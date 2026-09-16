@@ -1465,20 +1465,36 @@ function _rand_ztnb(rng::AbstractRNG, r, μ)
 end
 
 # --- Delta-lognormal -------------------------------------------------------
+# Shared-σ packing (#347) plus per-trait σ packing for Option A twin alignment
+# (`disp_group=:species`). Public fitter default stays `:shared` until paste
+# `accept delta dispersion A` also flips defaults + postfit vector-σ (deferred).
 function _family_ci(fit::DeltaLogNormalFit, Y::AbstractMatrix;
                     hessian::Symbol = :observed,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
     p, K = size(fit.Λc); n = size(Y, 2); rr = rr_theta_len(p, K)
-    fit.disp_group === :shared || throw(ArgumentError(
-        "DeltaLogNormalFit Wald CI: per-trait dispersion (disp_group=:species) is not yet wired in _family_ci"))
-    σ = fit.σ isa Real ? fit.σ : fit.σ[1]
+    shared = fit.disp_group === :shared
+    fit.disp_group in (:shared, :species) || throw(ArgumentError(
+        "DeltaLogNormalFit Wald CI: disp_group must be :shared or :species; got :$(fit.disp_group)"))
+    ndisp = shared ? 1 : p
+    if shared
+        fit.σ isa Real || throw(ArgumentError(
+            "DeltaLogNormalFit Wald CI: disp_group=:shared requires scalar σ"))
+        logσ = [log(fit.σ)]
+    else
+        fit.σ isa AbstractVector || throw(ArgumentError(
+            "DeltaLogNormalFit Wald CI: disp_group=:species requires length-p σ"))
+        length(fit.σ) == p || throw(ArgumentError(
+            "DeltaLogNormalFit Wald CI: length(σ)=$(length(fit.σ)) must equal p=$p"))
+        logσ = log.(fit.σ)
+    end
+    σ_names = shared ? ["sigma"] : ["sigma[$t]" for t in 1:p]
     if fit.predictor === :shared
         β = fit.βc
-        θ = vcat(β, pack_lambda(fit.Λc), log(σ))
+        θ = vcat(β, pack_lambda(fit.Λc), logσ)
         nll = function (θv)
             βv = θv[1:p]
             Λ = unpack_lambda(θv[(p + 1):(p + rr)], p, K)
-            σv = exp(θv[p + rr + 1])
+            σv = shared ? exp(θv[p + rr + 1]) : exp.(θv[(p + rr + 1):(p + rr + ndisp)])
             v = try
                 -delta_lognormal_marginal_loglik_laplace(Y, Λ, βv, βv, σv; Λz = Λ,
                     hessian = hessian, maxiter = newton_maxiter, tol = newton_tol)
@@ -1493,23 +1509,31 @@ function _family_ci(fit::DeltaLogNormalFit, Y::AbstractMatrix;
                 η = β .+ fit.Λc * randn(rng, K)
                 for t in 1:p
                     π = inv(1 + exp(-η[t]))
-                    rand(rng) < π && (Yb[t, s] = exp(η[t] + σ * randn(rng)))
+                    σt = shared ? fit.σ : fit.σ[t]
+                    rand(rng) < π && (Yb[t, s] = exp(η[t] + σt * randn(rng)))
                 end
             end
             return Yb
         end
         refit = function (Yb)
-            fb = try fit_delta_lognormal_gllvm(Yb; K = K, predictor = :shared) catch; return nothing end
-            fb.σ isa Real || return nothing
-            return vcat(fb.βc, pack_lambda(fb.Λc), log(fb.σ))
+            fb = try
+                fit_delta_lognormal_gllvm(Yb; K = K, predictor = :shared,
+                    disp_group = fit.disp_group)
+            catch
+                return nothing
+            end
+            logσb = shared ? (fb.σ isa Real ? [log(fb.σ)] : nothing) : (fb.σ isa AbstractVector ? log.(fb.σ) : nothing)
+            logσb === nothing && return nothing
+            return vcat(fb.βc, pack_lambda(fb.Λc), logσb)
         end
-        names = vcat(_twopart_shared_lin_names(p, K), "sigma")
-        return _FamilyCI(θ, nll, names, vcat(fill(:linear, length(θ) - 1), :log), sim, refit)
+        names = vcat(_twopart_shared_lin_names(p, K), σ_names)
+        return _FamilyCI(θ, nll, names, vcat(fill(:linear, p + rr), fill(:log, ndisp)), sim, refit)
     end
-    θ = vcat(fit.βz, fit.βc, pack_lambda(fit.Λc), log(σ))
+    θ = vcat(fit.βz, fit.βc, pack_lambda(fit.Λc), logσ)
     nll = function (θv)
         βz = θv[1:p]; βc = θv[(p + 1):(2p)]
-        Λc = unpack_lambda(θv[(2p + 1):(2p + rr)], p, K); σv = exp(θv[2p + rr + 1])
+        Λc = unpack_lambda(θv[(2p + 1):(2p + rr)], p, K)
+        σv = shared ? exp(θv[2p + rr + 1]) : exp.(θv[(2p + rr + 1):(2p + rr + ndisp)])
         v = try
             -delta_lognormal_marginal_loglik_laplace(Y, Λc, βz, βc, σv; hessian = hessian,
                 maxiter = newton_maxiter, tol = newton_tol)
@@ -1524,18 +1548,24 @@ function _family_ci(fit::DeltaLogNormalFit, Y::AbstractMatrix;
             ηc = fit.βc .+ fit.Λc * randn(rng, K)
             for t in 1:p
                 π = inv(1 + exp(-fit.βz[t]))
-                rand(rng) < π && (Yb[t, s] = exp(ηc[t] + σ * randn(rng)))
+                σt = shared ? fit.σ : fit.σ[t]
+                rand(rng) < π && (Yb[t, s] = exp(ηc[t] + σt * randn(rng)))
             end
         end
         return Yb
     end
     refit = function (Yb)
-        fb = try fit_delta_lognormal_gllvm(Yb; K = K) catch; return nothing end
-        fb.σ isa Real || return nothing
-        return vcat(fb.βz, fb.βc, pack_lambda(fb.Λc), log(fb.σ))
+        fb = try
+            fit_delta_lognormal_gllvm(Yb; K = K, disp_group = fit.disp_group)
+        catch
+            return nothing
+        end
+        logσb = shared ? (fb.σ isa Real ? [log(fb.σ)] : nothing) : (fb.σ isa AbstractVector ? log.(fb.σ) : nothing)
+        logσb === nothing && return nothing
+        return vcat(fb.βz, fb.βc, pack_lambda(fb.Λc), logσb)
     end
-    names = vcat(_twopart_lin_names(p, K), "sigma")
-    return _FamilyCI(θ, nll, names, vcat(fill(:linear, length(θ) - 1), :log), sim, refit)
+    names = vcat(_twopart_lin_names(p, K), σ_names)
+    return _FamilyCI(θ, nll, names, vcat(fill(:linear, 2p + rr), fill(:log, ndisp)), sim, refit)
 end
 
 # --- Delta-Gamma -----------------------------------------------------------
@@ -1544,16 +1574,29 @@ function _family_ci(fit::DeltaGammaFit, Y::AbstractMatrix;
                     hessian::Symbol = :observed,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
     p, K = size(fit.Λc); n = size(Y, 2); rr = rr_theta_len(p, K)
-    fit.disp_group === :shared || throw(ArgumentError(
-        "DeltaGammaFit Wald CI: per-trait dispersion (disp_group=:species) is not yet wired in _family_ci"))
-    α = fit.α isa Real ? fit.α : fit.α[1]
+    shared = fit.disp_group === :shared
+    fit.disp_group in (:shared, :species) || throw(ArgumentError(
+        "DeltaGammaFit Wald CI: disp_group must be :shared or :species; got :$(fit.disp_group)"))
+    ndisp = shared ? 1 : p
+    if shared
+        fit.α isa Real || throw(ArgumentError(
+            "DeltaGammaFit Wald CI: disp_group=:shared requires scalar α"))
+        logα = [log(fit.α)]
+    else
+        fit.α isa AbstractVector || throw(ArgumentError(
+            "DeltaGammaFit Wald CI: disp_group=:species requires length-p α"))
+        length(fit.α) == p || throw(ArgumentError(
+            "DeltaGammaFit Wald CI: length(α)=$(length(fit.α)) must equal p=$p"))
+        logα = log.(fit.α)
+    end
+    α_names = shared ? ["alpha"] : ["alpha[$t]" for t in 1:p]
     if fit.predictor === :shared
         β = fit.βc
-        θ = vcat(β, pack_lambda(fit.Λc), log(α))
+        θ = vcat(β, pack_lambda(fit.Λc), logα)
         nll = function (θv)
             βv = θv[1:p]
             Λ = unpack_lambda(θv[(p + 1):(p + rr)], p, K)
-            αv = exp(θv[p + rr + 1])
+            αv = shared ? exp(θv[p + rr + 1]) : exp.(θv[(p + rr + 1):(p + rr + ndisp)])
             v = try
                 objective === :va ?
                     -delta_gamma_marginal_loglik_va(Y, Λ, βv, βv, αv; Λz = Λ,
@@ -1572,24 +1615,32 @@ function _family_ci(fit::DeltaGammaFit, Y::AbstractMatrix;
                 for t in 1:p
                     π = inv(1 + exp(-η[t]))
                     if rand(rng) < π
-                        μ = exp(η[t]); Yb[t, s] = rand(rng, Gamma(α, μ / α))
+                        αt = shared ? fit.α : fit.α[t]
+                        μ = exp(η[t]); Yb[t, s] = rand(rng, Gamma(αt, μ / αt))
                     end
                 end
             end
             return Yb
         end
         refit = function (Yb)
-            fb = try fit_delta_gamma_gllvm(Yb; K = K, predictor = :shared) catch; return nothing end
-            fb.α isa Real || return nothing
-            return vcat(fb.βc, pack_lambda(fb.Λc), log(fb.α))
+            fb = try
+                fit_delta_gamma_gllvm(Yb; K = K, predictor = :shared,
+                    disp_group = fit.disp_group)
+            catch
+                return nothing
+            end
+            logαb = shared ? (fb.α isa Real ? [log(fb.α)] : nothing) : (fb.α isa AbstractVector ? log.(fb.α) : nothing)
+            logαb === nothing && return nothing
+            return vcat(fb.βc, pack_lambda(fb.Λc), logαb)
         end
-        names = vcat(_twopart_shared_lin_names(p, K), "alpha")
-        return _FamilyCI(θ, nll, names, vcat(fill(:linear, length(θ) - 1), :log), sim, refit)
+        names = vcat(_twopart_shared_lin_names(p, K), α_names)
+        return _FamilyCI(θ, nll, names, vcat(fill(:linear, p + rr), fill(:log, ndisp)), sim, refit)
     end
-    θ = vcat(fit.βz, fit.βc, pack_lambda(fit.Λc), log(α))
+    θ = vcat(fit.βz, fit.βc, pack_lambda(fit.Λc), logα)
     nll = function (θv)
         βz = θv[1:p]; βc = θv[(p + 1):(2p)]
-        Λc = unpack_lambda(θv[(2p + 1):(2p + rr)], p, K); αv = exp(θv[2p + rr + 1])
+        Λc = unpack_lambda(θv[(2p + 1):(2p + rr)], p, K)
+        αv = shared ? exp(θv[2p + rr + 1]) : exp.(θv[(2p + rr + 1):(2p + rr + ndisp)])
         v = try
             objective === :va ?
                 -delta_gamma_marginal_loglik_va(Y, Λc, βz, βc, αv; maxiter = newton_maxiter, tol = newton_tol) :
@@ -1607,19 +1658,25 @@ function _family_ci(fit::DeltaGammaFit, Y::AbstractMatrix;
             for t in 1:p
                 π = inv(1 + exp(-fit.βz[t]))
                 if rand(rng) < π
-                    μ = exp(ηc[t]); Yb[t, s] = rand(rng, Gamma(α, μ / α))
+                    αt = shared ? fit.α : fit.α[t]
+                    μ = exp(ηc[t]); Yb[t, s] = rand(rng, Gamma(αt, μ / αt))
                 end
             end
         end
         return Yb
     end
     refit = function (Yb)
-        fb = try fit_delta_gamma_gllvm(Yb; K = K) catch; return nothing end
-        fb.α isa Real || return nothing
-        return vcat(fb.βz, fb.βc, pack_lambda(fb.Λc), log(fb.α))
+        fb = try
+            fit_delta_gamma_gllvm(Yb; K = K, disp_group = fit.disp_group)
+        catch
+            return nothing
+        end
+        logαb = shared ? (fb.α isa Real ? [log(fb.α)] : nothing) : (fb.α isa AbstractVector ? log.(fb.α) : nothing)
+        logαb === nothing && return nothing
+        return vcat(fb.βz, fb.βc, pack_lambda(fb.Λc), logαb)
     end
-    names = vcat(_twopart_lin_names(p, K), "alpha")
-    return _FamilyCI(θ, nll, names, vcat(fill(:linear, length(θ) - 1), :log), sim, refit)
+    names = vcat(_twopart_lin_names(p, K), α_names)
+    return _FamilyCI(θ, nll, names, vcat(fill(:linear, 2p + rr), fill(:log, ndisp)), sim, refit)
 end
 
 # --- Beta-hurdle (Bernoulli occurrence × positive Beta) --------------------

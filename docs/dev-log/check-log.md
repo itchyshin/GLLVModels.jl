@@ -91,13 +91,25 @@
   fired. Goal **not** complete.
 - Commands: `git rev-parse origin/main`; `gh pr view 399 401 402 --json state,isDraft,mergeable`.
 
+## 2026-09-16 — DRAFT Option A scaffold (delta species CI + SO cells)
+
+- Branch `feat/delta-dispersion-a-scaffold-20260916` rebased onto `origin/main` @ `576cd927d`
+  (#408). Pre-paste engineering for `accept delta dispersion A`: `_family_ci` `:species` for
+  DeltaLogNormalFit / DeltaGammaFit; `core070_second_order` Delta cells use
+  `disp_group=:species`; `_nparams` respects ndisp. Decision doc stays **PENDING** (no
+  ACCEPTED block). Public fitter default stays `:shared` (postfit vector-σ deferred).
+  **≠** D1 pass / programme complete. No Stage 1 / S4 / Totoro / #357 / Project.toml.
+- Checks: `julia --project=. test/test_second_order_delta_followup.jl` (local, no R).
+- Files: `src/confint_family.jl`, `src/postfit.jl`, `tools/core070_second_order/cells.jl`,
+  `test/test_second_order_delta_followup.jl`, decision fence note, after-task.
+
 ## 2026-09-16 — Cloud babysit STOP → Mac handoff (`cursor/cloud-babysit-handoff-4a16`)
 
 - Cloud babysit lane **STOPPING**; Mac owns true-parity programme. Tip:
   `docs/dev-log/handover/2026-09-16-cloud-babysit-handoff-to-mac.md`.
 - Cloud merges: #398,#400,#403,#404,#405,**#401** @ `c33745302`. Mac merged #357
   (left alone). Paste-gated remain #399/#402.
-- Goal **not** complete. No Stage1/S4/Totoro/Delta without paste.
+- Goal **not** complete. No Stage1/S4/Tornado/Delta without paste.
 - Commands: `gh pr view 401 --json state,mergeCommit`; `gh pr list --state open`.
 
 ## 2026-09-16 — Post-#399 paste packet tip (`docs/post-399-delta-a-paste-tip-20260916`)

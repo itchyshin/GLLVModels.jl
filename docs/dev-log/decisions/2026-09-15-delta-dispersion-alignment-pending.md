@@ -1,14 +1,17 @@
-# Maintainer decision — Delta-lognormal / Delta-Gamma dispersion identity (shared Julia vs R per-trait)
+<!-- slop-ok: pending-decision field labels and option letters match prior Core070 decision docs -->
+# Maintainer decision: Delta-lognormal / Delta-Gamma dispersion identity (shared Julia vs R per-trait)
 
 **Date:** 2026-09-15  
-**Status:** **PENDING_ACCEPTANCE**  
-**Lane:** Cursor / Ada (true-parity programme; docs-only)  
+**Status:** **PENDING_ACCEPTANCE** (unchanged; no ACCEPTED block)  
+**Lane:** Cursor / Ada (true-parity programme)  
 **Base:** `origin/main` @ `3091fe613` (post–PR #347 second-order Delta shared-η Wald wiring)  
 **Trigger:** [`2026-09-15-second-order-delta-followup.md`](../after-task/2026-09-15-second-order-delta-followup.md) — paired Δ **D1 FAIL** (no tolerance widened)  
 **Twin anchor (R):** `log_sigma_lognormal_delta` / `log_phi_gamma_delta` length **p** (`gllvmTMB.cpp` family ids 12–13)  
-**Julia anchor:** `fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm` — `disp_group ∈ {:shared, :species}` in `src/families/twopart.jl`; **default** `core070_second_order` cells and public no-X path use **`:shared`**; Wald `_family_ci` is wired for **`:shared` only** (throws on `:species`).
+**Julia anchor:** `fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm` — `disp_group ∈ {:shared, :species}` in `src/families/twopart.jl`; public fitter **default remains `:shared`** until paste; Wald `_family_ci` now packs both `:shared` and `:species` (DRAFT scaffold).
 
-**Does not:** accept any option; edit `src/` or R `gllvmTMB`; promote D1 pass; claim covered / Stage 1 / S4 / Totoro clearance; bump `Project.toml`; close programme §7 or true-parity destination.
+**DRAFT scaffold (pre-paste, 2026-09-16):** branch `feat/delta-dispersion-a-scaffold-20260916` wires `_family_ci` `:species` and points `core070_second_order` Delta cells at `disp_group=:species`. Not an ACCEPTED disposition. Not a D1 pass. Not a public default flip / postfit vector-σ (deferred to post-paste). Merge only after paste `accept delta dispersion A`.
+
+**Does not:** accept any option; edit R `gllvmTMB`; promote D1 pass; claim covered / Stage 1 / S4 / Totoro clearance; bump `Project.toml`; close programme §7 or true-parity destination.
 
 ---
 
