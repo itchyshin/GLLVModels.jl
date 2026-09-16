@@ -68,4 +68,5 @@ Single Julia process; `OPENBLAS_NUM_THREADS=1`, `JULIA_NUM_THREADS=1`. Stop if r
 | Paste | Scaffold |
 |-------|----------|
 | `G0 Stage 1` | [`2026-09-16-d3-loading-profile-stage1-paste-gated-scaffold.md`](2026-09-16-d3-loading-profile-stage1-paste-gated-scaffold.md) |
-| `S4 probe yes` | [`2026-09-16-s4-probe-julia-checklist-paste-gated.md`](2026-09-16-s4-probe-julia-checklist-paste-gated.md) |
+| `S4 probe yes` | [`2026-09-16-s4-probe-julia-checklist-paste-gated.md`](2026-09-16-s4-probe-julia-checklist-paste-gated.md) · DRAFT harness **[#409](https://github.com/itchyshin/GLLVM.jl/pull/409)** |
+| `ack Totoro D-139 #323 Track A` | DRAFT harness **#410** (branch `feat/totoro-323-track-a-harness-draft-20260916`; update PR number after open) |
