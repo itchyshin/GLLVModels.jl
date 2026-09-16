@@ -44,7 +44,7 @@ Without the paste: **no** `src/` export, **no** ledger rebind, **no** shim remov
 
 | Paste | Scaffold PR |
 |-------|-------------|
-| `G0 Stage 1` | DRAFT (Stage 1 harness; runbook on `main` via #402) |
+| `G0 Stage 1` | DRAFT [#411](https://github.com/itchyshin/GLLVM.jl/pull/411) |
 | `accept delta dispersion A` | DRAFT [#399](https://github.com/itchyshin/GLLVM.jl/pull/399) |
 | `S4 probe yes` | DRAFT [#409](https://github.com/itchyshin/GLLVM.jl/pull/409) |
 | `ack Totoro D-139 #323 Track A` | DRAFT [#410](https://github.com/itchyshin/GLLVM.jl/pull/410) |
