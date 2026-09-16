@@ -1,0 +1,195 @@
+"""
+    S4 public `phylo_dep` isolated probe — Julia-side harness (paste-gated)
+
+Runbook: `docs/dev-log/plans/2026-09-16-s4-probe-julia-checklist-paste-gated.md`.
+
+Twin recorder (read-only, no gllvmTMB `src/` edits from this repo):
+gllvmTMB [PR #1283](https://github.com/itchyshin/gllvmTMB/pull/1283), commit
+`97214679c94cc4a6b9e02d3c2b03ccce516027d8` on branch
+`codex/destination-b-s4-phylo-dep-formula-20260910`.
+
+Execution requires maintainer paste **`S4 probe yes`** in
+`ENV["GLLVM_S4_PROBE_PASTE"]`. This harness does not substitute for that paste.
+"""
+
+const S4_PUBLIC_PHYLO_DEP_RECORDER_COMMIT =
+    "97214679c94cc4a6b9e02d3c2b03ccce516027d8"
+const S4_PUBLIC_PHYLO_DEP_RECORDER_COMMIT_SHORT = "97214679c"
+const S4_PUBLIC_PHYLO_DEP_RECORDER_BRANCH =
+    "codex/destination-b-s4-phylo-dep-formula-20260910"
+const S4_PUBLIC_PHYLO_DEP_RECORDER_PR = 1283
+const S4_PUBLIC_PHYLO_DEP_RUNNER_REL =
+    "tests/testthat/run-destination-b-s4-public-phylo-dep-isolated.R"
+const S4_PUBLIC_PHYLO_DEP_PASTE_EXACT = "S4 probe yes"
+
+_s4_probe_fail(message) = throw(ArgumentError("S4 public phylo_dep probe harness: " * message))
+
+"""
+    s4_public_phylo_dep_paste_authorized() -> Bool
+
+True only when `ENV["GLLVM_S4_PROBE_PASTE"]` equals the maintainer paste string
+exactly (`S4 probe yes`).
+"""
+function s4_public_phylo_dep_paste_authorized()
+    return get(ENV, "GLLVM_S4_PROBE_PASTE", "") == S4_PUBLIC_PHYLO_DEP_PASTE_EXACT
+end
+
+"""
+    s4_public_phylo_dep_require_paste()
+
+Fail closed unless the maintainer paste is present in the environment.
+"""
+function s4_public_phylo_dep_require_paste()
+    s4_public_phylo_dep_paste_authorized() ||
+        _s4_probe_fail("refusing probe execution without paste " *
+            repr(S4_PUBLIC_PHYLO_DEP_PASTE_EXACT) *
+            " in ENV[\"GLLVM_S4_PROBE_PASTE\"]")
+    return nothing
+end
+
+function _s4_git_read(cmd::Cmd)
+    try
+        return strip(read(cmd, String))
+    catch err
+        _s4_probe_fail("git command failed ($(cmd)): $(err)")
+    end
+end
+
+"""
+    s4_public_phylo_dep_verify_recorder_tip(gllvmtmb_root::AbstractString)
+
+Confirm `gllvmtmb_root` is a git checkout whose `HEAD` matches the pinned
+recorder commit (full or short prefix).
+"""
+function s4_public_phylo_dep_verify_recorder_tip(gllvmtmb_root::AbstractString)
+    root = abspath(gllvmtmb_root)
+    isdir(root) || _s4_probe_fail("gllvmTMB root is not a directory: $root")
+    head = _s4_git_read(Cmd(["git", "-C", root, "rev-parse", "HEAD"]))
+    startswith(head, S4_PUBLIC_PHYLO_DEP_RECORDER_COMMIT_SHORT) ||
+        startswith(head, S4_PUBLIC_PHYLO_DEP_RECORDER_COMMIT) ||
+        _s4_probe_fail("gllvmTMB HEAD $(head) is not recorder $(S4_PUBLIC_PHYLO_DEP_RECORDER_COMMIT_SHORT)")
+    runner = joinpath(root, S4_PUBLIC_PHYLO_DEP_RUNNER_REL)
+    isfile(runner) ||
+        _s4_probe_fail("recorder runner missing at $(S4_PUBLIC_PHYLO_DEP_RUNNER_REL)")
+    return (root = root, head = head, runner = runner)
+end
+
+"""
+    S4PublicPhyloDepProbeConfig
+
+Paths and executables for one isolated probe invocation. Does not run R.
+"""
+struct S4PublicPhyloDepProbeConfig
+    gllvmtmb_root::String
+    julia_project::String
+    julia_executable::String
+    julia_env::String
+    receipt_path::String
+    rscript_executable::String
+end
+
+function _s4_require_executable(path::AbstractString, label::AbstractString)
+    p = abspath(String(path))
+    isfile(p) || _s4_probe_fail("$label is not a file: $p")
+    return p
+end
+
+function _s4_require_project(path::AbstractString)
+    p = abspath(String(path))
+    isfile(joinpath(p, "Project.toml")) ||
+        _s4_probe_fail("Julia project lacks Project.toml: $p")
+    return p
+end
+
+"""
+    s4_public_phylo_dep_probe_config(;
+        gllvmtmb_root,
+        julia_project,
+        julia_executable,
+        julia_env = julia_project,
+        receipt_path,
+        rscript_executable = "Rscript",
+    ) -> S4PublicPhyloDepProbeConfig
+
+Validate configuration for the gllvmTMB isolated runner. Caller must still
+pass [`s4_public_phylo_dep_require_paste`](@ref) before [`s4_public_phylo_dep_run!`](@ref).
+"""
+function s4_public_phylo_dep_probe_config(;
+    gllvmtmb_root::AbstractString,
+    julia_project::AbstractString,
+    julia_executable::AbstractString,
+    julia_env::AbstractString = julia_project,
+    receipt_path::AbstractString,
+    rscript_executable::AbstractString = "Rscript",
+)
+    verified = s4_public_phylo_dep_verify_recorder_tip(gllvmtmb_root)
+    receipt = abspath(String(receipt_path))
+    parent = dirname(receipt)
+    isdir(parent) || mkpath(parent)
+    isdir(parent) || _s4_probe_fail("receipt parent is not creatable: $parent")
+    ispath(receipt) && _s4_probe_fail("refusing to overwrite existing receipt: $receipt")
+    return S4PublicPhyloDepProbeConfig(
+        verified.root,
+        _s4_require_project(julia_project),
+        _s4_require_executable(julia_executable, "julia_executable"),
+        _s4_require_project(julia_env),
+        receipt,
+        _s4_require_executable(rscript_executable, "rscript_executable"),
+    )
+end
+
+"""
+    s4_public_phylo_dep_r_environment(cfg::S4PublicPhyloDepProbeConfig) -> Dict{String,String}
+
+Environment variables expected by gllvmTMB
+`run-destination-b-s4-public-phylo-dep-isolated.R` at the recorder commit.
+"""
+function s4_public_phylo_dep_r_environment(cfg::S4PublicPhyloDepProbeConfig)
+    return Dict{String,String}(
+        "GLLVM_S4_LIVE_FORMULA_TESTS" => "1",
+        "GLLVM_DESTINATION_B_PROJECT" => cfg.julia_project,
+        "GLLVM_S4_JULIA_HOME" => cfg.julia_executable,
+        "GLLVM_S4_JULIA_ENV" => cfg.julia_env,
+        "GLLVM_S4_RECEIPT_PATH" => cfg.receipt_path,
+    )
+end
+
+"""
+    s4_public_phylo_dep_run!(cfg::S4PublicPhyloDepProbeConfig)
+
+Invoke the gllvmTMB isolated R runner (read-only w.r.t. gllvmTMB source from
+this repo). Requires maintainer paste; overwrites nothing if receipt exists.
+"""
+function s4_public_phylo_dep_run!(cfg::S4PublicPhyloDepProbeConfig)
+    s4_public_phylo_dep_require_paste()
+    runner = joinpath(cfg.gllvmtmb_root, S4_PUBLIC_PHYLO_DEP_RUNNER_REL)
+    env = merge(Dict{String,String}(ENV), s4_public_phylo_dep_r_environment(cfg))
+    cmd = setenv(Cmd([cfg.rscript_executable, "--vanilla", runner]; dir = cfg.gllvmtmb_root), env)
+    return run(cmd)
+end
+
+"""
+    s4_public_phylo_dep_scaffold_usage() -> String
+
+Plain-language instructions printed when the driver is invoked without paste.
+"""
+function s4_public_phylo_dep_scaffold_usage()
+    return """
+    S4 public phylo_dep probe harness (DRAFT — paste-gated, not merge-ready)
+
+    Recorder: gllvmTMB PR $(S4_PUBLIC_PHYLO_DEP_RECORDER_PR) @ $(S4_PUBLIC_PHYLO_DEP_RECORDER_COMMIT_SHORT)
+    Runbook: docs/dev-log/plans/2026-09-16-s4-probe-julia-checklist-paste-gated.md
+
+    1. Check out gllvmTMB at $(S4_PUBLIC_PHYLO_DEP_RECORDER_COMMIT_SHORT) (branch $(S4_PUBLIC_PHYLO_DEP_RECORDER_BRANCH)).
+    2. After maintainer paste, export:
+       export GLLVM_S4_PROBE_PASTE='$(S4_PUBLIC_PHYLO_DEP_PASTE_EXACT)'
+    3. Run (single Julia process):
+       julia --project=. tools/destination_b/run_s4_public_phylo_dep_probe.jl \\
+         --gllvmtmb-root /path/to/gllvmTMB \\
+         --julia-project $(pwd()) \\
+         --julia /path/to/julia \\
+         --receipt /tmp/s4-public-phylo-dep-receipt.json
+
+    Without the paste this driver exits without calling R.
+    """
+end
