@@ -53,7 +53,7 @@ This checklist is **Julia-side prep only**. No probe execution from cloud / Curs
 
 | Paste | Scaffold |
 |-------|----------|
-| `S4 probe yes` | **DRAFT PR** (Julia harness only; merge after paste + probe receipt, not before) |
+| `S4 probe yes` | DRAFT **[#409](https://github.com/itchyshin/GLLVM.jl/pull/409)** (Julia harness; merge after paste + probe receipt, not before) |
 | `G0 Stage 1` | [`2026-09-16-d3-loading-profile-stage1-paste-gated-scaffold.md`](2026-09-16-d3-loading-profile-stage1-paste-gated-scaffold.md) |
 | `ack Totoro D-139 #323 Track A` | [`2026-09-16-totoro-323-track-a-runbook-paste-gated.md`](2026-09-16-totoro-323-track-a-runbook-paste-gated.md) |
 
