@@ -1708,6 +1708,13 @@ end
 # lognormal; shared latent z drives the positive part, Λ_z = 0).
 # ---------------------------------------------------------------------------
 
+@inline _delta_lognormal_twopart_fam(σ::Union{Float64, Vector{Float64}}) =
+    σ isa Real ? DeltaLogNormal(float(σ)) : DeltaLogNormal.(float.(σ))
+@inline _delta_gamma_twopart_fam(α::Union{Float64, Vector{Float64}}) =
+    α isa Real ? DeltaGamma(float(α)) : DeltaGamma.(float.(α))
+@inline _delta_disp_sq(d::Union{Float64, Vector{Float64}}) =
+    d isa Real ? d^2 : (d .^ 2)
+
 _loadings(fit::DeltaLogNormalFit) = fit.Λc
 _loglik(fit::DeltaLogNormalFit)   = fit.loglik
 
@@ -1726,7 +1733,7 @@ mode `ẑₛ` (occurrence intercept-only, so only the positive part loads on `z`
 function getLV(fit::DeltaLogNormalFit, Y::AbstractMatrix{<:Real}; rotate::Bool = true)
     p, n = size(Y)
     K = size(fit.Λc, 2)
-    fam = DeltaLogNormal(fit.σ)
+    fam = _delta_lognormal_twopart_fam(fit.σ)
     Λz = zeros(p, K)
     Z = Matrix{Float64}(undef, K, n)
     @inbounds for s in 1:n
@@ -1753,7 +1760,7 @@ function predict(fit::DeltaLogNormalFit, Y::AbstractMatrix{<:Real}; type::Symbol
     type === :link && return ηc
     π = inv.(1 .+ exp.(-fit.βz))                     # length p
     type === :occurrence && return repeat(π, 1, n)
-    posmean = exp.(ηc .+ fit.σ^2 / 2)
+    posmean = exp.(ηc .+ _delta_disp_sq(fit.σ) ./ 2)
     type === :positive && return posmean
     return π .* posmean
 end
@@ -1772,10 +1779,12 @@ function residuals(fit::DeltaLogNormalFit, Y::AbstractMatrix{<:Real};
     ηc = fit.βc .+ fit.Λc * Z'
     π = inv.(1 .+ exp.(-fit.βz))
     R = Matrix{Float64}(undef, p, n)
+    σ = fit.σ
     @inbounds for s in 1:n, t in 1:p
         πt = π[t]
+        σt = σ isa Real ? σ : σ[t]
         if Y[t, s] > 0
-            u = (1 - πt) + πt * cdf(LogNormal(ηc[t, s], fit.σ), Y[t, s])
+            u = (1 - πt) + πt * cdf(LogNormal(ηc[t, s], σt), Y[t, s])
         else
             u = (1 - πt) * rand(rng)
         end
@@ -1786,9 +1795,11 @@ end
 
 function Base.show(io::IO, ::MIME"text/plain", fit::DeltaLogNormalFit)
     p, K = size(fit.Λc)
+    σstr = fit.σ isa Real ? string(round(fit.σ; sigdigits = 4)) :
+        "per-trait (p=$(p), disp_group=:species)"
     println(io, "Delta-lognormal GLLVM fit (two-part)")
     println(io, "  responses p = ", p, ", latent factors K = ", K,
-            ", log-SD σ = ", round(fit.σ; sigdigits = 4))
+            ", log-SD σ = ", σstr)
     println(io, "  logLik = ", round(fit.loglik; sigdigits = 7),
             ", AIC = ", round(aic(fit); sigdigits = 7))
     print(io,   "  converged = ", fit.converged, " (", fit.iterations, " iterations)")
@@ -1986,7 +1997,7 @@ Conditional latent scores for a Delta-Gamma fit: the per-site two-part Laplace m
 """
 function getLV(fit::DeltaGammaFit, Y::AbstractMatrix{<:Real}; rotate::Bool = true)
     p, n = size(Y); K = size(fit.Λc, 2)
-    fam = DeltaGamma(fit.α)
+    fam = _delta_gamma_twopart_fam(fit.α)
     Λz = zeros(p, K)
     Z = Matrix{Float64}(undef, K, n)
     @inbounds for s in 1:n
@@ -2033,9 +2044,10 @@ function residuals(fit::DeltaGammaFit, Y::AbstractMatrix{<:Real};
     R = Matrix{Float64}(undef, p, n)
     @inbounds for s in 1:n, t in 1:p
         πt = π[t]
+        αt = α isa Real ? α : α[t]
         if Y[t, s] > 0
             μ = exp(ηc[t, s])
-            u = (1 - πt) + πt * cdf(Gamma(α, μ / α), Y[t, s])
+            u = (1 - πt) + πt * cdf(Gamma(αt, μ / αt), Y[t, s])
         else
             u = (1 - πt) * rand(rng)
         end
@@ -2046,9 +2058,11 @@ end
 
 function Base.show(io::IO, ::MIME"text/plain", fit::DeltaGammaFit)
     p, K = size(fit.Λc)
+    αstr = fit.α isa Real ? string(round(fit.α; sigdigits = 4)) :
+        "per-trait (p=$(p), disp_group=:species)"
     println(io, "Delta-Gamma GLLVM fit (two-part)")
     println(io, "  responses p = ", p, ", latent factors K = ", K,
-            ", shape α = ", round(fit.α; sigdigits = 4))
+            ", shape α = ", αstr)
     println(io, "  logLik = ", round(fit.loglik; sigdigits = 7),
             ", AIC = ", round(aic(fit); sigdigits = 7))
     print(io,   "  converged = ", fit.converged, " (", fit.iterations, " iterations)")

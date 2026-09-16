@@ -216,6 +216,9 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
         family isa BetaBinom || (family isa StudentTFamily && family.ν === nothing))
         disp_group = :species
     end
+    # PASTE `accept delta dispersion A`: add DeltaLogNormal / DeltaGamma to the coerce
+    # block above (disp_group = :species when nothing), then forward disp_group into
+    # fit_delta_* via kwargs below — public twin default must not flip before paste.
 
     # --- Multinomial v1: FE softmax only (no LV). ----------------------------
     # Must run before row_eff / disp_group / pervar routes (those require K).
@@ -263,6 +266,14 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
             throw(ArgumentError(
                 "fit_gllvm: row_eff must be :none, :fixed, or :random (got :$(row_eff))"))
         end
+    end
+
+    # --- Delta two-part: disp_group is shared vs per-trait σ/α (not NB grouped routing). ---
+    if disp_group !== nothing && (family isa DeltaLogNormal || family isa DeltaGamma)
+        K === nothing && throw(ArgumentError("fit_gllvm: K (or num_lv) is required"))
+        disp_group in (:shared, :species) || throw(ArgumentError(
+            "fit_gllvm: Delta disp_group must be :shared or :species (got :$disp_group)"))
+        return _fit_gllvm(family, Y; K = K, disp_group = disp_group, kwargs...)
     end
 
     # --- disp_group: grouped / species-specific dispersion. ------------------
@@ -317,10 +328,10 @@ function _fit_gllvm(family::StudentTFamily, Y::AbstractMatrix; kwargs...)
 end
 # Delta markers are tag-payload markers: σ / α are always estimated by the named
 # fitters and are never read from the family instance (same pattern as NB1(φ)).
-_fit_gllvm(::DeltaLogNormal, Y::AbstractMatrix; kwargs...) =
-    fit_delta_lognormal_gllvm(Y; kwargs...)
-_fit_gllvm(::DeltaGamma, Y::AbstractMatrix; kwargs...) =
-    fit_delta_gamma_gllvm(Y; kwargs...)
+_fit_gllvm(::DeltaLogNormal, Y::AbstractMatrix; disp_group = :shared, kwargs...) =
+    fit_delta_lognormal_gllvm(Y; disp_group = disp_group, kwargs...)
+_fit_gllvm(::DeltaGamma, Y::AbstractMatrix; disp_group = :shared, kwargs...) =
+    fit_delta_gamma_gllvm(Y; disp_group = disp_group, kwargs...)
 _fit_gllvm(::GeneralizedPoisson1, Y::AbstractMatrix; kwargs...) = fit_gp1_gllvm(Y; kwargs...)
 _fit_gllvm(::ZIPoisson, Y::AbstractMatrix; kwargs...) = fit_zip_gllvm(Y; kwargs...)
 _fit_gllvm(::ZINegBin, Y::AbstractMatrix; kwargs...) = fit_zinb_gllvm(Y; kwargs...)

@@ -51,6 +51,14 @@ end
         fin = isfinite.(ci.se)
         @test count(fin) ≥ 3
         @test all(ci.lower[fin] .< ci.estimate[fin] .< ci.upper[fin])
+        Z = getLV(fit, Y)
+        @test size(Z) == (100, 1)
+        μ = predict(fit, Y; type = :response)
+        @test size(μ) == size(Y)
+        @test all(isfinite, μ)
+        R = residuals(fit, Y; rng = MersenneTwister(42))
+        @test size(R) == size(Y)
+        @test all(isfinite, R)
     end
 
     @testset "Delta-Gamma: shared θ packing + public Wald" begin
@@ -105,6 +113,22 @@ end
         @test length(ci.term) == p
         fin = isfinite.(ci.se)
         @test count(fin) ≥ 3
+        Z = getLV(fit, Y)
+        @test size(Z) == (n, K)
+        μ = predict(fit, Y; type = :response)
+        @test all(isfinite, μ)
+        R = residuals(fit, Y; rng = MersenneTwister(43))
+        @test all(isfinite, R)
+    end
+
+    @testset "fit_gllvm disp_group routing (explicit :species, default still :shared)" begin
+        Y = _sim_delta_lognormal(4, 1, 80; seed = 175)
+        fit_def = fit_gllvm(Y; family = DeltaLogNormal(), K = 1, iterations = 300)
+        @test fit_def.disp_group === :shared
+        fit_sp = fit_gllvm(Y; family = DeltaLogNormal(), K = 1,
+                           disp_group = :species, iterations = 300)
+        @test fit_sp.disp_group === :species
+        @test fit_sp.σ isa AbstractVector && length(fit_sp.σ) == 4
     end
 
     @testset "R paired each-own-optimum cells (live Δ)" begin
