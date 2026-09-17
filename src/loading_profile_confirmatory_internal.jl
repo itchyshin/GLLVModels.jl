@@ -6,11 +6,7 @@
 
 const _D3_LOADING_PROFILE_STAGE1_PASTE_EXACT = "G0 Stage 1"
 
-"""
-    _d3_loading_profile_stage1_paste_authorized() -> Bool
-
-True only when `ENV["GLLVM_STAGE1_PASTE"]` equals the maintainer paste exactly.
-"""
+# True only when `ENV["GLLVM_STAGE1_PASTE"]` equals the maintainer paste exactly.
 function _d3_loading_profile_stage1_paste_authorized()
     return get(ENV, "GLLVM_STAGE1_PASTE", "") == _D3_LOADING_PROFILE_STAGE1_PASTE_EXACT
 end
@@ -24,12 +20,8 @@ function _d3_loading_profile_stage1_require_paste!()
     return nothing
 end
 
-"""
-    _lambda_constraint_is_pinned(M_user, n_traits, K) -> BitMatrix
-
-Match `gllvmTMB` `loading-profile.R`: user `NaN`/`missing` = free, numeric = pinned,
-plus engine strict-upper-triangle pins for `i <= min(n_traits, K)` and `k > i`.
-"""
+# Match `gllvmTMB` `loading-profile.R`: user `NaN`/`missing` = free, numeric = pinned,
+# plus engine strict-upper-triangle pins for `i <= min(n_traits, K)` and `k > i`.
 function _lambda_constraint_is_pinned(
     M_user::Union{Nothing, AbstractMatrix{<:Real}},
     n_traits::Int,
@@ -52,12 +44,8 @@ function _lambda_constraint_is_pinned(
     return is_pinned
 end
 
-"""
-    _normalize_lambda_constraint_pin_matrix(M) -> Matrix{Float64}
-
-Drop above-diagonal user entries in the first `min(p,K)` rows (R ignores them).
-Free slots stay `NaN`; fixed slots keep their numeric value.
-"""
+# Drop above-diagonal user entries in the first `min(p,K)` rows (R ignores them).
+# Free slots stay `NaN`; fixed slots keep their numeric value.
 function _normalize_lambda_constraint_pin_matrix(M::AbstractMatrix{<:Real})
     p, K = size(M)
     out = Matrix{Float64}(undef, p, K)
@@ -72,11 +60,7 @@ function _normalize_lambda_constraint_pin_matrix(M::AbstractMatrix{<:Real})
     return out
 end
 
-"""
-    _enumerate_free_lambda_entries(M_user, n_traits, K; entries=nothing)
-
-Return `Vector{Tuple{Int,Int}}` of `(trait, axis)` pairs R would profile.
-"""
+# Return `Vector{Tuple{Int,Int}}` of `(trait, axis)` pairs R would profile.
 function _enumerate_free_lambda_entries(
     M_user::Union{Nothing, AbstractMatrix{<:Real}},
     n_traits::Int,
@@ -106,11 +90,7 @@ function _enumerate_free_lambda_entries(
     return out
 end
 
-"""
-    _profile_refit_lambda_constraint(M_user, i, k, c) -> Matrix{Float64}
-
-Pin matrix for one profile grid point: preserve other user pins, set `(i,k)` to `c`.
-"""
+# Pin matrix for one profile grid point: preserve other user pins, set `(i,k)` to `c`.
 function _profile_refit_lambda_constraint(
     M_user::Union{Nothing, AbstractMatrix{<:Real}},
     n_traits::Int,
@@ -128,38 +108,22 @@ function _profile_refit_lambda_constraint(
     return M
 end
 
-"""
-    _confirmatory_j1_fit_admitted(fit::GllvmFit) -> Bool
-
-Stage 1 bounded slice: ordinary unit-tier Gaussian J1 only (no W/diag/phylo blocks).
-"""
+# Stage 1 bounded slice: ordinary unit-tier Gaussian J1 only (no W/diag/phylo blocks).
 function _confirmatory_j1_fit_admitted(fit::GllvmFit)
     m = fit.model
     return m.K_W == 0 && !m.has_diag && m.K_phy == 0 && !m.has_phy_unique
 end
 
-"""
-    _lambda_b_theta_index(fit::GllvmFit, i::Integer, k::Integer) -> Int
-
-Index into `fit.pars.θ_packed` for raw-scale `Lambda_B[i,k]` naming (confint layout).
-"""
+# Index into `fit.pars.θ_packed` for raw-scale `Lambda_B[i,k]` naming (confint layout).
 function _lambda_b_theta_index(fit::GllvmFit, i::Integer, k::Integer)
     return _profile_parm_index(fit, "Lambda_B[$i,$k]")
 end
 
-"""
-    _confirmatory_lambda_pin_theta_fixes(
-        fit, M_user, profile_i, profile_k, profile_c;
-        component = :B,
-    ) -> Vector{Tuple{Int,Float64}}
-
-Map a user pin matrix (raw Λ scale, R convention) to fixed `(θ_index, working_value)`
-pairs for a single confirmatory profile grid point.
-
-Working values use the J1 packed scale `L = Λ / σ_eps` at the **reference** `fit`.
-Full R parity (σ_eps co-moving with raw pins) still requires fit-time
-`lambda_constraint` on the Gaussian fitter (post-paste slice).
-"""
+# Map a user pin matrix (raw Lambda scale, R convention) to fixed `(theta_index,
+# working_value)` pairs for a single confirmatory profile grid point.
+#
+# Working values use the J1 packed scale `L = Lambda / sigma_eps` at the reference
+# fit. Full R parity still requires fit-time `lambda_constraint` after the paste.
 function _confirmatory_lambda_pin_theta_fixes(
     fit::GllvmFit,
     M_user::Union{Nothing, AbstractMatrix{<:Real}},
@@ -189,14 +153,8 @@ function _confirmatory_lambda_pin_theta_fixes(
     return fixes
 end
 
-"""
-    _profile_refit_with_multi_fixed(
-        fit, fixed::AbstractVector{Tuple{Int,Float64}}, y; X, Σ_phy, kwargs...
-    ) -> Tuple{Float64,Bool,Vector{Float64}}
-
-Re-optimise the Gaussian NLL over all parameters except those listed in `fixed`
-(each `(index, value)` holds one `θ_packed` entry at `value`).
-"""
+# Re-optimise the Gaussian NLL over all parameters except those listed in `fixed`
+# (each `(index, value)` holds one `theta_packed` entry at `value`).
 function _profile_refit_with_multi_fixed(
     fit::GllvmFit,
     fixed::AbstractVector{Tuple{Int, Float64}},
@@ -269,14 +227,8 @@ function _profile_refit_with_multi_fixed(
     return (-nll_min, true, Optim.minimizer(res))
 end
 
-"""
-    _confirmatory_profile_refit_lambda_pin(
-        fit, y, M_user, profile_i, profile_k, profile_c; require_paste=true, kwargs...
-    ) -> Tuple{Float64,Bool}
-
-One confirmatory grid-point refit (J1 Gaussian). When `require_paste` (default),
-calls `_d3_loading_profile_stage1_require_paste!` before running the optimiser.
-"""
+# One confirmatory grid-point refit (J1 Gaussian). When `require_paste` (default),
+# calls `_d3_loading_profile_stage1_require_paste!` before running the optimiser.
 function _confirmatory_profile_refit_lambda_pin(
     fit::GllvmFit,
     y::AbstractMatrix,
