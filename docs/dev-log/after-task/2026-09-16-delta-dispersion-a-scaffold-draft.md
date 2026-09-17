@@ -4,8 +4,8 @@
 **Date:** 2026-09-16  
 **Lane:** PLATFORM: claude | ON BRANCH: feat/delta-dispersion-a-scaffold-20260916 | LANE: delta-dispersion-a-scaffold  
 **Worktree:** `~/local-scratch/gllvm-delta-disp-a-scaffold-20260916`  
-**Base:** `origin/main` @ `b1c048f2f`  
-**PR:** DRAFT; waits for paste `accept delta dispersion A` (do not mark ready; do not merge)
+**Base:** `origin/main` @ **`83f2e5224`** (rebased 2026-09-17; post-#420 paste packet tip)  
+**PR:** DRAFT [#399](https://github.com/itchyshin/GLLVM.jl/pull/399); waits for paste `accept delta dispersion A` (do not mark ready; do not merge)
 
 ## Rose fence
 
@@ -36,7 +36,8 @@
 
 ```text
 julia --project=. test/test_second_order_delta_followup.jl
-# 34 pass / 1 broken (R live Δ skip without GLLVM_PARITY_TESTS)
+# 2026-09-16: 34 pass / 1 broken (R live Δ skip without GLLVM_PARITY_TESTS)
+# 2026-09-17 post-rebase @ 83f2e5224: 34 pass / 1 broken (same)
 ```
 
 ## Goal
