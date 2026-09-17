@@ -21,8 +21,18 @@ const S4_PUBLIC_PHYLO_DEP_RECORDER_PR = 1283
 const S4_PUBLIC_PHYLO_DEP_RUNNER_REL =
     "tests/testthat/run-destination-b-s4-public-phylo-dep-isolated.R"
 const S4_PUBLIC_PHYLO_DEP_PASTE_EXACT = "S4 probe yes"
+const S4_FROZEN_ORACLE_PIN =
+    "b4d5fee64def88bc768dda1f1f77c29b295edd86"
+const S4_AFTER_TASK_RECEIPT_TEMPLATE_REL =
+    "docs/dev-log/after-task/TEMPLATE-s4-public-phylo-dep-probe-receipt.md"
 
-_s4_probe_fail(message) = throw(ArgumentError("S4 public phylo_dep probe harness: " * message))
+function _s4_probe_fail(message::AbstractString, hint::AbstractString = "")
+    body = "S4 public phylo_dep probe harness: " * message
+    if !isempty(hint)
+        body *= "\n  → " * hint
+    end
+    return throw(ArgumentError(body))
+end
 
 """
     s4_public_phylo_dep_paste_authorized() -> Bool
@@ -40,11 +50,21 @@ end
 Fail closed unless the maintainer paste is present in the environment.
 """
 function s4_public_phylo_dep_require_paste()
-    s4_public_phylo_dep_paste_authorized() ||
-        _s4_probe_fail("refusing probe execution without paste " *
-            repr(S4_PUBLIC_PHYLO_DEP_PASTE_EXACT) *
-            " in ENV[\"GLLVM_S4_PROBE_PASTE\"]")
-    return nothing
+    if s4_public_phylo_dep_paste_authorized()
+        return nothing
+    end
+    got = get(ENV, "GLLVM_S4_PROBE_PASTE", "")
+    if isempty(got)
+        _s4_probe_fail(
+            "refusing probe execution: ENV[\"GLLVM_S4_PROBE_PASTE\"] is unset",
+            "after maintainer paste, export GLLVM_S4_PROBE_PASTE='$(S4_PUBLIC_PHYLO_DEP_PASTE_EXACT)'",
+        )
+    else
+        _s4_probe_fail(
+            "refusing probe execution: paste mismatch (got $(repr(got)))",
+            "exact paste required: $(repr(S4_PUBLIC_PHYLO_DEP_PASTE_EXACT))",
+        )
+    end
 end
 
 function _s4_git_read(cmd::Cmd)
@@ -63,15 +83,68 @@ recorder commit (full or short prefix).
 """
 function s4_public_phylo_dep_verify_recorder_tip(gllvmtmb_root::AbstractString)
     root = abspath(gllvmtmb_root)
-    isdir(root) || _s4_probe_fail("gllvmTMB root is not a directory: $root")
+    isdir(root) ||
+        _s4_probe_fail(
+            "gllvmTMB root is not a directory: $root",
+            "check out gllvmTMB at $(S4_PUBLIC_PHYLO_DEP_RECORDER_COMMIT_SHORT) " *
+            "(branch $(S4_PUBLIC_PHYLO_DEP_RECORDER_BRANCH); PR #$(S4_PUBLIC_PHYLO_DEP_RECORDER_PR))",
+        )
+    git_dir = joinpath(root, ".git")
+    isdir(git_dir) || isfile(git_dir) ||
+        _s4_probe_fail(
+            "gllvmTMB root is not a git checkout: $root",
+            "use a full clone/worktree, not a source tarball",
+        )
     head = _s4_git_read(Cmd(["git", "-C", root, "rev-parse", "HEAD"]))
-    startswith(head, S4_PUBLIC_PHYLO_DEP_RECORDER_COMMIT_SHORT) ||
-        startswith(head, S4_PUBLIC_PHYLO_DEP_RECORDER_COMMIT) ||
-        _s4_probe_fail("gllvmTMB HEAD $(head) is not recorder $(S4_PUBLIC_PHYLO_DEP_RECORDER_COMMIT_SHORT)")
+    if !(startswith(head, S4_PUBLIC_PHYLO_DEP_RECORDER_COMMIT_SHORT) ||
+         startswith(head, S4_PUBLIC_PHYLO_DEP_RECORDER_COMMIT))
+        _s4_probe_fail(
+            "gllvmTMB HEAD $(head) is not recorder $(S4_PUBLIC_PHYLO_DEP_RECORDER_COMMIT_SHORT)",
+            "git -C \"$root\" fetch origin $(S4_PUBLIC_PHYLO_DEP_RECORDER_BRANCH) && " *
+            "git -C \"$root\" checkout $(S4_PUBLIC_PHYLO_DEP_RECORDER_COMMIT_SHORT)",
+        )
+    end
     runner = joinpath(root, S4_PUBLIC_PHYLO_DEP_RUNNER_REL)
     isfile(runner) ||
-        _s4_probe_fail("recorder runner missing at $(S4_PUBLIC_PHYLO_DEP_RUNNER_REL)")
+        _s4_probe_fail(
+            "recorder runner missing at $(S4_PUBLIC_PHYLO_DEP_RUNNER_REL)",
+            "confirm checkout matches gllvmTMB PR #$(S4_PUBLIC_PHYLO_DEP_RECORDER_PR)",
+        )
     return (root = root, head = head, runner = runner)
+end
+
+"""
+    s4_public_phylo_dep_recorder_remote_tip() -> Union{String,Nothing}
+
+Best-effort `git ls-remote` for the pinned recorder branch. Returns tip SHA or
+`nothing` if network/git remote is unavailable (dry-run still proceeds).
+"""
+function s4_public_phylo_dep_recorder_remote_tip()
+    try
+        out = strip(read(
+            Cmd([
+                "git",
+                "ls-remote",
+                "origin",
+                "refs/heads/$(S4_PUBLIC_PHYLO_DEP_RECORDER_BRANCH)",
+            ]),
+            String,
+        ))
+        isempty(out) && return nothing
+        sha = first(split(out))
+        return strip(sha)
+    catch
+        return nothing
+    end
+end
+
+"""
+    s4_public_phylo_dep_after_task_receipt_template(gllvm_root::AbstractString) -> String
+
+Absolute path to the markdown receipt template (for post-probe after-task).
+"""
+function s4_public_phylo_dep_after_task_receipt_template(gllvm_root::AbstractString)
+    return abspath(joinpath(gllvm_root, S4_AFTER_TASK_RECEIPT_TEMPLATE_REL))
 end
 
 """
@@ -121,21 +194,137 @@ function s4_public_phylo_dep_probe_config(;
     julia_env::AbstractString = julia_project,
     receipt_path::AbstractString,
     rscript_executable::AbstractString = "Rscript",
+    dry_run::Bool = false,
 )
     verified = s4_public_phylo_dep_verify_recorder_tip(gllvmtmb_root)
     receipt = abspath(String(receipt_path))
     parent = dirname(receipt)
-    isdir(parent) || mkpath(parent)
-    isdir(parent) || _s4_probe_fail("receipt parent is not creatable: $parent")
-    ispath(receipt) && _s4_probe_fail("refusing to overwrite existing receipt: $receipt")
+    if !isdir(parent)
+        try
+            mkpath(parent)
+        catch err
+            _s4_probe_fail(
+                "receipt parent is not creatable: $parent ($err)",
+                "choose --receipt under a writable directory",
+            )
+        end
+    end
+    isdir(parent) || _s4_probe_fail("receipt parent is not a directory: $parent")
+    if ispath(receipt) && !dry_run
+        _s4_probe_fail(
+            "refusing to overwrite existing receipt: $receipt",
+            "pick a fresh path or archive the prior receipt first",
+        )
+    end
+    julia_proj = _s4_require_project(julia_project)
+    julia_env_path = _s4_require_project(julia_env)
+    julia_exe = _s4_require_executable(julia_executable, "julia_executable")
+    rscript = if dry_run && !isfile(abspath(String(rscript_executable)))
+        # Dry-run may run on hosts without R; probe execution still requires Rscript.
+        abspath(String(rscript_executable))
+    else
+        _s4_require_executable(rscript_executable, "rscript_executable")
+    end
     return S4PublicPhyloDepProbeConfig(
         verified.root,
-        _s4_require_project(julia_project),
-        _s4_require_executable(julia_executable, "julia_executable"),
-        _s4_require_project(julia_env),
+        julia_proj,
+        julia_exe,
+        julia_env_path,
         receipt,
-        _s4_require_executable(rscript_executable, "rscript_executable"),
+        rscript,
     )
+end
+
+"""
+    S4PublicPhyloDepPreflightReport
+
+Checklist fields populated by [`s4_public_phylo_dep_preflight!`](@ref).
+"""
+struct S4PublicPhyloDepPreflightReport
+    gllvmtmb_head::String
+    recorder_remote_tip::Union{String,Nothing}
+    frozen_oracle_pin::String
+    receipt_template::String
+    julia_project::String
+    receipt_path::String
+    dry_run::Bool
+end
+
+"""
+    s4_public_phylo_dep_preflight!(; kwargs..., dry_run=false, gllvm_root=julia_project)
+        -> (cfg=S4PublicPhyloDepProbeConfig, report=S4PublicPhyloDepPreflightReport)
+
+Validate paths and recorder pin. Does not invoke R or RCall. Safe without paste
+when `dry_run=true`.
+"""
+function s4_public_phylo_dep_preflight!(;
+    gllvmtmb_root::AbstractString,
+    julia_project::AbstractString,
+    julia_executable::AbstractString,
+    julia_env::AbstractString = julia_project,
+    receipt_path::AbstractString,
+    rscript_executable::AbstractString = "Rscript",
+    dry_run::Bool = false,
+    gllvm_root::AbstractString = julia_project,
+)
+    cfg = s4_public_phylo_dep_probe_config(;
+        gllvmtmb_root,
+        julia_project,
+        julia_executable,
+        julia_env,
+        receipt_path,
+        rscript_executable,
+        dry_run,
+    )
+    remote = s4_public_phylo_dep_recorder_remote_tip()
+    if remote !== nothing &&
+       !(startswith(remote, S4_PUBLIC_PHYLO_DEP_RECORDER_COMMIT_SHORT) ||
+         startswith(remote, S4_PUBLIC_PHYLO_DEP_RECORDER_COMMIT))
+        _s4_probe_fail(
+            "origin/$(S4_PUBLIC_PHYLO_DEP_RECORDER_BRANCH) tip $(remote) " *
+            "drifted from pinned recorder $(S4_PUBLIC_PHYLO_DEP_RECORDER_COMMIT_SHORT)",
+            "fetch/recheck gllvmTMB PR #$(S4_PUBLIC_PHYLO_DEP_RECORDER_PR) before probing",
+        )
+    end
+    template = s4_public_phylo_dep_after_task_receipt_template(gllvm_root)
+    isfile(template) ||
+        _s4_probe_fail(
+            "after-task receipt template missing: $(S4_AFTER_TASK_RECEIPT_TEMPLATE_REL)",
+            "run from a GLLVM.jl checkout that includes DRAFT #409 harness docs",
+        )
+    head = _s4_git_read(Cmd(["git", "-C", cfg.gllvmtmb_root, "rev-parse", "HEAD"]))
+    report = S4PublicPhyloDepPreflightReport(
+        head,
+        remote,
+        S4_FROZEN_ORACLE_PIN,
+        template,
+        cfg.julia_project,
+        cfg.receipt_path,
+        dry_run,
+    )
+    return (cfg = cfg, report = report)
+end
+
+"""
+    s4_public_phylo_dep_preflight_summary(report::S4PublicPhyloDepPreflightReport) -> String
+"""
+function s4_public_phylo_dep_preflight_summary(report::S4PublicPhyloDepPreflightReport)
+    remote_line = report.recorder_remote_tip === nothing ?
+        "recorder remote tip: (skipped — git ls-remote unavailable)" :
+        "recorder remote tip: $(report.recorder_remote_tip[1:min(end, 12)])… OK"
+    mode = report.dry_run ? "DRY-RUN (no Rscript probe)" : "EXECUTE (requires paste)"
+    return """
+    S4 public phylo_dep preflight — $(mode)
+
+    gllvmTMB HEAD: $(report.gllvmtmb_head[1:min(end, 12)])… (pinned $(S4_PUBLIC_PHYLO_DEP_RECORDER_COMMIT_SHORT))
+    $(remote_line)
+    frozen oracle pin (manual): $(report.frozen_oracle_pin)
+    Julia project: $(report.julia_project)
+    receipt path: $(report.receipt_path)
+    after-task template: $(report.receipt_template)
+
+    Runbook: docs/dev-log/plans/2026-09-16-s4-probe-julia-checklist-paste-gated.md
+    """
 end
 
 """
@@ -190,6 +379,14 @@ function s4_public_phylo_dep_scaffold_usage()
          --julia /path/to/julia \\
          --receipt /tmp/s4-public-phylo-dep-receipt.json
 
-    Without the paste this driver exits without calling R.
+    Preflight (no paste, no R):
+       julia --project=. tools/destination_b/run_s4_public_phylo_dep_probe.jl --dry-run \\
+         --gllvmtmb-root /path/to/gllvmTMB \\
+         --julia-project $(pwd()) \\
+         --julia /path/to/julia \\
+         --receipt /tmp/s4-public-phylo-dep-receipt.json
+
+    Without the paste the driver exits 2 and does not call R.
+    After probe, fill: docs/dev-log/after-task/TEMPLATE-s4-public-phylo-dep-probe-receipt.md
     """
 end

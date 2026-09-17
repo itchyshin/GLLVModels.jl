@@ -40,4 +40,30 @@ include(joinpath(@__DIR__, "..", "tools", "destination_b",
         julia_executable = joinpath(Sys.BINDIR, "julia"),
         receipt_path = joinpath(tempdir(), "s4-probe-harness-test-receipt.json"),
     )
+
+    gllvm_root = abspath(joinpath(@__DIR__, ".."))
+    template = s4_public_phylo_dep_after_task_receipt_template(gllvm_root)
+    @test isfile(template)
+    @test occursin("TEMPLATE", basename(template))
+
+    err = nothing
+    try
+        s4_public_phylo_dep_require_paste()
+    catch e
+        err = e
+    end
+    @test err isa ArgumentError
+    @test occursin("GLLVM_S4_PROBE_PASTE", string(err))
+
+    summary = s4_public_phylo_dep_preflight_summary(S4PublicPhyloDepPreflightReport(
+        "97214679cdeadbeef",
+        "97214679c0000000",
+        S4_FROZEN_ORACLE_PIN,
+        template,
+        gllvm_root,
+        joinpath(tempdir(), "s4-probe-dry-run-receipt.json"),
+        true,
+    ))
+    @test occursin("DRY-RUN", summary)
+    @test occursin(S4_FROZEN_ORACLE_PIN, summary)
 end
