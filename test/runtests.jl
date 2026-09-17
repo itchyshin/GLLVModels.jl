@@ -418,6 +418,7 @@ println(_SHARD === nothing ?
     _RUN_QUALITY && include("test_quality.jl")
     _shard_include("test_loading_profile_stage0.jl")
     _shard_include("test_loading_profile_stage1_harness.jl")
+    _shard_include("test_loading_profile_confirmatory.jl")
     _shard_include("test_derived_ci_surfaces.jl")
     _shard_include("test_extractors.jl")
     _shard_include("test_postfit_tables.jl")
