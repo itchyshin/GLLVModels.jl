@@ -21,12 +21,12 @@
 
 using Test, GLLVModels, Random, LinearAlgebra, SparseArrays, Statistics
 
-const _RESULTS = Bool[]
-const _REASONS = String[]
+const _S7_IDENTITY_RESULTS = Bool[]
+const _S7_IDENTITY_REASONS = String[]
 
-function _check!(ok::Bool, msg::AbstractString)
-    push!(_RESULTS, ok)
-    ok || push!(_REASONS, msg)
+function _s7_check!(ok::Bool, msg::AbstractString)
+    push!(_S7_IDENTITY_RESULTS, ok)
+    ok || push!(_S7_IDENTITY_REASONS, msg)
     @test ok
     return ok
 end
@@ -70,7 +70,7 @@ relerr(a, b) = maximum(abs.(a .- b)) / max(1.0, maximum(abs.(b)))
 # dense reference within rtol 1e-12 at p=200 and p=1000.
 # ---------------------------------------------------------------------------
 function run_loglik_checks()
-    empty!(_RESULTS); empty!(_REASONS)
+    empty!(_S7_IDENTITY_RESULTS); empty!(_S7_IDENTITY_REASONS)
     for p in (200, 1000)
         fx = make_em_fixture(p)
         Λ_B0, σ_eps0, σ_phy0 = warmstart(fx)
@@ -79,11 +79,11 @@ function run_loglik_checks()
         ll_sparse = gaussian_marginal_loglik_sparse_phy(fx.y, Λ_B0, σ_eps0;
             σ_phy = σ_phy0, phy = fx.phy, σ²_phy = 1.0)
         rel = abs(ll_sparse - ll_dense) / abs(ll_dense)
-        _check!(rel <= 1e-12,
+        _s7_check!(rel <= 1e-12,
             "p=$p: sparse-routed loglik check vs dense rel=$rel > 1e-12 " *
             "(dense=$ll_dense, sparse=$ll_sparse)")
     end
-    return all(_RESULTS), copy(_REASONS)
+    return all(_S7_IDENTITY_RESULTS), copy(_S7_IDENTITY_REASONS)
 end
 
 # ---------------------------------------------------------------------------
@@ -94,7 +94,7 @@ end
 # the deduped `node_grad` is exactly 1.
 # ---------------------------------------------------------------------------
 function run_gradient_checks()
-    empty!(_RESULTS); empty!(_REASONS)
+    empty!(_S7_IDENTITY_RESULTS); empty!(_S7_IDENTITY_REASONS)
     Random.seed!(700)
     p = 60; K_B = 2; n = p + 5
     phy = random_balanced_tree(p; branch_length = 0.1)
@@ -118,15 +118,15 @@ function run_gradient_checks()
     g = node_grad(st)
     calls = GLLVModels._node_grad_takahashi_calls()
 
-    _check!(g.dσ_phy == dσ_phy_ref, "node_grad.dσ_phy not bitwise-equal to the two-call reference")
-    _check!(g.dσ²_phy == dσ²phy_ref, "node_grad.dσ²_phy not bitwise-equal to the two-call reference")
-    _check!(g.dσ²_eps == dσ²eps_ref, "node_grad.dσ²_eps not bitwise-equal to the two-call reference")
-    _check!(g.dΛ_B == dΛB_ref, "node_grad.dΛ_B not bitwise-equal to the two-call reference")
-    _check!(calls == 1,
+    _s7_check!(g.dσ_phy == dσ_phy_ref, "node_grad.dσ_phy not bitwise-equal to the two-call reference")
+    _s7_check!(g.dσ²_phy == dσ²phy_ref, "node_grad.dσ²_phy not bitwise-equal to the two-call reference")
+    _s7_check!(g.dσ²_eps == dσ²eps_ref, "node_grad.dσ²_eps not bitwise-equal to the two-call reference")
+    _s7_check!(g.dΛ_B == dΛB_ref, "node_grad.dΛ_B not bitwise-equal to the two-call reference")
+    _s7_check!(calls == 1,
         "node_grad called takahashi_diag(st.chol_Q_eff) $calls time(s); expected exactly 1 " *
         "(S7 item 3: computed once, passed through to both consumers)")
 
-    return all(_RESULTS), copy(_REASONS)
+    return all(_S7_IDENTITY_RESULTS), copy(_S7_IDENTITY_REASONS)
 end
 
 # ---------------------------------------------------------------------------
@@ -136,7 +136,7 @@ end
 # iterations on the p=200 fixture.
 # ---------------------------------------------------------------------------
 function run_estep_checks()
-    empty!(_RESULTS); empty!(_REASONS)
+    empty!(_S7_IDENTITY_RESULTS); empty!(_S7_IDENTITY_REASONS)
     for p in (200, 1000)
         fx = make_em_fixture(p)
         Λ_B0, σ_eps0, σ_phy0 = warmstart(fx)
@@ -144,18 +144,18 @@ function run_estep_checks()
         ss_dense  = GLLVModels._estep_dense(fx.y, Λ_B0, σ_eps0, σ_phy0, fx.Σ_phy)
 
         rel_beta = relerr(ss_sparse.β, ss_dense.β)
-        _check!(rel_beta <= 1e-10, "p=$p: β rel diff $rel_beta > 1e-10")
+        _s7_check!(rel_beta <= 1e-10, "p=$p: β rel diff $rel_beta > 1e-10")
 
         diagVφ_sparse = ss_sparse.Eφ2 .- ss_sparse.μ_φ .^ 2
         diagVφ_dense  = ss_dense.Eφ2 .- ss_dense.μ_φ .^ 2
         rel_dv = relerr(diagVφ_sparse, diagVφ_dense)
-        _check!(rel_dv <= 1e-10, "p=$p: diag(Vφ) rel diff $rel_dv > 1e-10")
+        _s7_check!(rel_dv <= 1e-10, "p=$p: diag(Vφ) rel diff $rel_dv > 1e-10")
 
         rel_muphi = relerr(ss_sparse.μ_φ, ss_dense.μ_φ)
-        _check!(rel_muphi <= 1e-10, "p=$p: μ_φ (conditional mean) rel diff $rel_muphi > 1e-10")
+        _s7_check!(rel_muphi <= 1e-10, "p=$p: μ_φ (conditional mean) rel diff $rel_muphi > 1e-10")
 
         rel_muz = relerr(ss_sparse.μ_z, ss_dense.μ_z)
-        _check!(rel_muz <= 1e-10, "p=$p: μ_z (conditional mean, data scale) rel diff $rel_muz > 1e-10")
+        _s7_check!(rel_muz <= 1e-10, "p=$p: μ_z (conditional mean, data scale) rel diff $rel_muz > 1e-10")
     end
 
     # EM trajectory parity: 50 FORCED iterations (tol=0.0 never declares
@@ -169,7 +169,7 @@ function run_estep_checks()
     emf_dense  = em_fit_phylo(fx.y, 1, fx.Σ_phy; phy = fx.phy, force_dense_estep = true,
                               common_kwargs...)
 
-    _check!(emf_sparse.n_iter == 50 && emf_dense.n_iter == 50,
+    _s7_check!(emf_sparse.n_iter == 50 && emf_dense.n_iter == 50,
         "EM trajectory: expected both paths to run exactly 50 forced iterations " *
         "(sparse ran $(emf_sparse.n_iter), dense ran $(emf_dense.n_iter))")
 
@@ -177,16 +177,16 @@ function run_estep_checks()
     rel_ll_traj = maximum(abs.(emf_sparse.loglik_trace[1:n_common] .-
                                emf_dense.loglik_trace[1:n_common]) ./
                           max.(1.0, abs.(emf_dense.loglik_trace[1:n_common])))
-    _check!(rel_ll_traj <= 1e-10,
+    _s7_check!(rel_ll_traj <= 1e-10,
         "EM trajectory: per-iteration loglik rel diff $rel_ll_traj > 1e-10")
 
     rel_theta = max(relerr(emf_sparse.Λ_B, emf_dense.Λ_B),
                      abs(emf_sparse.σ_eps - emf_dense.σ_eps) / max(1.0, abs(emf_dense.σ_eps)),
                      relerr(emf_sparse.σ_phy, emf_dense.σ_phy))
-    _check!(rel_theta <= 1e-10,
+    _s7_check!(rel_theta <= 1e-10,
         "EM trajectory: final θ (Λ_B, σ_eps, σ_phy) rel diff $rel_theta > 1e-10 after 50 iterations")
 
-    return all(_RESULTS), copy(_REASONS)
+    return all(_S7_IDENTITY_RESULTS), copy(_S7_IDENTITY_REASONS)
 end
 
 # ---------------------------------------------------------------------------
@@ -197,7 +197,7 @@ end
 # S7 items 1-4) sanity-checked to still converge.
 # ---------------------------------------------------------------------------
 function run_monotone_checks()
-    empty!(_RESULTS); empty!(_REASONS)
+    empty!(_S7_IDENTITY_RESULTS); empty!(_S7_IDENTITY_REASONS)
     p = 100
     fx = make_em_fixture(p)
     Λ_B0, σ_eps0, σ_phy0 = warmstart(fx)
@@ -221,23 +221,23 @@ function run_monotone_checks()
     flagged_dense  = inc_dense  < -1e-7
     flagged_sparse = inc_sparse < -1e-7
 
-    _check!(flagged_dense,
+    _s7_check!(flagged_dense,
         "fixture did not construct an actual decrease on the dense check (inc=$inc_dense)")
-    _check!(flagged_sparse == flagged_dense,
+    _s7_check!(flagged_sparse == flagged_dense,
         "sparse monotonicity check flags a DIFFERENT iteration than dense " *
         "(sparse flagged=$flagged_sparse, dense flagged=$flagged_dense)")
     rel_inc = abs(inc_sparse - inc_dense) / max(1.0, abs(inc_dense))
-    _check!(rel_inc <= 1e-8,
+    _s7_check!(rel_inc <= 1e-8,
         "sparse vs dense increment magnitude rel diff $rel_inc > 1e-8 " *
         "(inc_dense=$inc_dense, inc_sparse=$inc_sparse)")
 
     # SQUAREM: untouched by this arc (see docstring above); sanity-run only.
     sq = em_fit_phylo_squarem(fx.y, 1, fx.Σ_phy; max_iter = 20, tol = 1e-8)
-    _check!(isfinite(sq.logLik),
+    _s7_check!(isfinite(sq.logLik),
         "em_fit_phylo_squarem produced a non-finite logLik after this arc's changes " *
         "(it is untouched, so this would indicate an UNRELATED pre-existing issue)")
 
-    return all(_RESULTS), copy(_REASONS)
+    return all(_S7_IDENTITY_RESULTS), copy(_S7_IDENTITY_REASONS)
 end
 
 const _GATES = Dict(
