@@ -405,6 +405,7 @@ println(_SHARD === nothing ?
     _shard_include("test_core070_link_boundaries.jl")
     _shard_include("test_parity_trial_inputs.jl")
     _shard_include("test_em_phylo.jl")
+    _shard_include("test_sparse_phy_identities.jl")
     _shard_include("test_em_squarem.jl")
     _shard_include("test_em_squarem_safety.jl")
     _shard_include("test_relaxed_clock.jl")
