@@ -112,6 +112,33 @@ function fixture_b()
     return Poisson(), [3.0, 4.0, 2.0], ones(3), ones(3, 1), [log(2.0)], W
 end
 
+# fixture D: 4 crossed/nested GroupingTerms with common=true (single trait) —
+# the smallest shape reproducing the multi-source outer-fit regression this
+# arc found and fixed (mirrors the geometry of
+# test/test_destination_b_joint_poisson.jl without needing StableRNGs).
+function fixture_d()
+    Random.seed!(4242)
+    nunit, per_unit = 12, 8
+    n = nunit * per_unit
+    unit = repeat(collect(1:nunit), inner = per_unit)
+    unit_obs = repeat(collect(1:(nunit * 4)), inner = 2)
+    cluster = repeat(collect(1:8), nunit)
+    index = collect(0:(n - 1))
+    cluster2 = mod1.(3 .* index .+ (index .÷ per_unit), 11)
+    terms = [
+        GLLVModels.GroupingTerm(:unit; mode = :indep, common = true),
+        GLLVModels.GroupingTerm(:unit_obs; mode = :indep, common = true),
+        GLLVModels.GroupingTerm(:cluster; mode = :indep, common = true),
+        GLLVModels.GroupingTerm(:cluster2; mode = :indep, common = true),
+    ]
+    U = 0.5 .* randn(nunit); O = 0.4 .* randn(nunit * 4)
+    C = 0.3 .* randn(8); D = 0.25 .* randn(11)
+    eta = [0.8 + U[unit[i]] + O[unit_obs[i]] + C[cluster[i]] + D[cluster2[i]] for i in 1:n]
+    y = [rand(Poisson(exp(e))) for e in eta]
+    Y = reshape(Float64.(y), 1, :)
+    return (; Y, terms, unit, unit_obs, cluster, cluster2)
+end
+
 function run_identity_checks()
     empty!(_RESULTS); empty!(_REASONS)
 
@@ -226,50 +253,74 @@ function run_warm_identity_checks()
     _check!(r_bad.status === :invalid_warm_start,
         "inner: mismatched-length b_init did not fail cleanly (status=$(r_bad.status))")
 
-    # ---- Part B: outer fit identity (fixture A, the Latte 200x5 GLMM —
-    # the ONLY fixture in this file driven by an outer optimiser, so the
-    # only one where "outer iteration count and termination reason
-    # identical" is a meaningful claim). `warm_start_inner=false` is
-    # BYTE-IDENTICAL to the pre-S7c code path (b_init is always `nothing`,
-    # the cache-update block never runs), so "cold == origin/main" is
-    # already proven by G7b.1's own baseline assertions above; this gate
-    # only needs to prove warm == cold. ----
+    # ---- Part B: outer fit identity (fixture A, the Latte 200x5 GLMM, AND
+    # fixture D, a 4-source common=true design — the shape that regressed
+    # during this arc, see below). These are the fixtures in this file
+    # driven by an outer optimiser, so the only ones where "outer iteration
+    # count and termination reason identical" is a meaningful claim.
+    # `warm_start_inner=false` is BYTE-IDENTICAL to the pre-S7c code path
+    # (b_init is always `nothing`, the cache-update block never runs), so
+    # "cold == origin/main" is already proven by G7b.1's own baseline
+    # assertions above; this gate only needs to prove warm == cold, AT THE
+    # FITTER'S OWN DEFAULT inner_tol=1e-8 (no tolerance loosened to make
+    # this hold — see the MECHANISM note below). ----
+    #
+    # MECHANISM (measured while diagnosing a real regression this arc
+    # introduced and then fixed in the same commit series): warm-starting
+    # the ENTIRE outer optimisation — including the FD-gradient/-Hessian
+    # stencils `_grouped_fd_gradient`/`_grouped_fd_hessian` difference, and
+    # the BFGS refinement phase that needs a gradient at every line-search
+    # trial — makes each stencil point's inner Newton solve land on a mode
+    # accurate only to inner_tol (not to full machine precision), and WHICH
+    # inner_tol-scale residual it lands on depends on the arbitrary warm
+    # cache state, not on theta alone. Differencing two such inconsistently-
+    # noisy values and dividing by the small FD step size amplifies that
+    # noise by ~1/h. Measured on a 4-source common=true Poisson fixture
+    # (mirroring test/test_destination_b_joint_poisson.jl / -other_families):
+    # this took the reported FD gradient norm from ~1e-7 (cold) to
+    # ~1e-4-2e-4 (warm-throughout) — enough to flip `fit.converged` under
+    # the 1e-4 g_tol used there. FIX (src/grouped_nongaussian_fit.jl):
+    # warm-starting is confined to the Nelder-Mead VALUE-ONLY search, which
+    # differences nothing and tolerates inner_tol-scale noise; the BFGS
+    # phase and every FD-differenced/reported quantity always use a
+    # `warm_start_inner=false` objective, reproducing origin/main's
+    # numerics there bit-for-bit regardless of what the Nelder-Mead phase
+    # warm-started with.
     Y1, terms, group = fixture_a()
-
-    # At the fitter's own DEFAULT inner_tol=1e-8, Nelder-Mead's outer path is
-    # measurably sensitive to ANY perturbation of the inner solve's last few
-    # bits (a PRE-EXISTING property of this fitter, not introduced by
-    # warm-starting — the informational block below quantifies it).
-    # Tightening inner_tol (already a pre-existing, user-facing keyword of
-    # fit_grouped_nongaussian; not new in this arc) to 1e-10 removes that
-    # noise floor and is where the exact-iteration-count identity is
-    # asserted.
-    identity_inner_tol = 1e-10
     fit_cold = GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms, unit = group,
-        warm_start_inner = false, inner_tol = identity_inner_tol)
+        warm_start_inner = false)
     fit_warm = GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms, unit = group,
-        warm_start_inner = true, inner_tol = identity_inner_tol)
+        warm_start_inner = true)
     _check!(fit_cold.converged == fit_warm.converged, "fixture A: converged mismatch (cold vs warm)")
     _check!(fit_cold.iterations == fit_warm.iterations,
-        "fixture A: outer iteration count differs (cold=$(fit_cold.iterations), warm=$(fit_warm.iterations)) " *
-        "at inner_tol=$identity_inner_tol")
+        "fixture A: outer iteration count differs (cold=$(fit_cold.iterations), warm=$(fit_warm.iterations))")
     _check!(fit_cold.stopping_reason == fit_warm.stopping_reason,
         "fixture A: stopping reason differs (cold=$(fit_cold.stopping_reason), warm=$(fit_warm.stopping_reason))")
     _check!(isapprox(fit_warm.loglik, fit_cold.loglik; rtol = 1e-8),
         "fixture A: warm loglik not within rtol 1e-8 of cold ($(fit_warm.loglik) vs $(fit_cold.loglik))")
     _check!(isapprox(fit_warm.parameters, fit_cold.parameters; rtol = 1e-8),
         "fixture A: warm parameters not within rtol 1e-8 of cold")
+    @info "S7c G7c.1: fixture A cold vs warm at the DEFAULT inner_tol=1e-8" cold_iters=fit_cold.iterations warm_iters=fit_warm.iterations rel_ll=(abs(fit_warm.loglik - fit_cold.loglik) / abs(fit_cold.loglik)) rel_par=(maximum(abs.(fit_warm.parameters .- fit_cold.parameters)) / maximum(abs.(fit_cold.parameters)))
 
-    # Informational only (NOT gated): quantifies the default-inner_tol
-    # sensitivity named above, surfaced for the orchestrator rather than
-    # silently hidden. Both paths still converge to the same loglik to
-    # ~1e-13 relative; only the outer iteration COUNT and the last few
-    # significant digits of the parameters can differ at the loose default.
-    fit_cold_def = GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms, unit = group,
-        warm_start_inner = false)
-    fit_warm_def = GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms, unit = group,
-        warm_start_inner = true)
-    @info "S7c G7c.1: default inner_tol=1e-8 outer-path sensitivity (informational, not gated)" cold_iters=fit_cold_def.iterations warm_iters=fit_warm_def.iterations same_iters=(fit_cold_def.iterations == fit_warm_def.iterations) rel_ll=(abs(fit_warm_def.loglik - fit_cold_def.loglik) / abs(fit_cold_def.loglik)) rel_par=(maximum(abs.(fit_warm_def.parameters .- fit_cold_def.parameters)) / maximum(abs.(fit_cold_def.parameters)))
+    # ---- fixture D: 4-source common=true design (the shape that exposed
+    # the mechanism above) — same identity, on the harder fixture. ----
+    fx_d = fixture_d()
+    fitd_cold = GLLVModels.fit_gllvm(fx_d.Y; family = Poisson(), grouping = fx_d.terms,
+        unit = fx_d.unit, unit_obs = fx_d.unit_obs, cluster = fx_d.cluster,
+        cluster2 = fx_d.cluster2, g_tol = 1e-4, iterations = 250, warm_start_inner = false)
+    fitd_warm = GLLVModels.fit_gllvm(fx_d.Y; family = Poisson(), grouping = fx_d.terms,
+        unit = fx_d.unit, unit_obs = fx_d.unit_obs, cluster = fx_d.cluster,
+        cluster2 = fx_d.cluster2, g_tol = 1e-4, iterations = 250, warm_start_inner = true)
+    _check!(fitd_cold.converged, "fixture D: cold did not converge (gradient_norm=$(fitd_cold.gradient_norm))")
+    _check!(fitd_warm.converged, "fixture D: warm did not converge (gradient_norm=$(fitd_warm.gradient_norm)) " *
+                                  "-- this is exactly the regression this commit series fixed")
+    _check!(fitd_cold.iterations == fitd_warm.iterations,
+        "fixture D: outer iteration count differs (cold=$(fitd_cold.iterations), warm=$(fitd_warm.iterations))")
+    _check!(fitd_cold.stopping_reason == fitd_warm.stopping_reason,
+        "fixture D: stopping reason differs (cold=$(fitd_cold.stopping_reason), warm=$(fitd_warm.stopping_reason))")
+    _check!(isapprox(fitd_warm.loglik, fitd_cold.loglik; rtol = 1e-8), "fixture D: loglik mismatch")
+    _check!(isapprox(fitd_warm.parameters, fitd_cold.parameters; rtol = 1e-8), "fixture D: parameters mismatch")
+    @info "S7c G7c.1: fixture D (4-source common=true) cold vs warm" cold_gnorm=fitd_cold.gradient_norm warm_gnorm=fitd_warm.gradient_norm cold_iters=fitd_cold.iterations warm_iters=fitd_warm.iterations
 
     return all(_RESULTS), copy(_REASONS)
 end
