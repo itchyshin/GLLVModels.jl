@@ -347,10 +347,37 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
         all(x -> x isa Real && isfinite(x), start) || throw(ArgumentError("start must be finite and real"))
         Float64.(start)
     end
-    objective = _grouped_nongaussian_objective(data, trials, D, termvec, incidences, kind;
+    # S7c: warm-starting is confined to the Nelder-Mead VALUE-ONLY search
+    # below. FD-gradient/-Hessian differencing (`_grouped_fd_gradient`/
+    # `_grouped_fd_hessian`) needs the objective to vary SMOOTHLY and
+    # CONSISTENTLY between the +h/-h stencil points it differences — cached
+    # warm starts break that: which mode a stencil point's inner Newton
+    # solve lands on (to within inner_tol, not to full machine precision)
+    # depends on the arbitrary cache state left by whichever theta was
+    # evaluated most recently, so the tiny (~inner_tol-scale) residual
+    # noise floor is INCONSISTENT across nearby stencil points instead of
+    # both referencing the same b=0 start — and dividing that inconsistent
+    # noise by the small FD step size amplifies it by ~1/h. MEASURED: on a
+    # 4-source common=true Destination B fixture (test/test_destination_b_
+    # joint_other_families.jl) this took the fitter's own FD gradient norm
+    # from ~1e-7 (cold) to ~1e-4-2e-4 (warm-throughout) — enough to flip
+    # `converged` under the 1e-4 g_tol. So `objective_cold` (always cold,
+    # `warm_start_inner=false`) is used for every FD-differenced quantity
+    # and for BFGS refinement (which needs a gradient at every line-search
+    # trial), reproducing origin/main's numerics there exactly;
+    # `objective_warm` (the caller's actual `warm_start_inner`) is used
+    # ONLY for the plain value-only Nelder-Mead search, which does not
+    # difference nearby evaluations and tolerates inner_tol-scale noise.
+    objective_cold = _grouped_nongaussian_objective(data, trials, D, termvec, incidences, kind;
         dispersion_mode=mode, inner_maxiter=Int(inner_maxiter), inner_tol=Float64(inner_tol),
-        warm_start_inner=warm_start_inner)
-    initial_value = objective(theta)
+        warm_start_inner=false)
+    objective_warm = warm_start_inner ?
+        _grouped_nongaussian_objective(data, trials, D, termvec, incidences, kind;
+            dispersion_mode=mode, inner_maxiter=Int(inner_maxiter), inner_tol=Float64(inner_tol),
+            warm_start_inner=true) :
+        objective_cold
+    objective = objective_cold   # used below for the final, reported diagnostics
+    initial_value = objective_cold(theta)
     isfinite(initial_value) && !_nll_failed(initial_value) ||
         throw(ArgumentError("start produces an invalid grouped Laplace objective"))
     # The joint Laplace domain can invalidate a finite-difference neighbour.
@@ -358,27 +385,27 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
     # a line-search method would turn a rejected stencil into an Optim error.
     # Use a value-only outer search, then require a valid FD gradient/Hessian
     # for convergence and observed-marginal inference below.
-    result = Optim.optimize(objective, theta, Optim.NelderMead(),
+    result = Optim.optimize(objective_warm, theta, Optim.NelderMead(),
         Optim.Options(g_tol=Float64(g_tol), iterations=Int(iterations)))
     # A valid simplex endpoint can still be non-stationary because Nelder-Mead
     # stops on objective/simplex geometry, not this fitter's FD gradient norm.
     # Refine only when every initial BFGS stencil is valid. Invalid stencils
     # retain the value-only result and cannot be smuggled into a line search.
     candidate = collect(Optim.minimizer(result))
-    candidate_gradient = _grouped_fd_gradient(objective, candidate)
+    candidate_gradient = _grouped_fd_gradient(objective_cold, candidate)
     if all(isfinite, candidate_gradient)
-        gradient! = (storage, value) -> (storage .= _grouped_fd_gradient(objective, value))
+        gradient! = (storage, value) -> (storage .= _grouped_fd_gradient(objective_cold, value))
         refined = try
-            Optim.optimize(objective, gradient!, candidate, Optim.BFGS(),
+            Optim.optimize(objective_cold, gradient!, candidate, Optim.BFGS(),
                 Optim.Options(g_tol=Float64(g_tol), iterations=Int(iterations)))
         catch
             nothing
         end
         if refined !== nothing
             refined_estimate = collect(Optim.minimizer(refined))
-            refined_value = objective(refined_estimate)
+            refined_value = objective_cold(refined_estimate)
             if isfinite(refined_value) && !_nll_failed(refined_value) &&
-                    refined_value <= objective(candidate)
+                    refined_value <= objective_cold(candidate)
                 result = refined
             end
         end
