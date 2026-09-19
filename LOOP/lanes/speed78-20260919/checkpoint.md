@@ -4,16 +4,13 @@ GOAL: see GOAL.md. Order per arcs.md, most recent first: Shinichi reviewed
 S7b's outcome 2026-09-19 09:36 and re-set the order to S7 -> S7c -> S6 (S7c
 is new: warm-started inner Laplace fits across the outer FD evaluations,
 written up in arcs.md, gated leaf-S7c, dispatched after S7).
-STATE: arc S4 DONE (tables below). Arc S7b DONE: CHOLMOD symbolic-reuse
-landed in the grouped Laplace kernel, verified by a new identity test and a
-before/after bench measurement. G7b.1 PASS, G7b.2 PASS; G7b.3 full
-`Pkg.test()` run TWICE in the background (commits e7ca4ff49 then, after a
-DelimitedFiles dependency fix, e9c5fa16d) -- see "S7b gates" below for the
-result and the one pre-existing, unrelated, order-dependent test failure it
-surfaced (test_em_louis.jl, verified NOT caused by this arc).
-NEXT: S7 (sparse-phylo/EM hoists, per Shinichi's re-set order) -- see NEXT
-below for the concrete targets
-S4's profile ranked.
+STATE: arc S4 DONE (tables below). Arc S7b DONE (see "S7b gates" below).
+Arc S7 DONE (items 1/2/3/4 all landed; see "S7: sparse-phylo/EM hoists"
+below) modulo G7.5's full `Pkg.test()`, which was still running at the time
+this checkpoint was written -- see that section for the exact status,
+evidence gathered so far, and how to finish verifying it.
+NEXT: S7c (warm-started inner Laplace fits across outer FD evaluations),
+then S6 -- see "NEXT" at the end of this file.
 
 ## Table 1 -- per-site Poisson Laplace gradient (bench/profile_laplace_allocs.jl; n=500,K=2)
 | p  | iters | value_ms | grad_wall_ms | hoist_ms | forwarddiff_ms | dual_MB | gap vs decomposed |
@@ -168,19 +165,94 @@ arc. Full-suite log: `/tmp/full_pkg_test_s7b.log` (outside the repo,
 ephemeral). Ledger: `.unlazy/julia-speed-20260919/gates/leaf-S7b.md`
 (git-ignored).
 
-## NEXT: S7 (sparse-phylo/EM hoists)
-Per arcs.md and S4's Table 3 (p^2.4 ambiguous, near p^3): the ranked targets
-are (1) `gaussian_marginal_loglik`'s J3 phylogenetic path
-(src/likelihood.jl:212-244) forms a dense p x p Cholesky TWICE every
-`em_fit_phylo` iteration for the monotonicity check, regardless of which
-E-step runs; (2) `_estep_sparse` (src/em_phylo.jl:399-403) hides a THIRD
-dense p x p Cholesky, used only to get the K_B x K_B `ImβΛ` term -- a
-Woodbury/low-rank replacement avoids ever forming that dense p x p `A`;
-(3) `takahashi_diag` and the `X_G = chol_Q_eff \ G` solve inside
-`_estep_sparse` could plausibly be hoisted to once per fit rather than once
-per E-step call if `chol_Q_eff`'s pattern is also fit-invariant (unverified
--- check before assuming: this arc's own S7b experience is a caution that a
-plausible-looking symbolic-reuse win does not automatically move the wall
-the way expected -- measure the per-component wall share BEFORE committing
-to a fix, exactly as S4/S7b did here). Write leaf-S7's gates before touching
-src/, tests first, identities against origin/main 69a69b0a0.
+## S7: sparse-phylo/EM hoists -- DONE (items 1/2/3/4 all landed)
+
+All four ranked items from leaf-S7.md landed, in order, each an identity
+against origin/main 69a69b0a0, tests first (test/test_sparse_phy_identities.jl,
+gates G7.1-G7.4).
+
+- **item 1** (`_estep_sparse`'s hidden dense p x p Cholesky, src/em_phylo.jl):
+  replaced by the Woodbury/capacitance factorisation already built on the
+  solver (`LowRankPlusDiagChol`, reusing `s.d_total`/`s.Λ_B`/`s.chol_cap` --
+  no new factorisation). `X_G = chol_Q_eff \ G` is now stored once on
+  `AnBSparseSolver` (built inside `build_AnB_sparse`) instead of being
+  recomputed in `_estep_sparse`; the former p-fold loop of individual
+  K_B x K_B solves for `diag(Vφ)` is one multi-RHS solve of `chol_S_K`.
+- **item 2** (the per-iteration monotonicity check, `em_fit_phylo`): now
+  routes through `gaussian_marginal_loglik_sparse_phy` (O(p)) instead of the
+  dense J3 path's two p x p Choleskys, whenever the sparse E-step is
+  selected. SQUAREM (`em_squarem.jl`) untouched -- grep-verified, it
+  exclusively calls `_estep_dense`.
+- **item 3** (`node_grad`'s double `takahashi_diag` call, src/node_gradient.jl):
+  computed once, passed through to both `node_dσ_phy` and `node_scalar_grads`
+  (via `_same_leaf_Msad_inv_diag`). Call-count counter
+  (`_node_grad_takahashi_calls[_reset!]`) added so G7.2 can assert exactly 1
+  call per `node_grad` invocation (was 2, un-instrumented, on origin/main).
+- **item 4** (per-fit CHOLMOD symbolic-analysis reuse for `chol_Q_eff`):
+  MEASURED first per the ledger's explicit gate -- a throwaway before/after
+  timing on the p=1000 fixture found the symbolic-analysis share of one
+  `cholesky(Symmetric(Q_eff))` factorisation is **~70%**, well above the 10%
+  land/abandon threshold (contrast S7b's grouped-Laplace measurement, which
+  found a *small* symbolic share on that kernel's pattern -- the "measure,
+  don't assume" lesson cuts both ways). Landed: `_em_phylo_cached_cholesky!`
+  (mirrors S7b's `_grouped_chol_stats!` exactly: pattern-checked, falls back
+  to fresh + counted on mismatch) reuses the factorisation via `cholesky!`
+  across the EM iterations of one `em_fit_phylo` call, since `Q_eff`'s
+  sparsity pattern depends only on the tree topology and K_B (both fixed for
+  the fit) -- only the diagonal values change per M-step. Verified on a real
+  30-iteration fit: `(calls=30, fresh=1, reused=29, fallback=0)`.
+
+### Per-iteration wall, before -> after (bench/profile_em_phylo_scaling.jl)
+| p | loglik_check_ms | estep_ms | driver_ms_per_iter (before) | driver_ms_per_iter (after) |
+|---|---|---|---|---|
+| 200 | 1.3 -> 0.5 | 0.7 -> 0.3 | 3.4 | 3.5 |
+| 1000 | 35 -> 2.1 | 14.5 -> 1.1 | 83 | 3.2 |
+| 5000 | 2517 -> 13.1 | 1114 -> 5.8 | 8235 | 17.9 |
+
+**Fitted scaling exponent: 2.42 -> 0.51** (EM_SCALING p^1 band; was p^2.4,
+close to p^3). The class-change deliverable is met and exceeded -- driver
+wall is now roughly FLAT across two orders of magnitude in p (17.9ms at
+p=5000 vs 3.5ms at p=200), because every per-iteration O(p^3) term (the two
+dense Choleskys in the loglik check, the third inside `_estep_sparse`) is
+gone; what remains is the O(p) sparse-precision machinery plus small
+K_B x K_B dense work.
+
+**Two bench-script measurement artifacts found and fixed while landing
+this** (bench/profile_em_phylo_scaling.jl, both git-diffable in the S7 bench
+commit): (a) the standalone `loglik_ms` component measurement called the
+dense J3 path unconditionally, no longer matching what the driver does
+post-item-2 -- fixed to call the same sparse-routed function; (b) the driver
+measurement re-ran `ppca_init`'s O(p^3) dense eigendecomposition of the p x p
+sample covariance INSIDE the timed region on every cell -- invisible pre-fix
+(swamped by the O(p^3) per-iteration cost this arc removes) but, once that
+cost dropped, this one-time warm-start cost (tens of seconds at p=5000)
+completely dominated the reported "per-iteration" number when amortised
+over only `EM_ITERS_CAP=5` iterations. Fixed by passing the already-computed
+warm start (`λ_init`/`σ_eps_init`/`σ_phy_init`) into both the warm-up and
+timed `em_fit_phylo` calls.
+
+### S7 gates
+- G7.1 PASS: `env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. test/test_sparse_phy_identities.jl --gate loglik` -> `GATE G7.1 PASS` (2/2 checks, p=200/1000, rtol 1e-12).
+- G7.2 PASS: `... --gate gradient` -> `GATE G7.2 PASS` (5/5: bitwise-equal to the from-scratch two-call reference on dΛ_B/dσ²_eps/dσ²_phy/dσ_phy, plus the call-count == 1 assertion).
+- G7.3 PASS: `... --gate estep` -> `GATE G7.3 PASS` (11/11: β/diag(Vφ)/μ_φ/μ_z at rtol 1e-10, p=200/1000; 50-iteration EM trajectory -- per-iteration loglik and final θ -- at rtol 1e-10 vs the dense-estep driver).
+- G7.4 PASS: `... --gate monotone` -> `GATE G7.4 PASS` (4/4: a constructed fixture forces a genuine decrease; the sparse-routed check flags it at the same point as dense, to rtol 1e-8; SQUAREM sanity-run, unaffected by construction).
+- G7.5: bench portion PASS -- `env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. bench/profile_em_phylo_scaling.jl --gate after --p 200,1000,5000` -> `GATE G7.5 PASS`, TSV `bench/results/em_phylo_after_1f4ae6632.tsv` (git-ignored; SHA is the pre-S7 HEAD the bench script stamped, before the S7 commits below).
+  Full-suite portion **PENDING at the time this checkpoint was written**: `env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. -e 'using Pkg; Pkg.test()'` was launched in the background (log `/tmp/full_pkg_test_s7.log`, outside the repo) and was STILL RUNNING after 1h30m+ wall clock -- confirmed actively consuming CPU throughout (not hung; `ps` showed the test child process, pid varies per relaunch, steadily accumulating CPU time), under genuine three-way shared-machine contention (the DRM.jl-speed6 sibling lane was also running its own full `Pkg.test()` concurrently; `uptime` showed load average ~12-15 on a 20-core Mac Studio). This far overran the ledger's ~25 min estimate for this one run; per D-139 ("a run that overruns its estimate stops and re-reports"), reporting now rather than continuing to block indefinitely.
+  **Strong partial evidence in its place**: all seven directly-relevant test files were run STANDALONE (not via the ordered full suite, but exercising every function this arc touched) and passed with ZERO failures: `test_node_gradient.jl` 58/58, `test_em_phylo.jl` 27/27, `test_sparse_phy.jl` 43/44 (1 pre-existing `@test_broken`), `test_sparse_phy_grad.jl` 101/101, `test_em_squarem.jl` 27/27, `test_em_squarem_safety.jl` skipped (needs `GLLVM_SLOW_TESTS=1`, expected), `test_em_louis.jl` 147/147 (standalone -- confirms S7b's finding that its one known full-suite failure is order-dependent, not present in isolation, and NOT reintroduced by this arc).
+  **Next session: re-check `/tmp/full_pkg_test_s7.log`** (or re-run `Pkg.test()` if that file/process no longer exists) for the final "Testing GLLVModels tests passed" line and any failures before treating S7's Definition of Done as fully closed; if the only failure is the pre-existing `test_em_louis.jl:127` order-dependent flake (rel 0.001056 vs 0.001, documented in the S7b section above), that is not this arc's regression.
+
+## TRUTH LIVES IN
+Branch `claude/lane-speed78-20260919` in this worktree (unpushed). S7 commits,
+in order: `1f472cab7` (em_phylo.jl: items 1/2/4), `5369d5ae9` (node_gradient.jl:
+item 3), `4d3508c5d` (test/test_sparse_phy_identities.jl + runtests.jl wiring),
+`cfdaf7477` (bench/profile_em_phylo_scaling.jl: --gate after mode + the two
+measurement-artifact fixes). TSV: `bench/results/em_phylo_after_1f4ae6632.tsv`
+(git-ignored). Full-suite log: `/tmp/full_pkg_test_s7.log` (outside the repo,
+ephemeral, PENDING as of this writing -- see G7.5 above). Ledger:
+`.unlazy/julia-speed-20260919/gates/leaf-S7.md` (git-ignored).
+
+## NEXT: S7c (warm-started inner Laplace fits across outer FD evaluations)
+Per Shinichi's re-set order (2026-09-19 09:36): S7c is dispatched after S7.
+Write leaf-S7c's gates before touching src/, per arcs.md's S7c writeup.
+Confirm G7.5's full-suite result first (see above) before starting. Then S6
+(per-site changes S4's profile ranked, still open from before the re-set).
