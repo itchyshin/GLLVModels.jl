@@ -180,9 +180,9 @@ route-specific documentation before relying on a workflow beyond this page.
 
 R `gllvmTMB` remains the richer formula-first model surface and applied article
 set. GLLVModels.jl is the Julia companion: matrix-first today, with a partial
-`engine = "julia"` bridge — **ledger closure ≠ true parity** (see
-[Capability parity](gllvmtmb-parity.md)). Interval coverage campaigns on the
-Julia side are diagnostic evidence, not calibrated inference certificates.
+`engine = "julia"` bridge. The packages overlap only for the documented
+workflows; check [Capability parity](gllvmtmb-parity.md) before moving a model
+between them. Interval coverage has not been established for every workflow.
 See [Comparison vs gllvmTMB](comparison.md) and [Benchmarks](benchmarks.md) for
 the validated shared-residual Gaussian closed-form benchmark grid. Those
 speed results do not generalise to non-Gaussian fits or establish speed for the

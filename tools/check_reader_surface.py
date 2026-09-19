@@ -25,6 +25,14 @@ RULES = (
             re.IGNORECASE,
         ),
     ),
+    (
+        "internal-validation-language",
+        re.compile(
+            r"\b(?:capability\s+ledger|catch-?up\s+scoreboard|optimizer-health|"
+            r"scalar-density\s+(?:bug|problem)|parity\s+fixture)\b",
+            re.IGNORECASE,
+        ),
+    ),
 )
 
 

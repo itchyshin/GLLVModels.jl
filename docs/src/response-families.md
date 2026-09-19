@@ -245,11 +245,9 @@ With shared site covariates (`@formula` / bridge `X`), the default is
 negative binomial collapses to Poisson. For a single shared `r` across species,
 call [`fit_nb_gllvm`](@ref) (no-X) or [`fit_gllvm_cov`](@ref) (with X).
 
-The original NB2 parity fixture currently fails the stricter likelihood and
-fit-health checks: its Julia convergence flag accompanies an unstable numerical
-gradient. A scalar-density precision problem at large size has been identified
-and is awaiting a tested repair. Do not infer verified parity or parameter
-recovery from the convergence flag alone.
+The NB2 route is still experimental for demanding fits. A convergence message
+alone is not enough to establish reliable estimates: inspect the fit and use
+the documented Gaussian routes when you need the established teaching path.
 
 ### Negative binomial type-1 — `NB1()`
 
@@ -502,9 +500,9 @@ count-vector law). GLLVModels.jl deliberately excludes `Multinomial` from its
 that does `using GLLVModels, Distributions` the bare name `Multinomial` is
 undefined rather than resolving to either one. Always write
 `GLLVModels.Multinomial()` (and `Distributions.Multinomial(...)` for the count
-law). Because v1 has no latent variables, `Multinomial` is **not a completed
-capability in the same sense as the families above**: its row in the
-capability ledger is deliberately `missing`, not "available".
+law). Because v1 has no latent variables, `Multinomial` is not yet a complete
+workflow in the same sense as the families above. Treat it as a narrow model
+form rather than a general latent-variable analysis.
 
 ### Gamma — `Gamma()`
 
@@ -720,8 +718,8 @@ Student-t is a **no-X** surface: `fit_gllvm` and `gllvm(@formula(y ~ 1), …)` a
 admitted. Shared and per-species dispersion are supported; this does not
 establish arbitrary dispersion-group, covariate or row-effect support. The fit
 records `estimated_nu`, so AIC counts free degrees-of-freedom parameters only
-when they were estimated. See [Student-t parity limits](studentt-parity.md):
-the original required R fixture still fails its optimizer-health gate.
+when they were estimated. See [Student-t parity limits](studentt-parity.md) for
+the current boundary: the full R comparison is not yet established.
 
 ### Conway–Maxwell–Poisson — `COMPoisson()`
 

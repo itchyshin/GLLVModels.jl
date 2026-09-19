@@ -31,8 +31,8 @@ Those limits belong to the R package. Calling Julia does not lift them.
 
 Start in Julia when you already have a response matrix and want the
 matrix-first companion. Responses are rows and sites are columns
-(p × n). Parity is partial: some families and extractors are admitted,
-and ledger closure is not true parity.
+(p × n). The packages overlap only for the documented workflows; check
+[Capability parity](gllvmtmb-parity.md) before moving a model between them.
 
 ### Move one R matrix into Julia
 
@@ -44,7 +44,7 @@ and ledger closure is not true parity.
    table there to translate the model you need.
 
 - First fit and the R ⟷ Julia conversion table: [Quick start](quickstart.md)
-- Live catch-up scoreboard: [Capability parity](gllvmtmb-parity.md)
+- Documented R–Julia capability comparison: [Capability parity](gllvmtmb-parity.md)
 
 ## Use the bridge (one-way R → Julia only)
 
@@ -62,6 +62,5 @@ structures explicitly rather than silently changing the model.
 
 - Universal parity, or that every R workflow has an identical Julia counterpart.
 - Calibrated interval coverage on either side.
-- R-site navigation, which is maintained separately.
 
 For planned capability work, see the package [Roadmap](roadmap.md).

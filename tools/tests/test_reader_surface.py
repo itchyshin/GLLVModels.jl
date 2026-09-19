@@ -49,6 +49,16 @@ class ReaderSurfaceTests(unittest.TestCase):
 
             self.assertEqual(reader_surface.scan(root), [])
 
+    def test_reports_internal_validation_language(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write_doc(root, "guide.md", "The capability ledger is green.\n")
+
+            findings = reader_surface.scan(root)
+
+            self.assertEqual(len(findings), 1)
+            self.assertEqual(findings[0].rule, "internal-validation-language")
+
 
 if __name__ == "__main__":
     unittest.main()
