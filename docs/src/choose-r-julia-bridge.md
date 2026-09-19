@@ -31,8 +31,8 @@ Those limits belong to the R package. Calling Julia does not lift them.
 
 Start in Julia when you already have a response matrix and want the
 matrix-first companion. Responses are rows and sites are columns
-(p × n). The packages overlap only for the documented workflows; check
-[Capability parity](gllvmtmb-parity.md) before moving a model between them.
+(p × n). The packages overlap only for the workflows listed in
+[Capability parity](gllvmtmb-parity.md); do not assume a model transfers unchanged.
 
 ### Move one R matrix into Julia
 
@@ -44,7 +44,7 @@ matrix-first companion. Responses are rows and sites are columns
    table there to translate the model you need.
 
 - First fit and the R ⟷ Julia conversion table: [Quick start](quickstart.md)
-- Documented R–Julia capability comparison: [Capability parity](gllvmtmb-parity.md)
+- [Documented R–Julia capability comparison](gllvmtmb-parity.md)
 
 ## Use the bridge (one-way R → Julia only)
 
