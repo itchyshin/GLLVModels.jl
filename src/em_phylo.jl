@@ -75,6 +75,63 @@ using ForwardDiff
 # the rank-K_B Woodbury coupling, cap = I + Λ_B' D⁻¹ Λ_B. This returns the
 # ancestral-state BLUP machinery without ever forming the dense Σ_phy.
 
+# ---------------------------------------------------------------------------
+# CHOLMOD symbolic-reuse for `chol_Q_eff` across the EM iterations of ONE
+# `em_fit_phylo` call (S7 item 4 — measured, not assumed: a throwaway
+# before/after timing on the p=1000 fixture found CHOLMOD's symbolic analysis
+# (AMD ordering + elimination tree) is ~70% of one fresh
+# `cholesky(Symmetric(Q_eff))` factorisation, well above the ledger's 10%
+# land/abandon threshold). `Q_eff`'s sparsity PATTERN depends only on the
+# tree topology and K_B, both fixed for the lifetime of an EM fit — only the
+# diagonal VALUES change as σ_phy / σ_eps update each M-step — so the
+# symbolic step is redundant on every iteration after the first.
+#
+# Mirrors `_grouped_cached_cholesky!` (src/grouped_laplace.jl, S7b) exactly:
+# pattern-checked on every call, falls back to a fresh factorisation (counted)
+# if the pattern ever differs, never silently misfactorizes. Scope is ONE
+# `chol_cache::Base.RefValue` per caller (`em_fit_phylo` builds one before its
+# loop and threads it through every `_estep_sparse` call for that fit;
+# `blup_phylo_sparse` and other one-shot callers pass `chol_cache = nothing`
+# and get the old fresh-every-call behaviour).
+mutable struct _EMPhyloCholStats
+    calls::Int      # _em_phylo_cached_cholesky! invocations counted
+    fresh::Int      # fresh cholesky(...) symbolic+numeric factorizations
+    reused::Int     # cholesky!(...) numeric-only refactorizations (cache hit)
+    fallback::Int   # a cached factor existed but its sparsity pattern changed
+end
+
+const _EM_PHYLO_CHOL_STATS = _EMPhyloCholStats(0, 0, 0, 0)
+
+_em_phylo_chol_stats_reset!() = begin
+    _EM_PHYLO_CHOL_STATS.calls = 0
+    _EM_PHYLO_CHOL_STATS.fresh = 0
+    _EM_PHYLO_CHOL_STATS.reused = 0
+    _EM_PHYLO_CHOL_STATS.fallback = 0
+    nothing
+end
+
+_em_phylo_chol_stats() = (calls = _EM_PHYLO_CHOL_STATS.calls, fresh = _EM_PHYLO_CHOL_STATS.fresh,
+    reused = _EM_PHYLO_CHOL_STATS.reused, fallback = _EM_PHYLO_CHOL_STATS.fallback)
+
+function _em_phylo_cached_cholesky!(cache::Base.RefValue,
+        A::Symmetric{Float64, <:SparseMatrixCSC{Float64, Int}})
+    _EM_PHYLO_CHOL_STATS.calls += 1
+    S = parent(A)
+    cached = cache[]
+    if cached !== nothing
+        factor, rowval, colptr = cached
+        if size(factor) == size(S) && rowval == S.rowval && colptr == S.colptr
+            _EM_PHYLO_CHOL_STATS.reused += 1
+            return cholesky!(factor, A)
+        end
+        _EM_PHYLO_CHOL_STATS.fallback += 1
+    end
+    factor = cholesky(A)
+    _EM_PHYLO_CHOL_STATS.fresh += 1
+    cache[] = (factor, copy(S.rowval), copy(S.colptr))
+    return factor
+end
+
 """
     AnBSparseSolver
 
@@ -100,18 +157,26 @@ struct AnBSparseSolver
     chol_S_K::Cholesky{Float64,Matrix{Float64}}
     σ_phy::Vector{Float64}
     α::Float64
+    X_G::Matrix{Float64}   # chol_Q_eff \ G, stored once per factor (S7 item 1:
+                            # `_estep_sparse` used to recompute this)
 end
 
 """
-    build_AnB_sparse(Λ_B, σ_eps, σ_phy, phy, n; σ²_phy=1.0) -> AnBSparseSolver
+    build_AnB_sparse(Λ_B, σ_eps, σ_phy, phy, n; σ²_phy=1.0, chol_cache=nothing) -> AnBSparseSolver
 
 Factorise the augmented-state representation of `(A + n B)` for the
 phylo_unique model. `phy::AugmentedPhy` supplies the sparse Σ_phy precision;
 `σ²_phy` scales it (Σ_phy = σ²_phy · S Q_cond⁻¹ S').
+
+`chol_cache`, when a `Base.RefValue` (see `_em_phylo_cached_cholesky!` above),
+lets `chol_Q_eff` reuse a prior call's CHOLMOD symbolic analysis when the
+sparsity pattern is unchanged (S7 item 4) — pass the SAME `Ref` across the
+EM iterations of one fit. `nothing` (default) always factorises fresh.
 """
 function build_AnB_sparse(Λ_B::AbstractMatrix, σ_eps::Real,
                           σ_phy::AbstractVector, phy::GLLVModels.AugmentedPhy,
-                          n::Integer; σ²_phy::Real = 1.0)
+                          n::Integer; σ²_phy::Real = 1.0,
+                          chol_cache::Union{Nothing,Base.RefValue} = nothing)
     p   = phy.n_leaves
     K_B = size(Λ_B, 2)
     σ²  = float(σ_eps)^2
@@ -152,7 +217,9 @@ function build_AnB_sparse(Λ_B::AbstractMatrix, σ_eps::Real,
         push!(V_q, α * σ_phy64[t]^2 * d_inv[t])
     end
     Q_eff = sparse(I_q, J_q, V_q, n_block, n_block)
-    chol_Q_eff = cholesky(Symmetric(Q_eff))
+    chol_Q_eff = chol_cache === nothing ?
+        cholesky(Symmetric(Q_eff)) :
+        _em_phylo_cached_cholesky!(chol_cache, Symmetric(Q_eff))
 
     # G[(leaf_pos[t]), j] = σ_phy[t] · d_inv[t] · Λ_B[t, j]
     G = zeros(Float64, n_block, K_B)
@@ -169,7 +236,7 @@ function build_AnB_sparse(Λ_B::AbstractMatrix, σ_eps::Real,
 
     return AnBSparseSolver(phy, n_block, leaf_pos, d_total, d_inv,
                            Λ_B64, DinvΛB, chol_cap, chol_Q_eff, G, chol_S_K,
-                           σ_phy64, α)
+                           σ_phy64, α, X_G)
 end
 
 # A⁻¹ b via Woodbury for A = D + Λ_B Λ_B'.
@@ -322,7 +389,8 @@ end
 function _estep_sparse(y::AbstractMatrix, Λ_B::AbstractMatrix, σ_eps::Real,
                       σ_phy::AbstractVector,
                       phy::GLLVModels.AugmentedPhy{Float64};
-                      σ²_phy::Real = 1.0)
+                      σ²_phy::Real = 1.0,
+                      chol_cache::Union{Nothing,Base.RefValue} = nothing)
     p, n = size(y)
     p == phy.n_leaves ||
         throw(ArgumentError("y first dim ($p) must equal phy.n_leaves ($(phy.n_leaves))"))
@@ -330,11 +398,12 @@ function _estep_sparse(y::AbstractMatrix, Λ_B::AbstractMatrix, σ_eps::Real,
     Λ_B64 = Matrix{Float64}(Λ_B)
     Λφ = Vector{Float64}(σ_phy)
     α = n * float(σ²_phy)
-    σ² = float(σ_eps)^2     # used to build A = Λ_B Λ_B' + σ²·I below for β
 
     # Build the augmented saddle-point solver (shares its factorisation with
     # what `solve_AnB` uses; we reuse the constructed pieces directly).
-    s = build_AnB_sparse(Λ_B, σ_eps, Λφ, phy, n; σ²_phy = σ²_phy)
+    # `chol_cache` (S7 item 4), when passed, lets `chol_Q_eff` reuse the
+    # CHOLMOD symbolic analysis across the EM iterations of one fit.
+    s = build_AnB_sparse(Λ_B, σ_eps, Λφ, phy, n; σ²_phy = σ²_phy, chol_cache = chol_cache)
     nb       = s.n_block
     leaf_pos = s.leaf_pos
     d_inv    = s.d_inv
@@ -383,24 +452,38 @@ function _estep_sparse(y::AbstractMatrix, Λ_B::AbstractMatrix, σ_eps::Real,
     end
 
     # diag(V_φ) via Takahashi-selected inverse of Q_eff + rank-K_B Woodbury.
+    # `X_G = chol_Q_eff \ G` is now stored on `s` (built once inside
+    # `build_AnB_sparse`, S7 item 1) instead of being recomputed here, and the
+    # former p-fold loop of individual K_B × K_B solves (`chol_S_K \ collect(xg)`
+    # per leaf) is collapsed into ONE multi-RHS solve of `chol_S_K` across all
+    # p leaves at once.
     Qeff_diag = takahashi_diag(s.chol_Q_eff)             # length nb
-    # Slice X_G at leaf positions (X_G is stored on s as `chol_Q_eff \ G`).
-    # NB: AnBSparseSolver does not store X_G directly; recompute it. K_B solves.
-    X_G = s.chol_Q_eff \ s.G                              # nb × K_B
+    XG_leaf = Matrix{Float64}(undef, K_B, p)             # K_B × p, leaf rows of X_G'
+    @inbounds for t in 1:p
+        lp = leaf_pos[t]
+        for k in 1:K_B
+            XG_leaf[k, t] = s.X_G[lp, k]
+        end
+    end
+    Y_leaf = s.chol_S_K \ XG_leaf                         # K_B × p, ONE multi-RHS solve
     diag_Vφ = Vector{Float64}(undef, p)
     @inbounds for t in 1:p
         lp = leaf_pos[t]
-        xg = @view X_G[lp, :]
+        acc = 0.0
+        for k in 1:K_B
+            acc += XG_leaf[k, t] * Y_leaf[k, t]
+        end
         # Q_eff⁻¹[lp, lp] is `Qeff_diag[lp]` (selected inverse diagonal).
-        diag_Vφ[t] = σ²_phy * (Qeff_diag[lp] + α * dot(xg, s.chol_S_K \ collect(xg)))
+        diag_Vφ[t] = σ²_phy * (Qeff_diag[lp] + α * acc)
     end
 
-    # ImβΛ = I - β · Λ_B   (K_B × K_B).
-    β = Λ_B64' / cholesky(Symmetric(begin
-        A = Λ_B64 * Λ_B64'
-        @inbounds for t in 1:p; A[t, t] += σ²; end
-        (A + A') ./ 2
-    end))
+    # ImβΛ = I - β · Λ_B   (K_B × K_B). β = Λ_B' A⁻¹ obtained via the
+    # Woodbury/capacitance factorisation already built on `s` (S7 item 1):
+    # no fresh dense p × p Cholesky of A = Λ_B Λ_B' + σ²·I here (compare the
+    # dense reference E-step, `_estep_dense`, which still needs its own dense
+    # `cA` for other quantities and so keeps the O(p³) Cholesky).
+    F_A = GLLVModels.LowRankPlusDiagChol{Float64,Matrix{Float64}}(s.d_total, s.Λ_B, s.chol_cap)
+    β = (F_A \ s.Λ_B)'                                    # K_B × p (= (A⁻¹ Λ_B)' = Λ_B' A⁻¹)
     ImβΛ = I - β * Λ_B64
 
     # μ_z = Λ_φ · μ_φ.
@@ -728,10 +811,29 @@ function em_fit_phylo(y::AbstractMatrix, K_B::Integer, Σ_phy::AbstractMatrix;
     # fall back to the dense E-step when `phy` is omitted (no AugmentedPhy to
     # build from the dense Σ_phy) or when `force_dense_estep` is requested.
     use_sparse = phy !== nothing && !force_dense_estep
+    # S7 item 4: ONE cache, shared across every E-step call of this fit, so
+    # `chol_Q_eff`'s CHOLMOD symbolic analysis is done once (iteration 1) and
+    # reused via `cholesky!` thereafter — the sparsity pattern is fit-invariant
+    # (tree topology + K_B fixed; only σ_phy/σ_eps values change per M-step).
+    chol_cache = use_sparse ? Ref{Any}(nothing) : nothing
     estep = if use_sparse
-        (LB, σe, σp) -> _estep_sparse(yf, LB, σe, σp, phy; σ²_phy = 1.0)
+        (LB, σe, σp) -> _estep_sparse(yf, LB, σe, σp, phy; σ²_phy = 1.0, chol_cache = chol_cache)
     else
         (LB, σe, σp) -> _estep_dense(yf, LB, σe, σp, Σ_phy)
+    end
+    # S7 item 2: the per-iteration monotonicity CHECK is numerically the same
+    # closed-form Gaussian marginal log-lik regardless of which E-step ran,
+    # but `gaussian_marginal_loglik`'s J3 phylo path (likelihood.jl:212-244)
+    # forms TWO dense p × p Choleskys every call. When the sparse E-step is
+    # selected, route the check through the O(p) sparse-precision path
+    # instead (`gaussian_marginal_loglik_sparse_phy`, likelihood_sparse_phy.jl)
+    # — numerically equivalent, see that function's docstring.
+    loglik_check = if use_sparse
+        (LB, σe, σp) -> GLLVModels.gaussian_marginal_loglik_sparse_phy(yf, LB, σe;
+                                            σ_phy = σp, phy = phy, σ²_phy = 1.0)
+    else
+        (LB, σe, σp) -> GLLVModels.gaussian_marginal_loglik(yf, LB, σe;
+                                            σ_phy = σp, Σ_phy = Σ_phy)
     end
 
     # ----- Warm start (PPCA for Λ_B, σ_eps; small phylo SD to start) -----
@@ -759,10 +861,11 @@ function em_fit_phylo(y::AbstractMatrix, K_B::Integer, Σ_phy::AbstractMatrix;
 
     for iter in 1:max_iter
         iters_run = iter
-        # Marginal log-lik at the CURRENT parameters (dense closed form), i.e.
-        # at the output of the previous M-step ⇒ sequence is monotone.
-        ll = GLLVModels.gaussian_marginal_loglik(yf, Λ_B, σ_eps;
-                                            σ_phy = σ_phy, Σ_phy = Σ_phy)
+        # Marginal log-lik at the CURRENT parameters (closed form — sparse
+        # when the sparse E-step is selected, dense otherwise; see
+        # `loglik_check` above), i.e. at the output of the previous M-step
+        # ⇒ sequence is monotone.
+        ll = loglik_check(Λ_B, σ_eps, σ_phy)
         push!(loglik_trace, ll)
 
         if iter > 1
@@ -786,8 +889,7 @@ function em_fit_phylo(y::AbstractMatrix, K_B::Integer, Σ_phy::AbstractMatrix;
         Λ_B, σ_eps, σ_phy = _mstep_dense(yf, ss)
     end
 
-    ll_final = GLLVModels.gaussian_marginal_loglik(yf, Λ_B, σ_eps;
-                                              σ_phy = σ_phy, Σ_phy = Σ_phy)
+    ll_final = loglik_check(Λ_B, σ_eps, σ_phy)
     if !isempty(loglik_trace) && ll_final > loglik_trace[end]
         push!(loglik_trace, ll_final)
     end
