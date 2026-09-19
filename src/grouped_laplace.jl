@@ -220,7 +220,7 @@ end
 
 """
     joint_grouped_laplace_loglik(family, y, n, X, beta, W;
-        link, maxiter=100, tol=1e-8) -> JointGroupedLaplaceResult
+        link, maxiter=100, tol=1e-8, b_init=nothing) -> JointGroupedLaplaceResult
 
 Compute a fixed-parameter Laplace approximation for `eta = X * beta + W * b`
 with one global `b ~ N(0, I)`.  `W` must already contain all grouped effects;
@@ -231,10 +231,22 @@ The joint mode is located by observed Newton steps with Fisher-scoring fallback,
 while the reported
 log-determinant is assembled from observed conditional curvature.  No
 independent-per-unit mode solve is performed.
+
+`b_init` (S7c), when supplied, seeds the Newton iteration's starting `b`
+instead of the cold `zeros(m)` default — e.g. the converged mode from a
+nearby outer-parameter evaluation (an FD stencil point or a neighbouring
+Nelder-Mead simplex vertex), so the walk to the mode is short instead of
+starting over. Newton's iteration converges to the SAME fixed point (the
+unique interior mode, to within `tol`) regardless of the starting `b`, so
+this is an identity-preserving performance lever, never a different answer —
+see `test/test_grouped_laplace_identity.jl --gate warm_identity`. A
+length mismatch against `size(W, 2)` returns `_joint_grouped_failure(:invalid_warm_start, ...)`
+rather than silently truncating or padding.
 """
 function joint_grouped_laplace_loglik(family, y::AbstractVector, n::AbstractVector,
         X::AbstractMatrix, beta::AbstractVector, W::AbstractMatrix;
-        link::Link, maxiter::Integer = 100, tol::Real = 1e-8)
+        link::Link, maxiter::Integer = 100, tol::Real = 1e-8,
+        b_init::Union{Nothing,AbstractVector{<:Real}} = nothing)
     m = size(W, 2)
     maxiter >= 0 || return _joint_grouped_failure(:invalid_control, m)
     isfinite(tol) && tol > 0 || return _joint_grouped_failure(:invalid_control, m)
@@ -279,7 +291,13 @@ function joint_grouped_laplace_loglik(family, y::AbstractVector, n::AbstractVect
     ho_cache = Ref{Any}(nothing)   # observed-precision (Ho) factor, reused across iterations
                                    # (shared by Fn mid-loop and Fo at convergence — same formula)
 
-    b = zeros(Float64, m)
+    b = if b_init === nothing
+        zeros(Float64, m)
+    else
+        length(b_init) == m || return _joint_grouped_failure(:invalid_warm_start, m)
+        all(isfinite, b_init) || return _joint_grouped_failure(:invalid_warm_start, m)
+        Vector{Float64}(b_init)
+    end
     for iter in 1:maxiter
         state = _joint_grouped_state(family, Xf, betaf, Wf, link, b)
         state[1] === :ok || return _joint_grouped_failure(state[1], m; iterations = iter - 1)
