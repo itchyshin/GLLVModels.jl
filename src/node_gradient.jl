@@ -54,7 +54,11 @@ using SparseArrays
 # ===========================================================================
 
 # Internal: per-species dσ_phy via the NODE-DIAGONAL + rank-K_B correction.
-function node_dσ_phy(st::SparsePhyState, cc::AbstractVector)
+# `Qeff_diag` (the Takahashi selected-inverse diagonal of `st.chol_Q_eff`) is
+# computed ONCE per gradient by the caller (`node_grad`) and passed in here —
+# S7 item 3: this used to call `takahashi_diag(st.chol_Q_eff)` itself, a
+# second, redundant O(nnz L) pass duplicating `_same_leaf_Msad_inv_diag`'s.
+function node_dσ_phy(st::SparsePhyState, cc::AbstractVector, Qeff_diag::AbstractVector)
     p, n, K_B = st.p, st.n, st.K_B
     st.K_aug == 1 ||
         throw(ArgumentError("node_dσ_phy assumes phylo_unique (K_aug=1); got K_aug=$(st.K_aug)"))
@@ -62,7 +66,6 @@ function node_dσ_phy(st::SparsePhyState, cc::AbstractVector)
     c = st.d_inv[1]                                   # 1/σ²_eps  (constant d_total)
 
     # NODE-DIAGONAL trace piece: (M_sad⁻¹)_{ll} = Q_eff⁻¹_{ll} + α (X_G S_K⁻¹ X_Gᵀ)_{ll}.
-    Qeff_diag = takahashi_diag(st.chol_Q_eff)         # length total (=nb, K_aug=1), O(nnz L)
     leafrows = [st.leaf_pos[t] for t in 1:p]
     XGleaf = st.X_G[leafrows, :]                      # p × K_B (X_G stored on st)
     WR = st.chol_S_K \ XGleaf'                        # K_B × p  (= S_K⁻¹ X_G[leaf]ᵀ)
@@ -108,8 +111,9 @@ function node_dσ_phy(st::SparsePhyState, cc::AbstractVector)
 end
 
 # Internal: same-leaf entries of M_sad⁻¹ (K_aug=1 ⇒ a length-p vector).
-function _same_leaf_Msad_inv_diag(st::SparsePhyState)
-    Qeff_diag = takahashi_diag(st.chol_Q_eff)         # on-pattern Q_eff⁻¹ diagonal
+# `Qeff_diag` is computed once per gradient by the caller and passed in — see
+# `node_dσ_phy` above.
+function _same_leaf_Msad_inv_diag(st::SparsePhyState, Qeff_diag::AbstractVector)
     p = st.p; K_B = st.K_B
     leafrows = [st.leaf_pos[t] for t in 1:p]
     XGleaf = st.X_G[leafrows, :]
@@ -123,10 +127,12 @@ function _same_leaf_Msad_inv_diag(st::SparsePhyState)
 end
 
 # Internal: scalar global gradients (dσ²_phy, dσ²_eps) via same-leaf Takahashi.
-function node_scalar_grads(st::SparsePhyState, cc::AbstractVector, Ainv_Yc::AbstractMatrix)
+# `Qeff_diag` is computed once per gradient by the caller and passed in.
+function node_scalar_grads(st::SparsePhyState, cc::AbstractVector, Ainv_Yc::AbstractMatrix,
+                           Qeff_diag::AbstractVector)
     p, n, K_B = st.p, st.n, st.K_B
     σ_phy = @view st.Λ_aug[:, 1]
-    SL = _same_leaf_Msad_inv_diag(st)                 # (M_sad⁻¹)_{ll}, length p
+    SL = _same_leaf_Msad_inv_diag(st, Qeff_diag)      # (M_sad⁻¹)_{ll}, length p
 
     # dσ²_phy = ½ ⟨P_B, B⟩ / σ²_phy ; ⟨P_B,B⟩ = n[ −tr(C⁻¹B) + n cc'Bcc ].
     # tr(C⁻¹B) = σ²_phy tr(M_sad⁻¹ H), H = D_K'A⁻¹D_K = D_K'D⁻¹D_K − G cap⁻¹ G'.
@@ -203,11 +209,25 @@ phylogenetic random effect with SDs `σ_phy = st.Λ_aug[:, 1]` and no separate
 Evaluation-only for ForwardDiff: the node-diagonal uses a CHOLMOD Float64
 factor (see file header).
 """
+# S7 item 3 call-count evidence: `test/test_sparse_phy_identities.jl --gate
+# gradient` (G7.2) resets this counter, calls `node_grad` once, and asserts it
+# reads 1 — before the dedup, `node_dσ_phy` and `node_scalar_grads` (via
+# `_same_leaf_Msad_inv_diag`) each called `takahashi_diag(st.chol_Q_eff)`
+# independently, i.e. 2 calls per `node_grad` invocation.
+const _NODE_GRAD_TAKAHASHI_CALLS = Ref(0)
+_node_grad_takahashi_calls_reset!() = (_NODE_GRAD_TAKAHASHI_CALLS[] = 0; nothing)
+_node_grad_takahashi_calls() = _NODE_GRAD_TAKAHASHI_CALLS[]
+
 function node_grad(st::SparsePhyState)
     cc = _Cinv(st, st.m)
     Ainv_Yc = _AinvM(st, st.Y_c)
-    dσ_phy = node_dσ_phy(st, cc)
-    dσ²_phy, dσ²_eps = node_scalar_grads(st, cc, Ainv_Yc)
+    # S7 item 3: computed ONCE per gradient and passed to both consumers
+    # below (`node_dσ_phy` and `node_scalar_grads` via `_same_leaf_Msad_inv_diag`)
+    # instead of each recomputing `takahashi_diag(st.chol_Q_eff)` independently.
+    Qeff_diag = takahashi_diag(st.chol_Q_eff)
+    _NODE_GRAD_TAKAHASHI_CALLS[] += 1
+    dσ_phy = node_dσ_phy(st, cc, Qeff_diag)
+    dσ²_phy, dσ²_eps = node_scalar_grads(st, cc, Ainv_Yc, Qeff_diag)
     dΛ_B = node_dΛ_B(st, cc, Ainv_Yc)
     return (; dΛ_B, dσ²_eps, dσ²_phy, dσ_phy)
 end
@@ -220,7 +240,8 @@ solve. This is the headline node-diagonal object — the apples-to-apples
 analogue of the edge-frame per-species gradient — isolated from the global
 `dΛ_B` / `dσ²_eps` / `dσ²_phy` work for timing and scaling studies.
 """
-node_dσ_phy_only(st::SparsePhyState) = node_dσ_phy(st, _Cinv(st, st.m))
+node_dσ_phy_only(st::SparsePhyState) =
+    node_dσ_phy(st, _Cinv(st, st.m), takahashi_diag(st.chol_Q_eff))
 
 # ===========================================================================
 # MATCHED single-trait per-species node gradient.
