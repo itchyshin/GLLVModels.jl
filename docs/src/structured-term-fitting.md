@@ -28,8 +28,20 @@ Step-4 mutual-exclusion violation, a non-PD kernel matrix — surfaces
 unchanged through this public wrapper; it is a thin, documented pass-through,
 not a re-implementation.
 
-```@docs
-fit_gaussian_structured
+## A first structured fit
+
+This small Gaussian example adds one independent grouped term. `Y` has traits
+in rows and observations in columns; `g` identifies the group for each
+observation.
+
+```@example structured_term_first_fit
+using GLLVModels, Random
+rng = MersenneTwister(70100)
+Y = randn(rng, 3, 24)
+data = (g = repeat(1:6; inner = 4),)
+fit = fit_gaussian_structured(Y, data;
+    structure = [:(indep(0 + trait | g))], sigma_eps_fixed = 0.5)
+isfinite(fit.loglik)
 ```
 
 The recognizer internals this wrapper drives (`_recognize_source_term`,
