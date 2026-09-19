@@ -212,10 +212,28 @@ function _grouped_nongaussian_initial_parameters(data::Matrix{Float64},
     return theta
 end
 
+"""
+    _grouped_nongaussian_objective(...; warm_start_inner=false)
+
+`warm_start_inner` (S7c, default `false` — opt-in): when `true`, the closure
+keeps the last successfully-converged inner Laplace mode `b` (across calls to
+the SAME closure instance) and seeds the next call's `joint_grouped_laplace_loglik`
+with it via `b_init`, instead of starting cold from `zeros(m)` every time. One
+outer optimisation (Nelder-Mead simplex evaluations plus FD-gradient/-Hessian
+stencils) calls this closure with many nearby `value`s, so the previous mode
+is typically a very short walk from the next one's. This changes ONLY the
+Newton starting point, never the converged answer (see
+`joint_grouped_laplace_loglik`'s docstring and
+`test/test_grouped_laplace_identity.jl --gate warm_identity`). A non-`:ok`
+result leaves the cache untouched (never poisons the next call with a bad
+guess); `destination_b_fixed_effects.jl`'s call site does not pass this
+keyword and stays cold, unaffected.
+"""
 function _grouped_nongaussian_objective(data::Matrix{Float64}, trials::Matrix{Float64},
         D::Matrix{Float64}, terms::Vector{GroupingTerm},
         incidences::Vector{SparseMatrixCSC{Float64,Int}}, kind::Symbol;
-        dispersion_mode::Symbol=:trait, inner_maxiter::Integer, inner_tol::Float64)
+        dispersion_mode::Symbol=:trait, inner_maxiter::Integer, inner_tol::Float64,
+        warm_start_inner::Bool=false)
     p, n = size(data)
     q = size(D, 2)
     mode = _grouped_nongaussian_internal_dispersion_mode(kind, dispersion_mode)
@@ -223,6 +241,7 @@ function _grouped_nongaussian_objective(data::Matrix{Float64}, trials::Matrix{Fl
     dispersion_indices = _grouped_nongaussian_dispersion_indices(q, source_coordinates,
         kind, mode, p)
     expected = q + source_coordinates + length(dispersion_indices)
+    b_cache = Ref{Union{Nothing,Vector{Float64}}}(nothing)
     return function (value)
         length(value) == expected && all(isfinite, value) || return _NLL_SENTINEL
         try
@@ -233,8 +252,13 @@ function _grouped_nongaussian_objective(data::Matrix{Float64}, trials::Matrix{Fl
             family = _grouped_nongaussian_family(kind, value, dispersion_indices, p, n, mode)
             family === nothing && return _NLL_SENTINEL
             W = _grouped_laplace_design(incidences, loads; uniques=uniques)
+            b_init = warm_start_inner ? b_cache[] : nothing
             result = joint_grouped_laplace_loglik(family, vec(data), vec(trials), D, gamma, W;
-                link=_grouped_nongaussian_link(Val(kind)), maxiter=inner_maxiter, tol=inner_tol)
+                link=_grouped_nongaussian_link(Val(kind)), maxiter=inner_maxiter, tol=inner_tol,
+                b_init=b_init)
+            if warm_start_inner && result.status === :ok
+                b_cache[] = copy(result.mode)
+            end
             return result.status === :ok && result.converged && isfinite(result.loglik) ?
                 -result.loglik : _NLL_SENTINEL
         catch
@@ -268,13 +292,23 @@ It reuses `GroupingTerm` packing and one global joint-Laplace random-effect
 mode. Public fitting uses `fit_gllvm` or the grouping formula route; marginal
 interval diagnostics use `grouped_nongaussian_intervals`. The development route
 does not establish frozen-R parity, recovery, or coverage qualification.
+
+`warm_start_inner` (S7c, default `true`): each of the many inner Laplace-fit
+calls the outer optimiser makes (Nelder-Mead simplex evaluations plus the FD
+gradient/Hessian stencils) seeds its Newton solve from the previous call's
+converged mode instead of `zeros(m)`, since nearby outer-parameter values
+share a nearby mode. This changes only how fast each inner solve converges,
+never the converged answer (see `joint_grouped_laplace_loglik`'s `b_init`
+docstring); pass `warm_start_inner=false` to recover the pre-S7c cold-start
+behaviour.
 """
 function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
         unit=nothing, unit_obs=nothing, cluster=nothing, cluster2=nothing,
         N=nothing, X=nothing, coefficient_names=nothing, start=nothing,
         dispersion::Symbol=:trait,
         g_tol::Real=1e-4, iterations::Integer=100,
-        inner_maxiter::Integer=100, inner_tol::Real=1e-8)
+        inner_maxiter::Integer=100, inner_tol::Real=1e-8,
+        warm_start_inner::Bool=true)
     p, n = size(Y)
     p > 0 && n >= 2 || throw(ArgumentError("grouped fitting needs at least one trait and two observations"))
     all(isfinite, Y) || throw(ArgumentError("grouped fitting requires finite complete responses"))
@@ -314,7 +348,8 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
         Float64.(start)
     end
     objective = _grouped_nongaussian_objective(data, trials, D, termvec, incidences, kind;
-        dispersion_mode=mode, inner_maxiter=Int(inner_maxiter), inner_tol=Float64(inner_tol))
+        dispersion_mode=mode, inner_maxiter=Int(inner_maxiter), inner_tol=Float64(inner_tol),
+        warm_start_inner=warm_start_inner)
     initial_value = objective(theta)
     isfinite(initial_value) && !_nll_failed(initial_value) ||
         throw(ArgumentError("start produces an invalid grouped Laplace objective"))
