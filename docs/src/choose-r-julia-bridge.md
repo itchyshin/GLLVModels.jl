@@ -21,6 +21,9 @@ article set.
 
 - Get started: [R get-started guide](https://itchyshin.github.io/gllvmTMB/articles/gllvmTMB.html)
 - What that route currently supports: [current limits](https://itchyshin.github.io/gllvmTMB/articles/current-limits.html)
+- Spatially structured continuous traits: [multivariate spatial models](https://itchyshin.github.io/gllvmTMB/articles/spatial-models.html)
+- Repeated multivariate measurements: [temporal covariance](https://itchyshin.github.io/gllvmTMB/articles/temporal-ar1.html)
+- Repeated survey visits in the experimental integrated-SDM route: [what repeated visits add](https://itchyshin.github.io/gllvmTMB/articles/integrated-repeated-visits.html)
 
 Those limits belong to the R package. Calling Julia does not lift them.
 
@@ -28,8 +31,17 @@ Those limits belong to the R package. Calling Julia does not lift them.
 
 Start in Julia when you already have a response matrix and want the
 matrix-first companion. Responses are rows and sites are columns
-($p \times n$). Parity is partial: some families and extractors are admitted,
+(p × n). Parity is partial: some families and extractors are admitted,
 and ledger closure is not true parity.
+
+### Move one R matrix into Julia
+
+1. Install Julia 1.10 or later, then install the companion with
+   `Pkg.add(url = "https://github.com/itchyshin/GLLVModels.jl")`.
+2. If your R response matrix has sites in rows and species in columns
+   (`n × p`), transpose it before fitting in Julia (`Y'` gives `p × n`).
+3. Run the [Quick start](quickstart.md) first fit, then use the conversion
+   table there to translate the model you need.
 
 - First fit and the R ⟷ Julia conversion table: [Quick start](quickstart.md)
 - Live catch-up scoreboard: [Capability parity](gllvmtmb-parity.md)

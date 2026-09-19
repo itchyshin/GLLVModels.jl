@@ -10,15 +10,15 @@
 ```
 
 This page walks through one end-to-end fit: simulate a Gaussian GLLVM with one
-residual variance per response, fit it with `fit_gaussian_pervar_gllvm`, inspect the recovered parameters, build
-three flavours of confidence interval, and visualise the recovered
-`Σ_y` against the truth. It concludes with an R `gllvmTMB` ⟷ Julia `GLLVModels.jl`
-cheat sheet.
+residual variance per response, fit it with `fit_gaussian_pervar_gllvm`, inspect
+the recovered parameters and their current uncertainty boundary, and visualise
+the recovered `Σ_y` against the truth. It concludes with an R `gllvmTMB` ⟷ Julia
+`GLLVModels.jl` cheat sheet.
 
-!!! warning "Matrix Orientation: $p \times n$ in Julia vs $n \times p$ in R"
-    **GLLVModels.jl expects species/traits in rows and sites/observations in columns ($p \times n$).**
+!!! warning "Matrix orientation: p × n in Julia vs n × p in R"
+    **GLLVModels.jl expects species/traits in rows and sites/observations in columns (p × n).**
 
-    If you are importing data formatted for R packages such as `gllvm` or `gllvmTMB` (which use the $n \times p$ convention with sites in rows and species in columns), you must transpose your matrix (`Y'`) before passing it to `fit_gllvm`, `fit_gaussian_gllvm`, or any other GLLVModels.jl fitter.
+    If you are importing data formatted for R packages such as `gllvm` or `gllvmTMB` (which use the n × p convention with sites in rows and species in columns), you must transpose your matrix (`Y'`) before passing it to `fit_gllvm`, `fit_gaussian_gllvm`, or any other GLLVModels.jl fitter.
 
 ## 1. Simulate a fixture
 
@@ -85,19 +85,24 @@ The recovered `Λ_B` can be compared with `Λ_true` only up to an
 orthogonal rotation in `K`-space — the latent factors are identified
 only up to rotation in the Gaussian model.
 
-## 4. Build confidence intervals
-
-Three CI flavours share a common interface:
+## 4. Record the uncertainty boundary
 
 ```julia
-ci_wald      = confint(fit)                                # Wald via observed information
-ci_profile   = profile_ci(fit, "sigma_eps")                # likelihood-profile CI
-ci_bootstrap = bootstrap_ci(fit; n_boot = 200)             # parametric bootstrap
+(converged = fit.converged, iterations = fit.iterations)
 ```
 
-Wald CIs are cheapest and rely on the local quadratic approximation;
-profile CIs are exact up to grid resolution; bootstrap CIs make no
-distributional assumption on the sampling distribution of the estimator.
+`GaussianPerVarFit` currently has no public `confint`, `profile_ci`, or
+`bootstrap_ci` method. Its loadings, response-specific residual variances, and
+the derived `Σ_hat`, `c²_hat`, and `R_hat` below are therefore **point estimates**:
+this example does not supply standard errors, intervals, or a coverage claim.
+
+If interval estimates are essential for the scientific question, use the
+supported shared-residual Gaussian route (`fit_gaussian_gllvm`) and follow
+[Confidence intervals](confidence-intervals.md), supplying the original `y`.
+That route is a restricted model, so its intervals are not interchangeable with
+uncertainty for this per-response-residual fit. Otherwise, report the point
+estimates with this limitation and assess stability in a separately designed
+simulation or resampling study.
 
 ## 5. Check `Σ_y` recovery
 
@@ -135,29 +140,29 @@ species-by-species surface.
 
 | Task / Feature | R (`gllvm` / `gllvmTMB`) | Julia (`GLLVModels.jl`) | Notes |
 |:---|:---|:---|:---|
-| **Matrix shape** | `Y` is $n \times p$ (sites $\times$ species) | `Y` is $p \times n$ (species $\times$ sites) | **Transpose R matrices (`Y'`) when loading into Julia** |
+| **Matrix shape** | `Y` is n × p (sites × species) | `Y` is p × n (species × sites) | **Transpose R matrices (`Y'`) when loading into Julia** |
 | **Gaussian GLLVM** | `gllvm(Y, family = "gaussian", num.lv = 2)` | `fit_gaussian_gllvm(Y; K = 2)` or `fit_gllvm(Y; family = Normal(), K = 2)` | ~340× faster closed-form profile path (single-σ² Gaussian only; see [Benchmarks](benchmarks.md)) |
 | **Poisson count JSDM** | `gllvm(Y, family = "poisson", num.lv = 2)` | `fit_gllvm(Y; family = Poisson(), K = 2)` or `fit_poisson_gllvm(Y; K = 2)` | Laplace approximation with exact gradients |
-| **Negative Binomial (NB2)** | `gllvm(Y, family = "negative.binomial", num.lv = 2)` | `fit_gllvm(Y; family = NegativeBinomial(), K = 2)` or `fit_nb_gllvm(Y; K = 2)` | Quadratic variance $V(\mu) = \mu + \phi \mu^2$ |
-| **Negative Binomial 1 (NB1)** | `gllvm(Y, family = "NB1", num.lv = 2)` | `fit_nb1_gllvm(Y; K = 2)` | Linear variance $V(\mu) = (1 + \phi)\mu$ |
+| **Negative Binomial (NB2)** | `gllvm(Y, family = "negative.binomial", num.lv = 2)` | `fit_gllvm(Y; family = NegativeBinomial(), K = 2)` or `fit_nb_gllvm(Y; K = 2)` | Quadratic mean–variance relationship |
+| **Negative Binomial 1 (NB1)** | `gllvm(Y, family = "NB1", num.lv = 2)` | `fit_nb1_gllvm(Y; K = 2)` | Linear mean–variance relationship |
 | **Binomial / Bernoulli** | `gllvm(Y, family = "binomial", num.lv = 2)` | `fit_gllvm(Y; family = Binomial(), K = 2)` or `fit_binomial_gllvm(Y; K = 2)` | Logit or probit link |
-| **Beta (continuous (0,1))** | `gllvm(Y, family = "beta", num.lv = 2)` | `fit_gllvm(Y; family = Beta(), K = 2)` or `fit_beta_gllvm(Y; K = 2)` | Precision parameter $\phi$ |
-| **Gamma (positive continuous)** | `gllvm(Y, family = "gamma", num.lv = 2)` | `fit_gllvm(Y; family = Gamma(), K = 2)` or `fit_gamma_gllvm(Y; K = 2)` | Log link with shape parameter $\alpha$ |
+| **Beta (continuous (0,1))** | `gllvm(Y, family = "beta", num.lv = 2)` | `fit_gllvm(Y; family = Beta(), K = 2)` or `fit_beta_gllvm(Y; K = 2)` | Precision parameter |
+| **Gamma (positive continuous)** | `gllvm(Y, family = "gamma", num.lv = 2)` | `fit_gllvm(Y; family = Gamma(), K = 2)` or `fit_gamma_gllvm(Y; K = 2)` | Log link with a shape parameter |
 | **Ordinal (cumulative-logit)** | `gllvm(Y, family = "ordinal", num.lv = 2)` | `fit_ordinal_gllvm(Y; K = 2)` | Shared or per-trait cutpoints |
 | **Zero-inflated models** | `gllvm(Y, family = "ZIP", num.lv = 2)` | `fit_zip_gllvm(Y; K = 2)`, `fit_zinb_gllvm(Y; K = 2)` | Two-part mixture models |
-| **Site latent scores** | `getLV(fit)` | `getLV(fit)` | Returns $n \times K$ site coordinates |
-| **Species factor loadings** | `getLoadings(fit)` or `fit$params$theta` | `getLoadings(fit)` | Returns $p \times K$ species loadings |
-| **Residual correlation matrix** | `getResidualCor(fit)` | `correlation(fit)` | Returns $p \times p$ model-implied correlations |
-| **Total species covariance** | `getResidualCov(fit)` | `sigma_y_site(fit)` | Returns $p \times p$ matrix $\Sigma_y = \Lambda\Lambda^\top + \Sigma_\varepsilon$ |
-| **Variance partitioning** | `getResidualCov(fit)$var.part` | `communality(fit)` | Shared variance fraction per response |
+| **Site latent scores** | `getLV(fit)` | Fit-specific; some Julia routes require the original `Y` | Check the worked example for the fitted model |
+| **Species factor loadings** | `getLoadings(fit)` or `fit[["params"]][["theta"]]` | Fit-specific; see the fitted model's post-fit guide | The returned object and required data vary by fit type |
+| **Residual correlation matrix** | `getResidualCor(fit)` | Fit-specific; some Julia routes require the original `Y` | Model-implied association, not evidence of a biological interaction |
+| **Total species covariance** | `getResidualCov(fit)` | Fit-specific; see the fitted model's post-fit guide | Do not assume one covariance extractor applies to every fit |
+| **Variance partitioning** | `getResidualCov(fit)[["var.part"]]` | Fit-specific; see the fitted model's post-fit guide | State the denominator before interpreting a shared-variance fraction |
 | **Environmental covariates** | `gllvm(Y, X = X, formula = ~ x1 + x2, num.lv = 2)` | `fit_gllvm(Y; family = ..., X = X, K = 2)` or `@formula(Y ~ x1 + x2)` | Fixed effects for environmental predictors |
-| **Species-specific slopes** | `gllvm(Y, X = X, formula = ~ (x1 \| species), ...)` | `fit_gllvm_speciescov(Y, X; K = 2)` | Species-specific environmental responses |
-| **Fourth-corner models** | `gllvm(Y, X = X, TR = TR, formula = Y ~ ...)` | `fit_fourthcorner_gllvm(Y, X, TR; K = 2)` | Trait $\times$ environment interactions |
-| **Phylogenetic GLLVM** | `gllvm(Y, tree = phy, ...)` | `fit_phylo_gaussian(Y, phy; K = 2)` or `fit_phylo_glm(Y, phy; family = Poisson(), K = 2)` | Hadfield & Nakagawa sparse precision |
-| **Phylogenetic signal $H^2$** | (derived from variance components) | `phylo_signal(fit)`, `phylo_signal_wald_ci(fit)` | Transformed-Wald CIs with exact boundary bounds |
-| **Confidence intervals** | `confint(fit)` | `confint(fit)`, `profile_ci(fit, "par")`, `bootstrap_ci(fit)` | Wald, profile likelihood, and parametric bootstrap |
+| **Species-specific slopes** | `gllvm(Y, X = X, formula = ~ (x1 \| species), ...)` | Use the fit-specific species-covariate guide | Its Julia interface uses named inputs; do not copy an R positional call |
+| **Fourth-corner models** | `gllvm(Y, X = X, TR = TR, formula = Y ~ ...)` | Use the fit-specific fourth-corner guide | Its Julia interface uses named inputs; do not copy an R positional call |
+| **Phylogenetic comparative model** | `gllvm(Y, tree = phy, ...)` | See the [phylogenetic vignette](vignettes/phylogenetic-gllvm.md) for the currently supported univariate route | A separate model class with its own data and uncertainty requirements |
+| **Phylogenetic signal (H²)** | (derived from variance components) | See the fit-specific phylogenetic post-fit documentation | Derived summaries and their uncertainty are fit- and trait-specific |
+| **Confidence intervals** | `confint(fit)` | Model-dependent; see [Confidence intervals](confidence-intervals.md) | Wald, profile, and bootstrap routes are not available for every Julia fit; `GaussianPerVarFit` currently has no public CI route |
 
-For complete worked workflows, explore the [Community Abundance Vignette](vignettes/community-abundance.md) and the [Phylogenetic GLLVM Vignette](vignettes/phylogenetic-gllvm.md).
+For complete worked workflows, explore the [Community Abundance Vignette](vignettes/community-abundance.md) and the [Phylogenetic GLLVM Vignette](vignettes/phylogenetic-gllvm.md). If you have a site-by-species count matrix, take the Community Abundance route now rather than continuing with the Gaussian material below.
 
 For ordinal fits, choose `LogitLink()` or `ProbitLink()` explicitly when translating
 a model. The frozen gllvmTMB 0.7.0 ordinal route uses probit; Julia defaults to logit.

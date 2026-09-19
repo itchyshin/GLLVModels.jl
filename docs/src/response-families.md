@@ -474,7 +474,7 @@ before routing through it.
 
 Categories must be coded `1:K` with **`K ≥ 3`**. Both constraints fail loud:
 any `y < 1` (or `y > K`) throws `"multinomial requires y ∈ {1, …, K}; found
-y=$v"`, and `K = 2` throws `"multinomial requires K ≥ 3 categories; K = 2 is
+y=<observed value>"`, and `K = 2` throws `"multinomial requires K ≥ 3 categories; K = 2 is
 binomial-logit — use Binomial() / LogitLink()"`. `K` itself comes from
 `n_categories` when you pass it; **when `n_categories` is left unset, `K` is
 inferred as `maximum(y)`** — so pass it explicitly whenever the top category

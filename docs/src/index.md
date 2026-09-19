@@ -8,35 +8,81 @@ hero:
   tagline: "A matrix-first Julia companion for separating shared multivariate structure from response-specific variation."
   actions:
     - theme: brand
-      text: Fit the first Gaussian model
+      text: General latent-variable route
       link: /quickstart
     - theme: alt
-      text: Interpret covariance and correlation
-      link: /covariance-correlation
+      text: Phylogenetic comparative route
+      link: /vignettes/phylogenetic-gllvm
     - theme: alt
-      text: Check capability parity
-      link: /gllvmtmb-parity
+      text: Community and species route
+      link: /vignettes/community-abundance
 
 features:
-  - title: "Start with a Gaussian response matrix"
-    details: "Responses are rows and sites are columns: p × n. This landing-page route fits and interprets Gaussian multivariate data."
-  - title: "Read the covariance first"
-    details: "Use model-implied Sigma, correlation, and the shared-variance fraction before attaching meaning to a rotated loading axis."
-  - title: "A companion, not a replacement"
-    details: "GLLVModels.jl is matrix-first and partial parity. Use gllvmTMB for the richer formula-first R workflow and its route-specific evidence boundary."
+  - title: "General latent-variable models"
+    details: "Ask which responses vary together across observations. Start with the Gaussian first fit, then inspect model-implied covariance."
+  - title: "Phylogenetic comparative models"
+    details: "Ask how variation in one continuous trait is partitioned along a supplied tree. Start with the tree-and-trait vignette."
+  - title: "Community and species-distribution models"
+    details: "Ask whether latent site gradients summarize a community count matrix. Start with the Poisson community vignette."
 ---
 ```
 
-# Start with the response matrix
+# Choose your biology question
 
-This landing page introduces GLLVModels.jl through a Gaussian multivariate
-response-matrix route: fit a response matrix, then interpret its model-implied
-covariance and correlation.
+GLLVModels.jl has three reader routes. They use different data and answer
+different questions, so choose the question before choosing a function. The
+navigation keeps implementation and development reference pages separate from
+these ordinary analysis routes.
 
-!!! warning "Matrix Orientation: $p \times n$ in Julia vs $n \times p$ in R"
-    **GLLVModels.jl expects species/traits in rows and sites/observations in columns ($p \times n$).**
+## Three routes for a biology PhD
 
-    If you are importing data formatted for R packages such as `gllvm` or `gllvmTMB` (which use the $n \times p$ convention with sites in rows and species in columns), transpose your matrix (`Y'`) before passing it to the Gaussian fitters used here.
+### 1. General latent-variable models
+
+**Question:** Which continuous responses vary together across observations,
+and how much variation is shared rather than response-specific?
+
+**Start:** [General latent-variable first fit](quickstart.md) gives a complete,
+simulated Gaussian response matrix in the required `p × n` orientation.
+
+**Next action:** calculate and interpret model-implied covariance, correlation,
+and shared-variance fractions; then use [Working with a fit](working-with-a-fit.md)
+for the post-fit task you need.
+
+### 2. Phylogenetic comparative models
+
+**Question:** For one continuous trait, how is variation partitioned between a
+supplied Brownian-motion phylogenetic covariance and independent residual
+variation?
+
+**Start:** [First phylogenetic Gaussian model](vignettes/phylogenetic-gllvm.md)
+starts with a small tree and a trait vector in its exact tip order.
+
+**Next action:** verify the biological tip-to-trait match before fitting, then
+inspect the two variance components within that vignette's point-estimate
+scope.
+
+### 3. Community and species-distribution models
+
+**Question:** Can a small number of unobserved site gradients summarize the
+remaining co-variation in a community count matrix?
+
+**Start:** [First community abundance model](vignettes/community-abundance.md)
+defines and fits a small `p × n` Poisson count matrix.
+
+**Next action:** inspect the fitted ordination and model-implied residual
+associations as exploratory descriptions; use [Working with a fit](working-with-a-fit.md)
+when you need a specific post-fit quantity.
+
+## General latent-variable example
+
+The compact example below belongs to the first route. It introduces the
+Gaussian response-matrix model and its covariance summaries; it is not the
+starting point for the phylogenetic or community routes.
+
+!!! warning "Matrix orientation: p × n in Julia vs n × p in R"
+    **GLLVModels.jl expects species/traits in rows and sites/observations in columns (p × n).**
+
+    If you are importing data formatted for R packages such as `gllvm` or `gllvmTMB` (which use the n × p convention with sites in rows and species in columns), transpose your matrix (`Y'`) before passing it to the Gaussian fitters used here.
 
 ## Install
 
@@ -111,15 +157,12 @@ For the shared-residual Gaussian fit, the usual report-ready quantities are:
 For the per-response residual fit used above, use the explicit `Σ`, `c²`, and
 `R` construction until those extractors are admitted for `GaussianPerVarFit`.
 
-## Start Here
+## Route map and supporting guides
 
-- Choose a workflow: [Choose R, Julia, or the bridge](choose-r-julia-bridge.md).
-- First Gaussian fit & Cheat Sheet: [Quick start](quickstart.md).
-- Applied JSDM Vignette: [Community Abundance](vignettes/community-abundance.md).
-- Applied Evolutionary Vignette: [Phylogenetic GLLVM](vignettes/phylogenetic-gllvm.md).
+- Choose a runtime first: [Choose R, Julia, or the bridge](choose-r-julia-bridge.md).
+- General model-interface reference: [Tutorial](tutorial.md). This is a guided
+  interface tour, not a single copy-and-run analysis.
 - Model equation and estimands: [Model](model.md).
-- Ordination, predictions, residuals, AIC, and BIC:
-  [Working with a fit](working-with-a-fit.md).
 - Response-family choice: [Response families](response-families.md).
 - R twin comparison: [Capability parity](gllvmtmb-parity.md).
 

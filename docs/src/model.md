@@ -9,18 +9,21 @@
 </div>
 ```
 
-The Gaussian GLLVM that this package implements decomposes the response
-of species `s` (a length-`p` vector across the `p` species at site `s`)
-into a fixed linear predictor plus a sequence of latent contributions:
+For the Gaussian `fit_gaussian_gllvm` model, `Y` has `p` response rows
+(such as species) and `n` site columns. The vector `y_s = Y[:, s]` contains
+all responses at site `s`. It combines a fixed predictor, latent variation
+that differs among sites, response-specific variation, and an optional
+structured effect shared across sites:
 
 ```math
-y_s \;=\; X_s\,\beta \;+\; \Lambda_B\,\eta_B[s] \;+\; \Lambda_W\,\eta_W[:, s] \;+\; s_B[:, s] \;+\; s_W[:, s] \;+\; s_{\text{phy}} \;+\; \varepsilon[:, s].
+y_s = X_s\beta + \Lambda_B\eta_s + e_s + u.
 ```
 
-Each term is independent across sites (except where the phylogenetic
-covariance ties species together) and Gaussian. The latent factors and
-random effects are integrated out *analytically*, producing a closed-form
-marginal log-likelihood whose optimisation is the engine's main loop.
+Here `η_s` and `e_s` are independent between sites, whereas the same
+structured vector `u` enters every site. All random terms are Gaussian and
+independent of one another. The model integrates them out analytically.
+The entries of `e_s` have variances `d_total`, defined below; `u` has
+covariance `B` and is absent in an unstructured fit.
 
 ## Terms
 
@@ -54,10 +57,10 @@ calls can be limited to selected entries with `profile_indices`, which index
 `X_lv`, per-trait ordinal bridge parity, W-tier, and
 phylogenetic/source-specific extensions remain separate validation gates.
 
-**Unit-obs latent factor block** `Λ_W η_W[:, s]` — the per-site version
-of the latent block, used when the model has a `latent(0 + trait |
-site_species)` term. Loading matrix shape and packing are identical to
-`Λ_B`; the marginal contribution to `Σ_y_site` is also `Λ_W Λ_W'`.
+**Unit-observation loadings** `Λ_W` — for this fitter, these contribute
+response-specific variances: response `t` receives `sum(Λ_W[t, :] .^ 2)`.
+Only these diagonal entries enter the site covariance; the fitter does not
+add the off-diagonal entries of `Λ_W Λ_W'` to it.
 
 **Site-tier diagonal random effects** `s_B[:, s] ∼ N(0, diag(σ²_B))` —
 per-species independent random effects at the site tier. The marginal
@@ -66,30 +69,35 @@ contribution to `Σ_y_site` is `diag(σ²_B)`.
 **Unit-obs diagonal random effects** `s_W[:, s] ∼ N(0, diag(σ²_W))` —
 the per-site version, contributing `diag(σ²_W)` to `Σ_y_site`.
 
-**Phylogenetic component** `s_phy ∼ N(0, σ²_phy · Σ_phy)` — species are
-tied by a user-supplied species-by-species covariance `Σ_phy`. The
-marginal contribution at a single site is `σ²_phy · Σ_phy`. Across the
-full data the structure becomes block-diagonal in site and dense across
-species via `Σ_phy`.
+**Structured component** `u ∼ N(0, B)` — `Σ_phy` is a supplied covariance
+among the response rows. With structured loadings and/or per-response
+structured standard deviations, the model constructs
+`B = (Λ_phy_aug * Λ_phy_aug') .* Σ_phy`, where `Λ_phy_aug` combines
+`Λ_phy` with the column `σ_phy` when both are present. With `σ_phy` alone,
+`B = (σ_phy * σ_phy') .* Σ_phy`. The same `u` enters every site, so `B`
+contributes both within a site and between different sites. See
+[Structured dependence](structured-dependence.md) for the data layout.
 
 **Observation noise** `ε[:, s] ∼ N(0, σ²_eps I_p)` — the iid residual
 term.
 
 ## Closed-form Gaussian marginal
 
-Integrating out `η_B`, `η_W`, `s_B`, `s_W` and (where present) the
-phylogenetic random effect yields a Gaussian marginal in `y_s` with
-mean `X_s β` and covariance
+Without the structured effect, integrating out the random terms gives
 
 ```math
 y_s \sim \mathcal{N}\!\left(X_s\,\beta,\; \Lambda_B\,\Lambda_B^\top + \mathrm{diag}(d_{\text{total}})\right),
 ```
 
-where `d_total = σ²_B + σ²_W + σ²_eps` collects every diagonal
-contribution at a single site, plus the latent-W contribution which
-behaves like an additional rank-`K` block at the unit-obs tier. The full
-data log-likelihood is the sum of these per-site Gaussians, plus the
-phylogenetic correction below.
+where `d_total[t] = sum(Λ_W[t, :] .^ 2) + σ²_B[t] + σ²_W[t] + σ²_eps`,
+with absent components set to zero. Call this covariance `A`.
+The sites are independent in this case, so their log-likelihoods add.
+With a structured effect, a single site's marginal covariance is `A + B`
+and the covariance between two different sites is `B`; their joint
+likelihood must account for that dependence.
+
+`sigma_y_site(fit)` returns `A`, including observation noise but excluding
+`B`. It is not the full marginal covariance `A + B` of a structured fit.
 
 The negative log-marginal-likelihood is evaluated via Woodbury so the
 expensive `p × p` operations are reduced to `K × K` inversions plus a
@@ -98,16 +106,18 @@ random-effect blocks.
 
 ## Rotation trick for phylogenetic terms
 
-For models with `phylo_unique()` the full data covariance over the
-`n × p` long-form response is
+For this row-structured model, the covariance of `vec(Y)` (all `p`
+responses from the first site, then the second, and so on) is
 
 ```math
 \Sigma_{y,\text{full}} \;=\; I_n \otimes A \;+\; J_n \otimes B,
 ```
 
-where `A` is the iid-across-sites covariance (latent + diagonal RE +
-ε), `B` is the phylogenetic contribution `σ²_phy · Σ_phy`, and `J_n` is
-the `n × n` all-ones matrix. Diagonalising in the site-dimension (which
+where `A` contains the site-specific variation, `B` is the structured
+covariance defined above, and `J_n` is the `n × n` all-ones matrix.
+Each diagonal site block is `A + B`; each off-diagonal site block is `B`.
+Thus the full covariance is block-diagonal only when `B` is zero (or there
+is just one site). Diagonalising in the site-dimension (which
 amounts to rotating into the `1_n / √n` versus orthogonal-complement
 basis) decomposes the determinant and quadratic form into the rank-1
 component `A + n·B` and the `(n − 1)` copies of `A`, reducing the
@@ -124,8 +134,9 @@ lower-triangular packing (matching the R-side `gllvmTMB::rr_theta_len(p,
 K)`) as the identifying constraint at the optimum. The latent scores
 `η_B[s]` are not estimated; they are integrated out.
 
-The phylogenetic variance `σ²_phy` is identified separately from
-`σ²_eps` only when the phylogenetic correlation structure differs
-materially from the identity; very flat trees collapse the
-identifiability and the engine will report a wide profile CI on
-`σ²_phy` in those cases.
+Whether the structured variance can be separated from other components
+depends on the design and the covariance patterns they imply. In this
+model, the structured effect is shared across sites while observation
+noise is independent, even if `Σ_phy` is the identity. Inspect convergence
+and uncertainty for the fitted design; the form of the tree alone does
+not guarantee precise variance estimates.
