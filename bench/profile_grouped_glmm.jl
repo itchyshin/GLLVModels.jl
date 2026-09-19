@@ -180,16 +180,19 @@ function shadow_fit_counts(Y1::Matrix{Float64}, group::Vector{Int}; warm::Bool =
     ok_calls = Ref(0)
     failed_calls = Ref(0)
     final_inner_status = Ref(:never_ran)
-    # S7c: per-call inner-iteration record, split cold (b_cache empty — the
-    # first successful call only) vs warm (every call thereafter), mirroring
-    # src/grouped_nongaussian_fit.jl's `_grouped_nongaussian_objective` cache
-    # exactly (same b_cache Ref pattern) so this shadow measures what the
-    # real fitter does when `warm=true`.
+    # S7c fix (mirrors src/grouped_nongaussian_fit.jl exactly, see that
+    # file's `objective_cold`/`objective_warm` split and its comment for the
+    # mechanism): warm-starting is confined to the Nelder-Mead VALUE-ONLY
+    # search; every FD-differenced quantity (candidate_gradient, the BFGS
+    # gradient!, the final value/gradient/Hessian) always uses `use_warm =
+    # false`. `b_cache` is shared across BOTH so `warm calls` in the
+    # printed distribution below means "warm-started during Nelder-Mead",
+    # not "warm-started anywhere".
     b_cache = Ref{Union{Nothing,Vector{Float64}}}(nothing)
     cold_iters = Int[]
     warm_iters = Int[]
 
-    function counting_objective(value)
+    function counting_objective(value, use_warm::Bool)
         obj_calls[] += 1
         (length(value) == expected_len && all(isfinite, value)) || return GLLVModels._NLL_SENTINEL
         try
@@ -200,7 +203,7 @@ function shadow_fit_counts(Y1::Matrix{Float64}, group::Vector{Int}; warm::Bool =
             family = GLLVModels._grouped_nongaussian_family(kind, value, dispersion_indices, p, n, mode)
             family === nothing && return GLLVModels._NLL_SENTINEL
             W = GLLVModels._grouped_laplace_design(incidences, loads; uniques = uniques)
-            b_init = warm ? b_cache[] : nothing
+            b_init = (warm && use_warm) ? b_cache[] : nothing
             was_cold = b_init === nothing
             result = GLLVModels.joint_grouped_laplace_loglik(family, vec(data), vec(trials), D,
                 gamma, W; link = GLLVModels._grouped_nongaussian_link(Val(kind)),
@@ -210,7 +213,7 @@ function shadow_fit_counts(Y1::Matrix{Float64}, group::Vector{Int}; warm::Bool =
                 chol_count[] += 2 * result.iterations + 1
                 ok_calls[] += 1
                 was_cold ? push!(cold_iters, result.iterations) : push!(warm_iters, result.iterations)
-                warm && (b_cache[] = copy(result.mode))
+                (warm && use_warm) && (b_cache[] = copy(result.mode))
             else
                 chol_count[] += 2 * result.iterations
                 failed_calls[] += 1
@@ -223,6 +226,8 @@ function shadow_fit_counts(Y1::Matrix{Float64}, group::Vector{Int}; warm::Bool =
             return GLLVModels._NLL_SENTINEL
         end
     end
+    warm_objective(value) = counting_objective(value, true)
+    cold_objective(value) = counting_objective(value, false)
 
     grad_calls = Ref(0)
     fd_gradient = (obj, val) -> begin
@@ -230,30 +235,30 @@ function shadow_fit_counts(Y1::Matrix{Float64}, group::Vector{Int}; warm::Bool =
         GLLVModels._grouped_fd_gradient(obj, val)
     end
 
-    result1 = Optim.optimize(counting_objective, theta0, Optim.NelderMead(),
+    result1 = Optim.optimize(warm_objective, theta0, Optim.NelderMead(),
         Optim.Options(g_tol = 1e-4, iterations = 100))
     candidate = collect(Optim.minimizer(result1))
-    candidate_gradient = fd_gradient(counting_objective, candidate)
+    candidate_gradient = fd_gradient(cold_objective, candidate)
     final_result = result1
     if all(isfinite, candidate_gradient)
-        gradient! = (storage, value) -> (storage .= fd_gradient(counting_objective, value))
+        gradient! = (storage, value) -> (storage .= fd_gradient(cold_objective, value))
         refined = try
-            Optim.optimize(counting_objective, gradient!, candidate, Optim.BFGS(),
+            Optim.optimize(cold_objective, gradient!, candidate, Optim.BFGS(),
                 Optim.Options(g_tol = 1e-4, iterations = 100))
         catch
             nothing
         end
         if refined !== nothing
             refined_estimate = collect(Optim.minimizer(refined))
-            refined_value = counting_objective(refined_estimate)
+            refined_value = cold_objective(refined_estimate)
             if isfinite(refined_value) && !(refined_value >= 1e12) &&
-                    refined_value <= counting_objective(candidate)
+                    refined_value <= cold_objective(candidate)
                 final_result = refined
             end
         end
     end
     estimate = collect(Optim.minimizer(final_result))
-    shadow_loglik = -counting_objective(estimate)
+    shadow_loglik = -cold_objective(estimate)
 
     return (; shadow_loglik, obj_calls = obj_calls[], grad_calls = grad_calls[],
              inner_iters_sum = inner_iters_sum[], chol_count = chol_count[],
@@ -368,9 +373,11 @@ function main_warm()
             warm.obj_calls, warm.inner_iters_sum, warm.ok_calls, warm.failed_calls,
             warm.final_inner_status, warm.shadow_loglik)
 
-    # Per-call distribution: the FIRST successful call is necessarily cold
-    # (b_cache starts empty) even when warm=true; every call after it is
-    # warm-started from the previous call's mode.
+    # Per-call distribution (S7c fix: warm-starting is confined to the
+    # Nelder-Mead value-only search): "cold calls" are every call OUTSIDE
+    # that search (the very first call, plus every FD-differenced/BFGS
+    # call, which always starts cold by design); "warm calls" are the
+    # Nelder-Mead-phase calls that actually reused the cache.
     wc, ww = warm.cold_iters, warm.warm_iters
     println("--- per-call distribution (warm=true run) ---")
     @printf("cold calls: n=%d  sum=%d  values=%s\n", length(wc), sum(wc; init = 0), wc)
