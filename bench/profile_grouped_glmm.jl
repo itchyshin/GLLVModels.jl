@@ -51,7 +51,7 @@
 #       bench/profile_grouped_glmm.jl --gate
 
 using GLLVModels
-using DelimitedFiles, Statistics, LinearAlgebra, Printf
+using DelimitedFiles, Statistics, LinearAlgebra, Printf, Profile
 using Distributions: Poisson
 using Optim
 
@@ -152,7 +152,7 @@ end
 # the real, unexported GLLVModels internal — see src/grouped_nongaussian_fit.jl
 # for the original (lines 272-376) this mirrors.
 # ---------------------------------------------------------------------------
-function shadow_fit_counts(Y1::Matrix{Float64}, group::Vector{Int})
+function shadow_fit_counts(Y1::Matrix{Float64}, group::Vector{Int}; warm::Bool = false)
     p, n = size(Y1)
     termvec = GLLVModels.GroupingTerm[GLLVModels.GroupingTerm(:unit; mode = :indep)]
     kind = GLLVModels._grouped_nongaussian_kind(Poisson())          # :poisson
@@ -180,6 +180,14 @@ function shadow_fit_counts(Y1::Matrix{Float64}, group::Vector{Int})
     ok_calls = Ref(0)
     failed_calls = Ref(0)
     final_inner_status = Ref(:never_ran)
+    # S7c: per-call inner-iteration record, split cold (b_cache empty — the
+    # first successful call only) vs warm (every call thereafter), mirroring
+    # src/grouped_nongaussian_fit.jl's `_grouped_nongaussian_objective` cache
+    # exactly (same b_cache Ref pattern) so this shadow measures what the
+    # real fitter does when `warm=true`.
+    b_cache = Ref{Union{Nothing,Vector{Float64}}}(nothing)
+    cold_iters = Int[]
+    warm_iters = Int[]
 
     function counting_objective(value)
         obj_calls[] += 1
@@ -192,13 +200,17 @@ function shadow_fit_counts(Y1::Matrix{Float64}, group::Vector{Int})
             family = GLLVModels._grouped_nongaussian_family(kind, value, dispersion_indices, p, n, mode)
             family === nothing && return GLLVModels._NLL_SENTINEL
             W = GLLVModels._grouped_laplace_design(incidences, loads; uniques = uniques)
+            b_init = warm ? b_cache[] : nothing
+            was_cold = b_init === nothing
             result = GLLVModels.joint_grouped_laplace_loglik(family, vec(data), vec(trials), D,
                 gamma, W; link = GLLVModels._grouped_nongaussian_link(Val(kind)),
-                maxiter = 100, tol = 1e-8)
+                maxiter = 100, tol = 1e-8, b_init = b_init)
             inner_iters_sum[] += result.iterations
             if result.status === :ok
                 chol_count[] += 2 * result.iterations + 1
                 ok_calls[] += 1
+                was_cold ? push!(cold_iters, result.iterations) : push!(warm_iters, result.iterations)
+                warm && (b_cache[] = copy(result.mode))
             else
                 chol_count[] += 2 * result.iterations
                 failed_calls[] += 1
@@ -246,7 +258,8 @@ function shadow_fit_counts(Y1::Matrix{Float64}, group::Vector{Int})
     return (; shadow_loglik, obj_calls = obj_calls[], grad_calls = grad_calls[],
              inner_iters_sum = inner_iters_sum[], chol_count = chol_count[],
              ok_calls = ok_calls[], failed_calls = failed_calls[],
-             final_inner_status = final_inner_status[])
+             final_inner_status = final_inner_status[],
+             cold_iters = cold_iters, warm_iters = warm_iters)
 end
 
 # ---------------------------------------------------------------------------
@@ -276,13 +289,13 @@ function main_after()
     before_fresh = 1540
     before_outer_grad_evals = 8
 
-    warm_s_after = median_s(() -> GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms, unit = group))
-    after_fit = GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms, unit = group)
+    warm_s_after = median_s(() -> GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms, unit = group, warm_start_inner = false))
+    after_fit = GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms, unit = group, warm_start_inner = false)
 
     has_stats = isdefined(GLLVModels, :_grouped_chol_stats_reset!) && isdefined(GLLVModels, :_grouped_chol_stats)
     stats = if has_stats
         GLLVModels._grouped_chol_stats_reset!()
-        GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms, unit = group)
+        GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms, unit = group, warm_start_inner = false)
         GLLVModels._grouped_chol_stats()
     else
         (calls = -1, fresh = -1, reused = -1, fallback = -1)
@@ -328,9 +341,165 @@ function main_after()
     exit(ok ? 0 : 1)
 end
 
+# ---------------------------------------------------------------------------
+# --gate warm (leaf-S7c G7c.2): inner Newton iterations summed over one fit,
+# cold (S7b baseline behaviour, `warm=false`) vs warm-started (`warm=true`,
+# the S7c change), via the shadow driver's now warm-start-aware
+# `shadow_fit_counts` (the real `fit_grouped_nongaussian` still does not
+# expose per-call counts, so the byte-for-byte shadow is still how this is
+# measured — same rationale as the file header's `--gate`/`--gate after`).
+# The count is reported whatever it is; no pass/fail threshold on the value.
+# ---------------------------------------------------------------------------
+function main_warm()
+    println("Julia ", VERSION, "  threads=", Threads.nthreads())
+    y, group, G, N = load_fixture()
+    Y1 = Matrix{Float64}(reshape(Float64.(y), 1, :))
+
+    cold = shadow_fit_counts(Y1, group; warm = false)
+    warm = shadow_fit_counts(Y1, group; warm = true)
+
+    println("--- BEFORE (cold start every inner call, S7b baseline behaviour) ---")
+    @printf("obj_calls=%d  inner_newton_iters_sum=%d  ok_calls=%d  failed_calls=%d  final_status=%s  loglik=%.6f\n",
+            cold.obj_calls, cold.inner_iters_sum, cold.ok_calls, cold.failed_calls,
+            cold.final_inner_status, cold.shadow_loglik)
+
+    println("--- AFTER (warm-started from the previous call's converged mode, S7c) ---")
+    @printf("obj_calls=%d  inner_newton_iters_sum=%d  ok_calls=%d  failed_calls=%d  final_status=%s  loglik=%.6f\n",
+            warm.obj_calls, warm.inner_iters_sum, warm.ok_calls, warm.failed_calls,
+            warm.final_inner_status, warm.shadow_loglik)
+
+    # Per-call distribution: the FIRST successful call is necessarily cold
+    # (b_cache starts empty) even when warm=true; every call after it is
+    # warm-started from the previous call's mode.
+    wc, ww = warm.cold_iters, warm.warm_iters
+    println("--- per-call distribution (warm=true run) ---")
+    @printf("cold calls: n=%d  sum=%d  values=%s\n", length(wc), sum(wc; init = 0), wc)
+    if isempty(ww)
+        println("warm calls: n=0 (no calls after the first — nothing to distribute)")
+    else
+        @printf("warm calls: n=%d  sum=%d  min=%d  median=%.1f  max=%.1f\n",
+                length(ww), sum(ww), minimum(ww), median(ww), maximum(ww))
+    end
+
+    println("--- reference (S4/S7b corrected counter, banked) ---")
+    println("before_inner_newton_iters_sum=711 (118 inner Laplace-fit calls)")
+
+    loglik_gap_rel = abs(warm.shadow_loglik - cold.shadow_loglik) / max(abs(cold.shadow_loglik), 1.0)
+    @printf("cold-vs-warm shadow loglik gap: rel=%.3e\n", loglik_gap_rel)
+
+    ok = cold.obj_calls > 0 && warm.obj_calls > 0 && cold.ok_calls > 0 && warm.ok_calls > 0
+    reasons = String[]
+    ok || push!(reasons, "measurement incomplete (cold.obj_calls=$(cold.obj_calls) warm.obj_calls=$(warm.obj_calls) " *
+                          "cold.ok_calls=$(cold.ok_calls) warm.ok_calls=$(warm.ok_calls))")
+    if ok
+        println("GATE G7c.2 PASS")
+    else
+        println("GATE G7c.2 FAIL ", join(reasons, "; "))
+    end
+    exit(ok ? 0 : 1)
+end
+
+# ---------------------------------------------------------------------------
+# --gate after_warm (leaf-S7c G7c.3): warm median wall on the 200x5 fixture,
+# before (warm_start_inner=false) vs after (warm_start_inner=true, now the
+# default), against the banked 0.192s (ours, pre-warm-start) and 0.015s
+# (Latte.jl); plus a sampling-`Profile` split naming the per-call GLM-state
+# (`_joint_grouped_state`/`_joint_grouped_components`) share of one fit's
+# wall, so the NEXT lever (named in leaf-S7b's checkpoint as the likely
+# O(n=1000) per-Newton-iteration GLM state/score/curvature cost) is a number.
+# ---------------------------------------------------------------------------
+function main_after_warm()
+    println("Julia ", VERSION, "  threads=", Threads.nthreads())
+    sha = _git_sha()
+    y, group, G, N = load_fixture()
+    Y1 = reshape(Float64.(y), 1, :)
+    terms = [GLLVModels.GroupingTerm(:unit; mode = :indep)]
+
+    before_wall_s = median_s(() -> GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms,
+        unit = group, warm_start_inner = false))
+    after_wall_s = median_s(() -> GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms,
+        unit = group, warm_start_inner = true))
+    after_fit = GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms, unit = group,
+        warm_start_inner = true)
+
+    println("--- BEFORE (warm_start_inner=false, 5-rep median wall) ---")
+    @printf("warm_median_wall=%.4fs  (banked 0.192s)\n", before_wall_s)
+    println("--- AFTER (warm_start_inner=true, now the default, 5-rep median wall) ---")
+    @printf("warm_median_wall=%.4fs  converged=%s  iterations=%d\n",
+            after_wall_s, after_fit.converged, after_fit.iterations)
+    println("--- reference ---")
+    @printf("ours before/Latte=%.1fx  ours after/Latte=%.1fx  Latte.jl=0.015s\n",
+            before_wall_s / 0.015, after_wall_s / 0.015)
+
+    # ---- Profile split: per-call GLM-state share of one warm fit's wall ----
+    # `include_meta=false` strips the thread/task/cpu-cycle metadata blocks
+    # Julia's raw profile buffer otherwise interleaves with instruction
+    # pointers (without this, small metadata integers can collide with real
+    # `ip` values and throw `KeyError` on `lookup[ip]` — found and fixed
+    # while building this gate). A sample counts as "GLM-state" if
+    # `_joint_grouped_state` or `_joint_grouped_components` appears ANYWHERE
+    # in its stack (INCLUSIVE of whatever they call — score/curvature/link
+    # arithmetic — not just their own self-time), since that pair is the
+    # per-Newton-iteration cost this gate is naming a share for.
+    Profile.clear()
+    nreps_profile = 20
+    Profile.@profile for _ in 1:nreps_profile
+        GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms, unit = group,
+            warm_start_inner = true)
+    end
+    data = Profile.fetch(include_meta = false)
+    lookup = Profile.getdict(data)
+    glm_state_samples = 0
+    total_samples = 0
+    in_target = false
+    for ip in data
+        if ip == 0   # end-of-stack sentinel: tally the sample just finished
+            total_samples += 1
+            in_target && (glm_state_samples += 1)
+            in_target = false
+            continue
+        end
+        frames = lookup[ip]
+        frames_vec = frames isa AbstractVector ? frames : [frames]
+        if any(sf -> occursin("_joint_grouped_state", string(sf.func)) ||
+                     occursin("_joint_grouped_components", string(sf.func)), frames_vec)
+            in_target = true
+        end
+    end
+    glm_state_share = total_samples > 0 ? glm_state_samples / total_samples : NaN
+    @printf("Profile split (%d fits, %d total samples): GLM-state (_joint_grouped_state + _joint_grouped_components) share = %.1f%% (%d/%d samples)\n",
+            nreps_profile, total_samples, 100 * glm_state_share, glm_state_samples, total_samples)
+
+    mkpath(joinpath(@__DIR__, "results"))
+    out = joinpath(@__DIR__, "results", "grouped_warm_$(sha).tsv")
+    open(out, "w") do io
+        for l in header_lines()
+            println(io, l)
+        end
+        println(io, "N\tG\treps\tbefore_warm_wall_s\tafter_warm_wall_s\tbanked_wall_s\tlatte_wall_s\t",
+                     "before_over_latte\tafter_over_latte\tglm_state_share\ttotal_profile_samples")
+        println(io, N, "\t", G, "\t", REPS, "\t", before_wall_s, "\t", after_wall_s, "\t", 0.192, "\t", 0.015, "\t",
+                     before_wall_s / 0.015, "\t", after_wall_s / 0.015, "\t", glm_state_share, "\t", total_samples)
+    end
+    println("TSV written: ", out)
+
+    ok = after_fit.converged && before_wall_s > 0 && after_wall_s > 0 && total_samples > 0
+    reasons = String[]
+    ok || push!(reasons, "measurement incomplete (converged=$(after_fit.converged) before=$before_wall_s " *
+                          "after=$after_wall_s total_samples=$total_samples)")
+    if ok
+        println("GATE G7c.3 PASS")
+    else
+        println("GATE G7c.3 FAIL ", join(reasons, "; "))
+    end
+    exit(ok ? 0 : 1)
+end
+
 function main()
     gate = parse_args(ARGS)
     gate == "after" && return main_after()
+    gate == "warm" && return main_warm()
+    gate == "after_warm" && return main_after_warm()
     println("Julia ", VERSION, "  threads=", Threads.nthreads())
     sha = _git_sha()
 
@@ -339,8 +508,8 @@ function main()
     terms = [GLLVModels.GroupingTerm(:unit; mode = :indep)]
 
     # --- (1) real, unmodified wall-clock, exactly as f3_ours_glmm.jl does ---
-    warm_s = median_s(() -> GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms, unit = group))
-    real_fit = GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms, unit = group)
+    warm_s = median_s(() -> GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms, unit = group, warm_start_inner = false))
+    real_fit = GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms, unit = group, warm_start_inner = false)
     println("real fit: converged=", real_fit.converged, " loglik=", real_fit.loglik,
             " iterations=", real_fit.iterations, " stopping_reason=", real_fit.stopping_reason)
     @printf("warm median wall (%d reps): %.4f s\n", REPS, warm_s)
