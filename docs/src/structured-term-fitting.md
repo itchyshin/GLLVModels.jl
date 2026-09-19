@@ -44,6 +44,10 @@ fit = fit_gaussian_structured(Y, data;
 isfinite(fit.loglik)
 ```
 
+```@docs
+fit_gaussian_structured
+```
+
 The recognizer internals this wrapper drives (`_recognize_source_term`,
 `_source_term_covariance`, `SourceTermSpec`, and friends) are internal
 and documented on the [Low-level reference](low-level-reference.md) page —
