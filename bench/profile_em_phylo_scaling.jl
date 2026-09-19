@@ -42,6 +42,11 @@
 # USAGE
 #   env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. \
 #       bench/profile_em_phylo_scaling.jl --gate --p 200,1000,5000
+#
+# leaf-S7 G7.5 re-measurement after landing a change (writes
+# bench/results/em_phylo_after_<sha>.tsv instead of em_phylo_scaling_<sha>.tsv):
+#   env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. \
+#       bench/profile_em_phylo_scaling.jl --gate after --p 200,1000,5000
 
 using Random, LinearAlgebra, SparseArrays, Statistics, Printf
 using GLLVModels
@@ -114,6 +119,7 @@ end
 # ---------------------------------------------------------------------------
 function parse_args(argv)
     plist = [200, 1000, 5000]
+    mode = "scaling"
     i = 1
     while i <= length(argv)
         a = argv[i]
@@ -121,12 +127,21 @@ function parse_args(argv)
             plist = parse.(Int, split(argv[i + 1], ","))
             i += 2
         elseif a == "--gate"
-            i += 1
+            # `--gate` alone (leaf-S4 usage) takes no value; `--gate after`
+            # (leaf-S7 G7.5) selects the post-change measurement, writing
+            # bench/results/em_phylo_after_<sha>.tsv instead of the leaf-S4
+            # em_phylo_scaling_<sha>.tsv name.
+            if i + 1 <= length(argv) && argv[i + 1] == "after"
+                mode = "after"
+                i += 2
+            else
+                i += 1
+            end
         else
             i += 1
         end
     end
-    return plist
+    return plist, mode
 end
 
 # ---------------------------------------------------------------------------
@@ -156,8 +171,8 @@ median_s(f; reps::Int = REPS_COMPONENT) = begin
 end
 
 function main()
-    plist = parse_args(ARGS)
-    println("Julia ", VERSION, "  threads=", Threads.nthreads(), "  p=", plist)
+    plist, mode = parse_args(ARGS)
+    println("Julia ", VERSION, "  threads=", Threads.nthreads(), "  p=", plist, "  mode=", mode)
     sha = _git_sha()
     t_script_start = time()
 
@@ -184,10 +199,16 @@ function main()
         σ_phy0 = fill(0.1 * sqrt(mean(abs2, fx.y)), p)
 
         # ---- PROBE: one untimed-context loglik-check + one E-step, single rep ----
-        t_probe = @elapsed loglik_probe = GLLVModels.gaussian_marginal_loglik(fx.y, Λ_B0, σ_eps0;
-            σ_phy = σ_phy0, Σ_phy = fx.Σ_phy)
-        t_loglik_probe = @elapsed GLLVModels.gaussian_marginal_loglik(fx.y, Λ_B0, σ_eps0;
-            σ_phy = σ_phy0, Σ_phy = fx.Σ_phy)
+        # S7 item 2 landed: `em_fit_phylo`'s internal monotonicity check now
+        # routes through the O(p) sparse path (`gaussian_marginal_loglik_sparse_phy`)
+        # whenever a `phy::AugmentedPhy` is supplied (this fixture always
+        # supplies one), matching what the real driver below now does — so
+        # this standalone component measurement calls the SAME function the
+        # driver calls, not the dense J3 path it replaced.
+        t_probe = @elapsed loglik_probe = GLLVModels.gaussian_marginal_loglik_sparse_phy(fx.y, Λ_B0, σ_eps0;
+            σ_phy = σ_phy0, phy = fx.phy, σ²_phy = 1.0)
+        t_loglik_probe = @elapsed GLLVModels.gaussian_marginal_loglik_sparse_phy(fx.y, Λ_B0, σ_eps0;
+            σ_phy = σ_phy0, phy = fx.phy, σ²_phy = 1.0)
         t_estep_probe = @elapsed ss_probe = _estep_sparse(fx.y, Λ_B0, σ_eps0, σ_phy0, fx.phy; σ²_phy = 1.0)
         @printf("p=%-5d probe: loglik_check=%.4fs  estep=%.4fs\n", p, t_loglik_probe, t_estep_probe)
 
@@ -201,22 +222,33 @@ function main()
 
         # ---- component medians (independent, standalone timing) ----
         reps_here = (t_loglik_probe + t_estep_probe) * REPS_COMPONENT * 4 > PER_CELL_BUDGET_S ? 1 : REPS_COMPONENT
-        loglik_ms = 1000 * median_s(() -> GLLVModels.gaussian_marginal_loglik(fx.y, Λ_B0, σ_eps0;
-            σ_phy = σ_phy0, Σ_phy = fx.Σ_phy); reps = reps_here)
+        loglik_ms = 1000 * median_s(() -> GLLVModels.gaussian_marginal_loglik_sparse_phy(fx.y, Λ_B0, σ_eps0;
+            σ_phy = σ_phy0, phy = fx.phy, σ²_phy = 1.0); reps = reps_here)
         estep_ms = 1000 * median_s(() -> _estep_sparse(fx.y, Λ_B0, σ_eps0, σ_phy0, fx.phy; σ²_phy = 1.0);
             reps = reps_here)
         ss = _estep_sparse(fx.y, Λ_B0, σ_eps0, σ_phy0, fx.phy; σ²_phy = 1.0)
         mstep_ms = 1000 * median_s(() -> _mstep_dense(fx.y, ss); reps = reps_here)
 
         # ---- real driver, capped iterations, for the actual per-iteration wall ----
+        # `λ_init`/`σ_eps_init`/`σ_phy_init` reuse the SAME warm start already
+        # computed above (identical to what `em_fit_phylo` would compute
+        # itself via `ppca_init`), so the timed call does NOT re-run PPCA's
+        # O(p^3) dense eigendecomposition of the p x p sample covariance
+        # inside the timed region — at p=5000 that one-time cost is tens of
+        # seconds and, once amortised over only `EM_ITERS_CAP` iterations,
+        # swamped the actual per-iteration EM cost this gate measures (this
+        # was already true pre-fix but invisible: the O(p^3) per-iteration
+        # Cholesky cost this arc removes was itself large enough to hide it).
         remaining_budget = PER_CELL_BUDGET_S - (time() - t_cell_start)
         est_iter_cost = (loglik_ms + estep_ms + mstep_ms) / 1000
         iters_cap = remaining_budget > 0 && est_iter_cost > 0 ?
             max(1, min(EM_ITERS_CAP, floor(Int, remaining_budget / est_iter_cost / 2))) : 1
         # Warm-up (JIT) on the same shapes, 1 iteration, untimed for compute purposes.
-        em_fit_phylo(fx.y, 1, fx.Σ_phy; phy = fx.phy, tol = 1e-9, max_iter = 1, assert_monotone = true)
+        em_fit_phylo(fx.y, 1, fx.Σ_phy; phy = fx.phy, tol = 1e-9, max_iter = 1, assert_monotone = true,
+            λ_init = Λ_B0, σ_eps_init = σ_eps0, σ_phy_init = σ_phy0)
         t_driver = @elapsed emf = em_fit_phylo(fx.y, 1, fx.Σ_phy; phy = fx.phy, tol = 1e-9,
-            max_iter = iters_cap, assert_monotone = true)
+            max_iter = iters_cap, assert_monotone = true,
+            λ_init = Λ_B0, σ_eps_init = σ_eps0, σ_phy_init = σ_phy0)
         driver_ms_per_iter = 1000 * t_driver / max(emf.n_iter, 1)
 
         cell_wall = time() - t_cell_start
@@ -266,7 +298,8 @@ function main()
             [r.p for r in rows], ")")
 
     mkpath(joinpath(@__DIR__, "results"))
-    out = joinpath(@__DIR__, "results", "em_phylo_scaling_$(sha).tsv")
+    out_name = mode == "after" ? "em_phylo_after_$(sha).tsv" : "em_phylo_scaling_$(sha).tsv"
+    out = joinpath(@__DIR__, "results", out_name)
     open(out, "w") do io
         for l in header_lines()
             println(io, l)
@@ -287,10 +320,11 @@ function main()
     println("TSV written: ", out)
 
     ok = length(rows) >= 2 && !isnan(exponent)
+    gate_name = mode == "after" ? "G7.5" : "G4.4"
     if ok
-        println("GATE G4.4 PASS")
+        println("GATE $(gate_name) PASS")
     else
-        println("GATE G4.4 FAIL fewer than 2 usable p-cells completed: ", join(skipped, " | "))
+        println("GATE $(gate_name) FAIL fewer than 2 usable p-cells completed: ", join(skipped, " | "))
     end
     exit(ok ? 0 : 1)
 end
