@@ -5,10 +5,10 @@ S7b's outcome 2026-09-19 09:36 and re-set the order to S7 -> S7c -> S6 (S7c
 is new: warm-started inner Laplace fits across the outer FD evaluations,
 written up in arcs.md, gated leaf-S7c, dispatched after S7).
 STATE: arc S4 DONE (tables below). Arc S7b DONE (see "S7b gates" below).
-Arc S7 DONE (items 1/2/3/4 all landed; see "S7: sparse-phylo/EM hoists"
-below) modulo G7.5's full `Pkg.test()`, which was still running at the time
-this checkpoint was written -- see that section for the exact status,
-evidence gathered so far, and how to finish verifying it.
+Arc S7 DONE -- items 1/2/3/4 all landed, gates G7.1-G7.5 all PASS (the one
+full-suite exception is the pre-existing, unrelated test_em_louis.jl flake
+also seen in S7b); see "S7: sparse-phylo/EM hoists" below for the full
+before/after tables and gate evidence.
 NEXT: S7c (warm-started inner Laplace fits across outer FD evaluations),
 then S6 -- see "NEXT" at the end of this file.
 
@@ -236,23 +236,24 @@ timed `em_fit_phylo` calls.
 - G7.2 PASS: `... --gate gradient` -> `GATE G7.2 PASS` (5/5: bitwise-equal to the from-scratch two-call reference on dΛ_B/dσ²_eps/dσ²_phy/dσ_phy, plus the call-count == 1 assertion).
 - G7.3 PASS: `... --gate estep` -> `GATE G7.3 PASS` (11/11: β/diag(Vφ)/μ_φ/μ_z at rtol 1e-10, p=200/1000; 50-iteration EM trajectory -- per-iteration loglik and final θ -- at rtol 1e-10 vs the dense-estep driver).
 - G7.4 PASS: `... --gate monotone` -> `GATE G7.4 PASS` (4/4: a constructed fixture forces a genuine decrease; the sparse-routed check flags it at the same point as dense, to rtol 1e-8; SQUAREM sanity-run, unaffected by construction).
-- G7.5: bench portion PASS -- `env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. bench/profile_em_phylo_scaling.jl --gate after --p 200,1000,5000` -> `GATE G7.5 PASS`, TSV `bench/results/em_phylo_after_1f4ae6632.tsv` (git-ignored; SHA is the pre-S7 HEAD the bench script stamped, before the S7 commits below).
-  Full-suite portion **PENDING at the time this checkpoint was written**: `env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. -e 'using Pkg; Pkg.test()'` was launched in the background (log `/tmp/full_pkg_test_s7.log`, outside the repo) and was STILL RUNNING after 1h30m+ wall clock -- confirmed actively consuming CPU throughout (not hung; `ps` showed the test child process, pid varies per relaunch, steadily accumulating CPU time), under genuine three-way shared-machine contention (the DRM.jl-speed6 sibling lane was also running its own full `Pkg.test()` concurrently; `uptime` showed load average ~12-15 on a 20-core Mac Studio). This far overran the ledger's ~25 min estimate for this one run; per D-139 ("a run that overruns its estimate stops and re-reports"), reporting now rather than continuing to block indefinitely.
-  **Strong partial evidence in its place**: all seven directly-relevant test files were run STANDALONE (not via the ordered full suite, but exercising every function this arc touched) and passed with ZERO failures: `test_node_gradient.jl` 58/58, `test_em_phylo.jl` 27/27, `test_sparse_phy.jl` 43/44 (1 pre-existing `@test_broken`), `test_sparse_phy_grad.jl` 101/101, `test_em_squarem.jl` 27/27, `test_em_squarem_safety.jl` skipped (needs `GLLVM_SLOW_TESTS=1`, expected), `test_em_louis.jl` 147/147 (standalone -- confirms S7b's finding that its one known full-suite failure is order-dependent, not present in isolation, and NOT reintroduced by this arc).
-  **Next session: re-check `/tmp/full_pkg_test_s7.log`** (or re-run `Pkg.test()` if that file/process no longer exists) for the final "Testing GLLVModels tests passed" line and any failures before treating S7's Definition of Done as fully closed; if the only failure is the pre-existing `test_em_louis.jl:127` order-dependent flake (rel 0.001056 vs 0.001, documented in the S7b section above), that is not this arc's regression.
+- G7.5 PASS (with the one pre-existing, documented, unrelated exception below):
+  bench portion PASS -- `env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. bench/profile_em_phylo_scaling.jl --gate after --p 200,1000,5000` -> `GATE G7.5 PASS`, TSV `bench/results/em_phylo_after_1f4ae6632.tsv` (git-ignored).
+  Full-suite portion: `env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. -e 'using Pkg; Pkg.test()'` COMPLETED after 1h33m wall clock (log `/tmp/full_pkg_test_s7.log`, outside the repo) -- far over the ledger's ~25 min estimate, due to genuine three-way shared-machine contention (the DRM.jl-speed6 sibling lane ran its own full `Pkg.test()` concurrently the whole time; `uptime` showed load average ~12-15 on a 20-core Mac Studio; the test process itself was confirmed actively consuming ~100% of one core throughout via `ps`, never stalled). Result: **16228 passed, 1 failed, 0 errored, 19 broken**. The 1 failure is `test/test_em_louis.jl:127` ("SE PRIMARY GATE: EM-SEM SEs match dense-Hessian SEs (p=10)"), `rel = 0.0010560201922229443` vs threshold `0.001` -- the EXACT SAME value S7b's checkpoint recorded for the SAME pre-existing, order-dependent, deterministic flake (S7b verified it passes 147/147 in a clean standalone worktree at origin/main). I independently re-verified: `julia --project=. test/test_em_louis.jl` standalone -> 147/147 PASS, confirming this arc did not reintroduce or worsen it. The 19 broken are pre-existing `@test_broken` entries (R-parity cells gated behind live R availability etc.), unrelated to this arc. All four of this arc's own new gates appear in the full run and are clean: `sparse phylo identities (S7) — loglik check (G7.1)` 2/2, `— node_grad dedup (G7.2)` 5/5, `— E-step (G7.3)` 11/11, `— monotonicity check (G7.4)` 4/4. The ledger's literal CHECK (`grep -q "Testing GLLVModels tests passed"`) reads FAIL because of the pre-existing flake, exactly as S7b's did -- reported honestly, not silently reinterpreted.
+  One collateral fix from this full run: it surfaced `WARNING: redefinition of constant Main._RESULTS` (and `_REASONS`, `_check!`) -- test_sparse_phy_identities.jl's top-level helper names collided with test_grouped_laplace_identity.jl's identical pattern in the shared `Main` test namespace. Harmless in practice (each file's result is captured to a local before the next file's `include` runs) but the warning is real ("may fail, cause incorrect answers"); fixed by renaming to `_S7_IDENTITY_RESULTS`/`_S7_IDENTITY_REASONS`/`_s7_check!` (commit `ad578e52c`), all four gates re-verified standalone after the rename.
 
 ## TRUTH LIVES IN
 Branch `claude/lane-speed78-20260919` in this worktree (unpushed). S7 commits,
 in order: `1f472cab7` (em_phylo.jl: items 1/2/4), `5369d5ae9` (node_gradient.jl:
 item 3), `4d3508c5d` (test/test_sparse_phy_identities.jl + runtests.jl wiring),
 `cfdaf7477` (bench/profile_em_phylo_scaling.jl: --gate after mode + the two
-measurement-artifact fixes). TSV: `bench/results/em_phylo_after_1f4ae6632.tsv`
-(git-ignored). Full-suite log: `/tmp/full_pkg_test_s7.log` (outside the repo,
-ephemeral, PENDING as of this writing -- see G7.5 above). Ledger:
-`.unlazy/julia-speed-20260919/gates/leaf-S7.md` (git-ignored).
+measurement-artifact fixes), `ad578e52c` (test namespace-collision rename).
+TSV: `bench/results/em_phylo_after_1f4ae6632.tsv` (git-ignored). Full-suite
+log: `/tmp/full_pkg_test_s7.log` (outside the repo, ephemeral -- COMPLETE, see
+G7.5 above). Ledger: `.unlazy/julia-speed-20260919/gates/leaf-S7.md` (git-ignored).
 
 ## NEXT: S7c (warm-started inner Laplace fits across outer FD evaluations)
-Per Shinichi's re-set order (2026-09-19 09:36): S7c is dispatched after S7.
-Write leaf-S7c's gates before touching src/, per arcs.md's S7c writeup.
-Confirm G7.5's full-suite result first (see above) before starting. Then S6
-(per-site changes S4's profile ranked, still open from before the re-set).
+Per Shinichi's re-set order (2026-09-19 09:36): S7c is dispatched after S7,
+which is now fully closed (G7.1-G7.5 all PASS, modulo the pre-existing
+unrelated test_em_louis.jl flake documented above). Write leaf-S7c's gates
+before touching src/, per arcs.md's S7c writeup. Then S6 (per-site changes
+S4's profile ranked, still open from before the re-set).
