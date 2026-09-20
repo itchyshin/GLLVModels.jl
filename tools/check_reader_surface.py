@@ -45,6 +45,23 @@ RULES = (
 )
 
 
+def landing_contract_findings(docs_root: Path) -> list[str]:
+    """Return missing essentials from a reader's first GLLVModels page."""
+    landing = docs_root / "index.md"
+    if not landing.is_file():
+        return ["index.md is missing"]
+    text = landing.read_text(encoding="utf-8")
+    requirements = {
+        "an expansion of GLLVM": r"\bGLLVM\*{0,2}\s+(?:means|stands for)\s+\*{0,2}(?:generalised|generalized) linear latent[ -]variable model",
+        "a plain multi-response purpose": r"\b(?:several|many) responses\b",
+        "a standalone Julia identity": r"\bstandalone Julia\b",
+        "a link to the first runnable route": r"\]\(quickstart\.md\)",
+        "a plain current-limits route": r"\]\(what-can-i-fit-today\.md\)",
+    }
+    return [label for label, pattern in requirements.items()
+            if not re.search(pattern, text, flags=re.IGNORECASE | re.DOTALL)]
+
+
 class Finding(NamedTuple):
     path: Path
     line: int
@@ -121,6 +138,36 @@ def scan_paths(paths: Iterable[Path], display_root: Path) -> list[Finding]:
                 number = text.count("\n", 0, match.start()) + 1
                 by_line.setdefault(number, Finding(relative, number, rule, lines[number - 1].strip()))
         findings.extend(by_line[number] for number in sorted(by_line))
+    return findings
+
+
+def markdown_fence_findings(paths: Iterable[Path], display_root: Path) -> list[Finding]:
+    """Reject public Markdown pages with an unclosed fenced code block.
+
+    An unmatched fence can turn an otherwise readable tutorial into literal
+    code in the generated site, so source process-language checks alone are
+    not enough to protect the reader's route.
+    """
+    findings: list[Finding] = []
+    fence = re.compile(r"^\s*(`{3,}|~{3,})")
+    for path in sorted(paths):
+        try:
+            relative = path.relative_to(display_root)
+        except ValueError:
+            relative = Path(path.name)
+        opening_line: int | None = None
+        marker: str | None = None
+        for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            match = fence.match(line)
+            if match is None:
+                continue
+            current = match.group(1)
+            if opening_line is None:
+                opening_line, marker = line_number, current[0]
+            elif current[0] == marker:
+                opening_line, marker = None, None
+        if opening_line is not None:
+            findings.append(Finding(relative, opening_line, "unclosed-markdown-fence", ""))
     return findings
 
 
@@ -203,8 +250,17 @@ def main() -> int:
         "--rendered", type=Path,
         help="generated HTML root; use after the Documenter build",
     )
+    parser.add_argument(
+        "--landing-contract", action="store_true",
+        help="require a plain GLLVM definition, standalone Julia identity, and first route",
+    )
     args = parser.parse_args()
     try:
+        if args.landing_contract:
+            missing = landing_contract_findings(args.docs_root)
+            if missing:
+                print("LANDING_CONTRACT_FAIL missing=" + "; ".join(missing), file=sys.stderr)
+                return 1
         if args.rendered is not None:
             findings = scan_rendered(args.rendered)
             checked = len(list(args.rendered.rglob("*.html")))
@@ -212,6 +268,7 @@ def main() -> int:
         else:
             paths = source_surface_paths(args.docs_root, args.make_file, args.readme)
             findings = scan_paths(paths, args.docs_root.resolve().parent)
+            findings.extend(markdown_fence_findings(paths, args.docs_root.resolve().parent))
             checked = len(paths)
             scope = "source_files"
     except (ValueError, OSError) as error:
@@ -224,6 +281,8 @@ def main() -> int:
             )
         print(f"READER_SURFACE_FAIL findings={len(findings)}", file=sys.stderr)
         return 1
+    if args.landing_contract:
+        print("LANDING_CONTRACT_PASS")
     print(f"READER_SURFACE_PASS {scope}={checked}")
     return 0
 

@@ -22,7 +22,7 @@ jobs:
       # This standard-library check reads the literal makedocs(pages = [...])
       # navigation and README before Julia dependency installation or build.
       - name: Check reader source surface
-        run: python3 tools/check_reader_surface.py
+        run: python3 tools/check_reader_surface.py --landing-contract
       - uses: julia-actions/setup-julia@v3
         with:
           version: '1'

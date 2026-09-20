@@ -4,15 +4,15 @@
 <div class="gllvm-route gllvm-route--start">
   <div>
     <span class="gllvm-route__eyebrow">Pick a route</span>
-    <p>These are companions with partial parity, not interchangeable copies of the same workflow.</p>
+    <p>Choose the package that best matches your data and the way you want to work.</p>
   </div>
 </div>
 ```
 
-GLLVModels.jl is the matrix-first Julia companion to R `gllvmTMB`. The R package
-remains the formula-first model surface and the richer applied article set.
-The packages share core estimands; they do not offer identical workflows, and
-they are not a menu of interchangeable Julia optimisers.
+Both packages ask which responses vary together. `gllvmTMB` is an R package
+with a formula-based interface and a larger set of applied guides.
+GLLVModels.jl is a Julia package that starts from a response matrix. They are
+related tools, not drop-in replacements for one another.
 
 ## Use R (`gllvmTMB`)
 
@@ -30,25 +30,28 @@ Those limits belong to the R package. Calling Julia does not lift them.
 ## Use Julia (`GLLVModels.jl`)
 
 Start in Julia when you already have a response matrix and want the
-matrix-first companion. Responses are rows and sites are columns
-(p × n). The packages overlap only for the workflows listed in
-[Capability parity](gllvmtmb-parity.md); do not assume a model transfers unchanged.
+matrix-first companion. Responses are rows and sites are columns. Begin with
+the [Quick start](quickstart.md), or use [What can I fit today?](what-can-i-fit-today.md)
+to choose a documented route.
 
 ### Move one R matrix into Julia
 
-1. Install Julia 1.10 or later, then install the companion with
+1. Install Julia 1.10 or later, then run `using Pkg` and
    `Pkg.add(url = "https://github.com/itchyshin/GLLVModels.jl")`.
 2. If your R response matrix has sites in rows and species in columns
-   (`n × p`), transpose it before fitting in Julia (`Y'` gives `p × n`).
-3. Run the [Quick start](quickstart.md) first fit, then use the conversion
-   table there to translate the model you need.
+   (`n × p`), transpose it before fitting in Julia (`Y'` gives responses in
+   rows and observations in columns).
+3. Run the [Quick start](quickstart.md) before adapting the example to your
+   data.
 
-- First fit and the R ⟷ Julia conversion table: [Quick start](quickstart.md)
-- [Documented R–Julia capability comparison](gllvmtmb-parity.md)
+- [A detailed R–Julia capability comparison](gllvmtmb-parity.md) is available
+  when you need to compare a particular model.
 
 ## Use the bridge (one-way R → Julia only)
 
-The bridge is `gllvmTMB(..., engine = "julia")`. It sends a subset of
+The bridge is optional: the default `gllvmTMB` fitting workflow runs in R
+without Julia. To use the bridge, set `engine = "julia"` in `gllvmTMB(...)`.
+It sends a subset of
 cross-sectional reduced-rank models from R into Julia through JuliaCall. It
 is one-way: **R → Julia**. It does not run Julia models back through R, and
 it does not cover phylogeny, spatial, animal, kernel, or iSDM structure, nor
