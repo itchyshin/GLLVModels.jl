@@ -201,6 +201,6 @@ phylogenetic representation follows Bolker's `phylog.rmd`.
 
 ## Getting Help
 
-- Questions and bugs: open an issue on [GitHub](https://github.com/itchyshin/GLLVModels.jl/issues).
+- Start with the [Quickstart](quickstart.md) for a runnable analysis.
 - Function help: in the Julia REPL, type `?` then a name, for example `?fit_gaussian_gllvm`.
-- Planned work: see the [Roadmap](roadmap.md).
+- Check [what you can fit today](what-can-i-fit-today.md) for supported workflows and current limits.
