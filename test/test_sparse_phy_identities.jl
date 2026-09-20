@@ -240,7 +240,7 @@ function run_monotone_checks()
     return all(_S7_IDENTITY_RESULTS), copy(_S7_IDENTITY_REASONS)
 end
 
-const _GATES = Dict(
+const _S7_IDENTITY_GATES = Dict(
     "loglik"   => ("G7.1", run_loglik_checks),
     "gradient" => ("G7.2", run_gradient_checks),
     "estep"    => ("G7.3", run_estep_checks),
@@ -259,10 +259,10 @@ end
 
 if abspath(PROGRAM_FILE) == @__FILE__
     gate_arg = _parse_gate_arg(ARGS)
-    valid_gates = join(collect(keys(_GATES)), ", ")
-    haskey(_GATES, gate_arg) ||
+    valid_gates = join(collect(keys(_S7_IDENTITY_GATES)), ", ")
+    haskey(_S7_IDENTITY_GATES, gate_arg) ||
         error("unknown --gate '$gate_arg'; expected one of $valid_gates")
-    gate_label, runner = _GATES[gate_arg]
+    gate_label, runner = _S7_IDENTITY_GATES[gate_arg]
     ok = false; reasons = String[]
     try
         @testset "sparse phylo identities — $gate_label ($gate_arg)" begin
