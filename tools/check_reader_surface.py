@@ -56,6 +56,7 @@ def landing_contract_findings(docs_root: Path) -> list[str]:
         "a plain multi-response purpose": r"\b(?:several|many) responses\b",
         "a standalone Julia identity": r"\bstandalone Julia\b",
         "a link to the first runnable route": r"\]\(quickstart\.md\)",
+        "a plain current-limits route": r"\]\(what-can-i-fit-today\.md\)",
     }
     return [label for label, pattern in requirements.items()
             if not re.search(pattern, text, flags=re.IGNORECASE | re.DOTALL)]

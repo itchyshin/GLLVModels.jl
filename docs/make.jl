@@ -44,7 +44,7 @@ makedocs(;
             "Diagnostics and model comparison" => "diagnostics.md",
         ],
         "Tested models and limits" => [
-            "Current model limits" => "gllvmtmb-parity.md",
+            "What can I fit today?" => "what-can-i-fit-today.md",
             "Response families" => "response-families.md",
         ],
         "Function reference" => [

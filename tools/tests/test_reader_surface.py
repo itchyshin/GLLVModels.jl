@@ -217,6 +217,7 @@ class ReaderSurfaceTests(unittest.TestCase):
                 "GLLVM means generalized linear latent-variable model. It models several responses together.\n\n"
                 "A standalone Julia package.\n\n"
                 "[Fit your first model](quickstart.md).\n"
+                "[What can I fit today?](what-can-i-fit-today.md).\n"
             ))
             self.assertEqual(reader_surface.landing_contract_findings(root), [])
 

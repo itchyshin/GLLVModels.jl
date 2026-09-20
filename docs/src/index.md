@@ -15,7 +15,7 @@ hero:
       link: /#three-starting-routes
     - theme: alt
       text: What can I fit today?
-      link: /#landing-page-scope
+      link: /what-can-i-fit-today
 
 features:
   - title: "Traits or repeated outcomes"
@@ -43,7 +43,7 @@ or a direct biological interaction.
 
 !!! warning "Experimental package"
     Start with a documented example, check that the model fit is trustworthy,
-    and read [tested models and current limits](gllvmtmb-parity.md) before
+    and read [what you can fit today](what-can-i-fit-today.md) before
     reporting a result. A successful fit alone is not validation.
 
 # Choose your scientific question
@@ -161,7 +161,7 @@ For this shared-residual Gaussian fit, the usual report-ready quantities are:
   interface tour, not a single copy-and-run analysis.
 - Model equation and estimands: [Model](model.md).
 - Response-family choice: [Response families](response-families.md).
-- R twin comparison: [Capability parity](gllvmtmb-parity.md).
+- A technical comparison with the R package: [Capability parity](gllvmtmb-parity.md).
 
 ## Landing-page scope
 
@@ -170,7 +170,7 @@ per-response-residual Gaussian routes shown above. It does not establish
 support for non-Gaussian, mixture, variational (VA/ELBO), SPDE, or
 phylogenetic-GLM workflows. Those are separate routes, and a method being
 mentioned elsewhere in the repository is not evidence that it is ready for an
-applied analysis. Check [Capability parity](gllvmtmb-parity.md) and the
+applied analysis. Check [what you can fit today](what-can-i-fit-today.md) and the
 route-specific documentation before relying on a workflow beyond this page.
 
 ## Relation To gllvmTMB
