@@ -56,13 +56,13 @@ metric that matters for a multi-thousand-fit simulation study.
 | c05_large_noX  |       1.923e-07  |             3.742e-05  |
 | c06_large_X    |       2.343e-07  |             4.424e-05  |
 
-Worst-case `|Δ logLik|` over the full grid is **2.343e-07** (gate `<
-1e-4`: PASS). Worst-case relative Frobenius on `Σ_y` is **4.424e-05**
-(gate `< 1e-3`: PASS). The two engines agree to at least six
+Worst-case `|Δ logLik|` over the full grid is **2.343e-07**, below the
+pre-specified limit of `1e-4`. Worst-case relative Frobenius on `Σ_y` is
+**4.424e-05**, below its `1e-3` limit. The two engines agree to at least six
 significant digits on every fit.
 
 Full per-rep details, the wall-clock log-log plot, and the verification
-gate summary live in the source benchmark repo at
+criteria are available in the source benchmark repository at
 `gllvmTMB-julia-bench/report/grid-bench.md`.
 
 ## O(p) phylogenetic gradient scaling

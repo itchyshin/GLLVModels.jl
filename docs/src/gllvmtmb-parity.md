@@ -3,8 +3,8 @@
 ```@raw html
 <div class="gllvm-route gllvm-route--evidence">
   <div>
-    <span class="gllvm-route__eyebrow">Evidence boundary</span>
-    <p>Use this as a route-specific evidence record, not a promise that every R workflow has an identical Julia counterpart.</p>
+    <span class="gllvm-route__eyebrow">What works in both packages</span>
+    <p>Use this page to see which R workflows have a documented Julia counterpart, and which do not.</p>
   </div>
 </div>
 ```
@@ -19,7 +19,7 @@ phylogenetic path (worst case across the benchmark grid:
     This sentence previously claimed agreement "to machine precision". Machine
     precision is ~2.2e-16; the measured worst case is 2.343e-07 — roughly nine
     orders of magnitude larger. The Benchmarks page (linked below) always
-    reported the honest figure and its gates; this summary did not.
+    reported the honest figure and its comparison limits; this summary did not.
 
 page is a **capability overview** — where GLLVModels.jl stands against the
 `gllvmTMB` feature set. For *speed* comparisons see
@@ -29,34 +29,33 @@ Legend: ✅ available · 🔨 in progress · ⬜ planned · ⚡ GLLVModels.jl ad
 
 ## What parity does NOT mean
 
-"Parity" on this page is **harness parity**, not **true parity**: agreement on
-small, toy fixtures (`p ≤ 5`, `n ≤ 150`), not agreement on a real-workflow
-acceptance case run end-to-end as a user would.
-**First-order** receipts (log-likelihood at each optimum, cross-objective
-identity) exist for five paired families — Gaussian, Poisson-log,
+"Parity" on this page means agreement in small, controlled examples
+(`p ≤ 5`, `n ≤ 150`). It does not yet mean that a full workflow will give the
+same result end to end. **First-order** comparisons (log-likelihood at each
+optimum, cross-objective identity) exist for five paired families: Gaussian, Poisson-log,
 Binomial-logit, Beta-logit, and NB2-log. **Second-order** results
 (standard errors, the fixed-effect `vcov` block, Wald CI endpoints) exist
-only as a **5-cell toy pre-run** on those same families — explicitly *not a
-parity claim*, with no tolerance asserted or gated. **Realistic-size cells**
-(p ≥ 20, n ≥ 500) carry no receipts of either order yet. **Interval
-*coverage* is not part of parity** — it is a separate Julia-only diagnostic
-programme. Empirical undercoverage there is
-**evidence**, not a calibrated-coverage certificate and not an R↔Julia
+only for five small examples, without a stated tolerance. **Realistic-size
+examples** (p ≥ 20, n ≥ 500) have not yet been compared. **Interval
+*coverage* is not part of parity**. It is a separate Julia-only diagnostic
+study. Empirical undercoverage there is a finding, not a calibrated-coverage
+certificate and not an R↔Julia
 comparison. R's own 0.7.1 interval claim is based on three fixed Wald
 examples; the prior total-variance “0.94 coverage floor” wording was
 withdrawn.
 
 ### Second-order status
 
-**True second-order parity is not established.** A toy pre-run or partial
-batch does not show that standard errors and intervals agree on realistic data.
+**True second-order parity is not established.** A few small examples do not
+show that standard errors and intervals agree on realistic data.
 
-**Matched-coordinates tier: NOT implemented.** The shipped receipt tier remains
-**each-own-optimum only**. A five-cell pilot measured
+**Matched-coordinates comparison: not implemented.** The available comparisons
+evaluate each package at its own optimum. A five-example pilot measured
 **3 pass / 2 blocked** on five cells — gaussian, poisson, and binomial_logit
-pass at R-anchored θ; **beta_logit** and **nb2_log** are **blocked** on θ-map
-(R per-trait dispersion vs Julia shared log-dispersion). Do not read 3/5 pilot
-pass as programme completion or as a live matched-coordinates tier.
+pass at R-anchored θ; **beta_logit** and **nb2_log** cannot be compared on the
+same coordinates because R uses per-trait dispersion and Julia uses a shared
+log-dispersion. Do not read the 3/5 pilot as a completed matched-coordinates
+comparison.
 
 The qualification claim is **one-directional**: R workflows against Julia, at
 the frozen `gllvmTMB` 0.7.0 reference. At that reference point, 62 R exports
@@ -180,8 +179,8 @@ phylogenetic gradient benchmarked to p = 10,000.
     non-Gaussian speedups include zero-truncated Poisson ≈ 2.2× and Gamma ≈ 1.6×. Poisson, NB2, Binomial, and
 Beta use analytic Laplace outer gradients by default on plain no-mask/no-offset
 fits, with finite-difference fallback; Gamma and the remaining finite-difference
-Laplace paths stay conservative until their analytic gradients clear the runtime
-accuracy gate. The sparse-Cholesky / CHOLMOD marginals are not generic-AD-friendly;
+Laplace paths stay conservative until their analytic gradients meet the runtime
+accuracy criterion. The sparse-Cholesky / CHOLMOD marginals are not generic-AD-friendly;
 the VA estimator adds analytic inner and envelope-theorem outer gradients for
 further fit-time gains.
 
@@ -269,7 +268,7 @@ The mixed-family R bridge is guarded and intentionally limited: complete
 balanced trait-aligned no-X/no-mask/no-CI Julia-engine point fits are admitted
 for Gaussian, Poisson, Binomial, NB2, Beta, and Gamma components. The bridge
 stores row-aligned per-trait `families` and `link` labels, validates the native
-`gllvmTMB` selector oracle, checks direct-wrapper logLik equality, and routes
+`gllvmTMB` selector used for the comparison, checks direct-wrapper logLik equality, and routes
 current in-sample post-fit methods with unavailable-CI status. Mixed-family X,
 masks, cbind/weights, REML, ordinal/NB1/two-part components, and CI endpoints
 remain rejected deliberately.
