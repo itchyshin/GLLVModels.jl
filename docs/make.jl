@@ -81,16 +81,9 @@ if "--local" in ARGS
     end
 end
 
-# Use DocumenterVitepress.deploydocs (NOT Documenter's): it flattens the Vitepress
-# build output (build/1/*) into the version root on gh-pages and rewrites the
-# site `base`. Plain Documenter.deploydocs deploys build/ verbatim, which lands
-# the site under dev/1/ with base=/dev/ — every asset/nav link then 404s.
-if !("--local" in ARGS)
-    DocumenterVitepress.deploydocs(;
-    repo         = "github.com/itchyshin/GLLVModels.jl.git",
-    target       = joinpath(@__DIR__, "build"),
-    devbranch    = "main",
-    branch       = "gh-pages",
-    push_preview = true,
-    )
+# CI builds with GLLVM_DOCS_DEPLOY=false, audits the generated reader surface,
+# then runs docs/deploy.jl. Keeping deployment separate prevents an unchecked
+# rendered page (including expanded public docstrings) from reaching gh-pages.
+if !("--local" in ARGS) && get(ENV, "GLLVM_DOCS_DEPLOY", "true") == "true"
+    include("deploy.jl")
 end # --local builds never call deploydocs

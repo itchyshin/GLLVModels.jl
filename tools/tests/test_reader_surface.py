@@ -77,12 +77,82 @@ class ReaderSurfaceTests(unittest.TestCase):
             for invalid in (root / "missing", doc):
                 with self.subTest(root=invalid):
                     result = subprocess.run(
-                        [sys.executable, "-B", str(CHECKER), str(invalid)],
+                        [sys.executable, "-B", str(CHECKER), "--docs-root", str(invalid)],
                         capture_output=True, text=True, check=False,
                     )
                     self.assertEqual(result.returncode, 2)
                     self.assertNotIn("READER_SURFACE_PASS", result.stdout)
                     self.assertIn("directory", result.stderr)
+
+    def test_reads_the_actual_makedocs_navigation_and_readme(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            docs = root / "docs" / "src"
+            self.write_doc(docs, "included.md", "A reader-facing guide.\n")
+            self.write_doc(docs, "unlisted.md", "See issue #42 only in a draft.\n")
+            make = root / "docs" / "make.jl"
+            make.write_text(
+                'makedocs(; pages = ["Start" => ["Included" => "included.md"]])\n',
+                encoding="utf-8",
+            )
+            readme = self.write_doc(root, "README.md", "Install GLLVModels.\n")
+
+            paths = reader_surface.source_surface_paths(docs, make, readme)
+
+            self.assertEqual(paths, [readme.resolve(), (docs / "included.md").resolve()])
+            self.assertEqual(reader_surface.scan_paths(paths, root), [])
+
+    def test_navigation_requires_existing_markdown_route(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            docs = root / "docs" / "src"
+            docs.mkdir(parents=True)
+            make = root / "docs" / "make.jl"
+            make.write_text('makedocs(; pages = ["Start" => "missing.md"])\n', encoding="utf-8")
+            readme = self.write_doc(root, "README.md", "Install GLLVModels.\n")
+
+            with self.assertRaisesRegex(ValueError, "missing route"):
+                reader_surface.source_surface_paths(docs, make, readme)
+
+    def test_source_surface_includes_public_readme(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            docs = root / "docs" / "src"
+            self.write_doc(docs, "included.md", "A reader-facing guide.\n")
+            make = root / "docs" / "make.jl"
+            make.write_text('makedocs(; pages = ["Start" => "included.md"])\n', encoding="utf-8")
+            readme = self.write_doc(root, "README.md", "See pull request #42.\n")
+
+            findings = reader_surface.scan_paths(
+                reader_surface.source_surface_paths(docs, make, readme), root
+            )
+
+            self.assertEqual(len(findings), 1)
+            self.assertEqual(findings[0].path, Path("README.md"))
+            self.assertEqual(findings[0].rule, "pull-request-reference")
+
+    def test_rendered_scan_catches_documenter_expanded_docstring_text(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write_doc(
+                root, "api.html",
+                "<html><body><h1>API</h1><p>See issue #42 before fitting.</p></body></html>",
+            )
+
+            findings = reader_surface.scan_rendered(root)
+
+            self.assertEqual(len(findings), 1)
+            self.assertEqual(findings[0].path, Path("api.html"))
+            self.assertEqual(findings[0].rule, "issue-reference")
+
+    def test_rendered_scan_ignores_script_payloads(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write_doc(
+                root, "index.html",
+                "<script>const note = 'issue #42';</script><p>Fit a model.</p>",
+            )
+            self.assertEqual(reader_surface.scan_rendered(root), [])
 
     def test_allows_ordinary_technical_terms(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Reject unmistakable internal-process language in public Markdown sources."""
+"""Reject unmistakable internal-process language on the public reader surface."""
 
 from __future__ import annotations
 
 import argparse
+import html
 import re
 import sys
 from pathlib import Path
-from typing import NamedTuple
+from typing import Iterable, NamedTuple
 
 
 DEVELOPER_ONLY_DIRS = frozenset({"developer", "developer-notes"})
@@ -51,6 +52,30 @@ class Finding(NamedTuple):
     text: str
 
 
+def makedocs_route_paths(make_file: Path) -> list[Path]:
+    """Return Markdown routes passed to the literal ``makedocs(pages = [...])``."""
+    source = make_file.read_text(encoding="utf-8")
+    match = re.search(r"pages\s*=\s*\[", source)
+    if match is None:
+        raise ValueError(f"No literal makedocs(pages = [...]) list found in: {make_file}")
+    depth = 0
+    end = None
+    for offset, character in enumerate(source[match.end() - 1 :], start=match.end() - 1):
+        if character == "[":
+            depth += 1
+        elif character == "]":
+            depth -= 1
+            if depth == 0:
+                end = offset + 1
+                break
+    if end is None:
+        raise ValueError(f"Unterminated makedocs(pages = [...]) list in: {make_file}")
+    listed = re.findall(r"=>\s*\"([^\"]+\.md)\"", source[match.start() : end])
+    if not listed:
+        raise ValueError(f"No Markdown routes found in makedocs(pages = [...]) in: {make_file}")
+    return [Path(route) for route in listed]
+
+
 def is_public_markdown(path: Path, root: Path) -> bool:
     """Return whether a Markdown file is part of the reader-facing surface."""
     parts = set(path.relative_to(root).parts[:-1])
@@ -80,27 +105,115 @@ def scan(docs_root: Path) -> list[Finding]:
     return findings
 
 
+def scan_paths(paths: Iterable[Path], display_root: Path) -> list[Finding]:
+    """Return stable findings for explicit public reader-source files."""
+    findings: list[Finding] = []
+    for path in sorted(paths):
+        try:
+            relative = path.relative_to(display_root)
+        except ValueError:
+            relative = Path(path.name)
+        text = path.read_text(encoding="utf-8")
+        lines = text.splitlines()
+        by_line: dict[int, Finding] = {}
+        for rule, pattern in RULES:
+            for match in pattern.finditer(text):
+                number = text.count("\n", 0, match.start()) + 1
+                by_line.setdefault(number, Finding(relative, number, rule, lines[number - 1].strip()))
+        findings.extend(by_line[number] for number in sorted(by_line))
+    return findings
+
+
+def source_surface_paths(docs_root: Path, make_file: Path, readme: Path) -> list[Path]:
+    """Return the README and every existing Documenter navigation route.
+
+    CI uses this rather than a recursive source scan: a Markdown file is public
+    only when the actual ``makedocs(pages=...)`` navigation publishes it.
+    """
+    root = docs_root.resolve()
+    if not root.is_dir():
+        raise ValueError(f"Documentation root must be an existing directory: {root}")
+    routes = [root / route for route in makedocs_route_paths(make_file)]
+    missing = [path for path in routes if not path.is_file()]
+    if missing:
+        rendered = ", ".join(str(path.relative_to(root)) for path in missing)
+        raise ValueError(f"makedocs navigation references missing route(s): {rendered}")
+    if not readme.is_file():
+        raise ValueError(f"Public README must be an existing file: {readme}")
+    return [readme.resolve(), *routes]
+
+
+def rendered_text(html_source: str) -> str:
+    """Extract conservative visible text from a generated HTML page."""
+    without_noncontent = re.sub(
+        r"<(?:script|style)\b[^>]*>.*?</(?:script|style)>", "", html_source,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    return html.unescape(re.sub(r"<[^>]+>", " ", without_noncontent))
+
+
+def scan_rendered(rendered_root: Path) -> list[Finding]:
+    """Return findings from generated HTML, including Documenter docstrings."""
+    root = rendered_root.resolve()
+    if not root.is_dir():
+        raise ValueError(f"Rendered documentation root must be an existing directory: {root}")
+    pages = sorted(root.rglob("*.html"))
+    if not pages:
+        raise ValueError(f"Rendered documentation root contains no HTML pages: {root}")
+    findings: list[Finding] = []
+    for path in pages:
+        text = rendered_text(path.read_text(encoding="utf-8"))
+        lines = text.splitlines()
+        for rule, pattern in RULES:
+            for match in pattern.finditer(text):
+                number = text.count("\n", 0, match.start()) + 1
+                excerpt = lines[number - 1].strip() if number <= len(lines) else ""
+                findings.append(Finding(path.relative_to(root), number, rule, excerpt))
+    return findings
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=__doc__,
         epilog=(
-            "Scans *.md recursively, including code/comments/link targets, except "
-            "developer/, developer-notes/, and dev-log/ subtrees. This is a source-text "
-            "pattern check only: it does not inspect rendered output or generated "
-            "docstrings, validate scientific claims, or prove accessibility. "
-            "Run tests with: python3 -m unittest tools.tests.test_reader_surface"
+            "The default source check scans README.md and every route in the literal "
+            "makedocs(pages = [...]) navigation list. --rendered scans visible text in "
+            "generated HTML, including Documenter-expanded public docstrings. It does not "
+            "validate scientific claims or prove accessibility. Run tests with: "
+            "python3 -m unittest tools.tests.test_reader_surface"
         ),
     )
     parser.add_argument(
-        "docs_root",
-        nargs="?",
+        "--docs-root",
         type=Path,
         default=Path(__file__).resolve().parents[1] / "docs" / "src",
-        help="public documentation source directory (default: docs/src)",
+        help="Documenter source root (default: docs/src)",
+    )
+    parser.add_argument(
+        "--make-file", type=Path,
+        default=Path(__file__).resolve().parents[1] / "docs" / "make.jl",
+        help="Documenter entrypoint containing makedocs(pages = [...])",
+    )
+    parser.add_argument(
+        "--readme", type=Path,
+        default=Path(__file__).resolve().parents[1] / "README.md",
+        help="public README to scan with the navigation routes",
+    )
+    parser.add_argument(
+        "--rendered", type=Path,
+        help="generated HTML root; use after the Documenter build",
     )
     args = parser.parse_args()
     try:
-        findings = scan(args.docs_root)
+        if args.rendered is not None:
+            findings = scan_rendered(args.rendered)
+            checked = len(list(args.rendered.rglob("*.html")))
+            scope = "rendered_pages"
+        else:
+            paths = source_surface_paths(args.docs_root, args.make_file, args.readme)
+            findings = scan_paths(paths, args.docs_root.resolve().parent)
+            checked = len(paths)
+            scope = "source_files"
     except (ValueError, OSError) as error:
         parser.error(str(error))
     if findings:
@@ -111,7 +224,7 @@ def main() -> int:
             )
         print(f"READER_SURFACE_FAIL findings={len(findings)}", file=sys.stderr)
         return 1
-    print("READER_SURFACE_PASS")
+    print(f"READER_SURFACE_PASS {scope}={checked}")
     return 0
 
 
