@@ -12,10 +12,10 @@ hero:
       link: /quickstart
     - theme: alt
       text: Choose a scientific question
-      link: /vignettes/phylogenetic-gllvm
+      link: /#three-starting-routes
     - theme: alt
-      text: Tested models and limits
-      link: /gllvmtmb-parity
+      text: What can I fit today?
+      link: /#landing-page-scope
 
 features:
   - title: "Traits or repeated outcomes"
@@ -49,9 +49,7 @@ or a direct biological interaction.
 # Choose your scientific question
 
 GLLVModels.jl has three reader routes. They use different data and answer
-different questions, so choose the question before choosing a function. The
-navigation keeps implementation and development reference pages separate from
-these ordinary analysis routes.
+different questions, so choose the question before choosing a function.
 
 ## Three starting routes
 
@@ -69,9 +67,9 @@ response explained by shared patterns. Then use
 
 ### 2. Phylogenetic comparative models
 
-**Question:** For one continuous trait, how is variation partitioned between a
-supplied Brownian-motion phylogenetic covariance and independent residual
-variation?
+**Question:** For one continuous trait, how much variation follows the
+evolutionary relationships in a supplied tree, and how much remains
+independent?
 
 **Start:** [First phylogenetic Gaussian model](vignettes/phylogenetic-gllvm.md)
 starts with a small tree and a trait vector in its exact tip order.
@@ -82,11 +80,12 @@ scope.
 
 ### 3. Community and species-distribution models
 
-**Question:** Can a small number of unobserved site gradients summarize the
-remaining co-variation in a community count matrix?
+**Question:** Can a small number of unmeasured site differences summarize which
+species tend to occur or be abundant together after measured conditions are
+accounted for?
 
 **Start:** [First community abundance model](vignettes/community-abundance.md)
-defines and fits a small `p × n` Poisson count matrix.
+defines and fits a small count table with species as rows and sites as columns.
 
 **Next action:** inspect the fitted ordination and model-implied residual
 associations as exploratory descriptions; use [Working with a fit](working-with-a-fit.md)
@@ -97,7 +96,7 @@ when you need a specific post-fit quantity.
 The compact example below belongs to the first route. It is for continuous
 responses, such as several body traits measured on the same individuals. Each
 row is a trait and each column is an individual or site. If your data are in
-the common sites-by-species layout, transpose them before fitting.
+the common sites-by-species layout, swap the rows and columns before fitting.
 
 ## Install
 
@@ -141,9 +140,10 @@ means that two traits tend to vary together in this fitted model. A value near
 one in `shared` means that much of a trait's modelled variation belongs to the
 shared patterns. Neither result proves a causal relationship.
 
-This first route assumes a shared residual standard deviation. It is the
-documented route with stable result extractors. The [model guide](model.md)
-explains more flexible Gaussian models after you have completed this first fit.
+This first route assumes that every response has the same remaining variability
+after the shared patterns are accounted for. It is the documented route with
+stable result extractors. The [model guide](model.md) explains more flexible
+Gaussian models after you have completed this first fit.
 
 ## What The Fit Gives You
 
