@@ -140,6 +140,36 @@ def scan_paths(paths: Iterable[Path], display_root: Path) -> list[Finding]:
     return findings
 
 
+def markdown_fence_findings(paths: Iterable[Path], display_root: Path) -> list[Finding]:
+    """Reject public Markdown pages with an unclosed fenced code block.
+
+    An unmatched fence can turn an otherwise readable tutorial into literal
+    code in the generated site, so source process-language checks alone are
+    not enough to protect the reader's route.
+    """
+    findings: list[Finding] = []
+    fence = re.compile(r"^\s*(`{3,}|~{3,})")
+    for path in sorted(paths):
+        try:
+            relative = path.relative_to(display_root)
+        except ValueError:
+            relative = Path(path.name)
+        opening_line: int | None = None
+        marker: str | None = None
+        for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            match = fence.match(line)
+            if match is None:
+                continue
+            current = match.group(1)
+            if opening_line is None:
+                opening_line, marker = line_number, current[0]
+            elif current[0] == marker:
+                opening_line, marker = None, None
+        if opening_line is not None:
+            findings.append(Finding(relative, opening_line, "unclosed-markdown-fence", ""))
+    return findings
+
+
 def source_surface_paths(docs_root: Path, make_file: Path, readme: Path) -> list[Path]:
     """Return the README and every existing Documenter navigation route.
 
@@ -237,6 +267,7 @@ def main() -> int:
         else:
             paths = source_surface_paths(args.docs_root, args.make_file, args.readme)
             findings = scan_paths(paths, args.docs_root.resolve().parent)
+            findings.extend(markdown_fence_findings(paths, args.docs_root.resolve().parent))
             checked = len(paths)
             scope = "source_files"
     except (ValueError, OSError) as error:

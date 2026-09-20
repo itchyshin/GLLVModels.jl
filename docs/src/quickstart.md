@@ -81,7 +81,6 @@ the biological design.
 
 ## 4. What this first model does—and does not—assume
 
-```julia
 This route assumes a common residual standard deviation. If different traits
 need different residual variability, use the later model guides and check their
 documented limits. The [confidence-interval guide](confidence-intervals.md)

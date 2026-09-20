@@ -131,6 +131,19 @@ class ReaderSurfaceTests(unittest.TestCase):
             self.assertEqual(findings[0].path, Path("README.md"))
             self.assertEqual(findings[0].rule, "pull-request-reference")
 
+    def test_source_surface_rejects_an_unclosed_markdown_fence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            docs = root / "docs" / "src"
+            page = self.write_doc(docs, "quickstart.md", "# Quick start\n\n```julia\nfit\n")
+
+            findings = reader_surface.markdown_fence_findings([page], docs)
+
+            self.assertEqual(len(findings), 1)
+            self.assertEqual(findings[0].path, Path("quickstart.md"))
+            self.assertEqual(findings[0].line, 3)
+            self.assertEqual(findings[0].rule, "unclosed-markdown-fence")
+
     def test_rendered_scan_catches_documenter_expanded_docstring_text(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
