@@ -52,16 +52,53 @@ function _optimize_with_analytic(negll, analytic_grad, θ0, ls, opts)
     return Optim.optimize(negll, g!, θ0, ls, opts)
 end
 
+# R6 (allocation-free per-site kernel, S6 item 3): scratch buffers for
+# `_poisson_site_diffable` at a fixed (element type T, p, K), avoiding the
+# nine-ish fresh p- or (p×K)-sized allocations the naive broadcasted version
+# made on EVERY site call (η, μ, s, W, the two masked `ifelse.()` copies, WΛ,
+# the `Λ'*s` product, …) — measured at 383 MB of Dual allocations for one
+# p=50 gradient call (13 chunk passes × n=500 sites), see
+# docs/dev-log/core070/poisson-perf-diagnosis.md. `T` is a ForwardDiff dual
+# type in production (`_poisson_site_diffable` is only ever called from
+# inside `poisson_laplace_grad`'s `marg` closure below, differentiated by
+# `ForwardDiff.gradient`); the K×K solve/logdet stay on the small generic
+# path (their cost is negligible at the K this package ever fits with).
+struct PoissonSiteWorkspace{T}
+    η::Vector{T}
+    μ::Vector{T}
+    s::Vector{T}
+    W::Vector{T}
+    Λz::Vector{T}
+    WΛ::Matrix{T}
+    Amat::Matrix{T}
+end
+
+PoissonSiteWorkspace(::Type{T}, p::Integer, K::Integer) where {T} =
+    PoissonSiteWorkspace{T}(Vector{T}(undef, p), Vector{T}(undef, p), Vector{T}(undef, p),
+                            Vector{T}(undef, p), Vector{T}(undef, p),
+                            Matrix{T}(undef, p, K), Matrix{T}(undef, K, K))
+
 # Differentiable per-site Poisson Laplace marginal (log link), via the implicit step.
 # `β`, `Λ` may carry ForwardDiff duals; the mode is computed on their primal values.
 # `mask` (length-p Bool, or `nothing` = all observed) drops unobserved responses:
 # a masked cell adds zero score and zero Fisher weight (so it neither moves the mode
 # nor enters the log-det Hessian A) and is skipped in the log-pmf sum — exactly the
 # masking semantics of the core (src/families/laplace.jl), so the analytic gradient
-# matches the masked marginal.
+# matches the masked marginal. `ws` (optional `PoissonSiteWorkspace`, R6): reuse
+# pre-allocated buffers instead of allocating fresh ones; ignored (fresh allocation,
+# byte-identical numerics) on any type/size mismatch, so it is always safe to pass —
+# mirrors `LaplaceModeWorkspace`'s contract (src/families/laplace.jl).
 function _poisson_site_diffable(y::AbstractVector, Λ::AbstractMatrix, β::AbstractVector,
-                                ẑ::AbstractVector; mask = nothing)
-    p = size(Λ, 1)
+                                ẑ::AbstractVector; mask = nothing, ws = nothing)
+    p, K = size(Λ)
+    T = promote_type(eltype(Λ), eltype(β), eltype(ẑ))
+    η, μ, s, W, Λz, WΛ, Amat =
+        if ws isa PoissonSiteWorkspace{T} && length(ws.η) == p && size(ws.WΛ, 2) == K
+            ws.η, ws.μ, ws.s, ws.W, ws.Λz, ws.WΛ, ws.Amat
+        else
+            Vector{T}(undef, p), Vector{T}(undef, p), Vector{T}(undef, p), Vector{T}(undef, p),
+            Vector{T}(undef, p), Matrix{T}(undef, p, K), Matrix{T}(undef, K, K)
+        end
     # `ẑ` is the concrete mode at the primal (θ̂) parameters, precomputed ONCE by the
     # caller outside the ForwardDiff chunk loop (R2: mode-solve hoist, core070). Every
     # chunk pass of `ForwardDiff.gradient` below re-evaluates this function at duals
@@ -71,28 +108,44 @@ function _poisson_site_diffable(y::AbstractVector, Λ::AbstractMatrix, β::Abstr
     # docs/dev-log/core070/poisson-perf-diagnosis.md.
 
     # One differentiable Newton step from ẑ ⇒ z ≈ ẑ with the correct dz/dθ.
-    η = _clamp_eta.(β .+ Λ * ẑ)
-    μ = exp.(η)                       # log link
-    s = y .- μ                        # Poisson/log score wrt η
-    W = μ                             # Fisher weight wrt η
+    mul!(Λz, Λ, ẑ)
+    @. η = _clamp_eta(β + Λz)
+    @. μ = exp(η)                     # log link
+    @. s = y - μ                      # Poisson/log score wrt η
+    W .= μ                            # Fisher weight wrt η
     if mask !== nothing
-        s = ifelse.(mask, s, zero(eltype(s)))
-        W = ifelse.(mask, W, zero(eltype(W)))
+        @. s = ifelse(mask, s, zero(T))
+        @. W = ifelse(mask, W, zero(T))
     end
-    A = Λ' * (W .* Λ) + I             # plain Matrix (AD-safe generic solve/logdet)
-    z = ẑ .+ (A \ (Λ' * s .- ẑ))
+    @. WΛ = W * Λ
+    mul!(Amat, Λ', WΛ)
+    @inbounds for d in 1:K
+        Amat[d, d] += one(T)
+    end
+    rhs = Λ' * s                      # length K: too small to be worth workspace-caching
+    rhs .-= ẑ
+    z = ẑ .+ (Amat \ rhs)             # plain Matrix (AD-safe generic solve)
 
     # Marginal evaluated at the differentiable mode.
-    ηz = _clamp_eta.(β .+ Λ * z)
-    μz = exp.(ηz)
-    Wz = mask === nothing ? μz : ifelse.(mask, μz, zero(eltype(μz)))
-    Az = Λ' * (Wz .* Λ) + I
+    mul!(Λz, Λ, z)
+    @. η = _clamp_eta(β + Λz)
+    @. μ = exp(η)
+    if mask !== nothing
+        @. W = ifelse(mask, μ, zero(T))
+    else
+        W .= μ
+    end
+    @. WΛ = W * Λ
+    mul!(Amat, Λ', WΛ)
+    @inbounds for d in 1:K
+        Amat[d, d] += one(T)
+    end
     ℓ = zero(eltype(z))
     @inbounds for t in 1:p
         (mask === nothing || mask[t]) || continue
-        ℓ += _pois_logpmf(μz[t], y[t])
+        ℓ += _pois_logpmf(μ[t], y[t])
     end
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(Az)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(Amat)
 end
 
 """
@@ -138,13 +191,32 @@ function poisson_laplace_grad(Y::AbstractMatrix, Λ::AbstractMatrix, β::Abstrac
         mi = mask === nothing ? nothing : view(mask, :, s)
         ẑs[s] = _laplace_mode(Poisson(), view(Y, :, s), Nunit, Λv, βv, LogLink(); mask = mi, ws = ws)
     end
+    # R6 (allocation-free per-site kernel, S6 item 3): one `PoissonSiteWorkspace`
+    # per distinct element type `marg` is called with, built lazily on first use
+    # and cached in a `Ref` LOCAL to this call (captured by the closure, not a
+    # package-level global) — safe under `Threads.@threads` bootstrap replicates
+    # (src/confint_family.jl:2853), each of which calls `poisson_laplace_grad`
+    # with its own closure/cache. Every site call inside ONE `ForwardDiff.gradient`
+    # invocation shares the SAME dual type (one Tag, one chunk width per call), so
+    # this allocates the workspace once per `poisson_laplace_grad` call rather than
+    # once per site per chunk pass (n × ⌈nθ/chunksize⌉ before this change).
+    site_ws = Ref{Any}(nothing)
     function marg(θ)
         b = θ[1:p]
         L = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
-        acc = zero(eltype(θ))
+        Tθ = eltype(θ)
+        cur = site_ws[]
+        sws = if cur isa PoissonSiteWorkspace{Tθ}
+            cur
+        else
+            fresh = PoissonSiteWorkspace(Tθ, p, K)
+            site_ws[] = fresh
+            fresh
+        end
+        acc = zero(Tθ)
         @inbounds for s in axes(Y, 2)
             mi = mask === nothing ? nothing : view(mask, :, s)
-            acc += _poisson_site_diffable(view(Y, :, s), L, b, ẑs[s]; mask = mi)
+            acc += _poisson_site_diffable(view(Y, :, s), L, b, ẑs[s]; mask = mi, ws = sws)
         end
         return acc
     end
