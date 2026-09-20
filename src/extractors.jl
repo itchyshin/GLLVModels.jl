@@ -309,18 +309,16 @@ end
 
 Per-trait communality at ONE tier, `c²_t = (Λ_tier Λ_tierᵀ)_tt /
 Σ_tier,total_tt`, mirroring `gllvmTMB::extract_communality(level = ...)`.
-This is now the DEFAULT (`level = :unit`), matching R's
+The default `level = :unit` matches R's
 tier-scoped denominator exactly: `σ_eps²` (the Gaussian observation
 residual) never enters, because it is not one of R's `B`/`W`/`phy` tier
 components. `level = :unit_obs` is the within-unit (W) twin.
 
 On a fit with no diagonal Ψ_tier component (e.g. `has_diag = false`), the
 shared and total tiers coincide exactly and `c²_t` degenerates to `1.0` for
-every trait — this is R's own degenerate behaviour on such a fit (confirmed
-against R's `gaussian_small` oracle fixture, `unique = FALSE`, no W tier:
-`extract_communality(level = "unit")` returns all-`1.0`), not a bug.
+every trait, matching `gllvmTMB` for the same model structure.
 
-`level = :total` recovers GLLVModels.jl's original TOTAL-variance estimand
+`level = :total` returns the total-variance estimand
 (forwards to [`communality`](@ref)): shared / `sigma_y_site(fit)`, i.e.
 every non-phylo tier the fit carries plus `σ_eps²`. The two estimands agree
 only when `σ_eps == 0` and there is no W-tier.
@@ -604,15 +602,10 @@ genuinely carries — the phylogenetic block (`Λ_phy_aug Λ_phy_augᵀ` when
 `σ_eps²`, see [`extract_communality`](@ref)). Mirrors
 `gllvmTMB::extract_Omega()` with `tiers = NULL` (auto-detected) and
 `link_residual = "none"` (Gaussian `GllvmFit` has no implicit link residual
-to add). This tier-presence-gated composition is now the DEFAULT
-(`level = :auto`): the previous default
-unconditionally summed `extract_Sigma(level=:unit_obs, part=:total)`, which
-folds in `σ_eps²` even when the fit carries no genuine W tier at all — a
-confirmed cross-engine bug (R oracle diff ≈ `σ_eps²` exactly on a
-single-tier fixture), not a deliberate estimand choice, now fixed by
-gating on tier presence.
+to add). The default `level = :auto` includes only tiers present in the fit
+and excludes the Gaussian observation residual `σ_eps²`.
 
-`level = :total` recovers GLLVModels.jl's original unconditional-sum estimand
+`level = :total` returns the unconditional-sum estimand
 (`Σ_unit + Σ_unit_obs` via `extract_Sigma`, `:unit_obs` always including
 `σ_eps²·I` regardless of W-tier presence).
 """
