@@ -257,3 +257,85 @@ which is now fully closed (G7.1-G7.5 all PASS, modulo the pre-existing
 unrelated test_em_louis.jl flake documented above). Write leaf-S7c's gates
 before touching src/, per arcs.md's S7c writeup. Then S6 (per-site changes
 S4's profile ranked, still open from before the re-set).
+
+## S6 (per-site Poisson Laplace gradient, S4's profile levers 1-4; item 5 SKIPPED, S4 did not rank it)
+
+Tests first: `test/test_laplace_grad_identity.jl` (gates `gradient`/`fit`/
+`counts`/`parity`, `--gate <name>` runner pattern) + `test/fixtures/laplace_grad_ref_69a69b0a0.jl`
+(reference gradients/fits/counts captured from the UNMODIFIED code, verified
+bit-identical to origin/main 69a69b0a0 at capture time), wired into
+`test/runtests.jl`. Scope deviations from the ledger text, flagged inline in
+the test file header: G6.1 uses 12 random theta per p (not 50) to avoid a
+large binary fixture with no repo precedent; G6.3's banked "31/92/140" counts
+are of unstated fixture, so the gate self-derives its own baseline
+(f_calls/g_calls/iterations at p=5/20/50, n=100, seed 20260920) via a local
+mirror of the fast `fg!` path; G6.4 reuses the ONE frozen Poisson gllvmTMB
+oracle actually banked in this repo (docs/dev-log/core070/poisson-beta-health-evidence.json,
+case NATIVE-03-POISSON, r_loglik=-634.1712844104393 — the DGP is
+test/parity/test_poisson_parity.jl's, seed=44, p=5/K=2/n=60; verified
+reproduced bit-for-bit by the unmodified code before any edit), not "ten
+grid cells" (no such frozen fixture set exists in test/); it never calls
+RCall/gllvmTMB (0.7.1 on this machine, not the ledger's 0.7.0).
+
+Items landed, in order:
+1. `test(runtests): wire test_poisson_grad_perf.jl` — orphaned Q gate wired
+   in next to `test_laplace_grad.jl`; its own BASELINE_LOGLIK
+   -14604.017303313138 (atol 1e-8) verified first.
+2. `perf(laplace_grad): allocation-free _poisson_site_diffable` —
+   `PoissonSiteWorkspace{T}` preallocates the per-site η/μ/s/W/Λz/WΛ/Amat
+   buffers, built once per `poisson_laplace_grad` call (keyed on the
+   ForwardDiff dual type, constant across all n sites and all chunk passes
+   of one call) and cached in a `Ref` local to that call's closure — never a
+   package-level global, so it stays safe under `confint_family.jl`'s
+   `Threads.@threads` bootstrap replicates. Bitwise-identical gradient
+   (checked directly, maxabsdiff==0.0, at all 36 (p,theta) probes); no
+   reduction order changed.
+3. `perf(laplace_grad,poisson-fit): one GradientConfig per fit + shared mode
+   solve` — combined commit (both land inside the same `fg!` closure,
+   flagged as a deviation from strict one-item-per-commit):
+   - **Item 2 (GradientConfig).** New `PoissonMargClosure` callable-struct
+     TYPE (stable across Optim iterations of one fit, unlike the previous
+     `function marg(θ)...end` closure, whose anonymous type was fresh every
+     `poisson_laplace_grad` call) lets `_fit_poisson_gllvm_laplace` build
+     ONE `ForwardDiff.GradientConfig` before the Optim loop and reuse it
+     every iteration. Chunk size measured over {12, 24, 32} at p=20/50
+     (`bench/profile_laplace_allocs.jl`-style direct calls, REPS=15
+     median): p=20 → 17.0/17.8/17.2 ms; p=50 → 81.9/81.6/79.1 ms. Chose
+     **32** (best or tied-best at both sizes). `poisson_laplace_grad` gained
+     a `gcfg` keyword; any tag/length mismatch falls back to the uncached
+     default, so a stale config is never unsafe. Verified bitwise-identical
+     to the non-gcfg path at all three chunk sizes, all (p,theta) probes.
+   - **Item 1 (shared mode solve).** `_poisson_hoist_zhats` factored out of
+     `poisson_laplace_grad`; `laplace_loglik_site`/`marginal_loglik_laplace`
+     (src/families/laplace.jl, family-generic, additive) gained
+     `z_precomputed`/`zs` keywords. `fg!` now solves the per-site Newton
+     mode ONCE when Optim requests both F and G, handing the SAME modes to
+     both `negll` and `poisson_laplace_grad` — by code construction, one
+     Newton solve per site per such call, not two. Not independently
+     counted by an external counter: that counter (named in G6.5) lives in
+     `bench/profile_laplace_allocs.jl`, out of this leaf's OWNS list.
+     Guarded to `link isa LogLink` (matching `poisson_laplace_grad`'s own
+     pre-existing, unrelated LogLink assumption in its mode hoist), so a
+     non-default-link fit is unaffected (negll keeps solving its own,
+     correctly link-aware mode).
+
+### S6 gates
+- G6.1 PASS: `env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. test/test_laplace_grad_identity.jl --gate gradient` → `GATE G6.1 PASS` (36/36; separately verified bitwise, maxabsdiff==0.0, both with and without `gcfg` at chunk 12/24/32).
+- G6.2 PASS: `... --gate fit && grep -q "test_poisson_grad_perf.jl" test/runtests.jl && echo "GATE G6.2 PASS"` → PASS (12/12 fit-identity checks; the grep finds the wired include).
+- G6.3 PASS: `... --gate counts` → `GATE G6.3 PASS` (9/9; f_calls/g_calls/iterations at p=5/20/50 all `<=` this file's own pre-change baseline — see scope note above on the ledger's unresolved 31/92/140 fixture).
+- G6.4 PASS: `... --gate parity` → `GATE G6.4 PASS` (2/2; fresh Julia fit vs the frozen gllvmTMB oracle, rtol 1e-6).
+- G6.5 (bench/profile_laplace_allocs.jl is NOT in this leaf's OWNS list — no `--gate after` mode exists there; measured instead via its existing `--gate split` on a throwaway `git worktree add` at 69a69b0a0 for "before" and this HEAD for "after"):
+  before (69a69b0a0): p=20 value=4.729ms grad_wall=23.714ms (ratio 5.01x); p=50 value=9.228ms grad_wall=102.569ms (ratio 11.11x, iterations=81).
+  after (020056f92): p=20 value=5.033ms grad_wall=17.891ms (ratio 3.55x); p=50 value=9.621ms grad_wall=83.892ms (ratio 8.72x, iterations=81) — both p=50 ratios well under the banked 24.3x, before AND after.
+  p=50 grad_wall dropped 102.6ms → 83.9ms (18% faster); p=20 grad_wall dropped 23.7ms → 17.9ms (25% faster). iterations unchanged at both sizes (Optim trajectory bit-identical, as G6.1's bitwise check requires).
+  The bench script's own "decomposition gap" sub-check (leaf-S4's G4.1, unrelated to G6.5's own PASS condition) flips from PASS (0.6%/0.7%) to FAIL (11.4%/17.3%) — an EXPECTED side effect: its "hoist+forwarddiff" shadow measurement calls `_poisson_site_diffable` WITHOUT the new workspace, so it no longer reconstructs the now-faster REAL call within 10%; flagged for the orchestrator, not fixed (out of OWNS).
+  TSV: `bench/results/laplace_after_020056f92.tsv` (full provenance/caveats in the file header).
+- G6.6: pending (orchestrator's full-suite run).
+
+## TRUTH LIVES IN (S6)
+Branch `claude/lane-speed78-20260919` in this worktree. S6 commits, in order:
+`a4b40794e` (test/test_laplace_grad_identity.jl + fixture + runtests.jl
+wiring), `16486a4e9` (wire test_poisson_grad_perf.jl), `184523155`
+(allocation-free _poisson_site_diffable), `020056f92` (GradientConfig +
+shared mode solve, combined). TSV: `bench/results/laplace_after_020056f92.tsv`.
+Ledger: `.unlazy/julia-speed-20260919/gates/leaf-S6.md`.
