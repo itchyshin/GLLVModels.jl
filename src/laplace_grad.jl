@@ -187,6 +187,22 @@ function (c::PoissonMargClosure)(θ)
     return acc
 end
 
+function _poisson_hoist_zhats(Y::AbstractMatrix, Λv::AbstractMatrix, βv::AbstractVector;
+                              mask = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
+    p, K = size(Λv)
+    # R3 (workspace reuse, core070): one Float64 workspace shared across all n site
+    # mode solves in this hoist loop (concrete solve only — see LaplaceModeWorkspace).
+    ws = LaplaceModeWorkspace(Float64, p, K)
+    ẑs = Vector{Vector{Float64}}(undef, size(Y, 2))
+    Nunit = ones(Int, p)
+    @inbounds for s in axes(Y, 2)
+        mi = mask === nothing ? nothing : view(mask, :, s)
+        ẑs[s] = _laplace_mode(Poisson(), view(Y, :, s), Nunit, Λv, βv, LogLink();
+                              mask = mi, maxiter = maxiter, tol = tol, ws = ws)
+    end
+    return ẑs
+end
+
 """
     poisson_laplace_grad(Y, Λ, β; mask=nothing, gcfg=nothing) -> Vector
 
@@ -216,22 +232,6 @@ this function's own hoist loop, so a caller that already solved the SAME modes
 for the value path (e.g. `fg!`'s F+G branch) does not pay for a second, identical
 Newton solve per site. A length mismatch falls back to hoisting fresh.
 """
-function _poisson_hoist_zhats(Y::AbstractMatrix, Λv::AbstractMatrix, βv::AbstractVector;
-                              mask = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
-    p, K = size(Λv)
-    # R3 (workspace reuse, core070): one Float64 workspace shared across all n site
-    # mode solves in this hoist loop (concrete solve only — see LaplaceModeWorkspace).
-    ws = LaplaceModeWorkspace(Float64, p, K)
-    ẑs = Vector{Vector{Float64}}(undef, size(Y, 2))
-    Nunit = ones(Int, p)
-    @inbounds for s in axes(Y, 2)
-        mi = mask === nothing ? nothing : view(mask, :, s)
-        ẑs[s] = _laplace_mode(Poisson(), view(Y, :, s), Nunit, Λv, βv, LogLink();
-                              mask = mi, maxiter = maxiter, tol = tol, ws = ws)
-    end
-    return ẑs
-end
-
 function poisson_laplace_grad(Y::AbstractMatrix, Λ::AbstractMatrix, β::AbstractVector;
                               mask = nothing, gcfg = nothing, ẑs = nothing)
     p, K = size(Λ)

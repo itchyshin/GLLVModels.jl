@@ -187,6 +187,15 @@ function node_dΛ_B(st::SparsePhyState, cc::AbstractVector, Ainv_Yc::AbstractMat
     return (-Cinv_LB) .+ n .* ccLB .- (n - 1) .* Ainv_LB .+ AYcLB
 end
 
+# S7 item 3 call-count evidence: `test/test_sparse_phy_identities.jl --gate
+# gradient` (G7.2) resets this counter, calls `node_grad` once, and asserts it
+# reads 1 — before the dedup, `node_dσ_phy` and `node_scalar_grads` (via
+# `_same_leaf_Msad_inv_diag`) each called `takahashi_diag(st.chol_Q_eff)`
+# independently, i.e. 2 calls per `node_grad` invocation.
+const _NODE_GRAD_TAKAHASHI_CALLS = Ref(0)
+_node_grad_takahashi_calls_reset!() = (_NODE_GRAD_TAKAHASHI_CALLS[] = 0; nothing)
+_node_grad_takahashi_calls() = _NODE_GRAD_TAKAHASHI_CALLS[]
+
 """
     node_grad(st::SparsePhyState) -> (; dΛ_B, dσ²_eps, dσ²_phy, dσ_phy)
 
@@ -209,15 +218,6 @@ phylogenetic random effect with SDs `σ_phy = st.Λ_aug[:, 1]` and no separate
 Evaluation-only for ForwardDiff: the node-diagonal uses a CHOLMOD Float64
 factor (see file header).
 """
-# S7 item 3 call-count evidence: `test/test_sparse_phy_identities.jl --gate
-# gradient` (G7.2) resets this counter, calls `node_grad` once, and asserts it
-# reads 1 — before the dedup, `node_dσ_phy` and `node_scalar_grads` (via
-# `_same_leaf_Msad_inv_diag`) each called `takahashi_diag(st.chol_Q_eff)`
-# independently, i.e. 2 calls per `node_grad` invocation.
-const _NODE_GRAD_TAKAHASHI_CALLS = Ref(0)
-_node_grad_takahashi_calls_reset!() = (_NODE_GRAD_TAKAHASHI_CALLS[] = 0; nothing)
-_node_grad_takahashi_calls() = _NODE_GRAD_TAKAHASHI_CALLS[]
-
 function node_grad(st::SparsePhyState)
     cc = _Cinv(st, st.m)
     Ainv_Yc = _AinvM(st, st.Y_c)
