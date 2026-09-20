@@ -34,19 +34,19 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
   including intercept-only fits. Empty tables remain valid without covariates.
   The original NB2 wide/long formula model matches its native fit; broader
   interface qualification remains incomplete.
-- **Local development candidate:** ordinary NB2 evaluates its density directly
+- **EXPERIMENTAL:** ordinary NB2 evaluates its density directly
   from the mean and uses an overflow-safe observed curvature. The original
   paired fit, scalar derivatives and required NB2/truncated-NB2 runner pass.
   Broader recovery, full package checks and independent review remain pending.
 - Student-t fitting rejects infinite fixed degrees of freedom before reading
   responses, for scalar and per-trait inputs. Finite positive fixed values and
   the estimated-df route are unchanged.
-- **Local development candidate:** grouped Tweedie distinguishes fixed common,
+- **EXPERIMENTAL:** grouped Tweedie distinguishes fixed common,
   shared estimated and per-species estimated power; `TweediePerTraitPowerFit`
   stores the latter. Student fits record whether degrees of freedom were estimated
   so information-criterion parameter counts are correct. These changes do not
-  establish full parity: the original Student-t R health gate remains
-  failed, and final candidate requalification is pending.
+  establish full parity: the recorded Student-t R comparison still does not
+  converge reliably, and broader qualification remains pending.
 - Branch-RE uses an equivalent dense marginal fallback when the auxiliary sparse
   precision is numerically unsafe. This preserves valid marginal models without
   a ridge, at a possible O(p²) memory cost reported by a warning.

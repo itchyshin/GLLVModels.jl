@@ -10,8 +10,9 @@ This page documents the public API of `GLLVModels.jl`, categorized by functional
 
 The explicit Gaussian `phylo=PrecisionPhy` route supports precision-only
 `residual_mode=:trait` (default) or `:shared`. Joint ordinary grouping retains
-trait-specific residuals. See the [development guide](precision-bridge-development.md)
-for validation, interval diagnostics and the still-closed R admission boundary.
+trait-specific residuals. See the [developer guide](precision-bridge-development.md)
+for the Julia-side interface, interval diagnostics, and the fact that this model
+is not currently available through the public R bridge.
 
 ```@docs
 fit_gllvm
@@ -538,7 +539,7 @@ TruncatedNegBin2
 NB1
 ```
 
-## Poisson quadrature (local development candidate)
+## Experimental Poisson quadrature
 
 Ordinary log-link Poisson models can opt into adaptive Gauss–Hermite
 quadrature (AGHQ), which integrates over latent scores using a grid adapted to
@@ -568,7 +569,7 @@ Stored masks and offsets are used for the original data. For changed data with
 nonzero offsets, supply the offset explicitly. Inspect `fit.converged` and
 `fit.integration` before interpreting a result.
 
-## Binomial quadrature (local development candidate)
+## Experimental binomial quadrature
 
 For successes out of known trials, supply `N` with the same responses × sites
 shape as `Y`. Omit `N` only for Bernoulli observations. The ordinary binomial
@@ -597,8 +598,8 @@ trial placeholders cannot define a simulation until valid trials are supplied.
 Inspect nonconvergence before interpreting coefficients or intervals. The
 original five-node binomial comparison fails convergence in both engines and
 has an absolute log-likelihood difference of about 0.00894 (required ≤0.001).
-Higher-node diagnostics do not replace that required case. This is a local
-implementation candidate, not completed R parity or validated interval coverage.
+Higher-node diagnostics do not replace that comparison. This is experimental:
+it does not establish R parity or validated interval coverage.
 
 ### Gaussian integration metadata
 
@@ -615,5 +616,5 @@ the ordinary loadings-only route. See the executed Gaussian quickstart.
 recorded fit returns the full working-parameter covariance, not only its diagonal;
 `confint` transforms residual-SD estimates/bounds to the natural scale while
 standard errors remain on the working scale. Legacy `bootstrap_ci` outputs
-working-scale bounds. Failed bootstrap attempts remain visible. This is a local
-candidate, not a full Stage1a or calibrated-inference claim.
+working-scale bounds. Failed bootstrap attempts remain visible. This is an
+experimental option, not a complete R-parity or calibrated-inference claim.
