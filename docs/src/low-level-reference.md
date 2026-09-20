@@ -120,6 +120,7 @@ GLLVModels._fit_gaussian_structured_sources
 ```@docs
 GLLVModels._psd_sqrt_factor
 GLLVModels.LaplaceModeWorkspace
+GLLVModels._grouped_nongaussian_objective
 ```
 
 ## Cross-referenced internal helpers without a docstring
