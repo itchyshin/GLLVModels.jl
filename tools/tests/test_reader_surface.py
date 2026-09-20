@@ -193,6 +193,20 @@ class ReaderSurfaceTests(unittest.TestCase):
             self.assertEqual(findings[0].line, 2)
             self.assertEqual(findings[0].rule, "internal-validation-language")
 
+    def test_landing_contract_requires_definition_and_first_route(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write_doc(root, "index.md", "# GLLVModels.jl\n")
+            self.assertTrue(reader_surface.landing_contract_findings(root))
+
+            self.write_doc(root, "index.md", (
+                "# GLLVModels.jl\n\n"
+                "GLLVM means generalized linear latent-variable model. It models several responses together.\n\n"
+                "A standalone Julia package.\n\n"
+                "[Fit your first model](quickstart.md).\n"
+            ))
+            self.assertEqual(reader_surface.landing_contract_findings(root), [])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -45,6 +45,22 @@ RULES = (
 )
 
 
+def landing_contract_findings(docs_root: Path) -> list[str]:
+    """Return missing essentials from a reader's first GLLVModels page."""
+    landing = docs_root / "index.md"
+    if not landing.is_file():
+        return ["index.md is missing"]
+    text = landing.read_text(encoding="utf-8")
+    requirements = {
+        "an expansion of GLLVM": r"\bGLLVM\*{0,2}\s+(?:means|stands for)\s+\*{0,2}(?:generalised|generalized) linear latent[ -]variable model",
+        "a plain multi-response purpose": r"\b(?:several|many) responses\b",
+        "a standalone Julia identity": r"\bstandalone Julia\b",
+        "a link to the first runnable route": r"\]\(quickstart\.md\)",
+    }
+    return [label for label, pattern in requirements.items()
+            if not re.search(pattern, text, flags=re.IGNORECASE | re.DOTALL)]
+
+
 class Finding(NamedTuple):
     path: Path
     line: int
@@ -203,8 +219,17 @@ def main() -> int:
         "--rendered", type=Path,
         help="generated HTML root; use after the Documenter build",
     )
+    parser.add_argument(
+        "--landing-contract", action="store_true",
+        help="require a plain GLLVM definition, standalone Julia identity, and first route",
+    )
     args = parser.parse_args()
     try:
+        if args.landing_contract:
+            missing = landing_contract_findings(args.docs_root)
+            if missing:
+                print("LANDING_CONTRACT_FAIL missing=" + "; ".join(missing), file=sys.stderr)
+                return 1
         if args.rendered is not None:
             findings = scan_rendered(args.rendered)
             checked = len(list(args.rendered.rglob("*.html")))
@@ -224,6 +249,8 @@ def main() -> int:
             )
         print(f"READER_SURFACE_FAIL findings={len(findings)}", file=sys.stderr)
         return 1
+    if args.landing_contract:
+        print("LANDING_CONTRACT_PASS")
     print(f"READER_SURFACE_PASS {scope}={checked}")
     return 0
 

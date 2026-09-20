@@ -9,114 +9,96 @@
 </div>
 ```
 
-This page walks through one end-to-end fit: simulate a Gaussian GLLVM with one
-residual variance per response, fit it with `fit_gaussian_pervar_gllvm`, inspect
-the recovered parameters and their current uncertainty boundary, and visualise
-the recovered `Σ_y` against the truth. It concludes with an R `gllvmTMB` ⟷ Julia
-`GLLVModels.jl` cheat sheet.
+This page walks through one end-to-end fit: simulate a Gaussian GLLVM, fit the
+documented shared-residual route, and interpret model-implied covariance,
+correlation, and shared variation. It concludes with optional R-to-Julia
+translation material.
 
-!!! warning "Matrix orientation: p × n in Julia vs n × p in R"
-    **GLLVModels.jl expects species/traits in rows and sites/observations in columns (p × n).**
+!!! note "Arrange the response matrix"
+    GLLVModels.jl expects traits or species in rows and observations in
+    columns. If your table has observations in rows, transpose it with `Y'`.
 
-    If you are importing data formatted for R packages such as `gllvm` or `gllvmTMB` (which use the n × p convention with sites in rows and species in columns), you must transpose your matrix (`Y'`) before passing it to `fit_gllvm`, `fit_gaussian_gllvm`, or any other GLLVModels.jl fitter.
-
-## 1. Simulate a fixture
+## 1. Simulate a small teaching data set
 
 ```julia
-using GLLVModels, Random, LinearAlgebra
+using GLLVModels, Random, Statistics
 
 Random.seed!(20260528)
 
 n_sites   = 80
-n_species = 10
-K         = 2                  # rank of the latent factor block
-ψ_true    = 0.15 .+ 0.10 .* rand(n_species)  # response-specific residual variances
+n_traits  = 5
+K         = 2                  # two shared patterns in these teaching data
+σ_true    = 0.5
 
-# True low-rank loading matrix Λ_B (n_species × K)
-Λ_true = randn(n_species, K)
+# True loading matrix (traits × shared patterns)
+Λ_true = randn(n_traits, K)
 
-# Latent factor scores per site (n_sites × K)
+# Latent scores per observation
 η = randn(n_sites, K)
 
-# Response matrix y (n_species × n_sites) — diagonal-residual Gaussian GLLVM
-y = Λ_true * η' .+ sqrt.(ψ_true) .* randn(n_species, n_sites)
+# Response matrix y (traits × observations)
+y = Λ_true * η' .+ σ_true .* randn(n_traits, n_sites)
+y .-= mean(y; dims = 2)        # centre each trait for this first model
 ```
 
 ## 2. Fit the model
 
 ```julia
-fit = fit_gaussian_pervar_gllvm(y; K = K)
+fit = fit_gaussian_gllvm(y; K = K)
 ```
 
-`fit_gaussian_pervar_gllvm` returns a `GaussianPerVarFit` object. It fits the Gaussian
-model with `Sigma_y = Lambda * Lambda' + Psi`, where `Psi` is diagonal with a
-separate residual variance for each response. This is the Julia model to use
-before comparing with ordinary R `gllvmTMB` `traits(...) + latent(...)`; see
-the [R get-started guide](https://itchyshin.github.io/gllvmTMB/articles/gllvmTMB.html).
-The shared-residual `fit_gaussian_gllvm` shortcut is a restricted model, not an
-identical spelling of that R teaching fit. The packages have partial parity;
-the R route remains the richer formula-first documentation path and its
-[current limits](https://itchyshin.github.io/gllvmTMB/articles/current-limits.html)
-apply to claims about its route.
+`fit_gaussian_gllvm` fits the documented Gaussian route. It assumes that
+responses share one residual standard deviation; that assumption keeps this
+first example simple and gives stable result extractors.
 
-The shared-residual `sigma_y_site()`, `communality()`, and `correlation()`
-extractors do not yet accept `GaussianPerVarFit`. For this experimental
-per-response route, construct the rotation-invariant quantities explicitly:
+Calculate the quantities you can interpret directly:
 
 ```julia
-Σ_hat = fit.Λ * fit.Λ' + Diagonal(fit.ψ²)
-c²_hat = diag(fit.Λ * fit.Λ') ./ diag(Σ_hat)
-R_hat = Diagonal(1 ./ sqrt.(diag(Σ_hat))) * Σ_hat *
-    Diagonal(1 ./ sqrt.(diag(Σ_hat)))
+Σ_hat = sigma_y_site(fit)
+shared = communality(fit)
+R_hat = correlation(fit)
 ```
 
-This transparent calculation is a current route, not a stable extractor
-promise. Raw loading columns remain orientation-dependent; `Σ_hat`, `c²_hat`,
-and `R_hat` do not.
+`Σ_hat` is the model-implied covariance; `shared` is the fraction of each
+trait's variation explained by the shared patterns; and `R_hat` is the
+model-implied correlation matrix. The shared patterns describe association,
+not causation.
 
-## 3. Inspect the recovered parameters
+## 3. Check the fit and read the results
 
 ```julia
-fit.Λ, fit.ψ²             # shared loadings and response-specific residual variances
-fit.loglik                # marginal log-likelihood at the optimum
+fit.converged
+Σ_hat
+shared
+R_hat
 ```
 
-The recovered `Λ_B` can be compared with `Λ_true` only up to an
-orthogonal rotation in `K`-space — the latent factors are identified
-only up to rotation in the Gaussian model.
+Check `fit.converged` before interpreting results. A positive entry of `R_hat`
+means two traits tend to vary together under this model. A high value of
+`shared` means the trait's modelled variation is mostly shared with other
+traits. Do not name an individual latent axis before considering rotation and
+the biological design.
 
-## 4. Record the uncertainty boundary
-
-```julia
-(converged = fit.converged, iterations = fit.iterations)
-```
-
-`GaussianPerVarFit` currently has no public `confint`, `profile_ci`, or
-`bootstrap_ci` method. Its loadings, response-specific residual variances, and
-the derived `Σ_hat`, `c²_hat`, and `R_hat` below are therefore **point estimates**:
-this example does not supply standard errors, intervals, or a coverage claim.
-
-If interval estimates are essential for the scientific question, use the
-supported shared-residual Gaussian route (`fit_gaussian_gllvm`) and follow
-[Confidence intervals](confidence-intervals.md), supplying the original `y`.
-That route is a restricted model, so its intervals are not interchangeable with
-uncertainty for this per-response-residual fit. Otherwise, report the point
-estimates with this limitation and assess stability in a separately designed
-simulation or resampling study.
-
-## 5. Check `Σ_y` recovery
+## 4. What this first model does—and does not—assume
 
 ```julia
-Σ_true = Λ_true * Λ_true' + Diagonal(ψ_true)
-Σ_hat  = fit.Λ * fit.Λ' + Diagonal(fit.ψ²)
+This route assumes a common residual standard deviation. If different traits
+need different residual variability, use the later model guides and check their
+documented limits. The [confidence-interval guide](confidence-intervals.md)
+explains available uncertainty methods for this fitted model; no interval
+method is a blanket guarantee for every data set.
+
+## 5. Compare the model with the teaching data
+
+```julia
+Σ_true = Λ_true * Λ_true' + σ_true^2 * I
 
 maximum(abs, Σ_hat .- Σ_true)        # largest per-cell discrepancy — should be small
 ```
 
-This teaching simulation is not a recovery certificate. The published
-[Benchmarks](benchmarks.md) grid instead covers a matched **shared-residual**
-Gaussian special case; its agreement and speed results do not establish
-per-response-residual or non-Gaussian performance.
+This teaching simulation is not a recovery certificate. It shows the kind of
+comparison you can make when the true structure is known, not a general
+guarantee for applied data.
 
 To visualise it, with Plots.jl installed separately (`Pkg.add("Plots")` — it is
 not a GLLVModels.jl dependency):
