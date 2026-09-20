@@ -186,6 +186,7 @@ println(_SHARD === nothing ?
     # place for it. Every assertion is against an independently derived value.
     _shard_include("test_boundary_inference.jl")
     _shard_include("test_laplace_grad.jl")
+    _shard_include("test_poisson_grad_perf.jl")
     _shard_include("test_grouped_laplace.jl")
     _shard_include("test_grouped_laplace_identity.jl")
     _shard_include("test_laplace_grad_identity.jl")
