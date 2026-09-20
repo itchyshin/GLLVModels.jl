@@ -339,8 +339,13 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
                 # `negll`, unaffected by this change.
                 if F !== nothing && link isa LogLink
                     Λv = unpack_lambda(pack_lambda(Λ), p, K)  # round-tripped, matches poisson_laplace_grad's convention
+                    # The shared mode must stop where `negll`'s own solve would have
+                    # stopped: the fit's `newton_maxiter` / `newton_tol`, not
+                    # `_laplace_mode`'s defaults, or a caller asking for a tighter
+                    # mode would silently get the default one in the value path.
                     shared_ẑs = try
-                        _poisson_hoist_zhats(Yc, Λv, float.(β); mask = msk)
+                        _poisson_hoist_zhats(Yc, Λv, float.(β); mask = msk,
+                                             maxiter = newton_maxiter, tol = newton_tol)
                     catch
                         nothing
                     end
