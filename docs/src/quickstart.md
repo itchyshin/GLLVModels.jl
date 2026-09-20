@@ -20,7 +20,7 @@ cheat sheet.
 
     If you are importing data formatted for R packages such as `gllvm` or `gllvmTMB` (which use the $n \times p$ convention with sites in rows and species in columns), you must transpose your matrix (`Y'`) before passing it to `fit_gllvm`, `fit_gaussian_gllvm`, or any other GLLVModels.jl fitter.
 
-## 1. Simulate a fixture
+## 1. Simulate a small dataset
 
 ```julia
 using GLLVModels, Random, LinearAlgebra
@@ -163,7 +163,7 @@ For ordinal fits, choose `LogitLink()` or `ProbitLink()` explicitly when transla
 a model. The frozen gllvmTMB 0.7.0 ordinal route uses probit; Julia defaults to logit.
 Other ordinal links raise `ArgumentError` before the native fitter reads responses.
 
-## Poisson quadrature (local development candidate)
+## Experimental Poisson quadrature
 
 Ordinary log-link Poisson models can opt into adaptive Gauss–Hermite
 quadrature (AGHQ), which integrates over latent scores using a grid adapted to
@@ -189,15 +189,15 @@ unpenalized and requires one ordinary loadings-only block, a log link and
 requests retain Laplace with a visible reason. Other families and structured
 routes are not qualified by this Poisson implementation.
 
-Convergence refers to the final **frozen-node surrogate gradient**; it does
-not establish stationarity of an objective that differentiates through moving
-nodes. Wald and profile intervals use that same frozen objective. Bootstrap
-refits retain failed attempts; recovery and coverage validation remain pending.
-Stored masks and offsets are used for the original data. For changed data with
-nonzero offsets, supply the offset explicitly. Inspect `fit.converged` and
+The convergence diagnostic applies to the approximation actually fitted; it
+does not prove that a version which continually retunes its quadrature nodes
+would give the same answer. Wald and profile intervals use that same fitted
+approximation. Recovery and interval-coverage validation remain pending. Stored
+masks and offsets are used for the original data. For changed data with nonzero
+offsets, supply the offset explicitly. Inspect `fit.converged` and
 `fit.integration` before interpreting a result.
 
-## Binomial quadrature (local development candidate)
+## Experimental binomial quadrature
 
 For successes out of known trials, supply `N` with the same responses × sites
 shape as `Y`. Omit `N` only for Bernoulli observations. The ordinary binomial
@@ -226,10 +226,10 @@ trial placeholders cannot define a simulation until valid trials are supplied.
 Inspect nonconvergence before interpreting coefficients or intervals. The
 original five-node binomial comparison fails convergence in both engines and
 has an absolute log-likelihood difference of about 0.00894 (required ≤0.001).
-Higher-node diagnostics do not replace that required case. This is a local
-implementation candidate, not completed R parity or validated interval coverage.
+Higher-node diagnostics do not replace that comparison. This is experimental:
+it does not establish R parity or validated interval coverage.
 
-## Gaussian adaptive quadrature candidate
+## Experimental Gaussian quadrature
 
 The default Gaussian fitter integrates exactly and assumes zero mean without
 `X`. Opt-in quadrature keeps that model. Supply `X[p,n,q]` to define fixed effects;

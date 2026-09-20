@@ -4,7 +4,7 @@
 <div class="gllvm-route gllvm-route--start">
   <div>
     <span class="gllvm-route__eyebrow">Pick a route</span>
-    <p>These are companions with partial parity, not interchangeable copies of the same workflow.</p>
+    <p>Choose the language that fits your data and workflow. The packages overlap, but they do not offer the same models.</p>
   </div>
 </div>
 ```
@@ -28,11 +28,12 @@ Those limits belong to the R package. Calling Julia does not lift them.
 
 Start in Julia when you already have a response matrix and want the
 matrix-first companion. Responses are rows and sites are columns
-($p \times n$). Parity is partial: some families and extractors are admitted,
-and ledger closure is not true parity.
+($p \times n$). Only the families and post-fit tools described in the
+documentation should be treated as available; overlap with R does not make the
+two workflows interchangeable.
 
 - First fit and the R ⟷ Julia conversion table: [Quick start](quickstart.md)
-- Live catch-up scoreboard: [Capability parity](gllvmtmb-parity.md)
+- What is currently available in both packages: [Capability parity](gllvmtmb-parity.md)
 
 ## Use the bridge (one-way R → Julia only)
 

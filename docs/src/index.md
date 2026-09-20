@@ -5,7 +5,7 @@ layout: home
 hero:
   name: "GLLVModels.jl"
   text: "Which responses vary together?"
-  tagline: "A matrix-first Julia companion for separating shared multivariate structure from response-specific variation."
+  tagline: "A Julia package for generalised linear latent variable models: models for several responses that may vary together."
   actions:
     - theme: brand
       text: Fit the first Gaussian model
@@ -22,16 +22,18 @@ features:
     details: "Responses are rows and sites are columns: p × n. This landing-page route fits and interprets Gaussian multivariate data."
   - title: "Read the covariance first"
     details: "Use model-implied Sigma, correlation, and the shared-variance fraction before attaching meaning to a rotated loading axis."
-  - title: "A companion, not a replacement"
-    details: "GLLVModels.jl is matrix-first and partial parity. Use gllvmTMB for the richer formula-first R workflow and its route-specific evidence boundary."
+  - title: "A focused Julia companion"
+    details: "Start with a response matrix in Julia. For the broader formula-first R workflow, use gllvmTMB."
 ---
 ```
 
 # Start with the response matrix
 
-This landing page introduces GLLVModels.jl through a Gaussian multivariate
-response-matrix route: fit a response matrix, then interpret its model-implied
-covariance and correlation.
+GLLVModels.jl fits **generalised linear latent variable models (GLLVMs)**.
+These models ask whether several responses, such as species abundances, traits,
+or repeated measurements, vary together after allowing each response to retain
+its own variation. This landing page starts with the clearest case: a Gaussian
+response matrix, its model-implied covariance, and its correlations.
 
 !!! warning "Matrix Orientation: $p \times n$ in Julia vs $n \times p$ in R"
     **GLLVModels.jl expects species/traits in rows and sites/observations in columns ($p \times n$).**
@@ -87,15 +89,15 @@ This is the matrix-first companion to the ordinary R
 variance per response. R's wide formula is `traits(...) + latent(...)`, while
 Julia's matrix has responses in rows and units in columns. The simpler
 `fit_gaussian_gllvm` route has one shared residual SD, so it is a restricted
-model, not an identical R comparison. GLLVModels.jl has partial parity and a
-smaller applied documentation set; use gllvmTMB for the richer formula-first
-workflow and its current evidence boundary.
+model, not an identical R comparison. GLLVModels.jl currently covers a smaller
+set of applied workflows. Use gllvmTMB for the richer formula-first R workflow
+and its documented limits.
 
 `GaussianPerVarFit` does not yet have the `sigma_y_site()`, `correlation()`,
 and `communality()` extractor methods used by the shared-residual Gaussian
 fit. The explicit `Σ`, `c²`, and `R` calculation above is therefore the
-current experimental per-response route; its fields and output contract may
-change. It makes the model comparison explicit without promising a stable
+current per-response route; its fields and output contract may change. It makes
+the model comparison explicit without promising a stable
 extractor interface.
 
 ## What The Fit Gives You
@@ -126,20 +128,19 @@ For the per-response residual fit used above, use the explicit `Σ`, `c²`, and
 ## Landing-page scope
 
 This landing page makes a Gaussian-only promise: the shared-residual and
-per-response-residual Gaussian routes shown above. It does not establish
-support for non-Gaussian, mixture, variational (VA/ELBO), SPDE, or
-phylogenetic-GLM workflows. Those are separate routes, and a method being
-mentioned elsewhere in the repository is not evidence that it is ready for an
-applied analysis. Check [Capability parity](gllvmtmb-parity.md) and the
-route-specific documentation before relying on a workflow beyond this page.
+per-response-residual Gaussian routes shown above. It does not establish that
+non-Gaussian, mixture, spatial, or phylogenetic workflows mentioned elsewhere
+in the documentation are ready for an applied analysis. Check
+[Capability parity](gllvmtmb-parity.md) and the relevant guide before relying
+on a workflow beyond this page.
 
 ## Relation To gllvmTMB
 
 R `gllvmTMB` remains the richer formula-first model surface and applied article
-set. GLLVModels.jl is the Julia companion: matrix-first today, with a partial
-`engine = "julia"` bridge — **ledger closure ≠ true parity** (see
-[Capability parity](gllvmtmb-parity.md)). Interval coverage campaigns on the
-Julia side are diagnostic evidence, not calibrated inference certificates.
+set. GLLVModels.jl is the Julia companion: matrix-first today, with a limited
+`engine = "julia"` bridge. A list of implemented functions does not show that
+the two packages give interchangeable results. Julia interval studies are
+diagnostic checks, not calibrated-inference certificates.
 See [Comparison vs gllvmTMB](comparison.md) and [Benchmarks](benchmarks.md) for
 the validated shared-residual Gaussian closed-form benchmark grid. Those
 speed results do not generalise to non-Gaussian fits or establish speed for the
