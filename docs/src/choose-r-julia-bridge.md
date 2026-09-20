@@ -49,7 +49,9 @@ to choose a documented route.
 
 ## Use the bridge (one-way R → Julia only)
 
-The bridge is `gllvmTMB(..., engine = "julia")`. It sends a subset of
+The bridge is optional: the default `gllvmTMB` fitting workflow runs in R
+without Julia. To use the bridge, set `engine = "julia"` in `gllvmTMB(...)`.
+It sends a subset of
 cross-sectional reduced-rank models from R into Julia through JuliaCall. It
 is one-way: **R → Julia**. It does not run Julia models back through R, and
 it does not cover phylogeny, spatial, animal, kernel, or iSDM structure, nor
