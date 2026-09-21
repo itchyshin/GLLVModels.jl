@@ -72,9 +72,19 @@ const BASELINE_A_PARAMETERS = [0.9211786339273272, -0.3668330777412767]
 # not a bit-for-bit reimplementation of fit_grouped_nongaussian's optimiser
 # calls, so its call count is a good order-of-magnitude estimate, not a
 # pinnable identity. 118/1540 are the true, verified pre-fix numbers.
-const BASELINE_A_OBJ_CALLS = 118              # true inner Laplace-fit call count
+const BASELINE_A_OBJ_CALLS = 118              # true inner Laplace-fit call count (FD gradient path)
 const BASELINE_A_INNER_ITERS_SUM = 711        # = (1540 - 118) / 2
 const BASELINE_A_FRESH_CHOLESKY = 1540        # true pre-fix fresh cholesky() call count
+# S8 (leaf-S8, decided by Shinichi 2026-09-21, option (a): guard BOTH paths).
+# The 118 above is the finite-difference outer-gradient path, origin/main's
+# and S7b's. S8 added an analytic outer gradient (`analytic_gradient=true`,
+# the new default), which needs fewer inner Laplace fits per outer step:
+# 94 on fixture A, measured 2026-09-21 on this branch with warm_start_inner
+# = false. Every numeric identity above holds on both paths at rtol 1e-8;
+# only the call count moves, and a lower count IS the slice working. Pin
+# both so neither path can drift silently: 118 guards the FD path S7b
+# protected, 94 guards the analytic path S8 introduced.
+const BASELINE_A_OBJ_CALLS_ANALYTIC = 94      # inner Laplace-fit call count, analytic gradient path
 
 # --- fixture B: "crossed incidence" (test/test_grouped_laplace.jl), a direct
 # joint_grouped_laplace_loglik call with m=2 unknowns (Newton actually
@@ -177,18 +187,36 @@ function run_identity_checks()
         _check!(false, "GLLVModels._grouped_chol_stats[_reset!] not defined — " *
                        "the CHOLMOD symbolic-reuse change has not landed yet")
     else
+        # FD gradient path: the S7b pin, on the exact path origin/main took.
         GLLVModels._grouped_chol_stats_reset!()
         GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms, unit = group,
-            warm_start_inner = false)
+            warm_start_inner = false, analytic_gradient = false)
         stats = GLLVModels._grouped_chol_stats()
         _check!(stats.calls == BASELINE_A_OBJ_CALLS,
-                "fixture A: inner Laplace-fit call count changed ($(stats.calls) vs $(BASELINE_A_OBJ_CALLS)) — the reuse must not change the optimiser's path")
+                "fixture A (FD path): inner Laplace-fit call count changed ($(stats.calls) vs $(BASELINE_A_OBJ_CALLS)) — the reuse must not change the optimiser's path")
         _check!(stats.fallback == 0,
-                "fixture A: $(stats.fallback) fresh-cholesky fallbacks (pattern mismatch), expected 0")
+                "fixture A (FD path): $(stats.fallback) fresh-cholesky fallbacks (pattern mismatch), expected 0")
         _check!(stats.fresh == 2 * stats.calls,
-                "fixture A: fresh=$(stats.fresh) != 2*calls=$(2 * stats.calls) — expected exactly 2 fresh symbolic analyses (Fisher + observed) per inner Laplace-fit call, 0 thereafter")
+                "fixture A (FD path): fresh=$(stats.fresh) != 2*calls=$(2 * stats.calls) — expected exactly 2 fresh symbolic analyses (Fisher + observed) per inner Laplace-fit call, 0 thereafter")
         _check!(stats.fresh < BASELINE_A_FRESH_CHOLESKY,
-                "fixture A: fresh=$(stats.fresh) not below the pre-fix baseline $(BASELINE_A_FRESH_CHOLESKY)")
+                "fixture A (FD path): fresh=$(stats.fresh) not below the pre-fix baseline $(BASELINE_A_FRESH_CHOLESKY)")
+
+        # Analytic gradient path (S8, the default): its own pin, same reuse
+        # invariants. Fewer calls than the FD path is expected; a change in
+        # EITHER direction from 94 is a changed optimiser path and must be
+        # re-derived, not copied back in.
+        GLLVModels._grouped_chol_stats_reset!()
+        GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms, unit = group,
+            warm_start_inner = false, analytic_gradient = true)
+        stats_an = GLLVModels._grouped_chol_stats()
+        _check!(stats_an.calls == BASELINE_A_OBJ_CALLS_ANALYTIC,
+                "fixture A (analytic path): inner Laplace-fit call count changed ($(stats_an.calls) vs $(BASELINE_A_OBJ_CALLS_ANALYTIC))")
+        _check!(stats_an.calls < BASELINE_A_OBJ_CALLS,
+                "fixture A (analytic path): $(stats_an.calls) calls is not below the FD path's $(BASELINE_A_OBJ_CALLS) — the analytic gradient should need fewer inner fits")
+        _check!(stats_an.fallback == 0,
+                "fixture A (analytic path): $(stats_an.fallback) fresh-cholesky fallbacks (pattern mismatch), expected 0")
+        _check!(stats_an.fresh < BASELINE_A_FRESH_CHOLESKY,
+                "fixture A (analytic path): fresh=$(stats_an.fresh) not below the pre-fix baseline $(BASELINE_A_FRESH_CHOLESKY)")
 
         GLLVModels._grouped_chol_stats_reset!()
         GLLVModels.joint_grouped_laplace_loglik(fixture_b()...; link = GLLVModels.LogLink())
