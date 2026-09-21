@@ -189,6 +189,7 @@ println(_SHARD === nothing ?
     _shard_include("test_poisson_grad_perf.jl")
     _shard_include("test_grouped_laplace.jl")
     _shard_include("test_grouped_laplace_identity.jl")
+    _shard_include("test_grouped_analytic_grad.jl")
     _shard_include("test_laplace_grad_identity.jl")
     _shard_include("test_grouped_identification_diagnostics.jl")
     _shard_include("test_destination_b_joint_identification.jl")
