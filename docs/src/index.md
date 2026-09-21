@@ -5,7 +5,7 @@ layout: home
 hero:
   name: "GLLVModels.jl"
   text: "Which responses vary together?"
-  tagline: "A standalone Julia package for finding shared patterns across many species, traits, or outcomes—and separating them from variation unique to each response."
+  tagline: "A standalone Julia package for generalised linear latent variable models: finding shared patterns across many species, traits, or outcomes, and separating them from variation unique to each response."
   actions:
     - theme: brand
       text: Fit your first model
@@ -31,9 +31,10 @@ features:
 
 **GLLVM** means **generalised linear latent-variable model**. It is a model for
 several responses measured on the same sites, individuals, species, or studies.
-It uses a small number of unobserved shared patterns—called latent variables—to
-describe how responses vary together, while allowing each response to retain
-its own variation.
+It uses a small number of unobserved shared patterns, called latent variables,
+to describe how responses vary together, while allowing each response to retain
+its own variation. This landing page starts with the clearest case: a Gaussian
+response matrix, its model-implied covariance, and its correlations.
 
 In ecology, the responses may be species measured across sites. In evolution,
 they may be several traits measured across species or individuals. In other
@@ -141,8 +142,13 @@ one in `shared` means that much of a trait's modelled variation belongs to the
 shared patterns. Neither result proves a causal relationship.
 
 This first route assumes that every response has the same remaining variability
-after the shared patterns are accounted for. It is the documented route with
-stable result extractors. The [model guide](model.md) explains more flexible
+after the shared patterns are accounted for. It is a restricted model, not an
+identical comparison with the R `gllvmTMB` teaching route, which estimates one
+residual variance per response. It is the documented route with stable result
+extractors: the per-response-variance Gaussian fit
+(`fit_gaussian_pervar_gllvm`) does not yet have the `sigma_y_site()`,
+`correlation()`, and `communality()` extractor methods, and its fields and
+output contract may change. The [model guide](model.md) explains more flexible
 Gaussian models after you have completed this first fit.
 
 ## What The Fit Gives You
@@ -165,21 +171,25 @@ For this shared-residual Gaussian fit, the usual report-ready quantities are:
 
 ## Landing-page scope
 
-This landing page makes a Gaussian-only promise: the shared-residual and
-per-response-residual Gaussian routes shown above. It does not establish
-support for non-Gaussian, mixture, variational (VA/ELBO), SPDE, or
-phylogenetic-GLM workflows. Those are separate routes, and a method being
-mentioned elsewhere in the repository is not evidence that it is ready for an
-applied analysis. Check [what you can fit today](what-can-i-fit-today.md) and the
-route-specific documentation before relying on a workflow beyond this page.
+This landing page makes a Gaussian-only promise: the shared-residual Gaussian
+route shown above and the per-response-residual Gaussian route it points to.
+It does not establish that non-Gaussian, mixture, spatial, or phylogenetic
+workflows mentioned elsewhere in the documentation are ready for an applied
+analysis. Check [what you can fit today](what-can-i-fit-today.md),
+[Capability parity](gllvmtmb-parity.md), and the relevant guide before relying
+on a workflow beyond this page.
 
 ## Relation To gllvmTMB
 
 R `gllvmTMB` remains the richer formula-first model surface and applied article
-set. GLLVModels.jl is the Julia companion: matrix-first today, with a partial
-`engine = "julia"` bridge. The packages overlap only for the workflows listed
-in [Capability parity](gllvmtmb-parity.md); do not assume a model transfers
-unchanged. Interval coverage has not been established for every workflow.
+set. GLLVModels.jl is the Julia companion: matrix-first today, with a limited
+`engine = "julia"` bridge, and it currently covers a smaller set of applied
+workflows. The packages overlap only for the workflows listed in
+[Capability parity](gllvmtmb-parity.md); do not assume a model transfers
+unchanged, and a list of implemented functions does not show that the two
+packages give interchangeable results. Julia interval studies are diagnostic
+checks, not calibrated-inference certificates, and interval coverage has not
+been established for every workflow.
 See [Comparison vs gllvmTMB](comparison.md) and [Benchmarks](benchmarks.md) for
 the validated shared-residual Gaussian closed-form benchmark grid. Those
 speed results do not generalise to non-Gaussian fits or establish speed for the

@@ -4,7 +4,7 @@
 <div class="gllvm-route gllvm-route--start">
   <div>
     <span class="gllvm-route__eyebrow">Pick a route</span>
-    <p>Choose the package that best matches your data and the way you want to work.</p>
+    <p>Choose the package that best matches your data and the way you want to work. The packages overlap, but they do not offer the same models.</p>
   </div>
 </div>
 ```
@@ -30,9 +30,12 @@ Those limits belong to the R package. Calling Julia does not lift them.
 ## Use Julia (`GLLVModels.jl`)
 
 Start in Julia when you already have a response matrix and want the
-matrix-first companion. Responses are rows and sites are columns. Begin with
-the [Quick start](quickstart.md), or use [What can I fit today?](what-can-i-fit-today.md)
-to choose a documented route.
+matrix-first companion. Responses are rows and sites are columns
+($p \times n$). Only the families and post-fit tools described in the
+documentation should be treated as available; overlap with R does not make the
+two workflows interchangeable. Begin with the [Quick start](quickstart.md), or
+use [What can I fit today?](what-can-i-fit-today.md) to choose a documented
+route.
 
 ### Move one R matrix into Julia
 
@@ -44,8 +47,9 @@ to choose a documented route.
 3. Run the [Quick start](quickstart.md) before adapting the example to your
    data.
 
-- [A detailed R–Julia capability comparison](gllvmtmb-parity.md) is available
-  when you need to compare a particular model.
+- What is currently available in both packages, and a detailed R–Julia
+  capability comparison when you need to compare a particular model:
+  [Capability parity](gllvmtmb-parity.md)
 
 ## Use the bridge (one-way R → Julia only)
 

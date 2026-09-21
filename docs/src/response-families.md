@@ -245,9 +245,14 @@ With shared site covariates (`@formula` / bridge `X`), the default is
 negative binomial collapses to Poisson. For a single shared `r` across species,
 call [`fit_nb_gllvm`](@ref) (no-X) or [`fit_gllvm_cov`](@ref) (with X).
 
-The NB2 route is still experimental for demanding fits. A convergence message
-alone is not enough to establish reliable estimates: inspect the fit and use
-the documented Gaussian routes when you need the established teaching path.
+The NB2 route is still experimental for demanding fits. The recorded R
+comparison currently fails the stricter likelihood and fit-health checks: its
+Julia convergence flag accompanies an unstable numerical gradient, and a
+scalar-density precision problem at large size has been identified and is
+awaiting a tested repair. A convergence message alone is not enough to
+establish reliable estimates, verified parity, or parameter recovery: inspect
+the fit and use the documented Gaussian routes when you need the established
+teaching path.
 
 ### Negative binomial type-1 — `NB1()`
 
@@ -368,7 +373,7 @@ so the two routes cannot drift apart.
 
 #### Scope of the recorded R comparison
 
-The original seed-58 per-trait fixture has a verified comparison using a
+The recorded seed-58 per-trait comparison has a verified result using a
 public R BFGS continuation from its default fit. Both engines pass the recorded
 fit-health checks, with absolute log-likelihood difference below `1e-7`.
 The default R fit still reports unsuccessful convergence. This result applies
@@ -500,9 +505,10 @@ count-vector law). GLLVModels.jl deliberately excludes `Multinomial` from its
 that does `using GLLVModels, Distributions` the bare name `Multinomial` is
 undefined rather than resolving to either one. Always write
 `GLLVModels.Multinomial()` (and `Distributions.Multinomial(...)` for the count
-law). Because v1 has no latent variables, `Multinomial` is not yet a complete
-workflow in the same sense as the families above. Treat it as a narrow model
-form rather than a general latent-variable analysis.
+law). Because v1 has no latent variables, `Multinomial` is **not yet a general
+GLLVM workflow** in the same sense as the families above: it is a fixed-effects
+model for one unordered categorical response. Treat it as a narrow model form
+rather than a general latent-variable analysis.
 
 ### Gamma — `Gamma()`
 
@@ -533,7 +539,7 @@ fit = fit_gllvm(Yp; family = Gamma(), K = 2)   # Yp > 0; shared α (no-X)
     objective or the `converged` flag. Treat saturated cloglog fits with
     suspicion, especially the loadings.
 
-!!! note "Laplace curvature: Beta, NB1 and Student-t use the observed Hessian (decision A, 2026-08-27)"
+!!! note "Laplace curvature: Beta, NB1 and Student-t use the observed Hessian"
     The shared routes of Beta/logit, NB1/log and Student-t/identity now
     default to the **observed** conditional curvature in the Laplace
     log-determinant, matching TMB / `gllvmTMB` (their grouped fitters already
@@ -719,7 +725,8 @@ admitted. Shared and per-species dispersion are supported; this does not
 establish arbitrary dispersion-group, covariate or row-effect support. The fit
 records `estimated_nu`, so AIC counts free degrees-of-freedom parameters only
 when they were estimated. See [Student-t parity limits](studentt-parity.md) for
-the current boundary: the full R comparison is not yet established.
+the current boundary: the recorded R comparison still does not converge
+reliably, so the full R comparison is not yet established.
 
 ### Conway–Maxwell–Poisson — `COMPoisson()`
 
@@ -1135,7 +1142,7 @@ difficulty is concentrated in the zero-inflation intercept, not a global fit
 collapse. Treat `zip`/`zinb` at `p ≈ 25, n ≈ 50` as a documented limitation,
 not a supported capability. This study used K = 1 and intercept-only
 zero-inflation only, evaluated point-estimate bias/RMSE and the fitter's own
-convergence gate — **no coverage or SE evaluation was done**, so it says
+convergence diagnostic — **no coverage or SE evaluation was done**, so it says
 nothing about interval calibration for any of the three families.
 
 ## Extractors
