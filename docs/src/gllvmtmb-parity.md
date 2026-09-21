@@ -9,6 +9,16 @@
 </div>
 ```
 
+Can you fit the same biological model in Julia as in R? Start with the response
+family, then check the model structure and the summaries you need. A fitter
+available directly in Julia may not be available through
+`gllvmTMB(..., engine = "julia")`, and similar function names can describe
+different models or parameter scales.
+
+Use the tables below to choose a model, and the R bridge section to check
+whether you can call it from R. For help choosing a first analysis, see
+[Choose R, Julia, or the bridge](choose-r-julia-bridge.md).
+
 GLLVModels.jl is a Julia companion to R's `gllvmTMB`. On the shared Gaussian
 and phylogenetic examples, its point estimates and likelihoods agree to **at
 least six significant digits**. The largest measured differences on that grid
@@ -21,12 +31,13 @@ have a documented Julia counterpart and which do not. For *speed* comparisons se
 
 Legend: ✅ available · 🔨 in progress · ⬜ planned · ⚡ GLLVModels.jl advantage.
 
-## What parity does NOT mean
+## How closely do the results agree?
 
 "Parity" on this page means agreement in small, controlled examples
-(`p ≤ 5`, `n ≤ 150`). It does not yet mean that a full workflow will give the
-same result end to end. **First-order** comparisons (log-likelihood at each
-optimum, cross-objective identity) exist for five paired families: Gaussian, Poisson-log,
+(`p ≤ 5` responses, `n ≤ 150` observations). It does not yet mean that a full
+workflow will give the same result end to end. **First-order** comparisons
+(log-likelihood at each optimum and agreement when evaluating the same model)
+exist for five paired families: Gaussian, Poisson-log,
 Binomial-logit, Beta-logit, and NB2-log. **Second-order** results
 (standard errors, the fixed-effect `vcov` block, Wald CI endpoints) exist
 only for five small examples, without a stated tolerance. **Realistic-size
@@ -38,7 +49,7 @@ comparison. R's own 0.7.1 interval claim is based on three fixed Wald
 examples; the prior total-variance “0.94 coverage floor” wording was
 withdrawn.
 
-### Second-order status
+### Standard errors and confidence intervals
 
 **True second-order parity is not established.** A few small examples do not
 show that standard errors and intervals agree on realistic data.
@@ -51,46 +62,53 @@ because R uses one dispersion per trait whereas Julia uses one shared
 log-dispersion. This pilot is useful evidence, not a complete
 matched-parameter comparison.
 
-The qualification claim is **one-directional**: R workflows against Julia, at
-the frozen `gllvmTMB` 0.7.0 reference. At that reference point, 62 R exports
+The comparison starts from **R workflows and checks their Julia counterparts**,
+using `gllvmTMB` 0.7.0 as the fixed reference. It does not check every Julia
+workflow against R. At that reference point, 62 R exports
 have no Julia counterpart and 91 Julia exports have no R counterpart; three
 matches remain ambiguous. These counts describe the comparison, not a promise
 to implement every unmatched function here.
 
-### An inventory is not true parity
+### Matching functions does not establish matching analyses
 
 Completing a feature inventory does not establish true parity. True parity
-still needs second-order comparisons, realistic-size cells, real-data
+still needs comparisons of uncertainty, realistic-size examples, real-data
 workflows, and grouping-level pairing. Do not infer that R workflows run
 identically through Julia from a completed inventory.
 
 ### Bridge scope (what `engine = "julia"` is)
 
-One-way **R → Julia** only: a subset of cross-sectional reduced-rank models through
-JuliaCall. It admits 11 families, unit-tier
-`latent(d=K)` and no-latent paths. **Does not** cover phylo/spatial/animal/kernel/iSDM,
-`traits()` formula grammar, mixed-family vectors at full depth, or column_coef / slope
-families. Further bridge expansion remains open.
+The bridge sends a subset of cross-sectional reduced-rank models **from R to
+Julia** through JuliaCall. It supports 11 families, with unit-level
+`latent(d=K)` terms or no latent factors. It does not cover phylogenetic,
+spatial, animal, kernel, or integrated species-distribution (iSDM) structures,
+the full `traits()` formula grammar, all mixed-family combinations, or
+`column_coef` and slope models. The detailed restrictions appear below.
 
-### Explicitly OUT of the parity claim
+### What has not been established
 
 In plain language, the following remain out of scope:
 
-- Two-directional qualification (Julia→R)
-- Full 0.7.1 surface port (column_coef, slopes, formula grid)
-- Spatial/slopes engines before phylo transport completes
-- Interval *coverage* certification as an R↔Julia comparison
-- Other model-development work not required to compare these routes
-- Updating the frozen 0.7.0 reference before second-order comparisons land
-- fitted/predict/residuals and recovery-to-truth as parity requirements
+- Agreement for every Julia workflow when run through R
+- Support for all `gllvmTMB` 0.7.1 functions and formula combinations, including
+  `column_coef` and slopes
+- Spatial and slope models through the R bridge
+- Correct interval *coverage*, meaning that intervals contain the true value
+  at the stated rate across repeated datasets
+- Agreement for model extensions outside the compared examples
+- Agreement with newer R versions across the full comparison set; the fixed
+  reference remains 0.7.0, with individual exceptions identified below
+- Agreement of fitted values, predictions, and residuals, or recovery of known
+  simulated parameters, as part of the comparisons summarized here
 
 ### Capability differences
 
-Six compared capability rows differ from the R package by design or because a
-route remains incomplete: `spatial × dep`, Phylo Model A `lv` intervals,
-multinomial depth, broad simulation coverage, public AGHQ, and full
-mixed-family vectors. A partial mixed-family point fit through the R bridge is
-transport only; it does not make the whole row comparable.
+Six areas differ from the R package or remain incomplete: spatial models with
+dependent trait effects (`spatial × dep`), latent-variable intervals for the
+phylogenetic Model A, multinomial models, broad simulation validation,
+adaptive Gauss–Hermite quadrature (AGHQ), and mixed-family models. Obtaining
+point estimates for a supported mixed-family model through the bridge does
+not establish agreement for its uncertainty or for other family combinations.
 
 ## Response families
 
@@ -107,26 +125,26 @@ transport only; it does not make the whole row comparable.
 | Gamma | ✅ | shape `α` |
 | Delta-lognormal | ✅ | first two-part family. In an intercept-only R–Julia comparison with gllvmTMB 0.7.1, the log-likelihood difference was about `1.5e-8` (relative difference `1.7e-11`) when `predictor = :shared` and `disp_group = :species`: one shared linear predictor and one residual scale per trait. |
 | Delta-Gamma | ✅ | occurrence Bernoulli × positive Gamma (log-link mean). In the corresponding intercept-only comparison, the log-likelihood difference was about `7.5e-10` (relative difference `8.3e-13`) under the same settings. |
-| Hurdle (Poisson / NB) | ✅ | occurrence Bernoulli × zero-truncated Poisson / NB2; `fit_gllvm(Y; family = HurdlePoisson())` / `HurdleNB()` (marker `r` is a tag payload). Julia-forward — twin has no hurdle family |
+| Hurdle (Poisson / NB) | ✅ | occurrence Bernoulli × zero-truncated Poisson / NB2; `fit_gllvm(Y; family = HurdlePoisson())` / `HurdleNB()`; the marker's `r` value does not fix the fitted dispersion. Available in Julia; no matching family in the reference R package |
 | Zero-inflated (ZIP / ZINB / ZIB) | ✅ | structural zero × Poisson / NB2 / Binomial; zero-inflation intercept-only (Λ_z = 0) so the coupled-zero cross-term drops out |
-| Ordered-beta | ✅ | proportions / cover with point masses at 0 and 1; `fit_gllvm(Y; family = OrderedBeta())` (marker `c0`, `c1`, `φ` are tag payloads). Julia-forward — twin has no ordered-beta family |
-| Beta-hurdle | ✅ | occurrence Bernoulli × positive Beta; `fit_gllvm(Y; family = BetaHurdle())` (marker `φ` is a tag payload). Julia-forward — twin has no beta-hurdle family |
+| Ordered-beta | ✅ | proportions / cover with point masses at 0 and 1; `fit_gllvm(Y; family = OrderedBeta())`; the marker's `c0`, `c1`, and `φ` values do not fix the fitted parameters. Available in Julia; no matching family in the reference R package |
+| Beta-hurdle | ✅ | occurrence Bernoulli × positive Beta; `fit_gllvm(Y; family = BetaHurdle())`; the marker's `φ` value does not fix the fitted precision. Available in Julia; no matching family in the reference R package |
 | Exponential | ✅ | positive continuous, `Var = μ²` (Gamma with shape α=1) |
 | Tweedie | ✅ | compound Poisson–Gamma (1<p<2); `fit_tweedie_gllvm`, Dunn–Smyth density series |
-| Conway–Maxwell–Poisson | ✅ ⚡ | under- or over-dispersed counts; `fit_gllvm(Y; family = COMPoisson())`; marker `ν` is a tag payload (always estimated). Julia-forward — twin has no CMP family |
+| Conway–Maxwell–Poisson | ✅ ⚡ | under- or over-dispersed counts; `fit_gllvm(Y; family = COMPoisson())`; `ν` is always estimated rather than fixed by the marker's value. Available in Julia; no matching family in the reference R package |
 
 ## Model structure
 
 | Capability | GLLVModels.jl | Notes |
 |-----------|:---:|-------|
 | Latent-variable ordination (loadings) | ✅ | any `K`; canonical SVD rotation |
-| Fixed-effect covariates (`Xβ`) | ✅ Gaussian · ✅ non-Gaussian (GLM families) | Shared site-X: Poisson/Binomial via `fit_gllvm_cov`; NB2/NB1/Beta/Gamma public/bridge default via `fit_*_gllvm_grouped_cov` (per-trait φ/α + shared `γ`; twin API B; NB1 = `fit_nb1_gllvm_grouped_cov`); Ordinal via `fit_ordinal_gllvm_pertrait_cov` (per-trait cutpoints τ₁=0 / K−2 + shared `γ`; light RCall vs `ordinal_probit`). Shared-dispersion + X remains `fit_gllvm_cov` where that path exists (incl. shared-φ NB1 opt-in). Gaussian `β_fixed` / non-Gaussian `γ_fixed` zero masks supported. |
+| Fixed-effect covariates (`Xβ`) | ✅ Gaussian · ✅ non-Gaussian (GLM families) | Shared site-X: Poisson/Binomial via `fit_gllvm_cov`; NB2/NB1/Beta/Gamma public/bridge default via `fit_*_gllvm_grouped_cov` (per-trait φ/α + shared `γ`; NB1 = `fit_nb1_gllvm_grouped_cov`); Ordinal via `fit_ordinal_gllvm_pertrait_cov` (per-trait cutpoints τ₁=0 / K−2 + shared `γ`; checked against R's `ordinal_probit`). Shared-dispersion + X remains `fit_gllvm_cov` where that path exists (incl. shared-φ NB1 opt-in). Gaussian `β_fixed` / non-Gaussian `γ_fixed` zero masks supported. |
 | Between / within (multilevel) | ✅ Gaussian | `K_W` + per-trait diagonal |
 | Phylogenetic random effect | ✅ ⚡ | fast **O(p)** sparse path, benchmarked to p = 10⁴ |
 | Animal model (relatedness / GRM) | ✅ Gaussian | `relatedness_cov`, via the `Σ_phy` input |
 | Spatial (Matérn / exponential) | ✅ Gaussian | `spatial_cov`, via the `Σ_phy` input |
-| Structured dependence × non-Gaussian | ✅ phylo · 🔨 spatial-latent / animal | phylogenetic GLM landed (`fit_phylo_glm`, augmented-state joint Laplace); SPDE / Matérn spatial latent field (`fit_spde_latent_gllvm`) for the non-Gaussian GLLVM |
-| Random slopes `(1 + x \| g)` | 🔨 | formula front-end (c) |
+| Structured dependence × non-Gaussian | ✅ phylo · 🔨 spatial-latent / animal | phylogenetic GLM (`fit_phylo_glm`, augmented-state joint Laplace); SPDE / Matérn spatial latent field (`fit_spde_latent_gllvm`) for the non-Gaussian GLLVM; broader spatial and animal-model support remains incomplete |
+| Random slopes `(1 + x \| g)` | 🔨 | this formula syntax is not yet supported |
 | Per-species / grouped dispersion (`disp.group`) | ✅ all 5 dispersion families | `fit_{nb,beta,gamma,nb1,tweedie}_gllvm_grouped(Y; K, group)` give each species (or group) its own dispersion; reduces exactly to the shared fit at `G=1`. **gllvm's default is per-species** dispersion, so for parity route Julia through a grouped fitter with `group = 1:p` (or set gllvm `disp.formula = ~1` for the shared model) |
 | Row effects (fixed **and random**) | ✅ | fixed per-site intercepts (`fit_roweffect_gllvm`) **and** random `ρ_s ~ N(0, σ_row²)` (`fit_row_random_gllvm`, gllvmTMB `row.eff="random"`); `σ_row→0` reduces exactly to no-row-effect |
 
@@ -149,9 +167,9 @@ transport only; it does not make the whole row comparable.
 |-----------|:---:|-------|
 | Matrix-level fit API | ✅ | `fit_gllvm(Y; family, K, …)` |
 | `@formula` front-end | ✅ fixed effects (wide + long) · 🔨 rest | `gllvm(@formula(y ~ 1 + x), Y, data; …)` and `gllvm(@formula(y ~ 1 + x), long; species, site, …)`; random slopes, `traits()`/`phylo()`, categoricals deferred |
-| `traits()` / `phylo()` formula terms · random slopes `(1+x\|g)` | 🔨 | custom StatsModels terms + RE substrate (design spec'd) |
+| `traits()` / `phylo()` formula terms · random slopes `(1+x\|g)` | 🔨 | these formula terms are not yet supported |
 
-## Performance — the differentiator
+## How much faster are the measured fits?
 
 ⚡ Large per-fit speedups on the **Gaussian closed-form path**, and an O(p)
 phylogenetic gradient benchmarked to p = 10,000.
@@ -160,25 +178,27 @@ phylogenetic gradient benchmarked to p = 10,000.
     The grid published in these docs ([Benchmarks](benchmarks.md)) measures
     **161.2×, 185.3×, 194.9×, 335.3×, 398.8×, 698.1×** — median **265.1×**.
 
-    A `~340×` figure appears elsewhere in this repo, attributed to a "Gaussian +
-    phylogenetic" grid. **That grid is not published here**, so a reader cannot check
-    it against anything in this repository, and it does not match the one grid that
-    is. Treat `~340×` as unverified in-repo pending publication of its source.
+    A `~340×` figure elsewhere is attributed to a different Gaussian and
+    phylogenetic grid whose results are not published here. That figure remains
+    unverified; use the six published measurements above.
 
     Agreement is **at least six significant digits**, not machine precision: the
     measured worst case across the published grid is `|Δ logLik| = 2.343e-07` and
     `Σ_y` relative Frobenius `4.424e-05`.
 
     None of this generalises beyond the Gaussian closed-form path. Measured
-    non-Gaussian speedups include zero-truncated Poisson ≈ 2.2× and Gamma ≈ 1.6×. Poisson, NB2, Binomial, and
-Beta use analytic Laplace outer gradients by default on plain no-mask/no-offset
-fits, with finite-difference fallback; Gamma and the remaining finite-difference
-Laplace paths stay conservative until their analytic gradients meet the runtime
-accuracy criterion. The sparse-Cholesky / CHOLMOD marginals are not generic-AD-friendly;
-the VA estimator adds analytic inner and envelope-theorem outer gradients for
-further fit-time gains.
+    non-Gaussian speedups include zero-truncated Poisson ≈ 2.2× and Gamma ≈ 1.6×.
 
-## R bridge: parameterization map
+Poisson, NB2, Binomial, and Beta use analytic Laplace outer gradients by default
+on plain no-mask/no-offset
+fits, with finite-difference fallback; Gamma and the remaining finite-difference
+Laplace paths continue to use finite differences. Sparse-Cholesky / CHOLMOD
+calculations cannot generally use automatic differentiation directly. The
+variational approximation (VA) estimator uses analytic inner and
+envelope-theorem outer gradients; its timings depend on the model and should
+not be inferred from the Gaussian benchmark.
+
+## R bridge: match the model and parameter scales
 
 R `gllvmTMB` can call GLLVModels.jl as its default Julia fitting path through the
 R-side bridge. For results to agree, the bridge must reconcile a few
@@ -197,27 +217,27 @@ not bugs on either side.
 | Dispersion **structure** | per-species by default (`disp.formula = NULL`) | shared scalar by default; per-species via the grouped fitters | route Julia through `fit_*_gllvm_grouped(Y; K, group = 1:p)`, **or** set gllvm `disp.formula = ~1` |
 | Estimation method | default `method = "VA"` | default Laplace; VA available via `fit_*_gllvm_va` | pin matching methods; VA and LA differ in finite samples |
 
-Engine-side parity is broader than the current R bridge admission surface. The
-current `gllvmTMB(..., engine = "julia")` bridge admits complete, balanced,
+### Families, dispersion, and measured covariates
+
+More models can be fitted directly in Julia than through the R bridge. The
+current `gllvmTMB(..., engine = "julia")` bridge supports complete, balanced,
 one-part reduced-rank models for Gaussian, Poisson, Binomial, NB2, NB1, Beta,
 Gamma, and Ordinal-probit no-X fits. For NB2, NB1, Beta, and Gamma, the Julia
 bridge default now routes through per-trait grouped-dispersion fitters
-(`group = 1:p`) so the point-fit nuisance structure matches native
-`gllvmTMB`/`gllvm`; grouped-dispersion Wald/profile/bootstrap CI payloads are
-routed through the same no-X bridge contract. Ordinal and
-ordinal-probit bridge rows now use per-trait cutpoints by default and return
+(`group = 1:p`) so the dispersion structure matches native
+`gllvmTMB`/`gllvm`; grouped-dispersion Wald/profile/bootstrap intervals are
+available through the same bridge for models without covariates. Ordinal and
+ordinal-probit bridge models use per-trait cutpoints by default and return
 `cutpoints` as a NaN-padded trait x threshold matrix plus per-trait
 `n_categories`, `cutpoint_mode = "per_trait"`, and `cutpoint_link`; per-trait
-ordinal CI endpoints remain unavailable-status rows until a per-trait cutpoint
-CI engine lands. Fixed-effect
-covariates (`X`) are admitted for complete, balanced one-part Gaussian, Poisson,
+ordinal CI endpoints remain unavailable. Fixed-effect
+covariates (`X`) are supported for complete, balanced one-part Gaussian, Poisson,
 Binomial, NB2, NB1, Beta, and Gamma fits (NB1 via per-trait
-`fit_nb1_gllvm_grouped_cov`; light RCall `nbinom1`+X cell abs Δ ≈1.53e-9 @
-rtol 1e-6, seed=48).
-`GLLVModels.bridge_capabilities()` exposes the current Julia bridge surface as
-a JuliaCall-friendly capability list. It lets the R side verify that each
-admitted route has an explicit status, while Julia-only routes remain clearly
-marked as unavailable from R.
+`fit_nb1_gllvm_grouped_cov`; the `nbinom1` comparison with covariates had
+absolute log-likelihood difference ≈1.53e-9 at relative tolerance 1e-6, seed=48).
+`GLLVModels.bridge_capabilities()` lists which Julia models the bridge
+supports, with an explicit status for each. Models available only in Julia
+are marked as unavailable from R.
 For Gaussian covariate fits the bridge returns `mean_coef`, the full coefficient
 vector for the supplied `X` array, so the R side can reconstruct in-sample
 fitted values without guessing from the per-trait mean summary. When the R side
@@ -225,7 +245,10 @@ passes a fixed-zero coefficient mask through `options["coef_fixed"]`, the bridge
 returns the full coefficient vector with constrained entries equal to zero plus
 `mean_coef_status` (Gaussian) or `gamma_status` (non-Gaussian) so the R package
 can print fixed rows without treating them as estimated parameters.
-Predictor-informed latent-score covariates (`X_lv`) are admitted for
+
+### Predictors of latent scores
+
+Predictor-informed latent-score covariates (`X_lv`) are supported for
 complete-response ordinary Gaussian, Poisson (log link), shared-dispersion NB2,
 shared-shape Gamma, shared-precision Beta, binomial logit/probit/cloglog, and
 native shared-cutpoint Ordinal logit point fits. The Gaussian bridge centres
@@ -233,8 +256,9 @@ responses by trait means and returns those means as `alpha`; the Poisson, NB2,
 Gamma, Beta, and binomial bridges keep per-trait link-scale intercepts in
 `alpha` (the NB2, Gamma, and Beta `X_lv` routes use the
 shared-dispersion/shape/precision fitter, not the per-trait grouped route).
-Native shared-cutpoint Ordinal `X_lv` is Julia-side only for now; it does not
-promote the per-trait ordinal R bridge. These routes return total latent scores
+Native shared-cutpoint Ordinal `X_lv` is available only in Julia; the per-trait
+ordinal R bridge does not support this extension. These models return total
+latent scores
 in `scores` and add `scores_mean`, `scores_innovation`, `alpha_lv`, and
 rotation-stable `lv_effects = Lambda * alpha_lv'`. Native GLLVModels.jl can compute
 uncertainty for the ordinary `B_lv` product, including profile intervals for
@@ -243,71 +267,78 @@ documented `X_lv` routes. Response masks, simultaneous fixed-effect `X`,
 mixed-family fits, grouped-dispersion `X_lv`, profile or bootstrap `X_lv`
 intervals through R, per-trait ordinal `X_lv`, and two-part `X_lv` are not yet
 available.
-Initial response-missing masks are admitted only for no-X one-part non-Gaussian
-bridge fits through an explicit `mask` (`true = observed`); the R bridge
-live-tests Poisson, Bernoulli Binomial, NB2, NB1, Beta, Gamma, and
-Ordinal-probit routes end to end. Gaussian response masks remain an explicit
-follow-up.
-Ordinal-probit is fit/nobs/mask/link-tested, and the Julia payload carries
-per-trait cutpoints plus category counts so R-side prediction can be gated
-explicitly by the paired `gllvmTMB` branch. NB1 post-fit prediction, residual, augmentation,
+
+### Missing responses and predictions
+
+Missing responses are supported only for one-part non-Gaussian bridge fits
+without covariates, through an explicit `mask` (`true = observed`). Complete
+R-to-Julia calls have been tested for Poisson, Bernoulli Binomial, NB2, NB1,
+Beta, Gamma, and Ordinal-probit. Gaussian response masks remain unsupported
+through the bridge.
+
+Ordinal-probit comparisons check fitting, observation counts, masks, and links.
+Julia returns per-trait cutpoints and category counts, but the R implementation
+must also support prediction from those values before an ordinal prediction
+method can use them. NB1 post-fit prediction, residual, augmentation,
 and conditional simulation are routed for complete-data no-X fits and for masked
 fits where the fitted means are available; masked simulation and masked
 CI/profile/bootstrap refits remain rejected with explicit CI-status messages.
-X+mask fits, ordinal covariate fits, structured covariance terms, and
-user-selectable Julia-side optimizer controls remain explicit bridge follow-ups,
-not silently supported cells.
+Combining `X` with a mask, ordinal covariate fits, structured covariance terms,
+and user-selectable Julia optimizer controls remain unsupported through the bridge.
 
-The mixed-family R bridge is guarded and intentionally limited: complete
-balanced trait-aligned no-X/no-mask/no-CI Julia-engine point fits are admitted
-for Gaussian, Poisson, Binomial, NB2, Beta, and Gamma components. The bridge
-stores row-aligned per-trait `families` and `link` labels, validates the native
-`gllvmTMB` selector used for the comparison, checks direct-wrapper logLik equality, and routes
-current in-sample post-fit methods with unavailable-CI status. Mixed-family X,
-masks, cbind/weights, REML, ordinal/NB1/two-part components, and CI endpoints
-remain rejected deliberately.
+### Different response families in one model
+
+The mixed-family R bridge supports point estimates for complete, balanced,
+trait-aligned data without covariates or missing responses. Its components
+can be Gaussian, Poisson, Binomial, NB2, Beta, or Gamma. The bridge stores
+per-trait `families` and `link` labels in response-row order, checks the selected
+R model and agreement of direct and wrapped log-likelihoods, and supports
+the current in-sample post-fit methods. Confidence intervals are unavailable.
+Mixed-family X, masks, cbind/weights, REML, ordinal/NB1/two-part components, and CI endpoints
+remain unsupported.
 
 REML is currently available only for Gaussian models. Non-Gaussian models use
 the documented Laplace likelihood approximation; they should not be described
 as REML fits.
 
-The engine still carries additional gllvm/gllvmTMB parity rows that are not all
-public through the R bridge yet:
+### Further differences from R
 
-- **`ZNIB`** (zero-and-N-inflated binomial) — deferred: the gllvm TMB template's
-  `case ZNIB` appears to fall through (missing `break;`) into beta-binomial, so its
-  likelihood needs upstream confirmation before building to it.
+Check these restrictions when translating an R analysis:
+
+- **`ZNIB`** (zero-and-N-inflated binomial) — unsupported. The reference R
+  implementation appears to evaluate the beta-binomial likelihood instead;
+  the intended likelihood needs confirmation from its developers before a
+  Julia counterpart can be compared with it.
 - **corAR1 / corExp / corCS structured row effects, and `lvCor` correlated latent
   variables** — these are `gllvm` features, **not in gllvmTMB**, so they are out of
   scope for this bridge. (GLLVModels.jl does carry more general SPDE/Matérn-spatial and
-  phylogenetic substrates, which gllvm/gllvmTMB lack.)
+  phylogenetic implementations, which gllvm/gllvmTMB lack.)
 - **Per-trait nuisance-parameter intervals** — grouped NB2/NB1/Beta/Gamma CIs
-  are routed; grouped Tweedie and per-trait ordinal-cutpoint CI endpoints remain
-  follow-up work.
+  are supported; grouped Tweedie and per-trait ordinal-cutpoint CI endpoints
+  remain unavailable.
 
-## Honest gaps
+## Why likelihood approximations can differ
 
 ### Laplace curvature: Fisher vs observed
 
 `gllvmTMB` is built on TMB, whose `MakeADFun(..., random = ...)` differentiates
 the coded joint negative log-likelihood. Its Laplace log-determinant therefore
-uses the **observed** joint Hessian, structurally and without ever making a
-choice about it. GLLVModels.jl hand-codes its Laplace kernels, and several of them
-used the **Fisher (expected)** information in that role instead.
+uses the **observed** joint Hessian: the curvature of that likelihood at the
+fitted values. GLLVModels.jl implements its Laplace calculations directly, and
+several of them used the **Fisher (expected)** information in that role instead.
 
 The two coincide at canonical links — Poisson/log and Binomial/logit, where the
-curvature is free of `y` — which is why the launch families were unaffected and
-why the discrepancy went unnoticed. They differ everywhere else.
+curvature is free of `y`. For other families and links, the two can differ.
 
-**Status, stated plainly rather than as a capability claim:**
+The documented choices and comparisons are:
 
 - **Using observed curvature:** NB1 (grouped route), `truncated_nbinom2`,
-  `Exponential`, `DeltaGamma`, **`Gamma`** — the one that sat on the public
-  default path `fit_gllvm(Y; family = Gamma())` — and, as of 2026-08-28, the
+  `Exponential`, `DeltaGamma`, **`Gamma`** through
+  `fit_gllvm(Y; family = Gamma())` — and, as of 2026-08-28, the
   shared **Tweedie** route (`fit_tweedie_gllvm`) and **`Binomial`/probit**.
-  TMB structurally differentiates the joint nll, so its log-det is observed
-  for every family it ships, not a per-family exception.
-- **Still using the Fisher weight:** only **GP-1**. A minority of tested cells
+  TMB obtains observed curvature by differentiating the joint negative
+  log-likelihood for each family.
+- **Still using the Fisher weight:** only **GP-1**. A minority of tested examples
   fail badly under observed curvature, so GP-1 retains Fisher curvature. A
   log-likelihood from GP-1 will not match `gllvmTMB` to machine precision.
 - `Binomial` at the **cloglog** link and the grouped **Tweedie** route both
@@ -317,37 +348,34 @@ why the discrepancy went unnoticed. They differ everywhere else.
   `G = 1`.
 - **Not a uniform improvement.** Against numerical quadrature, the observed
   curvature is decisively closer for Gamma (12/12 seeds, 20–60× smaller error)
-  and for NB2 (87% of 150 curvature-adjudication study cells, 2026-08-27),
+  and for NB2 (87% of 150 examples in the curvature comparison, 2026-08-27),
   but *not* for Beta, and measurably worse for GP-1's dispersion recovery. So
-  each family is decided on its own evidence. Matching TMB is the goal;
-  "the numbers get better" would be an overstatement.
+  evidence for one family does not establish better accuracy for another.
 
 Where a curvature has been corrected, the previous behaviour stays reachable
 through `hessian = :fisher` on the corresponding marginal.
 
-### Other gaps
+## Choosing your next step
 
-The rows above describe engine capabilities and the narrower R bridge admission
-surface separately. Engine-side work now covers the major response-family rows,
-fixed-effect covariates for the GLM families, the VA estimator, ordination
-extractors, SPDE / Matérn spatial latent fields, phylogenetic GLMs, and
-confidence-interval machinery. Those are not automatically public
-`gllvmTMB(..., engine = "julia")` claims: each bridge row still needs its own
-R-side admission, parity test, CI-status handling, and documentation.
+For a native Julia analysis, choose the response family and structure in the
+tables above, then read the corresponding [response-family guide](response-families.md)
+or [structured-dependence guide](structured-dependence.md). For an analysis
+called from R, also check the bridge restrictions above: a native Julia
+fitter does not automatically become available through `engine = "julia"`.
 
-The principal remaining limitations are:
+The principal remaining extensions are:
 
 - **Structured dependence with non-Gaussian responses** — phylogenetic and
   spatial latent-field models are available, but a general dense species
   covariance `u ~ N(0, σ²Σ)` shared across sites and a scalable determinant for
   very many responses are still missing.
 - **Formula interface** — `gllvm(@formula(y ~ 1 + covariates), Y, data; family, K)`
-  accepts continuous fixed effects in wide data. Long data, custom
-  `traits()`/`phylo()`/`latent()` terms, categorical covariates, and random
-  slopes `(1 + x | g)` are not yet available.
+  accepts continuous fixed effects, with the wide and long interfaces listed
+  above. Custom `traits()`/`phylo()`/`latent()` terms, categorical covariates,
+  and random slopes `(1 + x | g)` are not yet available.
 - **R bridge (`engine = "julia"`)** — the bridge supports documented
-  complete-data one-part fits, selected fixed-effect routes, selected
-  missing-response routes, scalar confidence intervals, and NB1 post-fit
-  methods. Mixed-family metadata, grouped-dispersion intervals, NB1 models
-  with covariates, masked confidence intervals, structured dependence, and
-  broader post-fit methods remain unavailable.
+  models and summaries described above. Remaining extensions include
+  covariates together with missing responses, mixed-family covariates and
+  intervals, masked confidence intervals, structured dependence, and broader
+  post-fit methods. Use the family-specific descriptions above to distinguish
+  available intervals from those still unsupported.
