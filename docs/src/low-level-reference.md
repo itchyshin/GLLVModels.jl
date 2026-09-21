@@ -123,6 +123,23 @@ GLLVModels.LaplaceModeWorkspace
 GLLVModels._grouped_nongaussian_objective
 ```
 
+## S8 analytic outer gradient internals
+
+The grouped non-Gaussian route's analytic outer gradient, derived in
+`docs/design/grouped-analytic-gradient.md`. These are internal: they are listed here because
+Documenter's `checkdocs` requires every docstring in the module to appear in some `@docs`
+block, and because the derivation's alignment table refers to them by name.
+
+```@docs
+GLLVModels._grouped_analytic_gradient
+GLLVModels._grouped_analytic_loglik_gradient
+GLLVModels._grouped_laplace_design_jacobian
+GLLVModels._grouped_term_lstar_jacobian
+GLLVModels._grouped_selinv_row_quadform
+GLLVModels._grouped_selinv_row_crossform
+GLLVModels._glm_obs_weight_deta
+```
+
 ## Cross-referenced internal helpers without a docstring
 
 The following names have no `"""..."""` docstring of their own — they are
