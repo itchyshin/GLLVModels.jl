@@ -24,7 +24,7 @@ exact structural zero rather than delta-methoding a fixed value.
 `loading_profile_exploratory` for the profile-likelihood route on an
 exploratory (unpinned) fit.
 
-**Scope note (Core070 D3, 2026-09-04):** unlike R, GLLVModels.jl has no separate
+**Difference from R.** Unlike R, GLLVModels.jl has no separate
 confirmatory fit mode with `lambda_constraint` pins — the lower-triangular
 packing convention (`src/packing.jl`) is this package's built-in
 identifiability device. `loading_ci`/`loading_profile_exploratory` therefore
