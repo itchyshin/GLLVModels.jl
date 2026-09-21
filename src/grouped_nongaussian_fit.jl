@@ -237,8 +237,34 @@ function _grouped_term_lstar_jacobian(term::GroupingTerm, p::Integer, local_inde
     if term.common
         dLstar[:, (load_ncols + 1):width] .= view(Lstar, :, (load_ncols + 1):width)
     else
-        col = load_ncols + local_index
-        dLstar[local_index, col] = Lstar[local_index, col]
+        # The unique block is COMPACTED, and this is why `load_ncols +
+        # local_index` is wrong. `_grouped_laplace_trait_factors` (:135-154)
+        # gives a column ONLY to traits whose unique variance is strictly
+        # positive (`positive = findall(>(0.0), d)`) and packs them
+        # consecutively, writing `U[trait, column]` with `column` the
+        # COMPACTED position and `trait` the RAW one. So the unique block has
+        # `length(positive)` columns, not `p`, and the two indices coincide
+        # only while every trait is positive. With any trait at exactly zero,
+        # the old arithmetic wrote this trait's derivative into a later
+        # trait's column (silently wrong gradient, no error) or past the
+        # block's own width (an out-of-range write).
+        #
+        # Recover the mapping from `Lstar` itself rather than re-deriving it
+        # from `d`, which this function is not given: each unique column has
+        # exactly ONE nonzero, at its own trait's row, so the column for this
+        # trait is the unique-block column that is nonzero in this trait's row.
+        col = 0
+        for c in (load_ncols + 1):width
+            if Lstar[local_index, c] != 0.0
+                col = c
+                break
+            end
+        end
+        # `col == 0` means this trait has no unique column at all, i.e. its
+        # variance is exactly zero. Since the entry is `exp(theta_j)`, that is
+        # reachable only by underflow, and the derivative there is identically
+        # zero, so leaving `dLstar` as zeros is the right answer, not a skip.
+        col == 0 || (dLstar[local_index, col] = Lstar[local_index, col])
     end
     return dLstar
 end

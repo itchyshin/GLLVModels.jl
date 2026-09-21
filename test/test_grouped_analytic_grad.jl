@@ -205,8 +205,73 @@ function _fixture_latent_plus_indep()
         call)
 end
 
+function _fixture_poisson_percoord()
+    rng = Xoshiro(20260921)
+    p, n = 3, 72
+    unit = repeat(1:12; inner = n ÷ 12)
+    beta = [0.30, -0.20, 0.10]
+    sd = [0.55, 0.30, 0.45]                    # per-trait, deliberately unequal
+    zu = randn(rng, 12, p)
+    Y = Matrix{Float64}(undef, p, n)
+    for s in 1:n, t in 1:p
+        Y[t, s] = rand(rng, GLLVModels.Poisson(exp(beta[t] + sd[t] * zu[unit[s], t])))
+    end
+    call = (; Y = Y, family = GLLVModels.Poisson(),
+        terms = [GLLVModels.GroupingTerm(:unit; mode = :indep, common = false)],
+        unit = unit, cluster = nothing, dispersion = :trait)
+    st = _grouped_internals(Y; family = call.family, terms = call.terms,
+        unit = unit, cluster = nothing)
+    return ("poisson_percoord", st,
+        "Poisson, :indep with common=FALSE -- p separate unique-variance coordinates, the default " *
+        "shape and the one no other fixture exercised (audit 2026-09-21)",
+        call)
+end
+
 _fixtures() = [_fixture_poisson_latent(), _fixture_beta_shared(),
-    _fixture_nb2_shared(), _fixture_poisson_twoterm(), _fixture_latent_plus_indep()]
+    _fixture_nb2_shared(), _fixture_poisson_twoterm(), _fixture_latent_plus_indep(),
+    _fixture_poisson_percoord()]
+
+# ---------------------------------------------------------------------------
+# S8 regression: the unique-variance block is COMPACTED (audit 2026-09-21).
+# ---------------------------------------------------------------------------
+"""
+    _s8_compacted_unique_column_check!() -> Bool
+
+Direct unit check of `_grouped_term_lstar_jacobian`'s unique-variance branch
+against a COMPACTED `Lstar`, the case no whole-fit fixture reaches.
+
+`_grouped_laplace_trait_factors` gives a column only to traits with strictly
+positive unique variance, so with `d = [0, 0.25, 0.49]` the block is 3x2:
+trait 2 owns compacted column 1 and trait 3 owns compacted column 2. The
+pre-fix arithmetic (`col = load_ncols + local_index`) asked for column 2 when
+driving trait 2 and wrote `Lstar[2,2]`, which is zero, so the derivative came
+back ALL ZEROS with no error raised. That is the silent-wrong-gradient shape
+this test exists to catch, chosen over the `d = [0.25, 0, 0.49]` ordering
+which merely runs off the end of the block and would have thrown.
+"""
+function _s8_compacted_unique_column_check!()
+    term = GLLVModels.GroupingTerm(:unit; mode = :indep, common = false)
+    p = 3
+    d = [0.0, 0.25, 0.49]                      # trait 1 has NO column
+    Lstar = GLLVModels._grouped_laplace_trait_factors(zeros(p, 0), d)
+    size(Lstar) == (3, 2) || return _s8_fail("compacted Lstar is $(size(Lstar)), expected (3, 2)")
+    # driving RAW trait 2, which owns COMPACTED column 1
+    J = GLLVModels._grouped_term_lstar_jacobian(term, p, 2, Lstar, 0)
+    size(J) == size(Lstar) || return _s8_fail("jacobian shape $(size(J)) != Lstar $(size(Lstar))")
+    expected = sqrt(0.25)
+    isapprox(J[2, 1], expected; rtol = 1e-12) ||
+        return _s8_fail("trait 2 derivative landed at J[2,1]=$(J[2,1]), expected $(expected) " *
+                        "-- the compacted column mapping is wrong")
+    all(iszero, J[:, 2]) ||
+        return _s8_fail("trait 2 derivative leaked into trait 3's column: J[:,2]=$(J[:, 2])")
+    # and trait 3, which owns compacted column 2
+    J3 = GLLVModels._grouped_term_lstar_jacobian(term, p, 3, Lstar, 0)
+    isapprox(J3[3, 2], sqrt(0.49); rtol = 1e-12) ||
+        return _s8_fail("trait 3 derivative landed at J3[3,2]=$(J3[3, 2]), expected $(sqrt(0.49))")
+    return true
+end
+
+_s8_fail(msg) = (println("  compacted-unique check: ", msg); false)
 
 # ---------------------------------------------------------------------------
 # GB.2
