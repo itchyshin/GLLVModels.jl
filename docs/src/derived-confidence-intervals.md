@@ -24,13 +24,19 @@ exact structural zero rather than delta-methoding a fixed value.
 `loading_profile_exploratory` for the profile-likelihood route on an
 exploratory (unpinned) fit.
 
-**Difference from R.** Unlike R, GLLVModels.jl has no separate
-confirmatory fit mode with `lambda_constraint` pins — the lower-triangular
-packing convention (`src/packing.jl`) is this package's built-in
-identifiability device. `loading_ci`/`loading_profile_exploratory` therefore
-run on any fit, where R's `loading_ci()`/`loading_profile()` refuse an
-unpinned exploratory fit. The deprecated name `loading_profile` forwards here
-but is reserved for a future confirmatory mirror of R's surface.
+**Difference from R.** R's `loading_profile()` profiles a loading from a
+confirmatory model in which selected loadings have been fixed in advance.
+GLLVModels.jl does not have that separate confirmatory model. It uses a
+lower-triangular loading matrix for identification in every fit, so
+`loading_profile_exploratory` profiles a raw loading under that built-in
+constraint. The two functions concern the same kind of quantity, but not the
+same estimand: R profiles a loading under user-specified confirmatory
+constraints, whereas GLLVModels.jl profiles a loading from its exploratory
+model. Consequently, `loading_ci` and `loading_profile_exploratory` run on any
+GLLVModels.jl fit, while R's `loading_ci()` and `loading_profile()` reject an
+exploratory fit without confirmatory constraints. The deprecated name
+`loading_profile` forwards to `loading_profile_exploratory`; it is reserved for
+a future function matching R's confirmatory estimand.
 
 ## Two-level repeatability and ICC
 
