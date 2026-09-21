@@ -9,20 +9,14 @@
 </div>
 ```
 
-GLLVModels.jl is a from-scratch Julia twin of R's `gllvmTMB`, built for fitting speed
-at moderate-to-large species counts while reproducing point estimates and
-likelihoods to **at least six significant digits** on the shared Gaussian +
-phylogenetic path (worst case across the benchmark grid:
-`|Δ logLik| = 2.343e-07`, `Σ_y` relative Frobenius `4.424e-05`). This
+GLLVModels.jl is a Julia companion to R's `gllvmTMB`. On the shared Gaussian
+and phylogenetic examples, its point estimates and likelihoods agree to **at
+least six significant digits**. The largest measured differences on that grid
+are `|Δ logLik| = 2.343e-07` and a relative Frobenius difference of
+`4.424e-05` for `Σ_y`; this is close agreement, not machine precision.
 
-!!! note "Corrected 2026-08-25"
-    This sentence previously claimed agreement "to machine precision". Machine
-    precision is ~2.2e-16; the measured worst case is 2.343e-07 — roughly nine
-    orders of magnitude larger. The Benchmarks page (linked below) always
-    reported the honest figure and its comparison limits; this summary did not.
-
-page is a **capability overview** — where GLLVModels.jl stands against the
-`gllvmTMB` feature set. For *speed* comparisons see
+This page is a **capability overview**: it shows which `gllvmTMB` workflows
+have a documented Julia counterpart and which do not. For *speed* comparisons see
 [Comparison](comparison.md) and [Benchmarks](benchmarks.md).
 
 Legend: ✅ available · 🔨 in progress · ⬜ planned · ⚡ GLLVModels.jl advantage.
@@ -49,13 +43,13 @@ withdrawn.
 **True second-order parity is not established.** A few small examples do not
 show that standard errors and intervals agree on realistic data.
 
-**Matched-coordinates comparison: not implemented.** The available comparisons
-evaluate each package at its own optimum. A five-example pilot measured
-**3 pass / 2 blocked** on five cells — gaussian, poisson, and binomial_logit
-pass at R-anchored θ; **beta_logit** and **nb2_log** cannot be compared on the
-same coordinates because R uses per-trait dispersion and Julia uses a shared
-log-dispersion. Do not read the 3/5 pilot as a completed matched-coordinates
-comparison.
+**Matched-parameter comparison is incomplete.** The available comparisons
+evaluate each package at its own optimum. In a five-example pilot, Gaussian,
+Poisson, and binomial-logit agreed at parameter values estimated in R.
+Beta-logit and NB2-log could not be compared at matching parameter values
+because R uses one dispersion per trait whereas Julia uses one shared
+log-dispersion. This pilot is useful evidence, not a complete
+matched-parameter comparison.
 
 The qualification claim is **one-directional**: R workflows against Julia, at
 the frozen `gllvmTMB` 0.7.0 reference. At that reference point, 62 R exports
@@ -111,8 +105,8 @@ transport only; it does not make the whole row comparable.
 | Beta | ✅ | precision `φ` (matches gllvm) |
 | Ordinal (cumulative) | ✅ | logit + probit links (`link=ProbitLink()` matches gllvm's default cumulative-probit); `P(y≤c)=F(τ_c−η)` convention verified == gllvm; `fit_ordinal_gllvm()` keeps the shared-cutpoint Julia route, while `fit_ordinal_gllvm_pertrait()` and the R bridge use trait-specific cutpoints for native `gllvmTMB` parity |
 | Gamma | ✅ | shape `α` |
-| Delta-lognormal | ✅ | first two-part family; shared 2-block Laplace substrate. **Light RCall no-X logLik Δ PAID 2026-08-28** — Δ ≈ 1.5e-8 (rel 1.7e-11) against gllvmTMB 0.7.1, requires `predictor = :shared` + `disp_group = :species` (the twin's parameterisation: one shared η, per-trait σ); `test/parity/test_delta_lognormal_parity.jl` |
-| Delta-Gamma | ✅ | occurrence Bernoulli × positive Gamma (log-link mean) on the substrate. **Light RCall no-X logLik Δ PAID 2026-08-28** — Δ ≈ 7.5e-10 (rel 8.3e-13), same two settings; `test/parity/test_delta_gamma_parity.jl` |
+| Delta-lognormal | ✅ | first two-part family. In an intercept-only R–Julia comparison with gllvmTMB 0.7.1, the log-likelihood difference was about `1.5e-8` (relative difference `1.7e-11`) when `predictor = :shared` and `disp_group = :species`: one shared linear predictor and one residual scale per trait. |
+| Delta-Gamma | ✅ | occurrence Bernoulli × positive Gamma (log-link mean). In the corresponding intercept-only comparison, the log-likelihood difference was about `7.5e-10` (relative difference `8.3e-13`) under the same settings. |
 | Hurdle (Poisson / NB) | ✅ | occurrence Bernoulli × zero-truncated Poisson / NB2; `fit_gllvm(Y; family = HurdlePoisson())` / `HurdleNB()` (marker `r` is a tag payload). Julia-forward — twin has no hurdle family |
 | Zero-inflated (ZIP / ZINB / ZIB) | ✅ | structural zero × Poisson / NB2 / Binomial; zero-inflation intercept-only (Λ_z = 0) so the coupled-zero cross-term drops out |
 | Ordered-beta | ✅ | proportions / cover with point masses at 0 and 1; `fit_gllvm(Y; family = OrderedBeta())` (marker `c0`, `c1`, `φ` are tag payloads). Julia-forward — twin has no ordered-beta family |
@@ -243,12 +237,12 @@ Native shared-cutpoint Ordinal `X_lv` is Julia-side only for now; it does not
 promote the per-trait ordinal R bridge. These routes return total latent scores
 in `scores` and add `scores_mean`, `scores_innovation`, `alpha_lv`, and
 rotation-stable `lv_effects = Lambda * alpha_lv'`. Native GLLVModels.jl can compute
-uncertainty for the ordinary `B_lv` product, including selected-entry
-profile-likelihood canaries, but the R bridge still transports only the Wald
-`X_lv` payload for promoted rows. Response masks, simultaneous fixed-effect `X`,
-mixed-family fits, grouped-dispersion `X_lv`, bridge profile/bootstrap `X_lv`
-intervals, per-trait ordinal `X_lv`, and two-part `X_lv` remain deliberate
-follow-ups rather than inferred parity.
+uncertainty for the ordinary `B_lv` product, including profile intervals for
+selected entries. The R bridge currently returns Wald intervals for its
+documented `X_lv` routes. Response masks, simultaneous fixed-effect `X`,
+mixed-family fits, grouped-dispersion `X_lv`, profile or bootstrap `X_lv`
+intervals through R, per-trait ordinal `X_lv`, and two-part `X_lv` are not yet
+available.
 Initial response-missing masks are admitted only for no-X one-part non-Gaussian
 bridge fits through an explicit `mask` (`true = observed`); the R bridge
 live-tests Poisson, Bernoulli Binomial, NB2, NB1, Beta, Gamma, and
@@ -273,12 +267,9 @@ current in-sample post-fit methods with unavailable-CI status. Mixed-family X,
 masks, cbind/weights, REML, ordinal/NB1/two-part components, and CI endpoints
 remain rejected deliberately.
 
-REML is a Gaussian-only bridge/engine claim in this project. HSquared's very fast
-AI-REML work is useful design input for exact Gaussian variance-component cells,
-but it is not terminology to use for non-Gaussian Laplace GLLVMs. Non-Gaussian
-speedups should be described as observed-information, Fisher/natural-gradient,
-reverse-mode, or implicit-Laplace-adjoint work, each gated by reference-gradient,
-point-estimate, and CI/status evidence.
+REML is currently available only for Gaussian models. Non-Gaussian models use
+the documented Laplace likelihood approximation; they should not be described
+as REML fits.
 
 The engine still carries additional gllvm/gllvmTMB parity rows that are not all
 public through the R bridge yet:
@@ -344,26 +335,19 @@ confidence-interval machinery. Those are not automatically public
 `gllvmTMB(..., engine = "julia")` claims: each bridge row still needs its own
 R-side admission, parity test, CI-status handling, and documentation.
 
-The remaining gaps are each scoped by an execution-ready spec in
-`docs/superpowers/specs/` (design + slice plan + verifiable goals), so they can
-be built *with* validation rather than shipped unverified:
+The principal remaining limitations are:
 
-- **Structured dependence × non-Gaussian (animal / spatial extensions)** — the
-  phylogenetic GLM has landed (`fit_phylo_glm`, an augmented-state joint Laplace),
-  and the SPDE / Matérn spatial latent field is wired into the non-Gaussian GLLVM
-  (`fit_spde_latent_gllvm`). The remaining work is the general dense-`S_u`
-  species random effect `u ~ N(0, σ²Σ)` shared across sites and the scalable
-  large-`p` determinant. Spec:
-  `2026-05-31-nongaussian-structured-dependence-design.md`.
-- **`@formula` front-end** — **v1 landed**: `gllvm(@formula(y ~ 1 + covariates), Y,
-  data; family, K)` for continuous fixed effects over wide data routes to the
-  engine (StatsModels + Tables added). Still deferred (design spec'd in
-  `2026-05-31-formula-frontend-random-slopes-design.md`): long-format data, the
-  `traits()`/`phylo()`/`latent()` custom terms, categorical covariates, and the
-  headline random slopes `(1 + x | g)` (which need the new RE engine substrate).
-- **R bridge (`engine = "julia"`)** — in progress through the R package bridge.
-  Complete-data one-part fits, selected fixed-effect-X rows, selected
-  missing-response-mask rows including NB1, scalar-CI transport, and NB1
-  post-fit methods are admitted only where live R tests cover them. Mixed-family
-  point-fit metadata, grouped-dispersion CI endpoints, NB1-X, masked CIs,
-  structured dependence, and broader post-fit methods remain bridge follow-ups.
+- **Structured dependence with non-Gaussian responses** — phylogenetic and
+  spatial latent-field models are available, but a general dense species
+  covariance `u ~ N(0, σ²Σ)` shared across sites and a scalable determinant for
+  very many responses are still missing.
+- **Formula interface** — `gllvm(@formula(y ~ 1 + covariates), Y, data; family, K)`
+  accepts continuous fixed effects in wide data. Long data, custom
+  `traits()`/`phylo()`/`latent()` terms, categorical covariates, and random
+  slopes `(1 + x | g)` are not yet available.
+- **R bridge (`engine = "julia"`)** — the bridge supports documented
+  complete-data one-part fits, selected fixed-effect routes, selected
+  missing-response routes, scalar confidence intervals, and NB1 post-fit
+  methods. Mixed-family metadata, grouped-dispersion intervals, NB1 models
+  with covariates, masked confidence intervals, structured dependence, and
+  broader post-fit methods remain unavailable.
