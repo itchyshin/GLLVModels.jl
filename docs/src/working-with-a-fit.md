@@ -36,13 +36,16 @@ ordination biplot — sites as points, species as labeled vectors:
 ![Model-based ordination biplot](assets/ordination_biplot.png)
 
 *Simulated two-block data, two-factor Gaussian GLLVM. Species loading on the same
-latent factor point the same way; the grey cloud is the site scores `getLV(fit, y)`.*
+latent factor point the same way; the grey cloud is the site scores `getLV(fit, Y)`.*
 
 For supported one-part non-Gaussian fits, `ordination_uncertainty` gives per-site
 score intervals for that point cloud:
 
 ```julia
-u = ordination_uncertainty(fitp, Yp; n_boot = 200)
+Y_count = rand(0:5, p, n)
+count_fit = fit_poisson_gllvm(Y_count; K = K)
+u = ordination_uncertainty(count_fit, Y_count;
+                            n_boot = 200, rng = MersenneTwister(11))
 u.scores     # n×K reference site scores
 u.lower      # n×K lower score interval
 u.upper      # n×K upper score interval
