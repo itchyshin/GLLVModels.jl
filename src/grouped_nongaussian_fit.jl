@@ -597,14 +597,28 @@ fast each inner solve converges, never the converged answer (see `joint_grouped_
 docstring); pass `warm_start_inner=false` to recover the pre-S7c cold-start
 behaviour.
 
-`nelder_mead` (S9, default `!analytic_gradient`): whether the value-only
-Nelder-Mead search runs before BFGS. The pre-S9 code ran it unconditionally,
-because a finite-differenced gradient could hand BFGS a NaN stencil (see the
-comment at the Nelder-Mead call site). With `analytic_gradient=true` there is
-no stencil, so BFGS starts directly from `theta` by default; Nelder-Mead still
-runs once, with a warning, as a safety net if the initial or refined BFGS
-result is unusable. Pass `nelder_mead=true` to force the old unconditional
-search back on (this is the default when `analytic_gradient=false`).
+`nelder_mead` (S9, default `true`): whether the value-only Nelder-Mead search
+runs before BFGS. The pre-S9 code ran it unconditionally, because a
+finite-differenced gradient could hand BFGS a NaN stencil (see the comment at
+the Nelder-Mead call site). With `analytic_gradient=true` there is no stencil,
+so `nelder_mead=false` lets BFGS start directly from `theta`, which costs
+noticeably fewer objective evaluations.
+
+It is OPT-IN rather than the default, and the reason is measured, not
+cautious. Skipping the simplex changes where BFGS stops at the package's
+default `g_tol=1e-4`: the fitted mean coordinates move by about 1.4e-6 to
+2.3e-6 relative against `origin/main` 69a69b0a0, which fails this arc's rtol
+1e-8 identity. The optimum itself is unchanged, and the gap collapses to about
+1e-9 as `g_tol` tightens, so this is a stopping-point difference rather than a
+wrong answer. But the answer a user gets at default settings would move, and
+that is a user-facing change rather than a speed change, so it is not made
+silently. Summed inner Newton iterations also ROSE when it was tried (752
+against 407 on the small bench fixture, 1752 against 1437 on the large one)
+even as objective calls fell by 57 to 58 per cent, so the wall-clock direction
+is not established either.
+
+Pass `nelder_mead=false` to skip it. Whether it should become the default is a
+separate decision, deliberately left open.
 
 `hessian` (S9, default `:grad_fd` when `analytic_gradient=true`, `:fd`
 otherwise; D-274): how the final diagnostic Hessian (`min_eigenvalue`,
@@ -621,7 +635,7 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
         g_tol::Real=1e-4, iterations::Integer=100,
         inner_maxiter::Integer=100, inner_tol::Real=1e-8,
         warm_start_inner::Bool=true, analytic_gradient::Bool=true,
-        nelder_mead::Bool=!analytic_gradient,
+        nelder_mead::Bool=true,
         hessian::Symbol=(analytic_gradient ? :grad_fd : :fd))
     p, n = size(Y)
     p > 0 && n >= 2 || throw(ArgumentError("grouped fitting needs at least one trait and two observations"))
