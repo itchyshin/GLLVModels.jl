@@ -245,11 +245,14 @@ With shared site covariates (`@formula` / bridge `X`), the default is
 negative binomial collapses to Poisson. For a single shared `r` across species,
 call [`fit_nb_gllvm`](@ref) (no-X) or [`fit_gllvm_cov`](@ref) (with X).
 
-The recorded NB2 comparison currently fails the stricter likelihood and
-fit-health checks: its Julia convergence flag accompanies an unstable numerical
-gradient. A scalar-density precision problem at large size has been identified
-and is awaiting a tested repair. Do not infer verified parity or parameter
-recovery from the convergence flag alone.
+The NB2 route is still experimental for demanding fits. The recorded R
+comparison currently fails the stricter likelihood and fit-health checks: its
+Julia convergence flag accompanies an unstable numerical gradient, and a
+scalar-density precision problem at large size has been identified and is
+awaiting a tested repair. A convergence message alone is not enough to
+establish reliable estimates, verified parity, or parameter recovery: inspect
+the fit and use the documented Gaussian routes when you need the established
+teaching path.
 
 ### Negative binomial type-1 — `NB1()`
 
@@ -474,7 +477,7 @@ before routing through it.
 
 Categories must be coded `1:K` with **`K ≥ 3`**. Both constraints fail loud:
 any `y < 1` (or `y > K`) throws `"multinomial requires y ∈ {1, …, K}; found
-y=$v"`, and `K = 2` throws `"multinomial requires K ≥ 3 categories; K = 2 is
+y=<observed value>"`, and `K = 2` throws `"multinomial requires K ≥ 3 categories; K = 2 is
 binomial-logit — use Binomial() / LogitLink()"`. `K` itself comes from
 `n_categories` when you pass it; **when `n_categories` is left unset, `K` is
 inferred as `maximum(y)`** — so pass it explicitly whenever the top category
@@ -503,8 +506,9 @@ that does `using GLLVModels, Distributions` the bare name `Multinomial` is
 undefined rather than resolving to either one. Always write
 `GLLVModels.Multinomial()` (and `Distributions.Multinomial(...)` for the count
 law). Because v1 has no latent variables, `Multinomial` is **not yet a general
-GLLVM workflow**. It is a fixed-effects model for one unordered categorical
-response.
+GLLVM workflow** in the same sense as the families above: it is a fixed-effects
+model for one unordered categorical response. Treat it as a narrow model form
+rather than a general latent-variable analysis.
 
 ### Gamma — `Gamma()`
 
@@ -720,8 +724,9 @@ Student-t is a **no-X** surface: `fit_gllvm` and `gllvm(@formula(y ~ 1), …)` a
 admitted. Shared and per-species dispersion are supported; this does not
 establish arbitrary dispersion-group, covariate or row-effect support. The fit
 records `estimated_nu`, so AIC counts free degrees-of-freedom parameters only
-when they were estimated. See [Student-t parity limits](studentt-parity.md):
-the recorded R comparison still does not converge reliably.
+when they were estimated. See [Student-t parity limits](studentt-parity.md) for
+the current boundary: the recorded R comparison still does not converge
+reliably, so the full R comparison is not yet established.
 
 ### Conway–Maxwell–Poisson — `COMPoisson()`
 

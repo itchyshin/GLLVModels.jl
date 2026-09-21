@@ -19,14 +19,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      # This standard-library check reads the literal makedocs(pages = [...])
+      # navigation and README before Julia dependency installation or build.
+      - name: Check reader source surface
+        run: python3 tools/check_reader_surface.py --landing-contract
       - uses: julia-actions/setup-julia@v3
         with:
           version: '1'
       - uses: julia-actions/cache@v2
       - name: Install dependencies
         run: julia --project=docs -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
-      - name: Build and deploy
+      - name: Build documentation
+        env:
+          GLLVM_DOCS_DEPLOY: "false"
+        run: julia --project=docs docs/make.jl
+      # Generated HTML includes Documenter-expanded public docstrings, which a
+      # Markdown-only scan cannot see. Do this before publishing the site.
+      - name: Check rendered reader surface
+        run: python3 tools/check_reader_surface.py --rendered docs/build/1
+      - name: Deploy checked documentation
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
-        run: julia --project=docs docs/make.jl
+        run: julia --project=docs docs/deploy.jl

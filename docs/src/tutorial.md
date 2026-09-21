@@ -1,18 +1,30 @@
-# Tutorial
+# Tutorial: general-model interface tour
 
-A practical, copy-pasteable walkthrough of the modern GLLVModels.jl workflow: fit a
-community matrix under any of the response families, read off the ordination and
-estimates, build confidence intervals, add covariate / trait / row-effect
-structure, and reach the structured-latent extensions (spatial SPDE fields,
-phylogenetic GLLVMs). Every code block is static — copy it into a REPL with
-GLLVModels.jl installed to follow along. The data convention throughout is
-**`Y` is `p × n`**: `p` species (rows) by `n` sites (columns).
+This is a reference tour of the general latent-variable model interface. It is
+not one serial, copy-and-run analysis: later sections deliberately use symbolic
+data names (`Y`, `N`, `Yp`, `Yc`, and `Yo`) whose required support is described
+next to each family. Do not run the snippets as one workflow or substitute an
+undefined matrix into them.
+
+If you are new to the package, choose a complete, defined-data route first:
+
+- **General latent-variable question:** [General latent-variable first fit](quickstart.md)
+  simulates a Gaussian `p × n` response matrix and fits it end to end.
+- **Phylogenetic comparative question:** [First phylogenetic Gaussian model](vignettes/phylogenetic-gllvm.md)
+  supplies both a tree and an aligned continuous trait vector.
+- **Community or species-distribution question:** [First community abundance model](vignettes/community-abundance.md)
+  supplies a count matrix and a Poisson community fit.
+
+Return here after that first fit to identify a response family, an interface,
+or a supported extension. The matrix convention for the multivariate snippets
+is **`Y` is `p × n`**: `p` species or responses (rows) by `n` sites or
+observations (columns).
 
 ```julia
 using GLLVModels, Distributions, Random
 ```
 
-## 1. Core families
+## 1. Core family interfaces
 
 The most direct entry is the **unified** `fit_gllvm`, which dispatches on a
 `Distributions.jl` family marker (the GLM.jl convention) and forwards `K` and any

@@ -3,16 +3,18 @@
 GLLVModels.jl is being built as a fast Julia **companion to
 [`gllvmTMB`](https://itchyshin.github.io/gllvmTMB/)**: the same core estimands
 where paired, usable directly in Julia and through a **narrow** R bridge
-(`engine = "julia"`). An inventory of matching functions is not true
-parity; see [Capability parity](gllvmtmb-parity.md). A full 0.7.1
-surface port (column_coef, slopes, formula grid) is not part of the current
-release scope.
+(`engine = "julia"`). The bridge does not yet cover every R workflow, and an
+inventory of matching functions is not true parity; see
+[Capability parity](gllvmtmb-parity.md) for the currently documented scope. A
+full 0.7.1 surface port (column_coef, slopes, formula grid) is not part of the
+current release scope.
 
 Current sequencing is R-first. Native `gllvmTMB` functionality and the R user
-workflow define the oracle; `GLLVModels.jl` mirrors admitted rows, supplies parity
-evidence, and accelerates them after point estimates, logLik/objective, CI or
-CI-status, documentation, and tests agree. REML is Gaussian-only; AI-REML is
-future design input for exact Gaussian cells, not non-Gaussian Laplace.
+workflow define the reference behavior; `GLLVModels.jl` adds a Julia route only
+after its point estimates, log-likelihood, confidence intervals (or their
+availability status), documentation, and tests agree at the stated scope. REML
+is Gaussian-only; AI-REML is future work for exact Gaussian cells, not
+non-Gaussian Laplace.
 
 ## Phase → release map
 
@@ -21,7 +23,7 @@ future design input for exact Gaussian cells, not non-Gaussian Laplace.
 | **v0.2.0** | Gaussian complete | closed-form marginal, O(p) phylogenetic fitter, post-fit tools, this docs site |
 | **v0.3.0** | Non-Gaussian catch-up | one-part Laplace families, first two-part fitters, analytic-gradient hardening |
 | **v0.4.0** | Interface and bridge catch-up | `@formula` front-end, wide/long parity, gllvmTMB-mirroring tutorials, and a live `gllvmTMB` bridge |
-| **v1.0** | True-parity milestone (aspirational) | Needs agreement beyond point estimates on realistic data, real-data workflows, and grouping-level pairing; an inventory or a “complete bridge” label alone is not enough |
+| **v1.0** | True-parity milestone (aspirational) | Targets documented agreement with frozen gllvmTMB 0.7.0 beyond point estimates across realistic-size data, real-data workflows, and grouping-level pairing; it does **not** promise a complete Julia bridge for every R workflow, and an inventory of matching functions or a "complete bridge" label alone is not enough |
 
 ## What works today
 

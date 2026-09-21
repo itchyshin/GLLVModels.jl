@@ -25,44 +25,32 @@ makedocs(;
         devurl    = "dev",
     ),
     pages    = [
-        "Getting Started" => [
-            "Overview"                       => "index.md",
-            "Choose R, Julia, or the bridge" => "choose-r-julia-bridge.md",
-            "Quick Start"                    => "quickstart.md",
-            "Tutorial"                       => "tutorial.md",
-            "Common Pitfalls"                => "pitfalls.md",
+        "Start here" => [
+            "What is a GLLVM?" => "index.md",
+            "Fit your first model" => "quickstart.md",
+            "Coming from R?" => "choose-r-julia-bridge.md",
+            "Common pitfalls" => "pitfalls.md",
         ],
-        "Vignettes" => [
-            "Community Abundance (JSDM)" => "vignettes/community-abundance.md",
-            "Phylogenetic GLLVM"               => "vignettes/phylogenetic-gllvm.md",
-            "Morphometrics"              => "morphometrics.md",
+        "Choose a scientific question" => [
+            "Traits and repeated outcomes" => "tutorial.md",
+            "First phylogenetic Gaussian model" => "vignettes/phylogenetic-gllvm.md",
+            "First community abundance model" => "vignettes/community-abundance.md",
+            "Morphometrics" => "morphometrics.md",
         ],
-        "Guides & Methods" => [
-            "Mathematical Model"       => "model.md",
-            "Response Families"        => "response-families.md",
-            "Tweedie Power"            => "tweedie-power.md",
-            "Student-t Parity Limits"  => "studentt-parity.md",
-            "Working with a Fit"       => "working-with-a-fit.md",
+        "Understand your results" => [
+            "Working with a fit" => "working-with-a-fit.md",
             "Covariance & Correlation" => "covariance-correlation.md",
-            "Structured Dependence"    => "structured-dependence.md",
-            "Joint Named Grouping"     => "grouped-models.md",
-            "Precision Bridge (Development)" => "precision-bridge-development.md",
-            "Structured-Term Fitting"  => "structured-term-fitting.md",
-            "Confidence Intervals"     => "confidence-intervals.md",
-            "Derived Confidence Intervals" => "derived-confidence-intervals.md",
+            "Confidence intervals" => "confidence-intervals.md",
+            "Diagnostics and model comparison" => "diagnostics.md",
         ],
-        "Reference & Benchmarks" => [
-            "API Reference"                  => "api.md",
-            "Post-Fit Extractors"            => "postfit-extractors.md",
-            "Post-Fit Tables & Prediction"   => "postfit-tables.md",
-            "Diagnostics & Model Comparison" => "diagnostics.md",
-            "SE & Profile Machinery"         => "se-profile-machinery.md",
-            "Low-level Reference"    => "low-level-reference.md",
-            "Benchmarks"             => "benchmarks.md",
-            "Comparison vs gllvmTMB" => "comparison.md",
-            "Capability Parity"      => "gllvmtmb-parity.md",
-            "Roadmap"                => "roadmap.md",
-            "Changelog"              => "changelog.md",
+        "Tested models and limits" => [
+            "What can I fit today?" => "what-can-i-fit-today.md",
+            "Response families" => "response-families.md",
+        ],
+        "Function reference" => [
+            "API reference" => "api.md",
+            "Post-fit extractors" => "postfit-extractors.md",
+            "Post-fit tables and prediction" => "postfit-tables.md",
         ],
     ],
     warnonly = false,
@@ -79,16 +67,9 @@ if "--local" in ARGS
     end
 end
 
-# Use DocumenterVitepress.deploydocs (NOT Documenter's): it flattens the Vitepress
-# build output (build/1/*) into the version root on gh-pages and rewrites the
-# site `base`. Plain Documenter.deploydocs deploys build/ verbatim, which lands
-# the site under dev/1/ with base=/dev/ — every asset/nav link then 404s.
-if !("--local" in ARGS)
-    DocumenterVitepress.deploydocs(;
-    repo         = "github.com/itchyshin/GLLVModels.jl.git",
-    target       = joinpath(@__DIR__, "build"),
-    devbranch    = "main",
-    branch       = "gh-pages",
-    push_preview = true,
-    )
+# CI builds with GLLVM_DOCS_DEPLOY=false, audits the generated reader surface,
+# then runs docs/deploy.jl. Keeping deployment separate prevents an unchecked
+# rendered page (including expanded public docstrings) from reaching gh-pages.
+if !("--local" in ARGS) && get(ENV, "GLLVM_DOCS_DEPLOY", "true") == "true"
+    include("deploy.jl")
 end # --local builds never call deploydocs

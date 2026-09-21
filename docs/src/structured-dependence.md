@@ -42,6 +42,14 @@ The marginal covariance of `vec(y)` is `I_n ⊗ A + J_n ⊗ B` where
 - `A = Λ_B Λ_B' + σ²_eps I_p` (site covariance),
 - `B = (Λ_phy_aug Λ_phy_aug') .* Σ_phy` (structured between-site block).
 
+Here `vec(y)` stacks the columns: all entities at the first occasion,
+then all entities at the next. `J_n` is the all-ones matrix, and
+`Λ_phy_aug` combines the structured loading columns with `σ_phy` when
+present. A single occasion has covariance `A + B`; two different occasions
+have cross-covariance `B` because they share the same `u`. The full
+covariance is therefore not block-diagonal across occasions when `B` is
+nonzero. `sigma_y_site(fit)` returns only `A`, including residual noise.
+
 Two p × p Cholesky factorisations handle this regardless of `n`.
 
 > **Dense path only.** The fast O(p) sparse path (`likelihood_sparse_phy.jl`,
@@ -103,8 +111,12 @@ After fitting, the per-trait phylogenetic signal (fraction of variance explained
 by the structured effect) is available via `phylo_signal`:
 
 ```julia
-fraction = phylo_signal(fit)   # length-p vector for this fitted model
+fraction = phylo_signal(fit; Σ_phy = Σ_rel)   # length-p vector
 ```
+
+Supply the covariance used for fitting: without it, `phylo_signal` assumes
+a unit diagonal. The fraction is `B[t,t] / (A[t,t] + B[t,t])`, so its
+denominator includes the residual noise as well as the structured variance.
 
 Interpreting this quantity as heritability requires a compatible genetic design
 and variance decomposition; a relatedness matrix alone does not establish that.
