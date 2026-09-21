@@ -152,3 +152,31 @@ claim-and-boundary pass) are deferred. They are not attempted in this triage bec
 same `docs/src/` pages that #428 holds in `CONFLICTING` state, and this session's mandate is triage only: classify,
 measure the conflict, and hand the maintainer a decision, not edit any documentation page. No merge was possible today
 either way: #428 is `CONFLICTING` against current main and #439/#437/#433 are still drafts.
+
+## Update 2026-09-21: #428 merged
+
+- **Merged.** #428 (`codex/reader-text-recovery-20260919`) was squash-merged to `main` at 2026-09-21T23:21:21Z as
+  `4779446eabe5f476a26c26b36989b2031a80573e` (`docs: rebuild reader-first learning routes (#428)`). The maintainer
+  authorised the merge in his own words ("yes to 1", where 1 = merge #428 first, then update #444). Conditions
+  re-checked at 23:20:32Z on head `dc27ea79c9a719c17db2032e82a7de1a5435e6e1`: 0 unsettled checks (keyed on
+  `status == COMPLETED`), all 9 non-advisory checks `SUCCESS` (Documenter, Julia 1 x4 shards, Julia 1.10 x4 shards),
+  not a draft, `mergeable=MERGEABLE`, `mergeStateStatus=UNSTABLE`, `main` unprotected (404), `allow_auto_merge=false`
+  so no `--auto` was used. The one red check, `Frozen R 0.7.0 family smoke (advisory; rebuilt oracle)`, is
+  `continue-on-error: true` in `.github/workflows/CI.yml` and was already `failure` on the latest `main` CI run before
+  this merge (run 35415001194, `69a69b0a0`); it is not a regression introduced by #428 and is not a reason to weaken
+  any wording (see the 2026-09-21 handover).
+- **The three drafts now apply cleanly.** Polled after `main` moved, `gh pr view <n> --json mergeable` reports:
+  | PR | branch | mergeable | mergeStateStatus | draft |
+  |---|---|---|---|---|
+  | #439 | `docs/bootstrap-sigma-reader-wording` | `MERGEABLE` | `UNSTABLE` | yes |
+  | #437 | `codex/derived-ci-reader-cleanup` | `MERGEABLE` | `UNSTABLE` | yes |
+  | #433 | `codex/gllvmodels-public-docstrings-20260920` | `MERGEABLE` | `UNSTABLE` | yes |
+  `UNSTABLE` on each is the same advisory smoke failure (plus a `documenter/deploy` status context with no
+  conclusion, which is a commit status rather than a check run). No non-advisory check is red on any of them.
+- **The remaining decision: `src/` docstring ownership transfer.** Each of the three still edits reader-facing
+  docstrings inside engine-owned files (#439 `src/confint_derived_wald.jl`; #437 `src/confint_derived.jl`;
+  #433 `src/extractors.jl`, `src/postfit_tables.jl`), and #428 has now landed its own `src/formula.jl` docstring
+  edit on `main`. The ownership question from "Your clicks" 2 above is therefore still open and now covers three
+  PRs rather than four: an owner must sign off on editing reader-facing docstrings inside `src/*.jl` before any of
+  #439/#437/#433 leaves draft. Once that sign-off exists, each can be marked ready by its owner and merged on green
+  independently; nothing in this update marks a draft ready or merges one.
