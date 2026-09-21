@@ -173,8 +173,40 @@ function _fixture_poisson_twoterm()
     return ("poisson_twoterm", st, "Poisson, TWO grouping terms with unequal group counts", call)
 end
 
+# Requirement (b) AND (e) at once, added 2026-09-21. `poisson_twoterm` above
+# satisfies (e) with two `:indep` terms, so no LOADING coordinate is ever the
+# "found" block while placeholder blocks also exist -- hazard 7.3 (the lost
+# factor of 2 on the design-derivative trace) is still only exercised by the
+# single-term `poisson_latent`. This fixture crosses the two: a `:latent`
+# rank-1 term with nonzero loadings AND a second `:indep` term, again with a
+# different group count.
+function _fixture_latent_plus_indep()
+    rng = Xoshiro(20260925)
+    p, n = 3, 60
+    unit = repeat(1:12; inner = n ÷ 12)      # 12 groups, the :latent term
+    cluster = repeat(1:5; inner = n ÷ 5)     # 5 groups, the :indep term
+    lambda = [0.7, -0.4, 0.3]
+    beta = [0.3, 0.05, -0.2]
+    zu = randn(rng, 12)
+    zc = 0.4 .* randn(rng, 5)
+    Y = Matrix{Float64}(undef, p, n)
+    for s in 1:n, t in 1:p
+        Y[t, s] = rand(rng, GLLVModels.Poisson(
+            exp(beta[t] + lambda[t] * zu[unit[s]] + zc[cluster[s]])))
+    end
+    call = (; Y = Y, family = GLLVModels.Poisson(),
+        terms = [GLLVModels.GroupingTerm(:unit; mode = :latent, rank = 1),
+                 GLLVModels.GroupingTerm(:cluster; mode = :indep, common = true)],
+        unit = unit, cluster = cluster, dispersion = :trait)
+    st = _grouped_internals(Y; family = call.family, terms = call.terms,
+        unit = unit, cluster = cluster)
+    return ("latent_plus_indep", st,
+        "Poisson, :latent rank-1 PLUS a second :indep term (loadings and placeholders together)",
+        call)
+end
+
 _fixtures() = [_fixture_poisson_latent(), _fixture_beta_shared(),
-    _fixture_nb2_shared(), _fixture_poisson_twoterm()]
+    _fixture_nb2_shared(), _fixture_poisson_twoterm(), _fixture_latent_plus_indep()]
 
 # ---------------------------------------------------------------------------
 # GB.2
