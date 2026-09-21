@@ -20,25 +20,118 @@ SCOPE: replace the finite-difference outer gradient with an analytic one derived
 
 ## GATE B (only if GA.2 says proceed)
 
-- [ ] GB.1: docs/design/grouped-analytic-gradient.md derives the gradient before any code, with the symbolic-alignment table: implicit db̂/dθ, the tr(A⁻¹ dA/dθ) log-det term, and the observed-curvature dependence on y. Every symbol maps to the function that will compute it.
+- [x] GB.1: docs/design/grouped-analytic-gradient.md derives the gradient before any code, with the symbolic-alignment table: implicit db̂/dθ, the tr(A⁻¹ dA/dθ) log-det term, and the observed-curvature dependence on y. Every symbol maps to the function that will compute it.
   CHECK: manual read by the orchestrator
   EXPECT: PASS
-  EVIDENCE: pending
+  EVIDENCE: PASS, read 2026-09-21 ~03:40Z. docs/design/grouped-analytic-gradient.md, 30,897 bytes, written BEFORE the src/ change (file mtime 2026-09-20 18:27, the src edits are later and uncommitted). All three required derivations are present and are derivations rather than assertions: section 2 (stationarity and the implicit function theorem) and section 3 (total derivative, and precisely what the envelope theorem kills) give `dbhat/dtheta = A^-1 v_k` and show that ONLY the envelope term vanishes at the mode while the log-det's implicit term through `bhat` survives; section 4 derives the log-det as `tr(A^-1 dA/dtheta_k)` against SELECTED entries of the inverse and argues `pattern(A) subset pattern(L+L')`, so `takahashi_selinv` already supplies every entry read; section 5 gives the observed-curvature term in full, including its dependence on `y` being constant in theta, which is why observed-versus-Fisher curvature is not materially harder here.
+  Section 6 is the symbolic-alignment table: 28 rows, each mapping one symbol to the function that computes it with a `file:line`, and each marked `exists` or `must be written`. It is honest about what did not exist -- it flags `Fo` as computed but discarded (hence the `JointGroupedLaplaceResult.factor` field the implementation added), `takahashi_selinv` as existing but never wired to the grouped route, and `_grouped_laplace_design` as Float64-hard-typed so no AD can be carried through it.
+  ONE DOCUMENTED DEVIATION, recorded rather than smoothed: four table rows name functions the implementation chose to INLINE inside `_grouped_analytic_loglik_gradient` instead of writing as named functions -- `_grouped_eta_explicit` (e_k), `_grouped_mode_rhs` (v_k), `_grouped_mode_jacobian` (u_k), `_grouped_eta_total` (edot_k). The computations are all present and in the derived form; only their packaging differs from the table. This does not affect GB.1, which gates the derivation, but it means the table is now one revision ahead of the code's structure and should be reconciled before the PR body quotes it.
 
-- [ ] GB.2: the analytic gradient agrees with the existing central-difference gradient (`_grouped_fd_gradient`, src/grouped_fit.jl:213-224) at 20 random theta on BOTH fixtures, rtol 1e-6, which is the FD reference's own accuracy and not a widened bound.
+- [x] GB.2: the analytic gradient agrees with the existing central-difference gradient (`_grouped_fd_gradient`, src/grouped_fit.jl:213-224) at 20 random theta, rtol 1e-6, which is the FD reference's own accuracy and not a widened bound.
+  **AMENDED 2026-09-21 by the orchestrator after reading B1's section 7.** The gate as first written was
+  unable to catch four of the nine named failure modes, because both fixtures are Poisson and the
+  comparison was not per-coordinate. It now REQUIRES all four of:
+  (a) **per-coordinate** comparison, never a norm or a cosine similarity, because a sign slip confined to
+      the log-det direction leaves the mean coordinates matching to two digits while the log-SD
+      coordinates are wrong by about a factor of -1 (hazard 7.2);
+  (b) at least one fixture with a **nonzero loading coordinate**, because losing the factor of 2 on the
+      design-derivative trace is identically zero in every gamma coordinate (hazard 7.3);
+  (c) at least one **non-Poisson, non-Binomial family** (Beta or NB2), because for those two families the
+      Fisher and observed weights coincide pointwise, so picking up `Ff` where `A` belongs is undetectable
+      in Poisson (hazard 7.5), as is dropping the dispersion terms (hazard 7.9);
+  (d) the `inner_tol` in force **recorded in the evidence**, because the analytic and FD gradients degrade
+      differently as it loosens, so a disagreement at loose tol is the fixture's fault, not the gradient's
+      (hazard 7.7).
+  A Poisson-only, norm-summarised version of this gate would pass while four real defects shipped.
+  **AMENDED AGAIN 2026-09-21 ~05:00Z, after a defect all three fixtures were blind to.** A fifth
+  requirement:
+  (e) at least one fixture with **TWO OR MORE grouping terms, with UNEQUAL group counts**. With a
+      single term, `_grouped_laplace_design_jacobian` never pushes a zero PLACEHOLDER block for the
+      terms the coordinate does not belong to, so the placeholder's width is never exercised and
+      can be wrong. It was wrong: it used the trait-factor `width`, where the real block is
+      `kron(incidences[s], Lstar)`, i.e. `size(incidences[s], 2) * width` columns. Unequal group
+      counts are required as well as two terms, because equal counts let a coincidental width
+      match hide the same defect.
   CHECK: env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. test/test_grouped_analytic_grad.jl --gate fd_agreement
   EXPECT: GATE GB.2 PASS
-  EVIDENCE: pending
+  EVIDENCE: GATE GB.2 PASS, run by the orchestrator itself (scheduled session, 2026-09-21 ~03:20Z), no other Julia process on the machine. `inner_tol = 1.0e-10`, `inner_maxiter = 200`, rtol 1e-6, 20 valid theta per fixture, ZERO skipped and zero fallbacks to `_grouped_fd_gradient` (so every number below is the analytic path, not the FD path wearing its name). Worst PER-COORDINATE relative disagreement, every coordinate asserted separately and every one printed:
+  - `poisson_latent` (Poisson, `mode=:latent, rank=1`, p=3, n=60, G=12, ntheta=6 -- requirement (b), nonzero loading coordinates): worst 7.281e-08 at coord 6 (analytic 9.4693509067e-02 vs fd 9.4693515962e-02). Per-coordinate worsts 6.70e-09, 1.67e-09, 1.67e-08, 2.84e-09, 1.05e-09, 7.28e-08.
+  - `beta_shared` (Beta, shared log_phi, p=2, n=60, ntheta=4 -- requirement (c), Fisher != observed weight AND a dispersion block): worst 6.211e-09 at coord 4, the log_phi coordinate itself.
+  - `nb2_shared` (NegativeBinomial, shared log_r, ntheta=4 -- requirement (c) again, and the only fixture exercising the hand-coded `_glm_obs_weight` override in src/families/negbin.jl, i.e. a different `_glm_obs_weight_deta` dispatch): worst 1.986e-07 at coord 2.
+  No coordinate anywhere had its FD reference below 1e-6, so none of these is a small-denominator artefact; the check counts and prints that number rather than excusing it.
+  **The gate was shown to have teeth by MUTATION, not assumed to.** Dropping the log-det implicit term (`- 0.5 * dot(wdot, t)` -> `- 0.0 * ...` at all three sites, B1 section 2's "cheap wrong answer"), re-running, and restoring src from a byte copy: GATE GB.2 FAIL on all three fixtures, worst rel 7.995e-01 / 1.057e+00 / 1.322e+00, the Beta and NB2 dispersion coordinates flipping SIGN (beta coord 4 analytic -4.83 vs fd +0.275). A gate that cannot fail is not evidence; this one fails on the exact defect it was amended to catch.
+  **RE-RUN 2026-09-21 ~05:05Z with requirement (e)'s fixture added, and still PASS.** Fourth
+  fixture `poisson_twoterm` (Poisson, two `:indep common=true` terms -- `unit` with 12 groups and
+  `cluster` with 5 -- p=2, n=60, ntheta=4): worst per-coordinate rel **2.890e-08** against the 1e-6
+  bound, 20 valid theta, zero skipped, zero FD fallbacks, no coordinate with an FD reference below
+  1e-6. The other three fixtures' worsts are UNCHANGED to every printed digit (7.281e-08,
+  6.211e-09, 1.986e-07), which is the evidence that the src fix touched nothing they exercise.
+  **Mutation-tested again, and this is the part that matters.** Reverting the one-line fix (back to
+  `spzeros(Float64, N, width)`), re-running, and restoring src from a byte copy: the three original
+  fixtures ALL STILL PASS at their identical worsts, and only `poisson_twoterm` fails -- with a
+  hard `DimensionMismatch`, not a wrong number. The gate as it stood at ~03:20Z could not have
+  caught this defect, and the new fixture is the only thing now standing between it and a
+  release.
 
 - [ ] GB.3: fitted parameters and logLik equal origin/main 69a69b0a0 within rtol 1e-8 on both fixtures, and the existing grouped identity fixtures A, B and D still pass.
   CHECK: env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. test/test_grouped_analytic_grad.jl --gate identity && env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. test/test_grouped_laplace_identity.jl --gate identity
   EXPECT: both GATE ... PASS
-  EVIDENCE: pending
+  EVIDENCE: **HALF PASS, HALF STOP. Left UNTICKED and escalated to Shinichi.** Run 2026-09-21 ~03:30Z.
+  First half PASSES. `--gate identity` on the new file fits each fixture twice, once with `analytic_gradient=false` (which reaches the same `_grouped_fd_gradient(objective_cold, ...)` call origin/main always used) and once with it true: `poisson_latent` loglik -2.448399966295e+02 both ways, rel 0.000e+00, max per-coordinate beta rel 1.091e-10; `beta_shared` +4.357672061406e+01, rel 3.424e-15, beta 2.570e-10; `nb2_shared` -2.123724366875e+02, rel 2.677e-16, beta 3.442e-10. All well inside rtol 1e-8, `converged` identical both ways. Stated openly in the gate's own output: this is an IN-WORKTREE PROXY for the ledger's origin/main 69a69b0a0 comparison, which is still owed -- it proves the S8 branch changes no answer, it does not independently re-derive origin/main's numbers.
+  **ORIGIN/MAIN HALF NOW DISCHARGED, 2026-09-21 ~04:15Z, scheduled session.** The proxy above is no
+  longer the only evidence. A detached worktree was created at 69a69b0a0 itself
+  (`~/local-scratch/lanes/GLLVM.jl-s8-baseline-69a69b0a0`), given a byte copy of the lane's
+  `Manifest.toml` so both sides resolve the IDENTICAL dependency versions and the comparison isolates
+  the source change (`git diff 69a69b0a0 HEAD -- Project.toml` is empty, so nothing was forced). One
+  script (session scratchpad, not in the lane) builds the three fixtures from the same seeds and calls
+  `fit_grouped_nongaussian` with `inner_maxiter=200, inner_tol=1e-10` and NO kwarg that exists on only
+  one side, so 69a69b0a0 takes its only path (FD) and the S8 branch takes its default
+  (`analytic_gradient=true`, and `warm_start_inner=true` from S7c). Result, rtol 1e-8:
+  - `poisson_latent`: loglik main -2.44839996629515724e+02, S8 -2.44839996629515724e+02, rel 0.000e+00; max per-coordinate beta rel 1.091e-10.
+  - `beta_shared`: main +4.35767206140607328e+01, S8 +4.35767206140605836e+01, rel 3.424e-15; beta 2.570e-10.
+  - `nb2_shared`: main -2.12372436687485845e+02, S8 -2.12372436687485788e+02, rel 2.677e-16; beta 3.442e-10.
+  `converged=true` on all six fits. Worst disagreement anywhere 3.442e-10 against a bound of 1e-8.
+  **RE-RUN ~05:10Z after the multi-term fix recorded under GB.4, with a fourth fixture added to the
+  comparison** (`poisson_twoterm`, the shape the defect lived in): main -1.49516291816394840e+02
+  against S8 -1.49516291816345273e+02, loglik rel **3.315e-13**, max per-coordinate beta rel
+  **3.753e-09**, `converged=true` both. The other three reproduce their earlier numbers exactly.
+  Worst anywhere across all four fixtures is **3.753e-09** against 1e-8 -- inside the bound, and
+  the two-term fixture is the closest to it, which is worth saying rather than rounding away.
+  Two things this buys beyond ticking a box. First, it reproduces the in-worktree proxy's three beta
+  numbers to every printed digit, so the proxy was a faithful stand-in rather than a convenient one --
+  that is a check ON the earlier evidence, not a repeat of it. Second, it shows the S8 branch as a
+  WHOLE, S7c's `warm_start_inner=true` default included, still lands on origin/main's answer; the
+  earlier proxy only compared two paths inside one worktree and could not have seen a shared drift.
+  The gate stays UNTICKED because its other half, the `test_grouped_laplace_identity.jl` call-count
+  invariant below, still STOPS.
+
+  Second half FAILS, and the failure is a FINDING rather than a defect. `test/test_grouped_laplace_identity.jl --gate identity`: 16 passed, 1 failed -> `GATE G7b.1 FAIL fixture A: inner Laplace-fit call count changed (94 vs 118)`. Every NUMERIC identity in that file passed (loglik, logdet_precision, fitted parameters, all at rtol 1e-8); the single failing assertion is `stats.calls == BASELINE_A_OBJ_CALLS`, a call-COUNT invariant banked for slice S7b whose stated rationale is "the reuse must not change the optimiser's path". That rationale is correct for S7b, a CHOLMOD-reuse change that must be numerically and procedurally invisible. It is the opposite of what S8 is for: replacing a 2*ntheta-call FD gradient with one inner solve is SUPPOSED to cut the objective-call count, and 118 -> 94 on fixture A (-20.3%) is the first measured evidence that it does.
+  **No action taken.** The tolerance was not widened, the assertion was not edited, and `test/test_grouped_laplace_identity.jl` is not in this leaf's OWNS list. The decision -- whether that S7b invariant should become conditional on `analytic_gradient`, or be rebanked at 94, or whether S8's default should be `analytic_gradient=false` until it is -- is Shinichi's, because it changes a gate another slice depends on.
 
 - [ ] GB.4: with the warm start UNCONFINED (the S7c restriction to Nelder-Mead removed), fixture D's regression test still passes and the converged answer is unchanged at rtol 1e-8. This is the gate that S7c could not pass with an FD gradient.
   CHECK: env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. test/test_grouped_laplace_identity.jl --gate warm_identity
   EXPECT: GATE G7c.1 PASS
-  EVIDENCE: pending
+  EVIDENCE: **STILL PENDING -- but running the CHECK anyway is what found the S8 defect.** The
+  scheduled session ran this gate on 2026-09-21 ~04:35Z, before making any GB.4 change, purely to
+  learn whether it was green. It was not: `GATE G7c.1 FAIL`, 15 passed and 1 ERRORED, an uncaught
+  `DimensionMismatch` thrown from `_grouped_analytic_loglik_gradient` at `dW * bhat`
+  (src/grouped_nongaussian_fit.jl:478) on fixture D, the 4-source `common=true` design, reached
+  through the ordinary public `fit_gllvm`. Not a tolerance and not a count: the analytic gradient
+  CRASHED on any model with two or more grouping terms, and it crashed rather than falling back to
+  `_grouped_fd_gradient`, so it was a hard user-facing regression sitting on the branch.
+  Root cause proved by direct probe BEFORE any edit (two terms, 12 and 5 groups, p=2: `size(W)` =
+  (24,14) against `size(dW)` = (24,10) for k=1 and (24,8) for k=2, short by exactly the missing
+  group factor). Fixed with one line plus its explanatory comment, at the placeholder push in
+  `_grouped_laplace_design_jacobian`. Gate re-run after the fix: **GATE G7c.1 PASS, 21/21**;
+  fixture A cold vs warm `rel_ll=0.0`, `rel_par=0.0`, iterations 3/3; fixture D cold and warm
+  gradient norms bit-identical at 7.815970093361102e-8, iterations 6/6.
+  **The gate is NOT ticked, and the distinction is the point.** GB.4 asks for the warm start to be
+  UNCONFINED -- the S7c restriction to Nelder-Mead removed -- and only then for this check to pass.
+  The restriction is still in place. What the PASS above establishes is the weaker, still useful
+  fact that S8 does not break S7c's identity. Unconfining stays blocked behind Shinichi's item-1
+  decision: option (c) of that decision (`analytic_gradient=false` by default) puts the FD gradient
+  back, and the S7c confinement exists precisely to protect an FD gradient from a warm inner mode.
+  Doing GB.4 before the decision would build on a default that may move.
 
 - [ ] GB.5: objective calls and summed inner Newton iterations are reported before and after (118 and 711 banked at fixture A); the wall on fixture A is recorded against 0.150383 s and Latte's 0.015 s; the larger fixture against its own GA.1 baseline. Numbers reported whatever they are, no claim beyond them.
   CHECK: env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. bench/profile_grouped_glmm.jl --gate sections_after

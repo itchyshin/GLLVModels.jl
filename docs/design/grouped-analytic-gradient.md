@@ -27,14 +27,14 @@ calculus, section 7 is the part that decides whether this ships correctly.
 | `nθ` | length of the outer parameter vector |
 
 `y in R^N` is `vec(data)` and `nobs in R^N` is `vec(trials)`, passed at
-`src/grouped_nongaussian_fit.jl:256`.
+`src/grouped_nongaussian_fit.jl:362`.
 
 ### 1.2 The outer parameter vector
 
 `theta` is one flat vector, laid out in three contiguous blocks
-(`src/grouped_nongaussian_fit.jl:243`, `expected = q + source_coordinates + length(dispersion_indices)`):
+(`src/grouped_nongaussian_fit.jl:349`, `expected = q + source_coordinates + length(dispersion_indices)`):
 
-1. `gamma = theta[1:q]`, the mean coefficients (`src/grouped_nongaussian_fit.jl:248`).
+1. `gamma = theta[1:q]`, the mean coefficients (`src/grouped_nongaussian_fit.jl:354`).
    For the fixtures in scope, `D = _trait_mean_design(p, n)` (`src/source_fit.jl:137`) so
    `gamma` is one intercept per trait.
 2. `psi = theta[q+1 : q+c]`, `c = source_coordinates`, the grouping-term coordinates,
@@ -77,18 +77,18 @@ kappa_i         = d w_i / d eta_i        = - d^3 l_i / d eta_i^3             (do
 `w` is the **observed** curvature, not Fisher. `_joint_grouped_components` computes both
 (`fisher` at `src/grouped_laplace.jl:212`, `observed` at `:213`) but only `Ho`, the
 observed one, reaches the reported objective; `Hf` is used solely as a positive-definite
-fallback step direction (`src/grouped_laplace.jl:339`).
+fallback step direction (`src/grouped_laplace.jl:481`).
 
 ### 1.4 Joint log-posterior, mode, precision, objective
 
 ```
-Q(b, theta) = sum_i l_i(eta_i(b, theta); rho) - 0.5 * b' b        (src/grouped_laplace.jl:191-197)
-g(b, theta) = W' s(eta(b, theta)) - b                             (src/grouped_laplace.jl:309)  [= dQ/db]
+Q(b, theta) = sum_i l_i(eta_i(b, theta); rho) - 0.5 * b' b        (src/grouped_laplace.jl:193-206)
+g(b, theta) = W' s(eta(b, theta)) - b                             (src/grouped_laplace.jl:451)  [= dQ/db]
 A(b, theta) = W' diag(w(eta(b, theta))) W + I_m                   (src/grouped_laplace.jl:217)  [= Ho]
-bhat(theta) : g(bhat, theta) = 0                                  (converged at src/grouped_laplace.jl:310)
-ld(theta)   = logdet(A(bhat, theta))                              (src/grouped_laplace.jl:318 via the CHOLMOD factor Fo, :311-317)
-L(theta)    = Q(bhat, theta) - 0.5 * ld(theta)                    (src/grouped_laplace.jl:320, the `q0 - 0.5 * ld` field)
-F(theta)    = - L(theta)                                          (src/grouped_nongaussian_fit.jl:263)
+bhat(theta) : g(bhat, theta) = 0                                  (converged at src/grouped_laplace.jl:452)
+ld(theta)   = logdet(A(bhat, theta))                              (src/grouped_laplace.jl:460 via the CHOLMOD factor Fo, :453-459)
+L(theta)    = Q(bhat, theta) - 0.5 * ld(theta)                    (src/grouped_laplace.jl:462, the `q0 - 0.5 * ld` field)
+F(theta)    = - L(theta)                                          (src/grouped_nongaussian_fit.jl:368-369)
 ```
 
 `F` is what the outer optimiser minimises. **The deliverable of the implementation slice is
@@ -136,7 +136,8 @@ The middle sign is not a typo: `ds_i/deta_i = -w_i`. The last term is present on
 `k` in the `rho` block and only for Beta and NB2.
 
 `u_k` is obtained by one triangular solve per coordinate against the **factor already
-computed at convergence**, `Fo` (`src/grouped_laplace.jl:312`): `u_k = Fo \ v_k`. That is
+computed at convergence**, `Fo` (`src/grouped_laplace.jl:453-454`, now carried out of the
+inner fit on `result.factor`, `:32`): `u_k = Fo \ v_k`. That is
 `nθ` sparse solves, `nθ = 6` on the large fixture. No selected inverse is needed for this
 part.
 
@@ -147,7 +148,7 @@ and lets ForwardDiff produce `dz/dtheta = dzhat/dtheta` implicitly. That half tr
 principle and is identical mathematics. What does **not** transfer is the second half:
 after forming `z`, the per-site code evaluates `logdet(Az)` on a dense `K`-by-`K` matrix
 under duals (`src/laplace_grad.jl:148`). Here `A` is `m`-by-`m` sparse and its log-det is
-taken through a CHOLMOD factor (`src/grouped_laplace.jl:318`), which ForwardDiff cannot
+taken through a CHOLMOD factor (`src/grouped_laplace.jl:460`), which ForwardDiff cannot
 traverse. A third thing does not transfer either: `_grouped_laplace_design` is typed
 `Vector{SparseMatrixCSC{Float64,Int}}` and calls `Matrix{Float64}(load)`
 (`src/grouped_nongaussian_fit.jl:136`, `:164`), so the design cannot carry duals at all
@@ -243,7 +244,7 @@ because `j = l` occurs in the row quadratic forms). The entries *supplied* by
 missing and some computed entries are discarded. The routine already returns the result in
 the original, un-permuted ordering (`src/takahashi_selinv.jl:182-196`), and it already
 accepts a `SparseArrays.CHOLMOD.Factor{Float64}` (`src/takahashi_selinv.jl:103`), which is
-what `Fo` is (`src/grouped_laplace.jl:312`).
+what `Fo` is (`src/grouped_laplace.jl:453-454`).
 
 Two concrete quantities are extracted from the selected inverse `Sigma`:
 
@@ -313,7 +314,7 @@ available: section 1.4 shows `dg/db = -A` with the observed weight by definition
 For the record, the named fallback if `kappa` proves unobtainable for some family is
 **`:fd_logdet_direction`**: keep (A1), (A2) and (C1) analytic, and obtain the `(C2 + D)`
 scalar per coordinate by central-differencing **only** `ld(theta)` (the value at
-`src/grouped_laplace.jl:318`) while holding nothing else fixed. This changes how the
+`src/grouped_laplace.jl:460`) while holding nothing else fixed. This changes how the
 derivative is computed, never what is optimised. Its cost is `2 nθ` extra inner solves, so
 it recovers roughly half of the measured 54 percent FD-gradient share rather than all of
 it, and it reintroduces the warm-start bias hazard for that half. It is a fallback, not a
@@ -323,44 +324,67 @@ plan.
 
 ## 6. Alignment table
 
-Every symbol in sections 1 to 5, the function that computes it, and whether that function
-exists today.
+Every symbol in sections 1 to 5, the function or variable that computes it, and where it
+lives.
 
-| Symbol | Meaning | Function / variable that computes it | Exists today? |
+**Reconciled against the implementation on 2026-09-21** (commit `7ae2f8cbf`). This table was
+written before any code, so its first version was a plan: every row said `exists` or
+**`must be written`**. It is now a map of the shipped code instead, and three things changed
+in the move. First, every `must be written` row is written. Second, four rows named functions
+the implementation chose to **inline** inside `_grouped_analytic_loglik_gradient` rather than
+package separately -- `_grouped_eta_explicit`, `_grouped_mode_rhs`, `_grouped_mode_jacobian`
+and `_grouped_eta_total` do not exist under those names, and the rows below now point at the
+local variables that carry those quantities, at all three of the sites that compute them
+(the mean block, the grouping block, the dispersion block). The computations are present and
+in the derived form; only the packaging differs. Third, the derivation **missed a symbol**:
+the dispersion block needs `ds/drho` as well as `dw/drho` and `dl/drho`, and its row is added
+below rather than left implicit. Line numbers throughout were re-resolved against the current
+files, because the S8 change moved most of them.
+
+| Symbol | Meaning | Function / variable that computes it | State |
 |---|---|---|---|
-| `theta` | outer parameter vector | the `value` argument of the objective closure, `src/grouped_nongaussian_fit.jl:245` | exists |
-| `gamma` | mean coefficients, `theta[1:q]` | `gamma`, `src/grouped_nongaussian_fit.jl:248` | exists |
-| `psi` | grouping coordinates (loadings, log SDs) | `_grouped_term_unpack`, `src/grouped_fit.jl:125` | exists |
-| `rho` | log dispersion | `_grouped_nongaussian_family`, `src/grouped_nongaussian_fit.jl:93-107` | exists |
-| `D` | mean design, `N`-by-`q` | `_trait_mean_design`, `src/source_fit.jl:137` | exists |
-| `W(psi)` | sparse RE design, `N`-by-`m` | `_grouped_laplace_design`, `src/grouped_nongaussian_fit.jl:164` | exists, Float64 only |
-| `dk W` | `dW/dtheta_k`, same pattern as its block | `_grouped_laplace_design_jacobian` | **must be written** |
-| `bhat` | joint mode | `result.mode`, `src/grouped_laplace.jl:320` | exists |
-| `eta` | linear predictor at the mode | `_joint_grouped_state`, `src/grouped_laplace.jl:170` | exists |
-| `s` | score `dl/deta` | `_glm_score` via `_joint_grouped_components`, `src/grouped_laplace.jl:211` | exists |
-| `w` | observed weight `-d2l/deta2` | `_glm_obs_weight`, `src/families/laplace.jl:260`, used at `src/grouped_laplace.jl:213` | exists |
-| `kappa` | `dw/deta = -d3l/deta3` | `_glm_obs_weight_deta` | **must be written** |
-| `dw/drho` | weight sensitivity to log dispersion | `_glm_obs_weight_dphi` | **must be written** (Beta, NB2 only) |
-| `dl/drho` | log-density sensitivity to log dispersion | `_glm_logpdf_dphi` | **must be written** (Beta, NB2 only) |
-| `A` (`Ho`) | joint observed precision | `_joint_grouped_components`, `src/grouped_laplace.jl:217`; returned as `result.precision`, `:320` | exists |
-| `Fo` | CHOLMOD factor of `A` | local in `joint_grouped_laplace_loglik`, `src/grouped_laplace.jl:312` | exists but **not returned**; must be exposed or refactorised |
-| `ld` | `logdet(A)` | `src/grouped_laplace.jl:318`, field `logdet_precision` | exists |
-| `Sigma` | `A^{-1}` at the selected pattern | `takahashi_selinv`, `src/takahashi_selinv.jl:103` | exists, **never wired to the grouped route** |
-| `t_i` | `(W Sigma W')_{ii}` | `_grouped_selinv_row_quadform` | **must be written** |
-| `r_i(k)` | `(W Sigma (dk W)')_{ii}` | `_grouped_selinv_row_crossform` | **must be written** |
-| `e_k` | explicit `d eta / d theta_k` | `_grouped_eta_explicit` | **must be written** |
-| `v_k` | `dg/dtheta_k` at fixed `b` | `_grouped_mode_rhs` | **must be written** |
-| `u_k` | `dbhat/dtheta_k = A^{-1} v_k` | `Fo \ v_k` (CHOLMOD solve, exists); wrapper `_grouped_mode_jacobian` | **wrapper must be written** |
-| `edot_k` | total `d eta / d theta_k` | `_grouped_eta_total` | **must be written** |
-| `wdot_k` | total `d w / d theta_k` | inline in `_grouped_analytic_gradient` | **must be written** |
-| `grad L` | gradient of the Laplace marginal | `_grouped_analytic_loglik_gradient` | **must be written** |
-| `grad F` | gradient of the minimised objective, `-grad L` | `_grouped_analytic_gradient` | **must be written** |
-| FD reference | central difference of `F` | `_grouped_fd_gradient`, `src/grouped_fit.jl:213` | exists |
+| `theta` | outer parameter vector | the `value` argument of the objective closure, `src/grouped_nongaussian_fit.jl:351` | pre-existing |
+| `gamma` | mean coefficients, `theta[1:q]` | `gamma`, `src/grouped_nongaussian_fit.jl:354` | pre-existing |
+| `psi` | grouping coordinates (loadings, log SDs) | `_grouped_term_unpack`, `src/grouped_fit.jl:125` | pre-existing |
+| `rho` | log dispersion | `_grouped_nongaussian_family`, `src/grouped_nongaussian_fit.jl:93-107` | pre-existing |
+| `D` | mean design, `N`-by-`q` | `_trait_mean_design`, `src/source_fit.jl:137` | pre-existing |
+| `W(psi)` | sparse RE design, `N`-by-`m` | `_grouped_laplace_design`, `src/grouped_nongaussian_fit.jl:164` | pre-existing, Float64 only |
+| `dk W` | `dW/dtheta_k`, same pattern as its block | `_grouped_laplace_design_jacobian`, `src/grouped_nongaussian_fit.jl:257` | **written for S8** |
+| `bhat` | joint mode | `result.mode`, field of `JointGroupedLaplaceResult`, `src/grouped_laplace.jl:16`, set at `:462` | pre-existing |
+| `eta` | linear predictor at the mode | `_joint_grouped_state`, `src/grouped_laplace.jl:178` | pre-existing |
+| `s` | score `dl/deta` | `_glm_score` via `_joint_grouped_components`, `src/grouped_laplace.jl:219` | pre-existing |
+| `w` | observed weight `-d2l/deta2` | `_glm_obs_weight`, `src/families/laplace.jl:260`, used at `src/grouped_laplace.jl:221` | pre-existing |
+| `kappa` | `dw/deta = -d3l/deta3` | `_glm_obs_weight_deta`, `src/grouped_laplace.jl:257` | **written for S8** |
+| `dw/drho` | weight sensitivity to log dispersion | `_glm_obs_weight_dphi`, `src/grouped_laplace.jl:280-283` | **written for S8** (Beta, NB2 only) |
+| `dl/drho` | log-density sensitivity to log dispersion | `_glm_logpdf_dphi`, `src/grouped_laplace.jl:275-278` | **written for S8** (Beta, NB2 only) |
+| `ds/drho` | **score** sensitivity to log dispersion | `_glm_score_dphi`, `src/grouped_laplace.jl:285-288` | **written for S8; MISSING from this table until 2026-09-21** (Beta, NB2 only) |
+| `A` (`Ho`) | joint observed precision | `_joint_grouped_components`, `src/grouped_laplace.jl:208`; returned as `result.precision` | pre-existing |
+| `Fo` | CHOLMOD factor of `A` | `result.factor`, the field S8 added, `src/grouped_laplace.jl:32`, set at `:462-463` | **exposed for S8**; the pre-S8 code computed and discarded it |
+| `ld` | `logdet(A)` | `logdet(Fo)`, `src/grouped_laplace.jl:460`, field `logdet_precision`, `:20` | pre-existing |
+| `Sigma` | `A^{-1}` at the selected pattern | `takahashi_selinv`, `src/takahashi_selinv.jl:103`, called from `src/grouped_nongaussian_fit.jl:453` | pre-existing function, **wired to the grouped route for S8** |
+| `t_i` | `(W Sigma W')_{ii}` | `_grouped_selinv_row_quadform`, `src/grouped_laplace.jl:314`, called at `src/grouped_nongaussian_fit.jl:459` | **written for S8** |
+| `r_i(k)` | `(W Sigma (dk W)')_{ii}` | `_grouped_selinv_row_crossform`, `src/grouped_laplace.jl:342`, called at `src/grouped_nongaussian_fit.jl:484` | **written for S8** |
+| `e_k` | explicit `d eta / d theta_k` | INLINED as `e_expl`: `src/grouped_nongaussian_fit.jl:467` (mean block, `D[:,k]`), `:478` (grouping block, `dW * bhat`); identically zero in the dispersion block, so no variable exists there | **inlined, not a named function** |
+| `v_k` | `dg/dtheta_k` at fixed `b` | INLINED as `rhs`: `:468`, `:479`, `:501` | **inlined, not a named function** |
+| `u_k` | `dbhat/dtheta_k = A^{-1} v_k` | INLINED as `u = Fo \ rhs` (CHOLMOD solve): `:469`, `:480`, `:502` | **inlined; no wrapper written** |
+| `edot_k` | total `d eta / d theta_k` | INLINED as `edot`: `:470`, `:481`, `:503` | **inlined, not a named function** |
+| `wdot_k` | total `d w / d theta_k` | INLINED as `wdot`: `:471`, `:482`, and `:498` + `:504` in the dispersion block, where the explicit `dw/drho` part is accumulated first and the implicit `kappa .* edot` part added to it | **inlined**, as this table always said |
+| `grad L` | gradient of the Laplace marginal | `_grouped_analytic_loglik_gradient`, `src/grouped_nongaussian_fit.jl:403` | **written for S8** |
+| `grad F` | gradient of the minimised objective, `-grad L` | `_grouped_analytic_gradient`, `src/grouped_nongaussian_fit.jl:521` | **written for S8** |
+| FD reference | central difference of `F` | `_grouped_fd_gradient`, `src/grouped_fit.jl:213` | pre-existing |
 
-Three rows deserve emphasis because they are the ones that can be satisfied *incorrectly*
-rather than merely being absent: `dk W` (scale, section 7.4), `kappa` (availability,
-section 7.6), and `Fo` (currently discarded, so a naive implementation will refactorise `A`
-from `result.precision`, which is correct but pays for a second factorisation).
+Three rows deserved emphasis before the code existed, because they were the ones that could be
+satisfied *incorrectly* rather than merely being absent: `dk W` (scale, section 7.4), `kappa`
+(availability, section 7.6), and `Fo` (then discarded, so a naive implementation would
+refactorise `A` from `result.precision`, which is correct but pays for a second factorisation).
+All three were resolved the way the section argued they should be: `dk W` has its own function,
+`kappa` is available because all three families differentiate three levels (probed directly,
+2026-09-21), and `Fo` is now carried on the result rather than recomputed.
+
+What the reconciliation did NOT change: no equation in sections 1 to 5 moved, and no line of
+`src/` was edited to match the table. Where the table and the code disagreed, the code was
+taken as correct and the table was rewritten, because the code is what GB.2 tested per
+coordinate and what GB.3 compared against origin/main.
 
 ---
 
@@ -431,7 +455,7 @@ I state this as resolved, not as ignored.
 
 **7.7 A loosely converged inner mode.** The derivation assumes `g(bhat) = 0` exactly. At a
 finite `tol` the dropped piece is `g(bhat)' u_k`, first order in the residual. The default
-`inner_tol = 1e-8` (`src/grouped_nongaussian_fit.jl:310`) should make this negligible
+`inner_tol = 1e-8` (`src/grouped_nongaussian_fit.jl:571`) should make this negligible
 relative to the FD reference's own floor, but the analytic gradient and the FD gradient
 degrade *differently* as `tol` loosens, so a test run at a loose `inner_tol` can show a
 disagreement that is the fixture's fault rather than the gradient's. Record `inner_tol` in
@@ -458,7 +482,7 @@ that, not from a general preference for strictness.
 
 Reference: `_grouped_fd_gradient(objective_cold, theta)` (`src/grouped_fit.jl:213`) against
 the **cold** closure (`warm_start_inner = false`,
-`src/grouped_nongaussian_fit.jl:371-373`). Not the warm one: the warm closure's inner mode
+`src/grouped_nongaussian_fit.jl:632-634`). Not the warm one: the warm closure's inner mode
 depends on cache state, which is what biased the FD gradient to 1e-4 against a 1e-4
 criterion (`src/grouped_nongaussian_fit.jl:350-370`). Once the analytic gradient exists, the
 production path has no FD step to bias, but **the test's reference still does**, so the

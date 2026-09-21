@@ -52,12 +52,13 @@ const INNER_MAXITER = 200
 # gradient and the FD gradient are compared on the SAME objects the fitter
 # itself would hand them. Nothing here re-derives the objective.
 # ---------------------------------------------------------------------------
-function _grouped_internals(Y; family, terms, unit, N = nothing, dispersion = :trait)
+function _grouped_internals(Y; family, terms, unit, cluster = nothing, N = nothing,
+        dispersion = :trait)
     p, n = size(Y)
     kind = GLLVModels._grouped_nongaussian_kind(family)
     mode = GLLVModels._grouped_nongaussian_dispersion_mode(kind, dispersion)
     termvec = GLLVModels.GroupingTerm[terms...]
-    labels = GLLVModels._grouped_labels(n, termvec; unit = unit)
+    labels = GLLVModels._grouped_labels(n, termvec; unit = unit, cluster = cluster)
     incidences = [GLLVModels._grouped_incidence(v, n) for v in labels]
     data = Matrix{Float64}(Y)
     trials = GLLVModels._grouped_nongaussian_trials(data, N, kind)
@@ -142,7 +143,38 @@ function _fixture_nb2_shared()
     return ("nb2_shared", st, "NegativeBinomial, shared log_r (hand-coded _glm_obs_weight override)", call)
 end
 
-_fixtures() = [_fixture_poisson_latent(), _fixture_beta_shared(), _fixture_nb2_shared()]
+# Requirement (e), ADDED 2026-09-21 after a defect the first three fixtures
+# could not see. All three above use exactly ONE grouping term, and with one
+# term `_grouped_laplace_design_jacobian` never pushes a zero placeholder
+# block -- so its placeholder width was wrong (trait-factor `width` instead of
+# `size(incidence, 2) * width`) and no gate here could tell. With two terms it
+# is a hard `DimensionMismatch` at `dW * bhat`, which is how S7c's
+# `--gate warm_identity` found it on fixture D. This fixture puts a TWO-TERM
+# design, with DIFFERENT group counts per term so a coincidental width match
+# cannot hide the same bug, inside GB.2 itself.
+function _fixture_poisson_twoterm()
+    rng = Xoshiro(20260924)
+    p, n = 2, 60
+    unit = repeat(1:12; inner = n ÷ 12)      # 12 groups
+    cluster = repeat(1:5; inner = n ÷ 5)     # 5 groups, deliberately != 12
+    beta = [0.35, -0.15]
+    zu = 0.5 .* randn(rng, 12)
+    zc = 0.4 .* randn(rng, 5)
+    Y = Matrix{Float64}(undef, p, n)
+    for s in 1:n, t in 1:p
+        Y[t, s] = rand(rng, GLLVModels.Poisson(exp(beta[t] + zu[unit[s]] + zc[cluster[s]])))
+    end
+    call = (; Y = Y, family = GLLVModels.Poisson(),
+        terms = [GLLVModels.GroupingTerm(:unit; mode = :indep, common = true),
+                 GLLVModels.GroupingTerm(:cluster; mode = :indep, common = true)],
+        unit = unit, cluster = cluster, dispersion = :trait)
+    st = _grouped_internals(Y; family = call.family, terms = call.terms,
+        unit = unit, cluster = cluster)
+    return ("poisson_twoterm", st, "Poisson, TWO grouping terms with unequal group counts", call)
+end
+
+_fixtures() = [_fixture_poisson_latent(), _fixture_beta_shared(),
+    _fixture_nb2_shared(), _fixture_poisson_twoterm()]
 
 # ---------------------------------------------------------------------------
 # GB.2
@@ -240,12 +272,15 @@ function gate_identity()
     println("  it does not re-derive origin/main's own numbers. Stated, not hidden.")
     ok = true
     for (name, _st, _note, call) in _fixtures()
+        cluster = hasproperty(call, :cluster) ? call.cluster : nothing
         fit_fd = GLLVModels.fit_grouped_nongaussian(call.Y; family = call.family,
-            terms = call.terms, unit = call.unit, dispersion = call.dispersion,
+            terms = call.terms, unit = call.unit, cluster = cluster,
+            dispersion = call.dispersion,
             inner_maxiter = INNER_MAXITER, inner_tol = INNER_TOL,
             analytic_gradient = false)
         fit_an = GLLVModels.fit_grouped_nongaussian(call.Y; family = call.family,
-            terms = call.terms, unit = call.unit, dispersion = call.dispersion,
+            terms = call.terms, unit = call.unit, cluster = cluster,
+            dispersion = call.dispersion,
             inner_maxiter = INNER_MAXITER, inner_tol = INNER_TOL,
             analytic_gradient = true)
         dll = abs(fit_an.loglik - fit_fd.loglik) / max(abs(fit_fd.loglik), 1.0)

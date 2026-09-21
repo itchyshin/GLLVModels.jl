@@ -276,7 +276,14 @@ function _grouped_laplace_design_jacobian(incidences::Vector{SparseMatrixCSC{Flo
             push!(blocks, grouped_trait_design(incidences[s], dLstar))
         else
             found || (remaining -= nparams)
-            width == 0 || push!(blocks, spzeros(Float64, N, width))
+            # The real block for source `s` is `kron(incidences[s], Lstar)`, so it
+            # is `size(incidences[s], 2) * width` columns wide, NOT `width`. Using
+            # `width` here made `dk W` narrower than `W` for every term the
+            # coordinate does not belong to, which is invisible with ONE grouping
+            # term (no placeholder is ever pushed) and a hard `DimensionMismatch`
+            # at `dW * bhat` with two or more. Found by running S7c's
+            # `--gate warm_identity` on fixture D, 2026-09-21.
+            width == 0 || push!(blocks, spzeros(Float64, N, size(incidences[s], 2) * width))
         end
     end
     found || throw(ArgumentError("psi_index $psi_index out of range"))
