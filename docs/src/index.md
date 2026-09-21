@@ -5,40 +5,99 @@ layout: home
 hero:
   name: "GLLVModels.jl"
   text: "Which responses vary together?"
-  tagline: "A Julia package for generalised linear latent variable models: models for several responses that may vary together."
+  tagline: "A standalone Julia package for generalised linear latent variable models: finding shared patterns across many species, traits, or outcomes, and separating them from variation unique to each response."
   actions:
     - theme: brand
-      text: Fit the first Gaussian model
+      text: Fit your first model
       link: /quickstart
     - theme: alt
-      text: Interpret covariance and correlation
-      link: /covariance-correlation
+      text: Choose a scientific question
+      link: /#three-starting-routes
     - theme: alt
-      text: Check capability parity
-      link: /gllvmtmb-parity
+      text: What can I fit today?
+      link: /what-can-i-fit-today
 
 features:
-  - title: "Start with a Gaussian response matrix"
-    details: "Responses are rows and sites are columns: p × n. This landing-page route fits and interprets Gaussian multivariate data."
-  - title: "Read the covariance first"
-    details: "Use model-implied Sigma, correlation, and the shared-variance fraction before attaching meaning to a rotated loading axis."
-  - title: "A focused Julia companion"
-    details: "Start with a response matrix in Julia. For the broader formula-first R workflow, use gllvmTMB."
+  - title: "Traits or repeated outcomes"
+    details: "Which traits or outcomes vary together across individuals, and which mostly vary on their own?"
+  - title: "Species across sites"
+    details: "Which species tend to occur together after measured environmental conditions are accounted for?"
+  - title: "Related species"
+    details: "How much variation in a trait follows shared evolutionary history rather than independent differences?"
 ---
 ```
 
-# Start with the response matrix
+# What is a GLLVM?
 
-GLLVModels.jl fits **generalised linear latent variable models (GLLVMs)**.
-These models ask whether several responses, such as species abundances, traits,
-or repeated measurements, vary together after allowing each response to retain
+**GLLVM** means **generalised linear latent-variable model**. It is a model for
+several responses measured on the same sites, individuals, species, or studies.
+It uses a small number of unobserved shared patterns, called latent variables,
+to describe how responses vary together, while allowing each response to retain
 its own variation. This landing page starts with the clearest case: a Gaussian
 response matrix, its model-implied covariance, and its correlations.
 
-!!! warning "Matrix Orientation: $p \times n$ in Julia vs $n \times p$ in R"
-    **GLLVModels.jl expects species/traits in rows and sites/observations in columns ($p \times n$).**
+In ecology, the responses may be species measured across sites. In evolution,
+they may be several traits measured across species or individuals. In other
+fields, they may be repeated outcomes or questionnaire items. A latent pattern
+describes association in a fitted model; it does not on its own show causation
+or a direct biological interaction.
 
-    If you are importing data formatted for R packages such as `gllvm` or `gllvmTMB` (which use the $n \times p$ convention with sites in rows and species in columns), transpose your matrix (`Y'`) before passing it to the Gaussian fitters used here.
+!!! warning "Experimental package"
+    Start with a documented example, check that the model fit is trustworthy,
+    and read [what you can fit today](what-can-i-fit-today.md) before
+    reporting a result. A successful fit alone is not validation.
+
+# Choose your scientific question
+
+GLLVModels.jl has three reader routes. They use different data and answer
+different questions, so choose the question before choosing a function.
+
+## Three starting routes
+
+### 1. General latent-variable models
+
+**Question:** Which continuous responses vary together across observations,
+and how much variation is shared rather than response-specific?
+
+**Start:** [Fit your first model](quickstart.md) gives a complete, simulated
+Gaussian response matrix and shows how to interpret shared variation.
+
+**Next action:** interpret model-implied correlations and the fraction of each
+response explained by shared patterns. Then use
+[Working with a fit](working-with-a-fit.md) for the post-fit task you need.
+
+### 2. Phylogenetic comparative models
+
+**Question:** For one continuous trait, how much variation follows the
+evolutionary relationships in a supplied tree, and how much remains
+independent?
+
+**Start:** [First phylogenetic Gaussian model](vignettes/phylogenetic-gllvm.md)
+starts with a small tree and a trait vector in its exact tip order.
+
+**Next action:** verify the biological tip-to-trait match before fitting, then
+inspect the two variance components within that vignette's point-estimate
+scope.
+
+### 3. Community and species-distribution models
+
+**Question:** Can a small number of unmeasured site differences summarize which
+species tend to occur or be abundant together after measured conditions are
+accounted for?
+
+**Start:** [First community abundance model](vignettes/community-abundance.md)
+defines and fits a small count table with species as rows and sites as columns.
+
+**Next action:** inspect the fitted ordination and model-implied residual
+associations as exploratory descriptions; use [Working with a fit](working-with-a-fit.md)
+when you need a specific post-fit quantity.
+
+## A first model for shared variation
+
+The compact example below belongs to the first route. It is for continuous
+responses, such as several body traits measured on the same individuals. Each
+row is a trait and each column is an individual or site. If your data are in
+the common sites-by-species layout, swap the rows and columns before fitting.
 
 ## Install
 
@@ -47,100 +106,90 @@ using Pkg
 Pkg.add(url = "https://github.com/itchyshin/GLLVModels.jl")
 ```
 
-GLLVModels.jl is not yet in the General registry, so `Pkg.add("GLLVModels")` will not
-resolve. Use Julia 1.10 or later.
+Use Julia 1.10 or later. This package is installed directly from its source
+repository rather than the General registry.
 
 ## Fit your first model
 
-Most analyses start with the same scientific question:
+Ask: **Which continuous traits vary together across individuals, and which
+traits mostly vary on their own?**
 
-> Which responses vary together, and how much variation is shared rather than
-> response-specific?
-
-For continuous multivariate data, start with the Gaussian route that gives
-each response its own residual variance:
+For this first model, centre each response first and fit the stable
+shared-residual Gaussian route. The shared-residual assumption is a useful
+starting point, not a claim that every trait has identical variability.
 
 ```julia
-using GLLVModels, Random, LinearAlgebra
+using GLLVModels, Random, Statistics
 
 Random.seed!(1)
 n, p, K = 80, 5, 2                         # sites, responses, latent axes
 Λ = 0.7 .* randn(p, K)
-ψ = 0.15 .+ 0.10 .* rand(p)                # one residual variance per response
-Y = Λ * randn(K, n) .+ sqrt.(ψ) .* randn(p, n)  # p × n response matrix
+Y = Λ * randn(K, n) .+ 0.5 .* randn(p, n)  # traits × individuals
+Y .-= mean(Y; dims = 2)                    # centre each trait
 
-fit = fit_gaussian_pervar_gllvm(Y; K = K)
+fit = fit_gaussian_gllvm(Y; K = K)
 
-# Rotation-invariant summaries implied by the per-response fit
-Σ = fit.Λ * fit.Λ' + Diagonal(fit.ψ²)
-c² = diag(fit.Λ * fit.Λ') ./ diag(Σ)       # shared-variance fraction
-R = Diagonal(1 ./ sqrt.(diag(Σ))) * Σ * Diagonal(1 ./ sqrt.(diag(Σ)))
+fit.converged
+R = correlation(fit)          # model-implied trait correlations
+shared = communality(fit)     # shared fraction for each trait, from 0 to 1
 ```
 
 ![Model-implied cross-response correlations from a simulated two-factor GLLVM fit](assets/correlation_heatmap.png)
 
-The heatmap is a simulated two-factor Gaussian fit. Its off-diagonal structure
-is what the explicit `R` calculation reports: responses that share a latent axis correlate,
-and responses with no shared axis stay near zero.
+The heatmap is a simulated two-pattern Gaussian fit. A positive value in `R`
+means that two traits tend to vary together in this fitted model. A value near
+one in `shared` means that much of a trait's modelled variation belongs to the
+shared patterns. Neither result proves a causal relationship.
 
-This is the matrix-first companion to the ordinary R
-[`gllvmTMB`](https://itchyshin.github.io/gllvmTMB/) teaching route. Both use
-`Sigma = Lambda * Lambda' + Psi`; here `Psi` has one diagonal residual
-variance per response. R's wide formula is `traits(...) + latent(...)`, while
-Julia's matrix has responses in rows and units in columns. The simpler
-`fit_gaussian_gllvm` route has one shared residual SD, so it is a restricted
-model, not an identical R comparison. GLLVModels.jl currently covers a smaller
-set of applied workflows. Use gllvmTMB for the richer formula-first R workflow
-and its documented limits.
-
-`GaussianPerVarFit` does not yet have the `sigma_y_site()`, `correlation()`,
-and `communality()` extractor methods used by the shared-residual Gaussian
-fit. The explicit `Σ`, `c²`, and `R` calculation above is therefore the
-current per-response route; its fields and output contract may change. It makes
-the model comparison explicit without promising a stable
-extractor interface.
+This first route assumes that every response has the same remaining variability
+after the shared patterns are accounted for. It is a restricted model, not an
+identical comparison with the R `gllvmTMB` teaching route, which estimates one
+residual variance per response. It is the documented route with stable result
+extractors: the per-response-variance Gaussian fit
+(`fit_gaussian_pervar_gllvm`) does not yet have the `sigma_y_site()`,
+`correlation()`, and `communality()` extractor methods, and its fields and
+output contract may change. The [model guide](model.md) explains more flexible
+Gaussian models after you have completed this first fit.
 
 ## What The Fit Gives You
 
-For the shared-residual Gaussian fit, the usual report-ready quantities are:
+For this shared-residual Gaussian fit, the usual report-ready quantities are:
 
 - `sigma_y_site(fit)` for the among-response covariance `Σ_y`;
 - `communality(fit)` for the shared-variance fraction per response;
 - `correlation(fit)` for model-implied cross-response correlations;
-- `phylo_signal(fit)` for the phylogenetic share of trait variation;
-- `getLV(fit)` and `getLoadings(fit)` for ordination scores and loadings.
+- `getLV(fit, Y)` and `getLoadings(fit)` for ordination scores and loadings.
 
-For the per-response residual fit used above, use the explicit `Σ`, `c²`, and
-`R` construction until those extractors are admitted for `GaussianPerVarFit`.
+## Route map and supporting guides
 
-## Start Here
-
-- Choose a workflow: [Choose R, Julia, or the bridge](choose-r-julia-bridge.md).
-- First Gaussian fit & Cheat Sheet: [Quick start](quickstart.md).
-- Applied JSDM Vignette: [Community Abundance](vignettes/community-abundance.md).
-- Applied Evolutionary Vignette: [Phylogenetic GLLVM](vignettes/phylogenetic-gllvm.md).
+- Choose a runtime first: [Choose R, Julia, or the bridge](choose-r-julia-bridge.md).
+- General model-interface reference: [Tutorial](tutorial.md). This is a guided
+  interface tour, not a single copy-and-run analysis.
 - Model equation and estimands: [Model](model.md).
-- Ordination, predictions, residuals, AIC, and BIC:
-  [Working with a fit](working-with-a-fit.md).
 - Response-family choice: [Response families](response-families.md).
-- R twin comparison: [Capability parity](gllvmtmb-parity.md).
+- A technical comparison with the R package: [Capability parity](gllvmtmb-parity.md).
 
 ## Landing-page scope
 
-This landing page makes a Gaussian-only promise: the shared-residual and
-per-response-residual Gaussian routes shown above. It does not establish that
-non-Gaussian, mixture, spatial, or phylogenetic workflows mentioned elsewhere
-in the documentation are ready for an applied analysis. Check
-[Capability parity](gllvmtmb-parity.md) and the relevant guide before relying
+This landing page makes a Gaussian-only promise: the shared-residual Gaussian
+route shown above and the per-response-residual Gaussian route it points to.
+It does not establish that non-Gaussian, mixture, spatial, or phylogenetic
+workflows mentioned elsewhere in the documentation are ready for an applied
+analysis. Check [what you can fit today](what-can-i-fit-today.md),
+[Capability parity](gllvmtmb-parity.md), and the relevant guide before relying
 on a workflow beyond this page.
 
 ## Relation To gllvmTMB
 
 R `gllvmTMB` remains the richer formula-first model surface and applied article
 set. GLLVModels.jl is the Julia companion: matrix-first today, with a limited
-`engine = "julia"` bridge. A list of implemented functions does not show that
-the two packages give interchangeable results. Julia interval studies are
-diagnostic checks, not calibrated-inference certificates.
+`engine = "julia"` bridge, and it currently covers a smaller set of applied
+workflows. The packages overlap only for the workflows listed in
+[Capability parity](gllvmtmb-parity.md); do not assume a model transfers
+unchanged, and a list of implemented functions does not show that the two
+packages give interchangeable results. Julia interval studies are diagnostic
+checks, not calibrated-inference certificates, and interval coverage has not
+been established for every workflow.
 See [Comparison vs gllvmTMB](comparison.md) and [Benchmarks](benchmarks.md) for
 the validated shared-residual Gaussian closed-form benchmark grid. Those
 speed results do not generalise to non-Gaussian fits or establish speed for the
@@ -162,6 +211,6 @@ phylogenetic representation follows Bolker's `phylog.rmd`.
 
 ## Getting Help
 
-- Questions and bugs: open an issue on [GitHub](https://github.com/itchyshin/GLLVModels.jl/issues).
+- Start with the [Quickstart](quickstart.md) for a runnable analysis.
 - Function help: in the Julia REPL, type `?` then a name, for example `?fit_gaussian_gllvm`.
-- Planned work: see the [Roadmap](roadmap.md).
+- Check [what you can fit today](what-can-i-fit-today.md) for supported workflows and current limits.

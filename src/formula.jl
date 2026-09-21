@@ -751,10 +751,8 @@ true
 See also [`_fit_gaussian_structured_sources`](@ref) (the internal function this
 wraps), [`SourceCovariance`](@ref), [`fit_gaussian_sources`](@ref).
 
-Not wired into `gllvm(formula, ...)`; the convention-change cascade
-(README/tutorials/docs pages) for this new public symbol is deferred to the
-docs arc — this docstring and the test-file additions are the complete slice
-for this task.
+This is a direct matrix-and-data interface. It is not currently called by
+`gllvm(formula, ...)`; use the documented `structure=` form shown above.
 """
 function fit_gaussian_structured(Y::AbstractMatrix{<:Real}, data;
         structure::Vector{Expr}, family::Distribution=Normal(),
