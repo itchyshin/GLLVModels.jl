@@ -578,8 +578,15 @@ function _S8_fixtures()
     return small, large
 end
 
+# `analytic_gradient` DEFAULTS TO FALSE deliberately, and that is not the
+# package's default (src/grouped_nongaussian_fit.jl:579 defaults it true).
+# `--gate sections` is GA.1's ticked CHECK and its banked EVIDENCE was measured
+# on the all-FD path; flipping this default would silently make that gate
+# measure something else and stop reproducing its own numbers. `--gate
+# sections_after` passes both settings explicitly instead.
 function _S8_measure_driver(fx::_S8Fixture; g_tol = 1e-4, iterations = 100,
-        inner_maxiter = 100, inner_tol = 1e-8, warm_start_inner = true)
+        inner_maxiter = 100, inner_tol = 1e-8, warm_start_inner = true,
+        analytic_gradient::Bool = false)
     p, n = fx.p, fx.N
     family = Poisson()
     kind = GLLVModels._grouped_nongaussian_kind(family)
@@ -618,6 +625,8 @@ function _S8_measure_driver(fx::_S8Fixture; g_tol = 1e-4, iterations = 100,
     fdhess_obj_calls = Ref(0); fdhess_obj_seconds = Ref(0.0)
     fd_gradient_invocations = Ref(0); fd_gradient_seconds = Ref(0.0)
     fd_hessian_invocations = Ref(0); fd_hessian_seconds = Ref(0.0)
+    an_gradient_invocations = Ref(0); an_gradient_seconds = Ref(0.0)
+    an_gradient_fallbacks = Ref(0)
 
     nm_objective = value -> begin
         t0 = time_ns()
@@ -658,14 +667,51 @@ function _S8_measure_driver(fx::_S8Fixture; g_tol = 1e-4, iterations = 100,
         H
     end
 
+    # Mirrors the real `grad_fn` closure at src/grouped_nongaussian_fit.jl:
+    # 672-676 exactly: analytic first, and on `nothing` or any non-finite
+    # coordinate the SAME `_grouped_fd_gradient(objective_cold, ...)` fallback
+    # the pre-S8 code always used. The analytic stopwatch is stopped BEFORE any
+    # fallback call, so the analytic and FD buckets stay disjoint and the
+    # section sum is a partition rather than a double count.
+    # Two SEPARATE closures selected up front, rather than one closure that
+    # branches on `analytic_gradient` inside its body. That is a measurement
+    # requirement, not a style choice: a single branching closure is inferred
+    # as a whole on its first call, which drags `_grouped_analytic_gradient`
+    # through compilation even on the FD path. That compilation lands inside
+    # `driver_wall` but in none of the section buckets, and on the 0.17 s small
+    # fixture it pushed GA.1's sections-sum gap from 8.0% to 12.7%, past its
+    # 10% bound. Caught by re-running GA.1 after patching this function.
+    counted_grad_fn = analytic_gradient ? (x -> begin
+        an_gradient_invocations[] += 1
+        t0 = time_ns()
+        g = GLLVModels._grouped_analytic_gradient(x, data, trials, D, fx.terms,
+            incidences, kind; dispersion_mode = pubmode,
+            inner_maxiter = Int(inner_maxiter), inner_tol = Float64(inner_tol))
+        an_gradient_seconds[] += (time_ns() - t0) / 1e9
+        if g === nothing || !all(isfinite, g)
+            an_gradient_fallbacks[] += 1
+            return counted_fd_gradient(cold_objective, x)
+        end
+        g
+    end) : (x -> counted_fd_gradient(cold_objective, x))
+
+    # Inner-Laplace-fit calls and summed inner Newton iterations come from the
+    # existing `_grouped_chol_stats` counter (src/grouped_laplace.jl:76-85) via
+    # this file's documented 2n(+1) relationship, scoped to the driver run
+    # rather than to a separate `fit_gllvm` call -- which matters here because
+    # `analytic_gradient` is not threaded through the public `fit_gllvm`.
+    has_chol_stats = isdefined(GLLVModels, :_grouped_chol_stats_reset!) &&
+                     isdefined(GLLVModels, :_grouped_chol_stats)
+    has_chol_stats && GLLVModels._grouped_chol_stats_reset!()
+
     wall_t0 = time_ns()
     # ---- verbatim sequence of src/grouped_nongaussian_fit.jl:388-420 ------
     result = Optim.optimize(nm_objective, theta0, Optim.NelderMead(),
         Optim.Options(g_tol = Float64(g_tol), iterations = Int(iterations)))
     candidate = collect(Optim.minimizer(result))
-    candidate_gradient = counted_fd_gradient(cold_objective, candidate)
+    candidate_gradient = counted_grad_fn(candidate)
     if all(isfinite, candidate_gradient)
-        gradient! = (storage, value) -> (storage .= counted_fd_gradient(cold_objective, value))
+        gradient! = (storage, value) -> (storage .= counted_grad_fn(value))
         refined = try
             Optim.optimize(cold_objective, gradient!, candidate, Optim.BFGS(),
                 Optim.Options(g_tol = Float64(g_tol), iterations = Int(iterations)))
@@ -689,6 +735,11 @@ function _S8_measure_driver(fx::_S8Fixture; g_tol = 1e-4, iterations = 100,
     H = valid ? counted_fd_hessian(cold_objective, estimate) : fill(NaN, length(estimate), length(estimate))
     driver_wall = (time_ns() - wall_t0) / 1e9
     # -------------------------------------------------------------------
+    cstats = has_chol_stats ? GLLVModels._grouped_chol_stats() :
+        (calls = -1, fresh = -1, reused = -1, fallback = -1)
+    inner_calls = cstats.calls
+    chol_total = cstats.fresh + cstats.reused + cstats.fallback
+    inner_iters_sum = inner_calls > 0 ? (chol_total - inner_calls) / 2 : NaN
 
     converged = Optim.converged(result) && valid && gradient_norm <= g_tol
     driver_loglik = -value
@@ -704,6 +755,10 @@ function _S8_measure_driver(fx::_S8Fixture; g_tol = 1e-4, iterations = 100,
              fd_gradient_seconds = fdgrad_obj_seconds[],
              fd_hessian_invocations = fd_hessian_invocations[], fd_hessian_obj_calls = fdhess_obj_calls[],
              fd_hessian_seconds = fdhess_obj_seconds[],
+             analytic_gradient, an_gradient_invocations = an_gradient_invocations[],
+             an_gradient_seconds = an_gradient_seconds[],
+             an_gradient_fallbacks = an_gradient_fallbacks[],
+             inner_calls, chol_total, inner_iters_sum,
              total_obj_calls, total_obj_seconds, remainder)
 end
 
@@ -852,12 +907,215 @@ function main_sections()
     exit(ok ? 0 : 1)
 end
 
+# ---------------------------------------------------------------------------
+# --gate sections_after (leaf-S8 GB.5). The AFTER half of GA.1's partition:
+# the same driver, the same fixtures, the same counters, run TWICE inside ONE
+# process -- once with `analytic_gradient = false` (the pre-S8 all-FD path
+# GA.1 measured) and once with it `true` (what the branch now does by
+# default). Both settings in one run is deliberate: the machine state that
+# contaminates an absolute number is shared by both halves, so the RATIO
+# survives it even when the seconds do not.
+#
+# What this gate reports, per the ledger: objective calls and summed inner
+# Newton iterations before and after (118 and 711 banked at fixture A);
+# fixture A's wall against the S7c-banked 0.150383 s and Latte's 0.015 s; the
+# larger fixture against its own GA.1 baseline (10.8879 s). Numbers are
+# reported whatever they are -- the PASS condition is the integrity of the
+# measurement (the driver still lands on the real `fit_gllvm` loglik, the
+# sections still sum to the wall, before and after still agree at rtol 1e-8),
+# never the direction or the size of the speedup.
+#
+# Read every speedup here as a FLOOR. Two of the three things GA.2 measured
+# are still paid in full on the after path: the S7c warm start is still
+# confined to Nelder-Mead (GB.4 not done) and the final O(ntheta^2) FD Hessian
+# is still computed for the diagnostics (GA.2 put that alone at 16.0% of the
+# large-fixture wall). This gate measures what the gradient change bought on
+# its own.
+# ---------------------------------------------------------------------------
+const _S8_BANKED_A_WALL_S7C = 0.150383     # bench/results/grouped_warm_68c2f067c.tsv, post-S7c
+const _S8_BANKED_A_WALL_PRE_S7C = 0.184721 # same TSV, pre-S7c
+const _S8_BANKED_A_OBJ_CALLS = 118         # leaf-S8 BASELINE line
+const _S8_BANKED_A_INNER_ITERS = 711       # leaf-S8 BASELINE line
+const _S8_LATTE_A_WALL = 0.015             # Latte.jl on this same fixture
+const _S8_GA1_LARGE_DRIVER_WALL = 10.8879  # GA.1 EVIDENCE, commit f59757a4f
+
+# Median driver wall over `reps` timed runs after one untimed warm-up, with the
+# counts taken from the first timed run and every later run CHECKED against it
+# rather than assumed identical.
+function _S8_repeat_driver(fx::_S8Fixture; analytic_gradient::Bool, reps::Int)
+    _S8_measure_driver(fx; analytic_gradient = analytic_gradient)  # untimed warm-up
+    ms = [_S8_measure_driver(fx; analytic_gradient = analytic_gradient) for _ in 1:reps]
+    walls = [m.driver_wall for m in ms]
+    counts_stable = all(m -> m.total_obj_calls == ms[1].total_obj_calls &&
+                             m.inner_calls == ms[1].inner_calls, ms)
+    return (; m = ms[1], wall_median = median(walls), wall_min = minimum(walls),
+              wall_max = maximum(walls), reps, counts_stable)
+end
+
+function main_sections_after()
+    println("Julia ", VERSION, "  threads=", Threads.nthreads())
+    sha = _git_sha()
+    small, large = _S8_fixtures()
+
+    rows = NamedTuple[]
+    for (fx, reps) in ((small, 5), (large, 3))
+        println("=== fixture: ", fx.name, "  N=", fx.N, " G=", fx.G, " p=", fx.p, " ===")
+        # The public route, which on this branch already defaults to the
+        # analytic gradient -- the loglik faithfulness backstop for both halves.
+        real_fit = GLLVModels.fit_gllvm(fx.Y; family = Poisson(), grouping = fx.terms, unit = fx.group)
+
+        bef = _S8_repeat_driver(fx; analytic_gradient = false, reps = reps)
+        aft = _S8_repeat_driver(fx; analytic_gradient = true, reps = reps)
+        b, a = bef.m, aft.m
+
+        gap_before = abs(b.driver_loglik - real_fit.loglik) / max(abs(real_fit.loglik), 1.0)
+        gap_after = abs(a.driver_loglik - real_fit.loglik) / max(abs(real_fit.loglik), 1.0)
+        loglik_rel_ba = abs(a.driver_loglik - b.driver_loglik) / max(abs(b.driver_loglik), 1.0)
+
+        sum_before = b.nm_seconds + b.bfgs_seconds + b.fd_gradient_seconds + b.fd_hessian_seconds +
+                     b.an_gradient_seconds
+        sum_after = a.nm_seconds + a.bfgs_seconds + a.fd_gradient_seconds + a.fd_hessian_seconds +
+                    a.an_gradient_seconds
+        gap_sum_before = abs(sum_before - b.driver_wall) / b.driver_wall
+        gap_sum_after = abs(sum_after - a.driver_wall) / a.driver_wall
+        speedup = bef.wall_median / aft.wall_median
+
+        @printf("real fit_gllvm (branch default): loglik=%.10f converged=%s iterations=%d\n",
+                real_fit.loglik, real_fit.converged, real_fit.iterations)
+        @printf("BEFORE (analytic_gradient=false): wall median=%.6fs  min=%.6f max=%.6f (reps=%d)\n",
+                bef.wall_median, bef.wall_min, bef.wall_max, bef.reps)
+        @printf("AFTER  (analytic_gradient=true):  wall median=%.6fs  min=%.6f max=%.6f (reps=%d)\n",
+                aft.wall_median, aft.wall_min, aft.wall_max, aft.reps)
+        @printf("SPEEDUP (before/after medians) = %.3fx\n", speedup)
+        @printf("  counts stable across reps: before=%s after=%s\n", bef.counts_stable, aft.counts_stable)
+        @printf("  objective calls:            before=%-6d after=%-6d (delta %+d)\n",
+                b.total_obj_calls, a.total_obj_calls, a.total_obj_calls - b.total_obj_calls)
+        @printf("  inner Laplace-fit calls:    before=%-6d after=%-6d (delta %+d)\n",
+                b.inner_calls, a.inner_calls, a.inner_calls - b.inner_calls)
+        @printf("  inner Newton iters summed:  before=%-8.1f after=%-8.1f\n",
+                b.inner_iters_sum, a.inner_iters_sum)
+        @printf("  Nelder-Mead:      before calls=%-5d %.4fs | after calls=%-5d %.4fs\n",
+                b.nm_calls, b.nm_seconds, a.nm_calls, a.nm_seconds)
+        @printf("  BFGS line search: before calls=%-5d %.4fs | after calls=%-5d %.4fs\n",
+                b.bfgs_calls, b.bfgs_seconds, a.bfgs_calls, a.bfgs_seconds)
+        @printf("  FD gradient:      before inv=%-4d objcalls=%-5d %.4fs | after inv=%-4d objcalls=%-5d %.4fs\n",
+                b.fd_gradient_invocations, b.fd_gradient_obj_calls, b.fd_gradient_seconds,
+                a.fd_gradient_invocations, a.fd_gradient_obj_calls, a.fd_gradient_seconds)
+        @printf("  analytic gradient: before inv=%-4d %.4fs | after inv=%-4d %.4fs  fallbacks_to_FD before=%d after=%d\n",
+                b.an_gradient_invocations, b.an_gradient_seconds,
+                a.an_gradient_invocations, a.an_gradient_seconds,
+                b.an_gradient_fallbacks, a.an_gradient_fallbacks)
+        @printf("  FD Hessian:       before inv=%-4d objcalls=%-5d %.4fs | after inv=%-4d objcalls=%-5d %.4fs\n",
+                b.fd_hessian_invocations, b.fd_hessian_obj_calls, b.fd_hessian_seconds,
+                a.fd_hessian_invocations, a.fd_hessian_obj_calls, a.fd_hessian_seconds)
+        @printf("  section sum vs wall: before %.4f/%.4f gap=%.3f | after %.4f/%.4f gap=%.3f\n",
+                sum_before, b.driver_wall, gap_sum_before, sum_after, a.driver_wall, gap_sum_after)
+        @printf("  loglik: before=%.12f after=%.12f rel(after,before)=%.3e | vs real fit rel before=%.3e after=%.3e\n",
+                b.driver_loglik, a.driver_loglik, loglik_rel_ba, gap_before, gap_after)
+        @printf("  converged: before=%s after=%s\n", b.converged, a.converged)
+        if fx.name == "glmm_200x5"
+            @printf("  fixture A against the banked walls: pre-S7c %.6fs, post-S7c %.6fs, this AFTER %.6fs; Latte %.6fs -> gap now %.2fx (was %.2fx against post-S7c)\n",
+                    _S8_BANKED_A_WALL_PRE_S7C, _S8_BANKED_A_WALL_S7C, aft.wall_median,
+                    _S8_LATTE_A_WALL, aft.wall_median / _S8_LATTE_A_WALL,
+                    _S8_BANKED_A_WALL_S7C / _S8_LATTE_A_WALL)
+            @printf("  fixture A against the banked counts: objective calls %d banked vs %d after; inner Newton iters %d banked vs %.1f after (the banked pair predates S7c's counter, so this is a restatement, not a like-for-like delta)\n",
+                    _S8_BANKED_A_OBJ_CALLS, a.total_obj_calls,
+                    _S8_BANKED_A_INNER_ITERS, a.inner_iters_sum)
+        else
+            @printf("  large fixture against GA.1's banked driver wall %.4fs: this BEFORE %.4fs, this AFTER %.4fs\n",
+                    _S8_GA1_LARGE_DRIVER_WALL, bef.wall_median, aft.wall_median)
+        end
+
+        push!(rows, (; fixture = fx.name, N = fx.N, G = fx.G, p = fx.p, ntheta = a.nθ, reps,
+            wall_before_median_s = bef.wall_median, wall_before_min_s = bef.wall_min,
+            wall_before_max_s = bef.wall_max,
+            wall_after_median_s = aft.wall_median, wall_after_min_s = aft.wall_min,
+            wall_after_max_s = aft.wall_max, speedup,
+            obj_calls_before = b.total_obj_calls, obj_calls_after = a.total_obj_calls,
+            inner_laplace_calls_before = b.inner_calls, inner_laplace_calls_after = a.inner_calls,
+            inner_newton_iters_before = b.inner_iters_sum, inner_newton_iters_after = a.inner_iters_sum,
+            nm_calls_before = b.nm_calls, nm_seconds_before = b.nm_seconds,
+            nm_calls_after = a.nm_calls, nm_seconds_after = a.nm_seconds,
+            bfgs_calls_before = b.bfgs_calls, bfgs_seconds_before = b.bfgs_seconds,
+            bfgs_calls_after = a.bfgs_calls, bfgs_seconds_after = a.bfgs_seconds,
+            fd_grad_inv_before = b.fd_gradient_invocations, fd_grad_seconds_before = b.fd_gradient_seconds,
+            fd_grad_inv_after = a.fd_gradient_invocations, fd_grad_seconds_after = a.fd_gradient_seconds,
+            an_grad_inv_after = a.an_gradient_invocations, an_grad_seconds_after = a.an_gradient_seconds,
+            an_grad_fallbacks_after = a.an_gradient_fallbacks,
+            fd_hess_inv_before = b.fd_hessian_invocations, fd_hess_seconds_before = b.fd_hessian_seconds,
+            fd_hess_inv_after = a.fd_hessian_invocations, fd_hess_seconds_after = a.fd_hessian_seconds,
+            section_sum_before_s = sum_before, section_sum_after_s = sum_after,
+            sum_gap_before = gap_sum_before, sum_gap_after = gap_sum_after,
+            loglik_before = b.driver_loglik, loglik_after = a.driver_loglik,
+            loglik_rel_after_vs_before = loglik_rel_ba,
+            loglik_gap_before_vs_real = gap_before, loglik_gap_after_vs_real = gap_after,
+            converged_before = b.converged, converged_after = a.converged,
+            counts_stable_before = bef.counts_stable, counts_stable_after = aft.counts_stable,
+            banked_wall_post_s7c = fx.name == "glmm_200x5" ? _S8_BANKED_A_WALL_S7C : _S8_GA1_LARGE_DRIVER_WALL))
+    end
+
+    mkpath(joinpath(@__DIR__, "results"))
+    out = joinpath(@__DIR__, "results", "grouped_sections_after_$(sha).tsv")
+    open(out, "w") do io
+        for l in header_lines()
+            println(io, l)
+        end
+        names = fieldnames(typeof(rows[1]))
+        println(io, "# columns: ", join(names, " "))
+        println(io, join(names, "\t"))
+        for r in rows
+            println(io, join(getfield.(Ref(r), names), "\t"))
+        end
+    end
+    println("TSV written: ", out)
+
+    # PASS is about the integrity of the measurement, not its direction. The
+    # ledger's words are "numbers reported whatever they are, no claim beyond
+    # them", so a small or absent speedup is reported, not failed.
+    reasons = String[]
+    for r in rows
+        r.sum_gap_before <= 0.10 ||
+            push!(reasons, "$(r.fixture): BEFORE sections sum gap $(round(r.sum_gap_before, digits = 3)) exceeds 10%")
+        r.sum_gap_after <= 0.10 ||
+            push!(reasons, "$(r.fixture): AFTER sections sum gap $(round(r.sum_gap_after, digits = 3)) exceeds 10%")
+        r.loglik_gap_before_vs_real <= 1e-4 ||
+            push!(reasons, "$(r.fixture): BEFORE driver loglik diverges from the real fit by rel=$(round(r.loglik_gap_before_vs_real, sigdigits = 3))")
+        r.loglik_gap_after_vs_real <= 1e-4 ||
+            push!(reasons, "$(r.fixture): AFTER driver loglik diverges from the real fit by rel=$(round(r.loglik_gap_after_vs_real, sigdigits = 3))")
+        r.loglik_rel_after_vs_before <= 1e-8 ||
+            push!(reasons, "$(r.fixture): after-vs-before loglik rel=$(round(r.loglik_rel_after_vs_before, sigdigits = 3)) exceeds rtol 1e-8")
+        (r.converged_before && r.converged_after) ||
+            push!(reasons, "$(r.fixture): converged before=$(r.converged_before) after=$(r.converged_after)")
+        r.an_grad_fallbacks_after == 0 ||
+            push!(reasons, "$(r.fixture): the AFTER path fell back to the FD gradient $(r.an_grad_fallbacks_after) time(s), so its seconds are not purely analytic")
+        (r.counts_stable_before && r.counts_stable_after) ||
+            push!(reasons, "$(r.fixture): call counts moved between reps, so the reported counts are not deterministic")
+    end
+    ok = isempty(reasons)
+
+    println()
+    for r in rows
+        @printf("GB.5 SUMMARY %s: wall %.6fs -> %.6fs (%.3fx), objective calls %d -> %d, inner Laplace fits %d -> %d, inner Newton iters %.1f -> %.1f\n",
+                r.fixture, r.wall_before_median_s, r.wall_after_median_s, r.speedup,
+                r.obj_calls_before, r.obj_calls_after,
+                r.inner_laplace_calls_before, r.inner_laplace_calls_after,
+                r.inner_newton_iters_before, r.inner_newton_iters_after)
+    end
+    if ok
+        println("GATE GB.5 PASS")
+    else
+        println("GATE GB.5 FAIL ", join(reasons, "; "))
+    end
+    exit(ok ? 0 : 1)
+end
+
 function main()
     gate = parse_args(ARGS)
     gate == "after" && return main_after()
     gate == "warm" && return main_warm()
     gate == "after_warm" && return main_after_warm()
     gate == "sections" && return main_sections()
+    gate == "sections_after" && return main_sections_after()
     println("Julia ", VERSION, "  threads=", Threads.nthreads())
     sha = _git_sha()
 

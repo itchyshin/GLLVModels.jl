@@ -133,15 +133,107 @@ SCOPE: replace the finite-difference outer gradient with an analytic one derived
   back, and the S7c confinement exists precisely to protect an FD gradient from a warm inner mode.
   Doing GB.4 before the decision would build on a default that may move.
 
-- [ ] GB.5: objective calls and summed inner Newton iterations are reported before and after (118 and 711 banked at fixture A); the wall on fixture A is recorded against 0.150383 s and Latte's 0.015 s; the larger fixture against its own GA.1 baseline. Numbers reported whatever they are, no claim beyond them.
+- [x] GB.5: objective calls and summed inner Newton iterations are reported before and after (118 and 711 banked at fixture A); the wall on fixture A is recorded against 0.150383 s and Latte's 0.015 s; the larger fixture against its own GA.1 baseline. Numbers reported whatever they are, no claim beyond them.
   CHECK: env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. bench/profile_grouped_glmm.jl --gate sections_after
   EXPECT: GATE GB.5 PASS and a TSV at bench/results/grouped_sections_after_<sha>.tsv
-  EVIDENCE: pending
+  EVIDENCE: **GATE GB.5 PASS**, run by the orchestrator itself (scheduled session, 2026-09-21
+  06:30-07:00Z), `pgrep -x julia` empty before every run, no other Julia process on the machine. The
+  `--gate sections_after` mode did not exist when this gate was written; it was implemented this session
+  in `bench/profile_grouped_glmm.jl` (in this leaf's OWNS list) and the TSV is
+  `bench/results/grouped_sections_after_6f2a98f36.tsv` (git-ignored).
+  Both settings are measured inside ONE process -- one untimed warm-up then 5 timed reps (small) or 3
+  (large) per setting, median reported, min and max printed -- so the machine state that contaminates an
+  absolute number is shared by both halves and the RATIO survives it.
+
+  | fixture | wall BEFORE (FD) | wall AFTER (analytic) | speedup | objective calls | inner Laplace fits | inner Newton iters |
+  |---|---|---|---|---|---|---|
+  | `glmm_200x5` (nθ=2, 5 reps) | 0.149013 s | **0.122395 s** | **1.217x** | 116 -> 84 | 116 -> 92 | 551 -> 407 |
+  | `glmm_5000x3_g500` (nθ=6, 3 reps) | 10.566280 s | **5.928687 s** | **1.782x** | 512 -> 284 | 512 -> 303 | 2735 -> 1437 |
+
+  Integrity checks, all of which had to hold for the PASS and did: section sums land within 0.2% of the
+  measured wall on all four measurements (bound 10%); after-vs-before loglik rel 4.154e-15 (small) and
+  2.011e-15 (large), inside rtol 1e-8; the AFTER driver's loglik matches a real `fit_gllvm` call at rel
+  **0.000e+00** on both fixtures, so the after path is the shipped code and not a shadow; `converged=true`
+  on all four; **zero fallbacks to `_grouped_fd_gradient`** on the analytic path, so every analytic second
+  is analytic; and call counts were identical across every rep, checked rather than assumed.
+  Where the time went on the large fixture (the GA.2 partition, re-measured after): the FD gradient's
+  20 invocations and 240 objective calls costing 5.7901 s collapse to 19 analytic invocations costing
+  **0.6441 s**, a 9.0x cut in that one section, while Nelder-Mead (2.85 s) and the single final FD
+  Hessian (1.69 s) are paid in full exactly as before. That is why the wall speedup is 1.78x and not 9x,
+  and it is also why the number is a FLOOR: GB.4 (unconfine the warm start) and dropping the diagnostics
+  Hessian are both still undone, and GA.2 put the Hessian alone at 16.0% of this fixture's wall.
+  Fixture A against the banked numbers, as the gate asks: pre-S7c 0.184721 s, post-S7c **0.150383 s**,
+  this AFTER **0.122395 s**; against Latte's 0.015 s the gap closes from **10.03x to 8.16x**. The banked
+  118 objective calls / 711 summed inner Newton iterations are restated rather than differenced: they
+  predate S7c's counter, and this run's own before-half measures 116 / 551 on the same fixture, so the
+  honest comparison is 116 -> 84 and 551 -> 407 within this run.
+
+  **A BANKED NUMBER IS CORRECTED, AND IT IS THE LESS FLATTERING DIRECTION.** The progress record's
+  04:00Z interim entry reported the small fixture at **0.085829 s and 1.64x**. That does not reproduce.
+  THREE independent measurements taken this session put the after-wall at 0.120141 s, 0.122395 s and
+  0.117778 s, the last one from a separate cross-check script calling `fit_grouped_nongaussian` directly
+  -- the same entry point the interim script used -- which gave **1.265x** on the small fixture and
+  **1.772x** on the large. So the LARGE fixture's interim 1.78x is reproduced to within noise and stands;
+  the SMALL fixture's 0.0858 s / 1.64x is an outlier and is **withdrawn**. The machine was LESS loaded
+  for these runs than for the interim one (load average 7.7 against 28.9), so the direction cannot be
+  explained by contention. The arc's stated goal -- materially faster than 0.150 s on the Latte 200x5
+  fixture -- is still MET at 0.122 s, by about 19% rather than by the 43% the interim number implied.
+
+  **A REGRESSION THIS SESSION INTRODUCED AND THEN CAUGHT, recorded because the catching is the lesson.**
+  The first version of the patch gave `_S8_measure_driver` ONE gradient closure that branched on
+  `analytic_gradient` inside its body. GB.5 passed on it. But re-running GA.1 -- a ticked gate nobody
+  had asked to re-run -- returned `GATE GA.1 FAIL glmm_200x5: sections sum gap 0.127 exceeds 10%`.
+  Cause: a single branching closure is inferred as a whole on its first call, which drags
+  `_grouped_analytic_gradient` through compilation even on the FD path; that compilation lands inside
+  `driver_wall` but in none of the section buckets, and on a fixture whose whole wall is 0.17 s it moved
+  the gap from 8.0% to 12.7%. Fixed by selecting between TWO separate closures up front, so the FD path
+  never references the analytic function. **The 10% bound was not touched.** GA.1 re-run after the fix:
+  `GATE GA.1 PASS`, small-fixture sections gap **0.082** against the banked 0.080 and 0.084, FD-attributable
+  share **0.829** against the banked 0.830 and 0.827, large fixture **0.954** unchanged -- so GA.1's ticked
+  evidence is reproduced, not merely restored to green. Worth carrying: the small fixture's 10% bound has
+  always been marginal (8.0%, 8.4%, 8.2% across three runs), and a fixed overhead of about 15 ms is enough
+  to breach it. Anything added inside that driver has to be checked against GA.1, not just against GB.5.
+
+  Scope note on the implementation: `_S8_measure_driver`'s new `analytic_gradient` kwarg DEFAULTS TO
+  FALSE, which is not the package's default (src/grouped_nongaussian_fit.jl:579 defaults it true). That is
+  deliberate -- `--gate sections` is GA.1's ticked CHECK and its banked EVIDENCE was measured on the
+  all-FD path, so flipping this default would have made a ticked gate quietly stop reproducing its own
+  numbers. `--gate sections_after` passes both settings explicitly.
 
 - [ ] GB.6: full `Pkg.test()` green apart from the known pre-existing test_em_louis.jl:127 flake; test/test_grouped_laplace.jl unchanged from 69a69b0a0.
   CHECK: test -z "$(git diff --name-only 69a69b0a0 -- test/test_grouped_laplace.jl)" && env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. -e 'using Pkg; Pkg.test()'
   EXPECT: tests passed, or exactly 1 failed being test_em_louis.jl:127
-  EVIDENCE: pending
+  EVIDENCE: **RUN, NOT MET, and blocked by item 1 alone.** Precondition first:
+  `git diff --name-only 69a69b0a0 -- test/test_grouped_laplace.jl` is EMPTY, so that file is
+  unchanged from the baseline as the CHECK requires.
+  Run 2 (2026-09-21, after the Printf fix below), the first genuinely COMPLETE suite this arc has
+  had: **`GLLVModels.jl | 16320 pass, 2 fail, 0 error, 19 broken, 16341 total, 94m37.3s`**.
+  The two failures are exactly the two already known, and there is no third:
+  - `test_em_louis.jl:127`, "SE PRIMARY GATE: EM-SEM SEs match dense-Hessian SEs (p=10)", 65 passed
+    and 1 failed -- the pre-existing flake this gate explicitly allows.
+  - `test_grouped_laplace_identity.jl:49`, 16 passed and 1 failed -- the S7b call-count assertion,
+    item 1, Shinichi's decision.
+  So the gate's EXPECT ("exactly 1 failed being test_em_louis.jl:127") is not satisfied, and the one
+  extra failure is the decision itself. Nothing else in 16,341 tests regressed under S8.
+  `test/test_grouped_analytic_grad.jl` now executes INSIDE the suite and passes there
+  ("grouped analytic outer gradient vs finite differences | 8 | 8 | 0.5s"); until this session added
+  the include line it had never run in the suite or in CI at all.
+  Run 1 is recorded as a caution rather than deleted. It reported
+  `3847 pass, 2 fail, 1 error, 3853 total, 11m12.4s`, which reads like an almost-clean suite and is
+  not one: the single error was `ArgumentError: Package Printf not found in current path`, thrown
+  while loading the new gate file, and it propagated out of the `@testset` at `test/runtests.jl:48`,
+  so **every file after `runtests.jl:192` never ran**. 3847 was a partial count. Cause: the gate file
+  `using`s `Printf`, which resolves fine under `julia --project=.` but is absent from the test
+  environment `Pkg.test()` builds. Fixed by adding the stdlib to `test/Project.toml`, following this
+  repo's own precedent `f15ae2f52`.
+  **OWNS EXTENSION, declared rather than slipped in:** `test/Project.toml` is not in this leaf's OWNS
+  list and was edited anyway, for one stdlib line. The alternative was rewriting fifteen `@printf`
+  calls in a file whose job is to print evidence legibly. Checked before editing: no live lane has
+  touched that file since origin/main, and its last change on this lineage was 2026-09-17.
+  **Timing correction for whoever runs this next:** a full unsharded local `Pkg.test()` here is a
+  **95-minute** job. The pre-run estimate was 20 to 45 minutes, extrapolated from CI's "8 shards is
+  about 1 h of runner time"; that was wrong, and it overran. Estimate from 95 minutes, not from the
+  shard arithmetic.
 
 ## STOP conditions (report, never smooth over)
 
