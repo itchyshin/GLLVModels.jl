@@ -22,11 +22,19 @@ struct JointGroupedLaplaceResult
     status::Symbol
     iterations::Int
     gradient_norm::Float64
+    # S8 (analytic outer gradient): the CHOLMOD factor of `precision` at
+    # convergence, exposed rather than discarded so the implicit-function-
+    # theorem gradient can reuse it directly (nθ triangular solves for
+    # dbhat/dtheta plus one `takahashi_selinv` call) instead of
+    # refactorising `precision` from scratch. `nothing` on any failure
+    # result (no factor was ever computed, or the factorisation itself
+    # failed) -- see docs/design/grouped-analytic-gradient.md section 6.
+    factor::Union{Nothing,SparseArrays.CHOLMOD.Factor{Float64}}
 end
 
 function _joint_grouped_failure(status::Symbol, m::Integer; iterations::Integer = 0)
     return JointGroupedLaplaceResult(-Inf, zeros(Float64, m),
-        spdiagm(0 => ones(Float64, m)), NaN, false, status, iterations, Inf)
+        spdiagm(0 => ones(Float64, m)), NaN, false, status, iterations, Inf, nothing)
 end
 
 # ---------------------------------------------------------------------------
@@ -218,6 +226,140 @@ function _joint_grouped_components(family, y::Vector{Float64}, n::Vector{Float64
     return score, Hf, Ho
 end
 
+# ---------------------------------------------------------------------------
+# S8: analytic outer gradient -- family-generic curvature/dispersion
+# derivatives (docs/design/grouped-analytic-gradient.md section 6 alignment
+# table). Every function here differentiates the SAME function the objective
+# already calls (`_glm_obs_weight`, `_glm_logpdf`, `_glm_score`), never a
+# re-derivation of it, so a family whose curvature is a hand-coded analytic
+# override (NegativeBinomial's `_glm_obs_weight` at src/families/negbin.jl:34)
+# gets its kappa/dispersion derivatives from differentiating THAT override,
+# not from a generic third-order-AD reconstruction that would silently
+# target a different function than the one the log-det actually uses (the
+# hazard docs/design/grouped-analytic-gradient.md section 5 names explicitly
+# by pointing at src/laplace_grad.jl:308-316's warning).
+# ---------------------------------------------------------------------------
+
+"""
+    _glm_obs_weight_deta(family, μ, n, me, y, link, η) -> κ = dw/dη
+
+`κ_i = dw_i/dη_i = -d³ℓ_i/dη_i³`, the derivative of the observed conditional
+curvature `w = _glm_obs_weight(...)` (src/families/laplace.jl:260, or a
+family's own override) with respect to η. Implemented by nesting one more
+`ForwardDiff.derivative` around whatever `_glm_obs_weight` method actually
+dispatches for this family -- the generic two-nested-derivative default for
+Poisson/Binomial/Beta (three nested derivatives total here), or a single
+derivative of NegativeBinomial's closed-form override. This is the "third
+nested ForwardDiff" of docs/design/grouped-analytic-gradient.md section 7.6,
+generalised to dispatch correctly rather than re-deriving from `_glm_logpdf`
+directly (see the file header note above).
+"""
+function _glm_obs_weight_deta(family, μ, n, me, y, link::Link, η)
+    w = ηv -> _glm_obs_weight(family, _clamp_mu(family, linkinv(link, ηv)), n,
+        mu_eta(link, ηv), y, link, ηv)
+    return ForwardDiff.derivative(w, η)
+end
+
+# `_glm_logpdf_dphi`, `_glm_obs_weight_dphi`, `_glm_score_dphi`: sensitivity
+# of the log-density, the observed weight, and the score to the family's
+# NATURAL dispersion parameter (Beta's φ, NB2's r) -- the outer parameter
+# `rho` is the LOG of this natural parameter, so the caller multiplies by
+# the natural value itself (d(exp(rho))/d(rho) = exp(rho)) to get the
+# derivative wrt `rho`, exactly the `exp(theta_j)` scale already used for
+# the unique-variance block (section 1.2). `_glm_score_dphi` is not named in
+# the design doc's section 6 alignment table, but section 3's `v_k` formula
+# needs `ds/drho` for any `theta_k` in the dispersion block (a Beta/NB2
+# score is an explicit function of φ/r, so the mode shifts with dispersion
+# too) -- added here to keep that term from being silently dropped; see the
+# implementation report for this note made explicit.
+_glm_logpdf_dphi(f::Beta, μ, n, y) =
+    ForwardDiff.derivative(φ -> _glm_logpdf(_with_dispersion(f, φ), μ, n, y), f.α)
+_glm_logpdf_dphi(f::NegativeBinomial, μ, n, y) =
+    ForwardDiff.derivative(r -> _glm_logpdf(_with_dispersion(f, r), μ, n, y), f.r)
+
+_glm_obs_weight_dphi(f::Beta, μ, n, me, y, link::Link, η) =
+    ForwardDiff.derivative(φ -> _glm_obs_weight(_with_dispersion(f, φ), μ, n, me, y, link, η), f.α)
+_glm_obs_weight_dphi(f::NegativeBinomial, μ, n, me, y, link::Link, η) =
+    ForwardDiff.derivative(r -> _glm_obs_weight(_with_dispersion(f, r), μ, n, me, y, link, η), f.r)
+
+_glm_score_dphi(f::Beta, μ, n, me, y) =
+    ForwardDiff.derivative(φ -> _glm_score(_with_dispersion(f, φ), μ, n, me, y), f.α)
+_glm_score_dphi(f::NegativeBinomial, μ, n, me, y) =
+    ForwardDiff.derivative(r -> _glm_score(_with_dispersion(f, r), μ, n, me, y), f.r)
+
+# `_selinv_get`: a STRUCTURAL lookup into a `takahashi_selinv` output --
+# throws rather than silently returning 0.0 for an absent entry, per
+# docs/design/grouped-analytic-gradient.md section 4's own recommendation
+# ("the implementation should assert that every (j,l) it reads from Sigma
+# is structurally present rather than silently reading zero"). Reuses
+# `_csc_rowidx` from src/takahashi_selinv.jl (not modified by this slice).
+function _selinv_get(Sigma::SparseMatrixCSC{Float64,Int}, j::Integer, l::Integer)
+    idx = _csc_rowidx(Sigma.colptr, Sigma.rowval, l, j)
+    idx == -1 && throw(ArgumentError(
+        "selected inverse missing entry ($j,$l): pattern(A) not covered by " *
+        "pattern(L+Lᵀ) -- see docs/design/grouped-analytic-gradient.md section 4"))
+    return Sigma.nzval[idx]
+end
+
+"""
+    _grouped_selinv_row_quadform(Wt, Sigma) -> Vector{Float64}
+
+`t_i = (W Σ Wᵀ)_{ii}` for every response row `i`, where `Σ` is a selected
+inverse (`takahashi_selinv` output) at (a superset of) `pattern(A)`. `Wt` is
+`sparse(transpose(W))` (row `i` of `W` = column `i` of `Wt`), passed in so a
+caller computing several row-forms against the SAME `W` builds the
+transpose once. Computed once per gradient call and reused across every
+`theta_k` (docs/design/grouped-analytic-gradient.md section 4).
+"""
+function _grouped_selinv_row_quadform(Wt::SparseMatrixCSC{Float64,Int}, Sigma::SparseMatrixCSC{Float64,Int})
+    N = size(Wt, 2)
+    t = zeros(Float64, N)
+    @inbounds for i in 1:N
+        rng = Wt.colptr[i]:(Wt.colptr[i + 1] - 1)
+        cols = view(Wt.rowval, rng)
+        vals = view(Wt.nzval, rng)
+        acc = 0.0
+        for a in eachindex(cols)
+            j = cols[a]; wij = vals[a]
+            for b in eachindex(cols)
+                l = cols[b]; wil = vals[b]
+                acc += wij * wil * _selinv_get(Sigma, j, l)
+            end
+        end
+        t[i] = acc
+    end
+    return t
+end
+
+"""
+    _grouped_selinv_row_crossform(Wt, dWt, Sigma) -> Vector{Float64}
+
+`r_i(k) = (W Σ (dk W)ᵀ)_{ii}` for every response row `i`. `dWt` is
+`sparse(transpose(dk W))`; rows of `dk W` with no nonzero entries (every
+response outside the one grouping term `theta_k` touches) contribute `0.0`
+without touching `Σ` at all.
+"""
+function _grouped_selinv_row_crossform(Wt::SparseMatrixCSC{Float64,Int},
+        dWt::SparseMatrixCSC{Float64,Int}, Sigma::SparseMatrixCSC{Float64,Int})
+    N = size(Wt, 2)
+    r = zeros(Float64, N)
+    @inbounds for i in 1:N
+        rngW = Wt.colptr[i]:(Wt.colptr[i + 1] - 1)
+        rngD = dWt.colptr[i]:(dWt.colptr[i + 1] - 1)
+        isempty(rngD) && continue
+        acc = 0.0
+        for a in rngW
+            j = Wt.rowval[a]; wij = Wt.nzval[a]
+            for b in rngD
+                l = dWt.rowval[b]; dwil = dWt.nzval[b]
+                acc += wij * dwil * _selinv_get(Sigma, j, l)
+            end
+        end
+        r[i] = acc
+    end
+    return r
+end
+
 """
     joint_grouped_laplace_loglik(family, y, n, X, beta, W;
         link, maxiter=100, tol=1e-8, b_init=nothing) -> JointGroupedLaplaceResult
@@ -318,7 +460,7 @@ function joint_grouped_laplace_loglik(family, y::AbstractVector, n::AbstractVect
             ld = logdet(Fo)
             isfinite(ld) || return _joint_grouped_failure(:nonfinite_logdet, m; iterations = iter - 1)
             return JointGroupedLaplaceResult(q0 - 0.5 * ld, b, Ho, ld, true, :ok,
-                iter - 1, maximum(abs, g; init=0.0))
+                iter - 1, maximum(abs, g; init=0.0), Fo)
         end
         Ff = try
             _grouped_cached_cholesky!(ff_cache, Symmetric(Hf); check = false)
