@@ -1,9 +1,10 @@
 # Joint named grouping models
 
 This development route fits shared random effects jointly for Gaussian,
-Poisson-log, Binomial-logit, Beta-logit and NB2-log responses. It is not yet a
-Destination B parity or recovery qualification. Combined grouping/phylogeny
-and R admission remain under validation.
+Poisson-log, Binomial-logit, Beta-logit and NB2-log responses. Agreement with
+R and recovery of known simulated parameters have not yet been established.
+Models combining grouping and phylogeny, and access through the R bridge,
+remain under validation.
 
 Responses have traits in rows and observations in columns. A grouping term
 selects a covariance; its labels select observations that share an effect.
