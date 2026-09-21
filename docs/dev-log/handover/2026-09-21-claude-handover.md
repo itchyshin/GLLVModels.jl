@@ -99,7 +99,7 @@ result accurately rather than hiding it.
 
 | Artifact / branch | Committed | Pushed | PR | State |
 | --- | --- | --- | --- | --- |
-| `claude/gllvmodels-reader-arc-handover-20260921` | yes | pending | none yet | CARRIED-OVER: push and open a draft PR before a fresh Claude session relies on this note. |
+| `claude/gllvmodels-reader-arc-handover-20260921` | yes | yes | [#444](https://github.com/itchyshin/GLLVModels.jl/pull/444), draft | CARRIED-OVER: durable programme brief; its assigned prose work has not yet begun. |
 
 ## How to resume
 
