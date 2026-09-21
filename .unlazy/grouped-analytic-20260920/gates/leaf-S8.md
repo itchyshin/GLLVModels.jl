@@ -233,12 +233,44 @@ SCOPE: replace the finite-difference outer gradient with an analytic one derived
   all-FD path, so flipping this default would have made a ticked gate quietly stop reproducing its own
   numbers. `--gate sections_after` passes both settings explicitly.
 
-- [ ] GB.6: full `Pkg.test()` green apart from the known pre-existing test_em_louis.jl:127 flake; test/test_grouped_laplace.jl unchanged from 69a69b0a0.
+- [x] GB.6: full `Pkg.test()` green apart from the known pre-existing test_em_louis.jl:127 flake; test/test_grouped_laplace.jl unchanged from 69a69b0a0.
   CHECK: test -z "$(git diff --name-only 69a69b0a0 -- test/test_grouped_laplace.jl)" && env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. -e 'using Pkg; Pkg.test()'
   EXPECT: tests passed, or exactly 1 failed being test_em_louis.jl:127
-  EVIDENCE: **RUN, NOT MET, and blocked by item 1 alone.** Precondition first:
+  EVIDENCE: **MET on run 3 (2026-09-21, 14:41Z to 16:21Z).** Precondition first:
   `git diff --name-only 69a69b0a0 -- test/test_grouped_laplace.jl` is EMPTY, so that file is
   unchanged from the baseline as the CHECK requires.
+
+  **Run 3 (2026-09-21, HEAD `58fdee27f`, the run this gate passes on).** Launched 14:41Z by the
+  scheduled session `6ff2e4cb`, wrapper PID 73451 under `script -q` (a pty, so the buffered output
+  survives), julia worker PID 73633; exited 16:21Z. Read fresh by a later session, not inherited.
+  **`GLLVModels.jl | 16328 pass, 1 fail, 0 error, 19 broken, 16348 total, 100m27.3s`**
+  (log line 981; `Pkg.test()` exits nonzero on any failure, so the trailing `ERROR: Some tests did
+  not pass` at line 1404 is that one failure being reported, not a second fault).
+  **Exactly one `Test Failed` line in the whole log** (line 395): `test_em_louis.jl:127`,
+  "SE PRIMARY GATE: EM-SEM SEs match dense-Hessian SEs (p=10)", 65 passed and 1 failed -- the
+  pre-existing flake this gate explicitly allows. The EXPECT is therefore satisfied.
+  **Run 2's SECOND failure is gone, and that is the point of the run.** `test_grouped_laplace_identity.jl`
+  now reports "grouped Laplace CHOLMOD reuse identity (S7b) | 20 | 20" (line 1108), because item 1 was
+  decided as D-273 (guard BOTH optimiser paths: the S7b pin stays on the FD path, a bound is asserted
+  on the analytic path) and applied in `3ca07a491`. The count rose 16 -> 20 as the second path's
+  assertions were added, and nothing was re-pinned or switched off to get there.
+  `test/test_grouped_analytic_grad.jl` ran INSIDE the suite and passed: "grouped analytic outer
+  gradient vs finite differences | 12 | 12 | 0.9s" (line 1110), up from 8 on run 2 -- the four added
+  assertions are the compacted-column regression test from `7f175835e`.
+  Precondition re-checked against this exact HEAD, not carried over: `git diff --name-only 69a69b0a0
+  -- test/test_grouped_laplace.jl` EMPTY; `git status --porcelain` EMPTY at `58fdee27f`, so the
+  source state tested is the branch head.
+  Environment: Julia 1.10.0 (`juliaup` default, aarch64-apple-darwin), `JULIA_NUM_THREADS=4`,
+  `OPENBLAS_NUM_THREADS=1`, alone on the Mac Studio. Log:
+  `/private/tmp/claude-503/-Users-z3437171-Dropbox-Github-Local-Shinichi/6ff2e4cb-4cde-45b7-8d5e-63ce63ba3d8b/scratchpad/gb6_suite_run3.log`
+  (158,796 bytes, retained).
+  **Wall was 100m27s against the 95-minute estimate below** -- the estimate holds, and a future run
+  should budget 95 to 105 minutes.
+  **This gate's verdict is LOCAL only.** CI on #430 is a separate matter: `Julia 1 (1.13.0) ubuntu
+  shard 3/4` fails `test/test_poisson_grad_perf.jl:70`, which no Julia 1.10 run can reproduce. That
+  is S6's wired-in test and predates S8; it is tracked outside this leaf and does NOT bear on GB.6.
+
+  **Runs 1 and 2 are kept below as history, not as the verdict.**
   Run 2 (2026-09-21, after the Printf fix below), the first genuinely COMPLETE suite this arc has
   had: **`GLLVModels.jl | 16320 pass, 2 fail, 0 error, 19 broken, 16341 total, 94m37.3s`**.
   The two failures are exactly the two already known, and there is no third:
