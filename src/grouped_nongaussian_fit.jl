@@ -596,6 +596,23 @@ finite-differenced quantity keeps a cold objective. This changes only how
 fast each inner solve converges, never the converged answer (see `joint_grouped_laplace_loglik`'s `b_init`
 docstring); pass `warm_start_inner=false` to recover the pre-S7c cold-start
 behaviour.
+
+`nelder_mead` (S9, default `!analytic_gradient`): whether the value-only
+Nelder-Mead search runs before BFGS. The pre-S9 code ran it unconditionally,
+because a finite-differenced gradient could hand BFGS a NaN stencil (see the
+comment at the Nelder-Mead call site). With `analytic_gradient=true` there is
+no stencil, so BFGS starts directly from `theta` by default; Nelder-Mead still
+runs once, with a warning, as a safety net if the initial or refined BFGS
+result is unusable. Pass `nelder_mead=true` to force the old unconditional
+search back on (this is the default when `analytic_gradient=false`).
+
+`hessian` (S9, default `:grad_fd` when `analytic_gradient=true`, `:fd`
+otherwise; D-274): how the final diagnostic Hessian (`min_eigenvalue`,
+`pd_hessian`) is obtained. `:grad_fd` finite-differences the analytic
+gradient (`nθ` gradient calls); `:fd` is the pre-S9
+`_grouped_fd_hessian`, `O(nθ²)` objective calls, kept reachable as both the
+oracle `:grad_fd` is checked against and the fallback if `:grad_fd` fails at
+the final estimate. A full analytic Hessian is out of scope.
 """
 function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
         unit=nothing, unit_obs=nothing, cluster=nothing, cluster2=nothing,
@@ -603,7 +620,9 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
         dispersion::Symbol=:trait,
         g_tol::Real=1e-4, iterations::Integer=100,
         inner_maxiter::Integer=100, inner_tol::Real=1e-8,
-        warm_start_inner::Bool=true, analytic_gradient::Bool=true)
+        warm_start_inner::Bool=true, analytic_gradient::Bool=true,
+        nelder_mead::Bool=!analytic_gradient,
+        hessian::Symbol=(analytic_gradient ? :grad_fd : :fd))
     p, n = size(Y)
     p > 0 && n >= 2 || throw(ArgumentError("grouped fitting needs at least one trait and two observations"))
     all(isfinite, Y) || throw(ArgumentError("grouped fitting requires finite complete responses"))
@@ -611,6 +630,7 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
     iterations >= 0 || throw(ArgumentError("iterations must be non-negative"))
     inner_maxiter >= 0 || throw(ArgumentError("inner_maxiter must be non-negative"))
     isfinite(inner_tol) && inner_tol > 0 || throw(ArgumentError("inner_tol must be finite and positive"))
+    hessian in (:fd, :grad_fd) || throw(ArgumentError("hessian must be :fd or :grad_fd"))
     kind = _grouped_nongaussian_kind(family)
     mode = _grouped_nongaussian_dispersion_mode(kind, dispersion)
     all(term -> term isa GroupingTerm, terms) ||
@@ -681,15 +701,32 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
     # The joint Laplace domain can invalidate a finite-difference neighbour.
     # `_grouped_fd_gradient` correctly marks such a stencil NaN; feeding it to
     # a line-search method would turn a rejected stencil into an Optim error.
-    # Use a value-only outer search, then require a valid FD gradient/Hessian
-    # for convergence and observed-marginal inference below.
-    result = Optim.optimize(objective_warm, theta, Optim.NelderMead(),
+    # A value-only outer search sidesteps that; the FD gradient/Hessian is
+    # still required for convergence and observed-marginal inference below.
+    # S9: that reasoning is about the FD STENCIL specifically. With
+    # `analytic_gradient=true`, `grad_fn` below never hands BFGS a half-built
+    # stencil -- it returns one analytic vector, or falls back WHOLE to the FD
+    # gradient -- so there is no stencil for Nelder-Mead to protect BFGS from,
+    # and `nelder_mead` defaults to `false` in that case: BFGS starts directly
+    # from `theta`. The reasoning does not fully vanish, because `grad_fn`'s FD
+    # fallback can still hand BFGS a value it cannot resolve at the very first
+    # candidate, so Nelder-Mead stays wired as a safety net even when demoted:
+    # it runs, once, with a warning, if BFGS never produces a usable result.
+    # `nelder_mead=true` (the default when `analytic_gradient=false`) recovers
+    # the old unconditional search exactly.
+    run_nelder_mead = () -> Optim.optimize(objective_warm, theta, Optim.NelderMead(),
         Optim.Options(g_tol=Float64(g_tol), iterations=Int(iterations)))
     # A valid simplex endpoint can still be non-stationary because Nelder-Mead
     # stops on objective/simplex geometry, not this fitter's FD gradient norm.
     # Refine only when every initial BFGS stencil is valid. Invalid stencils
     # retain the value-only result and cannot be smuggled into a line search.
-    candidate = collect(Optim.minimizer(result))
+    result = nothing
+    candidate = if nelder_mead
+        result = run_nelder_mead()
+        collect(Optim.minimizer(result))
+    else
+        collect(theta)
+    end
     # S8: analytic outer gradient (implicit function theorem + selected
     # inverse, docs/design/grouped-analytic-gradient.md), used as the
     # `gradient!` Optim.BFGS refines against. `analytic_gradient=false`
@@ -719,6 +756,17 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
         (g === nothing || !all(isfinite, g)) ? _grouped_fd_gradient(objective_cold, value) : g
     end
     candidate_gradient = grad_fn(candidate)
+    # S9 safety net: Nelder-Mead was demoted (skipped above), and the very
+    # first candidate (`theta` itself) produced no usable gradient even after
+    # `grad_fn`'s own FD fallback. BFGS cannot start without a finite initial
+    # gradient, so fall back to the pre-S9 value-only search once, with a
+    # warning rather than a throw (G9.3).
+    if !all(isfinite, candidate_gradient) && result === nothing
+        @warn "no usable gradient at the starting value with Nelder-Mead demoted; falling back to the value-only Nelder-Mead search" maxlog=1
+        result = run_nelder_mead()
+        candidate = collect(Optim.minimizer(result))
+        candidate_gradient = grad_fn(candidate)
+    end
     if all(isfinite, candidate_gradient)
         gradient! = (storage, value) -> (storage .= grad_fn(value))
         # S8 (GB.4): the S7c confinement above exists because BFGS needed a
@@ -748,12 +796,61 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
             end
         end
     end
+    # S9 safety net, second occasion: `nelder_mead=false` and BFGS either
+    # never ran (non-finite candidate_gradient, already handled above and not
+    # reachable here) or ran and was rejected (`refined` invalid, or no
+    # better than `candidate`). `result` is still `nothing` in that case --
+    # there has never been an Optim result to fall back to -- so run the
+    # value-only search once, with a warning, exactly as the pre-S9 code
+    # always did unconditionally.
+    if result === nothing
+        @warn "BFGS refinement did not improve on the starting value with Nelder-Mead demoted; falling back to the value-only Nelder-Mead search" maxlog=1
+        result = run_nelder_mead()
+    end
     estimate = collect(Optim.minimizer(result))
     value = objective(estimate)
     valid = isfinite(value) && !_nll_failed(value)
-    gradient = valid ? _grouped_fd_gradient(objective, estimate) : fill(Inf, length(estimate))
+    # S9 (G9.7, D-274): the final REPORTED gradient, whose norm decides
+    # `converged` below, now matches the gradient the analytic path actually
+    # optimised against -- not `_grouped_fd_gradient` unconditionally, which
+    # is what the objective the fit reports on used to compute. The FD path
+    # (`analytic_gradient=false`) is unchanged.
+    gradient = if !valid
+        fill(Inf, length(estimate))
+    elseif analytic_gradient
+        g = try
+            _grouped_analytic_gradient(estimate, data, trials, D, termvec, incidences, kind;
+                dispersion_mode=mode, inner_maxiter=Int(inner_maxiter), inner_tol=Float64(inner_tol))
+        catch err
+            @warn "final analytic gradient threw; reporting the finite-difference gradient instead" exception=(err, catch_backtrace()) maxlog=1
+            nothing
+        end
+        (g === nothing || !all(isfinite, g)) ? _grouped_fd_gradient(objective, estimate) : g
+    else
+        _grouped_fd_gradient(objective, estimate)
+    end
     gradient_norm = all(isfinite, gradient) ? maximum(abs, gradient) : Inf
-    H = valid ? _grouped_fd_hessian(objective, estimate) : fill(NaN, length(estimate), length(estimate))
+    # S9 (D-274): `:grad_fd` finite-differences the ANALYTIC gradient (`nθ`
+    # gradient calls) instead of `_grouped_fd_hessian`'s `O(nθ²)` objective
+    # calls. `_grouped_fd_hessian` stays reachable by keyword as both the
+    # oracle `:grad_fd` is checked against (G9.2) and the fallback if
+    # `:grad_fd` fails at the final estimate.
+    H = if !valid
+        fill(NaN, length(estimate), length(estimate))
+    elseif hessian === :grad_fd
+        Hg = try
+            _grouped_fd_hessian_from_gradient(
+                v -> _grouped_analytic_gradient(v, data, trials, D, termvec, incidences, kind;
+                    dispersion_mode=mode, inner_maxiter=Int(inner_maxiter), inner_tol=Float64(inner_tol)),
+                estimate)
+        catch err
+            @warn "grad-FD Hessian threw; falling back to _grouped_fd_hessian" exception=(err, catch_backtrace()) maxlog=1
+            fill(NaN, length(estimate), length(estimate))
+        end
+        all(isfinite, Hg) ? Hg : _grouped_fd_hessian(objective, estimate)
+    else
+        _grouped_fd_hessian(objective, estimate)
+    end
     min_eigenvalue = all(isfinite, H) ? eigmin(Symmetric(H)) : NaN
     pd_hessian = isfinite(min_eigenvalue) && min_eigenvalue > 0
     converged = Optim.converged(result) && valid && gradient_norm <= g_tol
