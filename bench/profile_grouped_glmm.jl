@@ -51,7 +51,7 @@
 #       bench/profile_grouped_glmm.jl --gate
 
 using GLLVModels
-using DelimitedFiles, Statistics, LinearAlgebra, Printf, Profile
+using DelimitedFiles, Statistics, LinearAlgebra, Printf, Profile, Random
 using Distributions: Poisson
 using Optim
 
@@ -502,11 +502,362 @@ function main_after_warm()
     exit(ok ? 0 : 1)
 end
 
+# ---------------------------------------------------------------------------
+# --gate sections (leaf-S8 GA.1/GA.2). Second, larger fixture: 3 traits, one
+# :indep grouping term, Poisson, n=5000 observations, G=500 groups -> nθ = 3
+# trait intercepts + 3 per-trait log-sd = 6 (meets the gate's nθ>=6 floor).
+# Generated deterministically in code (Random.Xoshiro(seed)); no large CSV
+# committed. Section timing is measured by wrapping the REAL, unmodified
+# `_grouped_nongaussian_objective` closure (src/grouped_nongaussian_fit.jl:
+# 232-268) and the REAL `_grouped_fd_gradient`/`_grouped_fd_hessian`
+# (src/grouped_fit.jl:213-247) with bench-side counters/timers, then driving
+# `Optim.optimize` with the EXACT same call sequence and options as
+# `fit_grouped_nongaussian` (src/grouped_nongaussian_fit.jl:388-420, copied
+# verbatim below). This is NOT the S4/S7b shadow pattern: that shadow
+# hand-reimplemented the OBJECTIVE BODY itself (labels/incidence/family/W
+# reconstruction inlined into a `counting_objective` closure), and that
+# reimplementation silently drifted from the real one (103/1345 vs the real
+# 118/1540, see this file's header). Here the objective body is never
+# rewritten -- we call the real closure factory and only wrap its RETURN
+# VALUE with a stopwatch, so every objective evaluation the outer optimizer
+# sees is bit-identical to what `fit_grouped_nongaussian` itself would
+# produce. A loglik-agreement check against a real `fit_gllvm` call on the
+# same data is still printed and gates GA.1, as a faithfulness backstop.
+#
+# Inner Newton iteration COUNT is not re-derived by us: it is DERIVED from
+# the existing, already-validated `_grouped_chol_stats()` counter (src/
+# grouped_laplace.jl:59-100, added in S7b) via the documented relationship
+# at this file's header (lines ~35-47): a `status===:ok` inner call costs
+# 2*iterations+1 cholesky calls, any other status costs 2*iterations. We do
+# not add new instrumentation to src/ for this.
+#
+# GLM-state/CHOLMOD/log-det SECONDS (a split of the inner-Newton-solve time
+# already counted inside the four objective-call buckets above) come from a
+# sampling `Profile` pass over real, unmodified `fit_gllvm` calls -- the same
+# technique `main_after_warm` already uses for its GLM-state share, extended
+# to three mutually-exclusive categories. This is a measured proportion of
+# real execution (stack sampling), not a reimplementation and not a source
+# edit; it is reported as a SUBDIVISION of already-counted time, not summed
+# again into the top-level wall-partition check.
+# ---------------------------------------------------------------------------
+const _S8_LARGE_SEED = 20260920
+const _S8_LARGE_P = 3
+const _S8_LARGE_N = 5000
+const _S8_LARGE_G = 500
+
+function _S8_make_large_fixture()
+    rng = Random.Xoshiro(_S8_LARGE_SEED)
+    beta_true = [log(4.0), log(6.0), log(2.5)]
+    sd_true = [0.4, 0.3, 0.5]
+    group = rand(rng, 1:_S8_LARGE_G, _S8_LARGE_N)
+    b = [sd_true[t] .* randn(rng, _S8_LARGE_G) for t in 1:_S8_LARGE_P]
+    Y = zeros(Float64, _S8_LARGE_P, _S8_LARGE_N)
+    for i in 1:_S8_LARGE_N, t in 1:_S8_LARGE_P
+        Y[t, i] = rand(rng, Poisson(exp(beta_true[t] + b[t][group[i]])))
+    end
+    return Y, group, _S8_LARGE_G, _S8_LARGE_N, _S8_LARGE_P
+end
+
+struct _S8Fixture
+    name::String
+    Y::Matrix{Float64}
+    group::Vector{Int}
+    G::Int
+    N::Int
+    p::Int
+    terms::Vector{GLLVModels.GroupingTerm}
+end
+
+function _S8_fixtures()
+    y200, group200, G200, N200 = load_fixture()
+    small = _S8Fixture("glmm_200x5", reshape(Float64.(y200), 1, :), group200, G200, N200, 1,
+        [GLLVModels.GroupingTerm(:unit; mode = :indep)])
+    Ylarge, grouplarge, Glarge, Nlarge, plarge = _S8_make_large_fixture()
+    large = _S8Fixture("glmm_5000x3_g500", Ylarge, grouplarge, Glarge, Nlarge, plarge,
+        [GLLVModels.GroupingTerm(:unit; mode = :indep)])
+    return small, large
+end
+
+function _S8_measure_driver(fx::_S8Fixture; g_tol = 1e-4, iterations = 100,
+        inner_maxiter = 100, inner_tol = 1e-8, warm_start_inner = true)
+    p, n = fx.p, fx.N
+    family = Poisson()
+    kind = GLLVModels._grouped_nongaussian_kind(family)
+    pubmode = GLLVModels._grouped_nongaussian_dispersion_mode(kind, :trait)
+
+    labels = GLLVModels._grouped_labels(n, fx.terms; unit = fx.group, unit_obs = nothing,
+                                         cluster = nothing, cluster2 = nothing)
+    incidences = [GLLVModels._grouped_incidence(v, n) for v in labels]
+    data = Matrix{Float64}(fx.Y)
+    trials = GLLVModels._grouped_nongaussian_trials(data, nothing, kind)
+    D = GLLVModels._trait_mean_design(p, n)
+    theta0 = GLLVModels._grouped_nongaussian_initial_parameters(data, trials, D, fx.terms,
+        kind, family, pubmode)
+
+    # The REAL objective closures -- byte-identical to fit_grouped_nongaussian's
+    # own objective_cold/objective_warm (src/grouped_nongaussian_fit.jl:371-378).
+    objective_cold = GLLVModels._grouped_nongaussian_objective(data, trials, D, fx.terms,
+        incidences, kind; dispersion_mode = pubmode, inner_maxiter = Int(inner_maxiter),
+        inner_tol = Float64(inner_tol), warm_start_inner = false)
+    objective_warm = warm_start_inner ?
+        GLLVModels._grouped_nongaussian_objective(data, trials, D, fx.terms, incidences, kind;
+            dispersion_mode = pubmode, inner_maxiter = Int(inner_maxiter),
+            inner_tol = Float64(inner_tol), warm_start_inner = true) :
+        objective_cold
+
+    # `phase[]` tags which OUTER call site is currently invoking `cold_objective`:
+    # :bfgs_obj covers BFGS's own line-search value evaluations AND the handful
+    # of direct finalization checks fit_grouped_nongaussian also makes outside
+    # any FD stencil (refined_value, the two `cold_objective(candidate)`-style
+    # comparisons, and the final `value = objective(estimate)`) -- all of these
+    # are single calls, negligible in count next to the line search itself.
+    phase = Ref(:bfgs_obj)
+    nm_calls = Ref(0); nm_seconds = Ref(0.0)
+    bfgs_calls = Ref(0); bfgs_seconds = Ref(0.0)
+    fdgrad_obj_calls = Ref(0); fdgrad_obj_seconds = Ref(0.0)
+    fdhess_obj_calls = Ref(0); fdhess_obj_seconds = Ref(0.0)
+    fd_gradient_invocations = Ref(0); fd_gradient_seconds = Ref(0.0)
+    fd_hessian_invocations = Ref(0); fd_hessian_seconds = Ref(0.0)
+
+    nm_objective = value -> begin
+        t0 = time_ns()
+        v = objective_warm(value)
+        nm_seconds[] += (time_ns() - t0) / 1e9
+        nm_calls[] += 1
+        v
+    end
+    cold_objective = value -> begin
+        t0 = time_ns()
+        v = objective_cold(value)
+        dt = (time_ns() - t0) / 1e9
+        if phase[] === :bfgs_obj
+            bfgs_calls[] += 1; bfgs_seconds[] += dt
+        elseif phase[] === :fd_gradient
+            fdgrad_obj_calls[] += 1; fdgrad_obj_seconds[] += dt
+        else
+            fdhess_obj_calls[] += 1; fdhess_obj_seconds[] += dt
+        end
+        v
+    end
+    counted_fd_gradient = (obj, x) -> begin
+        fd_gradient_invocations[] += 1
+        prev = phase[]; phase[] = :fd_gradient
+        t0 = time_ns()
+        g = GLLVModels._grouped_fd_gradient(obj, x)
+        fd_gradient_seconds[] += (time_ns() - t0) / 1e9
+        phase[] = prev
+        g
+    end
+    counted_fd_hessian = (obj, x) -> begin
+        fd_hessian_invocations[] += 1
+        prev = phase[]; phase[] = :fd_hessian
+        t0 = time_ns()
+        H = GLLVModels._grouped_fd_hessian(obj, x)
+        fd_hessian_seconds[] += (time_ns() - t0) / 1e9
+        phase[] = prev
+        H
+    end
+
+    wall_t0 = time_ns()
+    # ---- verbatim sequence of src/grouped_nongaussian_fit.jl:388-420 ------
+    result = Optim.optimize(nm_objective, theta0, Optim.NelderMead(),
+        Optim.Options(g_tol = Float64(g_tol), iterations = Int(iterations)))
+    candidate = collect(Optim.minimizer(result))
+    candidate_gradient = counted_fd_gradient(cold_objective, candidate)
+    if all(isfinite, candidate_gradient)
+        gradient! = (storage, value) -> (storage .= counted_fd_gradient(cold_objective, value))
+        refined = try
+            Optim.optimize(cold_objective, gradient!, candidate, Optim.BFGS(),
+                Optim.Options(g_tol = Float64(g_tol), iterations = Int(iterations)))
+        catch
+            nothing
+        end
+        if refined !== nothing
+            refined_estimate = collect(Optim.minimizer(refined))
+            refined_value = cold_objective(refined_estimate)
+            if isfinite(refined_value) && !GLLVModels._nll_failed(refined_value) &&
+                    refined_value <= cold_objective(candidate)
+                result = refined
+            end
+        end
+    end
+    estimate = collect(Optim.minimizer(result))
+    value = cold_objective(estimate)
+    valid = isfinite(value) && !GLLVModels._nll_failed(value)
+    gradient = valid ? counted_fd_gradient(cold_objective, estimate) : fill(Inf, length(estimate))
+    gradient_norm = all(isfinite, gradient) ? maximum(abs, gradient) : Inf
+    H = valid ? counted_fd_hessian(cold_objective, estimate) : fill(NaN, length(estimate), length(estimate))
+    driver_wall = (time_ns() - wall_t0) / 1e9
+    # -------------------------------------------------------------------
+
+    converged = Optim.converged(result) && valid && gradient_norm <= g_tol
+    driver_loglik = -value
+
+    total_obj_calls = nm_calls[] + bfgs_calls[] + fdgrad_obj_calls[] + fdhess_obj_calls[]
+    total_obj_seconds = nm_seconds[] + bfgs_seconds[] + fdgrad_obj_seconds[] + fdhess_obj_seconds[]
+    remainder = driver_wall - total_obj_seconds
+
+    return (; nθ = length(theta0), driver_wall, driver_loglik, converged, estimate,
+             nm_calls = nm_calls[], nm_seconds = nm_seconds[],
+             bfgs_calls = bfgs_calls[], bfgs_seconds = bfgs_seconds[],
+             fd_gradient_invocations = fd_gradient_invocations[], fd_gradient_obj_calls = fdgrad_obj_calls[],
+             fd_gradient_seconds = fdgrad_obj_seconds[],
+             fd_hessian_invocations = fd_hessian_invocations[], fd_hessian_obj_calls = fdhess_obj_calls[],
+             fd_hessian_seconds = fdhess_obj_seconds[],
+             total_obj_calls, total_obj_seconds, remainder)
+end
+
+function _S8_chol_derived_iterations(fx::_S8Fixture)
+    has_stats = isdefined(GLLVModels, :_grouped_chol_stats_reset!) && isdefined(GLLVModels, :_grouped_chol_stats)
+    has_stats || return (; calls = -1, chol_total = -1, iters_sum = NaN)
+    GLLVModels._grouped_chol_stats_reset!()
+    GLLVModels.fit_gllvm(fx.Y; family = Poisson(), grouping = fx.terms, unit = fx.group)
+    stats = GLLVModels._grouped_chol_stats()
+    chol_total = stats.fresh + stats.reused + stats.fallback
+    iters_sum = (chol_total - stats.calls) / 2   # documented 2n(+1) relationship; assumes near-universal :ok
+    return (; calls = stats.calls, chol_total, iters_sum)
+end
+
+function _S8_profile_split(fx::_S8Fixture; nreps::Int)
+    Profile.clear()
+    Profile.@profile for _ in 1:nreps
+        GLLVModels.fit_gllvm(fx.Y; family = Poisson(), grouping = fx.terms, unit = fx.group)
+    end
+    data = Profile.fetch(include_meta = false)
+    lookup = Profile.getdict(data)
+    glm_samples = 0; chol_samples = 0; logdet_samples = 0; total_samples = 0
+    in_glm = false; in_chol = false; in_logdet = false
+    for ip in data
+        if ip == 0
+            total_samples += 1
+            in_glm && (glm_samples += 1)
+            in_chol && (chol_samples += 1)
+            in_logdet && (logdet_samples += 1)
+            in_glm = in_chol = in_logdet = false
+            continue
+        end
+        frames = lookup[ip]
+        frames_vec = frames isa AbstractVector ? frames : [frames]
+        for sf in frames_vec
+            fname = string(sf.func)
+            if occursin("_joint_grouped_state", fname) || occursin("_joint_grouped_components", fname) ||
+                    occursin("_joint_grouped_logpost", fname)
+                in_glm = true
+            elseif occursin("_grouped_cached_cholesky", fname) || fname == "cholesky" || fname == "cholesky!"
+                in_chol = true
+            elseif fname == "logdet"
+                in_logdet = true
+            end
+        end
+    end
+    glm_share = total_samples > 0 ? glm_samples / total_samples : NaN
+    chol_share = total_samples > 0 ? chol_samples / total_samples : NaN
+    logdet_share = total_samples > 0 ? logdet_samples / total_samples : NaN
+    return (; glm_share, chol_share, logdet_share, total_samples)
+end
+
+function main_sections()
+    println("Julia ", VERSION, "  threads=", Threads.nthreads())
+    sha = _git_sha()
+    small, large = _S8_fixtures()
+
+    rows = NamedTuple[]
+    for (fx, reps, profreps) in ((small, 5, 20), (large, 3, 5))
+        println("=== fixture: ", fx.name, "  N=", fx.N, " G=", fx.G, " p=", fx.p, " ===")
+        real_wall = median_s(() -> GLLVModels.fit_gllvm(fx.Y; family = Poisson(),
+            grouping = fx.terms, unit = fx.group); reps = reps)
+        real_fit = GLLVModels.fit_gllvm(fx.Y; family = Poisson(), grouping = fx.terms, unit = fx.group)
+
+        m = _S8_measure_driver(fx)
+        loglik_gap_rel = abs(m.driver_loglik - real_fit.loglik) / max(abs(real_fit.loglik), 1.0)
+
+        chol = _S8_chol_derived_iterations(fx)
+        prof = _S8_profile_split(fx; nreps = profreps)
+        glm_seconds = prof.glm_share * m.total_obj_seconds
+        chol_seconds = prof.chol_share * m.total_obj_seconds
+        logdet_seconds = prof.logdet_share * m.total_obj_seconds
+
+        section_sum = m.nm_seconds + m.bfgs_seconds + m.fd_gradient_seconds + m.fd_hessian_seconds
+        sum_gap_rel = abs(section_sum - m.driver_wall) / m.driver_wall
+        fd_share = (m.fd_gradient_seconds + m.fd_hessian_seconds + m.nm_seconds) / m.driver_wall
+
+        @printf("real fit: wall_median(reps=%d)=%.4fs converged=%s loglik=%.4f iterations=%d\n",
+                reps, real_wall, real_fit.converged, real_fit.loglik, real_fit.iterations)
+        @printf("driver:   wall=%.4fs converged=%s loglik=%.4f loglik_gap_rel=%.3e nθ=%d\n",
+                m.driver_wall, m.converged, m.driver_loglik, loglik_gap_rel, m.nθ)
+        @printf("  Nelder-Mead:       calls=%-5d seconds=%.4f\n", m.nm_calls, m.nm_seconds)
+        @printf("  BFGS line search:  calls=%-5d seconds=%.4f\n", m.bfgs_calls, m.bfgs_seconds)
+        @printf("  FD gradient:       invocations=%d  implied_obj_calls=%d  seconds=%.4f\n",
+                m.fd_gradient_invocations, m.fd_gradient_obj_calls, m.fd_gradient_seconds)
+        @printf("  FD Hessian:        invocations=%d  implied_obj_calls=%d  seconds=%.4f\n",
+                m.fd_hessian_invocations, m.fd_hessian_obj_calls, m.fd_hessian_seconds)
+        @printf("  remainder (driver_wall - sections): %.4fs\n", m.remainder)
+        @printf("  section_sum=%.4fs vs driver_wall=%.4fs (gap_rel=%.3f)\n", section_sum, m.driver_wall, sum_gap_rel)
+        @printf("  inner Newton iters (derived from chol stats): calls=%d chol_total=%d iters_sum=%.1f\n",
+                chol.calls, chol.chol_total, chol.iters_sum)
+        @printf("  inner-solve time split (profiled, %d fits, %d samples): GLM-state=%.1f%% CHOLMOD=%.1f%% logdet=%.1f%% -> seconds %.4f / %.4f / %.4f\n",
+                profreps, prof.total_samples, 100 * prof.glm_share, 100 * prof.chol_share, 100 * prof.logdet_share,
+                glm_seconds, chol_seconds, logdet_seconds)
+        @printf("  FD-attributable share (NM+FDgrad+FDhess)/driver_wall = %.3f\n", fd_share)
+
+        push!(rows, (; fixture = fx.name, N = fx.N, G = fx.G, p = fx.p, ntheta = m.nθ,
+            real_wall_median_s = real_wall, driver_wall_s = m.driver_wall, loglik_gap_rel,
+            nm_calls = m.nm_calls, nm_seconds = m.nm_seconds,
+            bfgs_calls = m.bfgs_calls, bfgs_seconds = m.bfgs_seconds,
+            fd_gradient_invocations = m.fd_gradient_invocations, fd_gradient_obj_calls = m.fd_gradient_obj_calls,
+            fd_gradient_seconds = m.fd_gradient_seconds,
+            fd_hessian_invocations = m.fd_hessian_invocations, fd_hessian_obj_calls = m.fd_hessian_obj_calls,
+            fd_hessian_seconds = m.fd_hessian_seconds,
+            remainder_s = m.remainder, section_sum_s = section_sum, sum_gap_rel = sum_gap_rel,
+            chol_calls = chol.calls, chol_total = chol.chol_total, inner_iters_sum = chol.iters_sum,
+            profile_reps = profreps, profile_samples = prof.total_samples,
+            glm_state_share = prof.glm_share, cholmod_share = prof.chol_share, logdet_share = prof.logdet_share,
+            glm_state_seconds = glm_seconds, cholmod_seconds = chol_seconds, logdet_seconds = logdet_seconds,
+            fd_attributable_share = fd_share))
+    end
+
+    mkpath(joinpath(@__DIR__, "results"))
+    out = joinpath(@__DIR__, "results", "grouped_sections_$(sha).tsv")
+    open(out, "w") do io
+        for l in header_lines()
+            println(io, l)
+        end
+        names = fieldnames(typeof(rows[1]))
+        println(io, "# columns: ", join(names, " "))
+        println(io, join(names, "\t"))
+        for r in rows
+            println(io, join(getfield.(Ref(r), names), "\t"))
+        end
+    end
+    println("TSV written: ", out)
+
+    ok = all(r -> r.sum_gap_rel <= 0.10, rows) && all(r -> r.loglik_gap_rel <= 1e-4, rows)
+    reasons = String[]
+    for r in rows
+        r.sum_gap_rel <= 0.10 || push!(reasons, "$(r.fixture): sections sum gap $(round(r.sum_gap_rel, digits=3)) exceeds 10%")
+        r.loglik_gap_rel <= 1e-4 || push!(reasons, "$(r.fixture): driver loglik diverges from real fit by rel=$(round(r.loglik_gap_rel, sigdigits=3))")
+    end
+    if ok
+        println("GATE GA.1 PASS")
+    else
+        println("GATE GA.1 FAIL ", join(reasons, "; "))
+    end
+
+    large_row = rows[end]
+    small_row = rows[1]
+    @printf("GA.2: FD-attributable share -- large fixture (%s): %.3f  small fixture (%s): %.3f\n",
+            large_row.fixture, large_row.fd_attributable_share, small_row.fixture, small_row.fd_attributable_share)
+    println(large_row.fd_attributable_share >= 0.25 ? "GA.2 VERDICT: PROCEED" : "GA.2 VERDICT: STOP")
+
+    exit(ok ? 0 : 1)
+end
+
 function main()
     gate = parse_args(ARGS)
     gate == "after" && return main_after()
     gate == "warm" && return main_warm()
     gate == "after_warm" && return main_after_warm()
+    gate == "sections" && return main_sections()
     println("Julia ", VERSION, "  threads=", Threads.nthreads())
     sha = _git_sha()
 
