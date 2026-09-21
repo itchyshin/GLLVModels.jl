@@ -674,8 +674,22 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
     # (test/test_grouped_analytic_grad.jl).
     grad_fn = value -> begin
         analytic_gradient || return _grouped_fd_gradient(objective_cold, value)
-        g = _grouped_analytic_gradient(value, data, trials, D, termvec, incidences, kind;
-            dispersion_mode=mode, inner_maxiter=Int(inner_maxiter), inner_tol=Float64(inner_tol))
+        # The docstring of `_grouped_analytic_loglik_gradient` promises `nothing`
+        # on ANY failure so this caller can fall back. It carries try/catch at
+        # only two internal sites, so a THROW from anywhere else used to escape
+        # here and abort a fit that the pre-S8 code completed -- which is exactly
+        # how the two-term `DimensionMismatch` (fixed in ec76a2090) reached a
+        # user through the ordinary public `fit_gllvm`. Fixing instances one at a
+        # time leaves the contract broken; this makes it true at the boundary.
+        # `maxlog=1` so a systematic fallback is VISIBLE as a performance cliff
+        # rather than silent, without spamming one warning per BFGS iteration.
+        g = try
+            _grouped_analytic_gradient(value, data, trials, D, termvec, incidences, kind;
+                dispersion_mode=mode, inner_maxiter=Int(inner_maxiter), inner_tol=Float64(inner_tol))
+        catch err
+            @warn "analytic outer gradient threw; falling back to the finite-difference gradient for the rest of this fit" exception=(err, catch_backtrace()) maxlog=1
+            nothing
+        end
         (g === nothing || !all(isfinite, g)) ? _grouped_fd_gradient(objective_cold, value) : g
     end
     candidate_gradient = grad_fn(candidate)

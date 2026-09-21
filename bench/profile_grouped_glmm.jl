@@ -699,7 +699,14 @@ function _S8_measure_driver(fx::_S8Fixture; g_tol = 1e-4, iterations = 100,
     # existing `_grouped_chol_stats` counter (src/grouped_laplace.jl:76-85) via
     # this file's documented 2n(+1) relationship, scoped to the driver run
     # rather than to a separate `fit_gllvm` call -- which matters here because
-    # `analytic_gradient` is not threaded through the public `fit_gllvm`.
+    # `analytic_gradient` IS threaded through the public `fit_gllvm` (it reaches
+    # `fit_grouped_nongaussian` via `kwargs...`, src/families/fit_gllvm.jl:193-194);
+    # verified 2026-09-21 by calling `fit_gllvm(...; analytic_gradient=false)` and
+    # `=true`, both accepted, both returning loglik -105.7468519 on a 12-group
+    # Poisson fixture. The earlier comment here asserted the opposite and was used
+    # to justify this scoping choice; the scoping is still fine, but not for that
+    # reason -- it is scoped to the driver run because the driver is what the
+    # section timings are measured against.
     has_chol_stats = isdefined(GLLVModels, :_grouped_chol_stats_reset!) &&
                      isdefined(GLLVModels, :_grouped_chol_stats)
     has_chol_stats && GLLVModels._grouped_chol_stats_reset!()

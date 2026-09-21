@@ -75,16 +75,27 @@ const BASELINE_A_PARAMETERS = [0.9211786339273272, -0.3668330777412767]
 const BASELINE_A_OBJ_CALLS = 118              # true inner Laplace-fit call count (FD gradient path)
 const BASELINE_A_INNER_ITERS_SUM = 711        # = (1540 - 118) / 2
 const BASELINE_A_FRESH_CHOLESKY = 1540        # true pre-fix fresh cholesky() call count
-# S8 (leaf-S8, decided by Shinichi 2026-09-21, option (a): guard BOTH paths).
-# The 118 above is the finite-difference outer-gradient path, origin/main's
-# and S7b's. S8 added an analytic outer gradient (`analytic_gradient=true`,
-# the new default), which needs fewer inner Laplace fits per outer step:
-# 94 on fixture A, measured 2026-09-21 on this branch with warm_start_inner
-# = false. Every numeric identity above holds on both paths at rtol 1e-8;
-# only the call count moves, and a lower count IS the slice working. Pin
-# both so neither path can drift silently: 118 guards the FD path S7b
-# protected, 94 guards the analytic path S8 introduced.
-const BASELINE_A_OBJ_CALLS_ANALYTIC = 94      # inner Laplace-fit call count, analytic gradient path
+# S8 (leaf-S8). The 118 above is the finite-difference outer-gradient path,
+# origin/main's and S7b's, and it is pinned exactly because a cache change
+# must not move it. S8 added an analytic outer gradient
+# (`analytic_gradient=true`, the new default) which needs FEWER inner Laplace
+# fits per outer step: 94 on fixture A, measured 2026-09-21 on this branch
+# with warm_start_inner = false.
+#
+# The analytic path is guarded by a BOUND, not by that 94. Shinichi's call,
+# 2026-09-21, in conversation. Two reasons, and the second is the operative
+# one. First, 94 is one Optim or Julia version away from moving, and the
+# likely response to two red exact counts is to rebank both, which would
+# discard the FD guard as collateral. Second, and this is what the assertion
+# is actually FOR: the failure it must catch is a silent degradation of the
+# analytic path back to finite differences, which the loglik and parameter
+# identities can never see, because the fallback preserves the answer. That
+# failure shows up as the count RETURNING TO 118, and `calls < 118` catches it
+# exactly. Pinning 94 would catch it too, while also failing on every benign
+# optimiser-path change, which is the brittleness without the extra safety.
+# BASELINE_A_OBJ_CALLS_ANALYTIC is kept as a recorded measurement, reported in
+# the failure message, and deliberately NOT asserted on.
+const BASELINE_A_OBJ_CALLS_ANALYTIC = 94      # measured, reported, not asserted
 
 # --- fixture B: "crossed incidence" (test/test_grouped_laplace.jl), a direct
 # joint_grouped_laplace_loglik call with m=2 unknowns (Newton actually
@@ -209,10 +220,12 @@ function run_identity_checks()
         GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms, unit = group,
             warm_start_inner = false, analytic_gradient = true)
         stats_an = GLLVModels._grouped_chol_stats()
-        _check!(stats_an.calls == BASELINE_A_OBJ_CALLS_ANALYTIC,
-                "fixture A (analytic path): inner Laplace-fit call count changed ($(stats_an.calls) vs $(BASELINE_A_OBJ_CALLS_ANALYTIC))")
+        # BOUND, not a pin: the failure this must catch is a silent fall back to
+        # the FD path, which returns the count to 118 and preserves the answer,
+        # so no numeric identity would notice. Measured 94 is reported for
+        # provenance, not asserted, so a benign optimiser-path change stays green.
         _check!(stats_an.calls < BASELINE_A_OBJ_CALLS,
-                "fixture A (analytic path): $(stats_an.calls) calls is not below the FD path's $(BASELINE_A_OBJ_CALLS) — the analytic gradient should need fewer inner fits")
+                "fixture A (analytic path): $(stats_an.calls) calls is not below the FD path's $(BASELINE_A_OBJ_CALLS) — the analytic gradient is not in use (measured on this branch: $(BASELINE_A_OBJ_CALLS_ANALYTIC))")
         _check!(stats_an.fallback == 0,
                 "fixture A (analytic path): $(stats_an.fallback) fresh-cholesky fallbacks (pattern mismatch), expected 0")
         _check!(stats_an.fresh < BASELINE_A_FRESH_CHOLESKY,

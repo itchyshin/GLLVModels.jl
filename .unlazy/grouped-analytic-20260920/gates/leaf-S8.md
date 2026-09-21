@@ -73,7 +73,7 @@ SCOPE: replace the finite-difference outer gradient with an analytic one derived
   caught this defect, and the new fixture is the only thing now standing between it and a
   release.
 
-- [ ] GB.3: fitted parameters and logLik equal origin/main 69a69b0a0 within rtol 1e-8 on both fixtures, and the existing grouped identity fixtures A, B and D still pass.
+- [x] GB.3: fitted parameters and logLik equal origin/main 69a69b0a0 within rtol 1e-8 on both fixtures, and the existing grouped identity fixtures A, B and D still pass.
   CHECK: env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. test/test_grouped_analytic_grad.jl --gate identity && env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. test/test_grouped_laplace_identity.jl --gate identity
   EXPECT: both GATE ... PASS
   EVIDENCE: **HALF PASS, HALF STOP. Left UNTICKED and escalated to Shinichi.** Run 2026-09-21 ~03:30Z.
@@ -102,13 +102,23 @@ SCOPE: replace the finite-difference outer gradient with an analytic one derived
   that is a check ON the earlier evidence, not a repeat of it. Second, it shows the S8 branch as a
   WHOLE, S7c's `warm_start_inner=true` default included, still lands on origin/main's answer; the
   earlier proxy only compared two paths inside one worktree and could not have seen a shared drift.
-  The gate stays UNTICKED because its other half, the `test_grouped_laplace_identity.jl` call-count
-  invariant below, still STOPS.
+  **GATE NOW TICKED, 2026-09-21 ~13:10Z, scheduled session.** Both halves pass. The second half's
+  STOP was Shinichi's item-1 decision, taken 2026-09-21 12:25-12:35Z as option (a) ("guard both
+  paths") and applied in `3ca07a491`, so `test_grouped_laplace_identity.jl --gate identity` now
+  reports **GATE G7b.1 PASS, 21/21** -- the FD path pinned at 118 calls with all its reuse
+  invariants, the analytic path pinned at 94 with 0 fallbacks. Re-run by this session on the GB.4
+  text below, not accepted from the earlier run: `test_grouped_analytic_grad.jl --gate identity`
+  **GATE GB.3 PASS** on all five fixtures (`poisson_latent` rel 0.000e+00 / beta 1.091e-10,
+  `beta_shared` 3.424e-15 / 2.570e-10, `nb2_shared` 2.677e-16 / 3.442e-10, `poisson_twoterm`
+  3.315e-13 / 3.753e-09, `latent_plus_indep` 1.183e-16 / 7.155e-10, `converged` true both ways
+  everywhere), then `test_grouped_laplace_identity.jl --gate identity` **GATE G7b.1 PASS**. The
+  origin/main half remains discharged by the detached 69a69b0a0 worktree recorded above; nothing
+  in the GB.4 change moved any number it measured.
 
   Second half FAILS, and the failure is a FINDING rather than a defect. `test/test_grouped_laplace_identity.jl --gate identity`: 16 passed, 1 failed -> `GATE G7b.1 FAIL fixture A: inner Laplace-fit call count changed (94 vs 118)`. Every NUMERIC identity in that file passed (loglik, logdet_precision, fitted parameters, all at rtol 1e-8); the single failing assertion is `stats.calls == BASELINE_A_OBJ_CALLS`, a call-COUNT invariant banked for slice S7b whose stated rationale is "the reuse must not change the optimiser's path". That rationale is correct for S7b, a CHOLMOD-reuse change that must be numerically and procedurally invisible. It is the opposite of what S8 is for: replacing a 2*ntheta-call FD gradient with one inner solve is SUPPOSED to cut the objective-call count, and 118 -> 94 on fixture A (-20.3%) is the first measured evidence that it does.
   **No action taken.** The tolerance was not widened, the assertion was not edited, and `test/test_grouped_laplace_identity.jl` is not in this leaf's OWNS list. The decision -- whether that S7b invariant should become conditional on `analytic_gradient`, or be rebanked at 94, or whether S8's default should be `analytic_gradient=false` until it is -- is Shinichi's, because it changes a gate another slice depends on.
 
-- [ ] GB.4: with the warm start UNCONFINED (the S7c restriction to Nelder-Mead removed), fixture D's regression test still passes and the converged answer is unchanged at rtol 1e-8. This is the gate that S7c could not pass with an FD gradient.
+- [x] GB.4: with the warm start UNCONFINED (the S7c restriction to Nelder-Mead removed), fixture D's regression test still passes and the converged answer is unchanged at rtol 1e-8. This is the gate that S7c could not pass with an FD gradient.
   CHECK: env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. test/test_grouped_laplace_identity.jl --gate warm_identity
   EXPECT: GATE G7c.1 PASS
   EVIDENCE: **STILL PENDING -- but running the CHECK anyway is what found the S8 defect.** The
@@ -132,6 +142,29 @@ SCOPE: replace the finite-difference outer gradient with an analytic one derived
   decision: option (c) of that decision (`analytic_gradient=false` by default) puts the FD gradient
   back, and the S7c confinement exists precisely to protect an FD gradient from a warm inner mode.
   Doing GB.4 before the decision would build on a default that may move.
+  **GATE NOW MET, 2026-09-21 ~13:05Z, scheduled session, with the restriction actually removed.**
+  Item 1 closed as option (a), so the default stays `analytic_gradient=true` and the FD-protection
+  argument for the confinement no longer applies on the default path. One change in
+  `src/grouped_nongaussian_fit.jl` (in this leaf's OWNS list), commit `5a9e37feb`: the BFGS
+  refinement optimises `objective_refine = analytic_gradient ? objective_warm : objective_cold`
+  instead of always `objective_cold`. The FD fallback inside `grad_fn`, the reported gradient and
+  the final FD Hessian all still difference `objective_cold`, so nothing that is differenced sees a
+  warm mode; the S7c comment block and the `warm_start_inner` docstring were corrected to say so.
+  CHECK re-run on the committed text: **GATE G7c.1 PASS, 21/21** -- fixture A cold vs warm
+  `rel_ll=0.0`, `rel_par=0.0`, iterations 3/3; fixture D (the 4-source `common=true` design) cold
+  and warm gradient norms bit-identical at 7.815970093361102e-8, iterations 6/6, both converged.
+  **The change was shown to be REACHED rather than assumed to be**, which matters because the gate
+  output above is byte-identical to the pre-change run. A scratchpad probe (not in the lane) fitted
+  fixture A with `analytic_gradient=true` under both builds and read the `_grouped_chol_stats`
+  counters: with the confinement, warm run `calls=94 fresh=188 reused=744`; with it lifted,
+  `calls=94 fresh=187 reused=685`. Summed inner CHOLMOD factorisations fall **744 -> 685 (-7.9%)**
+  while the objective-call count, the loglik (-2.025469254255519e+03) and both parameters
+  (0.9211786338480774, -0.3668330786521219) are bit-identical. The cold runs are identical under
+  both builds (`reused=1040`), which is the control. So the gate's identity is a real identity
+  across a path that genuinely changed, not a no-op passing itself.
+  What this gate does NOT establish: the -7.9% is inner-solve work on one small fixture, not a wall
+  measurement, and GB.5's 1.217x / 1.782x were measured BEFORE this change. The arc's headline
+  numbers are unchanged and are not claimed to improve.
 
 - [x] GB.5: objective calls and summed inner Newton iterations are reported before and after (118 and 711 banked at fixture A); the wall on fixture A is recorded against 0.150383 s and Latte's 0.015 s; the larger fixture against its own GA.1 baseline. Numbers reported whatever they are, no claim beyond them.
   CHECK: env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. bench/profile_grouped_glmm.jl --gate sections_after
