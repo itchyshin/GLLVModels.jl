@@ -562,11 +562,12 @@ interval diagnostics use `grouped_nongaussian_intervals`. The development route
 does not establish frozen-R parity, recovery, or coverage qualification.
 
 `warm_start_inner` (S7c, default `true`): each of the many inner Laplace-fit
-calls the outer optimiser makes (Nelder-Mead simplex evaluations plus the FD
-gradient/Hessian stencils) seeds its Newton solve from the previous call's
-converged mode instead of `zeros(m)`, since nearby outer-parameter values
-share a nearby mode. This changes only how fast each inner solve converges,
-never the converged answer (see `joint_grouped_laplace_loglik`'s `b_init`
+calls the outer optimiser makes seeds its Newton solve from the previous
+call's converged mode instead of `zeros(m)`, since nearby outer-parameter
+values share a nearby mode. It applies to the value-only Nelder-Mead search,
+and (S8) to the BFGS refinement when `analytic_gradient=true`; every
+finite-differenced quantity keeps a cold objective. This changes only how
+fast each inner solve converges, never the converged answer (see `joint_grouped_laplace_loglik`'s `b_init`
 docstring); pass `warm_start_inner=false` to recover the pre-S7c cold-start
 behaviour.
 """
@@ -634,8 +635,11 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
     # and for BFGS refinement (which needs a gradient at every line-search
     # trial), reproducing origin/main's numerics there exactly;
     # `objective_warm` (the caller's actual `warm_start_inner`) is used
-    # ONLY for the plain value-only Nelder-Mead search, which does not
-    # difference nearby evaluations and tolerates inner_tol-scale noise.
+    # for the plain value-only Nelder-Mead search, which does not
+    # difference nearby evaluations and tolerates inner_tol-scale noise --
+    # and, since S8's GB.4, for the BFGS refinement too whenever the
+    # analytic gradient is in use, because that phase then differences
+    # nothing either. See the note at the BFGS call below.
     objective_cold = _grouped_nongaussian_objective(data, trials, D, termvec, incidences, kind;
         dispersion_mode=mode, inner_maxiter=Int(inner_maxiter), inner_tol=Float64(inner_tol),
         warm_start_inner=false)
@@ -677,8 +681,20 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
     candidate_gradient = grad_fn(candidate)
     if all(isfinite, candidate_gradient)
         gradient! = (storage, value) -> (storage .= grad_fn(value))
+        # S8 (GB.4): the S7c confinement above exists because BFGS needed a
+        # gradient at every line-search trial and that gradient was
+        # FINITE-DIFFERENCED from this objective — warm inner modes make the
+        # +h/-h stencil noise inconsistent and 1/h amplifies it. With the
+        # analytic gradient in use the BFGS phase differences nothing: the
+        # gradient comes from one inner solve through the implicit function
+        # theorem, so the line search only needs VALUES, exactly like the
+        # Nelder-Mead phase that S7c already allowed to warm-start. The
+        # confinement therefore lifts for BFGS on the analytic path only; the
+        # FD fallback inside `grad_fn`, the reported gradient and the final
+        # FD Hessian all still difference `objective_cold`.
+        objective_refine = analytic_gradient ? objective_warm : objective_cold
         refined = try
-            Optim.optimize(objective_cold, gradient!, candidate, Optim.BFGS(),
+            Optim.optimize(objective_refine, gradient!, candidate, Optim.BFGS(),
                 Optim.Options(g_tol=Float64(g_tol), iterations=Int(iterations)))
         catch
             nothing
