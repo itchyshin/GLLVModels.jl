@@ -317,9 +317,71 @@ function _grouped_laplace_design_jacobian(incidences::Vector{SparseMatrixCSC{Flo
     return sparse(reduce(hcat, blocks))
 end
 
+"""
+    _grouped_moment_log_sd(values, group_labels, G) -> Float64
+
+A cheap, data-informed starting value for one trait's `:indep` log-SD, replacing
+the constant `log(0.25)` the initialiser used for every variance coordinate.
+
+Why it exists. The trait intercepts were already initialised from the data
+(`log(mean(values))`) while every variance coordinate started at a constant, so
+the outer optimiser's first phase spent its whole budget dragging those constants
+toward the data. Measured 2026-09-22: Nelder-Mead never converges on the grouped
+Poisson route, it exhausts its 100-iteration limit, which is why deleting it
+(8.36 s against 4.30 s), capping it, and loosening its tolerance all failed. They
+addressed the compensation instead of the cause.
+
+The estimator, on the log scale and deliberately crude because it must be cheap:
+form the per-group means, take the variance of their logs, subtract a
+delta-method estimate of the within-group sampling contribution, floor the
+remainder, and halve the log to get a log-SD. One pass over the data per trait.
+
+Recovered against a fixture with true SDs [0.4, 0.3, 0.5] (log-SDs -0.916,
+-1.204, -0.693), three seeds: [-0.807, -1.176, -0.625], [-0.928, -1.205, -0.677],
+[-0.906, -1.131, -0.676].
+
+It is a POISSON/count argument. Callers must only use it where that holds; every
+other family and term mode keeps the previous constant.
+"""
+function _grouped_moment_log_sd(values::AbstractVector{<:Real}, raw_labels::AbstractVector)
+    # Labels are NOT necessarily integers: `_grouped_labels` returns whatever the
+    # user supplied, and Symbol labels are routine. Map to dense codes first. This
+    # was a real defect: a `Vector{<:AbstractVector{<:Integer}}` annotation threw
+    # TypeError on five Destination B fits with Symbol units.
+    codes = Dict{Any,Int}()
+    idx = Vector{Int}(undef, length(raw_labels))
+    @inbounds for (i, lab) in enumerate(raw_labels)
+        idx[i] = get!(codes, lab, length(codes) + 1)
+    end
+    G = length(codes)
+    length(values) == length(idx) || return log(0.25)
+    sums = zeros(Float64, G)
+    counts = zeros(Float64, G)
+    @inbounds for i in eachindex(values)
+        k = idx[i]
+        sums[k] += values[i]
+        counts[k] += 1.0
+    end
+    used = count(>(0.0), counts)
+    used >= 2 || return log(0.25)          # not enough groups to say anything
+    logm = Float64[]
+    noise = 0.0
+    @inbounds for k in 1:G
+        counts[k] > 0.0 || continue
+        m = max(sums[k] / counts[k], 0.05)
+        push!(logm, log(m))
+        noise += 1.0 / (m * counts[k])     # delta-method variance of log(mean)
+    end
+    noise /= length(logm)
+    v = var(logm) - noise
+    isfinite(v) || return log(0.25)
+    return 0.5 * log(clamp(v, 1e-3, 1e2))
+end
+
 function _grouped_nongaussian_initial_parameters(data::Matrix{Float64},
         trials::Matrix{Float64}, D::Matrix{Float64}, terms::Vector{GroupingTerm},
-        kind::Symbol, family, mode::Symbol)
+        kind::Symbol, family, mode::Symbol;
+        group_labels=nothing, moment_start::Bool=false)
     p, n = size(data)
     q = size(D, 2)
     theta = zeros(Float64, q)
@@ -337,12 +399,30 @@ function _grouped_nongaussian_initial_parameters(data::Matrix{Float64},
             end
         end
     end
+    term_index = 0
     for term in terms
+        term_index += 1
         if term.mode === :latent
             append!(theta, init_theta_rr(p, term.rank))
             term.unique && append!(theta, fill(log(0.25), term.common ? 1 : p))
         elseif term.mode === :indep
-            append!(theta, fill(log(0.25), term.common ? 1 : p))
+            # Data-informed start for the variance coordinates, but ONLY where the
+            # count argument behind `_grouped_moment_log_sd` holds and the group
+            # labels are actually available. Everything else keeps the constant,
+            # which is exactly the previous behaviour.
+            lbl = (moment_start && group_labels !== nothing && term_index <= length(group_labels)) ?
+                  group_labels[term_index] : nothing
+            if lbl !== nothing && (kind === :poisson || kind === :nb2) && !isempty(lbl)
+                if term.common
+                    push!(theta, _grouped_moment_log_sd(vec(sum(data, dims=1)) ./ max(p, 1), lbl))
+                else
+                    for trait in 1:p
+                        push!(theta, _grouped_moment_log_sd(view(data, trait, :), lbl))
+                    end
+                end
+            else
+                append!(theta, fill(log(0.25), term.common ? 1 : p))
+            end
         else
             append!(theta, init_theta_rr(p, p))
         end
@@ -638,6 +718,7 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
         nelder_mead::Bool=true,
         nelder_mead_iterations::Integer=iterations,
         nelder_mead_g_tol::Real=g_tol,
+        moment_start::Bool=false,
         hessian::Symbol=(analytic_gradient ? :grad_fd : :fd))
     p, n = size(Y)
     p > 0 && n >= 2 || throw(ArgumentError("grouped fitting needs at least one trait and two observations"))
@@ -672,7 +753,8 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
         kind, mode, p)
     total = q + source_coordinates + length(dispersion_indices)
     theta = if start === nothing
-        _grouped_nongaussian_initial_parameters(data, trials, D, termvec, kind, family, mode)
+        _grouped_nongaussian_initial_parameters(data, trials, D, termvec, kind, family, mode;
+            group_labels=labels, moment_start=moment_start)
     else
         length(start) == total || throw(DimensionMismatch("start has $(length(start)) coordinates; expected $total"))
         all(x -> x isa Real && isfinite(x), start) || throw(ArgumentError("start must be finite and real"))
