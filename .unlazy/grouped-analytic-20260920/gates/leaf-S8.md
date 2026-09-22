@@ -76,7 +76,7 @@ SCOPE: replace the finite-difference outer gradient with an analytic one derived
 - [x] GB.3: fitted parameters and logLik equal origin/main 69a69b0a0 within rtol 1e-8 on both fixtures, and the existing grouped identity fixtures A, B and D still pass.
   CHECK: env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. test/test_grouped_analytic_grad.jl --gate identity && env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. test/test_grouped_laplace_identity.jl --gate identity
   EXPECT: both GATE ... PASS
-  EVIDENCE: **HALF PASS, HALF STOP. Left UNTICKED and escalated to Shinichi.** Run 2026-09-21 ~03:30Z.
+  EVIDENCE: **TICKED 2026-09-21 ~13:10Z. Read the resolution below before the ~03:30Z record.** This block opens with the run as it stood at ~03:30Z, when it was half pass, half stop and escalated to Shinichi; his decision and the tick follow further down, and the FAIL paragraph near the end is the PRE-DECISION record kept verbatim, not a live failure.
   First half PASSES. `--gate identity` on the new file fits each fixture twice, once with `analytic_gradient=false` (which reaches the same `_grouped_fd_gradient(objective_cold, ...)` call origin/main always used) and once with it true: `poisson_latent` loglik -2.448399966295e+02 both ways, rel 0.000e+00, max per-coordinate beta rel 1.091e-10; `beta_shared` +4.357672061406e+01, rel 3.424e-15, beta 2.570e-10; `nb2_shared` -2.123724366875e+02, rel 2.677e-16, beta 3.442e-10. All well inside rtol 1e-8, `converged` identical both ways. Stated openly in the gate's own output: this is an IN-WORKTREE PROXY for the ledger's origin/main 69a69b0a0 comparison, which is still owed -- it proves the S8 branch changes no answer, it does not independently re-derive origin/main's numbers.
   **ORIGIN/MAIN HALF NOW DISCHARGED, 2026-09-21 ~04:15Z, scheduled session.** The proxy above is no
   longer the only evidence. A detached worktree was created at 69a69b0a0 itself
@@ -114,6 +114,8 @@ SCOPE: replace the finite-difference outer gradient with an analytic one derived
   everywhere), then `test_grouped_laplace_identity.jl --gate identity` **GATE G7b.1 PASS**. The
   origin/main half remains discharged by the detached 69a69b0a0 worktree recorded above; nothing
   in the GB.4 change moved any number it measured.
+
+  **SUPERSEDED 2026-09-21 ~13:10Z by the tick above.** Shinichi took the decision as option (a) and it was applied in `3ca07a491`, which pins fixture A's inner-fit count on BOTH gradient paths (118 FD, 94 analytic). The paragraph below is the pre-decision ~03:30Z record, kept verbatim rather than summarised away; it is not a live failure and `No action taken` below is no longer true.
 
   Second half FAILS, and the failure is a FINDING rather than a defect. `test/test_grouped_laplace_identity.jl --gate identity`: 16 passed, 1 failed -> `GATE G7b.1 FAIL fixture A: inner Laplace-fit call count changed (94 vs 118)`. Every NUMERIC identity in that file passed (loglik, logdet_precision, fitted parameters, all at rtol 1e-8); the single failing assertion is `stats.calls == BASELINE_A_OBJ_CALLS`, a call-COUNT invariant banked for slice S7b whose stated rationale is "the reuse must not change the optimiser's path". That rationale is correct for S7b, a CHOLMOD-reuse change that must be numerically and procedurally invisible. It is the opposite of what S8 is for: replacing a 2*ntheta-call FD gradient with one inner solve is SUPPOSED to cut the objective-call count, and 118 -> 94 on fixture A (-20.3%) is the first measured evidence that it does.
   **No action taken.** The tolerance was not widened, the assertion was not edited, and `test/test_grouped_laplace_identity.jl` is not in this leaf's OWNS list. The decision -- whether that S7b invariant should become conditional on `analytic_gradient`, or be rebanked at 94, or whether S8's default should be `analytic_gradient=false` until it is -- is Shinichi's, because it changes a gate another slice depends on.
@@ -240,7 +242,7 @@ SCOPE: replace the finite-difference outer gradient with an analytic one derived
   `git diff --name-only 69a69b0a0 -- test/test_grouped_laplace.jl` is EMPTY, so that file is
   unchanged from the baseline as the CHECK requires.
 
-  **Run 3 (2026-09-21, HEAD `58fdee27f`, the run this gate passes on).** Launched 14:41Z by the
+  **Run 3 (2026-09-21, source state of `7f175835e`, the run this gate passes on).** Launched 14:41Z by the
   scheduled session `6ff2e4cb`, wrapper PID 73451 under `script -q` (a pty, so the buffered output
   survives), julia worker PID 73633; exited 16:21Z. Read fresh by a later session, not inherited.
   **`GLLVModels.jl | 16328 pass, 1 fail, 0 error, 19 broken, 16348 total, 100m27.3s`**
@@ -258,17 +260,34 @@ SCOPE: replace the finite-difference outer gradient with an analytic one derived
   gradient vs finite differences | 12 | 12 | 0.9s" (line 1110), up from 8 on run 2 -- the four added
   assertions are the compacted-column regression test from `7f175835e`.
   Precondition re-checked against this exact HEAD, not carried over: `git diff --name-only 69a69b0a0
-  -- test/test_grouped_laplace.jl` EMPTY; `git status --porcelain` EMPTY at `58fdee27f`, so the
-  source state tested is the branch head.
+  -- test/test_grouped_laplace.jl` EMPTY; `git status --porcelain` EMPTY, so the source state tested
+  is the tree as committed.
+  **CORRECTED 2026-09-21 ~00:50Z, and the correction matters more than the verdict.** An earlier
+  version of this block said the suite ran on HEAD `58fdee27f`. It did not, and could not have:
+  `7f175835e` is timestamped 14:40:30Z, the suite launched at 14:41Z, and `58fdee27f` was not created
+  until 14:59:13Z, eighteen minutes into a hundred-minute run. The VERDICT is unaffected, because
+  `58fdee27f` touches `docs/src/low-level-reference.md` alone and `Pkg.test()` never reads `docs/src/`,
+  so its `src/` and `test/` are identical to `7f175835e`'s. What was wrong was naming a commit that did
+  not yet exist as the thing under test.
+  **The run also does not describe this branch's CURRENT test corpus.** `test/test_poisson_grad_perf.jl`
+  was re-pinned twice after the run finished: `9db03e8e9` (version-keyed, 19:54:54Z) and `4b3832f76`
+  (StableRNG, one baseline valid on every Julia, 2026-09-22 00:32:57Z). So the 16,348 total counts the
+  pre-re-pin corpus. Neither re-pin adds or removes a test; both change one constant and its comment.
   Environment: Julia 1.10.0 (`juliaup` default, aarch64-apple-darwin), `JULIA_NUM_THREADS=4`,
   `OPENBLAS_NUM_THREADS=1`, alone on the Mac Studio. Log:
   `/private/tmp/claude-503/-Users-z3437171-Dropbox-Github-Local-Shinichi/6ff2e4cb-4cde-45b7-8d5e-63ce63ba3d8b/scratchpad/gb6_suite_run3.log`
   (158,796 bytes, retained).
   **Wall was 100m27s against the 95-minute estimate below** -- the estimate holds, and a future run
   should budget 95 to 105 minutes.
-  **This gate's verdict is LOCAL only.** CI on #430 is a separate matter: `Julia 1 (1.13.0) ubuntu
-  shard 3/4` fails `test/test_poisson_grad_perf.jl:70`, which no Julia 1.10 run can reproduce. That
-  is S6's wired-in test and predates S8; it is tracked outside this leaf and does NOT bear on GB.6.
+  **This gate's verdict is LOCAL only, and the CI story has since moved.** When this run finished,
+  `Julia 1 (1.13.0) ubuntu shard 3/4` was failing `test/test_poisson_grad_perf.jl:70`, which no Julia
+  1.10 run can reproduce. The cause was found: `MersenneTwister(20260901)` yields a different stream
+  after Julia 1.10, so the fixture was DIFFERENT DATA on that runner, not a regression and not a
+  better optimum. It was version-keyed in `9db03e8e9` (shard 3/4 then passed on both Julia legs) and
+  properly fixed in `4b3832f76`, which moves the fixture to `StableRNGs` and one baseline valid on
+  every Julia. Both landed on THIS leaf's branch AFTER this suite ran, so the new constant and the
+  StableRNG code path have been executed by CI and by targeted gates, but by no full local suite.
+  That is the honest residual: GB.6's 16,348 total does not cover them.
 
   **Runs 1 and 2 are kept below as history, not as the verdict.**
   Run 2 (2026-09-21, after the Printf fix below), the first genuinely COMPLETE suite this arc has
