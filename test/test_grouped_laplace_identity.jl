@@ -95,7 +95,18 @@ const BASELINE_A_FRESH_CHOLESKY = 1540        # true pre-fix fresh cholesky() ca
 # optimiser-path change, which is the brittleness without the extra safety.
 # BASELINE_A_OBJ_CALLS_ANALYTIC is kept as a recorded measurement, reported in
 # the failure message, and deliberately NOT asserted on.
-const BASELINE_A_OBJ_CALLS_ANALYTIC = 94      # measured, reported, not asserted
+const BASELINE_A_OBJ_CALLS_ANALYTIC = 86      # measured, reported, not asserted
+# D-273 re-pin, Shinichi 2026-09-22. `moment_start` gives the :indep variance
+# coordinates a data-informed start instead of a constant, which MOVES the
+# optimiser's path on BOTH gradient paths. D-273 says guard both: the constant
+# start keeps its 118 above, and the moment start banks its own measured pin
+# here. Never a single re-pin, and never a default flipped off to keep a count.
+# Measured 2026-09-22 on this fixture, all four combinations giving an identical
+# logLik of -2025.4692542555 and converged=true:
+#     moment_start=false  FD 118   analytic 86
+#     moment_start=true   FD  97   analytic 60
+const BASELINE_A_OBJ_CALLS_MOMENT = 97        # FD path, moment start: PINNED
+const BASELINE_A_OBJ_CALLS_MOMENT_ANALYTIC = 60  # measured, reported, not asserted
 
 # --- fixture B: "crossed incidence" (test/test_grouped_laplace.jl), a direct
 # joint_grouped_laplace_loglik call with m=2 unknowns (Newton actually
@@ -201,7 +212,7 @@ function run_identity_checks()
         # FD gradient path: the S7b pin, on the exact path origin/main took.
         GLLVModels._grouped_chol_stats_reset!()
         GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms, unit = group,
-            warm_start_inner = false, analytic_gradient = false)
+            warm_start_inner = false, analytic_gradient = false, moment_start = false)
         stats = GLLVModels._grouped_chol_stats()
         _check!(stats.calls == BASELINE_A_OBJ_CALLS,
                 "fixture A (FD path): inner Laplace-fit call count changed ($(stats.calls) vs $(BASELINE_A_OBJ_CALLS)) — the reuse must not change the optimiser's path")
@@ -218,7 +229,7 @@ function run_identity_checks()
         # re-derived, not copied back in.
         GLLVModels._grouped_chol_stats_reset!()
         GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms, unit = group,
-            warm_start_inner = false, analytic_gradient = true)
+            warm_start_inner = false, analytic_gradient = true, moment_start = false)
         stats_an = GLLVModels._grouped_chol_stats()
         # BOUND, not a pin: the failure this must catch is a silent fall back to
         # the FD path, which returns the count to 118 and preserves the answer,
@@ -230,6 +241,32 @@ function run_identity_checks()
                 "fixture A (analytic path): $(stats_an.fallback) fresh-cholesky fallbacks (pattern mismatch), expected 0")
         _check!(stats_an.fresh < BASELINE_A_FRESH_CHOLESKY,
                 "fixture A (analytic path): fresh=$(stats_an.fresh) not below the pre-fix baseline $(BASELINE_A_FRESH_CHOLESKY)")
+
+        # MOMENT START, the other path D-273 requires guarded. Same invariants,
+        # its own measured pin. A change in either direction from 97 is a changed
+        # optimiser path and must be re-derived, never copied back in.
+        GLLVModels._grouped_chol_stats_reset!()
+        GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms, unit = group,
+            warm_start_inner = false, analytic_gradient = false, moment_start = true)
+        stats_ms = GLLVModels._grouped_chol_stats()
+        _check!(stats_ms.calls == BASELINE_A_OBJ_CALLS_MOMENT,
+                "fixture A (FD path, moment start): inner Laplace-fit call count changed ($(stats_ms.calls) vs $(BASELINE_A_OBJ_CALLS_MOMENT))")
+        _check!(stats_ms.fallback == 0,
+                "fixture A (FD path, moment start): $(stats_ms.fallback) fresh-cholesky fallbacks, expected 0")
+        _check!(stats_ms.fresh == 2 * stats_ms.calls,
+                "fixture A (FD path, moment start): fresh=$(stats_ms.fresh) != 2*calls=$(2 * stats_ms.calls)")
+
+        GLLVModels._grouped_chol_stats_reset!()
+        GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms, unit = group,
+            warm_start_inner = false, analytic_gradient = true, moment_start = true)
+        stats_ms_an = GLLVModels._grouped_chol_stats()
+        # BOUND, not a pin, for the same reason as the analytic block above: the
+        # failure to catch is a silent fall back to finite differences, which
+        # returns the count to the FD path's and preserves the answer.
+        _check!(stats_ms_an.calls < BASELINE_A_OBJ_CALLS_MOMENT,
+                "fixture A (analytic path, moment start): $(stats_ms_an.calls) calls is not below the FD path's $(BASELINE_A_OBJ_CALLS_MOMENT) — the analytic gradient is not in use (measured on this branch: $(BASELINE_A_OBJ_CALLS_MOMENT_ANALYTIC))")
+        _check!(stats_ms_an.fallback == 0,
+                "fixture A (analytic path, moment start): $(stats_ms_an.fallback) fresh-cholesky fallbacks, expected 0")
 
         GLLVModels._grouped_chol_stats_reset!()
         GLLVModels.joint_grouped_laplace_loglik(fixture_b()...; link = GLLVModels.LogLink())
