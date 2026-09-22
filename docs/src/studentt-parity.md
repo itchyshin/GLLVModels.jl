@@ -29,11 +29,11 @@ When a trait approaches the Gaussian limit, the likelihood can be very flat in
 the same log likelihood. Parity therefore compares fit health and the common
 log likelihood; it does not force ν estimates to be equal.
 
-For the preserved seed-71 core fixture, the fixed-ν control agrees to machine
-precision and the estimated-ν log likelihood is within `0.001`. The frozen R
-fit currently reports `nlminb` code 1 (`false convergence (8)`) on that public
-estimated-ν target. This remains a visible evidence boundary: the target is
-not promoted until both engines are healthy.
+In a small reproducible comparison, the fixed-ν model agrees to machine
+precision and the estimated-ν log likelihood differs by less than `0.001`.
+For the estimated-ν model, the reference R fit reports false convergence.
+Treat that result as a limitation of the comparison: it does not yet show that
+both engines converge cleanly for estimated degrees of freedom.
 
 For large degrees of freedom, the Float64 density now evaluates its normalizing
 constant without subtracting two large log-gamma values. The calculation also
@@ -41,18 +41,15 @@ preserves automatic first and second derivatives near the Gaussian limit.
 This numerical repair does not cap `nu`, change the model, or turn a failed
 optimizer diagnostic into a successful fit.
 
-The frozen oracle also has a numerical limit. Same-parameter checks with its
-installed TMB 1.9.21 show loss of precision in the Student-t density at very
-large degrees of freedom. On the preserved fixture, inner modes and curvature
-agree closely, but the density discrepancy changes the reported likelihood.
-Thus a small difference between two separately optimized log likelihoods is
-not sufficient evidence of parity. The original fixture and fit-health gates
-remain required; no df cap or weakened tolerance has been substituted.
+The reference R calculation also has a numerical limit. With TMB 1.9.21,
+same-parameter calculations lose precision in the Student-t density at very
+large degrees of freedom. In the comparison above, the inner modes and
+curvature agree closely, but this density difference changes the reported
+likelihood. A small difference between two separately optimized likelihoods is
+therefore not enough evidence of parity. We have not added an upper limit for
+`nu` or relaxed the comparison tolerance to hide this limitation.
 
-The numerical record retains the exact oracle provenance alongside the source
-used for the comparison.
-
-A public fixed-to-free warm start on this same fixture improves likelihood
-agreement but still fails the raw-gradient and same-parameter density checks.
-The final free-df fit remains unqualified even though its optimizer returns
-code0. Fixed initializer parameters have not replaced the original free model.
+Starting the estimated-ν fit from a fixed-ν fit can improve likelihood
+agreement, but the resulting fit still has an unsatisfactory gradient and a
+same-parameter density mismatch. An optimizer's convergence message alone
+does not validate this estimated-ν model.

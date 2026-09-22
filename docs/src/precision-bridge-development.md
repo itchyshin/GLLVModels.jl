@@ -1,9 +1,10 @@
-# Multivariate phylogenetic precision bridge (development)
+# Multivariate phylogenetic precision bridge (developer guide)
 
-This page describes the current Julia development route for a complete
-Gaussian multivariate phylogenetic model. It is useful when you already have
-a canonical sparse phylogenetic-precision payload and a traits-by-observations
-matrix. It is a candidate bridge route, not an admitted R `phylo_rr` workflow.
+**Audience: developers extending the Julia interface.** This page describes the
+Julia-side interface for a complete Gaussian multivariate phylogenetic model.
+It is useful when you already have a canonical sparse phylogenetic-precision
+payload and a traits-by-observations matrix. This model is not currently
+available through the public R `phylo_rr` workflow.
 
 The model has a rank-`d` trait loading matrix `L`, optional phylogenetic
 trait-specific variances `U`, and independent observation residual variances
@@ -64,7 +65,7 @@ Two maps intentionally use different bases.
 
 The precision bundle also carries `scale` and native `log_det = log|Q|`.
 `Q` already contains any correlation/unit-height scaling, so the Julia fit
-does not apply `scale` a second time. The frozen R normaliser's
+does not apply `scale` a second time. The reference R normaliser's
 `log_det_A_phy_rr` is a covariance log determinant and therefore has the
 opposite sign; payload admission performs the required native precision
 convention check. Do not construct a dense response covariance or drop
@@ -87,9 +88,9 @@ describes the packed coordinates. Shared mode has only one residual log-SD
 coordinate even though residual variances are returned for every trait.
 
 The machine-readable `admission_status == "closed"` and
-`admission_scope == "R phylo_rr"` explicitly prevent treating this candidate
-receipt as evidence that the legacy R route has been admitted. Consumers must
-honour these fields; point convergence does not override admission status.
+`admission_scope == "R phylo_rr"` state that this model is not available
+through the legacy R route. Consumers must honour these fields; point
+convergence does not change that status.
 
 - Mean and covariance: `coefficients`, `coefficient_names`, `mean_design`,
   `loadings`, `phylo_unique_variance`, `phylo_covariance`,
@@ -97,7 +98,7 @@ honour these fields; point convergence does not override admission status.
 - Fit diagnostics: `parameters`, `loglik`, `converged`, `gradient_max`,
   `hessian_min_eigenvalue`, `hessian_positive_definite`,
   `hessian_condition_number`, `iterations`, and `stopping_reason`.
-- Precision receipt: `species_id`, `species_aug_id`, `node_labels`,
+- Precision metadata: `species_id`, `species_aug_id`, `node_labels`,
   `n_leaves`, `n_aug`, `scale`, and `log_det`.
 - Signal boundary: `phylogenetic_signal_status`,
   `phylogenetic_signal_definition`, and `phylogenetic_signal_message`.
@@ -192,6 +193,6 @@ scale at one to avoid confounding that scale with `L` and `U`.
 
 Most importantly, the public R `phylo_rr` admission remains **closed**.
 The ordinary R-to-Julia bridge should not be presented as supporting this
-model until paired frozen-R model tests have admitted it. This page documents
-the Julia development contract and its diagnostics; it makes no parity,
-profile-interval, recovery, or coverage claim.
+model until paired R model tests support it. This page documents the Julia-side
+contract and its diagnostics; it makes no parity, profile-interval, recovery,
+or coverage claim.

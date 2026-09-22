@@ -1,205 +1,149 @@
-# Vignette: Phylogenetic GLLVM & Evolutionary Covariance Partitioning
+# A first phylogenetic Gaussian model
 
 ```@raw html
 <div class="gllvm-route gllvm-route--applied">
   <div>
     <span class="gllvm-route__eyebrow">Applied phylogenetic route</span>
-    <p>Separate evolutionary history, shared functional structure, and response-specific variation in the same matrix-first model.</p>
+    <p>Fit one continuous trait across a tree first; use the result as a variance-component description, not a complete evolutionary explanation.</p>
   </div>
 </div>
 ```
 
-This vignette demonstrates how to model multivariate trait evolution, estimate
-phylogenetic signal ($H^2$), construct transformed-Wald confidence intervals,
-and partition evolutionary versus environmental covariance using `GLLVModels.jl`.
+This is the supported starting point for phylogenetic analysis in
+`GLLVModels.jl`: `fit_phylo_gaussian` fits a Gaussian model for **one
+continuous trait measured once per tree tip**, with the tree supplied as
+Newick text. This example aligns named observations with the tree and
+inspects the fitted mean and two variance components, phylogenetic and
+residual, in a Gaussian Brownian-motion model. It is a univariate phylogenetic
+model: it does not fit a multivariate trait matrix, the latent community axes
+used in the [community abundance example](community-abundance.md), latent
+functional modules, phylogenetic signal intervals, or ancestral states.
 
-We cover:
-1. Formulating Phylogenetic GLLVMs (PGLLVM) for comparative biological data.
-2. Fast $O(p)$ phylogenetic fitting with `fit_phylo_gaussian` and `fit_phylo_glm`.
-3. Estimating phylogenetic signal ($H^2$) and bounded Wald CIs via `phylo_signal_wald_ci`.
-4. Decomposing phenotypic covariance into phylogenetic (Brownian motion), ecological latent factors, and residual components.
+!!! warning "Tip order is part of the data"
+    The response vector must have one value per tip and be in the tree's tip
+    order (`phy.leaf_names`). Check that alignment before fitting; matching
+    dimensions alone does not verify biological identity.
 
----
+## The model and its scope
 
-!!! warning "Matrix Orientation: $p \times n$ in Julia vs $n \times p$ in R"
-    **GLLVModels.jl expects species/taxa in rows and traits/replicates/sites in columns ($p \times n$).**
+For a trait vector ``y`` over ``p`` species, the fitter uses
 
-    When importing phylogenetic data from R, ensure that the $p$ tips of the phylogeny match the $p$ rows of the response matrix $Y$.
-
----
-
-## 1. Evolutionary Motivation & Mathematical Formulation
-
-In evolutionary biology, comparative analyses across species must account for shared evolutionary history: species that recently diverged from a common ancestor tend to resemble one another. 
-
-Standard Phylogenetic Comparative Methods (PCMs) often analyze traits individually (e.g. Pagel's $\lambda$, Blomberg's $K$) or via unconstrained multivariate Brownian motion. However, multivariate traits often share **low-rank functional syndromes** (e.g. pace-of-life, leaf economics spectrum) alongside phylogenetic structure.
-
-### The Phylogenetic GLLVM Decomposition
-
-For $p$ species observed across $n$ individuals, populations, or traits, the Gaussian Phylogenetic GLLVM models the $p \times n$ response matrix $Y$ as:
-
-$$Y = A + \Lambda \eta^\top + E$$
-
-where:
-- $A \sim \mathcal{MN}_{p \times n}(0, \sigma_{\text{phy}}^2 C_{\text{phy}}, I_n)$ represents phylogenetic random effects evolving under Brownian motion along the tree covariance $C_{\text{phy}}$.
-- $\Lambda \in \mathbb{R}^{p \times K}$ are species loadings on $K$ unobserved latent factors $\eta \sim \mathcal{MN}_{n \times K}(0, I_n, I_K)$, capturing correlated evolutionary/functional modules.
-- $E \sim \mathcal{MN}_{p \times n}(0, \sigma_\varepsilon^2 I_p, I_n)$ is idiosyncratic residual variation (measurement error or individual plasticity).
-
-The total across-species covariance matrix decomposes cleanly into three distinct biological sources:
-
-$$\Sigma_{\text{total}} = \underbrace{\sigma_{\text{phy}}^2 C_{\text{phy}}}_{\text{Evolutionary History}} + \underbrace{\Lambda \Lambda^\top}_{\text{Functional Modules}} + \underbrace{\sigma_\varepsilon^2 I_p}_{\text{Residual Noise}}$$
-
----
-
-## 2. Simulating a Phylogenetic Fixture
-
-`GLLVModels.jl` provides built-in utilities for generating tree fixtures using the Hadfield & Nakagawa (2010) augmented-state sparse representation:
-
-```julia
-using GLLVModels, Random, LinearAlgebra
-
-Random.seed!(20260829)
-
-p = 32          # number of species (tips in phylogeny)
-n = 50          # number of observations/sites/replicates per species
-K = 2           # number of latent factors
-σ_phy_true = 0.8 # phylogenetic standard deviation
-σ_eps_true = 0.4 # residual standard deviation
-
-# Generate a balanced phylogenetic tree with p tips
-tree = random_balanced_tree(p)
-phy = augmented_phy(tree)
-
-# Dense phylogenetic correlation matrix C_phy (p × p)
-C_phy = sigma_phy_dense(phy)
-
-# Simulate phylogenetic random effect A (p × n)
-L_phy = cholesky(Hermitian(C_phy)).L
-A_true = σ_phy_true .* (L_phy * randn(p, n))
-
-# True latent loadings (p × K) and latent scores (K × n)
-Λ_true = 0.6 .* randn(p, K)
-η_true = randn(K, n)
-
-# Generate response matrix Y (p × n)
-Y = A_true + Λ_true * η_true .+ σ_eps_true .* randn(p, n)
-
-println("Simulated phylogenetic response matrix: ", size(Y)) # (32, 50)
+```math
+y\sim\mathcal{N}\left(\mu\mathbf{1},\;
+\sigma^2_{\mathrm{phy}}C+\sigma^2_{\mathrm{eps}}I\right),
 ```
 
----
+where ``C`` is the Brownian-motion tip covariance implied by the supplied
+tree. The fitter estimates a common mean ``\mu``, the multiplier
+``\sigma^2_{\mathrm{phy}}`` of that covariance, and an independent residual
+variance ``\sigma^2_{\mathrm{eps}}`` by maximum likelihood. There is no
+multivariate response matrix or `K` argument in this interface. The two
+variance components describe variation compatible with this model. They do
+not prove that a trait is evolutionarily conserved, that a particular
+ecological process caused the variation, or that another phylogenetic model
+would give the same answer.
 
-## 3. Fast Phylogenetic Model Fitting
-
-`GLLVModels.jl` leverages the sparse precision matrix $Q_{\text{phy}} = C_{\text{phy}}^{-1}$ (Hadfield & Nakagawa 2010), achieving high-performance fitting without inverting large dense matrices:
-
-```julia
-# Fit Gaussian Phylogenetic GLLVM
-fit_phy = fit_phylo_gaussian(Y, phy; K = K)
-
-println("Estimated σ_phy: ", round(fit_phy.pars.sigma_phy, digits = 4))
-println("Estimated σ_eps: ", round(fit_phy.pars.sigma_eps, digits = 4))
-println("Marginal log-likelihood: ", round(fit_phy.logLik, digits = 2))
-```
-
-For non-Gaussian traits (e.g. binary presence/absence or counts across phylogenies), use `fit_phylo_glm`:
+## Build a small tree and align the trait vector
 
 ```julia
-# Non-Gaussian count example (Poisson phylogenetic GLM)
-Y_count = rand.(Distributions.Poisson.(exp.(0.5 .* Y)))
-fit_phy_pois = fit_phylo_glm(Y_count, phy; family = Distributions.Poisson(), K = 1)
+using GLLVModels
+
+# Four named tips and their branch lengths.
+newick = "((sp1:1,sp2:1):1,(sp3:1,sp4:1):1);"
+phy = augmented_phy(newick)
+
+# Labels, rather than the input table's row order, determine the match.
+species = ["sp3", "sp1", "sp4", "sp2"]
+trait = [0.9, 1.2, 1.1, 1.6]
+
+@assert length(species) == length(trait)
+@assert length(unique(species)) == length(species)
+@assert length(unique(phy.leaf_names)) == phy.n_leaves
+@assert Set(species) == Set(phy.leaf_names)
+trait_by_species = Dict(zip(species, trait))
+y = [trait_by_species[name] for name in phy.leaf_names]
+@assert all(isfinite, y)
+
+collect(zip(phy.leaf_names, y))
 ```
 
----
+The response vector follows `phy.leaf_names`, the parser's tip order. A
+length check alone cannot detect a biological mismatch. The assertions catch
+duplicate labels and missing or extra species before fitting. For a real
+dataset, preserve the original tree, resolve those differences deliberately,
+and document any pruning or exclusions rather than relying only on the checks
+above.
 
-## 4. Estimating Phylogenetic Signal ($H^2$)
+`augmented_phy` accepts Newick text for binary trees with positive non-root
+branch lengths and constructs the sparse phylogenetic representation used by
+the fitter. The default `correlation = false` retains the branch-length
+scale. The optional `correlation = true` rescales an ultrametric tree to unit
+height; it changes the interpretation of the fitted phylogenetic variance
+multiplier. Keep the tree and its scaling with your results. Four tips are
+used here to show the interface, not to support reliable variance estimation.
 
-Phylogenetic signal $H^2$ (phylogenetic heritability) measures the fraction of total variance explained by shared evolutionary history:
-
-$$H^2 = \frac{\sigma_{\text{phy}}^2}{\sigma_{\text{phy}}^2 + \bar{c}^2 + \sigma_\varepsilon^2}$$
-
-where $\bar{c}^2 = \frac{1}{p} \text{tr}(\Lambda \Lambda^\top)$ is the average variance explained by the latent factors.
+## Fit the supported Gaussian model
 
 ```julia
-# Compute point estimate of phylogenetic signal H²
-H2_hat = phylo_signal(fit_phy)
-println("Phylogenetic signal H²: ", round(H2_hat, digits = 3))
+fit = fit_phylo_gaussian(phy, y)
+
+(
+    converged = fit.converged,
+    mean = fit.μ,
+    phylogenetic_variance_multiplier = fit.σ²_phy,
+    residual_variance = fit.σ²_eps,
+    negative_loglikelihood = fit.negll,
+    iterations = fit.iterations,
+)
 ```
 
-An $H^2$ close to 1 indicates strong phylogenetic conservatism (traits follow Brownian motion along the phylogeny), whereas $H^2 \approx 0$ indicates evolutionary lability or dominance of environmental/adaptive syndromes.
+`fit_phylo_gaussian` is a univariate model: its arguments are the phylogeny
+first and the length-`p` trait vector second. The result stores variances
+directly, not standard deviations. `fit.negll` is the **negative**
+log-likelihood, so the log-likelihood is `-fit.negll`.
 
----
+Check `fit.converged` and inspect the scale and plausibility of the estimates
+before reporting them. If convergence fails, revisit the data and fitting
+settings before interpreting the components. Convergence is a numerical
+diagnostic, not evidence that Brownian motion, the supplied tree, or the
+sampling process is correct.
 
-## 5. Transformed-Wald Confidence Intervals
+## Interpret variance components carefully
 
-Because $H^2$ is bounded on the interval $[0, 1]$, standard symmetric Wald intervals ($\hat{H}^2 \pm 1.96 \cdot \text{SE}$) often produce invalid confidence limits exceeding 1 or dropping below 0.
+`fit.σ²_phy` is the estimated variance attached to the supplied Brownian
+phylogenetic covariance, while `fit.σ²_eps` is the model's independent
+residual variance. The phylogenetic contribution to species ``i``'s marginal
+variance is ``\sigma^2_{\mathrm{phy}}C_{ii}``, so the multiplier's magnitude
+depends on the tree's branch-length scale: it is not automatically a marginal
+variance or a proportion of total variance. On a non-ultrametric tree,
+``C_{ii}`` can differ among tips. The residual component describes
+independent variation under this model; it does not distinguish measurement
+error from other unmodelled causes.
 
-`GLLVModels.jl` solves this by applying a logit-scale Fisher-style transformed Wald interval:
+Their relative size is a compact description conditional on this trait, tree,
+and Gaussian model. This vignette provides point estimates only: it does not
+provide confidence intervals, a formal test of phylogenetic signal, ancestral
+states, or a causal interpretation of either component. The fitted object
+shown here contains the mean, variance estimates, likelihood, and optimization
+diagnostics; those outputs do not by themselves provide uncertainty estimates
+for this small dataset.
 
-$$\zeta = \text{logit}(H^2) = \log\left(\frac{H^2}{1 - H^2}\right)$$
+That boundary matters especially for small trees, uncertain branch lengths,
+measurement error, non-Brownian evolution, and traits measured in different
+environments. Those choices can materially change the fitted components.
 
-The Wald CI is constructed on the unconstrained $\zeta$-scale using the delta method and inverted back via the logistic function:
+## Next step
 
-$$\text{CI}_{1-\alpha}(H^2) = \text{logistic}\left(\hat{\zeta} \pm z_{1-\alpha/2} \cdot \text{SE}(\hat{\zeta})\right)$$
+Use this route to establish a correctly aligned tree and trait vector, then fit
+and inspect the basic Gaussian variance-component model. If the scientific
+question requires multiple traits, repeated observations, latent covariance,
+non-Gaussian responses, ancestral-state reconstruction, or uncertainty
+statements, do not promote this example into that workflow. Specify the target
+estimand, then consult [Structured dependence](../structured-dependence.md) and
+[Choose R, Julia, or the bridge](../choose-r-julia-bridge.md) to select an
+interface whose public surface and uncertainty support cover your design.
+Those models require their own data layout and interpretation; changing this
+vector to a matrix does not fit them.
 
-This is computed directly via `phylo_signal_wald_ci(fit)`:
-
-```julia
-# Compute 95% transformed-Wald CI for H²
-ci_H2 = phylo_signal_wald_ci(fit_phy; level = 0.95)
-
-println("95% Transformed-Wald CI for H²: [", 
-        round(ci_H2.lower, digits = 3), ", ", 
-        round(ci_H2.upper, digits = 3), "]")
-```
-
-The transformed CI is guaranteed to lie strictly inside $(0, 1)$ without arbitrary truncation.
-
----
-
-## 6. Covariance Partitioning: Evolution vs Environment
-
-We can decompose the total among-species covariance surface into its evolutionary and functional components:
-
-```julia
-# Extract estimated covariance components
-Σ_phy_hat = (fit_phy.pars.sigma_phy^2) .* C_phy
-Λ_hat = fit_phy.pars.Lambda
-Σ_latent_hat = Λ_hat * Λ_hat'
-Σ_eps_hat = (fit_phy.pars.sigma_eps^2) .* I(p)
-
-Σ_total_hat = Σ_phy_hat + Σ_latent_hat + Σ_eps_hat
-
-# Proportion of total variance in each component
-total_var = tr(Σ_total_hat)
-phy_pct = (tr(Σ_phy_hat) / total_var) * 100
-lat_pct = (tr(Σ_latent_hat) / total_var) * 100
-eps_pct = (tr(Σ_eps_hat) / total_var) * 100
-
-println("Variance Partitioning:")
-println("  Phylogenetic component: ", round(phy_pct, digits = 1), "%")
-println("  Latent functional axes: ", round(lat_pct, digits = 1), "%")
-println("  Idiosyncratic residual: ", round(eps_pct, digits = 1), "%")
-```
-
----
-
-## 7. Ancestral State Reconstruction via BLUPs
-
-The phylogenetic random effects $A$ double as ancestral state predictions (Best Linear Unbiased Predictors / BLUPs):
-
-```julia
-# Extract species-level BLUPs for phylogenetic effects
-blups = node_blups(fit_phy)
-println("Estimated ancestral/tip BLUPs matrix size: ", size(blups))
-```
-
----
-
-## 8. Summary
-
-- **Fast scaling**: Hadfield & Nakagawa precision enables $O(p)$ likelihood and gradient computations.
-- **Unified signal**: `phylo_signal(fit)` and `phylo_signal_wald_ci(fit)` provide rigorous, boundary-respecting inference for $H^2$.
-- **Complete decomposition**: Separates historical ancestry ($\sigma_{\text{phy}}^2 C_{\text{phy}}$), functional modules ($\Lambda \Lambda^\top$), and noise ($\sigma_\varepsilon^2 I_p$).
-
-For community count data and ordination biplots, refer to the [Community Abundance Vignette](community-abundance.md).
+For a basic community count ordination, see the
+[Community abundance vignette](community-abundance.md).

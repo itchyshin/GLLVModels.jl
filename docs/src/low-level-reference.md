@@ -138,6 +138,8 @@ GLLVModels._grouped_term_lstar_jacobian
 GLLVModels._grouped_selinv_row_quadform
 GLLVModels._grouped_selinv_row_crossform
 GLLVModels._glm_obs_weight_deta
+GLLVModels._grouped_fd_hessian_from_gradient
+GLLVModels._grouped_moment_log_sd
 ```
 
 ## Cross-referenced internal helpers without a docstring

@@ -1,0 +1,27 @@
+# The SHIPPED configuration, measured. nelder_mead=true throughout: the demotion
+# was abandoned on measurement, so true is what ships. g_tol is left at its 1e-4
+# default. The arc's 2.0486 s was taken at nelder_mead=false and g_tol=1e-6 and
+# describes no shipped path; this file replaces it.
+# git_sha	8bcb576fc
+# julia	1.10.0
+# blas	LBTConfig([ILP64] libopenblas64_.dylib)
+# julia_threads	4
+# openblas_threads	1
+# config	nelder_mead=true g_tol=1e-4 analytic_gradient=default
+# thread_regime	lane-discipline (julia=4 openblas=1)
+# LABEL CORRECTION, appended after f667dffb0 reverted moment_start to opt-in:
+# the row named SHIPPED is hessian=:grad_fd WITH moment_start=true, which is NOT
+# the shipped default any more. The shipped default is the HESS row
+# (hessian=:grad_fd, moment_start=false). The SHIPPED row is retained as the
+# opt-in configuration's measurement. This file's own header rule, that a
+# benchmark must carry its keyword configuration, is what makes the mislabel
+# recoverable: every row states hess and moment explicitly.
+fixture	config	nelder_mead	hessian	moment_start	wall_median_s	wall_min_s	wall_max_s	reps	loglik	rel_loglik_vs_S8BASE	converged	iterations
+glmm_200x5	S8BASE	true	fd	false	0.116574	0.115151	0.119443	5	-2025.469254255519	0.000e+00	true	3
+glmm_200x5	HESS	true	grad_fd	false	0.109201	0.107303	0.115068	5	-2025.469254255519	0.000e+00	true	3
+glmm_200x5	MOMENT	true	fd	true	0.084733	0.082433	0.086911	5	-2025.4692542555274	4.154e-15	true	3
+glmm_200x5	SHIPPED	true	grad_fd	true	0.077954	0.077173	0.079937	5	-2025.4692542555274	4.154e-15	true	3
+glmm_5000x3_g500	S8BASE	true	fd	false	6.300910	6.288243	6.317427	3	-32557.752001459012	0.000e+00	true	8
+glmm_5000x3_g500	HESS	true	grad_fd	false	4.945744	4.933769	4.948136	3	-32557.752001459012	0.000e+00	true	8
+glmm_5000x3_g500	MOMENT	true	fd	true	6.143456	6.141554	6.161975	3	-32557.752001458935	2.347e-15	true	8
+glmm_5000x3_g500	SHIPPED	true	grad_fd	true	4.727907	4.721296	4.728814	3	-32557.752001458935	2.347e-15	true	8

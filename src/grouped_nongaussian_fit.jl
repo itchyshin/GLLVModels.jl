@@ -317,9 +317,71 @@ function _grouped_laplace_design_jacobian(incidences::Vector{SparseMatrixCSC{Flo
     return sparse(reduce(hcat, blocks))
 end
 
+"""
+    _grouped_moment_log_sd(values, group_labels, G) -> Float64
+
+A cheap, data-informed starting value for one trait's `:indep` log-SD, replacing
+the constant `log(0.25)` the initialiser used for every variance coordinate.
+
+Why it exists. The trait intercepts were already initialised from the data
+(`log(mean(values))`) while every variance coordinate started at a constant, so
+the outer optimiser's first phase spent its whole budget dragging those constants
+toward the data. Measured 2026-09-22: Nelder-Mead never converges on the grouped
+Poisson route, it exhausts its 100-iteration limit, which is why deleting it
+(8.36 s against 4.30 s), capping it, and loosening its tolerance all failed. They
+addressed the compensation instead of the cause.
+
+The estimator, on the log scale and deliberately crude because it must be cheap:
+form the per-group means, take the variance of their logs, subtract a
+delta-method estimate of the within-group sampling contribution, floor the
+remainder, and halve the log to get a log-SD. One pass over the data per trait.
+
+Recovered against a fixture with true SDs [0.4, 0.3, 0.5] (log-SDs -0.916,
+-1.204, -0.693), three seeds: [-0.807, -1.176, -0.625], [-0.928, -1.205, -0.677],
+[-0.906, -1.131, -0.676].
+
+It is a POISSON/count argument. Callers must only use it where that holds; every
+other family and term mode keeps the previous constant.
+"""
+function _grouped_moment_log_sd(values::AbstractVector{<:Real}, raw_labels::AbstractVector)
+    # Labels are NOT necessarily integers: `_grouped_labels` returns whatever the
+    # user supplied, and Symbol labels are routine. Map to dense codes first. This
+    # was a real defect: a `Vector{<:AbstractVector{<:Integer}}` annotation threw
+    # TypeError on five Destination B fits with Symbol units.
+    codes = Dict{Any,Int}()
+    idx = Vector{Int}(undef, length(raw_labels))
+    @inbounds for (i, lab) in enumerate(raw_labels)
+        idx[i] = get!(codes, lab, length(codes) + 1)
+    end
+    G = length(codes)
+    length(values) == length(idx) || return log(0.25)
+    sums = zeros(Float64, G)
+    counts = zeros(Float64, G)
+    @inbounds for i in eachindex(values)
+        k = idx[i]
+        sums[k] += values[i]
+        counts[k] += 1.0
+    end
+    used = count(>(0.0), counts)
+    used >= 2 || return log(0.25)          # not enough groups to say anything
+    logm = Float64[]
+    noise = 0.0
+    @inbounds for k in 1:G
+        counts[k] > 0.0 || continue
+        m = max(sums[k] / counts[k], 0.05)
+        push!(logm, log(m))
+        noise += 1.0 / (m * counts[k])     # delta-method variance of log(mean)
+    end
+    noise /= length(logm)
+    v = var(logm) - noise
+    isfinite(v) || return log(0.25)
+    return 0.5 * log(clamp(v, 1e-3, 1e2))
+end
+
 function _grouped_nongaussian_initial_parameters(data::Matrix{Float64},
         trials::Matrix{Float64}, D::Matrix{Float64}, terms::Vector{GroupingTerm},
-        kind::Symbol, family, mode::Symbol)
+        kind::Symbol, family, mode::Symbol;
+        group_labels=nothing, moment_start::Bool=false)
     p, n = size(data)
     q = size(D, 2)
     theta = zeros(Float64, q)
@@ -337,12 +399,30 @@ function _grouped_nongaussian_initial_parameters(data::Matrix{Float64},
             end
         end
     end
+    term_index = 0
     for term in terms
+        term_index += 1
         if term.mode === :latent
             append!(theta, init_theta_rr(p, term.rank))
             term.unique && append!(theta, fill(log(0.25), term.common ? 1 : p))
         elseif term.mode === :indep
-            append!(theta, fill(log(0.25), term.common ? 1 : p))
+            # Data-informed start for the variance coordinates, but ONLY where the
+            # count argument behind `_grouped_moment_log_sd` holds and the group
+            # labels are actually available. Everything else keeps the constant,
+            # which is exactly the previous behaviour.
+            lbl = (moment_start && group_labels !== nothing && term_index <= length(group_labels)) ?
+                  group_labels[term_index] : nothing
+            if lbl !== nothing && (kind === :poisson || kind === :nb2) && !isempty(lbl)
+                if term.common
+                    push!(theta, _grouped_moment_log_sd(vec(sum(data, dims=1)) ./ max(p, 1), lbl))
+                else
+                    for trait in 1:p
+                        push!(theta, _grouped_moment_log_sd(view(data, trait, :), lbl))
+                    end
+                end
+            else
+                append!(theta, fill(log(0.25), term.common ? 1 : p))
+            end
         else
             append!(theta, init_theta_rr(p, p))
         end
@@ -596,6 +676,37 @@ finite-differenced quantity keeps a cold objective. This changes only how
 fast each inner solve converges, never the converged answer (see `joint_grouped_laplace_loglik`'s `b_init`
 docstring); pass `warm_start_inner=false` to recover the pre-S7c cold-start
 behaviour.
+
+`nelder_mead` (S9, default `true`): whether the value-only Nelder-Mead search
+runs before BFGS. The pre-S9 code ran it unconditionally, because a
+finite-differenced gradient could hand BFGS a NaN stencil (see the comment at
+the Nelder-Mead call site). With `analytic_gradient=true` there is no stencil,
+so `nelder_mead=false` lets BFGS start directly from `theta`, which costs
+noticeably fewer objective evaluations.
+
+It is OPT-IN rather than the default, and the reason is measured, not
+cautious. Skipping the simplex changes where BFGS stops at the package's
+default `g_tol=1e-4`: the fitted mean coordinates move by about 1.4e-6 to
+2.3e-6 relative against `origin/main` 69a69b0a0, which fails this arc's rtol
+1e-8 identity. The optimum itself is unchanged, and the gap collapses to about
+1e-9 as `g_tol` tightens, so this is a stopping-point difference rather than a
+wrong answer. But the answer a user gets at default settings would move, and
+that is a user-facing change rather than a speed change, so it is not made
+silently. Summed inner Newton iterations also ROSE when it was tried (752
+against 407 on the small bench fixture, 1752 against 1437 on the large one)
+even as objective calls fell by 57 to 58 per cent, so the wall-clock direction
+is not established either.
+
+Pass `nelder_mead=false` to skip it. Whether it should become the default is a
+separate decision, deliberately left open.
+
+`hessian` (S9, default `:grad_fd` when `analytic_gradient=true`, `:fd`
+otherwise; D-274): how the final diagnostic Hessian (`min_eigenvalue`,
+`pd_hessian`) is obtained. `:grad_fd` finite-differences the analytic
+gradient (`nθ` gradient calls); `:fd` is the pre-S9
+`_grouped_fd_hessian`, `O(nθ²)` objective calls, kept reachable as both the
+oracle `:grad_fd` is checked against and the fallback if `:grad_fd` fails at
+the final estimate. A full analytic Hessian is out of scope.
 """
 function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
         unit=nothing, unit_obs=nothing, cluster=nothing, cluster2=nothing,
@@ -603,7 +714,12 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
         dispersion::Symbol=:trait,
         g_tol::Real=1e-4, iterations::Integer=100,
         inner_maxiter::Integer=100, inner_tol::Real=1e-8,
-        warm_start_inner::Bool=true, analytic_gradient::Bool=true)
+        warm_start_inner::Bool=true, analytic_gradient::Bool=true,
+        nelder_mead::Bool=true,
+        nelder_mead_iterations::Integer=iterations,
+        nelder_mead_g_tol::Real=g_tol,
+        moment_start::Bool=false,
+        hessian::Symbol=(analytic_gradient ? :grad_fd : :fd))
     p, n = size(Y)
     p > 0 && n >= 2 || throw(ArgumentError("grouped fitting needs at least one trait and two observations"))
     all(isfinite, Y) || throw(ArgumentError("grouped fitting requires finite complete responses"))
@@ -611,6 +727,7 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
     iterations >= 0 || throw(ArgumentError("iterations must be non-negative"))
     inner_maxiter >= 0 || throw(ArgumentError("inner_maxiter must be non-negative"))
     isfinite(inner_tol) && inner_tol > 0 || throw(ArgumentError("inner_tol must be finite and positive"))
+    hessian in (:fd, :grad_fd) || throw(ArgumentError("hessian must be :fd or :grad_fd"))
     kind = _grouped_nongaussian_kind(family)
     mode = _grouped_nongaussian_dispersion_mode(kind, dispersion)
     all(term -> term isa GroupingTerm, terms) ||
@@ -636,7 +753,8 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
         kind, mode, p)
     total = q + source_coordinates + length(dispersion_indices)
     theta = if start === nothing
-        _grouped_nongaussian_initial_parameters(data, trials, D, termvec, kind, family, mode)
+        _grouped_nongaussian_initial_parameters(data, trials, D, termvec, kind, family, mode;
+            group_labels=labels, moment_start=moment_start)
     else
         length(start) == total || throw(DimensionMismatch("start has $(length(start)) coordinates; expected $total"))
         all(x -> x isa Real && isfinite(x), start) || throw(ArgumentError("start must be finite and real"))
@@ -681,15 +799,45 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
     # The joint Laplace domain can invalidate a finite-difference neighbour.
     # `_grouped_fd_gradient` correctly marks such a stencil NaN; feeding it to
     # a line-search method would turn a rejected stencil into an Optim error.
-    # Use a value-only outer search, then require a valid FD gradient/Hessian
-    # for convergence and observed-marginal inference below.
-    result = Optim.optimize(objective_warm, theta, Optim.NelderMead(),
-        Optim.Options(g_tol=Float64(g_tol), iterations=Int(iterations)))
+    # A value-only outer search sidesteps that; the FD gradient/Hessian is
+    # still required for convergence and observed-marginal inference below.
+    # S9: that reasoning is about the FD STENCIL specifically. With
+    # `analytic_gradient=true`, `grad_fn` below never hands BFGS a half-built
+    # stencil -- it returns one analytic vector, or falls back WHOLE to the FD
+    # gradient -- so there is no stencil for Nelder-Mead to protect BFGS from,
+    # and `nelder_mead` defaults to `false` in that case: BFGS starts directly
+    # from `theta`. The reasoning does not fully vanish, because `grad_fn`'s FD
+    # fallback can still hand BFGS a value it cannot resolve at the very first
+    # candidate, so Nelder-Mead stays wired as a safety net even when demoted:
+    # it runs, once, with a warning, if BFGS never produces a usable result.
+    # `nelder_mead=true` (the default when `analytic_gradient=false`) recovers
+    # the old unconditional search exactly.
+    # EXPERIMENT (2026-09-22): the simplex runs to its OWN convergence today and
+    # costs 2.69 s of the large fixture's remaining 4.30 s, about 62%. Removing it
+    # is measured SLOWER (8.36 s), so the only route to the arc's 1.5 s target is a
+    # cheaper simplex. `nelder_mead_iterations` caps its budget independently of the
+    # outer `iterations`, so BFGS can be handed a good-enough start instead of a
+    # fully converged one. Defaults to `iterations`, i.e. exactly today's behaviour.
+    # EXPERIMENT 2 (2026-09-22): a MEASURED stopping criterion instead of a count.
+    # Capping `nelder_mead_iterations` was refuted across three fixture seeds: the
+    # safe budget moved with the draw, so no constant works. Optim's NelderMead
+    # already converges on the SIMPLEX SPREAD, tested against `g_tol`, so loosening
+    # that one tolerance stops the simplex when it has stopped improving on THIS
+    # problem rather than after a guessed number of steps. `nelder_mead_g_tol`
+    # defaults to `g_tol`, so the default path is unchanged.
+    run_nelder_mead = () -> Optim.optimize(objective_warm, theta, Optim.NelderMead(),
+        Optim.Options(g_tol=Float64(nelder_mead_g_tol), iterations=Int(nelder_mead_iterations)))
     # A valid simplex endpoint can still be non-stationary because Nelder-Mead
     # stops on objective/simplex geometry, not this fitter's FD gradient norm.
     # Refine only when every initial BFGS stencil is valid. Invalid stencils
     # retain the value-only result and cannot be smuggled into a line search.
-    candidate = collect(Optim.minimizer(result))
+    result = nothing
+    candidate = if nelder_mead
+        result = run_nelder_mead()
+        collect(Optim.minimizer(result))
+    else
+        collect(theta)
+    end
     # S8: analytic outer gradient (implicit function theorem + selected
     # inverse, docs/design/grouped-analytic-gradient.md), used as the
     # `gradient!` Optim.BFGS refines against. `analytic_gradient=false`
@@ -719,6 +867,17 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
         (g === nothing || !all(isfinite, g)) ? _grouped_fd_gradient(objective_cold, value) : g
     end
     candidate_gradient = grad_fn(candidate)
+    # S9 safety net: Nelder-Mead was demoted (skipped above), and the very
+    # first candidate (`theta` itself) produced no usable gradient even after
+    # `grad_fn`'s own FD fallback. BFGS cannot start without a finite initial
+    # gradient, so fall back to the pre-S9 value-only search once, with a
+    # warning rather than a throw (G9.3).
+    if !all(isfinite, candidate_gradient) && result === nothing
+        @warn "no usable gradient at the starting value with Nelder-Mead demoted; falling back to the value-only Nelder-Mead search" maxlog=1
+        result = run_nelder_mead()
+        candidate = collect(Optim.minimizer(result))
+        candidate_gradient = grad_fn(candidate)
+    end
     if all(isfinite, candidate_gradient)
         gradient! = (storage, value) -> (storage .= grad_fn(value))
         # S8 (GB.4): the S7c confinement above exists because BFGS needed a
@@ -748,12 +907,61 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
             end
         end
     end
+    # S9 safety net, second occasion: `nelder_mead=false` and BFGS either
+    # never ran (non-finite candidate_gradient, already handled above and not
+    # reachable here) or ran and was rejected (`refined` invalid, or no
+    # better than `candidate`). `result` is still `nothing` in that case --
+    # there has never been an Optim result to fall back to -- so run the
+    # value-only search once, with a warning, exactly as the pre-S9 code
+    # always did unconditionally.
+    if result === nothing
+        @warn "BFGS refinement did not improve on the starting value with Nelder-Mead demoted; falling back to the value-only Nelder-Mead search" maxlog=1
+        result = run_nelder_mead()
+    end
     estimate = collect(Optim.minimizer(result))
     value = objective(estimate)
     valid = isfinite(value) && !_nll_failed(value)
-    gradient = valid ? _grouped_fd_gradient(objective, estimate) : fill(Inf, length(estimate))
+    # S9 (G9.7, D-274): the final REPORTED gradient, whose norm decides
+    # `converged` below, now matches the gradient the analytic path actually
+    # optimised against -- not `_grouped_fd_gradient` unconditionally, which
+    # is what the objective the fit reports on used to compute. The FD path
+    # (`analytic_gradient=false`) is unchanged.
+    gradient = if !valid
+        fill(Inf, length(estimate))
+    elseif analytic_gradient
+        g = try
+            _grouped_analytic_gradient(estimate, data, trials, D, termvec, incidences, kind;
+                dispersion_mode=mode, inner_maxiter=Int(inner_maxiter), inner_tol=Float64(inner_tol))
+        catch err
+            @warn "final analytic gradient threw; reporting the finite-difference gradient instead" exception=(err, catch_backtrace()) maxlog=1
+            nothing
+        end
+        (g === nothing || !all(isfinite, g)) ? _grouped_fd_gradient(objective, estimate) : g
+    else
+        _grouped_fd_gradient(objective, estimate)
+    end
     gradient_norm = all(isfinite, gradient) ? maximum(abs, gradient) : Inf
-    H = valid ? _grouped_fd_hessian(objective, estimate) : fill(NaN, length(estimate), length(estimate))
+    # S9 (D-274): `:grad_fd` finite-differences the ANALYTIC gradient (`nθ`
+    # gradient calls) instead of `_grouped_fd_hessian`'s `O(nθ²)` objective
+    # calls. `_grouped_fd_hessian` stays reachable by keyword as both the
+    # oracle `:grad_fd` is checked against (G9.2) and the fallback if
+    # `:grad_fd` fails at the final estimate.
+    H = if !valid
+        fill(NaN, length(estimate), length(estimate))
+    elseif hessian === :grad_fd
+        Hg = try
+            _grouped_fd_hessian_from_gradient(
+                v -> _grouped_analytic_gradient(v, data, trials, D, termvec, incidences, kind;
+                    dispersion_mode=mode, inner_maxiter=Int(inner_maxiter), inner_tol=Float64(inner_tol)),
+                estimate)
+        catch err
+            @warn "grad-FD Hessian threw; falling back to _grouped_fd_hessian" exception=(err, catch_backtrace()) maxlog=1
+            fill(NaN, length(estimate), length(estimate))
+        end
+        all(isfinite, Hg) ? Hg : _grouped_fd_hessian(objective, estimate)
+    else
+        _grouped_fd_hessian(objective, estimate)
+    end
     min_eigenvalue = all(isfinite, H) ? eigmin(Symmetric(H)) : NaN
     pd_hessian = isfinite(min_eigenvalue) && min_eigenvalue > 0
     converged = Optim.converged(result) && valid && gradient_norm <= g_tol

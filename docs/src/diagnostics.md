@@ -1,11 +1,32 @@
 # Diagnostics and model comparison
 
-These functions read an already-fitted model (or a pair of fits) and report
-on its health — score-centring consistency, boundary/degeneracy scans,
-residual-family checks, kernel separability — or compare two fits on the same
-species set. None of them fits a new model.
+Use this page after you have fitted a model and understood its main result.
+Diagnostics help answer three practical questions:
 
-## Single-fit diagnostics
+- Did the optimiser finish at a sensible solution?
+- Is a variance or correlation pressed against a boundary, where its estimate
+  can be fragile?
+- If two models describe the same response matrix, which differences are worth
+  investigating?
+
+Start with the fitted object and the response matrix used to fit it:
+
+```julia
+checks = fit_diagnostic_table(fit; y = Y)
+checks.check
+checks.status
+checks.message
+```
+
+The table reports a passed, failed, or unavailable check. An unavailable check
+means that this model type does not expose that calculation; it does not mean
+that the model passed by default. Read the fit summary, inspect residuals, and
+return to the data and scientific question before reporting a result.
+
+For the first Gaussian example, start with the [Quick start](quickstart.md).
+For fitted values and residuals, see [Working with a fitted model](working-with-a-fit.md).
+
+## What the detailed checks do
 
 `sanity_multi` and `gllvmTMB_diagnose`/`check_gllvmTMB` run Hessian-based
 health checks (positive-definiteness, gradient norm) and a boundary scan on

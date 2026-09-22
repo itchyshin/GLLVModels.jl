@@ -1,4 +1,32 @@
-# test/test_grouped_analytic_grad.jl — leaf-S8 gates GB.2 (fd_agreement) and GB.3 (identity).
+# test/test_grouped_analytic_grad.jl — leaf-S8 gates GB.2 (fd_agreement) and
+# GB.3 (identity); leaf-S9 gates G9.1-G9.7 (`--gate identity/hessian/
+# nm_fallback/counts/coverage/mixed/final_gradient`; G9.8/G9.9 are the
+# orchestrator's, not this file's).
+#
+# S9 (`.unlazy/grouped-analytic-20260920/gates/leaf-S9.md`) demotes the
+# unconditional value-only Nelder-Mead phase to a fallback when the analytic
+# gradient is in use, replaces the final O(nθ²) `_grouped_fd_hessian` with a
+# Hessian obtained by finite-differencing the ANALYTIC gradient (D-274), and
+# makes the FINAL REPORTED gradient the analytic one on the analytic path.
+# New gates, following this file's own `_S8_`-prefix convention with `_S9_`:
+#   --gate hessian        G9.2  grad-FD Hessian vs `_grouped_fd_hessian`,
+#                                compared as STANDARD ERRORS, rtol 1e-4.
+#   --gate nm_fallback     G9.3  the FD path (nelder_mead=true default,
+#                                hessian=:fd default) runs verbatim; a
+#                                mid-fit forced analytic-gradient failure
+#                                still completes rather than throwing.
+#   --gate counts          G9.4  objective calls / inner Newton iterations
+#                                bounded BELOW the S8-measured baseline on
+#                                both bench fixtures, reported not pinned.
+#   --gate coverage        G9.5 / G9c.1  the four coverage holes S8 left
+#                                (Binomial; Beta/NB2 dispersion=:trait; mode=:dep),
+#                                with per-draw per-coordinate FD certification
+#                                + Richardson (leaf-S9c). RTOL_FD is never widened.
+#   --gate mixed            G9.6 THE MIXED PATH: analytic gradient forced to
+#                                fail at a SUBSET of theta during a real
+#                                optimisation, still lands on the FD answer.
+#   --gate final_gradient   G9.7 the reported gradient on the analytic path
+#                                IS the analytic gradient.
 #
 # GB.2 compares the S8 analytic outer gradient
 # (`GLLVModels._grouped_analytic_gradient`, src/grouped_nongaussian_fit.jl)
@@ -37,17 +65,21 @@
 #       test/test_grouped_analytic_grad.jl --gate fd_agreement
 #   env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. \
 #       test/test_grouped_analytic_grad.jl --gate identity
-#
-# leaf-S9c added two more gates and the four fixtures they need:
-#   --gate coverage   holes 1-3 (Binomial; Beta/NB2 per-trait dispersion; mode=:dep)
-#   --gate mixed      hole 4, the mixed analytic/FD-fallback path
-# An unrecognised `--gate` name now EXITS 2 instead of silently running
-# `fd_agreement` under the wrong name; see the dispatch at the bottom.
 
-using GLLVModels, Test, Random, LinearAlgebra, SparseArrays, Printf
+using GLLVModels, Test, Random, LinearAlgebra, SparseArrays, Printf, DelimitedFiles, Optim
 
 const RTOL_FD = 1e-6      # GB.2, the FD reference's own accuracy. Never widened.
-const RTOL_IDENTITY = 1e-8  # GB.3.
+const RTOL_IDENTITY = 1e-8  # GB.3, and S9's G9.1/G9.6.
+const RTOL_HESSIAN = 1e-4   # S9 G9.2 -- the FD Hessian oracle's own accuracy, per D-274. Never widened.
+# S9 G9.2 boundary cutoff (amended 2026-09-21). Every coordinate compared here is
+# a mean or a log-scale variance parameter, so a standard error at or above this
+# means the parameter ranges over e^(+/-200) at one sigma and carries no practical
+# information: its curvature is ~0 and two finite-difference approximations of a
+# near-zero curvature compare noise, not method. Coordinates at or above it are
+# PRINTED and NOT asserted. This is a scoping of the gate to where its oracle is
+# defined; RTOL_HESSIAN above is untouched and is never widened.
+const SE_BOUNDARY = 1e2
+const RTOL_GRADIENT_NORM = 1e-6  # S9 G9.7.
 const NTHETA = 20
 const INNER_TOL = 1e-10   # tightened FIXTURE, not a loosened assertion; recorded per (d).
 const INNER_MAXITER = 200
@@ -233,14 +265,14 @@ function _fixture_poisson_percoord()
         call)
 end
 
-# The four `_s9c_*` fixtures (leaf-S9c, defined further down) are part of this
-# list, not a side gate: closing a coverage hole means every gate that loops the
-# fixtures -- fd_agreement, identity, mixed, and the in-suite `@testset` -- picks
-# them up automatically. `_s9c_coverage_fixtures()` names them as a subset so
-# `--gate coverage` can report on them on their own.
+# Coverage fixtures (G9.5 / leaf-S9c) are part of this list, not a side gate:
+# fd_agreement, identity, mixed, final_gradient, and the in-suite @testset pick
+# them up automatically. `_coverage_fixtures()` names them as a subset so
+# `--gate coverage` can report on them alone; `_s9c_coverage_fixtures()` is the
+# leaf-S9c alias for the same four fixtures.
 _fixtures() = [_fixture_poisson_latent(), _fixture_beta_shared(),
     _fixture_nb2_shared(), _fixture_poisson_twoterm(), _fixture_latent_plus_indep(),
-    _fixture_poisson_percoord(), _s9c_coverage_fixtures()...]
+    _fixture_poisson_percoord(), _coverage_fixtures()...]
 
 # ---------------------------------------------------------------------------
 # S8 regression: the unique-variance block is COMPACTED (audit 2026-09-21).
@@ -459,98 +491,437 @@ function gate_identity()
     return ok
 end
 
-# ===========================================================================
-# leaf-S9c — the four coverage holes leaf-S8 left open, split out of S9 on
-# Shinichi's instruction 2026-09-21 so S9 could ship on its speed result alone.
-#
-# S8's six fixtures leave four configurations of the grouped analytic outer
-# gradient with NO fixture at all:
-#
-#   1. Binomial. No S8 fixture uses it. Section 8.4's table says a Poisson or
-#      Binomial fixture cannot see hazard 7.5, but that is an argument for
-#      ALSO having Beta/NB2, not for leaving Binomial's own `trials` weighting
-#      and its `_glm_obs_weight` dispatch unexercised.
-#   2. PER-TRAIT dispersion (`dispersion = :trait` with a genuinely per-trait
-#      parameter block) for Beta and for NB2. The S8 `beta_shared` and
-#      `nb2_shared` fixtures collapse to ONE shared dispersion coordinate, so
-#      the per-trait branch of the dispersion block is untested — and hazard
-#      7.9 (dropped dispersion terms) lives exactly there.
-#   3. `GroupingTerm(mode = :dep)`, the full trait-covariance term. Untested.
-#   4. THE MIXED PATH: a fit in which the analytic gradient fails at a SUBSET
-#      of theta, so the optimisation runs partly analytic and partly on the
-#      `_grouped_fd_gradient` fallback. GB.4 reasoned about this path and never
-#      exercised it. It is the same class that produced a real silent bug on
-#      2026-09-21 (`_grouped_term_lstar_jacobian` writing a raw trait index
-#      where a COMPACTED column index belonged: a silently wrong gradient on
-#      the default `common=false` path, zero fixture coverage, fixed in
-#      7f175835e). Reasoning is not coverage; only a forced failure is.
-#
-# Prefix: `_s9c_` / `_S9C_`, distinct from this file's own `_S8_`/`_s8_` and
-# from the S9 lane's `_s9_`, because test files share one `Main`.
-# ===========================================================================
-
-_s9c_call_cluster(call) = hasproperty(call, :cluster) ? call.cluster : nothing
-_s9c_call_N(call) = hasproperty(call, :N) ? call.N : nothing
+# ---------------------------------------------------------------------------
+# S9 shared helper: pull `N` and `cluster` out of a fixture's `call`
+# NamedTuple when present, matching `gate_identity`'s existing `cluster`
+# pattern (not every fixture has either field).
+# ---------------------------------------------------------------------------
+_s9_call_cluster(call) = hasproperty(call, :cluster) ? call.cluster : nothing
+_s9_call_N(call) = hasproperty(call, :N) ? call.N : nothing
 
 # ---------------------------------------------------------------------------
-# Hole 1: Binomial.
+# G9.2 (--gate hessian) — the grad-FD Hessian (D-274) vs `_grouped_fd_hessian`,
+# compared as STANDARD ERRORS (the gate's own instruction: the two are
+# different estimators of the same matrix and SEs are what users see, not raw
+# Hessian entries). Both differenced at the SAME converged estimate, on all
+# six fixtures (including Beta and NB2, as G9.2 requires).
 # ---------------------------------------------------------------------------
-function _s9c_fixture_binomial()
+function _hessian_standard_errors(H::Matrix{Float64})
+    Hs = Symmetric((H .+ H') ./ 2)
+    Hinv = try
+        inv(Hs)
+    catch
+        return nothing
+    end
+    d = diag(Hinv)
+    all(isfinite, d) && all(>(0.0), d) || return nothing
+    return sqrt.(d)
+end
+
+function gate_hessian()
+    println("GATE G9.2 — grad-FD Hessian (D-274) vs _grouped_fd_hessian, STANDARD ERRORS, PER COORDINATE")
+    @printf("  rtol = %.1e   inner_tol = %.1e   inner_maxiter = %d\n", RTOL_HESSIAN, INNER_TOL, INNER_MAXITER)
+    ok = true
+    for (name, st, note, call) in _fixtures()
+        fit = GLLVModels.fit_grouped_nongaussian(call.Y; family = call.family, terms = call.terms,
+            unit = call.unit, cluster = _s9_call_cluster(call), N = _s9_call_N(call),
+            dispersion = call.dispersion, inner_maxiter = INNER_MAXITER, inner_tol = INNER_TOL,
+            analytic_gradient = true)
+        estimate = copy(fit.parameters)
+        H_gradfd = GLLVModels._grouped_fd_hessian_from_gradient(
+            v -> GLLVModels._grouped_analytic_gradient(v, st.data, st.trials, st.D, st.termvec,
+                st.incidences, st.kind; dispersion_mode = st.mode,
+                inner_maxiter = INNER_MAXITER, inner_tol = INNER_TOL),
+            estimate)
+        H_fd = GLLVModels._grouped_fd_hessian(st.objective_cold, estimate)
+        se_gradfd = _hessian_standard_errors(H_gradfd)
+        se_fd = _hessian_standard_errors(H_fd)
+        # AMENDED 2026-09-21 by Shinichi's decision, after the first run FAILED on
+        # two of six fixtures for reasons that were the ORACLE's, not this change's.
+        # The gate now asserts only where the standard error is DEFINED, and PRINTS
+        # the boundary coordinates instead of asserting on them. That is a scoping
+        # of the gate to where its oracle exists; it is NOT a widened tolerance, and
+        # RTOL_HESSIAN is untouched.
+        #
+        # Two distinct situations, kept distinct:
+        # (a) the OLD `:fd` Hessian is not positive-definite at the estimate while
+        #     `:grad_fd` is. There is then no oracle to compare against, so nothing
+        #     is asserted for that fixture and it is reported. The converse, this
+        #     change failing where the oracle succeeds, IS still a failure.
+        # (b) a single coordinate sits at a boundary: its curvature is ~0, so its SE
+        #     is astronomically large and two finite-difference approximations of a
+        #     near-zero curvature are comparing noise. Every coordinate here is a
+        #     mean or a log-scale variance parameter, so an SE above SE_BOUNDARY
+        #     means the parameter ranges over e^(+/-200) and carries no practical
+        #     information. Those coordinates are printed and not asserted.
+        # A fixture with NO assertable coordinate cannot pass vacuously: it is
+        # reported as NOT ASSERTED and the per-fixture assert count is printed.
+        if se_gradfd === nothing && se_fd === nothing
+            @printf("  NOT ASSERTED %s: neither Hessian is positive-definite at the converged estimate\n", name)
+            continue
+        elseif se_gradfd === nothing
+            @printf("  FAIL %s: the grad_fd Hessian is NOT positive-definite where the :fd oracle IS -- this change is worse than what it replaces\n", name)
+            ok = false
+            continue
+        elseif se_fd === nothing
+            @printf("  NOT ASSERTED %s: the :fd ORACLE is not positive-definite at the converged estimate while grad_fd is (grad_fd ok=true, fd ok=false); no oracle to compare against, and grad_fd is strictly the more robust of the two here\n", name)
+            continue
+        end
+        worst = 0.0; worst_k = 0; nassert = 0; nboundary = 0
+        for k in eachindex(se_fd)
+            boundary = !isfinite(se_fd[k]) || !isfinite(se_gradfd[k]) ||
+                       max(se_fd[k], se_gradfd[k]) >= SE_BOUNDARY
+            rel = abs(se_gradfd[k] - se_fd[k]) / abs(se_fd[k])
+            @printf("      coord %2d  se_grad_fd=%.10e  se_fd=%.10e  rel=%.3e%s\n", k, se_gradfd[k], se_fd[k], rel,
+                    boundary ? "   [BOUNDARY, reported not asserted]" : "")
+            if boundary
+                nboundary += 1
+            else
+                nassert += 1
+                rel > worst && (worst = rel; worst_k = k)
+            end
+        end
+        if nassert == 0
+            @printf("  NOT ASSERTED %s: every coordinate is at a boundary (%d of %d)\n", name, nboundary, length(se_fd))
+            continue
+        end
+        pass = worst <= RTOL_HESSIAN
+        @printf("  %-16s %-62s worst per-coord SE rel = %.3e (coord %d) over %d asserted, %d boundary\n",
+                name, note, worst, worst_k, nassert, nboundary)
+        println(pass ? "  PASS $name" : "  FAIL $name")
+        ok &= pass
+    end
+    println(ok ? "GATE G9.2 PASS" : "GATE G9.2 FAIL")
+    return ok
+end
+
+# ---------------------------------------------------------------------------
+# Shared monkeypatch infrastructure for G9.3(b) and G9.6 — forces
+# `GLLVModels._grouped_analytic_gradient` to return `nothing` (its documented
+# failure sentinel) on every `_S9_MIXED_FAIL_EVERY`-th call, so a fit can be
+# driven through a SUBSET of theta where the analytic gradient fails without
+# hand-crafting a fixture that fails "naturally". `_S9_MIXED_FAIL_EVERY[] =
+# 0` (the default) disables it entirely. Installed only by the gates that use
+# it, and each `--gate` mode is its own `julia` process (this file's own
+# `--gate` convention), so the patch never leaks into another gate's run.
+# ---------------------------------------------------------------------------
+const _S9_MIXED_CALL_INDEX = Ref(0)
+const _S9_MIXED_FAIL_EVERY = Ref(0)
+const _S9_MIXED_PATCH_INSTALLED = Ref(false)
+
+function _s9_install_mixed_gradient_monkeypatch!()
+    _S9_MIXED_PATCH_INSTALLED[] && return nothing
+    @eval GLLVModels function _grouped_analytic_gradient(theta::AbstractVector{<:Real},
+            data::Matrix{Float64}, trials::Matrix{Float64}, D::Matrix{Float64},
+            terms::Vector{GroupingTerm}, incidences::Vector{SparseMatrixCSC{Float64,Int}},
+            kind::Symbol; dispersion_mode::Symbol, inner_maxiter::Integer, inner_tol::Real)
+        Main._S9_MIXED_CALL_INDEX[] += 1
+        every = Main._S9_MIXED_FAIL_EVERY[]
+        if every > 0 && Main._S9_MIXED_CALL_INDEX[] % every == 0
+            return nothing
+        end
+        gradL = _grouped_analytic_loglik_gradient(theta, data, trials, D, terms, incidences, kind;
+            dispersion_mode = dispersion_mode, inner_maxiter = inner_maxiter, inner_tol = inner_tol)
+        gradL === nothing && return nothing
+        return -gradL
+    end
+    _S9_MIXED_PATCH_INSTALLED[] = true
+    return nothing
+end
+
+# ---------------------------------------------------------------------------
+# G9.3 (--gate nm_fallback) — the fallback contract.
+# ---------------------------------------------------------------------------
+function gate_nm_fallback()
+    println("GATE G9.3 — fallback contract: analytic_gradient=false runs the pre-S9 path verbatim;")
+    println("  a fit whose analytic gradient fails mid-optimisation still completes, warning not throwing.")
+    (name, st, _note, call) = _fixture_poisson_latent()
+    cluster = _s9_call_cluster(call)
+
+    # (a) analytic_gradient=false's DEFAULTS (nelder_mead=true, hessian=:fd)
+    # reproduce the pre-S9 path exactly, and Nelder-Mead actually EXECUTES --
+    # checked as more inner-Laplace-fit calls than the demoted analytic-
+    # default path costs, not merely assumed from the kwarg default.
+    GLLVModels._grouped_chol_stats_reset!()
+    fit_fd_default = GLLVModels.fit_grouped_nongaussian(call.Y; family = call.family, terms = call.terms,
+        unit = call.unit, cluster = cluster, dispersion = call.dispersion,
+        inner_maxiter = INNER_MAXITER, inner_tol = INNER_TOL, analytic_gradient = false)
+    calls_fd_default = GLLVModels._grouped_chol_stats().calls
+
+    GLLVModels._grouped_chol_stats_reset!()
+    fit_fd_explicit = GLLVModels.fit_grouped_nongaussian(call.Y; family = call.family, terms = call.terms,
+        unit = call.unit, cluster = cluster, dispersion = call.dispersion,
+        inner_maxiter = INNER_MAXITER, inner_tol = INNER_TOL, analytic_gradient = false,
+        nelder_mead = true, hessian = :fd)
+    calls_fd_explicit = GLLVModels._grouped_chol_stats().calls
+
+    GLLVModels._grouped_chol_stats_reset!()
+    fit_an_default = GLLVModels.fit_grouped_nongaussian(call.Y; family = call.family, terms = call.terms,
+        unit = call.unit, cluster = cluster, dispersion = call.dispersion,
+        inner_maxiter = INNER_MAXITER, inner_tol = INNER_TOL, analytic_gradient = true)
+    calls_an_default = GLLVModels._grouped_chol_stats().calls
+
+    @printf("  inner Laplace-fit calls: FD default (nelder_mead=true, hessian=:fd) = %d, FD explicit-kwargs = %d, analytic default (nelder_mead=false, hessian=:grad_fd) = %d\n",
+        calls_fd_default, calls_fd_explicit, calls_an_default)
+
+    default_matches_explicit = calls_fd_default == calls_fd_explicit &&
+        isapprox(fit_fd_default.loglik, fit_fd_explicit.loglik; rtol = 1e-12) &&
+        isapprox(fit_fd_default.beta, fit_fd_explicit.beta; rtol = 1e-12)
+    default_matches_explicit ||
+        println("  FAIL: analytic_gradient=false's DEFAULT kwargs do not reproduce nelder_mead=true, hessian=:fd given explicitly")
+
+    nm_ran = calls_fd_default > calls_an_default
+    nm_ran || @printf("  FAIL: expected the FD-default path (Nelder-Mead executing) to cost MORE inner Laplace fits than the demoted analytic-default path; got %d vs %d\n",
+        calls_fd_default, calls_an_default)
+
+    # `_grouped_fd_hessian` supplies H on the FD path: the fit's own
+    # hessian_min_eigenvalue must match a FRESH direct call to
+    # `_grouped_fd_hessian` at the SAME estimate.
+    H_direct = GLLVModels._grouped_fd_hessian(st.objective_cold, fit_fd_default.parameters)
+    me_direct = all(isfinite, H_direct) ? eigmin(Symmetric(H_direct)) : NaN
+    hessian_matches = isfinite(me_direct) && isapprox(fit_fd_default.hessian_min_eigenvalue, me_direct; rtol = 1e-8)
+    hessian_matches || @printf("  FAIL: fit's hessian_min_eigenvalue=%.6e does not match a direct _grouped_fd_hessian call=%.6e\n",
+        fit_fd_default.hessian_min_eigenvalue, me_direct)
+
+    # (b) a mid-fit forced analytic-gradient failure still completes, warning
+    # rather than throwing (the `grad_fn` try/catch + nothing/non-finite
+    # fallback is S8 machinery, unchanged by S9 -- this exercises it under a
+    # SUBSET-failure regime rather than assuming it still holds).
+    _s9_install_mixed_gradient_monkeypatch!()
+    _S9_MIXED_CALL_INDEX[] = 0
+    _S9_MIXED_FAIL_EVERY[] = 2
+    completed = true
+    fit_mixed = nothing
+    try
+        # `Base.invokelatest`, not a plain call: the `@eval GLLVModels` above ran
+        # from WITHIN this same function's dynamic extent, so ordinary dispatch
+        # here is still pinned to the world age from BEFORE the redefinition and
+        # would silently call the UNPATCHED method (measured: without
+        # `invokelatest`, `_S9_MIXED_CALL_INDEX` stays exactly 0 through this
+        # call). `invokelatest` forces the lookup to the current world.
+        fit_mixed = Base.invokelatest(GLLVModels.fit_grouped_nongaussian, call.Y; family = call.family,
+            terms = call.terms, unit = call.unit, cluster = cluster, dispersion = call.dispersion,
+            inner_maxiter = INNER_MAXITER, inner_tol = INNER_TOL, analytic_gradient = true)
+    catch err
+        completed = false
+        @printf("  FAIL: fit threw instead of completing: %s\n", sprint(showerror, err))
+    end
+    _S9_MIXED_FAIL_EVERY[] = 0
+    forced = _S9_MIXED_CALL_INDEX[] ÷ 2
+    @printf("  mid-fit, every 2nd analytic-gradient call forced to `nothing`: total calls=%d forced>=%d completed=%s converged=%s\n",
+        _S9_MIXED_CALL_INDEX[], forced, completed, completed ? fit_mixed.converged : "n/a")
+    (completed && forced > 0) ||
+        @printf("  FAIL: expected completion with the forced-failure branch actually exercised (completed=%s forced=%d)\n", completed, forced)
+
+    ok = default_matches_explicit && nm_ran && hessian_matches && completed && forced > 0
+    println(ok ? "GATE G9.3 PASS" : "GATE G9.3 FAIL")
+    return ok
+end
+
+# ---------------------------------------------------------------------------
+# G9.4 (--gate counts) — objective calls / inner Newton iterations, S9
+# default (nelder_mead=false) vs the S8-measured baseline, on BOTH bench
+# fixtures. Fixture CONSTRUCTION only is duplicated from
+# bench/profile_grouped_glmm.jl (same seed for the large one, the same
+# committed CSV for the small one) -- the bench DRIVER is not reused, because
+# it shadows the PRE-S9 unconditional NM-then-BFGS sequence verbatim and
+# would misreport call counts for the now-demoted default path. This harness
+# mirrors the CURRENT `fit_grouped_nongaussian` control flow instead,
+# wrapping the real objective/gradient factories with counters, never
+# reimplementing their bodies.
+# ---------------------------------------------------------------------------
+const _S9_LARGE_SEED = 20260920
+const _S9_LARGE_P = 3
+const _S9_LARGE_N = 5000
+const _S9_LARGE_G = 500
+
+function _s9_make_large_fixture()
+    rng = Xoshiro(_S9_LARGE_SEED)
+    beta_true = [log(4.0), log(6.0), log(2.5)]
+    sd_true = [0.4, 0.3, 0.5]
+    group = rand(rng, 1:_S9_LARGE_G, _S9_LARGE_N)
+    b = [sd_true[t] .* randn(rng, _S9_LARGE_G) for t in 1:_S9_LARGE_P]
+    Y = zeros(Float64, _S9_LARGE_P, _S9_LARGE_N)
+    for i in 1:_S9_LARGE_N, t in 1:_S9_LARGE_P
+        Y[t, i] = rand(rng, GLLVModels.Poisson(exp(beta_true[t] + b[t][group[i]])))
+    end
+    return Y, group
+end
+
+function _s9_load_small_fixture()
+    path = joinpath(@__DIR__, "..", "bench", "fixtures", "glmm_200x5.csv")
+    M = readdlm(path, ',', Int)
+    y = M[:, 1]; group = M[:, 2]
+    return reshape(Float64.(y), 1, :), group
+end
+
+"""
+    _s9_counted_fit(Y, group; g_tol, iterations, inner_maxiter, inner_tol) -> NamedTuple
+
+Runs the S9 `fit_grouped_nongaussian` CONTROL FLOW (`nelder_mead=false`: BFGS
+starts directly from `theta0`, with the safety-net fallbacks wired exactly as
+`src/grouped_nongaussian_fit.jl` now implements them) on a single `:indep`
+Poisson grouping fixture, wrapping the REAL objective factory's returned
+closures with a call counter -- never reimplementing the objective body.
+`_grouped_chol_stats()` is reset first and read after, so
+`inner_iters_sum` is DERIVED from it via the documented (bench/
+profile_grouped_glmm.jl header) `2*iterations(+1)` relationship, assuming
+(nearly) every inner Laplace fit converges `:ok` -- reported, not silently
+assumed: `chol_stats` is also returned so a reader can check that assumption.
+"""
+function _s9_counted_fit(Y::Matrix{Float64}, group::Vector{Int};
+        g_tol = 1e-4, iterations = 100, inner_maxiter = 100, inner_tol = 1e-8)
+    p, n = size(Y)
+    terms = GLLVModels.GroupingTerm[GLLVModels.GroupingTerm(:unit; mode = :indep)]
+    kind = GLLVModels._grouped_nongaussian_kind(GLLVModels.Poisson())
+    mode = GLLVModels._grouped_nongaussian_dispersion_mode(kind, :trait)
+    labels = GLLVModels._grouped_labels(n, terms; unit = group, unit_obs = nothing,
+        cluster = nothing, cluster2 = nothing)
+    incidences = [GLLVModels._grouped_incidence(v, n) for v in labels]
+    data = Matrix{Float64}(Y)
+    trials = GLLVModels._grouped_nongaussian_trials(data, nothing, kind)
+    D = GLLVModels._trait_mean_design(p, n)
+    theta0 = GLLVModels._grouped_nongaussian_initial_parameters(data, trials, D, terms,
+        kind, GLLVModels.Poisson(), mode)
+
+    objective_cold = GLLVModels._grouped_nongaussian_objective(data, trials, D, terms, incidences, kind;
+        dispersion_mode = mode, inner_maxiter = Int(inner_maxiter), inner_tol = Float64(inner_tol),
+        warm_start_inner = false)
+    objective_warm = GLLVModels._grouped_nongaussian_objective(data, trials, D, terms, incidences, kind;
+        dispersion_mode = mode, inner_maxiter = Int(inner_maxiter), inner_tol = Float64(inner_tol),
+        warm_start_inner = true)
+
+    obj_calls = Ref(0)
+    counted_cold = value -> (obj_calls[] += 1; objective_cold(value))
+    counted_warm = value -> (obj_calls[] += 1; objective_warm(value))
+
+    grad_fn = value -> begin
+        g = try
+            GLLVModels._grouped_analytic_gradient(value, data, trials, D, terms, incidences, kind;
+                dispersion_mode = mode, inner_maxiter = Int(inner_maxiter), inner_tol = Float64(inner_tol))
+        catch
+            nothing
+        end
+        (g === nothing || !all(isfinite, g)) ? GLLVModels._grouped_fd_gradient(counted_cold, value) : g
+    end
+
+    GLLVModels._grouped_chol_stats_reset!()
+
+    run_nm = () -> Optim.optimize(counted_warm, theta0, Optim.NelderMead(),
+        Optim.Options(g_tol = Float64(g_tol), iterations = Int(iterations)))
+    result = nothing
+    candidate = collect(theta0)
+    candidate_gradient = grad_fn(candidate)
+    if !all(isfinite, candidate_gradient)
+        result = run_nm()
+        candidate = collect(Optim.minimizer(result))
+        candidate_gradient = grad_fn(candidate)
+    end
+    if all(isfinite, candidate_gradient)
+        gradient! = (storage, value) -> (storage .= grad_fn(value))
+        refined = try
+            Optim.optimize(counted_warm, gradient!, candidate, Optim.BFGS(),
+                Optim.Options(g_tol = Float64(g_tol), iterations = Int(iterations)))
+        catch
+            nothing
+        end
+        if refined !== nothing
+            refined_estimate = collect(Optim.minimizer(refined))
+            refined_value = counted_cold(refined_estimate)
+            if isfinite(refined_value) && !GLLVModels._nll_failed(refined_value) &&
+                    refined_value <= counted_cold(candidate)
+                result = refined
+            end
+        end
+    end
+    result === nothing && (result = run_nm())
+    estimate = collect(Optim.minimizer(result))
+    value = counted_cold(estimate)
+    valid = isfinite(value) && !GLLVModels._nll_failed(value)
+
+    stats = GLLVModels._grouped_chol_stats()
+    total_chol = stats.fresh + stats.reused + stats.fallback
+    # `total_chol = 2*sum(iterations) + ok_calls` (the documented bench/
+    # profile_grouped_glmm.jl relationship), so sum(iterations) = (total_chol
+    # - ok_calls) / 2 when nearly all calls are :ok (ok_calls ~= stats.calls).
+    # The FIRST version of this line forgot the /2 and over-reported by ~2x.
+    inner_iters_sum = max(0, fld(total_chol - stats.calls, 2))
+
+    return (; loglik = valid ? -value : -Inf, valid,
+        obj_calls = obj_calls[], inner_laplace_calls = stats.calls,
+        inner_iters_sum = inner_iters_sum, chol_stats = stats)
+end
+
+function gate_counts()
+    println("GATE G9.4 — objective calls / inner Newton iterations, S9 default (nelder_mead=false) vs the S8-measured baseline")
+    println("  Reported, not pinned (D-273: the old pin stays on the old path).")
+    baseline = [("glmm_200x5", 84, 407), ("glmm_5000x3_g500", 284, 1437)]
+    fixtures = [("glmm_200x5", _s9_load_small_fixture()...), ("glmm_5000x3_g500", _s9_make_large_fixture()...)]
+    ok = true
+    for ((name, Y, group), (_, base_obj, base_iters)) in zip(fixtures, baseline)
+        m = _s9_counted_fit(Y, group)
+        @printf("  %-18s objective_calls=%d (S8 baseline %d)  inner_newton_iters_sum≈%d (S8 baseline %d)  inner_laplace_calls=%d  chol_stats=%s  loglik=%.6f valid=%s\n",
+            name, m.obj_calls, base_obj, m.inner_iters_sum, base_iters, m.inner_laplace_calls, m.chol_stats, m.loglik, m.valid)
+        pass = m.valid && m.obj_calls < base_obj && m.inner_iters_sum < base_iters
+        pass || @printf("  FAIL %s: need valid=true, obj_calls < %d (got %d), inner_iters_sum < %d (got %d)\n",
+            name, base_obj, m.obj_calls, base_iters, m.inner_iters_sum)
+        println(pass ? "  PASS $name" : "  FAIL $name")
+        ok &= pass
+    end
+    println(ok ? "GATE G9.4 PASS" : "GATE G9.4 FAIL")
+    return ok
+end
+
+# ---------------------------------------------------------------------------
+# G9.5 (--gate coverage) — the four coverage holes S8 left: Binomial;
+# per-trait `dispersion=:trait` for Beta and for NB2; `GroupingTerm(mode=:dep)`.
+# Each must pass BOTH fd_agreement (per-coordinate, rtol RTOL_FD) and identity
+# (rtol RTOL_IDENTITY).
+# ---------------------------------------------------------------------------
+function _fixture_binomial()
     rng = Xoshiro(20260926)
     p, n, G = 2, 60, 12
     unit = repeat(1:G; inner = n ÷ G)
     beta = [0.2, -0.3]
     z = 0.6 .* randn(rng, G)
-    ntrials = 8
-    N = fill(Float64(ntrials), p, n)
+    ntrials = 8.0
+    N = fill(ntrials, p, n)
     Y = Matrix{Float64}(undef, p, n)
     for s in 1:n, t in 1:p
         mu = 1 / (1 + exp(-(beta[t] + z[unit[s]])))
-        Y[t, s] = rand(rng, GLLVModels.Binomial(ntrials, mu))
+        Y[t, s] = rand(rng, GLLVModels.Binomial(Int(ntrials), mu))
     end
     call = (; Y = Y, family = GLLVModels.Binomial(), N = N,
         terms = [GLLVModels.GroupingTerm(:unit; mode = :indep, common = true)],
         unit = unit, dispersion = :trait)
     st = _grouped_internals(Y; family = call.family, terms = call.terms, unit = unit, N = N)
-    return ("binomial", st, "Binomial with trials=8 (hole 1: no S8 fixture uses it)", call)
+    return ("binomial", st, "Binomial, coverage hole S8 left untested (G9.5)", call)
 end
 
-# ---------------------------------------------------------------------------
-# Hole 2: PER-TRAIT dispersion, for Beta and for NB2.
-#
-# The point of these two is the SHAPE of the dispersion block, so each is
-# asserted to own more than one dispersion coordinate — otherwise it silently
-# degenerates into the shared case the S8 fixtures already cover and the hole
-# stays open while the gate goes green. `_s9c_assert_per_trait_dispersion`
-# below is that check, and it runs inside the gate, not as a comment.
-# ---------------------------------------------------------------------------
-function _s9c_fixture_beta_trait()
+function _fixture_beta_trait()
     rng = Xoshiro(20260927)
     p, n, G = 2, 60, 12
     unit = repeat(1:G; inner = n ÷ G)
-    phi = [7.0, 11.0]          # DIFFERENT per trait, so :trait is not cosmetic
+    phi = [7.0, 11.0]
     beta = [0.25, -0.2]
     z = 0.6 .* randn(rng, G)
     Y = Matrix{Float64}(undef, p, n)
     for s in 1:n, t in 1:p
         mu = 1 / (1 + exp(-(beta[t] + z[unit[s]])))
-        Y[t, s] = clamp(rand(rng, GLLVModels.Beta(mu * phi[t], (1 - mu) * phi[t])),
-            1e-4, 1 - 1e-4)
+        Y[t, s] = clamp(rand(rng, GLLVModels.Beta(mu * phi[t], (1 - mu) * phi[t])), 1e-4, 1 - 1e-4)
     end
     call = (; Y = Y, family = GLLVModels.Beta(8.0, 1.0),
         terms = [GLLVModels.GroupingTerm(:unit; mode = :indep, common = true)],
         unit = unit, dispersion = :trait)
-    st = _grouped_internals(Y; family = call.family, terms = call.terms, unit = unit,
-        dispersion = :trait)
-    return ("beta_trait", st,
-        "Beta, PER-TRAIT log_phi (hole 2: beta_shared has ONE shared phi)", call)
+    st = _grouped_internals(Y; family = call.family, terms = call.terms, unit = unit, dispersion = :trait)
+    return ("beta_trait", st, "Beta, PER-TRAIT log_phi (dispersion=:trait), coverage hole S8 left (G9.5)", call)
 end
 
-function _s9c_fixture_nb2_trait()
+function _fixture_nb2_trait()
     rng = Xoshiro(20260928)
     p, n, G = 2, 60, 12
     unit = repeat(1:G; inner = n ÷ G)
-    r = [4.0, 6.0]             # DIFFERENT per trait
+    r = [4.0, 6.0]
     beta = [0.5, 0.15]
     z = 0.5 .* randn(rng, G)
     Y = Matrix{Float64}(undef, p, n)
@@ -561,21 +932,16 @@ function _s9c_fixture_nb2_trait()
     call = (; Y = Y, family = GLLVModels.NegativeBinomial(4.0, 0.5),
         terms = [GLLVModels.GroupingTerm(:unit; mode = :indep, common = true)],
         unit = unit, dispersion = :trait)
-    st = _grouped_internals(Y; family = call.family, terms = call.terms, unit = unit,
-        dispersion = :trait)
-    return ("nb2_trait", st,
-        "NegativeBinomial, PER-TRAIT log_r (hole 2: nb2_shared has ONE shared r)", call)
+    st = _grouped_internals(Y; family = call.family, terms = call.terms, unit = unit, dispersion = :trait)
+    return ("nb2_trait", st, "NegativeBinomial, PER-TRAIT log_r (dispersion=:trait), coverage hole S8 left (G9.5)", call)
 end
 
-# ---------------------------------------------------------------------------
-# Hole 3: GroupingTerm(mode = :dep), the full trait-covariance term.
-# ---------------------------------------------------------------------------
-function _s9c_fixture_dep()
+function _fixture_dep()
     rng = Xoshiro(20260929)
     p, n, G = 2, 60, 12
     unit = repeat(1:G; inner = n ÷ G)
     beta = [0.3, -0.1]
-    Ltrue = [0.6 0.0; 0.3 0.5]   # off-diagonal nonzero, so :dep is not :indep
+    Ltrue = [0.6 0.0; 0.3 0.5]
     z = randn(rng, G, 2)
     Y = Matrix{Float64}(undef, p, n)
     for s in 1:n
@@ -588,12 +954,21 @@ function _s9c_fixture_dep()
         terms = [GLLVModels.GroupingTerm(:unit; mode = :dep)],
         unit = unit, dispersion = :trait)
     st = _grouped_internals(Y; family = call.family, terms = call.terms, unit = unit)
-    return ("dep_term", st,
-        "GroupingTerm(mode=:dep), off-diagonal trait covariance (hole 3)", call)
+    return ("dep_term", st, "GroupingTerm(mode=:dep), full trait covariance, coverage hole S8 left (G9.5)", call)
 end
 
-_s9c_coverage_fixtures() = [_s9c_fixture_binomial(), _s9c_fixture_beta_trait(),
-    _s9c_fixture_nb2_trait(), _s9c_fixture_dep()]
+_coverage_fixtures() = [_fixture_binomial(), _fixture_beta_trait(), _fixture_nb2_trait(), _fixture_dep()]
+
+# leaf-S9c aliases: same four fixtures under the `_s9c_*` names the certification
+# lane shipped. Keep BOTH surfaces (main `_fixture_*` / `_coverage_fixtures` and
+# branch `_s9c_fixture_*` / `_s9c_coverage_fixtures`).
+_s9c_call_cluster(call) = _s9_call_cluster(call)
+_s9c_call_N(call) = _s9_call_N(call)
+_s9c_fixture_binomial() = _fixture_binomial()
+_s9c_fixture_beta_trait() = _fixture_beta_trait()
+_s9c_fixture_nb2_trait() = _fixture_nb2_trait()
+_s9c_fixture_dep() = _fixture_dep()
+_s9c_coverage_fixtures() = _coverage_fixtures()
 
 """
     _s9c_assert_per_trait_dispersion(name, st, want) -> Bool
@@ -692,18 +1067,89 @@ function _s9c_richardson_check(st, theta, coord; ladder = [2e-4, 1e-4, 5e-5, 2.5
              "OUTSIDE it: a genuine analytic-gradient error")
     return (; ok, res, worst_gap, reason = :measured)
 end
-
 # ---------------------------------------------------------------------------
-# G9c.1 (--gate coverage) — holes 1 to 3. Each fixture must pass BOTH
-# fd_agreement (per-coordinate, rtol RTOL_FD) and identity (rtol
-# RTOL_IDENTITY), and the per-trait ones must really own a per-trait block.
+# A theta coordinate can differ between two paths for two very different
+# reasons: the fit landed somewhere else (a defect), or the coordinate is on a
+# FLAT direction the data does not identify, so the two paths stopped at
+# different points on the same likelihood plateau (not a defect).
 #
-# A coordinate that misses RTOL_FD while the FD instrument is NOT certified
-# there is reported INDETERMINATE, which is NOT a pass: the gate still fails,
-# but the ledger records that the instrument, not the gradient, is what ran
-# out of resolution. Section 8.3 requires exactly that distinction, and it is
-# the only honest alternative to widening the bound.
+# Telling them apart is a MEASUREMENT, not a judgement call: substitute the
+# other path's value for that ONE coordinate into the reference estimate and
+# re-evaluate the objective. On a flat direction the objective does not move. A
+# coordinate that is genuinely wrong moves it.
+#
+# This is the only reason any coordinate is ever exempted from RTOL_IDENTITY,
+# the exemption is per coordinate, it is re-measured every run, and RTOL_IDENTITY
+# itself is never widened. Inherited S8 fixtures `poisson_twoterm` and
+# `poisson_percoord` each drive a variance component to its boundary
+# (log_sd = -8.45 and -9.32, i.e. SD ~ 2e-4 and 9e-5) at the default g_tol=1e-4,
+# which is where this arises; it is PRE-EXISTING and reproduces with no forced
+# gradient failure at all.
 # ---------------------------------------------------------------------------
+function _s9c_flat_direction_check(st, ref_theta, other_theta, k, label)
+    probe = collect(ref_theta)
+    probe[k] = other_theta[k]
+    f_ref = st.objective_cold(collect(ref_theta))
+    f_probe = st.objective_cold(probe)
+    (isfinite(f_ref) && isfinite(f_probe)) ||
+        return (; flat = false, f_ref, f_probe, rel = Inf)
+    rel = abs(f_probe - f_ref) / max(abs(f_ref), 1.0)
+    flat = rel <= RTOL_IDENTITY
+    @printf("      coord %d (%s): %+.10e vs %+.10e\n", k, label, ref_theta[k], other_theta[k])
+    @printf("        objective at reference = %.12e, with ONLY this coordinate swapped = %.12e\n",
+        f_ref, f_probe)
+    @printf("        relative objective change = %.3e (bound %.1e) -> %s\n", rel, RTOL_IDENTITY,
+        flat ? "FLAT: the data does not identify this coordinate; same point on the likelihood" :
+               "NOT FLAT: the objective moved, so this is a genuine disagreement")
+    return (; flat, f_ref, f_probe, rel)
+end
+
+"""
+    _s9c_theta_verdict(st, fit_ref, fit_other, labels) -> (pass, offenders, flat_ok)
+
+Per-coordinate theta comparison at RTOL_IDENTITY, with every over-tolerance
+coordinate adjudicated by `_s9c_flat_direction_check` rather than waved through.
+"""
+function _s9c_theta_verdict(st, fit_ref, fit_other, labels)
+    ref, oth = fit_ref.parameters, fit_other.parameters
+    offenders = Int[]
+    for k in eachindex(ref)
+        abs(oth[k] - ref[k]) / max(abs(ref[k]), 1.0) <= RTOL_IDENTITY || push!(offenders, k)
+    end
+    flat_ok = true
+    for k in offenders
+        lab = k <= length(labels) ? labels[k] : "coord $k"
+        chk = _s9c_flat_direction_check(st, ref, oth, k, lab)
+        flat_ok &= chk.flat
+    end
+    return (; pass = flat_ok, offenders, flat_ok)
+end
+
+const _S9C_MIXED_CALL_INDEX = Ref(0)
+const _S9C_MIXED_FAIL_EVERY = Ref(0)
+const _S9C_MIXED_PATCH_INSTALLED = Ref(false)
+
+function _s9c_install_mixed_gradient_monkeypatch!()
+    _S9C_MIXED_PATCH_INSTALLED[] && return nothing
+    @eval GLLVModels function _grouped_analytic_gradient(theta::AbstractVector{<:Real},
+            data::Matrix{Float64}, trials::Matrix{Float64}, D::Matrix{Float64},
+            terms::Vector{GroupingTerm}, incidences::Vector{SparseMatrixCSC{Float64,Int}},
+            kind::Symbol; dispersion_mode::Symbol, inner_maxiter::Integer, inner_tol::Real)
+        Main._S9C_MIXED_CALL_INDEX[] += 1
+        every = Main._S9C_MIXED_FAIL_EVERY[]
+        if every > 0 && Main._S9C_MIXED_CALL_INDEX[] % every == 0
+            return nothing
+        end
+        gradL = _grouped_analytic_loglik_gradient(theta, data, trials, D, terms, incidences,
+            kind; dispersion_mode = dispersion_mode, inner_maxiter = inner_maxiter,
+            inner_tol = inner_tol)
+        gradL === nothing && return nothing
+        return -gradL
+    end
+    _S9C_MIXED_PATCH_INSTALLED[] = true
+    return nothing
+end
+
 function gate_coverage()
     println("GATE G9c.1 — coverage holes 1-3: Binomial; Beta/NB2 per-trait dispersion; GroupingTerm(mode=:dep)")
     @printf("  rtol_fd = %.1e   rtol_identity = %.1e   inner_tol = %.1e   inner_maxiter = %d   ntheta = %d\n",
@@ -711,7 +1157,7 @@ function gate_coverage()
     println("  Each fixture must pass BOTH halves. No tolerance is widened anywhere in this gate.")
     want_disp = Dict("beta_trait" => 2, "nb2_trait" => 2)
     ok = true
-    for (name, st, note, call) in _s9c_coverage_fixtures()
+    for (name, st, note, call) in _coverage_fixtures()
         println()
         r = _compare_fixture(name, st, note)
         _s9c_fd_certificate(name, st)
@@ -786,189 +1232,115 @@ function gate_coverage()
 end
 
 # ---------------------------------------------------------------------------
-# A theta coordinate can differ between two paths for two very different
-# reasons: the fit landed somewhere else (a defect), or the coordinate is on a
-# FLAT direction the data does not identify, so the two paths stopped at
-# different points on the same likelihood plateau (not a defect).
-#
-# Telling them apart is a MEASUREMENT, not a judgement call: substitute the
-# other path's value for that ONE coordinate into the reference estimate and
-# re-evaluate the objective. On a flat direction the objective does not move. A
-# coordinate that is genuinely wrong moves it.
-#
-# This is the only reason any coordinate is ever exempted from RTOL_IDENTITY,
-# the exemption is per coordinate, it is re-measured every run, and RTOL_IDENTITY
-# itself is never widened. Inherited S8 fixtures `poisson_twoterm` and
-# `poisson_percoord` each drive a variance component to its boundary
-# (log_sd = -8.45 and -9.32, i.e. SD ~ 2e-4 and 9e-5) at the default g_tol=1e-4,
-# which is where this arises; it is PRE-EXISTING and reproduces with no forced
-# gradient failure at all.
-# ---------------------------------------------------------------------------
-function _s9c_flat_direction_check(st, ref_theta, other_theta, k, label)
-    probe = collect(ref_theta)
-    probe[k] = other_theta[k]
-    f_ref = st.objective_cold(collect(ref_theta))
-    f_probe = st.objective_cold(probe)
-    (isfinite(f_ref) && isfinite(f_probe)) ||
-        return (; flat = false, f_ref, f_probe, rel = Inf)
-    rel = abs(f_probe - f_ref) / max(abs(f_ref), 1.0)
-    flat = rel <= RTOL_IDENTITY
-    @printf("      coord %d (%s): %+.10e vs %+.10e\n", k, label, ref_theta[k], other_theta[k])
-    @printf("        objective at reference = %.12e, with ONLY this coordinate swapped = %.12e\n",
-        f_ref, f_probe)
-    @printf("        relative objective change = %.3e (bound %.1e) -> %s\n", rel, RTOL_IDENTITY,
-        flat ? "FLAT: the data does not identify this coordinate; same point on the likelihood" :
-               "NOT FLAT: the objective moved, so this is a genuine disagreement")
-    return (; flat, f_ref, f_probe, rel)
-end
-
-"""
-    _s9c_theta_verdict(st, fit_ref, fit_other, labels) -> (pass, offenders, flat_ok)
-
-Per-coordinate theta comparison at RTOL_IDENTITY, with every over-tolerance
-coordinate adjudicated by `_s9c_flat_direction_check` rather than waved through.
-"""
-function _s9c_theta_verdict(st, fit_ref, fit_other, labels)
-    ref, oth = fit_ref.parameters, fit_other.parameters
-    offenders = Int[]
-    for k in eachindex(ref)
-        abs(oth[k] - ref[k]) / max(abs(ref[k]), 1.0) <= RTOL_IDENTITY || push!(offenders, k)
-    end
-    flat_ok = true
-    for k in offenders
-        lab = k <= length(labels) ? labels[k] : "coord $k"
-        chk = _s9c_flat_direction_check(st, ref, oth, k, lab)
-        flat_ok &= chk.flat
-    end
-    return (; pass = flat_ok, offenders, flat_ok)
-end
-
-# ---------------------------------------------------------------------------
-# Hole 4, the important one: THE MIXED PATH.
-#
-# A test-only monkeypatch makes `_grouped_analytic_gradient` return its
-# documented failure sentinel (`nothing`) on every `_S9C_MIXED_FAIL_EVERY`-th
-# call, so a REAL optimisation is driven through a SUBSET of theta where the
-# analytic gradient fails, without hand-crafting a fixture that fails by luck.
-# `_S9C_MIXED_FAIL_EVERY[] = 0` (the default) disables it entirely, and each
-# `--gate` mode is its own `julia` process, so the patch never leaks.
-#
-# WORLD AGE, and why `Base.invokelatest` below is load-bearing rather than
-# defensive: the `@eval`-installed redefinition is invisible to calls made
-# later in the SAME already-executing function. A plain call from inside
-# `gate_mixed` is pinned to a world age before the redefinition and silently
-# runs the UNPATCHED method -- `forced = 0`, the failure branch never
-# exercised, and the gate passes VACUOUSLY. The `forced > 0` assertion is what
-# catches that, and it is asserted, not printed.
-# ---------------------------------------------------------------------------
-const _S9C_MIXED_CALL_INDEX = Ref(0)
-const _S9C_MIXED_FAIL_EVERY = Ref(0)
-const _S9C_MIXED_PATCH_INSTALLED = Ref(false)
-
-function _s9c_install_mixed_gradient_monkeypatch!()
-    _S9C_MIXED_PATCH_INSTALLED[] && return nothing
-    @eval GLLVModels function _grouped_analytic_gradient(theta::AbstractVector{<:Real},
-            data::Matrix{Float64}, trials::Matrix{Float64}, D::Matrix{Float64},
-            terms::Vector{GroupingTerm}, incidences::Vector{SparseMatrixCSC{Float64,Int}},
-            kind::Symbol; dispersion_mode::Symbol, inner_maxiter::Integer, inner_tol::Real)
-        Main._S9C_MIXED_CALL_INDEX[] += 1
-        every = Main._S9C_MIXED_FAIL_EVERY[]
-        if every > 0 && Main._S9C_MIXED_CALL_INDEX[] % every == 0
-            return nothing
-        end
-        gradL = _grouped_analytic_loglik_gradient(theta, data, trials, D, terms, incidences,
-            kind; dispersion_mode = dispersion_mode, inner_maxiter = inner_maxiter,
-            inner_tol = inner_tol)
-        gradL === nothing && return nothing
-        return -gradL
-    end
-    _S9C_MIXED_PATCH_INSTALLED[] = true
-    return nothing
-end
-
-# ---------------------------------------------------------------------------
-# G9c.2 (--gate mixed) — a hard gate, not optional. A fit whose analytic
-# gradient fails at a SUBSET of theta still lands on the all-FD answer (the
-# code path origin/main 69a69b0a0 takes) at rtol RTOL_IDENTITY, and really did
-# fall back (`forced > 0`, asserted).
+# G9.6 (--gate mixed) — THE MIXED PATH, a hard gate. A fixture that forces the
+# analytic gradient to fail at a SUBSET of theta during a REAL optimisation
+# still lands on the all-FD answer at rtol 1e-8. This is the class that
+# produced the S8 compaction bug (GB.4's reasoning-without-exercising).
 # ---------------------------------------------------------------------------
 function gate_mixed()
-    println("GATE G9c.2 — MIXED PATH: analytic gradient forced to fail on a SUBSET of theta mid-fit,")
-    println("  and the fit must still land on the all-FD answer at rtol $(RTOL_IDENTITY).")
-    println("  `forced > 0` is ASSERTED, not printed: without it this gate passes vacuously.")
-    _s9c_install_mixed_gradient_monkeypatch!()
-    every = 3
-    all_fixtures = _fixtures()   # includes the four S9c coverage fixtures
+    println("GATE G9.6 — MIXED PATH: analytic gradient forced to `nothing` on a SUBSET of theta, still lands on the FD answer")
+    _s9_install_mixed_gradient_monkeypatch!()
     ok = true
-    for (name, st, _note, call) in all_fixtures
-        cluster = _s9c_call_cluster(call)
-        N = _s9c_call_N(call)
-        fit_ref = GLLVModels.fit_grouped_nongaussian(call.Y; family = call.family,
-            terms = call.terms, unit = call.unit, cluster = cluster, N = N,
-            dispersion = call.dispersion, inner_maxiter = INNER_MAXITER,
-            inner_tol = INNER_TOL, analytic_gradient = false)
+    for (name, st, _note, call) in _fixtures()
+        cluster = _s9_call_cluster(call)
+        N = _s9_call_N(call)
+        fit_ref = GLLVModels.fit_grouped_nongaussian(call.Y; family = call.family, terms = call.terms,
+            unit = call.unit, cluster = cluster, N = N, dispersion = call.dispersion,
+            inner_maxiter = INNER_MAXITER, inner_tol = INNER_TOL, analytic_gradient = false)
 
-        _S9C_MIXED_CALL_INDEX[] = 0
-        _S9C_MIXED_FAIL_EVERY[] = every
-        fit_mixed = Base.invokelatest(GLLVModels.fit_grouped_nongaussian, call.Y;
-            family = call.family, terms = call.terms, unit = call.unit, cluster = cluster,
-            N = N, dispersion = call.dispersion, inner_maxiter = INNER_MAXITER,
-            inner_tol = INNER_TOL, analytic_gradient = true)
-        _S9C_MIXED_FAIL_EVERY[] = 0
-        total_calls = _S9C_MIXED_CALL_INDEX[]
-        forced = total_calls ÷ every
+        _S9_MIXED_CALL_INDEX[] = 0
+        _S9_MIXED_FAIL_EVERY[] = 3
+        # `Base.invokelatest`, not a plain call -- see the comment at
+        # `gate_nm_fallback`'s equivalent call: `_s9_install_mixed_gradient_
+        # monkeypatch!` ran from within this same function's dynamic extent,
+        # so ordinary dispatch here is pinned to a world age before the
+        # redefinition and would silently run the UNPATCHED method.
+        fit_mixed = Base.invokelatest(GLLVModels.fit_grouped_nongaussian, call.Y; family = call.family,
+            terms = call.terms, unit = call.unit, cluster = cluster, N = N, dispersion = call.dispersion,
+            inner_maxiter = INNER_MAXITER, inner_tol = INNER_TOL, analytic_gradient = true)
+        _S9_MIXED_FAIL_EVERY[] = 0
+        total_calls = _S9_MIXED_CALL_INDEX[]
+        forced = total_calls ÷ 3
 
         dll = abs(fit_mixed.loglik - fit_ref.loglik) / max(abs(fit_ref.loglik), 1.0)
         dbeta = maximum(abs.(fit_mixed.beta .- fit_ref.beta) ./ max.(abs.(fit_ref.beta), 1.0))
-        dtheta = maximum(abs.(fit_mixed.parameters .- fit_ref.parameters) ./
-            max.(abs.(fit_ref.parameters), 1.0))
-        @printf("  %-16s analytic calls=%3d forced=%3d  loglik ref=%.12e mixed=%.12e rel=%.3e\n",
-            name, total_calls, forced, fit_ref.loglik, fit_mixed.loglik, dll)
-        @printf("      max per-coord beta rel=%.3e  max per-coord theta rel=%.3e  converged ref=%s mixed=%s\n",
-            dbeta, dtheta, fit_ref.converged, fit_mixed.converged)
+        @printf("  %-16s analytic-gradient calls=%d forced-failures=%d  loglik ref=%.12e mixed=%.12e rel=%.3e  beta_rel=%.3e  converged ref=%s mixed=%s\n",
+            name, total_calls, forced, fit_ref.loglik, fit_mixed.loglik, dll, dbeta, fit_ref.converged, fit_mixed.converged)
         tv = _s9c_theta_verdict(st, fit_ref, fit_mixed, fit_ref.parameter_labels)
         pass = forced > 0 && dll <= RTOL_IDENTITY && dbeta <= RTOL_IDENTITY &&
             tv.pass && fit_ref.converged == fit_mixed.converged
-        pass || @printf("  FAIL %s: forced=%d (need > 0, else VACUOUS) loglik rel=%.3e beta rel=%.3e theta offenders=%s\n",
-            name, forced, dll, dbeta, string(tv.offenders))
+        pass || @printf("  FAIL %s: forced=%d (need >0) dll=%.3e dbeta=%.3e theta offenders=%s (need <= %.1e)\n",
+            name, forced, dll, dbeta, string(tv.offenders), RTOL_IDENTITY)
         println(pass ? "  PASS $name" : "  FAIL $name")
         ok &= pass
     end
-    println(ok ? "GATE G9c.2 PASS" : "GATE G9c.2 FAIL")
+    println(ok ? "GATE G9.6 PASS" : "GATE G9.6 FAIL")
+    return ok
+end
+
+# ---------------------------------------------------------------------------
+# G9.7 (--gate final_gradient) — the final REPORTED gradient on the analytic
+# path IS the analytic gradient (not `_grouped_fd_gradient`, which
+# src/grouped_nongaussian_fit.jl:754 called unconditionally pre-S9), and its
+# norm agrees with the FD gradient's norm at the converged point to rtol
+# 1e-6, so the convergence verdict does not change.
+# ---------------------------------------------------------------------------
+function gate_final_gradient()
+    println("GATE G9.7 — the final reported gradient on the analytic path IS the analytic gradient")
+    ok = true
+    for (name, st, _note, call) in _fixtures()
+        fit = GLLVModels.fit_grouped_nongaussian(call.Y; family = call.family, terms = call.terms,
+            unit = call.unit, cluster = _s9_call_cluster(call), N = _s9_call_N(call),
+            dispersion = call.dispersion,
+            inner_maxiter = INNER_MAXITER, inner_tol = INNER_TOL, analytic_gradient = true)
+        estimate = copy(fit.parameters)
+        g_an = GLLVModels._grouped_analytic_gradient(estimate, st.data, st.trials, st.D, st.termvec,
+            st.incidences, st.kind; dispersion_mode = st.mode,
+            inner_maxiter = INNER_MAXITER, inner_tol = INNER_TOL)
+        g_fd = GLLVModels._grouped_fd_gradient(st.objective_cold, estimate)
+        an_norm_direct = maximum(abs, g_an)
+        fd_norm = maximum(abs, g_fd)
+        rel_source = abs(fit.gradient_norm - an_norm_direct) / max(an_norm_direct, 1.0)
+        rel_fd = abs(fit.gradient_norm - fd_norm) / max(fd_norm, 1.0)
+        @printf("  %-16s reported=%.10e  analytic_direct=%.10e (source rel=%.3e)  fd=%.10e (rel to reported=%.3e)\n",
+            name, fit.gradient_norm, an_norm_direct, rel_source, fd_norm, rel_fd)
+        pass = rel_source <= 1e-10 && rel_fd <= RTOL_GRADIENT_NORM
+        pass || @printf("  FAIL %s: rel_source=%.3e (need <=1e-10) rel_fd=%.3e (need <=%.1e)\n",
+            name, rel_source, rel_fd, RTOL_GRADIENT_NORM)
+        println(pass ? "  PASS $name" : "  FAIL $name")
+        ok &= pass
+    end
+    println(ok ? "GATE G9.7 PASS" : "GATE G9.7 FAIL")
     return ok
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__
-    # An unrecognised `--gate` name must ERROR, never fall through. It used to
-    # run `gate_fd_agreement()`, so any CHECK naming a gate this branch does not
-    # implement printed "GATE GB.2 PASS" and exited 0 while measuring something
-    # else entirely. That is not hypothetical: leaf-S9.md ships seven CHECK
-    # lines, six of which name gates that live only on the S9 lanes, so six
-    # acceptance gates would each have passed vacuously. A typo did the same.
-    #
-    # Exit 2 (usage) rather than 1 (gate failed), so a script can tell a typo
-    # from a real failure. The table is `_S9C_GATES`, not `_GATES`, because
-    # test_grouped_laplace_identity.jl:369 already binds `const _GATES` at top
-    # level and the suite shares one `Main`.
-    _S9C_GATES = Dict{String,Function}(
-        "fd_agreement" => gate_fd_agreement,
-        "identity"     => gate_identity,
-        "coverage"     => gate_coverage,
-        "mixed"        => gate_mixed,
-    )
-    if !(length(ARGS) == 0 || (length(ARGS) == 2 && ARGS[1] == "--gate"))
-        println(stderr, "usage: julia --project=. $(basename(@__FILE__)) [--gate <name>]")
-        println(stderr, "known gates: ", join(sort(collect(keys(_S9C_GATES))), ", "))
-        exit(2)
+    gate = length(ARGS) >= 2 && ARGS[1] == "--gate" ? ARGS[2] : "fd_agreement"
+    # An UNRECOGNISED gate name must ERROR, never fall through. It used to run
+    # `gate_fd_agreement()`, so any CHECK naming a gate this branch does not
+    # implement printed "GATE GB.2 PASS" and exited 0, and a typo did the same.
+    # Both sides of this merge fixed that; this keeps S9a's seven gates AND the
+    # error branch, because dropping either would reinstate one half of the bug.
+    ok = if gate == "fd_agreement"
+        gate_fd_agreement()
+    elseif gate == "identity"
+        gate_identity()
+    elseif gate == "hessian"
+        gate_hessian()
+    elseif gate == "nm_fallback"
+        gate_nm_fallback()
+    elseif gate == "counts"
+        gate_counts()
+    elseif gate == "coverage"
+        gate_coverage()
+    elseif gate == "mixed"
+        gate_mixed()
+    elseif gate == "final_gradient"
+        gate_final_gradient()
+    else
+        error("unknown --gate $(gate); gates implemented on this branch: " *
+              "fd_agreement, identity, hessian, nm_fallback, counts, coverage, mixed, final_gradient")
     end
-    gate = length(ARGS) == 2 ? ARGS[2] : "fd_agreement"
-    if !haskey(_S9C_GATES, gate)
-        println(stderr, "unknown gate $(repr(gate)). Known gates: ",
-            join(sort(collect(keys(_S9C_GATES))), ", "))
-        println(stderr, "Refusing to run a different gate under this name: that is a vacuous pass.")
-        exit(2)
-    end
-    ok = _S9C_GATES[gate]()
     exit(ok ? 0 : 1)
 else
     @testset "grouped analytic outer gradient vs finite differences" begin

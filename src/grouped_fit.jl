@@ -246,6 +246,36 @@ function _grouped_fd_hessian(f, theta::Vector{Float64}; step::Float64 = 1e-4)
     return H
 end
 
+"""
+    _grouped_fd_hessian_from_gradient(gradfn, theta; step=1e-5) -> Matrix{Float64}
+
+The S9 (D-274) Hessian: finite-differences a GRADIENT function `gradfn`
+(`theta -> Vector{Float64}` or `nothing` on failure) in `d = length(theta)`
+gradient calls, rather than `_grouped_fd_hessian`'s `O(d^2)` objective calls.
+Central difference per coordinate, `H[:, j] = (gradfn(theta+h*e_j) -
+gradfn(theta-h*e_j)) / (2h)`, then SYMMETRISED as `(H + H') / 2` -- the two
+finite-difference columns need not agree exactly off-diagonal even though the
+true Hessian does. Returns a matrix of `NaN` (the same failure sentinel
+`_grouped_fd_hessian` uses) if `gradfn` returns `nothing` or a non-finite
+vector at either stencil point of any coordinate, so callers can fall back to
+`_grouped_fd_hessian` exactly as they already do for a failed value.
+"""
+function _grouped_fd_hessian_from_gradient(gradfn, theta::Vector{Float64}; step::Float64 = 1e-5)
+    d = length(theta)
+    fail = fill(NaN, d, d)
+    H = Matrix{Float64}(undef, d, d)
+    for j in 1:d
+        h = step * max(1.0, abs(theta[j]))
+        plus = copy(theta); minus = copy(theta)
+        plus[j] += h; minus[j] -= h
+        gp = gradfn(plus)
+        gm = gradfn(minus)
+        (gp === nothing || gm === nothing || !all(isfinite, gp) || !all(isfinite, gm)) && return fail
+        H[:, j] = (gp .- gm) ./ (2h)
+    end
+    return (H .+ H') ./ 2
+end
+
 function _grouped_initial_parameters(data::Matrix{Float64}, D::Matrix{Float64},
         terms::Vector{GroupingTerm})
     p = size(data, 1)

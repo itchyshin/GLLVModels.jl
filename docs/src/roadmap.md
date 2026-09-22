@@ -3,16 +3,18 @@
 GLLVModels.jl is being built as a fast Julia **companion to
 [`gllvmTMB`](https://itchyshin.github.io/gllvmTMB/)**: the same core estimands
 where paired, usable directly in Julia and through a **narrow** R bridge
-(`engine = "julia"`). A closed spreadsheet ledger is accounting, not true
-parity — see [Capability parity](gllvmtmb-parity.md). A full 0.7.1
-surface port (column_coef, slopes, formula grid) is not part of the current
-release scope.
+(`engine = "julia"`). The bridge does not yet cover every R workflow, and an
+inventory of matching functions is not true parity; see
+[Capability parity](gllvmtmb-parity.md) for the currently documented scope. A
+full 0.7.1 surface port (column_coef, slopes, formula grid) is not part of the
+current release scope.
 
 Current sequencing is R-first. Native `gllvmTMB` functionality and the R user
-workflow define the oracle; `GLLVModels.jl` mirrors admitted rows, supplies parity
-evidence, and accelerates them after point estimates, logLik/objective, CI or
-CI-status, docs, tests, and Rose audit agree. REML is Gaussian-only; AI-REML is
-future design input for exact Gaussian cells, not non-Gaussian Laplace.
+workflow define the reference behavior; `GLLVModels.jl` adds a Julia route only
+after its point estimates, log-likelihood, confidence intervals (or their
+availability status), documentation, and tests agree at the stated scope. REML
+is Gaussian-only; AI-REML is future work for exact Gaussian cells, not
+non-Gaussian Laplace.
 
 ## Phase → release map
 
@@ -20,8 +22,8 @@ future design input for exact Gaussian cells, not non-Gaussian Laplace.
 |---------|-------|-----------|
 | **v0.2.0** | Gaussian complete | closed-form marginal, O(p) phylogenetic fitter, post-fit tools, this docs site |
 | **v0.3.0** | Non-Gaussian catch-up | one-part Laplace families, first two-part fitters, analytic-gradient hardening |
-| **v0.4.0** | Interface and bridge catch-up | `@formula` front-end, wide/long parity, gllvmTMB-mirroring tutorials, live `gllvmTMB` bridge gates |
-| **v1.0** | True-parity milestone (aspirational) | Meets the true-parity decision map against frozen gllvmTMB 0.7.0 — second-order receipts, realistic-size cells, real-data workflows, grouping-level pairing; **not** merely a closed ledger or “complete bridge” for every R row |
+| **v0.4.0** | Interface and bridge catch-up | `@formula` front-end, wide/long parity, gllvmTMB-mirroring tutorials, and a live `gllvmTMB` bridge |
+| **v1.0** | True-parity milestone (aspirational) | Targets documented agreement with frozen gllvmTMB 0.7.0 beyond point estimates across realistic-size data, real-data workflows, and grouping-level pairing; it does **not** promise a complete Julia bridge for every R workflow, and an inventory of matching functions or a "complete bridge" label alone is not enough |
 
 ## What works today
 
@@ -29,7 +31,7 @@ future design input for exact Gaussian cells, not non-Gaussian Laplace.
 - An **O(p)** phylogenetic gradient — exact, linear-in-species scaling.
 - Wald / profile-likelihood / parametric-bootstrap confidence intervals,
   including derived quantities (Sigma_y, communality, phylogenetic signal), where
-  the family/structure row has passed its local evidence gate.
+  the relevant family and structure have their own documented checks.
 - One-part Laplace families through `fit_gllvm`: Binomial, Poisson,
   NegativeBinomial, Beta, Ordinal, and Gamma.
 - Wald/profile/bootstrap confidence-interval routes for scalar-dispersion

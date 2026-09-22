@@ -1,8 +1,10 @@
 # Confidence intervals
 
-GLLVModels.jl provides three complementary interval methods — **Wald**, **profile
+GLLVModels.jl provides three interval constructions — **Wald**, **profile
 likelihood**, and **parametric bootstrap** — for the Gaussian engine and the
-admitted non-Gaussian CI rows.
+admitted non-Gaussian CI rows. They quantify different approximations to
+uncertainty; none by itself guarantees calibrated coverage for a particular fit
+or data set.
 
 ## Non-Gaussian families — one entry point
 
@@ -23,16 +25,19 @@ confint(fit, Y; method = :bootstrap, n_boot = 500)       # parametric bootstrap
 marginal likelihood. The call returns a `NamedTuple` with `term`, `estimate`,
 `lower`, `upper`, and `method` (plus method-specific extras below).
 
-Supported fits: the GLM families (`PoissonFit`, `BinomialFit`, `NBFit`,
-`NB1Fit`, `BetaFit`, `GammaFit`), grouped-dispersion NB2/NB1/Beta/Gamma fits,
-the two-part families (`DeltaLogNormalFit`, `DeltaGammaFit`, `BetaHurdleFit`,
-`HurdlePoissonFit`, `HurdleNBFit`, `ZIPFit`, `ZIPCovFit`, `ZINBFit`,
-`ZINBCovFit`, `ZIBFit`), and
-shared-cutpoint ordinal (`OrdinalFit`). `ZIPCovFit` / `ZINBCovFit` need the
-design via `X` (`confint(fit, Y; method=…, X=X)`); term names add free dual
-slopes `gammaz[k]` / `gammac[k]` (`ZINBCovFit` also reports shared scalar `r`
-on the log scale). Grouped Tweedie and per-trait ordinal
-cutpoint CI endpoints are deliberate follow-ups.
+The generic entry point currently accepts the fitted types in its `_CIFit`
+dispatch: ordinary family fits (including Poisson, Binomial, NB/NB1, GP1,
+Beta, Gamma, Exponential, Tweedie, Beta-Binomial, row-random, lognormal,
+truncated-count, and Student-t routes); two-part fits; grouped-dispersion and
+grouped-dispersion-covariate fits; `OrdinalFit`, per-trait ordinal fits,
+`MultinomialFit`, `GllvmCovFit`, `ZIPCovFit`, `ZINBCovFit`, `OrderedBetaFit`,
+`QuadraticFit`, and `RowEffectFit`. Availability of a meaningful endpoint still
+depends on the selected fit, term, convergence, and curvature diagnostics.
+`ZIPCovFit` / `ZINBCovFit` need the design via `X`
+(`confint(fit, Y; method=…, X=X)`); term names add free dual slopes
+`gammaz[k]` / `gammac[k]` (`ZINBCovFit` also reports shared scalar `r` on the
+log scale). `GaussianPerVarFit` is not in this dispatch and currently has no
+public CI method.
 
 ### Term names
 
@@ -80,11 +85,14 @@ family/grouped-dispersion route (`confint(fit::_CIFit, Y; ...)`,
 
 ### Profile likelihood — `method = :profile`
 
-Inverts the likelihood-ratio test: the deviance `D(c) = 2(ℓ̂ − ℓ_p(c))` is
-χ²₁ under `θ_i = c`, and the interval is `{c : D(c) ≤ qchisq(level, 1)}`. Each
-side is located by **bracket-then-bisection**, re-optimising the other
-parameters at every candidate. Better coverage than Wald when the likelihood is
-asymmetric. Returns a per-term `status` (`:profile` / `:partial` / `:failed`).
+Uses a likelihood-ratio construction: the deviance `D(c) = 2(ℓ̂ − ℓ_p(c))` is
+compared with a χ²₁ cutoff, and the reported interval is
+`{c : D(c) ≤ qchisq(level, 1)}`. Each side is located by
+**bracket-then-bisection**, re-optimising the other parameters at every
+candidate. This can represent asymmetry that a local Wald approximation misses,
+but it remains conditional on successful constrained refits and the usual
+likelihood-ratio approximation; it is not an exact or coverage-guaranteed
+interval. Returns a per-term `status` (`:profile` / `:partial` / `:failed`).
 Use `profile_iterations`, `profile_g_tol`, `profile_max_expand`, and
 `profile_max_bisect` to tune the constrained-refit and bracketing budget when a
 profile canary needs tighter or cheaper refits.
@@ -92,8 +100,10 @@ profile canary needs tighter or cheaper refits.
 ### Parametric bootstrap — `method = :bootstrap`
 
 Simulates `n_boot` datasets from the fitted model, refits each, and takes
-percentile bounds. The gold standard for skewed or bounded parameters, at the
-cost of `n_boot` refits.
+percentile bounds. It can be useful where a local quadratic approximation is
+unpersuasive, but it is not a gold standard or a coverage guarantee: results
+also depend on the fitted model, the number of replicates, and successful
+refits.
 
 ```julia
 confint(fit, Y; method = :bootstrap, n_boot = 1000, parallel = true)
@@ -103,7 +113,8 @@ Set `parallel = true` to run replicates over `Threads.@threads`. **Each
 replicate seeds its own RNG (`seed + b`)**, so the result is independent of
 thread scheduling — multi-core and single-core give identical bounds. Returns an
 extra `n_converged::Int` (replicates whose refit failed or changed dimension are
-dropped). Start Julia with `julia -t auto` to use multiple threads.
+dropped). Inspect it before interpreting the percentile bounds. Start Julia
+with `julia -t auto` to use multiple threads.
 
 ## Gaussian engine
 

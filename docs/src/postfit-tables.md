@@ -1,19 +1,22 @@
 # Post-fit tables and prediction
 
-Tidy summary tables, prediction/imputation helpers, and a few sensitivity
-tools that sit alongside them. Scope on this page is deliberately narrow —
-each function documents exactly which fit types it covers, and several are
-`GllvmFit` (plain Gaussian) only, tighter than their R counterparts' family
-coverage.
+Start here when you want to summarise a fitted model, predict missing responses,
+or examine how a result changes with the assumed cross-trait correlation.
+Check the accepted fit type in each function's reference entry below: several
+helpers accept only `GllvmFit`, the Gaussian model with a shared residual
+variance, even when the corresponding R function accepts other families.
 
 ## Tidy tables
 
-`tidy(fit, Y)` and `summary(fit, Y)` (returning a [`GllvmSummary`](@ref))
-report the core parameter tiers — `:fixed`, `:ran_pars`, `:cutpoint` — for a
-plain Gaussian `GllvmFit`. Both forward `X` to the underlying
-`coef_table`/`confint` calls; if you have a fixed-effects design matrix, pass
-it, or the Hessian reconstruction inside `confint` silently mismatches and
-every standard error comes back `NaN` rather than erroring.
+`tidy(fit, Y)` returns a parameter table for a Gaussian `GllvmFit`.
+Its `effects` keyword selects `:fixed` (fixed effects, the default),
+`:ran_pars` (random-effect standard deviations), or `:cutpoint` (ordinal
+thresholds, empty for this Gaussian model).
+`summary(fit, Y)` returns a [`GllvmSummary`](@ref) with fit information,
+fixed-effect estimates, and covariance summaries.
+Supply the same response matrix `Y` used for fitting. If you fitted covariate
+effects, also supply the original design array as `X = X`; omitting it can
+produce `NaN` standard errors without an error message.
 
 `deviance(fit)` is `-2 * loglikelihood(fit)`, the standard model-comparison
 statistic, defined across the full family surface.
@@ -22,24 +25,51 @@ statistic, defined across the full family surface.
 
 `rotate_loadings(fit, Y)` (varimax/promax) and its tidy wrapper
 `extract_rotated_loadings_table(fit, Y; loading_scale = :raw | :standardized)`
-are scoped to `GllvmFit` at `level = :unit` — no `TwoLevelFit` tier mapping.
+accept `GllvmFit` at `level = :unit`. They do not accept `TwoLevelFit`.
 
 ## Prediction and imputation
 
-`predict_missing(fit, Y)` returns `(row, col, est)` triples at masked cells
-only. `predict_cross_covariance(fit, K)` reads off a cross-covariance implied
-by a supplied kernel matrix (positional form; rho/kernel-includes-rho
-metadata columns are not attached). `imputed(fitmi, x)` returns point
-estimates from a reduced Gaussian-FIML form — conditional standard errors are
-**not computed**; every row reports `status = :se_not_computed` rather than a
-placeholder number.
+Use `predict_missing(fit, Y; mask = mask, type = :response)` to predict the
+cells marked `false` in a Boolean mask with the same shape as `Y`.
+Rows are traits and columns are sites; the returned `row`, `col`, and `est`
+vectors identify those cells and their predictions. The default `type = :link`
+returns predictions on the link scale. The default `mask = nothing` treats all
+cells as observed, so it selects no missing-cell predictions. Supply the mask
+explicitly; it is not recovered from the fit or inferred from `Y`.
+
+The fitted model's `predict` method must accept `mask`. This is supported for
+Gaussian models fitted with adaptive Gaussian quadrature and dense-Laplace
+non-Gaussian models such as Binomial. Expected-category predictions for ordinal
+responses and prediction standard errors are not available through this helper.
+
+`predict_cross_covariance(fit, K)` returns the cross-covariance implied by a
+supplied kernel matrix `K`. Its output does not record `rho` or whether `K`
+already includes that multiplier; retain that information with your analysis.
+`imputed(fitmi, x)` returns point estimates for supported Gaussian models fitted
+with full-information maximum likelihood. It does not compute conditional
+standard errors; every row reports `status = :se_not_computed`.
 
 ## Sensitivity: cross-trait correlation profiling
 
-`profile_cross_rho(A_H, A_P, W, refit)` is a grid-refit sensitivity driver
-over a candidate cross-trait correlation `rho`, duck-typed on a caller-
-supplied `refit(K, rho)` closure. `profile_cross_rho_ci` turns a
-`(rho, delta_deviance)` table into a grid-interpolated confidence interval.
+Use `profile_cross_rho(A_H, A_P, W, refit)` to refit a model at a grid of
+candidate cross-trait correlations `rho`. You supply a function `refit(K, rho)`
+that fits your model at each candidate. `profile_cross_rho_ci` then interpolates
+a confidence interval from the resulting `rho` and `delta_deviance` vectors.
+
+For example, this small hypothetical profile illustrates the interval calculation
+without fitting a model:
+
+```@example postfit_profile
+using GLLVModels
+
+rho = [-0.8, -0.4, 0.0, 0.4, 0.8]
+delta_deviance = [6.0, 2.0, 0.0, 2.0, 6.0]
+ci = profile_cross_rho_ci(rho, delta_deviance)
+(ci.lower, ci.upper, ci.lower_bounded, ci.upper_bounded)
+```
+
+If either `*_bounded` flag is `false`, that end of the interval is the edge of
+the supplied grid. Extend the grid if you need to locate the threshold crossing.
 
 ## Coevolution modules
 
@@ -52,8 +82,8 @@ there is no stored ρ for a `scale = :effect` variant.
 
 `simulate_unit_trait` draws from a balanced two-level Gaussian
 data-generating process (units × traits, within/between variance
-components) — useful for building a quick recovery check or a worked-example
-fixture without hand-rolling the DGP.
+components). Use it to make example data or to check whether fitting recovers
+known parameter values.
 
 ```@docs
 tidy
