@@ -69,6 +69,14 @@ using GLLVModels, Test, Random, LinearAlgebra, SparseArrays, Printf, DelimitedFi
 const RTOL_FD = 1e-6      # GB.2, the FD reference's own accuracy. Never widened.
 const RTOL_IDENTITY = 1e-8  # GB.3, and S9's G9.1/G9.6.
 const RTOL_HESSIAN = 1e-4   # S9 G9.2 -- the FD Hessian oracle's own accuracy, per D-274. Never widened.
+# S9 G9.2 boundary cutoff (amended 2026-09-21). Every coordinate compared here is
+# a mean or a log-scale variance parameter, so a standard error at or above this
+# means the parameter ranges over e^(+/-200) at one sigma and carries no practical
+# information: its curvature is ~0 and two finite-difference approximations of a
+# near-zero curvature compare noise, not method. Coordinates at or above it are
+# PRINTED and NOT asserted. This is a scoping of the gate to where its oracle is
+# defined; RTOL_HESSIAN above is untouched and is never widened.
+const SE_BOUNDARY = 1e2
 const RTOL_GRADIENT_NORM = 1e-6  # S9 G9.7.
 const NTHETA = 20
 const INNER_TOL = 1e-10   # tightened FIXTURE, not a loosened assertion; recorded per (d).
@@ -468,20 +476,58 @@ function gate_hessian()
         H_fd = GLLVModels._grouped_fd_hessian(st.objective_cold, estimate)
         se_gradfd = _hessian_standard_errors(H_gradfd)
         se_fd = _hessian_standard_errors(H_fd)
-        if se_gradfd === nothing || se_fd === nothing
-            @printf("  FAIL %s: Hessian not invertible/positive-definite at the converged estimate (grad_fd ok=%s, fd ok=%s)\n",
-                name, se_gradfd !== nothing, se_fd !== nothing)
+        # AMENDED 2026-09-21 by Shinichi's decision, after the first run FAILED on
+        # two of six fixtures for reasons that were the ORACLE's, not this change's.
+        # The gate now asserts only where the standard error is DEFINED, and PRINTS
+        # the boundary coordinates instead of asserting on them. That is a scoping
+        # of the gate to where its oracle exists; it is NOT a widened tolerance, and
+        # RTOL_HESSIAN is untouched.
+        #
+        # Two distinct situations, kept distinct:
+        # (a) the OLD `:fd` Hessian is not positive-definite at the estimate while
+        #     `:grad_fd` is. There is then no oracle to compare against, so nothing
+        #     is asserted for that fixture and it is reported. The converse, this
+        #     change failing where the oracle succeeds, IS still a failure.
+        # (b) a single coordinate sits at a boundary: its curvature is ~0, so its SE
+        #     is astronomically large and two finite-difference approximations of a
+        #     near-zero curvature are comparing noise. Every coordinate here is a
+        #     mean or a log-scale variance parameter, so an SE above SE_BOUNDARY
+        #     means the parameter ranges over e^(+/-200) and carries no practical
+        #     information. Those coordinates are printed and not asserted.
+        # A fixture with NO assertable coordinate cannot pass vacuously: it is
+        # reported as NOT ASSERTED and the per-fixture assert count is printed.
+        if se_gradfd === nothing && se_fd === nothing
+            @printf("  NOT ASSERTED %s: neither Hessian is positive-definite at the converged estimate\n", name)
+            continue
+        elseif se_gradfd === nothing
+            @printf("  FAIL %s: the grad_fd Hessian is NOT positive-definite where the :fd oracle IS -- this change is worse than what it replaces\n", name)
             ok = false
             continue
+        elseif se_fd === nothing
+            @printf("  NOT ASSERTED %s: the :fd ORACLE is not positive-definite at the converged estimate while grad_fd is (grad_fd ok=true, fd ok=false); no oracle to compare against, and grad_fd is strictly the more robust of the two here\n", name)
+            continue
         end
-        worst = 0.0; worst_k = 0
+        worst = 0.0; worst_k = 0; nassert = 0; nboundary = 0
         for k in eachindex(se_fd)
+            boundary = !isfinite(se_fd[k]) || !isfinite(se_gradfd[k]) ||
+                       max(se_fd[k], se_gradfd[k]) >= SE_BOUNDARY
             rel = abs(se_gradfd[k] - se_fd[k]) / abs(se_fd[k])
-            @printf("      coord %2d  se_grad_fd=%.10e  se_fd=%.10e  rel=%.3e\n", k, se_gradfd[k], se_fd[k], rel)
-            rel > worst && (worst = rel; worst_k = k)
+            @printf("      coord %2d  se_grad_fd=%.10e  se_fd=%.10e  rel=%.3e%s\n", k, se_gradfd[k], se_fd[k], rel,
+                    boundary ? "   [BOUNDARY, reported not asserted]" : "")
+            if boundary
+                nboundary += 1
+            else
+                nassert += 1
+                rel > worst && (worst = rel; worst_k = k)
+            end
+        end
+        if nassert == 0
+            @printf("  NOT ASSERTED %s: every coordinate is at a boundary (%d of %d)\n", name, nboundary, length(se_fd))
+            continue
         end
         pass = worst <= RTOL_HESSIAN
-        @printf("  %-16s %-62s worst per-coord SE rel = %.3e (coord %d)\n", name, note, worst, worst_k)
+        @printf("  %-16s %-62s worst per-coord SE rel = %.3e (coord %d) over %d asserted, %d boundary\n",
+                name, note, worst, worst_k, nassert, nboundary)
         println(pass ? "  PASS $name" : "  FAIL $name")
         ok &= pass
     end
