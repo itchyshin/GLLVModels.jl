@@ -434,3 +434,42 @@ without them the dispatch fell through to `gate_fd_agreement()`, printing `GATE 
 unknown gate an error. Separately, `gate_identity()` prints `GATE GB.3 PASS` while G9.1's EXPECT reads
 `GATE G9.1 PASS`, so exact EXPECT-matching would fail a passing gate; recorded rather than papered
 over.
+
+## ADDENDUM 2026-09-22: the cause of the remaining wall, found and shipped OPT-IN
+
+After S9a was measured at 4.30 s against the arc's 1.5 s target, three attacks on Nelder-Mead all
+failed: deleting it (8.36 s), capping its iterations (chaotic across seeds, and the fast rows were fits
+that had GIVEN UP after 1 BFGS iteration), and loosening its tolerance (inert, because the tolerance
+never binds). The reason they failed is that they addressed the symptom.
+
+**The cause.** `_grouped_nongaussian_initial_parameters` sets the trait intercepts from the data and
+every variance coordinate to a CONSTANT `log(0.25)`. Nelder-Mead's real job is dragging those constants
+toward the data, and it never converges; it exhausts its 100-iteration limit. Measured: loosening its
+`g_tol` a hundredfold changes the answer by exactly 0.000e+00.
+
+**The fix, and its measurement.** `moment_start=true` gives the `:indep` variance coordinates a cheap
+data-informed start. With the simplex demoted and `g_tol` TIGHTENED to 1e-6 (tightened, not widened):
+
+| case | shipped default | moment start, no simplex, g_tol 1e-6 | identity |
+|---|---|---|---|
+| large, seed 20260920 | 4.2349 s | **2.0486 s, 2.067x** | 1.772e-10 |
+| large, seed 20260921 | 4.0996 s | 2.3924 s, 1.714x | 5.488e-10 |
+| large, seed 20260922 | 4.2649 s | 2.4512 s, 1.740x | 6.367e-09 |
+| small glmm_200x5 | 0.1091 s | 0.0945 s, 1.154x | 1.747e-11 |
+
+All four hold the arc's rtol 1e-8. Against the original S8 baseline of 5.71 s that is up to 2.9x.
+
+**Why it is OPT-IN and not the default.** A full suite with it ON as the default returned
+`16292 passed, 3 failed, 5 ERRORED` against a `16328/1/0/19` baseline. Five errors were a defect in this
+implementation (group labels are not necessarily integers; Symbol units threw TypeError), now fixed and
+that file passes 20/20. The remaining failure is NOT a defect: `test_grouped_laplace_identity` pins
+fixture A's inner-fit count, and any change to the STARTING POINT moves the optimiser's path on both
+gradient paths. [[DECISIONS#D-273|D-273]] reserves that re-pin for Shinichi.
+
+**Validated with the flag off:** full `Pkg.test()` on `8415e0883`, `16329 passed, 1 failed, 0 errored,
+19 broken`, 96m47.3s, the one failure being the `test_em_louis.jl:127` flake. Every `--gate` passes and
+`G7b.1` PASSES, so the default path is unchanged.
+
+**What is owed before it could become the default:** Shinichi's call on the S7b re-pin under D-273; the
+estimator is a count-family argument and applies only to `:poisson`/`:nb2` `:indep` terms, with every
+other family and mode keeping the constant; and `:latent`/`:dep` remain untested.
