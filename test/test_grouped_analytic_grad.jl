@@ -939,19 +939,18 @@ function gate_mixed()
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__
-    # A `--gate` name this file does not know is an ERROR, never a silent
-    # fall-through. Exit 2 (usage) rather than 1 (gate failed), so a script can
-    # tell a typo from a real failure; the sibling gate files `error(...)` for
-    # the same purpose. The name is `_S9C_GATES`, not `_GATES`, because
+    # An unrecognised `--gate` name must ERROR, never fall through. It used to
+    # run `gate_fd_agreement()`, so any CHECK naming a gate this branch does not
+    # implement printed "GATE GB.2 PASS" and exited 0 while measuring something
+    # else entirely. That is not hypothetical: leaf-S9.md ships seven CHECK
+    # lines, six of which name gates that live only on the S9 lanes, so six
+    # acceptance gates would each have passed vacuously. A typo did the same.
+    #
+    # Exit 2 (usage) rather than 1 (gate failed), so a script can tell a typo
+    # from a real failure. The table is `_S9C_GATES`, not `_GATES`, because
     # test_grouped_laplace_identity.jl:369 already binds `const _GATES` at top
     # level and the suite shares one `Main`.
-    #
-    # The pre-S9c dispatch was
-    #     ok = gate == "identity" ? gate_identity() : gate_fd_agreement()
-    # so a typo'd or renamed gate ran `fd_agreement` under the WRONG NAME and
-    # could report PASS for a gate that never executed -- a vacuous pass, and a
-    # trap for every future gate added to this file. Fixed as part of leaf-S9c.
-    _GATES = Dict{String,Function}(
+    _S9C_GATES = Dict{String,Function}(
         "fd_agreement" => gate_fd_agreement,
         "identity"     => gate_identity,
         "coverage"     => gate_coverage,
@@ -959,17 +958,17 @@ if abspath(PROGRAM_FILE) == @__FILE__
     )
     if !(length(ARGS) == 0 || (length(ARGS) == 2 && ARGS[1] == "--gate"))
         println(stderr, "usage: julia --project=. $(basename(@__FILE__)) [--gate <name>]")
-        println(stderr, "known gates: ", join(sort(collect(keys(_GATES))), ", "))
+        println(stderr, "known gates: ", join(sort(collect(keys(_S9C_GATES))), ", "))
         exit(2)
     end
     gate = length(ARGS) == 2 ? ARGS[2] : "fd_agreement"
-    if !haskey(_GATES, gate)
+    if !haskey(_S9C_GATES, gate)
         println(stderr, "unknown gate $(repr(gate)). Known gates: ",
-            join(sort(collect(keys(_GATES))), ", "))
+            join(sort(collect(keys(_S9C_GATES))), ", "))
         println(stderr, "Refusing to run a different gate under this name: that is a vacuous pass.")
         exit(2)
     end
-    ok = _GATES[gate]()
+    ok = _S9C_GATES[gate]()
     exit(ok ? 0 : 1)
 else
     @testset "grouped analytic outer gradient vs finite differences" begin
@@ -983,5 +982,10 @@ else
             # Richardson reference.
             @test all(r.coord_pass)
         end
+        # The regression check for the compacted-unique-variance column bug
+        # (7f175835e) was defined and documented and then called from nowhere,
+        # so the one test written to catch a silently WRONG gradient had never
+        # executed. It returns Bool and prints its own diagnostic.
+        @test _s8_compacted_unique_column_check!()
     end
 end
