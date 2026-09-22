@@ -347,6 +347,10 @@ WHY NELDER-MEAD IS THERE, stated so the demotion is not naive: the comment at :6
   **The 1.5 s target in the gate text is NOT met and was never reachable**: it assumed the Nelder-Mead
   demotion returned its 2.79 s, which measurement refuted. Reported, not asserted, as the gate says.
 
+ABANDON: G9.4 Unsound as written. It bounds objective calls only from BELOW, which is the direction a stalled optimiser also moves, and it gated the Nelder-Mead demotion that was abandoned on measurement. Superseded by the two-regime wall-clock table in bench/results/shipped_*.tsv, which reports converged and iterations on every row so a fit that gave up cannot read as fast.
+ABANDON: G9.5 Not this arc's to close. Moved to the coverage arc on Shinichi's 2026-09-21 instruction and LANDED there at claude/lane-s9cov-20260921 fa886fe81, open as PR #448 against main, suite-green at 16337 pass / 1 fail / 19 broken.
+ABANDON: G9.6 Not this arc's to close, and still a HARD gate where it went. Same move as G9.5, same commit and PR.
+
 ## STOP conditions (report, never smooth over)
 
 An identity failing at rtol 1e-8. G9.2's SEs missing rtol 1e-4 (reopen D-274 rather than loosening). Any tolerance needing to be widened. A converged answer changing under the demotion. Two Julia suites at once. Any need to touch HSquared.jl, hsquared, PR #781, or src/takahashi_selinv.jl.
