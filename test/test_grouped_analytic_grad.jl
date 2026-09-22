@@ -397,7 +397,19 @@ end
 
 if abspath(PROGRAM_FILE) == @__FILE__
     gate = length(ARGS) >= 2 && ARGS[1] == "--gate" ? ARGS[2] : "fd_agreement"
-    ok = gate == "identity" ? gate_identity() : gate_fd_agreement()
+    # An UNRECOGNISED gate name must ERROR, never fall through. It used to run
+    # `gate_fd_agreement()`, so any CHECK naming a gate this branch does not
+    # implement printed "GATE GB.2 PASS" and exited 0. leaf-S9.md ships seven
+    # CHECK lines on this branch and six of them name gates that live only on
+    # the S9 lanes, so six acceptance gates would have passed vacuously against
+    # a gate that tests something else entirely. A typo did the same.
+    ok = if gate == "fd_agreement"
+        gate_fd_agreement()
+    elseif gate == "identity"
+        gate_identity()
+    else
+        error("unknown --gate $(gate); gates implemented on this branch: fd_agreement, identity")
+    end
     exit(ok ? 0 : 1)
 else
     @testset "grouped analytic outer gradient vs finite differences" begin
@@ -406,5 +418,10 @@ else
             @test r.used == NTHETA
             @test r.worst_rel <= RTOL_FD
         end
+        # The regression check for the compacted-unique-variance column bug
+        # (7f175835e) was defined and documented and then called from nowhere,
+        # so the one test written to catch a silently WRONG gradient had never
+        # executed. It returns Bool and prints its own diagnostic.
+        @test _s8_compacted_unique_column_check!()
     end
 end
