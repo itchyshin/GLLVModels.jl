@@ -9,6 +9,13 @@
 # openblas_threads	1
 # config	nelder_mead=true g_tol=1e-4 analytic_gradient=default
 # thread_regime	lane-discipline (julia=4 openblas=1)
+# LABEL CORRECTION, appended after f667dffb0 reverted moment_start to opt-in:
+# the row named SHIPPED is hessian=:grad_fd WITH moment_start=true, which is NOT
+# the shipped default any more. The shipped default is the HESS row
+# (hessian=:grad_fd, moment_start=false). The SHIPPED row is retained as the
+# opt-in configuration's measurement. This file's own header rule, that a
+# benchmark must carry its keyword configuration, is what makes the mislabel
+# recoverable: every row states hess and moment explicitly.
 fixture	config	nelder_mead	hessian	moment_start	wall_median_s	wall_min_s	wall_max_s	reps	loglik	rel_loglik_vs_S8BASE	converged	iterations
 glmm_200x5	S8BASE	true	fd	false	0.116574	0.115151	0.119443	5	-2025.469254255519	0.000e+00	true	3
 glmm_200x5	HESS	true	grad_fd	false	0.109201	0.107303	0.115068	5	-2025.469254255519	0.000e+00	true	3
