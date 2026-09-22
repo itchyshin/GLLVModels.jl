@@ -73,7 +73,7 @@ All with `env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=.`, Jul
 | `--gate coverag` (typo) | exit 2, no gate ran |
 | `--badflag x` | exit 2 |
 | real 69a69b0a0 baseline diff | 4/4 logliks, 20/20 theta coords within rtol 1e-8 |
-| full `Pkg.test()` | **see §10, deferred because another lane held the machine** |
+| full `Pkg.test()` | 16336 pass / 1 fail / 19 broken, 97 min, on merged state 462c2675f |
 
 ## 6. Tests of the Tests
 
@@ -134,10 +134,12 @@ The neighbourhood sweep, having found one instance and looked for the same class
 
 ## 10. Known Residuals
 
-- Full `Pkg.test()` was not run by this lane. Another lane (`GLLVM.jl-s9a-hessian-20260921`) started one
-  at 18:36 MDT and the machine allows only one. I waited rather than break that rule. If it completes in
-  this session the suite is run and this line updated. A suite-wide regression outside the edited file is
-  therefore unproven. The file itself was run standalone and as an include, plus a two-file `Main` check.
+- Full `Pkg.test()` is now run and this residual is closed. Another lane held the machine until 20:14,
+  so this one waited rather than break the one-suite rule, then ran 20:15 to 21:52 MDT on the merged
+  state: 16336 pass / 1 fail / 19 broken against a 16328 / 1 / 19 baseline. The +8 is exactly this
+  lane's own in-suite testset growing from 12 assertions to 20. The single failure is the known
+  `test_em_louis.jl:127` flake (`rel = 0.001056` against its own 1e-3 bound), in a file this lane never
+  touched, and it reproduced identically in the other lane's run at 20:14.
 - PR #430 was NOT merged to main, despite the instruction to "merge everything". My branch sits on
   speed78, which is itself PR #430's head, so merging to main would land the whole S4/S7/S7b/S7c/S8 perf
   change rather than my work. That PR's own GB.6 records 1 failure and 19 broken, and leaf-S9 has several

@@ -181,14 +181,39 @@ Measured: both report `mode=trait length=2 (require 2) OK`.
   `test_grouped_laplace_identity.jl:369`, so this file's dispatch table is named `_S9C_GATES`. Both files
   were then included into ONE `Main` in a single process and both testsets pass.
 
+- [x] G9c.6: the full suite is green apart from the known `test_em_louis.jl:127` flake.
+  CHECK: env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. -e 'using Pkg; Pkg.test()'
+  EXPECT: the known baseline, plus this leaf's new tests, and no new failure
+  EVIDENCE: **PASS.** Run on the merged state 462c2675f (this branch with speed78's 4b3832f76 merged
+  in), 20:15 to 21:52 MDT 2026-09-21, 97 minutes, wrapped in `script -q /tmp/s9c_suite.log`, sole suite
+  on the machine, nothing edited in the lane while it ran.
+
+  | | baseline (leaf-S8 GB.6, and the s9a lane's own run earlier tonight) | this run | delta |
+  |---|---|---|---|
+  | passed | 16328 | **16336** | **+8** |
+  | failed | 1 | 1 | 0 |
+  | broken | 19 | 19 | 0 |
+
+  The +8 is exactly this leaf's own additions: the in-suite `@testset` went from 6 fixtures x 2
+  assertions to 10 x 2, and it reports `grouped analytic outer gradient vs finite differences | 20 20
+  2.0s`. Nothing else moved: broken is unchanged at 19, and the failure count is unchanged at 1.
+
+  The single failure is the KNOWN flake this arc has named all along, at the same file and the same line
+  leaf-S9's G9.8 predicted: `test_em_louis.jl:127`, `SE PRIMARY GATE: EM-SEM SEs match dense-Hessian SEs
+  (p=10)`, `rel = 0.0010560201922229443 <= 0.001` — marginally over its own 1e-3 bound, in a file this
+  leaf never touched. It is NOT counted as green-by-assertion here; it is reported as the pre-existing
+  failure it is, and it reproduced identically in the s9a lane's independent run at 20:14 tonight.
+
+  Machine discipline: a full suite from lane `GLLVM.jl-s9a-hessian-20260921` was already running when
+  this leaf was ready for one (started 18:36, finished 20:14). Only one may run at a time, so this one
+  waited rather than starting beside it.
+
 ## What this leaf does NOT cover
 
 - **No `src/` change is validated here.** This leaf is test-only, on a base (eb48adcc2) that contains
   S8 but NOT S9. It says nothing about the Nelder-Mead demotion, the D-274 Hessian, or S9's speed result.
-- **The full `Pkg.test()` was NOT run** (95-105 min, over the D-139 30-minute line, so it needs Shinichi's
-  go-ahead rather than a unilateral launch). What WAS run is the affected file both standalone and as an
-  include, plus a two-file shared-`Main` check. A suite-wide regression outside this file is therefore
-  unproven here.
+- The full `Pkg.test()` WAS run, see G9c.6: 16336 pass / 1 fail / 19 broken in 97 min, the known
+  baseline plus this leaf's +8. The one failure is the pre-existing `test_em_louis.jl:127` flake.
 - **`beta_trait` coord 5 is certified to the resolution of the best instrument available, not to 1e-6.**
   Two instruments agree the analytic value is right, and the Richardson reference's own resolution there
   is 1.350e-09 absolute. A gradient error SMALLER than that would not be detected at that coordinate by
