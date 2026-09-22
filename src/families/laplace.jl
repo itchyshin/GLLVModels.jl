@@ -277,14 +277,24 @@ the score, the Hessian weight, and the log-density sum. Returns
 function laplace_loglik_site(family, y::AbstractVector, n::AbstractVector,
         Λ::AbstractMatrix, β::AbstractVector, link::Link;
         mask = nothing, offset = nothing, hessian::Symbol = _default_hessian(family, link),
-        maxiter::Integer = 100, tol::Real = 1e-9, ws = nothing)
+        maxiter::Integer = 100, tol::Real = 1e-9, ws = nothing, z_precomputed = nothing)
     (hessian === :fisher || hessian === :observed) || throw(ArgumentError(
         "hessian must be :fisher or :observed; got :$hessian"))
     p = size(Λ, 1)
     K = size(Λ, 2)
     off = offset === nothing ? false : offset
-    z  = _laplace_mode(family, y, n, Λ, β, link;
-                       mask = mask, offset = offset, maxiter = maxiter, tol = tol, ws = ws)
+    # R8 (shared mode solve, S6 item 1): `z_precomputed` (length K), when given,
+    # skips the Newton mode-finder here — the caller (e.g. `fg!` in
+    # `_fit_poisson_gllvm_laplace`) already solved it at this θ for the
+    # gradient path and hands the SAME concrete mode to the value path,
+    # instead of each path solving its own copy of the identical fixed point.
+    # A length mismatch falls back to solving fresh (never silently wrong).
+    z  = if z_precomputed !== nothing && length(z_precomputed) == K
+        z_precomputed
+    else
+        _laplace_mode(family, y, n, Λ, β, link;
+                     mask = mask, offset = offset, maxiter = maxiter, tol = tol, ws = ws)
+    end
     # Per-call buffers (written in place with the SAME broadcast / BLAS expressions
     # as before ⇒ bit-identical values and FP-operation order).
     Λz = Λ * z                                # Λ*z (one-shot; result reused below)
@@ -359,16 +369,21 @@ invariant to whatever placeholder sits in the masked cells of `Y`.
 `η = β + offset + Λz` (e.g. log-exposure/effort/area for counts). A constant
 per-species offset is equivalent to shifting that species' intercept (the
 offset-absorption identity), which serves as the exact verification anchor.
+
+`zs` (optional `Vector` of length-K per-site modes, R8 shared mode solve): when
+given, threads `zs[i]` into site `i` as `laplace_loglik_site`'s `z_precomputed`,
+skipping that site's own Newton mode solve — see `laplace_loglik_site`.
 """
 function marginal_loglik_laplace(family, Y::AbstractMatrix, N::AbstractMatrix,
         Λ::AbstractMatrix, β::AbstractVector, link::Link;
-        mask = nothing, offset = nothing, kwargs...)
+        mask = nothing, offset = nothing, zs = nothing, kwargs...)
     acc = 0.0
     @inbounds for i in axes(Y, 2)
         mi = mask   === nothing ? nothing : view(mask, :, i)
         oi = offset === nothing ? nothing : view(offset, :, i)
+        zi = zs     === nothing ? nothing : zs[i]
         acc += laplace_loglik_site(family, view(Y, :, i), view(N, :, i), Λ, β, link;
-                                   mask = mi, offset = oi, kwargs...)
+                                   mask = mi, offset = oi, z_precomputed = zi, kwargs...)
     end
     return acc
 end

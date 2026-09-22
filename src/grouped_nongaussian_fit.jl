@@ -178,6 +178,145 @@ function _grouped_laplace_design(incidences::Vector{SparseMatrixCSC{Float64,Int}
     return sparse(reduce(hcat, blocks))
 end
 
+# ---------------------------------------------------------------------------
+# S8: analytic outer gradient -- the design Jacobian dk W = dW/dtheta_k for
+# psi coordinates (docs/design/grouped-analytic-gradient.md sections 3, 6).
+# ---------------------------------------------------------------------------
+
+"""
+    _grouped_term_lstar_jacobian(term, p, local_index, Lstar, load_ncols) -> Matrix{Float64}
+
+`d Lstar / d theta_local`, `theta_local` the `local_index`-th (1-based) raw
+coordinate WITHIN this one term's own packed sub-vector (the same indexing
+`_grouped_term_unpack` walks). `Lstar` is this term's OWN `p`-by-width block
+as built by `_grouped_laplace_trait_factors`; `load_ncols` is how many of
+its leading columns are the loading block `L` (`0` for `:indep`, or for a
+`:latent`/`:dep` term whose current `L` is exactly the zero matrix and so
+was dropped by `_grouped_laplace_trait_factors` -- see the caveat raised at
+this function's use site in `_grouped_laplace_design_jacobian`).
+
+Two cases, both linear in `theta` so the derivative needs no clamp/domain
+logic:
+  - a LOADING coordinate (`unpack_lambda`, src/packing.jl): the packing is a
+    raw coordinate-selecting map, so its derivative is the same map applied
+    to a unit vector -- exactly one entry of `L` is `1`, the rest `0`.
+  - a UNIQUE-VARIANCE coordinate (`:indep`, or a `:latent` term's own unique
+    tail): the entry that actually enters the design is `exp(theta_j)`
+    (docs/design/grouped-analytic-gradient.md section 1.2), so
+    `d(entry)/d(theta_j) = entry` -- the derivative of that column (or, for
+    `common=true`, every column, since one raw coordinate then drives ALL
+    `p` diagonal entries identically) is THE SAME BLOCK'S OWN VALUES.
+"""
+function _grouped_term_lstar_jacobian(term::GroupingTerm, p::Integer, local_index::Integer,
+        Lstar::AbstractMatrix{Float64}, load_ncols::Integer)
+    width = size(Lstar, 2)
+    dLstar = zeros(Float64, p, width)
+    if term.mode === :dep
+        e = zeros(Float64, rr_theta_len(p, p)); e[local_index] = 1.0
+        dLstar .= unpack_lambda(e, p, p)
+        return dLstar
+    end
+    if term.mode === :latent
+        nload = rr_theta_len(p, term.rank)
+        if local_index <= nload
+            load_ncols == 0 && throw(ArgumentError(
+                "psi coordinate $local_index drives a loading column that " *
+                "_grouped_laplace_trait_factors dropped as exactly zero -- " *
+                "the analytic design jacobian does not cover this boundary case"))
+            e = zeros(Float64, nload); e[local_index] = 1.0
+            dL = unpack_lambda(e, p, term.rank)
+            dLstar[:, 1:load_ncols] .= view(dL, :, 1:load_ncols)
+            return dLstar
+        end
+        local_index -= nload
+    end
+    # :indep, or the unique tail of a :latent term.
+    ucols = width - load_ncols
+    ucols == 0 && throw(ArgumentError(
+        "psi coordinate has no unique-variance columns to drive (local_index=$local_index)"))
+    if term.common
+        dLstar[:, (load_ncols + 1):width] .= view(Lstar, :, (load_ncols + 1):width)
+    else
+        # The unique block is COMPACTED, and this is why `load_ncols +
+        # local_index` is wrong. `_grouped_laplace_trait_factors` (:135-154)
+        # gives a column ONLY to traits whose unique variance is strictly
+        # positive (`positive = findall(>(0.0), d)`) and packs them
+        # consecutively, writing `U[trait, column]` with `column` the
+        # COMPACTED position and `trait` the RAW one. So the unique block has
+        # `length(positive)` columns, not `p`, and the two indices coincide
+        # only while every trait is positive. With any trait at exactly zero,
+        # the old arithmetic wrote this trait's derivative into a later
+        # trait's column (silently wrong gradient, no error) or past the
+        # block's own width (an out-of-range write).
+        #
+        # Recover the mapping from `Lstar` itself rather than re-deriving it
+        # from `d`, which this function is not given: each unique column has
+        # exactly ONE nonzero, at its own trait's row, so the column for this
+        # trait is the unique-block column that is nonzero in this trait's row.
+        col = 0
+        for c in (load_ncols + 1):width
+            if Lstar[local_index, c] != 0.0
+                col = c
+                break
+            end
+        end
+        # `col == 0` means this trait has no unique column at all, i.e. its
+        # variance is exactly zero. Since the entry is `exp(theta_j)`, that is
+        # reachable only by underflow, and the derivative there is identically
+        # zero, so leaving `dLstar` as zeros is the right answer, not a skip.
+        col == 0 || (dLstar[local_index, col] = Lstar[local_index, col])
+    end
+    return dLstar
+end
+
+"""
+    _grouped_laplace_design_jacobian(incidences, loads, uniques, terms, psi_index) -> SparseMatrixCSC
+
+`dk W = dW/dtheta_k` for the psi coordinate at 1-based index `psi_index`
+within the packed psi block (`theta[q+1:q+source_coordinates]`, the layout
+`_grouped_term_unpack` consumes). Same shape as
+`_grouped_laplace_design(incidences, loads; uniques=uniques)`; nonzero ONLY
+in the block-columns owned by the one grouping term `psi_index` belongs to
+-- `dk W` never introduces a new block column (docs/design/grouped-analytic-
+gradient.md section 3's `pattern(dk W) ⊆ pattern(W)` argument).
+"""
+function _grouped_laplace_design_jacobian(incidences::Vector{SparseMatrixCSC{Float64,Int}},
+        loads::Vector{<:AbstractMatrix}, uniques, terms::Vector{GroupingTerm},
+        psi_index::Integer)
+    p = size(loads[1], 1)
+    n = size(incidences[1], 1)
+    N = p * n
+    blocks = SparseMatrixCSC{Float64,Int}[]
+    remaining = Int(psi_index)
+    found = false
+    for s in eachindex(loads)
+        term = terms[s]
+        nparams = _grouping_term_nparams(term, p)
+        Lstar = _grouped_laplace_trait_factors(loads[s], uniques[s])
+        width = size(Lstar, 2)
+        if !found && remaining <= nparams
+            found = true
+            width == 0 && throw(ArgumentError("psi coordinate $psi_index drives a zero-width term block"))
+            load_ncols = all(iszero, loads[s]) ? 0 : size(loads[s], 2)
+            dLstar = _grouped_term_lstar_jacobian(term, p, remaining, Lstar, load_ncols)
+            push!(blocks, grouped_trait_design(incidences[s], dLstar))
+        else
+            found || (remaining -= nparams)
+            # The real block for source `s` is `kron(incidences[s], Lstar)`, so it
+            # is `size(incidences[s], 2) * width` columns wide, NOT `width`. Using
+            # `width` here made `dk W` narrower than `W` for every term the
+            # coordinate does not belong to, which is invisible with ONE grouping
+            # term (no placeholder is ever pushed) and a hard `DimensionMismatch`
+            # at `dW * bhat` with two or more. Found by running S7c's
+            # `--gate warm_identity` on fixture D, 2026-09-21.
+            width == 0 || push!(blocks, spzeros(Float64, N, size(incidences[s], 2) * width))
+        end
+    end
+    found || throw(ArgumentError("psi_index $psi_index out of range"))
+    isempty(blocks) && return spzeros(Float64, N, 0)
+    return sparse(reduce(hcat, blocks))
+end
+
 function _grouped_nongaussian_initial_parameters(data::Matrix{Float64},
         trials::Matrix{Float64}, D::Matrix{Float64}, terms::Vector{GroupingTerm},
         kind::Symbol, family, mode::Symbol)
@@ -212,10 +351,28 @@ function _grouped_nongaussian_initial_parameters(data::Matrix{Float64},
     return theta
 end
 
+"""
+    _grouped_nongaussian_objective(...; warm_start_inner=false)
+
+`warm_start_inner` (S7c, default `false` — opt-in): when `true`, the closure
+keeps the last successfully-converged inner Laplace mode `b` (across calls to
+the SAME closure instance) and seeds the next call's `joint_grouped_laplace_loglik`
+with it via `b_init`, instead of starting cold from `zeros(m)` every time. One
+outer optimisation (Nelder-Mead simplex evaluations plus FD-gradient/-Hessian
+stencils) calls this closure with many nearby `value`s, so the previous mode
+is typically a very short walk from the next one's. This changes ONLY the
+Newton starting point, never the converged answer (see
+`joint_grouped_laplace_loglik`'s docstring and
+`test/test_grouped_laplace_identity.jl --gate warm_identity`). A non-`:ok`
+result leaves the cache untouched (never poisons the next call with a bad
+guess); `destination_b_fixed_effects.jl`'s call site does not pass this
+keyword and stays cold, unaffected.
+"""
 function _grouped_nongaussian_objective(data::Matrix{Float64}, trials::Matrix{Float64},
         D::Matrix{Float64}, terms::Vector{GroupingTerm},
         incidences::Vector{SparseMatrixCSC{Float64,Int}}, kind::Symbol;
-        dispersion_mode::Symbol=:trait, inner_maxiter::Integer, inner_tol::Float64)
+        dispersion_mode::Symbol=:trait, inner_maxiter::Integer, inner_tol::Float64,
+        warm_start_inner::Bool=false)
     p, n = size(data)
     q = size(D, 2)
     mode = _grouped_nongaussian_internal_dispersion_mode(kind, dispersion_mode)
@@ -223,6 +380,7 @@ function _grouped_nongaussian_objective(data::Matrix{Float64}, trials::Matrix{Fl
     dispersion_indices = _grouped_nongaussian_dispersion_indices(q, source_coordinates,
         kind, mode, p)
     expected = q + source_coordinates + length(dispersion_indices)
+    b_cache = Ref{Union{Nothing,Vector{Float64}}}(nothing)
     return function (value)
         length(value) == expected && all(isfinite, value) || return _NLL_SENTINEL
         try
@@ -233,14 +391,174 @@ function _grouped_nongaussian_objective(data::Matrix{Float64}, trials::Matrix{Fl
             family = _grouped_nongaussian_family(kind, value, dispersion_indices, p, n, mode)
             family === nothing && return _NLL_SENTINEL
             W = _grouped_laplace_design(incidences, loads; uniques=uniques)
+            b_init = warm_start_inner ? b_cache[] : nothing
             result = joint_grouped_laplace_loglik(family, vec(data), vec(trials), D, gamma, W;
-                link=_grouped_nongaussian_link(Val(kind)), maxiter=inner_maxiter, tol=inner_tol)
+                link=_grouped_nongaussian_link(Val(kind)), maxiter=inner_maxiter, tol=inner_tol,
+                b_init=b_init)
+            if warm_start_inner && result.status === :ok
+                b_cache[] = copy(result.mode)
+            end
             return result.status === :ok && result.converged && isfinite(result.loglik) ?
                 -result.loglik : _NLL_SENTINEL
         catch
             return _NLL_SENTINEL
         end
     end
+end
+
+# ---------------------------------------------------------------------------
+# S8: analytic outer gradient of the grouped non-Gaussian Laplace objective
+# (docs/design/grouped-analytic-gradient.md, whose alignment table section 6
+# names every function below). Replaces the ~2*nθ inner Laplace-fit calls a
+# central-difference gradient needs with exactly ONE inner Newton solve plus
+# nθ sparse triangular solves against the already-factorised precision `Fo`
+# and one `takahashi_selinv` call -- section 4's O(nnz(L)) log-det trace.
+# ---------------------------------------------------------------------------
+
+"""
+    _grouped_analytic_loglik_gradient(theta, data, trials, D, terms, incidences, kind;
+        dispersion_mode, inner_maxiter, inner_tol) -> Vector{Float64} | nothing
+
+`grad L`, the gradient of the Laplace marginal `L(theta)` itself (NOT the
+minimised objective `F = -L`; see [`_grouped_analytic_gradient`](@ref)),
+computed through the implicit function theorem exactly as derived in
+docs/design/grouped-analytic-gradient.md sections 2-5. Always solves the
+inner mode COLD (`b_init = nothing`), matching `objective_cold`'s own
+convention (section 8.1) -- Newton converges to the same fixed point
+regardless of the starting `b`, so this is never a different answer than a
+warm-started evaluation at the same `theta`, only a possibly slower one.
+
+Returns `nothing` on ANY failure (non-finite `theta`, invalid packing, a
+non-`:ok`/non-converged inner fit, a `nothing` factor) so the caller can
+fall back to `_grouped_fd_gradient` -- mirroring `_grouped_nongaussian_
+objective`'s own `_NLL_SENTINEL` convention for the value path.
+"""
+function _grouped_analytic_loglik_gradient(theta::AbstractVector{<:Real},
+        data::Matrix{Float64}, trials::Matrix{Float64}, D::Matrix{Float64},
+        terms::Vector{GroupingTerm}, incidences::Vector{SparseMatrixCSC{Float64,Int}},
+        kind::Symbol; dispersion_mode::Symbol, inner_maxiter::Integer, inner_tol::Real)
+    p, n = size(data)
+    q = size(D, 2)
+    mode = _grouped_nongaussian_internal_dispersion_mode(kind, dispersion_mode)
+    source_coordinates = sum(t -> _grouping_term_nparams(t, p), terms; init=0)
+    dispersion_indices = _grouped_nongaussian_dispersion_indices(q, source_coordinates, kind, mode, p)
+    disp_count = length(dispersion_indices)
+    ntheta = q + source_coordinates + disp_count
+    (length(theta) == ntheta && all(isfinite, theta)) || return nothing
+
+    thetaf = Float64.(theta)
+    gamma = collect(view(thetaf, 1:q))
+    loads, uniques, _, used = _grouped_term_unpack(view(thetaf, q + 1:q + source_coordinates), p, terms)
+    used == source_coordinates || return nothing
+    family = _grouped_nongaussian_family(kind, thetaf, dispersion_indices, p, n, mode)
+    family === nothing && return nothing
+    W = _grouped_laplace_design(incidences, loads; uniques=uniques)
+    y = vec(data); ntrial = vec(trials)
+    link = _grouped_nongaussian_link(Val(kind))
+
+    result = try
+        joint_grouped_laplace_loglik(family, y, ntrial, D, gamma, W;
+            link=link, maxiter=Int(inner_maxiter), tol=Float64(inner_tol), b_init=nothing)
+    catch
+        return nothing
+    end
+    (result.status === :ok && result.converged) || return nothing
+    Fo = result.factor
+    Fo === nothing && return nothing
+    bhat = result.mode
+
+    state = _joint_grouped_state(family, D, gamma, W, link, bhat)
+    state[1] === :ok || return nothing
+    _, eta, mu, me = state
+
+    Npts = length(y)
+    s = Vector{Float64}(undef, Npts)
+    w = Vector{Float64}(undef, Npts)
+    kappa = Vector{Float64}(undef, Npts)
+    @inbounds for i in 1:Npts
+        rf = _joint_grouped_family_at(family, i)
+        s[i] = _glm_score(rf, mu[i], ntrial[i], me[i], y[i])
+        w[i] = _glm_obs_weight(rf, mu[i], ntrial[i], me[i], y[i], link, eta[i])
+        kappa[i] = _glm_obs_weight_deta(rf, mu[i], ntrial[i], me[i], y[i], link, eta[i])
+    end
+    all(isfinite, s) && all(isfinite, w) && all(isfinite, kappa) || return nothing
+
+    Sigma = try
+        takahashi_selinv(Fo)
+    catch
+        return nothing
+    end
+    Wt = SparseMatrixCSC(transpose(W))
+    t = _grouped_selinv_row_quadform(Wt, Sigma)
+
+    trait_of(i) = mod1(i, p)
+    disp_local = disp_count == 0 ? Int[] : (mode === :shared ? fill(1, p) : collect(1:p))
+
+    gradL = Vector{Float64}(undef, ntheta)
+
+    @inbounds for k in 1:q
+        e_expl = view(D, :, k)
+        rhs = -(W' * (w .* e_expl))
+        u = Fo \ rhs
+        edot = e_expl .+ W * u
+        wdot = kappa .* edot
+        gradL[k] = dot(s, e_expl) - 0.5 * dot(wdot, t)
+    end
+
+    @inbounds for local_k in 1:source_coordinates
+        k = q + local_k
+        dW = _grouped_laplace_design_jacobian(incidences, loads, uniques, terms, local_k)
+        e_expl = dW * bhat
+        rhs = dW' * s .- (W' * (w .* e_expl))
+        u = Fo \ rhs
+        edot = e_expl .+ W * u
+        wdot = kappa .* edot
+        dWt = SparseMatrixCSC(transpose(dW))
+        r = _grouped_selinv_row_crossform(Wt, dWt, Sigma)
+        gradL[k] = dot(s, e_expl) - dot(w, r) - 0.5 * dot(wdot, t)
+    end
+
+    @inbounds for local_k in 1:disp_count
+        k = q + source_coordinates + local_k
+        ds_drho = zeros(Float64, Npts)
+        wdot = zeros(Float64, Npts)
+        dl_drho_total = 0.0
+        for i in 1:Npts
+            disp_local[trait_of(i)] == local_k || continue
+            rf = _joint_grouped_family_at(family, i)
+            phi = kind === :beta ? rf.α : rf.r
+            ds_drho[i] = _glm_score_dphi(rf, mu[i], ntrial[i], me[i], y[i]) * phi
+            wdot[i] = _glm_obs_weight_dphi(rf, mu[i], ntrial[i], me[i], y[i], link, eta[i]) * phi
+            dl_drho_total += _glm_logpdf_dphi(rf, mu[i], ntrial[i], y[i]) * phi
+        end
+        rhs = W' * ds_drho
+        u = Fo \ rhs
+        edot = W * u
+        wdot .+= kappa .* edot
+        gradL[k] = dl_drho_total - 0.5 * dot(wdot, t)
+    end
+
+    all(isfinite, gradL) || return nothing
+    return gradL
+end
+
+"""
+    _grouped_analytic_gradient(theta, data, trials, D, terms, incidences, kind;
+        dispersion_mode, inner_maxiter, inner_tol) -> Vector{Float64} | nothing
+
+`grad F = -grad L`, the gradient of the MINIMISED objective (`F(theta) =
+-L(theta)`, `src/grouped_nongaussian_fit.jl:263`; docs/design/grouped-
+analytic-gradient.md section 1.4). `nothing` on any failure -- the caller
+falls back to `_grouped_fd_gradient`.
+"""
+function _grouped_analytic_gradient(theta::AbstractVector{<:Real},
+        data::Matrix{Float64}, trials::Matrix{Float64}, D::Matrix{Float64},
+        terms::Vector{GroupingTerm}, incidences::Vector{SparseMatrixCSC{Float64,Int}},
+        kind::Symbol; dispersion_mode::Symbol, inner_maxiter::Integer, inner_tol::Real)
+    gradL = _grouped_analytic_loglik_gradient(theta, data, trials, D, terms, incidences, kind;
+        dispersion_mode=dispersion_mode, inner_maxiter=inner_maxiter, inner_tol=inner_tol)
+    gradL === nothing && return nothing
+    return -gradL
 end
 
 function _grouped_nongaussian_trials(Y::AbstractMatrix, N, kind::Symbol)
@@ -268,13 +586,24 @@ It reuses `GroupingTerm` packing and one global joint-Laplace random-effect
 mode. Public fitting uses `fit_gllvm` or the grouping formula route; marginal
 interval diagnostics use `grouped_nongaussian_intervals`. The development route
 does not establish frozen-R parity, recovery, or coverage qualification.
+
+`warm_start_inner` (S7c, default `true`): each of the many inner Laplace-fit
+calls the outer optimiser makes seeds its Newton solve from the previous
+call's converged mode instead of `zeros(m)`, since nearby outer-parameter
+values share a nearby mode. It applies to the value-only Nelder-Mead search,
+and (S8) to the BFGS refinement when `analytic_gradient=true`; every
+finite-differenced quantity keeps a cold objective. This changes only how
+fast each inner solve converges, never the converged answer (see `joint_grouped_laplace_loglik`'s `b_init`
+docstring); pass `warm_start_inner=false` to recover the pre-S7c cold-start
+behaviour.
 """
 function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
         unit=nothing, unit_obs=nothing, cluster=nothing, cluster2=nothing,
         N=nothing, X=nothing, coefficient_names=nothing, start=nothing,
         dispersion::Symbol=:trait,
         g_tol::Real=1e-4, iterations::Integer=100,
-        inner_maxiter::Integer=100, inner_tol::Real=1e-8)
+        inner_maxiter::Integer=100, inner_tol::Real=1e-8,
+        warm_start_inner::Bool=true, analytic_gradient::Bool=true)
     p, n = size(Y)
     p > 0 && n >= 2 || throw(ArgumentError("grouped fitting needs at least one trait and two observations"))
     all(isfinite, Y) || throw(ArgumentError("grouped fitting requires finite complete responses"))
@@ -313,9 +642,40 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
         all(x -> x isa Real && isfinite(x), start) || throw(ArgumentError("start must be finite and real"))
         Float64.(start)
     end
-    objective = _grouped_nongaussian_objective(data, trials, D, termvec, incidences, kind;
-        dispersion_mode=mode, inner_maxiter=Int(inner_maxiter), inner_tol=Float64(inner_tol))
-    initial_value = objective(theta)
+    # S7c: warm-starting is confined to the Nelder-Mead VALUE-ONLY search
+    # below. FD-gradient/-Hessian differencing (`_grouped_fd_gradient`/
+    # `_grouped_fd_hessian`) needs the objective to vary SMOOTHLY and
+    # CONSISTENTLY between the +h/-h stencil points it differences — cached
+    # warm starts break that: which mode a stencil point's inner Newton
+    # solve lands on (to within inner_tol, not to full machine precision)
+    # depends on the arbitrary cache state left by whichever theta was
+    # evaluated most recently, so the tiny (~inner_tol-scale) residual
+    # noise floor is INCONSISTENT across nearby stencil points instead of
+    # both referencing the same b=0 start — and dividing that inconsistent
+    # noise by the small FD step size amplifies it by ~1/h. MEASURED: on a
+    # 4-source common=true Destination B fixture (test/test_destination_b_
+    # joint_other_families.jl) this took the fitter's own FD gradient norm
+    # from ~1e-7 (cold) to ~1e-4-2e-4 (warm-throughout) — enough to flip
+    # `converged` under the 1e-4 g_tol. So `objective_cold` (always cold,
+    # `warm_start_inner=false`) is used for every FD-differenced quantity
+    # and for BFGS refinement (which needs a gradient at every line-search
+    # trial), reproducing origin/main's numerics there exactly;
+    # `objective_warm` (the caller's actual `warm_start_inner`) is used
+    # for the plain value-only Nelder-Mead search, which does not
+    # difference nearby evaluations and tolerates inner_tol-scale noise --
+    # and, since S8's GB.4, for the BFGS refinement too whenever the
+    # analytic gradient is in use, because that phase then differences
+    # nothing either. See the note at the BFGS call below.
+    objective_cold = _grouped_nongaussian_objective(data, trials, D, termvec, incidences, kind;
+        dispersion_mode=mode, inner_maxiter=Int(inner_maxiter), inner_tol=Float64(inner_tol),
+        warm_start_inner=false)
+    objective_warm = warm_start_inner ?
+        _grouped_nongaussian_objective(data, trials, D, termvec, incidences, kind;
+            dispersion_mode=mode, inner_maxiter=Int(inner_maxiter), inner_tol=Float64(inner_tol),
+            warm_start_inner=true) :
+        objective_cold
+    objective = objective_cold   # used below for the final, reported diagnostics
+    initial_value = objective_cold(theta)
     isfinite(initial_value) && !_nll_failed(initial_value) ||
         throw(ArgumentError("start produces an invalid grouped Laplace objective"))
     # The joint Laplace domain can invalidate a finite-difference neighbour.
@@ -323,27 +683,67 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
     # a line-search method would turn a rejected stencil into an Optim error.
     # Use a value-only outer search, then require a valid FD gradient/Hessian
     # for convergence and observed-marginal inference below.
-    result = Optim.optimize(objective, theta, Optim.NelderMead(),
+    result = Optim.optimize(objective_warm, theta, Optim.NelderMead(),
         Optim.Options(g_tol=Float64(g_tol), iterations=Int(iterations)))
     # A valid simplex endpoint can still be non-stationary because Nelder-Mead
     # stops on objective/simplex geometry, not this fitter's FD gradient norm.
     # Refine only when every initial BFGS stencil is valid. Invalid stencils
     # retain the value-only result and cannot be smuggled into a line search.
     candidate = collect(Optim.minimizer(result))
-    candidate_gradient = _grouped_fd_gradient(objective, candidate)
+    # S8: analytic outer gradient (implicit function theorem + selected
+    # inverse, docs/design/grouped-analytic-gradient.md), used as the
+    # `gradient!` Optim.BFGS refines against. `analytic_gradient=false`
+    # recovers the exact pre-S8 all-FD path -- kept reachable as both a
+    # deliberate fallback (any theta where the analytic value comes back
+    # non-finite falls through to the SAME `_grouped_fd_gradient` call the
+    # pre-S8 code always used) and a test oracle
+    # (test/test_grouped_analytic_grad.jl).
+    grad_fn = value -> begin
+        analytic_gradient || return _grouped_fd_gradient(objective_cold, value)
+        # The docstring of `_grouped_analytic_loglik_gradient` promises `nothing`
+        # on ANY failure so this caller can fall back. It carries try/catch at
+        # only two internal sites, so a THROW from anywhere else used to escape
+        # here and abort a fit that the pre-S8 code completed -- which is exactly
+        # how the two-term `DimensionMismatch` (fixed in ec76a2090) reached a
+        # user through the ordinary public `fit_gllvm`. Fixing instances one at a
+        # time leaves the contract broken; this makes it true at the boundary.
+        # `maxlog=1` so a systematic fallback is VISIBLE as a performance cliff
+        # rather than silent, without spamming one warning per BFGS iteration.
+        g = try
+            _grouped_analytic_gradient(value, data, trials, D, termvec, incidences, kind;
+                dispersion_mode=mode, inner_maxiter=Int(inner_maxiter), inner_tol=Float64(inner_tol))
+        catch err
+            @warn "analytic outer gradient threw; falling back to the finite-difference gradient for the rest of this fit" exception=(err, catch_backtrace()) maxlog=1
+            nothing
+        end
+        (g === nothing || !all(isfinite, g)) ? _grouped_fd_gradient(objective_cold, value) : g
+    end
+    candidate_gradient = grad_fn(candidate)
     if all(isfinite, candidate_gradient)
-        gradient! = (storage, value) -> (storage .= _grouped_fd_gradient(objective, value))
+        gradient! = (storage, value) -> (storage .= grad_fn(value))
+        # S8 (GB.4): the S7c confinement above exists because BFGS needed a
+        # gradient at every line-search trial and that gradient was
+        # FINITE-DIFFERENCED from this objective — warm inner modes make the
+        # +h/-h stencil noise inconsistent and 1/h amplifies it. With the
+        # analytic gradient in use the BFGS phase differences nothing: the
+        # gradient comes from one inner solve through the implicit function
+        # theorem, so the line search only needs VALUES, exactly like the
+        # Nelder-Mead phase that S7c already allowed to warm-start. The
+        # confinement therefore lifts for BFGS on the analytic path only; the
+        # FD fallback inside `grad_fn`, the reported gradient and the final
+        # FD Hessian all still difference `objective_cold`.
+        objective_refine = analytic_gradient ? objective_warm : objective_cold
         refined = try
-            Optim.optimize(objective, gradient!, candidate, Optim.BFGS(),
+            Optim.optimize(objective_refine, gradient!, candidate, Optim.BFGS(),
                 Optim.Options(g_tol=Float64(g_tol), iterations=Int(iterations)))
         catch
             nothing
         end
         if refined !== nothing
             refined_estimate = collect(Optim.minimizer(refined))
-            refined_value = objective(refined_estimate)
+            refined_value = objective_cold(refined_estimate)
             if isfinite(refined_value) && !_nll_failed(refined_value) &&
-                    refined_value <= objective(candidate)
+                    refined_value <= objective_cold(candidate)
                 result = refined
             end
         end

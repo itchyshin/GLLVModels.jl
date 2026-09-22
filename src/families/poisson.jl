@@ -254,12 +254,16 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
     # differentiates through this closure), so this workspace's element type never
     # needs to be a dual.
     ws_negll = LaplaceModeWorkspace(Float64, p, K)
-    function negll(θ)
+    # R8 (shared mode solve, S6 item 1): `zs`, when given, is threaded straight
+    # into `marginal_loglik_laplace`'s per-site `z_precomputed`, so an `fg!` call
+    # that already solved the same modes for the gradient path does not make
+    # `negll` solve them again — see `fg!` below.
+    function negll(θ; zs = nothing)
         β = θ[1:p]
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         v = try
             -marginal_loglik_laplace(Poisson(), Yc, N1, Λ, β, link; mask = msk, offset = offset,
-                                     hessian = hessian,
+                                     hessian = hessian, zs = zs,
                                      maxiter = newton_maxiter, tol = newton_tol, ws = ws_negll)
         catch
             return 1e12
@@ -299,11 +303,55 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         # `Optim.optimize` bookkeeping pass rather than two separate closures the
         # optimizer must call at the same θ. See
         # docs/dev-log/core070/poisson-perf-repair-notes.md for the measured effect.
+        #
+        # R7 (one GradientConfig per fit, S6 item 2): built ONCE here (not inside
+        # `poisson_laplace_grad`, which would otherwise let `ForwardDiff.gradient`
+        # allocate a fresh config — seed/partial buffers sized to nθ — on EVERY
+        # Optim iteration) and reused across the whole fit. Valid because
+        # `PoissonMargClosure`'s TYPE (not the field VALUES) is what the config's
+        # tag is keyed on, and that type only depends on `Yc`'s type, `p`/`rr`/`K`,
+        # and whether `msk` is `nothing` — all fixed for this fit. Chunk 32
+        # measured best of {12, 24, 32} at p=20/50 (bench, see commit body);
+        # `poisson_laplace_grad` falls back to an uncached config on any mismatch,
+        # so a wrong/stale `_grad_gcfg` here is never unsafe, only non-optimal.
+        _grad_chunk = min(32, p + rr)
+        _grad_gcfg = try
+            _proto_ẑs = [zeros(K) for _ in 1:n]
+            _proto_marg = PoissonMargClosure(Yc, p, rr, K, _proto_ẑs, msk, Ref{Any}(nothing))
+            ForwardDiff.GradientConfig(_proto_marg, θ0, ForwardDiff.Chunk{_grad_chunk}())
+        catch
+            nothing
+        end
         function fg!(F, G, θ)
+            # R8 (shared mode solve, S6 item 1): when this call needs BOTH the
+            # value and the gradient at θ, solve the per-site Newton mode ONCE
+            # here and hand it to both `negll` and `poisson_laplace_grad` — before
+            # this change each solved its own copy of the identical fixed point
+            # (2 solves/site/iteration whenever Optim asked for F+G together).
+            shared_ẑs = nothing
             if G !== nothing
                 β = θ[1:p]; Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
+                # `poisson_laplace_grad`'s hoist always solves the mode under
+                # `LogLink()` (pre-existing; not introduced here — see its
+                # docstring); sharing that mode into `negll` is only valid when
+                # this fit's own `link` is ALSO `LogLink()`, so a non-default
+                # link keeps solving its own (correctly link-aware) mode in
+                # `negll`, unaffected by this change.
+                if F !== nothing && link isa LogLink
+                    Λv = unpack_lambda(pack_lambda(Λ), p, K)  # round-tripped, matches poisson_laplace_grad's convention
+                    # The shared mode must stop where `negll`'s own solve would have
+                    # stopped: the fit's `newton_maxiter` / `newton_tol`, not
+                    # `_laplace_mode`'s defaults, or a caller asking for a tighter
+                    # mode would silently get the default one in the value path.
+                    shared_ẑs = try
+                        _poisson_hoist_zhats(Yc, Λv, float.(β); mask = msk,
+                                             maxiter = newton_maxiter, tol = newton_tol)
+                    catch
+                        nothing
+                    end
+                end
                 gg = try
-                    poisson_laplace_grad(Yc, Λ, β; mask = msk)
+                    poisson_laplace_grad(Yc, Λ, β; mask = msk, gcfg = _grad_gcfg, ẑs = shared_ẑs)
                 catch
                     nothing
                 end
@@ -318,7 +366,7 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
                 end
             end
             if F !== nothing
-                return negll(θ)
+                return negll(θ; zs = shared_ẑs)
             end
             return nothing
         end
