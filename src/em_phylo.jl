@@ -757,6 +757,12 @@ struct EMPhyloFit
     end
 end
 
+# The EM's convergence tolerance, as ONE definition. test_sparse_phy_identities.jl's
+# G7.3 derives its identity bound from this, so the two cannot drift apart. It was
+# previously read out of this file by regex, which matched the DOCSTRING copy above
+# the signature rather than the signature itself.
+const EM_DEFAULT_TOL = 1e-9
+
 """
     em_fit_phylo(y, K_B, Σ_phy;
                  λ_init=nothing, σ_eps_init=nothing, σ_phy_init=nothing,
@@ -793,7 +799,7 @@ is always used regardless of `force_dense_estep`.
 function em_fit_phylo(y::AbstractMatrix, K_B::Integer, Σ_phy::AbstractMatrix;
                       λ_init = nothing, σ_eps_init = nothing,
                       σ_phy_init = nothing,
-                      tol = 1e-9, max_iter = 1000, assert_monotone = true,
+                      tol = EM_DEFAULT_TOL, max_iter = 1000, assert_monotone = true,
                       phy::Union{Nothing,GLLVModels.AugmentedPhy{Float64}} = nothing,
                       force_dense_estep::Bool = false)
     p, n = size(y)
