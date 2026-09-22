@@ -1012,7 +1012,14 @@ end
 
 if abspath(PROGRAM_FILE) == @__FILE__
     gate = length(ARGS) >= 2 && ARGS[1] == "--gate" ? ARGS[2] : "fd_agreement"
-    ok = if gate == "identity"
+    # An UNRECOGNISED gate name must ERROR, never fall through. It used to run
+    # `gate_fd_agreement()`, so any CHECK naming a gate this branch does not
+    # implement printed "GATE GB.2 PASS" and exited 0, and a typo did the same.
+    # Both sides of this merge fixed that; this keeps S9a's seven gates AND the
+    # error branch, because dropping either would reinstate one half of the bug.
+    ok = if gate == "fd_agreement"
+        gate_fd_agreement()
+    elseif gate == "identity"
         gate_identity()
     elseif gate == "hessian"
         gate_hessian()
@@ -1027,7 +1034,8 @@ if abspath(PROGRAM_FILE) == @__FILE__
     elseif gate == "final_gradient"
         gate_final_gradient()
     else
-        gate_fd_agreement()
+        error("unknown --gate $(gate); gates implemented on this branch: " *
+              "fd_agreement, identity, hessian, nm_fallback, counts, coverage, mixed, final_gradient")
     end
     exit(ok ? 0 : 1)
 else
@@ -1037,5 +1045,10 @@ else
             @test r.used == NTHETA
             @test r.worst_rel <= RTOL_FD
         end
+        # The regression check for the compacted-unique-variance column bug
+        # (7f175835e) was defined and documented and then called from nowhere,
+        # so the one test written to catch a silently WRONG gradient had never
+        # executed. It returns Bool and prints its own diagnostic.
+        @test _s8_compacted_unique_column_check!()
     end
 end

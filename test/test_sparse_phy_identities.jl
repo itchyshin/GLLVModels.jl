@@ -26,7 +26,14 @@ const _S7_IDENTITY_REASONS = String[]
 
 function _s7_check!(ok::Bool, msg::AbstractString)
     push!(_S7_IDENTITY_RESULTS, ok)
-    ok || push!(_S7_IDENTITY_REASONS, msg)
+    if !ok
+        push!(_S7_IDENTITY_REASONS, msg)
+        # Say WHICH check missed and by how much. The in-suite path (runtests.jl)
+        # only ever saw `Test Failed ... Expression: ok` and lost the number
+        # (Linux Julia 1.10 shard 1/4, 2026-09-21); only the standalone gate
+        # printed the reason.
+        println(stderr, "S7 identity check FAILED: ", msg)
+    end
     @test ok
     return ok
 end
