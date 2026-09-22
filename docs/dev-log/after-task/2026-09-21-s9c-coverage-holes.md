@@ -73,7 +73,7 @@ All with `env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=.`, Jul
 | `--gate coverag` (typo) | exit 2, no gate ran |
 | `--badflag x` | exit 2 |
 | real 69a69b0a0 baseline diff | 4/4 logliks, 20/20 theta coords within rtol 1e-8 |
-| full `Pkg.test()` | 16336 pass / 1 fail / 19 broken, 97 min, on merged state 462c2675f |
+| full `Pkg.test()` | run 1: 16336/1/19, 97 min. run 2 (final, a9abb4f62): **16337/1/19**, 98 min |
 
 ## 6. Tests of the Tests
 
@@ -109,10 +109,14 @@ Each new gate was checked for the way it could pass without testing anything:
 
 The neighbourhood sweep, having found one instance and looked for the same class:
 
-- A `_GATES` collision. Checked whether my new top-level names exist elsewhere in `test/`.
+- A `_GATES` collision, and a correction. Checked whether my new top-level names exist elsewhere in `test/`.
   `_s9c_`/`_S9C_`, `gate_*` and `_compare_fixture` are unique, but `test_grouped_laplace_identity.jl:369`
-  binds `const _GATES` unconditionally at top level. Renamed mine `_S9C_GATES` and verified by including
-  both files into one `Main`.
+  binds `const _GATES` unconditionally at top level. The first rename attempt SILENTLY FAILED: it used
+  `sed` with `\b`, which BSD sed on macOS does not support, so nothing matched and the table kept the
+  name `_GATES` under a comment claiming otherwise. The two-file `Main` check could not catch it either,
+  because that binding only exists when the file runs as a program, where the sibling file is never
+  loaded. Caught while resolving the speed78 merge conflict, and now verified by grep on the code rather
+  than by a test that structurally could not fail.
 - The dispatch trap in sibling gate files. Checked all three; `test_laplace_grad_identity.jl` and
   `test_sparse_phy_identities.jl` already `error(...)` on an unknown gate, as does
   `test_grouped_laplace_identity.jl`. This file was the only outlier, so the fix restores the repo's own
@@ -134,12 +138,12 @@ The neighbourhood sweep, having found one instance and looked for the same class
 
 ## 10. Known Residuals
 
-- Full `Pkg.test()` is now run and this residual is closed. Another lane held the machine until 20:14,
-  so this one waited rather than break the one-suite rule, then ran 20:15 to 21:52 MDT on the merged
-  state: 16336 pass / 1 fail / 19 broken against a 16328 / 1 / 19 baseline. The +8 is exactly this
-  lane's own in-suite testset growing from 12 assertions to 20. The single failure is the known
-  `test_em_louis.jl:127` flake (`rel = 0.001056` against its own 1e-3 bound), in a file this lane never
-  touched, and it reproduced identically in the other lane's run at 20:14.
+- Full `Pkg.test()` is run and this residual is closed. It ran twice, because speed78 advanced while
+  the first was in flight. Final run on a9abb4f62, 21:58 to 23:36 MDT: 16337 pass / 1 fail / 19 broken
+  against a 16328 / 1 / 19 baseline. The +9 is fully accounted for: +8 this lane's own in-suite testset
+  growing from 12 assertions to 20, and +1 speed78's compacted-column check merged in. The single
+  failure is the known `test_em_louis.jl:127` flake (`rel = 0.001056` against its own 1e-3 bound), in a
+  file this lane never touched, and it reproduced identically in the other lane's run at 20:14.
 - PR #430 was NOT merged to main, despite the instruction to "merge everything". My branch sits on
   speed78, which is itself PR #430's head, so merging to main would land the whole S4/S7/S7b/S7c/S8 perf
   change rather than my work. That PR's own GB.6 records 1 failure and 19 broken, and leaf-S9 has several

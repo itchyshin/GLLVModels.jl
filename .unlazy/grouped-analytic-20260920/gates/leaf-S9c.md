@@ -184,19 +184,23 @@ Measured: both report `mode=trait length=2 (require 2) OK`.
 - [x] G9c.6: the full suite is green apart from the known `test_em_louis.jl:127` flake.
   CHECK: env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. -e 'using Pkg; Pkg.test()'
   EXPECT: the known baseline, plus this leaf's new tests, and no new failure
-  EVIDENCE: **PASS.** Run on the merged state 462c2675f (this branch with speed78's 4b3832f76 merged
-  in), 20:15 to 21:52 MDT 2026-09-21, 97 minutes, wrapped in `script -q /tmp/s9c_suite.log`, sole suite
-  on the machine, nothing edited in the lane while it ran.
+  EVIDENCE: **PASS.** Run TWICE, because speed78 advanced mid-run and the second run is the one that
+  counts. Both were the sole suite on the machine, wrapped in `script -q`, with nothing edited in the
+  lane while they ran.
 
-  | | baseline (leaf-S8 GB.6, and the s9a lane's own run earlier tonight) | this run | delta |
+  | | baseline | run 1, 462c2675f | run 2, a9abb4f62 (final) |
   |---|---|---|---|
-  | passed | 16328 | **16336** | **+8** |
-  | failed | 1 | 1 | 0 |
-  | broken | 19 | 19 | 0 |
+  | passed | 16328 | 16336 (+8) | **16337 (+9)** |
+  | failed | 1 | 1 | 1 |
+  | broken | 19 | 19 | 19 |
+  | wall | about 100 min | 97 min (20:15-21:52) | 98 min (21:58-23:36) |
 
-  The +8 is exactly this leaf's own additions: the in-suite `@testset` went from 6 fixtures x 2
-  assertions to 10 x 2, and it reports `grouped analytic outer gradient vs finite differences | 20 20
-  2.0s`. Nothing else moved: broken is unchanged at 19, and the failure count is unchanged at 1.
+  Baseline is leaf-S8's GB.6, independently reproduced by the `GLLVM.jl-s9a-hessian-20260921` lane's own
+  run at 20:14 tonight. The delta is fully accounted for and nothing is unexplained: +8 is this leaf's
+  own in-suite `@testset` going from 6 fixtures x 2 assertions to 10 x 2; the further +1 in run 2 is
+  speed78's `@test _s8_compacted_unique_column_check!()`, merged in here. The testset reports
+  `grouped analytic outer gradient vs finite differences | 21 21 2.1s`. Broken is unchanged at 19 and
+  the failure count is unchanged at 1.
 
   The single failure is the KNOWN flake this arc has named all along, at the same file and the same line
   leaf-S9's G9.8 predicted: `test_em_louis.jl:127`, `SE PRIMARY GATE: EM-SEM SEs match dense-Hessian SEs
@@ -206,7 +210,14 @@ Measured: both report `mode=trait length=2 (require 2) OK`.
 
   Machine discipline: a full suite from lane `GLLVM.jl-s9a-hessian-20260921` was already running when
   this leaf was ready for one (started 18:36, finished 20:14). Only one may run at a time, so this one
-  waited rather than starting beside it.
+  waited rather than starting beside it, and the two runs here were likewise sequential.
+
+  MERGED IN FROM speed78 while run 1 was in flight, and re-verified by run 2: `45fcb8e7d` wired up
+  `_s8_compacted_unique_column_check!()`, which had been defined, documented, and called from nowhere.
+  That is the regression test for the compacted-column bug of `7f175835e`, the one defect in this arc
+  that produced a silently WRONG gradient rather than an error, and it had never executed. It passes on
+  its first run. That lane also fixed the same `--gate` fall-through independently; the resolution keeps
+  their assertion and their sharper rationale together with this lane's four-gate Dict dispatch.
 
 ## What this leaf does NOT cover
 
