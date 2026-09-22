@@ -207,7 +207,8 @@ function run_identity_checks()
     # the FD objective-call count moved 118 -> 113 between Optim 1.13.3 and
     # 2.3.2 while the answer was identical to 1e-7, so an `==` here fails on a
     # dependency bump that changed nothing we own. It is reported instead.
-    _check!(fit.iterations > 0, "fixture A: no outer iterations recorded")
+    _check!(0 < fit.iterations <= 20,
+            "fixture A: outer iterations $(fit.iterations) outside 1..20")
 
     # The LOGLIK identity is kept at rtol 1e-8 and is the load-bearing one. It
     # is portable: it survived the Optim 1.13.3 -> 2.3.2 change unchanged,
@@ -230,7 +231,7 @@ function run_identity_checks()
     # optimum is still caught while a flat-direction wobble is not.
     ll_at_baseline = GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms,
         unit = group, warm_start_inner = false,
-        start = BASELINE_A_PARAMETERS, iterations = 0).loglik
+        start = BASELINE_A_PARAMETERS, iterations = 0, nelder_mead = false).loglik
     _check!(isfinite(ll_at_baseline),
             "fixture A: could not evaluate the objective at the recorded baseline parameters")
     _check!(abs(ll_at_baseline - fit.loglik) / max(1.0, abs(fit.loglik)) <= 1e-8,
@@ -269,8 +270,16 @@ function run_identity_checks()
         # "the reuse must not change the optimiser's path", is asserted below by
         # `fresh == 2*calls` and `fallback == 0`, which are relations between
         # quantities measured in THIS process and hold on any platform.
-        _check!(stats.calls > 0,
-                "fixture A (FD path): no inner Laplace-fit calls recorded; the counter is not wired")
+        # A BAND, not a pin and not a bare > 0. The exact count encodes the
+        # dependency set (118 under Optim 1.13.3, 113 under 2.3.2, a 4.2 per cent
+        # move), but `> 0` asserts nothing: `fresh == 2*calls` and `fallback == 0`
+        # are PER-CALL invariants that hold identically at 118, 190 or 3 calls, so
+        # without a band a path lengthening to ~190 passes every check here while
+        # the loglik stays inside rtol 1e-8, the Laplace objective being stationary
+        # in the inner mode. The band absorbs a measured 4.2 per cent with an order
+        # of magnitude spare.
+        _check!(80 <= stats.calls <= 160,
+                "fixture A (FD path): inner Laplace-fit call count $(stats.calls) is outside 80..160 — the reuse must not change the optimiser's path")
         _check!(stats.fallback == 0,
                 "fixture A (FD path): $(stats.fallback) fresh-cholesky fallbacks (pattern mismatch), expected 0")
         _check!(stats.fresh == 2 * stats.calls,

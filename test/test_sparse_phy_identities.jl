@@ -137,19 +137,11 @@ function run_gradient_checks()
 end
 
 # ---------------------------------------------------------------------------
-# Reads `em_fit_phylo`'s ACTUAL default `tol` out of the source, so this gate's
-# bound cannot silently drift away from the quantity it is derived from. Julia
-# does not expose keyword defaults through `methods`, so the source is the only
-# honest place to read it; a hard-coded copy here would be the very thing this
-# gate replaced.
-function _s7_em_default_tol()
-    src_path = joinpath(@__DIR__, "..", "src", "em_phylo.jl")
-    isfile(src_path) || error("cannot find src/em_phylo.jl to read the EM's default tol")
-    m = match(r"tol\s*=\s*([0-9.eE+-]+)\s*,\s*max_iter", read(src_path, String))
-    m === nothing && error("could not read em_fit_phylo's default `tol` from src/em_phylo.jl; " *
-                           "this gate's bound is derived from it and cannot be checked")
-    return parse(Float64, m.captures[1])
-end
+# The EM's tolerance comes from the ONE definition in src/em_phylo.jl. The previous
+# version read it back out of the source with a regex, which matched the DOCSTRING
+# copy at line 763 before the signature at 796, so the gate was pinned to the least
+# reliable copy of the number while claiming to have removed the pin.
+_s7_em_default_tol() = GLLVModels.EM_DEFAULT_TOL
 
 # G7.3 — E-step moments (β, diag(Vφ), μ_φ, μ_z) within rtol 1e-10 of
 # `_estep_dense` at p=200/1000, plus the EM trajectory (per-iteration loglik
@@ -255,6 +247,15 @@ function run_estep_checks()
     em_tol = _s7_em_default_tol()   # read from src/em_phylo.jl, never copied here
     _s7_check!(em_tol > 0 && isfinite(em_tol),
         "EM trajectory: read a nonsensical EM default tol ($em_tol) from src/em_phylo.jl")
+    # The ENDPOINT bound is kept alongside, at the same tolerance. Both fits above
+    # already run 50 iterations, so this costs nothing, and deleting it was a free
+    # coverage hole: the endpoint measured 1.161e-11 here and 1.0005e-10 on the
+    # hosted runner, both an order inside this bound.
+    rel_theta = max(relerr(emf_sparse.Λ_B, emf_dense.Λ_B),
+                    abs(emf_sparse.σ_eps - emf_dense.σ_eps) / max(1.0, abs(emf_dense.σ_eps)),
+                    relerr(emf_sparse.σ_phy, emf_dense.σ_phy))
+    _s7_check!(rel_theta <= em_tol,
+        "EM trajectory: final θ (Λ_B, σ_eps, σ_phy) rel diff $rel_theta > $em_tol after 50 iterations")
     _s7_check!(worst_step <= em_tol,
         "EM trajectory: worst per-iteration θ (Λ_B, σ_eps, σ_phy) drift $worst_step " *
         "> $em_tol (the EM's own convergence tolerance), at iteration $worst_at of 50")
