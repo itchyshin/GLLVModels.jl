@@ -323,7 +323,29 @@ WHY NELDER-MEAD IS THERE, stated so the demotion is not naive: the comment at :6
 - [x] G9.9: MET by direct measurement, NOT by the CHECK as written, see the amendment. MEASUREMENT. Both fixtures re-measured with GA.1's section partition, before and after in one process so machine state is shared. The after TSV carries git SHA, Julia version, BLAS config and thread counts in its header. The large fixture's target is about 1.5 s against 5.93 s; that is a TARGET and is reported, never asserted.
   CHECK: env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. bench/profile_grouped_glmm.jl --gate sections
   EXPECT: GATE GA.1 PASS, and bench/results/grouped_sections_after_<sha>.tsv non-empty with a full header
-  EVIDENCE: pending
+  EVIDENCE: **MET.** Measured twice, on two different commits, by a driver that calls the REAL entry
+  point `fit_gllvm` rather than the bench's reimplemented Optim loop. Second run on the merged head
+  `edf7d39e0`, Julia 1.10.0, `JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1`, all four configurations in
+  ONE process, median of 5 reps (small) and 3 (large):
+
+  | fixture | config | wall median | speedup | logLik rel vs BEFORE | iters |
+  |---|---|---|---|---|---|
+  | glmm_200x5 | BEFORE (nm=true, :fd) | 0.112903 s | 1.000x | 0.000e+00 | 3 |
+  | glmm_200x5 | **HESS (nm=true, :grad_fd)** | **0.109809 s** | **1.028x** | **0.000e+00** | 3 |
+  | glmm_200x5 | NM-OFF | 0.303855 s | 0.372x | 1.796e-15 | 9 |
+  | glmm_200x5 | BOTH | 0.289247 s | 0.390x | 1.796e-15 | 9 |
+  | glmm_5000x3_g500 | BEFORE | 5.712590 s | 1.000x | 0.000e+00 | 8 |
+  | glmm_5000x3_g500 | **HESS** | **4.299553 s** | **1.329x** | **0.000e+00** | 8 |
+  | glmm_5000x3_g500 | NM-OFF | 8.133130 s | 0.702x | 2.682e-15 | 15 |
+  | glmm_5000x3_g500 | BOTH | 7.034797 s | 0.812x | 2.682e-15 | 15 |
+
+  The first run, on `d988de835`, gave 1.322x on the large fixture; this one gives 1.329x. The
+  conclusion is stable across commits and across machine load.
+  TSV with git sha, Julia version, BLAS config, thread counts and host in its header:
+  `bench/results/s9_hessian_2x2_edf7d39e0.tsv` (locally excluded, per this repo's practice), durable
+  copy in the vault at `docs/dev-log/measurements/2026-09-22-s9-hessian-2x2-edf7d39e0.tsv`.
+  **The 1.5 s target in the gate text is NOT met and was never reachable**: it assumed the Nelder-Mead
+  demotion returned its 2.79 s, which measurement refuted. Reported, not asserted, as the gate says.
 
 ## STOP conditions (report, never smooth over)
 
