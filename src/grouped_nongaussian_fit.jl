@@ -636,6 +636,7 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
         inner_maxiter::Integer=100, inner_tol::Real=1e-8,
         warm_start_inner::Bool=true, analytic_gradient::Bool=true,
         nelder_mead::Bool=true,
+        nelder_mead_iterations::Integer=iterations,
         hessian::Symbol=(analytic_gradient ? :grad_fd : :fd))
     p, n = size(Y)
     p > 0 && n >= 2 || throw(ArgumentError("grouped fitting needs at least one trait and two observations"))
@@ -728,8 +729,14 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
     # it runs, once, with a warning, if BFGS never produces a usable result.
     # `nelder_mead=true` (the default when `analytic_gradient=false`) recovers
     # the old unconditional search exactly.
+    # EXPERIMENT (2026-09-22): the simplex runs to its OWN convergence today and
+    # costs 2.69 s of the large fixture's remaining 4.30 s, about 62%. Removing it
+    # is measured SLOWER (8.36 s), so the only route to the arc's 1.5 s target is a
+    # cheaper simplex. `nelder_mead_iterations` caps its budget independently of the
+    # outer `iterations`, so BFGS can be handed a good-enough start instead of a
+    # fully converged one. Defaults to `iterations`, i.e. exactly today's behaviour.
     run_nelder_mead = () -> Optim.optimize(objective_warm, theta, Optim.NelderMead(),
-        Optim.Options(g_tol=Float64(g_tol), iterations=Int(iterations)))
+        Optim.Options(g_tol=Float64(g_tol), iterations=Int(nelder_mead_iterations)))
     # A valid simplex endpoint can still be non-stationary because Nelder-Mead
     # stops on objective/simplex geometry, not this fitter's FD gradient norm.
     # Refine only when every initial BFGS stencil is valid. Invalid stencils
