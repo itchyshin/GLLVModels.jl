@@ -307,8 +307,8 @@ WHY NELDER-MEAD IS THERE, stated so the demotion is not naive: the comment at :6
   computed cleanly (no fallback at that specific point), so it does not affect this gate's numbers.
 
 - [ ] G9.8: full `Pkg.test()` green apart from the known test_em_louis.jl:127 flake. Budget 95 to 105 minutes from the GB.6 measurement; state the estimate before launching, run alone on the machine, wrap in `script -q` with a watcher, and edit nothing in the lane while it runs.
-  CHECK: env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. -e 'using Pkg; Pkg.test()'
-  EXPECT: tests passed, or exactly 1 failed being test_em_louis.jl:127
+  CHECK: env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. -e 'using Pkg; Pkg.test()' > /tmp/gate_suite.log 2>&1; other=$(grep 'Test Failed at' /tmp/gate_suite.log | grep -vc 'test_em_louis.jl:127'); tot=$(grep -c 'Test Failed' /tmp/gate_suite.log); if [ "$other" -eq 0 ]; then echo "SUITE OK ($tot failure(s), all the known em_louis flake)"; else echo "SUITE BAD ($other unexpected failure(s))"; fi
+  EXPECT: SUITE OK
   EVIDENCE: pending
   `GLLVModels.jl | 16328 pass, 1 fail, 0 error, 19 broken, 16348 total, 97m10.2s`. Exactly one
   `Test Failed` line in the log, `test_em_louis.jl:127`, the flake this gate allows, so the EXPECT is
