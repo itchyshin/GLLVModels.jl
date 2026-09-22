@@ -135,7 +135,7 @@ WHY NELDER-MEAD IS THERE, stated so the demotion is not naive: the comment at :6
   (a) `analytic_gradient=false`'s DEFAULT kwargs reproduce `nelder_mead=true, hessian=:fd` given
   explicitly, bit-for-bit: inner Laplace-fit calls (`_grouped_chol_stats().calls`) 471 both ways,
   loglik and beta `isapprox(...; rtol=1e-12)` both true. Nelder-Mead ACTUALLY EXECUTES, checked rather
-  than assumed: the analytic-default path (`nelder_mead=false`, the S9 default) costs only 173 calls --
+  than assumed: the analytic path with the simplex demoted (`nelder_mead=false`, which was expected to become the S9 default and did NOT; the demotion was abandoned on measurement) costs only 173 calls --
   63% fewer -- confirming the FD-default path's extra 298 calls are Nelder-Mead's own simplex/line-search
   evaluations. `_grouped_fd_hessian` supplies H on the FD path: the fit's own `hessian_min_eigenvalue`
   matches a FRESH, independent call to `_grouped_fd_hessian` at the same estimate, `isapprox(...; rtol=1e-8)`
@@ -457,9 +457,23 @@ data-informed start. With the simplex demoted and `g_tol` TIGHTENED to 1e-6 (tig
 | large, seed 20260922 | 4.2649 s | 2.4512 s, 1.740x | 6.367e-09 |
 | small glmm_200x5 | 0.1091 s | 0.0945 s, 1.154x | 1.747e-11 |
 
-All four hold the arc's rtol 1e-8. Against the original S8 baseline of 5.71 s that is up to 2.9x.
+All four hold the arc's rtol 1e-8.
 
-**Why it is OPT-IN and not the default.** A full suite with it ON as the default returned
+**CORRECTION 2026-09-22: this whole table is measured in a configuration that does NOT ship.**
+Every "with the flag" number above was taken with the simplex DEMOTED (`nelder_mead=false`) and
+`g_tol` TIGHTENED to 1e-6. The demotion was then abandoned on its own measurement, and the shipped
+defaults at `f35aa1027` are `nelder_mead=true`, `g_tol=1e-4`, `moment_start=true`. No user reaches
+2.0486 s by calling the function, and the arc's "up to 2.9x against the S8 baseline of 5.71 s"
+claim rests on this table and is withdrawn with it. The 5.71 s figure is also wrong: this ledger
+fixes the S8 after-state at 5.928687 s at line 5.
+
+The "shipped default" column, 4.2349 s large and 0.1091 s small, is PR #446 alone and is
+unaffected; it was measured on its own. The small fixture's target of under 0.122 s is met there.
+
+The speed of the configuration that actually ships is UNMEASURED. A re-measurement at the shipped
+defaults is owed, with the keyword configuration written into the TSV header.
+
+**Why it WAS opt-in (superseded by `f35aa1027`, which made it the default on Shinichi's D-273 decision).** A full suite with it ON as the default returned
 `16292 passed, 3 failed, 5 ERRORED` against a `16328/1/0/19` baseline. Five errors were a defect in this
 implementation (group labels are not necessarily integers; Symbol units threw TypeError), now fixed and
 that file passes 20/20. The remaining failure is NOT a defect: `test_grouped_laplace_identity` pins
