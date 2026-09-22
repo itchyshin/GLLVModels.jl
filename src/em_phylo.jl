@@ -757,6 +757,12 @@ struct EMPhyloFit
     end
 end
 
+# The EM's convergence tolerance, as ONE definition. test_sparse_phy_identities.jl's
+# G7.3 derives its identity bound from this, so the two cannot drift apart. It was
+# previously read out of this file by regex, which matched the DOCSTRING copy above
+# the signature rather than the signature itself.
+const EM_DEFAULT_TOL = 1e-9
+
 """
     em_fit_phylo(y, K_B, Σ_phy;
                  λ_init=nothing, σ_eps_init=nothing, σ_phy_init=nothing,
@@ -790,12 +796,6 @@ the only option when `phy` is omitted, since an `AugmentedPhy` cannot be
 recovered from the dense `Σ_phy` alone). When `phy === nothing` the dense path
 is always used regardless of `force_dense_estep`.
 """
-# The EM's convergence tolerance, as ONE definition. test_sparse_phy_identities.jl's
-# G7.3 derives its identity bound from this, so the two cannot drift apart. It was
-# previously read out of this file by regex, which matched the DOCSTRING copy above
-# the signature rather than the signature itself.
-const EM_DEFAULT_TOL = 1e-9
-
 function em_fit_phylo(y::AbstractMatrix, K_B::Integer, Σ_phy::AbstractMatrix;
                       λ_init = nothing, σ_eps_init = nothing,
                       σ_phy_init = nothing,
