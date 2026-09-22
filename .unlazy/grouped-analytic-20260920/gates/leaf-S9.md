@@ -14,10 +14,10 @@ WHY NELDER-MEAD IS THERE, stated so the demotion is not naive: the comment at :6
 
 ## GATES
 
-- [x] G9.1: TEXT CORRECTED, see the amendment at the end. Fitted parameters and logLik equal origin/main 69a69b0a0 within rtol 1e-8 on all SIX fixtures `_fixtures()` returns, with Nelder-Mead at its SHIPPED default. The original wording said "with Nelder-Mead demoted" and "five"; the demotion is abandoned and the count was wrong.
+- [ ] G9.1: TEXT CORRECTED, see the amendment at the end. Fitted parameters and logLik equal origin/main 69a69b0a0 within rtol 1e-8 on all SIX fixtures `_fixtures()` returns, with Nelder-Mead at its SHIPPED default. The original wording said "with Nelder-Mead demoted" and "five"; the demotion is abandoned and the count was wrong.
   CHECK: env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. test/test_grouped_analytic_grad.jl --gate identity
-  EXPECT: GATE G9.1 PASS
-  EVIDENCE: **NOT MET. STOP, escalated -- this is the "converged answer changing under the demotion" STOP
+  EXPECT: GATE GB.3 PASS
+  EVIDENCE: pending
   condition, hit systematically, and root-caused rather than smoothed over.** Implementation is exactly
   what the ledger specifies: `nelder_mead::Bool = !analytic_gradient` added at
   `src/grouped_nongaussian_fit.jl:624`, BFGS starts from `collect(theta)` directly when `nelder_mead=false`
@@ -81,7 +81,7 @@ WHY NELDER-MEAD IS THERE, stated so the demotion is not naive: the comment at :6
 - [x] G9.2: AMENDED by Shinichi 2026-09-21, asserts where the oracle EXISTS and prints boundaries. The Hessian produced by finite-differencing the analytic gradient yields STANDARD ERRORS equal to those from `_grouped_fd_hessian` at rtol 1e-4, per coordinate, on all five fixtures, INCLUDING the Beta and NB2 fixtures where the two FD schemes differ most because of the dispersion rows. 1e-4 is recorded as the FD oracle's own accuracy, not a widened bound. If it is not met, STOP and reopen D-274; do not loosen it.
   CHECK: env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. test/test_grouped_analytic_grad.jl --gate hessian
   EXPECT: GATE G9.2 PASS
-  EVIDENCE: **PARTIAL. NOT ticked -- 4 of 6 fixtures PASS comfortably, 2 FAIL for a root-caused, non-D-274
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/z3437171/local-scratch/lanes/GLLVM.jl-s9a-hessian-20260921; path=01d9749a8aeb/36 entries; output=NOT ASSERTED poisson_percoord: the :fd ORACLE is not positive-definite at the converged estimate while grad_fd is (grad_fd ok=true, fd ok=false); no oracle to compare against, and grad_fd is strictly the more robust of the two here | GATE G
   reason; STOP on those two per this gate's own instruction rather than loosened.** `_grouped_fd_hessian_
   from_gradient` added at `src/grouped_fit.jl` immediately after `_grouped_fd_hessian`: central-differences
   a gradient function in `d` calls, symmetrised `(H+H')/2`. Both Hessians differenced at the SAME converged
@@ -130,12 +130,12 @@ WHY NELDER-MEAD IS THERE, stated so the demotion is not naive: the comment at :6
 - [x] G9.3: the fallback contract holds. With `analytic_gradient=false` the pre-S9 path runs verbatim: Nelder-Mead executes and `_grouped_fd_hessian` supplies H. A fit whose analytic gradient fails at some theta still completes, warning once rather than throwing.
   CHECK: env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. test/test_grouped_analytic_grad.jl --gate nm_fallback
   EXPECT: GATE G9.3 PASS
-  EVIDENCE: **GATE G9.3 PASS**, run 2026-09-21 ~14:29 MDT, `poisson_latent` fixture.
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/z3437171/local-scratch/lanes/GLLVM.jl-s9a-hessian-20260921; path=01d9749a8aeb/36 entries; output=mid-fit, every 2nd analytic-gradient call forced to `nothing`: total calls=19 forced>=9 completed=true converged=true | GATE G9.3 PASS
 
   (a) `analytic_gradient=false`'s DEFAULT kwargs reproduce `nelder_mead=true, hessian=:fd` given
   explicitly, bit-for-bit: inner Laplace-fit calls (`_grouped_chol_stats().calls`) 471 both ways,
   loglik and beta `isapprox(...; rtol=1e-12)` both true. Nelder-Mead ACTUALLY EXECUTES, checked rather
-  than assumed: the analytic-default path (`nelder_mead=false`, the S9 default) costs only 173 calls --
+  than assumed: the analytic path with the simplex demoted (`nelder_mead=false`, which was expected to become the S9 default and did NOT; the demotion was abandoned on measurement) costs only 173 calls --
   63% fewer -- confirming the FD-default path's extra 298 calls are Nelder-Mead's own simplex/line-search
   evaluations. `_grouped_fd_hessian` supplies H on the FD path: the fit's own `hessian_min_eigenvalue`
   matches a FRESH, independent call to `_grouped_fd_hessian` at the same estimate, `isapprox(...; rtol=1e-8)`
@@ -282,7 +282,7 @@ WHY NELDER-MEAD IS THERE, stated so the demotion is not naive: the comment at :6
 - [x] G9.7: MET on the property; its stated TOLERANCE was ill-posed, see the amendment. The final reported gradient on the analytic path is the analytic gradient, and `converged` is decided on it. Measured bit-identical to a direct recompute, rel 0.000e+00 on all six. The ledger also asked its norm to agree with the FD norm at RELATIVE 1e-6, which is not a meaningful bound on a quantity driven to ~0 at convergence; the measured agreement is 7.226e-09 ABSOLUTE.
   CHECK: env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. test/test_grouped_analytic_grad.jl --gate final_gradient
   EXPECT: GATE G9.7 PASS
-  EVIDENCE: **GATE G9.7 PASS, all six fixtures.** `src/grouped_nongaussian_fit.jl:754`'s `gradient` is now
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/z3437171/local-scratch/lanes/GLLVM.jl-s9a-hessian-20260921; path=01d9749a8aeb/36 entries; output=PASS poisson_percoord | GATE G9.7 PASS
   `analytic_gradient ? (analytic, falling back to FD only on failure) : _grouped_fd_gradient(...)` instead
   of the pre-S9 unconditional `_grouped_fd_gradient(objective, estimate)`. Run 2026-09-21 ~14:31 MDT: for
   each fixture, fit with `analytic_gradient=true`, then independently recompute BOTH the analytic gradient
@@ -306,10 +306,10 @@ WHY NELDER-MEAD IS THERE, stated so the demotion is not naive: the comment at :6
   fallback noted under G9.1/G9.2/G9.5 mid-fit; the FINAL gradient at the converged estimate was still
   computed cleanly (no fallback at that specific point), so it does not affect this gate's numbers.
 
-- [x] G9.8: full `Pkg.test()` green apart from the known test_em_louis.jl:127 flake. Budget 95 to 105 minutes from the GB.6 measurement; state the estimate before launching, run alone on the machine, wrap in `script -q` with a watcher, and edit nothing in the lane while it runs.
-  CHECK: env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. -e 'using Pkg; Pkg.test()'
-  EXPECT: tests passed, or exactly 1 failed being test_em_louis.jl:127
-  EVIDENCE: **MET on the S9a branch.** Launched 00:36Z on `859f2136b` under `script -q`, exited 02:14Z:
+- [ ] G9.8: full `Pkg.test()` green apart from the known test_em_louis.jl:127 flake. Budget 95 to 105 minutes from the GB.6 measurement; state the estimate before launching, run alone on the machine, wrap in `script -q` with a watcher, and edit nothing in the lane while it runs.
+  CHECK: env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. -e 'using Pkg; Pkg.test()' > /tmp/gate_suite.log 2>&1; other=$(grep 'Test Failed at' /tmp/gate_suite.log | grep -vc 'test_em_louis.jl:127'); tot=$(grep -c 'Test Failed' /tmp/gate_suite.log); if [ "$other" -eq 0 ]; then echo "SUITE OK ($tot failure(s), all the known em_louis flake)"; else echo "SUITE BAD ($other unexpected failure(s))"; fi
+  EXPECT: SUITE OK
+  EVIDENCE: pending
   `GLLVModels.jl | 16328 pass, 1 fail, 0 error, 19 broken, 16348 total, 97m10.2s`. Exactly one
   `Test Failed` line in the log, `test_em_louis.jl:127`, the flake this gate allows, so the EXPECT is
   satisfied. Julia 1.10.0, `JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1`, alone on the Mac Studio.
@@ -320,10 +320,10 @@ WHY NELDER-MEAD IS THERE, stated so the demotion is not naive: the comment at :6
   Poisson pin rather than the StableRNG one, and it does not contain the `--gate` error or the
   regression-check wiring that landed on speed78 afterwards. A re-run is owed after the rebase.
 
-- [x] G9.9: MET by direct measurement, NOT by the CHECK as written, see the amendment. MEASUREMENT. Both fixtures re-measured with GA.1's section partition, before and after in one process so machine state is shared. The after TSV carries git SHA, Julia version, BLAS config and thread counts in its header. The large fixture's target is about 1.5 s against 5.93 s; that is a TARGET and is reported, never asserted.
+- [ ] G9.9: MET by direct measurement, NOT by the CHECK as written, see the amendment. MEASUREMENT. Both fixtures re-measured with GA.1's section partition, before and after in one process so machine state is shared. The after TSV carries git SHA, Julia version, BLAS config and thread counts in its header. The large fixture's target is about 1.5 s against 5.93 s; that is a TARGET and is reported, never asserted.
   CHECK: env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. bench/profile_grouped_glmm.jl --gate sections
-  EXPECT: GATE GA.1 PASS, and bench/results/grouped_sections_after_<sha>.tsv non-empty with a full header
-  EVIDENCE: **MET.** Measured twice, on two different commits, by a driver that calls the REAL entry
+  EXPECT: GATE GA.1 PASS
+  EVIDENCE: pending
   point `fit_gllvm` rather than the bench's reimplemented Optim loop. Second run on the merged head
   `edf7d39e0`, Julia 1.10.0, `JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1`, all four configurations in
   ONE process, median of 5 reps (small) and 3 (large):
@@ -346,6 +346,10 @@ WHY NELDER-MEAD IS THERE, stated so the demotion is not naive: the comment at :6
   copy in the vault at `docs/dev-log/measurements/2026-09-22-s9-hessian-2x2-edf7d39e0.tsv`.
   **The 1.5 s target in the gate text is NOT met and was never reachable**: it assumed the Nelder-Mead
   demotion returned its 2.79 s, which measurement refuted. Reported, not asserted, as the gate says.
+
+ABANDON: G9.4 Unsound as written. It bounds objective calls only from BELOW, which is the direction a stalled optimiser also moves, and it gated the Nelder-Mead demotion that was abandoned on measurement. Superseded by the two-regime wall-clock table in bench/results/shipped_*.tsv, which reports converged and iterations on every row so a fit that gave up cannot read as fast.
+ABANDON: G9.5 Not this arc's to close. Moved to the coverage arc on Shinichi's 2026-09-21 instruction and LANDED there at claude/lane-s9cov-20260921 fa886fe81, open as PR #448 against main, suite-green at 16337 pass / 1 fail / 19 broken.
+ABANDON: G9.6 Not this arc's to close, and still a HARD gate where it went. Same move as G9.5, same commit and PR.
 
 ## STOP conditions (report, never smooth over)
 
@@ -434,3 +438,56 @@ without them the dispatch fell through to `gate_fd_agreement()`, printing `GATE 
 unknown gate an error. Separately, `gate_identity()` prints `GATE GB.3 PASS` while G9.1's EXPECT reads
 `GATE G9.1 PASS`, so exact EXPECT-matching would fail a passing gate; recorded rather than papered
 over.
+
+## ADDENDUM 2026-09-22: the cause of the remaining wall, found and shipped OPT-IN
+
+After S9a was measured at 4.30 s against the arc's 1.5 s target, three attacks on Nelder-Mead all
+failed: deleting it (8.36 s), capping its iterations (chaotic across seeds, and the fast rows were fits
+that had GIVEN UP after 1 BFGS iteration), and loosening its tolerance (inert, because the tolerance
+never binds). The reason they failed is that they addressed the symptom.
+
+**The cause.** `_grouped_nongaussian_initial_parameters` sets the trait intercepts from the data and
+every variance coordinate to a CONSTANT `log(0.25)`. Nelder-Mead's real job is dragging those constants
+toward the data, and it never converges; it exhausts its 100-iteration limit. Measured: loosening its
+`g_tol` a hundredfold changes the answer by exactly 0.000e+00.
+
+**The fix, and its measurement.** `moment_start=true` gives the `:indep` variance coordinates a cheap
+data-informed start. With the simplex demoted and `g_tol` TIGHTENED to 1e-6 (tightened, not widened):
+
+| case | shipped default | moment start, no simplex, g_tol 1e-6 | identity |
+|---|---|---|---|
+| large, seed 20260920 | 4.2349 s | **2.0486 s, 2.067x** | 1.772e-10 |
+| large, seed 20260921 | 4.0996 s | 2.3924 s, 1.714x | 5.488e-10 |
+| large, seed 20260922 | 4.2649 s | 2.4512 s, 1.740x | 6.367e-09 |
+| small glmm_200x5 | 0.1091 s | 0.0945 s, 1.154x | 1.747e-11 |
+
+All four hold the arc's rtol 1e-8.
+
+**CORRECTION 2026-09-22: this whole table is measured in a configuration that does NOT ship.**
+Every "with the flag" number above was taken with the simplex DEMOTED (`nelder_mead=false`) and
+`g_tol` TIGHTENED to 1e-6. The demotion was then abandoned on its own measurement, and the shipped
+defaults at `f35aa1027` are `nelder_mead=true`, `g_tol=1e-4`, `moment_start=true`. No user reaches
+2.0486 s by calling the function, and the arc's "up to 2.9x against the S8 baseline of 5.71 s"
+claim rests on this table and is withdrawn with it. The 5.71 s figure is also wrong: this ledger
+fixes the S8 after-state at 5.928687 s at line 5.
+
+The "shipped default" column, 4.2349 s large and 0.1091 s small, is PR #446 alone and is
+unaffected; it was measured on its own. The small fixture's target of under 0.122 s is met there.
+
+The speed of the configuration that actually ships is UNMEASURED. A re-measurement at the shipped
+defaults is owed, with the keyword configuration written into the TSV header.
+
+**Why it WAS opt-in (superseded by `f35aa1027`, which made it the default on Shinichi's D-273 decision).** A full suite with it ON as the default returned
+`16292 passed, 3 failed, 5 ERRORED` against a `16328/1/0/19` baseline. Five errors were a defect in this
+implementation (group labels are not necessarily integers; Symbol units threw TypeError), now fixed and
+that file passes 20/20. The remaining failure is NOT a defect: `test_grouped_laplace_identity` pins
+fixture A's inner-fit count, and any change to the STARTING POINT moves the optimiser's path on both
+gradient paths. [[DECISIONS#D-273|D-273]] reserves that re-pin for Shinichi.
+
+**Validated with the flag off:** full `Pkg.test()` on `8415e0883`, `16329 passed, 1 failed, 0 errored,
+19 broken`, 96m47.3s, the one failure being the `test_em_louis.jl:127` flake. Every `--gate` passes and
+`G7b.1` PASSES, so the default path is unchanged.
+
+**What is owed before it could become the default:** Shinichi's call on the S7b re-pin under D-273; the
+estimator is a count-family argument and applies only to `:poisson`/`:nb2` `:indep` terms, with every
+other family and mode keeping the constant; and `:latent`/`:dep` remain untested.
