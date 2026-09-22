@@ -381,7 +381,7 @@ end
 function _grouped_nongaussian_initial_parameters(data::Matrix{Float64},
         trials::Matrix{Float64}, D::Matrix{Float64}, terms::Vector{GroupingTerm},
         kind::Symbol, family, mode::Symbol;
-        group_labels=nothing, moment_start::Bool=true)
+        group_labels=nothing, moment_start::Bool=false)
     p, n = size(data)
     q = size(D, 2)
     theta = zeros(Float64, q)
@@ -718,7 +718,7 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
         nelder_mead::Bool=true,
         nelder_mead_iterations::Integer=iterations,
         nelder_mead_g_tol::Real=g_tol,
-        moment_start::Bool=true,
+        moment_start::Bool=false,
         hessian::Symbol=(analytic_gradient ? :grad_fd : :fd))
     p, n = size(Y)
     p > 0 && n >= 2 || throw(ArgumentError("grouped fitting needs at least one trait and two observations"))
