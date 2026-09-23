@@ -452,7 +452,7 @@ function _grouped_nongaussian_objective(data::Matrix{Float64}, trials::Matrix{Fl
         D::Matrix{Float64}, terms::Vector{GroupingTerm},
         incidences::Vector{SparseMatrixCSC{Float64,Int}}, kind::Symbol;
         dispersion_mode::Symbol=:trait, inner_maxiter::Integer, inner_tol::Float64,
-        warm_start_inner::Bool=false)
+        warm_start_inner::Bool=false, diag_precision_kernel::Bool=false)
     p, n = size(data)
     q = size(D, 2)
     mode = _grouped_nongaussian_internal_dispersion_mode(kind, dispersion_mode)
@@ -474,7 +474,8 @@ function _grouped_nongaussian_objective(data::Matrix{Float64}, trials::Matrix{Fl
             b_init = warm_start_inner ? b_cache[] : nothing
             result = joint_grouped_laplace_loglik(family, vec(data), vec(trials), D, gamma, W;
                 link=_grouped_nongaussian_link(Val(kind)), maxiter=inner_maxiter, tol=inner_tol,
-                b_init=b_init)
+                b_init=b_init, diag_precision=diag_precision_kernel,
+                reuse_identical_hf_ho=diag_precision_kernel)
             if warm_start_inner && result.status === :ok
                 b_cache[] = copy(result.mode)
             end
@@ -516,7 +517,8 @@ objective`'s own `_NLL_SENTINEL` convention for the value path.
 function _grouped_analytic_loglik_gradient(theta::AbstractVector{<:Real},
         data::Matrix{Float64}, trials::Matrix{Float64}, D::Matrix{Float64},
         terms::Vector{GroupingTerm}, incidences::Vector{SparseMatrixCSC{Float64,Int}},
-        kind::Symbol; dispersion_mode::Symbol, inner_maxiter::Integer, inner_tol::Real)
+        kind::Symbol; dispersion_mode::Symbol, inner_maxiter::Integer, inner_tol::Real,
+        diag_precision_kernel::Bool=false)
     p, n = size(data)
     q = size(D, 2)
     mode = _grouped_nongaussian_internal_dispersion_mode(kind, dispersion_mode)
@@ -538,7 +540,9 @@ function _grouped_analytic_loglik_gradient(theta::AbstractVector{<:Real},
 
     result = try
         joint_grouped_laplace_loglik(family, y, ntrial, D, gamma, W;
-            link=link, maxiter=Int(inner_maxiter), tol=Float64(inner_tol), b_init=nothing)
+            link=link, maxiter=Int(inner_maxiter), tol=Float64(inner_tol), b_init=nothing,
+            diag_precision=diag_precision_kernel,
+            reuse_identical_hf_ho=diag_precision_kernel)
     catch
         return nothing
     end
@@ -634,9 +638,11 @@ falls back to `_grouped_fd_gradient`.
 function _grouped_analytic_gradient(theta::AbstractVector{<:Real},
         data::Matrix{Float64}, trials::Matrix{Float64}, D::Matrix{Float64},
         terms::Vector{GroupingTerm}, incidences::Vector{SparseMatrixCSC{Float64,Int}},
-        kind::Symbol; dispersion_mode::Symbol, inner_maxiter::Integer, inner_tol::Real)
+        kind::Symbol; dispersion_mode::Symbol, inner_maxiter::Integer, inner_tol::Real,
+        diag_precision_kernel::Bool=false)
     gradL = _grouped_analytic_loglik_gradient(theta, data, trials, D, terms, incidences, kind;
-        dispersion_mode=dispersion_mode, inner_maxiter=inner_maxiter, inner_tol=inner_tol)
+        dispersion_mode=dispersion_mode, inner_maxiter=inner_maxiter, inner_tol=inner_tol,
+        diag_precision_kernel=diag_precision_kernel)
     gradL === nothing && return nothing
     return -gradL
 end
@@ -707,6 +713,13 @@ gradient (`nθ` gradient calls); `:fd` is the pre-S9
 `_grouped_fd_hessian`, `O(nθ²)` objective calls, kept reachable as both the
 oracle `:grad_fd` is checked against and the fallback if `:grad_fd` fails at
 the final estimate. A full analytic Hessian is out of scope.
+
+`diag_precision_kernel` (Latte-kernel S3, default `false`): when `true`, the
+inner `joint_grouped_laplace_loglik` may (a) skip a second factorisation when
+Fisher and observed weights are identical for the fitted family/link, and
+(b) use an O(m) diagonal factor mid-loop when the precision is structurally
+diagonal. Default stays off until identity gates pass; do not treat this as
+a public speed claim.
 """
 function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
         unit=nothing, unit_obs=nothing, cluster=nothing, cluster2=nothing,
@@ -719,7 +732,8 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
         nelder_mead_iterations::Integer=iterations,
         nelder_mead_g_tol::Real=g_tol,
         moment_start::Bool=false,
-        hessian::Symbol=(analytic_gradient ? :grad_fd : :fd))
+        hessian::Symbol=(analytic_gradient ? :grad_fd : :fd),
+        diag_precision_kernel::Bool=false)
     p, n = size(Y)
     p > 0 && n >= 2 || throw(ArgumentError("grouped fitting needs at least one trait and two observations"))
     all(isfinite, Y) || throw(ArgumentError("grouped fitting requires finite complete responses"))
@@ -786,11 +800,11 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
     # nothing either. See the note at the BFGS call below.
     objective_cold = _grouped_nongaussian_objective(data, trials, D, termvec, incidences, kind;
         dispersion_mode=mode, inner_maxiter=Int(inner_maxiter), inner_tol=Float64(inner_tol),
-        warm_start_inner=false)
+        warm_start_inner=false, diag_precision_kernel=diag_precision_kernel)
     objective_warm = warm_start_inner ?
         _grouped_nongaussian_objective(data, trials, D, termvec, incidences, kind;
             dispersion_mode=mode, inner_maxiter=Int(inner_maxiter), inner_tol=Float64(inner_tol),
-            warm_start_inner=true) :
+            warm_start_inner=true, diag_precision_kernel=diag_precision_kernel) :
         objective_cold
     objective = objective_cold   # used below for the final, reported diagnostics
     initial_value = objective_cold(theta)
@@ -859,7 +873,8 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
         # rather than silent, without spamming one warning per BFGS iteration.
         g = try
             _grouped_analytic_gradient(value, data, trials, D, termvec, incidences, kind;
-                dispersion_mode=mode, inner_maxiter=Int(inner_maxiter), inner_tol=Float64(inner_tol))
+                dispersion_mode=mode, inner_maxiter=Int(inner_maxiter), inner_tol=Float64(inner_tol),
+                diag_precision_kernel=diag_precision_kernel)
         catch err
             @warn "analytic outer gradient threw; falling back to the finite-difference gradient for the rest of this fit" exception=(err, catch_backtrace()) maxlog=1
             nothing
@@ -931,7 +946,8 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
     elseif analytic_gradient
         g = try
             _grouped_analytic_gradient(estimate, data, trials, D, termvec, incidences, kind;
-                dispersion_mode=mode, inner_maxiter=Int(inner_maxiter), inner_tol=Float64(inner_tol))
+                dispersion_mode=mode, inner_maxiter=Int(inner_maxiter), inner_tol=Float64(inner_tol),
+                diag_precision_kernel=diag_precision_kernel)
         catch err
             @warn "final analytic gradient threw; reporting the finite-difference gradient instead" exception=(err, catch_backtrace()) maxlog=1
             nothing
@@ -952,7 +968,8 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
         Hg = try
             _grouped_fd_hessian_from_gradient(
                 v -> _grouped_analytic_gradient(v, data, trials, D, termvec, incidences, kind;
-                    dispersion_mode=mode, inner_maxiter=Int(inner_maxiter), inner_tol=Float64(inner_tol)),
+                    dispersion_mode=mode, inner_maxiter=Int(inner_maxiter), inner_tol=Float64(inner_tol),
+                    diag_precision_kernel=diag_precision_kernel),
                 estimate)
         catch err
             @warn "grad-FD Hessian threw; falling back to _grouped_fd_hessian" exception=(err, catch_backtrace()) maxlog=1
@@ -973,7 +990,8 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
     final_W = _grouped_laplace_design(incidences, loads; uniques=uniques)
     inner = final_family === nothing ? nothing : joint_grouped_laplace_loglik(
         final_family, vec(data), vec(trials), D, collect(view(estimate, 1:q)), final_W;
-        link=_grouped_nongaussian_link(Val(kind)), maxiter=Int(inner_maxiter), tol=Float64(inner_tol))
+        link=_grouped_nongaussian_link(Val(kind)), maxiter=Int(inner_maxiter), tol=Float64(inner_tol),
+        diag_precision=diag_precision_kernel, reuse_identical_hf_ho=diag_precision_kernel)
     inner_status = inner === nothing ? :invalid_family : inner.status
     natural_dispersion = _grouped_nongaussian_dispersion(estimate, dispersion_indices, kind, mode)
     return GroupedNonGaussianFit(collect(estimate[1:q]), final_family, natural_dispersion, covariances,
