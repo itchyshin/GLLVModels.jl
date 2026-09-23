@@ -44,5 +44,9 @@ stays default OFF. Report aim for GLLVM met at 20; DRM 11–20 still empty.
 
 ## Next
 
-Merge-when-green this evidence PR. Latte OFF→ON remains other agent. DRM
+**MERGED** as squash `36479c28dde2f44f7e72821e546c3eee5f45c0f3` on
+`origin/main` (PR #454, head `1022e3a74`, 2026-09-23T19:08:38Z).
+Merge landed before all required Julia shards settled; Frozen-R advisory
+settled FAILURE (allowed). Main Documenter green; main CI was still
+in progress at receipt write. Latte OFF→ON remains other agent. DRM
 Phase B sibling still owns DRM slots 11–20.
