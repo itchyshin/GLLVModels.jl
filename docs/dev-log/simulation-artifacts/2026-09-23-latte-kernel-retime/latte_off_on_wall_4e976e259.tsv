@@ -1,0 +1,9 @@
+# timing_scope=real fit_gllvm Poisson GroupingTerm(:unit;mode=:indep) warm_start_inner=true
+# warm=1 untimed + REPS timed @elapsed; median reported; arms differ only by diag_precision_kernel
+# identical_path_flags=diag_precision+reuse_identical_hf_ho (both driven by diag_precision_kernel)
+# fixture_glmm_200x5_md5=60a293d6c45e36cc458adc5df2458b30
+# started_utc=2026-09-23T18:20:56Z host=totoro sha=4e976e259 JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 REPS=5
+# default_flip=NO (measure-only; diag_precision_kernel default remains false)
+cell_id	sha	host	threads	blas	reps	warm_start_inner	wall_off_s	wall_on_s	speedup_off_over_on	ll_off	ll_on	abs_dll	rel_dll	reps_off	reps_on	timing_scope
+glmm_200x5	4e976e259	totoro	4	1	5	true	0.587371	0.202824	2.8960	-2025.469254255519	-2025.469254255519	0.000000e+00	0.000000e+00	0.590648;0.587371;1.0654;0.498253;0.500448	0.349813;0.202824;0.232678;0.177924;0.179394	fit_gllvm Poisson GroupingTerm(:unit;mode=:indep) warm_start_inner=true
+glmm_5000x3_g500	4e976e259	totoro	4	1	5	true	10.879144	9.244865	1.1768	-32523.622573080604	-32523.622573080604	0.000000e+00	0.000000e+00	10.886377;12.476103;10.635482;9.886909;10.879144	9.598168;9.244865;8.90007;9.291888;9.027247	fit_gllvm Poisson GroupingTerm(:unit;mode=:indep) warm_start_inner=true

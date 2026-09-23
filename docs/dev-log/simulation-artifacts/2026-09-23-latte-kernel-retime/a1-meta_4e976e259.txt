@@ -1,0 +1,13 @@
+sha=4e976e259
+full_sha=4e976e259 (origin/main after #449/#451; rsynced tip tree)
+host=totoro
+started_utc=2026-09-23T18:20:43Z
+nproc=384
+load=229.49 214.11 220.45
+julia=julia version 1.12.6
+JULIA_NUM_THREADS=4
+OPENBLAS_NUM_THREADS=1
+REPS=5
+default_flip=NO
+cores_cap=taskset 0-15
+done_utc=2026-09-23T18:25:01Z
