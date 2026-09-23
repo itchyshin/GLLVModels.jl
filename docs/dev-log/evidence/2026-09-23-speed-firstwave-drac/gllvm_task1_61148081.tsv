@@ -1,0 +1,2 @@
+cell_id	kind	detail	wall_s	loglik	note	status	sha	host	threads
+gllvm-binom-glmm-200x5	G-binom-glmm; grouped Binomial glmm_200x5-class	fit_gllvm Binomial grouped	0.158222	-683.3149136	julia_abs_only	ok	unknown	fc20317	4

@@ -2,7 +2,7 @@
 
 **Status:** DRAFT toward publishable scratch · **Phase B UNLOCKED** (Shinichi *finish all parts*; see `2026-09-23-speed-then-20-report-sequence.md`) · bank as siblings return · do **not** claim “20 done” until every package hits banked aim · **not** a README/NEWS claim surface  
 **Date:** 2026-09-23  
-**Filled now:** GLLVM **20** (floor 10 + Phase B first-wave **10**) · DRM **10** · H² **20** = **50** attested rows · DRM 11–20 still empty  
+**Filled now:** GLLVM **20** · DRM **20** · H² **20** = **60** attested rows (aims met). Fir DRAC GLLVM job `61148081` 7/7 ok (cross-host abs only); Fir DRM job `61148082` harness errored — board authority remains Totoro CSV `e9d50a110`.  
 **Authority for numbers:** board `2026-09-23-three-package-speed-board.md` (floor 32/32) + H² kinds expand TSV `e2e_wall_receipts_fdc43845.tsv`  
 **Closeout digest:** `docs/dev-log/plans/2026-09-23-arc-status-digest.md` (floor closeout; Phase B continues here)
 
@@ -119,10 +119,10 @@ Source tables copied from the speed board §2 (2026-09-23). Phase B additions ar
 
 | Package | Floor (board) | Phase B new | **Filled in this report** | Aim | Empty slots |
 |---|---:|---:|---:|---:|---|
-| GLLVModels | 10 | **10** | **20** | ~20 | (GLLVM aim met) |
-| DRModels | 10 | 0 | **10** | ~20 | 11–20 |
+| GLLVModels | 10 | **10** | **20** | ~20 | (GLLVM aim met; Fir `61148081` abs confirm) |
+| DRModels | 10 | **10** | **20** | ~20 | (DRM aim met; Totoro `e9d50a110`) |
 | HSquared | 12 | **8** | **20** | ~20 | (H² aim met) |
-| **Total** | **32** | **18** | **50** | ~60 | DRM 11–20 |
+| **Total** | **32** | **28** | **60** | ~60 | (aims met) |
 
 ---
 
@@ -149,24 +149,30 @@ Lane: `GLLVM.jl-speed-diversity-20260923` · `bench/speed_board_firstwave.jl` ·
 
 Sibling diversity inventory (alternate cell_ids, not these slots): 8 kinds in `…/speed-diversity-totoro/` (ordinal/ZIP/ZINB/…).
 
-### 4.2 DRModels: cells 11–20 — awaiting sibling
+Fir DRAC confirm (job `61148081`, Julia 1.11.3, J=4): binom 0.158 s; gauss-lv 0.0067 s; pois-lv 1.209 s; nb2-lv 4.256 s; unstruct-p50n2k 0.100 s; phylo-fit-p200 0.020 s; profile-ci-glmm 1.191 s. Evidence `…/speed-firstwave-drac/gllvm_fir_61148081_combined.tsv`. Same cells as Totoro 11–17; **no cross-host ×**.
 
-Lane: `DRM.jl-speed-kinds-20260923` · fixtures under `evidence/2026-09-23-speed-kinds-toward20/` · **0 new walls banked yet**.
+### 4.2 DRModels: cells 11–20 — BANKED (Phase B first-wave)
+
+Lane: `DRM.jl-speed-kinds-20260923` · Totoro tip `e9d50a110` · Julia 1.12.6 · `JULIA_NUM_THREADS=1` · evidence
+`docs/dev-log/evidence/2026-09-23-speed-kinds-toward20/board_drm_first_wave_20260923_e9d50a110.csv`
+(on DRModels PR #808). Absolute walls only. **No ×.** Fir job `61148082` completed but every cell
+errored in `bench/speed_board_firstwave_drm.jl` (MethodError on `tree=`/`se=` kwargs); Fir TSVs are
+negative receipts only — do not quote Fir walls.
 
 | # | cell_id | Comparator | Wall / metric | Speedup | PR / SHA | Notes |
 |---:|---|---|---|---|---|---|
-| 11 | _TODO_ | | | | | |
-| 12 | _TODO_ | | | | | |
-| 13 | _TODO_ | | | | | |
-| 14 | _TODO_ | | | | | |
-| 15 | _TODO_ | | | | | |
-| 16 | _TODO_ | | | | | |
-| 17 | _TODO_ | | | | | |
-| 18 | _TODO_ | | | | | |
-| 19 | _TODO_ | | | | | |
-| 20 | _TODO_ | | | | | |
+| 11 | `drm-phylo-poisson` | abs (Totoro) | **0.0223 s** | n/a (abs) | tip `e9d50a110` · #808 | phylo Poisson tip smoke p=100 |
+| 12 | `drm-phylo-nb2` | abs (Totoro) | **0.0348 s** | n/a (abs) | same | phylo NB2 p=100 |
+| 13 | `drm-phylo-binomial` | abs (Totoro) | **0.0232 s** | n/a (abs) | same | phylo binomial p=128 |
+| 14 | `drm-h2h-q4-vs-tmb-p1000` | abs (Totoro) | **20.8147 s** | n/a (abs) | same | Julia arm q4 p=1000; TMB pair not run this receipt |
+| 15 | `drm-phylo-gamma` | abs (Totoro) | **0.0717 s** | n/a (abs) | same | phylo gamma p=128 |
+| 16 | `drm-crossed-binomial` | abs (Totoro) | **0.0374 s** | n/a (abs) | same | crossed binomial G=H=20 n=1000 |
+| 17 | `drm-biv-gauss-rho12` | abs (Totoro) | **0.0572 s** | n/a (abs) | same | bivariate residual rho12 |
+| 18 | `drm-profile-ci-locscale` | abs (Totoro) | **0.0160 s** | n/a (abs) | same | profile CI loc-scale gaussian n=600 |
+| 19 | `drm-animal-gauss` | abs (Totoro) | **0.0177 s** | n/a (abs) | same | animal() Gaussian A supplied G=60 |
+| 20 | `drm-lss-sd-slope` | abs (Totoro) | **0.0029 s** | n/a (abs) | same | sd(id) ~ sex LSS n=480 |
 
-Honest standing fact: q4 Julia-vs-Julia on the speed6 grid shows **no wall gain**. New cells need a new mechanism or a vs-TMB pairing, not a re-run expecting a Julia-vs-Julia ×.
+Honest standing fact: q4 Julia-vs-Julia on the speed6 grid shows **no wall gain**. These Phase B rows are tip-abs diversity, not a Julia-vs-Julia × claim.
 
 ### 4.3 HSquared: cells 13–20 — BANKED (Phase B)
 
@@ -197,7 +203,7 @@ Still gated (not in this table): ASReml ladder (needs paired receipt + Rose word
 6. **Latte `diag_precision_kernel` default OFF** (#449). No public wall quote from that path until owner default-ON (+ optional retime).
 7. **Soft † / ‡ / § / conv=false footnotes stay.** Soft-hist DGP mismatch, banked dense, estimator-confound, and non-converged validation-scale walls are not pure LA claims.
 8. **README / NEWS.** Withheld until Rose signs a claim surface. This file is publishable **scratch** evidence inventory, not marketing.
-9. **Phase B unlock ≠ all packages done.** GLLVM+H² at 20; DRM 11–20 still empty.
+9. **Phase B unlock ≠ public claim.** All three packages at 20 attested abs/× rows in this scratch report; README/NEWS still withheld.
 
 ---
 
