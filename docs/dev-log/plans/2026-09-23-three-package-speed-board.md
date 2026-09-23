@@ -1,6 +1,6 @@
 # End-of-arc speed board — three packages (inventory + cell matrix)
 
-**Status:** DRM + H² filled earlier 2026-09-23. GLLVM unstructured `speed_bench` tip abs Totoro @ `8d58a0c94` (post-#449/#450); 9/10 GLLVM cells `has_receipt`; only `gllvm-profile-ci-small` still `needs_run`.
+**Status:** GLLVM **10/10** `has_receipt` (PROFILE_CI banked Totoro @ `8d58a0c`). DRM/H² filled earlier 2026-09-23. Soft-owed: exact Aug-24 DRM H2H re-anchor (Totoro in flight; drmTMB already DRModels-aware).
 **Sibling plans:** `2026-09-23-ultra-plan-three-package-speed.md` (Q1 verdict + Phases 0–2), `2026-09-23-ultra-plan-next-after-448.md` (GLLVM Latte arc).
 **Thread discipline (standing):** Mac Studio lanes measure at `JULIA_NUM_THREADS=4` + `OPENBLAS_NUM_THREADS=1` unless a receipt says otherwise. Totoro H² selinv cells used `threads=1`. Do not mix regimes in one speedup column.
 
