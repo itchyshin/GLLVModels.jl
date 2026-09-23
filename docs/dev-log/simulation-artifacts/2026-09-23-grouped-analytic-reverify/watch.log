@@ -1,0 +1,782 @@
+WATCH_START 2026-09-23T08:23:16-06:00
+POLL 2026-09-23T08:23:16-06:00 gate=2886961 julia=2894021 etime=01:14:23 log_bytes=61096 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T08:25:16-06:00 gate=2886961 julia=2894021 etime=01:16:24 log_bytes=61096 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T08:27:16-06:00 gate=2886961 julia=2894021 etime=01:18:24 log_bytes=61096 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T08:29:16-06:00 gate=2886961 julia=2894021 etime=01:20:24 log_bytes=61096 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T08:31:16-06:00 gate=2886961 julia=2894021 etime=01:22:24 log_bytes=61096 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T08:33:17-06:00 gate=2886961 julia=2894021 etime=01:24:24 log_bytes=61096 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T08:35:17-06:00 gate=2886961 julia=2894021 etime=01:26:24 log_bytes=61096 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T08:37:17-06:00 gate=2886961 julia=2894021 etime=01:28:24 log_bytes=61096 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T08:39:17-06:00 gate=2886961 julia=2894021 etime=01:30:24 log_bytes=61096 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T08:41:17-06:00 gate=2886961 julia=2894021 etime=01:32:24 log_bytes=61096 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T08:43:17-06:00 gate=2886961 julia=2894021 etime=01:34:25 log_bytes=61096 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T08:45:17-06:00 gate=2886961 julia=2894021 etime=01:36:25 log_bytes=61096 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T08:47:18-06:00 gate=2886961 julia=2894021 etime=01:38:25 log_bytes=61096 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T08:49:18-06:00 gate=2886961 julia=2894021 etime=01:40:25 log_bytes=61096 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T08:51:18-06:00 gate=2886961 julia=2894021 etime=01:42:25 log_bytes=61096 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T08:53:18-06:00 gate=2886961 julia=2894021 etime=01:44:25 log_bytes=61096 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T08:55:18-06:00 gate=2886961 julia=2894021 etime=01:46:26 log_bytes=61096 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T08:57:18-06:00 gate=2886961 julia=2894021 etime=01:48:26 log_bytes=61096 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T08:59:18-06:00 gate=2886961 julia=2894021 etime=01:50:26 log_bytes=61096 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:01:19-06:00 gate=2886961 julia=2894021 etime=01:52:26 log_bytes=61096 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:03:19-06:00 gate=2886961 julia=2894021 etime=01:54:26 log_bytes=61096 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:05:19-06:00 gate=2886961 julia=2894021 etime=01:56:26 log_bytes=61096 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:07:19-06:00 gate=2886961 julia=2894021 etime=01:58:26 log_bytes=61096 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:09:19-06:00 gate=2886961 julia=2894021 etime= log_bytes=61096 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:11:19-06:00 gate=2886961 julia=2894021 etime= log_bytes=61096 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:13:20-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:15:20-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:17:20-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:19:20-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:21:20-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:23:20-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:25:20-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:27:21-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:29:21-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:31:21-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:33:21-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:35:21-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:37:21-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:39:21-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:41:22-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:43:22-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:45:22-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:47:22-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:49:22-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:51:22-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:53:22-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:55:23-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:57:23-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T09:59:23-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:01:23-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:03:23-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:05:23-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:07:24-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:09:24-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:11:24-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:13:24-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:15:24-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:17:24-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:19:25-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:21:25-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:23:25-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:25:25-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:27:25-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:29:25-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:31:25-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:33:25-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:35:26-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:37:26-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:39:26-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:41:26-06:00 gate=2886961 julia=2894021 etime= log_bytes=5509 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:43:26-06:00 gate=2886961 julia=2894021 etime= log_bytes=18173 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:45:26-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:47:27-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:49:27-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:51:27-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:53:27-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:55:27-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:57:27-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T10:59:27-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:01:28-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:03:28-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:05:28-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:07:28-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:09:28-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:11:28-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:13:28-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:15:29-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:17:29-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:19:29-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:21:29-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:23:29-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:25:30-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:27:30-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:29:30-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:31:30-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:33:30-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:35:30-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:37:30-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:39:31-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:41:31-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:43:31-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:45:31-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:47:31-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:49:32-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:51:32-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:53:32-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:55:32-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:57:32-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T11:59:32-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:01:32-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:03:32-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:05:33-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:07:33-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:09:33-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:11:33-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:13:33-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:15:33-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:17:33-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:19:34-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:21:34-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:23:34-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:25:34-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:27:34-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:29:34-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:31:34-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:33:34-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:35:35-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:37:35-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:39:35-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:41:35-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:43:35-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:45:35-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:47:35-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:49:36-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:51:36-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:53:36-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:55:36-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:57:36-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T12:59:36-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T13:01:36-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T13:03:36-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T13:05:37-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T13:07:37-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T13:09:37-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T13:11:37-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T13:13:37-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T13:15:37-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+POLL 2026-09-23T13:17:38-06:00 gate=2886961 julia=2894021 etime= log_bytes=60813 fails=0
+0
+     Testing GLLVModels
+     Testing Running tests...
+GATECHECK_EXITED 2026-09-23T13:19:38-06:00
+143
+=== FINAL STATUS ===
+bash: line 21: node: command not found
+=== SUITE TAIL ===
+WARNING: Method definition _db_write_receipt(Any, Any) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:270 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_gllvm_source_hash(AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:278 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition compare_phylo_gaussian_reference(AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:293 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition kwcall(NamedTuple{names, T} where T<:Tuple where names, typeof(Main.compare_phylo_gaussian_reference), AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:293 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _compare_phylo_gaussian_reference_main() in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:390 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _compare_phylo_gaussian_reference_main(Any) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:390 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _dbget(Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:12 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _dbstring(Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:15 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _dbbool(Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:21 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _dbint(Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:27 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _dbfloat(Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:33 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _dbvec(Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:39 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _dbmatrix(Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:45 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_y_hash(AbstractArray{var"#s10563", 2} where var"#s10563"<:Real) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:62 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_exact_keys(Any, Tuple, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:67 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_blocked_parameters(Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:75 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition kwcall(NamedTuple{names, T} where T<:Tuple where names, typeof(Main._db_blocked_parameters), Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:75 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_validate_long_mapping(Any, Any, Int64, Int64) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:129 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_validate_precision(Any, Any, Int64, Int64) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:180 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_transport_close(Any, Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:218 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_validate_source_covariance(Any, Any, Int64) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:224 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_native_nll(Any, Any, Any, Any) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:260 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_write_receipt(Any, Any) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:270 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_gllvm_source_hash(AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:278 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition compare_phylo_gaussian_reference(AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:293 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition kwcall(NamedTuple{names, T} where T<:Tuple where names, typeof(Main.compare_phylo_gaussian_reference), AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:293 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _compare_phylo_gaussian_reference_main() in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:390 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _compare_phylo_gaussian_reference_main(Any) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:390 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_check_tree_gaussian(Any, Any) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_tree_gaussian_reference.jl:8 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition compare_tree_gaussian_reference(Any, Any, Any, Any) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_tree_gaussian_reference.jl:75 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _dbget(Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:12 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _dbstring(Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:15 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _dbbool(Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:21 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _dbint(Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:27 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _dbfloat(Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:33 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _dbvec(Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:39 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _dbmatrix(Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:45 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_y_hash(AbstractArray{var"#s10563", 2} where var"#s10563"<:Real) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:62 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_exact_keys(Any, Tuple, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:67 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_blocked_parameters(Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:75 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition kwcall(NamedTuple{names, T} where T<:Tuple where names, typeof(Main._db_blocked_parameters), Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:75 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_validate_long_mapping(Any, Any, Int64, Int64) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:129 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_validate_precision(Any, Any, Int64, Int64) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:180 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_transport_close(Any, Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:218 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_validate_source_covariance(Any, Any, Int64) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:224 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_native_nll(Any, Any, Any, Any) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:260 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_write_receipt(Any, Any) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:270 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_gllvm_source_hash(AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:278 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition compare_phylo_gaussian_reference(AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:293 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition kwcall(NamedTuple{names, T} where T<:Tuple where names, typeof(Main.compare_phylo_gaussian_reference), AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:293 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _compare_phylo_gaussian_reference_main() in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:390 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _compare_phylo_gaussian_reference_main(Any) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:390 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_check_pedigree_gaussian(Any, Any) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_pedigree_gaussian_reference.jl:8 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition compare_pedigree_gaussian_reference(Any, Any, Any, Any) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_pedigree_gaussian_reference.jl:75 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition compare_phylo_uncertainty(Any, Any, Any) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_uncertainty.jl:6 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_compare_checked_uncertainty(Any, Any, Any) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_uncertainty.jl:13 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _dbget(Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:12 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _dbstring(Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:15 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _dbbool(Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:21 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _dbint(Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:27 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _dbfloat(Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:33 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _dbvec(Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:39 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _dbmatrix(Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:45 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_y_hash(AbstractArray{var"#s10563", 2} where var"#s10563"<:Real) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:62 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_exact_keys(Any, Tuple, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:67 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_blocked_parameters(Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:75 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition kwcall(NamedTuple{names, T} where T<:Tuple where names, typeof(Main._db_blocked_parameters), Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:75 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_validate_long_mapping(Any, Any, Int64, Int64) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:129 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_validate_precision(Any, Any, Int64, Int64) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:180 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_transport_close(Any, Any, AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:218 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_validate_source_covariance(Any, Any, Int64) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:224 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_native_nll(Any, Any, Any, Any) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:260 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_write_receipt(Any, Any) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:270 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_gllvm_source_hash(AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:278 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition compare_phylo_gaussian_reference(AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:293 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition kwcall(NamedTuple{names, T} where T<:Tuple where names, typeof(Main.compare_phylo_gaussian_reference), AbstractString) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:293 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _compare_phylo_gaussian_reference_main() in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:390 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _compare_phylo_gaussian_reference_main(Any) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_phylo_gaussian_reference.jl:390 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition _db_check_pedigree_gaussian(Any, Any) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_pedigree_gaussian_reference.jl:8 overwritten on the same line (check for duplicate calls to `include`).
+WARNING: Method definition compare_pedigree_gaussian_reference(Any, Any, Any, Any) in module Main at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/tools/destination_b/compare_pedigree_gaussian_reference.jl:75 overwritten on the same line (check for duplicate calls to `include`).
+=== REVERIFY LOG TAIL ===
+    EXPECT: GATE G9c.2 PASS
+    CWD: /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923
+    SHELL: /bin/sh
+    PATH: /home/snakagaw/.local/node/bin:/home/snakagaw/.juliaup/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+    APPROVAL BOUND TO A DIFFERENT PATH (the environment moved since approval; re-approve to re-bind)
+    APPROVED: /home/snakagaw/.unlazy/approved/38fbca25dabc704982e1571d719f7829de0fa4a40914a876727db2d41bd634d6.json
+APPROVAL REQUIRED leaf-S9c:G9c.3
+    CHECK: a self-contained fixture script run in BOTH trees and diffed —
+    EXPECT: every loglik and every theta coordinate within rtol 1e-8
+    CWD: /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923
+    SHELL: /bin/sh
+    PATH: /home/snakagaw/.local/node/bin:/home/snakagaw/.juliaup/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+    APPROVAL BOUND TO A DIFFERENT PATH (the environment moved since approval; re-approve to re-bind)
+    APPROVED: /home/snakagaw/.unlazy/approved/cdbbdad5d639e3befa9e6b80a1621b7e124b796f63e2454566f4e6632f10acea.json
+APPROVAL REQUIRED leaf-S9c:G9c.4
+    CHECK: env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. test/test_grouped_analytic_grad.jl --gate coverag; echo $?
+    EXPECT: exit 2, and NO gate runs
+    CWD: /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923
+    SHELL: /bin/sh
+    PATH: /home/snakagaw/.local/node/bin:/home/snakagaw/.juliaup/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+    APPROVAL BOUND TO A DIFFERENT PATH (the environment moved since approval; re-approve to re-bind)
+    APPROVED: /home/snakagaw/.unlazy/approved/4babc65f09efea8465ce8987174df8bea43d01986c8b771d997461e8941d3298.json
+APPROVAL REQUIRED leaf-S9c:G9c.5
+    CHECK: env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. test/test_grouped_analytic_grad.jl --gate fd_agreement
+    EXPECT: GATE GB.2 PASS, GATE GB.3 PASS, in-suite testset green, no name collision
+    CWD: /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923
+    SHELL: /bin/sh
+    PATH: /home/snakagaw/.local/node/bin:/home/snakagaw/.juliaup/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+    APPROVAL BOUND TO A DIFFERENT PATH (the environment moved since approval; re-approve to re-bind)
+    APPROVED: /home/snakagaw/.unlazy/approved/23beab52b2b5ddb257a9c3e7d9d9b07bd8336dfdb0049810c927cd028d391390.json
+APPROVAL REQUIRED leaf-S9c:G9c.6
+    CHECK: env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. -e 'using Pkg; Pkg.test()'
+    EXPECT: the known baseline, plus this leaf's new tests, and no new failure
+    CWD: /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923
+    SHELL: /bin/sh
+    PATH: /home/snakagaw/.local/node/bin:/home/snakagaw/.juliaup/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+    APPROVAL BOUND TO A DIFFERENT PATH (the environment moved since approval; re-approve to re-bind)
+    APPROVED: /home/snakagaw/.unlazy/approved/a01a3c71f53471759269994edf71b6bf7ecaf00bb2787fb71bfa4c1ffcc52ec5.json
+  RUN  leaf-S8:GA.1 shell=/bin/sh cwd=/home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923 PATH=/home/snakagaw/.local/node/bin:/home/snakagaw/.juliaup/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+  RUN  leaf-S8:GB.1 shell=/bin/sh cwd=/home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923 PATH=/home/snakagaw/.local/node/bin:/home/snakagaw/.juliaup/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+  RUN  leaf-S8:GB.2 shell=/bin/sh cwd=/home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923 PATH=/home/snakagaw/.local/node/bin:/home/snakagaw/.juliaup/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+  RUN  leaf-S8:GB.3 shell=/bin/sh cwd=/home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923 PATH=/home/snakagaw/.local/node/bin:/home/snakagaw/.juliaup/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+  RUN  leaf-S8:GB.4 shell=/bin/sh cwd=/home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923 PATH=/home/snakagaw/.local/node/bin:/home/snakagaw/.juliaup/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+  RUN  leaf-S8:GB.5 shell=/bin/sh cwd=/home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923 PATH=/home/snakagaw/.local/node/bin:/home/snakagaw/.juliaup/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+  RUN  leaf-S8:GB.6 shell=/bin/sh cwd=/home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923 PATH=/home/snakagaw/.local/node/bin:/home/snakagaw/.juliaup/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+  RUN  leaf-S9:G9.1 shell=/bin/sh cwd=/home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923 PATH=/home/snakagaw/.local/node/bin:/home/snakagaw/.juliaup/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+  RUN  leaf-S9:G9.2 shell=/bin/sh cwd=/home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923 PATH=/home/snakagaw/.local/node/bin:/home/snakagaw/.juliaup/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+  RUN  leaf-S9:G9.3 shell=/bin/sh cwd=/home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923 PATH=/home/snakagaw/.local/node/bin:/home/snakagaw/.juliaup/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+  RUN  leaf-S9:G9.7 shell=/bin/sh cwd=/home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923 PATH=/home/snakagaw/.local/node/bin:/home/snakagaw/.juliaup/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+  RUN  leaf-S9:G9.8 shell=/bin/sh cwd=/home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923 PATH=/home/snakagaw/.local/node/bin:/home/snakagaw/.juliaup/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+  RUN  leaf-S9:G9.9 shell=/bin/sh cwd=/home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923 PATH=/home/snakagaw/.local/node/bin:/home/snakagaw/.juliaup/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+  RUN  leaf-S9c:G9c.1 shell=/bin/sh cwd=/home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923 PATH=/home/snakagaw/.local/node/bin:/home/snakagaw/.juliaup/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+  RUN  leaf-S9c:G9c.2 shell=/bin/sh cwd=/home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923 PATH=/home/snakagaw/.local/node/bin:/home/snakagaw/.juliaup/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+  RUN  leaf-S9c:G9c.3 shell=/bin/sh cwd=/home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923 PATH=/home/snakagaw/.local/node/bin:/home/snakagaw/.juliaup/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+  RUN  leaf-S9c:G9c.4 shell=/bin/sh cwd=/home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923 PATH=/home/snakagaw/.local/node/bin:/home/snakagaw/.juliaup/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+  RUN  leaf-S9c:G9c.5 shell=/bin/sh cwd=/home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923 PATH=/home/snakagaw/.local/node/bin:/home/snakagaw/.juliaup/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+  RUN  leaf-S9c:G9c.6 shell=/bin/sh cwd=/home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923 PATH=/home/snakagaw/.local/node/bin:/home/snakagaw/.juliaup/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+  FAIL leaf-S8:GA.1: `bench/profile_grouped_glmm.jl` gains a second fixture with nθ >= 6 and a section partition (Nelder-Mead evaluations, BFGS line search, FD gradient calls, final FD Hessian, inner Newton iterations, GLM state/score/curvature, CHOLMOD factorisation, log-det). Sections sum to within 10% of the measured wall on both fixtures.
+       exit=1; EXPECT=not matched; output=Julia 1.12.6  threads=4 | === fixture: glmm_200x5  N=1000 G=200 p=1 === | real fit: wall_median(reps=5)=0.1706s converged=true loglik=-2025.4693 iterations=3 | driver:   wall=0.2735s converged=true loglik=-2025.4693 loglik_gap_rel=4.154e-15 nθ=2 | Nelder-Mead:       calls=61    seconds=0.0920 | BFGS line search:  calls=10    seconds=0.0247 | ... | GA.2 VERDICT: PROCEED | sysctl: cannot stat /proc/sys/machdep/cpu/brand_string: No such file or directory
+  FAIL leaf-S8:GB.1: docs/design/grouped-analytic-gradient.md derives the gradient before any code, with the symbolic-alignment table: implicit db̂/dθ, the tr(A⁻¹ dA/dθ) log-det term, and the observed-curvature dependence on y. Every symbol maps to the function that will compute it.
+       exit=127; EXPECT=not matched; output=/bin/sh: 1: manual: not found
+  PASS leaf-S8:GB.2: the analytic gradient agrees with the existing central-difference gradient (`_grouped_fd_gradient`, src/grouped_fit.jl:213-224) at 20 random theta, rtol 1e-6, which is the FD reference's own accuracy and not a widened bound.
+       exit=0; EXPECT=matched; output=PASS dep_term: worst per-coordinate rel 9.170e-08 <= 1.0e-06 (rtol alone) | GATE GB.2 PASS
+  FAIL leaf-S8:GB.3: fitted parameters and logLik equal origin/main 69a69b0a0 within rtol 1e-8 on both fixtures, and the existing grouped identity fixtures A, B and D still pass.
+       exit=1; EXPECT=not matched; output=GATE GB.3 — fitted parameters and logLik, analytic-gradient fit vs all-FD fit | rtol = 1.0e-08   inner_tol = 1.0e-10   inner_maxiter = 200 | REFERENCE: `analytic_gradient=false`, which reaches the same | `_grouped_fd_gradient(objective_cold, ...)` call origin/main 69a69b0a0 always used. | This is an IN-WORKTREE proxy for the ledger's origin/main comparison, | not a substitute for it: it proves the S8 branch changes no answer, | ... | PASS dep_term | GATE GB.3 FAIL
+  PASS leaf-S8:GB.4: with the warm start UNCONFINED (the S7c restriction to Nelder-Mead removed), fixture D's regression test still passes and the converged answer is unchanged at rtol 1e-8. This is the gate that S7c could not pass with an FD gradient.
+       exit=0; EXPECT=matched; output=│   cold_iters = 6 | └   warm_iters = 6
+  PASS leaf-S8:GB.5: objective calls and summed inner Newton iterations are reported before and after (118 and 711 banked at fixture A); the wall on fixture A is recorded against 0.150383 s and Latte's 0.015 s; the larger fixture against its own GA.1 baseline. Numbers reported whatever they are, no claim beyond them.
+       exit=0; EXPECT=matched; output=GATE GB.5 PASS | sysctl: cannot stat /proc/sys/machdep/cpu/brand_string: No such file or directory
+  FAIL leaf-S8:GB.6: full `Pkg.test()` green apart from the known pre-existing test_em_louis.jl:127 flake; test/test_grouped_laplace.jl unchanged from 69a69b0a0.
+       timed out after 7200s; exit=none signal=SIGKILL; EXPECT=not matched; output=(no output)
+  FAIL leaf-S9:G9.1: TEXT CORRECTED, see the amendment at the end. Fitted parameters and logLik equal origin/main 69a69b0a0 within rtol 1e-8 on all SIX fixtures `_fixtures()` returns, with Nelder-Mead at its SHIPPED default. The original wording said "with Nelder-Mead demoted" and "five"; the demotion is abandoned and the count was wrong.
+       exit=1; EXPECT=not matched; output=GATE GB.3 — fitted parameters and logLik, analytic-gradient fit vs all-FD fit | rtol = 1.0e-08   inner_tol = 1.0e-10   inner_maxiter = 200 | REFERENCE: `analytic_gradient=false`, which reaches the same | `_grouped_fd_gradient(objective_cold, ...)` call origin/main 69a69b0a0 always used. | This is an IN-WORKTREE proxy for the ledger's origin/main comparison, | not a substitute for it: it proves the S8 branch changes no answer, | ... | PASS dep_term | GATE GB.3 FAIL
+  PASS leaf-S9:G9.2: AMENDED by Shinichi 2026-09-21, asserts where the oracle EXISTS and prints boundaries. The Hessian produced by finite-differencing the analytic gradient yields STANDARD ERRORS equal to those from `_grouped_fd_hessian` at rtol 1e-4, per coordinate, on all five fixtures, INCLUDING the Beta and NB2 fixtures where the two FD schemes differ most because of the dispersion rows. 1e-4 is recorded as the FD oracle's own accuracy, not a widened bound. If it is not met, STOP and reopen D-274; do not loosen it.
+       exit=0; EXPECT=matched; output=PASS dep_term | GATE G9.2 PASS
+  FAIL leaf-S9:G9.3: the fallback contract holds. With `analytic_gradient=false` the pre-S9 path runs verbatim: Nelder-Mead executes and `_grouped_fd_hessian` supplies H. A fit whose analytic gradient fails at some theta still completes, warning once rather than throwing.
+       exit=1; EXPECT=not matched; output=GATE G9.3 — fallback contract: analytic_gradient=false runs the pre-S9 path verbatim; | a fit whose analytic gradient fails mid-optimisation still completes, warning not throwing. | inner Laplace-fit calls: FD default (nelder_mead=true, hessian=:fd) = 471, FD explicit-kwargs = 471, analytic default (nelder_mead=false, hessian=:grad_fd) = 223 | mid-fit, every 2nd analytic-gradient call forced to `nothing`: total calls=0 forced>=0 completed=true converged=true | FAIL: expected 
+  PASS leaf-S9:G9.7: MET on the property; its stated TOLERANCE was ill-posed, see the amendment. The final reported gradient on the analytic path is the analytic gradient, and `converged` is decided on it. Measured bit-identical to a direct recompute, rel 0.000e+00 on all six. The ledger also asked its norm to agree with the FD norm at RELATIVE 1e-6, which is not a meaningful bound on a quantity driven to ~0 at convergence; the measured agreement is 7.226e-09 ABSOLUTE.
+       exit=0; EXPECT=matched; output=PASS dep_term | GATE G9.7 PASS
+  FAIL leaf-S9:G9.8: full `Pkg.test()` green apart from the known test_em_louis.jl:127 flake. Budget 95 to 105 minutes from the GB.6 measurement; state the estimate before launching, run alone on the machine, wrap in `script -q` with a watcher, and edit nothing in the lane while it runs.
+       timed out after 7200s; exit=none signal=SIGKILL; EXPECT=not matched; output=(no output)
+  FAIL leaf-S9:G9.9: MET by direct measurement, NOT by the CHECK as written, see the amendment. MEASUREMENT. Both fixtures re-measured with GA.1's section partition, before and after in one process so machine state is shared. The after TSV carries git SHA, Julia version, BLAS config and thread counts in its header. The large fixture's target is about 1.5 s against 5.93 s; that is a TARGET and is reported, never asserted.
+       exit=1; EXPECT=not matched; output=Julia 1.12.6  threads=4 | === fixture: glmm_200x5  N=1000 G=200 p=1 === | real fit: wall_median(reps=5)=0.2536s converged=true loglik=-2025.4693 iterations=3 | driver:   wall=0.3832s converged=true loglik=-2025.4693 loglik_gap_rel=4.154e-15 nθ=2 | Nelder-Mead:       calls=61    seconds=0.1151 | BFGS line search:  calls=10    seconds=0.0408 | ... | GA.2 VERDICT: PROCEED | sysctl: cannot stat /proc/sys/machdep/cpu/brand_string: No such file or directory
+  PASS leaf-S9c:G9c.1: holes 1-3 pass BOTH fd_agreement (per-coordinate, rtol 1e-6) and identity (rtol 1e-8).
+       exit=0; EXPECT=matched; output=PASS dep_term (both halves) | GATE G9c.1 PASS
+  FAIL leaf-S9c:G9c.2: hole 4, THE MIXED PATH. A fit whose analytic gradient fails at a SUBSET of theta still
+       exit=1; EXPECT=not matched; output=GATE G9.6 — MIXED PATH: analytic gradient forced to `nothing` on a SUBSET of theta, still lands on the FD answer | poisson_latent   analytic-gradient calls=0 forced-failures=0  loglik ref=-2.448399966295e+02 mixed=-2.448399966295e+02 rel=0.000e+00  beta_rel=0.000e+00  converged ref=true mixed=true | FAIL poisson_latent: forced=0 (need >0) dll=0.000e+00 dbeta=0.000e+00 theta offenders=Int64[] (need <= 1.0e-08) | FAIL poisson_latent | beta_shared      analytic-gradient calls=0 
+  FAIL leaf-S9c:G9c.3: the four new fixtures land on the REAL `origin/main` 69a69b0a0 answer, not only on the
+       exit=127; EXPECT=not matched; output=/bin/sh: 1: a: not found
+  FAIL leaf-S9c:G9c.4: the `--gate` dispatch errors on an unknown name instead of falling through.
+       exit=0; EXPECT=not matched; output=1 | ERROR: LoadError: unknown --gate coverag; gates implemented on this branch: fd_agreement, identity, hessian, nm_fallback, counts, coverage, mixed, final_gradient | Stacktrace: | [1] error(s::String) | @ Base ./error.jl:44 | [2] top-level scope | ... | @ Base ./client.jl:550 | in expression starting at /home/snakagaw/GLLVModels.jl-grouped-analytic-reverify-20260923/test/test_grouped_analytic_grad.jl:1317
+  FAIL leaf-S9c:G9c.5: the six inherited S8 fixtures are not weakened, and the file still behaves in the suite.
+       exit=0; EXPECT=not matched; output=GATE GB.2 — analytic vs central-difference outer gradient, PER COORDINATE | inner_tol = 1.0e-10   inner_maxiter = 200   rtol = 1.0e-06   ntheta per fixture = 20 | (inner_tol recorded per amended requirement (d)) | poisson_latent   Poisson, :latent rank-1 (nonzero loading coordinates)          ntheta=6 nvalid=20 skipped=0 | coord  1  worst rel = 6.698e-09   FD resolution (h vs h/2) = 5.116e-08   pass (rtol) | coord  2  worst rel = 1.673e-09   FD resolution (h vs h/2) = 4.547e-
+  FAIL leaf-S9c:G9c.6: the full suite is green apart from the known `test_em_louis.jl:127` flake.
+       timed out after 7200s; exit=none signal=SIGKILL; EXPECT=not matched; output=Testing GLLVModels | Status `/tmp/jl_O6AGrU/Project.toml` | ⌅ [4c88cf16] Aqua v0.8.16 | [8bb1440f] DelimitedFiles v1.9.1 | [31c24e10] Distributions v0.25.131 | ⌃ [f6369f11] ForwardDiff v0.10.39 | ... | ┌ Warning: scalar(...) is deprecated; use indep(..., common = true) instead | └ @ GLLVModels ~/GLLVModels.jl-grouped-analytic-reverify-20260923/src/formula.jl:554
+leaf-S8.md: 8 gates
+leaf-S9.md: 9 gates
+leaf-S9c.md: 6 gates
+UNMET: 13 (met: 6, abandoned: 4, reran: 19, previously met reverified: 12) [scope grouped-analytic-20260920]
+  leaf-S8:GA.1, leaf-S8:GB.1, leaf-S8:GB.3, leaf-S8:GB.6, leaf-S9:G9.1, leaf-S9:G9.3, leaf-S9:G9.8, leaf-S9:G9.9, leaf-S9c:G9c.2, leaf-S9c:G9c.3, leaf-S9c:G9c.4, leaf-S9c:G9c.5, +1 more
+=== LEAF CHECKBOXES ===
+bash: line 27: rg: command not found
+WATCH_DONE 2026-09-23T13:19:38-06:00
