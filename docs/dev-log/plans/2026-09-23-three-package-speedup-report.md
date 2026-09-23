@@ -54,7 +54,7 @@ Use these as the “current” column unless a newer cell receipt names another 
 | GLLVModels | `#449` `f36def049…` Latte-kernel (default **OFF**); `#451` `4e976e259…` Totoro board receipts | post-board merges (digest) |
 | DRModels | `#781` merge `cf058168b`; tip abs Totoro `12ee8a8c2` (q4 p5000 / crossed); H2H re-anchor `1b8e81c` | Julia-vs-Julia q4 + vs-TMB H2H |
 | DRModels | `#803`–`#807` evidence PRs (`3107f0c66…` … `e9d50a110…`) | end-arc attested walls |
-| DRModels | `#808` tip `e9d50a110` / head pending merge | Phase B Wave A+B → report **28** |
+| DRModels | `#808` MERGED `da8b3f871` (tip cells `e9d50a110`) | Phase B Wave A+B → report **28** |
 | HSquared | `e05fcf0e` (#371 / #379 Mac e2e); Totoro e2e `101aa483` (#379/#380); selinv `#361`/`#363`; kinds expand **`fdc43845`** | fit + kernel + Phase B kinds |
 
 ### How a cell enters this report
@@ -250,7 +250,7 @@ Tracking issues for reader-facing follow-up in the R twins (verified open 2026-0
 | #451 | GLLVModels | Totoro unstructured + PROFILE_CI board receipts |
 | #781 | DRModels | MERGED; q4 Julia-vs-Julia no gain; bridge vs drmTMB 0.7.1 |
 | #803–#807 | DRModels | end-arc attested walls / Totoro tip / H2H re-anchor |
-| #808 | DRModels | Phase B kinds Wave A+B → **28** `has_receipt` (Totoro Wave B + Mac Wave A) |
+| #808 | DRModels | MERGED `da8b3f871`; Phase B kinds Wave A+B → **28** `has_receipt` |
 | #454 | GLLVModels | Phase B first-wave + diversity; report GLLVM **20**/20 |
 | #361 | HSquared | selinv 416.8→14.9 s (28×) |
 | #363 | HSquared | +SIMD → 5.45 s (76×) |
@@ -272,3 +272,4 @@ Tracking issues for reader-facing follow-up in the R twins (verified open 2026-0
 | 2026-09-23 | GLLVM Phase B first-wave **10/10** Totoro (`4e976e2`; load≈229). Report slots 11–20 filled. Counts **20 / 10 / 20**. Profile-ci Wald fallback; latte-gap labelled only (no default flip). No invented ×. |
 | 2026-09-23 | Fir DRAC GLLVM `61148081` abs confirm (7/7); DRM Wave B Totoro slots 11–20 banked on #808 tip `e9d50a110`. Interim counts **20 / 20 / 20** (Wave A not yet in report slots). |
 | 2026-09-23 | Final counts after DRM #808 bank: Wave A Mac cells 21–28 added. Counts **20 / 28 / 20** = **68**. Merge SHA pending CI green. No invented ×. |
+| 2026-09-23 | DRM #808 MERGED `da8b3f871` (ci-ok green after Julia 1 shard 4/4). Report counts **20 / 28 / 20** on `main`. No invented ×. |
