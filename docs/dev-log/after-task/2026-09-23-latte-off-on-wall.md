@@ -6,7 +6,7 @@ Lane: `cursor/latte-retime-20260923`.
 ## Scope
 
 Paired wall `diag_precision_kernel=false` vs `true` on tip after #449/#451.
-Gate (locked sequence): ≥1.5× on **at least one** certify cell, plus identity.
+No default flip. No merge of a default-ON PR.
 
 ## Outcome
 
@@ -20,15 +20,15 @@ Gate (locked sequence): ≥1.5× on **at least one** certify cell, plus identity
 
 3. Identity: `|Δll|=0` on both cells; cite existing S4 **26/26**.
 4. Receipts under `docs/dev-log/evidence/2026-09-23-latte-off-on-wall/`.
-5. Harness only in the evidence PR: `bench/latte_gap_retime/` (no `src/`).
+5. Harness only: `bench/latte_gap_retime/` (no `src/`).
 
 ## Verdict
 
-**FLIP (default ON).** Gate clears: `glmm_200x5` at **2.90×** (≥1.5×) with `|Δll|=0`.
-Large cell stays at 1.18× (honest; no public speed claim from it). Owner standing
-approval for this goal: merge evidence, then merge default-ON noting the gate.
+**KEEP opt-in (default OFF).** Shinichi G0 (2026-09-23): large certify cell
+**1.18×** fails the dual-fixture ~1.5× bar even though `glmm_200x5` clears at
+2.90×. Mixed clearance is not enough to flip the default. Keyword stays
+available; no default-ON PR.
 
 ## Rose
 
-No README/NEWS speed claim. Default-ON is a behaviour flip only; quote walls from
-dated TSV, not as a package headline.
+No README/NEWS speed claim. Default remains `false`. Evidence PR only.
