@@ -2,9 +2,9 @@
 
 **Status:** DRAFT toward publishable scratch · **Phase B UNLOCKED** (Shinichi *finish all parts*; see `2026-09-23-speed-then-20-report-sequence.md`) · bank as siblings return · do **not** claim “20 done” until every package hits banked aim · **not** a README/NEWS claim surface  
 **Date:** 2026-09-23  
-**Filled now:** GLLVM **20** · DRM **20** · H² **20** = **60** attested rows (aims met). Fir DRAC GLLVM job `61148081` 7/7 ok (cross-host abs only); Fir DRM job `61148082` harness errored — board authority remains Totoro CSV `e9d50a110`.  
-**Authority for numbers:** board `2026-09-23-three-package-speed-board.md` (floor 32/32) + H² kinds expand TSV `e2e_wall_receipts_fdc43845.tsv`  
-**Closeout digest:** `docs/dev-log/plans/2026-09-23-arc-status-digest.md` (floor closeout; Phase B continues here)
+**Filled now:** GLLVM **20** · DRM **28** (floor 10 + Wave A 8 + Wave B 10) · H² **20** = **68** attested rows · aim ~20 cleared (DRM overshot). Fir DRAC GLLVM job `61148081` 7/7 ok (cross-host abs only); Fir DRM job `61148082` harness errored — Wave B authority remains Totoro CSV `e9d50a110` / DRModels #808.  
+**Authority for numbers:** board `2026-09-23-three-package-speed-board.md` (floor 32/32) + H² kinds TSV `e2e_wall_receipts_fdc43845.tsv` + DRM `board_new_cells.tsv` (Wave A) + Totoro first-wave CSV (Wave B)  
+**Closeout digest:** `docs/dev-log/plans/2026-09-23-arc-status-digest.md` (floor closeout; Phase B banked here)
 
 Active lenses: Shannon, Ada, Rose (perspectives). No subagents for this scaffold.
 
@@ -54,6 +54,7 @@ Use these as the “current” column unless a newer cell receipt names another 
 | GLLVModels | `#449` `f36def049…` Latte-kernel (default **OFF**); `#451` `4e976e259…` Totoro board receipts | post-board merges (digest) |
 | DRModels | `#781` merge `cf058168b`; tip abs Totoro `12ee8a8c2` (q4 p5000 / crossed); H2H re-anchor `1b8e81c` | Julia-vs-Julia q4 + vs-TMB H2H |
 | DRModels | `#803`–`#807` evidence PRs (`3107f0c66…` … `e9d50a110…`) | end-arc attested walls |
+| DRModels | `#808` tip `e9d50a110` / head pending merge | Phase B Wave A+B → report **28** |
 | HSquared | `e05fcf0e` (#371 / #379 Mac e2e); Totoro e2e `101aa483` (#379/#380); selinv `#361`/`#363`; kinds expand **`fdc43845`** | fit + kernel + Phase B kinds |
 
 ### How a cell enters this report
@@ -120,9 +121,9 @@ Source tables copied from the speed board §2 (2026-09-23). Phase B additions ar
 | Package | Floor (board) | Phase B new | **Filled in this report** | Aim | Empty slots |
 |---|---:|---:|---:|---:|---|
 | GLLVModels | 10 | **10** | **20** | ~20 | (GLLVM aim met; Fir `61148081` abs confirm) |
-| DRModels | 10 | **10** | **20** | ~20 | (DRM aim met; Totoro `e9d50a110`) |
+| DRModels | 10 | **18** | **28** | ~20 | (aim cleared; Wave A Mac + Wave B Totoro; #808) |
 | HSquared | 12 | **8** | **20** | ~20 | (H² aim met) |
-| **Total** | **32** | **28** | **60** | ~60 | (aims met) |
+| **Total** | **32** | **36** | **68** | ~60 | (aims met; DRM overshot) |
 
 ---
 
@@ -172,7 +173,22 @@ negative receipts only — do not quote Fir walls.
 | 19 | `drm-animal-gauss` | abs (Totoro) | **0.0177 s** | n/a (abs) | same | animal() Gaussian A supplied G=60 |
 | 20 | `drm-lss-sd-slope` | abs (Totoro) | **0.0029 s** | n/a (abs) | same | sd(id) ~ sex LSS n=480 |
 
-Honest standing fact: q4 Julia-vs-Julia on the speed6 grid shows **no wall gain**. These Phase B rows are tip-abs diversity, not a Julia-vs-Julia × claim.
+#### DRM Wave A (cells 21–28) — BANKED (Mac Studio; `board_new_cells.tsv`)
+
+Host **Mac Studio** · tip `e9d50a110` / `cf058168b` as named · J=1 OB=1 · evidence on DRModels #808. **No cross-host ×** with Totoro Wave B. Beta bridge R arm FAIL fenced (Julia abs only).
+
+| # | cell_id | Comparator | Wall / metric | Speedup | PR / SHA | Notes |
+|---:|---|---|---|---|---|---|
+| 21 | `drm-bridge-student` | **vs drmTMB 0.7.1** | Julia **0.002791 s** / TMB 0.020 s | **7.2×** | `cf058168b` · #808 | FE bridge n=180 |
+| 22 | `drm-bridge-biv-rho12` | **vs drmTMB 0.7.1** | Julia **0.001319 s** / TMB 0.020 s | **15.2×** | same | biv_gaussian rho12 |
+| 23 | `drm-bridge-gamma` | **vs drmTMB 0.7.1** | Julia **0.000808 s** / TMB 0.016 s | **19.8×** | same | gamma FE |
+| 24 | `drm-bridge-beta` | abs (Mac) | Julia **0.001356 s** | n/a | same | R arm FAIL (`a` missing); Julia-only fence |
+| 25 | `drm-missing-gauss-n1000` | **vs drmTMB 0.7.1** | Julia **0.001177 s** / TMB 0.033 s | **28.0×** | `e9d50a110` · #808 | shared CSV; Δll≈2.4e-4 |
+| 26 | `drm-sigma-re-G40` | **vs drmTMB 0.7.1** | Julia **0.001696 s** / TMB 0.113 s | **66.6×** | same | \|Δll\|≈0.065 disclosed (not bit-id) |
+| 27 | `drm-tweedie-fe-n400` | **vs drmTMB 0.7.1** | Julia **0.023955 s** / TMB 0.061 s | **2.55×** | same | shared CSV H2H |
+| 28 | `drm-phylo-beta-p128` | abs (Mac) | Julia **0.023632 s** | n/a | same | tip abs; no TMB pair this slice |
+
+Honest standing fact: q4 Julia-vs-Julia on the speed6 grid shows **no wall gain**. Wave B rows are tip-abs diversity; Wave A carries the vs-TMB × where paired.
 
 ### 4.3 HSquared: cells 13–20 — BANKED (Phase B)
 
@@ -203,7 +219,7 @@ Still gated (not in this table): ASReml ladder (needs paired receipt + Rose word
 6. **Latte `diag_precision_kernel` default OFF** (#449). No public wall quote from that path until owner default-ON (+ optional retime).
 7. **Soft † / ‡ / § / conv=false footnotes stay.** Soft-hist DGP mismatch, banked dense, estimator-confound, and non-converged validation-scale walls are not pure LA claims.
 8. **README / NEWS.** Withheld until Rose signs a claim surface. This file is publishable **scratch** evidence inventory, not marketing.
-9. **Phase B unlock ≠ public claim.** All three packages at 20 attested abs/× rows in this scratch report; README/NEWS still withheld.
+9. **Phase B unlock ≠ public claim.** Counts **20 / 28 / 20** in this scratch report; README/NEWS still withheld.
 
 ---
 
@@ -234,6 +250,8 @@ Tracking issues for reader-facing follow-up in the R twins (verified open 2026-0
 | #451 | GLLVModels | Totoro unstructured + PROFILE_CI board receipts |
 | #781 | DRModels | MERGED; q4 Julia-vs-Julia no gain; bridge vs drmTMB 0.7.1 |
 | #803–#807 | DRModels | end-arc attested walls / Totoro tip / H2H re-anchor |
+| #808 | DRModels | Phase B kinds Wave A+B → **28** `has_receipt` (Totoro Wave B + Mac Wave A) |
+| #454 | GLLVModels | Phase B first-wave + diversity; report GLLVM **20**/20 |
 | #361 | HSquared | selinv 416.8→14.9 s (28×) |
 | #363 | HSquared | +SIMD → 5.45 s (76×) |
 | #370 | HSquared | post-fit 4.37→0.60 s; reml eval 43.2→9.08 ms |
@@ -252,3 +270,5 @@ Tracking issues for reader-facing follow-up in the R twins (verified open 2026-0
 | 2026-09-23 | §6: drmTMB [#1420](https://github.com/itchyshin/drmTMB/issues/1420) (`beta`→`beta_family` bare `family=beta()` / NEWS overclaim). Skip note: no ×-gap speed issues (TMB walls often ms-scale). hsquared still TODO. |
 | 2026-09-23 | Phase B UNLOCKED (*finish all parts*). Banked H² cells 13–20 from `fdc43845` TSV (abs only; conv=false fenced on 3 rows). Counts **10 / 10 / 20**. GLLVM+DRM 11–20 still TODO. §6 hsquared = none (deliberate). Rose fences refreshed. No invented ×. |
 | 2026-09-23 | GLLVM Phase B first-wave **10/10** Totoro (`4e976e2`; load≈229). Report slots 11–20 filled. Counts **20 / 10 / 20**. Profile-ci Wald fallback; latte-gap labelled only (no default flip). No invented ×. |
+| 2026-09-23 | Fir DRAC GLLVM `61148081` abs confirm (7/7); DRM Wave B Totoro slots 11–20 banked on #808 tip `e9d50a110`. Interim counts **20 / 20 / 20** (Wave A not yet in report slots). |
+| 2026-09-23 | Final counts after DRM #808 bank: Wave A Mac cells 21–28 added. Counts **20 / 28 / 20** = **68**. Merge SHA pending CI green. No invented ×. |
