@@ -11,7 +11,7 @@
 # Phase B first-wave GLLVM (7 cells). Skips Latte + Totoro-banked phylo/spatial smokes.
 set -euo pipefail
 module load StdEnv/2023 julia/1.11.3 || module load julia/1.12.5 || module load julia/1.10.10
-export JULIA_DEPOT_PATH="${JULIA_DEPOT_PATH:-$HOME/julia_depot_fir}"
+export JULIA_DEPOT_PATH="/scratch/snakagaw/julia_depot_speed_phaseB"
 export JULIA_NUM_THREADS=${SLURM_CPUS_PER_TASK:-4}
 export OPENBLAS_NUM_THREADS=1
 export OMP_NUM_THREADS=1
@@ -21,5 +21,4 @@ OUT="docs/dev-log/evidence/2026-09-23-speed-firstwave-drac/gllvm_task${SLURM_ARR
 export SPEED_ARRAY_INDEX="$SLURM_ARRAY_TASK_ID"
 export GLLVM_FIRSTWAVE_OUT="$OUT"
 export GLLVM_FIRSTWAVE_REPS=3
-julia --project=. -e 'using Pkg; Pkg.instantiate()'
 julia --project=. bench/speed_board_firstwave.jl

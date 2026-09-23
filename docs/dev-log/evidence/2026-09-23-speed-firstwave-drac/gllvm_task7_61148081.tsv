@@ -1,0 +1,2 @@
+cell_id	kind	detail	wall_s	loglik	note	status	sha	host	threads
+gllvm-profile-ci-glmm	G-profile-ci; profile on small grouped Poisson	confint profile (grouped or unstruct fallback)	1.191450	-430.5985186	julia_abs_only	ok	unknown	fc20355	4
