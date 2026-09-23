@@ -1,6 +1,7 @@
-# End-of-arc speed board — three packages (inventory + cell matrix)
+<!-- slop-ok: inventory matrix reused prior board cells with em-dash empty fields; new prose cleaned -->
+# End-of-arc speed board: three packages (inventory + cell matrix)
 
-**Status:** GLLVM **10/10** `has_receipt` (PROFILE_CI in #451). DRM **10/10** incl. Aug-24 H2H re-anchor Totoro (locscale 43.4× vs drmTMB 0.7.1; relmat Julia abs + Δll; TMB wall load-fenced). H² **12/12**. Soft-owed H2H **DONE**.
+**Status:** GLLVM **report 20/20** (floor 10 + Phase B first-wave 10 @ tip `4e976e2` Totoro) · board inventory also holds **8** diversity alternate IDs (18 kinds total on matrix). DRM **10/10**. H² **12/12** floor (+ Phase B kinds on H² report). Soft-owed H2H **DONE**. Latte default-ON remains other agent.
 **Sibling plans:** `2026-09-23-ultra-plan-three-package-speed.md` (Q1 verdict + Phases 0–2), `2026-09-23-ultra-plan-next-after-448.md` (GLLVM Latte arc).
 **Thread discipline (standing):** Mac Studio lanes measure at `JULIA_NUM_THREADS=4` + `OPENBLAS_NUM_THREADS=1` unless a receipt says otherwise. Totoro H² selinv cells used `threads=1`. Do not mix regimes in one speedup column.
 
@@ -18,9 +19,9 @@ Active lenses: Shannon, Ada, Rose (perspectives). Spawned subagents: none.
 | S9a Hessian | `~/local-scratch/lanes/GLLVM.jl-s9a-hessian-20260921` · **PR #446 MERGED** | D-274 Hessian-by-grad-FD; `glmm_200x5` / `glmm_5000x3_g500` |
 | Moment / NM | **PR #447 MERGED** | NM demotion abandoned; `moment_start` opt-in (not a shipped wall win) |
 | S9c coverage | `~/local-scratch/lanes/GLLVM.jl-s9cov-20260921` · **PR #448 MERGED** | coverage certification; not a fit-wall receipt |
-| `origin/main` tip (lane fetch) | `8d58a0c94` | post-#448/#449/#450 |
-| Primary scripts | `bench/profile_em_phylo_scaling.jl`, `bench/profile_grouped_glmm.jl`, `bench/speed_bench.jl`, `bench/sparse_phy*_bench.jl` | EM scaling; grouped Laplace section walls; self-grid families |
-| Banked TSVs | `bench/results/em_phylo_{scaling,after}_*.tsv`, `grouped_warm_68c2f067c.tsv`, `grouped_sections_after_*.tsv`, `s9_hessian_2x2_*.tsv`, `board_gllvm_20260923_8d58a0c94.tsv` | attested before/after + tip abs |
+| `origin/main` tip (lane fetch) | `4e976e259` (#451) | post-#448/#449/#450/#451 |
+| Primary scripts | `bench/profile_em_phylo_scaling.jl`, `bench/profile_grouped_glmm.jl`, `bench/speed_bench.jl`, `bench/speed_board_diversity.jl`, `bench/speed_board_firstwave.jl`, `bench/sparse_phy*_bench.jl` | EM scaling; grouped Laplace; self-grid; diversity + first-wave |
+| Banked TSVs | `bench/results/em_phylo_{scaling,after}_*.tsv`, `grouped_warm_68c2f067c.tsv`, `grouped_sections_after_*.tsv`, `s9_hessian_2x2_*.tsv`, `board_gllvm_20260923_8d58a0c94.tsv`, `docs/dev-log/evidence/2026-09-23-speed-diversity-totoro/board_gllvm_diversity_4e976e2.tsv`, `docs/dev-log/evidence/2026-09-23-speed-firstwave-totoro/board_gllvm_firstwave_4e976e2.tsv` | attested before/after + tip abs + diversity + first-wave |
 
 ### DRModels (`DRM.jl`)
 
@@ -50,7 +51,7 @@ Columns: `package | cell_id | DGP kind | script path | baseline SHA/date | curre
 
 Paths are relative to the owning repo root (lane or Dropbox twin). Absolute lane roots named in §1.
 
-### 2.1 GLLVModels — 10 cells
+### 2.1 GLLVModels: floor + diversity + first-wave
 
 | package | cell_id | DGP kind | script path | baseline SHA/date | current SHA | wall before | wall after | speedup | notes | status |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -64,8 +65,26 @@ Paths are relative to the owning repo root (lane or Dropbox twin). Absolute lane
 | GLLVModels | `gllvm-pois-glmm-200x5-hess` | same small fixture; Hessian path only | same | fd Hessian | grad_fd Hessian #446 | 0.113 s | 0.110 s | 1.028× | modest; do not conflate with S7c 1.23× | `has_receipt` |
 | GLLVModels | `gllvm-nb2-or-binom-unstruct` | NB / Binomial unstructured Laplace; analytic vs finite | `bench/speed_bench.jl` | :finite same run | `8d58a0c94` Totoro | NB 0.2008 / Bin 0.1410 s (:finite @ 8×40×1) | NB **0.0222** / Bin **0.0130** s (:analytic) | **9.04× / 10.84×** vs :finite | Δll ≤1.7e-13; large grid companion NB 1.60 s / Bin 2.52 s analytic | `has_receipt` |
 | GLLVModels | `gllvm-profile-ci-small` | post-fit profile CI `beta[1]` on 8×40×1 count | `bench/speed_bench.jl` (`PROFILE_CI=1`) | — | `8d58a0c` Totoro | n/a | Poisson **1.5809 s**; NB 2.5044; Binom 1.9279 | n/a (abs) | tip abs; log `board_profile_ci_8d58a0c.log` | `has_receipt` |
+| GLLVModels | `gllvm-ordinal-unstruct-small` | Ordinal unstructured Laplace; `(p,n,K,C)=(6,80,1,3)` | `bench/speed_board_diversity.jl` | — | `4e976e2` Totoro | n/a | **0.1443 s** | n/a (abs) | julia abs only; J=4 OB=1 | `has_receipt` |
+| GLLVModels | `gllvm-zip-unstruct-small` | ZIP unstructured Laplace; `(p,n,K)=(5,40,1)` | same | — | `4e976e2` Totoro | n/a | **0.4358 s** | n/a (abs) | two-part; no R H2H | `has_receipt` |
+| GLLVModels | `gllvm-zinb-unstruct-small` | ZINB unstructured Laplace; `(p,n,K)=(5,40,1)` | same | — | `4e976e2` Totoro | n/a | **2.7330 s** | n/a (abs) | two-part; no R H2H | `has_receipt` |
+| GLLVModels | `gllvm-phylo-pois-glm-smoke` | Phylo Poisson GLM joint Laplace; 6 tips × n=12 | same | — | `4e976e2` Totoro | n/a | **0.0187 s** | n/a (abs) | not Gaussian EM phylo | `has_receipt` |
+| GLLVModels | `gllvm-spatial-spde-gauss-smoke` | SPDE Matérn Gaussian spatial; 8×8 mesh, M=16 | same | — | `4e976e2` Totoro | n/a | **0.1407 s** | n/a (abs) | spatial path smoke | `has_receipt` |
+| GLLVModels | `gllvm-concurrent-pois-small` | Concurrent (constrained) Poisson LV; `(p,n,q,K)=(5,40,2,1)` | same | — | `4e976e2` Totoro | n/a | **0.2524 s** | n/a (abs) | `fit_concurrent_gllvm` | `has_receipt` |
+| GLLVModels | `gllvm-missing-gauss-mask` | Gaussian GLLVM ~10% missing mask; `(p,n,K)=(8,60,2)` | same | — | `4e976e2` Totoro | n/a | **0.0277 s** | n/a (abs) | mask path; residual σ=0.8 | `has_receipt` |
+| GLLVModels | `gllvm-profile-ci-medium` | Profile CI `beta[1]` Poisson; `(p,n,K)=(12,50,1)` | same | — | `4e976e2` Totoro | n/a | **3.8452 s** | n/a (abs) | larger than `gllvm-profile-ci-small` | `has_receipt` |
+| GLLVModels | `gllvm-binom-glmm-200x5` | grouped Binomial `glmm_200x5`-class | `bench/speed_board_firstwave.jl` | — | `4e976e2` Totoro | n/a | **0.2369 s** | n/a (abs) | Phase B first-wave; J=4 OB=1 | `has_receipt` |
+| GLLVModels | `gllvm-gauss-lv-t4-p20n500` | T4 Gaussian `(20,500,2)` | same | — | `4e976e2` Totoro | n/a | **0.0088 s** | n/a (abs) | closed-form post-compile median | `has_receipt` |
+| GLLVModels | `gllvm-pois-lv-t4-p20n500` | T4 Poisson `(20,500,2)` | same | — | `4e976e2` Totoro | n/a | **1.6459 s** | n/a (abs) | Laplace LV | `has_receipt` |
+| GLLVModels | `gllvm-nb2-lv-t4-p20n500` | T4 NB2 `(20,500,2)` | same | — | `4e976e2` Totoro | n/a | **4.8812 s** | n/a (abs) | load≈229 at launch | `has_receipt` |
+| GLLVModels | `gllvm-gauss-unstruct-p50n2k` | Gaussian `(50,2000,2)` | same | — | `4e976e2` Totoro | n/a | **0.5197 s** | n/a (abs) | large-n unstruct | `has_receipt` |
+| GLLVModels | `gllvm-gauss-phylo-fit-p200` | non-EM `fit_phylo_gaussian` p=200 | same | — | `4e976e2` Totoro | n/a | **0.0418 s** | n/a (abs) | label ≠ EM ms/iter | `has_receipt` |
+| GLLVModels | `gllvm-profile-ci-glmm` | grouped Poisson interval wall | same | — | `4e976e2` Totoro | n/a | **0.0091 s** | n/a (abs) | Wald fallback (profile not admitted) | `has_receipt` |
+| GLLVModels | `gllvm-latte-gap-200x5` | tip wall / Latte banked 0.015 s | same | Latte banked | `4e976e2` Totoro | 0.015 s | **0.3830 s** | **25.53× labelled** | no default flip; load-inflated | `has_receipt` |
+| GLLVModels | `gllvm-pois-phylo-small` | Poisson phylo GLM 6×12 | same | — | `4e976e2` Totoro | n/a | **0.0191 s** | n/a (abs) | plan §4.1 id | `has_receipt` |
+| GLLVModels | `gllvm-spatial-gauss-small` | SPDE Matérn 8×8 M=16 | same | — | `4e976e2` Totoro | n/a | **0.0130 s** | n/a (abs) | plan §4.1 id | `has_receipt` |
 
-### 2.2 DRModels — 10 cells
+### 2.2 DRModels: 10 cells
 
 | package | cell_id | DGP kind | script path | baseline SHA/date | current SHA | wall before | wall after | speedup | notes | status |
 |---|---|---|---|---|---|---|---|---|---|---|

@@ -1,0 +1,2 @@
+cell_id	kind	detail	wall_s	loglik	note	status	sha	host	threads
+gllvm-nb2-lv-t4-p20n500	G-nb2-lv-scale; T4 NB2 (p,n,K)=(20,500,2)	fit_nb_gllvm	4.881201	-14232.63236	julia_abs_only	ok	4e976e2	totoro	4

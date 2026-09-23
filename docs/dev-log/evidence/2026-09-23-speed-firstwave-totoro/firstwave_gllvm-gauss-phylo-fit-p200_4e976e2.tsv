@@ -1,0 +1,2 @@
+cell_id	kind	detail	wall_s	loglik	note	status	sha	host	threads
+gllvm-gauss-phylo-fit-p200	G-gauss-phylo-em adjacent; non-EM fit_phylo_gaussian p=200	fit_phylo_gaussian AugmentedPhy	0.041839	NaN	julia_abs_only; label≠EM	ok	4e976e2	totoro	4

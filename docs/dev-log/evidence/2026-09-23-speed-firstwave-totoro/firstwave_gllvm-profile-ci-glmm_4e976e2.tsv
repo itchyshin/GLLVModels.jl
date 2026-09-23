@@ -1,0 +1,2 @@
+cell_id	kind	detail	wall_s	loglik	note	status	sha	host	threads
+gllvm-profile-ci-glmm	G-profile-ci; profile on small grouped Poisson	grouped_nongaussian_intervals Wald (profile not admitted)	0.009065	-303.9144915	julia_abs_only; Wald_fallback_not_profile	ok	4e976e2	totoro	4

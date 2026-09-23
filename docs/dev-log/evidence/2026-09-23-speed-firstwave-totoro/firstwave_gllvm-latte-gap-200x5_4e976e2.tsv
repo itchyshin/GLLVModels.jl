@@ -1,0 +1,2 @@
+cell_id	kind	detail	wall_s	loglik	note	status	sha	host	threads
+gllvm-latte-gap-200x5	G-latte-gap; tip HESS-class wall / banked Latte 0.015s	fit_gllvm Poisson grouped / Latte banked	0.382988	-2025.469254	julia_abs_only; labelled_ratio_vs_latte_banked=25.53x; latte_wall_s=0.015; no_default_flip	ok	4e976e2	totoro	4

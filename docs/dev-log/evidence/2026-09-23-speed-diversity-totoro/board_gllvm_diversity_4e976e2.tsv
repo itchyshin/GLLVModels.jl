@@ -1,0 +1,9 @@
+cell_id	kind	detail	wall_s	loglik	note	status	sha	host	threads
+gllvm-ordinal-unstruct-small	Ordinal unstructured Laplace; (p,n,K,C)=(6,80,1,3)	fit_ordinal_gllvm	0.144275	-512.5106066	julia_abs_only	ok	4e976e2	totoro	4
+gllvm-zip-unstruct-small	ZIP unstructured Laplace; (p,n,K)=(5,40,1)	fit_zip_gllvm	0.435780	-316.4592771	julia_abs_only	ok	4e976e2	totoro	4
+gllvm-zinb-unstruct-small	ZINB unstructured Laplace; (p,n,K)=(5,40,1)	fit_zinb_gllvm	2.733019	-252.0708569	julia_abs_only	ok	4e976e2	totoro	4
+gllvm-phylo-pois-glm-smoke	Phylo Poisson GLM augmented-state Laplace; 6 tips × n=12	fit_phylo_glm Poisson	0.018709	-140.8988374	julia_abs_only	ok	4e976e2	totoro	4
+gllvm-spatial-spde-gauss-smoke	SPDE Matérn Gaussian spatial; 8×8 mesh, M=16 sites	fit_spde_gaussian	0.140710	-6.332259565	julia_abs_only	ok	4e976e2	totoro	4
+gllvm-concurrent-pois-small	Concurrent (constrained) Poisson LV; (p,n,q,K)=(5,40,2,1)	fit_concurrent_gllvm Poisson	0.252436	-272.1065231	julia_abs_only	ok	4e976e2	totoro	4
+gllvm-missing-gauss-mask	Gaussian GLLVM with ~10% missing mask; (p,n,K)=(8,60,2)	fit_gaussian_gllvm mask	0.027699	-550.0729891	julia_abs_only	ok	4e976e2	totoro	4
+gllvm-profile-ci-medium	Profile CI beta[1] Poisson; (p,n,K)=(12,50,1)	confint profile beta[1]	3.845209	-753.7115249	julia_abs_only; larger than gllvm-profile-ci-small	ok	4e976e2	totoro	4
