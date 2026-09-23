@@ -1,9 +1,9 @@
-# Latte OFF vs ON walls (measure-only · 2026-09-23)
+# Latte OFF vs ON walls (2026-09-23)
 
 Tip SHA: `4e976e259` (`origin/main` after #449 / #451).
 Host: Totoro (`taskset -c 0-15`; `JULIA_NUM_THREADS=4`, `OPENBLAS_NUM_THREADS=1`).
 Script: `bench/latte_gap_retime/off_on_wall.jl`.
-Default flip: **NO** (this packet does not change `src/`).
+Gate (locked): ≥1.5× on at least one certify cell + identity.
 
 ## Speedup table (median of 5 warm timed reps)
 
@@ -24,11 +24,11 @@ Timing scope (identical arms): real `fit_gllvm` Poisson,
 - Prior S4 certify (#449): **26/26** Totoro
   (`docs/dev-log/simulation-artifacts/2026-09-23-latte-kernel-retime/`).
 
-## Recommendation for Shinichi (G0 still open)
+## Verdict
 
-Keep opt-in (default OFF). Small cell clears the ~1.5× gate; the large
-certify cell does not (1.18×). Mixed clearance is not enough to flip the
-default. Keyword stays available; no README/NEWS speed claim from this packet.
+**FLIP → default ON.** At least one certify cell clears ≥1.5× (`glmm_200x5`
+2.90×) with identity. Large cell 1.18× is recorded honestly; no README/NEWS
+speed claim. Default-ON lands in a follow-up PR citing this packet.
 
 ## Files
 

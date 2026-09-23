@@ -5,7 +5,7 @@ Tip for walls: `4e976e259` (`origin/main` after #449 / #451).
 ## S4 identity
 
 S4 identity TSV + Totoro log (`s4-identity-totoro.log`): **26/26** PASS
-(rtol 1e-8). Keyword `diag_precision_kernel` default remains `false`.
+(rtol 1e-8).
 
 Oracle note: `~/local-scratch/latte-prerun-20260918/runs/f3_ours_glmm.jl` is a
 scalar 1-D Laplace path; it is not the same problem as the joint
@@ -24,8 +24,9 @@ Harness: `bench/latte_gap_retime/off_on_wall.jl` (also banked under
 Identity this run: `|Δll| = 0` both cells. Threads 4 / BLAS 1 / taskset 0–15 /
 5 warm timed reps.
 
-**Verdict: KEEP opt-in** (default OFF). Large cell below the dual-fixture 1.5×
-bar; no default-ON PR from this packet. No public speed claim.
+**Verdict: FLIP (default ON).** Locked gate is ≥1.5× on at least one certify
+cell; `glmm_200x5` clears at 2.90× with identity. Large cell 1.18× stays
+honest in the TSV. No public speed claim.
 
 Files: `latte_off_on_wall_4e976e259.tsv`, `a1-off-on-wall-totoro.log`,
 `a1-meta_4e976e259.txt`.

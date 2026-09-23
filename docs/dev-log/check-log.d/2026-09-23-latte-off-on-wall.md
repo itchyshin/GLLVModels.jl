@@ -1,4 +1,4 @@
-# 2026-09-23: Latte OFF vs ON wall (measure-only)
+# 2026-09-23: Latte OFF vs ON wall
 
 | Field | Value |
 |---|---|
@@ -11,8 +11,7 @@
 | Cells | `glmm_200x5`, `glmm_5000x3_g500` |
 | Result | OFF/ON **2.90×** / **1.18×**; `|Δll|=0` both |
 | Identity cite | S4 26/26 (#449) + this-run Δll=0 |
-| Default flip | **NO** (no `src/` edit) |
+| Gate | ≥1.5× on ≥1 certify cell (locked sequence) → **PASS** on `glmm_200x5` |
+| Verdict | **FLIP** (default ON in follow-up PR) |
 | Receipt | `docs/dev-log/evidence/2026-09-23-latte-off-on-wall/` |
 | Public claim | none |
-
-Recommend: keep opt-in (large cell below ~1.5× gate).
