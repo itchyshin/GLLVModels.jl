@@ -1,0 +1,15 @@
+========================================================================
+fixture=glmm_200x5  size=1x1000  REPS=5  threads=4 blas=1
+identity: ll_off=-2025.469254255519 ll_on=-2025.469254255519 |Δll|=0.000e+00 |Δll|/max=0.000e+00
+wall_off_median=0.587371  wall_on_median=0.202824  speedup_off/on=2.896×
+reps_off=0.590648,0.587371,1.0654,0.498253,0.500448
+reps_on=0.349813,0.202824,0.232678,0.177924,0.179394
+========================================================================
+fixture=glmm_5000x3_g500  size=3x5000  REPS=5  threads=4 blas=1
+identity: ll_off=-32523.622573080604 ll_on=-32523.622573080604 |Δll|=0.000e+00 |Δll|/max=0.000e+00
+wall_off_median=10.879144  wall_on_median=9.244865  speedup_off/on=1.177×
+reps_off=10.886377,12.476103,10.635482,9.886909,10.879144
+reps_on=9.598168,9.244865,8.90007,9.291888,9.027247
+WROTE /home/snakagaw/local-scratch/lanes/GLLVM.jl-latte-retime-20260923/docs/dev-log/evidence/2026-09-23-latte-off-on-wall/latte_off_on_wall_4e976e259.tsv
+SUMMARY glmm_200x5: off=0.5874s on=0.2028s speedup=2.896× |Δll|/max=0.000e+00
+SUMMARY glmm_5000x3_g500: off=10.8791s on=9.2449s speedup=1.177× |Δll|/max=0.000e+00
