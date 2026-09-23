@@ -20,11 +20,11 @@ No default flip. No merge of a default-ON PR.
 
 3. Identity: `|Δll|=0` on both cells; cite existing S4 **26/26**.
 4. Receipts under `docs/dev-log/evidence/2026-09-23-latte-off-on-wall/`.
-5. Harness only: `bench/latte_gap_retime/` (no `src/`).
+5. Bench script only: `bench/latte_gap_retime/` (no `src/`).
 
 ## Recommendation
 
-**Keep opt-in (default OFF).** Gate ~≥1.5× clears on the small cell only.
+Keep opt-in (default OFF). Gate ~≥1.5× clears on the small cell only.
 Large cell 1.18× is below the dual-fixture bar.
 
 ## Rose

@@ -2,7 +2,7 @@
 
 Tip SHA: `4e976e259` (`origin/main` after #449 / #451).
 Host: Totoro (`taskset -c 0-15`; `JULIA_NUM_THREADS=4`, `OPENBLAS_NUM_THREADS=1`).
-Harness: `bench/latte_gap_retime/off_on_wall.jl`.
+Script: `bench/latte_gap_retime/off_on_wall.jl`.
 Default flip: **NO** (this packet does not change `src/`).
 
 ## Speedup table (median of 5 warm timed reps)
@@ -26,7 +26,7 @@ Timing scope (identical arms): real `fit_gllvm` Poisson,
 
 ## Recommendation for Shinichi (G0 still open)
 
-**Keep opt-in (default OFF).** Small cell clears the ~1.5× gate; the large
+Keep opt-in (default OFF). Small cell clears the ~1.5× gate; the large
 certify cell does not (1.18×). Mixed clearance is not enough to flip the
 default. Keyword stays available; no README/NEWS speed claim from this packet.
 

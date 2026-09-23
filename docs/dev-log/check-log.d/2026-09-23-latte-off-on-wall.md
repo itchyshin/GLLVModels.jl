@@ -1,4 +1,4 @@
-# 2026-09-23 — Latte OFF vs ON wall (measure-only)
+# 2026-09-23: Latte OFF vs ON wall (measure-only)
 
 | Field | Value |
 |---|---|
@@ -15,4 +15,4 @@
 | Receipt | `docs/dev-log/evidence/2026-09-23-latte-off-on-wall/` |
 | Public claim | none |
 
-Recommend: **keep opt-in** (large cell below ~1.5× gate).
+Recommend: keep opt-in (large cell below ~1.5× gate).
