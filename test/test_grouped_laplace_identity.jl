@@ -259,9 +259,15 @@ function run_identity_checks()
                        "the CHOLMOD symbolic-reuse change has not landed yet")
     else
         # FD gradient path: the S7b pin, on the exact path origin/main took.
+        # Pin `diag_precision_kernel=false`: Latte A1 default-ON also turns on
+        # `reuse_identical_hf_ho`, which shares Fisher+observed into one factor
+        # and breaks the CHOLMOD `fresh == 2*calls` invariant this block owns.
+        # Identity of the fitted answer under default-ON is covered elsewhere
+        # (test_latte_kernel_identity.jl); this block stays on the CHOLMOD path.
         GLLVModels._grouped_chol_stats_reset!()
         GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms, unit = group,
-            warm_start_inner = false, analytic_gradient = false, moment_start = false)
+            warm_start_inner = false, analytic_gradient = false, moment_start = false,
+            diag_precision_kernel = false)
         stats = GLLVModels._grouped_chol_stats()
         # D-277: the exact count is NOT asserted. It encodes the dependency set
         # as well as the claim: measured 2026-09-22, resolving this same file's
@@ -293,7 +299,8 @@ function run_identity_checks()
         # re-derived, not copied back in.
         GLLVModels._grouped_chol_stats_reset!()
         GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms, unit = group,
-            warm_start_inner = false, analytic_gradient = true, moment_start = false)
+            warm_start_inner = false, analytic_gradient = true, moment_start = false,
+            diag_precision_kernel = false)
         stats_an = GLLVModels._grouped_chol_stats()
         # BOUND, not a pin: the failure this must catch is a silent fall back to
         # the FD path, which returns the count to 118 and preserves the answer,
@@ -311,7 +318,8 @@ function run_identity_checks()
         # optimiser path and must be re-derived, never copied back in.
         GLLVModels._grouped_chol_stats_reset!()
         GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms, unit = group,
-            warm_start_inner = false, analytic_gradient = false, moment_start = true)
+            warm_start_inner = false, analytic_gradient = false, moment_start = true,
+            diag_precision_kernel = false)
         stats_ms = GLLVModels._grouped_chol_stats()
         # D-277 again, and this one states the claim the pin only implied: the
         # moment start EXISTS to reach the optimum in fewer objective calls than
@@ -325,7 +333,8 @@ function run_identity_checks()
 
         GLLVModels._grouped_chol_stats_reset!()
         GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms, unit = group,
-            warm_start_inner = false, analytic_gradient = true, moment_start = true)
+            warm_start_inner = false, analytic_gradient = true, moment_start = true,
+            diag_precision_kernel = false)
         stats_ms_an = GLLVModels._grouped_chol_stats()
         # BOUND, not a pin, for the same reason as the analytic block above: the
         # failure to catch is a silent fall back to finite differences, which
