@@ -1,4 +1,4 @@
-# 2026-09-23 — GLLVM speed-board diversity Totoro (8 new kinds)
+# 2026-09-23: GLLVM speed-board diversity Totoro (8 new kinds)
 
 | Field | Value |
 |---|---|
