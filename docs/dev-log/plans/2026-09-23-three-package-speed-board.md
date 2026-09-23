@@ -1,6 +1,6 @@
 # End-of-arc speed board — three packages (inventory + cell matrix)
 
-**Status:** GLLVM **10/10** `has_receipt` (PROFILE_CI banked Totoro @ `8d58a0c`). DRM/H² filled earlier 2026-09-23. Soft-owed: exact Aug-24 DRM H2H re-anchor (Totoro in flight; drmTMB already DRModels-aware).
+**Status:** GLLVM **10/10** `has_receipt` (PROFILE_CI in #451). DRM **10/10** incl. Aug-24 H2H re-anchor Totoro (locscale 43.4× vs drmTMB 0.7.1; relmat Julia abs + Δll; TMB wall load-fenced). H² **12/12**. Soft-owed H2H **DONE**.
 **Sibling plans:** `2026-09-23-ultra-plan-three-package-speed.md` (Q1 verdict + Phases 0–2), `2026-09-23-ultra-plan-next-after-448.md` (GLLVM Latte arc).
 **Thread discipline (standing):** Mac Studio lanes measure at `JULIA_NUM_THREADS=4` + `OPENBLAS_NUM_THREADS=1` unless a receipt says otherwise. Totoro H² selinv cells used `threads=1`. Do not mix regimes in one speedup column.
 
@@ -72,8 +72,8 @@ Paths are relative to the owning repo root (lane or Dropbox twin). Absolute lane
 | DRModels | `drm-gauss-q4-phylo-p100` | Gaussian q=4 phylo ML; p=100 | `bench/profile_q4_sections.jl` | `a734d2b90` (S3 bank) | `cf058168b` (#781 merge) | 0.874 s | 0.976 s | ~0.90× (no gain) | Julia-vs-Julia same DGP; chol fallbacks 0; evidence `q4_sections_cf058168b.tsv` + `…a734d2b90.tsv` | `has_receipt` |
 | DRModels | `drm-gauss-q4-phylo-p1000` | Gaussian q=4 phylo; p=1,000 | same | `a734d2b90` | `cf058168b` | 8.331 s | 10.375 s | ~0.80× (no gain) | Julia-vs-Julia; speed6 reuse = identity on this grid | `has_receipt` |
 | DRModels | `drm-gauss-q4-phylo-p5000` | Gaussian q=4 phylo; p=5,000 | same | `a734d2b90` | tip abs Totoro `12ee8a8c2`; paired bank `9d709f008` | 38.772 s | tip Totoro **82.4455 s**; paired after 42.700 s | ~0.91× paired (no gain); tip abs n/a cross-host | Julia-vs-Julia paired on speed6 bank; tip abs Totoro JULIA_NUM_THREADS=4; evidence `docs/dev-log/evidence/2026-09-23-q4-p5000-totoro/` | `has_receipt` (paired + tip abs Totoro) |
-| DRModels | `drm-gauss-locscale-n1000` | Gaussian unstructured loc-scale; n=1000 | `bench/results/speed6_end_arc_20260923/board_julia_reanchor_4a5840c15.tsv` | 2026-08-24 H2H julia 0.002 s | `4a5840c15` tip | 0.002 s | 0.00147 s | ~1.36× | **provisional pair**: tip DGP is testlike seed 20260815, not byte-identical R H2H fixture; do not headline | `has_receipt` (tip abs) / pair provisional |
-| DRModels | `drm-gauss-relmat-G25` | Gaussian structured `relmat`; G=25 | same reanchor TSV | 2026-08-24 grid julia 0.006 s | `4a5840c15` | 0.006 s | 0.0174 s | ~0.35× | **provisional**: tip K=I+0.3 off-diag testlike, not engine-speed-grid fixture; tip absolute only is load-bearing | `has_receipt` (tip abs) / pair provisional |
+| DRModels | `drm-gauss-locscale-n1000` | Gaussian unstructured loc-scale; n=1000 | `docs/dev-log/evidence/2026-09-23-h2h-reanchor/` (Aug-24 fixture seed 20260815) | 2026-08-24 H2H julia 0.002 / tmb 0.025 s | tip Totoro `1b8e81c` + drmTMB 0.7.1 | tmb **0.024** s | julia **0.000553** s | **43.4×** vs TMB | byte-identical CSV fixtures; Δll≈0; evidence `soft_owed_h2h_combined.tsv` | `has_receipt` (vs TMB H2H) |
+| DRModels | `drm-gauss-relmat-G25` | Gaussian structured `relmat`; G=25 | `docs/dev-log/evidence/2026-09-23-h2h-reanchor/` (`mk_relmat(77)`) | 2026-08-24 grid julia 0.006 / tmb 0.110 s | tip Totoro `1b8e81c` + drmTMB 0.7.1 | tmb 8.847 s† | julia **0.000906** s | n/a quiet ×† | †TMB wall load-inflated (Totoro load~114); Julia abs + Δll≈0 load-bearing; same `mk_relmat(77)` bytes | `has_receipt` (tip abs + loglik H2H; TMB wall fenced) |
 | DRModels | `drm-bridge-gauss-locscale` | Gaussian bridge fixture n=180 | `bench/bridge_six_cell_timing.jl` (#372) | — | `cf058168b` | — | Julia 0.000446 s | 49.3× vs drmTMB 0.7.1 | **vs TMB**, not Julia-vs-Julia; sibling end-arc receipt | `has_receipt` (vs TMB) |
 | DRModels | `drm-bridge-nbinom2` | NB2 bridge fixture n=180 | same + plus5 | — | `cf058168b` | — | Julia 0.001149 s | 18.3× vs TMB | non-Gaussian; vs TMB | `has_receipt` (vs TMB) |
 | DRModels | `drm-bridge-poisson` | Poisson bridge fixture n=180 | `plus5` cohort | — | `cf058168b` | — | Julia 0.000235 s | 55.2× vs TMB | non-Gaussian; vs TMB | `has_receipt` (vs TMB) |
@@ -104,7 +104,7 @@ Paths are relative to the owning repo root (lane or Dropbox twin). Absolute lane
 | Package | Cells | `has_receipt` | `needs_run` | `blocked` |
 |---|---:|---:|---:|---:|
 | GLLVModels | 10 | 10 | 0 | 0 |
-| DRModels | 10 | 10 (3 Julia-vs-Julia q4 + 2 tip-abs provisional + 4 vs-TMB bridge + 1 Totoro crossed) | 0 | 0 |
+| DRModels | 10 | 10 (3 Julia-vs-Julia q4 + 2 Aug-24 H2H re-anchor + 4 vs-TMB bridge + 1 Totoro crossed) | 0 | 0 |
 | HSquared | 12 | 12 | 0 | 0 |
 | **Total** | **32** | **32** | **0** | **0** |
 
@@ -115,7 +115,7 @@ Paths are relative to the owning repo root (lane or Dropbox twin). Absolute lane
 ## 4. Gaps (what the board still owes)
 
 1. **Paired Julia-vs-Julia for DRM q4 — DONE (honest no gain).** `a734d2b90`→`cf058168b` p100/1000; p5000 paired on speed6 bank (`a734d2b90`→`9d709f008`). #781 **MERGED** `cf058168b`. Tip p5000 Totoro absolute DONE @ `12ee8a8c2` (82.4455 s).
-2. **DRM bridge cohort re-anchored vs drmTMB 0.7.1** (10 OK cells, median 18.3×) in `docs/dev-log/evidence/2026-09-23-speed6-end-arc-cells/`. Board now carries 4 vs-TMB bridge rows + 2 provisional tip-abs locscale/relmat. Exact Aug-24 H2H Julia re-anchor (byte-identical fixtures) still owed; R harness failed (`Package DRM not found` — rename to DRModels).
+2. **DRM bridge cohort re-anchored vs drmTMB 0.7.1** (10 OK cells, median 18.3×) in `docs/dev-log/evidence/2026-09-23-speed6-end-arc-cells/`. **Aug-24 H2H soft-owed DONE** Totoro: locscale 43.4× / relmat Julia abs + Δll (`docs/dev-log/evidence/2026-09-23-h2h-reanchor/`); tip drmTMB already DRModels-aware (no Package-DRM rename needed).
 3. **GLLVM unstructured + profile-CI** tip abs Totoro @ `8d58a0c94` / profile follow-up `8d58a0c` (`board_gllvm_20260923_8d58a0c94.tsv` + `board_profile_ci_8d58a0c.log`). All 10 GLLVM board cells `has_receipt`.
 4. **H² end-to-end fit wall** — board `needs_run` animal/PEV cells flipped `has_receipt` via #379 TSV `e05fcf0e` (gene-drop; soft hist †/‡ fenced). Totoro absolute walls for q10k/q20k banked at `101aa483` (0.0345 s / 0.0477 s). Still owed: same-DGP before/after; optional Totoro re-time of q500/q2000/PEV/multi-effect; public README/NEWS speed claim remains withheld. Projected SelectedInversion (#378) stays fenced (unwired).
 5. **Cross-package comparability.** Do not put Latte gap, TMB H2H, and selinv kernel ms in one “headline ×” without labeling comparator. Board rows already separate them in `notes`.
