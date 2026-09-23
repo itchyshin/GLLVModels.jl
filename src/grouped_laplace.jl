@@ -120,10 +120,8 @@ end
 #     (observed depends on y) so this lever stays cold there by design.
 # ---------------------------------------------------------------------------
 
-"""
-Diagonal factor for a structurally-diagonal joint precision. Used only when
-`diag_precision=true` and the sparse matrix has no off-diagonal nonzeros.
-"""
+# Diagonal factor for a structurally-diagonal joint precision. Used only when
+# diag_precision=true and the sparse matrix has no off-diagonal nonzeros.
 struct _GroupedDiagFactor
     d::Vector{Float64}
 end
@@ -163,10 +161,8 @@ function _grouped_hf_ho_identical(families::AbstractVector, link::Link)
     return all(f -> _glm_weight_matches_observed(f, link), families)
 end
 
-"""
-Factorise `A` with the diagonal fast path when `allow_diag` and `A` is
-structurally diagonal; otherwise the cached CHOLMOD path.
-"""
+# Factorise A with the diagonal fast path when allow_diag and A is structurally
+# diagonal; otherwise the cached CHOLMOD path. Comment-only (see above).
 function _grouped_factor_precision!(cache::Base.RefValue,
         A::Symmetric{Float64, <:SparseMatrixCSC{Float64, Int}};
         check::Bool = false, allow_diag::Bool = false)
