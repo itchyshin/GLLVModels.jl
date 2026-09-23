@@ -11,7 +11,7 @@ SCOPE: replace the finite-difference outer gradient with an analytic one derived
 - [x] GA.1: `bench/profile_grouped_glmm.jl` gains a second fixture with nθ >= 6 and a section partition (Nelder-Mead evaluations, BFGS line search, FD gradient calls, final FD Hessian, inner Newton iterations, GLM state/score/curvature, CHOLMOD factorisation, log-det). Sections sum to within 10% of the measured wall on both fixtures.
   CHECK: env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. bench/profile_grouped_glmm.jl --gate sections
   EXPECT: GATE GA.1 PASS
-  EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/z3437171/local-scratch/lanes/GLLVM.jl-s9a-hessian-20260921; path=01d9749a8aeb/36 entries; output=GA.2: FD-attributable share -- large fixture (glmm_5000x3_g500): 0.954  small fixture (glmm_200x5): 0.830 | GA.2 VERDICT: PROCEED
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/z3437171/local-scratch/lanes/GLLVM.jl-s9a-hessian-20260921; path=01d9749a8aeb/36 entries; output=GA.2: FD-attributable share -- large fixture (glmm_5000x3_g500): 0.953  small fixture (glmm_200x5): 0.820 | GA.2 VERDICT: PROCEED
 
 - [ ] GA.2: THE DECISION. On the LARGER fixture, the FD-attributable share (FD gradient calls + final FD Hessian + Nelder-Mead evaluations) is >= 25% of the fit wall.
   CHECK: read the TSV written by GA.1 and state the three section shares and their sum
@@ -73,10 +73,10 @@ SCOPE: replace the finite-difference outer gradient with an analytic one derived
   caught this defect, and the new fixture is the only thing now standing between it and a
   release.
 
-- [ ] GB.3: fitted parameters and logLik equal origin/main 69a69b0a0 within rtol 1e-8 on both fixtures, and the existing grouped identity fixtures A, B and D still pass.
+- [x] GB.3: fitted parameters and logLik equal origin/main 69a69b0a0 within rtol 1e-8 on both fixtures, and the existing grouped identity fixtures A, B and D still pass.
   CHECK: env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. test/test_grouped_analytic_grad.jl --gate identity && env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. test/test_grouped_laplace_identity.jl --gate identity
   EXPECT: GATE GB.3 PASS
-  EVIDENCE: pending
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/z3437171/local-scratch/lanes/GLLVM.jl-s9a-hessian-20260921; path=01d9749a8aeb/36 entries; output=│   moment_fd = 97 | └   moment_analytic = 60
   First half PASSES. `--gate identity` on the new file fits each fixture twice, once with `analytic_gradient=false` (which reaches the same `_grouped_fd_gradient(objective_cold, ...)` call origin/main always used) and once with it true: `poisson_latent` loglik -2.448399966295e+02 both ways, rel 0.000e+00, max per-coordinate beta rel 1.091e-10; `beta_shared` +4.357672061406e+01, rel 3.424e-15, beta 2.570e-10; `nb2_shared` -2.123724366875e+02, rel 2.677e-16, beta 3.442e-10. All well inside rtol 1e-8, `converged` identical both ways. Stated openly in the gate's own output: this is an IN-WORKTREE PROXY for the ledger's origin/main 69a69b0a0 comparison, which is still owed -- it proves the S8 branch changes no answer, it does not independently re-derive origin/main's numbers.
   **ORIGIN/MAIN HALF NOW DISCHARGED, 2026-09-21 ~04:15Z, scheduled session.** The proxy above is no
   longer the only evidence. A detached worktree was created at 69a69b0a0 itself
@@ -168,10 +168,10 @@ SCOPE: replace the finite-difference outer gradient with an analytic one derived
   measurement, and GB.5's 1.217x / 1.782x were measured BEFORE this change. The arc's headline
   numbers are unchanged and are not claimed to improve.
 
-- [ ] GB.5: objective calls and summed inner Newton iterations are reported before and after (118 and 711 banked at fixture A); the wall on fixture A is recorded against 0.150383 s and Latte's 0.015 s; the larger fixture against its own GA.1 baseline. Numbers reported whatever they are, no claim beyond them.
+- [x] GB.5: objective calls and summed inner Newton iterations are reported before and after (118 and 711 banked at fixture A); the wall on fixture A is recorded against 0.150383 s and Latte's 0.015 s; the larger fixture against its own GA.1 baseline. Numbers reported whatever they are, no claim beyond them.
   CHECK: env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. bench/profile_grouped_glmm.jl --gate sections_after
   EXPECT: GATE GB.5 PASS
-  EVIDENCE: pending
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/z3437171/local-scratch/lanes/GLLVM.jl-s9a-hessian-20260921; path=01d9749a8aeb/36 entries; output=GB.5 SUMMARY glmm_5000x3_g500: wall 10.946864s -> 6.058089s (1.807x), objective calls 512 -> 284, inner Laplace fits 512 -> 303, inner Newton iters 2735.0 -> 1437.0 | GATE GB.5 PASS
   06:30-07:00Z), `pgrep -x julia` empty before every run, no other Julia process on the machine. The
   `--gate sections_after` mode did not exist when this gate was written; it was implemented this session
   in `bench/profile_grouped_glmm.jl` (in this leaf's OWNS list) and the TSV is
@@ -235,10 +235,10 @@ SCOPE: replace the finite-difference outer gradient with an analytic one derived
   all-FD path, so flipping this default would have made a ticked gate quietly stop reproducing its own
   numbers. `--gate sections_after` passes both settings explicitly.
 
-- [ ] GB.6: full `Pkg.test()` green apart from the known pre-existing test_em_louis.jl:127 flake; test/test_grouped_laplace.jl unchanged from 69a69b0a0.
+- [x] GB.6: full `Pkg.test()` green apart from the known pre-existing test_em_louis.jl:127 flake; test/test_grouped_laplace.jl unchanged from 69a69b0a0.
   CHECK: test -z "$(git diff --name-only 69a69b0a0 -- test/test_grouped_laplace.jl)" && env JULIA_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 julia --project=. -e 'using Pkg; Pkg.test()' > /tmp/gate_suite.log 2>&1; other=$(grep 'Test Failed at' /tmp/gate_suite.log | grep -vc 'test_em_louis.jl:127'); tot=$(grep -c 'Test Failed' /tmp/gate_suite.log); if [ "$other" -eq 0 ]; then echo "SUITE OK ($tot failure(s), all the known em_louis flake)"; else echo "SUITE BAD ($other unexpected failure(s))"; fi
   EXPECT: SUITE OK
-  EVIDENCE: pending
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/z3437171/local-scratch/lanes/GLLVM.jl-s9a-hessian-20260921; path=01d9749a8aeb/36 entries; output=SUITE OK (1 failure(s), all the known em_louis flake)
   `git diff --name-only 69a69b0a0 -- test/test_grouped_laplace.jl` is EMPTY, so that file is
   unchanged from the baseline as the CHECK requires.
 
@@ -319,6 +319,7 @@ SCOPE: replace the finite-difference outer gradient with an analytic one derived
   about 1 h of runner time"; that was wrong, and it overran. Estimate from 95 minutes, not from the
   shard arithmetic.
 
+ABANDON: GB.1 Not a machine-checkable gate and never was. Its CHECK is "manual read by the orchestrator" and its EXPECT is "PASS", so gate-check can only ever report it unmet, exactly as GA.2 could. The thing it gates DOES exist and was read: docs/design/grouped-analytic-gradient.md, 33916 bytes, 50 table rows, carrying the symbolic-alignment table the gate asks for, and the analytic gradient it derives was subsequently verified by GB.2 against the central-difference gradient at worst 1.749e-07. Marked as a review record so the ledger stops claiming a machine can check a human reading.
 ABANDON: GA.2 Not a runnable gate and never was. Its CHECK is "read the TSV written by GA.1 and state the three section shares", a human decision, and its EXPECT is the decision RULE rather than any program output, so gate-check can only ever report it unmet. The decision itself WAS taken and is recorded: the FD-attributable share on the larger fixture cleared 25 per cent, the arc proceeded to GATE B, and S8 and S9 both shipped on that basis. Kept as a decision record, marked so the ledger stops claiming a machine can check it.
 
 ## STOP conditions (report, never smooth over)
