@@ -41,6 +41,19 @@
 - `…/totoro-reverify.log`
 - `…/watch.log`
 
+## Triage (2026-09-23, post-bank)
+
+**Verdict: REGRESSION** (identity). Not tip-stale for engine; not timeout-only.
+
+| Class | Gates |
+|---|---|
+| Real tip regression | **GB.3**, **G9.1** (`GATE GB.3 FAIL`); **G9.3** / **G9c.2** (`forced=0` / `calls=0` — same kit, may share root) |
+| TIMEOUT starvation | GB.6, G9.8, G9c.6 (`Pkg.test` SIGKILL at 7200s) |
+| EXPECT drift / broken CHECK | GA.1, GB.1, G9.9, G9c.3, G9c.4, G9c.5 |
+| Wrong tip vs `36479c28`+ | **No** — `8d58a0c94..origin/main` has **0** `src/`/`test/` commits |
+
+Next: [#458](https://github.com/itchyshin/GLLVModels.jl/issues/458) on GB.3 / G9.1 (reproducer: `test/test_grouped_analytic_grad.jl --gate identity`). Do not demote Latte/NM. Do not re-run full kit until identity is green.
+
 ## Rose fence
 
 Does **not** close the S8/S9 ledger. Does **not** flip Latte defaults ON.
