@@ -459,6 +459,7 @@ function gate_identity()
     println("  leaf-S9c also checks the FULL theta vector, not just beta: `fitted parameters`")
     println("  means every coordinate. Any coordinate over the bound is adjudicated by measuring")
     println("  whether the objective moves along it (`_s9c_flat_direction_check`), never waved through.")
+    println("  Beta over-rtol alone is NOT a FAIL when those beta coordinates are flat (#458).")
     ok = true
     for (name, st, _note, call) in _fixtures()
         cluster = _s9c_call_cluster(call)
@@ -480,10 +481,17 @@ function gate_identity()
             name, fit_fd.loglik, fit_an.loglik, dll)
         @printf("      max per-coordinate beta rel diff = %.3e   max per-coordinate theta rel diff = %.3e   converged fd=%s analytic=%s\n",
             dbeta, dtheta, fit_fd.converged, fit_an.converged)
+        # Beta is inside `parameters`. A hard `dbeta <= RTOL_IDENTITY` here used to
+        # REJECT fixtures whose over-tolerance beta coordinates `_s9c_theta_verdict`
+        # had already adjudicated as FLAT (same likelihood). That double-check is
+        # what failed `poisson_percoord` on Julia 1.12 x64 / Totoro (#458) while
+        # aarch64 stayed under the bare rtol — loglik already agreed at ~1e-13.
+        # Authority is dll + theta-with-flatness + matching converged flags.
         tv = _s9c_theta_verdict(st, fit_fd, fit_an, fit_fd.parameter_labels)
-        pass = dll <= RTOL_IDENTITY && dbeta <= RTOL_IDENTITY && tv.pass &&
+        pass = dll <= RTOL_IDENTITY && tv.pass &&
             fit_fd.converged == fit_an.converged
-        pass || @printf("      theta offenders not explained by flatness: %s\n", string(tv.offenders))
+        !tv.pass && @printf("      theta offenders not explained by flatness: %s\n",
+            string(tv.offenders))
         println(pass ? "  PASS $name" : "  FAIL $name")
         ok &= pass
     end
@@ -1112,16 +1120,17 @@ coordinate adjudicated by `_s9c_flat_direction_check` rather than waved through.
 """
 function _s9c_theta_verdict(st, fit_ref, fit_other, labels)
     ref, oth = fit_ref.parameters, fit_other.parameters
-    offenders = Int[]
+    over = Int[]
     for k in eachindex(ref)
-        abs(oth[k] - ref[k]) / max(abs(ref[k]), 1.0) <= RTOL_IDENTITY || push!(offenders, k)
+        abs(oth[k] - ref[k]) / max(abs(ref[k]), 1.0) <= RTOL_IDENTITY || push!(over, k)
     end
-    flat_ok = true
-    for k in offenders
+    offenders = Int[]
+    for k in over
         lab = k <= length(labels) ? labels[k] : "coord $k"
         chk = _s9c_flat_direction_check(st, ref, oth, k, lab)
-        flat_ok &= chk.flat
+        chk.flat || push!(offenders, k)
     end
+    flat_ok = isempty(offenders)
     return (; pass = flat_ok, offenders, flat_ok)
 end
 
@@ -1266,8 +1275,10 @@ function gate_mixed()
         dbeta = maximum(abs.(fit_mixed.beta .- fit_ref.beta) ./ max.(abs.(fit_ref.beta), 1.0))
         @printf("  %-16s analytic-gradient calls=%d forced-failures=%d  loglik ref=%.12e mixed=%.12e rel=%.3e  beta_rel=%.3e  converged ref=%s mixed=%s\n",
             name, total_calls, forced, fit_ref.loglik, fit_mixed.loglik, dll, dbeta, fit_ref.converged, fit_mixed.converged)
+        # Same authority as `gate_identity`: hard `dbeta` would defeat flat
+        # adjudication on beta coordinates already covered by `tv` (#458).
         tv = _s9c_theta_verdict(st, fit_ref, fit_mixed, fit_ref.parameter_labels)
-        pass = forced > 0 && dll <= RTOL_IDENTITY && dbeta <= RTOL_IDENTITY &&
+        pass = forced > 0 && dll <= RTOL_IDENTITY &&
             tv.pass && fit_ref.converged == fit_mixed.converged
         pass || @printf("  FAIL %s: forced=%d (need >0) dll=%.3e dbeta=%.3e theta offenders=%s (need <= %.1e)\n",
             name, forced, dll, dbeta, string(tv.offenders), RTOL_IDENTITY)
