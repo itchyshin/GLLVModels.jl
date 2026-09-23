@@ -20,12 +20,12 @@ No default flip. No merge of a default-ON PR.
 
 3. Identity: `|Δll|=0` on both cells; cite existing S4 **26/26**.
 4. Receipts under `docs/dev-log/evidence/2026-09-23-latte-off-on-wall/`.
-5. Harness only: `bench/latte_gap_retime/` (no `src/`).
+5. Bench harness: `bench/latte_gap_retime/` (no `src/`).
 
 ## Verdict
 
-**KEEP opt-in (default OFF).** Shinichi G0 (2026-09-23): large certify cell
-**1.18×** fails the dual-fixture ~1.5× bar even though `glmm_200x5` clears at
+Verdict: KEEP opt-in (default OFF). Shinichi G0 (2026-09-23): large certify cell
+1.18× fails the dual-fixture ~1.5× bar even though `glmm_200x5` clears at
 2.90×. Mixed clearance is not enough to flip the default. Keyword stays
 available; no default-ON PR.
 

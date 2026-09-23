@@ -26,7 +26,7 @@ Timing scope (identical arms): real `fit_gllvm` Poisson,
 
 ## Verdict (Shinichi G0 · 2026-09-23)
 
-**KEEP opt-in (default OFF).** Small cell clears ~1.5×; the large certify cell
+Verdict: KEEP opt-in (default OFF). Small cell clears ~1.5×; the large certify cell
 does not (1.18×). Mixed clearance is not enough to flip the default. Keyword
 stays available; no default-ON PR; no README/NEWS speed claim.
 
