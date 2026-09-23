@@ -1,0 +1,2 @@
+cell_id	kind	detail	wall_s	loglik	note	status	sha	host	threads
+gllvm-missing-gauss-mask	Gaussian GLLVM with ~10% missing mask; (p,n,K)=(8,60,2)	fit_gaussian_gllvm mask	0.027699	-550.0729891	julia_abs_only	ok	4e976e2	totoro	4
