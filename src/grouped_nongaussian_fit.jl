@@ -452,7 +452,7 @@ function _grouped_nongaussian_objective(data::Matrix{Float64}, trials::Matrix{Fl
         D::Matrix{Float64}, terms::Vector{GroupingTerm},
         incidences::Vector{SparseMatrixCSC{Float64,Int}}, kind::Symbol;
         dispersion_mode::Symbol=:trait, inner_maxiter::Integer, inner_tol::Float64,
-        warm_start_inner::Bool=false, diag_precision_kernel::Bool=false)
+        warm_start_inner::Bool=false, diag_precision_kernel::Bool=true)
     p, n = size(data)
     q = size(D, 2)
     mode = _grouped_nongaussian_internal_dispersion_mode(kind, dispersion_mode)
@@ -518,7 +518,7 @@ function _grouped_analytic_loglik_gradient(theta::AbstractVector{<:Real},
         data::Matrix{Float64}, trials::Matrix{Float64}, D::Matrix{Float64},
         terms::Vector{GroupingTerm}, incidences::Vector{SparseMatrixCSC{Float64,Int}},
         kind::Symbol; dispersion_mode::Symbol, inner_maxiter::Integer, inner_tol::Real,
-        diag_precision_kernel::Bool=false)
+        diag_precision_kernel::Bool=true)
     p, n = size(data)
     q = size(D, 2)
     mode = _grouped_nongaussian_internal_dispersion_mode(kind, dispersion_mode)
@@ -639,7 +639,7 @@ function _grouped_analytic_gradient(theta::AbstractVector{<:Real},
         data::Matrix{Float64}, trials::Matrix{Float64}, D::Matrix{Float64},
         terms::Vector{GroupingTerm}, incidences::Vector{SparseMatrixCSC{Float64,Int}},
         kind::Symbol; dispersion_mode::Symbol, inner_maxiter::Integer, inner_tol::Real,
-        diag_precision_kernel::Bool=false)
+        diag_precision_kernel::Bool=true)
     gradL = _grouped_analytic_loglik_gradient(theta, data, trials, D, terms, incidences, kind;
         dispersion_mode=dispersion_mode, inner_maxiter=inner_maxiter, inner_tol=inner_tol,
         diag_precision_kernel=diag_precision_kernel)
@@ -714,12 +714,11 @@ gradient (`nθ` gradient calls); `:fd` is the pre-S9
 oracle `:grad_fd` is checked against and the fallback if `:grad_fd` fails at
 the final estimate. A full analytic Hessian is out of scope.
 
-`diag_precision_kernel` (Latte-kernel S3, default `false`): when `true`, the
+`diag_precision_kernel` (Latte-kernel S3, default `true`): when `true`, the
 inner `joint_grouped_laplace_loglik` may (a) skip a second factorisation when
 Fisher and observed weights are identical for the fitted family/link, and
 (b) use an O(m) diagonal factor mid-loop when the precision is structurally
-diagonal. Default stays off until identity gates pass; do not treat this as
-a public speed claim.
+diagonal. Pass `false` to opt out.
 """
 function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
         unit=nothing, unit_obs=nothing, cluster=nothing, cluster2=nothing,
@@ -733,7 +732,7 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
         nelder_mead_g_tol::Real=g_tol,
         moment_start::Bool=false,
         hessian::Symbol=(analytic_gradient ? :grad_fd : :fd),
-        diag_precision_kernel::Bool=false)
+        diag_precision_kernel::Bool=true)
     p, n = size(Y)
     p > 0 && n >= 2 || throw(ArgumentError("grouped fitting needs at least one trait and two observations"))
     all(isfinite, Y) || throw(ArgumentError("grouped fitting requires finite complete responses"))
