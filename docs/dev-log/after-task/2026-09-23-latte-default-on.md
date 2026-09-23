@@ -26,4 +26,5 @@ only.
 
 ## Owner note
 
-DRAFT PR only — awaits Shinichi G0 before any merge. Do not merge from this lane.
+Standing approval for this goal: merge when Julia/Documenter green
+(Frozen-R advisory may stay red). Evidence walls in #452.
