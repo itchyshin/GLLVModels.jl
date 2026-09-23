@@ -107,6 +107,72 @@ function _grouped_cached_cholesky!(cache::Base.RefValue,
     return factor
 end
 
+# ---------------------------------------------------------------------------
+# Latte-kernel levers (S3 after #448; default OFF). Two independent opts:
+#   * `diag_precision` — when Hf/Ho are structurally diagonal (simple random-
+#     intercept GLMM), solve and logdet with an O(m) diagonal factor instead of
+#     CHOLMOD mid-loop. The returned `.factor` is still a CHOLMOD Factor so the
+#     S8 analytic-gradient path (`takahashi_selinv`) is unchanged.
+#   * `reuse_identical_hf_ho` — when Fisher weights already equal observed
+#     (`_glm_weight_matches_observed`, e.g. Poisson+LogLink), build one
+#     precision and share one Cholesky cache instead of factorising Hf and Ho
+#     as separate matrices with identical values. NB2+LogLink does NOT match
+#     (observed depends on y) so this lever stays cold there by design.
+# ---------------------------------------------------------------------------
+
+# Diagonal factor for a structurally-diagonal joint precision. Used only when
+# diag_precision=true and the sparse matrix has no off-diagonal nonzeros.
+struct _GroupedDiagFactor
+    d::Vector{Float64}
+end
+
+LinearAlgebra.issuccess(F::_GroupedDiagFactor) =
+    all(x -> isfinite(x) && x > 0.0, F.d)
+LinearAlgebra.logdet(F::_GroupedDiagFactor) = sum(log, F.d)
+Base.:\(F::_GroupedDiagFactor, b::AbstractVector{<:Real}) = Float64.(b) ./ F.d
+
+function _grouped_sparse_is_diagonal(S::SparseMatrixCSC{Float64, Int})
+    n = size(S, 1)
+    size(S, 2) == n || return false
+    @inbounds for j in 1:n
+        for p in S.colptr[j]:(S.colptr[j + 1] - 1)
+            S.rowval[p] == j || return false
+        end
+    end
+    return true
+end
+
+function _grouped_diag_factor(S::SparseMatrixCSC{Float64, Int})
+    n = size(S, 1)
+    d = Vector{Float64}(undef, n)
+    @inbounds for j in 1:n
+        dj = 0.0
+        for p in S.colptr[j]:(S.colptr[j + 1] - 1)
+            S.rowval[p] == j && (dj = S.nzval[p])
+        end
+        d[j] = dj
+    end
+    return _GroupedDiagFactor(d)
+end
+
+_grouped_hf_ho_identical(family, link::Link) = _glm_weight_matches_observed(family, link)
+function _grouped_hf_ho_identical(families::AbstractVector, link::Link)
+    isempty(families) && return false
+    return all(f -> _glm_weight_matches_observed(f, link), families)
+end
+
+# Factorise A with the diagonal fast path when allow_diag and A is structurally
+# diagonal; otherwise the cached CHOLMOD path. Comment-only (see above).
+function _grouped_factor_precision!(cache::Base.RefValue,
+        A::Symmetric{Float64, <:SparseMatrixCSC{Float64, Int}};
+        check::Bool = false, allow_diag::Bool = false)
+    S = parent(A)
+    if allow_diag && _grouped_sparse_is_diagonal(S)
+        return _grouped_diag_factor(S)
+    end
+    return _grouped_cached_cholesky!(cache, A; check = check)
+end
+
 """
     grouped_trait_design(incidence, trait_factors) -> SparseMatrixCSC
 
@@ -207,7 +273,8 @@ end
 
 function _joint_grouped_components(family, y::Vector{Float64}, n::Vector{Float64},
         X::Matrix{Float64}, beta::Vector{Float64}, W::SparseMatrixCSC{Float64, Int},
-        link::Link, b::Vector{Float64}; state = nothing)
+        link::Link, b::Vector{Float64}; state = nothing,
+        reuse_identical_hf_ho::Bool = false)
     current = state === nothing ? _joint_grouped_state(family, X, beta, W, link, b) : state
     current[1] === :ok || return nothing
     _, eta, mu, me = current
@@ -222,6 +289,12 @@ function _joint_grouped_components(family, y::Vector{Float64}, n::Vector{Float64
     end
     all(isfinite, score) && all(isfinite, fisher) && all(isfinite, observed) || return nothing
     Hf = sparse(W' * spdiagm(0 => fisher) * W + spdiagm(0 => ones(Float64, size(W, 2))))
+    # Keyword-gated: when Fisher ≡ observed (Poisson+LogLink), Ho is the same
+    # matrix — skip the second `W' * diag * W + I` assembly. Default OFF keeps
+    # the historical two-matrix build for bit-identity with origin/main.
+    if reuse_identical_hf_ho && _grouped_hf_ho_identical(family, link)
+        return score, Hf, Hf
+    end
     Ho = sparse(W' * spdiagm(0 => observed) * W + spdiagm(0 => ones(Float64, size(W, 2))))
     return score, Hf, Ho
 end
@@ -362,7 +435,8 @@ end
 
 """
     joint_grouped_laplace_loglik(family, y, n, X, beta, W;
-        link, maxiter=100, tol=1e-8, b_init=nothing) -> JointGroupedLaplaceResult
+        link, maxiter=100, tol=1e-8, b_init=nothing,
+        diag_precision=false, reuse_identical_hf_ho=false) -> JointGroupedLaplaceResult
 
 Compute a fixed-parameter Laplace approximation for `eta = X * beta + W * b`
 with one global `b ~ N(0, I)`.  `W` must already contain all grouped effects;
@@ -384,11 +458,19 @@ this is an identity-preserving performance lever, never a different answer —
 see `test/test_grouped_laplace_identity.jl --gate warm_identity`. A
 length mismatch against `size(W, 2)` returns `_joint_grouped_failure(:invalid_warm_start, ...)`
 rather than silently truncating or padding.
+
+`diag_precision` / `reuse_identical_hf_ho` (Latte-kernel S3, both default
+`false`): keyword-gated speed levers. OFF keeps the shipped CHOLMOD path
+bit-identical to `origin/main`. ON enables the diagonal mid-loop factor and/or
+shared Hf≡Ho assembly when `_glm_weight_matches_observed` holds (Poisson+LogLink).
+Do not flip these defaults without the S4 rtol 1e-8 NB2+phylo identity gate.
 """
 function joint_grouped_laplace_loglik(family, y::AbstractVector, n::AbstractVector,
         X::AbstractMatrix, beta::AbstractVector, W::AbstractMatrix;
         link::Link, maxiter::Integer = 100, tol::Real = 1e-8,
-        b_init::Union{Nothing,AbstractVector{<:Real}} = nothing)
+        b_init::Union{Nothing,AbstractVector{<:Real}} = nothing,
+        diag_precision::Bool = false,
+        reuse_identical_hf_ho::Bool = false)
     m = size(W, 2)
     maxiter >= 0 || return _joint_grouped_failure(:invalid_control, m)
     isfinite(tol) && tol > 0 || return _joint_grouped_failure(:invalid_control, m)
@@ -429,9 +511,11 @@ function joint_grouped_laplace_loglik(family, y::AbstractVector, n::AbstractVect
         return _joint_grouped_failure(:invalid_design, m)
 
     _GROUPED_CHOL_STATS.calls += 1
+    share_hf_ho = reuse_identical_hf_ho && _grouped_hf_ho_identical(family, link)
     ff_cache = Ref{Any}(nothing)   # Fisher-precision (Hf) factor, reused across iterations
-    ho_cache = Ref{Any}(nothing)   # observed-precision (Ho) factor, reused across iterations
-                                   # (shared by Fn mid-loop and Fo at convergence — same formula)
+    # When Hf≡Ho under the keyword, one cache serves both Fisher scoring and
+    # observed Newton / final logdet — otherwise keep the historical split.
+    ho_cache = share_hf_ho ? ff_cache : Ref{Any}(nothing)
 
     b = if b_init === nothing
         zeros(Float64, m)
@@ -445,25 +529,39 @@ function joint_grouped_laplace_loglik(family, y::AbstractVector, n::AbstractVect
         state[1] === :ok || return _joint_grouped_failure(state[1], m; iterations = iter - 1)
         q0 = _joint_grouped_logpost(family, yf, nf, Xf, betaf, Wf, link, b; state = state)
         isfinite(q0) || return _joint_grouped_failure(:nonfinite_objective, m; iterations = iter - 1)
-        parts = _joint_grouped_components(family, yf, nf, Xf, betaf, Wf, link, b; state = state)
+        parts = _joint_grouped_components(family, yf, nf, Xf, betaf, Wf, link, b;
+            state = state, reuse_identical_hf_ho = share_hf_ho)
         parts === nothing && return _joint_grouped_failure(:nonfinite_curvature, m; iterations = iter - 1)
         score, Hf, Ho = parts
         g = Wf' * score - b
         maximum(abs, g; init = 0.0) <= tol * (1 + norm(b)) && begin
+            Fo_fast = try
+                _grouped_factor_precision!(ho_cache, Symmetric(Ho); check = false,
+                    allow_diag = diag_precision)
+            catch
+                return _joint_grouped_failure(:observed_precision_factorization_failed, m;
+                    iterations = iter - 1)
+            end
+            issuccess(Fo_fast) || return _joint_grouped_failure(:observed_precision_not_pd, m; iterations = iter - 1)
+            ld = logdet(Fo_fast)
+            isfinite(ld) || return _joint_grouped_failure(:nonfinite_logdet, m; iterations = iter - 1)
+            # Always materialise a CHOLMOD Factor for `.factor` so S8's
+            # `takahashi_selinv` contract is unchanged when the mid-loop used
+            # the diagonal fast path.
             Fo = try
-                _grouped_cached_cholesky!(ho_cache, Symmetric(Ho); check = false)
+                Fo_fast isa SparseArrays.CHOLMOD.Factor{Float64} ? Fo_fast :
+                    _grouped_cached_cholesky!(ho_cache, Symmetric(Ho); check = false)
             catch
                 return _joint_grouped_failure(:observed_precision_factorization_failed, m;
                     iterations = iter - 1)
             end
             issuccess(Fo) || return _joint_grouped_failure(:observed_precision_not_pd, m; iterations = iter - 1)
-            ld = logdet(Fo)
-            isfinite(ld) || return _joint_grouped_failure(:nonfinite_logdet, m; iterations = iter - 1)
             return JointGroupedLaplaceResult(q0 - 0.5 * ld, b, Ho, ld, true, :ok,
                 iter - 1, maximum(abs, g; init=0.0), Fo)
         end
         Ff = try
-            _grouped_cached_cholesky!(ff_cache, Symmetric(Hf); check = false)
+            _grouped_factor_precision!(ff_cache, Symmetric(Hf); check = false,
+                allow_diag = diag_precision)
         catch
             return _joint_grouped_failure(:fisher_precision_factorization_failed, m;
                 iterations = iter - 1)
@@ -474,7 +572,8 @@ function joint_grouped_laplace_loglik(family, y::AbstractVector, n::AbstractVect
         # a neighbouring outer-parameter value has a perfectly regular mode.
         # Keep Fisher scoring as the positive-definite fallback away from it.
         Fn = try
-            _grouped_cached_cholesky!(ho_cache, Symmetric(Ho); check = false)
+            _grouped_factor_precision!(ho_cache, Symmetric(Ho); check = false,
+                allow_diag = diag_precision)
         catch
             nothing
         end
@@ -507,7 +606,8 @@ function joint_grouped_laplace_loglik(family, y::AbstractVector, n::AbstractVect
             if isfinite(qtrial) && qtrial < q0 &&
                     q0 - qtrial <= 32eps(Float64) * (1 + abs(q0))
                 trial_parts = _joint_grouped_components(family, yf, nf, Xf,
-                    betaf, Wf, link, trial; state=trial_state)
+                    betaf, Wf, link, trial; state=trial_state,
+                    reuse_identical_hf_ho = share_hf_ho)
                 if trial_parts !== nothing
                     trial_g = Wf' * trial_parts[1] - trial
                     roundoff_step = norm(trial_g) < norm(g)
