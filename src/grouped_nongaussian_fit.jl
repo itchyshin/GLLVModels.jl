@@ -714,13 +714,11 @@ gradient (`nθ` gradient calls); `:fd` is the pre-S9
 oracle `:grad_fd` is checked against and the fallback if `:grad_fd` fails at
 the final estimate. A full analytic Hessian is out of scope.
 
-`diag_precision_kernel` (Latte-kernel S3, default `true` after A1 walls
-2026-09-23): when `true`, the inner `joint_grouped_laplace_loglik` may (a)
-skip a second factorisation when Fisher and observed weights are identical
-for the fitted family/link, and (b) use an O(m) diagonal factor mid-loop when
-the precision is structurally diagonal. Pass `false` to opt out. Wall evidence:
-`docs/dev-log/evidence/2026-09-23-latte-off-on-wall/` (2.90× on glmm_200x5;
-large cell 1.18×). Not a public README/NEWS speed claim.
+`diag_precision_kernel` (Latte-kernel S3, default `true`): when `true`, the
+inner `joint_grouped_laplace_loglik` may (a) skip a second factorisation when
+Fisher and observed weights are identical for the fitted family/link, and
+(b) use an O(m) diagonal factor mid-loop when the precision is structurally
+diagonal. Pass `false` to opt out.
 """
 function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
         unit=nothing, unit_obs=nothing, cluster=nothing, cluster2=nothing,
