@@ -23,3 +23,5 @@ Headline walls (median of 3 warm reps):
 | `gllvm-gauss-unstruct-large` | Gaussian closed 30×100×2 | 0.0016 |
 | `gllvm-nb2-or-binom-unstruct` | NB :analytic 8×40×1 | 0.0222 |
 | `gllvm-nb2-or-binom-unstruct` | Binomial :analytic 8×40×1 | 0.0130 |
+
+| 2026-09-23 | profile-ci follow-up | Totoro `GLLVM_SPEED_BENCH_PROFILE_CI=1 GRID=8,40,1` @ `8d58a0c` | Poisson profileCI 1.5809 s; NB 2.5044; Binom 1.9279; board 10/10 |

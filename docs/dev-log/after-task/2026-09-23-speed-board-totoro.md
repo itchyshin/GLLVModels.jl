@@ -21,16 +21,18 @@ no heavy local Julia. No Latte default-ON.
    (10.84x vs finite).
 4. Totoro cell 2 (`30,100,2`): Gaussian 0.0016 s; NB analytic 1.6035 s;
    Binomial analytic 2.5181 s.
-5. Board flipped three cells to `has_receipt`. `gllvm-profile-ci-small`
-   remains `needs_run`.
-6. No README/NEWS speed claim. No `diag_precision_kernel` default flip.
+5. Board flipped three cells to `has_receipt` in the first Totoro slice.
+6. Follow-up Totoro `PROFILE_CI=1` on `8,40,1` @ tip `8d58a0c`:
+   Poisson profileCI **1.5809 s**, NB 2.5044 s, Binomial 1.9279 s.
+   `gllvm-profile-ci-small` → `has_receipt`. GLLVM board **10/10**.
+7. No README/NEWS speed claim. No `diag_precision_kernel` default flip.
 
 ## Checks
 
 - Totoro logs under `docs/dev-log/evidence/2026-09-23-speed-board-totoro/`
-- TSV `bench/results/board_gllvm_20260923_8d58a0c94.tsv`
-- Board plan `docs/dev-log/plans/2026-09-23-three-package-speed-board.md`
-  counts: GLLVM 9 has_receipt / 1 needs_run
+- TSV `docs/dev-log/evidence/2026-09-23-speed-board-totoro/board_gllvm_20260923_8d58a0c94.tsv`
+- Profile log `board_profile_ci_8d58a0c.log`
+- Board plan counts: GLLVM **10** has_receipt / **0** needs_run
 
 ## Rose
 
@@ -40,4 +42,5 @@ stays default OFF.
 
 ## Next
 
-Optional: `PROFILE_CI=1` on `8,40,1` for `gllvm-profile-ci-small`.
+Soft-owed DRM Aug-24 H2H re-anchor (drmTMB already DRModels-aware on
+`origin/main`); H² soft-hist same-DGP optional.

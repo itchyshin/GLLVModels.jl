@@ -63,7 +63,7 @@ Paths are relative to the owning repo root (lane or Dropbox twin). Absolute lane
 | GLLVModels | `gllvm-pois-glmm-5000x3` | non-Gaussian grouped; N=5000, G=500, p=3 (`glmm_5000x3_g500`) | `bench/profile_grouped_glmm.jl` + S9a real entry | BEFORE fd Hessian `edf7d39e0` | HESS `edf7d39e0` / #446 | 5.713 s | 4.300 s | 1.329× | bit-identical loglik; `s9_hessian_2x2_edf7d39e0.tsv` | `has_receipt` |
 | GLLVModels | `gllvm-pois-glmm-200x5-hess` | same small fixture; Hessian path only | same | fd Hessian | grad_fd Hessian #446 | 0.113 s | 0.110 s | 1.028× | modest; do not conflate with S7c 1.23× | `has_receipt` |
 | GLLVModels | `gllvm-nb2-or-binom-unstruct` | NB / Binomial unstructured Laplace; analytic vs finite | `bench/speed_bench.jl` | :finite same run | `8d58a0c94` Totoro | NB 0.2008 / Bin 0.1410 s (:finite @ 8×40×1) | NB **0.0222** / Bin **0.0130** s (:analytic) | **9.04× / 10.84×** vs :finite | Δll ≤1.7e-13; large grid companion NB 1.60 s / Bin 2.52 s analytic | `has_receipt` |
-| GLLVModels | `gllvm-profile-ci-small` | post-fit profile CI `beta[1]` on smallest count cell | `bench/speed_bench.jl` (`PROFILE_CI`) | — | `8d58a0c94` | — | — | — | not in this Totoro slice (`PROFILE_CI=0`) | `needs_run` |
+| GLLVModels | `gllvm-profile-ci-small` | post-fit profile CI `beta[1]` on 8×40×1 count | `bench/speed_bench.jl` (`PROFILE_CI=1`) | — | `8d58a0c` Totoro | n/a | Poisson **1.5809 s**; NB 2.5044; Binom 1.9279 | n/a (abs) | tip abs; log `board_profile_ci_8d58a0c.log` | `has_receipt` |
 
 ### 2.2 DRModels — 10 cells
 
@@ -103,10 +103,10 @@ Paths are relative to the owning repo root (lane or Dropbox twin). Absolute lane
 
 | Package | Cells | `has_receipt` | `needs_run` | `blocked` |
 |---|---:|---:|---:|---:|
-| GLLVModels | 10 | 9 | 1 | 0 |
+| GLLVModels | 10 | 10 | 0 | 0 |
 | DRModels | 10 | 10 (3 Julia-vs-Julia q4 + 2 tip-abs provisional + 4 vs-TMB bridge + 1 Totoro crossed) | 0 | 0 |
 | HSquared | 12 | 12 | 0 | 0 |
-| **Total** | **32** | **31** | **1** | **0** |
+| **Total** | **32** | **32** | **0** | **0** |
 
 \*DRM #781 MERGED. Julia-vs-Julia q4 shows **no wall gain** (identity). Attested multi-cell speedups on tip are **vs drmTMB**, not vs prior Julia.
 
@@ -116,7 +116,7 @@ Paths are relative to the owning repo root (lane or Dropbox twin). Absolute lane
 
 1. **Paired Julia-vs-Julia for DRM q4 — DONE (honest no gain).** `a734d2b90`→`cf058168b` p100/1000; p5000 paired on speed6 bank (`a734d2b90`→`9d709f008`). #781 **MERGED** `cf058168b`. Tip p5000 Totoro absolute DONE @ `12ee8a8c2` (82.4455 s).
 2. **DRM bridge cohort re-anchored vs drmTMB 0.7.1** (10 OK cells, median 18.3×) in `docs/dev-log/evidence/2026-09-23-speed6-end-arc-cells/`. Board now carries 4 vs-TMB bridge rows + 2 provisional tip-abs locscale/relmat. Exact Aug-24 H2H Julia re-anchor (byte-identical fixtures) still owed; R harness failed (`Package DRM not found` — rename to DRModels).
-3. **GLLVM unstructured Gaussian + NB2/Binomial `speed_bench`** tip abs Totoro @ `8d58a0c94` (`board_gllvm_20260923_8d58a0c94.tsv`). Still owed: `gllvm-profile-ci-small` (`PROFILE_CI=1`).
+3. **GLLVM unstructured + profile-CI** tip abs Totoro @ `8d58a0c94` / profile follow-up `8d58a0c` (`board_gllvm_20260923_8d58a0c94.tsv` + `board_profile_ci_8d58a0c.log`). All 10 GLLVM board cells `has_receipt`.
 4. **H² end-to-end fit wall** — board `needs_run` animal/PEV cells flipped `has_receipt` via #379 TSV `e05fcf0e` (gene-drop; soft hist †/‡ fenced). Totoro absolute walls for q10k/q20k banked at `101aa483` (0.0345 s / 0.0477 s). Still owed: same-DGP before/after; optional Totoro re-time of q500/q2000/PEV/multi-effect; public README/NEWS speed claim remains withheld. Projected SelectedInversion (#378) stays fenced (unwired).
 5. **Cross-package comparability.** Do not put Latte gap, TMB H2H, and selinv kernel ms in one “headline ×” without labeling comparator. Board rows already separate them in `notes`.
 6. **ASReml public compare (H²)** stays gated (`phase_s6_asreml_wallclock_ladder.jl`); not a board cell until a paired receipt + Rose wording.
