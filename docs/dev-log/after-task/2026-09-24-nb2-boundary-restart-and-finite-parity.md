@@ -75,6 +75,7 @@ run, sweep below.
 | Existing files that exercise the fitter (Julia 1.10.12, test deps env), 15.5 min | all pass: `test_grouped_dispersion` 20, `test_nb_fit` 8, `test_fit_gllvm` 11, `test_aicbic_newfits` 18, `test_unified_api` 24, `test_known_sentinel_defects` 25 + 1 known broken, `test_grouped_hessian_consistency` 23, `test_bridge_grouped_dispersion` 129, `test_bridge_x` 192, `test_confint_family` 326 |
 | Developer parity check on the Mac | finite data: 6 of 6 plus hash; NATIVE-06 boundary agreement: 4 of 4 |
 | NATIVE-06 Julia fit before vs after the fix | identical, logLik −820.5485342071867 |
+| Totoro, Julia 1.10.12, R 4.5.3, Track A's oracle, code = #475 `d653ef416` + this branch's diff (tree `02c03beb…`, equal to the local commit), 4.75 min | regression test 5 of 5; developer check passes: finite data Δ logLik 2.0987e-8 and the same five `r` as the Mac; NATIVE-06 boundary agreement passes (R trait 3 `r` 9.2e5, above the 1e5 bar) |
 
 ## 6. Tests of the Tests
 
@@ -109,7 +110,7 @@ run, sweep below.
 
 ## 10. Known Residuals
 
-- Not run on Totoro yet at the time of writing (see check-log for the run, if made).
+- On Totoro, R's trait-3 `r` on the NATIVE-06 data is 9.2e5, about 9 times the 1e5 bar in the boundary-agreement check; other machines sit higher (3.1e7 on the Mac).
 - `fit_nb_gllvm_grouped_cov` and the Beta, Gamma, NB1 and other grouped fitters share the start
   pattern and were not screened.
 - A fit that reaches the boundary now costs one extra optimisation.

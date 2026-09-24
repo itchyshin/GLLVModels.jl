@@ -11,6 +11,8 @@
   frozen contract): on stored finite-dispersion data both engines agree to 2.5e-11 in logLik and
   2e-5 in every `r`; on NATIVE-06 both put traits 1 and 3 at the boundary. R's gradient is
   recorded, not gated.
+- Totoro (Julia 1.10.12, R 4.5.3, Track A's oracle, same tree as the local commit), 4.75 min:
+  regression test 5 of 5; developer check passes with the same numbers as the Mac.
 - After-task: `docs/dev-log/after-task/2026-09-24-nb2-boundary-restart-and-finite-parity.md`.
 
 ## 2026-09-24: closeout OWED 2 and 4 decided (A, A) and carried out
