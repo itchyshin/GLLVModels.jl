@@ -36,6 +36,16 @@ include(joinpath(@__DIR__, "..", "tools", "destination_b",
         @test env["GLLVM_S4_JULIA_HOME"] == dirname(executable)
         @test env["GLLVM_S4_JULIA_HOME"] != executable
         @test isfile(joinpath(env["GLLVM_S4_JULIA_HOME"], basename(executable)))
+
+        # The R child command must build on Julia 1.10: `Cmd(::Vector; dir=)`
+        # has no such method (first live run, 2026-09-24), so the working
+        # directory goes through `setenv(cmd, env; dir=)`.
+        cmd = s4_public_phylo_dep_r_command(cfg)
+        @test cmd isa Cmd
+        @test cmd.dir == cfg.gllvmtmb_root
+        @test cmd.exec == ["Rscript", "--vanilla",
+            joinpath(cfg.gllvmtmb_root, S4_PUBLIC_PHYLO_DEP_RUNNER_REL)]
+        @test "GLLVM_S4_LIVE_FORMULA_TESTS=1" in cmd.env
     end
 
     # GLLVM_S4_JULIA_ENV defaults to the committed probe-only environment

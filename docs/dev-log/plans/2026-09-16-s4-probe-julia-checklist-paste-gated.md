@@ -38,14 +38,24 @@ This checklist is **Julia-side prep only**. No probe execution from cloud / Curs
   repo root and lists `LogExpFunctions` as a direct dependency, since the recorder's clean-Julia-probe
   does `using LogExpFunctions` before `using GLLVM` and the root `Project.toml` only carries
   `LogExpFunctions` transitively. One-time local instantiate (Manifest is gitignored, like every other
-  sub-environment in this repo):
-  `julia --project=tools/destination_b/probe_env -e 'using Pkg; Pkg.develop(path="../../.."); Pkg.instantiate()'`
+  sub-environment in this repo). Since the option A shim (below), `probe_env/Project.toml` lists the
+  unregistered `GLLVM` shim, so the older one-step `Pkg.develop(path="../../.."); Pkg.instantiate()` now
+  fails with `expected package GLLVM [530e1681] to be registered` (and from the repo root the relative
+  `../../..` does not resolve at all). Use this two-step setup, run from `tools/destination_b/probe_env`:
+  `julia --project=GLLVM -e 'using Pkg; Pkg.develop(path="../../.."); Pkg.instantiate()'`
+  `julia --project=. -e 'using Pkg; Pkg.develop([PackageSpec(path="../../.."), PackageSpec(path="GLLVM")]); Pkg.instantiate()'`
   `--julia-env` still overrides this default when passed explicitly.
-- [ ] **`using GLLVM` inside the recorder's clean-Julia-probe is UNFIXED** — this package renamed to
-  `GLLVModels` (PR #423); `GLLVModels.GLLVM === GLLVModels` is an internal alias only, not a loadable
-  package name, so a bare `using GLLVM` will not resolve against this (or the probe_env's dev'd) project.
-  Waiting on Shinichi for the remedy (compat shim vs. patching the frozen recorder is his call) — do not
-  add anything for this without his direction.
+- [x] `using GLLVM` resolved by a probe-only shim (maintainer decision 2026-09-24, option A;
+  `claude/s4-probe-run-20260924`): `tools/destination_b/probe_env/GLLVM/` is a local package named
+  `GLLVM` that re-exports `GLLVModels.bridge_fit`, developed into the probe env only. It is never
+  registered and the repository root project cannot load it. Because the recorder asserts
+  `Base.pkgdir(GLLVM) == GLLVM_DESTINATION_B_PROJECT`, the probe passes the shim directory as the
+  Julia project. Receipt: `docs/dev-log/after-task/2026-09-24-s4-public-phylo-dep-probe-receipt.md`.
+- [ ] **Recorder runner does not attach testthat (OPEN, needs Shinichi).** Under `Rscript --vanilla` the
+  frozen runner evaluates `test_that(...)` in `globalenv()` with testthat loaded but not attached, so
+  both selected tests error with `could not find function "test_that"` before any fit. The recorder is
+  frozen (D-220). A diagnostic run that attached testthat through `R_DEFAULT_PACKAGES` (not a receipt)
+  then failed one point-estimate gate (`phylo_covariance`, tolerance 5e-6). See the receipt for both.
 
 ---
 
