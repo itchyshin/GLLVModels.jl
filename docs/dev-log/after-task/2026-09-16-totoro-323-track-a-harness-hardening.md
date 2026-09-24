@@ -1,7 +1,7 @@
 # Totoro #323 Track A harness hardening (DRAFT #410)
 
 **Date:** 2026-09-16  
-**PR:** DRAFT [#410](https://github.com/itchyshin/GLLVM.jl/pull/410)  
+**PR:** DRAFT [#410](https://github.com/itchyshin/GLLVModels.jl/pull/410)  
 **Paste:** not fired (harness only)
 
 ## Scope

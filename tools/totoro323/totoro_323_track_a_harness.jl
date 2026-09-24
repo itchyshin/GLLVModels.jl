@@ -83,7 +83,7 @@ end
 """
     Totoro323TrackAConfig
 
-Paths for validating a local GLLVM.jl workspace before Codex runs on Totoro.
+Paths for validating a local GLLVModels.jl workspace before Codex runs on Totoro.
 """
 struct Totoro323TrackAConfig
     gllvm_root::String
@@ -100,7 +100,7 @@ function totoro_323_track_a_config(;
     isdir(root) ||
         _track_a_fail(
             "GLLVM root is not a directory: $root",
-            "pass --gllvm-root to a GLLVM.jl checkout (directory containing Project.toml)",
+            "pass --gllvm-root to a GLLVModels.jl checkout (directory containing Project.toml)",
         )
     isfile(joinpath(root, "Project.toml")) ||
         _track_a_fail(
@@ -110,7 +110,7 @@ function totoro_323_track_a_config(;
     isfile(joinpath(root, TOTORO_323_TRACK_A_PARITY_RUNNER)) ||
         _track_a_fail(
             "missing parity runner at $(TOTORO_323_TRACK_A_PARITY_RUNNER)",
-            "use a full GLLVM.jl tree with test/parity/runparity.jl",
+            "use a full GLLVModels.jl tree with test/parity/runparity.jl",
         )
     track_u = uppercase(strip(String(track)))
     track_u == "A" ||
@@ -151,7 +151,7 @@ function totoro_323_track_a_preflight!(cfg::Totoro323TrackAConfig; dry_run::Bool
     isfile(contract) ||
         _track_a_fail(
             "frozen contract missing at $(TOTORO_323_FROZEN_CONTRACT_REL)",
-            "run from a GLLVM.jl checkout that includes the frozen-R 0.7.0 contract",
+            "run from a GLLVModels.jl checkout that includes the frozen-R 0.7.0 contract",
         )
     launch = joinpath(root, TOTORO_323_LAUNCH_PACK_REL)
     isfile(launch) ||
@@ -184,8 +184,8 @@ end
 """
 function totoro_323_track_a_preflight_summary(report::Totoro323TrackAPreflightReport)
     head_line = report.gllvm_head === nothing ?
-        "GLLVM.jl git HEAD: (skipped — not a git checkout or git unavailable)" :
-        "GLLVM.jl git HEAD: $(report.gllvm_head[1:min(end, 12)])…"
+        "GLLVModels.jl git HEAD: (skipped — not a git checkout or git unavailable)" :
+        "GLLVModels.jl git HEAD: $(report.gllvm_head[1:min(end, 12)])…"
     mode = report.dry_run ? "DRY-RUN (no Totoro / no parity)" : "EXECUTE (requires paste)"
     paste_line = report.paste_ready ?
         "paste: GLLVM_TOTORO_PASTE set OK" :
@@ -249,7 +249,7 @@ function totoro_323_track_a_executor_plan(cfg::Totoro323TrackAConfig)
         stamp = "<set RECEIPT_STAMP on Totoro>"
     end
     return """
-    Totoro #323 Track A — Codex executor plan (paste acknowledged; no SSH from GLLVM.jl lane)
+    Totoro #323 Track A — Codex executor plan (paste acknowledged; no SSH from GLLVModels.jl lane)
 
     GLLVM_ROOT=$(cfg.gllvm_root)
     TRACK=A

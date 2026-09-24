@@ -2,14 +2,14 @@
 
 **Date:** YYYY-MM-DD  
 **Paste ack:** maintainer pasted `ack Totoro D-139 #323 Track A` (do not claim without evidence)  
-**GLLVM.jl tip:** `<short SHA>`  
+**GLLVModels.jl tip:** `<short SHA>`  
 **gllvmTMB frozen pin:** `b4d5fee64def88bc768dda1f1f77c29b295edd86`  
 **Contract:** `docs/dev-log/core070/frozen-r070-contract.toml`
 
 ## Scope boundary
 
 - IN: Track A Frozen R smoke on Totoro per launch pack (full CI mirror or stated subset).
-- OUT: goal complete, advisory CI gating, gllvmTMB `src/` edits from GLLVM.jl, `waive #323`.
+- OUT: goal complete, advisory CI gating, gllvmTMB `src/` edits from GLLVModels.jl, `waive #323`.
 
 ## Environment
 
