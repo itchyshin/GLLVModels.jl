@@ -369,6 +369,21 @@ function s4_public_phylo_dep_r_environment(cfg::S4PublicPhyloDepProbeConfig)
 end
 
 """
+    s4_public_phylo_dep_r_command(cfg::S4PublicPhyloDepProbeConfig) -> Cmd
+
+The `Rscript --vanilla <runner>` command, run from the gllvmTMB root with the
+recorder's environment. Does not run it. The working directory is set through
+`setenv(cmd, env; dir=)` because `Cmd(::Vector; dir=)` has no method on
+Julia 1.10.
+"""
+function s4_public_phylo_dep_r_command(cfg::S4PublicPhyloDepProbeConfig)
+    runner = joinpath(cfg.gllvmtmb_root, S4_PUBLIC_PHYLO_DEP_RUNNER_REL)
+    env = merge(Dict{String,String}(ENV), s4_public_phylo_dep_r_environment(cfg))
+    return setenv(Cmd([cfg.rscript_executable, "--vanilla", runner]), env;
+        dir = cfg.gllvmtmb_root)
+end
+
+"""
     s4_public_phylo_dep_run!(cfg::S4PublicPhyloDepProbeConfig)
 
 Invoke the gllvmTMB isolated R runner (read-only w.r.t. gllvmTMB source from
@@ -376,10 +391,7 @@ this repo). Requires maintainer paste; overwrites nothing if receipt exists.
 """
 function s4_public_phylo_dep_run!(cfg::S4PublicPhyloDepProbeConfig)
     s4_public_phylo_dep_require_paste()
-    runner = joinpath(cfg.gllvmtmb_root, S4_PUBLIC_PHYLO_DEP_RUNNER_REL)
-    env = merge(Dict{String,String}(ENV), s4_public_phylo_dep_r_environment(cfg))
-    cmd = setenv(Cmd([cfg.rscript_executable, "--vanilla", runner]; dir = cfg.gllvmtmb_root), env)
-    return run(cmd)
+    return run(s4_public_phylo_dep_r_command(cfg))
 end
 
 """
