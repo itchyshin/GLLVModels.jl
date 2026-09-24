@@ -33,6 +33,19 @@ This checklist is **Julia-side prep only**. No probe execution from cloud / Curs
   **directory** holding the `julia` executable, matching the recorder's
   `file.path(julia_home, "julia")` in `s4_public_phylo_dep_clean_julia_probe()` — previously it passed
   the executable file itself, which that `file.path()` call could never resolve.
+- [x] `GLLVM_S4_JULIA_ENV` now defaults to a committed probe-only environment,
+  `tools/destination_b/probe_env/Project.toml` (`claude/s4-probe-wiring-20260924`): it `develop`s the
+  repo root and lists `LogExpFunctions` as a direct dependency, since the recorder's clean-Julia-probe
+  does `using LogExpFunctions` before `using GLLVM` and the root `Project.toml` only carries
+  `LogExpFunctions` transitively. One-time local instantiate (Manifest is gitignored, like every other
+  sub-environment in this repo):
+  `julia --project=tools/destination_b/probe_env -e 'using Pkg; Pkg.develop(path="../../.."); Pkg.instantiate()'`
+  `--julia-env` still overrides this default when passed explicitly.
+- [ ] **`using GLLVM` inside the recorder's clean-Julia-probe is UNFIXED** — this package renamed to
+  `GLLVModels` (PR #423); `GLLVModels.GLLVM === GLLVModels` is an internal alias only, not a loadable
+  package name, so a bare `using GLLVM` will not resolve against this (or the probe_env's dev'd) project.
+  Waiting on Shinichi for the remedy (compat shim vs. patching the frozen recorder is his call) — do not
+  add anything for this without his direction.
 
 ---
 

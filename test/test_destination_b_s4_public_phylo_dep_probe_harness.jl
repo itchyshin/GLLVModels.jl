@@ -38,6 +38,15 @@ include(joinpath(@__DIR__, "..", "tools", "destination_b",
         @test isfile(joinpath(env["GLLVM_S4_JULIA_HOME"], basename(executable)))
     end
 
+    # GLLVM_S4_JULIA_ENV defaults to the committed probe-only environment
+    # (develops the repo root; carries LogExpFunctions as a direct dep) when
+    # the caller does not pass julia_env explicitly.
+    let julia_project = abspath(joinpath(@__DIR__, ".."))
+        @test s4_public_phylo_dep_probe_env(julia_project) ==
+              joinpath(julia_project, "tools", "destination_b", "probe_env")
+        @test isfile(joinpath(s4_public_phylo_dep_probe_env(julia_project), "Project.toml"))
+    end
+
     gllvmtmb = get(ENV, "GLLVM_TEST_GLLVMTMB_ROOT", "")
     if !isempty(gllvmtmb) && isdir(gllvmtmb)
         try

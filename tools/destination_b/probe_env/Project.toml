@@ -1,0 +1,32 @@
+# Standalone project for the S4 public phylo_dep probe's "clean Julia
+# environment" preflight (docs/dev-log/plans/2026-09-16-s4-probe-julia-checklist-paste-gated.md).
+#
+# The frozen gllvmTMB recorder's `run-destination-b-s4-public-phylo-dep-isolated.R`
+# (`s4_public_phylo_dep_clean_julia_probe()`) activates GLLVM_S4_JULIA_ENV and
+# runs `using LogExpFunctions; ...; using GLLVM` before touching anything else.
+# LogExpFunctions is not a direct dependency of the root Project.toml (only a
+# transitive one via SpecialFunctions/Distributions), so that first `using`
+# fails against the root project directly. This project adds it, and is kept
+# separate from the root project rather than adding LogExpFunctions there, to
+# avoid widening the package's own declared dependency surface for a probe-only
+# need.
+#
+# GLLVModels *is* listed in [deps] below, with the package's own UUID taken
+# from the root Project.toml (mirrors test/parity/Project.toml's rationale).
+# The harness / `tools/destination_b/run_s4_public_phylo_dep_probe.jl` do not
+# call `Pkg.develop` themselves; the recorder's clean-Julia-probe activates
+# this project as-is and asserts `Base.pkgdir(GLLVM) == julia_project`, so
+# this project's (gitignored) Manifest must be instantiated once with
+# `Pkg.develop(path="../../..")` pointed at the working tree before use:
+#   julia --project=tools/destination_b/probe_env -e \
+#     'using Pkg; Pkg.develop(path="../../.."); Pkg.instantiate()'
+# With the entry already present here, that `Pkg.develop` has nothing to
+# rewrite in this file, so it only touches the Manifest.
+
+[deps]
+GLLVModels = "2dc8e01c-4f48-4476-aaae-e919b4a30df7"
+LogExpFunctions = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
+
+[compat]
+LogExpFunctions = "0.3"
+julia = "1.10"

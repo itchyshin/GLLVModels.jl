@@ -25,6 +25,22 @@ const S4_FROZEN_ORACLE_PIN =
     "b4d5fee64def88bc768dda1f1f77c29b295edd86"
 const S4_AFTER_TASK_RECEIPT_TEMPLATE_REL =
     "docs/dev-log/after-task/TEMPLATE-s4-public-phylo-dep-probe-receipt.md"
+const S4_PUBLIC_PHYLO_DEP_PROBE_ENV_REL =
+    "tools/destination_b/probe_env"
+
+"""
+    s4_public_phylo_dep_probe_env(julia_project::AbstractString) -> String
+
+Default `GLLVM_S4_JULIA_ENV`: the committed probe-only environment that
+`develop`s `julia_project` and adds `LogExpFunctions` as a direct dependency
+(the recorder's clean-Julia-probe step does `using LogExpFunctions` before
+`using GLLVM`; that fails against the main `Project.toml`, which does not list
+`LogExpFunctions` directly). Callers may still override via `--julia-env` /
+the `julia_env` keyword.
+"""
+function s4_public_phylo_dep_probe_env(julia_project::AbstractString)
+    return joinpath(julia_project, S4_PUBLIC_PHYLO_DEP_PROBE_ENV_REL)
+end
 
 function _s4_probe_fail(message::AbstractString, hint::AbstractString = "")
     body = "S4 public phylo_dep probe harness: " * message
@@ -179,7 +195,7 @@ end
         gllvmtmb_root,
         julia_project,
         julia_executable,
-        julia_env = julia_project,
+        julia_env = s4_public_phylo_dep_probe_env(julia_project),
         receipt_path,
         rscript_executable = "Rscript",
     ) -> S4PublicPhyloDepProbeConfig
@@ -191,7 +207,7 @@ function s4_public_phylo_dep_probe_config(;
     gllvmtmb_root::AbstractString,
     julia_project::AbstractString,
     julia_executable::AbstractString,
-    julia_env::AbstractString = julia_project,
+    julia_env::AbstractString = s4_public_phylo_dep_probe_env(julia_project),
     receipt_path::AbstractString,
     rscript_executable::AbstractString = "Rscript",
     dry_run::Bool = false,
@@ -261,7 +277,7 @@ function s4_public_phylo_dep_preflight!(;
     gllvmtmb_root::AbstractString,
     julia_project::AbstractString,
     julia_executable::AbstractString,
-    julia_env::AbstractString = julia_project,
+    julia_env::AbstractString = s4_public_phylo_dep_probe_env(julia_project),
     receipt_path::AbstractString,
     rscript_executable::AbstractString = "Rscript",
     dry_run::Bool = false,
