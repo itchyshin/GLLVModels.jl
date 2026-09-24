@@ -148,13 +148,7 @@ fit = fit_gaussian_gllvm(y; K = 2, lambda_constraint = M)   # M: p × K, NaN = f
 loading_profile(fit; y = y, n_grid = 11)
 ```
 
-**Stage 1 scope, not full R grid parity.** This slice covers the ordinary J1
-Gaussian case only (`K_W = 0`, `has_diag = false`, `K_phy = 0`,
-`has_phy_unique = false`, `X = nothing`); `aghq`, `mask`, and `offset` are not
-yet supported together with `lambda_constraint`. Grid spacing is a Wald-SE
-heuristic, not R's exact grid-spacing rule, and no cross-package numeric
-comparison against R's `loading_profile()` output has been published yet. See
-`docs/dev-log/plans/2026-09-16-d3-loading-profile-stage1-paste-gated-scaffold.md`.
+**Current scope.** Confirmatory loading profiles are available for the ordinary Gaussian latent-variable model only: no phylogenetic or diagonal terms and no fixed-effect covariates `X`. `lambda_constraint` cannot yet be combined with `aghq`, `mask`, `offset`, or predictor-informed latent scores; such fits are refused with an error. The profile grid spacing follows a Wald-standard-error heuristic rather than R's exact spacing rule, and no cross-package numeric comparison against R's `loading_profile()` output has been published yet.
 
 ## Predictor-informed latent-score effects
 
