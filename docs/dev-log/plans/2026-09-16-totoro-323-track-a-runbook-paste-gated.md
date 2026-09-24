@@ -54,6 +54,19 @@ Single Julia process; `OPENBLAS_NUM_THREADS=1`, `JULIA_NUM_THREADS=1`. Stop if r
 
 ---
 
+## Julia harness checklist (DRAFT #410 — local only)
+
+- [x] Paste gate: `ENV["GLLVM_TOTORO_PASTE"]` must equal `ack Totoro D-139 #323 Track A` (driver exits **2** without paste).
+- [x] Harness entry: `tools/totoro323/run_totoro_323_track_a_launcher.jl` + `tools/totoro323/totoro_323_track_a_harness.jl` (shell: `tools/totoro_323_track_a_launcher.sh`).
+- [ ] Harness **dry-run** (no paste, no SSH, no parity):  
+  `julia --project=. tools/totoro323/run_totoro_323_track_a_launcher.jl --dry-run --gllvm-root "$(pwd)"`  
+  → expect `TOTORO_323_TRACK_A_PREFLIGHT_DRY_RUN_OK`
+- [ ] After-Totoro receipt template: `docs/dev-log/after-task/TEMPLATE-totoro-323-track-a-receipt.md`
+- [ ] Frozen gllvmTMB pin unchanged: `b4d5fee64def88bc768dda1f1f77c29b295edd86` (printed in dry-run summary; confirm on Totoro)
+- [ ] D-139: full Track A only after maintainer paste; Cursor lane does **not** SSH
+
+---
+
 ## Fences
 
 - **No** Totoro spend without ack (D-139).
@@ -68,4 +81,5 @@ Single Julia process; `OPENBLAS_NUM_THREADS=1`, `JULIA_NUM_THREADS=1`. Stop if r
 | Paste | Scaffold |
 |-------|----------|
 | `G0 Stage 1` | [`2026-09-16-d3-loading-profile-stage1-paste-gated-scaffold.md`](2026-09-16-d3-loading-profile-stage1-paste-gated-scaffold.md) |
-| `S4 probe yes` | [`2026-09-16-s4-probe-julia-checklist-paste-gated.md`](2026-09-16-s4-probe-julia-checklist-paste-gated.md) |
+| `S4 probe yes` | [`2026-09-16-s4-probe-julia-checklist-paste-gated.md`](2026-09-16-s4-probe-julia-checklist-paste-gated.md) · DRAFT harness **[#409](https://github.com/itchyshin/GLLVModels.jl/pull/409)** |
+| `ack Totoro D-139 #323 Track A` | DRAFT harness **[#410](https://github.com/itchyshin/GLLVModels.jl/pull/410)** |
