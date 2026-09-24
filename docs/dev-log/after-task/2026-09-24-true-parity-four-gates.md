@@ -37,7 +37,7 @@ The handover's no-paste path was a docs refresh. The pastes turned it into the f
   - Receipts in #470.
 - D3 Stage 1.
   - #411 now carries a confirmed fix for a pin-scaling bug that #411 itself introduced.
-  - The Stage 1 slice (#471) adds the fit-time pin path and the confirmatory `loading_profile` export. It refuses predictor-informed, AGHQ, masked and offset fits, and adds one frozen-R NLL check at a fixed parameter point (Δ = 0.0). That check tests the packing convention and the Gaussian kernel only, not a constrained fit. Runbook item 3, an R-aligned pin-and-refit grid cell, is NOT met: the R reference has per-trait intercepts, which the Stage 1 `X = nothing` path cannot fit.
+  - The Stage 1 slice (#471, merged `4d0569534`) adds the fit-time pin path and the confirmatory `loading_profile` export. It refuses predictor-informed, AGHQ, masked and offset fits, and adds one frozen-R NLL check at a fixed parameter point (Δ = 0.0). That check tests the packing convention and the Gaussian kernel only, not a constrained fit. Runbook item 3, an R-aligned pin-and-refit grid cell, is NOT met: the R reference has per-trait intercepts, which the Stage 1 `X = nothing` path cannot fit.
 - Check-log sections from the four PRs were moved out of their PRs, so each merge stopped conflicting with the next. They land verbatim in this PR.
 
 ## 3a. Decisions and Rejected Alternatives
@@ -58,7 +58,7 @@ The handover's no-paste path was a docs refresh. The pastes turned it into the f
 
 ## 4. Files Touched
 
-- Merged PRs: #465, #409, #410, #469, #399, #411. Plus #470, #471 and #472, whose states are recorded in the handover.
+- Merged PRs: #465, #409, #410, #469, #399, #411, #470, #471, #472.
 - This PR:
   - `docs/dev-log/check-log.md` (carried sections plus this entry)
   - `docs/dev-log/after-task/2026-09-24-totoro-323-track-a-receipt.md`

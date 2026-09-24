@@ -6,7 +6,7 @@ You are Claude, picking up the GLLVModels.jl ↔ gllvmTMB true-parity programme.
 
 ## Critical Context
 
-1. **All four paste gates were given and executed on 2026-09-24.** The four DRAFTs (#409 S4, #410 Track A, #399 Delta A, #411 Stage 1) are merged. Delta A: D1 PASS on both cells. Track A ran in full but refreshed only NATIVE-12's `r_gradient_max` (NATIVE-06 not reached, NATIVE-10 not recorded). S4: no endpoint (recorder runner defect). Stage 1: harness merged; see the Landing State for the slice (#471).
+1. **All four paste gates were given and executed on 2026-09-24.** The four DRAFTs (#409 S4, #410 Track A, #399 Delta A, #411 Stage 1) are merged. Delta A: D1 PASS on both cells. Track A ran in full but refreshed only NATIVE-12's `r_gradient_max` (NATIVE-06 not reached, NATIVE-10 not recorded). S4: no endpoint (recorder runner defect). Stage 1: harness (#411) and slice (#471) merged; runbook item 3 (an R-aligned pin-and-refit cell) is not met.
 2. **gllvmTMB is read-only from this repo (D-220).** The S4 recorder fix was requested on itchyshin/gllvmTMB#1283; wait for its owning lane to answer.
 3. **Multi-lane repo.** Foreign lanes are still open, and their files are off-limits:
    - Codex docs #433/#437/#439 (#437 edits `src/confint_derived.jl` and `docs/src/derived-confidence-intervals.md`)
@@ -23,7 +23,7 @@ You are Claude, picking up the GLLVModels.jl ↔ gllvmTMB true-parity programme.
 | S4 probe (#409) | #409 `137cab8e1`, wiring #469 `194e01f0e`, receipt #472 | Option A (probe-only `GLLVM` shim) ran. Result `pass=0 fail=2 oracle_defect=2`: the frozen recorder's runner never attaches testthat, so both tests stop before any fit. Shinichi then chose option (b), and a recorder fix was requested on gllvmTMB#1283. |
 | Track A (#410) | #410 `decbc8ddc` | Totoro, 56 min, `main` `94a7b56f9`, oracle `b4d5fee64` built and verified. 14 of 17 required cells succeeded. See the per-holdout rows below. Receipt: `docs/dev-log/after-task/2026-09-24-totoro-323-track-a-receipt.md`; raw evidence in `docs/dev-log/core070/totoro-323-track-a-20260924/`. |
 | Delta A (#399) | #399 `94a7b56f9`, D1 receipts #470 `3c56e629c` | Delta default is now `disp_group = :species`. **D1 PASS on both cells** (each-own-optimum tier, one seed per cell), no tolerance changed: lognormal SE rel 4.0e-5, logLik Δ 1.8e-8; gamma SE rel 3.1e-5. The 2026-09-15 FAIL (logLik Δ −1.923) used an unknown R library (see the `GLLVM_PARITY_R_LIBS` finding), so attributing the change to `disp_group` is inference. |
-| Stage 1 (#411) | #411 `3b19b2817`; slice #471 (see Landing State) | #411 includes a verified fix for a σ_eps pin-scaling bug it had introduced (pins were off by 1/σ_eps). The slice adds the fit-time pin path, the confirmatory `loading_profile` export, four admission refusals, and one frozen-R NLL check at a fixed parameter point (Δ = 0.0; packing convention and Gaussian kernel only). Runbook item 3, an R-aligned pin-and-refit grid cell, is NOT met: the R reference has per-trait intercepts, which the `X = nothing` path cannot fit. |
+| Stage 1 (#411) | #411 `3b19b2817`; slice #471 `4d0569534` | #411 includes a verified fix for a σ_eps pin-scaling bug it had introduced (pins were off by 1/σ_eps). The slice adds the fit-time pin path, the confirmatory `loading_profile` export, four admission refusals, and one frozen-R NLL check at a fixed parameter point (Δ = 0.0; packing convention and Gaussian kernel only). Runbook item 3, an R-aligned pin-and-refit grid cell, is NOT met: the R reference has per-trait intercepts, which the `X = nothing` path cannot fit. |
 
 Track A holdouts:
 - NATIVE-12 still fails on the R side: `r_gradient_max` 5.90e-4.
@@ -61,8 +61,8 @@ Lane decisions:
 
 | Artifact | Committed | Pushed | PR | State |
 |---|---|---|---|---|
-| #465, #409, #410, #469, #399, #411, #470, #472 | y | y | merged | LANDED |
-| Stage 1 slice `claude/d3-stage1-slice-20260924` | y | y | #471 | see the closeout PR comment for its final state |
+| #465, #409, #410, #469, #399, #411, #470, #471, #472 | y | y | merged | LANDED |
+| Stage 1 slice `claude/d3-stage1-slice-20260924` | y | y | #471 | LANDED (merged `4d0569534`) |
 | S4 receipt `claude/s4-probe-run-20260924` | y | y | #472 | LANDED (merged `aed31c8bb`) |
 | This closeout (`claude/true-parity-closeout-20260924`) | y | y | this PR | LANDING |
 | Lane ledger `.unlazy/true-parity-20260924/` in `~/local-scratch/lanes/GLLVM.jl-true-parity-20260924` | n/a (ignored) | n/a | none | run state; two gates honestly ABANDONED (X409 G2, X410 G4) |
