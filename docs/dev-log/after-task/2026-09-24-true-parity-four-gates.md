@@ -31,12 +31,13 @@ The handover's no-paste path was a docs refresh. The pastes turned it into the f
 - Delta A.
   - ACCEPTED (A) block recorded; the delta default is now `disp_group = :species`.
   - D1 remeasure: both cells PASS, with no tolerance changed.
-    - lognormal: SE rel 4.0e-5; logLik Δ went from −1.923 to 1.8e-8.
+    - lognormal: SE rel 4.0e-5; logLik Δ 1.8e-8, against −1.923 on 2026-09-15. The 2026-09-15 baseline's R library is unknown (see the `GLLVM_PARITY_R_LIBS` finding), so the PASS stands on its own; attributing the change to `disp_group` is inference.
+    - Tier: each-own-optimum, one seed per cell.
     - gamma: SE rel 3.1e-5.
   - Receipts in #470.
 - D3 Stage 1.
   - #411 now carries a confirmed fix for a pin-scaling bug that #411 itself introduced.
-  - The Stage 1 slice (#471) adds the fit-time pin path and the confirmatory `loading_profile` export. It refuses predictor-informed, AGHQ, masked and offset fits, and adds one exact frozen-R-oracle cell (NLL Δ = 0.0).
+  - The Stage 1 slice (#471) adds the fit-time pin path and the confirmatory `loading_profile` export. It refuses predictor-informed, AGHQ, masked and offset fits, and adds one frozen-R NLL check at a fixed parameter point (Δ = 0.0). That check tests the packing convention and the Gaussian kernel only, not a constrained fit. Runbook item 3, an R-aligned pin-and-refit grid cell, is NOT met: the R reference has per-trait intercepts, which the Stage 1 `X = nothing` path cannot fit.
 - Check-log sections from the four PRs were moved out of their PRs, so each merge stopped conflicting with the next. They land verbatim in this PR.
 
 ## 3a. Decisions and Rejected Alternatives
@@ -53,7 +54,7 @@ The handover's no-paste path was a docs refresh. The pastes turned it into the f
 - Rejected:
   - Loosening any tolerance.
   - Editing the gllvmTMB recorder from this repo (D-220).
-  - Treating the advisory Frozen R failure as blocking. It is `continue-on-error` and fails identically on `main`.
+  - Treating the advisory Frozen R failure as blocking. It is `continue-on-error`; it failed the same way (278 pass, 8 fail, Julia 1.13.0) on every PR run in this lane, and on main's earlier run 35999539704 at `6ba1770ab`. Main had no completed CI run for today's merge heads.
 
 ## 4. Files Touched
 
@@ -95,7 +96,7 @@ The handover's no-paste path was a docs refresh. The pastes turned it into the f
 
 ## 7a. Issue Ledger
 
-- #323: Track A receipt filed. Not closed or waived.
+- #323: CLOSED 2026-09-15 as an agent-applied waiver (option B), which is not evidence of a pass. Today's Track A run is option (A) evidence, filed without reopening or commenting on the issue; the three holdout cells stay OWED.
 - gllvmTMB#1283: recorder fix requested (S4 option b).
 - The open items are in section 10.
 
@@ -128,7 +129,7 @@ The handover's no-paste path was a docs refresh. The pastes turned it into the f
 - Track A:
   - NATIVE-06 did not reach its R check (seeded-data guard on Julia 1.10.12, likely D-275, AGENT-INFERRED).
   - NATIVE-10 records no R gradient.
-  - NATIVE-12's R gradient is still 5.90e-4.
+  - NATIVE-12's R gradient is still 5.90e-4 on Totoro, but it passes in the Julia 1.13.0 CI job, where NATIVE-10's Cell 9 fails instead. Holdout outcomes depend on the Julia version; none counts as a pass.
   - The ledger's X410 G4 is abandoned for that reason.
 - Stage 1:
   - The ledger row `namespace/export/loading_profile` is untouched (no paired fixture evidence yet).

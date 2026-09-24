@@ -6,7 +6,7 @@ You are Claude, picking up the GLLVModels.jl ↔ gllvmTMB true-parity programme.
 
 ## Critical Context
 
-1. **All four paste gates were given and executed on 2026-09-24.** The four DRAFTs (#409 S4, #410 Track A, #399 Delta A, #411 Stage 1) are merged. Each gate was carried to its runbook stop line. Two produced numbers; two ended at a documented blocker (details below).
+1. **All four paste gates were given and executed on 2026-09-24.** The four DRAFTs (#409 S4, #410 Track A, #399 Delta A, #411 Stage 1) are merged. Delta A: D1 PASS on both cells. Track A ran in full but refreshed only NATIVE-12's `r_gradient_max` (NATIVE-06 not reached, NATIVE-10 not recorded). S4: no endpoint (recorder runner defect). Stage 1: harness merged; see the Landing State for the slice (#471).
 2. **gllvmTMB is read-only from this repo (D-220).** The S4 recorder fix was requested on itchyshin/gllvmTMB#1283; wait for its owning lane to answer.
 3. **Multi-lane repo.** Foreign lanes are still open, and their files are off-limits:
    - Codex docs #433/#437/#439 (#437 edits `src/confint_derived.jl` and `docs/src/derived-confidence-intervals.md`)
@@ -22,13 +22,14 @@ You are Claude, picking up the GLLVModels.jl ↔ gllvmTMB true-parity programme.
 | Docs truth | #465 `3b2fd96e3` | Board, paste packet and handover now carry the live tip and the four pastes. |
 | S4 probe (#409) | #409 `137cab8e1`, wiring #469 `194e01f0e`, receipt #472 | Option A (probe-only `GLLVM` shim) ran. Result `pass=0 fail=2 oracle_defect=2`: the frozen recorder's runner never attaches testthat, so both tests stop before any fit. Shinichi then chose option (b), and a recorder fix was requested on gllvmTMB#1283. |
 | Track A (#410) | #410 `decbc8ddc` | Totoro, 56 min, `main` `94a7b56f9`, oracle `b4d5fee64` built and verified. 14 of 17 required cells succeeded. See the per-holdout rows below. Receipt: `docs/dev-log/after-task/2026-09-24-totoro-323-track-a-receipt.md`; raw evidence in `docs/dev-log/core070/totoro-323-track-a-20260924/`. |
-| Delta A (#399) | #399 `94a7b56f9`, D1 receipts #470 `3c56e629c` | Delta default is now `disp_group = :species`. **D1 PASS on both cells**, no tolerance changed: lognormal SE rel 4.0e-5 (logLik Δ went from −1.923 to 1.8e-8), gamma SE rel 3.1e-5. |
-| Stage 1 (#411) | #411 `3b19b2817`; slice #471 (see Landing State) | #411 includes a verified fix for a σ_eps pin-scaling bug it had introduced (pins were off by 1/σ_eps). The slice adds the fit-time pin path, the confirmatory `loading_profile` export, four admission refusals, and one exact frozen-R-oracle cell. |
+| Delta A (#399) | #399 `94a7b56f9`, D1 receipts #470 `3c56e629c` | Delta default is now `disp_group = :species`. **D1 PASS on both cells** (each-own-optimum tier, one seed per cell), no tolerance changed: lognormal SE rel 4.0e-5, logLik Δ 1.8e-8; gamma SE rel 3.1e-5. The 2026-09-15 FAIL (logLik Δ −1.923) used an unknown R library (see the `GLLVM_PARITY_R_LIBS` finding), so attributing the change to `disp_group` is inference. |
+| Stage 1 (#411) | #411 `3b19b2817`; slice #471 (see Landing State) | #411 includes a verified fix for a σ_eps pin-scaling bug it had introduced (pins were off by 1/σ_eps). The slice adds the fit-time pin path, the confirmatory `loading_profile` export, four admission refusals, and one frozen-R NLL check at a fixed parameter point (Δ = 0.0; packing convention and Gaussian kernel only). Runbook item 3, an R-aligned pin-and-refit grid cell, is NOT met: the R reference has per-trait intercepts, which the `X = nothing` path cannot fit. |
 
 Track A holdouts:
 - NATIVE-12 still fails on the R side: `r_gradient_max` 5.90e-4.
 - NATIVE-06 never reached its R check: a seeded-data hash guard refused on Julia 1.10.12 (AGENT-INFERRED as the D-275 class).
-- NATIVE-10's parity cell passes (Δ logLik 2.0e-8); only its near-Gaussian diagnostic fails to converge.
+- NATIVE-10's Parity Cell 9 passes on Totoro, Julia 1.10.12 (Δ logLik 2.0e-8).
+- In the advisory CI job (Julia 1.13.0, same pin) the pattern flips: NATIVE-10 Cell 9 fails (R optimizer code 1, Δ logLik 2.86e-3), NATIVE-12 passes, and NATIVE-06 fails on the R side (`r_gradient_max` 2.43e-3). Holdout outcomes depend on the Julia version or platform; no holdout counts as a pass.
 
 Full report: `docs/dev-log/after-task/2026-09-24-true-parity-four-gates.md`.
 
@@ -52,7 +53,7 @@ Lane decisions:
 - Merge order #409 → #410 → #399 → #411.
 - Check-log sections were moved out of each PR to stop merge-chain conflicts. They land in the closeout PR.
 - The pin fix was folded into #411, so `main` never carried the bug.
-- The advisory Frozen R CI failure was treated as non-blocking: it is `continue-on-error` and fails identically on `main`.
+- The advisory Frozen R CI failure was treated as non-blocking: it is `continue-on-error`, and it failed the same way on every PR run in this lane and on main's earlier run at `6ba1770ab`.
 
 ## Landing State
 
@@ -78,8 +79,12 @@ FINDINGS-OF-RECORD:
    - re-run the S4 probe without the shim (runbook `docs/dev-log/plans/2026-09-16-s4-probe-julia-checklist-paste-gated.md`);
    - file a new receipt;
    - remove `tools/destination_b/probe_env/GLLVM/`;
-   - then examine the `phylo_covariance` 5e-6 gate. The diagnostic suggested a 2.2e-6 gap, but that run is not evidence.
-2. OWED (decide with Shinichi): how the NB2 fixture (NATIVE-06) should be pinned across Julia versions; whether the Student cell should record `r_gradient_max`.
+   - keep the embedded Julia off the default `@v1.10` environment: the diagnostic mixed LogExpFunctions 0.3.26 into a process pinned to 0.3.29. Check that the embedded log has no `loglogistic not defined` line;
+   - a new recorder SHA needs a code, test and runbook change: the SHA is hard-coded in `tools/destination_b/s4_public_phylo_dep_probe_harness.jl` (lines 16-17), in the harness test (lines 12 and 101-102), and in the runbook pin `97214679c`;
+   - write the D-139 estimate before the run;
+   - fallback: gllvmTMB#1283 was PARKED in today's triage (conflicting, very large, 10 days stale), so the fix may never come. Shinichi decides whether to assign the recorder fix or accept an environment-level deviation (attach testthat and isolate the embedded Julia) as recorded in the S4 receipt's Follow-up.
+   - then examine the `phylo_covariance` gate: in the diagnostic run (not evidence) that check FAILED its 5e-6 gate, with a mean relative difference of 7.6e-6 and a largest absolute difference of 2.2e-6.
+2. OWED (decide with Shinichi): the holdouts flip between Julia 1.10.12 (Totoro) and 1.13.0 (CI). Decide which Julia version is the reference for #323 evidence, how the NB2 fixture (NATIVE-06) should be pinned across versions, and whether the Student cell should record `r_gradient_max`.
 3. OWED (small, reversible): make `tools/core070_second_order/common.jl` honour `GLLVM_PARITY_R_LIBS` or fail closed, and add a test.
 4. OWED (decide with Shinichi): the Stage 0 fixture's L11 sign against R's reference.
 5. Not OWED without a new acknowledgement: the Stage 1 heavy grid on Totoro (D-139); ledger-row promotion; a `Project.toml` bump.
@@ -98,6 +103,8 @@ FINDINGS-OF-RECORD:
   - fetch the frozen gllvmTMB pin with `--depth 1` (a full-history clone took 15+ minutes);
   - point `R_LIBS_USER` inside the run folder so `install_deps` never writes the shared library.
 - The S4 recorder attests the shim's directory as the project path while the shim is in use; the receipt records this.
+- The Delta A default change (`:species`) can move existing delta fits to a different optimum, not only change the shape of σ/α: one existing offset test did, and is pinned to `:shared`.
+- S4's D-139 estimate line was written after the run (ledger X409 G2 is abandoned for that). Write the estimate before the next run.
 
 ## How to Resume
 

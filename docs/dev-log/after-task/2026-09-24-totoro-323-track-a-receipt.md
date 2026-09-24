@@ -27,7 +27,7 @@ TRACKA_RESULT NATIVE06_gradmax=not_reached NATIVE10_gradmax=not_recorded NATIVE1
 | TRACK | A |
 | RECEIPT_STAMP | 20260924-105152 |
 | Wall clock | 56 min (10:51 to 11:47 MDT): oracle build and verify 7 min, Julia parity environment 3 min, `runparity.jl` 45 min 35 s (its own Test Summary), setup the rest |
-| D-139 band | 90 to 150 min estimated; the run finished well inside it |
+| D-139 band | 90 to 150 min estimated; the run finished in 56 min, below the band |
 
 ## Pre-run (D-139), 2026-09-24 09:42 MDT, at #410's head `78de8d0a1`
 
@@ -61,14 +61,17 @@ Deviations, both deliberate:
 
 The other 14 cells succeeded. They include both default delta cells, after today's #399 default change, and Tweedie, whose cell took 40 of the 56 minutes and passed all 28 assertions.
 
+**Julia-version dependence (checked against CI).** The advisory Frozen R CI job runs the same frozen pin on Julia 1.13.0. On every PR in this lane (#409, #411, #472) it gives 278 pass / 8 fail, with the opposite holdout pattern: NATIVE-06 passes the data guard and fails on the R side (`r_gradient_max` 2.43e-3); NATIVE-10's Parity Cell 9 FAILS (R `optimizer_code` 1, |Δ logLik| 2.86e-3 > 1e-3); NATIVE-12 PASSES 21/21. Holdout outcomes therefore depend on the Julia version or platform, and no holdout counts as a pass on today's evidence.
+
 ## Failure classification
 
 - [ ] R build / remotes / TMB compile: none; the oracle built and verified.
 - [ ] Frozen oracle drift vs pin: none; source and build are at the pin.
 - [x] Julia parity gradient or convergence miss (no `@test` tolerance widened):
   - NATIVE-12 is R-side.
-  - NATIVE-06 and the Student near-Gaussian diagnostic are Julia-side convergence.
-- [x] Fixture guard (NATIVE-06): the seeded-data hash guard failed on Julia 1.10.12. AGENT-INFERRED, not verified: the seeded RNG stream differs from the Julia version the hash was recorded on, which is the D-275 class ("a pin on a seeded fixture is a pin on the Julia version too"). `nb2_health.jl` last changed on 2026-09-18.
+  - The Student near-Gaussian diagnostic is Julia-side convergence.
+  - NATIVE-06: on Totoro the fit ran on data that failed the frozen-hash guard, so its non-convergence says nothing about the frozen fixture. In the advisory CI job (Julia 1.13.0) the guard passes, and the frozen fixture gives R `r_gradient_max` 2.43e-3.
+- [x] Fixture guard (NATIVE-06): the seeded-data hash guard failed on Julia 1.10.12. AGENT-INFERRED, not verified: the seeded RNG stream differs from the Julia version the hash was recorded on, which is the D-275 class ("a pin on a seeded fixture is a pin on the Julia version too"). `nb2_health.jl` last changed on 2026-09-18. Consistent with this inference: the same guard passes on Julia 1.13.0 in CI.
 
 ## What this does NOT cover
 
