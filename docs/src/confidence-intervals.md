@@ -131,6 +131,25 @@ bootstrap_ci(fit; y = y, n_boot = 500)    # parametric bootstrap
 and derived-quantity CIs (Σ_y entries, communality, correlation, phylogenetic
 signal H²) via [`confint_derived`-family helpers](covariance-correlation.md).
 
+### Confirmatory fits and `loading_profile` (D3 Stage 1)
+
+`fit_gaussian_gllvm(y; K, lambda_constraint = M)` fits a **confirmatory**
+ordinary Gaussian model: `M` is a `p × K` matrix of raw `Λ` values (`NaN` =
+free, numeric = pinned at that value), mirroring R gllvmTMB's
+`lambda_constraint = list(unit = M)`. `loading_profile(fit; y, ...)` then
+profiles a grid over each **free** entry of such a fit, refitting with that
+one entry additionally pinned at each grid value — the confirmatory mirror of
+R's `loading_profile()`. It requires a confirmatory fit and refuses an
+ordinary (unpinned) one; see `loading_profile_exploratory` for the existing
+penalty-based profile CI on an unpinned fit's raw loadings.
+
+```julia
+fit = fit_gaussian_gllvm(y; K = 2, lambda_constraint = M)   # M: p × K, NaN = free
+loading_profile(fit; y = y, n_grid = 11)
+```
+
+**Current scope.** Confirmatory loading profiles are available for the ordinary Gaussian latent-variable model only: no phylogenetic or diagonal terms and no fixed-effect covariates `X`. `lambda_constraint` cannot yet be combined with `aghq`, `mask`, `offset`, or predictor-informed latent scores; such fits are refused with an error. The profile grid spacing follows a Wald-standard-error heuristic rather than R's exact spacing rule, and no cross-package numeric comparison against R's `loading_profile()` output has been published yet.
+
 ## Predictor-informed latent-score effects
 
 For fits with `X_lv`, `confint_lv_effects(fit, Y, X_lv)` targets the induced,

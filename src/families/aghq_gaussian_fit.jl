@@ -1,6 +1,7 @@
 """
     fit_gaussian_gllvm(Y; K, aghq=false, aghq_control=(;), mask=nothing,
-                       offset=nothing, hessian=:observed, kwargs...) -> GllvmFit
+                       offset=nothing, hessian=:observed,
+                       lambda_constraint=nothing, kwargs...) -> GllvmFit
 
 Fit a Gaussian GLLVM with shared residual SD. Default `aghq=false` retains the
 closed-form Gaussian fitter and its existing keywords. In particular `X=nothing`
@@ -21,11 +22,39 @@ The fit's `integration` records requested/actual method, node count, starting
 vectors, controls, convergence, observed caches and input identity. AGHQ convergence
 and inference refer to the **frozen-node surrogate**, not its moving-node derivative.
 This route does not establish full R↔Julia parity.
+
+**`lambda_constraint`:** fits a confirmatory model in which specific loadings
+are held fixed at given values instead of estimated, mirroring R gllvmTMB's
+`lambda_constraint = list(unit = M)`. Pass a `p × K` matrix of raw `Λ` values
+(`NaN` = free, a number = pinned at that value); this first fits the ordinary
+model with nothing pinned, then re-optimises with the requested entries held
+fixed. Available for the ordinary Gaussian latent-variable model only: no
+phylogenetic or diagonal random-effect terms, and no fixed-effect covariates
+(`X`) or predictor-informed latent scores (`X_lv`). Combining
+`lambda_constraint` with `aghq`, `mask`, or `offset` is not yet supported;
+each of these combinations raises a clear `ArgumentError` rather than
+silently fitting the wrong model. The returned fit's `pars.lambda_constraint`
+records the normalised pin matrix, which [`loading_profile`](@ref) reads to
+determine which entries are free. No cross-package numeric comparison
+against R's own `lambda_constraint` fits has been published yet.
 """
 function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control=(;),
-        mask=nothing,offset=nothing,hessian=:observed,kwargs...)
-    request=_aghq_request(aghq);c=_aghq_controls(aghq_control)
+        mask=nothing,offset=nothing,hessian=:observed,lambda_constraint=nothing,kwargs...)
     hessian===:observed || throw(ArgumentError("Gaussian integration uses observed curvature"))
+    if lambda_constraint!==nothing
+        aghq===false || throw(ArgumentError(
+            "lambda_constraint does not yet support aghq in Stage 1; use the default aghq=false"))
+        (mask===nothing && offset===nothing) || throw(ArgumentError(
+            "lambda_constraint does not yet support mask/offset in Stage 1"))
+        get(kwargs,:X,nothing)===nothing || throw(ArgumentError(
+            "lambda_constraint currently supports X = nothing (zero-mean) fits only"))
+        get(kwargs,:X_lv,nothing)===nothing || throw(ArgumentError(
+            "lambda_constraint does not yet support X_lv (predictor-informed latent " *
+            "scores) in Stage 1"))
+        base=fit_gaussian_gllvm(Y;K=K,hessian=hessian,kwargs...)
+        return _fit_confirmatory_lambda_constraint(base,Y,lambda_constraint)
+    end
+    request=_aghq_request(aghq);c=_aghq_controls(aghq_control)
     if request===:off && mask===nothing && offset===nothing
         return _fit_gaussian_gllvm_exact(Y;K=K,kwargs...)
     end

@@ -23,6 +23,16 @@ All notable changes to GLLVModels.jl are documented here.
   explicitly to keep the previous one-scalar-per-model behaviour. Decision:
   `docs/dev-log/decisions/2026-09-15-delta-dispersion-alignment-pending.md`
   (accepted 2026-09-24).
+- **Development (D3 Stage 1):** `fit_gaussian_gllvm(y; K, lambda_constraint = M)`
+  fits a confirmatory ordinary J1 Gaussian model with the numeric entries of a
+  `p × K` pin matrix `M` (`NaN` = free) held fixed, mirroring R gllvmTMB's
+  `lambda_constraint`. `loading_profile(fit; y, ...)` now profiles the free
+  entries of such a confirmatory fit on a grid — the confirmatory mirror of
+  R's `loading_profile()`, distinct from the existing exploratory
+  `loading_profile_exploratory`. Stage 1 scope only (`X = nothing`, no W/diag/
+  phylo blocks, no `aghq`); this is a Stage 1 receipt, not full R grid parity.
+  The deprecated generic `loading_profile` shim is unchanged and still serves
+  the old three-positional-argument calling convention.
 - **Development:** fixed Gaussian source fits accept a complete mean design `X`.
   Explicit-source wide/long formulas expose trait intercepts, shared slopes,
   categorical contrasts and interactions. Fits retain the copied design, response
