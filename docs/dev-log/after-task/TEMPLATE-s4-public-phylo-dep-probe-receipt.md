@@ -2,14 +2,14 @@
 
 **Date:** YYYY-MM-DD  
 **Paste ack:** maintainer pasted `S4 probe yes` (do not claim without evidence)  
-**GLLVM.jl tip:** `<short SHA>`  
+**GLLVModels.jl tip:** `<short SHA>`  
 **gllvmTMB recorder:** PR #1283 @ `97214679c` (branch `codex/destination-b-s4-phylo-dep-formula-20260910`)  
 **Frozen oracle pin (unchanged):** `b4d5fee64def88bc768dda1f1f77c29b295edd86`
 
 ## Scope boundary
 
 - IN: isolated public-formula probe receipt vs recorder runner (DestB S4 cell).
-- OUT: Arc 0 promotion, capability row `covered`, honest-0.7 FINAL-REVIEW complete, gllvmTMB engine edits from GLLVM.jl.
+- OUT: Arc 0 promotion, capability row `covered`, honest-0.7 FINAL-REVIEW complete, gllvmTMB engine edits from GLLVModels.jl.
 
 ## Environment
 
@@ -17,7 +17,7 @@
 |-------|--------|
 | Host | |
 | Julia | `julia --version` |
-| GLLVM.jl project | |
+| GLLVModels.jl project | |
 | gllvmTMB root HEAD | |
 | Receipt JSON path | |
 | Wall clock | |

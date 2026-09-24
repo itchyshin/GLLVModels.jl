@@ -290,7 +290,7 @@ function s4_public_phylo_dep_preflight!(;
     isfile(template) ||
         _s4_probe_fail(
             "after-task receipt template missing: $(S4_AFTER_TASK_RECEIPT_TEMPLATE_REL)",
-            "run from a GLLVM.jl checkout that includes DRAFT #409 harness docs",
+            "run from a GLLVModels.jl checkout that includes DRAFT #409 harness docs",
         )
     head = _s4_git_read(Cmd(["git", "-C", cfg.gllvmtmb_root, "rev-parse", "HEAD"]))
     report = S4PublicPhyloDepPreflightReport(

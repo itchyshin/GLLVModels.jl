@@ -1,7 +1,7 @@
 # After-task: S4 probe harness hardening (DRAFT #409)
 
 **Date:** 2026-09-16  
-**PR:** [#409](https://github.com/itchyshin/GLLVM.jl/pull/409) (stay DRAFT)  
+**PR:** [#409](https://github.com/itchyshin/GLLVModels.jl/pull/409) (stay DRAFT)  
 **Paste:** not set; no live probe
 
 ## Scope
