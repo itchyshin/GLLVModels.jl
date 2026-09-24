@@ -93,6 +93,8 @@ Full responsibility detail lives in §2 of the reference plan.
 
 ## Phase state snapshot
 
+- **True-parity execution (2026-09-24, later).** `origin/main` @ **`6ba1770ab`** (#463 reverted #453; latte default OFF). Shinichi pasted all four gate strings; DRAFT **#399/#409/#410/#411** are being rebased onto the renamed package and executed in order #409, #410, #399, #411 harness, Stage 1 slice. Lane kit: `LOOP/lanes/true-parity-20260924/`. Receipts land on the board as each gate closes. `Project.toml` stays **`0.3.0`**. **START HERE:** `LOOP/lanes/true-parity-20260924/checkpoint.md`, then `docs/dev-log/2026-09-14-true-parity-pending-board.md`.
+
 - **True-parity continuation (2026-09-24).** `origin/main` @ **`1703c54b4`**
   (post-rename **GLLVModels** #423/#425; speed/latte #453 on main; programme goal
   **not** complete). Paste-gated DRAFT harnesses **#399/#409/#410/#411** still

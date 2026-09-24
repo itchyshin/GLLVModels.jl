@@ -19,6 +19,16 @@ Programme goal is not complete. Core070 ledger `FREE=0` is not true parity. Do n
 
 ---
 
+## Reconciliation on pickup (Claude, 2026-09-24)
+
+Measured against live git after this handover merged:
+
+- `origin/main` is **`6ba1770ab`**, not `1703c54b4`: #464 (this file) and **#463** merged. #463 reverted #453, so the "#453 latte default ON" lines below no longer describe `main`.
+- **#399 is CONFLICTING**, like #409/#410/#411. All four branched from `7a6fe4962`, before the #423 rename, so each needs a rename port as well as a conflict fix.
+- Shinichi pasted all four gate strings in chat on 2026-09-24 and approved rebasing all four now. Execution state lives in `LOOP/lanes/true-parity-20260924/` and the pending board.
+
+---
+
 ## Mission control (2026-09-24)
 
 | Repo | Branch / tip | Recent merges | Next parity move |
