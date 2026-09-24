@@ -18,19 +18,19 @@
                      conf_level::Real = 0.95, y::AbstractMatrix)
         -> NamedTuple
 
-**D3 Stage 1 confirmatory profile-likelihood grid** for the free entries of a
-**pinned** `Λ` (`level = :unit`, the shared/between tier), mirroring R
-gllvmTMB's `loading_profile()`. Requires `fit` to be a **confirmatory** fit —
-built via `fit_gaussian_gllvm(y; K, lambda_constraint = M)` — so this refuses
-plain exploratory fits (opposite of R's `loading_ci()`, which refuses
-unpinned fits for the same reason: distinct estimands need distinct fit
-metadata). Use [`loading_profile_exploratory`](@ref) for a penalty-based
-profile CI on a single raw `Λ` entry of an ordinary (unpinned) fit.
+**Confirmatory profile-likelihood grid** for the free entries of a **pinned**
+`Λ` (`level = :unit`, the shared/between tier), mirroring R gllvmTMB's
+`loading_profile()`. Requires `fit` to be a **confirmatory** fit — built via
+`fit_gaussian_gllvm(y; K, lambda_constraint = M)` — so this refuses plain
+exploratory fits (opposite of R's `loading_ci()`, which refuses unpinned fits
+for the same reason: distinct estimands need distinct fit metadata). Use
+[`loading_profile_exploratory`](@ref) for a penalty-based profile CI on a
+single raw `Λ` entry of an ordinary (unpinned) fit.
 
 # Keywords
-- `level`: `:unit` (equivalently `:B`) is the only tier Stage 1 supports —
-  the shared/between-tier `Λ`. `:unit_obs`/`:W` are reserved for a later slice
-  (no within-tier block exists on the J1 fits this admits).
+- `level`: `:unit` (equivalently `:B`) is the only tier currently supported —
+  the shared/between-tier `Λ`. `:unit_obs`/`:W` are not yet supported (no
+  within-tier block exists on the ordinary fits this function admits).
 - `entries`: an `n × 2` integer matrix of `(trait, axis)` pairs to profile: one
   row per requested entry. `nothing` (default) profiles every free entry.
 - `n_grid`: number of grid points per profiled entry (must be `≥ 3`).
@@ -38,8 +38,7 @@ profile CI on a single raw `Λ` entry of an ordinary (unpinned) fit.
   MLE for each entry (falls back to `|Λ̂|/2 + 0.5` when the Hessian-based SE is
   non-finite, matching the fallback in `loading_profile_exploratory`).
 - `conf_level`: confidence level recorded alongside each row (not itself used
-  to trim the grid in Stage 1 — grid width is controlled by `n_grid` /
-  `grid_extent`).
+  to trim the grid — grid width is controlled by `n_grid` / `grid_extent`).
 - `y`: the response matrix used to fit `fit` (required — same convention as
   `loading_profile_exploratory`).
 
@@ -51,14 +50,17 @@ with fields `trait`, `axis`, `i`, `k`, `profile_value`, `objective`
 `NaN` when the refit did not converge), `estimate` (the confirmatory MLE for
 that entry), `conf_level`, and `converged`.
 
-# Stage 1 scope (Rose fence)
-This is a **Stage 1 receipt**, not full R grid parity and not `T5` row 8
-"covered": ordinary J1 Gaussian only (`K_W = 0`, `has_diag = false`,
-`K_phy = 0`, `has_phy_unique = false`), `X = nothing` fits only, one entry
-pinned per refit via
-[`GLLVModels._confirmatory_profile_refit_lambda_pin`](@ref) (internal), and a
-grid built from a Wald-SE heuristic rather than R's exact grid-spacing rule.
-See `docs/dev-log/plans/2026-09-16-d3-loading-profile-stage1-paste-gated-scaffold.md`.
+# Current limits
+Available for the ordinary Gaussian latent-variable model only: no
+phylogenetic or diagonal random-effect terms, and no fixed-effect
+covariates. `fit` must come from `fit_gaussian_gllvm` with `lambda_constraint`
+set and without `aghq`, `mask`, `offset`, or predictor-informed latent scores
+(`X_lv`) — those combinations are refused with a clear error rather than
+silently fitting the wrong model. Each free entry is refit one at a time,
+holding it at every grid value while re-optimising everything else. The grid
+itself follows a Wald-standard-error heuristic rather than R's own
+grid-spacing rule, and no cross-package numeric comparison against R's
+`loading_profile()` output has been published yet.
 """
 function loading_profile(fit::GllvmFit;
                           level::Symbol = :unit,

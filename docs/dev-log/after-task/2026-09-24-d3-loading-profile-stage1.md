@@ -2,9 +2,10 @@
 
 Lane: `claude/d3-stage1-slice-20260924`, worktree
 `/Users/z3437171/local-scratch/gllvm-d3-stage1-slice-20260924`, branch created
-at rebased DRAFT #411 head `e613a56a4`. **Work is local only — not pushed.**
-PR #411 must merge first; this lane pushes afterwards per the coordinator's
-instruction.
+at rebased DRAFT #411 head `e613a56a4`. **Update, 2026-09-24 (later the same
+day): #411, #399, and #410 have all merged to `main`. This branch has been
+rebased onto `main` and pushed — it is now open as PR #471**, not local-only
+as originally stated above when #411 was still an unmerged DRAFT.
 
 ## Scope
 
@@ -336,11 +337,80 @@ the move, confirming the relocation did not change behavior.
 - `test/runtests.jl` unchanged (no new test *file*, only new testsets in an
   existing one); `grep -o '_shard_include("[^"]*")' test/runtests.jl | sort |
   uniq -d` empty; `Meta.parseall` on `runtests.jl` succeeds.
-- Docs build (`julia --project=docs docs/make.jl --local`): **not run** — the
-  `docs/` project environment is separate from the main one and would need
-  its own `Pkg.instantiate()` inside the time budget available; skipping per
-  the task's "skip if over 15 min, say so" allowance rather than risk an
-  unbounded first-instantiate.
+- **Docs build (update, 2026-09-24): run for real, on Julia 1.13** (CI's docs
+  job uses Julia `'1'`; the Mac's default `juliaup` channel is a stale
+  1.10.0, so this needed `julia +1.13` explicitly):
+  `$S julia +1.13 --project=docs -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'`
+  succeeded (one benign `SHA` compat warning, unrelated). `$S julia +1.13
+  --project=docs docs/make.jl` exited 0 — full Vitepress + Documenter build,
+  no errors. `python3 tools/check_reader_surface.py --landing-contract`
+  printed `LANDING_CONTRACT_PASS` / `READER_SURFACE_PASS source_files=18`.
+  `python3 tools/check_reader_surface.py --rendered docs/build/1` printed
+  `READER_SURFACE_PASS rendered_pages=33`. This closes the two CI Documenter
+  failures on PR #471: two `@ref` links to undocumented internal functions
+  (`fit_gaussian_gllvm`'s and `loading_profile`'s docstrings referenced
+  `GLLVModels._fit_confirmatory_lambda_constraint` and
+  `GLLVModels._confirmatory_profile_refit_lambda_pin` via `[...](@ref)`;
+  changed to plain code, since neither internal function has its own `@docs`
+  entry for Documenter to resolve against), and three reader-surface findings
+  in the rendered API page from process vocabulary in those same two
+  docstrings ("D3 Stage 1", "Stage 1 receipt", "Rose fence", "T5 row 8",
+  internal flag names `K_W`/`has_diag`/`K_phy`/`has_phy_unique`, internal
+  function names, and the `docs/dev-log/plans/...` path) — both docstrings
+  rewritten in plain reader language; see "Docstring rewrite" below.
+
+## Docstring rewrite (CI fix, 2026-09-24)
+
+`fit_gaussian_gllvm`'s `lambda_constraint` paragraph and `loading_profile`'s
+docstring both used to describe their scope with internal programme
+vocabulary and dev-log file paths, which the CI reader-surface check on the
+rendered API page correctly rejects. Rewritten to state the same limits in
+plain language; the actual behavior did not change, only how it is described.
+
+- `fit_gaussian_gllvm` (`src/families/aghq_gaussian_fit.jl`): "**`lambda_constraint`
+  (D3 Stage 1, confirmatory fit):** ... via `GLLVModels._fit_confirmatory_lambda_constraint`
+  (internal). Stage 1 scope only: ordinary J1 Gaussian (`K_W = 0`, `has_diag
+  = false`, `K_phy = 0`, `has_phy_unique = false`)... This is a **Stage 1
+  receipt**, not full R grid parity — see `docs/dev-log/plans/2026-09-16-d3-
+  loading-profile-stage1-paste-gated-scaffold.md`." → "**`lambda_constraint`:**
+  fits a confirmatory model in which specific loadings are held fixed at
+  given values instead of estimated... Available for the ordinary Gaussian
+  latent-variable model only: no phylogenetic or diagonal random-effect
+  terms, and no fixed-effect covariates (`X`) or predictor-informed latent
+  scores (`X_lv`)... No cross-package numeric comparison against R's own
+  `lambda_constraint` fits has been published yet."
+- `loading_profile` (`src/loading_profile_confirmatory.jl`): "**D3 Stage 1
+  confirmatory profile-likelihood grid**..." → "**Confirmatory
+  profile-likelihood grid**..."; the `level` keyword's "`:unit_obs`/`:W` are
+  reserved for a later slice (no within-tier block exists on the `J1` fits
+  this admits)" → "`:unit_obs`/`:W` are not yet supported (no within-tier
+  block exists on the ordinary fits this function admits)"; and the whole
+  "# Stage 1 scope (Rose fence) This is a **Stage 1 receipt**, not full R
+  grid parity and not `T5` row 8 "covered": ordinary `J1` Gaussian only
+  (`K_W = 0`, `has_diag = false`, `K_phy = 0`, `has_phy_unique = false`),
+  `X = nothing` fits only, one entry pinned per refit via
+  `GLLVModels._confirmatory_profile_refit_lambda_pin` (internal)... See
+  `docs/dev-log/plans/2026-09-16-d3-loading-profile-stage1-paste-gated-scaffold.md`."
+  section → "# Current limits Available for the ordinary Gaussian
+  latent-variable model only: no phylogenetic or diagonal random-effect
+  terms, and no fixed-effect covariates. `fit` must come from
+  `fit_gaussian_gllvm` with `lambda_constraint` set and without `aghq`,
+  `mask`, `offset`, or predictor-informed latent scores (`X_lv`)... The grid
+  itself follows a Wald-standard-error heuristic rather than R's own
+  grid-spacing rule, and no cross-package numeric comparison against R's
+  `loading_profile()` output has been published yet."
+
+**Plainly: runbook item 3 (one R-aligned pin-and-refit grid cell) is NOT
+met.** The frozen-R check this slice has (the "frozen R oracle match" test)
+is an NLL evaluation at one fixed parameter point, not a pin-and-refit grid
+cell, and it tests the loading-packing convention and the Gaussian
+likelihood kernel only — not the `lambda_constraint` fitter or the
+`loading_profile` grid end to end. It cannot be extended to a real
+pin-and-refit comparison against that same R reference, because the R
+reference model has per-trait fixed intercepts, and this slice's
+`X = nothing` fitting path structurally cannot fit a model with fixed-effect
+covariates. This is unchanged from the "Not claimed" section above; restated
+here plainly because the coordinator asked for it explicitly.
 
 ## Rose
 

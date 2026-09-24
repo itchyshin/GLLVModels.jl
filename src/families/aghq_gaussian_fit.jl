@@ -23,21 +23,20 @@ vectors, controls, convergence, observed caches and input identity. AGHQ converg
 and inference refer to the **frozen-node surrogate**, not its moving-node derivative.
 This route does not establish full R↔Julia parity.
 
-**`lambda_constraint` (D3 Stage 1, confirmatory fit):** a `p × K` matrix of raw
-`Λ` values (`NaN` = free, numeric = pinned at that value), mirroring R
-gllvmTMB's `lambda_constraint = list(unit = M)`. When supplied, this first
-fits the ordinary unconstrained model, then re-optimises with the numeric
-entries held fixed via
-[`GLLVModels._fit_confirmatory_lambda_constraint`](@ref) (internal). Stage 1
-scope only: ordinary J1 Gaussian (`K_W = 0`, `has_diag = false`, `K_phy = 0`,
-`has_phy_unique = false`), `X = nothing`, and `X_lv = nothing`; `aghq`,
-`mask`, `offset`, and `X_lv` (predictor-informed latent scores) are not yet
-supported together with `lambda_constraint` and refuse with a clear
-`ArgumentError`. The returned fit's
-`pars.lambda_constraint` records the normalised pin matrix, which
-[`loading_profile`](@ref) reads to determine free vs pinned entries. This is a
-**Stage 1 receipt**, not full R grid parity — see
-`docs/dev-log/plans/2026-09-16-d3-loading-profile-stage1-paste-gated-scaffold.md`.
+**`lambda_constraint`:** fits a confirmatory model in which specific loadings
+are held fixed at given values instead of estimated, mirroring R gllvmTMB's
+`lambda_constraint = list(unit = M)`. Pass a `p × K` matrix of raw `Λ` values
+(`NaN` = free, a number = pinned at that value); this first fits the ordinary
+model with nothing pinned, then re-optimises with the requested entries held
+fixed. Available for the ordinary Gaussian latent-variable model only: no
+phylogenetic or diagonal random-effect terms, and no fixed-effect covariates
+(`X`) or predictor-informed latent scores (`X_lv`). Combining
+`lambda_constraint` with `aghq`, `mask`, or `offset` is not yet supported;
+each of these combinations raises a clear `ArgumentError` rather than
+silently fitting the wrong model. The returned fit's `pars.lambda_constraint`
+records the normalised pin matrix, which [`loading_profile`](@ref) reads to
+determine which entries are free. No cross-package numeric comparison
+against R's own `lambda_constraint` fits has been published yet.
 """
 function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control=(;),
         mask=nothing,offset=nothing,hessian=:observed,lambda_constraint=nothing,kwargs...)
