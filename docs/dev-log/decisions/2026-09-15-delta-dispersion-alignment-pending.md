@@ -2,16 +2,16 @@
 # Maintainer decision: Delta-lognormal / Delta-Gamma dispersion identity (shared Julia vs R per-trait)
 
 **Date:** 2026-09-15  
-**Status:** **PENDING_ACCEPTANCE** (unchanged; no ACCEPTED block)  
+**Status:** **ACCEPTED (A)** — maintainer paste `accept delta dispersion A`, 2026-09-24 (see the dated block below)  
 **Lane:** Cursor / Ada (true-parity programme)  
 **Base:** `origin/main` @ `3091fe613` (post–PR #347 second-order Delta shared-η Wald wiring)  
 **Trigger:** [`2026-09-15-second-order-delta-followup.md`](../after-task/2026-09-15-second-order-delta-followup.md) — paired Δ **D1 FAIL** (no tolerance widened)  
 **Twin anchor (R):** `log_sigma_lognormal_delta` / `log_phi_gamma_delta` length **p** (`gllvmTMB.cpp` family ids 12–13)  
-**Julia anchor:** `fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm` — `disp_group ∈ {:shared, :species}` in `src/families/twopart.jl`; public fitter **default remains `:shared`** until paste; Wald `_family_ci` packs both modes; postfit `predict` / `getLV` / `residuals` handle vector σ/α (DRAFT #399).
+**Julia anchor:** `fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm` — `disp_group ∈ {:shared, :species}` in `src/families/twopart.jl`; public fitter **default is now `:species`** (since 2026-09-24; `:shared` is an explicit opt-in); Wald `_family_ci` packs both modes; postfit `predict` / `getLV` / `residuals` handle vector σ/α (DRAFT #399).
 
-**DRAFT scaffold (pre-paste, 2026-09-16):** DRAFT [#399](https://github.com/itchyshin/GLLVModels.jl/pull/399) wires species CI, SO cells at `:species`, postfit vector dispersion, and `fit_gllvm(..., disp_group=)` for Delta. Not an ACCEPTED disposition. Not a D1 pass. Not a public `fit_gllvm` default coerce to `:species`. Merge only after paste `accept delta dispersion A`.
+**DRAFT scaffold (pre-paste, 2026-09-16):** DRAFT [#399](https://github.com/itchyshin/GLLVModels.jl/pull/399) wired species CI, SO cells at `:species`, postfit vector dispersion, and `fit_gllvm(..., disp_group=)` for Delta, ahead of acceptance. Superseded by the ACCEPTED block below, which records the 2026-09-24 default flip built on that scaffold. The PR itself stays DRAFT — this lane merges it after #409 and #410, not on paste alone.
 
-**Does not:** accept any option; edit R `gllvmTMB`; promote D1 pass; claim covered / Stage 1 / S4 / Totoro clearance; bump `Project.toml`; close programme §7 or true-parity destination.
+**Does not:** edit R `gllvmTMB`; promote a D1 pass (still measured **FAIL** — remeasurement is post-merge, per the runbook linked below); claim covered / Stage 1 / S4 / Totoro clearance; bump `Project.toml`; close programme §7 or true-parity destination.
 
 ---
 
@@ -120,31 +120,47 @@ Until one phrase above appears in maintainer chat, **this file is PENDING** and 
 
 When Shinichi chooses, append a dated **ACCEPTED** block below with option letter(s) and exact reply phrase. Follow with a **bounded implementation arc** for **(A)** only (confint + cells + receipts); **(B)/(C)** are docs + contract fence updates only.
 
-```text
-(pending — no ACCEPTED block yet; paste-gate draft below is NOT live disposition)
-```
+## ACCEPTED (A) — 2026-09-24
 
-<!--
-=== PASTE-GATE: on `accept delta dispersion A`, replace the pending block above with: ===
+**Maintainer phrase (verbatim, given in chat 2026-09-24):** `accept delta dispersion A`
 
-## ACCEPTED — 2026-09-__ (Option A)
+**Option:** **(A)** — Align Julia's default twin path to R's **per-trait** dispersion
+(`disp_group = :species` on the default bridge / `fit_gllvm` / `core070_second_order`
+Delta cells).
 
-**Maintainer phrase:** `accept delta dispersion A`  
-**Option:** **(A)** — Align Julia default twin path to R **per-trait** dispersion (`disp_group = :species` on default bridge / `fit_gllvm` / `core070_second_order` Delta cells).
+**What changes:**
+- The public default for `fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm` (and
+  `fit_gllvm(...; family = DeltaLogNormal()/DeltaGamma())` when `disp_group` is
+  omitted) becomes `disp_group = :species`, matching R gllvmTMB's per-trait
+  `log_sigma_lognormal_delta` / `log_phi_gamma_delta`. **Existing Julia delta fits
+  that omitted `disp_group` will change**: `σ` / `α` move from one scalar per model
+  to one value per species (`length(σ) == p`). This was explained to Shinichi in
+  plain language before the paste (existing fits get a different, per-trait answer),
+  and he accepted knowing that.
+- `disp_group = :shared` remains available as an explicit opt-in, unchanged
+  (one scalar sdlog/shape for every species) — see
+  `docs/dev-log/decisions/2026-08-28-per-trait-dispersion-synthesis.md`.
+- Postfit (`getLV` / `predict` / `residuals` / `show` / `_nparams`), the Wald
+  `_family_ci` packing, and `core070_second_order`'s Delta cells were already
+  wired for `:species` on the DRAFT #399 scaffold (2026-09-16); this acceptance is
+  what flips the *default* the scaffold's plumbing was built to carry.
 
-**Disposition:**
-- Coerce `disp_group = :species` for `DeltaLogNormal` / `DeltaGamma` when `fit_gllvm` omits `disp_group` (same pattern as NB2/Beta).
-- Remeasure **D1** on default Delta SO cells at unchanged [`second-order-parity-contract.md`](../core070/second-order-parity-contract.md) §4 tolerances (no rtol widen).
-- Keep `disp_group = :shared` as explicit opt-in (laboratory / parsimony).
-
-**Rose fence (until D1 receipts green):**
-- ≠ second-order D1 pass / “covered” promotion for default Delta cells.
+**Rose fence (accepted ≠ D1 pass):**
+- ≠ second-order D1 pass / "covered" promotion for the default Delta cells — D1 at
+  contract §4 tolerances was measured **FAIL** on 2026-09-15
+  ([`2026-09-15-second-order-delta-followup.md`](../after-task/2026-09-15-second-order-delta-followup.md))
+  and has **not** been remeasured since. Remeasurement runs post-merge per
+  [`2026-09-16-delta-dispersion-a-d1-remeasure-runbook.md`](../plans/2026-09-16-delta-dispersion-a-d1-remeasure-runbook.md),
+  with **no rtol widened** to get there.
 - ≠ programme §7 or true-parity destination complete.
+- ≠ merged / ready-for-review: DRAFT #399 stays a draft; this lane merges it after
+  #409 and #410, not on paste alone.
 
-**Post-paste closeout:** flip coerce in `fit_gllvm.jl`, run D1 remeasure runbook, mark DRAFT #399 ready + merge on Julia 8/8.
-
-=== END PASTE-GATE ===
--->
+**Post-paste closeout (this commit / PR #399):** flip the coerce in `fit_gllvm.jl`
+and the named fitters' own defaults in `twopart.jl`; audit and test the postfit
+vector-σ/α paths under the new default; update the docs cascade (articles,
+reference docs, README, CHANGELOG). The D1 remeasure runbook and the mark-ready +
+merge step remain for a later slice.
 
 ---
 
