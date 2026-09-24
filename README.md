@@ -182,7 +182,9 @@ with sparse random-effect design matrices. `GLLVModels.jl` solves a
 - Per-species / grouped dispersion (`disp.group`) for NB2, NB1, Beta, beta-binomial,
   Gamma, and Tweedie via the `_grouped` drivers — per-species is the `fit_gllvm`
   default for NB2, NB1, Beta, and beta-binomial (`family = NB1()`,
-  `family = BetaBinom()`), matching gllvmTMB
+  `family = BetaBinom()`), matching gllvmTMB. Delta-lognormal and Delta-Gamma
+  likewise default to per-species dispersion (`disp_group = :species`); shared
+  dispersion remains available via `disp_group = :shared`
 - Two-part / mixture families: Delta-lognormal, Delta-Gamma, Hurdle-Poisson,
   Hurdle-NB, Beta-hurdle, and ordered-beta via `family = DeltaLogNormal()` /
   `DeltaGamma()` / `HurdlePoisson()` / `HurdleNB()` / `BetaHurdle()` /

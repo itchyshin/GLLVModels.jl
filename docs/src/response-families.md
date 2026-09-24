@@ -83,8 +83,8 @@ supports `LogitLink()` (default), `ProbitLink()`, and `CLogLogLink()`.
 | `COMPoisson()` | ✅ available | log | Laplace | dispersion exponent `ν` (tag payload) | counts with under- or over-dispersion (`ν>1` / `ν<1`; `ν=1 ⇒ Poisson`); `fit_gllvm` / named `fit_compoisson_gllvm`; Julia-forward |
 | `GeneralizedPoisson1(α)` | ✅ available | log | Laplace | signed dispersion `α` (tag payload) | counts with over- **or** under-dispersion (`α>0` / `α<0`); `fit_gllvm` / named `fit_gp1_gllvm`; Julia-forward (no twin counterpart) |
 | `OrderedBeta()` | ✅ available | logit | Laplace | precision `φ`, cutpoints `c₀<c₁` (tag payloads) | proportions / cover with point masses at 0 and 1; `fit_gllvm` / named `fit_ordered_beta_gllvm`; Julia-forward |
-| `DeltaLogNormal()` | ✅ available | logit × identity(log) | two-part Laplace | log-SD `σ` (tag payload) | occurrence × positive lognormal; `fit_gllvm` / named `fit_delta_lognormal_gllvm` |
-| `DeltaGamma()` | ✅ available | logit × log | two-part Laplace | shape `α` (tag payload) | occurrence × positive Gamma; `fit_gllvm` / named `fit_delta_gamma_gllvm` |
+| `DeltaLogNormal()` | ✅ available | logit × identity(log) | two-part Laplace | log-SD `σ` (tag payload) | occurrence × positive lognormal; `fit_gllvm` / named `fit_delta_lognormal_gllvm`; default is per-species `σ` (`disp_group = :species`), shared `σ` via `disp_group = :shared` |
+| `DeltaGamma()` | ✅ available | logit × log | two-part Laplace | shape `α` (tag payload) | occurrence × positive Gamma; `fit_gllvm` / named `fit_delta_gamma_gllvm`; default is per-species `α` (`disp_group = :species`), shared `α` via `disp_group = :shared` |
 | `BetaHurdle()` | ✅ available | logit × logit | two-part Laplace | precision `φ` (tag payload) | occurrence × positive Beta; `fit_gllvm` / named `fit_beta_hurdle_gllvm`; Julia-forward |
 | `HurdlePoisson()` | ✅ available | logit × log | two-part Laplace | — | occurrence × zero-truncated Poisson; `fit_gllvm` / named `fit_hurdle_poisson_gllvm` |
 | `HurdleNB()` | ✅ available | logit × log | two-part Laplace | dispersion `r` (tag payload) | occurrence × zero-truncated NB2; `fit_gllvm` / named `fit_hurdle_nb_gllvm`; Julia-forward |
@@ -799,13 +799,21 @@ fit = fit_gllvm(Y; family = DeltaLogNormal(9.0), K = 2)  # same — marker σ ne
 ```
 
 Two-part Laplace: Bernoulli occurrence (`π = logistic(β^z)`, `Λ_z = 0` in v1) times
-a positive lognormal with meanlog `η^c = β^c + Λ_c z` and shared sdlog `σ`. The
-marker's `σ` is a **tag payload** — always estimated (returned as `fit.σ`). Named
-fitter [`fit_delta_lognormal_gllvm`](@ref) remains available.
+a positive lognormal with meanlog `η^c = β^c + Λ_c z` and sdlog `σ`. The marker's
+`σ` is a **tag payload** — always estimated (returned as `fit.σ`). Named fitter
+[`fit_delta_lognormal_gllvm`](@ref) remains available.
+
+**`disp_group` (per-trait dispersion, default since 2026-09-24):** `σ` is now
+one sdlog **per species** by default (`fit.σ` a length-`p` vector,
+`disp_group = :species`), matching gllvmTMB's per-trait
+`log_sigma_lognormal_delta`. Pass `disp_group = :shared` (on the named fitter,
+or `fit_gllvm(...; disp_group = :shared)`) for the previous one-scalar-per-model
+behaviour. **Existing code that omitted `disp_group` will see `fit.σ` change
+from a scalar to a vector.**
 
 Delta-lognormal is a **no-X** surface: `fit_gllvm` and `gllvm(@formula(y ~ 1), …)`
-are open; covariates, `disp_group`, and `row_eff` are not admitted. No bridge /
-R-parity claim.
+are open, including `disp_group`; covariates and `row_eff` are not admitted. No
+bridge / R-parity claim.
 
 **`predictor` mode (2026-08-28):** [`fit_delta_lognormal_gllvm`](@ref) takes a
 `predictor::Symbol` kwarg, `:separate` (default, the behaviour above) or
@@ -823,12 +831,19 @@ fit = fit_gllvm(Y; family = DeltaGamma(4.0), K = 2)  # same — marker α never 
 ```
 
 Two-part Laplace: Bernoulli occurrence times a positive Gamma with log-link mean
-`μ = exp(η^c)` and shared shape `α` (`Var = μ²/α`). The marker's `α` is a **tag
+`μ = exp(η^c)` and shape `α` (`Var = μ²/α`). The marker's `α` is a **tag
 payload** — always estimated (returned as `fit.α`). Named fitter
 [`fit_delta_gamma_gllvm`](@ref) remains available.
 
-Delta-Gamma is a **no-X** surface: same fence as Delta-lognormal (no +X, no
-`disp_group`, no `row_eff`, no bridge / R-parity claim).
+**`disp_group` (per-trait dispersion, default since 2026-09-24):** `α` is now
+one shape **per species** by default (`fit.α` a length-`p` vector,
+`disp_group = :species`), matching gllvmTMB's per-trait `log_phi_gamma_delta`.
+Pass `disp_group = :shared` for the previous one-scalar-per-model behaviour.
+**Existing code that omitted `disp_group` will see `fit.α` change from a scalar
+to a vector.**
+
+Delta-Gamma is a **no-X** surface: same fence as Delta-lognormal (no +X,
+`disp_group` admitted, no `row_eff`, no bridge / R-parity claim).
 
 **`predictor` mode (2026-08-28):** same kwarg as Delta-lognormal above —
 [`fit_delta_gamma_gllvm`](@ref)'s `predictor::Symbol`, `:separate` (default)
