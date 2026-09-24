@@ -189,6 +189,7 @@ observed_mask
 ```@docs
 confint
 profile_ci
+loading_profile
 bootstrap_ci
 transformed_wald_ci_derived
 correlation_wald_ci

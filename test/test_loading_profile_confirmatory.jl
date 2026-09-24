@@ -157,7 +157,7 @@ end
         @test_throws ArgumentError loading_profile(fit_allfixed; y = Y)
     end
 
-    @testset "one R-aligned pin-and-refit grid cell (MASK-B-PINS)" begin
+    @testset "one pin-and-refit grid cell, internal consistency (MASK-B-PINS)" begin
         pins = loading_profile_fixture_mask_b_pins()
         fit = fit_gaussian_gllvm(Y; K = _K, lambda_constraint = pins)
         result = loading_profile(fit; y = Y, n_grid = 3, entries = [2 1])
@@ -170,6 +170,47 @@ end
         mle_row = argmin(row -> abs(row.profile_value - row.estimate), result.table)
         @test mle_row.delta_deviance < 1e-4
     end
+
+    # --- A literal comparison against the frozen R oracle (masks-known-contract.json
+    # case CORE070-MASKS-KNOWN-MASK-B-PINS-PAIRED-CONTROL, r_nll = 65.5136777950417
+    # at point MASK-B-PINS-P1, docs/dev-log/core070/masks-known-evidence.json,
+    # tolerance abs_nll_delta = 1e-06) is NOT added here. Checked precisely and
+    # found not achievable in this checkout, for two independent reasons:
+    #
+    # 1. The point's raw inputs are not present. `masks-known-evidence.json`
+    #    records only summary statistics (r_nll, dense_nll, delta, gradient_error)
+    #    for MASK-B-PINS-P1/P2; the underlying observations/design/parameters TSVs
+    #    that would let anything (this test, or `tools/core070_masks_known.jl`,
+    #    which itself does not call GLLVModels.jl) reproduce that NLL are listed
+    #    only as SHA-256 provenance under `retained_artifacts` (paths under
+    #    `masks-known-points-01/attempt1/out/MASK-B-PINS-P1/*.tsv`), pointing at an
+    #    ephemeral campaign sandbox this checkout does not contain — confirmed
+    #    absent by search of this repo, `~/local-scratch` (including the lane and
+    #    the frozen R library directory), and `~/shinichi-brain`.
+    #    `docs/dev-log/core070/masks-known-leaf.md` gives the point's beta
+    #    ((.2,-.1,.3) at P1), sigma_eps (.8 at P1), and the full 5-coordinate
+    #    loading vector before pinning ((.8,.7,.1,.2,-.15) at P1, packed
+    #    diagonal-first-then-strict-lower per `loading_layout`), which is enough
+    #    to reconstruct the parameter point exactly (pin L11 to -0.8 and L32 to 0
+    #    per the MASK-B-PINS fixture; keep L22=.7, L21=.1, L31=.2 free-vector
+    #    values) — but NOT the observed response matrix the NLL was evaluated
+    #    against, which is what is actually missing.
+    # 2. Even with the point's inputs, this comparand (`abs_nll_delta`) is an NLL
+    #    match AT A FIXED, GIVEN parameter vector — not a converged refit/MLE
+    #    match — for an R call with per-trait fixed intercepts
+    #    (`value~0+trait+latent(...)`, i.e. beta != 0 / an X design). This slice's
+    #    `lambda_constraint` fit-time path is restricted to `X = nothing`
+    #    (documented, deliberate Stage 1 scope), so it cannot reproduce that exact
+    #    R call's model shape regardless of data availability.
+    #
+    # A live R call through the frozen oracle library
+    # (/Users/z3437171/local-scratch/R-gllvmtmb-frozen-b4d5fee64, gllvmTMB @
+    # b4d5fee64) was considered. `test/parity/parity_helpers.jl` has an
+    # established `GLLVM_PARITY_TESTS=1`-gated live-R pattern, but no existing
+    # helper there calls `gllvmTMB(..., lambda_constraint = ...)` — every
+    # `fit_gllvmtmb_parity_*` helper is for an unconstrained/exploratory fit.
+    # Building that call is new R-calling infrastructure for this one cell, not
+    # reuse of an existing gated path, so it was not added here.
 
     @testset "entries filter profiles only the requested pair" begin
         pins = loading_profile_fixture_mask_b_pins()

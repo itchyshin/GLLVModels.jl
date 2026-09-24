@@ -1,3 +1,44 @@
+## 2026-09-24 — D3 Stage 1 slice: lane-bleed fix + R-aligned cell investigation (`claude/d3-stage1-slice-20260924`)
+
+- Coordinator review of the entry below required two fixes, both applied, still local only:
+  1. **Lane bleed:** open foreign Codex PR #437 (`codex/derived-ci-reader-cleanup`)
+     touches exactly `src/confint_derived.jl` and
+     `docs/src/derived-confidence-intervals.md`, which this slice had also
+     edited. Moved the new `loading_profile(fit::GllvmFit; ...)` method into
+     new file `src/loading_profile_confirmatory.jl` (included from
+     `src/GLLVModels.jl` right after `confint_derived.jl`); restored
+     `confint_derived.jl` byte-identical to `e613a56a4`. Moved the docs
+     cascade to `docs/src/confidence-intervals.md` ("Gaussian engine" section)
+     and `docs/src/api.md` (`@docs` block); restored
+     `derived-confidence-intervals.md` byte-identical to `e613a56a4`. Both
+     confirmed via empty `git diff e613a56a4 -- <path>`. All 7 previously-run
+     test files re-run after the move with identical pass counts.
+  2. **R-aligned grid cell (runbook step 3):** investigated whether
+     `docs/dev-log/core070/masks-known-contract.json` case
+     `CORE070-MASKS-KNOWN-MASK-B-PINS-PAIRED-CONTROL` (frozen `r_nll =
+     65.5136777950417` at point `MASK-B-PINS-P1`, tolerance `1e-06`, R@
+     `b4d5fee64`) could ground a literal Julia-vs-R comparison test.
+     **Not achievable in this checkout**: the point's raw observations are not
+     present (only SHA-256 provenance of an ephemeral campaign sandbox;
+     confirmed absent by search of this repo, `~/local-scratch`, and
+     `~/shinichi-brain`), and separately the comparand is an NLL-at-a-fixed-point
+     check for an R model with per-trait fixed effects (`X != nothing`),
+     outside this slice's `X = nothing`-only scope regardless of data
+     availability. No existing `GLLVM_PARITY_TESTS=1`-gated live-R helper in
+     `test/parity/parity_helpers.jl` calls `gllvmTMB(...,
+     lambda_constraint = ...)`, so a live-R path would be new infrastructure,
+     not reuse. Documented precisely as a comment in
+     `test/test_loading_profile_confirmatory.jl` (full evidence trail); the
+     existing internal-consistency grid-cell test renamed from "one
+     R-aligned pin-and-refit grid cell" to "one pin-and-refit grid cell,
+     internal consistency" to stop overclaiming an R match that never ran.
+  Precise σ_eps pin-scaling bug write-up (file:function, old/new line,
+  numeric evidence: `Λ[1,1]` off by 35.79% before the fix, exact after) added
+  to `docs/dev-log/after-task/2026-09-24-d3-loading-profile-stage1.md`.
+- Commands: same battery as below, re-run after the file move — identical
+  pass counts (31/9/24/12/8/31/45); `git diff e613a56a4 -- src/confint_derived.jl`
+  and `git diff e613a56a4 -- docs/src/derived-confidence-intervals.md` both empty.
+
 ## 2026-09-24 — D3 loading_profile Stage 1 slice (`claude/d3-stage1-slice-20260924`)
 
 - Maintainer paste **`G0 Stage 1`** received 2026-09-24. Built on the rebased DRAFT
