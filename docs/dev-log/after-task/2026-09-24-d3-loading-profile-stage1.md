@@ -65,13 +65,17 @@ bounded slice:
   docstring, with the new `lambda_constraint` section, already renders there
   automatically via the existing `fit_gaussian_gllvm` entry — no separate
   edit needed for that half).
-- `test/test_loading_profile_confirmatory.jl`: new top-level `@testset`
-  (9 nested testsets, 26 assertions) — fit-time pin exactness on
-  `MASK-B-PINS`/`MASK-B-UPPER`/`MASK-B-ALLFIXED`, the all-NaN no-op fast path,
-  four refusal paths, one grid-cell profile, the `entries` filter, and a
-  regression guard that the old 3-positional-argument `loading_profile(fit, t,
-  k)` calling convention still dispatches to `loading_profile_exploratory`
-  unchanged.
+- `test/test_loading_profile_confirmatory.jl`: new top-level `@testset`,
+  since grown across the coordinator round-trips below to 9 nested testsets —
+  fit-time pin exactness on `MASK-B-PINS`/`MASK-B-UPPER`/`MASK-B-ALLFIXED`,
+  the all-NaN no-op fast path, four refusal paths, the admission-gate
+  refusals for `alpha_lv`/AGHQ/masked/offset fits (10 assertions, see
+  "Admission gate strengthened" below), a real frozen-R-oracle match, one
+  grid-cell profile, the `entries` filter, and a regression guard that the
+  old 3-positional-argument `loading_profile(fit, t, k)` calling convention
+  still dispatches to `loading_profile_exploratory` unchanged. Final count:
+  38 pass (0 broken) in this outer testset — see "Checks run" for the full
+  file's total including DRAFT #411's own regression test.
 - `CHANGELOG.md`: `Unreleased` → `Changed` entry.
 
 ## Lane bleed fix (coordinator-flagged, 2026-09-24)
@@ -226,12 +230,71 @@ confirmatory. Verified with an explicit regression test.
 - The `loading_profile` deprecation shim is untouched — not removed, not
   altered.
 
+## Admission gate strengthened (coordinator/Gauss-flagged, 2026-09-24)
+
+Gauss's verdict (residual risk #3) found `_confirmatory_j1_fit_admitted`
+checks only `K_W`, `has_diag`, `K_phy`, `has_phy_unique` — it does not refuse
+predictor-informed `alpha_lv` (`X_lv`) fits, whose packed-θ layout
+`_profile_spec`/`_derived_unpack` does not cover (the refit would silently
+return `NaN` rather than erroring), nor AGHQ/masked/offset fits, whose
+closed-form `gaussian_nll_packed` re-evaluation does not reproduce the
+objective those fits were actually estimated under.
+
+Fixed in `src/loading_profile_confirmatory_internal.jl`:
+`_confirmatory_j1_fit_admitted` now also requires `fit.integration === nothing`
+(AGHQ, masked, offset, and `X_lv` fits all attach a non-`nothing`
+`AGHQFitInfo` — confirmed by reading `src/families/aghq_gaussian_fit.jl`'s
+`structured || predictor` branch, the only place `_gaussian_with_integration`
+is called) and `fit.pars.alpha_lv === nothing` (kept as an explicit second
+layer specifically for the case Gauss named by field, not just relying on the
+`integration` proxy). This single shared function protects both entry
+points: DRAFT #411's own lower-level `_confirmatory_profile_refit_lambda_pin`/
+`_confirmatory_lambda_pin_theta_fixes`, callable directly on any `GllvmFit`
+bypassing this slice's wrapper entirely, and this slice's
+`_fit_confirmatory_lambda_constraint`/`_confirmatory_lambda_constraint_theta_fixes`.
+
+Also added, in `src/families/aghq_gaussian_fit.jl`: an early, explicit
+`get(kwargs, :X_lv, nothing) === nothing` check in `fit_gaussian_gllvm`'s
+`lambda_constraint` branch, alongside the pre-existing `aghq`/`mask`/`offset`/`X`
+checks — `X_lv` is a separate keyword from `X` and was the one gap in that
+branch's own guards (aghq/mask/offset were already refused there before
+reaching the admission gate at all).
+
+`test/test_loading_profile_confirmatory.jl`'s new "lambda_constraint refuses
+fit types the pin mapping does not cover" testset (10 assertions) checks: all
+four kinds (`X_lv`, `aghq`, `mask`, `offset`) refuse via
+`fit_gaussian_gllvm(...; lambda_constraint = ...)`; the admission gate itself
+returns `false` for each (defense-in-depth, proving #411's own lower-level
+entry point is protected too, via one direct `_confirmatory_profile_refit_lambda_pin`
+call on an `alpha_lv` fit); and a plain admitted fit is unaffected (control).
+
 ## Fences honoured
 
 No `Project.toml` bump. `src/grouped_nongaussian_fit.jl` not touched. No
 existing `rtol`/`atol` widened (the bug fix removed an erroneous division, not
 a tolerance). gllvmTMB (R) not touched. No GitHub `@handle` used anywhere in
 this report or the check-log entry.
+
+## Open items
+
+- **Fixture sign discrepancy (untouched, coordinator instruction).**
+  `docs/dev-log/core070/masks-known-points-01/attempt1/out/maps.tsv` records
+  the R reference's own pin for the `MASK-B-PINS` case as `L11 = +0.8` (the
+  file's `pins` column reads `0.8,0`). This repo's pre-existing (Stage 0,
+  PR #345) `loading_profile_fixture_mask_b_pins()` in
+  `test/parity/fixtures/loading_profile_confirmatory_substrate.jl` uses
+  `L11 = -0.8` instead — opposite sign, same magnitude. Both are internally
+  self-consistent (every test in this repo that uses the Stage 0 fixture,
+  including the new frozen-R-oracle test, uses whichever sign it needs and
+  checks against that same sign throughout), so nothing is currently broken
+  by this. But it means two different synthetic fixtures, built for two
+  different purposes at two different times, disagree on a value a reader
+  might reasonably expect to be shared. **Per instruction, the Stage 0
+  fixture is NOT changed in this slice** — that fixture is Stage 0 / PR #345
+  territory, out of this Stage 1 slice's scope, and changing it would be a
+  separate, deliberate decision (which sign is "canonical", and whether
+  anything downstream assumes the current one) that belongs to whoever owns
+  Stage 0, not a side effect of this slice. Flagging so it is not lost.
 
 ## Flag for whoever lands this (resolved 2026-09-24)
 
@@ -252,11 +315,16 @@ the move, confirming the relocation did not change behavior.
 - `git diff e613a56a4 -- docs/src/derived-confidence-intervals.md` — empty
   (byte-identical).
 - `julia --project=. -e 'using Pkg; Pkg.instantiate(); using GLLVModels'` — OK.
-- `julia --project=. test/test_loading_profile_confirmatory.jl` — 33 pass
-  (5 pre-existing + 28 new, the +2 being the frozen-R-oracle testset added
-  after the self-correction below), 1 broken (`@test_skip`, expected: the
-  paste-gated low-level smoke test in the pre-existing testset still requires
-  `ENV["GLLVM_STAGE1_PASTE"]`, which the new export path does not use).
+- **Final re-run, after rebasing onto the re-fixed #411 (`fd6acc090`) and adding
+  the admission-gate refusals:**
+  `julia --project=. test/test_loading_profile_confirmatory.jl` — 48 pass total
+  across both outer testsets (10 pass / 1 broken in "loading_profile
+  confirmatory internal", which now also carries DRAFT #411's own raw-scale
+  regression test; 38 pass / 0 broken in "loading_profile Stage 1", which now
+  also carries the "lambda_constraint refuses fit types the pin mapping does
+  not cover" testset, 10 assertions). The 1 broken is expected (`@test_skip`,
+  the paste-gated low-level smoke test still requires
+  `ENV["GLLVM_STAGE1_PASTE"]`, which this slice's export path does not use).
 - `julia --project=. test/test_loading_profile_stage1_harness.jl` — 9 pass.
 - `julia --project=. test/test_loading_profile_stage0.jl` — 24 pass (existing
   test that includes the substrate file DRAFT #411 modified).

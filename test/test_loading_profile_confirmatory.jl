@@ -146,6 +146,54 @@ end
             Y; K = _K, lambda_constraint = fill(NaN, _P + 1, _K))
     end
 
+    @testset "lambda_constraint refuses fit types the pin mapping does not cover" begin
+        # Gauss (2026-09-24): predictor-informed alpha_lv (X_lv) fits pass the
+        # X = nothing check (X_lv is a separate kwarg from X) and previously
+        # reached the pin-index machinery, whose packed-θ layout does not
+        # include alpha_lv -- the refit silently returned NaN rather than
+        # refusing. AGHQ, masked, and offset fits are the same class: their
+        # closed-form gaussian_nll_packed re-evaluation does not reproduce the
+        # objective the fit was actually estimated under.
+        pins = loading_profile_fixture_mask_b_pins()
+        X_lv = reshape(collect(range(-1.0, 1.0; length = n)), n, 1)
+        @test_throws ArgumentError fit_gaussian_gllvm(
+            Y; K = _K, X_lv = X_lv, lambda_constraint = fill(NaN, _P, _K))
+
+        @test_throws ArgumentError fit_gaussian_gllvm(
+            Y; K = _K, aghq = 3, lambda_constraint = fill(NaN, _P, _K))
+
+        @test_throws ArgumentError fit_gaussian_gllvm(
+            Y; K = _K, mask = trues(_P, n), lambda_constraint = fill(NaN, _P, _K))
+
+        off = zeros(_P, n)
+        @test_throws ArgumentError fit_gaussian_gllvm(
+            Y; K = _K, offset = off, lambda_constraint = fill(NaN, _P, _K))
+
+        # Defense in depth: the shared admission gate itself refuses these fit
+        # types, independent of the fit_gaussian_gllvm wrapper's own early
+        # checks above -- this is what protects DRAFT #411's own lower-level
+        # `_confirmatory_profile_refit_lambda_pin`/`_confirmatory_lambda_pin_theta_fixes`,
+        # which a caller can reach directly on any GllvmFit, bypassing the
+        # wrapper entirely.
+        alpha_lv_fit = fit_gaussian_gllvm(Y; K = _K, X_lv = X_lv)
+        @test !GLLVModels._confirmatory_j1_fit_admitted(alpha_lv_fit)
+        @test_throws ArgumentError GLLVModels._confirmatory_profile_refit_lambda_pin(
+            alpha_lv_fit, Y, pins, 2, 1, 0.1; require_paste = false)
+
+        aghq_fit = fit_gaussian_gllvm(Y; K = _K, aghq = 3)
+        @test !GLLVModels._confirmatory_j1_fit_admitted(aghq_fit)
+
+        masked_fit = fit_gaussian_gllvm(Y; K = _K, mask = trues(_P, n))
+        @test !GLLVModels._confirmatory_j1_fit_admitted(masked_fit)
+
+        offset_fit = fit_gaussian_gllvm(Y; K = _K, offset = off)
+        @test !GLLVModels._confirmatory_j1_fit_admitted(offset_fit)
+
+        # Control: the plain admitted fit is unaffected by the strengthened gate.
+        plain_fit = fit_gaussian_gllvm(Y; K = _K)
+        @test GLLVModels._confirmatory_j1_fit_admitted(plain_fit)
+    end
+
     @testset "loading_profile refuses a non-confirmatory (exploratory) fit" begin
         base = fit_gaussian_gllvm(Y; K = _K)
         @test_throws ArgumentError loading_profile(base; y = Y)

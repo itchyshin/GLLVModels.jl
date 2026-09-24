@@ -114,10 +114,22 @@ function _profile_refit_lambda_constraint(
     return M
 end
 
-# Stage 1 bounded slice: ordinary unit-tier Gaussian J1 only (no W/diag/phylo blocks).
+# Stage 1 bounded slice: ordinary unit-tier Gaussian J1 only. Refuses (Gauss,
+# 2026-09-24): W/diag/phylo blocks; predictor-informed `alpha_lv` (X_lv) fits,
+# whose packed-θ layout `_profile_spec`/`_derived_unpack` does not cover —
+# without this check the pin-index mapping targets the wrong θ_packed slot and
+# the refit silently returns NaN; and AGHQ/masked/offset fits, which attach a
+# non-`nothing` `fit.integration` and whose closed-form `gaussian_nll_packed`
+# evaluation (what the refit actually re-optimises) does not reproduce the
+# integrated/masked/offset objective the fit itself was estimated under.
+# `X_lv` fits also always attach a non-`nothing` `fit.integration`, so the
+# single `integration === nothing` check below covers AGHQ/masked/offset/X_lv
+# together; the `alpha_lv === nothing` check is kept as an explicit,
+# self-documenting second layer for the specific case Gauss named.
 function _confirmatory_j1_fit_admitted(fit::GllvmFit)
     m = fit.model
-    return m.K_W == 0 && !m.has_diag && m.K_phy == 0 && !m.has_phy_unique
+    return m.K_W == 0 && !m.has_diag && m.K_phy == 0 && !m.has_phy_unique &&
+        fit.integration === nothing && fit.pars.alpha_lv === nothing
 end
 
 # Index into `fit.pars.θ_packed` for raw-scale `Lambda_B[i,k]` naming (confint layout).

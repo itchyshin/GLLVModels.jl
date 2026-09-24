@@ -30,8 +30,10 @@ fits the ordinary unconstrained model, then re-optimises with the numeric
 entries held fixed via
 [`GLLVModels._fit_confirmatory_lambda_constraint`](@ref) (internal). Stage 1
 scope only: ordinary J1 Gaussian (`K_W = 0`, `has_diag = false`, `K_phy = 0`,
-`has_phy_unique = false`) and `X = nothing`; `aghq`, `mask`, and `offset` are
-not yet supported together with `lambda_constraint`. The returned fit's
+`has_phy_unique = false`), `X = nothing`, and `X_lv = nothing`; `aghq`,
+`mask`, `offset`, and `X_lv` (predictor-informed latent scores) are not yet
+supported together with `lambda_constraint` and refuse with a clear
+`ArgumentError`. The returned fit's
 `pars.lambda_constraint` records the normalised pin matrix, which
 [`loading_profile`](@ref) reads to determine free vs pinned entries. This is a
 **Stage 1 receipt**, not full R grid parity — see
@@ -47,6 +49,9 @@ function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control
             "lambda_constraint does not yet support mask/offset in Stage 1"))
         get(kwargs,:X,nothing)===nothing || throw(ArgumentError(
             "lambda_constraint currently supports X = nothing (zero-mean) fits only"))
+        get(kwargs,:X_lv,nothing)===nothing || throw(ArgumentError(
+            "lambda_constraint does not yet support X_lv (predictor-informed latent " *
+            "scores) in Stage 1"))
         base=fit_gaussian_gllvm(Y;K=K,hessian=hessian,kwargs...)
         return _fit_confirmatory_lambda_constraint(base,Y,lambda_constraint)
     end
