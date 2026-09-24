@@ -16,7 +16,7 @@ This file is a **pre-paste runbook**. It is **not** Stage 1 implementation.
 
 | Paste (exact) | Agent may |
 |---------------|-----------|
-| `G0 Stage 1` | Open a **new** implementation PR (or mark this scaffold’s follow-on ready) and execute the bounded slice below. |
+| `G0 Stage 1` | Merge DRAFT Stage 1 harness when green, then execute the bounded slice below in that PR (or a follow-on). |
 
 Without the paste: **no** `src/` export, **no** ledger rebind, **no** shim removal.
 
@@ -32,6 +32,26 @@ Without the paste: **no** `src/` export, **no** ledger rebind, **no** shim remov
 
 ---
 
+## Internal plumbing (DRAFT #411 — pre-export)
+
+| Item | Status |
+|------|--------|
+| `src/loading_profile_confirmatory_internal.jl` pin substrate + J1 multi-fixed refit | **landed** (not exported) |
+| `test/test_loading_profile_confirmatory.jl` | **landed** (refit smoke paste-gated / `@test_skip`) |
+| Fit-time `lambda_constraint` on `fit_gaussian_gllvm` | **PENDING** paste |
+| Public `loading_profile` export + deprecation shim removal | **PENDING** paste |
+| Ledger rebind `namespace/export/loading_profile` | **PENDING** paste + paired evidence |
+| Docs cascade (docstrings, reference, after-task) | **PENDING** paste |
+
+<!--
+PENDING — ACCEPTED export checklist (flip only after maintainer paste `G0 Stage 1` + Rose receipt):
+[ ] Public export loading_profile(fit; level, entries, n_grid, grid_extent, conf_level, y)
+[ ] Fit-time lambda_constraint wired on Gaussian + ordinary latent (raw-scale pins)
+[ ] test_loading_profile_confirmatory: R-aligned grid cell on frozen fixtures (local or frozen JSON)
+[ ] Ledger row namespace/export/loading_profile bound with joint D3 wording
+[ ] check-log + after-task + capability matrix honest fence
+-->
+
 ## Explicit fences (unchanged)
 
 - **No** `Project.toml` version bump.
@@ -44,6 +64,7 @@ Without the paste: **no** `src/` export, **no** ledger rebind, **no** shim remov
 
 | Paste | Scaffold PR |
 |-------|-------------|
+| `G0 Stage 1` | DRAFT [#411](https://github.com/itchyshin/GLLVModels.jl/pull/411) |
 | `accept delta dispersion A` | DRAFT [#399](https://github.com/itchyshin/GLLVM.jl/pull/399) |
-| `S4 probe yes` | DRAFT (S4 Julia checklist plan in this PR series) |
-| `ack Totoro D-139 #323 Track A` | DRAFT (Totoro #323 runbook in this PR series) |
+| `S4 probe yes` | DRAFT [#409](https://github.com/itchyshin/GLLVModels.jl/pull/409) |
+| `ack Totoro D-139 #323 Track A` | DRAFT [#410](https://github.com/itchyshin/GLLVModels.jl/pull/410) |

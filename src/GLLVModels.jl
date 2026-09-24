@@ -157,6 +157,7 @@ include("ordination_uncertainty.jl")      # per-site latent-score uncertainty (c
 # Confidence intervals
 include("confint.jl")                    # Wald
 include("confint_profile.jl")            # profile likelihood
+include("loading_profile_confirmatory_internal.jl")  # D3 confirmatory pins (not exported)
 include("confint_bootstrap.jl")          # parametric bootstrap
 include("confint_derived.jl")            # derived quantities (Σ_y, communality, ...)
 include("confint_derived_wald.jl")       # transformed-Wald CIs for bounded derived quantities
