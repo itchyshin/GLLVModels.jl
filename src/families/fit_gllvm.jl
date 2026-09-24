@@ -97,6 +97,12 @@ the plain-call behaviour when they are at their defaults (regression safe):
   dispersion for NB/Beta/NB1/BetaBinom remains available via the named fitters
   [`fit_nb_gllvm`](@ref) / [`fit_beta_gllvm`](@ref) / [`fit_nb1_gllvm`](@ref) /
   [`fit_beta_binomial_gllvm`](@ref).
+  For `DeltaLogNormal` / `DeltaGamma`, `disp_group` is not a grouping — it
+  selects the two-part fitter's own dispersion parameterisation
+  (`:species`/`:shared`, see [`fit_delta_lognormal_gllvm`](@ref) /
+  [`fit_delta_gamma_gllvm`](@ref)); `disp_group = nothing` is likewise
+  coerced to `:species` (per-trait σ/α, matching gllvmTMB's per-trait
+  dispersion), with `:shared` available as an explicit opt-in.
 
 - `pervar::Bool = false` — heteroscedastic (per-species variance) Gaussian. Only valid
   for `family = Normal()`; `true` routes to [`fit_gaussian_pervar_gllvm`](@ref).
@@ -211,14 +217,17 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
     # engines remain `fit_nb_gllvm` / `fit_beta_gllvm` / `fit_nb1_gllvm` /
     # `fit_beta_binomial_gllvm`. The NB1 and BetaBinom markers' `φ` fields are never
     # read: φ is always estimated. Gamma unchanged.
+    # DeltaLogNormal / DeltaGamma joined this coerce on `accept delta dispersion A`
+    # (maintainer paste, 2026-09-24; docs/dev-log/decisions/2026-09-15-delta-dispersion-
+    # alignment-pending.md): their public default now matches gllvmTMB's per-trait
+    # `log_sigma_lognormal_delta` / `log_phi_gamma_delta` too. Shared dispersion
+    # remains available via `disp_group = :shared` on either the named fitters or here.
     if disp_group === nothing &&
        (family isa NegativeBinomial || family isa Beta || family isa NB1 ||
-        family isa BetaBinom || (family isa StudentTFamily && family.ν === nothing))
+        family isa BetaBinom || (family isa StudentTFamily && family.ν === nothing) ||
+        family isa DeltaLogNormal || family isa DeltaGamma)
         disp_group = :species
     end
-    # PASTE `accept delta dispersion A`: add DeltaLogNormal / DeltaGamma to the coerce
-    # block above (disp_group = :species when nothing), then forward disp_group into
-    # fit_delta_* via kwargs below — public twin default must not flip before paste.
 
     # --- Multinomial v1: FE softmax only (no LV). ----------------------------
     # Must run before row_eff / disp_group / pervar routes (those require K).
@@ -328,9 +337,13 @@ function _fit_gllvm(family::StudentTFamily, Y::AbstractMatrix; kwargs...)
 end
 # Delta markers are tag-payload markers: σ / α are always estimated by the named
 # fitters and are never read from the family instance (same pattern as NB1(φ)).
-_fit_gllvm(::DeltaLogNormal, Y::AbstractMatrix; disp_group = :shared, kwargs...) =
+# The coerce block above already turns a `nothing` disp_group into `:species`
+# before either Delta family reaches this dispatch via `fit_gllvm`, so this
+# default only matters for a direct `_fit_gllvm` call; kept in sync with the
+# named fitters' own `:species` default (`accept delta dispersion A`, 2026-09-24).
+_fit_gllvm(::DeltaLogNormal, Y::AbstractMatrix; disp_group = :species, kwargs...) =
     fit_delta_lognormal_gllvm(Y; disp_group = disp_group, kwargs...)
-_fit_gllvm(::DeltaGamma, Y::AbstractMatrix; disp_group = :shared, kwargs...) =
+_fit_gllvm(::DeltaGamma, Y::AbstractMatrix; disp_group = :species, kwargs...) =
     fit_delta_gamma_gllvm(Y; disp_group = disp_group, kwargs...)
 _fit_gllvm(::GeneralizedPoisson1, Y::AbstractMatrix; kwargs...) = fit_gp1_gllvm(Y; kwargs...)
 _fit_gllvm(::ZIPoisson, Y::AbstractMatrix; kwargs...) = fit_zip_gllvm(Y; kwargs...)

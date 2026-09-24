@@ -267,7 +267,8 @@ positive-part meanlog intercepts `βc` (length p), positive-part loadings `Λc`
 (p×K), the log-scale SD `σ` (a `Float64` under `disp_group == :shared`, or a
 length-p `Vector{Float64}` under `disp_group == :species`), the maximised
 `loglik`, `converged`, `iterations`, `predictor` (`:separate` default or
-`:shared`), and `disp_group` (`:shared` default or `:species`).
+`:shared`), and `disp_group` (`:species` default, matching R gllvmTMB's
+per-trait dispersion — `:shared` remains available as an explicit opt-in).
 (`Λz = 0` — occurrence is intercept-only — under `predictor == :separate`.
 Under `predictor == :shared` (the gllvmTMB twin-identity mode: one linear
 predictor drives both parts, `gllvmTMB.cpp:2816-2830`), `βz === βc` and `Λc`
@@ -324,16 +325,19 @@ log-responses + `σ₀ = sd(log y_{>0})`.
   supplied `offset` is threaded into BOTH `offsetz` and `offsetc` under
   `:shared` so the tie `ηz ≡ ηc` is preserved.
 
-`disp_group` selects the dispersion parameterisation (`:shared` default, or
-`:species`) for grouped or species-specific dispersion:
-- `:shared` (default, previous/only behaviour before this kwarg existed): one
-  scalar sdlog `σ` for every species.
-- `:species`: one sdlog per species (`length(σ) == p`), matching gllvmTMB's
-  per-trait `log_sigma_lognormal_delta`. Adds
-  `p − 1` free parameters relative to `:shared`; the two nest (`:shared` is
-  the `:species` model with all p sdlogs tied), so `:species` logLik ≥
-  `:shared` logLik on the same data up to optimiser noise. Composes with
-  either `predictor` mode.
+`disp_group` selects the dispersion parameterisation (`:species` default, or
+`:shared`) for grouped or species-specific dispersion:
+- `:species` (default since `accept delta dispersion A`, 2026-09-24): one
+  sdlog per species (`length(σ) == p`), matching gllvmTMB's per-trait
+  `log_sigma_lognormal_delta`. Adds `p − 1` free parameters relative to
+  `:shared`; the two nest (`:shared` is the `:species` model with all p
+  sdlogs tied), so `:species` logLik ≥ `:shared` logLik on the same data up
+  to optimiser noise. Composes with either `predictor` mode. **Existing code
+  that called this fitter without an explicit `disp_group` will see σ change
+  from a scalar to a length-p vector** — pass `disp_group = :shared`
+  explicitly to keep the old one-scalar-per-model behaviour.
+- `:shared` (previous default, before 2026-09-24; still available as an
+  explicit opt-in): one scalar sdlog `σ` for every species.
 
 `hessian` selects the two-part Laplace log-det curvature (`:observed` default /
 `:fisher`); the mode search is always Fisher-scored. NOTE (2026-08-28): for this
@@ -347,7 +351,7 @@ function fit_delta_lognormal_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         offset = nothing,
         hessian::Symbol = :observed,
         predictor::Symbol = :separate,
-        disp_group::Symbol = :shared,
+        disp_group::Symbol = :species,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
@@ -831,7 +835,9 @@ positive-part log-mean intercepts `βc` (length p), positive-part loadings `Λc`
 (p×K), the shape `α` (`Var = μ²/α`; a `Float64` under `disp_group == :shared`,
 or a length-p `Vector{Float64}` under `disp_group == :species`), the maximised
 `loglik`, `converged`, `iterations`, `predictor` (`:separate` default or
-`:shared`), and `disp_group` (`:shared` default or `:species`). (`Λz = 0` —
+`:shared`), and `disp_group` (`:species` default, matching R gllvmTMB's
+per-trait dispersion — `:shared` remains available as an explicit opt-in).
+(`Λz = 0` —
 occurrence is intercept-only — under `predictor == :separate`. Under
 `predictor == :shared` (the gllvmTMB twin-identity mode: one linear predictor
 drives both parts, `gllvmTMB.cpp:2831-2844`), `βz === βc` and `Λc` IS the
@@ -890,16 +896,19 @@ standardised positives.
   supplied `offset` is threaded into BOTH `offsetz` and `offsetc` under
   `:shared` so the tie `ηz ≡ ηc` is preserved.
 
-`disp_group` selects the dispersion parameterisation (`:shared` default, or
-`:species`) for grouped or species-specific dispersion:
-- `:shared` (default, previous/only behaviour before this kwarg existed): one
-  scalar shape `α` for every species.
-- `:species`: one shape per species (`length(α) == p`), matching gllvmTMB's
-  per-trait `log_phi_gamma_delta`. Adds
-  `p − 1` free parameters relative to `:shared`; the two nest (`:shared` is
-  the `:species` model with all p shapes tied), so `:species` logLik ≥
-  `:shared` logLik on the same data up to optimiser noise. Composes with
-  either `predictor` mode.
+`disp_group` selects the dispersion parameterisation (`:species` default, or
+`:shared`) for grouped or species-specific dispersion:
+- `:species` (default since `accept delta dispersion A`, 2026-09-24): one
+  shape per species (`length(α) == p`), matching gllvmTMB's per-trait
+  `log_phi_gamma_delta`. Adds `p − 1` free parameters relative to `:shared`;
+  the two nest (`:shared` is the `:species` model with all p shapes tied), so
+  `:species` logLik ≥ `:shared` logLik on the same data up to optimiser
+  noise. Composes with either `predictor` mode. **Existing code that called
+  this fitter without an explicit `disp_group` will see α change from a
+  scalar to a length-p vector** — pass `disp_group = :shared` explicitly to
+  keep the old one-scalar-per-model behaviour.
+- `:shared` (previous default, before 2026-09-24; still available as an
+  explicit opt-in): one scalar shape `α` for every species.
 
 `hessian` selects the two-part Laplace log-det curvature (`:observed` default /
 `:fisher`); the mode search is always Fisher-scored. DeltaGamma is the one
@@ -909,7 +918,7 @@ selectors genuinely differ here. This holds under both `predictor` modes.
 function fit_delta_gamma_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         offset = nothing, hessian::Symbol = :observed,
         predictor::Symbol = :separate,
-        disp_group::Symbol = :shared,
+        disp_group::Symbol = :species,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     # Validated up front: the objective wraps its body in a try/catch that converts any

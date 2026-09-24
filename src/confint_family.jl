@@ -1466,8 +1466,9 @@ end
 
 # --- Delta-lognormal -------------------------------------------------------
 # Shared-σ packing (#347) plus per-trait σ packing for Option A twin alignment
-# (`disp_group=:species`). Public fitter default stays `:shared` until paste
-# `accept delta dispersion A` also flips defaults + postfit vector-σ (deferred).
+# (`disp_group=:species`). Public fitter default is `:species` since
+# `accept delta dispersion A` (maintainer paste, 2026-09-24); `:shared` remains
+# an explicit opt-in and both branches below stay exercised.
 function _family_ci(fit::DeltaLogNormalFit, Y::AbstractMatrix;
                     hessian::Symbol = :observed,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
