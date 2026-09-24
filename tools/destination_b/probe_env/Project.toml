@@ -16,12 +16,13 @@
 # The harness / `tools/destination_b/run_s4_public_phylo_dep_probe.jl` do not
 # call `Pkg.develop` themselves; the recorder's clean-Julia-probe activates
 # this project as-is and asserts `Base.pkgdir(GLLVM) == julia_project`, so
-# this project's (gitignored) Manifest must be instantiated once with
-# `Pkg.develop(path="../../..")` pointed at the working tree before use:
-#   julia --project=tools/destination_b/probe_env -e \
-#     'using Pkg; Pkg.develop(path="../../.."); Pkg.instantiate()'
-# With the entry already present here, that `Pkg.develop` has nothing to
-# rewrite in this file, so it only touches the Manifest.
+# this project's (gitignored) Manifest must be instantiated once before use.
+# Because [deps] also lists the unregistered `GLLVM` shim (see below), a
+# one-step `Pkg.develop(path="../../.."); Pkg.instantiate()` fails with
+# `expected package GLLVM [530e1681] to be registered`. Use the two-step
+# setup at the end of this comment, run from this directory. With the entries
+# already present here, those `Pkg.develop` calls have nothing to rewrite in
+# this file, so they only touch the Manifests.
 #
 # Shim (maintainer decision 2026-09-24, option A): the package was renamed
 # GLLVM -> GLLVModels (#423) but the frozen recorder still runs `using GLLVM`.

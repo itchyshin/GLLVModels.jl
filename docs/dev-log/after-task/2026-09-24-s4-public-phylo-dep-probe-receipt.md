@@ -9,11 +9,13 @@
 **Verdict in one sentence:** the probe ran, but the frozen recorder refused to write a receipt, because its own runner cannot call `test_that()` under `Rscript --vanilla`; no endpoint was produced, so there is no S4 pass.
 
 ```text
-S4_ESTIMATE est_min=3
+S4_ESTIMATE est_min=3 recorded=post_run pre_run_record=orchestrator_brief_2to6min
 S4_RESULT pass=0 fail=2 julia_gap=0 recorder_drift=0 oracle_defect=2 wall_min=0.22
 ```
 
-The unit in `S4_RESULT` is the recorder's selected test pair (the only unit the runner reports), because no endpoint pair was produced. Both failures share one root cause.
+How the counts are derived. No endpoint pair was produced, so the unit here is the recorder's selected `test_that()` expression, not an endpoint. The recorder's own `FAILED.json` reports `selected_test_count: 1` and `test_counts: {failed: 0, skipped: 0, error: 1}`, with one `test_tab` row (`test: null`, `nb: 1`). That is because both `test_that()` calls errored before they registered a test name, so the reporter folded them into one row. The same file lists two entries in `source.selected_test_expressions` and two `expectation_error` entries in `reporter_details`, one per expression. `fail=2` and `oracle_defect=2` count those two selected expressions, each of which produced an `expectation_error`. Counted in the runner's own reported unit, the result is 1 error. Both failures share one root cause.
+
+The `S4_ESTIMATE` line was written after the run, when the receipt was drafted; see Estimate.
 
 ## Scope boundary
 
@@ -40,7 +42,12 @@ This probe receipt is not Arc 0 promotion and does not make any capability row `
 
 ## Estimate
 
-Define-only smoke (source the runner with `GLLVM_S4_PUBLIC_PHYLO_DEP_DEFINE_ONLY=1`, call `s4_public_phylo_dep_clean_julia_probe()` on the shim and probe env): 1.58 s wall, returned the expected six-field list with `package_root` = the shim directory. Full-probe estimate: 3 min, well under the 30-minute line. The diagnostic run, which reached both fits, took 1.7 min.
+The `est_min=3` figure was recorded after the run, when this receipt was written. No estimate line was written to the lane log or elsewhere by the builder before the full run started (log, 16:59:43Z). The pre-run basis was:
+
+- the orchestrator's written brief for this run, which estimated 2 to 6 min (well under the 30-minute line); this is the only estimate written before the run, and it sits in the workflow transcript, not in a repository or lane file;
+- the define-only smoke at 16:59:11Z (source the runner with `GLLVM_S4_PUBLIC_PHYLO_DEP_DEFINE_ONLY=1`, call `s4_public_phylo_dep_clean_julia_probe()` on the shim and probe env): 1.58 s wall, returned the expected six-field list with `package_root` = the shim directory.
+
+So gate X409 G2 ("pre-run estimate line") is met in substance by the orchestrator's brief, not by a pre-run artifact in this receipt. A checker reading `S4_ESTIMATE` here is not evidence that the estimate came first. The official run took 13.2 s. The diagnostic run, which reached both fits, took 1.7 min, measured after the fact.
 
 ## Commands (exact)
 
@@ -126,9 +133,16 @@ Result: 2 tests selected; expectations 6 pass, 1 fail, 0 error.
 | Julia lower endpoints equal native lower, tolerance 1e-4 | pass |
 | Julia upper endpoints equal native upper, tolerance 1e-4 | pass |
 
-The failing gate: Julia `(0.2256317, 0.0969768, 0.0969768, 0.0416807)` against native `(0.2256295, 0.0969762, 0.0969762, 0.0416806)`. The largest absolute difference is 2.2e-6 and the mean relative difference is 7.6e-6, above testthat's 5e-6. The recorder's own comment records 9e-7 when it set that gate against the pre-rename Julia package. Leading hypothesis, not tested: a change in where the Julia optimizer stops since then (a Julia-side cause). The per-target endpoint numbers were not retained, because the runner stops before it reads them.
+**This run's embedded Julia did not meet the recorder's own qualification standard.** The embedded Julia logged six `Error during loading of extension LogExpFunctionsInverseFunctionsExt ... loglogistic not defined` blocks. That is exactly the pattern the runner's stage-1 clean-Julia check rejects (runner line 318 matches `loglogistic not defined`). Stage 1 passed only because it checks a separate fresh process, not the embedded one. Both probe Manifests pin LogExpFunctions 0.3.29, but the default `~/.julia/environments/v1.10` carries LogExpFunctions 0.3.26 and RCall, so the embedded process very likely loaded a mix of the two versions (JuliaCall loads RCall and its dependencies from `@v1.10` before the shim project is activated). The errors did not stop the run, but every number below comes from an environment the recorder would not qualify.
 
-The embedded Julia also logged six `Error during loading of extension LogExpFunctionsInverseFunctionsExt ... loglogistic not defined` blocks. They were not fatal. The likely cause is JuliaCall loading RCall and its dependencies from the default `@v1.10` environment before the shim project is activated, which mixes two LogExpFunctions versions. The recorder's clean-Julia probe checks for this error only in a separate fresh process, so it cannot catch it in the embedded one.
+The failing gate: Julia `(0.2256317, 0.0969768, 0.0969768, 0.0416807)` against native `(0.2256295, 0.0969762, 0.0969762, 0.0416806)`. The largest absolute difference is 2.2e-6 and the mean relative difference is 7.6e-6, above testthat's 5e-6. The recorder's own comment records 9e-7 when it set that gate against the pre-rename Julia package. Two competing hypotheses, neither tested:
+
+1. a change in where the Julia optimizer stops since the gate was set (a Julia-side cause);
+2. environment contamination: mixed LogExpFunctions versions (0.3.26 from `@v1.10` against the pinned 0.3.29) in the embedded process changed the numerics.
+
+The two 1e-4 "passes" are testthat `expect_equal()` checks, which compare a mean relative difference across all seven targets. They are not the per-target maximum absolute delta that the endpoint table above uses as its gate. The per-target endpoint numbers were not retained, because the runner stops before it reads them. So these passes are not endpoint evidence, and nothing in this section says the 1e-4 endpoint gates passed.
+
+Correction: the message of commit `8471f1fa3` says the diagnostic run "passed the 1e-4 endpoint gates". That overstates it, for the reasons just given. The branch is pushed and is not rewritten; any squash or merge message for this work must not repeat that wording.
 
 ## Other findings
 
@@ -138,11 +152,12 @@ The embedded Julia also logged six `Error during loading of extension LogExpFunc
 ## Checks
 
 - `test/test_destination_b_s4_public_phylo_dep_probe_harness.jl`: 22 of 22 pass (includes the new `s4_public_phylo_dep_r_command` test, which failed before the fix).
+- Probe env setup, fresh clone of `8471f1fa3` (no Manifests), under the lane semaphore: the old one-step `Pkg.develop(path="../../.."); Pkg.instantiate()` from `tools/destination_b/probe_env` fails with `expected package GLLVM [530e1681] to be registered`; the two-step setup now in the runbook and `probe_env/Project.toml` instantiates both environments, `using GLLVM` resolves to the shim, and `git status --porcelain` stays empty.
 - Recorder worktree after all runs: `git status --porcelain` empty, `HEAD` `97214679c94cc4a6b9e02d3c2b03ccce516027d8`.
 
 ## Follow-up (needs Shinichi)
 
-- [ ] Choose a remedy for the runner defect. The recorder is frozen, so any remedy is either an environment-level deviation recorded in the receipt (for example `R_DEFAULT_PACKAGES` attaching testthat, as in the diagnostic) or a new recorder commit.
+- [ ] Choose a remedy for the runner defect. The recorder is frozen, so any remedy is either an environment-level deviation recorded in the receipt (for example `R_DEFAULT_PACKAGES` attaching testthat, as in the diagnostic) or a new recorder commit. Note that `R_DEFAULT_PACKAGES` alone would not give a qualified embedded environment: the diagnostic also showed the embedded Julia mixing LogExpFunctions versions from `@v1.10`, so any rerun also needs the embedded process kept off the default environment (for example a `JULIA_LOAD_PATH` or depot that excludes `@v1.10`, recorded as a deviation) and a check that the embedded log has no `loglogistic not defined` line.
 - [ ] Then decide on the `phylo_covariance` 5e-6 gate result above. Do not widen it. First find out which optimizer is further from the optimum.
 - [ ] Pending board / paste packet update (docs PR only).
 - [ ] GOAL QS4 checkbox (maintainer only; stays open).

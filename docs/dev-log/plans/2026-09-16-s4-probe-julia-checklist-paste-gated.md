@@ -38,8 +38,12 @@ This checklist is **Julia-side prep only**. No probe execution from cloud / Curs
   repo root and lists `LogExpFunctions` as a direct dependency, since the recorder's clean-Julia-probe
   does `using LogExpFunctions` before `using GLLVM` and the root `Project.toml` only carries
   `LogExpFunctions` transitively. One-time local instantiate (Manifest is gitignored, like every other
-  sub-environment in this repo):
-  `julia --project=tools/destination_b/probe_env -e 'using Pkg; Pkg.develop(path="../../.."); Pkg.instantiate()'`
+  sub-environment in this repo). Since the option A shim (below), `probe_env/Project.toml` lists the
+  unregistered `GLLVM` shim, so the older one-step `Pkg.develop(path="../../.."); Pkg.instantiate()` now
+  fails with `expected package GLLVM [530e1681] to be registered` (and from the repo root the relative
+  `../../..` does not resolve at all). Use this two-step setup, run from `tools/destination_b/probe_env`:
+  `julia --project=GLLVM -e 'using Pkg; Pkg.develop(path="../../.."); Pkg.instantiate()'`
+  `julia --project=. -e 'using Pkg; Pkg.develop([PackageSpec(path="../../.."), PackageSpec(path="GLLVM")]); Pkg.instantiate()'`
   `--julia-env` still overrides this default when passed explicitly.
 - [x] `using GLLVM` resolved by a probe-only shim (maintainer decision 2026-09-24, option A;
   `claude/s4-probe-run-20260924`): `tools/destination_b/probe_env/GLLVM/` is a local package named
