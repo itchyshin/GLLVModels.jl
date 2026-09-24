@@ -248,6 +248,21 @@ end
 _dispersion_group_boundary(dvec::AbstractVector{<:Real}) =
     Bool[(d > 1e6) || (d < 1e-6) for d in dvec]
 
+# NB2 grouped fits can stall with a group's log r out at the Poisson boundary, where
+# the likelihood is nearly flat, below the optimum (#477). Restart once from the
+# returned point with those groups at r = 1, and keep the restart only if it lowers
+# the negative log-likelihood by more than 1e-6. Fits that never reach the boundary,
+# and genuine boundary fits, are returned unchanged.
+function _nb_boundary_restart(negll, res, ls, opts, first_log_r::Integer)
+    θ = Optim.minimizer(res)
+    bd = findall(_dispersion_group_boundary(exp.(θ[first_log_r:end])))
+    isempty(bd) && return res
+    θs = copy(θ)
+    θs[first_log_r - 1 .+ bd] .= 0.0
+    res2 = Optim.optimize(negll, θs, ls, opts; autodiff = :finite)
+    return Optim.minimum(res2) < Optim.minimum(res) - 1e-6 ? res2 : res
+end
+
 """
     NBGroupedFit
 
@@ -329,7 +344,11 @@ Fit a negative-binomial GLLVM with grouped / species-specific dispersion (gllvm'
 `disp.group`): species `t` shares dispersion `r_group[group[t]]`. `group` is a
 length-p vector of group ids (relabelled to `1..G` internally). L-BFGS over
 `[β; vec(Λ); log r_1 … log r_G]`; finite-difference gradient; warm start from
-empirical log-means + SVD loadings + a moderate per-group `r₀`. With one group this
+empirical log-means + SVD loadings + a moderate per-group `r₀`. If a group's `r`
+ends at the Poisson boundary (outside `[1e-6, 1e6]`), the fit restarts once from
+that point with those groups at `r = 1` and keeps the restart only if its
+log-likelihood is higher by more than `1e-6`; otherwise the boundary fit stands and
+is flagged in `dispersion_boundary`. With one group this
 matches [`fit_nb_gllvm`](@ref) when `hessian=:fisher`. `hessian=:observed` (the
 default) uses the exact conditional NB2/log curvature used by TMB's Laplace
 objective; set `hessian=:fisher` to retain the expected-information approximation.
@@ -377,8 +396,9 @@ function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVect
         return isfinite(v) ? v : 1e12
     end
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
-    res = Optim.optimize(negll, θ0, ls, Optim.Options(g_tol = g_tol, iterations = iterations);
-                         autodiff = :finite)
+    opts = Optim.Options(g_tol = g_tol, iterations = iterations)
+    res = Optim.optimize(negll, θ0, ls, opts; autodiff = :finite)
+    res = _nb_boundary_restart(negll, res, ls, opts, p + rr + 1)
     θ̂ = Optim.minimizer(res)
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)

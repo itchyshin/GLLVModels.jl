@@ -13,6 +13,15 @@ All notable changes to GLLVModels.jl are documented here.
 
 ## Unreleased
 
+### Fixed
+- **NB2 with per-trait dispersion no longer stalls at the Poisson boundary.**
+  `fit_nb_gllvm_grouped`, the default route for
+  `fit_gllvm(...; family = NegativeBinomial())`, could stop with a trait's `r`
+  pushed toward the Poisson limit and a log-likelihood up to 1.6 units below the
+  optimum (#477). When a group ends at the boundary, the fit now restarts once with
+  those groups at `r = 1` and keeps the better fit. Fits that never reach the
+  boundary, and genuine boundary fits, are unchanged.
+
 ### Changed
 - **Breaking (default change):** `fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm`
   (and `fit_gllvm(...; family = DeltaLogNormal()/DeltaGamma())`) now default to
