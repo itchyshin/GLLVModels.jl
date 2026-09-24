@@ -110,6 +110,9 @@ const _ST_SEED = 71
 
     @testset "per-trait σ + per-trait estimated ν (twin default) — Parity Cell 9" begin
         r_est = fit_gllvmtmb_parity_student(Y, K; df_fixed = nothing)
+        # Read right after the R fit, while `fit_r` is still this cell's fit.
+        # Recorded, not gated: docs/dev-log/decisions/2026-09-24-parity-reference-julia-and-fixture-pins.md.
+        r_gradient_max = rcopy(Float64, R"max(abs(as.numeric(fit_r$tmb_obj$gr(fit_r$opt$par))))")
         @test r_est.converged
         @test r_est.optimizer_code == 0
         @test isfinite(r_est.logLik)
@@ -134,6 +137,7 @@ const _ST_SEED = 71
         println("  gllvmTMB per-trait ν = ", round.(r_est.df_vec; sigdigits = 5))
         println("  gllvmTMB optimizer code/message/iterations = ",
                 (r_est.optimizer_code, r_est.optimizer_message, r_est.optimizer_iterations))
+        println("  gllvmTMB r_gradient_max = ", r_gradient_max, " (recorded, not a gate)")
         flat_boundary = any(>(1e6), jl_est.ν) || any(>(1e6), r_est.df_vec)
         println("  flat Gaussian-limit boundary diagnosed = ", flat_boundary)
         println()
