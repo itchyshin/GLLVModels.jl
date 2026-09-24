@@ -34,16 +34,6 @@
 - Commands: lane preflight; `git fetch --prune origin`; `gh run list --workflow Documenter.yml`;
   `gh run view 35148351157 --log`; `gh run view 35148337444 --log`; `rg 'deploydocs|gh-pages|DOCUMENTER_KEY|docs/make|Documenter'`.
 
-## 2026-09-17 — Mac Ada: ranks 2/4/5 score + DRAFT #399 rebase (@ `83f2e5224`)
-
-- **origin/main** @ **`83f2e5224`** (#420). Adversarial: rank **2** SO batch **exhausted** on main
-  (#374/#376/#378/#391); Delta species remainder **paste-gated** (#399). Rank **4** bridge mirror
-  = gllvmTMB `julia-bridge.R` admission (**foreign**; no engine surgery from Julia lane). Rank **5**
-  grouping = multi-family engine (**large / Shannon lease**). **No** ungated mergeable engine slice.
-- **DRAFT #399:** rebased onto `83f2e5224`; `test/test_second_order_delta_followup.jl` **34 pass /
-  1 broken**; public Delta coerce **unchanged** (paste TODO @ `fit_gllvm.jl:219`). Goal **not** complete.
-- Commands: `git rebase origin/main` on `feat/delta-dispersion-a-scaffold-20260916`; focused delta test.
-
 ## 2026-09-17 — Post-#419 paste packet tip (`docs/post-419-paste-packet-tip-20260917`)
 
 - **origin/main** @ **`8a751b55d`** (#419). Four DRAFT harnesses already rebased on tip
