@@ -1,3 +1,48 @@
+## 2026-09-24 — D3 loading_profile Stage 1 slice (`claude/d3-stage1-slice-20260924`)
+
+- Maintainer paste **`G0 Stage 1`** received 2026-09-24. Built on the rebased DRAFT
+  #411 harness (`feat/d3-stage1-harness-draft-20260916` @ `e613a56a4`, local only —
+  #411 must merge first). Implemented the runbook's "First actions after paste"
+  bounded slice: `fit_gaussian_gllvm(y; K, lambda_constraint = M)` (ordinary J1
+  Gaussian, `X = nothing` only) and exported `loading_profile(fit; level, entries,
+  n_grid, grid_extent, conf_level, y)` per the scout signature
+  (`docs/dev-log/after-task/2026-09-14-loading-profile-d3-surface-scout.md`).
+  **Found and fixed a latent scaling bug in DRAFT #411's own substrate**
+  (`_confirmatory_lambda_pin_theta_fixes`): it divided the raw pin value by
+  `σ_eps` before fixing it in `θ_packed`, but `gaussian_nll_packed` unpacks
+  `θ_rr_B` as the raw-scale `Λ` directly (no rescaling) — the division was never
+  exercised in #411 because its own "J1 pin-and-refit smoke" test only runs
+  under the paste gate, which was unset in CI. Removing the division makes pins
+  land exactly on the Stage 0 fixtures (`MASK-B-PINS`, `MASK-B-UPPER`,
+  `MASK-B-ALLFIXED`), verified interactively and in the new test block.
+  Added 9 new `@testset`s / 26 assertions to `test/test_loading_profile_confirmatory.jl`
+  covering fit-time pin exactness, refusals (exploratory fit, structured fit,
+  `X`-carrying fit, all-pinned fit), one pin-and-refit grid cell, the `entries`
+  filter, and the old 3-positional-argument shim (confirms no dispatch collision
+  with the new single-`GllvmFit`-argument method). Docs cascade:
+  `docs/src/derived-confidence-intervals.md` "Difference from R" section
+  rewritten (the old text claimed no confirmatory mode exists — now false) and
+  `loading_profile` added to its `@docs` block; `CHANGELOG.md` Unreleased entry.
+  **Stage 1 receipt, not full R grid parity, not T5 row 8 "covered"** — no
+  cross-package numeric comparison has run; grid spacing is a Wald-SE heuristic,
+  not R's exact rule. Did not touch the `loading_profile` deprecation shim, did
+  not bump `Project.toml`, did not touch `src/grouped_nongaussian_fit.jl`.
+  🔴 **Flag for whoever lands this:** `docs/src/derived-confidence-intervals.md`
+  "Difference from R" paragraph is also touched, unmerged, by
+  `origin/codex/derived-ci-reader-cleanup` (reader-wording pass, different text,
+  same paragraph) — the two will conflict on merge; reconcile content, not just
+  text, since this slice's version documents new behavior the other's does not.
+  Work is **local only** (`claude/d3-stage1-slice-20260924`, not pushed); PR #411
+  must merge first per the coordinator's instruction.
+- Commands: `julia --project=. -e 'using Pkg; Pkg.instantiate(); using GLLVModels'`;
+  `julia --project=. test/test_loading_profile_confirmatory.jl` (31 pass);
+  `julia --project=. test/test_loading_profile_stage1_harness.jl` (9 pass);
+  `julia --project=. test/test_loading_profile_stage0.jl` (24 pass);
+  `julia --project=. test/test_fit.jl` (12 pass);
+  `julia --project=. test/test_confint_profile.jl` (8 pass);
+  `julia --project=. test/parity/test_gaussian_parity.jl` (31 pass);
+  `julia --project=. test/test_confint_derived.jl` (45 pass).
+
 ## 2026-09-17 - Non-paste ruling packet (`docs/non-paste-ruling-packet-20260917`)
 
 - **origin/main** @ **`83f2e5224`** (#420 already merged upstream before this work). Lane preflight found a foreign active lane; lease granted for `docs/dev-log/owed/2026-09-17-non-paste-ruling-packet.md`, this check-log entry, and the after-task report. Files in PR: owed packet, check-log entry, after-task report.

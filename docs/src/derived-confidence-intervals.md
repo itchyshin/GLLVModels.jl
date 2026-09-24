@@ -24,13 +24,25 @@ exact structural zero rather than delta-methoding a fixed value.
 `loading_profile_exploratory` for the profile-likelihood route on an
 exploratory (unpinned) fit.
 
-**Difference from R.** Unlike R, GLLVModels.jl has no separate
-confirmatory fit mode with `lambda_constraint` pins — the lower-triangular
-packing convention (`src/packing.jl`) is this package's built-in
-identifiability device. `loading_ci`/`loading_profile_exploratory` therefore
-run on any fit, where R's `loading_ci()`/`loading_profile()` refuse an
-unpinned exploratory fit. The deprecated name `loading_profile` forwards here
-but is reserved for a future confirmatory mirror of R's surface.
+**Difference from R.** `loading_ci`/`loading_profile_exploratory` run on
+*any* ordinary fit — the lower-triangular packing convention
+(`src/packing.jl`) is this package's built-in identifiability device, so no
+confirmatory pin is required for those two functions, where R's
+`loading_ci()`/`loading_profile()` refuse an unpinned exploratory fit.
+
+**D3 Stage 1 (2026-09-24): a confirmatory mirror now exists, narrower than
+R's.** `fit_gaussian_gllvm(y; K, lambda_constraint = M)` fits a confirmatory
+Gaussian model with the numeric entries of `M` (raw `Λ` scale, `NaN` = free)
+held fixed, mirroring R gllvmTMB's `lambda_constraint = list(unit = M)`. The
+returned fit's `pars.lambda_constraint` records the pin matrix. `loading_profile`
+takes that confirmatory fit (refusing an ordinary/exploratory one — the
+opposite refusal direction from `loading_ci`) and profiles each **free** entry
+on a grid, mirroring R's `loading_profile()`. This Stage 1 slice covers the
+ordinary J1 Gaussian case only (`K_W = 0`, `has_diag = false`, `K_phy = 0`,
+`has_phy_unique = false`, `X = nothing`) and is a **Stage 1 receipt, not full
+R grid parity**: grid spacing is a Wald-SE heuristic rather than R's exact
+rule, and no cross-package numeric comparison has been run yet. See
+`docs/dev-log/plans/2026-09-16-d3-loading-profile-stage1-paste-gated-scaffold.md`.
 
 ## Two-level repeatability and ICC
 
@@ -65,6 +77,7 @@ standardized_loading_wald_ci
 raw_loading_wald_ci
 loading_ci
 loading_profile_exploratory
+loading_profile
 repeatability_wald_ci
 repeatability_bootstrap_ci
 repeatability_ci
