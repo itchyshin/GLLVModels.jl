@@ -6,6 +6,14 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
 ## GLLVModels.jl (development version)
 
 ### Changed
+- **CHANGED (default, breaking):** `DeltaLogNormal()` / `DeltaGamma()`
+  (`fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm`, and `fit_gllvm`)
+  default to `disp_group = :species` — one dispersion per trait, matching R
+  gllvmTMB's per-trait `log_sigma_lognormal_delta` / `log_phi_gamma_delta` —
+  instead of one scalar shared across all traits. Existing delta fits that
+  omitted `disp_group` will see `fit.σ` / `fit.α` change from a scalar to a
+  length-`p` vector; pass `disp_group = :shared` to keep the previous
+  behaviour.
 - **CHANGED:** the package and module are now named `GLLVModels`; the public
   fitting API remains unchanged. After the rename, `using GLLVM` cannot resolve
   a package. Once `GLLVModels` is loaded, `GLLVModels.GLLVM` is only a temporary

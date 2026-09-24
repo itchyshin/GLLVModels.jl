@@ -84,7 +84,10 @@ using GLLVModels, Test, Random, Distributions, Statistics
             end
         end
 
-        fit = fit_delta_gamma_gllvm(Y; K = K)
+        # disp_group=:shared pinned: α_true is a single shared scalar, and fit.α is
+        # compared below as a scalar (chained inequality) — :shared keeps this test's
+        # pre-2026-09-24 behaviour unchanged now that :species is the public default.
+        fit = fit_delta_gamma_gllvm(Y; K = K, disp_group = :shared)
         @test fit isa DeltaGammaFit
         @test isfinite(fit.loglik)
         @test cor(fit.βz, βz_true) > 0.8                                  # occurrence recovers well
@@ -128,7 +131,8 @@ using GLLVModels, Test, Random, Distributions, Statistics
                 end
             end
         end
-        fit = fit_delta_gamma_gllvm(Y; K = K)
+        # disp_group=:shared pinned: nterm below assumes a single α term.
+        fit = fit_delta_gamma_gllvm(Y; K = K, disp_group = :shared)
 
         ci_va = confint(fit, Y; method = :wald, objective = :va)
         ci_la = confint(fit, Y; method = :wald, objective = :laplace)

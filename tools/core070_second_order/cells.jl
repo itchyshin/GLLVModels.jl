@@ -850,7 +850,10 @@ function cell_delta_lognormal()
     end
 
     t0 = time()
-    fit = fit_delta_lognormal_gllvm(Y; K = K, predictor = :shared, hessian = :observed, iterations = 500)
+    # DRAFT Option A scaffold: Julia twin cell uses per-trait σ (matches R).
+    # Decision doc stays PENDING until paste `accept delta dispersion A`.
+    fit = fit_delta_lognormal_gllvm(Y; K = K, predictor = :shared, disp_group = :species,
+                                    hessian = :observed, iterations = 500)
     wall_fit = time() - t0
     ci = confint(fit, Y; method = :wald)
     ad = GLLVModels._family_ci(fit, Y; hessian = :observed)
@@ -862,11 +865,11 @@ function cell_delta_lognormal()
     r_beta_idx = findall(==("b_fix"), r.names)
 
     d = _assemble("delta_lognormal",
-        "test/parity/test_delta_lognormal_parity.jl (seed=61,p=5,K=1,n=130,predictor=:shared)",
-        "Delta-lognormal (shared η, twin fid 12)", "observed (family default)", false,
+        "test/parity/test_delta_lognormal_parity.jl (seed=61,p=5,K=1,n=130,predictor=:shared,disp_group=:species)",
+        "Delta-lognormal (shared η, per-trait σ; twin fid 12)", "observed (family default)", false,
         p, K, n, seed, fit.converged, fit.loglik, wall_fit, r, ci, Σ, ad.names, beta_idx_jl, r_beta_idx)
-    d["note"] = "Compared quantity is trait intercept block b_fix only; R per-trait sigma_lognormal_delta vs Julia shared σ is a known first-order parameterisation gap — not part of this β SE/vcov/Wald block."
-    d["parameterisation_gap"] = true
+    d["note"] = "Compared quantity is trait intercept block b_fix only. Julia disp_group=:species matches R per-trait sigma_lognormal_delta (Option A scaffold; decision PENDING until paste)."
+    d["parameterisation_gap"] = false
     return d
 end
 
@@ -889,7 +892,10 @@ function cell_delta_gamma()
     end
 
     t0 = time()
-    fit = fit_delta_gamma_gllvm(Y; K = K, predictor = :shared, hessian = :observed, iterations = 500)
+    # DRAFT Option A scaffold: Julia twin cell uses per-trait α (matches R).
+    # Decision doc stays PENDING until paste `accept delta dispersion A`.
+    fit = fit_delta_gamma_gllvm(Y; K = K, predictor = :shared, disp_group = :species,
+                                hessian = :observed, iterations = 500)
     wall_fit = time() - t0
     ci = confint(fit, Y; method = :wald)
     ad = GLLVModels._family_ci(fit, Y; hessian = :observed)
@@ -901,11 +907,11 @@ function cell_delta_gamma()
     r_beta_idx = findall(==("b_fix"), r.names)
 
     d = _assemble("delta_gamma",
-        "test/parity/test_delta_gamma_parity.jl (seed=62,p=5,K=1,n=130,predictor=:shared)",
-        "Delta-Gamma (shared η, twin fid 13)", "observed (family default; specialised Wc)", false,
+        "test/parity/test_delta_gamma_parity.jl (seed=62,p=5,K=1,n=130,predictor=:shared,disp_group=:species)",
+        "Delta-Gamma (shared η, per-trait α; twin fid 13)", "observed (family default; specialised Wc)", false,
         p, K, n, seed, fit.converged, fit.loglik, wall_fit, r, ci, Σ, ad.names, beta_idx_jl, r_beta_idx)
-    d["note"] = "Compared quantity is trait intercept block b_fix only; R per-trait phi_gamma_delta (CV) vs Julia shared shape α is a known parameterisation gap — not part of this β block."
-    d["parameterisation_gap"] = true
+    d["note"] = "Compared quantity is trait intercept block b_fix only. Julia disp_group=:species matches R per-trait phi_gamma_delta (Option A scaffold; decision PENDING until paste)."
+    d["parameterisation_gap"] = false
     return d
 end
 

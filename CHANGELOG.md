@@ -14,6 +14,15 @@ All notable changes to GLLVModels.jl are documented here.
 ## Unreleased
 
 ### Changed
+- **Breaking (default change):** `fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm`
+  (and `fit_gllvm(...; family = DeltaLogNormal()/DeltaGamma())`) now default to
+  `disp_group = :species` — **one dispersion per trait**, matching R gllvmTMB's
+  per-trait dispersion, instead of one scalar shared across all traits.
+  **Existing delta fits that omitted `disp_group` will see `fit.σ` / `fit.α`
+  change from a scalar to a length-`p` vector.** Pass `disp_group = :shared`
+  explicitly to keep the previous one-scalar-per-model behaviour. Decision:
+  `docs/dev-log/decisions/2026-09-15-delta-dispersion-alignment-pending.md`
+  (accepted 2026-09-24).
 - **Development:** fixed Gaussian source fits accept a complete mean design `X`.
   Explicit-source wide/long formulas expose trait intercepts, shared slopes,
   categorical contrasts and interactions. Fits retain the copied design, response

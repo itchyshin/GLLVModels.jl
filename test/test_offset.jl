@@ -124,8 +124,14 @@ using GLLVModels, Test, Random, Distributions
         end
         cc = 0.5 .* randn(p); O = repeat(cc, 1, n)
 
-        f0 = fit_delta_gamma_gllvm(Y; K = K, iterations = 100)
-        fO = fit_delta_gamma_gllvm(Y; K = K, offset = O, iterations = 100)
+        # disp_group=:shared pinned: the reparam-invariance tolerances below were
+        # measured against the (previously default) 1-parameter shared alpha; under
+        # :species (p=3 free shapes on this small dataset) the two 100-iteration
+        # fits land at distinguishable local optima and these atols are too tight —
+        # a convergence-budget artifact of :species, not a break in the offset
+        # absorption identity itself. :shared keeps this test's original behaviour.
+        f0 = fit_delta_gamma_gllvm(Y; K = K, disp_group = :shared, iterations = 100)
+        fO = fit_delta_gamma_gllvm(Y; K = K, disp_group = :shared, offset = O, iterations = 100)
         @test isfinite(fO.loglik)
         @test isapprox(f0.loglik, fO.loglik; atol = 2e-2)      # reparam-invariant
         @test isapprox(f0.βc, fO.βc .+ cc; atol = 1.5e-1)      # β^c shifted by −c

@@ -171,7 +171,10 @@ end
                 rand() < inv(1 + exp(-βz[t])) && (Y[t, s] = exp(ηc[t] + σ_true * randn()))
             end
         end
-        fit = fit_delta_lognormal_gllvm(Y; K = K)
+        # disp_group=:shared pinned: this test checks the singular "sigma" Wald
+        # term name, which only exists under :shared (:species names them
+        # "sigma[t]").
+        fit = fit_delta_lognormal_gllvm(Y; K = K, disp_group = :shared)
         ci = confint(fit, Y; method = :wald, parm = "sigma")
         @test ci.term == ["sigma"]
         @test ci.estimate[1] ≈ fit.σ atol = 1e-8
