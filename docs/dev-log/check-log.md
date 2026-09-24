@@ -1,3 +1,20 @@
+## 2026-09-24: second-order tools honour GLLVM_PARITY_R_LIBS (OWED 3 of the closeout handover)
+
+- Branch `claude/second-order-r-libs-guard-20260924` from `origin/main` @ `4e6e7eef5`.
+  `_require_gllvmtmb!` (`tools/core070_second_order/common.jl`) now loads gllvmTMB from
+  `GLLVM_PARITY_R_LIBS` when it is set, refuses a library without gllvmTMB, refuses when
+  gllvmTMB is already loaded from another library, and checks the loaded path. Unset keeps
+  the old bare `library(gllvmTMB)`. The choice is the pure function `second_order_r_lib`
+  (`tools/core070_second_order/r_lib.jl`).
+- Checks (Mac Studio, Julia 1.10.0, single-threaded): `test/test_second_order_r_libs.jl`
+  6 pass + 1 skip without R; 6 + 3 pass with `GLLVM_PARITY_TESTS=1` and the frozen
+  `b4d5fee64` library; 2 FAIL against `origin/main`'s `common.jl` (it loaded the default
+  0.7.1 build). `smoke_delta_lognormal_eoo.jl` PASS with only `GLLVM_PARITY_R_LIBS` set.
+- The frozen and default builds give identical numbers on the delta_lognormal cell, so the
+  smoke does not show routing; the namespace-path test does. R logLik for both Delta cells
+  matches the 2026-08-28 values, so the D1 FAIL to PASS move comes from the Julia side.
+- After-task: `docs/dev-log/after-task/2026-09-24-second-order-r-libs-guard.md`.
+
 ## 2026-09-24 — Carried check-log sections from the true-parity PRs (#399, #410, #411, Stage 1 slice)
 
 These sections were written on their own branches. They were moved out of those PRs, verbatim, so each PR stopped conflicting with the next one on this file. Only the heading levels changed, so they nest here. PRs: #399 (merged 94a7b56f9), #410 (decbc8ddc), #411 (3b19b2817), Stage 1 slice (#471).
