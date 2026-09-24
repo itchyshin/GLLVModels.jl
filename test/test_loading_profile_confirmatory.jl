@@ -171,46 +171,73 @@ end
         @test mle_row.delta_deviance < 1e-4
     end
 
-    # --- A literal comparison against the frozen R oracle (masks-known-contract.json
-    # case CORE070-MASKS-KNOWN-MASK-B-PINS-PAIRED-CONTROL, r_nll = 65.5136777950417
-    # at point MASK-B-PINS-P1, docs/dev-log/core070/masks-known-evidence.json,
-    # tolerance abs_nll_delta = 1e-06) is NOT added here. Checked precisely and
-    # found not achievable in this checkout, for two independent reasons:
-    #
-    # 1. The point's raw inputs are not present. `masks-known-evidence.json`
-    #    records only summary statistics (r_nll, dense_nll, delta, gradient_error)
-    #    for MASK-B-PINS-P1/P2; the underlying observations/design/parameters TSVs
-    #    that would let anything (this test, or `tools/core070_masks_known.jl`,
-    #    which itself does not call GLLVModels.jl) reproduce that NLL are listed
-    #    only as SHA-256 provenance under `retained_artifacts` (paths under
-    #    `masks-known-points-01/attempt1/out/MASK-B-PINS-P1/*.tsv`), pointing at an
-    #    ephemeral campaign sandbox this checkout does not contain — confirmed
-    #    absent by search of this repo, `~/local-scratch` (including the lane and
-    #    the frozen R library directory), and `~/shinichi-brain`.
-    #    `docs/dev-log/core070/masks-known-leaf.md` gives the point's beta
-    #    ((.2,-.1,.3) at P1), sigma_eps (.8 at P1), and the full 5-coordinate
-    #    loading vector before pinning ((.8,.7,.1,.2,-.15) at P1, packed
-    #    diagonal-first-then-strict-lower per `loading_layout`), which is enough
-    #    to reconstruct the parameter point exactly (pin L11 to -0.8 and L32 to 0
-    #    per the MASK-B-PINS fixture; keep L22=.7, L21=.1, L31=.2 free-vector
-    #    values) — but NOT the observed response matrix the NLL was evaluated
-    #    against, which is what is actually missing.
-    # 2. Even with the point's inputs, this comparand (`abs_nll_delta`) is an NLL
-    #    match AT A FIXED, GIVEN parameter vector — not a converged refit/MLE
-    #    match — for an R call with per-trait fixed intercepts
-    #    (`value~0+trait+latent(...)`, i.e. beta != 0 / an X design). This slice's
-    #    `lambda_constraint` fit-time path is restricted to `X = nothing`
-    #    (documented, deliberate Stage 1 scope), so it cannot reproduce that exact
-    #    R call's model shape regardless of data availability.
-    #
-    # A live R call through the frozen oracle library
-    # (/Users/z3437171/local-scratch/R-gllvmtmb-frozen-b4d5fee64, gllvmTMB @
-    # b4d5fee64) was considered. `test/parity/parity_helpers.jl` has an
-    # established `GLLVM_PARITY_TESTS=1`-gated live-R pattern, but no existing
-    # helper there calls `gllvmTMB(..., lambda_constraint = ...)` — every
-    # `fit_gllvmtmb_parity_*` helper is for an unconstrained/exploratory fit.
-    # Building that call is new R-calling infrastructure for this one cell, not
-    # reuse of an existing gated path, so it was not added here.
+    @testset "frozen R oracle match: packing convention (masks-known-contract MASK-B-PINS-P1)" begin
+        # Direct comparison against the frozen R oracle named by the runbook:
+        # docs/dev-log/core070/masks-known-contract.json case
+        # CORE070-MASKS-KNOWN-MASK-B-PINS-PAIRED-CONTROL, point MASK-B-PINS-P1,
+        # r_nll = 65.5136777950417, tolerance abs_nll_delta = 1e-06 (R @ b4d5fee64,
+        # docs/dev-log/core070/masks-known-evidence.json).
+        #
+        # An initial search for this point's raw inputs missed them (only
+        # SHA-256 provenance is in masks-known-evidence.json's
+        # `retained_artifacts`); they were later found preserved at
+        # ~/local-scratch/preservation/core070-execution-20260831T155501Z-delta/
+        # runtime-delta/masks-known-points-01/attempt1/out/MASK-B-PINS-P1/
+        # {observations,parameters,source}.tsv, SHA-256-verified byte-for-byte
+        # against `retained_artifacts` before use. The values below (Y, X, β,
+        # σ_eps, and the packed Λ) are transcribed from those files so this test
+        # is self-contained and does not read that external, ephemeral path.
+        #
+        # `maps.tsv` for MASK-B-PINS records `pins = 0.8,0` — L11 pinned to
+        # **+0.8**, not the -0.8 this repo's own (pre-existing, Stage 0)
+        # `loading_profile_fixture_mask_b_pins()` uses. Those are two
+        # independently authored synthetic fixtures for different purposes
+        # (this masks-known-points campaign vs. the D3 substrate); this test
+        # uses the R reference's own pin value since it targets the frozen R
+        # number, not the Stage 0 fixture.
+        #
+        # This validates `unpack_lambda`'s diagonal-first/strict-lower-column
+        # packing convention and `gaussian_marginal_loglik`/`gaussian_nll_packed`
+        # against the real R oracle — the shared kernel that
+        # `_lambda_b_theta_index` (hence `_confirmatory_lambda_constraint_theta_fixes`
+        # and the σ_eps pin-scaling bug fixed above) packs into and reads from.
+        # It does NOT call `fit_gaussian_gllvm(...; lambda_constraint = ...)`
+        # end-to-end: that path is `X = nothing`-only by Stage 1 design, and this
+        # R call has per-trait fixed intercepts (`X != nothing`, β below), so the
+        # full wrapper cannot reach this exact model regardless.
+        Y_oracle = [
+            0.527194696796152 0.00943203712451463 -0.301277048588345 -0.556802495307928 -0.729014501270762 -0.798954917097928 -0.758924274663138 -0.61332939156758 -0.378198241744309 -0.0794154981989258 0.818369803069737 1.0414709848079 1.17193790136331 1.19540795775176 1.10929742682568 0.923085881738325 0.657272626635812 0.341120008059867
+            0.450127009882173 0.491317235554749 0.160463226869684 -0.14402111088937 -0.388616282223224 -0.546395756838108 -0.599990206550703 -0.543499627015485 -0.38314284623659 -0.136572918000435 0.77415123057122 1.05698659871879 1.26749686961881 1.38250778698637 1.38935824662338 1.28729410809469 1.08755121511306 0.812118485241757
+            0.369066234098832 0.965928155352931 0.641284864348666 0.312096683334935 0.0146026577519254 -0.218447253157945 -0.361397491879557 -0.398511223084363 -0.32570274057403 -0.150987246771676 0.700127985546573 1.02016703682664 1.29395153457706 1.49134160918208 1.59060735569487 1.5808209944866 1.46305986796802 1.25028784015712
+        ]
+        p_o, n_o = 3, 18
+        # source.tsv is the 18x18 identity (verified separately): "Ordinary
+        # source I" per masks-known-leaf.md, so the ordinary Sigma = sigma_eps^2 I
+        # + I_18 * (Lambda Lambda')[trait,trait] applies without a kron-style
+        # site covariance, matching gaussian_marginal_loglik's own assumption.
+        X_oracle = zeros(p_o, n_o, p_o)
+        for t in 1:p_o, s in 1:n_o
+            X_oracle[t, s, t] = 1.0   # 0+trait: per-trait fixed intercept
+        end
+        beta_oracle = [0.2, -0.1, 0.3]
+        sigma_eps_oracle = exp(-0.22314355131421)
+        # Packed order [L11,L22,L21,L31,L32]: L11=.8 and L32=0 pinned (maps.tsv);
+        # L22=.7, L21=.1, L31=.2 free (parameters.tsv theta_rr_B).
+        theta_oracle = [0.8, 0.7, 0.1, 0.2, 0.0]
+        Lambda_oracle = GLLVModels.unpack_lambda(theta_oracle, p_o, 2)
+
+        r_nll = 65.5136777950417
+        julia_nll = -GLLVModels.gaussian_marginal_loglik(
+            Y_oracle, Lambda_oracle, sigma_eps_oracle; X = X_oracle, β = beta_oracle)
+        @test abs(julia_nll - r_nll) <= 1e-6   # contract's own abs_nll_delta tolerance
+
+        # Cross-check via the packed-θ entry point `_confirmatory_lambda_pin_theta_fixes`
+        # itself depends on (gaussian_nll_packed + spec), not just the direct kernel.
+        spec = (q = 3, p = p_o, K_B = 2, K_W = 0, has_diag = false)
+        theta_packed = vcat(beta_oracle, log(sigma_eps_oracle), GLLVModels.pack_lambda(Lambda_oracle))
+        julia_nll_packed = GLLVModels.gaussian_nll_packed(theta_packed, Y_oracle; spec = spec, X = X_oracle)
+        @test julia_nll_packed == julia_nll
+    end
 
     @testset "entries filter profiles only the requested pair" begin
         pins = loading_profile_fixture_mask_b_pins()

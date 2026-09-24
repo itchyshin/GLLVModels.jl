@@ -17,12 +17,16 @@ bounded slice:
 2. Public export: `loading_profile(fit; level, entries, n_grid, grid_extent,
    conf_level, y)`, exact scout signature
    (`docs/dev-log/after-task/2026-09-14-loading-profile-d3-surface-scout.md`).
-3. Tests: unit coverage plus one pin-and-refit grid cell on the frozen Stage 0
-   fixtures.
-4. Ledger: **not touched** — the runbook requires paired fixture evidence
-   before rebinding `namespace/export/loading_profile`, and this slice has no
-   cross-package (R) numeric comparison, only internal consistency checks. See
-   "Not claimed" below.
+3. Tests: unit coverage, one internal-consistency pin-and-refit grid cell on
+   the frozen Stage 0 fixtures, and (added after a coordinator round-trip) one
+   exact-match test against the real frozen R oracle NLL for
+   `MASK-B-PINS-P1` — see "Not claimed" for exactly what that test does and
+   does not validate.
+4. Ledger: **not touched** — the runbook requires paired fixture evidence for
+   the *full* `lambda_constraint` fitter and `loading_profile` grid before
+   rebinding `namespace/export/loading_profile`, and this slice's R evidence
+   is at the shared packing/kernel layer only, not end-to-end. See "Not
+   claimed" below.
 5. Docs cascade: reference page, `CHANGELOG.md`, this report, check-log entry.
 
 ## Change
@@ -155,49 +159,59 @@ confirmatory. Verified with an explicit regression test.
 
 ## Not claimed
 
-- **No R numeric comparison has run — investigated precisely, found not
-  achievable in this checkout.** The coordinator asked for one test cell
-  comparing the new `lambda_constraint` path against the frozen R oracle
-  named in `docs/dev-log/core070/loading-profile-confirmatory-substrate.json`
-  (`masks-known-contract.json` case
-  `CORE070-MASKS-KNOWN-MASK-B-PINS-PAIRED-CONTROL`, point `MASK-B-PINS-P1`,
-  `r_nll = 65.5136777950417`, tolerance `abs_nll_delta = 1e-06`, per
-  `docs/dev-log/core070/masks-known-evidence.json`). Two independent reasons
-  this is not achievable here, documented in full (with the exact evidence
-  trail) as a comment in `test/test_loading_profile_confirmatory.jl`
-  immediately after the internal-consistency grid-cell test:
-  1. The point's raw inputs (observations/design/parameters) are not present
-     in this checkout — only SHA-256 provenance of an ephemeral campaign
-     sandbox (`masks-known-points-01/attempt1/out/MASK-B-PINS-P1/*.tsv`)
-     under `retained_artifacts`. Confirmed absent by search of this repo,
-     `~/local-scratch` (including the true-parity lane and the frozen R
-     library directory itself), and `~/shinichi-brain`.
-     `docs/dev-log/core070/masks-known-leaf.md` gives enough to reconstruct
-     the *parameter point* exactly (`beta = (.2,-.1,.3)`, `sigma_eps = .8`,
-     full loading `(.8,.7,.1,.2,-.15)` before pinning, at P1) but not the
-     *response matrix* the NLL was evaluated against, which is what is
-     actually missing.
-  2. Even with the point's inputs, that comparand is an NLL match at a
-     **fixed, given** parameter vector (a likelihood-kernel check), not a
-     converged refit/MLE match, for an R call with per-trait fixed
-     intercepts (`value~0+trait+latent(...)`, i.e. `beta != 0`). This
-     slice's `lambda_constraint` fit-time path is deliberately restricted to
-     `X = nothing`, so it cannot reproduce that R call's model shape
-     regardless of data availability.
-  A live R call through the frozen oracle library
-  (`/Users/z3437171/local-scratch/R-gllvmtmb-frozen-b4d5fee64`, gllvmTMB @
-  `b4d5fee64`) was considered per the coordinator's allowance. It requires an
-  *existing* `GLLVM_PARITY_TESTS=1`-gated live-R helper to reuse;
-  `test/parity/parity_helpers.jl` has the gating pattern, but no
-  `fit_gllvmtmb_parity_*` helper there calls `gllvmTMB(...,
-  lambda_constraint = ...)` — every one is for an unconstrained fit. Building
-  that call would be new R-calling infrastructure for this one cell, not
-  reuse of an existing gated path, so it was not built.
-  "R-aligned" in the internal-consistency test's original name overclaimed
-  this — renamed to "one pin-and-refit grid cell, internal consistency
-  (MASK-B-PINS)" to not imply a numeric R match that was never run. That test
-  checks internal consistency only (non-negative deviance, ~zero deviance at
-  the confirmatory MLE) — a Stage 1 receipt, not parity evidence.
+- **R numeric comparison: added, exact match, after a self-correction.**
+  First pass concluded (and was reported to the coordinator as) "not
+  achievable in this checkout" — that conclusion was **wrong**, caught by a
+  slower background `find /` search that was still running when the first
+  reply was sent. The point's raw R inputs are NOT absent: they are preserved
+  at `~/local-scratch/preservation/core070-execution-20260831T155501Z-delta/
+  runtime-delta/masks-known-points-01/attempt1/out/MASK-B-PINS-P1/` (found
+  outside the narrower, shallower search done initially, which used
+  `-maxdepth 6` under `~/local-scratch` and missed the `preservation/`
+  subtree). All four files there (`observations.tsv`, `covariance.tsv`,
+  `source.tsv`, `parameters.tsv`) SHA-256-verified byte-for-byte against
+  `docs/dev-log/core070/masks-known-evidence.json`'s `retained_artifacts`
+  before use.
+  Using that data, `test/test_loading_profile_confirmatory.jl`'s new
+  `"frozen R oracle match: packing convention (masks-known-contract
+  MASK-B-PINS-P1)"` testset calls `GLLVModels.gaussian_marginal_loglik`
+  (and, as a cross-check, `gaussian_nll_packed`) directly at the frozen
+  parameter point (`β = (0.2, -0.1, 0.3)`, `σ_eps = exp(-0.22314355131421)`,
+  packed `Λ = [0.8, 0.7, 0.1, 0.2, 0.0]` — diagonal-first, strict-lower —
+  against the real 3×18 `Y`) and compares the result to the contract's frozen
+  `r_nll = 65.5136777950417` at its own tolerance
+  (`abs_nll_delta = 1e-06`, `masks-known-contract.json` case
+  `CORE070-MASKS-KNOWN-MASK-B-PINS-PAIRED-CONTROL`). **The match is exact to
+  full double precision (`abs(julia_nll - r_nll) == 0.0`)**, not merely
+  within tolerance.
+  One correction along the way: `maps.tsv` records the R reference's L11 pin
+  as **`+0.8`**, not `-0.8` — the sign this repo's own, pre-existing (Stage 0,
+  PR #345) `loading_profile_fixture_mask_b_pins()` fixture uses. These are
+  two independently authored synthetic pin matrices for different purposes;
+  the new test uses the R reference's own value since it targets the frozen
+  R number specifically, and says so in its comments.
+  **Scope of what this validates, stated precisely:** this exercises
+  `unpack_lambda`'s packing convention and the shared Gaussian-kernel
+  functions (`gaussian_marginal_loglik`/`gaussian_nll_packed`) that
+  `_lambda_b_theta_index` — and therefore `_confirmatory_lambda_pin_theta_fixes`
+  / `_confirmatory_lambda_constraint_theta_fixes`, the functions the σ_eps
+  scaling bug was in — pack into and read from. It does **not** call
+  `fit_gaussian_gllvm(...; lambda_constraint = ...)` end-to-end: that path is
+  `X = nothing`-only by Stage 1 design, and this R reference call has
+  per-trait fixed intercepts (`X != nothing`), so the full wrapper cannot
+  reach this exact model regardless of data availability. It is real,
+  external, frozen-R evidence for the packing/kernel layer, not an
+  end-to-end parity claim for the full `lambda_constraint` fitter or the
+  `loading_profile` grid — those remain internal-consistency-only (see
+  below), and the ledger stays untouched.
+- **The pre-existing grid-cell test's name still overclaimed** ("one
+  R-aligned pin-and-refit grid cell") relative to what it actually checks —
+  renamed to "one pin-and-refit grid cell, internal consistency
+  (MASK-B-PINS)". That test checks internal consistency only (non-negative
+  deviance, ~zero deviance at the confirmatory MLE) via a REFIT through the
+  full `lambda_constraint` wrapper — genuinely different from, and still not
+  covered by, the new frozen-R-oracle test above (which checks a fixed point,
+  not a refit, and bypasses the `X = nothing`-restricted wrapper).
 - **Grid spacing is a documented heuristic**, not R's exact rule (which this
   session did not have R source available to consult precisely): half-width =
   `grid_extent * Wald_SE`, falling back to `grid_extent * (|Λ̂|/2 + 0.5)` when
@@ -238,9 +252,10 @@ the move, confirming the relocation did not change behavior.
 - `git diff e613a56a4 -- docs/src/derived-confidence-intervals.md` — empty
   (byte-identical).
 - `julia --project=. -e 'using Pkg; Pkg.instantiate(); using GLLVModels'` — OK.
-- `julia --project=. test/test_loading_profile_confirmatory.jl` — 31 pass
-  (5 pre-existing + 26 new), 1 broken (`@test_skip`, expected: the paste-gated
-  low-level smoke test in the pre-existing testset still requires
+- `julia --project=. test/test_loading_profile_confirmatory.jl` — 33 pass
+  (5 pre-existing + 28 new, the +2 being the frozen-R-oracle testset added
+  after the self-correction below), 1 broken (`@test_skip`, expected: the
+  paste-gated low-level smoke test in the pre-existing testset still requires
   `ENV["GLLVM_STAGE1_PASTE"]`, which the new export path does not use).
 - `julia --project=. test/test_loading_profile_stage1_harness.jl` — 9 pass.
 - `julia --project=. test/test_loading_profile_stage0.jl` — 24 pass (existing
@@ -262,10 +277,20 @@ the move, confirming the relocation did not change behavior.
 ## Rose
 
 Claim matches code: this is a **Stage 1 receipt** — fit-time pinning and a
-profiling export exist, are tested for internal consistency and exact pin
-placement on the Stage 0 fixtures, and refuse cleanly outside their scope. It
-is **not** full R grid parity (no R numeric comparison has run) and **not**
-`T5` row 8 "covered" (ledger untouched, by design). The one substantive risk
-this session found and closed was silent, not cosmetic: DRAFT #411's pin
-scaling was wrong in a way its own test suite could not have caught, because
-the only test that would have caught it never ran with the paste set.
+profiling export exist, are tested for internal consistency, exact pin
+placement on the Stage 0 fixtures, and (new) an exact match against a real
+frozen R oracle NLL at the shared kernel/packing layer, and refuse cleanly
+outside their scope. It is still **not** full R grid parity — the
+`lambda_constraint` fitter and `loading_profile` grid have no end-to-end R
+comparison, only the packing/kernel layer does, and that distinction is
+stated precisely above, not blurred — and **not** `T5` row 8 "covered"
+(ledger untouched, by design).
+
+Two things this session got wrong before getting right, both self-caught and
+corrected in place rather than left standing: DRAFT #411's pin scaling was
+wrong in a way its own test suite could not have caught, because the only
+test that would have caught it never ran with the paste set; and this
+session's own first claim that the frozen R oracle's raw data was
+unavailable was wrong too, caught only because a slower background search
+was still running after the first reply had already been sent. Both are
+documented above with the exact evidence, not smoothed over.

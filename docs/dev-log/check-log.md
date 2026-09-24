@@ -1,3 +1,38 @@
+## 2026-09-24 — D3 Stage 1 slice: self-correction, real R-oracle match found (`claude/d3-stage1-slice-20260924`)
+
+- **Correction to the entry immediately below.** That entry reported the
+  MASK-B-PINS-P1 frozen-R-oracle comparison "not achievable in this
+  checkout" — WRONG. A background `find /` search launched before that reply
+  was sent finished afterward and located the point's raw R inputs
+  (previously missed by a shallower, `-maxdepth 6` search) at
+  `~/local-scratch/preservation/core070-execution-20260831T155501Z-delta/
+  runtime-delta/masks-known-points-01/attempt1/out/MASK-B-PINS-P1/`. All four
+  files SHA-256-verified byte-for-byte against
+  `docs/dev-log/core070/masks-known-evidence.json`'s `retained_artifacts`.
+  Added `test/test_loading_profile_confirmatory.jl`'s new "frozen R oracle
+  match: packing convention (masks-known-contract MASK-B-PINS-P1)" testset:
+  calls `GLLVModels.gaussian_marginal_loglik`/`gaussian_nll_packed` directly
+  at the frozen point (data embedded as literals, so the test does not read
+  the external path) and compares to the contract's `r_nll =
+  65.5136777950417` at its own `abs_nll_delta = 1e-06` tolerance — **the
+  match is exact to full double precision (delta = 0.0)**. Along the way
+  found `maps.tsv` records the R reference's L11 pin as `+0.8`, not the
+  `-0.8` this repo's own pre-existing Stage 0 fixture uses (two independent
+  synthetic fixtures; used the R reference's own value here).
+  **Scope, stated precisely:** this validates `unpack_lambda`'s packing
+  convention and the shared Gaussian kernel — the layer
+  `_lambda_b_theta_index`/`_confirmatory_lambda_pin_theta_fixes` (the
+  σ_eps-bug function) reads and writes — against real frozen R evidence. It
+  does **not** exercise `fit_gaussian_gllvm(...; lambda_constraint = ...)`
+  end-to-end (that path is `X = nothing`-only; this R reference has per-trait
+  fixed intercepts, `X != nothing`), so it is not end-to-end parity evidence
+  and the ledger stays untouched. Test counts:
+  `test_loading_profile_confirmatory.jl` now 33 pass (was 31) / 1 broken,
+  unchanged elsewhere. Full write-up in
+  `docs/dev-log/after-task/2026-09-24-d3-loading-profile-stage1.md`
+  ("Not claimed" and "Rose" sections, updated in place with both this
+  correction and the earlier DRAFT #411 bug write-up).
+
 ## 2026-09-24 — D3 Stage 1 slice: lane-bleed fix + R-aligned cell investigation (`claude/d3-stage1-slice-20260924`)
 
 - Coordinator review of the entry below required two fixes, both applied, still local only:
