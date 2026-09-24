@@ -99,6 +99,12 @@ function _profile_refit_lambda_constraint(
     k::Integer,
     c::Real,
 )
+    if M_user !== nothing
+        size(M_user) == (n_traits, K) ||
+            throw(ArgumentError(
+                "pin matrix is $(size(M_user, 1))×$(size(M_user, 2)); expected " *
+                "$(n_traits)×$(K) to match the fit"))
+    end
     M = if M_user === nothing
         fill(NaN, n_traits, K)
     else
@@ -122,8 +128,11 @@ end
 # Map a user pin matrix (raw Lambda scale, R convention) to fixed `(theta_index,
 # working_value)` pairs for a single confirmatory profile grid point.
 #
-# Working values use the J1 packed scale `L = Lambda / sigma_eps` at the reference
-# fit. Full R parity still requires fit-time `lambda_constraint` after the paste.
+# `θ_packed`'s Lambda_B block is raw-scale: `gaussian_nll_packed` (src/likelihood.jl)
+# unpacks it directly via `unpack_lambda` and passes it unchanged into
+# `gaussian_marginal_loglik`, with no σ_eps rescaling anywhere on that path. The
+# fixed working value is therefore the raw pin value unchanged (Gauss verdict,
+# 2026-09-24: confirmed by an independent constrained-MLE oracle to 8 dp).
 function _confirmatory_lambda_pin_theta_fixes(
     fit::GllvmFit,
     M_user::Union{Nothing, AbstractMatrix{<:Real}},
@@ -140,15 +149,12 @@ function _confirmatory_lambda_pin_theta_fixes(
     p = fit.model.p
     K = fit.model.K
     M = _profile_refit_lambda_constraint(M_user, p, K, profile_i, profile_k, profile_c)
-    σ_eps = fit.pars.σ_eps
-    σ_eps > 0 && isfinite(σ_eps) ||
-        throw(ArgumentError("fit.pars.σ_eps must be finite and positive"))
     fixes = Tuple{Int, Float64}[]
     for i in 1:p, k in 1:K
         v = M[i, k]
         v isa Real && isnan(v) && continue
         idx = _lambda_b_theta_index(fit, i, k)
-        push!(fixes, (idx, Float64(v) / σ_eps))
+        push!(fixes, (idx, Float64(v)))
     end
     return fixes
 end
