@@ -1,3 +1,204 @@
+## 2026-09-24 — Carried check-log sections from the true-parity PRs (#399, #410, #411, Stage 1 slice)
+
+These sections were written on their own branches. They were moved out of those PRs, verbatim, so each PR stopped conflicting with the next one on this file. Only the heading levels changed, so they nest here. PRs: #399 (merged 94a7b56f9), #410 (decbc8ddc), #411 (3b19b2817), Stage 1 slice (#471).
+
+### Carried from #399 (feat/delta-dispersion-a-scaffold-20260916)
+
+Carried verbatim from this branch's own docs/dev-log/check-log.md sections before
+the 2026-09-24 re-rebase onto origin/main @ 137cab8e1 dropped check-log.md changes
+(main's version is now taken as-is, per instruction, to stop repeat conflicts on
+every later merge). Includes the branch's own Tornado->Totoro typo fix, which by
+the time of this carry already nets to zero diff against main (main's own text was
+already "Totoro"; the branch had briefly regressed it to "Tornado" via an earlier
+rebase's auto-merge, then restored it — see commit 6e0450450 on this branch).
+
+#### 2026-09-17 — Mac Ada: ranks 2/4/5 score + DRAFT #399 rebase (@ `83f2e5224`)
+
+- **origin/main** @ **`83f2e5224`** (#420). Adversarial: rank **2** SO batch **exhausted** on main
+  (#374/#376/#378/#391); Delta species remainder **paste-gated** (#399). Rank **4** bridge mirror
+  = gllvmTMB `julia-bridge.R` admission (**foreign**; no engine surgery from Julia lane). Rank **5**
+  grouping = multi-family engine (**large / Shannon lease**). **No** ungated mergeable engine slice.
+- **DRAFT #399:** rebased onto `83f2e5224`; `test/test_second_order_delta_followup.jl` **34 pass /
+  1 broken**; public Delta coerce **unchanged** (paste TODO @ `fit_gllvm.jl:219`). Goal **not** complete.
+- Commands: `git rebase origin/main` on `feat/delta-dispersion-a-scaffold-20260916`; focused delta test.
+
+#### 2026-09-16 — DRAFT #399 pre-paste deepen (postfit + D1 runbook)
+
+- Branch `feat/delta-dispersion-a-scaffold-20260916` (DRAFT **#399**): vector σ/α postfit,
+  `fit_gllvm(..., disp_group=)` Delta routing, paste-gate ACCEPTED HTML draft, D1 remeasure runbook.
+  **No** ACCEPTED block live; **no** public default coerce; **no** merge. Goal **not** complete.
+- Commands: `julia --project=. test/test_second_order_delta_followup.jl` → **34 pass / 1 broken**.
+
+#### 2026-09-16 — DRAFT Option A scaffold (delta species CI + SO cells)
+
+- Branch `feat/delta-dispersion-a-scaffold-20260916` rebased onto `origin/main` @ `576cd927d`
+  (#408). Pre-paste engineering for `accept delta dispersion A`: `_family_ci` `:species` for
+  DeltaLogNormalFit / DeltaGammaFit; `core070_second_order` Delta cells use
+  `disp_group=:species`; `_nparams` respects ndisp. Decision doc stays **PENDING** (no
+  ACCEPTED block). Public fitter default stays `:shared` (postfit vector-σ deferred).
+  **≠** D1 pass / programme complete. No Stage 1 / S4 / Totoro / #357 / Project.toml.
+- Checks: `julia --project=. test/test_second_order_delta_followup.jl` (local, no R).
+- Files: `src/confint_family.jl`, `src/postfit.jl`, `tools/core070_second_order/cells.jl`,
+  `test/test_second_order_delta_followup.jl`, decision fence note, after-task.
+
+### Carried from #410 (feat/totoro-323-track-a-harness-draft-20260916)
+
+Carried verbatim from this branch's own docs/dev-log/check-log.md section before
+the 2026-09-24 re-rebase onto origin/main @ 137cab8e1 dropped check-log.md changes
+(main's version is now taken as-is, per instruction, to stop repeat conflicts on
+every later merge).
+
+#### 2026-09-16 — Totoro #323 Track A harness hardening (DRAFT #410)
+
+- Branch `feat/totoro-323-track-a-harness-draft-20260916`; DRAFT **[#410](https://github.com/itchyshin/GLLVModels.jl/pull/410)** rebased on `origin/main`. `--dry-run` preflight, receipt template, expanded harness tests. No Totoro / no paste fired. Goal **not** complete.
+- Commands: `julia --project=. test/test_totoro_323_track_a_harness.jl`; `tools/totoro323/run_totoro_323_track_a_launcher.jl --dry-run --gllvm-root .`; `tools/totoro_323_track_a_launcher.sh --gllvm-root .` (expect exit 2).
+
+### Carried from #411 (feat/d3-stage1-harness-draft-20260916)
+
+Carried verbatim from this branch's own docs/dev-log/check-log.md section before
+the 2026-09-24 re-rebase onto origin/main @ 137cab8e1 dropped check-log.md changes
+(main's version is now taken as-is, per instruction, to stop repeat conflicts on
+every later merge).
+
+#### 2026-09-16 — D3 Stage 1 paste harness DRAFT (paste `G0 Stage 1`)
+
+- Branch `feat/d3-stage1-harness-draft-20260916`: paste-gated driver
+  `tools/loading_profile/run_d3_stage1_scaffold.jl` +
+  `d3_stage1_harness.jl`; test `test/test_loading_profile_stage1_harness.jl`.
+  Deepened: `src/loading_profile_confirmatory_internal.jl` (not exported),
+  `test/test_loading_profile_confirmatory.jl` (refit smoke paste-gated).
+  **No** public `loading_profile` export; **no** ledger rebind; **no** Stage 1 done claim.
+- Commands: `julia --project=. test/test_loading_profile_stage1_harness.jl`
+
+### Carried from Stage 1 slice (claude/d3-stage1-slice-20260924)
+
+Carried verbatim from this branch's own docs/dev-log/check-log.md sections before
+the 2026-09-24 rebase onto the re-rebased #411 head (which itself carries no
+check-log.md changes, per the same instruction applied to #411 and #410 above —
+main's version is taken as-is, to stop repeat conflicts on every later merge).
+Three dated sections, newest first as they appeared in this branch's own file.
+
+#### 2026-09-24 — D3 Stage 1 slice: self-correction, real R-oracle match found (`claude/d3-stage1-slice-20260924`)
+
+- **Correction to the entry immediately below.** That entry reported the
+  MASK-B-PINS-P1 frozen-R-oracle comparison "not achievable in this
+  checkout" — WRONG. A background `find /` search launched before that reply
+  was sent finished afterward and located the point's raw R inputs
+  (previously missed by a shallower, `-maxdepth 6` search) at
+  `~/local-scratch/preservation/core070-execution-20260831T155501Z-delta/
+  runtime-delta/masks-known-points-01/attempt1/out/MASK-B-PINS-P1/`. All four
+  files SHA-256-verified byte-for-byte against
+  `docs/dev-log/core070/masks-known-evidence.json`'s `retained_artifacts`.
+  Added `test/test_loading_profile_confirmatory.jl`'s new "frozen R oracle
+  match: packing convention (masks-known-contract MASK-B-PINS-P1)" testset:
+  calls `GLLVModels.gaussian_marginal_loglik`/`gaussian_nll_packed` directly
+  at the frozen point (data embedded as literals, so the test does not read
+  the external path) and compares to the contract's `r_nll =
+  65.5136777950417` at its own `abs_nll_delta = 1e-06` tolerance — **the
+  match is exact to full double precision (delta = 0.0)**. Along the way
+  found `maps.tsv` records the R reference's L11 pin as `+0.8`, not the
+  `-0.8` this repo's own pre-existing Stage 0 fixture uses (two independent
+  synthetic fixtures; used the R reference's own value here).
+  **Scope, stated precisely:** this validates `unpack_lambda`'s packing
+  convention and the shared Gaussian kernel — the layer
+  `_lambda_b_theta_index`/`_confirmatory_lambda_pin_theta_fixes` (the
+  σ_eps-bug function) reads and writes — against real frozen R evidence. It
+  does **not** exercise `fit_gaussian_gllvm(...; lambda_constraint = ...)`
+  end-to-end (that path is `X = nothing`-only; this R reference has per-trait
+  fixed intercepts, `X != nothing`), so it is not end-to-end parity evidence
+  and the ledger stays untouched. Test counts:
+  `test_loading_profile_confirmatory.jl` now 33 pass (was 31) / 1 broken,
+  unchanged elsewhere. Full write-up in
+  `docs/dev-log/after-task/2026-09-24-d3-loading-profile-stage1.md`
+  ("Not claimed" and "Rose" sections, updated in place with both this
+  correction and the earlier DRAFT #411 bug write-up).
+
+#### 2026-09-24 — D3 Stage 1 slice: lane-bleed fix + R-aligned cell investigation (`claude/d3-stage1-slice-20260924`)
+
+- Coordinator review of the entry below required two fixes, both applied, still local only:
+  1. **Lane bleed:** open foreign Codex PR #437 (`codex/derived-ci-reader-cleanup`)
+     touches exactly `src/confint_derived.jl` and
+     `docs/src/derived-confidence-intervals.md`, which this slice had also
+     edited. Moved the new `loading_profile(fit::GllvmFit; ...)` method into
+     new file `src/loading_profile_confirmatory.jl` (included from
+     `src/GLLVModels.jl` right after `confint_derived.jl`); restored
+     `confint_derived.jl` byte-identical to `e613a56a4`. Moved the docs
+     cascade to `docs/src/confidence-intervals.md` ("Gaussian engine" section)
+     and `docs/src/api.md` (`@docs` block); restored
+     `derived-confidence-intervals.md` byte-identical to `e613a56a4`. Both
+     confirmed via empty `git diff e613a56a4 -- <path>`. All 7 previously-run
+     test files re-run after the move with identical pass counts.
+  2. **R-aligned grid cell (runbook step 3):** investigated whether
+     `docs/dev-log/core070/masks-known-contract.json` case
+     `CORE070-MASKS-KNOWN-MASK-B-PINS-PAIRED-CONTROL` (frozen `r_nll =
+     65.5136777950417` at point `MASK-B-PINS-P1`, tolerance `1e-06`, R@
+     `b4d5fee64`) could ground a literal Julia-vs-R comparison test.
+     **Not achievable in this checkout**: the point's raw observations are not
+     present (only SHA-256 provenance of an ephemeral campaign sandbox;
+     confirmed absent by search of this repo, `~/local-scratch`, and
+     `~/shinichi-brain`), and separately the comparand is an NLL-at-a-fixed-point
+     check for an R model with per-trait fixed effects (`X != nothing`),
+     outside this slice's `X = nothing`-only scope regardless of data
+     availability. No existing `GLLVM_PARITY_TESTS=1`-gated live-R helper in
+     `test/parity/parity_helpers.jl` calls `gllvmTMB(...,
+     lambda_constraint = ...)`, so a live-R path would be new infrastructure,
+     not reuse. Documented precisely as a comment in
+     `test/test_loading_profile_confirmatory.jl` (full evidence trail); the
+     existing internal-consistency grid-cell test renamed from "one
+     R-aligned pin-and-refit grid cell" to "one pin-and-refit grid cell,
+     internal consistency" to stop overclaiming an R match that never ran.
+  Precise σ_eps pin-scaling bug write-up (file:function, old/new line,
+  numeric evidence: `Λ[1,1]` off by 35.79% before the fix, exact after) added
+  to `docs/dev-log/after-task/2026-09-24-d3-loading-profile-stage1.md`.
+- Commands: same battery as below, re-run after the file move — identical
+  pass counts (31/9/24/12/8/31/45); `git diff e613a56a4 -- src/confint_derived.jl`
+  and `git diff e613a56a4 -- docs/src/derived-confidence-intervals.md` both empty.
+
+#### 2026-09-24 — D3 loading_profile Stage 1 slice (`claude/d3-stage1-slice-20260924`)
+
+- Maintainer paste **`G0 Stage 1`** received 2026-09-24. Built on the rebased DRAFT
+  #411 harness (`feat/d3-stage1-harness-draft-20260916` @ `e613a56a4`, local only —
+  #411 must merge first). Implemented the runbook's "First actions after paste"
+  bounded slice: `fit_gaussian_gllvm(y; K, lambda_constraint = M)` (ordinary J1
+  Gaussian, `X = nothing` only) and exported `loading_profile(fit; level, entries,
+  n_grid, grid_extent, conf_level, y)` per the scout signature
+  (`docs/dev-log/after-task/2026-09-14-loading-profile-d3-surface-scout.md`).
+  **Found and fixed a latent scaling bug in DRAFT #411's own substrate**
+  (`_confirmatory_lambda_pin_theta_fixes`): it divided the raw pin value by
+  `σ_eps` before fixing it in `θ_packed`, but `gaussian_nll_packed` unpacks
+  `θ_rr_B` as the raw-scale `Λ` directly (no rescaling) — the division was never
+  exercised in #411 because its own "J1 pin-and-refit smoke" test only runs
+  under the paste gate, which was unset in CI. Removing the division makes pins
+  land exactly on the Stage 0 fixtures (`MASK-B-PINS`, `MASK-B-UPPER`,
+  `MASK-B-ALLFIXED`), verified interactively and in the new test block.
+  Added 9 new `@testset`s / 26 assertions to `test/test_loading_profile_confirmatory.jl`
+  covering fit-time pin exactness, refusals (exploratory fit, structured fit,
+  `X`-carrying fit, all-pinned fit), one pin-and-refit grid cell, the `entries`
+  filter, and the old 3-positional-argument shim (confirms no dispatch collision
+  with the new single-`GllvmFit`-argument method). Docs cascade:
+  `docs/src/derived-confidence-intervals.md` "Difference from R" section
+  rewritten (the old text claimed no confirmatory mode exists — now false) and
+  `loading_profile` added to its `@docs` block; `CHANGELOG.md` Unreleased entry.
+  **Stage 1 receipt, not full R grid parity, not T5 row 8 "covered"** — no
+  cross-package numeric comparison has run; grid spacing is a Wald-SE heuristic,
+  not R's exact rule. Did not touch the `loading_profile` deprecation shim, did
+  not bump `Project.toml`, did not touch `src/grouped_nongaussian_fit.jl`.
+  🔴 **Flag for whoever lands this:** `docs/src/derived-confidence-intervals.md`
+  "Difference from R" paragraph is also touched, unmerged, by
+  `origin/codex/derived-ci-reader-cleanup` (reader-wording pass, different text,
+  same paragraph) — the two will conflict on merge; reconcile content, not just
+  text, since this slice's version documents new behavior the other's does not.
+  Work is **local only** (`claude/d3-stage1-slice-20260924`, not pushed); PR #411
+  must merge first per the coordinator's instruction.
+- Commands: `julia --project=. -e 'using Pkg; Pkg.instantiate(); using GLLVModels'`;
+  `julia --project=. test/test_loading_profile_confirmatory.jl` (31 pass);
+  `julia --project=. test/test_loading_profile_stage1_harness.jl` (9 pass);
+  `julia --project=. test/test_loading_profile_stage0.jl` (24 pass);
+  `julia --project=. test/test_fit.jl` (12 pass);
+  `julia --project=. test/test_confint_profile.jl` (8 pass);
+  `julia --project=. test/parity/test_gaussian_parity.jl` (31 pass);
+  `julia --project=. test/test_confint_derived.jl` (45 pass).
+
 ## 2026-09-17 - Non-paste ruling packet (`docs/non-paste-ruling-packet-20260917`)
 
 - **origin/main** @ **`83f2e5224`** (#420 already merged upstream before this work). Lane preflight found a foreign active lane; lease granted for `docs/dev-log/owed/2026-09-17-non-paste-ruling-packet.md`, this check-log entry, and the after-task report. Files in PR: owed packet, check-log entry, after-task report.

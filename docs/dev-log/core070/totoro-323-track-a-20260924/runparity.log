@@ -1,0 +1,258 @@
+[ Info: Loading RCall...
+[ Info: R_HOME in Julia: /usr/lib/R
+[ Info: RCall loaded successfully.
+┌ Warning: NB2 grouped-dispersion fit reached the per-group boundary (r_group outside [1e-6, 1e6]) for group(s) [1, 3]; those groups' overdispersion is not distinguishable from the Poisson/extreme-overdispersion limit on this data, and optimizer convergence flags are unreliable for them.
+└ @ GLLVModels ~/gllvmodels-track-a-20260924/GLLVModels.jl/src/families/grouped_dispersion.jl:387
+┌ Warning: RCall.jl: Student-t degrees of freedom parameter fixed at 4. To estimate it, set `df =
+│ NULL`.
+└ @ RCall ~/.julia/packages/RCall/fTLHT/src/io.jl:166
+┌ Warning: RCall.jl: Student-t degrees of freedom parameter will be estimated. This used to be fixed
+│ at 3 by default. To fix it, supply a value to `df` (e.g., `df = 3`).
+└ @ RCall ~/.julia/packages/RCall/fTLHT/src/io.jl:166
+┌ Warning: RCall.jl: Student-t degrees of freedom parameter will be estimated. This used to be fixed
+│ at 3 by default. To fix it, supply a value to `df` (e.g., `df = 3`).
+└ @ RCall ~/.julia/packages/RCall/fTLHT/src/io.jl:166
+┌ Warning: RCall.jl: Student-t degrees of freedom parameter will be estimated. This used to be fixed
+│ at 3 by default. To fix it, supply a value to `df` (e.g., `df = 3`).
+└ @ RCall ~/.julia/packages/RCall/fTLHT/src/io.jl:166
+┌ Warning: Student-t estimated ν reached the flat Gaussian-limit boundary (ν > 1e6); the Student model is not distinguishable from Gaussian on this data, and optimizer convergence flags are unreliable at this boundary. Consider a fixed ν or the Gaussian family.
+└ @ GLLVModels ~/gllvmodels-track-a-20260924/GLLVModels.jl/src/families/studentt.jl:433
+ERROR: LoadError: Some tests did not pass: 269 passed, 3 failed, 1 errored, 0 broken.
+in expression starting at /home/snakagaw/gllvmodels-track-a-20260924/GLLVModels.jl/test/parity/runparity.jl:117
+========================================================================
+GLLVModels.jl ↔ R gllvmTMB parity suite (Phase 1.0 scaffold)
+========================================================================
+
+── Gaussian logLik oracle (seed=42, p=5, K=2, n=80, centred) ──
+  Julia logLik          = -501.4507003432741
+  gllvmTMB logLik       = -501.4507003474048
+  gllvmTMB -objective   = -501.4507003474048
+  Δ logLik (jl − r)     = 4.130697561777197e-9
+  Julia σ_eps           = 0.690655006386013
+  gllvmTMB σ_eps        = 0.6906542277149186
+  Δ σ_eps               = 7.786710943813446e-7
+
+
+── Binomial logLik oracle (seed=43, p=5, K=2, n=60, Bernoulli) ──
+  Julia logLik          = -194.68198623406386
+  gllvmTMB logLik       = -194.68198623424558
+  gllvmTMB -objective   = -194.68198623424558
+  Δ logLik (jl − r)     = 1.8172841009800322e-10
+
+POISSON_HEALTH_SHA256 4c76cc8bfee7e545ff82053804b899586b79e669702374146582b931fc174ee5
+POISSON_RAW_FITS_SHA256 78b43a1f68439beef9367438b64404f0aa597c6be0417473e9399fb6f482006d
+NATIVE-03-POISSON checks=16/16 dLL=1.3415046851150692e-11 native_gradient=1.8868158089285305e-6 R_gradient=3.4576849596401615e-5 samepoint=2.2737367544323206e-13
+NB2 GLLVModels parity: GLLVModels.jl vs gllvmTMB: Test Failed at /home/snakagaw/gllvmodels-track-a-20260924/GLLVModels.jl/test/parity/test_negbin_parity.jl:72
+  Expression: jl_fit.converged
+
+Stacktrace:
+ [1] macro expansion
+   @ ~/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Test/src/Test.jl:673 [inlined]
+ [2] macro expansion
+   @ ~/gllvmodels-track-a-20260924/GLLVModels.jl/test/parity/test_negbin_parity.jl:72 [inlined]
+ [3] macro expansion
+   @ ~/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Test/src/Test.jl:1582 [inlined]
+ [4] top-level scope
+   @ ~/gllvmodels-track-a-20260924/GLLVModels.jl/test/parity/test_negbin_parity.jl:53
+NB2 GLLVModels parity: GLLVModels.jl vs gllvmTMB: Error During Test at /home/snakagaw/gllvmodels-track-a-20260924/GLLVModels.jl/test/parity/test_negbin_parity.jl:52
+  Got exception outside of a @test
+  original NB2 data changed
+  Stacktrace:
+    [1] error(s::String)
+      @ Base ./error.jl:35
+    [2] parity_nb2_health(Y::Matrix{Int64}, K::Int64, native::NBGroupedFit; artifact_prefix::String, receipt_tag::String, case_id::String)
+      @ Main ~/gllvmodels-track-a-20260924/GLLVModels.jl/test/parity/nb2_health.jl:8
+    [3] parity_nb2_health
+      @ ~/gllvmodels-track-a-20260924/GLLVModels.jl/test/parity/nb2_health.jl:2 [inlined]
+    [4] macro expansion
+      @ ~/gllvmodels-track-a-20260924/GLLVModels.jl/test/parity/test_negbin_parity.jl:77 [inlined]
+    [5] macro expansion
+      @ ~/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Test/src/Test.jl:1582 [inlined]
+    [6] top-level scope
+      @ ~/gllvmodels-track-a-20260924/GLLVModels.jl/test/parity/test_negbin_parity.jl:53
+    [7] include
+      @ ./client.jl:487 [inlined]
+    [8] #34
+      @ ~/gllvmodels-track-a-20260924/GLLVModels.jl/test/parity/runparity.jl:72 [inlined]
+    [9] macro expansion
+      @ ~/gllvmodels-track-a-20260924/GLLVModels.jl/test/parity/parity_helpers.jl:186 [inlined]
+   [10] macro expansion
+      @ ~/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Test/src/Test.jl:1582 [inlined]
+   [11] core070_execute_case!(id::String, fixture::String, thunk::var"#34#35"{String})
+      @ Main ~/gllvmodels-track-a-20260924/GLLVModels.jl/test/parity/parity_helpers.jl:186
+   [12] run_required_family_cell!
+      @ ~/gllvmodels-track-a-20260924/GLLVModels.jl/test/parity/runparity.jl:72 [inlined]
+   [13] macro expansion
+      @ ~/gllvmodels-track-a-20260924/GLLVModels.jl/test/parity/runparity.jl:87 [inlined]
+   [14] macro expansion
+      @ ~/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Test/src/Test.jl:1582 [inlined]
+   [15] run_required_family_smoke!()
+      @ Main ~/gllvmodels-track-a-20260924/GLLVModels.jl/test/parity/runparity.jl:84
+   [16] top-level scope
+      @ ~/gllvmodels-track-a-20260924/GLLVModels.jl/test/parity/runparity.jl:120
+BETA_HEALTH_SHA256 976fc9470356e69e139634b08b9c23c5fcae62ddee8c83d352edb02ccb589599
+BETA_RAW_FITS_SHA256 b231916e00eb412f1d40e293358126ab898133080c09ff4815750da719f9b8f5
+NATIVE-08-BETA checks=16/16 dLL=2.12878603633726e-11 native_gradient=3.44977517304097e-7 R_gradient=2.004182224903117e-5 samepoint=1.7053025658242404e-13
+Ordinal-probit diagnostic: Julia = -304.6673639667663, R = -304.6673639722419, Δ = 5.4756128520239145e-9
+
+── lognormal logLik oracle (seed=52, p=5, K=2, n=60; twin fid 3) ──
+  Julia logLik          = -594.6707717158077
+  gllvmTMB logLik       = -594.6707717381978
+  gllvmTMB -objective   = -594.6707717381978
+  Δ logLik (jl − r)     = 2.239005425508367e-8
+
+
+── truncated_poisson logLik oracle (seed=53, p=5, K=2, n=60; twin fid 10) ──
+  Julia logLik          = -618.0776776554325
+  gllvmTMB logLik       = -618.0776776581461
+  gllvmTMB -objective   = -618.0776776581461
+  Δ logLik (jl − r)     = 2.713591129577253e-9
+
+
+── Gamma no-X logLik oracle (seed=54, p=5, K=1, n=120, per-trait α; twin fid 4) ──
+  Julia logLik          = -917.4461930186753
+  gllvmTMB logLik       = -917.4461930392698
+  gllvmTMB -objective   = -917.4461930392698
+  Δ logLik (jl − r)     = 2.0594484340108465e-8
+
+
+── NB1 no-X logLik oracle (seed=55, p=5, K=1, n=120, per-trait φ; twin fid 15) ──
+  Julia logLik          = -1129.6667320235438
+  gllvmTMB logLik       = -1129.6667320371553
+  gllvmTMB -objective   = -1129.6667320371553
+  Δ logLik (jl − r)     = 1.3611497706733644e-8
+
+
+── BetaBinomial no-X logLik oracle (seed=56, p=5, K=1, n=120, per-trait φ, N=8; twin fid 8) ──
+  Julia logLik          = -1222.7727130822207
+  gllvmTMB logLik       = -1222.7727130883695
+  gllvmTMB -objective   = -1222.7727130883695
+  Δ logLik (jl − r)     = 6.1488663050113246e-9
+
+
+── multinomial FE logLik oracle (seed=57, ncat=4, n=400; twin fid 16) ──
+  Julia logLik          = -532.6016144503127
+  gllvmTMB logLik       = -532.6016144503094
+  gllvmTMB -objective   = -532.6016144503094
+  Δ logLik (jl − r)     = -3.296918293926865e-12
+
+TRUNCNB2_POLICY_SHA256 f0942c338d1193727f2bede886edc087b3b154fbd76aa1310634fa8681ad8d1b
+TRUNCNB2_RAW_FITS_SHA256 d6822f1c6fa754f8867b0a2410ec23943f382e64ebad789bd4c10d8e482e111a
+TRUNCNB2_DEFAULT_STATUS 0 relative convergence (4)
+explicit public R continuation and complete fit health: Test Failed at /home/snakagaw/gllvmodels-track-a-20260924/GLLVModels.jl/test/parity/test_truncated_nbinom2_parity.jl:80
+  Expression: d["r_gradient_max"] <= 0.0001
+   Evaluated: 0.0005901797966929578 <= 0.0001
+
+Stacktrace:
+ [1] macro expansion
+   @ ~/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Test/src/Test.jl:673 [inlined]
+ [2] macro expansion
+   @ ~/gllvmodels-track-a-20260924/GLLVModels.jl/test/parity/test_truncated_nbinom2_parity.jl:80 [inlined]
+ [3] macro expansion
+   @ ~/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Test/src/Test.jl:1582 [inlined]
+ [4] macro expansion
+   @ ~/gllvmodels-track-a-20260924/GLLVModels.jl/test/parity/test_truncated_nbinom2_parity.jl:76 [inlined]
+ [5] macro expansion
+   @ ~/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Test/src/Test.jl:1582 [inlined]
+ [6] top-level scope
+   @ ~/gllvmodels-track-a-20260924/GLLVModels.jl/test/parity/test_truncated_nbinom2_parity.jl:41
+
+── truncated_nbinom2 logLik oracle (seed=58, p=5, K=1, n=120, per-trait r; twin fid 11) ──
+  Julia logLik          = -1375.3913734823204
+  gllvmTMB logLik       = -1375.3913742176867
+  gllvmTMB -objective   = -1375.3913742176867
+  Δ logLik (jl − r)     = 7.35366256776615e-7
+
+DELTA_MATCHED_RESULT Dict{String, Any}("tight_public_r_control" => true, "original_r_gradient_max" => 0.0006196904365618075, "family" => "delta_lognormal", "native_converged" => true, "native_fd_stability" => 5.162928830401453e-8, "native_reevaluation_delta" => 0.0, "native_dispersion" => [0.39793636645072483, 0.44098250673831174, 0.4723758851217317, 0.5625139835595414, 0.46716910637326187], "r_nfree" => 15, "native_nfree" => 15, "loglik_rtol" => 1.0e-6, "data_sha256" => "8a25e4c307c0bc2a732c3d238b547e94af51d8b6962479638c5014bf3ca55e6b", "native_loglik" => -744.4500530971086, "r_converged" => true, "loglik_delta" => 2.099795892718248e-10, "hessian" => "observed", "fixture_sha256" => "a05b4d5a2d898d4a8585f7c4bda373806c792b021f342133de8376c78c1559ab", "r_loglik" => -744.4500530973186, "r_objective" => 744.4500530973186, "r_dispersion" => [0.39793470795812785, 0.4409852590305238, 0.47237577749703796, 0.5625139969928054, 0.46716909709756177], "gradient_atol" => 0.0001, "dgp_sha256" => "2d3b68503b1d132c9d8e106cf2123781848f796344e994dd61fb4cd61b71c294", "dispersion" => "species", "predictor" => "shared", "native_parameters" => [0.3318547155642333, -0.13172619419540457, 0.2544045467429133, -0.01410389870860866, -0.27578863170877577, -0.40823172020667, -0.5534957089984942, -0.16792292749468984, 0.20548601772381414, -0.05606263819057359, -0.9214631697700311, -0.8187500715821217, -0.7499802435450272, -0.5753392855511512, -0.7610639747117083], "native_gradient_max" => 7.3125846525140566e-6, "r_parameters" => [0.33185445443775996, -0.13172524373567054, 0.2544046978217737, -0.014103961888612024, -0.2757886771532021, 0.4082335705445453, 0.5534934010802269, 0.1679231607648399, -0.20548597205174232, 0.05606258057599113, -0.9214673375118936, -0.8187438303286, -0.7499804713820303, -0.575339261670387, -0.7610639945668316], "r_gradient_max" => 4.9287337704435885e-5, "seed" => 61, "K" => 1, "p" => 5, "n" => 130)
+DELTA_MATCHED_PARITY_PASS delta_lognormal
+DELTA_MATCHED_RESULT Dict{String, Any}("tight_public_r_control" => true, "original_r_gradient_max" => 0.001605141906077856, "family" => "delta_gamma", "native_converged" => true, "native_fd_stability" => 6.101643163201715e-8, "native_reevaluation_delta" => 0.0, "native_dispersion" => [5.505986353406478, 3.19603494206221, 5.935741973206155, 3.5872816110935593, 4.714317962172352], "r_nfree" => 15, "native_nfree" => 15, "loglik_rtol" => 1.0e-6, "data_sha256" => "035e0a974e83aa342cd3db991e568078935d5ca06abd424537bef3c6820ee97a", "native_loglik" => -725.9597543994768, "r_converged" => true, "loglik_delta" => 2.000888343900442e-10, "hessian" => "observed", "fixture_sha256" => "c43ce47b0c0ededa4213ca4852865618f1f5121a67db8b2789986b7d0685f9a1", "r_loglik" => -725.9597543996769, "r_objective" => 725.9597543996769, "r_dispersion" => [0.42617038411113206, 0.5593637260538573, 0.41045179084910766, 0.5279797438823558, 0.4605645984448852], "gradient_atol" => 0.0001, "dgp_sha256" => "7d1d390c046c4e56d5a3a683a6ddd8119ff2f06a2d5a86f58fa587d8dd398116", "dispersion" => "species", "predictor" => "shared", "native_parameters" => [0.3016924166954909, 0.013917502377248824, 0.2602033017702372, 0.003990363990332476, -0.2334473059433499, -0.4263212812278391, -0.3221646297960949, -0.20716078582813083, 0.09956181170670772, 0.016917413666613125, 1.7058359282223348, 1.1619109609050293, 1.7809920367946652, 1.277394704276285, 1.550604252848573], "native_gradient_max" => 9.312046181378618e-6, "r_parameters" => [0.3016930573289565, 0.013917756392294306, 0.2602030044834864, 0.003990350455026175, -0.2334472791458315, 0.42632048488725216, 0.3221642500658986, 0.20716145000579728, -0.09956189455150125, -0.01691738184187692, -0.8529160499743393, -0.5809553446967131, -0.8904967970615352, -0.6386973598709619, -0.7753021542001117], "r_gradient_max" => 4.3465533710929094e-5, "seed" => 62, "K" => 1, "p" => 5, "n" => 130)
+DELTA_MATCHED_PARITY_PASS delta_gamma
+
+── student logLik oracle, disp_group=:shared (seed=71, p=5, K=1, n=130, df fixed = 4.0 on both sides; twin fid 9) ──
+  Julia logLik          = -875.8638255351678
+  gllvmTMB logLik       = -874.7938200331472
+  gllvmTMB -objective   = -874.7938200331472
+  Δ logLik (jl − r)     = -1.0700055020206491
+
+  Julia β (shared σ=0.6858) = [0.20457, -0.016897, 0.366, -0.026253, -0.16855]
+  gllvmTMB b_fix (per-trait σ)  = [0.20614, -0.018998, 0.36531, -0.025489, -0.16904]
+  gllvmTMB per-trait σ vector   = [0.67301, 0.76384, 0.64126, 0.7116, 0.66022]
+
+
+── student logLik oracle, disp_group=:species (seed=71, p=5, K=1, n=130, df fixed = 4.0 on both sides; twin fid 9) ──
+  Julia logLik          = -874.7938200321828
+  gllvmTMB logLik       = -874.7938200331472
+  gllvmTMB -objective   = -874.7938200331472
+  Δ logLik (jl − r)     = 9.644054443924688e-10
+
+  Julia per-trait σ  = [0.67301, 0.76384, 0.64126, 0.7116, 0.66022]
+  gllvmTMB per-trait σ vector = [0.67301, 0.76384, 0.64126, 0.7116, 0.66022]
+
+
+── student logLik oracle, disp_group=:species, estimated ν (seed=71, p=5, K=1, n=130; twin fid 9) ──
+  Julia logLik          = -871.6960503768579
+  gllvmTMB logLik       = -871.6960503966714
+  gllvmTMB -objective   = -871.6960503966714
+  Δ logLik (jl − r)     = 1.9813455764960963e-8
+
+  Julia per-trait σ  = [0.76988, 0.77123, 0.64369, 0.70922, 0.80209]
+  gllvmTMB per-trait σ = [0.76988, 0.77123, 0.64369, 0.70922, 0.80209]
+  Julia per-trait ν  = [9.9552, 4.0541, 4.0766, 3.9419, 44.96]
+  gllvmTMB per-trait ν = [9.9548, 4.0541, 4.0765, 3.9421, 44.952]
+  gllvmTMB optimizer code/message/iterations = (0, "relative convergence (4)", 80)
+  flat Gaussian-limit boundary diagnosed = false
+
+near-Gaussian estimated-ν diagnostic: Test Failed at /home/snakagaw/gllvmodels-track-a-20260924/GLLVModels.jl/test/parity/test_studentt_parity.jl:191
+  Expression: jl_diag.converged
+
+Stacktrace:
+ [1] macro expansion
+   @ ~/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Test/src/Test.jl:673 [inlined]
+ [2] macro expansion
+   @ ~/gllvmodels-track-a-20260924/GLLVModels.jl/test/parity/test_studentt_parity.jl:191 [inlined]
+ [3] macro expansion
+   @ ~/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Test/src/Test.jl:1582 [inlined]
+ [4] macro expansion
+   @ ~/gllvmodels-track-a-20260924/GLLVModels.jl/test/parity/test_studentt_parity.jl:175 [inlined]
+ [5] macro expansion
+   @ ~/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Test/src/Test.jl:1582 [inlined]
+ [6] top-level scope
+   @ ~/gllvmodels-track-a-20260924/GLLVModels.jl/test/parity/test_studentt_parity.jl:45
+  near-Gaussian diagnostic Δ logLik (jl − r) = -5.387384408095386e-5
+  near-Gaussian diagnostic ν (Julia, R) = ([1.4422305477416224e10, 6.620850321285605e10, 1.2295439315436624e12], [3.976933778859298e6, 1.589424373478989e8, 567889.8781684702])
+TWEEDIE_PARITY fixed julia_logLik=-1065.415279743914 r_logLik=-1065.415279778604
+TWEEDIE_R_HEALTH (passed = true, optimizer_code = 0, optimizer_message = "relative convergence (4)", gradient_max_scaled = 6.53198017484536e-7, finite_parameters = true, finite_report = true, n_free = 15, n_power_free = 0, hessian_diagnostic = "not measured; se=FALSE", gradient_error = "")
+TWEEDIE_PARITY shared julia_logLik=-1064.3516394913443 r_logLik=-1064.3516394956707
+TWEEDIE_R_HEALTH (passed = true, optimizer_code = 0, optimizer_message = "relative convergence (4)", gradient_max_scaled = 4.1814770305111563e-7, finite_parameters = true, finite_report = true, n_free = 16, n_power_free = 1, hessian_diagnostic = "not measured; se=FALSE", gradient_error = "")
+TWEEDIE_PARITY species julia_logLik=-1057.8366215990375 r_logLik=-1057.836621630017
+TWEEDIE_R_HEALTH (passed = true, optimizer_code = 0, optimizer_message = "relative convergence (4)", gradient_max_scaled = 1.5792685364065208e-6, finite_parameters = true, finite_report = true, n_free = 20, n_power_free = 5, hessian_diagnostic = "not measured; se=FALSE", gradient_error = "")
+Test Summary:                                                                             | Pass  Fail  Error  Total      Time
+CORE-070 required family smoke                                                            |  269     3      1    273  45m35.2s
+  CORE-070 required cell: NATIVE-01-GAUSSIAN                                              |   31                  31     38.6s
+  CORE-070 required cell: NATIVE-02-BINOMIAL                                              |    6                   6     32.2s
+  CORE-070 required cell: NATIVE-03-POISSON                                               |   16                  16     32.2s
+  CORE-070 required cell: NATIVE-06-NB2                                                   |    3     1      1      5     29.7s
+    NB2 GLLVModels parity: GLLVModels.jl vs gllvmTMB                                      |    3     1      1      5     21.0s
+  CORE-070 required cell: NATIVE-08-BETA                                                  |   16                  16      9.5s
+  CORE-070 required cell: NATIVE-15-ORDINAL-PROBIT                                        |    5                   5      4.0s
+  CORE-070 required cell: NATIVE-04-LOGNORMAL                                             |   15                  15      4.8s
+  CORE-070 required cell: NATIVE-11-TRUNCATED-POISSON                                     |    8                   8      4.6s
+  CORE-070 required fixture group: NATIVE-05-GAMMA, NATIVE-16-NB1, NATIVE-09-BETABINOMIAL |   28                  28     58.3s
+  CORE-070 required cell: NATIVE-17-MULTINOMIAL-FIXED                                     |   13                  13      2.9s
+  CORE-070 required cell: NATIVE-12-TRUNCATED-NB2                                         |   20     1            21     46.2s
+    truncated_nbinom2 GLLVModels parity: GLLVModels.jl vs gllvmTMB (twin fid 11)          |   20     1            21     38.0s
+      support is {1,2,…} (zero-truncated)                                                 |    1                   1      0.0s
+      explicit public R continuation and complete fit health                              |    9     1            10      0.1s
+      log-likelihood agreement (rtol=1e-6)                                                |    2                   2      0.0s
+      `hessian=:fisher` remains reachable and is a different objective                    |    2                   2     15.4s
+      invalid hessian symbol is rejected up front                                         |    1                   1      0.2s
+  CORE-070 required cell: NATIVE-13-DELTA-LOGNORMAL                                       |   24                  24     12.4s
+  CORE-070 required cell: NATIVE-14-DELTA-GAMMA                                           |   24                  24      6.4s
+  CORE-070 required cell: NATIVE-10-STUDENT                                               |   32     1            33   1m17.3s
+    Student-t GLLVModels parity: GLLVModels.jl vs gllvmTMB (twin fid 9)                   |   32     1            33   1m17.1s
+      shared σ (Julia default) — measured baseline mismatch                               |    5                   5      7.0s
+      per-trait σ (disp_group = :species) — closes the mismatch                           |    5                   5      1.8s
+      per-trait σ + per-trait estimated ν (twin default) — Parity Cell 9                  |   10                  10     25.4s
+      well-identified estimated-ν diagnostic                                              |    5                   5     26.3s
+      near-Gaussian estimated-ν diagnostic                                                |    3     1             4     15.6s
+  CORE-070 required cell: NATIVE-07-TWEEDIE                                               |   28                  28  39m35.7s

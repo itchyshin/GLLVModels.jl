@@ -1,0 +1,14 @@
+contract_sha256 = "401e438e850b199ac6b826a8e4a78b088126d33c02b4d7ddafebcb180af8ab8d"
+fixture = "test/parity/test_binomial_parity.jl"
+status = "success"
+run_id = "bf15ffbc1e289d9bcce8a37745635683e1ad2ddede39fdc50f33f2f5f7b38672"
+fixture_sha256 = "26c8dd3d86182b899f990326362994b5c596a2957572aa1116d65bfaa0a5934a"
+id = "NATIVE-02-BINOMIAL"
+execution_manifest_sha256 = "f52df96047485fb6c07bd33c9d3911c95affe80be09a03836fd2a43c64c4b998"
+execution_case_ids = ["NATIVE-02-BINOMIAL"]
+
+[assertions]
+passed = 6
+broken = 0
+failed = 0
+errored = 0
