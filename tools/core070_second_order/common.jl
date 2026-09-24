@@ -72,10 +72,33 @@ _rand_nb2_ms(μ::Float64, r::Float64) = _rand_poisson(_rand_gamma_ms(r, μ / r))
 # fit_gllvmtmb_parity_loglik / _x / _species_x (test/parity/parity_helpers.jl)
 # with se=TRUE and sd_report extraction (mirrors se-prerun-01's r_fit.R).
 # ===========================================================================
+include(joinpath(@__DIR__, "r_lib.jl"))
+
 function _require_gllvmtmb!()
+    lib = second_order_r_lib()
+    if lib === nothing
+        R"""
+        suppressMessages(library(gllvmTMB))
+        """
+        return nothing
+    end
+    @rput lib
     R"""
-    suppressMessages(library(gllvmTMB))
+    local({
+      expected <- normalizePath(file.path(lib, "gllvmTMB"), mustWork = TRUE)
+      loaded_from <- function() normalizePath(getNamespaceInfo("gllvmTMB", "path"), mustWork = TRUE)
+      if ("gllvmTMB" %in% loadedNamespaces() && loaded_from() != expected) {
+        stop("gllvmTMB is already loaded from ", loaded_from(),
+             ", not GLLVM_PARITY_R_LIBS (", lib, "); start a fresh process")
+      }
+      .libPaths(c(lib, .libPaths()))
+      suppressMessages(library(gllvmTMB, lib.loc = lib))
+      if (loaded_from() != expected) {
+        stop("gllvmTMB loaded from ", loaded_from(), ", not GLLVM_PARITY_R_LIBS (", lib, ")")
+      }
+    })
     """
+    return nothing
 end
 
 # no-X
