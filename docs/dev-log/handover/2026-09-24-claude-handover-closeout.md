@@ -21,7 +21,7 @@ You are Claude, picking up the GLLVModels.jl ↔ gllvmTMB true-parity programme.
 |---|---|---|
 | Docs truth | #465 `3b2fd96e3` | Board, paste packet and handover now carry the live tip and the four pastes. |
 | S4 probe (#409) | #409 `137cab8e1`, wiring #469 `194e01f0e`, receipt #472 | Option A (probe-only `GLLVM` shim) ran. Result `pass=0 fail=2 oracle_defect=2`: the frozen recorder's runner never attaches testthat, so both tests stop before any fit. Shinichi then chose option (b), and a recorder fix was requested on gllvmTMB#1283. |
-| Track A (#410) | #410 `decbc8ddc` | Totoro, 56 min, `main` `94a7b56f9`, oracle `b4d5fee64` built and verified. 13 of 16 required cells succeeded. See the per-holdout rows below. Receipt: `docs/dev-log/after-task/2026-09-24-totoro-323-track-a-receipt.md`; raw evidence in `docs/dev-log/core070/totoro-323-track-a-20260924/`. |
+| Track A (#410) | #410 `decbc8ddc` | Totoro, 56 min, `main` `94a7b56f9`, oracle `b4d5fee64` built and verified. 14 of 17 required cells succeeded. See the per-holdout rows below. Receipt: `docs/dev-log/after-task/2026-09-24-totoro-323-track-a-receipt.md`; raw evidence in `docs/dev-log/core070/totoro-323-track-a-20260924/`. |
 | Delta A (#399) | #399 `94a7b56f9`, D1 receipts #470 `3c56e629c` | Delta default is now `disp_group = :species`. **D1 PASS on both cells**, no tolerance changed: lognormal SE rel 4.0e-5 (logLik Δ went from −1.923 to 1.8e-8), gamma SE rel 3.1e-5. |
 | Stage 1 (#411) | #411 `3b19b2817`; slice #471 (see Landing State) | #411 includes a verified fix for a σ_eps pin-scaling bug it had introduced (pins were off by 1/σ_eps). The slice adds the fit-time pin path, the confirmatory `loading_profile` export, four admission refusals, and one exact frozen-R-oracle cell. |
 

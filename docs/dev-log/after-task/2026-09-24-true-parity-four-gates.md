@@ -26,7 +26,7 @@ The handover's no-paste path was a docs refresh. The pastes turned it into the f
   - Shinichi then chose (b): a corrected recorder commit was requested on gllvmTMB#1283.
 - Track A on Totoro:
   - Pre-run passed at 09:42.
-  - The full run took 56 min: 13 of 16 required cells succeeded; the 3 failures are the #323 holdouts.
+  - The full run took 56 min: 14 of 17 required cells succeeded; the 3 failures are the #323 holdouts.
   - Receipt: `docs/dev-log/after-task/2026-09-24-totoro-323-track-a-receipt.md`.
 - Delta A.
   - ACCEPTED (A) block recorded; the delta default is now `disp_group = :species`.

@@ -26,7 +26,7 @@ TRACKA_RESULT NATIVE06_gradmax=not_reached NATIVE10_gradmax=not_recorded NATIVE1
 | GLLVM_ROOT | `~/gllvmodels-track-a-20260924/GLLVModels.jl` |
 | TRACK | A |
 | RECEIPT_STAMP | 20260924-105152 |
-| Wall clock | 56 min (10:51 to 11:47 MDT) |
+| Wall clock | 56 min (10:51 to 11:47 MDT): oracle build and verify 7 min, Julia parity environment 3 min, `runparity.jl` 45 min 35 s (its own Test Summary), setup the rest |
 | D-139 band | 90 to 150 min estimated; the run finished well inside it |
 
 ## Pre-run (D-139), 2026-09-24 09:42 MDT, at #410's head `78de8d0a1`
@@ -54,12 +54,12 @@ Deviations, both deliberate:
 | Check | Result | Notes |
 |-------|-----------|-------|
 | Oracle build | PASS | `BUILD_EXIT=0`, `VERIFY_EXIT=0`, 7 min |
-| Full runparity (Track A) | 13 of 16 required cells succeeded, 3 failed | exit 1; the three failures are exactly the #323 holdouts |
+| Full runparity (Track A) | 14 of 17 required cells succeeded, 3 failed | exit 1; the three failures are exactly the #323 holdouts |
 | Holdout NATIVE-06-NB2 `r_gradient_max ≤ 1e-4` | NOT REACHED | The cell stopped before its R check. The health helper's guard (`test/parity/nb2_health.jl:8`) refused with `original NB2 data changed`: data simulated under `Random.seed!(45)` no longer hashes to the frozen value. The Julia fit on that data also reported `converged = false`. |
 | Holdout NATIVE-12-TRUNCATED-NB2 | FAIL, R side | `r_gradient_max = 5.90e-4` (2026-09-05 baseline 6.47e-4); native gradient 6.5e-6 |
 | Holdout NATIVE-10-STUDENT | 32 of 33 pass | Parity Cell 9 (per-trait σ and ν, the twin default) passes: Δ logLik = 2.0e-8. The one failure is the near-Gaussian estimated-ν diagnostic, where the Julia fit reports `converged = false`. This cell's test records no `r_gradient_max`. |
 
-The other 13 cells succeeded. They include both default delta cells, after today's #399 default change, and Tweedie, whose cell took 40 of the 56 minutes and passed all 28 assertions.
+The other 14 cells succeeded. They include both default delta cells, after today's #399 default change, and Tweedie, whose cell took 40 of the 56 minutes and passed all 28 assertions.
 
 ## Failure classification
 
