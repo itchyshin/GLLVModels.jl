@@ -1,3 +1,18 @@
+## 2026-09-24: NB2 boundary-stall fix (#477) and finite-dispersion developer parity check (#476, B-lite)
+
+- Branch `claude/nb2-finite-dispersion-parity-20260924` on #475's branch. `fit_nb_gllvm_grouped`
+  restarts once, with boundary groups at `r = 1`, when a group ends outside `[1e-6, 1e6]`, and
+  keeps the restart only if the log-likelihood rises by more than 1e-6.
+- Measured: current code stopped 0.65 to 1.56 log-likelihood units below the optimum on 3 of 10
+  NATIVE-06-design datasets; the fix recovers all 3 and changes nothing else screened. New core
+  test `test/test_nb_boundary_restart.jl`: 3 fail before, 5 of 5 after. Eleven existing test files
+  that use the fitter all pass (Julia 1.10.12). NATIVE-06's Julia fit is identical before and after.
+- New developer parity check `test/parity/test_nb2_finite_dispersion_parity.jl` (outside the
+  frozen contract): on stored finite-dispersion data both engines agree to 2.5e-11 in logLik and
+  2e-5 in every `r`; on NATIVE-06 both put traits 1 and 3 at the boundary. R's gradient is
+  recorded, not gated.
+- After-task: `docs/dev-log/after-task/2026-09-24-nb2-boundary-restart-and-finite-parity.md`.
+
 ## 2026-09-24: closeout OWED 2 and 4 decided (A, A) and carried out
 
 - Branch `claude/owed-2-4-decisions-20260924` from `origin/main` @ `4e6e7eef5`. Decision:
