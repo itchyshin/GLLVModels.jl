@@ -5,7 +5,7 @@ Lane: `claude/d3-stage1-slice-20260924`, worktree
 at rebased DRAFT #411 head `e613a56a4`. **Update, 2026-09-24 (later the same
 day): #411, #399, and #410 have all merged to `main`. This branch has been
 rebased onto `main` and pushed — it is now open as PR #471**, not local-only
-as originally stated above when #411 was still an unmerged DRAFT.
+as originally stated above when #411 was still an unmerged DRAFT. It merged to `main` on 2026-09-24 at `4d0569534`.
 
 ## Scope
 

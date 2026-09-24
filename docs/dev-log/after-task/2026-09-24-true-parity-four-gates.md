@@ -84,6 +84,8 @@ The handover's no-paste path was a docs refresh. The pastes turned it into the f
   - `test_loading_profile_confirmatory.jl`: 48 pass, 1 broken.
   - Helper tests: S4 22/22, Track A 20/20, shard selection 43/43.
 - Totoro: oracle `BUILD_EXIT=0`, `VERIFY_EXIT=0`; `runparity.jl` exit 1, from exactly the three holdouts.
+- Completion panel (D-43), 2026-09-24: first pass NOT READY (Rose, 19 items; a recount found the 13-of-16 cell count wrong). Corrections were applied in `4faf3bb0f` and `1df7128e3`; the re-check returned READY WITH EDITS, and those edits are in this PR.
+- Plan-vs-actual open items: 1 (X409 G2) accepted as disclosed drift; 2 and 3 resolved by the #471 and #472 merges and by the panel; 4 (X410 G2) turns met only when this PR merges the receipt; 5: no wording claims D1 gated the #399 merge; 6: each of the lane's test files is included exactly once in `test/runtests.jl` on main, with no duplicates; 7: surfaced in the handover Gotchas and the CHANGELOG.
 
 ## 6. Tests of the Tests
 

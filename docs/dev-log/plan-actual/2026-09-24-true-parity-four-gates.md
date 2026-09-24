@@ -1,5 +1,7 @@
 # Plan vs actual: true-parity-20260924 four paste gates
 
+> Snapshot taken before #471 and #472 merged and before the Julia 1.13.0 CI comparison. Since then #471 (`4d0569534`) and #472 (`aed31c8bb`) have merged. NATIVE-10's Cell 9 passes on Totoro (Julia 1.10.12) but fails in the advisory CI job (Julia 1.13.0), so no holdout counts as a pass. The completion panel's disposition of the open items below is recorded in `docs/dev-log/after-task/2026-09-24-true-parity-four-gates.md` §5.
+
 Reconciler: Melissa (ultra-plan Phase 4.5). Scope: diff the approved plan
 (`LOOP/lanes/true-parity-20260924/ultra-plan.md`, `GOAL.md`, `arcs.md`,
 `checkpoint.md`) against what actually happened, using the acceptance ledger
