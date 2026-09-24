@@ -159,6 +159,38 @@ function _confirmatory_lambda_pin_theta_fixes(
     return fixes
 end
 
+# Fit-time counterpart of `_confirmatory_lambda_pin_theta_fixes`: map ALL of a
+# user pin matrix's numeric (non-NaN) entries to fixed `(theta_index,
+# working_value)` pairs, with no extra single-entry override. Used to build the
+# confirmatory (pinned) fit itself, before any profiling grid runs. Raw-scale,
+# no σ_eps rescaling — see the note above `_confirmatory_lambda_pin_theta_fixes`.
+function _confirmatory_lambda_constraint_theta_fixes(
+    fit::GllvmFit,
+    M_user::AbstractMatrix{<:Real};
+    component::Symbol = :B,
+)
+    component === :B ||
+        throw(ArgumentError("Stage 1 internal pin path supports component = :B only"))
+    _confirmatory_j1_fit_admitted(fit) ||
+        throw(ArgumentError(
+            "lambda_constraint fit-time pinning is J1-only in Stage 1 plumbing"))
+    p = fit.model.p
+    K = fit.model.K
+    size(M_user) == (p, K) ||
+        throw(ArgumentError(
+            "pin matrix is $(size(M_user, 1))×$(size(M_user, 2)); expected " *
+            "$(p)×$(K) to match the fit"))
+    M = _normalize_lambda_constraint_pin_matrix(M_user)
+    fixes = Tuple{Int, Float64}[]
+    for i in 1:p, k in 1:K
+        v = M[i, k]
+        v isa Real && isnan(v) && continue
+        idx = _lambda_b_theta_index(fit, i, k)
+        push!(fixes, (idx, Float64(v)))
+    end
+    return fixes
+end
+
 # Re-optimise the Gaussian NLL over all parameters except those listed in `fixed`
 # (each `(index, value)` holds one `theta_packed` entry at `value`).
 function _profile_refit_with_multi_fixed(
@@ -253,4 +285,64 @@ function _confirmatory_profile_refit_lambda_pin(
     ll, ok, _ = _profile_refit_with_multi_fixed(
         fit, fixes, y; X = X, Σ_phy = Σ_phy, kwargs...)
     return (ll, ok)
+end
+
+# Stage 1 fit-time `lambda_constraint`: given an already-fitted ordinary J1
+# Gaussian `base` (X = nothing, no W/diag/phylo blocks), hold the numeric
+# (non-NaN) entries of `M_user` fixed at their raw-scale value and re-optimise
+# every other free parameter. Returns a new `GllvmFit` whose `pars` carries
+# `lambda_constraint = M_user` (normalised) so `loading_profile` can read back
+# which entries are free vs pinned. Structural upper-triangle zeros (`k > i`
+# for `i <= min(p, K)`) are already enforced by the lower-triangular packing
+# convention on every ordinary fit and need no extra fixing.
+#
+# X = nothing only: the packed-θ layout this reuses (`_profile_spec` /
+# `_derived_unpack`) does not carry `alpha_lv`, and Stage 1 scope (Stage 0
+# fixtures) has no `X` design — see the runbook's bounded-slice fence.
+function _fit_confirmatory_lambda_constraint(
+    base::GllvmFit,
+    Y::AbstractMatrix,
+    M_user::AbstractMatrix{<:Real};
+    kwargs...,
+)
+    _confirmatory_j1_fit_admitted(base) ||
+        throw(ArgumentError(
+            "lambda_constraint is supported for the ordinary J1 Gaussian fitter " *
+            "only (K_W = 0, has_diag = false, K_phy = 0, has_phy_unique = false)"))
+    (base.pars.β === nothing || isempty(base.pars.β)) ||
+        throw(ArgumentError(
+            "lambda_constraint currently supports X = nothing (zero-mean) fits only"))
+    p = base.model.p
+    K = base.model.K
+    size(M_user) == (p, K) ||
+        throw(ArgumentError(
+            "lambda_constraint must be $(p)×$(K) (p traits × K axes); got $(size(M_user))"))
+    M_norm = _normalize_lambda_constraint_pin_matrix(M_user)
+    fixes = _confirmatory_lambda_constraint_theta_fixes(base, M_user)
+    if isempty(fixes)
+        # No additional user pins beyond the engine's own structural zeros:
+        # numerically identical to `base`, only the pin metadata is new.
+        pars = merge(base.pars, (lambda_constraint = M_norm,))
+        return GllvmFit(base.model, pars, base.logLik, base.n_iter, base.converged,
+                         base.optim_result, base.cputime, base.integration)
+    end
+    ll, ok, θ_red = _profile_refit_with_multi_fixed(base, fixes, Y; kwargs...)
+    ok || throw(ArgumentError(
+        "confirmatory lambda_constraint refit did not converge"))
+    N = length(base.pars.θ_packed)
+    fixed_dict = Dict{Int, Float64}(fixes)
+    free_idx = [j for j in 1:N if !haskey(fixed_dict, j)]
+    θ_full = Vector{Float64}(undef, N)
+    for (idx, v) in fixes
+        θ_full[idx] = v
+    end
+    for (r, j) in enumerate(free_idx)
+        θ_full[j] = θ_red[r]
+    end
+    spec = _profile_spec(base)
+    u = _derived_unpack(θ_full, spec)
+    pars = merge(base.pars, (σ_eps = u.σ_eps, Λ = u.Λ_B, θ_packed = θ_full,
+                              lambda_constraint = M_norm))
+    return GllvmFit(base.model, pars, ll, base.n_iter, ok, base.optim_result,
+                     base.cputime, base.integration)
 end

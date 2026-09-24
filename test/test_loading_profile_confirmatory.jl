@@ -91,3 +91,98 @@ const _K = LOADING_PROFILE_CONFIRMATORY_K
         @test u.Λ_B[2, 1] == 0.3
     end
 end
+
+# D3 Stage 1 slice (maintainer paste `G0 Stage 1`, 2026-09-24): fit-time
+# `lambda_constraint` on `fit_gaussian_gllvm` and the exported `loading_profile`.
+# These exercise the actual pin-and-refit numerics for the first time — the
+# tests above only reached the paste-refusal path since no paste was set in
+# CI. This is a Stage 1 receipt (Stage 0 fixtures, one entry per refit), not
+# full R grid parity: see the runbook's Rose fence.
+@testset "loading_profile Stage 1 (fit-time lambda_constraint + export)" begin
+    rng = MersenneTwister(49)
+    n = 40
+    Y = randn(rng, _P, n)
+
+    @testset "fit-time pins land exactly on Stage 0 fixtures" begin
+        pins = loading_profile_fixture_mask_b_pins()
+        fit = fit_gaussian_gllvm(Y; K = _K, lambda_constraint = pins)
+        @test fit.converged
+        @test fit.pars.Λ[1, 1] == -0.8
+        @test fit.pars.Λ[3, 2] == 0.0
+        @test fit.pars.lambda_constraint[1, 1] == -0.8
+        @test isnan(fit.pars.lambda_constraint[2, 1])
+
+        # MASK-B-UPPER: a bogus above-diagonal entry R (and this port) ignores.
+        upper = loading_profile_fixture_mask_b_upper()
+        fit_upper = fit_gaussian_gllvm(Y; K = _K, lambda_constraint = upper)
+        @test fit_upper.pars.Λ == fit.pars.Λ
+
+        # MASK-B-ALLFIXED: every entry pinned, nothing left free.
+        allfixed = loading_profile_fixture_mask_b_allfixed()
+        fit_allfixed = fit_gaussian_gllvm(Y; K = _K, lambda_constraint = allfixed)
+        @test fit_allfixed.converged
+        @test fit_allfixed.pars.Λ[1, 1] == 0.8
+        @test fit_allfixed.pars.Λ[2, 2] == 0.7
+
+        # No additional user pins beyond structural zeros: numerically
+        # identical to the plain unconstrained fit (only metadata differs).
+        base = fit_gaussian_gllvm(Y; K = _K)
+        fit_free = fit_gaussian_gllvm(Y; K = _K, lambda_constraint = fill(NaN, _P, _K))
+        @test fit_free.logLik == base.logLik
+        @test fit_free.pars.Λ == base.pars.Λ
+    end
+
+    @testset "lambda_constraint refusals" begin
+        pins = loading_profile_fixture_mask_b_pins()
+        # Structured (K_W > 0) fits are out of Stage 1 scope.
+        @test_throws ArgumentError fit_gaussian_gllvm(
+            Y; K = _K, K_W = 1, lambda_constraint = fill(NaN, _P, _K))
+        # X-carrying fits are out of Stage 1 scope.
+        X = zeros(_P, n, 1)
+        @test_throws ArgumentError fit_gaussian_gllvm(
+            Y; K = _K, X = X, lambda_constraint = fill(NaN, _P, _K))
+        # Wrong-shaped pin matrix.
+        @test_throws ArgumentError fit_gaussian_gllvm(
+            Y; K = _K, lambda_constraint = fill(NaN, _P + 1, _K))
+    end
+
+    @testset "loading_profile refuses a non-confirmatory (exploratory) fit" begin
+        base = fit_gaussian_gllvm(Y; K = _K)
+        @test_throws ArgumentError loading_profile(base; y = Y)
+    end
+
+    @testset "loading_profile refuses when no free entries remain" begin
+        allfixed = loading_profile_fixture_mask_b_allfixed()
+        fit_allfixed = fit_gaussian_gllvm(Y; K = _K, lambda_constraint = allfixed)
+        @test_throws ArgumentError loading_profile(fit_allfixed; y = Y)
+    end
+
+    @testset "one R-aligned pin-and-refit grid cell (MASK-B-PINS)" begin
+        pins = loading_profile_fixture_mask_b_pins()
+        fit = fit_gaussian_gllvm(Y; K = _K, lambda_constraint = pins)
+        result = loading_profile(fit; y = Y, n_grid = 3, entries = [2 1])
+        @test length(result.table) == 3
+        @test all(row -> row.trait == 2 && row.axis == 1, result.table)
+        @test all(row -> row.converged, result.table)
+        @test all(row -> row.objective >= -fit.logLik - 1e-6, result.table)
+        @test all(row -> row.delta_deviance >= -1e-6, result.table)
+        # The grid point nearest the confirmatory MLE has ~zero deviance.
+        mle_row = argmin(row -> abs(row.profile_value - row.estimate), result.table)
+        @test mle_row.delta_deviance < 1e-4
+    end
+
+    @testset "entries filter profiles only the requested pair" begin
+        pins = loading_profile_fixture_mask_b_pins()
+        fit = fit_gaussian_gllvm(Y; K = _K, lambda_constraint = pins)
+        result = loading_profile(fit; y = Y, n_grid = 3, entries = [3 1])
+        @test result.entries == [(3, 1)]
+        @test length(result.table) == 3
+    end
+
+    @testset "old 3-positional-arg shim still dispatches to loading_profile_exploratory" begin
+        base = fit_gaussian_gllvm(Y; K = _K)
+        r = loading_profile(base, 1, 1; y = Y)
+        @test r.method == :profile
+        @test isfinite(r.estimate)
+    end
+end
