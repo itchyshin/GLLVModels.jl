@@ -259,11 +259,11 @@ function run_identity_checks()
                        "the CHOLMOD symbolic-reuse change has not landed yet")
     else
         # FD gradient path: the S7b pin, on the exact path origin/main took.
-        # Pin `diag_precision_kernel=false`: Latte A1 default-ON also turns on
+        # Pin `diag_precision_kernel=false`: when true, Latte also turns on
         # `reuse_identical_hf_ho`, which shares Fisher+observed into one factor
         # and breaks the CHOLMOD `fresh == 2*calls` invariant this block owns.
-        # Identity of the fitted answer under default-ON is covered elsewhere
-        # (test_latte_kernel_identity.jl); this block stays on the CHOLMOD path.
+        # Latte identity is covered in test_latte_kernel_identity.jl; this block
+        # stays on the CHOLMOD path regardless of the public default.
         GLLVModels._grouped_chol_stats_reset!()
         GLLVModels.fit_gllvm(Y1; family = Poisson(), grouping = terms, unit = group,
             warm_start_inner = false, analytic_gradient = false, moment_start = false,
