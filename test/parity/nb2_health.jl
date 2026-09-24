@@ -1,3 +1,14 @@
+"""The original NB2 data, read from `fixtures/nb2_original_data.toml`. Julia 1.10 draws
+different numbers from the fixture's seed than Julia 1.12+, where the pinned draw was made,
+so the draw is stored and every version fits the same data."""
+function parity_nb2_original_Y()
+ d=TOML.parsefile(joinpath(@__DIR__,"fixtures","nb2_original_data.toml"))
+ Y=reshape(Int.(d["Y_column_major"]),d["p"],d["n"])
+ h=bytes2hex(sha256(reinterpret(UInt8,vec(Float64.(Y)))))
+ h==d["data_sha256"]=="7abde2731134afe61afee5a7f0c29b58892ad72e550fa41cf8230e9c701a2bf9" || error("stored NB2 data changed")
+ return Y
+end
+
 """Record the original NB2 default-oracle health without changing either fit."""
 function parity_nb2_health(Y, K, native; artifact_prefix="nb2", receipt_tag="NB2", case_id="NATIVE-06-NB2")
  occursin(r"^[a-z][a-z0-9-]*$", artifact_prefix) || throw(ArgumentError("invalid NB2 artifact prefix"))

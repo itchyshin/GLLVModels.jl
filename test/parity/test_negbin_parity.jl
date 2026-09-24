@@ -64,6 +64,9 @@ end
         μ = exp(clamp(η[t, s], -8.0, 8.0))
         Y[t, s] = _rand_nb2(μ, r_true)
     end
+    # The loop above records how the data were drawn (Julia 1.12+). Julia 1.10
+    # draws different numbers from this seed, so the fit uses the stored draw.
+    Y = parity_nb2_original_Y()
 
     # Public default route — twin-aligned with gllvmTMB default nbinom2().
     jl_fit = fit_gllvm(Y; family = GLLVModels.NegativeBinomial(), K = K,
