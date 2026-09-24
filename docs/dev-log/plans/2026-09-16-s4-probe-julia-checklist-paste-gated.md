@@ -20,10 +20,14 @@ This checklist is **Julia-side prep only**. No probe execution from cloud / Curs
 
 ## Pre-flight (before any probe run)
 
-- [ ] Confirm recorder ref fetchable: `git ls-remote origin codex/destination-b-s4-phylo-dep-formula-20260910` → tip `97214679c…`
+- [ ] Confirm recorder ref fetchable: `git ls-remote origin codex/destination-b-s4-phylo-dep-formula-20260910` → tip `97214679c…` (harness checks when network available)
 - [ ] Read gllvmTMB #1283 scope (formula / fixture contract only; **no** TMB edits from GLLVM.jl lane)
-- [ ] Frozen oracle pin unchanged: `b4d5fee64def88bc768dda1f1f77c29b295edd86`
-- [ ] Identify Julia entry script (DestB isolated runner; do not invent a second driver without Hopper review)
+- [ ] Frozen oracle pin unchanged: `b4d5fee64def88bc768dda1f1f77c29b295edd86` (printed in dry-run summary; confirm manually)
+- [x] Julia entry script (paste-gated harness; DRAFT PR — does not execute without paste):
+  `tools/destination_b/run_s4_public_phylo_dep_probe.jl` +
+  `tools/destination_b/s4_public_phylo_dep_probe_harness.jl`
+- [ ] Harness dry-run (no paste, no R): `julia --project=. tools/destination_b/run_s4_public_phylo_dep_probe.jl --dry-run --gllvmtmb-root … --julia-project … --julia … --receipt …` → expect `S4_PUBLIC_PHYLO_DEP_PREFLIGHT_DRY_RUN_OK`
+- [ ] After-task receipt template present: `docs/dev-log/after-task/TEMPLATE-s4-public-phylo-dep-probe-receipt.md`
 - [ ] D-50: probe on **local Mac-light** or **Totoro** with maintainer compute ack if wall clock >30 min (separate from #323 Track A ack)
 
 ---
@@ -51,5 +55,10 @@ This checklist is **Julia-side prep only**. No probe execution from cloud / Curs
 
 | Paste | Scaffold |
 |-------|----------|
+| `S4 probe yes` | DRAFT **[#409](https://github.com/itchyshin/GLLVModels.jl/pull/409)** (Julia harness; merge after paste + probe receipt, not before) |
 | `G0 Stage 1` | [`2026-09-16-d3-loading-profile-stage1-paste-gated-scaffold.md`](2026-09-16-d3-loading-profile-stage1-paste-gated-scaffold.md) |
 | `ack Totoro D-139 #323 Track A` | [`2026-09-16-totoro-323-track-a-runbook-paste-gated.md`](2026-09-16-totoro-323-track-a-runbook-paste-gated.md) |
+
+After paste, set `export GLLVM_S4_PROBE_PASTE='S4 probe yes'` and run the driver
+documented in `s4_public_phylo_dep_scaffold_usage()` (gllvmTMB checkout at
+`97214679c`, single Julia process).

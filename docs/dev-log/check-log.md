@@ -52,6 +52,15 @@
   Goal **not** complete.
 - Commands: `git fetch origin main`; `git rev-parse origin/main`; `rg 'leave.*357|487e2cb74|62091750d' docs LOOP AGENTS.md`.
 
+## 2026-09-16 — S4 probe Julia harness DRAFT (paste `S4 probe yes`)
+
+- Branch `feat/s4-probe-harness-draft-20260916`: paste-gated driver
+  `tools/destination_b/run_s4_public_phylo_dep_probe.jl` +
+  `s4_public_phylo_dep_probe_harness.jl`; test
+  `test/test_destination_b_s4_public_phylo_dep_probe_harness.jl`. **No probe run.**
+  Recorder pin gllvmTMB #1283 @ `97214679c`. Goal **not** complete.
+- Commands: `julia --project=. test/test_destination_b_s4_public_phylo_dep_probe_harness.jl`
+
 ## 2026-09-16 — Four DRAFT paste harnesses on canonical packet (`docs/four-draft-paste-packet-20260916`)
 
 - **origin/main** @ **`576cd927d`** before merge. Board + [`owed/2026-09-16-post-402-paste-packet.md`](owed/2026-09-16-post-402-paste-packet.md) list DRAFT **#399/#409/#410/#411** (do not merge without paste). Goal **not** complete.
