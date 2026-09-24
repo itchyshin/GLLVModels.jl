@@ -93,6 +93,18 @@ Full responsibility detail lives in §2 of the reference plan.
 
 ## Phase state snapshot
 
+- **True-parity continuation (2026-09-24).** `origin/main` @ **`1703c54b4`**
+  (post-rename **GLLVModels** #423/#425; speed/latte #453 on main; programme goal
+  **not** complete). Paste-gated DRAFT harnesses **#399/#409/#410/#411** still
+  **DRAFT until Shinichi paste**; **#409/#410/#411** were **CONFLICTING** with
+  `main` at handoff (rebase after paste). **#357** bridge receipts **MERGED**
+  (`5ee6dc596`; do not revert). `Project.toml` stays **`0.3.0`**. Multi-lane:
+  see `docs/dev-log/coordination-board.md`; do not orphan reader (**#444**) or
+  latte (**#463**) lanes. Board:
+  `docs/dev-log/2026-09-14-true-parity-pending-board.md`. Paste packet:
+  `docs/dev-log/owed/2026-09-16-post-402-paste-packet.md`. **START HERE:**
+  `docs/dev-log/handover/2026-09-24-claude-handover.md`.
+
 - **True-parity continuation (2026-09-17).** `origin/main` @ `e590eb9ec` after
   docs tip chain through **#418** (paste-ready status for four DRAFT harness
   heads). **#357** bridge logLik receipts **MERGED** (#357, `5ee6dc596`; do not
