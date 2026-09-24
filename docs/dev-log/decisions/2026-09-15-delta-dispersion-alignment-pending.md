@@ -9,7 +9,7 @@
 **Twin anchor (R):** `log_sigma_lognormal_delta` / `log_phi_gamma_delta` length **p** (`gllvmTMB.cpp` family ids 12–13)  
 **Julia anchor:** `fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm` — `disp_group ∈ {:shared, :species}` in `src/families/twopart.jl`; public fitter **default remains `:shared`** until paste; Wald `_family_ci` packs both modes; postfit `predict` / `getLV` / `residuals` handle vector σ/α (DRAFT #399).
 
-**DRAFT scaffold (pre-paste, 2026-09-16):** DRAFT [#399](https://github.com/itchyshin/GLLVM.jl/pull/399) wires species CI, SO cells at `:species`, postfit vector dispersion, and `fit_gllvm(..., disp_group=)` for Delta. Not an ACCEPTED disposition. Not a D1 pass. Not a public `fit_gllvm` default coerce to `:species`. Merge only after paste `accept delta dispersion A`.
+**DRAFT scaffold (pre-paste, 2026-09-16):** DRAFT [#399](https://github.com/itchyshin/GLLVModels.jl/pull/399) wires species CI, SO cells at `:species`, postfit vector dispersion, and `fit_gllvm(..., disp_group=)` for Delta. Not an ACCEPTED disposition. Not a D1 pass. Not a public `fit_gllvm` default coerce to `:species`. Merge only after paste `accept delta dispersion A`.
 
 **Does not:** accept any option; edit R `gllvmTMB`; promote D1 pass; claim covered / Stage 1 / S4 / Totoro clearance; bump `Project.toml`; close programme §7 or true-parity destination.
 

@@ -4,7 +4,7 @@
 
 **Contract:** [`second-order-parity-contract.md`](../core070/second-order-parity-contract.md) §4 — **do not widen rtol**.
 
-**Prerequisite:** DRAFT [#399](https://github.com/itchyshin/GLLVM.jl/pull/399) merged with `core070_second_order` Delta cells at `disp_group=:species` and Julia-side Wald packing green.
+**Prerequisite:** DRAFT [#399](https://github.com/itchyshin/GLLVModels.jl/pull/399) merged with `core070_second_order` Delta cells at `disp_group=:species` and Julia-side Wald packing green.
 
 ## Commands (local Mac; R live Δ needs `GLLVM_PARITY_TESTS=1`)
 

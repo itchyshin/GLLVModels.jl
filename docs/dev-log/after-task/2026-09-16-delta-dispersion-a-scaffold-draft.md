@@ -5,7 +5,7 @@
 **Lane:** PLATFORM: claude | ON BRANCH: feat/delta-dispersion-a-scaffold-20260916 | LANE: delta-dispersion-a-scaffold  
 **Worktree:** `~/local-scratch/gllvm-delta-disp-a-scaffold-20260916`  
 **Base:** `origin/main` @ **`83f2e5224`** (rebased 2026-09-17; post-#420 paste packet tip)  
-**PR:** DRAFT [#399](https://github.com/itchyshin/GLLVM.jl/pull/399); waits for paste `accept delta dispersion A` (do not mark ready; do not merge)
+**PR:** DRAFT [#399](https://github.com/itchyshin/GLLVModels.jl/pull/399); waits for paste `accept delta dispersion A` (do not mark ready; do not merge)
 
 ## Rose fence
 
