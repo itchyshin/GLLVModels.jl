@@ -25,6 +25,22 @@ const S4_FROZEN_ORACLE_PIN =
     "b4d5fee64def88bc768dda1f1f77c29b295edd86"
 const S4_AFTER_TASK_RECEIPT_TEMPLATE_REL =
     "docs/dev-log/after-task/TEMPLATE-s4-public-phylo-dep-probe-receipt.md"
+const S4_PUBLIC_PHYLO_DEP_PROBE_ENV_REL =
+    "tools/destination_b/probe_env"
+
+"""
+    s4_public_phylo_dep_probe_env(julia_project::AbstractString) -> String
+
+Default `GLLVM_S4_JULIA_ENV`: the committed probe-only environment that
+`develop`s `julia_project` and adds `LogExpFunctions` as a direct dependency
+(the recorder's clean-Julia-probe step does `using LogExpFunctions` before
+`using GLLVM`; that fails against the main `Project.toml`, which does not list
+`LogExpFunctions` directly). Callers may still override via `--julia-env` /
+the `julia_env` keyword.
+"""
+function s4_public_phylo_dep_probe_env(julia_project::AbstractString)
+    return joinpath(julia_project, S4_PUBLIC_PHYLO_DEP_PROBE_ENV_REL)
+end
 
 function _s4_probe_fail(message::AbstractString, hint::AbstractString = "")
     body = "S4 public phylo_dep probe harness: " * message
@@ -179,7 +195,7 @@ end
         gllvmtmb_root,
         julia_project,
         julia_executable,
-        julia_env = julia_project,
+        julia_env = s4_public_phylo_dep_probe_env(julia_project),
         receipt_path,
         rscript_executable = "Rscript",
     ) -> S4PublicPhyloDepProbeConfig
@@ -191,7 +207,7 @@ function s4_public_phylo_dep_probe_config(;
     gllvmtmb_root::AbstractString,
     julia_project::AbstractString,
     julia_executable::AbstractString,
-    julia_env::AbstractString = julia_project,
+    julia_env::AbstractString = s4_public_phylo_dep_probe_env(julia_project),
     receipt_path::AbstractString,
     rscript_executable::AbstractString = "Rscript",
     dry_run::Bool = false,
@@ -261,7 +277,7 @@ function s4_public_phylo_dep_preflight!(;
     gllvmtmb_root::AbstractString,
     julia_project::AbstractString,
     julia_executable::AbstractString,
-    julia_env::AbstractString = julia_project,
+    julia_env::AbstractString = s4_public_phylo_dep_probe_env(julia_project),
     receipt_path::AbstractString,
     rscript_executable::AbstractString = "Rscript",
     dry_run::Bool = false,
@@ -332,12 +348,21 @@ end
 
 Environment variables expected by gllvmTMB
 `run-destination-b-s4-public-phylo-dep-isolated.R` at the recorder commit.
+
+`GLLVM_S4_JULIA_HOME` is the *directory* containing the `julia` executable, not
+the executable file itself: the recorder's `s4_public_phylo_dep_clean_julia_probe()`
+resolves it as `file.path(normalizePath(julia_home, mustWork = TRUE), "julia")`
+(falling back to `.../bin/julia`), so passing the file itself makes that
+`file.path()` call append a second `julia` path segment onto a file and always
+miss. `cfg.julia_executable` is still validated as a file by
+[`s4_public_phylo_dep_probe_config`](@ref); only the value handed to the R
+child process changes.
 """
 function s4_public_phylo_dep_r_environment(cfg::S4PublicPhyloDepProbeConfig)
     return Dict{String,String}(
         "GLLVM_S4_LIVE_FORMULA_TESTS" => "1",
         "GLLVM_DESTINATION_B_PROJECT" => cfg.julia_project,
-        "GLLVM_S4_JULIA_HOME" => cfg.julia_executable,
+        "GLLVM_S4_JULIA_HOME" => dirname(cfg.julia_executable),
         "GLLVM_S4_JULIA_ENV" => cfg.julia_env,
         "GLLVM_S4_RECEIPT_PATH" => cfg.receipt_path,
     )

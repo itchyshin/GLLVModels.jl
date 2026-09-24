@@ -52,7 +52,7 @@ function _s4_parse_args(args::Vector{String})
     )
         val === nothing && error("missing required argument $name")
     end
-    julia_env = something(julia_env, project)
+    julia_env = something(julia_env, s4_public_phylo_dep_probe_env(project))
     gllvm_root = abspath(String(project))
     while !isfile(joinpath(gllvm_root, "Project.toml")) && gllvm_root != dirname(gllvm_root)
         gllvm_root = dirname(gllvm_root)

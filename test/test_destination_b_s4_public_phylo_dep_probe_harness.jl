@@ -15,6 +15,38 @@ include(joinpath(@__DIR__, "..", "tools", "destination_b",
     @test_throws ArgumentError s4_public_phylo_dep_verify_recorder_tip(
         joinpath(@__DIR__, "nonexistent_gllvmtmb_root"))
 
+    # GLLVM_S4_JULIA_HOME must be the *directory* holding the `julia`
+    # executable, not the executable file itself: the frozen recorder's
+    # `s4_public_phylo_dep_clean_julia_probe()` in
+    # run-destination-b-s4-public-phylo-dep-isolated.R resolves it as
+    # `file.path(normalizePath(julia_home, mustWork = TRUE), "julia")`
+    # (falling back to `.../bin/julia`) — passing the executable file itself
+    # makes that `file.path()` call append a second `julia` segment onto a
+    # file, which never exists.
+    let executable = joinpath(Sys.BINDIR, Base.julia_exename()),
+        cfg = S4PublicPhyloDepProbeConfig(
+            @__DIR__,
+            abspath(joinpath(@__DIR__, "..")),
+            executable,
+            abspath(joinpath(@__DIR__, "..")),
+            joinpath(tempdir(), "s4-probe-harness-unused-receipt.json"),
+            "Rscript",
+        )
+        env = s4_public_phylo_dep_r_environment(cfg)
+        @test env["GLLVM_S4_JULIA_HOME"] == dirname(executable)
+        @test env["GLLVM_S4_JULIA_HOME"] != executable
+        @test isfile(joinpath(env["GLLVM_S4_JULIA_HOME"], basename(executable)))
+    end
+
+    # GLLVM_S4_JULIA_ENV defaults to the committed probe-only environment
+    # (develops the repo root; carries LogExpFunctions as a direct dep) when
+    # the caller does not pass julia_env explicitly.
+    let julia_project = abspath(joinpath(@__DIR__, ".."))
+        @test s4_public_phylo_dep_probe_env(julia_project) ==
+              joinpath(julia_project, "tools", "destination_b", "probe_env")
+        @test isfile(joinpath(s4_public_phylo_dep_probe_env(julia_project), "Project.toml"))
+    end
+
     gllvmtmb = get(ENV, "GLLVM_TEST_GLLVMTMB_ROOT", "")
     if !isempty(gllvmtmb) && isdir(gllvmtmb)
         try
