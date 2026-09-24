@@ -1,12 +1,16 @@
 # `disp_group::Symbol` on fit_delta_lognormal_gllvm / fit_delta_gamma_gllvm
 # (2026-08-28) — per-trait dispersion, matching gllvmTMB's per-trait
 # `log_sigma_lognormal_delta` / `log_phi_gamma_delta` (gllvmTMB.cpp:1195-1196,
-# length n_traits). `:shared` (default) stays bit-identical to the
-# pre-existing single-scalar-dispersion behaviour; `:species` is new. See
+# length n_traits). `:species` is now the DEFAULT (`accept delta dispersion A`,
+# maintainer paste 2026-09-24 — see
+# docs/dev-log/decisions/2026-09-15-delta-dispersion-alignment-pending.md);
+# `:shared` (previous default, before 2026-09-24) stays bit-identical to the
+# pre-existing single-scalar-dispersion behaviour and remains available as an
+# explicit opt-in. See also
 # docs/dev-log/decisions/2026-08-28-per-trait-dispersion-synthesis.md and
 # the naming precedent `disp_group` in fit_gllvm.jl / grouped_dispersion.jl.
 #
-# Seeds 180-186 — fresh, outside the ranges claimed by test_delta_fit.jl
+# Seeds 180-187 — fresh, outside the ranges claimed by test_delta_fit.jl
 # (140-141), test_delta_gamma.jl (73-74, 160-163, 808),
 # test_twopart_substrate.jl (130-131), test_delta_shared_predictor.jl
 # (170-176), and the parity-ladder brief's reserved 42-49/52/53/58.
@@ -15,7 +19,7 @@ using GLLVModels, Test, Random, Distributions, Statistics
 
 @testset "delta family: disp_group mode (:shared / :species)" begin
 
-    @testset ":shared ≡ omitted — bit-identical (compat safety net)" begin
+    @testset ":species ≡ omitted — bit-identical (default since 2026-09-24)" begin
         Random.seed!(180)
         p, K, n = 6, 2, 150
         βz_true = 0.5 .* randn(p) .+ 0.4
@@ -31,24 +35,48 @@ using GLLVModels, Test, Random, Distributions, Statistics
         end
 
         f_omit = fit_delta_lognormal_gllvm(Y; K = K)
-        f_shared = fit_delta_lognormal_gllvm(Y; K = K, disp_group = :shared)
-        @test f_omit.disp_group == :shared
-        @test f_shared.disp_group == :shared
-        @test f_omit.loglik == f_shared.loglik
-        @test f_omit.βz == f_shared.βz
-        @test f_omit.βc == f_shared.βc
-        @test f_omit.Λc == f_shared.Λc
-        @test f_omit.σ == f_shared.σ
+        f_species = fit_delta_lognormal_gllvm(Y; K = K, disp_group = :species)
+        @test f_omit.disp_group == :species
+        @test f_species.disp_group == :species
+        @test f_omit.loglik == f_species.loglik
+        @test f_omit.βz == f_species.βz
+        @test f_omit.βc == f_species.βc
+        @test f_omit.Λc == f_species.Λc
+        @test f_omit.σ == f_species.σ
 
         g_omit = fit_delta_gamma_gllvm(Y; K = K)
+        g_species = fit_delta_gamma_gllvm(Y; K = K, disp_group = :species)
+        @test g_omit.disp_group == :species
+        @test g_species.disp_group == :species
+        @test g_omit.loglik == g_species.loglik
+        @test g_omit.βz == g_species.βz
+        @test g_omit.βc == g_species.βc
+        @test g_omit.Λc == g_species.Λc
+        @test g_omit.α == g_species.α
+    end
+
+    @testset ":shared — previous default, still available as an explicit opt-in" begin
+        Random.seed!(187)
+        p, K, n = 6, 2, 150
+        βz_true = 0.5 .* randn(p) .+ 0.4
+        βc_true = 0.5 .* randn(p)
+        Λc_true = 0.5 .* randn(p, K)
+        σ_true = 0.5
+        Z = randn(K, n)
+        ηc = βc_true .+ Λc_true * Z
+        π = inv.(1 .+ exp.(-βz_true))
+        Y = zeros(p, n)
+        for t in 1:p, s in 1:n
+            rand() < π[t] && (Y[t, s] = exp(ηc[t, s] + σ_true * randn()))
+        end
+
+        f_shared = fit_delta_lognormal_gllvm(Y; K = K, disp_group = :shared)
+        @test f_shared.disp_group == :shared
+        @test f_shared.σ isa Real
+
         g_shared = fit_delta_gamma_gllvm(Y; K = K, disp_group = :shared)
-        @test g_omit.disp_group == :shared
         @test g_shared.disp_group == :shared
-        @test g_omit.loglik == g_shared.loglik
-        @test g_omit.βz == g_shared.βz
-        @test g_omit.βc == g_shared.βc
-        @test g_omit.Λc == g_shared.Λc
-        @test g_omit.α == g_shared.α
+        @test g_shared.α isa Real
     end
 
     @testset "invalid disp_group throws ArgumentError (both fitters)" begin
