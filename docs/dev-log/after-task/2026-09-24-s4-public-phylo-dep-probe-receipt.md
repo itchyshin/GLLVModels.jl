@@ -47,7 +47,7 @@ The `est_min=3` figure was recorded after the run, when this receipt was written
 - the orchestrator's written brief for this run, which estimated 2 to 6 min (well under the 30-minute line); this is the only estimate written before the run, and it sits in the workflow transcript, not in a repository or lane file;
 - the define-only smoke at 16:59:11Z (source the runner with `GLLVM_S4_PUBLIC_PHYLO_DEP_DEFINE_ONLY=1`, call `s4_public_phylo_dep_clean_julia_probe()` on the shim and probe env): 1.58 s wall, returned the expected six-field list with `package_root` = the shim directory.
 
-So gate X409 G2 ("pre-run estimate line") is met in substance by the orchestrator's brief, not by a pre-run artifact in this receipt. A checker reading `S4_ESTIMATE` here is not evidence that the estimate came first. The official run took 13.2 s. The diagnostic run, which reached both fits, took 1.7 min, measured after the fact.
+So ledger gate X409 G2 ("pre-run estimate line") is ABANDONED: the line exists, but it was not written before the run. A checker reading `S4_ESTIMATE` here is not evidence that the estimate came first. The official run took 13.2 s. The diagnostic run, which reached both fits, took 1.7 min, measured after the fact.
 
 ## Commands (exact)
 

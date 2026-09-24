@@ -51,7 +51,7 @@ This checklist is **Julia-side prep only**. No probe execution from cloud / Curs
   registered and the repository root project cannot load it. Because the recorder asserts
   `Base.pkgdir(GLLVM) == GLLVM_DESTINATION_B_PROJECT`, the probe passes the shim directory as the
   Julia project. Receipt: `docs/dev-log/after-task/2026-09-24-s4-public-phylo-dep-probe-receipt.md`.
-- [ ] **Recorder runner does not attach testthat (OPEN, needs Shinichi).** Under `Rscript --vanilla` the
+- [ ] **Recorder runner does not attach testthat (Shinichi chose option b on 2026-09-24: a new recorder commit was requested on gllvmTMB#1283, which was parked the same day).** Under `Rscript --vanilla` the
   frozen runner evaluates `test_that(...)` in `globalenv()` with testthat loaded but not attached, so
   both selected tests error with `could not find function "test_that"` before any fit. The recorder is
   frozen (D-220). A diagnostic run that attached testthat through `R_DEFAULT_PACKAGES` (not a receipt)

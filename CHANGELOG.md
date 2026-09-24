@@ -20,7 +20,10 @@ All notable changes to GLLVModels.jl are documented here.
   per-trait dispersion, instead of one scalar shared across all traits.
   **Existing delta fits that omitted `disp_group` will see `fit.σ` / `fit.α`
   change from a scalar to a length-`p` vector.** Pass `disp_group = :shared`
-  explicitly to keep the previous one-scalar-per-model behaviour. Decision:
+  explicitly to keep the previous one-scalar-per-model behaviour. The per-trait
+  default can also move an existing fit to a different optimum or change whether
+  it converges: one existing offset test did, and now passes `disp_group = :shared`.
+  Decision:
   `docs/dev-log/decisions/2026-09-15-delta-dispersion-alignment-pending.md`
   (accepted 2026-09-24).
 - **Development (D3 Stage 1):** `fit_gaussian_gllvm(y; K, lambda_constraint = M)`

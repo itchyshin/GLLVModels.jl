@@ -9,9 +9,9 @@
 **Twin anchor (R):** `log_sigma_lognormal_delta` / `log_phi_gamma_delta` length **p** (`gllvmTMB.cpp` family ids 12–13)  
 **Julia anchor:** `fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm` — `disp_group ∈ {:shared, :species}` in `src/families/twopart.jl`; public fitter **default is now `:species`** (since 2026-09-24; `:shared` is an explicit opt-in); Wald `_family_ci` packs both modes; postfit `predict` / `getLV` / `residuals` handle vector σ/α (DRAFT #399).
 
-**DRAFT scaffold (pre-paste, 2026-09-16):** DRAFT [#399](https://github.com/itchyshin/GLLVModels.jl/pull/399) wired species CI, SO cells at `:species`, postfit vector dispersion, and `fit_gllvm(..., disp_group=)` for Delta, ahead of acceptance. Superseded by the ACCEPTED block below, which records the 2026-09-24 default flip built on that scaffold. The PR itself stays DRAFT — this lane merges it after #409 and #410, not on paste alone.
+**DRAFT scaffold (pre-paste, 2026-09-16):** DRAFT [#399](https://github.com/itchyshin/GLLVModels.jl/pull/399) wired species CI, SO cells at `:species`, postfit vector dispersion, and `fit_gllvm(..., disp_group=)` for Delta, ahead of acceptance. Superseded by the ACCEPTED block below, which records the 2026-09-24 default flip built on that scaffold. The PR itself stays DRAFT — this lane merges it after #409 and #410, not on paste alone. (Merged 2026-09-24 at `94a7b56f9` after the paste; the DRAFT wording above is historical.)
 
-**Does not:** edit R `gllvmTMB`; promote a D1 pass (still measured **FAIL** — remeasurement is post-merge, per the runbook linked below); claim covered / Stage 1 / S4 / Totoro clearance; bump `Project.toml`; close programme §7 or true-parity destination.
+**Does not:** edit R `gllvmTMB`; promote a D1 pass beyond its tier (D1 was remeasured after merge on 2026-09-24 and PASSES on both default cells, each-own-optimum, one seed each: `docs/dev-log/after-task/2026-09-24-delta-dispersion-a-d1-remeasure.md`; not matched-coordinates, not covered; see the runbook linked below); claim covered / Stage 1 / S4 / Totoro clearance; bump `Project.toml`; close programme §7 or true-parity destination.
 
 ---
 
