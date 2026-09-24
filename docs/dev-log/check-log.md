@@ -11,6 +11,10 @@
   `r_gradient_max` 4.85e-3 and Julia `converged = false` (Δ logLik 1.21e-7). NATIVE-10 Cell 9
   passes (Δ 1.98e-8, R `r_gradient_max` 9.15e-4 recorded); the near-Gaussian diagnostic fails
   on both engines' convergence flags.
+- Totoro re-run (Julia 1.10.12, R 4.5.3, Track A's verified oracle, head `fb2ff8c49`), 1.6 min:
+  NATIVE-06 17 of 18, R `r_gradient_max` 5.62e-5 passes, only Julia `converged = false` fails;
+  NATIVE-10 32 of 33, as in Track A. Julia's NB2 flag is also false on CI 1.13.0, so it does not
+  depend on the version. Receipts: `docs/dev-log/core070/totoro-owed24-20260924/`.
 - After-task: `docs/dev-log/after-task/2026-09-24-owed-2-4-decisions.md`.
 
 ## 2026-09-24 — Carried check-log sections from the true-parity PRs (#399, #410, #411, Stage 1 slice)

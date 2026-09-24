@@ -49,6 +49,7 @@ as data, the Student cell records R's gradient, and the Stage 0 L11 sign stays w
 - `test/parity/test_nb2_formula_parity.jl`
 - `test/parity/test_studentt_parity.jl`
 - `test/parity/fixtures/loading_profile_confirmatory_substrate.jl` (comment only)
+- `docs/dev-log/core070/totoro-owed24-20260924/` (new: Totoro launcher, log and receipts)
 - `docs/dev-log/after-task/2026-09-24-owed-2-4-decisions.md` (this file)
 - `docs/dev-log/check-log.md`
 - `AGENTS.md` (Phase state snapshot line only)
@@ -93,11 +94,32 @@ What this adds to the picture:
   same data, R stops at `r_gradient_max` 4.85e-3 on this Mac and 2.43e-3 on CI (Linux), and
   the CI workflow notes a retained Totoro receipt for the same data that passed 18 of 18. R's
   optimizer end point depends on the machine.
-- **NB2's Julia flag does depend on the version.** On the same data the CI job (Julia 1.13.0)
-  reports only the R-side failure, while Julia 1.10.12 here reports `converged = false` with a
-  gradient of 1.3e-6.
+- **NB2's Julia flag does not depend on the version.** Julia reports `converged = false` on
+  the pinned data on 1.10.12 (this Mac and Totoro, below) and on 1.13.0 (the advisory CI job
+  on #474 fails `test_negbin_parity.jl:72`, `@test jl_fit.converged`). The Julia gradient is
+  small in every case (1.3e-6 here, 2.7e-7 on Totoro). *Correction: an earlier version of this
+  report said the flag depends on the version; the CI log shows it does not.*
 - Student Cell 9's R gradient (9.15e-4) would not meet the 1e-4 bar other cells use; it is
   recorded only, as decided.
+
+**Totoro re-run (the reference platform), requested by Shinichi.** Julia 1.10.12, R 4.5.3,
+PR head `fb2ff8c49`, Track A's verified oracle build of `b4d5fee64` reused read-only
+(`CORE070_ORACLE_VERIFY_PASS` at the start of the run), single-threaded. Estimate written
+before the run: 10 to 25 minutes. Actual: 1.6 minutes (environment 25 s, two cells 70 s).
+Launcher, log and receipts: `docs/dev-log/core070/totoro-owed24-20260924/`.
+
+| Cell | Totoro 1.10.12 | Mac 1.10.12 | CI 1.13.0 (#474, advisory) |
+|---|---|---|---|
+| NATIVE-06 checks passed | 17 of 18 | 16 of 18 | 15 of 18 |
+| NATIVE-06 R `r_gradient_max` (bar 1e-4) | **5.62e-5, passes** | 4.85e-3 | fails |
+| NATIVE-06 Julia `converged` | false | false | false |
+| NATIVE-06 Δ logLik | 3.95e-6 | 1.21e-7 | |
+| NATIVE-10 checks passed | 32 of 33 | 30 of 33 | 28 of 33 |
+| NATIVE-10 Cell 9 Δ logLik | 1.98e-8 | 1.98e-8 | Cell 9 fails |
+| NATIVE-10 Cell 9 R `r_gradient_max` (recorded) | 9.15e-4 | 9.15e-4 | |
+
+On the reference platform NATIVE-06 now fails on one check only: Julia's `converged` flag.
+NATIVE-10's only failure is the near-Gaussian diagnostic's Julia flag, as in Track A.
 
 ## 6. Tests of the Tests
 
@@ -110,7 +132,7 @@ What this adds to the picture:
 
 - Resolved: closeout OWED 2 and OWED 4 (decisions recorded and carried out).
 - Resolved: Track A receipt's open item "decide how the NB2 fixture should be pinned across
-  Julia versions, and re-run that cell" (Mac re-run; see section 5).
+  Julia versions, and re-run that cell" (Mac and Totoro re-runs; see section 5).
 - Still open: OWED 1 (gllvmTMB#1283 has no new recorder commit).
 
 ## 8. Consistency Audit
@@ -133,8 +155,10 @@ What this adds to the picture:
 
 - NATIVE-06 and NATIVE-10 still fail on Julia 1.10.12. The data fix removes the guard failure
   only; it does not make either cell pass.
-- These results are from the Mac (arm64). The reference platform for #323 evidence is still
-  Totoro on Julia 1.10.12, which has not been re-run with this change.
+- On Totoro, NATIVE-06 still fails on Julia's `converged` flag (gradient 2.7e-7). Whether that
+  flag or the check should change is a separate question; nothing here loosens it.
+- NB2's R-side gradient passes on Totoro (5.62e-5) but not on this Mac (4.85e-3) or on CI's
+  rebuilt oracle. The cause of that machine dependence was not investigated.
 - `tools/core070_verify_student_refinement.py` pins `test_studentt_parity.jl` to `484aac83…`.
   That pin was already stale on `main` after the rename (`main` has `5da7a5c9…`), and nothing
   runs the script, so this change does not break a live check.
@@ -152,8 +176,7 @@ pin its hash. The seed alone is not enough: Julia 1.10 and 1.12+ draw different 
 The reference-version decision is cross-cutting across all #323 holdouts.
 
 - Covers ✓: NATIVE-06 (data now fixed across versions) and NATIVE-10 (gradient recorded).
-- This change does NOT cover: NATIVE-12's R-side gradient on 1.10.12, a Totoro re-run, any
-  other seeded fixture, or the CI advisory job's Julia version (it stays 1.13.0 and advisory).
+- This change does NOT cover: NATIVE-12's R-side gradient on 1.10.12, any other seeded fixture, or the CI advisory job's Julia version (it stays 1.13.0 and advisory).
 
 Memory receipt: `route.py` has no LOAD-FIRST manifest for this repo. Applied: this repo's
 `AGENTS.md` (no push without instruction, stage by name, check-log and after-task on every
