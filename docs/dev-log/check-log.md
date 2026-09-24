@@ -1,3 +1,18 @@
+## 2026-09-24: closeout OWED 2 and 4 decided (A, A) and carried out
+
+- Branch `claude/owed-2-4-decisions-20260924` from `origin/main` @ `4e6e7eef5`. Decision:
+  `docs/dev-log/decisions/2026-09-24-parity-reference-julia-and-fixture-pins.md` (Julia 1.10
+  LTS is the #323 reference; NB2 data stored; Student Cell 9 records `r_gradient_max`; Stage 0
+  L11 = −0.8 kept with a comment).
+- Measured: seed 45 gives NB2 hash `af68c91f…` on Julia 1.10.0/1.10.12 and the pinned
+  `7abde273…` on 1.12.6/1.13.0. The stored draw loads with the pinned hash on 1.10.12 and 1.13.0.
+- Mac, Julia 1.10.12, locally built oracle `b4d5fee64`, required mode for NATIVE-06 and
+  NATIVE-10: 46 pass / 5 fail in 41 s. NATIVE-06 now reaches its R check; it fails on R
+  `r_gradient_max` 4.85e-3 and Julia `converged = false` (Δ logLik 1.21e-7). NATIVE-10 Cell 9
+  passes (Δ 1.98e-8, R `r_gradient_max` 9.15e-4 recorded); the near-Gaussian diagnostic fails
+  on both engines' convergence flags.
+- After-task: `docs/dev-log/after-task/2026-09-24-owed-2-4-decisions.md`.
+
 ## 2026-09-24 — Carried check-log sections from the true-parity PRs (#399, #410, #411, Stage 1 slice)
 
 These sections were written on their own branches. They were moved out of those PRs, verbatim, so each PR stopped conflicting with the next one on this file. Only the heading levels changed, so they nest here. PRs: #399 (merged 94a7b56f9), #410 (decbc8ddc), #411 (3b19b2817), Stage 1 slice (#471).

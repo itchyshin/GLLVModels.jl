@@ -93,6 +93,8 @@ Full responsibility detail lives in §2 of the reference plan.
 
 ## Phase state snapshot
 
+- **Closeout OWED 2 and 4 decided (2026-09-24).** Julia 1.10 LTS is the #323 reference; NB2 data stored in `test/parity/fixtures/nb2_original_data.toml`; Student Cell 9 records `r_gradient_max`; Stage 0 L11 sign kept. NATIVE-06 and NATIVE-10 still fail on 1.10.12 (Mac). Decision: `docs/dev-log/decisions/2026-09-24-parity-reference-julia-and-fixture-pins.md`.
+
 - **True-parity closeout (2026-09-24).** All four paste gates executed; #409/#410/#399/#411 and the Stage 1 slice #471 merged. S4 waits on a recorder fix (gllvmTMB#1283); Track A and D1 receipts on main. `Project.toml` stays **`0.3.0`**. **START HERE:** `docs/dev-log/handover/2026-09-24-claude-handover-closeout.md`.
 
 - **True-parity execution (2026-09-24, later).** `origin/main` @ **`6ba1770ab`** (#463 reverted #453; latte default OFF). Shinichi pasted all four gate strings; DRAFT **#399/#409/#410/#411** are being rebased onto the renamed package and executed in order #409, #410, #399, #411 harness, Stage 1 slice. Lane kit: `LOOP/lanes/true-parity-20260924/`. Receipts land on the board as each gate closes. `Project.toml` stays **`0.3.0`**. **START HERE:** `LOOP/lanes/true-parity-20260924/checkpoint.md`, then `docs/dev-log/2026-09-14-true-parity-pending-board.md`.
