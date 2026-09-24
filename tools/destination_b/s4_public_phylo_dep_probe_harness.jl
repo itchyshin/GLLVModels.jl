@@ -332,12 +332,21 @@ end
 
 Environment variables expected by gllvmTMB
 `run-destination-b-s4-public-phylo-dep-isolated.R` at the recorder commit.
+
+`GLLVM_S4_JULIA_HOME` is the *directory* containing the `julia` executable, not
+the executable file itself: the recorder's `s4_public_phylo_dep_clean_julia_probe()`
+resolves it as `file.path(normalizePath(julia_home, mustWork = TRUE), "julia")`
+(falling back to `.../bin/julia`), so passing the file itself makes that
+`file.path()` call append a second `julia` path segment onto a file and always
+miss. `cfg.julia_executable` is still validated as a file by
+[`s4_public_phylo_dep_probe_config`](@ref); only the value handed to the R
+child process changes.
 """
 function s4_public_phylo_dep_r_environment(cfg::S4PublicPhyloDepProbeConfig)
     return Dict{String,String}(
         "GLLVM_S4_LIVE_FORMULA_TESTS" => "1",
         "GLLVM_DESTINATION_B_PROJECT" => cfg.julia_project,
-        "GLLVM_S4_JULIA_HOME" => cfg.julia_executable,
+        "GLLVM_S4_JULIA_HOME" => dirname(cfg.julia_executable),
         "GLLVM_S4_JULIA_ENV" => cfg.julia_env,
         "GLLVM_S4_RECEIPT_PATH" => cfg.receipt_path,
     )

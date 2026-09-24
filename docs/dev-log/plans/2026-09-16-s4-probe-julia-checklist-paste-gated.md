@@ -29,6 +29,10 @@ This checklist is **Julia-side prep only**. No probe execution from cloud / Curs
 - [ ] Harness dry-run (no paste, no R): `julia --project=. tools/destination_b/run_s4_public_phylo_dep_probe.jl --dry-run --gllvmtmb-root … --julia-project … --julia … --receipt …` → expect `S4_PUBLIC_PHYLO_DEP_PREFLIGHT_DRY_RUN_OK`
 - [ ] After-task receipt template present: `docs/dev-log/after-task/TEMPLATE-s4-public-phylo-dep-probe-receipt.md`
 - [ ] D-50: probe on **local Mac-light** or **Totoro** with maintainer compute ack if wall clock >30 min (separate from #323 Track A ack)
+- [x] `GLLVM_S4_JULIA_HOME` wiring fixed (`claude/s4-probe-wiring-20260924`): the harness now passes the
+  **directory** holding the `julia` executable, matching the recorder's
+  `file.path(julia_home, "julia")` in `s4_public_phylo_dep_clean_julia_probe()` — previously it passed
+  the executable file itself, which that `file.path()` call could never resolve.
 
 ---
 
