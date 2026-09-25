@@ -72,11 +72,13 @@ end
     end
 
     @testset "d01: a gradient criterion that is not met is reported as not converged" begin
-        # With g_tol = 1e-9 Optim stops on "objective did not change" at the same point, with
-        # g residual 4.4e-7, and calls that converged. No restart does better, so the first
-        # run is kept, and it must be reported as not converged. Before: converged = true.
+        # With g_tol = 1e-12 Optim stops on "objective did not change" at the same point, with a
+        # g residual near the finite-difference noise floor (about 4e-7), far above the
+        # scale-aware threshold max(g_tol, g_tol * |nll|) of about 2.7e-10, and calls that
+        # converged. No restart does better, so the first run is kept, and it must be reported
+        # as not converged. Before: converged = true.
         Y, K = _beta480_fixture("beta_grouped_screen_d01.toml")
-        fit = fit_beta_gllvm_grouped(Y; K = K, g_tol = 1e-9)
+        fit = fit_beta_gllvm_grouped(Y; K = K, g_tol = 1e-12)
         @test fit.loglik ≈ 272.920887270 atol = 1e-6
         @test !fit.converged
     end

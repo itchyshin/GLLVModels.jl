@@ -756,8 +756,14 @@ end
 # the negative log-likelihood by more than 1e-6. A run that meets the gradient
 # criterion is returned as it is. `first_log_phi` indexes the first log φ in θ; the
 # log φ block runs to the end of θ.
+# Scale-aware gradient test, as in `_tweedie_verdict`: the residual is judged against
+# `g_tol` scaled by the objective's own size, so a caller's g_tol below the
+# finite-difference noise floor does not turn a stationary point into a non-converged fit.
+_beta_grouped_g_met(res, g_tol) = (gres = Optim.g_residual(res);
+    isfinite(gres) && gres <= max(g_tol, g_tol * abs(Optim.minimum(res))))
+
 function _beta_grouped_gradient_restart(negll, res, θ_warm, ls, opts, first_log_phi::Integer)
-    Optim.g_converged(res) && return res
+    _beta_grouped_g_met(res, Optim.g_tol(res)) && return res
     θa = copy(θ_warm)
     θa[first_log_phi:end] .= 0.0
     best = res
@@ -840,7 +846,7 @@ function fit_beta_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     boundary = _dispersion_group_boundary(φ̂g)
     any(boundary) && @warn "Beta grouped-dispersion fit reached the per-group boundary (φ outside [1e-6, 1e6]) for group(s) $(findall(boundary)); those groups' precision is at the near-Bernoulli or near-deterministic limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
     loglik, conv, iters = _fit_verdict(res)
-    conv = conv && Optim.g_converged(res)   # #480: a zero-length step is not convergence
+    conv = conv && _beta_grouped_g_met(res, g_tol)   # #480: a zero-length step is not convergence
     return BetaGroupedFit(β̂, Λ̂, φ̂g, gidx, link, loglik, conv && !any(boundary), iters, hessian,
                           boundary)
 end
@@ -991,7 +997,7 @@ function fit_beta_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 
     boundary = _dispersion_group_boundary(φ̂g)
     any(boundary) && @warn "Beta grouped-cov fit reached the per-group boundary (φ outside [1e-6, 1e6]) for group(s) $(findall(boundary)); those groups' precision is at the near-Bernoulli or near-deterministic limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
     loglik, conv, iters = _fit_verdict(res)
-    conv = conv && Optim.g_converged(res)   # #480: a zero-length step is not convergence
+    conv = conv && _beta_grouped_g_met(res, g_tol)   # #480: a zero-length step is not convergence
     return BetaGroupedCovFit(β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, φ̂g, gidx, link,
                              loglik, conv && !any(boundary), iters, hessian, boundary)
 end
