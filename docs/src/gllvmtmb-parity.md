@@ -39,9 +39,20 @@ workflow will give the same result end to end. **First-order** comparisons
 (log-likelihood at each optimum and agreement when evaluating the same model)
 exist for five paired families: Gaussian, Poisson-log,
 Binomial-logit, Beta-logit, and NB2-log. **Second-order** results
-(standard errors, the fixed-effect `vcov` block, Wald CI endpoints) exist
-only for five small examples, without a stated tolerance. **Realistic-size
-examples** (p ≥ 20, n ≥ 500) have not yet been compared. **Interval
+(standard errors, the fixed-effect `vcov` block, Wald CI endpoints) now cover
+about 15 examples, each checked against a numerical tolerance the maintainer
+signed off on 2026-09-05
+(`docs/dev-log/core070/second-order-parity-contract.md`; the disposition
+list is in `docs/dev-log/core070/second-order-holdouts-2026-09-04.md`). As
+with the first-order comparisons, each package is still evaluated at its own
+optimum, not at identical parameter values; see "Matched-parameter
+comparison" below. **Realistic-size examples** (p ∈ {20, 50}, n ∈ {500,
+2000}) have also been checked, for three families (Gaussian, Poisson, and
+negative binomial): all 12 example cells passed their tolerance (PR #297,
+merged 2026-09-06; receipts in
+`docs/dev-log/core070/t4-p6-*-receipt-2026-09-05.json`). This check does not
+cover every family, and the receipts themselves say this specifically is not
+a completed-parity claim. **Interval
 *coverage* is not part of parity**. It is a separate Julia-only diagnostic
 study. Empirical undercoverage there is a finding, not a calibrated-coverage
 certificate and not an R↔Julia
@@ -51,16 +62,24 @@ withdrawn.
 
 ### Standard errors and confidence intervals
 
-**True second-order parity is not established.** A few small examples do not
-show that standard errors and intervals agree on realistic data.
+**True second-order parity is not established.** A broader set of small
+examples, plus a twelve-cell check for three families at realistic size,
+still falls short of showing that standard errors and intervals agree across
+every family and every data shape.
 
 **Matched-parameter comparison is incomplete.** The available comparisons
 evaluate each package at its own optimum. In a five-example pilot, Gaussian,
 Poisson, and binomial-logit agreed at parameter values estimated in R.
-Beta-logit and NB2-log could not be compared at matching parameter values
-because R uses one dispersion per trait whereas Julia uses one shared
-log-dispersion. This pilot is useful evidence, not a complete
-matched-parameter comparison.
+Beta-logit and NB2-log are still not compared at matching parameter values,
+but the reason has changed: GLLVModels.jl's bridge now defaults to a
+per-trait dispersion route for these two families, the same structure R
+uses by default, so the earlier mismatch (R using one dispersion value per
+trait while Julia used one shared value) no longer applies as a technical
+block. The maintainer instead decided, on 2026-09-15, to keep
+matched-parameter comparison permanently out of scope for these two
+families' default examples rather than promote it from a test-code fix alone
+(`docs/dev-log/decisions/2026-09-14-matched-theta-beta-nb2-pending.md`).
+This pilot is useful evidence, not a complete matched-parameter comparison.
 
 The comparison starts from **R workflows and checks their Julia counterparts**,
 using `gllvmTMB` 0.7.0 as the fixed reference. It does not check every Julia
@@ -68,6 +87,24 @@ workflow against R. At that reference point, 62 R exports
 have no Julia counterpart and 91 Julia exports have no R counterpart; three
 matches remain ambiguous. These counts describe the comparison, not a promise
 to implement every unmatched function here.
+
+### A separate frozen-reference check
+
+Apart from the comparisons above, a fixed set of harder example datasets is
+also run against one frozen copy of `gllvmTMB` (commit `b4d5fee6`, version
+0.7.0) as an early-warning check, not a parity claim: the reference version
+never moves, so a failure here can also mean the Julia side changed, rather
+than that either package is wrong. Three examples in that fixed set still
+fail as written and are treated as known hard cases, sometimes called
+"holdouts": a negative-binomial model whose overdispersion estimate drifts
+toward the edge where the model is indistinguishable from a plain Poisson
+count model, a Student-t model, and a truncated negative-binomial model. The
+most recent run of all three is in
+`docs/dev-log/after-task/2026-09-24-totoro-323-track-a-receipt.md`; the open
+tracking item is issue #323. A fix merged 2026-09-25 (PR #478) restarts
+negative-binomial fits that stall at that Poisson-like edge and raised
+several fits that used to stop early, but the negative-binomial holdout case
+is a deliberately hard example and is not resolved by that fix.
 
 ### Matching functions does not establish matching analyses
 
