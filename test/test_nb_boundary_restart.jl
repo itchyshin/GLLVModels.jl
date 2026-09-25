@@ -38,6 +38,23 @@ end
         @test !fit.converged   # a boundary group is still flagged
     end
 
+    @testset "covariate route: fit_nb_gllvm_grouped_cov gets the same restart" begin
+        # Sibling screen d7 (docs/dev-log/core070/nb2-boundary-screen-20260924/siblings/): the
+        # fit used to stop at -853.078517 with groups 3 and 4 at the boundary; the restart
+        # reaches -851.780905 with groups 2 and 5 there instead.
+        d = TOML.parsefile(joinpath(_NB2_RESTART_DIR, "nb2cov_restart_d7.toml"))
+        Y = reshape(Int.(d["Y_column_major"]), d["p"], d["n"])
+        x = Float64.(d["x"])
+        @test bytes2hex(sha256(vcat(reinterpret(UInt8, vec(Float64.(Y))), reinterpret(UInt8, x)))) ==
+              d["data_sha256"]
+        X = Array{Float64}(undef, d["p"], d["n"], 1)
+        for t in 1:d["p"], s in 1:d["n"]
+            X[t, s, 1] = x[s]
+        end
+        fit = fit_nb_gllvm_grouped_cov(Y; X = X, K = d["K"], group = collect(1:d["p"]))
+        @test fit.loglik >= -851.780905 - 1e-5
+    end
+
     @testset "restart helper: keeps a better restart, discards one that is not better" begin
         Optim = GLLVModels.Optim
         ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))

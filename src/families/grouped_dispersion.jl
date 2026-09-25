@@ -500,6 +500,8 @@ Fit a negative-binomial GLLVM with **grouped / per-trait dispersion** and
 `[β; γ_free; pack(Λ); log r_1 … log r_G]`; offset `O = Xγ` is passed into the
 grouped Laplace marginal. Default `hessian=:observed` matches TMB; identity
 checks against shared [`fit_gllvm_cov`](@ref) should force `hessian=:fisher`.
+Groups that end at the Poisson boundary get the same restart as
+[`fit_nb_gllvm_grouped`](@ref) (together and each on its own, kept only if better).
 Public / bridge default under X for NB2 (twin API B). Keep `fit_gllvm_cov` for
 the shared-`r` + X opt-in.
 """
@@ -553,8 +555,9 @@ function fit_nb_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3}
         return isfinite(v) ? v : 1e12
     end
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
-    res = Optim.optimize(negll, θ0, ls, Optim.Options(g_tol = g_tol, iterations = iterations);
-                         autodiff = :finite)
+    opts = Optim.Options(g_tol = g_tol, iterations = iterations)
+    res = Optim.optimize(negll, θ0, ls, opts; autodiff = :finite)
+    res = _nb_boundary_restart(negll, res, ls, opts, p + q + rr + 1)
     θ̂ = Optim.minimizer(res)
     β̂ = θ̂[1:p]
     γ̂_free = θ̂[(p + 1):(p + q)]

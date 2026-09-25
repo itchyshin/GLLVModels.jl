@@ -25,7 +25,8 @@ All notable changes to GLLVModels.jl are documented here.
   (`docs/dev-log/core070/nb2-boundary-screen-20260924/`). Fits that never reach the
   boundary are unchanged. On small data the NB2 likelihood can have several maxima,
   so a fit is not guaranteed to reach the highest one. The covariate route
-  (`fit_nb_gllvm_grouped_cov`) is unchanged.
+  (`fit_nb_gllvm_grouped_cov`, used by `gllvm(@formula(...), ...)` with NB2 and site
+  covariates) gets the same restart; it had the same stall on 3 of 10 screened datasets.
 
 ### Changed
 - **Breaking (default change):** `fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm`
