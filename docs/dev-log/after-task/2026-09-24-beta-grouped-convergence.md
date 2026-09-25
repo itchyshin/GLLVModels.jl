@@ -49,17 +49,16 @@ at 50 iterations. The cov route with an all-zero covariate went from 266.008692 
 
 ## 3a. Decisions and Rejected Alternatives
 
-- **Gradient test: `Optim.g_converged`, as the brief specified.** In Optim 1.13.3 this is
-  `r.stopped_by.g_converged`, so it tests `g_residual <= g_tol` in absolute terms.
-  **This choice has a cost that needs a decision; see section 10, item 1.** The alternative I
-  measured, and did not commit, is the scale-aware rule already used by `_tweedie_verdict` in
-  this file: `g_residual <= max(g_tol, g_tol * |nll|)`. That keeps the CI-required parity cell
-  NATIVE-08-BETA unchanged and still catches #480 by three orders of magnitude (d05 threshold
-  2.7e-3 against a residual of 9.06). The patch, relative to this branch's commit, is at
-  `/tmp/claude-503/fix-beta-480/option-b-scale-aware-gradient.patch`. It changes the helper's
-  first line and the two `conv = ...` lines, and adds a one-line helper
-  `_beta_grouped_g_met(res, g_tol)`. With it, all 19 new assertions pass, and NATIVE-08-BETA
-  and the Beta + X parity cell give `converged = true` on their own data.
+- **Gradient test: scale-aware, adopted after review.** The first commit used
+  `Optim.g_converged` (absolute `g_residual <= g_tol`), as the brief specified. The independent
+  reviewer found that this calls a stationary fit "not converged" when a caller's `g_tol` sits
+  below the finite-difference noise floor: NATIVE-08-BETA (`g_tol = 1e-7`) stops at a stationary
+  point with residual 3.0e-7 and would have flipped to `converged = false`. The branch now uses
+  the rule `_tweedie_verdict` already applies in this repository,
+  `g_residual <= max(g_tol, g_tol * |nll|)`, via `_beta_grouped_g_met`. That keeps
+  NATIVE-08-BETA at `converged = true` and still catches #480 by three orders of magnitude (d05
+  threshold 2.7e-3 against a residual of 9.06). The d01 "not converged" test moved to
+  `g_tol = 1e-12` so its margin is not thin.
 - **The restart runs on any stop without the gradient criterion, iteration-limit stops
   included.** That follows the brief's wording. A caller who sets `iterations = 40` can now get
   up to three runs of 40. PR #478's NB2 restart gives each restart the same budget; I followed
@@ -167,12 +166,12 @@ It reads 5.985 on the unfixed d05 fit and 6.3e-6 on the fixed one.
 ## 7a. Issue Ledger
 
 - #480: fixed on this branch (not pushed, no PR).
-- New, needs a decision before a PR: the CI-required parity cell NATIVE-08-BETA would turn red
-  (section 10, item 1).
+- Resolved before the PR: NATIVE-08-BETA stays `converged = true` under the scale-aware gate
+  (section 3a).
 - New, for a separate issue: `fit_gamma_gllvm_grouped` has the same weakness, measured by the
   sibling screen (section 8).
-- New, for a separate issue: the inner site mode search can run out of iterations while
-  oscillating, and says nothing (section 8).
+- Filed as #482: the inner site mode search can run out of iterations while oscillating, and
+  says nothing (section 8).
 - Known, not reopened: `_fit_verdict` accepts Optim's `converged`, which counts `f_converged`
   and `x_converged` (93 call sites). The class is wider than Beta; see section 8.
 
@@ -228,21 +227,12 @@ criterion):
 
 ## 10. Known Residuals
 
-1. **The CI-required parity check NATIVE-08-BETA will very likely fail with this commit.**
-   `test/parity/poisson_beta_health.jl` checks `native_converged` for
-   `fit_gllvm(Y; family = Beta(), K = 1, g_tol = 1e-7, iterations = 800)`, and CI runs it on
-   pull requests (`test-parity` job, `CORE070_PARITY_REQUIRED=1`). Julia side measured on this
-   machine, on Julia 1.10.12 and on 1.13.0 (both draws give logLik 173.070526375): unfixed,
-   `converged = true`; fixed, `converged = false`, at the same point and logLik. The reason is
-   that the first run stops on "no x change" with gradient residual 3.0e-7, which is above the
-   requested 1e-7. That residual is at the finite-difference noise floor: the central-difference
-   gradient is also 3.0e-7, and both restarts end at the same value with residuals 4.0e-7 and
-   3.0e-7. So the point is stationary, and `converged = false` here is a false alarm caused by a
-   `g_tol` below what finite differences can deliver. I did not edit the parity cell or its
-   pinned contract. Options: (a) adopt the scale-aware rule (patch in section 3a); (b) keep the
-   strict rule and change the pinned cell's `g_tol`, which is a contract change for the
-   maintainer; (c) keep the strict rule and accept a red required check, which is not
-   recommended. The Beta + X parity cell (default `g_tol`) stays `converged = true` either way.
+1. **Parity.** Checked on the rebased branch (on `main` with #478) against the frozen oracle
+   `b4d5fee64`: `test/parity/test_beta_parity.jl` 8 of 8, `test/parity/test_x_covariate_parity.jl`
+   65 of 65, and the NATIVE-08-BETA draw fitted as the required cell does
+   (`g_tol = 1e-7`, 800 iterations) gives logLik 173.070526375 with `converged = true` after 41
+   iterations, as on `main`. (The Frozen R job is advisory, `continue-on-error`, not a
+   merge-blocking check; an earlier draft of this report said otherwise.)
 2. Cost: fits that stop without the gradient criterion now run two more optimizations. On the
    boundary datasets this about doubles the time (about 4 s to 9 s), with no change in the
    result. Iteration-capped fits can use up to three times the cap.
@@ -251,9 +241,23 @@ criterion):
    criterion met) at 245.624 with φ[1] = 604.5, while the log φ = 0 start converges at 244.243.
    A fit that meets the gradient criterion is never restarted, so a converged but lower mode
    would be kept.
-4. The inner mode search, the Gamma grouped sibling, and the `_fit_verdict` class are unfixed
+4. **Some fits now report `converged = false` with no better answer, and run slower.** The
+   independent reviewer's 24-design screen at default settings: 3 of 24 fits on `main` report
+   converged at non-stationary points (Optim residual about 3e6). One (rand_s13) is fixed, 21.46
+   log-likelihood units higher. Two keep their value but now report `converged = false`
+   (rand_s23, 21 s to 53 s; rand_s02). The cause there is the Beta inner mode search: at
+   rand_s02, a 1e-5 step in one loading makes one site's search run to 100 iterations and jump
+   by about 34 log-likelihood units, so the objective has a cliff and no gradient test can pass.
+   Honest `false` is the correct report until the inner search is fixed (separate issue).
+5. `hessian = :fisher` and iteration-capped calls change too: d05 with `:fisher` keeps its value
+   and now reports `converged = false` (5.6 s to 13.8 s); iteration-capped calls can return a
+   better point (d05 at `iterations = 10`: 264.877 to 265.929) at up to three times the cap.
+6. The Gamma grouped sibling (#479, separate PR) and the `_fit_verdict` class are unfixed here
    (section 8).
-5. The parity files were not run against R.
+
+Review: an independent adversarial reviewer returned **blockers** on the first version (the
+absolute gate turning NATIVE-08-BETA red); the scale-aware gate resolves that, and its other
+findings are recorded above.
 
 ## 11. Team Learning
 

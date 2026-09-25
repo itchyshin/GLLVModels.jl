@@ -93,6 +93,7 @@ Full responsibility detail lives in §2 of the reference plan.
 
 ## Phase state snapshot
 
+- **Beta grouped convergence gate (#480), 2026-09-24.** `converged` now requires a scale-aware gradient test, with a restart when Optim stops without it; inner-search follow-up is #482.
 - **Gamma grouped mode search fixed (#479), 2026-09-24.** A diverged per-site search now returns `-Inf` instead of a finite value, so the fit cannot report convergence far below the optimum.
 
 - **NB2 boundary restart (#477) and B-lite parity check (#476), 2026-09-24, PR #478.** `fit_nb_gllvm_grouped` restarts boundary groups (together and singly) and keeps only a better fit; the NB2 likelihood on small data has several maxima, so this is a better local search, not a global optimum. Developer check `test/parity/test_nb2_finite_dispersion_parity.jl`. NATIVE-06 stays frozen as a boundary case; B-full waits for the next contract revision.
