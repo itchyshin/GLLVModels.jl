@@ -2561,9 +2561,10 @@ function _family_ci(fit::GllvmCovFit, Y::AbstractMatrix;
         β = θv[1:p]; γ = θv[(p + 1):(p + q)]
         Λ = unpack_lambda(θv[(p + q + 1):(p + q + rr)], p, K)
         disp = has_disp ? exp(θv[p + q + rr + 1]) : NaN
-        fam = _cov_family(fit.family, disp)
         O = _build_offset(Xfit, γ)
         v = try
+            # Inside the `try`: exp(log-dispersion) can underflow to 0.0 (see fit_gllvm_cov).
+            fam = _cov_family(fit.family, disp)
             -_marginal_loglik_offset(fam, Y, Nm, Λ, β, O, lk; maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
