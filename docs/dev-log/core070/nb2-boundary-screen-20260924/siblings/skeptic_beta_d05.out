@@ -1,0 +1,27 @@
+data: size=(5, 80)  min=6.810e-08  max=1-7.345e-11  all in (0,1)=true
+
+FITTER: loglik=265.976379 converged=true iters=26 phi=[2.5225, 2.9415, 1.6614, 2.0759, 36.17] boundary=Int64[]
+  unpack(pack(Λ̂)) == Λ̂: true
+  CHECK1 negll(θF)=-265.976378942  -fit.loglik=-265.976378942  |diff|=0.000e+00  (direct public call: 265.976378942)
+
+ALT (a): loglik=272.609413  conv=true iters=50
+  CHECK2 all finite=true  negll(θA)=-272.609413 (<1e11: true)  phi=[2.576, 2.8884, 1.783, 2.0787, 1.7233]  in[1e-6,1e6]=true
+  direct public call at θA: 272.609413060
+  beta=[-1.8224, -0.7878, -0.0474, 0.6505, 1.5071]
+  Lambda=[-0.3436 0.0; -0.4655 0.4144; 0.1553 0.2232; 0.2099 -0.1046; 0.2818 0.1757]
+  CHECK3 gain = 6.633034  (> 1e-3: true)
+  inner Newton [fitter]: default=265.976378942  tight=265.976257605  |diff|=1.21e-04
+  inner Newton [alt]: default=272.609413060  tight=272.609413060  |diff|=1.49e-11
+
+INDEPENDENT Laplace (own mode search + FD Hessian, Distributions.Beta) and exact (adaptive GH 30x30):
+  [fitter] pkg=265.976379  indep_laplace=265.976254 (|diff|=1.25e-04)  min eig(H)=1.412  exact_GH=270.067087
+  [alt] pkg=272.609413  indep_laplace=272.609413 (|diff|=2.96e-07)  min eig(H)=1.08  exact_GH=273.228625
+  gain under indep Laplace = 6.633159 ; gain under exact GH marginal = 3.161538
+
+max|grad negll| at fitter=5.985 (component 6)  at alt=6.264e-06
+
+[15044] signal (15): Terminated: 15
+in expression starting at /tmp/claude-503/sibling-screen/skeptic_beta_d05.jl:189
+.Ldgemm_ncopy_L2_M4_40 at /Users/z3437171/.julia/juliaup/julia-1.10.12+0.aarch64.apple.darwin14/Julia-1.10.app/Contents/Resources/julia/lib/julia/libopenblas64_.0.3.23.dylib (unknown line)
+unknown function (ip: 0x0)
+Allocations: 7450936568 (Pool: 7450597261; Big: 339307); GC: 21089

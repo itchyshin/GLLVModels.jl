@@ -8,8 +8,12 @@
   2.59 and lowered none; the new fit is never below gllvmTMB and is above it on 6. A higher
   Laplace point with one more trait at the Poisson limit remains on 7 (0.10 to 0.69), so the fix
   is a better local search, not a global optimum.
-- Core test `test/test_nb_boundary_restart.jl` 10 of 10 (seed 46, seed 52, and a toy check of both
-  branches of the restart). Eleven existing test files that use the fitter pass on the final code.
+- Core test `test/test_nb_boundary_restart.jl` 12 of 12 (seed 46, seed 52, a covariate case, and a
+  toy check of both branches of the restart). Twelve test files that use either fitter pass on the
+  final code; `test_x_covariate_parity.jl` against the frozen oracle 65 of 65.
+- Sibling screen (`siblings/`): `fit_nb_gllvm_grouped_cov` has the same stall (3 of 10) and now gets the
+  restart; Gamma (#479) and Beta (#480) have different correctness bugs, filed; NB1 clean; Tweedie
+  not screened.
   NATIVE-06's Julia fit is identical before and after.
 - Developer parity check on an n = 200 dataset whose interior maximum survives pushing any trait
   or pair to the boundary: Julia and gllvmTMB agree to 2.4e-11 relative in logLik and 1e-5 in

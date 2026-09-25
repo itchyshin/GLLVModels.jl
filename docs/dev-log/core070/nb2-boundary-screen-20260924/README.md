@@ -31,3 +31,18 @@ skeptic reproduced the ranking and margins with its own evaluator. The scripts u
 paths from the run (`/tmp/claude-503/nb2-aghq`); logs are the printed output. Result: on seed 46
 the Laplace lead of the boundary point (0.317) is a tie under AGHQ (0.013); on seed 52 the
 boundary point really is higher (0.419) and the interior Laplace maximum is an artefact.
+
+## `siblings/`: the same screen on five sibling fitters (Julia only)
+
+One harness per fitter replicates its objective and optimizer exactly (checked: the replicated
+objective equals `-fit.loglik` at every returned point) and tries alternative starts on 10
+simulated datasets. Every claimed stall was re-checked by a separate skeptic. The scripts use
+absolute paths from the run (`/tmp/claude-503/sibling-screen`).
+
+| Fitter | Result |
+|---|---|
+| `fit_nb_gllvm_grouped_cov` (`nb2-cov*`) | same class as #477: 3 of 10 stall 0.39 to 1.30 below; the package restart recovers all 3 (now applied in the fitter) |
+| `fit_gamma_gllvm_grouped` (`gamma*`) | different bug: the per-site mode search diverges at the default start, returns a finite nonsense value, and the fit reports converged after 2 iterations, 43 units below the optimum |
+| `fit_beta_gllvm_grouped` (`beta*`) | different bug: converged is reported at a non-stationary point (max gradient 6.0) after a zero-length line-search step; a fresh start is 6.6 higher (3.2 under AGHQ) |
+| `fit_nb1_gllvm_grouped` (`nb1*`) | no stall on 8 datasets; boundary hits are genuine |
+| `fit_tweedie_gllvm_grouped` (`tweedie*`) | not screened (one fit takes 4 to 73 min on a Mac); by reading, it never flags a dispersion boundary |

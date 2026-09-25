@@ -1,0 +1,99 @@
+# fit_beta_gllvm_grouped sibling screen (#477 bug class)
+# p=5 K=2 n=80  beta=[-1.5, -0.75, 0.0, 0.75, 1.5]  Lambda=0.30*[...]  phi levels 2 (d1-5), 50 (d6-10)
+# stall rule: best_alt_loglik - fitter_loglik > 1e-3 under the same replicated objective
+
+[d01] phi_true=2  clamped_y=0  fit_time=5.2s
+  fitter: loglik=272.920887 converged=true iters=50 phi_hat=[2.759,2.502,2.101,3.192,3.331] boundary_groups=Int64[]
+  harness: negll(theta_hat)=-272.920887270  -fit.loglik=-272.920887270  |diff|=0.000e+00  valid=true
+  objective at truth: loglik=260.992755
+  (a) fresh theta0 with log phi=0: loglik=272.920887 conv=true iters=43 phi=[2.759,2.502,2.101,3.192,3.331] boundary=Int64[]
+  (b) not run: no boundary groups
+  best_alt=a_fresh_logphi0 loglik=272.920887  gain=0.000000  STALL=false
+
+[d02] phi_true=2  clamped_y=0  fit_time=2.8s
+  fitter: loglik=206.218552 converged=true iters=46 phi_hat=[2.655,2.523,1.975,1.962,3.216] boundary_groups=Int64[]
+  harness: negll(theta_hat)=-206.218552473  -fit.loglik=-206.218552473  |diff|=0.000e+00  valid=true
+  objective at truth: loglik=198.008187
+  (a) fresh theta0 with log phi=0: loglik=206.218552 conv=true iters=42 phi=[2.655,2.523,1.975,1.962,3.216] boundary=Int64[]
+  (b) not run: no boundary groups
+  best_alt=a_fresh_logphi0 loglik=206.218552  gain=0.000000  STALL=false
+
+[d03] phi_true=2  clamped_y=0  fit_time=2.9s
+  fitter: loglik=245.623687 converged=true iters=44 phi_hat=[604.5,2.495,2.534,2.219,2.589] boundary_groups=Int64[]
+  harness: negll(theta_hat)=-245.623686987  -fit.loglik=-245.623686987  |diff|=0.000e+00  valid=true
+  objective at truth: loglik=236.560234
+  (a) fresh theta0 with log phi=0: loglik=244.243445 conv=true iters=35 phi=[3.152,2.841,2.622,2.213,2.563] boundary=Int64[]
+  (b) not run: no boundary groups
+  best_alt=a_fresh_logphi0 loglik=244.243445  gain=-1.380242  STALL=false
+
+[d04] phi_true=2  clamped_y=0  fit_time=3.3s
+  fitter: loglik=240.249307 converged=true iters=52 phi_hat=[1.574,2.417,2.635,3.409,2.174] boundary_groups=Int64[]
+  harness: negll(theta_hat)=-240.249307249  -fit.loglik=-240.249307249  |diff|=0.000e+00  valid=true
+  objective at truth: loglik=221.425415
+  (a) fresh theta0 with log phi=0: loglik=240.249307 conv=true iters=35 phi=[1.574,2.417,2.635,3.409,2.174] boundary=Int64[]
+  (b) not run: no boundary groups
+  best_alt=a_fresh_logphi0 loglik=240.249307  gain=0.000000  STALL=false
+
+[d05] phi_true=2  clamped_y=0  fit_time=1.9s
+  fitter: loglik=265.976379 converged=true iters=26 phi_hat=[2.522,2.942,1.661,2.076,36.17] boundary_groups=Int64[]
+  harness: negll(theta_hat)=-265.976378942  -fit.loglik=-265.976378942  |diff|=0.000e+00  valid=true
+  objective at truth: loglik=264.438795
+  (a) fresh theta0 with log phi=0: loglik=272.609413 conv=true iters=50 phi=[2.576,2.888,1.783,2.079,1.723] boundary=Int64[]
+  (b) not run: no boundary groups
+  best_alt=a_fresh_logphi0 loglik=272.609413  gain=6.633034  STALL=true
+
+[d06] phi_true=50  clamped_y=0  fit_time=3.8s
+  fitter: loglik=512.350250 converged=false iters=119 phi_hat=[45.44,38.77,1.082e+06,39.23,56.71] boundary_groups=[3]
+  harness: negll(theta_hat)=-512.350250320  -fit.loglik=-512.350250320  |diff|=0.000e+00  valid=true
+  objective at truth: loglik=507.009241
+  (a) fresh theta0 with log phi=0: loglik=512.350238 conv=true iters=136 phi=[45.44,38.78,8.516e+05,39.23,56.71] boundary=Int64[]
+  (b) restart boundary groups at log phi=0: loglik=512.350256 phi=[45.44,38.76,1.235e+06,39.23,56.71]
+  best_alt=b_restart_boundary0 loglik=512.350256  gain=0.000005  STALL=false
+
+[d07] phi_true=50  clamped_y=0  fit_time=3.3s
+  fitter: loglik=522.885377 converged=true iters=88 phi_hat=[72.4,52.28,65.7,51.02,70.67] boundary_groups=Int64[]
+  harness: negll(theta_hat)=-522.885376781  -fit.loglik=-522.885376781  |diff|=0.000e+00  valid=true
+  objective at truth: loglik=509.080048
+  (a) fresh theta0 with log phi=0: loglik=522.885377 conv=true iters=81 phi=[72.4,52.28,65.7,51.02,70.67] boundary=Int64[]
+  (b) not run: no boundary groups
+  best_alt=a_fresh_logphi0 loglik=522.885377  gain=0.000000  STALL=false
+
+[d08] phi_true=50  clamped_y=0  fit_time=3.0s
+  fitter: loglik=522.063975 converged=true iters=85 phi_hat=[55.5,35.6,53.95,76.96,90.57] boundary_groups=Int64[]
+  harness: negll(theta_hat)=-522.063974955  -fit.loglik=-522.063974955  |diff|=0.000e+00  valid=true
+  objective at truth: loglik=503.998037
+  (a) fresh theta0 with log phi=0: loglik=522.063975 conv=true iters=103 phi=[55.5,35.6,53.95,76.96,90.57] boundary=Int64[]
+  (b) not run: no boundary groups
+  best_alt=a_fresh_logphi0 loglik=522.063975  gain=0.000000  STALL=false
+
+[d09] phi_true=50  clamped_y=0  fit_time=4.0s
+  fitter: loglik=522.923720 converged=false iters=128 phi_hat=[48.78,3.369e+06,53.59,72.93,57.07] boundary_groups=[2]
+  harness: negll(theta_hat)=-522.923720375  -fit.loglik=-522.923720375  |diff|=0.000e+00  valid=true
+  objective at truth: loglik=512.936845
+  (a) fresh theta0 with log phi=0: loglik=522.923702 conv=true iters=159 phi=[48.78,2.088e+06,53.58,72.96,57.07] boundary=[2]
+  (b) restart boundary groups at log phi=0: loglik=522.923698 phi=[48.78,1.952e+06,53.58,72.97,57.07]
+  best_alt=a_fresh_logphi0 loglik=522.923702  gain=-0.000018  STALL=false
+
+[d10] phi_true=50  clamped_y=0  fit_time=4.2s
+  fitter: loglik=541.519366 converged=false iters=121 phi_hat=[47.75,54.99,58.97,7.995e+06,50.87] boundary_groups=[4]
+  harness: negll(theta_hat)=-541.519366160  -fit.loglik=-541.519366160  |diff|=0.000e+00  valid=true
+  objective at truth: loglik=527.477624
+  (a) fresh theta0 with log phi=0: loglik=541.519346 conv=true iters=141 phi=[47.75,54.99,58.96,3.775e+06,50.87] boundary=[4]
+  (b) restart boundary groups at log phi=0: loglik=541.519322 phi=[47.75,55.01,58.96,2.347e+06,50.87]
+  best_alt=a_fresh_logphi0 loglik=541.519346  gain=-0.000021  STALL=false
+┌ Warning: Beta grouped-dispersion fit reached the per-group boundary (φ outside [1e-6, 1e6]) for group(s) [3]; those groups' precision is at the near-Bernoulli or near-deterministic limit on this data, and optimizer convergence flags are unreliable for them.
+└ @ GLLVModels ~/local-scratch/gllvm-nb2-finite-20260924/src/families/grouped_dispersion.jl:799
+
+# SUMMARY
+dataset	phi	fitter_ll	mismatch	valid	boundary	ll_a	ll_b	best_alt	gain	stall
+d01	2	272.920887	0.00e+00	true	Int64[]	272.920887	NA	a_fresh_logphi0	0.000000	false
+d02	2	206.218552	0.00e+00	true	Int64[]	206.218552	NA	a_fresh_logphi0	0.000000	false
+d03	2	245.623687	0.00e+00	true	Int64[]	244.243445	NA	a_fresh_logphi0	-1.380242	false
+d04	2	240.249307	0.00e+00	true	Int64[]	240.249307	NA	a_fresh_logphi0	0.000000	false
+d05	2	265.976379	0.00e+00	true	Int64[]	272.609413	NA	a_fresh_logphi0	6.633034	true
+d06	50	512.350250	0.00e+00	true	[3]	512.350238	512.350256	b_restart_boundary0	0.000005	false
+d07	50	522.885377	0.00e+00	true	Int64[]	522.885377	NA	a_fresh_logphi0	0.000000	false
+d08	50	522.063975	0.00e+00	true	Int64[]	522.063975	NA	a_fresh_logphi0	0.000000	false
+d09	50	522.923720	0.00e+00	true	[2]	522.923702	522.923698	a_fresh_logphi0	-0.000018	false
+d10	50	541.519366	0.00e+00	true	[4]	541.519346	541.519322	a_fresh_logphi0	-0.000021	false
+harness_valid=true n_with_boundary=3 n_stalls=1 max_gain=6.63303 max_mismatch=0.000e+00 total_time=80.2s

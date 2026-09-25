@@ -1,0 +1,41 @@
+ * Status: success
+
+ * Candidate solution
+    Final objective value:     6.102247e+02
+
+ * Found with
+    Algorithm:     L-BFGS
+
+ * Convergence measures
+    |x - x'|               = 0.00e+00 ≤ 0.0e+00
+    |x - x'|/|x'|          = 0.00e+00 ≤ 0.0e+00
+    |f(x) - f(x')|         = 0.00e+00 ≤ 0.0e+00
+    |f(x) - f(x')|/|f(x')| = 0.00e+00 ≤ 0.0e+00
+    |g(x)|                 = 5.34e+01 ≰ 1.0e-05
+
+ * Work counters
+    Seconds run:   0  (vs limit Inf)
+    Iterations:    2
+    f(x) calls:    85
+    ∇f(x) calls:   2
+
+fields: (:method, :initial_x, :minimizer, :minimum, :iterations, :x_abstol, :x_reltol, :x_abschange, :x_relchange, :f_abstol, :f_reltol, :f_abschange, :f_relchange, :g_abstol, :g_residual, :trace, :f_calls, :g_calls, :h_calls, :time_limit, :time_run, :stopped_by, :termination_code)
+g_residual    53.4470001034925
+f_calls       85
+g_calls       2
+iterations    2
+negll(θ0) = 141690568670183138787328.000000   negll(θ̂) = 610.224727   |θ̂-θ0|∞ = 9.567e-03
+|grad(θ0)|∞ = 3.497e+28   |grad(θ̂)|∞ = 5.345e+01
+grad(θ̂) = [-17.2, -53.4, -28.5, -42.0, -3.73, -17.0, -6.32, 15.9, 5.4, -7.32, -2.67, -9.18, -7.74, 27.0, -1.09, 8.46, -1.54, 2.66, -4.62]
+negll along -grad(θ̂)/|grad| at step sizes:
+  s=1e-08   negll=610.224726
+  s=1e-06   negll=610.224641
+  s=0.0001  negll=610.216131
+  s=0.001   negll=610.138869
+  s=0.01    negll=609.375347
+  s=0.1     negll=602.507908
+  s=0.3     negll=591.884487
+  s=1       negll=593.633401
+iter 0  f=141690568670183138787328.000000  |g|=5.776e+27
+iter 1  f=610.224727  |g|=5.345e+01
+iter 2  f=610.224727  |g|=5.345e+01
