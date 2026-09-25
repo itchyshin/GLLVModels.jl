@@ -985,6 +985,69 @@ function _gamma_grouped_laplace_weight(hessian::Symbol, f::Gamma, μ, me, y, lin
     return f.α * y / μ
 end
 
+# Per-site mode search for the Gamma grouped kernel (#479). Returns `(z, converged)`.
+# `step_weight` picks the curvature that sets the Newton step. It never changes the
+# mode, which is the fixed point of `Λ's − z = 0` whatever W is.
+#
+# Before #479 the kernel ran undamped Fisher scoring and returned whatever `z` it held
+# when the loop stopped, converged or not. Gamma/log's Fisher weight is the constant α,
+# blind to y/μ, so the step overshoots when y/μ is far from 1: on one site of the
+# fitter's own warm start it cycled out to z ≈ 1e11 and the kernel returned a FINITE
+# −1.4e23. That value slipped past the fitter's 1e12 sentinel and stopped L-BFGS at
+# iteration 2, 43 log-likelihood units below the optimum, with converged = true.
+#
+# Now a step that lowers the per-site log-posterior is halved (the generic core's
+# `_laplace_mode` rule, so small steps and accepted full steps are bit-identical to the
+# old loop), and `converged` is true only when the full proposed step is below `tol`,
+# which is the old loop's own stopping test. A heavily halved step does NOT count.
+function _gamma_grouped_mode(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
+        Λ::AbstractMatrix, β::AbstractVector, link::Link, step_weight::Symbol;
+        mask = nothing, offset = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
+    p, K = size(Λ)
+    off = offset === nothing ? false : offset
+    z = zeros(K)
+    for _ in 1:maxiter
+        η  = _clamp_eta.(β .+ off .+ Λ * z)
+        μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
+        me = mu_eta.(Ref(link), η)
+        s  = _glm_score.(fams, μ, n, me, y)
+        W  = _gamma_grouped_laplace_weight.(Ref(step_weight), fams, μ, me, y, Ref(link))
+        if mask !== nothing
+            s = ifelse.(mask, s, 0.0)
+            W = ifelse.(mask, W, 0.0)
+        end
+        A  = Symmetric(Λ' * (W .* Λ) + I)
+        Δ  = _safe_solve(A, Λ' * s .- z)
+        (Δ === nothing || !all(isfinite, Δ)) && return z, false
+        maximum(abs, Δ) < tol && return z .+ Δ, true
+        if norm(Δ) <= 1e-3 * (1 + norm(z))
+            z = z .+ Δ
+        else
+            q0 = _grouped_laplace_mode_logpost(fams, y, n, Λ, β, link, z;
+                                               mask = mask, offset = offset)
+            if isfinite(q0)
+                accepted = false
+                step = 1.0
+                for _half in 1:30
+                    ztrial = z .+ step .* Δ
+                    q1 = _grouped_laplace_mode_logpost(fams, y, n, Λ, β, link, ztrial;
+                                                       mask = mask, offset = offset)
+                    if isfinite(q1) && q1 >= q0
+                        z = ztrial
+                        accepted = true
+                        break
+                    end
+                    step *= 0.5
+                end
+                accepted || return z, false
+            else
+                z = z .+ Δ
+            end
+        end
+    end
+    return z, false
+end
+
 # Per-site Laplace log-marginal with per-species Gamma shape markers `fams`.
 function _gamma_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
         Λ::AbstractMatrix, β::AbstractVector, link::Link;
@@ -992,35 +1055,28 @@ function _gamma_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::
         maxiter::Integer = 100, tol::Real = 1e-9)
     p, K = size(Λ)
     off = offset === nothing ? false : offset
-    z = zeros(K)
-    local A
-    for _ in 1:maxiter
-        η  = _clamp_eta.(β .+ off .+ Λ * z)
-        μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
-        me = mu_eta.(Ref(link), η)
-        s  = _glm_score.(fams, μ, n, me, y)
-        # Role separation (2026-08-25). The MODE SEARCH is Fisher-scored,
-        # ALWAYS — `:fisher` here is not the caller's selector. Expected
-        # information is >= 0, so `Λ'WΛ + I` is SPD by construction and every
-        # Newton step is a descent step. The observed weight CAN be negative
-        # (measured: Beta at φ=12, η=−1.2, y=0.87 gives −1.218), which made this
-        # loop an unguarded, possibly-indefinite Newton whenever the caller
-        # asked for `:observed` — and the grouped fitters default to it.
-        # The selector still governs the post-loop log-det below, which is the
-        # only role that needs the observed curvature. The converged mode is
-        # unchanged either way: it is the fixed point of `Λ's − z = 0`, which
-        # does not involve W at all — W only sets the step.
-        W  = _gamma_grouped_laplace_weight.(Ref(:fisher), fams, μ, me, y, Ref(link))
-        if mask !== nothing
-            s = ifelse.(mask, s, 0.0)
-            W = ifelse.(mask, W, 0.0)
-        end
-        A  = Symmetric(Λ' * (W .* Λ) + I)
-        Δ  = _safe_solve(A, Λ' * s .- z)
-        (Δ === nothing || !all(isfinite, Δ)) && break
-        z  = z .+ Δ
-        maximum(abs, Δ) < tol && break
+    # Role separation (2026-08-25). The MODE SEARCH is Fisher-scored first:
+    # `:fisher` here is not the caller's selector, which governs only the post-loop
+    # log-det below. Expected information is >= 0, so `Λ'WΛ + I` is SPD by
+    # construction. The converged mode is unchanged either way: it is the fixed point
+    # of `Λ's − z = 0`, which does not involve W at all. W only sets the step.
+    z, ok = _gamma_grouped_mode(fams, y, n, Λ, β, link, :fisher;
+                                mask = mask, offset = offset, maxiter = maxiter, tol = tol)
+    # Fallback (#479). Fisher scoring converges only linearly for Gamma/log and can
+    # take far longer than `maxiter` even with halving (measured: 1532 iterations on the
+    # #479 site at the fitter's warm start, contraction factor about 0.991). Under LogLink the observed weight α·y/μ is >= 0 for every admissible
+    # response (masked cells are zeroed), so `Λ'WΛ + I` stays SPD and the step is exact
+    # damped Newton on a strictly concave per-site objective (measured: at most 6
+    # iterations on every site probed across the sibling screen's 10 datasets). It
+    # runs only where the Fisher search failed, so every site that converged before
+    # keeps its old path.
+    if !ok && link isa LogLink
+        z, ok = _gamma_grouped_mode(fams, y, n, Λ, β, link, :observed;
+                                    mask = mask, offset = offset, maxiter = maxiter, tol = tol)
     end
+    # A search that did not converge must not produce a finite value. -Inf makes the
+    # fitters' objective return its 1e12 sentinel instead of a garbage surface.
+    ok || return -Inf
     η  = _clamp_eta.(β .+ off .+ Λ * z)
     μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
     me = mu_eta.(Ref(link), η)
@@ -1045,8 +1101,12 @@ Total Laplace log-marginal of a Gamma GLLVM with **per-species** shape `αvec`
 (length p; `Var_t = μ_t²/αvec[t]`). `Y` is the p×n matrix of positive reals; `Λ`
 p×K; `β` length-p. With a constant `αvec = fill(α, p)` this equals the shared-shape
 [`gamma_marginal_loglik_laplace`](@ref) to machine precision when
-`hessian=:fisher` (the default). `hessian=:observed` uses the conditional
-Gamma/log Hessian used by TMB's Laplace objective.
+`hessian=:fisher`. `hessian=:observed` (the default) uses the conditional
+Gamma/log Hessian used by TMB's Laplace objective. If any site's mode search fails
+to converge to `tol` (default 1e-9), the total is `-Inf`, never a value computed at
+an unconverged mode (#479). The search is Fisher scoring with step halving for up to
+`maxiter` steps (default 100) and, under `LogLink`, a damped Newton search of up to
+`maxiter` more.
 """
 function gamma_grouped_marginal_loglik_laplace(Y::AbstractMatrix, Λ::AbstractMatrix,
         β::AbstractVector, αvec::AbstractVector; link::Link = LogLink(),

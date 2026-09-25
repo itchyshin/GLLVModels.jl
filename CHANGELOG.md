@@ -14,6 +14,15 @@ All notable changes to GLLVModels.jl are documented here.
 ## Unreleased
 
 ### Fixed
+- **Gamma grouped fits no longer report convergence from a diverged inner search.**
+  The per-site mode search inside `fit_gamma_gllvm_grouped` and its covariate and
+  shared-shape routes could diverge at the fitter's own start and still return a
+  finite value, so a fit could report `converged = true` far below the optimum (43
+  log-likelihood units on the case in #479). The search now halves steps that lower
+  the site objective and, under the log link, falls back to damped Newton; a site that
+  still does not converge returns `-Inf`, so the fitter's failure sentinel fires.
+  Values where the old search converged are unchanged (to 1e-8). Healthy fits run
+  about 20 to 25 percent slower.
 - **NB2 with per-trait dispersion: fewer fits stuck at the Poisson boundary.**
   `fit_nb_gllvm_grouped`, the default no-covariate route for
   `fit_gllvm(...; family = NegativeBinomial())`, could stop with a trait's `r`
