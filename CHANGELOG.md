@@ -45,6 +45,27 @@ All notable changes to GLLVModels.jl are documented here.
   so a fit is not guaranteed to reach the highest one. The covariate route
   (`fit_nb_gllvm_grouped_cov`, used by `gllvm(@formula(...), ...)` with NB2 and site
   covariates) gets the same restart; it had the same stall on 3 of 10 screened datasets.
+- **Gamma with fixed-effect covariates no longer throws `DomainError`.**
+  `fit_gllvm_cov(Y; family = Gamma(...), X, K)` stopped with
+  `DomainError("Gamma: alpha > 0")` on ordinary Gamma data, and so did
+  `fit_gllvm_speciescov`, `fit_fourthcorner_gllvm`, `fit_roweffect_gllvm` and
+  `fit_constrained_gllvm`, which share its per-site Laplace search. That search took
+  undamped steps and could return a finite value from a diverged site (about -7.2e22
+  at the fitter's own start), which sent the optimizer to a shape of 0. The search now
+  halves steps that lower the site objective, falls back to damped Newton on the
+  observed curvature, and returns `-Inf` for a site that still does not converge, so
+  the fitter's failure sentinel fires. The dispersion is also built inside the
+  objective's guard, so an out-of-range value returns the sentinel instead of an
+  error. On the #479 data the Gamma fit now reaches -569.700833, the same optimum as
+  `fit_gamma_gllvm`. Values where the old search converged are unchanged (to 1e-8).
+  **Behaviour change:** `fit_gllvm_cov` with Binomial went from converged to NOT
+  converged on 2 of 8 screened datasets, with loadings running away (largest 42.2 and
+  41.2, was 3.5 and 3.1) at a higher log-likelihood (-211.64, was -236.13; -214.44,
+  was -241.08). The old fits had stopped where unconverged sites fed the optimizer
+  wrong values; the no-covariate `fit_binomial_gllvm` runs away on the same data too.
+  Very dispersed Gamma data with responses near 1e-29 (true shape 0.1) now fail with
+  log-likelihood `-Inf` and `converged = false` instead of throwing. Healthy fits run
+  about 20 percent slower.
 
 ### Changed
 - **Breaking (default change):** `fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm`
