@@ -1,5 +1,19 @@
 # Checkpoint: honest 0.7 R↔Julia true parity (`/goal` armed in Cursor)
 
+**Status 2026-09-25:** item 4 below ("T4 realistic-size second-order: Totoro
+grid; D-139 ack before spend") is stale on two counts. First, the T4 P6 grid
+it names (`p in {20,50}`, `n in {500,2000}`, Gaussian/Poisson/NB2) already
+closed with 12 of 12 cells passing on 2026-09-05 (PR #297; receipts
+`docs/dev-log/core070/t4-p6-*-receipt-2026-09-05.json`). Second, the D-139
+ack this checkpoint is waiting on was given 2026-09-24 for the separate #323
+frozen-reference smoke (Totoro Track A ran; receipts
+`docs/dev-log/core070/totoro-323-track-a-20260924/`, after-task
+`docs/dev-log/after-task/2026-09-24-totoro-323-track-a-receipt.md`). Also
+landed since this checkpoint's "Rehydrate (2026-09-17)" line: PR #478
+(2026-09-25, NB2 restart at the Poisson boundary). The rest of this file is
+left as-is; see `docs/dev-log/handover/2026-09-24-claude-handover-closeout.md`
+for a more current picture.
+
 GOAL: see [`LOOP/GOAL.md`](GOAL.md). STATE: DestB DONE; true-parity vs frozen 0.7.0; Project.toml = 0.3.0.
 
 CreateGoal: armed in parent chat (2026-09-14). Do not mark complete.

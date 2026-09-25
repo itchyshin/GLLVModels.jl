@@ -1,5 +1,11 @@
 # G0: GLLVM.jl to GLLVModels.jl rename design
 
+**Status 2026-09-25:** landed. G0 was approved and the rename executed in PR
+#423 (commit `69a69b0a0`, "chore: rename Julia package to GLLVModels"). The
+repository and `Project.toml` (`name = "GLLVModels"`) both reflect the
+completed rename. The "STOP AT G0 pending Shinichi's approval" line below no
+longer applies.
+
 Proposed in [PR #422](https://github.com/itchyshin/GLLVM.jl/pull/422). STOP AT G0 pending Shinichi's approval.
 The programme authority is D-269 and the vault's 2026-09-15 working document
 for this two-package rename.

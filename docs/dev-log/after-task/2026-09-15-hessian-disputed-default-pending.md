@@ -1,5 +1,14 @@
 # After-task — §2 Hessian disputed-default decision draft (docs-only)
 
+**Status 2026-09-25:** superseded. This after-task's deliverable
+(`docs/dev-log/decisions/2026-09-15-hessian-disputed-default-pending.md`) was
+not the draft that was accepted. The same §2 question (cloglog / Tweedie
+grouped Hessian default) was decided through a separate, differently-named
+draft, `docs/dev-log/decisions/2026-09-15-second-order-hessian-s2-pending.md`,
+which was ACCEPTED (option A) and applied 2026-09-15 (PR #347, merged
+`3091fe61`). Do not cite this draft or its deliverable as the operative
+decision.
+
 **Date:** 2026-09-15  
 **Lane:** Cursor / Ada (true-parity `/goal`; ledger-gap inventory **rank 3**)  
 **Branch:** `docs/hessian-disputed-default-20260915` from `origin/main` @ `0da63860`  
