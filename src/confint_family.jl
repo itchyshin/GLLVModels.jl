@@ -44,7 +44,8 @@ const _GroupedDispersionCovFit = Union{NBGroupedCovFit, NB1GroupedCovFit, BetaGr
 
 const _CIFit = Union{_FamilyFit, _TwoPartFit, _GroupedDispersionFit, _GroupedDispersionCovFit,
                      OrdinalFit, OrdinalPerTraitFit, OrdinalPerTraitCovFit, MultinomialFit,
-                     GllvmCovFit, ZIPCovFit, ZINBCovFit, OrderedBetaFit, QuadraticFit, RowEffectFit}
+                     GllvmCovFit, ZIPCovFit, ZINBCovFit, OrderedBetaFit, QuadraticFit, RowEffectFit,
+                     TruncatedNegBin2PerTraitFit}
 
 # ---------------------------------------------------------------------------
 # Per-family adapter. Bundles everything the generic routines need:
@@ -569,6 +570,55 @@ function _family_ci(fit::TruncatedNegBin2Fit, Y::AbstractMatrix;
     end
     names = vcat(_glm_lin_names(p, K), "r")
     kinds = vcat(fill(:linear, length(θ) - 1), :log)
+    return _FamilyCI(θ, nll, names, kinds, simulate, refit)
+end
+
+# Zero-truncated NB2 (per-trait r): packing [β; pack(Λ); log r_1 … log r_p].
+# Twin of the shared-r `TruncatedNegBin2Fit` route above, but `r` is already a
+# length-p vector on the fit — no group-index indirection is needed (twin
+# `log_phi_truncnb2[t]`, matching gllvmTMB's default per-trait dispersion).
+function _family_ci(fit::TruncatedNegBin2PerTraitFit, Y::AbstractMatrix;
+                    mask = nothing,
+                    hessian::Symbol = :observed,
+                    newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
+    p, K = size(fit.Λ); n = size(Y, 2); rr = rr_theta_len(p, K); link = fit.link
+    M = _ci_mask(mask, Y)
+    Yi = round.(Int, Y)
+    θ = vcat(fit.β, pack_lambda(fit.Λ), log.(fit.r))
+    nll = function (θv)
+        β = θv[1:p]
+        Λ = unpack_lambda(θv[(p + 1):(p + rr)], p, K)
+        rvec = exp.(θv[(p + rr + 1):(p + rr + p)])
+        v = try
+            -truncated_nbinom2_pertrait_marginal_loglik_laplace(Yi, Λ, β, rvec;
+                link = link, mask = M, hessian = hessian,
+                maxiter = newton_maxiter, tol = newton_tol)
+        catch
+            return 1e12
+        end
+        return isfinite(v) ? v : 1e12
+    end
+    simulate = function (rng)
+        Yb = Matrix{Int}(undef, p, n)
+        @inbounds for s in 1:n
+            η = fit.β .+ fit.Λ * randn(rng, K)
+            for t in 1:p
+                μ = max(linkinv(link, _clamp_eta(η[t])), 1e-12)
+                Yb[t, s] = _rand_ztnb(rng, fit.r[t], μ)
+            end
+        end
+        return Yb
+    end
+    refit = function (Yb)
+        fb = try
+            fit_truncated_nbinom2_gllvm_pertrait(Yb; K = K, link = link, mask = M, hessian = hessian)
+        catch
+            return nothing
+        end
+        return vcat(fb.β, pack_lambda(fb.Λ), log.(fb.r))
+    end
+    names = vcat(_glm_lin_names(p, K), ["r[$t]" for t in 1:p])
+    kinds = vcat(fill(:linear, p + rr), fill(:log, p))
     return _FamilyCI(θ, nll, names, kinds, simulate, refit)
 end
 

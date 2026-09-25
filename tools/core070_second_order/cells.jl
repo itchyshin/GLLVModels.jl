@@ -1033,28 +1033,11 @@ function cell_truncated_poisson()
 end
 
 function cell_truncated_nbinom2()
-    seed = 58
-    Random.seed!(seed)
-    p, K, n = 5, 1, 120
-    β = log.([4.0, 5.0, 3.5, 4.5, 4.0])
-    r_true = 4.0
-    Λ = 0.2 .* parity_loadings_p5k2()[:, 1:K]
-    Z = randn(K, n)
-    η = β .+ Λ * Z
-    Y = Matrix{Int}(undef, p, n)
-    for t in 1:p, s in 1:n
-        μ = exp(clamp(η[t, s], -3.0, 3.5))
-        while true
-            v = rand(NegativeBinomial(r_true, r_true / (r_true + μ)))
-            if v >= 1
-                Y[t, s] = v
-                break
-            end
-        end
-    end
+    fx = truncnb2_interior_fixture()
+    Y, p, K, n, seed = fx.Y, fx.p, fx.K, fx.n, fx.seed
 
     t0 = time()
-    fit = fit_truncated_nbinom2_gllvm(Y; K = K, hessian = :observed)
+    fit = fit_truncated_nbinom2_gllvm_pertrait(Y; K = K, hessian = :observed)
     wall_fit = time() - t0
     ci = confint(fit, Y; method = :wald)
     ad = GLLVModels._family_ci(fit, Y; hessian = :observed)
@@ -1066,10 +1049,15 @@ function cell_truncated_nbinom2()
     r_beta_idx = _r_trait_intercept_idx(r, length(beta_idx_jl))
 
     d = _assemble("truncated_nbinom2",
-        "test/parity/test_truncated_nbinom2_parity.jl (seed=58,p=5,K=1,n=120; Julia shared r)",
+        "test/parity/fixtures/truncnb2_interior_seed61_n150.toml (seed=61,p=5,K=1,n=150; per-trait r/phi both engines)",
         "Truncated-NB2-log (β[] block only)", "observed (family default)", false,
         p, K, n, seed, fit.converged, fit.loglik, wall_fit, r, ci, Σ, ad.names, beta_idx_jl, r_beta_idx)
-    d["note"] = "Julia TruncatedNegBin2Fit uses one shared r; R uses per-trait log_phi_truncnb2 — β[] block paired only."
+    d["note"] = "Both engines now fit per-trait dispersion (Julia fit_truncated_nbinom2_gllvm_pertrait; " *
+        "R's truncated_nbinom2() default log_phi_truncnb2 is per-trait already) -- like with like, not " *
+        "shared-r vs per-trait-phi. Data re-pointed off the frozen NATIVE-12 seed=58/n=120 shape (whose " *
+        "se=TRUE per-trait R fit pushes one trait to the Poisson-limit boundary, phi ~ 1e7-1e8) to a " *
+        "screened interior fixture where every trait is finite on both engines. beta[] block paired only; " *
+        "the r/phi dispersion block itself is not compared, same restriction as every other cell here."
     d["parameterisation_gap"] = false
     return d
 end
