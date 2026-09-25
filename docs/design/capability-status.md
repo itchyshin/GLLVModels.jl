@@ -34,11 +34,20 @@ Status words (MC parser; counts derived at render time — never hand-typed into
 - Prefer reading this beside R `/p/gllvmTMB/surface` — gaps should stay visible
   as `planned` / `missing` / `rejected`, not renamed away.
 
-## Twin join — six DIFFER rows (capability-status cross-walk)
+## Twin join: DIFFER rows (capability-status cross-walk)
 
-`tools/parity_ledger.R` (twin, read-only) joined to this file reports **48
-matched**, **32 R-only**, **33 J-only**, and **6 DIFFER** @ frozen oracle
-(inventory: `docs/dev-log/after-task/2026-09-15-true-parity-ledger-gap-inventory.md`).
+`tools/parity_ledger.R` (twin, read-only) joined to this file reports **57
+matched** (22 AGREE, 23 R-NARROWER, 3 J-NARROWER, 9 DIFFER), **23 R-only**,
+**34 Julia-only**, CLOSURE FAIL (2 undispositioned rows) as of 2026-09-25, run
+with the tool's own default `--r-ref origin/main`. **Corrected 2026-09-25:**
+the "@ frozen oracle" label previously on this line was wrong. The tool's own
+header comment says plainly that `docs/design/capability-status.md` "did not
+exist at the frozen 0.7.0 oracle (`b4d5fee64`)" and that pinned-oracle
+comparison instead uses `tools/parity_ledger.py` on `NAMESPACE`; this join
+always runs against R's `origin/main`, which moves. Re-running this exact
+command later will not reproduce these counts (inventory for the prior
+2026-09-15 run: `docs/dev-log/after-task/2026-09-15-true-parity-ledger-gap-inventory.md`,
+itself against `origin/main` at that date, not a frozen pin).
 **DIFFER ≠ covered twin.** Do not promote these rows, paste light Δ, or describe
 them as “aligned capability” on public surfaces until both sides share the same
 status word *and* the scope fence is written.
@@ -50,14 +59,17 @@ status word *and* the scope fence is written.
 | 3 | `multinomial / categorical` | scope-limited | `missing` | FE softmax engine ≠ twin latent/phylo/spatial multinomial (Design 123) |
 | 4 | Simulation-validated coverage certificate | scope-limited | `missing` | Julia arcG/DRAC diagnostics are **not** this row; out of R↔Julia parity |
 | 5 | `AGHQ` estimator | scope-limited (opt-in experimental) | `missing` | Julia internal GH for VA only; no public `aghq=` knob |
-| 6 | Mixed-family response vector | scope-limited (native programme validated) | `planned` | **Bridge mixed-family point-fit (`implemented` below) is a transport subset only** — does not close this row |
+| 6 | Mixed-family response vector | scope-limited (native programme validated) | `planned` | **Bridge mixed-family point-fit (`implemented` below) is a transport subset only**, does not close this row |
+| 7 | `grouping level × unit` | scope-limited | `planned` | Added 2026-09-25, see the new `## Grouping levels` section; `Row effects fixed` above is ACCOUNTED as a coarser-granularity match, this row stays `planned` rather than inheriting that promotion |
+| 8 | `Internal IID column coefficients` (`column_coef()`) | scope-limited | `missing` | Reachable only after the 2026-09-25 header fix below; no Julia `column_coef()`-equivalent construct has been located |
+| 9 | `Column-slope covariance helpers incl. diagonal phylogenetic column slopes` | scope-limited | `missing` | Reachable only after the 2026-09-25 header fix below; no Julia implementation located |
 
 **Planned / missing rows that must not read as harness parity:** any row still
 `planned` or `missing` here (including Arc 0 Gaussian-only cells marked
 `implemented` with scope caveats) stays **out** of “R workflow runs identically
-through Julia” claims on `docs/src/gllvmtmb-parity.md`. **R-NARROWER (21):**
+through Julia” claims on `docs/src/gllvmtmb-parity.md`. **R-NARROWER (23):**
 Julia `implemented` where R registers `scope-limited` is a **promotion fence**,
-not evidence that Julia exceeds the twin — wait for receipts at R’s narrower
+not evidence that Julia exceeds the twin, wait for receipts at R’s narrower
 claim before advertising.
 
 ## Covariance structure grid (sources × modes)
@@ -147,7 +159,8 @@ Twin family names align with gllvmTMB / gllvm. Status = native Julia engine
 | beta | implemented |
 | Gamma | implemented |
 | tweedie | implemented |
-| ordinal_probit / cumulative_logit | implemented |
+| ordinal_probit | implemented |
+| ordinal_logit | implemented (default link; see note) |
 | student | implemented (**parity Δ PAID 2026-08-28**) |
 | lognormal | implemented |
 | truncated_poisson | implemented |
@@ -187,19 +200,28 @@ Twin family names align with gllvmTMB / gllvm. Status = native Julia engine
 | com_poisson | implemented |
 
 Notes (not status rows): `zip` / `zinb` / `zib` are Julia-forward (ZIP+X via
-`fit_zip_gllvm_cov`; ZINB+X via `fit_zinb_gllvm_cov`, shared scalar `r`);
-twin gllvmTMB cut ZIP/ZINB — **no** invent twin light Δ. Status cells stay
-bare MC tokens. `zib` also has a native Julia ZIB+X fitter (`fit_zib_gllvm_cov`)
-with dual shared slopes (`γz`, `γc`), `Λ_z = 0`, and one shared scalar `N::Int`.
-Since #218 / #220 the **no-X** ZIB is reachable through `fit_gllvm(Y;
-family = ZIB(N))` and `@formula(y ~ 1)`, and since the bridge no-X arc through
-`bridge_fit(; family = "zib", N = …)` with Wald/profile/bootstrap CI and one
-**required shared scalar** trials count `N` (a uniform `p×n` `N` collapses; a
-non-uniform one errors — ZIB is deliberately **out** of
-`_BRIDGE_TRIALS_FAMILIES`, so `cbind_binomial` stays false). ZIB+X on any public
-surface, bridge missing-response masks, `confint` under X, and any gllvmTMB
-parity claim all remain OWED (the twin has no ZIB, so a light Δ would be
-invented, not owed).
+`fit_zip_gllvm_cov`; ZINB+X via `fit_zinb_gllvm_cov`, shared scalar `r`).
+**Corrected 2026-09-25** (the "twin cut ZIP/ZINB" line here was stale): gllvmTMB
+no longer cuts ZIP/ZINB/ZIB. `zi_poisson()`, `zi_nbinom2()`, and `zi_binomial()`
+merged to the twin's `main` as FAM-21/22/23 (PR #1240, Arc D1, maintainer-approved
+D-207); R's own ledger lists this row `scope-limited`, not missing. The two sides
+still diverge in the NB2 dispersion parameterisation: gllvmTMB reuses the
+ordinary per-trait `nbinom2()` dispersion (one `log_phi_nbinom2` per trait),
+while GLLVModels.jl's ZINB uses one SHARED SCALAR NB2 dispersion `r` across
+every trait (`ZINBCovFit` docstring), so a light Δ between the two
+`implemented`-shaped statuses needs a parameterisation decision first, not just
+a run. Status cells stay bare MC tokens. `zib` also has a native Julia ZIB+X
+fitter (`fit_zib_gllvm_cov`) with dual shared slopes (`γz`, `γc`), `Λ_z = 0`,
+and one shared scalar `N::Int`. Since #218 / #220 the **no-X** ZIB is reachable
+through `fit_gllvm(Y; family = ZIB(N))` and `@formula(y ~ 1)`, and since the
+bridge no-X arc through `bridge_fit(; family = "zib", N = …)` with
+Wald/profile/bootstrap CI and one **required shared scalar** trials count `N`
+(a uniform `p×n` `N` collapses; a non-uniform one errors, ZIB is deliberately
+**out** of `_BRIDGE_TRIALS_FAMILIES`, so `cbind_binomial` stays false). ZIB+X
+on any public surface, bridge missing-response masks, `confint` under X, and a
+measured gllvmTMB light Δ all remain OWED: the twin's `zi_binomial()` now
+exists (same PR #1240, FAM-23), so a Δ is no longer categorically forbidden,
+but none has been run yet.
 `student` / `com_poisson` promoted on native engine + package
 **Student-t parity, PARTIAL (2026-08-28).** The live logLik Δ against
 gllvmTMB 0.7.1 is PAID — but only in the **fixed-ν** configuration, and the
@@ -255,7 +277,7 @@ hurdle / ordered-beta family, so a Δ would be invented. `truncated_poisson` =
 zero-truncated Poisson (Identity 2026-08-15; twin fid 10; engine+admit; **bridge no-X paid** via `bridge_fit(; family = "truncated_poisson")`; **light RCall no-X Δ PAID 2026-08-24** — live Δ abs ≈2.71e-9 @ rtol 1e-6 (seed=53, p=5, K=2, n=60; Laplace both sides; gllvmTMB 0.7.0 / R 4.6.0; `test/parity/test_truncated_poisson_parity.jl`; ≠ full family parity)); `truncated_nbinom2`
 = zero-truncated NB2 (Identity 2026-08-15; twin fid 11; **light RCall no-X Δ PAID 2026-08-24** — live Δ abs ≈1.58e-6 @ rtol 1e-6, relative ≈1.15e-9 (seed=58, p=5, K=1, n=120, per-trait `r`; gllvmTMB 0.7.0 / R 4.6.0; `test/parity/test_truncated_nbinom2_parity.jl`; pairs with `fit_truncated_nbinom2_gllvm_pertrait`, NEVER the shared-scalar route; requires `hessian=:observed`, the default since 2026-08-24 — the Fisher weight gives relative 1.06e-5 and FAILS; ≠ full family parity); Arc1 shared scalar `r`
 ≡ twin `φ`; Arc1b 2026-08-18 per-trait pack ≡ twin `log_phi_truncnb2`;
-≠ bridge admit ≠ AGHQ). `lognormal` = one-part lognormal (Identity 2026-08-15; twin fid 3; engine+admit; **bridge no-X paid** via `bridge_fit(; family = "lognormal")`; **light RCall no-X Δ PAID 2026-08-24** — live Δ abs ≈2.24e-8 @ rtol 1e-6 (seed=52, p=5, K=2, n=60; exact-vs-exact; shared scalar σ; loglik includes `−Σ log y`, verified structurally **and** by a scale-shift test on `2·Y`; gllvmTMB 0.7.0 / R 4.6.0; `test/parity/test_lognormal_parity.jl`; ≠ full family parity)). `censored_poisson` = right-censored Poisson (Identity 2026-08-15; Julia-forward / twin constructor-only; light RCall Δ FORBIDDEN).
+≠ bridge admit ≠ AGHQ). `lognormal` = one-part lognormal (Identity 2026-08-15; twin fid 3; engine+admit; **bridge no-X paid** via `bridge_fit(; family = "lognormal")`; **light RCall no-X Δ PAID 2026-08-24** — live Δ abs ≈2.24e-8 @ rtol 1e-6 (seed=52, p=5, K=2, n=60; exact-vs-exact; shared scalar σ; loglik includes `−Σ log y`, verified structurally **and** by a scale-shift test on `2·Y`; gllvmTMB 0.7.0 / R 4.6.0; `test/parity/test_lognormal_parity.jl`; ≠ full family parity)). `censored_poisson` = right-censored Poisson (Identity 2026-08-15; Julia-forward). **Corrected 2026-09-25**: the twin is no longer constructor-only, `censored_poisson()` got a real engine behind its exported constructor (gllvmTMB PR #1254, id 21, `scope-limited` as FAM-25 on R's own ledger), so a light RCall Δ is no longer categorically forbidden; none has been run yet, so it stays OWED, not PAID.
 
 ## Intervals and estimation evidence
 
@@ -369,6 +391,56 @@ parity certificate for all NB2+X cells.
 `docs/dev-log/after-task/2026-09-14-destb-g6-t15-knife-edge.md` — **18**
 fixtures dispositioned (keep / document / already-retargeted); **0** test edits
 this slice. Named degenerate NB2 seed-523 cells stay **by design** post-T14.
+
+## Model selection
+
+**Added 2026-09-25.** R's ledger carries a row for `select_lv()` / `anova()`
+under this exact name; GLLVModels.jl's ledger never had a row here at all, so
+the two files could not join on this capability.
+
+| Capability | Status |
+|---|---|
+| select_lv() rank selection + anova() boundary likelihood-ratio test | implemented (partial; R pairing not established, see note) |
+
+Notes (not a status row): `select_lv` (`src/model_selection.jl:57`, tested in
+`test/test_model_selection.jl` and `test/test_known_sentinel_defects.jl`) is
+Julia's latent-dimension rank-selection routine; `chibar2_pvalue` /
+`variance_lrt` (`src/boundary_inference.jl`, exported at `src/GLLVModels.jl:249`)
+are Julia's boundary-aware likelihood-ratio test. R's alias for this row lists
+exactly these three names (`select_lv / chibar2_pvalue / variance_lrt`), so the
+row is named here under R's own primary Capability text to join correctly.
+`implemented` reflects code + test under this ledger's own definition only, not
+cross-package parity: no light RCall Δ has been run against gllvmTMB's
+`select_lv()` / `anova()`. Flagged `partial - R pairing not established`
+because whether Julia's rank-selection criterion and boundary LRT are the same
+estimand as R's (same test statistic, same boundary correction) has not been
+checked function by function; treat the join as a name match only until that
+comparison is done.
+
+## Grouping levels
+
+**Added 2026-09-25.** R's ledger has a `## Grouping levels` section (`unit`,
+`unit_obs`, `cluster`, `cluster2`: the formula-grouping-level keywords for
+random-effect structure); GLLVModels.jl's ledger never carried rows under
+these names, so this tool's own `--check-names` "MISSING grouping-level rows"
+check could never find them here to report.
+
+| Capability | Status |
+|---|---|
+| grouping level × unit | planned (partial; R pairing not established, see note) |
+| grouping level × unit_obs | planned (partial; R pairing not established, see note) |
+| grouping level × cluster | planned (partial; R pairing not established, see note) |
+| grouping level × cluster2 | planned (partial; R pairing not established, see note) |
+
+Notes (not a status row): `planned` here is a placeholder, not a verified
+capability comparison. GLLVModels.jl has no documentation that maps its own
+random-intercept machinery onto this specific four-way R vocabulary. The
+`Row effects fixed` / `Row effects random` rows above are already ACCOUNTED in
+`tools/parity_ledger.R` as covering `grouping level × unit` /
+`grouping level × unit_obs` at a coarser granularity; whether that accounting
+also extends to `cluster` / `cluster2` is exactly the pairing these rows leave
+open. Flagged `partial - R pairing not established` for the same reason as the
+`select_lv()` / `anova()` row above.
 
 ## R bridge (`engine = "julia"`)
 
@@ -558,12 +630,45 @@ the merged feature PRs (#1192, #1196, #1216, #1217).
 
 New twin capability with **no Julia ledger vocabulary until now**:
 
-| Capability (twin 0.7.1 vocabulary) | Status |
+| Capability | Status |
 |---|---|
 | Response-column slope family (`slope()`, `phylo_slope()`, `animal_slope()`, `kernel_slope()`, `spatial_slope()`; Gaussian long-format, predictor-only) | missing |
 | Internal IID column coefficients (#1216) | missing |
 | Per-source iSDM observation formulas (#1192) | missing |
 | Column-slope covariance helpers incl. diagonal phylogenetic column slopes (#1196) | missing |
+
+**Header fixed 2026-09-25** (was `| Capability (twin 0.7.1 vocabulary) | Status |`,
+which `tools/parity_ledger.R`'s parser does not recognise as a Capability|Status
+table, so all four rows above were silently dropped from every join run before
+this fix). Running the join against this corrected header surfaces two of the
+four rows as UNDISPOSITIONED (the other two, `Internal IID column coefficients`
+and `Column-slope covariance helpers ...`, already join cleanly to R's aliased
+rows of the same name). Proposed dispositions for the two that do not join,
+**PROPOSED, NOT SIGNED** (a disposition in `tools/parity_ledger.R`'s own
+`PORT`/`ACCOUNTED`/`DIVERGENCE` tables requires editing that file, which lives
+in gllvmTMB and is out of scope here; the maintainer signs off on the actual
+tool edit):
+
+- `Response-column slope family (...; Gaussian long-format, predictor-only)`:
+  **PROPOSED PORT.** R's own row of the same name (minus this row's trailing
+  scope clause) is `scope-limited` (register FG-19, FG-15, PHY-06, ANI-06,
+  SPA-11, KER-04) and carries an Aliases cell that is this exact Julia string,
+  so R's own ledger already intends this pairing
+  (`dev/gapclose/build-capability-status.R`'s provenance note: "Where the
+  R-canonical name differs from GLLVM.jl's spelling of the same concept, the
+  Aliases column carries GLLVM.jl's exact string so `tools/parity_ledger.R`
+  still joins them"). The join still fails here because that Aliases cell has
+  a semicolon INSIDE its parenthetical, and `split_aliases()` splits on every
+  semicolon with no parenthesis-awareness, producing two malformed halves that
+  match neither this Julia string nor anything sensible. That parser bug lives
+  in `tools/parity_ledger.R`, in gllvmTMB, so it is not fixed here.
+- `Per-source iSDM observation formulas (#1192)`: **PROPOSED ACCOUNTED.**
+  `#1192` is gllvmTMB's own filed issue ("per-source observation models; hand-masked
+  bias columns fail silently; 34-48h to build", from gllvmTMB's 2026-08-20
+  handover) rather than a built R capability, so there is no register row to
+  join to on either side; this is not a Julia-ahead capability owed as a port,
+  and not a confirmed shared register row either. Track it via #1192 rather
+  than double-counting it here.
 
 Deltas to rows that already exist elsewhere in this ledger (no duplicate rows —
 the existing row keeps its status; the twin side moved):
@@ -664,8 +769,12 @@ experimental (#1189).
 - censored_poisson Identity + engine + admit (right-censored Poisson):
   `docs/dev-log/decisions/2026-08-15-censored-poisson-identity.md` ·
   `src/families/censored_poisson.jl` · `test/test_censored_poisson.jl` ·
-  `docs/dev-log/after-task/2026-08-15-censored-poisson-engine.md` — Julia-forward;
-  twin is constructor-only, so a light RCall Δ is **forbidden**, not owed
+  `docs/dev-log/after-task/2026-08-15-censored-poisson-engine.md` — Julia-forward.
+  **Corrected 2026-09-25**: gllvmTMB's `censored_poisson()` is no longer
+  constructor-only (PR #1254 built the engine behind the exported constructor,
+  id 21; R's own ledger now lists it `scope-limited`, FAM-25), so a light
+  RCall Δ is no longer forbidden by construction; it is simply not measured
+  yet and stays OWED
 - Hurdle-Poisson no-X surface admit (`fit_gllvm` + `@formula` fall-through):
   `src/families/fit_gllvm.jl` · `test/test_hurdle_poisson.jl` — empty marker
   `HurdlePoisson()`; +X / bridge remain OWED; twin light Δ
