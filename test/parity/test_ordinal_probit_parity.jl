@@ -26,9 +26,10 @@ using GLLVModels, RCall, Test, Random
     @test jl_fit.converged
     @test isfinite(jl_fit.loglik)
 
+    # parity_helpers.jl is included once by runparity.jl
+    _parity_require_gllvmtmb!()
     @rput Y K p n
     R"""
-    suppressPackageStartupMessages(library(gllvmTMB))
     trait_names <- paste0("t", seq_len(p))
     df_long <- data.frame(
         site  = factor(rep(seq_len(n), each = p)),

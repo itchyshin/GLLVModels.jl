@@ -23,6 +23,11 @@ All notable changes to GLLVModels.jl are documented here.
   still does not converge returns `-Inf`, so the fitter's failure sentinel fires.
   Values where the old search converged are unchanged (to 1e-8). Healthy fits run
   about 20 to 25 percent slower.
+- **Parity tools now refuse a wrong `GLLVM_PARITY_R_LIBS`, dev-only.** Seven `tools/core070_*`
+  parity scripts and `test/parity/parity_helpers.jl` called `library(gllvmTMB)` directly, so a
+  library named by `GLLVM_PARITY_R_LIBS` with no gllvmTMB was silently ignored in favour of R's
+  default library. They now route through the same guard as `tools/core070_second_order`
+  (`second_order_r_lib()`) and refuse instead. No effect on `gllvm`/`fit_gllvm`.
 - **Beta grouped fits no longer report convergence at a non-stationary point.**
   `fit_beta_gllvm_grouped` (the default route for `fit_gllvm(...; family = Beta())`)
   and `fit_beta_gllvm_grouped_cov` could report `converged = true` after Optim stopped
