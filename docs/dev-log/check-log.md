@@ -17,6 +17,7 @@
 - Near-exact AGHQ check (skeptic-verified): the Laplace ranking of these maxima can be off by
   about 0.3 in either direction; on seed 52 the interior Laplace maximum is an artefact and the
   restart's boundary answer is right.
+- Totoro (fresh clone of PR head `025df3fca`), 4.2 min: core test 10 of 10; developer check passes with the Mac's numbers.
 - After-task: `docs/dev-log/after-task/2026-09-24-nb2-boundary-restart-and-finite-parity.md`.
 
 ## 2026-09-24: closeout OWED 2 and 4 decided (A, A) and carried out

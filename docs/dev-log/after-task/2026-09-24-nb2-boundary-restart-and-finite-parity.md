@@ -82,6 +82,7 @@ inside its estimate.
 | Chosen dataset, all 15 single and pair pushes (`nb2_pairs_check.out`) | every push 1.27 to 6.51 lower |
 | Developer parity check, Mac | interior data: Δ logLik 4.95e-8 (2.4e-11 relative), every r within 1e-5, estimates 0.89 to 1.15 (true 1); NATIVE-06 boundary agreement passes |
 | NATIVE-06 Julia fit before vs after | identical, logLik −820.5485342071867 |
+| Totoro, Julia 1.10.12, R 4.5.3, Track A's oracle, fresh clone of PR head `025df3fca`, 4.2 min | core test 10 of 10; developer check passes with the Mac's numbers (interior data Δ logLik 4.9537e-8) |
 
 **Laplace against near-exact integration (AGHQ), verified by an independent skeptic.** An
 evaluator built from the package's own NB2 pieces reproduces the package Laplace value with one
