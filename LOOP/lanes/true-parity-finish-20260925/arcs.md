@@ -10,11 +10,11 @@ Status: TODO / RUNNING / PR-OPEN #n / STOPPED (reason) / DONE. Gates flagged wit
 | S4 | A-03 truncated-NB2 second-order cell to the per-trait route | PR-OPEN #493 draft (Wald CI rel 0.372 FAIL -> 5.8e-5 PASS; per-trait is NOT default dispatch; adds src _family_ci for the per-trait fit: REVIEW) | G if it needs a required-cell edit |
 | S5 | A-09 reverse-gap classes for 91 Julia exports + D8 text | RUNNING | classes proposed, maintainer signs |
 | S6 | A-12 cross-audit issue triage | RUNNING | close only with a receipt |
-| S7 | X-06 sibling screen of unprobed suspects (mixed, beta-binomial, NB1, hurdle/delta, GP1, COMPoisson, ordered beta, Student t, ordinal) | TODO | |
+| S7 | X-06 sibling screen of unprobed suspects (mixed, beta-binomial, NB1, GP1, COMPoisson, ordered beta, Student t, ordinal) | RUNNING | |
 | S8 | cov-Gamma fix (`_laplace_mode_off` + family build in try) | PR-OPEN #494 draft (Fixes #486; 33/33 new, 21 files unchanged; Binomial 2/8 now not converged) | |
 | S8b | Audit follow-ups: issues for two-part kernel (Class A) and `_fit_verdict` (Class B) | DONE | #484 two-part, #485 verdict, #486 covariate kernel; receipts in docs/dev-log/core070/class-audit-20260924/ on the lane branch |
 | S7b | Two-part kernel fix PR for #484 (pattern of #481) | RUNNING | R zero-inflated families post-date 0.7.0 (B-06); correctness fix regardless |
-| S8c | Class B central fix draft PR (`_fit_verdict` needs a gradient check) | TODO | G: changes converged flags across ~85 fitters; maintainer decides |
+| S8c | Class B central fix draft PR (`_fit_verdict` needs a gradient check) | RUNNING (flip list is the product) | G: changes converged flags across ~85 fitters; maintainer decides |
 | S9 | A-05 realistic-size Binomial-logit cell on Totoro (Beta after #483) | PR-OPEN #491 (113 s; logLik delta 6.6e-8; SE 8.1e-6, vcov 1.2e-5 PASS; cond 162 / 858). REVIEW: DGP intercept changed after a separated first run whose log was not kept | D-139 estimate first |
 | S10 | Decision packet | DRAFT on lane branch (54d266e51) |
 | S13 | User-requested: docstring that Julia 1.10 parses as a link (docs build fails on 1.10) | PR #492 merge-when-green gate running (1.10.12 build exit 1 -> 0; sweep of 738 docstrings + 32 pages: 1 -> 0) | |
