@@ -249,18 +249,26 @@ _dispersion_group_boundary(dvec::AbstractVector{<:Real}) =
     Bool[(d > 1e6) || (d < 1e-6) for d in dvec]
 
 # NB2 grouped fits can stall with a group's log r out at the Poisson boundary, where
-# the likelihood is nearly flat, below the optimum (#477). Restart once from the
-# returned point with those groups at r = 1, and keep the restart only if it lowers
-# the negative log-likelihood by more than 1e-6. Fits that never reach the boundary,
-# and genuine boundary fits, are returned unchanged.
+# the likelihood is nearly flat, well below a better point (#477). From the returned
+# point, restart with the boundary groups at r = 1: all of them together and, when
+# there are several, each one on its own (a group can genuinely belong at the
+# boundary while another does not). Keep the best result, and only if it lowers the
+# negative log-likelihood by more than 1e-6. Fits that never reach the boundary are
+# returned unchanged. The likelihood can have several maxima on small data, so this
+# is a better local search, not a guarantee of the global maximum.
 function _nb_boundary_restart(negll, res, ls, opts, first_log_r::Integer)
     θ = Optim.minimizer(res)
     bd = findall(_dispersion_group_boundary(exp.(θ[first_log_r:end])))
     isempty(bd) && return res
-    θs = copy(θ)
-    θs[first_log_r - 1 .+ bd] .= 0.0
-    res2 = Optim.optimize(negll, θs, ls, opts; autodiff = :finite)
-    return Optim.minimum(res2) < Optim.minimum(res) - 1e-6 ? res2 : res
+    trials = length(bd) == 1 ? [bd] : vcat([bd], [[g] for g in bd])
+    best = res
+    for groups in trials
+        θs = copy(θ)
+        θs[first_log_r - 1 .+ groups] .= 0.0
+        trial = Optim.optimize(negll, θs, ls, opts; autodiff = :finite)
+        Optim.minimum(trial) < Optim.minimum(best) - 1e-6 && (best = trial)
+    end
+    return best
 end
 
 """
@@ -345,10 +353,13 @@ Fit a negative-binomial GLLVM with grouped / species-specific dispersion (gllvm'
 length-p vector of group ids (relabelled to `1..G` internally). L-BFGS over
 `[β; vec(Λ); log r_1 … log r_G]`; finite-difference gradient; warm start from
 empirical log-means + SVD loadings + a moderate per-group `r₀`. If a group's `r`
-ends at the Poisson boundary (outside `[1e-6, 1e6]`), the fit restarts once from
-that point with those groups at `r = 1` and keeps the restart only if its
-log-likelihood is higher by more than `1e-6`; otherwise the boundary fit stands and
-is flagged in `dispersion_boundary`. With one group this
+ends at the Poisson boundary (outside `[1e-6, 1e6]`), the fit restarts from that
+point with the boundary groups at `r = 1` (together, and each on its own when there
+are several) and keeps the best restart only if its log-likelihood is higher by
+more than `1e-6`; otherwise the boundary fit stands and is flagged in
+`dispersion_boundary`. `iterations` then counts the kept run only. On small data the
+likelihood can have several maxima, so this improves the local search but does not
+guarantee the global maximum. With one group this
 matches [`fit_nb_gllvm`](@ref) when `hessian=:fisher`. `hessian=:observed` (the
 default) uses the exact conditional NB2/log curvature used by TMB's Laplace
 objective; set `hessian=:fisher` to retain the expected-information approximation.
