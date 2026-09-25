@@ -1,4 +1,4 @@
-using GLLVModels, Test, SHA, TOML, Random, LinearAlgebra, Distributions, Logging
+using GLLVModels, Test, SHA, TOML, Random, LinearAlgebra, Distributions
 
 # fit_gllvm_cov(Y; family = Gamma(...), X, K) threw DomainError("Gamma: alpha > 0") on
 # ordinary Gamma data. Two faults, both in src/families/covariates.jl:
@@ -102,7 +102,7 @@ function _cms_indep_gamma_site(y, Λ, η0, α)
     return h(z) - 0.5 * logdet(H)
 end
 
-_cms_quiet(f) = with_logger(f, NullLogger())
+_cms_quiet(f) = Base.CoreLogging.with_logger(f, Base.CoreLogging.NullLogger())
 
 @testset "fit_gllvm_cov offset mode search: damped, fails loudly, no DomainError" begin
     G = GLLVModels
