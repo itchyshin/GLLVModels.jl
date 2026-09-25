@@ -99,7 +99,7 @@ skeptic reproduced the numbers with a separate evaluator.
   understates the seed-52 boundary point by 0.236. Two datasets only; no general direction is
   established.
 
-Scripts are in scratch (`/tmp/claude-503/nb2-aghq/`), not committed.
+Scripts and logs: `docs/dev-log/core070/nb2-boundary-screen-20260924/aghq/`.
 
 ## 6. Tests of the Tests
 
@@ -142,8 +142,8 @@ Scripts are in scratch (`/tmp/claude-503/nb2-aghq/`), not committed.
 
 - **Decision for Shinichi:** should the NB2 fit go further than the restart? The AGHQ check says
   the Laplace ranking of these maxima can be off by about 0.3 in either direction, so a wider
-  Laplace search is not the honest route; an NB2 AGHQ fit would be. The evaluator exists in
-  scratch.
+  Laplace search is not the honest route; an NB2 AGHQ fit would be. The evaluator is in the
+  receipts folder.
 - A fit that reaches the boundary now costs one to three more optimisations, including inside
   the bootstrap.
 - `fit_nb_gllvm_grouped_cov` and the Beta, Gamma, NB1 and Tweedie grouped fitters share the start
