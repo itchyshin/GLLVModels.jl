@@ -21,3 +21,13 @@ at that oracle library.
 
 The final restart resets the boundary groups together and, when there are several, each on its
 own, and keeps the best only if it is better by more than 1e-6.
+
+## `aghq/`: Laplace against near-exact integration (seeds 46 and 52, n = 80, r = 1)
+
+An adaptive Gauss-Hermite evaluator built from the package's own NB2 pieces
+(`aghq_nb2_eval_lib.jl`). With one node it reproduces the package Laplace value (|Δ| 4.5e-13);
+it converges by 15 nodes, and a brute-force trapezoid grid agrees to 3e-8. An independent
+skeptic reproduced the ranking and margins with its own evaluator. The scripts use absolute
+paths from the run (`/tmp/claude-503/nb2-aghq`); logs are the printed output. Result: on seed 46
+the Laplace lead of the boundary point (0.317) is a tie under AGHQ (0.013); on seed 52 the
+boundary point really is higher (0.419) and the interior Laplace maximum is an artefact.
