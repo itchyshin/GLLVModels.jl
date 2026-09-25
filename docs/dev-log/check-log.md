@@ -1,3 +1,16 @@
+## 2026-09-24: Beta grouped fits report convergence only at a stationary point (#480)
+
+- Branch `claude/beta-convergence-480`, rebased on `origin/main` after #481 (Gamma) merged. Beta grouped fits
+  (plain and covariate) gate `converged` on a scale-aware gradient test and restart when Optim
+  stops without it; `_fit_verdict` is unchanged.
+- d05 of the sibling screen: 265.976 ("converged", gradient 6.0) becomes 272.609 (gradient 6e-6).
+  New test `test/test_beta_grouped_convergence.jl` 19 of 19 (5 fail and 1 error on the old code).
+  Beta-related core files pass; `test_beta_parity.jl` 8 of 8 and `test_x_covariate_parity.jl`
+  65 of 65 against the frozen oracle; NATIVE-08-BETA stays `converged = true`.
+- Independent review returned blockers on the first (absolute) gate; the scale-aware gate
+  resolves them. Remaining cause of honest `converged = false`: the inner mode search (#482).
+- After-task: `docs/dev-log/after-task/2026-09-24-beta-grouped-convergence.md`.
+
 ## 2026-09-24: Gamma grouped mode search no longer diverges silently (#479)
 
 - Branch `claude/gamma-mode-search-479` from `origin/main` @ `d9bc77412`. `_gamma_grouped_loglik_site`

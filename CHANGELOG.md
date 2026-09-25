@@ -23,6 +23,15 @@ All notable changes to GLLVModels.jl are documented here.
   still does not converge returns `-Inf`, so the fitter's failure sentinel fires.
   Values where the old search converged are unchanged (to 1e-8). Healthy fits run
   about 20 to 25 percent slower.
+- **Beta grouped fits no longer report convergence at a non-stationary point.**
+  `fit_beta_gllvm_grouped` (the default route for `fit_gllvm(...; family = Beta())`)
+  and `fit_beta_gllvm_grouped_cov` could report `converged = true` after Optim stopped
+  on a zero-length line-search step with a large gradient, well below a better point
+  (#480). They now report convergence only when the gradient meets a scale-aware test,
+  `g_residual <= max(g_tol, g_tol * |nll|)` (the rule the Tweedie fitter uses), and
+  otherwise restart once from a neutral start and once from the returned point,
+  keeping the best only if it is better. Some fits that used to claim convergence now
+  report `converged = false`; the cause there is the inner mode search (#482).
 - **NB2 with per-trait dispersion: fewer fits stuck at the Poisson boundary.**
   `fit_nb_gllvm_grouped`, the default no-covariate route for
   `fit_gllvm(...; family = NegativeBinomial())`, could stop with a trait's `r`

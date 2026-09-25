@@ -687,7 +687,8 @@ Result of [`fit_beta_gllvm_grouped`](@ref): intercepts `β` (length p), loadings
 (length G, T14 F1, 2026-09-02) flags groups whose fitted `φ[g]` fell outside
 `[1e-6, 1e6]` (see `_dispersion_group_boundary`) — the near-Bernoulli
 maximal-variance limit at the lower end, the near-deterministic collapse at the
-upper end; `converged` is forced `false` whenever any group is flagged.
+upper end; `converged` is forced `false` whenever any group is flagged, and is
+`true` only when the optimizer's gradient criterion was met (#480).
 """
 struct BetaGroupedFit
     β::Vector{Float64}
@@ -746,6 +747,33 @@ function getLV(fit::BetaGroupedFit, Y::AbstractMatrix{<:Real};
                           rotate = rotate, mask = mask)
 end
 
+# Beta grouped fits can stop on a zero-length line-search step, which Optim counts as
+# "the objective did not change" (f_converged) and reports as converged, while the
+# gradient is still large (#480; screen dataset d05: Optim g residual 9.06 against
+# g_tol 1e-5, logLik 265.976 where a fresh start reaches 272.609). When the run stops
+# without Optim's gradient criterion, restart once from the warm start with every
+# log φ = 0 and once from the returned point, and keep the best run only if it lowers
+# the negative log-likelihood by more than 1e-6. A run that meets the gradient
+# criterion is returned as it is. `first_log_phi` indexes the first log φ in θ; the
+# log φ block runs to the end of θ.
+# Scale-aware gradient test, as in `_tweedie_verdict`: the residual is judged against
+# `g_tol` scaled by the objective's own size, so a caller's g_tol below the
+# finite-difference noise floor does not turn a stationary point into a non-converged fit.
+_beta_grouped_g_met(res, g_tol) = (gres = Optim.g_residual(res);
+    isfinite(gres) && gres <= max(g_tol, g_tol * abs(Optim.minimum(res))))
+
+function _beta_grouped_gradient_restart(negll, res, θ_warm, ls, opts, first_log_phi::Integer)
+    _beta_grouped_g_met(res, Optim.g_tol(res)) && return res
+    θa = copy(θ_warm)
+    θa[first_log_phi:end] .= 0.0
+    best = res
+    for θs in (θa, copy(Optim.minimizer(res)))
+        trial = Optim.optimize(negll, θs, ls, opts; autodiff = :finite)
+        Optim.minimum(trial) < Optim.minimum(best) - 1e-6 && (best = trial)
+    end
+    return best
+end
+
 """
     fit_beta_gllvm_grouped(Y; K, group, link=LogitLink(), mask=nothing, offset=nothing,
                            hessian=:observed, …) -> BetaGroupedFit
@@ -754,7 +782,12 @@ Fit a Beta GLLVM with grouped / species-specific precision (gllvm's `disp.group`
 species `t` shares precision `φ[group[t]]`. `group` is a length-p vector of group
 ids (relabelled to `1..G` internally; default `1:p` = per-species). L-BFGS over
 `[β; vec(Λ); log φ_1 … log φ_G]`; finite-difference gradient; warm start from
-empirical logit-mean intercepts + SVD loadings + a moderate per-group `φ₀`. With one
+empirical logit-mean intercepts + SVD loadings + a moderate per-group `φ₀`.
+`converged` is `true` only when the optimizer's gradient criterion (`g_tol`) is met.
+If the first run stops without it, the fit restarts once from the warm start with
+every `φ = 1` and once from the returned point, and keeps the best run only if its
+log-likelihood is higher by more than `1e-6`; `iterations` then counts the kept run
+only. This improves the local search but does not guarantee the global maximum. With one
 group this matches [`fit_beta_gllvm`](@ref). `hessian=:observed` (the default)
 uses the exact conditional Beta/logit curvature used by TMB's Laplace objective;
 set `hessian=:fisher` to retain the expected-information approximation.
@@ -803,8 +836,9 @@ function fit_beta_gllvm_grouped(Y::AbstractMatrix; K::Integer,
         return isfinite(v) ? v : 1e12
     end
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
-    res = Optim.optimize(negll, θ0, ls, Optim.Options(g_tol = g_tol, iterations = iterations);
-                         autodiff = :finite)
+    opts = Optim.Options(g_tol = g_tol, iterations = iterations)
+    res = Optim.optimize(negll, θ0, ls, opts; autodiff = :finite)
+    res = _beta_grouped_gradient_restart(negll, res, θ0, ls, opts, p + rr + 1)
     θ̂ = Optim.minimizer(res)
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
@@ -812,6 +846,7 @@ function fit_beta_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     boundary = _dispersion_group_boundary(φ̂g)
     any(boundary) && @warn "Beta grouped-dispersion fit reached the per-group boundary (φ outside [1e-6, 1e6]) for group(s) $(findall(boundary)); those groups' precision is at the near-Bernoulli or near-deterministic limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
     loglik, conv, iters = _fit_verdict(res)
+    conv = conv && _beta_grouped_g_met(res, g_tol)   # #480: a zero-length step is not convergence
     return BetaGroupedFit(β̂, Λ̂, φ̂g, gidx, link, loglik, conv && !any(boundary), iters, hessian,
                           boundary)
 end
@@ -826,7 +861,7 @@ precision `φ`, species→group map `group`, `link`, maximised Laplace `loglik`,
 precision `φ[group[t]]`. `dispersion_boundary` (length G, T14 F1, 2026-09-02)
 flags groups whose fitted `φ[g]` fell outside `[1e-6, 1e6]` (see
 `_dispersion_group_boundary`); `converged` is forced `false` whenever any group
-is flagged.
+is flagged, and is `true` only when the optimizer's gradient criterion was met (#480).
 """
 struct BetaGroupedCovFit
     β::Vector{Float64}
@@ -894,7 +929,10 @@ Fit a Beta GLLVM with **grouped / per-trait precision** and **shared site
 covariates** `X` (`p×n×q`). Working vector `[β; γ_free; pack(Λ); log φ_1 … log φ_G]`;
 offset `O = Xγ` is passed into the grouped Laplace marginal. Default
 `hessian=:observed` matches TMB; identity checks against shared
-[`fit_gllvm_cov`](@ref) should force `hessian=:fisher`. Public / bridge default
+[`fit_gllvm_cov`](@ref) should force `hessian=:fisher`. `converged` requires the
+optimizer's gradient criterion, and a run that stops without it gets the same
+restart as [`fit_beta_gllvm_grouped`](@ref) (warm start with `γ = 0` and every
+`φ = 1`, and the returned point; kept only if better by more than `1e-6`). Public / bridge default
 under X for Beta (twin API B). Keep `fit_gllvm_cov` for the shared-`φ` + X opt-in.
 """
 function fit_beta_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3},
@@ -947,8 +985,9 @@ function fit_beta_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 
         return isfinite(v) ? v : 1e12
     end
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
-    res = Optim.optimize(negll, θ0, ls, Optim.Options(g_tol = g_tol, iterations = iterations);
-                         autodiff = :finite)
+    opts = Optim.Options(g_tol = g_tol, iterations = iterations)
+    res = Optim.optimize(negll, θ0, ls, opts; autodiff = :finite)
+    res = _beta_grouped_gradient_restart(negll, res, θ0, ls, opts, p + q + rr + 1)
     θ̂ = Optim.minimizer(res)
     β̂ = θ̂[1:p]
     γ̂_free = θ̂[(p + 1):(p + q)]
@@ -958,6 +997,7 @@ function fit_beta_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 
     boundary = _dispersion_group_boundary(φ̂g)
     any(boundary) && @warn "Beta grouped-cov fit reached the per-group boundary (φ outside [1e-6, 1e6]) for group(s) $(findall(boundary)); those groups' precision is at the near-Bernoulli or near-deterministic limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
     loglik, conv, iters = _fit_verdict(res)
+    conv = conv && _beta_grouped_g_met(res, g_tol)   # #480: a zero-length step is not convergence
     return BetaGroupedCovFit(β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, φ̂g, gidx, link,
                              loglik, conv && !any(boundary), iters, hessian, boundary)
 end
