@@ -1,8 +1,20 @@
-# Arcs — from the approved ultra-plan
+# Arcs: true-parity-finish-20260925
 
-| # | arc | status | gate? |
-|---|-----|--------|-------|
-| 1 | <...> | todo | — |
+Status: TODO / RUNNING / PR-OPEN #n / STOPPED (reason) / DONE. Gates flagged with a G.
 
-Status: todo / doing / done / paused / blocked. `paused` = awaiting Shinichi's named decision;
-`blocked` = external dependency. Ordinary repair work remains `doing`.
+| id | arc | status | notes |
+|---|---|---|---|
+| S1 | A-13 gate-tier scoreboard (32 rows + the 42-vs-32 count) | TODO | draft PR |
+| S2 | A-04 R-library guard for 7 tools + parity_helpers fail-closed | TODO | |
+| S3 | A-08/A-10/A-11 docs truth (capability-status, parity page, stale docs) | TODO | |
+| S4 | A-03 truncated-NB2 second-order cell to the per-trait route | TODO | G if it needs a required-cell edit |
+| S5 | A-09 reverse-gap classes for 91 Julia exports + D8 text | TODO | classes proposed, maintainer signs |
+| S6 | A-12 cross-audit issue triage | TODO | close only with a receipt |
+| S7 | X-06 sibling screen of unprobed suspects (mixed, beta-binomial, NB1, hurdle/delta, GP1, COMPoisson, ordered beta, Student t, ordinal) | TODO | |
+| S8 | cov-Gamma fix (`_laplace_mode_off` + family build in try) | RUNNING | agent a733f81ccc566ab69 |
+| S8b | Audit follow-ups: issues for two-part kernel (Class A) and `_fit_verdict` (Class B) | TODO | |
+| S8c | Class B central fix draft PR (`_fit_verdict` needs a gradient check) | TODO | G: changes converged flags across ~85 fitters; maintainer decides |
+| S9 | A-05 realistic-size Binomial-logit cell on Totoro (Beta after #483) | TODO | D-139 estimate first |
+| S10 | Decision packet | TODO | |
+| S11 | Adversarial review per code PR; Rose on scoreboard + packet | TODO | |
+| S12 | Close: handover, after-task, plan-vs-actual, vault log | TODO | |
