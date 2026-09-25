@@ -1,18 +1,22 @@
-## 2026-09-24: NB2 boundary-stall fix (#477) and finite-dispersion developer parity check (#476, B-lite)
+## 2026-09-24: NB2 boundary restart (#477) and B-lite developer parity check (#476)
 
-- Branch `claude/nb2-finite-dispersion-parity-20260924` on #475's branch. `fit_nb_gllvm_grouped`
-  restarts once, with boundary groups at `r = 1`, when a group ends outside `[1e-6, 1e6]`, and
-  keeps the restart only if the log-likelihood rises by more than 1e-6.
-- Measured: current code stopped 0.65 to 1.56 log-likelihood units below the optimum on 3 of 10
-  NATIVE-06-design datasets; the fix recovers all 3 and changes nothing else screened. New core
-  test `test/test_nb_boundary_restart.jl`: 3 fail before, 5 of 5 after. Eleven existing test files
-  that use the fitter all pass (Julia 1.10.12). NATIVE-06's Julia fit is identical before and after.
-- New developer parity check `test/parity/test_nb2_finite_dispersion_parity.jl` (outside the
-  frozen contract): on stored finite-dispersion data both engines agree to 2.5e-11 in logLik and
-  2e-5 in every `r`; on NATIVE-06 both put traits 1 and 3 at the boundary. R's gradient is
-  recorded, not gated.
-- Totoro (Julia 1.10.12, R 4.5.3, Track A's oracle, same tree as the local commit), 4.75 min:
-  regression test 5 of 5; developer check passes with the same numbers as the Mac.
+- PR #478. `fit_nb_gllvm_grouped` restarts, when groups end outside `[1e-6, 1e6]`, with the
+  boundary groups at `r = 1` (together, and each on its own) and keeps the best result only if
+  the log-likelihood rises by more than 1e-6.
+- Final-code screen, 16 NATIVE-06-design datasets (receipts in
+  `docs/dev-log/core070/nb2-boundary-screen-20260924/`): the restart lifted 7 fits by 0.46 to
+  2.59 and lowered none; the new fit is never below gllvmTMB and is above it on 6. A higher
+  Laplace point with one more trait at the Poisson limit remains on 7 (0.10 to 0.69), so the fix
+  is a better local search, not a global optimum.
+- Core test `test/test_nb_boundary_restart.jl` 10 of 10 (seed 46, seed 52, and a toy check of both
+  branches of the restart). Eleven existing test files that use the fitter pass on the final code.
+  NATIVE-06's Julia fit is identical before and after.
+- Developer parity check on an n = 200 dataset whose interior maximum survives pushing any trait
+  or pair to the boundary: Julia and gllvmTMB agree to 2.4e-11 relative in logLik and 1e-5 in
+  every `r`. NATIVE-06 boundary agreement passes. R's gradient recorded, not gated.
+- Near-exact AGHQ check (skeptic-verified): the Laplace ranking of these maxima can be off by
+  about 0.3 in either direction; on seed 52 the interior Laplace maximum is an artefact and the
+  restart's boundary answer is right.
 - After-task: `docs/dev-log/after-task/2026-09-24-nb2-boundary-restart-and-finite-parity.md`.
 
 ## 2026-09-24: closeout OWED 2 and 4 decided (A, A) and carried out
