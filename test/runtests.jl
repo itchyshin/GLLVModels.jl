@@ -318,6 +318,7 @@ println(_SHARD === nothing ?
     _shard_include("test_phylo_poisson_xlv.jl")
     _shard_include("test_twopart_substrate.jl")
     _shard_include("test_twopart_alloc_equiv.jl")
+    _shard_include("test_twopart_mode_search.jl")
     _shard_include("test_delta_fit.jl")
     _shard_include("test_delta_shared_predictor.jl")
     _shard_include("test_delta_disp_group.jl")
