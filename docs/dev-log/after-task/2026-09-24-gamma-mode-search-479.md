@@ -104,7 +104,9 @@ All runs used Julia 1.10.12, single-threaded, with the test environment built fr
 
 ## 6. Tests of the Tests
 
-- **The test fails on the unfixed code.** 12 of 18 assertions fail:
+- **The test fails on the unfixed code.** 11 of 18 assertions fail, measured by the independent
+  reviewer against the verbatim `origin/main` kernel. (My first run showed 12; the twelfth came
+  from a mis-set guard in an earlier draft of the test, since corrected.) The failures:
   - site 7 is off by 7.2e22 from the independent evaluator;
   - `maxiter = 2` returns finite values instead of -Inf;
   - the `newton_maxiter = 2` fit reported -567.572 as if converged;
@@ -166,6 +168,15 @@ Neither comment was edited.
 - **R parity suite not run.** The twin library path in the parity README (`/tmp/R-gllvmtmb-x-parity-20260802`) no longer exists. Instead, the Julia fits of the Gamma parity cells were shown identical before and after, to 12 decimals.
 - **Sibling kernels keep the weakness** (section 8), including the throwing `fit_gllvm_cov` Gamma route.
 - **Iteration counts changed** on some fits whose optimum did not (dataset 7: 350 to 423).
+- **Runtime.** An independent reviewer measured healthy fits about 20 to 25 percent slower with
+  the same log-likelihood and iteration count (for example 2.02 s to 2.53 s), from the extra
+  log-posterior evaluation on large steps. Measured while another Julia job ran, so approximate.
+- **One platform.** The public-fit assertions were run on macOS aarch64 with Julia 1.10.12; CI's
+  Linux shards are the cross-platform check.
+
+Review: an independent adversarial reviewer returned **ok-with-notes**. It reproduced the fix
+on 21,200 stress-site evaluations (converged values unchanged to 6.6e-9, no new -Inf) and
+raised the count, runtime and docstring notes now reflected here.
 
 ## 11. Team Learning
 

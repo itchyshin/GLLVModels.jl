@@ -1,3 +1,14 @@
+## 2026-09-24: Gamma grouped mode search no longer diverges silently (#479)
+
+- Branch `claude/gamma-mode-search-479` from `origin/main` @ `d9bc77412`. `_gamma_grouped_loglik_site`
+  now uses a damped mode search (`_gamma_grouped_mode`): step halving on the site objective, a
+  damped Newton fallback under the log link, and `-Inf` for a site that still does not converge.
+- Seed-2 case of the sibling screen: −610.2247 (2 iterations, "converged") becomes −567.2326.
+  New test `test/test_gamma_grouped_mode_search.jl` 18 of 18 (11 fail on the old kernel); 11
+  existing files that reach the Gamma grouped code pass. Independent review: ok-with-notes,
+  converged values unchanged to 6.6e-9 over 21,200 stress-site evaluations.
+- After-task: `docs/dev-log/after-task/2026-09-24-gamma-mode-search-479.md`.
+
 ## 2026-09-24: NB2 boundary restart (#477) and B-lite developer parity check (#476)
 
 - PR #478. `fit_nb_gllvm_grouped` restarts, when groups end outside `[1e-6, 1e6]`, with the

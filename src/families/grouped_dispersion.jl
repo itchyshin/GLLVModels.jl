@@ -1063,8 +1063,8 @@ function _gamma_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::
     z, ok = _gamma_grouped_mode(fams, y, n, Λ, β, link, :fisher;
                                 mask = mask, offset = offset, maxiter = maxiter, tol = tol)
     # Fallback (#479). Fisher scoring converges only linearly for Gamma/log and can
-    # stall even with halving (measured: no convergence in 2000 iterations on the #479
-    # site). Under LogLink the observed weight α·y/μ is >= 0 for every admissible
+    # take far longer than `maxiter` even with halving (measured: 1532 iterations on the
+    # #479 site at the fitter's warm start, contraction factor about 0.991). Under LogLink the observed weight α·y/μ is >= 0 for every admissible
     # response (masked cells are zeroed), so `Λ'WΛ + I` stays SPD and the step is exact
     # damped Newton on a strictly concave per-site objective (measured: at most 6
     # iterations on every site probed across the sibling screen's 10 datasets). It
@@ -1101,10 +1101,12 @@ Total Laplace log-marginal of a Gamma GLLVM with **per-species** shape `αvec`
 (length p; `Var_t = μ_t²/αvec[t]`). `Y` is the p×n matrix of positive reals; `Λ`
 p×K; `β` length-p. With a constant `αvec = fill(α, p)` this equals the shared-shape
 [`gamma_marginal_loglik_laplace`](@ref) to machine precision when
-`hessian=:fisher` (the default). `hessian=:observed` uses the conditional
-Gamma/log Hessian used by TMB's Laplace objective. If any site's mode search does
-not converge within `maxiter` (default 100) to `tol` (default 1e-9), the total is
-`-Inf`, never a value computed at an unconverged mode (#479).
+`hessian=:fisher`. `hessian=:observed` (the default) uses the conditional
+Gamma/log Hessian used by TMB's Laplace objective. If any site's mode search fails
+to converge to `tol` (default 1e-9), the total is `-Inf`, never a value computed at
+an unconverged mode (#479). The search is Fisher scoring with step halving for up to
+`maxiter` steps (default 100) and, under `LogLink`, a damped Newton search of up to
+`maxiter` more.
 """
 function gamma_grouped_marginal_loglik_laplace(Y::AbstractMatrix, Λ::AbstractMatrix,
         β::AbstractVector, αvec::AbstractVector; link::Link = LogLink(),
