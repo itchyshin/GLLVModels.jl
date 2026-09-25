@@ -32,6 +32,20 @@ All notable changes to GLLVModels.jl are documented here.
   otherwise restart once from a neutral start and once from the returned point,
   keeping the best only if it is better. Some fits that used to claim convergence now
   report `converged = false`; the cause there is the inner mode search (#482).
+- **Zero-inflated, hurdle and delta fits no longer score an unfinished inner search.**
+  The per-site mode search behind `fit_zip_gllvm`, `fit_zinb_gllvm` and
+  `fit_zib_gllvm` (and their `_cov` variants), the hurdle Poisson and NB fitters, the
+  delta Gamma and lognormal fitters and `fit_beta_hurdle_gllvm` took full Fisher steps
+  and stopped after 100 of them with no signal. The site was then scored wherever the
+  search had stopped, and the value was finite, so a fit could report
+  `converged = true` well below the optimum: -935.296 on the ZIP case in #484, where a
+  restart reaches -920.603. The search now halves steps that lower the site objective
+  and, where Fisher scoring does not converge, continues with damped Newton on the
+  observed curvature. A site that still does not converge returns `-Inf`, so the
+  fitter's failure sentinel fires. Site values where the old search converged are
+  unchanged (to 1e-8). On the audit datasets three ZIP and ZINB fits rose by 7.5 to 34.7
+  log-likelihood units and now stop at a stationary point; two clean fits stayed at the
+  same point. `getLV` for these families uses the same search. Fixes #484.
 - **NB2 with per-trait dispersion: fewer fits stuck at the Poisson boundary.**
   `fit_nb_gllvm_grouped`, the default no-covariate route for
   `fit_gllvm(...; family = NegativeBinomial())`, could stop with a trait's `r`

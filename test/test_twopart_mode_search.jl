@@ -120,6 +120,25 @@ end
 @testset "Two-part mode search: damped, and fails loudly (#484)" begin
     G = GLLVModels
 
+    @testset "each two-part family's score is the derivative of its own log-density" begin
+        # The damped search accepts a step only if it raises the site log-posterior, so the
+        # score that sets the step must be the gradient of that log-posterior. Before #484,
+        # HurdleNB's positive-part score lacked the NB2 factor r/(r + mu) (off by up to a
+        # factor 2.5 here), so its search converged to a point that is not the mode.
+        fams = ((G.ZIPoisson(), (0, 1, 3, 9)), (G.ZINB(2.0), (0, 1, 5, 20)), (G.ZIB(10), (0, 1, 4, 10)),
+                (G.HurdlePoisson(), (0, 1, 2, 7)), (G.HurdleNB(3.0), (0, 1, 2, 7, 30)),
+                (G.DeltaGamma(2.0), (0.0, 0.3, 1.7)), (G.DeltaLogNormal(0.7), (0.0, 0.4, 2.2)),
+                (G.BetaHurdle(5.0), (0.0, 0.1, 0.6)))
+        for (fam, ys) in fams
+            worst = 0.0
+            for y in ys, ηc in (-1.5, 0.3, 1.5), ηz in (-1.0, 0.5)
+                d = ForwardDiff.derivative(e -> G._tp_pieces(fam, y, ηz, e)[5], ηc)
+                worst = max(worst, abs(G._tp_pieces(fam, y, ηz, ηc)[2] - d) / max(1, abs(d)))
+            end
+            @test worst < 1e-10
+        end
+    end
+
     @testset "ZIP seed-101 truth: every site reaches its mode and its true Laplace value" begin
         # Before: 9 of 80 sites stopped at maxiter = 100; the objective read -10085.3 and the
         # worst site -4871 against -21.25.
@@ -162,6 +181,27 @@ end
         fit = G.fit_zip_gllvm(Y; K = K, newton_maxiter = 1)
         @test !fit.converged
         @test fit.loglik == -Inf
+    end
+
+    @testset "stress sites: the step halving and the Newton guard are both needed" begin
+        # Step halving in the Fisher stage. At a heavily zero-inflated stress point built
+        # from the ZIP seed-101 truth (loadings x3, count intercepts - 1, zero-inflation
+        # logits + 2), undamped Fisher scoring leaves sites 23 and 78 where the Newton
+        # fallback cannot recover.
+        Y, ds, K = _tp484_data("zip_s101")
+        p = size(Y, 1)
+        βz = Float64.(ds["truth_beta_z"]) .+ 2.0; βc = Float64.(ds["truth_beta_c"]) .- 1.0
+        Λc = 3.0 .* reshape(Float64.(ds["truth_Lambda_c_column_major"]), p, K)
+        worst = maximum(abs(G.twopart_loglik_site(G.ZIPoisson(), Y[:, s], zeros(p, K), Λc, βz, βc) -
+                            _tp484_indep_site(Y[:, s], Λc, βz, βc)) for s in (23, 78))
+        @test worst < 1e-6
+        # The Newton guard. Two zero counts at a high Poisson mean: the observed
+        # curvature is negative (the zero-inflated mixture bends the wrong way), so the
+        # Newton matrix is indefinite on the way to the mode (z = -1.13) and its negative
+        # weights must be dropped for the step to climb.
+        y2 = [0, 0]; Λ2 = fill(2.5, 2, 1); βz2 = fill(-0.5, 2); βc2 = fill(2.0, 2)
+        v2 = G.twopart_loglik_site(G.ZIPoisson(), y2, zeros(2, 1), Λ2, βz2, βc2)
+        @test abs(v2 - _tp484_indep_site(y2, Λ2, βz2, βc2)) < 1e-6
     end
 
     @testset "where the old loop converged, the site value is unchanged (to 1e-8)" begin

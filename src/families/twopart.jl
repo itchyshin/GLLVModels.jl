@@ -29,16 +29,47 @@
 @inline _tp_observed_Wc_at(family, t, y, ηc, Wc) = _tp_observed_Wc(family, y, ηc, Wc)
 @inline _tp_observed_Wc_at(fams::AbstractVector, t, y, ηc, Wc) = _tp_observed_Wc(fams[t], y, ηc, Wc)
 
-# Per-site joint mode ẑ over the shared latent z (Fisher-scoring Newton).
-function _twopart_mode(family, y::AbstractVector,
+# Site log-posterior q(z) = Σ_t logf_t − ½z'z: the objective the mode search climbs.
+function _twopart_logpost(family, y::AbstractVector, Λz::AbstractMatrix, Λc::AbstractMatrix,
+        βz::AbstractVector, βc::AbstractVector, offz, offc, z::AbstractVector)
+    ηz = _clamp_eta.(βz .+ offz .+ Λz * z)
+    ηc = _clamp_eta.(βc .+ offc .+ Λc * z)
+    ℓ = 0.0
+    @inbounds for t in eachindex(y)
+        ℓ += _tp_pieces_at(family, t, y[t], ηz[t], ηc[t])[5]
+    end
+    return ℓ - 0.5 * dot(z, z)
+end
+
+# Observed positive-part curvature −∂s^c/∂η^c, used ONLY to set the step of the Newton
+# fallback in `_twopart_mode_stage` (never the log-det, which keeps `_tp_observed_Wc`).
+# Taken by forward-mode AD of the family's own score, so every `_tp_pieces` method gets
+# it without a hand-derived formula.
+_tp_newton_Wc(family, t, y, ηz, ηc) =
+    -ForwardDiff.derivative(e -> _tp_pieces_at(family, t, y, ηz, e)[2], ηc)
+
+# One stage of the per-site mode search (#484). Returns `(z, converged)`.
+# `curvature` sets the weight in the step matrix A: `:fisher` (expected information, the
+# original search) or `:newton` (observed positive-part curvature). Neither changes the
+# mode, which is the zero of g(z) = Λz's^z + Λc's^c − z whatever A is.
+#
+# Before #484 the search took full Fisher steps and returned whatever `z` it held when
+# the loop stopped, converged or not; `twopart_loglik_site` then scored that `z` and the
+# value was finite, so the fitters' 1e12 sentinel never fired. At the ZIP seed-101
+# truth 9 of 80 sites ran out of iterations and the objective read −10085.3 against
+# −930.4 at converged modes. Now a step that lowers q(z) is halved (the rule of the
+# generic `_laplace_mode` and of the Gamma fix #481, so small steps and accepted full
+# steps are bit-identical to the old loop), and `converged` is true only when the full
+# proposed step is below `tol`, the old loop's own stopping test.
+function _twopart_mode_stage(family, y::AbstractVector,
         Λz::AbstractMatrix, Λc::AbstractMatrix,
-        βz::AbstractVector, βc::AbstractVector;
-        offsetz = nothing, offsetc = nothing,
+        βz::AbstractVector, βc::AbstractVector, curvature::Symbol;
+        z0 = nothing, offsetz = nothing, offsetc = nothing,
         maxiter::Integer = 100, tol::Real = 1e-9)
     p, K = size(Λc)
     offz = offsetz === nothing ? false : offsetz    # additive identity ⇒ no-offset path unchanged
     offc = offsetc === nothing ? false : offsetc
-    z = zeros(K)
+    z = z0 === nothing ? zeros(K) : Vector{Float64}(z0)
     sz = Vector{Float64}(undef, p); sc = Vector{Float64}(undef, p)
     Wz = Vector{Float64}(undef, p); Wc = Vector{Float64}(undef, p)
     # Per-call buffers, reused across Newton iterations. Each is written in place
@@ -61,26 +92,92 @@ function _twopart_mode(family, y::AbstractVector,
         ηc .= _clamp_eta.(βc .+ offc .+ Λcz)
         @inbounds for t in 1:p
             s_z, s_c, W_z, W_c, _ = _tp_pieces_at(family, t, y[t], ηz[t], ηc[t])
-            sz[t] = s_z; sc[t] = s_c; Wz[t] = W_z; Wc[t] = W_c
+            sz[t] = s_z; sc[t] = s_c; Wz[t] = W_z
+            Wc[t] = curvature === :newton ? _tp_newton_Wc(family, t, y[t], ηz[t], ηc[t]) : W_c
         end
-        WzΛz .= Wz .* Λz                       # = Wz .* Λz (p×K)
-        WcΛc .= Wc .* Λc                       # = Wc .* Λc (p×K)
-        mul!(Amat, Λz', WzΛz)                  # = Λz' * (Wz .* Λz)
-        mul!(Atmp, Λc', WcΛc)                  # = Λc' * (Wc .* Λc)
-        Amat .+= Atmp                          # = Λz'(Wz.*Λz) + Λc'(Wc.*Λc)
-        @inbounds for d in 1:K
-            Amat[d, d] += 1.0                  # + I (adds 1.0 to each diagonal entry)
+        for attempt in 1:2
+            WzΛz .= Wz .* Λz                   # = Wz .* Λz (p×K)
+            WcΛc .= Wc .* Λc                   # = Wc .* Λc (p×K)
+            mul!(Amat, Λz', WzΛz)              # = Λz' * (Wz .* Λz)
+            mul!(Atmp, Λc', WcΛc)              # = Λc' * (Wc .* Λc)
+            Amat .+= Atmp                      # = Λz'(Wz.*Λz) + Λc'(Wc.*Λc)
+            @inbounds for d in 1:K
+                Amat[d, d] += 1.0              # + I (adds 1.0 to each diagonal entry)
+            end
+            # The observed weight can be negative (a zero count where the zero-inflated
+            # mixture bends the wrong way). If that makes A indefinite, drop the negative
+            # weights: A is then >= I, so the step is an ascent direction and halving
+            # works. Without this, 4 site searches at stress points (loadings x3) failed.
+            (curvature === :fisher || attempt == 2 ||
+             issuccess(cholesky(Symmetric(Amat); check = false))) && break
+            Wc .= max.(Wc, 0.0)
         end
         A = Symmetric(Amat)
         mul!(g, Λz', sz)                        # = Λz' * sz
         mul!(gc, Λc', sc)                       # = Λc' * sc
         g .= g .+ gc .- z                       # rhs = Λz'sz + Λc'sc − z
         Δ = _safe_solve(A, g)
-        (Δ === nothing || !all(isfinite, Δ)) && break
-        z = z .+ Δ
-        maximum(abs, Δ) < tol && break
+        (Δ === nothing || !all(isfinite, Δ)) && return z, false
+        maximum(abs, Δ) < tol && return z .+ Δ, true
+        if norm(Δ) <= 1e-3 * (1 + norm(z))
+            z = z .+ Δ
+        else
+            q0 = _twopart_logpost(family, y, Λz, Λc, βz, βc, offz, offc, z)
+            if isfinite(q0)
+                accepted = false
+                step = 1.0
+                for _half in 1:30
+                    ztrial = z .+ step .* Δ
+                    q1 = _twopart_logpost(family, y, Λz, Λc, βz, βc, offz, offc, ztrial)
+                    if isfinite(q1) && q1 >= q0
+                        z = ztrial
+                        accepted = true
+                        break
+                    end
+                    step *= 0.5
+                end
+                accepted || return z, false
+            else
+                z = z .+ Δ
+            end
+        end
     end
-    return z
+    return z, false
+end
+
+# Per-site mode search (#484). Returns `(z, converged)`.
+# Fisher scoring runs first, so a site where the old search converged without
+# overshooting keeps its exact path and value. Fisher scoring converges only linearly
+# here, and slowly wherever the expected information is far from the observed curvature
+# (for ZIP, a zero count at a large Poisson mean): with halving alone, 45 of 80 sites at
+# the pre-#484 ZIP seed-101 fit still stopped at maxiter. Where it does not converge,
+# damped Newton on the observed positive-part curvature continues from where it stopped.
+# Measured on the class-audit receipt datasets (ZIP, ZINB, ZIB; 3600 site searches at the
+# warm start, the old and new fits, the truth and stress points with loadings x2 and
+# x3): Fisher scoring failed at 1327, and the Newton stage converged at every one of
+# them, in at most 7 iterations.
+function _twopart_mode_search(family, y::AbstractVector,
+        Λz::AbstractMatrix, Λc::AbstractMatrix,
+        βz::AbstractVector, βc::AbstractVector;
+        offsetz = nothing, offsetc = nothing,
+        maxiter::Integer = 100, tol::Real = 1e-9)
+    z, ok = _twopart_mode_stage(family, y, Λz, Λc, βz, βc, :fisher;
+                                offsetz = offsetz, offsetc = offsetc, maxiter = maxiter, tol = tol)
+    ok && return z, true
+    return _twopart_mode_stage(family, y, Λz, Λc, βz, βc, :newton; z0 = z,
+                               offsetz = offsetz, offsetc = offsetc, maxiter = maxiter, tol = tol)
+end
+
+# Per-site joint mode ẑ over the shared latent z, for callers that need only z (getLV in
+# src/postfit.jl and src/families/beta_hurdle.jl). Returns the search's last z whether or
+# not it converged; `twopart_loglik_site` is the caller that acts on the flag.
+function _twopart_mode(family, y::AbstractVector,
+        Λz::AbstractMatrix, Λc::AbstractMatrix,
+        βz::AbstractVector, βc::AbstractVector;
+        offsetz = nothing, offsetc = nothing,
+        maxiter::Integer = 100, tol::Real = 1e-9)
+    return first(_twopart_mode_search(family, y, Λz, Λc, βz, βc; offsetz = offsetz,
+                                      offsetc = offsetc, maxiter = maxiter, tol = tol))
 end
 
 """
@@ -89,7 +186,10 @@ end
 
 Two-part Laplace log-marginal for one site: `ℓ_s(ẑ) − ½ẑ'ẑ − ½logdet A(ẑ)`. Optional
 `offsetz` / `offsetc` are known additive terms on the occurrence / positive-part
-predictors (`η^z = β^z + offsetz + Λ^z z`, similarly `η^c`).
+predictors (`η^z = β^z + offsetz + Λ^z z`, similarly `η^c`). If the mode search does
+not converge to `tol`, the value is `-Inf`, never a value computed at an unconverged
+mode (#484). The search is Fisher scoring with step halving for up to `maxiter` steps
+and, where that fails, a damped Newton search of up to `maxiter` more.
 """
 # ---------------------------------------------------------------------------
 # Observed-curvature override for the POSITIVE-part weight (2026-08-24).
@@ -102,10 +202,12 @@ predictors (`η^z = β^z + offsetz + Λ^z z`, similarly `η^c`).
 # by AD-ing the joint nll (`TMB::MakeADFun(..., random=)`) and so never faces this
 # choice at all.
 #
-# This hook is applied ONLY in `twopart_loglik_site`'s A-matrix, never in
-# `_twopart_mode`. Keeping the mode solver untouched is deliberate: substituting a
+# This hook is applied ONLY in `twopart_loglik_site`'s A-matrix, never in the mode
+# search. Keeping the Fisher mode search untouched is deliberate: substituting a
 # curvature into a mode search that was tuned for a different one is exactly how the
-# Exponential fix first went wrong (‖Λ‖ ran away to ~960 against a true 0.38).
+# Exponential fix first went wrong (‖Λ‖ ran away to ~960 against a true 0.38). The
+# Newton fallback added for #484 runs only where Fisher scoring did not converge, takes
+# its own weight (`_tp_newton_Wc`), and halves any step that lowers the site objective.
 #
 # Default is identity, so every family not given a method here is bit-for-bit
 # unchanged.
@@ -120,8 +222,11 @@ function twopart_loglik_site(family, y::AbstractVector,
     offz = offsetz === nothing ? false : offsetz
     offc = offsetc === nothing ? false : offsetc
     K = size(Λc, 2)
-    ẑ = _twopart_mode(family, y, Λz, Λc, βz, βc;
-                      offsetz = offsetz, offsetc = offsetc, maxiter = maxiter, tol = tol)
+    ẑ, ok = _twopart_mode_search(family, y, Λz, Λc, βz, βc;
+                                 offsetz = offsetz, offsetc = offsetc, maxiter = maxiter, tol = tol)
+    # A search that did not converge must not produce a finite value (#484). -Inf makes
+    # the fitters' objective return its 1e12 sentinel instead of a garbage surface.
+    ok || return -Inf
     ηz = _clamp_eta.(βz .+ offz .+ Λz * ẑ)
     ηc = _clamp_eta.(βc .+ offc .+ Λc * ẑ)
     Wz = Vector{Float64}(undef, p); Wc = Vector{Float64}(undef, p)
@@ -154,7 +259,8 @@ end
 Total two-part Laplace log-marginal over the `n` sites (columns of `Y`). `offsetz` /
 `offsetc` (p×n, or `nothing`) are known additive offsets on the occurrence /
 positive-part predictors; a constant per-species `offsetc` is equivalent to shifting
-`βc` (the offset-absorption identity).
+`βc` (the offset-absorption identity). The total is `-Inf` if any site's mode search
+fails to converge (see [`twopart_loglik_site`](@ref)).
 """
 function twopart_marginal_loglik_laplace(family, Y::AbstractMatrix,
         Λz::AbstractMatrix, Λc::AbstractMatrix,
@@ -340,7 +446,7 @@ log-responses + `σ₀ = sd(log y_{>0})`.
   explicit opt-in): one scalar sdlog `σ` for every species.
 
 `hessian` selects the two-part Laplace log-det curvature (`:observed` default /
-`:fisher`); the mode search is always Fisher-scored. NOTE (2026-08-28): for this
+`:fisher`); the mode search does not depend on it. NOTE (2026-08-28): for this
 family the observed count-part weight is not yet specialised, so both selectors
 currently produce the identical objective (the `TWOPART_KNOWN_OPEN` census gap;
 DeltaGamma is the only two-part family whose observed weight is implemented).
@@ -524,7 +630,7 @@ Fit a Hurdle-Poisson two-part GLLVM by L-BFGS over `[βz; βc; vec(Λc)]` (Λz=0
 `logit(empirical P(y>0))` + `log` mean positive count + SVD loadings.
 
 `hessian` selects the two-part Laplace log-det curvature (`:observed` default /
-`:fisher`); the mode search is always Fisher-scored. NOTE (2026-08-28): for this
+`:fisher`); the mode search does not depend on it. NOTE (2026-08-28): for this
 family the observed count-part weight is not yet specialised, so both selectors
 currently produce the identical objective (the `TWOPART_KNOWN_OPEN` census gap;
 DeltaGamma is the only two-part family whose observed weight is implemented).
@@ -621,9 +727,14 @@ function _tp_pieces(f::HurdleNB, y, ηz, ηc)
         p0 = (r / (r + μ))^r
         μtr = μ / (1 - p0)
         V = μ + μ^2 / r
-        Wc = (V + μ^2) / (1 - p0) - μtr^2
+        # NB2 chain-rule factor a = r/(r+μ): ∂logf/∂η^c = a·(y − μtr), with expected
+        # information a²·Var_tr (as `TruncatedNegBin2`, truncated_nbinom2.jl). Before #484
+        # the factor was missing, so the score was not the derivative of `logf` and the
+        # mode search converged to a point that is not the posterior mode.
+        a = r / (r + μ)
+        Wc = a^2 * ((V + μ^2) / (1 - p0) - μtr^2)
         logf = log(π) + logpdf(NegativeBinomial(r, r / (r + μ)), Int(y)) - log1p(-p0)
-        return (one(π) - π, y - μtr, Wz, Wc, logf)
+        return (one(π) - π, a * (y - μtr), Wz, Wc, logf)
     else
         return (-π, zero(ηc), Wz, zero(ηc), log1p(-π))
     end
@@ -672,7 +783,7 @@ end
 Fit a Hurdle-NB two-part GLLVM by L-BFGS over `[βz; βc; vec(Λc); log r]` (Λz=0).
 
 `hessian` selects the two-part Laplace log-det curvature (`:observed` default /
-`:fisher`); the mode search is always Fisher-scored. NOTE (2026-08-28): for this
+`:fisher`); the mode search does not depend on it. NOTE (2026-08-28): for this
 family the observed count-part weight is not yet specialised, so both selectors
 currently produce the identical objective (the `TWOPART_KNOWN_OPEN` census gap;
 DeltaGamma is the only two-part family whose observed weight is implemented).
@@ -911,7 +1022,7 @@ standardised positives.
   explicit opt-in): one scalar shape `α` for every species.
 
 `hessian` selects the two-part Laplace log-det curvature (`:observed` default /
-`:fisher`); the mode search is always Fisher-scored. DeltaGamma is the one
+`:fisher`); the mode search does not depend on it. DeltaGamma is the one
 two-part family whose observed count-part weight is implemented, so the two
 selectors genuinely differ here. This holds under both `predictor` modes.
 """
@@ -1166,7 +1277,7 @@ Fit a zero-inflated Poisson GLLVM by L-BFGS over `[βz; βc; vec(Λc)]` (Λz=0).
 excess-zero fraction + positive-count log-means + SVD loadings.
 
 `hessian` selects the two-part Laplace log-det curvature (`:observed` default /
-`:fisher`); the mode search is always Fisher-scored. NOTE (2026-08-28): for this
+`:fisher`); the mode search does not depend on it. NOTE (2026-08-28): for this
 family the observed count-part weight is not yet specialised, so both selectors
 currently produce the identical objective (the `TWOPART_KNOWN_OPEN` census gap;
 DeltaGamma is the only two-part family whose observed weight is implemented).
@@ -1251,7 +1362,7 @@ ZIP Laplace marginal. Finite-difference gradient; warm start from
 is out of scope (twin ZIP cut).
 
 `hessian` selects the two-part Laplace log-det curvature (`:observed` default /
-`:fisher`); the mode search is always Fisher-scored. As for the no-covariate
+`:fisher`); the mode search does not depend on it. As for the no-covariate
 fitter, the observed count-part weight is not yet specialised for this family,
 so both selectors currently produce the identical objective (the
 `TWOPART_KNOWN_OPEN` census gap).
@@ -1379,7 +1490,7 @@ end
 Fit a zero-inflated NB2 GLLVM by L-BFGS over `[βz; βc; vec(Λc); log r]` (Λz=0).
 
 `hessian` selects the two-part Laplace log-det curvature (`:observed` default /
-`:fisher`); the mode search is always Fisher-scored. NOTE (2026-08-28): for this
+`:fisher`); the mode search does not depend on it. NOTE (2026-08-28): for this
 family the observed count-part weight is not yet specialised, so both selectors
 currently produce the identical objective (the `TWOPART_KNOWN_OPEN` census gap;
 DeltaGamma is the only two-part family whose observed weight is implemented).
@@ -1480,7 +1591,7 @@ free packed vector). Twin light RCall Δ is out of scope (twin ZINB cut).
 Per-trait `r` is **not** the default.
 
 `hessian` selects the two-part Laplace log-det curvature (`:observed` default /
-`:fisher`); the mode search is always Fisher-scored. As for the no-covariate
+`:fisher`); the mode search does not depend on it. As for the no-covariate
 fitter, the observed count-part weight is not yet specialised for this family,
 so both selectors currently produce the identical objective (the
 `TWOPART_KNOWN_OPEN` census gap).
@@ -1686,7 +1797,7 @@ gradient; warm start from the excess-zero share + positive-part success logits +
 SVD loadings.
 
 `hessian` selects the two-part Laplace log-det curvature (`:observed` default /
-`:fisher`); the mode search is always Fisher-scored. NOTE (2026-08-28): for this
+`:fisher`); the mode search does not depend on it. NOTE (2026-08-28): for this
 family the observed count-part weight is not yet specialised, so both selectors
 currently produce the identical objective (the `TWOPART_KNOWN_OPEN` census gap;
 DeltaGamma is the only two-part family whose observed weight is implemented).
@@ -1773,7 +1884,7 @@ ZIB Laplace marginal. Finite-difference gradient; warm start from
 RCall Δ is out of scope (twin ZIP/ZINB cut; no live twin ZIB).
 
 `hessian` selects the two-part Laplace log-det curvature (`:observed` default /
-`:fisher`); the mode search is always Fisher-scored. As for the no-covariate
+`:fisher`); the mode search does not depend on it. As for the no-covariate
 fitter, the observed count-part weight is not yet specialised for this family,
 so both selectors currently produce the identical objective (the
 `TWOPART_KNOWN_OPEN` census gap).
