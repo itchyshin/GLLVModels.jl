@@ -123,6 +123,13 @@ _cms_quiet(f) = with_logger(f, NullLogger())
                             _cms_indep_gamma_site(Y[:, i], Λ0, β0, 2.0)) for i in 1:n)
         @test worst < 1e-8
         @test isfinite(G._marginal_loglik_offset(gam2, Y, fill(1, p, n), Λ0, β0, zeros(p, n), link))
+        # Step halving on its own: the Fisher pass converges only slowly here (the
+        # fallback is what makes 100 iterations enough), but with halving it gets to the
+        # same mode instead of running away (measured: converged by 2000 iterations).
+        zf, okf = G._laplace_mode_off_pass(gam2, Y[:, 7], ones_p, Λ0, β0, link, :fisher;
+                                           maxiter = 2000)
+        @test okf
+        @test maximum(abs, zf .- G._laplace_mode_off(gam2, Y[:, 7], ones_p, Λ0, β0, link)) < 1e-8
     end
 
     @testset "a search that cannot converge returns -Inf, never a finite value" begin
