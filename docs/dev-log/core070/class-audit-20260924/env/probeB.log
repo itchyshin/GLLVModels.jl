@@ -1,0 +1,97 @@
+
+[31856] signal (15): Terminated: 15
+in expression starting at /private/tmp/claude-503/audit/env/probeB.jl:43
+__psynch_cvwait at /usr/lib/system/libsystem_kernel.dylib (unknown line)
+unknown function (ip: 0x0)
+__psynch_cvwait at /usr/lib/system/libsystem_kernel.dylib (unknown line)
+unknown function (ip: 0x0)
+__psynch_cvwait at /usr/lib/system/libsystem_kernel.dylib (unknown line)
+unknown function (ip: 0x0)
+immut_id_ at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/builtins.c:419
+_objectid at ./reflection.jl:617 [inlined]
+objectid at ./reflection.jl:611 [inlined]
+dataids at ./abstractarray.jl:1536 [inlined]
+mightalias at ./abstractarray.jl:1513 [inlined]
+unalias at ./abstractarray.jl:1478 [inlined]
+copyto! at ./abstractarray.jl:1064 [inlined]
+copy_similar at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/usr/share/julia/stdlib/v1.10/LinearAlgebra/src/LinearAlgebra.jl:416
+eigencopy_oftype at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/usr/share/julia/stdlib/v1.10/LinearAlgebra/src/symmetriceigen.jl:5 [inlined]
+#bunchkaufman#172 at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/usr/share/julia/stdlib/v1.10/LinearAlgebra/src/bunchkaufman.jl:199
+bunchkaufman at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/usr/share/julia/stdlib/v1.10/LinearAlgebra/src/bunchkaufman.jl:199 [inlined]
+bunchkaufman at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/usr/share/julia/stdlib/v1.10/LinearAlgebra/src/bunchkaufman.jl:199 [inlined]
+#_factorize#112 at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/usr/share/julia/stdlib/v1.10/LinearAlgebra/src/symmetric.jl:570 [inlined]
+_factorize at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/usr/share/julia/stdlib/v1.10/LinearAlgebra/src/symmetric.jl:565 [inlined]
+factorize at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/usr/share/julia/stdlib/v1.10/LinearAlgebra/src/symmetric.jl:564 [inlined]
+\ at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/usr/share/julia/stdlib/v1.10/LinearAlgebra/src/symmetric.jl:580 [inlined]
+_safe_solve at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/laplace.jl:27
+#_twopart_mode#771 at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/twopart.jl:78
+_twopart_mode at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/twopart.jl:33 [inlined]
+#twopart_loglik_site#772 at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/twopart.jl:123
+twopart_loglik_site at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/twopart.jl:114 [inlined]
+#twopart_marginal_loglik_laplace#773 at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/twopart.jl:167
+twopart_marginal_loglik_laplace at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/twopart.jl:159 [inlined]
+#zip_marginal_loglik_laplace#806 at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/twopart.jl:1108
+zip_marginal_loglik_laplace at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/twopart.jl:1103
+unknown function (ip: 0x11add40df)
+_jl_invoke at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/gf.c:0 [inlined]
+ijl_apply_generic at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/gf.c:3076
+negll at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/twopart.jl:1190
+#finite_difference_gradient!#11 at /Users/z3437171/.julia/packages/FiniteDiff/Z4dvL/src/gradients.jl:438
+finite_difference_gradient! at /Users/z3437171/.julia/packages/FiniteDiff/Z4dvL/src/gradients.jl:390 [inlined]
+gradient! at /Users/z3437171/.julia/packages/DifferentiationInterface/seMaz/ext/DifferentiationInterfaceFiniteDiffExt/onearg.jl:351 [inlined]
+g! at /Users/z3437171/.julia/packages/NLSolversBase/n7XXO/src/objective_types/oncedifferentiable.jl:49
+unknown function (ip: 0x11adfc07b)
+_jl_invoke at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/gf.c:0 [inlined]
+ijl_apply_generic at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/gf.c:3076
+gradient!! at /Users/z3437171/.julia/packages/NLSolversBase/n7XXO/src/interface.jl:63
+value_gradient! at /Users/z3437171/.julia/packages/NLSolversBase/n7XXO/src/interface.jl:73
+update_g! at /Users/z3437171/.julia/packages/Optim/gmigl/src/multivariate/optimize/optimize.jl:4
+optimize at /Users/z3437171/.julia/packages/Optim/gmigl/src/multivariate/optimize/optimize.jl:70
+optimize at /Users/z3437171/.julia/packages/Optim/gmigl/src/multivariate/optimize/optimize.jl:43 [inlined]
+#optimize#77 at /Users/z3437171/.julia/packages/Optim/gmigl/src/multivariate/optimize/interface.jl:274 [inlined]
+optimize at /Users/z3437171/.julia/packages/Optim/gmigl/src/multivariate/optimize/interface.jl:264 [inlined]
+#fit_zip_gllvm#809 at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/twopart.jl:1198
+fit_zip_gllvm at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/twopart.jl:1175
+unknown function (ip: 0x11ad54153)
+_jl_invoke at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/gf.c:0 [inlined]
+ijl_apply_generic at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/gf.c:3076
+macro expansion at ./timing.jl:395 [inlined]
+top-level scope at /private/tmp/claude-503/audit/env/probeB.jl:49
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/toplevel.c:925
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/toplevel.c:877
+ijl_toplevel_eval at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/toplevel.c:943 [inlined]
+ijl_toplevel_eval_in at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/toplevel.c:985
+eval at ./boot.jl:385 [inlined]
+include_string at ./loading.jl:2070
+_jl_invoke at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/gf.c:0 [inlined]
+ijl_apply_generic at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/gf.c:3076
+_include at ./loading.jl:2130
+include at ./Base.jl:495
+jfptr_include_46486 at /Users/z3437171/.julia/juliaup/julia-1.10.0+0.aarch64.apple.darwin14/lib/julia/sys.dylib (unknown line)
+_jl_invoke at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/gf.c:0 [inlined]
+ijl_apply_generic at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/gf.c:3076
+exec_options at ./client.jl:318
+_start at ./client.jl:552
+jfptr__start_82831 at /Users/z3437171/.julia/juliaup/julia-1.10.0+0.aarch64.apple.darwin14/lib/julia/sys.dylib (unknown line)
+_jl_invoke at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/gf.c:0 [inlined]
+ijl_apply_generic at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/gf.c:3076
+jl_apply at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/./julia.h:1982 [inlined]
+true_main at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/jlapi.c:582
+jl_repl_entrypoint at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/jlapi.c:731
+unknown function (ip: 0x0)
+Allocations: 5684345009 (Pool: 5684290009; Big: 55000); GC: 21453
+== fit_gllvm_cov(Poisson) : converged flag vs gradient at returned point
+seed=1  converged=true  iters=145  loglik=-1189.629  max|grad|=6.88e-6  time=10.5s
+seed=2  converged=true  iters=62  loglik=-1338.006  max|grad|=6.63e-6  time=2.2s
+seed=3  converged=false  iters=2  loglik=-Inf  max|grad|=1.97e20  time=0.3s
+seed=4  converged=false  iters=17  loglik=-Inf  max|grad|=3.58e21  time=1.8s
+seed=5  converged=false  iters=34  loglik=-Inf  max|grad|=1.62e8  time=2.8s
+seed=6  converged=true  iters=202  loglik=-5096.25  max|grad|=141.0  time=68.0s
+seed=7  converged=true  iters=247  loglik=-1524.95  max|grad|=0.128  time=15.3s
+seed=8  converged=false  iters=29  loglik=-Inf  max|grad|=0.0  time=3.4s
+== fit_zip_gllvm : converged flag vs gradient at returned point
+seed=1  converged=false  iters=500  loglik=-1592.482  max|grad|=6.86  time=262.4s
+seed=2  converged=false  iters=500  loglik=-1089.437  max|grad|=35.2  time=116.6s
+seed=3  converged=true  iters=45  loglik=-1206.502  max|grad|=71.8  time=24.4s
+seed=4  converged=true  iters=28  loglik=-2264.734  max|grad|=901000.0  time=19.0s
+seed=5  converged=true  iters=14  loglik=-4924.516  max|grad|=3.13e10  time=10.8s

@@ -1,0 +1,8 @@
+== fit_gllvm_cov(Poisson) : converged flag vs gradient at returned point
+seed=1  converged=true  iters=145  loglik=-1189.629  max|grad|=6.88e-6  time=10.3s
+seed=5  converged=false  iters=34  loglik=-Inf  max|grad|=1.62e8  time=2.7s
+seed=6  converged=false  iters=150  loglik=-5317.843  max|grad|=149.0  time=47.9s
+== fit_zip_gllvm : converged flag vs gradient at returned point
+seed=1  converged=false  iters=150  loglik=-1604.0  max|grad|=182.0  time=77.2s
+seed=5  converged=true  iters=14  loglik=-4924.516  max|grad|=3.13e10  time=10.2s
+seed=6  converged=false  iters=150  loglik=-1611.72  max|grad|=15.8  time=72.7s

@@ -1,0 +1,88 @@
+gamma_default            seed=1  type=GammaFit  converged=true  iters=48  loglik=-693.593  nll_adapter=693.593  max|grad|=1.05e-5  t=4.7s  
+gamma_default            seed=2  type=GammaFit  converged=true  iters=51  loglik=-545.412  nll_adapter=545.412  max|grad|=0.000234  t=0.4s  
+gamma_default            seed=3  type=GammaFit  converged=true  iters=29  loglik=-506.908  nll_adapter=506.908  max|grad|=3.49e-6  t=0.1s  
+exponential_default      seed=1  type=ExponentialFit  converged=true  iters=33  loglik=-683.207  nll_adapter=683.207  max|grad|=7.55e-6  t=3.3s  
+exponential_default      seed=2  type=ExponentialFit  converged=true  iters=42  loglik=-580.849  nll_adapter=580.849  max|grad|=8.81e-6  t=4.0s  
+exponential_default      seed=3  type=ExponentialFit  converged=true  iters=28  loglik=-604.369  nll_adapter=604.369  max|grad|=1.61e-6  t=1.7s  
+hurdlepoisson_default    seed=1  type=HurdlePoissonFit  converged=true  iters=176  loglik=-836.296  nll_adapter=836.296  max|grad|=9.27e-6  t=12.3s  
+hurdlepoisson_default    seed=2  type=HurdlePoissonFit  converged=true  iters=391  loglik=-637.82  nll_adapter=637.82  max|grad|=0.0209  t=17.7s  DISHONEST(conv=true, |g|>100*g_tol)
+hurdlepoisson_default    seed=3  type=HurdlePoissonFit  converged=true  iters=37  loglik=-584.471  nll_adapter=584.471  max|grad|=8.65e-6  t=1.0s  
+deltagamma_default       seed=1  type=DeltaGammaFit  converged=true  iters=29  loglik=-815.065  nll_adapter=815.065  max|grad|=3.65e30  t=4.4s  DISHONEST(conv=true, |g|>100*g_tol)
+deltagamma_default       seed=2  type=DeltaGammaFit  converged=true  iters=41  loglik=-597.423  nll_adapter=597.423  max|grad|=3.9100000000000004e29  t=5.0s  DISHONEST(conv=true, |g|>100*g_tol)
+deltagamma_default       seed=3  type=DeltaGammaFit  converged=true  iters=383  loglik=-464.728  nll_adapter=464.728  max|grad|=9.57  t=30.9s  DISHONEST(conv=true, |g|>100*g_tol)
+
+[46168] signal (15): Terminated: 15
+in expression starting at /private/tmp/claude-503/audit/probe_B3_routes.jl:40
+__psynch_cvwait at /usr/lib/system/libsystem_kernel.dylib (unknown line)
+unknown function (ip: 0x0)
+__psynch_cvwait at /usr/lib/system/libsystem_kernel.dylib (unknown line)
+unknown function (ip: 0x0)
+__psynch_cvwait at /usr/lib/system/libsystem_kernel.dylib (unknown line)
+unknown function (ip: 0x0)
+_logabsgamma_pos at /Users/z3437171/.julia/packages/SpecialFunctions/EJiJa/src/logabsgamma/e_lgamma_r.jl:0
+_logabsgamma at /Users/z3437171/.julia/packages/SpecialFunctions/EJiJa/src/logabsgamma/e_lgamma_r.jl:115
+logabsgamma at /Users/z3437171/.julia/packages/SpecialFunctions/EJiJa/src/gamma.jl:624 [inlined]
+logabsbeta at /Users/z3437171/.julia/packages/SpecialFunctions/EJiJa/src/gamma.jl:921
+logabsbeta at /Users/z3437171/.julia/packages/SpecialFunctions/EJiJa/src/gamma.jl:925 [inlined]
+logbeta at /Users/z3437171/.julia/packages/SpecialFunctions/EJiJa/src/gamma.jl:882 [inlined]
+logpdf at /Users/z3437171/.julia/packages/Distributions/RTt4y/src/univariate/discrete/negativebinomial.jl:107
+_tp_pieces at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/twopart.jl:1328
+_tp_pieces_at at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/twopart.jl:27 [inlined]
+#_twopart_mode#771 at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/twopart.jl:63
+_twopart_mode at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/twopart.jl:33 [inlined]
+#twopart_loglik_site#772 at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/twopart.jl:123
+twopart_loglik_site at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/twopart.jl:114 [inlined]
+#twopart_marginal_loglik_laplace#773 at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/twopart.jl:167
+twopart_marginal_loglik_laplace at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/twopart.jl:159 [inlined]
+#zinb_marginal_loglik_laplace#813 at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/twopart.jl:1350
+zinb_marginal_loglik_laplace at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/twopart.jl:1345
+unknown function (ip: 0x11e7680e7)
+_jl_invoke at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/gf.c:0 [inlined]
+ijl_apply_generic at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/gf.c:3076
+negll at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/twopart.jl:1404
+#finite_difference_gradient!#11 at /Users/z3437171/.julia/packages/FiniteDiff/Z4dvL/src/gradients.jl:438
+finite_difference_gradient! at /Users/z3437171/.julia/packages/FiniteDiff/Z4dvL/src/gradients.jl:390 [inlined]
+gradient! at /Users/z3437171/.julia/packages/DifferentiationInterface/seMaz/ext/DifferentiationInterfaceFiniteDiffExt/onearg.jl:351 [inlined]
+g! at /Users/z3437171/.julia/packages/NLSolversBase/n7XXO/src/objective_types/oncedifferentiable.jl:49
+unknown function (ip: 0x11e78807b)
+_jl_invoke at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/gf.c:0 [inlined]
+ijl_apply_generic at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/gf.c:3076
+gradient!! at /Users/z3437171/.julia/packages/NLSolversBase/n7XXO/src/interface.jl:63
+value_gradient! at /Users/z3437171/.julia/packages/NLSolversBase/n7XXO/src/interface.jl:73
+update_g! at /Users/z3437171/.julia/packages/Optim/gmigl/src/multivariate/optimize/optimize.jl:4
+optimize at /Users/z3437171/.julia/packages/Optim/gmigl/src/multivariate/optimize/optimize.jl:70
+optimize at /Users/z3437171/.julia/packages/Optim/gmigl/src/multivariate/optimize/optimize.jl:43 [inlined]
+#optimize#77 at /Users/z3437171/.julia/packages/Optim/gmigl/src/multivariate/optimize/interface.jl:274 [inlined]
+optimize at /Users/z3437171/.julia/packages/Optim/gmigl/src/multivariate/optimize/interface.jl:264 [inlined]
+#fit_zinb_gllvm#814 at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/twopart.jl:1412
+fit_zinb_gllvm at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/twopart.jl:1388 [inlined]
+#_fit_gllvm#918 at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/fit_gllvm.jl:350 [inlined]
+_fit_gllvm at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/fit_gllvm.jl:350 [inlined]
+#fit_gllvm#900 at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/fit_gllvm.jl:305
+fit_gllvm at /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/families/fit_gllvm.jl:158 [inlined]
+one at /private/tmp/claude-503/audit/probe_B3_routes.jl:31
+top-level scope at /private/tmp/claude-503/audit/probe_B3_routes.jl:41
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/toplevel.c:925
+jl_toplevel_eval_flex at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/toplevel.c:877
+ijl_toplevel_eval at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/toplevel.c:943 [inlined]
+ijl_toplevel_eval_in at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/toplevel.c:985
+eval at ./boot.jl:385 [inlined]
+include_string at ./loading.jl:2070
+_jl_invoke at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/gf.c:0 [inlined]
+ijl_apply_generic at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/gf.c:3076
+_include at ./loading.jl:2130
+include at ./Base.jl:495
+jfptr_include_46486 at /Users/z3437171/.julia/juliaup/julia-1.10.0+0.aarch64.apple.darwin14/lib/julia/sys.dylib (unknown line)
+_jl_invoke at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/gf.c:0 [inlined]
+ijl_apply_generic at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/gf.c:3076
+exec_options at ./client.jl:318
+_start at ./client.jl:552
+jfptr__start_82831 at /Users/z3437171/.julia/juliaup/julia-1.10.0+0.aarch64.apple.darwin14/lib/julia/sys.dylib (unknown line)
+_jl_invoke at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/gf.c:0 [inlined]
+ijl_apply_generic at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/gf.c:3076
+jl_apply at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/./julia.h:1982 [inlined]
+true_main at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/jlapi.c:582
+jl_repl_entrypoint at /Users/julia/.julia/scratchspaces/a66863c6-20e8-4ff4-8a62-49f30b1f605e/agent-cache/default-honeycrisp-HL2F7YQ3XH.0/build/default-honeycrisp-HL2F7YQ3XH-0/julialang/julia-release-1-dot-10/src/jlapi.c:731
+unknown function (ip: 0x0)
+Allocations: 1136750915 (Pool: 1136690374; Big: 60541); GC: 4402
+DONE

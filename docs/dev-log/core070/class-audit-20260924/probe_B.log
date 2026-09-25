@@ -1,0 +1,29 @@
+poisson_default        seed=1  type=PoissonFit  converged=true  iters=62  loglik=-769.047  nll_adapter=769.047  max|grad|=9.35e-6  t=8.8s  
+poisson_default        seed=2  type=PoissonFit  converged=true  iters=49  loglik=-834.924  nll_adapter=834.924  max|grad|=7.55e-6  t=0.1s  
+poisson_default        seed=3  type=PoissonFit  converged=true  iters=59  loglik=-777.925  nll_adapter=777.925  max|grad|=8.52e-6  t=0.1s  
+poisson_default        seed=4  type=PoissonFit  converged=true  iters=109  loglik=-960.65  nll_adapter=960.65  max|grad|=8.87e-6  t=0.2s  
+poisson_formula_X      seed=1  type=GllvmCovFit  converged=true  iters=142  loglik=-777.762  nll_adapter=777.762  max|grad|=9.12e-6  t=9.2s  
+poisson_formula_X      seed=2  type=GllvmCovFit  converged=true  iters=58  loglik=-851.973  nll_adapter=851.973  max|grad|=9.86e-6  t=1.9s  
+poisson_formula_X      seed=3  type=GllvmCovFit  converged=true  iters=65  loglik=-804.681  nll_adapter=804.681  max|grad|=4.32e-6  t=2.8s  
+poisson_formula_X      seed=4  type=GllvmCovFit  converged=true  iters=163  loglik=-929.03  nll_adapter=929.03  max|grad|=3.1e-5  t=10.4s  
+nb1_default            seed=1  type=NB1GroupedFit  converged=true  iters=64  loglik=-730.403  nll_adapter=730.403  max|grad|=1230.0  t=31.8s  DISHONEST(conv=true, |g|>100*g_tol)
+nb1_default            seed=2  type=NB1GroupedFit  converged=true  iters=83  loglik=-899.475  nll_adapter=899.475  max|grad|=1.35e11  t=29.2s  DISHONEST(conv=true, |g|>100*g_tol)
+nb1_default            seed=3  type=NB1GroupedFit  converged=true  iters=115  loglik=-783.862  nll_adapter=783.862  max|grad|=542.0  t=59.3s  DISHONEST(conv=true, |g|>100*g_tol)
+nb1_default            seed=4  type=NB1GroupedFit  converged=true  iters=299  loglik=-998.257  nll_adapter=998.257  max|grad|=9.17e-6  t=200.8s  
+zip_default            seed=1  type=ZIPFit  converged=true  iters=79  loglik=-720.862  nll_adapter=720.862  max|grad|=8960.0  t=23.5s  DISHONEST(conv=true, |g|>100*g_tol)
+zip_default            seed=2  type=ZIPFit  converged=true  iters=386  loglik=-816.518  nll_adapter=816.518  max|grad|=64.0  t=106.2s  DISHONEST(conv=true, |g|>100*g_tol)
+zip_default            seed=3  type=ZIPFit  converged=true  iters=21  loglik=-1170.222  nll_adapter=1170.222  max|grad|=9.68e6  t=14.0s  DISHONEST(conv=true, |g|>100*g_tol)
+zip_default            seed=4  type=ZIPFit  converged=true  iters=17  loglik=-1233.438  nll_adapter=1233.438  max|grad|=1.64e6  t=10.6s  DISHONEST(conv=true, |g|>100*g_tol)
+betabinom_default      seed=1  type=BetaBinomialGroupedFit  converged=true  iters=102  loglik=-1038.778  nll_adapter=1038.778  max|grad|=0.00444  t=17.2s  DISHONEST(conv=true, |g|>100*g_tol)
+betabinom_default      seed=2  type=BetaBinomialGroupedFit  converged=true  iters=77  loglik=-1049.454  nll_adapter=1049.454  max|grad|=0.00104  t=10.2s  DISHONEST(conv=true, |g|>100*g_tol)
+betabinom_default      seed=3  type=BetaBinomialGroupedFit  converged=true  iters=104  loglik=-1019.365  nll_adapter=1019.365  max|grad|=0.000297  t=13.6s  
+betabinom_default      seed=4  type=BetaBinomialGroupedFit  converged=true  iters=96  loglik=-920.447  nll_adapter=920.447  max|grad|=0.00399  t=13.5s  DISHONEST(conv=true, |g|>100*g_tol)
+orderedbeta_default    seed=1  type=OrderedBetaFit  converged=true  iters=26  loglik=-542.345  nll_adapter=542.345  max|grad|=3.8e6  t=3.4s  DISHONEST(conv=true, |g|>100*g_tol)
+orderedbeta_default    seed=2  type=OrderedBetaFit  converged=true  iters=45  loglik=-632.159  nll_adapter=632.159  max|grad|=1.75e7  t=6.6s  DISHONEST(conv=true, |g|>100*g_tol)
+orderedbeta_default    seed=3  type=OrderedBetaFit  converged=true  iters=2  loglik=-4334.912  nll_adapter=4334.912  max|grad|=390.0  t=0.8s  DISHONEST(conv=true, |g|>100*g_tol)
+orderedbeta_default    seed=4  type=OrderedBetaFit  converged=true  iters=50  loglik=-481.832  nll_adapter=481.832  max|grad|=3.36e6  t=5.1s  DISHONEST(conv=true, |g|>100*g_tol)
+studentt_fixed_nu      seed=1  type=StudentTFit  converged=true  iters=52  loglik=-665.2  nll_adapter=665.2  max|grad|=1.51e-5  t=5.9s  
+studentt_fixed_nu      seed=2  type=StudentTFit  converged=true  iters=57  loglik=-665.127  nll_adapter=665.127  max|grad|=8.61e-6  t=5.2s  
+studentt_fixed_nu      seed=3  type=StudentTFit  converged=true  iters=46  loglik=-650.066  nll_adapter=650.066  max|grad|=5.12e-6  t=4.4s  
+studentt_fixed_nu      seed=4  type=StudentTFit  converged=true  iters=76  loglik=-667.823  nll_adapter=667.823  max|grad|=8.29e-6  t=7.8s  
+DONE

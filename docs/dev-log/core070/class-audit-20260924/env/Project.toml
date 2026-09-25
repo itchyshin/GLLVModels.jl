@@ -1,0 +1,5 @@
+[deps]
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+GLLVModels = "2dc8e01c-4f48-4476-aaae-e919b4a30df7"
+Optim = "429524aa-4258-5aef-a3af-852621145aeb"

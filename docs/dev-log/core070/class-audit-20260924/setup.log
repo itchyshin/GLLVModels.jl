@@ -1,0 +1,107 @@
+  Activating new project at `/tmp/claude-503/audit/env`
+   Resolving package versions...
+    Updating `/private/tmp/claude-503/audit/env/Project.toml`
+  [2dc8e01c] + GLLVModels v0.3.0 `~/local-scratch/gllvm-nb2-finite-20260924`
+    Updating `/private/tmp/claude-503/audit/env/Manifest.toml`
+  [47edcb42] + ADTypes v1.24.0
+  [7d9f7c33] + Accessors v0.1.45
+  [79e6a3ab] + Adapt v4.7.1
+  [66dad0bd] + AliasTables v1.1.3
+  [4fba245c] + ArrayInterface v7.30.2
+  [38540f10] + CommonSolve v0.2.14
+  [bbf7d656] + CommonSubexpressions v0.3.1
+  [34da2185] + Compat v4.18.1
+  [a33af91c] + CompositionsBase v0.1.2
+  [187b0558] + ConstructionBase v1.6.0
+  [9a962f9c] + DataAPI v1.16.0
+  [864edb3b] + DataStructures v0.19.6
+  [e2d170a0] + DataValueInterfaces v1.0.0
+  [163ba53b] + DiffResults v1.1.0
+  [b552c78f] + DiffRules v1.16.0
+  [a0c0ee7d] + DifferentiationInterface v0.7.21
+  [31c24e10] + Distributions v0.25.131
+  [ffbed154] + DocStringExtensions v0.9.5
+  [4e289a0a] + EnumX v1.0.7
+  [1a297f60] + FillArrays v1.17.1
+  [6a86dc24] + FiniteDiff v2.33.0
+⌃ [f6369f11] + ForwardDiff v0.10.39
+  [2dc8e01c] + GLLVModels v0.3.0 `~/local-scratch/gllvm-nb2-finite-20260924`
+⌃ [a0844989] + Gamma v1.1.0
+  [34004b35] + HypergeometricFunctions v0.3.30
+  [3587e190] + InverseFunctions v0.1.17
+  [92d709cd] + IrrationalConstants v0.2.6
+  [82899510] + IteratorInterfaceExtensions v1.0.0
+  [692b3bcd] + JLLWrappers v1.8.0
+⌃ [d3d80556] + LineSearches v7.5.1
+⌅ [2ab3a3ac] + LogExpFunctions v0.3.29
+  [1914dd2f] + MacroTools v0.5.16
+  [e1d29d7a] + Missings v1.2.0
+⌅ [d41bc354] + NLSolversBase v7.10.0
+  [77ba4419] + NaNMath v1.1.4
+⌃ [429524aa] + Optim v1.13.3
+  [bac558e1] + OrderedCollections v2.0.1
+  [90014a1f] + PDMats v0.11.41
+  [85a6dd25] + PositiveFactorizations v0.2.4
+⌅ [aea7be01] + PrecompileTools v1.2.1
+  [21216c6a] + Preferences v1.6.0
+  [43287f4e] + PtrArrays v1.4.0
+  [1fd47b50] + QuadGK v2.11.3
+  [189a3867] + Reexport v1.2.2
+  [79098fc4] + Rmath v0.9.0
+  [f2b01f46] + Roots v3.0.8
+  [efcf1570] + Setfield v1.1.2
+  [1277b4bf] + ShiftedArrays v2.0.0
+  [a2af1166] + SortingAlgorithms v1.2.3
+  [276daf66] + SpecialFunctions v2.9.0
+  [1e83bf80] + StaticArraysCore v1.4.4
+  [82ae8749] + StatsAPI v1.8.0
+  [2913bbd2] + StatsBase v0.34.13
+  [4c63d2b9] + StatsFuns v2.2.1
+  [3eaba693] + StatsModels v0.7.10
+  [3783bdb8] + TableTraits v1.0.1
+  [bd369af6] + Tables v1.14.0
+  [efe28fd5] + OpenSpecFun_jll v0.5.6+0
+  [f50d1b31] + Rmath_jll v0.5.2+0
+  [56f22d72] + Artifacts
+  [2a0f44e3] + Base64
+  [ade2ca70] + Dates
+  [8ba89e20] + Distributed
+  [9fa8497b] + Future
+  [b77e0a4c] + InteractiveUtils
+  [8f399da3] + Libdl
+  [37e2e46d] + LinearAlgebra
+  [d6f4376e] + Markdown
+  [de0858da] + Printf
+  [3fa0cd96] + REPL
+  [9a3f8284] + Random
+  [ea8e919c] + SHA v0.7.0
+  [9e88b42a] + Serialization
+  [6462fe0b] + Sockets
+  [2f01184e] + SparseArrays v1.10.0
+  [10745b16] + Statistics v1.10.0
+  [4607b0f0] + SuiteSparse
+  [fa267f1f] + TOML v1.0.3
+  [cf7118a7] + UUIDs
+  [4ec0a83e] + Unicode
+  [e66e0078] + CompilerSupportLibraries_jll v1.0.5+1
+  [4536629a] + OpenBLAS_jll v0.3.23+2
+  [05823500] + OpenLibm_jll v0.8.1+2
+  [bea87d4a] + SuiteSparse_jll v7.2.1+1
+  [8e850b90] + libblastrampoline_jll v5.8.0+1
+        Info Packages marked with ⌃ and ⌅ have new versions available. Those with ⌃ may be upgradable, but those with ⌅ are restricted by compatibility constraints from upgrading. To see why use `status --outdated -m`
+   Resolving package versions...
+    Updating `/private/tmp/claude-503/audit/env/Project.toml`
+  [31c24e10] + Distributions v0.25.131
+⌃ [f6369f11] + ForwardDiff v0.10.39
+⌃ [429524aa] + Optim v1.13.3
+  No Changes to `/private/tmp/claude-503/audit/env/Manifest.toml`
+Precompiling project...
+[32m  ✓ [39mGLLVModels
+  1 dependency successfully precompiled in 9 seconds. 86 already precompiled.
+  [33m1[39m dependency had output during precompilation:[33m
+┌ [39mGLLVModels[33m
+│  [39mWARNING: using Distributions.Multinomial in module GLLVModels conflicts with an existing identifier.[33m
+└  [39m
+OK /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/GLLVModels.jl
+Optim 1.13.3
+EXIT 0

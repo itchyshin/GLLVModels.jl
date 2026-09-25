@@ -1,0 +1,63 @@
+== ZIP formula check: closed-form expected info vs brute-force sum ==
+  eta=-1.0 pi=0.25 closed=0.2530728998 sum=0.2530728998
+  eta=0.5 pi=0.25 closed=0.9879274918 sum=0.9879274918
+  eta=1.5 pi=0.40 closed=2.5549368043 sum=2.5549368043
+  eta=2.5 pi=0.10 closed=10.9635608026 sum=10.9635608026
+  eta=0.0 pi=0.70 closed=0.2046666700 sum=0.2046666700
+
+== zip base-s1 (seed 101) ==
+  fit_zip_gllvm: converged=true loglik=-935.2960 iterations=50 (15.0s)
+  [theta_hat] pkg total ll -935.2960 | my robust ll -935.2636 | pkg-my = -0.0324 | sites |pkg-my|>1e-6: 4 (max +3.391e-03, min -3.576e-02) | multimodal sites 0 | my-mode not ok 0
+  my smooth objective: central-FD max|grad| at theta_hat, h=1e-03: 10.4205 (argmax 12)
+  my smooth objective: central-FD max|grad| at theta_hat, h=1e-04: 10.4205 (argmax 12)
+  my smooth objective: central-FD max|grad| at theta_hat, h=1e-05: 10.4205 (argmax 12)
+  my nll(theta_hat - 1e-04*g/|g|) - my nll(theta_hat) = -0.00200
+  my nll(theta_hat - 1e-03*g/|g|) - my nll(theta_hat) = -0.01990
+  my nll(theta_hat - 1e-02*g/|g|) - my nll(theta_hat) = -0.19285
+  my nll(theta_hat - 3e-02*g/|g|) - my nll(theta_hat) = -0.53766
+  re-opt (my objective, LBFGS+HagerZhang): my ll -935.2636 -> -920.5303 (Δ +14.7333), g_conv=true gres=5.52e-06 it=70 (23.6s)
+  [theta_reopt] pkg total ll -937.5143 | my robust ll -920.5303 | pkg-my = -16.9840 | sites |pkg-my|>1e-6: 3 (max +2.164e-03, min -1.141e+01) | multimodal sites 0 | my-mode not ok 0
+  package's own objective at my re-opt point: -937.5143 (vs fit.loglik -935.2960, Δ -2.2183)
+  max|Δθ| theta_reopt vs theta_hat: 2.090 ; |Λc| frob hat 7.642 reopt 9.686 truth 6.959
+  βz hat [-0.869, -0.586, -0.272, -0.492, -0.683]
+  βz re-opt [-1.217, -0.716, -0.835, -2.582, -0.719] (truth -1.099)
+  fit_zip_gllvm(newton_maxiter=2000): converged=true loglik=-921.4147 iterations=46 (24.8s)
+  elapsed 68s
+
+== nb1 base-s2 (seed 102) ==
+  fit_nb1_gllvm_grouped: converged=true loglik=-912.3032 iterations=67 (13.2s)
+  [theta_hat] pkg total ll -912.3032 | my robust ll -912.3028 | pkg-my = -0.0004 | sites |pkg-my|>1e-6: 1 (max +2.801e-11, min -3.636e-04) | multimodal sites 0 | my-mode not ok 0
+  my smooth objective: central-FD max|grad| at theta_hat, h=1e-03: 9.970e-02 (argmax 12)
+  my smooth objective: central-FD max|grad| at theta_hat, h=1e-04: 9.971e-02 (argmax 12)
+  my smooth objective: central-FD max|grad| at theta_hat, h=1e-05: 1.001e-01 (argmax 12)
+  PACKAGE objective: central-FD max|grad| at theta_hat, h=1e-04: 1.240e+01
+  PACKAGE objective: central-FD max|grad| at theta_hat, h=1e-05: 1.201e+02
+  PACKAGE objective: central-FD max|grad| at theta_hat, h=1e-06: 3.987e+01
+  re-opt my objective from theta_hat: my ll -912.30281 -> -912.27413 (Δ +0.02869), g_conv=false gres=1.20e-01 it=18 (66.0s) max|Δθ|=1.1873
+  elapsed 152s
+
+== nb1 base-s1 (seed 101) ==
+  fit_nb1_gllvm_grouped: converged=true loglik=-1038.5504 iterations=64 (22.2s)
+  [theta_hat] pkg total ll -1038.5504 | my robust ll -1038.5501 | pkg-my = -0.0003 | sites |pkg-my|>1e-6: 1 (max +6.158e-09, min -2.624e-04) | multimodal sites 0 | my-mode not ok 4
+  my smooth objective: central-FD max|grad| at theta_hat, h=1e-03: 3.125e-01 (argmax 6)
+  my smooth objective: central-FD max|grad| at theta_hat, h=1e-04: 3.126e-01 (argmax 6)
+  my smooth objective: central-FD max|grad| at theta_hat, h=1e-05: 3.141e-01 (argmax 6)
+  PACKAGE objective: central-FD max|grad| at theta_hat, h=1e-04: 4.483e-01
+  PACKAGE objective: central-FD max|grad| at theta_hat, h=1e-05: 3.850e+00
+  PACKAGE objective: central-FD max|grad| at theta_hat, h=1e-06: 4.019e+01
+  re-opt my objective from theta_hat: my ll -1038.55011 -> -1038.48136 (Δ +0.06876), g_conv=false gres=8.90e-01 it=14 (64.5s) max|Δθ|=0.9336
+  elapsed 244s
+
+== nb1 base-s3 (seed 103) ==
+  fit_nb1_gllvm_grouped: converged=true loglik=-977.5064 iterations=56 (35.3s)
+  [theta_hat] pkg total ll -977.5064 | my robust ll -977.5064 | pkg-my = -0.0000 | sites |pkg-my|>1e-6: 1 (max +3.981e-10, min -3.032e-05) | multimodal sites 0 | my-mode not ok 2
+  my smooth objective: central-FD max|grad| at theta_hat, h=1e-03: 1.302e+00 (argmax 3)
+  my smooth objective: central-FD max|grad| at theta_hat, h=1e-04: 1.302e+00 (argmax 3)
+  my smooth objective: central-FD max|grad| at theta_hat, h=1e-05: 1.302e+00 (argmax 3)
+  PACKAGE objective: central-FD max|grad| at theta_hat, h=1e-04: 5.320e+02
+  PACKAGE objective: central-FD max|grad| at theta_hat, h=1e-05: 1.237e+01
+  PACKAGE objective: central-FD max|grad| at theta_hat, h=1e-06: 1.104e+02
+  re-opt my objective from theta_hat: my ll -977.50636 -> -977.02948 (Δ +0.47688), g_conv=false gres=8.67e-01 it=17 (60.8s) max|Δθ|=2.8520
+  elapsed 343s
+total 343s
+EXIT 0

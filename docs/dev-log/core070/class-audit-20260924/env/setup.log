@@ -1,0 +1,6 @@
+  Activating project at `/private/tmp/claude-503/audit/env`
+   Resolving package versions...
+  No Changes to `/private/tmp/claude-503/audit/env/Project.toml`
+  No Changes to `/private/tmp/claude-503/audit/env/Manifest.toml`
+loaded in 0.9 s
+julia --startup-file=no setup.jl  4.53s user 0.76s system 96% cpu 5.504 total
