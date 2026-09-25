@@ -1,3 +1,22 @@
+## 2026-09-24: closeout OWED 2 and 4 decided (A, A) and carried out
+
+- Branch `claude/owed-2-4-decisions-20260924` from `origin/main` @ `4e6e7eef5`. Decision:
+  `docs/dev-log/decisions/2026-09-24-parity-reference-julia-and-fixture-pins.md` (Julia 1.10
+  LTS is the #323 reference; NB2 data stored; Student Cell 9 records `r_gradient_max`; Stage 0
+  L11 = −0.8 kept with a comment).
+- Measured: seed 45 gives NB2 hash `af68c91f…` on Julia 1.10.0/1.10.12 and the pinned
+  `7abde273…` on 1.12.6/1.13.0. The stored draw loads with the pinned hash on 1.10.12 and 1.13.0.
+- Mac, Julia 1.10.12, locally built oracle `b4d5fee64`, required mode for NATIVE-06 and
+  NATIVE-10: 46 pass / 5 fail in 41 s. NATIVE-06 now reaches its R check; it fails on R
+  `r_gradient_max` 4.85e-3 and Julia `converged = false` (Δ logLik 1.21e-7). NATIVE-10 Cell 9
+  passes (Δ 1.98e-8, R `r_gradient_max` 9.15e-4 recorded); the near-Gaussian diagnostic fails
+  on both engines' convergence flags.
+- Totoro re-run (Julia 1.10.12, R 4.5.3, Track A's verified oracle, head `fb2ff8c49`), 1.6 min:
+  NATIVE-06 17 of 18, R `r_gradient_max` 5.62e-5 passes, only Julia `converged = false` fails;
+  NATIVE-10 32 of 33, as in Track A. Julia's NB2 flag is also false on CI 1.13.0, so it does not
+  depend on the version. Receipts: `docs/dev-log/core070/totoro-owed24-20260924/`.
+- After-task: `docs/dev-log/after-task/2026-09-24-owed-2-4-decisions.md`.
+
 ## 2026-09-24: second-order tools honour GLLVM_PARITY_R_LIBS (OWED 3 of the closeout handover)
 
 - Branch `claude/second-order-r-libs-guard-20260924` from `origin/main` @ `4e6e7eef5`.

@@ -1,0 +1,656 @@
+contract_sha256 = "401e438e850b199ac6b826a8e4a78b088126d33c02b4d7ddafebcb180af8ab8d"
+failure_reason = "Some tests did not pass: 49 passed, 2 failed, 0 errored, 0 broken."
+scope = "subset"
+requested_case_ids = ["NATIVE-06-NB2", "NATIVE-10-STUDENT"]
+family_smoke_case_ids = ["NATIVE-01-GAUSSIAN", "NATIVE-02-BINOMIAL", "NATIVE-03-POISSON", "NATIVE-04-LOGNORMAL", "NATIVE-05-GAMMA", "NATIVE-06-NB2", "NATIVE-07-TWEEDIE", "NATIVE-08-BETA", "NATIVE-09-BETABINOMIAL", "NATIVE-10-STUDENT", "NATIVE-11-TRUNCATED-POISSON", "NATIVE-12-TRUNCATED-NB2", "NATIVE-13-DELTA-LOGNORMAL", "NATIVE-14-DELTA-GAMMA", "NATIVE-15-ORDINAL-PROBIT", "NATIVE-16-NB1", "NATIVE-17-MULTINOMIAL-FIXED"]
+assertion_counting = "execution_groups_v1"
+exit_code = 1
+actual_assertions = 49
+status = "failed"
+run_id = "30678d56a92b85c8db2fba461d6c1c67654720e5c5d19b866cbcf1fd055edf50"
+completed_case_ids = ["NATIVE-06-NB2", "NATIVE-10-STUDENT"]
+selected_family_count = 2
+
+[cells.NATIVE-06-NB2]
+contract_sha256 = "401e438e850b199ac6b826a8e4a78b088126d33c02b4d7ddafebcb180af8ab8d"
+fixture = "test/parity/test_negbin_parity.jl"
+status = "failed"
+run_id = "30678d56a92b85c8db2fba461d6c1c67654720e5c5d19b866cbcf1fd055edf50"
+fixture_sha256 = "39f8f2919111dd2acf199661f3d6cef1d0e12810362a9dfd2628433f08f66b45"
+id = "NATIVE-06-NB2"
+execution_manifest_sha256 = "761e6f24a3e65f4679a83b3e21f80583c1823d5ad85d95f26dca37bb7716054a"
+execution_case_ids = ["NATIVE-06-NB2"]
+
+    [cells.NATIVE-06-NB2.assertions]
+    passed = 17
+    broken = 0
+    failed = 1
+    errored = 0
+
+[cells.NATIVE-10-STUDENT]
+contract_sha256 = "401e438e850b199ac6b826a8e4a78b088126d33c02b4d7ddafebcb180af8ab8d"
+fixture = "test/parity/test_studentt_parity.jl"
+status = "failed"
+run_id = "30678d56a92b85c8db2fba461d6c1c67654720e5c5d19b866cbcf1fd055edf50"
+fixture_sha256 = "e556e87e4c06021993b0283918763ddc5d9b33a83c4d69322355ddda194cf9f0"
+id = "NATIVE-10-STUDENT"
+execution_manifest_sha256 = "761e6f24a3e65f4679a83b3e21f80583c1823d5ad85d95f26dca37bb7716054a"
+execution_case_ids = ["NATIVE-10-STUDENT"]
+
+    [cells.NATIVE-10-STUDENT.assertions]
+    passed = 32
+    broken = 0
+    failed = 1
+    errored = 0
+
+[source]
+source_marker_sha256 = "c0c7c703b04dd9b1cdb1d1f0db0ea2da508127e30ba5f2dcbaa31b32c8a7e35b"
+julia_package_root = "/home/snakagaw/gllvmodels-owed24-20260924/GLLVModels.jl"
+tmb_version = "1.9.21"
+oracle_build_receipt_sha256 = "bfc763eaf184ce83dcac35d74664c236c305432e096f464992282b7fa985cfa9"
+matrix_version = "1.7.6"
+julia_machine = "x86_64-linux-gnu"
+julia_source_tree_sha256 = "1d393f43658fc90b875a96542035698590ec8e77763119d3cee903c47ca6df07"
+source_tree_sha256 = "f83545faa6543dbb1f64d64bbf5a9498adcdf036cc3da5851f269912698b1cc7"
+julia_version = "1.10.12"
+oracle_source_receipt_sha256 = "6b6cce9742e0c984c1bf4c93fba3759acb820fa81e509dd90dbe43b75638a997"
+julia_project_sha256 = "fc4c59d9d880a8a7843d73c22645eeb45048a0a1d1175d27b995100267edaceb"
+blas_threads = 1
+archive_sha256 = "0c2f4323eb9fb19acccf039b8d57b4dd6bda82e2aa8b4a7bb712f36a64b022bc"
+namespace_sha256 = "9094613610789faab69c43195d3cfdafb2c7dfef284e6646b10dababa4fa132c"
+installed_tree_sha256 = "ec650e171accdad1f3d49c28325ca8a2260874749d338bd113bb01816bebcc17"
+julia_project_path = "/home/snakagaw/gllvmodels-owed24-20260924/GLLVModels.jl/test/parity/Project.toml"
+reference_commit = "b4d5fee64def88bc768dda1f1f77c29b295edd86"
+rcall_version = "0.14.13"
+r_library_path = "/home/snakagaw/gllvmodels-track-a-20260924/GLLVModels.jl/.unlazy/r-build/library/gllvmTMB"
+julia_threads = 1
+julia_package_path = "/home/snakagaw/gllvmodels-owed24-20260924/GLLVModels.jl/src/GLLVModels.jl"
+r_version = "R version 4.5.3 (2026-03-11)"
+r_home = "/usr/lib/R"
+julia_manifest_sha256 = "e8744266c8f6349eb0794e0ff09eaae9cc9a4ae32f87885df54ab59096641675"
+
+[execution]
+manifest_sha256 = "761e6f24a3e65f4679a83b3e21f80583c1823d5ad85d95f26dca37bb7716054a"
+
+    [[execution.entries]]
+    sha256 = "f184cd03258c6e5367f6df73cda39cce514fbc53096805f2937090bf5e12deb7"
+    path = "Project.toml"
+    [[execution.entries]]
+    sha256 = "f3afe9852d88ed1b3de10f320184dae2cc4631fd8c7d5ebdc9ccbfebf8625c9a"
+    path = "docs/dev-log/core070/covariance-formula-programme-contract.json"
+    [[execution.entries]]
+    sha256 = "58b7ab7e955bb7cb11e36e25b2b8ea4eba524cdc1a7e82567a81f38b955874d4"
+    path = "docs/dev-log/core070/covariance-programme-contract.json"
+    [[execution.entries]]
+    sha256 = "52e817307a1bc088fd05de61631c257c101cf78e198c7c91de2603c2d111c162"
+    path = "docs/dev-log/core070/family-formulas-contract.json"
+    [[execution.entries]]
+    sha256 = "401e438e850b199ac6b826a8e4a78b088126d33c02b4d7ddafebcb180af8ab8d"
+    path = "docs/dev-log/core070/frozen-r070-contract.toml"
+    [[execution.entries]]
+    sha256 = "8b6016cbedcbdc4d20d66f3a4db74f3e0e5bfb4b0fb7d34e742afa499150642c"
+    path = "docs/dev-log/core070/poisson-beta-required-contract.json"
+    [[execution.entries]]
+    sha256 = "76f47a6f4f22a30938ebfab848b4a7a486d55f84721277e1295b2542d5e4d759"
+    path = "src/GLLVModels.jl"
+    [[execution.entries]]
+    sha256 = "48c6514ed4e5627ce05afe9f17e2dc03f2c9600b125c18e2c271dc92b0990123"
+    path = "src/animal_dep.jl"
+    [[execution.entries]]
+    sha256 = "98066a44e0035deaebfe3370267fd283b6d7ce35ef55011d21d65cbec3eed51b"
+    path = "src/animal_latent.jl"
+    [[execution.entries]]
+    sha256 = "3dec666318bd43e32e13e93d06f5c6edf7b25adebcec3b91b802a3e5dfadf543"
+    path = "src/boundary_inference.jl"
+    [[execution.entries]]
+    sha256 = "5adef5de0227fa9a2cd496ea28be4217bf29bff54fe01746493b2c09e575fc96"
+    path = "src/bridge.jl"
+    [[execution.entries]]
+    sha256 = "889e240011e0b4bf6205a61b46e5519d655997f55a0bb07ea520c7edd004c5e0"
+    path = "src/bridge_precision_multivariate.jl"
+    [[execution.entries]]
+    sha256 = "12ba6b6f893921538643e6c22b09299b00235f0a234b4b42e08ef932d876df50"
+    path = "src/coevolution_blockna.jl"
+    [[execution.entries]]
+    sha256 = "32edf11332c16d1f8f4ec281dd69c42968b3c049eff3a8c7ee3cdfb512eea09c"
+    path = "src/coevolution_glm.jl"
+    [[execution.entries]]
+    sha256 = "0806ae44bb3890bc8a631ea8d5cf4bfac402443c7ef1f5b28ac9d988dd9e27bb"
+    path = "src/coevolution_kronecker.jl"
+    [[execution.entries]]
+    sha256 = "e576f75ae6b3d89c2a3e05a5ba4eb66c02196db7b4a1776e07e8cb9d61242d7c"
+    path = "src/confint.jl"
+    [[execution.entries]]
+    sha256 = "d83c3835ef2b7aa93067f7d706d7545773c0995acb665b7504d716191b83eccf"
+    path = "src/confint_bootstrap.jl"
+    [[execution.entries]]
+    sha256 = "1174ccc116f2dbd1202526930187f45a3b361f82edba2c36e8e31344ad4f8582"
+    path = "src/confint_derived.jl"
+    [[execution.entries]]
+    sha256 = "ff1d294d90f83bf1a641a351941a1cf76244480752ce1d8473d5e8b9fbf834b5"
+    path = "src/confint_derived_wald.jl"
+    [[execution.entries]]
+    sha256 = "a2d649d4f22368c88e59319ae57608d11d2734d6a8c5357d9d2480ad3bfcd175"
+    path = "src/confint_family.jl"
+    [[execution.entries]]
+    sha256 = "5a191a7add670df448cdd56ffd60893e44ab623e21c2e9dc891dec240dd90b5f"
+    path = "src/confint_profile.jl"
+    [[execution.entries]]
+    sha256 = "457c235ac0324d122b8e586edd9d08aa16be4b5f051da983988cb3f3c46323d4"
+    path = "src/cross_kernel.jl"
+    [[execution.entries]]
+    sha256 = "32f9995e46325241dac12ea3909099048151440262f28bf5b0b557c1c9a133de"
+    path = "src/cv.jl"
+    [[execution.entries]]
+    sha256 = "ee5d0bdca27c75c1eceeea01dcbef0101fe8c7901a76696a1558e60a60cb47fa"
+    path = "src/destination_b_fixed_effects.jl"
+    [[execution.entries]]
+    sha256 = "6afa22bb6262fd6342eafcf1aed368f4aa6c7b1735faad20e5f1082218584d5b"
+    path = "src/destination_b_postfit.jl"
+    [[execution.entries]]
+    sha256 = "fecf9f19a4f66bb1aa512fd8de76948a76fa868ea88ff311768aef8de33f7898"
+    path = "src/diagnostics.jl"
+    [[execution.entries]]
+    sha256 = "3372f6c9fc24f36af86cfa9448c31f6277f1b0ebbc9d2e622569e2dc54e54e4d"
+    path = "src/edge_incidence.jl"
+    [[execution.entries]]
+    sha256 = "b2d1fbfd51f44eca9fe8467cbed0a0dcd9324a6516cc54150d2ce4ad3a8c90c0"
+    path = "src/em_fa.jl"
+    [[execution.entries]]
+    sha256 = "0fba59063f28b29b787bb0e5e83da0aeada35ab0f493581041b50de314e59311"
+    path = "src/em_phylo.jl"
+    [[execution.entries]]
+    sha256 = "64b1da3036f1833449293aaab631fb22b11404a7e857a1e0788a8ec8a851414f"
+    path = "src/em_squarem.jl"
+    [[execution.entries]]
+    sha256 = "6d2ee156f124665c59c3d9339eeceb133b67d2cfad39c4392b0e60b6c21f2719"
+    path = "src/extract_gamma.jl"
+    [[execution.entries]]
+    sha256 = "38b5c21c786f43295e9b7b480c30f8a1ebb698e741090b10620de1f264d01def"
+    path = "src/extractors.jl"
+    [[execution.entries]]
+    sha256 = "17e5dad83d38ade19b3f584ea004ea41ac3e4494598d3b660c8b4cab624964bc"
+    path = "src/families/aghq_binomial.jl"
+    [[execution.entries]]
+    sha256 = "b5ac717755b9122edc07e6b28a8e312b405a0559f25996459846ad54c3c3edad"
+    path = "src/families/aghq_binomial_fit.jl"
+    [[execution.entries]]
+    sha256 = "b543b937ff5919895a0be43e83fad1e4da898e997c817610d1224f3d59da26f6"
+    path = "src/families/aghq_fit_info.jl"
+    [[execution.entries]]
+    sha256 = "97b775f7dedb250825f1d2917a240f4f7140c921c06d17eef25e5547d53532ea"
+    path = "src/families/aghq_gaussian.jl"
+    [[execution.entries]]
+    sha256 = "8d89eb25e13f7f741db65fa2ea5d40564be3fae39a3ebb57d2e363b5fe81c21f"
+    path = "src/families/aghq_gaussian_fit.jl"
+    [[execution.entries]]
+    sha256 = "8a22d85da4d279bc636af02cdabd8497d82aee21e68b75a6202483303f36331e"
+    path = "src/families/aghq_grid.jl"
+    [[execution.entries]]
+    sha256 = "e9c6967e50d83713e4e67fd57d53c5ac75a47c39f056c15e3db9ecbe2794028a"
+    path = "src/families/aghq_outer.jl"
+    [[execution.entries]]
+    sha256 = "468f189fe21b59e166c2fc727e8df87cc9be2b9c6b36aeca60492d489220888c"
+    path = "src/families/aghq_poisson.jl"
+    [[execution.entries]]
+    sha256 = "ac2a53156542a86ebb0eddb9cd353f3c9a9119136d9be9e2a72b7d1b346f9631"
+    path = "src/families/aghq_poisson_fit.jl"
+    [[execution.entries]]
+    sha256 = "8090ce59aaafa0088e1c01a6b6d5ed08ca38c915c399005b82ceef2411da0e66"
+    path = "src/families/beta.jl"
+    [[execution.entries]]
+    sha256 = "5b2ac47536e58cb5a669ce1bfaa783711f3278a18f4c50c59612ba6cf3ef022a"
+    path = "src/families/beta_binomial.jl"
+    [[execution.entries]]
+    sha256 = "9e79002704968cd9c723eecac7dc2beee8342d7db97b8cd8bff5b772d2779ca5"
+    path = "src/families/beta_hurdle.jl"
+    [[execution.entries]]
+    sha256 = "7940076f00651836fb1e41e74be58456de505d5da7935695266fd2e9f3615be3"
+    path = "src/families/binomial.jl"
+    [[execution.entries]]
+    sha256 = "05bb3e542944c4d059c15f29ce242463bcb9d8c21fe887b207a5798b2bbd0bf7"
+    path = "src/families/censored_poisson.jl"
+    [[execution.entries]]
+    sha256 = "76ddfdefd1b2cdb2227c45b1e2506ead9b5da74ae94c83ba364d772350a012b3"
+    path = "src/families/com_poisson.jl"
+    [[execution.entries]]
+    sha256 = "de127413bb0d9525687d8f0ba2dc6398472e51a57e8e0e741fd4dbf00645eda7"
+    path = "src/families/constrained_ordination.jl"
+    [[execution.entries]]
+    sha256 = "ef4a9ee1e3843a5f117941770a3b54f4903a7431f865cec05f58e8b4676245d7"
+    path = "src/families/covariates.jl"
+    [[execution.entries]]
+    sha256 = "fc91965be4574cdc2803ea1786f782a55c0d99bfed70beeffd0105bb6fb132e0"
+    path = "src/families/exponential.jl"
+    [[execution.entries]]
+    sha256 = "ab9a506b9eb7b5f5f6cb5cac1dcae98e37fff9d721c50aae2612ac46a41f303b"
+    path = "src/families/fit_gllvm.jl"
+    [[execution.entries]]
+    sha256 = "bea408ad1a70e79127698d7be986009c0b99ca6be26a065d72b37b05f234e1ec"
+    path = "src/families/fourthcorner.jl"
+    [[execution.entries]]
+    sha256 = "928217930fd48d8cb99b1722dd263151f7425e1a27479c0db762872ef6ff315d"
+    path = "src/families/gamma.jl"
+    [[execution.entries]]
+    sha256 = "1d9d37ce97707d7960ad307ee3561d70c36419de64803792b6414a2920c5eabd"
+    path = "src/families/gaussian_pervar.jl"
+    [[execution.entries]]
+    sha256 = "09a60bdc185b37aadf7e4181896ec7aba4210216dd08f2487055661109a4e9d4"
+    path = "src/families/gp1.jl"
+    [[execution.entries]]
+    sha256 = "32c7e13105237bcb283e781a195d6470870a9b147a280558e75ce21604057da5"
+    path = "src/families/grouped_dispersion.jl"
+    [[execution.entries]]
+    sha256 = "6789487ded2818f39ddf6717534d2a59b84c7a863890623e5f05a6e68e59435c"
+    path = "src/families/laplace.jl"
+    [[execution.entries]]
+    sha256 = "ac8b2e2719c69b3aadb7545953bdcb65526e908f2b2a861e4e1ca0e790e5297f"
+    path = "src/families/links.jl"
+    [[execution.entries]]
+    sha256 = "888fc177cff369b7778c93c4e4a01098426b5cd89f5007a54721a1af26984ec9"
+    path = "src/families/lognormal.jl"
+    [[execution.entries]]
+    sha256 = "da001798fd05ac6765b34b48ac06c75ad1d04c837b163b5ebabc795f531b8183"
+    path = "src/families/mixed.jl"
+    [[execution.entries]]
+    sha256 = "0af0dbcfb6c7a292693725cb96351cdd16951bd42ace116b5d145b69ac2079fd"
+    path = "src/families/multinomial.jl"
+    [[execution.entries]]
+    sha256 = "b97547e151d4fd87261b15aae6c835a4995ed85e3462cf081d53d1bbb00223b6"
+    path = "src/families/negbin.jl"
+    [[execution.entries]]
+    sha256 = "8080bc276d299a508bc240af716e89d0edf453fb5ae9179f52e6804ed62967f0"
+    path = "src/families/negbin1.jl"
+    [[execution.entries]]
+    sha256 = "89d727b105078c6dac683a25fd0e81ca39a83bb0241b32407a1cb4ef994cff43"
+    path = "src/families/ordered_beta.jl"
+    [[execution.entries]]
+    sha256 = "a3395e96ea5e48cc0ce116d1252a0b685dbdebbab05154cac2636ca29d192a37"
+    path = "src/families/ordinal.jl"
+    [[execution.entries]]
+    sha256 = "20339d9dfb19efcd2f7b941d3e1887a548cb5def1f08bc3c680437f357c78d21"
+    path = "src/families/poisson.jl"
+    [[execution.entries]]
+    sha256 = "ba53d8358beeeea576e686404db41d6bbf95da5a9ce00abc60772f24bfbe82a0"
+    path = "src/families/quadratic.jl"
+    [[execution.entries]]
+    sha256 = "efb176a09b7855d5526c36bb587fdc0b082752019cb125d2f77ced051c21ff08"
+    path = "src/families/random_slopes.jl"
+    [[execution.entries]]
+    sha256 = "c6a957fdec8b98f9b791a0786c5296b265c62d691ae40a2b2f3c03e21787a0b0"
+    path = "src/families/row_effects.jl"
+    [[execution.entries]]
+    sha256 = "1bbb0fb207b97aaf70d3f895c95735da934f9330dcc1c6b8bb3d27c8559e90ca"
+    path = "src/families/row_random.jl"
+    [[execution.entries]]
+    sha256 = "896f21764b741e9d5f4f139e65d79adf37ba9aceb866d5187991a00d2d64ac4e"
+    path = "src/families/rrr.jl"
+    [[execution.entries]]
+    sha256 = "8e15bcb6d9894f50aef3abcf80748d6f79c2d956106765ba896d15053919c781"
+    path = "src/families/species_covariates.jl"
+    [[execution.entries]]
+    sha256 = "6ebf529cd74c448f2aae85ecf0055e2bf67ff12b436edc39c30c5ec65aacc45c"
+    path = "src/families/studentt.jl"
+    [[execution.entries]]
+    sha256 = "d7aa460172cbc096a5903ba892dc61d72cd616e503cbc083bfafa18ac115ddd5"
+    path = "src/families/truncated_nbinom2.jl"
+    [[execution.entries]]
+    sha256 = "c9b20520415644bec5b85cfc4c9b34b6bda323cbbc280f96b988a90141a22ed3"
+    path = "src/families/truncated_poisson.jl"
+    [[execution.entries]]
+    sha256 = "df9efb87e24e799eb3226f429db7bf4fb3186715782ef89692201c442517a7f0"
+    path = "src/families/tweedie.jl"
+    [[execution.entries]]
+    sha256 = "ac9fb375120d03439e34185691728a2a4cf055ba3d4480f52ba983204e7cc3a5"
+    path = "src/families/twopart.jl"
+    [[execution.entries]]
+    sha256 = "a75e6fb64c4ac0e015e559d3f95864598f073a2f6eb7495f00d6fe51becc2ed7"
+    path = "src/families/variational.jl"
+    [[execution.entries]]
+    sha256 = "ba3b260071cb2a77cc9c1aa87e960a63aee7e3a7c62da94de90881219fc6bc67"
+    path = "src/families/variational_beta.jl"
+    [[execution.entries]]
+    sha256 = "2668c8d56c1117956ff2c703b956cc0f4299c094d6fc298536b6c9210220bb52"
+    path = "src/families/variational_binomial.jl"
+    [[execution.entries]]
+    sha256 = "fbc5747e629ac4c3f5493eda6beb5d4700bfe85a9ed5454cf112914b91d1e5b4"
+    path = "src/families/variational_dgamma.jl"
+    [[execution.entries]]
+    sha256 = "527d954d983f784c1afe0ca6479727b40b0e1826adda6acbbee858407e725c3b"
+    path = "src/families/variational_exponential.jl"
+    [[execution.entries]]
+    sha256 = "22222482c2e30c571b4e1b5b1b0436cf5867011ed55ed73558b6dc2eed6d6f96"
+    path = "src/families/variational_gamma.jl"
+    [[execution.entries]]
+    sha256 = "c9f2e0ed23979eea33f240dc5b106373b709b385f90c94e8cc7e80e566f27ce4"
+    path = "src/families/variational_negbin.jl"
+    [[execution.entries]]
+    sha256 = "b93e0e61c584722a6b59ee308639023ed143d00702f9c0b8318512b1778e1dae"
+    path = "src/fit.jl"
+    [[execution.entries]]
+    sha256 = "394b40a92cf844f4f3816f7a1864cbdc026f4a5124954456226bee3390aaaab8"
+    path = "src/fit_phylo.jl"
+    [[execution.entries]]
+    sha256 = "0934bd6db4ffbc5e3a3b3c758c070b6eddc1cef58dfb776cc725c77379fa77c5"
+    path = "src/fit_random_effects.jl"
+    [[execution.entries]]
+    sha256 = "928c4fb42a88b91a06c50e1aaafeaadd651bc81b069c2e25230693c96ca93a77"
+    path = "src/fit_verdict.jl"
+    [[execution.entries]]
+    sha256 = "9df7209abdb1359cfaa58555e93bf1fd0b4a8de65ee887b3a53cf11b7fb2a161"
+    path = "src/fixed_coefficients.jl"
+    [[execution.entries]]
+    sha256 = "42b54404accd9dbad9740b70030bfd1ffb19eee091dd037bd579c3f25ca919ab"
+    path = "src/formula.jl"
+    [[execution.entries]]
+    sha256 = "eae6f3f2e2e24af07580ead37799ec3b973f2b0d40b9eff2cb87c4ab83c257fb"
+    path = "src/grouped_fit.jl"
+    [[execution.entries]]
+    sha256 = "983cfd9cd2a5d7312da572418e66bd63daa04555c2acb02e2d2c2630e3787599"
+    path = "src/grouped_gaussian.jl"
+    [[execution.entries]]
+    sha256 = "4a8734c336a76910ed65f5544f3eca7481febfb0a5751d2e9585f562564cbc2d"
+    path = "src/grouped_laplace.jl"
+    [[execution.entries]]
+    sha256 = "578d9e733034cefc96a73dcecce991bdb8481aa37177b08676eab85434120d95"
+    path = "src/grouped_nongaussian_fit.jl"
+    [[execution.entries]]
+    sha256 = "d51cb5aecfaf1a51e59cbcfe7cff49dad8a3d8deda1fc9581e8f9373750c0584"
+    path = "src/grouped_nongaussian_postfit.jl"
+    [[execution.entries]]
+    sha256 = "f936ca47fde639795c7a1d2ef768c272f82e9feda284862ff4c68124da3752eb"
+    path = "src/grouped_profile_foundation.jl"
+    [[execution.entries]]
+    sha256 = "0ea3e3cc99ea9d41acbbc201170929090e94cd2727e345dc2cfc1f5b4a0ce7e6"
+    path = "src/grouped_profile_interval.jl"
+    [[execution.entries]]
+    sha256 = "93b0e87c50d12488c4d437671ead2c76e72cb07e59d674890ceedda8fc21628a"
+    path = "src/grouped_profile_inversion.jl"
+    [[execution.entries]]
+    sha256 = "d0383bb3a8373869251bb1e33aea036424054ffffd0184b78c0773a49990d3a3"
+    path = "src/grouped_profile_refit.jl"
+    [[execution.entries]]
+    sha256 = "8dde3492912553210dff8f267ee7f2d40a67bcf070f2e71dfffc0a6a3b1787ec"
+    path = "src/joint_covariance_identification.jl"
+    [[execution.entries]]
+    sha256 = "a5030a74eeac80a8e70939ecf8b06162cd47c96d20b480d523282b8cc33a6b34"
+    path = "src/joint_phylo_grouped_fit.jl"
+    [[execution.entries]]
+    sha256 = "57b4e31baf4fa1765f34b33d9074e7c549e9399fe4901fc8cf596c7a2d472fcd"
+    path = "src/joint_phylo_grouped_gaussian.jl"
+    [[execution.entries]]
+    sha256 = "e00db8257117c5ecb339aed5b0b158d51b08a7d2d182d28e16975ccd809993af"
+    path = "src/joint_phylo_grouped_postfit.jl"
+    [[execution.entries]]
+    sha256 = "0a2a29eae0ec062e77bc34ab52ee4abc631a8c6e937ce59c5f96439de04b196e"
+    path = "src/kernel_dep.jl"
+    [[execution.entries]]
+    sha256 = "e2e99e32cdedc57a78a61b1f196b5df3a2f18037d772c537190ebd7ef661e2db"
+    path = "src/kernel_indep.jl"
+    [[execution.entries]]
+    sha256 = "988c71056ac4c912a491f819fffdcdd3db927b01544ececa68e6194955b58796"
+    path = "src/kernel_latent.jl"
+    [[execution.entries]]
+    sha256 = "685931637f70237d6c52561ee524ce5827d5cf9bbd4017192dcc38afeadda187"
+    path = "src/laplace_grad.jl"
+    [[execution.entries]]
+    sha256 = "92b6d5aa79b1fe8f63ffa9243d8cf3c11575d047715644c462344b41f5917141"
+    path = "src/likelihood.jl"
+    [[execution.entries]]
+    sha256 = "860aaf6b5be4dceab0b4e8c26b22f6fcfbaa3dbb9a85782b1fad0400d4a27020"
+    path = "src/likelihood_contrasts.jl"
+    [[execution.entries]]
+    sha256 = "15ae13fc2d2be81cedc09b78fbd1056498aa98ee3a769e42c913404fcb71349a"
+    path = "src/likelihood_edge_incidence.jl"
+    [[execution.entries]]
+    sha256 = "da2f327e233493113f48af6e3ed40a6f1cad9e26b47ab27713579b7cc8f5e18b"
+    path = "src/likelihood_sparse_phy.jl"
+    [[execution.entries]]
+    sha256 = "661499f2c3183a64fec8626a393311138057ad2b89c0ce072bae064a77258272"
+    path = "src/link_residual.jl"
+    [[execution.entries]]
+    sha256 = "7e6c48f3dd0d80f0b05cd4f5ae766e129743e6165b8f5f0d838f17c353e9eb10"
+    path = "src/loading_profile_confirmatory.jl"
+    [[execution.entries]]
+    sha256 = "7b89d59063184c908762a2f5c09f4092cdb5443a7fbc4e5922843ca35b746188"
+    path = "src/loading_profile_confirmatory_internal.jl"
+    [[execution.entries]]
+    sha256 = "12d996ee7c41234378ecb5326ff538c8d60d3e28e6873feda9fd40b7330c2e2c"
+    path = "src/lowrank_cholesky.jl"
+    [[execution.entries]]
+    sha256 = "2ee0e4ff924687a9fa05fbed1c2fa8205f8bb8f0c5eb2bb9fede31970f67018e"
+    path = "src/lv_targets.jl"
+    [[execution.entries]]
+    sha256 = "a63b1f21df1362494c165967926d3d152fd1048ec38c49e44e6bf7eb400541eb"
+    path = "src/marginal_target_intervals.jl"
+    [[execution.entries]]
+    sha256 = "c99c51180378c684a90b47921968e8200133e207db120e59277b40f818e81317"
+    path = "src/missing_predictor_fiml.jl"
+    [[execution.entries]]
+    sha256 = "43ea898e01360b52bf2894c7fae0fdb4a11051f08adf376dc74ca6ae4f900395"
+    path = "src/missing_predictor_multi.jl"
+    [[execution.entries]]
+    sha256 = "84999a6f8b5ecbfc5cb50658d0f207dd4edfe4c2c9db22f2a0006d666b2c5a0d"
+    path = "src/missing_predictor_phylo.jl"
+    [[execution.entries]]
+    sha256 = "4e52b664f798b052ced42720b26ac34a535d5582af8be05e9ee1bcded1281231"
+    path = "src/missing_predictor_poisson.jl"
+    [[execution.entries]]
+    sha256 = "c23cc22cb8aa359c41c19d7b9f25a2f4d1ba05b50b096a3ef2355125471e0621"
+    path = "src/model_selection.jl"
+    [[execution.entries]]
+    sha256 = "05e44ac5ae5a4406abf80a02d9747d1b04f1ff12351ab9be3d2a6b0d3bb596d1"
+    path = "src/node_gradient.jl"
+    [[execution.entries]]
+    sha256 = "267d9513d1976422b050a8146c14a75e5da86aa1fe95de3228e607ded8020528"
+    path = "src/none_dep.jl"
+    [[execution.entries]]
+    sha256 = "6142f72a9df4500bc503f7cd918a03ec9c32afe917c4d1003d7a65543407ddca"
+    path = "src/ordination.jl"
+    [[execution.entries]]
+    sha256 = "b5bf8b1b7df530ec3d93a8aa826d0bd1362678e144b80dfa27bd9dbf55b53976"
+    path = "src/ordination_uncertainty.jl"
+    [[execution.entries]]
+    sha256 = "53c4e41ef2fb3084cd00399a3e507ff5d0f223692245f61d964d57b518d109f9"
+    path = "src/packing.jl"
+    [[execution.entries]]
+    sha256 = "38ac7c25fa09afa5ca75c423f4b006124de66c0ef1885815519ddbb115a7b9ed"
+    path = "src/phylo_beta_xlv.jl"
+    [[execution.entries]]
+    sha256 = "0a362281ef1b05f21eb42fa43b22c90bda5e2d1752ab4794bc86ee91c5334235"
+    path = "src/phylo_binomial_xlv.jl"
+    [[execution.entries]]
+    sha256 = "c537f5b2293eb786080d7df6424f00acaa809c20468e474cd4cacba49075df06"
+    path = "src/phylo_branch_re.jl"
+    [[execution.entries]]
+    sha256 = "09edade1f725df5509099fffa803388cd32d34525da2572b1b70e752cf0afd84"
+    path = "src/phylo_contrasts.jl"
+    [[execution.entries]]
+    sha256 = "94837f96c7acbbe2677863cd322b858ca976282623da5eea868e87be1bc478f3"
+    path = "src/phylo_dep.jl"
+    [[execution.entries]]
+    sha256 = "e254a2013cfcdbf0783411119b0166deed7fe140e8d0bde622ebd052f2965a4a"
+    path = "src/phylo_gamma_xlv.jl"
+    [[execution.entries]]
+    sha256 = "9dd0bbd9d78ef3219a971cb87d9f280d9c7016dd43a842c70826526538b73e48"
+    path = "src/phylo_glm.jl"
+    [[execution.entries]]
+    sha256 = "a2866ab2be8a3a8e5603f950a24008c199eeb47427bcef4843d3bb03c7fff6cd"
+    path = "src/phylo_nb_xlv.jl"
+    [[execution.entries]]
+    sha256 = "db3952a1a10786cc5b4269f58b10d4928661f43532804fb2c81240e23cf2f00f"
+    path = "src/phylo_ordinal_xlv.jl"
+    [[execution.entries]]
+    sha256 = "e486d79a985be51bb0f13b06ab123ee2ec329621fa4d5ba885c32eee5e592292"
+    path = "src/phylo_poisson_xlv.jl"
+    [[execution.entries]]
+    sha256 = "35e17f3fb5d936d009b601ba72b63fcd11c3d900d88f23a8c4070cd941eb77ed"
+    path = "src/phylo_precision.jl"
+    [[execution.entries]]
+    sha256 = "3b4dc82012bd38c70e24f3416fecb2b2f4daa62163309f757a6b73be69dc4529"
+    path = "src/postfit.jl"
+    [[execution.entries]]
+    sha256 = "abeb36461a9ef899507c6896837d3fac1883589a8a97a82bab70f8043a8abba8"
+    path = "src/postfit_tables.jl"
+    [[execution.entries]]
+    sha256 = "9d9018fedc648de860fbb82a1b0faaeba4d0563ccdc051f9017163c3590ed807"
+    path = "src/ppca_init.jl"
+    [[execution.entries]]
+    sha256 = "f13658d4ce404baf3bcb9395700e6c47104bb2a939bbba3d94490cd8567af34e"
+    path = "src/precision_fit_admission.jl"
+    [[execution.entries]]
+    sha256 = "3a0eecb500bd9540b752430aeb6de5d57d7b814da2a8fbf1f695bf151176a634"
+    path = "src/precision_multivariate.jl"
+    [[execution.entries]]
+    sha256 = "1eae35fd119aa7747a71608686feb2dfd784b91c0384817a01943bdfcb2d0efb"
+    path = "src/precision_multivariate_fit.jl"
+    [[execution.entries]]
+    sha256 = "6a1e147bfe178efaca201195f2122403172150b27e23f8e4e8fca0acf6e76972"
+    path = "src/profile.jl"
+    [[execution.entries]]
+    sha256 = "38da8d6e6261b7a2524a96afecacaf4f245c0670784ea9c81a5f85456d07f922"
+    path = "src/random_effects.jl"
+    [[execution.entries]]
+    sha256 = "0d7209e7da63a09e93d8197be397f33bb44e2aa2fe4313fb34a52979cdbce8c0"
+    path = "src/re_sd.jl"
+    [[execution.entries]]
+    sha256 = "a3b1d3f7a98e768a46a9bc60300bd768503de7bf4cab8e0213a6e440dd20a77d"
+    path = "src/relaxed_clock.jl"
+    [[execution.entries]]
+    sha256 = "c887d598ff1838d6258ad0080e9627f963c5b8ec5c60ca2ebdc5c6c870a94cb7"
+    path = "src/reml.jl"
+    [[execution.entries]]
+    sha256 = "e68978b4defb1e2200f24881743880a529a46cef7e605395fbe994b2c532d70e"
+    path = "src/simulate.jl"
+    [[execution.entries]]
+    sha256 = "e7272505c2510fe13547b9df1264c9e95c683ce67e6195484d19359b1a158b33"
+    path = "src/simulate_fit.jl"
+    [[execution.entries]]
+    sha256 = "1706d02a4d7838986ddd4f0cc6cb4ad09c3e92c6213736c223a314a48ec0263b"
+    path = "src/source_covariance.jl"
+    [[execution.entries]]
+    sha256 = "cedd38b61939049364a0a8edb48d5968c29a434fab59f0e82c92733818e3bc45"
+    path = "src/source_fit.jl"
+    [[execution.entries]]
+    sha256 = "00bf6190562b26324a5808f69342c217b3a097b211eddf9f54db47c0a66ed7f0"
+    path = "src/sparse_phy.jl"
+    [[execution.entries]]
+    sha256 = "7373782dec536a45e7c8690b78762587916e984cdcb1485300e3c848a58fa87e"
+    path = "src/sparse_phy_grad.jl"
+    [[execution.entries]]
+    sha256 = "f23dac88e5637bd34c66a44de2fc5e50c975e2240c6aa5979e308e33e1f7c954"
+    path = "src/spatial_dep.jl"
+    [[execution.entries]]
+    sha256 = "920d890e0e1ee31d09ec67776ecb872571213c7b345af61c2f8521e5938870d5"
+    path = "src/spde.jl"
+    [[execution.entries]]
+    sha256 = "def7144f05140805a22f914b71a9c6bb90069fc02096d1d93a6825d14cd64b9e"
+    path = "src/spde_delaunay.jl"
+    [[execution.entries]]
+    sha256 = "be1f189de617c600b12388a787e66c1c392c603d79251f45d2b492281b82957c"
+    path = "src/spde_fit.jl"
+    [[execution.entries]]
+    sha256 = "fccb7b6b2bb7890128afce30d34044bb8698fdabb013b6906026abebe0d23051"
+    path = "src/spde_latent.jl"
+    [[execution.entries]]
+    sha256 = "f7be3a13a583076e63bbebfc96cdca908b7ea857f5eed3ba1e0dc81f825728d0"
+    path = "src/spde_latent_postfit.jl"
+    [[execution.entries]]
+    sha256 = "ed110157ef74be37f2e0cf5cce8f2419e6351d9b8850566c0509f0b777c85718"
+    path = "src/spde_mesh.jl"
+    [[execution.entries]]
+    sha256 = "80401fda340952f875f0c7591c4ac862700ccd14c1db63226d47c24bd662133c"
+    path = "src/structured_cov.jl"
+    [[execution.entries]]
+    sha256 = "545bf0489466adc02189fd0f745f30246e14e95e93b137acbf9fe359b6a644b2"
+    path = "src/summary_table.jl"
+    [[execution.entries]]
+    sha256 = "c9ed00e3a1b0f521daabf0991a45048ae5319e67000e48dfb6b533bafc7d2e58"
+    path = "src/takahashi_selinv.jl"
+    [[execution.entries]]
+    sha256 = "d2d0e7e20facf7a3625ee16f2a1552c35c80437cf318dacd1f1783a4ae1ba7ee"
+    path = "src/twolevel.jl"
+    [[execution.entries]]
+    sha256 = "0e5d7ce63ed27a571800e6f6772bc14b8159765920b9a6188006031ba2c83e26"
+    path = "test/Project.toml"
+    [[execution.entries]]
+    sha256 = "e8744266c8f6349eb0794e0ff09eaae9cc9a4ae32f87885df54ab59096641675"
+    path = "test/parity/Manifest.toml"
+    [[execution.entries]]
+    sha256 = "fc4c59d9d880a8a7843d73c22645eeb45048a0a1d1175d27b995100267edaceb"
+    path = "test/parity/Project.toml"
+    [[execution.entries]]
+    sha256 = "a2ec621466ef14ddc3101f217dc190709915b8e10150b4450eb9e693a87067f7"
+    path = "test/parity/core070_case_registry.jl"
+    [[execution.entries]]
+    sha256 = "ed142de650c71f72bf4c932f6c3e612f977439e47f54deccb4ebb5b762ba5e9e"
+    path = "test/parity/core070_receipts.jl"
+    [[execution.entries]]
+    sha256 = "a200fd07885eaa7c36912acec9a6e54c11eb721b0d430e38c86b4e882efbc8f1"
+    path = "test/parity/covariance_formula_cases.jl"
+    [[execution.entries]]
+    sha256 = "f8b4efdf774cf9f5b0f0821f473a4b287d73261ff9d71c86490ad8cc29e8d306"
+    path = "test/parity/family_formula_cases.jl"
+    [[execution.entries]]
+    sha256 = "ef2f8a84a11106ce8037f0be52e6cebd0a0a758b2f5f8e5116522fe6b84d46d1"
+    path = "test/parity/fixtures/core070_covariance_fits.R"
+    [[execution.entries]]
+    sha256 = "fbcd0b7f359d2dcbfacfe6e5b611a5f3398100123b7eb0258a049864307840a1"
+    path = "test/parity/fixtures/core070_covariance_modes.R"
+    [[execution.entries]]
+    sha256 = "52a4664c99295ec675a7b666458350bf57ff57e338c77d5ada1cf9d2e5efba92"
+    path = "test/parity/fixtures/core070_gaussian_original.toml"
+    [[execution.entries]]
+    sha256 = "2df19cd81b17ba38a4f8dca656797bf94085534f0f9b1d5ab495bc9d29cd8ff0"
+    path = "test/parity/fixtures/core070_gaussian_reference.R"
+    [[execution.entries]]
+    sha256 = "8f6c5e8c318f42f7208b899efb5bac5ed7dea22ed802f6e1d49fe491f00fe7f0"
+    path = "test/parity/nb2_health.jl"
+    [[execution.entries]]
+    sha256 = "ab64a231791421ec8efebbeed83b30c007aa9bb3bccc2ae4aac7369b6be20606"
+    path = "test/parity/parity_helpers.jl"
+    [[execution.entries]]
+    sha256 = "f4bb02fd150c306f635b7f86885272939f0b66faa4a8c5ee8843c64f6f7ea7cd"
+    path = "test/parity/parity_trial_inputs.jl"
+    [[execution.entries]]
+    sha256 = "acdede2d988d2ba4a30977031a09ebcdaa7508a3799ec33a71a533d6dc8b24d6"
+    path = "test/parity/poisson_beta_health.jl"
+    [[execution.entries]]
+    sha256 = "966168a6846c1dbae1be34bdcedc136857e797b14be80a22478a09c794f3edce"
+    path = "test/parity/r_health.R"
+    [[execution.entries]]
+    sha256 = "f4d10cb6404aba1f17332ee4cc90c03bec48e2de416b4257d4bd5f75fa158961"
+    path = "test/parity/runparity.jl"
+    [[execution.entries]]
+    sha256 = "2fda9fcd23ac2bb435cacd7cf9b03bc25b7ccbadacb291a928ed7ac3d1440fa9"
+    path = "test/parity/test_beta_parity.jl"
+    [[execution.entries]]
+    sha256 = "c43ce47b0c0ededa4213ca4852865618f1f5121a67db8b2789986b7d0685f9a1"
+    path = "test/parity/test_delta_gamma_parity.jl"
+    [[execution.entries]]
+    sha256 = "a05b4d5a2d898d4a8585f7c4bda373806c792b021f342133de8376c78c1559ab"
+    path = "test/parity/test_delta_lognormal_parity.jl"
+    [[execution.entries]]
+    sha256 = "39f8f2919111dd2acf199661f3d6cef1d0e12810362a9dfd2628433f08f66b45"
+    path = "test/parity/test_negbin_parity.jl"
+    [[execution.entries]]
+    sha256 = "0faa57a2d346dd85715053c90db35550c614e6f87152956e79d9aaf6f0a296c7"
+    path = "test/parity/test_poisson_parity.jl"
+    [[execution.entries]]
+    sha256 = "e556e87e4c06021993b0283918763ddc5d9b33a83c4d69322355ddda194cf9f0"
+    path = "test/parity/test_studentt_parity.jl"
+    [[execution.entries]]
+    sha256 = "e2b66610180ed0bd70ffb239c99ad4ed9fabbf3150ce6ed1701a4e9aeb78e3d7"
+    path = "test/parity/test_truncated_nbinom2_parity.jl"
+    [[execution.entries]]
+    sha256 = "7fd11122eabf63b18f9ba71fec44e016b5e2f2adce204abc3d02322a529aa304"
+    path = "test/parity/truncnb2_policy.jl"
+    [[execution.entries]]
+    sha256 = "d4fa081b2491c09d1fda5d35fdefb1b3188c6f15f8b53078fc4b46669216118e"
+    path = "tools/core070_covariance_mode_fits.jl"
+    [[execution.entries]]
+    sha256 = "65cacc5ad16fc101760e0559d39a958e20c9a0f2b6d3762529d58248051e9e8e"
+    path = "tools/core070_delta_matched.jl"
+    [[execution.entries]]
+    sha256 = "21bae53e5cbae8e0c38106bff9810c3ff08215916790352f083a03258d1ef109"
+    path = "tools/core070_source_fixed_residual_pair.jl"

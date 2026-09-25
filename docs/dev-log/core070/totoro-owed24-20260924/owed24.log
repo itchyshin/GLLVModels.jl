@@ -1,0 +1,25 @@
+=== STEP 1-clone 2026-09-24T16:31:33-06:00 elapsed_min=0
+GLLVM_HEAD fb2ff8c49d7283bfc1bf32b6b8793bf540a0178b
+=== STEP 2-oracle-receipts 2026-09-24T16:31:35-06:00 elapsed_min=0
+CORE070_ORACLE_VERIFY_PASS
+VERIFY_EXIT=0
+=== STEP 3-julia-env 2026-09-24T16:31:36-06:00 elapsed_min=0
+JULIAENV_EXIT=0
+└  
+    Building Conda → `~/.julia/scratchspaces/44cfe95a-1eb2-52ea-b672-e2afdf69b78f/8f06b0cfa4c514c7b9546756dbae91fcfbc92dc9/build.log`
+    Building RCall → `~/.julia/scratchspaces/44cfe95a-1eb2-52ea-b672-e2afdf69b78f/a2be505c76807bf9ce4220cde4e1b464c726eb2f/build.log`
+=== STEP 4-env 2026-09-24T16:32:01-06:00 elapsed_min=0
+RECEIPT_DIR /home/snakagaw/gllvmodels-owed24-20260924/receipts-20260924-163201
+=== STEP 5-runparity 2026-09-24T16:32:01-06:00 elapsed_min=0
+RUNPARITY_EXIT=1
+      log-likelihood agreement (rtol=1e-6)                               |    2            2   0.1s
+  CORE-070 required cell: NATIVE-10-STUDENT                              |   32     1     33  29.9s
+    Student-t GLLVModels parity: GLLVModels.jl vs gllvmTMB (twin fid 9)  |   32     1     33  29.9s
+      shared σ (Julia default) — measured baseline mismatch              |    5            5   3.0s
+      per-trait σ (disp_group = :species) — closes the mismatch          |    5            5   1.0s
+      per-trait σ + per-trait estimated ν (twin default) — Parity Cell 9 |   10           10   9.5s
+      well-identified estimated-ν diagnostic                             |    5            5   8.5s
+      near-Gaussian estimated-ν diagnostic                               |    3     1      4   6.3s
+=== STEP done 2026-09-24T16:33:11-06:00 elapsed_min=1
+WALL_MIN 1
+OWED24_DONE 2026-09-24T16:33:11-06:00

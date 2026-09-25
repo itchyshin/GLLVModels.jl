@@ -2,7 +2,7 @@
 isdefined(@__MODULE__, :parity_nb2_health) || include(joinpath(@__DIR__, "nb2_health.jl"))
 module Core070NB2FormulaCase
 using GLLVModels, RCall, Test, Random, SHA, TOML, LinearAlgebra
-using ..Main: parity_nb2_health, _core070_receipt_dir, _core070_sha256_file, parity_loadings_p5k2
+using ..Main: parity_nb2_health, parity_nb2_original_Y, _core070_receipt_dir, _core070_sha256_file, parity_loadings_p5k2
 source=read("test/parity/test_negbin_parity.jl",String)
 helpers=source[findfirst("function _rand_poisson",source).start:findfirst("@testset \"NB2 GLLVModels",source).start-1]
 dgp=source[findfirst("    Random.seed!(45)",source).start:findfirst("    jl_fit =",source).start-1]

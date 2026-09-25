@@ -1,0 +1,14 @@
+contract_sha256 = "401e438e850b199ac6b826a8e4a78b088126d33c02b4d7ddafebcb180af8ab8d"
+fixture = "test/parity/test_studentt_parity.jl"
+status = "failed"
+run_id = "30678d56a92b85c8db2fba461d6c1c67654720e5c5d19b866cbcf1fd055edf50"
+fixture_sha256 = "e556e87e4c06021993b0283918763ddc5d9b33a83c4d69322355ddda194cf9f0"
+id = "NATIVE-10-STUDENT"
+execution_manifest_sha256 = "761e6f24a3e65f4679a83b3e21f80583c1823d5ad85d95f26dca37bb7716054a"
+execution_case_ids = ["NATIVE-10-STUDENT"]
+
+[assertions]
+passed = 32
+broken = 0
+failed = 1
+errored = 0

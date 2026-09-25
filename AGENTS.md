@@ -93,6 +93,8 @@ Full responsibility detail lives in §2 of the reference plan.
 
 ## Phase state snapshot
 
+- **Closeout OWED 2 and 4 decided (2026-09-24).** Julia 1.10 LTS is the #323 reference; NB2 data stored in `test/parity/fixtures/nb2_original_data.toml`; Student Cell 9 records `r_gradient_max`; Stage 0 L11 sign kept. On Totoro 1.10.12 NATIVE-06 fails only Julia's `converged` flag (R side passes) and NATIVE-10 only the near-Gaussian Julia flag; receipts in `docs/dev-log/core070/totoro-owed24-20260924/`. Decision: `docs/dev-log/decisions/2026-09-24-parity-reference-julia-and-fixture-pins.md`.
+
 - **Closeout OWED 3 done (2026-09-24).** `tools/core070_second_order` now loads gllvmTMB from `GLLVM_PARITY_R_LIBS` when set, or stops. OWED 1 still waits on gllvmTMB#1283; OWED 2 and 4 need Shinichi. After-task: `docs/dev-log/after-task/2026-09-24-second-order-r-libs-guard.md`.
 
 - **True-parity closeout (2026-09-24).** All four paste gates executed; #409/#410/#399/#411 and the Stage 1 slice #471 merged. S4 waits on a recorder fix (gllvmTMB#1283); Track A and D1 receipts on main. `Project.toml` stays **`0.3.0`**. **START HERE:** `docs/dev-log/handover/2026-09-24-claude-handover-closeout.md`.
