@@ -248,7 +248,7 @@ logit-scale positive residuals as loadings + a method-of-moments `φ₀` from th
 positive-part empirical variance.
 
 `hessian` selects the two-part Laplace log-det curvature (`:observed` default /
-`:fisher`); the mode search is always Fisher-scored. NOTE (2026-08-28): for this
+`:fisher`); the mode search does not depend on it. NOTE (2026-08-28): for this
 family the observed count-part weight is not yet specialised, so both selectors
 currently produce the identical objective (the `TWOPART_KNOWN_OPEN` census gap;
 DeltaGamma is the only two-part family whose observed weight is implemented).
