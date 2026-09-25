@@ -9,7 +9,7 @@ Status: TODO / RUNNING / PR-OPEN #n / STOPPED (reason) / DONE. Gates flagged wit
 | S3 | A-08 (S3a) and A-10/A-11 (S3b) docs truth | S3a PR-OPEN #488 (CLOSURE now honest FAIL, 2 proposed dispositions); S3b PR-OPEN #489 (local docs build failed on grouped_nongaussian_fit.jl docstring; check CI) | |
 | S4 | A-03 truncated-NB2 second-order cell to the per-trait route | PR-OPEN #493 draft (Wald CI rel 0.372 FAIL -> 5.8e-5 PASS; per-trait is NOT default dispatch; adds src _family_ci for the per-trait fit: REVIEW) | G if it needs a required-cell edit |
 | S5 | A-09 reverse-gap classes for 91 Julia exports + D8 text | RUNNING | classes proposed, maintainer signs |
-| S6 | A-12 cross-audit issue triage | RUNNING | close only with a receipt |
+| S6 | A-12 cross-audit issue triage | PR-OPEN #495 draft (closed 9 with receipts; 9 live divergences left open: #129 #131 #134 #135 #136 #137 #142 #147 #149; 11 NEEDS-DECISION; #477 retitled) | close only with a receipt |
 | S7 | X-06 sibling screen of unprobed suspects (mixed, beta-binomial, NB1, GP1, COMPoisson, ordered beta, Student t, ordinal) | RUNNING | |
 | S8 | cov-Gamma fix (`_laplace_mode_off` + family build in try) | PR-OPEN #494 draft (Fixes #486; 33/33 new, 21 files unchanged; Binomial 2/8 now not converged) | |
 | S8b | Audit follow-ups: issues for two-part kernel (Class A) and `_fit_verdict` (Class B) | DONE | #484 two-part, #485 verdict, #486 covariate kernel; receipts in docs/dev-log/core070/class-audit-20260924/ on the lane branch |
