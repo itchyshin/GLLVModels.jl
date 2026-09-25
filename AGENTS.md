@@ -93,6 +93,8 @@ Full responsibility detail lives in §2 of the reference plan.
 
 ## Phase state snapshot
 
+- **NB2 boundary restart (#477) and B-lite parity check (#476), 2026-09-24, PR #478.** `fit_nb_gllvm_grouped` restarts boundary groups (together and singly) and keeps only a better fit; the NB2 likelihood on small data has several maxima, so this is a better local search, not a global optimum. Developer check `test/parity/test_nb2_finite_dispersion_parity.jl`. NATIVE-06 stays frozen as a boundary case; B-full waits for the next contract revision.
+
 - **Closeout OWED 2 and 4 decided (2026-09-24).** Julia 1.10 LTS is the #323 reference; NB2 data stored in `test/parity/fixtures/nb2_original_data.toml`; Student Cell 9 records `r_gradient_max`; Stage 0 L11 sign kept. On Totoro 1.10.12 NATIVE-06 fails only Julia's `converged` flag (R side passes) and NATIVE-10 only the near-Gaussian Julia flag; receipts in `docs/dev-log/core070/totoro-owed24-20260924/`. Decision: `docs/dev-log/decisions/2026-09-24-parity-reference-julia-and-fixture-pins.md`.
 
 - **Closeout OWED 3 done (2026-09-24).** `tools/core070_second_order` now loads gllvmTMB from `GLLVM_PARITY_R_LIBS` when set, or stops. OWED 1 still waits on gllvmTMB#1283; OWED 2 and 4 need Shinichi. After-task: `docs/dev-log/after-task/2026-09-24-second-order-r-libs-guard.md`.

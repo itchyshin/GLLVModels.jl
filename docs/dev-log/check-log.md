@@ -1,3 +1,29 @@
+## 2026-09-24: NB2 boundary restart (#477) and B-lite developer parity check (#476)
+
+- PR #478. `fit_nb_gllvm_grouped` restarts, when groups end outside `[1e-6, 1e6]`, with the
+  boundary groups at `r = 1` (together, and each on its own) and keeps the best result only if
+  the log-likelihood rises by more than 1e-6.
+- Final-code screen, 16 NATIVE-06-design datasets (receipts in
+  `docs/dev-log/core070/nb2-boundary-screen-20260924/`): the restart lifted 7 fits by 0.46 to
+  2.59 and lowered none; the new fit is never below gllvmTMB and is above it on 6. A higher
+  Laplace point with one more trait at the Poisson limit remains on 7 (0.10 to 0.69), so the fix
+  is a better local search, not a global optimum.
+- Core test `test/test_nb_boundary_restart.jl` 12 of 12 (seed 46, seed 52, a covariate case, and a
+  toy check of both branches of the restart). Twelve test files that use either fitter pass on the
+  final code; `test_x_covariate_parity.jl` against the frozen oracle 65 of 65.
+- Sibling screen (`siblings/`): `fit_nb_gllvm_grouped_cov` has the same stall (3 of 10) and now gets the
+  restart; Gamma (#479) and Beta (#480) have different correctness bugs, filed; NB1 clean; Tweedie
+  not screened.
+  NATIVE-06's Julia fit is identical before and after.
+- Developer parity check on an n = 200 dataset whose interior maximum survives pushing any trait
+  or pair to the boundary: Julia and gllvmTMB agree to 2.4e-11 relative in logLik and 1e-5 in
+  every `r`. NATIVE-06 boundary agreement passes. R's gradient recorded, not gated.
+- Near-exact AGHQ check (skeptic-verified): the Laplace ranking of these maxima can be off by
+  about 0.3 in either direction; on seed 52 the interior Laplace maximum is an artefact and the
+  restart's boundary answer is right.
+- Totoro (fresh clone of PR head `025df3fca`), 4.2 min: core test 10 of 10; developer check passes with the Mac's numbers.
+- After-task: `docs/dev-log/after-task/2026-09-24-nb2-boundary-restart-and-finite-parity.md`.
+
 ## 2026-09-24: closeout OWED 2 and 4 decided (A, A) and carried out
 
 - Branch `claude/owed-2-4-decisions-20260924` from `origin/main` @ `4e6e7eef5`. Decision:

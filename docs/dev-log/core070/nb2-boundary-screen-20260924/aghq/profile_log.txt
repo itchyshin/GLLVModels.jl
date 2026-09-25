@@ -1,0 +1,39 @@
+seed46 logr3= 1.517  Laplace-profile -835.412264 (conv=true)  AGHQ9-profile -835.297481 (conv=true, k15 -835.297481)  [8s]
+seed46 logr3= 1.000  Laplace-profile -835.369299 (conv=true)  AGHQ9-profile -835.311363 (conv=true, k15 -835.311363)  [15s]
+seed46 logr3= 0.500  Laplace-profile -835.890206 (conv=true)  AGHQ9-profile -835.845977 (conv=true, k15 -835.845977)  [25s]
+seed46 logr3= 2.000  Laplace-profile -835.396324 (conv=true)  AGHQ9-profile -835.297217 (conv=true, k15 -835.297217)  [30s]
+seed46 logr3= 3.000  Laplace-profile -835.243336 (conv=true)  AGHQ9-profile -835.291792 (conv=true, k15 -835.291787)  [36s]
+seed46 logr3= 4.000  Laplace-profile -835.133105 (conv=true)  AGHQ9-profile -835.287658 (conv=true, k15 -835.287629)  [40s]
+seed46 logr3= 6.000  Laplace-profile -835.064015 (conv=true)  AGHQ9-profile -835.285139 (conv=true, k15 -835.285073)  [45s]
+seed46 logr3=10.000  Laplace-profile -835.052531 (conv=true)  AGHQ9-profile -835.284729 (conv=true, k15 -835.284653)  [48s]
+seed46 logr3=30.000  Laplace-profile -835.052315 (conv=true)  AGHQ9-profile -835.284721 (conv=true, k15 -835.284646)  [49s]
+seed52 logr2= 0.078  Laplace-profile -833.608480 (conv=true)  AGHQ9-profile -833.330797 (conv=true, k15 -833.330797)  [55s]
+seed52 logr2=-0.500  Laplace-profile -834.772760 (conv=true)  AGHQ9-profile -834.591803 (conv=true, k15 -834.591804)  [62s]
+seed52 logr2= 0.500  Laplace-profile -833.819365 (conv=true)  AGHQ9-profile -833.152790 (conv=true, k15 -833.152789)  [69s]
+seed52 logr2= 1.000  Laplace-profile -833.996623 (conv=true)  AGHQ9-profile -833.074739 (conv=true, k15 -833.074736)  [74s]
+seed52 logr2= 2.000  Laplace-profile -833.686440 (conv=true)  AGHQ9-profile -832.990801 (conv=true, k15 -832.990820)  [79s]
+seed52 logr2= 3.000  Laplace-profile -833.389423 (conv=true)  AGHQ9-profile -832.949713 (conv=true, k15 -832.949716)  [84s]
+seed52 logr2= 5.000  Laplace-profile -833.209813 (conv=true)  AGHQ9-profile -832.926067 (conv=true, k15 -832.926029)  [88s]
+seed52 logr2=10.000  Laplace-profile -833.181567 (conv=true)  AGHQ9-profile -832.922194 (conv=true, k15 -832.922149)  [92s]
+seed52 logr2=30.000  Laplace-profile -833.181377 (conv=true)  AGHQ9-profile -832.922168 (conv=true, k15 -832.922122)  [93s]
+
+==== sorted profiles (logr, Laplace, AGHQ9, AGHQ15) ====
+seed46   0.500  -835.890206  -835.845977  -835.845977
+seed46   1.000  -835.369299  -835.311363  -835.311363
+seed46   1.517  -835.412264  -835.297481  -835.297481
+seed46   2.000  -835.396324  -835.297217  -835.297217
+seed46   3.000  -835.243336  -835.291792  -835.291787
+seed46   4.000  -835.133105  -835.287658  -835.287629
+seed46   6.000  -835.064015  -835.285139  -835.285073
+seed46  10.000  -835.052531  -835.284729  -835.284653
+seed46  30.000  -835.052315  -835.284721  -835.284646
+seed52  -0.500  -834.772760  -834.591803  -834.591804
+seed52   0.078  -833.608480  -833.330797  -833.330797
+seed52   0.500  -833.819365  -833.152790  -833.152789
+seed52   1.000  -833.996623  -833.074739  -833.074736
+seed52   2.000  -833.686440  -832.990801  -832.990820
+seed52   3.000  -833.389423  -832.949713  -832.949716
+seed52   5.000  -833.209813  -832.926067  -832.926029
+seed52  10.000  -833.181567  -832.922194  -832.922149
+seed52  30.000  -833.181377  -832.922168  -832.922122
+total 94.1s

@@ -1,0 +1,14 @@
+one k=9 AGHQ negll eval: 488.7 ms
+seed46 AGHQ9 interior max: -835.297481 (start -835.319344) logr=[0.081, 0.111, 1.517, 0.494, -0.179] conv=true it=48 |g|=8.4e-06 (13s)
+seed46 AGHQ9 boundary max (logr3=30 fixed): -835.284721 (start -835.290913) logr=[0.086, 0.111, 30.0, 0.481, -0.182] conv=true it=25 |g|=7.2e-06 (17s)
+seed52 AGHQ9 interior max: -832.922168 (start -833.363926) logr=[-0.023, 20.358, 0.051, 0.239, -0.16] conv=true it=91 |g|=3.6e-06 (34s)
+seed52 AGHQ9 boundary max (logr2=30 fixed): -832.922168 (start -832.945326) logr=[-0.023, 30.0, 0.051, 0.239, -0.16] conv=true it=22 |g|=8.3e-06 (38s)
+
+==== AGHQ maxima evaluated at higher k ====
+seed46 interior Laplace -835.425221 | AGHQ k1 -835.425221 k3 -835.304701 k5 -835.297545 k9 -835.297481 k15 -835.297481 k21 -835.297481 | trap -835.297481
+seed46 boundary Laplace -835.060401 | AGHQ k1 -835.060401 k3 -835.525322 k5 -835.281365 k9 -835.284721 k15 -835.284646 k21 -835.284645 | trap -835.284645
+seed46 boundary - interior at AGHQ maxima: k9 +0.012760  k15 +0.012836  k21 +0.012836  trap +0.012836
+seed52 interior Laplace -833.221804 | AGHQ k1 -833.221804 k3 -833.440658 k5 -832.945730 k9 -832.922168 k15 -832.922122 k21 -832.922126 | trap -832.922126
+seed52 boundary Laplace -833.221807 | AGHQ k1 -833.221807 k3 -833.440659 k5 -832.945730 k9 -832.922168 k15 -832.922122 k21 -832.922126 | trap -832.922126
+seed52 boundary - interior at AGHQ maxima: k9 +0.000000  k15 +0.000000  k21 +0.000000  trap +0.000000
+total 45.0s

@@ -1,0 +1,18 @@
+
+[d03] phi_true=2.0
+  fitter loglik=245.623687  max|grad|=9.253e-06  phi=[604.5,2.495,2.534,2.219,2.589]
+         row-norms |Lambda_t|=[2.252, 0.502, 0.343, 0.494, 0.196]  beta=[-2.926, -0.865, 0.109, 0.768, 1.685]
+  alt_a  loglik=244.243445  max|grad|=5.683e-06  phi=[3.152,2.841,2.622,2.213,2.563]
+         row-norms |Lambda_t|=[0.567, 0.618, 0.389, 0.485, 0.166]  beta=[-1.756, -0.886, 0.109, 0.769, 1.683]
+  restart from fitter point unchanged: loglik=245.623687 iters=0
+  (c) fitter point with outlying group 1 log phi=0: loglik=244.243445 phi=[3.152,2.841,2.622,2.213,2.563]
+  slice loglik vs log phi_1 (others fixed at fitter): [0.00: 164.875] [0.50: 183.298] [1.00: 198.002] [2.00: 219.015] [3.00: 232.227] [6.40: 245.624] [5.00: 244.040] [7.00: 77.179] 
+
+[d05] phi_true=2.0
+  fitter loglik=265.976379  max|grad|=5.985e+00  phi=[2.522,2.942,1.661,2.076,36.17]
+         row-norms |Lambda_t|=[0.277, 0.637, 0.067, 0.244, 2.03]  beta=[-1.819, -0.786, -0.047, 0.65, 2.492]
+  alt_a  loglik=272.609413  max|grad|=6.264e-06  phi=[2.576,2.888,1.783,2.079,1.723]
+         row-norms |Lambda_t|=[0.344, 0.623, 0.272, 0.235, 0.332]  beta=[-1.822, -0.788, -0.047, 0.65, 1.507]
+  restart from fitter point unchanged: loglik=266.008995 iters=12
+  (c) fitter point with outlying group 5 log phi=0: loglik=272.609413 phi=[2.576,2.888,1.783,2.079,1.723]
+  slice loglik vs log phi_5 (others fixed at fitter): [0.00: 218.662] [0.50: 233.701] [1.00: 244.797] [2.00: 258.421] [3.00: 264.603] [3.59: 265.976] [5.00: 134.060] [7.00: -1828.372] 

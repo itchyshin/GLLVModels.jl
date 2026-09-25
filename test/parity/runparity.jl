@@ -103,7 +103,8 @@ end
 function run_optional_developer_parity!()
     for file in (
         "test_gaussian_parity.jl", "test_binomial_parity.jl", "test_poisson_parity.jl",
-        "test_negbin_parity.jl", "test_beta_parity.jl", "test_ordinal_probit_parity.jl",
+        "test_negbin_parity.jl", "test_nb2_finite_dispersion_parity.jl",
+        "test_beta_parity.jl", "test_ordinal_probit_parity.jl",
         "test_lognormal_parity.jl", "test_truncated_poisson_parity.jl",
         "test_nox_dispersion_parity.jl", "test_multinomial_parity.jl",
         "test_truncated_nbinom2_parity.jl", "test_x_covariate_parity.jl",

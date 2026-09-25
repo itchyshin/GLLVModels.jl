@@ -1,0 +1,28 @@
+# PRE-RUN (datasets 1 and 6; full harness incl. (a) re-run and supplementary (c)); 197.9 s loop time, 199 s wall.
+# Printed output as captured (tail of the run; nothing preceded the warning except package loading).
+┌ Warning: NB1 grouped-dispersion fit reached the per-group boundary (φ outside [1e-6, 1e6]) for group(s) [1, 2, 3]; those groups' overdispersion is at the Poisson limit or numerically flat on this data, and optimizer convergence flags are unreliable for them.
+└ @ GLLVModels ~/local-scratch/gllvm-nb2-finite-20260924/src/families/grouped_dispersion.jl:1606
+
+[d01] phi_true=0.05  fit_time=36.2s  ybar=[0.9875,1.525,2.862,4.463,7.475]
+  fitter: loglik=-754.033294 converged=false iters=53 phi_hat=[8.894e-07,1.355e-07,5.356e-08,6.57e-06,4.964e-06] boundary_groups=[1, 2, 3]
+  harness: negll(theta_hat)=754.033293831  -fit.loglik=754.033293831  |diff|=0.000e+00  valid=true
+  objective at truth: loglik=-758.274776
+  (a) fresh theta0 with log phi=0 (identical to fitter theta0: true): loglik=-754.033294 conv=true iters=53 phi=[8.894e-07,1.355e-07,5.356e-08,6.57e-06,4.964e-06] boundary=[1, 2, 3]
+  (b) restart boundary groups at log phi=0: loglik=-754.033295 conv=true iters=65 phi=[1.224e-06,1.529e-07,2.894e-08,6.57e-06,4.964e-06]
+  (c) SUPPLEMENTARY theta0 with log phi=log(10): loglik=-754.033296 conv=true iters=51 phi=[2.198e-06,1.801e-07,1.933e-07,1.006e-06,2.345e-06] boundary=[2, 3]  gain_c=-0.000002  stall_c=false
+  best_alt(a,b)=a_fresh_logphi0 loglik=-754.033294  gain=0.000000  STALL=false
+
+[d06] phi_true=2.0  fit_time=6.8s  ybar=[1.163,1.762,2.812,4.075,7.075]
+  fitter: loglik=-851.640794 converged=true iters=61 phi_hat=[2.634,1.123,0.8606,0.838,1.643] boundary_groups=Int64[]
+  harness: negll(theta_hat)=851.640793926  -fit.loglik=851.640793926  |diff|=0.000e+00  valid=true
+  objective at truth: loglik=-859.165092
+  (a) fresh theta0 with log phi=0 (identical to fitter theta0: true): loglik=-851.640794 conv=true iters=61 phi=[2.634,1.123,0.8606,0.838,1.643] boundary=Int64[]
+  (b) not applicable: no boundary groups
+  (c) SUPPLEMENTARY theta0 with log phi=log(10): loglik=-851.577190 conv=true iters=70 phi=[1.681,2.047,1.044,0.79,1.548] boundary=Int64[]  gain_c=0.063604  stall_c=true
+  best_alt(a,b)=a_fresh_logphi0 loglik=-851.640794  gain=0.000000  STALL=false
+
+# SUMMARY
+dataset	phi	fitter_ll	mismatch	valid	boundary	ll_a	ll_b	best_alt	gain	stall	ll_c_supp	gain_c	stall_c
+d01	0.05	-754.033294	0.00e+00	true	[1, 2, 3]	-754.033294	-754.033295	a_fresh_logphi0	0.000000	false	-754.033296	-0.000002	false
+d06	2.0	-851.640794	0.00e+00	true	Int64[]	-851.640794	NA	a_fresh_logphi0	0.000000	false	-851.577190	0.063604	true
+harness_valid=true n_with_boundary=1 n_stalls=0 max_gain=0.0 max_mismatch=0.000e+00 n_stalls_supp_c=1 max_gain_c=0.06360403160022088 total_time=197.9s

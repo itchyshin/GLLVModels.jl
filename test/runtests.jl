@@ -204,6 +204,7 @@ println(_SHARD === nothing ?
     _shard_include("test_nb1.jl")
     _shard_include("test_gp1_laplace.jl")
     _shard_include("test_grouped_dispersion.jl")
+    _shard_include("test_nb_boundary_restart.jl")
     _shard_include("test_grouped_dispersion_beta_gamma.jl")
     _shard_include("test_grouped_dispersion_tweedie_nb1.jl")
     _shard_include("test_nb_beta_x_identity.jl")

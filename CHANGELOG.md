@@ -13,6 +13,21 @@ All notable changes to GLLVModels.jl are documented here.
 
 ## Unreleased
 
+### Fixed
+- **NB2 with per-trait dispersion: fewer fits stuck at the Poisson boundary.**
+  `fit_nb_gllvm_grouped`, the default no-covariate route for
+  `fit_gllvm(...; family = NegativeBinomial())`, could stop with a trait's `r`
+  pushed toward the Poisson limit, well below a better point (#477). When a group
+  ends at the boundary, the fit now restarts with the boundary groups at `r = 1`,
+  together and each on its own, and keeps the best result only if it raises the
+  log-likelihood. On 16 datasets of the NATIVE-06 design this lifted 7 fits by 0.46
+  to 2.59 log-likelihood units and lowered none
+  (`docs/dev-log/core070/nb2-boundary-screen-20260924/`). Fits that never reach the
+  boundary are unchanged. On small data the NB2 likelihood can have several maxima,
+  so a fit is not guaranteed to reach the highest one. The covariate route
+  (`fit_nb_gllvm_grouped_cov`, used by `gllvm(@formula(...), ...)` with NB2 and site
+  covariates) gets the same restart; it had the same stall on 3 of 10 screened datasets.
+
 ### Changed
 - **Breaking (default change):** `fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm`
   (and `fit_gllvm(...; family = DeltaLogNormal()/DeltaGamma())`) now default to
