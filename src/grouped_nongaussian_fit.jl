@@ -336,9 +336,9 @@ form the per-group means, take the variance of their logs, subtract a
 delta-method estimate of the within-group sampling contribution, floor the
 remainder, and halve the log to get a log-SD. One pass over the data per trait.
 
-Recovered against a fixture with true SDs [0.4, 0.3, 0.5] (log-SDs -0.916,
--1.204, -0.693), three seeds: [-0.807, -1.176, -0.625], [-0.928, -1.205, -0.677],
-[-0.906, -1.131, -0.676].
+Recovered against a fixture with true SDs [0.4, 0.3, 0.5], that is log-SDs
+[-0.916, -1.204, -0.693], over three seeds: [-0.807, -1.176, -0.625],
+[-0.928, -1.205, -0.677], [-0.906, -1.131, -0.676].
 
 It is a POISSON/count argument. Callers must only use it where that holds; every
 other family and term mode keeps the previous constant.
