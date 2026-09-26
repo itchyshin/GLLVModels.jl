@@ -25,3 +25,5 @@ Deferred-earlier items now queued: fix the stale "#500 waiting" line in the hand
 
 ## Fence added 23:25Z: reserved for a separate "auto-d" lane (estimate the number of latent dimensions from data)
 The overnight lane does NOT edit src/model_selection.jl, src/cv.jl, or the `K`/`d` argument handling in src/families/fit_gllvm.jl. P4/P5 items that would touch these wait.
+
+- 23:35Z triage second pass: NB2 grouped confirmed live 25/187 on the DEFAULT NB2 route -> wave B item B0 (first). Reachability confirmed for GP1, COMP, BetaBinom, Tweedie, StudentT grouped. #503 updated by comment.
