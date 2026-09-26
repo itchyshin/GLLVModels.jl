@@ -151,16 +151,43 @@ function _twopart_mode_stage(family, y::AbstractVector,
                     z = ztrial
                 elseif maximum(abs, g) < sqrt(tol)
                     # The Newton matrix cannot improve on the current iterate with a step
-                    # this small, but the gradient here already meets a (relaxed) tolerance:
-                    # keep the current iterate and report it converged rather than spend the
-                    # halving loop chasing an improvement the (imperfect, cross-curvature-free)
-                    # matrix cannot deliver.
+                    # this small, but the gradient here ALREADY meets a (relaxed)
+                    # tolerance before any step is taken: keep the current iterate and
+                    # report it converged rather than spend the halving loop chasing an
+                    # improvement the (imperfect, cross-curvature-free) matrix cannot
+                    # deliver. Checked before halving, not after (#500 R1): near the
+                    # mode, q0/q1/q2 differ only at floating-point noise level, so a
+                    # halving loop run unconditionally here can "succeed" on a
+                    # meaningless sub-tol step, then repeat every following iteration
+                    # without ever re-triggering this check, and burn all `maxiter`
+                    # iterations before failing outright. Measured on the R1 perturbed-
+                    # start probe: routing every q-decreasing small step into halving
+                    # FIRST turned 1637 of 4672 correct relaxed-converged sites into
+                    # false failures; checking the relaxed exit first, as here, removed
+                    # that regression (0 introduced) while still fixing the 35 genuine
+                    # R1 sites below (see docstring note on the relaxed tolerance, S1).
                     return z, true
                 else
-                    # Small step by the norm test, no improvement, and the gradient is NOT
-                    # small either (possible only if A is ill-conditioned): this is not a
-                    # converged point, so fail honestly instead of silently declaring victory.
-                    return z, false
+                    # max|g| >= sqrt(tol): the gradient is NOT already close to
+                    # converged, so this is the genuine #500 R1 window -- the full small
+                    # step is a real descent step, not noise. Try the same step-halving
+                    # loop the large-step branch below uses before giving up.
+                    accepted = false
+                    step = 0.5
+                    for _half in 1:30
+                        ztrial2 = z .+ step .* Δ
+                        q2 = _twopart_logpost(family, y, Λz, Λc, βz, βc, offz, offc, ztrial2)
+                        if isfinite(q2) && q2 >= q0
+                            z = ztrial2
+                            accepted = true
+                            break
+                        end
+                        step *= 0.5
+                    end
+                    # Halving failed and the gradient is not small either (possible only
+                    # if A is ill-conditioned): this is not a converged point, so fail
+                    # honestly instead of silently declaring victory.
+                    accepted || return z, false
                 end
             end
         else
@@ -254,6 +281,21 @@ predictors (`η^z = β^z + offsetz + Λ^z z`, similarly `η^c`). If the mode sea
 not converge to `tol`, the value is `-Inf`, never a value computed at an unconverged
 mode (#484). The search is Fisher scoring with step halving for up to `maxiter` steps
 and, where that fails, a damped Newton search of up to `maxiter` more.
+
+For the Newton stage on a family with occurrence loadings (`Λz != 0`), "converge to
+`tol`" is relaxed in one narrow case (#500 S1): if a step below the `1e-3*(1+‖z‖)`
+small-step threshold does not raise the site log-posterior `q(z)`, and step-halving
+also cannot raise it, the search accepts the current iterate as converged whenever
+`max|∇q| < sqrt(tol)` there (about 3.2e-5 at the default `tol = 1e-9`), rather than
+the documented `tol` itself. On the class-audit natural-search scan this fires at
+19 to 92 of 400 sites per family/loading-scale combination, with the value up to
+1.7e-6 away from the value at the fully Newton-refined mode (worst case measured:
+ZIP at loadings x5). Tightening this to the documented `tol` was tried and reverted:
+requiring step-halving to also satisfy `max|∇q| < tol` before accepting a step,
+rather than short-circuiting on the relaxed gradient check first, turns floating-
+point noise at already-converged sites into outright search failures (measured:
+1637 of 4672 relaxed-exit sites on a perturbed-start probe). The relaxed exit is
+therefore intentional, not merely undocumented.
 """
 function twopart_loglik_site(family, y::AbstractVector,
         Λz::AbstractMatrix, Λc::AbstractMatrix,

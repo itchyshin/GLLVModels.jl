@@ -61,14 +61,29 @@ All notable changes to GLLVModels.jl are documented here.
   the exact Hessian of the site objective or larger after clipping), so the fix below
   is scoped to `Lambda_z != 0` only; widening it to every small step broke
   `fit_delta_gamma_gllvm(...; disp_group = :species)` (a per-trait shape estimate blew
-  up to 4e5 with `Lambda_z = 0`, caught by re-running the existing test suite before
-  merge, not by the reviewer). A step is now accepted only if it does not lower the
-  objective; a small step that would lower it keeps the current iterate instead
-  (already within that small-step radius of a stationary point) rather than declaring
-  failure. Healthy fits are not slower after this (the `Lambda_z = 0` fast path used
-  by every fitter is untouched): ZINB and ZIB fits on the audit datasets ran within 2
-  to 23 percent of their pre-#484 (main) time; hurdle-Poisson was unchanged. Fixes
-  #484.
+  up to 4e5 with `Lambda_z = 0`). A step that would lower the objective is now halved
+  (falling back to keeping the current iterate only when halving also cannot raise
+  the objective and the gradient there already meets a relaxed tolerance) rather than
+  being accepted unconditionally or declaring outright failure. The `Lambda_z = 0`
+  fast path used by every existing fitter is untouched, so this adds no runtime cost
+  there (see the next bullet for the #484 cost that does apply to every fitter, via
+  the per-site mode search itself). ZINB and ZIB fits on the audit datasets ran
+  within 2 to 23 percent of their pre-#484 (`origin/main`) time. Fixes #484.
+- **The `Lambda_z != 0` small-step guard above could itself return a false `-Inf`
+  (#500 verify pass).** The first version of that guard, when a small step lowered
+  `q(z)` and the gradient there was not already within a relaxed tolerance, declared
+  outright failure with no attempt to halve the step, unlike every other step in the
+  search; a healthy, near-converged site could hit this if the small step's own
+  floating-point noise made it look like a descent step (found: 35 of 11,560 sites
+  on a perturbed-start probe, ZIP/ZINB/ZIB, loadings x2/x3/x5). Fixed by trying the
+  same step-halving loop a large step uses before declaring failure. This is not
+  reachable from any fitter (Lambda_z = 0 everywhere they call in), so no fitted
+  result changes. A second, sharper regression showed up while fixing this: trying
+  halving before the relaxed-gradient check, rather than after, turned 1637 of 4672
+  correct relaxed-converged sites into false failures, because near the mode a
+  halving loop can "succeed" on floating-point noise and keep the outer search
+  spinning through `maxiter` iterations instead of returning immediately. Checking
+  the relaxed exit first, as before, removes that regression.
 - **Runtime cost of the #484 damping, measured and partly recovered (#500).** The
   step-halving / damped-Newton fallback needs the site log-posterior `q(z)` at least
   twice per large step; #500 removes one of the two `_twopart_logpost` calls by
