@@ -35,6 +35,23 @@ All notable changes to GLLVModels.jl are documented here.
   `:partial` or `:failed` where it previously returned a plain number (e.g. a
   Beta grouped-dispersion `phi` upper bound of `1.09e19` on `main` was never a
   real confidence bound and now correctly reports `:partial` with `NaN`).
+- **NB1 grouped kernel (`fit_nb1_gllvm_grouped`): the per-site Laplace mode search
+  took undamped Fisher-scoring steps and could report `converged = true` at a
+  non-mode point with a finite but incorrect log-likelihood.** The search now
+  halves any step that lowers the per-site log-posterior, falls back to a damped
+  Newton search on the observed curvature under `LogLink` when Fisher scoring
+  stalls, and returns `-Inf` for a site whose search still fails, so the fitter's
+  own convergence sentinel fires correctly. A genuinely converging site that
+  simply needs more than the default 100 Fisher-scored iterations under
+  ill-conditioned curvature now gets a 20x-iteration-budget retry before falling
+  back to the observed-curvature search, so it is no longer misreported as
+  `-Inf` (2/200 independently-healthy sites in an external reviewer's stress
+  probe). On every healthy site the returned log-likelihood is unchanged to
+  1.6e-9 under this PR's own probe (Lambda scale up to 3x and a beta/phi
+  perturbation varied separately); this figure is specific to that probe's
+  conditions, not a general bound — the same reviewer's harsher probe, which
+  stacks a 3x Lambda scale together with a ±50% perturbation on every parameter,
+  measured up to 8.5e-7 (#503, #507).
 - **Gamma grouped fits no longer report convergence from a diverged inner search.**
   The per-site mode search inside `fit_gamma_gllvm_grouped` and its covariate and
   shared-shape routes could diverge at the fitter's own start and still return a

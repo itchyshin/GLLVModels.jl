@@ -1478,6 +1478,70 @@ function _nb1_grouped_laplace_weight(hessian::Symbol, f::NB1, μ, me, y, link::L
     return -μ * s_μ - (μ / φ)^2 * (trigamma(y + r) - trigamma(r))
 end
 
+# Per-site mode search for the NB1 grouped kernel (#503, the #479 pattern). Returns
+# `(z, converged)`. `step_weight` picks the curvature that sets the Newton step; it
+# never changes the mode, which is the fixed point of `Λ's − z = 0` whatever W is.
+#
+# Before this fix the kernel ran undamped Fisher scoring (the loop below, unmodified
+# apart from the halving) and returned whatever `z` it held when the loop stopped,
+# converged or not — the same defect #479 fixed for Gamma. The audit's stress probe
+# (Λ scaled up to 3x, warm start perturbed ±50%) measured a 3.6% rate (108/3000, later
+# re-measured 20/600) of sites where the returned z had |grad log-posterior| > 1e-4
+# while a from-scratch restart converged cleanly, yet the kernel still returned a
+# finite site log-likelihood.
+#
+# Now a step that lowers the per-site log-posterior is halved (the generic core's
+# `_laplace_mode` rule, so small steps and accepted full steps are bit-identical to the
+# old loop), and `converged` is true only when the full proposed step is below `tol`,
+# which is the old loop's own stopping test. A heavily halved step does NOT count.
+function _nb1_grouped_mode(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
+        Λ::AbstractMatrix, β::AbstractVector, link::Link, step_weight::Symbol;
+        mask = nothing, offset = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
+    p, K = size(Λ)
+    off = offset === nothing ? false : offset
+    z = zeros(K)
+    for _ in 1:maxiter
+        η  = _clamp_eta.(β .+ off .+ Λ * z)
+        μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
+        me = mu_eta.(Ref(link), η)
+        s  = _glm_score.(fams, μ, n, me, y)
+        W  = _nb1_grouped_laplace_weight.(Ref(step_weight), fams, μ, me, y, Ref(link))
+        if mask !== nothing
+            s = ifelse.(mask, s, 0.0)
+            W = ifelse.(mask, W, 0.0)
+        end
+        A  = Symmetric(Λ' * (W .* Λ) + I)
+        Δ  = _safe_solve(A, Λ' * s .- z)
+        (Δ === nothing || !all(isfinite, Δ)) && return z, false
+        maximum(abs, Δ) < tol && return z .+ Δ, true
+        if norm(Δ) <= 1e-3 * (1 + norm(z))
+            z = z .+ Δ
+        else
+            q0 = _grouped_laplace_mode_logpost(fams, y, n, Λ, β, link, z;
+                                               mask = mask, offset = offset)
+            if isfinite(q0)
+                accepted = false
+                step = 1.0
+                for _half in 1:30
+                    ztrial = z .+ step .* Δ
+                    q1 = _grouped_laplace_mode_logpost(fams, y, n, Λ, β, link, ztrial;
+                                                       mask = mask, offset = offset)
+                    if isfinite(q1) && q1 >= q0
+                        z = ztrial
+                        accepted = true
+                        break
+                    end
+                    step *= 0.5
+                end
+                accepted || return z, false
+            else
+                z = z .+ Δ
+            end
+        end
+    end
+    return z, false
+end
+
 # Per-site Laplace log-marginal with per-species NB1 dispersion markers `fams`.
 function _nb1_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
         Λ::AbstractMatrix, β::AbstractVector, link::Link;
@@ -1485,35 +1549,41 @@ function _nb1_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::Ab
         maxiter::Integer = 100, tol::Real = 1e-9)
     p, K = size(Λ)
     off = offset === nothing ? false : offset
-    z = zeros(K)
-    local A
-    for _ in 1:maxiter
-        η  = _clamp_eta.(β .+ off .+ Λ * z)
-        μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
-        me = mu_eta.(Ref(link), η)
-        s  = _glm_score.(fams, μ, n, me, y)
-        # Role separation (2026-08-25). The MODE SEARCH is Fisher-scored,
-        # ALWAYS — `:fisher` here is not the caller's selector. Expected
-        # information is >= 0, so `Λ'WΛ + I` is SPD by construction and every
-        # Newton step is a descent step. The observed weight CAN be negative
-        # (measured: Beta at φ=12, η=−1.2, y=0.87 gives −1.218), which made this
-        # loop an unguarded, possibly-indefinite Newton whenever the caller
-        # asked for `:observed` — and the grouped fitters default to it.
-        # The selector still governs the post-loop log-det below, which is the
-        # only role that needs the observed curvature. The converged mode is
-        # unchanged either way: it is the fixed point of `Λ's − z = 0`, which
-        # does not involve W at all — W only sets the step.
-        W  = _nb1_grouped_laplace_weight.(Ref(:fisher), fams, μ, me, y, Ref(link))
-        if mask !== nothing
-            s = ifelse.(mask, s, 0.0)
-            W = ifelse.(mask, W, 0.0)
-        end
-        A  = Symmetric(Λ' * (W .* Λ) + I)
-        Δ  = _safe_solve(A, Λ' * s .- z)
-        (Δ === nothing || !all(isfinite, Δ)) && break
-        z  = z .+ Δ
-        maximum(abs, Δ) < tol && break
+    # Role separation (2026-08-25). The MODE SEARCH is Fisher-scored first:
+    # `:fisher` here is not the caller's selector, which governs only the post-loop
+    # log-det below. Expected information is >= 0, so `Λ'WΛ + I` is SPD by
+    # construction. The converged mode is unchanged either way: it is the fixed point
+    # of `Λ's − z = 0`, which does not involve W at all. W only sets the step.
+    z, ok = _nb1_grouped_mode(fams, y, n, Λ, β, link, :fisher;
+                              mask = mask, offset = offset, maxiter = maxiter, tol = tol)
+    # Larger-budget retry (review of #507, mirrors #509's Student-t fallback). A
+    # genuinely converging site can still need more than the default
+    # `maxiter = 100` Fisher-scored steps under ill-conditioned curvature
+    # (measured: reviewer's stress probe found 2/200 stationary, negative-definite
+    # sites failing at `maxiter = 100` that converge cleanly, to the same `z`, at
+    # `maxiter = 2000`). Retry Fisher scoring with a 20x iteration budget, still
+    # restarting from z = 0, before falling back to the `:observed` direction below —
+    # it runs only where the default budget failed, so every site that converged
+    # within `maxiter` keeps its original path and iteration count.
+    ok || ((z, ok) = _nb1_grouped_mode(fams, y, n, Λ, β, link, :fisher;
+                                       mask = mask, offset = offset,
+                                       maxiter = 20 * maxiter, tol = tol))
+    # Fallback (#503, the #479 pattern). If Fisher scoring does not converge, retry
+    # with the observed weight, but only under LogLink — the only link this kernel's
+    # :observed weight supports (see `_nb1_grouped_laplace_weight`). Unlike Gamma's
+    # fallback, NB1's observed curvature is not established to be sign-definite in
+    # general, so this is offered only as a second candidate DIRECTION: the
+    # step-halving accept test inside `_nb1_grouped_mode` still requires the trial
+    # point to raise the per-site log-posterior over its own q0, so an indefinite or
+    # wrong-signed step is rejected (falls through to non-convergence), never accepted.
+    if !ok && link isa LogLink
+        z, ok = _nb1_grouped_mode(fams, y, n, Λ, β, link, :observed;
+                                  mask = mask, offset = offset, maxiter = maxiter, tol = tol)
     end
+    # A search that did not converge must not produce a finite value. -Inf makes the
+    # fitters' objective return its 1e12 sentinel instead of a garbage surface (#503,
+    # the #479 pattern).
+    ok || return -Inf
     η  = _clamp_eta.(β .+ off .+ Λ * z)
     μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
     me = mu_eta.(Ref(link), η)
