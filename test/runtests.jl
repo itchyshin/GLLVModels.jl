@@ -232,6 +232,7 @@ println(_SHARD === nothing ?
     _shard_include("test_studentt_boundary.jl")
     _shard_include("test_studentt_normalizer_precision.jl")
     _shard_include("test_studentt_retained_precision.jl")
+    _shard_include("test_studentt_grouped_mode_search.jl")
     _shard_include("test_lognormal.jl")
     _shard_include("test_multinomial.jl")
     _shard_include("test_zib_x_identity.jl")
