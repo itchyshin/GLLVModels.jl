@@ -12,3 +12,6 @@
 - [ ] S7b sibling screen on Totoro (Sonnet agent running; report reviews/sibling-screen-2026-09-26.md)
 - [x] Issues filed from Opus review: #498 (Binomial separation diagnostic parity), #499 (truncNB2 per-trait stall, boundary flags, shared-r default)
 - [ ] S2 fixes for #491 (disclose discarded run, record it) and #493 (test, boundary flags, docs) -> queued behind #484 lease; then NEEDS_SHINICHI
+- [x] #496 fixed (citation #941 verified) -> MERGED b90641c97 (advisory 278/8)
+- [x] #485 -> PR #502 (red/green; 15-file sweep 3 honest flips; full sweep inconclusive) -> two-lens review running (wf_ee806206-962)
+- [x] Sibling screen -> #501 (ordered beta, confirmed by 2 verifiers)
