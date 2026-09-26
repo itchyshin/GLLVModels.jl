@@ -385,8 +385,11 @@ All notable changes to GLLVModels.jl are documented here.
   and an infinite upper bound, flipping with wherever the optimizer stopped.
   The shared-`r` adapter this one was copied from has the same untreated
   boundary gap; tracked separately (#499). This is a new working method on an
-  already-exported `confint`/fit type, so it needs maintainer sign-off before
-  it ships as a public-surface addition.
+  already-exported `confint`/fit type, merged on the maintainer's sign-off.
+  Because the type joins the generic `confint(fit::_CIFit, Y; method)` path,
+  `method = :profile` and `method = :bootstrap` are also reachable for it; only
+  `:wald` is tested. The bootstrap route accepts non-converged replicates (#504),
+  and the per-trait fitter can stop at an inferior interior optimum (#499).
 
 ## v0.3.0 — broad gllvmTMB-targeted capability build-out (2026-06-07)
 
