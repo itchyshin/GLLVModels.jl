@@ -179,6 +179,94 @@ function _studentt_grouped_laplace_weight(hessian::Symbol, f::StudentTFamily, μ
     return _glm_obs_weight(f, μ, 1, me, y, link, η)
 end
 
+# Per-site mode search for the Student-t grouped kernel (#503, following the
+# #479/#480/#484/#500 pattern). Returns `(z, converged)`. Mode search is ALWAYS
+# Fisher-scored (role separation, 2026-08-25 convention shared with
+# Gamma/Beta/NB2 grouped kernels): expected information is >= 0, so `Λ'WΛ + I`
+# is SPD by construction, independent of the caller's `hessian` (which only
+# selects the post-loop log-det curvature, in `_studentt_grouped_loglik_site`
+# below). There is no observed-curvature Newton fallback here, unlike Gamma's
+# LogLink route: the observed Student-t curvature is genuinely negative for
+# |r| > σ√ν (documented above at `_glm_obs_weight`), so it cannot be used as a
+# guaranteed-descent step the way Gamma/log's α·y/μ can.
+#
+# Before this fix the loop below ran undamped Fisher scoring and returned
+# whatever `z` it held when `maxiter` was reached, converged or not — the same
+# defect class as #479 (Gamma) and #500 (twopart): a step that overshoots the
+# per-site log-posterior is never rejected, so the mode search can leave a
+# site far from its stationary point while still returning a finite value.
+# Now a step that lowers the per-site log-posterior is halved (the generic
+# core's `_laplace_mode`/`_grouped_laplace_mode` rule, reusing
+# `_grouped_laplace_mode_logpost` from `grouped_dispersion.jl`, included
+# before this file), so small steps and accepted full steps are bit-identical
+# to the old loop. `converged` is true only when the FULL proposed step (not a
+# halved one) is below `tol` AND the log-posterior gradient itself is below
+# `grad_tol` (see the comment at the check, below): mirrors
+# `_gamma_grouped_mode`'s "a heavily halved step does not count as converged"
+# rule, plus the extra gradient check this family's constant Fisher weight
+# needs.
+function _studentt_grouped_mode(fams::AbstractVector{<:StudentTFamily}, y::AbstractVector, n::AbstractVector,
+        Λ::AbstractMatrix, β::AbstractVector, link::Link;
+        mask = nothing, offset = nothing, maxiter::Integer = 100, tol::Real = 1e-9,
+        grad_tol::Real = 1e-6)
+    p, K = size(Λ)
+    off = offset === nothing ? false : offset
+    z = zeros(K)
+    for _ in 1:maxiter
+        η  = _clamp_eta.(β .+ off .+ Λ * z)
+        μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
+        me = mu_eta.(Ref(link), η)
+        s  = _glm_score.(fams, μ, n, me, y)
+        W  = _glm_weight.(fams, μ, n, me)
+        if mask !== nothing
+            s = ifelse.(mask, s, 0.0)
+            W = ifelse.(mask, W, 0.0)
+        end
+        # Log-posterior gradient wrt z at the CURRENT z (before this step) —
+        # the same quantity `_safe_solve` is asked to zero. Checked directly,
+        # not only via the step size below: Student-t's Fisher weight
+        # (ν+1)/((ν+3)σ²) is a CONSTANT, blind to the residual, so on an
+        # ill-scaled site `A = Λ'WΛ + I` can be large enough that a tiny
+        # Newton step `Δ` solves `AΔ = g` even while `g` itself is still far
+        # from zero — measured on the #503 stress probe: 25/500 sites hit
+        # `maximum(abs, Δ) < tol` this way while sitting up to 13.7
+        # log-posterior units from the true mode. A step-size-only test (the
+        # rule every OTHER grouped kernel uses, since their curvature tracks
+        # the response) is not sufficient here; requiring the gradient itself
+        # to be small is what catches these.
+        g  = Λ' * s .- z
+        A  = Symmetric(Λ' * (W .* Λ) + I)
+        Δ  = _safe_solve(A, g)
+        (Δ === nothing || !all(isfinite, Δ)) && return z, false
+        maximum(abs, Δ) < tol && maximum(abs, g) < grad_tol && return z .+ Δ, true
+        if norm(Δ) <= 1e-3 * (1 + norm(z))
+            z = z .+ Δ
+        else
+            q0 = _grouped_laplace_mode_logpost(fams, y, n, Λ, β, link, z;
+                                               mask = mask, offset = offset)
+            if isfinite(q0)
+                accepted = false
+                step = 1.0
+                for _half in 1:30
+                    ztrial = z .+ step .* Δ
+                    q1 = _grouped_laplace_mode_logpost(fams, y, n, Λ, β, link, ztrial;
+                                                       mask = mask, offset = offset)
+                    if isfinite(q1) && q1 >= q0
+                        z = ztrial
+                        accepted = true
+                        break
+                    end
+                    step *= 0.5
+                end
+                accepted || return z, false
+            else
+                z = z .+ Δ
+            end
+        end
+    end
+    return z, false
+end
+
 # Per-site Laplace log-marginal with per-species Student-t markers `fams` (each
 # entry shares ν, differs only in σ). PD guard mirrors the generic single-family
 # core (`families/laplace.jl`'s `laplace_loglik_site`): the observed Student-t
@@ -191,28 +279,30 @@ function _studentt_grouped_loglik_site(fams::AbstractVector{<:StudentTFamily}, y
         maxiter::Integer = 100, tol::Real = 1e-9)
     p, K = size(Λ)
     off = offset === nothing ? false : offset
-    z = zeros(K)
-    local A
-    for _ in 1:maxiter
-        η  = _clamp_eta.(β .+ off .+ Λ * z)
-        μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
-        me = mu_eta.(Ref(link), η)
-        s  = _glm_score.(fams, μ, n, me, y)
-        # Mode search is ALWAYS Fisher-scored (role separation, 2026-08-25
-        # convention shared with Gamma/Beta/NB2 grouped kernels): expected
-        # information is >= 0, so `Λ'WΛ + I` is SPD by construction and every
-        # Newton step is a descent step, independent of the caller's `hessian`.
-        W  = _glm_weight.(fams, μ, n, me)
-        if mask !== nothing
-            s = ifelse.(mask, s, 0.0)
-            W = ifelse.(mask, W, 0.0)
-        end
-        A  = Symmetric(Λ' * (W .* Λ) + I)
-        Δ  = _safe_solve(A, Λ' * s .- z)
-        (Δ === nothing || !all(isfinite, Δ)) && break
-        z  = z .+ Δ
-        maximum(abs, Δ) < tol && break
-    end
+    z, ok = _studentt_grouped_mode(fams, y, n, Λ, β, link;
+                                   mask = mask, offset = offset, maxiter = maxiter, tol = tol)
+    # Fallback (measured, mirrors #479's Gamma fallback in spirit though not in
+    # mechanism): damped Fisher scoring is only linearly convergent here (no
+    # PSD observed-curvature Newton fallback exists for Student-t, unlike
+    # Gamma/log), so a genuinely healthy site can still need more than the
+    # default `maxiter = 100` steps to reach `tol`. Measured on the #503 stress
+    # probe: a site with gradient norm <= 1e-4 at its own warm start (i.e. one
+    # a from-scratch restart confirms is already near the true mode) needed up
+    # to several hundred damped-Fisher steps to certify convergence at
+    # `tol = 1e-9`. Retrying with a 20x iteration budget (still Fisher-scored,
+    # still damped, restarting from z = 0) resolves every such site in the
+    # stress probe; it runs only where the first pass failed, so every site
+    # that converged within the default budget keeps its original path and
+    # iteration count.
+    ok || ((z, ok) = _studentt_grouped_mode(fams, y, n, Λ, β, link;
+                                            mask = mask, offset = offset,
+                                            maxiter = 20 * maxiter, tol = tol))
+    # A search that did not converge must not produce a finite value. -Inf makes the
+    # fitters' objective return its 1e12 sentinel instead of a garbage surface (#479
+    # precedent). The nu-boundary guard in `fit_studentt_gllvm` is a separate,
+    # fit-level check (an ESTIMATED ν running to the flat Gaussian-limit boundary)
+    # and is untouched by this change.
+    ok || return -Inf
     η  = _clamp_eta.(β .+ off .+ Λ * z)
     μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
     me = mu_eta.(Ref(link), η)

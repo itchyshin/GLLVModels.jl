@@ -157,6 +157,32 @@ All notable changes to GLLVModels.jl are documented here.
   Very dispersed Gamma data with responses near 1e-29 (true shape 0.1) now fail with
   log-likelihood `-Inf` and `converged = false` instead of throwing. Healthy fits run
   about 20 percent slower.
+- **Student-t grouped fits no longer report convergence from a diverged inner search
+  (#503).** `_studentt_grouped_loglik_site` (the per-trait-scale route reached by
+  default from `fit_gllvm(...; family = StudentTFamily())` when `nu` is estimated, and
+  from `fit_gllvm(...; family = StudentTFamily(), disp_group = :species)`) ran an
+  undamped per-site Fisher-scoring search with no convergence flag, so a non-mode
+  site could still return a finite log-likelihood: measured at 90/500 stress-probe
+  sites (about 18%), the same defect class as #479/#480/#484. The search now halves
+  any step that lowers the per-site log-posterior and requires the log-posterior
+  gradient itself to be small before declaring convergence (this family's Fisher
+  weight is a constant, so a step-size-only test — the rule every other grouped
+  kernel uses — is not sufficient here); a site that still cannot certify a
+  stationary point within a 20x-widened iteration budget returns `-Inf`, so the
+  fitter's failure sentinel fires. Values at sites where the old search's own 100-
+  iteration convergence test already fired are unchanged (max 9.1e-9 on a 500-site
+  stress probe). **Residual, not covered by this fix:** the per-site Student-t
+  log-posterior is not globally concave (a heavy-tailed outlier can create more than
+  one local mode), and about 25/500 stress-probe sites converge to a genuine but
+  non-global local mode rather than the site a from-scratch restart would find — a
+  real but far milder issue than the silent divergence this fix closes (differences
+  of a few log-posterior units, not the astronomic finite-garbage values #479
+  measured). The nu-boundary honesty guard in `fit_studentt_gllvm` (`nu_boundary`) is
+  unrelated and unchanged. The generic Laplace core's own Student-t route
+  (`disp_group = :shared`, reached by `fit_gllvm(...; family = StudentTFamily())` with
+  a fixed `nu`, or via `fit_studentt_gllvm(...; disp_group = :shared)`) shares no code
+  with the grouped kernel fixed here and is NOT covered by this PR (measured 78/500
+  stress-probe sites non-mode on the same audit).
 
 ### Changed
 - **Breaking (default change):** `fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm`
