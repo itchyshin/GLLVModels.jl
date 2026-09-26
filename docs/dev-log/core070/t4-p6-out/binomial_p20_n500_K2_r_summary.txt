@@ -1,0 +1,8 @@
+family=binomial
+p=20 n=500 K=2 seed=42
+logLik=-6744.5394869632
+converged=TRUE
+has_sd_report=TRUE
+wall_fit_sec=4.9598
+wall_confint_sec=0.0001
+cond_H=857.893

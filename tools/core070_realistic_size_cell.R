@@ -34,6 +34,7 @@ fam_obj <- switch(fam,
     gaussian = stats::gaussian(),
     poisson  = stats::poisson(),
     nb2      = gllvmTMB::nbinom2(),
+    binomial = stats::binomial(),
     stop("unknown family: ", fam)
 )
 
