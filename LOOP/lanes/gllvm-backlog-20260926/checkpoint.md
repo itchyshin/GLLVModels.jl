@@ -1,11 +1,10 @@
-GOAL: see GOAL.md.   STATE: IN PROGRESS, wave 1 running (workflow wf_2f0e7019-416, started 2026-09-26 ~13:05Z).
-ARCS DONE (verified): S0 #494 MERGED d4da31544 (latest check per name green on 60105df5b; advisory 277/9 = main's own range).
-ARC IN PROGRESS: S1 recon (Haiku) -> S2 Opus review #491/#493 + S3 Sonnet review #487-#490/#495 (reports in reviews/pr-N.md);
-  S4 #484 builder (~/local-scratch/gllvm-twopart-484), S5 #485 builder (~/local-scratch/gllvm-verdict-485),
-  S6 reverse-gap (~/local-scratch/gllvm-reverse-gap) + packet (~/local-scratch/gllvm-packet).
-NEXT: read verdicts; apply fixes; merge train (S7) one PR at a time, head-pinned.
-OPEN GATES (need human): #491 and #493 merges.
-LEDGERS: run ledger .unlazy/gllvm-backlog/GATES.md (1/14 met after --reverify; copy backlog-GATES.md); true-parity ledger .unlazy/true-parity/GATES.md (0/10; copy true-parity-ledger/).
-NEW PRs from wave 1 so far: #496 reverse-gap classes (draft), #497 decision packet update (draft).
-TRUTH LIVES IN: branch claude/lane-gllvm-backlog-20260926 (this kit); reviews/; PRs on itchyshin/GLLVModels.jl.
-RESUME: read GOAL.md -> checkpoint.md -> ultra-plan.md; if wf_2f0e7019-416 finished, read its journal.jsonl; continue from NEXT.
+GOAL: see GOAL.md.   STATE: IN PROGRESS, wave 2 running (workflow wf_7c017c8f-9d5, started ~13:40Z); sibling screen agent on Totoro still running.
+ARCS DONE (verified): S0 #494 MERGED d4da31544; S1 recon; S3 docs review; #488 MERGED 8001b0523; #495 MERGED 39886c705; #487 fixed+MERGED d89179d41;
+  S2 Opus review of #491/#493 (NEEDS_SHINICHI, blocking items listed in reviews/pr-491.md, pr-493.md); issues #498, #499 filed;
+  S4 #484 -> PR #500 (red 14/35 on main, green 35/35; 25 files 2059 pass); S6 -> #496, #497 drafts.
+ARC IN PROGRESS (wave 2): Opus review #500; #485 builder; #493 fixes; #489 one-line fix + #490 rebase; #491 fixes; Rose review #496/#497 + scoreboard audit.
+NEXT: merge #500 if review MERGE + CI green; merge #489, #490 after fixes + CI; merge #485 PR after review; #496/#497 after Rose; bring #491 and #493 to Shinichi with verdict + drafted reply; D-43 panel; close.
+OPEN GATES (need human): #491, #493 merges (science-changing; public confint method in #493).
+LEDGERS: .unlazy/gllvm-backlog/GATES.md (run); .unlazy/true-parity/GATES.md (0/10, all measurable since #487).
+TRUTH LIVES IN: branch claude/lane-gllvm-backlog-20260926; reviews/; PRs on itchyshin/GLLVModels.jl.
+RESUME: read GOAL.md -> checkpoint.md -> ultra-plan.md; if wf_7c017c8f-9d5 finished, read its journal.jsonl; continue from NEXT.
