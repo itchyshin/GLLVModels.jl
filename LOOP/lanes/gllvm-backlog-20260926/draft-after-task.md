@@ -1,7 +1,5 @@
 # After-task: landing the 2026-09-25 true-parity backlog (lane gllvm-backlog-20260926)
 
-DRAFT. Items marked PENDING are filled at close from the ledger and GitHub, not from memory.
-
 ## 1. Goal
 
 Land the backlog the 2026-09-25 true-parity-finish lane left open: merge #494, review and then merge or return each of the seven drafts (#487 to #491, #493, #495), turn #484 and #485 into reviewed PRs, update and audit the decision packet, and hand over. No parity claim.
@@ -12,7 +10,9 @@ Land the backlog the 2026-09-25 true-parity-finish lane left open: merge #494, r
 - New PRs: #496 (reverse-gap classes, proposed and unsigned), #497 (decision packet brought to main with #495's 11 decisions and live divergences #129 and #131), #500 (Fixes #484, two-part mode search), #502 (Fixes #485, reworked as a per-family NB1 verdict after review).
 - Issues filed from independent reviews and a screen: #498 (Binomial quasi-separation flagged differently by the engines), #499 (per-trait truncated-NB2 stall, boundary flags, shared-r default), #501 (ordered beta reports converged at non-stationary points; restarts reach valid optima up to +2859 logLik; confirmed by two independent verifiers; a correction comment records that the optimiser path differs between Linux and macOS on the same data).
 - A true-parity acceptance ledger (seven clauses plus two row gates plus one manual gate) with an oracle that reads origin/main, run with positive and negative controls. Baseline: 0 of 10 met.
-- PENDING: #500 (in the merge train at rebased head ff3252540, src identical to the reviewed head a4e3eaec2).
+- #500 (Fixes #484) reviewed three times and rebased (head ff3252540, source identical to the reviewed head a4e3eaec2), then returned for sign-off rather than merged, because its hurdle NB chain-rule fix changes fitted results.
+- All merges were made from this lane's session through the maintainer's `gh` credentials under his written pre-authorisation (2026-09-26), so GitHub records them as merged by itchyshin; #491 and #493 were merged by the lane only after his explicit word ("merge #491 and #493 when green").
+- #493's CHANGELOG entry on main corrected in the closing PR (it still said the method awaited sign-off, and described only `method = :wald` although `:profile` and `:bootstrap` are also reachable and untested for that type).
 
 ## 3a. Decisions and Rejected Alternatives
 
@@ -25,23 +25,23 @@ Land the backlog the 2026-09-25 true-parity-finish lane left open: merge #494, r
 
 - GLLVModels.jl, through the PRs above (see each PR's file list). Lane kit on branch `claude/lane-gllvm-backlog-20260926` under `LOOP/lanes/gllvm-backlog-20260926/` (GOAL, arcs, checkpoint, plan copy, both ledgers, merge_train.sh, prstate.sh, reviews/).
 - Vault: `memory/DECISIONS.md` (D-220 amendment), `Shinichi/Dashboards/mission-control/live/status/gllvmTMB.json`.
-- PENDING: final list at close.
+- Closing PR: `CHANGELOG.md` (#493 entry), this report, and `docs/dev-log/handover/2026-09-26-claude-handover-gllvm-backlog.md`.
 
 ## 5. Checks Run
 
 - Every merge: latest check run per name on the pinned head; advisory count read from the job log.
-- Run ledger `.unlazy/gllvm-backlog/GATES.md` re-verified after each merge (PENDING final count). True-parity ledger 0 of 10 (all gates measurable from main since #487).
+- Run ledger `.unlazy/gllvm-backlog/GATES.md` re-verified after each merge (12 of 14 before the closing PR; H1 is met by the closing PR, D43 by the panel verdict). True-parity ledger 0 of 10 (all gates measurable from main since #487).
 - Test evidence per PR as recorded in the review reports under `reviews/`.
 
 ## 6. Tests of the Tests
 
 - True-parity oracle: a synthetic all-evidenced fixture makes every mode print MET; reverting one row flips only that row's clauses. This caught a vacuous pass (the realistic-size gate passed with zero rows) before any baseline was recorded.
 - Run ledger: two false passes caught and removed (a substring EXPECT that could never match; a fuzzy GitHub search that matched #494 for "Fixes #485"), and one stale tick from a lapsed approval.
-- #500 and #502: red on main, green on branch (PENDING for the reworked heads).
+- #500: the R1 relation test fails on the pre-fix head and passes on a4e3eaec2; an independent probe over 1800 matched sites found no regressions. #502: the verdict test is red on main and green on the branch, and its fixed-seed case was replaced by a platform-free unit contract that passes on Julia 1.10 and 1.13.
 
 ## 7a. Issue Ledger
 
-Filed #498, #499, #501, #503 (remaining undamped mode searches, re-measured on main), #504 (confint bootstrap and profile refit accept non-converged replicates). Corrected #501 by comment (optimiser paths differ between Linux and macOS on the same data).
+Filed #498, #499, #501, #503 (remaining undamped mode searches, re-measured on main), #504 (confint bootstrap and profile refit accept non-converged replicates). Filed #505 (the rest of the #485 class). Corrected #501 (optimiser paths differ between Linux and macOS on the same data) and #503 (it wrongly said #502 covered the `_fit_verdict` class) by comment.
 
 ## 8. Consistency Audit
 
@@ -54,10 +54,16 @@ Filed #498, #499, #501, #503 (remaining undamped mode searches, re-measured on m
 - Lane leases keyed on the session PID made sibling subagents overwrite each other's claims; `LANE_ID` per agent fixed it. A broad lease (a whole `test/` directory) blocked the #485 builder for an hour.
 - A Totoro completion watcher of the form `until ! pgrep -f PATTERN` matched its own command line and never exited, holding up a report for 90 minutes.
 - zsh passed a space-joined argument list as one argument to the merge train; the train refused (fail-closed).
+- The lane set #500 merging on its own although its hurdle NB fix changes fitted results, the same reason it had returned #491 and #493; the completion panel caught it and the gate was stopped before any merge.
+- About six Opus review children ran against a plan of one (recorded as routing drift in the plan-actual note); each found a defect the builders had missed.
 
 ## 10. Known Residuals
 
-PENDING at close. Known now: the gate-tier scoreboard is dated 2026-09-25 and some rows cite PR states that have since changed; #501's fix is not started; the triage's still-live families have no fixes.
+- #500 awaits the maintainer; no check against gllvmTMB was run on hurdle NB after its chain-rule fix, and the frozen-R smoke has no hurdle cell.
+- #502 fixes only `fit_nb1_gllvm_grouped`; the rest of the class is #505.
+- `confint(:profile)` and `confint(:bootstrap)` on `TruncatedNegBin2PerTraitFit` are reachable but untested; the bootstrap route inherits #504 and the fitter inherits #499.
+- For #487, #489, #490 and #496 the merged head differs from the head the first review read; the panel confirmed each difference is only the requested fix, but no in-repo record of that check existed at merge time.
+- The gate-tier scoreboard is dated 2026-09-25 and some rows cite PR states that have since changed. #501, #503 and #504 have no fixes yet.
 
 ## 11. Team Learning
 
@@ -67,6 +73,8 @@ PENDING at close. Known now: the gate-tier scoreboard is dated 2026-09-25 and so
 - Give each subagent its own `LANE_ID`; claim exact files, never directories.
 - Never write a `pgrep -f` watcher whose own command line contains its pattern.
 - Keep live agents at three or fewer on a long run; the shared usage window, not context, runs out first.
+- Apply a "returns for sign-off" rule by what a PR does to users' results, not by which PR was flagged first; check every code PR against it before starting its merge gate.
+- When a merged head differs from the reviewed head, record the reviewed-to-merged diff check in the PR before merging.
 
 ## 12. Cross-Product Coverage
 
