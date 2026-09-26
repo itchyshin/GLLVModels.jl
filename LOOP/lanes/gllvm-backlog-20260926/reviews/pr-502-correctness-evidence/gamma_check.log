@@ -1,0 +1,25 @@
+gamma-analytic s1            nll=  1654.911 gres= 1.66e-03 thr= 1.65e-02 ratio= 1.01e-01 x/f/g=010 it=  24 old=1 new=1 t=4.4s
+gamma-FD s1                  nll=  1654.911 gres= 1.26e-01 thr= 1.65e-02 ratio= 7.59e+00 x/f/g=110 it=  30 old=1 new=0 t=3.7s
+gamma-FD-warm s1             nll=  1654.911 gres= 1.26e-01 thr= 1.65e-02 ratio= 7.59e+00 x/f/g=110 it=   1 old=1 new=0 t=0.2s
+gamma-FD-warm-from-analytic s1 nll=  1654.911 gres= 5.41e-06 thr= 1.65e-02 ratio= 3.27e-04 x/f/g=001 it=  18 old=1 new=1 t=2.4s
+  s1: loglik analytic=-1654.9107 FD=-1654.9107 diff=-0.0000
+gamma-analytic s3            nll=  1607.119 gres= 1.31e-03 thr= 1.61e-02 ratio= 8.16e-02 x/f/g=010 it=  24 old=1 new=1 t=0.3s
+gamma-FD s3                  nll=  1607.119 gres= 1.29e+01 thr= 1.61e-02 ratio= 8.04e+02 x/f/g=010 it=  41 old=1 new=0 t=5.8s
+gamma-FD-warm s3             nll=  1607.119 gres= 1.29e+01 thr= 1.61e-02 ratio= 8.04e+02 x/f/g=110 it=   1 old=1 new=0 t=0.2s
+gamma-FD-warm-from-analytic s3 nll=  1607.119 gres= 1.29e+01 thr= 1.61e-02 ratio= 8.04e+02 x/f/g=010 it=   7 old=1 new=0 t=1.4s
+  s3: loglik analytic=-1607.1193 FD=-1607.1193 diff=0.0000
+gamma-analytic s7            nll=  1650.061 gres= 2.29e-02 thr= 1.65e-02 ratio= 1.39e+00 x/f/g=110 it=  50 old=1 new=0 t=1.0s
+gamma-FD s7                  nll=  1650.061 gres= 1.61e+00 thr= 1.65e-02 ratio= 9.73e+01 x/f/g=010 it=  42 old=1 new=0 t=6.2s
+gamma-FD-warm s7             nll=  1650.061 gres= 1.61e+00 thr= 1.65e-02 ratio= 9.73e+01 x/f/g=010 it=   3 old=1 new=0 t=0.9s
+gamma-FD-warm-from-analytic s7 nll=  1650.061 gres= 1.62e+00 thr= 1.65e-02 ratio= 9.80e+01 x/f/g=110 it=   7 old=1 new=0 t=1.2s
+  s7: loglik analytic=-1650.0609 FD=-1650.0609 diff=-0.0000
+gamma-analytic s8            nll=  1691.444 gres= 2.68e-05 thr= 1.69e-02 ratio= 1.58e-03 x/f/g=010 it=  26 old=1 new=1 t=0.3s
+gamma-FD s8                  nll=  1691.444 gres= 5.36e-02 thr= 1.69e-02 ratio= 3.17e+00 x/f/g=010 it=  21 old=1 new=0 t=2.7s
+gamma-FD-warm s8             nll=  1691.444 gres= 4.86e-03 thr= 1.69e-02 ratio= 2.87e-01 x/f/g=110 it=  36 old=1 new=1 t=4.4s
+gamma-FD-warm-from-analytic s8 nll=  1691.444 gres= 7.51e-06 thr= 1.69e-02 ratio= 4.44e-04 x/f/g=001 it=   9 old=1 new=1 t=1.2s
+  s8: loglik analytic=-1691.4438 FD=-1691.4439 diff=0.0002
+gamma-analytic s2            nll=  1609.647 gres= 9.99e-05 thr= 1.61e-02 ratio= 6.20e-03 x/f/g=010 it=  21 old=1 new=1 t=0.3s
+gamma-FD s2                  nll=  1609.647 gres= 2.99e-06 thr= 1.61e-02 ratio= 1.85e-04 x/f/g=001 it=  21 old=1 new=1 t=2.7s
+gamma-FD-warm s2             nll=  1609.647 gres= 2.99e-06 thr= 1.61e-02 ratio= 1.85e-04 x/f/g=001 it=   0 old=1 new=1 t=0.1s
+gamma-FD-warm-from-analytic s2 nll=  1609.647 gres= 5.97e-06 thr= 1.61e-02 ratio= 3.71e-04 x/f/g=001 it=  12 old=1 new=1 t=1.6s
+  s2: loglik analytic=-1609.6468 FD=-1609.6468 diff=-0.0000

@@ -1,0 +1,20 @@
+DONE test_twolevel.jl in 19.0s
+DONE test_phylo_poisson_xlv.jl in 11.5s
+Phylo x Binomial B_eta_realized selected-entry canary: Test Failed at /Users/z3437171/local-scratch/review-502-correctness/test/test_phylo_binomial_xlv.jl:194
+Phylo x Binomial B_eta_realized selected-entry canary: Test Failed at /Users/z3437171/local-scratch/review-502-correctness/test/test_phylo_binomial_xlv.jl:195
+Phylo x Binomial B_eta_realized selected-entry canary: Test Failed at /Users/z3437171/local-scratch/review-502-correctness/test/test_phylo_binomial_xlv.jl:196
+Phylo x Binomial B_eta_realized selected-entry canary: Test Failed at /Users/z3437171/local-scratch/review-502-correctness/test/test_phylo_binomial_xlv.jl:197
+Phylo x Binomial B_eta_realized selected-entry canary: Test Failed at /Users/z3437171/local-scratch/review-502-correctness/test/test_phylo_binomial_xlv.jl:198
+Phylo x Binomial B_eta_realized selected-entry canary: Test Failed at /Users/z3437171/local-scratch/review-502-correctness/test/test_phylo_binomial_xlv.jl:203
+DONE test_phylo_binomial_xlv.jl in 27.8s
+Phylo x Gamma predictor-informed LV S1 likelihood: Test Failed at /Users/z3437171/local-scratch/review-502-correctness/test/test_phylo_gamma_xlv.jl:123
+Phylo x Gamma B_eta_realized selected-entry canary: Test Failed at /Users/z3437171/local-scratch/review-502-correctness/test/test_phylo_gamma_xlv.jl:185
+Phylo x Gamma B_eta_realized selected-entry canary: Test Failed at /Users/z3437171/local-scratch/review-502-correctness/test/test_phylo_gamma_xlv.jl:186
+Phylo x Gamma B_eta_realized selected-entry canary: Test Failed at /Users/z3437171/local-scratch/review-502-correctness/test/test_phylo_gamma_xlv.jl:187
+Phylo x Gamma B_eta_realized selected-entry canary: Test Failed at /Users/z3437171/local-scratch/review-502-correctness/test/test_phylo_gamma_xlv.jl:188
+Phylo x Gamma B_eta_realized selected-entry canary: Test Failed at /Users/z3437171/local-scratch/review-502-correctness/test/test_phylo_gamma_xlv.jl:189
+Phylo x Gamma B_eta_realized selected-entry canary: Test Failed at /Users/z3437171/local-scratch/review-502-correctness/test/test_phylo_gamma_xlv.jl:195
+DONE test_phylo_gamma_xlv.jl in 75.0s
+Phylo x NB2 predictor-informed LV S1 likelihood: Test Failed at /Users/z3437171/local-scratch/review-502-correctness/test/test_phylo_nb_xlv.jl:123
+DONE test_phylo_nb_xlv.jl in 19.4s
+DONE test_phylo_beta_xlv.jl in 27.7s
