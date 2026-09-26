@@ -8,8 +8,8 @@ This lane landed the backlog the 2026-09-25 true-parity-finish lane left open. I
 
 ## What Was Accomplished
 
-- Merged (each pinned to its reviewed head, CI green apart from the advisory frozen-R cell at main's own range): #494, #488, #495, #487, #489, #490, #497, #496, #502 (squash; Fixes #485 as a per-family NB1 verdict), and PENDING #500 (Fixes #484).
-- Returned to the maintainer with a written note, both recommended to merge: #491 (realistic-size Binomial receipt), #493 (per-trait truncated-NB2 Wald CI; adds a public `confint` method; squash with a corrected message).
+- Merged (each pinned to its reviewed head, CI green apart from the advisory frozen-R cell at main's own range): #494, #488, #495, #487, #489, #490, #497, #496, #502 (squash; Fixes #485 as a per-family NB1 verdict), and, after the maintainer's sign-off ("merge #491 and #493 when green"), #491 `0a2796257` and #493 `7aa8bc39e` (squash with a corrected message). PENDING: #500 (Fixes #484).
+- #491 and #493 were first returned to the maintainer with a written note (they change scientific results; #493 adds a public `confint` method), then merged on his word.
 - Issues filed: #498, #499, #501, #503 (tracking issue for the remaining undamped mode searches), #504 (confint bootstrap and profile refit accept non-converged replicates). #501 carries a correction comment on platform-dependent optimiser paths.
 
 ## Current Working State
@@ -21,7 +21,7 @@ This lane landed the backlog the 2026-09-25 true-parity-finish lane left open. I
 
 - #502, maintainer 2026-09-26: option (d), per-family verdicts. A global gradient criterion in `_fit_verdict` broke five existing tests and flagged genuine optima where the objective has small jumps.
 - `_phylo_verdict` is deliberately unchanged: its flips under the global rule were finite-difference steps hitting the 1e12 failure value. It gets its own verdict only after a family-specific reproduction.
-- #491 and #493 change scientific results, so the lane returned them instead of merging.
+- #491 and #493 change scientific results, so the lane returned them for sign-off rather than merging on its own authority; both merged after the maintainer's word on 2026-09-26.
 
 ## Landing State
 
@@ -29,10 +29,9 @@ PENDING: paste `tools/handoff_gate.sh` output at close.
 
 ## Next Immediate Steps
 
-1. Maintainer: sign off #491 and #493 (drafted replies: "merge #491 when green"; "merge #493 when green, squash with a corrected message").
-2. #504 first (small, affects every family's intervals), then #503 one family at a time (NB1 grouped and Student-t first), following the #479/#480 pattern.
-3. #501 (ordered beta): diagnose the jump in the objective before fixing; any regression test must assert a relation over several seeds.
-4. `_phylo_verdict`: build a family-specific reproduction before changing it.
+1. #504 first (small, affects every family's intervals), then #503 one family at a time (NB1 grouped and Student-t first), following the #479/#480 pattern.
+2. #501 (ordered beta): diagnose the jump in the objective before fixing; any regression test must assert a relation over several seeds.
+3. `_phylo_verdict`: build a family-specific reproduction before changing it.
 
 ## Blockers / Open Questions
 

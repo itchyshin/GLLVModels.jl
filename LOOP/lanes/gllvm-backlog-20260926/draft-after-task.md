@@ -8,17 +8,17 @@ Land the backlog the 2026-09-25 true-parity-finish lane left open: merge #494, r
 
 ## 2. Implemented
 
-- Merged after review, each pinned to its reviewed head and gated on CI (the advisory frozen-R cell allowed only at main's own 277/9 to 278/8 range): #494 `d4da31544`, #488 `8001b0523`, #495 `39886c705`, #487 `d89179d41`, #489 `5bc5818d5`, #490 `b71c0047f`, #497 `ef0488df8`, #496 `b90641c97`.
+- Merged after review, each pinned to its reviewed head and gated on CI (the advisory frozen-R cell allowed only at main's own 277/9 to 278/8 range): #494 `d4da31544`, #488 `8001b0523`, #495 `39886c705`, #487 `d89179d41`, #489 `5bc5818d5`, #490 `b71c0047f`, #497 `ef0488df8`, #496 `b90641c97`, #502 `6cb0649e3` (squash), and after the maintainer's sign-off #491 `0a2796257` and #493 `7aa8bc39e` (squash, corrected message).
 - New PRs: #496 (reverse-gap classes, proposed and unsigned), #497 (decision packet brought to main with #495's 11 decisions and live divergences #129 and #131), #500 (Fixes #484, two-part mode search), #502 (Fixes #485, reworked as a per-family NB1 verdict after review).
 - Issues filed from independent reviews and a screen: #498 (Binomial quasi-separation flagged differently by the engines), #499 (per-trait truncated-NB2 stall, boundary flags, shared-r default), #501 (ordered beta reports converged at non-stationary points; restarts reach valid optima up to +2859 logLik; confirmed by two independent verifiers; a correction comment records that the optimiser path differs between Linux and macOS on the same data).
 - A true-parity acceptance ledger (seven clauses plus two row gates plus one manual gate) with an oracle that reads origin/main, run with positive and negative controls. Baseline: 0 of 10 met.
-- PENDING: #500 outcome; #502 rework outcome; #491 and #493 handed to the maintainer with verification.
+- PENDING: #500 (in the merge train at rebased head ff3252540, src identical to the reviewed head a4e3eaec2).
 
 ## 3a. Decisions and Rejected Alternatives
 
 - #502: a global gradient criterion in `_fit_verdict` was rejected after review (it failed five existing tests and flagged genuine optima where the objective has small jumps). Maintainer chose option (d), per-family verdicts (2026-09-26). Rejected: (a) a stall check needing the objective at about 100 call sites; (b) sentinel and tolerance exemptions on the global rule; (c) a curvature-scaled test, left as a later option.
 - `_phylo_verdict`: not changed. Its flips under the global rule were finite-difference steps hitting the 1e12 failure value, so it waits for a family-specific reproduction under (d).
-- #491 and #493 change scientific results (and #493 adds a public `confint` method), so they are returned for the maintainer's sign-off after their blocking items were fixed, not merged by the lane.
+- #491 and #493 change scientific results (and #493 adds a public `confint` method), so they were returned for the maintainer's sign-off after their blocking items were fixed; both merged on his word.
 - D-220 amended in the vault (Claude owns GLLVModels.jl true parity from 2026-09-24; Cursor keeps gllvmTMB twin work).
 
 ## 4. Files Touched
@@ -41,12 +41,12 @@ Land the backlog the 2026-09-25 true-parity-finish lane left open: merge #494, r
 
 ## 7a. Issue Ledger
 
-Filed #498, #499, #501. Corrected #501 by comment. PENDING: the mode-search tracking issue and the confint bootstrap/profile-refit issue from the triage.
+Filed #498, #499, #501, #503 (remaining undamped mode searches, re-measured on main), #504 (confint bootstrap and profile refit accept non-converged replicates). Corrected #501 by comment (optimiser paths differ between Linux and macOS on the same data).
 
 ## 8. Consistency Audit
 
 - Sibling screen of eight unscreened families on Totoro (ordered beta severe, ordinal and mixed modest, COM-Poisson anomaly, the rest clean).
-- Mode-search triage of the audit's sibling list against current main (PENDING).
+- Mode-search triage of the audit's sibling list against current main: NB1 grouped and Student-t highest; filed as #503.
 
 ## 9. What Did Not Go Smoothly
 
