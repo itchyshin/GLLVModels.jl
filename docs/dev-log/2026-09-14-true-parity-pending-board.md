@@ -1,5 +1,17 @@
 # True-parity programme: maintainer board (2026-09-14, updated 2026-09-16)
 
+**Status 2026-09-25:** the "### T4 realistic-size second-order" line below
+("Blocked on D-139 ack before Totoro spend") is stale. The T4 P6 grid it
+refers to (`p in {20,50}`, `n in {500,2000}`, Gaussian/Poisson/NB2) had
+already closed with 12 of 12 cells passing on 2026-09-05 (PR #297; receipts
+`docs/dev-log/core070/t4-p6-*-receipt-2026-09-05.json`). Separately, the
+D-139 ack for the #323 frozen-reference smoke was given 2026-09-24 (Totoro
+Track A ran; receipts `docs/dev-log/core070/totoro-323-track-a-20260924/`,
+after-task `docs/dev-log/after-task/2026-09-24-totoro-323-track-a-receipt.md`).
+Also landed since this board's last update: PR #478 (2026-09-25, NB2 restart
+at the Poisson boundary). This board's body is left as-is below; the
+"historical" markers already on most of its sections still apply.
+
 STATE: **IN PROGRESS**. (The live state is the OUTCOME 2026-09-24 line below; the rest of this line is pre-paste history.) **Mac Studio owns programme (STARTED 2026-09-15).** #323, matched-θ **(C)**, §2 Hessian **(A)** disposed (Ada defaults). Ledger gap inventory done. arcG Julia-only disposition ACCEPTED (#358 + gllvmTMB #1284). Still open: S4 probe, D3 Stage 1, `Project.toml` `0.3.0`, Delta dispersion paste.
 
 OUTCOME 2026-09-24 (Claude closeout): all four paste gates executed. #409, #410, #399 and #411 merged in that order; #469 carried the S4 wiring fixes. S4: probe ran with a probe-only shim; `pass=0 fail=2 oracle_defect=2` because the frozen recorder never attaches testthat; recorder fix requested on gllvmTMB#1283 (S4 option b). Track A (Totoro, 56 min): 14/17 required cells succeeded; NATIVE-12 `r_gradient_max` 5.90e-4 (R side), NATIVE-06 stopped at a seeded-data guard, NATIVE-10 parity cell passes; in the Julia 1.13.0 CI job the pattern flips (NATIVE-10 fails, NATIVE-12 passes), so no holdout counts as a pass. Delta A: default `:species`; D1 PASS on both cells (#470; each-own-optimum, one seed per cell). Stage 1: #411 with the σ_eps pin fix and the slice #471 merged (runbook item 3, an R-aligned pin-and-refit cell, not met). START HERE: `docs/dev-log/handover/2026-09-24-claude-handover-closeout.md`. No parity claim beyond the receipts; `Project.toml` stays `0.3.0`.

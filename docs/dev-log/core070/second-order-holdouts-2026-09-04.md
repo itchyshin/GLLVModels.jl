@@ -1,5 +1,14 @@
 # Second-order contract §6 holdouts (frozen list, 2026-09-04)
 
+**Status 2026-09-25:** the Tweedie row below is stale where it says the
+species estimated-power second-order cell is "still open" or "not
+attempted". PR #391 (merged 2026-09-16) wired both the shared and species
+Tweedie estimated-power second-order cells (option A, PARTIAL: β/`b_fix`
+block only, plug-in power, not a D1 each-own-optimum pass). The Delta-lognormal
+/ Delta-Gamma row is not stale: `accept delta dispersion A` is still listed
+as an outstanding maintainer paste in `LOOP/checkpoint.md` as of this date,
+so Delta remains pending as written below.
+
 Source: `second-order-parity-contract.md` §6–§7. These families/cells are **out of the
 first second-order batch claim** until the listed blocker clears.
 

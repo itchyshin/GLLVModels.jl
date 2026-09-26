@@ -1,5 +1,16 @@
 # Maintainer decision — §2 disputed Laplace Hessian defaults (cloglog / Tweedie grouped)
 
+**Status 2026-09-25:** superseded, still PENDING_ACCEPTANCE as written, and
+not the draft that was accepted. The same §2 question (cloglog / Tweedie
+grouped Hessian default) was decided through a separate, differently-named
+draft, `docs/dev-log/decisions/2026-09-15-second-order-hessian-s2-pending.md`,
+which was ACCEPTED (option A) and ratified 2026-09-15; the engine defaults
+(`_default_hessian(::Binomial, ::CLogLogLink) = :observed` in
+`src/families/binomial.jl`, and the Tweedie grouped default in
+`src/families/grouped_dispersion.jl`) were already on HEAD at that point,
+not introduced by any specific PR identified here. Do not cite this file
+as the operative decision.
+
 **Date:** 2026-09-15  
 **Status:** **PENDING_ACCEPTANCE** — do not cite as ACCEPTED until Shinichi pastes a reply phrase below  
 **Lane:** Cursor / Ada (true-parity programme; ledger-gap inventory rank **3**)  
