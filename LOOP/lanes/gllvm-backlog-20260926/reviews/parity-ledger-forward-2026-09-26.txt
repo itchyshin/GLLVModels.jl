@@ -1,0 +1,464 @@
+gllvmTMB 0.7.0 @ b4d5fee64def88bc768dda1f1f77c29b295edd86 (b4d5fee64)
+  R exports: 160   GLLVModels.jl exports: 456
+
+FORWARD -- RENAMED AWAY (0) -- the R name is deliberately NOT the Julia name (api-rename-notes.md)
+
+FORWARD -- NOT CAPABILITY (4) -- R-idiom helper, no engine analogue
+  gllvmTMBcontrol          R control-object constructor (fit-option bag); Julia takes options as keyword args, no matching constructor export
+  gr                       R gradient/generic helper; not a distinct Julia-facing capability
+  meta_known_V             meta-analysis known-V helper; not a GLLVModels engine capability (DRM.jl carries the identical exclusion for its own meta_known_V)
+  screen_control           R control-object constructor for screen_gllvmTMB(); same shape as gllvmTMBcontrol, no Julia analogue
+
+FORWARD -- ACCOUNTED FOR IN WRITING (6) -- not owed, and why
+  add_utm_columns          R-side coordinate-projection convenience for geospatial prep; no fitting-engine analogue
+  categorical              an imputation family (categorical missingness), not a response family; same missing-data surface as impute_model
+  get_crs                  R-side CRS/projection accessor for geospatial prep; no fitting-engine analogue
+  impute_model             missing-data imputation-model surface; structurally separate from GLLVModels.jl's Laplace/VA family fitters
+  make_mesh                R-side geospatial mesh prep (sf, CRS) before any fit; SPDE fitters take a mesh/precision Julia already has, not this constructor
+  miss_control             missing-data control-object constructor; same missing-data surface as impute_model
+
+FORWARD -- gllvmTMB EXPORTS WITH NO GLLVModels.jl TWIN (62) -- genuinely owed
+  VP                           no disposition (classification=intentionally_excluded)
+  animal_indep                 no disposition (classification=required_core)
+  animal_scalar                no disposition (classification=required_core)
+  animal_slope                 no disposition (classification=required_core)
+  animal_unique                BLOCKED_NEEDS_JULIA_SURFACE
+  block_V                      no disposition (classification=intentionally_excluded)
+  confirmatory_lambda          BLOCKED_NEEDS_JULIA_SURFACE
+  delta_beta                   no disposition (classification=intentionally_excluded)
+  delta_gamma_mix              no disposition (classification=intentionally_excluded)
+  delta_gengamma               no disposition (classification=intentionally_excluded)
+  delta_lognormal_mix          no disposition (classification=intentionally_excluded)
+  delta_poisson_link_gamma     no disposition (classification=intentionally_excluded)
+  delta_poisson_link_lognormal no disposition (classification=intentionally_excluded)
+  delta_truncated_nbinom1      no disposition (classification=intentionally_excluded)
+  delta_truncated_nbinom2      no disposition (classification=intentionally_excluded)
+  extract_residual_split       no disposition (classification=required_core)
+  gamma_mix                    no disposition (classification=intentionally_excluded)
+  gengamma                     no disposition (classification=intentionally_excluded)
+  gllvm_julia_setup            no disposition (classification=required_core)
+  indep                        PARTIAL_PENDING_DECISION_OPEN_QUESTION
+  isdm_source                  BLOCKED_NEEDS_JULIA_SURFACE
+  isdm_sources                 BLOCKED_NEEDS_JULIA_SURFACE
+  latent                       BLOCKED_NEEDS_JULIA_SURFACE
+  lognormal_mix                no disposition (classification=intentionally_excluded)
+  meta                         BLOCKED_NEEDS_JULIA_SURFACE
+  meta_V                       BLOCKED_NEEDS_JULIA_SURFACE
+  nbinom2_mix                  no disposition (classification=intentionally_excluded)
+  pedigree_to_A                BLOCKED_NEEDS_JULIA_SURFACE
+  pedigree_to_Ainv_sparse      BLOCKED_NEEDS_JULIA_SURFACE
+  phylo                        BLOCKED_NEEDS_JULIA_SURFACE
+  phylo_dep                    BLOCKED_NEEDS_JULIA_SURFACE
+  phylo_indep                  BLOCKED_NEEDS_JULIA_SURFACE
+  phylo_latent                 BLOCKED_NEEDS_JULIA_SURFACE
+  phylo_rr                     BLOCKED_NEEDS_JULIA_SURFACE
+  phylo_scalar                 BLOCKED_NEEDS_JULIA_SURFACE
+  phylo_signal_mi              BLOCKED_NEEDS_JULIA_SURFACE
+  phylo_slope                  BLOCKED_NEEDS_JULIA_SURFACE
+  phylo_unique                 BLOCKED_NEEDS_JULIA_SURFACE
+  plot_Sigma_comparison        no disposition (classification=intentionally_excluded)
+  plot_Sigma_heatmap           no disposition (classification=intentionally_excluded)
+  plot_Sigma_table             no disposition (classification=intentionally_excluded)
+  plot_anisotropy              no disposition (classification=intentionally_excluded)
+  plot_anisotropy2             no disposition (classification=intentionally_excluded)
+  plot_correlations            no disposition (classification=intentionally_excluded)
+  plot_loadings_confidence_eye no disposition (classification=intentionally_excluded)
+  plot_rotated_loadings        no disposition (classification=intentionally_excluded)
+  ridge_path                   no disposition (classification=intentionally_excluded)
+  scalar                       PARTIAL_PENDING_DECISION_OPEN_QUESTION
+  screen_gllvmTMB              no disposition (classification=intentionally_excluded)
+  screen_table                 no disposition (classification=intentionally_excluded)
+  simulate_site_trait          BLOCKED_NEEDS_JULIA_SURFACE
+  spatial                      BLOCKED_NEEDS_JULIA_SURFACE
+  spatial_dep                  BLOCKED_NEEDS_JULIA_SURFACE
+  spatial_indep                BLOCKED_NEEDS_JULIA_SURFACE
+  spatial_latent               BLOCKED_NEEDS_JULIA_SURFACE
+  spatial_scalar               BLOCKED_NEEDS_JULIA_SURFACE
+  spatial_unique               BLOCKED_NEEDS_JULIA_SURFACE
+  spde                         BLOCKED_NEEDS_JULIA_SURFACE
+  suggest_lambda_constraint    BLOCKED_NEEDS_JULIA_SURFACE
+  suggest_lambda_constraints   BLOCKED_NEEDS_JULIA_SURFACE
+  traits                       BLOCKED_NEEDS_JULIA_SURFACE
+  truncated_nbinom1            no disposition (classification=intentionally_excluded)
+
+REVERSE -- AHEAD OF gllvmTMB, ACCOUNTED FOR IN WRITING (375) -- not a gap, and why
+  @formula                         StatsModels macro mirroring R's built-in ~ formula literal; base R syntax needs no export
+  AnBSparseSolver                  [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only phylogenetic engine substrate; same class as the existing ^phylo_/^edge_/^branch_/^clade_ AHEAD_PATTERNS bucket, but this name's shape doesn't match those regexes -- a GLLVModels.jl capability with no gllvmTMB analogue
+  AugmentedPhy                     [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only phylogenetic engine substrate; same class as the existing ^phylo_/^edge_/^branch_/^clade_ AHEAD_PATTERNS bucket, but this name's shape doesn't match those regexes -- a GLLVModels.jl capability with no gllvmTMB analogue
+  BetaBinomialFit                  struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  BetaBinomialGroupedCovFit        struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  BetaBinomialGroupedFit           struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  BetaFit                          struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  BetaGroupedCovFit                struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  BetaGroupedFit                   struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  BetaHurdle                       [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only family: Beta-hurdle two-part family (Bernoulli occurrence x positive Beta, Ferrari & Cribari-Neto parameterisation) for [0,1) proportion data; gllvmTMB has no hurdle-beta family
+  BetaHurdleFit                    struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  BinomialFit                      struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  BranchRECache                    phylogenetic engine substrate (sparse/contrasts/edge-incidence); a GLLVModels.jl capability with no gllvmTMB analogue
+  BranchREFit                      struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  CLogLogLink                      Julia link-function marker type; R represents the same link as a string argument (e.g. link="logit"), no type export
+  COMPoisson                       [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only family: Conway-Maxwell-Poisson, a two-parameter count family handling BOTH over- and under-dispersion; in-repo comment states explicitly this is 'a capability gllvmTMB does NOT offer'
+  COMPoissonFit                    struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  CVResult                         [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only diagnostic or extractor: result struct returned by cv_gllvm() (see below) -- paired entry
+  CensoredPoissonFit               struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  CoevolutionGLMFit                struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  ConcurrentOrdinationFit          struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  ConstrainedOrdinationFit         struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  DeltaGammaFit                    struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  DeltaLogNormalFit                struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  EMPhyloFit                       struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  EdgePhy                          phylogenetic engine substrate (sparse/contrasts/edge-incidence); a GLLVModels.jl capability with no gllvmTMB analogue
+  ExponentialFit                   struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  FelsensteinContrasts             phylogenetic engine substrate (sparse/contrasts/edge-incidence); a GLLVModels.jl capability with no gllvmTMB analogue
+  FourthCornerFit                  struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  GP1Fit                           struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  GammaFit                         struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  GammaGroupedCovFit               struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  GammaGroupedFit                  struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  GaussianPerVarFit                struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  GaussianREMLFit                  struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  GaussianRandomSlopeFit           struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  GaussianSourcesFit               struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  GeneralizedPoisson1              [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only family: Generalized-Poisson type-1 (Famoye/Consul-Jain) with signed scalar dispersion (over- or under-dispersion); gllvmTMB has no GP-1 family
+  GllvmCoefTable                   [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only diagnostic or extractor: result struct returned by coef_table() (see below) -- paired entry
+  GllvmCovFit                      struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  GllvmFit                         struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  GllvmModel                       [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] internal-but-exported helper: immutable dimension-bookkeeping spec (p, K, K_W, has_diag, K_phy, has_phy_unique) for a Gaussian GLLVM (fit.jl); internal dispatch/construction type, no R analogue -- candidate to unexport
+  GllvmSpeciesCovFit               struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  GllvmSummary                     [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only diagnostic or extractor: result struct backing summary()'s tabular output (postfit_tables.jl); gllvmTMB's summary.gllvmTMB prints the same information without a separate exported class
+  GroupedGaussianFit               struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  GroupedNonGaussianFit            struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  GroupingTerm                     [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] internal-but-exported helper: formula-grammar term type for the unit/unit_obs/cluster/cluster2 grouping grammar (grouped_fit.jl); gllvmTMB expresses the identical grammar (its own 6x3 keyword grid) as formula tokens, not an exported class -- candidate to unexport if callers always go through fit_gllvm(..., grouping=...)
+  HurdleNB                         [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only family: Hurdle-NB2 two-part family (Bernoulli occurrence x zero-truncated NB2 count, shared dispersion r); gllvmTMB has no hurdle-NB family
+  HurdleNBFit                      struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  HurdlePoisson                    [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only family: Hurdle-Poisson two-part family (Bernoulli occurrence x zero-truncated Poisson count); gllvmTMB has no hurdle-Poisson family
+  HurdlePoissonFit                 struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  IdentityLink                     Julia link-function marker type; R represents the same link as a string argument (e.g. link="logit"), no type export
+  JointPhyloGroupedGaussianFit     struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  LVSelection                      [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] R has it after 0.7.0: result struct returned by select_lv(), which R gained post-0.7.0 (export(select_lv) on origin/main, not in the frozen b4d5fee6 NAMESPACE); R exposes the same sweep information via a printed object, not a separate exported class
+  LogLink                          Julia link-function marker type; R represents the same link as a string argument (e.g. link="logit"), no type export
+  LogitLink                        Julia link-function marker type; R represents the same link as a string argument (e.g. link="logit"), no type export
+  LognormalFit                     struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  MixedFamilyFit                   struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  MultinomialFit                   struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  NB1Fit                           struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  NB1GroupedCovFit                 struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  NB1GroupedFit                    struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  NBGroupedCovFit                  struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  NBGroupedFit                     struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  NodePerSpecies                   [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only phylogenetic engine substrate; same class as the existing ^phylo_/^edge_/^branch_/^clade_ AHEAD_PATTERNS bucket, but this name's shape doesn't match those regexes -- a GLLVModels.jl capability with no gllvmTMB analogue
+  OrderedBeta                      [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only family: ordered-beta family (Kubinec 2023) for [0,1] proportions with point masses at 0 and 1; gllvmTMB has no ordered-beta family
+  OrderedBetaFit                   struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  OrdinalPerTraitCovFit            struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  OrdinalPerTraitFit               struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  PhyloGLMFit                      struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  PhyloGaussianFit                 struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  PoissonFit                       struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  PoissonRandomSlopeFit            struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  PrecisionMultivariateFit         struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  PrecisionPhy                     [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only phylogenetic engine substrate; same class as the existing ^phylo_/^edge_/^branch_/^clade_ AHEAD_PATTERNS bucket, but this name's shape doesn't match those regexes -- a GLLVModels.jl capability with no gllvmTMB analogue
+  ProbitLink                       Julia link-function marker type; R represents the same link as a string argument (e.g. link="logit"), no type export
+  Q_perbranch                      SPDE/Matern spatial substrate; a GLLVModels.jl capability gllvmTMB's TMB template does not implement (per docs/src/gllvmtmb-parity.md "Honest gaps")
+  Q_times_x                        SPDE/Matern spatial substrate; a GLLVModels.jl capability gllvmTMB's TMB template does not implement (per docs/src/gllvmtmb-parity.md "Honest gaps")
+  QuadraticFit                     struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  RRRFit                           struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  RelaxedClockFit                  struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  RowEffectFit                     struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  RowRandomFit                     struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  SPDEGaussianFit                  struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  SPDELatentFit                    struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  SourceCovariance                 [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] Julia-first capability awaiting an R decision: fixed source-covariance grammar term (source_fit.jl, fit_gaussian_sources) for per-source observation-model structure; gllvmTMB has FILED this as a known gap (gllvmTMB issue #941, 'Integrated GLLVM: multisource biodiversity data (GBIF + literature) sharing one ecological latent process', which specs a source-specific observation process per (cell, species, source) alongside one shared ecological latent process), so this is a genuine Julia-first capability the R side has flagged wanting, not yet a PORT decision
+  StatsAPI                         re-exported package name (Julia convention for extending a shared interface), not a gllvmTMB-comparable symbol
+  StudentTFamily                   [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] R has it under another name: `const StudentT = StudentTFamily` (families/studentt.jl) -- StudentT is already ALIASES-matched to R's student(); StudentTFamily is the same type exported under its defining name too, not an additional capability
+  StudentTFit                      struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  TruncatedNegBin2Fit              struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  TruncatedNegBin2PerTraitFit      struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  TruncatedPoissonFit              struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  TweedieGroupedFit                struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  TweediePerTraitPowerFit          struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  TwoLevelFit                      struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  TwoLevelRepeatabilityProfileWithdrawn [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] R has it under another name: mirrors R's extract_repeatability(method="profile") abort class gllvmTMB_repeatability_profile_withdrawn (twolevel.jl comment, verbatim); an intentional-refusal exception type, not a capability gap
+  ZIB                              [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] R has it after 0.7.0, FLAGGED: export(zi_binomial) is on origin/main, and norm() name-matches; but bridge.jl's own comments call this route 'Julia-forward / twin-asymmetric' with 'no twin light RCall Delta' -- Julia's ZIB is a shared-z two-part Newton-scoring family (separate gamma_z/gamma_c, complete-response fixed-effect-X routes) vs R's per-trait intercept-only zero-part Laplace family. Needs maintainer confirmation whether this is a genuine twin or a documented parameterization divergence
+  ZIBCovFit                        struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  ZIBFit                           struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  ZINBCovFit                       struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  ZINBFit                          struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  ZINegBin                         [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] R has it after 0.7.0, FLAGGED: export(zi_nbinom2) is on origin/main, and norm() name-matches; but bridge.jl's own comments call this route 'Julia-forward / twin-asymmetric' with 'no twin light RCall Delta' -- Julia's ZINegBin is a shared-z two-part Newton-scoring family (separate gamma_z/gamma_c, complete-response fixed-effect-X routes) vs R's per-trait intercept-only zero-part Laplace family. Needs maintainer confirmation whether this is a genuine twin or a documented parameterization divergence
+  ZIPCovFit                        struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  ZIPFit                           struct suffix: backs a fitted model; R represents the same as an S3 class tag, never a matching export
+  ZIPoisson                        [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] R has it after 0.7.0, FLAGGED: export(zi_poisson) is on origin/main, and norm() name-matches; but bridge.jl's own comments call this route 'Julia-forward / twin-asymmetric' with 'no twin light RCall Delta' -- Julia's ZIPoisson is a shared-z two-part Newton-scoring family (separate gamma_z/gamma_c, complete-response fixed-effect-X routes) vs R's per-trait intercept-only zero-part Laplace family. Needs maintainer confirmation whether this is a genuine twin or a documented parameterization divergence
+  admit_phylo_precision_payload    [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only phylogenetic engine substrate; same class as the existing ^phylo_/^edge_/^branch_/^clade_ AHEAD_PATTERNS bucket, but this name's shape doesn't match those regexes -- a GLLVModels.jl capability with no gllvmTMB analogue
+  aic                              mirrors stats::AIC; gllvmTMB reaches it via S3method(AIC, gllvmTMB), never export()
+  augmented_phy                    phylogenetic engine substrate (sparse/contrasts/edge-incidence); a GLLVModels.jl capability with no gllvmTMB analogue
+  beta_grouped_marginal_loglik_laplace internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  beta_hurdle_marginal_loglik_laplace internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  beta_laplace_grad                hand-coded analytic-gradient kernel; engine internal, never reached by an R-facing name
+  beta_marginal_loglik_va          internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  betabinomial_grouped_marginal_loglik_laplace internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  betabinomial_marginal_loglik_laplace internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  bic                              mirrors stats::BIC; gllvmTMB reaches it via S3method(BIC, gllvmTMB), never export()
+  binomial_laplace_grad            hand-coded analytic-gradient kernel; engine internal, never reached by an R-facing name
+  binomial_marginal_loglik_va      internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  blup_phylo_sparse                phylogenetic engine substrate (sparse/contrasts/edge-incidence); a GLLVModels.jl capability with no gllvmTMB analogue
+  bootstrap_ci                     named Wald/profile CI accessor for one derived quantity; gllvmTMB reaches CIs generically via confint(), not per-quantity exports
+  branch_blups                     phylogenetic engine substrate (sparse/contrasts/edge-incidence); a GLLVModels.jl capability with no gllvmTMB analogue
+  branch_re_cache                  phylogenetic engine substrate (sparse/contrasts/edge-incidence); a GLLVModels.jl capability with no gllvmTMB analogue
+  branch_re_profile_negll          phylogenetic engine substrate (sparse/contrasts/edge-incidence); a GLLVModels.jl capability with no gllvmTMB analogue
+  bridge_capabilities              [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] internal-but-exported helper: introspection function reporting the RCall/JuliaCall bridge's OWN capability surface as a NamedTuple (bridge.jl); a bridge self-description/testing tool, not a modelling capability
+  build_AnB_sparse                 [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only phylogenetic engine substrate; same class as the existing ^phylo_/^edge_/^branch_/^clade_ AHEAD_PATTERNS bucket, but this name's shape doesn't match those regexes -- a GLLVModels.jl capability with no gllvmTMB analogue
+  build_node_perspecies            [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only phylogenetic engine substrate; same class as the existing ^phylo_/^edge_/^branch_/^clade_ AHEAD_PATTERNS bucket, but this name's shape doesn't match those regexes -- a GLLVModels.jl capability with no gllvmTMB analogue
+  chibar2_pvalue                   [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] R has it after 0.7.0: export(chibar2_pvalue) is on origin/main (not the frozen 0.7.0 NAMESPACE) -- the boundary-inference chi-bar-square p-value accessor now has a direct R twin; the frozen-oracle comparator this countdown runs against predates it
+  clade_detection                  phylogenetic engine substrate (sparse/contrasts/edge-incidence); a GLLVModels.jl capability with no gllvmTMB analogue
+  clade_edges                      phylogenetic engine substrate (sparse/contrasts/edge-incidence); a GLLVModels.jl capability with no gllvmTMB analogue
+  coef                             mirrors stats::coef; gllvmTMB reaches it via S3method(coef, gllvmTMB), never export()
+  coef_table                       [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only diagnostic or extractor: coefficient-table accessor (summary_table.jl); gllvmTMB prints the same table via summary.gllvmTMB, not a separately exported function of this name (same reasoning as the existing AHEAD_EXPLICIT 'coeftable' StatsAPI-generic entry, applied to this differently-named variant)
+  coeftable                        StatsAPI generic for the coefficient table; gllvmTMB prints the same via summary.gllvmTMB, no separate accessor
+  coevolution_gamma                coevolution/cross-kernel substrate; a GLLVModels.jl capability with no gllvmTMB analogue
+  coevolution_glm_marginal_loglik  internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  communality                      [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only diagnostic or extractor: short-name duplicate of extract_communality(), which already has a matched R twin (export(extract_communality) both sides); this bare form is Julia-ecosystem convenience naming, not an additional capability
+  communality_B                    [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only diagnostic or extractor: between/within-tier variant of communality() (twolevel.jl), which is itself a short-name duplicate of an R-twinned extract_communality(); a TwoLevelFit-specific decomposition, not an additional capability beyond the two-level model
+  communality_W                    [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only diagnostic or extractor: between/within-tier variant of communality() (twolevel.jl), which is itself a short-name duplicate of an R-twinned extract_communality(); a TwoLevelFit-specific decomposition, not an additional capability beyond the two-level model
+  communality_wald_ci              named Wald/profile CI accessor for one derived quantity; gllvmTMB reaches CIs generically via confint(), not per-quantity exports
+  compare_fits_Sigma_table         [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] R has it under another name (api-rename-notes.md, RENAMED_AWAY['compare_Sigma_table']): deliberately renamed because R's compare_Sigma_table(x, truth, ...) compares a fit against a supplied ground-truth matrix, while Julia's is a two-fit bridge -- different signature, same family of capability
+  compare_fits_dep_vs_two_psi      [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] R has it under another name (api-rename-notes.md, RENAMED_AWAY['compare_dep_vs_two_psi']): R refits an alternative phylogenetic two-psi model internally; Julia's is a generic two-fit AIC/BIC/Sigma_y bridge applicable to any two fits -- different model class, same family of capability
+  compare_fits_indep_vs_two_psi    [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] R has it under another name (api-rename-notes.md, RENAMED_AWAY['compare_indep_vs_two_psi']): indep counterpart of compare_fits_dep_vs_two_psi; same two-psi naming mismatch
+  compoisson_logpdf                distribution-kernel helper (log-density/normalizer/CDF); engine internal
+  compoisson_logz                  distribution-kernel helper (log-density/normalizer/CDF); engine internal
+  compoisson_marginal_loglik_laplace internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  confint                          CI-machinery entry point (Wald/profile/bootstrap); gllvmTMB reaches CIs via S3method(confint, gllvmTMB), never a family of separate exports
+  confint_constrained              CI-machinery entry point (Wald/profile/bootstrap); gllvmTMB reaches CIs via S3method(confint, gllvmTMB), never a family of separate exports
+  confint_fourthcorner             CI-machinery entry point (Wald/profile/bootstrap); gllvmTMB reaches CIs via S3method(confint, gllvmTMB), never a family of separate exports
+  confint_lv_effects               CI-machinery entry point (Wald/profile/bootstrap); gllvmTMB reaches CIs via S3method(confint, gllvmTMB), never a family of separate exports
+  confint_rrr                      CI-machinery entry point (Wald/profile/bootstrap); gllvmTMB reaches CIs via S3method(confint, gllvmTMB), never a family of separate exports
+  confint_spde_latent              CI-machinery entry point (Wald/profile/bootstrap); gllvmTMB reaches CIs via S3method(confint, gllvmTMB), never a family of separate exports
+  confint_speciescov               CI-machinery entry point (Wald/profile/bootstrap); gllvmTMB reaches CIs via S3method(confint, gllvmTMB), never a family of separate exports
+  constrained_marginal_loglik_laplace internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  contrast_transform               [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only phylogenetic engine substrate; same class as the existing ^phylo_/^edge_/^branch_/^clade_ AHEAD_PATTERNS bucket, but this name's shape doesn't match those regexes -- a GLLVModels.jl capability with no gllvmTMB analogue
+  correlation                      [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only diagnostic or extractor: short-name duplicate of extract_correlation(), which already has a matched R twin (export(extract_correlation) both sides); this bare form is Julia-ecosystem convenience naming, not an additional capability
+  correlation_B                    [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only diagnostic or extractor: between/within-tier variant of correlation() (twolevel.jl), which is itself a short-name duplicate of an R-twinned extract_correlation(); a TwoLevelFit-specific decomposition, not an additional capability beyond the two-level model
+  correlation_W                    [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only diagnostic or extractor: between/within-tier variant of correlation() (twolevel.jl), which is itself a short-name duplicate of an R-twinned extract_correlation(); a TwoLevelFit-specific decomposition, not an additional capability beyond the two-level model
+  correlation_wald_ci              named Wald/profile CI accessor for one derived quantity; gllvmTMB reaches CIs generically via confint(), not per-quantity exports
+  cv_gllvm                         [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] Julia-first capability awaiting an R decision: K-fold-style cross-validation workflow tool (cv.jl); no R export or capability-status row exists. Comparable in nature to select_lv/LVSelection above, which R has since ported -- flagged as a candidate for the same treatment
+  delta_gamma_marginal_loglik_laplace internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  delta_gamma_marginal_loglik_va   internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  delta_lognormal_marginal_loglik_laplace internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  deviance                         mirrors stats::deviance; gllvmTMB reaches it via S3method(deviance, gllvmTMB), never export()
+  dof                              StatsAPI naming for a fixed-effect parameter count; gllvmTMB computes this internally for AIC/BIC without exposing an accessor
+  edge_W_diag                      phylogenetic engine substrate (sparse/contrasts/edge-incidence); a GLLVModels.jl capability with no gllvmTMB analogue
+  edge_phy                         phylogenetic engine substrate (sparse/contrasts/edge-incidence); a GLLVModels.jl capability with no gllvmTMB analogue
+  em_fa                            EM/SQUAREM alternative-solver internals; gllvmTMB's TMB path never uses this solver family
+  em_fit_phylo                     EM/SQUAREM alternative-solver internals; gllvmTMB's TMB path never uses this solver family
+  em_fit_phylo_squarem             EM/SQUAREM alternative-solver internals; gllvmTMB's TMB path never uses this solver family
+  em_observed_information          EM/SQUAREM alternative-solver internals; gllvmTMB's TMB path never uses this solver family
+  estep_edge_moments               [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only phylogenetic engine substrate; same class as the existing ^phylo_/^edge_/^branch_/^clade_ AHEAD_PATTERNS bucket, but this name's shape doesn't match those regexes -- a GLLVModels.jl capability with no gllvmTMB analogue
+  excess_kurtosis                  [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] internal-but-exported helper: generic descriptive-statistics helper (phylo_branch_re.jl) used to validate simulated phylogenetic branch-rate distributions; not a GLLVM capability itself -- candidate to unexport
+  exponential_marginal_loglik_laplace internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  exponential_marginal_loglik_va   internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  extract_rotated_loadings         named accessor for a value gllvmTMB exposes as a raw fitted-object field or printed summary() text, not a separate function
+  felsenstein_contrast_matrix      phylogenetic engine substrate (sparse/contrasts/edge-incidence); a GLLVModels.jl capability with no gllvmTMB analogue
+  felsenstein_contrasts            phylogenetic engine substrate (sparse/contrasts/edge-incidence); a GLLVModels.jl capability with no gllvmTMB analogue
+  find_clade_root                  [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only phylogenetic engine substrate; same class as the existing ^phylo_/^edge_/^branch_/^clade_ AHEAD_PATTERNS bucket, but this name's shape doesn't match those regexes -- a GLLVModels.jl capability with no gllvmTMB analogue
+  fit_beta_binomial_gllvm          Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_beta_binomial_gllvm_grouped  Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_beta_binomial_gllvm_grouped_cov Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_beta_gllvm_grouped           Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_beta_gllvm_grouped_cov       Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_beta_gllvm_va                Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_beta_hurdle_gllvm            Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_binomial_gllvm               Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_binomial_gllvm_va            Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_branch_re                    Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_branch_re_dense              Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_censored_poisson_gllvm       Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_coevolution_blockna          Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_coevolution_gaussian         Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_coevolution_glm              Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_compoisson_gllvm             Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_concurrent_gllvm             Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_constrained_gllvm            Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_delta_gamma_gllvm            Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_delta_gamma_gllvm_va         Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_delta_lognormal_gllvm        Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_diagnostic_table             Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_em_phylo                     Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_exponential_gllvm            Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_exponential_gllvm_va         Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_fourthcorner_gllvm           Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_gamma_gllvm                  Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_gamma_gllvm_grouped          Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_gamma_gllvm_grouped_cov      Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_gamma_gllvm_va               Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_gaussian_gllvm               Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_gaussian_mi_fiml             Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_gaussian_mi_phylo            Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_gaussian_pervar_gllvm        Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_gaussian_random_slope        Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_gaussian_reml                Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_gaussian_sources             Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_gaussian_structured          Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_gllvm_cov                    Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_gllvm_mi                     Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_gllvm_mi_multi               Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_gllvm_speciescov             Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_gp1_gllvm                    Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_hurdle_nb_gllvm              Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_hurdle_poisson_gllvm         Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_lognormal_gllvm              Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_mixed_gllvm                  Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_multinomial_gllvm            Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_nb1_gllvm                    Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_nb1_gllvm_grouped            Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_nb1_gllvm_grouped_cov        Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_nb_gllvm                     Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_nb_gllvm_grouped             Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_nb_gllvm_grouped_cov         Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_nb_gllvm_va                  Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_ordered_beta_gllvm           Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_ordinal_gllvm                Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_ordinal_gllvm_pertrait       Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_ordinal_gllvm_pertrait_cov   Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_phylo_dep_gllvm              Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_phylo_gaussian               Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_phylo_glm                    Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_phylo_squarem                Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_poisson_gllvm                Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_poisson_gllvm_va             Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_poisson_random_slope         Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_quadratic_gllvm              Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_relaxed_clock                Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_row_random_gllvm             Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_roweffect_gllvm              Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_rrr_gllvm                    Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_spatial_dep_gllvm            Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_spde_gaussian                Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_spde_latent_gllvm            Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_studentt_gllvm               Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_truncated_nbinom2_gllvm      Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_truncated_nbinom2_gllvm_pertrait Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_truncated_poisson_gllvm      Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_tweedie_gllvm                Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_tweedie_gllvm_grouped        Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_twolevel_gaussian            Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_zib_gllvm                    Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_zib_gllvm_cov                Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_zinb_gllvm                   Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_zinb_gllvm_cov               Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_zip_gllvm                    Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fit_zip_gllvm_cov                Julia fitting-verb entry point for one family/structure; R dispatches the same concept through gllvmTMB()'s family= argument, not a separate export per family
+  fitted                           mirrors stats::fitted; gllvmTMB reaches it via S3method(fitted, gllvmTMB), never export()
+  gamma_grouped_marginal_loglik_laplace internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  gamma_laplace_grad               hand-coded analytic-gradient kernel; engine internal, never reached by an R-facing name
+  gamma_marginal_loglik_va         internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  gaussian_grouped_intercept_loglik [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only diagnostic or extractor: named log-likelihood kernel for the Gaussian grouped-intercept fit (fit_random_effects.jl); gllvmTMB reaches the same grammar via gllvmTMB()'s grouping= argument and logLik(), not a per-quantity export (same reasoning as the existing ^confint_ AHEAD_PATTERNS bucket, applied by name here since this isn't confint-prefixed)
+  gaussian_marginal_loglik_contrasts internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  gaussian_marginal_loglik_edge_phy internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  gaussian_marginal_loglik_sparse_phy internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  gaussian_pervar_marginal_loglik  internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  gaussian_reml_loglik             [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only diagnostic or extractor: REML log-likelihood kernel (reml.jl); gllvmTMB's own non-Gaussian REML route (allow_nongaussian_reml) is an internal control knob, not an exported accessor of this shape
+  gp1_marginal_loglik_laplace      internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  grad_node_perspecies             [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only phylogenetic engine substrate; same class as the existing ^phylo_/^edge_/^branch_/^clade_ AHEAD_PATTERNS bucket, but this name's shape doesn't match those regexes -- a GLLVModels.jl capability with no gllvmTMB analogue
+  grouped_gaussian_intervals       [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only diagnostic or extractor: named Wald/profile/bootstrap CI or profile-curve accessor for one derived grouped/phylo/precision quantity; gllvmTMB reaches CIs generically via confint()/its own grouping grammar, not per-quantity exports (same reasoning as the existing ^confint_/_wald_ci$ AHEAD_PATTERNS buckets, applied by name here since these don't match those regexes)
+  grouped_gaussian_variance_profile [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only diagnostic or extractor: named Wald/profile/bootstrap CI or profile-curve accessor for one derived grouped/phylo/precision quantity; gllvmTMB reaches CIs generically via confint()/its own grouping grammar, not per-quantity exports (same reasoning as the existing ^confint_/_wald_ci$ AHEAD_PATTERNS buckets, applied by name here since these don't match those regexes)
+  grouped_nongaussian_intervals    [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only diagnostic or extractor: named Wald/profile/bootstrap CI or profile-curve accessor for one derived grouped/phylo/precision quantity; gllvmTMB reaches CIs generically via confint()/its own grouping grammar, not per-quantity exports (same reasoning as the existing ^confint_/_wald_ci$ AHEAD_PATTERNS buckets, applied by name here since these don't match those regexes)
+  hurdle_nb_marginal_loglik_laplace internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  hurdle_poisson_marginal_loglik_laplace internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  icc_wald_ci                      named Wald/profile CI accessor for one derived quantity; gllvmTMB reaches CIs generically via confint(), not per-quantity exports
+  joint_phylo_grouped_intervals    [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only diagnostic or extractor: named Wald/profile/bootstrap CI or profile-curve accessor for one derived grouped/phylo/precision quantity; gllvmTMB reaches CIs generically via confint()/its own grouping grammar, not per-quantity exports (same reasoning as the existing ^confint_/_wald_ci$ AHEAD_PATTERNS buckets, applied by name here since these don't match those regexes)
+  latent_score_sd                  [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] R has it under another name (api-rename-notes.md, RENAMED_AWAY['getREsd']): R's getREsd(fit, block=) covers auxiliary RE blocks; Julia's computes latent factor-score conditional SDs instead -- a deliberately different quantity under a deliberately different name
+  link_residual                    [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] R has it under another name, DEFERRED: the tool's own TWIN_ALIAS_DEFERRED comment already documents this -- R's extract_residual_cov splits across Julia's extract_residual_cov + link_residual (a structural twin), but 'no single Julia export target yet -- stay in FORWARD until maintainer picks one symbol or thin wrapper'; not a plain gap, a pending naming decision
+  loading_profile_exploratory      [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only diagnostic or extractor: named Wald/profile/bootstrap CI or profile-curve accessor for one derived grouped/phylo/precision quantity; gllvmTMB reaches CIs generically via confint()/its own grouping grammar, not per-quantity exports (same reasoning as the existing ^confint_/_wald_ci$ AHEAD_PATTERNS buckets, applied by name here since these don't match those regexes)
+  log_det_Q                        [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only phylogenetic engine substrate; same class as the existing ^phylo_/^edge_/^branch_/^clade_ AHEAD_PATTERNS bucket, but this name's shape doesn't match those regexes -- a GLLVModels.jl capability with no gllvmTMB analogue
+  loglikelihood                    StatsAPI naming for stats::logLik; gllvmTMB reaches it via S3method(logLik, gllvmTMB), never export()
+  lognormal_marginal_loglik        internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  lognormal_response_mean          [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only diagnostic or extractor: response-scale mean accessor for the already-twinned lognormal family (lognormal.jl, twin family_id 3); gllvmTMB reports the same quantity via predict(type="response"), not a separately named function
+  lv_effects                       [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only diagnostic or extractor: literal one-line alias (`lv_effects(fit) = extract_lv_effects(fit)`, postfit.jl) of extract_lv_effects(), which already has a matched R twin (export(extract_lv_effects) both sides)
+  make_phy                         [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only phylogenetic engine substrate; same class as the existing ^phylo_/^edge_/^branch_/^clade_ AHEAD_PATTERNS bucket, but this name's shape doesn't match those regexes -- a GLLVModels.jl capability with no gllvmTMB analogue
+  matern_correlation               [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only spatial engine substrate: same reasoning as the existing ^spde_/Precision$ AHEAD_PATTERNS bucket (SPDE/Matern spatial substrate a GLLVModels.jl capability gllvmTMB's TMB template does not implement), applied here since the name doesn't match those regexes. NOTE: gllvmTMB's own CLAUDE.md now lists spatial_indep/spatial_dep/spatial_latent/spatial_coef/spatial_slope as live keywords, so the AHEAD_PATTERNS bucket's premise may be stale -- worth a maintainer check, out of scope for this pass
+  mixed_marginal_loglik_laplace    internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  nb1_grouped_marginal_loglik_laplace internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  nb1_marginal_loglik_laplace      internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  nb_grouped_marginal_loglik_laplace internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  nb_laplace_grad                  hand-coded analytic-gradient kernel; engine internal, never reached by an R-facing name
+  nb_marginal_loglik_va            internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  nobs                             mirrors stats::nobs; gllvmTMB reaches it via S3method(nobs, gllvmTMB), never export()
+  node_blups                       [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only phylogenetic engine substrate; same class as the existing ^phylo_/^edge_/^branch_/^clade_ AHEAD_PATTERNS bucket, but this name's shape doesn't match those regexes -- a GLLVModels.jl capability with no gllvmTMB analogue
+  node_dσ_phy_only                 [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only phylogenetic engine substrate; same class as the existing ^phylo_/^edge_/^branch_/^clade_ AHEAD_PATTERNS bucket, but this name's shape doesn't match those regexes -- a GLLVModels.jl capability with no gllvmTMB analogue
+  node_grad                        hand-coded analytic-gradient kernel; engine internal, never reached by an R-facing name
+  observed_mask                    [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] internal-but-exported helper: one-line utility building a not-missing mask from Y (`observed_mask(Y) = .!ismissing.(Y)`, laplace.jl); trivial internal helper reused across masked-likelihood routes -- candidate to unexport
+  ordered_beta_marginal_loglik_laplace internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  ordination                       [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only diagnostic or extractor: short-name duplicate of extract_ordination(), which already has a matched R twin (export(extract_ordination) both sides); same convenience-naming pattern as communality()/correlation() above
+  ordination_uncertainty           [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] R has it after 0.7.0: export(ordination_uncertainty) is on origin/main (not the frozen 0.7.0 NAMESPACE); R's S3 print.gllvmTMB_ordination_uncertainty landed alongside it
+  path_membership                  [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only phylogenetic engine substrate; same class as the existing ^phylo_/^edge_/^branch_/^clade_ AHEAD_PATTERNS bucket, but this name's shape doesn't match those regexes -- a GLLVModels.jl capability with no gllvmTMB analogue
+  phylo_glm_marginal_loglik        internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  phylo_precision_payload          phylogenetic engine substrate (sparse/contrasts/edge-incidence); a GLLVModels.jl capability with no gllvmTMB analogue
+  phylo_signal                     phylogenetic engine substrate (sparse/contrasts/edge-incidence); a GLLVModels.jl capability with no gllvmTMB analogue
+  phylo_signal_wald_ci             named Wald/profile CI accessor for one derived quantity; gllvmTMB reaches CIs generically via confint(), not per-quantity exports
+  poisson_laplace_grad             hand-coded analytic-gradient kernel; engine internal, never reached by an R-facing name
+  poisson_marginal_loglik_va       internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  ppca_init                        [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] internal-but-exported helper: probabilistic-PCA warm-start initializer for latent scores/loadings (ppca_init.jl); an internal optimizer warm-start utility, not a user-facing capability -- candidate to unexport
+  precision_logdet_check           [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only phylogenetic engine substrate; same class as the existing ^phylo_/^edge_/^branch_/^clade_ AHEAD_PATTERNS bucket, but this name's shape doesn't match those regexes -- a GLLVModels.jl capability with no gllvmTMB analogue
+  precision_multivariate_intervals [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only diagnostic or extractor: named Wald/profile/bootstrap CI or profile-curve accessor for one derived grouped/phylo/precision quantity; gllvmTMB reaches CIs generically via confint()/its own grouping grammar, not per-quantity exports (same reasoning as the existing ^confint_/_wald_ci$ AHEAD_PATTERNS buckets, applied by name here since these don't match those regexes)
+  predict                          mirrors Base/StatsAPI predict; gllvmTMB reaches it via S3method(predict, gllvmTMB), never export()
+  predict_spatial                  [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only spatial engine substrate: postfit prediction for the SPDE latent-field fit (spde_latent_postfit.jl); R's spatial_* keywords route through the generic predict() S3 method (already AHEAD_EXPLICIT) rather than a separately named function of this shape
+  profile_ci                       named Wald/profile CI accessor for one derived quantity; gllvmTMB reaches CIs generically via confint(), not per-quantity exports
+  profile_ci_variance              [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only diagnostic or extractor: named Wald/profile/bootstrap CI or profile-curve accessor for one derived grouped/phylo/precision quantity; gllvmTMB reaches CIs generically via confint()/its own grouping grammar, not per-quantity exports (same reasoning as the existing ^confint_/_wald_ci$ AHEAD_PATTERNS buckets, applied by name here since these don't match those regexes)
+  profile_curve_targets            [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] R has it under another name (api-rename-notes.md, RENAMED_AWAY['profile_targets']): renamed alongside the diagnostics.jl round2-3 pass; same underlying profile-curve capability
+  qq_max_dev                       [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] internal-but-exported helper: generic QQ-plot max-deviation statistic (phylo_branch_re.jl), same validation-utility role as excess_kurtosis -- candidate to unexport
+  quadratic_marginal_loglik_laplace internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  random_balanced_tree             [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only phylogenetic engine substrate; same class as the existing ^phylo_/^edge_/^branch_/^clade_ AHEAD_PATTERNS bucket, but this name's shape doesn't match those regexes -- a GLLVModels.jl capability with no gllvmTMB analogue
+  random_slope_marginal_loglik_laplace internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  rank_sum_z                       [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] internal-but-exported helper: generic rank-sum-test statistic (phylo_branch_re.jl), same validation-utility role as excess_kurtosis -- candidate to unexport
+  raw_loading_wald_ci              named Wald/profile CI accessor for one derived quantity; gllvmTMB reaches CIs generically via confint(), not per-quantity exports
+  relatedness_cov                  [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only phylogenetic engine substrate; same class as the existing ^phylo_/^edge_/^branch_/^clade_ AHEAD_PATTERNS bucket, but this name's shape doesn't match those regexes -- a GLLVModels.jl capability with no gllvmTMB analogue
+  repeatability                    [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only diagnostic or extractor: short-name duplicate of extract_repeatability() (cross-referenced directly in its own docstring), which already has a matched R twin (export(extract_repeatability) both sides)
+  repeatability_bootstrap_ci       named Wald/profile CI accessor for one derived quantity; gllvmTMB reaches CIs generically via confint(), not per-quantity exports
+  repeatability_ci                 named Wald/profile CI accessor for one derived quantity; gllvmTMB reaches CIs generically via confint(), not per-quantity exports
+  repeatability_wald_ci            named Wald/profile CI accessor for one derived quantity; gllvmTMB reaches CIs generically via confint(), not per-quantity exports
+  residuals                        mirrors stats::residuals; gllvmTMB reaches it via S3method(residuals, gllvmTMB), never export()
+  rotation                         [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only diagnostic or extractor: `rotation(fit) = _svd_rotation(_loadings(fit))` (postfit.jl), the rotation-matrix component of ordination(); gllvmTMB exposes the same information via extract_ordination()/ordiplot(), not a separately exported function of this name
+  row_effects                      [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only diagnostic or extractor: BLUP accessor for the random row-effect capability (row.eff="random", row_random.jl -- a gllvm-package concept gllvmTMB itself does not implement); pairs with a Julia-only capability whose fitter is already covered by the ^_marginal_loglik AHEAD_PATTERNS bucket
+  row_random_marginal_loglik_laplace internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  rrr_marginal_loglik              internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  select_lv                        [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] R has it after 0.7.0: export(select_lv) is on origin/main (not the frozen 0.7.0 NAMESPACE); R's S3 print.gllvmTMB_select_lv landed alongside it
+  shrink_logrates                  [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only phylogenetic engine substrate; same class as the existing ^phylo_/^edge_/^branch_/^clade_ AHEAD_PATTERNS bucket, but this name's shape doesn't match those regexes -- a GLLVModels.jl capability with no gllvmTMB analogue
+  shrinkage_factor                 [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only phylogenetic engine substrate; same class as the existing ^phylo_/^edge_/^branch_/^clade_ AHEAD_PATTERNS bucket, but this name's shape doesn't match those regexes -- a GLLVModels.jl capability with no gllvmTMB analogue
+  sigma_phy_dense                  [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only phylogenetic engine substrate; same class as the existing ^phylo_/^edge_/^branch_/^clade_ AHEAD_PATTERNS bucket, but this name's shape doesn't match those regexes -- a GLLVModels.jl capability with no gllvmTMB analogue
+  sigma_phy_dense_edge             [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only phylogenetic engine substrate; same class as the existing ^phylo_/^edge_/^branch_/^clade_ AHEAD_PATTERNS bucket, but this name's shape doesn't match those regexes -- a GLLVModels.jl capability with no gllvmTMB analogue
+  sigma_y_site                     [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only diagnostic or extractor: named accessor for the implied site-level Sigma_y (confint_derived.jl / link_residual.jl); gllvmTMB exposes the same information via summary()/predict(), not a separately exported function of this name
+  simulate                         mirrors stats::simulate; gllvmTMB reaches it via S3method(simulate, gllvmTMB), never export()
+  simulate_branch_re               [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only phylogenetic engine substrate; same class as the existing ^phylo_/^edge_/^branch_/^clade_ AHEAD_PATTERNS bucket, but this name's shape doesn't match those regexes -- a GLLVModels.jl capability with no gllvmTMB analogue
+  simulate_relaxed_bm              [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only phylogenetic engine substrate; same class as the existing ^phylo_/^edge_/^branch_/^clade_ AHEAD_PATTERNS bucket, but this name's shape doesn't match those regexes -- a GLLVModels.jl capability with no gllvmTMB analogue
+  solve_AnB                        [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only phylogenetic engine substrate; same class as the existing ^phylo_/^edge_/^branch_/^clade_ AHEAD_PATTERNS bucket, but this name's shape doesn't match those regexes -- a GLLVModels.jl capability with no gllvmTMB analogue
+  solve_Q                          [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only phylogenetic engine substrate; same class as the existing ^phylo_/^edge_/^branch_/^clade_ AHEAD_PATTERNS bucket, but this name's shape doesn't match those regexes -- a GLLVModels.jl capability with no gllvmTMB analogue
+  spatial_cov                      [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only spatial engine substrate: covariance-matrix builder for the SPDE/spatial substrate (structured_cov.jl); same caveat as matern_correlation above
+  spde_fem                         SPDE/Matern spatial substrate; a GLLVModels.jl capability gllvmTMB's TMB template does not implement (per docs/src/gllvmtmb-parity.md "Honest gaps")
+  spde_gaussian_marginal_loglik    internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  spde_latent_marginal_loglik      internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  spde_mesh_delaunay               SPDE/Matern spatial substrate; a GLLVModels.jl capability gllvmTMB's TMB template does not implement (per docs/src/gllvmtmb-parity.md "Honest gaps")
+  spde_mesh_grid                   SPDE/Matern spatial substrate; a GLLVModels.jl capability gllvmTMB's TMB template does not implement (per docs/src/gllvmtmb-parity.md "Honest gaps")
+  spde_precision                   SPDE/Matern spatial substrate; a GLLVModels.jl capability gllvmTMB's TMB template does not implement (per docs/src/gllvmtmb-parity.md "Honest gaps")
+  spde_projector                   SPDE/Matern spatial substrate; a GLLVModels.jl capability gllvmTMB's TMB template does not implement (per docs/src/gllvmtmb-parity.md "Honest gaps")
+  spearman                         [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] internal-but-exported helper: generic Spearman-correlation utility (phylo_branch_re.jl / relaxed_clock.jl), same validation-utility role as excess_kurtosis -- candidate to unexport
+  standardized_loading_wald_ci     named Wald/profile CI accessor for one derived quantity; gllvmTMB reaches CIs generically via confint(), not per-quantity exports
+  stderror                         StatsAPI generic for per-parameter SEs; gllvmTMB surfaces the same values through printed summary()/coeftable(), not a queryable function
+  studentt_marginal_loglik_laplace internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  transformed_wald_ci_derived      [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only diagnostic or extractor: named Wald/profile/bootstrap CI or profile-curve accessor for one derived grouped/phylo/precision quantity; gllvmTMB reaches CIs generically via confint()/its own grouping grammar, not per-quantity exports (same reasoning as the existing ^confint_/_wald_ci$ AHEAD_PATTERNS buckets, applied by name here since these don't match those regexes)
+  truncated_nbinom2_marginal_loglik_laplace internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  truncated_nbinom2_pertrait_marginal_loglik_laplace internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  truncated_poisson_marginal_loglik_laplace internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  tweedie_cdf                      distribution-kernel helper (log-density/normalizer/CDF); engine internal
+  tweedie_grouped_marginal_loglik_laplace internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  tweedie_logpdf                   distribution-kernel helper (log-density/normalizer/CDF); engine internal
+  tweedie_marginal_loglik_laplace  internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  twolevel_marginal_loglik         internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  variance_lrt                     [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] R has it after 0.7.0: export(variance_lrt) is on origin/main (not the frozen 0.7.0 NAMESPACE)
+  vcov                             mirrors stats::vcov; gllvmTMB reaches it via S3method(vcov, gllvmTMB), never export()
+  welch_t                          [PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] internal-but-exported helper: generic Welch two-sample t-test utility (phylo_branch_re.jl), same validation-utility role as excess_kurtosis -- candidate to unexport
+  zib_marginal_loglik_laplace      internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  zinb_marginal_loglik_laplace     internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+  zip_marginal_loglik_laplace      internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name
+
+REVERSE -- GLLVModels.jl EXPORTS WITH NO gllvmTMB TWIN (0) -- genuinely ahead, unclassified
+
+COUNTDOWN: 62 export gaps genuinely owed (0 UNTRACKED of those) · 0 renamed away · 4 not-capability · 6 accounted for · 0 genuinely ahead · 375 ahead-accounted
+FORWARD=62 REVERSE=0
