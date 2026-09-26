@@ -85,15 +85,23 @@ function _twopart_mode_stage(family, y::AbstractVector,
     Atmp = Matrix{Float64}(undef, K, K)  # Λc'(Wc.*Λc) temp before accumulation
     g  = Vector{Float64}(undef, K)     # rhs Λz'sz + Λc'sc − z
     gc = Vector{Float64}(undef, K)     # Λc'sc temp before accumulation
+    # #500: whether the small-step fast path below needs the extra q-check at all. The
+    # reviewer's own analysis (SHOULD-FIX 1) ties the bug to Λz != 0 specifically: with
+    # Λz == 0 (every Hurdle and Delta family, and ZIP/ZINB/ZIB before any occurrence
+    # loading is fit) the Newton matrix is the exact Hessian of q or larger after
+    # clipping, so a small step is always exact or conservative, same as :fisher.
+    Λz_zero = iszero(Λz)
     for _ in 1:maxiter
         mul!(Λzz, Λz, z)
         mul!(Λcz, Λc, z)
         ηz .= _clamp_eta.(βz .+ offz .+ Λzz)
         ηc .= _clamp_eta.(βc .+ offc .+ Λcz)
+        ℓ0 = 0.0
         @inbounds for t in 1:p
-            s_z, s_c, W_z, W_c, _ = _tp_pieces_at(family, t, y[t], ηz[t], ηc[t])
+            s_z, s_c, W_z, W_c, logf = _tp_pieces_at(family, t, y[t], ηz[t], ηc[t])
             sz[t] = s_z; sc[t] = s_c; Wz[t] = W_z
             Wc[t] = curvature === :newton ? _tp_newton_Wc(family, t, y[t], ηz[t], ηc[t]) : W_c
+            ℓ0 += logf
         end
         for attempt in 1:2
             WzΛz .= Wz .* Λz                   # = Wz .* Λz (p×K)
@@ -119,10 +127,44 @@ function _twopart_mode_stage(family, y::AbstractVector,
         Δ = _safe_solve(A, g)
         (Δ === nothing || !all(isfinite, Δ)) && return z, false
         maximum(abs, Δ) < tol && return z .+ Δ, true
+        # A step must never be accepted if it lowers the site log-posterior q(z) (#500)
+        # when the Newton matrix can actually be wrong: the :newton stage's A mixes the
+        # observed Wc with a Fisher Wz and omits the eta_z/eta_c cross-curvature, so for
+        # zero-inflated families with Λz != 0 even a "small" Newton step can walk away
+        # from a near-converged iterate. With Λz == 0 (Hurdle, Delta, and any :fisher
+        # step) that gap does not exist, so the small-step fast path stays exactly the
+        # old, reviewer-verified-conservative behaviour; narrowing the extra check to
+        # this one case is deliberate; the Λz == 0 fast path is used by every existing
+        # fit (Hurdle-Poisson, Hurdle-NB, Delta-Gamma, Delta-lognormal, Beta-hurdle, and
+        # ZIP/ZINB/ZIB before any occurrence loading is fit), so widening the check
+        # broke `fit_delta_gamma_gllvm(...; disp_group = :species)` (see #500 after-task).
+        # ℓ0 above (from the pieces loop already run this iteration) gives q0 without a
+        # second `_twopart_logpost` call.
         if norm(Δ) <= 1e-3 * (1 + norm(z))
-            z = z .+ Δ
+            if curvature === :fisher || Λz_zero
+                z = z .+ Δ
+            else
+                q0 = ℓ0 - 0.5 * dot(z, z)
+                ztrial = z .+ Δ
+                q1 = _twopart_logpost(family, y, Λz, Λc, βz, βc, offz, offc, ztrial)
+                if isfinite(q1) && q1 >= q0
+                    z = ztrial
+                elseif maximum(abs, g) < sqrt(tol)
+                    # The Newton matrix cannot improve on the current iterate with a step
+                    # this small, but the gradient here already meets a (relaxed) tolerance:
+                    # keep the current iterate and report it converged rather than spend the
+                    # halving loop chasing an improvement the (imperfect, cross-curvature-free)
+                    # matrix cannot deliver.
+                    return z, true
+                else
+                    # Small step by the norm test, no improvement, and the gradient is NOT
+                    # small either (possible only if A is ill-conditioned): this is not a
+                    # converged point, so fail honestly instead of silently declaring victory.
+                    return z, false
+                end
+            end
         else
-            q0 = _twopart_logpost(family, y, Λz, Λc, βz, βc, offz, offc, z)
+            q0 = ℓ0 - 0.5 * dot(z, z)
             if isfinite(q0)
                 accepted = false
                 step = 1.0
@@ -180,17 +222,6 @@ function _twopart_mode(family, y::AbstractVector,
                                       offsetc = offsetc, maxiter = maxiter, tol = tol))
 end
 
-"""
-    twopart_loglik_site(family, y, Λz, Λc, βz, βc; offsetz=nothing, offsetc=nothing,
-                        maxiter=100, tol=1e-9) -> Float64
-
-Two-part Laplace log-marginal for one site: `ℓ_s(ẑ) − ½ẑ'ẑ − ½logdet A(ẑ)`. Optional
-`offsetz` / `offsetc` are known additive terms on the occurrence / positive-part
-predictors (`η^z = β^z + offsetz + Λ^z z`, similarly `η^c`). If the mode search does
-not converge to `tol`, the value is `-Inf`, never a value computed at an unconverged
-mode (#484). The search is Fisher scoring with step halving for up to `maxiter` steps
-and, where that fails, a damped Newton search of up to `maxiter` more.
-"""
 # ---------------------------------------------------------------------------
 # Observed-curvature override for the POSITIVE-part weight (2026-08-24).
 #
@@ -213,6 +244,17 @@ and, where that fails, a damped Newton search of up to `maxiter` more.
 # unchanged.
 _tp_observed_Wc(::Any, y, ηc, Wc) = Wc
 
+"""
+    twopart_loglik_site(family, y, Λz, Λc, βz, βc; offsetz=nothing, offsetc=nothing,
+                        maxiter=100, tol=1e-9) -> Float64
+
+Two-part Laplace log-marginal for one site: `ℓ_s(ẑ) − ½ẑ'ẑ − ½logdet A(ẑ)`. Optional
+`offsetz` / `offsetc` are known additive terms on the occurrence / positive-part
+predictors (`η^z = β^z + offsetz + Λ^z z`, similarly `η^c`). If the mode search does
+not converge to `tol`, the value is `-Inf`, never a value computed at an unconverged
+mode (#484). The search is Fisher scoring with step halving for up to `maxiter` steps
+and, where that fails, a damped Newton search of up to `maxiter` more.
+"""
 function twopart_loglik_site(family, y::AbstractVector,
         Λz::AbstractMatrix, Λc::AbstractMatrix,
         βz::AbstractVector, βc::AbstractVector;
@@ -260,7 +302,7 @@ Total two-part Laplace log-marginal over the `n` sites (columns of `Y`). `offset
 `offsetc` (p×n, or `nothing`) are known additive offsets on the occurrence /
 positive-part predictors; a constant per-species `offsetc` is equivalent to shifting
 `βc` (the offset-absorption identity). The total is `-Inf` if any site's mode search
-fails to converge (see [`twopart_loglik_site`](@ref)).
+fails to converge (see [`GLLVModels.twopart_loglik_site`](@ref)).
 """
 function twopart_marginal_loglik_laplace(family, Y::AbstractMatrix,
         Λz::AbstractMatrix, Λc::AbstractMatrix,

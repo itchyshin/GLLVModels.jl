@@ -260,4 +260,62 @@ end
         @test abs(f4.loglik - (-820.1151365707786)) < 1e-6
         @test f4.converged
     end
+
+    @testset "Newton stage: a near-converged site does not walk away when Λz != 0 (#500)" begin
+        # PR #500 review, SHOULD-FIX 1: the small-step bypass at the top of the accept
+        # test in `_twopart_mode_stage` (`norm(Δ) <= 1e-3 * (1 + norm(z))`) took every
+        # step of that size unconditionally, without checking whether it raised the site
+        # log-posterior q(z). For zero-inflated families with Λz != 0 (occurrence loadings
+        # present) the Newton stage's step matrix omits the η^z/η^c cross-curvature and
+        # mixes a Fisher W^z with an observed W^c, so a "small" step by that norm test can
+        # still be a descent step. Reproducer found by random search (recorded verbatim,
+        # not the reviewer's own untracked script): a ZINB(2) site with occurrence and
+        # count loadings, y = [0, 13, 0, 0, 0, 1]. Fisher scoring nearly converges
+        # (|grad q| = 6.1e-7); the pre-#500 bypass then raises |grad q| to 1.4e-3 and
+        # fails at maxiter = 100, though the true Hessian at the Fisher iterate is
+        # negative-definite (eigenvalues -11.67, -2.44), i.e. a healthy mode.
+        y500 = [0, 13, 0, 0, 0, 1]
+        Λz500 = [-0.08411049838001773 -1.2980988495589005
+                 2.2575996449911377 1.9114606922694863
+                 -0.4383545906976807 0.34147738096407787
+                 -1.343429707551161 0.3948510212415177
+                 1.5837541874068504 2.334839366832539
+                 1.9465952693840505 1.647696097038088]
+        Λc500 = [-0.9594119548138331 1.652194889645204
+                 1.6188634145274499 -0.023811974272768602
+                 1.7078897517336884 1.498032015079005
+                 0.93769961857294 0.4597311511262226
+                 2.761485044760618 -2.937346684327989
+                 -2.023583688938316 -0.7485773875914757]
+        βz500 = [-1.9808674062121012, -0.5805482177256127, -0.1957007600068396,
+                 -0.17979167750042335, 0.6197668169969093, -0.04932546244202318]
+        βc500 = [2.0166340534625276, 2.0178540308130906, 2.3121356912840962,
+                 1.4421664943730117, 0.1963323668296605, 0.07421497633337726]
+        fam500 = G.ZINB(2.0)
+
+        z_fisher, ok_fisher = G._twopart_mode_stage(fam500, y500, Λz500, Λc500, βz500, βc500,
+                                                     :fisher; maxiter = 100, tol = 1e-9)
+        @test !ok_fisher    # Fisher scoring alone does not reach tol at this site
+        g_fisher = ForwardDiff.gradient(
+            zz -> G._twopart_logpost(fam500, y500, Λz500, Λc500, βz500, βc500, false, false, zz),
+            z_fisher)
+        @test maximum(abs, g_fisher) < 1e-5    # ... but it is already near the mode
+
+        # The Newton fallback must converge at the default maxiter, not return -Inf.
+        val500 = G.twopart_loglik_site(fam500, y500, Λz500, Λc500, βz500, βc500)
+        @test isfinite(val500)
+
+        # And it must land at a genuine stationary point of q, not merely stop early.
+        z_newton, ok_newton = G._twopart_mode_stage(fam500, y500, Λz500, Λc500, βz500, βc500,
+                                                     :newton; z0 = z_fisher, maxiter = 100, tol = 1e-9)
+        @test ok_newton
+        g_newton = ForwardDiff.gradient(
+            zz -> G._twopart_logpost(fam500, y500, Λz500, Λc500, βz500, βc500, false, false, zz),
+            z_newton)
+        @test maximum(abs, g_newton) < 1e-6
+        H_newton = ForwardDiff.hessian(
+            zz -> G._twopart_logpost(fam500, y500, Λz500, Λc500, βz500, βc500, false, false, zz),
+            z_newton)
+        @test all(eigvals(Symmetric(H_newton)) .< 0)    # a healthy (negative-definite) mode
+    end
 end
