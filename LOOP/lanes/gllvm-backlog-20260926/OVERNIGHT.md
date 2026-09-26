@@ -7,3 +7,8 @@ Queue (dependency order):
  C1 #504 bootstrap adapters, highest-use families first (after #508 merges; confint_family.jl, one family per PR)
  D1 generic `_laplace_mode` (GP1 + Student-t shared): build + Opus review, then WAIT for Shinichi (shared kernel)
 Close by 10:30Z: handover + after-task on main, vault log, Mission Control.
+
+## Progress log
+- 22:15Z #509 merged 8f0bc97f6 (maintainer's word). 22:4xZ #508 merged 2847b5dbf.
+- ~22:35Z usage limit hit again (window already spent before the night); wave A builders killed; reset 22:50Z. NEW CAP: <=2 live.
+- 22:55Z #507 rebased (CHANGELOG only; src/test identical; 39/39) -> 9d78698eb, train restarted. Wave A relaunched (wf_29e21376-8a1): betabinom (from commit b7f0886c9), orderedbeta (diagnose first), compoisson (reuse WIP edit).
