@@ -1,0 +1,103 @@
+Optim 1.13.3  GLLVModels at /home/snakagaw/hsq_work/gllvm-sibling-screen-20260926/repo/src/GLLVModels.jl
+seeds 2001:2010 (n=10)
+--- negbin1 ---
+  negbin1      seed=2001  t= 2.49s conv=true  ll= -494.0764 valid|Δ|=0.0e+00 | |g|=3.11e-06 gscaled=7.19e-06 flagB=false | dinner=-2.57e-10 innerFlag=false | restart Δ=-5.684e-13 flagRestart=false
+  negbin1      seed=2002  t= 1.40s conv=true  ll= -482.3470 valid|Δ|=0.0e+00 | |g|=8.04e-06 gscaled=1.49e-05 flagB=false | dinner=-3.50e-10 innerFlag=false | restart Δ=-2.728e-12 flagRestart=false
+  negbin1      seed=2003  t= 3.24s conv=true  ll= -537.1256 valid|Δ|=0.0e+00 | |g|=6.90e-06 gscaled=1.14e-05 flagB=false | dinner=2.00e-09 innerFlag=false | restart Δ=+6.935e-12 flagRestart=false
+  negbin1      seed=2004  t= 1.83s conv=true  ll= -457.9643 valid|Δ|=0.0e+00 | |g|=1.08e-05 gscaled=2.09e-05 flagB=false | dinner=-5.62e-11 innerFlag=false | restart Δ=+9.607e-12 flagRestart=false
+  negbin1      seed=2005  t= 3.49s conv=true  ll= -456.2167 valid|Δ|=0.0e+00 | |g|=6.33e-06 gscaled=1.15e-05 flagB=false | dinner=-9.00e-10 innerFlag=false | restart Δ=+2.217e-12 flagRestart=false
+  negbin1      seed=2006  t= 1.74s conv=true  ll= -456.5074 valid|Δ|=0.0e+00 | |g|=9.44e-06 gscaled=2.70e-05 flagB=false | dinner=9.67e-11 innerFlag=false | restart Δ=+1.995e-11 flagRestart=false
+  negbin1      seed=2007  t= 2.16s conv=true  ll= -427.3821 valid|Δ|=0.0e+00 | |g|=8.64e-06 gscaled=1.63e-05 flagB=false | dinner=-1.03e-09 innerFlag=false | restart Δ=+4.036e-12 flagRestart=false
+  negbin1      seed=2008  t= 1.34s conv=true  ll= -479.0496 valid|Δ|=0.0e+00 | |g|=3.98e-06 gscaled=9.94e-06 flagB=false | dinner=-6.63e-10 innerFlag=false | restart Δ=+1.705e-12 flagRestart=false
+  negbin1      seed=2009  t= 0.97s conv=true  ll= -479.6484 valid|Δ|=0.0e+00 | |g|=9.52e-06 gscaled=1.20e-05 flagB=false | dinner=1.81e-10 innerFlag=false | restart Δ=+3.070e-12 flagRestart=false
+  negbin1      seed=2010  t= 1.28s conv=true  ll= -407.3018 valid|Δ|=0.0e+00 | |g|=5.20e-06 gscaled=7.31e-06 flagB=false | dinner=1.34e-11 innerFlag=false | restart Δ=+3.979e-13 flagRestart=false
+--- gp1 ---
+  gp1          seed=2001  t= 5.86s conv=true  ll= -403.4616 valid|Δ|=0.0e+00 | |g|=2.31e-06 gscaled=4.18e-06 flagB=false | dinner=-4.09e-11 innerFlag=false | restart Δ=-1.705e-13 flagRestart=false
+  gp1          seed=2002  t=20.69s conv=true  ll= -418.8685 valid|Δ|=0.0e+00 | |g|=7.89e-06 gscaled=9.21e-06 flagB=false | dinner=7.69e-02 innerFlag=true  | restart Δ=-4.206e-12 flagRestart=false
+  gp1          seed=2003  t=28.13s conv=true  ll= -424.4231 valid|Δ|=0.0e+00 | |g|=1.15e-05 gscaled=1.65e-05 flagB=false | dinner=2.66e-02 innerFlag=false | restart Δ=+4.093e-12 flagRestart=false
+  gp1          seed=2004  t= 8.20s conv=true  ll= -365.9023 valid|Δ|=0.0e+00 | |g|=8.91e-06 gscaled=1.13e-05 flagB=false | dinner=-1.93e-10 innerFlag=false | restart Δ=-2.331e-12 flagRestart=false
+  gp1          seed=2005  t=47.89s conv=true  ll= -403.5200 valid|Δ|=0.0e+00 | |g|=1.89e-04 gscaled=2.09e-04 flagB=false | dinner=4.26e-02 innerFlag=false | restart Δ=+1.160e-03 flagRestart=false
+  gp1          seed=2006  t= 8.00s conv=true  ll= -402.9080 valid|Δ|=0.0e+00 | |g|=8.92e-06 gscaled=1.67e-05 flagB=false | dinner=1.64e-11 innerFlag=false | restart Δ=+1.802e-11 flagRestart=false
+  gp1          seed=2007  t= 6.31s conv=true  ll= -341.6004 valid|Δ|=0.0e+00 | |g|=2.32e-06 gscaled=3.29e-06 flagB=false | dinner=-6.25e-12 innerFlag=false | restart Δ=-6.821e-13 flagRestart=false
+  gp1          seed=2008  t=10.31s conv=true  ll= -393.6562 valid|Δ|=0.0e+00 | |g|=6.53e-06 gscaled=1.37e-05 flagB=false | dinner=2.36e-02 innerFlag=false | restart Δ=+3.922e-12 flagRestart=false
+  gp1          seed=2009  t= 9.20s conv=true  ll= -385.3740 valid|Δ|=0.0e+00 | |g|=3.49e-06 gscaled=5.60e-06 flagB=false | dinner=7.32e-05 innerFlag=false | restart Δ=+1.194e-12 flagRestart=false
+  gp1          seed=2010  t=11.93s conv=true  ll= -354.3854 valid|Δ|=0.0e+00 | |g|=6.41e-06 gscaled=7.59e-06 flagB=false | dinner=-3.93e-11 innerFlag=false | restart Δ=+1.137e-12 flagRestart=false
+--- compoisson ---
+  compoisson   seed=2001  t=35.19s conv=true  ll= -564.9105 valid|Δ|=0.0e+00 | |g|=6.11e-06 gscaled=1.26e-05 flagB=false | dinner=-1.14e-13 innerFlag=false | restart Δ=+9.095e-13 flagRestart=false
+  compoisson   seed=2002  t=37.98s conv=true  ll= -579.8137 valid|Δ|=0.0e+00 | |g|=6.18e-06 gscaled=8.62e-06 flagB=false | dinner=0.00e+00 innerFlag=false | restart Δ=+7.958e-13 flagRestart=false
+  compoisson   seed=2003  t=36.67s conv=true  ll= -617.0957 valid|Δ|=0.0e+00 | |g|=5.29e+08 gscaled=8.95e+08 flagB=true  | dinner=3.41e-13 innerFlag=false | restart Δ=-4.943e+00 flagRestart=false
+  compoisson   seed=2004  t=28.60s conv=true  ll= -526.1814 valid|Δ|=0.0e+00 | |g|=8.31e-06 gscaled=1.10e-05 flagB=false | dinner=0.00e+00 innerFlag=false | restart Δ=+2.387e-12 flagRestart=false
+  compoisson   seed=2005  t=89.41s conv=true  ll= -568.0830 valid|Δ|=0.0e+00 | |g|=1.88e+14 gscaled=2.09e+14 flagB=true  | dinner=0.00e+00 innerFlag=false | restart Δ=+5.850e-02 flagRestart=false
+  compoisson   seed=2006  t=125.81s conv=true  ll= -548.6062 valid|Δ|=0.0e+00 | |g|=8.97e-06 gscaled=1.70e-05 flagB=false | dinner=0.00e+00 innerFlag=false | restart Δ=+1.364e-12 flagRestart=false
+  compoisson   seed=2007  t=34.80s conv=true  ll= -474.8213 valid|Δ|=0.0e+00 | |g|=5.99e-06 gscaled=1.32e-05 flagB=false | dinner=0.00e+00 innerFlag=false | restart Δ=+1.535e-12 flagRestart=false
+  compoisson   seed=2008  t=36.76s conv=true  ll= -569.0764 valid|Δ|=0.0e+00 | |g|=7.88e-06 gscaled=1.38e-05 flagB=false | dinner=0.00e+00 innerFlag=false | restart Δ=-1.137e-13 flagRestart=false
+  compoisson   seed=2009  t=22.17s conv=true  ll= -547.6416 valid|Δ|=0.0e+00 | |g|=6.80e-06 gscaled=8.64e-06 flagB=false | dinner=0.00e+00 innerFlag=false | restart Δ=-1.251e-12 flagRestart=false
+  compoisson   seed=2010  t=12.81s conv=true  ll= -488.1077 valid|Δ|=0.0e+00 | |g|=6.37e-06 gscaled=1.34e-05 flagB=false | dinner=0.00e+00 innerFlag=false | restart Δ=-4.547e-13 flagRestart=false
+--- beta_binomial ---
+  beta_binomial seed=2001  t= 1.74s conv=true  ll= -454.1972 valid|Δ|=0.0e+00 | |g|=5.14e-06 gscaled=9.89e-06 flagB=false | dinner=-5.68e-14 innerFlag=false | restart Δ=+1.194e-12 flagRestart=false
+  beta_binomial seed=2002  t= 0.68s conv=true  ll= -456.3811 valid|Δ|=0.0e+00 | |g|=4.21e-06 gscaled=5.17e-06 flagB=false | dinner=0.00e+00 innerFlag=false | restart Δ=-3.979e-13 flagRestart=false
+  beta_binomial seed=2003  t= 0.66s conv=true  ll= -450.8792 valid|Δ|=0.0e+00 | |g|=6.37e-06 gscaled=8.51e-06 flagB=false | dinner=1.14e-13 innerFlag=false | restart Δ=+5.286e-12 flagRestart=false
+  beta_binomial seed=2004  t= 0.76s conv=true  ll= -447.4946 valid|Δ|=0.0e+00 | |g|=8.58e-06 gscaled=1.01e-05 flagB=false | dinner=5.68e-14 innerFlag=false | restart Δ=+1.023e-12 flagRestart=false
+  beta_binomial seed=2005  t= 1.02s conv=true  ll= -455.1006 valid|Δ|=0.0e+00 | |g|=7.37e-06 gscaled=2.04e-05 flagB=false | dinner=-2.27e-13 innerFlag=false | restart Δ=+3.922e-12 flagRestart=false
+  beta_binomial seed=2006  t= 0.75s conv=true  ll= -450.7206 valid|Δ|=0.0e+00 | |g|=9.94e-06 gscaled=1.38e-05 flagB=false | dinner=0.00e+00 innerFlag=false | restart Δ=+8.527e-13 flagRestart=false
+  beta_binomial seed=2007  t= 0.63s conv=true  ll= -445.0557 valid|Δ|=0.0e+00 | |g|=6.41e-06 gscaled=2.01e-05 flagB=false | dinner=0.00e+00 innerFlag=false | restart Δ=+1.933e-12 flagRestart=false
+  beta_binomial seed=2008  t= 0.51s conv=true  ll= -452.5425 valid|Δ|=0.0e+00 | |g|=6.41e-06 gscaled=1.10e-05 flagB=false | dinner=0.00e+00 innerFlag=false | restart Δ=+4.036e-12 flagRestart=false
+  beta_binomial seed=2009  t= 0.44s conv=true  ll= -456.6726 valid|Δ|=0.0e+00 | |g|=7.22e-06 gscaled=1.07e-05 flagB=false | dinner=5.68e-14 innerFlag=false | restart Δ=+4.093e-12 flagRestart=false
+  beta_binomial seed=2010  t= 0.83s conv=true  ll= -457.0714 valid|Δ|=0.0e+00 | |g|=4.20e-06 gscaled=1.13e-05 flagB=false | dinner=0.00e+00 innerFlag=false | restart Δ=+5.684e-13 flagRestart=false
+--- ordered_beta ---
+  ordered_beta seed=2001  t= 1.24s conv=true  ll= -169.0038 valid|Δ|=0.0e+00 | |g|=8.57e-06 gscaled=1.85e-05 flagB=false | dinner=-2.84e-14 innerFlag=false | restart Δ=+5.997e-12 flagRestart=false
+  ordered_beta seed=2002  t= 0.92s conv=true  ll= -489.8415 valid|Δ|=0.0e+00 | |g|=1.36e+03 gscaled=2.34e+03 flagB=true  | dinner=-2.62e-02 innerFlag=false | restart Δ=+2.952e+02 flagRestart=true 
+  ordered_beta seed=2003  t= 1.13s conv=true  ll= -196.8406 valid|Δ|=0.0e+00 | |g|=4.85e+06 gscaled=9.56e+06 flagB=true  | dinner=0.00e+00 innerFlag=false | restart Δ=+2.171e+01 flagRestart=true 
+  ordered_beta seed=2004  t= 0.73s conv=true  ll= -271.8970 valid|Δ|=0.0e+00 | |g|=6.11e+06 gscaled=1.13e+07 flagB=true  | dinner=0.00e+00 innerFlag=false | restart Δ=+7.515e+01 flagRestart=true 
+  ordered_beta seed=2005  t= 1.09s conv=true  ll=-3041.3466 valid|Δ|=0.0e+00 | |g|=9.67e+03 gscaled=1.82e+04 flagB=true  | dinner=-2.12e-01 innerFlag=false | restart Δ=+2.859e+03 flagRestart=true 
+  ordered_beta seed=2006  t= 1.31s conv=true  ll= -231.2090 valid|Δ|=0.0e+00 | |g|=2.23e+06 gscaled=4.24e+06 flagB=true  | dinner=0.00e+00 innerFlag=false | restart Δ=+3.229e+01 flagRestart=true 
+  ordered_beta seed=2007  t= 1.06s conv=true  ll= -252.2199 valid|Δ|=0.0e+00 | |g|=8.17e+06 gscaled=1.59e+07 flagB=true  | dinner=0.00e+00 innerFlag=false | restart Δ=+6.726e+01 flagRestart=true 
+  ordered_beta seed=2008  t= 1.24s conv=true  ll= -192.2081 valid|Δ|=0.0e+00 | |g|=8.01e-06 gscaled=1.07e-05 flagB=false | dinner=0.00e+00 innerFlag=false | restart Δ=+2.473e-12 flagRestart=false
+  ordered_beta seed=2009  t= 1.24s conv=true  ll= -183.9922 valid|Δ|=0.0e+00 | |g|=8.68e-06 gscaled=1.88e-05 flagB=false | dinner=2.84e-14 innerFlag=false | restart Δ=+7.162e-12 flagRestart=false
+  ordered_beta seed=2010  t= 0.27s conv=true  ll= -372.3648 valid|Δ|=0.0e+00 | |g|=3.61e+06 gscaled=6.27e+06 flagB=true  | dinner=-5.92e+01 innerFlag=false | restart Δ=+1.997e+02 flagRestart=true 
+--- studentt ---
+  studentt     seed=2001  t= 0.67s conv=true  ll= -278.0036 valid|Δ|=0.0e+00 | |g|=4.03e-06 gscaled=8.36e-06 flagB=false | dinner=-1.06e-10 innerFlag=false | restart Δ=-2.785e-12 flagRestart=false
+  studentt     seed=2002  t= 0.39s conv=true  ll= -289.6768 valid|Δ|=0.0e+00 | |g|=8.94e-06 gscaled=1.36e-05 flagB=false | dinner=-1.16e-10 innerFlag=false | restart Δ=+1.990e-12 flagRestart=false
+  studentt     seed=2003  t= 0.99s conv=false ll= -314.1326 valid|Δ|=0.0e+00 | |g|=9.94e-06 gscaled=1.50e-05 flagB=false | dinner=0.00e+00 innerFlag=false | restart Δ=+1.407e-10 flagRestart=false
+  studentt     seed=2004  t= 0.46s conv=true  ll= -286.5827 valid|Δ|=0.0e+00 | |g|=7.91e-06 gscaled=9.67e-06 flagB=false | dinner=9.31e-11 innerFlag=false | restart Δ=+0.000e+00 flagRestart=false
+  studentt     seed=2005  t= 0.50s conv=false ll= -326.5419 valid|Δ|=0.0e+00 | |g|=6.94e-06 gscaled=1.26e-05 flagB=false | dinner=0.00e+00 innerFlag=false | restart Δ=+1.372e-10 flagRestart=false
+  studentt     seed=2006  t= 0.56s conv=false ll= -307.9251 valid|Δ|=0.0e+00 | |g|=4.68e-06 gscaled=5.27e-06 flagB=false | dinner=1.14e-13 innerFlag=false | restart Δ=+9.464e-11 flagRestart=false
+  studentt     seed=2007  t= 0.45s conv=false ll= -289.9558 valid|Δ|=0.0e+00 | |g|=3.32e-06 gscaled=4.69e-06 flagB=false | dinner=-5.68e-14 innerFlag=false | restart Δ=+1.377e-10 flagRestart=false
+  studentt     seed=2008  t= 0.42s conv=true  ll= -314.7059 valid|Δ|=0.0e+00 | |g|=7.09e-06 gscaled=1.66e-05 flagB=false | dinner=1.40e-11 innerFlag=false | restart Δ=+1.182e-11 flagRestart=false
+  studentt     seed=2009  t= 0.54s conv=true  ll= -297.6803 valid|Δ|=0.0e+00 | |g|=5.78e-06 gscaled=7.59e-06 flagB=false | dinner=-1.65e-09 innerFlag=false | restart Δ=+6.821e-13 flagRestart=false
+  studentt     seed=2010  t= 0.52s conv=true  ll= -301.7682 valid|Δ|=0.0e+00 | |g|=6.26e-06 gscaled=8.67e-06 flagB=false | dinner=-8.44e-10 innerFlag=false | restart Δ=+3.126e-12 flagRestart=false
+--- ordinal ---
+  ordinal      seed=2001  t= 0.69s conv=true  ll= -239.1824 valid|Δ|=0.0e+00 | |g|=8.09e-06 gscaled=1.53e-05 flagB=false | dinner=0.00e+00 innerFlag=false | restart Δ=-3.837e-12 flagRestart=false
+  ordinal      seed=2002  t= 0.34s conv=true  ll= -240.8174 valid|Δ|=0.0e+00 | |g|=2.49e-06 gscaled=5.91e-06 flagB=false | dinner=0.00e+00 innerFlag=false | restart Δ=-3.524e-12 flagRestart=false
+  ordinal      seed=2003  t= 0.40s conv=true  ll= -239.6596 valid|Δ|=0.0e+00 | |g|=1.33e+06 gscaled=2.38e+06 flagB=true  | dinner=0.00e+00 innerFlag=false | restart Δ=+1.809e-01 flagRestart=true 
+  ordinal      seed=2004  t= 0.37s conv=true  ll= -236.6593 valid|Δ|=0.0e+00 | |g|=5.49e-06 gscaled=1.11e-05 flagB=false | dinner=0.00e+00 innerFlag=false | restart Δ=+2.746e-11 flagRestart=false
+  ordinal      seed=2005  t= 0.35s conv=true  ll= -234.0077 valid|Δ|=0.0e+00 | |g|=7.78e-06 gscaled=1.28e-05 flagB=false | dinner=0.00e+00 innerFlag=false | restart Δ=+6.219e-11 flagRestart=false
+  ordinal      seed=2006  t= 1.31s conv=true  ll= -236.2881 valid|Δ|=0.0e+00 | |g|=1.08e+06 gscaled=2.16e+06 flagB=true  | dinner=-2.84e-14 innerFlag=false | restart Δ=-2.448e-02 flagRestart=false
+  ordinal      seed=2007  t= 0.42s conv=true  ll= -223.2978 valid|Δ|=0.0e+00 | |g|=8.08e-06 gscaled=1.54e-05 flagB=false | dinner=0.00e+00 innerFlag=false | restart Δ=+3.254e-11 flagRestart=false
+  ordinal      seed=2008  t= 0.34s conv=true  ll= -235.1950 valid|Δ|=0.0e+00 | |g|=7.74e-06 gscaled=1.04e-05 flagB=false | dinner=2.84e-14 innerFlag=false | restart Δ=-3.155e-12 flagRestart=false
+  ordinal      seed=2009  t= 0.50s conv=true  ll= -218.6188 valid|Δ|=0.0e+00 | |g|=7.23e+05 gscaled=1.65e+06 flagB=true  | dinner=0.00e+00 innerFlag=false | restart Δ=+1.274e-01 flagRestart=true 
+  ordinal      seed=2010  t= 0.37s conv=true  ll= -230.9872 valid|Δ|=0.0e+00 | |g|=9.96e-06 gscaled=2.02e-05 flagB=false | dinner=0.00e+00 innerFlag=false | restart Δ=+5.247e-11 flagRestart=false
+--- mixed ---
+  mixed        seed=2001  t= 3.12s conv=true  ll= -133.6756 valid|Δ|=0.0e+00 | |g|=4.71e-06 gscaled=8.16e-06 flagB=false | dinner=-6.86e-10 innerFlag=false | restart Δ=+5.770e-12 flagRestart=false
+  mixed        seed=2002  t= 0.30s conv=true  ll= -109.8878 valid|Δ|=0.0e+00 | |g|=5.42e-06 gscaled=7.59e-06 flagB=false | dinner=-5.01e-11 innerFlag=false | restart Δ=+1.008e-11 flagRestart=false
+  mixed        seed=2003  t= 0.42s conv=true  ll= -108.8396 valid|Δ|=0.0e+00 | |g|=6.08e+07 gscaled=1.41e+08 flagB=true  | dinner=-5.10e-11 innerFlag=false | restart Δ=+4.665e-01 flagRestart=true 
+  mixed        seed=2004  t= 0.58s conv=true  ll=  -97.8765 valid|Δ|=0.0e+00 | |g|=4.14e-02 gscaled=4.96e-02 flagB=true  | dinner=-2.24e-07 innerFlag=false | restart Δ=-2.564e-05 flagRestart=false
+  mixed        seed=2005  t= 0.63s conv=true  ll= -129.2822 valid|Δ|=0.0e+00 | |g|=1.47e-02 gscaled=2.69e-02 flagB=true  | dinner=-8.94e-08 innerFlag=false | restart Δ=+1.308e+00 flagRestart=true 
+  mixed        seed=2006  t= 0.67s conv=true  ll= -115.0795 valid|Δ|=0.0e+00 | |g|=3.34e-02 gscaled=4.16e-02 flagB=true  | dinner=-6.14e-08 innerFlag=false | restart Δ=-4.336e-05 flagRestart=false
+  mixed        seed=2007  t= 0.71s conv=true  ll= -105.3445 valid|Δ|=0.0e+00 | |g|=1.11e-02 gscaled=3.28e-02 flagB=true  | dinner=-2.48e-07 innerFlag=false | restart Δ=-2.121e-01 flagRestart=false
+  mixed        seed=2008  t= 0.34s conv=true  ll= -137.0921 valid|Δ|=0.0e+00 | |g|=4.38e-06 gscaled=7.10e-06 flagB=false | dinner=-8.14e-10 innerFlag=false | restart Δ=+1.080e-12 flagRestart=false
+  mixed        seed=2009  t= 0.33s conv=true  ll= -132.8362 valid|Δ|=0.0e+00 | |g|=6.46e-06 gscaled=9.25e-06 flagB=false | dinner=-7.44e-10 innerFlag=false | restart Δ=-2.700e-12 flagRestart=false
+  mixed        seed=2010  t= 0.37s conv=true  ll=  -94.7465 valid|Δ|=0.0e+00 | |g|=2.54e-02 gscaled=2.89e-02 flagB=true  | dinner=-1.05e-07 innerFlag=false | restart Δ=-2.781e-02 flagRestart=false
+┌ Warning: Student-t estimated ν reached the flat Gaussian-limit boundary (ν > 1e6); the Student model is not distinguishable from Gaussian on this data, and optimizer convergence flags are unreliable at this boundary. Consider a fixed ν or the Gaussian family.
+└ @ GLLVModels ~/hsq_work/gllvm-sibling-screen-20260926/repo/src/families/studentt.jl:433
+
+==== SUMMARY by family ====
+negbin1        fits=10 conv=10 | flagB(scaled|g|>1e-3)=0 | innerFlag(Δinner>0.05)=0 (max 2e-09) | restartFlag(Δ>0.1)=0 (max 2e-11) | max valid|Δ|=0.0e+00
+gp1            fits=10 conv=10 | flagB(scaled|g|>1e-3)=0 | innerFlag(Δinner>0.05)=1 (max 0.0769) | restartFlag(Δ>0.1)=0 (max 0.00116) | max valid|Δ|=0.0e+00
+compoisson     fits=10 conv=10 | flagB(scaled|g|>1e-3)=2 | innerFlag(Δinner>0.05)=0 (max 3.41e-13) | restartFlag(Δ>0.1)=0 (max 0.0585) | max valid|Δ|=0.0e+00
+beta_binomial  fits=10 conv=10 | flagB(scaled|g|>1e-3)=0 | innerFlag(Δinner>0.05)=0 (max 1.14e-13) | restartFlag(Δ>0.1)=0 (max 5.29e-12) | max valid|Δ|=0.0e+00
+ordered_beta   fits=10 conv=10 | flagB(scaled|g|>1e-3)=7 | innerFlag(Δinner>0.05)=0 (max 2.84e-14) | restartFlag(Δ>0.1)=7 (max 2.86e+03) | max valid|Δ|=0.0e+00
+studentt       fits=10 conv=6 | flagB(scaled|g|>1e-3)=0 | innerFlag(Δinner>0.05)=0 (max 9.31e-11) | restartFlag(Δ>0.1)=0 (max 1.41e-10) | max valid|Δ|=0.0e+00
+ordinal        fits=10 conv=10 | flagB(scaled|g|>1e-3)=3 | innerFlag(Δinner>0.05)=0 (max 2.84e-14) | restartFlag(Δ>0.1)=2 (max 0.181) | max valid|Δ|=0.0e+00
+mixed          fits=10 conv=10 | flagB(scaled|g|>1e-3)=6 | innerFlag(Δinner>0.05)=0 (max -5.01e-11) | restartFlag(Δ>0.1)=2 (max 1.31) | max valid|Δ|=0.0e+00
+total elapsed 1750.4 s
