@@ -312,10 +312,78 @@ end
         g_newton = ForwardDiff.gradient(
             zz -> G._twopart_logpost(fam500, y500, Λz500, Λc500, βz500, βc500, false, false, zz),
             z_newton)
-        @test maximum(abs, g_newton) < 1e-6
+        # This site's gradient is already below sqrt(tol) at z_fisher, so the Newton
+        # stage's relaxed-convergence exit (checked before any step is attempted, #500
+        # R1) fires on iteration 1 and returns the Fisher iterate unchanged: ok_newton
+        # is true because the gradient meets the RELAXED tolerance, not the documented
+        # `tol` contract (#500 S1/S2). This bound is the relaxed one (sqrt(tol) ~
+        # 3.2e-5), not the tight one a genuinely converged Newton stationary point would
+        # meet (see the R1 testset below for a case that takes real Newton/halving steps).
+        @test maximum(abs, g_newton) < sqrt(1e-9)
         H_newton = ForwardDiff.hessian(
             zz -> G._twopart_logpost(fam500, y500, Λz500, Λc500, βz500, βc500, false, false, zz),
             z_newton)
         @test all(eigvals(Symmetric(H_newton)) .< 0)    # a healthy (negative-definite) mode
+    end
+
+    @testset "Newton stage: a q-decreasing small step is halved, not declared a failure (#500 R1)" begin
+        # PR #500 verify (pr-500-verify.md), BLOCKING R1: the small-step branch above
+        # (`norm(Δ) <= 1e-3 * (1 + norm(z))`) tried the full small step once and, if it
+        # lowered q(z), either kept the current iterate (max|g| < sqrt(tol), a relaxed
+        # "converged") or declared outright failure -- with no attempt to halve the step
+        # first, unlike every other step in this search. At a healthy, negative-definite
+        # mode this can still fire: the full small step's floating-point noise can make
+        # q1 < q0 even though the site truly is at the mode, and max|g| can sit just
+        # above sqrt(tol) so the relaxed exit does not cover it either, so the un-halved
+        # branch declared -Inf at a converged site.
+        #
+        # Reproducer found by random search (recorded verbatim, not a seed drawn at test
+        # time -- CI runs Julia 1.10 and 1.13, which draw different data from the same
+        # seed): a ZIP site, loadings at scale x2, occurrence loadings present
+        # (Λz != 0), y = [84, 9, 0, 0, 0, 1958]. The Newton stage started at a 1e-4
+        # perturbation of a mode independently verified by full-Hessian Newton refine
+        # (|grad q| < 1e-10, negative-definite Hessian). On acb0563a9 the un-halved
+        # small-step branch declares this perturbed start a failure; after R1 it takes
+        # the halving loop and lands back at the mode.
+        yR1 = [84.0, 9.0, 0.0, 0.0, 0.0, 1958.0]
+        ΛzR1 = [0.037188611098819574 -2.152948798382778
+                -2.292477733826876 -1.8519783638265486
+                2.446614048125441 1.730830357665107
+                -2.8247842474608995 2.9639940211349574
+                3.9113355445386886 -2.2609809458173267
+                -0.8067485107480427 5.5061965718506]
+        ΛcR1 = [3.2372496876879966 4.001878863995055
+                0.7170873486889502 0.5983496276784183
+                3.0009117104005685 -2.96860058116712
+                -1.1541529143410467 3.1623578159368564
+                1.011252293792797 -0.30828558594789873
+                3.152206490230297 -2.894587858639107]
+        βzR1 = [-0.05216049472730456, -0.8719988038642438, 0.160483254815714,
+                0.4901810450071207, 1.077262385190342, -0.7217178804884182]
+        βcR1 = [0.3540542138106729, 0.8031394352696253, 0.8368604127121863,
+                0.1695990663779502, 0.9087617797879823, 0.7356725658701869]
+        famR1 = G.ZIPoisson()
+        zR1_mode = [1.783340182625326, -0.4222764444885066]    # independent full-Hessian refine
+        zR1_pert = [1.7832804356714147, -0.4223566336492351]   # 1e-4 perturbation of zR1_mode
+
+        gR1_mode = ForwardDiff.gradient(
+            zz -> G._twopart_logpost(famR1, yR1, ΛzR1, ΛcR1, βzR1, βcR1, false, false, zz),
+            zR1_mode)
+        @test maximum(abs, gR1_mode) < 1e-9    # zR1_mode is genuinely a stationary point
+        HR1_mode = ForwardDiff.hessian(
+            zz -> G._twopart_logpost(famR1, yR1, ΛzR1, ΛcR1, βzR1, βcR1, false, false, zz),
+            zR1_mode)
+        @test all(eigvals(Symmetric(HR1_mode)) .< 0)    # ... and negative-definite, i.e. healthy
+
+        z_r1, ok_r1 = G._twopart_mode_stage(famR1, yR1, ΛzR1, ΛcR1, βzR1, βcR1, :newton;
+                                            z0 = zR1_pert, maxiter = 100, tol = 1e-9)
+        @test ok_r1                     # must not be false -Inf (the R1 bug on acb0563a9)
+        g_r1 = ForwardDiff.gradient(
+            zz -> G._twopart_logpost(famR1, yR1, ΛzR1, ΛcR1, βzR1, βcR1, false, false, zz),
+            z_r1)
+        @test maximum(abs, g_r1) < 1e-6                          # a real stationary point
+        @test maximum(abs, z_r1 .- zR1_mode) < 1e-6               # ... and it is the SAME mode
+        val_r1 = G.twopart_loglik_site(famR1, yR1, ΛzR1, ΛcR1, βzR1, βcR1)
+        @test isfinite(val_r1)          # the natural (z0 = 0) path must also reach this mode
     end
 end
