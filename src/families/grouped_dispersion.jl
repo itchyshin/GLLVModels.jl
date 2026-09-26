@@ -1629,6 +1629,17 @@ function getLV(fit::NB1GroupedFit, Y::AbstractMatrix{<:Integer};
                           N = N, rotate = rotate, mask = mask)
 end
 
+# NB1 grouped fits can stop on a zero-length line-search step, which Optim counts as
+# "the objective did not change" (f_converged) and reports as converged, while the
+# gradient is still large (#485). Scale-aware gradient test, as in `_tweedie_verdict`
+# and `_beta_grouped_g_met`: the residual is judged against `g_tol` scaled by the
+# objective's own size, so a caller's g_tol below the finite-difference noise floor
+# does not turn a stationary point into a non-converged fit. A gradient residual at or
+# above ~1e11 is what a finite-difference step looks like when it lands on the 1e12
+# objective-failure penalty — that fails this test on scale alone and is never a pass.
+_nb1_grouped_g_met(res, g_tol) = (gres = Optim.g_residual(res);
+    isfinite(gres) && gres <= max(g_tol, g_tol * abs(Optim.minimum(res))))
+
 """
     fit_nb1_gllvm_grouped(Y; K, group, link=LogLink(), mask=nothing, offset=nothing,
                           hessian=:observed, …) -> NB1GroupedFit
@@ -1708,6 +1719,7 @@ function fit_nb1_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     boundary = _dispersion_group_boundary(φ̂g)
     any(boundary) && @warn "NB1 grouped-dispersion fit reached the per-group boundary (φ outside [1e-6, 1e6]) for group(s) $(findall(boundary)); those groups' overdispersion is at the Poisson limit or numerically flat on this data, and optimizer convergence flags are unreliable for them." maxlog=1
     loglik, conv, iters = _fit_verdict(res)
+    conv = conv && _nb1_grouped_g_met(res, g_tol)   # #485: a zero-length step is not convergence
     return NB1GroupedFit(β̂, Λ̂, φ̂g, gidx, link, loglik, conv && !any(boundary), iters, hessian,
                          boundary)
 end

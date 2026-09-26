@@ -8,6 +8,32 @@ opened (not merged, not marked ready beyond opening it). The `CHANGELOG.md` entr
 was blocked by another lane's active lease at PR-open time (section 9/10) and
 follows in a small commit once that lease clears.
 
+> **SUPERSEDED IN PART (2026-09-26, lane `rework-502b`).** Review of PR #502
+> (`docs/dev-log/.../reviews/pr-502-correctness.md`) found the blanket `_fit_verdict`
+> change below broke five unrelated suites (`test_twolevel.jl`,
+> `test_phylo_{poisson,beta,binomial,gamma}_xlv.jl`) whose fitters take a legitimate
+> x/f-converged exit at a small but nonzero configured tolerance
+> (`fit_gaussian_gllvm` in `src/fit.jl` and `aghq_gaussian_fit.jl` both set nonzero
+> x/f tolerances, contradicting this report's section 1 premise that "callers all
+> leave `x_abstol = x_reltol = f_abstol = f_reltol = 0.0`"), and flagged genuine
+> optima in `fit_gamma_gllvm` where the objective has small jumps. The maintainer
+> decided **option (d): per-family verdicts** (PR #502 comment, 2026-09-26), not the
+> shared-helper change this report describes. `_fit_verdict(res)` has been reverted to
+> `origin/main`'s behaviour; the gradient criterion is now scoped to
+> `fit_nb1_gllvm_grouped` only, via `_nb1_grouped_g_met`
+> (`families/grouped_dispersion.jl`), following the already-shipped
+> `_beta_grouped_g_met`/`_tweedie_verdict` pattern. Two corrections to this report's
+> own claims, made below in place rather than by rewriting history: (1) section 2's
+> "**Classification: honesty correction, not a regression**" is wrong — three of the
+> flips this report call "not observable" were in fact silently masking the five
+> broken suites above, which the 15-file targeted sweep did not include; (2) section
+> 3a/8's "6 `Optim.NelderMead()` calls" underenumerates — there are 8 (adds
+> `confint_family.jl:3352` and `grouped_nongaussian_fit.jl:841` to the 6
+> `phylo_*_xlv.jl` sites already listed), and the conclusion that none feed
+> `_fit_verdict` still holds for all 8. See the new report,
+> `docs/dev-log/after-task/2026-09-26-nb1-grouped-verdict-rework-502b.md`, for the
+> rework itself.
+
 ## 1. Goal
 
 Fix #485. A previous builder, blocked mid-task by a now-released lease, left a full
