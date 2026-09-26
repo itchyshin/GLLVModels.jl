@@ -159,3 +159,59 @@ end
         @test_throws InterruptException select_lv(Y; Kmax = 2, _fitter = f)
     end
 end
+
+# --- Runaway detector (lane auto-d-20260926) -------------------------------------
+# Latent variables are standardised (u ~ N(0, I)), so a trait's loading row norm is
+# its latent SD on the link scale; ~4 is as strong as real gradients get and 10 is
+# saturated (vault note "Two runaway modes in GLLVM loadings"). Mode B (common
+# inflation) needs a SCALE check; Mode A (one binary trait separates) needs a RATIO
+# check, which is blind to Mode B by construction.
+@testset "select_lv — runaway detector" begin
+    Y = zeros(6, 40)
+    # K = 3 is a common-inflation runaway (all rows × 40) with the best logLik.
+    inflate = function (Y; family, K, kwargs...)
+        haskey(kwargs, :Λ_init) && return _FakeLVFit(-380.0, 10K, true, zeros(6), fill(0.5, 6, K))
+        Λ = K == 3 ? fill(20.0, 6, K) : fill(0.5, 6, K)
+        return _FakeLVFit(Dict(1 => -500.0, 2 => -400.0, 3 => -300.0)[K], 10K, true, zeros(6), Λ)
+    end
+
+    @testset "Mode B: a common-inflation K is retried, and excluded if still runaway" begin
+        sel = select_lv(Y; family = Poisson(), Kmax = 3, criterion = :aic, warm_start = false,
+                        _fitter = inflate)
+        a3 = only(filter(a -> a.K == 3, sel.attempts))
+        @test a3.status === :runaway
+        @test occursin("latent SD", a3.message)
+        @test !(3 in sel.K)
+        @test sel.best_k == 2
+    end
+
+    @testset "Mode B: the warm-start refit replaces a runaway when it is healthy" begin
+        sel = select_lv(Y; family = Poisson(), Kmax = 3, _fitter = inflate)
+        a3 = only(filter(a -> a.K == 3, sel.attempts))
+        @test a3.status === :warm_start
+        @test a3.loglik == -380.0
+    end
+
+    @testset "Mode A: one binary trait separating is caught by the ratio check" begin
+        sep = function (Y; family, K, kwargs...)
+            Λ = fill(0.5, 6, K); K == 2 && (Λ[4, 1] = 15.0)   # one trait at 30× the median
+            K == 3 && (Λ[4, 1] = 48.0)
+            return _FakeLVFit(-500.0 + 60K, 10K, true, zeros(6), Λ)
+        end
+        sel = select_lv(Y; family = Binomial(), Kmax = 3, warm_start = false,
+                        max_latent_sd = Inf, _fitter = sep)
+        @test only(filter(a -> a.K == 2, sel.attempts)).status === :runaway   # ratio 30 ≥ 25
+        @test occursin("ratio", only(filter(a -> a.K == 2, sel.attempts)).message)
+        @test sel.K == [1]
+    end
+
+    @testset "the ratio check is binomial-only; the scale check can be disabled" begin
+        one_big = (Y; family, K, kwargs...) ->
+            _FakeLVFit(-500.0 + 60K, 10K, true, zeros(6), (Λ = fill(0.5, 6, K); Λ[4, 1] = 9.0; Λ))
+        sel = select_lv(Y; family = Poisson(), Kmax = 2, _fitter = one_big)
+        @test sel.K == [1, 2]                                                  # ratio 18, rows < 10
+        sel2 = select_lv(Y; family = Poisson(), Kmax = 3, max_latent_sd = Inf,
+                         warm_start = false, _fitter = inflate)
+        @test 3 in sel2.K
+    end
+end

@@ -33,7 +33,8 @@ Fields:
 - `attempts::Vector` — one named tuple `(K, status, loglik, message)` per
   attempted `K`. `status` is `:ok`, `:warm_start` (accepted after a refit from
   the previous solution), `:nonmonotone` (log-likelihood below the last accepted
-  `K`), `:unconverged`, or `:failed` (the fit threw; `message` says why).
+  `K`), `:unconverged`, `:runaway` (inflated or separated loadings; `message`
+  gives the statistic), or `:failed` (the fit threw; `message` says why).
 """
 struct LVSelection
     K::Vector{Int}
@@ -61,9 +62,41 @@ end
 
 _lv_converged(fit) = hasproperty(fit, :converged) ? Bool(fit.converged) : true
 
+# Runaway detector. Latent variables are standardised (u ~ N(0, I)), so a trait's
+# loading row norm is its latent SD on the link scale: ~4 is as strong as real
+# gradients get, 10 is saturated. Two modes need two statistics (vault note "Two
+# runaway modes in GLLVM loadings", gllvmTMB lane 2026-07-30):
+#   Mode B, common inflation (any family): a SCALE check, max row norm > max_latent_sd.
+#   Mode A, one binary trait separating: a RATIO check, the largest per-trait max
+#     |loading| over the median, ≥ ratio_max. Binomial only; the ratio is blind to
+#     Mode B by construction (Λ → cΛ leaves it unchanged).
+# Identity-link fits are skipped: their loadings are in data units. Both thresholds
+# are provisional (measured in gllvmTMB: ratio 25 gave 96.3% detection, 0/551 false
+# positives on binomial) and are to be recalibrated on the auto-d recovery grid.
+# Returns "" when healthy, else the reason.
+function _lv_runaway(fit, family; max_latent_sd::Real, ratio_max::Real)
+    hasproperty(fit, :Λ) || return ""
+    hasproperty(fit, :link) && fit.link isa IdentityLink && return ""
+    Λ = fit.Λ
+    (ndims(Λ) == 2 && size(Λ, 2) >= 1 && size(Λ, 1) >= 1) || return ""
+    rows = [sqrt(sum(abs2, @view Λ[t, :])) for t in axes(Λ, 1)]
+    smax = maximum(rows)
+    if smax > max_latent_sd
+        t = argmax(rows)
+        return "latent SD $(round(smax; sigdigits = 3)) on the link scale for trait $t (> $max_latent_sd)"
+    end
+    if family isa Binomial
+        m = [maximum(abs, @view Λ[t, :]) for t in axes(Λ, 1)]
+        r = maximum(m) / max(median(m), eps())
+        r >= ratio_max && return "loading ratio $(round(r; sigdigits = 3)) for trait $(argmax(m)) (≥ $ratio_max; separation)"
+    end
+    return ""
+end
+
 """
     select_lv(Y; family = Normal(), Kmax = 3, criterion = :bic,
-              warm_start = true, tol = 1e-3, kwargs...) -> LVSelection
+              warm_start = true, tol = 1e-3, max_latent_sd = 10.0,
+              ratio_max = 25.0, kwargs...) -> LVSelection
 
 Latent-dimension selection: fit `fit_gllvm(Y; family, K = k, kwargs...)` for
 `k in 1:Kmax` and pick the `K` minimising `criterion` (`:aic` or `:bic`) among
@@ -71,10 +104,16 @@ the fits that pass a guard.
 
 The guard rejects a fit that throws, reports non-convergence, or has a
 log-likelihood more than `tol` below the last accepted `K` (a `K` model nests the
-`K − 1` model, so its maximum cannot be lower). With `warm_start = true`, a
-non-monotone or unconverged fit is first refitted once from the previous
+`K − 1` model, so its maximum cannot be lower). It also rejects a runaway fit:
+because the latent variables are standardised, a trait's loading row norm is its
+latent SD on the link scale, and a value above `max_latent_sd` (default 10, a
+saturated effect) marks common inflation of the loadings; for `Binomial`, one
+trait's largest loading at `ratio_max` (default 25) times the median trait's
+marks separation. Identity-link (Gaussian) fits skip the runaway check. Both
+thresholds are provisional. With `warm_start = true`, a rejected
+(non-monotone, unconverged or runaway) fit is first refitted once from the previous
 solution plus a small new loading column, for families whose fitter accepts
-`β_init`/`Λ_init`; the better converged fit is kept. Rejected fits stay in
+`β_init`/`Λ_init`; the refit is kept only if it passes every check. Rejected fits stay in
 `attempts` with their reason and are never chosen. At least one `K` must be
 accepted or an error is thrown. Healthy sweeps never trigger a refit, so their
 results are unchanged. An interrupt is never swallowed.
@@ -98,7 +137,8 @@ sel.attempts        # every K tried, with status
 """
 function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
                    criterion::Symbol = :bic, warm_start::Bool = true,
-                   tol::Real = 1e-3, _fitter = fit_gllvm, kwargs...)
+                   tol::Real = 1e-3, max_latent_sd::Real = 10.0,
+                   ratio_max::Real = 25.0, _fitter = fit_gllvm, kwargs...)
     criterion in (:aic, :bic) ||
         throw(ArgumentError("criterion must be :aic or :bic; got :$criterion"))
     Kmax >= 1 || throw(ArgumentError("Kmax must be ≥ 1; got $Kmax"))
@@ -122,16 +162,15 @@ function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
         fit, msg = tryfit(k)
         prev = isempty(fits) ? nothing : fits[end]
         llprev = isempty(lls) ? -Inf : lls[end]
-        ok(f) = f !== nothing && _lv_converged(f) && _loglik(f) >= llprev - tol
+        runaway(f) = _lv_runaway(f, family; max_latent_sd = max_latent_sd, ratio_max = ratio_max)
+        acceptable(f) = f !== nothing && _lv_converged(f) && isempty(runaway(f)) &&
+                        _loglik(f) >= llprev - tol
         status = :ok
-        if !ok(fit) && fit !== nothing && warm_start && prev !== nothing
+        if !acceptable(fit) && fit !== nothing && warm_start && prev !== nothing
             init = _lv_warm_start(prev, k)
             if init !== nothing
                 refit, _ = tryfit(k; init...)
-                if refit !== nothing && _lv_converged(refit) &&
-                   (!_lv_converged(fit) || _loglik(refit) > _loglik(fit))
-                    fit, status = refit, :warm_start
-                end
+                acceptable(refit) && ((fit, status) = (refit, :warm_start))
             end
         end
         if fit === nothing
@@ -139,6 +178,9 @@ function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
             continue
         elseif !_lv_converged(fit)
             push!(attempts, (K = k, status = :unconverged, loglik = _loglik(fit), message = ""))
+            continue
+        elseif !isempty(runaway(fit))
+            push!(attempts, (K = k, status = :runaway, loglik = _loglik(fit), message = runaway(fit)))
             continue
         elseif _loglik(fit) < llprev - tol
             push!(attempts, (K = k, status = :nonmonotone, loglik = _loglik(fit),
