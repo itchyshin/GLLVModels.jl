@@ -389,6 +389,7 @@ betabinomial_marginal_loglik_laplace
 betabinomial_grouped_marginal_loglik_laplace
 GLLVModels.betabinomial_logp
 GLLVModels.twopart_marginal_loglik_laplace
+GLLVModels.twopart_loglik_site
 GLLVModels.multinomial_loglik
 GLLVModels.multinomial_eta
 GLLVModels.unpack_multinomial
