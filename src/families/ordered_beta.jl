@@ -141,15 +141,15 @@ end
 # between two competing modes; the class-audit and independent verification
 # (issue #501, `obeta-verify-reproduce.md`) measured the returned z at such a
 # point having a central finite-difference gradient that scales as 1/h across
-# five step sizes spanning four orders of magnitude — the signature of a jump
+# five step sizes spanning four orders of magnitude, the signature of a jump
 # discontinuity in the OUTER marginal negative log-likelihood, not a smooth
 # steep slope, which was tripping the outer optimiser's own x/f convergence
 # test (the #485-class failure) rather than genuine multimodality.
 #
 # Now a step that lowers the per-site log-posterior is halved (so small and
 # accepted full steps are bit-identical to the old loop), and `converged` is
-# true only when the FULL proposed step (not a halved one) is below `tol` — the
-# old loop's own stopping test. Unlike Gamma/NB1's LogLink fallback, there is no
+# true only when the FULL proposed step (not a halved one) is below `tol`,
+# the old loop's own stopping test. Unlike Gamma/NB1's LogLink fallback, there is no
 # second, alternate curvature to retry with here (`_ob_score_weight` is the
 # single, already-clamped-positive weight this family has); a site that still
 # fails after the default budget is retried once with a 20x iteration budget
@@ -203,13 +203,13 @@ function _ordered_beta_mode_search(y::AbstractVector, Λ::AbstractMatrix, β::Ab
 end
 
 # Public per-site mode-finder. Retries `_ordered_beta_mode_search` with a 20x
-# iteration budget (restarting from z = 0) before giving up — mirrors #509's
+# iteration budget (restarting from z = 0) before giving up, mirroring #509's
 # Student-t and #507's NB1 review retry: a genuinely converging site can still
 # need more than the default `maxiter = 100` damped steps under
 # ill-conditioned curvature. Runs only where the default budget failed, so a
 # site that converges within `maxiter` keeps its original path and iteration
 # count. Returns `(z, converged)`; used both by `_ordered_beta_loglik_site`
-# (below) and by `getLV`/`predict` (further down), which take only `z` — a
+# (below) and by `getLV`/`predict` (further down), which take only `z`; a
 # call at converged `(Λ, β, c0, c1, φ)` lands on the mode this same function
 # certified during fitting.
 function _ordered_beta_mode(y::AbstractVector, Λ::AbstractMatrix, β::AbstractVector,

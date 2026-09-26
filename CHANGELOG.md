@@ -18,12 +18,12 @@ All notable changes to GLLVModels.jl are documented here.
   with a restart reaching a genuinely better optimum (#501).** The per-site
   inner mode search (`_ordered_beta_mode`, `src/families/ordered_beta.jl`) ran
   undamped Newton and returned whatever `z` it held at `maxiter`, converged or
-  not — the same defect class as #479/#484/#503. The per-site conditional
+  not, the same defect class as #479/#484/#503. The per-site conditional
   density here is a nonconvex mixture of two point masses (at 0 and 1) and an
   interior Beta piece, so an undamped step can overshoot across a local ridge
   between two competing per-site modes; independent verification measured the
   returned mode's central finite-difference gradient scaling as `1/h` across
-  five step sizes spanning four orders of magnitude — the signature of a jump
+  five step sizes spanning four orders of magnitude, the signature of a jump
   discontinuity in the *outer* marginal negative log-likelihood as the outer
   parameters cross a threshold, not a smooth steep slope, tripping the outer
   optimiser's own x/f convergence test (the #485-class failure). The search now
@@ -31,7 +31,7 @@ All notable changes to GLLVModels.jl are documented here.
   full steps are bit-identical to the old loop), certifies convergence only
   when the full proposed step is below `tol`, retries once with a 20x iteration
   budget for a genuinely slow-but-healthy site (mirrors #509's Student-t /
-  #507's NB1 review retry — there is no second, alternate curvature to fall
+  #507's NB1 review retry; there is no second, alternate curvature to fall
   back to here, unlike Gamma/NB1's LogLink fallback, since this family's
   per-trait weight is already the single, clamped-positive observed
   curvature), and returns `-Inf` for a site whose search still fails, so the
