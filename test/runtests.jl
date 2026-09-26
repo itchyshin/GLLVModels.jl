@@ -331,6 +331,7 @@ println(_SHARD === nothing ?
     _shard_include("test_twopart_hessian_kwarg.jl")
     _shard_include("test_beta_hurdle.jl")
     _shard_include("test_beta_binomial.jl")
+    _shard_include("test_beta_binomial_mode_search.jl")
     _shard_include("test_zero_inflated.jl")
     _shard_include("test_missing_data.jl")
     _shard_include("test_missing_response.jl")

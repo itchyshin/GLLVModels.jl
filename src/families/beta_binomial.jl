@@ -93,14 +93,47 @@ end
 @inline _bb_phi_at(φ::Real, ::Integer) = φ
 @inline _bb_phi_at(φ::AbstractVector, t::Integer) = φ[t]
 
-# Inner Laplace mode-finder for one site (Newton on the negative second
-# derivative). Mirrors `_ordered_beta_mode`. `mask` (length-p Bool, or `nothing` =
-# all observed) drops missing responses: a masked entry contributes zero score and
-# zero Fisher weight, so it neither pulls the mode nor enters the Hessian. `φ` is
-# either a shared scalar or a length-p per-trait vector (grouped/+X extension).
-# `offset` (length-p, or `nothing`) is an optional site-covariate contribution
-# `(Xγ)[:, i]` added to the linear predictor before the link.
-function _beta_binomial_mode(y::AbstractVector, N::AbstractVector, Λ::AbstractMatrix,
+# Per-site log-posterior q(z) = Σ betabinomial_logp(...) − ½z'z, masked and offset
+# exactly as `_beta_binomial_mode_search` below. Used only by that search's step-
+# halving accept/reject test (mirrors `_grouped_laplace_mode_logpost` in
+# `grouped_dispersion.jl`).
+function _bb_mode_logpost(y::AbstractVector, N::AbstractVector, Λ::AbstractMatrix,
+        β::AbstractVector, φ::Union{Real, AbstractVector}, link::Link, z::AbstractVector;
+        mask = nothing, offset::Union{Nothing, AbstractVector} = nothing)
+    p = size(Λ, 1)
+    off = offset === nothing ? false : offset
+    η = β .+ off .+ Λ * z
+    q = -0.5 * dot(z, z)
+    @inbounds for t in 1:p
+        (mask === nothing || mask[t]) || continue
+        q += betabinomial_logp(y[t], η[t], N[t], _bb_phi_at(φ, t); link = link)
+    end
+    return q
+end
+
+# Inner Laplace mode-finder for one site (#503, the #479/#500/#507/#509 damped-
+# search pattern). Returns `(z, converged)`. Mirrors `_ordered_beta_mode` in its
+# score/weight but was, before this fix, an UNDAMPED Newton loop on the clamped
+# observed curvature (`_bb_score_weight` floors `W` to `≥ 1e-8`, which keeps
+# `Λ'WΛ + I` SPD by construction — same role as the expected-information floor
+# in the Gamma/NB1/NB2/Student-t grouped kernels — but does not keep any step a
+# DESCENT step) that returned whatever `z` it held at `maxiter`, converged or
+# not. The class audit (Λ scaled up to 3x, warm start perturbed ±50%) measured
+# 27/500 sites where the returned `z` was not stationary while a from-scratch
+# restart converged cleanly, some of them finite (able to escape the fitter's
+# 1e12 sentinel).
+#
+# Now a step that lowers the per-site log-posterior `q` is halved (the generic
+# core's rule, so small steps and accepted full steps are bit-identical to the
+# old loop), and `converged` requires the FULL proposed step to be below `tol`
+# (the old loop's own stopping test) — a heavily halved step does not count.
+# `mask` (length-p Bool, or `nothing` = all observed) drops missing responses:
+# a masked entry contributes zero score and zero weight, so it neither pulls
+# the mode nor enters the Hessian. `φ` is either a shared scalar or a length-p
+# per-trait vector (grouped/+X extension). `offset` (length-p, or `nothing`) is
+# an optional site-covariate contribution `(Xγ)[:, i]` added to the linear
+# predictor before the link.
+function _beta_binomial_mode_search(y::AbstractVector, N::AbstractVector, Λ::AbstractMatrix,
         β::AbstractVector, φ::Union{Real, AbstractVector}; link::Link = LogitLink(),
         mask = nothing, offset::Union{Nothing, AbstractVector} = nothing,
         maxiter::Integer = 100, tol::Real = 1e-9)
@@ -122,25 +155,74 @@ function _beta_binomial_mode(y::AbstractVector, N::AbstractVector, Λ::AbstractM
         end
         A = Symmetric(Λ' * (W .* Λ) + I)
         Δ = _safe_solve(A, Λ' * s .- z)
-        (Δ === nothing || !all(isfinite, Δ)) && break
-        z = z .+ Δ
-        maximum(abs, Δ) < tol && break
+        (Δ === nothing || !all(isfinite, Δ)) && return z, false
+        maximum(abs, Δ) < tol && return z .+ Δ, true
+        if norm(Δ) <= 1e-3 * (1 + norm(z))
+            z = z .+ Δ
+        else
+            q0 = _bb_mode_logpost(y, N, Λ, β, φ, link, z; mask = mask, offset = offset)
+            if isfinite(q0)
+                accepted = false
+                step = 1.0
+                for _half in 1:30
+                    ztrial = z .+ step .* Δ
+                    q1 = _bb_mode_logpost(y, N, Λ, β, φ, link, ztrial; mask = mask, offset = offset)
+                    if isfinite(q1) && q1 >= q0
+                        z = ztrial
+                        accepted = true
+                        break
+                    end
+                    step *= 0.5
+                end
+                accepted || return z, false
+            else
+                z = z .+ Δ
+            end
+        end
     end
+    return z, false
+end
+
+# Public per-site mode search, retained under its original name for `getLV`/
+# `predict` (which need only `z`, at the fitted parameters, not a convergence
+# flag). Retries with a 20x iteration budget before giving up (mirrors #507's
+# review fix for NB1 and #509's Student-t fallback: a genuinely healthy site
+# can still need more than the default `maxiter = 100` damped steps under
+# ill-conditioned curvature). `_beta_binomial_loglik_site` below calls
+# `_beta_binomial_mode_search` directly so it can act on the `converged` flag.
+function _beta_binomial_mode(y::AbstractVector, N::AbstractVector, Λ::AbstractMatrix,
+        β::AbstractVector, φ::Union{Real, AbstractVector}; link::Link = LogitLink(),
+        mask = nothing, offset::Union{Nothing, AbstractVector} = nothing,
+        maxiter::Integer = 100, tol::Real = 1e-9)
+    z, ok = _beta_binomial_mode_search(y, N, Λ, β, φ; link = link, mask = mask,
+                                       offset = offset, maxiter = maxiter, tol = tol)
+    ok || ((z, ok) = _beta_binomial_mode_search(y, N, Λ, β, φ; link = link, mask = mask,
+                                                offset = offset, maxiter = 20 * maxiter, tol = tol))
     return z
 end
 
 # Per-site Laplace log-marginal:
 #   log p(y_s) ≈ ℓ(ẑ) − ½ẑ'ẑ − ½logdet(Λ'WΛ + I).
-# `mask` drops the masked entries from the score/weight (via `_beta_binomial_mode`)
-# and from the conditional log-density sum. `φ`/`offset` as in `_beta_binomial_mode`.
+# `mask` drops the masked entries from the score/weight (via
+# `_beta_binomial_mode_search`) and from the conditional log-density sum.
+# `φ`/`offset` as in `_beta_binomial_mode_search`.
+#
+# Calls the search directly (not the public `_beta_binomial_mode` wrapper) so
+# it can act on the `converged` flag (#503): a search that cannot certify a
+# stationary point — even after the wrapper's own 20x-budget retry — must not
+# produce a finite value. -Inf makes the fitters' objective return its 1e12
+# sentinel instead of a garbage surface (the #479 precedent).
 function _beta_binomial_loglik_site(y::AbstractVector, N::AbstractVector,
         Λ::AbstractMatrix, β::AbstractVector, φ::Union{Real, AbstractVector};
         link::Link = LogitLink(), mask = nothing, offset::Union{Nothing, AbstractVector} = nothing,
         maxiter::Integer = 100, tol::Real = 1e-9)
     p, K = size(Λ)
     off = offset === nothing ? false : offset
-    z = _beta_binomial_mode(y, N, Λ, β, φ; link = link, mask = mask, offset = offset,
-                            maxiter = maxiter, tol = tol)
+    z, ok = _beta_binomial_mode_search(y, N, Λ, β, φ; link = link, mask = mask, offset = offset,
+                                       maxiter = maxiter, tol = tol)
+    ok || ((z, ok) = _beta_binomial_mode_search(y, N, Λ, β, φ; link = link, mask = mask,
+                                                offset = offset, maxiter = 20 * maxiter, tol = tol))
+    ok || return -Inf
     η = β .+ off .+ Λ * z
     ℓ = 0.0
     W = Vector{Float64}(undef, p)
