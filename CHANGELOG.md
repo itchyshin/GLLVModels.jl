@@ -14,6 +14,30 @@ All notable changes to GLLVModels.jl are documented here.
 ## Unreleased
 
 ### Fixed
+- **Mixed-family fits (`fit_mixed_gllvm`) no longer report convergence from a
+  diverged inner search (#503).** The per-site Laplace mode search inside
+  `_mixed_laplace_mode` (a GLLVM where different traits carry different response
+  families on one shared latent block) took undamped Fisher-scoring steps and
+  had no convergence flag: a site could be left far from its stationary point
+  while `_mixed_loglik_site` still returned a finite log-likelihood. A
+  re-measure across three family mixes (Poisson/Binomial/Gamma;
+  Normal/NegativeBinomial/Beta; a four-trait Poisson/Gamma/Beta/Binomial mix)
+  found 120/1200 finite-non-mode sites using the class audit's own
+  gradient-of-the-score probe. The search now halves any step that lowers the
+  per-site log-posterior and requires BOTH the full proposed step and the
+  log-posterior gradient itself to be small before declaring convergence (a
+  step-size-only test is not safe here: mixing in a family whose Fisher weight
+  does not track the residual, such as a Normal trait under `IdentityLink`, is
+  enough to trigger the same defect #509 found for Student-t). A site that
+  still cannot certify a stationary point within a 20x-widened iteration budget
+  returns `-Inf`, so the fitter's own `1e12` failure sentinel fires instead of a
+  silently wrong log-likelihood. `getLV`/`predict` call `_mixed_laplace_mode`
+  directly and keep their prior no-sentinel behaviour: they use whichever `z`
+  the damped search returns, converged or not, exactly as before. On four
+  datasets across three family mixes where `main`'s outer fit already converged
+  with every site independently certified stationary, the fitted log-likelihood
+  is unchanged to about 1e-7 to 1e-10 on this branch; this figure is specific to
+  those datasets, not a general bound.
 - **`confint(..., method = :profile)` and `method = :bootstrap` could accept a
   silently failed inner refit.** `_family_profile_refit` and `_family_bootstrap`
   (`src/confint_family.jl`) judged a refit's success only by `isfinite` on its
