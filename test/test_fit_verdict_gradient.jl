@@ -32,14 +32,14 @@ using GLLVModels, Test, Random, LinearAlgebra, Distributions, Optim
 # PLATFORM ROBUSTNESS. Optim's finite-difference L-BFGS path is not bit-reproducible
 # across BLAS/LAPACK builds: the same seed can take a different number of steps, stall
 # at a different zero-length step, or land in a different local optimum on Linux x86_64
-# vs macOS ARM64 — and CI runs both Julia 1.10 and Julia 1 (1.13) on Linux, where the
+# vs macOS ARM64, and CI runs both Julia 1.10 and Julia 1 (1.13) on Linux, where the
 # same seed draws different data and takes a different optimiser path than on macOS.
 # None of these tests assert one seed's fitted outcome for that reason: (a) exercises
 # `_nb1_grouped_g_met`'s contract directly on constructed (gres, nll, g_tol) values
-# that exceed the threshold — a unit-level, platform-free reproduction of the #485
+# that exceed the threshold, a unit-level, platform-free reproduction of the #485
 # defect (Optim's own flag says converged, the gradient plainly is not small, so the
-# helper must say the criterion is not met); (b) checks a relation — whenever
-# `fit.converged`, the gradient is small — across several seeds, which must hold
+# helper must say the criterion is not met); (b) checks a relation, whenever
+# `fit.converged`, the gradient is small, across several seeds, which must hold
 # regardless of which optimiser path any given platform takes (no seed is required to
 # stall; the implication only needs to hold where it applies); (c) checks a fit that is
 # actually at a stationary point stays converged, again without pinning the numeric
@@ -106,7 +106,7 @@ Optim.minimum(r::_NB1VerdictFakeResult) = r.nll
     @testset "unit contract: a large gradient residual is never reported met (platform-free)" begin
         # `_nb1_grouped_g_met(res, g_tol) = gres <= max(g_tol, g_tol * |nll|)`. Exercise
         # this directly on constructed (gres, nll, g_tol) values that exceed the
-        # threshold — the #485 defect (Optim's own `converged` flag says true, but the
+        # threshold, the #485 defect (Optim's own `converged` flag says true, but the
         # gradient plainly is not small) reproduced at the unit level, not by asserting
         # which seed a given platform's optimiser stalls on.
         g_tol = 1e-5
