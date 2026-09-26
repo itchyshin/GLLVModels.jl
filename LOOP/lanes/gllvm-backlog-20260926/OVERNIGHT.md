@@ -12,3 +12,13 @@ Close by 10:30Z: handover + after-task on main, vault log, Mission Control.
 - 22:15Z #509 merged 8f0bc97f6 (maintainer's word). 22:4xZ #508 merged 2847b5dbf.
 - ~22:35Z usage limit hit again (window already spent before the night); wave A builders killed; reset 22:50Z. NEW CAP: <=2 live.
 - 22:55Z #507 rebased (CHANGELOG only; src/test identical; 39/39) -> 9d78698eb, train restarted. Wave A relaunched (wf_29e21376-8a1): betabinom (from commit b7f0886c9), orderedbeta (diagnose first), compoisson (reuse WIP edit).
+
+## Added 23:15Z (Shinichi: "true parity and if you have any missing stuff please do all - true R and Julia parity and beyond!")
+Limits stated to him: true parity cannot close overnight (191 unsigned ledger rows, 91 reverse-gap classes and the joint note are his; C4 real-data blocked on gllvmTMB #1236; phylo latent is multi-week). gllvmTMB stays read-only (D-220 amendment).
+Parity queue (engineering/docs inside GLLVModels.jl), interleaved with the fix waves, <=2 live:
+ P1 C7: "what parity does not mean" section on docs/src/gllvmtmb-parity.md (reader-surface rules: no issue/PR refs, no process terms) -> moves gate C7 to MET
+ P2 scoreboard refresh: re-date the gate-tier scoreboard against current main (A8/A9 Beta receipts vs #483; #491 as Binomial RSZ evidence toward A7; PR states), statuses only where a receipt supports them
+ P3 Beta realistic-size cell (p=20, n=500, K=2) on Totoro <=30 min, #491's approved pattern -> RSZ evidence for Beta
+ P4 FORWARD gaps: census the 62 R exports missing in Julia; implement the small, well-specified ones (extractors/accessors) one per PR, each against the frozen oracle b4d5fee64
+ P5 C1 BLOCKED_NEEDS_JULIA_SURFACE (122 rows): group by missing surface; build the single most common missing surface if it fits a night
+Deferred-earlier items now queued: fix the stale "#500 waiting" line in the handover on main; propose (not apply) a lane_lease directory-claim guard; _phylo_verdict family-specific reproduction (diagnosis only).
