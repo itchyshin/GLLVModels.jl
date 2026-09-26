@@ -29,7 +29,7 @@ for spec in "$@"; do
     if [ -z "$p" ] || [ "$p" -lt 277 ] || [ "$f" -gt 9 ]; then echo "NOT MERGED #$N: advisory outside main's range; stopping train"; exit 1; fi
   fi
   gh pr ready $N -R $R >/dev/null 2>&1
-  gh pr merge $N -R $R --merge --match-head-commit $H --delete-branch >/dev/null 2>&1
+  gh pr merge $N -R $R ${MERGE_METHOD:---merge} --match-head-commit $H --delete-branch >/dev/null 2>&1
   st=$(gh pr view $N -R $R --json state,mergeCommit -q '"\(.state) \(.mergeCommit.oid // "")"')
   echo "#$N: $st"
   case "$st" in MERGED*) ;; *) echo "NOT MERGED #$N: merge call failed; stopping train"; exit 1;; esac
