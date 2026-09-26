@@ -41,16 +41,13 @@ exist for five paired families: Gaussian, Poisson-log,
 Binomial-logit, Beta-logit, and NB2-log. **Second-order** results
 (standard errors, the fixed-effect `vcov` block, Wald CI endpoints) now cover
 about 15 examples, each checked against a numerical tolerance the maintainer
-signed off on 2026-09-05
-(`docs/dev-log/core070/second-order-parity-contract.md`; the disposition
-list is in `docs/dev-log/core070/second-order-holdouts-2026-09-04.md`). As
+signed off on 2026-09-05. As
 with the first-order comparisons, each package is still evaluated at its own
 optimum, not at identical parameter values; see "Matched-parameter
 comparison" below. **Realistic-size examples** (p ∈ {20, 50}, n ∈ {500,
 2000}) have also been checked, for three families (Gaussian, Poisson, and
-negative binomial): all 12 example cells passed their tolerance (PR #297,
-merged 2026-09-06; receipts in
-`docs/dev-log/core070/t4-p6-*-receipt-2026-09-05.json`). This check does not
+negative binomial): all 12 example cells passed their tolerance, merged
+2026-09-06. This check does not
 cover every family, and the receipts themselves say this specifically is not
 a completed-parity claim. **Interval
 *coverage* is not part of parity**. It is a separate Julia-only diagnostic
@@ -77,8 +74,7 @@ uses by default, so the earlier mismatch (R using one dispersion value per
 trait while Julia used one shared value) no longer applies as a technical
 block. The maintainer instead decided, on 2026-09-15, to keep
 matched-parameter comparison permanently out of scope for these two
-families' default examples rather than promote it from a test-code fix alone
-(`docs/dev-log/decisions/2026-09-14-matched-theta-beta-nb2-pending.md`).
+families' default examples rather than promote it from a test-code fix alone.
 This pilot is useful evidence, not a complete matched-parameter comparison.
 
 The comparison starts from **R workflows and checks their Julia counterparts**,
@@ -99,12 +95,11 @@ fail as written and are treated as known hard cases, sometimes called
 "holdouts": a negative-binomial model whose overdispersion estimate drifts
 toward the edge where the model is indistinguishable from a plain Poisson
 count model, a Student-t model, and a truncated negative-binomial model. The
-most recent run of all three is in
-`docs/dev-log/after-task/2026-09-24-totoro-323-track-a-receipt.md`; the open
-tracking item is issue #323. A fix merged 2026-09-25 (PR #478) restarts
-negative-binomial fits that stall at that Poisson-like edge and raised
-several fits that used to stop early, but the negative-binomial holdout case
-is a deliberately hard example and is not resolved by that fix.
+most recent run of all three was 2026-09-24; this gap remains open. A fix
+merged 2026-09-25 restarts negative-binomial fits that stall at that
+Poisson-like edge and raised several fits that used to stop early, but the
+negative-binomial holdout case is a deliberately hard example and is not
+resolved by that fix.
 
 ### Matching functions does not establish matching analyses
 

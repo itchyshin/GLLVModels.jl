@@ -4,8 +4,12 @@
 not the draft that was accepted. The same §2 question (cloglog / Tweedie
 grouped Hessian default) was decided through a separate, differently-named
 draft, `docs/dev-log/decisions/2026-09-15-second-order-hessian-s2-pending.md`,
-which was ACCEPTED (option A) and applied 2026-09-15 (PR #347, merged
-`3091fe61`). Do not cite this file as the operative decision.
+which was ACCEPTED (option A) and ratified 2026-09-15; the engine defaults
+(`_default_hessian(::Binomial, ::CLogLogLink) = :observed` in
+`src/families/binomial.jl`, and the Tweedie grouped default in
+`src/families/grouped_dispersion.jl`) were already on HEAD at that point,
+not introduced by any specific PR identified here. Do not cite this file
+as the operative decision.
 
 **Date:** 2026-09-15  
 **Status:** **PENDING_ACCEPTANCE** — do not cite as ACCEPTED until Shinichi pastes a reply phrase below  
