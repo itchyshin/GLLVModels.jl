@@ -30,7 +30,11 @@ All notable changes to GLLVModels.jl are documented here.
   Existing per-family bootstrap adapters still return a bare parameter vector
   (the prior `isfinite`-only path) and are migrated to the richer contract one
   family at a time in follow-up PRs; healthy fits and profile brackets that were
-  already at a genuine optimum are unchanged.
+  already at a genuine optimum are unchanged. A caller of
+  `confint(...; method = :profile)` may now see a bracket endpoint report
+  `:partial` or `:failed` where it previously returned a plain number (e.g. a
+  Beta grouped-dispersion `phi` upper bound of `1.09e19` on `main` was never a
+  real confidence bound and now correctly reports `:partial` with `NaN`).
 - **Gamma grouped fits no longer report convergence from a diverged inner search.**
   The per-site mode search inside `fit_gamma_gllvm_grouped` and its covariate and
   shared-shape routes could diverge at the fitter's own start and still return a
