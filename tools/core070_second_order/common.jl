@@ -1,3 +1,6 @@
+using TOML
+using SHA
+
 parity_loadings_p5k2() = [
     0.8   0.0
     0.5   0.6
@@ -5,6 +8,12 @@ parity_loadings_p5k2() = [
    -0.2   0.5
     0.1   0.3
 ]
+
+# Zero-truncated NB2 interior/boundary fixtures for the `truncated_nbinom2` second-
+# order cell and the per-trait Wald CI test. Pure Julia (TOML + SHA, no RCall) so
+# test/test_second_order_truncnb2_ci.jl can include it directly in the default suite,
+# same reason r_lib.jl above stays RCall-free.
+include(joinpath(@__DIR__, "truncnb2_fixtures.jl"))
 
 function parity_site_design(x::AbstractVector{<:Real}, p::Integer)
     n = length(x)
