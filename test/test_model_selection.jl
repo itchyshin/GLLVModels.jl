@@ -49,3 +49,113 @@ using GLLVModels, Test, Random, Distributions, Statistics
         @test sel.best_k == sel.K[argmin(sel.aic)]
     end
 end
+
+# --- Warm-start safeguard (lane auto-d-20260926) ---------------------------------
+# A K+1 model nests the K model, so a correct maximum can never have a lower
+# log-likelihood. Measured on origin/main 2847b5dbf (NB2, n=300, p=20, K_true=3):
+# K=3 and K=4 fits reported converged=true with logLik below K=2. These tests drive
+# select_lv's guard with a stand-in fitter so they are exact and fast.
+struct _FakeLVFit
+    ll::Float64
+    np::Int
+    converged::Bool
+    β::Vector{Float64}
+    Λ::Matrix{Float64}
+end
+GLLVModels._loglik(f::_FakeLVFit) = f.ll
+GLLVModels._nparams(f::_FakeLVFit) = f.np
+GLLVModels.StatsAPI.aic(f::_FakeLVFit) = 2f.np - 2f.ll
+GLLVModels.StatsAPI.bic(f::_FakeLVFit, Y::AbstractMatrix) = f.np * log(length(Y)) - 2f.ll
+
+# Loglik per K on a default start, and on a warm start (used only if the fitter
+# accepts Λ_init). K=3 is a bad optimum from the default start only.
+const _LL_DEFAULT = Dict(1 => -500.0, 2 => -400.0, 3 => -450.0, 4 => -395.0)
+const _LL_WARM    = Dict(3 => -390.0, 4 => -389.0)
+
+function _fake_fitter(calls; warm_ok::Bool, fail_at = nothing, unconv_at = nothing)
+    return function (Y; family, K, kwargs...)
+        push!(calls, (K = K, warm = haskey(kwargs, :Λ_init), kwargs = kwargs))
+        K == fail_at && error("singular at K=$K")
+        p = size(Y, 1)
+        if haskey(kwargs, :Λ_init)
+            warm_ok || throw(ArgumentError("unsupported keyword Λ_init"))
+            ll = get(_LL_WARM, K, _LL_DEFAULT[K])
+        else
+            ll = _LL_DEFAULT[K]
+        end
+        return _FakeLVFit(ll, 10K, K != unconv_at, zeros(p), fill(0.5, p, K))
+    end
+end
+
+@testset "select_lv — warm-start safeguard" begin
+    Y = zeros(6, 40)
+
+    @testset "healthy sweep: no retries, results unchanged" begin
+        calls = Any[]
+        f = function (Y; family, K, kwargs...)
+            push!(calls, K)
+            return _FakeLVFit(-500.0 + 60K, 10K, true, zeros(6), fill(0.5, 6, K))
+        end
+        sel = select_lv(Y; Kmax = 4, _fitter = f)
+        @test calls == [1, 2, 3, 4]
+        @test sel.K == [1, 2, 3, 4]
+        @test all(a -> a.status === :ok, sel.attempts)
+    end
+
+    @testset "non-monotone K is retried from the K-1 solution and accepted" begin
+        calls = Any[]
+        sel = select_lv(Y; Kmax = 4, _fitter = _fake_fitter(calls; warm_ok = true))
+        warm = filter(c -> c.warm, calls)
+        # K=3 is retried; then default K=4 (−395) sits below the warm K=3 (−390),
+        # so K=4 is retried too and accepted at −389.
+        @test [c.K for c in warm] == [3, 4]
+        @test only(filter(a -> a.K == 4, sel.attempts)).status === :warm_start
+        Λ0 = warm[1].kwargs[:Λ_init]
+        @test size(Λ0) == (6, 3)
+        @test Λ0[:, 1:2] == fill(0.5, 6, 2)          # previous solution kept
+        @test all(iszero, Λ0[1:2, 3])                  # lower-triangular new column
+        @test Λ0[3, 3] > 0
+        a3 = only(filter(a -> a.K == 3, sel.attempts))
+        @test a3.status === :warm_start
+        @test a3.loglik == -390.0
+        @test 3 in sel.K
+    end
+
+    @testset "non-monotone K without warm-start support is excluded, not chosen" begin
+        calls = Any[]
+        sel = select_lv(Y; Kmax = 3, criterion = :aic,
+                        _fitter = _fake_fitter(calls; warm_ok = false))
+        a3 = only(filter(a -> a.K == 3, sel.attempts))
+        @test a3.status === :nonmonotone
+        @test !(3 in sel.K)
+        @test sel.best_k == 2
+    end
+
+    @testset "a throwing fit is recorded with its reason, not silently dropped" begin
+        sel = select_lv(Y; Kmax = 3, _fitter = _fake_fitter(Any[]; warm_ok = true, fail_at = 2))
+        a2 = only(filter(a -> a.K == 2, sel.attempts))
+        @test a2.status === :failed
+        @test occursin("singular", a2.message)
+        @test !(2 in sel.K)
+    end
+
+    @testset "an unconverged fit is excluded" begin
+        sel = select_lv(Y; Kmax = 3, _fitter = _fake_fitter(Any[]; warm_ok = true, unconv_at = 2))
+        a2 = only(filter(a -> a.K == 2, sel.attempts))
+        @test a2.status === :unconverged
+        @test !(2 in sel.K)
+    end
+
+    @testset "warm_start = false disables the retry but keeps the guard" begin
+        calls = Any[]
+        sel = select_lv(Y; Kmax = 3, warm_start = false,
+                        _fitter = _fake_fitter(calls; warm_ok = true))
+        @test !any(c -> c.warm, calls)
+        @test only(filter(a -> a.K == 3, sel.attempts)).status === :nonmonotone
+    end
+
+    @testset "InterruptException is not swallowed" begin
+        f = (Y; family, K, kwargs...) -> throw(InterruptException())
+        @test_throws InterruptException select_lv(Y; Kmax = 2, _fitter = f)
+    end
+end
