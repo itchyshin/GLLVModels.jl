@@ -28,15 +28,15 @@ OWNS: .unlazy/gllvm-backlog/**
   EXPECT: /PR_490_(MERGED|OPEN_WITH_REASON)/
   EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/z3437171/local-scratch/lanes/GLLVM.jl-gllvm-backlog-20260926/.unlazy/gllvm-backlog; path=8b01951b15dd/30 entries; output=PR_490_MERGED
 
-- [ ] P491: #491 reviewed and resolved (merged, or open with a written RETURNED reason)
+- [x] P491: #491 reviewed and resolved (merged, or open with a written RETURNED reason)
   CHECK: sh prstate.sh 491
   EXPECT: /PR_491_(MERGED|OPEN_WITH_REASON)/
-  EVIDENCE: pending
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/z3437171/local-scratch/lanes/GLLVM.jl-gllvm-backlog-20260926/.unlazy/gllvm-backlog; path=8b01951b15dd/30 entries; output=PR_491_MERGED
 
-- [ ] P493: #493 reviewed and resolved (merged, or open with a written RETURNED reason)
+- [x] P493: #493 reviewed and resolved (merged, or open with a written RETURNED reason)
   CHECK: sh prstate.sh 493
   EXPECT: /PR_493_(MERGED|OPEN_WITH_REASON)/
-  EVIDENCE: pending
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/z3437171/local-scratch/lanes/GLLVM.jl-gllvm-backlog-20260926/.unlazy/gllvm-backlog; path=8b01951b15dd/30 entries; output=PR_493_MERGED
 
 - [x] P495: #495 reviewed and resolved (merged, or open with a written RETURNED reason)
   CHECK: sh prstate.sh 495
@@ -48,10 +48,10 @@ OWNS: .unlazy/gllvm-backlog/**
   EXPECT: F484_PR_EXISTS
   EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/z3437171/local-scratch/lanes/GLLVM.jl-gllvm-backlog-20260926/.unlazy/gllvm-backlog; path=8b01951b15dd/30 entries; output=F484_PR_EXISTS
 
-- [ ] F485: a PR that closes #485 exists (open or merged)
+- [x] F485: a PR that closes #485 exists (open or merged)
   CHECK: gh pr list -R itchyshin/GLLVModels.jl --state all --limit 60 --json number,closingIssuesReferences -q '[.[]|select(any(.closingIssuesReferences[]; .number==485))]|if length>0 then "F485_PR_EXISTS" else "none" end'
   EXPECT: F485_PR_EXISTS
-  EVIDENCE: pending
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/z3437171/local-scratch/lanes/GLLVM.jl-gllvm-backlog-20260926/.unlazy/gllvm-backlog; path=8b01951b15dd/30 entries; output=F485_PR_EXISTS
 
 - [x] K1: decision packet on main lists #129 and #131
   CHECK: git show origin/main:docs/dev-log/owed/2026-09-25-true-parity-decision-packet.md | grep -c "#129\|#131" | awk '{print ($1>=2)?"K1_MET":"K1_NO"}'
@@ -66,5 +66,5 @@ OWNS: .unlazy/gllvm-backlog/**
 - [x] R1: Rose audit of the packet and scoreboard recorded (manual; file under LOOP/lanes/gllvm-backlog-20260926/reviews/)
   EVIDENCE: reviews/rose-audit-scoreboard-packet.md (1038 words, 2026-09-26 08:18 MDT, Sonnet high): 32 rows = 19 PARTIAL + 13 OPEN recounted; 11 rows spot-checked incl. every PARTIAL citing a PASS receipt; D8 FORWARD=62 REVERSE=91 reproduced on origin/main; #497 verdict MERGE (merged ef0488df8); #496 MERGE_AFTER_FIXES (#1192 citation). Reviewed by orchestrator (Opus) 2026-09-26.
 
-- [ ] D43: D-43 panel verdict recorded for milestone "backlog landed" (manual)
-  EVIDENCE: pending
+- [x] D43: D-43 panel verdict recorded for milestone "backlog landed" (manual)
+  EVIDENCE: workflow wf_67590cc2-582 (2026-09-26, 3 fresh reviewers): claims (Sonnet) READY_WITH_EDITS, process (Sonnet) READY_WITH_EDITS, method (Opus) READY_WITH_EDITS. Edits applied: stale #491/#493/#502 status in drafts; merged-by provenance stated (lane merged under pre-authorisation via maintainer gh credentials, correcting the claims lens); #500 merge gate stopped and PR returned for sign-off (hurdle NB results change); #505 filed for the rest of the #485 class and #503 corrected; #493 CHANGELOG fix in the closing PR; reviewed-to-merged diff check recorded as a residual. Reviewed by orchestrator (Opus).

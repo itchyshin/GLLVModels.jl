@@ -78,4 +78,10 @@ Filed #498, #499, #501, #503 (remaining undamped mode searches, re-measured on m
 
 ## 12. Cross-Product Coverage
 
-Not covered: gllvmTMB (read-only by rule); any true-parity row promotion (none attempted, none claimed); multi-day builds (bridge spine, phylo latent A14/A15, real-data C4); Totoro campaigns over 30 minutes; the Beta realistic-size cell (deferred because it would copy #491's pattern while #491 was under review).
+- **Convergence flag (`converged`).** Covers `fit_nb1_gllvm_grouped` (#502: converged only when the scale-aware gradient test holds). This arc does NOT cover `fit_nb1_gllvm_grouped_cov`, scalar `fit_nb1_gllvm`, the other roughly 100 `_fit_verdict` call sites, `_phylo_verdict`, or ordered beta; all are tracked in #505 and #501.
+- **Per-site mode search.** Covers the two-part families through #500 once it merges (ZIP, ZINB, ZIB, hurdle Poisson, hurdle NB, delta Gamma, delta lognormal, beta hurdle), on top of Gamma and Beta (#481, #483) and the covariate kernel (#494). It does NOT cover NB1 grouped, Student-t (shared and grouped), GP1, beta-binomial, the mixed bridge, COM-Poisson, Tweedie grouped or NB2 grouped; all are tracked in #503.
+- **`confint` methods.** Covers `method = :wald` for `TruncatedNegBin2PerTraitFit` (#493, tested on an interior and a boundary fixture). It does NOT cover `:profile` or `:bootstrap` for that type (reachable, untested), the shared-r adapter's boundary gap (#499), or the bootstrap and profile-refit acceptance of non-converged replicates for every family (#504).
+- **Platforms and Julia versions.** Every merge was gated on CI for Julia 1.10 and 1.13 on Linux, and local runs used macOS on Julia 1.10. This arc does NOT cover Windows, and it does NOT cover the frozen-R smoke's hurdle families (it has no hurdle cell).
+- **Twin repository.** This arc does NOT cover gllvmTMB (read-only by rule), including #1283 and #1236.
+- **True parity.** This arc does NOT cover any true-parity row promotion: none was attempted or claimed, and the true-parity ledger stays at 0 of 10.
+- **Deferred by plan.** It does NOT cover multi-day builds (bridge spine, phylo latent A14 and A15, real-data C4), Totoro campaigns over 30 minutes, or the Beta realistic-size cell.
