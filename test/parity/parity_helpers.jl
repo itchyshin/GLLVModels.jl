@@ -14,6 +14,7 @@ include(joinpath(@__DIR__, "parity_trial_inputs.jl"))
 include(joinpath(@__DIR__, "core070_receipts.jl"))
 using .Core070Receipts
 include(joinpath(@__DIR__, "core070_case_registry.jl"))
+include(joinpath(@__DIR__, "..", "..", "tools", "core070_second_order", "r_lib.jl"))
 
 const _CORE070_REFERENCE_COMMIT = "b4d5fee64def88bc768dda1f1f77c29b295edd86"
 const _CORE070_NAMESPACE_SHA256 = "9094613610789faab69c43195d3cfdafb2c7dfef284e6646b10dababa4fa132c"
@@ -225,10 +226,14 @@ function core070_finish_run!()
 end
 
 # Prefer the lane twin install when present (gllvmTMB @ origin/main SHA recorded
-# in LOOP / after-task). Override with ENV["GLLVM_PARITY_R_LIBS"].
-const _PARITY_TWIN_RLIB =
-    get(ENV, "GLLVM_PARITY_R_LIBS", "/tmp/R-gllvmtmb-x-parity-20260802")
+# in LOOP / after-task). Override with ENV["GLLVM_PARITY_R_LIBS"]; a library
+# named there that does not hold gllvmTMB is refused rather than silently
+# falling back to R's default library -- see second_order_r_lib() in
+# tools/core070_second_order/r_lib.jl (included above), which owns that check.
+const _PARITY_TWIN_RLIB_DEFAULT = "/tmp/R-gllvmtmb-x-parity-20260802"
 
+# Returns the twin library path it loaded gllvmTMB from, or `nothing` when no
+# twin library was found (unset GLLVM_PARITY_R_LIBS and no historical default).
 function _parity_prepend_twin_lib!()
     # Required runs may never fall back to the historical developer library
     # after validating a different oracle at startup.
@@ -237,32 +242,40 @@ function _parity_prepend_twin_lib!()
         isfile(marker) || throw(ArgumentError("required R source marker is missing"))
         dirname(dirname(realpath(marker)))
     else
-        _PARITY_TWIN_RLIB
+        something(second_order_r_lib(), _PARITY_TWIN_RLIB_DEFAULT)
     end
     isdir(joinpath(twin, "gllvmTMB")) || return nothing
     @rput twin
     R"""
-    expected_package <- normalizePath(file.path(twin, "gllvmTMB"), mustWork = TRUE)
-    if ("gllvmTMB" %in% loadedNamespaces() &&
-        normalizePath(getNamespaceInfo("gllvmTMB", "path"), mustWork = TRUE) != expected_package) {
-      stop("gllvmTMB is already loaded from a different library; start a fresh pinned process")
-    }
-    .libPaths(c(twin, .libPaths()))
-    invisible(TRUE)
+    local({
+      expected <- normalizePath(file.path(twin, "gllvmTMB"), mustWork = TRUE)
+      loaded_from <- function() normalizePath(getNamespaceInfo("gllvmTMB", "path"), mustWork = TRUE)
+      if ("gllvmTMB" %in% loadedNamespaces() && loaded_from() != expected) {
+        stop("gllvmTMB is already loaded from ", loaded_from(),
+             ", not the parity twin library (", twin, "); start a fresh process")
+      }
+      .libPaths(c(twin, .libPaths()))
+      suppressPackageStartupMessages(library(gllvmTMB, lib.loc = twin))
+      if (loaded_from() != expected) {
+        stop("gllvmTMB loaded from ", loaded_from(), ", not the parity twin library (", twin, ")")
+      }
+    })
     """
-    return nothing
+    return twin
 end
 
 function _parity_require_gllvmtmb!()
-    _parity_prepend_twin_lib!()
-    R"""
-    if (!requireNamespace("gllvmTMB", quietly = TRUE)) {
-        stop("R package 'gllvmTMB' is not installed. ",
-             "Install from the twin checkout or GitHub (itchyshin/gllvmTMB).")
-    }
-    suppressPackageStartupMessages(library(gllvmTMB))
-    invisible(TRUE)
-    """
+    twin = _parity_prepend_twin_lib!()
+    if twin === nothing
+        R"""
+        if (!requireNamespace("gllvmTMB", quietly = TRUE)) {
+            stop("R package 'gllvmTMB' is not installed. ",
+                 "Install from the twin checkout or GitHub (itchyshin/gllvmTMB).")
+        }
+        suppressPackageStartupMessages(library(gllvmTMB))
+        invisible(TRUE)
+        """
+    end
     _core070_required() && _core070_source_pin!()
     return nothing
 end

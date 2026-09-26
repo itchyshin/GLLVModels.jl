@@ -55,17 +55,13 @@ using GLLVModels, RCall, Test, Random, LinearAlgebra, Statistics
     # Model alignment:
     #   latent(..., unique = FALSE) → no Ψ; Σ = ΛΛᵀ + σ²I like Julia
     #   per-trait-centred Y         → intercepts do not shift the objective
+    # parity_helpers.jl is included once by runparity.jl
+    _parity_require_gllvmtmb!()
     @rput y K p n
 
     # Assign into R global env so extractors are unambiguous; R""" return
     # value alone is an RObject and is NOT named `r_result` on the R side.
     R"""
-        if (!requireNamespace("gllvmTMB", quietly = TRUE)) {
-            stop("R package 'gllvmTMB' is not installed. ",
-                 "Install from the twin checkout or GitHub (itchyshin/gllvmTMB).")
-        }
-        suppressPackageStartupMessages(library(gllvmTMB))
-
         # y arrives as p × n (traits × sites). Build long data for explicit
         # traits(...,) / latent formula (byte-equivalent to wide form).
         trait_names <- paste0("t", seq_len(p))

@@ -80,7 +80,7 @@ function _write_report(path, rows)
     end
 end
 
-R"suppressPackageStartupMessages(library(gllvmTMB)); source('test/parity/fixtures/core070_covariance_fits.R')"
+R"source('test/parity/fixtures/core070_covariance_fits.R')"
 if control_policy == "tight-control"
     R"control <- gllvmTMBcontrol(n_init=1L,se=FALSE,aghq=FALSE,optArgs=list(control=list(rel.tol=1e-12,sing.tol=1e-12,eval.max=2000L,iter.max=1500L)))"
 end
