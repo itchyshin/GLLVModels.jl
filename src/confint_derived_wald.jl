@@ -780,10 +780,9 @@ of `Σ_y`:
 as documented there (pass the same values used for `fit_gaussian_gllvm`).
 
 Cost: `p(p+1)/2 × n_boot` refits (one full `bootstrap_ci_derived` bootstrap
-run per matrix entry) — quadratic in `p`. Fine for the small fixtures this
-is validated on; a large-`p` production call should lower `n_boot` or
-restrict to a subset of entries computed with direct `bootstrap_ci_derived`
-calls instead of the full table.
+run per matrix entry) — quadratic in `p`. Use the full table for small trait
+matrices. For larger `p`, lower `n_boot` or call `bootstrap_ci_derived`
+directly for only the entries you need.
 
 R's `bootstrap_Sigma()` also bootstraps `R` (correlation), `communality`, `ICC`,
 and `cross_corr` in the SAME call, over multiple covariance tiers. This
