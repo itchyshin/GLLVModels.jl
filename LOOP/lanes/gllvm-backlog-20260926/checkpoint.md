@@ -8,11 +8,13 @@ MERGED since: #489 5bc5818d5, #490 b71c0047f, #497 ef0488df8 (train done). Run l
 SIBLING SCREEN: done (35 min Totoro). Ordered beta severe (7/10 converged at non-stationary points, restart +2859) CONFIRMED by 2 independent verifiers -> issue #501. Ordinal, mixed modest (2/10), COM-Poisson anomaly, rest clean. Lane branch pushed (evidence links).
 TOTORO LESSON: a 'until ! pgrep -f PATTERN' watcher matches its own command line and never exits; killed pid 988245.
 #496 fixed (#941 citation verified) -> merge train 2 waiting on CI.
+#496 MERGED b90641c97. #502 (Fixes #485) two-lens review: DO_NOT_MERGE (breaks 5 existing tests, platform-fragile test, flags genuine optima where objective jumps). RETURNED comment posted with 4 design options (a stall check via objective, b sentinel+nonzero-tol exemption, c curvature-scaled, d per-family) -> SHINICHI DECISION; converted to draft.
+#501 correction posted: same data both platforms; optimiser path differs Linux vs macOS (seed 2005 reaches -182.81 on macOS = Linux restart value); regression test must assert a relation over seeds.
 LEDGER LESSON: a lapsed approval prints APPROVAL REQUIRED (not FAIL) and leaves a stale [x]; --approve skips ticked gates. Reset the tick, approve, reverify. Filter output for APPROVAL REQUIRED.
 PREVIOUSLY IN FLIGHT: merge_train.sh (copy in kit) for 489,490,497 -> scratchpad merge_train_1.log; wave 3 wf_8fbce2c7-103 (fix #500, fix #496, Opus verify #500/#493/#491).
 FINDING: lane_lease identity is per session PID, so sibling subagents overwrite each other's claims; wave 3 sets LANE_ID per agent.
 NEXT: merge #500 if review MERGE + CI green; merge #489, #490 after fixes + CI; merge #485 PR after review; #496/#497 after Rose; bring #491 and #493 to Shinichi with verdict + drafted reply; D-43 panel; close.
-OPEN GATES (need human): #491, #493 merges (science-changing; public confint method in #493).
+OPEN GATES (need human): #491, #493 merges (science-changing; public confint method in #493); #502 design choice (a-d) for the converged criterion.
 LEDGERS: .unlazy/gllvm-backlog/GATES.md (run); .unlazy/true-parity/GATES.md (0/10, all measurable since #487).
 TRUTH LIVES IN: branch claude/lane-gllvm-backlog-20260926; reviews/; PRs on itchyshin/GLLVModels.jl.
 RESUME: read GOAL.md -> checkpoint.md -> ultra-plan.md; if wf_7c017c8f-9d5 finished, read its journal.jsonl; continue from NEXT.
