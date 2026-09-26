@@ -58,10 +58,10 @@ OWNS: .unlazy/gllvm-backlog/**
   EXPECT: K1_MET
   EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/z3437171/local-scratch/lanes/GLLVM.jl-gllvm-backlog-20260926/.unlazy/gllvm-backlog; path=8b01951b15dd/30 entries; output=K1_MET
 
-- [ ] H1: a handover for this lane is on main
-  CHECK: git ls-tree -r --name-only origin/main docs/dev-log/handover | grep -q "2026-09-2[67].*backlog" && echo H1_MET
+- [x] H1: a handover for this lane is on main
+  CHECK: git ls-tree -r --full-tree --name-only origin/main docs/dev-log/handover | grep -q "2026-09-2[67].*backlog" && echo H1_MET
   EXPECT: H1_MET
-  EVIDENCE: pending
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/z3437171/local-scratch/lanes/GLLVM.jl-gllvm-backlog-20260926/.unlazy/gllvm-backlog; path=8b01951b15dd/30 entries; output=H1_MET
 
 - [x] R1: Rose audit of the packet and scoreboard recorded (manual; file under LOOP/lanes/gllvm-backlog-20260926/reviews/)
   EVIDENCE: reviews/rose-audit-scoreboard-packet.md (1038 words, 2026-09-26 08:18 MDT, Sonnet high): 32 rows = 19 PARTIAL + 13 OPEN recounted; 11 rows spot-checked incl. every PARTIAL citing a PASS receipt; D8 FORWARD=62 REVERSE=91 reproduced on origin/main; #497 verdict MERGE (merged ef0488df8); #496 MERGE_AFTER_FIXES (#1192 citation). Reviewed by orchestrator (Opus) 2026-09-26.
