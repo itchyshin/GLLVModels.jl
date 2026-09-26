@@ -43,6 +43,30 @@ All notable changes to GLLVModels.jl are documented here.
   across all three of the issue's flagged seeds (120 sites probed). `getLV`/
   `predict` are unaffected in signature (they take the best available mode
   regardless of convergence, as the shared generic core does).
+- **Conway-Maxwell-Poisson fits no longer report a value from a diverged inner
+  search (#503).** `_compoisson_mode` (`src/families/com_poisson.jl`, this
+  family's own per-site Laplace mode search — it shares no code with the
+  generic `_laplace_mode` core) ran an undamped Newton step every iteration
+  and returned whatever `z` it held at `maxiter`, converged or not, the same
+  defect class as #479/#480/#484/#500/#507/#509: measured 7/266 non-mode
+  stress-probe sites. A step that lowers the per-site log-posterior is now
+  halved, and "converged" requires both the proposed step and the
+  log-posterior gradient itself to be small (mirrors the Student-t grouped
+  fix, #509 — a large, well-conditioned curvature can solve for a tiny step
+  while the gradient is still far from zero). `_compoisson_loglik_site` now
+  returns `-Inf` when a site cannot certify a stationary point, so the
+  fitter's `1e12` sentinel fires instead of a garbage finite value; a
+  genuinely healthy but ill-conditioned site is retried once at a 20x
+  iteration budget before giving up (mirrors #507/#509). Values at sites
+  where the old undamped loop already converged are unchanged (to 1e-8).
+  **Not covered by this fix:** a separate, unconfirmed anomaly noted by a
+  sibling audit (2/10 fits showing an enormous outer finite-difference
+  gradient, no better restart) is documented in this PR's body rather than
+  fixed — restart evidence does not support a missed optimum, and the
+  `compoisson_logz` branch switch this fix's PR re-checked directly is
+  continuous in value and derivative across the crossover, so the
+  suspected mechanism is this same class of undamped-search sensitivity,
+  not a kink in the normalizer.
 - **`confint(..., method = :profile)` and `method = :bootstrap` could accept a
   silently failed inner refit.** `_family_profile_refit` and `_family_bootstrap`
   (`src/confint_family.jl`) judged a refit's success only by `isfinite` on its
