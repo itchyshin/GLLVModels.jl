@@ -1,4 +1,4 @@
-using GLLVModels, Test, Random, LinearAlgebra, Distributions
+using GLLVModels, Test, Random, LinearAlgebra, Distributions, Optim
 
 # _fit_verdict(res) (fit_verdict.jl) is the shared, family-agnostic helper used across
 # ~90 fitters: it screens the failure-sentinel plateau (nll >= _NLL_FAIL_THRESHOLD) but
@@ -32,13 +32,18 @@ using GLLVModels, Test, Random, LinearAlgebra, Distributions
 # PLATFORM ROBUSTNESS. Optim's finite-difference L-BFGS path is not bit-reproducible
 # across BLAS/LAPACK builds: the same seed can take a different number of steps, stall
 # at a different zero-length step, or land in a different local optimum on Linux x86_64
-# vs macOS ARM64. None of these tests pin an exact loglik or an exact gradient value for
-# that reason: (a) asserts the qualitative flip this fix exists for (Optim's own flag
-# says converged, the gradient plainly is not small, so the fit must report
-# not-converged); (b) checks a relation — whenever `fit.converged`, the gradient is
-# small — across several seeds, which must hold regardless of which optimiser path any
-# given platform takes; (c) checks a fit that is actually at a stationary point stays
-# converged, again without pinning the numeric optimum.
+# vs macOS ARM64 — and CI runs both Julia 1.10 and Julia 1 (1.13) on Linux, where the
+# same seed draws different data and takes a different optimiser path than on macOS.
+# None of these tests assert one seed's fitted outcome for that reason: (a) exercises
+# `_nb1_grouped_g_met`'s contract directly on constructed (gres, nll, g_tol) values
+# that exceed the threshold — a unit-level, platform-free reproduction of the #485
+# defect (Optim's own flag says converged, the gradient plainly is not small, so the
+# helper must say the criterion is not met); (b) checks a relation — whenever
+# `fit.converged`, the gradient is small — across several seeds, which must hold
+# regardless of which optimiser path any given platform takes (no seed is required to
+# stall; the implication only needs to hold where it applies); (c) checks a fit that is
+# actually at a stationary point stays converged, again without pinning the numeric
+# optimum.
 
 function _nb1_verdict_lowtri(rng, p, K, sd)
     Λ = sd .* randn(rng, p, K)
@@ -86,23 +91,35 @@ function _nb1_verdict_max_grad(Y, β, Λ, φg, gidx)
     end
 end
 
+# Minimal stand-in for an `Optim` result, carrying only what `_nb1_grouped_g_met`
+# reads (`Optim.g_residual`, `Optim.minimum`). Lets the helper's contract be tested
+# directly, at values that exceed the threshold, without depending on which
+# non-stationary point any given platform's Optim/BLAS path happens to stall at.
+struct _NB1VerdictFakeResult
+    gres::Float64
+    nll::Float64
+end
+Optim.g_residual(r::_NB1VerdictFakeResult) = r.gres
+Optim.minimum(r::_NB1VerdictFakeResult) = r.nll
+
 @testset "_nb1_grouped_g_met scopes the gradient criterion to fit_nb1_gllvm_grouped (#485)" begin
-    @testset "seed 101: the zero-length-step stall no longer reports converged" begin
-        # Data generation matches the audit's `route_nb1` exactly (seed 101, defaults
-        # p=5, n=80, K=2, sd=0.7, φ=1.0, βlo=0.5, βhi=1.5). Before this fix (both
-        # origin/main and PR #502's blanket `_fit_verdict` change reverted here):
-        # fit.converged == true although the fit sits on a zero-length line-search
-        # step with a large gradient. No loglik pin — the optimiser path (and hence
-        # which non-stationary point it stalls at) is not bit-reproducible across
-        # platforms.
-        Y = _nb1_verdict_fixture(101)
-        fit = GLLVModels.fit_nb1_gllvm_grouped(Y; K = 2, group = collect(1:5))
-        @test isfinite(fit.loglik)
-        gmax = _nb1_verdict_max_grad(Y, fit.β, fit.Λ, fit.φ, fit.group)
-        # Confirms this really is the non-stationary stall the fix targets, not a
-        # coincidentally-small gradient at a point Optim happened to converge on.
-        @test gmax > 1e-3
-        @test !fit.converged
+    @testset "unit contract: a large gradient residual is never reported met (platform-free)" begin
+        # `_nb1_grouped_g_met(res, g_tol) = gres <= max(g_tol, g_tol * |nll|)`. Exercise
+        # this directly on constructed (gres, nll, g_tol) values that exceed the
+        # threshold — the #485 defect (Optim's own `converged` flag says true, but the
+        # gradient plainly is not small) reproduced at the unit level, not by asserting
+        # which seed a given platform's optimiser stalls on.
+        g_tol = 1e-5
+        # Values measured on this platform for seed 101 (see the sweep below): the
+        # gradient residual sits far above g_tol and above g_tol*|nll| alike.
+        @test !GLLVModels._nb1_grouped_g_met(_NB1VerdictFakeResult(3.85, 100.0), g_tol)
+        # Large residual, large |nll|: still must fail the scale-aware comparison.
+        @test !GLLVModels._nb1_grouped_g_met(_NB1VerdictFakeResult(120.1, 1e4), g_tol)
+        # A genuinely small residual meets the criterion.
+        @test GLLVModels._nb1_grouped_g_met(_NB1VerdictFakeResult(1e-7, 100.0), g_tol)
+        # Scale-aware branch: gres above the absolute g_tol but below g_tol*|nll|
+        # still passes, matching the `_beta_grouped_g_met`/`_tweedie_verdict` precedent.
+        @test GLLVModels._nb1_grouped_g_met(_NB1VerdictFakeResult(5e-4, 1e6), g_tol)
     end
 
     @testset "relation over several seeds: fit.converged implies a small gradient" begin
