@@ -20549,3 +20549,27 @@ After-task: `docs/dev-log/after-task/2026-09-13-destination-b-close-as-limit.md`
 - Fix: exact test-only compat pin in `test/Project.toml`: `Aqua = "=0.8.16"`. No `Project.toml` version bump, no runtime deps, no likelihood code, no gllvmTMB edits, no Aqua subcheck skip.
 - Local validation: temp Julia env with `Aqua v0.8.16`, `SpecialFunctions v2.9.0`, and `LogExpFunctions v0.3.29`; `Aqua.test_all(GLLVM; ambiguities=false)` passed, including `Persistent tasks | 1/1`.
 - Also ran: `git diff --check` passed. Full `Pkg.test()` was not run locally; an accidental all-suite probe was stopped after it started because the focused Aqua reproducer covered the CI failure mode.
+
+## 2026-09-21 - Reader PR triage (`claude/gllvmodels-reader-arc-handover-20260921`)
+
+- Handover step 1: classified #429, #428, #439, #437, #433, and PROTECTED #430 as OWED, DONE, RETRACTED, or PROTECTED
+  with evidence. Added `docs/dev-log/reader-pr-triage-2026-09-21.md`.
+- Headline finding: PR #429's base branch was `codex/reader-text-recovery-20260919` (PR #428's own branch), not
+  `main`. `gh api repos/itchyshin/GLLVModels.jl/pulls/429 --jq '{merged,merge_commit_sha,base:.base.ref,state}'`
+  confirmed this; `git merge-base --is-ancestor 51f63db5d origin/main` returned false. #429's content is not on main
+  and cannot be treated as an independent landed base.
+- Conflict probe: `git merge-tree --write-tree origin/main origin/codex/reader-text-recovery-20260919` exited 1, 7 of
+  #428's 24 files conflict. Per-file `git log --oneline origin/main -8 -- <file>` traced all 7 to two already-merged
+  main PRs, #431 (5 files) and #434 (2 files), not to the #429 squash itself. No branch or worktree was created.
+- No merge attempted anywhere: #428 is CONFLICTING and #439/#437/#433 are drafts.
+- Revised the triage file once after an independent Fable (Rose + Pat) review, 0 BLOCKING: relabelled #429 from
+  DONE to OWED (carried inside #428; not on main); narrowed the split-the-clean-files recommendation to 13 files,
+  naming an owner requirement for the other 4 (`.github/workflows/Documenter.yml`, `docs/deploy.jl`, `.gitignore`,
+  and the `src/formula.jl` docstring); pointed the record-correction step at
+  `docs/dev-log/handover/2026-09-21-claude-handover.md` specifically; added a head SHA per row; added a "Your
+  clicks" quick-decision box.
+- Commands: `git diff --check` passed on both commits; `git for-each-ref` snapshots before and after each push
+  matched except for the handover branch itself and one fetch-updated `refs/remotes/origin/gh-pages`.
+- After-task: `docs/dev-log/after-task/2026-09-21-reader-pr-triage.md`. `python3 ~/shinichi-brain/tools/slop_check.py`
+  on that report: 0 findings, 0 em dashes.
+- No merge, no rebase, no `Project.toml` change, no `docs/src/` edit, no #430 edit.
