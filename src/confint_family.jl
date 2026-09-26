@@ -528,6 +528,10 @@ end
 
 # Zero-truncated NB2 (shared r): packing [β; pack(Λ); log r]. Fit object does
 # not store hessian — NLL uses :observed (family default / twin TMB).
+# NOTE: this adapter has the same T14 F1 boundary gap as the per-trait one below
+# had before pr-493's review (uses the 6-arg `_FamilyCI(...)`, so `boundary` is
+# all-false) — a shared `r` at the Poisson limit is not conditioned out of the
+# joint Wald Hessian. Left unfixed here; tracked in #499.
 function _family_ci(fit::TruncatedNegBin2Fit, Y::AbstractMatrix;
                     mask = nothing,
                     hessian::Symbol = :observed,
@@ -619,7 +623,14 @@ function _family_ci(fit::TruncatedNegBin2PerTraitFit, Y::AbstractMatrix;
     end
     names = vcat(_glm_lin_names(p, K), ["r[$t]" for t in 1:p])
     kinds = vcat(fill(:linear, p + rr), fill(:log, p))
-    return _FamilyCI(θ, nll, names, kinds, simulate, refit)
+    # T14 F1: flag a per-trait r at the Poisson-limit boundary so it is conditioned
+    # out of the joint Wald Hessian, same as the grouped NB2/NB1/Beta/Gamma adapters
+    # above. Without this, a boundary trait's SE depends on where the optimizer
+    # happened to stop (seed 62/n150: pd_hessian = true, upper bound = Inf; seed
+    # 58/n120: the greedy eigen fallback catches it) instead of being conditioned
+    # out consistently (pr-493 review).
+    boundary = vcat(falses(p + rr), _dispersion_group_boundary(fit.r))
+    return _FamilyCI(θ, nll, names, kinds, simulate, refit, boundary)
 end
 
 # --- Grouped / per-trait dispersion bridge families -----------------------

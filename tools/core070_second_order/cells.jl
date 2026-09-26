@@ -1052,12 +1052,39 @@ function cell_truncated_nbinom2()
         "test/parity/fixtures/truncnb2_interior_seed61_n150.toml (seed=61,p=5,K=1,n=150; per-trait r/phi both engines)",
         "Truncated-NB2-log (β[] block only)", "observed (family default)", false,
         p, K, n, seed, fit.converged, fit.loglik, wall_fit, r, ci, Σ, ad.names, beta_idx_jl, r_beta_idx)
+
+    # Contract §4's Wald-CI-endpoint bar is relative to R's own interval half-width
+    # (`second-order-parity-contract.md:146`), not the absolute delta `_assemble`
+    # already writes to `ci_endpoint_max_delta`. `r` and `ci` are already in scope
+    # here (this cell's own fit), so compute it locally rather than widening
+    # `_assemble`'s signature for every other cell.
+    z = 1.959963984540054
+    se_r_beta = sqrt.(max.(diag(r.cov_fixed[r_beta_idx, r_beta_idx]), 0.0))
+    half_width_r = z .* se_r_beta
+    if r.has_sd && all(isfinite, half_width_r) && all(>(0), half_width_r)
+        pf_r = r.par_fixed[r_beta_idx]
+        lower_r = pf_r .- half_width_r; upper_r = pf_r .+ half_width_r
+        lower_jl = collect(ci.lower)[beta_idx_jl]; upper_jl = collect(ci.upper)[beta_idx_jl]
+        rel_deltas = filter(isfinite, vcat(abs.(lower_jl .- lower_r) ./ half_width_r,
+                                           abs.(upper_jl .- upper_r) ./ half_width_r))
+        d["ci_endpoint_rel_half_width"] = isempty(rel_deltas) ? nothing : maximum(rel_deltas)
+    else
+        d["ci_endpoint_rel_half_width"] = nothing
+    end
+
     d["note"] = "Both engines now fit per-trait dispersion (Julia fit_truncated_nbinom2_gllvm_pertrait; " *
         "R's truncated_nbinom2() default log_phi_truncnb2 is per-trait already) -- like with like, not " *
-        "shared-r vs per-trait-phi. Data re-pointed off the frozen NATIVE-12 seed=58/n=120 shape (whose " *
-        "se=TRUE per-trait R fit pushes one trait to the Poisson-limit boundary, phi ~ 1e7-1e8) to a " *
+        "shared-r vs per-trait-phi. Data re-pointed off the frozen NATIVE-12 seed=58/n=120 shape (one " *
+        "trait's dispersion sits at the Poisson-limit boundary on BOTH engines there -- Julia r~2.9e9, " *
+        "R phi~1.2e7; se=TRUE vs se=FALSE makes no difference in R -- corrected 2026-09-26, an independent " *
+        "review of #493 found the earlier note here wrongly blamed R/se=TRUE for a shared boundary) to a " *
         "screened interior fixture where every trait is finite on both engines. beta[] block paired only; " *
-        "the r/phi dispersion block itself is not compared, same restriction as every other cell here."
+        "the r/phi dispersion block itself is not compared, same restriction as every other cell here. " *
+        "Screened: 3/14 candidate seed/n draws were interior (finite, non-boundary dispersion) on both " *
+        "engines; chosen = lowest cond(H)_R among the three (independent review of #493, 2026-09-26: " *
+        "the filter also selects on first-order agreement between the engines, which is why one discarded " *
+        "draw, seed=65/n=150, was not seen to be a case where Julia's per-trait fitter itself stalls at an " *
+        "inferior local optimum -- tracked in #499, not fixed here)."
     d["parameterisation_gap"] = false
     return d
 end
