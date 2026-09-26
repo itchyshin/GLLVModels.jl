@@ -1,6 +1,7 @@
 # Checkpoint — OVERWRITTEN every arc (a pointer to truth, not a log)
 
 - DONE: G0 — ultra-plan approved (ultra-plan.md). Decisions: omitting d means estimate it; gllvmTMB gets the same rule via a spec handed to the Cursor lane; A1 is a feasibility question first.
+- D-291 (2026-09-26): Claude owns gllvmTMB too; build auto-d in R and Julia side by side, each cross-checking the other. A8b becomes a real R build, not a spec.
 - IN PROGRESS: A1 blocked on NotebookLM login (token_fetch false at 23:10Z).
 - NEXT: once `notebooklm auth check --test --json` shows token_fetch true, run /notebook for A1. A2 pilot may start meanwhile (≤2 live agents while overnight lane runs to 11:00Z).
 - OPEN GATE: none
