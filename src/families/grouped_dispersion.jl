@@ -1556,6 +1556,18 @@ function _nb1_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::Ab
     # of `Λ's − z = 0`, which does not involve W at all. W only sets the step.
     z, ok = _nb1_grouped_mode(fams, y, n, Λ, β, link, :fisher;
                               mask = mask, offset = offset, maxiter = maxiter, tol = tol)
+    # Larger-budget retry (review of #507, mirrors #509's Student-t fallback). A
+    # genuinely converging site can still need more than the default
+    # `maxiter = 100` Fisher-scored steps under ill-conditioned curvature
+    # (measured: reviewer's stress probe found 2/200 stationary, negative-definite
+    # sites failing at `maxiter = 100` that converge cleanly, to the same `z`, at
+    # `maxiter = 2000`). Retry Fisher scoring with a 20x iteration budget, still
+    # restarting from z = 0, before falling back to the `:observed` direction below —
+    # it runs only where the default budget failed, so every site that converged
+    # within `maxiter` keeps its original path and iteration count.
+    ok || ((z, ok) = _nb1_grouped_mode(fams, y, n, Λ, β, link, :fisher;
+                                       mask = mask, offset = offset,
+                                       maxiter = 20 * maxiter, tol = tol))
     # Fallback (#503, the #479 pattern). If Fisher scoring does not converge, retry
     # with the observed weight, but only under LogLink — the only link this kernel's
     # :observed weight supports (see `_nb1_grouped_laplace_weight`). Unlike Gamma's

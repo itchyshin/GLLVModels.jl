@@ -1,4 +1,4 @@
-using GLLVModels, Test, SHA, TOML, Random, LinearAlgebra, Distributions, SpecialFunctions
+using GLLVModels, Test, SHA, TOML, Random, LinearAlgebra, Distributions, SpecialFunctions, ForwardDiff
 
 # `_nb1_grouped_loglik_site` could return a finite site log-likelihood at a z whose
 # per-site log-posterior gradient was not near zero (#503, the same defect #479 fixed
@@ -102,11 +102,17 @@ end
 
     @testset "a search that cannot converge returns -Inf, never a finite value" begin
         fams = _nb1_503_fams(φ0)
-        # Two iterations cannot reach tol = 1e-9 from z = 0 on this fixture's site.
+        # A zero-iteration budget cannot reach tol = 1e-9 from z = 0, and the
+        # #507-review 20x-maxiter retry (20 * 0 = 0) does not change that, so
+        # this is a genuine, budget-independent non-convergence case. (Before
+        # the #507-review retry, `maxiter = 2` sufficed here; it no longer
+        # does, because 20 * 2 = 40 iterations is now enough for this
+        # fixture's site to converge -- see the #507-review testset below,
+        # which checks the retry itself does the right thing.)
         @test GLLVModels._nb1_grouped_loglik_site(fams, y, n1, Λ0, β0, link;
-                                                  maxiter = 2) == -Inf
+                                                  maxiter = 0) == -Inf
         Y = reshape(y, p, 1)
-        @test GLLVModels.nb1_grouped_marginal_loglik_laplace(Y, Λ0, β0, φ0; maxiter = 2) == -Inf
+        @test GLLVModels.nb1_grouped_marginal_loglik_laplace(Y, Λ0, β0, φ0; maxiter = 0) == -Inf
     end
 
     @testset "every replicate `_nb1_grouped_mode` reports converged has converged = true and sits at a mode" begin
@@ -175,5 +181,81 @@ end
         end
         @test n_compared >= 3
         @test worst < 1e-8
+    end
+
+    @testset "a genuinely healthy site that needs more than maxiter=100 no longer returns -Inf (#507 review)" begin
+        # Two sites from the #507 reviewer's independent 200-site stress probe
+        # (`gen_sites(200; seed = 20260926)`, sites 38 and 127; literal data
+        # reproduced here, not drawn at test time). Both are stationary points
+        # with a negative-definite Hessian by an independent ForwardDiff check
+        # -- i.e. genuinely healthy, not the #503 non-mode defect -- yet on
+        # `e1946bc66` the default `maxiter = 100` Fisher-scored search fails to
+        # reach `tol = 1e-9` and the kernel returns `-Inf`, while the identical
+        # Fisher search at `maxiter = 2000` converges cleanly to the same `z`.
+        # This is the class of failure `_nb1_grouped_mode`'s new 20x-maxiter
+        # retry is meant to close: red (== -Inf) on e1946bc66, green (finite,
+        # matching the maxiter=2000 reference) after the fix.
+        #
+        # Stationarity here uses the reviewer's own scale-invariant check
+        # (Newton decrement `0.5*g'*(-H)^{-1}*g` in log-posterior units, plus
+        # `-H` positive-definite) rather than a raw `maximum(abs, g) < tol`
+        # test: at Lambda scaled up to 3x (site 127's Lambda spans -6.5 to
+        # 5.3), curvature is ill-conditioned enough that a converged z's raw
+        # gradient can sit well above 1e-6 in a stiff direction while the
+        # actual value-gap from the true mode is negligible -- exactly the
+        # reviewer's documented reason for using the value gap instead.
+        healthy_sites = [
+            (p = 7, K = 2, ref = -3408.911388084037,
+             Λ = [2.1626379100300923 3.5435925675349362
+                  -1.573473951060384 -3.170850060842463
+                  2.402628372759946 3.3723171668579877
+                  1.0125782726980486 3.829532949280581
+                  2.1030356747579986 0.4949386694007092
+                  -1.9096396802680646 2.9200002206398734
+                  -0.13895313257505362 -5.954662919946589],
+             β = [-0.7798931035337782, -1.6780158921706316, -1.580508694237179,
+                  -0.01866115177497216, 4.364569435218946, -1.2483402050105858,
+                  1.2000640447789166],
+             φ = [0.42126506697381694, 0.150337285981422, 0.5340754423682359,
+                  0.19017733339559012, 0.2915710860821505, 0.3651246978467624,
+                  0.7272872436881687],
+             y = [21849.0, 0.0, 5868.0, 22013.0, 354.0, 1914.0, 0.0]),
+            (p = 8, K = 1, ref = -43.36983214367315,
+             Λ = reshape([-1.7453337493450365, 0.43542024889002195,
+                          -1.2755807655587754, 4.294977884907205,
+                          -6.455300512457354, 1.5022621395734836,
+                          4.678469845141786, 5.29983927597365], 8, 1),
+             β = [-1.7496012856832255, -1.0108310494888537, 0.2995992428197909,
+                  3.6433650988811324, 1.1681664120287405, -1.8080416845880694,
+                  1.7867822921785192, -0.8956879271637277],
+             φ = [0.10947771910256915, 0.4493198537661287, 0.48582136228970835,
+                  0.14724611788572436, 0.18592949776660808, 0.5246034973052842,
+                  0.23513446947500044, 0.2957382221780239],
+             y = [14.0, 0.0, 31.0, 0.0, 21909.0, 0.0, 0.0, 0.0]),
+        ]
+        for st in healthy_sites
+            fams = _nb1_503_fams(st.φ)
+            n1 = ones(Int, st.p)
+            # default maxiter = 100
+            v = GLLVModels._nb1_grouped_loglik_site(fams, st.y, n1, st.Λ, st.β, link)
+            @test isfinite(v)
+            @test abs(v - st.ref) < 1e-6
+            # the kernel's own 20x-maxiter retry is internal to `_nb1_grouped_loglik_site`;
+            # reproduce the same larger budget here to recover the `z` it actually used.
+            z, ok = GLLVModels._nb1_grouped_mode(fams, st.y, n1, st.Λ, st.β, link, :fisher;
+                                                  maxiter = 2000)
+            @test ok
+            q = zz -> begin
+                η = clamp.(st.β .+ st.Λ * zz, -30.0, 30.0)
+                μ = max.(exp.(η), 1e-12)
+                sum(GLLVModels._glm_logpdf(fams[t], μ[t], 1, st.y[t]) for t in 1:st.p) -
+                    0.5 * dot(zz, zz)
+            end
+            g = ForwardDiff.gradient(q, z)
+            H = ForwardDiff.hessian(q, z)
+            negH = Symmetric(-H)
+            @test isposdef(negH)
+            @test 0.5 * dot(g, negH \ g) < 1e-6
+        end
     end
 end
