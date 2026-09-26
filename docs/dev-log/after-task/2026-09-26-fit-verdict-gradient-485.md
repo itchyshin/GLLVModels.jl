@@ -3,7 +3,10 @@
 Lane: Claude, branch `claude/fit-verdict-gradient-485`, worktree
 `~/local-scratch/gllvm-verdict-485`. Cut from `origin/main` @ `d89179d41` (a stale
 local checkout of the same branch name was fast-forwarded to it; includes #481, #483,
-#487, #488, #492, #494, #495). [FILL: commit / push / PR status]
+#487, #488, #492, #494, #495). 2 commits (fix + this report), pushed, PR #502
+opened (not merged, not marked ready beyond opening it). The `CHANGELOG.md` entry
+was blocked by another lane's active lease at PR-open time (section 9/10) and
+follows in a small commit once that lease clears.
 
 ## 1. Goal
 
@@ -115,7 +118,7 @@ only by `test/test_known_sentinel_defects.jl`).
 - `src/fit_verdict.jl`
 - `test/test_fit_verdict_gradient.jl` (new)
 - `test/runtests.jl` (one `_shard_include` line)
-- `CHANGELOG.md`
+- `CHANGELOG.md` (pending as of this report's first commit - see section 9)
 - this report
 
 Outside the repo: a read-only baseline worktree
@@ -162,9 +165,9 @@ OPENBLAS_NUM_THREADS=1`, single Mac Studio, `--project=.` (the package's own
 
 ## 7a. Issue Ledger
 
-- #485: addressed on this branch. PR opened (not merged, not marked ready by this
-  lane beyond opening it - see PR body); not closed and not commented on beyond the
-  PR itself.
+- #485: addressed on this branch. PR #502 opened (not merged, not marked ready by
+  this lane beyond opening it - see PR body); not closed and not commented on
+  beyond the PR itself.
 - Found in passing, for the orchestrator to file or route. None is fixed here:
   1. The same undamped per-site inner mode search that #479 (Gamma) and #480 (Beta)
      fixed for their families is unfixed in several siblings (per the prior audit's
