@@ -112,12 +112,50 @@ function _ob_score_weight(y, η, c0, c1, φ)
     return s, max(W, 1e-8)
 end
 
-# Inner Laplace mode-finder for one site (Newton on the negative second
-# derivative). Mirrors `_laplace_mode` from families/laplace.jl. `mask` (length-p
-# Bool, or `nothing` = all observed) drops missing responses: a masked entry
-# contributes zero score and zero Fisher weight, so it neither pulls the mode nor
-# enters the Hessian.
-function _ordered_beta_mode(y::AbstractVector, Λ::AbstractMatrix, β::AbstractVector,
+# Site log-posterior q(z) = Σ_t log p(y_t|η_t) − ½z'z (mask drops a term
+# entirely, matching the score/weight masking below). Used only by the damped
+# mode search's step-halving line search (#501), mirroring
+# `_laplace_mode_logpost` / `_grouped_laplace_mode_logpost`.
+function _ordered_beta_logpost(y::AbstractVector, Λ::AbstractMatrix, β::AbstractVector,
+        c0::Real, c1::Real, φ::Real, z::AbstractVector; mask = nothing)
+    η = β .+ Λ * z
+    q = -0.5 * dot(z, z)
+    @inbounds for t in eachindex(y)
+        (mask === nothing || mask[t]) || continue
+        q += ordered_beta_logp(y[t], η[t], c0, c1, φ)
+    end
+    return q
+end
+
+# Inner Laplace mode-finder for one site (damped Newton on the negative second
+# derivative; #501). Mirrors `_laplace_mode` from families/laplace.jl and the
+# `_gamma_grouped_mode`/`_nb1_grouped_mode` pattern (#479/#503): returns `(z,
+# converged)`. `mask` (length-p Bool, or `nothing` = all observed) drops missing
+# responses: a masked entry contributes zero score and zero weight, so it
+# neither pulls the mode nor enters the Hessian.
+#
+# Before #501 this loop ran undamped Newton and returned whatever `z` it held
+# at `maxiter`, converged or not (the #479/#484/#503 defect class). The per-site
+# conditional density here is a nonconvex mixture of two point masses and an
+# interior Beta piece, so an undamped step can overshoot across a local ridge
+# between two competing modes; the class-audit and independent verification
+# (issue #501, `obeta-verify-reproduce.md`) measured the returned z at such a
+# point having a central finite-difference gradient that scales as 1/h across
+# five step sizes spanning four orders of magnitude — the signature of a jump
+# discontinuity in the OUTER marginal negative log-likelihood, not a smooth
+# steep slope, which was tripping the outer optimiser's own x/f convergence
+# test (the #485-class failure) rather than genuine multimodality.
+#
+# Now a step that lowers the per-site log-posterior is halved (so small and
+# accepted full steps are bit-identical to the old loop), and `converged` is
+# true only when the FULL proposed step (not a halved one) is below `tol` — the
+# old loop's own stopping test. Unlike Gamma/NB1's LogLink fallback, there is no
+# second, alternate curvature to retry with here (`_ob_score_weight` is the
+# single, already-clamped-positive weight this family has); a site that still
+# fails after the default budget is retried once with a 20x iteration budget
+# (mirrors #509's Student-t / #507's NB1 review retry), restarting from z = 0,
+# before the caller gives up and reports -Inf.
+function _ordered_beta_mode_search(y::AbstractVector, Λ::AbstractMatrix, β::AbstractVector,
         c0::Real, c1::Real, φ::Real; mask = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
     p, K = size(Λ)
     z = zeros(K)
@@ -136,22 +174,65 @@ function _ordered_beta_mode(y::AbstractVector, Λ::AbstractMatrix, β::AbstractV
         end
         A = Symmetric(Λ' * (W .* Λ) + I)
         Δ = _safe_solve(A, Λ' * s .- z)
-        (Δ === nothing || !all(isfinite, Δ)) && break
-        z = z .+ Δ
-        maximum(abs, Δ) < tol && break
+        (Δ === nothing || !all(isfinite, Δ)) && return z, false
+        maximum(abs, Δ) < tol && return z .+ Δ, true
+        if norm(Δ) <= 1e-3 * (1 + norm(z))
+            z = z .+ Δ
+        else
+            q0 = _ordered_beta_logpost(y, Λ, β, c0, c1, φ, z; mask = mask)
+            if isfinite(q0)
+                accepted = false
+                step = 1.0
+                for _half in 1:30
+                    ztrial = z .+ step .* Δ
+                    q1 = _ordered_beta_logpost(y, Λ, β, c0, c1, φ, ztrial; mask = mask)
+                    if isfinite(q1) && q1 >= q0
+                        z = ztrial
+                        accepted = true
+                        break
+                    end
+                    step *= 0.5
+                end
+                accepted || return z, false
+            else
+                z = z .+ Δ
+            end
+        end
     end
-    return z
+    return z, false
+end
+
+# Public per-site mode-finder. Retries `_ordered_beta_mode_search` with a 20x
+# iteration budget (restarting from z = 0) before giving up — mirrors #509's
+# Student-t and #507's NB1 review retry: a genuinely converging site can still
+# need more than the default `maxiter = 100` damped steps under
+# ill-conditioned curvature. Runs only where the default budget failed, so a
+# site that converges within `maxiter` keeps its original path and iteration
+# count. Returns `(z, converged)`; used both by `_ordered_beta_loglik_site`
+# (below) and by `getLV`/`predict` (further down), which take only `z` — a
+# call at converged `(Λ, β, c0, c1, φ)` lands on the mode this same function
+# certified during fitting.
+function _ordered_beta_mode(y::AbstractVector, Λ::AbstractMatrix, β::AbstractVector,
+        c0::Real, c1::Real, φ::Real; mask = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
+    z, ok = _ordered_beta_mode_search(y, Λ, β, c0, c1, φ; mask = mask, maxiter = maxiter, tol = tol)
+    ok || ((z, ok) = _ordered_beta_mode_search(y, Λ, β, c0, c1, φ;
+                                               mask = mask, maxiter = 20 * maxiter, tol = tol))
+    return z, ok
 end
 
 # Per-site Laplace log-marginal:
 #   log p(y_s) ≈ ℓ(ẑ) − ½ẑ'ẑ − ½logdet(Λ'WΛ + I).
-# `mask` drops the masked entries from the score/weight (via `_ordered_beta_mode`)
-# and from the conditional log-density sum.
+# `mask` drops the masked entries from the score/weight (via the mode search)
+# and from the conditional log-density sum. A mode search that does not converge
+# (default budget, then a 20x-budget retry; see `_ordered_beta_mode`)
+# must not produce a finite value: `-Inf` makes the fitter's own 1e12 sentinel
+# fire instead of scoring a garbage surface (#501, the #479 precedent).
 function _ordered_beta_loglik_site(y::AbstractVector, Λ::AbstractMatrix,
         β::AbstractVector, c0::Real, c1::Real, φ::Real;
         mask = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
     p, K = size(Λ)
-    z = _ordered_beta_mode(y, Λ, β, c0, c1, φ; mask = mask, maxiter = maxiter, tol = tol)
+    z, ok = _ordered_beta_mode(y, Λ, β, c0, c1, φ; mask = mask, maxiter = maxiter, tol = tol)
+    ok || return -Inf
     η = β .+ Λ * z
     ℓ = 0.0
     W = Vector{Float64}(undef, p)
@@ -244,7 +325,8 @@ function getLV(fit::OrderedBetaFit, Y::AbstractMatrix{<:Real}; rotate::Bool = tr
     K = size(fit.Λ, 2)
     Z = Matrix{Float64}(undef, K, n)
     @inbounds for s in 1:n
-        Z[:, s] = _ordered_beta_mode(view(Y, :, s), fit.Λ, fit.β, fit.c0, fit.c1, fit.φ)
+        z, _ = _ordered_beta_mode(view(Y, :, s), fit.Λ, fit.β, fit.c0, fit.c1, fit.φ)
+        Z[:, s] = z
     end
     Zt = permutedims(Z)
     return rotate ? Zt * _svd_rotation(fit.Λ) : Zt
