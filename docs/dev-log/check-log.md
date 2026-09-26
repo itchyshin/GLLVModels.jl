@@ -1,3 +1,28 @@
+## 2026-09-25: Two-part families no longer score an unfinished mode search (#484)
+
+- Branch `claude/twopart-mode-search-484`, rebased onto `origin/main` (past #481 Gamma, #483 Beta,
+  #492 and #494 covariate-kernel). `_twopart_mode_stage` now halves any step that lowers the site
+  log-posterior and falls back to damped Newton on the observed positive-part curvature where
+  Fisher scoring does not converge (dropping negative observed weights when they leave the step
+  matrix indefinite); `twopart_loglik_site` returns `-Inf` for a site whose search still fails.
+  Applies to `fit_zip_gllvm`, `fit_zinb_gllvm`, `fit_zib_gllvm` (and their `_cov` routes), the
+  hurdle Poisson/NB and delta Gamma/lognormal fitters, `fit_beta_hurdle_gllvm`, and `getLV` for all
+  of them (`_twopart_mode`, signature unchanged).
+- Independent review also found HurdleNB's positive-part score missing the NB2/log chain-rule
+  factor `a = r/(r+μ)` (score was `y - μtr`, should be `a*(y - μtr)`, expected information `a²*Var_tr`);
+  fixed alongside the damping and covered by a new assertion that every two-part family's score is
+  the ForwardDiff derivative of its own log-density.
+- ZIP seed-101 truth: 9 of 80 sites used to run out of iterations (objective -10085.3 against
+  -930.4 at converged modes); public base-s1 ZIP fit rose from -935.296 to -920.603 and other clean
+  ZIP/ZINB fits stayed within 1e-6. On the class-audit datasets (ZIP/ZINB/ZIB, 3600 site searches
+  at the warm start, old/new fits, truth and stress points at loadings x2/x3), Fisher scoring alone
+  failed to converge at 1327; the Newton fallback converged at all of them, in at most 7 iterations.
+- New test `test/test_twopart_mode_search.jl`, 35 of 35 (14 fail on unfixed `origin/main`). All 25
+  existing test files that reach a two-part family (~2060 assertions) pass unchanged, apart from
+  one pre-existing `@test_skip` (`test_second_order_delta_followup.jl`, opt-in R parity) unrelated
+  to this change.
+- After-task: `docs/dev-log/after-task/2026-09-25-twopart-mode-search-484.md`.
+
 ## 2026-09-24: Beta grouped fits report convergence only at a stationary point (#480)
 
 - Branch `claude/beta-convergence-480`, rebased on `origin/main` after #481 (Gamma) merged. Beta grouped fits

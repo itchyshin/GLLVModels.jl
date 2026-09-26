@@ -37,6 +37,84 @@ All notable changes to GLLVModels.jl are documented here.
   otherwise restart once from a neutral start and once from the returned point,
   keeping the best only if it is better. Some fits that used to claim convergence now
   report `converged = false`; the cause there is the inner mode search (#482).
+- **Zero-inflated, hurdle and delta fits no longer score an unfinished inner search.**
+  The per-site mode search behind `fit_zip_gllvm`, `fit_zinb_gllvm` and
+  `fit_zib_gllvm` (and their `_cov` variants), the hurdle Poisson and NB fitters, the
+  delta Gamma and lognormal fitters and `fit_beta_hurdle_gllvm` took full Fisher steps
+  and stopped after 100 of them with no signal. The site was then scored wherever the
+  search had stopped, and the value was finite, so a fit could report
+  `converged = true` well below the optimum: -935.296 on the ZIP case in #484, where a
+  restart reaches -920.603. The search now halves steps that lower the site objective
+  and, where Fisher scoring does not converge, continues with damped Newton on the
+  observed curvature. A site that still does not converge returns `-Inf`, so the
+  fitter's failure sentinel fires. Site values where the old search converged are
+  unchanged (to 1e-8) for ZIP and hurdle Poisson (checked directly on one dataset
+  each) and, per the audit datasets below, for the two ZINB fits that had already
+  converged. ZIB and the delta families were not independently re-verified in this
+  pass. It is NOT true for HurdleNB (see the next entry).
+  On the audit datasets three ZIP and ZINB fits rose by 7.5 to 34.7 log-likelihood
+  units and now stop at a stationary point; two clean fits stayed at the same point.
+  `getLV` for these families uses the same search. A near-converged site could still
+  be walked away from and returned as `-Inf` for zero-inflated families with
+  occurrence loadings (`Lambda_z != 0`, only reachable through the exported
+  `zip`/`zinb`/`zib`/`twopart_marginal_loglik_laplace` functions' `Lambda_z` keyword,
+  never through a fitter or `getLV`, which always use `Lambda_z = 0`): the small-step
+  branch of the damped-Newton fallback accepted any small step unconditionally, and
+  that stage's step matrix mixes a Fisher occurrence weight with an observed count
+  weight and omits their cross-curvature, so a "small" step could still lower the
+  site objective. With `Lambda_z = 0` that gap does not exist (the Newton matrix is
+  the exact Hessian of the site objective or larger after clipping), so the fix below
+  is scoped to `Lambda_z != 0` only; widening it to every small step broke
+  `fit_delta_gamma_gllvm(...; disp_group = :species)` (a per-trait shape estimate blew
+  up to 4e5 with `Lambda_z = 0`). A step that would lower the objective is now halved
+  (falling back to keeping the current iterate only when halving also cannot raise
+  the objective and the gradient there already meets a relaxed tolerance) rather than
+  being accepted unconditionally or declaring outright failure. The `Lambda_z = 0`
+  fast path used by every existing fitter is untouched, so this adds no runtime cost
+  there (see the next bullet for the #484 cost that does apply to every fitter, via
+  the per-site mode search itself). ZINB and ZIB fits on the audit datasets ran
+  within 2 to 23 percent of their pre-#484 (`origin/main`) time. Fixes #484.
+- **The `Lambda_z != 0` small-step guard above could itself return a false `-Inf`
+  (#500 verify pass).** The first version of that guard, when a small step lowered
+  `q(z)` and the gradient there was not already within a relaxed tolerance, declared
+  outright failure with no attempt to halve the step, unlike every other step in the
+  search; a healthy, near-converged site could hit this if the small step's own
+  floating-point noise made it look like a descent step (found: 35 of 11,560 sites
+  on a perturbed-start probe, ZIP/ZINB/ZIB, loadings x2/x3/x5). Fixed by trying the
+  same step-halving loop a large step uses before declaring failure. This is not
+  reachable from any fitter (Lambda_z = 0 everywhere they call in), so no fitted
+  result changes. A second, sharper regression showed up while fixing this: trying
+  halving before the relaxed-gradient check, rather than after, turned 1637 of 4672
+  correct relaxed-converged sites into false failures, because near the mode a
+  halving loop can "succeed" on floating-point noise and keep the outer search
+  spinning through `maxiter` iterations instead of returning immediately. Checking
+  the relaxed exit first, as before, removes that regression.
+- **Runtime cost of the #484 damping, measured and partly recovered (#500).** The
+  step-halving / damped-Newton fallback needs the site log-posterior `q(z)` at least
+  twice per large step; #500 removes one of the two `_twopart_logpost` calls by
+  summing `logf` inside the per-iteration pieces loop that already runs (for the
+  gradient and step matrix) to get `q0` for free, instead of a second full
+  evaluation. Measured on two fits where the fitted value and iteration count match
+  the pre-#484 `origin/main` result (to 1e-8, so this isolates cost, not a different
+  optimum), minimum of 3 warm runs, macOS aarch64, Julia 1.10.12:
+  `fit_hurdle_poisson_gllvm` (p = 6, n = 150, K = 2) 1.06 s on `main` vs 1.27 s on
+  this branch (+20%, 25 L-BFGS iterations both); `fit_zip_gllvm` (p = 6, n = 150,
+  K = 2) 4.36 s on `main` vs 5.43 s on this branch (+25%, 30 vs 31 iterations). The
+  remaining overhead is the per-site mode search itself (an extra pass of Fisher
+  scoring plus, where that does not converge, the Newton fallback), which #484
+  added and #500 does not remove.
+- **HurdleNB estimates, log-likelihood and AIC change (chain-rule fix, #484).**
+  The `HurdleNB` positive-part score gained the missing NB2 chain-rule factor
+  `a = r/(r + mu)` (`d/d eta log NB = a(y - mu)`), so the per-site mode search now
+  climbs the true log-density instead of a score that was not its derivative; the
+  Laplace log-det weight changes with it. Both move for essentially every HurdleNB
+  fit, not just ones that previously failed to converge. Measured on one simulated
+  dataset (p = 6, n = 150, K = 2, true r = 6): `fit_hurdle_nb_gllvm` log-likelihood
+  -1766.970 with r = 1.32e7 (pinned at the Poisson boundary, 173 iterations) moves to
+  -1746.342 with r = 3.576 (48 iterations); the Laplace marginal at the true
+  parameters moves from -2003.994 to -1758.200. Loadings shrink too (one trait's
+  `diag(Lambda Lambda')` goes from 1.292 to 0.952). The "unchanged to 1e-8" claim
+  above does not hold for HurdleNB.
 - **NB2 with per-trait dispersion: fewer fits stuck at the Poisson boundary.**
   `fit_nb_gllvm_grouped`, the default no-covariate route for
   `fit_gllvm(...; family = NegativeBinomial())`, could stop with a trait's `r`
