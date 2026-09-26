@@ -2,20 +2,21 @@
 
 Status: **PROPOSED 2026-09-25 -- not signed by the maintainer.** This document writes up the
 per-name classes that `tools/parity_ledger.py` already carries (added as a WIP commit on
-`claude/reverse-gap-classes-20260925`, `REVERSE_CLASSES` dict) so the class/reason table has a
-durable home next to the tool, and so Shinichi can review and sign it. Nothing here has been
-approved; every class below is a proposal, and each `REVERSE_CLASSES` string in the tool repeats
-that `[PROPOSED 2026-09-25, unsigned -- ...]` tag so a reader hitting the raw tool output sees the
-same caveat.
+`claude/reverse-gap-classes-20260925`, merged into `AHEAD_EXPLICIT` -- see "What this closes"
+below) so the class/reason table has a durable home next to the tool, and so Shinichi can review
+and sign it. Nothing here has been approved; every class below is a proposal, and each entry's
+string in the tool repeats that `[PROPOSED 2026-09-25, unsigned -- ...]` tag so a reader hitting
+the raw tool output sees the same caveat.
 
 ## What this closes
 
 Clause C6 of the true-parity programme required that the 91 Julia-only export names the countdown
 was reporting as "genuinely ahead, unclassified" (REVERSE, no written class) each get a written
 reason, the same way the existing `AHEAD_EXPLICIT`/`AHEAD_PATTERNS` tables already classify the
-larger pattern-matched Julia-only surface. `REVERSE_CLASSES` is a separate, explicit per-name dict
-so `classify_ahead()`'s matching logic needed no change -- it is consulted only as a last-resort
-class for names nothing else classified.
+larger pattern-matched Julia-only surface. The 91 entries are merged directly into
+`AHEAD_EXPLICIT.update({...})` (not a separate dict), so `classify_ahead()`'s matching logic needs
+no change -- per the tool's own comment, this keeps the merge as a plain dict update rather than
+adding a second lookup path.
 
 ## Tool re-run: exact output
 
@@ -46,7 +47,7 @@ unclassified" now carry a written class in `REVERSE_CLASSES`.
 | R has it after 0.7.0 | 5 | The frozen 0.7.0 oracle NAMESPACE predates the export; `origin/main` already has it (`select_lv`, `chibar2_pvalue`, `variance_lrt`, and two more) -- the countdown's frozen-oracle comparator is simply behind, not a genuine gap. |
 | R has it after 0.7.0, FLAGGED | 3 | Same "R gained it after 0.7.0" situation, but for the three zero-inflated families (`ZIB`, `ZINegBin`, `ZIPoisson`) bridge.jl's own comments already call the route "Julia-forward / twin-asymmetric" with no twin light RCall Delta -- flagged because the parameterizations differ (shared-z two-part Newton-scoring vs. R's per-trait intercept-only zero-part Laplace) and need maintainer confirmation on whether this is a genuine twin or a documented divergence. |
 | julia-only spatial engine substrate | 3 | SPDE/Matern spatial-substrate builders (`spatial_cov` and two more); gllvmTMB's TMB template does not implement this per `docs/src/gllvmtmb-parity.md` "Honest gaps". |
-| Julia-first capability awaiting an R decision | 2 | `SourceCovariance` and `cv_gllvm`: capabilities with no R export or capability-status row, where the R side has either already filed the gap (gllvmTMB issue #1192) or has a directly comparable precedent (`select_lv`) that R later ported -- flagged as candidates for the same treatment, not yet decided. |
+| Julia-first capability awaiting an R decision | 2 | `SourceCovariance` and `cv_gllvm`: capabilities with no R export or capability-status row, where the R side has either already filed the gap (gllvmTMB issue #941, "Integrated GLLVM: multisource biodiversity data (GBIF + literature) sharing one ecological latent process", which specs a source-specific observation process) or has a directly comparable precedent (`select_lv`) that R later ported -- flagged as candidates for the same treatment, not yet decided. |
 | R has it under another name | 8 | Renamed-away pairs already tracked in `api-rename-notes.md` (`RENAMED_AWAY`) plus `StudentTFamily` (an alias-matched duplicate export) and `TwoLevelRepeatabilityProfileWithdrawn` (an intentional-refusal exception class mirroring R's own abort class) -- same underlying capability under a different name, not an additional one. |
 
 ## D8 hand-off text
@@ -54,8 +55,8 @@ unclassified" now carry a written class in `REVERSE_CLASSES`.
 Per the true-parity gate-tier table (`docs/dev-log/core070/true-parity-gate-tier-2026-09-05.md`),
 row **D8**:
 
-> D8 | `parity/REVERSE-GAP-DISPOSITION` | Reverse list (`parity_ledger.py`) | meta | Tool-produced;
-> R lane owns R-side ports
+> D8 | `parity/REVERSE-GAP-DISPOSITION` | Reverse list (`parity_ledger.py`) | meta | — |
+> Tool-produced; R lane owns R-side ports
 
 and per `docs/dev-log/after-task/2026-09-14-destb-api-boundary.md`:
 
