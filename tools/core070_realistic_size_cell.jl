@@ -9,7 +9,7 @@
 # rebuild of the marginal NLL for the full covariance block and cond(H)).
 #
 # Usage: julia --project=. core070_realistic_size_cell.jl <family> <p> <n> <K> <seed>
-#   family in {gaussian, poisson, nb2}
+#   family in {gaussian, poisson, nb2, binomial}
 #
 # Writes to ./out/<family>_p<p>_n<n>_K<K>_julia_summary.txt (+ _terms.csv,
 # _vcov_beta.csv). Also emits the shared CSV Y matrix to ./data/ so the
@@ -172,6 +172,51 @@ elseif fam == "poisson"
     end
     write_mat(joinpath("out", "$(tag)_julia_vcov_beta.csv"), Σ[1:p, 1:p])
 
+elseif fam == "binomial"
+    # Bernoulli trials (N=1), logit link — matches gllvmTMB's `stats::binomial()`
+    # default on a 0/1 response, and fit_binomial_gllvm's default N = fill(1,p,n).
+    # The shared β_log/η above is a count-family rate-scale intercept
+    # (log(2..5) ≈ 0.69..1.61) and is NOT a sensible logit-scale intercept: it
+    # puts baseline prevalence at 0.66-0.83 rather than centered near 0.5,
+    # which (measured) drove one trait into quasi-complete separation. Build a
+    # zero-centered logit intercept instead, reusing the same Λ_true/Z latent
+    # draw (RNG state is deterministic given `seed`, so this stays reproducible).
+    β_bin = 0.4 .* randn(p)
+    η_bin = β_bin .+ Λ_true * Z
+    P = 1.0 ./ (1.0 .+ exp.(-clamp.(η_bin, -8.0, 8.0)))
+    Y = Int.(rand(p, n) .< P)
+    write_mat(datapath, Y)
+    if length(ARGS) >= 6 && ARGS[6] == "data-only"
+        println("DATA-ONLY $tag written to $datapath")
+        exit(0)
+    end
+    Yi = Y
+
+    t0 = time(); fit = fit_binomial_gllvm(Yi; K = K); wall_fit = time() - t0
+    push!(summary_lines, "converged=$(fit.converged)")
+    push!(summary_lines, "logLik=$(fit.loglik)")
+    push!(summary_lines, "wall_fit_sec=$(wall_fit)")
+
+    t1 = time(); ci = confint(fit, Yi); wall_ci = time() - t1
+    push!(summary_lines, "pd_hessian=$(ci.pd_hessian)")
+    push!(summary_lines, "wall_confint_sec=$(wall_ci)")
+    boundary_terms = hasproperty(ci, :boundary_terms) ? ci.boundary_terms : String[]
+    push!(summary_lines, "dispersion_boundary=NA (Binomial has no dispersion parameter)")
+    push!(summary_lines, "boundary_terms=$(join(boundary_terms, ';'))")
+    write_terms(joinpath("out", "$(tag)_julia_terms.csv"), ci.term, ci.estimate, ci.se, ci.lower, ci.upper)
+
+    ad = GLLVModels._family_ci(fit, Yi; objective = :laplace)
+    H = GLLVModels._fd_hessian(ad.nll, ad.θ)
+    Hs = Symmetric((H .+ H') ./ 2)
+    push!(summary_lines, "cond_H=$(cond(Hs))")
+    Σ = try
+        inv(Hs)
+    catch e
+        push!(summary_lines, "vcov_inversion_error=$(sprint(showerror, e))")
+        fill(NaN, size(H))
+    end
+    write_mat(joinpath("out", "$(tag)_julia_vcov_beta.csv"), Σ[1:p, 1:p])
+
 elseif fam == "nb2"
     r_true = 3.0 .+ 2.0 .* rand(p)   # per-trait dispersion (grouped by species)
     Y = Matrix{Int}(undef, p, n)
@@ -214,7 +259,7 @@ elseif fam == "nb2"
     end
     write_mat(joinpath("out", "$(tag)_julia_vcov_beta.csv"), Σ[1:p, 1:p])
 else
-    error("unknown family $fam (expected gaussian|poisson|nb2)")
+    error("unknown family $fam (expected gaussian|poisson|nb2|binomial)")
 end
 
 open(joinpath("out", "$(tag)_julia_summary.txt"), "w") do io
