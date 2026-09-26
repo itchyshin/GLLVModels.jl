@@ -55,7 +55,7 @@ Used the existing T4 scripts without changing their mechanism
   shared data-generating setup: the file's shared intercept
   (`β_log = log.(2.0 .+ 3.0 .* rand(p))`) is tuned for count-family rate scale and gives
   logit intercepts 0.69 to 1.61, i.e. true trait prevalence 0.66 to 0.83 with latent SD
-  about 0.5 — an ordinary range for real presence/absence data, not a malformed DGP. The
+  about 0.5, an ordinary range for real presence/absence data, not a malformed DGP. The
   first run, using it as-is, landed in the quasi-separation regime: Julia reported
   `converged=false`, and the frozen R oracle converged (`convergence=0`) with a "runaway
   trait loading" warning (trait t16, prevalence 0.814, `max_loading=44.3`,
@@ -114,7 +114,7 @@ A 5-seed panel under each DGP (seeds 1-5, excluding the receipt seed 42), run lo
 stop condition): the count-scale intercept separates on 2 of 6 seeds tried (42 and 5); the
 zero-centered intercept separates on 0 of 6. Full table:
 `docs/dev-log/core070/binomial-p20-n500-K2-seed-panel.md`. This shows seed 42 was not picked
-because it happens to pass under the zero-centered DGP — none of the 6 seeds tried under
+because it happens to pass under the zero-centered DGP: none of the 6 seeds tried under
 that DGP separate.
 
 ## Result
@@ -162,7 +162,7 @@ The original after-task proposed binding A13 (`covariance/COV-ORD-LATENT-BARE-RS
 receipt plus the twelve existing K=2 T4-p6 receipts. Withdrawn: A13's route is BRG/NAT
 (`true-parity-gate-tier-2026-09-05.md:49`) and is a **covariance** row (Λ Λᵀ). Every T4-p6
 receipt, including this one, is native-only (`fit_*_gllvm`, not the formula bridge) and
-compares only logLik and the β-block SE/vcov — never the covariance estimand A13 names. The
+compares only logLik and the β-block SE/vcov, never the covariance estimand A13 names. The
 proposal also miscounted "five family/shape combinations" against four families (13
 receipts). None of that is evidence toward A13 as written; `docs/dev-log/core070/true-parity-gate-tier-2026-09-05.md`
 is SIGNED and this session did not edit it.

@@ -82,7 +82,7 @@ estimate of under 30 minutes.
 ## 5. Scope not covered
 
 - Does not add the runaway-loading diagnostic to Julia, does not R-check #494's seeds 1/8,
-  and does not decide whether Julia's `converged` flag should match R's under separation —
+  and does not decide whether Julia's `converged` flag should match R's under separation:
   all three are #498's scope, not this PR's.
 - Does not touch Beta-logit, does not touch gllvmTMB, does not change the frozen-contract or
   gate-tier docs, does not mark this PR ready.

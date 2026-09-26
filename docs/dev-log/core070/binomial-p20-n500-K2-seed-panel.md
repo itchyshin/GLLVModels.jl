@@ -1,4 +1,4 @@
-# Seed panel — Binomial-logit, p=20, n=500, K=2, two intercept DGPs
+# Seed panel: Binomial-logit, p=20, n=500, K=2, two intercept DGPs
 
 **Date:** 2026-09-26. Not a receipt; not gate-tier evidence. Answers one question raised in
 review of PR #491: was seed 42 picked because it passes under the zero-centered intercept?
@@ -7,7 +7,7 @@ review of PR #491: was seed 42 picked because it passes under the zero-centered 
 5 seeds x 2 DGPs), so under 15 minutes wall; measured total 181s (Julia) + 59s (R) = 240s,
 well inside the 30-minute stop condition.
 
-**Method:** seeds {1,2,3,4,5} (seed 42 excluded — it is the receipt seed and is reported
+**Method:** seeds {1,2,3,4,5} (seed 42 excluded; it is the receipt seed and is reported
 separately in `binomial-p20-n500-K2-separated-regime-seed42.md` and the T4-p6 receipt), same
 p=20/n=500/K=2 shape, both DGPs from `tools/core070_realistic_size_cell.jl`:
 count-scale intercept (`β_log`, "original") and zero-centered intercept (`β_bin = 0.4*randn`,
@@ -50,7 +50,7 @@ pattern as the receipt's 6.6e-08 delta).
 ## Reading
 
 Seed 42 was not selected to pass: under the zero-centered intercept, all 6 seeds tried
-(1-5 plus 42) converge cleanly with no separation on either engine — the DGP is well away
+(1-5 plus 42) converge cleanly with no separation on either engine; the DGP is well away
 from the quasi-separation boundary at this size, not narrowly tuned to one seed. Under the
 count-scale intercept, separation is seed-dependent (2 of 6 here), consistent with the
 after-task's design-rule note that this DGP was not "a bug", just an intercept range that
