@@ -14,7 +14,7 @@ LEDGER LESSON: a lapsed approval prints APPROVAL REQUIRED (not FAIL) and leaves 
 PREVIOUSLY IN FLIGHT: merge_train.sh (copy in kit) for 489,490,497 -> scratchpad merge_train_1.log; wave 3 wf_8fbce2c7-103 (fix #500, fix #496, Opus verify #500/#493/#491).
 FINDING: lane_lease identity is per session PID, so sibling subagents overwrite each other's claims; wave 3 sets LANE_ID per agent.
 NEXT: merge #500 if review MERGE + CI green; merge #489, #490 after fixes + CI; merge #485 PR after review; #496/#497 after Rose; bring #491 and #493 to Shinichi with verdict + drafted reply; D-43 panel; close.
-OPEN GATES (need human): #491, #493 merges (science-changing; public confint method in #493); #502 design choice (a-d) for the converged criterion.
+OPEN GATES (need human): #491, #493 merges (science-changing; public confint method in #493); #502 DECIDED 2026-09-26 by Shinichi: (d) per-family verdicts (comment posted); rework agent running (revert global _fit_verdict, NB1-grouped verdict, relation test). _phylo_verdict brief HELD: its flips were sentinel artefacts; follow (d) with its own evidence.
 LEDGERS: .unlazy/gllvm-backlog/GATES.md (run); .unlazy/true-parity/GATES.md (0/10, all measurable since #487).
 TRUTH LIVES IN: branch claude/lane-gllvm-backlog-20260926; reviews/; PRs on itchyshin/GLLVModels.jl.
 RESUME: read GOAL.md -> checkpoint.md -> ultra-plan.md; if wf_7c017c8f-9d5 finished, read its journal.jsonl; continue from NEXT.
