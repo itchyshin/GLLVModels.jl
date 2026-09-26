@@ -1143,15 +1143,14 @@ confirmatory fit mode with `lambda_constraint` pins; the lower-triangular
 packing convention (`src/packing.jl`) is this package's built-in identifiability
 device, so this function runs on any fit.
 
-**Estimand scope (Core070 D3, 2026-09-04):** this is **not** R's
-`loading_profile()`, which profiles a Λ entry on a **confirmatory
-(pinned-loadings)** fit gated on R's `fit\$lambda_constraint`
-(`.unlazy/core070-aghq/oracle-source/readback/R/loading-profile.R`). Same
-family of quantity, different estimand — the rename makes that gap visible in
-the API rather than hiding it behind a matching signature.
+**Difference from R.** This is not R's `loading_profile()`. R profiles a
+loading from a confirmatory model in which selected loadings were fixed before
+fitting. GLLVModels.jl instead profiles a raw loading from its exploratory
+model under the built-in lower-triangular constraint. The functions therefore
+concern the same kind of quantity but estimate it under different constraints.
+The name `loading_profile_exploratory` makes that distinction explicit.
 
-Implementation: a thin wrapper around [`profile_ci_derived`](@ref) using the
-packed-θ closure `θ -> Λ_component(θ)[t, k]`; all keyword arguments forward.
+Additional keyword arguments are passed to the profile-likelihood calculation.
 
 For `k > t` on the lower-triangular reduced-rank packing convention, the entry
 is structurally pinned at `0`: this returns
