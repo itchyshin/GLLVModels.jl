@@ -22,3 +22,6 @@ Parity queue (engineering/docs inside GLLVModels.jl), interleaved with the fix w
  P4 FORWARD gaps: census the 62 R exports missing in Julia; implement the small, well-specified ones (extractors/accessors) one per PR, each against the frozen oracle b4d5fee64
  P5 C1 BLOCKED_NEEDS_JULIA_SURFACE (122 rows): group by missing surface; build the single most common missing surface if it fits a night
 Deferred-earlier items now queued: fix the stale "#500 waiting" line in the handover on main; propose (not apply) a lane_lease directory-claim guard; _phylo_verdict family-specific reproduction (diagnosis only).
+
+## Fence added 23:25Z: reserved for a separate "auto-d" lane (estimate the number of latent dimensions from data)
+The overnight lane does NOT edit src/model_selection.jl, src/cv.jl, or the `K`/`d` argument handling in src/families/fit_gllvm.jl. P4/P5 items that would touch these wait.
