@@ -1,8 +1,11 @@
-# Arcs — from the approved ultra-plan
-
-| # | arc | status | gate? |
-|---|-----|--------|-------|
-| 1 | <...> | todo | — |
-
-Status: todo / doing / done / paused / blocked. `paused` = awaiting Shinichi's named decision;
-`blocked` = external dependency. Ordinary repair work remains `doing`.
+# arcs — gllvm-backlog-20260926
+- [x] S0 merge #494 -> MERGED d4da31544 2026-09-26T12:59Z (advisory 277/9 within main's range)
+- [ ] S1 recon (Haiku): mergeability/conflicts/CI/review notes for #487-#491,#493,#495
+- [ ] S2 adversarial review (Opus high): #493, #491, #494 knock-ons
+- [ ] S3 bounded review (Sonnet med): #490, #488, #489, #495, #487
+- [ ] S4 #484 two-part fix finish -> PR (Sonnet high)
+- [ ] S5 #485 central verdict -> PR (Sonnet high)
+- [ ] S6 reverse-gap classes doc + packet update (Haiku -> Sonnet)
+- [ ] S7 review fixes + merge train (Ada)  GATE: #491, #493 need Shinichi
+- [ ] S8 D-43 panel (2 Sonnet + 1 Opus)
+- [ ] S9 close: reverify, after-task, handover, vault log, MC status, Melissa
