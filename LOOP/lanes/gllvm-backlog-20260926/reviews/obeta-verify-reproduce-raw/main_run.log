@@ -1,0 +1,42 @@
+Optim 1.13.3  GLLVModels at /home/snakagaw/hsq_work/obeta-verify-reproduce-20260926/repo/src/GLLVModels.jl
+
+==== FLAGGED SEEDS ====
+
+seed=2003  conv=true  tfit=1.71s
+  first fit:      ll=-196.8406  valid|negll(that)-(-ll)|=0.00e+00  paramsOK=true (gap=2.442 phi=6.255 maxL=3.154)
+  first-fit grad: gmax=4.854e+07 gscaled=9.562e+07  (stationary iff gscaled ~1e-5 or below)
+  restart best:   source=true-start ll=-175.1269  drestart(vs first fit)=+2.1714e+01
+  restart grad:   gmax=8.211e-02 gscaled=1.280e-01  paramsOK=true (gap=2.326 phi=12.06 maxL=1.403)  valid|negll-(-ll)|=0.00e+00
+  true-start refit: ll=-175.1269  gscaled=1.280e-01 paramsOK=true | |ll-firstfit|=2.1714e+01 |ll-restart|=0.0000e+00 -> closer_to=restart
+
+seed=2005  conv=true  tfit=1.24s
+  first fit:      ll=-3041.3466  valid|negll(that)-(-ll)|=0.00e+00  paramsOK=true (gap=1.677 phi=5.089 maxL=6.275)
+  first-fit grad: gmax=8.196e+04 gscaled=1.765e+05  (stationary iff gscaled ~1e-5 or below)
+  restart best:   source=true-start ll=-182.8099  drestart(vs first fit)=+2.8585e+03
+  restart grad:   gmax=3.155e-06 gscaled=8.218e-06  paramsOK=true (gap=2.332 phi=9.262 maxL=2.152)  valid|negll-(-ll)|=0.00e+00
+  true-start refit: ll=-182.8099  gscaled=8.218e-06 paramsOK=true | |ll-firstfit|=2.8585e+03 |ll-restart|=0.0000e+00 -> closer_to=restart
+
+seed=2010  conv=true  tfit=0.30s
+  first fit:      ll=-372.3648  valid|negll(that)-(-ll)|=0.00e+00  paramsOK=true (gap=2 phi=10.01 maxL=5.118)
+  first-fit grad: gmax=3.216e+07 gscaled=5.444e+07  (stationary iff gscaled ~1e-5 or below)
+  restart best:   source=true-start ll=-172.6168  drestart(vs first fit)=+1.9975e+02
+  restart grad:   gmax=8.555e-06 gscaled=1.609e-05  paramsOK=true (gap=2.101 phi=18.74 maxL=0.8812)  valid|negll-(-ll)|=0.00e+00
+  true-start refit: ll=-172.6168  gscaled=1.609e-05 paramsOK=true | |ll-firstfit|=1.9975e+02 |ll-restart|=0.0000e+00 -> closer_to=restart
+
+==== CLEAN SEEDS ====
+
+seed=2001  conv=true  tfit=1.26s
+  first fit:      ll=-169.0038  valid|negll(that)-(-ll)|=0.00e+00  paramsOK=true (gap=2.238 phi=17.73 maxL=1.162)
+  first-fit grad: gmax=8.585e-06 gscaled=1.856e-05  (stationary iff gscaled ~1e-5 or below)
+  restart best:   source=true-start ll=-169.0038  drestart(vs first fit)=+5.9970e-12
+  restart grad:   gmax=7.043e-06 gscaled=2.729e-05  paramsOK=true (gap=2.238 phi=17.73 maxL=1.162)  valid|negll-(-ll)|=0.00e+00
+  true-start refit: ll=-169.0038  gscaled=2.729e-05 paramsOK=true | |ll-firstfit|=5.9970e-12 |ll-restart|=0.0000e+00 -> closer_to=restart
+
+seed=2008  conv=true  tfit=1.43s
+  first fit:      ll=-192.2081  valid|negll(that)-(-ll)|=0.00e+00  paramsOK=true (gap=2.003 phi=8.623 maxL=0.9774)
+  first-fit grad: gmax=8.029e-06 gscaled=1.072e-05  (stationary iff gscaled ~1e-5 or below)
+  restart best:   source=true-start ll=-192.2081  drestart(vs first fit)=+2.4727e-12
+  restart grad:   gmax=4.022e-06 gscaled=6.815e-06  paramsOK=true (gap=2.003 phi=8.623 maxL=0.9774)  valid|negll-(-ll)|=0.00e+00
+  true-start refit: ll=-192.2081  gscaled=6.815e-06 paramsOK=true | |ll-firstfit|=2.4727e-12 |ll-restart|=0.0000e+00 -> closer_to=restart
+
+total elapsed 23.3 s

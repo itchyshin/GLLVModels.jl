@@ -1,0 +1,14 @@
+==================================================
+seed=2001 (CLEAN)  ll=-169.0038
+  h=1e-04  gscaled_max=1.8671e-05  coord=14  raw_g=-8.6359e-06
+  h=1e-05  gscaled_max=1.8534e-05  coord=14  raw_g=-8.5725e-06
+  h=1e-06  gscaled_max=1.8561e-05  coord=14  raw_g=-8.5847e-06
+  h=1e-07  gscaled_max=1.7715e-05  coord=14  raw_g=-8.1934e-06
+  h=1e-08  gscaled_max=1.2032e-05  coord=6  raw_g=8.5265e-06
+==================================================
+seed=2008 (CLEAN)  ll=-192.2081
+  h=1e-04  gscaled_max=1.0856e-05  coord=17  raw_g=3.4415e-06
+  h=1e-05  gscaled_max=1.0676e-05  coord=17  raw_g=3.3844e-06
+  h=1e-06  gscaled_max=1.0716e-05  coord=17  raw_g=3.3969e-06
+  h=1e-07  gscaled_max=9.9873e-06  coord=17  raw_g=3.1661e-06
+  h=1e-08  gscaled_max=1.0974e-05  coord=6  raw_g=-5.6843e-06

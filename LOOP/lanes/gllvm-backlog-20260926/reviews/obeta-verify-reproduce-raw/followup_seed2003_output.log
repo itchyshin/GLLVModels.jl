@@ -1,0 +1,4 @@
+stage1 (g_tol=1e-5, matches original restart): ll=-175.126937 gscaled=1.2797e-01 iters=38
+stage2 (polish, g_tol=1e-9): ll=-175.126937 gscaled=1.2797e-01 iters=1  Δll(stage2-stage1)=0.0000e+00  |Δθ|max=0.0000e+00
+first-fit ll for reference: -196.840579
+stage1 gradient at h=1e-4 (coarser step): gscaled=3.8397e+05 (compare to h=1e-6: 1.2797e-01)

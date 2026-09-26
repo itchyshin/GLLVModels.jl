@@ -1,0 +1,7 @@
+h=1e-03  gscaled_max=3.9547e+04  at coord 15 (c0)  raw_g=1.8724e+04 theta=-1.1121e+00
+h=1e-04  gscaled_max=3.8397e+05  at coord 16 (logΔc)  raw_g=2.0822e+05 theta=8.4405e-01
+h=1e-05  gscaled_max=3.6692e+06  at coord 11 (Λpk6)  raw_g=-1.5870e+06 theta=-1.3121e+00
+h=1e-06  gscaled_max=1.2797e-01  at coord 2 (β2)  raw_g=-8.2113e-02 theta=5.5846e-01
+h=1e-07  gscaled_max=1.2797e-01  at coord 2 (β2)  raw_g=-8.2113e-02 theta=5.5846e-01
+h=1e-08  gscaled_max=1.2797e-01  at coord 2 (β2)  raw_g=-8.2116e-02 theta=5.5846e-01
+negll(θ1) = 175.1269372289
