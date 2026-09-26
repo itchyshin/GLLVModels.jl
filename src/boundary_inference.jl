@@ -5,10 +5,17 @@
 # boundary. Self & Liang (1987) / Stram & Lee (1994): the null LRT follows a χ̄²
 # MIXTURE of χ² distributions, not a single χ²_q.
 #
-# Use cases in GLLVModels.jl: K-selection / over-factoring ("is the K-th latent factor real?"),
-# and the RE variances (σ_row, the grouped/structured σ_u, the random-slope Σ_b diagonals,
-# the Poisson OLRE ψ_t) — all are variances tested against 0. Methods-sharing with DRM
-# (MIT/GPL clean).
+# Use cases in GLLVModels.jl: the RE variances (σ_row, the grouped/structured σ_u, the
+# random-slope Σ_b diagonals, the Poisson OLRE ψ_t) — all are variances tested against 0.
+# Methods-sharing with DRM (MIT/GPL clean).
+#
+# NOT a valid reference for choosing the number of latent dimensions (K vs K+1). There the
+# extra loading column is zero under the null and its direction is unidentified, so the
+# problem is not one variance on a boundary: Wilks' theorem fails and the null LRT is not a
+# χ̄² mixture (Hayashi, Bentler & Yuan 2007, Struct. Equ. Modeling 14:505–526; Drton 2009,
+# Ann. Statist. 37:979–1012 — the limit involves Wishart eigenvalues). Use a parametric
+# bootstrap for that test, or an information criterion via `select_lv`. (Corrected
+# 2026-09-27, lane auto-d; the line previously listed K-selection as a use case.)
 
 """
     chibar2_pvalue(LRT, q) -> Float64
