@@ -27,3 +27,5 @@ Deferred-earlier items now queued: fix the stale "#500 waiting" line in the hand
 The overnight lane does NOT edit src/model_selection.jl, src/cv.jl, or the `K`/`d` argument handling in src/families/fit_gllvm.jl. P4/P5 items that would touch these wait.
 
 - 23:35Z triage second pass: NB2 grouped confirmed live 25/187 on the DEFAULT NB2 route -> wave B item B0 (first). Reachability confirmed for GP1, COMP, BetaBinom, Tweedie, StudentT grouped. #503 updated by comment.
+
+- 23:45Z #511 (Fixes #501, ordered beta) opened by wave-A2 builder: all three #501 checks held on macOS (seed 2010 -371.95 -> -172.62, matches restart to 3.7e-5). A DUPLICATE copy of that builder wrote the same worktree: most likely forked when the triage agent SendMessage-d it (D-225 rule 10, triggered agent-to-agent). Branch verified coherent (getLV destructure present at ordered_beta.jl:328). LESSON: tell builders never to SendMessage other agents; coordinate via the orchestrator or lease notes. Also: agents killed by a usage limit can auto-resume after reset and exceed the live cap unseen.
