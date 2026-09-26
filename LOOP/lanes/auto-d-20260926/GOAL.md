@@ -35,5 +35,5 @@
 
 ## Out of scope (the fence — do NOT drift here)
 - The overnight gllvm-backlog lane's files and PRs (read LOOP/lanes/gllvm-backlog-20260926/OVERNIGHT.md on branch claude/lane-gllvm-backlog-20260926): family kernels, confint_family.jl, grouped_dispersion.jl, the parity docs.
-- gllvmTMB (read-only from this lane; the R twin belongs to the Cursor lane under the D-220 amendment). An R-side auto-d is a separate request to that lane.
+- (Superseded by D-292, 2026-09-26: gllvmTMB is now in this lane. Build auto-d in R and Julia side by side, each cross-checking the other. The first question is feasibility: has anyone chosen the number of latent variables in GLLVMs, and how well does it work?)
 - Porting the 25 post-0.7.0 gllvmTMB exports (a separate arc).
