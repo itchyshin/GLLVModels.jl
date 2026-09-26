@@ -147,3 +147,8 @@ authority for the correction.
   revision, which is maintainer-gated; they are not gate-tier rows and are
   listed here only because A9 and A11 share fitters, and A2/A3/A5/A11 share
   oracle-build concerns, with them.
+- **Post-drafting update:** PR #481 and PR #483 (both listed above as "open,
+  needs maintainer review") merged 2026-09-25, after this scoreboard was
+  drafted. A8/A9's Beta receipts still await re-measurement against the
+  landed #483 fix; no such re-measurement is recorded in this document or
+  elsewhere as of this note. This does not change any row's status above.
