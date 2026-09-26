@@ -530,7 +530,7 @@ end
 # not store hessian — NLL uses :observed (family default / twin TMB).
 # NOTE: this adapter has the same T14 F1 boundary gap as the per-trait one below
 # had before pr-493's review (uses the 6-arg `_FamilyCI(...)`, so `boundary` is
-# all-false) — a shared `r` at the Poisson limit is not conditioned out of the
+# all-false): a shared `r` at the Poisson limit is not conditioned out of the
 # joint Wald Hessian. Left unfixed here; tracked in #499.
 function _family_ci(fit::TruncatedNegBin2Fit, Y::AbstractMatrix;
                     mask = nothing,

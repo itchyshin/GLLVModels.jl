@@ -367,12 +367,12 @@ All notable changes to GLLVModels.jl are documented here.
   for Poisson. R-side reading of these CI fields is not yet wired.
 - **`confint(fit, Y; method = :wald)` for `TruncatedNegBin2PerTraitFit`**
   (`fit_truncated_nbinom2_gllvm_pertrait`, gllvmTMB's only `truncated_nbinom2()`
-  mode) — previously threw `MethodError`. The per-trait `r` block is reported on
+  mode), which previously threw `MethodError`. The per-trait `r` block is reported on
   the log scale (`kinds = :log`, matching every other dispersion family): the
   `se` column for `r[t]` is the SE of `log r_t`, and the bounds are
   `exp(log r_t ± z·se)`. A trait's `r` at the Poisson-limit boundary is
   conditioned out of the joint Wald Hessian, the same T14 F1 handling the
-  grouped NB2/NB1/Beta/Gamma adapters already use — without it, a boundary
+  grouped NB2/NB1/Beta/Gamma adapters already use; without it, a boundary
   trait could report `pd_hessian = true` with a meaningless finite-looking SE
   and an infinite upper bound, flipping with wherever the optimizer stopped.
   The shared-`r` adapter this one was copied from has the same untreated

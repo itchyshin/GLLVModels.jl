@@ -109,7 +109,7 @@ end
     # Poisson limit (~1e10). Before the fix, the per-trait adapter passed the
     # 6-arg `_FamilyCI(...)`, so `boundary` was all-false, `pd_hessian` came back
     # `true`, and r[1] got a finite-looking but meaningless SE (~1860 on the log
-    # scale) with an `Inf` upper bound — the same T14 F1 failure the grouped
+    # scale) with an `Inf` upper bound: the same T14 F1 failure the grouped
     # NB2/NB1/Beta/Gamma adapters already guard against. After the fix, r[1] is
     # conditioned out of the joint Hessian like those adapters: `pd_hessian` is
     # `false` and `boundary_terms` names it (the mirror-image local-optimum stall
