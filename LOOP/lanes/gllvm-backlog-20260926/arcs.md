@@ -2,7 +2,7 @@
 - [x] S0 merge #494 -> MERGED d4da31544 2026-09-26T12:59Z (advisory 277/9 within main's range)
 - [x] S1 recon (Haiku) done (Haiku): mergeability/conflicts/CI/review notes for #487-#491,#493,#495
 - [ ] S2 adversarial review (Opus high): #493, #491, #494 knock-ons
-- [x] S3 review done: #488 MERGE -> MERGED 8001b0523; #495 MERGE -> MERGED 39886c705; #490 MERGE but conflicts (rebase); #487, #489 MERGE_AFTER_FIXES (docs-fixer agent running; #489 Documenter red)
+- [x] S3 review done: #488 MERGE -> MERGED 8001b0523; #495 MERGE -> MERGED 39886c705; #490 MERGE but conflicts (rebase); #487 fixed -> MERGED d89179d41; #489 MERGE_AFTER_FIXES (docs-fixer agent running; #489 Documenter red)
 - [ ] S4 #484 two-part fix finish -> PR (Sonnet high)
 - [ ] S5 #485: BLOCKED by our own #484 builder's broad lease (test/, CHANGELOG); diagnosis ready; redispatch after #484 releases
 - [x] S6 done: #496 reverse-gap classes (draft), #497 packet update (draft); both need review before merge
@@ -10,3 +10,5 @@
 - [ ] S8 D-43 panel (2 Sonnet + 1 Opus)
 - [ ] S9 close: reverify, after-task, handover, vault log, MC status, Melissa
 - [ ] S7b sibling screen on Totoro (Sonnet agent running; report reviews/sibling-screen-2026-09-26.md)
+- [x] Issues filed from Opus review: #498 (Binomial separation diagnostic parity), #499 (truncNB2 per-trait stall, boundary flags, shared-r default)
+- [ ] S2 fixes for #491 (disclose discarded run, record it) and #493 (test, boundary flags, docs) -> queued behind #484 lease; then NEEDS_SHINICHI
