@@ -7,31 +7,16 @@ using Random
 using GLLVModels
 using Distributions: NegativeBinomial
 
-# Same DGP as tools/truncnb2_parity_data_draw.jl (NATIVE-12 design, p=5, K=1,
-# beta=log([4,5,3.5,4.5,4]), Lambda=0.2*parity_loadings_p5k2()), so `seed` alone
-# reproduces the exact draws the review measured on Julia 1.10.
-_pertrait_loadings_p5k2() = [0.8 0.0; 0.5 0.6; 0.3 -0.4; -0.2 0.5; 0.1 0.3]
-
-function _draw_truncnb2_pertrait(seed::Integer, r_true::Real, n::Integer)
-    p, K = 5, 1
-    Random.seed!(seed)
-    β = log.([4.0, 5.0, 3.5, 4.5, 4.0])
-    Λ = 0.2 .* _pertrait_loadings_p5k2()[:, 1:K]
-    Z = randn(K, n)
-    η = β .+ Λ * Z
-    Y = Matrix{Int}(undef, p, n)
-    for t in 1:p, s in 1:n
-        μ = exp(clamp(η[t, s], -3.0, 3.5))
-        while true
-            v = rand(NegativeBinomial(r_true, r_true / (r_true + μ)))
-            if v >= 1
-                Y[t, s] = v
-                break
-            end
-        end
-    end
-    return Y
-end
+# Interior (seed 61/n150) and boundary (seed 62/n150) per-trait draws are loaded from
+# committed, hash-verified fixtures, not redrawn from a seed: Julia 1.10 and 1.13 draw
+# different numbers from the same seed (docs/dev-log/decisions/2026-09-24-parity-
+# reference-julia-and-fixture-pins.md), which made this test assert one seed's fitted
+# outcome and fail on the Julia 1 CI leg. Both fixtures were drawn by
+# tools/truncnb2_parity_data_draw.jl (NATIVE-12 design, p=5, K=1,
+# beta=log([4,5,3.5,4.5,4]), Lambda=0.2*parity_loadings_p5k2()) on Julia 1.10; the
+# loaders below (shared with tools/core070_second_order/cells.jl via common.jl) re-hash
+# the stored data on every load. Pure Julia (TOML + SHA, no RCall), unlike common.jl.
+include(joinpath(@__DIR__, "..", "tools", "core070_second_order", "truncnb2_fixtures.jl"))
 
 @testset "TruncatedNegBin2Fit second-order Wald CI" begin
     Random.seed!(73)
@@ -78,7 +63,7 @@ end
     # Basic confint call (pr-493 BLOCKING 1): the new user-reachable route
     # (`confint(fit_truncated_nbinom2_gllvm_pertrait(Y; K), Y)`) used to throw a
     # MethodError before #493 added TruncatedNegBin2PerTraitFit to _CIFit.
-    Y_interior = _draw_truncnb2_pertrait(61, 4.0, 150)
+    Y_interior = truncnb2_interior_fixture().Y
     fit_interior = fit_truncated_nbinom2_gllvm_pertrait(Y_interior; K = 1)
     @test fit_interior isa TruncatedNegBin2PerTraitFit
     @test fit_interior.converged
@@ -115,7 +100,7 @@ end
     # `false` and `boundary_terms` names it (the mirror-image local-optimum stall
     # on some other seeds, e.g. 65/n150, is a fitter defect tracked in #499, not
     # fixed here).
-    Y_boundary = _draw_truncnb2_pertrait(62, 4.0, 150)
+    Y_boundary = truncnb2_boundary_fixture().Y
     fit_boundary = fit_truncated_nbinom2_gllvm_pertrait(Y_boundary; K = 1)
     @test fit_boundary isa TruncatedNegBin2PerTraitFit
     @test fit_boundary.r[1] > 1e6
