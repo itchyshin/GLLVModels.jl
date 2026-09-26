@@ -24,28 +24,103 @@
 
 # --- offset-aware per-site Laplace (mirrors families/laplace.jl, with η0 = β + offset) ---
 
-function _laplace_mode_off(family, y::AbstractVector, n::AbstractVector,
-        Λ::AbstractMatrix, η0::AbstractVector, link::Link;
+# One pass of the per-site mode search. Returns `(z, converged)`. `step_weight` picks
+# the curvature that sets the step, `:fisher` (expected, never negative) or `:observed`.
+# It never changes the mode, which is the fixed point of `Λ's − z = 0` whatever W is.
+#
+# Before 2026-09-25 this loop took full Fisher-scoring steps with no damping and
+# returned whatever `z` it held when it stopped, converged or not. Gamma/log's Fisher
+# weight is the constant α, blind to y/μ, so the step overshoots when y/μ is far from 1:
+# on one site of fit_gllvm_cov's own warm start (the #479 data) it ran out to z ≈ 1e11
+# and the site returned a FINITE −7.2e22, which slipped past the fitter's 1e12 sentinel
+# and sent the line search to a log α so low that exp(log α) == 0.0.
+#
+# Now a step that lowers the per-site log-posterior is halved (the generic core's
+# `_laplace_mode` rule, so small steps and accepted full steps are bit-identical to the
+# old loop), and `converged` is true only when the full proposed step is below `tol`,
+# the old loop's own stopping test. A heavily halved step does NOT count.
+function _laplace_mode_off_pass(family, y::AbstractVector, n::AbstractVector,
+        Λ::AbstractMatrix, η0::AbstractVector, link::Link, step_weight::Symbol;
         mask = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
-    K = size(Λ, 2)
+    p, K = size(Λ)
     z = zeros(K)
     for _ in 1:maxiter
         η  = _clamp_eta.(η0 .+ Λ * z)
         μ  = _clamp_mu.(Ref(family), linkinv.(Ref(link), η))
         me = mu_eta.(Ref(link), η)
         s  = _glm_score.(Ref(family), μ, n, me, y)
-        W  = _glm_weight.(Ref(family), μ, n, me)
+        W  = if step_weight === :fisher
+            _glm_weight.(Ref(family), μ, n, me)
+        else
+            # Masked cells hold a placeholder `y`, so their observed weight is not evaluated.
+            [(mask === nothing || mask[t]) ?
+                _glm_obs_weight(family, μ[t], n[t], me[t], y[t], link, η[t]) : 0.0 for t in 1:p]
+        end
         if mask !== nothing
             s = ifelse.(mask, s, 0.0)            # masked ⇒ no contribution
             W = ifelse.(mask, W, 0.0)
         end
+        # A negative (or NaN) observed weight can make Λ'WΛ + I indefinite, and then the
+        # step need not point uphill. Give up rather than take it.
+        step_weight === :fisher || all(w -> w >= 0, W) || return z, false
         A  = Symmetric(Λ' * (W .* Λ) + I)
         Δ  = _safe_solve(A, Λ' * s .- z)
-        (Δ === nothing || !all(isfinite, Δ)) && break
-        z  = z .+ Δ
-        maximum(abs, Δ) < tol && break
+        (Δ === nothing || !all(isfinite, Δ)) && return z, false
+        maximum(abs, Δ) < tol && return z .+ Δ, true
+        if norm(Δ) <= 1e-3 * (1 + norm(z))
+            z = z .+ Δ
+        else
+            q0 = _laplace_mode_logpost(family, y, n, Λ, η0, link, z; mask = mask)
+            if isfinite(q0)
+                accepted = false
+                step = 1.0
+                for _half in 1:30
+                    ztrial = z .+ step .* Δ
+                    q1 = _laplace_mode_logpost(family, y, n, Λ, η0, link, ztrial; mask = mask)
+                    if isfinite(q1) && q1 >= q0
+                        z = ztrial
+                        accepted = true
+                        break
+                    end
+                    step *= 0.5
+                end
+                accepted || return z, false
+            else
+                z = z .+ Δ
+            end
+        end
     end
-    return z
+    return z, false
+end
+
+# Per-site mode search with a convergence report. Returns `(z, converged)`.
+# Fisher scoring runs first, so every site that converged before keeps its old path.
+# Fallback: Fisher scoring converges only linearly when it is not Newton (Gamma/log,
+# Exponential/log, NB2/log), and even with halving it left sites unconverged after 100
+# iterations on healthy Gamma datasets at the fitter's warm start (measured: 6 of 4000
+# site evaluations on the #479 sibling screen, 2 of them on healthy datasets 4 and 5).
+# A damped Newton search on the observed curvature converged at all 4000, in at most 6
+# iterations. It runs only where Fisher failed and the two curvatures differ; if it also
+# fails, the Fisher pass's last iterate is returned, flagged unconverged.
+function _laplace_mode_off_conv(family, y::AbstractVector, n::AbstractVector,
+        Λ::AbstractMatrix, η0::AbstractVector, link::Link;
+        mask = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
+    z, ok = _laplace_mode_off_pass(family, y, n, Λ, η0, link, :fisher;
+                                   mask = mask, maxiter = maxiter, tol = tol)
+    (ok || _glm_weight_matches_observed(family, link)) && return z, ok
+    z2, ok2 = _laplace_mode_off_pass(family, y, n, Λ, η0, link, :observed;
+                                     mask = mask, maxiter = maxiter, tol = tol)
+    return ok2 ? (z2, true) : (z, false)
+end
+
+# The mode alone, for the getLV-style callers (covariate, species-covariate,
+# fourth-corner, row-effect and constrained getLV). Unchanged contract: a plain score,
+# with no convergence flag, even at a site whose search did not converge.
+function _laplace_mode_off(family, y::AbstractVector, n::AbstractVector,
+        Λ::AbstractMatrix, η0::AbstractVector, link::Link;
+        mask = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
+    return first(_laplace_mode_off_conv(family, y, n, Λ, η0, link;
+                                        mask = mask, maxiter = maxiter, tol = tol))
 end
 
 function _laplace_site_off(family, y::AbstractVector, n::AbstractVector,
@@ -55,9 +130,13 @@ function _laplace_site_off(family, y::AbstractVector, n::AbstractVector,
     (hessian === :fisher || hessian === :observed) || throw(ArgumentError(
         "hessian must be :fisher or :observed; got :$hessian"))
     p = size(Λ, 1)
-    # The MODE SEARCH stays on Fisher (`_laplace_mode_off` is untouched) — only
-    # the log-det takes the selector. Same role separation as the generic core.
-    z  = _laplace_mode_off(family, y, n, Λ, η0, link; mask = mask, maxiter = maxiter, tol = tol)
+    # The MODE SEARCH is Fisher first, with an observed-curvature fallback
+    # (`_laplace_mode_off_conv`); only the log-det takes the selector. Same role
+    # separation as the generic core. A site whose search does not converge returns
+    # -Inf, never a value computed at an unconverged mode, so the fitters' objective
+    # returns its 1e12 sentinel instead of a garbage surface.
+    z, ok = _laplace_mode_off_conv(family, y, n, Λ, η0, link; mask = mask, maxiter = maxiter, tol = tol)
+    ok || return -Inf
     η  = _clamp_eta.(η0 .+ Λ * z)
     μ  = _clamp_mu.(Ref(family), linkinv.(Ref(link), η))
     me = mu_eta.(Ref(link), η)
@@ -296,9 +375,13 @@ function fit_gllvm_cov(Y::AbstractMatrix; family, X::AbstractArray{<:Real, 3},
         γ = θ[(p + 1):(p + q)]
         Λ = unpack_lambda(θ[(p + q + 1):(p + q + rr)], p, K)
         disp = has_disp ? exp(θ[p + q + rr + 1]) : NaN
-        fam = _cov_family(family, disp)
         O = _build_offset(X_fit, γ)
         v = try
+            # Built inside the `try`: a line-search step can push log-dispersion so low
+            # that exp(...) == 0.0, and Distributions then throws DomainError (Gamma,
+            # Beta and NegativeBinomial all check their parameter). That point must get
+            # the sentinel, not end the fit.
+            fam = _cov_family(family, disp)
             -_marginal_loglik_offset(fam, Yc, Nm, Λ, β, O, lk;
                                      mask = msk, maxiter = newton_maxiter, tol = newton_tol)
         catch

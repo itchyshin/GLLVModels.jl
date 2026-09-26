@@ -189,9 +189,10 @@ function fit_gllvm_speciescov(Y::AbstractMatrix; family, X::AbstractArray{<:Real
         B = reshape(θ[(p + 1):(p + p * q)], p, q)
         Λ = unpack_lambda(θ[(p + p * q + 1):(p + p * q + rr)], p, K)
         disp = has_disp ? exp(θ[p + p * q + rr + 1]) : NaN
-        fam = _cov_family(family, disp)
         O = _build_offset_species(X, B)
         v = try
+            # Inside the `try`: exp(log-dispersion) can underflow to 0.0 (see fit_gllvm_cov).
+            fam = _cov_family(family, disp)
             -_marginal_loglik_offset(fam, Yc, Nm, Λ, β, O, lk;
                                      mask = msk, maxiter = newton_maxiter, tol = newton_tol)
         catch

@@ -176,10 +176,11 @@ function fit_roweffect_gllvm(Y::AbstractMatrix; family,
         ρfree = θ[(p + 1):(p + nfree)]
         Λ = unpack_lambda(θ[(p + nfree + 1):(p + nfree + rr)], p, K)
         disp = has_disp ? exp(θ[p + nfree + rr + 1]) : NaN
-        fam = _cov_family(family, disp)
         ρ = vcat(zero(eltype(ρfree)), ρfree)
         O = _build_offset_row(ρ, p)
         v = try
+            # Inside the `try`: exp(log-dispersion) can underflow to 0.0 (see fit_gllvm_cov).
+            fam = _cov_family(family, disp)
             -_marginal_loglik_offset(fam, Yc, Nm, Λ, β, O, lk;
                                      mask = msk, maxiter = newton_maxiter, tol = newton_tol)
         catch
