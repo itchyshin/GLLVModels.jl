@@ -14,6 +14,23 @@ All notable changes to GLLVModels.jl are documented here.
 ## Unreleased
 
 ### Fixed
+- **`confint(..., method = :profile)` and `method = :bootstrap` could accept a
+  silently failed inner refit.** `_family_profile_refit` and `_family_bootstrap`
+  (`src/confint_family.jl`) judged a refit's success only by `isfinite` on its
+  objective or parameter vector, never checking `Optim.converged` or the refit's
+  own convergence flag — so a constrained refit that landed on the package's
+  `1e12` failure sentinel (whose finite-difference gradient is exactly flat, so
+  `Optim.converged` reports `true` at iteration 0 regardless) was counted as a
+  success, and likewise for a bootstrap replicate (#504). `_family_profile_refit`
+  now requires `Optim.converged` in addition to a non-sentinel minimum (shared
+  `_fit_verdict` helper, the same guard used on the point-fit path). `ad.refit`
+  adapters may now report their own verdict as `(θ = ..., converged = ...,
+  loglik = ...)`; a `false` `converged` or a sentinel-valued `loglik` is rejected
+  even though `θ` is finite, and `n_converged` reflects the stricter count.
+  Existing per-family bootstrap adapters still return a bare parameter vector
+  (the prior `isfinite`-only path) and are migrated to the richer contract one
+  family at a time in follow-up PRs; healthy fits and profile brackets that were
+  already at a genuine optimum are unchanged.
 - **Gamma grouped fits no longer report convergence from a diverged inner search.**
   The per-site mode search inside `fit_gamma_gllvm_grouped` and its covariate and
   shared-shape routes could diverge at the fitter's own start and still return a

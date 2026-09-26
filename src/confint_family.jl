@@ -2856,6 +2856,12 @@ end
 # Constrained refit: minimise nll over θ_{-i} with θ_i fixed at c. Returns
 # (ℓ_profile, ok, θ_red_solution). Finite-difference gradient (nll is not
 # AD-friendly through the Laplace mode-finder).
+#
+# `ok` requires BOTH `Optim.converged(res)` and a non-sentinel minimum (`_fit_verdict`,
+# shared with the point-fit path — fit_verdict.jl). Checking `Optim.converged` alone is not
+# enough: when `nll_red` lands on the `1e12` failure plateau its finite-difference gradient
+# is exactly zero, so `Optim.converged` reports `g_converged = true` at iteration 0 even
+# though nothing was actually minimised (#504).
 function _family_profile_refit(ad::_FamilyCI, i::Integer, c::Real, θ_red_warm::AbstractVector;
                                g_tol::Real = 1e-4,
                                iterations::Integer = 200)
@@ -2876,9 +2882,9 @@ function _family_profile_refit(ad::_FamilyCI, i::Integer, c::Real, θ_red_warm::
     catch
         return (NaN, false, collect(Float64, θ_red_warm))
     end
-    nmin = Optim.minimum(res)
-    isfinite(nmin) || return (NaN, false, collect(Float64, θ_red_warm))
-    return (-nmin, true, Optim.minimizer(res))
+    ll, converged, _ = _fit_verdict(res)
+    converged || return (NaN, false, collect(Float64, θ_red_warm))
+    return (ll, true, Optim.minimizer(res))
 end
 
 function _family_profile(ad::_FamilyCI, sel::Vector{Int}, level::Real;
@@ -2951,6 +2957,28 @@ end
 # ---------------------------------------------------------------------------
 # Parametric bootstrap (optionally threaded)
 # ---------------------------------------------------------------------------
+# `ad.refit(Yb)` returns one of:
+#   - `nothing`                — refit failed outright (an exception, or the per-family
+#                                 adapter already screened it out, as the AGHQ adapters do).
+#   - a bare parameter vector   — legacy contract: only `isfinite` is checked. A refit that
+#                                 stopped early or silently landed on the fitter's `1e12`/`-Inf`
+#                                 failure sentinel is NOT caught by this path (#504); families
+#                                 are migrated to the richer contract below one at a time.
+#   - `(θ = ..., converged = ..., loglik = ...)` — the per-family adapter's own convergence
+#                                 verdict. `loglik` is optional (default: assume finite). A
+#                                 `false` `converged`, or a sentinel-valued `loglik`, is
+#                                 rejected even though `θ` itself is finite (#504).
+function _bootstrap_refit_ok(raw, m::Integer)
+    raw === nothing && return (nothing, false)
+    if raw isa AbstractVector
+        return (raw, length(raw) == m && all(isfinite, raw))
+    end
+    θb = raw.θ
+    ok = raw.converged && !_nll_failed(-float(get(raw, :loglik, 0.0))) &&
+         length(θb) == m && all(isfinite, θb)
+    return (θb, ok)
+end
+
 function _family_bootstrap(ad::_FamilyCI, sel::Vector{Int}, level::Real,
                            n_boot::Integer, seed::Integer, parallel::Bool; retain_replicates::Bool=false)
     m = length(ad.θ)
@@ -2958,12 +2986,13 @@ function _family_bootstrap(ad::_FamilyCI, sel::Vector{Int}, level::Real,
     ok = fill(false, n_boot)   # Vector{Bool} (one byte/elt) — safe for concurrent distinct-index writes (a BitVector is not)
     work = function (b)
         rng = MersenneTwister(seed + b)
-        θb = try
+        raw = try
             ad.refit(ad.simulate(rng))     # guard both sim + refit so one bad replicate can't crash the run
         catch
             nothing
         end
-        if θb !== nothing && length(θb) == m && all(isfinite, θb)
+        θb, good = _bootstrap_refit_ok(raw, m)
+        if good
             @inbounds reps[b, :] .= θb
             ok[b] = true
         end
@@ -3058,8 +3087,12 @@ power `p ∈ (1,2)` is held fixed at its fitted value, so only `phi` is profiled
                    fitted model, refit each, take percentile bounds. Set
                    `parallel = true` to run replicates over `Threads.@threads`
                    (each replicate seeds its own RNG `seed + b`, so multi-core
-                   and single-core give identical results). Returns an extra
-                   `n_converged::Int`.
+                   and single-core give identical results). A replicate whose
+                   refit reports non-convergence, or a sentinel-valued
+                   objective, on adapters that expose that signal, is
+                   excluded from the percentile bounds (#504). Returns an
+                   extra `n_converged::Int` (`n_boot - n_converged` were
+                   rejected).
 
 All methods return `term`, `estimate` (dispersion on its natural scale),
 `lower`, `upper`, and `method`. Dispersion parameters (`r`, `phi`, `alpha`) are
