@@ -1,0 +1,7 @@
+name: True parity P1 twin tests
+on: [pull_request, workflow_dispatch]
+jobs:
+  true-parity-p1-twin:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "fixture job, not a real workflow"
