@@ -1,6 +1,7 @@
 # Temporal port spec: gllvmTMB temporal models at P1 into GLLVModels.jl
 
-Status: DRAFT design spec, no code. Written 2026-09-27 against the signed P1
+Status: DRAFT design spec, no code. Written 2026-09-27, revised the same day
+after an independent review (section 9 lists the changes), against the signed P1
 boundary (vault D-295: temporal is inside P1; port R's semantics; Julia designs
 stay documented extras; twin R's public API at R's scope and no further).
 
@@ -21,8 +22,11 @@ The plan on file recorded R's temporal scope as "Gaussian, rank-1 latent score,
 AR1/OU correlation; extract, forecast, bootstrap, profile, compare". Section 1
 checks that against R. The short verdict: correct on family, rank and
 correlation, but incomplete. R has three covariance modes (`indep`, `dep`,
-`latent`), of which the rank-one latent score is one; the four helpers are bounded to
-unreplicated Gaussian `temporal_indep` fits only; and R admits four
+`latent`), of which the rank-one latent score is one; three of the four
+helpers (`forecast_temporal`, `profile_temporal`, `bootstrap_temporal`) are
+bounded to unreplicated Gaussian `temporal_indep` fits with the temporal source
+alone, while `compare_temporal` admits every temporal mode, replicated fits and
+AR1-versus-OU candidates (R/temporal-selection.R:5-23); and R admits four
 cross-source cells and ordinary `unit` / `unit_obs` composition that the plan
 did not mention. Section 7 asks the maintainer how much of that is in scope.
 
@@ -247,8 +251,14 @@ claimed anywhere; `profile_temporal` is "not a calibrated interval"
 calibrated prediction interval" (R/temporal-forecast.R:6-7);
 `bootstrap_temporal` returns refit rows and no interval
 (R/temporal-bootstrap.R:17-19); `compare_temporal` is an AIC table with "no
-likelihood-ratio test" (R/temporal-selection.R:3). The port claims the same
-and no more.
+likelihood-ratio test" (R/temporal-selection.R:3), and it is the one helper
+without the unreplicated-`indep` bound: its only fit checks are "native
+temporal fit", "temporal source by itself" and identical response rows
+(R/temporal-selection.R:9-23), so it compares `indep`/`dep`/`latent`,
+replicated and unreplicated, AR1 and OU candidates alike, with
+`AIC = -2 logLik + 2 length(opt$par)` exactly
+(tests/testthat/test-temporal-program-selection.R:1-20). The port claims the
+same and no more.
 
 ## 2. Public API contract (eight exports)
 
@@ -356,9 +366,15 @@ trait panel at future occasions of already fitted series. Computation:
 residual `r = y - X beta_hat` on the fitted rows; `C_oo`, `C_ff`, `C_of`
 built from the fitted `phi`/`kappa` and `psi` (R/temporal-forecast.R:138-164,
 with `sigma_eps^2` on the diagonal of `C_oo` and `C_ff` only);
-`est = X_new beta_hat + C_of' C_oo^{-1} r`;
-`se.fit = sqrt(diag(C_ff - C_of' C_oo^{-1} C_of))` (R/temporal-forecast.R:125-134).
+`est = eta_fixed_new + C_of' C_oo^{-1} r`, where `eta_fixed_new = X_new beta_hat +
+offset_new` and the fitted-row residual also subtracts the fitted offset
+(R/temporal-forecast.R:114-120, 128); `se.fit = sqrt(max(v, 0))` with
+`v = diag(C_ff - C_of' C_oo^{-1} C_of)`, refused only when some `v < -1e-8`
+and clamped at zero otherwise (R/temporal-forecast.R:131-133).
 Return: `newdata` rows in input order plus `est` and, if requested, `se.fit`.
+Julia has no offset door on this fit, so the offset term is fenced: a Julia
+temporal fit has `offset = 0` and the forecast twin covers the no-offset case
+only (recorded as a partial fence on the `forecast_temporal` row).
 
 Refusals (message, R error class):
 
@@ -395,27 +411,80 @@ R (R/temporal-profile.R:14-29): same fit contract as forecast (unreplicated
 Gaussian `temporal_indep` alone); refusals "`profile_temporal()` requires a
 native temporal fit.", "`profile_temporal()` currently supports unreplicated
 Gaussian `temporal_indep()` fits only.", "`profile_temporal()` currently
-requires the temporal source by itself.". It profiles `theta_temporal_time`
-with all other coordinates re-optimised, through `tmbprofile_wrapper`
-(R/profile-ci.R:372-456): threshold `crit = qchisq(level, 1) / 2` on the
-negative log-likelihood scale (R/profile-ci.R:41-48), search budget
-`ytol = crit + 1` (R/profile-ci.R:66-68), step `ystep = 0.5`, bounds found by
-linear interpolation of the deviance trace with asymptotic (infinite) versus
-truncated (`NA`) endpoints (R/profile-ci.R:188-235). Return: named vector
-`estimate, lower, upper` on the `phi` or `kappa` scale; `NA` bounds mean no
-endpoint was established (R/temporal-profile.R:10-12).
+requires the temporal source by itself.". It passes `name =
+"theta_temporal_time"`, `level`, the `phi`/`kappa` transform and `...`
+(`ystep`, `ytol`, `parm.range`) to `tmbprofile_wrapper`
+(R/profile-ci.R:372-456), which calls `TMB::tmbprofile(fit$tmb_obj, name =
+idx, ystep = ystep, ytol = ytol, parm.range = parm.range, trace = FALSE)`
+(R/profile-ci.R:424-432) with `ystep = 0.5` by default (R/profile-ci.R:379)
+and `ytol = crit + 1` where `crit = qchisq(level, 1) / 2`
+(R/profile-ci.R:41-48, 66-68, 394-396). The test calls it with `ystep = .25,
+ytol = 1` and, for the `NA` case, `parm.range = theta_hat ± 0.01`
+(tests/testthat/test-temporal-program-profile.R:11, 22-24).
+
+`TMB::tmbprofile` (TMB 1.9.21, `R/TMB.R`, function `tmbprofile`; the installed
+copy was read with `print(TMB::tmbprofile)`) does the following, and the
+Julia port reproduces each step:
+
+1. Starts from `obj$env$last.par.best` with the random block removed, so the
+   walk starts at the fitted outer coordinates, and the profiled coordinate
+   is `that = theta_hat[idx]`.
+2. For a displacement `x`, the profile value is the inner minimum over the
+   other outer coordinates of `obj$fn(par + x direction + C par0)`, found by
+   `nlminb(start, newfn, newgr, control = list(step.min = 0.001))`, where
+   `start` is warm-started from the previous displacement's solution
+   (`start <<- ans$par`) and reset to zero at the beginning of each
+   direction. `obj$fn` is the Laplace objective; for this model it is the
+   exact marginal NLL, so the Julia inner problem is the closed-form NLL of
+   section 3.4 with `theta_time` fixed.
+3. Walks up then down from `x = 0` with initial step `h = 1e-4`
+   (`h = 1e-04` default), evaluating `f(x + h)` at each iteration; any
+   error in the evaluation becomes `NA`.
+4. Stops a direction when `x + that` leaves `parm.range`, when the value is
+   `NA`, when `|y_next - y_0| > ytol` (change relative to the value at
+   `x = 0`, the MLE), or after `maxit = ceiling(5 * ytol / ystep)`
+   iterations.
+5. Adapts the step (`adaptive = TRUE`): if `|y_next - y_current| > ystep`
+   the step halves; if it is below `ystep / 4` (when `y_next >= y_0`) or
+   `ystep / 8` (when `y_next < y_0`) the step doubles. `ystep` is therefore a
+   cap on the objective change per step, on the NLL scale, and never a step
+   on the `theta` scale.
+6. Returns the two traces joined and sorted by the parameter value, as a
+   data frame `(<name>, value)`.
+
+`tmbprofile_wrapper` then (R/profile-ci.R:442-455): returns
+`(estimate = transform(theta_hat), NA, NA)` when the trace has fewer than
+three rows; otherwise `.profile_bounds(prof, mle_val, mle_par, crit)`
+(R/profile-ci.R:188-296) finds each bound on the side of the MLE by
+locating the sign change of `value - (mle_val + crit)` nearest the MLE and
+interpolating on the zeta scale `zeta = sign(theta - theta_hat) sqrt(2 (nll
+- nll_hat))` (R/profile-ci.R:249-275), falling back to deviance-scale
+interpolation when zeta is degenerate (R/profile-ci.R:276-283). When no point
+on a side exceeds the threshold, `.profile_terminus_status`
+(R/profile-ci.R:157-184) classifies the tail from its slope: "asymptotic"
+(the tail slope is at most one tenth of the maximum slope, or the trace never
+climbed) gives `-Inf`/`Inf`; "truncated" or "undecidable" (fewer than three
+finite points) gives `NA` (R/profile-ci.R:226-235). If no point on a side is
+inside the threshold, the bound is `NA` (R/profile-ci.R:236-238). Bounds are
+mapped by `transform` (`(1-1e-6) tanh` or `exp`), so `±Inf` on the `theta`
+scale becomes `±(1-1e-6)` for AR1 and `0`/`Inf` for OU.
+Return: named vector `estimate, lower, upper`; `NA` bounds mean no endpoint
+was established (R/temporal-profile.R:10-12).
 
 Julia: `profile_temporal(fit; level = 0.95, ystep = 0.5, ytol = nothing,
-parm_range = (-Inf, Inf))` returning `(estimate, lower, upper)` with
-`missing` where R returns `NA` and `-Inf`/`Inf` where R returns an
-asymptotic bound (section 7, Q4). The profile is computed by a fixed-`theta`
-re-optimisation of the remaining coordinates with the same LBFGS settings as
-the fit, walking outward in `ystep` on the `theta` scale until the deviance
-exceeds `ytol`, then interpolating the crossing of `crit` exactly as
-R/profile-ci.R:188-235 does. Because the deviance trace itself is exact
-(closed form), the only expected R-versus-Julia difference is the trace grid,
-which is why receipts on `lower`/`upper` carry a looser tolerance than the
-estimate (section 5).
+parm_range = (-Inf, Inf), h = 1e-4)` returning `(estimate, lower, upper)`
+with `missing` where R returns `NA` (section 7, Q4) and the transformed
+`±Inf` where R returns an asymptotic bound. The implementation is a direct
+port of steps 1 to 6 and of `.profile_bounds` and `.profile_terminus_status`
+into `src/temporal_methods.jl`: an inner Optim LBFGS solve (warm-started,
+same `g_tol` as the fit) in place of `nlminb` with `step.min = 0.001`; the
+same `h`, halve/double rules, `ytol`, `parm_range`, `maxit` and `NA`
+stops; the same zeta-scale interpolation and terminus classifier. Because
+the objective is exact, R and Julia traces differ only through the inner
+optimiser's stopping point at each displacement, which moves the trace values
+by about the inner tolerance and the bounds by a correspondingly small
+amount; the receipt tolerance for `lower`/`upper` (section 5) is set from
+that, and `estimate` matches to the fit tolerance.
 
 ### 2.6 `bootstrap_temporal(object, n_boot = 100L, seed = NULL)`
 
@@ -445,10 +514,14 @@ compares instead.
 ### 2.7 `compare_temporal(...)`
 
 R (R/temporal-selection.R:5-29): at least two named temporal fits, each
-with the temporal source alone and identical response rows; returns
-`model, logLik, df, AIC, convergence` where `logLik = -opt$objective`,
-`df = length(opt$par)` and `AIC` from `stats::AIC`; no test statistic of
-any kind. Refusals: "Supply at least two named temporal fits.", "Temporal
+with the temporal source alone and identical response rows; no restriction
+on mode, workflow, structure or (in code) family, so `indep` versus `dep`,
+replicated fits, and AR1 versus OU on the same data are all admitted
+(R/temporal-selection.R:9-23). Returns `model, logLik, df, AIC,
+convergence` where `logLik = -opt$objective`, `df = length(opt$par)` (the
+free outer coordinates after mapping), `AIC = -2 logLik + 2 df` through
+`stats::AIC` (tests/testthat/test-temporal-program-selection.R:14-19 assert
+that identity to `1e-12`); no test statistic of any kind. Refusals: "Supply at least two named temporal fits.", "Temporal
 candidates must be named.", "Every candidate must be a native temporal fit.",
 "`compare_temporal()` currently requires the temporal source by itself."
 (class `gllvmTMB_temporal_selection_composed`), "Temporal candidates must
@@ -479,8 +552,16 @@ modes: `fit_gaussian_sources` (`src/source_fit.jl:290-392`) over
 built by `_source_trait_covariances` (`src/source_fit.jl:71-93`) and the
 dense NLL in `_gaussian_sources_nll` (`src/source_fit.jl:108-135`). R's
 temporal model is that model with one difference: the source correlation `C`
-is not fixed, it is `K(theta_time)`. The port adds a parametric source
-beside the fixed ones without editing the fixed-source code.
+is not fixed, it is `K(theta_time)`. `fit_gaussian_sources` cannot carry a
+parametric kernel: `SourceCovariance` stores `C` as a `Matrix{Float64}`
+(`src/source_fit.jl:18-26`), the projected `S = P C P'` is precomputed once
+before optimisation (`src/source_fit.jl:342`), and `_gaussian_sources_nll`
+takes `theta` as trait-block and residual coordinates only. So the port
+writes a new NLL (`temporal_marginal_nll`, section 3.4) and reuses only the
+trait-block builder `_source_trait_covariances` (`src/source_fit.jl:71-93`),
+`unpack_lambda` / `rr_theta_len` (`src/packing.jl`), and, in slice 2, fixed
+`SourceCovariance` terms for the ordinary `unit` / `unit_obs` blocks. The
+fixed-source code is not edited.
 
 Nothing in the Laplace stack is involved. The spec does not touch
 `_laplace_mode` (`src/families/laplace.jl:102`), `src/families/mixed.jl`,
@@ -523,7 +604,14 @@ blocks `K_g ⊗ Sigma_T + sigma_eps^2 I` of size `p T_g`. The NLL is the sum of
 per-series dense Gaussian terms (`cholesky(Symmetric(V_g))`, `logdet`,
 quadratic form), which is what `_gaussian_sources_nll` does for one dense
 matrix (`src/source_fit.jl:124-135`); the per-series split is an exactness-
-preserving cost reduction. Replicated: `V_g = Z_g (K_g ⊗ Sigma_T) Z_g' +
+preserving cost reduction. AR1 entries are `phi^Int(gap)` with the gap stored
+as an integer, mirroring R's integer-power helper (src/gllvmTMB.cpp:62-75);
+`phi` is negative half the time, and an integer exponent keeps the power on
+the real branch for every AD type without relying on a special case in
+ForwardDiff (measured on this machine: ForwardDiff 0.10.39 on Julia 1.10.0
+returns the correct value and derivative for `(-0.6)^2.0` and `(-0.6)^3.0`,
+so the float form does not throw here, but the integer form is the
+documented contract). Replicated: `V_g = Z_g (K_g ⊗ Sigma_T) Z_g' +
 sigma_eps^2 I` with the row incidence `Z_g`. With ordinary `unit` /
 `unit_obs` sources (slice 2), the cross-series identity blocks are added as
 fixed `SourceCovariance` terms and `V` is assembled once, dense, exactly as
@@ -571,11 +659,15 @@ Julia has no `traits()` wide-format sugar, so R's wide route
 
 ### 3.6 Profile, bootstrap, compare, forecast
 
-- `profile_temporal` re-optimises the remaining coordinates at fixed
-  `theta_time` with the same objective; the trace and interpolation follow
-  R/profile-ci.R:188-235. It does not call `profile_ci` from
-  `src/confint_profile.jl` (typed on `GllvmFit`), so `confint_profile.jl` is
-  untouched.
+- `profile_temporal` ports `TMB::tmbprofile` as R calls it (section 2.5,
+  steps 1 to 6: `last.par.best` start, warm-started inner solve at each
+  displacement, `h = 1e-4` initial step, `ystep` cap with halve/double,
+  stops on `ytol`, `NA`, `parm_range`, `maxit = ceiling(5 ytol / ystep)`),
+  then `.profile_bounds` (zeta-scale interpolation, R/profile-ci.R:249-283)
+  and `.profile_terminus_status` (R/profile-ci.R:157-184), with the
+  fewer-than-three-rows `NA` rule (R/profile-ci.R:442-444). It does not call
+  `profile_ci` from `src/confint_profile.jl` (typed on `GllvmFit`), so
+  `confint_profile.jl` is untouched.
 - `bootstrap_temporal` uses `simulate(fit; condition_on_RE = false, rng)`
   from `temporal_methods.jl` and `update` to refit; no use of
   `src/confint_bootstrap.jl`.
@@ -602,8 +694,9 @@ reading every block: 91 `test_that` blocks and 396 `expect_*` calls (the raw
 `writeLines()` in `test-temporal-ar1-verify-runner.R:23,29`, which are not
 blocks). All fits are `gaussian()`.
 
-Legend: T = twin (red-first Julia test written before the code), F = fenced
-with reason. "tol" is the Julia test tolerance; R's own tolerance is quoted
+Legend: T = twin (red-first Julia test written before the code), T (partial)
+= twin that changes R's fixture and is scoped as such, D = deferred pending a
+maintainer answer (inside P1, twinnable in principle), F = fenced with reason. "tol" is the Julia test tolerance; R's own tolerance is quoted
 where it differs. Slice numbers refer to section 8.
 
 ### 4.1 Twinned blocks (43 blocks, 150 expectations)
@@ -620,7 +713,7 @@ where it differs. Slice numbers refer to section 8.
 | ar1-parser.R:25 | constructor and parser boundary checks | 8 | T: type, `d == 1`, structure; refusals "rank one", "bare column", "trait-intercept block", "complete trait panel", "replicate". Regex. |
 | program-bootstrap.R:1 | bootstrap retains every attempt | 5 | T `test_temporal_bootstrap.jl`: `replicate == 1:2`, six column names, finite seeds, objective finite or error text; refusal "temporal_indep" on a `dep` fit. Structure only (RNG differs from R). |
 | program-bootstrap.R:18 | reproducible seeds and OU scale | 6 | T: same seed reproduces seeds and `time_estimate` (atol 1e-10), `time_estimate > 0` on OU, caller RNG untouched (Julia: `Random.default_rng()` state unchanged), `time_estimate == exp(theta_time)` (atol 1e-12). |
-| program-bootstrap.R:40 | refuses source pairs | 1 | T: a fit with an ordinary `unit` source refuses with "temporal source by itself" (slice 2; the kernel pair itself is fenced, the composed-refusal is what the block asserts). |
+| program-bootstrap.R:40 | refuses source pairs | 1 | T (partial): R's fixture is a replicated `temporal_indep + kernel_indep(K = I)` fit; the twin substitutes an ordinary `unit` source (slice 2) to exercise the same "temporal source by itself" refusal path (`.gllvmTMB_predict_unhandled_re_tiers`). This is evidence for the composed-refusal only, never for the kernel pair; the kernel-fixture form is deferred pending Q1. |
 | program-composed-simulation.R:12 | unconditional sim redraws temporal and ordinary tiers | 1 | T slice 2 `test_temporal_simulate.jl`: with an `rng` that returns zeros (Julia `simulate` takes `rng`; the twin passes a zero-returning `AbstractRNG` stub), unconditional draw equals `X beta`; atol 1e-12. |
 | program-composed-simulation.R:36 | conditional sim keeps the fitted predictor | 1 | T slice 2: zero-noise conditional draw equals fitted `eta`; atol 1e-12. |
 | program-composed-simulation.R:84 | composed sim matches analytic moments | 1 (4 at run) | T slice 2: 10000 draws, four covariance entries within 4.2 Monte Carlo SE of the analytic `V`. |
@@ -630,7 +723,7 @@ where it differs. Slice numbers refer to section 8.
 | program-profile.R:1 | profile of the transformed time parameter | 6 | T `test_temporal_profile.jl`: names, `estimate == (1-1e-6) tanh(theta)` (atol 1e-10), trace value at the MLE equals the objective (atol 1e-8), trace maximum exceeds objective + 0.1, narrow `parm_range` gives `missing` bounds, refusal on `dep`. The R block reads `TMB::tmbprofile` directly; the twin reads the Julia trace. |
 | program-profile.R:30 | OU profile invariant to time-origin shift | 2 | T: objectives (atol 1e-8) and profile outputs (atol 1e-8) equal after `+100`. |
 | program-selection.R:1 | compare_temporal AIC semantics, no LRT | 6 | T `test_temporal_compare.jl`: column names, `logLik == -objective` (atol 1e-12), `df == length(theta)`, `AIC == -2 logLik + 2 df` (atol 1e-12), no `p_value` column. |
-| program-selection.R:22 | compare refuses composed candidates | 1 | T slice 2: "source by itself" on a fit with an ordinary `unit` source. |
+| program-selection.R:22 | compare refuses composed candidates | 1 | T (partial), slice 2: "source by itself" on a fit with an ordinary `unit` source in place of R's `kernel_indep` fixture; same caveat as program-bootstrap.R:40. |
 | program-simulation.R:32 | unconditional sim removes fitted recursive states | 1 | T `test_temporal_simulate.jl`: mock fit (`phi = 0.6`, 3 states, unique), zero-noise unconditional effect is `zeros(3)`; atol 1e-14. |
 | program-simulation.R:41 | conditional sim centred on fitted predictor | 1 | T: zero-noise conditional equals `eta`; atol 1e-14. |
 | sixth-source-api.R:1 | constructors preserve mode | 7 | T `test_temporal_api.jl`: types and modes; `unique == true` on latent. Exact. |
@@ -645,7 +738,7 @@ where it differs. Slice numbers refer to section 8.
 | sixth-source-engine.R:91 | ordinary ordination beside temporal | 3 | T slice 2: `extract_ordination` returns one row per series, no `pair_id`. |
 | sixth-source-engine.R:104 | composed simulation redraws ordinary tiers | 2 | T slice 2: shapes of unconditional and conditional draws. |
 | sixth-source-engine.R:119 | long and wide lifecycle (loop indep/dep/latent) | 14 | T (long form only): modes, `dep` loadings `3 × 3`, latent score ids and loading names, `getLV` is `nothing` otherwise, `predict` columns, `simulate` shape, `update` type, refusals for `predict(newdata)`, `confint`, `select_lv`. The wide-versus-long equality assertions are fenced inside this block (no `traits()` sugar in Julia; Q2). |
-| sixth-source-engine.R:169 | refuses each deferred provider and duplicate terms | 3 (5 at run) | T: phylo/animal/spatial/kernel `indep` beside an unreplicated temporal term refuse "requires replicated AR1" (Julia refuses at the pre-pass with the same message; the cell itself is fenced); two temporal terms refuse "Only one temporal covariance term". |
+| sixth-source-engine.R:169 | refuses each deferred provider and duplicate terms | 3 (5 at run) | T: phylo/animal/spatial/kernel `indep` beside an unreplicated temporal term refuse "requires replicated AR1" (Julia refuses at the pre-pass with the same message; the kernel/phylo/animal cells themselves are deferred pending Q1 and the spatial cell is fenced); two temporal terms refuse "Only one temporal covariance term". |
 | sixth-source-engine.R:196 | all modes and structures reach the tier | 3 (8 at run) | T: 8 cells (indep, dep, latent, latent-unique × AR1, OU) fit and report mode and structure. |
 | sixth-source-oracles.R:214 | all cells match dense NLL and gradient | 2 (32 at run) | T `test_temporal_oracles.jl`: the Julia objective versus an independently written dense builder (a second, separate implementation in the test file, as R does at oracles.R:36-106) over 8 cells × 4 time values; NLL atol 1e-9, ForwardDiff `theta_time` gradient versus central difference atol 1e-6. Tighter than R's 2e-6 / 2e-5 because there is no Laplace or tape noise. |
 | sixth-source-oracles.R:318 | dense oracle with unit and unit_obs | 2 | T slice 2: NLL atol 1e-9; gradient atol 1e-6. |
@@ -654,30 +747,44 @@ where it differs. Slice numbers refer to section 8.
 | sixth-source-oracles.R:375 | latent-unique Psi correlated across occasions | 4 | T: correct versus iid-Psi covariance and NLL differ by more than 1e-4. |
 | sixth-source-regressions.R:1 | ordinary providers stay ordinary without temporal | 2 | T: `fit_gaussian_structured` with `dep` / `latent` and no temporal term has no temporal spec. |
 
-Subtotal: 43 blocks, 150 expectations. Of these, 14 blocks (32 expectations)
-need slice 2 (ordinary `unit` / `unit_obs` composition and simulate).
+Subtotal: 43 blocks, 150 expectations, of which 2 blocks (2 expectations)
+are partial twins. 14 blocks (32 expectations) need slice 2 (ordinary `unit`
+/ `unit_obs` composition and simulate). Inside the twinned set, two further
+partial fences are recorded: the wide-format (`traits()`) equalities in
+sixth-source-engine.R:119, and R's exact bootstrap seeds in
+program-bootstrap.R:18 (Julia reproduces its own seeds).
 
-### 4.2 Fenced blocks (48 blocks, 246 expectations)
+### 4.2 Deferred blocks pending Q1 (18 blocks, 99 expectations)
 
 | Group | R file (blocks, exp) | Reason |
 | --- | --- | --- |
-| Cross-source cells (24 blocks, 119 exp) | program-animal-replicated.R (6, 40); program-kernel-replicated.R (6, 31); program-phylo-replicated.R (5, 24); program-spatial-replicated.R (6, 20); phylo-optimizer-qualification.R:208 (1, 4) | The replicated AR1 `temporal_indep` plus one `kernel_indep` / `phylo_indep` / `animal_indep` / `spatial_indep` cell. Spatial is outside P1 by D-295. The phylo, animal and spatial pairs are recorded by R as failed engineering gates (docs/design/35-validation-debt-register.md:77-79). The kernel pair is twinnable later because Julia has fixed kernel sources (section 7, Q1). Each pair file also carries R-only assertions (`optimizer_passes`, `engine = "julia"` refusal, `Lambda_phy` report). |
+| Kernel pair (6 blocks, 31 exp) | program-kernel-replicated.R:85, 109, 136, 163, 193, 233 | Replicated AR1 `temporal_indep` plus one labelled `kernel_indep`. Inside P1; Julia has fixed kernel `SourceCovariance` terms, so the dense additive oracle (block 109), admission, refusals (block 163), simulation moments (193) and update replay (233) are twinnable once the composition slice exists. R-only assertions inside these blocks (`optimizer_passes = 2`, `engine = "julia"` refusal, `Lambda_phy` report equality, pass history) are fenced within the block. R records this pair's recovery gate as passed (docs/design/35-validation-debt-register.md:76). |
+| Phylo pair (6 blocks, 28 exp) | program-phylo-replicated.R:72, 85, 109, 151, 191; phylo-optimizer-qualification.R:208 | Replicated AR1 `temporal_indep` plus one fixed labelled `phylo_indep(vcv = )` or `tree =`. Inside P1 (phylo latent is inside the boundary by D-295) and twinnable through a fixed-VCV `SourceCovariance`; R records the pair's recovery gate as failed (register row TEMP-06-03), so a twin would receipt the likelihood, never recovery. Block 208's eleven-coordinate finite-difference audit is a straight oracle twin. |
+| Animal pair (6 blocks, 40 exp) | program-animal-replicated.R:79, 88, 104, 143, 208, 217 | Same shape with a dense relationship matrix `A`, pedigree or `Ainv`. Julia has `relatedness_cov`; the pedigree-to-`A` construction (block 104, `A[a5,a5] = 1.25`) needs a pedigree helper that the port does not include. Register row TEMP-06-04 is a failed gate. |
+
+Subtotal: 6 + 6 + 6 = 18 blocks; 31 + 28 + 40 = 99 expectations. The
+recommendation in Q1 is to leave these deferred in this port and revisit the
+kernel pair after slice 2; if the maintainer opens them, each moves to the
+twinned table with the R-only assertions fenced inside the block.
+
+### 4.3 Fenced blocks (30 blocks, 147 expectations)
+
+| Group | R file (blocks, exp) | Reason |
+| --- | --- | --- |
+| Spatial pair (6 blocks, 20 exp) | program-spatial-replicated.R:71, 79, 97, 122, 138, 160 | Replicated AR1 `temporal_indep` plus one fixed-mesh `spatial_indep`. Spatial is outside P1 by signed disposition (D-295); R records the pair's recovery gate as failed (register row TEMP-06-05). |
 | Dev-only optimiser helpers and DRAC artefacts (19 blocks, 104 exp) | phylo-damped-newton.R (8, 34); phylo-third-pass.R (4, 17); phylo-optimizer-qualification.R:39, 50, 166, 244, 269 (5, 44); ar1-verify-runner.R (1, 6); sixth-source-regressions.R:19 (1, 3) | They test scripts under `dev/temporal-program/`, TMB internals (`spHess`, `EvalADFunObject`, `optimizer_pass_history`, a 44-column diagnostics table), a retained DRAC campaign CSV with an md5, and a seed plan for an R campaign. No public API and no Julia analogue. |
 | Retired TMB branch (1 block, 5 exp) | sixth-source-oracles.R:250 | Rebuilds the legacy `use_temporal_B` TMB object with `MakeADFun` and compares; R-internal migration evidence. |
 | Non-temporal regression guards (3 blocks, 11 exp) | ar1-regressions.R:5, 37, 71 | No temporal term; they guard R's ordinary `latent`, phylo-versus-kernel equality and spatial alias rewriting. Covered by existing Julia tests where the feature exists. |
 | Spatial plotting (1 block, 7 exp) | anisotropy.R:76 | `plot_anisotropy` refusal on `use$spatiotemporal`; spatial and plotting are outside this port. |
 
-Subtotal check: 24 + 19 + 1 + 3 + 1 = 48 blocks and 119 + 104 + 5 + 11 + 7 =
-246 expectations, so twinned plus fenced is 43 + 48 = 91 blocks and 150 + 246
-= 396 expectations. Two files split across groups:
-`phylo-optimizer-qualification.R` (block 208 with 4 expectations is a
-cross-source cell; the other five blocks carry 44) and
+Subtotal check: 6 + 19 + 1 + 3 + 1 = 30 blocks and 20 + 104 + 5 + 11 + 7 =
+147 expectations. Across the three tables: 43 + 18 + 30 = 91 blocks and
+150 + 99 + 147 = 396 expectations. Two files split across tables:
+`phylo-optimizer-qualification.R` (block 208 with 4 expectations is
+deferred with the phylo pair; the other five blocks with 44 are fenced) and
 `sixth-source-regressions.R` (block 1 with 2 expectations is twinned; block
 19 with 3 is fenced).
 
-Inside the twinned set, two partial fences are recorded: the wide-format
-(`traits()`) equalities in sixth-source-engine.R:119, and the exact R seed
-values in program-bootstrap.R:18 (Julia reproduces its own seeds, not R's).
 
 ## 5. Receipts and case-map rows
 
@@ -698,7 +805,10 @@ Which rows close per slice:
   (unreplicated and replicated, AR1 and OU).
 - Slice 2 closes the `update` S3 row and the composition sub-cases inside
   the constructor rows (`temporal + indep/dep/latent(unit | unit_obs)`).
-- Cross-source cells stay open with a `PARTIAL` disposition proposal (Q1).
+- The kernel, phylo and animal cross-source cells stay open as deferred
+  sub-cases pending Q1; the spatial cell carries an outside-boundary
+  disposition (D-295). Both are recorded on the constructor rows as
+  named sub-cases rather than as a `PARTIAL` disposition on the row.
 
 Each receipt is one JSON file under
 `docs/dev-log/core070/true-parity-latest/receipts/temporal/` produced by
@@ -712,7 +822,12 @@ records:
 - the public R call (formula string, `structure`, `time`, `replicate`,
   `unit`), the data md5 and the data itself when small (the R fixtures are
   9 to 96 rows);
-- R's `opt$par` with names, `opt$objective`, `opt$convergence`,
+- R's `opt$par` together with `names(opt$par)` as recorded by the R runner;
+  the Julia side asserts that recorded name vector (order and multiplicity)
+  against its own coordinate layout before evaluating, rather than assuming
+  the set of section 3.3 (a mapped-off `log_sigma_eps`, section 7 Q7,
+  would otherwise silently shift every coordinate); `opt$objective`,
+  `opt$convergence`,
   `report$phi_temporal` or `report$ou_rate`, `report$temporal_sd`,
   `report$Lambda_temporal`, and `extract_temporal()` output;
 - Julia's estimate, `loglik`, verdict fields;
@@ -725,9 +840,12 @@ records:
   atol `1e-5`, `Sigma_T = L L'` entries atol `1e-5` (not `L`, section 1.6),
   `psi` and `sigma_eps` rtol `1e-5`, `beta` atol `1e-6`;
 - helper receipts: `forecast_temporal` `est`/`se_fit` atol `1e-8` at R's
-  coordinates; `profile_temporal` `estimate` atol `1e-8`, `lower`/`upper`
-  atol `1e-3` (grid interpolation, section 2.5) with `NA`/`missing` agreement
-  recorded as a boolean; `compare_temporal` `logLik`/`df`/`AIC` atol `1e-8`;
+  coordinates on offset-free data; `profile_temporal` `estimate` atol
+  `1e-8`, `lower`/`upper` atol `1e-4` on the `theta` scale (the walk and
+  interpolation are ported step for step, section 2.5, so the residual
+  difference is the inner optimiser's stopping point), plus the full
+  `(theta, value)` trace from both sides so a miss can be localised to a
+  step, and `NA`/`missing` and `±Inf` agreement recorded as booleans; `compare_temporal` `logLik`/`df`/`AIC` atol `1e-8`;
   `bootstrap_temporal` structural agreement (columns, `n_boot` rows, count of
   converged refits) and a distribution summary of `time_estimate` (mean and
   SD within Monte Carlo error at `n_boot = 200`), never per-row equality.
@@ -764,12 +882,13 @@ Each with a recommendation. None of these blocks slice 1.
 - Q1. Cross-source cells (replicated AR1 `temporal_indep` plus one
   `kernel_indep` / `phylo_indep` / `animal_indep` / `spatial_indep`; 24 R
   blocks). Options: twin all four; twin the kernel pair only; fence all.
-  Recommendation: fence all four in this port, with a `PARTIAL` disposition
-  proposal on the constructor rows naming the cells; revisit the kernel pair
-  after slice 2 because Julia already has fixed kernel sources and R records
-  that pair as the one with a passed recovery gate. The spatial pair is
-  outside P1 by D-295; the phylo and animal pairs are failed gates on R's own
-  ledger, so a twin would replicate an unvalidated route.
+  Recommendation: defer the kernel, phylo and animal pairs (18 blocks,
+  section 4.2) in this port, named as open sub-cases on the constructor
+  rows, and revisit the kernel pair first after slice 2 because Julia
+  already has fixed kernel sources and R records that pair as the one with a
+  passed recovery gate. The spatial pair is fenced outright: outside P1 by
+  D-295. The phylo and animal pairs are failed gates on R's own ledger, so a
+  twin there would receipt the likelihood only, never recovery.
 - Q2. Wide-format `traits(t1, t2, t3) ~ ...` route. Julia has no `traits()`
   sugar and its front door takes `Y` as a `p × n` matrix. Recommendation:
   fence the wide route; the long-form door is R's canonical temporal input
@@ -792,11 +911,15 @@ Each with a recommendation. None of these blocks slice 1.
   `latent` at both levels beside the temporal term (14 twinned blocks need
   it). Recommendation: inside P1, as slice 2; it reuses `SourceCovariance`
   with identity blocks and costs little beyond assembling one dense `V`.
-- Q7. The `sigma_eps` auto-suppression rule. R keeps `sigma_eps` free for an
-  unreplicated temporal fit even when a per-row `indep` term is present
-  (R/fit-multi.R:6959-6960), and suppresses it in the replicated case.
-  Recommendation: port the rule as written (R semantics) in slice 2 and
-  record it in the reference page; do not "improve" it.
+- Q7. The `sigma_eps` auto-suppression rule. R suppresses `sigma_eps` only
+  when a per-row diagonal term is present (`per_row_diag_W || per_row_diag_B`)
+  and the fit is not an unreplicated temporal fit (R/fit-multi.R:6959-6960);
+  a temporal-only fit, or a temporal fit with unit-level terms, keeps
+  `sigma_eps` free. When the rule fires, `log_sigma_eps` is fixed at
+  `log(max(1e-3 sd(y), 1e-6))` and mapped off (R/fit-multi.R:6962-6967), so
+  it leaves `opt$par` and `df` in `compare_temporal` drops by one.
+  Recommendation: port the rule as written (R semantics) in slice 2, including
+  the `df` effect, and record it in the reference page; do not "improve" it.
 - Q8. Three stale Julia docs (section 3.7). Recommendation: fix in the
   implementing PR under design rule 3, not in this spec PR.
 - Q9. Bridge reachability. Should `bridge_capabilities` advertise temporal
@@ -817,12 +940,15 @@ Each with a recommendation. None of these blocks slice 1.
 
 ## 8. Estimate
 
-Build: about 8 to 11 working days of one lane, split as slice 1 (constructors,
+Build: about 9 to 13 working days of one lane, split as slice 1 (constructors,
 pre-pass, likelihood, fit, `extract_temporal`, `forecast_temporal`,
 `profile_temporal`, `compare_temporal`, `bootstrap_temporal`, `update`,
 in-sample `predict`, `simulate`, latent scores with the sign anchor, refusal
-set) 5 to 7 days; slice 2 (ordinary `unit` / `unit_obs` composition, the
-partition rule, the `sigma_eps` rule, composed simulate, the formula hook
+set) 6 to 9 days, of which 1 to 2 days are the step-for-step port of
+`TMB::tmbprofile` plus `.profile_bounds` / `.profile_terminus_status`
+(section 2.5), whose trace must match R's for the bound receipts; slice 2
+(ordinary `unit` / `unit_obs` composition, the partition rule, the
+`sigma_eps` rule with its `df` effect, composed simulate, the formula hook
 after coordination) 3 to 4 days.
 
 Tests and receipts: about 4 to 5 days: 43 red-first twins (29 in slice 1, 14
@@ -830,7 +956,9 @@ in slice 2), the independent dense builder for the oracle file, the R receipt
 runs for the eight rows (an R-side lane task, since Codex holds the live R
 toolchain per the operating contract), and the case-map evidence edits.
 
-Total: about three working weeks of lane time, plus review.
+Total: about three to three and a half working weeks of lane time, plus
+review. Deferred cross-source cells (section 4.2), if opened, add about 2
+days for the kernel pair and 3 to 4 days each for phylo and animal.
 
 What the estimate rests on:
 
@@ -844,10 +972,33 @@ What the estimate rests on:
   source and a per-series block loop.
 - 34 of the 43 twins are contract, refusal and structural tests; 9 are
   numeric oracles with an exact target.
-- Risk that stretches the estimate: `profile_temporal` bound agreement at
-  `1e-3` depends on reproducing R's trace grid and interpolation; if the
-  first receipt misses, the fix is in the walk, not in the likelihood, and
-  the `estimate` receipt still closes. `bootstrap_temporal` receipts are by
+- Risk that stretches the estimate: `profile_temporal` bound agreement
+  depends on reproducing `tmbprofile`'s adaptive walk and the inner
+  optimiser's stopping behaviour; the receipt records both traces so a miss
+  is localised to a step, the fix is in the walk rather than in the
+  likelihood, and the `estimate` receipt still closes. `bootstrap_temporal` receipts are by
   design distributional.
-- What the estimate does not cover: the cross-source cells (Q1), the wide
-  route (Q2), and any Kronecker fast path.
+- What the estimate does not cover: the deferred cross-source cells (Q1,
+  costed separately above), the wide route (Q2), offsets, and any Kronecker
+  fast path.
+
+## 9. Revision log
+
+2026-09-27, after the independent review of head `c121fe12d`:
+
+- `compare_temporal` was wrongly described as bounded to unreplicated
+  `temporal_indep`; it admits every mode, workflow and structure
+  (sections 0, 1.8, 2.7).
+- The profile description replaced a generic fixed-`theta` walk with the
+  step-for-step port of `TMB::tmbprofile` and R's bound finder
+  (sections 2.5, 3.6, 5, 8).
+- Kernel, phylo and animal cross-source pairs moved from "fenced" to
+  "deferred pending Q1" (new section 4.2); only the spatial pair stays
+  fenced. Counts: 43 twinned / 18 deferred / 30 fenced blocks; 150 / 99 / 147
+  expectations.
+- Two twins that substitute a `unit` source for R's kernel fixture are marked
+  partial (section 4.1).
+- Q7 states the suppression trigger and its `df` effect precisely.
+- Receipts assert `names(opt$par)` (section 5); forecast records the offset
+  term and the negative-variance rule (section 2.4); AR1 powers use integer
+  exponents (section 3.4); section 3.1 says why a new NLL is written.
