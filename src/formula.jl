@@ -6,9 +6,12 @@
 #     gllvm(@formula(y ~ 1 + temp + habitat), Y, site_data; contrasts = Dict(:habitat => DummyCoding()))
 #
 # Mapping (verified against the engine contract):
-#  - The intercept `1` is the engine's BUILT-IN per-species intercept (the Gaussian
-#    path profiles out the per-trait row mean — src/likelihood.jl:39; fit_gllvm_cov
-#    carries explicit per-species β). So the `1` term is dropped here, not put into X.
+#  - The intercept `1` means one intercept per species. The non-Gaussian fitters
+#    estimate these themselves (e.g. fit_gllvm_cov's β), so `1` is dropped from X.
+#    fit_gaussian_gllvm has NO built-in intercept (with no X it is a zero-mean factor
+#    model), so the Normal() routes supply it explicitly: `y ~ 1` goes through
+#    _fit_gaussian_trait_intercepts, and a formula with covariates gets per-trait
+#    intercept columns from _pervar_formula_design. `y ~ 0` stays zero mean.
 #  - Site-level covariates (continuous, categorical contrasts via StatsModels, function
 #    terms, interactions) become columns of the engine's (p, n, q) design X, broadcast
 #    across species (X[t,s,k] = covariate[s,k]) ⇒ a coefficient SHARED across species.
@@ -135,7 +138,9 @@ gllvm(@formula(y ~ 1 + temp + habitat), Y, site_data; family = Poisson(), K = 2,
 ```
 
 The response symbol on the formula LHS (`y`) names the matrix `Y` and is otherwise
-ignored. The intercept (`1`) is the engine's built-in per-species intercept; each
+ignored. The intercept (`1`) gives one intercept per species: non-Gaussian fitters
+estimate it internally, and for `Normal()` the formula adds trait-intercept columns
+(`fit_gaussian_gllvm` itself has no built-in intercept). Each
 covariate column on the RHS (continuous, categorical via `contrasts`, interactions)
 becomes a coefficient **shared across species** (the engine's `(p,n,q)` design).
 Dispatches to [`fit_gaussian_gllvm`](@ref) for `Normal()`, to [`fit_nb_gllvm_grouped_cov`](@ref) /
