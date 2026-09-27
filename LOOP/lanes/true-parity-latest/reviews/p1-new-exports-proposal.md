@@ -15,7 +15,7 @@ Source: `diff` of `export(` and `S3method(` lines in gllvmTMB NAMESPACE, b4d5fee
 | AIC, BIC, anova, update (gllvmTMB_multi) + print.anova | (check) | twin | A2 small | Julia has aic/bic; anova likely needs a surface |
 | column_coef, animal_coef, phylo_coef, kernel_coef, spatial_coef | R/column-coef-foundation.R | outside-boundary (column grammar) | A7 at P2 | signed disposition row (D-295 boundary) |
 | spatial_slope | (check) | outside-boundary (spatial) | A8 at P2 | |
-| slope, kernel_slope | R/brms-sugar.R (slope) | recon decides: random-slope sugar (twin candidate) or column grammar (outside) | A0r | check before classing |
+| slope, kernel_slope | R/brms-sugar.R | outside-boundary (column grammar) | A7 at P2 | Checked 2026-09-27: roxygen defines them as response-column slopes, deviations in a response-column by predictor coefficient matrix B (Cov(vec(B')) = K kron Sigma), written as formula markers. R's capability-status groups them with phylo_slope, animal_slope and spatial_slope as the "Response-column slope family" (scope-limited, Gaussian long-format, predictor-only). The Haiku recon called them "formula sugar, not column-coef"; that is true of the syntax, not the model. Shinichi signs. |
 | removed: .proportions_bootstrap_ci, .proportions_wald_ci | | retired | | any P0 row citing them becomes retired at P1, not stale |
 
 Recon (A0r, Haiku) fills the "(check)" file cells and tests/examples per export.
