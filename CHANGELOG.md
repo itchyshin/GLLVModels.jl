@@ -381,6 +381,20 @@ All notable changes to GLLVModels.jl are documented here.
   :aghq`) already checked `fb.converged` and is untouched. Other families
   (Binomial, NB, Gamma, ...) still use the bare-vector adapter and are
   migrated one at a time in follow-up PRs.
+- **BetaBinomial `confint(..., method = :bootstrap)` now reports the refit's own
+  convergence verdict (#542, part of #504).** The refit closures in
+  `_family_ci` for `BetaBinomialFit`, `BetaBinomialGroupedFit` and
+  `BetaBinomialGroupedCovFit` (`src/confint_family.jl`) returned a bare
+  parameter vector, so a replicate whose refit reported `converged = false`
+  was still counted as a good draw. Since #522 that includes a Beta
+  precision at the 1e6 boundary, where the loglik and every parameter
+  (`log φ` about 18 to 29) are finite: on two literal Binomial datasets the
+  ungrouped refit lands there and the old contract accepted it. The closures
+  now return `(θ, converged, loglik)` as Poisson's does since #516, so such
+  replicates are excluded and `n_converged` counts only the ones kept. When
+  every replicate converges, bootstrap endpoints are identical to before.
+  Excluding boundary replicates can make an upper bound for `φ` look tighter
+  than the data support; check `n_converged` against `n_boot`.
 
 ### Changed
 - **Breaking (default change):** `fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm`
