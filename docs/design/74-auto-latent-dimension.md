@@ -37,12 +37,25 @@ n, p and family, and every place a user reads an interval says it is conditional
 
 ## What we measured (this lane)
 
-- Existing fitters can return a WORSE optimum at larger K while reporting `converged = true`
-  (NB2, n = 300, p = 20, true K = 3: logLik K=2 −18874, K=3 −19113, K=4 −20240). Every criterion
-  then picks K = 2. The K = 2 fit is itself a runaway: one trait's latent SD 26.9 on the log scale
-  against a median of 2.7 (`LOOP/lanes/auto-d-20260926/pilot/runaway_probe.txt`).
-- Binomial, same size: K = 4 unconverged with Laplace saturation; AIC on the old `select_lv` would
-  have chosen it.
+- Existing NB fits can sit in poor optima while reporting `converged = true` (NB2, n = 300,
+  p = 20, true K = 3; `LOOP/lanes/auto-d-20260926/pilot/runaway_probe.txt`):
+
+  | K | logLik | converged | max latent SD | median | ratio |
+  |---|---|---|---|---|---|
+  | 2 | −18874 | true | 26.9 | 2.69 | 9.1 |
+  | 3 | −19113 | true | 8.7 | 1.40 | 6.1 |
+  | 4 | −20240 | true | (not probed) | | |
+  | 5 | −16720 | true | 2.45 | 1.41 | 1.75 |
+
+  K = 5 (20 min) reached a region ~2400 logLik units above K = 2–4 with healthy loadings, so the
+  K = 2–4 fits are poor optima, not the maxima. The old `select_lv` picks K = 2, itself a runaway.
+  The guarded `select_lv` rejects K = 2 (runaway) and K = 4 (non-monotone) and would choose K = 5
+  by BIC: it stops the runaway being chosen but cannot recover K = 3, because the K = 3 fit is a
+  bad optimum. **Recovery here needs better NB optimisation (multi-start or warm start in the
+  per-species NB route), which the guard cannot supply.** An earlier note in this lane called
+  K = 5 a likely runaway; the probe shows it is not.
+- Binomial, same size: K = 4 unconverged, latent SD 156, ratio 106 (a clear separation runaway,
+  caught by both checks); AIC on the old `select_lv` would have chosen it. K = 3 and K = 5 healthy.
 - Recovery grid (4 families × n {30,60,120,300} × p {10,20} × true K {1,2,3} × 200 reps, K fitted
   1..K+2, existing code): running on DRAC nibi, array 22744942. Table goes here when harvested.
 

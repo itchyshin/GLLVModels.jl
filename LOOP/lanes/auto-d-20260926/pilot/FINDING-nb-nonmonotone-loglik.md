@@ -16,3 +16,8 @@ Consequence for auto-d: any fit-and-compare rule must (a) warm-start K+1 from th
 and/or multi-start, and (b) flag loglik(K+1) < loglik(K) - tol as a failed fit rather than a valid candidate.
 Owner of the fitter: family kernels are the overnight gllvm-backlog lane's files; reported, not fixed here.
 Reproduce: julia --project=. LOOP/lanes/auto-d-20260926/pilot/pilot.jl out.csv 1 heavy
+
+## Update 2026-09-27 00:50Z (runaway_probe.txt)
+K=5 logLik −16719.6 with healthy loadings (max latent SD 2.45, median 1.41) — NOT a runaway. K=2 (latent SD 26.9) is.
+So K=2..4 are poor optima; the K=3 maximum is likely far above −19113. The guard rejects K=2 and K=4 but then BIC
+chooses K=5. Real fix: multi-start / warm start in the per-species NB route (grouped_dispersion.jl).
