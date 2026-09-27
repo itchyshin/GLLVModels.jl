@@ -21,7 +21,7 @@ CI is runner-starved (about 24 queued runs across lanes); trains wait, nothing f
 - #533 case-map rows (9c1f55038, re-created #526) and #534 carry scan (21433f1bd, stacked): waiting for Shinichi's own signature comment on #533 (proposal: ordination_uncertainty moves to semantic_divergence).
 - Specs #525 iSDM (032d90284), #535 temporal (af130f704), #545 phylo latent (c0fd5f5be): reviewed and revised; docs-only, land when convenient.
 
-- Running: zi_* R-semantics twin (b2z, claude/twin-zi); ISDM-PSI unique variance port (b1p, claude/isdm-psi, stacked on #546).
+- zi_* = draft PR #557 (8bab78578): all three families verdict (b), new R-semantics route (observed-curvature Laplace, per-trait phi, per-row trials) alongside unchanged Julia routes; logLik 1e-8, cross 4e-9; no recovery study yet (repo rule); r557 reviewing. Running: ISDM-PSI unique variance port (b1p, claude/isdm-psi, stacked on #546).
 
 - Landing word given for #548, #556, #547 (train scratchpad/train_548_556_547.log, order 548 -> 556 -> 547).
 
