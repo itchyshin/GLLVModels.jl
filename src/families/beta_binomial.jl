@@ -366,7 +366,7 @@ Convergence contract for [`fit_beta_binomial_gllvm`](@ref) (#515, per the #502/
 where the Beta precision `φ` has run to the numerical edge (the file header's
 φ→∞ reduction to Binomial) with intercepts and loadings correspondingly large
 — `φ ≈ 3.3e65`, reported loglik ≈ +7.18e54, every per-site latent score
-trivially at `z=0` (issue #515's own reproduction, `test/fixtures/`). Two
+trivially at `z=0` (the #515 reproduction in `test/fixtures/`). Two
 checks gate the reported flag beyond `optim_converged`; an impossible value
 is reported as `loglik = -Inf`, never as a log-likelihood:
 
