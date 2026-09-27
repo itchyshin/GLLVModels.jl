@@ -1,3 +1,41 @@
+## 2026-09-27 (delta review fix): `extract_latent_scores()` RRRFit + explicit plain union (PR #531)
+
+- Delta review of the prior dispatch fix confirmed all 47 `getLV` methods
+  across the package were bucketed correctly, with one exception: `RRRFit`
+  was in the generic (now `_PlainGllvmFit`) bucket, but its
+  `getLV(fit, X; rotate)` is a deterministic, fully predictor-driven
+  reduced-rank-regression projection with no latent innovation at all —
+  labelling its result "innovation" is wrong, and passing this wrapper's
+  response `y` where RRRFit expects a covariate design `X` would raise a raw
+  `DimensionMismatch`. Moved to its own `_extract_latent_scores_unit(fit::RRRFit,
+  ...)` method (more specific than, but still a member of,
+  `_PositionalArgGllvmFit` for the completeness accounting below) raising an
+  `ArgumentError` naming the reason and pointing at `getLV(fit, X)` for the
+  constrained axes directly.
+- Replaced the fully generic catch-all `_extract_latent_scores_unit(fit, y;
+  kwargs...) = getLV(fit, y; rotate=false, kwargs...)` method with an
+  explicit `_PlainGllvmFit` union of the 21 verified plain fit types (`NB1Fit`,
+  `GP1Fit`, `ExponentialFit`, `DeltaLogNormalFit`, `HurdlePoissonFit`,
+  `HurdleNBFit`, `DeltaGammaFit`, `ZIPFit`, `ZINBFit`, `ZIBFit`, `TweedieFit`,
+  `COMPoissonFit`, `BetaBinomialFit`, `BetaBinomialGroupedFit`,
+  `BetaHurdleFit`, `GammaGroupedFit`, `NB1GroupedFit`, `NBGroupedFit`,
+  `BetaGroupedFit`, `OrdinalPerTraitFit`, `RowEffectFit`, `RowRandomFit`).
+  New test iterates `Base.uniontypes(GLLVModels.AnyGllvmFit)`, checks each
+  member for a `getLV` method via `methods(getLV)` (not `hasmethod`, which
+  would false-negative on the `AbstractMatrix{<:Real}`/`{<:Integer}` argument
+  constraints), and asserts it is in exactly one of the three dispatch
+  `Union`s. Types with no `getLV` method at all (`MultinomialFit`,
+  `StudentTFit`, the phylo/spatial-only fits, ...) are correctly excluded —
+  they already fail loudly with `MethodError`, unchanged.
+- Noted in the PR body (not fixed, out of scope): `QuadraticFit`,
+  `OrderedBetaFit`, and `MixedFamilyFit` have `getLV` methods but are not
+  members of `AnyGllvmFit`, so `extract_latent_scores` cannot reach them at
+  all (falls through to the `.default`-mirroring fallback).
+- `test/test_extract_latent_scores.jl` 79/79 pass on `julia +1.10` and
+  `julia +1.13` (up from 34: +1 RRRFit refusal test, +44 completeness-union
+  checks, one per `AnyGllvmFit` member with a `getLV` method);
+  `test_postfit.jl` (892/892) unchanged on both versions.
+
 ## 2026-09-27 (review fix): `extract_latent_scores()` dispatch correctness (PR #531)
 
 - Independent review of PR #531 found the initial implementation always

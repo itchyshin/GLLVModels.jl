@@ -27,6 +27,16 @@ All notable changes to GLLVModels.jl are documented here.
   `ConstrainedOrdinationFit`, `FourthCornerFit`, and others — see
   `src/extract_latent_scores.jl`) raise a named `ArgumentError` pointing at
   the `getLV` call to make directly, rather than silently misrouting it.
+  `RRRFit` raises its own, differently-worded `ArgumentError`: its
+  `getLV(fit, X; rotate)` is a plain 2-argument call, but `X` there is a
+  deterministic, fully predictor-driven reduced-rank-regression projection
+  with no latent innovation at all, so "innovation" does not apply.
+  `_ComponentAwareGllvmFit`, `_PlainGllvmFit` (the remaining fit types with no
+  `X_lv`/`component` support), and `_PositionalArgGllvmFit` are three
+  explicit, disjoint `Union`s built by reading every `getLV` method's
+  signature; a test asserts every `AnyGllvmFit` member with a `getLV` method
+  is in exactly one of them, so a newly added fit type with an unclassified
+  `getLV` method turns that test red instead of silently defaulting.
   Verified against a live P1 R fit at each side's own fitted `Λ`/`β`
   (isolating the shared posterior-mean/mode definition from optimiser-path
   differences) for three families: Gaussian (test tolerance `1e-8`, measured
