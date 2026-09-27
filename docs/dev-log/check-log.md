@@ -1,3 +1,21 @@
+## 2026-09-27: Grouped beta-binomial fits get the #515 verdict (part of #515)
+
+- Branch `claude/bb-grouped-verdict-515` from `origin/main` @ `52ed4281b` (#522 merge).
+  `fit_beta_binomial_gllvm_grouped` and `fit_beta_binomial_gllvm_grouped_cov` now use
+  `_beta_binomial_grouped_verdict`: the shared `_fit_verdict` screen, then
+  `_beta_binomial_verdict` at the largest group `φ`. `_fit_verdict` and `_laplace_mode`
+  are unchanged.
+- On main, per-species fits of three #522 fixture datasets reported `converged = true`
+  with a group `φ` of 8.5e11 to 7.6e15 on Julia 1.10.12 and 1.13.0. New test
+  `test/test_beta_binomial_grouped_verdict_515.jl`: 73 pass, 3 fail, 5 error on main
+  (1.10); the five beta-binomial test files pass 906/906 on the branch on 1.10.12 and
+  1.13.0 (`JULIA_NUM_THREADS=2 OPENBLAS_NUM_THREADS=1`, per-file, full suite not run).
+  Local Documenter build and `tools/check_reader_surface.py` clean after rebasing onto
+  `824d22a4b`.
+- Main vs branch over 52 grouped fits per version: every fit with all `φ` below 1e6 is
+  bitwise identical (49 on 1.10, 47 on 1.13); boundary fits change only `converged`.
+- After-task: `docs/dev-log/after-task/2026-09-27-bb-grouped-verdict-515.md`.
+
 ## 2026-09-25: Two-part families no longer score an unfinished mode search (#484)
 
 - Branch `claude/twopart-mode-search-484`, rebased onto `origin/main` (past #481 Gamma, #483 Beta,
