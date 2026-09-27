@@ -35,6 +35,125 @@ function r_lambda(c)
     return reshape(Float64.(c["Lambda_B_colmajor"]), :, K)
 end
 
+# P1-ISDM-ADMISSION-20: the 20 CORE070-ISDM-*-PAIRED-CONTROL predicates of
+# docs/dev-log/core070/isdm-batch-contract.json (helpers:
+# test/parity/fixtures/core070_isdm_admission.R), run natively in Julia and
+# compared with their R replay at P1 (admission_p1.toml). ISDM-LEGACY is the
+# legacy two-source route: re-measured in R, an R-only disposition (D-296).
+function _adm_fixture(sources = ["count", "detect"])
+    trait = String[]; src = String[]; unit = Int[]
+    for u in 1:2, s in sources, t in ("a", "b")          # expand.grid: trait fastest
+        push!(trait, t); push!(src, s); push!(unit, u)
+    end
+    n = length(trait)
+    return (trait = trait, isdm_source = src, unit = unit,
+            value = [s == "detect" ? 1.0 : 2.0 for s in src],
+            log_support = log.((1:n) .+ 1.0),
+            x = Union{Missing, Float64}[s == "count" ? Float64(i) : missing for (i, s) in enumerate(src)],
+            z = Union{Missing, Float64}[s == "detect" ? Float64(i) : missing for (i, s) in enumerate(src)])
+end
+_adm_laws() = isdm_sources(count = Poisson(), detect = (Binomial(), CLogLogLink()))
+function _adm_ids(f, d)
+    idx = [findfirst(==(Symbol(s)), f.names) for s in d.isdm_source]
+    return f.fid[idx], f.lid[idx]
+end
+function _adm_admitted(; f = _adm_laws(), d = _adm_fixture(), ids = _adm_ids(f, d), traits = d.trait)
+    GLLVModels._isdm_declared_core(f, d.isdm_source, ids[1], ids[2], traits, length(d.isdm_source))
+end
+_adm_sub(d, keep) = NamedTuple{keys(d)}(Tuple(v[keep] for v in values(d)))
+function _adm_design()
+    d = _adm_fixture()
+    f = isdm_sources(count = isdm_source(Poisson(); observation = :(~ x)),
+                     detect = isdm_source((Binomial(), CLogLogLink()); observation = :(~ z)))
+    X = Float64.(hcat(d.trait .== "a", d.trait .== "b")); Xn = ["traita", "traitb"]
+    M, names, _ = GLLVModels._isdm_observation_design(X, Xn, d, d.isdm_source, f)
+    return d, f, X, Xn, M, names
+end
+function _adm_offset(off; allow = true, d = _adm_fixture())
+    fid, lid = _adm_ids(_adm_laws(), d)
+    v = off === nothing ? zeros(length(d.value)) : GLLVModels._isdm_eval_expr(off, d, length(d.value))
+    return GLLVModels._isdm_prepare_offset(v, fid, lid; allow_isdm_cloglog = allow)
+end
+
+const _ADMISSION_JULIA = Dict{String, Function}(
+    "ISDM-ALIASED" => () -> begin
+        d, f, X, Xn, M, names = _adm_design()
+        size(M, 2) == 5 && GLLVModels._isdm_qr_rank(M) == 5 && M[:, 1:2] == X && names[1:2] == Xn
+    end,
+    "ISDM-ALIGN" => () -> begin
+        # declared in the reverse of the selector's sorted level order: alignment is by name
+        d = _adm_fixture()
+        f = isdm_sources(detect = isdm_source((Binomial(), CLogLogLink()); observation = :(~ z)),
+                         count = isdm_source(Poisson(); observation = :(~ x)))
+        f.names == [:detect, :count] && f.observation[:detect] == Expr(:call, :~, :z) &&
+            f.links[1] isa CLogLogLink && _adm_admitted(f = f, d = d)
+    end,
+    "ISDM-COUNT" => () -> begin
+        f = isdm_sources(count = Poisson(), detect = Poisson())
+        f.names == [:count, :detect] && !_adm_admitted(f = f)
+    end,
+    "ISDM-EXTRA-SOURCE" => () -> begin
+        d = _adm_fixture(); ids = _adm_ids(_adm_laws(), d)
+        d2 = merge(d, (isdm_source = ["unknown"; d.isdm_source[2:end]],))
+        !_adm_admitted(d = d2, ids = ids)
+    end,
+    "ISDM-MASKED-ARM" => () -> begin
+        d = _adm_fixture()
+        _adm_admitted(d = merge(d, (value = [s == "detect" ? NaN : v for (s, v) in zip(d.isdm_source, d.value)],)))
+    end,
+    "ISDM-MASKED-COLUMNS" => () -> begin
+        d, f, X, Xn, M, names = _adm_design()
+        cc = findall(startswith("isdm_source:count:"), names)
+        dc = findall(startswith("isdm_source:detect:"), names)
+        !isempty(cc) && !isempty(dc) && all(M[d.isdm_source .!= "count", cc] .== 0) &&
+            all(M[d.isdm_source .!= "detect", dc] .== 0) && M[:, 1:2] == X && names[1:2] == Xn
+    end,
+    "ISDM-MISSING-IN-TRAIT" => () -> begin
+        d = _adm_fixture()
+        !_adm_admitted(d = _adm_sub(d, .!((d.trait .== "a") .& (d.isdm_source .== "detect"))))
+    end,
+    "ISDM-MISSING-SOURCE" => () -> begin
+        d = _adm_fixture()
+        !_adm_admitted(d = _adm_sub(d, d.isdm_source .== "count"))
+    end,
+    "ISDM-MIXED" => () -> _adm_admitted(),
+    "ISDM-NO-OFFSET" => () -> _adm_offset(nothing) == zeros(length(_adm_fixture().value)),
+    "ISDM-NO-TRAITS" => () -> !_adm_admitted(traits = nothing),
+    "ISDM-SUPPORT" => () -> _adm_offset(:log_support) == _adm_fixture().log_support,
+    "ISDM-THREE" => () -> begin
+        f = isdm_sources(count = Poisson(), detect = (Binomial(), CLogLogLink()), literature = Poisson())
+        _adm_admitted(f = f, d = _adm_fixture(String.(f.names)))
+    end,
+    "ISDM-UNBALANCED" => () -> begin
+        d = _adm_fixture()
+        _adm_admitted(d = _adm_sub(d, 2:length(d.value)))
+    end,
+    "ISDM-WITHIN-TRAIT-ADMIT" => () ->
+        GLLVModels._isdm_assert_trait_scale([2, 1], [0, 2], ["a", "a"]; allow_isdm_mixed = true) === nothing,
+    "ISDM-WRAPPER-LAW" => () -> isdm_source(Binomial(); observation = :(~ x)) isa IsdmSource,
+    "ISDM-WRONG-ID" => () -> begin
+        fid, lid = _adm_ids(_adm_laws(), _adm_fixture()); fid = copy(fid); fid[1] = 1
+        !_adm_admitted(ids = (fid, lid))
+    end,
+    "ISDM-WRONG-LINK" => () -> begin
+        fid, lid = _adm_ids(_adm_laws(), _adm_fixture()); lid = copy(lid); lid[1] = 2
+        !_adm_admitted(ids = (fid, lid))
+    end,
+    "ISDM-ZERO-ORDINARY" => () -> _adm_offset(0; allow = false) == zeros(length(_adm_fixture().value)),
+)
+
+@testset "P1-ISDM-ADMISSION-20" begin
+    adm = TOML.parsefile(joinpath(ISDM_FIXTURE_DIR, "admission_p1.toml"))
+    @test adm["gllvmtmb_sha"] == "9539352f66f2db2cc26b1c393e67212a359b60c9"
+    @test length(adm["cases"]) == 20
+    @test Set(keys(_ADMISSION_JULIA)) == setdiff(Set(keys(adm["cases"])), Set(["ISDM-LEGACY"]))
+    for (id, r) in sort(collect(adm["cases"]))
+        id == "ISDM-LEGACY" && continue                  # R-only disposition
+        @test r == "TRUE"
+        @test _ADMISSION_JULIA[id]() === true
+    end
+end
+
 @testset "iSDM P1 paired twins" begin
 
 @test RV["gllvmtmb_sha"] == "9539352f66f2db2cc26b1c393e67212a359b60c9"

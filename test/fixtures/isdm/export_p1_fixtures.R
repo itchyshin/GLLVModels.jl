@@ -18,6 +18,9 @@
 #   xobj      read julia_estimates_p1.toml (written by the Julia side) and
 #             evaluate R's own objective at Julia's estimate; appends to
 #             r_values_p1.toml
+#   admission replay the 20 CORE070-ISDM-*-PAIRED-CONTROL predicates of
+#             docs/dev-log/core070/isdm-batch-contract.json at P1; writes
+#             admission_p1.toml
 #
 # Both engines read the SAME CSV bytes, so the paired numbers cannot drift
 # with R's RNG. The Julia side checks each CSV's sha256 before use.
@@ -423,6 +426,24 @@ if (identical(stage, "fixtures")) {
   add <- c(add, kv_str("julia_estimates_sha256", sha256_file(est_path)))
   writeLines(c(lines[seq_len(if (any(lines == "[xobj]")) which(lines == "[xobj]") - 2L else length(lines))], add),
              file.path(out_dir, "r_values_p1.toml"))
+} else if (identical(stage, "admission")) {
+  contract <- jsonlite::fromJSON(file.path("docs", "dev-log", "core070", "isdm-batch-contract.json"),
+                                 simplifyVector = FALSE)
+  env <- new.env(parent = asNamespace("gllvmTMB"))
+  sys.source(file.path("test", "parity", "fixtures", "core070_isdm_admission.R"), envir = env)
+  lines <- c("# R replay at P1 of the 20 iSDM admission predicates. Written by",
+             "# test/fixtures/isdm/export_p1_fixtures.R (stage admission). Do not edit.",
+             kv_str("gllvmtmb_sha", P1_SHA),
+             kv_str("contract_sha256", sha256_file(file.path("docs", "dev-log", "core070", "isdm-batch-contract.json"))),
+             kv_str("fixture_sha256", sha256_file(file.path("test", "parity", "fixtures", "core070_isdm_admission.R"))),
+             "", "[cases]")
+  for (cs in contract$cases) {
+    val <- tryCatch(as.character(isTRUE(eval(parse(text = cs$expression), env))),
+                    error = function(e) paste0("ERROR: ", conditionMessage(e)))
+    lines <- c(lines, kv_str(fmt_str(cs$admission_case_id), val))
+    cat(cs$admission_case_id, val, "\n")
+  }
+  writeLines(lines, file.path(out_dir, "admission_p1.toml"))
 } else {
   stop("Unknown stage: ", stage)
 }
