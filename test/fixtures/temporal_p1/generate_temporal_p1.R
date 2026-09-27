@@ -8,7 +8,7 @@
 ##   RLIB=<scratch>/Rlib Rscript test/fixtures/temporal_p1/generate_temporal_p1.R
 ##
 ## Stage 1 (default) writes oracle.toml, fits.toml, forecast.toml, profile.toml
-## and compare.toml. Stage 2 (`Rscript ... cross`) reads julia_optima.csv, written
+## and compare.toml; stage `bootstrap` writes bootstrap.toml. Stage 2 (`Rscript ... cross`) reads julia_optima.csv, written
 ## by test/fixtures/temporal_p1/julia_optima.jl, and writes cross_objective.toml:
 ## R's objective evaluated at Julia's optimum for every fit (cross-objective,
 ## the Julia-to-R direction).
@@ -368,6 +368,31 @@ if (identical(stage, "stage1")) {
     c("indep", "dep", "latent_unique"))
   close(con)
   cat("stage 1 written to", out_dir, "\n")
+} else if (identical(stage, "bootstrap")) {
+  ## bootstrap.toml: R's bootstrap_temporal distribution at n_boot = 200 on the
+  ## interior temporal_indep AR1 panel (spec section 5: structure and a
+  ## distribution summary, never per-row equality; the generators differ).
+  ## A literal top-level call: bootstrap_temporal() refits through update(),
+  ## which re-evaluates the saved call and so cannot see fit_cell()'s locals.
+  sim_indep <- datasets$sim_indep$d
+  fit <- suppressWarnings(gllvmTMB(value ~ 0 + trait +
+    temporal_indep(0 + trait | series, time = occasion, structure = "ar1"),
+    data = sim_indep, unit = "series", family = gaussian(), silent = TRUE,
+    control = gllvmTMBcontrol(se = FALSE)))
+  stopifnot(abs(fit$opt$objective - fits[["sim_indep__indep__ar1"]]$opt$objective) < 1e-10)
+  bt <- bootstrap_temporal(fit, n_boot = 200L, seed = 260931L)
+  stopifnot(!any(grepl("object .* not found", bt$error)))
+  ok <- !nzchar(bt$error)
+  con <- file(file.path(out_dir, "bootstrap.toml"), "w")
+  header(con, "bootstrap_temporal distribution summary (n_boot = 200)")
+  kv(con, "fit_id", tstr("sim_indep__indep__ar1")); kv(con, "n_boot", "200"); kv(con, "seed", "260931")
+  kv(con, "columns", tarr(names(bt), tstr))
+  kv(con, "n_converged", as.character(sum(ok)))
+  kv(con, "time_estimate_mean", tnum(mean(bt$time_estimate[ok])))
+  kv(con, "time_estimate_sd", tnum(stats::sd(bt$time_estimate[ok])))
+  kv(con, "time_estimate", tarr(bt$time_estimate))
+  close(con)
+  cat("bootstrap stage written\n")
 } else if (identical(stage, "cross")) {
   jo <- utils::read.csv(file.path(out_dir, "julia_optima.csv"), stringsAsFactors = FALSE)
   con <- file(file.path(out_dir, "cross_objective.toml"), "w")

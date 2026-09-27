@@ -112,8 +112,10 @@ with ForwardDiff gradients; the final gradient and Hessian are recomputed.
 
 Not available in this version: ordinary `unit` / `unit_obs` terms beside the
 temporal source, cross-source cells (kernel, phylo, animal, spatial), the wide
-`traits()` form, offsets, non-Gaussian families and the R bridge.
-[`extract_temporal`](@ref) returns the fitted temporal parameters.
+`traits()` form, offsets, non-Gaussian families and the R bridge. Helper
+routes: [`extract_temporal`](@ref), [`forecast_temporal`](@ref),
+[`profile_temporal`](@ref), [`bootstrap_temporal`](@ref) and
+[`compare_temporal`](@ref).
 """
 function fit_temporal_gllvm(long_data; formula, temporal, trait::Symbol=:trait,
         structure=Expr[], start=nothing, g_tol::Real=1e-6, iterations::Integer=500)

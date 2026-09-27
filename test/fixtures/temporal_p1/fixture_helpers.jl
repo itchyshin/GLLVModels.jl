@@ -16,6 +16,7 @@ const TEMPORAL_P1_SHA256 = Dict(
     "forecast.toml" => "41fc640a5892e7952cb4df331f84a799b91facf0cda4ae92a73dce55fe0b72fd",
     "profile.toml" => "6e442a7edb7867aa871a0b664deade557666e95e44cf33bed19cde950ceb0a64",
     "compare.toml" => "0209f6f2836465fbf6069540223406a7505651ec1c68113afbb9f583951975e8",
+    "bootstrap.toml" => "a83f83bec3efa0791f83151193eb6e2797bbe4b4c6527a2be6dd9d58d919fa0e",
     "cross_objective.toml" => "680bfefdd6c0d5de7e142eb537363f3a2953c80d1f54c9af7babb1132e5cfb72",
 )
 

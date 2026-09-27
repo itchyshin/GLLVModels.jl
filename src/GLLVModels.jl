@@ -372,6 +372,7 @@ export make_cross_kernel, extract_Gamma, fit_coevolution_gaussian, fit_coevoluti
        extract_rotated_loadings_table, extract_coevolution_modules, imputed,
        tidy, GllvmSummary,
        temporal_indep, temporal_dep, temporal_latent, TemporalTerm, TemporalContractError,
-       fit_temporal_gllvm, TemporalGaussianFit, extract_temporal
+       fit_temporal_gllvm, TemporalGaussianFit, extract_temporal, forecast_temporal,
+       profile_temporal, bootstrap_temporal, compare_temporal
 
 end # module GLLVModels
