@@ -12,7 +12,7 @@
 - [ ] A4a gllvmTMB #1236 bridge rebase and finish; #1283 recorder
 - [ ] A4b real-data workflows C1 to C5
 - [~] A5 silent-failure backlog: #514 landed 855542118, #515 via #522 landed 52ed4281b; remaining #504 adapters, #505, Tweedie grouped
-- [ ] A6 temporal at R's scope (INSIDE P1): spec DONE (#535, reviewed); slice 1 build IN PROGRESS; A9 phylo latent A14/A15 (INSIDE P1)
+- [ ] A6 temporal at R's scope (INSIDE P1): spec DONE (#535); slice 1 = draft PR #543 under review; slice 2 next (needs the grammar lane's hook); A9 phylo latent A14/A15 (INSIDE P1): spec #545 reviewed, Packet 1d signed (D-300), build IN PROGRESS
 - [ ] A7 column-coefficient grammar and A8 spatial_dep/spatial_*: OUTSIDE P1 (D-295). Write their signed-disposition rows in WS0; revisit at P2
 - [ ] D2 GATE: Packet 2 (47 pending-decision rows, 22 spec-defect rows), week 2
 - [ ] D3 GATE: Packet 3 (91 reverse-gap classes, Julia-only extras), week 5
