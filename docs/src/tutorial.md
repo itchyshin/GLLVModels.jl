@@ -306,14 +306,14 @@ To choose `K`, `select_lv` sweeps `K = 1:Kmax`, fits each, and reports the
 criteria:
 
 ```julia
-sel = select_lv(Y; family = Poisson(), Kmax = 3, criterion = :bic_sites)
+sel = select_lv(Y; family = Poisson(), Kmax = 3)   # criterion = :bic_sites by default
 sel.best_k; sel.best          # the chosen K and the fitted model at that K
 sel.bic_sites; sel.aic        # criterion values for every accepted K
 sel.attempts                  # every K tried, with a status and a reason
 ```
 
-Lower is better. `:bic_sites` penalises each parameter by `log(n)` with `n`
-the number of sites; `:bic` uses `log(p·n)`, the number of observed cells,
+Lower is better. The default, `:bic_sites`, penalises each parameter by
+`log(n)` with `n` the number of sites; `:bic` uses `log(p·n)`, the number of observed cells,
 and picks fewer dimensions at small sample sizes; `:aic` tends to pick one
 too many. In simulations with known `K` (Gaussian, Poisson and negative
 binomial responses, 30 to 300 sites, 10 or 20 species), `:bic_sites`
@@ -330,7 +330,7 @@ responses are the weak spot: at small sample sizes most fits beyond `K = 1`
 run away, so read `sel.attempts` before trusting the choice.
 
 If you leave `K` out of `fit_gllvm`, it runs this sweep (by default
-`Kmax = min(5, p − 1)` and `:bic` unless you pass `criterion`) and returns
+`Kmax = min(5, p − 1)` and `:bic_sites` unless you pass `criterion`) and returns
 the chosen fit with a one-line message.
 
 !!! warning "The chosen K is an estimate"

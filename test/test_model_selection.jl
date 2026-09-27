@@ -9,7 +9,7 @@ using GLLVModels, Test, Random, Distributions, Statistics
         η = β_true .+ Λ_true * randn(K, n)
         Y = [rand(Poisson(exp(η[t, s]))) for t in 1:p, s in 1:n]
 
-        sel = select_lv(Y; family = Poisson(), Kmax = 3)
+        sel = select_lv(Y; family = Poisson(), Kmax = 3, criterion = :bic)
 
         @test sel isa LVSelection
         @test length(sel.K) == 3
@@ -29,8 +29,7 @@ using GLLVModels, Test, Random, Distributions, Statistics
         @test isfinite(GLLVModels._loglik(sel.best))
         @test sel.best isa PoissonFit
 
-        # AIC default agrees with the BIC selection consistency: best row is the
-        # argmin of the chosen criterion (default :bic).
+        # Best row is the argmin of the chosen criterion (:bic here, by cells).
         @test sel.best_k == sel.K[argmin(sel.bic)]
 
         # bic uses nobs(fit, Y), R's p·n observed-cell count, not the site
@@ -345,4 +344,12 @@ end
                                                K == 2 ? fill(30.0, 6, 2) : fill(0.5, 6, K))
     sel2 = select_lv(Y; family = Poisson(), Kmax = 3, warm_start = false, _fitter = f)
     @test only(filter(a -> a.K == 2, sel2.attempts)).status === :runaway
+end
+
+@testset "select_lv default criterion is :bic_sites (maintainer decision 2026-09-27)" begin
+    Y = zeros(6, 40)
+    f = (Y; family, K, kwargs...) ->
+        _FakeLVFit(Dict(1 => -500.0, 2 => -477.0, 3 => -476.0)[K], 10K, true, zeros(6), fill(0.5, 6, K))
+    @test select_lv(Y; Kmax = 3, _fitter = f).best_k ==
+          select_lv(Y; Kmax = 3, criterion = :bic_sites, _fitter = f).best_k == 2
 end

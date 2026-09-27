@@ -225,7 +225,7 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
         kmax = Kmax === nothing ? min(5, p - 1) : Int(Kmax)
         kmax >= 1 || throw(ArgumentError("fit_gllvm: cannot estimate K with p = $p response(s)"))
         sel = select_lv(Y; family = family, Kmax = kmax, disp_group = disp_group, kwargs...)
-        crit = get(kwargs, :criterion, :bic)
+        crit = get(kwargs, :criterion, :bic_sites)
         @info "fit_gllvm: K not supplied; chose K = $(sel.best_k) by $(crit) over K = 1:$kmax " *
               "(call select_lv for the full comparison). Intervals from this fit are " *
               "conditional on the chosen K." sel

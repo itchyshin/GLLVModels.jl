@@ -13,6 +13,34 @@ All notable changes to GLLVModels.jl are documented here.
 
 ## Unreleased
 
+### Added
+- **`fit_gllvm` estimates the number of latent dimensions when `K` is
+  omitted.** It sweeps `K = 1:Kmax` (default `min(5, p − 1)`) through
+  `select_lv` and returns the chosen fit with a one-line message. Previously
+  omitting `K` threw, so no working call changes. New keyword `Kmax`, valid only
+  when `K` is omitted; `row_eff` and `pervar` still need an explicit `K`.
+- **`select_lv(...; criterion = :bic_sites)`**: BIC with `log(n)`, `n` the
+  number of sites; `LVSelection` gains `bic_sites` and `attempts`.
+
+### Changed
+- **`select_lv` now defaults to `criterion = :bic_sites`** (was `:bic`, which
+  penalises by `log(p·n)` observed cells). In a recovery simulation (17 687
+  datasets with known K; Gaussian, Poisson, negative binomial, binomial; 30 to
+  300 sites, 10 or 20 species) `:bic_sites` recovered the true K most often for
+  Gaussian, Poisson and negative binomial responses; `:bic` picked too few
+  dimensions at small sample sizes. Existing `select_lv` calls without
+  `criterion` may choose a different K; pass `criterion = :bic` for the old rule.
+- **`select_lv` no longer chooses a broken fit.** Every attempted K is recorded
+  in `attempts` with a status. A K whose fit threw, whose log-likelihood fell
+  below a smaller K, or whose loadings ran away (a trait's latent SD above
+  `max_latent_sd = 10` on the link scale, or for binomial data one trait's
+  loadings `ratio_max = 25` times the median) is never chosen; it is first
+  refitted once from the last accepted solution where the family fitter accepts
+  `β_init`/`Λ_init`. A fit whose optimiser did not report convergence is kept
+  and flagged unless it also fails those checks (`require_converged = true`
+  rejects it). Interrupts are no longer swallowed; an `ArgumentError` at `K = 1`
+  is raised; `mask` reaches the criteria.
+
 ### Fixed
 - **Ordered-beta fits could report `converged = true` at a non-stationary point,
   with a restart reaching a genuinely better optimum (#501).** The per-site
@@ -43,6 +71,8 @@ All notable changes to GLLVModels.jl are documented here.
   across all three of the issue's flagged seeds (120 sites probed). `getLV`/
   `predict` are unaffected in signature (they take the best available mode
   regardless of convergence, as the shared generic core does).
+- The `chibar2_pvalue` notes no longer list choosing K (K vs K+1) as a use case:
+  that test is non-regular and needs a parametric bootstrap.
 - **`confint(..., method = :profile)` and `method = :bootstrap` could accept a
   silently failed inner refit.** `_family_profile_refit` and `_family_bootstrap`
   (`src/confint_family.jl`) judged a refit's success only by `isfinite` on its

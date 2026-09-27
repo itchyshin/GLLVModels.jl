@@ -1,6 +1,6 @@
 # 74: Estimating the number of latent dimensions from data (auto-d)
 
-Status: DRAFT for maintainer sign-off (G1). Lane `auto-d-20260926` (Julia) with the R twin on
+Status: SIGNED OFF (G1, 2026-09-27, vault D-293: "go with your recommendations, push and open draft PRs"). Default criterion `:bic_sites` applied in both packages. Lane `auto-d-20260926` (Julia) with the R twin on
 gllvmTMB branch `claude/lane-auto-d-r-20260926` (vault D-292). Nothing here is merged.
 
 ## Destination
