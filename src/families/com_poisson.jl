@@ -162,13 +162,54 @@ function _cmp_score_weight(y, η, ν)
     return s, max(W, 1e-8)
 end
 
+# Per-site log-posterior ℓ(z) = Σ_t compoisson_logpdf(y_t, η_t, ν) − ½z'z (mask-aware).
+# Used only by `_compoisson_mode`'s damped-step accept/reject test, below.
+function _compoisson_mode_logpost(y::AbstractVector, Λ::AbstractMatrix, β::AbstractVector,
+        ν::Real, z::AbstractVector; mask = nothing)
+    η = β .+ Λ * z
+    ℓ = 0.0
+    @inbounds for t in eachindex(y)
+        (mask !== nothing && !mask[t]) && continue
+        ℓ += compoisson_logpdf(y[t], η[t], ν)
+    end
+    return ℓ - 0.5 * dot(z, z)
+end
+
 # Inner Laplace mode-finder for one site (Newton on the negative second
 # derivative). Mirrors `_beta_binomial_mode` / `_ordered_beta_mode`. `mask`
 # (length-p Bool, or `nothing` = all observed) drops missing responses: a masked
 # entry contributes zero score and zero Fisher weight, so it neither pulls the
 # mode nor enters the Hessian (mirrors `_laplace_mode` in families/laplace.jl).
+#
+# Returns `(z, converged)` (#503, following the #479/#480/#484/#500/#507/#509
+# pattern). Before this fix the loop ran an undamped Newton step every
+# iteration and returned whatever `z` it held at `maxiter`, converged or not —
+# measured 7/266 stress-probe sites non-mode (class-wide audit, `origin/claude/
+# lane-true-parity-finish-20260925:docs/dev-log/core070/class-audit-20260924/`,
+# re-measured against `#503`). `W` is always clamped to `>= 1e-8`
+# (`_cmp_score_weight`), so `A = Λ'WΛ + I` is SPD by construction and every
+# Newton step solves in a well-defined direction — but the clamp only floors
+# the curvature used for the step, it does not certify that the step is a
+# descent step on the true per-site log-posterior, so an undamped step can
+# still overshoot into a far worse `z` (measured: a tiny, unrelated parameter
+# perturbation — 1e-5 relative on `ν` — flips a healthy site from `z=[1.88,
+# -0.94]`, log-posterior -13.76, to a divergent `z=[1.46, 3.42]`, log-posterior
+# -10590, that gets WORSE with more undamped iterations; this is the mechanism
+# behind the sibling-screen `sibling-screen-2026-09-26.md` COM-Poisson anomaly,
+# see that report and this PR's body — not a kink in `compoisson_logz`, whose
+# value is continuous to ~1e-9 relative error across its branch boundary,
+# checked directly and too small to explain a 1e8-1e14 apparent FD gradient).
+# Now a step that lowers the per-site log-posterior is halved (the generic
+# core's `_laplace_mode` rule, reused here as `_compoisson_mode_logpost`), so
+# small steps and accepted full steps are bit-identical to the old loop.
+# `converged` requires BOTH the full proposed step below `tol` AND the
+# log-posterior gradient itself below `grad_tol`: mirrors `_studentt_grouped_
+# mode`'s (#509) extra gradient check — a large, well-conditioned `A` (large
+# `W` at an extreme count) can solve `AΔ = g` with a tiny `Δ` while `g` itself
+# is still far from zero.
 function _compoisson_mode(y::AbstractVector, Λ::AbstractMatrix, β::AbstractVector,
-        ν::Real; mask = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
+        ν::Real; mask = nothing, maxiter::Integer = 100, tol::Real = 1e-9,
+        grad_tol::Real = 1e-6)
     p, K = size(Λ)
     z = zeros(K)
     for _ in 1:maxiter
@@ -184,23 +225,54 @@ function _compoisson_mode(y::AbstractVector, Λ::AbstractMatrix, β::AbstractVec
             s[t] = st
             W[t] = Wt
         end
+        g = Λ' * s .- z
         A = Symmetric(Λ' * (W .* Λ) + I)
-        Δ = _safe_solve(A, Λ' * s .- z)
-        (Δ === nothing || !all(isfinite, Δ)) && break
-        z = z .+ Δ
-        maximum(abs, Δ) < tol && break
+        Δ = _safe_solve(A, g)
+        (Δ === nothing || !all(isfinite, Δ)) && return z, false
+        maximum(abs, Δ) < tol && maximum(abs, g) < grad_tol && return z .+ Δ, true
+        if norm(Δ) <= 1e-3 * (1 + norm(z))
+            z = z .+ Δ
+        else
+            q0 = _compoisson_mode_logpost(y, Λ, β, ν, z; mask = mask)
+            if isfinite(q0)
+                accepted = false
+                step = 1.0
+                for _half in 1:30
+                    ztrial = z .+ step .* Δ
+                    q1 = _compoisson_mode_logpost(y, Λ, β, ν, ztrial; mask = mask)
+                    if isfinite(q1) && q1 >= q0
+                        z = ztrial
+                        accepted = true
+                        break
+                    end
+                    step *= 0.5
+                end
+                accepted || return z, false
+            else
+                z = z .+ Δ
+            end
+        end
     end
-    return z
+    return z, false
 end
 
 # Per-site Laplace log-marginal:
 #   log p(y_s) ≈ ℓ(ẑ) − ½ẑ'ẑ − ½logdet(Λ'WΛ + I).
 # `mask` drops the masked entries from the score/weight (via `_compoisson_mode`)
 # and from the conditional log-density sum.
+#
+# `-Inf` on a search that cannot certify a stationary point (#503; the fitter's
+# objective then returns its 1e12 sentinel instead of a garbage finite value).
+# The default budget is retried once at 20x `maxiter` (same `tol`), restarting
+# from `z=0` — mirrors #507/#509's retry: a genuinely healthy but
+# ill-conditioned site can need more damped-Newton steps than the default
+# budget without ever being a diverging one.
 function _compoisson_loglik_site(y::AbstractVector, Λ::AbstractMatrix,
         β::AbstractVector, ν::Real; mask = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
     p, K = size(Λ)
-    z = _compoisson_mode(y, Λ, β, ν; mask = mask, maxiter = maxiter, tol = tol)
+    z, ok = _compoisson_mode(y, Λ, β, ν; mask = mask, maxiter = maxiter, tol = tol)
+    ok || ((z, ok) = _compoisson_mode(y, Λ, β, ν; mask = mask, maxiter = 20 * maxiter, tol = tol))
+    ok || return -Inf
     η = β .+ Λ * z
     ℓ = 0.0
     W = Vector{Float64}(undef, p)
@@ -290,13 +362,21 @@ end
 Conditional latent-variable scores for a CMP fit: the per-site Laplace mode `ẑₛ`
 (`_compoisson_mode`) at the fitted `(Λ, β)` and dispersion `ν`. `Y` is the `p×n`
 integer count matrix; `rotate=true` applies the canonical [`rotation`](@ref).
+
+A site whose mode search does not certify a stationary point at the default
+budget is retried at 20x the iterations (mirrors `_compoisson_loglik_site`);
+unlike that function there is no `-Inf` sentinel here (a latent score, not a
+log-likelihood), so the best `z` the retried search found is still returned.
 """
 function getLV(fit::COMPoissonFit, Y::AbstractMatrix{<:Real}; rotate::Bool = true)
     p, n = size(Y)
     K = size(fit.Λ, 2)
     Z = Matrix{Float64}(undef, K, n)
     @inbounds for s in 1:n
-        Z[:, s] = _compoisson_mode(view(Y, :, s), fit.Λ, fit.β, fit.ν)
+        y = view(Y, :, s)
+        z, ok = _compoisson_mode(y, fit.Λ, fit.β, fit.ν)
+        ok || ((z, ok) = _compoisson_mode(y, fit.Λ, fit.β, fit.ν; maxiter = 2000))
+        Z[:, s] = z
     end
     Zt = permutedims(Z)
     return rotate ? Zt * _svd_rotation(fit.Λ) : Zt
