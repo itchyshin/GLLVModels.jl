@@ -533,6 +533,8 @@ IsdmTable
 fit_isdm_gllvm
 IsdmFit
 isdm_marginal_loglik_laplace
+predict(::IsdmFit)
+fitted(::IsdmFit)
 ```
 
 ### Family & Distribution Markers

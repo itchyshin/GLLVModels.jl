@@ -4,7 +4,7 @@
 # the one-step implicit gradient, and fits. Identities and refusals only; the
 # paired R-versus-Julia numbers live in test/parity/isdm_cases.jl.
 # R test file and line of each twin: docs/design/isdm-port-spec.md section 3.4.
-using Test, GLLVModels, Distributions, ForwardDiff, LinearAlgebra
+using Test, GLLVModels, Distributions, ForwardDiff, LinearAlgebra, Statistics
 
 include(joinpath(@__DIR__, "fixtures", "isdm", "isdm_fixture_io.jl"))
 
@@ -253,6 +253,85 @@ end
     gfd0 = [(m0(b .+ 1e-6 .* (1:length(b) .== i)) - m0(b .- 1e-6 .* (1:length(b) .== i))) / 2e-6
             for i in eachindex(b)]
     @test norm(g0 .- gfd0) <= 1e-6 * max(1.0, norm(gfd0))
+end
+
+@testset "predict and fitted (test-isdm-predict.R, non-spatial blocks)" begin
+    c = isdm_case("predict"); dat = read_isdm_csv(c.csv)
+    ft = fit_isdm_gllvm(c.formula, dat; family = c.family)
+    tab = ft.table
+    out = predict(ft)
+    ic = dat.isdm_source .== "gbif"; ip = .!ic
+    # 55-66: in-sample link prediction is report$eta, one row per data row
+    @test out isa NamedTuple && length(out.est) == 120 && haskey(out, :est)
+    @test out.est == ft.eta
+    # 67-83: each row's own inverse link
+    resp = predict(ft; type = :response)
+    @test resp.est[ic] == exp.(out.est[ic])
+    @test resp.est[ip] == -expm1.(-exp.(out.est[ip]))
+    @test all(0 .<= resp.est[ip] .<= 1) && all(resp.est[ic] .> 0)
+    # 84-93: newdata = training reproduces in-sample
+    @test isapprox(predict(ft; newdata = dat).est, out.est; atol = 1e-10)
+    # 94-110: re_form zero on newdata is fixed effects + offset, and differs from full
+    wre = predict(ft; newdata = dat, re_form = :all)
+    fo = predict(ft; newdata = dat, re_form = :zero)
+    @test std(wre.est .- fo.est) > 0
+    @test isapprox(fo.est, tab.X * ft.b_fix .+ tab.offset; atol = 1e-10)
+    # 111-127: only the newdata refusal is twinned; in-sample se.fit is fenced (D-296)
+    @test_first_line "`se.fit = TRUE` is not yet supported together with `newdata`." predict(
+        ft; newdata = dat, se_fit = true)
+    @test_throws ArgumentError predict(ft; se_fit = true)
+    # 128-149: an unseen unit falls back to the fixed-only prediction
+    first_cell = sort(unique(dat.cell_id))[1]
+    rows1 = dat.cell_id .== first_cell
+    nn = merge(_subset(dat, rows1), (cell_id = fill("cNEW", count(rows1)), env = fill(0.25, count(rows1))))
+    @test predict(ft; newdata = nn).est == predict(ft; newdata = nn, re_form = :zero).est
+    # 150-175: newdata response uses each row's arm
+    ir = predict(ft; type = :response)
+    nr = predict(ft; newdata = dat, type = :response)
+    @test isapprox(nr.est, ir.est; atol = 1e-10)
+    @test all(0 .<= nr.est[ip] .<= 1)
+    nl = predict(ft; newdata = dat, type = :link)
+    @test nr.est[ip] == -expm1.(-exp.(nl.est[ip]))
+    # 176-211: re_form honoured in-sample for every zero form; fitted forwards
+    z = predict(ft; re_form = :zero)
+    @test z.est == tab.X * ft.b_fix .+ tab.offset
+    @test std(out.est .- z.est) > 0
+    @test predict(ft; re_form = nothing).est == z.est
+    @test predict(ft; re_form = 0).est == z.est
+    @test predict(ft; re_form = missing).est == z.est
+    @test fitted(ft; type = :link, re_form = :zero).est == z.est
+    # R warns (class gllvmTMB_predict_re_form_unsupported); Julia has no formula-valued
+    # re_form, so an unsupported form is an error (a recorded fence).
+    @test_throws ArgumentError predict(ft; re_form = :intercept)
+    # 467-489: the source column is carried, est last, fitted inherits
+    @test keys(out) == (:cell_id, :trait, :isdm_source, :est)
+    @test out.isdm_source == dat.isdm_source
+    @test keys(fitted(ft; type = :link)) == keys(out)
+    @test fitted(ft).est == resp.est                       # fitted defaults to the response scale
+    # 511-529: zeroing the offset in newdata moves the link prediction by exactly log(support)
+    nd0 = merge(dat, (log_support = zeros(length(dat.value)),))
+    @test isapprox(predict(ft; newdata = dat).est .- predict(ft; newdata = nd0).est,
+                   log.(dat.support); atol = 1e-12)
+    # 530-556: newdata without the response column
+    nov = Base.structdiff(dat, NamedTuple{(:value,)})
+    @test predict(ft; newdata = nov).est == predict(ft; newdata = dat).est
+    @test isapprox(predict(ft; newdata = nov).est, out.est; atol = 1e-10)
+    @test isapprox(predict(ft; newdata = nov, type = :response).est, resp.est; atol = 1e-10)
+    # source-column refusals (R/methods-gllvmTMB.R:2876-2905)
+    @test_first_line "Integrated-source prediction needs source column `isdm_source` in `newdata`." predict(
+        ft; newdata = Base.structdiff(dat, NamedTuple{(:isdm_source,)}))
+    @test_first_line "New data names undeclared integrated source" predict(
+        ft; newdata = merge(dat, (isdm_source = fill("mystery", 120),)))
+    @test_first_line "Integrated-source prediction does not allow missing source labels" predict(
+        ft; newdata = merge(dat, (isdm_source = Union{Missing, String}[missing; dat.isdm_source[2:end]],)))
+    @test_first_line "`newdata` is missing the offset variable" predict(
+        ft; newdata = Base.structdiff(dat, NamedTuple{(:log_support,)}))
+
+    # source-observation columns are rebuilt from the frozen basis (K = 0, mixed laws)
+    cm = isdm_case("srcform_mixed"); dm = read_isdm_csv(cm.csv)
+    fm = fit_isdm_gllvm(cm.formula, dm; family = cm.family)
+    @test isapprox(predict(fm; newdata = dm).est, predict(fm).est; atol = 1e-10)
+    @test predict(fm).est == fm.eta
 end
 
 @testset "fits: one count + one detection source, three sources, K = 0, all-count" begin

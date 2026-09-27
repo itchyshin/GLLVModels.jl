@@ -646,8 +646,10 @@ All notable changes to GLLVModels.jl are documented here.
   selector alignment, the every-trait-every-source predicate, the within-trait
   scale rule, source-masked observation formulas with QR rank retention, the
   count-family offset gate with the cloglog exception, and the weights,
-  multi-trial and observed-arm refusals) and `fit_isdm_gllvm()` returning
-  `IsdmFit`. The per-cell long-row Laplace kernel uses a copy of R's
+  multi-trial and observed-arm refusals), `fit_isdm_gllvm()` returning
+  `IsdmFit`, and `predict` / `fitted` (link or response scale per row's law,
+  `re_form` zero forms, `newdata` rebuilt from the fitted basis by name, unseen
+  units falling back to fixed-only; `se_fit` refused). The per-cell long-row Laplace kernel uses a copy of R's
   `gll_dbinom_cloglog` and its observed curvature; the fitter uses the one-step
   implicit gradient. Zero or one `latent(0 + trait | unit, d = K, unique = FALSE)`
   term; `K = 0` fits a GLM through the same kernel. R's `latent()` default

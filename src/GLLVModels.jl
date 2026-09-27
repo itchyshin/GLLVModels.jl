@@ -176,6 +176,7 @@ include("families/isdm_table.jl")        # iSDM: long-table assembly and contrac
 include("families/isdm_laplace.jl")      # iSDM: per-cell long-row Laplace kernel, cloglog tail copy
 include("families/isdm_grad.jl")         # iSDM: one-step implicit gradient
 include("families/isdm_fit.jl")          # iSDM: fit_isdm_gllvm + IsdmFit
+include("families/isdm_predict.jl")      # iSDM: predict / fitted
 include("boundary_inference.jl")         # χ̄² boundary LRT + boundary-aware profile CI for variance components
 include("confint_family.jl")             # Wald / profile / bootstrap CIs for non-Gaussian families
 include("marginal_target_intervals.jl")  # internal marginal intervals for grouped/precision candidates
