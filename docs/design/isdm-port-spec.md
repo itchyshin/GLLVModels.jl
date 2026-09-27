@@ -207,6 +207,7 @@ within-trait family mix (`R/fit-multi.R:307-317`) and a non-zero offset on the c
 (`R/offset.R:187-191`).
 
 Fit-time refusals (the first fires before admission, the rest after it, `R/fit-multi.R:3462-3480`):
+
 | input | class |
 |---|---|
 | an `isdm_source` value outside the declaration, or a declared source with no rows (selector level count differs from the list length) | plain `cli_abort`, `length(family) must match the number of distinct levels in isdm_source.`, fired at `R/fit-multi.R:1440-1445` before the core predicate is evaluated |
