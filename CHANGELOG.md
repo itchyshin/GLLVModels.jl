@@ -16,17 +16,30 @@ All notable changes to GLLVModels.jl are documented here.
 ### Added
 - **`extract_latent_scores(fit, y; level=:unit)`, the Julia twin of gllvmTMB's
   `extract_latent_scores()` (P1 pin `9539352f6`, gllvmTMB 0.7.1).** Twins
-  `.default` and `.gllvmTMB_multi`; `level = :unit` is exactly
-  `getLV(fit, y; component=:innovation, rotate=false)` — verified against a
-  live P1 R fit (Gaussian and Poisson, rank 2) to `|Δz| < 1e-8` (Gaussian) and
-  `< 1e-6` (Poisson, Laplace-mode Newton tolerance) when evaluated at R's own
-  fitted `Λ`/`β`, isolating the shared posterior-mean/mode definition from
-  optimiser-path differences. `level = :unit_obs` always returns `nothing`:
-  R's within-unit `z_W` tier belongs to gllvmTMB's two-tier
-  `latent(0 + trait | site, d)` trait-table formula grammar (unbalanced
-  replication per unit), which this package's single-tier wide-format `Y`
-  GLLVM engine does not implement — every fit type here lacks a `unit_obs`
-  tier, so this is R's own "no such tier" `NULL` case, not an approximation.
+  `.default` and `.gllvmTMB_multi`; `level = :unit` is
+  `getLV(fit, y; rotate=false)`, passing `component=:innovation` too on the
+  seven fit types whose `getLV` accepts that keyword (`GllvmFit`,
+  `BinomialFit`, `PoissonFit`, `NBFit`, `BetaFit`, `OrdinalFit`, `GammaFit`;
+  every other fit type has no predictor-informed latent-score mean at all, so
+  `:total` and `:innovation` are structurally identical for it and passing
+  `component` would raise `MethodError`). Fit types whose `getLV` needs an
+  extra required positional argument (`GllvmCovFit`, `ZIPCovFit`,
+  `ConstrainedOrdinationFit`, `FourthCornerFit`, and others — see
+  `src/extract_latent_scores.jl`) raise a named `ArgumentError` pointing at
+  the `getLV` call to make directly, rather than silently misrouting it.
+  Verified against a live P1 R fit at each side's own fitted `Λ`/`β`
+  (isolating the shared posterior-mean/mode definition from optimiser-path
+  differences) for three families: Gaussian (test tolerance `1e-8`, measured
+  `5.6e-15` — machine precision), Poisson (test tolerance `1e-6`, measured
+  `7.2e-11` — Laplace-mode Newton tolerance), and NB2 per-trait dispersion via
+  `NBGroupedFit` (test tolerance `1e-6`, measured `5.7e-11`, on a fit where
+  3 of 6 traits' dispersion is boundary-hugging — irrelevant to this
+  identity, which holds at whatever parameters R fitted, not at the truth).
+  `level = :unit_obs` always returns `nothing`: R's within-unit `z_W` tier
+  belongs to gllvmTMB's two-tier `latent(0 + trait | site, d)` trait-table
+  formula grammar (unbalanced replication per unit), which this package's
+  single-tier wide-format `Y` GLLVM engine does not implement at all — not a
+  per-fit "this model happens to lack that tier" check.
   `extract_latent_scores.gllvmTMB_site_trait_sim` and
   `extract_latent_scores.gllvmTMB_va` are excluded from this twin per the P1
   case map (PR #526): Julia has neither a site-trait-simulation class nor a

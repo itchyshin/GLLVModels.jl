@@ -1,3 +1,48 @@
+## 2026-09-27 (review fix): `extract_latent_scores()` dispatch correctness (PR #531)
+
+- Independent review of PR #531 found the initial implementation always
+  forwarded `component = :innovation` to `getLV`, but only 7 of ~35 `getLV`
+  methods in this package accept a `component` keyword at all (the seven
+  `X_lv`-capable types: `GllvmFit`, `BinomialFit`, `PoissonFit`, `NBFit`,
+  `BetaFit`, `OrdinalFit`, `GammaFit`) — every other fit type (`NB1Fit`,
+  `TweedieFit`, `NBGroupedFit`, `RowRandomFit`, and more) would raise a plain
+  `MethodError`. Fixed by dispatching on two disjoint `Union`s built by
+  reading every `getLV` method's signature in `src/postfit.jl` and
+  `src/families/*.jl`: `_ComponentAwareGllvmFit` (the seven types, passed
+  `component = :innovation` explicitly) and `_PositionalArgGllvmFit` (types
+  whose `getLV` needs an extra required positional argument beyond `(fit,
+  y)` — `GllvmCovFit`, `ZIPCovFit`, `ConstrainedOrdinationFit`,
+  `FourthCornerFit`, `SPDELatentFit`, and others; these now raise a named
+  `ArgumentError` pointing at the `getLV` call to make directly, rather than
+  silently misrouting the argument as an unsupported keyword). Every other
+  fit type falls through to a generic `getLV(fit, y; rotate = false, ...)`
+  call with no `component` at all, which is exactly the zero-mean score for
+  those types (none of them has an `X_lv`/predictor-informed mean field to
+  distinguish `:total` from `:innovation`).
+- Also fixed: the docstring's false claim that `extract_ordination` is
+  R-only — it exists (`src/extractors.jl`, forwarding to `ordination()`) —
+  and corrected the "differences from R" section (R warns-and-continues on
+  deprecated `level = "B"`/`"W"` aliases where this method throws;
+  `level = :unit_obs` returning `nothing` is categorical, not a per-fit "this
+  model lacks that tier" check, since no fit type here has ever had one).
+- New tests: an `extract_ordination`/`extract_latent_scores` identity check
+  on a no-`X`, no-`X_lv` fit (this identity does *not* hold generally,
+  because `ordination()` never forwards a fixed-effect `X` to `getLV` either
+  — documented as a real, if narrow, gap rather than silently worked
+  around); a shape-only loop over `NB1Fit`/`TweedieFit`/`NBGroupedFit`/
+  `RowRandomFit` (red before the fix: `MethodError` on the `component`
+  keyword); an `ArgumentError`-refusal check via `GllvmCovFit`; a third
+  fixture family (NB2 per-trait dispersion via `NBGroupedFit`, its own
+  `n_sites = 60` fixture — 15 sites was too few for a well-posed per-trait
+  dispersion + rank-2 fit) verified at R's fitted parameters (measured
+  `max|Δz| = 5.7e-11`); and a deprecated-alias rejection check
+  (`level = :B`). Fixture hygiene: `SHA256SUMS.txt` now uses relative file
+  names, and the R script that generated every fixture file
+  (`generate_fixture.R`, with the exact P1 install call and seed in its
+  header) is committed beside the fixtures.
+- `test/test_extract_latent_scores.jl` 34/34 pass on `julia +1.10` and
+  `julia +1.13`; `test_postfit.jl` (892/892) unchanged on both versions.
+
 ## 2026-09-27: `extract_latent_scores()` twin of gllvmTMB's P1 export
 
 - Branch `claude/twin-extract-latent-scores` from `origin/main`. Recon at pin
