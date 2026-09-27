@@ -68,7 +68,7 @@ n, p and family, and every place a user reads an interval says it is conditional
 3. Runaway detector: scale check (max loading row norm = latent SD on the link scale > 10, any
    non-identity link) and binomial ratio check (≥ 25), from the gllvmTMB runaway study
    (commit 9653b1778). Thresholds provisional; recalibrate on the grid's healthy fits.
-4. R twin: the same guard and detector ported to gllvmTMB `select_lv()` (in progress).
+4. R twin: the same guard and detector in gllvmTMB `select_lv()` (branch claude/lane-auto-d-r-20260926, commit 978f4bba2; 15 new + 70 existing tests pass). Warm start uses `control(start_from = <accepted fit>)`: matching blocks carry over, the new column starts at the default. The table keeps rejected rows with `status` and `message`.
 
 Tests: 50/50 in `test/test_model_selection.jl` (16 existing + 34 new).
 
