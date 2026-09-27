@@ -162,6 +162,7 @@ rotation
 ordination
 ordiplot
 ordination_uncertainty
+extract_latent_scores
 select_lv
 cv_gllvm
 simulate

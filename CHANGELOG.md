@@ -13,6 +13,26 @@ All notable changes to GLLVModels.jl are documented here.
 
 ## Unreleased
 
+### Added
+- **`extract_latent_scores(fit, y; level=:unit)`, the Julia twin of gllvmTMB's
+  `extract_latent_scores()` (P1 pin `9539352f6`, gllvmTMB 0.7.1).** Twins
+  `.default` and `.gllvmTMB_multi`; `level = :unit` is exactly
+  `getLV(fit, y; component=:innovation, rotate=false)` — verified against a
+  live P1 R fit (Gaussian and Poisson, rank 2) to `|Δz| < 1e-8` (Gaussian) and
+  `< 1e-6` (Poisson, Laplace-mode Newton tolerance) when evaluated at R's own
+  fitted `Λ`/`β`, isolating the shared posterior-mean/mode definition from
+  optimiser-path differences. `level = :unit_obs` always returns `nothing`:
+  R's within-unit `z_W` tier belongs to gllvmTMB's two-tier
+  `latent(0 + trait | site, d)` trait-table formula grammar (unbalanced
+  replication per unit), which this package's single-tier wide-format `Y`
+  GLLVM engine does not implement — every fit type here lacks a `unit_obs`
+  tier, so this is R's own "no such tier" `NULL` case, not an approximation.
+  `extract_latent_scores.gllvmTMB_site_trait_sim` and
+  `extract_latent_scores.gllvmTMB_va` are excluded from this twin per the P1
+  case map (PR #526): Julia has neither a site-trait-simulation class nor a
+  variational-approximation fit class. See
+  `src/extract_latent_scores.jl` and `test/test_extract_latent_scores.jl`.
+
 ### Fixed
 - **Ordered-beta fits could report `converged = true` at a non-stationary point,
   with a restart reaching a genuinely better optimum (#501).** The per-site

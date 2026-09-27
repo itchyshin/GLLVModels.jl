@@ -1,3 +1,42 @@
+## 2026-09-27: `extract_latent_scores()` twin of gllvmTMB's P1 export
+
+- Branch `claude/twin-extract-latent-scores` from `origin/main`. Recon at pin
+  P1 (`9539352f66f2db2cc26b1c393e67212a359b60c9`, gllvmTMB 0.7.1) read
+  `R/extract-latent-scores.R`'s generic and four S3 methods, its roxygen, and
+  `tests/testthat/test-extract-latent-scores.R`. Per the P1 case map (PR
+  #526), `.default` and `.gllvmTMB_multi` are proposed `required_core` and
+  are twinned here; `.gllvmTMB_site_trait_sim` and `.gllvmTMB_va` are
+  `excluded` (no Julia site-trait-simulation or variational-fit class) and
+  are not twinned.
+- New `src/extract_latent_scores.jl`: `extract_latent_scores(fit, y;
+  level=:unit)` is `getLV(fit, y; component=:innovation, rotate=false)`
+  (R's `rotate = "none"`, `component = "innovation"` orientation);
+  `level=:unit_obs` always returns `nothing` (this package has no `unit_obs`/
+  `z_W` tier in any fit type — R's own "no such tier" `NULL` case, not an
+  approximation). A fallback method mirrors `extract_latent_scores.default`'s
+  named abort for unsupported types.
+- Verified against a live R fit at P1 (installed to a temporary library from
+  a detached worktree; `R CMD INSTALL` ~1 min, well under the 20-minute
+  budget): Gaussian and Poisson GLLVMs, `n_sites=15`, `p=6` traits, rank 2,
+  fit via `gllvmTMB(value ~ 0 + trait + latent(0 + trait | site, d = 2,
+  unique = FALSE), ...)` — the degenerate single-tier case of R's
+  `gllvmTMB_multi` class (one row per site x trait cell, no replication),
+  which is exactly this package's ordinary p x n GLLVM. At R's own fitted
+  `Λ`/`β` plugged into this package's `getLV`, `|Δz|` is `5.6e-15`
+  (Gaussian, machine precision) and `7.2e-11` (Poisson, Laplace-mode Newton
+  tolerance); at each side's own optimum the rotation-invariant `Λz'`
+  product agrees to `2.4e-6` (Gaussian) / `1.8e-5` (Poisson) absolute.
+  Fixture (`Y`, R's `z_hat`, `Λ`, `β`, `σ_eps`, logLik) stored under
+  `test/fixtures/extract_latent_scores_p1/`, sha256-guarded in
+  `test/test_extract_latent_scores.jl` (tagged `# gllvm-parity-tag: P1`,
+  Julia-only — reads recorded R values, runs no R/RCall).
+- New test 22/22 pass on `julia +1.10` and `julia +1.13`; `test_postfit.jl`
+  (892/892) unchanged on both versions (no regression to the wrapped
+  `getLV`). Registered in `test/runtests.jl`; `CHANGELOG.md` and
+  `docs/src/api.md` updated.
+- Did not touch `src/families/mixed.jl`, `grouped_dispersion.jl`,
+  `model_selection.jl`, `cv.jl`, `_laplace_mode`, or `Project.toml`.
+
 ## 2026-09-25: Two-part families no longer score an unfinished mode search (#484)
 
 - Branch `claude/twopart-mode-search-484`, rebased onto `origin/main` (past #481 Gamma, #483 Beta,
