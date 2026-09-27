@@ -175,6 +175,18 @@ function _grouped_laplace_mode(fams::AbstractVector, y::AbstractVector,
     return z
 end
 
+# getLV must return the z at which the fit's Laplace objective was evaluated. Families
+# whose likelihood kernel has its own mode chain reuse it; where that chain fails (the
+# likelihood returned -Inf there) keep the generic kernel's z. Everything else keeps
+# `_grouped_laplace_mode`.
+_grouped_site_mode(fams::AbstractVector{<:Beta}, a...; kw...)             = _beta_grouped_site_mode(fams, a...; kw...)
+_grouped_site_mode(fams::AbstractVector, a...; kw...)                     = (_grouped_laplace_mode(fams, a...; kw...), true)
+function _grouped_getLV_mode(fams, y, n, Λ, β, link; mask = nothing, offset = nothing)
+    size(Λ, 2) == 0 && return zeros(Float64, 0)
+    z, ok = _grouped_site_mode(fams, y, n, Λ, β, link; mask = mask, offset = offset)
+    return ok ? z : _grouped_laplace_mode(fams, y, n, Λ, β, link; mask = mask, offset = offset)
+end
+
 function _grouped_getLV(Y::AbstractMatrix, Λ::AbstractMatrix, β::AbstractVector,
         link::Link, fams::AbstractVector; N = nothing, rotate::Bool = true,
         mask = nothing, offset = nothing)
@@ -187,8 +199,8 @@ function _grouped_getLV(Y::AbstractMatrix, Λ::AbstractMatrix, β::AbstractVecto
     @inbounds for s in 1:n
         mi = mask === nothing ? nothing : view(mask, :, s)
         oi = offset === nothing ? nothing : view(offset, :, s)
-        Z[:, s] = _grouped_laplace_mode(fams, view(Y, :, s), view(Nm, :, s),
-                                        Λ, β, link; mask = mi, offset = oi)
+        Z[:, s] = _grouped_getLV_mode(fams, view(Y, :, s), view(Nm, :, s),
+                                      Λ, β, link; mask = mi, offset = oi)
     end
     Zt = permutedims(Z)
     return rotate ? Zt * _svd_rotation(Λ) : Zt
@@ -664,17 +676,10 @@ function _beta_grouped_mode(fams::AbstractVector, y::AbstractVector, n::Abstract
     return z, false
 end
 
-# Per-site Laplace log-marginal with per-species Beta precision markers `fams`.
-function _beta_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
+# The Beta site-mode chain shared by the likelihood and getLV. Returns (z, converged).
+function _beta_grouped_site_mode(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
         Λ::AbstractMatrix, β::AbstractVector, link::Link;
-        mask = nothing, offset = nothing, hessian::Symbol = :observed,
-        maxiter::Integer = 100, tol::Real = 1e-9)
-    p, K = size(Λ)
-    off = offset === nothing ? false : offset
-    # Role separation (2026-08-25). The MODE SEARCH is Fisher-scored first; the
-    # caller's `hessian` governs only the post-loop log-det below. The observed
-    # weight CAN be negative (measured: Beta at φ=12, η=−1.2, y=0.87 gives −1.218),
-    # which is why the step never uses it alone.
+        mask = nothing, offset = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
     z, ok = _beta_grouped_mode(fams, y, n, Λ, β, link, :fisher;
                                mask = mask, offset = offset, maxiter = maxiter, tol = tol)
     # Fallback 1: max(observed, Fisher) weight, defined for LogitLink only.
@@ -686,6 +691,22 @@ function _beta_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::A
     ok || ((z, ok) = _beta_grouped_mode(fams, y, n, Λ, β, link, :fisher;
                                         mask = mask, offset = offset,
                                         maxiter = 20 * maxiter, tol = tol))
+    return z, ok
+end
+
+# Per-site Laplace log-marginal with per-species Beta precision markers `fams`.
+function _beta_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
+        Λ::AbstractMatrix, β::AbstractVector, link::Link;
+        mask = nothing, offset = nothing, hessian::Symbol = :observed,
+        maxiter::Integer = 100, tol::Real = 1e-9)
+    p, K = size(Λ)
+    off = offset === nothing ? false : offset
+    # Role separation (2026-08-25). The MODE SEARCH is Fisher-scored first; the
+    # caller's `hessian` governs only the post-loop log-det below. The observed
+    # weight CAN be negative (measured: Beta at φ=12, η=−1.2, y=0.87 gives −1.218),
+    # which is why the step never uses it alone.
+    z, ok = _beta_grouped_site_mode(fams, y, n, Λ, β, link;
+                                    mask = mask, offset = offset, maxiter = maxiter, tol = tol)
     # A search that did not converge must not produce a finite value. -Inf makes the
     # fitters' objective return its 1e12 sentinel instead of a garbage surface.
     ok || return -Inf

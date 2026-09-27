@@ -1,3 +1,14 @@
+## 2026-09-27: getLV on grouped Beta fits returns the per-site mode
+
+- Branch `claude/beta-getlv-mode-20260927`, stacked on `claude/beta-grouped-mode-search-503` (#540).
+  The Beta mode chain moves verbatim into `_beta_grouped_site_mode`; `_grouped_getLV` calls it through
+  `_grouped_site_mode` (Beta method; generic method keeps `_grouped_laplace_mode`). Same dispatcher as
+  #529, whose NB2/NB1/Gamma methods merge alongside (expect a one-line conflict: keep every method).
+- Before: seed-6 panel, getLV max gradient 0.055 (sites 14 and 78). After: below 1e-6, and with a
+  covariate offset too. Two new testsets in `test/test_beta_grouped_mode_search.jl`.
+- 32 related test files (every `test_grouped*.jl` and `test_beta*.jl`, bridge, postfit, ordination,
+  fit_gllvm, unified API): 3497 pass, 0 fail.
+
 ## 2026-09-27: Beta grouped kernel scores every site at its mode (#503 class)
 
 - Branch `claude/beta-grouped-mode-search-503` from `origin/main`. `_beta_grouped_loglik_site`
