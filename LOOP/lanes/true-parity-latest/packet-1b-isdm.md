@@ -1,5 +1,7 @@
 # Packet 1b: iSDM scope questions before the build (2026-09-27)
 
+**SIGNED 2026-09-27 by Shinichi, in chat: "Packet 1b: accept 1 to 5 as recommended." Vault decision D-296.**
+
 From the iSDM port spec (PR #525, head 032d90284, reviewed and revised). Each row has a recommendation and a reply to paste. Engineering questions the spec settles itself (cloglog kernel copy, name-based coefficient pairing, cross-objective pass criterion, gradient method) are not asked.
 
 | # | Question | Recommendation | Reply to paste |
