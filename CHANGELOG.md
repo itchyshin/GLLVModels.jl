@@ -73,24 +73,37 @@ All notable changes to GLLVModels.jl are documented here.
   families on one shared latent block) took undamped Fisher-scoring steps and
   had no convergence flag: a site could be left far from its stationary point
   while `_mixed_loglik_site` still returned a finite log-likelihood. A
-  re-measure across three family mixes (Poisson/Binomial/Gamma;
+  re-measure on `main` across three family mixes (Poisson/Binomial/Gamma;
   Normal/NegativeBinomial/Beta; a four-trait Poisson/Gamma/Beta/Binomial mix)
   found 120/1200 finite-non-mode sites using the class audit's own
   gradient-of-the-score probe. The search now halves any step that lowers the
-  per-site log-posterior and requires BOTH the full proposed step and the
-  log-posterior gradient itself to be small before declaring convergence (a
-  step-size-only test is not safe here: mixing in a family whose Fisher weight
-  does not track the residual, such as a Normal trait under `IdentityLink`, is
-  enough to trigger the same defect #509 found for Student-t). A site that
-  still cannot certify a stationary point within a 20x-widened iteration budget
-  returns `-Inf`, so the fitter's own `1e12` failure sentinel fires instead of a
-  silently wrong log-likelihood. `getLV`/`predict` call `_mixed_laplace_mode`
-  directly and keep their prior no-sentinel behaviour: they use whichever `z`
-  the damped search returns, converged or not, exactly as before. On four
-  datasets across three family mixes where `main`'s outer fit already converged
-  with every site independently certified stationary, the fitted log-likelihood
-  is unchanged to about 1e-7 to 1e-10 on this branch; this figure is specific to
-  those datasets, not a general bound.
+  per-site log-posterior. It declares convergence when the Newton decrement
+  `|g'Δ|` is below `1e-12`, or when both the step `|Δ|` is below `1e-9` and
+  `|g'Δ|` is below `1e-6`. The decrement replaces an absolute bound on the
+  gradient `g` because `Λ'WΛ + I` can be badly scaled (a Normal trait whose
+  fitted σ is driven near zero makes `W = 1/σ²` enormous), and there a genuine
+  mode leaves a large raw `g` in the stiff direction purely from rounding. The
+  `1e-12` clause exists because at a mode reached to rounding the step stalls
+  at the floating-point floor (measured 1e-9 to 2e-8) and never falls below
+  `1e-9`. Once a full-size step has been rejected in a call, later steps skip
+  the small-step shortcut and go through the line search, because the undamped
+  Fisher map is not always a contraction near the mode (a Gamma trait with
+  shape 0.7 far into its tail oscillates otherwise); this latch is off once the
+  step is at the floating-point floor, where the line search could only compare
+  rounding noise. A site that still cannot certify a stationary point within a
+  20x-widened iteration budget returns `-Inf`, so the fitter's own `1e12`
+  failure sentinel fires instead of a silently wrong log-likelihood.
+  `getLV`/`predict` call `_mixed_laplace_mode` directly and keep their prior
+  no-sentinel behaviour. Whole-fit check (20 simulated datasets, 5 family
+  mixes, Julia 1.10 only): of the 16 fits that were healthy on `main`
+  (converged, every site independently certified stationary), none got worse;
+  15 moved by at most 3.9e-7 in log-likelihood and one (Normal/NB2/Beta) rose
+  by 0.014. Of the 4 fits that were not healthy on `main`, 3 now reach a higher
+  log-likelihood (by 0.24, 14.4 and 1749; `main`'s value in the last case was
+  computed at non-mode sites) and one that hit the iteration limit on `main`
+  now converges to the same value. Total fit time was 43.2 s against 45.0 s on
+  `main`; per fit the ratio ranged from 0.06 to 2.2. These figures are specific
+  to those datasets, not a general bound.
 - **`confint(..., method = :profile)` and `method = :bootstrap` could accept a
   silently failed inner refit.** `_family_profile_refit` and `_family_bootstrap`
   (`src/confint_family.jl`) judged a refit's success only by `isfinite` on its
