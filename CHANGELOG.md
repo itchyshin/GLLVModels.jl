@@ -14,6 +14,12 @@ All notable changes to GLLVModels.jl are documented here.
 ## Unreleased
 
 ### Fixed
+- **Gaussian `@formula(y ~ x)` fitted no species intercepts (#520).** The
+  default Gaussian formula branch passed a site-only design to
+  `fit_gaussian_gllvm`. `y ~ x` and `y ~ 1 + x` now fit one intercept per trait
+  plus shared slopes, as the docstring states and as the other formula routes
+  and gllvmTMB's `value ~ 0 + trait + x` do; `y ~ 0 + x` is unchanged.
+  **Gaussian formula results with covariates change.**
 - **Gaussian `fit_gllvm` without `X` fitted no species intercepts (#519).**
   `fit_gllvm(Y; family = Normal(), K)` routed to `fit_gaussian_gllvm`, whose
   `X = nothing` means a zero mean, so shifting `Y` changed the log-likelihood.
