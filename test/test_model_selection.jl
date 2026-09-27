@@ -215,3 +215,26 @@ end
         @test 3 in sel2.K
     end
 end
+
+# --- Omitting K estimates it (lane auto-d-20260926; public API, awaiting sign-off) --
+@testset "fit_gllvm without K selects K via select_lv" begin
+    Random.seed!(11)
+    p, n = 6, 150
+    Λ_true = 0.9 .* randn(p, 1)
+    η = log(3.0) .+ Λ_true * randn(1, n)
+    Y = [rand(Poisson(exp(η[t, s]))) for t in 1:p, s in 1:n]
+
+    fit = @test_logs (:info, r"chose K") match_mode = :any fit_gllvm(Y; family = Poisson())
+    sel = select_lv(Y; family = Poisson(), Kmax = min(5, p - 1))
+    @test fit isa PoissonFit
+    @test size(fit.Λ, 2) == sel.best_k
+    @test GLLVModels._loglik(fit) ≈ GLLVModels._loglik(sel.best)
+
+    one = fit_gllvm(Y; family = Poisson(), Kmax = 1)
+    @test size(one.Λ, 2) == 1
+    @test_throws ArgumentError fit_gllvm(Y; family = Poisson(), K = 2, Kmax = 3)
+
+    # Explicit K is untouched by the auto path.
+    @test GLLVModels._loglik(fit_gllvm(Y; family = Poisson(), K = 1)) ≈
+          GLLVModels._loglik(fit_gllvm(Y; family = Poisson(), num_lv = 1))
+end
