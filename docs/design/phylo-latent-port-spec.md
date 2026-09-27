@@ -54,8 +54,10 @@ gllvmTMB(value ~ 0 + trait + phylo_latent(species, d = 1, vcv = C), df,
 ```
 
 with free parameters `b_fix: 3, log_sigma_eps: 1, theta_rr_phy: 3` and random `g_phy`.
-The third case, `STRUCT-PHY-TREE-PROPTO`, is `phylo_scalar()`, a different keyword; it is
-listed under the same ledger row but is not `phylo_latent()` and is fenced here (section 4).
+The third case, `STRUCT-PHY-TREE-PROPTO`, is `phylo_scalar()`, a different keyword (a scalar
+phylogenetic variance shared across traits, `R/brms-sugar.R:1046`), listed under A14's own ledger
+row. Whether A14 can be promoted with that planned case left `UNPAID` is the maintainer's call
+(OQ-10); this spec recommends fencing it and says so there rather than fencing it unilaterally.
 
 "Bare" means the R default `unique = FALSE` (`brms-sugar.R:771-782`), no `rho`, no slope
 LHS, no companion `latent()` at the species tier. NEWS at P1 confirms this is the
@@ -169,7 +171,7 @@ fit_phylo_latent_gllvm(Y::AbstractMatrix, species::AbstractVector{<:AbstractStri
     Ainv = nothing,        # PrecisionPhy, or (I, J, V, labels) sparse triplets
     tip_labels = nothing,  # labels for vcv / A rows; required with vcv / A
     unique::Bool = false,  # true is a documented extra (mode :explicitunique), not the twin
-    rho = 1,               # anything other than 1 is refused (structured rho is out of boundary)
+    rho = 1,               # anything other than 1 is refused by a Julia scope fence (OQ-12)
     X = nothing,           # optional site-level design; default is 0 + trait intercepts
     start = nothing, g_tol = 1e-5, iterations = 400)
 ```
@@ -182,7 +184,16 @@ fit_phylo_latent_gllvm(Y::AbstractMatrix, species::AbstractVector{<:AbstractStri
   `test-phylo-vcv-A-aliases.R:107-119`).
 - `tree` is converted with `PrecisionPhy(tree; correlation = true)`
   (`src/phylo_precision.jl:122-160`), which already carries R's unit-height rescale and the
-  ultrametric gate (`GJL-GATE-PHYLO-NONULTRAMETRIC`, `:116`). This entry sets
+  ultrametric gate (`GJL-GATE-PHYLO-NONULTRAMETRIC`, `:116`). Polytomies: R accepts them,
+  with `n_aug = n_tip + Nnode - 1`, smaller than `2p - 2` (`src/gllvmTMB.cpp:920-922`), but
+  `PrecisionPhy(::AugmentedPhy)` asserts `n_aug == 2p - 2` (`src/phylo_precision.jl:147-148`)
+  and `augmented_phy` itself is bifurcating-only (`src/edge_incidence.jl:181`). The twin
+  therefore builds the R-convention precision for a tree **directly** from the edge list
+  (R's rule at `R/phylo-tree-precision.R:209-227`, one row per non-root node) and wraps it with
+  the raw-triplet constructor (`src/phylo_precision.jl:190`), so polytomies are admitted
+  exactly as R admits them; `PrecisionPhy(::AugmentedPhy)` is not on the twin path. A tree
+  with a node of out-degree one is refused with `GJL-GATE-PHYLO-LATENT-TREE`, as R refuses
+  it through `.gllvm_validate_phylo_tree`. This entry sets
   `correlation = true` **because it is the twin of R's fit path**; the native constructors
   keep the Q1 default (opt-in `false`). No native default changes.
 - `vcv`/`A` follows the R dense route byte for byte: reorder rows to the species label order,
@@ -227,7 +238,7 @@ assert the same substring on both sides. cli markup is rendered to plain text.
 | `vcv` without labels | "phylo_vcv must have rownames matching levels of `species`." (`R/fit-multi.R:4729-4733`) | `GJL-GATE-PHYLO-LATENT-LABELS` |
 | species label not in tree / vcv rows | "{what} do not cover all species levels." plus the `droplevels()` bullet when the level is unobserved (`:609-636`) | `GJL-GATE-PHYLO-LATENT-COVERAGE` |
 | `unique = true` | not refused; routed to `mode = :explicitunique` and labelled a documented extra in the fit's `admission_scope` | none |
-| `rho != 1` | "This structured `rho` configuration does not resolve to one trait-intercept covariance block." (`:4639-4641`) | `GJL-GATE-PHYLO-LATENT-RHO` |
+| `rho != 1` | **No R analogue.** R accepts `rho` on a bare `phylo_latent()`: the guard at `R/fit-multi.R:4639-4641` aborts only when `use_phylo_rr` is false or a slope/mi/kernel term co-occurs, and the dense route attenuates `Aphy` (`:4742-4750`). The twin refuses with its own scope fence: "rho is outside the A14/A15 scope of the Julia twin; fit rho = 1 or use R." (OQ-12) | `GJL-GATE-PHYLO-LATENT-RHO` |
 | non-Gaussian `family` | "explicit precision fitting currently requires Gaussian responses" (`src/families/fit_gllvm.jl:167`) | existing |
 
 Formula-only guards have no analogue in a matrix API and are fenced in section 4: a global
@@ -269,7 +280,7 @@ to adopt.
 |---|---|---|
 | `src/phylo_latent.jl` | new | `fit_phylo_latent_gllvm`, the three source admissions (tree, dense vcv/A with the `1e-8` ridge, sparse Ainv), label matching, the refusal table of section 2.3. Wraps `fit_precision_multivariate`. |
 | `src/phylo_latent_postfit.jl` | new | `extract_Sigma(::PrecisionMultivariateFit; level, part)`, `extract_phylo_signal(::PrecisionMultivariateFit)`, `show`. |
-| `src/precision_multivariate_fit.jl` | edit, additive | two fields on `PrecisionMultivariateFit` (`species_labels`, `tip_labels`) with defaults so existing constructors and tests do not change. |
+| `src/precision_multivariate_fit.jl` | edit, additive | two fields appended to `PrecisionMultivariateFit` (`species_labels`, `tip_labels`), filled through the outer constructor at `src/precision_multivariate_fit.jl:173`, which is the only construction site, so existing callers and tests do not change. |
 | `src/GLLVModels.jl` | edit | two `include`s after line 177; export `fit_phylo_latent_gllvm`. |
 | `test/test_phylo_latent_twin.jl` | new | the red-first twins of section 4. |
 | `test/test_phylo_latent_paired_p1.jl` | new | replays the P1 receipts of section 5 from committed JSON; skips, never passes, when a receipt is absent. |
@@ -379,29 +390,40 @@ StableRNGs (AGENTS.md design rule 1, recovery test for the new public route).
 | `test-m1-7-extract-omega-phylo-signal-mixed-family.R` | 3 | out of boundary: mixed families, dev-only |
 | `test-phylo-signal-categorical.R` | 7 (`:61,:78,:96,:146,:197,:239,:291`) | out of boundary: ordinal and multinomial liability H2 |
 
-### 4.4 Fenced, whole files (208 R blocks)
+### 4.4 Owned by the temporal spec (23 R blocks)
 
-All out of boundary for A14/A15. Block counts from the census.
+Temporal is inside P1 (D-295). The four temporal-phylo files at P1 contain no `phylo_latent()`
+call (census: 0 mentions in each) and belong to the temporal port spec (PR #535). They are
+recorded there, not fenced here: `test-temporal-program-phylo-replicated.R` (5 blocks; gated on
+`TMB`/`ape` only) is **deferred** to #535; `test-temporal-phylo-damped-newton.R` (8),
+`test-temporal-phylo-optimizer-qualification.R` (6) and `test-temporal-phylo-third-pass.R` (4)
+are **dev-only** there (they skip when the temporal programme files are absent from an
+installed check, `test-temporal-phylo-damped-newton.R:8`).
+
+### 4.5 Fenced, whole files (185 R blocks)
+
+Block counts from the census; the reason is given per group.
 
 | Surface | Files (blocks) |
 |---|---|
-| Non-Gaussian `phylo_latent` matrix cells | `test-matrix-poisson-phylo.R` (4), `-nbinom2-` (4), `-gamma-` (4), `-beta-` (4), `-ordinal-` (4), `test-matrix-multinomial-phylo.R` (15) |
-| Augmented slopes (PHY-11 to PHY-18) | `test-matrix-slope-phylo-latent.R` (7), `test-phylo-latent-slope-gaussian.R` (5), `test-matrix-slope-phylo-dep.R` (14), `test-matrix-slope-phylo-indep.R` (6), `test-phylo-dep-slope-gaussian.R` (8), `test-phylo-dep-slope-s2-gaussian.R` (6), `test-phylo-indep-slope-gaussian.R` (2), `-nongaussian.R` (5), `-spike.R` (3), `test-phylo-unique-slope-{gaussian,binomial-logit,binomial-probit}.R` (3 each), `test-phylo-column-slope-indep.R` (8), `test-phylo-slope.R` (2), `test-phylo-slope-rhs-routing.R` (3), `test-ordinary-column-slope-phylo-coexistence.R` (4) |
+| Non-Gaussian phylo matrix cells: **dev-only, non-Gaussian, not bare** for the 8 blocks that call `phylo_latent()` (the paired `phylo_latent + phylo_unique` block in each of `test-matrix-{poisson,nbinom2,gamma,beta,ordinal}-phylo.R`, all `skip_if_not_heavy`, and the three multinomial equivalence blocks `test-matrix-multinomial-phylo.R:315,376,456`, heavy); **out of boundary (other keyword)** for the remaining 27 blocks (`phylo_scalar`, `phylo_indep`, `phylo_dep`, animal and kernel keywords). Whether non-Gaussian `phylo_latent()` is inside P1 is OQ-11. | 20 blocks in the five family files, 15 in the multinomial file |
+| Augmented slopes (PHY-11 to PHY-18): out of boundary. D-297 classes the slope and column-coefficient family (`slope`, `kernel_slope`, `spatial_slope`, `*_coef`) `outside_boundary`, revisited at P2; `phylo_slope` and the augmented `phylo_*(1 + x \| sp)` forms predate P1 and are fenced by A14's bare scope with D-297 as the class precedent. 58 of these 82 blocks are also `skip_if_not_heavy` (dev-only). | `test-matrix-slope-phylo-latent.R` (7), `test-phylo-latent-slope-gaussian.R` (5), `test-matrix-slope-phylo-dep.R` (14), `test-matrix-slope-phylo-indep.R` (6), `test-phylo-dep-slope-gaussian.R` (8), `test-phylo-dep-slope-s2-gaussian.R` (6), `test-phylo-indep-slope-gaussian.R` (2), `-nongaussian.R` (5), `-spike.R` (3), `test-phylo-unique-slope-{gaussian,binomial-logit,binomial-probit}.R` (3 each), `test-phylo-column-slope-indep.R` (8), `test-phylo-slope.R` (2), `test-phylo-slope-rhs-routing.R` (3), `test-ordinary-column-slope-phylo-coexistence.R` (4) |
 | Column coefficients | `test-column-coef-phylo-fixed-rho.R` (10), `test-column-coef-phylo-estimated-rho.R` (14) |
-| Missing predictors, temporal, VA | `test-missing-predictor-phylo.R` (12), `test-temporal-phylo-*.R` (8, 6, 4), `test-temporal-program-phylo-replicated.R` (5), `test-va-r3-structured-phylo.R` (11) |
-| Other keywords | `test-stage3-propto-equalto.R` (7), `test-relmat-*-slope-gaussian.R` (3, 4, 3, 3), `test-funcphylo-spatial-recovery.R` (1) |
+| R-internal | `test-missing-predictor-phylo.R` (12): `mi()` covariate-model grammar with zero `phylo_latent()` calls (census); `test-va-r3-structured-phylo.R` (11): internal VA/KL machinery (`Stage 7 does NOT open the public route`, `:574`) |
+| Other keywords: out of boundary | `test-stage3-propto-equalto.R` (7), `test-relmat-*-slope-gaussian.R` (3, 4, 3, 3), `test-funcphylo-spatial-recovery.R` (1) |
 
 Animal, kernel, structured-rho and multinomial-fence files that mention `phylo` only through
 shared helpers are outside this ledger row and are not counted.
 
-### 4.5 Counts
+### 4.6 Counts
 
 | Class | R blocks | Notes |
 |---|---|---|
 | Twinned | 26 | 21 Julia testsets plus 2 Julia-only red-first tests |
-| Deferred | 16 | inside the boundary, outside the A14/A15 bar |
+| Deferred here | 16 | inside the boundary, outside the A14/A15 bar |
+| Owned by the temporal spec (#535) | 23 | 5 deferred there, 18 dev-only there |
 | Fenced, enumerated | 76 | 21 R-internal, 5 dev-only, 50 out of boundary |
-| Fenced, whole files | 208 | out of boundary |
+| Fenced, whole files | 185 | 23 R-internal, 8 dev-only (non-Gaussian, not bare), 154 out of boundary (82 of them slope, 58 of those also heavy) |
 | Total examined | 326 | |
 
 ---
@@ -415,14 +437,18 @@ re-pinned to P1. The existing Destination B evidence was recorded against gllvmT
 `1.07e-14`, own-optimum NLL delta about `6.4e-14` on the tree cell, matched Wald covariance
 relative error `3.9e-6` (`destination-b-s3b-pilot/README.md`, `destination-b-tree/README.md`,
 `destination-b-uncertainty/README.md`). Those numbers show the kernel pairs; they do not
-discharge A14 or A15 at P1.
+discharge A14 or A15 at P1, by the receipt carry rule (D-295 rule 1; `docs/dev-log/core070/true-parity-latest/GATES.md:129`): a 0.7.0 receipt
+counts at P1 only if every source-pin file is byte-identical, otherwise `PARTIAL_STALE_AT_P1`.
+Between `b4d5fee64` and `9539352f6`, `src/gllvmTMB.cpp` changed by +866 lines and
+`R/fit-multi.R` by +2375 (`git diff --stat`), so every phylo receipt is stale at P1 and must be
+re-run.
 
 | Case | Model | R side (P1) | Julia side | Paired quantities and tolerance |
 |---|---|---|---|---|
 | `STRUCT-PHY-TREE-RR` (A14) | 3 traits, 8-tip ultrametric tree of height 4 (the Destination B fixture, `destination-b-tree/precision-reference.json`), 2 replicates, `d = 1`, `tree =` | `gllvmTMB(value ~ 0 + trait + phylo_latent(species, d = 1, tree = tree), cluster = "species", family = gaussian())` from a private library built at `9539352f6`; DLL SHA-256, `sessionInfo()`, refined nlminb `rel.tol = 1e-12`; `se = FALSE` | `fit_phylo_latent_gllvm(Y, species; d = 1, tree = phy)`, Julia 1.10 (reference platform, decision X-03), `origin/main` SHA recorded | logLik at each own optimum `rtol 1e-6`; Julia objective at R's `theta_hat` and R objective at Julia's `theta_hat` (`abs 1e-8` after coordinate reorder `beta, theta_rr_phy, log_sigma_eps`); `Sigma_phy`, `beta`, `sigma_eps^2` `rtol 1e-4`; `log_det` checksum `abs 1e-8`; gradient at the other engine's optimum `<= 1e-4` |
 | `STRUCT-PHY-DENSE-RR` (A14) | same data, `vcv = ape::vcv(tree, corr = TRUE)` | same call with `vcv = C` | same with `vcv = C, tip_labels` | same table; additionally tree-vs-vcv agreement on each side `1e-4`, matching `test-phylo-hadfield.R:99-107` |
 | `COV-PHYLO-LATENT-RSZ` (A15) | T = 20 traits, 100 species (`ape::rcoal`, seed fixed), 5 replicates per species (n = 500 observations, 10 000 long rows), `d = 2`, `tree =` | same call; `cond(H)` from `sdreport` `cov.fixed` recorded | same; `fit.hessian_condition_number` recorded | same table; `cond(H)` on both sides recorded, not gated; wall time on both sides recorded |
-| `STRUCT-PHY-TREE-PROPTO` | `phylo_scalar()` | not run | not run | fenced, other keyword; the ledger row keeps it `UNPAID` with the reason written |
+| `STRUCT-PHY-TREE-PROPTO` | `phylo_scalar()` | not run under this spec | not run | maintainer question OQ-10; recommended disposition is a written fence with the case left `UNPAID` on the row |
 
 Each receipt JSON carries: `source_pin = 9539352f66f2db2cc26b1c393e67212a359b60c9`,
 `r_version = 0.7.1`, DLL hash, response hash (Float64 little-endian, `digits = 17`), the
@@ -511,6 +537,9 @@ link (`src/precision_multivariate_fit.jl:41-64`) and intervals are transformed W
 | OQ-7 | Who lands the #129 fix, and when? | Its own PR after #519 merges, by whichever lane holds `confint_profile.jl` then. | "OQ-7: #129 after #519, separate PR." |
 | OQ-8 | Gradient. Accept finite differences for A14 and A15, with the selected-inverse gradient as a later performance item? | Yes. Record wall time in the A15 receipt; open the gradient item only if A15 exceeds one hour on Totoro. | "OQ-8: FD now; gradient later if A15 > 1 h." |
 | OQ-9 | Sign-off evidence for A14/A15 promotion: a dated maintainer block in the receipt PR body (the B-01/B-02 pattern)? | Yes. | "OQ-9: dated maintainer block in the PR body." |
+| OQ-10 | `STRUCT-PHY-TREE-PROPTO` (`phylo_scalar()`) sits in A14's own ledger row. Fence it (scalar shared phylogenetic variance is a different model from the rank-K loadings model) and promote A14 with that planned case `UNPAID`, or require it before promotion? | Fence it, with the reason written on the row; A14 promotes on the two `phylo_latent` cases. If required later, it is a small extra slice on the same `PrecisionPhy` kernel (`rank = 1` with a shared loading and the variance as the free parameter). | "OQ-10: fence PROPTO; A14 promotes on the two phylo_latent cases." |
+| OQ-11 | Is non-Gaussian `phylo_latent()` (Poisson, NB2, Gamma, Beta, ordinal, multinomial; 8 heavy R blocks) inside P1? | Inside the boundary by D-295's wording, but a later slice, not this spec: it needs a Laplace or AGHQ outer loop over the augmented field, which is `src/phylo_glm.jl`'s territory, and R's own evidence there is heavy-gated and partly failed (multinomial rail rates, `NEWS.md:1101-1112`). | "OQ-11: non-Gaussian phylo_latent is a later slice via phylo_glm.jl." |
+| OQ-12 | R accepts `rho` (source-strength attenuation) on a bare `phylo_latent()`; the twin refuses `rho != 1` with its own scope fence. Accept the fence for A14/A15, or require `rho` pairing? | Accept the fence: `rho` is a separate estimand (`R/brms-sugar.R:762-770`, "not a variance-share summary") with its own R test files (`test-structured-rho-*.R`), and no ledger case in A14/A15 names it. | "OQ-12: accept the rho scope fence." |
 
 ---
 
