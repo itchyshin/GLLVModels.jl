@@ -182,6 +182,8 @@ end
     @test_throws r"refuses missing responses" isdm_table(_DOOR_FORMULA, dm; family = dfam)
     fdef = :(value ~ 0 + trait + trait & isdm_gbif + offset(log_support) + latent(0 + trait | cell_id, d = 1))
     @test_throws r"unique = TRUE\) is R's default" isdm_table(fdef, door; family = dfam)
+    @test occursin("value ~ 0 + trait + trait & isdm_gbif + offset(log_support) + latent(0 + trait | cell_id, d = 1, unique = FALSE)",
+                   try isdm_table(fdef, door; family = dfam); "" catch e; e.msg end)
     fphy = :(value ~ 0 + trait + offset(log_support) + phylo_latent(species, d = 1))
     @test_throws r"not admitted on the integrated door" isdm_table(fphy, door; family = dfam)
     @test_throws r"zero or one latent\(\)" isdm_table(

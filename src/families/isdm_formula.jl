@@ -42,7 +42,7 @@ function _isdm_refused_structured(ex)
     return any(r -> s == String(r) || startswith(s, String(r) * "_"), _ISDM_REFUSED_CALLS)
 end
 
-# Parse `latent(0 + trait | unit, d = K, unique = FALSE)`; returns K.
+# Parse `latent(0 + trait | unit, d = K, unique = FALSE)`; returns (K, unique_false).
 function _isdm_parse_latent(ex::Expr, trait::Symbol, unit::Symbol)
     bar = length(ex.args) >= 2 ? ex.args[2] : nothing
     (bar isa Expr && bar.head === :call && bar.args[1] === :|) || throw(ArgumentError(
@@ -68,14 +68,7 @@ function _isdm_parse_latent(ex::Expr, trait::Symbol, unit::Symbol)
     end
     (d isa Integer && d >= 1) || throw(ArgumentError(
         "latent(): `d` must be a positive integer literal; got `$(repr(d))`."))
-    if uniq !== false && uniq !== :FALSE
-        throw(ArgumentError(
-            "latent(..., unique = TRUE) is R's default and adds a per-trait unit-level unique " *
-            "variance (theta_diag_B) that the Julia integrated door does not fit. Write " *
-            "latent(0 + $trait | $unit, d = $d, unique = FALSE) for the loadings-only model; " *
-            "R fits the same model under that text."))
-    end
-    return Int(d)
+    return Int(d), (uniq === false || uniq === :FALSE)
 end
 
 # Expr -> StatsModels term, for the admitted fixed-effect grammar.
@@ -126,7 +119,17 @@ function _isdm_parse_formula(f::Expr; trait::Symbol, unit::Symbol)
             nlatent += 1
             nlatent == 1 || throw(ArgumentError(
                 "The integrated door admits zero or one latent() term; got more than one."))
-            K = _isdm_parse_latent(t, trait, unit)
+            K, unique_false = _isdm_parse_latent(t, trait, unit)
+            if !unique_false
+                fixed_t = "latent(0 + $trait | $unit, d = $K, unique = FALSE)"
+                corrected = "$resp ~ " * join((u === t ? fixed_t : string(u)
+                                              for u in _isdm_flatten_plus(f.args[3])), " + ")
+                throw(ArgumentError(
+                    "latent(..., unique = TRUE) is R's default and adds a per-trait unit-level unique " *
+                    "variance (theta_diag_B) that the Julia integrated door does not fit. For the " *
+                    "loadings-only model, which R fits under the same text, write:\n    " *
+                    corrected))
+            end
         elseif _isdm_refused_structured(t)
             throw(ArgumentError(
                 "Structured term `$t` is not admitted on the integrated door (P1 scope: fixed " *
