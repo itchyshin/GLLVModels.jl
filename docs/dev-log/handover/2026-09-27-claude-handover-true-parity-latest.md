@@ -18,8 +18,10 @@ You are Claude, picking up the true-parity programme for GLLVModels.jl against t
 
 | Item | State | Owner |
 |---|---|---|
-| #514 mixed-family bridge rework | build then review workflow running in the PREVIOUS session (opened in the glmmTMB folder); lease wb-mixed2 on `src/families/mixed.jl` | previous session |
-| #515 beta-binomial loglik +7e54 | build then review workflow running in the previous session; lease wc-bb515 on `src/families/beta_binomial.jl`; cause is loggamma cancellation at large phi | previous session |
+| #514 mixed-family bridge rework | CARRIED-OVER to you. Worktree `~/local-scratch/GLLVM.jl-mixed-bridge-503`, branch `claude/mixed-bridge-mode-search-503`: local commit 05911a3f8 (rebased) plus uncommitted edits; PR head on GitHub still 9261fae9a. Done: S1, S2, S4 in the code, S6, two regression tests (381/381 on Julia 1.10, 379/379 on 1.13). Left: whole-fit main vs branch (at least 10 datasets, 3 family mixes, a Heywood case; none may get worse), S4 in CHANGELOG and PR body, S3 listed as not covered, push with --force-with-lease against 9261fae9a, `gh pr edit 514`, then a fresh review. Resume note: `~/.claude/plans/hidden-meandering-newell-agent-a9af17eb0b86e402c.md`. Review brief it answers: `reviews/pr-514.md` in the backlog lane kit. Lease wb-mixed2 may still be held (4 h expiry) | you |
+| #515 beta-binomial loglik +7e54 | CARRIED-OVER to you. Worktree `~/local-scratch/GLLVM.jl-bb-verdict-515`, branch `claude/betabinom-phi-verdict-515` (not pushed, no PR): uncommitted fix in `src/families/beta_binomial.jl` (Binomial limit at phi >= 1e6, `_beta_binomial_verdict`), new `test/test_beta_binomial_verdict_515.jl` and fixture `test/fixtures/beta_binomial_verdict_515.toml` (check both are complete). Left: finish the wide search on main, test on 1.10 and 1.13, register the test, CHANGELOG, commit, push, open a draft PR (no closing keyword in the title), fresh review. Resume note: `~/.claude/plans/hidden-meandering-newell-agent-ae8bcbcfc2a90df28.md`. Remove the throwaway `~/local-scratch/GLLVM.jl-bb515-base2847` when done. Lease wc-bb515 may still be held | you |
+| Merge authority | Shinichi, 2026-09-27: "merge #514 and #515 when green" (#515 means the PR the fix opens). Merge each only after a fresh review finds nothing blocking and CI is green apart from the advisory frozen-R cell; use `merge_train.sh` from the backlog lane kit (`MERGE_METHOD=--squash`, head-pinned). A blocking review goes back to him | you |
+| #521 (NB per-species lane's NB2 grouped PR) | That lane asked for an independent review; the reviewer was stopped before reporting (scratch left at `~/local-scratch/review-521`; remove it). Rerun it: a fresh Fable agent, own seeds, whole-fit main vs branch on at least 12 datasets, and the author's four points (two lower cells of 0.0015 and 0.0067, the 1e-3 small-step shortcut under stress, more converged = false via the boundary flag, +70% runtime). Read-only on GitHub; send the verdict to that session | you |
 | Lane kit | `LOOP/lanes/true-parity-latest/` (GOAL, arcs, checkpoint, ultra-plan, HANDOVER) on branch `claude/lane-true-parity-latest`, pushed | you |
 | Arcs | none started | you |
 
@@ -51,6 +53,7 @@ Mission control:
 
 ## Next Immediate Steps
 
+0. Finish #514 and #515 and merge them on Shinichi's word (Current Working State), and rerun the #521 review.
 1. Run `~/shinichi-brain/tools/lane_preflight.sh "/Users/z3437171/Dropbox/Github Local/GLLVM.jl"`, read `AGENTS.md`, and classify each item here as OWED, DONE, RETRACTED or PROTECTED against the current git state (for example, #514 and #515 may have landed by then).
 2. Arc D1: draft Packet 1 (13 items, listed in the plan's "What needs Shinichi") and the P1 claim-boundary question, each with a recommendation and a drafted reply. Send it as a message; do not block on it.
 3. Arc A0: additive re-pin with a Sonnet builder and a Fable reviewer, using `LOOP/lanes/gllvm-backlog-20260926/fix-build-review.workflow.js` (branch `claude/lane-gllvm-backlog-20260926`). First output: the stale-row count under the carry rule.
@@ -60,6 +63,7 @@ Mission control:
 
 - Packet 1 and the P1 claim boundary (Shinichi).
 - iSDM build (A1b) waits for #514 to merge (shared `mixed.jl` area; build in new files).
+- The previous session (glmmTMB folder) is closed; nothing of this lane runs there any more.
 - gllvmTMB #1236 and #1283 are open drafts in conflict.
 
 ## Other lanes (PROTECTED)

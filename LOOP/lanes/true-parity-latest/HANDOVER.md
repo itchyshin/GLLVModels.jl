@@ -8,12 +8,12 @@ Shinichi approved a plan (`ultra-plan.md` here) for true parity of GLLVModels.jl
 
 Open the new session in the GLLVM.jl folder (`/Users/z3437171/Dropbox/Github Local/GLLVM.jl`). Make code changes only in worktrees under `~/local-scratch/`; this lane's kit is in `~/local-scratch/lanes/GLLVM.jl-true-parity-latest` on branch `claude/lane-true-parity-latest`. That worktree's settings deny `git push`; push from the main clone or ask, as the plan allows pushing branches and draft PRs.
 
-## Still running in the previous session (keep it open until they finish)
+## Carried over from the previous session (now closed)
 
-The previous session (opened in the glmmTMB folder) is still running two build-then-review workflows. They stop if that session is closed.
+The previous session (glmmTMB folder) stopped its workflows and closed; the work below is yours. Details and exact resume steps are in docs/dev-log/handover/2026-09-27-claude-handover-true-parity-latest.md.
 - #514 rework (mixed-family bridge; lease wb-mixed2 on `src/families/mixed.jl`). iSDM (A1b) must not start until #514 merges.
 - #515 fix (beta-binomial loglik +7e54; lease wc-bb515 on `src/families/beta_binomial.jl`). Cause found: loggamma cancellation at large phi.
-That session will report the results and ask Shinichi for merge words. Merged today: #510, #511, #512, #513 (clause C7 met), #516, #517; #501 closed.
+Shinichi already said "merge #514 and #515 when green" (after a clean fresh review). Merged today: #510, #511, #512, #513 (clause C7 met), #516, #517; #501 closed.
 
 ## Other lanes (agreed by message)
 
