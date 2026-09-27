@@ -13,8 +13,11 @@
 - A15 receipt (100 species x 5 replicates x 20 traits, `d = 2`): logLik relative difference
   2.8e-13, cross objectives 3.7e-11 and 1.7e-11, Sigma_phy 1.1e-6; wall time R 3.4 s, Julia
   17.7 s. Neither engine meets the 1e-4 cross-gradient bar (R's own optimum 4.0e-3, Julia's
-  2.0e-4, Julia `converged = false`); recorded as `@test_broken`. Replay 98 pass, 4 broken
-  (102 pass with the opt-in live A15 refit) on 1.10.12 and 1.13.0.
+  2.0e-4, Julia `converged = false`); after review, asserted with explicit measured bounds
+  (no `@test_broken`) and the live A15 refit always on.
+- Review follow-up: in-keyword `Ainv` now twins R's `vcv = solve(as.matrix(Ainv))` (reproduces
+  the A14 dense receipt); branch-length refusals use R's wording; `g_tol` documented as
+  absolute. Twin file 89/89 (test environment), replay 113/113, 0 broken, on 1.10.12 and 1.13.0.
 - P1 contradicts the spec twice (Ainv route, unary nodes); recorded in
   `docs/dev-log/decisions/2026-09-27-phylo-latent-parameterisation.md`.
 

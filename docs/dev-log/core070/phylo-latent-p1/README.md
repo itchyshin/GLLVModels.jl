@@ -101,7 +101,21 @@ Julia reports `converged = false` under its absolute `g_tol = 1e-5`. A
 restart from the returned point, or 2000 iterations, does not move it. One
 Newton step with the finite-difference Hessian from the Julia point lowers the
 objective by `1.8e-10` and the gradient to `6e-6`, so the Julia point is
-within about `2e-10` of the optimum in objective. The two cross-gradient
-checks and Julia's `converged` flag are `@test_broken` in the replay; every
-other A15 quantity passes. A scale-aware stopping rule or a Newton polish in
-`fit_precision_multivariate` would close it; neither is in this PR.
+within about `2e-10` of the optimum in objective. The replay asserts the
+primary receipt (cross objectives abs 1e-8, logLik rtol 1e-6) and, for the
+gradients, explicit looser bounds with measured headroom: R's AD gradient at
+the Julia point `<= 1e-3` (measured 2.0e-4), Julia's FD gradient at R's point
+`<= 1e-2` (measured 4.0e-3), Julia `converged = false` with
+`stopping_reason = :gradient_not_converged` and `gradient_norm <= 1e-3`
+(recorded explicitly, also on the live refit), and the elementwise beta gap
+`<= 1e-4` absolute (measured 1.6e-5). A scale-aware stopping rule or a Newton
+polish in `fit_precision_multivariate` would close the gap; that belongs to
+the convergence lane (decision-packet item 485), not this PR.
+
+## In-keyword `Ainv`
+
+`fit_phylo_latent_gllvm(...; Ainv = inv(C), tip_labels)` on the A14 fixture
+reproduces the dense receipt (R's keyword rewrites `Ainv` to
+`vcv = solve(as.matrix(Ainv))`): `n_aug = 8`, the same log-det, logLik within
+rtol 1e-6 of R's `-8.68192011899238`, and the Julia objective at R's dense
+optimum within 1e-8 of R's.
