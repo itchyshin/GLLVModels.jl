@@ -1,8 +1,8 @@
 # Auto-d: morning report for Shinichi (overnight 2026-09-26/27)
 
 Estimating d automatically works for Gaussian, Poisson and negative binomial
-data with BIC on log(number of sites) and a guard against broken fits; it does not yet work for
-binary data, where most fits at d ≥ 2 run away. Nothing is merged or pushed; four decisions need you.
+data with BIC on log(number of sites) and a guard against broken fits; binary data needs a loading ridge,
+because most unpenalised fits at d ≥ 2 run away. Nothing is merged or pushed; four decisions need you.
 
 ## Your decisions (G1), each with a recommendation
 
@@ -14,11 +14,13 @@ binary data, where most fits at d ≥ 2 run away. Nothing is merged or pushed; f
 3. **R API.** Today `latent()` without `d` silently means d = 1, so making it automatic would
    change existing users' fits. Recommend `d = "auto"` first, and switching the default later with
    a NEWS warning.
-4. **Binary data.** Recommend: for Bernoulli data, return the candidate table and do not auto-pick
-   until a ridge-stabilised sweep with an unpenalised criterion exists (a follow-up). Evidence: 70–87%
-   of binomial fits at d ≥ 2 do not converge and all of those are runaways; a loading ridge makes
-   every fit healthy but its penalised logLik then pushes BIC to d = 1 (R experiment, 10 reps × 4
-   cells, loadings 0.8 and 1.5).
+4. **Binary data.** Recommend: sweep with a loading ridge and compare BIC on the unpenalised
+   log-likelihood at the ridge optimum (gllvmTMB already reports that value); add the same ridge to
+   Julia's binomial fitter after the overnight lane closes. Where even that cannot resolve d (10
+   species, n ≤ 120 here), return the candidate table and say so. Evidence: 70–87% of binomial
+   fits at d ≥ 2 do not converge and all of those are runaways. In an R experiment (10 reps per
+   cell) with 20 species and n = 120, the ridge recovers true d = 2 in 8/10 datasets vs 4/10
+   without, and d = 3 in 4/10 vs 1/10; it still leans low because it shrinks the loadings.
 
 ## What was built (branches only, not pushed)
 
