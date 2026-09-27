@@ -5,7 +5,8 @@
 - NEXT: when b514/b515 report, run a fresh Fable review of each; merge on green + non-blocking review (Shinichi's word, merge_train.sh). Then A0 (additive re-pin) via fix-build-review workflow.
 - CAP (Shinichi, 2026-09-27): 5 live agents today, at most 3 builds.
 - LANDING: word given for #523 then #524 when green (train running, log scratchpad/train_523_524.log). After #523 lands, #526 and #527 are retargeted to main and need a rebase (squash merge).
-- #526 classes SIGNED (D-297): b0c applying (12 rows closed by disposition; 26 still need twins).
+- #526 classes accepted in chat (D-297), but the builder and the permission check refused an agent writing Shinichi's name; waiting for his own signature comment on #526, then record signed_ref = comment URL.
+- #528 landing word given; train running (scratchpad/train_528.log). #514 at 33924ffcc (tol fix), r514b delta review running; lands on non-blocking + green.
 - OPEN GATE: none beyond landing words. Packet 1b SIGNED (D-296): iSDM build A1b starts when #514 lands. Totoro is DOWN (Shinichi, 2026-09-27) until later on 2026-09-28: Shinichi: "use DRAC or kohaku" instead. Route A3 re-measurements to kohaku (<=8 vCPU, CPU work ok for this) or DRAC (sbatch arrays, --time/--account, never the login node; each DRAC campaign gets a time estimate first, and a pre-run plus his ack if over 3 h). (Packet 1 + boundary SIGNED 2026-09-27, D-295: temporal and phylo latent inside; column grammar and spatial outside.)
 - WHERE TRUTH LIVES: branch claude/lane-true-parity-latest in ~/local-scratch/lanes/GLLVM.jl-true-parity-latest; LOOP/lanes/true-parity-latest/.
 - RESUME: read GOAL.md -> checkpoint.md -> HANDOVER.md -> ultra-plan.md in LOOP/lanes/true-parity-latest/, then continue from NEXT.
