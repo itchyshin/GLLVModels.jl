@@ -1,6 +1,6 @@
 # Packet 1d: phylo latent (A14, A15) scope questions (2026-09-27)
 
-**SIGNED 2026-09-27 by Shinichi, in chat: "Packet 1c and 1d: accept all as recommended." Vault decision D-298.**
+**SIGNED 2026-09-27 by Shinichi, in chat: "Packet 1c and 1d: accept all as recommended." Vault decision D-300.**
 
 From the phylo latent port spec (draft PR #545, head c0fd5f5be, reviewed and revised). Estimate about 8.5 agent-days; the twin builds on the R-shaped `PrecisionPhy` / `fit_precision_multivariate` path that already pairs with 0.7.0 to 1e-14. Counts: 26 R blocks twinned, 16 deferred, 23 owned by the temporal spec (#535), 261 fenced with stated reasons.
 
