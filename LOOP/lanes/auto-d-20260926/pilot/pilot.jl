@@ -29,7 +29,7 @@ if length(ARGS) >= 4          # cost-balanced task map: slow cells (n·p ≥ 240
 end
 
 open(out, "w") do io
-    println(io, "family,n,p,K_true,rep,K_fit,status,converged,loglik,dof,aic,bic_pn,bic_n,secs")
+    println(io, "family,n,p,K_true,rep,K_fit,status,converged,loglik,dof,aic,bic_pn,bic_n,secs,max_rownorm,relload")
     for (fam, n, p, K) in cells, r in reprange
         rng = MersenneTwister(hash((fam, n, p, K, r)))
         Y = simulate(fam, n, p, K, rng)
@@ -39,11 +39,16 @@ open(out, "w") do io
                 fit = fit_gllvm(Y; family = fams[fam], K = k)
                 ll, d = loglikelihood(fit), dof(fit)
                 cv = hasproperty(fit, :converged) ? fit.converged : missing
-                @printf(io, "%s,%d,%d,%d,%d,%d,ok,%s,%.6f,%d,%.6f,%.6f,%.6f,%.2f\n", fam, n, p, K, r, k, cv, ll, d,
-                        aic(fit), bic(fit, Y), bic(fit, n), time() - t)
+                rn, rl = NaN, NaN
+                if hasproperty(fit, :Λ)
+                    Λ = fit.Λ; m = [maximum(abs, Λ[i, :]) for i in axes(Λ, 1)]
+                    rn = maximum(sqrt(sum(abs2, Λ[i, :])) for i in axes(Λ, 1)); rl = maximum(m) / max(median(m), eps())
+                end
+                @printf(io, "%s,%d,%d,%d,%d,%d,ok,%s,%.6f,%d,%.6f,%.6f,%.6f,%.2f,%.4f,%.4f\n", fam, n, p, K, r, k, cv, ll, d,
+                        aic(fit), bic(fit, Y), bic(fit, n), time() - t, rn, rl)
             catch e
                 e isa InterruptException && rethrow()
-                @printf(io, "%s,%d,%d,%d,%d,%d,fail:%s,,,,,,,%.2f\n", fam, n, p, K, r, k, nameof(typeof(e)), time() - t)
+                @printf(io, "%s,%d,%d,%d,%d,%d,fail:%s,,,,,,,%.2f,,\n", fam, n, p, K, r, k, nameof(typeof(e)), time() - t)
             end
             flush(io)
         end
