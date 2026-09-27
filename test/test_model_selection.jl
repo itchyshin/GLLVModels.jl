@@ -235,6 +235,7 @@ end
     one = fit_gllvm(Y; family = Poisson(), Kmax = 1)
     @test size(one.Λ, 2) == 1
     @test_throws ArgumentError fit_gllvm(Y; family = Poisson(), K = 2, Kmax = 3)
+    @test_throws ArgumentError fit_gllvm(Y; family = Poisson(), num_lv = 1, Kmax = 3)
 
     # Explicit K is untouched by the auto path.
     @test GLLVModels._loglik(fit_gllvm(Y; family = Poisson(), K = 1)) ≈
@@ -274,11 +275,12 @@ end
         @test only(filter(a -> a.K == 3, sel2.attempts)).status === :ok   # runaway −300 is not the bar
     end
 
-    @testset "a converged fit rejected as non-monotone still raises the bar" begin
-        # K=2 −380 (ok), K=3 −390 (non-monotone, converged), K=4 −385: below K=2 → rejected.
-        f = (Y; family, K, kwargs...) -> mk(Dict(1 => -500.0, 2 => -380.0, 3 => -390.0, 4 => -385.0)[K], K)
-        sel = select_lv(Y; family = Poisson(), Kmax = 4, warm_start = false, _fitter = f)
-        @test only(filter(a -> a.K == 4, sel.attempts)).status === :nonmonotone
+    @testset "tolerance is relative to the logLik scale" begin
+        # At |ℓ| ≈ 1e7 the tolerance is 1e-6·|ℓ| = 10: a 5-unit dip is accepted, 20 is not.
+        f = (Y; family, K, kwargs...) -> mk(Dict(1 => -1.0e7, 2 => -1.0e7 - 5.0, 3 => -1.0e7 - 20.0)[K], K)
+        sel = select_lv(Y; family = Poisson(), Kmax = 3, warm_start = false, _fitter = f)
+        @test only(filter(a -> a.K == 2, sel.attempts)).status === :ok
+        @test only(filter(a -> a.K == 3, sel.attempts)).status === :nonmonotone
     end
 
     @testset "warm start pads from the last accepted K when K−1 was rejected" begin

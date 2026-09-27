@@ -78,8 +78,10 @@ binomial probes. The interim Gaussian grid shows old = new because Gaussian fits
 skip the runaway check and warm start; it is not evidence for the guard.
 
 Independent review (D-43 panel, 2026-09-27: Opus statistical lens, Sonnet code lens) returned
-PASS WITH REQUIRED FIXES; fixed in bf8940ad2: the monotone bar is the best converged,
-non-runaway fit at any smaller K; warm start pads from the last accepted K; the runaway check
+PASS WITH REQUIRED FIXES; fixed in bf8940ad2: tolerance is relative (max(1e-3, 1e-6·|ℓ|)); the
+"best converged, non-runaway fit at any smaller K" bar the review asked for turned out to equal
+the last accepted fit (a third reviewer showed the extra update was dead code), so the practical
+change is the tolerance; warm start pads from the last accepted K; the runaway check
 skips the Normal family; `mask` reaches the criteria; an ArgumentError at K = 1 is re-raised;
 `fit_gllvm` without K refuses row_eff/pervar. Known limits kept: no warm start for Gaussian
 (`GllvmFit` keeps Λ in `pars`) or for the NB/Beta per-species route (no `Λ_init`); the returned

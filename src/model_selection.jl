@@ -182,7 +182,10 @@ function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
         (nothing, sprint(showerror, e))
     end
 
-    llbar = -Inf     # best logLik of any converged, non-runaway fit at a smaller K
+    # Bar: best logLik of any converged, non-runaway fit at a smaller K. Accepted fits
+    # rise monotonically and every other converged fit is either below the bar
+    # (non-monotone) or excluded (runaway), so this equals the last accepted fit.
+    llbar = -Inf
     for k in 1:Kmax
         fit, msg = tryfit(k)
         prev = isempty(fits) ? nothing : fits[end]
@@ -209,7 +212,6 @@ function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
             push!(attempts, (K = k, status = :runaway, loglik = _loglik(fit), message = runaway(fit)))
             continue
         elseif _loglik(fit) < llprev - tolk(llprev)
-            llbar = max(llbar, _loglik(fit))
             push!(attempts, (K = k, status = :nonmonotone, loglik = _loglik(fit),
                              message = "logLik below a converged fit at a smaller K ($(llprev))"))
             continue
