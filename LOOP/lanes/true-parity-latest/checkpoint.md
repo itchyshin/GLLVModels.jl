@@ -11,12 +11,12 @@ D-294 re-pin to P1; D-295 Packet 1 + boundary (temporal, phylo latent inside; co
 - #531 extract_latent_scores twin (d0e454150): log scratchpad/train_531.log
 CI is runner-starved (about 24 queued runs across lanes); trains wait, nothing failing.
 
-## Ready, awaiting landing word
+## Landing word given 2026-09-27 (train scratchpad/train_543_546.log): #543 (refreshed dafe3b9d2), #546 (983c9979b); D-301 keeps the unique = TRUE refusal, ISDM-PSI follow-up.
 - #543 temporal slice 1 (146c6fdf5): NLL = R's TMB fn to 2.3e-13, gr 1.8e-12; getLV vs R 1.3e-15; review NON-BLOCKING, fixes applied.
 
 ## In review / in progress
 - #546 iSDM build (e2b53b25b): cross-objective 1.3e-11 on 4 cases; cloglog grid bit-identical; 3 b_fix rows @test_broken vs R's stopped nlminb (pass vs polished optimum); admission 19/19; tests 158 + 41 + 213 on 1.10 and 1.13. DEVIATION for Shinichi: R latent() defaults unique = TRUE (theta_diag_B), omitted by the spec; the Julia door refuses it. No gllvm() door (formula.jl belongs to the grammar lane). Review NON-BLOCKING (reviews/pr-546-review.md); fixes DONE at 983c9979b (polish convergence asserted; no @test_broken, door gap bound 1e-4; level-order doc; refusal prints the full corrected formula; 159 + 41 + 219 both versions). READY to land on Shinichi's word. unique = TRUE: reviewer recommends refuse now + follow-up port ISDM-PSI (1-2 days, p >= 3 fixture); Shinichi decides.
-- A2 small twins running: chibar2_pvalue/variance_lrt = SAME function (R's file says it is a faithful port of Julia's), draft PR #548 (da1fd562c, 1e-12 twin, 71/54 both versions); b2c adding R's NaN refusal (Julia returned p = 1.0 silently); the case-map row can move semantic_divergence -> twin (Shinichi signs); AIC/BIC/anova/update (b2a, claude/twin-aic-anova).
+- A2 small twins running: chibar2_pvalue/variance_lrt = SAME function (R's file says it is a faithful port of Julia's), draft PR #548 (da1fd562c, 1e-12 twin, 71/54 both versions); NaN refusal added at 40d4578b6 (83/54 both versions, red-then-green shown); READY to land; the case-map row can move semantic_divergence -> twin (Shinichi signs); AIC/BIC/anova/update (b2a, claude/twin-aic-anova).
 - Phylo latent build (b9, branch claude/phylo-latent-build) from spec #545 (c0fd5f5be) and D-300.
 - #533 case-map rows (9c1f55038, re-created #526) and #534 carry scan (21433f1bd, stacked): waiting for Shinichi's own signature comment on #533 (proposal: ordination_uncertainty moves to semantic_divergence).
 - Specs #525 iSDM (032d90284), #535 temporal (af130f704), #545 phylo latent (c0fd5f5be): reviewed and revised; docs-only, land when convenient.
