@@ -1,0 +1,70 @@
+# NB grid re-run on the corrected NB2 kernel (#521): plan and pre-run test
+
+Status: PLAN, pre-run done; awaiting two gates: #521 merged, and Shinichi's approval of the estimate below
+(D-287: a run over 3 h needs a plan, a pre-run test with results, and approval).
+
+## Why
+
+Every NB number in the auto-d recovery grid (mean exact recovery 0.895 with `:bic_sites`) was
+measured on the NB2 grouped kernel before #521, which 2-cycled at sites with y much larger than
+μ and let L-BFGS stop at poor optima reported as converged. Those numbers are withdrawn in the
+docs (#518, #1324). The 24 NB cells need re-running on the fixed kernel.
+
+## What
+
+- Cells: `nb` × n ∈ {30, 60, 120, 300} × p ∈ {10, 20} × K_true ∈ {1, 2, 3}; 200 reps each;
+  4,800 datasets. Same DGP and seeds as `pilot/pilot.jl` (`MersenneTwister(hash((fam, n, p,
+  K, r)))`), fits K = 1 .. K_true + 2.
+- Code: GLLVModels.jl `main` after #521 merges (and after #518, if it has merged by then).
+- Harvest: `pilot/analyze.py`, as for the original grid; report NB alongside the old numbers.
+
+## Estimate (before the pre-run test)
+
+Old-kernel mean seconds per dataset, from the harvest (DRAC, complete datasets only): 196 s
+(n 30, p 10, K 1) to 3,073 s (n 300, p 20, K 3). Summed over 24 cells × 200 datasets: about
+1,730 core-h on the old kernel, an underestimate because the 1,513 missing datasets were the
+slowest. #521 reported NB fits about 70% slower: about 2,900 core-h, plausible range 2,000 to
+5,000. Too large for Totoro's share of a day; DRAC arrays as before (per-task `--time` from the
+pre-run ratio, not the old 6 h, which timed out on the heaviest cells).
+
+## Pre-run test (local Mac, 1 thread per process, 4 at a time)
+
+Six cells, rep 1, fitted with the old kernel (#518 head) and the new one (#518 head plus #521's
+`grouped_dispersion.jl`), same data, 2026-09-27. Old-kernel seconds are for K = 1 .. K_true + 2.
+
+| cell (n, p, K_true) | old s | new s | new/old | K chosen (`:bic_sites`, guarded) old / new |
+|---|---|---|---|---|
+| 30, 10, 1 | 72 | 91 | 1.26 | 1 / 1 |
+| 30, 10, 3 | 443 | 861 | 1.94 | 3 / 3 |
+| 60, 20, 2 | 934 | 1,427 | 1.53 | 2 / 2 |
+| 120, 10, 2 | 444 | 500 | 1.13 | 2 / 2 |
+| 300, 10, 1 | 110 | 134 | 1.21 | 1 / 1 |
+| 300, 20, 3 | 1,467 | 4,626 | 3.15 | **5 / 3** |
+| total | 3,471 | 7,638 | 2.20 | |
+
+- Cost: 2.2x overall, not the 1.7x #521 measured on its panel, and 3.15x on the heaviest cell,
+  which dominates the grid's cost.
+- Accuracy preview (one rep): on 300 × 20, K = 3 the old kernel's logliks fell at K = 3 and 4
+  (-19113, -20240 below K = 2's -18874), so the guard skipped them and chose K = 5; the new kernel
+  is monotone (-18400, -17618, -16743, -16728, -16720) and chooses the true K = 3. Other cells agree.
+- DRAC nodes ran these fits 1.5 to 3.9x slower than the Mac; the estimate below uses DRAC's own
+  harvest times, so it needs no hardware correction.
+
+## Revised estimate and recommendation
+
+At ratio 2.2: about 3,800 core-h. At ratio 3.2 (the heavy-cell ratio applied everywhere): about
+5,500 core-h. **Recommend sizing at 3.2**: 943 tasks with 5 h of estimated work each (under the
+1,000-job limit), largest task 7.1 h, `--time=11:00:00`; the committed `nb_rerun_tasks.csv` and
+`run_nb_rerun.sh` are generated at that setting. Expected wall time with 300 running at once:
+about a day, queue permitting. A run that overruns this estimate stops and re-reports (D-287).
+
+## Submission kit (prepared, not submitted)
+
+- `pilot/pilot.jl` gained a `listrange` mode (rows `a:b` of a list in one Julia process); smoke-
+  tested against `list` mode on the same rows (identical output).
+- `pilot/nb_rerun_tasks.py <ratio> 3` writes `nb_rerun_list.csv` (4,800 rows, heaviest cells first)
+  and `nb_rerun_tasks.csv` (cost-balanced, about 3 h of estimated work per task). At ratio 1.7:
+  850 tasks, about 2,940 core-h, largest task 4.35 h, largest single dataset 1.45 h.
+- `pilot/run_nb_rerun.sh`: sbatch array over the task map; `--time` and `--array` are placeholders
+  until the pre-run ratio is in. Outputs to `out-nbrerun/`, never mixed with `out-rerun/` (old
+  kernel, cancelled run).

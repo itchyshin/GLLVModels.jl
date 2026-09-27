@@ -27,6 +27,10 @@ if grid == "list"            # pilot.jl <out.csv> <unused> list <task_id> <list.
     row = split(readlines(ARGS[5])[t + 1], ",")          # header: family,n,p,K_true,rep
     c = (String(row[1]), parse(Int, row[2]), parse(Int, row[3]), parse(Int, row[4]))
     cells = [c]; r0 = parse(Int, row[5]); reprange = r0:r0
+elseif grid == "listrange"   # pilot.jl <out.csv> <unused> listrange <first_row> <last_row> <list.csv>: rows of a list, one process
+    a, b = parse(Int, ARGS[4]), parse(Int, ARGS[5])
+    rows = [split(l, ",") for l in readlines(ARGS[6])[(a + 1):(b + 1)]]
+    work = [((String(r[1]), parse(Int, r[2]), parse(Int, r[3]), parse(Int, r[4])), parse(Int, r[5])) for r in rows]
 elseif length(ARGS) >= 4          # cost-balanced task map: slow cells (n·p ≥ 2400) 10 reps/task, others 50; 200 reps each
     t = parse(Int, ARGS[4])
     tasks = [(c, (b * r + 1):((b + 1) * r)) for c in cells for r in ((c[2] * c[3] >= 2400) ? 10 : 50) for b in 0:(200 ÷ r - 1)]
@@ -35,7 +39,7 @@ end
 
 open(out, "w") do io
     println(io, "family,n,p,K_true,rep,K_fit,status,converged,loglik,dof,aic,bic_pn,bic_n,secs,max_rownorm,relload")
-    for (fam, n, p, K) in cells, r in reprange
+    for ((fam, n, p, K), r) in (@isdefined(work) ? work : [(c, r) for c in cells for r in reprange])
         rng = MersenneTwister(hash((fam, n, p, K, r)))
         Y = simulate(fam, n, p, K, rng)
         for k in 1:min(K + 2, p - 1)
