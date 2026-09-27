@@ -71,6 +71,17 @@ select_lv's lenient default already tolerates. Recommendation: cancel, and after
 | NB per-site mode search | [#521](https://github.com/itchyshin/GLLVModels.jl/pull/521), `claude/nb-grouped-init-v2` | `docs/dev-log/handover/2026-09-27-nb2-grouped-kernel-handover.md` (that branch) | Damped per-site search with an observed-Newton fallback in `_nb_grouped_loglik_site` (`src/families/grouped_dispersion.jl`); `fit_nb_gllvm_grouped`, `fit_nb1_gllvm_grouped`, `fit_beta_gllvm_grouped` accept `β_init`/`Λ_init`. Auto-d NB fixture (p = 20, n = 300, true K = 3), logLik main → branch: K=1 −19473 → −18400; K=2 −18874 → −17618; K=3 −19113 → −16743; K=4 −20240 → −16728 (monotone, all converged, max row norm ≤ 2.44; K=3→4 gain 15.2, so BIC should now pick the true K = 3 where main picked 2). Ill-conditioned panel: 7 higher, 1 unchanged, 0 lower. NB fits ~70% slower. More fits report converged = false via the dispersion-boundary flag (select_lv's lenient default tolerates this). | Two `_shard_include` lines (`test_nb2_grouped_mode_search.jl`, `test_grouped_init_kwargs.jl`, next to `test_nb1_grouped_mode_search.jl`) and a CHANGELOG entry were NOT added. Needs Shinichi's sign-off (changes healthy-fit results). |
 | Gaussian trait intercepts | [#519](https://github.com/itchyshin/GLLVModels.jl/pull/519), `claude/gaussian-intercept-20260927` (head `c8299eebe`); [#520](https://github.com/itchyshin/GLLVModels.jl/pull/520) stacked on #519 | `docs/dev-log/handover/2026-09-27-claude-handover-gaussian-intercepts.md` (#519 branch) | `fit_gllvm` Normal route (one line in `fit_gllvm.jl` ~L309, outside the auto-d K block) and `cv_gllvm` refits now fit p trait intercepts; `@formula(y ~ 0)` stays mean-zero, `y ~ 1` fits intercepts; #520: `@formula(y ~ x)` fits intercepts plus shared slopes. #519 CI: Documenter passed, test shards were running; the advisory "Frozen R 0.7.0 family smoke" also fails on main. | CHANGELOG entries for #519/#520; #520 retargets to main after #519 merges. Needs Shinichi's sign-off. |
 
+**Ownership (Shinichi, 2026-09-27):** the new GLLVModels.jl true-parity session looks after #519/#520 and
+#521 as well as this auto-d lane. Their state at close:
+- #519: CHANGELOG entry in (`f8e06f97c`); CI run 36334110593 on `f8e06f97c` started 16:40 UTC (results
+  ~17:40 to 18:15 UTC); code unchanged since `c8299eebe`; the corrected CI status is a comment on #519.
+  Next: read that CI, Shinichi signs off (or not).
+- #520: CHANGELOG entry in (`8c7f483e5`, also merged the #519 branch). After #519 merges:
+  `gh pr edit 520 --base main` so its CI runs, then sign-off.
+- #521: its two `_shard_include` lines and CHANGELOG entry are still OWED (see its handover).
+- Pushing even Markdown-only commits to any of these PRs restarts CI (paths-ignore is checked against the
+  whole PR diff), so batch doc pushes.
+
 **What they mean for auto-d:** (1) the NB recovery numbers (0.895) and the cancelled re-run measured the broken
 kernel: after #521 merges, re-run the 24 NB grid cells on it (state a new estimate first; ~70% slower), and
 check select_lv's warm start now reaches the NB route. (2) The Gaussian grid used mean-zero data; after #519
@@ -82,8 +93,7 @@ test/runtests.jl rebases between #518, #519, #520 and #521 (all add lines there;
 ## Next immediate steps (classify each OWED / DONE on arrival)
 
 1. Run `tools/lane_preflight.sh` in GLLVModels.jl and gllvmTMB; check `git status` in both worktrees.
-2. **R fix round:** if the R worktree has uncommitted edits and no commit after `3b1e8e61f` addresses the
-   review findings, finish it: re-read the journal above, complete the fixes, run
+2. **R fix round:** commit `e7e5eaaf0` ("forward species= alias, refuse mixed latent formulas, restore docs") landed before close; verify it covers all nine findings in the journal, then re-read the journal above, complete the fixes, run
    `bash LOOP/lanes/auto-d-20260926/gates/r_tests.sh` (from the Julia worktree; expect `R-TESTS-PASS`),
    commit, push to #1324.
 3. **Julia ridge review:** read the journal; fix every confirmed finding on the Julia branch; run
