@@ -23,6 +23,8 @@ CI is runner-starved (about 24 queued runs across lanes); trains wait, nothing f
 
 - Running: zi_* R-semantics twin (b2z, claude/twin-zi); ISDM-PSI unique variance port (b1p, claude/isdm-psi, stacked on #546).
 
+- Landing word given for #548, #556, #547 (train scratchpad/train_548_556_547.log, order 548 -> 556 -> 547).
+
 ## Findings to remember
 - Carry scan: 0 of 306 required P0 rows carry; 278 receipts dangling (gitignored .unlazy/), 21 stale. P1 evidence must be re-made (A3); compute is small (10-45 min on kohaku); the harness is the work (#539 is step 1).
 - ordination_uncertainty is name-only (R: TMB joint-precision conditional covariance; Julia: bootstrap + Procrustes).
