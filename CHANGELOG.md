@@ -13,6 +13,21 @@ All notable changes to GLLVModels.jl are documented here.
 
 ## Unreleased
 
+### Added
+- **`zi_poisson()`, `zi_nbinom2()`, `zi_binomial()`: twins of gllvmTMB's
+  zero-inflated family exports at the P1 pin (`9539352f6`), with R's semantics.**
+  A true zero-inflation mixture with a per-trait, intercept-only structural-zero
+  probability, the count process active at every observation, one NB2 dispersion
+  per trait, per-observation binomial trials (single-trial-only traits refused),
+  and a Laplace log-determinant from the observed curvature, as TMB computes it.
+  New `fit_zi_gllvm` / `ZiFit` / `zi_marginal_loglik_laplace`, reachable as
+  `fit_gllvm(Y; family = zi_poisson(), K)`. Julia's own `ZIPoisson()` /
+  `ZINegBin()` / `ZIB(N)` routes are unchanged and remain a documented extra:
+  they use the Fisher count weight in the log-determinant (3.62 log-likelihood
+  units off R's logLik at R's optimum on the ZIP fixture), a shared NB2
+  dispersion, and a shared trials count. Twin fixtures:
+  `test/fixtures/zi_p1.toml`, test `test/test_zi_twin.jl`.
+
 ### Fixed
 - **Ordered-beta fits could report `converged = true` at a non-stationary point,
   with a restart reaching a genuinely better optimum (#501).** The per-site

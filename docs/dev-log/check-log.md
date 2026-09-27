@@ -1,3 +1,19 @@
+## 2026-09-27: zi_poisson / zi_nbinom2 / zi_binomial twins of gllvmTMB at P1
+
+- Branch `claude/twin-zi` from `origin/main` @ `97e11be04`. New `src/families/zi_twin.jl`:
+  R-named constructors, `fit_zi_gllvm` / `ZiFit` / `zi_marginal_loglik_laplace`, and a
+  `_fit_gllvm` method so `fit_gllvm(Y; family = zi_poisson(), K)` works. The route reuses
+  `twopart_loglik_site` through per-cell markers that supply the observed count curvature
+  (nested ForwardDiff of the mixture density) to the Laplace log-determinant; Julia's own
+  `ZIPoisson` / `ZINegBin` / `ZIB` routes are unchanged.
+- Twin fixtures fitted in R at gllvmTMB `9539352f6` (temporary library): logLik optimum vs
+  optimum 1.35e-8 (ZIP), 1.04e-8 (ZINB), 1.35e-9 (ZIB); Julia objective at R's optimum within
+  4.3e-9 of R's logLik; R's objective at Julia's optimum within 4.4e-9 of Julia's value. The
+  existing `ZIPoisson` marginal at R's optimum is 3.62 units off R's logLik (Fisher log-det).
+- `test/test_zi_twin.jl` 58 of 58 on Julia 1.10.0 and 1.13.0. Neighbours on both versions:
+  `test_curvature_census.jl` 66/66, `test_zero_inflated.jl` 29/29, `test_twopart_substrate.jl`
+  2/2, `test_twopart_hessian_kwarg.jl` 13/13.
+
 ## 2026-09-25: Two-part families no longer score an unfinished mode search (#484)
 
 - Branch `claude/twopart-mode-search-484`, rebased onto `origin/main` (past #481 Gamma, #483 Beta,

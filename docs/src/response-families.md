@@ -1160,6 +1160,44 @@ zero-inflation only, evaluated point-estimate bias/RMSE and the fitter's own
 convergence diagnostic — **no coverage or SE evaluation was done**, so it says
 nothing about interval calibration for any of the three families.
 
+### `zi_poisson()` / `zi_nbinom2()` / `zi_binomial()` — gllvmTMB twins (P1)
+
+gllvmTMB 0.7.1 (commit `9539352f6`, the P1 pin) exports `zi_poisson()`,
+`zi_nbinom2()` and `zi_binomial()`. The same names in GLLVModels.jl fit R's
+model, not the Julia fitters above:
+
+```julia
+fit = fit_gllvm(Y; family = zi_poisson(), K = 1)
+fit = fit_gllvm(Y; family = zi_nbinom2(), K = 1)
+fit = fit_gllvm(Y; family = zi_binomial(), K = 1, trials = N)  # N: p×n trials
+fit.zi     # per-trait structural-zero probability (R: fit$report$zi)
+fit.phi    # zi_nbinom2 only: per-trait NB2 dispersion, Var = μ + μ²/φ
+```
+
+R's model is a true zero-inflation mixture with a per-trait, intercept-only
+structural-zero probability (no covariates and no latent loadings on the zero
+part), the count process active at every observation, one NB2 dispersion per
+trait, and binomial trials per observation. A `zi_binomial()` trait whose rows
+all have one trial is refused, as in R: with 0/1 data the structural-zero
+probability and the success probability are not separately identified. The
+Laplace log-determinant uses the observed curvature, as TMB does.
+
+How this differs from Julia's own routes, which stay available unchanged:
+
+| | `zi_poisson()` / `zi_nbinom2()` / `zi_binomial()` | `ZIPoisson()` / `ZINegBin()` / `ZIB(N)` |
+|---|---|---|
+| Laplace log-det count weight | observed (as TMB) | expected (Fisher) |
+| NB2 dispersion | one per trait | one shared across traits |
+| binomial trials | per observation, `N = 1` traits refused | one shared integer `N`, `N = 1` admitted |
+| covariates on the count part | not offered | `_cov` fitters |
+
+On the ZIP twin fixture the Julia `ZIPoisson` marginal evaluated at R's optimum
+is 3.62 log-likelihood units away from R's logLik, while the `zi_poisson()`
+route matches to 1.4e-8 (optimum against optimum). Twin evidence:
+`test/test_zi_twin.jl`. Only the no-covariate model is offered on this route,
+and `predict`, `confint`, `simulate` and the extractors below are not wired for
+its [`ZiFit`](@ref) result yet.
+
 ## Extractors
 
 The same post-fit extractors (`communality`, `correlation`, `sigma_y_site`, …)
