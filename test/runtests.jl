@@ -256,6 +256,7 @@ println(_SHARD === nothing ?
     _shard_include("test_postfit_zib_tweedie.jl")
     _shard_include("test_ordination.jl")
     _shard_include("test_model_selection.jl")
+    _shard_include("test_model_comparison.jl")
     _shard_include("test_structured_cov.jl")
     _shard_include("test_cross_kernel.jl")
     _shard_include("test_extract_gamma.jl")
