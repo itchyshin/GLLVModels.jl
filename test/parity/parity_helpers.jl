@@ -16,10 +16,32 @@ using .Core070Receipts
 include(joinpath(@__DIR__, "core070_case_registry.jl"))
 include(joinpath(@__DIR__, "..", "..", "tools", "core070_second_order", "r_lib.jl"))
 
-const _CORE070_REFERENCE_COMMIT = "b4d5fee64def88bc768dda1f1f77c29b295edd86"
-const _CORE070_NAMESPACE_SHA256 = "9094613610789faab69c43195d3cfdafb2c7dfef284e6646b10dababa4fa132c"
-const _CORE070_SOURCE_TREE_SHA256 = "f83545faa6543dbb1f64d64bbf5a9498adcdf036cc3da5851f269912698b1cc7"
-const _CORE070_ARCHIVE_SHA256 = "0c2f4323eb9fb19acccf039b8d57b4dd6bda82e2aa8b4a7bb712f36a64b022bc"
+# Pin selection (D-294/D-295): GLLVM_PARITY_PIN names which entry of
+# tools/core070_oracle_pins.toml this file's frozen-reference constants come
+# from -- same switch, same default ("P0"), and the same strict-on-unknown
+# behavior as tools/parity_oracle.py's Python side of this switch. The TOML
+# file is the shared source of the per-pin commit + companion byte hashes;
+# neither this file nor tools/core070_build_oracle.py hardcodes its own copy.
+const _CORE070_PIN_ENV_VAR = "GLLVM_PARITY_PIN"
+const _CORE070_PINS_FILE = normpath(joinpath(@__DIR__, "..", "..", "tools", "core070_oracle_pins.toml"))
+
+function _core070_selected_pin()
+    raw = get(ENV, _CORE070_PIN_ENV_VAR, nothing)
+    name = raw === nothing ? "P0" : uppercase(strip(raw))
+    pins = TOML.parsefile(_CORE070_PINS_FILE)
+    haskey(pins, name) || error(
+        "$_CORE070_PIN_ENV_VAR=$(repr(raw)) is not a recognized pin. Set " *
+        "$_CORE070_PIN_ENV_VAR to one of $(sort(collect(keys(pins)))) " *
+        "(case/whitespace insensitive), or leave it unset to use the default (P0)."
+    )
+    return pins[name]
+end
+
+const _CORE070_PIN = _core070_selected_pin()
+const _CORE070_REFERENCE_COMMIT = _CORE070_PIN["reference_commit"]
+const _CORE070_NAMESPACE_SHA256 = _CORE070_PIN["namespace_sha256"]
+const _CORE070_SOURCE_TREE_SHA256 = _CORE070_PIN["source_tree_sha256"]
+const _CORE070_ARCHIVE_SHA256 = _CORE070_PIN["archive_sha256"]
 const _CORE070_FAMILY_SMOKE_IDS = Core070CaseRegistry.FAMILY_IDS
 const _CORE070_SOURCE = Ref{Dict{String, Any}}()
 const _CORE070_RUN = Ref{Any}(nothing)

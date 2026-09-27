@@ -1,0 +1,32 @@
+# Shared gllvmTMB oracle pins for the Core070 parity harness (D-294/D-295).
+#
+# One entry per named pin (see tools/parity_oracle.py's R_REF_PINS /
+# GLLVM_PARITY_PIN for the commit-SHA switch that selects a key into this
+# file). tools/core070_build_oracle.py and test/parity/parity_helpers.jl both
+# read this file for the three companion byte-hashes (NAMESPACE / source
+# tree / archive) that go with each pin's commit, so neither hardcodes its
+# own copy. `reference_commit` here must agree with tools/parity_oracle.py's
+# R_REF_PINS[<pin>]; both sides check this at load time and fail loud on
+# disagreement.
+#
+# P1's hashes were computed read-only from the local gllvmTMB clone
+# (`/Users/z3437171/Dropbox/Github Local/gllvmTMB`) via `git archive
+# 9539352f66f2db2cc26b1c393e67212a359b60c9`, using the identical algorithm as
+# tools/core070_build_oracle.py's prepare() (sha256 of the archive, sha256 of
+# the extracted NAMESPACE, and the sorted-manifest tree hash of every
+# extracted file). Adding a pin here does not itself build or verify that
+# pin's oracle -- see tools/core070_build_oracle.py prepare|build|verify.
+
+[P0]
+version = "0.7.0"
+reference_commit = "b4d5fee64def88bc768dda1f1f77c29b295edd86"
+namespace_sha256 = "9094613610789faab69c43195d3cfdafb2c7dfef284e6646b10dababa4fa132c"
+source_tree_sha256 = "f83545faa6543dbb1f64d64bbf5a9498adcdf036cc3da5851f269912698b1cc7"
+archive_sha256 = "0c2f4323eb9fb19acccf039b8d57b4dd6bda82e2aa8b4a7bb712f36a64b022bc"
+
+[P1]
+version = "0.7.1"
+reference_commit = "9539352f66f2db2cc26b1c393e67212a359b60c9"
+namespace_sha256 = "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c"
+source_tree_sha256 = "86fa00f05ee2ccb8ffef65a82cd59c47b1b2a256a5bad86957a92461a6dbe1db"
+archive_sha256 = "73b665b22c1497d43dc0674eecd5657f2659a726fcad13004de899833e2d5423"
