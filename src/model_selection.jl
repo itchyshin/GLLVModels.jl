@@ -7,8 +7,9 @@
 #
 # Guard. A K model nests the (K−1) model (a zero loading column), so a correct
 # maximum can never have a lower log-likelihood. A fit that throws, reports
-# non-convergence, or falls below the last accepted K by more than `tol` is not a
-# valid candidate. Before rejecting a non-monotone or unconverged fit, the sweep
+# non-convergence, or falls below the best converged, non-runaway fit at any
+# smaller K (accepted or not; a rejected fit is still a point inside every larger
+# model) by more than max(tol, 1e-6·|logLik|) is not a valid candidate. Before rejecting a non-monotone or unconverged fit, the sweep
 # refits that K once from the previous solution plus a small new column (a warm
 # start), where the family fitter accepts `β_init`/`Λ_init`. Every attempted K is
 # recorded in `attempts` with its status, so nothing is dropped silently.
@@ -51,17 +52,23 @@ struct LVSelection
     attempts::Vector{NamedTuple{(:K, :status, :loglik, :message),Tuple{Int,Symbol,Float64,String}}}
 end
 
-# Warm-start keywords for a K-dimensional refit from an accepted (K−1) fit, or
-# `nothing` when the fit does not expose `β`/`Λ`. The new column keeps the top
-# K×K block lower-triangular (zeros above the diagonal, positive diagonal).
+# Warm start needs top-level `β`/`Λ` fields: Gaussian `GllvmFit` keeps them in
+# `pars`, so Gaussian sweeps get the guard but no retry (they are well-behaved).
+# Warm-start keywords for a K-dimensional refit from the last accepted fit (any
+# smaller K), or `nothing` when the fit does not expose `β`/`Λ`. The added columns
+# keep the top K×K block lower-triangular (zeros above the diagonal, 0.1 on and
+# below it). Assumes `prev.Λ` is the fitter's constrained (unrotated) matrix.
 function _lv_warm_start(prev, K::Integer)
     (hasproperty(prev, :β) && hasproperty(prev, :Λ)) || return nothing
     Λp = prev.Λ
-    p = size(Λp, 1)
-    (size(Λp, 2) == K - 1 && K <= p) || return nothing
-    col = zeros(p)
-    col[K:end] .= 0.1
-    return (β_init = copy(prev.β), Λ_init = hcat(Λp, col))
+    p, Kp = size(Λp, 1), size(Λp, 2)
+    (Kp < K <= p) || return nothing
+    Λ0 = zeros(p, K)
+    Λ0[:, 1:Kp] .= Λp
+    for j in (Kp + 1):K          # lower-triangular padding: zeros above row j
+        Λ0[j:end, j] .= 0.1
+    end
+    return (β_init = copy(prev.β), Λ_init = Λ0)
 end
 
 _lv_converged(fit) = hasproperty(fit, :converged) ? Bool(fit.converged) : true
@@ -74,12 +81,14 @@ _lv_converged(fit) = hasproperty(fit, :converged) ? Bool(fit.converged) : true
 #   Mode A, one binary trait separating: a RATIO check, the largest per-trait max
 #     |loading| over the median, ≥ ratio_max. Binomial only; the ratio is blind to
 #     Mode B by construction (Λ → cΛ leaves it unchanged).
-# Identity-link fits are skipped: their loadings are in data units. Both thresholds
+# Gaussian (Normal family) and identity-link fits are skipped: their loadings are in
+# data units (e.g. `pervar = true` fits carry Λ but no link field). Both thresholds
 # are provisional (measured in gllvmTMB: ratio 25 gave 96.3% detection, 0/551 false
 # positives on binomial) and are to be recalibrated on the auto-d recovery grid.
 # Returns "" when healthy, else the reason.
 function _lv_runaway(fit, family; max_latent_sd::Real, ratio_max::Real)
     hasproperty(fit, :Λ) || return ""
+    family isa Normal && return ""
     hasproperty(fit, :link) && fit.link isa IdentityLink && return ""
     Λ = fit.Λ
     (ndims(Λ) == 2 && size(Λ, 2) >= 1 && size(Λ, 1) >= 1) || return ""
@@ -108,16 +117,19 @@ guard: `:aic`, `:bic` (penalty `log(p·n)`, observed cells) or `:bic_sites`
 (penalty `log(n)`, sites).
 
 The guard rejects a fit that throws, reports non-convergence, or has a
-log-likelihood more than `tol` below the last accepted `K` (a `K` model nests the
-`K − 1` model, so its maximum cannot be lower). It also rejects a runaway fit:
+log-likelihood more than `max(tol, 1e-6·|ℓ|)` below the best converged,
+non-runaway fit at any smaller `K` (a `K` model nests every smaller one, so its
+maximum cannot be lower; runaway fits are excluded from this bar because
+separation inflates their log-likelihood). It also rejects a runaway fit:
 because the latent variables are standardised, a trait's loading row norm is its
 latent SD on the link scale, and a value above `max_latent_sd` (default 10, a
 saturated effect) marks common inflation of the loadings; for `Binomial`, one
 trait's largest loading at `ratio_max` (default 25) times the median trait's
 marks separation. Identity-link (Gaussian) fits skip the runaway check. Both
 thresholds are provisional. With `warm_start = true`, a rejected
-(non-monotone, unconverged or runaway) fit is first refitted once from the previous
-solution plus a small new loading column, for families whose fitter accepts
+(non-monotone, unconverged or runaway) fit is first refitted once from the last
+accepted solution padded with small lower-triangular loading columns, for
+families whose fitter accepts
 `β_init`/`Λ_init`; the refit is kept only if it passes every check. Rejected fits stay in
 `attempts` with their reason and are never chosen. At least one `K` must be
 accepted or an error is thrown. Healthy sweeps never trigger a refit, so their
@@ -146,8 +158,10 @@ function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
                    ratio_max::Real = 25.0, _fitter = fit_gllvm, kwargs...)
     criterion in (:aic, :bic, :bic_sites) ||
         throw(ArgumentError("criterion must be :aic, :bic or :bic_sites; got :$criterion"))
-    nsites = count(j -> any(x -> !(x isa Missing) && !(x isa AbstractFloat && isnan(x)), view(Y, :, j)),
-                   axes(Y, 2))
+    mask = get(kwargs, :mask, nothing)
+    observed(i, j) = (mask === nothing || mask[i, j]) &&
+                     !(Y[i, j] isa Missing) && !(Y[i, j] isa AbstractFloat && isnan(Y[i, j]))
+    nsites = count(j -> any(i -> observed(i, j), axes(Y, 1)), axes(Y, 2))
     Kmax >= 1 || throw(ArgumentError("Kmax must be ≥ 1; got $Kmax"))
 
     Ks       = Int[]
@@ -163,16 +177,20 @@ function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
         (_fitter(Y; family = family, K = k, kwargs..., init...), "")
     catch e
         e isa InterruptException && rethrow()
+        # An ArgumentError at K = 1 is a misconfiguration, not a hard K: surface it.
+        (k == 1 && e isa ArgumentError && isempty(init)) && rethrow()
         (nothing, sprint(showerror, e))
     end
 
+    llbar = -Inf     # best logLik of any converged, non-runaway fit at a smaller K
     for k in 1:Kmax
         fit, msg = tryfit(k)
         prev = isempty(fits) ? nothing : fits[end]
-        llprev = isempty(lls) ? -Inf : lls[end]
+        llprev = llbar
+        tolk(ll) = max(tol, 1e-6 * abs(ll))
         runaway(f) = _lv_runaway(f, family; max_latent_sd = max_latent_sd, ratio_max = ratio_max)
         acceptable(f) = f !== nothing && _lv_converged(f) && isempty(runaway(f)) &&
-                        _loglik(f) >= llprev - tol
+                        _loglik(f) >= llprev - tolk(llprev)
         status = :ok
         if !acceptable(fit) && fit !== nothing && warm_start && prev !== nothing
             init = _lv_warm_start(prev, k)
@@ -190,17 +208,19 @@ function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
         elseif !isempty(runaway(fit))
             push!(attempts, (K = k, status = :runaway, loglik = _loglik(fit), message = runaway(fit)))
             continue
-        elseif _loglik(fit) < llprev - tol
+        elseif _loglik(fit) < llprev - tolk(llprev)
+            llbar = max(llbar, _loglik(fit))
             push!(attempts, (K = k, status = :nonmonotone, loglik = _loglik(fit),
-                             message = "logLik below accepted K = $(Ks[end]) ($(llprev))"))
+                             message = "logLik below a converged fit at a smaller K ($(llprev))"))
             continue
         end
+        llbar = max(llbar, _loglik(fit))
         push!(attempts, (K = k, status = status, loglik = _loglik(fit), message = ""))
         push!(Ks, k)
         push!(nps, _nparams(fit))
         push!(lls, _loglik(fit))
         push!(aics, aic(fit))
-        push!(bics, bic(fit, Y))
+        push!(bics, bic(fit, Y; mask = mask))
         push!(bicns, bic(fit, nsites))
         push!(fits, fit)
     end

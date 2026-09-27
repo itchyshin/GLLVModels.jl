@@ -65,7 +65,8 @@ end
 GLLVModels._loglik(f::_FakeLVFit) = f.ll
 GLLVModels._nparams(f::_FakeLVFit) = f.np
 GLLVModels.StatsAPI.aic(f::_FakeLVFit) = 2f.np - 2f.ll
-GLLVModels.StatsAPI.bic(f::_FakeLVFit, Y::AbstractMatrix) = f.np * log(length(Y)) - 2f.ll
+GLLVModels.StatsAPI.bic(f::_FakeLVFit, Y::AbstractMatrix; mask = nothing) =
+    f.np * log(mask === nothing ? length(Y) : count(mask)) - 2f.ll
 GLLVModels.StatsAPI.bic(f::_FakeLVFit, n::Integer) = f.np * log(n) - 2f.ll
 
 # Loglik per K on a default start, and on a warm start (used only if the fitter
@@ -253,4 +254,75 @@ end
     @test sel_n.best_k == 2
     @test sel_n.bic_sites ≈ [10k * log(40) - 2ll for (k, ll) in ((1, -500.0), (2, -477.0), (3, -476.0))]
     @test_throws ArgumentError select_lv(Y; Kmax = 2, criterion = :bogus, _fitter = f)
+end
+
+# --- Panel fixes (D-43 statistical review, 2026-09-27) -----------------------------
+@testset "select_lv — review fixes" begin
+    Y = zeros(6, 40)
+    mk(ll, K; Λ = fill(0.5, 6, K), conv = true) = _FakeLVFit(ll, 10K, conv, zeros(6), Λ)
+
+    @testset "bar = best converged non-runaway fit at any smaller K, rejected or not" begin
+        # K=1 −500, K=2 −400 accepted; K=3 −450 rejected; K=4 −430 is below K=2 → rejected.
+        f = (Y; family, K, kwargs...) -> mk(Dict(1 => -500.0, 2 => -400.0, 3 => -450.0, 4 => -430.0)[K], K)
+        sel = select_lv(Y; family = Poisson(), Kmax = 4, warm_start = false, _fitter = f)
+        @test only(filter(a -> a.K == 4, sel.attempts)).status === :nonmonotone
+        # A runaway K (inflated logLik) must NOT set the bar for later K.
+        g = (Y; family, K, kwargs...) -> K == 2 ? mk(-300.0, 2; Λ = fill(20.0, 6, 2)) :
+                                          mk(Dict(1 => -500.0, 3 => -420.0)[K], K)
+        sel2 = select_lv(Y; family = Poisson(), Kmax = 3, warm_start = false, _fitter = g)
+        @test only(filter(a -> a.K == 2, sel2.attempts)).status === :runaway
+        @test only(filter(a -> a.K == 3, sel2.attempts)).status === :ok   # runaway −300 is not the bar
+    end
+
+    @testset "a converged fit rejected as non-monotone still raises the bar" begin
+        # K=2 −380 (ok), K=3 −390 (non-monotone, converged), K=4 −385: below K=2 → rejected.
+        f = (Y; family, K, kwargs...) -> mk(Dict(1 => -500.0, 2 => -380.0, 3 => -390.0, 4 => -385.0)[K], K)
+        sel = select_lv(Y; family = Poisson(), Kmax = 4, warm_start = false, _fitter = f)
+        @test only(filter(a -> a.K == 4, sel.attempts)).status === :nonmonotone
+    end
+
+    @testset "warm start pads from the last accepted K when K−1 was rejected" begin
+        calls = Any[]
+        f = function (Y; family, K, kwargs...)
+            push!(calls, (K = K, kw = kwargs))
+            K == 2 && return mk(-300.0, 2; Λ = fill(20.0, 6, 2))       # runaway, refit too
+            haskey(kwargs, :Λ_init) && return mk(-350.0, K)
+            return mk(Dict(1 => -500.0, 3 => -520.0)[K], K; Λ = K == 3 ? fill(0.5, 6, 3) : fill(0.5, 6, 1))
+        end
+        sel = select_lv(Y; family = Poisson(), Kmax = 3, _fitter = f)
+        w3 = only(filter(c -> c.K == 3 && haskey(c.kw, :Λ_init), calls))
+        Λ0 = w3.kw[:Λ_init]
+        @test size(Λ0) == (6, 3)
+        @test Λ0[:, 1] == fill(0.5, 6)                       # from accepted K = 1
+        @test Λ0[1, 2] == 0 && all(iszero, Λ0[1:2, 3])        # lower-triangular padding
+        @test Λ0[2, 2] > 0 && Λ0[3, 3] > 0
+    end
+
+    @testset "runaway check skips Normal family (pervar loadings are in data units)" begin
+        f = (Y; family, K, kwargs...) -> mk(-500.0 + 60K, K; Λ = fill(50.0, 6, K))
+        sel = select_lv(Y; family = Normal(), Kmax = 2, _fitter = f)
+        @test sel.K == [1, 2]
+    end
+
+    @testset "fit_gllvm without K refuses out-of-scope routes" begin
+        Yc = rand(0:5, 5, 40)
+        @test_throws ArgumentError fit_gllvm(Yc; family = Poisson(), row_eff = :fixed)
+        @test_throws ArgumentError fit_gllvm(Float64.(Yc); family = Normal(), pervar = true)
+    end
+end
+
+@testset "select_lv — review fixes (code lens)" begin
+    Y = zeros(6, 40)
+    mk(ll, K) = _FakeLVFit(ll, 10K, true, zeros(6), fill(0.5, 6, K))
+    @testset "an ArgumentError at K = 1 is a misconfiguration and is re-raised" begin
+        f = (Y; family, K, kwargs...) -> throw(ArgumentError("bad combination"))
+        @test_throws ArgumentError select_lv(Y; Kmax = 3, _fitter = f)
+    end
+    @testset "mask reaches the criteria (cells and sites)" begin
+        m = trues(6, 40); m[:, 31:40] .= false; m[1:3, 1:10] .= false   # 30 sites, 150 cells
+        f = (Y; family, K, kwargs...) -> mk(-500.0 + 30K, K)
+        sel = select_lv(Y; Kmax = 2, mask = m, _fitter = f)
+        @test sel.bic ≈ [10k * log(150) - 2(-500.0 + 30k) for k in 1:2]
+        @test sel.bic_sites ≈ [10k * log(30) - 2(-500.0 + 30k) for k in 1:2]
+    end
 end

@@ -218,12 +218,15 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
     Kmax === nothing || K === nothing || throw(ArgumentError(
         "fit_gllvm: Kmax is used only when K is omitted (K is estimated); got K=$K and Kmax=$Kmax"))
     if K === nothing && !(family isa Multinomial)
+        (row_eff === :none && !pervar) || throw(ArgumentError(
+            "fit_gllvm: estimating K is available for the default family route only; " *
+            "supply K with row_eff or pervar (or call select_lv directly)"))
         p = size(Y, 1)
         kmax = Kmax === nothing ? min(5, p - 1) : Int(Kmax)
         kmax >= 1 || throw(ArgumentError("fit_gllvm: cannot estimate K with p = $p response(s)"))
-        sel = select_lv(Y; family = family, Kmax = kmax, row_eff = row_eff,
-                        disp_group = disp_group, pervar = pervar, kwargs...)
-        @info "fit_gllvm: K not supplied; chose K = $(sel.best_k) by BIC over K = 1:$kmax " *
+        sel = select_lv(Y; family = family, Kmax = kmax, disp_group = disp_group, kwargs...)
+        crit = get(kwargs, :criterion, :bic)
+        @info "fit_gllvm: K not supplied; chose K = $(sel.best_k) by $(crit) over K = 1:$kmax " *
               "(call select_lv for the full comparison). Intervals from this fit are " *
               "conditional on the chosen K." sel
         return sel.best
