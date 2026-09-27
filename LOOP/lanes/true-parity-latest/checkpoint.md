@@ -16,6 +16,7 @@ CI is runner-starved (about 24 queued runs across lanes); trains wait, nothing f
 
 ## In review / in progress
 - #546 iSDM build (e2b53b25b): cross-objective 1.3e-11 on 4 cases; cloglog grid bit-identical; 3 b_fix rows @test_broken vs R's stopped nlminb (pass vs polished optimum); admission 19/19; tests 158 + 41 + 213 on 1.10 and 1.13. DEVIATION for Shinichi: R latent() defaults unique = TRUE (theta_diag_B), omitted by the spec; the Julia door refuses it. No gllvm() door (formula.jl belongs to the grammar lane). Review NON-BLOCKING (reviews/pr-546-review.md); fixes DONE at 983c9979b (polish convergence asserted; no @test_broken, door gap bound 1e-4; level-order doc; refusal prints the full corrected formula; 159 + 41 + 219 both versions). READY to land on Shinichi's word. unique = TRUE: reviewer recommends refuse now + follow-up port ISDM-PSI (1-2 days, p >= 3 fixture); Shinichi decides.
+- A2 small twins running: chibar2_pvalue/variance_lrt semantic check (b2c, branch claude/twin-chibar2); AIC/BIC/anova/update (b2a, claude/twin-aic-anova).
 - Phylo latent build (b9, branch claude/phylo-latent-build) from spec #545 (c0fd5f5be) and D-300.
 - #533 case-map rows (9c1f55038, re-created #526) and #534 carry scan (21433f1bd, stacked): waiting for Shinichi's own signature comment on #533 (proposal: ordination_uncertainty moves to semantic_divergence).
 - Specs #525 iSDM (032d90284), #535 temporal (af130f704), #545 phylo latent (c0fd5f5be): reviewed and revised; docs-only, land when convenient.
