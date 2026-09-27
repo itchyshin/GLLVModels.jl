@@ -73,6 +73,16 @@ end
 
 _lv_converged(fit) = hasproperty(fit, :converged) ? Bool(fit.converged) : true
 
+# Value the non-monotone check compares. A K model nests every smaller one, so its
+# maximised objective cannot be lower. Under a loading ridge that objective is the
+# PENALISED one, ℓ − ½Σλ²/τ²; the unpenalised ℓ at the ridge optimum can fall as K
+# grows. Criteria still use the unpenalised ℓ (`_loglik`).
+function _lv_bar_value(fit)
+    τ = hasproperty(fit, :loading_ridge) ? Float64(fit.loading_ridge) : Inf
+    isfinite(τ) || return _loglik(fit)
+    return _loglik(fit) - 0.5 * sum(abs2, fit.Λ) / τ^2
+end
+
 # Runaway detector. Latent variables are standardised (u ~ N(0, I)), so a trait's
 # loading row norm is its latent SD on the link scale: ~4 is as strong as real
 # gradients get, 10 is saturated. Two modes need two statistics (vault note "Two
@@ -109,7 +119,7 @@ end
 """
     select_lv(Y; family = Normal(), Kmax = 3, criterion = :bic_sites,
               warm_start = true, tol = 1e-3, max_latent_sd = 10.0,
-              ratio_max = 25.0, kwargs...) -> LVSelection
+              ratio_max = 25.0, binary_ridge = 2.0, kwargs...) -> LVSelection
 
 Latent-dimension selection: fit `fit_gllvm(Y; family, K = k, kwargs...)` for
 `k in 1:Kmax` and pick the `K` minimising `criterion` among the fits that pass a
@@ -118,6 +128,21 @@ guard: `:bic_sites` (default; penalty `log(n)`, sites), `:bic` (penalty
 (17 687 datasets with known K): `:bic_sites` recovered the true K most often for
 Gaussian, Poisson and negative binomial responses; `:bic` picked too few
 dimensions at small n.
+
+Binary (single-trial `Binomial`) data get a loading ridge during the sweep:
+every fit in the sweep — including a
+warm-start refit — is called with `loading_ridge = binary_ridge` (default
+`2.0`), unless the caller already passed their own `loading_ridge` (which then
+wins) or `binary_ridge = Inf` (which disables it, restoring today's unpenalised
+behaviour). This is because most unpenalised Bernoulli fits beyond `K = 1` run
+away (see the runaway guard below): in an R recovery experiment with 20 species
+and `n = 120`, the ridge recovered the true `K = 2` in 8/10 datasets versus 4/10
+without it. The information criteria are still computed on the UNPENALISED
+Laplace log-likelihood at the ridge optimum (`GLLVModels._loglik(fit)`); the
+check that the log-likelihood does not fall as `K` grows uses the penalised value
+`ℓ − ½Σλ²/τ²`, which is what nesting guarantees under a ridge.
+Multi-trial `Binomial` (an `N` keyword whose entries are not all one) and every
+other family are unaffected and never receive `loading_ridge`.
 
 The guard rejects a fit that throws, is a runaway (below), or has a
 log-likelihood more than `max(tol, 1e-6·|ℓ|)` below the best converged,
@@ -163,6 +188,7 @@ function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
                    criterion::Symbol = :bic_sites, warm_start::Bool = true,
                    tol::Real = 1e-3, max_latent_sd::Real = 10.0,
                    ratio_max::Real = 25.0, require_converged::Bool = false,
+                   binary_ridge::Real = 2.0,
                    _fitter = fit_gllvm, kwargs...)
     criterion in (:aic, :bic, :bic_sites) ||
         throw(ArgumentError("criterion must be :aic, :bic or :bic_sites; got :$criterion"))
@@ -181,8 +207,20 @@ function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
     fits     = Any[]
     attempts = NamedTuple{(:K, :status, :loglik, :message),Tuple{Int,Symbol,Float64,String}}[]
 
+    # D-293: single-trial Binomial sweeps carry a loading ridge unless the caller
+    # already picked their own `loading_ridge`, or `binary_ridge = Inf` (off).
+    # Multi-trial Binomial (an `N` whose entries are not all one) is unaffected.
+    Nk = get(kwargs, :N, nothing)
+    single_trial = Nk === nothing || all(isone, Nk)
+    ridge_active = family isa Binomial && single_trial &&
+                   !haskey(kwargs, :loading_ridge) && isfinite(binary_ridge)
+    ridge_kwarg = ridge_active ? (loading_ridge = binary_ridge,) : NamedTuple()
+    ridge_note = ridge_active ? "loading_ridge=$binary_ridge" : ""
+    withridge(msg) = isempty(ridge_note) ? msg :
+                     (isempty(msg) ? ridge_note : msg * "; " * ridge_note)
+
     tryfit(k; init...) = try
-        (_fitter(Y; family = family, K = k, kwargs..., init...), "")
+        (_fitter(Y; family = family, K = k, kwargs..., ridge_kwarg..., init...), "")
     catch e
         e isa InterruptException && rethrow()
         # An ArgumentError at K = 1 is a misconfiguration, not a hard K: surface it.
@@ -201,7 +239,7 @@ function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
         tolk(ll) = max(tol, 1e-6 * abs(ll))
         runaway(f) = _lv_runaway(f, family; max_latent_sd = max_latent_sd, ratio_max = ratio_max)
         acceptable(f) = f !== nothing && (_lv_converged(f) || !require_converged) && isempty(runaway(f)) &&
-                        _loglik(f) >= llprev - tolk(llprev)
+                        _lv_bar_value(f) >= llprev - tolk(llprev)
         status = :ok
         if !acceptable(fit) && fit !== nothing && warm_start && prev !== nothing
             init = _lv_warm_start(prev, k)
@@ -211,22 +249,22 @@ function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
             end
         end
         if fit === nothing
-            push!(attempts, (K = k, status = :failed, loglik = NaN, message = msg))
+            push!(attempts, (K = k, status = :failed, loglik = NaN, message = withridge(msg)))
             continue
         elseif require_converged && !_lv_converged(fit)
-            push!(attempts, (K = k, status = :unconverged, loglik = _loglik(fit), message = ""))
+            push!(attempts, (K = k, status = :unconverged, loglik = _loglik(fit), message = withridge("")))
             continue
         elseif !isempty(runaway(fit))
-            push!(attempts, (K = k, status = :runaway, loglik = _loglik(fit), message = runaway(fit)))
+            push!(attempts, (K = k, status = :runaway, loglik = _loglik(fit), message = withridge(runaway(fit))))
             continue
-        elseif _loglik(fit) < llprev - tolk(llprev)
+        elseif _lv_bar_value(fit) < llprev - tolk(llprev)
             push!(attempts, (K = k, status = :nonmonotone, loglik = _loglik(fit),
-                             message = "logLik below a converged fit at a smaller K ($(llprev))"))
+                             message = withridge("logLik below a converged fit at a smaller K ($(llprev))")))
             continue
         end
-        llbar = max(llbar, _loglik(fit))
+        llbar = max(llbar, _lv_bar_value(fit))
         push!(attempts, (K = k, status = status, loglik = _loglik(fit),
-                         message = _lv_converged(fit) ? "" : "optimiser did not report convergence; kept (not runaway, logLik non-decreasing)"))
+                         message = withridge(_lv_converged(fit) ? "" : "optimiser did not report convergence; kept (not runaway, logLik non-decreasing)")))
         push!(Ks, k)
         push!(nps, _nparams(fit))
         push!(lls, _loglik(fit))

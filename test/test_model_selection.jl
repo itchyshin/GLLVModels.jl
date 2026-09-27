@@ -353,3 +353,111 @@ end
     @test select_lv(Y; Kmax = 3, _fitter = f).best_k ==
           select_lv(Y; Kmax = 3, criterion = :bic_sites, _fitter = f).best_k == 2
 end
+
+# --- binary_ridge: single-trial Binomial sweeps get a loading ridge (D-293, lane
+# auto-d-20260926) --------------------------------------------------------------
+# Maintainer decision: for K selection on Bernoulli data, sweep with a loading
+# ridge and compare criteria on the UNPENALISED log-likelihood at the ridge
+# optimum. A separate lane is adding `loading_ridge` to the binomial fitter
+# itself (src/families/binomial.jl); here we only check that select_lv wires the
+# keyword through correctly, using a stand-in fitter that records its kwargs.
+function _ridge_fitter(calls)
+    return function (Y; family, K, kwargs...)
+        push!(calls, (K = K, kwargs = kwargs))
+        p = size(Y, 1)
+        return _FakeLVFit(-500.0 + 60K, 10K, true, zeros(p), fill(0.5, p, K))
+    end
+end
+
+@testset "select_lv — binary_ridge for single-trial Binomial" begin
+    Y = zeros(6, 40)
+
+    @testset "default binary_ridge = 2.0: every Binomial call gets loading_ridge" begin
+        calls = Any[]
+        sel = select_lv(Y; family = Binomial(), Kmax = 3, warm_start = false,
+                        _fitter = _ridge_fitter(calls))
+        @test !isempty(calls)
+        @test all(c -> get(c.kwargs, :loading_ridge, nothing) == 2.0, calls)
+        a1 = only(filter(a -> a.K == 1, sel.attempts))
+        @test occursin("loading_ridge", a1.message)
+    end
+
+    @testset "binary_ridge = Inf disables the ridge (today's behaviour)" begin
+        calls = Any[]
+        sel = select_lv(Y; family = Binomial(), Kmax = 3, warm_start = false,
+                        binary_ridge = Inf, _fitter = _ridge_fitter(calls))
+        @test !isempty(calls)
+        @test all(c -> !haskey(c.kwargs, :loading_ridge), calls)
+    end
+
+    @testset "the caller's own loading_ridge wins over the default" begin
+        calls = Any[]
+        sel = select_lv(Y; family = Binomial(), Kmax = 3, warm_start = false,
+                        loading_ridge = 5.0, _fitter = _ridge_fitter(calls))
+        @test !isempty(calls)
+        @test all(c -> get(c.kwargs, :loading_ridge, nothing) == 5.0, calls)
+    end
+
+    @testset "non-Binomial families never get loading_ridge" begin
+        calls = Any[]
+        sel = select_lv(Y; family = Poisson(), Kmax = 3, warm_start = false,
+                        _fitter = _ridge_fitter(calls))
+        @test !isempty(calls)
+        @test all(c -> !haskey(c.kwargs, :loading_ridge), calls)
+    end
+
+    @testset "multi-trial Binomial (N not all ones) never gets loading_ridge" begin
+        calls = Any[]
+        sel = select_lv(Y; family = Binomial(), Kmax = 3, warm_start = false,
+                        N = fill(3, size(Y)), _fitter = _ridge_fitter(calls))
+        @test !isempty(calls)
+        @test all(c -> !haskey(c.kwargs, :loading_ridge), calls)
+    end
+
+    @testset "the warm-start refit also carries loading_ridge" begin
+        calls = Any[]
+        f = function (Y; family, K, kwargs...)
+            push!(calls, (K = K, kwargs = kwargs))
+            if haskey(kwargs, :Λ_init)
+                return _FakeLVFit(-380.0, 10K, true, zeros(6), fill(0.5, 6, K))
+            end
+            ll = K == 3 ? -450.0 : Dict(1 => -500.0, 2 => -400.0)[K]
+            return _FakeLVFit(ll, 10K, true, zeros(6), fill(0.5, 6, K))
+        end
+        sel = select_lv(Y; family = Binomial(), Kmax = 3, _fitter = f)
+        warm = filter(c -> haskey(c.kwargs, :Λ_init), calls)
+        @test !isempty(warm)                                    # the retry did happen
+        @test all(c -> get(c.kwargs, :loading_ridge, nothing) == 2.0, calls)
+    end
+end
+
+# --- Monotone bar under the loading ridge --------------------------------------------
+# Nesting guarantees the PENALISED objective improves with K, not the unpenalised logLik at
+# the ridge optimum, so with a ridge the non-monotone check compares ℓ − ½Σλ²/τ².
+struct _FakeRidgeFit
+    ll::Float64
+    np::Int
+    converged::Bool
+    β::Vector{Float64}
+    Λ::Matrix{Float64}
+    loading_ridge::Float64
+end
+GLLVModels._loglik(f::_FakeRidgeFit) = f.ll
+GLLVModels._nparams(f::_FakeRidgeFit) = f.np
+GLLVModels.StatsAPI.aic(f::_FakeRidgeFit) = 2f.np - 2f.ll
+GLLVModels.StatsAPI.bic(f::_FakeRidgeFit, Y::AbstractMatrix; mask = nothing) = f.np * log(length(Y)) - 2f.ll
+GLLVModels.StatsAPI.bic(f::_FakeRidgeFit, n::Integer) = f.np * log(n) - 2f.ll
+
+@testset "select_lv — monotone check uses the penalised objective under a ridge" begin
+    Y = zeros(6, 40)
+    # τ = 2: K=1 Λ = 1.0 (pen 0.125·6 = 0.75); K=2 Λ = 0.1 everywhere (pen 0.015).
+    # Unpenalised ℓ falls 0.5 (−500 → −500.5) but the penalised value rises (−500.75 → −500.515).
+    f = (Y; family, K, loading_ridge = Inf, kwargs...) ->
+        K == 1 ? _FakeRidgeFit(-500.0, 10, true, zeros(6), fill(1.0, 6, 1), loading_ridge) :
+                 _FakeRidgeFit(-500.5, 20, true, zeros(6), fill(0.1, 6, 2), loading_ridge)
+    sel = select_lv(Y; family = Binomial(), Kmax = 2, warm_start = false, _fitter = f)
+    @test only(filter(a -> a.K == 2, sel.attempts)).status === :ok
+    # Without the ridge the same unpenalised fall is rejected.
+    sel0 = select_lv(Y; family = Binomial(), Kmax = 2, warm_start = false, binary_ridge = Inf, _fitter = f)
+    @test only(filter(a -> a.K == 2, sel0.attempts)).status === :nonmonotone
+end

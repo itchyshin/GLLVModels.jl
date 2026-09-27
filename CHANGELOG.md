@@ -21,6 +21,13 @@ All notable changes to GLLVModels.jl are documented here.
   when `K` is omitted; `row_eff` and `pervar` still need an explicit `K`.
 - **`select_lv(...; criterion = :bic_sites)`**: BIC with `log(n)`, `n` the
   number of sites; `LVSelection` gains `bic_sites` and `attempts`.
+- **Loading ridge for binary data.** `fit_binomial_gllvm(...; loading_ridge = τ)`
+  (Laplace route) minimises the negative marginal log-likelihood plus
+  `½Σλ²/τ²`, the same penalty as gllvmTMB's `aghq_ridge`; the fit's reported
+  log-likelihood is the unpenalised one at that optimum, and `fit.loading_ridge`
+  records τ (`Inf` = off, the default). `select_lv` sweeps single-trial binomial
+  data with `binary_ridge = 2` (set `Inf` to turn it off); most unpenalised
+  Bernoulli fits beyond `K = 1` run away at ecological sample sizes.
 
 ### Changed
 - **`select_lv` now defaults to `criterion = :bic_sites`** (was `:bic`, which
