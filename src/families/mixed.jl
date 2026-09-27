@@ -196,16 +196,76 @@ end
 # loops with the scalar family/link swapped to families[t]/links[t].
 # ===========================================================================
 
-# Mixed site mode-finder: identical Fisher scoring to _laplace_mode!, but each
-# observation uses its trait's family/link. `families` markers carry dispersion.
+# Per-site log-posterior at a given z (mixed-family twin of `_laplace_mode_logpost`
+# / `_grouped_laplace_mode_logpost`; see #507/#509/#500). The step-halving line
+# search inside `_mixed_laplace_mode` below accepts a trial z only when it raises
+# this value. Missing cells are dropped, matching `_mixed_laplace_mode` itself.
+function _mixed_logpost(families::AbstractVector, links::AbstractVector,
+        y::AbstractVector, n::AbstractVector, Λ::AbstractMatrix, β::AbstractVector,
+        z::AbstractVector)
+    p = size(Λ, 1)
+    η = Λ * z
+    q = -0.5 * dot(z, z)
+    @inbounds for t in 1:p
+        ismissing(y[t]) && continue
+        ηt = _clamp_eta(β[t] + η[t])
+        μt = _clamp_mu(families[t], linkinv(links[t], ηt))
+        q += _glm_logpdf(families[t], μt, n[t], y[t])
+    end
+    return q
+end
+
+# Mixed site mode-finder: Fisher scoring, each observation on its trait's own
+# family/link. `families` markers carry dispersion. Returns `(z, converged)`.
+#
+# Before this fix (#503, the #479/#507/#509/#500 pattern) the loop below took
+# undamped Fisher-scoring steps and returned whatever `z` it held when `maxiter`
+# was reached, converged or not: a step that overshoots the per-site
+# log-posterior was never rejected, so a site could be left far from its
+# stationary point while `_mixed_loglik_site` still reported a finite value. A
+# re-measure on origin/main found this at a non-trivial rate across several
+# family mixes (Poisson/Binomial/Gamma, Normal/NB2/Beta, and a four-trait
+# Poisson/Gamma/Beta/Binomial mix) using this file's own gradient-of-the-score
+# check (`Λ's − z`).
+#
+# The fix mirrors the other grouped kernels: a step that lowers the per-site
+# log-posterior is halved (small steps and accepted full steps are bit-identical
+# to the old loop), and `converged` requires BOTH the full proposed step and a
+# scale-aware gradient check to be small. A step-size-only test is not safe
+# here because `A = Λ'WΛ + I` can be ill-conditioned (e.g. a Normal trait
+# whose fitted σ is driven near zero — a Heywood case the outer fitter can
+# reach — makes `W = 1/σ²` enormous), and in that regime a tiny `Δ` solves
+# `AΔ = g` while the raw gradient `g` is still large in the stiff direction.
+# The check below is the Newton decrement `g'Δ` (both already computed to get
+# `Δ`, so this is free): it scales WITH the curvature, so it stays small at a
+# genuine mode even when `A`'s eigenvalues are huge, unlike an absolute bound
+# on `maximum(abs, g)`. An earlier draft used the
+# absolute form, reasoning by analogy to Student-t's #509 Fisher/observed
+# mismatch, which does not apply here — a Normal trait under `IdentityLink`
+# has a quadratic log-likelihood, so its Fisher weight `1/σ²` IS the observed
+# curvature, not a defect of the #509 kind. Since every family this bridge
+# supports has a nonnegative expected (Fisher) weight (file header: "expected
+# Hessian ⇒ Λ'WΛ + I is always SPD"), the step-halving line search below needs
+# no per-family backtrack gate and no observed-curvature fallback direction:
+# Fisher scoring is always a valid ascent direction here. That says nothing
+# about whether the UNDAMPED fixed-point map (the small-step shortcut just
+# below) is a CONTRACTION at the mode, though: where it is not (e.g. a Gamma
+# trait with shape well below 1 and `y/μ` far from 1, observed/Fisher weight
+# ratio > 1), the shortcut can oscillate indefinitely rather than settle, so
+# once a full-size line-search step has been rejected once, every subsequent
+# step in this call goes through the line search too, unless the step is already
+# at the floating-point floor, where the line search can only compare rounding
+# noise.
 function _mixed_laplace_mode(families::AbstractVector, links::AbstractVector,
         y::AbstractVector, n::AbstractVector, Λ::AbstractMatrix, β::AbstractVector;
-        maxiter::Integer = 100, tol::Real = 1e-9, z_init = nothing)
+        maxiter::Integer = 100, tol::Real = 1e-9, grad_tol::Real = 1e-6, nd_tol::Real = 1e-12, z_init = nothing)
     p, K = size(Λ)
     T = promote_type(eltype(Λ), eltype(β))
     z = z_init === nothing ? zeros(T, K) : collect(T, z_init)
     s = Vector{T}(undef, p)
     W = Vector{T}(undef, p)
+    linesearch_only = false   # set once a full step has been rejected
+    prev_dmax = Inf           # previous max|Δ|: has the step stopped shrinking?
     for _ in 1:maxiter
         η = Λ * z
         @inbounds for t in 1:p
@@ -219,13 +279,62 @@ function _mixed_laplace_mode(families::AbstractVector, links::AbstractVector,
                 W[t] = _glm_weight(families[t], μt, n[t], met)
             end
         end
+        g = Λ' * s .- z
         A = Symmetric(Λ' * (W .* Λ) + I)
-        Δ = _safe_solve(A, Λ' * s .- z)
-        (Δ === nothing || !all(isfinite, Δ)) && break
-        z .+= Δ
-        maximum(abs, Δ) < tol && break
+        Δ = _safe_solve(A, g)
+        (Δ === nothing || !all(isfinite, Δ)) && return z, false
+        # Scale-aware convergence check: the Newton decrement `g'Δ`, not an
+        # absolute bound on `g`. `Δ` solves `AΔ = g`, so this is `g'A⁻¹g`,
+        # which stays small at a genuine mode even when `A` is ill-conditioned.
+        decrement = abs(dot(g, Δ))
+        maximum(abs, Δ) < tol && decrement < grad_tol && return z .+ Δ, true
+        # The latch below forces the line search only while the step is above the
+        # floating-point floor (about sqrt(eps) relative to z): at the floor the
+        # log-posterior differences are rounding noise, and a line search there can
+        # reject a genuine step and report a real mode as a failure.
+        dmax = maximum(abs, Δ)
+        at_floor = dmax <= sqrt(eps(Float64)) * (1 + norm(z))
+        # At the floor, a step that has stopped shrinking with the Newton
+        # decrement below `nd_tol` is the mode to rounding: the undamped map is
+        # bouncing at the floor (measured: |Δ| wandering 1e-8 to 6e-8 for 2000
+        # iterations, `g'Δ` about 1e-15), and no further step can be resolved.
+        # A step that is still shrinking keeps going until `tol`, so a caller that
+        # asks for a tighter mode (e.g. `tol = 1e-13`) still gets one.
+        at_floor && dmax >= prev_dmax && decrement < nd_tol && return z .+ Δ, true
+        prev_dmax = dmax
+        if (!linesearch_only || at_floor) && norm(Δ) <= 1e-3 * (1 + norm(z))
+            z = z .+ Δ
+        else
+            q0 = _mixed_logpost(families, links, y, n, Λ, β, z)
+            if isfinite(q0)
+                zprev = z
+                accepted = false
+                step = 1.0
+                for _half in 1:30
+                    ztrial = z .+ step .* Δ
+                    q1 = _mixed_logpost(families, links, y, n, Λ, β, ztrial)
+                    if isfinite(q1) && q1 >= q0
+                        z = ztrial
+                        accepted = true
+                        break
+                    end
+                    step *= 0.5
+                    linesearch_only = true   # a full-size step was just rejected
+                end
+                # A line search that cannot move `z` (every trial rejected, or the
+                # accepted trial rounds back to `z`) while the Newton decrement is
+                # below `nd_tol` means the log-posterior can no longer resolve the
+                # remaining step: `z` is the mode to rounding (measured: |Δ| stuck
+                # near 1e-8 with `g'Δ` about 1e-14 and every trial lower by noise).
+                # That is convergence, not failure.
+                (!accepted || z == zprev) && decrement < nd_tol && return z, true
+                accepted || return z, false
+            else
+                z = z .+ Δ
+            end
+        end
     end
-    return z
+    return z, false
 end
 
 # Laplace log-marginal for one mixed site: Σ_t ℓ_t(ẑ) − ½ẑ'ẑ − ½logdet(Λ'WΛ + I).
@@ -233,8 +342,23 @@ function _mixed_loglik_site(families::AbstractVector, links::AbstractVector,
         y::AbstractVector, n::AbstractVector, Λ::AbstractMatrix, β::AbstractVector;
         maxiter::Integer = 100, tol::Real = 1e-9, z_init = nothing)
     p = size(Λ, 1)
-    z = _mixed_laplace_mode(families, links, y, n, Λ, β;
-                            maxiter = maxiter, tol = tol, z_init = z_init)
+    z, ok = _mixed_laplace_mode(families, links, y, n, Λ, β;
+                                maxiter = maxiter, tol = tol, z_init = z_init)
+    # Larger-budget retry (#507/#509 review pattern): a genuinely converging site
+    # can still need more than the default `maxiter` Fisher-scored steps under
+    # ill-conditioned cross-family curvature. Retry from the SAME `z_init` (zero
+    # in every current call path) with a 20x iteration budget before declaring
+    # failure; runs only where the default budget failed, so every site that
+    # converged within `maxiter` keeps its original path and iteration count.
+    ok || ((z, ok) = _mixed_laplace_mode(families, links, y, n, Λ, β;
+                                         maxiter = 20 * maxiter, tol = tol, z_init = z_init))
+    # A search that did not certify a stationary point must not produce a
+    # finite value: -Inf makes the fitter's own 1e12 failure sentinel fire
+    # instead of a silently wrong log-likelihood (#503, the #479/#507/#509/#500
+    # pattern). `getLV`/`predict` call `_mixed_laplace_mode` directly (below) and
+    # never see this sentinel: they use whatever z the damped search returns,
+    # converged or not, exactly as the old code did.
+    ok || return -Inf
     η = Λ * z
     T = promote_type(eltype(Λ), eltype(β))
     W = Vector{T}(undef, p)
@@ -517,8 +641,12 @@ function getLV(fit::MixedFamilyFit, Y::AbstractMatrix;
                 isfinite(fit.dispersion[t]) ? fit.dispersion[t] : 1.0) for t in 1:p]
     Z = Matrix{Float64}(undef, K, n)
     @inbounds for s in 1:n
-        Z[:, s] = _mixed_laplace_mode(fams_t, fit.links, view(Y, :, s), view(Nm, :, s),
-                                      fit.Λ, fit.β)
+        # No-sentinel contract (#503): take whichever z the damped search
+        # returns, converged or not, same as the pre-#503 code, which had no
+        # convergence flag to discard in the first place.
+        z, _ = _mixed_laplace_mode(fams_t, fit.links, view(Y, :, s), view(Nm, :, s),
+                                   fit.Λ, fit.β)
+        Z[:, s] = z
     end
     Zt = permutedims(Z)
     return rotate ? Zt * _svd_rotation(fit.Λ) : Zt
