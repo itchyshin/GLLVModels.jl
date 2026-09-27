@@ -70,18 +70,18 @@ function _isdm_cell_onestep(y, fid, tr, eta0, Λ, ẑ::AbstractVector)
 end
 
 """
-    isdm_laplace_grad(table::IsdmTable, θ; K = table.K, unique = table.unique,
+    isdm_laplace_grad(table::IsdmTable, θ; K = table.K, with_unique = table.unique,
                       maxiter = 100, tol = 1e-9) -> Union{Vector{Float64}, Nothing}
 
 Gradient of [`isdm_marginal_loglik_laplace`](@ref) with respect to
-`θ = [b; pack_lambda(Λ)]` (with `unique = true`, `θ = [b; pack_lambda(Λ);
+`θ = [b; pack_lambda(Λ)]` (with `with_unique = true`, `θ = [b; pack_lambda(Λ);
 theta_diag_B]`) by the one-step implicit method. Returns `nothing` when any
 cell's mode search fails at `θ`.
 """
 function isdm_laplace_grad(table::IsdmTable, θ::AbstractVector; K::Integer = table.K,
-        unique::Bool = table.unique, maxiter::Integer = 100, tol::Real = 1e-9)
+        with_unique::Bool = table.unique, maxiter::Integer = 100, tol::Real = 1e-9)
     pX = size(table.X, 2); p = length(table.trait_levels)
-    uniq = unique && K > 0
+    uniq = with_unique && K > 0
     unpack(θd) = uniq ? _isdm_unpack_unique(θd, pX, p, K)[4] : _isdm_unpack(θd, pX, p, K)[2]
     b = θ[1:pX]
     Λ = unpack(θ)

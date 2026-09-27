@@ -666,7 +666,8 @@ All notable changes to GLLVModels.jl are documented here.
   conditional modes); `IsdmTable` gains `unique`; `isdm_marginal_loglik_laplace`
   takes `theta_diag_B` for a unique table; `predict` re-adds `s_B` on units seen
   at fit time and not on unseen ones, as R does. `unique = FALSE` fits are
-  bit-identical to before. The unique variances are identified only with
+  bit-identical to before. `K = 0` on a `unique = TRUE` table is refused, as R
+  refuses `latent(d = 0)`. The unique variances are identified only with
   `p >= 2K + 1` traits; with two traits they run toward zero in R and Julia alike.
   Paired twins on a new four-trait fixture and on R's default-formula fits of the
   two-trait fixtures: `test/parity/isdm_unique_cases.jl`.

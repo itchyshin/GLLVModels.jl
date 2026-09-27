@@ -274,6 +274,12 @@ end
     pX = size(tab.X, 2); p = 4
     b0, L0 = GLLVModels._isdm_start(tab, 1)
 
+    # K = 0 on a unique table is refused up front, as R refuses latent(d = 0)
+    # ("loading rank must be between 1 and the number of rows", measured at P1):
+    # R has no unique variance without a latent() term.
+    @test_throws r"K = 0 on a table built from latent\(\.\.\., unique = TRUE\)" fit_isdm_gllvm(tab; K = 0)
+    @test fit_isdm_gllvm(tab0; K = 0).converged       # the loadings-only table still fits a GLM
+
     # theta_diag_B is required on a unique table and refused on any other.
     @test_throws r"pass `theta_diag_B`" isdm_marginal_loglik_laplace(tab, L0, b0)
     @test_throws r"`theta_diag_B` was given" isdm_marginal_loglik_laplace(tab0, L0, b0; theta_diag_B = zeros(p))

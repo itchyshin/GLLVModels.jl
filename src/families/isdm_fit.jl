@@ -155,7 +155,8 @@ A formula without `latent()` fits `K = 0`: a GLM through the same kernel.
 are identified only when there are enough traits: a one-factor model needs at
 least three (in general `p >= 2K + 1`); with two traits `theta_diag_B` runs
 toward the boundary (a unique SD near zero) in R and in Julia alike, and only
-the log-likelihood is comparable.
+the log-likelihood is comparable. `K = 0` on a `unique = TRUE` table is refused,
+as R refuses `latent(d = 0)`; drop the `latent()` term to fit the GLM.
 
 The marginal is a per-cell Laplace approximation with the observed curvature of
 the summed density; the gradient is the one-step implicit gradient with a
@@ -179,6 +180,11 @@ function fit_isdm_gllvm(table::IsdmTable; K::Integer = table.K, b_init = nothing
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9,
         gradient::Symbol = :analytic)
     gradient in (:analytic, :finite) || throw(ArgumentError("gradient must be :analytic or :finite"))
+    table.unique && K == 0 && throw(ArgumentError(
+        "K = 0 on a table built from latent(..., unique = TRUE): R refuses latent(d = 0) " *
+        "(\"loading rank must be between 1 and the number of rows\") and fits no unique " *
+        "variance without a latent() term. Drop the latent() term from the formula to fit " *
+        "the GLM (K = 0)."))
     table.admitted && _isdm_experimental_notice()
     pX = size(table.X, 2); p = length(table.trait_levels)
     b0, L0 = _isdm_start(table, Int(K))
@@ -199,7 +205,7 @@ function fit_isdm_gllvm(table::IsdmTable; K::Integer = table.K, b_init = nothing
     end
     function agrad(θ)
         gradient === :finite && return nothing
-        g = isdm_laplace_grad(table, θ; K = K, unique = uniq, maxiter = newton_maxiter,
+        g = isdm_laplace_grad(table, θ; K = K, with_unique = uniq, maxiter = newton_maxiter,
                               tol = newton_tol)
         return g === nothing ? nothing : -g
     end

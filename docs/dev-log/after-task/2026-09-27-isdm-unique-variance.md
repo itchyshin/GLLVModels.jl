@@ -54,6 +54,9 @@ CHANGELOG, the `fit_isdm_gllvm` and `predict` docstrings, `docs/src/api.md` and 
 - Mode-search floor noise: `_isdm_cell_mode` (copy of the `_mixed_laplace_mode` rule) accepts a mode at the floating-point floor with a residual step near sqrt(eps)(1 + |z|); the log-determinant is first-order in it, so a cell value can move by ~2.4e-8. Below every receipt tolerance, affects `unique = FALSE` equally, not fixed here.
 - Two-trait default fits: theta_diag_B runs to the boundary (not identified); asserted only through logLik, cross-objective, b_fix and Λ Λ'.
 - Full suite and Aqua/JET not run in this lane.
+- Review follow-up (fixed): `fit_isdm_gllvm(tab; K = 0)` on a unique table threw the internal "pass theta_diag_B" error from inside the optimiser. Now refused up front, as R refuses `latent(d = 0)` (measured at P1); `test/test_isdm.jl` 185/185 on 1.10 and 1.13 after the fix.
+- No boundary twin on an identified (p >= 3) fixture: seeds 20260927 and 20260928 of the generator put one trait's unique SD at the boundary in R; a follow-up could assert logLik and cross-objective only there.
+- Mode-search floor follow-up: Newton polish with the observed curvature at acceptance, in a separate PR that also touches `mixed.jl`.
 
 ## 11. Team Learning
 
@@ -61,4 +64,4 @@ When a model component enters additively with identity loadings, porting it as a
 
 ## 12. Cross-Product Coverage
 
-Covers: `unique = TRUE` on the iSDM door with K = 1, Poisson-log count and Bernoulli-cloglog detection arms, offsets, source-reporting-rate terms, in-sample and `newdata` predict (seen and unseen units), the one-step gradient. This arc does NOT cover: K >= 2 with `unique = TRUE` against R (the kernel accepts it; no R fixture), source observation formulas combined with `unique = TRUE` against R, `se_fit`, R's `diag_B_skip` gate (unreachable on this door), `unique(..., common = TRUE)`, spatial or AGHQ routes, and the `gllvm()` formula door.
+Covers: `unique = TRUE` on the iSDM door with K = 1, Poisson-log count and Bernoulli-cloglog detection arms, offsets, source-reporting-rate terms, in-sample and `newdata` predict (seen and unseen units), the one-step gradient. This arc does NOT cover: K >= 2 with `unique = TRUE` against R (the kernel accepts it; no R fixture), source observation formulas combined with `unique = TRUE` against R, `se_fit`, a boundary twin on an identified (p >= 3) fixture, R's `diag_B_skip` gate (unreachable on this door), `unique(..., common = TRUE)`, spatial or AGHQ routes, and the `gllvm()` formula door.
