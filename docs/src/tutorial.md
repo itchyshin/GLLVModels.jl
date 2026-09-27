@@ -300,16 +300,49 @@ aic(fp)                # 2k − 2·logLik
 bic(fp, size(Y, 2))    # k·log(n_sites) − 2·logLik
 ```
 
+### Choosing the number of latent dimensions
+
 To choose `K`, `select_lv` sweeps `K = 1:Kmax`, fits each, and reports the
 criteria:
 
 ```julia
-sel = select_lv(Y; family = Poisson(), Kmax = 3)
-sel.aic; sel.bic; sel.best_k; sel.best     # sel.best is the fitted model at best_k
+sel = select_lv(Y; family = Poisson(), Kmax = 3, criterion = :bic_sites)
+sel.best_k; sel.best          # the chosen K and the fitted model at that K
+sel.bic_sites; sel.aic        # criterion values for every accepted K
+sel.attempts                  # every K tried, with a status and a reason
 ```
 
-Lower AIC/BIC is better; BIC penalises extra factors more and tends to pick a
-smaller `K`. Use `criterion = :aic` to switch.
+Lower is better. `:bic_sites` penalises each parameter by `log(n)` with `n`
+the number of sites; `:bic` uses `log(p·n)`, the number of observed cells,
+and picks fewer dimensions at small sample sizes; `:aic` tends to pick one
+too many. In simulations with known `K` (Gaussian, Poisson and negative
+binomial responses, 30 to 300 sites, 10 or 20 species), `:bic_sites`
+recovered the true `K` most often.
+
+A fit with more latent dimensions contains every fit with fewer, so its
+log-likelihood can never be lower. `select_lv` therefore never chooses a `K`
+whose fit threw an error, whose log-likelihood fell below a smaller `K`, or
+whose loadings ran away (a trait's latent standard deviation above 10 on the
+link scale, or, for binary data, one trait's loadings far larger than the
+rest). Such a `K` is refitted once from the smaller solution when the family
+allows it, and otherwise listed in `sel.attempts` with the reason. Binary
+responses are the weak spot: at small sample sizes most fits beyond `K = 1`
+run away, so read `sel.attempts` before trusting the choice.
+
+If you leave `K` out of `fit_gllvm`, it runs this sweep (by default
+`Kmax = min(5, p − 1)` and `:bic` unless you pass `criterion`) and returns
+the chosen fit with a one-line message.
+
+!!! warning "The chosen K is an estimate"
+    The number of latent dimensions is chosen from the same data the model is
+    then fitted to. Intervals, p-values and tests from that fit are
+    conditional on the chosen number and do not include uncertainty about it;
+    when the top two candidates are close, treat the choice as uncertain.
+    Species correlations, variance partitions and ordination axes all depend
+    on the chosen number, and individual axes can change meaning when it
+    changes. With a misspecified model the chosen number tends to grow with
+    sample size, so read it as the dimensions the data support at this sample
+    size, not as the number of true gradients.
 
 Finally, `simulate` draws a fresh response matrix from scalar-mean GLM-style,
 Tweedie, and covariate fits (useful for posterior-predictive checks):
