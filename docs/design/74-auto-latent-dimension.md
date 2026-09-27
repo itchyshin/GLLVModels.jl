@@ -69,7 +69,21 @@ n, p and family, and every place a user reads an interval says it is conditional
     on the logit scale), and 17–64% of converged fits exceed latent SD 10. Old AIC over-selects
     wildly (picks broken fits); guarded rules fall back to K = 1 and under-select K = 2, 3
     (≤ 0.07 exact at n ≤ 60). Both BIC variants find K = 1 correctly (≥ 0.96).
-  - Count families (Poisson, NB) not yet harvested.
+  - Update 02:00Z, 818 of 960 tasks, 13 506 datasets (`pilot/harvest-report-interim-0200Z.md`).
+    Mean exact recovery across cells (unweighted), by rule (`len` = guard that keeps an
+    unconverged fit if it is not runaway and not non-monotone):
+
+    | family | old AIC | old BIC pn | old BIC n | new AIC | new BIC pn | new BIC n | len AIC | len BIC pn | len BIC n |
+    |---|---|---|---|---|---|---|---|---|---|
+    | binomial | 0.333 | 0.374 | 0.461 | 0.564 | 0.391 | 0.440 | 0.564 | 0.391 | 0.440 |
+    | gaussian | 0.858 | 0.864 | **0.948** | 0.858 | 0.864 | **0.948** | 0.858 | 0.864 | **0.948** |
+    | nb (partial) | 0.806 | 0.862 | 0.893 | 0.818 | 0.851 | 0.866 | 0.815 | 0.873 | **0.904** |
+    | poisson | 0.982 | 0.998 | **0.999** | 0.974 | 0.989 | 0.991 | 0.982 | 0.998 | **0.999** |
+
+    Poisson: every BIC rule ≥ 0.95 in every cell. NB: 27–47% of K = 2–4 fits unconverged; small
+    cells under-select. Rejecting on the convergence flag alone cost recovery (Poisson, NB), so
+    the guard now keeps an unconverged fit unless it is runaway or non-monotone
+    (`require_converged = false` default, flagged in `attempts`).
 
 ## Built so far (lane branch, not merged)
 
@@ -103,7 +117,7 @@ fit carries no "K was estimated" flag, so `confint`/`summary` do not yet print t
 | ticket | question | recommendation | why |
 |---|---|---|---|
 | T2 route | fit-and-compare, shrinkage, spectral, or hybrid? | **Fit-and-compare with the two safeguards (v1). Spectral guess to narrow the K window later (v1.1). OFAL in a separate lane.** | Reuses `select_lv`; no new estimator; the failure we found is in fits, not in criteria. |
-| T2 criterion | default criterion | **Decide from the grid.** Provisional: BIC. Candidates on the grid: AIC, BIC log(p·n) (current), BIC log(n sites). Chen–Li JIC read and set aside (joint likelihood, J ≥ 100). | No published discrete-data evidence exists; our grid is the evidence. |
+| T2 criterion | default criterion | **BIC with log(number of sites) (`:bic_sites`)**: best or joint best for Gaussian, Poisson and NB on the grid (table above); log(p·n), the current convention, under-selects at small n. Final table when the grid completes. Chen–Li JIC read and set aside (joint likelihood, J ≥ 100). | No published discrete-data evidence exists; our grid is the evidence. |
 | T4 API, Julia | what does omitting K do? | **Omitting K runs `select_lv` and returns the chosen fit**, printing the candidate table once (`@info`); `select_lv` stays the way to get the full record. Today omitting K throws, so nothing that works now changes. Default `Kmax = min(5, p − 1)`. | Shinichi: "OK what if we do not supply d - yes". Return type stays a fit, so downstream code is unchanged. |
 | T4 API, R | what does omitting `d` in `latent()` do? | **Flag: today omitting `d` silently means d = 1**, so switching it to auto changes existing users' fits. Recommend `d = "auto"` now, and switching the default in a later minor release with a NEWS warning. | Julia's switch is error → behaviour; R's would be behaviour → different behaviour. |
 | T7 binary data | how to estimate K for Bernoulli data when most K ≥ 2 fits run away? | **Sweep with a loading ridge (gllvmTMB `aghq_ridge = 2`, Laplace + ridge; Julia has none yet) and compare criteria on the unpenalised log-likelihood at the ridge optimum, or refuse auto-K for binary data below a size threshold and say why.** R ridge experiment running (`ridge/ridge_binary.R`). Also test stronger loadings (latent SD 1.5–3) to separate "undetectable" from "unfittable". | The runaway note (vault) measured ridge τ = 2 cutting runaways 47% → 0% at n = 100; gllvmTMB warns a ridge logLik is not valid for comparison. |

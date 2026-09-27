@@ -36,12 +36,20 @@ for key, g in df.groupby(keys):
     a = pd.DataFrame(acc)
     for name, col in crits.items():
         rec[f"new_{name}"] = int(a.K_fit[a[col].idxmin()]) if len(a) else np.nan
+    # lenient: unconverged fits are allowed if not runaway and monotone
+    acc2, llp2 = [], -math.inf
+    for _, r in g.iterrows():
+        if not r.ok or runaway(r) or r.loglik < llp2 - TOL: continue
+        acc2.append(r); llp2 = r.loglik
+    a2 = pd.DataFrame(acc2)
+    for name, col in crits.items():
+        rec[f"len_{name}"] = int(a2.K_fit[a2[col].idxmin()]) if len(a2) else np.nan
     rows.append(rec)
 R, KS = pd.DataFrame(rows), pd.DataFrame(kstat)
 
 def summ(sub):
     out = {"datasets": len(sub)}
-    for rule in ("old", "new"):
+    for rule in ("old", "new", "len"):
         for name in crits:
             k = sub[f"{rule}_{name}"]; t = sub.K_true; m = k.notna()
             e = (k[m] == t[m]).mean() if m.any() else np.nan
@@ -51,9 +59,13 @@ def summ(sub):
 with open(sys.argv[2], "w") as fh:
     fh.write(f"# Auto-d recovery grid ({len(files)} task files, {len(R)} datasets, {len(df)} fits)\n\n")
     fh.write("Cells: exact-recovery rate ± MCSE (u = too few, o = too many). old = argmin over every fit that returned;\n")
-    fh.write(f"new = guarded (converged, logLik non-decreasing, not runaway: row norm > {SD_MAX} or binomial ratio ≥ {RATIO_MAX}).\n\n")
+    fh.write(f"new = guarded (converged, logLik non-decreasing, not runaway: row norm > {SD_MAX} or binomial ratio ≥ {RATIO_MAX});\nlen = lenient guard (unconverged allowed if not runaway and non-decreasing).\n\n")
     for fam, gf in R.groupby("family"):
         fh.write(f"## {fam}\n\n" + gf.groupby(["n", "p", "K_true"])[list(gf.columns)].apply(summ).to_markdown() + "\n\n")
+    fh.write("## Mean exact-recovery rate across cells (unweighted), by family and rule\n\n")
+    cols = [f"{r}_{c}" for r in ("old", "new", "len") for c in crits]
+    tab = R.assign(**{c: (R[c] == R.K_true).astype(float).where(R[c].notna()) for c in cols}).groupby("family")[cols].mean().round(3)
+    fh.write(tab.to_markdown() + "\n\n")
     fh.write("## Fit status by family and K_fit (share of attempted fits)\n\n")
     fh.write(pd.crosstab([KS.family, KS.K_fit], KS.st, normalize="index").round(3).to_markdown() + "\n")
 print(f"{len(files)} files, {len(R)} datasets -> {sys.argv[2]}")

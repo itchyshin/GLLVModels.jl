@@ -116,11 +116,15 @@ Latent-dimension selection: fit `fit_gllvm(Y; family, K = k, kwargs...)` for
 guard: `:aic`, `:bic` (penalty `log(p·n)`, observed cells) or `:bic_sites`
 (penalty `log(n)`, sites).
 
-The guard rejects a fit that throws, reports non-convergence, or has a
+The guard rejects a fit that throws, is a runaway (below), or has a
 log-likelihood more than `max(tol, 1e-6·|ℓ|)` below the best converged,
 non-runaway fit at any smaller `K` (a `K` model nests every smaller one, so its
 maximum cannot be lower; runaway fits are excluded from this bar because
-separation inflates their log-likelihood). It also rejects a runaway fit:
+separation inflates their log-likelihood). A fit whose optimiser did not report
+convergence is kept, with a message in `attempts`, unless it is also runaway or
+non-monotone; `require_converged = true` rejects it instead (on the auto-d recovery
+grid the strict rule lost recovery for Poisson and negative binomial data, and every
+broken unconverged fit was already caught by the other checks). It also rejects a runaway fit:
 because the latent variables are standardised, a trait's loading row norm is its
 latent SD on the link scale, and a value above `max_latent_sd` (default 10, a
 saturated effect) marks common inflation of the loadings; for `Binomial`, one
@@ -155,7 +159,8 @@ sel.attempts        # every K tried, with status
 function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
                    criterion::Symbol = :bic, warm_start::Bool = true,
                    tol::Real = 1e-3, max_latent_sd::Real = 10.0,
-                   ratio_max::Real = 25.0, _fitter = fit_gllvm, kwargs...)
+                   ratio_max::Real = 25.0, require_converged::Bool = false,
+                   _fitter = fit_gllvm, kwargs...)
     criterion in (:aic, :bic, :bic_sites) ||
         throw(ArgumentError("criterion must be :aic, :bic or :bic_sites; got :$criterion"))
     mask = get(kwargs, :mask, nothing)
@@ -192,7 +197,7 @@ function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
         llprev = llbar
         tolk(ll) = max(tol, 1e-6 * abs(ll))
         runaway(f) = _lv_runaway(f, family; max_latent_sd = max_latent_sd, ratio_max = ratio_max)
-        acceptable(f) = f !== nothing && _lv_converged(f) && isempty(runaway(f)) &&
+        acceptable(f) = f !== nothing && (_lv_converged(f) || !require_converged) && isempty(runaway(f)) &&
                         _loglik(f) >= llprev - tolk(llprev)
         status = :ok
         if !acceptable(fit) && fit !== nothing && warm_start && prev !== nothing
@@ -205,7 +210,7 @@ function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
         if fit === nothing
             push!(attempts, (K = k, status = :failed, loglik = NaN, message = msg))
             continue
-        elseif !_lv_converged(fit)
+        elseif require_converged && !_lv_converged(fit)
             push!(attempts, (K = k, status = :unconverged, loglik = _loglik(fit), message = ""))
             continue
         elseif !isempty(runaway(fit))
@@ -217,7 +222,8 @@ function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
             continue
         end
         llbar = max(llbar, _loglik(fit))
-        push!(attempts, (K = k, status = status, loglik = _loglik(fit), message = ""))
+        push!(attempts, (K = k, status = status, loglik = _loglik(fit),
+                         message = _lv_converged(fit) ? "" : "optimiser did not report convergence; kept (not runaway, logLik non-decreasing)"))
         push!(Ks, k)
         push!(nps, _nparams(fit))
         push!(lls, _loglik(fit))

@@ -141,8 +141,9 @@ end
         @test !(2 in sel.K)
     end
 
-    @testset "an unconverged fit is excluded" begin
-        sel = select_lv(Y; Kmax = 3, _fitter = _fake_fitter(Any[]; warm_ok = true, unconv_at = 2))
+    @testset "an unconverged fit is excluded when require_converged = true" begin
+        sel = select_lv(Y; Kmax = 3, require_converged = true,
+                        _fitter = _fake_fitter(Any[]; warm_ok = true, unconv_at = 2))
         a2 = only(filter(a -> a.K == 2, sel.attempts))
         @test a2.status === :unconverged
         @test !(2 in sel.K)
@@ -327,4 +328,21 @@ end
         @test sel.bic ≈ [10k * log(150) - 2(-500.0 + 30k) for k in 1:2]
         @test sel.bic_sites ≈ [10k * log(30) - 2(-500.0 + 30k) for k in 1:2]
     end
+end
+
+# Recovery grid (lane auto-d, 13 506 datasets): rejecting a fit only because the optimiser
+# did not report convergence cost recovery (Poisson 0.999 → 0.991, NB 0.904 → 0.866); every
+# broken unconverged fit was already caught as runaway or non-monotone. Default is lenient.
+@testset "select_lv — unconverged fits are kept by default, flagged" begin
+    Y = zeros(6, 40)
+    sel = select_lv(Y; Kmax = 3, _fitter = _fake_fitter(Any[]; warm_ok = true, unconv_at = 2))
+    a2 = only(filter(a -> a.K == 2, sel.attempts))
+    @test a2.status === :ok
+    @test occursin("did not report convergence", a2.message)
+    @test 2 in sel.K
+    # still rejected if it is also a runaway
+    f = (Y; family, K, kwargs...) -> _FakeLVFit(-500.0 + 60K, 10K, K != 2, zeros(6),
+                                               K == 2 ? fill(30.0, 6, 2) : fill(0.5, 6, K))
+    sel2 = select_lv(Y; family = Poisson(), Kmax = 3, warm_start = false, _fitter = f)
+    @test only(filter(a -> a.K == 2, sel2.attempts)).status === :runaway
 end
