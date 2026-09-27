@@ -250,6 +250,22 @@ All notable changes to GLLVModels.jl are documented here.
   a fixed `nu`, or via `fit_studentt_gllvm(...; disp_group = :shared)`) shares no code
   with the grouped kernel fixed here and is NOT covered by this PR (measured 78/500
   stress-probe sites non-mode on the same audit).
+- **BetaBinomial fits no longer report convergence from a diverged inner search
+  (#503).** `_beta_binomial_mode` (the single per-site Laplace mode search shared by
+  every `BetaBinom` route — `fit_beta_binomial_gllvm`, its grouped and grouped+X
+  variants, and their `getLV`/`predict`) ran an undamped Newton loop on the clamped
+  observed curvature (`_bb_score_weight` floors the weight to keep `Λ'WΛ + I` SPD, but
+  does not keep any step a descent step) with no convergence flag, so a non-mode site
+  could still return a finite value: the class audit (Λ scaled up to 3x, warm start
+  perturbed ±50%) measured 27/500 non-mode sites. The search now halves any step that
+  lowers the per-site log-posterior and certifies convergence only when the full
+  proposed step is below `tol`; a site that still cannot converge is retried once at a
+  20x iteration budget (mirrors #507/#509) before the fitting objective's per-site
+  log-marginal returns `-Inf`, so the fitter's failure sentinel fires. Values at sites
+  where the old search converged are unchanged: a 220-site stress probe measured 0
+  finite non-stationary sites and 0 false `-Inf` at healthy sites, with a maximum
+  healthy-site value change of 4.3e-11. `getLV`/`predict` are unaffected in their
+  public behaviour (still return `z`) but now run the same damped, retried search.
 
 ### Changed
 - **Breaking (default change):** `fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm`
