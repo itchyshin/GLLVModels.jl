@@ -1,5 +1,7 @@
 # Packet 1: true parity at P1, the decisions only you can make (2026-09-27)
 
+**SIGNED 2026-09-27 by Shinichi, in chat: "Packet 1: accept 0 to 13 as recommended." Vault decision D-295.**
+
 Pin P1 = gllvmTMB main 9539352f6 (0.7.1, untagged). Plan: `ultra-plan.md` in this folder. Each row has a recommendation and a reply you can paste. Reply with the row numbers you accept; anything you do not mention stays open, and the lane keeps building what does not depend on it.
 
 Four items were answered on 2026-09-24 and are not asked again: the S4 probe, D3 Stage 1, Totoro #323 Track A, delta dispersion A. The older packet (`docs/dev-log/owed/2026-09-25-true-parity-decision-packet.md`, 36 rows) still stands for the 0.7.0 ledger. Its row 1 (B-06, which R version) is answered by your re-pin decision; Packet 2 (week 2) carries the rest forward.

@@ -2,7 +2,7 @@
 
 - [ ] A0 WS0 additive re-pin to P1: P1 oracle beside P0, CAPABILITY_LEDGER_REF pinned, required P1 CI job, case-map rows for +25 exports and +11 S3 methods (proposed; Shinichi signs), stale-row scan under the carry rule, 20 isdm rows reclassified, `tools/true_parity_check.mjs` with dynamic row count, receipt resolution, negative controls; tracked ledger. (4 to 5 days)
 - [ ] A0r Recon of each new export at P1 (Haiku)
-- [ ] D1 GATE: Packet 1 (13 items) and the P1 claim boundary, drafted with replies
+- [x] D1 GATE: Packet 1 and the P1 claim boundary. DONE: signed as recommended 2026-09-27 (D-295, packet-1.md)
 - [ ] A1a iSDM spec (Fable), after the iSDM scope decision in D1
 - [ ] A1b iSDM kernel and fitter in new files (after #514 merges)
 - [ ] A1c iSDM twin tests and receipts
@@ -12,6 +12,7 @@
 - [ ] A4a gllvmTMB #1236 bridge rebase and finish; #1283 recorder
 - [ ] A4b real-data workflows C1 to C5
 - [ ] A5 silent-failure backlog (#504 adapters, #505, Tweedie grouped); #514 and #515 are finishing in the previous session
-- [ ] A6 temporal at R's scope; A7 column-coefficient grammar; A8 spatial_dep and spatial_*; A9 phylo latent (inside or outside P1 per D1's boundary)
+- [ ] A6 temporal at R's scope (INSIDE P1); A9 phylo latent A14/A15 (INSIDE P1)
+- [ ] A7 column-coefficient grammar and A8 spatial_dep/spatial_*: OUTSIDE P1 (D-295). Write their signed-disposition rows in WS0; revisit at P2
 - [ ] D2 GATE: Packet 2 (47 pending-decision rows, 22 spec-defect rows), week 2
 - [ ] D3 GATE: Packet 3 (91 reverse-gap classes, Julia-only extras), week 5
