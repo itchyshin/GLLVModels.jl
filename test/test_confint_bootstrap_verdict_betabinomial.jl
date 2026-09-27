@@ -7,15 +7,18 @@
 # precision at the 1e6 boundary, where the loglik and every parameter, including
 # log φ ≈ 29, are finite. This follows the Poisson migration (#516,
 # test_confint_bootstrap_verdict_poisson.jl): the closures now return
-# `(θ = ..., converged = ..., loglik = ...)`, and such replicates are excluded
-# and not counted in `n_converged` (maintainer choice, option 1 on #542).
+# `(θ = ..., converged = ..., loglik = ..., upper_boundary = ...)`. Such
+# replicates are excluded and not counted in `n_converged`; and when more than
+# the upper tail `(1 - level)/2` of usable replicates put a given φ at the
+# boundary, that φ's upper bound is reported as `Inf` (maintainer choice,
+# option 3 on #542).
 #
 # Every assertion is a relation (the adapter against a direct refit, the new
 # contract against the old bare-vector one, a count strictly between 0 and
 # n_boot) rather than one seed's fitted number. The data are literal and
 # hash-verified: #522's fixture for healthy fits and
 # fixtures/beta_binomial_boot_boundary_542.toml for the boundary case.
-using GLLVModels, Test, Random, TOML, SHA
+using GLLVModels, Test, Random, TOML, SHA, Statistics
 const GM = GLLVModels
 
 const BB542_HEALTHY = joinpath(@__DIR__, "fixtures", "beta_binomial_verdict_515.toml")
@@ -128,9 +131,80 @@ end
             @test all(isfinite, raw.θ)
             # The old bare-vector contract would have counted it ...
             @test GM._bootstrap_refit_ok(raw.θ, m)[2]
-            # ... the migrated contract does not.
+            # ... the migrated contract does not ...
             @test !GM._bootstrap_refit_ok(raw, m)[2]
+            # ... and the refit flags φ (the last entry) as at its upper boundary.
+            @test raw.upper_boundary == [i == m for i in 1:m]
+            @test GM._bootstrap_upper_boundary(raw, m) !== nothing
         end
+    end
+
+    @testset "grouped refit flags exactly the species whose φ is at the boundary" begin
+        # Per-species grouped fit of healthy_seed_9003 (#522 fixture): one species'
+        # φ runs past 1e6 on origin/main 97e11be04 (7.6e15 on Julia 1.10.12, 4.1e15
+        # on 1.13.0; measured for #541, test_beta_binomial_grouped_verdict_515.jl there). The adapter's
+        # refit of the same data is the same fit.
+        Yk, Nk = _bb542_case(BB542_HEALTHY, "healthy_seed_9003")
+        p = size(Yk, 1)
+        fk = GM.fit_beta_binomial_gllvm_grouped(Yk; K = 2, N = Nk, group = collect(1:p))
+        @test maximum(fk.φ) >= GM._BB_PHI_STABLE   # the recorded state
+        ad = GM._family_ci(fk, Yk; N = Nk)
+        m = length(ad.θ)
+        raw = ad.refit(Yk)
+        at = fk.φ .>= GM._BB_PHI_STABLE
+        @test raw.upper_boundary == vcat(fill(false, m - p), at)
+        @test 1 <= count(raw.upper_boundary) < p
+    end
+
+    @testset "option 3: Inf upper bound when boundary share exceeds the tail (synthetic)" begin
+        # A fake adapter, no fitting: replicate k (in call order, `parallel = false`)
+        # is at the φ boundary for k <= nb, a failed refit for nb < k <= nb + nf, and
+        # an interior draw otherwise. θ = [β, λ, log φ]; only φ carries the flag.
+        function fake_ad(nb, nf; flag_field = true)
+            k = Ref(0)
+            refit = function (_)
+                j = k[] += 1
+                θj = [j / 100, -j / 100, log(5 + j / 10)]
+                if j <= nb
+                    θb = [j / 100, -j / 100, log(1e7)]
+                    return flag_field ?
+                        (θ = θb, converged = false, loglik = -100.0,
+                         upper_boundary = [false, false, true]) :
+                        (θ = θb, converged = false, loglik = -100.0)
+                elseif j <= nb + nf
+                    return (θ = θj, converged = false, loglik = -Inf)
+                end
+                return (θ = θj, converged = true, loglik = -100.0)
+            end
+            return GM._FamilyCI([0.0, 0.0, log(5.0)], θ -> 0.0, ["beta", "lambda", "phi"],
+                                [:linear, :linear, :log], rng -> nothing, refit)
+        end
+        boot(ad, n_boot) = GM._family_bootstrap(ad, [1, 2, 3], 0.95, n_boot, 1, false)
+        n_boot = 40   # tail a = 0.025, i.e. exactly 1 of 40
+
+        r0 = boot(fake_ad(0, 0), n_boot)
+        @test r0.n_converged == 40 && all(isfinite, r0.upper)
+
+        r1 = boot(fake_ad(1, 0), n_boot)   # 1/40 = 0.025: not above the tail
+        @test r1.n_converged == 39 && isfinite(r1.upper[3])
+
+        r2 = boot(fake_ad(2, 0), n_boot)   # 2/40 = 0.05 > 0.025
+        @test r2.n_converged == 38
+        @test r2.upper[3] == Inf
+        @test isfinite(r2.lower[3])                        # lower bound from the interior draws
+        @test isfinite(r2.upper[1]) && isfinite(r2.upper[2])   # β and λ keep their quantiles
+        # β's bounds come from the 38 interior draws only (boundary rows excluded).
+        interior = [j / 100 for j in 3:40]
+        @test r2.lower[1] ≈ quantile(interior, 0.025) && r2.upper[1] ≈ quantile(interior, 0.975)
+
+        # A failed refit is not a usable replicate: 1 boundary of 39 usable > 0.025.
+        r3 = boot(fake_ad(1, 1), n_boot)
+        @test r3.n_converged == 38 && r3.upper[3] == Inf
+
+        # Without the field (the Poisson contract), boundary rows are just excluded.
+        r4 = boot(fake_ad(2, 0; flag_field = false), n_boot)
+        @test r4.n_converged == 38 && isfinite(r4.upper[3])
+        @test r4.lower == r2.lower && r4.upper[1:2] == r2.upper[1:2]
     end
 
     @testset "all-converged bootstrap: endpoints identical to the bare-vector contract" begin

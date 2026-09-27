@@ -391,10 +391,16 @@ All notable changes to GLLVModels.jl are documented here.
   (`log φ` about 18 to 29) are finite: on two literal Binomial datasets the
   ungrouped refit lands there and the old contract accepted it. The closures
   now return `(θ, converged, loglik)` as Poisson's does since #516, so such
-  replicates are excluded and `n_converged` counts only the ones kept. When
-  every replicate converges, bootstrap endpoints are identical to before.
-  Excluding boundary replicates can make an upper bound for `φ` look tighter
-  than the data support; check `n_converged` against `n_boot`.
+  replicates are excluded and `n_converged` counts only the ones kept. They
+  also flag each `φ` at the boundary (`upper_boundary`), and when the flagged
+  share of usable replicates for a given `φ` exceeds the upper tail
+  `(1 - level)/2`, that `φ`'s bootstrap upper bound is `Inf` rather than a
+  quantile of the interior draws (option 3 on #542). Its lower bound still
+  comes from the interior draws. On per-species grouped fits of the #522
+  fixture, about a quarter of replicates (35 of 150) had some species at the
+  boundary. `_family_bootstrap` reads the new field only when an adapter sets
+  it, so other families are unchanged, and when every replicate converges the
+  bootstrap endpoints are identical to before.
 
 ### Changed
 - **Breaking (default change):** `fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm`
