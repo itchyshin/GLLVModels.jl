@@ -10,6 +10,11 @@
 - A14 receipts against a private P1 build (`docs/dev-log/core070/phylo-latent-p1/`): logLik
   relative difference 4e-14, cross objectives within 1.1e-14 on both the tree and dense
   routes. Replay `test/test_phylo_latent_paired_p1.jl` (parity tag P1).
+- A15 receipt (100 species x 5 replicates x 20 traits, `d = 2`): logLik relative difference
+  2.8e-13, cross objectives 3.7e-11 and 1.7e-11, Sigma_phy 1.1e-6; wall time R 3.4 s, Julia
+  17.7 s. Neither engine meets the 1e-4 cross-gradient bar (R's own optimum 4.0e-3, Julia's
+  2.0e-4, Julia `converged = false`); recorded as `@test_broken`. Replay 98 pass, 4 broken
+  (102 pass with the opt-in live A15 refit) on 1.10.12 and 1.13.0.
 - P1 contradicts the spec twice (Ainv route, unary nodes); recorded in
   `docs/dev-log/decisions/2026-09-27-phylo-latent-parameterisation.md`.
 

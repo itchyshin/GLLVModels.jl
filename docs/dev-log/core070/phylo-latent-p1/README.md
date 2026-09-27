@@ -25,6 +25,9 @@ the Julia side.
 | `struct_phy_tree_rr/julia-receipt.json` | `7da419e71edc2268395e84a9687ded92fa466902691374d68e3c53b0f430becd` |
 | `struct_phy_dense_rr/r-receipt.json` | `b7d728eb30e27c207ba05d4867730052fc75ebe82db1cac15cc3e738d03fc3d5` |
 | `struct_phy_dense_rr/julia-receipt.json` | `700f14677d5498d832d900ea7939d8ed023c90948f1603891029da18401cd288` |
+| `a15-fixture.json` | `f3bace851f60f337a8274859644135a84792b9e9ab35c07f757a7ade336706d4` |
+| `cov_phylo_latent_rsz/r-receipt.json` | `5121fbfeb20421149e9c535ea9220458d531f8ec0cfaa71c5b010a8597a7e40e` |
+| `cov_phylo_latent_rsz/julia-receipt.json` | `9840f0a17840e438f66c5df97b5325188f15d0e05789191a14b6188f04054bab` |
 
 ## A14 fixture
 
@@ -55,3 +58,47 @@ cases fit the same response. R parameters: `b_fix` x3, `log_sigma_eps`,
 
 Julia wall time includes the finite-difference Hessian diagnostic and
 first-call compilation.
+
+## A15 fixture (COV-PHYLO-LATENT-RSZ)
+
+The signed shape (D-300 answer 2): `ape::rcoal(100)` with seed `20260928`,
+tips relabelled `sp1` to `sp100` and written with 17 significant digits (both
+engines read that Newick string), 20 traits, 5 replicates per species
+(500 observations, 10 000 long rows), `d = 2`. Truth drawn in R (intercepts
+`sd = 0.5`, loadings `sd = 0.6`, residual `sd = 0.5`, all recorded in the
+fixture). 60 free parameters on both sides; `n_aug = 198`.
+
+## A15 results
+
+| Quantity | Value | Bar |
+|---|---|---|
+| R / Julia logLik | -7371.771401586599 / -7371.7714015845095 | |
+| logLik relative difference | 2.8e-13 | rtol 1e-6, pass |
+| Julia objective at R optimum minus R objective | 3.7e-11 | abs 1e-8, pass |
+| R objective at Julia optimum minus Julia objective | 1.7e-11 | abs 1e-8, pass |
+| Sigma_phy relative difference (norm; max abs / max) | 1.1e-6; 1.2e-6 | rtol 1e-4, pass |
+| beta relative difference (norm; elementwise max) | 1.5e-5; 1.2e-4 | rtol 1e-4, pass in norm |
+| sigma_eps^2 relative difference | 4.2e-7 | rtol 1e-4, pass |
+| log det A, R minus Julia; n_aug | 0; 198 and 198 | abs 1e-8, pass |
+| R AD gradient max abs at Julia optimum | 2.0e-4 | 1e-4, **not met** |
+| Julia FD gradient max abs at R optimum | 4.0e-3 | 1e-4, **not met** |
+| R nlminb status; AD gradient max abs at own optimum | 0 (relative convergence); 4.0e-3 | |
+| Julia `converged`; FD gradient max abs at own optimum | false (`gradient_not_converged`, 338 LBFGS iterations); 2.0e-4 | Julia `g_tol = 1e-5` |
+| cond(H): R sdreport `cov.fixed`; Julia FD Hessian | 83 030; 81 735 | recorded, not gated |
+| Wall time, fit only: R; Julia (1.10.12, 2 threads) | 3.4 s; 17.7 s | estimate was minutes; far under 1 h |
+
+The elementwise beta maximum is the one near-zero intercept (trait 14,
+`b = 0.0476`), absolute difference `5.8e-6`.
+
+**Stationarity gap, recorded, not widened.** Both engines stop on the flat
+floor of an objective of size 7372. R's own nlminb optimum has AD gradient
+`4.0e-3`; Julia's LBFGS stops at FD gradient `2.0e-4` (R's AD gradient at the
+same point is `2.03e-4`, so the finite differences are accurate there), so
+Julia reports `converged = false` under its absolute `g_tol = 1e-5`. A
+restart from the returned point, or 2000 iterations, does not move it. One
+Newton step with the finite-difference Hessian from the Julia point lowers the
+objective by `1.8e-10` and the gradient to `6e-6`, so the Julia point is
+within about `2e-10` of the optimum in objective. The two cross-gradient
+checks and Julia's `converged` flag are `@test_broken` in the replay; every
+other A15 quantity passes. A scale-aware stopping rule or a Newton polish in
+`fit_precision_multivariate` would close it; neither is in this PR.

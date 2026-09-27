@@ -17,6 +17,9 @@ const _PLP1_SHA = Dict(
     "struct_phy_tree_rr/julia-receipt.json" => "7da419e71edc2268395e84a9687ded92fa466902691374d68e3c53b0f430becd",
     "struct_phy_dense_rr/r-receipt.json" => "b7d728eb30e27c207ba05d4867730052fc75ebe82db1cac15cc3e738d03fc3d5",
     "struct_phy_dense_rr/julia-receipt.json" => "700f14677d5498d832d900ea7939d8ed023c90948f1603891029da18401cd288",
+    "a15-fixture.json" => "f3bace851f60f337a8274859644135a84792b9e9ab35c07f757a7ade336706d4",
+    "cov_phylo_latent_rsz/r-receipt.json" => "5121fbfeb20421149e9c535ea9220458d531f8ec0cfaa71c5b010a8597a7e40e",
+    "cov_phylo_latent_rsz/julia-receipt.json" => "9840f0a17840e438f66c5df97b5325188f15d0e05789191a14b6188f04054bab",
 )
 const _PLP1_DLL_SHA = "cba0f54d5492f0c6d0c5474c19281e3b58d5e2b0709e536684619558aaf55b8d"
 
@@ -70,8 +73,15 @@ function _plp1_case(case, fixture; refit::Bool, stationarity_gap::Bool = false)
     labels_r = String.(collect(rr.Ainv_node_labels))
     tips_r = [findfirst(==(t), labels_r) for t in phy.node_labels[phy.species_aug_id]]
     @test all(!isnothing, tips_r)
+    # Tip covariance implied by each engine's precision (node order differs
+    # only among internal nodes). Norm-relative: two dense inverses of an
+    # order-198 precision with short edges carry ~1e-12 roundoff per entry.
     @test isapprox(inv(Q_r)[tips_r, tips_r],
-        inv(Matrix(phy.Q))[phy.species_aug_id, phy.species_aug_id]; atol = 1e-10)
+        inv(Matrix(phy.Q))[phy.species_aug_id, phy.species_aug_id]; rtol = 1e-10)
+    order = [findfirst(==(t), fx.tips) for t in phy.node_labels[phy.species_aug_id]]
+    C_expected = fx.vcv[order, order] + (pl_route(case) === :vcv ? 1e-8 : 0.0) * I
+    @test isapprox(inv(Matrix(phy.Q))[phy.species_aug_id, phy.species_aug_id], C_expected;
+        rtol = 1e-10)
     @test sort(unique(rr.species_aug_id_zero_based .+ 1)) == sort(unique(phy.species_aug_id[species_id]))
 
     # Both optima and both cross objectives.
