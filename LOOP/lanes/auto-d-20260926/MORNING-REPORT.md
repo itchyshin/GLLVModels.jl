@@ -48,6 +48,13 @@ because most unpenalised fits at d ≥ 2 run away. Nothing is merged or pushed; 
 - **gllvmTMB `latent()` adds a per-species residual (Ψ) by default**; GLLVModels does not. They
   agree like-for-like only with `unique = FALSE`.
 
+## Compute: over estimate
+
+The DRAC grid used about 1,200 core-hours (nibi 18, narval 1,185) against the 300 to 600 I
+estimated, 2 to 4 times over; nearly all of it was negative binomial fits that ran to the 6-hour
+limit (119 tasks). I did not resubmit the timed-out tasks: that is more compute, so it is your call.
+To finish the grid: resubmit those tasks with a 24-hour limit or 2 reps per task.
+
 ## What it does NOT cover
 
 HSquared; the ordered factor LASSO (parked as its own lane); grouped/phylo/row-effect routes;
