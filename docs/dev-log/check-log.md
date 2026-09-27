@@ -1,3 +1,20 @@
+## 2026-09-27: BetaBinomial bootstrap refits report their own verdict (#542, part of #504)
+
+- Branch `claude/bb-boot-verdict-542` from `origin/main` @ `97e11be04`. The three beta-binomial
+  refit closures in `src/confint_family.jl` return `(θ, converged, loglik)`, as Poisson's has
+  since #516; `_bootstrap_refit_ok` and `_family_bootstrap` are unchanged. Maintainer choice:
+  option 1 on #542 (exclude non-converged replicates, report `n_converged`).
+- New test `test/test_confint_bootstrap_verdict_betabinomial.jl` with a literal fixture
+  `test/fixtures/beta_binomial_boot_boundary_542.toml` (two Binomial datasets where the ungrouped
+  refit reaches φ >= 1e6 with a finite loglik and θ). 17 pass, 17 fail, 23 error on main (1.10.12);
+  57/57 on the branch on Julia 1.10.12 and 1.13.0 (`JULIA_NUM_THREADS=2 OPENBLAS_NUM_THREADS=1`,
+  per-file, full suite not run).
+- Neighbour: the beta-binomial bootstrap testset in `test/test_confint_family.jl` (`n_converged >= 4`
+  of 8) gives 8 of 8 on main and branch, both versions.
+- Boundary rate, 50 replicates per dataset, Julia 1.10.12, local merge with #541: ungrouped 0 of
+  250; per-species grouped 35 of 150 (23%) at `φ >= 1e6`, which option 1 drops once #541 merges.
+- After-task: `docs/dev-log/after-task/2026-09-27-bb-boot-verdict-542.md`.
+
 ## 2026-09-25: Two-part families no longer score an unfinished mode search (#484)
 
 - Branch `claude/twopart-mode-search-484`, rebased onto `origin/main` (past #481 Gamma, #483 Beta,
