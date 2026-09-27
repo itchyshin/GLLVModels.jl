@@ -8,6 +8,8 @@ for spec in "$@"; do
   N=${spec%%:*}; H=${spec#*:}
   cur=$(gh pr view $N -R $R --json headRefOid -q .headRefOid)
   if [ "$cur" != "$H" ]; then echo "NOT MERGED #$N: head moved ($cur != $H); stopping train"; exit 1; fi
+  title=$(gh pr view $N -R $R --json title -q .title)
+  if printf '%s' "$title" | grep -qiE '(fix(es|ed)?|close[sd]?|resolve[sd]?) +#[0-9]+' && [ "${ALLOW_CLOSE:-}" != "$N" ]; then echo "NOT MERGED #$N: title would close an issue on squash ($title); set ALLOW_CLOSE=$N if intended"; exit 1; fi
   git -C "$CLONE" fetch -q origin
   if ! git -C "$CLONE" merge-tree --write-tree origin/main $H >/dev/null 2>&1; then echo "NOT MERGED #$N: conflicts with current main; stopping train"; exit 1; fi
   echo "#$N: waiting for checks on ${H:0:9}"
