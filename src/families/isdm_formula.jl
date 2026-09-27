@@ -145,8 +145,10 @@ end
 # "traitsp1:env"), so b_fix pairs with R's X_fix_names by name (spec Q3).
 _isdm_r_name(s::AbstractString) = replace(replace(s, r"([A-Za-z0-9_.]+): " => s"\1"), " & " => ":")
 
-# Evaluate an offset (or other simple column) expression against the table:
-# column names, numeric literals, and calls to Base functions, broadcast.
+# Evaluate an offset expression against the table: column names, numeric
+# literals, and a small set of arithmetic and log/exp functions, broadcast.
+const _ISDM_OFFSET_FUNS = (:log, :exp, :log1p, :log10, :log2, :sqrt, :abs, :+, :-, :*, :/, :^)
+
 function _isdm_eval_expr(ex, cols, n::Int)
     if ex isa Symbol
         haskey(cols, ex) || throw(ArgumentError(
@@ -157,8 +159,7 @@ function _isdm_eval_expr(ex, cols, n::Int)
         return Float64.(col)
     elseif ex isa Real
         return fill(Float64(ex), n)
-    elseif ex isa Expr && ex.head === :call && ex.args[1] isa Symbol &&
-           isdefined(Base, ex.args[1])
+    elseif ex isa Expr && ex.head === :call && ex.args[1] in _ISDM_OFFSET_FUNS
         fn = getfield(Base, ex.args[1])
         args = (_isdm_eval_expr(a, cols, n) for a in ex.args[2:end])
         return Float64.(broadcast(fn, args...))
