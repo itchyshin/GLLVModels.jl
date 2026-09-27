@@ -1,0 +1,21 @@
+Optim 1.13.3  GLLVModels at /home/snakagaw/gllvm-check-501/repo/src/GLLVModels.jl  Julia 1.10.12
+seeds 2001:2010
+seed=2001  conv=true  ll=   -169.0038 nonstat= 0/40 maxgrad=1.170e-14 restart(pert=-169.0038 true=-169.0038) best=-169.0038 gap=-2.6716e-12 better=false flagged=false t=12.23s
+seed=2002  conv=true  ll=   -194.6364 nonstat= 0/40 maxgrad=3.732e-15 restart(pert=-194.6364 true=-194.6364) best=-194.6364 gap=-6.4801e-12 better=false flagged=true  t=3.62s
+  line-trace fit->bestrestart: maxstep=0.8637 medstep=0.5549 jump-ratio=1.56
+seed=2003  conv=true  ll=   -175.1267 nonstat= 0/40 maxgrad=6.932e-15 restart(pert=-175.1267 true=-175.1267) best=-175.1267 gap=-7.6454e-12 better=false flagged=true  t=2.59s
+  line-trace fit->bestrestart: maxstep=0.0000 medstep=0.0000 jump-ratio=2.07
+seed=2004  conv=true  ll=   -196.7429 nonstat= 0/40 maxgrad=5.846e-15 restart(pert=-196.7429 true=-196.7429) best=-196.7429 gap=+1.7025e-11 better=false flagged=true  t=2.73s
+  line-trace fit->bestrestart: maxstep=0.0000 medstep=0.0000 jump-ratio=2.04
+seed=2005  conv=true  ll=   -182.8099 nonstat= 0/40 maxgrad=1.112e-14 restart(pert=-182.8099 true=-182.8099) best=-182.8099 gap=+8.5265e-12 better=false flagged=false t=3.62s
+seed=2006  conv=true  ll=   -198.9214 nonstat= 0/40 maxgrad=4.274e-15 restart(pert=-198.9214 true=-198.9214) best=-198.9214 gap=+2.9331e-11 better=false flagged=true  t=2.83s
+  line-trace fit->bestrestart: maxstep=0.0000 medstep=0.0000 jump-ratio=2.31
+seed=2007  conv=true  ll=   -184.9645 nonstat= 0/40 maxgrad=3.915e-15 restart(pert=-184.9645 true=-184.9645) best=-184.9645 gap=-2.6716e-12 better=false flagged=true  t=2.42s
+  line-trace fit->bestrestart: maxstep=0.0000 medstep=0.0000 jump-ratio=3.05
+seed=2008  conv=true  ll=   -192.2081 nonstat= 0/40 maxgrad=4.207e-15 restart(pert=-192.2081 true=-192.2081) best=-192.2081 gap=-1.9327e-12 better=false flagged=true  t=2.28s
+  line-trace fit->bestrestart: maxstep=4.2802 medstep=1.8950 jump-ratio=2.26
+seed=2009  conv=true  ll=   -183.9922 nonstat= 0/40 maxgrad=6.547e-15 restart(pert=-183.9922 true=-183.9922) best=-183.9922 gap=+1.7337e-12 better=false flagged=false t=2.08s
+seed=2010  conv=true  ll=   -172.6168 nonstat= 0/40 maxgrad=8.106e-15 restart(pert=-172.6168 true=-172.6168) best=-172.6168 gap=+4.2633e-12 better=false flagged=true  t=2.09s
+  line-trace fit->bestrestart: maxstep=0.0000 medstep=0.0000 jump-ratio=2.40
+
+total elapsed 37.6 s
