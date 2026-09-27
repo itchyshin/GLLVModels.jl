@@ -90,15 +90,15 @@ the `_fit_verdict` step would fail it.
 ## 7a. Issue Ledger
 
 - #515: grouped routes now gated. This PR says "part of #515" and does not close it.
-- No new issue opened.
+- #542 opened for the beta-binomial bootstrap gap (part of #504).
 
 ## 8. Consistency Audit
 
 - No other beta-binomial fitter uses the bare `_fit_verdict` (grep of `src/`).
 - `confint` bootstrap refits for both grouped routes (`src/confint_family.jl`,
   `_family_ci` for `BetaBinomialGroupedFit` and `BetaBinomialGroupedCovFit`) keep a
-  refit's estimates without looking at its `converged` flag. Unchanged here; the
-  Poisson analogue was #504.
+  refit's estimates without looking at its `converged` flag. Unchanged here; #516
+  fixed the Poisson analogue under the #504 umbrella. Filed as #542.
 - The bridge (`_bridge_fit_onepart`, `_bridge_fit_onepart_cov`) and
   `fit_gllvm(...; family = BetaBinom())` route to `fit_beta_binomial_gllvm_grouped`
   with `group = 1:p`, so per-species boundary fits there now report
