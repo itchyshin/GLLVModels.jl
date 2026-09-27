@@ -21,6 +21,8 @@ CI is runner-starved (about 24 queued runs across lanes); trains wait, nothing f
 - #533 case-map rows (9c1f55038, re-created #526) and #534 carry scan (21433f1bd, stacked): waiting for Shinichi's own signature comment on #533 (proposal: ordination_uncertainty moves to semantic_divergence).
 - Specs #525 iSDM (032d90284), #535 temporal (af130f704), #545 phylo latent (c0fd5f5be): reviewed and revised; docs-only, land when convenient.
 
+- Running: zi_* R-semantics twin (b2z, claude/twin-zi); ISDM-PSI unique variance port (b1p, claude/isdm-psi, stacked on #546).
+
 ## Findings to remember
 - Carry scan: 0 of 306 required P0 rows carry; 278 receipts dangling (gitignored .unlazy/), 21 stale. P1 evidence must be re-made (A3); compute is small (10-45 min on kohaku); the harness is the work (#539 is step 1).
 - ordination_uncertainty is name-only (R: TMB joint-precision conditional covariance; Julia: bootstrap + Procrustes).
