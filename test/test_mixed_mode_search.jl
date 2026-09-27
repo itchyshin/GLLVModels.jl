@@ -252,6 +252,49 @@ _ind_family_logpdf(f::Normal, μ, n, y) = logpdf(Normal(μ, f.σ), y)
         @test isposdef(Symmetric(-H))
     end
 
+    @testset "a mode reached to floating-point precision counts as converged, not -Inf" begin
+        # Literal inputs from a whole-fit regression check on PR #514: a six-trait
+        # Normal/NB2/Beta mix (the "NNbB d3" dataset) at the parameters that
+        # origin/main's fit_mixed_gllvm returned (a healthy fit there). At these four
+        # sites the search reaches the mode (Newton decrement |g'Δ| about 1e-16) but
+        # the Fisher step stalls at the floating-point floor (|Δ| about 3e-9, never
+        # below `tol = 1e-9`), because the score and the log-posterior agree only to
+        # rounding there. A convergence test that also demanded |Δ| < 1e-9 reported
+        # these genuine modes as -Inf, and the fitter's 1e12 sentinel then walled
+        # the optimiser off from the optimum it had found on main (loglik -735 worse).
+        dsp = [1.070025536276192, 1.5146447435143808e10, 11.87184368307261,
+               1.0792380006033333, 6.390877570956655, 8.360391481036528]
+        βs = [-0.527446828767601, -0.3935557249460554, -0.2356461724731469,
+              0.14494857366800448, 0.2463628832920535, 0.09707134556857336]
+        Λs = reshape([-0.6048032043008664, 1.0420186238460956, -1.1350517862660352,
+                      -0.2761100750343702, -1.89269011051375, 0.958059008408879,
+                      0.0, -0.9498606877833506, -1.231383035907502, -1.0524320965082075,
+                      -1.819033523778783, 0.4445953433095372], 6, 2)
+        famss = [Normal(0.0, dsp[1]), NegativeBinomial(dsp[2], 0.5), Beta(dsp[3], 1.0),
+                 Normal(0.0, dsp[4]), NegativeBinomial(dsp[5], 0.5), Beta(dsp[6], 1.0)]
+        linkss = [GLLVModels.IdentityLink(), GLLVModels.LogLink(), GLLVModels.LogitLink(),
+                  GLLVModels.IdentityLink(), GLLVModels.LogLink(), GLLVModels.LogitLink()]
+        tagss = [(:identity, famss[1]), (:log, famss[2]), (:logit, famss[3]),
+                 (:identity, famss[4]), (:log, famss[5]), (:logit, famss[6])]
+        sites = [
+            [1.225930189200676, 0.0, 0.9534177938496369, -0.18077446998860358, 71.0, 0.2805169544852231],
+            [0.46776030637915417, 0.0, 0.7639235225749853, 1.8421208730966772, 118.0, 0.36625132610265854],
+            [1.836651670380507, 0.0, 0.9999, 3.937608718075512, 2521.0, 0.07266171307699819],
+            [-0.8425203564692556, 6.0, 0.5214151289690533, -0.9896195951166681, 0.0, 0.8339164170466897],
+        ]
+        n6 = ones(Int, 6)
+        for ys in sites
+            z, ok = GLLVModels._mixed_laplace_mode(famss, linkss, ys, n6, Λs, βs)
+            @test ok
+            @test isfinite(GLLVModels._mixed_loglik_site(famss, linkss, ys, n6, Λs, βs))
+            q = zz -> _ind_logpost(tagss, ys, n6, Λs, βs, zz)
+            g = ForwardDiff.gradient(q, z)
+            H = ForwardDiff.hessian(q, z)
+            @test isposdef(Symmetric(-H))
+            @test abs(0.5 * dot(g, Symmetric(-H) \ g)) < 1e-6
+        end
+    end
+
     @testset "a search that cannot converge returns -Inf, never a finite value" begin
         z, ok = GLLVModels._mixed_laplace_mode(fams0, links0, y, n1, Λ0, β0; maxiter = 0)
         @test !ok

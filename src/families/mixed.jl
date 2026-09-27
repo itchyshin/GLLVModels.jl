@@ -253,10 +253,12 @@ end
 # trait with shape well below 1 and `y/μ` far from 1, observed/Fisher weight
 # ratio > 1), the shortcut can oscillate indefinitely rather than settle, so
 # once a full-size line-search step has been rejected once, every subsequent
-# step in this call goes through the line search too.
+# step in this call goes through the line search too, unless the step is already
+# at the floating-point floor, where the line search can only compare rounding
+# noise.
 function _mixed_laplace_mode(families::AbstractVector, links::AbstractVector,
         y::AbstractVector, n::AbstractVector, Λ::AbstractMatrix, β::AbstractVector;
-        maxiter::Integer = 100, tol::Real = 1e-9, grad_tol::Real = 1e-6, z_init = nothing)
+        maxiter::Integer = 100, tol::Real = 1e-9, grad_tol::Real = 1e-6, nd_tol::Real = 1e-12, z_init = nothing)
     p, K = size(Λ)
     T = promote_type(eltype(Λ), eltype(β))
     z = z_init === nothing ? zeros(T, K) : collect(T, z_init)
@@ -283,8 +285,18 @@ function _mixed_laplace_mode(families::AbstractVector, links::AbstractVector,
         # Scale-aware convergence check: the Newton decrement `g'Δ`, not an
         # absolute bound on `g`. `Δ` solves `AΔ = g`, so this is `g'A⁻¹g`,
         # which stays small at a genuine mode even when `A` is ill-conditioned.
-        maximum(abs, Δ) < tol && abs(dot(g, Δ)) < grad_tol && return z .+ Δ, true
-        if !linesearch_only && norm(Δ) <= 1e-3 * (1 + norm(z))
+        # A decrement below `nd_tol` is convergence on its own: at a mode reached
+        # to rounding, `Δ` can stall at the floating-point floor (measured 1e-9 to
+        # 2e-8) and never fall below `tol`, while `g'Δ` is about 1e-16.
+        decrement = abs(dot(g, Δ))
+        decrement < nd_tol && return z .+ Δ, true
+        maximum(abs, Δ) < tol && decrement < grad_tol && return z .+ Δ, true
+        # The latch below forces the line search only while the step is above the
+        # floating-point floor (about sqrt(eps) relative to z): at the floor the
+        # log-posterior differences are rounding noise, and a line search there can
+        # reject a genuine step and report a real mode as a failure.
+        at_floor = maximum(abs, Δ) <= sqrt(eps(Float64)) * (1 + norm(z))
+        if (!linesearch_only || at_floor) && norm(Δ) <= 1e-3 * (1 + norm(z))
             z = z .+ Δ
         else
             q0 = _mixed_logpost(families, links, y, n, Λ, β, z)
