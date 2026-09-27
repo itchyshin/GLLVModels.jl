@@ -12,7 +12,7 @@ const TEMPORAL_P1_DIR = @__DIR__
 # update them only together with the regenerated file and its generator run.
 const TEMPORAL_P1_SHA256 = Dict(
     "oracle.toml" => "ab41f55069d46b4cac23519cdba039872809f04020b1dad2ec129a057bc9aea0",
-    "fits.toml" => "41f92cfdfc1169b99fca41c854c533a739fe29b2975563a710f6418fd693df3d",
+    "fits.toml" => "4c2ea4d92ad5abd137fdaf23fbc372f46694f742a7116b012d08d78e5242678c",
     "forecast.toml" => "41fc640a5892e7952cb4df331f84a799b91facf0cda4ae92a73dce55fe0b72fd",
     "profile.toml" => "6e442a7edb7867aa871a0b664deade557666e95e44cf33bed19cde950ceb0a64",
     "compare.toml" => "0209f6f2836465fbf6069540223406a7505651ec1c68113afbb9f583951975e8",

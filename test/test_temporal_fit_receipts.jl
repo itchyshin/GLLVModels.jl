@@ -59,10 +59,13 @@ include(joinpath(@__DIR__, "fixtures", "temporal_p1", "fixture_helpers.jl"))
         dll = jf.loglik - (-c["objective_tight"])
         @test dll >= -1e-8                      # Julia is never worse than R's best
         if dll > 1e-6
-            # Julia found a higher likelihood than R's optimiser: R's own
-            # objective must confirm it at Julia's point (recorded finding).
+            # Multimodality, not an early stop: R converged to a different,
+            # stationary local optimum (on profile_ar1 latent-unique AR1 its
+            # tight-run gradient is 8.7e-7), while Julia reached a higher one on
+            # the psi = 0 boundary (theta_diag near -180, one loading near 0).
+            # R's own objective must confirm Julia's point is better.
             @test xc["r_fn_at_julia_par"] < c["objective_tight"] - 1e-6
-            @info "Julia optimum above R's reported optimum (R objective confirms)" c["id"] dll
+            @info "Julia at a different, higher local optimum than R (R objective confirms)" c["id"] dll
         else
             @test abs(dll) <= 1e-6
             note("iii: |Δ logLik|", abs(dll))
@@ -73,8 +76,14 @@ include(joinpath(@__DIR__, "fixtures", "temporal_p1", "fixture_helpers.jl"))
             # nlminb stops before stationarity even at rel.tol = 1e-14 (its
             # recorded gradient at par_tight reaches 1.8e-3 on these cells),
             # so the parameters are compared at R's point after one Newton
-            # step built from R's own recorded gradient. The raw differences
-            # are reported alongside.
+            # step built from R's own recorded gradient. The raw gaps to R's
+            # stopped point are also asserted, loosely (1e-4), so an optimiser
+            # regression on either side cannot hide behind the polish.
+            @test abs(jf.time_value - at_rt.time_value) <= 1e-4
+            @test maximum(abs, jf.Sigma_T - at_rt.Sigma_T) <= 1e-4
+            @test abs(jf.sigma_eps / at_rt.sigma_eps - 1) <= 1e-4
+            jf.psi === nothing || @test maximum(abs, jf.psi ./ at_rt.psi .- 1) <= 1e-4
+            @test maximum(abs, jf.beta - at_rt.beta) <= 1e-4
             nll(t) = GMF.temporal_marginal_nll(t, at_rt.y, at_rt.X, at_rt.spec)
             gR = temporal_p1_vec(c["gradient_at_par_tight"])
             @test maximum(abs, GMF.ForwardDiff.gradient(nll, rtight) .- gR) <= 1e-8
@@ -124,6 +133,19 @@ include(joinpath(@__DIR__, "fixtures", "temporal_p1", "fixture_helpers.jl"))
         @test abs(aic(at_r) - c["AIC"]) <= 1e-8
         @test abs(bic(at_r) - c["BIC"]) <= 1e-8
         @test abs(loglikelihood(at_r) - c["logLik"]) <= 1e-8
+
+        # getLV against R's reported conditional scores (latent cells).
+        if c["mode"] == "latent"
+            lv = getLV(at_r)
+            zR = temporal_p1_vec(c["report_z_temporal_state"])
+            @test vec(at_r.loadings) ≈ temporal_p1_vec(c["report_Lambda_temporal"]) atol = 1e-12
+            @test length(zR) == size(lv.scores, 1)
+            d = maximum(abs, lv.scores[:, 1] .- lv.sign.multiplier .* zR)
+            @test d <= 1e-10
+            note("getLV: |scores_J - scores_R| (R coordinates)", d)
+        else
+            @test getLV(at_r) === nothing
+        end
     end
     println("temporal fit receipt maxima:")
     for (k, v) in sort(collect(worst)); println("  ", rpad(k, 46), v); end

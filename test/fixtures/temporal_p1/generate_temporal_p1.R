@@ -237,6 +237,12 @@ write_fit <- function(con, cell, fit) {
   kv(con, "variance_component", tarr(et$variance$component, tstr))
   kv(con, "variance", tarr(et$variance$value))
   kv(con, "temporal_sd", tarr(as.numeric(fit$report$temporal_sd)))
+  if (identical(cell$mode, "latent")) {
+    ## Conditional temporal scores (TMB's inner mode, the posterior mean for
+    ## this all-Gaussian model) and the raw loadings, at R's default optimum.
+    kv(con, "report_Lambda_temporal", tarr(as.numeric(fit$report$Lambda_temporal)))
+    kv(con, "report_z_temporal_state", tarr(as.numeric(fit$report$z_temporal_state)))
+  }
   tf <- tight_fits[[cell$id]]
   kv(con, "par_tight", tarr(unname(tf$opt$par)))
   kv(con, "objective_tight", tnum(tf$opt$objective))
