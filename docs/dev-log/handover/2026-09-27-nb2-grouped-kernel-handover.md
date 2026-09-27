@@ -8,10 +8,10 @@ To: whichever Claude session picks up draft PR #521. Shinichi confirmed (2026-09
 | Item | State | Where | Resume |
 |---|---|---|---|
 | Kernel fix + init keywords + tests + fixtures | LANDED on branch, draft PR | #521, `claude/nb-grouped-init-v2` @ e22221eb0 (plus this file) | `git fetch origin && git worktree add ../nb2 origin/claude/nb-grouped-init-v2` |
-| `test/runtests.jl` registration of the two new test files | CARRIED-OVER | not done | The auto-d lane held a lease on runtests.jl. Add two `_shard_include` lines next to `test_nb1_grouped_mode_search.jl` (around line 212) once the lease is free (`tools/lane_lease.sh --list GLLVM.jl`) |
-| CHANGELOG entry | CARRIED-OVER | not done | The auto-d lane held a lease on CHANGELOG.md. Put the entry after #507's NB1 grouped entry |
+| `test/runtests.jl` registration of the two new test files | CARRIED-OVER | not done | The auto-d lane released its lease (17:1xZ). Add two `_shard_include` lines next to `test_nb1_grouped_mode_search.jl` (around line 212) once the lease is free (`tools/lane_lease.sh --list GLLVM.jl`) |
+| CHANGELOG entry | CARRIED-OVER | not done | Lease now free. Put the entry after #507's NB1 grouped entry |
 | Merge | GATED on Shinichi | | It changes fitted NB2 results on the default route and adds public keywords (D-290). Draft only; never merge from this lane |
-| Independent review | RUNNING in the backlog lane | a fresh reviewer agent, read-only | That lane will send the verdict and the review file path |
+| Independent review | OWED | stopped before reporting when that session closed | Handed to the new true-parity lane (GLLVM.jl folder), which carries the four review points. The auto-d branch (#518) also adds a runtests line and CHANGELOG entries, so whichever merges second rebases |
 
 FINDINGS-OF-RECORD: the NB2 Fisher-scoring 2-cycle mechanism below. It is recorded in the PR body and in the comment above `_nb_grouped_mode`. vault-note: AGENT_LOG entry 2026-09-27 (NB2 grouped kernel).
 
@@ -23,9 +23,9 @@ FINDINGS-OF-RECORD: the NB2 Fisher-scoring 2-cycle mechanism below. It is record
 
 ## Numbers (against origin/main d55a8e3af)
 
-- Seed-1 (p=20, n=300, K_true=3) `fit_nb_gllvm_grouped` loglik, main then branch: K=1 -19473.13 then -18400.45; K=2 -18874.03 then -17617.63; K=3 -19113.13 then -16743.17. K=4 was still running at handover (main -20240.21). Scratch script: `ksweep.jl` in the session scratchpad; rerun it if you need the number.
+- Seed-1 (p=20, n=300, K_true=3) `fit_nb_gllvm_grouped` loglik, main then branch: K=1 -19473.13 then -18400.45; K=2 -18874.03 then -17617.63; K=3 -19113.13 then -16743.17; K=4 -20240.21 then -16727.98 (monotone through K=4, max loading-row norm 2.44).
 - Default-route panel, 48 NB2 cells: 18 higher (up to +5,340), 28 unchanged, 2 lower (both main-overstatement artefacts). NB1/Beta grouped: 8/8 identical.
-- Ill-conditioned panel (loading scale 2.5, r ∈ {0.3, 50}): 6 higher, 1 unchanged, none lower; 1 cell still running at handover.
+- Ill-conditioned panel (loading scale 2.5, r ∈ {0.3, 50}): 7 higher (by 50 to 806), 1 unchanged, none lower.
 - 13 panel cells where the branch reports `converged = false`: every one is the existing dispersion-boundary flag (one species' r > 1e6), not an optimizer failure.
 - Runtime: the panel took 70% longer in total on the branch.
 - Local tests: 27 files green (every `test_grouped*.jl`, `test_model_selection.jl`, and the NB2 grouped callers). The slow seed-1 test (`GLLVM_SLOW_TESTS=1`) passed.
