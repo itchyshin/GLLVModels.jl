@@ -70,3 +70,13 @@ end
     @test ok
     @test maximum(abs, z .- zr) < 1e-7
 end
+
+@testset "Beta grouped restart: precision-plateau trigger" begin
+    # θ = [β (2); packed Λ (2); log φ (G)]; the log φ block starts at index 5.
+    θ(lφ) = vcat(zeros(4), lφ)
+    @test G_BETA._beta_grouped_phi_plateau(θ(log.([2.5, 2.9, 1.7, 2.1, 1139.0])), 5)  # d05 after the kernel fix
+    @test !G_BETA._beta_grouped_phi_plateau(θ(log.([2.6, 2.9, 1.8, 2.1, 1.7])), 5)    # d05 optimum
+    @test !G_BETA._beta_grouped_phi_plateau(θ([log(5.0)]), 5)                          # one group: never
+    @test !G_BETA._beta_grouped_phi_plateau(θ(log.([2.0, 2.0, 190.0])), 5)             # 95x: below the line
+    @test G_BETA._beta_grouped_phi_plateau(θ(log.([2.0, 2.0, 210.0])), 5)              # 105x: above it
+end

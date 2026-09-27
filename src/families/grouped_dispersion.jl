@@ -810,7 +810,8 @@ end
 # without Optim's gradient criterion, restart once from the warm start with every
 # log φ = 0 and once from the returned point, and keep the best run only if it lowers
 # the negative log-likelihood by more than 1e-6. A run that meets the gradient
-# criterion is returned as it is. `first_log_phi` indexes the first log φ in θ; the
+# criterion is returned as it is unless it sits on a precision plateau
+# (`_beta_grouped_phi_plateau`, below). `first_log_phi` indexes the first log φ in θ; the
 # log φ block runs to the end of θ.
 # Scale-aware gradient test, as in `_tweedie_verdict`: the residual is judged against
 # `g_tol` scaled by the objective's own size, so a caller's g_tol below the
@@ -818,8 +819,21 @@ end
 _beta_grouped_g_met(res, g_tol) = (gres = Optim.g_residual(res);
     isfinite(gres) && gres <= max(g_tol, g_tol * abs(Optim.minimum(res))))
 
+# A group precision far above the rest is the flat-plateau sign #480 described: as φ grows
+# the Beta tends to a point mass and that group's log-φ gradient goes to zero, so L-BFGS can
+# stop there and still meet the gradient test. Measured on the #480 screen dataset d05
+# after the Beta kernel fix: a stationary point at logLik 269.30 with φ5 ≈ 1139 (about
+# 550x the median, log-φ5 gradient exactly 0), where the restart reaches 272.61. The
+# restart keeps a run only if it is better, so a false trigger costs time, not accuracy.
+function _beta_grouped_phi_plateau(θ, first_log_phi::Integer)
+    lφ = θ[first_log_phi:end]
+    length(lφ) >= 2 || return false
+    return maximum(lφ) - median(lφ) > log(100)
+end
+
 function _beta_grouped_gradient_restart(negll, res, θ_warm, ls, opts, first_log_phi::Integer)
-    _beta_grouped_g_met(res, Optim.g_tol(res)) && return res
+    _beta_grouped_g_met(res, Optim.g_tol(res)) &&
+        !_beta_grouped_phi_plateau(Optim.minimizer(res), first_log_phi) && return res
     θa = copy(θ_warm)
     θa[first_log_phi:end] .= 0.0
     best = res
@@ -840,9 +854,10 @@ ids (relabelled to `1..G` internally; default `1:p` = per-species). L-BFGS over
 `[β; vec(Λ); log φ_1 … log φ_G]`; finite-difference gradient; warm start from
 empirical logit-mean intercepts + SVD loadings + a moderate per-group `φ₀`.
 `converged` is `true` only when the optimizer's gradient criterion (`g_tol`) is met.
-If the first run stops without it, the fit restarts once from the warm start with
-every `φ = 1` and once from the returned point, and keeps the best run only if its
-log-likelihood is higher by more than `1e-6`; `iterations` then counts the kept run
+If the first run stops without it, or stops with one group's precision more than 100
+times the median (a flat-plateau stationary point), the fit restarts once from the warm
+start with every `φ = 1` and once from the returned point, and keeps the best run only
+if its log-likelihood is higher by more than `1e-6`; `iterations` then counts the kept run
 only. This improves the local search but does not guarantee the global maximum. With one
 group this matches [`fit_beta_gllvm`](@ref). `hessian=:observed` (the default)
 uses the exact conditional Beta/logit curvature used by TMB's Laplace objective;

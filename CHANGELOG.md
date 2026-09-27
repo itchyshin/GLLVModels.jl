@@ -116,10 +116,12 @@ All notable changes to GLLVModels.jl are documented here.
   returns `-Inf` if all fail. On 18,000 simulated sites every site where the old
   loop converged is bit-identical; the 4 sites it got wrong now match an
   independent reference. Four whole fits tested gave identical log-likelihoods. On
-  the #480 screen dataset d05 the corrected surface sends L-BFGS to a different
+  the #480 screen dataset d05 the corrected surface sent L-BFGS to a different
   stationary point (log-likelihood 269.30, one precision drifting to about 1100 on a
-  flat plateau) instead of 272.61; the #480 restart recovers 272.61 but does not
-  fire, because that point meets the gradient test. Part of #503.
+  flat plateau), which meets the gradient test. The #480 restart (from every `φ = 1`
+  and from the returned point, keeping only a better run) now also fires when a
+  group's precision is more than 100 times the median, and d05 again reaches 272.61.
+  Part of #503.
 - **Gamma grouped fits no longer report convergence from a diverged inner search.**
   The per-site mode search inside `fit_gamma_gllvm_grouped` and its covariate and
   shared-shape routes could diverge at the fitter's own start and still return a

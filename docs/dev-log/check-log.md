@@ -10,11 +10,14 @@
   `-Inf`, every previously healthy site bit-identical. Affected cells about 35 to 48% slower.
   Four whole fits (seeds 6 and 1, K = 1, 2): identical log-likelihoods before and after.
 - New test `test/test_beta_grouped_mode_search.jl`, 604 assertions (fails on the base, worst 15.02).
-- Regression, OPEN: `test_beta_grouped_convergence.jl` d05 (2 assertions) fails: the fit stops at
-  269.2966 (φ5 = 1139, log-φ5 gradient exactly 0, max |grad| 5.7e-6) instead of 272.6094. Both
-  points are stationary; under the new kernel the old optimum still scores 272.6094 (the old
-  kernel scores the new point at -861.3, garbage). Forcing the #480 restart reaches 272.6094 in
-  11 s. Needs a decision on the restart trigger before this can merge. Other 31 files: 3495 pass.
+- d05 regression found and fixed: with the corrected kernel the fit stopped at 269.2966 (φ5 = 1139,
+  log-φ5 gradient exactly 0, max |grad| 5.7e-6) instead of 272.6094. Both points are stationary;
+  the old optimum still scores 272.6094 under the new kernel (the old kernel scores the new point
+  at -861.3). Maintainer choice (2026-09-27): the #480 restart now also fires when a group's
+  precision is more than 100x the median (`_beta_grouped_phi_plateau`); d05 back to 272.6094,
+  `test_beta_grouped_convergence.jl` 19/19.
+- 32 related test files (every `test_grouped*.jl` and `test_beta*.jl`, bridge grouped and missing-mask,
+  postfit, ordination, fit_gllvm, unified API): 3497 assertions pass, 0 fail. Full `Pkg.test()` not run.
 
 ## 2026-09-25: Two-part families no longer score an unfinished mode search (#484)
 
