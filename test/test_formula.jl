@@ -24,7 +24,7 @@ using GLLVModels, Test, Random, Distributions, Statistics, StatsModels
         Y = randn(p, n)
         data = (temp = randn(n),)
         f1 = gllvm(@formula(y ~ 1), Y, data; family = Normal(), K = K)
-        f2 = fit_gaussian_gllvm(Y; K = K)
+        f2 = fit_gaussian_gllvm(Y; K = K, X = GLLVModels._trait_intercept_design(p, n))
         @test f1.logLik ≈ f2.logLik atol = 1e-8
     end
 
