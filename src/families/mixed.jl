@@ -224,23 +224,36 @@ end
 # log-posterior was never rejected, so a site could be left far from its
 # stationary point while `_mixed_loglik_site` still reported a finite value. A
 # re-measure on origin/main found this at a non-trivial rate across several
-# family mixes (Poisson/Binomial/Gamma, Normal/NB1/Beta, and a four-trait
+# family mixes (Poisson/Binomial/Gamma, Normal/NB2/Beta, and a four-trait
 # Poisson/Gamma/Beta/Binomial mix) using this file's own gradient-of-the-score
 # check (`Λ's − z`).
 #
 # The fix mirrors the other grouped kernels: a step that lowers the per-site
 # log-posterior is halved (small steps and accepted full steps are bit-identical
-# to the old loop), and `converged` requires BOTH the full proposed step and the
-# log-posterior gradient itself to be small, since the step-only test every
-# kernel except Student-t's uses is not safe to assume here: ONE trait mixing
-# in a family whose Fisher weight does not track the residual (e.g. a Normal
-# trait under IdentityLink has a σ-only, y-independent weight, exactly
-# Student-t's #509 defect) is enough to make a tiny step solve `AΔ = g` while
-# `g` itself is still far from zero. Since every family this bridge supports has
-# a nonnegative expected (Fisher) weight (file header: "expected Hessian ⇒
-# Λ'WΛ + I is always SPD"), the step-halving line search below needs no
-# per-family backtrack gate and no observed-curvature fallback direction: Fisher
-# scoring is always a valid descent direction here.
+# to the old loop), and `converged` requires BOTH the full proposed step and a
+# scale-aware gradient check to be small. A step-size-only test is not safe
+# here because `A = Λ'WΛ + I` can be ill-conditioned (e.g. a Normal trait
+# whose fitted σ is driven near zero — a Heywood case the outer fitter can
+# reach — makes `W = 1/σ²` enormous), and in that regime a tiny `Δ` solves
+# `AΔ = g` while the raw gradient `g` is still large in the stiff direction.
+# The check below is the Newton decrement `g'Δ` (both already computed to get
+# `Δ`, so this is free): it scales WITH the curvature, so it stays small at a
+# genuine mode even when `A`'s eigenvalues are huge, unlike an absolute bound
+# on `maximum(abs, g)`. An earlier draft used the
+# absolute form, reasoning by analogy to Student-t's #509 Fisher/observed
+# mismatch, which does not apply here — a Normal trait under `IdentityLink`
+# has a quadratic log-likelihood, so its Fisher weight `1/σ²` IS the observed
+# curvature, not a defect of the #509 kind. Since every family this bridge
+# supports has a nonnegative expected (Fisher) weight (file header: "expected
+# Hessian ⇒ Λ'WΛ + I is always SPD"), the step-halving line search below needs
+# no per-family backtrack gate and no observed-curvature fallback direction:
+# Fisher scoring is always a valid ascent direction here. That says nothing
+# about whether the UNDAMPED fixed-point map (the small-step shortcut just
+# below) is a CONTRACTION at the mode, though: where it is not (e.g. a Gamma
+# trait with shape well below 1 and `y/μ` far from 1, observed/Fisher weight
+# ratio > 1), the shortcut can oscillate indefinitely rather than settle, so
+# once a full-size line-search step has been rejected once, every subsequent
+# step in this call goes through the line search too.
 function _mixed_laplace_mode(families::AbstractVector, links::AbstractVector,
         y::AbstractVector, n::AbstractVector, Λ::AbstractMatrix, β::AbstractVector;
         maxiter::Integer = 100, tol::Real = 1e-9, grad_tol::Real = 1e-6, z_init = nothing)
@@ -249,6 +262,7 @@ function _mixed_laplace_mode(families::AbstractVector, links::AbstractVector,
     z = z_init === nothing ? zeros(T, K) : collect(T, z_init)
     s = Vector{T}(undef, p)
     W = Vector{T}(undef, p)
+    linesearch_only = false   # set once a full step has been rejected
     for _ in 1:maxiter
         η = Λ * z
         @inbounds for t in 1:p
@@ -266,8 +280,11 @@ function _mixed_laplace_mode(families::AbstractVector, links::AbstractVector,
         A = Symmetric(Λ' * (W .* Λ) + I)
         Δ = _safe_solve(A, g)
         (Δ === nothing || !all(isfinite, Δ)) && return z, false
-        maximum(abs, Δ) < tol && maximum(abs, g) < grad_tol && return z .+ Δ, true
-        if norm(Δ) <= 1e-3 * (1 + norm(z))
+        # Scale-aware convergence check: the Newton decrement `g'Δ`, not an
+        # absolute bound on `g`. `Δ` solves `AΔ = g`, so this is `g'A⁻¹g`,
+        # which stays small at a genuine mode even when `A` is ill-conditioned.
+        maximum(abs, Δ) < tol && abs(dot(g, Δ)) < grad_tol && return z .+ Δ, true
+        if !linesearch_only && norm(Δ) <= 1e-3 * (1 + norm(z))
             z = z .+ Δ
         else
             q0 = _mixed_logpost(families, links, y, n, Λ, β, z)
@@ -283,6 +300,7 @@ function _mixed_laplace_mode(families::AbstractVector, links::AbstractVector,
                         break
                     end
                     step *= 0.5
+                    linesearch_only = true   # a full-size step was just rejected
                 end
                 accepted || return z, false
             else

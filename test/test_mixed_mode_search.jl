@@ -7,13 +7,21 @@ using GLLVModels, Test, SHA, TOML, Random, LinearAlgebra, Distributions, Forward
 # was reached, converged or not. A re-measure on origin/main across three different
 # family mixes (this file's own gradient-of-the-score check, `Λ's − z`) found 120/1200
 # finite-non-mode sites. `_mixed_laplace_mode` now halves any step that lowers the
-# per-site log-posterior and requires BOTH the full proposed step and the log-posterior
-# gradient itself to be small before declaring convergence (a step-size-only test is not
-# safe here: a Normal trait under IdentityLink has a σ-only, residual-blind Fisher
-# weight, exactly the #509 Student-t defect, and mixing it with any other family is
-# enough to trigger it). `_mixed_loglik_site` retries a non-converging site with a 20x
-# iteration budget, then returns -Inf if it still cannot certify a stationary point, so
-# the fitter's own 1e12 failure sentinel fires instead of a silently wrong value.
+# per-site log-posterior and requires BOTH the full proposed step and a scale-aware
+# gradient check (the Newton decrement `g'Δ`, not an absolute bound on `g`) to be small
+# before declaring convergence: an absolute bound is unusable once `Λ'WΛ + I` is
+# ill-conditioned (e.g. a Normal trait whose fitted σ is driven near zero, a Heywood
+# case the outer fitter can reach), where a tiny step solves the Newton equation while
+# the raw gradient in the stiff direction is still large in floating point. The small
+# step shortcut (skip the line search when `‖Δ‖` is already tiny) is also no longer
+# unconditional: once a full-size line-search step has been rejected once in a call,
+# every later step goes through the line search too, since the undamped fixed-point map
+# is not always a contraction near the mode (e.g. a low-shape Gamma trait far out in its
+# tail, where the Fisher weight underestimates the observed curvature) and would
+# otherwise oscillate to `-Inf` even though a genuine mode exists. `_mixed_loglik_site`
+# retries a non-converging site with a 20x iteration budget, then returns -Inf if it
+# still cannot certify a stationary point, so the fitter's own 1e12 failure sentinel
+# fires instead of a silently wrong value.
 #
 # `getLV`/`predict` call `_mixed_laplace_mode` directly (not `_mixed_loglik_site`) and
 # discard the convergence flag, exactly as the old code discarded nothing (there was no
@@ -147,18 +155,21 @@ _ind_family_logpdf(f::NegativeBinomial, μ, n, y) =
 _ind_family_logpdf(f::Normal, μ, n, y) = logpdf(Normal(μ, f.σ), y)
 
 @testset "Mixed-family mode search: damped, and fails loudly (#503)" begin
-    y, Λ0, β0, fams0, links0, z_ref, v_ref, v_old_ref = _mixed503_data()
+    y, Λ0, β0, fams0, links0, z_ref, v_ref, _v_old_ref = _mixed503_data()
     p, K = size(Λ0)
     n1 = ones(Int, p)
 
     @testset "the audit's diverging site now gets its true Laplace value" begin
         # Before: undamped Fisher scoring returned a finite garbage value at a
-        # non-mode z (`v_k_on_main` in the fixture, about -1.07e13).
+        # non-mode z (`v_k_on_main` in the fixture, about -1.07e13). Asserted as a
+        # relation, not pinned to that one BLAS/platform number (review-514 S6): 100
+        # divergent undamped iterations are not guaranteed to reproduce to 1.0 across
+        # Julia versions or platforms, only to stay non-converged and enormous.
         z_old, conv_old = _mixed503_old_mode(fams0, links0, y, n1, Λ0, β0)
         @test !conv_old
         v_old, _ = _mixed503_old_site(fams0, links0, y, n1, Λ0, β0)
         @test isfinite(v_old)
-        @test abs(v_old - v_old_ref) < 1.0   # reproduces the recorded garbage value
+        @test abs(v_old) > 1e6
 
         v = GLLVModels._mixed_loglik_site(fams0, links0, y, n1, Λ0, β0)
         @test isfinite(v)
@@ -171,6 +182,70 @@ _ind_family_logpdf(f::Normal, μ, n, y) = logpdf(Normal(μ, f.σ), y)
         @test isapprox(z, z_ref; atol = 1e-6)
         families_tag = [(:log, fams0[1]), (:logit, fams0[2]), (:log, fams0[3])]
         q = zz -> _ind_logpost(families_tag, y, n1, Λ0, β0, zz)
+        g = ForwardDiff.gradient(q, z)
+        H = ForwardDiff.hessian(q, z)
+        @test maximum(abs, g) < 1e-5
+        @test isposdef(Symmetric(-H))
+    end
+
+    @testset "Heywood-case Normal trait: certified stationary, not -Inf" begin
+        # A Normal trait whose σ is driven to near-zero (the regime an outer fit's
+        # free log-σ can reach; a Beta/Normal/… mix at a Heywood optimum is exactly
+        # where review-514 measured this) mixed with a Poisson trait. Before the
+        # scale-aware gradient check, `maximum(abs, g) < grad_tol` on the raw score
+        # `Λ's − z` was unattainable once `W = 1/σ²` amplified the unavoidable
+        # floating-point residual past `grad_tol`, so a genuine mode was reported as
+        # -Inf even though it is a true stationary point.
+        K = 1
+        Λh = reshape([1.3, -0.8], 2, 1)
+        βh = [0.2, -0.3]
+        z_true = [0.7]
+        σtiny = 1e-8
+        y_normal = βh[1] + Λh[1, 1] * z_true[1]   # exact fit: zero residual at z_true
+        yh = [y_normal, 4.0]
+        famsh = [Normal(0.0, σtiny), Poisson()]
+        linksh = [GLLVModels.IdentityLink(), GLLVModels.LogLink()]
+        n1h = ones(Int, 2)
+
+        z, ok = GLLVModels._mixed_laplace_mode(famsh, linksh, yh, n1h, Λh, βh)
+        @test ok
+        v = GLLVModels._mixed_loglik_site(famsh, linksh, yh, n1h, Λh, βh)
+        @test isfinite(v)
+
+        families_tag = [(:identity, famsh[1]), (:log, famsh[2])]
+        q = zz -> _ind_logpost(families_tag, yh, n1h, Λh, βh, zz)
+        g = ForwardDiff.gradient(q, z)
+        H = ForwardDiff.hessian(q, z)
+        @test isposdef(Symmetric(-H))
+        # Scale-free certification (the Newton decrement, matching review-514's own
+        # probe): the raw gradient itself is O(1) here purely from floating-point
+        # amplification by `1/σ²`, so an absolute bound on `g` would wrongly reject
+        # this genuine mode.
+        nd = abs(0.5 * dot(g, Symmetric(-H) \ g))
+        @test nd < 1e-6
+    end
+
+    @testset "non-contracting Fisher fixed point: certified stationary, not -Inf" begin
+        # A low-shape Gamma trait far out in its tail (shape 0.7, y/μ ≈ 5, mirroring
+        # review-514's own trace: "observed weight 2.6 vs Fisher 0.5") mixed with a
+        # Poisson trait. Before the small-step shortcut was gated behind "no full
+        # step has been rejected yet in this call", the undamped fixed-point map was
+        # not a contraction here and the search oscillated to -Inf even though a
+        # genuine mode exists (4/3000 random sites in review-514's own probe).
+        Λg = reshape([-1.0246747788910122, -0.33378003105895476], 2, 1)
+        βg = [2.1248325556839487, -0.2627633787999423]
+        yg = [438.601569107305, 1.0]
+        famsg = [Gamma(0.7, 1.0), Poisson()]
+        linksg = [GLLVModels.LogLink(), GLLVModels.LogLink()]
+        n1g = ones(Int, 2)
+
+        z, ok = GLLVModels._mixed_laplace_mode(famsg, linksg, yg, n1g, Λg, βg; maxiter = 2000)
+        @test ok
+        v = GLLVModels._mixed_loglik_site(famsg, linksg, yg, n1g, Λg, βg; maxiter = 2000)
+        @test isfinite(v)
+
+        families_tag = [(:log, famsg[1]), (:log, famsg[2])]
+        q = zz -> _ind_logpost(families_tag, yg, n1g, Λg, βg, zz)
         g = ForwardDiff.gradient(q, z)
         H = ForwardDiff.hessian(q, z)
         @test maximum(abs, g) < 1e-5
@@ -228,6 +303,7 @@ function _stress_probe(mixname, fams, families_tag, links; ntrials = 60, seed = 
     rng = MersenneTwister(seed)
     p = length(fams)
     n_certified = 0
+    n_not_converged = 0
     for _ in 1:ntrials
         K = rand(rng, 1:3)
         sc = rand(rng, (0.5, 1.0, 2.0, 3.0))
@@ -237,7 +313,14 @@ function _stress_probe(mixname, fams, families_tag, links; ntrials = 60, seed = 
         y = [_stress_y(fams[t], families_tag[t][1], β[t] + sum(Λ[t, :] .* randn(rng, K)), rng)
              for t in 1:p]
         z, ok = GLLVModels._mixed_laplace_mode(fams, links, y, n1, Λ, β; maxiter = 2000)
-        ok || continue
+        # A non-converged draw is COUNTED, not silently skipped (review-514 S6): a
+        # bare `ok || continue` with only a loose "at least half certify" floor would
+        # not see a regression that pushed a modest fraction of draws to a false
+        # -Inf (S1/S2's failure mode measured 4/3000, far below a 50% threshold).
+        if !ok
+            n_not_converged += 1
+            continue
+        end
         q = zz -> _ind_logpost(families_tag, y, n1, Λ, β, zz)
         g = ForwardDiff.gradient(q, z)
         H = ForwardDiff.hessian(q, z)
@@ -246,14 +329,14 @@ function _stress_probe(mixname, fams, families_tag, links; ntrials = 60, seed = 
         # bound in a stiff direction even at a genuine stationary point.
         @test maximum(abs, g) < 2e-3
         @test isposdef(Symmetric(-H))
-        # cross-check: the site value GLLVModels reports agrees with an
-        # independent evaluation of the SAME log-posterior at this z (up to the
-        # log-det curvature term, which the independent evaluator does not
-        # reconstruct) -- i.e. the mode itself, and the conditional density
-        # there, are self-consistent.
         n_certified += 1
     end
-    @test n_certified >= ntrials ÷ 2   # most draws should converge and certify
+    # Tightened from a bare majority: measured at 90-95% on both Julia 1.10 and 1.13
+    # with this seed, so an 80% floor has margin for genuinely mode-less random draws
+    # and for the RNG stream differing slightly across Julia versions, while still
+    # catching a regression that reintroduces S1/S2's failure mode.
+    @test n_not_converged <= ntrials ÷ 5
+    @test n_certified >= ntrials - ntrials ÷ 5
     return n_certified
 end
 
