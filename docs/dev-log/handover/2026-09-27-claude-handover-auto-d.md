@@ -64,6 +64,21 @@ reach the NB route; and more NB fits will report converged = false via the dispe
 select_lv's lenient default already tolerates. Recommendation: cancel, and after #521 merges re-run only the
 24 NB cells (4 800 datasets) on the fixed kernel; state a new estimate first (#521 is ~70% slower).
 
+## The two sibling lanes (both stopped 2026-09-27 ~17:00Z; neither merged)
+
+| lane | draft PR / branch | handover | what it did | carried over |
+|---|---|---|---|---|
+| NB per-site mode search | [#521](https://github.com/itchyshin/GLLVModels.jl/pull/521), `claude/nb-grouped-init-v2` | `docs/dev-log/handover/2026-09-27-nb2-grouped-kernel-handover.md` (that branch) | Damped per-site search with an observed-Newton fallback in `_nb_grouped_loglik_site` (`src/families/grouped_dispersion.jl`); `fit_nb_gllvm_grouped`, `fit_nb1_gllvm_grouped`, `fit_beta_gllvm_grouped` accept `β_init`/`Λ_init`. Auto-d NB fixture (p = 20, n = 300, true K = 3), logLik main → branch: K=1 −19473 → −18400; K=2 −18874 → −17618; K=3 −19113 → −16743; K=4 −20240 → −16728 (monotone, all converged, max row norm ≤ 2.44; K=3→4 gain 15.2, so BIC should now pick the true K = 3 where main picked 2). Ill-conditioned panel: 7 higher, 1 unchanged, 0 lower. NB fits ~70% slower. More fits report converged = false via the dispersion-boundary flag (select_lv's lenient default tolerates this). | Two `_shard_include` lines (`test_nb2_grouped_mode_search.jl`, `test_grouped_init_kwargs.jl`, next to `test_nb1_grouped_mode_search.jl`) and a CHANGELOG entry were NOT added. Needs Shinichi's sign-off (changes healthy-fit results). |
+| Gaussian trait intercepts | [#519](https://github.com/itchyshin/GLLVModels.jl/pull/519), `claude/gaussian-intercept-20260927` (head `c8299eebe`); [#520](https://github.com/itchyshin/GLLVModels.jl/pull/520) stacked on #519 | `docs/dev-log/handover/2026-09-27-claude-handover-gaussian-intercepts.md` (#519 branch) | `fit_gllvm` Normal route (one line in `fit_gllvm.jl` ~L309, outside the auto-d K block) and `cv_gllvm` refits now fit p trait intercepts; `@formula(y ~ 0)` stays mean-zero, `y ~ 1` fits intercepts; #520: `@formula(y ~ x)` fits intercepts plus shared slopes. #519 CI: Documenter passed, test shards were running; the advisory "Frozen R 0.7.0 family smoke" also fails on main. | CHANGELOG entries for #519/#520; #520 retargets to main after #519 merges. Needs Shinichi's sign-off. |
+
+**What they mean for auto-d:** (1) the NB recovery numbers (0.895) and the cancelled re-run measured the broken
+kernel: after #521 merges, re-run the 24 NB grid cells on it (state a new estimate first; ~70% slower), and
+check select_lv's warm start now reaches the NB route. (2) The Gaussian grid used mean-zero data; after #519
+merges, re-run the Gaussian cells on uncentred data. The intercept count is the same at every K, so any change
+in the chosen K comes from the logLiks. (3) Merge order is Shinichi's; expect CHANGELOG.md and
+test/runtests.jl rebases between #518, #519, #520 and #521 (all add lines there; no other file overlaps with
+#518 except #519's one-line Normal route in `fit_gllvm.jl`, outside the auto-d block).
+
 ## Next immediate steps (classify each OWED / DONE on arrival)
 
 1. Run `tools/lane_preflight.sh` in GLLVModels.jl and gllvmTMB; check `git status` in both worktrees.
@@ -83,7 +98,8 @@ select_lv's lenient default already tolerates. Recommendation: cancel, and after
    (later dirs fill incomplete datasets). Report core-hours (`sacct … elapsedraw,alloccpus`) against the
    estimate. Update design/74, the MORNING-REPORT numbers and both PR bodies (#518 says 17 687; the
    complete-only count is 17 569 before the re-run).
-7. Release leases (`claude:GLLVM.jl:auto-d*`, `claude:gllvmTMB:auto-d*`) when done; update
+7. After #521 and #519 merge: rebase #518; re-run the NB and Gaussian grid cells as above; update design/74, MORNING-REPORT and the #518 body.
+8. Release leases (`claude:GLLVM.jl:auto-d*`, `claude:gllvmTMB:auto-d*`) when done; update
    `LOOP/lanes/auto-d-20260926/checkpoint.md`.
 
 ## Blockers / open questions (Shinichi's)
