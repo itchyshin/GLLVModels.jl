@@ -66,6 +66,7 @@ GLLVModels._loglik(f::_FakeLVFit) = f.ll
 GLLVModels._nparams(f::_FakeLVFit) = f.np
 GLLVModels.StatsAPI.aic(f::_FakeLVFit) = 2f.np - 2f.ll
 GLLVModels.StatsAPI.bic(f::_FakeLVFit, Y::AbstractMatrix) = f.np * log(length(Y)) - 2f.ll
+GLLVModels.StatsAPI.bic(f::_FakeLVFit, n::Integer) = f.np * log(n) - 2f.ll
 
 # Loglik per K on a default start, and on a warm start (used only if the fitter
 # accepts Λ_init). K=3 is a bad optimum from the default start only.
@@ -237,4 +238,19 @@ end
     # Explicit K is untouched by the auto path.
     @test GLLVModels._loglik(fit_gllvm(Y; family = Poisson(), K = 1)) ≈
           GLLVModels._loglik(fit_gllvm(Y; family = Poisson(), num_lv = 1))
+end
+
+# --- criterion = :bic_sites (BIC with log(number of sites), lane auto-d) -----------
+# The recovery grid compares log(p·n) (current :bic) with log(n sites); both are kept.
+@testset "select_lv criterion = :bic_sites" begin
+    Y = zeros(6, 40)
+    # Gains chosen so log(p·n) = log(240) prefers K = 1 and log(n) = log(40) prefers K = 2.
+    f = (Y; family, K, kwargs...) ->
+        _FakeLVFit(Dict(1 => -500.0, 2 => -477.0, 3 => -476.0)[K], 10K, true, zeros(6), fill(0.5, 6, K))
+    sel_pn = select_lv(Y; Kmax = 3, criterion = :bic, _fitter = f)
+    sel_n  = select_lv(Y; Kmax = 3, criterion = :bic_sites, _fitter = f)
+    @test sel_pn.best_k == 1
+    @test sel_n.best_k == 2
+    @test sel_n.bic_sites ≈ [10k * log(40) - 2ll for (k, ll) in ((1, -500.0), (2, -477.0), (3, -476.0))]
+    @test_throws ArgumentError select_lv(Y; Kmax = 2, criterion = :bogus, _fitter = f)
 end

@@ -27,7 +27,10 @@ Fields:
   path `aic`/`bic` use; loadings counted modulo the `K(K−1)/2` rotational df).
 - `loglik::Vector{Float64}` — maximised marginal log-likelihood per fit.
 - `aic::Vector{Float64}` — Akaike information criterion per fit.
-- `bic::Vector{Float64}` — Bayesian information criterion per fit.
+- `bic::Vector{Float64}` — Bayesian information criterion per fit, penalty
+  `log(p·n)` (observed cells, R's convention).
+- `bic_sites::Vector{Float64}` — BIC with penalty `log(n)`, `n` the number of
+  sites (columns of `Y` with at least one observed cell).
 - `best_k::Int` — the accepted `K` minimising the chosen criterion.
 - `best::Any` — the chosen fitted model (the one at `best_k`).
 - `attempts::Vector` — one named tuple `(K, status, loglik, message)` per
@@ -42,6 +45,7 @@ struct LVSelection
     loglik::Vector{Float64}
     aic::Vector{Float64}
     bic::Vector{Float64}
+    bic_sites::Vector{Float64}
     best_k::Int
     best::Any
     attempts::Vector{NamedTuple{(:K, :status, :loglik, :message),Tuple{Int,Symbol,Float64,String}}}
@@ -99,8 +103,9 @@ end
               ratio_max = 25.0, kwargs...) -> LVSelection
 
 Latent-dimension selection: fit `fit_gllvm(Y; family, K = k, kwargs...)` for
-`k in 1:Kmax` and pick the `K` minimising `criterion` (`:aic` or `:bic`) among
-the fits that pass a guard.
+`k in 1:Kmax` and pick the `K` minimising `criterion` among the fits that pass a
+guard: `:aic`, `:bic` (penalty `log(p·n)`, observed cells) or `:bic_sites`
+(penalty `log(n)`, sites).
 
 The guard rejects a fit that throws, reports non-convergence, or has a
 log-likelihood more than `tol` below the last accepted `K` (a `K` model nests the
@@ -139,8 +144,10 @@ function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
                    criterion::Symbol = :bic, warm_start::Bool = true,
                    tol::Real = 1e-3, max_latent_sd::Real = 10.0,
                    ratio_max::Real = 25.0, _fitter = fit_gllvm, kwargs...)
-    criterion in (:aic, :bic) ||
-        throw(ArgumentError("criterion must be :aic or :bic; got :$criterion"))
+    criterion in (:aic, :bic, :bic_sites) ||
+        throw(ArgumentError("criterion must be :aic, :bic or :bic_sites; got :$criterion"))
+    nsites = count(j -> any(x -> !(x isa Missing) && !(x isa AbstractFloat && isnan(x)), view(Y, :, j)),
+                   axes(Y, 2))
     Kmax >= 1 || throw(ArgumentError("Kmax must be ≥ 1; got $Kmax"))
 
     Ks       = Int[]
@@ -148,6 +155,7 @@ function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
     lls      = Float64[]
     aics     = Float64[]
     bics     = Float64[]
+    bicns    = Float64[]
     fits     = Any[]
     attempts = NamedTuple{(:K, :status, :loglik, :message),Tuple{Int,Symbol,Float64,String}}[]
 
@@ -193,16 +201,17 @@ function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
         push!(lls, _loglik(fit))
         push!(aics, aic(fit))
         push!(bics, bic(fit, Y))
+        push!(bicns, bic(fit, nsites))
         push!(fits, fit)
     end
 
     isempty(Ks) && error("select_lv: no K in 1:$Kmax was accepted; attempts: " *
                          join(("K=$(a.K) $(a.status) $(a.message)" for a in attempts), "; "))
 
-    crit = criterion === :aic ? aics : bics
+    crit = criterion === :aic ? aics : criterion === :bic ? bics : bicns
     ibest = argmin(crit)
 
-    return LVSelection(Ks, nps, lls, aics, bics, Ks[ibest], fits[ibest], attempts)
+    return LVSelection(Ks, nps, lls, aics, bics, bicns, Ks[ibest], fits[ibest], attempts)
 end
 
 # Tidy table display, best row marked with '*'.
