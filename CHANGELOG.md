@@ -27,15 +27,20 @@ All notable changes to GLLVModels.jl are documented here.
   log-likelihood is the unpenalised one at that optimum, and `fit.loading_ridge`
   records τ (`Inf` = off, the default). `select_lv` sweeps single-trial binomial
   data with `binary_ridge = 2` (set `Inf` to turn it off); most unpenalised
-  Bernoulli fits beyond `K = 1` run away at ecological sample sizes.
+  Bernoulli fits beyond `K = 1` run away at ecological sample sizes. The ridge
+  applies only on the Laplace `fit_binomial_gllvm` route; with `aghq`,
+  `row_eff`, `grouping`, `phylo`, `disp_group` or `pervar` the sweep runs
+  unpenalised and says so in `attempts`. `confint` and `confint_lv_effects`
+  refuse a ridge fit, because it is a penalised estimate.
 
 ### Changed
 - **`select_lv` now defaults to `criterion = :bic_sites`** (was `:bic`, which
   penalises by `log(p·n)` observed cells). In a recovery simulation (17 687
   datasets with known K; Gaussian, Poisson, negative binomial, binomial; 30 to
   300 sites, 10 or 20 species) `:bic_sites` recovered the true K most often for
-  Gaussian, Poisson and negative binomial responses; `:bic` picked too few
-  dimensions at small sample sizes. Existing `select_lv` calls without
+  Gaussian and Poisson responses; `:bic` picked too few dimensions at small
+  sample sizes. Negative-binomial recovery is being re-measured on the
+  corrected negative-binomial fitting code, so no rate is claimed for it yet. Existing `select_lv` calls without
   `criterion` may choose a different K; pass `criterion = :bic` for the old rule.
 - **`select_lv` no longer chooses a broken fit.** Every attempted K is recorded
   in `attempts` with a status. A K whose fit threw, whose log-likelihood fell

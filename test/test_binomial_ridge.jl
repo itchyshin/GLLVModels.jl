@@ -96,11 +96,89 @@ using GLLVModels, Test, Random, Distributions, LinearAlgebra
             Y, fill(1, p, n), fitr.Λ, fitr.β, GLLVModels.LogitLink())
         @test isapprox(recomputed, fitr.loglik; atol = 1e-8, rtol = 1e-10)
 
-        # A penalised optimum cannot beat the unpenalised maximum when the
-        # latter converged; skip this check for a genuine runaway (as here).
-        if fit0.converged
-            @test fitr.loglik <= fit0.loglik + 1e-6
-        end
+    end
+
+    # --- Review fixes (2026-09-27) --------------------------------------------
+    pen(f) = f.loglik - 0.5 * sum(abs2, f.Λ) / f.loading_ridge^2
+    maxrow(Λ) = maximum(sqrt.(sum(abs2, Λ; dims = 2)))
+    function runaway_data()
+        Random.seed!(30)
+        p, n, K = 10, 60, 2
+        Λtrue = 0.8 .* randn(p, K); βtrue = 0.3 .* randn(p)
+        η = βtrue .+ Λtrue * randn(K, n)
+        return Int.(rand(p, n) .< 1 ./ (1 .+ exp.(-η)))
+    end
+
+    @testset "penalised optimum vs a converged unpenalised fit" begin
+        # Well-conditioned data, so the unpenalised fit converges and the
+        # comparison always runs: the ridge fit has lower ℓ but higher ℓ − pen.
+        Random.seed!(11)
+        p, n, K = 6, 300, 1
+        η = 0.3 .* randn(p) .+ randn(p, K) * randn(K, n)
+        Y = Int.(rand(p, n) .< 1 ./ (1 .+ exp.(-η)))
+        fit0 = fit_binomial_gllvm(Y; K = K)
+        fitr = fit_binomial_gllvm(Y; K = K, loading_ridge = 2.0)
+        @test fit0.converged
+        @test fitr.loglik <= fit0.loglik + 1e-6
+        @test pen(fitr) >= fit0.loglik - 0.5 * sum(abs2, fit0.Λ) / 4 - 1e-6
+    end
+
+    @testset "analytic and finite-difference routes reach the same penalised optimum" begin
+        # Exercises the ridge term in the fitter's own `ag` closure (analytic
+        # route) and in `negll`'s value (the only ridge on the FD route).
+        Y = runaway_data()
+        fa = fit_binomial_gllvm(Y; K = 2, iterations = 1000, loading_ridge = 2.0, gradient = :analytic)
+        ff = fit_binomial_gllvm(Y; K = 2, iterations = 1000, loading_ridge = 2.0, gradient = :finite)
+        @test maxrow(fa.Λ) < 10
+        @test maxrow(ff.Λ) < 10
+        @test isapprox(pen(fa), pen(ff); atol = 1e-3)
+    end
+
+    @testset "probit (finite-difference route) ridge" begin
+        Y = runaway_data()
+        p, n = size(Y)
+        fr = fit_binomial_gllvm(Y; K = 2, link = ProbitLink(), iterations = 1000, loading_ridge = 2.0)
+        @test maxrow(fr.Λ) < 10
+        @test isapprox(fr.loglik,
+                       GLLVModels.binomial_marginal_loglik_laplace(Y, fill(1, p, n), fr.Λ, fr.β,
+                                                                   ProbitLink(); hessian = fr.hessian);
+                       atol = 1e-8, rtol = 1e-10)
+    end
+
+    @testset "mask and offset with a ridge: loglik is the unpenalised marginal" begin
+        Y = runaway_data()
+        p, n = size(Y)
+        M = trues(p, n); M[1, 1:5] .= false
+        fm = fit_binomial_gllvm(Y; K = 2, mask = M, loading_ridge = 2.0)
+        @test isapprox(fm.loglik,
+                       GLLVModels.binomial_marginal_loglik_laplace(Y, fill(1, p, n), fm.Λ, fm.β,
+                                                                   LogitLink(); mask = M);
+                       atol = 1e-8, rtol = 1e-10)
+        off = fill(0.1, p, n)
+        fo = fit_binomial_gllvm(Y; K = 2, offset = off, loading_ridge = 2.0)
+        @test isapprox(fo.loglik,
+                       GLLVModels.binomial_marginal_loglik_laplace(Y, fill(1, p, n), fo.Λ, fo.β,
+                                                                   LogitLink(); offset = off);
+                       atol = 1e-8, rtol = 1e-10)
+    end
+
+    @testset "X_lv with a ridge: loglik is the unpenalised objective" begin
+        Y = runaway_data()
+        p, n = size(Y)
+        Random.seed!(5)
+        X_lv = randn(n, 1)
+        fx = fit_binomial_gllvm(Y; K = 1, X_lv = X_lv, loading_ridge = 2.0)
+        @test fx.loading_ridge == 2.0
+        nll_unpen = GLLVModels.binomial_lv_nll_packed(fx.theta_packed, Y, fill(1, p, n), p, 1,
+                                                      LogitLink(); X_lv = X_lv, q_lv = 1)
+        @test isapprox(fx.loglik, -nll_unpen; atol = 1e-8, rtol = 1e-10)
+        @test_throws ArgumentError confint_lv_effects(fx, Y, X_lv)
+    end
+
+    @testset "confint refuses a ridge fit" begin
+        Y = runaway_data()
+        fr = fit_binomial_gllvm(Y; K = 2, loading_ridge = 2.0)
+        @test_throws ArgumentError confint(fr, Y)
     end
 
     @testset "AGHQ + finite loading_ridge throws" begin
