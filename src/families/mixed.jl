@@ -265,6 +265,7 @@ function _mixed_laplace_mode(families::AbstractVector, links::AbstractVector,
     s = Vector{T}(undef, p)
     W = Vector{T}(undef, p)
     linesearch_only = false   # set once a full step has been rejected
+    prev_dmax = Inf           # previous max|Δ|: has the step stopped shrinking?
     for _ in 1:maxiter
         η = Λ * z
         @inbounds for t in 1:p
@@ -285,22 +286,28 @@ function _mixed_laplace_mode(families::AbstractVector, links::AbstractVector,
         # Scale-aware convergence check: the Newton decrement `g'Δ`, not an
         # absolute bound on `g`. `Δ` solves `AΔ = g`, so this is `g'A⁻¹g`,
         # which stays small at a genuine mode even when `A` is ill-conditioned.
-        # A decrement below `nd_tol` is convergence on its own: at a mode reached
-        # to rounding, `Δ` can stall at the floating-point floor (measured 1e-9 to
-        # 2e-8) and never fall below `tol`, while `g'Δ` is about 1e-16.
         decrement = abs(dot(g, Δ))
-        decrement < nd_tol && return z .+ Δ, true
         maximum(abs, Δ) < tol && decrement < grad_tol && return z .+ Δ, true
         # The latch below forces the line search only while the step is above the
         # floating-point floor (about sqrt(eps) relative to z): at the floor the
         # log-posterior differences are rounding noise, and a line search there can
         # reject a genuine step and report a real mode as a failure.
-        at_floor = maximum(abs, Δ) <= sqrt(eps(Float64)) * (1 + norm(z))
+        dmax = maximum(abs, Δ)
+        at_floor = dmax <= sqrt(eps(Float64)) * (1 + norm(z))
+        # At the floor, a step that has stopped shrinking with the Newton
+        # decrement below `nd_tol` is the mode to rounding: the undamped map is
+        # bouncing at the floor (measured: |Δ| wandering 1e-8 to 6e-8 for 2000
+        # iterations, `g'Δ` about 1e-15), and no further step can be resolved.
+        # A step that is still shrinking keeps going until `tol`, so a caller that
+        # asks for a tighter mode (e.g. `tol = 1e-13`) still gets one.
+        at_floor && dmax >= prev_dmax && decrement < nd_tol && return z .+ Δ, true
+        prev_dmax = dmax
         if (!linesearch_only || at_floor) && norm(Δ) <= 1e-3 * (1 + norm(z))
             z = z .+ Δ
         else
             q0 = _mixed_logpost(families, links, y, n, Λ, β, z)
             if isfinite(q0)
+                zprev = z
                 accepted = false
                 step = 1.0
                 for _half in 1:30
@@ -314,6 +321,13 @@ function _mixed_laplace_mode(families::AbstractVector, links::AbstractVector,
                     step *= 0.5
                     linesearch_only = true   # a full-size step was just rejected
                 end
+                # A line search that cannot move `z` (every trial rejected, or the
+                # accepted trial rounds back to `z`) while the Newton decrement is
+                # below `nd_tol` means the log-posterior can no longer resolve the
+                # remaining step: `z` is the mode to rounding (measured: |Δ| stuck
+                # near 1e-8 with `g'Δ` about 1e-14 and every trial lower by noise).
+                # That is convergence, not failure.
+                (!accepted || z == zprev) && decrement < nd_tol && return z, true
                 accepted || return z, false
             else
                 z = z .+ Δ
