@@ -50,7 +50,7 @@ goes beyond standard `gllvm`.
       `phylo_latent(species, d = K)` on the `PrecisionPhy` path (label matching, tree or
       dense `vcv`, R's refusals); A14/A15 paired receipts at gllvmTMB P1 in
       `docs/dev-log/core070/phylo-latent-p1/`, promotion awaiting the maintainer block.
-      Open: the `Ainv` mapping, `rho != 1`, `unique = TRUE` pairing, non-Gaussian
+      Open: R's global sparse `phylo_vcv` route (no keyword twin), `rho != 1`, `unique = TRUE` pairing, non-Gaussian
       `phylo_latent()`, and the A15 stationarity gap (both engines above the 1e-4
       cross-gradient bar)
 - [x] **Phylogenetic GLM for non-Gaussian families** — `fit_phylo_glm` / `PhyloGLMFit`:

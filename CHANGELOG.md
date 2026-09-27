@@ -645,8 +645,9 @@ All notable changes to GLLVModels.jl are documented here.
   `AugmentedPhy`, polytomies admitted via R's own precision rule) or a
   labelled dense `vcv` / `A` with R's `1e-8` ridge; R's refusal sentences
   (rank, source, labels, coverage with the `droplevels()` hint,
-  non-ultrametric tree). `rho != 1` and `Ainv` are refused by labelled Julia
-  scope fences (`GJL-GATE-PHYLO-LATENT-RHO`, `-AINV`). `extract_phylo_signal`
+  non-ultrametric tree). `Ainv` follows R's keyword (`vcv = solve(Ainv)`, then
+  the dense ridged route); `rho != 1` is refused by a labelled Julia scope
+  fence (`GJL-GATE-PHYLO-LATENT-RHO`). `extract_phylo_signal`
   on a `PrecisionMultivariateFit` now returns R's bare-fit answer
   (`H2 = 1`, `V_eta = diag(Sigma_phy)`) and refuses `ci = true`;
   `extract_Sigma` accepts R's `level = :phy`. `PrecisionMultivariateFit`

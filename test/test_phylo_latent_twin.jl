@@ -153,6 +153,7 @@ const _PL_A14_NEWICK = "(((s1:2,s2:2):1,(s3:1,s4:1):2):1,((s5:1.5,s6:1.5):1,(s7:
     @testset "test-phylo-vcv-A-aliases.R:107,119 two sources refuse" begin
         @test_throws r"phylo_latent\(\) got both A and vcv" fit_phylo_latent_gllvm(Y20, sp20; vcv = C20, A = C20, tip_labels = tips20)
         @test_throws r"phylo_latent\(\) got both Ainv and vcv" fit_phylo_latent_gllvm(Y20, sp20; vcv = C20, Ainv = inv(C20), tip_labels = tips20)
+        @test_throws r"phylo_latent\(\) got both Ainv and vcv" fit_phylo_latent_gllvm(Y20, sp20; A = C20, Ainv = inv(C20), tip_labels = tips20)
         @test_throws r"Supply one of tree, vcv, or A / Ainv" fit_phylo_latent_gllvm(Y20, sp20; tree = newick20, vcv = C20, tip_labels = tips20)
     end
 
@@ -229,9 +230,27 @@ const _PL_A14_NEWICK = "(((s1:2,s2:2):1,(s3:1,s4:1):2):1,((s5:1.5,s6:1.5):1,(s7:
         @test_throws r"phylo_vcv rownames do not cover all species levels" fit_phylo_latent_gllvm(Y20, sp20; vcv = C20[rest, rest], tip_labels = tips20[rest])
     end
 
-    @testset "Julia scope fences: rho and Ainv" begin
+    @testset "Julia scope fence: rho" begin
         @test_throws r"GJL-GATE-PHYLO-LATENT-RHO" fit_phylo_latent_gllvm(Y20, sp20; vcv = C20, tip_labels = tips20, rho = 0.5)
-        @test_throws r"GJL-GATE-PHYLO-LATENT-AINV" fit_phylo_latent_gllvm(Y20, sp20; Ainv = inv(C20), tip_labels = tips20)
+    end
+
+    @testset "in-keyword Ainv is R's vcv = solve(as.matrix(Ainv)) dense route" begin
+        fi = fit_phylo_latent_gllvm(Y20, sp20; d = 2, Ainv = inv(C20), tip_labels = tips20)
+        @test fi.phy.n_aug == 20
+        @test isapprox(fi.phy.log_det, fit20.phy.log_det; atol = 1e-8)
+        @test isapprox(fi.loglik, fit20.loglik; rtol = 1e-8)
+        # Inverted BEFORE subsetting to species levels: an Ainv over 21 tips
+        # (one unobserved) marginalises that tip, it does not condition on it.
+        Cbig = [C20 0.3 .* C20[:, 1]; 0.3 .* C20[1:1, :] 1.0]
+        fb = fit_phylo_latent_gllvm(Y20, sp20; d = 2, Ainv = inv(Cbig), tip_labels = vcat(tips20, "extra"))
+        @test fb.phy.n_aug == 20
+        @test isapprox(fb.loglik, fit20.loglik; rtol = 1e-8)
+        @test_throws r"phylo_vcv must have rownames matching levels of species" fit_phylo_latent_gllvm(Y20, sp20; Ainv = inv(C20))
+    end
+
+    @testset "branch-length refusals use R's wording" begin
+        @test_throws r"tree branch lengths must be non-negative" fit_phylo_latent_gllvm(Y20[:, 1:3], ["a", "b", "c"]; tree = "((a:-1,b:1):1,c:2);")
+        @test_throws r"tree branch lengths must be positive to build sparse precision" fit_phylo_latent_gllvm(Y20[:, 1:3], ["a", "b", "c"]; tree = "((a:0,b:0):2,c:2);")
     end
 
     @testset "Julia-only: non-ultrametric tree refuses with the R sentence" begin

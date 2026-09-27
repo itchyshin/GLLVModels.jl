@@ -57,9 +57,13 @@ followed by a Julia tag.
    direct route (`R/fit-multi.R:4691-4723`). At P1 that route is reached only
    by a global sparse `phylo_vcv`; the in-keyword `phylo_latent(Ainv = X)` is
    rewritten to `vcv = solve(as.matrix(X))` (`R/brms-sugar.R:3311-3319`), the
-   dense ridged route. Per the build brief (stop where R contradicts the
-   spec), `Ainv` is refused by `GJL-GATE-PHYLO-LATENT-AINV` until the
-   maintainer chooses which R behaviour the keyword twins.
+   dense ridged route. The first build refused `Ainv`; after review, the
+   maintainer rule (port R's semantics) was applied: the Julia keyword now
+   inverts `Ainv` over all its rows, then subsets to the species levels and
+   takes the dense ridged route, exactly as R's keyword does. R's global
+   sparse `phylo_vcv` route has no keyword twin and is not admitted, so
+   `test-species-unused-levels-guard.R:78` (which exercises that global route)
+   stays deferred.
 2. **Unary nodes.** The spec says a node of out-degree one is refused "as R
    refuses it through `.gllvm_validate_phylo_tree`". At P1 that validator
    has no such check, and R's precision rule is well defined for unary nodes.

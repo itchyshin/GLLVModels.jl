@@ -13,9 +13,8 @@
 # Two P1 facts differ from the spec and are recorded in the decisions note:
 #  * R's in-keyword `phylo_latent(Ainv = )` is rewritten to
 #    `vcv = solve(as.matrix(Ainv))` (R/brms-sugar.R:3311-3319), i.e. the dense
-#    ridged route, while a global sparse `phylo_vcv` takes the sparse direct
-#    route. Which one the Julia `Ainv` keyword twins is a maintainer question,
-#    so `Ainv` is refused here for now (GJL-GATE-PHYLO-LATENT-AINV).
+#    ridged route. The twin ports exactly that; R's sparse direct route
+#    (reached only by a global sparse `phylo_vcv`) has no keyword twin.
 #  * R's tree validator (R/phylo-tree-precision.R:70-160) does not refuse a
 #    node of out-degree one, so no unary-node refusal is added.
 
@@ -133,8 +132,8 @@ function _phylo_latent_tree_precision(tree)
         _phylo_latent_refuse("tree tip labels must be unique.", tag)
     (all(isfinite, e.edge_length) && length(e.edge_length) == n_total - 1) ||
         _phylo_latent_refuse("tree must contain finite branch lengths for every edge.", tag)
-    all(>(0), e.edge_length) ||
-        _phylo_latent_refuse("tree branch lengths must be positive to build sparse precision.", tag)
+    all(>=(0), e.edge_length) ||
+        _phylo_latent_refuse("tree branch lengths must be non-negative.", tag)
     # Root-to-node depths.
     depth = fill(NaN, n_total)
     depth[e.root] = 0.0
@@ -160,6 +159,8 @@ function _phylo_latent_tree_precision(tree)
             "GJL-GATE-PHYLO-NONULTRAMETRIC")
     all(>(0), tip_depths) ||
         _phylo_latent_refuse("tree must have positive root-to-tip height.", tag)
+    all(>(0), e.edge_length) ||
+        _phylo_latent_refuse("tree branch lengths must be positive to build sparse precision.", tag)
     # R's node order: internal (non-root) nodes first, tips last.
     internal = [i for i in (n_tip + 1):n_total if i != e.root]
     included = vcat(internal, collect(1:n_tip))
@@ -274,21 +275,34 @@ Exactly one phylogeny source is required:
   `tip_labels`. R's `1e-8` diagonal ridge is added before inversion, exactly as
   in R, so the dense route and the tree route agree only to roughly `1e-5` in
   log-density. A condition number above `1e8` warns; it never refuses.
+* `Ainv`: a precision matrix with row labels `tip_labels`, treated exactly as
+  R's keyword treats it (`vcv = solve(as.matrix(Ainv))`): it is inverted over
+  all its rows first, so unobserved rows (ancestors, extra tips) are
+  marginalised, then subset to the species levels and passed through the
+  dense ridged route above. R's separate sparse direct route, reached only by
+  a global sparse `phylo_vcv` argument, has no keyword twin and is not
+  admitted here.
 
 Refusals port R's sentences: `d` above the number of traits, no source, two
 sources, a non-phylogeny `tree`, a non-ultrametric tree, `vcv` without labels,
 and species labels the source does not cover (naming `droplevels()` when the
-uncovered level has no observations). Two Julia scope fences are labelled as
+uncovered level has no observations). One Julia scope fence is labelled as
 such: `rho != 1` (`GJL-GATE-PHYLO-LATENT-RHO`; R accepts `rho`, the twin does
-not yet) and `Ainv` (`GJL-GATE-PHYLO-LATENT-AINV`; R's in-keyword `Ainv` takes
-the dense ridged route while a global sparse `phylo_vcv` takes the sparse
-route, and which one this keyword twins is a pending maintainer decision).
+not yet).
 
 `unique = true` adds a per-trait phylogenetic unique variance (positive log
 link); it is a documented extra, not part of the twin.
 
 Optimisation uses finite-difference gradients because the sparse Cholesky
-does not accept automatic-differentiation numbers. Returns a
+does not accept automatic-differentiation numbers. `g_tol` is an absolute
+bound on the largest finite-difference gradient entry, and `converged = true`
+requires it. At realistic sizes the objective's numerical floor can sit above
+the default `1e-5`: on the A15 receipt (100 species, 5 replicates, 20 traits,
+`d = 2`, objective about 7372) the optimiser stops at gradient `2e-4` with
+`converged = false` and `stopping_reason = :gradient_not_converged`, although
+the point is within about `2e-10` of the optimum in objective and matches R's
+logLik to `3e-13`. There, `g_tol = 1e-3` gives `converged = true`; inspect
+`gradient_norm` rather than raising `g_tol` blindly. Returns a
 [`PrecisionMultivariateFit`](@ref) with `residual_mode = :shared`; use
 `extract_Sigma(fit; level = :phy)` and [`extract_phylo_signal`](@ref).
 """
@@ -303,20 +317,31 @@ function fit_phylo_latent_gllvm(Y::AbstractMatrix{<:Real}, species::AbstractVect
     source_tag = "GJL-GATE-PHYLO-LATENT-SOURCE"
     (A !== nothing && vcv !== nothing) && _phylo_latent_refuse(
         "phylo_latent() got both A and vcv.", source_tag, "These are aliases -- supply only one.")
-    (Ainv !== nothing && vcv !== nothing) && _phylo_latent_refuse(
+    # R turns A into vcv first, so A together with Ainv meets the same refusal.
+    (Ainv !== nothing && (vcv !== nothing || A !== nothing)) && _phylo_latent_refuse(
         "phylo_latent() got both Ainv and vcv.", source_tag, "These are aliases -- supply only one.")
+    if Ainv !== nothing
+        # R/brms-sugar.R:3317: `vcv = solve(as.matrix(Ainv))`, inverted over all
+        # rows before the species-level subset of the dense route.
+        Ainv isa AbstractMatrix || _phylo_latent_refuse(
+            "Ainv must be a numeric matrix.", "GJL-GATE-PHYLO-LATENT-VCV")
+        Ainv_dense = Matrix{Float64}(Ainv)
+        size(Ainv_dense, 1) == size(Ainv_dense, 2) || _phylo_latent_refuse(
+            "Ainv must be square.", "GJL-GATE-PHYLO-LATENT-VCV")
+        vcv = try
+            inv(Ainv_dense)
+        catch err
+            err isa LinearAlgebra.SingularException || rethrow()
+            _phylo_latent_refuse("Ainv must be invertible.", "GJL-GATE-PHYLO-LATENT-VCV")
+        end
+    end
     dense = A !== nothing ? A : vcv
-    n_sources = count(!isnothing, (tree, dense, Ainv))
+    n_sources = count(!isnothing, (tree, dense))
     n_sources == 0 && _phylo_latent_refuse(
         "phylo_latent() / phylo_slope() found in formula but phylo_vcv (or phylo_tree) is NULL.",
         source_tag, "Pass tree = ... or vcv = ... to fit_phylo_latent_gllvm.")
     n_sources > 1 && _phylo_latent_refuse(
         "Supply one of tree, vcv, or A / Ainv.", source_tag)
-    Ainv === nothing || _phylo_latent_refuse(
-        "Ainv is not yet admitted by the Julia twin.", "GJL-GATE-PHYLO-LATENT-AINV",
-        "R's in-keyword Ainv takes the dense ridged route and a global sparse phylo_vcv " *
-        "takes the sparse route; which one this keyword twins awaits a maintainer decision. " *
-        "Use tree or vcv.")
     n_traits, m = size(Y)
     d > n_traits && _phylo_latent_refuse(
         "phylo_latent(d = $(d)) exceeds the number of traits ($(n_traits)); the latent rank must satisfy d <= n_traits.",

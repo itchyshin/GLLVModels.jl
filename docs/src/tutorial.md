@@ -533,8 +533,10 @@ A labelled dense covariance works too (`vcv = C, tip_labels = labels`, or its
 alias `A = C`); as in R, a `1e-8` ridge is added before inversion, so the tree
 and dense routes agree to about `1e-5` in log-density. Polytomies in a Newick
 tree are admitted as R admits them. Report `Sigma_phy = Lambda * Lambda'`:
-the loadings themselves are fixed only up to the sign of each column. `rho != 1`
-and `Ainv` are refused by labelled scope fences for now.
+the loadings themselves are fixed only up to rotation and sign of their
+columns. `Ainv = P` (with `tip_labels`) is inverted first and then follows the dense
+route, as R's keyword does. `rho != 1` is refused by a labelled scope fence for
+now.
 
 ## 7. Choosing a family
 
