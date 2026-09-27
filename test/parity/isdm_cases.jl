@@ -113,6 +113,26 @@ for name in ISDM_CASES
         pb = by_name(r["b_fix_names"], Float64.(r["polished_b_fix"]), tab.X_names)
         @test maximum(relgap.(ft.b_fix, pb)) <= 1e-4
         @test abs(ft.loglik - r["polished_loglik"]) <= 1e-6
+
+        # P1-ISDM-PREDICT: link and response, in-sample, fixed-only, and on the
+        # training rows with the offset zeroed; abs 1e-4. R's output carries a
+        # `species` column ("placeholder" on this fit, spec Q8); the twin compares
+        # the four shared columns.
+        if haskey(r, "predict_link")
+            @test r["predict_columns"] == ["cell_id", "species", "trait", "isdm_source", "est"]
+            out = predict(ft)
+            @test keys(out) == (:cell_id, :trait, :isdm_source, :est)
+            @test out.isdm_source == dat.isdm_source && out.cell_id == dat.cell_id && out.trait == dat.trait
+            nd0 = merge(dat, (log_support = zeros(length(dat.value)),))
+            for (got, key) in ((out.est, "predict_link"),
+                               (predict(ft; type = :response).est, "predict_response"),
+                               (predict(ft; re_form = :zero).est, "predict_link_zero_re"),
+                               (predict(ft; newdata = nd0).est, "predict_newdata_offset0_link"),
+                               (predict(ft; newdata = nd0, type = :response).est,
+                                "predict_newdata_offset0_response"))
+                @test maximum(abs.(got .- Float64.(r[key]))) <= 1e-4
+            end
+        end
     end
 end
 
