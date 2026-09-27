@@ -62,7 +62,7 @@ Worktrees: `~/local-scratch/lanes/GLLVM.jl-auto-d-20260926` (Julia) and
    (expect ALL MET); push to #518.
 4. **Recovery check:** if `ridge/ridge_binary_julia_L1.5.csv` is complete (80 rows), compare with the
    R result and add the numbers to design/74 T7 and the PR body; if missing, re-run it (≈ 60–90 min local).
-5. **Docs pass (Julia):** a docs agent was adding a README note that `K` can be omitted (AGENTS.md rule 3) and `docs/dev-log/after-task/2026-09-27-auto-d.md`. If neither is on the branch, do it: README note next to the existing `fit_gllvm` example; check `docs/src/api.md` lists `select_lv`/`LVSelection` and that `fit_binomial_gllvm`'s docstring mentions `loading_ridge`.
+5. **Docs pass: DONE** (Julia `fe09db2e3`: README note, after-task report; `api.md` already lists `select_lv`, `LVSelection`, `fit_binomial_gllvm` with `loading_ridge` documented. R `3b1e8e61f`: check-log, validation-debt rows MS-03 to MS-06, formula-grammar note, `vignettes/articles/model-selection-latent-rank.Rmd` example with `eval = FALSE`, after-task report). Not run: Documenter build, `devtools::check()`, 3-OS CI.
 6. **NB re-run:** when all three arrays finish, rsync each cluster's `out-rerun/` to separate local dirs
    (task ids overlap across clusters), then
    `python3 LOOP/lanes/auto-d-20260926/pilot/analyze.py harvest,harvest-rerun-narval,harvest-rerun-nibi,harvest-rerun-rorqual harvest-report-final2.md`
@@ -96,7 +96,7 @@ Julia (`git diff --name-only origin/main...claude/lane-auto-d-20260926`): `src/m
 `src/families/fit_gllvm.jl`, `src/boundary_inference.jl`, `src/families/binomial.jl`,
 `src/families/aghq_binomial_fit.jl`, `test/test_model_selection.jl`, `test/test_binomial_ridge.jl`,
 `test/runtests.jl`, `docs/src/tutorial.md`, `docs/design/74-auto-latent-dimension.md`, `CHANGELOG.md`,
-`docs/dev-log/plan-actual/2026-09-27-auto-d.md`,
+`README.md`, `docs/dev-log/after-task/2026-09-27-auto-d.md`, `docs/dev-log/plan-actual/2026-09-27-auto-d.md`,
 `LOOP/lanes/auto-d-20260926/**`, and this file.
 R (`git diff --name-only origin/main...claude/lane-auto-d-r-20260926`): `R/select-lv.R`, `R/gllvmTMB.R`,
 `R/brms-sugar.R`, `man/select_lv.Rd`, `man/latent.Rd`, `man/gllvmTMB.Rd`, `NEWS.md`,
