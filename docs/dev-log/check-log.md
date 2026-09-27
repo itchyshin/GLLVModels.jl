@@ -1,3 +1,21 @@
+## 2026-09-27: Beta grouped kernel scores every site at its mode (#503 class)
+
+- Branch `claude/beta-grouped-mode-search-503` from `origin/main`. `_beta_grouped_loglik_site`
+  now calls `_beta_grouped_mode` (damped, #479 rule) with a `LogitLink` fallback whose step
+  weight is max(observed, Fisher), a 20x Fisher retry, then `-Inf`.
+- Before: seed-6 StableRNG panel (φ = 10, K = 1, warm start) 2 of 300 sites off the mode, value
+  off by up to 15.02; undamped Fisher 2-cycles (z = -0.318 / -0.983 around -0.555). Damped
+  Fisher alone does not converge there; the fallback does.
+- After: 18,000 sites (φ in {2, 10, 50}, K in {1, 2, 3}, loadings x1 and x3): 0 off the mode, 0
+  `-Inf`, every previously healthy site bit-identical. Affected cells about 35 to 48% slower.
+  Four whole fits (seeds 6 and 1, K = 1, 2): identical log-likelihoods before and after.
+- New test `test/test_beta_grouped_mode_search.jl`, 604 assertions (fails on the base, worst 15.02).
+- Regression, OPEN: `test_beta_grouped_convergence.jl` d05 (2 assertions) fails: the fit stops at
+  269.2966 (φ5 = 1139, log-φ5 gradient exactly 0, max |grad| 5.7e-6) instead of 272.6094. Both
+  points are stationary; under the new kernel the old optimum still scores 272.6094 (the old
+  kernel scores the new point at -861.3, garbage). Forcing the #480 restart reaches 272.6094 in
+  11 s. Needs a decision on the restart trigger before this can merge. Other 31 files: 3495 pass.
+
 ## 2026-09-25: Two-part families no longer score an unfinished mode search (#484)
 
 - Branch `claude/twopart-mode-search-484`, rebased onto `origin/main` (past #481 Gamma, #483 Beta,
