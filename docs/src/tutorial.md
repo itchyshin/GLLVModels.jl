@@ -513,6 +513,29 @@ would silently change every existing user's `σ²_phy` by a tree-dependent
 factor). This keeps established Julia estimates on the same scale while making
 the R-compatible convention an explicit choice.
 
+#### Fitting R's `phylo_latent()` model: `fit_phylo_latent_gllvm`
+
+`fit_phylo_latent_gllvm` is the named twin of gllvmTMB's bare Gaussian
+`phylo_latent(species, d = K)`. It always uses the unit-height convention (R's
+fit path), matches species to tips **by label**, and returns a
+`PrecisionMultivariateFit` with one shared residual variance:
+
+```julia
+tree = "(((s1:2,s2:2):1,(s3:1,s4:1):2):1,((s5:1.5,s6:1.5):1,(s7:1,s8:1):1.5):1.5);"
+species = repeat(["s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8"]; inner = 2)
+Y = randn(3, length(species))            # traits x observations
+fit = fit_phylo_latent_gllvm(Y, species; d = 1, tree = tree)
+extract_Sigma(fit; level = :phy, part = :shared).Sigma   # Lambda * Lambda'
+extract_phylo_signal(fit)                # H2 = 1 per trait for this bare model
+```
+
+A labelled dense covariance works too (`vcv = C, tip_labels = labels`, or its
+alias `A = C`); as in R, a `1e-8` ridge is added before inversion, so the tree
+and dense routes agree to about `1e-5` in log-density. Polytomies in a Newick
+tree are admitted as R admits them. Report `Sigma_phy = Lambda * Lambda'`:
+the loadings themselves are fixed only up to the sign of each column. `rho != 1`
+and `Ainv` are refused by labelled scope fences for now.
+
 ## 7. Choosing a family
 
 Match the family to the response support and its mean–variance behaviour:

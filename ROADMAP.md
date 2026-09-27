@@ -46,6 +46,13 @@ goes beyond standard `gllvm`.
 - [x] Confidence intervals: Wald (FD-Hessian), profile (LRT inversion), parametric bootstrap
 - [x] Derived-quantity CIs
 - [x] Phylogenetic models (sparse precision, contrasts, edge-incidence, relaxed clock, branch RE) — *beyond* `gllvm`
+- [x] **`phylo_latent()` twin** — `fit_phylo_latent_gllvm`: R's bare Gaussian
+      `phylo_latent(species, d = K)` on the `PrecisionPhy` path (label matching, tree or
+      dense `vcv`, R's refusals); A14/A15 paired receipts at gllvmTMB P1 in
+      `docs/dev-log/core070/phylo-latent-p1/`, promotion awaiting the maintainer block.
+      Open: the `Ainv` mapping, `rho != 1`, `unique = TRUE` pairing, non-Gaussian
+      `phylo_latent()`, and the A15 stationarity gap (both engines above the 1e-4
+      cross-gradient bar)
 - [x] **Phylogenetic GLM for non-Gaussian families** — `fit_phylo_glm` / `PhyloGLMFit`:
       a per-species phylogenetic random intercept (Poisson / NB / Binomial) via an
       augmented-state joint Laplace over the sparse phylogenetic precision (issue #61)
