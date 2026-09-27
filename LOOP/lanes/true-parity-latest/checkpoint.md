@@ -27,6 +27,10 @@ CI is runner-starved (about 24 queued runs across lanes); trains wait, nothing f
 
 - A3 PR2 started: namespace rows (71, no R needed) re-measured at P1 with tracked receipts (b3n, branch claude/true-parity-p1-namespace, stacked on #539). #544 (ordination X-forward fix, the user's side task) landed on main b3d86fe62.
 
+- Temporal slice 2 started (b6b, branch claude/temporal-slice2): unit/unit_obs composition via fit_temporal_gllvm's structure argument; no formula.jl edit (the gllvm() hook still needs the grammar lane).
+- #558 retargeted to main; its train waits for #546 to merge first (scratchpad/train_558.log). Trains #528/#539 and #531 timed out on CI capacity and were restarted (logs ...b.log).
+- Remote Control turned on for this session and the two running sessions (#541 grouped beta-binomial; DRM.jl package completion).
+
 ## Findings to remember
 - Carry scan: 0 of 306 required P0 rows carry; 278 receipts dangling (gitignored .unlazy/), 21 stale. P1 evidence must be re-made (A3); compute is small (10-45 min on kohaku); the harness is the work (#539 is step 1).
 - ordination_uncertainty is name-only (R: TMB joint-precision conditional covariance; Julia: bootstrap + Procrustes).
