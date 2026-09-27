@@ -80,7 +80,7 @@ end
 
 # The per-variance Gaussian fitter treats X as the complete mean design. Use
 # StatsModels' intercept/rank rules before expanding a site intercept to one
-# coefficient per trait. Keep the legacy shared-variance route separate.
+# coefficient per trait. The shared-variance route with covariates uses it too.
 function _pervar_formula_design(rhs, cols, p, n; contrasts, names::Bool=false)
     intercept = !StatsModels.omitsintercept(rhs)
     site_names = String[]
@@ -156,7 +156,8 @@ For `Normal()`, `pervar=true` instead selects
 `fixed_residual_sd=c` passes an explicit fixed residual scale to this route;
 it does not choose R's data-dependent scale automatically. Categorical contrasts
 follow StatsModels' rank rules. Do not also supply `X` with a formula.
-The default shared-variance route keeps its existing behavior.
+The default shared-variance route uses the same design when the formula has
+covariates.
 With no covariates it reduces to the intercept-only fit. Supplied table columns
 must still have one entry per site; an empty table is allowed for an
 intercept-only formula because `Y` supplies the site count.
@@ -250,7 +251,10 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
     end
 
     if family isa Normal
-        return fit_gaussian_gllvm(Y; X = X, K = K, kwargs...)
+        # fit_gaussian_gllvm treats X as the complete mean, so build the same
+        # trait-intercept + shared-slope design as the other Gaussian routes.
+        Xg = _pervar_formula_design(formula.rhs, cols, p, n; contrasts = contrasts)
+        return fit_gaussian_gllvm(Y; X = Xg, K = K, kwargs...)
     elseif family isa NegativeBinomial
         return fit_nb_gllvm_grouped_cov(Y; X = X, K = K, kwargs...)
     elseif family isa Beta

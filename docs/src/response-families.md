@@ -977,8 +977,8 @@ end
 The formula interface can build the same complete design. `y ~ 1 + site_x`
 includes one intercept per trait and a shared slope. `y ~ 0 + site_x` removes
 the intercepts; `y ~ 0` is a zero-mean model. Omitting the intercept marker
-(`y ~ site_x`) includes trait intercepts. This applies to `pervar=true`; the
-existing shared-variance formula route is unchanged. Complete long tables and
+(`y ~ site_x`) includes trait intercepts. The same design is used with
+`pervar=true` and by the default shared-variance route. Complete long tables and
 categorical contrast choices use the same per-variance route.
 
 ```@example pervar_design
