@@ -266,6 +266,21 @@ All notable changes to GLLVModels.jl are documented here.
   finite non-stationary sites and 0 false `-Inf` at healthy sites, with a maximum
   healthy-site value change of 4.3e-11. `getLV`/`predict` are unaffected in their
   public behaviour (still return `z`) but now run the same damped, retried search.
+- **Poisson `confint(..., method = :bootstrap)` now reports the refit's own
+  convergence verdict (#504).** The Laplace-route `refit` closure in
+  `_family_ci(fit::PoissonFit, ...)` (`src/confint_family.jl`) returned a bare
+  parameter vector, so `_bootstrap_refit_ok` (the richer `(θ = ..., converged
+  = ..., loglik = ...)` contract added in #508) could only check `isfinite` on
+  it: a replicate whose refit did not converge, or landed on the fitter's own
+  `1e12` failure sentinel, was still counted as a successful draw. The closure
+  now returns the fit's real `converged` and `loglik` alongside `θ`, so such a
+  replicate is excluded and `n_converged` reflects the stricter count. Fits
+  where every replicate already converged are unchanged (bootstrap interval
+  endpoints identical to before, to full precision). This is the first family
+  migrated to the richer contract for #504; the AGHQ route (`objective =
+  :aghq`) already checked `fb.converged` and is untouched. Other families
+  (Binomial, NB, Gamma, ...) still use the bare-vector adapter and are
+  migrated one at a time in follow-up PRs.
 
 ### Changed
 - **Breaking (default change):** `fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm`
