@@ -8,7 +8,9 @@
 # fitters — which default to `:observed` — ran an unguarded, possibly-indefinite
 # Newton (Beta's observed weight is measurably negative). The converged mode is
 # unaffected either way: it is the fixed point of `Λ's − z = 0`, which does not
-# involve W at all.
+# involve W at all. Exception (part of #503): where Fisher scoring fails at an NB2
+# site under LogLink, `_nb_grouped_loglik_site` falls back to observed-curvature
+# Newton, which is exact and SPD for NB2/log.
 #
 # of species) instead of one shared r. With G = 1 this reduces EXACTLY to the
 # shared-dispersion NB2 fit (`fit_nb_gllvm`): both routes default to
@@ -117,8 +119,9 @@ function _nb_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::Abs
     # is positive, so this is an exact, always-SPD Newton step on the concave per-site
     # log-posterior. It converges in a few steps where Fisher scoring 2-cycles
     # (measured: 5 steps at the fixture site, where Fisher had not settled after 2000).
-    # It runs only where Fisher failed, so every site that converged keeps its original
-    # path and value.
+    # It runs only where Fisher failed. Sites where the old loop converged keep its
+    # path; the damped search's full-step certification moves their values by about
+    # 1e-10 to 1e-8.
     if !ok && link isa LogLink
         z, ok = _nb_grouped_mode(fams, y, n, Λ, β, link, :observed;
                                  mask = mask, offset = offset, maxiter = maxiter, tol = tol)
@@ -266,6 +269,10 @@ equals the shared-dispersion [`nb_marginal_loglik_laplace`](@ref) to machine
 precision — both default `hessian=:observed` (TMB's conditional NB2/log
 Hessian) since 2026-08-27; `hessian=:fisher` selects the previous
 expected-information objective on both routes.
+
+Returns `-Inf` when a site's mode search does not converge (damped Fisher scoring,
+then observed-curvature Newton under `LogLink`, then a 20x Fisher retry), so a
+caller's objective sees a failure rather than a value away from the mode.
 """
 function nb_grouped_marginal_loglik_laplace(Y::AbstractMatrix, Λ::AbstractMatrix,
         β::AbstractVector, rvec::AbstractVector; link::Link = LogLink(),
