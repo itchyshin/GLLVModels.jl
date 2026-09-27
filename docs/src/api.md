@@ -532,6 +532,7 @@ BetaHurdle
 OrderedBeta
 Ordinal
 ordinal_logit
+OrdinalLogit
 ZIPoisson
 ZINegBin
 GLLVModels.ZINB

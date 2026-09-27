@@ -36,18 +36,53 @@ function _check_ordinal_link(link::Link)
 end
 
 """
+    OrdinalLogit
+
+Family marker returned by [`ordinal_logit`](@ref). A distinct type from
+[`Ordinal`](@ref) — not merely `Ordinal()` under another name — so that the
+link stays pinned to `LogitLink()` regardless of what `Ordinal()`'s own
+default link happens to be, and so `fit_gllvm(Y; family = ordinal_logit(),
+link = ProbitLink())` is refused rather than silently fitting a probit model
+under the logit name. The underlying fit (`fit_ordinal_gllvm_pertrait` /
+`fit_ordinal_gllvm_pertrait_cov`) and its result type
+([`OrdinalPerTraitFit`](@ref) / `OrdinalPerTraitCovFit`) are exactly the
+same as `Ordinal()`'s with `link = LogitLink()`; post-fit, `confint`,
+`simulate`, `predict`, and the R bridge all dispatch on that shared result
+type, not on this marker, so this type has no other dispatch surface to
+maintain beyond [`fit_gllvm`](@ref) / [`gllvm`](@ref) itself.
+"""
+struct OrdinalLogit end
+
+default_link(::OrdinalLogit) = LogitLink()
+
+# Both the bare `fit_gllvm` entry point and the `@formula` front door
+# (`src/formula.jl`) reach this: reject any explicitly supplied non-logit
+# `link` up front rather than silently overriding it, since the whole point
+# of a distinct marker is that `ordinal_logit()` never quietly becomes a
+# probit fit.
+function _check_ordinal_logit_link(kwargs)
+    haskey(kwargs, :link) && !(kwargs[:link] isa LogitLink) && throw(ArgumentError(
+        "ordinal_logit() only supports LogitLink(); got $(typeof(kwargs[:link])). " *
+        "Use Ordinal() with link = ProbitLink() for the probit link."))
+    return nothing
+end
+
+"""
     ordinal_logit(; link::Link = LogitLink())
 
 The Julia twin of `gllvmTMB`'s `ordinal_logit()` response family (`family_id
 20`, gllvmTMB ≥ 0.7.1): a cumulative-**logit** threshold model for K ≥ 3
 ordered categories, with a per-trait intercept and per-trait cutpoints
-(``\\tau_1 = 0`` fixed, ``K_t - 2`` free log-spaced cutpoints). This is exactly
-[`Ordinal`](@ref) routed through [`fit_ordinal_gllvm_pertrait`](@ref) /
-[`fit_ordinal_gllvm_pertrait_cov`](@ref) with `link = LogitLink()` — already
-the default link for `Ordinal()`, so `ordinal_logit()` changes no numerics; it
-exists to give R's public name a literal Julia counterpart. As in `gllvmTMB`,
-`link` supports only the logit link and exists for API symmetry with the
-family constructor shape; pass anything else and this throws.
+(``\\tau_1 = 0`` fixed, ``K_t - 2`` free log-spaced cutpoints). It fits
+exactly the same model as [`Ordinal`](@ref) with `link = LogitLink()` — via
+[`fit_ordinal_gllvm_pertrait`](@ref) / [`fit_ordinal_gllvm_pertrait_cov`](@ref)
+— but returns the distinct [`OrdinalLogit`](@ref) marker, which pins the
+link: `fit_gllvm(Y; family = ordinal_logit(), link = ProbitLink())` throws
+`ArgumentError` rather than silently fitting a probit model under the logit
+name. As in `gllvmTMB`, `link` supports only the logit link and exists for
+API symmetry with the family constructor shape; pass anything else and this
+throws, naming [`Ordinal`](@ref) with `ProbitLink()` as the alternative —
+exactly as R's `ordinal_logit(link = "probit")` names `ordinal_probit()`.
 
 The shared-cutpoint, no-intercept [`fit_ordinal_gllvm`](@ref) route (the
 `Ordinal()` marker's other, non-default fitter) has no `gllvmTMB` twin.
@@ -59,8 +94,9 @@ fit = fit_gllvm(Y; family = ordinal_logit(), K = 1)
 """
 function ordinal_logit(; link::Link = LogitLink())
     link isa LogitLink || throw(ArgumentError(
-        "ordinal_logit supports only LogitLink(); got $(typeof(link))"))
-    return Ordinal()
+        "ordinal_logit supports only LogitLink(); got $(typeof(link)). " *
+        "Use Ordinal() with link = ProbitLink() for the probit link."))
+    return OrdinalLogit()
 end
 
 # Link CDF F and density f = F'. The cumulative model and the analytic

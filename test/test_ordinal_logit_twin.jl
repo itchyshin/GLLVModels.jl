@@ -13,9 +13,12 @@
 # free log-spaced cutpoints). GLLVModels.jl's Ordinal() family already fits
 # exactly this model by default (fit_ordinal_gllvm_pertrait, link =
 # LogitLink()) -- this is the twin-default per the 2026-08-03
-# ordinal-x-cutpoint-identity decision. ordinal_logit() is a thin, literal
-# name-twin of Ordinal() so R's public export has a matching Julia name; it
-# changes no numerics.
+# ordinal-x-cutpoint-identity decision. ordinal_logit() is a name-twin that
+# fits the identical model through the identical fitter, but returns its own
+# OrdinalLogit marker (not Ordinal() itself) so the link stays pinned to
+# LogitLink() at the dispatch site -- Ordinal() carries no link of its own,
+# so routing ordinal_logit() straight to Ordinal() would let a downstream
+# `link = ProbitLink()` silently fit a probit model under the logit name.
 using Test
 using GLLVModels
 using TOML
@@ -46,18 +49,47 @@ function _load_ordinal_logit_csv(path::AbstractString, trait_names::Vector{Strin
 end
 
 @testset "ordinal_logit() API (name-twin of gllvmTMB's ordinal_logit())" begin
-    @test ordinal_logit() isa Ordinal
-    @test ordinal_logit(; link = LogitLink()) isa Ordinal
+    # ordinal_logit() returns its OWN marker type, not Ordinal() under another
+    # name: Ordinal() carries no link, so a bare `family = ordinal_logit()`
+    # dispatch that just forwarded to Ordinal()'s own default link would
+    # silently start fitting probit the moment Ordinal()'s default changed,
+    # or would accept `link = ProbitLink()` under the logit name today. The
+    # distinct OrdinalLogit marker pins the link at the dispatch site instead.
+    @test ordinal_logit() isa OrdinalLogit
+    @test !(ordinal_logit() isa Ordinal)
+    @test ordinal_logit(; link = LogitLink()) isa OrdinalLogit
     # Mirrors gllvmTMB's `ordinal_logit(link = "probit")` refusal (naming
     # ordinal_probit()); see R/families.R's ordinal_logit().
     @test_throws ArgumentError ordinal_logit(; link = ProbitLink())
-    # Dispatches identically to Ordinal() (same default link, same fitter).
+
     Y0 = [1 2 3 1 2 3 1 2 3 1 2 3
           1 2 1 2 1 2 1 2 1 2 1 2]
+    # A `link` supplied downstream, at the fit_gllvm call site, must be
+    # refused too -- not just a `link` supplied to the ordinal_logit()
+    # constructor. Before OrdinalLogit existed, this silently fit a probit
+    # model under the logit name (Ordinal() carries no link of its own).
+    @test_throws ArgumentError fit_gllvm(Y0; family = ordinal_logit(), K = 1, link = ProbitLink())
+
+    # Dispatches to exactly the same fitter as Ordinal() (same default link).
     f1 = fit_gllvm(Y0; family = Ordinal(), K = 1)
     f2 = fit_gllvm(Y0; family = ordinal_logit(), K = 1)
     @test f1.loglik == f2.loglik
     @test isequal(f1.τ, f2.τ)          # isequal: NaN padding compares equal to itself
+end
+
+@testset "ordinal_logit() through gllvm(@formula(...), ...) with a site covariate" begin
+    # Exercises the `elseif family isa OrdinalLogit` branch in src/formula.jl
+    # (the shared site-X / @formula front door), not just the bare
+    # fit_gllvm(Y; family = ordinal_logit()) no-X path above.
+    Y0 = [1 2 3 1 2 3 1 2 3 1 2 3
+          1 2 1 2 1 2 1 2 1 2 1 2]
+    site_data = (x = collect(1.0:12.0),)
+    f1 = gllvm(@formula(y ~ 1 + x), Y0, site_data; family = Ordinal(), K = 1)
+    f2 = gllvm(@formula(y ~ 1 + x), Y0, site_data; family = ordinal_logit(), K = 1)
+    @test f1.loglik == f2.loglik
+    @test isequal(f1.τ, f2.τ)
+    @test_throws ArgumentError gllvm(@formula(y ~ 1 + x), Y0, site_data;
+        family = ordinal_logit(), K = 1, link = ProbitLink())
 end
 
 @testset "ordinal_logit() twin: gllvmTMB P1 (9539352f6) fixed dataset" begin
@@ -80,6 +112,15 @@ end
         @test fit isa OrdinalPerTraitFit
         @test fit.converged
         @test fit.C == fill(4, length(trait_names))
+
+        # ordinal_logit() and Ordinal() fit to the EXACT same optimum on the
+        # fixture (both run the identical deterministic optimizer path with
+        # link = LogitLink()), not merely to a numerically close one.
+        fit_via_ordinal = fit_gllvm(Y; family = Ordinal(), K = 1)
+        @test fit.loglik == fit_via_ordinal.loglik
+        @test fit.β == fit_via_ordinal.β
+        @test fit.Λ == fit_via_ordinal.Λ
+        @test fit.τ == fit_via_ordinal.τ
 
         r = fixture["r_reference"]
 
