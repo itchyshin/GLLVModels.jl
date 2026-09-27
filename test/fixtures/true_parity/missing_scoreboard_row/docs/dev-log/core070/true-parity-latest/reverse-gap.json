@@ -1,4 +1,10 @@
 [
-  {"source_id": "SourceCovariance", "decision": "Julia-only extra, documented, kept as an extra."},
-  {"source_id": "TwoPartZI", "decision": "Julia-only extra, documented, kept as an extra."}
+ {
+  "source_id": "SourceCovariance",
+  "decision": "KEPT_AS_JULIA_EXTRA"
+ },
+ {
+  "source_id": "TwoPartZI",
+  "decision": "KEPT_AS_JULIA_EXTRA"
+ }
 ]

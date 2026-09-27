@@ -1,0 +1,8 @@
+name: x
+on: [pull_request]
+jobs:
+  true-parity-p1:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - run: echo P1

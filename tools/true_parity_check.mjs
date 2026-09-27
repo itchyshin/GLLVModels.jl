@@ -7,8 +7,8 @@
 // C0 C1 C2 C3 C4 C5 C6 C7 C8 X2. Prints measured numbers, then <mode>_MET only when the
 // clause holds. Exit 0 on a clean measurement regardless of MET/NOT_MET (the gate is decided
 // by the printed verdict, not the exit code); exit 2 if the measurement itself could not be
-// made (missing file, malformed JSON, etc — MEASUREMENT_FAILED). An empty row selection is
-// never a pass.
+// made (missing file, malformed JSON, a receipt reference the tool cannot resolve either way,
+// etc -- MEASUREMENT_FAILED). An empty row selection is never a pass.
 //
 // Reads a git ref (default origin/main), never the working tree, so a gate cannot pass on an
 // unmerged branch. PARITY_REF=FS switches to a filesystem fixture tree rooted at
@@ -18,8 +18,20 @@
 // docs/dev-log/core070/true-parity-latest/GATES.md). Copied from and extends
 // ~/local-scratch/lanes/GLLVM.jl-gllvm-backlog-20260926/.unlazy/true-parity/check.mjs
 // (untracked, kept as-is; this file is the tracked continuation, not an edit of that one).
+//
+// Post-review hardening (2026-09-27, independent review of PR #523, BLOCKING): the first cut
+// accepted labels in place of evidence -- a receipt path that resolved to a directory counted
+// as present; a scoreboard cell with no extractable path counted as done anyway; a bare
+// `DISPOSITION-SIGNED` label or a bare `executable_case_ids` entry counted as bound with no
+// receipt, signer, or date; `outside_boundary` rows vanished from C8 entirely; the carry rule
+// compared author-typed strings with no hash-format check and was opt-in; `git ls-tree` without
+// a trailing slash never actually listed a directory's contents, so C0's CI-job scan silently
+// scanned nothing in git mode. Every one of those is fixed below. What is intentionally still
+// deferred (name-twin detection from receipt content; a CARRY_VERIFY mode that re-hashes the
+// gllvmTMB tree itself) is stated as a gap, not silently patched over -- see
+// docs/dev-log/core070/true-parity-latest/GATES.md.
 import { execFileSync } from 'node:child_process';
-import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 const REF = process.env.PARITY_REF || 'origin/main';
@@ -28,6 +40,7 @@ const FS_ROOT = process.env.PARITY_FS_ROOT || '.';
 
 const P0_SHA = 'b4d5fee64def88bc768dda1f1f77c29b295edd86';
 const P1_SHA = '9539352f66f2db2cc26b1c393e67212a359b60c9';
+const SHA256_RE = /^[0-9a-f]{64}$/;
 
 // Per-pin ledger paths. "Configurable per pin": add a pin here, or override with
 // PARITY_SCOREBOARD / PARITY_CASEMAP / PARITY_REVERSE_GAP for one-off runs.
@@ -51,8 +64,22 @@ const PATHS = {
 const PARITY_PAGE = 'docs/src/gllvmtmb-parity.md';
 const ORACLE_PY = 'tools/parity_oracle.py';
 const WORKFLOWS_DIR = '.github/workflows';
+// This tool's own CI smoke test never counts as "the P1 twin job" for C0 -- it runs fixtures,
+// not real P1 twin tests. Excluded by name as a backstop; the content check below (job id
+// `p1-twin-tests` plus the `gllvm-parity-tag: P1` discovery convention from PR #524) would not
+// match it anyway, but a filename exclusion is cheap insurance against that check drifting.
+const SMOKE_WORKFLOW_FILE = 'true-parity-check.yml';
 
 const DONE = new Set(['EVIDENCED', 'DISPOSITION-SIGNED']);
+// C6's decision vocabulary is enumerated, not free text: a reverse-gap item's "decision" must
+// be exactly one of these, or it does not count as decided (a placeholder like "TBD" must not
+// pass just because the field is non-empty).
+const C6_DECISION_VOCAB = new Set([
+  'KEPT_AS_JULIA_EXTRA',
+  'PORT_TO_MATCH_R',
+  'DEPRECATE_AND_REMOVE',
+  'RENAME_TO_AVOID_COLLISION',
+]);
 
 const git = (...a) => execFileSync('git', a, { encoding: 'utf8', maxBuffer: 64 << 20, stdio: ['ignore', 'pipe', 'pipe'] });
 const die = (m) => { console.log(`MEASUREMENT_FAILED ${m}`); process.exit(2); };
@@ -65,26 +92,58 @@ function show(p) {
   }
 }
 
-function exists(p) {
-  if (REF === 'FS') return existsSync(join(FS_ROOT, p));
-  try { git('cat-file', '-e', `${REF}:${p}`); return true; } catch { return false; }
+// A receipt (or any cited path) must resolve to a FILE, never a directory: git `cat-file -e`
+// succeeds on a tree too, which is how a directory silently passed as "the receipt" before
+// this fix. `cat-file -t` reports the object type; only "blob" counts.
+function existsAsBlob(p) {
+  if (REF === 'FS') {
+    try { return statSync(join(FS_ROOT, p)).isFile(); } catch { return false; }
+  }
+  try { return git('cat-file', '-t', `${REF}:${p}`).trim() === 'blob'; } catch { return false; }
 }
 
 function listDir(dir) {
   if (REF === 'FS') {
     try { return readdirSync(join(FS_ROOT, dir)); } catch { return []; }
   }
-  try { return git('ls-tree', '--name-only', REF, '--', dir).split('\n').filter(Boolean).map((p) => p.split('/').pop()); } catch { return []; }
+  try {
+    // `git ls-tree --name-only REF -- dir` (no trailing slash) returns the directory entry
+    // itself, not its contents, so nothing was ever scanned in git mode. A trailing slash (or
+    // -r) makes it list the directory's contents instead.
+    const d = dir.endsWith('/') ? dir : `${dir}/`;
+    return git('ls-tree', '--name-only', REF, '--', d).split('\n').filter(Boolean).map((p) => p.split('/').pop());
+  } catch {
+    return [];
+  }
 }
 
 // --- shared parsers -------------------------------------------------------
 
 // Extracts path-like tokens (docs/..., tools/..., test/..., src/...) from free text, e.g. a
 // scoreboard's "Receipt / disposition" column, so receipt resolution can check they exist.
+// Deliberately narrow (a known top-level dir plus a known extension) to avoid pulling prose
+// into a false receipt; `looksPathLike` below catches text this misses so it fails loudly
+// instead of silently passing.
 function extractPaths(text) {
   if (!text) return [];
   const m = text.match(/\b(?:docs|tools|test|src)\/[A-Za-z0-9._\-/]+\.(?:md|json|toml|jl|py|mjs)\b/g);
   return m ? [...new Set(m)] : [];
+}
+
+// True for any text that contains a slash-separated token (".unlazy/x/y.json", "docs/x.txt",
+// a bare directory) -- i.e. text a human plainly intended as a path reference, whether or not
+// `extractPaths`'s narrower pattern captured it.
+function looksPathLike(text) {
+  if (!text) return false;
+  return /[A-Za-z0-9_.-]+\/[A-Za-z0-9_./-]+/.test(text);
+}
+
+// A DISPOSITION-SIGNED scoreboard row (markdown has no separate signed_by/signed_on columns)
+// records its signer and date as plain tokens in the same free-text cell, e.g.
+// "Disposition: outside_boundary; signed_by: Shinichi Nakagawa; signed_on: 2026-09-27".
+function hasSignedTokens(text) {
+  if (!text) return false;
+  return /signed_by:\s*\S/.test(text) && /signed_on:\s*\d{4}-\d{2}-\d{2}/.test(text);
 }
 
 function loadCasemap() {
@@ -101,17 +160,34 @@ function rowReceiptPaths(row) {
   return Array.isArray(r) ? r : [r];
 }
 
-// A row carried from P0 counts at P1 only if every source-pin file is byte-identical between
-// the gllvmTMB commit it was measured against and P1 (the two hashes are recorded on the row
-// itself when it is re-measured; this tool never reaches into an external gllvmTMB clone).
-function carryIsStale(row) {
-  const c = row.carry;
-  if (!c || !Array.isArray(c.source_pins) || c.source_pins.length === 0) return false;
-  return c.source_pins.some((sp) => !sp.sha256_at_p1 || sp.sha256_at_p0 !== sp.sha256_at_p1);
+function isValidSha256(s) { return typeof s === 'string' && SHA256_RE.test(s); }
+
+// A DISPOSITION-SIGNED row (case-map JSON schema) needs an actual signer and date on the row,
+// not just the label. The tool never verifies the signer's identity -- that happens in PR
+// review, by a human reading the diff (GATES.md says so) -- it only refuses to treat an
+// unsigned label as if it were signed.
+function dispositionSignedProperly(row) {
+  return row.disposition === 'DISPOSITION-SIGNED'
+    && typeof row.signed_by === 'string' && row.signed_by.trim().length > 0
+    && typeof row.signed_on === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(row.signed_on);
 }
 
-function danglingReceipts(row) {
-  return rowReceiptPaths(row).filter((p) => !exists(p));
+// Receipt carry rule (Packet 1 row 1): a row not measured directly against P1 needs a `carry`
+// block whose source_pins are non-empty, real 64-lowercase-hex sha256 pairs, and equal (byte-
+// identical at the two pins) -- author-typed strings like "abc123"/"abc123" no longer pass, an
+// empty source_pins array no longer passes, and a row with no `carry` block at all (or no
+// `measured_against` at all) is no longer treated as fresh by default.
+function carryStatus(row) {
+  const ma = row.measured_against;
+  if (ma === 'P1' || ma === P1_SHA) return { stale: false };
+  if (ma === undefined || ma === null) return { stale: true, reason: 'PARTIAL_STALE_AT_P1(missing measured_against)' };
+  const c = row.carry;
+  if (!c || !Array.isArray(c.source_pins) || c.source_pins.length === 0) {
+    return { stale: true, reason: 'PARTIAL_STALE_AT_P1(no carry.source_pins)' };
+  }
+  const bad = c.source_pins.some((sp) => !isValidSha256(sp.sha256_at_p0) || !isValidSha256(sp.sha256_at_p1) || sp.sha256_at_p0 !== sp.sha256_at_p1);
+  if (bad) return { stale: true, reason: 'PARTIAL_STALE_AT_P1(hash mismatch or not 64-hex sha256)' };
+  return { stale: false };
 }
 
 function scoreboardRows() {
@@ -128,18 +204,36 @@ function scoreboardRows() {
   return rows;
 }
 
+// Evaluates one scoreboard row. Returns { ok } for a settled result, or { fatal, reason } when
+// the row's own text cannot be trusted enough to call it either done or not-done (a path-like
+// receipt reference that extractPaths could not capture): that is a MEASUREMENT_FAILED, not a
+// silent "not done".
+function evaluateScoreboardRow(r) {
+  if (!DONE.has(r.status)) return { ok: false, reason: 'NOT_DONE' };
+  const extracted = extractPaths(r.receiptText);
+  if (extracted.length === 0) {
+    if (r.status === 'DISPOSITION-SIGNED' && hasSignedTokens(r.receiptText)) return { ok: true };
+    if (looksPathLike(r.receiptText)) {
+      return { fatal: true, reason: `receipt text looks path-like but no path was extracted: "${r.receiptText}"` };
+    }
+    return { ok: false, reason: 'NO_RECEIPT_PATH' };
+  }
+  const dangling = extracted.filter((p) => !existsAsBlob(p));
+  if (dangling.length) return { ok: false, reason: `DANGLING:${dangling.join(',')}` };
+  return { ok: true };
+}
+
 function report(tag, rows, pick) {
   const sel = pick ? rows.filter(pick) : rows;
   if (sel.length === 0) { console.log(`${tag} rows=0 EMPTY_SELECTION (vacuous; not a pass)`); return false; }
-  const dangling = [];
-  const open = sel.filter((r) => {
-    if (!DONE.has(r.status)) return true;
-    const bad = extractPaths(r.receiptText).filter((p) => !exists(p));
-    if (bad.length) { dangling.push(`${r.id}:${bad.join(',')}`); return true; }
-    return false;
-  });
-  console.log(`${tag} rows=${sel.length} done=${sel.length - open.length} not_done=${open.map((r) => r.id).join(',') || 'none'}` + (dangling.length ? ` dangling_receipts=${dangling.join(';')}` : ''));
-  return open.length === 0;
+  const notDone = [];
+  for (const r of sel) {
+    const ev = evaluateScoreboardRow(r);
+    if (ev.fatal) die(`row ${r.id}: ${ev.reason}`);
+    if (!ev.ok) notDone.push(`${r.id}:${ev.reason}`);
+  }
+  console.log(`${tag} rows=${sel.length} done=${sel.length - notDone.length} not_done=${notDone.join(',') || 'none'}`);
+  return notDone.length === 0;
 }
 
 // --- C0: additive P1 oracle + required CI job -----------------------------
@@ -149,22 +243,27 @@ function checkC0() {
   if (py === null) die(`${ORACLE_PY} not on ${REF}`);
   const hasP0 = new RegExp(`FROZEN_GLLVMTMB_ORACLE\\s*=\\s*["']${P0_SHA}["']`).test(py);
   const hasP1 = new RegExp(`P1_GLLVMTMB_ORACLE\\s*=\\s*["']${P1_SHA}["']`).test(py);
-  const defaultsToP1 = /DEFAULT_R_REF\s*=\s*P1_GLLVMTMB_ORACLE/.test(py);
-  const wfFiles = listDir(WORKFLOWS_DIR).filter((f) => /\.ya?ml$/.test(f));
-  let requiredP1Job = false;
+  // DEFAULT_R_REF stays at P0 by design (tools/parity_oracle.py::DEFAULT_R_REF, PR #524) --
+  // flipping the default is a separate, later PR. What C0 checks here is that the explicit,
+  // documented switch exists: a named-pins map plus an env-var-driven lookup that resolves to
+  // the P1 pin when asked (GLLVM_PARITY_PIN=P1).
+  const hasP1Switch = /R_REF_PINS/.test(py) && /os\.environ\.get\(/.test(py) && /DEFAULT_R_REF\s*=\s*R_REF_PINS(\.get\(|\[)/.test(py);
+  const hasCapabilityLedgerRef = /CAPABILITY_LEDGER_REF\s*=\s*["'][^"']+["']/.test(py);
+
+  const wfFiles = listDir(WORKFLOWS_DIR).filter((f) => /\.ya?ml$/.test(f) && f !== SMOKE_WORKFLOW_FILE);
+  let p1JobFile = null;
   for (const f of wfFiles) {
     const t = show(`${WORKFLOWS_DIR}/${f}`);
     if (!t) continue;
-    // Best-effort, not a full YAML parse: a job block mentioning the P1 pin or "true-parity"
-    // that is not marked continue-on-error counts as a required job.
-    const blocks = t.split(/\n(?=\s{2}\S)/);
-    for (const b of blocks) {
-      if (/true[-_]parity|P1\b/i.test(b) && !/continue-on-error:\s*true/i.test(b)) { requiredP1Job = true; break; }
-    }
-    if (requiredP1Job) break;
+    // Recognises exactly PR #524's job (by id and by the tagged-test discovery convention it
+    // runs), not any workflow that merely mentions "P1" or "true-parity" in passing.
+    const hasJobId = /(^|\n)\s{2}p1-twin-tests:/.test(t);
+    const runsTaggedP1 = /gllvm-parity-tag:\s*P1/.test(t);
+    const notAdvisory = !/continue-on-error:\s*true/i.test(t);
+    if (hasJobId && runsTaggedP1 && notAdvisory) { p1JobFile = f; break; }
   }
-  console.log(`C0 p0_pin_present=${hasP0} p1_pin_present=${hasP1} default_r_ref_is_p1=${defaultsToP1} required_p1_ci_job=${requiredP1Job} (workflows scanned: ${wfFiles.join(',') || 'none'})`);
-  return hasP0 && hasP1 && defaultsToP1 && requiredP1Job;
+  console.log(`C0 p0_pin_present=${hasP0} p1_pin_present=${hasP1} p1_pin_switch_present=${hasP1Switch} capability_ledger_ref_present=${hasCapabilityLedgerRef} p1_twin_job_file=${p1JobFile || 'none'} (workflows scanned: ${wfFiles.join(',') || 'none'}; NOTE: GitHub's "required check" status is branch-protection configuration on main, not something readable from repo content -- this only checks the job exists, runs the P1-tagged convention, and is not continue-on-error)`);
+  return hasP0 && hasP1 && hasP1Switch && hasCapabilityLedgerRef && !!p1JobFile;
 }
 
 // --- C1: required rows bound, receipts resolve, carry rule applied --------
@@ -177,18 +276,28 @@ function checkC1() {
   const dangling = [];
   const stale = [];
   for (const r of req) {
-    const dang = danglingReceipts(r);
-    if (dang.length) { dangling.push(`${r.source_id}:${dang.join(',')}`); continue; }
-    if (carryIsStale(r)) { stale.push(r.source_id); continue; }
+    const paths = rowReceiptPaths(r);
+    if (paths.length > 0) {
+      const dang = paths.filter((p) => !existsAsBlob(p));
+      if (dang.length) { dangling.push(`${r.source_id}:${dang.join(',')}`); continue; }
+      // The carry/staleness gate only applies to rows that actually cite a receipt: a pure
+      // signed disposition (no numeric evidence) has nothing that can go stale.
+      const cs = carryStatus(r);
+      if (cs.stale) { stale.push(`${r.source_id}:${cs.reason}`); continue; }
+    }
     const d = r.disposition ?? null;
-    const hasReceipt = (Array.isArray(r.executable_case_ids) ? r.executable_case_ids.length > 0 : !!r.executable_case_ids) || rowReceiptPaths(r).length > 0;
-    if (d === null || d === undefined) { hasReceipt ? bound++ : free++; continue; }
-    if (/^(BLOCKED|PARTIAL)/.test(d)) unsigned[d] = (unsigned[d] || 0) + 1;
-    else if (d === 'DISPOSITION-SIGNED') bound++;
-    else unsigned[d] = (unsigned[d] || 0) + 1;
+    if (d === 'DISPOSITION-SIGNED') {
+      dispositionSignedProperly(r) ? bound++ : (unsigned['DISPOSITION-SIGNED-UNVERIFIED'] = (unsigned['DISPOSITION-SIGNED-UNVERIFIED'] || 0) + 1);
+      continue;
+    }
+    if (d !== null && d !== undefined) { unsigned[d] = (unsigned[d] || 0) + 1; continue; }
+    // d === null: bound requires BOTH case ids and a resolving receipt -- case ids alone, or a
+    // receipt alone, are not enough.
+    const caseIdsPresent = Array.isArray(r.executable_case_ids) ? r.executable_case_ids.length > 0 : !!r.executable_case_ids;
+    (caseIdsPresent && paths.length > 0) ? bound++ : free++;
   }
   const nUnsigned = Object.values(unsigned).reduce((a, b) => a + b, 0);
-  console.log(`C1 required=${req.length} bound=${bound} free=${free} unsigned_or_blocked=${nUnsigned} ${JSON.stringify(unsigned)} dangling_receipts=${dangling.join(';') || 'none'} stale_carries=${stale.map((s) => `${s}:PARTIAL_STALE_AT_P1`).join(';') || 'none'}`);
+  console.log(`C1 required=${req.length} bound=${bound} free=${free} unsigned_or_blocked=${nUnsigned} ${JSON.stringify(unsigned)} dangling_receipts=${dangling.join(';') || 'none'} stale_carries=${stale.join(';') || 'none'}`);
   return req.length > 0 && nUnsigned === 0 && free === 0 && dangling.length === 0 && stale.length === 0;
 }
 
@@ -210,7 +319,7 @@ function checkC3() { return report('C3 realistic-size', scoreboardRows(), (r) =>
 function checkC4() { return report('C4 real-data workflows', scoreboardRows(), (r) => /^RD-/i.test(r.id)); }
 function checkC5() { return report('C5 grouping levels', scoreboardRows(), (r) => /^GRP-/i.test(r.id)); }
 
-// --- C6: reverse-gap list, one written decision per item ------------------
+// --- C6: reverse-gap list, one written decision per item, from a fixed vocabulary ----
 
 function checkC6() {
   if (!PATHS.reverseGap) die('no reverse-gap list path configured for this pin');
@@ -219,42 +328,49 @@ function checkC6() {
   let items;
   try { items = JSON.parse(j); } catch (e) { die(`${PATHS.reverseGap} is not valid JSON: ${e.message}`); }
   if (!Array.isArray(items) || items.length === 0) { console.log('C6 items=0 EMPTY_SELECTION (vacuous; not a pass)'); return false; }
-  const undecided = items.filter((it) => !it.decision).map((it) => it.source_id || it.name || '?');
-  console.log(`C6 items=${items.length} undecided=${undecided.join(',') || 'none'}`);
-  return undecided.length === 0;
+  const invalid = items.filter((it) => !C6_DECISION_VOCAB.has(it.decision)).map((it) => `${it.source_id || it.name || '?'}:${JSON.stringify(it.decision)}`);
+  console.log(`C6 items=${items.length} invalid_decision=${invalid.join(',') || 'none'} (vocabulary: ${[...C6_DECISION_VOCAB].join('|')})`);
+  return invalid.length === 0;
 }
 
-// --- C7: parity page states what parity does not mean, pin-independent ---
+// --- C7: parity page states the exact "what parity does not mean" heading, pin-independent --
 
 function checkC7() {
   const p = show(PARITY_PAGE);
   if (p === null) die(`${PARITY_PAGE} missing`);
-  const hit = /^#+ .*(does not mean|is not|not (a )?parity claim)/im.test(p);
-  console.log(`C7 parity_page_has_not_mean_section=${hit}`);
+  const hit = /^#+\s*What parity does not mean\s*$/im.test(p);
+  console.log(`C7 parity_page_has_exact_not_mean_heading=${hit}`);
   return hit;
 }
 
-// --- C8: every export twinned or signed; name-only matches never count ---
+// --- C8: every export twinned or signed; name matches and unsigned dispositions never count --
 
 function checkC8() {
   const rows = loadCasemap();
-  const relevant = rows.filter((r) => r.classification !== 'outside_boundary');
-  if (relevant.length === 0) { console.log('C8 rows=0 EMPTY_SELECTION (vacuous; not a pass)'); return false; }
+  if (rows.length === 0) { console.log('C8 rows=0 EMPTY_SELECTION (vacuous; not a pass)'); return false; }
   const failing = [];
-  for (const r of relevant) {
-    const signed = r.disposition === 'DISPOSITION-SIGNED';
-    if (signed) continue;
+  for (const r of rows) {
+    if (dispositionSignedProperly(r)) continue; // a real, signed-and-dated disposition always resolves the row
     if (r.classification === 'semantic_divergence') {
-      // Name matches alone never count, however many executable_case_ids exist.
+      // Name matches alone never count, however many executable_case_ids exist, and however
+      // it is classified elsewhere: this branch fires on the label itself.
       failing.push(`${r.source_id}:NAME_ONLY_MATCH_NOT_SIGNED`);
       continue;
     }
-    const dang = danglingReceipts(r);
-    if (dang.length) { failing.push(`${r.source_id}:DANGLING_RECEIPT`); continue; }
-    const twinned = (Array.isArray(r.executable_case_ids) ? r.executable_case_ids.length > 0 : !!r.executable_case_ids);
+    if (r.classification === 'outside_boundary') {
+      // A capability placed outside the P1 boundary still needs a signed disposition; it does
+      // not get to leave the ledger silently.
+      failing.push(`${r.source_id}:OUTSIDE_BOUNDARY_NOT_SIGNED`);
+      continue;
+    }
+    const paths = rowReceiptPaths(r);
+    const dangling = paths.filter((p) => !existsAsBlob(p));
+    if (dangling.length) { failing.push(`${r.source_id}:DANGLING_RECEIPT`); continue; }
+    const caseIdsPresent = Array.isArray(r.executable_case_ids) ? r.executable_case_ids.length > 0 : !!r.executable_case_ids;
+    const twinned = caseIdsPresent && paths.length > 0;
     if (!twinned) failing.push(`${r.source_id}:NOT_TWINNED_NOT_SIGNED`);
   }
-  console.log(`C8 rows=${relevant.length} failing=${failing.join(';') || 'none'}`);
+  console.log(`C8 rows=${rows.length} failing=${failing.join(';') || 'none'}`);
   return failing.length === 0;
 }
 

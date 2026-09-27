@@ -13,7 +13,78 @@ PIN: P1 = gllvmTMB `main` at commit `9539352f66f2db2cc26b1c393e67212a359b60c9` (
 candidate, untagged as of 2026-09-27). P0 (the frozen 0.7.0 oracle, `b4d5fee64def88bc768dda1f1f77c29b295edd86`)
 remains the pin for the existing `tools/parity_oracle.py::FROZEN_GLLVMTMB_ORACLE` and every
 receipt that cites it; nothing here rewrites those ~555 files or that pin. Re-pointing
-`tools/parity_oracle.py::DEFAULT_R_REF` at P1 is A0b's job (a separate PR), not this one.
+`tools/parity_oracle.py::DEFAULT_R_REF` at P1 is A0b's job (a separate PR, `claude/true-parity-p1-pin`
+/ PR #524, additive: `P1_GLLVMTMB_ORACLE`, `R_REF_PINS`, the `GLLVM_PARITY_PIN` env switch,
+`DEFAULT_R_REF` unchanged at P0), not this one.
+
+## Post-review hardening (2026-09-27)
+
+An independent review of the first cut of this ledger and tool (PR #523, head `346d01734`)
+came back BLOCKING: the oracle accepted labels in place of evidence. Nothing false could be
+claimed at the time (the P1 scoreboard/case-map did not exist yet), but every gap below would
+have let a future row be signed off without real evidence. All are fixed in
+`tools/true_parity_check.mjs`, each with a negative control in `tools/test_true_parity_check.mjs`
+that fails on the old behaviour and passes on the fix:
+
+1. A receipt path that resolved to a **directory** counted as present (`git cat-file -e`
+   succeeds on trees, and `existsSync` is true for a directory too). Fixed: every receipt path
+   must resolve to a **blob** (`git cat-file -t` = `blob`; FS `statSync(...).isFile()`).
+2. A scoreboard cell with **no extractable receipt path** (an empty cell, "see PR #501", a
+   `.unlazy/...` reference, an unsupported extension) counted as done anyway. Fixed: an
+   `EVIDENCED` (or signed) row needs at least one extracted, resolving path; text that plainly
+   looks like a path (`looksPathLike`) but that the extractor could not capture is a
+   `MEASUREMENT_FAILED`, not a silent pass or a silent not-done.
+3. Self-labelled evidence passed: (a) `DISPOSITION-SIGNED` with no signer or date; (b)
+   `executable_case_ids` with no `evidence.receipt` still counted as bound/twinned; (c)
+   `outside_boundary` with `disposition: null` vanished from C1 and C8 entirely. Fixed: a
+   signed disposition needs both `signed_by` (non-empty) and `signed_on` (`YYYY-MM-DD`) on the
+   row — **the tool never verifies the signer's identity; that happens in PR review**, by a
+   human reading the diff, exactly as any other reviewed change; a bound/twinned row needs a
+   receipt that actually resolves, case ids alone are not enough; `outside_boundary` rows are
+   evaluated by C8 like any other row and must carry a real signed disposition.
+4. `git ls-tree --name-only REF -- .github/workflows` (no trailing slash) returned the
+   directory entry itself, not its contents, so C0's CI-job scan silently scanned nothing in
+   git mode (`C0_MET` was unreachable, but so was an honest `C0_NOT_MET` reason). C0 also never
+   checked `CAPABILITY_LEDGER_REF`, and a workflow merely mentioning "P1" or "true-parity" in
+   passing (including this ledger's own CI smoke test) could satisfy it. Fixed: `listDir` adds
+   a trailing slash; C0 requires the job id `p1-twin-tests` running the `gllvm-parity-tag: P1`
+   discovery convention from PR #524's `parity-p1-twin.yml`, excludes this repo's own
+   `true-parity-check.yml` by name as a backstop, and checks `CAPABILITY_LEDGER_REF` is
+   present. **GitHub's "required check" status is branch-protection configuration on `main`,
+   which no tool running against repo content can read — C0 checks the job exists, runs the
+   P1 convention, and is not `continue-on-error`; it does not and cannot confirm branch
+   protection marks it required.** A git-mode negative control (a temporary `git init` repo)
+   exercises `show`, `existsAsBlob` and `listDir` through real `git show` / `git cat-file` /
+   `git ls-tree`, the same code path CI runs against `origin/main`, not only the FS fixture
+   fallback.
+5. The carry rule compared author-written strings ("abc123"/"abc123" passed, no hash-format
+   check) and was opt-in (a row with no `carry` block counted as fresh by default; an empty
+   `source_pins` array passed). Fixed: every required row must record `measured_against`
+   (`"P1"` or the full P1 sha, or the pin/commit it was actually measured at); a row not
+   measured directly against P1 needs a non-empty `carry.source_pins`, each pair a real
+   64-lowercase-hex sha256 with `sha256_at_p0 === sha256_at_p1`, or the row reads
+   `PARTIAL_STALE_AT_P1` and does not count as bound. **Deferred, stated not silently patched:**
+   a `CARRY_VERIFY` mode that takes a local gllvmTMB clone (`GLLVMTMB_DIR`) and re-hashes
+   `git show P0:path` / `P1:path` itself, rather than trusting the two hashes recorded on the
+   row, does not exist yet. Until it lands, every `carry` entry is trusted input from whoever
+   re-measured the row (checked for format and equality only, not independently reproduced).
+6. C8's name-only-match rule only catches a row that is **self-labelled**
+   `semantic_divergence`; the tool has no way to notice, from the case-map alone, that a row
+   classified `required_core` is actually a name twin (e.g. R's `zi_*` mislabeled instead of
+   correctly tagged). **Deferred, stated not silently patched:** catching this needs a receipt
+   that records an actual R-vs-Julia numeric comparison, not just a classification field; until
+   that exists, correct classification at P1 is A0c's signed responsibility (D-295 row 3,
+   Shinichi signs), not something this tool can verify on its own.
+7. C6 accepted any non-empty `decision` string (`"TBD"` passed); C7 matched any heading
+   containing "is not" (an unrelated heading like "This page is not finished" passed). Fixed:
+   C6 requires `decision` to be exactly one of a fixed vocabulary (below); C7 requires the
+   exact heading `What parity does not mean` at any heading level.
+8. This file omitted Packet 1 row 6 (`select_lv`), `CAPABILITY_LEDGER_REF` from C0's own
+   description, and the scoreboard id conventions the tool relies on. All added below.
+9. CI (`.github/workflows/true-parity-check.yml`) runs only the fixture-based negative
+   controls, never the real modes against `origin/main` — this is intentional (there is
+   nothing real to check yet) but is not a substitute for `node tools/true_parity_check.mjs
+   <mode>` run by hand once A0c/A0d populate the ledger.
 
 ## The D-295 boundary
 
@@ -31,17 +102,49 @@ Signed 2026-09-27, Packet 1 row 0 ("accept 0 to 13 as recommended"):
 - Name twins never count on name alone: `SEMANTIC_DIVERGENCE` capabilities (e.g. R's `zi_*`
   vs Julia's two-part ZI) stay FORWARD until a twin with R's semantics exists or Shinichi
   signs a disposition (Packet 1 row 5).
+- **`select_lv` (Packet 1 row 6): Shinichi signs this row.** The auto-d lane (#518, gllvmTMB
+  #1324) builds `select_lv` and drafts the receipt; this ledger only records it — no agent
+  signs it. The row must carry the known twin difference as a fence: R rejects fits whose
+  Hessian is not positive-definite, a behaviour Julia's `select_lv` does not currently
+  reproduce. Until Shinichi signs, this row stays open under C1/C8 like any other unsigned row.
 
 ## The receipt carry rule (Packet 1 row 1)
 
-A P0 receipt counts at P1 only if every file in its `carry.source_pins` is byte-identical
-between the gllvmTMB commit the receipt was measured against and P1. `tools/true_parity_check.mjs`
-does not re-hash the gllvmTMB tree itself; a case-map row that claims a carry must record
-both hashes it was measured against (`sha256_at_p0` and `sha256_at_p1` per source-pin path).
-If any pair differs, or the P1 hash is missing (not yet re-measured), the row's effective
-status is `PARTIAL_STALE_AT_P1` and it does **not** count as bound for C1, regardless of its
-original P0 disposition. 62 R and C++ files changed between the pins (measured 2026-09-27),
-so most carried rows are expected to land here until WS0d's stale-row scan re-measures them.
+Every required row records `measured_against`: `"P1"` or the full P1 sha if it was measured
+directly at P1, otherwise the pin/commit it actually predates. A row not measured directly
+against P1 counts at P1 only if every file in its `carry.source_pins` is byte-identical
+between the gllvmTMB commit the receipt was measured against and P1 — each pin entry is
+`{path, sha256_at_p0, sha256_at_p1}`, and both hashes must be real 64-lowercase-hex sha256
+strings with `sha256_at_p0 === sha256_at_p1`. `tools/true_parity_check.mjs` does not re-hash
+the gllvmTMB tree itself (see gap 5 above, `CARRY_VERIFY` deferred); a case-map row that
+claims a carry must record both hashes itself, computed by whoever re-measures the row. If
+`measured_against` is missing, if `carry` or `carry.source_pins` is missing or empty, if a
+hash is not 64-lowercase-hex, or if the pair differs, the row's effective status is
+`PARTIAL_STALE_AT_P1` and it does **not** count as bound for C1, regardless of its original P0
+disposition. 62 R and C++ files changed between the pins (measured 2026-09-27), so most
+carried rows are expected to land here until WS0d's stale-row scan re-measures them.
+
+## Case-map row schema (what A0c/A0d must write)
+
+A required row is bound only with a resolving receipt (`evidence.receipt`, a path that exists
+as a blob at the ref) **and** non-empty `executable_case_ids` — neither alone is enough. A
+`DISPOSITION-SIGNED` row additionally needs `signed_by` (a non-empty name) and `signed_on`
+(`YYYY-MM-DD`) on the row itself; **the tool checks the fields are present, not that the named
+person actually signed — identity is verified in PR review**, by whoever reviews the diff that
+adds the row, the same way any other change to this repo is reviewed. `classification` values
+this tool understands: `required_core`, `compatibility_adapter` (both feed C1), plus
+`semantic_divergence`, `outside_boundary`, `excluded`, `needs_surface` (C8 requires each of
+these to be either twinned or carry a real signed disposition — none of them are exempt or
+silently skipped). A row may carry an optional `capability` field naming the scoreboard row id
+it corresponds to (used by C2's cross-check, control (b) below).
+
+## Scoreboard id conventions (what the tool's C2-C5 filters rely on)
+
+`tools/true_parity_check.mjs` splits scoreboard rows by id prefix/suffix, not by a separate
+column: a row whose id ends `-RSZ` is a realistic-size cell (C3); a row whose id starts `RD-`
+is a real-data workflow (C4); a row whose id starts `GRP-` is a grouping-level row (C5); every
+other row is a plain P1-boundary capability (C2). A0c/A0d must follow this convention when they
+add real scoreboard rows, or their rows will silently fall into the wrong clause.
 
 ## Clauses
 
@@ -55,11 +158,18 @@ modes on `origin/main`, which is the honest state, not a false pass.
 
 - [ ] C0: the P1 oracle exists alongside P0 (additive) in `tools/parity_oracle.py`
       (`P1_GLLVMTMB_ORACLE` present and equal to the full P1 SHA, `FROZEN_GLLVMTMB_ORACLE`
-      unchanged), `DEFAULT_R_REF` points at the P1 constant, and a required (non-advisory,
-      no `continue-on-error`) CI job runs the P1 twin tests
+      unchanged, `CAPABILITY_LEDGER_REF` present), the explicit `R_REF_PINS` +
+      `GLLVM_PARITY_PIN` switch exists so `DEFAULT_R_REF` can resolve to P1 on request (the
+      default itself stays P0 until a later PR, see above), and a CI job named `p1-twin-tests`
+      runs the `gllvm-parity-tag: P1` discovery convention and is not `continue-on-error`.
+      "Required" in GitHub's sense is branch-protection configuration on `main`, which cannot
+      be read from repo content — this clause checks the job exists and is not advisory, no
+      more; the maintainer still marks it required from the GitHub UI once satisfied
   CHECK: node tools/true_parity_check.mjs C0
   EXPECT: C0_MET
-  EVIDENCE: pending (A0b re-pins `DEFAULT_R_REF`; no P1 CI job exists yet)
+  EVIDENCE: pending (PR #524 adds the P1 pin/switch and the `parity-p1-twin.yml` job on its own
+  branch; `node tools/true_parity_check.mjs C0` against that branch already reports `C0_MET`;
+  merging it is what makes `origin/main` itself pass this clause)
 
 - [ ] C1: every required row (`required_core`, `compatibility_adapter`) at P1 is bound to a
       receipt that resolves on `origin/main`, or carries a maintainer-signed disposition;
@@ -98,25 +208,36 @@ modes on `origin/main`, which is the honest state, not a false pass.
   EVIDENCE: pending
 
 - [ ] C6: the reverse-gap list is tool-produced and every item (including the Julia-only
-      extras: `SourceCovariance`, two-part ZI) has a written decision
+      extras: `SourceCovariance`, two-part ZI) has a written decision from a fixed vocabulary
+      (`KEPT_AS_JULIA_EXTRA`, `PORT_TO_MATCH_R`, `DEPRECATE_AND_REMOVE`,
+      `RENAME_TO_AVOID_COLLISION`) — a placeholder like `"TBD"` or an empty string does not
+      count as decided just because the field is non-empty or present
   CHECK: node tools/true_parity_check.mjs C6
   EXPECT: C6_MET
   EVIDENCE: pending
 
-- [x] C7: `docs/src/gllvmtmb-parity.md` states in one place what parity does not mean
+- [x] C7: `docs/src/gllvmtmb-parity.md` states in one place what parity does not mean, under
+      the exact heading `What parity does not mean` (any heading level) — a heading that merely
+      contains "is not" (e.g. "This page is not finished") does not satisfy this clause
   CHECK: node tools/true_parity_check.mjs C7
   EXPECT: C7_MET
-  EVIDENCE: verified 2026-09-27 against `origin/main` (`1385b0490`): the "### What parity
-  does not mean" heading is present; `C7 parity_page_has_not_mean_section=true` /
+  EVIDENCE: verified 2026-09-27 against `origin/main` (`1385b0490`): the exact "### What parity
+  does not mean" heading is present; `C7 parity_page_has_exact_not_mean_heading=true` /
   `C7_MET`. Pin-independent (the page is not gllvmTMB-ref-scoped).
 
-- [ ] C8: every R export at P1 is twinned (case-map row with a Julia receipt) or signed;
-      name matches alone never count — a `semantic_divergence` row without a signed
-      disposition fails this clause even if `executable_case_ids` is non-empty
+- [ ] C8: every R export at P1 is twinned (case-map row with a resolving Julia receipt AND
+      non-empty `executable_case_ids`) or carries a real signed disposition (`signed_by` +
+      `signed_on`, see the case-map schema above); name matches alone never count — a
+      `semantic_divergence` row fails this clause unless it is properly signed, however many
+      `executable_case_ids` it has; an `outside_boundary` row is evaluated the same way and
+      does **not** leave the ledger silently just by being placed outside the boundary
   CHECK: node tools/true_parity_check.mjs C8
   EXPECT: C8_MET
   EVIDENCE: pending (A0c classifies the +25 exports / +11 S3 methods since 0.7.0; Shinichi
-  signs in that PR, Packet 1 row 3)
+  signs in that PR, Packet 1 row 3). Known gap, stated not silently patched: the tool can only
+  catch a name-only match that is self-labelled `semantic_divergence` — it cannot detect from
+  the case map alone that a row classified `required_core` is actually a name twin; correct
+  classification at P1 is A0c's signed responsibility (see gap 6 above).
 
 - [ ] X2: all scoreboard rows are `EVIDENCED` or `DISPOSITION-SIGNED`; row count read from
       the file, an empty selection is never a pass
