@@ -1,8 +1,8 @@
 # Checkpoint (overwritten every arc)
 
-- DONE: plan approved 2026-09-27 (ultra-plan.md); lane kit created; three peer lanes told where things stand.
-- IN PROGRESS: nothing running. #514 and #515 are CARRIED-OVER to this lane (see the handover doc, Current Working State); #516 merged 1385b0490.
-- NEXT: A0 (WS0 additive re-pin). Start by drafting D1 (Packet 1 + claim boundary) in parallel, since A1a waits on it.
-- OPEN GATE: D1 (Shinichi). Totoro socket must be reopened for A3 compute.
-- WHERE TRUTH LIVES: branch claude/lane-true-parity-latest in ~/local-scratch/lanes/GLLVM.jl-true-parity-latest; plan in LOOP/lanes/true-parity-latest/ultra-plan.md; prior lane kit on branch claude/lane-gllvm-backlog-20260926 (LOOP/lanes/gllvm-backlog-20260926/: merge_train.sh, fix-build-review.workflow.js, reviews/).
+- DONE: plan approved 2026-09-27; lane kit; rehydration 2026-09-27 (main 1385b0490; #514, #515, #521 review, D1, A0 all OWED; 3 dead leases reaped). D1 drafted: `packet-1.md` (commit 48dc8858f), sent to Shinichi, not blocking.
+- IN PROGRESS: agent b514 (finish #514, fast-forward push onto 9261fae9a, no force); agent b515 (finish #515, draft PR); agent r521 (Fable review of #521, read-only, verdict goes to the NB per-species session).
+- NEXT: when b514/b515 report, run a fresh Fable review of each; merge on green + non-blocking review (Shinichi's word, merge_train.sh). Then A0 (additive re-pin) via fix-build-review workflow.
+- OPEN GATE: Packet 1 + P1 boundary (Shinichi). Totoro socket for A3.
+- WHERE TRUTH LIVES: branch claude/lane-true-parity-latest in ~/local-scratch/lanes/GLLVM.jl-true-parity-latest; LOOP/lanes/true-parity-latest/.
 - RESUME: read GOAL.md -> checkpoint.md -> HANDOVER.md -> ultra-plan.md in LOOP/lanes/true-parity-latest/, then continue from NEXT.
