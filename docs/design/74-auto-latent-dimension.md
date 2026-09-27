@@ -49,9 +49,10 @@ n, p and family, and every place a user reads an interval says it is conditional
 
   K = 5 (20 min) reached a region ~2400 logLik units above K = 2–4 with healthy loadings, so the
   K = 2–4 fits are poor optima, not the maxima. The old `select_lv` picks K = 2, itself a runaway.
-  The guarded `select_lv` rejects K = 2 (runaway) and K = 4 (non-monotone) and would choose K = 5
-  by BIC: it stops the runaway being chosen but cannot recover K = 3, because the K = 3 fit is a
-  bad optimum. **Recovery here needs better NB optimisation (multi-start or warm start in the
+  The guarded `select_lv` (measured, `pilot/j3_nb_guarded_prefix.txt`, 21.6 min) rejects K = 1
+  (latent SD 12.6), K = 2 (26.9) and K = 4 (10.4) as runaways and chooses K = 5 by BIC: it stops
+  the runaway being chosen but cannot recover K = 3, because the K = 3 fit is a bad optimum.
+  K = 4's 10.4 sits just above the provisional cutoff of 10. **Recovery here needs better NB optimisation (multi-start or warm start in the
   per-species NB route), which the guard cannot supply.** An earlier note in this lane called
   K = 5 a likely runaway; the probe shows it is not.
 - Binomial, same size: K = 4 unconverged, latent SD 156, ratio 106 (a clear separation runaway,
@@ -61,8 +62,8 @@ n, p and family, and every place a user reads an interval says it is conditional
 
 ## Built so far (lane branch, not merged)
 
-1. `select_lv` guard: every attempted K recorded with a status; failed, unconverged and
-   non-monotone K are never chosen; interrupts no longer swallowed (commit caddc8653).
+1. `select_lv` guard: every attempted K recorded with a status; failed, unconverged, runaway and
+   non-monotone K are never chosen; interrupts no longer swallowed (caddc8653, bf8940ad2).
 2. Warm-start retry from the (K−1) solution plus a lower-triangular new column, where the
    fitter accepts `β_init`/`Λ_init` (same commit).
 3. Runaway detector: scale check (max loading row norm = latent SD on the link scale > 10, any
@@ -70,7 +71,19 @@ n, p and family, and every place a user reads an interval says it is conditional
    (commit 9653b1778). Thresholds provisional; recalibrate on the grid's healthy fits.
 4. R twin: the same guard and detector in gllvmTMB `select_lv()` (branch claude/lane-auto-d-r-20260926, commit 978f4bba2; 15 new + 70 existing tests pass). Warm start uses `control(start_from = <accepted fit>)`: matching blocks carry over, the new column starts at the default. The table keeps rejected rows with `status` and `message`.
 
-Tests: 50/50 in `test/test_model_selection.jl` (16 existing + 34 new).
+Tests: 75/75 in `test/test_model_selection.jl` (16 existing + 59 new). Most new tests drive the
+guard with a stand-in fitter (exact, fast); real-fit coverage is the Poisson omitted-K test, the
+explicit-K identity gate (6 real fits bit-identical to the pre-lane source), and the NB and
+binomial probes. The interim Gaussian grid shows old = new because Gaussian fits are healthy and
+skip the runaway check and warm start; it is not evidence for the guard.
+
+Independent review (D-43 panel, 2026-09-27: Opus statistical lens, Sonnet code lens) returned
+PASS WITH REQUIRED FIXES; fixed in bf8940ad2: the monotone bar is the best converged,
+non-runaway fit at any smaller K; warm start pads from the last accepted K; the runaway check
+skips the Normal family; `mask` reaches the criteria; an ArgumentError at K = 1 is re-raised;
+`fit_gllvm` without K refuses row_eff/pervar. Known limits kept: no warm start for Gaussian
+(`GllvmFit` keeps Λ in `pars`) or for the NB/Beta per-species route (no `Λ_init`); the returned
+fit carries no "K was estimated" flag, so `confint`/`summary` do not yet print the caveat.
 
 ## Decisions needed at G1 (each with a recommendation)
 
