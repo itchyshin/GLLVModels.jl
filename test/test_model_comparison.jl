@@ -58,8 +58,10 @@ _sha(path) = bytes2hex(sha256(read(path)))
         end
     end
 
+    p_r = Int(fx.meta.p_trait)  # species/trait count; needed to verify a rank step's q
+
     @testset "_anova_core definition twin — test = :chibar" begin
-        tab = GLLVModels._anova_core(npar_r, loglik_r, d_r; test = :chibar)
+        tab = GLLVModels._anova_core(npar_r, loglik_r, d_r, p_r; test = :chibar)
         ref = fx.anova_chibar
         @test tab.npar == npar_r
         @test tab.loglik ≈ loglik_r
@@ -74,12 +76,22 @@ _sha(path) = bytes2hex(sha256(read(path)))
     end
 
     @testset "_anova_core definition twin — test = :chisq" begin
-        tab = GLLVModels._anova_core(npar_r, loglik_r, d_r; test = :chisq)
+        tab = GLLVModels._anova_core(npar_r, loglik_r, d_r, p_r; test = :chisq)
         ref = fx.anova_chisq
         for i in 2:n_models
             @test tab.LRT[i] ≈ Float64(ref.LRT[i]) atol=1e-6
             @test tab.pvalue[i] ≈ Float64(ref.pvalue[i]) atol=1e-6
             @test occursin("chisq", tab.test[i])
+        end
+    end
+
+    @testset "_anova_core: test = :none reports no p-values (rank steps)" begin
+        tab = GLLVModels._anova_core(npar_r, loglik_r, d_r, p_r; test = :none)
+        for i in 2:n_models
+            @test tab.test[i] == "none"
+            @test tab.pvalue[i] === missing
+            # LRT/df are still reported; only the p-value is withheld.
+            @test tab.LRT[i] !== missing
         end
     end
 
@@ -149,6 +161,79 @@ _sha(path) = bytes2hex(sha256(read(path)))
         Xr = ones(4, 20, 1)
         reml_fit = fit_gaussian_reml(Y, Xr; K = 1)
         @test_throws ArgumentError gllvm_anova(fit1, reml_fit)
+    end
+
+    @testset "gllvm_anova refuses a compound step instead of mislabelling it a rank test" begin
+        # Regression for the review finding on this PR: comparing a no-X fit
+        # at K to an X-ADDED fit at K+1 changes TWO things at once (fixed
+        # effects appear, and the rank increases by 1). Using the naive
+        # Δnpar as q silently absorbed the X's parameters into q and reported
+        # a spuriously significant clean rank test ("chibar (q=7)",
+        # p ≈ 8.1e-14, on data with no such 7-df boundary effect). The fix
+        # verifies q = p - d_prev structurally and refuses the step when the
+        # observed Δnpar does not match it.
+        Y = randn(4, 25)
+        p, n = size(Y)
+        X = zeros(p, n, p)
+        for t in 1:p, s in 1:n
+            X[t, s, t] = 1.0
+        end
+        fit_noX_K1 = fit_gaussian_gllvm(Y; K = 1)
+        fit_X_K2   = fit_gaussian_gllvm(Y; X = X, K = 2)
+
+        # dof: 5 (no X, K=1: 0 + 1 + 4) vs 12 (X, K=2: 4 + 1 + 7) — Δnpar = 7,
+        # but the clean rank-only q at p=4, d_prev=1 is p - d_prev = 3.
+        @test dof(fit_noX_K1) == 5
+        @test dof(fit_X_K2) == 12
+
+        tab = gllvm_anova(fit_noX_K1, fit_X_K2; test = :chibar)
+        @test tab.test[2] == "refused"
+        @test tab.pvalue[2] === missing
+        @test tab.note[2] !== missing
+        @test occursin("3", tab.note[2])  # names the expected q = p - d_prev = 3
+    end
+
+    @testset "gllvm_anova refuses fits of different concrete type / family" begin
+        Yg = randn(4, 20)
+        Yp = [rand(1:5) for _ in 1:4, _ in 1:20]
+        fit_gauss = fit_gaussian_gllvm(Yg; K = 1)
+        fit_pois  = fit_poisson_gllvm(Yp; K = 1)
+        @test typeof(fit_gauss) !== typeof(fit_pois)
+        @test_throws ArgumentError gllvm_anova(fit_gauss, fit_pois)
+    end
+
+    @testset "gllvm_anova refuses fits with a different species/trait count" begin
+        Y4 = randn(4, 20)
+        Y5 = randn(5, 20)
+        fit_p4 = fit_gaussian_gllvm(Y4; K = 1)
+        fit_p5 = fit_gaussian_gllvm(Y5; K = 1)
+        @test size(GLLVModels._loadings(fit_p4), 1) != size(GLLVModels._loadings(fit_p5), 1)
+        @test_throws ArgumentError gllvm_anova(fit_p4, fit_p5)
+    end
+
+    @testset "gllvm_anova: interior fixed-effect step (chi-square) end-to-end" begin
+        # Same K (d unchanged), X added: a genuine interior fixed-effect
+        # step, not a rank step — exercises the `is_fixed_step` branch that
+        # the fixture-based tests above never touch (they only vary K).
+        Y = randn(4, 30)
+        p, n = size(Y)
+        X = zeros(p, n, p)
+        for t in 1:p, s in 1:n
+            X[t, s, t] = 1.0
+        end
+        fit_noX = fit_gaussian_gllvm(Y; K = 1)
+        fit_X   = fit_gaussian_gllvm(Y; X = X, K = 1)
+        @test dof(fit_noX) < dof(fit_X)  # same K, so this must be a fixed step
+
+        tab = gllvm_anova(fit_noX, fit_X; test = :chibar)
+        @test tab.test[2] == "chisq"
+        @test tab.pvalue[2] !== missing
+        @test 0.0 <= tab.pvalue[2] <= 1.0
+        @test occursin("Interior", tab.note[2])
+
+        tab_none = gllvm_anova(fit_noX, fit_X; test = :none)
+        @test tab_none.test[2] == "none"
+        @test tab_none.pvalue[2] === missing
     end
 
     @testset "_anova_core: unclassified step gets a note, not a crash" begin
