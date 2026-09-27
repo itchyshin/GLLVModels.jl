@@ -15,6 +15,7 @@ Shinichi's sign-off.
 | #521 NB2 grouped kernel | `claude/nb-grouped-init-v2` | `a2c5b5cb7` | Tests registered, CHANGELOG, review done (nothing blocking); 8/8 shards green. Documenter fail is inherited from `main` (fixed there in #530). |
 | #529 getLV grouped modes | `claude/getlv-grouped-mode-20260927`, stacked on #521 | `2420bfa56` | After #521 merges: `gh pr edit 529 --base main`, then merge `main` into it. |
 | #540 Beta grouped kernel | `claude/beta-grouped-mode-search-503` | `583acb6de` | Damped search + max(observed, Fisher) fallback; plateau-triggered #480 restart (Shinichi's choice). CI running. |
+| #551 Beta getLV modes | `claude/beta-getlv-mode-20260927`, stacked on #540 | `see git log` | Same `_grouped_site_mode` dispatcher as #529: the second to merge keeps every method line. After #540 merges: `gh pr edit 551 --base main`. |
 
 ## Decisions made today (record)
 
@@ -34,11 +35,11 @@ Shinichi's sign-off.
 4. Gaussian grid cells re-run on uncentred data after #519 merges.
 5. Follow-ups, not owned by this lane (other lanes are active on truncated NB2): the truncated-NB2
    per-trait objective (`truncated_nbinom2.jl:323`) and the root-cause fix inside
-   `_grouped_laplace_mode`; Beta `getLV` dispatch after #529 and #540 both merge.
+   `_grouped_laplace_mode`; Beta `getLV` is now #551.
 
 ## Open questions for Shinichi
 
-- Sign-off order suggestion: #519, #521, then #520, #529, #540, #518/#1324.
+- Sign-off order suggestion: #519, #521, #540, then #520, #529, #551, #518/#1324.
 - NB re-run estimate approval (see the plan file).
 - Julia vs R binary-ridge gap at n = 120, p = 10 (8/10 vs 1/10 under the same criterion, different
   random datasets): worth a matched-data check?
