@@ -1,0 +1,11 @@
+98c4305d0f52b3fe26841f826e58d25276c6cf67ae58df02e3446ef9b5d78bc0  /Users/z3437171/local-scratch/GLLVM.jl-twin-extract-latent-scores/test/fixtures/extract_latent_scores_p1/Lambda_gauss_hat.csv
+acf73fb8c52a5ea1dcc556c8dfb5e746721fb4f414a660419f513fd02a588949  /Users/z3437171/local-scratch/GLLVM.jl-twin-extract-latent-scores/test/fixtures/extract_latent_scores_p1/Lambda_pois_hat.csv
+2362c7e7472c978cd1e746904e2c20d4d5fb6fdb236ffad698c4bbfb8a11341d  /Users/z3437171/local-scratch/GLLVM.jl-twin-extract-latent-scores/test/fixtures/extract_latent_scores_p1/Y_gauss.csv
+0f5b241dc0fc0eaa76bb78e8592845146d6d53c110f082c496689c0ea9960436  /Users/z3437171/local-scratch/GLLVM.jl-twin-extract-latent-scores/test/fixtures/extract_latent_scores_p1/Y_pois.csv
+00faefbadc41dd12cca661a3fbd7331a90bbefc690b224878fd66a10c461179a  /Users/z3437171/local-scratch/GLLVM.jl-twin-extract-latent-scores/test/fixtures/extract_latent_scores_p1/beta_gauss_hat.txt
+1b941089b6ae488c75b26fc308288aecd39090e259eadb92fc6964d23dea412c  /Users/z3437171/local-scratch/GLLVM.jl-twin-extract-latent-scores/test/fixtures/extract_latent_scores_p1/beta_pois_hat.txt
+16744c87ecdd8a28d9a93cc8fa7d9916bc2e90f374e1b3544ecce720edc8aaee  /Users/z3437171/local-scratch/GLLVM.jl-twin-extract-latent-scores/test/fixtures/extract_latent_scores_p1/loglik_gauss.txt
+bdaf6225a745b9cfd8c7c55ee0d14a12071781a1898b34f4e52c6a7daa5a6ffa  /Users/z3437171/local-scratch/GLLVM.jl-twin-extract-latent-scores/test/fixtures/extract_latent_scores_p1/loglik_pois.txt
+8c28c39d3be580254744eba48426deb1a83d323bff8e78092fc4c4c10d0b9597  /Users/z3437171/local-scratch/GLLVM.jl-twin-extract-latent-scores/test/fixtures/extract_latent_scores_p1/sigma_eps_hat.txt
+378ee2d6508f4edf2ba835d2e94cb5258bdbdf7d43f649ff4824efd8bf251d88  /Users/z3437171/local-scratch/GLLVM.jl-twin-extract-latent-scores/test/fixtures/extract_latent_scores_p1/z_gauss_unit.csv
+add182d306e2c653a5315ae26156ab8bd070b51587b8fb032115c0278a662ab0  /Users/z3437171/local-scratch/GLLVM.jl-twin-extract-latent-scores/test/fixtures/extract_latent_scores_p1/z_pois_unit.csv
