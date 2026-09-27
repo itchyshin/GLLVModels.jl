@@ -244,6 +244,7 @@ println(_SHARD === nothing ?
     _shard_include("test_truncated_formula.jl")
     _shard_include("test_unified_api.jl")
     _shard_include("test_com_poisson.jl")
+    _shard_include("test_com_poisson_mode_search.jl")
     _shard_include("test_gaussian_pervar.jl")
     _shard_include("test_gaussian_pervar_design.jl")
     _shard_include("test_gaussian_fixed_residual.jl")
