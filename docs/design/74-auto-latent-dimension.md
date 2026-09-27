@@ -94,7 +94,7 @@ n, p and family, and every place a user reads an interval says it is conditional
 3. Runaway detector: scale check (max loading row norm = latent SD on the link scale > 10, any
    non-identity link) and binomial ratio check (≥ 25), from the gllvmTMB runaway study
    (commit 9653b1778). Thresholds provisional; recalibrate on the grid's healthy fits.
-4. R twin: the same guard and detector in gllvmTMB `select_lv()` (branch claude/lane-auto-d-r-20260926, commit 978f4bba2; 15 new + 70 existing tests pass). Warm start uses `control(start_from = <accepted fit>)`: matching blocks carry over, the new column starts at the default. The table keeps rejected rows with `status` and `message`.
+4. R twin: the same guard and detector in gllvmTMB `select_lv()` (branch claude/lane-auto-d-r-20260926, commit 978f4bba2; 15 new + 70 existing tests pass). Warm start uses `control(start_from = <accepted fit>)`: matching blocks carry over, the new column starts at the default. The table keeps rejected rows with `status` and `message`. Review fixes 21319c652; lenient convergence rule 3fea6b68a (136 expectations pass). Remaining difference: R still rejects a fit whose Hessian is not positive definite (`pd_hessian = FALSE`); Julia has no such flag.
 
 Tests: 75/75 in `test/test_model_selection.jl` (16 existing + 59 new). Most new tests drive the
 guard with a stand-in fitter (exact, fast); real-fit coverage is the Poisson omitted-K test, the
