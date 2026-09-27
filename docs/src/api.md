@@ -14,12 +14,19 @@ trait-specific residuals. See the [developer guide](precision-bridge-development
 for the Julia-side interface, interval diagnostics, and the fact that this model
 is not currently available through the public R bridge.
 
+`fit_phylo_latent_gllvm` is the named twin of gllvmTMB's bare Gaussian
+`phylo_latent(species, d = K)`: species matched by label, a `tree` (Newick or
+`AugmentedPhy`, polytomies admitted) or a labelled dense `vcv` / `A` with R's
+`1e-8` ridge, one shared residual, and R's refusals. `rho != 1` and `Ainv`
+are refused by labelled Julia scope fences.
+
 ```@docs
 fit_gllvm
 gllvm
 fit_gllvm_cov
 fit_dep_gllvm
 fit_phylo_dep_gllvm
+fit_phylo_latent_gllvm
 fit_animal_dep_gllvm
 fit_animal_latent_gllvm
 fit_spatial_dep_gllvm

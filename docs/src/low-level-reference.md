@@ -205,4 +205,6 @@ GLLVModels._grouped_gaussian_objective
 GLLVModels.JointGroupedLaplaceResult
 GLLVModels._joint_grouped_state
 GLLVModels._bridge_fit_precision_multivariate
+GLLVModels._phylo_latent_tree_precision
+GLLVModels._phylo_latent_dense_precision
 ```
