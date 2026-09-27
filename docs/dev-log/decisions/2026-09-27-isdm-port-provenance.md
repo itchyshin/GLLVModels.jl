@@ -30,3 +30,17 @@ The damped mode search copies the convergence rule of this repository's own
   maintainer decision.
 - The spec's `gllvm()` door edits `src/formula.jl`, another lane's file; not
   added. The entry point is `fit_isdm_gllvm`.
+
+## Recorded R optima and the polish diagnostic
+
+`r_values_p1.toml` also records a polished R optimum: nlminb restarted from the
+door's optimum on the same TMB objective (rel.tol 1e-14). It certified
+convergence (code 0) on `ms3` and `srcform_mixed`. It did not certify on the
+other two: on `srcform_pois` it moved (max|gradient| 6.1e-4 to 1.0e-5) and then
+stopped with code 1; on `predict` it did not move at all (code 1). The paired
+test labels `srcform_pois` "polish did not certify" and makes no polished
+comparison for `predict`, whose door optimum already passes rel 1e-4.
+
+Factor levels are ordered by Julia byte order (`sort(unique(...))`), not R's
+locale collation; a mixed-case observation factor can take a different
+reference level, which fails loudly because coefficients pair by name.

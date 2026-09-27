@@ -284,6 +284,14 @@ within-trait scale rule, the observation-formula checks, the offset gate
 ("offsets are supported for count families (poisson, nbinom) only"), weights
 ("`weights` is not admitted for the integrated multi-source model."), multi-trial
 detection rows, and the observed-arm check. Missing responses are refused.
+
+Factor levels (traits, units, sources, and categorical covariates in the main
+and observation formulas) are ordered by Julia's byte order,
+`sort(unique(...))`, not by R's locale collation. For lower-case or
+consistently cased labels the two agree; a mixed-case categorical covariate
+(for example levels `"a"` and `"B"`) can take a different reference level than
+in R, so its dummy columns get different names. Coefficients are paired with R
+by name, so such a case fails loudly rather than pairing the wrong columns.
 """
 function isdm_table(formula::Expr, data; family::IsdmSources, trait::Symbol = :trait,
         unit::Symbol = :cell_id, weights = nothing, n_trials = nothing)

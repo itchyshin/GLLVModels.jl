@@ -15,7 +15,7 @@
 # This kernel is a long-table sibling of src/families/mixed.jl: one cell has
 # several rows per trait, so the p x n matrix substrate of laplace.jl / mixed.jl
 # does not fit. The mode search COPIES (does not share or call) the damped
-# Fisher-scoring rule of `_mixed_laplace_mode` as merged in #514 (step halving
+# Fisher-scoring rule of `_mixed_laplace_mode` (step halving
 # on a decrease of the cell log-posterior, the Newton-decrement convergence
 # test, the floating-point-floor acceptance and the stalled-step acceptance);
 # the shared `_laplace_mode` is neither edited nor called. With K = 0 (no
