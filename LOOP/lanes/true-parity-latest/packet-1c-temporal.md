@@ -1,5 +1,7 @@
 # Packet 1c: temporal port scope questions (2026-09-27)
 
+**SIGNED 2026-09-27 by Shinichi, in chat: "Packet 1c and 1d: accept all as recommended." Vault decision D-298.**
+
 From the temporal port spec (draft PR #535, head 5da58438f, reviewed and revised). Engineering questions the spec settles itself (profile bound NA as `missing`, StableRNG bootstrap, integer AR1 exponents, error type, fit type, receipt names from `opt$par`) are not asked.
 
 | # | Question | Recommendation | Reply to paste |
