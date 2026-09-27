@@ -1,3 +1,16 @@
+## 2026-09-27: Integrated SDM (iSDM) twin of gllvmTMB's public door at P1 (arc A1b)
+
+- Branch `claude/isdm-build` (draft PR #546). New files `src/families/isdm_{sources,formula,table,laplace,grad,fit,predict}.jl`;
+  entry `fit_isdm_gllvm`, type `IsdmFit`, `isdm_sources()` / `isdm_source()`, `predict` / `fitted`.
+  No edits to `formula.jl`, `mixed.jl`, `laplace.jl`, `grouped_dispersion.jl`, `model_selection.jl`,
+  `cv.jl` or `Project.toml`.
+- `test/test_isdm.jl` 158 of 158 on Julia 1.10.12 and 1.13.0. `test/parity/isdm_cases.jl` (tag P1,
+  recorded R values): admission 41 of 41; paired 213 pass, 3 broken (b_fix at R's door optimum on
+  ms3 and the two K = 0 fits, where R's nlminb stops with max|gradient| 3.9e-4 to 9.0e-4; all pass
+  against R's polished optimum). Cross-objective both directions within 1.3e-11 on all four cases.
+- Finding: R's `latent()` default `unique = TRUE` adds `theta_diag_B`, which the spec omits; the Julia
+  door refuses it. Provenance: `docs/dev-log/decisions/2026-09-27-isdm-port-provenance.md`.
+
 ## 2026-09-25: Two-part families no longer score an unfinished mode search (#484)
 
 - Branch `claude/twopart-mode-search-484`, rebased onto `origin/main` (past #481 Gamma, #483 Beta,
