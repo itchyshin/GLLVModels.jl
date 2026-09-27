@@ -50,7 +50,7 @@ Worktrees: `~/local-scratch/lanes/GLLVM.jl-auto-d-20260926` (Julia) and
    (543 moved tasks; ids in `pilot/rorqual_moved_ids.txt`). Outputs in each cluster's
    `~/projects/def-snakagaw/snakagaw/auto-d-pilot/out-rerun/`. Pre-lane fitting code on all three.
 
-## Late news (16:40Z): the NB kernel was broken; re-run is ON HOLD
+## Late news (16:40Z): the NB kernel was broken; re-run CANCELLED
 
 Draft PR #521 (branch `claude/nb-grouped-init-v2`, another lane) fixed the NB per-site mode search in
 `src/families/grouped_dispersion.jl`: Fisher scoring 2-cycled where y ≫ μ and returned points off the mode, so
@@ -58,8 +58,7 @@ L-BFGS stopped at bad points reporting converged. On the auto-d NB fixture (p = 
 logLik moved K=1 −19473 → −18400, K=2 −18874 → −17618, K=3 −19113 → −16743, now monotone with healthy loadings.
 Consequences: **every NB number in the recovery grid (NB 0.895) and the DRAC NB re-run measure the broken
 kernel.** The re-run's PENDING tasks are on `scontrol hold` on narval 4098607, nibi 22779067 and rorqual
-21902752 (running tasks were left to finish). Shinichi decides: cancel (`scancel <job>`) and re-run the NB
-cells on #521's code, or release (`scontrol release <job>`). #521 also lets `fit_nb_gllvm_grouped`,
+21902752 (running tasks were left to finish). **Cancelled on Shinichi's word (16:50Z)**: all three arrays gone; used about 95 core-h (narval 23, nibi 20, rorqual 52). Partial outputs remain in each cluster's `out-rerun/` (old kernel; do not mix with a #521 run). #521 also lets `fit_nb_gllvm_grouped`,
 `fit_nb1_gllvm_grouped` and `fit_beta_gllvm_grouped` accept `β_init`/`Λ_init`, so select_lv's warm start will
 reach the NB route; and more NB fits will report converged = false via the dispersion-boundary flag, which
 select_lv's lenient default already tolerates. Recommendation: cancel, and after #521 merges re-run only the
@@ -78,7 +77,7 @@ select_lv's lenient default already tolerates. Recommendation: cancel, and after
 4. **Recovery check:** if `ridge/ridge_binary_julia_L1.5.csv` is complete (80 rows), compare with the
    R result and add the numbers to design/74 T7 and the PR body; if missing, re-run it (≈ 60–90 min local).
 5. **Docs pass: DONE** (Julia `fe09db2e3`: README note, after-task report; `api.md` already lists `select_lv`, `LVSelection`, `fit_binomial_gllvm` with `loading_ridge` documented. R `3b1e8e61f`: check-log, validation-debt rows MS-03 to MS-06, formula-grammar note, `vignettes/articles/model-selection-latent-rank.Rmd` example with `eval = FALSE`, after-task report). Not run: Documenter build, `devtools::check()`, 3-OS CI.
-6. **NB re-run (on hold, see Late news):** only if Shinichi releases it: when all three arrays finish, rsync each cluster's `out-rerun/` to separate local dirs
+6. **NB re-run: CANCELLED.** OWED instead, after #521 merges: estimate, then re-run the 24 NB cells on the fixed kernel. Old instructions, kept for the method: when all three arrays finish, rsync each cluster's `out-rerun/` to separate local dirs
    (task ids overlap across clusters), then
    `python3 LOOP/lanes/auto-d-20260926/pilot/analyze.py harvest,harvest-rerun-narval,harvest-rerun-nibi,harvest-rerun-rorqual harvest-report-final2.md`
    (later dirs fill incomplete datasets). Report core-hours (`sacct … elapsedraw,alloccpus`) against the
