@@ -14,6 +14,14 @@ All notable changes to GLLVModels.jl are documented here.
 ## Unreleased
 
 ### Fixed
+- **Gaussian `fit_gllvm` without `X` fitted no species intercepts (#519).**
+  `fit_gllvm(Y; family = Normal(), K)` routed to `fit_gaussian_gllvm`, whose
+  `X = nothing` means a zero mean, so shifting `Y` changed the log-likelihood.
+  It now estimates one intercept per trait, as every other family, `pervar =
+  true` and gllvmTMB do. `@formula(y ~ 1)` and `cv_gllvm` with `Normal()` use the
+  same route; `@formula(y ~ 0)`, explicit `X` and `fit_gaussian_gllvm` itself are
+  unchanged. Post-fit and interval routines apply the intercepts when `X` is
+  omitted. **Gaussian results change for uncentred data.**
 - **Ordered-beta fits could report `converged = true` at a non-stationary point,
   with a restart reaching a genuinely better optimum (#501).** The per-site
   inner mode search (`_ordered_beta_mode`, `src/families/ordered_beta.jl`) ran
