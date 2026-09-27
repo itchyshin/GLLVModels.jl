@@ -93,9 +93,7 @@ test/runtests.jl rebases between #518, #519, #520 and #521 (all add lines there;
 ## Next immediate steps (classify each OWED / DONE on arrival)
 
 1. Run `tools/lane_preflight.sh` in GLLVModels.jl and gllvmTMB; check `git status` in both worktrees.
-2. **R fix round:** commit `e7e5eaaf0` ("forward species= alias, refuse mixed latent formulas, restore docs") landed before close; verify it covers all nine findings in the journal, then re-read the journal above, complete the fixes, run
-   `bash LOOP/lanes/auto-d-20260926/gates/r_tests.sh` (from the Julia worktree; expect `R-TESTS-PASS`),
-   commit, push to #1324.
+2. **R fix round: DONE** (`e7e5eaaf0`, pushed): all 7 required findings and 5 cheap suggestions fixed; test-latent-auto 11, ridge 9, guard 21, anova 30 (3 heavy skips), brms-sugar 3, latent-unique 4 tests, 0 failed; true-d = 2 real-fit test uses seed 6. **OWED:** the new `?latent`/`?gllvmTMB`/NEWS text quotes NB 0.90, measured on the broken NB kernel (#521): qualify or remove it until the NB cells are re-run. Left for later (review suggestions): auto dispatch runs before ordinary formula/data validation, so input errors are retried per d; no check that the swept `latent()` sits at the unit level (a cluster-tier term can fit zero loadings yet report a chosen d).
 3. **Julia ridge review:** read the journal; fix every confirmed finding on the Julia branch; run
    `node ~/shinichi-brain/skills/unlazy/scripts/gate-check.mjs --root . --cwd . --approve --reverify --timeout 3600 .unlazy/auto-d/gates/leaf-julia.md .unlazy/auto-d/gates/leaf-docs.md`
    (expect ALL MET); push to #518.
