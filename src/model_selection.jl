@@ -26,7 +26,8 @@ Fields:
 - `K::Vector{Int}` — the latent dimensions whose fits were accepted.
 - `nparams::Vector{Int}` — free-parameter count per fit (the same `_nparams`
   path `aic`/`bic` use; loadings counted modulo the `K(K−1)/2` rotational df).
-- `loglik::Vector{Float64}` — maximised marginal log-likelihood per fit.
+- `loglik::Vector{Float64}` — maximised marginal log-likelihood per fit (under a
+  loading ridge, the unpenalised log-likelihood at the penalised optimum).
 - `aic::Vector{Float64}` — Akaike information criterion per fit.
 - `bic::Vector{Float64}` — Bayesian information criterion per fit, penalty
   `log(p·n)` (observed cells, R's convention).
@@ -37,7 +38,8 @@ Fields:
 - `attempts::Vector` — one named tuple `(K, status, loglik, message)` per
   attempted `K`. `status` is `:ok`, `:warm_start` (accepted after a refit from
   the previous solution), `:nonmonotone` (log-likelihood below the last accepted
-  `K`), `:unconverged`, `:runaway` (inflated or separated loadings; `message`
+  `K`; under a loading ridge the penalised objective ℓ − ½Σλ²/τ² is compared,
+  while `loglik` stays the unpenalised value), `:unconverged`, `:runaway` (inflated or separated loadings; `message`
   gives the statistic), or `:failed` (the fit threw; `message` says why).
 """
 struct LVSelection
@@ -126,8 +128,9 @@ Latent-dimension selection: fit `fit_gllvm(Y; family, K = k, kwargs...)` for
 guard: `:bic_sites` (default; penalty `log(n)`, sites), `:bic` (penalty
 `log(p·n)`, observed cells) or `:aic`. The default follows a recovery simulation
 (17 687 datasets with known K): `:bic_sites` recovered the true K most often for
-Gaussian, Poisson and negative binomial responses; `:bic` picked too few
-dimensions at small n.
+Gaussian and Poisson responses; `:bic` picked too few dimensions at small n.
+Negative-binomial recovery has not yet been measured on the corrected
+negative-binomial fitting code, so no rate is claimed for it.
 
 Binary (single-trial `Binomial`) data get a loading ridge during the sweep:
 every fit in the sweep — including a
@@ -141,6 +144,13 @@ without it. The information criteria are still computed on the UNPENALISED
 Laplace log-likelihood at the ridge optimum (`GLLVModels._loglik(fit)`); the
 check that the log-likelihood does not fall as `K` grows uses the penalised value
 `ℓ − ½Σλ²/τ²`, which is what nesting guarantees under a ridge.
+The criteria count the loadings at their nominal number of parameters. Under
+the ridge the effective number is smaller, and the gap grows with `K`, so ridge
+BIC leans towards smaller `K` (a conservative bias). The ridge applies only on
+the Laplace `fit_binomial_gllvm` route: with `aghq`, `row_eff`, `grouping`,
+`phylo`, `disp_group` or `pervar` the sweep runs unpenalised and each attempt's
+`message` says so. `confint` refuses a ridge fit, because it is a penalised
+estimate; refit at the chosen `K` with `loading_ridge = Inf` for intervals.
 Multi-trial `Binomial` (an `N` keyword whose entries are not all one) and every
 other family are unaffected and never receive `loading_ridge`.
 
@@ -151,7 +161,7 @@ maximum cannot be lower; runaway fits are excluded from this bar because
 separation inflates their log-likelihood). A fit whose optimiser did not report
 convergence is kept, with a message in `attempts`, unless it is also runaway or
 non-monotone; `require_converged = true` rejects it instead (on the auto-d recovery
-grid the strict rule lost recovery for Poisson and negative binomial data, and every
+grid the strict rule lost recovery for Poisson data, and every
 broken unconverged fit was already caught by the other checks). It also rejects a runaway fit:
 because the latent variables are standardised, a trait's loading row norm is its
 latent SD on the link scale, and a value above `max_latent_sd` (default 10, a
@@ -210,12 +220,21 @@ function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
     # D-293: single-trial Binomial sweeps carry a loading ridge unless the caller
     # already picked their own `loading_ridge`, or `binary_ridge = Inf` (off).
     # Multi-trial Binomial (an `N` whose entries are not all one) is unaffected.
+    # Only the Laplace `fit_binomial_gllvm` route takes `loading_ridge`; AGHQ refuses
+    # it and the row-effect, grouping, phylo and dispersion routes have no such
+    # keyword. On those routes the sweep runs unpenalised and each attempt says so.
     Nk = get(kwargs, :N, nothing)
     single_trial = Nk === nothing || all(isone, Nk)
-    ridge_active = family isa Binomial && single_trial &&
+    ridge_wanted = family isa Binomial && single_trial &&
                    !haskey(kwargs, :loading_ridge) && isfinite(binary_ridge)
+    other_route = [string(k) for k in (:row_eff, :grouping, :phylo, :disp_group, :pervar)
+                   if !(get(kwargs, k, nothing) in (nothing, :none, false))]
+    _aghq_request(get(kwargs, :aghq, false)) === :off || push!(other_route, "aghq")
+    ridge_active = ridge_wanted && isempty(other_route)
     ridge_kwarg = ridge_active ? (loading_ridge = binary_ridge,) : NamedTuple()
-    ridge_note = ridge_active ? "loading_ridge=$binary_ridge" : ""
+    ridge_note = ridge_active ? "loading_ridge=$binary_ridge" :
+                 ridge_wanted ? "binary ridge not applied (not supported with " *
+                                join(other_route, ", ") * ")" : ""
     withridge(msg) = isempty(ridge_note) ? msg :
                      (isempty(msg) ? ridge_note : msg * "; " * ridge_note)
 
@@ -259,7 +278,9 @@ function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
             continue
         elseif _lv_bar_value(fit) < llprev - tolk(llprev)
             push!(attempts, (K = k, status = :nonmonotone, loglik = _loglik(fit),
-                             message = withridge("logLik below a converged fit at a smaller K ($(llprev))")))
+                             message = withridge(ridge_active ?
+                                 "penalised objective ℓ − ½Σλ²/τ² = $(_lv_bar_value(fit)) below the bar $(llprev) set by a smaller K" :
+                                 "logLik below a converged fit at a smaller K ($(llprev))")))
             continue
         end
         llbar = max(llbar, _lv_bar_value(fit))

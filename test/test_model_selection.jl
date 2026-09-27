@@ -461,3 +461,72 @@ GLLVModels.StatsAPI.bic(f::_FakeRidgeFit, n::Integer) = f.np * log(n) - 2f.ll
     sel0 = select_lv(Y; family = Binomial(), Kmax = 2, warm_start = false, binary_ridge = Inf, _fitter = f)
     @test only(filter(a -> a.K == 2, sel0.attempts)).status === :nonmonotone
 end
+
+# --- Ridge review fixes (2026-09-27): route gating, warm start under a ridge, explicit N ---
+@testset "select_lv — binary ridge only on the Laplace fit_binomial_gllvm route" begin
+    Y = zeros(6, 40)
+    @testset "explicit all-ones N counts as single-trial" begin
+        calls = Any[]
+        select_lv(Y; family = Binomial(), Kmax = 2, warm_start = false,
+                  N = fill(1, size(Y)), _fitter = _ridge_fitter(calls))
+        @test !isempty(calls)
+        @test all(c -> get(c.kwargs, :loading_ridge, nothing) == 2.0, calls)
+    end
+    for (label, kw) in (("aghq = true", (aghq = true,)), ("aghq = 1", (aghq = 1,)),
+                        ("row_eff = :fixed", (row_eff = :fixed,)),
+                        ("row_eff = :random", (row_eff = :random,)),
+                        ("disp_group", (disp_group = :species,)))
+        @testset "$label: no loading_ridge, and the attempt says so" begin
+            calls = Any[]
+            sel = select_lv(Y; family = Binomial(), Kmax = 2, warm_start = false,
+                            _fitter = _ridge_fitter(calls), kw...)
+            @test !isempty(calls)
+            @test all(c -> !haskey(c.kwargs, :loading_ridge), calls)
+            @test all(a -> occursin("binary ridge not applied", a.message), sel.attempts)
+        end
+    end
+    @testset "aghq = false keeps the ridge" begin
+        calls = Any[]
+        select_lv(Y; family = Binomial(), Kmax = 2, warm_start = false, aghq = false,
+                  _fitter = _ridge_fitter(calls))
+        @test all(c -> get(c.kwargs, :loading_ridge, nothing) == 2.0, calls)
+    end
+end
+
+@testset "select_lv — warm start is judged on the penalised objective under a ridge" begin
+    Y = zeros(6, 40)
+    # τ = 2. K = 1: ℓ = −500, Λ = 1 (penalised −500.75, the bar).
+    # K = 2 cold: ℓ = −500.2 is above the bar unpenalised, but Λ = 2 gives
+    # penalised −503.2, below it; the warm refit (ℓ = −499, Λ = 0.1) passes.
+    # Judging acceptable() on the unpenalised ℓ would keep the cold fit as :ok.
+    f = function (Y; family, K, loading_ridge = Inf, kwargs...)
+        K == 1 && return _FakeRidgeFit(-500.0, 10, true, zeros(6), fill(1.0, 6, 1), loading_ridge)
+        haskey(kwargs, :Λ_init) &&
+            return _FakeRidgeFit(-499.0, 20, true, zeros(6), fill(0.1, 6, 2), loading_ridge)
+        return _FakeRidgeFit(-500.2, 20, true, zeros(6), fill(2.0, 6, 2), loading_ridge)
+    end
+    sel = select_lv(Y; family = Binomial(), Kmax = 2, _fitter = f)
+    a2 = only(filter(a -> a.K == 2, sel.attempts))
+    @test a2.status === :warm_start
+    @test a2.loglik == -499.0
+end
+
+@testset "select_lv — real binary fits: default ridge, and routes without it still run" begin
+    rng = MersenneTwister(7)
+    p, n = 5, 40
+    Λt = 0.8 .* randn(rng, p, 1)
+    Y = Int.(rand(rng, p, n) .< 1 ./ (1 .+ exp.(-(Λt * randn(rng, 1, n)))))
+    sel = select_lv(Y; family = Binomial(), Kmax = 2)
+    @test sel.best.loading_ridge == 2.0
+    @test_throws ArgumentError confint(sel.best, Y)
+    # Unpenalised row-effect binary fits may run away here; what matters is that each
+    # K is fitted (no :failed from a rejected loading_ridge keyword) and the note shows.
+    msg = try
+        selr = select_lv(Y; family = Binomial(), Kmax = 2, row_eff = :fixed)
+        join(("K=$(a.K) $(a.status) $(a.message)" for a in selr.attempts), "; ")
+    catch e
+        sprint(showerror, e)
+    end
+    @test !occursin("failed", msg)
+    @test occursin("binary ridge not applied (not supported with row_eff)", msg)
+end
