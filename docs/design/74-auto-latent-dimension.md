@@ -58,7 +58,18 @@ n, p and family, and every place a user reads an interval says it is conditional
 - Binomial, same size: K = 4 unconverged, latent SD 156, ratio 106 (a clear separation runaway,
   caught by both checks); AIC on the old `select_lv` would have chosen it. K = 3 and K = 5 healthy.
 - Recovery grid (4 families × n {30,60,120,300} × p {10,20} × true K {1,2,3} × 200 reps, K fitted
-  1..K+2, existing code): running on DRAC nibi, array 22744942. Table goes here when harvested.
+  1..K+2, pre-lane fitting code; loadings 0.8·N(0,1)): DRAC nibi 22744942 (tasks 1–480) and narval
+  4064148 (481–960). Interim at 01:00Z, 251 of 960 tasks
+  (`pilot/harvest-report-interim-0100Z.md`; `old` = argmin over every returned fit, `new` = guarded):
+  - **Gaussian** (all fits healthy): BIC log(p·n) under-selects at small n (n = 30, p = 10, K = 3:
+    0.21 exact); BIC log(n sites) 0.53 there and 0.93–1.00 once n ≥ 60 with p = 20; AIC overshoots
+    by 10–15% everywhere but is best in the hardest cells. Guard changes nothing (as expected).
+  - **Binomial (Bernoulli)**: fits are the problem, not the criterion. Share of attempted fits
+    unconverged at K = 2–5: 70–87%; **every unconverged fit is a runaway** (median latent SD 141–295
+    on the logit scale), and 17–64% of converged fits exceed latent SD 10. Old AIC over-selects
+    wildly (picks broken fits); guarded rules fall back to K = 1 and under-select K = 2, 3
+    (≤ 0.07 exact at n ≤ 60). Both BIC variants find K = 1 correctly (≥ 0.96).
+  - Count families (Poisson, NB) not yet harvested.
 
 ## Built so far (lane branch, not merged)
 
@@ -95,6 +106,7 @@ fit carries no "K was estimated" flag, so `confint`/`summary` do not yet print t
 | T2 criterion | default criterion | **Decide from the grid.** Provisional: BIC. Candidates on the grid: AIC, BIC log(p·n) (current), BIC log(n sites). Chen–Li JIC read and set aside (joint likelihood, J ≥ 100). | No published discrete-data evidence exists; our grid is the evidence. |
 | T4 API, Julia | what does omitting K do? | **Omitting K runs `select_lv` and returns the chosen fit**, printing the candidate table once (`@info`); `select_lv` stays the way to get the full record. Today omitting K throws, so nothing that works now changes. Default `Kmax = min(5, p − 1)`. | Shinichi: "OK what if we do not supply d - yes". Return type stays a fit, so downstream code is unchanged. |
 | T4 API, R | what does omitting `d` in `latent()` do? | **Flag: today omitting `d` silently means d = 1**, so switching it to auto changes existing users' fits. Recommend `d = "auto"` now, and switching the default in a later minor release with a NEWS warning. | Julia's switch is error → behaviour; R's would be behaviour → different behaviour. |
+| T7 binary data | how to estimate K for Bernoulli data when most K ≥ 2 fits run away? | **Sweep with a loading ridge (gllvmTMB `aghq_ridge = 2`, Laplace + ridge; Julia has none yet) and compare criteria on the unpenalised log-likelihood at the ridge optimum, or refuse auto-K for binary data below a size threshold and say why.** R ridge experiment running (`ridge/ridge_binary.R`). Also test stronger loadings (latent SD 1.5–3) to separate "undetectable" from "unfittable". | The runaway note (vault) measured ridge τ = 2 cutting runaways 47% → 0% at n = 100; gllvmTMB warns a ridge logLik is not valid for comparison. |
 | T5 caveat | wording only, or propagate K uncertainty? | **Wording now** (below). A bootstrap that re-selects K per replicate is a later option. | Honest now; the bootstrap costs Kmax fits per replicate. |
 | T6 scope | which routes get auto in v1? | **Default family route, including NB/Beta via their per-species dispersion route.** Those routes need `β_init`/`Λ_init` in `grouped_dispersion.jl` for the warm-start retry; without it the guard still rejects bad K. That file belongs to the overnight lane until 11:00Z; raise after. | NB is the most-used count family. |
 
