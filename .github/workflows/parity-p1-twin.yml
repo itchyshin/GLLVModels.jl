@@ -1,0 +1,53 @@
+name: Parity P1 twin tests
+# Required CI slot for the gllvmTMB P1 re-pin (D-294/D-295; see
+# tools/parity_oracle.py::P1_GLLVMTMB_ORACLE and
+# docs/dev-log/core070/true-parity-latest/GATES.md clause C0). No P1 twin
+# tests exist yet, so this job is a placeholder: it discovers any test file
+# tagged for P1 and runs it, and passes cleanly when none exist yet. Later
+# PRs add tagged test files without touching this workflow.
+#
+# NOT wired into branch protection as a required check by this PR (the
+# maintainer does that from the GitHub UI once satisfied) -- ubuntu-only,
+# PR + manual trigger, matching this repo's CI-cost convention (see
+# .github/workflows/CI.yml for the routine-vs-release matrix rationale).
+on: [pull_request, workflow_dispatch]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  p1-twin-tests:
+    name: gllvmTMB P1 twin tests (placeholder; auto-discovers tagged files)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v2
+      - uses: julia-actions/julia-buildpkg@v1
+      - name: Discover and run P1-tagged twin tests
+        run: |
+          set -euo pipefail
+          # Convention: a P1 twin test file carries the literal marker
+          # "# gllvm-parity-tag: P1" on one of its lines. No such file exists
+          # yet -- this job lists whatever it finds and passes when the list
+          # is empty, so a future PR can add tagged files and have this job
+          # pick them up without any CI edit.
+          mapfile -t files < <(grep -rl '# gllvm-parity-tag: P1' test 2>/dev/null | sort || true)
+          echo "P1-tagged parity test files found: ${#files[@]}"
+          if [ "${#files[@]}" -gt 0 ]; then
+            printf '  %s\n' "${files[@]}"
+          fi
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No P1 twin tests exist yet -- placeholder passes."
+            echo "Tag a future test file with '# gllvm-parity-tag: P1' on its own line"
+            echo "and this job will discover and run it automatically."
+            exit 0
+          fi
+          status=0
+          for f in "${files[@]}"; do
+            echo "::group::julia --project=. $f"
+            julia --project=. "$f" || status=$?
+            echo "::endgroup::"
+          done
+          exit "$status"
