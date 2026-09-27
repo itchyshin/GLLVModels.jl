@@ -12,7 +12,13 @@
 - Neighbour: the beta-binomial bootstrap testset in `test/test_confint_family.jl` (`n_converged >= 4`
   of 8) gives 8 of 8 on main and branch, both versions.
 - Boundary rate, 50 replicates per dataset, Julia 1.10.12, local merge with #541: ungrouped 0 of
-  250; per-species grouped 35 of 150 (23%) at `φ >= 1e6`, which option 1 drops once #541 merges.
+  250; per-species grouped 35 of 150 (23%) at `φ >= 1e6`.
+- Maintainer then chose option 3: refits also flag `φ` at the boundary (`upper_boundary`), and
+  `_family_bootstrap` reports an `Inf` upper bound for a parameter whose flagged share of usable
+  replicates exceeds `(1 - level)/2` (opt-in; other families unchanged). New file 76/76 on
+  1.10.12 and 1.13.0 (28 pass, 19 fail, 29 error on main); seven neighbouring bootstrap files
+  708/708 on 1.10.12. Live per-species grouped bootstrap on healthy_seed_9001 (50 replicates):
+  `φ[1]` and `φ[6]` upper bounds `Inf`, 38 of 50 converged.
 - After-task: `docs/dev-log/after-task/2026-09-27-bb-boot-verdict-542.md`.
 
 ## 2026-09-25: Two-part families no longer score an unfinished mode search (#484)
