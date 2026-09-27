@@ -45,6 +45,10 @@ Mission control:
 - Vault (local-only): `memory/DECISIONS.md` D-294.
 - No `AGENTS.md` snapshot edit: four GLLVM lanes are live, so a single pointer would orphan the others.
 
+## Landing State
+
+`tools/handoff_gate.sh` (2026-09-27): GATE FAIL, for reasons outside this lane. The six unmet ledgers belong to earlier lanes (`.unlazy/grouped-analytic-20260920/` and `.unlazy/s9c-coverage-448-20260922/`), carried in the shared clone; this lane has none. Its branch `claude/lane-true-parity-latest` is pushed.
+
 ## Next Immediate Steps
 
 1. Run `~/shinichi-brain/tools/lane_preflight.sh "/Users/z3437171/Dropbox/Github Local/GLLVM.jl"`, read `AGENTS.md`, and classify each item here as OWED, DONE, RETRACTED or PROTECTED against the current git state (for example, #514 and #515 may have landed by then).
