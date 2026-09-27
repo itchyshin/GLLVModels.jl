@@ -173,8 +173,8 @@ makes the same claim, no more.
 
 | check | error text (first line) |
 |---|---|
-| `family` not an R family | `family must be an R family object.` |
-| `observation` not a one-sided formula | `observation must be a one-sided formula.` |
+| `family` not an R family | `` `family` must be an R <family> object. `` |
+| `observation` not a one-sided formula | `` `observation` must be a one-sided formula. `` |
 
 `isdm_sources(...)` (`R/isdm-sources.R:119-172`), in order:
 
@@ -206,10 +206,10 @@ occurs; at least one count arm and at least one detection arm are declared; each
 within-trait family mix (`R/fit-multi.R:307-317`) and a non-zero offset on the cloglog rows
 (`R/offset.R:187-191`).
 
-Fit-time refusals after admission (`R/fit-multi.R:3462-3480`):
-
+Fit-time refusals (the first fires before admission, the rest after it, `R/fit-multi.R:3462-3480`):
 | input | class |
 |---|---|
+| an `isdm_source` value outside the declaration, or a declared source with no rows (selector level count differs from the list length) | plain `cli_abort`, `length(family) must match the number of distinct levels in isdm_source.`, fired at `R/fit-multi.R:1440-1445` before the core predicate is evaluated |
 | `weights` supplied | `gllvmTMB_isdm_weights_unsupported` |
 | any detection row with `n_trials != 1` (a `cbind(succ, fail)` LHS) | `gllvmTMB_isdm_multitrial_unsupported` |
 | a declared source x trait arm with no observed response | `gllvmTMB_isdm_observed_source_incomplete` (`R/fit-multi.R:3502-3528`, `R/isdm-sources.R:445-477`) |
@@ -250,9 +250,10 @@ and the predict output data frame.
 |---|---|
 | `src/families/isdm_sources.jl` | `IsdmSource` (law + optional observation formula), `IsdmSources` (ordered names, laws as `(family, link)` pairs, observation formulas), constructors `isdm_source(family; observation = nothing)` and `isdm_sources(; kwargs...)` with the four `isdm_sources()` checks of section 2.1 as `ArgumentError`s carrying R's first line verbatim; `_isdm_admitted_law_id` returning `(fid, lid)` or `nothing`. Admitted Julia spellings: `Poisson()` (implies `LogLink()`), `(Binomial(), CLogLogLink())` or `Binomial(CLogLogLink())` wrapper; `Binomial()` bare (logit) is refused exactly as R refuses `binomial()`. |
 | `src/families/isdm_table.jl` | `IsdmTable`: the validated long table. Fields: `y`, `n_trials` (all 1 on detection rows), `trait_id`, `unit_id`, `source_id`, `fid`, `lid`, `offset`, `X_fix` (dense, with column names), `rows_by_unit` (ranges after a stable sort by unit), level vectors, and the frozen observation basis. Builder `isdm_table(formula, data; family::IsdmSources, trait, unit)` runs, in R's order: selector alignment by name (`R/fit-multi.R:1432-1452`), `_isdm_declared_core` (`R/isdm-sources.R:412-439`), the within-trait scale rule with the admitted exception, the observation design with QR rank retention (`R/isdm-sources.R:178-277`), the offset gate with the cloglog exception (`R/offset.R:108-195`), the weights and multitrial refusals, and the observed-arm check. |
-| `src/families/isdm_formula.jl` | The small formula reader: pull `offset(expr)` and exactly one `latent(0 + trait \| unit, d = K)` out of the RHS (mirrors `R/parse-multi-formula.R:100, 287` and `R/offset.R:14-16`), refuse any other structured term (`indep`, `dep`, `spatial_*`, `phylo_*`, `(1 \| g)`) with a named error, and hand the remaining fixed RHS to StatsModels with `0 + trait` full dummy coding so `X_fix` column names can be aligned to R's `X_fix_names` by name. |
-| `src/families/isdm_laplace.jl` | The per-cell kernel over long rows. `_isdm_cell_mode(cell, Λ, b, θ...)`: damped Fisher scoring on `z_s` (length `K`) where each row contributes score `s_o` and weight `W_o` to `Λ[t(o), :]`; the Newton matrix is `A = Σ_o W_o λ_{t(o)} λ_{t(o)}ᵀ + I_K`, step halving on a decrease of the cell log-posterior, a `converged` flag (the rule PR #514 introduces, copied, not shared). `_isdm_cell_loglik`: `Σ_o ℓ_o(ẑ) - ½ ẑᵀẑ - ½ logdet(A_obs)`, with `A_obs` built from `_glm_obs_weight` on cloglog rows and `_glm_weight` on Poisson-log rows (Fisher equals observed there), which is the observed curvature TMB obtains by AD. `isdm_marginal_loglik_laplace(table, Λ, b)`: the sum over cells. `_isdm_dbinom_cloglog(y, η)`: a Julia copy of `gll_dbinom_cloglog` including the `eta < -20` series and the `700` cap, used instead of `_glm_logpdf(::Binomial)` on detection rows so the two engines agree in the tails (risk R2). |
-| `src/families/isdm_fit.jl` | `IsdmFit` (fields: `b_fix` with names, `Λ` (p x K), `zhat` (K x n_units), `eta` (per row, the twin of `fit$report$eta`), `loglik`, `converged`, `iterations`, `table`, `sources`, `formula`, `hessian_used`). `fit_isdm_gllvm(table::IsdmTable; K, b_init, Λ_init, optimizer controls)`: packed θ = `[b_fix; vech-lower(Λ)]` (same lower-triangular layout as `src/packing.jl`), Optim LBFGS on the negative marginal with a ForwardDiff or finite-difference gradient (decision R6), warm start from a per-row link-scale pseudodata regression. The name mirrors the `fit_<family>_gllvm` pattern of `src/families/fit_gllvm.jl`. |
+| `src/families/isdm_formula.jl` | The small formula reader: pull `offset(expr)` and zero or one `latent(0 + trait \| unit, d = K)` out of the RHS (mirrors `R/parse-multi-formula.R:100, 287` and `R/offset.R:14-16`; R fits without a latent term, `tests/testthat/test-isdm-source-formula.R:155-159`, so `K = 0` is a valid GLM route through the same kernel), refuse any other structured term (`indep`, `dep`, `spatial_*`, `phylo_*`, `(1 \| g)`) with a named error, and hand the remaining fixed RHS to StatsModels with `0 + trait` full dummy coding so `X_fix` column names can be aligned to R's `X_fix_names` by name. |
+| `src/families/isdm_laplace.jl` | The per-cell kernel over long rows. `_isdm_dbinom_cloglog(y, η)`: a Dual-safe Julia copy of `gll_dbinom_cloglog` (`src/gllvmTMB_cloglog.h:45-57`) with the `eta < -20` series and the `700` cap written with `ifelse`, not branches, so `ForwardDiff` differentiates it; used instead of `_glm_logpdf(::Binomial)` on detection rows. `_isdm_cloglog_score(y, η)` and `_isdm_cloglog_obs_weight(y, η)`: the first derivative and minus the second `ForwardDiff` derivative of `_isdm_dbinom_cloglog` itself, not `_glm_obs_weight`, so the curvature in the logdet is the curvature of the density actually summed (review item 3; pinned with the value on the 24-point grid, `P1-ISDM-CLOGLOG-GRID`). Poisson rows use `_pois_logpmf` (`src/laplace_grad.jl:30`) with score `y - μ` and weight `μ`. `_isdm_cell_mode(cell, Λ, b)`: damped Fisher scoring on `z_s` (length `K`) where each row contributes score `s_o` and Fisher weight to `Λ[t(o), :]`; the step matrix is `A = Σ_o W_o λ_{t(o)} λ_{t(o)}ᵀ + I_K`, step halving on a decrease of the cell log-posterior, a `converged` flag (the rule PR #514 introduces, copied, not shared). `_isdm_cell_loglik`: `Σ_o ℓ_o(ẑ) - ½ ẑᵀẑ - ½ logdet(A_obs)`, with `A_obs` built from the observed weights above, which is the observed curvature TMB obtains by AD. `isdm_marginal_loglik_laplace(table, Λ, b)`: the sum over cells. |
+| `src/families/isdm_grad.jl` | The one-step implicit gradient of the marginal (Q5): per cell, the concrete mode `ẑ` from `_isdm_cell_mode`, one differentiable Newton step `z(θ) = ẑ + A_obs(ẑ, θ)⁻¹ g(ẑ; θ)` with the offset carried inside `η_o(θ)`, the marginal evaluated at `z(θ)`, `ForwardDiff.gradient` over `θ = [b_fix; vech-lower(Λ)]`; returns `nothing` for any θ where a cell did not converge, so the optimiser falls back to central finite differences for that evaluation (`_optimize_with_analytic`, `src/laplace_grad.jl:36-50`). |
+| `src/families/isdm_fit.jl` | `IsdmFit` (fields: `b_fix` with names, `Λ` (p x K), `zhat` (K x n_units), `eta` (per row, the twin of `fit$report$eta`), `loglik`, `converged`, `cell_converged`, `iterations`, `table`, `sources`, `formula`, `hessian_used`). `fit_isdm_gllvm(table::IsdmTable; K, b_init, Λ_init, optimizer controls)`: packed θ = `[b_fix; vech-lower(Λ)]` (same lower-triangular layout as `src/packing.jl`), Optim L-BFGS on the negative marginal with the `isdm_grad.jl` gradient, warm start from a per-row link-scale pseudodata regression. The name mirrors the `fit_<family>_gllvm` pattern of `src/families/fit_gllvm.jl`. |
 | `src/families/isdm_predict.jl` | `predict(fit::IsdmFit; newdata = nothing, type = :link, re_form = :all)` and `fitted(fit::IsdmFit; ...)`. Returns a `NamedTuple` of columns `(unit, trait, isdm_source, est)` in R's order; `re_form = :zero` (also `nothing`, `0`) gives `X_fix b_fix + offset`; `newdata` rebuilds the fixed design from the frozen basis by column name, re-evaluates the offset, re-adds `Λ[t, :] . ẑ[:, s]` for seen units, falls back to fixed-only on unseen units, refuses unknown or missing source labels with the two R classes as `ArgumentError` subtypes, and applies the per-row inverse link for `type = :response`. No `se_fit` (Q1). |
 | `src/families/isdm_public.jl` | The door: a two-line branch at the top of `gllvm(formula, long_data; family, ...)` in `src/formula.jl:300` (`family isa IsdmSources && return fit_isdm_gllvm(isdm_table(formula, long_data; family, trait, unit); K = d from the formula)`), plus the once-per-session experimental notice mirroring `R/fit-multi.R:1487-1495`. This is the only edit outside new files, besides the `include` lines in `src/GLLVModels.jl` and the export list. |
 
@@ -279,53 +280,110 @@ law, which is what R does (`src/gllvmTMB.cpp:3083-3096` indexes `Lambda_B` by th
 Tolerance vocabulary: `exact` means the same floating-point expression on both sides of the
 Julia identity (tested with `==` or `atol = 1e-12`); `paired` means an R-versus-Julia number
 recorded in a receipt; `class` means a thrown `ArgumentError` whose message starts with R's
-first line. Every twin is written red first. Twin file: `test/test_isdm.jl` (default suite,
-no R) for identities and refusals; `test/parity/isdm_cases.jl` (opt-in, RCall) for paired
-numbers.
+cli-rendered first line (for example `` `family` must be an R <family> object. ``, the
+rendering of `{.arg family} must be an R {.cls family} object.`). Every twin is written red
+first. Twin file: `test/test_isdm.jl` (default suite, no R) for identities and refusals;
+`test/parity/isdm_cases.jl` (opt-in, RCall) for paired numbers.
 
-`tests/testthat/test-isdm-public-door.R`:
+Counts, so the coverage claim is exact: the four R files hold 39 `test_that` blocks and 117
+`expect_*` calls (public-door 5 blocks / 8 calls; multisource 7 / 20; source-formula 7 / 27;
+predict 20 / 62). This spec twins 83 of the 117 calls (public-door 8, multisource 15,
+source-formula 27, predict 33). The 34 not twinned are listed with reasons at the end of
+this section.
 
-| R lines | assertion | Julia twin | tolerance | reason |
-|---|---|---|---|---|
-| 5-40 | cloglog offset admitted inside the contract, refused outside | `isdm_table` on a two-row table with a non-zero offset: passes when `allow_isdm_cloglog`, throws "offsets are supported for count families" otherwise | class | pure contract; identical predicate |
-| 42-69 | the flag never opens the offset for gaussian, logit, probit, Beta | four `@test_throws` on the same message | class | same |
-| 71-110 | contract requires both arms within every trait; split traits and a dummy portal row are refused | `_isdm_declared_core` on the three selector/trait vectors: `true, false, false` | exact boolean | pure predicate |
-| 145-161 | `weights` refused inside the contract | `gllvm(...; weights = ...)` on the door fixture throws `gllvmTMB_isdm_weights_unsupported` text | class | same rule; Julia has no `weights` keyword on this door, so the keyword exists only to be refused |
-| 163-179 | multi-trial detection rows refused | table with `n_trials = 2` on a detection row throws the multitrial text | class | same |
+Route note. `tests/testthat/test-isdm-public-door.R` builds its fixtures in the legacy
+`isdm_family` shape (`:72-77, 119-143`), which Q4 does not twin as a route. Its assertions
+are still twinned because they exercise code shared by both routes: blocks 1 and 2 call
+`gll_prepare_offset()` directly with `allow_isdm_cloglog` (`R/offset.R:157-159`, reached by
+the declared route through `isdm_admitted` at `R/fit-multi.R:3351-3360`); block 3 calls the
+two-source predicate, which is the `n = 2` instance of `.gllvmTMB_isdm_declared_core()`
+(`R/fit-multi.R:392-401`); blocks 4 and 5 hit the post-admission refusals
+(`R/fit-multi.R:3462-3480`) that fire for either route. The Julia twins run through the
+declared constructor, never through a legacy shape.
 
-`tests/testthat/test-isdm-predict.R` (non-spatial, on the fixture at `:6-45`, regenerated in
-Julia from the same literal `x`, `u_cell`, `alpha`, `beta`, `lam_tr` and stored as a literal
-CSV under `test/fixtures/`, hash-verified, never from a seed):
+`tests/testthat/test-isdm-public-door.R` (legacy-shape assertions, twinned through the shared
+core predicate and gates):
 
-| R lines | assertion | Julia twin | tolerance | reason |
-|---|---|---|---|---|
-| 55-65 | in-sample `predict()` equals `report$eta`, 120 rows, `est` present | `predict(fit).est == fit.eta` | exact | same vector by construction |
-| 67-82 | response scale applies each row's own inverse link; PA in [0,1], counts > 0 | `exp` on count rows, `-expm1(-exp(.))` on detection rows | exact | same expression |
-| 84-92 | `predict(newdata = training)` equals in-sample | equality of the two vectors | `atol 1e-10` | design rebuilt from names; floating reassociation only |
-| 94-109 | `re_form = ~0` on newdata equals `X_fix b_fix + offset` and differs from `~.` | same two checks with `re_form = :zero` | `atol 1e-10`, and `std(diff) > 0` | same |
-| 111-126 | `se.fit` finite in-sample, refused with newdata | only the refusal is twinned: `predict(fit; newdata, se_fit = true)` throws the R first line | class | intervals are out of scope (Q1) |
-| 128-140 | unseen unit level falls back to fixed-only | `predict` on one cell relabelled `cNEW` equals `re_form = :zero` | exact | same fallback rule |
-| 150-174 | `#1132` defect 3: newdata response uses each row's arm | newdata response equals in-sample response; detection rows in [0,1]; equals the cloglog inverse of the link prediction | `atol 1e-10` / exact | same |
-| 176-210 | `#1132` defect 2: `re_form` honoured in-sample for `~0`, `NA`, `0`; `fitted` forwards; `~1` warns | `re_form` in `(:zero, nothing, 0)` all equal `X b + offset`; `fitted(fit; re_form = :zero)` equal; an unsupported form throws (Julia has no formula-valued `re_form`, so `:something_else` is an `ArgumentError`, not a warning) | exact / class | same rule; the warning-versus-error difference is recorded as a fence |
-| 467-488 | in-sample output carries the `isdm_source` column, `est` last | `keys(predict(fit)) == (:cell_id, :trait, :isdm_source, :est)` and the column equals the table's source labels | exact | same |
-| 511-528 | zeroing the offset in newdata changes link predictions by exactly `log(support)` | same | `atol 1e-12` | same arithmetic |
-| 530-555 | `predict(newdata)` without the response column | drop `value` from `newdata`; equal to with-response results on both scales | exact | same |
+| R lines | calls | assertion | Julia twin | tolerance | reason |
+|---|---|---|---|---|---|
+| 5-41 | 2 | cloglog offset admitted inside the contract, refused outside | `_isdm_prepare_offset` on a two-row table with a non-zero offset: passes with `allow_isdm_cloglog = true`, throws `offsets are supported for count families (poisson, nbinom) only` otherwise | class | shared gate, route-neutral |
+| 42-70 | 1 (4 cases) | the flag never opens the offset for gaussian, logit, probit, Beta | four `@test_throws` on the same message | class | same |
+| 71-144 | 3 | contract requires both arms within every trait; split traits and a dummy portal row are refused | `_isdm_declared_core` on the three selector/trait vectors, declared as `isdm_sources(gbif = Poisson(), survey = Binomial(CLogLogLink()))`: `true, false, false` | exact boolean | same predicate at `n = 2` |
+| 145-162 | 1 | `weights` refused inside the contract | `gllvm(...; weights = ...)` on the door fixture throws `` `weights` is not admitted for the integrated multi-source model. `` | class | same rule; the keyword exists on the Julia door only to be refused |
+| 163-184 | 1 | multi-trial detection rows refused | table with `n_trials = 2` on a detection row throws `The integrated multi-source model admits only single-trial detection rows.` | class | same |
 
-Not twinned, with the reason recorded in the ledger row: `:212-259, 293-360` (SPDE spatial,
-outside P1), `:261-291` (augmented random-slope tier, column grammar, outside P1),
-`:382-458, 557-608` (`diag_species`, `rr_W`, `diag_W`, `propto`, `re_int` tiers on non-iSDM fits;
-they belong to the covariance rows, not to ISDM-01 to 03), `:490-509` (single-family output
-shape, a `predict` row, not an iSDM row). The legacy two-source route
+`tests/testthat/test-isdm-multisource.R` (the declared route; fixture `.ms_fixture()` at
+`:4-31`, exported once from R at P1 as a hash-pinned CSV, see the fixture rule below):
+
+| R lines | calls | assertion | Julia twin | tolerance | reason |
+|---|---|---|---|---|---|
+| 33-51 | 8 | `family_var` is `isdm_source`; names kept in order; refusals for one source, unnamed sources, duplicate name, logit, probit, gaussian | `isdm_sources(gbif = Poisson(), literature = Poisson(), survey = Binomial(CLogLogLink()))` has `names == (:gbif, :literature, :survey)`; six `@test_throws` on `needs at least two named sources`, `is declared twice`, `an observation law that is not admitted` | exact / class | constructor twin |
+| 52-73 | 2 | three-source mixed-law fit with `trait:src` converges | the same fit in Julia converges (`converged == true`, every cell mode converged); paired case `P1-ISDM-MS3` | `converged`; paired at the section tolerances | first three-source paired cell |
+| 74-84 | 1 | all-detection declaration refused | `@test_throws` `An integrated declaration needs at least one count arm.` | class | constructor twin |
+| 85-117 | 3 | an undeclared source label is refused before admission; a trait missing one source is refused with the within-trait class; `weights` refused | `isdm_table` throws `length(family) must match the number of distinct levels in` (`R/fit-multi.R:1440-1445`), then `Response family/link cannot currently vary across rows within a trait.`, then the weights text | class | same three refusals in the same order |
+| 118-135 | 1 | all-count declaration fits and keeps `weights` as likelihood multipliers | not twinned in P1: the Julia door has no likelihood weights; the fit without `weights` is exercised under Q6 and receipted under the mixed-family rows | fence | Julia has no `weights` on this door |
+| 136-159 | 3 | legacy predicate admits the two-source shape (2 calls); the declared predicate admits the same shape (1 call) | the declared call only: `_isdm_declared_core` with `isdm_sources(gbif = Poisson(), survey = Binomial(CLogLogLink()))` on `("gbif", "survey")`, traits `("sp1", "sp1")` is `true` | exact boolean | legacy calls are R-only (Q4) |
+| 160-189 | 2 | legacy and declared fits give the same objective and parameters | not twinned: an R-internal byte-compatibility claim between two R routes (Q4); recorded as an R-only disposition on ISDM-01 | none | R-only |
+
+`tests/testthat/test-isdm-source-formula.R` (observation formulas; fixtures at `:3-21`
+literal, `:23-58` exported from R at P1 as hash-pinned CSVs):
+
+| R lines | calls | assertion | Julia twin | tolerance | reason |
+|---|---|---|---|---|---|
+| 60-68 | 5 | `isdm_source()` keeps the family and the formula; refuses a non-formula and a non-family | `IsdmSource` fields; `@test_throws` `` `observation` must be a one-sided formula. `` and `` `family` must be an R <family> object. `` (Julia wording: `family must be an admitted family marker`; the R first line is the pinned substring in the parity case, the Julia message in the unit test) | exact / class | constructor twin |
+| 69-76 | 3 | wrapped and bare laws coexist; observation formulas keyed by source name; bare declaration has no observation attribute | `sources.observation` is a `Dict{Symbol, Any}` keyed by source name with `nothing` for bare laws; `isempty` for an all-bare declaration | exact | same |
+| 77-92 | 4 | added columns are all prefixed `isdm_source:`; gbif and survey blocks are zero off-source; no NA | `_isdm_observation_design` on the six-row fixture: column names, zero blocks, no `NaN` | exact | same construction; column order compared by name |
+| 93-125 | 4 | `~ 0 + access` yields `isdm_source:gbif:access` zero off-source; a factor `~ observer + method` survey basis is non-empty and zero off-source | same on the same two literal tables | exact | same |
+| 126-147 | 3 | missing variable, NA inside the source, and a top-level `trait:isdm_source` duplicate are refused | three `@test_throws`: `uses variable(s) not found in`, `has missing values after source filtering`, `Top-level` ... `duplicate` | class | same |
+| 148-170 | 5 | all-Poisson, no latent term (`value ~ 0 + trait + trait:env + offset(log_support)`), 120 cells: converges; `isdm_source:gbif:access` recovers `0.5` within `0.15`; zero off-source; survey columns present; no NA in `b_fix` | same fit with `K = 0` (no `latent()` term, a pure GLM through the same kernel); paired case `P1-ISDM-SRCFORM-POIS` | `converged`; `abs 0.15` on the access slope; paired `rel 1e-4` on `b_fix` by name | the latent term is optional in R; Julia's reader admits zero or one `latent()` |
+| 171-200 | 3 | mixed Poisson and cloglog with source formulas, no latent term, 60 cells: converges; survey columns present and zero off-source | same fit with `K = 0`; paired case `P1-ISDM-SRCFORM-MIXED` | `converged`; exact zero blocks; paired at the section tolerances | same |
+
+`tests/testthat/test-isdm-predict.R` (non-spatial blocks, on the fixture at `:6-45`):
+
+| R lines | calls | assertion | Julia twin | tolerance | reason |
+|---|---|---|---|---|---|
+| 55-66 | 4 | in-sample `predict()` equals `report$eta`, 120 rows, `est` present | `predict(fit).est == fit.eta` | exact | same vector by construction |
+| 67-83 | 4 | response scale applies each row's own inverse link; PA in [0,1], counts > 0 | `exp` on count rows, `-expm1(-exp(.))` on detection rows | exact | same expression |
+| 84-93 | 1 | `predict(newdata = training)` equals in-sample | equality of the two vectors | `atol 1e-10` | design rebuilt from names; floating reassociation only |
+| 94-110 | 2 | `re_form = ~0` on newdata equals `X_fix b_fix + offset` and differs from `~.` | same two checks with `re_form = :zero` | `atol 1e-10`, and `std(diff) > 0` | same |
+| 111-127 | 4 (1 twinned) | `se.fit` finite in-sample (3 calls), refused with newdata (1 call) | only the refusal: `predict(fit; newdata, se_fit = true)` throws `` `se.fit = TRUE` is not yet supported together with `newdata`. `` | class | intervals are out of scope (Q1) |
+| 128-149 | 1 | unseen unit level falls back to fixed-only | `predict` on one cell relabelled `cNEW` equals `re_form = :zero` | exact | same fallback rule |
+| 150-175 | 3 | `#1132` defect 3: newdata response uses each row's arm | newdata response equals in-sample response; detection rows in [0,1]; equals the cloglog inverse of the link prediction | `atol 1e-10` / exact | same |
+| 176-211 | 6 | `#1132` defect 2: `re_form` honoured in-sample for `~0`, `NA`, `0`; `fitted` forwards; `~1` warns | `re_form` in `(:zero, nothing, 0)` all equal `X b + offset`; `fitted(fit; re_form = :zero)` equal; an unsupported form throws (Julia has no formula-valued `re_form`, so `:other` is an `ArgumentError` rather than a warning) | exact / class | same rule; the warning-versus-error difference is recorded as a fence |
+| 467-489 | 6 | in-sample output carries the `isdm_source` column, `est` last, `fitted` inherits | `keys(predict(fit)) == (:cell_id, :trait, :isdm_source, :est)`, the column equals the table's source labels, `fitted` has the same keys | exact | same (see Q8 for R's `species` column) |
+| 511-529 | 1 | zeroing the offset in newdata changes link predictions by exactly `log(support)` | same | `atol 1e-12` | same arithmetic |
+| 530-556 | 4 | `predict(newdata)` without the response column | drop `value` from `newdata`; equal to with-response results on both scales | exact | same |
+
+Fixture rule. No twin fixture is regenerated from `set.seed(...)`: `.isdm_predict_fixture()`
+(`test-isdm-predict.R:6-34`), `.ms_fixture()` (`test-isdm-multisource.R:4-31`, three
+source mixes) and `.isdm_source_recovery_fixture()` (`test-isdm-source-formula.R:23-58`, two
+sizes, plus the `:171-181` survey relabelling) are each exported ONCE from R at P1 with
+`write.csv`, stored under `test/fixtures/isdm/` with a sha256 recorded in
+`test/parity/isdm_cases.jl` and checked on load. R's own twin-side fit reads the same CSV,
+so both engines see identical bytes and the paired receipt cannot drift with R's RNG.
+
+Not twinned (34 calls), with the reason recorded in the ledger row:
+`test-isdm-predict.R:212-260, 293-321, 322-381` (SPDE spatial, 9 calls, outside P1);
+`:261-292` (augmented random-slope tier, 3 calls, column grammar, outside P1);
+`:382-401, 402-426, 427-466, 557-608` (`diag_species`, `rr_W`, `diag_W`, `propto`, `re_int`
+tiers on non-iSDM fits, 13 calls; they belong to the covariance rows, not to ISDM-01 to 03);
+`:490-510` (single-family output shape, 1 call, a `predict` row, not an iSDM row);
+`:111-127` in-sample `se.fit` (3 calls, Q1); `test-isdm-multisource.R:118-135` weights on an
+all-count fit (1 call, fence); `:136-159` legacy predicate (2 calls, Q4); `:160-189` legacy
+byte-compatibility (2 calls, Q4). The legacy two-source route
 (`list(gbif = poisson(), survey_pa = binomial("cloglog"))` with `isdm_family`,
-`R/fit-multi.R:364-390`) is not twinned; R itself calls it backward compatibility (Q4).
+`R/fit-multi.R:364-390`) is not twinned as a route; R itself calls it backward compatibility.
 
-Paired numeric twins (`test/parity/isdm_cases.jl`), on the same fixture:
+Paired numeric twins (`test/parity/isdm_cases.jl`), on the P1 fixtures:
 
 | case id | comparison | tolerance |
 |---|---|---|
-| `P1-ISDM-LOGLIK-XOBJ` | Julia `isdm_marginal_loglik_laplace` evaluated at R's `(b_fix, Lambda_B)` versus R's `-fit$opt$objective`; and R's objective (via `fit$tmb_obj$fn`) at Julia's estimate versus Julia's own | `abs 1e-6` | cross-objective identity in both directions, the gate-tier bar; the cloglog tail copy and observed-curvature logdet make this a like-for-like Laplace |
-| `P1-ISDM-ESTIMATES` | `b_fix` by name; `Lambda_B Lambda_B'`; per-row `eta` at each engine's own optimum | `rel 1e-4` on `b_fix` and the loading crossproduct, `abs 1e-4` on `eta` | different optimisers, same objective; residual is optimiser noise, and any larger gap is a finding |
+| `P1-ISDM-LOGLIK-XOBJ` | Julia `isdm_marginal_loglik_laplace` evaluated at R's `(b_fix, Lambda_B)` versus R's `-fit$opt$objective`; and R's objective (via `fit$tmb_obj$fn`) at Julia's estimate versus Julia's own; predict fixture | `abs 1e-6` | cross-objective identity in both directions, the gate-tier bar; the cloglog copy and observed-curvature logdet make this a like-for-like Laplace |
+| `P1-ISDM-ESTIMATES` | `b_fix` by name; `Lambda_B Lambda_B'`; per-row `eta` at each engine's own optimum; predict fixture | `rel 1e-4` on `b_fix` and the loading crossproduct, `abs 1e-4` on `eta` | different optimisers, same objective; residual is optimiser noise, and any larger gap is a finding |
 | `P1-ISDM-PREDICT` | `predict` on link and response scales, in-sample and on a newdata grid with the offset zeroed | `abs 1e-4` | follows from estimates |
+| `P1-ISDM-MS3` | the three-source mixed-law fit of `test-isdm-multisource.R:52-73`: same three comparisons as the two cases above | same | first `n = 3` cell |
+| `P1-ISDM-SRCFORM-POIS`, `P1-ISDM-SRCFORM-MIXED` | the two source-formula fits (`test-isdm-source-formula.R:148-200`), `K = 0`: logLik both directions, `b_fix` by name including the `isdm_source:*` columns | `abs 1e-6` logLik, `rel 1e-4` `b_fix` | exercises the observation design end to end |
+| `P1-ISDM-CLOGLOG-GRID` | `_isdm_dbinom_cloglog` value and its observed weight at 24 `eta` values on `[-40, 720]` for `y in (0, 1)` versus R's `gll_dbinom_cloglog` and its AD second derivative (obtained once through a TMB `MakeADFun` on the scalar kernel) | `rel 1e-10` on the value, `rel 1e-8` on the weight | pins the tail kernel and its curvature, not only the density |
 | `P1-ISDM-ADMISSION-20` | the 20 `CORE070-ISDM-*-PAIRED-CONTROL` predicates (section 4), each now run natively in Julia and compared with the R replay | exact boolean or error substring | contract twins, first executed on a Julia surface |
 
 ## 4. Receipts and scoreboard rows
@@ -422,12 +480,37 @@ recognised as the `n = 2` instance of the same predicate (`R/fit-multi.R:364-390
 Recommendation: do not twin it. Record it as an R-only backward-compatibility disposition on
 the ISDM-01 row; the public door covers the same likelihood.
 
-**Q5. Gradient route for the fitter.** TMB differentiates the joint by AD and applies the
-implicit-function step through the Laplace mode. Options in Julia: ForwardDiff through the
-damped mode search (simple, correct at convergence, slower), or the implicit-step analytic
-gradient pattern of `src/laplace_grad.jl` (faster, more code). Recommendation: ForwardDiff
-first in 1b, with a finite-difference check at three random θ; the analytic gradient is a
-later speed slice, not part of the parity claim.
+**Q5. Gradient route for the fitter.** TMB obtains the exact gradient of the Laplace marginal
+by AD of the joint plus the implicit-function step through the mode. Julia's own record says
+that naive `ForwardDiff` through the inner Newton mode search fails
+(`src/laplace_grad.jl:5-8`) and that the working pattern is the one-step implicit gradient
+(`:10-17`): solve the mode `ẑ` concretely at the primal θ, form the single differentiable step
+`z(θ) = ẑ + A(ẑ, θ)⁻¹ (g(ẑ; θ))` with `g(z; θ) = Σ_o s_o(z; θ) λ_{t(o)} - z`, evaluate the
+marginal at `z(θ)`, and take `ForwardDiff` of that expression only. Plan for `isdm_grad.jl`:
+
+- the score `s_o(z; θ)` carries the offset explicitly, `η_o = x_oᵀ b + offset_o + λ_{t(o)}ᵀ z`,
+  so the offset is a constant inside the Dual expression and never triggers the
+  finite-difference fallback that `src/laplace_grad.jl:22-24` applies to offset fits;
+- `A(ẑ, θ)` in the dual step uses the OBSERVED per-row weight, `W_o = -∂²ℓ_o/∂η_o²`, because
+  the implicit function theorem needs the true Jacobian of `g`; on Poisson-log rows Fisher
+  equals observed (`src/families/poisson.jl:10-12`), on cloglog rows it does not, so the
+  detection weight comes from the second derivative of `_isdm_dbinom_cloglog` (section 3.2);
+- the Poisson log-pmf is the AD-friendly `_pois_logpmf(μ, y)` (`src/laplace_grad.jl:30`), not
+  `Distributions.logpdf` under a Dual mean;
+- the mode search stays Fisher-scoring with step halving (the mode does not depend on `W`),
+  and a cell whose `converged` flag is false returns `nothing` from the gradient so the
+  optimiser falls back to central finite differences for that θ
+  (`_optimize_with_analytic`, `src/laplace_grad.jl:36-50`);
+- verification: at three random θ (one at the warm start, one mid-way, one at the optimum)
+  the analytic gradient agrees with a central finite difference of
+  `isdm_marginal_loglik_laplace` to `rel 1e-6`, as `test/test_laplace_grad.jl` gates the
+  other families.
+
+Why not AD through the iterations: the halving branch and the iteration cap make the mode
+search a non-smooth function of θ, ForwardDiff propagates Duals through every iteration at
+`K x n_iter` cost per cell, and the derivative it returns is of the truncated iteration, not
+of the fixed point. Recommendation: the one-step implicit gradient is the 1b default; the FD
+gradient exists only as the fallback path.
 
 **Q6. All-count declarations.** `isdm_sources(a = Poisson(), b = Poisson())` is accepted by R and
 fits through the ordinary mixed route with no relaxation (`R/isdm-sources.R:149-155`).
@@ -439,11 +522,13 @@ check exists for that path. Recommendation: refuse `missing` in the response at 
 for P1 (one named `ArgumentError`), and port the observed-arm check as a plain contract test so
 the row is not silently narrower than R's; masking is a `mi()`/missing-data row.
 
-**Q8. The `species` column in `predict` output.** R emits `unit, species, trait` from
-`object$species_col` (`R/methods-gllvmTMB.R:2838-2860`); the iSDM fixture has no species
-column and R resolves that internally. Recommendation: Julia emits `(unit, trait,
-isdm_source, est)` and the twin compares on those four; whether R's `species` column is a
-copy of `trait` on this fixture is measured in 1c, not assumed.
+**Q8. The `species` column in `predict` output.** R emits `unit, species, trait`, reading
+`object$species_col`, which falls back to the literal `"species"`, and then
+`object$data[[species_lbl]]` (`R/methods-gllvmTMB.R:2838-2857`). The iSDM fixture carries no
+`species` column, so what that column holds on this fit (a copy of `trait`, a filled-in
+default, or a dropped column that shifts the `names(out)[1:3]` labels) is a code-path fact
+to measure, not assume. Recommendation: Julia emits `(unit, trait, isdm_source, est)`; 1c
+measures R's column on the P1 fixture and the twin compares on the four shared columns.
 
 **Q9. Multiple maxima.** Issue #477 recorded that small-data NB2 likelihoods have several
 maxima that Laplace ranks differently. Sparse detection arms can do the same here.
@@ -475,8 +560,13 @@ This is R-side work under D-292 and needs its own gllvmTMB PR.
   alias is exact; record the tolerance in the receipt.
 - R5: receipts for the 20 admission rows are lost and their pins are stale; nothing is
   carried, everything is re-measured (D-295 rule 1).
-- R6: estimate risk on 1b if the ForwardDiff gradient through the damped mode search proves
-  too slow on the 120-row fixture; fallback is a finite-difference gradient with a cost note.
+- R6: the one-step implicit gradient is exact only when the primal mode has converged and
+  the Newton matrix in the dual step is the true Jacobian of the score equation. A cell whose
+  mode search stopped on the iteration cap, or a Fisher matrix used where observed differs,
+  gives a wrong gradient that L-BFGS may still accept. Mitigation: the per-cell `converged`
+  flag is a hard gate on the gradient (fall back to central FD for that θ, as
+  `_optimize_with_analytic` does, `src/laplace_grad.jl:36-50`), and the observed matrix is
+  the only one used in the dual step.
 
 ### 6.3 Estimates
 
@@ -486,9 +576,9 @@ so nothing approaches the three-hour line.
 
 | slice | work | estimate |
 |---|---|---|
-| 1b build | `isdm_sources.jl`, `isdm_table.jl`, `isdm_formula.jl` (3 days); `isdm_laplace.jl` with the cloglog copy and the FD gradient check (3 days); `isdm_fit.jl`, `isdm_predict.jl`, `isdm_public.jl`, docstrings, tutorial page, README row, `capability-status.md` row (3 days); review and the Rose walk-around (1 day); buffer for Q3 and R6 (2 days) | 10 to 12 days |
-| 1c tests and receipts | `test/test_isdm.jl` red-first twins (1 day); `test/parity/isdm_cases.jl` with the four paired cases and the 20 admission twins (1.5 days); receipts written and the two scoreboard rows plus the 20 reclassified rows updated (1 day); Totoro re-run for the second host (0.5 day) | 3 to 4 days |
-| 1d bridge route | gllvmTMB additive branch and payload, `bridge_isdm_fit`, one paired receipt through `engine = "julia"`, gate ids and tests (Q10) | 2 to 3 days |
+| 1b build | `isdm_sources.jl`, `isdm_table.jl`, `isdm_formula.jl` (2.5 days); `isdm_laplace.jl` with the Dual-safe cloglog copy and its second-derivative weight (2 days); `isdm_grad.jl` one-step implicit gradient with the 3-point FD check (1.5 days); `isdm_fit.jl`, `isdm_predict.jl`, `isdm_public.jl`, docstrings, tutorial page, README row, `capability-status.md` row (2 days); review and the Rose walk-around (1 day); buffer for Q3 (1 day) | 8 to 10 days |
+| 1c tests and receipts | `test/test_isdm.jl` red-first twins for the four R files, 83 expect calls (1.5 days); `test/parity/isdm_cases.jl` with the five paired cases, the 20 admission twins and the 24-point cloglog grid (1.5 days); receipts written and the two scoreboard rows plus the 20 reclassified rows updated (1 day); the P1 fixture export and hash pin (0.5 day); Totoro re-run for the second host (0.5 day) | 4 to 5 days |
+| 1d bridge route | a gllvmTMB PR: additive branch and long-table payload, `bridge_isdm_fit`, one paired receipt through `engine = "julia"`, gate ids and tests (Q10) | 2 to 3 days |
 
 Dependencies: 1b starts after #514 merges (its file is not touched, but the damping rule is
 copied from the merged text); 1c after 1b; 1d after 1c only.
@@ -498,8 +588,9 @@ copied from the merged text); 1c after 1b; 1d after 1c only.
 - gllvmTMB at `9539352f6` (read-only reference; no edits): `R/isdm-sources.R`,
   `R/isdm-contract.R` (developer route, not twinned), `R/fit-multi.R`, `R/offset.R`,
   `R/methods-gllvmTMB.R`, `R/julia-bridge.R`, `src/gllvmTMB.cpp`, `src/gllvmTMB_cloglog.h`,
-  `tests/testthat/test-isdm-public-door.R`, `tests/testthat/test-isdm-predict.R`,
-  `docs/design/120-multi-source-isdm-contract.md`, `docs/design/126-isdm-prediction-api.md`,
+  `tests/testthat/test-isdm-public-door.R` (legacy-shape assertions),
+  `tests/testthat/test-isdm-multisource.R`, `tests/testthat/test-isdm-source-formula.R`,
+  `tests/testthat/test-isdm-predict.R`,
   `docs/design/127-isdm-prediction-map-implementation.md`,
   `docs/design/111-isdm-nonspatial-recovery-protocol.md`, `docs/design/capability-status.md`.
 - gllvmTMB issue #1238 (iJSDM response-information forensic follow-up): parked as a Claude
@@ -516,3 +607,4 @@ copied from the merged text); 1c after 1b; 1d after 1c only.
   Ecology and Evolution 6, 424-438.
 - Kristensen, K. et al. (2016). TMB: automatic differentiation and Laplace approximation.
   Journal of Statistical Software 70(5).
+
