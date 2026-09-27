@@ -104,6 +104,17 @@ All notable changes to GLLVModels.jl are documented here.
   now converges to the same value. Total fit time was 43.2 s against 45.0 s on
   `main`; per fit the ratio ranged from 0.06 to 2.2. These figures are specific
   to those datasets, not a general bound.
+  An independent review (15 datasets, its own seeds, 6 family mixes) found
+  none of 10 healthy fits worse beyond outer-optimiser noise (one lower by
+  1.2e-6 on a flat Gamma-shape ridge, where the kernel reproduces `main`'s value
+  at `main`'s parameters) and a total fit time of 1.5x `main`. It also set the
+  limits of the ill-conditioning argument: with one latent variable it holds
+  down to a Normal σ of about 1e-13, below which rounding keeps `|g'Δ|` above
+  both tolerances and the site returns `-Inf`; with two or more latent
+  variables and σ at or below 1e-9, `A` is too ill-conditioned (condition number
+  above 1e16) for the step to be trusted and the site returns `-Inf` where
+  `main` returned a finite wrong value. A floor on the Normal σ is the remedy
+  and is not in this change.
 - **`confint(..., method = :profile)` and `method = :bootstrap` could accept a
   silently failed inner refit.** `_family_profile_refit` and `_family_bootstrap`
   (`src/confint_family.jl`) judged a refit's success only by `isfinite` on its
