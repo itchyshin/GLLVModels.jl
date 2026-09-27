@@ -80,6 +80,15 @@ using Test, GLLVModels, Random, Distributions, Statistics, LinearAlgebra
         @test isapprox(ff.logLik, f1.logLik; atol = 1e-8)
     end
 
+    @testset "@formula(y ~ 0) stays zero mean" begin
+        # Documented contract, and the R `value ~ 0 + latent(...)` pairing in
+        # test/parity/core070_aghq_admission_cases.toml.
+        fz = gllvm(@formula(y ~ 0), Y1, (; temp = randn(MersenneTwister(5), n));
+                   family = Normal(), K = 1)
+        @test isempty(fz.pars.β)
+        @test fz.logLik == fit_gaussian_gllvm(Y1; K = 1).logLik
+    end
+
     @testset "explicit X is unchanged" begin
         X = zeros(p, n, 2)
         X[:, :, 1] .= 1.0

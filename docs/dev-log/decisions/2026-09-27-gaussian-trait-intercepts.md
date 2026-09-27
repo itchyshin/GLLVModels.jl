@@ -42,6 +42,7 @@ convention"). For the public `fit_gllvm` route, no evidence of intent was found:
 |---|---|
 | `fit_gllvm(Y; family = Normal(), K)`, no X | one estimated intercept per trait |
 | `gllvm(@formula(y ~ 1), Y, data; family = Normal(), K)` | same as above |
+| `gllvm(@formula(y ~ 0), Y, data; family = Normal(), K)` | zero mean, unchanged (documented; paired with R `value ~ 0 + latent(...)` in `test/parity/core070_aghq_admission_cases.toml`) |
 | `fit_gllvm(...; X = X)` | `X` is the complete mean, unchanged |
 | `fit_gaussian_gllvm(Y; K)` | zero mean, unchanged (bridge relies on it) |
 | `lambda_constraint = M` | zero mean, unchanged (Stage 1 requires X = nothing) |
