@@ -1,5 +1,6 @@
 # Checkpoint — OVERWRITTEN every arc (a pointer to truth, not a log)
 
+- NOW (17:10Z 09-27, new GLLVM.jl session): working GOAL-2026-09-27-owed.md. DONE: R NB figures withdrawn (R 0eedd4d9d, unpushed); ridge review fixes (Julia afd5c2554, 848f57d4c, unpushed); #521 test registration, CHANGELOG, comment fixes pushed (a3129233d) + review comment. RUNNING: ridge sweep resume, gate re-verify. WAITING: #519 CI. BLOCKED on merges: NB and Gaussian grid re-runs, #518 rebase.
 - DONE: G0 — ultra-plan approved (ultra-plan.md). Decisions: omitting d means estimate it; gllvmTMB gets the same rule via a spec handed to the Cursor lane; A1 is a feasibility question first.
 - D-292 (2026-09-26): Claude owns gllvmTMB too; build auto-d in R and Julia side by side, each cross-checking the other. A8b becomes a real R build, not a spec.
 - PARKED FOR A POSSIBLE NEW LANE (Shinichi 2026-09-26): the big LASSO/shrinkage investigation (LASSO vs ridge priors, FA and latent-variable models generally). If this lane cannot address it, open a follow-up lane.
