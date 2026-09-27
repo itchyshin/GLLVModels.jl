@@ -53,6 +53,17 @@ In an unreplicated `temporal_indep` fit, the temporal variances and the
 residual variance are separated only by the temporal correlation. With little
 persistence the fit can put all variation in one of them.
 
+A variance can sit on its zero boundary: a fit can return `theta_temporal_diag`
+near -180 (so `psi` is numerically zero) and still report `converged = true`.
+Read `fit.psi` or [`extract_temporal`](@ref), not the raw coordinates. With
+`temporal_latent(...; unique = true)` the likelihood can also have more than
+one local optimum.
+
+Traits are ordered by `sort(unique(trait))`. gllvmTMB orders them by the factor
+levels of the trait column, so an R analysis with custom factor levels shows the
+`psi` and loading rows in a different order; the likelihood and every fitted
+covariance are the same up to that permutation.
+
 ## Helper routes
 
 | Function | What it returns | Scope |

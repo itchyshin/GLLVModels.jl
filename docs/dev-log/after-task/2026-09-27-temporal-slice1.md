@@ -38,7 +38,8 @@ helpers. Twin R's P1 test blocks from literal, hash-guarded receipts.
 - **Between-optima parameters are compared at a Newton-polished R point.** R's
   `nlminb` stops with gradients up to 1.8e-3 even at `rel.tol = 1e-14`; one Newton
   step from R's recorded gradient (checked equal to Julia's to 1e-8) brings the
-  agreement to 1e-10. Raw differences are reported, not hidden.
+  agreement to 1e-10. The raw gaps to R's stopped point are also asserted at 1e-4
+  (measured max 1.9e-5 relative).
 - **Bootstrap seeds use `Random.Xoshiro`, not `StableRNG`.** StableRNGs is a
   test-only dependency and `Project.toml` was out of bounds; the reproducibility
   promise is within a Julia version.
@@ -61,8 +62,9 @@ this report and `docs/dev-log/check-log.md`. Not touched: `_laplace_mode`,
 ## 5. Checks Run
 
 - Per file, `julia +1.10` and `+1.13 --project=. -e 'using Test, GLLVModels; include(...)'`:
-  api 81/81, oracles 258/258, fit receipts 649/649, helpers 129/129 plus latent
-  scores 8/8, on both versions. The full suite was not run (instruction).
+  api 81/81, oracles 258/258, fit receipts 738/738 (after review: raw-gap and
+  getLV receipt assertions), helpers 129/129 plus latent scores 8/8, on both versions.
+  getLV scores vs R's `report$z_temporal_state` at R's coordinates: 1.3e-15. The full suite was not run (instruction).
 - `Test.detect_ambiguities(GLLVModels)`: 0.
 - Local Documenter build (`docs/make.jl --local`): exit 0;
   `tools/check_reader_surface.py` source and rendered: pass.
@@ -97,9 +99,12 @@ reconciled pages describe the same scope: temporal source alone; no `unit` /
 
 ## 10. Known Residuals
 
-- On the R fixture `profile_ar1` with latent-unique AR1, R's optimiser stopped
-  0.278 log-likelihood units below Julia's optimum; R's own objective confirms Julia's
-  point. Recorded as a finding in the test, not a failure.
+- On the R fixture `profile_ar1` with latent-unique AR1 the likelihood is
+  multimodal. R converged to a stationary local optimum (tight-run gradient 8.7e-7,
+  objective 47.5671); Julia reached a different, higher one on the `psi = 0` boundary
+  (theta_diag near -179, -27.5, -107 and one loading near 0; objective 47.2888, confirmed
+  by R's `fn`). This is not an R early stop. Recorded as a finding in the test.
+  (Revised after independent review; the first version called it an early stop.)
 - Not twinned: ar1-methods.R:59 `select_lv` and VA refusals (Julia `select_lv`
   takes no temporal formula; the door has no integration keyword), the
   `update()` S3 row (refit is internal), `extract_ordination` for the latent cell,

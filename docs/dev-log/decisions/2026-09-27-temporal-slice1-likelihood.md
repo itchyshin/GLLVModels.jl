@@ -48,6 +48,24 @@ send a trial step to a singular covariance; the objective is then `Inf` and Hage
 asserts, so the fit reruns from the same start with cubic backtracking. The verdict
 recomputes the gradient and Hessian at the returned point.
 
+## Multimodality and the psi = 0 boundary
+
+The latent-unique likelihood can be multimodal. On the R fixture `profile_ar1`
+(latent-unique AR1), R converges to a stationary local optimum (objective 47.5671,
+tight-run gradient 8.7e-7) and Julia to a different, higher one (47.2888, confirmed by
+R's `fn`) on the `psi = 0` boundary: `theta_diag` near -179, -27.5 and -107 and one
+loading near 0. Julia's fit reports `converged = true` there because the gradient in
+the raw coordinates is flat. Users should read `psi`, not raw `theta_diag`. The receipt
+test treats a Julia optimum above R's as a finding and requires R's objective to confirm
+it; it is not an R early stop.
+
+## Trait order
+
+Traits are ordered by `sort(unique(trait))` (code-point order). gllvmTMB uses the
+factor levels of the trait column (alphabetical by locale for character columns). With
+custom factor levels in R, the `psi` and loading rows appear permuted relative to
+Julia; the likelihood is invariant to the permutation.
+
 ## Provenance
 
 Ported semantics (no code copied): the pre-pass checks and messages of
