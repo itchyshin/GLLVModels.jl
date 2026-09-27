@@ -243,12 +243,23 @@ function checkC0() {
   if (py === null) die(`${ORACLE_PY} not on ${REF}`);
   const hasP0 = new RegExp(`FROZEN_GLLVMTMB_ORACLE\\s*=\\s*["']${P0_SHA}["']`).test(py);
   const hasP1 = new RegExp(`P1_GLLVMTMB_ORACLE\\s*=\\s*["']${P1_SHA}["']`).test(py);
-  // DEFAULT_R_REF stays at P0 by design (tools/parity_oracle.py::DEFAULT_R_REF, PR #524) --
-  // flipping the default is a separate, later PR. What C0 checks here is that the explicit,
-  // documented switch exists: a named-pins map plus an env-var-driven lookup that resolves to
-  // the P1 pin when asked (GLLVM_PARITY_PIN=P1).
+  // The switch (a named-pins map plus an env-var-driven lookup, GLLVM_PARITY_PIN) is necessary
+  // but NOT sufficient for C0: the plan's own C0 text requires DEFAULT_R_REF and
+  // CAPABILITY_LEDGER_REF to point AT P, not merely be switchable to it on request. A branch
+  // that only adds the switch while leaving the live default at P0 is exactly the false-MET
+  // this clause exists to catch -- reported as `default_pin_switch_present` below, but it does
+  // not by itself satisfy the clause.
   const hasP1Switch = /R_REF_PINS/.test(py) && /os\.environ\.get\(/.test(py) && /DEFAULT_R_REF\s*=\s*R_REF_PINS(\.get\(|\[)/.test(py);
   const hasCapabilityLedgerRef = /CAPABILITY_LEDGER_REF\s*=\s*["'][^"']+["']/.test(py);
+  // tools/parity_oracle.py (PR #524) names the live default as a single token, `_DEFAULT_PIN`,
+  // precisely so the ACTUAL default can be read directly instead of inferred from the presence
+  // of a switch mechanism. C0 is met only once this reads "P1". Anchored to the start of a
+  // line (module's own docstring/comments mention the token in prose, e.g. "flip
+  // `_DEFAULT_PIN = "P1"` below" -- an unanchored match would find that prose occurrence
+  // first and misread the file, the exact false-MET shape this clause exists to prevent).
+  const defaultPinMatch = py.match(/^[ \t]*_DEFAULT_PIN\s*=\s*["'](P0|P1)["']/m);
+  const defaultPin = defaultPinMatch ? defaultPinMatch[1] : 'MISSING';
+  const defaultIsP1 = defaultPin === 'P1';
 
   const wfFiles = listDir(WORKFLOWS_DIR).filter((f) => /\.ya?ml$/.test(f) && f !== SMOKE_WORKFLOW_FILE);
   let p1JobFile = null;
@@ -262,8 +273,8 @@ function checkC0() {
     const notAdvisory = !/continue-on-error:\s*true/i.test(t);
     if (hasJobId && runsTaggedP1 && notAdvisory) { p1JobFile = f; break; }
   }
-  console.log(`C0 p0_pin_present=${hasP0} p1_pin_present=${hasP1} p1_pin_switch_present=${hasP1Switch} capability_ledger_ref_present=${hasCapabilityLedgerRef} p1_twin_job_file=${p1JobFile || 'none'} (workflows scanned: ${wfFiles.join(',') || 'none'}; NOTE: GitHub's "required check" status is branch-protection configuration on main, not something readable from repo content -- this only checks the job exists, runs the P1-tagged convention, and is not continue-on-error)`);
-  return hasP0 && hasP1 && hasP1Switch && hasCapabilityLedgerRef && !!p1JobFile;
+  console.log(`C0 p0_pin_present=${hasP0} p1_pin_present=${hasP1} default_pin=${defaultPin} default_pin_switch_present=${hasP1Switch} capability_ledger_ref_present=${hasCapabilityLedgerRef} p1_twin_job_file=${p1JobFile || 'none'} (workflows scanned: ${wfFiles.join(',') || 'none'}; NOTE: GitHub's "required check" status is branch-protection configuration on main, not something readable from repo content -- this only checks the job exists, runs the P1-tagged convention, and is not continue-on-error)`);
+  return hasP0 && hasP1 && defaultIsP1 && hasP1Switch && hasCapabilityLedgerRef && !!p1JobFile;
 }
 
 // --- C1: required rows bound, receipts resolve, carry rule applied --------

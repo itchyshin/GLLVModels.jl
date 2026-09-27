@@ -187,6 +187,35 @@ test('item 4: a missing CAPABILITY_LEDGER_REF fails C0', () => {
   assert.match(stdout, /capability_ledger_ref_present=false/);
 });
 
+// --- false-MET fix: a switch existing is not the same as the default actually being P1.
+// PR #524's real shape names the live default as a single token, _DEFAULT_PIN; C0 must read
+// it directly rather than accept "a switch exists" as sufficient (that accepted #524's own
+// current state -- default still P0 by design -- as C0_MET, the exact failure this tool
+// exists to catch). ---
+test('the false-MET fix: _DEFAULT_PIN = "P0" (the switch exists, but the default has not been flipped) fails C0', () => {
+  const { stdout, code } = run('c0_default_pin_p0', 'C0');
+  assert.equal(code, 0);
+  assert.match(stdout, /C0_NOT_MET$/m);
+  assert.match(stdout, /default_pin=P0\b/);
+});
+test('the false-MET fix: _DEFAULT_PIN = "P1" (the same shape, one token flipped) is what C0_MET actually requires', () => {
+  const { stdout, code } = run('c0_default_pin_p1', 'C0');
+  assert.equal(code, 0);
+  assert.match(stdout, /C0_MET$/m);
+  assert.match(stdout, /default_pin=P1\b/);
+});
+// Regression found while verifying the fix above against the real sibling branch: an
+// unanchored regex matched the token where it appears in the module's own docstring prose
+// ("flip `_DEFAULT_PIN = "P1"` below") before it ever reached the real assignment further
+// down the file (`_DEFAULT_PIN = "P0"`), misreading the file as already flipped -- the exact
+// false-MET this clause exists to prevent.
+test('a docstring mentioning the token in prose is not mistaken for the real assignment', () => {
+  const { stdout, code } = run('c0_default_pin_mentioned_in_prose_only', 'C0');
+  assert.equal(code, 0);
+  assert.match(stdout, /C0_NOT_MET$/m);
+  assert.match(stdout, /default_pin=P0\b/);
+});
+
 // --- item 5(i)(ii): measured_against + validated 64-hex carry hashes, not opt-in strings ---
 test('item 5(i): a row missing measured_against is stale, not fresh by default', () => {
   const { stdout, code } = run('carry_missing_measured_against', 'C1');
@@ -256,7 +285,7 @@ test('a missing case-map at the ref is a measurement failure (exit 2)', () => {
 // --- item 4 / git-mode control: show, existsAsBlob and listDir exercised through real git,
 // the same code path CI runs against origin/main, not the FS fallback ---
 {
-  let goodRepo, dirReceiptRepo;
+  let goodRepo, dirReceiptRepo, defaultPinP0Repo;
   test('git mode: positive control base fixture is MET on every mode via a real git ref', () => {
     goodRepo = makeGitRepo('base');
     for (const mode of ALL_MODES) {
@@ -278,7 +307,14 @@ test('a missing case-map at the ref is a measurement failure (exit 2)', () => {
     assert.match(stdout, /C0_MET$/m);
     assert.match(stdout, /p1_twin_job_file=parity-p1-twin\.yml/);
   });
-  for (const dir of [goodRepo, dirReceiptRepo]) {
+  test('git mode: the false-MET fix -- _DEFAULT_PIN = "P0" fails C0 even with everything else in place (matches PR #524\'s real current state)', () => {
+    defaultPinP0Repo = makeGitRepo('c0_default_pin_p0');
+    const { stdout, code } = runGit(defaultPinP0Repo, 'C0');
+    assert.equal(code, 0);
+    assert.match(stdout, /C0_NOT_MET$/m);
+    assert.match(stdout, /default_pin=P0\b/);
+  });
+  for (const dir of [goodRepo, dirReceiptRepo, defaultPinP0Repo]) {
     if (dir) rmSync(dir, { recursive: true, force: true });
   }
 }

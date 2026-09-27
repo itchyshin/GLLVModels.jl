@@ -15,7 +15,7 @@ remains the pin for the existing `tools/parity_oracle.py::FROZEN_GLLVMTMB_ORACLE
 receipt that cites it; nothing here rewrites those ~555 files or that pin. Re-pointing
 `tools/parity_oracle.py::DEFAULT_R_REF` at P1 is A0b's job (a separate PR, `claude/true-parity-p1-pin`
 / PR #524, additive: `P1_GLLVMTMB_ORACLE`, `R_REF_PINS`, the `GLLVM_PARITY_PIN` env switch,
-`DEFAULT_R_REF` unchanged at P0), not this one.
+`_DEFAULT_PIN` left at `"P0"` by design until a later PR flips that one token), not this one.
 
 ## Post-review hardening (2026-09-27)
 
@@ -85,6 +85,24 @@ that fails on the old behaviour and passes on the fix:
    controls, never the real modes against `origin/main` — this is intentional (there is
    nothing real to check yet) but is not a substitute for `node tools/true_parity_check.mjs
    <mode>` run by hand once A0c/A0d populate the ledger.
+
+**Second round (same day):** the first fix for item 4 still let a false `C0_MET` through. It
+treated the presence of the `R_REF_PINS` + `GLLVM_PARITY_PIN` switch as sufficient for "P oracle
+points at P", when the plan's own C0 text requires `DEFAULT_R_REF` to actually resolve to P1 --
+a branch can add the switch and still leave the live default at P0 by design (exactly PR #524's
+real, current state), and the first fix reported that as met. Caught by re-running C0 against
+that real sibling branch, not only the fixtures: `PARITY_REF=origin/claude/true-parity-p1-pin
+node tools/true_parity_check.mjs C0` printed `C0_MET` when it should not have. Fixed by reading
+the live default directly from the single `_DEFAULT_PIN` token `tools/parity_oracle.py` (PR
+#524) now exposes for exactly this purpose. A second bug surfaced verifying that fix the same
+way: the first version of the `_DEFAULT_PIN` regex was unanchored, so it matched the token where
+the module's own docstring mentions it in prose ("flip `` `_DEFAULT_PIN = "P1"` `` below") before
+it reached the real assignment further down the file -- again a false `C0_MET` against the same
+real branch. Fixed by anchoring the match to the start of a line. Both are now negative controls
+(`c0_default_pin_p0`/`c0_default_pin_p1`/`c0_default_pin_mentioned_in_prose_only` in
+`tools/test_true_parity_check.mjs`, one of them in git mode). The lesson generalises: a fixture
+proves the logic is internally consistent, but only re-running the live modes against a real,
+independently-authored branch catches a check that is consistent with itself and still wrong.
 
 ## The D-295 boundary
 
@@ -159,17 +177,26 @@ modes on `origin/main`, which is the honest state, not a false pass.
 - [ ] C0: the P1 oracle exists alongside P0 (additive) in `tools/parity_oracle.py`
       (`P1_GLLVMTMB_ORACLE` present and equal to the full P1 SHA, `FROZEN_GLLVMTMB_ORACLE`
       unchanged, `CAPABILITY_LEDGER_REF` present), the explicit `R_REF_PINS` +
-      `GLLVM_PARITY_PIN` switch exists so `DEFAULT_R_REF` can resolve to P1 on request (the
-      default itself stays P0 until a later PR, see above), and a CI job named `p1-twin-tests`
-      runs the `gllvm-parity-tag: P1` discovery convention and is not `continue-on-error`.
+      `GLLVM_PARITY_PIN` switch exists, **and `DEFAULT_R_REF` itself actually resolves to P1**
+      — read directly from the single `_DEFAULT_PIN` token (`_DEFAULT_PIN = "P1"`), not
+      inferred from the switch merely existing — plus a CI job named `p1-twin-tests` that runs
+      the `gllvm-parity-tag: P1` discovery convention and is not `continue-on-error`.
+      A switch that CAN select P1 on request is necessary but not sufficient: the plan's own
+      C0 text requires `DEFAULT_R_REF` to point at P, and a branch that adds the switch while
+      leaving the live default at P0 is a real, distinguishable state, not C0_MET.
       "Required" in GitHub's sense is branch-protection configuration on `main`, which cannot
       be read from repo content — this clause checks the job exists and is not advisory, no
       more; the maintainer still marks it required from the GitHub UI once satisfied
   CHECK: node tools/true_parity_check.mjs C0
   EXPECT: C0_MET
-  EVIDENCE: pending (PR #524 adds the P1 pin/switch and the `parity-p1-twin.yml` job on its own
-  branch; `node tools/true_parity_check.mjs C0` against that branch already reports `C0_MET`;
-  merging it is what makes `origin/main` itself pass this clause)
+  EVIDENCE: pending. `claude/true-parity-p1-pin` (PR #524) adds the P1 pin, the switch, and the
+  `parity-p1-twin.yml` job, but keeps `_DEFAULT_PIN = "P0"` by design until a later PR flips
+  the one token — `node tools/true_parity_check.mjs C0` against that branch correctly reports
+  `C0_NOT_MET` with `default_pin=P0` (verified 2026-09-27; an earlier version of this clause
+  accepted the switch alone and produced a false `C0_MET` against that same branch — the exact
+  defect this tool exists to catch, caught by re-running the check against the real sibling
+  branch rather than only the fixtures). C0 becomes met once a later PR sets
+  `_DEFAULT_PIN = "P1"` there and it merges.
 
 - [ ] C1: every required row (`required_core`, `compatibility_adapter`) at P1 is bound to a
       receipt that resolves on `origin/main`, or carries a maintainer-signed disposition;
