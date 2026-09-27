@@ -586,9 +586,16 @@ names plus `TemporalTerm`, `TemporalGaussianFit`, `fit_temporal_gllvm`.
 
 ### 3.3 Parameter vector and coordinates
 
-`theta = [beta (q); theta_time (1); theta_rr (p*rank - rank(rank-1)/2); theta_diag (p, only when unique); log_sigma_eps (1)]`,
-named `b_fix[i]`, `theta_temporal_time[1]`, `theta_temporal_rr[k]`,
-`theta_temporal_diag[j]`, `log_sigma_eps[1]` so that an R `opt$par` vector
+`theta = [beta (q); log_sigma_eps (1); theta_time (1); theta_rr (p*rank - rank(rank-1)/2); theta_diag (p, only when unique)]`,
+named `b_fix[i]`, `log_sigma_eps[1]`, `theta_temporal_time[1]`,
+`theta_temporal_rr[k]`, `theta_temporal_diag[j]`. This is R's `names(opt$par)`
+order: TMB orders `opt$par` by the `parameters` list, and R builds that list
+as `b_fix`, `log_sigma_eps`, ..., `theta_temporal_time`, `theta_temporal_rr`,
+`theta_temporal_diag` (R/fit-multi.R:5802-5816), so `log_sigma_eps` is the
+second block and never the last (confirmed by the slice 1 build, PR #543, and
+an independent reviewer on a fresh P1 install). The layout is stated here for
+orientation only; every receipt asserts the recorded `names(opt$par)` vector
+(section 5) before placing coordinates, so that an R `opt$par` vector
 from the receipt can be placed on the Julia objective coordinate by
 coordinate (this is how the existing B1 receipt test evaluates at R's
 coordinates with `start = r_theta, iterations = 0`,
@@ -1002,3 +1009,8 @@ What the estimate rests on:
 - Receipts assert `names(opt$par)` (section 5); forecast records the offset
   term and the negative-variance rule (section 2.4); AR1 powers use integer
   exponents (section 3.4); section 3.1 says why a new NLL is written.
+
+2026-09-27, later, from the slice 1 build (PR #543): section 3.3 had
+`log_sigma_eps` last; R's `names(opt$par)` order is `b_fix, log_sigma_eps,
+theta_temporal_time, theta_temporal_rr, theta_temporal_diag`
+(R/fit-multi.R:5802-5816). Fixed; receipts assert the recorded name vector.
