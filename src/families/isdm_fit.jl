@@ -1,5 +1,6 @@
 # iSDM fitter (docs/design/isdm-port-spec.md section 3.2): packed
-# theta = [b_fix; pack_lambda(Λ)], Optim L-BFGS on the negative Laplace
+# theta = [b_fix; pack_lambda(Λ)] (with latent(..., unique = TRUE), R's default,
+# theta = [b_fix; pack_lambda(Λ); theta_diag_B]), Optim L-BFGS on the negative Laplace
 # marginal with the one-step implicit gradient of isdm_grad.jl, warm-started
 # from a per-row link-scale pseudodata regression.
 
@@ -14,6 +15,14 @@ Fields:
 - `Λ::Matrix{Float64}`: `p x K` shared loadings (`K = 0` for a GLM fit). Only
   `Λ * Λ'` is identified.
 - `zhat::Matrix{Float64}`: `K x n_units` conditional modes of the latent scores.
+- `unique::Bool`: whether the fit carries R's default `latent(..., unique = TRUE)`
+  per-trait unit-level unique variance.
+- `theta_diag_B::Vector{Float64}`: with `unique`, the length-`p` log standard
+  deviations of the unit-level unique effects (gllvmTMB's `theta_diag_B`; the
+  trait covariance is `Λ * Λ' + Diagonal(exp.(2 .* theta_diag_B))`); empty
+  otherwise.
+- `s_B::Matrix{Float64}`: `p x n_units` conditional modes of the unique effects
+  (gllvmTMB's `s_B`); zeros without `unique`.
 - `eta::Vector{Float64}`: per-row linear predictor at the modes, including the
   offset (the twin of gllvmTMB's `fit\$report\$eta`).
 - `loglik::Float64`, `converged::Bool`, `iterations::Int`: Laplace marginal at
@@ -31,6 +40,9 @@ struct IsdmFit
     b_names::Vector{String}
     Λ::Matrix{Float64}
     zhat::Matrix{Float64}
+    unique::Bool
+    theta_diag_B::Vector{Float64}
+    s_B::Matrix{Float64}
     eta::Vector{Float64}
     loglik::Float64
     converged::Bool
@@ -43,7 +55,7 @@ struct IsdmFit
 end
 
 Base.show(io::IO, f::IsdmFit) = print(io, "IsdmFit(loglik = ", round(f.loglik; digits = 4),
-    ", K = ", size(f.Λ, 2), ", ", length(f.b_fix), " fixed coefficients, ",
+    ", K = ", size(f.Λ, 2), f.unique ? ", unique" : "", ", ", length(f.b_fix), " fixed coefficients, ",
     f.converged ? "converged" : "NOT CONVERGED", ")")
 
 loglikelihood(f::IsdmFit) = f.loglik
@@ -111,8 +123,8 @@ end
     fit_isdm_gllvm(formula::Expr, data; family::IsdmSources, trait = :trait,
                    unit = :cell_id, weights = nothing, n_trials = nothing, kwargs...) -> IsdmFit
     fit_isdm_gllvm(table::IsdmTable; K = table.K, b_init = nothing, Λ_init = nothing,
-                   g_tol = 1e-6, iterations = 1000, newton_maxiter = 100,
-                   newton_tol = 1e-9, gradient = :analytic) -> IsdmFit
+                   theta_diag_B_init = nothing, g_tol = 1e-6, iterations = 1000,
+                   newton_maxiter = 100, newton_tol = 1e-9, gradient = :analytic) -> IsdmFit
 
 Fit an integrated species-distribution model, the Julia twin of gllvmTMB's
 public door `gllvmTMB(..., family = isdm_sources(...))` at pin P1
@@ -120,6 +132,11 @@ public door `gllvmTMB(..., family = isdm_sources(...))` at pin P1
 linear predictor per (unit, trait), each under its own law: Poisson-log count
 rows and Bernoulli-cloglog detection rows, with a known per-row support as an
 offset. The loadings `Λ` and fixed coefficients are shared across sources.
+With `latent(..., unique = TRUE)`, R's default, each (unit, trait) also carries
+a unique effect `s_B(t, s) ~ N(0, exp(theta_diag_B[t])^2)`, shared by that
+trait's rows in that unit across sources, so the between-unit trait covariance
+is `Λ * Λ' + Diagonal(exp.(2 .* theta_diag_B))`; the unique effects are
+integrated by Laplace jointly with the latent scores.
 
 The formula is a quoted expression (StatsModels' `@formula` cannot parse the
 keyword arguments of `latent()`); interactions are written with `&`:
@@ -128,14 +145,17 @@ keyword arguments of `latent()`); interactions are written with `&`:
 fam = isdm_sources(gbif = Poisson(), survey = (Binomial(), CLogLogLink()))
 fit = fit_isdm_gllvm(
     :(value ~ 0 + trait + trait & env + trait & src_gbif + offset(log_support) +
-      latent(0 + trait | cell_id, d = 1, unique = FALSE)),
+      latent(0 + trait | cell_id, d = 1)),
     dat; family = fam, trait = :trait, unit = :cell_id)
 predict(fit; type = :response)
 ```
 
 A formula without `latent()` fits `K = 0`: a GLM through the same kernel.
-R's `latent()` defaults to `unique = TRUE`, which adds a per-trait unit-level
-unique variance this door does not fit, so `unique = FALSE` must be written.
+`latent(..., unique = FALSE)` fits the loadings-only model. The unique variances
+are identified only when there are enough traits: a one-factor model needs at
+least three (in general `p >= 2K + 1`); with two traits `theta_diag_B` runs
+toward the boundary (a unique SD near zero) in R and in Julia alike, and only
+the log-likelihood is comparable.
 
 The marginal is a per-cell Laplace approximation with the observed curvature of
 the summed density; the gradient is the one-step implicit gradient with a
@@ -154,7 +174,8 @@ function fit_isdm_gllvm(formula::Expr, data; family::IsdmSources, trait::Symbol 
 end
 
 function fit_isdm_gllvm(table::IsdmTable; K::Integer = table.K, b_init = nothing,
-        Λ_init = nothing, g_tol::Real = 1e-6, iterations::Integer = 1000,
+        Λ_init = nothing, theta_diag_B_init = nothing, g_tol::Real = 1e-6,
+        iterations::Integer = 1000,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9,
         gradient::Symbol = :analytic)
     gradient in (:analytic, :finite) || throw(ArgumentError("gradient must be :analytic or :finite"))
@@ -163,42 +184,52 @@ function fit_isdm_gllvm(table::IsdmTable; K::Integer = table.K, b_init = nothing
     b0, L0 = _isdm_start(table, Int(K))
     b_init === nothing || (b0 = collect(float.(b_init)))
     Λ_init === nothing || (L0 = collect(float.(Λ_init)))
-    θ0 = _isdm_pack(b0, L0)
+    uniq = table.unique && K > 0
+    # R starts theta_diag_B at log(1) on non-Gaussian fits (R/fit-multi.R:5765-5869).
+    θd0 = theta_diag_B_init === nothing ? zeros(p) : collect(float.(theta_diag_B_init))
+    θ0 = uniq ? _isdm_pack(b0, L0, θd0) : _isdm_pack(b0, L0)
+    unpackθ(θ) = uniq ? _isdm_unpack_unique(θ, pX, p, K) :
+                      (_isdm_unpack(θ, pX, p, K)..., nothing, nothing)
 
     function negll(θ)
-        b, Λ = _isdm_unpack(θ, pX, p, K)
-        v = isdm_marginal_loglik_laplace(table, Λ, b; maxiter = newton_maxiter, tol = newton_tol)
+        b, Λ, θd, _ = unpackθ(θ)
+        v = isdm_marginal_loglik_laplace(table, Λ, b; theta_diag_B = θd,
+                                         maxiter = newton_maxiter, tol = newton_tol)
         return isfinite(v) ? -v : _NLL_SENTINEL
     end
     function agrad(θ)
         gradient === :finite && return nothing
-        g = isdm_laplace_grad(table, θ; K = K, maxiter = newton_maxiter, tol = newton_tol)
+        g = isdm_laplace_grad(table, θ; K = K, unique = uniq, maxiter = newton_maxiter,
+                              tol = newton_tol)
         return g === nothing ? nothing : -g
     end
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     res = _optimize_with_analytic(negll, agrad, θ0, ls,
                                   Optim.Options(g_tol = g_tol, iterations = iterations))
     θ̂ = Optim.minimizer(res)
-    b̂, Λ̂ = _isdm_unpack(θ̂, pX, p, K)
+    b̂, Λ̂, θ̂d, Λ̂a = unpackθ(θ̂)
+    Λk = uniq ? Λ̂a : Λ̂                       # the kernel's loading matrix
     loglik, conv, iters = _fit_verdict(res)
 
     # Modes, per-row eta and per-cell verdicts at the optimum.
     eta0 = table.X * b̂ .+ table.offset
     nU = length(table.rows_by_unit)
-    Ẑ = zeros(K, nU); cell_ok = trues(nU)
+    Ẑ = zeros(K, nU); S = zeros(p, nU); cell_ok = trues(nU)
     eta = copy(eta0)
     if K > 0
         for (u, rows) in enumerate(table.rows_by_unit)
             z, ok = _isdm_cell_mode_retry(view(table.y, rows), view(table.fid, rows),
-                                          view(table.trait_id, rows), view(eta0, rows), Λ̂;
+                                          view(table.trait_id, rows), view(eta0, rows), Λk;
                                           maxiter = newton_maxiter, tol = newton_tol)
-            Ẑ[:, u] = z; cell_ok[u] = ok
+            Ẑ[:, u] = z[1:K]; cell_ok[u] = ok
+            uniq && (S[:, u] = exp.(θ̂d) .* z[(K + 1):end])
             for o in rows
-                eta[o] = _isdm_eta(eta0[o], Λ̂, table.trait_id[o], z)
+                eta[o] = _isdm_eta(eta0[o], Λk, table.trait_id[o], z)
             end
         end
     end
     conv = conv && all(cell_ok) && isfinite(loglik)
-    return IsdmFit(b̂, copy(table.X_names), Matrix{Float64}(Λ̂), Ẑ, eta, loglik, conv,
+    return IsdmFit(b̂, copy(table.X_names), Matrix{Float64}(Λ̂), Ẑ, uniq,
+                   uniq ? collect(Float64, θ̂d) : Float64[], S, eta, loglik, conv,
                    collect(cell_ok), iters, table, table.sources, table.formula, :observed)
 end

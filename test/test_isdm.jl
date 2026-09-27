@@ -177,13 +177,19 @@ end
     @test_first_line "The integrated multi-source model admits only single-trial detection rows" isdm_table(
         _DOOR_FORMULA, door; family = dfam, n_trials = door.succ .+ door.fail)
 
-    # Julia-side scope refusals (D-296): missing responses; R's latent() default.
+    # Julia-side scope refusal (D-296): missing responses.
     dm = merge(door, (value = Union{Missing, Float64}[missing; door.value[2:end]],))
     @test_throws r"refuses missing responses" isdm_table(_DOOR_FORMULA, dm; family = dfam)
+    # R's latent() default, unique = TRUE, is admitted (the unit-level unique
+    # variance, theta_diag_B); a non-literal `unique` is refused.
     fdef = :(value ~ 0 + trait + trait & isdm_gbif + offset(log_support) + latent(0 + trait | cell_id, d = 1))
-    @test_throws r"unique = TRUE\) is R's default" isdm_table(fdef, door; family = dfam)
-    @test occursin("value ~ 0 + trait + trait & isdm_gbif + offset(log_support) + latent(0 + trait | cell_id, d = 1, unique = FALSE)",
-                   try isdm_table(fdef, door; family = dfam); "" catch e; e.msg end)
+    @test isdm_table(fdef, door; family = dfam).unique
+    @test isdm_table(:(value ~ 0 + trait + trait & isdm_gbif + offset(log_support) +
+                       latent(0 + trait | cell_id, d = 1, unique = TRUE)), door; family = dfam).unique
+    @test !isdm_table(_DOOR_FORMULA, door; family = dfam).unique
+    @test !isdm_table(:(value ~ 0 + trait + offset(log_support)), door; family = dfam).unique
+    @test_throws r"`unique` must be the literal TRUE or FALSE" isdm_table(
+        :(value ~ 0 + trait + latent(0 + trait | cell_id, d = 1, unique = maybe)), door; family = dfam)
     fphy = :(value ~ 0 + trait + offset(log_support) + phylo_latent(species, d = 1))
     @test_throws r"not admitted on the integrated door" isdm_table(fphy, door; family = dfam)
     @test_throws r"zero or one latent\(\)" isdm_table(
@@ -255,6 +261,107 @@ end
     gfd0 = [(m0(b .+ 1e-6 .* (1:length(b) .== i)) - m0(b .- 1e-6 .* (1:length(b) .== i))) / 2e-6
             for i in eachindex(b)]
     @test norm(g0 .- gfd0) <= 1e-6 * max(1.0, norm(gfd0))
+end
+
+@testset "latent(unique = TRUE): the unit-level unique variance (R's theta_diag_B)" begin
+    c = isdm_psi_case("psi4")
+    dat = read_isdm_csv(c.csv)
+    tab = isdm_table(c.formula, dat; family = c.family)
+    @test tab.unique && tab.K == 1 && length(tab.trait_levels) == 4
+    f_nou = Meta.parse(replace(string(c.formula), "d = 1)" => "d = 1, unique = FALSE)"))
+    tab0 = isdm_table(f_nou, dat; family = c.family)
+    @test !tab0.unique && tab0.X_names == tab.X_names
+    pX = size(tab.X, 2); p = 4
+    b0, L0 = GLLVModels._isdm_start(tab, 1)
+
+    # theta_diag_B is required on a unique table and refused on any other.
+    @test_throws r"pass `theta_diag_B`" isdm_marginal_loglik_laplace(tab, L0, b0)
+    @test_throws r"`theta_diag_B` was given" isdm_marginal_loglik_laplace(tab0, L0, b0; theta_diag_B = zeros(p))
+    @test_throws DimensionMismatch isdm_marginal_loglik_laplace(tab, L0, b0; theta_diag_B = zeros(p - 1))
+
+    # A vanishing unique SD recovers the loadings-only marginal.
+    @test isdm_marginal_loglik_laplace(tab, L0, b0; theta_diag_B = fill(-40.0, p)) ≈
+          isdm_marginal_loglik_laplace(tab0, L0, b0) atol = 1e-9
+
+    # The augmented kernel is the joint Laplace over (z, s_B): with K = 1 and one
+    # cell it equals a direct Laplace in the original s_B scale (no change of
+    # variables), evaluated with ForwardDiff's Hessian of the joint log density.
+    θd = [-0.4, -1.1, -0.35, -1.0]
+    rows = tab.rows_by_unit[1]
+    eta0 = (tab.X * b0 .+ tab.offset)[rows]
+    y = tab.y[rows]; fid = tab.fid[rows]; tr = tab.trait_id[rows]
+    Λa = GLLVModels._isdm_augment(L0, θd)
+    v_aug, zaug, ok = GLLVModels._isdm_cell_loglik(y, fid, tr, eta0, Λa; tol = 1e-13)
+    @test ok
+    joint(w) = begin                       # w = [z; s_B], s_B in its own scale
+        acc = -0.5 * w[1]^2
+        for t in 1:p
+            sd = exp(θd[t])
+            acc += -0.5 * (w[1 + t] / sd)^2 - log(sd)
+        end
+        for o in eachindex(y)
+            acc += GLLVModels._isdm_row_logpdf(fid[o], y[o], eta0[o] + L0[tr[o], 1] * w[1] + w[1 + tr[o]])
+        end
+        acc
+    end
+    ŵ = vcat(zaug[1], exp.(θd) .* zaug[2:end])
+    @test norm(ForwardDiff.gradient(joint, ŵ)) <= 1e-8
+    H = -ForwardDiff.hessian(joint, ŵ)
+    @test v_aug ≈ joint(ŵ) - 0.5 * logdet(Symmetric(H)) rtol = 1e-12
+
+    # The one-step implicit gradient over theta = [b; pack(Λ); theta_diag_B]
+    # (R's opt$par order) agrees with central differences of the exact Laplace
+    # value. FINDING (measured): the kernel's mode search, a copy of the
+    # `_mixed_laplace_mode` rule, accepts a mode at the floating-point floor
+    # with a residual step up to sqrt(eps) * (1 + |z|); the log-determinant is
+    # first-order in that residual, so a cell's value can move by ~2e-8 between
+    # neighbouring theta (cell 49 at the start, theta_rr_B[1] + 1e-5). That is far
+    # below the 1e-6 receipts but swamps a 1e-5 central difference, so the
+    # reference polishes each cell's mode with three Newton steps on the
+    # ForwardDiff Hessian before evaluating the value.
+    θ0 = GLLVModels._isdm_pack(b0, L0, zeros(p))
+    θ1 = GLLVModels._isdm_pack(b0, L0, θd)
+    marg(θ) = begin
+        b, Λ, t, Λa = GLLVModels._isdm_unpack_unique(θ, pX, p, 1)
+        e0 = tab.X * b .+ tab.offset
+        acc = 0.0
+        for rows in tab.rows_by_unit
+            yy = tab.y[rows]; ff = tab.fid[rows]; tt = tab.trait_id[rows]; ee = e0[rows]
+            z, ok = GLLVModels._isdm_cell_mode(yy, ff, tt, ee, Λa; tol = 1e-13)
+            lp(w) = GLLVModels._isdm_cell_logpost(yy, ff, tt, ee, Λa, w)
+            for _ in 1:3
+                z = z .- ForwardDiff.hessian(lp, z) \ ForwardDiff.gradient(lp, z)
+            end
+            acc += GLLVModels._isdm_cell_value_at(yy, ff, tt, ee, Λa, z)
+        end
+        acc
+    end
+    for θ in (θ0, θ1)
+        ga = GLLVModels.isdm_laplace_grad(tab, θ)
+        @test ga !== nothing && length(ga) == pX + p + p
+        h = 1e-5
+        gfd = [(marg(θ .+ h .* (1:length(θ) .== i)) - marg(θ .- h .* (1:length(θ) .== i))) / (2h)
+               for i in eachindex(θ)]
+        @test norm(ga .- gfd) <= 1e-6 * max(1.0, norm(gfd))
+    end
+
+    # The fit: fields, eta at the modes, and predict re-adding s_B on seen units only.
+    ft = fit_isdm_gllvm(tab)
+    @test ft.converged && ft.unique && length(ft.theta_diag_B) == p && size(ft.s_B) == (p, 80)
+    @test occursin("unique", sprint(show, ft))
+    @test ft.loglik ≈ isdm_marginal_loglik_laplace(tab, ft.Λ, ft.b_fix;
+                                                   theta_diag_B = ft.theta_diag_B) atol = 1e-10
+    eta_chk = tab.X * ft.b_fix .+ tab.offset .+
+        [dot(ft.Λ[tab.trait_id[o], :], ft.zhat[:, tab.unit_id[o]]) + ft.s_B[tab.trait_id[o], tab.unit_id[o]]
+         for o in eachindex(tab.y)]
+    @test maximum(abs.(ft.eta .- eta_chk)) <= 1e-12
+    @test predict(ft).est == ft.eta
+    @test maximum(abs.(predict(ft; newdata = dat).est .- ft.eta)) <= 1e-12
+    nu = merge(dat, (cell_id = [i <= 12 ? "c_new" : v for (i, v) in enumerate(dat.cell_id)],))
+    pu = predict(ft; newdata = nu).est
+    fixed_only = tab.X * ft.b_fix .+ tab.offset
+    @test maximum(abs.(pu[1:12] .- fixed_only[1:12])) <= 1e-12
+    @test maximum(abs.(pu[13:end] .- ft.eta[13:end])) <= 1e-12
 end
 
 @testset "predict and fitted (test-isdm-predict.R, non-spatial blocks)" begin

@@ -29,6 +29,18 @@ end
 _isdm_pack(b::AbstractVector, Λ::AbstractMatrix) =
     size(Λ, 2) == 0 ? collect(float.(b)) : vcat(float.(b), pack_lambda(Λ))
 
+# unique = TRUE: theta = [b; pack_lambda(Λ); theta_diag_B], R's opt$par order
+# (b_fix, theta_rr_B, theta_diag_B; measured from names(fit$opt$par) at P1).
+_isdm_pack(b::AbstractVector, Λ::AbstractMatrix, θd::AbstractVector) =
+    vcat(_isdm_pack(b, Λ), float.(θd))
+
+# Split a unique = TRUE theta; returns (b, Λ, theta_diag_B, Λ_aug).
+function _isdm_unpack_unique(θ::AbstractVector, pX::Int, p::Int, K::Int)
+    b, Λ = _isdm_unpack(θ[1:(end - p)], pX, p, K)
+    θd = θ[(end - p + 1):end]
+    return b, Λ, θd, _isdm_augment(Λ, θd)
+end
+
 # Differentiable one-step value of one cell at the concrete mode zhat.
 function _isdm_cell_onestep(y, fid, tr, eta0, Λ, ẑ::AbstractVector)
     K = size(Λ, 2)
@@ -58,17 +70,22 @@ function _isdm_cell_onestep(y, fid, tr, eta0, Λ, ẑ::AbstractVector)
 end
 
 """
-    isdm_laplace_grad(table::IsdmTable, θ; K = table.K, maxiter = 100, tol = 1e-9)
-        -> Union{Vector{Float64}, Nothing}
+    isdm_laplace_grad(table::IsdmTable, θ; K = table.K, unique = table.unique,
+                      maxiter = 100, tol = 1e-9) -> Union{Vector{Float64}, Nothing}
 
 Gradient of [`isdm_marginal_loglik_laplace`](@ref) with respect to
-`θ = [b; pack_lambda(Λ)]` by the one-step implicit method. Returns `nothing`
-when any cell's mode search fails at `θ`.
+`θ = [b; pack_lambda(Λ)]` (with `unique = true`, `θ = [b; pack_lambda(Λ);
+theta_diag_B]`) by the one-step implicit method. Returns `nothing` when any
+cell's mode search fails at `θ`.
 """
 function isdm_laplace_grad(table::IsdmTable, θ::AbstractVector; K::Integer = table.K,
-        maxiter::Integer = 100, tol::Real = 1e-9)
+        unique::Bool = table.unique, maxiter::Integer = 100, tol::Real = 1e-9)
     pX = size(table.X, 2); p = length(table.trait_levels)
-    b, Λ = _isdm_unpack(θ, pX, p, K)
+    uniq = unique && K > 0
+    unpack(θd) = uniq ? _isdm_unpack_unique(θd, pX, p, K)[4] : _isdm_unpack(θd, pX, p, K)[2]
+    b = θ[1:pX]
+    Λ = unpack(θ)
+    Ka = size(Λ, 2)
     if K == 0
         f0(θd) = begin
             bd = θd[1:pX]
@@ -82,7 +99,7 @@ function isdm_laplace_grad(table::IsdmTable, θ::AbstractVector; K::Integer = ta
         return ForwardDiff.gradient(f0, θ)
     end
     eta0 = table.X * b .+ table.offset
-    Ẑ = Matrix{Float64}(undef, K, length(table.rows_by_unit))
+    Ẑ = Matrix{Float64}(undef, Ka, length(table.rows_by_unit))
     for (u, rows) in enumerate(table.rows_by_unit)
         z, ok = _isdm_cell_mode_retry(view(table.y, rows), view(table.fid, rows),
                                       view(table.trait_id, rows), view(eta0, rows), Λ;
@@ -91,7 +108,8 @@ function isdm_laplace_grad(table::IsdmTable, θ::AbstractVector; K::Integer = ta
         Ẑ[:, u] = z
     end
     function marg(θd)
-        bd, Λd = _isdm_unpack(θd, pX, p, K)
+        bd = θd[1:pX]
+        Λd = unpack(θd)
         e0 = table.X * bd .+ table.offset
         acc = zero(eltype(θd))
         for (u, rows) in enumerate(table.rows_by_unit)
