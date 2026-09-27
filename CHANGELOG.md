@@ -25,12 +25,21 @@ All notable changes to GLLVModels.jl are documented here.
   `test/parity/fixtures/generate_chibar2_p1_fixture.R` against the real installed
   gllvmTMB package at the P1 pin) to 1e-12, across `LRT ∈ {negative, 0, tiny, textbook,
   large}` and `q ∈ {1, 2, 3}`, plus gllvmTMB's own `chibar2_pvalue()`/`variance_lrt()`
-  unit-test inputs and its reachable argument refusals. One minor, documented
-  divergence is out of scope for the twin: gllvmTMB refuses a `NaN` log-likelihood/LRT,
-  while GLLVModels.jl currently returns a p-value of 1.0 for it (no NaN-refusal
-  branch) — a validation-strictness gap, not a mixture-weight difference.
+  unit-test inputs and its reachable argument refusals, including a `NaN`
+  log-likelihood/LRT (see the paired `Fixed` entry below).
 
 ### Fixed
+- **`chibar2_pvalue`/`variance_lrt` silently returned a p-value of 1.0 for a `NaN`
+  `LRT` or log-likelihood instead of refusing it.** `LRT > 0` is `false` for `NaN`, so
+  a missing or non-finite input fell through to the "no evidence against the reduced
+  model" branch unnoticed — a silent p = 1 is exactly the failure class this repo
+  exists to catch, and gllvmTMB's `R/chibar.R` already refuses this input (classed
+  errors `gllvmTMB_chibar2_bad_LRT` / `gllvmTMB_variance_lrt_bad_loglik`; see the P1
+  twin above). `chibar2_pvalue` now throws `ArgumentError` for a `NaN` `LRT`, and
+  `variance_lrt` throws `ArgumentError` for a `NaN` `ℓ_full`/`ℓ_reduced`, before either
+  could reach that branch. An infinite `LRT` is unaffected and still returns a valid
+  p-value (`is.na(Inf)` is `FALSE` in R too, so gllvmTMB does not refuse it either).
+  No caller in this package passes a `NaN` to either function.
 - **Ordered-beta fits could report `converged = true` at a non-stationary point,
   with a restart reaching a genuinely better optimum (#501).** The per-site
   inner mode search (`_ordered_beta_mode`, `src/families/ordered_beta.jl`) ran

@@ -19,14 +19,19 @@
 # affine transform of two log-likelihoods) -- no fitting, no RNG, no RCall needed at
 # test time. The tolerance is 1e-12, matching that closed-form character.
 #
-# ONE DOCUMENTED DIVERGENCE (not a mixture-weight/substance difference, so it does not
-# block twinning per D-297): gllvmTMB's `chibar2_pvalue()`/`variance_lrt()` explicitly
-# reject a non-numeric or `NA` log-likelihood/LRT (classed errors
-# `gllvmTMB_chibar2_bad_LRT` / `gllvmTMB_variance_lrt_bad_loglik`). GLLVModels.jl's
-# `chibar2_pvalue(LRT::Real, q::Integer)` does not special-case `NaN`: `LRT > 0` is
-# `false` for `NaN`, so it silently returns a p-value of 1.0 instead of erroring. See
-# the "documented divergence" testset below -- it records current behaviour, it does
-# not assert parity with R for that one input class.
+# NaN REFUSAL. gllvmTMB's `chibar2_pvalue()`/`variance_lrt()` explicitly reject a
+# non-numeric or `NA` log-likelihood/LRT (classed errors `gllvmTMB_chibar2_bad_LRT` /
+# `gllvmTMB_variance_lrt_bad_loglik`) rather than silently reporting "no evidence" for
+# it -- a silent p-value of 1.0 for a missing input is exactly the failure class this
+# repo exists to catch. `src/boundary_inference.jl` now mirrors that: `chibar2_pvalue`
+# throws `ArgumentError` for a `NaN` `LRT`, and `variance_lrt` throws `ArgumentError`
+# for a `NaN` `ℓ_full`/`ℓ_reduced`, before either could fall through to `LRT > 0`
+# (which is `false` for `NaN` and would otherwise return 1.0 unnoticed).
+#
+# R does NOT refuse an infinite `LRT`: `is.na(Inf)` is `FALSE` in R, so
+# `chibar2_pvalue(Inf, q)` computes a valid p-value of 0 there (checked directly
+# against R/chibar.R at the P1 pin) rather than erroring, and GLLVModels.jl matches
+# that -- only `NaN` is refused, not `Inf`.
 
 using GLLVModels, Test, TOML, SHA
 
@@ -69,16 +74,32 @@ const _CHIBAR2_P1_FIXTURE_SHA256 =
         # signature (`q::Integer`) enforces the identical constraint one level earlier,
         # at dispatch, as a MethodError rather than the library's own ArgumentError.
         @test_throws MethodError chibar2_pvalue(3.84, 1.5)
+        # gllvmTMB refuses a NaN LRT (class gllvmTMB_chibar2_bad_LRT); GLLVModels.jl
+        # now mirrors that with an ArgumentError instead of silently returning 1.0.
+        @test_throws ArgumentError chibar2_pvalue(NaN, 1)
+        # gllvmTMB refuses a NaN log-likelihood in variance_lrt() (class
+        # gllvmTMB_variance_lrt_bad_loglik); GLLVModels.jl now mirrors that too.
+        @test_throws ArgumentError variance_lrt(NaN, -102.0)
+        # R does not refuse an infinite LRT (is.na(Inf) is FALSE in R); it returns a
+        # valid p-value of 0. GLLVModels.jl matches: Inf is not refused, only NaN is.
+        @test chibar2_pvalue(Inf, 1) == 0.0
     end
 
-    @testset "documented divergence: NaN log-likelihood / LRT (not twinned)" begin
-        # gllvmTMB errors (class gllvmTMB_chibar2_bad_LRT / gllvmTMB_variance_lrt_bad_loglik)
-        # on a missing/NaN LRT or log-likelihood. GLLVModels.jl does not special-case NaN
-        # here: `NaN > 0` is `false`, so both functions silently report "no evidence"
-        # (p-value 1.0) instead of refusing. This test records that ACTUAL behaviour; it
-        # is a known, minor divergence in input validation, not in the mixture formula
-        # itself, and is out of scope for this twin (see file header).
-        @test chibar2_pvalue(NaN, 1) == 1.0
-        @test variance_lrt(NaN, -102.0).pvalue == 1.0
+    @testset "refusal fixture rows: Julia raises for every gllvmTMB-refused case" begin
+        # Cross-check against the same fixture rows the R generator recorded gllvmTMB's
+        # own refusal classes into, so this stays anchored to the R source rather than
+        # to a hand-maintained duplicate list above.
+        expected_julia_exception = Dict(
+            "q_zero" => ArgumentError,
+            "q_non_integer" => MethodError,
+            "q_negative" => ArgumentError,
+            "LRT_na" => ArgumentError,
+            "vlrt_loglik_na" => ArgumentError,
+        )
+        for row in fixture["refusals"]
+            @test row["class"] != "no_error"   # gllvmTMB really did refuse this input
+            @test haskey(expected_julia_exception, row["case"])
+        end
+        @test length(fixture["refusals"]) == length(expected_julia_exception)
     end
 end
