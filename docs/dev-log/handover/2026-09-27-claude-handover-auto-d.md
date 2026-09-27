@@ -31,7 +31,7 @@ Worktrees: `~/local-scratch/lanes/GLLVM.jl-auto-d-20260926` (Julia) and
 
 **Working (committed, pushed):** everything in the mission-control table except the items below.
 
-**In progress when this handover was written (authoring session may still be running them):**
+**In progress when this handover was written (the authoring session closes ~17:10Z; anything not committed by then is OWED):**
 1. **R review-fix round** for `latent(d = "auto")`: uncommitted edits in the R worktree (`R/gllvmTMB.R`,
    `R/brms-sugar.R`, `R/select-lv.R`, `man/*`, `NEWS.md`). The nine confirmed findings and evidence are in
    the review journal `~/.claude/projects/-Users-z3437171-Dropbox-Github-Local-glmmTMB/4f055e97-b708-44a2-bba7-707dda5c4eff/subagents/workflows/wf_190cad38-518/journal.jsonl`
@@ -50,6 +50,21 @@ Worktrees: `~/local-scratch/lanes/GLLVM.jl-auto-d-20260926` (Julia) and
    (543 moved tasks; ids in `pilot/rorqual_moved_ids.txt`). Outputs in each cluster's
    `~/projects/def-snakagaw/snakagaw/auto-d-pilot/out-rerun/`. Pre-lane fitting code on all three.
 
+## Late news (16:40Z): the NB kernel was broken; re-run is ON HOLD
+
+Draft PR #521 (branch `claude/nb-grouped-init-v2`, another lane) fixed the NB per-site mode search in
+`src/families/grouped_dispersion.jl`: Fisher scoring 2-cycled where y ≫ μ and returned points off the mode, so
+L-BFGS stopped at bad points reporting converged. On the auto-d NB fixture (p = 20, n = 300, true K = 3) the
+logLik moved K=1 −19473 → −18400, K=2 −18874 → −17618, K=3 −19113 → −16743, now monotone with healthy loadings.
+Consequences: **every NB number in the recovery grid (NB 0.895) and the DRAC NB re-run measure the broken
+kernel.** The re-run's PENDING tasks are on `scontrol hold` on narval 4098607, nibi 22779067 and rorqual
+21902752 (running tasks were left to finish). Shinichi decides: cancel (`scancel <job>`) and re-run the NB
+cells on #521's code, or release (`scontrol release <job>`). #521 also lets `fit_nb_gllvm_grouped`,
+`fit_nb1_gllvm_grouped` and `fit_beta_gllvm_grouped` accept `β_init`/`Λ_init`, so select_lv's warm start will
+reach the NB route; and more NB fits will report converged = false via the dispersion-boundary flag, which
+select_lv's lenient default already tolerates. Recommendation: cancel, and after #521 merges re-run only the
+24 NB cells (4 800 datasets) on the fixed kernel; state a new estimate first (#521 is ~70% slower).
+
 ## Next immediate steps (classify each OWED / DONE on arrival)
 
 1. Run `tools/lane_preflight.sh` in GLLVModels.jl and gllvmTMB; check `git status` in both worktrees.
@@ -63,7 +78,7 @@ Worktrees: `~/local-scratch/lanes/GLLVM.jl-auto-d-20260926` (Julia) and
 4. **Recovery check:** if `ridge/ridge_binary_julia_L1.5.csv` is complete (80 rows), compare with the
    R result and add the numbers to design/74 T7 and the PR body; if missing, re-run it (≈ 60–90 min local).
 5. **Docs pass: DONE** (Julia `fe09db2e3`: README note, after-task report; `api.md` already lists `select_lv`, `LVSelection`, `fit_binomial_gllvm` with `loading_ridge` documented. R `3b1e8e61f`: check-log, validation-debt rows MS-03 to MS-06, formula-grammar note, `vignettes/articles/model-selection-latent-rank.Rmd` example with `eval = FALSE`, after-task report). Not run: Documenter build, `devtools::check()`, 3-OS CI.
-6. **NB re-run:** when all three arrays finish, rsync each cluster's `out-rerun/` to separate local dirs
+6. **NB re-run (on hold, see Late news):** only if Shinichi releases it: when all three arrays finish, rsync each cluster's `out-rerun/` to separate local dirs
    (task ids overlap across clusters), then
    `python3 LOOP/lanes/auto-d-20260926/pilot/analyze.py harvest,harvest-rerun-narval,harvest-rerun-nibi,harvest-rerun-rorqual harvest-report-final2.md`
    (later dirs fill incomplete datasets). Report core-hours (`sacct … elapsedraw,alloccpus`) against the
