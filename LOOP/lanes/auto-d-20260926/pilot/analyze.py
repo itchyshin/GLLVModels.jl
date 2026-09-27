@@ -2,12 +2,25 @@
 (argmin over every fit that returned) and the guarded rule (converged, logLik non-decreasing
 vs the last accepted K, not runaway), for AIC, BIC log(p*n) and BIC log(n).
 Usage: python3 analyze.py <dir with task-*.csv> <out.md>"""
-import sys, glob, math
+import sys, glob, math, os
 import numpy as np, pandas as pd
 
 TOL, SD_MAX, RATIO_MAX = 1e-3, 10.0, 25.0
-files = sorted(glob.glob(f"{sys.argv[1]}/task-*.csv"))
-df = pd.concat([pd.read_csv(f) for f in files if sum(1 for _ in open(f)) > 1], ignore_index=True)
+# Usage: python3 analyze.py <dir>[,<dir2>...] <out.md>. Later dirs (e.g. a re-run) fill datasets the
+# earlier ones left incomplete; only COMPLETE datasets (every K_fit 1..min(K_true+2, p-1)) are counted.
+dirs = sys.argv[1].split(",")
+files, parts = [], []
+for i, d in enumerate(dirs):
+    for f in sorted(glob.glob(f"{d}/task-*.csv")):
+        if os.path.getsize(f) > 0 and sum(1 for _ in open(f)) > 1:
+            x = pd.read_csv(f); x["src"] = i; parts.append(x); files.append(f)
+df = pd.concat(parts, ignore_index=True)
+_k = ["family", "n", "p", "K_true", "rep"]
+_c = df.groupby(_k + ["src"]).K_fit.nunique().rename("nk").reset_index()
+_c["need"] = np.minimum(_c.K_true + 2, _c.p - 1)
+_c = _c[_c.nk >= _c.need].sort_values("src").drop_duplicates(_k, keep="first")[_k + ["src"]]
+n_incomplete = df[_k].drop_duplicates().shape[0] - len(_c)
+df = df.merge(_c, on=_k + ["src"])
 for c in ("max_rownorm", "relload"):
     if c not in df: df[c] = np.nan
 df["ok"] = df.status.eq("ok")
@@ -57,7 +70,7 @@ def summ(sub):
     return pd.Series(out)
 
 with open(sys.argv[2], "w") as fh:
-    fh.write(f"# Auto-d recovery grid ({len(files)} task files, {len(R)} datasets, {len(df)} fits)\n\n")
+    fh.write(f"# Auto-d recovery grid ({len(files)} task files, {len(R)} complete datasets, {len(df)} fits; {n_incomplete} incomplete datasets dropped)\n\n")
     fh.write("Cells: exact-recovery rate ± MCSE (u = too few, o = too many). old = argmin over every fit that returned;\n")
     fh.write(f"new = guarded (converged, logLik non-decreasing, not runaway: row norm > {SD_MAX} or binomial ratio ≥ {RATIO_MAX});\nlen = lenient guard (unconverged allowed if not runaway and non-decreasing).\n\n")
     for fam, gf in R.groupby("family"):

@@ -1,6 +1,6 @@
 # A2 recovery pilot — existing API only (no src edits). One row per (family, n, p, K_true, rep, K_fit).
 # Criteria are computed afterwards from the rows: AIC, BIC log(p·n), BIC log(n); failures kept as rows.
-# Usage: julia --project=<repo> pilot.jl <out.csv> <reps> [grid=pre|heavy|full] [task_id]
+# Usage: julia --project=<repo> pilot.jl <out.csv> <reps> [grid=pre|heavy|full|list] [task_id] [list.csv]
 # With task_id (full grid, 96 cells, 960 tasks): cost-balanced map, see below; <reps> is ignored.
 using GLLVModels, Distributions, Random, Statistics, Printf
 import GLLVModels.StatsAPI: loglikelihood, dof, aic, bic
@@ -22,7 +22,12 @@ function simulate(fam, n, p, K, rng)
 end
 
 reprange = 1:reps
-if length(ARGS) >= 4          # cost-balanced task map: slow cells (n·p ≥ 2400) 10 reps/task, others 50; 200 reps each
+if grid == "list"            # pilot.jl <out.csv> <unused> list <task_id> <list.csv>: one dataset per task
+    t = parse(Int, ARGS[4])
+    row = split(readlines(ARGS[5])[t + 1], ",")          # header: family,n,p,K_true,rep
+    c = (String(row[1]), parse(Int, row[2]), parse(Int, row[3]), parse(Int, row[4]))
+    cells = [c]; r0 = parse(Int, row[5]); reprange = r0:r0
+elseif length(ARGS) >= 4          # cost-balanced task map: slow cells (n·p ≥ 2400) 10 reps/task, others 50; 200 reps each
     t = parse(Int, ARGS[4])
     tasks = [(c, (b * r + 1):((b + 1) * r)) for c in cells for r in ((c[2] * c[3] >= 2400) ? 10 : 50) for b in 0:(200 ÷ r - 1)]
     c, reprange = tasks[t]; cells = [c]
