@@ -1,10 +1,14 @@
 name: Parity P1 twin tests
 # Required CI slot for the gllvmTMB P1 re-pin (D-294/D-295; see
 # tools/parity_oracle.py::P1_GLLVMTMB_ORACLE and
-# docs/dev-log/core070/true-parity-latest/GATES.md clause C0). No P1 twin
-# tests exist yet, so this job is a placeholder: it discovers any test file
-# tagged for P1 and runs it, and passes cleanly when none exist yet. Later
-# PRs add tagged test files without touching this workflow.
+# docs/dev-log/core070/true-parity-latest/GATES.md clause C0).
+#
+# Scope: this job discovers and runs Julia-only test files tagged
+# "# gllvm-parity-tag: P1" (a single sentinel exists today,
+# test/parity/p1_pin_sentinel.jl). It does NOT run R-backed P1 twins --
+# those need a live gllvmTMB checkout pinned at P1, which is what CI.yml's
+# `test-parity` job does for P0 today. Re-pinning that job from P0 to P1 is
+# a separate, later PR; this workflow does not touch CI.yml.
 #
 # NOT wired into branch protection as a required check by this PR (the
 # maintainer does that from the GitHub UI once satisfied) -- ubuntu-only,
@@ -16,34 +20,34 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   p1-twin-tests:
-    name: gllvmTMB P1 twin tests (placeholder; auto-discovers tagged files)
+    name: gllvmTMB P1 twin tests (Julia-only; ${{ matrix.version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ['1.10', '1']     # same LTS + current-stable pair as CI.yml
     steps:
       - uses: actions/checkout@v6
       - uses: julia-actions/setup-julia@v3
         with:
-          version: '1'
+          version: ${{ matrix.version }}
       - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
       - name: Discover and run P1-tagged twin tests
         run: |
           set -euo pipefail
           # Convention: a P1 twin test file carries the literal marker
-          # "# gllvm-parity-tag: P1" on one of its lines. No such file exists
-          # yet -- this job lists whatever it finds and passes when the list
-          # is empty, so a future PR can add tagged files and have this job
-          # pick them up without any CI edit.
-          mapfile -t files < <(grep -rl '# gllvm-parity-tag: P1' test 2>/dev/null | sort || true)
+          # "# gllvm-parity-tag: P1" on one of its lines. Restricted to .jl
+          # files -- this job runs Julia tests, not arbitrary tagged text.
+          mapfile -t files < <(grep -rl '# gllvm-parity-tag: P1' --include='*.jl' test 2>/dev/null | sort || true)
           echo "P1-tagged parity test files found: ${#files[@]}"
-          if [ "${#files[@]}" -gt 0 ]; then
-            printf '  %s\n' "${files[@]}"
-          fi
           if [ "${#files[@]}" -eq 0 ]; then
-            echo "No P1 twin tests exist yet -- placeholder passes."
-            echo "Tag a future test file with '# gllvm-parity-tag: P1' on its own line"
-            echo "and this job will discover and run it automatically."
-            exit 0
+            echo "No P1-tagged test files found. This job must not be green by" >&2
+            echo "absence -- at least test/parity/p1_pin_sentinel.jl should always" >&2
+            echo "match. Failing." >&2
+            exit 1
           fi
+          printf '  %s\n' "${files[@]}"
           status=0
           for f in "${files[@]}"; do
             echo "::group::julia --project=. $f"
