@@ -439,4 +439,5 @@ println(_SHARD === nothing ?
     _shard_include("test_postfit_tables.jl")
     _shard_include("test_destination_b_s4_public_phylo_dep_probe_harness.jl")
     _shard_include("test_totoro_323_track_a_harness.jl")
+    _shard_include("test_isdm.jl")
 end

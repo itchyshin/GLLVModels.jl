@@ -638,6 +638,23 @@ All notable changes to GLLVModels.jl are documented here.
   unaffected. Pinned by `test/test_fd_hessian.jl`.
 
 ### Added
+- **Integrated species distribution models (iSDM), the twin of gllvmTMB's public
+  door `gllvmTMB(..., family = isdm_sources(...))` at the P1 pin.** New
+  `isdm_sources()` / `isdm_source()` declarations (Poisson-log count sources and
+  Bernoulli-cloglog detection sources only, with R's constructor refusals),
+  `isdm_table()` (long-table assembly with R's contract checks in R's order:
+  selector alignment, the every-trait-every-source predicate, the within-trait
+  scale rule, source-masked observation formulas with QR rank retention, the
+  count-family offset gate with the cloglog exception, and the weights,
+  multi-trial and observed-arm refusals) and `fit_isdm_gllvm()` returning
+  `IsdmFit`. The per-cell long-row Laplace kernel uses a copy of R's
+  `gll_dbinom_cloglog` and its observed curvature; the fitter uses the one-step
+  implicit gradient. Zero or one `latent(0 + trait | unit, d = K, unique = FALSE)`
+  term; `K = 0` fits a GLM through the same kernel. R's `latent()` default
+  (`unique = TRUE`) adds a per-trait unique variance that is not ported, so it is
+  refused rather than silently fitting a different model. Missing responses and
+  `weights` are refused in P1. Paired twins against R at P1:
+  `test/parity/isdm_cases.jl`. Design: `docs/design/isdm-port-spec.md`.
 - **`predictor::Symbol = :separate | :shared` on `fit_delta_lognormal_gllvm` /
   `fit_delta_gamma_gllvm`** (2026-08-28, maintainer decision "Twin identity
   MODE" — `docs/dev-log/decisions/2026-08-28-arc-decision-batch.md` gate 4):
