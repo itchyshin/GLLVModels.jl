@@ -310,7 +310,25 @@ All notable changes to GLLVModels.jl are documented here.
   11.1) on both Julia versions; 20 healthy fits keep the same loglik (to 12 significant
   digits) and converged flag. The grouped routes
   (`fit_beta_binomial_gllvm_grouped`, `fit_beta_binomial_gllvm_grouped_cov`)
-  benefit from the stabilised log-pmf but do not yet have the verdict gate.
+  benefit from the stabilised log-pmf; their verdict gate is the next entry.
+- **Grouped BetaBinomial fits no longer report `converged = true` with a
+  group's `φ` past the 1e6 boundary (part of #515).**
+  `fit_beta_binomial_gllvm_grouped` and `fit_beta_binomial_gllvm_grouped_cov`
+  (`src/families/beta_binomial.jl`) now pass the shared `_fit_verdict` result
+  through `_beta_binomial_verdict` at the largest group precision
+  (`_beta_binomial_grouped_verdict`): a positive or non-finite objective
+  reports `loglik = -Inf`, `converged = false`, and any group at `φ >= 1e6`
+  reports `converged = false` with the loglik kept. At that `φ` the log-pmf is
+  exactly Binomial, so the objective is flat in `φ` and Optim's zero-gradient
+  stop says nothing about an optimum in it. Measured on origin/main 52ed4281b
+  (Julia 1.10.12 and 1.13.0; the 13 fixture datasets from #522, per-species
+  and one-group, both routes: 52 fits per version): three per-species fits reported
+  `converged = true` at `φ` from 8.5e11 to 7.6e15 on both versions, and a
+  fourth (seed 9002) crosses 1e6 on 1.13 only. Their logliks are unchanged;
+  only the flag changes. The other fits (49 on 1.10, 47 on 1.13) are
+  bitwise identical to main in loglik, `φ`, iterations and converged flag.
+  Per-species fits that stop just below the boundary (`φ` near 1e5) are not
+  caught; this is a boundary tripwire, not an identifiability test.
 - **Poisson `confint(..., method = :bootstrap)` now reports the refit's own
   convergence verdict (#504).** The Laplace-route `refit` closure in
   `_family_ci(fit::PoissonFit, ...)` (`src/confint_family.jl`) returned a bare
