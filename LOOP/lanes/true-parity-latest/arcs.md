@@ -1,8 +1,17 @@
-# Arcs — from the approved ultra-plan
+# Arcs (status: TODO / IN PROGRESS / DONE / PAUSED; gates marked)
 
-| # | arc | status | gate? |
-|---|-----|--------|-------|
-| 1 | <...> | todo | — |
-
-Status: todo / doing / done / paused / blocked. `paused` = awaiting Shinichi's named decision;
-`blocked` = external dependency. Ordinary repair work remains `doing`.
+- [ ] A0 WS0 additive re-pin to P1: P1 oracle beside P0, CAPABILITY_LEDGER_REF pinned, required P1 CI job, case-map rows for +25 exports and +11 S3 methods (proposed; Shinichi signs), stale-row scan under the carry rule, 20 isdm rows reclassified, `tools/true_parity_check.mjs` with dynamic row count, receipt resolution, negative controls; tracked ledger. (4 to 5 days)
+- [ ] A0r Recon of each new export at P1 (Haiku)
+- [ ] D1 GATE: Packet 1 (13 items) and the P1 claim boundary, drafted with replies
+- [ ] A1a iSDM spec (Fable), after the iSDM scope decision in D1
+- [ ] A1b iSDM kernel and fitter in new files (after #514 merges)
+- [ ] A1c iSDM twin tests and receipts
+- [ ] A1d iSDM engine = "julia" route in gllvmTMB
+- [ ] A2 small twins: ordinal_logit, extract_latent_scores; medium: zi_* (R semantics), meta/meta_V, multinomial LV, Wald ordination_uncertainty
+- [ ] A3 re-measure stale rows at P1; T9 bindings; D3 to D5, D8; grouping pairing
+- [ ] A4a gllvmTMB #1236 bridge rebase and finish; #1283 recorder
+- [ ] A4b real-data workflows C1 to C5
+- [ ] A5 silent-failure backlog (#504 adapters, #505, Tweedie grouped); #514 and #515 are finishing in the previous session
+- [ ] A6 temporal at R's scope; A7 column-coefficient grammar; A8 spatial_dep and spatial_*; A9 phylo latent (inside or outside P1 per D1's boundary)
+- [ ] D2 GATE: Packet 2 (47 pending-decision rows, 22 spec-defect rows), week 2
+- [ ] D3 GATE: Packet 3 (91 reverse-gap classes, Julia-only extras), week 5
