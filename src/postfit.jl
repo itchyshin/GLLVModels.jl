@@ -76,11 +76,13 @@ function getLoadings(fit; rotate::Bool = true)
     return rotate ? Λ * _svd_rotation(Λ) : copy(Λ)
 end
 
-# Fitted mean μ (p×n): X·β when fixed effects are present, else zeros.
+# Fitted mean μ (p×n): X·β when fixed effects are present, the per-trait
+# intercepts β when the fit estimated them without X, else zeros.
 function _fitted_mean(fit::GllvmFit, y::AbstractMatrix,
                       X::Union{Nothing, AbstractArray{<:Real, 3}})
     p, n = size(y)
     β = fit.pars.β
+    X === nothing && _has_trait_intercepts(fit) && return repeat(β, 1, n)
     if X === nothing || β === nothing || length(β) == 0
         return zeros(Float64, p, n)
     end

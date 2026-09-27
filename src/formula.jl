@@ -231,7 +231,7 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
     q = size(mm, 2)
 
     if q == 0
-        return family isa Normal ? fit_gaussian_gllvm(Y; K = K, kwargs...) :
+        return family isa Normal ? _fit_gaussian_trait_intercepts(Y; K = K, kwargs...) :
                family isa ZIPoisson ? fit_zip_gllvm(Y; K = K, kwargs...) :
                family isa ZINegBin ? fit_zinb_gllvm(Y; K = K, kwargs...) :
                family isa ZIB ? fit_gllvm(Y; family = family, K = K, kwargs...) :

@@ -425,6 +425,7 @@ println(_SHARD === nothing ?
     _shard_include("test_relaxed_clock.jl")
     _shard_include("test_spatial_cov.jl")
     _shard_include("test_cv.jl")
+    _shard_include("test_gaussian_intercept.jl")
     _RUN_QUALITY && include("test_quality.jl")
     _shard_include("test_loading_profile_stage0.jl")
     _shard_include("test_loading_profile_stage1_harness.jl")

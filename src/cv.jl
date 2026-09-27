@@ -419,13 +419,13 @@ function cv_gllvm(Y::AbstractMatrix;
         # Fit model on training fold
         fit_k = if family isa Normal
             if all(train_mask)
-                fit_gaussian_gllvm(Y; K = K_actual, kwargs...)
+                _fit_gaussian_trait_intercepts(Y; K = K_actual, kwargs...)
             elseif split_mode === :site
                 train_sites = findall(s -> any(view(train_mask, :, s)), 1:n)
-                fit_gaussian_gllvm(view(Y, :, train_sites); K = K_actual, kwargs...)
+                _fit_gaussian_trait_intercepts(view(Y, :, train_sites); K = K_actual, kwargs...)
             elseif split_mode === :species
                 train_species = findall(t -> any(view(train_mask, t, :)), 1:p)
-                fit_gaussian_gllvm(view(Y, train_species, :); K = K_actual, kwargs...)
+                _fit_gaussian_trait_intercepts(view(Y, train_species, :); K = K_actual, kwargs...)
             else
                 # Random cell split: impute unobserved cells with species mean + PPCA refinement
                 Y_imputed = Matrix{Float64}(undef, p, n)
@@ -436,12 +436,13 @@ function cv_gllvm(Y::AbstractMatrix;
                         Y_imputed[t, s] = train_mask[t, s] ? Float64(Y[t, s]) : m_t
                     end
                 end
-                fit_init = fit_gaussian_gllvm(Y_imputed; K = K_actual, kwargs...)
+                fit_init = _fit_gaussian_trait_intercepts(Y_imputed; K = K_actual, kwargs...)
                 Z_init = getLV(fit_init, Y_imputed; rotate = false)
                 for (t, s) in test_cells
-                    Y_imputed[t, s] = dot(view(fit_init.pars.Λ, t, :), view(Z_init, s, :))
+                    μ_t = _has_trait_intercepts(fit_init) ? fit_init.pars.β[t] : 0.0
+                    Y_imputed[t, s] = μ_t + dot(view(fit_init.pars.Λ, t, :), view(Z_init, s, :))
                 end
-                fit_gaussian_gllvm(Y_imputed; K = K_actual, kwargs...)
+                _fit_gaussian_trait_intercepts(Y_imputed; K = K_actual, kwargs...)
             end
         else
             if N !== nothing
