@@ -1,10 +1,11 @@
 ## 2026-09-27: One shared pin source for the Core070 parity harness, plus a P1 oracle build (D-294/D-295)
 
-- Branch `claude/true-parity-p1-oracle`, stacked on draft PR #524's `claude/true-parity-p1-pin`
-  (`tools/parity_oracle.py`'s additive `R_REF_PINS` / `GLLVM_PARITY_PIN` switch, P0 default unchanged).
-  First step of re-measuring parity evidence at the P1 gllvmTMB pin (`9539352f66f2db2cc26b1c393e67212a359b60c9`)
-  per the A3 re-measure sizing note (`docs/dev-log/core070/true-parity-latest/reviews/a3-remeasure-sizing.md`
-  on the `true-parity-latest` lane).
+- Branch `claude/true-parity-p1-oracle`, builds on #524 (merged into `main` as `824d22a4b`
+  while this PR was in progress: `tools/parity_oracle.py`'s additive `R_REF_PINS` /
+  `GLLVM_PARITY_PIN` switch, P0 default unchanged). First step of re-measuring parity evidence
+  at the P1 gllvmTMB pin (`9539352f66f2db2cc26b1c393e67212a359b60c9`) per the A3 re-measure
+  sizing note (`docs/dev-log/core070/true-parity-latest/reviews/a3-remeasure-sizing.md` on the
+  `true-parity-latest` lane).
 - Added `tools/core070_oracle_pins.toml`: the per-pin `reference_commit` + companion byte hashes
   (`namespace_sha256`, `source_tree_sha256`, `archive_sha256`) for P0 and P1, read by both
   `tools/core070_build_oracle.py` and `test/parity/parity_helpers.jl` instead of each hardcoding its

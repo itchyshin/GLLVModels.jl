@@ -2,12 +2,18 @@
 #
 # One entry per named pin (see tools/parity_oracle.py's R_REF_PINS /
 # GLLVM_PARITY_PIN for the commit-SHA switch that selects a key into this
-# file). tools/core070_build_oracle.py and test/parity/parity_helpers.jl both
-# read this file for the three companion byte-hashes (NAMESPACE / source
-# tree / archive) that go with each pin's commit, so neither hardcodes its
-# own copy. `reference_commit` here must agree with tools/parity_oracle.py's
-# R_REF_PINS[<pin>]; both sides check this at load time and fail loud on
-# disagreement.
+# file). tools/core070_build_oracle.py and test/parity/core070_pin.jl (included
+# by test/parity/parity_helpers.jl) both read this file for the three
+# companion byte-hashes (NAMESPACE / source tree / archive) that go with each
+# pin's commit, so neither hardcodes its own copy. `reference_commit` here
+# must agree with tools/parity_oracle.py's R_REF_PINS[<pin>]; both sides
+# check this at load time and fail loud on disagreement.
+#
+# Adding a pin: a new [Pn] table here MUST be paired with a matching entry in
+# tools/parity_oracle.py's R_REF_PINS (same key, same commit SHA). Neither
+# side infers the other's key set; tools/test_core070_build_oracle_pin.py's
+# PinsFileAgreesWithParityOracle test is the guard that catches a mismatch or
+# a one-sided addition.
 #
 # P1's hashes were computed read-only from the local gllvmTMB clone
 # (`/Users/z3437171/Dropbox/Github Local/gllvmTMB`) via `git archive

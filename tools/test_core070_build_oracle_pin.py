@@ -25,8 +25,13 @@ from pathlib import Path
 TOOLS = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOLS))
 
-os.environ.pop("GLLVM_PARITY_PIN", None)
-
+# Deliberately no module-level os.environ mutation here: importing this test
+# module must not have a side effect on the runner's environment (it could
+# mask a misconfigured GLLVM_PARITY_PIN in another test module collected in
+# the same process). Every assertion below either reads pin-independent
+# parity_oracle attributes (FROZEN_GLLVMTMB_ORACLE, P1_GLLVMTMB_ORACLE,
+# R_REF_PINS never depend on the ambient env var) or spawns a subprocess
+# through _clean_env(), which scrubs GLLVM_PARITY_PIN explicitly per call.
 import parity_oracle  # noqa: E402
 
 PINS_FILE = TOOLS / "core070_oracle_pins.toml"
