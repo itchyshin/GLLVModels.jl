@@ -80,6 +80,12 @@ n, p and family, and every place a user reads an interval says it is conditional
     | nb (partial) | 0.806 | 0.862 | 0.893 | 0.818 | 0.851 | 0.866 | 0.815 | 0.873 | **0.904** |
     | poisson | 0.982 | 0.998 | **0.999** | 0.974 | 0.989 | 0.991 | 0.982 | 0.998 | **0.999** |
 
+    **Final (07:33Z, 960 task files, 17 687 of 19 200 datasets; `pilot/harvest-report-final.md`
+    has every cell with MCSE and too-few/too-many splits).** Mean exact recovery:
+    Gaussian len BIC-n 0.948; Poisson len BIC-n 0.999; NB len BIC-n 0.893 (old AIC 0.775,
+    new BIC-n 0.827); binomial best 0.56 (new/len AIC). The 1 513 missing datasets are all NB
+    (17 cells, tasks that hit the 6 h limit); those are the slowest fits, so NB recovery there
+    may read optimistic.
     Poisson: every BIC rule ≥ 0.95 in every cell. NB: 27–47% of K = 2–4 fits unconverged; small
     cells under-select. Rejecting on the convergence flag alone cost recovery (Poisson, NB), so
     the guard now keeps an unconverged fit unless it is runaway or non-monotone
@@ -117,7 +123,7 @@ fit carries no "K was estimated" flag, so `confint`/`summary` do not yet print t
 | ticket | question | recommendation | why |
 |---|---|---|---|
 | T2 route | fit-and-compare, shrinkage, spectral, or hybrid? | **Fit-and-compare with the two safeguards (v1). Spectral guess to narrow the K window later (v1.1). OFAL in a separate lane.** | Reuses `select_lv`; no new estimator; the failure we found is in fits, not in criteria. |
-| T2 criterion | default criterion | **BIC with log(number of sites) (`:bic_sites`)**: best or joint best for Gaussian, Poisson and NB on the grid (table above); log(p·n), the current convention, under-selects at small n. Final table when the grid completes. Chen–Li JIC read and set aside (joint likelihood, J ≥ 100). | No published discrete-data evidence exists; our grid is the evidence. |
+| T2 criterion | default criterion | **BIC with log(number of sites) (`:bic_sites`)**: best or joint best for Gaussian, Poisson and NB on the grid (final: 0.948 / 0.999 / 0.893 with the lenient guard); log(p·n), the current convention, under-selects at small n. Chen–Li JIC read and set aside (joint likelihood, J ≥ 100). | No published discrete-data evidence exists; our grid is the evidence. |
 | T4 API, Julia | what does omitting K do? | **Omitting K runs `select_lv` and returns the chosen fit**, printing the candidate table once (`@info`); `select_lv` stays the way to get the full record. Today omitting K throws, so nothing that works now changes. Default `Kmax = min(5, p − 1)`. | Shinichi: "OK what if we do not supply d - yes". Return type stays a fit, so downstream code is unchanged. |
 | T4 API, R | what does omitting `d` in `latent()` do? | **Flag: today omitting `d` silently means d = 1**, so switching it to auto changes existing users' fits. Recommend `d = "auto"` now, and switching the default in a later minor release with a NEWS warning. | Julia's switch is error → behaviour; R's would be behaviour → different behaviour. |
 | T7 binary data | how to estimate K for Bernoulli data when most K ≥ 2 fits run away? | **Sweep with a loading ridge (gllvmTMB `aghq_ridge = 2`, Laplace + ridge) and compare BIC on the unpenalised logLik at the ridge optimum (what gllvmTMB's `logLik` already returns, with a warning); add the same ridge to Julia's binomial fitter (a family-kernel change, after the overnight lane).** Below a size where even the ridge cannot recover K (p = 10, n ≤ 120 here), return the table and say the data cannot resolve d. | R experiment (`ridge/`, 10 reps per cell, BIC): loadings 1.5·N(0,1), n = 120, p = 20: K = 2 correct 8/10 with ridge vs 4/10 without; K = 3 4/10 vs 1/10; p = 10, K = 2: 1/10 vs 0/10; without ridge ~half of sweeps have no admissible d. Loadings 0.8: ridge recovers K = 1 10/10 (vs 6/10) but not K = 2. The ridge still under-selects because its optimum shrinks the loadings, trimming each added dimension's logLik gain. Sweeps with ridge are ~7× faster. |

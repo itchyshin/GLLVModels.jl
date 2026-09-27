@@ -7,7 +7,7 @@ because most unpenalised fits at d ≥ 2 run away. Nothing is merged or pushed; 
 ## Your decisions (G1), each with a recommendation
 
 1. **Default criterion.** Recommend BIC with log(number of sites) (`:bic_sites`). Recovery grid,
-   mean exact recovery: Gaussian 0.95, Poisson 0.999, NB 0.90. The current convention, BIC with
+   mean exact recovery (17 687 simulated datasets): Gaussian 0.95, Poisson 0.999, NB 0.89. NB is 8% short (1 513 datasets timed out on DRAC), so its number may read slightly high. The current convention, BIC with
    log(sites × species), picks too few dimensions at small n (Gaussian n = 30: 0.21 vs 0.53).
 2. **Julia API.** Recommend: omitting K runs the guarded sweep and returns the chosen fit, with a
    one-line message. Today omitting K throws, so no working call changes. Built on the branch.
