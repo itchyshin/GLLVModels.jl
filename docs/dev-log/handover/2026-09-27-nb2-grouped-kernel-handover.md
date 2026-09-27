@@ -25,7 +25,7 @@ FINDINGS-OF-RECORD: the NB2 Fisher-scoring 2-cycle mechanism below. It is record
 
 - Seed-1 (p=20, n=300, K_true=3) `fit_nb_gllvm_grouped` loglik, main then branch: K=1 -19473.13 then -18400.45; K=2 -18874.03 then -17617.63; K=3 -19113.13 then -16743.17; K=4 -20240.21 then -16727.98 (monotone through K=4, max loading-row norm 2.44).
 - Default-route panel, 48 NB2 cells: 18 higher (up to +5,340), 28 unchanged, 2 lower (both main-overstatement artefacts). NB1/Beta grouped: 8/8 identical.
-- Ill-conditioned panel (loading scale 2.5, r ∈ {0.3, 50}): 7 higher (by 50 to 806), 1 unchanged, none lower.
+- Ill-conditioned panel (loading scale 2.5, r ∈ {0.3, 50}): 7 higher (by 50 to 1,141), 1 unchanged, none lower.
 - 13 panel cells where the branch reports `converged = false`: every one is the existing dispersion-boundary flag (one species' r > 1e6), not an optimizer failure.
 - Runtime: the panel took 70% longer in total on the branch.
 - Local tests: 27 files green (every `test_grouped*.jl`, `test_model_selection.jl`, and the NB2 grouped callers). The slow seed-1 test (`GLLVM_SLOW_TESTS=1`) passed.
