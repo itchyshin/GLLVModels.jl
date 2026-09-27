@@ -2,8 +2,10 @@
 #
 # extract_latent_scores() twin test — reads recorded R (gllvmTMB 0.7.1, pin
 # P1 9539352f66f2db2cc26b1c393e67212a359b60c9) values from
-# test/fixtures/extract_latent_scores_p1/ (sha256-guarded below); runs no R
-# and no RCall. R was fit with:
+# test/fixtures/extract_latent_scores_p1/ (sha256-guarded below; the R script
+# and exact install call that produced them live alongside the fixtures as
+# generate_fixture.R). Runs no R and no RCall. Gaussian and Poisson were fit
+# with:
 #
 #   value ~ 0 + trait + latent(0 + trait | site, d = 2, unique = FALSE)
 #
@@ -14,26 +16,37 @@
 # p x n matrix. `unique = FALSE` removes R's default per-trait Psi_B
 # companion (Sigma = Lambda Lambda' + Psi) so the fitted model is the same
 # homoscedastic-residual factor model this package's `fit_gaussian_gllvm`
-# assumes (see docs/dev-log/p1-export-recon.md for the recon and the
-# "R differences" note in `extract_latent_scores`'s docstring).
+# assumes. NB2 (per-trait dispersion, `family = nbinom2()`) uses the same
+# formula on its own, larger dataset (n_sites = 60; per-trait dispersion +
+# rank-2 loadings needs more data than the 15-site Gaussian/Poisson fixture
+# to stay numerically well-posed). See the "R differences" note in
+# `extract_latent_scores`'s docstring (src/extract_latent_scores.jl) for the
+# full semantic comparison.
 using Test
 using GLLVModels
 using SHA
+using Distributions: Poisson
 
 const _ELS_FIXDIR = joinpath(@__DIR__, "fixtures", "extract_latent_scores_p1")
 
 const _ELS_SHA256 = Dict(
-    "Y_gauss.csv"         => "2362c7e7472c978cd1e746904e2c20d4d5fb6fdb236ffad698c4bbfb8a11341d",
-    "Y_pois.csv"          => "0f5b241dc0fc0eaa76bb78e8592845146d6d53c110f082c496689c0ea9960436",
-    "z_gauss_unit.csv"    => "378ee2d6508f4edf2ba835d2e94cb5258bdbdf7d43f649ff4824efd8bf251d88",
-    "z_pois_unit.csv"     => "add182d306e2c653a5315ae26156ab8bd070b51587b8fb032115c0278a662ab0",
-    "Lambda_gauss_hat.csv"=> "98c4305d0f52b3fe26841f826e58d25276c6cf67ae58df02e3446ef9b5d78bc0",
-    "Lambda_pois_hat.csv" => "acf73fb8c52a5ea1dcc556c8dfb5e746721fb4f414a660419f513fd02a588949",
-    "beta_gauss_hat.txt"  => "00faefbadc41dd12cca661a3fbd7331a90bbefc690b224878fd66a10c461179a",
-    "beta_pois_hat.txt"   => "1b941089b6ae488c75b26fc308288aecd39090e259eadb92fc6964d23dea412c",
-    "loglik_gauss.txt"    => "16744c87ecdd8a28d9a93cc8fa7d9916bc2e90f374e1b3544ecce720edc8aaee",
-    "loglik_pois.txt"     => "bdaf6225a745b9cfd8c7c55ee0d14a12071781a1898b34f4e52c6a7daa5a6ffa",
-    "sigma_eps_hat.txt"   => "8c28c39d3be580254744eba48426deb1a83d323bff8e78092fc4c4c10d0b9597",
+    "Y_gauss.csv"          => "2362c7e7472c978cd1e746904e2c20d4d5fb6fdb236ffad698c4bbfb8a11341d",
+    "Y_pois.csv"           => "0f5b241dc0fc0eaa76bb78e8592845146d6d53c110f082c496689c0ea9960436",
+    "Y_nb2.csv"            => "194de3673547a751a68c8f2761d33d9ed735cf4e68a84e409080ccb3f108221a",
+    "z_gauss_unit.csv"     => "378ee2d6508f4edf2ba835d2e94cb5258bdbdf7d43f649ff4824efd8bf251d88",
+    "z_pois_unit.csv"      => "add182d306e2c653a5315ae26156ab8bd070b51587b8fb032115c0278a662ab0",
+    "z_nb2_unit.csv"       => "ee62d25bf0badf3d431bd88a28c631906ad654b18d964f9e84889d0b06020d4c",
+    "Lambda_gauss_hat.csv" => "98c4305d0f52b3fe26841f826e58d25276c6cf67ae58df02e3446ef9b5d78bc0",
+    "Lambda_pois_hat.csv"  => "acf73fb8c52a5ea1dcc556c8dfb5e746721fb4f414a660419f513fd02a588949",
+    "Lambda_nb2_hat.csv"   => "4b344e362d13cfaa6ab81a22db4870c1a4fe5162312a55d4cd5c7676f49cd813",
+    "beta_gauss_hat.txt"   => "00faefbadc41dd12cca661a3fbd7331a90bbefc690b224878fd66a10c461179a",
+    "beta_pois_hat.txt"    => "1b941089b6ae488c75b26fc308288aecd39090e259eadb92fc6964d23dea412c",
+    "beta_nb2_hat.txt"     => "58df42488c0c240815adf0b4d459a771003d019650bed2f9a645e66524c627e2",
+    "phi_nb2_hat.txt"      => "cfcef573cbf18da51018be8e7bee45bf9b145cea5523f02f4d305e9bfbada496",
+    "loglik_gauss.txt"     => "16744c87ecdd8a28d9a93cc8fa7d9916bc2e90f374e1b3544ecce720edc8aaee",
+    "loglik_pois.txt"      => "bdaf6225a745b9cfd8c7c55ee0d14a12071781a1898b34f4e52c6a7daa5a6ffa",
+    "loglik_nb2.txt"       => "a17ac5719d4d83c1bbaed3d9736d789bddcb84a6bdc2ca767bd114912b8e2df0",
+    "sigma_eps_hat.txt"    => "8c28c39d3be580254744eba48426deb1a83d323bff8e78092fc4c4c10d0b9597",
 )
 
 function _els_verify_and_path(name::AbstractString)
@@ -120,7 +133,22 @@ _els_read_scalar(path::AbstractString) = parse(Float64, only(readlines(path)))
             fit0.logLik, fit0.n_iter, fit0.converged, fit0.optim_result, fit0.cputime,
             fit0.integration)
         z_atR = extract_latent_scores(fit_atR, Y_gauss; level = :unit, X = X)
-        @test isapprox(z_atR, z_r_gauss; atol = 1e-8)
+        @test isapprox(z_atR, z_r_gauss; atol = 1e-8)  # measured 5.6e-15 (machine precision)
+    end
+
+    @testset "matches extract_ordination on a no-X, no-X_lv fit" begin
+        # extract_ordination(fit, Y; rotate=false).sites is
+        # getLV(fit, Y; rotate=false) at getLV's *default* component (:total,
+        # not :innovation — see the dispatch note in
+        # src/extract_latent_scores.jl), and neither extract_ordination nor
+        # the underlying ordination() forwards a fixed-effect X at all, so
+        # this identity only holds for a fit with no X (zero fixed-effect
+        # mean) and no X_lv, where :total == :innovation exactly (R's own
+        # documented extract_ordination(component = "innovation") identity).
+        fit0 = fit_gaussian_gllvm(Y_gauss; K = K)  # X = nothing: zero-mean model
+        z0 = extract_latent_scores(fit0, Y_gauss; level = :unit)
+        ord0 = extract_ordination(fit0, Y_gauss; rotate = false)
+        @test ord0.sites == z0
     end
 
     @testset "Poisson: own optimum" begin
@@ -147,12 +175,74 @@ _els_read_scalar(path::AbstractString) = parse(Float64, only(readlines(path)))
             fit0.converged, fit0.iterations, fit0.alpha_lv, fit0.theta_packed, fit0.hessian,
             fit0.integration)
         z_atR = extract_latent_scores(fit_atR, Y_pois; level = :unit)
-        @test isapprox(z_atR, z_r_pois; atol = 1e-6)
+        @test isapprox(z_atR, z_r_pois; atol = 1e-6)  # measured 7.2e-11 (Laplace-Newton tolerance)
+    end
+
+    @testset "NB2 (NBGroupedFit, per-trait dispersion): at R's fitted parameters" begin
+        # Own (larger) n_sites: see generate_fixture.R. R's fit here is
+        # boundary-hugging on 3 of 6 traits (per-trait NB2 dispersion + rank-2
+        # loadings is a lot of parameters for this sample size) — irrelevant
+        # to this test, which only checks that this package's posterior-mode
+        # formula agrees with R's AT R's own fitted (however imperfect)
+        # parameters, not that either side recovered the truth well.
+        Y_nb2_sites = _els_read_csv(_els_verify_and_path("Y_nb2.csv"))
+        z_r_nb2      = _els_read_csv(_els_verify_and_path("z_nb2_unit.csv"))
+        Lambda_r_nb2 = _els_read_csv(_els_verify_and_path("Lambda_nb2_hat.csv"))
+        beta_r_nb2   = _els_read_vector(_els_verify_and_path("beta_nb2_hat.txt"))
+        phi_r_nb2    = _els_read_vector(_els_verify_and_path("phi_nb2_hat.txt"))
+
+        Y_nb2 = Int.(permutedims(Y_nb2_sites))
+        p_nb2, n_nb2 = size(Y_nb2)
+        @test p_nb2 == p
+        @test size(z_r_nb2) == (n_nb2, K)
+
+        fit_atR = GLLVModels.NBGroupedFit(beta_r_nb2, Lambda_r_nb2, phi_r_nb2,
+            collect(1:p_nb2), LogLink(), NaN, true, 0)
+        z_atR = extract_latent_scores(fit_atR, Y_nb2; level = :unit)
+        @test isapprox(z_atR, z_r_nb2; atol = 1e-6)  # measured 5.7e-11
+        @test extract_latent_scores(fit_atR, Y_nb2; level = :unit_obs) === nothing
+    end
+
+    @testset "component-less fit types return an n×K matrix (no MethodError)" begin
+        # NB1Fit, TweedieFit, NBGroupedFit and RowRandomFit have no `X_lv`
+        # support, so their `getLV` has no `component` keyword at all —
+        # extract_latent_scores must NOT forward `component = :innovation` to
+        # them (that would raise a MethodError; see the dispatch note in
+        # src/extract_latent_scores.jl).
+        fit_nb1 = fit_nb1_gllvm(Y_pois; K = K)
+        z_nb1 = extract_latent_scores(fit_nb1, Y_pois; level = :unit)
+        @test size(z_nb1) == (n, K)
+        @test extract_latent_scores(fit_nb1, Y_pois; level = :unit_obs) === nothing
+
+        fit_tw = fit_tweedie_gllvm(Float64.(Y_pois); K = K)
+        z_tw = extract_latent_scores(fit_tw, Float64.(Y_pois); level = :unit)
+        @test size(z_tw) == (n, K)
+
+        fit_nbg = fit_nb_gllvm_grouped(Y_pois; K = K, group = collect(1:p))
+        z_nbg = extract_latent_scores(fit_nbg, Y_pois; level = :unit)
+        @test size(z_nbg) == (n, K)
+
+        fit_rr = fit_row_random_gllvm(Y_pois; K = K)
+        z_rr = extract_latent_scores(fit_rr, Y_pois; level = :unit)
+        @test size(z_rr) == (n, K)
+    end
+
+    @testset "fit types needing an extra positional getLV argument refuse cleanly" begin
+        # GllvmCovFit's getLV needs X positionally (getLV(fit, Y, X; ...)):
+        # extract_latent_scores's (fit, y; kwargs...) signature cannot route
+        # that, and refuses with a named ArgumentError rather than passing X
+        # as a keyword (which getLV does not accept and would raise a plain
+        # MethodError).
+        fit_cov = fit_gllvm_cov(Y_pois; family = Poisson(), X = X, K = K)
+        @test_throws ArgumentError extract_latent_scores(fit_cov, Y_pois)
     end
 
     @testset "level validation and default fallback" begin
         fit = fit_gaussian_gllvm(Y_gauss; K = K, X = X)
         @test_throws ArgumentError extract_latent_scores(fit, Y_gauss; level = :bogus, X = X)
+        # R accepts deprecated level = "B"/"W" aliases with a warning; this
+        # method does not (see "Differences from R" in the docstring).
+        @test_throws ArgumentError extract_latent_scores(fit, Y_gauss; level = :B, X = X)
         # Mirrors R's extract_latent_scores.default abort for an unsupported type.
         @test_throws ArgumentError extract_latent_scores([1, 2, 3])
         @test_throws ArgumentError extract_latent_scores("not a fit")
