@@ -95,6 +95,17 @@ All notable changes to GLLVModels.jl are documented here.
   grouped fits run about 70% slower. `fit_nb_gllvm_grouped`,
   `fit_nb1_gllvm_grouped` and `fit_beta_gllvm_grouped` now accept `β_init` and
   `Λ_init`, as `fit_nb_gllvm` does (#503, #521).
+- **`getLV` on grouped NB2, NB1 and Gamma fits now returns the per-site mode.**
+  `getLV` (and so the R bridge `scores` and `ordination`) used a generic mode search
+  whose undamped small steps could oscillate where a count or a Gamma response sits
+  far above its mean, and it stopped silently at 100 iterations. It now uses the
+  same mode search as each family's likelihood. At converged fits about 0.3 to 4.5%
+  of site scores move, by up to about 1e-3 on the latent scale; scores that were
+  already at the mode are unchanged to 1e-8. Log-likelihoods, estimates and
+  intervals do not change. Known limits: `getLV` for the no-covariate grouped fits
+  takes no `offset`, so a fit made with an offset gets scores without it; and
+  `getLV` always uses the default inner tolerance, not a fit's `newton_tol`. Beta
+  grouped scores are unchanged (follow-up).
 - **Gamma grouped fits no longer report convergence from a diverged inner search.**
   The per-site mode search inside `fit_gamma_gllvm_grouped` and its covariate and
   shared-shape routes could diverge at the fitter's own start and still return a
