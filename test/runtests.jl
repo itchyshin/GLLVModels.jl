@@ -185,6 +185,10 @@ println(_SHARD === nothing ?
     # most likely to end up in a paper — so untested was the least acceptable
     # place for it. Every assertion is against an independently derived value.
     _shard_include("test_boundary_inference.jl")
+    # P1 twin vs gllvmTMB's R/chibar.R (D-297 case map: a name match alone never
+    # counts as parity; this proves equal outputs on a literal fixture computed by
+    # the real installed R package at the pin).
+    _shard_include("test_chibar2_variance_lrt_p1_twin.jl")
     _shard_include("test_laplace_grad.jl")
     _shard_include("test_poisson_grad_perf.jl")
     _shard_include("test_grouped_laplace.jl")
