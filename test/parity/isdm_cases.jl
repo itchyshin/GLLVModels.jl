@@ -215,23 +215,33 @@ for name in ISDM_CASES
             @test all(isapprox.(LLj, LLr; rtol = 1e-4, atol = 1e-6))
         end
         @test maximum(abs.(ft.eta .- Float64.(r["eta"]))) <= 1e-4
-        gaps = relgap.(ft.b_fix, rb)
-        if name == "predict"
-            @test maximum(gaps) <= 1e-4
-        else
-            # FINDING (recorded, not a tolerance change): R's nlminb stops at
-            # "relative convergence (4)" with max|gradient| 3.9e-4 to 9.0e-4 on these
-            # fits, so small coefficients sit up to 2e-5 (absolute) short of the
-            # optimum; Julia's log-likelihood is higher on every case. The polished
-            # comparison below closes the gap on the same TMB objective.
-            @test_broken maximum(gaps) <= 1e-4
-        end
+        # b_fix at R's door optimum: rel 1e-4 on predict. FINDING (recorded): on ms3
+        # and the two K = 0 fits R's nlminb stops at "relative convergence (4)" with
+        # max|gradient| 3.9e-4 to 9.0e-4, so small coefficients sit short of the
+        # optimum (relative gaps 1.3e-4 to 1.9e-3; Julia's logLik is higher on every
+        # case). Those rows are held to a loose absolute bound (measured max 2.1e-5)
+        # so a regression fails; the cross-objective identity above and the polished
+        # comparison below are the primary receipts.
+        @test maximum(abs.(ft.b_fix .- rb)) <= 1e-4
+        name == "predict" && @test maximum(relgap.(ft.b_fix, rb)) <= 1e-4
 
-        # The same comparison against R's polished optimum (nlminb restarted from
-        # the door's optimum on the same TMB objective, rel.tol 1e-14).
-        pb = by_name(r["b_fix_names"], Float64.(r["polished_b_fix"]), tab.X_names)
-        @test maximum(relgap.(ft.b_fix, pb)) <= 1e-4
-        @test abs(ft.loglik - r["polished_loglik"]) <= 1e-6
+        # R's polished optimum: nlminb restarted from the door's optimum on the same
+        # TMB objective (rel.tol 1e-14). It certified convergence (code 0) on ms3 and
+        # srcform_mixed. On srcform_pois it moved (max|gradient| 6.1e-4 -> 1.0e-5)
+        # but stopped with code 1: the polish did not certify, and the comparison is
+        # labelled so. On predict it did not move at all (code 1, the door optimum
+        # already passes rel 1e-4 above), so no polished comparison is made there.
+        if name != "predict"
+            certified = r["polished_convergence"] == 0
+            name == "srcform_pois" ? (@test !certified) : (@test certified)
+            pb = by_name(r["b_fix_names"], Float64.(r["polished_b_fix"]), tab.X_names)
+            @testset "polished $(certified ? "certified" : "(polish did not certify)")" begin
+                @test maximum(relgap.(ft.b_fix, pb)) <= 1e-4
+                @test abs(ft.loglik - r["polished_loglik"]) <= 1e-6
+            end
+        else
+            @test r["polished_convergence"] == 1 && r["polished_b_fix"] == r["b_fix"]
+        end
 
         # P1-ISDM-PREDICT: link and response, in-sample, fixed-only, and on the
         # training rows with the offset zeroed; abs 1e-4. R's output carries a
