@@ -39,3 +39,4 @@ The overnight lane does NOT edit src/model_selection.jl, src/cv.jl, or the `K`/`
 
 ## Daytime continuation (Shinichi: "/dispatching-parallel-agents if it helps", 2026-09-27)
 - 15:25Z Three parallel streams, <=3 live, reviewers on Fable: A #514 rework (S1 scale-aware test, S2 oscillation, S4 claim, S5 body, S6 Linux-failing test) -> re-review (wf_b7911c03-a3e); B NB2 grouped (#503) -> review (wf_8a0ab375-fba); C #501 ten-seed macOS check (agent), then #515 reproduction and fix. Reviewer rule updated to the D-290 amendment (better optimum fine, worse goes to Shinichi). Merges need Shinichi's word (the overnight envelope ended 05:00). Totoro socket (cm-snakagaw@totoro...) is gone, so #501's Linux leg waits; flagged once.
+- 15:29Z Shinichi: "merge #516 when green and merge #513". train13 (merge_train_13.log): #513 at 3df3220a7, then #516 at fa4966d56, both squash, head-pinned, each re-checked against main before its merge.
