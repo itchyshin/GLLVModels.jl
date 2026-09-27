@@ -237,6 +237,48 @@ _els_read_scalar(path::AbstractString) = parse(Float64, only(readlines(path)))
         @test_throws ArgumentError extract_latent_scores(fit_cov, Y_pois)
     end
 
+    @testset "RRRFit refuses: no innovation score" begin
+        # RRRFit's getLV(fit, X; rotate) is a plain 2-argument call (no
+        # missing positional argument), but its z_s = B' x_s is a
+        # deterministic, fully predictor-driven projection with no residual
+        # latent variable at all -- "innovation" does not apply, and calling
+        # getLV(fit, Y) with this wrapper's response matrix in place of
+        # RRRFit's covariate design X would raise a raw DimensionMismatch.
+        X_rr = reshape(collect(1.0:n) ./ n, n, 1)  # n×1 site-covariate design
+        fit_rrr = fit_rrr_gllvm(Y_pois; family = Poisson(), X = X_rr, K = K)
+        @test_throws ArgumentError extract_latent_scores(fit_rrr, Y_pois)
+    end
+
+    @testset "every AnyGllvmFit member with a getLV method is in exactly one dispatch union" begin
+        # Guards the three-Union accounting in src/extract_latent_scores.jl:
+        # a newly added fit type with a getLV method that nobody sorts into
+        # _ComponentAwareGllvmFit / _PlainGllvmFit / _PositionalArgGllvmFit
+        # turns this test red instead of silently defaulting (there is no
+        # catch-all _extract_latent_scores_unit method any more). Types with
+        # no getLV method at all (e.g. MultinomialFit, StudentTFit, the
+        # phylo/spatial-only fits) are correctly excluded from this
+        # accounting -- calling extract_latent_scores on them still fails
+        # loudly with a MethodError, exactly as calling getLV on them
+        # directly already does.
+        function has_getLV_method(::Type{T}) where {T}
+            for m in methods(getLV)
+                params = m.sig.parameters
+                length(params) >= 2 || continue
+                P1 = params[2]
+                T <: P1 && return true
+            end
+            return false
+        end
+
+        buckets = (GLLVModels._ComponentAwareGllvmFit, GLLVModels._PlainGllvmFit,
+                   GLLVModels._PositionalArgGllvmFit)
+        for T in Base.uniontypes(GLLVModels.AnyGllvmFit)
+            has_getLV_method(T) || continue
+            n_buckets = count(U -> T <: U, buckets)
+            @test n_buckets == 1
+        end
+    end
+
     @testset "level validation and default fallback" begin
         fit = fit_gaussian_gllvm(Y_gauss; K = K, X = X)
         @test_throws ArgumentError extract_latent_scores(fit, Y_gauss; level = :bogus, X = X)

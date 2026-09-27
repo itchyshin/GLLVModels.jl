@@ -13,44 +13,67 @@
 # `component` keyword. Only the seven fit types with a predictor-informed
 # latent-score mean (`X_lv`) do — GllvmFit, BinomialFit, PoissonFit, NBFit,
 # BetaFit, OrdinalFit, GammaFit (src/postfit.jl) — and only for those does
-# `component = :innovation` differ from the plain, no-`component` call. Every
-# other fit type's `getLV` has no `X_lv`/predictor-informed mean at all, so it
-# has no separate "mean" layer to add to or subtract from: whatever it
-# returns already IS the (only) zero-mean latent score, i.e. `component =
-# :total` and `component = :innovation` are structurally identical (there is
-# no field on those fit types corresponding to R's `alpha_lv`/`X_lv`). Calling
-# `getLV(fit, y; component = :innovation, rotate = false, ...)` on one of
-# those types would raise a plain `MethodError` (no such keyword), so this
-# file dispatches on two disjoint `Union`s built directly from that
-# enumeration rather than guessing generically.
+# `component = :innovation` differ from the plain, no-`component` call.
+# `_ComponentAwareGllvmFit` below is exactly this set.
 #
-# A further, disjoint group of fit types accept an extra required positional
-# argument beyond `(fit, y)` — `X` (a 3-D covariate array, or a 2-D design
-# matrix for `ConstrainedOrdinationFit`), `(Xenv, TR)` for `FourthCornerFit`,
-# or `locs` for `SPDELatentFit`. This wrapper's signature is `(fit, y;
-# kwargs...)`, so it cannot route a required positional argument through
-# `kwargs...`; rather than silently misrouting it as a keyword (which would
-# raise an unhelpful `MethodError`), these types get a named `ArgumentError`
-# pointing at the `getLV` call to make directly. (`RRRFit` is NOT in this
-# group: its `getLV(fit, X; rotate)` is a plain 2-argument call — the second
-# argument is just named/semantically "X" rather than "y", not an extra
-# argument, so this wrapper routes it unchanged through the generic bucket.)
+# Every fit type in `_PlainGllvmFit` has no `X_lv`/predictor-informed mean at
+# all, so it has no separate "mean" layer to add to or subtract from:
+# whatever its plain `getLV(fit, y; rotate=false, ...)` (no `component`
+# keyword — passing one would raise a plain `MethodError`) returns already IS
+# the (only) zero-mean latent score.
+#
+# `_PositionalArgGllvmFit` is a further, disjoint group of fit types whose
+# `getLV` needs an extra required positional argument beyond `(fit, y)` — `X`
+# (a 3-D covariate array, or a 2-D design matrix for
+# `ConstrainedOrdinationFit`), `(Xenv, TR)` for `FourthCornerFit`, or `locs`
+# for `SPDELatentFit`. This wrapper's signature is `(fit, y; kwargs...)`, so
+# it cannot route a required positional argument through `kwargs...`; rather
+# than silently misrouting it as a keyword (which would raise an unhelpful
+# `MethodError`), these types get a named `ArgumentError` pointing at the
+# `getLV` call to make directly. `RRRFit` is in this Union too, but for a
+# different reason (see its own, more specific method below, which Julia
+# dispatches to in preference to the Union-typed one): its
+# `getLV(fit, X; rotate)` is a plain 2-argument call with no missing
+# argument, but `X` there is a deterministic, fully predictor-driven
+# reduced-rank-regression projection with no latent innovation at all — there
+# is no meaningful "innovation" score to return, and treating this wrapper's
+# `y` (a response matrix) as RRRFit's `X` (a predictor design matrix) would
+# raise a raw, unhelpful `DimensionMismatch` instead.
+#
+# `_ComponentAwareGllvmFit`, `_PlainGllvmFit`, and `_PositionalArgGllvmFit`
+# are meant to jointly, disjointly cover every `AnyGllvmFit` member that has
+# a `getLV` method at all (test/test_extract_latent_scores.jl asserts this
+# via `methods(getLV)`, so a newly added fit type with a `getLV` method that
+# nobody sorts into one of these three `Union`s turns that test red instead
+# of silently falling through to a wrong bucket). `AnyGllvmFit` members with
+# no `getLV` method at all (e.g. `MultinomialFit`, `StudentTFit`,
+# `TruncatedPoissonFit`, the phylo/spatial/temporal-only fits) are outside
+# this accounting on purpose: they already fail with Julia's plain
+# `MethodError` on `_extract_latent_scores_unit` (same failure mode as
+# calling `getLV` on them directly today), which is the correct behaviour —
+# there is nothing to twin for a fit type this package cannot ordinate at
+# all. Likewise, `QuadraticFit`, `OrderedBetaFit`, and `MixedFamilyFit` have
+# `getLV` methods but are not part of `AnyGllvmFit`, so `extract_latent_scores`
+# cannot reach them either (see the PR body's "not covered" list).
 
 const _ComponentAwareGllvmFit = Union{
     GllvmFit, BinomialFit, PoissonFit, NBFit, BetaFit, OrdinalFit, GammaFit,
+}
+
+const _PlainGllvmFit = Union{
+    NB1Fit, GP1Fit, ExponentialFit, DeltaLogNormalFit, HurdlePoissonFit,
+    HurdleNBFit, DeltaGammaFit, ZIPFit, ZINBFit, ZIBFit, TweedieFit,
+    COMPoissonFit, BetaBinomialFit, BetaBinomialGroupedFit, BetaHurdleFit,
+    GammaGroupedFit, NB1GroupedFit, NBGroupedFit, BetaGroupedFit,
+    OrdinalPerTraitFit, RowEffectFit, RowRandomFit,
 }
 
 const _PositionalArgGllvmFit = Union{
     GllvmCovFit, GllvmSpeciesCovFit, ZIPCovFit, ZINBCovFit, ZIBCovFit,
     BetaBinomialGroupedCovFit, GammaGroupedCovFit, NB1GroupedCovFit,
     NBGroupedCovFit, BetaGroupedCovFit, OrdinalPerTraitCovFit,
-    ConstrainedOrdinationFit, FourthCornerFit, SPDELatentFit,
+    ConstrainedOrdinationFit, FourthCornerFit, SPDELatentFit, RRRFit,
 }
-# RRRFit is NOT in this Union: its getLV(fit, X; rotate) is a plain 2-argument
-# call like the rest of the generic bucket below — the second argument is
-# just named/semantically "X" (RRRFit has no response Y at all, only
-# constraining predictors) rather than "y", which is a naming difference, not
-# a dispatch problem: this wrapper's (fit, y) signature routes it unchanged.
 
 """
     extract_latent_scores(fit, y; level=:unit, kwargs...) -> Matrix{Float64} or Nothing
@@ -64,7 +87,10 @@ returns `getLV(fit, y; rotate = false, kwargs...)` — passing `component =
 :innovation` too on the seven fit types whose `getLV` accepts that keyword
 (see the dispatch note at the top of `src/extract_latent_scores.jl`) — the
 Gaussian posterior mean / Laplace mode of the between-unit latent scores in
-native (unrotated) orientation.
+native (unrotated) orientation. The seven `component`-aware types are the
+*only* ones with a predictor-informed latent-score mean (`X_lv`) at all;
+every other fit type this method supports has no such mean layer, so its
+plain (no-`component`) `getLV` call already returns the zero-mean score.
 
 This package's own [`extract_ordination`](@ref) (`src/extractors.jl`) already
 exists and forwards to [`ordination`](@ref), whose `sites` field is
@@ -98,8 +124,11 @@ categorically true of every fit this package can produce, not a per-fit
 fit-type-specific [`getLV`](@ref) method exactly as `getLV` itself requires
 them for that fit type. Fit types whose `getLV` needs an extra *required
 positional* argument beyond `(fit, y)` (`X`, `(Xenv, TR)`, or `locs`) raise a
-named `ArgumentError` here instead — call `getLV` directly for those (see the
-dispatch note at the top of `src/extract_latent_scores.jl` for the full list).
+named `ArgumentError` here instead — call `getLV` directly for those.
+`RRRFit` raises a different named `ArgumentError`: it is a pure
+reduced-rank-regression fit with a deterministic, fully predictor-driven
+projection and no latent innovation score at all (see the dispatch note at
+the top of `src/extract_latent_scores.jl` for the full list and reasoning).
 
 # Differences from R (documented, not twinned)
 - **Explicit `y`**: R's fitted object retains its TMB environment and needs
@@ -131,10 +160,25 @@ function extract_latent_scores(fit::AnyGllvmFit, y::AbstractMatrix;
 end
 
 # level = :unit dispatch. The seven X_lv-capable types get component =
-# :innovation explicitly; every other fit type has no separate mean layer, so
-# the plain (no-component) call already returns the zero-mean score.
+# :innovation explicitly; every "plain" fit type has no separate mean layer,
+# so the no-component call already returns the zero-mean score.
 _extract_latent_scores_unit(fit::_ComponentAwareGllvmFit, y::AbstractMatrix; kwargs...) =
     getLV(fit, y; component = :innovation, rotate = false, kwargs...)
+
+_extract_latent_scores_unit(fit::_PlainGllvmFit, y::AbstractMatrix; kwargs...) =
+    getLV(fit, y; rotate = false, kwargs...)
+
+# RRRFit: more specific than the _PositionalArgGllvmFit method below (RRRFit
+# is one of that Union's members, but Julia always prefers a method typed on
+# the concrete type over one typed on a Union containing it), so this is the
+# method RRRFit actually dispatches to.
+function _extract_latent_scores_unit(fit::RRRFit, y::AbstractMatrix; kwargs...)
+    throw(ArgumentError(
+        "extract_latent_scores has no innovation score for RRRFit: it is a " *
+        "pure reduced-rank-regression fit, a deterministic, fully " *
+        "predictor-driven projection z_s = B' x_s with no latent innovation " *
+        "at all; call getLV(fit, X) directly for the constrained ordination axes"))
+end
 
 function _extract_latent_scores_unit(fit::_PositionalArgGllvmFit, y::AbstractMatrix; kwargs...)
     throw(ArgumentError(
@@ -143,9 +187,6 @@ function _extract_latent_scores_unit(fit::_PositionalArgGllvmFit, y::AbstractMat
         "top of src/extract_latent_scores.jl); call getLV(fit, y, <that argument>; " *
         "rotate = false, ...) directly instead"))
 end
-
-_extract_latent_scores_unit(fit, y::AbstractMatrix; kwargs...) =
-    getLV(fit, y; rotate = false, kwargs...)
 
 """
     extract_latent_scores(x, args...; kwargs...)
