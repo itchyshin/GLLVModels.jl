@@ -67,6 +67,7 @@ GLLVModels._fit_phylo_gamma_xlv
 GLLVModels._fit_verdict
 GLLVModels._aghq_gh_normal
 GLLVModels._tweedie_verdict
+GLLVModels._beta_binomial_verdict
 GLLVModels._mixed_unpack
 GLLVModels._phylo_ordinal_xlv_marginal_loglik
 GLLVModels._gauss_hermite

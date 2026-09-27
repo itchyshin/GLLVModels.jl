@@ -300,7 +300,8 @@ All notable changes to GLLVModels.jl are documented here.
   `φ` to 1e21 to 1e85, where `fit_beta_binomial_gllvm` reported
   `converged = true` at loglik up to +1.3e74. Measured on origin/main 1385b0490
   (Julia 1.10.12, 100 simulated datasets per loading scale): 0/100 at loading
-  sd 0.9, 2/100 at sd 4.5; a third dataset diverges only on Julia 1.13.0. At
+  sd 0.9, 2/100 at sd 4.5; a third dataset diverges only on Julia 1.13.0. Near-binomial data is far more exposed: an independent review found 4 of 6
+  datasets with true `φ` of 1e3 to 1e5 diverging on main. At
   `φ >= 1e6` the log-pmf now returns the exact Binomial(N, μ) limit, and a
   per-family verdict (`_beta_binomial_verdict`) reports `loglik = -Inf`,
   `converged = false` for a non-finite, sentinel, or positive objective, and
