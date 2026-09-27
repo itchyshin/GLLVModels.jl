@@ -35,6 +35,34 @@ function _check_ordinal_link(link::Link)
     return nothing
 end
 
+"""
+    ordinal_logit(; link::Link = LogitLink())
+
+The Julia twin of `gllvmTMB`'s `ordinal_logit()` response family (`family_id
+20`, gllvmTMB ≥ 0.7.1): a cumulative-**logit** threshold model for K ≥ 3
+ordered categories, with a per-trait intercept and per-trait cutpoints
+(``\\tau_1 = 0`` fixed, ``K_t - 2`` free log-spaced cutpoints). This is exactly
+[`Ordinal`](@ref) routed through [`fit_ordinal_gllvm_pertrait`](@ref) /
+[`fit_ordinal_gllvm_pertrait_cov`](@ref) with `link = LogitLink()` — already
+the default link for `Ordinal()`, so `ordinal_logit()` changes no numerics; it
+exists to give R's public name a literal Julia counterpart. As in `gllvmTMB`,
+`link` supports only the logit link and exists for API symmetry with the
+family constructor shape; pass anything else and this throws.
+
+The shared-cutpoint, no-intercept [`fit_ordinal_gllvm`](@ref) route (the
+`Ordinal()` marker's other, non-default fitter) has no `gllvmTMB` twin.
+
+# Examples
+```julia
+fit = fit_gllvm(Y; family = ordinal_logit(), K = 1)
+```
+"""
+function ordinal_logit(; link::Link = LogitLink())
+    link isa LogitLink || throw(ArgumentError(
+        "ordinal_logit supports only LogitLink(); got $(typeof(link))"))
+    return Ordinal()
+end
+
 # Link CDF F and density f = F'. The cumulative model and the analytic
 # score/Fisher-weight are written generically in (F, f), so a new link only
 # swaps these two. Logit (default) keeps its exact prior numerics; probit uses

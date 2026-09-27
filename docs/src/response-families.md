@@ -437,7 +437,11 @@ cutpoints carry the category levels. The fitted cutpoints are available as
 For native `gllvmTMB` bridge parity, use `fit_ordinal_gllvm_pertrait()` (no-X)
 or `fit_ordinal_gllvm_pertrait_cov()` / `@formula`+X / bridge X (shared site-X):
 per-trait cutpoints with τ₁=0 fixed and K−2 free log-spacings, plus shared `γ`
-under X (twin API B). The shared-cutpoint `fit_ordinal_gllvm()` route remains a
+under X (twin API B). [`ordinal_logit()`](@ref) is the literal-name Julia twin
+of gllvmTMB's `ordinal_logit()` (family_id 20, gllvmTMB ≥ 0.7.1): it returns
+`Ordinal()` and changes no numerics, since `Ordinal()` already defaults to
+`link = LogitLink()` through this per-trait route. The shared-cutpoint
+`fit_ordinal_gllvm()` route remains a
 Julia-side comparator and is **not** the public X default.
 
 The shared-cutpoint route also admits predictor-informed latent-score means:

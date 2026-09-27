@@ -13,6 +13,18 @@ All notable changes to GLLVModels.jl are documented here.
 
 ## Unreleased
 
+### Added
+- **`ordinal_logit()`: name-twin of gllvmTMB's `ordinal_logit()` (family_id 20,
+  gllvmTMB >= 0.7.1).** Thin, literal-name counterpart of the existing
+  `Ordinal()` marker fit through `fit_ordinal_gllvm_pertrait` /
+  `fit_ordinal_gllvm_pertrait_cov` with `link = LogitLink()` (already
+  `Ordinal()`'s default), so this changes no numerics -- it exists so R's
+  public export has a matching Julia name. Twin-verified against a real
+  gllvmTMB 0.7.1 install (commit `9539352f6`) on a fixed fixture dataset:
+  logLik, per-trait cutpoints, and `Lambda * Lambda'` match to well within
+  1e-6 absolute (`test/test_ordinal_logit_twin.jl`, tagged
+  `gllvm-parity-tag: P1`).
+
 ### Fixed
 - **Ordered-beta fits could report `converged = true` at a non-stationary point,
   with a restart reaching a genuinely better optimum (#501).** The per-site
