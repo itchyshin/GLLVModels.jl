@@ -3,7 +3,7 @@
 - [ ] A0 WS0 additive re-pin to P1: P1 oracle beside P0, CAPABILITY_LEDGER_REF pinned, required P1 CI job, case-map rows for +25 exports and +11 S3 methods (proposed; Shinichi signs), stale-row scan under the carry rule, 20 isdm rows reclassified, `tools/true_parity_check.mjs` with dynamic row count, receipt resolution, negative controls; tracked ledger. (4 to 5 days)
 - [x] A0r Recon of each new export at P1. DONE: reviews/p1-export-recon.md (slope family corrected to column grammar)
 - [x] D1 GATE: Packet 1 and the P1 claim boundary. DONE: signed as recommended 2026-09-27 (D-295, packet-1.md)
-- [ ] A1a iSDM spec (Fable): IN PROGRESS 2026-09-27, scope signed in D-295
+- [x] A1a iSDM spec: DONE as draft PR #525 (032d90284), reviewed and revised; Packet 1b open
 - [ ] A1b iSDM kernel and fitter in new files (after #514 merges)
 - [ ] A1c iSDM twin tests and receipts
 - [ ] A1d iSDM engine = "julia" route in gllvmTMB
