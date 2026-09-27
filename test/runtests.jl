@@ -277,6 +277,7 @@ println(_SHARD === nothing ?
     _shard_include("test_precision_fit_admission.jl")
     _shard_include("test_precision_shared_residual.jl")
     _shard_include("test_phylo_latent_twin.jl")
+    _shard_include("test_phylo_latent_paired_p1.jl")
     _shard_include("test_destination_b_phylo_reference_checker.jl")
     _shard_include("test_destination_b_phylo_independent_receipt.jl")
     _shard_include("test_destination_b_pedigree_precision.jl")

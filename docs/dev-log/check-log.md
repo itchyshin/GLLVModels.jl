@@ -1,3 +1,18 @@
+## 2026-09-27: phylo_latent twin at gllvmTMB P1 (A14, A15)
+
+- Branch `claude/phylo-latent-build` from `origin/main` `97e11be04`. New named entry
+  `fit_phylo_latent_gllvm` (`src/phylo_latent.jl`) on the R-shaped `PrecisionPhy` /
+  `fit_precision_multivariate` path; `extract_phylo_signal(::PrecisionMultivariateFit)`
+  (`src/phylo_latent_postfit.jl`); `level = :phy` on the precision `extract_Sigma`.
+- Twins: `test/test_phylo_latent_twin.jl`, red first (UndefVarError on the unfixed tree),
+  81/81 on Julia 1.10.12 and 1.13.0. Adjacent precision tests unchanged and green on 1.10
+  (fitter 47, postfit 29, fixed effects 25, shared residual 19, bridge 5, tree precision 19).
+- A14 receipts against a private P1 build (`docs/dev-log/core070/phylo-latent-p1/`): logLik
+  relative difference 4e-14, cross objectives within 1.1e-14 on both the tree and dense
+  routes. Replay `test/test_phylo_latent_paired_p1.jl` (parity tag P1).
+- P1 contradicts the spec twice (Ainv route, unary nodes); recorded in
+  `docs/dev-log/decisions/2026-09-27-phylo-latent-parameterisation.md`.
+
 ## 2026-09-25: Two-part families no longer score an unfinished mode search (#484)
 
 - Branch `claude/twopart-mode-search-484`, rebased onto `origin/main` (past #481 Gamma, #483 Beta,
