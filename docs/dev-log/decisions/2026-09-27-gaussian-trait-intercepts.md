@@ -72,5 +72,4 @@ for those fits.
 - `gllvm(@formula(y ~ x), ...; family = Normal())` builds a site-only design
   with no trait intercepts. That is the same class of gap, but fixing it changes
   what a formula design means, so it is left for a separate decision.
-- The one-line route change at `src/families/fit_gllvm.jl` (`_fit_gllvm(::Normal, ...)`)
-  and the `fit_gllvm` docstring wait for lane auto-d's lease on that file.
+- CHANGELOG.md is leased by lane auto-d; the entry is added at merge time.
