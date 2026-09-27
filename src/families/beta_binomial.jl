@@ -62,15 +62,41 @@ _bb_logistic(x) = x ≥ 0 ? inv(one(x) + exp(-x)) : (e = exp(x); e / (one(x) + e
 const _BB_MU_LO = 1e-12
 const _BB_MU_HI = 1 - 1e-12
 
+# Beyond this precision the direct loggamma formula below is numerically wrong,
+# not just imprecise (#515). a=μφ and b=(1−μ)φ both grow like φ, so each of the
+# formula's six loggamma terms grows like φ·log(φ) while their SUM (the actual
+# log-pmf) stays O(1) — a huge cancellation. Float64's ~2.2e-16 relative
+# rounding in each term becomes an ABSOLUTE error in the sum of order
+# φ·log(φ)·2.2e-16: negligible at φ=1e6 (≈2e-10, measured against the same
+# formula in 256-bit BigFloat during the #515 diagnosis) but ~1e-3 by
+# φ=1e12 and unbounded from there — a genuine beta-binomial log-pmf reads back
+# as a huge, wrong, but still-finite number, silently. That is the mechanism
+# behind #515's reported `loglik ≈ +7.18e54` at `φ ≈ 3.3e65`: the outer L-BFGS
+# search (finite-difference gradient) reads the cancellation noise as room to
+# improve and runs φ further into it. Beyond this threshold the Beta(μφ,
+# (1−μ)φ) has already collapsed to a point mass at μ (file header), so the
+# Binomial(N, μ) log-pmf IS the φ→∞ limit the direct formula is trying (and,
+# above this threshold, numerically failing) to compute. Matches the boundary
+# `_dispersion_group_boundary` (`grouped_dispersion.jl`) already uses for
+# NB1/NB2 group dispersion, and is far above any φ a healthy fit reaches (this
+# family's own tests fit φ_true=12), so this never perturbs a healthy fit.
+const _BB_PHI_STABLE = 1e6
+
 """
     betabinomial_logp(y, η, N, φ; link=LogitLink()) -> Float64
 
 Scalar beta-binomial conditional log-pmf log p(y|N,η,φ) for one trait, in the
 gllvm parameterisation `a = μφ`, `b = (1−μ)φ` with `μ = linkinv(link, η)` clamped
 to (1e-12, 1−1e-12). Uses `loggamma` (from SpecialFunctions, imported module-wide).
+At `φ ≥ $(_BB_PHI_STABLE)` returns the Binomial(N, μ) log-pmf instead (the exact
+φ→∞ limit, see `_BB_PHI_STABLE` above) — the direct formula's own cancellation
+error is unbounded past that point (#515).
 """
 function betabinomial_logp(y, η, N, φ; link::Link = LogitLink())
     μ = clamp(linkinv(link, η), _BB_MU_LO, _BB_MU_HI)
+    φ >= _BB_PHI_STABLE &&
+        return loggamma(N + 1) - loggamma(y + 1) - loggamma(N - y + 1) +
+               y * log(μ) + (N - y) * log(one(μ) - μ)
     a = μ * φ
     b = (one(μ) - μ) * φ
     return loggamma(a + b) + loggamma(a + y) + loggamma(b + N - y) -
@@ -318,6 +344,53 @@ end
 # Fit driver.
 # ---------------------------------------------------------------------------
 
+# Same sentinel this file's own `negll` closures already return on a failed
+# evaluation (`catch; return 1e12`, `isfinite(v) ? v : 1e12`); a legitimate
+# evaluation never lands there.
+const _BB_FAIL_PENALTY = 1e12
+
+# The Laplace log-marginal `betabinomial_marginal_loglik_laplace` sums, per
+# site, a discrete log-probability (≤0, a beta-binomial pmf value is never
+# above 1) plus the Laplace correction `−½ẑ'ẑ − ½logdet(Λ'WΛ + I)`, itself
+# ≤0 since `Λ'WΛ + I` is positive definite by construction (logdet ≥ 0). So a
+# genuine value never rises meaningfully above 0; the small positive margin
+# here is floating-point headroom, not a modelling tolerance.
+const _BB_LOGLIK_MAX = 1e-6
+
+"""
+    _beta_binomial_verdict(optim_converged, nll, φ) -> (converged, loglik, reason)
+
+Convergence contract for [`fit_beta_binomial_gllvm`](@ref) (#515, per the #502/
+#505 rule: a per-family verdict rather than a change to the shared
+`_fit_verdict`). `Optim`'s own flag is not enough here: it can fire at a point
+where the Beta precision `φ` has run to the numerical edge (the file header's
+φ→∞ reduction to Binomial) with intercepts and loadings correspondingly large
+— `φ ≈ 3.3e65`, reported loglik ≈ +7.18e54, every per-site latent score
+trivially at `z=0` (issue #515's own reproduction, `test/fixtures/`). Two
+checks gate the reported flag beyond `optim_converged`; an impossible value
+is reported as `loglik = -Inf`, never as a log-likelihood:
+
+- `:objective_impossible` — the objective is non-finite, still at
+  `_BB_FAIL_PENALTY` (never evaluated), or the resulting log-likelihood is
+  positive beyond floating-point rounding (`> _BB_LOGLIK_MAX`; see that
+  constant's own note for why a genuine value cannot be). +7e54 is not a large
+  log-likelihood — it is `betabinomial_logp`'s catastrophic cancellation at
+  extreme φ (see `_BB_PHI_STABLE`) read back as data.
+- `:phi_at_boundary` — `φ ≥ _BB_PHI_STABLE`, the same boundary
+  `_dispersion_group_boundary` (`grouped_dispersion.jl`) already uses for
+  NB1/NB2 group dispersion: at or beyond it the Beta has collapsed to a point
+  mass at μ and φ is not identifiable from a Binomial fit, whatever `Optim`
+  reports. This never fires for a healthy fit — this family's own tests fit
+  φ_true=12, orders of magnitude below the boundary.
+"""
+function _beta_binomial_verdict(optim_converged::Bool, nll::Real, φ::Real)
+    (isfinite(nll) && nll < _BB_FAIL_PENALTY) || return (false, -Inf, :objective_impossible)
+    ll = -Float64(nll)
+    ll <= _BB_LOGLIK_MAX || return (false, -Inf, :objective_impossible)
+    φ < _BB_PHI_STABLE || return (false, ll, :phi_at_boundary)
+    return (optim_converged, ll, :ok)
+end
+
 """
     BetaBinomialFit
 
@@ -471,7 +544,8 @@ function fit_beta_binomial_gllvm(Y::AbstractMatrix; K::Integer,
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     φ̂ = exp(θ̂[p + rr + 1])
-    return BetaBinomialFit(β̂, Λ̂, link, φ̂, _fit_verdict(res)...)
+    conv, loglik, _reason = _beta_binomial_verdict(Optim.converged(res), Optim.minimum(res), φ̂)
+    return BetaBinomialFit(β̂, Λ̂, link, φ̂, loglik, conv, Optim.iterations(res))
 end
 
 # ===========================================================================

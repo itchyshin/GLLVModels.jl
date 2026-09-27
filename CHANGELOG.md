@@ -290,6 +290,27 @@ All notable changes to GLLVModels.jl are documented here.
   finite non-stationary sites and 0 false `-Inf` at healthy sites, with a maximum
   healthy-site value change of 4.3e-11. `getLV`/`predict` are unaffected in their
   public behaviour (still return `z`) but now run the same damped, retried search.
+- **BetaBinomial fits no longer report `converged = true` at an impossible
+  log-likelihood (#515).** `betabinomial_logp` (`src/families/beta_binomial.jl`)
+  computed the log-pmf as a sum of six `loggamma` terms in `a = μφ`,
+  `b = (1-μ)φ`; each term grows like `φ log φ` while the sum stays O(1), so at
+  large `φ` the Float64 result is dominated by cancellation error (about 2e-10
+  at `φ = 1e6`, 1e-3 at `1e12`, unbounded beyond, against a 256-bit BigFloat
+  reference). The outer L-BFGS search read that error as room to improve and ran
+  `φ` to 1e21 to 1e85, where `fit_beta_binomial_gllvm` reported
+  `converged = true` at loglik up to +1.3e74. Measured on origin/main 1385b0490
+  (Julia 1.10.12, 100 simulated datasets per loading scale): 0/100 at loading
+  sd 0.9, 2/100 at sd 4.5; a third dataset diverges only on Julia 1.13.0. Near-binomial data is far more exposed: an independent review found 4 of 6
+  datasets with true `φ` of 1e3 to 1e5 diverging on main. At
+  `φ >= 1e6` the log-pmf now returns the exact Binomial(N, μ) limit, and a
+  per-family verdict (`_beta_binomial_verdict`) reports `loglik = -Inf`,
+  `converged = false` for a non-finite, sentinel, or positive objective, and
+  `converged = false` when `φ` sits at that boundary. All three diverging
+  datasets now reach an ordinary optimum (loglik -910 to -1072, `φ` 2.8 to
+  11.1) on both Julia versions; 20 healthy fits keep the same loglik (to 12 significant
+  digits) and converged flag. The grouped routes
+  (`fit_beta_binomial_gllvm_grouped`, `fit_beta_binomial_gllvm_grouped_cov`)
+  benefit from the stabilised log-pmf but do not yet have the verdict gate.
 - **Poisson `confint(..., method = :bootstrap)` now reports the refit's own
   convergence verdict (#504).** The Laplace-route `refit` closure in
   `_family_ci(fit::PoissonFit, ...)` (`src/confint_family.jl`) returned a bare
