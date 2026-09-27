@@ -18,9 +18,15 @@ n, p and family, and every place a user reads an interval says it is conditional
   binary GLLVM data at ecological n, p.** Ecology packages (gllvm, boral, glmmTMB `rr()`, HMSC)
   leave d to the user and suggest "compare AIC/BIC/CV"; on one real dataset (gllvm 2.0 beetles,
   n = 88, m = 68) AIC picks 3 and BIC picks 2.
-- **Chen & Li (2022, Biometrika)** give the only criterion with a consistency proof for binary and
-  count factor models (joint-likelihood IC, large n and p). Its numeric recovery table was not
-  re-confirmed in the notebook; read the paper before relying on it.
+- **Chen & Li (2022, Biometrika; arXiv:2010.02326, read directly 2026-09-27)** give the only
+  criterion with a consistency proof for binary and count factor models:
+  JIC(K) = −2 l̂_K + K (N ∨ J) log{n / (N ∨ J)}, where l̂_K is the **joint** likelihood (factor
+  scores estimated as parameters, constrained joint MLE), N persons, J items, n observed cells.
+  Their simulation is binary only, J = 100–400 with N = J or 5J, K* = 3; the paper itself reports
+  over-selection when N = J and J is small, and under-selection of a weak factor when N = 5J.
+  Our fits maximise the **marginal** (Laplace) likelihood and ecological p is 10–20, so JIC does
+  not transfer directly; the paper notes the marginal likelihood approaches the joint one only
+  when both N and J are large. Not a v1 candidate.
 - **Ordered factor LASSO** (Hui, Tanaka & Warton 2018, Biometrics) is the only GLLVM-native
   single-fit rule. No software implementation was found and no precedent for a non-smooth group
   penalty inside a Laplace/TMB fit. Parked as a follow-up lane (Shinichi, 2026-09-26).
@@ -58,7 +64,7 @@ Tests: 50/50 in `test/test_model_selection.jl` (16 existing + 34 new).
 | ticket | question | recommendation | why |
 |---|---|---|---|
 | T2 route | fit-and-compare, shrinkage, spectral, or hybrid? | **Fit-and-compare with the two safeguards (v1). Spectral guess to narrow the K window later (v1.1). OFAL in a separate lane.** | Reuses `select_lv`; no new estimator; the failure we found is in fits, not in criteria. |
-| T2 criterion | default criterion | **Decide from the grid.** Provisional: BIC. Candidates on the grid: AIC, BIC log(p·n) (current), BIC log(n sites). Add Chen–Li JIC after reading the paper. | No published discrete-data evidence exists; our grid is the evidence. |
+| T2 criterion | default criterion | **Decide from the grid.** Provisional: BIC. Candidates on the grid: AIC, BIC log(p·n) (current), BIC log(n sites). Chen–Li JIC read and set aside (joint likelihood, J ≥ 100). | No published discrete-data evidence exists; our grid is the evidence. |
 | T4 API, Julia | what does omitting K do? | **Omitting K runs `select_lv` and returns the chosen fit**, printing the candidate table once (`@info`); `select_lv` stays the way to get the full record. Today omitting K throws, so nothing that works now changes. Default `Kmax = min(5, p − 1)`. | Shinichi: "OK what if we do not supply d - yes". Return type stays a fit, so downstream code is unchanged. |
 | T4 API, R | what does omitting `d` in `latent()` do? | **Flag: today omitting `d` silently means d = 1**, so switching it to auto changes existing users' fits. Recommend `d = "auto"` now, and switching the default in a later minor release with a NEWS warning. | Julia's switch is error → behaviour; R's would be behaviour → different behaviour. |
 | T5 caveat | wording only, or propagate K uncertainty? | **Wording now** (below). A bootstrap that re-selects K per replicate is a later option. | Honest now; the bootstrap costs Kmax fits per replicate. |
