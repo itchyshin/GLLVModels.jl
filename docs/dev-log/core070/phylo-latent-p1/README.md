@@ -11,7 +11,10 @@ maintainer signs the dated promotion block (D-300 answer 9).
 
 Generating scripts: `tools/phylo_latent/r_reference_p1.R` (SHA-256
 `b6acbf5e014a5eae39ba47d164def4c1c8461ccaf59ca8ec5ce8cfda3b34ff7f`) and
-`tools/phylo_latent/compare_phylo_latent_p1.jl`. Order of operations per
+`tools/phylo_latent/compare_phylo_latent_p1.jl` (the committed Julia receipts were
+written by its first version through JSON3; it now uses a dependency-free JSON
+codec so the P1 CI job can run the replay with `--project=.`, and a re-fit with
+it reproduces the A14 tree receipt's logLik exactly). Order of operations per
 case: R `generate` writes the literal fixture; Julia `fit` writes its receipt
 from that fixture; R `fit` fits the same fixture, records its own optimum and
 evaluates its objective at the Julia optimum. The replay test

@@ -9,8 +9,107 @@
 #       quantity against the signed tolerances.
 #
 # The replay test `test/test_phylo_latent_paired_p1.jl` includes this file for
-# the shared helpers; nothing here runs at include time.
-using JSON3, SHA, LinearAlgebra, GLLVModels
+# the shared helpers; nothing here runs at include time. Only root-project
+# dependencies are used (the P1 CI job runs tagged tests with --project=.),
+# so the receipts are read and written by the minimal JSON codec below.
+using SHA, LinearAlgebra, GLLVModels
+
+# --- minimal JSON codec (objects, arrays, strings, numbers, true/false/null) ---
+struct PLJson
+    d::Dict{String,Any}
+end
+_plwrap(x) = x isa Dict{String,Any} ? PLJson(x) : x isa Vector{Any} ? map(_plwrap, x) : x
+Base.getproperty(o::PLJson, s::Symbol) = _plwrap(getfield(o, :d)[String(s)])
+Base.haskey(o::PLJson, s::Symbol) = haskey(getfield(o, :d), String(s))
+
+mutable struct _PLCursor
+    s::String
+    i::Int
+end
+function _plskip!(c)
+    while c.i <= ncodeunits(c.s) && c.s[c.i] in (' ', '\n', '\r', '\t')
+        c.i += 1
+    end
+end
+function _plvalue!(c)
+    _plskip!(c)
+    ch = c.s[c.i]
+    if ch == '{'
+        c.i += 1; out = Dict{String,Any}(); _plskip!(c)
+        c.s[c.i] == '}' && (c.i += 1; return out)
+        while true
+            _plskip!(c); key = _plvalue!(c); _plskip!(c)
+            c.s[c.i] == ':' || error("JSON: expected ':' at $(c.i)"); c.i += 1
+            out[key] = _plvalue!(c); _plskip!(c)
+            c.s[c.i] == ',' ? (c.i += 1) : c.s[c.i] == '}' ? (c.i += 1; return out) :
+                error("JSON: expected ',' or '}' at $(c.i)")
+        end
+    elseif ch == '['
+        c.i += 1; out = Any[]; _plskip!(c)
+        c.s[c.i] == ']' && (c.i += 1; return out)
+        while true
+            push!(out, _plvalue!(c)); _plskip!(c)
+            c.s[c.i] == ',' ? (c.i += 1) : c.s[c.i] == ']' ? (c.i += 1; return out) :
+                error("JSON: expected ',' or ']' at $(c.i)")
+        end
+    elseif ch == '"'
+        c.i += 1; io = IOBuffer()
+        while true
+            b = c.s[c.i]
+            if b == '"'
+                c.i += 1; return String(take!(io))
+            elseif b == '\\'
+                e = c.s[c.i + 1]
+                if e == 'u'
+                    write(io, Char(parse(UInt16, c.s[(c.i + 2):(c.i + 5)]; base = 16))); c.i += 6
+                else
+                    write(io, Dict('n' => '\n', 't' => '\t', 'r' => '\r', 'b' => '\b',
+                        'f' => '\f', '"' => '"', '\\' => '\\', '/' => '/')[e]); c.i += 2
+                end
+            else
+                write(io, b); c.i = nextind(c.s, c.i)
+            end
+        end
+    elseif startswith(SubString(c.s, c.i), "true")
+        c.i += 4; return true
+    elseif startswith(SubString(c.s, c.i), "false")
+        c.i += 5; return false
+    elseif startswith(SubString(c.s, c.i), "null")
+        c.i += 4; return nothing
+    else
+        j = c.i
+        while j <= ncodeunits(c.s) && c.s[j] in "+-0123456789.eE"
+            j += 1
+        end
+        tok = c.s[c.i:(j - 1)]; c.i = j
+        return occursin(r"[.eE]", tok) ? parse(Float64, tok) : parse(Int, tok)
+    end
+end
+"""Parse a JSON file into nested `PLJson` / `Vector` / scalar values."""
+function pl_read_json(path)
+    c = _PLCursor(read(path, String), 1)
+    v = _plvalue!(c); _plskip!(c)
+    c.i > ncodeunits(c.s) || error("JSON: trailing characters in $path")
+    return _plwrap(v)
+end
+_pljson(io, x::AbstractString) = print(io, '"', escape_string(x), '"')
+_pljson(io, x::Bool) = print(io, x ? "true" : "false")
+_pljson(io, ::Nothing) = print(io, "null")
+_pljson(io, x::Integer) = print(io, x)
+_pljson(io, x::AbstractFloat) = isfinite(x) ? print(io, repr(Float64(x))) : print(io, "null")
+_pljson(io, x::Symbol) = _pljson(io, String(x))
+function _pljson(io, x::AbstractVector)
+    print(io, '['); for (k, v) in enumerate(x); k > 1 && print(io, ", "); _pljson(io, v); end; print(io, ']')
+end
+function _pljson(io, x::AbstractDict)
+    print(io, "{\n")
+    ks = sort!(collect(keys(x)))
+    for (k, key) in enumerate(ks)
+        print(io, "  "); _pljson(io, String(key)); print(io, ": "); _pljson(io, x[key])
+        print(io, k < length(ks) ? ",\n" : "\n")
+    end
+    print(io, '}')
+end
 
 const PL_P1_SOURCE_PIN = "9539352f66f2db2cc26b1c393e67212a359b60c9"
 const PL_P1_CASES = ("struct_phy_tree_rr", "struct_phy_dense_rr", "cov_phylo_latent_rsz")
@@ -30,7 +129,7 @@ end
 
 """Read a fixture JSON: response, labels, tree, dense correlation matrix."""
 function pl_read_fixture(path)
-    fx = JSON3.read(read(path, String))
+    fx = pl_read_json(path)
     Y = _pl_matrix(fx.Y_traits_by_observations)
     pl_y_hash(Y) == fx.data_sha256 || error("fixture response hash mismatch")
     return (Y = Y, species = String.(collect(fx.observation_species)),
@@ -104,7 +203,7 @@ function pl_fit_receipt(case, data_path, out_path)
         "species_aug_id" => phy.species_aug_id,
         "fit_elapsed_seconds" => elapsed, "qualified" => false)
     open(out_path, "w") do io
-        JSON3.pretty(io, receipt)
+        _pljson(io, receipt); println(io)
     end
     println("Julia $case loglik=$(fit.loglik) converged=$(fit.converged) elapsed=$(round(elapsed; digits = 2))s")
     return receipt
@@ -113,8 +212,8 @@ end
 """Every paired quantity for one case, from the fixture and both receipts."""
 function pl_compare(case, data_path, julia_path, r_path)
     fx = pl_read_fixture(data_path)
-    jr = JSON3.read(read(julia_path, String))
-    rr = JSON3.read(read(r_path, String))
+    jr = pl_read_json(julia_path)
+    rr = pl_read_json(r_path)
     n_traits = size(fx.Y, 1)
     r_theta = Float64.(collect(rr.theta_hat))
     j_theta = Float64.(collect(jr.theta_julia_order))

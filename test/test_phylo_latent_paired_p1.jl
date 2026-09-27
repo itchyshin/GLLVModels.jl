@@ -6,7 +6,7 @@
 # tools/phylo_latent/r_reference_p1.R from a private P1 build. The Julia side is
 # recomputed live from the stored response. A missing receipt is a counted
 # skip, never a pass.
-using Test, LinearAlgebra, JSON3, SHA, GLLVModels
+using Test, LinearAlgebra, SHA, GLLVModels
 
 include(joinpath(@__DIR__, "..", "tools", "phylo_latent", "compare_phylo_latent_p1.jl"))
 
@@ -43,8 +43,8 @@ function _plp1_case(case, fixture; refit::Bool, stationarity_gap::Bool = false)
         @test bytes2hex(sha256(read(_plp1(p)))) == _PLP1_SHA[p]
     end
     fx = pl_read_fixture(_plp1(data))
-    rr = JSON3.read(read(_plp1(rpath), String))
-    jr = JSON3.read(read(_plp1(jpath), String))
+    rr = pl_read_json(_plp1(rpath))
+    jr = pl_read_json(_plp1(jpath))
     n_traits = size(fx.Y, 1)
     K = fx.rank
     n_rr = n_traits * K - K * (K - 1) ÷ 2
@@ -137,8 +137,8 @@ end
         if _plp1_present("struct_phy_tree_rr/r-receipt.json", "struct_phy_dense_rr/r-receipt.json",
                 "struct_phy_tree_rr/julia-receipt.json", "struct_phy_dense_rr/julia-receipt.json")
             for side in ("r", "julia")
-                t = JSON3.read(read(_plp1("struct_phy_tree_rr/$(side)-receipt.json"), String))
-                d = JSON3.read(read(_plp1("struct_phy_dense_rr/$(side)-receipt.json"), String))
+                t = pl_read_json(_plp1("struct_phy_tree_rr/$(side)-receipt.json"))
+                d = pl_read_json(_plp1("struct_phy_dense_rr/$(side)-receipt.json"))
                 lt = side == "r" ? t.loglik : -t.objective
                 ld = side == "r" ? d.loglik : -d.objective
                 @test isapprox(lt, ld; rtol = 1e-4)
