@@ -206,6 +206,14 @@ with sparse random-effect design matrices. `GLLVModels.jl` solves a
   `predict` / `getLV` / `ordination`, and an `@formula` front-end
   (wide formula tables require one row per site, including intercept-only fits;
   an empty table is allowed when there are no covariates)
+- Automatic latent-dimension selection: omitting `K` from `fit_gllvm(Y;
+  family)` sweeps `K` (guarded against non-converged, non-improving, and
+  runaway fits) and returns the chosen fit with a one-line message; call
+  `select_lv` directly for the full per-`K` comparison table
+  (`Kmax`, `criterion = :bic_sites` default). See the tutorial's
+  "Choosing the number of latent dimensions" section — the chosen `K` is
+  an estimate, not ground truth, and downstream intervals are conditional
+  on it.
 - Wald / profile / bootstrap CI routes across scalar-dispersion GLM, grouped
   NB2/NB1/Beta/Gamma, and two-part families; grouped Tweedie, per-trait
   ordinal, and bridge-only edge rows remain status-gated before promotion
