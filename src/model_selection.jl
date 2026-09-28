@@ -140,7 +140,10 @@ wins) or `binary_ridge = Inf` (which disables it, restoring today's unpenalised
 behaviour). This is because most unpenalised Bernoulli fits beyond `K = 1` run
 away (see the runaway guard below): in an R recovery experiment with 20 species
 and `n = 120`, the ridge recovered the true `K = 2` in 8/10 datasets versus 4/10
-without it. The information criteria are still computed on the UNPENALISED
+without it. With weak loadings (0.8·N(0,1), the recovery grid's own binary cells,
+1,200 datasets) it did not raise recovery (0.41 versus 0.44 without it), but it never
+chose too many dimensions; there the ridge buys safety rather than accuracy, and
+dimensions beyond `K = 1` were found mainly at n = 300. The information criteria are still computed on the UNPENALISED
 Laplace log-likelihood at the ridge optimum (`GLLVModels._loglik(fit)`); the
 check that the log-likelihood does not fall as `K` grows uses the penalised value
 `ℓ − ½Σλ²/τ²`, which is what nesting guarantees under a ridge.
