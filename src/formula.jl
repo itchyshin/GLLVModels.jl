@@ -12,6 +12,8 @@
 #    model), so the Normal() routes supply it explicitly: `y ~ 1` goes through
 #    _fit_gaussian_trait_intercepts, and a formula with covariates gets per-trait
 #    intercept columns from _pervar_formula_design. `y ~ 0` stays zero mean.
+#    Phylogenetic fits (`Σ_phy` supplied) use one common intercept instead, since
+#    per-trait intercepts would absorb the species-constant phylo effect.
 #  - Site-level covariates (continuous, categorical contrasts via StatsModels, function
 #    terms, interactions) become columns of the engine's (p, n, q) design X, broadcast
 #    across species (X[t,s,k] = covariate[s,k]) ⇒ a coefficient SHARED across species.
@@ -84,7 +86,10 @@ end
 # The per-variance Gaussian fitter treats X as the complete mean design. Use
 # StatsModels' intercept/rank rules before expanding a site intercept to one
 # coefficient per trait. The shared-variance route with covariates uses it too.
-function _pervar_formula_design(rhs, cols, p, n; contrasts, names::Bool=false)
+# `common_intercept=true` keeps one intercept shared by all traits instead (for
+# phylogenetic fits, where per-trait intercepts would absorb the phylo effect).
+function _pervar_formula_design(rhs, cols, p, n; contrasts, names::Bool=false,
+                                common_intercept::Bool=false)
     intercept = !StatsModels.omitsintercept(rhs)
     site_names = String[]
     terms = rhs isa Tuple ? rhs : (rhs,)
@@ -103,9 +108,11 @@ function _pervar_formula_design(rhs, cols, p, n; contrasts, names::Bool=false)
         site_names = model_names[site_idx]
     end
     size(site, 1) == n || throw(DimensionMismatch("formula design must have one row per site"))
-    q0 = intercept ? p : 0
+    q0 = intercept ? (common_intercept ? 1 : p) : 0
     X = zeros(p, n, q0 + size(site, 2))
-    if intercept
+    if intercept && common_intercept
+        X[:, :, 1] .= 1
+    elseif intercept
         for t in 1:p
             X[t, :, t] .= 1
         end
@@ -115,7 +122,11 @@ function _pervar_formula_design(rhs, cols, p, n; contrasts, names::Bool=false)
     end
     if names
         coefficient_names = String[]
-        append!(coefficient_names, ("trait_$(trait)" for trait in 1:p if intercept))
+        if intercept && common_intercept
+            push!(coefficient_names, "(Intercept)")
+        else
+            append!(coefficient_names, ("trait_$(trait)" for trait in 1:p if intercept))
+        end
         append!(coefficient_names, site_names)
         return X, coefficient_names
     end
@@ -258,7 +269,9 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
     if family isa Normal
         # fit_gaussian_gllvm treats X as the complete mean, so build the same
         # trait-intercept + shared-slope design as the other Gaussian routes.
-        Xg = _pervar_formula_design(formula.rhs, cols, p, n; contrasts = contrasts)
+        # A phylogenetic fit keeps one common intercept (see _fit_gaussian_trait_intercepts).
+        Xg = _pervar_formula_design(formula.rhs, cols, p, n; contrasts = contrasts,
+            common_intercept = get(kwargs, :Σ_phy, nothing) !== nothing)
         return fit_gaussian_gllvm(Y; X = Xg, K = K, kwargs...)
     elseif family isa NegativeBinomial
         return fit_nb_gllvm_grouped_cov(Y; X = X, K = K, kwargs...)
