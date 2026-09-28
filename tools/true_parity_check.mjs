@@ -30,6 +30,25 @@
 // deferred (name-twin detection from receipt content; a CARRY_VERIFY mode that re-hashes the
 // gllvmTMB tree itself) is stated as a gap, not silently patched over -- see
 // docs/dev-log/core070/true-parity-latest/GATES.md.
+//
+// Evidence tier (review of #559, D-295 row 5 "a name match never counts"): a case-map row carries
+// `evidence_tier` ("numeric" or "registration"). C1 prints bound_numeric / bound_registration_only
+// and is MET only when no bound row is registration-only (a signed disposition still resolves a
+// row); C8 does not count a registration-only row as twinned. A missing tier is fail-closed.
+//
+// Numeric tier verified against the receipt (review of #561, BLOCKING): the label alone was
+// trusted, so a one-word edit ("registration" -> "numeric") on a namespace row made C1_MET and
+// C8_MET. A row labelled "numeric" now counts as numeric only if its cited receipts carry a
+// machine-readable `comparison` block (schema in numericReceiptStatus below and in GATES.md)
+// pinned to P1 and covering every executable_case_id, each case within its tolerance.
+// Otherwise the row reads NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT and does not bind.
+//
+// Receipt status (review of #567's tamper tests): a comparison block within tolerance in a
+// receipt whose own verdict/status/batch_status/harness_pass is not a pass value (e.g. "FAIL")
+// no longer binds: NUMERIC_RECEIPT_NOT_PASSED, unless the row carries a maintainer-signed
+// `receipt_status_exception`, in which case it counts in bound_signed=, not bound_numeric=.
+// And a recorded abs_diff/max_abs_diff that disagrees with the difference the tool recomputes
+// from r_value/julia_value fails the row as NUMERIC_RECORDED_DIFF_MISMATCH.
 import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -141,9 +160,12 @@ function looksPathLike(text) {
 // A DISPOSITION-SIGNED scoreboard row (markdown has no separate signed_by/signed_on columns)
 // records its signer and date as plain tokens in the same free-text cell, e.g.
 // "Disposition: outside_boundary; signed_by: Shinichi Nakagawa; signed_on: 2026-09-27".
+// The same signer allow-list and date check as the case-map rows apply here.
 function hasSignedTokens(text) {
   if (!text) return false;
-  return /signed_by:\s*\S/.test(text) && /signed_on:\s*\d{4}-\d{2}-\d{2}/.test(text);
+  const by = text.match(/signed_by:\s*([^;|]+)/);
+  const on = text.match(/signed_on:\s*([^;|\s]+)/);
+  return !!by && !!on && signatureProblem(by[1], on[1]) === null;
 }
 
 function loadCasemap() {
@@ -160,16 +182,172 @@ function rowReceiptPaths(row) {
   return Array.isArray(r) ? r : [r];
 }
 
+// A case-map row's evidence tier: "numeric" (the receipt records an actual R-vs-Julia output
+// comparison) or "registration" (export/existence registration only, e.g. the namespace Tier 0
+// batch). Anything but "numeric" -- including a missing field -- is treated as registration-only.
+function isNumericTier(row) { return row.evidence_tier === 'numeric'; }
+
+// The label can only lower a row, never raise it: "numeric" must be backed by receipt content.
+// A numeric receipt is a JSON file with a top-level `comparison` block:
+//
+//   "comparison": {
+//     "pin": "P1",                      // or the full P1 sha
+//     "cases": [
+//       { "case_id": "CASE-1", "quantity": "coef",
+//         "abs_diff": 2.4e-06,          // or "max_abs_diff" (the core070 receipt spelling), or
+//                                       // "r_value" + "julia_value" (finite numbers, or equal-
+//                                       // length arrays of finite numbers; the tool computes the
+//                                       // max absolute difference itself)
+//         "tolerance": 1e-04 }          // finite number > 0
+//     ]
+//   }
+//
+// Every case must satisfy abs_diff <= tolerance, and the union of case_ids across the row's
+// receipts must cover every executable_case_id. A malformed block in any cited receipt fails the
+// row (it is never skipped). Returns { ok } or { ok: false, reason }.
+//
+// Recorded diff cross-check (review of #567, tamper test "stale max_abs_diff, vectors disagree by
+// 1"): when a case carries a comparable r_value + julia_value pair, the tool's own difference is
+// the one judged against tolerance, and every recorded abs_diff / max_abs_diff on that case must
+// agree with it to 1e-12 relative, or the row fails as NUMERIC_RECORDED_DIFF_MISMATCH. A recorded
+// value is used on its own only when the case carries no comparable pair.
+const RECORDED_DIFF_REL_TOL = 1e-12;
+
+// Returns { d } (the difference to judge), or { d: null } when there is none, or
+// { mismatch: reason } when a recorded difference disagrees with the recomputed one.
+function comparisonCaseDiff(c) {
+  const fin = (x) => typeof x === 'number' && Number.isFinite(x);
+  const finArr = (x) => Array.isArray(x) && x.length > 0 && x.every(fin);
+  let computed = null;
+  if (fin(c.r_value) && fin(c.julia_value)) computed = Math.abs(c.r_value - c.julia_value);
+  else if (finArr(c.r_value) && finArr(c.julia_value) && c.r_value.length === c.julia_value.length) {
+    computed = Math.max(...c.r_value.map((r, i) => Math.abs(r - c.julia_value[i])));
+  }
+  const recorded = [];
+  for (const k of ['abs_diff', 'max_abs_diff']) {
+    if (c[k] === undefined) continue;
+    if (!fin(c[k]) || c[k] < 0) return { d: null };
+    recorded.push([k, c[k]]);
+  }
+  if (computed === null) return { d: recorded.length ? recorded[0][1] : null };
+  for (const [k, v] of recorded) {
+    if (Math.abs(v - computed) > RECORDED_DIFF_REL_TOL * Math.max(Math.abs(v), Math.abs(computed))) {
+      return { mismatch: `case ${c.case_id}: recorded ${k} ${v} != recomputed ${computed} from r_value/julia_value` };
+    }
+  }
+  return { d: computed };
+}
+
+// Receipt status (review of #567, tamper test "verdict = FAIL, comparison intact"): a comparison
+// block within tolerance is not enough if the receipt itself says the run did not pass. These are
+// the status fields real core070 receipts write (case receipts: `verdict`, `batch_status`,
+// `harness_pass`; batch receipts: `status`). Each one present at the top level of a cited JSON
+// receipt, or inside its `comparison` block, must hold a pass value; anything else (including
+// "FAIL", null, or an object) fails the row as NUMERIC_RECEIPT_NOT_PASSED unless the row carries a
+// maintainer-signed `receipt_status_exception` (see receiptStatusExceptionProblem).
+const RECEIPT_STATUS_FIELDS = ['status', 'verdict', 'batch_status', 'harness_pass'];
+const isPassValue = (v) => v === 'PASS' || v === 'pass' || v === true;
+
+function receiptNotPassed(j, p) {
+  const where = [[j, ''], [j.comparison && typeof j.comparison === 'object' ? j.comparison : null, 'comparison.']];
+  for (const [obj, prefix] of where) {
+    if (!obj) continue;
+    for (const f of RECEIPT_STATUS_FIELDS) {
+      if (Object.prototype.hasOwnProperty.call(obj, f) && !isPassValue(obj[f])) {
+        return `${prefix}${f}=${JSON.stringify(obj[f])} in ${p}`;
+      }
+    }
+  }
+  return null;
+}
+
+function numericReceiptStatus(row) {
+  const paths = rowReceiptPaths(row);
+  if (paths.length === 0) return { ok: false, reason: 'no receipt' };
+  const covered = new Set();
+  let blocks = 0;
+  let notPassed = null;
+  for (const p of paths) {
+    const txt = show(p);
+    if (txt === null) return { ok: false, reason: `unreadable ${p}` };
+    let j;
+    try { j = JSON.parse(txt); } catch { continue; } // a non-JSON receipt carries no comparison
+    if (!j || typeof j !== 'object') continue;
+    if (notPassed === null) notPassed = receiptNotPassed(j, p);
+    if (j.comparison === undefined) continue;
+    const cmp = j.comparison;
+    if (!cmp || typeof cmp !== 'object' || Array.isArray(cmp)) return { ok: false, reason: `malformed comparison in ${p}` };
+    if (cmp.pin !== 'P1' && cmp.pin !== P1_SHA) return { ok: false, reason: `comparison not pinned to P1 in ${p}` };
+    if (!Array.isArray(cmp.cases) || cmp.cases.length === 0) return { ok: false, reason: `comparison has no cases in ${p}` };
+    for (const c of cmp.cases) {
+      if (!c || typeof c.case_id !== 'string' || c.case_id.length === 0) return { ok: false, reason: `comparison case without case_id in ${p}` };
+      const tol = c.tolerance;
+      if (typeof tol !== 'number' || !Number.isFinite(tol) || tol <= 0) return { ok: false, reason: `case ${c.case_id}: tolerance not a finite number > 0` };
+      const cd = comparisonCaseDiff(c);
+      if (cd.mismatch) return { ok: false, kind: 'diff_mismatch', reason: `${cd.mismatch} in ${p}` };
+      const d = cd.d;
+      if (d === null) return { ok: false, reason: `case ${c.case_id}: no finite abs_diff or r_value/julia_value` };
+      if (d > tol) return { ok: false, reason: `case ${c.case_id}: abs_diff ${d} > tolerance ${tol}` };
+      covered.add(c.case_id);
+    }
+    blocks++;
+  }
+  if (blocks === 0) return { ok: false, reason: 'no comparison block in any receipt' };
+  const ids = Array.isArray(row.executable_case_ids) ? row.executable_case_ids : [row.executable_case_ids];
+  const missing = ids.filter((id) => !covered.has(id));
+  if (missing.length) return { ok: false, reason: `case ids not compared: ${missing.join(',')}` };
+  // The comparison itself holds; the row still does not bind if a cited receipt says it failed.
+  if (notPassed !== null) return { ok: false, kind: 'not_passed', reason: notPassed };
+  return { ok: true };
+}
+
+// A maintainer may accept a receipt whose status is not a pass (e.g. a batch receipt that reads
+// FAIL because of one unrelated case) by signing the row: `receipt_status_exception:
+// { "reason": "...", "signed_by": "...", "signed_on": "YYYY-MM-DD" }`. Same signer allow-list and
+// date rule as a signed disposition, plus a non-empty reason. It only waives the status check:
+// the comparison block must still be valid and within tolerance. A row bound this way counts in
+// bound_signed=, never in bound= / bound_numeric=. Returns null when acceptable, else why not.
+function receiptStatusExceptionProblem(row) {
+  const e = row.receipt_status_exception;
+  if (e === undefined || e === null) return 'no receipt_status_exception';
+  if (typeof e !== 'object' || typeof e.reason !== 'string' || e.reason.trim().length === 0) return 'receipt_status_exception without a reason';
+  return signatureProblem(e.signed_by, e.signed_on);
+}
+
 function isValidSha256(s) { return typeof s === 'string' && SHA256_RE.test(s); }
 
 // A DISPOSITION-SIGNED row (case-map JSON schema) needs an actual signer and date on the row,
-// not just the label. The tool never verifies the signer's identity -- that happens in PR
-// review, by a human reading the diff (GATES.md says so) -- it only refuses to treat an
-// unsigned label as if it were signed.
+// not just the label. The tool cannot verify that the named person actually signed -- that
+// happens in PR review, by a human reading the diff (GATES.md says so) -- but it refuses an
+// unsigned label, a signer outside the maintainer allow-list, and a date that is not a real
+// calendar date or lies in the future (review of #561: "Claude Fable (agent)" / "9999-99-99"
+// both passed before).
+const SIGNER_ALLOW = new Set(['Shinichi Nakagawa', 'itchyshin']);
+const SIGNER_DENY_RE = /agent|claude|codex|cursor|fable/i;
+
+// A real YYYY-MM-DD calendar date, no later than the current date anywhere on earth (UTC+14),
+// so a signer's local date is never refused for time-zone reasons alone.
+function isRealPastIsoDate(s) {
+  if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const d = new Date(`${s}T00:00:00Z`);
+  if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== s) return false;
+  const latestToday = new Date(Date.now() + 14 * 3600 * 1000).toISOString().slice(0, 10);
+  return s <= latestToday;
+}
+
+// Returns null when the signature is acceptable, else the reason it is not.
+function signatureProblem(signedBy, signedOn) {
+  if (typeof signedBy !== 'string' || signedBy.trim().length === 0 || typeof signedOn !== 'string' || signedOn.trim().length === 0) {
+    return 'DISPOSITION-SIGNED-UNVERIFIED';
+  }
+  const who = signedBy.trim();
+  if (SIGNER_DENY_RE.test(who) || !SIGNER_ALLOW.has(who)) return 'DISPOSITION-SIGNER-NOT-ALLOWED';
+  if (!isRealPastIsoDate(signedOn.trim())) return 'DISPOSITION-SIGNED-BAD-DATE';
+  return null;
+}
+
 function dispositionSignedProperly(row) {
-  return row.disposition === 'DISPOSITION-SIGNED'
-    && typeof row.signed_by === 'string' && row.signed_by.trim().length > 0
-    && typeof row.signed_on === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(row.signed_on);
+  return row.disposition === 'DISPOSITION-SIGNED' && signatureProblem(row.signed_by, row.signed_on) === null;
 }
 
 // Receipt carry rule (Packet 1 row 1): a row not measured directly against P1 needs a `carry`
@@ -282,8 +460,12 @@ function checkC0() {
 function checkC1() {
   const rows = loadCasemap();
   const req = rows.filter((r) => ['required_core', 'compatibility_adapter'].includes(r.classification));
-  let bound = 0, free = 0;
+  let bound = 0, free = 0, boundNumeric = 0, boundSigned = 0;
   const unsigned = {};
+  const registrationOnly = [];
+  const numericLabelOnly = [];
+  const notPassed = [];
+  const diffMismatch = [];
   const dangling = [];
   const stale = [];
   for (const r of req) {
@@ -298,18 +480,35 @@ function checkC1() {
     }
     const d = r.disposition ?? null;
     if (d === 'DISPOSITION-SIGNED') {
-      dispositionSignedProperly(r) ? bound++ : (unsigned['DISPOSITION-SIGNED-UNVERIFIED'] = (unsigned['DISPOSITION-SIGNED-UNVERIFIED'] || 0) + 1);
+      // A signed disposition resolves the row but is counted in bound_signed=, never in bound=
+      // (bound= is numeric evidence only), so a signed registration row cannot pose as a twin.
+      const why = signatureProblem(r.signed_by, r.signed_on);
+      if (why === null) boundSigned++; else unsigned[why] = (unsigned[why] || 0) + 1;
       continue;
     }
     if (d !== null && d !== undefined) { unsigned[d] = (unsigned[d] || 0) + 1; continue; }
     // d === null: bound requires BOTH case ids and a resolving receipt -- case ids alone, or a
     // receipt alone, are not enough.
     const caseIdsPresent = Array.isArray(r.executable_case_ids) ? r.executable_case_ids.length > 0 : !!r.executable_case_ids;
-    (caseIdsPresent && paths.length > 0) ? bound++ : free++;
+    // Evidence tier (D-295 row 5, review of #559): only a row whose receipt records a numeric
+    // R-vs-Julia comparison (`evidence_tier: "numeric"`) counts as bound. A registration/existence
+    // match ("registration") is a name match, and a missing tier is fail-closed as the same.
+    // The label must also be backed by a numeric comparison block in the receipt (review of #561).
+    if (caseIdsPresent && paths.length > 0) {
+      if (!isNumericTier(r)) { registrationOnly.push(r.source_id); continue; }
+      const ns = numericReceiptStatus(r);
+      if (ns.ok) { bound++; boundNumeric++; } else if (ns.kind === 'not_passed') {
+        const why = receiptStatusExceptionProblem(r);
+        if (why === null) boundSigned++; else notPassed.push(`${r.source_id}(${ns.reason}; ${why})`);
+      } else if (ns.kind === 'diff_mismatch') diffMismatch.push(`${r.source_id}(${ns.reason})`);
+      else numericLabelOnly.push(`${r.source_id}(${ns.reason})`);
+    } else {
+      free++;
+    }
   }
   const nUnsigned = Object.values(unsigned).reduce((a, b) => a + b, 0);
-  console.log(`C1 required=${req.length} bound=${bound} free=${free} unsigned_or_blocked=${nUnsigned} ${JSON.stringify(unsigned)} dangling_receipts=${dangling.join(';') || 'none'} stale_carries=${stale.join(';') || 'none'}`);
-  return req.length > 0 && nUnsigned === 0 && free === 0 && dangling.length === 0 && stale.length === 0;
+  console.log(`C1 required=${req.length} bound=${bound} bound_numeric=${boundNumeric} bound_registration_only=${registrationOnly.length} bound_signed=${boundSigned} free=${free} unsigned_or_blocked=${nUnsigned} ${JSON.stringify(unsigned)} dangling_receipts=${dangling.join(';') || 'none'} stale_carries=${stale.join(';') || 'none'} registration_only=${registrationOnly.join(';') || 'none'} numeric_label_without_numeric_receipt=${numericLabelOnly.join(';') || 'none'} numeric_receipt_not_passed=${notPassed.join(';') || 'none'} numeric_recorded_diff_mismatch=${diffMismatch.join(';') || 'none'}`);
+  return req.length > 0 && nUnsigned === 0 && free === 0 && dangling.length === 0 && stale.length === 0 && registrationOnly.length === 0 && numericLabelOnly.length === 0 && notPassed.length === 0 && diffMismatch.length === 0;
 }
 
 // --- C2..C5: scoreboard tiers, plus C2's boundary-capability cross-check --
@@ -379,7 +578,19 @@ function checkC8() {
     if (dangling.length) { failing.push(`${r.source_id}:DANGLING_RECEIPT`); continue; }
     const caseIdsPresent = Array.isArray(r.executable_case_ids) ? r.executable_case_ids.length > 0 : !!r.executable_case_ids;
     const twinned = caseIdsPresent && paths.length > 0;
-    if (!twinned) failing.push(`${r.source_id}:NOT_TWINNED_NOT_SIGNED`);
+    if (!twinned) { failing.push(`${r.source_id}:NOT_TWINNED_NOT_SIGNED`); continue; }
+    // A registration-only receipt is a name match, which never counts as a twin (D-295 row 5).
+    if (!isNumericTier(r)) { failing.push(`${r.source_id}:REGISTRATION_ONLY_NOT_TWINNED`); continue; }
+    // A "numeric" label without a numeric comparison block in the receipt is still a name match.
+    const ns = numericReceiptStatus(r);
+    if (ns.ok) continue;
+    if (ns.kind === 'not_passed') {
+      // A receipt that says it did not pass is not a twin, unless the maintainer signed for it.
+      if (receiptStatusExceptionProblem(r) !== null) failing.push(`${r.source_id}:NUMERIC_RECEIPT_NOT_PASSED(${ns.reason})`);
+      continue;
+    }
+    if (ns.kind === 'diff_mismatch') { failing.push(`${r.source_id}:NUMERIC_RECORDED_DIFF_MISMATCH(${ns.reason})`); continue; }
+    failing.push(`${r.source_id}:NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT`);
   }
   console.log(`C8 rows=${rows.length} failing=${failing.join(';') || 'none'}`);
   return failing.length === 0;

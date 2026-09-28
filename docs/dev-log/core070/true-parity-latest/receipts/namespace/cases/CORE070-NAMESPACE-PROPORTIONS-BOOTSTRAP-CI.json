@@ -1,0 +1,49 @@
+{
+ "schema": "core070-namespace-1-case-receipt/v1",
+ "case_id": "CORE070-NAMESPACE-PROPORTIONS-BOOTSTRAP-CI",
+ "source_id": "namespace/export/.proportions_bootstrap_ci",
+ "bucket": "retired_at_p1",
+ "meaning": "The export left the NAMESPACE between P0 and P1 (definition still present, unexported). A PASS confirms the retirement; the row is retired, not measured for parity.",
+ "pin": "P1",
+ "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+ "r_sources_read": [
+  {
+   "path": "NAMESPACE",
+   "sha256": "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c",
+   "read_as": "git show 9539352f66f2db2cc26b1c393e67212a359b60c9:NAMESPACE"
+  },
+  {
+   "path": "R/proportions-ci.R",
+   "sha256": "a05e86b8fc335bab960c8c0e5b4257eb3e913296a8acbaa5fec159628f00b00b",
+   "read_as": "git show 9539352f66f2db2cc26b1c393e67212a359b60c9:R/proportions-ci.R"
+  }
+ ],
+ "r_check": {
+  "namespace_line": "export(.proportions_bootstrap_ci)",
+  "definition_pattern": "^\\.proportions_bootstrap_ci\\s*<-\\s*function",
+  "definition_line_hint": 423,
+  "registered": false,
+  "defined": true,
+  "expected_registered": false,
+  "expected_defined": true
+ },
+ "julia_check": null,
+ "julia_commit": "c29c1c0b6d8d985e1edd96426edef2621402a03f",
+ "julia_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+ "result": "PASS",
+ "verifier": {
+  "tool": "tools/core070_verify_namespace_1_batch.py",
+  "case_verdict": "PASS",
+  "category": "retirement_confirmed",
+  "reason": "export absent from the P1 NAMESPACE; definition still present",
+  "batch_verdict": "CORE070_NAMESPACE_1_STATE_OK"
+ },
+ "batch_receipt": {
+  "path": "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json",
+  "sha256": "33190f383ad320f14e6accc560774a6c46911ab6965f86e320eeb63f3dd82e6b"
+ },
+ "contract": {
+  "path": "docs/dev-log/core070/true-parity-latest/namespace-1-batch-contract-p1.json",
+  "sha256": "fe645d39063248210c66bea21428bd282cd8d0982666940f58422e0c6e34ea51"
+ }
+}
