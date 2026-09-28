@@ -130,6 +130,7 @@ println(_SHARD === nothing ?
     _shard_include("test_censored_poisson.jl")
     _shard_include("test_truncated_nbinom2.jl")
     _shard_include("test_truncnb2_precision.jl")
+    _shard_include("test_truncnb2_mode_search.jl")
     _shard_include("test_nb2_precision.jl")
     _shard_include("test_negbin_laplace.jl")
     _shard_include("test_beta_laplace.jl")
