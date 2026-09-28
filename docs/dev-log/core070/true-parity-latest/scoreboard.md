@@ -44,6 +44,7 @@ decision for the PR that measures it, not something this tool does.
 - `test/fixtures/gen_ordinal_logit_p1.R`
 - `test/fixtures/ordinal_logit_p1.toml`
 - `test/fixtures/ordinal_logit_p1_data.csv`
+- `test/fixtures/temporal_p1/generate_temporal_p1.R`
 
 ## Rows
 
