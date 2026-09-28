@@ -1,3 +1,12 @@
+## 2026-09-27: Binomial bootstrap refit reports its own verdict (part of #504)
+
+- Branch `claude/binom-boot-verdict-504` from `origin/main` @ `cb5688f7e`. The Laplace `BinomialFit`
+  refit closure returns `(θ, converged, loglik)` (#508/#516 contract); AGHQ route unchanged.
+- New `test/test_confint_bootstrap_verdict_binomial.jl`: 7 pass, 8 fail, 14 error on main; 29/29 on
+  Julia 1.10.12 and 1.13.0 (per-file; full suite not run).
+  Six neighbouring files that bootstrap a Binomial fit: 2006/2006 on 1.10.12.
+- After-task: `docs/dev-log/after-task/2026-09-27-binom-boot-verdict-504.md`.
+
 ## 2026-09-27: One shared pin source for the Core070 parity harness, plus a P1 oracle build (D-294/D-295)
 
 - Branch `claude/true-parity-p1-oracle`, builds on #524 (merged into `main` as `824d22a4b`
