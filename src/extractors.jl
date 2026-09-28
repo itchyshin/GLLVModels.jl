@@ -476,12 +476,13 @@ getResidualCor(fit::_GllvmOrTwoLevel; level::Symbol = :unit) = extract_residual_
 # ---------------------------------------------------------------------------
 
 """
-    extract_ordination(fit, Y; rotate::Bool = true) -> (sites, species, rotation)
+    extract_ordination(fit, Y; rotate::Bool = true, kwargs...) -> (sites, species, rotation)
 
 Canonical snake_case accessor forwarding to [`ordination`](@ref), mirroring
-`gllvmTMB::extract_ordination()`.
+`gllvmTMB::extract_ordination()`. Other keywords (`X`, `N`, ...) are forwarded too.
 """
-extract_ordination(fit, Y::AbstractMatrix; rotate::Bool = true) = ordination(fit, Y; rotate = rotate)
+extract_ordination(fit, Y::AbstractMatrix; rotate::Bool = true, kwargs...) =
+    ordination(fit, Y; rotate = rotate, kwargs...)
 
 # ---------------------------------------------------------------------------
 # Ordinal cutpoints.
