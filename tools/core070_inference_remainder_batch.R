@@ -24,7 +24,6 @@ stopifnot(length(args) == 2L)
 frozen_library <- normalizePath(args[[1]], mustWork = TRUE)
 output_dir <- args[[2]]
 stopifnot(!dir.exists(output_dir))
-dir.create(output_dir, recursive = TRUE)
 
 sha256_file <- function(path) {
   command <- if (nzchar(Sys.which("sha256sum"))) "sha256sum" else "shasum"
@@ -76,6 +75,10 @@ for (rel in names(contract$source_pins)) {
   digest <- sha256_file(path)
   stopifnot(identical(digest, contract$source_pins[[rel]]))
 }
+
+# Create the destination only after the pin checks pass (PR #571 review F6),
+# so a refused run leaves nothing behind.
+dir.create(output_dir, recursive = TRUE)
 
 # ---------------------------------------------------------------------------
 # 1. Shared Gaussian fixture (same convention as

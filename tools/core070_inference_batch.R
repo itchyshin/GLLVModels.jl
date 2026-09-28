@@ -29,7 +29,6 @@ stopifnot(length(args) == 2L)
 root <- normalizePath(args[[1]], mustWork = TRUE)
 destination <- args[[2]]
 stopifnot(!dir.exists(destination))
-dir.create(destination, recursive = TRUE)
 
 suppressPackageStartupMessages(library(jsonlite))
 
@@ -76,6 +75,13 @@ if (identical(parity_pin, "P1")) {
   for (rel in names(src_pins)) {
     stopifnot(identical(sha256_file(file.path(p1_root, rel)), src_pins[[rel]]))
   }
+}
+
+# Create the destination only after the pin checks pass (PR #571 review F6),
+# so a refused run leaves nothing behind.
+dir.create(destination, recursive = TRUE)
+
+if (identical(parity_pin, "P1")) {
   probe <- contract$r_route_comparand$p1_probe
   results_rel <- "p1-route-probe-results.tsv"
   results_path <- file.path(destination, results_rel)
