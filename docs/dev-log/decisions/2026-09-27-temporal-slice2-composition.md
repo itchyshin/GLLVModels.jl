@@ -88,6 +88,27 @@ Laplace solve has residual precision near 1e6. The receipt test checks the suppr
 cells against the 256-bit reference at 1e-10 and against R at 5e-8; every other cell
 stays at 1e-8.
 
+The 256-bit reference shows only that Julia's gradient is consistent with Julia's NLL.
+Two pieces of evidence tie the discrepancy to R's side. First, Julia's NLL and gradient
+equal R's `fn` / `gr` to 1e-8 at the deterministic off-optimum coordinates on these same
+two cells (max 3.0e-9 / 3.4e-9 over all 25 cells), so the objective is R's. Second, an
+R-only check (independent review of PR #563): TMB's `gr` against a central difference of
+TMB's own `fn` at R's `opt$par`, h = 1e-4, P1 temporary library:
+
+    sim_rw__Tindep_Wrowlatent  sigma_eps fixed  max|gr - fd(fn)| = 1.13e-05
+    sim_rw__Tindep_Wrow        sigma_eps fixed  max|gr - fd(fn)| = 9.6e-06
+    sim_u__Tindep_Bindep       sigma_eps free   max|gr - fd(fn)| = 4.4e-07
+
+R's own `fn` and `gr` are more than an order of magnitude less self-consistent on the
+suppressed cells than on a free-sigma cell. With h = 1e-4 this carries truncation error
+as well, so it is directional support for the inner-Laplace explanation, not a bound on
+R's gradient error. Reproduce from the repository root:
+
+    RLIB=<scratch>/Rlib Rscript test/fixtures/temporal_p1/generate_temporal_p1_slice2.R fdcheck
+
+(stage `fdcheck` prints the three lines above and writes nothing). The 5e-8 tolerance is
+unchanged.
+
 ## Ordination
 
 `extract_ordination(fit; level = :unit)` follows R/extractors.R:505-566: with a unit term

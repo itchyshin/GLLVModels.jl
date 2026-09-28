@@ -13,7 +13,8 @@
 ## julia_optima_composed.csv, written by
 ## test/fixtures/temporal_p1/julia_optima_composed.jl, and writes
 ## composed_cross.toml: R's objective at Julia's optimum for every fit
-## (cross-objective, the Julia-to-R direction).
+## (cross-objective, the Julia-to-R direction). Stage `fdcheck` prints R's own
+## gradient-versus-finite-difference check at R's optimum (review of PR #563, F3).
 ##
 ## Data: R's own slice-2 test fixtures at P1 (test-temporal-sixth-source-engine.R,
 ## test-temporal-program-composed-simulation.R, test-temporal-sixth-source-oracles.R)
@@ -331,4 +332,22 @@ if (identical(stage, "stage1")) {
   }
   close(con)
   cat("cross stage written\n")
+} else if (identical(stage, "fdcheck")) {
+  ## R-side self-consistency of TMB's gradient at R's optimum (writes nothing):
+  ## max |gr - central difference of fn|, h = 1e-4, on the two sigma_eps-fixed
+  ## cells and one free-sigma cell. Recorded in
+  ## docs/dev-log/decisions/2026-09-27-temporal-slice2-composition.md.
+  h <- 1e-4
+  for (id in c("sim_rw__Tindep_Wrowlatent", "sim_rw__Tindep_Wrow", "sim_u__Tindep_Bindep")) {
+    cl <- Filter(function(x) identical(x$id, id), cells)[[1L]]
+    fit <- fit_cell(cl)
+    par <- fit$opt$par
+    gr <- as.numeric(fit$tmb_obj$gr(par))
+    fd <- vapply(seq_along(par), function(k) {
+      e <- replace(numeric(length(par)), k, h)
+      (fit$tmb_obj$fn(par + e) - fit$tmb_obj$fn(par - e)) / (2 * h)
+    }, numeric(1))
+    cat(sprintf("%-28s sigma_eps %-5s max|gr - fd(fn)| = %.3g\n", id,
+      if ("log_sigma_eps" %in% names(par)) "free" else "fixed", max(abs(gr - fd))))
+  }
 }
