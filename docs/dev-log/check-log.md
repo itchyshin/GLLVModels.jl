@@ -1,3 +1,19 @@
+## 2026-09-27: P1 ledger assembled from the per-family case maps (draft, nothing signed)
+
+- Branch `claude/true-parity-p1-ledger-assembly`: `claude/true-parity-p1-aghq` (`8f4427d4a`) plus merges
+  of `claude/true-parity-p1-isdm` (`d1eb87947`) and `claude/true-parity-p1-namespace-v2` (`92cf39571`).
+  Both merges conflicted only in this file (pure prepends on both sides, base empty); kept both entries.
+- `tools/true_parity_assemble.py` writes `scoreboard.md`, `case-map-assembled.json` and `reverse-gap.json`
+  from the nine tracked `case-map-<family>.json` files (297 rows, no duplicate source ids, no conflicts).
+  `--check` current; `tools/test_true_parity_assemble.py` 13/13 (conflicting duplicate id fails, missing
+  map fails, unbucketed tier fails, hand-edited scoreboard fails, EVIDENCED count equals checker C1
+  `bound=`). `node tools/test_true_parity_check.mjs` passes.
+- Checker, PARITY_REF=FS, PARITY_CASEMAP=case-map-assembled.json: C0 NOT_MET (default_pin=P0), C1 NOT_MET
+  (required=297 bound_numeric=52 registration_only=44 free=197 blocked=4), C2 NOT_MET (52/297 done), C3/C4/C5
+  NOT_MET (empty selection), C6 NOT_MET (372 items, decision null), C7 MET, C8 NOT_MET (245 failing), X2
+  NOT_MET (52/297). With PR #533's `case-map.json` folded in scratch only: 335 rows, 318 required, no
+  conflicts, same verdicts.
+
 ## 2026-09-27: aghq rows re-measured at gllvmTMB P1 (A3), tracked receipts
 
 - Branch `claude/true-parity-p1-aghq`, stacked on `claude/true-parity-p1-family` (PR #584 at `0fb2b9411`),
