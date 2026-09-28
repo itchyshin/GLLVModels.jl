@@ -315,6 +315,7 @@ function bootstrap_ci(fit::GllvmFit;
             "y has $(size(y, 2)) sites but n_sites was determined to be $n"))
     end
 
+    X = _mean_X(fit, X, n)
     if q > 0 && X === nothing
         throw(ArgumentError(
             "The fitted model has q = $q fixed effects but X was not supplied. " *
