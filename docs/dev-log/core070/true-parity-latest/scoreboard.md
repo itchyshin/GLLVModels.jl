@@ -46,7 +46,9 @@ decision for the PR that measures it, not something this tool does.
 - `test/fixtures/isdm/cloglog_grid_p1.csv`
 - `test/fixtures/isdm/export_p1_fixtures.R`
 - `test/fixtures/isdm/julia_estimates_p1.toml`
+- `test/fixtures/isdm/julia_estimates_psi_p1.toml`
 - `test/fixtures/isdm/r_values_p1.toml`
+- `test/fixtures/isdm/r_values_psi_p1.toml`
 - `test/fixtures/ordinal_logit_p1.toml`
 - `test/fixtures/ordinal_logit_p1_data.csv`
 - `test/fixtures/temporal_p1/generate_temporal_p1.R`
