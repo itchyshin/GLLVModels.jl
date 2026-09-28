@@ -1,3 +1,13 @@
+## 2026-09-27: Zero-inflated bootstrap refits report their own verdict (part of #504)
+
+- Branch `claude/zi-boot-verdict-504` from `origin/main` @ `1214e948e`. The `ZIPFit`, `ZIPCovFit`,
+  `ZINBFit`, `ZINBCovFit` and `ZIBFit` refit closures return `(θ, converged, loglik)`; θ unchanged,
+  no boundary flag.
+- New `test/test_confint_bootstrap_verdict_zi.jl`: 11 pass, 22 fail, 25 error of 58 on main; 58/58 on
+  Julia 1.10.12 (106 s; also 58/58 with `--check-bounds=yes`) and 1.13.0 (98 s). Per-file; full suite
+  not run. Three neighbouring files: 775/775 on 1.10.12.
+- After-task: `docs/dev-log/after-task/2026-09-27-zi-boot-verdict-504.md`.
+
 ## 2026-09-27: One shared pin source for the Core070 parity harness, plus a P1 oracle build (D-294/D-295)
 
 - Branch `claude/true-parity-p1-oracle`, builds on #524 (merged into `main` as `824d22a4b`
