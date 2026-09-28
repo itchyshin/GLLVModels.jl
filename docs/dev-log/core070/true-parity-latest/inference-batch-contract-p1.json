@@ -587,6 +587,7 @@
     "CORE070-INFERENCE-SIGMA-PHY-CI-METHOD-ROUTE",
     "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE"
   ],
+  "julia_runner_sha256_at_p1": "5ba2d5cdebb598a8512fa4d5f4d0a51eb732d6793d8599d4259aae0ed860921a",
   "p0_contract": "docs/dev-log/core070/inference-batch-contract.json",
   "p0_contract_sha256": "c3ebeb05fdbf6866a313e1528de6b31c4dcca1aa784d957be8516b8451c4c2c0",
   "p0_to_p1_r_function_diff": [
@@ -689,6 +690,12 @@
           "R/z-confint-gllvmTMB.R": "0e995245ce1f0b5c9c5d1676bec982709728e20c980b274d9f4499ea6c6c7a53",
           "R/temporal.R": "93ec5bfe19b2f64afa04c50d9a7a8c85d2b0d9b9a6410eeceb5504895b280902"
         }
+      },
+      {
+        "field": "julia_runner_sha256_at_p1 (added)",
+        "p0_carried_julia_runner_sha256": "d0884be6b210cef1cc4656d2759f1310be824b2a67331448a55af64f3da116e8",
+        "p1": "5ba2d5cdebb598a8512fa4d5f4d0a51eb732d6793d8599d4259aae0ed860921a",
+        "note": "julia_runner_sha256 is carried verbatim from P0 and does not match the current runner; julia_runner_sha256_at_p1 is the runner's sha256 at regeneration and is what tools/core070_verify_inference_batch.py checks at P1"
       }
     ],
     "carried_verbatim": "status, rows/cases (julia_call, expected_route_tag, r_call, check, tolerance), buckets, needs_new_julia_surface, spec-defect rows, negative_controls, fixtures, runner. No case, expectation or tolerance was edited; a P1 mismatch is recorded by the batch as a failure."

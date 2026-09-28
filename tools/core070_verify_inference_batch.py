@@ -92,6 +92,17 @@ def check_contract_shape(contract):
     return buckets
 
 
+def check_p1_julia_runner(contract):
+    """PR #571 review F4: at P1 the twin's julia_runner_sha256_at_p1 must be the runner's sha256.
+
+    The P0 field julia_runner_sha256 is carried verbatim as history and is not checked."""
+    if SELECTED_PIN != "P1":
+        return
+    runner = ROOT / str(contract.get("julia_runner", ""))
+    need(runner.is_file() and contract.get("julia_runner_sha256_at_p1") == sha(runner),
+         "julia_runner_sha256_at_p1 does not match the Julia runner")
+
+
 # ---------------------------------------------------------------------------
 # Julia-side report checks.
 # ---------------------------------------------------------------------------
@@ -133,6 +144,7 @@ def verify_julia_state(state=DEFAULT_JULIA_STATE):
     contract = load_contract()
     contract_sha256 = sha(CONTRACT_PATH)
     buckets = contract_rows_by_bucket(contract)
+    check_p1_julia_runner(contract)
 
     receipt_path = state / "receipt.json"
     results_path = state / "inference-batch-results.json"
@@ -307,7 +319,24 @@ def self_test():
     n_pin = core070_source_pin_check.self_test(SELECTED_PIN)
     print("CORE070_INFERENCE_BATCH_SOURCE_PIN_NEGATIVES_PASS", n_pin)
 
-    return rejected + r_rejected + n_pin
+    n_runner = 0
+    if SELECTED_PIN == "P1":
+        check_p1_julia_runner(contract)  # sanity
+        for name, mutate in [("stale runner hash (the P0-era value)",
+                              lambda c: c.update(julia_runner_sha256_at_p1=c["julia_runner_sha256"])),
+                             ("runner hash missing", lambda c: c.pop("julia_runner_sha256_at_p1")),
+                             ("runner path wrong", lambda c: c.update(julia_runner="tools/no_such_runner.jl"))]:
+            bad = deepcopy(contract)
+            mutate(bad)
+            try:
+                check_p1_julia_runner(bad)
+            except ValueError:
+                n_runner += 1
+                continue
+            raise AssertionError(f"accepted a bad P1 Julia runner pin: {name}")
+        print("CORE070_INFERENCE_BATCH_JULIA_RUNNER_PIN_NEGATIVES_PASS", n_runner)
+
+    return rejected + r_rejected + n_pin + n_runner
 
 
 if __name__ == "__main__":

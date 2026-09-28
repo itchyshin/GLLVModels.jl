@@ -25,6 +25,9 @@ What changes, recorded in each output's `regeneration_log`:
     (.unlazy/core070-aghq/oracle-source/readback/R/<file>) to R/<file> and
     recomputed from the P1 bytes (`git -C $GLLVMTMB_DIR show <P1>:<path>`);
     at P1 the runner checks them under CORE070_P1_R_SOURCE_ROOT;
+  * inference-batch: `julia_runner_sha256` is carried verbatim (a P0-era hash that no
+    longer matches the runner); `julia_runner_sha256_at_p1` records the runner's actual
+    sha256, checked by the P1 verifier (PR #571 review F4);
   * both twins gain `p0_to_p1_r_function_diff`: for each R function the cases
     route through, whether the body is byte-identical at P0 and P1. This is a
     record, not a gate.
@@ -148,6 +151,16 @@ def build(repo, name):
                            "P0 run named by docs/dev-log/core070/inference-routing-subset.json.")
         log.append({"field": "r_route_comparand.pins", "p0": old_pins, "p1": new_pins})
         log.append({"field": "r_route_comparand.p1_r_source_pins (added)", "p1": src_pins})
+        # PR #571 review F4: the carried julia_runner_sha256 is the P0-era hash (the runner was
+        # renamed/edited since, #423). Keep it as history and record the runner's actual hash
+        # at P1 next to it; the P1 verifier checks the new field against the file.
+        runner_now = sha_bytes((ROOT / contract["julia_runner"]).read_bytes())
+        contract["julia_runner_sha256_at_p1"] = runner_now
+        log.append({"field": "julia_runner_sha256_at_p1 (added)", "p0_carried_julia_runner_sha256":
+                    contract["julia_runner_sha256"], "p1": runner_now,
+                    "note": "julia_runner_sha256 is carried verbatim from P0 and does not match the current "
+                            "runner; julia_runner_sha256_at_p1 is the runner's sha256 at regeneration and is "
+                            "what tools/core070_verify_inference_batch.py checks at P1"})
     if name == "inference-remainder":
         new = {}
         for rel, old in contract["source_pins"].items():
