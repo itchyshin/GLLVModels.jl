@@ -48,6 +48,15 @@
   Julia 1.10.12 and 1.13.0 (per-file; full suite not run).
   Seven neighbouring files: 926 pass, plus 1 pre-existing `@test_broken` (same on main).
 - After-task: `docs/dev-log/after-task/2026-09-27-gamma-boot-verdict-504.md`.
+## 2026-09-27: Beta bootstrap refits report their own verdict (part of #504)
+
+- Branch `claude/beta-boot-verdict-504` from `origin/main` @ `cb5688f7e`. The `BetaFit`,
+  `BetaGroupedFit` and `BetaGroupedCovFit` refit closures return `(θ, converged, loglik)`; no boundary
+  flag for φ (the near-deterministic end is identified).
+- New `test/test_confint_bootstrap_verdict_beta.jl`: 7 pass, 14 fail, 15 error on main; 36/36 on
+  Julia 1.10.12 and 1.13.0 (per-file; full suite not run).
+  Six neighbouring files: 908/908 on 1.10.12.
+- After-task: `docs/dev-log/after-task/2026-09-27-beta-boot-verdict-504.md`.
 
 ## 2026-09-27: Temporal source alone at gllvmTMB P1 (slice 1)
 

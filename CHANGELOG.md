@@ -534,6 +534,9 @@ All notable changes to GLLVModels.jl are documented here.
 - **Gamma `confint(..., method = :bootstrap)` now reports the refit's own
   convergence verdict (part of #504).** The refit closures for `GammaFit`,
   `GammaGroupedFit` and `GammaGroupedCovFit` (`src/confint_family.jl`)
+- **Beta `confint(..., method = :bootstrap)` now reports the refit's own
+  convergence verdict (part of #504).** The refit closures for `BetaFit`,
+  `BetaGroupedFit` and `BetaGroupedCovFit` (`src/confint_family.jl`)
   returned a bare parameter vector, so a replicate whose refit ended on the
   fitter's failure sentinel (its θ is the finite warm start) was counted as a
   good draw. They now return `(θ = ..., converged = ..., loglik = ...)`, as
@@ -542,6 +545,8 @@ All notable changes to GLLVModels.jl are documented here.
   endpoints are identical to before. The shape α is deliberately not given
   a boundary flag: a large α is not a flat-likelihood limit (on data with
   true α = 1e8 every route estimates α close to the truth).
+  endpoints are identical to before. The precision φ is not given a boundary
+  flag: a large φ is the near-deterministic end, which the data identify.
 
 ### Added
 - **Temporal covariance source, temporal source alone (gllvmTMB P1 port).**
