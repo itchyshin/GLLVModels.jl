@@ -1586,7 +1586,8 @@ function _family_ci(fit::DeltaLogNormalFit, Y::AbstractMatrix;
             end
             logσb = shared ? (fb.σ isa Real ? [log(fb.σ)] : nothing) : (fb.σ isa AbstractVector ? log.(fb.σ) : nothing)
             logσb === nothing && return nothing
-            return vcat(fb.βc, pack_lambda(fb.Λc), logσb)
+            return (θ = vcat(fb.βc, pack_lambda(fb.Λc), logσb), converged = fb.converged,
+                    loglik = fb.loglik)
         end
         names = vcat(_twopart_shared_lin_names(p, K), σ_names)
         return _FamilyCI(θ, nll, names, vcat(fill(:linear, p + rr), fill(:log, ndisp)), sim, refit)
@@ -1624,7 +1625,8 @@ function _family_ci(fit::DeltaLogNormalFit, Y::AbstractMatrix;
         end
         logσb = shared ? (fb.σ isa Real ? [log(fb.σ)] : nothing) : (fb.σ isa AbstractVector ? log.(fb.σ) : nothing)
         logσb === nothing && return nothing
-        return vcat(fb.βz, fb.βc, pack_lambda(fb.Λc), logσb)
+        return (θ = vcat(fb.βz, fb.βc, pack_lambda(fb.Λc), logσb), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = vcat(_twopart_lin_names(p, K), σ_names)
     return _FamilyCI(θ, nll, names, vcat(fill(:linear, 2p + rr), fill(:log, ndisp)), sim, refit)
@@ -1693,7 +1695,8 @@ function _family_ci(fit::DeltaGammaFit, Y::AbstractMatrix;
             end
             logαb = shared ? (fb.α isa Real ? [log(fb.α)] : nothing) : (fb.α isa AbstractVector ? log.(fb.α) : nothing)
             logαb === nothing && return nothing
-            return vcat(fb.βc, pack_lambda(fb.Λc), logαb)
+            return (θ = vcat(fb.βc, pack_lambda(fb.Λc), logαb), converged = fb.converged,
+                    loglik = fb.loglik)
         end
         names = vcat(_twopart_shared_lin_names(p, K), α_names)
         return _FamilyCI(θ, nll, names, vcat(fill(:linear, p + rr), fill(:log, ndisp)), sim, refit)
@@ -1735,7 +1738,8 @@ function _family_ci(fit::DeltaGammaFit, Y::AbstractMatrix;
         end
         logαb = shared ? (fb.α isa Real ? [log(fb.α)] : nothing) : (fb.α isa AbstractVector ? log.(fb.α) : nothing)
         logαb === nothing && return nothing
-        return vcat(fb.βz, fb.βc, pack_lambda(fb.Λc), logαb)
+        return (θ = vcat(fb.βz, fb.βc, pack_lambda(fb.Λc), logαb), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = vcat(_twopart_lin_names(p, K), α_names)
     return _FamilyCI(θ, nll, names, vcat(fill(:linear, 2p + rr), fill(:log, ndisp)), sim, refit)
@@ -2041,7 +2045,8 @@ function _family_ci(fit::HurdlePoissonFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_hurdle_poisson_gllvm(Yb; K = K) catch; return nothing end
-        return vcat(fb.βz, fb.βc, pack_lambda(fb.Λc))
+        return (θ = vcat(fb.βz, fb.βc, pack_lambda(fb.Λc)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     return _FamilyCI(θ, nll, _twopart_lin_names(p, K), fill(:linear, length(θ)), sim, refit)
 end
@@ -2074,7 +2079,8 @@ function _family_ci(fit::HurdleNBFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_hurdle_nb_gllvm(Yb; K = K) catch; return nothing end
-        return vcat(fb.βz, fb.βc, pack_lambda(fb.Λc), log(fb.r))
+        return (θ = vcat(fb.βz, fb.βc, pack_lambda(fb.Λc), log(fb.r)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = vcat(_twopart_lin_names(p, K), "r")
     return _FamilyCI(θ, nll, names, vcat(fill(:linear, length(θ) - 1), :log), sim, refit)
