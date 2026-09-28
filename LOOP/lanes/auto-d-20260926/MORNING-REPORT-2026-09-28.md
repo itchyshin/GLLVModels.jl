@@ -132,6 +132,12 @@ undamped generic kernel), the #504 bootstrap-verdict lane (its 15 PRs touch only
 (#519/#520 change that file), and "main parity" (merging its trains this morning on your word; none of
 mine has a landing word, so I rebase after). Nothing of mine merges without you.
 
+## Landing #521 → #529 and #540 → #551 (13:10Z, your word via the getLV lane)
+The getLV lane runs the merge-when-green gates; I resolved the two blockers in my branches: #529 merged
+its base (#521's branch), #540 merged `main`; both check-log only, tests re-run (pass), pushed, and
+GitHub reports both mergeable. #521 vs `main` and #551 vs #540 are clean (git merge-tree). I told that
+lane how to resolve the one expected conflict when the second of #529/#551 reaches `main`.
+
 ## Will auto-d work? (your 01:55Z question, answered with tonight's numbers)
 Gaussian 0.95 and Poisson 0.999: yes. Negative binomial: promising (the fixed kernel picked the true
 K where the old one picked 5) but unmeasured until the NB re-run. Binary: K = 1 reliably, higher K only
