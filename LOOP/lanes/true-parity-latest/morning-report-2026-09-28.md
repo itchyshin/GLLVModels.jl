@@ -124,6 +124,8 @@ Plain answer: 52 of 306 required 0.7.0 rows now carry real R-vs-Julia numbers at
 
 ## Findings worth knowing
 
+- Advisory frozen-R smoke job, NB2 cell (auto-d lane, on your fixture-swap decision): a new NB2 dataset fixes the Julia side (converged, no boundary trait, logLik agreement 1.4e-9), but the cell's gate on R's own final gradient (<= 1e-4) fails for almost every dataset and depends on the machine (same data: 5.6e-5 Totoro, 2.4e-3 CI, 4.9e-3 Mac). The gate tests R's optimiser stop, not parity. Decision for you (auto-d is bringing it): record R's gradient without gating it, or compare after one Newton polish of R's optimum.
+
 - Truncated NB2 lane (the task you started): draft PR #601 guards _grouped_laplace_mode against overshooting (grouped_dispersion.jl plus a test). The objective jump is gone (a 1e-5 step in log r now moves it by about 2e-8, not 5e-4; all 150 sites stationary). On main's draw-104 optimum (r = 0.326) Wald and profile intervals for r are sane. Still open: intervals at #581's guarded optimum (r = 0.133) need #601 and #581 together. #601 conflicts with #581 only in runtests.jl and CHANGELOG. grouped_dispersion.jl is also edited by auto-d (#521/#529/#540/#551) and the getLV lane (#598); all three have been told.
 
 - Truncated NB2's confidence intervals for the dispersion r are broken on main (profile fails after 12 minutes; Wald far too narrow), traced to the inner mode search in grouped_dispersion.jl oscillating around the mode at one site (so the objective jumps by about 5e-4). Filed as a task chip with that lead; the fix touches a shared grouped-dispersion helper, so it wants its own review.
