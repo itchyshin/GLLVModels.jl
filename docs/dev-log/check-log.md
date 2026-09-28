@@ -1,3 +1,12 @@
+## 2026-09-27: NB1 bootstrap refits report their own verdict (part of #504)
+
+- Branch `claude/nb1-boot-verdict-504` from `origin/main` @ `cb5688f7e`. The `NB1Fit`, `NB1GroupedFit`
+  and `NB1GroupedCovFit` refit closures return `(θ, converged, loglik)`; no boundary flag (the common
+  NB1 boundary, the Poisson limit, is a lower one).
+- New `test/test_confint_bootstrap_verdict_nb1.jl`: 7 pass, 14 fail, 15 error on main; 36/36 on Julia
+  1.10.12 and 1.13.0 (per-file; full suite not run). Four neighbouring files: 585/585 on 1.10.12.
+- After-task: `docs/dev-log/after-task/2026-09-27-nb1-boot-verdict-504.md`.
+
 ## 2026-09-27: One shared pin source for the Core070 parity harness, plus a P1 oracle build (D-294/D-295)
 
 - Branch `claude/true-parity-p1-oracle`, builds on #524 (merged into `main` as `824d22a4b`
