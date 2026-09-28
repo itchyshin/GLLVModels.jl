@@ -665,6 +665,7 @@
       "body_sha256_p1": "bd458d3b940470bd5b3d7f3b046b578c1a500ffb3cfd80403f3137bdbdc9fbc7"
     }
   ],
+  "julia_surface_status_p1_note": "Read julia_surface_status (carried verbatim from P0) as a statement about helper-equivalent surfaces only. Its parenthetical 'Base.kwarg_decl() over gllvm()/fit_gllvm() to rule out an undocumented keyword' does not hold: both entry points end in kwargs..., so kwarg_decl lists only the dispatcher's own keywords, not what it forwards. GLLVModels does have fit-time offset= and mask= / missing-in-Y surfaces on the non-Gaussian fitters (and offset= / mask= on the default Gaussian path), reachable through fit_gllvm and gllvm; it has no weights surface. What it lacks is the helper layer these cases replay: a formula-offset evaluator, a stored or predict-time offset accessor, a miss_control constructor, and a normalise_weights adapter. The behavioural evidence is tools/core070_data_surface_probe.jl and its tracked receipt next to the data batch.",
   "regeneration_log": {
     "generator": "tools/core070_data_p1_contract.py",
     "changes": [
@@ -690,6 +691,11 @@
         "p0": "bf78912c192311d1ca40704cd81493c2c06773eb3eb7aea14b826a7459dd6f20",
         "p1": "a1ad39041f88d08b017500132bac45b5282f246025c488bc1829dc57aeae3faf",
         "changed": true
+      },
+      {
+        "field": "julia_surface_status_p1_note",
+        "added": true,
+        "why": "Base.kwarg_decl on a kwargs... dispatcher is not a keyword census"
       }
     ],
     "carried_verbatim": "status, cases/rows (expression, expected, r_call, julia_call, acceptance), tolerances, julia_planned_surfaces, needs_new_julia_surface, negative controls, runner blocks. No case, expectation or tolerance was edited; a P1 mismatch is recorded by the batch as a failure."
