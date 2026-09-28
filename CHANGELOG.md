@@ -466,6 +466,18 @@ All notable changes to GLLVModels.jl are documented here.
   :aghq`) already checked `fb.converged` and is untouched. Other families
   (Binomial, NB, Gamma, ...) still use the bare-vector adapter and are
   migrated one at a time in follow-up PRs.
+- **Row-random, multinomial and covariate-GLLVM `confint(..., method =
+  :bootstrap)` now report the refit's own convergence verdict (part of
+  #504).** The refit closures for `RowRandomFit`, `MultinomialFit` and
+  `GllvmCovFit` (`src/confint_family.jl`) returned a bare parameter vector, so
+  a replicate whose refit ended on the fitter's failure verdict (its θ is the
+  finite warm start) was counted as a good draw. They now return `(θ = ...,
+  converged = ..., loglik = ...)`, as Poisson's does since #516, for families
+  with and without a dispersion parameter; such replicates are excluded and
+  `n_converged` counts only the ones kept. When every replicate converges,
+  bootstrap endpoints are identical to before. These are the last three
+  bare-vector refit closures of #504; the other families are migrated on
+  their own branches.
 
 ### Changed
 - **Breaking (default change):** `fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm`
