@@ -195,6 +195,10 @@ include("diagnostics.jl")                # check_gllvmTMB / gllvmTMB_diagnose / 
 include("summary_table.jl")              # coef_table: tidy Wald inference table
 include("postfit_tables.jl")             # final missing-surface cluster (core070 §1): deviance, cross-rho profiles,
                                           # predict_cross_covariance, predict_missing, rotate_loadings, tidy, summary, imputed
+include("temporal.jl")                   # temporal source: constructors, pre-pass, TemporalContractError (gllvmTMB P1 port, slice 1)
+include("temporal_likelihood.jl")        # exact Gaussian marginal NLL, K_blockdiag ⊗ Sigma_T + sigma_eps² I
+include("temporal_fit.jl")               # fit_temporal_gllvm / TemporalGaussianFit (separate door; no formula.jl hook)
+include("temporal_methods.jl")           # extract_temporal and the temporal helper routes
 include("formula.jl")                    # @formula front-end (v1: fixed effects → engine)
 include("bridge.jl")                      # R→Julia bridge_fit (JuliaCall flat contract); LAST
 include("bridge_precision_multivariate.jl") # explicit multivariate precision bridge candidate
@@ -371,6 +375,9 @@ export make_cross_kernel, extract_Gamma, fit_coevolution_gaussian, fit_coevoluti
        deviance, profile_cross_rho_ci, predict_cross_covariance, predict_missing,
        simulate_unit_trait, profile_cross_rho, rotate_loadings,
        extract_rotated_loadings_table, extract_coevolution_modules, imputed,
-       tidy, GllvmSummary
+       tidy, GllvmSummary,
+       temporal_indep, temporal_dep, temporal_latent, TemporalTerm, TemporalContractError,
+       fit_temporal_gllvm, TemporalGaussianFit, extract_temporal, forecast_temporal,
+       profile_temporal, bootstrap_temporal, compare_temporal
 
 end # module GLLVModels

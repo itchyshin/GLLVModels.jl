@@ -431,6 +431,29 @@ GLLVModels.bootstrap_ci_derived
 
 ---
 
+## Temporal Covariance Source
+
+One AR1 or OU temporal source on long data, the twin of gllvmTMB's
+`temporal_indep()`, `temporal_dep()` and `temporal_latent()` for the temporal
+source alone. Composition with ordinary `unit` / `unit_obs` terms, the
+cross-source cells and the wide `traits()` form are not available yet; see the
+[temporal reference page](temporal.md).
+
+```@docs
+temporal_indep
+temporal_dep
+temporal_latent
+TemporalTerm
+fit_temporal_gllvm
+TemporalGaussianFit
+TemporalContractError
+extract_temporal
+forecast_temporal
+profile_temporal
+bootstrap_temporal
+compare_temporal
+```
+
 ## Types & Link Functions
 
 ### Link Functions
