@@ -295,7 +295,8 @@ function _family_ci(fit::GP1Fit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_gp1_gllvm(Yb; K = K, link = link, mask = M, hessian = fit.hessian) catch; return nothing end
-        return vcat(fb.β, pack_lambda(fb.Λ), fb.α)
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ), fb.α), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = vcat(_glm_lin_names(p, K), "alpha")
     kinds = fill(:linear, length(θ))                      # α is raw/linear, not log
@@ -422,7 +423,8 @@ function _family_ci(fit::LognormalFit, Y::AbstractMatrix; kwargs...)
     end
     refit = function (Yb)
         fb = try fit_lognormal_gllvm(Yb; K = K) catch; return nothing end
-        return vcat(fb.β, pack_lambda(fb.Λ), log(fb.σ))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ), log(fb.σ)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = vcat(_glm_lin_names(p, K), "sigma")
     kinds = vcat(fill(:linear, length(θ) - 1), :log)
@@ -478,7 +480,8 @@ function _family_ci(fit::StudentTFit, Y::AbstractMatrix;
             return nothing
         end
         logσb = shared ? [log(fb.σ)] : log.(fb.σ)
-        return vcat(fb.β, pack_lambda(fb.Λ), logσb)
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ), logσb), converged = fb.converged,
+                loglik = fb.loglik)
     end
     σ_names = shared ? ["sigma"] : ["sigma[$t]" for t in 1:p]
     names = vcat(_glm_lin_names(p, K), σ_names)
@@ -1386,7 +1389,8 @@ function _family_ci(fit::ExponentialFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_exponential_gllvm(Yb; K = K, link = link, hessian = fit.hessian) catch; return nothing end
-        return vcat(fb.β, pack_lambda(fb.Λ))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     return _FamilyCI(θ, nll, _glm_lin_names(p, K), fill(:linear, length(θ)), simulate, refit)
 end
