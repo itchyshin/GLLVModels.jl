@@ -87,7 +87,12 @@ end
         @test d["native_nfree"] == d["r_nfree"] == 19
         @test d["r_packing_delta"] <= 1e-12
         @test d["native_gradient_max"] <= 1e-4
-        @test d["r_gradient_max"] <= 1e-4
+        # R's gradient is recorded, not a gate (decision 2026-09-28): nlminb's
+        # relative-convergence stop leaves about 1e-4 to 2e-3 on the intercepts of a
+        # well-identified NB2 fit, and the same data give 5.6e-5 to 4.9e-3 on
+        # different machines. R's convergence code (r.converged) and the logLik
+        # agreement below stay gates, as in test_nb2_finite_dispersion_parity.jl.
+        println("  gllvmTMB r_gradient_max = ", d["r_gradient_max"], " (recorded, not a gate)")
         @test d["fd_stability"] <= 1e-4
         @test d["native_objective_delta"] <= 1e-8
         @test abs(d["samepoint_delta"]) <= 1e-6
