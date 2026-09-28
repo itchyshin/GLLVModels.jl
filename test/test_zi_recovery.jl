@@ -1,8 +1,10 @@
 # Known-DGP recovery for the gllvmTMB-semantics zero-inflated route
 # (zi_poisson(), zi_nbinom2(), zi_binomial(); src/families/zi_twin.jl), AGENTS.md
 # design rule 1. Julia-only: simulated data from StableRNGs. This file is deliberately
-# NOT tagged `# gllvm-parity-tag: P1`: it needs StableRNGs from test/Project.toml, so it
-# runs under Pkg.test() only, not in the P1 twin job (which runs `julia --project=.`).
+# NOT carrying the P1 parity tag: it needs StableRNGs from test/Project.toml, so it
+# runs under Pkg.test() only, not in the P1 twin job (which runs `julia --project=.`
+# on every .jl file whose text contains the tag string, comments included, so the
+# tag must not be quoted here).
 # The R-pinned literal NB2 regression datasets (reviewer seed 12, boundary seed 12,
 # breakdown seed 6) live in the P1-tagged test/test_zi_twin.jl.
 #
