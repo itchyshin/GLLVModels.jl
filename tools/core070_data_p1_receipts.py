@@ -48,7 +48,10 @@ Shared gates (PR #567 / #569 / #571):
   * Provenance. Every receipt records glvmodels_commit = HEAD. The tool refuses to
     write when tracked files outside its own outputs are modified (unless
     --allow-dirty, which is then recorded), and refuses unless each run directory
-    holds a run-commit.json naming this HEAD with an empty dirty list.
+    holds a run-commit.json naming this HEAD with an empty dirty list. --check
+    compares each receipt's own glvmodels_commit, glvmodels_worktree_dirty and
+    glvmodels_src_tree (and each case map's glvmodels_commit) with the tracked
+    run-commit.json of its batch.
   * Read-file hashes. Every case receipt records `read_from`, the sha256 of each
     tracked file it was derived from. Receipt bodies and case-map rows are derived
     only from tracked files, so --check re-hashes every read_from file, re-derives
@@ -503,6 +506,29 @@ PROVENANCE_KEYS = {"pin", "reference_commit", "p0_reference_commit", "oracle_bui
                    "verdict", "evidence_kind", "comparison"}
 
 
+FAMILY_BATCH = {"data": "data-p1", "fit-input": "fit-input-2-p1"}
+
+
+def provenance_problems(tracked):
+    """Each receipt's own provenance copy must agree with the tracked run-commit.json of its batch."""
+    problems, src_tree = [], {}
+    for cid, (path, rec) in tracked.items():
+        fam = family_of(cid)
+        rc = load(ROOT / rec_rel(fam) / FAMILY_BATCH[fam] / "run-commit.json")
+        commit = rc.get("glvmodels_commit")
+        if rec.get("glvmodels_commit") != commit:
+            problems.append(f"{path}: glvmodels_commit {rec.get('glvmodels_commit')} != run-commit.json {commit}")
+            continue
+        if rec.get("glvmodels_worktree_dirty") != [] or rc.get("dirty") != []:
+            problems.append(f"{path}: written or run from a dirty tree")
+        if commit not in src_tree:
+            src_tree[commit] = git("rev-parse", f"{commit}:src", check=False).stdout.strip()
+        if rec.get("glvmodels_src_tree") != src_tree[commit]:
+            problems.append(f"{path}: glvmodels_src_tree {rec.get('glvmodels_src_tree')} != {commit}:src "
+                            f"{src_tree[commit] or '(commit not found)'}")
+    return problems
+
+
 def check():
     problems = []
     tracked = {}
@@ -539,6 +565,7 @@ def check():
             problems.append(f"{cid}: comparison block differs from the re-derivation")
         if rec.get("reference_commit") != P1_SHA or rec.get("pin") != "P1":
             problems.append(f"{cid}: receipt not pinned at P1")
+    problems += provenance_problems(tracked)
     n_rows = 0
     receipts = {cid: receipt_info(path, rec) for cid, (path, rec) in tracked.items()}
     for fam in FAMILIES:
@@ -554,6 +581,10 @@ def check():
             problems.append(f"{fam}: case-map rows differ from the re-derivation: {', '.join(bad)}")
         if counts != cm["counts"]:
             problems.append(f"{fam}: case-map counts {cm['counts']} != re-derived {counts}")
+        run_commit = load(ROOT / rec_rel(fam) / FAMILY_BATCH[fam] / "run-commit.json")["glvmodels_commit"]
+        if cm.get("glvmodels_commit") != run_commit:
+            problems.append(f"{fam}: case-map glvmodels_commit {cm.get('glvmodels_commit')} != run-commit.json "
+                            f"{run_commit}")
     if problems:
         print("STALE\n  " + "\n  ".join(problems))
         sys.exit(1)
