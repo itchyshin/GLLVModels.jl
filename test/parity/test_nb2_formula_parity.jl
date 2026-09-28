@@ -2,7 +2,8 @@
 isdefined(@__MODULE__, :parity_nb2_health) || include(joinpath(@__DIR__, "nb2_health.jl"))
 module Core070NB2FormulaCase
 using GLLVModels, RCall, Test, Random, SHA, TOML, LinearAlgebra
-using ..Main: parity_nb2_health, parity_nb2_original_Y, _core070_receipt_dir, _core070_sha256_file, parity_loadings_p5k2
+using ..Main: parity_nb2_health, parity_nb2_original_Y, _core070_receipt_dir, _core070_sha256_file, parity_loadings_p5k2,
+    core070_record_values!
 source=read("test/parity/test_negbin_parity.jl",String)
 helpers=source[findfirst("function _rand_poisson",source).start:findfirst("@testset \"NB2 GLLVModels",source).start-1]
 dgp=source[findfirst("    Random.seed!(45)",source).start:findfirst("    jl_fit =",source).start-1]
@@ -43,6 +44,8 @@ println("NB2_FORMULA_SHA256 ",_core070_sha256_file(file))
     @test native.converged && r.converged
     @test r.health["native_gradient_max"]<=1e-4 && r.health["r_gradient_max"]<=1e-4
     @test abs(r.health["samepoint_delta"])<=1e-6
+    core070_record_values!("logLik, native route (the formula routes are checked against it)";
+        julia=native.loglik, r=r.logLik, rtol=1e-6, test="@test native.loglik≈r.logLik rtol=1e-6")
     @test native.loglik≈r.logLik rtol=1e-6
     for f in (wide,longfit)
         @test f isa NBGroupedFit
