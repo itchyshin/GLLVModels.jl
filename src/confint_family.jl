@@ -1223,7 +1223,8 @@ function _family_ci(fit::TweedieFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_tweedie_gllvm(Yb; K = K, link = link, hessian = fit.hessian) catch; return nothing end
-        return vcat(fb.β, pack_lambda(fb.Λ), log(fb.φ))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ), log(fb.φ)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = vcat(_glm_lin_names(p, K), "phi")
     kinds = vcat(fill(:linear, length(θ) - 1), :log)
@@ -1283,7 +1284,8 @@ function _family_ci(fit::TweedieGroupedFit, Y::AbstractMatrix;
             return nothing
         end
         fb isa TweedieGroupedFit || return nothing
-        return vcat(fb.β, pack_lambda(fb.Λ), log.(fb.φ))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ), log.(fb.φ)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = _grouped_dispersion_names(p, K, "phi", G)
     kinds = vcat(fill(:linear, p + rr), fill(:log, G))
@@ -1338,7 +1340,8 @@ function _family_ci(fit::TweediePerTraitPowerFit, Y::AbstractMatrix;
             return nothing
         end
         fb isa TweediePerTraitPowerFit || return nothing
-        return vcat(fb.β, pack_lambda(fb.Λ), log.(fb.φ))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ), log.(fb.φ)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = _grouped_dispersion_names(p, K, "phi", G)
     kinds = vcat(fill(:linear, p + rr), fill(:log, G))
