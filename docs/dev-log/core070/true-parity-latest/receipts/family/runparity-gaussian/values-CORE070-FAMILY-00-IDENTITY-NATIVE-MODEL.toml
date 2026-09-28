@@ -1,0 +1,30 @@
+case_id = "CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL"
+
+[[values]]
+label = "objective at a fixed off-optimum point"
+julia = 592.7911708880561
+test = "@test point_value_delta<=1e-6"
+rtol = 0.0
+r = 592.7911708880557
+atol = 1.0e-6
+[[values]]
+label = "objective at the R optimum"
+julia = 576.2849371937112
+test = "@test record[\"r_endpoint_value_delta\"]<=1e-6"
+rtol = 0.0
+r = 576.2849371937104
+atol = 1.0e-6
+[[values]]
+label = "objective at the Julia optimum"
+julia = 576.2849371937112
+test = "@test record[\"native_endpoint_cross_delta\"]<=1e-6"
+rtol = 0.0
+r = 576.2849371937117
+atol = 1.0e-6
+[[values]]
+label = "logLik"
+julia = -576.2849371937112
+test = "@test record[\"delta_loglik\"]<=1e-3"
+rtol = 0.0
+r = -576.2849371937104
+atol = 0.001

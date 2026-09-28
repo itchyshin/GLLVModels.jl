@@ -1,0 +1,23 @@
+case_id = "NATIVE-07-TWEEDIE"
+
+[[values]]
+label = "logLik, fixed common power"
+julia = -1065.4152797439144
+test = "@test isapprox(jl_fit.loglik, r_fit.logLik; atol = _TW_LOGLIK_ATOL)"
+rtol = 0.0
+r = -1065.4152797789618
+atol = 1.0e-6
+[[values]]
+label = "logLik, estimated shared power"
+julia = -1064.3516394913456
+test = "@test isapprox(jl_fit.loglik, r_fit.logLik; atol = _TW_LOGLIK_ATOL)"
+rtol = 0.0
+r = -1064.351639519949
+atol = 1.0e-6
+[[values]]
+label = "logLik, estimated per-species power"
+julia = -1057.8366215990368
+test = "@test isapprox(jl_fit.loglik, r_fit.logLik; atol = _TW_LOGLIK_ATOL)"
+rtol = 0.0
+r = -1057.8366216300153
+atol = 1.0e-6

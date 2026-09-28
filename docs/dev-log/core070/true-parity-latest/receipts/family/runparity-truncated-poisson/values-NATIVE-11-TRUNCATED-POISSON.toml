@@ -1,0 +1,9 @@
+case_id = "NATIVE-11-TRUNCATED-POISSON"
+
+[[values]]
+label = "logLik"
+julia = -618.0776776554326
+test = "@test jl_logL ≈ r.logLik rtol = 1e-6"
+rtol = 1.0e-6
+r = -618.077677658145
+atol = 0.0
