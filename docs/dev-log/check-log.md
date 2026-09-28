@@ -1,3 +1,58 @@
+## 2026-09-27: Inference at P1, independent review of #571 applied
+
+- Same branch, fast-forward commits only. Merged #569's review fixes (`073e90e78`; one conflict, this
+  file, both entries kept). Review findings F1 to F4 and F6 applied, one concern per commit; no
+  classification, `src/`, GATES.md or P0 evidence change.
+- Shared gates adopted: `tools/core070_inference_p1_receipts.py` runs the wave2 and wave4 batch
+  verifiers at P1 with `--self-test`, tracks `verify.txt` and `run-commit.json`, puts a
+  `batch_verifier` block on every case receipt (wave5 reads #569's tracked `verify.txt`), holds a
+  numeric row whose batch verifier failed (no exception path), flags degenerate comparisons with
+  #569's rule, records `glvmodels_commit` and refuses a dirty tree. The wave4 R runner checks the
+  library's `CORE070_SOURCE_PIN.toml` marker and version (`tools/core070_source_pin.R`); the wave2
+  route probe loads no package, so at P1 it requires `CORE070_P1_ORACLE_LIBRARY` and checks that
+  library's marker and version. Both verifiers check the record (`tools/core070_source_pin_check.py`).
+- F1: every case receipt records `read_from` sha256 for each tracked file it read; wave5 receipts
+  cite #569's `julia_results_sha256`. `--check` re-hashes them and re-derives wave5 and all 63 rows;
+  tamper tests (one byte on #569's julia-results.json, a dropped anomaly block, a mutated row) fail.
+- F2: 008 and 010 receipts and rows note they are one measurement counted twice (identical R and
+  Julia vectors); not reclassified, the count is the maintainer's call.
+- F3: the 011 receipt and row carry an anomaly note (Julia bootstrap lower bounds 1.06e-7 and
+  4.53e-40 vs R 0.126 and 0.414); root cause fixed in draft PR #576; re-measure after it lands.
+- F4: the P1 twin records `julia_runner_sha256_at_p1` (5ba2d5cd...); the P1 verifier checks it.
+  F6: the R runners create the destination only after the pin checks pass.
+- Re-run from clean commit `61c5eda48` (local Mac, one BLAS/OMP thread, JULIA_NUM_THREADS=4), wall
+  84 s: route probes 3 s, R crosscheck 2 s, wave2 Julia 64 s, wave4 15 s. Outcomes identical to the
+  first run; wave5 vectors from #569's re-run bit-identical. Counts unchanged: 2 numeric pass,
+  45 routing, 14 error-class, 2 partial, 0 held, 0 non-discriminating. Checker, PARITY_REF=FS, main
+  (`880cad4c7`) and #561 (`92cf39571`): inference C1 required=63 bound=2 free=61 (#561
+  bound_numeric=2, numeric_recorded_diff_mismatch=none), C8 61 NOT_TWINNED_NOT_SIGNED; postfit C1
+  required=52 bound=29 free=21 unsigned_or_blocked=2, C8 23; covariance C1 required=17 bound=0, C8
+  17. `test_true_parity_check.mjs` passes; inference, postfit and covariance contract `--check`s and
+  the inference receipt `--check` current; `test/parity/test_core070_pin.jl` 27/27.
+
+## 2026-09-27: Inference family re-measured at gllvmTMB P1 (A3), tracked receipts
+
+- Branch `claude/true-parity-p1-inference`, stacked on `claude/true-parity-p1-postfit` (PR #569) at
+  `28d880acb`, which is stacked on #567. Scope: the 63 inference rows the P1 carry scan lists as
+  DANGLING (45 wave2 inference-batch, 14 wave4 inference-remainder, 4 wave5 surface-conversion).
+  Classifications (all compatibility_adapter) and dispositions carried unchanged.
+- P1 oracle reused read-only from `/Users/z3437171/local-scratch/a3cov-oracle/build/library`
+  (`build.json`: reference_commit P1, source-tree sha256 equal to the P1 pin). The route probe reads
+  `<oracle>/build/source` via CORE070_P1_R_SOURCE_ROOT.
+- `tools/core070_inference_p1_contract.py` writes two P1 twins; `--check` passes. Adaptation: the P0
+  route probe fails 98/98 on the P1 source (P1's confint.gllvmTMB_multi calls
+  `.temporal_assert_no_iid_inference()`, defined in R/temporal.R); the P1 twin
+  `tools/core070_inference_routes_p1.R` also parses R/temporal.R and passes 98/98 with output
+  identical to the P0 probe on P0 source.
+- Runs (local Mac, one BLAS/OMP thread, JULIA_NUM_THREADS=4), wall seconds: route probe + R crosscheck
+  2 (64/64), wave2 Julia 57 (45/45 + 2 negative controls), wave4 remainder 14 (5/5 cases, 14 rows, +
+  2 negative controls). Both verifiers pass at P1. wave5 not re-run (read from #569's P1 run).
+- Case-map rows (`case-map-inference.json`): 2 numeric pass (CI-ROUTE-008/010, max diff 1.8e-6,
+  tolerance 1e-3), 45 routing/control-flow only, 14 error-class only, 2 partial (009 refusal pair,
+  011 structural bootstrap), 0 fail, 0 not measured. Checker, PARITY_REF=FS: C1 required=63 bound=2
+  free=61 (main and #561 checker); C8 61 NOT_TWINNED_NOT_SIGNED. `node tools/test_true_parity_check.mjs`
+  passes.
+
 ## 2026-09-27: Postfit at P1, independent review of #569 applied
 
 - Same branch, fast-forward commits only. Merged #567's review fixes (`4176a9dce`; one conflict, this
