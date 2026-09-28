@@ -124,8 +124,8 @@ All notable changes to GLLVModels.jl are documented here.
   Part of #503.
 - **`getLV` on grouped Beta fits now returns the per-site mode.** `getLV` (and so
   the R bridge `scores` and `ordination`) used the generic mode search, which stops
-  off the mode at the same sites the Beta likelihood used to get wrong (off by about
-  2.4e-4 on the measured panel). It now uses the Beta likelihood's own mode search,
+  off the mode at the same sites the Beta likelihood used to get wrong (off by up to
+  about 4e-4 on the measured panel). It now uses the Beta likelihood's own mode search,
   so the scores are the modes the fit's objective was evaluated at. Log-likelihoods
   and estimates do not change.
 - **Gamma grouped fits no longer report convergence from a diverged inner search.**

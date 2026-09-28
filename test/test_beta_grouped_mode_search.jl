@@ -9,8 +9,8 @@ using GLLVModels, Test, LinearAlgebra, StableRNGs, Statistics, Distributions, Op
 
 const G_BETA = GLLVModels
 
-# Closed-form Beta/logit log-posterior (shares no code with the kernel), μ clamped as the
-# package clamps it.
+# Closed-form Beta/logit log-posterior (shares no code with the kernel). μ is clamped at
+# 1e-10 here (the package clamps Beta μ at 1e-6); the difference is immaterial on this panel.
 function _bgm_logpost(y, Λ, β, φ, z)
     μ = clamp.(1 ./ (1 .+ exp.(-(β .+ Λ * z))), 1e-10, 1 - 1e-10)
     a = μ .* φ; b = (1 .- μ) .* φ
@@ -83,7 +83,7 @@ end
 
 # getLV must return the mode the likelihood used. Before, `_grouped_getLV` used the generic
 # `_grouped_laplace_mode`, which stops off the mode at the 2-cycle sites (sites 14 and 78 of
-# the panel below, off by about 2.4e-4).
+# the panel below, off by up to about 4e-4).
 _bgm_grad(y, Λ, β, φ, z) = ForwardDiff.gradient(zz -> _bgm_logpost(y, Λ, β, φ, zz), z)
 
 function _bgm_panel()
