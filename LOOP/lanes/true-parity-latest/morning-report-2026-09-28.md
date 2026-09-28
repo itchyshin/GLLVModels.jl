@@ -61,6 +61,8 @@ Overnight: #548 chibar2_pvalue / variance_lrt twin (4357e4652, 22:58); #531 extr
 
 ## In a merge train (word given)
 
+#546 (b47f36a15) and #558 (6c0182adb) synced with main (export and runtests lines kept from both sides; all tests and the docs build pass); one train merges them in order with merge commits.
+
 Third word ("merge #567, #569, #571, #579, #584 when green"): all five were green but conflicted with main in check-log only. Refreshed #567 against main (adec8189e) and cascaded each branch into the next (#569 f558685f6, #571 646ebedc2, #579 c89251972, #584 1475e5b7c; fast-forward pushes, log files only), so all five re-run CI at once. One train merges them in order with MERGE COMMITS rather than squash, so each later PR still contains the earlier one's commits and stays clean after it lands (squash would force a full re-sync and CI cycle per PR). Trade-off: #584's intermediate commits (which briefly broke Pkg.test) enter main's history.
 
 Second word ("merge #546, then #558; #556; #547 when green"): #556 train started (clean, 73f7952f4); #547 refreshed (3127c0576) and train started; #546 and #558 conflict with main in src/GLLVModels.jl and test/runtests.jl include lines as well as the logs, so a builder is merging main in carefully (then #546 into #558) before their trains.
