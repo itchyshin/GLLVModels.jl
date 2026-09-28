@@ -400,6 +400,17 @@ All notable changes to GLLVModels.jl are documented here.
   :aghq`) already checked `fb.converged` and is untouched. Other families
   (Binomial, NB, Gamma, ...) still use the bare-vector adapter and are
   migrated one at a time in follow-up PRs.
+- **Gamma `confint(..., method = :bootstrap)` now reports the refit's own
+  convergence verdict (part of #504).** The refit closures for `GammaFit`,
+  `GammaGroupedFit` and `GammaGroupedCovFit` (`src/confint_family.jl`)
+  returned a bare parameter vector, so a replicate whose refit ended on the
+  fitter's failure sentinel (its θ is the finite warm start) was counted as a
+  good draw. They now return `(θ = ..., converged = ..., loglik = ...)`, as
+  Poisson's does since #516; such replicates are excluded and `n_converged`
+  counts only the ones kept. When every replicate converges, bootstrap
+  endpoints are identical to before. The shape α is deliberately not given
+  a boundary flag: a large α is not a flat-likelihood limit (on data with
+  true α = 1e8 every route estimates α close to the truth).
 
 ### Changed
 - **Breaking (default change):** `fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm`
