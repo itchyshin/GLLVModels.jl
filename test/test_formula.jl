@@ -10,9 +10,13 @@ using GLLVModels, Test, Random, Distributions, Statistics, StatsModels
         data = (temp = temp, depth = depth)
 
         f1 = gllvm(@formula(y ~ 1 + temp + depth), Y, data; family = Normal(), K = K)
-        X = zeros(p, n, 2)
+        # Trait intercepts, then shared slopes (2026-09-27-gaussian-formula-covariates.md).
+        X = zeros(p, n, p + 2)
+        for t in 1:p
+            X[t, :, t] .= 1.0
+        end
         for s in 1:n, t in 1:p
-            X[t, s, 1] = temp[s]; X[t, s, 2] = depth[s]
+            X[t, s, p + 1] = temp[s]; X[t, s, p + 2] = depth[s]
         end
         f2 = fit_gaussian_gllvm(Y; X = X, K = K)
         @test f1.logLik ≈ f2.logLik atol = 1e-8
