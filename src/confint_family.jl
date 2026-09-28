@@ -257,7 +257,8 @@ function _family_ci(fit::NB1Fit, Y::AbstractMatrix;
                                            (rg, μ) -> (m = max(μ, 1e-12); NegativeBinomial(m / fit.φ, 1 / (1 + fit.φ))))
     refit = function (Yb)
         fb = try fit_nb1_gllvm(Yb; K = K, link = link, mask = M, hessian = fit.hessian) catch; return nothing end
-        return vcat(fb.β, pack_lambda(fb.Λ), log(fb.φ))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ), log(fb.φ)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = vcat(_glm_lin_names(p, K), "phi")
     kinds = vcat(fill(:linear, length(θ) - 1), :log)
@@ -721,7 +722,8 @@ function _family_ci(fit::NB1GroupedFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_nb1_gllvm_grouped(Yb; K = K, group = group, link = link, mask = M, hessian = fit.hessian) catch; return nothing end
-        return vcat(fb.β, pack_lambda(fb.Λ), log.(fb.φ))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ), log.(fb.φ)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = _grouped_dispersion_names(p, K, "phi", G)
     kinds = vcat(fill(:linear, p + rr), fill(:log, G))
@@ -886,7 +888,8 @@ function _family_ci(fit::NB1GroupedCovFit, Y::AbstractMatrix;
         catch
             return nothing
         end
-        return vcat(fb.β, fb.γ[γ_free_idx], pack_lambda(fb.Λ), log.(fb.φ))
+        return (θ = vcat(fb.β, fb.γ[γ_free_idx], pack_lambda(fb.Λ), log.(fb.φ)),
+                converged = fb.converged, loglik = fb.loglik)
     end
     names = vcat(["beta[$t]" for t in 1:p], ["gamma[$k]" for k in γ_free_idx],
                  _confint_lambda_term_names("Lambda", p, K),

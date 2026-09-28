@@ -547,6 +547,16 @@ All notable changes to GLLVModels.jl are documented here.
   true α = 1e8 every route estimates α close to the truth).
   endpoints are identical to before. The precision φ is not given a boundary
   flag: a large φ is the near-deterministic end, which the data identify.
+- **NB1 `confint(..., method = :bootstrap)` now reports the refit's own
+  convergence verdict (part of #504).** The refit closures for `NB1Fit`,
+  `NB1GroupedFit` and `NB1GroupedCovFit` (`src/confint_family.jl`) returned
+  a bare parameter vector, so a replicate whose refit ended on the fitter's
+  failure sentinel (its θ is the finite warm start) was counted as a good
+  draw. They now return `(θ = ..., converged = ..., loglik = ...)`, as
+  Poisson's does since #516; such replicates are excluded and `n_converged`
+  counts only the ones kept. When every replicate converges, bootstrap
+  endpoints are identical to before. No boundary flag: NB1's common boundary
+  is the Poisson limit `φ → 0`, a lower boundary.
 
 ### Added
 - **Temporal covariance source, temporal source alone (gllvmTMB P1 port).**
