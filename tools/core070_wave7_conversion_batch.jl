@@ -145,7 +145,12 @@ isfile(oracle_path) || error("oracle file not found: $oracle_path")
 oracle = json_read(oracle_path)
 
 root = normpath(joinpath(@__DIR__, ".."))
-contract = json_read(joinpath(root, "docs/dev-log/core070/wave7-conversion-batch-contract.json"))
+# GLLVM_PARITY_PIN=P1 reads the P1-regenerated contract (cases verbatim); unset/P0 is unchanged.
+_parity_pin = uppercase(strip(get(ENV, "GLLVM_PARITY_PIN", "P0")))
+_parity_pin in ("P0", "P1") || error("GLLVM_PARITY_PIN must be P0 or P1, got $(repr(_parity_pin))")
+contract = json_read(joinpath(root, _parity_pin == "P1" ?
+    "docs/dev-log/core070/true-parity-latest/wave7-conversion-batch-contract-p1.json" :
+    "docs/dev-log/core070/wave7-conversion-batch-contract.json"))
 cases = contract["cases"]
 length(cases) == contract["expected_case_count"] || error("case count mismatch vs contract")
 Int(contract["expected_case_count"]) == 6 || error("expected_case_count drifted from 6; update this script")

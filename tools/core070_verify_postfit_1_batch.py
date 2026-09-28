@@ -28,7 +28,11 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CONTRACT_PATH = ROOT / "docs/dev-log/core070/postfit-1-batch-contract.json"
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, str(ROOT / "tools"))
+from parity_oracle import R_REF_PINS, SELECTED_PIN  # noqa: E402  (GLLVM_PARITY_PIN; P0 default; unknown pin exits)
+CONTRACT_PATH = ROOT / ("docs/dev-log/core070/true-parity-latest/postfit-1-batch-contract-p1.json"
+                        if SELECTED_PIN == "P1" else "docs/dev-log/core070/postfit-1-batch-contract.json")
 DEFAULT_R_STATE = ROOT / ".unlazy/core070-aghq/postfit-1-batch-r-01"
 DEFAULT_JULIA_STATE = ROOT / ".unlazy/core070-aghq/postfit-1-batch-julia-01"
 

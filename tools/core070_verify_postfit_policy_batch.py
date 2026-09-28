@@ -25,7 +25,12 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CONTRACT_PATH = ROOT / "docs/dev-log/core070/postfit-policy-batch-contract.json"
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, str(ROOT / "tools"))
+from parity_oracle import R_REF_PINS, SELECTED_PIN  # noqa: E402  (GLLVM_PARITY_PIN; P0 default; unknown pin exits)
+CONTRACT_PATH = ROOT / ("docs/dev-log/core070/true-parity-latest/postfit-policy-batch-contract-p1.json"
+                        if SELECTED_PIN == "P1" else "docs/dev-log/core070/postfit-policy-batch-contract.json")
+REFERENCE_COMMIT = R_REF_PINS[SELECTED_PIN] if SELECTED_PIN == "P1" else "b4d5fee64def88bc768dda1f1f77c29b295edd86"
 DEFAULT_STATE = ROOT / ".unlazy/core070-aghq/postfit-policy-batch-01"
 
 MANIFEST_ROW_COUNT = 24
@@ -51,7 +56,7 @@ def verify_contract(contract=None):
     c = contract or load_contract()
     need(c["status"] == "FROZEN_POSTFIT_POLICY_BATCH_CONTRACT", "wrong contract status")
     need(c["area"] == "postfit-policy", "wrong area")
-    need(c["reference_commit"] == "b4d5fee64def88bc768dda1f1f77c29b295edd86", "wrong reference commit")
+    need(c["reference_commit"] == REFERENCE_COMMIT, "wrong reference commit")
     need(c["manifest_row_count"] == MANIFEST_ROW_COUNT, "manifest row count drift")
 
     executable_ids = {x["case_id"] for x in c["cases"]}

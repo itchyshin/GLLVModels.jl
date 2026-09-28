@@ -31,7 +31,12 @@ import hashlib
 import json
 from pathlib import Path
 
-REFERENCE_COMMIT = "b4d5fee64def88bc768dda1f1f77c29b295edd86"
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+from parity_oracle import R_REF_PINS, SELECTED_PIN  # noqa: E402  (GLLVM_PARITY_PIN; P0 default; unknown pin exits)
+
+# No contract file for this batch; the pin only changes the expected reference commit.
+REFERENCE_COMMIT = R_REF_PINS[SELECTED_PIN] if SELECTED_PIN == "P1" else "b4d5fee64def88bc768dda1f1f77c29b295edd86"
 TOLERANCE = 1e-4
 
 CASE_META = {
