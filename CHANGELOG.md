@@ -262,6 +262,20 @@ All notable changes to GLLVModels.jl are documented here.
   and from the returned point, keeping only a better run) now also fires when a
   group's precision is more than 100 times the median, and d05 again reaches 272.61.
   Part of #503.
+- **NB2 grouped kernel (`fit_nb_gllvm_grouped`, the default route for
+  `fit_gllvm(...; family = NegativeBinomial())`): the per-site Laplace mode search
+  could 2-cycle and report `converged = true` at a poor optimum.** Where a count
+  sits far above its mean, the Fisher weight understates the observed curvature,
+  the undamped step overshoots, and the site returned a value away from its mode.
+  The search now halves any step that lowers the per-site log-posterior, falls
+  back to exact observed-curvature Newton under `LogLink`, then to a 20x Fisher
+  retry, and returns `-Inf` if all fail. Fitted NB2 results change on the default
+  route: on a 48-cell panel 18 fits reached higher log-likelihoods (by up to
+  5,340), 28 were unchanged, and none got genuinely worse. More fits now report
+  `converged = false` through the existing dispersion-boundary warning, and NB2
+  grouped fits run about 70% slower. `fit_nb_gllvm_grouped`,
+  `fit_nb1_gllvm_grouped` and `fit_beta_gllvm_grouped` now accept `β_init` and
+  `Λ_init`, as `fit_nb_gllvm` does (#503, #521).
 - **Gamma grouped fits no longer report convergence from a diverged inner search.**
   The per-site mode search inside `fit_gamma_gllvm_grouped` and its covariate and
   shared-shape routes could diverge at the fitter's own start and still return a
