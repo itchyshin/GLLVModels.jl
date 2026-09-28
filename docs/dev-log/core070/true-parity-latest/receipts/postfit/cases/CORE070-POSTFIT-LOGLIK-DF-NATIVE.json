@@ -1,0 +1,43 @@
+{
+  "schema": "core070-postfit-p1-case-receipt/v2",
+  "case_id": "CORE070-POSTFIT-LOGLIK-DF-NATIVE",
+  "verdict": "PASS",
+  "evidence_kind": "paired_policy_check",
+  "source_ids": [
+    "postfit-policy/POST-LOGLIK-DF"
+  ],
+  "batch": "tools/core070_postfit_policy_batch.R + .jl, GLLVM_PARITY_PIN=P1",
+  "harness_pass": true,
+  "batch_verifier": {
+    "tool": "tools/core070_verify_postfit_policy_batch.py",
+    "argv": "tools/core070_verify_postfit_policy_batch.py --state {state} --self-test",
+    "status": "PASS",
+    "exit_code": 0,
+    "accept_marker": "CORE070_POSTFIT_POLICY_BATCH_VERIFIED",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-policy-p1/verify.txt"
+  },
+  "r_call": "attr(logLik(object),'df') non-REML branch (R/methods-gllvmTMB.R:1064-1066)",
+  "julia_surface": "StatsAPI.dof(fit::AnyGllvmFit) = _nparams(fit) (src/postfit.jl:573)",
+  "comparand": "exact integer equality",
+  "check": "StatsAPI.dof(fit) == r_df",
+  "harness_fields": {
+    "julia": 15,
+    "r": 15,
+    "pass": true
+  },
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-policy-p1/julia-results.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-policy-p1/r-oracle.json"
+  ],
+  "why_not_numeric": "Exact integer equality (contract tolerances.integer_exact = 0). R and Julia values are recorded; the numeric-tier rule needs a tolerance > 0, and none is invented here.",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "gllvmtmb_version": "0.7.1",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "681c4c3ca666e630470bba01a057bc88158b85f3",
+  "glvmodels_worktree_dirty": [],
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+}
