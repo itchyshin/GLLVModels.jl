@@ -75,6 +75,16 @@
   Julia 1.10.12 and 1.13.0 (per-file; full suite not run; about 23 to 25 min per run on a loaded Mac).
   Four neighbouring files: 407 pass, plus 2 pre-existing broken (one `@test_broken`, one `@test_skip`).
 - After-task: `docs/dev-log/after-task/2026-09-27-tweedie-boot-verdict-504.md`.
+## 2026-09-27: Ordinal bootstrap refits report their own verdict (part of #504)
+
+- Branch `claude/ordinal-boot-verdict-504` from `origin/main` @ `880cad4c7`. The `OrdinalFit`,
+  `OrdinalPerTraitFit` and `OrdinalPerTraitCovFit` refit closures return `(θ, converged, loglik)`;
+  the category-count drop is kept; no boundary flag.
+- New `test/test_confint_bootstrap_verdict_ordinal.jl`: 22 pass, 5 fail, 12 error of 39 on main;
+  39/39 on Julia 1.10.12 (21.4 s) and 1.13.0 (27.2 s) (per-file; full suite not run). No data-driven
+  draw fails an ordinal fitter softly under bounds checking, so rejection is tested with a labelled stub.
+  Six neighbouring files: 986 pass, 0 fail, 0 broken.
+- After-task: `docs/dev-log/after-task/2026-09-27-ordinal-boot-verdict-504.md`.
 
 ## 2026-09-27: Temporal source alone at gllvmTMB P1 (slice 1)
 

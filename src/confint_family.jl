@@ -2352,7 +2352,8 @@ function _family_ci(fit::OrdinalFit, Y::AbstractMatrix;
     refit = function (Yb)
         fb = try fit_ordinal_gllvm(Yb; K = K, link = fit.link) catch; return nothing end
         fb.C == C || return nothing                 # category-count mismatch ⇒ drop replicate
-        return vcat(pack_lambda(fb.Λ), fb.τ)
+        return (θ = vcat(pack_lambda(fb.Λ), fb.τ), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = vcat(_confint_lambda_term_names("Lambda", p, K), ["tau[$c]" for c in 1:(C - 1)])
     return _FamilyCI(θ, nll, names, fill(:linear, length(θ)), sim, refit)
@@ -2441,7 +2442,8 @@ function _family_ci(fit::OrdinalPerTraitFit, Y::AbstractMatrix;
     refit = function (Yb)
         fb = try fit_ordinal_gllvm_pertrait(Yb; K = K, link = fit.link) catch; return nothing end
         fb.C == C || return nothing
-        return vcat(fb.β, pack_lambda(fb.Λ), _pack_free_tau_pertrait(fb.τ, C))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ), _pack_free_tau_pertrait(fb.τ, C)),
+                converged = fb.converged, loglik = fb.loglik)
     end
     names = vcat(["beta[$t]" for t in 1:p],
                  _confint_lambda_term_names("Lambda", p, K),
@@ -2510,8 +2512,9 @@ function _family_ci(fit::OrdinalPerTraitCovFit, Y::AbstractMatrix;
             return nothing
         end
         fb.C == C || return nothing
-        return vcat(fb.β, fb.γ[γ_free_idx], pack_lambda(fb.Λ),
-                    _pack_free_tau_pertrait(fb.τ, C))
+        return (θ = vcat(fb.β, fb.γ[γ_free_idx], pack_lambda(fb.Λ),
+                         _pack_free_tau_pertrait(fb.τ, C)),
+                converged = fb.converged, loglik = fb.loglik)
     end
     names = vcat(["beta[$t]" for t in 1:p],
                  ["gamma[$k]" for k in γ_free_idx],

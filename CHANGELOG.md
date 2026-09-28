@@ -599,6 +599,16 @@ All notable changes to GLLVModels.jl are documented here.
   boundary flag is added: the power is held fixed in the CI layer, and the
   Tweedie verdict already reports a power at the edge of (1, 2) as not
   converged.
+- **Ordinal `confint(..., method = :bootstrap)` now reports the refit's own
+  convergence verdict (part of #504).** The refit closures for `OrdinalFit`,
+  `OrdinalPerTraitFit` and `OrdinalPerTraitCovFit` (`src/confint_family.jl`)
+  returned a bare parameter vector, so a replicate whose refit did not
+  converge was counted as a good draw. They now return
+  `(θ = ..., converged = ..., loglik = ...)`, as Poisson's does since #516;
+  such replicates are excluded and `n_converged` counts only the ones kept.
+  A replicate whose category count differs from the original fit is still
+  dropped, as before. When every replicate converges, bootstrap endpoints
+  are identical to before. No boundary flag is added.
 
 ### Added
 - **Temporal covariance source, temporal source alone (gllvmTMB P1 port).**
