@@ -1,0 +1,60 @@
+{
+ "schema": "core070-namespace-1-case-receipt/v1",
+ "case_id": "CORE070-NAMESPACE-ANIMAL-SCALAR-FIT",
+ "source_id": "namespace/export/animal_scalar",
+ "bucket": "executable_now",
+ "meaning": "Tier 0 registration check: the R export/S3 method is registered in the pinned NAMESPACE and defined in the cited R file, and the named Julia symbol is defined in GLLVModels (at P1 also exported and a Function). A name match only (evidence_tier registration): semantics and numeric output are not compared, so a PASS is not a twin.",
+ "pin": "P1",
+ "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+ "r_sources_read": [
+  {
+   "path": "NAMESPACE",
+   "sha256": "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c",
+   "read_as": "git show 9539352f66f2db2cc26b1c393e67212a359b60c9:NAMESPACE"
+  },
+  {
+   "path": "R/animal-keyword.R",
+   "sha256": "11ecc611a434c2de0f3ed0947ea2652996d638fb4aecbe594fc9e54f987c0b2f",
+   "read_as": "git show 9539352f66f2db2cc26b1c393e67212a359b60c9:R/animal-keyword.R"
+  }
+ ],
+ "r_check": {
+  "namespace_line": "export(animal_scalar)",
+  "definition_pattern": "^animal_scalar\\s*<-\\s*function",
+  "definition_line_hint": 85,
+  "registered": true,
+  "defined": true,
+  "expected_registered": true,
+  "expected_defined": true
+ },
+ "julia_check": {
+  "symbol": "relatedness_cov",
+  "expected_exists": true,
+  "measured": {
+   "kind": "Function",
+   "exported": true,
+   "callable": true,
+   "first_own_method": "src/structured_cov.jl:124",
+   "exists": true,
+   "own_methods": 1
+  }
+ },
+ "julia_commit": "c29c1c0b6d8d985e1edd96426edef2621402a03f",
+ "julia_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+ "result": "PASS",
+ "verifier": {
+  "tool": "tools/core070_verify_namespace_1_batch.py",
+  "case_verdict": "PASS",
+  "category": "registration_twin",
+  "reason": "R registered and defined; Julia symbol present, exported, a Function",
+  "batch_verdict": "CORE070_NAMESPACE_1_STATE_OK"
+ },
+ "batch_receipt": {
+  "path": "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json",
+  "sha256": "33190f383ad320f14e6accc560774a6c46911ab6965f86e320eeb63f3dd82e6b"
+ },
+ "contract": {
+  "path": "docs/dev-log/core070/true-parity-latest/namespace-1-batch-contract-p1.json",
+  "sha256": "fe645d39063248210c66bea21428bd282cd8d0982666940f58422e0c6e34ea51"
+ }
+}
