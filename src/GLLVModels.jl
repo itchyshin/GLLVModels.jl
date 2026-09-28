@@ -303,7 +303,7 @@ export make_cross_kernel, extract_Gamma, fit_coevolution_gaussian, fit_coevoluti
        Lognormal, LognormalFit, fit_lognormal_gllvm,
        lognormal_marginal_loglik, lognormal_response_mean,
        Multinomial, MultinomialFit, fit_multinomial_gllvm,
-       Ordinal, fit_ordinal_gllvm, OrdinalFit,
+       Ordinal, ordinal_logit, OrdinalLogit, fit_ordinal_gllvm, OrdinalFit,
        fit_ordinal_gllvm_pertrait, OrdinalPerTraitFit,
        fit_ordinal_gllvm_pertrait_cov, OrdinalPerTraitCovFit,
        fit_gamma_gllvm, GammaFit,

@@ -13,6 +13,25 @@ All notable changes to GLLVModels.jl are documented here.
 
 ## Unreleased
 
+### Added
+- **`ordinal_logit()`: name-twin of gllvmTMB's `ordinal_logit()` (family_id 20,
+  gllvmTMB >= 0.7.1).** Fits exactly the model `Ordinal()` already fits with
+  `link = LogitLink()` (`fit_ordinal_gllvm_pertrait` /
+  `fit_ordinal_gllvm_pertrait_cov`), so it changes no numerics, but returns
+  its own `OrdinalLogit` marker rather than `Ordinal()` itself: `Ordinal()`
+  carries no link of its own, so a bare alias would let
+  `fit_gllvm(Y; family = ordinal_logit(), link = ProbitLink())` silently fit
+  a probit model under the logit name. `OrdinalLogit` pins the link and
+  refuses any other one, at both the `fit_gllvm` and `@formula` entry points.
+  Twin-verified against a real gllvmTMB 0.7.1 install (commit `9539352f6`) on
+  a fixed fixture dataset: logLik agrees to 3.1e-9 absolute at each side's own
+  optimum (test tolerance `atol = 1e-6`), and Julia's own Laplace marginal
+  evaluated at R's fitted coordinates reproduces R's logLik to 2.7e-11.
+  Per-trait cutpoints agree to at most 5.4e-6 (test tolerance `atol = 1e-3`)
+  and `Lambda * Lambda'` (loadings are only sign-identified) to at most 4.2e-5
+  (test tolerance `atol = 1e-3`) (`test/test_ordinal_logit_twin.jl`, tagged
+  `gllvm-parity-tag: P1`).
+
 ### Fixed
 - **Ordered-beta fits could report `converged = true` at a non-stationary point,
   with a restart reaching a genuinely better optimum (#501).** The per-site
