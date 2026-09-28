@@ -487,6 +487,22 @@ All notable changes to GLLVModels.jl are documented here.
   it, so other families are unchanged, and when every replicate converges the
   bootstrap endpoints are identical to before.
 
+### Added
+- **Temporal covariance source, temporal source alone (gllvmTMB P1 port).**
+  `temporal_indep`, `temporal_dep` and `temporal_latent` (rank one, optional
+  correlated `psi`) with AR1 or OU time structure fit through the separate door
+  `fit_temporal_gllvm(long_data; formula, temporal)`, unreplicated or
+  replicated. The likelihood is the exact Gaussian marginal
+  `Z (K ⊗ Sigma_T) Z' + sigma_eps^2 I`; parameters follow gllvmTMB's `opt$par`
+  order and names. `extract_temporal` returns the fitted time parameter, state
+  table, loadings and temporal variances; `TemporalGaussianFit` has its own
+  `loglikelihood`, `dof`, `nobs`, `aic` and `bic`, and refusals throw
+  `TemporalContractError` with gllvmTMB's message and condition class. Checked
+  against gllvmTMB P1 receipts: the objective at R's coordinates agrees to
+  1.7e-11 and R's objective at Julia's optimum to 7.5e-11 over 21 fits. Not yet
+  available: `unit` / `unit_obs` composition, cross-source cells, the wide
+  `traits()` form and the R bridge.
+
 ### Changed
 - **Breaking (default change):** `fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm`
   (and `fit_gllvm(...; family = DeltaLogNormal()/DeltaGamma())`) now default to
