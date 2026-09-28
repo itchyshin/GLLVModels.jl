@@ -124,7 +124,7 @@ Plain answer: 52 of 306 required 0.7.0 rows now carry real R-vs-Julia numbers at
 
 ## Findings worth knowing
 
-- Advisory frozen-R smoke on main (auto-d's check of run 36425715200): only the NB2 cell trips the R-gradient gate; no truncated-NB2 failure. The Student-t cell with per-trait estimated nu is a genuine convergence problem in BOTH engines (R optimizer code 1, Julia unconverged, logLik gap 0.0029 > 0.001, near-Gaussian nu diagnostic unconverged). No owner; assign if you want the job green.
+- Advisory frozen-R smoke on main (auto-d's check of run 36425715200): only the NB2 cell trips the R-gradient gate; no truncated-NB2 failure. The Student-t cell with per-trait estimated nu is a genuine convergence problem in BOTH engines (R optimizer code 1, Julia unconverged, logLik gap 0.0029 > 0.001, near-Gaussian nu diagnostic unconverged). Now taken by auto-d: draft #610 fixes a real Julia defect (estimated nu ran to the Gaussian limit past an interior optimum that gllvmTMB finds; warm restarts from nu = 20 and 50) and pins the NATIVE-10 cell to stored draws per Julia version; 33/33 on 1.10 and 1.13. Needs your word. auto-d's #608 swaps the NB2 smoke fixture and records (not gates) R's gradient, per your choice (a).
 
 - Advisory frozen-R smoke job, NB2 cell (auto-d lane, on your fixture-swap decision): a new NB2 dataset fixes the Julia side (converged, no boundary trait, logLik agreement 1.4e-9), but the cell's gate on R's own final gradient (<= 1e-4) fails for almost every dataset and depends on the machine (same data: 5.6e-5 Totoro, 2.4e-3 CI, 4.9e-3 Mac). The gate tests R's optimiser stop, not parity. Decision for you (auto-d is bringing it): record R's gradient without gating it, or compare after one Newton polish of R's optimum.
 
