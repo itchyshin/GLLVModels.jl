@@ -39,9 +39,12 @@ _mean_X(fit::GllvmFit, X, n) =
 # `residuals` and `simulate` apply the intercepts when called without `X`.
 # Supplying `X` defines the complete mean instead (no intercept is added) and is
 # passed through unchanged. `lambda_constraint` still requires a zero-mean fit
-# and is passed through unchanged.
+# and is passed through unchanged, as is a phylogenetic fit (`Σ_phy` supplied).
 function _fit_gaussian_trait_intercepts(Y::AbstractMatrix; K::Integer, kwargs...)
-    if get(kwargs, :X, nothing) !== nothing || get(kwargs, :lambda_constraint, nothing) !== nothing
+    # The phylogenetic effect J_n ⊗ B is constant across sites within a species,
+    # so a free per-species intercept would absorb it and drive σ_phy to zero.
+    if get(kwargs, :X, nothing) !== nothing || get(kwargs, :lambda_constraint, nothing) !== nothing ||
+       get(kwargs, :Σ_phy, nothing) !== nothing
         return fit_gaussian_gllvm(Y; K = K, kwargs...)
     end
     p, n = size(Y)
