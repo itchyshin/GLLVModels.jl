@@ -428,3 +428,46 @@ end
         @test occursin("Ordinal", s) && occursin("AIC", s)
     end
 end
+
+@testset "GllvmFit postfit requires X when β was estimated" begin
+    # Regression: _fitted_mean returned a zero mean when X was omitted, so
+    # getLV/predict/fitted/residuals on a fit with fixed effects were silently
+    # wrong. They must now throw, and still agree when X is supplied.
+    Random.seed!(7)
+    p, K, n = 6, 2, 80
+    x = randn(n)
+    X = zeros(p, n, 2); X[:, :, 1] .= 1.0; X[:, :, 2] .= x'
+    Y = 3.0 .+ 2.0 .* x' .+ 0.6 .* randn(p, K) * randn(K, n) .+ 0.3 .* randn(p, n)
+    fit = fit_gaussian_gllvm(Y; K = K, X = X)
+    @test fit.converged
+    @test length(fit.pars.β) == 2
+    @test !GLLVModels._has_gaussian_record(fit)
+
+    @testset "missing X throws" begin
+        @test_throws ArgumentError getLV(fit, Y)
+        @test_throws ArgumentError predict(fit, Y)
+        @test_throws ArgumentError fitted(fit, Y)
+        @test_throws ArgumentError residuals(fit, Y)
+    end
+
+    @testset "supplied X uses the fitted mean" begin
+        μ = [dot(X[t, s, :], fit.pars.β) for t in 1:p, s in 1:n]
+        Z = getLV(fit, Y; X = X, rotate = false)
+        η = predict(fit, Y; X = X)
+        @test η ≈ μ .+ fit.pars.Λ * Z' atol = 1e-10
+        @test fitted(fit, Y; X = X) ≈ η atol = 1e-10
+        @test residuals(fit, Y; X = X) ≈ (Y .- η) ./ fit.pars.σ_eps atol = 1e-10
+        # Residuals centre near zero only when the fixed-effect mean is used.
+        @test abs(mean(residuals(fit, Y; X = X))) < 0.1
+    end
+
+    @testset "the X_lv-only :mean component does not need X" begin
+        @test getLV(fit, Y; component = :mean, rotate = false) == zeros(n, K)
+    end
+
+    @testset "a fit without X still works without X" begin
+        f0 = fit_gaussian_gllvm(Y .- mean(Y; dims = 2); K = K)
+        @test isempty(f0.pars.β)
+        @test size(predict(f0, Y .- mean(Y; dims = 2))) == (p, n)
+    end
+end
