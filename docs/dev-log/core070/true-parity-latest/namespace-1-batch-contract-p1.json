@@ -1,0 +1,1678 @@
+{
+ "schema": "core070-namespace-1-batch-contract/v1",
+ "status": "FROZEN_NAMESPACE_1_BATCH_CONTRACT",
+ "area": "namespace-1",
+ "pin": "P1",
+ "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+ "regenerated_from": {
+  "path": "docs/dev-log/core070/namespace-1-batch-contract.json",
+  "sha256": "ded3a7c2a01c9bf36f5e0abaf017c07a07fcc31296b50d1ed675bd0c4289de4a",
+  "reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86"
+ },
+ "regenerated_by": "tools/core070_namespace_1_p1_contract.py",
+ "manifest_source": "docs/dev-log/core070/manifest-freeze-work/drafts/namespace-1.json",
+ "case_plan_annex": "docs/dev-log/core070/namespace-required-case-plan.json",
+ "manifest_row_count": 90,
+ "triage_note": "Tier 0 at P1: existence/registration parity only, same tier as the P0 batch. R side reads NAMESPACE and the cited R files with `git show <P1>:<path>` from a local gllvmTMB clone (GLLVMTMB_DIR), no installed gllvmTMB, no RCall. Julia side is isdefined() on the loaded GLLVModels module at the branch head. Not a numeric-output comparison (see P0 runner.tier1_followup, still unbuilt).",
+ "expected_case_count": 50,
+ "needs_new_julia_surface_count": 2,
+ "retired_at_p1_count": 2,
+ "spec_defect_count": 0,
+ "reused_or_reclassify_count": 36,
+ "source_access": "git-show",
+ "namespace_pin": "NAMESPACE",
+ "namespace_sha256": "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c",
+ "source_pins": {
+  "R/julia-bridge.R": "b588fd8084828586414a52ce4bc728ab75e282f0bd9253c5908d786fe1be26ee",
+  "R/methods-gllvmTMB.R": "6c32924b415646697ab4e471fda8b83108e416d662ba6e607bbeba335dd21616",
+  "R/vcov-coef.R": "7092603b1d86e5fcaf030e2e0d2c39a27febb08ffea9f46a5390954f116b4a04",
+  "R/z-confint-gllvmTMB.R": "0e995245ce1f0b5c9c5d1676bec982709728e20c980b274d9f4499ea6c6c7a53",
+  "R/predictive-diagnostics.R": "2a6775ab9e21b036c994864316b8addf6e97957d8a3961b841f6bc519862c029",
+  "R/output-methods.R": "3598b7a52f9e3e126a6feed227ed03781a182bd958d5382d2a38c941b2d45eaf",
+  "R/missing-predictor.R": "0955b93f3ff226a22d41b7a2cbf26d5f18d007c8157115332c302e35f50e72b5",
+  "R/proportions-ci.R": "a05e86b8fc335bab960c8c0e5b4257eb3e913296a8acbaa5fec159628f00b00b",
+  "R/families.R": "beed3caa91b0ed77b402f40192a493db693eafdd0bb214aa0ef73c33e4538791",
+  "R/animal-keyword.R": "11ecc611a434c2de0f3ed0947ea2652996d638fb4aecbe594fc9e54f987c0b2f",
+  "R/bootstrap-sigma.R": "c30fbad64542b7add009c8a971ce76da6b9b4d500b32737b8358322cac824238",
+  "R/diagnose.R": "625d497392c2d331e3a9dcf032630edfc29a82b12be71f5d28bd189b8bdcd7c4",
+  "R/confint-inspect.R": "321469bedf844e2aee03426660049e7b9cbe6a6e9090e3d085fd5aa9a139c426",
+  "R/brms-sugar.R": "7ea192ddde2dbb807e70322faef0bac8e6cdcfa19df7dd9f805476b02889191a",
+  "R/extract-sigma.R": "dbd337827707a7ca04c31ee57d6caf143b08e633d30a495f809f5b8728f90a14",
+  "R/extractors.R": "4b59791255564fd39617a57479fb0c479db1e429e874918830ce7451e75bfc37",
+  "R/extract-omega.R": "dc7e8afdc5875086f2e35f82548138198c6092baa1892a0573aaf94c9b03929b",
+  "R/extract-correlations.R": "eb66435a4b5d552cbbf92fd19a7663b90c92c81311492d3782e3f622daf2f02a",
+  "R/extract-cutpoints.R": "38c195646d91db683cbb31da1e3ba60fb1d857d5c0637f0877514176b11bc151",
+  "R/extract-repeatability.R": "e2da918fe3399c56b5f96fcb3d9924b06711a987adde4f14aa907cc331dc1fe2",
+  "R/rotate-loadings.R": "c10c9dbdbfe974bbda0e2280ac1f3ef30759a3db5b2fd175215676c024ff41e7",
+  "R/loading-ci.R": "f740dfc35ea554fbb77b29f59bfd15ff875fc9cd004b6cd9af0eb9e9e4ebd456"
+ },
+ "source_pin_changes_since_p0": [
+  {
+   "path": "R/julia-bridge.R",
+   "sha256_at_p0": "d6c167179b7cb9774655a3a68e401b133ac3a3d7f443028498529316d697fffa",
+   "sha256_at_p1": "b588fd8084828586414a52ce4bc728ab75e282f0bd9253c5908d786fe1be26ee",
+   "changed": true
+  },
+  {
+   "path": "R/methods-gllvmTMB.R",
+   "sha256_at_p0": "fd5515ec3eb355d0672ca19d7031ce251250d1dbeee80e8c2e772594cbd37fb3",
+   "sha256_at_p1": "6c32924b415646697ab4e471fda8b83108e416d662ba6e607bbeba335dd21616",
+   "changed": true
+  },
+  {
+   "path": "R/vcov-coef.R",
+   "sha256_at_p0": "7092603b1d86e5fcaf030e2e0d2c39a27febb08ffea9f46a5390954f116b4a04",
+   "sha256_at_p1": "7092603b1d86e5fcaf030e2e0d2c39a27febb08ffea9f46a5390954f116b4a04",
+   "changed": false
+  },
+  {
+   "path": "R/z-confint-gllvmTMB.R",
+   "sha256_at_p0": "c521f0874fd76b22d93bab9f43108b07603de0044f8b76228c75fd83e8c75893",
+   "sha256_at_p1": "0e995245ce1f0b5c9c5d1676bec982709728e20c980b274d9f4499ea6c6c7a53",
+   "changed": true
+  },
+  {
+   "path": "R/predictive-diagnostics.R",
+   "sha256_at_p0": "7416069e6e6dcb46bb242f296093131e70d9e8cc35f0d40bd19c728b2c85efc0",
+   "sha256_at_p1": "2a6775ab9e21b036c994864316b8addf6e97957d8a3961b841f6bc519862c029",
+   "changed": true
+  },
+  {
+   "path": "R/output-methods.R",
+   "sha256_at_p0": "576df3ae9070c9062ec58f8034e0dc329ef31f0a484693e2757a0759e31b2fac",
+   "sha256_at_p1": "3598b7a52f9e3e126a6feed227ed03781a182bd958d5382d2a38c941b2d45eaf",
+   "changed": true
+  },
+  {
+   "path": "R/missing-predictor.R",
+   "sha256_at_p0": "e0b8d4a7299ce18a64b171059e1c2c36ba9ee0f7234bb6d65f3cd36e606cad84",
+   "sha256_at_p1": "0955b93f3ff226a22d41b7a2cbf26d5f18d007c8157115332c302e35f50e72b5",
+   "changed": true
+  },
+  {
+   "path": "R/proportions-ci.R",
+   "sha256_at_p0": "6c927aec8135ca55da599c43a30940fe70b1a0d1643cb82ccd26068c86f7a22f",
+   "sha256_at_p1": "a05e86b8fc335bab960c8c0e5b4257eb3e913296a8acbaa5fec159628f00b00b",
+   "changed": true
+  },
+  {
+   "path": "R/families.R",
+   "sha256_at_p0": "1d39b05e33ef60ffd11ded940e22f9fd3234fcea1cce0a91938d31dab61a5be6",
+   "sha256_at_p1": "beed3caa91b0ed77b402f40192a493db693eafdd0bb214aa0ef73c33e4538791",
+   "changed": true
+  },
+  {
+   "path": "R/animal-keyword.R",
+   "sha256_at_p0": "f7a7da8db1fc487a00f836353433ae9375bfd5ba8a0b9d2a9a21e5cabf1b6076",
+   "sha256_at_p1": "11ecc611a434c2de0f3ed0947ea2652996d638fb4aecbe594fc9e54f987c0b2f",
+   "changed": true
+  },
+  {
+   "path": "R/bootstrap-sigma.R",
+   "sha256_at_p0": "33095a8b5d34a7f23fc8c469682c3aa83521da0096242df7c2ee7aa009ce1668",
+   "sha256_at_p1": "c30fbad64542b7add009c8a971ce76da6b9b4d500b32737b8358322cac824238",
+   "changed": true
+  },
+  {
+   "path": "R/diagnose.R",
+   "sha256_at_p0": "7a7e2fd389c0f417504bf8892744a3288975267f435604b12cc5d15436cc6637",
+   "sha256_at_p1": "625d497392c2d331e3a9dcf032630edfc29a82b12be71f5d28bd189b8bdcd7c4",
+   "changed": true
+  },
+  {
+   "path": "R/confint-inspect.R",
+   "sha256_at_p0": "321469bedf844e2aee03426660049e7b9cbe6a6e9090e3d085fd5aa9a139c426",
+   "sha256_at_p1": "321469bedf844e2aee03426660049e7b9cbe6a6e9090e3d085fd5aa9a139c426",
+   "changed": false
+  },
+  {
+   "path": "R/brms-sugar.R",
+   "sha256_at_p0": "001f6de37c9d2102470d39af79e21cff2ae4e3c62d2c250243cb0a2782ce27c8",
+   "sha256_at_p1": "7ea192ddde2dbb807e70322faef0bac8e6cdcfa19df7dd9f805476b02889191a",
+   "changed": true
+  },
+  {
+   "path": "R/extract-sigma.R",
+   "sha256_at_p0": "629740a1edf6b5ea9b2a0004046df6fdedaec9a6e02eb96e056fdd68ca08c76d",
+   "sha256_at_p1": "dbd337827707a7ca04c31ee57d6caf143b08e633d30a495f809f5b8728f90a14",
+   "changed": true
+  },
+  {
+   "path": "R/extractors.R",
+   "sha256_at_p0": "ab40d8251dae70b29f1a5af8e23ca26cc831fc0c795c5954b2dfa4e22ca5ddca",
+   "sha256_at_p1": "4b59791255564fd39617a57479fb0c479db1e429e874918830ce7451e75bfc37",
+   "changed": true
+  },
+  {
+   "path": "R/extract-omega.R",
+   "sha256_at_p0": "1d5e65c1832ce0f30868f46fdb6d3fb48b69896ff8e675c39e94bd3c80399484",
+   "sha256_at_p1": "dc7e8afdc5875086f2e35f82548138198c6092baa1892a0573aaf94c9b03929b",
+   "changed": true
+  },
+  {
+   "path": "R/extract-correlations.R",
+   "sha256_at_p0": "8981505704c8de886d613f43e4479df9e5613ce7b805a247b8f3592c36acee3f",
+   "sha256_at_p1": "eb66435a4b5d552cbbf92fd19a7663b90c92c81311492d3782e3f622daf2f02a",
+   "changed": true
+  },
+  {
+   "path": "R/extract-cutpoints.R",
+   "sha256_at_p0": "a6b7133735c7ff854ac5e3b547bf46a790e771fef5d6d0b05585d454200ef905",
+   "sha256_at_p1": "38c195646d91db683cbb31da1e3ba60fb1d857d5c0637f0877514176b11bc151",
+   "changed": true
+  },
+  {
+   "path": "R/extract-repeatability.R",
+   "sha256_at_p0": "279be2420cc228c78ae2e5ef132d28c87a818aa4674f83fc15d32ab7b974199f",
+   "sha256_at_p1": "e2da918fe3399c56b5f96fcb3d9924b06711a987adde4f14aa907cc331dc1fe2",
+   "changed": true
+  },
+  {
+   "path": "R/rotate-loadings.R",
+   "sha256_at_p0": "c10c9dbdbfe974bbda0e2280ac1f3ef30759a3db5b2fd175215676c024ff41e7",
+   "sha256_at_p1": "c10c9dbdbfe974bbda0e2280ac1f3ef30759a3db5b2fd175215676c024ff41e7",
+   "changed": false
+  },
+  {
+   "path": "R/loading-ci.R",
+   "sha256_at_p0": "058f5bde518b4d0f030be944a6eba32fbd02b027c54b60a81fdc463359babd46",
+   "sha256_at_p1": "f740dfc35ea554fbb77b29f59bfd15ff875fc9cd004b6cd9af0eb9e9e4ebd456",
+   "changed": true
+  }
+ ],
+ "julia_source_root": "src",
+ "cases": [
+  {
+   "source_id": "namespace/S3method/coef,gllvmTMB_julia",
+   "case_id": "CORE070-NAMESPACE-COEF-JULIA-BRIDGE-COMPARE",
+   "r_kind": "S3method",
+   "r_name": "coef",
+   "r_class": "gllvmTMB_julia",
+   "r_file": "R/julia-bridge.R",
+   "r_definition_line_hint": 3161,
+   "r_definition_pattern": "^coef\\.gllvmTMB_julia\\s*<-\\s*function",
+   "r_namespace_line": "S3method(coef,gllvmTMB_julia)",
+   "julia_symbol": "coef",
+   "julia_note": "StatsAPI.coef(fit::GllvmFit) src/postfit.jl:633 (+ per-fit-type methods)",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/S3method/confint,gllvmTMB_julia",
+   "case_id": "CORE070-NAMESPACE-CONFINT-JULIA-BRIDGE-COMPARE",
+   "r_kind": "S3method",
+   "r_name": "confint",
+   "r_class": "gllvmTMB_julia",
+   "r_file": "R/julia-bridge.R",
+   "r_definition_line_hint": 3386,
+   "r_definition_pattern": "^confint\\.gllvmTMB_julia\\s*<-\\s*function",
+   "r_namespace_line": "S3method(confint,gllvmTMB_julia)",
+   "julia_symbol": "confint",
+   "julia_note": "confint(fit::GllvmFit; ...) src/confint.jl:246",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/S3method/fitted,gllvmTMB_julia",
+   "case_id": "CORE070-NAMESPACE-FITTED-JULIA-BRIDGE-COMPARE",
+   "r_kind": "S3method",
+   "r_name": "fitted",
+   "r_class": "gllvmTMB_julia",
+   "r_file": "R/julia-bridge.R",
+   "r_definition_line_hint": 3213,
+   "r_definition_pattern": "^fitted\\.gllvmTMB_julia\\s*<-\\s*function",
+   "r_namespace_line": "S3method(fitted,gllvmTMB_julia)",
+   "julia_symbol": "fitted",
+   "julia_note": "StatsAPI.fitted(fit::AnyGllvmFit, data; ...) src/postfit.jl:306",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/S3method/logLik,gllvmTMB_julia",
+   "case_id": "CORE070-NAMESPACE-LOGLIK-JULIA-BRIDGE-COMPARE",
+   "r_kind": "S3method",
+   "r_name": "logLik",
+   "r_class": "gllvmTMB_julia",
+   "r_file": "R/julia-bridge.R",
+   "r_definition_line_hint": 3130,
+   "r_definition_pattern": "^logLik\\.gllvmTMB_julia\\s*<-\\s*function",
+   "r_namespace_line": "S3method(logLik,gllvmTMB_julia)",
+   "julia_symbol": "loglikelihood",
+   "julia_note": "StatsAPI.loglikelihood(fit::AnyGllvmFit) src/postfit.jl:580",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/S3method/predict,gllvmTMB_julia",
+   "case_id": "CORE070-NAMESPACE-PREDICT-JULIA-BRIDGE-COMPARE",
+   "r_kind": "S3method",
+   "r_name": "predict",
+   "r_class": "gllvmTMB_julia",
+   "r_file": "R/julia-bridge.R",
+   "r_definition_line_hint": 3167,
+   "r_definition_pattern": "^predict\\.gllvmTMB_julia\\s*<-\\s*function",
+   "r_namespace_line": "S3method(predict,gllvmTMB_julia)",
+   "julia_symbol": "predict",
+   "julia_note": "predict(fit::GllvmFit, y; ...) src/postfit.jl:258",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/S3method/residuals,gllvmTMB_julia",
+   "case_id": "CORE070-NAMESPACE-RESIDUALS-JULIA-BRIDGE-COMPARE",
+   "r_kind": "S3method",
+   "r_name": "residuals",
+   "r_class": "gllvmTMB_julia",
+   "r_file": "R/julia-bridge.R",
+   "r_definition_line_hint": 3246,
+   "r_definition_pattern": "^residuals\\.gllvmTMB_julia\\s*<-\\s*function",
+   "r_namespace_line": "S3method(residuals,gllvmTMB_julia)",
+   "julia_symbol": "residuals",
+   "julia_note": "residuals(fit::GllvmFit, y; ...) src/postfit.jl:316",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/S3method/simulate,gllvmTMB_julia",
+   "case_id": "CORE070-NAMESPACE-SIMULATE-JULIA-BRIDGE-COMPARE",
+   "r_kind": "S3method",
+   "r_name": "simulate",
+   "r_class": "gllvmTMB_julia",
+   "r_file": "R/julia-bridge.R",
+   "r_definition_line_hint": 3293,
+   "r_definition_pattern": "^simulate\\.gllvmTMB_julia\\s*<-\\s*function",
+   "r_namespace_line": "S3method(simulate,gllvmTMB_julia)",
+   "julia_symbol": "simulate",
+   "julia_note": "simulate(fit::_ScalarMuFit, n; ...) src/simulate_fit.jl:30 (+ per-family methods)",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/S3method/summary,gllvmTMB_julia",
+   "case_id": "CORE070-NAMESPACE-SUMMARY-JULIA-BRIDGE-COMPARE",
+   "r_kind": "S3method",
+   "r_name": "summary",
+   "r_class": "gllvmTMB_julia",
+   "r_file": "R/julia-bridge.R",
+   "r_definition_line_hint": 3489,
+   "r_definition_pattern": "^summary\\.gllvmTMB_julia\\s*<-\\s*function",
+   "r_namespace_line": "S3method(summary,gllvmTMB_julia)",
+   "julia_symbol": "coef_table",
+   "julia_note": "coef_table(fit, Y; ...) src/summary_table.jl:70 (assembles the coef/SE table)",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/S3method/coef,gllvmTMB_multi",
+   "case_id": "CORE070-NAMESPACE-COEF-MULTI-NATIVE",
+   "r_kind": "S3method",
+   "r_name": "coef",
+   "r_class": "gllvmTMB_multi",
+   "r_file": "R/vcov-coef.R",
+   "r_definition_line_hint": 59,
+   "r_definition_pattern": "^coef\\.gllvmTMB_multi\\s*<-\\s*function",
+   "r_namespace_line": "S3method(coef,gllvmTMB_multi)",
+   "julia_symbol": "coef",
+   "julia_note": "StatsAPI.coef(fit::GllvmFit) src/postfit.jl:633",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/S3method/confint,gllvmTMB_multi",
+   "case_id": "CORE070-NAMESPACE-CONFINT-MULTI-NATIVE",
+   "r_kind": "S3method",
+   "r_name": "confint",
+   "r_class": "gllvmTMB_multi",
+   "r_file": "R/z-confint-gllvmTMB.R",
+   "r_definition_line_hint": 1608,
+   "r_definition_pattern": "^confint\\.gllvmTMB_multi\\s*<-\\s*function",
+   "r_namespace_line": "S3method(confint,gllvmTMB_multi)",
+   "julia_symbol": "confint",
+   "julia_note": "confint(fit::GllvmFit; ...) src/confint.jl:246",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/S3method/fitted,gllvmTMB_multi",
+   "case_id": "CORE070-NAMESPACE-FITTED-MULTI-NATIVE",
+   "r_kind": "S3method",
+   "r_name": "fitted",
+   "r_class": "gllvmTMB_multi",
+   "r_file": "R/methods-gllvmTMB.R",
+   "r_definition_line_hint": 3330,
+   "r_definition_pattern": "^fitted\\.gllvmTMB_multi\\s*<-\\s*function",
+   "r_namespace_line": "S3method(fitted,gllvmTMB_multi)",
+   "julia_symbol": "fitted",
+   "julia_note": "StatsAPI.fitted(fit::AnyGllvmFit, data; ...) src/postfit.jl:306",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/S3method/logLik,gllvmTMB_multi",
+   "case_id": "CORE070-NAMESPACE-LOGLIK-MULTI-NATIVE",
+   "r_kind": "S3method",
+   "r_name": "logLik",
+   "r_class": "gllvmTMB_multi",
+   "r_file": "R/methods-gllvmTMB.R",
+   "r_definition_line_hint": 1109,
+   "r_definition_pattern": "^logLik\\.gllvmTMB_multi\\s*<-\\s*function",
+   "r_namespace_line": "S3method(logLik,gllvmTMB_multi)",
+   "julia_symbol": "loglikelihood",
+   "julia_note": "StatsAPI.loglikelihood(fit::AnyGllvmFit) src/postfit.jl:580",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/S3method/predict,gllvmTMB_multi",
+   "case_id": "CORE070-NAMESPACE-PREDICT-MULTI-NATIVE",
+   "r_kind": "S3method",
+   "r_name": "predict",
+   "r_class": "gllvmTMB_multi",
+   "r_file": "R/methods-gllvmTMB.R",
+   "r_definition_line_hint": 2786,
+   "r_definition_pattern": "^predict\\.gllvmTMB_multi\\s*<-\\s*function",
+   "r_namespace_line": "S3method(predict,gllvmTMB_multi)",
+   "julia_symbol": "predict",
+   "julia_note": "predict(fit::GllvmFit, y; ...) src/postfit.jl:258",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/S3method/residuals,gllvmTMB_multi",
+   "case_id": "CORE070-NAMESPACE-RESIDUALS-MULTI-NATIVE",
+   "r_kind": "S3method",
+   "r_name": "residuals",
+   "r_class": "gllvmTMB_multi",
+   "r_file": "R/predictive-diagnostics.R",
+   "r_definition_line_hint": 229,
+   "r_definition_pattern": "^residuals\\.gllvmTMB_multi\\s*<-\\s*function",
+   "r_namespace_line": "S3method(residuals,gllvmTMB_multi)",
+   "julia_symbol": "residuals",
+   "julia_note": "residuals(fit::GllvmFit, y; ...) src/postfit.jl:316 -- NOTE: actual R definition site is predictive-diagnostics.R, not the three files the manifest row's r_call cited (methods-gllvmTMB.R / vcov-coef.R / z-confint-gllvmTMB.R); corrected here after grep, see spec_defects note.",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/S3method/simulate,gllvmTMB_multi",
+   "case_id": "CORE070-NAMESPACE-SIMULATE-MULTI-NATIVE",
+   "r_kind": "S3method",
+   "r_name": "simulate",
+   "r_class": "gllvmTMB_multi",
+   "r_file": "R/methods-gllvmTMB.R",
+   "r_definition_line_hint": 1523,
+   "r_definition_pattern": "^simulate\\.gllvmTMB_multi\\s*<-\\s*function",
+   "r_namespace_line": "S3method(simulate,gllvmTMB_multi)",
+   "julia_symbol": "simulate",
+   "julia_note": "simulate(fit::_ScalarMuFit, n; ...) src/simulate_fit.jl:30",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/S3method/summary,gllvmTMB_multi",
+   "case_id": "CORE070-NAMESPACE-SUMMARY-MULTI-NATIVE",
+   "r_kind": "S3method",
+   "r_name": "summary",
+   "r_class": "gllvmTMB_multi",
+   "r_file": "R/methods-gllvmTMB.R",
+   "r_definition_line_hint": 825,
+   "r_definition_pattern": "^summary\\.gllvmTMB_multi\\s*<-\\s*function",
+   "r_namespace_line": "S3method(summary,gllvmTMB_multi)",
+   "julia_symbol": "coef_table",
+   "julia_note": "coef_table(fit, Y; ...) src/summary_table.jl:70",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/S3method/vcov,gllvmTMB_multi",
+   "case_id": "CORE070-NAMESPACE-VCOV-MULTI-NATIVE",
+   "r_kind": "S3method",
+   "r_name": "vcov",
+   "r_class": "gllvmTMB_multi",
+   "r_file": "R/vcov-coef.R",
+   "r_definition_line_hint": 69,
+   "r_definition_pattern": "^vcov\\.gllvmTMB_multi\\s*<-\\s*function",
+   "r_namespace_line": "S3method(vcov,gllvmTMB_multi)",
+   "julia_symbol": "vcov",
+   "julia_note": "StatsAPI.vcov(fit::GllvmFit; ...) src/postfit.jl:679",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/S3method/stats::nobs,gllvmTMB_multi",
+   "case_id": "CORE070-NAMESPACE-NOBS-MULTI-NATIVE",
+   "r_kind": "S3method",
+   "r_name": "nobs",
+   "r_class": "gllvmTMB_multi",
+   "r_file": "R/methods-gllvmTMB.R",
+   "r_definition_line_hint": 1216,
+   "r_definition_pattern": "^nobs\\.gllvmTMB_multi\\s*<-\\s*function",
+   "r_namespace_line": "S3method(stats::nobs,gllvmTMB_multi)",
+   "julia_symbol": "nobs",
+   "julia_note": "StatsAPI.nobs(fit::AnyGllvmFit) src/postfit.jl:614 -- NAMESPACE registers this as S3method(stats::nobs,gllvmTMB_multi) (namespaced generic); the function definition itself is still plain nobs.gllvmTMB_multi <- function(...).",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/S3method/ordiplot,gllvmTMB_multi",
+   "case_id": "CORE070-NAMESPACE-ORDIPLOT-MULTI-SCORES",
+   "r_kind": "S3method",
+   "r_name": "ordiplot",
+   "r_class": "gllvmTMB_multi",
+   "r_file": "R/output-methods.R",
+   "r_definition_line_hint": 406,
+   "r_definition_pattern": "^ordiplot\\.gllvmTMB_multi\\s*<-\\s*function",
+   "r_namespace_line": "S3method(ordiplot,gllvmTMB_multi)",
+   "julia_symbol": "ordiplot",
+   "julia_note": "ordiplot(fit, Y; ...) src/ordination.jl:97",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/S3method/imputed,gllvmTMB",
+   "case_id": "CORE070-NAMESPACE-IMPUTED-MISSING-PREDICTOR",
+   "r_kind": "S3method",
+   "r_name": "imputed",
+   "r_class": "gllvmTMB",
+   "r_file": "R/missing-predictor.R",
+   "r_definition_line_hint": 2610,
+   "r_definition_pattern": "^imputed\\.gllvmTMB\\s*<-\\s*function",
+   "r_namespace_line": "S3method(imputed,gllvmTMB)",
+   "julia_symbol": "fit_gaussian_mi_fiml",
+   "julia_note": "fit_gaussian_mi_fiml(...).eblup_x field src/missing_predictor_fiml.jl:184 (Gaussian FIML path; the grouped-cov multi.jl path does not yet return an eblup_x-equivalent field -- see spec_defects note)",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/Beta",
+   "case_id": "CORE070-NAMESPACE-BETA-FAMILY-NATIVE-MODEL",
+   "r_kind": "export",
+   "r_name": "Beta",
+   "r_class": null,
+   "r_file": "R/families.R",
+   "r_definition_line_hint": 217,
+   "r_definition_pattern": "^Beta\\s*<-\\s*function",
+   "r_namespace_line": "export(Beta)",
+   "julia_symbol": "fit_beta_gllvm",
+   "julia_note": "fit_beta_gllvm(Y; K, ...) src/families/beta.jl:157",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/animal_scalar",
+   "case_id": "CORE070-NAMESPACE-ANIMAL-SCALAR-FIT",
+   "r_kind": "export",
+   "r_name": "animal_scalar",
+   "r_class": null,
+   "r_file": "R/animal-keyword.R",
+   "r_definition_line_hint": 85,
+   "r_definition_pattern": "^animal_scalar\\s*<-\\s*function",
+   "r_namespace_line": "export(animal_scalar)",
+   "julia_symbol": "relatedness_cov",
+   "julia_note": "relatedness_cov(A; jitter) src/structured_cov.jl:113 -> Sigma_phy passed to fit_gaussian_gllvm",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/bootstrap_Sigma",
+   "case_id": "CORE070-NAMESPACE-BOOTSTRAP-SIGMA-NATIVE",
+   "r_kind": "export",
+   "r_name": "bootstrap_Sigma",
+   "r_class": null,
+   "r_file": "R/bootstrap-sigma.R",
+   "r_definition_line_hint": 202,
+   "r_definition_pattern": "^bootstrap_Sigma\\s*<-\\s*function",
+   "r_namespace_line": "export(bootstrap_Sigma)",
+   "julia_symbol": "bootstrap_ci",
+   "julia_note": "bootstrap_ci(fit; ...) src/confint_bootstrap.jl:258, applied to sigma_y_site()",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/extract_Gamma",
+   "case_id": "CORE070-NAMESPACE-EXTRACT-GAMMA-BLOCK",
+   "r_kind": "export",
+   "r_name": "extract_Gamma",
+   "r_class": null,
+   "r_file": "R/extract-sigma.R",
+   "r_definition_line_hint": 1984,
+   "r_definition_pattern": "^extract_Gamma\\s*<-\\s*function",
+   "r_namespace_line": "export(extract_Gamma)",
+   "julia_symbol": "extract_Gamma",
+   "julia_note": "extract_Gamma(fit; row_traits, col_traits, ...) src/extract_gamma.jl:36 -- literal name match",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/extract_ICC_site",
+   "case_id": "CORE070-NAMESPACE-EXTRACT-ICC-SITE",
+   "r_kind": "export",
+   "r_name": "extract_ICC_site",
+   "r_class": null,
+   "r_file": "R/extractors.R",
+   "r_definition_line_hint": 101,
+   "r_definition_pattern": "^extract_ICC_site\\s*<-\\s*function",
+   "r_namespace_line": "export(extract_ICC_site)",
+   "julia_symbol": "icc_wald_ci",
+   "julia_note": "icc_wald_ci(fit, derived_fn_packed; ...) src/confint_derived_wald.jl:378",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/extract_Omega",
+   "case_id": "CORE070-NAMESPACE-EXTRACT-OMEGA-SUM",
+   "r_kind": "export",
+   "r_name": "extract_Omega",
+   "r_class": null,
+   "r_file": "R/extract-omega.R",
+   "r_definition_line_hint": 189,
+   "r_definition_pattern": "^extract_Omega\\s*<-\\s*function",
+   "r_namespace_line": "export(extract_Omega)",
+   "julia_symbol": "sigma_y_site",
+   "julia_note": "composed: sum of sigma_y_site()-family outputs across tiers (src/confint_derived.jl:191, src/twolevel.jl Sigma_B/Sigma_W) + one link-residual addition -- no single named Julia aggregator function; composition performed by the verifier",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/extract_Sigma",
+   "case_id": "CORE070-NAMESPACE-EXTRACT-SIGMA-NATIVE",
+   "r_kind": "export",
+   "r_name": "extract_Sigma",
+   "r_class": null,
+   "r_file": "R/extract-sigma.R",
+   "r_definition_line_hint": 789,
+   "r_definition_pattern": "^extract_Sigma\\s*<-\\s*function",
+   "r_namespace_line": "export(extract_Sigma)",
+   "julia_symbol": "sigma_y_site",
+   "julia_note": "sigma_y_site(fit::GllvmFit) src/confint_derived.jl:191",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/extract_Sigma_B",
+   "case_id": "CORE070-NAMESPACE-EXTRACT-SIGMA-B-TWOLEVEL",
+   "r_kind": "export",
+   "r_name": "extract_Sigma_B",
+   "r_class": null,
+   "r_file": "R/extractors.R",
+   "r_definition_line_hint": 31,
+   "r_definition_pattern": "^extract_Sigma_B\\s*<-\\s*function",
+   "r_namespace_line": "export(extract_Sigma_B)",
+   "julia_symbol": "TwoLevelFit",
+   "julia_note": "fit.Sigma_B field on TwoLevelFit src/twolevel.jl (struct field, not a function; see communality_B docstring)",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/extract_Sigma_W",
+   "case_id": "CORE070-NAMESPACE-EXTRACT-SIGMA-W-TWOLEVEL",
+   "r_kind": "export",
+   "r_name": "extract_Sigma_W",
+   "r_class": null,
+   "r_file": "R/extractors.R",
+   "r_definition_line_hint": 66,
+   "r_definition_pattern": "^extract_Sigma_W\\s*<-\\s*function",
+   "r_namespace_line": "export(extract_Sigma_W)",
+   "julia_symbol": "TwoLevelFit",
+   "julia_note": "fit.Sigma_W field on TwoLevelFit src/twolevel.jl",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/extract_coevolution_modules",
+   "case_id": "CORE070-NAMESPACE-EXTRACT-COEVOLUTION-MODULES-SVD",
+   "r_kind": "export",
+   "r_name": "extract_coevolution_modules",
+   "r_class": null,
+   "r_file": "R/extract-sigma.R",
+   "r_definition_line_hint": 2468,
+   "r_definition_pattern": "^extract_coevolution_modules\\s*<-\\s*function",
+   "r_namespace_line": "export(extract_coevolution_modules)",
+   "julia_symbol": "extract_Gamma",
+   "julia_note": "composed: svd() of Sigma_row^-1/2 * extract_Gamma(...) * Sigma_col^-1/2 -- uses extract_Gamma() + Julia stdlib LinearAlgebra.svd; no single named Julia wrapper, composition performed by the verifier",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/extract_communality",
+   "case_id": "CORE070-NAMESPACE-EXTRACT-COMMUNALITY-NATIVE",
+   "r_kind": "export",
+   "r_name": "extract_communality",
+   "r_class": null,
+   "r_file": "R/extractors.R",
+   "r_definition_line_hint": 212,
+   "r_definition_pattern": "^extract_communality\\s*<-\\s*function",
+   "r_namespace_line": "export(extract_communality)",
+   "julia_symbol": "communality",
+   "julia_note": "communality(fit::GllvmFit) src/confint_derived.jl:208",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/extract_correlations",
+   "case_id": "CORE070-NAMESPACE-EXTRACT-CORRELATIONS-NATIVE",
+   "r_kind": "export",
+   "r_name": "extract_correlations",
+   "r_class": null,
+   "r_file": "R/extract-correlations.R",
+   "r_definition_line_hint": 392,
+   "r_definition_pattern": "^extract_correlations\\s*<-\\s*function",
+   "r_namespace_line": "export(extract_correlations)",
+   "julia_symbol": "correlation",
+   "julia_note": "correlation(fit::GllvmFit) src/confint_derived.jl:280",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/extract_cross_correlations",
+   "case_id": "CORE070-NAMESPACE-EXTRACT-CROSS-CORRELATIONS-NATIVE",
+   "r_kind": "export",
+   "r_name": "extract_cross_correlations",
+   "r_class": null,
+   "r_file": "R/extract-correlations.R",
+   "r_definition_line_hint": 886,
+   "r_definition_pattern": "^extract_cross_correlations\\s*<-\\s*function",
+   "r_namespace_line": "export(extract_cross_correlations)",
+   "julia_symbol": "correlation",
+   "julia_note": "correlation(fit::GllvmFit) src/confint_derived.jl:280, subset to the cross-trait block",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/extract_cutpoints",
+   "case_id": "CORE070-NAMESPACE-EXTRACT-CUTPOINTS-ORDINAL",
+   "r_kind": "export",
+   "r_name": "extract_cutpoints",
+   "r_class": null,
+   "r_file": "R/extract-cutpoints.R",
+   "r_definition_line_hint": 71,
+   "r_definition_pattern": "^extract_cutpoints\\s*<-\\s*function",
+   "r_namespace_line": "export(extract_cutpoints)",
+   "julia_symbol": "OrdinalFit",
+   "julia_note": "fit.tau field on OrdinalFit src/families/ordinal.jl:265",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/extract_loadings",
+   "case_id": "CORE070-NAMESPACE-EXTRACT-LOADINGS-NATIVE",
+   "r_kind": "export",
+   "r_name": "extract_loadings",
+   "r_class": null,
+   "r_file": "R/output-methods.R",
+   "r_definition_line_hint": 87,
+   "r_definition_pattern": "^extract_loadings\\s*<-\\s*function",
+   "r_namespace_line": "export(extract_loadings)",
+   "julia_symbol": "unpack_lambda",
+   "julia_note": "unpack_lambda(theta, p, K) src/packing.jl:47",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/extract_lv_effects",
+   "case_id": "CORE070-NAMESPACE-EXTRACT-LV-EFFECTS-NATIVE",
+   "r_kind": "export",
+   "r_name": "extract_lv_effects",
+   "r_class": null,
+   "r_file": "R/extractors.R",
+   "r_definition_line_hint": 674,
+   "r_definition_pattern": "^extract_lv_effects\\s*<-\\s*function",
+   "r_namespace_line": "export(extract_lv_effects)",
+   "julia_symbol": "extract_lv_effects",
+   "julia_note": "extract_lv_effects(fit::GllvmFit; ...) src/postfit.jl:353 -- literal name match",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/extract_ordination",
+   "case_id": "CORE070-NAMESPACE-EXTRACT-ORDINATION-NATIVE",
+   "r_kind": "export",
+   "r_name": "extract_ordination",
+   "r_class": null,
+   "r_file": "R/extractors.R",
+   "r_definition_line_hint": 482,
+   "r_definition_pattern": "^extract_ordination\\s*<-\\s*function",
+   "r_namespace_line": "export(extract_ordination)",
+   "julia_symbol": "ordination",
+   "julia_note": "ordination(fit, Y; rotate=true) src/ordination.jl:42",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/extract_phylo_signal",
+   "case_id": "CORE070-NAMESPACE-EXTRACT-PHYLO-SIGNAL-NATIVE",
+   "r_kind": "export",
+   "r_name": "extract_phylo_signal",
+   "r_class": null,
+   "r_file": "R/extract-omega.R",
+   "r_definition_line_hint": 468,
+   "r_definition_pattern": "^extract_phylo_signal\\s*<-\\s*function",
+   "r_namespace_line": "export(extract_phylo_signal)",
+   "julia_symbol": "phylo_signal",
+   "julia_note": "phylo_signal(fit::GllvmFit; ...) src/confint_derived.jl:306",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/extract_proportions",
+   "case_id": "CORE070-NAMESPACE-EXTRACT-PROPORTIONS-NATIVE",
+   "r_kind": "export",
+   "r_name": "extract_proportions",
+   "r_class": null,
+   "r_file": "R/extract-omega.R",
+   "r_definition_line_hint": 736,
+   "r_definition_pattern": "^extract_proportions\\s*<-\\s*function",
+   "r_namespace_line": "export(extract_proportions)",
+   "julia_symbol": "proportions",
+   "julia_note": "proportions(fit::GllvmFit; component=:shared) src/confint_derived.jl:231",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/extract_repeatability",
+   "case_id": "CORE070-NAMESPACE-EXTRACT-REPEATABILITY-TWOLEVEL",
+   "r_kind": "export",
+   "r_name": "extract_repeatability",
+   "r_class": null,
+   "r_file": "R/extract-repeatability.R",
+   "r_definition_line_hint": 83,
+   "r_definition_pattern": "^extract_repeatability\\s*<-\\s*function",
+   "r_namespace_line": "export(extract_repeatability)",
+   "julia_symbol": "repeatability",
+   "julia_note": "repeatability(fit::TwoLevelFit) src/twolevel.jl:263",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/extract_residual_cor",
+   "case_id": "CORE070-NAMESPACE-EXTRACT-RESIDUAL-COR-NATIVE",
+   "r_kind": "export",
+   "r_name": "extract_residual_cor",
+   "r_class": null,
+   "r_file": "R/output-methods.R",
+   "r_definition_line_hint": 355,
+   "r_definition_pattern": "^extract_residual_cor\\s*<-\\s*function",
+   "r_namespace_line": "export(extract_residual_cor)",
+   "julia_symbol": "correlation",
+   "julia_note": "correlation(fit::_NonGaussianLatentFit, Y; ...) src/link_residual.jl:435 (family-aware residual correlation)",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/extract_residual_cov",
+   "case_id": "CORE070-NAMESPACE-EXTRACT-RESIDUAL-COV-NATIVE",
+   "r_kind": "export",
+   "r_name": "extract_residual_cov",
+   "r_class": null,
+   "r_file": "R/output-methods.R",
+   "r_definition_line_hint": 349,
+   "r_definition_pattern": "^extract_residual_cov\\s*<-\\s*function",
+   "r_namespace_line": "export(extract_residual_cov)",
+   "julia_symbol": "sigma_y_site",
+   "julia_note": "sigma_y_site(fit::_NonGaussianLatentFit, Y; ...) src/link_residual.jl:371",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/extract_residual_split",
+   "case_id": "CORE070-NAMESPACE-EXTRACT-RESIDUAL-SPLIT-NATIVE",
+   "r_kind": "export",
+   "r_name": "extract_residual_split",
+   "r_class": null,
+   "r_file": "R/extract-omega.R",
+   "r_definition_line_hint": 95,
+   "r_definition_pattern": "^extract_residual_split\\s*<-\\s*function",
+   "r_namespace_line": "export(extract_residual_split)",
+   "julia_symbol": "proportions",
+   "julia_note": "proportions(fit; component=:shared/:unique) src/confint_derived.jl:231",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/extract_rotated_loadings_table",
+   "case_id": "CORE070-NAMESPACE-EXTRACT-ROTATED-LOADINGS-NATIVE",
+   "r_kind": "export",
+   "r_name": "extract_rotated_loadings_table",
+   "r_class": null,
+   "r_file": "R/rotate-loadings.R",
+   "r_definition_line_hint": 281,
+   "r_definition_pattern": "^extract_rotated_loadings_table\\s*<-\\s*function",
+   "r_namespace_line": "export(extract_rotated_loadings_table)",
+   "julia_symbol": "ordination",
+   "julia_note": "ordination(fit, Y; rotate=true) src/ordination.jl:42",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/flag_unreliable_loadings",
+   "case_id": "CORE070-NAMESPACE-FLAG-UNRELIABLE-LOADINGS-NATIVE",
+   "r_kind": "export",
+   "r_name": "flag_unreliable_loadings",
+   "r_class": null,
+   "r_file": "R/loading-ci.R",
+   "r_definition_line_hint": 378,
+   "r_definition_pattern": "^flag_unreliable_loadings\\s*<-\\s*function",
+   "r_namespace_line": "export(flag_unreliable_loadings)",
+   "julia_symbol": "confint",
+   "julia_note": "composed: confint(fit; parm=<Lambda term names>) src/confint.jl:246, zero-crossing test performed by the verifier",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/getLV",
+   "case_id": "CORE070-NAMESPACE-GETLV-NATIVE",
+   "r_kind": "export",
+   "r_name": "getLV",
+   "r_class": null,
+   "r_file": "R/output-methods.R",
+   "r_definition_line_hint": 169,
+   "r_definition_pattern": "^getLV\\s*<-\\s*function",
+   "r_namespace_line": "export(getLV)",
+   "julia_symbol": "getLV",
+   "julia_note": "getLV(fit::GllvmFit, y; ...) src/postfit.jl:170 -- literal name match",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/S3method/deviance,gllvmTMB_multi",
+   "case_id": "CORE070-NAMESPACE-DEVIANCE-MULTI-NATIVE",
+   "r_kind": "S3method",
+   "r_name": "deviance",
+   "r_class": "gllvmTMB_multi",
+   "r_file": "R/methods-gllvmTMB.R",
+   "r_definition_line_hint": 3355,
+   "r_definition_pattern": "^deviance\\.gllvmTMB_multi\\s*<-\\s*function",
+   "r_namespace_line": "S3method(deviance,gllvmTMB_multi)",
+   "julia_symbol": "deviance",
+   "julia_note": "StatsAPI.deviance(fit::AnyGllvmFit) = -2 * loglikelihood(fit), src/postfit_tables.jl:21 (added a9464034d, core070 section 1.1); exported.",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/S3method/tidy,gllvmTMB_multi",
+   "case_id": "CORE070-NAMESPACE-TIDY-MULTI-NATIVE",
+   "r_kind": "S3method",
+   "r_name": "tidy",
+   "r_class": "gllvmTMB_multi",
+   "r_file": "R/methods-gllvmTMB.R",
+   "r_definition_line_hint": 1260,
+   "r_definition_pattern": "^tidy\\.gllvmTMB_multi\\s*<-\\s*function",
+   "r_namespace_line": "S3method(tidy,gllvmTMB_multi)",
+   "julia_symbol": "tidy",
+   "julia_note": "tidy(fit::GllvmFit, Y; ...) src/postfit_tables.jl:898 (added df3e61b55, core070 section 1.13); exported.",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/check_gllvmTMB",
+   "case_id": "CORE070-NAMESPACE-CHECK-GLLVMTMB-DIAGNOSTIC",
+   "r_kind": "export",
+   "r_name": "check_gllvmTMB",
+   "r_class": null,
+   "r_file": "R/diagnose.R",
+   "r_definition_line_hint": 1564,
+   "r_definition_pattern": "^check_gllvmTMB\\s*<-\\s*function",
+   "r_namespace_line": "export(check_gllvmTMB)",
+   "julia_symbol": "check_gllvmTMB",
+   "julia_note": "check_gllvmTMB(fit; ...) src/diagnostics.jl:344 (added 0fc22cddf, core070 diagnostics cluster); exported.",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/confint_inspect",
+   "case_id": "CORE070-NAMESPACE-CONFINT-INSPECT-NATIVE",
+   "r_kind": "export",
+   "r_name": "confint_inspect",
+   "r_class": null,
+   "r_file": "R/confint-inspect.R",
+   "r_definition_line_hint": 128,
+   "r_definition_pattern": "^confint_inspect\\s*<-\\s*function",
+   "r_namespace_line": "export(confint_inspect)",
+   "julia_symbol": "confint_inspect",
+   "julia_note": "confint_inspect(fit::GllvmFit, y; ...) src/diagnostics.jl:702 (added 0fc22cddf, core070 diagnostics cluster); exported.",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  }
+ ],
+ "needs_new_julia_surface": [
+  {
+   "source_id": "namespace/export/animal_slope",
+   "case_id": "CORE070-NAMESPACE-ANIMAL-SLOPE-FIT",
+   "r_kind": "export",
+   "r_name": "animal_slope",
+   "r_class": null,
+   "r_file": "R/animal-keyword.R",
+   "r_definition_line_hint": 373,
+   "r_definition_pattern": "^animal_slope\\s*<-\\s*function",
+   "r_namespace_line": "export(animal_slope)",
+   "julia_symbol": "relatedness_cov",
+   "julia_note": "structured_cov.jl's relatedness_cov() only builds Sigma_phy for random INTERCEPTS (consumed by fit_gaussian_gllvm); families/random_slopes.jl's grouped random-slope path uses an unstructured Sigma_b (no precomputed-relatedness-matrix support). No relatedness/pedigree-structured random-SLOPE fit path exists.",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true
+  },
+  {
+   "source_id": "namespace/export/dep",
+   "case_id": "CORE070-NAMESPACE-DEP-FORMULA-KEYWORD",
+   "r_kind": "export",
+   "r_name": "dep",
+   "r_class": null,
+   "r_file": "R/brms-sugar.R",
+   "r_definition_line_hint": 1959,
+   "r_definition_pattern": "^dep\\s*<-\\s*function",
+   "r_namespace_line": "export(dep)",
+   "julia_symbol": "dep",
+   "julia_note": "src/formula.jl is a StatsModels @formula-to-design-matrix front end only; it explicitly disclaims parsing 'formula source terms, trees, pedigrees, meshes' (formula.jl:167). No dep/indep covariance-structure keyword grammar exists anywhere in src/.",
+   "expected_r_registered": true,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": false
+  }
+ ],
+ "retired_at_p1": [
+  {
+   "source_id": "namespace/export/.proportions_bootstrap_ci",
+   "case_id": "CORE070-NAMESPACE-PROPORTIONS-BOOTSTRAP-CI",
+   "r_kind": "export",
+   "r_name": ".proportions_bootstrap_ci",
+   "r_class": null,
+   "r_file": "R/proportions-ci.R",
+   "r_definition_line_hint": 423,
+   "r_definition_pattern": "^\\.proportions_bootstrap_ci\\s*<-\\s*function",
+   "r_namespace_line": "export(.proportions_bootstrap_ci)",
+   "julia_symbol": "bootstrap_ci_derived",
+   "julia_note": "bootstrap_ci_derived(fit, derived_fn; ...) src/confint_derived.jl:481, applied to proportions()",
+   "expected_r_registered": false,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true,
+   "retired_note": "export(.proportions_bootstrap_ci) is absent from the P1 NAMESPACE; the definition is still present at R/proportions-ci.R:423 (internal, unexported)."
+  },
+  {
+   "source_id": "namespace/export/.proportions_wald_ci",
+   "case_id": "CORE070-NAMESPACE-PROPORTIONS-WALD-CI",
+   "r_kind": "export",
+   "r_name": ".proportions_wald_ci",
+   "r_class": null,
+   "r_file": "R/proportions-ci.R",
+   "r_definition_line_hint": 247,
+   "r_definition_pattern": "^\\.proportions_wald_ci\\s*<-\\s*function",
+   "r_namespace_line": "export(.proportions_wald_ci)",
+   "julia_symbol": "transformed_wald_ci_derived",
+   "julia_note": "transformed_wald_ci_derived(...) src/confint_derived_wald.jl:217, applied to proportions()",
+   "expected_r_registered": false,
+   "expected_r_defined": true,
+   "expected_julia_symbol_exists": true,
+   "retired_note": "export(.proportions_wald_ci) is absent from the P1 NAMESPACE; the definition is still present at R/proportions-ci.R:247 (internal, unexported)."
+  }
+ ],
+ "spec_defect_notes": [],
+ "reused_or_reclassify": [
+  {
+   "source_id": "namespace/S3method/print,gllvmTMB_julia",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "compatibility_adapter",
+    "reason": "Pure R-side console formatting of bridge-object fields that are separately covered as required_core (coef/confint/fitted/logLik/predict/residuals/simulate,gllvmTMB_julia). No numeric parity target of its own."
+   }
+  },
+  {
+   "source_id": "namespace/S3method/print,summary.gllvmTMB_julia",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "compatibility_adapter",
+    "reason": "Console formatting of a summary object whose numeric content is separately required_core (summary,gllvmTMB_julia). No distinct Julia surface."
+   }
+  },
+  {
+   "source_id": "namespace/S3method/plot,gllvmTMB_multi",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "intentionally_excluded",
+    "reason": "plot.gllvmTMB_multi (plot-gllvmTMB.R) renders a generic diagnostic/residual plot; it is a visualization-only S3 method with no distinct numeric Julia parity target beyond the residuals/fitted accessors already required above."
+   }
+  },
+  {
+   "source_id": "namespace/S3method/plot,gllvmTMBmesh",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "intentionally_excluded",
+    "reason": "Rendering of a spatial SPDE mesh (mesh.R). GLLVM.jl's SPDE surface (src/spde.jl, src/spde_mesh.jl) is exercised by its own construction/fitting cases; the plot method itself has no numeric parity target."
+   }
+  },
+  {
+   "source_id": "namespace/S3method/plot,sdmTMBmesh",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "intentionally_excluded",
+    "reason": "Rendering-only S3 method for a spatial mesh object; no independent numeric Julia parity target."
+   }
+  },
+  {
+   "source_id": "namespace/S3method/plot,profile_derived",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "intentionally_excluded",
+    "reason": "Visualization of profile_ci_derived() output already covered by GLLVM.jl's src/confint_derived.jl profile-CI required cases; the plot itself renders no new numeric content."
+   }
+  },
+  {
+   "source_id": "namespace/S3method/plot,profile_loadings",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "intentionally_excluded",
+    "reason": "Visualization of profile-CI-on-loadings values already covered by GLLVM.jl's src/confint_profile.jl required cases; no independent numeric target."
+   }
+  },
+  {
+   "source_id": "namespace/S3method/print,gllvmTMB_Sigma_phy_slope",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "compatibility_adapter",
+    "reason": "print.gllvmTMB_Sigma_phy_slope (extract-sigma.R) only formats an already-computed R diagnostic object (the phylogenetic-slope Sigma table already covered by extract_Sigma-family required cases) for console display; it carries no independent numeric content."
+   }
+  },
+  {
+   "source_id": "namespace/S3method/print,gllvmTMB_check_consistency",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "compatibility_adapter",
+    "reason": "print.gllvmTMB_check_consistency (check-consistency.R) only formats an already-computed R diagnostic object (check_gllvmTMB()'s internal consistency diagnostic, already required_core via check_gllvmTMB) for console display; it carries no independent numeric content."
+   }
+  },
+  {
+   "source_id": "namespace/S3method/print,gllvmTMB_confint_inspect",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "compatibility_adapter",
+    "reason": "print.gllvmTMB_confint_inspect (confint-inspect.R) only formats an already-computed R diagnostic object (the confint_inspect() object, already required_core via confint_inspect) for console display; it carries no independent numeric content."
+   }
+  },
+  {
+   "source_id": "namespace/S3method/print,gllvmTMB_coverage_study",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "compatibility_adapter",
+    "reason": "print.gllvmTMB_coverage_study (coverage-study.R) only formats an already-computed R diagnostic object (a simulation coverage-study summary object (dev/reporting tooling, not a fitted-model accessor)) for console display; it carries no independent numeric content."
+   }
+  },
+  {
+   "source_id": "namespace/S3method/print,gllvmTMB_identifiability",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "compatibility_adapter",
+    "reason": "print.gllvmTMB_identifiability (diagnose.R) only formats an already-computed R diagnostic object (an identifiability-diagnostic object produced by check_gllvmTMB()) for console display; it carries no independent numeric content."
+   }
+  },
+  {
+   "source_id": "namespace/S3method/print,gllvmTMB_reportable_table",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "compatibility_adapter",
+    "reason": "print.gllvmTMB_reportable_table (reportable-table.R) only formats an already-computed R diagnostic object (a formatted reporting table assembled from already-validated diagnostic values) for console display; it carries no independent numeric content."
+   }
+  },
+  {
+   "source_id": "namespace/S3method/print,gllvmTMB_slope_ci",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "compatibility_adapter",
+    "reason": "print.gllvmTMB_slope_ci (slope-sd-ci.R) only formats an already-computed R diagnostic object (the slope-SD CI object, already required_core via the slope confint machinery) for console display; it carries no independent numeric content."
+   }
+  },
+  {
+   "source_id": "namespace/S3method/print,gllvmTMB_multi",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "compatibility_adapter",
+    "reason": "Console formatting only; underlying numeric accessors are separately required_core."
+   }
+  },
+  {
+   "source_id": "namespace/S3method/print,summary.gllvmTMB_multi",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "compatibility_adapter",
+    "reason": "Console formatting only; the summary object's numeric content is separately required_core."
+   }
+  },
+  {
+   "source_id": "namespace/export/add_utm_columns",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "compatibility_adapter",
+    "reason": "Pure R coordinate-system convenience utility outside GLLVM.jl's modeling surface (no CRS/UTM equivalent in src/)."
+   }
+  },
+  {
+   "source_id": "namespace/export/animal_dep",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reused_from",
+    "annex": "docs/dev-log/core070/slopes-required-case-plan.json",
+    "planned_case_ids": [
+     "SLOPE-ANIMAL-DEP-BAR",
+     "SLOPE-ANIMAL-DEP-DBAR"
+    ]
+   }
+  },
+  {
+   "source_id": "namespace/export/animal_indep",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reused_from",
+    "annex": "docs/dev-log/core070/slopes-required-case-plan.json",
+    "planned_case_ids": [
+     "SLOPE-ANIMAL-INDEP-BAR",
+     "SLOPE-ANIMAL-INDEP-DBAR"
+    ]
+   }
+  },
+  {
+   "source_id": "namespace/export/animal_latent",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reused_from",
+    "annex": "docs/dev-log/core070/slopes-required-case-plan.json",
+    "planned_case_ids": [
+     "SLOPE-ANIMAL-LAT-DEFAULT",
+     "SLOPE-ANIMAL-LAT-NOUNIQUE",
+     "SLOPE-ANIMAL-LAT-RANK4"
+    ]
+   }
+  },
+  {
+   "source_id": "namespace/export/animal_unique",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "compatibility_adapter",
+    "reason": "animal_unique() (animal-keyword.R:89-96) carries an explicit lifecycle::badge(\"deprecated\") in its own docstring: 'soft-deprecated as compatibility syntax in gllvmTMB 0.2.0. Use animal_indep() for standalone marginal diagonal animal-model terms ... use animal_latent(..., unique = TRUE) when the folded latent term itself should carry this diagonal companion.' It is a deprecated alias whose behaviour is already covered by the required_core animal_indep and animal_latent(unique=TRUE) cases (SLOPE-ANIMAL-INDEP-*, SLOPE-ANIMAL-LAT-*)."
+   }
+  },
+  {
+   "source_id": "namespace/export/betabinomial",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "intentionally_excluded",
+    "reason": "Beta-binomial is not among GLLVM.jl's implemented families (README/CLAUDE.md family list); no Julia surface exists to compare against until it ships."
+   }
+  },
+  {
+   "source_id": "namespace/export/block_V",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "intentionally_excluded",
+    "reason": "Two-stage meta-analytic block-variance construction utility, outside GLLVM.jl's GLLVM/phylogenetic modeling scope (no meta-analysis two-stage pipeline in src/)."
+   }
+  },
+  {
+   "source_id": "namespace/export/categorical",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "compatibility_adapter",
+    "reason": "categorical() (R/missing-predictor.R:143) is a formula-grammar sentinel marking a predictor's imputation type at parse time; it carries no independent Julia numeric surface of its own."
+   }
+  },
+  {
+   "source_id": "namespace/export/check_auto_residual",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "compatibility_adapter",
+    "reason": "check_auto_residual(fit) (check-auto-residual.R:60) reads fit$tmb_data$family_id_vec and fit$tmb_data$trait_id -- metadata already built by the fitting call -- and checks for within-trait family mixing / ordinal-family conflicts, returning a status/messages list. It computes no numeric quantity of its own (no likelihood, no covariance, no residual value); it is a pure R-side consistency validator over fields the fit already carries, so there is no independent Julia surface to compare against."
+   }
+  },
+  {
+   "source_id": "namespace/export/compare_Sigma_table",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "compatibility_adapter",
+    "reason": "compare_Sigma_table operates on already-extracted R objects and compares two already-extracted Sigma tables; it is a comparison/diagnostic utility, not itself a fitted-model accessor with an independent Julia numeric surface."
+   }
+  },
+  {
+   "source_id": "namespace/export/compare_dep_vs_two_psi",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "compatibility_adapter",
+    "reason": "compare_dep_vs_two_psi operates on already-extracted R objects and cross-checks the dep vs. two-psi covariance parameterizations against each other (an R-internal consistency check between two R parameterizations); it is a comparison/diagnostic utility, not itself a fitted-model accessor with an independent Julia numeric surface."
+   }
+  },
+  {
+   "source_id": "namespace/export/compare_indep_vs_two_psi",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "compatibility_adapter",
+    "reason": "compare_indep_vs_two_psi operates on already-extracted R objects and cross-checks the indep vs. two-psi covariance parameterizations against each other; it is a comparison/diagnostic utility, not itself a fitted-model accessor with an independent Julia numeric surface."
+   }
+  },
+  {
+   "source_id": "namespace/export/compare_loadings",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "compatibility_adapter",
+    "reason": "compare_loadings operates on already-extracted R objects and compares two already-extracted loadings matrices (Lambda_a, Lambda_b) generically; it is a comparison/diagnostic utility, not itself a fitted-model accessor with an independent Julia numeric surface."
+   }
+  },
+  {
+   "source_id": "namespace/export/confirmatory_lambda",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "compatibility_adapter",
+    "reason": "confirmatory_lambda(species, group, d, loads_on, ...) (confirmatory-lambda.R:72) is pure R-side construction: it validates its arguments and builds an n x d NA/0 fixed-zero pattern matrix from the loads_on group->axis mapping, with no call into a fit or the TMB/Julia engine. It is the same class of R-only helper as suggest_lambda_constraint(s) (already compatibility_adapter in this manifest): a specification/advisory object with no numeric quantity to compare against a Julia surface."
+   }
+  },
+  {
+   "source_id": "namespace/export/cumulative_logit",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "compatibility_adapter",
+    "reason": "cumulative_logit() (R/missing-predictor.R:104) is a formula-grammar link-name sentinel used when parsing ordinal formulas; the underlying cumulative-logit likelihood is already required_core via the Ordinal family plan (GLLVM.jl families/ordinal.jl), so this sentinel constructor has no independent numeric content."
+   }
+  },
+  {
+   "source_id": "namespace/export/delta_gamma",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "intentionally_excluded",
+    "reason": "Two-part delta-Gamma family is not implemented in GLLVM.jl (see AGENTS.md \"Planned next\"); no Julia surface exists to compare against yet."
+   }
+  },
+  {
+   "source_id": "namespace/export/delta_lognormal",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "intentionally_excluded",
+    "reason": "Two-part delta-lognormal family is not implemented in GLLVM.jl (see AGENTS.md \"Planned next\"); no Julia surface exists to compare against yet."
+   }
+  },
+  {
+   "source_id": "namespace/export/diagnose_kernel_separability",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "compatibility_adapter",
+    "reason": "diagnose_kernel_separability(...) (kernel-helpers.R:581) takes user-supplied kernel matrices directly as its ... arguments (not a fitted model) and computes a pairwise Frobenius-style similarity between them in pure R, returning an advisory classification (near_orthogonal/high overlap) and recommendation text. It never touches a gllvmTMB fit or the TMB/Julia engine, so it has no Julia numeric surface to compare against -- the same class as suggest_lambda_constraint(s)."
+   }
+  },
+  {
+   "source_id": "namespace/export/diagnostic_table",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "compatibility_adapter",
+    "reason": "Aggregates already-validated diagnostic values (from check_gllvmTMB and friends, separately required_core) into an R display table; no independent numeric content of its own."
+   }
+  },
+  {
+   "source_id": "namespace/export/extract_Sigma_table",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": {
+    "kind": "reclassify",
+    "to": "compatibility_adapter",
+    "reason": "Display-table wrapper around extract_Sigma() and its CIs, both separately required_core; no independent numeric content."
+   }
+  }
+ ],
+ "negative_controls": [
+  {
+   "control_id": "NEG-DEP-ABSENT",
+   "case_id": "CORE070-NAMESPACE-DEP-FORMULA-KEYWORD",
+   "kind": "julia_absent",
+   "description": "dep is a NEEDS_NEW_JULIA_SURFACE row whose Julia symbol is genuinely absent at the branch head; the Julia facts must report exists=false and the row must not pass as if a surface existed.",
+   "check": "julia_facts['dep']['exists'] == false AND expected_julia_symbol_exists == false for this case_id"
+  },
+  {
+   "control_id": "NEG-RETIRED-EXPORT-UNREGISTERED",
+   "case_id": "CORE070-NAMESPACE-PROPORTIONS-WALD-CI",
+   "kind": "r_unregistered",
+   "description": "export(.proportions_wald_ci) left the NAMESPACE between P0 and P1 while the function body stayed in R/proportions-ci.R; the R scan must report registered=false, defined=true, proving the registration check discriminates and is not reading the definition as registration.",
+   "check": "r_facts[case_id].registered == false AND r_facts[case_id].defined == true"
+  },
+  {
+   "control_id": "NEG-NEVER-EXISTED-SYMBOL",
+   "case_id": null,
+   "kind": "julia_absent_synthetic",
+   "description": "A symbol that has never existed in GLLVModels.jl (gllvmTMB_julia_bridge_nonexistent_surface_zzz) must resolve to exists=false, proving the Julia introspection path is not an always-true stub.",
+   "check": "isdefined(GLLVModels, :gllvmTMB_julia_bridge_nonexistent_surface_zzz) == false"
+  }
+ ],
+ "regeneration_log": [
+  {
+   "case_id": "CORE070-NAMESPACE-COEF-JULIA-BRIDGE-COMPARE",
+   "change": "r_definition_line_hint",
+   "p0": 3089,
+   "p1": 3161
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-CONFINT-JULIA-BRIDGE-COMPARE",
+   "change": "r_definition_line_hint",
+   "p0": 3314,
+   "p1": 3386
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-FITTED-JULIA-BRIDGE-COMPARE",
+   "change": "r_definition_line_hint",
+   "p0": 3141,
+   "p1": 3213
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-LOGLIK-JULIA-BRIDGE-COMPARE",
+   "change": "r_definition_line_hint",
+   "p0": 3058,
+   "p1": 3130
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-PREDICT-JULIA-BRIDGE-COMPARE",
+   "change": "r_definition_line_hint",
+   "p0": 3095,
+   "p1": 3167
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-RESIDUALS-JULIA-BRIDGE-COMPARE",
+   "change": "r_definition_line_hint",
+   "p0": 3174,
+   "p1": 3246
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-SIMULATE-JULIA-BRIDGE-COMPARE",
+   "change": "r_definition_line_hint",
+   "p0": 3221,
+   "p1": 3293
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-SUMMARY-JULIA-BRIDGE-COMPARE",
+   "change": "r_definition_line_hint",
+   "p0": 3417,
+   "p1": 3489
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-FITTED-MULTI-NATIVE",
+   "change": "r_definition_line_hint",
+   "p0": 2837,
+   "p1": 3330
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-LOGLIK-MULTI-NATIVE",
+   "change": "r_definition_line_hint",
+   "p0": 1026,
+   "p1": 1109
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-PREDICT-MULTI-NATIVE",
+   "change": "r_definition_line_hint",
+   "p0": 2421,
+   "p1": 2786
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-SIMULATE-MULTI-NATIVE",
+   "change": "r_definition_line_hint",
+   "p0": 1431,
+   "p1": 1523
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-SUMMARY-MULTI-NATIVE",
+   "change": "r_definition_line_hint",
+   "p0": 744,
+   "p1": 825
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-NOBS-MULTI-NATIVE",
+   "change": "r_definition_line_hint",
+   "p0": 1133,
+   "p1": 1216
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-ORDIPLOT-MULTI-SCORES",
+   "change": "r_definition_line_hint",
+   "p0": 384,
+   "p1": 406
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-IMPUTED-MISSING-PREDICTOR",
+   "change": "r_definition_line_hint",
+   "p0": 2603,
+   "p1": 2610
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-PROPORTIONS-BOOTSTRAP-CI",
+   "change": "retired_at_p1",
+   "reason": "export(.proportions_bootstrap_ci) is absent from the P1 NAMESPACE; the definition is still present at R/proportions-ci.R:423 (internal, unexported)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-PROPORTIONS-WALD-CI",
+   "change": "retired_at_p1",
+   "reason": "export(.proportions_wald_ci) is absent from the P1 NAMESPACE; the definition is still present at R/proportions-ci.R:247 (internal, unexported)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-BETA-FAMILY-NATIVE-MODEL",
+   "change": "r_definition_line_hint",
+   "p0": 213,
+   "p1": 217
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-BOOTSTRAP-SIGMA-NATIVE",
+   "change": "r_definition_line_hint",
+   "p0": 196,
+   "p1": 202
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-EXTRACT-GAMMA-BLOCK",
+   "change": "r_definition_line_hint",
+   "p0": 1662,
+   "p1": 1984
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-EXTRACT-SIGMA-NATIVE",
+   "change": "r_definition_line_hint",
+   "p0": 686,
+   "p1": 789
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-EXTRACT-COEVOLUTION-MODULES-SVD",
+   "change": "r_definition_line_hint",
+   "p0": 2146,
+   "p1": 2468
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-EXTRACT-CROSS-CORRELATIONS-NATIVE",
+   "change": "r_definition_line_hint",
+   "p0": 884,
+   "p1": 886
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-EXTRACT-CUTPOINTS-ORDINAL",
+   "change": "r_definition_line_hint",
+   "p0": 66,
+   "p1": 71
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-EXTRACT-LV-EFFECTS-NATIVE",
+   "change": "r_definition_line_hint",
+   "p0": 641,
+   "p1": 674
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-EXTRACT-PHYLO-SIGNAL-NATIVE",
+   "change": "r_definition_line_hint",
+   "p0": 463,
+   "p1": 468
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-EXTRACT-PROPORTIONS-NATIVE",
+   "change": "r_definition_line_hint",
+   "p0": 725,
+   "p1": 736
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-EXTRACT-RESIDUAL-COR-NATIVE",
+   "change": "r_definition_line_hint",
+   "p0": 342,
+   "p1": 355
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-EXTRACT-RESIDUAL-COV-NATIVE",
+   "change": "r_definition_line_hint",
+   "p0": 336,
+   "p1": 349
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-FLAG-UNRELIABLE-LOADINGS-NATIVE",
+   "change": "r_definition_line_hint",
+   "p0": 363,
+   "p1": 378
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-DEVIANCE-MULTI-NATIVE",
+   "change": "r_definition_line_hint",
+   "p0": 2862,
+   "p1": 3355
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-DEVIANCE-MULTI-NATIVE",
+   "change": "promoted_to_cases",
+   "julia_symbol_p0": "deviance",
+   "julia_symbol_p1": "deviance",
+   "expected_julia_symbol_exists_p0": false,
+   "reason": "StatsAPI.deviance(fit::AnyGllvmFit) = -2 * loglikelihood(fit), src/postfit_tables.jl:21 (added a9464034d, core070 section 1.1); exported."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-TIDY-MULTI-NATIVE",
+   "change": "r_definition_line_hint",
+   "p0": 1177,
+   "p1": 1260
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-TIDY-MULTI-NATIVE",
+   "change": "promoted_to_cases",
+   "julia_symbol_p0": "tidy",
+   "julia_symbol_p1": "tidy",
+   "expected_julia_symbol_exists_p0": false,
+   "reason": "tidy(fit::GllvmFit, Y; ...) src/postfit_tables.jl:898 (added df3e61b55, core070 section 1.13); exported."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-ANIMAL-SLOPE-FIT",
+   "change": "r_definition_line_hint",
+   "p0": 349,
+   "p1": 373
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-CHECK-GLLVMTMB-DIAGNOSTIC",
+   "change": "r_definition_line_hint",
+   "p0": 1548,
+   "p1": 1564
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-CHECK-GLLVMTMB-DIAGNOSTIC",
+   "change": "promoted_to_cases",
+   "julia_symbol_p0": "_fit_verdict",
+   "julia_symbol_p1": "check_gllvmTMB",
+   "expected_julia_symbol_exists_p0": true,
+   "reason": "check_gllvmTMB(fit; ...) src/diagnostics.jl:344 (added 0fc22cddf, core070 diagnostics cluster); exported."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-CONFINT-INSPECT-NATIVE",
+   "change": "promoted_to_cases",
+   "julia_symbol_p0": "_profile_bisect_side",
+   "julia_symbol_p1": "confint_inspect",
+   "expected_julia_symbol_exists_p0": true,
+   "reason": "confint_inspect(fit::GllvmFit, y; ...) src/diagnostics.jl:702 (added 0fc22cddf, core070 diagnostics cluster); exported."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE-DEP-FORMULA-KEYWORD",
+   "change": "r_definition_line_hint",
+   "p0": 1756,
+   "p1": 1959
+  }
+ ],
+ "runner": {
+  "outer": "tools/core070_namespace_1_batch.R",
+  "inner": "tools/core070_namespace_1_batch.jl",
+  "outer_usage": "GLLVM_PARITY_PIN=P1 GLLVMTMB_DIR=<gllvmTMB clone> Rscript --vanilla tools/core070_namespace_1_batch.R <destination>",
+  "inner_invocation": "GLLVM_PARITY_PIN=P1 julia --project=. tools/core070_namespace_1_batch.jl <destination>/julia-facts.json",
+  "needs_frozen_library": false
+ },
+ "verifier": {
+  "path": "tools/core070_verify_namespace_1_batch.py",
+  "invocation": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <destination> --write-case-receipts <dir>",
+  "self_test": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py --self-test",
+  "rejected_mutations_required": 4,
+  "negative_controls_required": 2
+ }
+}
