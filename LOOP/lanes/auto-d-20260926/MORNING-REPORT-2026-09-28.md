@@ -9,7 +9,11 @@ Goal: GOAL-2026-09-28-overnight.md. Written at the start and updated as arcs fin
 
 ## "All GitHub Actions green" (your 01:40Z request)
 - #518: `main` merged again (CHANGELOG conflict from tonight's merges); lane tests pass; pushed, CI running.
-- #521: `main` merged (picks up #530's Documenter fix); its two test files pass; pushed, CI running.
+- #521: `main` merged; **CI green at 06:20Z** (8/8 shards, Documenter now passes, twin tests); only
+  the advisory smoke job fails (NB2 boundary, see below).
+- #518: previous run green at 06:10Z (8/8 shards). `main` moved again (#531, #548), so I merged it
+  (CHANGELOG conflict only; #548's NaN checks in boundary_inference.jl merged cleanly next to #518's
+  edit; lane + chibar2 tests pass) and pushed the six held docs commits with it; new run queued.
 - At 03:05Z every run in the account was queued (main's and other lanes' too): GitHub's concurrent-job
   limit, not a failure. #518/#521 results will land whenever the queue drains; see the checks on each PR.
 - At 04:37Z still 25 runs queued account-wide; the 6 running were other lanes' full suites started 1.5 to
