@@ -1,3 +1,14 @@
+## 2026-09-27: Exponential, lognormal, Student-t and GP-1 bootstrap refits report their own verdict (part of #504)
+
+- Branch `claude/misc-boot-verdict-504` from `origin/main` @ `5b9af3763`. The `ExponentialFit`,
+  `LognormalFit`, `StudentTFit` and `GP1Fit` refit closures return `(θ, converged, loglik)`; θ
+  unchanged, no boundary flag.
+- New `test/test_confint_bootstrap_verdict_misc.jl`: 14 pass, 19 fail, 24 error of 57 on main; 57/57 on
+  Julia 1.10.12 (67 s; also 57/57 with `--check-bounds=yes`, 67 s) and 1.13.0 (51 s). Per-file; full
+  suite not run. Four neighbouring files on 1.10.12: 620 pass, 1 broken (a static `@test_broken` on the
+  phylo σ_phy sign, unrelated).
+- After-task: `docs/dev-log/after-task/2026-09-27-misc-boot-verdict-504.md`.
+
 ## 2026-09-27 (delta review fix): `extract_latent_scores()` RRRFit + explicit plain union (PR #531)
 
 - Delta review of the prior dispatch fix confirmed all 47 `getLV` methods
