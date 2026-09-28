@@ -143,6 +143,50 @@ composed_uo(c) = (u = get(c, "unit_obs", ""); isempty(u) ? nothing : Symbol(u))
 
     worst = Dict{String,Float64}()
     note(k, v) = (worst[k] = max(get(worst, k, 0.0), v))
+    # Which cells reach an interior optimum (Hessian min eigenvalue > 1e-3 and
+    # Julia not above R's tight optimum), measured on Julia 1.10 and 1.13 at
+    # g_tol = 1e-8. Only these are held to the tight between-optima block
+    # below; the rest are listed by reason and held to loose real bounds, so a
+    # cell that leaves the interior set, or an actual optimizer failure, fails
+    # the file rather than skipping silently.
+    #   :interior    10 simulated cells.
+    #   :flat        converged, but the surface has a flat direction
+    #                (|min eigenvalue| < 1e-3, measured ~1e-14 to 2e-9), so
+    #                the optimum is not unique along one direction on these
+    #                data (likely two tiers trading variance; not diagnosed).
+    #   :saddle      R's deterministic engine fixture (value = trait +
+    #                occasion / 10, sixth-source-engine.R:1-10) with a dep or
+    #                latent(unique = false) unit tier: a stationary point with
+    #                an indefinite Hessian (min eigenvalue -2.2 to -2.7); the
+    #                log-likelihood equals R's to 1e-12, so R stops at the same
+    #                point.
+    #   :degenerate  the same engine fixture with an indep / latent tier or
+    #                re_int: a flat, slightly indefinite direction (min
+    #                eigenvalue -7.2e-7 to -5e-12).
+    # On both engine classes the stop is platform-sensitive (on 1.10
+    # engine__latent_B_nounique converges and engine__latent_within_unit does
+    # not; on 1.13 the reverse), with gradient at most 4.8e-7: above g_tol,
+    # within 1e-6. So they assert the stop reason set and that bound, not
+    # `converged`; the log-likelihood still equals R's to 5e-9 (asserted above).
+    composed_optimum_class = Dict(
+        "engine__indep_series" => :degenerate, "engine__latent_series" => :degenerate,
+        "engine__indep_within_unit" => :degenerate,
+        "engine__latent_within_unit" => :degenerate, "engine__re_int" => :degenerate,
+        "engine__dep_series" => :saddle, "engine__dep_within_unit" => :saddle,
+        "engine__latent_B_nounique" => :saddle,
+        "composed__indep_BW" => :flat, "sim_u__Tindep_Blatent" => :flat,
+        "sim_u__Tlatent_Bindep" => :flat, "sim_u__Tlatentu_Bindep" => :flat,
+        "sim_u__Tindep_reint" => :flat, "sim_uo__Tlatentu_Blatent" => :flat,
+        "sim_r__Tindep_Bindep_Windep" => :flat,
+        "sim_u__Tindep_Bindep" => :interior, "sim_u__Tindep_Bdep" => :interior,
+        "sim_u__Tdep_Bindep" => :interior, "sim_uo__Tindep_Bindep" => :interior,
+        "sim_r__Tindep_Windep" => :interior, "sim_r__Tindep_Wdep" => :interior,
+        "sim_r__Tindep_Wlatent" => :interior, "sim_r__Tlatentu_Bindep" => :interior,
+        "sim_rw__Tindep_Wrow" => :interior, "sim_rw__Tindep_Wrowlatent" => :interior)
+    @testset "optimum classes cover the receipt cells" begin
+        @test Set(keys(composed_optimum_class)) == Set(c["id"] for c in C["fits"])
+        @test count(==(:interior), values(composed_optimum_class)) == 10
+    end
     @testset "$(c["id"])" for c in C["fits"]
         tbl = temporal_p1_composed_table(C["datasets"][c["dataset"]])
         names = String.(c["par_names"])
@@ -242,6 +286,18 @@ composed_uo(c) = (u = get(c, "unit_obs", ""); isempty(u) ? nothing : Symbol(u))
             note("between optima: |Δ logLik|", abs(dll))
         end
         interior = jf.hessian_min_eigenvalue > 1e-3 && dll <= 1e-6
+        class = composed_optimum_class[c["id"]]
+        @test interior == (class === :interior)
+        if class === :degenerate || class === :saddle
+            @test jf.stopping_reason in (:converged, :gradient_not_converged)
+            @test jf.gradient_norm <= 1e-6
+            @test class === :saddle ? jf.hessian_min_eigenvalue < -1 :
+                abs(jf.hessian_min_eigenvalue) <= 1e-5
+            note("non-interior engine cells: gradient norm", jf.gradient_norm)
+        elseif class === :flat
+            @test jf.converged
+            @test abs(jf.hessian_min_eigenvalue) < 1e-3
+        end
         if interior
             @test jf.converged
             # R's nlminb stops before stationarity even at rel.tol = 1e-14, so
