@@ -1,6 +1,6 @@
 # NB grid re-run on the corrected NB2 kernel (#521): plan and pre-run test
 
-Status: PLAN, pre-run done; #521 MERGED (gate 1 cleared 2026-09-28); awaiting gate 2: #521 merged, and Shinichi's approval of the estimate below
+Status: SUBMITTED 2026-09-28 16:40Z on nibi (Shinichi approved, "1-3 as you recommended"). Smoke job 22840888 (precompile + cheapest row), array 22840890 (943 tasks, `--dependency=afterok`). Code: #518 head be55464e0 in `~/projects/def-snakagaw/snakagaw/auto-d-nbrerun` (`DEPLOYED_SHA`, `SUBMITTED`); scripts `pilot/*_nibi.sh`. Stop and re-report if it overruns about 5,500 core-h (D-287).
 (D-287: a run over 3 h needs a plan, a pre-run test with results, and approval).
 
 ## Why
