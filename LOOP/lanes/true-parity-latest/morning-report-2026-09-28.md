@@ -49,6 +49,24 @@ Overnight: #548 chibar2_pvalue / variance_lrt twin (4357e4652, 22:58); #531 extr
 - #587 A3 isdm at P1 (head d1eb87947; stacked on #584): all 20 rows measured on the R side (admission predicates, all TRUE at P1); none binds because the P0 batch never had a Julia side, and the Julia iSDM code is in #546 (not yet merged). Proposal for you: pay these rows with #546's own P1 receipts, either (A) paired R/Julia booleans for 19 predicates, or (B) fit-level numbers for 5 rows (MIXED, THREE, ALIASED, MASKED-COLUMNS, SUPPORT). ISDM-LEGACY is R-only by D-296. Review running.
 - #586 A3 aghq at P1 (head 8f4427d4a; stacked on #584): 21 rows, none numeric, because neither P0 batch ever compared an R number with a Julia number (7 label-only paired controls; 14 R-only policy rows). Found: several R AGHQ fits pass their P0 assertions while adaptation stalls (max gradient 2.2 to 2.7; one optimizer code 1), because the assertions check only used / k / finite objective. Review running. Your decisions: allow a label-comparison tier or signed dispositions for the 7 controls; add Julia twins for the 14 R-only rows (binomial, Poisson, Gaussian look feasible) or sign dispositions; require convergence in the assertions (a contract edit).
 
+## A3 re-measurement scoreboard at P1 (00:00, from each PR's own checker run)
+
+| Family | PR | Required rows | Bind (numeric) | Main reason the rest don't |
+|---|---|---|---|---|
+| namespace | #561 | 69 | 0 | name matches only (44); 17 need live R fits |
+| covariance | #567 | 17 | 0 | 2 held on the nobs ruling; 7 partial (R bridge); 8 need a Julia surface |
+| postfit + policy | #569 | 52 | 29 | 2 held (nobs), 4 non-discriminating, 13 partial |
+| inference | #571 | 63 | 2 | 45 routing and 14 error-class checks carry no numbers |
+| data | #579 | 28 | 0 | R side replays a helper; no fit number |
+| fit-input | #579 | 6 | 6 | (C1 and C8 MET) |
+| family | #584 | 21 | 15 | 5 partial (R bridge inputs), 1 not measured |
+| aghq | #586 | 21 | 0 | P0 batch never compared R with Julia numbers |
+| isdm | #587 | 20 | 0 | R-only admission predicates; #546 receipts could pay them (your call) |
+| masks-known | none | 9 | 0 | not measured (inputs not on this machine) |
+| **Total** | | **306** | **52** | |
+
+Plain answer: 52 of 306 required 0.7.0 rows now carry real R-vs-Julia numbers at P1 (none before tonight). Most of the rest cannot bind without either your rulings (nobs, count-once, bridge splits, #546 mapping) or new comparison cases; the per-PR entries list them.
+
 ## Findings worth knowing
 
 - Truncated NB2's confidence intervals for the dispersion r are broken on main (profile fails after 12 minutes; Wald far too narrow), traced to the inner mode search in grouped_dispersion.jl oscillating around the mode at one site (so the objective jumps by about 5e-4). Filed as a task chip with that lead; the fix touches a shared grouped-dispersion helper, so it wants its own review.
