@@ -12,15 +12,21 @@
     "failed": 0,
     "errored": 0
   },
-  "run_contract_sha256": "bd4541ed3d153d13a1652716d85ddadac6ffa8b5f11a1e5351e1f47ae4adef9c",
+  "run_contract_sha256": "bc282aed156488eee12c519fb0e8a68b53a508197a89a34d6620f07adaee0765",
   "harness_checks_all_true": true,
   "harness_group_all_checks": true,
+  "batch_verifier": {
+    "tool": "test/parity/runparity.jl (run.toml status, exit code, manifest sha)",
+    "status": "PASS",
+    "detail": "status=success exit_code=0 contract_sha256 == sha256(frozen-r070-contract-p1.toml)"
+  },
   "pin": "P1",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "gllvmtmb_version": "0.7.1",
   "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit": "cb5688f7eecbeefa714b56d3214fdfaa75b9779e",
+  "glvmodels_commit": "ead8f4180957dd47111f662efcda6e0734c9de94",
+  "glvmodels_worktree_dirty": [],
   "host": "local Mac (M1 Ultra), single BLAS/OMP thread, JULIA_NUM_THREADS=4",
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
   "comparison": {

@@ -1,5 +1,5 @@
 {
-  "schema": "core070-postfit-p1-case-receipt/v1",
+  "schema": "core070-postfit-p1-case-receipt/v2",
   "case_id": "CORE070-POSTFIT-COEF-MULTI-READBACK",
   "verdict": "PASS",
   "evidence_kind": "numeric_r_vs_julia",
@@ -7,9 +7,14 @@
     "postfit/POSTFIT-SURFACE-coef.gllvmTMB_multi"
   ],
   "batch": "tools/core070_postfit_1_batch.R then .jl, GLLVM_PARITY_PIN=P1",
-  "verifier_output": [
-    "CORE070_POSTFIT_1_BATCH_VERIFIED executable_now 1 needs_new_julia_surface 50 spec_defect 0 max_coef_diff 7.192450925397331e-07"
-  ],
+  "batch_verifier": {
+    "tool": "tools/core070_verify_postfit_1_batch.py",
+    "argv": "tools/core070_verify_postfit_1_batch.py --r-state {r_state} --julia-state {julia_state} --self-test",
+    "status": "PASS",
+    "exit_code": 0,
+    "accept_marker": "CORE070_POSTFIT_1_BATCH_VERIFIED",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-1-p1/verify.txt"
+  },
   "raw": [
     "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-1-p1/postfit-1-r-results.json",
     "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-1-p1/postfit-1-julia-results.json"
@@ -20,7 +25,8 @@
   "gllvmtmb_version": "0.7.1",
   "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit_at_receipt_write": "9d2dd6cbfc1d458c38ee0cc91272ccb2e9cb43f1",
+  "glvmodels_commit": "681c4c3ca666e630470bba01a057bc88158b85f3",
+  "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
   "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
   "comparison": {
@@ -45,7 +51,8 @@
           -0.2481022083333333,
           0.35365920833333336,
           0.9301414166666667
-        ]
+        ],
+        "discriminating": true
       }
     ]
   }

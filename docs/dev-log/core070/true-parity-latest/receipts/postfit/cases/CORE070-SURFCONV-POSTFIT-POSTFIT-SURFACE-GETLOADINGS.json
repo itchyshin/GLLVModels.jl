@@ -1,5 +1,5 @@
 {
-  "schema": "core070-postfit-p1-case-receipt/v1",
+  "schema": "core070-postfit-p1-case-receipt/v2",
   "case_id": "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETLOADINGS",
   "verdict": "PASS",
   "evidence_kind": "numeric_r_vs_julia",
@@ -10,10 +10,14 @@
   "harness_kind": "point",
   "harness_pass": true,
   "batch_status": "PASS",
-  "verifier_output": [
-    "CORE070_SURFACE_CONVERSION_CONTRACT_OK cases=20 deferred=21 total_target_rows=41",
-    "CORE070_SURFACE_CONVERSION_STATE_OK /Users/z3437171/local-scratch/a3pf-runs/surface-conversion-p1"
-  ],
+  "batch_verifier": {
+    "tool": "tools/core070_verify_surface_conversion_batch.py",
+    "argv": "tools/core070_verify_surface_conversion_batch.py {state} --self-test",
+    "status": "PASS",
+    "exit_code": 0,
+    "accept_marker": "CORE070_SURFACE_CONVERSION_STATE_OK",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/verify.txt"
+  },
   "batch_status_note": "",
   "r_call": "crossprod(getLoadings(fit_r))",
   "julia_call": "GLLVM.getLoadings(fit) |> L -> L'L",
@@ -27,7 +31,8 @@
   "gllvmtmb_version": "0.7.1",
   "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit_at_receipt_write": "9d2dd6cbfc1d458c38ee0cc91272ccb2e9cb43f1",
+  "glvmodels_commit": "681c4c3ca666e630470bba01a057bc88158b85f3",
+  "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
   "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
   "comparison": {
@@ -94,7 +99,8 @@
           -0.0691708342220822,
           0.1358451181567998,
           0.06900989468592977
-        ]
+        ],
+        "discriminating": true
       }
     ]
   }

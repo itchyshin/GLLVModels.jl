@@ -71,6 +71,10 @@ parity_pin <- toupper(trimws(Sys.getenv("GLLVM_PARITY_PIN", "P0")))
 if (!parity_pin %in% c("P0", "P1")) stop("GLLVM_PARITY_PIN must be P0 or P1, got '", parity_pin, "'")
 expected_reference <- if (identical(parity_pin, "P1"))
   "9539352f66f2db2cc26b1c393e67212a359b60c9" else "b4d5fee64def88bc768dda1f1f77c29b295edd86"
+# Oracle source pin (PR #569 review finding 2): the library's CORE070_SOURCE_PIN.toml
+# marker and gllvmTMB version must match tools/core070_oracle_pins.toml (required at P1).
+source(file.path(root, "tools/core070_source_pin.R"))
+source_pin <- core070_source_pin(root, frozen_library, parity_pin, expected_reference)
 contract_path <- file.path(root, if (identical(parity_pin, "P1"))
   "docs/dev-log/core070/true-parity-latest/surface-conversion-batch-contract-p1.json" else
   "docs/dev-log/core070/surface-conversion-batch-contract.json")
@@ -544,7 +548,8 @@ receipt <- list(
   diagnostics_sha256 = sha256_file(diag_path),
   r_version = R.version.string,
   gllvmTMB_version = as.character(utils::packageVersion("gllvmTMB")),
-  frozen_library = frozen_library
+  frozen_library = frozen_library,
+  source_pin = source_pin
 )
 receipt_path <- file.path(output_dir, "receipt.json")
 jsonlite::write_json(receipt, receipt_path, auto_unbox = TRUE, pretty = TRUE, null = "null")

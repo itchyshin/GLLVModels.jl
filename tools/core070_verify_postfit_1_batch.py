@@ -31,6 +31,7 @@ ROOT = Path(__file__).resolve().parents[1]
 import sys as _sys  # noqa: E402
 _sys.path.insert(0, str(ROOT / "tools"))
 from parity_oracle import R_REF_PINS, SELECTED_PIN  # noqa: E402  (GLLVM_PARITY_PIN; P0 default; unknown pin exits)
+import core070_source_pin_check  # noqa: E402  (PR #569 review finding 2: library pin + version)
 CONTRACT_PATH = ROOT / ("docs/dev-log/core070/true-parity-latest/postfit-1-batch-contract-p1.json"
                         if SELECTED_PIN == "P1" else "docs/dev-log/core070/postfit-1-batch-contract.json")
 DEFAULT_R_STATE = ROOT / ".unlazy/core070-aghq/postfit-1-batch-r-01"
@@ -230,6 +231,7 @@ def verify_state(r_state=DEFAULT_R_STATE, julia_state=DEFAULT_JULIA_STATE):
     need(r_receipt.get("status") == "PASS", "R receipt did not pass")
     need(r_receipt.get("reference_commit") == contract["reference_commit"], "R receipt: wrong reference_commit")
     need(r_receipt.get("results_sha256") == sha(r_results_path), "R results.json changed since receipt")
+    core070_source_pin_check.check_source_pin(r_receipt, SELECTED_PIN, need)
 
     r_result = json.loads(r_results_path.read_text())
     julia_result = json.loads(j_results_path.read_text())
@@ -253,7 +255,9 @@ def self_test():
     contract = load_contract()
     n1 = self_test_triage(contract)
     n2 = self_test_pair(contract)
-    total = n1 + n2
+    n3 = core070_source_pin_check.self_test(SELECTED_PIN)
+    print("CORE070_POSTFIT_1_SOURCE_PIN_NEGATIVES_PASS", n3)
+    total = n1 + n2 + n3
     print("CORE070_POSTFIT_1_BATCH_SELF_TEST_MUTATIONS_REJECTED", total)
     return total
 

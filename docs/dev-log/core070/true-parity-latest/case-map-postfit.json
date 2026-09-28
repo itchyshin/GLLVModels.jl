@@ -2,69 +2,145 @@
   "schema": 1,
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "scope": "postfit family: the 36 rows the P1 carry scan lists as DANGLING (34) or RETIRED (2); postfit-policy family: the 16 rows it lists as DANGLING. NOT_BOUND_AT_P0 rows (64 postfit, 5 postfit-policy) had no P0 evidence and are out of scope here.",
-  "note": "Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with PARITY_CASEMAP pointing at this file. Classification, disposition and the P0 `uncertain` / `reclassify_proposed` fields are carried from docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. Only rows whose every executable case id carries a numeric R-vs-Julia comparison block within tolerance cite evidence.receipt; every other measured row cites evidence.non_binding_receipts, so it reads as not bound under both the current checker and the numeric-tier rule proposed in PR #561.",
+  "note": "Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with PARITY_CASEMAP pointing at this file. Classification, disposition and the P0 `uncertain` / `reclassify_proposed` fields are carried from docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. Only rows whose every executable case id carries a numeric R-vs-Julia comparison block within tolerance cite evidence.receipt; every other measured row cites evidence.non_binding_receipts, so it reads as not bound under both the current checker and the numeric-tier rule proposed in PR #561. Two further holds cite non-binding receipts: a row whose batch verifier rejected the run (numeric_held_batch_verifier_failed; no exception path) and a row with a degenerate comparison (numeric_non_discriminating).",
   "generator": "tools/core070_postfit_p1_receipts.py",
+  "glvmodels_commit": "681c4c3ca666e630470bba01a057bc88158b85f3",
+  "batch_verifiers": {
+    "surface-conversion-p1": {
+      "tool": "tools/core070_verify_surface_conversion_batch.py",
+      "argv": "tools/core070_verify_surface_conversion_batch.py {state} --self-test",
+      "status": "PASS",
+      "exit_code": 0,
+      "accept_marker": "CORE070_SURFACE_CONVERSION_STATE_OK",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/verify.txt"
+    },
+    "estimand-rebind-p1": {
+      "tool": "tools/core070_verify_estimand_rebind_batch.py",
+      "argv": "tools/core070_verify_estimand_rebind_batch.py {state} --self-test",
+      "status": "PASS",
+      "exit_code": 0,
+      "accept_marker": "CORE070_ESTIMAND_REBIND_STATE_OK",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/postfit/estimand-rebind-p1/verify.txt"
+    },
+    "wave6-conversion-p1": {
+      "tool": "tools/core070_verify_wave6_conversion_batch.py",
+      "argv": "tools/core070_verify_wave6_conversion_batch.py {state}",
+      "status": "FAIL",
+      "exit_code": 1,
+      "accept_marker": "CORE070_WAVE6_CONVERSION_STATE_OK",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave6-conversion-p1/verify.txt"
+    },
+    "wave7-conversion-p1": {
+      "tool": "tools/core070_verify_wave7_conversion_batch.py",
+      "argv": "tools/core070_verify_wave7_conversion_batch.py {state} --self-test",
+      "status": "PASS",
+      "exit_code": 0,
+      "accept_marker": "CORE070_WAVE7_CONVERSION_STATE_OK",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave7-conversion-p1/verify.txt"
+    },
+    "wave8-conversion-p1": {
+      "tool": "tools/core070_verify_wave8_conversion_batch.py",
+      "argv": "tools/core070_verify_wave8_conversion_batch.py {state} --self-test",
+      "status": "PASS",
+      "exit_code": 0,
+      "accept_marker": "CORE070_WAVE8_CONVERSION_STATE_OK",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave8-conversion-p1/verify.txt"
+    },
+    "postfit-1-p1": {
+      "tool": "tools/core070_verify_postfit_1_batch.py",
+      "argv": "tools/core070_verify_postfit_1_batch.py --r-state {r_state} --julia-state {julia_state} --self-test",
+      "status": "PASS",
+      "exit_code": 0,
+      "accept_marker": "CORE070_POSTFIT_1_BATCH_VERIFIED",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-1-p1/verify.txt"
+    },
+    "postfit-policy-p1": {
+      "tool": "tools/core070_verify_postfit_policy_batch.py",
+      "argv": "tools/core070_verify_postfit_policy_batch.py --state {state} --self-test",
+      "status": "PASS",
+      "exit_code": 0,
+      "accept_marker": "CORE070_POSTFIT_POLICY_BATCH_VERIFIED",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-policy-p1/verify.txt"
+    }
+  },
   "counts": {
-    "numeric_pass": 35,
+    "numeric_pass": 29,
     "numeric_fail": 1,
+    "numeric_held_batch_verifier_failed": 2,
+    "numeric_non_discriminating": 4,
     "partial_non_numeric_case": 13,
     "needs_surface_not_executed": 1,
     "retired_at_p1_not_measured": 2,
     "not_measured": 0
   },
   "runtimes_seconds": {
-    "surface_conversion_batch_wall": 117,
-    "wave6_conversion_batch_wall": 48,
-    "wave7_conversion_batch_wall": 25,
-    "wave8_conversion_batch_wall": 24,
-    "estimand_rebind_batch_wall": 11,
-    "postfit_policy_batch_wall": 29,
+    "surface_conversion_batch_wall": 121,
+    "wave6_conversion_batch_wall": 44,
+    "wave7_conversion_batch_wall": 23,
+    "wave8_conversion_batch_wall": 22,
+    "estimand_rebind_batch_wall": 12,
+    "postfit_policy_batch_wall": 23,
     "postfit_1_r_wall": 1,
-    "postfit_1_julia_wall": 12,
-    "julia_env_instantiate_wall": 15,
-    "total_batch_wall": 267
+    "postfit_1_julia_wall": 11,
+    "total_batch_wall": 257,
+    "glvmodels_commit": "681c4c3ca666e630470bba01a057bc88158b85f3"
   },
   "batch_artifacts": {
     "surface-conversion-p1": [
       "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/receipt.json",
       "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/results.tsv",
       "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/julia-results.json",
-      "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/r-oracle.json"
+      "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/r-oracle.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/verify.txt"
     ],
     "estimand-rebind-p1": [
       "docs/dev-log/core070/true-parity-latest/receipts/postfit/estimand-rebind-p1/receipt.json",
       "docs/dev-log/core070/true-parity-latest/receipts/postfit/estimand-rebind-p1/results.tsv",
       "docs/dev-log/core070/true-parity-latest/receipts/postfit/estimand-rebind-p1/julia-results.json",
-      "docs/dev-log/core070/true-parity-latest/receipts/postfit/estimand-rebind-p1/r-oracle.json"
+      "docs/dev-log/core070/true-parity-latest/receipts/postfit/estimand-rebind-p1/r-oracle.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/postfit/estimand-rebind-p1/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/postfit/estimand-rebind-p1/verify.txt"
     ],
     "wave6-conversion-p1": [
       "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave6-conversion-p1/receipt.json",
       "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave6-conversion-p1/results.tsv",
       "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave6-conversion-p1/julia-results.json",
-      "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave6-conversion-p1/r-oracle.json"
+      "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave6-conversion-p1/r-oracle.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave6-conversion-p1/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave6-conversion-p1/verify.txt"
     ],
     "wave7-conversion-p1": [
       "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave7-conversion-p1/receipt.json",
       "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave7-conversion-p1/results.tsv",
       "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave7-conversion-p1/julia-results.json",
-      "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave7-conversion-p1/r-oracle.json"
+      "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave7-conversion-p1/r-oracle.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave7-conversion-p1/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave7-conversion-p1/verify.txt"
     ],
     "wave8-conversion-p1": [
       "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave8-conversion-p1/receipt.json",
       "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave8-conversion-p1/results.tsv",
       "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave8-conversion-p1/julia-results.json",
-      "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave8-conversion-p1/r-oracle.json"
+      "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave8-conversion-p1/r-oracle.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave8-conversion-p1/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave8-conversion-p1/verify.txt"
     ],
     "postfit-1-p1": [
       "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-1-p1/receipt.json",
       "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-1-p1/postfit-1-r-results.json",
-      "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-1-p1/postfit-1-julia-results.json"
+      "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-1-p1/postfit-1-julia-results.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-1-p1/run-commit-r.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-1-p1/run-commit-julia.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-1-p1/verify.txt"
     ],
     "postfit-policy-p1": [
       "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-policy-p1/receipt.json",
       "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-policy-p1/results.tsv",
       "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-policy-p1/julia-results.json",
-      "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-policy-p1/r-oracle.json"
+      "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-policy-p1/r-oracle.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-policy-p1/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-policy-p1/verify.txt"
     ]
   },
   "rows": [
@@ -87,6 +163,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-WAVE7-CHECK-AUTO-RESIDUAL": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-WAVE7-CHECK-AUTO-RESIDUAL": "PASS"
         },
         "case_kinds": {
@@ -115,6 +194,9 @@
         "case_verdicts": {
           "CORE070-POSTFIT-COEF-MULTI-READBACK": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-POSTFIT-COEF-MULTI-READBACK": "PASS"
+        },
         "row_verdict": "PASS"
       }
     },
@@ -139,6 +221,9 @@
         "case_verdicts": {
           "CORE070-WAVE7-COMPARE-LOADINGS-SELF-CONSISTENCY": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-WAVE7-COMPARE-LOADINGS-SELF-CONSISTENCY": "PASS"
+        },
         "case_kinds": {
           "CORE070-WAVE7-COMPARE-LOADINGS-SELF-CONSISTENCY": "paired_own_consistency"
         }
@@ -153,19 +238,25 @@
         "CORE070-WAVE6-POSTFIT-CONFINT-MULTI"
       ],
       "disposition": null,
-      "evidence_tier": "numeric",
+      "evidence_tier": "numeric_held_batch_verifier_failed",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "receipt": [
+        "non_binding_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE6-POSTFIT-CONFINT-MULTI.json"
         ],
-        "tier": "numeric: every executable case receipt carries an R-vs-Julia comparison block pinned to P1, within the harness tolerance"
+        "tier": "numeric comparison blocks pass, but the batch verifier rejected the run, so the row does not bind"
       },
+      "note": "held pending the maintainer's ruling on the wave6 nobs expectation",
       "measured_result": {
         "case_verdicts": {
           "CORE070-WAVE6-POSTFIT-CONFINT-MULTI": "PASS"
         },
-        "row_verdict": "PASS"
+        "batch_verifier": {
+          "CORE070-WAVE6-POSTFIT-CONFINT-MULTI": "FAIL"
+        },
+        "discriminating": {
+          "CORE070-WAVE6-POSTFIT-CONFINT-MULTI": true
+        }
       }
     },
     {
@@ -187,6 +278,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-WAVE8-DEVIANCE-MULTI": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-WAVE8-DEVIANCE-MULTI": "PASS"
         },
         "row_verdict": "PASS"
@@ -213,6 +307,9 @@
         "case_verdicts": {
           "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-ICC-SITE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-ICC-SITE": "PASS"
+        },
         "row_verdict": "PASS"
       }
     },
@@ -235,6 +332,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-ESTIMAND-REBIND-EXTRACT-OMEGA": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-ESTIMAND-REBIND-EXTRACT-OMEGA": "PASS"
         },
         "row_verdict": "PASS"
@@ -264,6 +364,10 @@
           "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-SIGMA": "PASS",
           "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-SIGMA-TABLE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-SIGMA": "PASS",
+          "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-SIGMA-TABLE": "PASS"
+        },
         "row_verdict": "PASS"
       }
     },
@@ -288,6 +392,9 @@
         "case_verdicts": {
           "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-SIGMA-TABLE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-SIGMA-TABLE": "PASS"
+        },
         "row_verdict": "PASS"
       }
     },
@@ -300,19 +407,25 @@
         "CORE070-ESTIMAND-REBIND-EXTRACT-COMMUNALITY"
       ],
       "disposition": null,
-      "evidence_tier": "numeric",
+      "evidence_tier": "numeric_non_discriminating",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "receipt": [
+        "non_binding_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-ESTIMAND-REBIND-EXTRACT-COMMUNALITY.json"
         ],
-        "tier": "numeric: every executable case receipt carries an R-vs-Julia comparison block pinned to P1, within the harness tolerance"
+        "tier": "numeric comparison blocks pass, but at least one is degenerate (the R values are one constant or all ~0), so a constant or zero implementation would pass too; the row does not bind"
       },
+      "note": "Measured on the unique = FALSE Gaussian fixture (tools/core070_estimand_rebind_batch.R), where communality is identically 1 for every trait: R and Julia both return [1, 1, 1, 1, 1]. Reviewer mutation: a Julia extract_communality that returns a constant 1.0 still PASSES the batch; 0.99 * s/t FAILS. The harness bounds |R - Julia| correctly, but this fixture cannot distinguish a wrong implementation. A non-degenerate fixture (unique = TRUE) is a new case, i.e. a contract change for the maintainer.",
       "measured_result": {
         "case_verdicts": {
           "CORE070-ESTIMAND-REBIND-EXTRACT-COMMUNALITY": "PASS"
         },
-        "row_verdict": "PASS"
+        "batch_verifier": {
+          "CORE070-ESTIMAND-REBIND-EXTRACT-COMMUNALITY": "PASS"
+        },
+        "discriminating": {
+          "CORE070-ESTIMAND-REBIND-EXTRACT-COMMUNALITY": false
+        }
       }
     },
     {
@@ -334,6 +447,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-ESTIMAND-REBIND-EXTRACT-CORRELATIONS": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-ESTIMAND-REBIND-EXTRACT-CORRELATIONS": "PASS"
         },
         "row_verdict": "PASS"
@@ -360,6 +476,9 @@
         "case_verdicts": {
           "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-CUTPOINTS": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-CUTPOINTS": "PASS"
+        },
         "row_verdict": "PASS"
       }
     },
@@ -382,6 +501,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-LOADINGS": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-LOADINGS": "PASS"
         },
         "row_verdict": "PASS"
@@ -408,6 +530,9 @@
         "case_verdicts": {
           "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-ORDINATION": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-ORDINATION": "PASS"
+        },
         "row_verdict": "PASS"
       }
     },
@@ -420,19 +545,25 @@
         "CORE070-ESTIMAND-REBIND-EXTRACT-PROPORTIONS"
       ],
       "disposition": null,
-      "evidence_tier": "numeric",
+      "evidence_tier": "numeric_non_discriminating",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "receipt": [
+        "non_binding_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-ESTIMAND-REBIND-EXTRACT-PROPORTIONS.json"
         ],
-        "tier": "numeric: every executable case receipt carries an R-vs-Julia comparison block pinned to P1, within the harness tolerance"
+        "tier": "numeric comparison blocks pass, but at least one is degenerate (the R values are one constant or all ~0), so a constant or zero implementation would pass too; the row does not bind"
       },
+      "note": "Same unique = FALSE fixture as extract_communality: the compared proportion vectors are all 1, so a constant implementation would pass (same structure as the reviewer's communality mutation). A non-degenerate fixture is a contract change for the maintainer.",
       "measured_result": {
         "case_verdicts": {
           "CORE070-ESTIMAND-REBIND-EXTRACT-PROPORTIONS": "PASS"
         },
-        "row_verdict": "PASS"
+        "batch_verifier": {
+          "CORE070-ESTIMAND-REBIND-EXTRACT-PROPORTIONS": "PASS"
+        },
+        "discriminating": {
+          "CORE070-ESTIMAND-REBIND-EXTRACT-PROPORTIONS": false
+        }
       }
     },
     {
@@ -454,6 +585,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-REPEATABILITY": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-REPEATABILITY": "PASS"
         },
         "row_verdict": "PASS"
@@ -480,6 +614,9 @@
         "case_verdicts": {
           "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-RESIDUAL-COR": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-RESIDUAL-COR": "PASS"
+        },
         "row_verdict": "PASS"
       }
     },
@@ -504,6 +641,9 @@
         "case_verdicts": {
           "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-RESIDUAL-COV": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-RESIDUAL-COV": "PASS"
+        },
         "row_verdict": "PASS"
       }
     },
@@ -526,6 +666,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-WAVE8-EXTRACT-ROTATED-LOADINGS-TABLE-SHAPE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-WAVE8-EXTRACT-ROTATED-LOADINGS-TABLE-SHAPE": "PASS"
         },
         "case_kinds": {
@@ -554,6 +697,9 @@
         "case_verdicts": {
           "CORE070-WAVE7-FITTED-MULTI": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-WAVE7-FITTED-MULTI": "PASS"
+        },
         "row_verdict": "PASS"
       }
     },
@@ -576,6 +722,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETLV": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETLV": "PASS"
         },
         "row_verdict": "PASS"
@@ -602,6 +751,9 @@
         "case_verdicts": {
           "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETLOADINGS": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETLOADINGS": "PASS"
+        },
         "row_verdict": "PASS"
       }
     },
@@ -624,6 +776,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETRESIDUALCOR": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETRESIDUALCOR": "PASS"
         },
         "row_verdict": "PASS"
@@ -650,6 +805,9 @@
         "case_verdicts": {
           "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETRESIDUALCOV": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETRESIDUALCOV": "PASS"
+        },
         "row_verdict": "PASS"
       }
     },
@@ -662,19 +820,25 @@
         "CORE070-WAVE6-POSTFIT-LOGLIK-MULTI"
       ],
       "disposition": null,
-      "evidence_tier": "numeric",
+      "evidence_tier": "numeric_held_batch_verifier_failed",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "receipt": [
+        "non_binding_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE6-POSTFIT-LOGLIK-MULTI.json"
         ],
-        "tier": "numeric: every executable case receipt carries an R-vs-Julia comparison block pinned to P1, within the harness tolerance"
+        "tier": "numeric comparison blocks pass, but the batch verifier rejected the run, so the row does not bind"
       },
+      "note": "held pending the maintainer's ruling on the wave6 nobs expectation",
       "measured_result": {
         "case_verdicts": {
           "CORE070-WAVE6-POSTFIT-LOGLIK-MULTI": "PASS"
         },
-        "row_verdict": "PASS"
+        "batch_verifier": {
+          "CORE070-WAVE6-POSTFIT-LOGLIK-MULTI": "FAIL"
+        },
+        "discriminating": {
+          "CORE070-WAVE6-POSTFIT-LOGLIK-MULTI": true
+        }
       }
     },
     {
@@ -696,6 +860,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-WAVE6-POSTFIT-NOBS-MULTI": "FAIL"
+        },
+        "batch_verifier": {
           "CORE070-WAVE6-POSTFIT-NOBS-MULTI": "FAIL"
         },
         "row_verdict": "FAIL"
@@ -722,6 +889,9 @@
         "case_verdicts": {
           "CORE070-WAVE7-PREDICT-MULTI": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-WAVE7-PREDICT-MULTI": "PASS"
+        },
         "row_verdict": "PASS"
       }
     },
@@ -744,6 +914,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-WAVE8-PREDICT-MISSING-ZERO-ROWS": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-WAVE8-PREDICT-MISSING-ZERO-ROWS": "PASS"
         },
         "case_kinds": {
@@ -772,6 +945,9 @@
         "case_verdicts": {
           "CORE070-WAVE7-RESIDUALS-MULTI": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-WAVE7-RESIDUALS-MULTI": "PASS"
+        },
         "row_verdict": "PASS"
       }
     },
@@ -794,6 +970,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-WAVE8-ROTATE-LOADINGS-LLT-INVARIANT": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-WAVE8-ROTATE-LOADINGS-LLT-INVARIANT": "PASS"
         },
         "row_verdict": "PASS"
@@ -819,6 +998,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-WAVE7-SANITY-MULTI": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-WAVE7-SANITY-MULTI": "PASS"
         },
         "case_kinds": {
@@ -847,6 +1029,9 @@
         "case_verdicts": {
           "CORE070-WAVE8-SIMULATE-UNIT-TRAIT-STRUCTURAL": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-WAVE8-SIMULATE-UNIT-TRAIT-STRUCTURAL": "PASS"
+        },
         "case_kinds": {
           "CORE070-WAVE8-SIMULATE-UNIT-TRAIT-STRUCTURAL": "paired_verdict"
         }
@@ -873,6 +1058,9 @@
         "case_verdicts": {
           "CORE070-WAVE8-SUMMARY-FIXEF-AND-LOGLIK": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-WAVE8-SUMMARY-FIXEF-AND-LOGLIK": "PASS"
+        },
         "row_verdict": "PASS"
       }
     },
@@ -885,19 +1073,25 @@
         "CORE070-WAVE8-TIDY-FIXED-ESTIMATE"
       ],
       "disposition": null,
-      "evidence_tier": "numeric",
+      "evidence_tier": "numeric_non_discriminating",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "receipt": [
+        "non_binding_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE8-TIDY-FIXED-ESTIMATE.json"
         ],
-        "tier": "numeric: every executable case receipt carries an R-vs-Julia comparison block pinned to P1, within the harness tolerance"
+        "tier": "numeric comparison blocks pass, but at least one is degenerate (the R values are one constant or all ~0), so a constant or zero implementation would pass too; the row does not bind"
       },
+      "note": "Fixed-effect estimates on row-centred data: the R oracle is about 1e-14 per coefficient and the harness difference (1.4e-14) equals max |R|, i.e. Julia returns about 0. A Julia tidy that returned zeros would pass. An uncentred fixture is a contract change for the maintainer.",
       "measured_result": {
         "case_verdicts": {
           "CORE070-WAVE8-TIDY-FIXED-ESTIMATE": "PASS"
         },
-        "row_verdict": "PASS"
+        "batch_verifier": {
+          "CORE070-WAVE8-TIDY-FIXED-ESTIMATE": "PASS"
+        },
+        "discriminating": {
+          "CORE070-WAVE8-TIDY-FIXED-ESTIMATE": false
+        }
       }
     },
     {
@@ -955,6 +1149,9 @@
         "case_verdicts": {
           "CORE070-POSTFIT-COEF-EMPTY-NATIVE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-POSTFIT-COEF-EMPTY-NATIVE": "PASS"
+        },
         "case_kinds": {
           "CORE070-POSTFIT-COEF-EMPTY-NATIVE": "paired_policy_check"
         }
@@ -969,19 +1166,25 @@
         "CORE070-POSTFIT-COEF-NAMED-NATIVE"
       ],
       "disposition": null,
-      "evidence_tier": "numeric",
+      "evidence_tier": "numeric_non_discriminating",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "receipt": [
+        "non_binding_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-COEF-NAMED-NATIVE.json"
         ],
-        "tier": "numeric: every executable case receipt carries an R-vs-Julia comparison block pinned to P1, within the harness tolerance"
+        "tier": "numeric comparison blocks pass, but at least one is degenerate (the R values are one constant or all ~0), so a constant or zero implementation would pass too; the row does not bind"
       },
+      "note": "Same row-centred fixture as tidy: R coef values are about 1e-14 and the harness delta (1.359e-14) equals max |R|, so a Julia coef returning zeros would pass. An uncentred fixture is a contract change for the maintainer.",
       "measured_result": {
         "case_verdicts": {
           "CORE070-POSTFIT-COEF-NAMED-NATIVE": "PASS"
         },
-        "row_verdict": "PASS"
+        "batch_verifier": {
+          "CORE070-POSTFIT-COEF-NAMED-NATIVE": "PASS"
+        },
+        "discriminating": {
+          "CORE070-POSTFIT-COEF-NAMED-NATIVE": false
+        }
       }
     },
     {
@@ -1004,6 +1207,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-POSTFIT-CONFINT-METHODS-WALD-NATIVE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-POSTFIT-CONFINT-METHODS-WALD-NATIVE": "PASS"
         },
         "row_verdict": "PASS"
@@ -1044,6 +1250,9 @@
         "case_verdicts": {
           "CORE070-POSTFIT-FITTED-DEFAULT-NATIVE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-POSTFIT-FITTED-DEFAULT-NATIVE": "PASS"
+        },
         "row_verdict": "PASS"
       }
     },
@@ -1067,6 +1276,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-POSTFIT-LOGLIK-DF-NATIVE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-POSTFIT-LOGLIK-DF-NATIVE": "PASS"
         },
         "case_kinds": {
@@ -1095,6 +1307,9 @@
         "case_verdicts": {
           "CORE070-POSTFIT-LOGLIK-NOBS-NATIVE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-POSTFIT-LOGLIK-NOBS-NATIVE": "PASS"
+        },
         "case_kinds": {
           "CORE070-POSTFIT-LOGLIK-NOBS-NATIVE": "paired_policy_check"
         }
@@ -1121,6 +1336,9 @@
         "case_verdicts": {
           "CORE070-POSTFIT-LOGLIK-VALUE-NATIVE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-POSTFIT-LOGLIK-VALUE-NATIVE": "PASS"
+        },
         "row_verdict": "PASS"
       }
     },
@@ -1143,6 +1361,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-POSTFIT-NOBS-COUNT-NATIVE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-POSTFIT-NOBS-COUNT-NATIVE": "PASS"
         },
         "case_kinds": {
@@ -1171,6 +1392,9 @@
         "case_verdicts": {
           "CORE070-POSTFIT-NOBS-FALLBACK-NATIVE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-POSTFIT-NOBS-FALLBACK-NATIVE": "PASS"
+        },
         "case_kinds": {
           "CORE070-POSTFIT-NOBS-FALLBACK-NATIVE": "paired_policy_check"
         }
@@ -1195,6 +1419,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-POSTFIT-PREDICT-DEFAULT-NATIVE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-POSTFIT-PREDICT-DEFAULT-NATIVE": "PASS"
         },
         "case_kinds": {
@@ -1223,6 +1450,9 @@
         "case_verdicts": {
           "CORE070-POSTFIT-RE-FORM-FULL-NATIVE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-POSTFIT-RE-FORM-FULL-NATIVE": "PASS"
+        },
         "row_verdict": "PASS"
       }
     },
@@ -1245,6 +1475,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-POSTFIT-RESIDUAL-CONDITIONAL-NATIVE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-POSTFIT-RESIDUAL-CONDITIONAL-NATIVE": "PASS"
         },
         "row_verdict": "PASS"
@@ -1272,6 +1505,9 @@
         "case_verdicts": {
           "CORE070-POSTFIT-RESIDUAL-SCALES-NATIVE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-POSTFIT-RESIDUAL-SCALES-NATIVE": "PASS"
+        },
         "row_verdict": "PASS"
       }
     },
@@ -1294,6 +1530,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-POSTFIT-RESIDUAL-TYPES-NATIVE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-POSTFIT-RESIDUAL-TYPES-NATIVE": "PASS"
         },
         "row_verdict": "PASS"
@@ -1319,6 +1558,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-POSTFIT-SIMULATE-DEFAULT-NATIVE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-POSTFIT-SIMULATE-DEFAULT-NATIVE": "PASS"
         },
         "case_kinds": {

@@ -21,6 +21,32 @@
   free=61 (main and #561 checker); C8 61 NOT_TWINNED_NOT_SIGNED. `node tools/test_true_parity_check.mjs`
   passes.
 
+## 2026-09-27: Postfit at P1, independent review of #569 applied
+
+- Same branch, fast-forward commits only. Merged #567's review fixes (`4176a9dce`; one conflict, this
+  file, both entries kept). Review findings 1 to 4 applied, one concern per commit; no classification,
+  `src/`, GATES.md or P0 evidence change; the wave6 nobs expectation is not edited.
+- #567's gate adopted: `tools/core070_postfit_p1_receipts.py` runs each batch verifier, tracks its
+  output as `verify.txt`, puts a `batch_verifier` block on every case receipt, and holds a row whose
+  batch verifier failed (`numeric_held_batch_verifier_failed`; no exception path). confint and logLik
+  (wave6) are held pending the maintainer's ruling on the wave6 nobs expectation.
+- Finding 1: a degenerate-comparison gate (R values one constant, or all |value| < 1e-10) marks
+  extract_communality, extract_proportions, tidy and POST-COEF-NAMED `numeric_non_discriminating`
+  with the reviewer's mutation evidence; none bind. A non-degenerate fixture is left to the maintainer.
+- Finding 2: the six postfit R runners check the library's `CORE070_SOURCE_PIN.toml` and gllvmTMB
+  version against `tools/core070_oracle_pins.toml`; the verifiers check the recorded pin and version.
+- Finding 3: `verify.txt` and `run-commit.json` tracked per batch; wave7 and wave8 Julia children
+  now write `julia_values`, so every wave7/wave8 comparison is recomputed. Postfit-policy still
+  harness-reported (proposal).
+- Finding 4: `estimand-rebind-accessor-diff-p1.json` records extract_proportions as the 14th changed
+  accessor; `--check` covers it.
+- Re-run from clean commit `681c4c3ca`, wall 257 s; all R and Julia values bit-identical to the first
+  run. Counts: 29 numeric pass, 1 numeric fail, 2 held, 4 non-discriminating, 13 partial, 1 needs
+  surface, 2 retired. Checker, PARITY_REF=FS, main and #561 (`92cf39571`): postfit C1 required=52
+  bound=29 free=21 unsigned_or_blocked=2 (#561 bound_numeric=29); C8 23 NOT_TWINNED_NOT_SIGNED.
+  Covariance C1 required=17 bound=0; C8 17. `test_true_parity_check.mjs` passes; both contract
+  `--check`s current; `test/parity/test_core070_pin.jl` 27/27.
+
 ## 2026-09-27: Postfit and postfit-policy families re-measured at gllvmTMB P1 (A3), tracked receipts
 
 - Branch `claude/true-parity-p1-postfit`, stacked on `claude/true-parity-p1-covariance` (PR #567) at
@@ -42,6 +68,30 @@
   executed), 2 retired at P1, 0 not measured. Checker, PARITY_REF=FS: C1 required=52 bound=35
   free=15 unsigned_or_blocked=2 (main and #561 checker; #561 reports bound_numeric=35); C8 17
   NOT_TWINNED_NOT_SIGNED. `node tools/test_true_parity_check.mjs` passes.
+
+## 2026-09-27: Covariance at P1, independent review of #567 applied
+
+- Same branch, fast-forward commits only. Review findings 1, 2, 6, 7, 10 and 13 applied, one concern
+  per commit; no classification, `src/`, GATES.md or P0 evidence change; the wave6 nobs expectation
+  in the contract is not edited.
+- Finding 1 (blocking): `tools/core070_covariance_p1_receipts.py` runs each batch verifier and refuses
+  a numeric tier when it did not pass, unless a maintainer-signed exception is supplied (none exists).
+  COV-KERNEL-FOLDED-UNIQUE and COV-KERNEL-LATENT are held (`numeric_held_batch_verifier_failed`,
+  non-binding receipts) pending the maintainer's ruling on the wave6 nobs case; their cases pass
+  (7.25e-8, 1.26e-6 vs tol 1e-4).
+- Finding 2: the P1 runner manifest's 34 P0-pinned citations are re-anchored at P1 by the generator
+  (2 identical ranges, 12 changed ranges, 2 file pins, 18 GLLVModels.jl blob pins); `--check` passes.
+- Findings 6, 13: the wave6 and grammar batches record the library's `CORE070_SOURCE_PIN.toml` and
+  their verifiers check it against `tools/core070_oracle_pins.toml`; the required runner's oracle
+  build/source receipts are pin-aware and validated before use. Run requirements documented in
+  `receipts/covariance/README.md`; `oracle/source.json` kept (regenerates byte for byte, but it is the
+  runner's tracked source receipt).
+- Finding 7: all batches re-run from clean commit `ead8f4180`; every R and Julia value bit-identical to
+  the first run; receipts record that commit. Wall: runparity 51 s, default-control mode fits 42 s,
+  wave6 47 s, grammar batch 1 s, bridge under 1 s.
+- Checker, PARITY_REF=FS: C1 required=17 bound=0 free=17 (main and #561 checkers); C8 17
+  NOT_TWINNED_NOT_SIGNED. `test/parity/test_core070_pin.jl` 27/27; `test_parity_oracle_defaults` OK;
+  `node tools/test_true_parity_check.mjs` passes.
 
 ## 2026-09-27: Covariance family re-measured at gllvmTMB P1 (A3), tracked receipts
 

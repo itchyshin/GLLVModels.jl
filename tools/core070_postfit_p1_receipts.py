@@ -3,7 +3,7 @@
 Reads the raw outputs of the seven postfit batches run at gllvmTMB pin P1
 (GLLVM_PARITY_PIN=P1) and writes, under docs/dev-log/core070/true-parity-latest/:
 
-  receipts/postfit/<batch>-p1/...   batch artifacts copied verbatim (JSON/TSV only, no logs)
+  receipts/postfit/<batch>-p1/...   batch artifacts copied verbatim (JSON/TSV), run-commit.json, verify.txt
   receipts/postfit/cases/<id>.json  one receipt per executable case id
   case-map-postfit.json             the 36 postfit rows the P1 carry scan lists as
                                     DANGLING (34) or RETIRED (2), and the 16 DANGLING
@@ -21,18 +21,41 @@ Cases that are verdicts (both engines report a boolean), own-consistency
 checks (each engine checked against itself), exact-integer equalities, empty
 lengths, or signature/default-policy checks carry no comparison block, and
 their rows cite evidence.non_binding_receipts. A row is evidence_tier
-"numeric" only when every executable case id has a comparison block and the
-harness verdict is PASS.
+"numeric" only when every executable case id has a comparison block, the
+harness verdict is PASS, every batch those cases came from passed its own
+verifier, and no comparison is degenerate.
+
+Batch verifier gate (PR #567's rule, review finding 1 there): this tool runs
+each batch's verifier at P1 (with --self-test) and keeps its full output as
+the tracked <batch>/verify.txt; every case receipt carries a batch_verifier
+block. A row whose numeric cases pass but whose batch verifier rejected the
+run is held back: evidence_tier "numeric_held_batch_verifier_failed",
+receipts under evidence.non_binding_receipts. There is no exception path.
+
+Degenerate-comparison gate (PR #569 review finding 1): a comparison whose R
+oracle values are all equal to one constant (two or more values) or all
+below DEGENERATE_ABS in magnitude cannot tell a right implementation from a
+constant or zero one, so it is flagged discriminating: false and its row is
+evidence_tier "numeric_non_discriminating" with non-binding receipts.
+
+Provenance: every receipt records glvmodels_commit = HEAD of this checkout.
+The tool refuses to write when tracked files outside its own outputs are
+modified (unless --allow-dirty, which is then recorded), and refuses unless
+each run directory holds a run-commit.json (written by whoever launched the
+batch: {"glvmodels_commit": <HEAD at launch>, "dirty": [<porcelain lines>]})
+that names this HEAD with an empty dirty list. Run the batches and this tool
+from the same clean commit.
 
 Usage (inputs are the raw run directories under local-scratch):
-  python3 tools/core070_postfit_p1_receipts.py --runs DIR --runtimes JSON
+  python3 tools/core070_postfit_p1_receipts.py --runs DIR --runtimes JSON [--allow-dirty]
 where DIR holds surface-conversion-p1/, wave6-conversion-p1/, wave7-conversion-p1/,
 wave8-conversion-p1/, estimand-rebind-p1/, postfit-policy-p1/, postfit-1-r-p1/,
-postfit-1-julia-p1/, each with the verifier's output in verify.txt.
+postfit-1-julia-p1/, each with its run-commit.json.
 """
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -49,6 +72,9 @@ P0_SHA = PINS["P0"]["reference_commit"]
 ORACLE_BUILD = "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json"
 ORACLE_SOURCE = "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json"
 MAX_INLINE = 25  # vectors longer than this stay in the batch raw file only
+DEGENERATE_ABS = 1e-10  # every |R value| below this: the comparison cannot discriminate
+ESTIMAND_ACCESSOR_RECORD = "docs/dev-log/core070/true-parity-latest/estimand-rebind-accessor-diff-p1.json"
+HELD_NOTE = "held pending the maintainer's ruling on the wave6 nobs expectation"
 
 # Rows in scope: P1 carry scan (branch claude/true-parity-p1-carry, carry-scan-p1.json).
 POSTFIT_DANGLING = [
@@ -82,6 +108,58 @@ WAVE6_NOTE = ("The wave6 batch receipt reads FAIL, and tools/core070_verify_wave
               "expectation that Julia nobs returns n = 80 no longer holds (Julia now returns p*n = 400, as R does). "
               "The other nine cases pass; each case receipt carries its own verdict.")
 
+# Reviewer's evidence for the rows the degenerate-comparison gate holds (PR #569 review finding 1).
+NON_DISCRIMINATING_NOTES = {
+    "postfit/POSTFIT-SURFACE-extract_communality": (
+        "Measured on the unique = FALSE Gaussian fixture (tools/core070_estimand_rebind_batch.R), where communality "
+        "is identically 1 for every trait: R and Julia both return [1, 1, 1, 1, 1]. Reviewer mutation: a Julia "
+        "extract_communality that returns a constant 1.0 still PASSES the batch; 0.99 * s/t FAILS. The harness "
+        "bounds |R - Julia| correctly, but this fixture cannot distinguish a wrong implementation. A non-degenerate "
+        "fixture (unique = TRUE) is a new case, i.e. a contract change for the maintainer."),
+    "postfit/POSTFIT-SURFACE-extract_proportions": (
+        "Same unique = FALSE fixture as extract_communality: the compared proportion vectors are all 1, so a "
+        "constant implementation would pass (same structure as the reviewer's communality mutation). A "
+        "non-degenerate fixture is a contract change for the maintainer."),
+    "postfit/POSTFIT-SURFACE-tidy.gllvmTMB_multi": (
+        "Fixed-effect estimates on row-centred data: the R oracle is about 1e-14 per coefficient and the harness "
+        "difference (1.4e-14) equals max |R|, i.e. Julia returns about 0. A Julia tidy that returned zeros would "
+        "pass. An uncentred fixture is a contract change for the maintainer."),
+    "postfit-policy/POST-COEF-NAMED": (
+        "Same row-centred fixture as tidy: R coef values are about 1e-14 and the harness delta (1.359e-14) equals "
+        "max |R|, so a Julia coef returning zeros would pass. An uncentred fixture is a contract change for the "
+        "maintainer."),
+}
+
+# postfit-policy: case id -> the r-oracle.json key(s) holding the R values it compares (degenerate gate).
+POLICY_R_KEYS = {
+    "CORE070-POSTFIT-COEF-NAMED-NATIVE": ["coef"],
+    "CORE070-POSTFIT-CONFINT-METHODS-WALD-NATIVE": ["ci_lower", "ci_upper"],
+    "CORE070-POSTFIT-FITTED-DEFAULT-NATIVE": ["response"],
+    "CORE070-POSTFIT-LOGLIK-VALUE-NATIVE": ["loglik"],
+    "CORE070-POSTFIT-RE-FORM-FULL-NATIVE": ["link"],
+    "CORE070-POSTFIT-RESIDUAL-CONDITIONAL-NATIVE": ["residual"],
+    "CORE070-POSTFIT-RESIDUAL-SCALES-NATIVE": ["residual"],
+    "CORE070-POSTFIT-RESIDUAL-TYPES-NATIVE": ["residual"],
+}
+
+# Each batch's verifier (run by this tool at P1) and the line that marks acceptance.
+VERIFIERS = {
+    "surface-conversion-p1": (["tools/core070_verify_surface_conversion_batch.py", "{state}", "--self-test"],
+                              "CORE070_SURFACE_CONVERSION_STATE_OK"),
+    "estimand-rebind-p1": (["tools/core070_verify_estimand_rebind_batch.py", "{state}", "--self-test"],
+                           "CORE070_ESTIMAND_REBIND_STATE_OK"),
+    "wave6-conversion-p1": (["tools/core070_verify_wave6_conversion_batch.py", "{state}"],
+                            "CORE070_WAVE6_CONVERSION_STATE_OK"),
+    "wave7-conversion-p1": (["tools/core070_verify_wave7_conversion_batch.py", "{state}", "--self-test"],
+                            "CORE070_WAVE7_CONVERSION_STATE_OK"),
+    "wave8-conversion-p1": (["tools/core070_verify_wave8_conversion_batch.py", "{state}", "--self-test"],
+                            "CORE070_WAVE8_CONVERSION_STATE_OK"),
+    "postfit-policy-p1": (["tools/core070_verify_postfit_policy_batch.py", "--state", "{state}", "--self-test"],
+                          "CORE070_POSTFIT_POLICY_BATCH_VERIFIED"),
+    "postfit-1-p1": (["tools/core070_verify_postfit_1_batch.py", "--r-state", "{r_state}", "--julia-state",
+                      "{julia_state}", "--self-test"], "CORE070_POSTFIT_1_BATCH_VERIFIED"),
+}
+
 # postfit-policy: case id -> contract tolerance key (numeric cases only).
 POLICY_TOL_KEY = {
     "CORE070-POSTFIT-COEF-NAMED-NATIVE": "coefficient_delta",
@@ -110,14 +188,62 @@ def write_json(path, value):
     path.write_text(json.dumps(value, indent=2) + "\n")
 
 
-def git_head():
-    return subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+def git(*args):
+    return subprocess.run(["git", "-C", str(ROOT), *args], check=True, capture_output=True, text=True).stdout
 
 
-def verifier_lines(run_dir):
-    p = run_dir / "verify.txt"
-    lines = [l for l in p.read_text().splitlines() if l.strip()] if p.exists() else []
-    return lines[-3:]
+def git_state():
+    """HEAD and the tracked paths modified outside this tool's own outputs."""
+    head = git("rev-parse", "HEAD").strip()
+    own = (REC_REL + "/", "docs/dev-log/core070/true-parity-latest/case-map-postfit.json")
+    dirty = [line[3:] for line in git("status", "--porcelain", "--untracked-files=no").splitlines()
+             if not line[3:].startswith(own)]
+    return head, dirty
+
+
+def check_run_commit(run_dir, head):
+    """The run directory's run-commit.json must name this HEAD and a clean tree."""
+    p = run_dir / "run-commit.json"
+    if not p.is_file():
+        raise SystemExit(f"{run_dir} has no run-commit.json; re-run the batch from a clean commit")
+    rc = load(p)
+    if rc.get("glvmodels_commit") != head or rc.get("dirty") != []:
+        raise SystemExit(f"{run_dir}: run at {rc.get('glvmodels_commit')} dirty={rc.get('dirty')}, "
+                         f"not at clean HEAD {head}; re-run at HEAD")
+
+
+def run_verifier(name, **states):
+    """Run a batch verifier at P1 and keep its full output as the tracked <batch>/verify.txt."""
+    argv_t, marker = VERIFIERS[name]
+    argv = ["python3"] + [a.format(**{k: str(v) for k, v in states.items()}) for a in argv_t]
+    proc = subprocess.run(argv, cwd=ROOT, capture_output=True, text=True,
+                          env=dict(os.environ, GLLVM_PARITY_PIN="P1"))
+    log = REC / name / "verify.txt"
+    log.parent.mkdir(parents=True, exist_ok=True)
+    log.write_text(proc.stdout + proc.stderr)
+    ok = proc.returncode == 0 and marker in proc.stdout
+    return {"tool": argv_t[0], "argv": " ".join(a for a in argv_t), "status": "PASS" if ok else "FAIL",
+            "exit_code": proc.returncode, "accept_marker": marker, "log": f"{REC_REL}/{name}/verify.txt"}
+
+
+def degenerate(values):
+    """Why a comparison cannot discriminate (None when it can), judged on the R oracle values."""
+    vals = [float(v) for v in values]
+    if not vals:
+        return "no values"
+    if all(abs(v) < DEGENERATE_ABS for v in vals):
+        return f"every |R value| < {DEGENERATE_ABS:g} (max {max(abs(v) for v in vals):.3g})"
+    if len(vals) >= 2 and max(vals) - min(vals) <= 1e-12 * max(1.0, max(abs(v) for v in vals)):
+        return f"all {len(vals)} R values equal the constant {vals[0]:.17g}"
+    return None
+
+
+def mark_degenerate(entry, r_values):
+    why = degenerate(r_values)
+    entry["discriminating"] = why is None
+    if why is not None:
+        entry["degenerate_reason"] = why
+    return entry
 
 
 def copy_batch(src_dir, dest_name, names):
@@ -144,42 +270,56 @@ def vec_entry(case_id, quantity, rv, jv, tol, harness_diff, rule):
          "tolerance_rule": rule, "n_values": len(rv), "diff_source": "recomputed from raw R and Julia values"}
     if len(rv) <= MAX_INLINE:
         e["r_value"], e["julia_value"] = rv, jv
-    return e
+    return mark_degenerate(e, rv)
 
 
-def harness_entry(case_id, quantity, diff, tol, rule):
-    return {"case_id": case_id, "quantity": quantity, "max_abs_diff": diff, "tolerance": tol,
-            "tolerance_rule": rule,
-            "diff_source": "harness-reported (the Julia results file records the max |R - Julia| it bounded, "
-                           "not the Julia vector)"}
+def harness_entry(case_id, quantity, diff, tol, rule, r_values):
+    e = {"case_id": case_id, "quantity": quantity, "max_abs_diff": diff, "tolerance": tol,
+         "tolerance_rule": rule,
+         "diff_source": "harness-reported (the Julia results file records the max |R - Julia| it bounded, "
+                        "not the Julia vector)"}
+    if r_values is None:
+        raise SystemExit(f"{case_id}: no R values to judge whether the comparison discriminates")
+    return mark_degenerate(e, r_values)
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--runs", type=Path, required=True)
     ap.add_argument("--runtimes", type=Path, required=True)
+    ap.add_argument("--allow-dirty", action="store_true",
+                    help="write receipts from a checkout with modified tracked files (recorded, not hidden)")
     args = ap.parse_args()
     runs = args.runs
     runtimes = load(args.runtimes)
-    head = git_head()
+    head, dirty = git_state()
+    if dirty and not args.allow_dirty:
+        raise SystemExit("tracked files are modified outside this tool's outputs; commit first or pass "
+                         "--allow-dirty: " + ", ".join(dirty))
+    run_dirs = ["surface-conversion-p1", "estimand-rebind-p1", "wave6-conversion-p1", "wave7-conversion-p1",
+                "wave8-conversion-p1", "postfit-policy-p1", "postfit-1-r-p1", "postfit-1-julia-p1"]
+    for d in run_dirs:
+        check_run_commit(runs / d, head)
 
-    common = {"pin": "P1", "reference_commit": P1_SHA, "p0_reference_commit": P0_SHA, "gllvmtmb_version": "0.7.1",
+    common = {"pin": "P1", "reference_commit": P1_SHA, "p0_reference_commit": P0_SHA,
+              "gllvmtmb_version": PINS["P1"]["version"],
               "oracle_build_receipt": ORACLE_BUILD, "oracle_source_receipt": ORACLE_SOURCE,
-              "glvmodels_commit_at_receipt_write": head,
-              "glvmodels_src_tree": subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD:src"],
-                                                   capture_output=True, text=True).stdout.strip(),
+              "glvmodels_commit": head, "glvmodels_worktree_dirty": dirty,
+              "glvmodels_src_tree": git("rev-parse", f"{head}:src").strip(),
               "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"}
-    receipts = {}  # case_id -> (path, kind, verdict)
+    receipts = {}  # case_id -> (path, kind, verdict, batch verifier status, discriminating)
     artifacts = {}
+    verifiers = {}
 
     def emit(cid, kind, verdict, body, comparison=None):
-        rec = {"schema": "core070-postfit-p1-case-receipt/v1", "case_id": cid, "verdict": verdict,
+        rec = {"schema": "core070-postfit-p1-case-receipt/v2", "case_id": cid, "verdict": verdict,
                "evidence_kind": kind, **body, **common}
         if comparison is not None:
             rec["comparison"] = {"pin": "P1", "cases": comparison}
         path = REC / "cases" / f"{cid}.json"
         write_json(path, rec)
-        receipts[cid] = (str(path.relative_to(ROOT)), kind, verdict)
+        disc = all(e.get("discriminating", True) for e in comparison) if comparison else True
+        receipts[cid] = (str(path.relative_to(ROOT)), kind, verdict, body["batch_verifier"]["status"], disc)
 
     # ---- point-style batches: surface-conversion, estimand-rebind, wave6, wave7, wave8 ----
     point_batches = [
@@ -195,10 +335,12 @@ def main():
     ]
     for d, batch, contract_path in point_batches:
         rd = runs / d
-        artifacts[d] = copy_batch(rd, d, ["receipt.json", "results.tsv", "julia-results.json", "r-oracle.json"])
+        artifacts[d] = copy_batch(rd, d, ["receipt.json", "results.tsv", "julia-results.json", "r-oracle.json",
+                                          "run-commit.json"])
         julia, oracle, breceipt = load(rd / "julia-results.json"), load(rd / "r-oracle.json"), load(rd / "receipt.json")
         ccases = {c["case_id"]: c for c in load(contract_path)["cases"]} if contract_path else {}
-        vlines = verifier_lines(rd)
+        verifiers[d] = run_verifier(d, state=rd)
+        artifacts[d].append(verifiers[d]["log"])
         for cid, jc in julia["cases"].items():
             cc = ccases.get(cid, {})
             srcs = cc.get("source_ids") or ([cc["source_id"]] if cc.get("source_id") else [])
@@ -209,10 +351,12 @@ def main():
             kind_h = jc.get("kind") or cc.get("kind") or "point"
             passed = bool(jc.get("pass"))
             body = {"source_ids": srcs, "batch": batch, "harness_kind": kind_h, "harness_pass": passed,
-                    "batch_status": breceipt["status"], "verifier_output": vlines,
+                    "batch_status": breceipt["status"], "batch_verifier": verifiers[d],
                     "batch_status_note": (WAVE6_NOTE if d == "wave6-conversion-p1" and breceipt["status"] != "PASS" else ""),
                     "r_call": cc.get("r_call"), "julia_call": cc.get("julia_call"),
                     "raw": [f"{REC_REL}/{d}/julia-results.json", f"{REC_REL}/{d}/r-oracle.json"]}
+            if d == "estimand-rebind-p1":
+                body["p0_to_p1_accessor_record"] = ESTIMAND_ACCESSOR_RECORD
             if kind_h in ("point", "ci") and "max_abs_diff" in jc:
                 tol = jc["tolerance"]
                 rule = (f"{contract_path.name if contract_path else 'tools/core070_verify_estimand_rebind_batch.py TOLERANCE'}"
@@ -221,7 +365,8 @@ def main():
                 jv = jc.get("julia_values")
                 entry = (vec_entry(cid, jc.get("quantity") or cc.get("quantity"), rv, jv, tol, jc["max_abs_diff"], rule)
                          if isinstance(rv, (list, float, int)) and jv is not None
-                         else harness_entry(cid, jc.get("quantity") or cc.get("quantity"), jc["max_abs_diff"], tol, rule))
+                         else harness_entry(cid, jc.get("quantity") or cc.get("quantity"), jc["max_abs_diff"], tol, rule,
+                                            rv if isinstance(rv, list) else ([rv] if isinstance(rv, (float, int)) else None)))
                 ok = passed and entry["max_abs_diff"] <= tol
                 emit(cid, "numeric_r_vs_julia", "PASS" if ok else "FAIL", body, [entry])
             elif kind_h == "own_receipt_defect":
@@ -246,6 +391,11 @@ def main():
     r1, j1 = runs / "postfit-1-r-p1", runs / "postfit-1-julia-p1"
     artifacts["postfit-1-p1"] = copy_batch(r1, "postfit-1-p1", ["receipt.json", "postfit-1-r-results.json"]) + \
         copy_batch(j1, "postfit-1-p1", ["postfit-1-julia-results.json"])
+    shutil.copyfile(r1 / "run-commit.json", REC / "postfit-1-p1" / "run-commit-r.json")
+    shutil.copyfile(j1 / "run-commit.json", REC / "postfit-1-p1" / "run-commit-julia.json")
+    verifiers["postfit-1-p1"] = run_verifier("postfit-1-p1", r_state=r1, julia_state=j1)
+    artifacts["postfit-1-p1"] += [f"{REC_REL}/postfit-1-p1/run-commit-r.json", f"{REC_REL}/postfit-1-p1/run-commit-julia.json",
+                                  verifiers["postfit-1-p1"]["log"]]
     rr, jr = load(r1 / "postfit-1-r-results.json"), load(j1 / "postfit-1-julia-results.json")
     c1 = load(OUT / "postfit-1-batch-contract-p1.json")["executable_batch"]
     tol = c1["tolerance"]["max_abs_diff"]
@@ -254,30 +404,33 @@ def main():
                       "postfit-1-batch-contract-p1.json executable_batch.tolerance.max_abs_diff (carried verbatim from P0)")
     emit(cid, "numeric_r_vs_julia", "PASS" if entry["max_abs_diff"] <= tol and rr["all_checks"] and jr["all_checks"] else "FAIL",
          {"source_ids": [c1["source_id"]], "batch": "tools/core070_postfit_1_batch.R then .jl, GLLVM_PARITY_PIN=P1",
-          "verifier_output": verifier_lines(j1),
+          "batch_verifier": verifiers["postfit-1-p1"],
           "raw": [f"{REC_REL}/postfit-1-p1/postfit-1-r-results.json", f"{REC_REL}/postfit-1-p1/postfit-1-julia-results.json"]},
          [entry])
 
     # ---- postfit-policy ----
     rp = runs / "postfit-policy-p1"
-    artifacts["postfit-policy-p1"] = copy_batch(rp, "postfit-policy-p1", ["receipt.json", "results.tsv", "julia-results.json", "r-oracle.json"])
+    artifacts["postfit-policy-p1"] = copy_batch(rp, "postfit-policy-p1", ["receipt.json", "results.tsv", "julia-results.json",
+                                                                         "r-oracle.json", "run-commit.json"])
+    verifiers["postfit-policy-p1"] = run_verifier("postfit-policy-p1", state=rp)
+    artifacts["postfit-policy-p1"].append(verifiers["postfit-policy-p1"]["log"])
     pj, po = load(rp / "julia-results.json"), load(rp / "r-oracle.json")
     pc = load(OUT / "postfit-policy-batch-contract-p1.json")
     ptol = pc["tolerances"]
-    vlines = verifier_lines(rp)
     for c in pc["cases"]:
         cid = c["case_id"]
         jc = pj["cases"][cid]
         passed = bool(jc["pass"])
         body = {"source_ids": [c["source_id"]], "batch": "tools/core070_postfit_policy_batch.R + .jl, GLLVM_PARITY_PIN=P1",
-                "harness_pass": passed, "verifier_output": vlines, "r_call": c.get("r_call"),
+                "harness_pass": passed, "batch_verifier": verifiers["postfit-policy-p1"], "r_call": c.get("r_call"),
                 "julia_surface": c.get("julia_surface"), "comparand": c.get("comparand"), "check": c.get("check"),
                 "harness_fields": jc,
                 "raw": [f"{REC_REL}/postfit-policy-p1/julia-results.json", f"{REC_REL}/postfit-policy-p1/r-oracle.json"]}
         if cid in POLICY_TOL_KEY:
             key = POLICY_TOL_KEY[cid]
+            r_vals = [v for k in POLICY_R_KEYS[cid] for v in (po[k] if isinstance(po[k], list) else [po[k]])]
             e = harness_entry(cid, c.get("comparand"), jc["delta"], ptol[key],
-                              f"postfit-policy-batch-contract-p1.json tolerances.{key} (carried verbatim from P0)")
+                              f"postfit-policy-batch-contract-p1.json tolerances.{key} (carried verbatim from P0)", r_vals)
             emit(cid, "numeric_r_vs_julia", "PASS" if passed and jc["delta"] <= ptol[key] else "FAIL", body, [e])
         else:
             if cid in POLICY_PARTIAL_WITH_NUMERIC_LEG:
@@ -298,7 +451,8 @@ def main():
     p0 = {r["source_id"]: r for r in load(P0_CASEMAP)["rows"]}
     carried_keys = ("uncertain", "reclassify_proposed", "original_classification")
     out_rows = []
-    counts = {"numeric_pass": 0, "numeric_fail": 0, "partial_non_numeric_case": 0,
+    counts = {"numeric_pass": 0, "numeric_fail": 0, "numeric_held_batch_verifier_failed": 0,
+              "numeric_non_discriminating": 0, "partial_non_numeric_case": 0,
               "needs_surface_not_executed": 0, "retired_at_p1_not_measured": 0, "not_measured": 0}
     in_scope = [(f"postfit/POSTFIT-SURFACE-{s}", "DANGLING") for s in POSTFIT_DANGLING] + \
                [(f"postfit/POSTFIT-SURFACE-{s}", "RETIRED") for s in POSTFIT_RETIRED] + \
@@ -337,18 +491,43 @@ def main():
             verdicts = {i: h[2] for i, h in zip(ids, have)}
             paths = [h[0] for h in have]
             all_pass = all(v == "PASS" for v in verdicts.values())
-            if kinds == {"numeric_r_vs_julia"} and all_pass:
+            batch_ok = {i: h[3] for i, h in zip(ids, have)}
+            disc = {i: h[4] for i, h in zip(ids, have)}
+            if kinds == {"numeric_r_vs_julia"} and all_pass and not all(v == "PASS" for v in batch_ok.values()):
+                # PR #567's gate: a batch whose own verifier rejected the run cannot bind a row
+                row.update(evidence_tier="numeric_held_batch_verifier_failed", measured_against=P1_SHA,
+                           evidence={"non_binding_receipts": paths,
+                                     "tier": "numeric comparison blocks pass, but the batch verifier rejected the "
+                                             "run, so the row does not bind"},
+                           note=HELD_NOTE,
+                           measured_result={"case_verdicts": verdicts, "batch_verifier": batch_ok,
+                                            "discriminating": disc})
+                counts["numeric_held_batch_verifier_failed"] += 1
+            elif kinds == {"numeric_r_vs_julia"} and all_pass and not all(disc.values()):
+                # review finding 1: a comparison that cannot discriminate does not bind
+                row.update(evidence_tier="numeric_non_discriminating", measured_against=P1_SHA,
+                           evidence={"non_binding_receipts": paths,
+                                     "tier": "numeric comparison blocks pass, but at least one is degenerate (the R "
+                                             "values are one constant or all ~0), so a constant or zero "
+                                             "implementation would pass too; the row does not bind"},
+                           note=NON_DISCRIMINATING_NOTES.get(sid, "flagged by the degenerate-comparison gate; see the "
+                                                                  "comparison blocks' degenerate_reason"),
+                           measured_result={"case_verdicts": verdicts, "batch_verifier": batch_ok,
+                                            "discriminating": disc})
+                counts["numeric_non_discriminating"] += 1
+            elif kinds == {"numeric_r_vs_julia"} and all_pass:
                 row.update(evidence_tier="numeric", measured_against=P1_SHA,
                            evidence={"receipt": paths,
                                      "tier": "numeric: every executable case receipt carries an R-vs-Julia comparison "
                                              "block pinned to P1, within the harness tolerance"},
-                           measured_result={"case_verdicts": verdicts, "row_verdict": "PASS"})
+                           measured_result={"case_verdicts": verdicts, "batch_verifier": batch_ok,
+                                            "row_verdict": "PASS"})
                 counts["numeric_pass"] += 1
             elif not all_pass:
                 row.update(evidence_tier="numeric_fail", measured_against=P1_SHA,
                            evidence={"non_binding_receipts": paths,
                                      "tier": "measured at P1; the harness verdict is FAIL, so the row does not bind"},
-                           measured_result={"case_verdicts": verdicts, "row_verdict": "FAIL"})
+                           measured_result={"case_verdicts": verdicts, "batch_verifier": batch_ok, "row_verdict": "FAIL"})
                 counts["numeric_fail"] += 1
             else:
                 row.update(evidence_tier="partial_non_numeric_case", measured_against=P1_SHA,
@@ -356,7 +535,8 @@ def main():
                                      "tier": "measured at P1 and the harness passes, but at least one case is a verdict, "
                                              "own-consistency, exact-integer, empty-length or default-policy check with "
                                              "no R-vs-Julia number and tolerance, so the row does not bind"},
-                           measured_result={"case_verdicts": verdicts, "case_kinds": {i: h[1] for i, h in zip(ids, have)}})
+                           measured_result={"case_verdicts": verdicts, "batch_verifier": batch_ok,
+                                            "case_kinds": {i: h[1] for i, h in zip(ids, have)}})
                 counts["partial_non_numeric_case"] += 1
         out_rows.append(row)
 
@@ -371,8 +551,12 @@ def main():
                  "unchanged; nothing is signed by an agent. Only rows whose every executable case id carries a numeric "
                  "R-vs-Julia comparison block within tolerance cite evidence.receipt; every other measured row cites "
                  "evidence.non_binding_receipts, so it reads as not bound under both the current checker and the "
-                 "numeric-tier rule proposed in PR #561."),
+                 "numeric-tier rule proposed in PR #561. Two further holds cite non-binding receipts: a row whose "
+                 "batch verifier rejected the run (numeric_held_batch_verifier_failed; no exception path) and a row "
+                 "with a degenerate comparison (numeric_non_discriminating)."),
         "generator": "tools/core070_postfit_p1_receipts.py",
+        "glvmodels_commit": head,
+        "batch_verifiers": verifiers,
         "counts": counts, "runtimes_seconds": runtimes,
         "batch_artifacts": artifacts,
         "rows": out_rows,

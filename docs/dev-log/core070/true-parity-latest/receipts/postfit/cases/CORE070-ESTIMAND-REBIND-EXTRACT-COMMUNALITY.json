@@ -1,5 +1,5 @@
 {
-  "schema": "core070-postfit-p1-case-receipt/v1",
+  "schema": "core070-postfit-p1-case-receipt/v2",
   "case_id": "CORE070-ESTIMAND-REBIND-EXTRACT-COMMUNALITY",
   "verdict": "PASS",
   "evidence_kind": "numeric_r_vs_julia",
@@ -10,9 +10,14 @@
   "harness_kind": "point",
   "harness_pass": true,
   "batch_status": "PASS",
-  "verifier_output": [
-    "CORE070_ESTIMAND_REBIND_STATE_OK /Users/z3437171/local-scratch/a3pf-runs/estimand-rebind-p1"
-  ],
+  "batch_verifier": {
+    "tool": "tools/core070_verify_estimand_rebind_batch.py",
+    "argv": "tools/core070_verify_estimand_rebind_batch.py {state} --self-test",
+    "status": "PASS",
+    "exit_code": 0,
+    "accept_marker": "CORE070_ESTIMAND_REBIND_STATE_OK",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/postfit/estimand-rebind-p1/verify.txt"
+  },
   "batch_status_note": "",
   "r_call": null,
   "julia_call": null,
@@ -20,13 +25,15 @@
     "docs/dev-log/core070/true-parity-latest/receipts/postfit/estimand-rebind-p1/julia-results.json",
     "docs/dev-log/core070/true-parity-latest/receipts/postfit/estimand-rebind-p1/r-oracle.json"
   ],
+  "p0_to_p1_accessor_record": "docs/dev-log/core070/true-parity-latest/estimand-rebind-accessor-diff-p1.json",
   "pin": "P1",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
   "gllvmtmb_version": "0.7.1",
   "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit_at_receipt_write": "9d2dd6cbfc1d458c38ee0cc91272ccb2e9cb43f1",
+  "glvmodels_commit": "681c4c3ca666e630470bba01a057bc88158b85f3",
+  "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
   "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
   "comparison": {
@@ -53,7 +60,9 @@
           1.0,
           1.0,
           1.0
-        ]
+        ],
+        "discriminating": false,
+        "degenerate_reason": "all 5 R values equal the constant 1"
       }
     ]
   }

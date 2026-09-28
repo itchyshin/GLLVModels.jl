@@ -1,5 +1,5 @@
 {
-  "schema": "core070-postfit-p1-case-receipt/v1",
+  "schema": "core070-postfit-p1-case-receipt/v2",
   "case_id": "CORE070-POSTFIT-RESIDUAL-TYPES-NATIVE",
   "verdict": "PASS",
   "evidence_kind": "numeric_r_vs_julia",
@@ -8,10 +8,14 @@
   ],
   "batch": "tools/core070_postfit_policy_batch.R + .jl, GLLVM_PARITY_PIN=P1",
   "harness_pass": true,
-  "verifier_output": [
-    "CORE070_POSTFIT_POLICY_CONTRACT_VERIFIED executable= 15 needs_surface= 8 spec_defect= 1 total= 24",
-    "CORE070_POSTFIT_POLICY_BATCH_VERIFIED 15 negative_controls 2"
-  ],
+  "batch_verifier": {
+    "tool": "tools/core070_verify_postfit_policy_batch.py",
+    "argv": "tools/core070_verify_postfit_policy_batch.py --state {state} --self-test",
+    "status": "PASS",
+    "exit_code": 0,
+    "accept_marker": "CORE070_POSTFIT_POLICY_BATCH_VERIFIED",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-policy-p1/verify.txt"
+  },
   "r_call": "residuals.gllvmTMB_multi(type='randomized_quantile') (R/predictive-diagnostics.R:157-233)",
   "julia_surface": "residuals(fit::GllvmFit, y; type=:dunnsmyth, ...) (src/postfit.jl:316) -- exact family-CDF randomized-quantile residual",
   "comparand": "same residual value delta as RESIDUAL-CONDITIONAL/-SCALES",
@@ -30,7 +34,8 @@
   "gllvmtmb_version": "0.7.1",
   "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit_at_receipt_write": "9d2dd6cbfc1d458c38ee0cc91272ccb2e9cb43f1",
+  "glvmodels_commit": "681c4c3ca666e630470bba01a057bc88158b85f3",
+  "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
   "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
   "comparison": {
@@ -42,7 +47,8 @@
         "max_abs_diff": 8.64429937963429e-06,
         "tolerance": 0.0001,
         "tolerance_rule": "postfit-policy-batch-contract-p1.json tolerances.link_response_residual_delta (carried verbatim from P0)",
-        "diff_source": "harness-reported (the Julia results file records the max |R - Julia| it bounded, not the Julia vector)"
+        "diff_source": "harness-reported (the Julia results file records the max |R - Julia| it bounded, not the Julia vector)",
+        "discriminating": true
       }
     ]
   }

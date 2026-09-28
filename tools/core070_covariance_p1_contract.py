@@ -27,10 +27,23 @@ What changes, all recorded in each output's regeneration log:
     * the provenance header (reference_commit, NAMESPACE blob + sha256,
       R/fit-multi.R and R/families.R blobs, archive and source-tree sha256,
       source inventory path, `source` line) is recomputed at P1;
-    * everything else (case-id registries, family rows, obligations, and their
-      free-text `R/<file>:<lines> @ b4d5fee64...` citations) is carried verbatim
-      from P0. Those citations are NOT re-anchored; they describe where P0 R
-      source said something and are history, not P1 evidence.
+    * every `source = "..."` citation that names the P0 commit or the P0
+      NAMESPACE blob is re-anchored at P1 (reanchor_source below):
+        - a line range (`R/<file>:<a>-<b> @ <P0>`, `<P0>:R/<file>:<a>-<b>`,
+          `NAMESPACE:<P0 blob>:<a>-<b>`) is located at P1 by searching for the
+          same text: first the whole cited block verbatim, then the shortest
+          unique leading and trailing runs of its lines. The citation is
+          rewritten to the P1 line range (with the P1 blob sha), marked
+          `identical` or `changed` in the log;
+        - a range that cannot be located unambiguously, and a file-level
+          citation (`R/<file> @ <P0>`), become a P1 file pin
+          `R/<file> @ <P1> blob <sha>`;
+        - a `<P0>:test/parity/...` citation names a GLLVModels.jl path under a
+          gllvmTMB sha (the path does not exist in gllvmTMB at P0 or P1); it is
+          rewritten to a GLLVModels.jl file pin with the file's git blob sha;
+      the full per-citation log is written as comments under the header;
+    * everything else (case-id registries, family rows, obligations) is
+      carried verbatim from P0.
 
   covariance-batch-contract-p1.json
     * reference_commit and the four source_pins sha256 are recomputed at P1;
@@ -99,6 +112,100 @@ def replace_line(text, key, value, log):
     return text[:m.start()] + f'{key} = "{value}"' + text[m.end():]
 
 
+def git_text_lines(ctx, sha, path):
+    key = (sha, path)
+    if key not in ctx["cache"]:
+        ctx["cache"][key] = git_show(ctx["repo"], sha, path).decode().split("\n")
+    return ctx["cache"][key]
+
+
+def find_unique(haystack, needle):
+    """Index of the only occurrence of the contiguous run `needle` in `haystack`, or None."""
+    hits = [i for i in range(len(haystack) - len(needle) + 1) if haystack[i:i + len(needle)] == needle]
+    return hits[0] if len(hits) == 1 else None
+
+
+def locate_block(old_lines, new_lines, a, b, max_anchor=12):
+    """Locate P0 lines a..b (1-based, inclusive) in the P1 file.
+
+    Returns (kind, a1, b1) with kind "range-identical" or "range-changed", or None
+    when the block cannot be located unambiguously.
+    """
+    block = old_lines[a - 1:b]
+    at = find_unique(new_lines, block)
+    if at is not None:
+        return "range-identical", at + 1, at + len(block)
+    start = end = None
+    for k in range(1, min(max_anchor, len(block)) + 1):
+        start = find_unique(new_lines, block[:k])
+        if start is not None:
+            break
+    for k in range(1, min(max_anchor, len(block)) + 1):
+        hit = find_unique(new_lines, block[-k:])
+        if hit is not None:
+            end = hit + k - 1
+            break
+    if start is None or end is None or end < start:
+        return None
+    return "range-changed", start + 1, end + 1
+
+
+def reanchor_part(part, ctx, anchors):
+    """Rewrite one `;`-separated citation at P1 and append its log row to `anchors`."""
+    p0, p1 = ctx["p0"], ctx["p1"]
+    patterns = [
+        (re.compile(rf"^(R/[^:@ ]+):(\d+)-(\d+) @ {p0}$"), "range"),
+        (re.compile(rf"^{p0}:(R/[^:@ ]+):(\d+)-(\d+)$"), "range"),
+        (re.compile(rf"^(NAMESPACE):{ctx['p0_ns_blob']}:(\d+(?:-\d+)?(?:,\d+(?:-\d+)?)*)$"), "ranges"),
+        (re.compile(rf"^(R/[^:@ ]+) ?@ ?{p0}$"), "file"),
+        (re.compile(rf"^{p0}:(test/parity/[^:@ ]+)$"), "glvmodels"),
+    ]
+    for pattern, kind in patterns:
+        m = pattern.match(part)
+        if m is None:
+            continue
+        path = m.group(1)
+        if kind == "glvmodels":
+            blob = subprocess.run(["git", "-C", str(ROOT), "hash-object", path], check=True,
+                                  capture_output=True, text=True).stdout.strip()
+            new = f"GLLVModels.jl:{path} @ blob {blob}"
+            anchors.append({"kind": "glvmodels-file-pin", "p0": part, "p1": new})
+            return new
+        blob = git_blob(ctx["repo"], p1, path)
+        if kind == "range":
+            a, b = int(m.group(2)), int(m.group(3))
+            hit = locate_block(git_text_lines(ctx, p0, path), git_text_lines(ctx, p1, path), a, b)
+            if hit is not None:
+                how, a1, b1 = hit
+                new = f"{path}:{a1}-{b1} @ {p1} blob {blob}"
+                anchors.append({"kind": how, "p0": part, "p1": new})
+                return new
+        if kind == "ranges":
+            # NAMESPACE:<blob>:<list> -- a comma list of lines / line ranges; each segment
+            # is located on its own, and all must be found or the file is pinned instead.
+            segs = []
+            for seg in m.group(2).split(","):
+                a, _, b = seg.partition("-")
+                hit = locate_block(git_text_lines(ctx, p0, path), git_text_lines(ctx, p1, path),
+                                   int(a), int(b or a))
+                if hit is None:
+                    segs = None
+                    break
+                segs.append(hit)
+            if segs:
+                how = "range-identical" if all(h[0] == "range-identical" for h in segs) else "range-changed"
+                spans = ",".join(str(h[1]) if h[1] == h[2] else f"{h[1]}-{h[2]}" for h in segs)
+                new = f"{path}:{blob}:{spans} @ {p1}"
+                anchors.append({"kind": how, "p0": part, "p1": new})
+                return new
+        new = f"{path} @ {p1} blob {blob}"
+        anchors.append({"kind": "file-pin", "p0": part, "p1": new})
+        return new
+    if p0 in part or ctx["p0_ns_blob"] in part:
+        raise SystemExit(f"unrecognised P0 citation form, cannot re-anchor: {part!r}")
+    return part
+
+
 def build_toml(repo):
     p0, p1 = pin_entry()
     sha = p1["reference_commit"]
@@ -122,16 +229,48 @@ def build_toml(repo):
         ("source", f"git show gllvmTMB:{sha}"),
     ):
         head = replace_line(head, key, value, log)
-    carried = len(re.findall(p0["reference_commit"], rest))
+    p0_ns_blob = git_blob(repo, p0["reference_commit"], "NAMESPACE")
+    anchors = []
+    ctx = {"repo": repo, "p0": p0["reference_commit"], "p1": sha, "p0_ns_blob": p0_ns_blob, "cache": {}}
+
+    def rewrite(m):
+        value = m.group(2)
+        if p0["reference_commit"] not in value and f"NAMESPACE:{p0_ns_blob}:" not in value:
+            return m.group(0)
+        parts = [reanchor_part(part.strip(), ctx, anchors) for part in value.split(";")]
+        return f'{m.group(1)}"{"; ".join(parts)}"'
+
+    rest = re.sub(r'^(source = )"([^"]*)"$', rewrite, rest, flags=re.M)
+    leftover = len(re.findall(p0["reference_commit"], rest))
+    if leftover:
+        raise SystemExit(f"{leftover} P0 commit citation(s) were not re-anchored")
+    kinds = {}
+    for a in anchors:
+        kinds[a["kind"]] = kinds.get(a["kind"], 0) + 1
     note = [
         "",
-        "# P1 regeneration (tools/core070_covariance_p1_contract.py). Only the provenance header",
-        "# above was recomputed at P1; every line below is carried verbatim from",
-        "# docs/dev-log/core070/frozen-r070-contract.toml. Free-text citations of the form",
-        f"# `R/<file>:<lines> @ {p0['reference_commit']}` below ({carried} occurrences) are P0 history,",
-        "# not re-anchored at P1. Header changes:",
+        "# P1 regeneration (tools/core070_covariance_p1_contract.py). The provenance header above",
+        "# was recomputed at P1. Below it, every `source` citation that named the P0 commit",
+        f"# ({p0['reference_commit']}) or the P0 NAMESPACE blob was re-anchored at P1",
+        f"# ({len(anchors)} citations: " + ", ".join(f"{k} {v}" for k, v in sorted(kinds.items())) + ").",
+        "# `range-identical`: the cited block is byte-identical at P1, only its line numbers moved.",
+        "# `range-changed`: the block's first and last lines were found uniquely at P1, but the code",
+        "# between them changed; the citation spans the P1 block. `file-pin`: the file is cited by its",
+        "# P1 blob sha, either because the P0 citation was file-level or because the range could not",
+        "# be located unambiguously. `glvmodels-file-pin`: the P0 citation named a GLLVModels.jl path",
+        "# under a gllvmTMB sha; it is now pinned by the GLLVModels.jl git blob sha of that file.",
+        "# Everything else below is carried verbatim from docs/dev-log/core070/frozen-r070-contract.toml.",
+        "# Header changes:",
     ]
     note += [f"#   {row['field']}: {row['p0']} -> {row['p1']}" for row in log]
+    note.append("# Citation re-anchoring (distinct citations; kind: P0 -> P1):")
+    seen = set()
+    for a in anchors:
+        if (a["p0"], a["p1"]) in seen:
+            continue
+        seen.add((a["p0"], a["p1"]))
+        n = sum(1 for b in anchors if b["p0"] == a["p0"])
+        note.append(f"#   {a['kind']} x{n}: {a['p0']} -> {a['p1']}")
     return head + "\n".join(note) + rest
 
 
