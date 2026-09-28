@@ -69,5 +69,12 @@ else:
 # Default R-side git ref for NAMESPACE / export parity (not working tree, not live main)
 DEFAULT_R_REF = R_REF_PINS[_selected_pin]
 
+# Public name of the pin GLLVM_PARITY_PIN selected ("P0" unless overridden).
+# Other harness entry points (tools/core070_build_oracle.py,
+# test/parity/parity_helpers.jl) key their own per-pin data off this name
+# instead of re-deriving the switch themselves, so this module stays the
+# single place that reads GLLVM_PARITY_PIN.
+SELECTED_PIN = _selected_pin
+
 # Capability ledger join: file landed after the frozen oracle (see r-ref-closure-receipt)
 CAPABILITY_LEDGER_REF = "origin/main"
