@@ -61,6 +61,10 @@ stopifnot(identical(eb$case_id, "CORE070-POSTFIT-COEF-MULTI-READBACK"))
 .libPaths(c(lib, .libPaths()))
 suppressPackageStartupMessages(library(gllvmTMB))
 stopifnot(normalizePath(find.package("gllvmTMB")) == normalizePath(file.path(lib, "gllvmTMB")))
+# Oracle source pin (PR #569 review finding 2): the library's CORE070_SOURCE_PIN.toml
+# marker and gllvmTMB version must match tools/core070_oracle_pins.toml (required at P1).
+source(file.path(root, "tools/core070_source_pin.R"))
+source_pin <- core070_source_pin(root, lib, parity_pin, expected_reference)
 
 # --- reconstruct the fixture straight from the contract (single source of
 #     truth; no fixture values duplicated by hand in this file) ------------
@@ -121,10 +125,11 @@ receipt <- list(
   gllvmTMB_lib_path = result$gllvmTMB_lib_path,
   gllvmTMB_version = result$gllvmTMB_version,
   results_sha256 = sha256_file(results_path),
-  r_runtime = R.version.string
+  r_runtime = R.version.string,
+  source_pin = source_pin
 )
 receipt_path <- file.path(destination, "receipt.json")
-jsonlite::write_json(receipt, receipt_path, auto_unbox = TRUE, pretty = TRUE)
+jsonlite::write_json(receipt, receipt_path, auto_unbox = TRUE, pretty = TRUE, null = "null")
 
 cat("CORE070_POSTFIT_1_BATCH_R_RESULT coef=", paste(r_coef, collapse = ","), "\n")
 cat("CORE070_POSTFIT_1_BATCH_R_PASS\n")
