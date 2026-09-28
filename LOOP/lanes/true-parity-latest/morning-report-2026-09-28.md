@@ -63,6 +63,8 @@ Overnight: #548 chibar2_pvalue / variance_lrt twin (4357e4652, 22:58); #531 extr
 
 ## In a merge train (word given)
 
+Afternoon: every merge makes the other PRs conflict in check-log.md (each PR adds a top entry), and refreshing them all restarted every PR's CI each time. Switched to one group at a time: the A3 stack alone now (refreshed and cascaded again: #567 b4607b17e ... #589 df3ea8ae7, ledger regenerated, counts unchanged); #547, #557 and #563 wait (not refreshed) and go one after another once the stack lands. #603 keeps its train (touches no log file). A standing fix would be for PRs to stop adding top-of-file check-log entries (or a merge queue); that is a process change for you.
+
 After #561 merged (check-log conflicts only): refreshed #546 (46dbb8ef3), #547 (03aa1aeb8), #557 (f97dfbfe0), #563 (dc365bd58), #567 (83b2b562a), and cascaded up the stacks: #558 (b6efad8bb); #569 (6df22c49b), #571 (3d367a519), #579 (1b80ed422), #584 (3558f14a4); #586 (4b7a367b0), #587 (7b9f78911); #589 (0c37d9e6b). All clean against main; trains restarted, the stack as one train #567 to #584, then #586, #587, then #589.
 
 #576 and #581 moved to the grouped-getLV session's Shinichi-approved integration train (24 PRs gated by one integration branch); my duplicate trains stopped, my #576 CI re-runs cancelled, and that session told #581's new head 8250342d7 (Linux test fix; renewed word). #557 refreshed (ace014f88) and in my train.
