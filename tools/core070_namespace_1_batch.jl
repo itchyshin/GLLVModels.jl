@@ -145,12 +145,28 @@ to_json(x::AbstractFloat) = isfinite(x) ? repr(x) : "null"
 to_json(x::AbstractVector) = "[" * join(to_json.(x), ",") * "]"
 to_json(x::AbstractDict) = "{" * join(("\"$(json_escape(string(k)))\":" * to_json(v) for (k, v) in x), ",") * "}"
 
-const CONTRACT_PATH = joinpath(@__DIR__, "..", "docs/dev-log/core070/namespace-1-batch-contract.json")
+# Pin selection: GLLVM_PARITY_PIN via the shared pin source
+# (test/parity/core070_pin.jl reads tools/core070_oracle_pins.toml; default P0).
+# The contract is the one frozen at the selected pin's reference_commit, so P0
+# resolves to the original contract exactly as before.
+include(joinpath(@__DIR__, "..", "test", "parity", "core070_pin.jl"))
+
+const CONTRACT_PATHS = [
+    joinpath(@__DIR__, "..", "docs/dev-log/core070/namespace-1-batch-contract.json"),
+    joinpath(@__DIR__, "..", "docs/dev-log/core070/true-parity-latest/namespace-1-batch-contract-p1.json"),
+]
 
 function load_contract()
-    isfile(CONTRACT_PATH) ||
-        error("FATAL: contract not found at $CONTRACT_PATH -- refusing to run with no state.")
-    return json_read(CONTRACT_PATH)
+    for path in CONTRACT_PATHS
+        isfile(path) || continue
+        contract = json_read(path)
+        if get(contract, "reference_commit", nothing) == _CORE070_REFERENCE_COMMIT
+            _core070_check_frozen_contract_pin(contract, path)
+            return contract
+        end
+    end
+    error("FATAL: no namespace-1 contract frozen at $(_CORE070_REFERENCE_COMMIT) " *
+          "(GLLVM_PARITY_PIN=$(repr(get(ENV, "GLLVM_PARITY_PIN", nothing)))) -- refusing to run with no state.")
 end
 
 # The one check this tier performs, exposed as a function so --self-test can
@@ -191,6 +207,7 @@ function main()
         "schema" => "core070-namespace-1-julia-facts/v1",
         "status" => "OK",
         "julia_version" => string(VERSION),
+        "reference_commit" => contract["reference_commit"],
         "symbol_count" => length(facts),
         "facts" => facts,
     )
