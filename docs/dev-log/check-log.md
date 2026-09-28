@@ -1,3 +1,22 @@
+## 2026-09-27: Covariance family re-measured at gllvmTMB P1 (A3), tracked receipts
+
+- Branch `claude/true-parity-p1-covariance` from `origin/main` `cb5688f7e`. Scope: the 17 covariance
+  rows the P1 carry scan lists as PARTIAL_STALE_AT_P1 (7) or DANGLING (10). Classifications carried
+  unchanged from `required-source-case-map.json`.
+- P1 oracle built locally with `GLLVM_PARITY_PIN=P1 tools/core070_build_oracle.py prepare|build|verify`
+  (source from `git archive` of the gllvmTMB clone, read-only): SOURCE/BUILD/VERIFY PASS, 243.7 s.
+- `tools/core070_covariance_p1_contract.py` regenerates three P1 contracts under
+  `docs/dev-log/core070/true-parity-latest/` (runner manifest header, R-only grammar batch source pins,
+  wave6 reference_commit); cases, expectations and tolerances carried verbatim; `--check` passes.
+- Runs (local Mac, one BLAS/OMP thread, JULIA_NUM_THREADS=4): runparity 18 covariance cases 450/450
+  assertions, 55.8 s; R-only grammar batch 9/9 + 2 negative controls, verifier + 8 mutations pass;
+  public R bridge boundary 9/9 unchanged; wave6 batch 9/10 point cases pass, batch FAIL on the
+  unrelated postfit nobs own-receipt-defect case (Julia nobs now returns p*n = 400, as R does).
+- Case-map rows (`case-map-covariance.json`): 2 numeric pass, 0 numeric fail, 7 partial numeric (bridge
+  case is an R boundary), 8 R-only needing a Julia surface, 0 not measured. Checker, PARITY_REF=FS:
+  C1 required=17 bound=2 free=15 (main and #561 checker); C8 15 NOT_TWINNED_NOT_SIGNED.
+  `node tools/test_true_parity_check.mjs` passes; `test/parity/test_core070_pin.jl` 16/16.
+
 ## 2026-09-27: One shared pin source for the Core070 parity harness, plus a P1 oracle build (D-294/D-295)
 
 - Branch `claude/true-parity-p1-oracle`, builds on #524 (merged into `main` as `824d22a4b`
