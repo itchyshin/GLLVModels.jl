@@ -35,7 +35,13 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CONTRACT_PATH = ROOT / "docs/dev-log/core070/inference-remainder-batch-contract.json"
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, str(ROOT / "tools"))
+from parity_oracle import R_REF_PINS, SELECTED_PIN  # noqa: E402  (GLLVM_PARITY_PIN; P0 default; unknown pin exits)
+# P0 keeps the frozen contract; P1 reads the twin written by tools/core070_inference_p1_contract.py.
+CONTRACT_PATH = ROOT / ("docs/dev-log/core070/true-parity-latest/inference-remainder-batch-contract-p1.json"
+                        if SELECTED_PIN == "P1" else "docs/dev-log/core070/inference-remainder-batch-contract.json")
+REFERENCE_COMMIT = R_REF_PINS[SELECTED_PIN] if SELECTED_PIN == "P1" else "b4d5fee64def88bc768dda1f1f77c29b295edd86"
 DEFAULT_STATE = ROOT / ".unlazy/core070-aghq/inference-remainder-batch-01"
 
 MANIFEST_ROW_COUNT = 19
@@ -61,7 +67,7 @@ def verify_contract(contract=None):
     c = contract or load_contract()
     need(c["status"] == "FROZEN_INFERENCE_REMAINDER_BATCH_CONTRACT", "wrong contract status")
     need(c["area"] == "inference-remainder", "wrong area")
-    need(c["reference_commit"] == "b4d5fee64def88bc768dda1f1f77c29b295edd86", "wrong reference commit")
+    need(c["reference_commit"] == REFERENCE_COMMIT, "wrong reference commit")
     need(c["manifest_row_count"] == MANIFEST_ROW_COUNT, "manifest row count drift")
 
     covered = c["covered_source_ids"]

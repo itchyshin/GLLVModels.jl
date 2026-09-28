@@ -26,7 +26,13 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CONTRACT_PATH = ROOT / "docs/dev-log/core070/inference-batch-contract.json"
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, str(ROOT / "tools"))
+from parity_oracle import R_REF_PINS, SELECTED_PIN  # noqa: E402  (GLLVM_PARITY_PIN; P0 default; unknown pin exits)
+# P0 keeps the frozen contract; P1 reads the twin written by tools/core070_inference_p1_contract.py.
+CONTRACT_PATH = ROOT / ("docs/dev-log/core070/true-parity-latest/inference-batch-contract-p1.json"
+                        if SELECTED_PIN == "P1" else "docs/dev-log/core070/inference-batch-contract.json")
+REFERENCE_COMMIT = R_REF_PINS[SELECTED_PIN] if SELECTED_PIN == "P1" else "b4d5fee64def88bc768dda1f1f77c29b295edd86"
 DEFAULT_JULIA_STATE = ROOT / ".unlazy/core070-aghq/inference-batch-01/julia"
 DEFAULT_R_STATE = ROOT / ".unlazy/core070-aghq/inference-batch-01/r-crosscheck"
 
@@ -60,7 +66,7 @@ def check_contract_shape(contract):
     need(contract.get("schema") == "core070-inference-batch-contract/v1", "wrong schema")
     need(contract.get("status") == "FROZEN_INFERENCE_BATCH_CONTRACT", "contract not frozen")
     need(contract.get("area") == "inference", "wrong area")
-    need(contract.get("reference_commit") == "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+    need(contract.get("reference_commit") == REFERENCE_COMMIT,
          "wrong reference commit")
     buckets = contract_rows_by_bucket(contract)
     need(len(buckets["EXECUTABLE_NOW"]) == contract["expected_executable_case_count"] == 45,
