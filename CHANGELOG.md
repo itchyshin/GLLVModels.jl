@@ -466,6 +466,17 @@ All notable changes to GLLVModels.jl are documented here.
   :aghq`) already checked `fb.converged` and is untouched. Other families
   (Binomial, NB, Gamma, ...) still use the bare-vector adapter and are
   migrated one at a time in follow-up PRs.
+- **Beta-hurdle and ordered-beta `confint(..., method = :bootstrap)` refits now
+  report their own convergence verdict (part of #504).** The refit closures for
+  `BetaHurdleFit` and `OrderedBetaFit` (`src/confint_family.jl`) returned a bare
+  parameter vector, so a replicate whose refit ended on the fitter's failure
+  verdict (its θ is the finite warm start) was counted as a good draw. They now
+  return `(θ = ..., converged = ..., loglik = ...)`, as Poisson's does since
+  #516; such replicates are excluded and `n_converged` counts only the ones
+  kept. When every replicate converges, bootstrap endpoints are identical to
+  before. The ordered-beta adapter's simulator still errors (bootstrap is not
+  offered for that family), so only direct callers of its refit see the change.
+  No boundary flag is added for the Beta precision φ.
 
 ### Changed
 - **Breaking (default change):** `fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm`
