@@ -1,0 +1,123 @@
+engine = "Julia GLLVModels"
+glvmodels_path = "/Users/z3437171/local-scratch/grouping-receipts-wt/src/GLLVModels.jl"
+julia_version = "1.10.0"
+
+[levels.cluster]
+Sigma_diag = [0.1468877647126536, 0.11281766300156089]
+Sigma_offdiag = 0.0
+beta = [0.8827754923925539, -0.7902130531755053]
+call = "fit_gllvm(Y; family=Normal(), grouping=[GroupingTerm(:cluster; mode=:indep)], cluster=<labels>, iterations=1000)"
+converged = true
+fit_seconds = 0.09221196174621582
+fit_type = "GroupedGaussianFit"
+fixture = "docs/dev-log/core070/true-parity-latest/receipts/grouping/fixtures/cluster.csv"
+fixture_sha256 = "eed99dade526648ce54fdbe794003c2667ca20a59775e3b77151f571ffe58338"
+iterations = 8
+keyword = "cluster"
+keyword_accepted = true
+logLik = -54.78922451886703
+n_groups = 6
+n_rows = 96
+sigma_eps = 0.37504756943982037
+term_names = ["cluster"]
+
+    [levels.cluster.membership_control]
+    converged = true
+    logLik = -56.63949886881734
+    moved_obs_row = 1
+    to_group = "c2"
+
+    [levels.cluster.negative_control]
+    keyword = "cluster_zz_not_a_keyword"
+    message = "MethodError: no method matching fit_grouped_gaussian(::Matrix{Float64}; terms::Vector{GroupingTerm}, unit::Nothing, unit_obs::Nothing, cluster::Vector{Symbol}, cluster2::Nothing, cluster_zz_not_a_keyword::Vector{Symbol})\n\nClosest candidates are:\n  fit_grouped_gaussian(::AbstractMatrix{<:Real}; terms, unit, unit_obs, cluster, cluster2, X, coefficient_names, start, g_tol, iterations) got unsupported keyword argument \"cluster_zz_not_a_keyword\"\n   @ GLLVModels ~/local-scratch/grouping-receipts-wt/src/grouped_fit.jl:359\n"
+    rejected = true
+
+[levels.cluster2]
+Sigma_diag = [0.14011840024010344, 0.10242485443892382]
+Sigma_offdiag = 0.0
+beta = [-0.20040824356112055, -0.3533438699118703]
+call = "fit_gllvm(Y; family=Normal(), grouping=[GroupingTerm(:cluster2; mode=:indep)], cluster2=<labels>, iterations=1000)"
+converged = true
+fit_seconds = 0.08032679557800293
+fit_type = "GroupedGaussianFit"
+fixture = "docs/dev-log/core070/true-parity-latest/receipts/grouping/fixtures/cluster2.csv"
+fixture_sha256 = "f66c68823cfde7850eae6f239b3c07b7a93694d0a6623a6be258e832a53ef1b8"
+iterations = 8
+keyword = "cluster2"
+keyword_accepted = true
+logLik = -59.931778813682065
+n_groups = 6
+n_rows = 96
+sigma_eps = 0.40000818068488336
+term_names = ["cluster2"]
+
+    [levels.cluster2.membership_control]
+    converged = true
+    logLik = -64.48882883374763
+    moved_obs_row = 1
+    to_group = "k2"
+
+    [levels.cluster2.negative_control]
+    keyword = "cluster2_zz_not_a_keyword"
+    message = "MethodError: no method matching fit_grouped_gaussian(::Matrix{Float64}; terms::Vector{GroupingTerm}, unit::Nothing, unit_obs::Nothing, cluster::Nothing, cluster2::Vector{Symbol}, cluster2_zz_not_a_keyword::Vector{Symbol})\n\nClosest candidates are:\n  fit_grouped_gaussian(::AbstractMatrix{<:Real}; terms, unit, unit_obs, cluster, cluster2, X, coefficient_names, start, g_tol, iterations) got unsupported keyword argument \"cluster2_zz_not_a_keyword\"\n   @ GLLVModels ~/local-scratch/grouping-receipts-wt/src/grouped_fit.jl:359\n"
+    rejected = true
+
+[levels.unit]
+Sigma_diag = [0.578728021391471, 0.2356239360881792]
+Sigma_offdiag = 0.0
+beta = [0.4721359511064795, -0.6200155672805793]
+call = "fit_gllvm(Y; family=Normal(), grouping=[GroupingTerm(:unit; mode=:indep)], unit=<labels>, iterations=1000)"
+converged = true
+fit_seconds = 4.040463924407959
+fit_type = "GroupedGaussianFit"
+fixture = "docs/dev-log/core070/true-parity-latest/receipts/grouping/fixtures/unit.csv"
+fixture_sha256 = "553c89bcf06b7d864dd1bba5ed72288170c93caa6a5374091b0e305288fb9f7b"
+iterations = 9
+keyword = "unit"
+keyword_accepted = true
+logLik = -73.39194631980321
+n_groups = 12
+n_rows = 96
+sigma_eps = 0.38483982505957737
+term_names = ["unit"]
+
+    [levels.unit.membership_control]
+    converged = true
+    logLik = -84.24313416019027
+    moved_obs_row = 1
+    to_group = "u2"
+
+    [levels.unit.negative_control]
+    keyword = "unit_zz_not_a_keyword"
+    message = "MethodError: no method matching fit_grouped_gaussian(::Matrix{Float64}; terms::Vector{GroupingTerm}, unit::Vector{Symbol}, unit_obs::Nothing, cluster::Nothing, cluster2::Nothing, unit_zz_not_a_keyword::Vector{Symbol})\n\nClosest candidates are:\n  fit_grouped_gaussian(::AbstractMatrix{<:Real}; terms, unit, unit_obs, cluster, cluster2, X, coefficient_names, start, g_tol, iterations) got unsupported keyword argument \"unit_zz_not_a_keyword\"\n   @ GLLVModels ~/local-scratch/grouping-receipts-wt/src/grouped_fit.jl:359\n"
+    rejected = true
+
+[levels.unit_obs]
+Sigma_diag = [0.5110059239550903, 0.15050783619272645]
+Sigma_offdiag = 0.0
+beta = [0.33309048816797904, -0.3964357004681324]
+call = "fit_gllvm(Y; family=Normal(), grouping=[GroupingTerm(:unit_obs; mode=:indep)], unit=<labels>, unit_obs=<labels>, iterations=1000)"
+converged = true
+fit_seconds = 0.09194707870483398
+fit_type = "GroupedGaussianFit"
+fixture = "docs/dev-log/core070/true-parity-latest/receipts/grouping/fixtures/unit_obs.csv"
+fixture_sha256 = "590ee4b9f67b2736daa3510d52819b42ca34b93bfac5a8317ecf237853537bcf"
+iterations = 10
+keyword = "unit_obs"
+keyword_accepted = true
+logLik = -85.60621350557676
+n_groups = 24
+n_rows = 96
+sigma_eps = 0.40441733563621085
+term_names = ["unit_obs"]
+
+    [levels.unit_obs.membership_control]
+    converged = true
+    logLik = -85.16004891405296
+    moved_obs_row = 1
+    to_group = "u1_o2"
+
+    [levels.unit_obs.negative_control]
+    keyword = "unit_obs_zz_not_a_keyword"
+    message = "MethodError: no method matching fit_grouped_gaussian(::Matrix{Float64}; terms::Vector{GroupingTerm}, unit::Vector{Symbol}, unit_obs::Vector{Symbol}, cluster::Nothing, cluster2::Nothing, unit_obs_zz_not_a_keyword::Vector{Symbol})\n\nClosest candidates are:\n  fit_grouped_gaussian(::AbstractMatrix{<:Real}; terms, unit, unit_obs, cluster, cluster2, X, coefficient_names, start, g_tol, iterations) got unsupported keyword argument \"unit_obs_zz_not_a_keyword\"\n   @ GLLVModels ~/local-scratch/grouping-receipts-wt/src/grouped_fit.jl:359\n"
+    rejected = true
