@@ -33,6 +33,7 @@ Written first at 18:27 MDT on 2026-09-27 and updated through the night. The newe
 ## Findings worth knowing
 
 - The advisory "Frozen R 0.7.0 family smoke" job is red on main and so on every PR. The auto-d lane is taking the NB2 cells (its #521); the Student-t and truncated-NB2 cells (test_studentt_parity.jl, test_truncated_nbinom2_parity.jl) have no owner. Assign if you want all Actions green.
+  - auto-d's NB2 diagnosis: not a code bug. On the hash-pinned fixture two traits sit at the Poisson boundary (NB2 dispersion goes to infinity) in both engines, so Julia honestly reports converged = false and R's gradient check fails at the same boundary. Your call: swap the fixture for data with real overdispersion, or accept a boundary fit in those assertions.
 
 - Temporal: on 3 cells built from R's own engine test data, R and Julia both stop at the same saddle point (Hessian eigenvalue about -2.5, logLik equal to 1e-12). Recorded in the test, not investigated; worth a look on the R side.
 
