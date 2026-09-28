@@ -31,14 +31,13 @@ CI is runner-starved (about 24 queued runs across lanes); trains wait, nothing f
 - #558 retargeted to main; its train waits for #546 to merge first (scratchpad/train_558.log). Trains #528/#539 and #531 timed out on CI capacity and were restarted (logs ...b.log).
 - Remote Control turned on for this session and the two running sessions (#541 grouped beta-binomial; DRM.jl package completion).
 
-## Overnight state (23:40 MDT; the morning report is the fuller view)
-- Merged overnight (word given): #548 (4357e4652), #531 (5b9af3763).
-- Trains running (tracked bash tasks; logs scratchpad/train_*): #556 (32d3f2097) then #547; #546 (512f90dc5) then #558. Refresh with scratchpad/refresh_pr.sh <N> (union-resolves only CHANGELOG/check-log, checks the PR touches no new files), verify, restart merge_train_v2.sh pinned to the new head. The auto-refresh-and-merge train (v3) was refused by the permission classifier: do not rebuild it.
-- #543: twin job failed on CI Linux at the reviewed head (one fit just above g_tol); cherry-picked #563's reviewed optimizer commits (now 7921c55ab after refresh); NEEDS SHINICHI'S RENEWED WORD.
-- Ready for word (all reviewed, fixes applied): #557 (1834fd515), #561 (92cf39571), #563 (acfd02a69, after #543), #567 (4176a9dce), #569 (073e90e78), #571 (1b99ae6b8), #576 (94fd6abb9), #579 (a857516df), #581 (1dc7c6dc6), #584 (0fb2b9411); specs #525/#535 (9ec406e07)/#545.
-- A3 stack: #567 -> #569 -> #571 -> #579 -> #584 -> {aghq builder, isdm builder} running.
-- Task chip filed: truncated NB2 mode-search jump and r intervals (grouped_dispersion.jl _grouped_laplace_mode oscillation).
-- Waits for Shinichi: Woodbury fix in likelihood.jl (headline Gaussian path); shared post-fit gate in _fit_verdict; nobs ruling (unblocks 4 wave6 rows).
+## Overnight state (final 04:20 MDT; the morning report is the full view)
+- Merged overnight on Shinichi's word: #548 (4357e4652), #531 (5b9af3763). No trains running.
+- Renewed word needed (changed after the word to fix CI failures present at reviewed heads): #546 27b0a2837, #558 8e82cb38a, #556 73f7952f4, #547 90c5caac9; #543 7921c55ab.
+- Ready for word: #557 1553f20e7, #561 0ee89e37c, #563 a76afd5fd, A3 stack #567 4176a9dce -> #569 073e90e78 -> #571 1b99ae6b8 -> #579 a857516df -> #584 0fb2b9411 -> #586 befbe3ccc / #587 387102799 -> #589 313a31d66 (ledger assembly), #576 94fd6abb9, #581 eea4d5a38, specs #525/#535/#545.
+- CI at 04:16: green (advisory smoke aside) #543 #567 #569 #571 #576 #579 #584; queued, not started: the ten fixed or refreshed PRs.
+- Decisions: packet-2-draft.md (32 rows + C3-C5 row proposals). Scoreboard: 52 of 306 required rows numeric at P1.
+- Merge procedure: scratchpad/refresh_pr.sh <N> then merge_train_v2.sh N:<head>, one PR at a time in stack order; refresh after every merge (CHANGELOG/check-log conflicts).
 
 ## Findings to remember
 - LESSON (2026-09-28 02:25): a review verdict is not CI. Before listing a PR as ready, check its CURRENT head's check runs exist and pass (a PR that conflicts with its base gets NO pull_request CI runs at all, so "no failures" can mean "never ran"). Three PRs with landing words (#546, #547, #556) were red at their reviewed heads (missing docs pages; a frozen destination-B source-hash guard; a test-only package in a P1-tagged test). The P1 twin job enrols any .jl file whose text contains the tag string, comments included.

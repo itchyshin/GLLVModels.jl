@@ -1,6 +1,15 @@
 # Morning report, true-parity-latest lane (for 2026-09-28)
 
-Written first at 18:27 MDT on 2026-09-27 and updated through the night. The newest state is at the top of each section.
+Written first at 18:27 MDT on 2026-09-27, updated through the night, final at 04:20 MDT on 2026-09-28. The newest state is at the top of each section.
+
+## CI at 04:16 MDT (check again before you reply; only the advisory smoke job is red on main too)
+
+| Required checks all green (advisory smoke red, as on main) | #543, #567, #569, #571, #576, #579, #584 |
+|---|---|
+| Green so far, partial run | #589; specs #525, #535, #545 |
+| Not started yet (queued behind 70+ runs) | #546, #547, #556, #557, #558, #561, #563, #581, #586, #587 |
+
+#543's run confirms its cherry-picked optimizer fix works on CI (its twin job had failed at the reviewed head). For the queued ten, wait for green before your word takes effect; a merge train can hold each one until then.
 
 ## In five lines
 
