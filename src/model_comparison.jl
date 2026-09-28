@@ -11,7 +11,7 @@
 #
 # SCOPE OF THAT VERIFICATION: numerically checked only for the Gaussian
 # closed-form route (`GllvmFit`) with a single shared residual variance
-# (test/fixtures/gllvmtmb_anova_fixture.json, K = 1, 2, 3). The other
+# (test/fixtures/gllvmtmb_anova_fixture.toml, K = 1, 2, 3). The other
 # Laplace-approximated families and the REML/diagonal-variance/masked-data
 # routes are NOT independently re-verified here; their `dof`/`nobs`
 # docstrings carry the same R-convention claim, but this PR did not fit each
@@ -34,7 +34,7 @@
 # p) indicator `X` to `fit_gaussian_gllvm(Y; X, K)` (still the same closed-
 # form `GllvmFit` engine); with that, `dof`/`loglikelihood`/`aic`/`bic`
 # reproduce R's recorded values to ~1e-8 at K = 1, 2, 3 (test/fixtures/
-# gllvmtmb_anova_fixture.json) — full agreement, not merely a shared
+# gllvmtmb_anova_fixture.toml) — full agreement, not merely a shared
 # convention. `aic`/`bic` are twinned by test only; no new code was needed
 # for them, and none is added here, per AGENTS.md "do not change existing
 # behaviour".

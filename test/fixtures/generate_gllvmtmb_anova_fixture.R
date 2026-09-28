@@ -1,7 +1,12 @@
 #!/usr/bin/env Rscript
 # gllvm-parity-tag: P1
 #
-# Generates test/fixtures/gllvmtmb_anova_fixture.json: the R oracle for
+# Generates test/fixtures/gllvmtmb_anova_fixture.json, the R oracle for
+# test/test_model_comparison.jl. The test reads a TOML copy
+# (gllvmtmb_anova_fixture.toml), produced from this JSON by
+#   julia --project=test test/fixtures/convert_gllvmtmb_anova_fixture_to_toml.jl
+# which checks every value round-trips exactly; the JSON itself is not
+# committed. Oracle for
 # test/test_model_comparison.jl (twin of gllvmTMB's AIC.gllvmTMB_multi,
 # BIC.gllvmTMB_multi, anova.gllvmTMB_multi at pin
 # 9539352f66f2db2cc26b1c393e67212a359b60c9, "P1").
@@ -19,7 +24,7 @@
 # .libPaths(), never replacing it, so those dependencies keep resolving):
 #   GLLVMTMB_RLIB=/path/to/temp/lib Rscript test/fixtures/generate_gllvmtmb_anova_fixture.R
 #
-# The committed fixture's sha256 is asserted by test/test_model_comparison.jl
+# The committed TOML fixture's sha256 is asserted by test/test_model_comparison.jl
 # so a silent drift (re-running this script with a different gllvmTMB build,
 # a different R version, or a different seed) is caught rather than
 # committed unnoticed.
