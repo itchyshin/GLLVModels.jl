@@ -195,6 +195,24 @@
   `@test_broken`, σ_phy sign), curvature_census 66/66, confint_family 341/341.
   Local Documenter build exit 0. Full suite not run.
 - After-task: `docs/dev-log/after-task/2026-09-28-gp1-verdict.md`.
+## 2026-09-28: Two-part fitters reject observed out-of-support values
+
+- Branch `claude/twopart-input-check` from `origin/main` @ `863ee0f78`; fix commit `dd934d182`.
+  `_check_twopart_support` (src/families/twopart.jl) is called by the twelve public two-part
+  fitters before the warm start. NaN, negatives (all), `Inf` (delta families) and values
+  `>= 1` (beta-hurdle) now throw `ArgumentError` instead of being scored as zeros.
+- `test/test_twopart_input_check.jl`: RED on `863ee0f78` 27 passed, 92 failed; GREEN 119/119
+  on Julia 1.10, 1.10 `--check-bounds=yes` and 1.13.
+- Neighbours on 1.10, one file per process: 23 of 24 files green (beta_hurdle 62, bridge_x
+  8 + 192, bridge_zib 77, bridge_zip_nox 39, confint_family 341, delta_disp_group 57,
+  delta_fit 13, delta_gamma 50, delta_postfit 213, delta_shared_predictor 38, formula 27,
+  hurdle_nb 24, hurdle_poisson 171, offset 29, postfit_zib_tweedie 17,
+  second_order_delta_followup 43 + 1 env-gated `@test_skip`, twopart_hessian_kwarg 13, twopart_mode_search 47,
+  va_vs_laplace 8, zero_inflated 29, zib_x_identity 23, zinb_x_identity 42, zip_x_identity 28).
+  `test_variational_dgamma.jl` errors standalone with `dot` not defined (the file does not
+  load LinearAlgebra); with LinearAlgebra loaded it is 17/17. Full suite not run.
+- After-task: `docs/dev-log/after-task/2026-09-28-twopart-input-check.md`.
+
 ## 2026-09-27: Temporal source alone at gllvmTMB P1 (slice 1)
 
 - Branch `claude/temporal-slice1`, draft PR #543. New `src/temporal*.jl`: constructors and

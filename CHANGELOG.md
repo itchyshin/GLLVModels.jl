@@ -176,6 +176,21 @@ All notable changes to GLLVModels.jl are documented here.
   `test/test_grouped_getlv_offset.jl` checks that a per-trait constant offset gives the
   same scores as shifting `β` by that constant, for all four families. The `_cov`
   variants are unaffected: they take no user offset and already pass `Xγ`.
+- **Two-part fitters scored an observed NaN or negative value as an observed zero.**
+  Every two-part log-density branches on `y > 0`, so NaN and negative values took the
+  zero branch and the fit reported `converged = true`; `fit_beta_hurdle_gllvm` also
+  clamped values `>= 1` into (0,1). The twelve public fitters (`fit_zip_gllvm`,
+  `fit_zip_gllvm_cov`, `fit_zinb_gllvm`, `fit_zinb_gllvm_cov`, `fit_zib_gllvm`,
+  `fit_zib_gllvm_cov`, `fit_hurdle_poisson_gllvm`, `fit_hurdle_nb_gllvm`,
+  `fit_delta_lognormal_gllvm`, `fit_delta_gamma_gllvm`, `fit_delta_gamma_gllvm_va`,
+  `fit_beta_hurdle_gllvm`) now throw `ArgumentError` naming the value, its index and
+  the support before fitting: NaN and negatives for the count families; NaN,
+  negatives and `Inf` for the delta families; NaN, negatives and values `>= 1` for
+  beta-hurdle. NaN is not a missing-value marker in this package. A non-integer count
+  (0.5), a huge finite value (1e300) and a ZIB count above `N` are not refused up
+  front: they already end on the fitter's failure verdict (`converged = false`), and
+  the #504 bootstrap-verdict tests rely on that. Valid data fits exactly as before.
+  `test/test_twopart_input_check.jl`.
 - **`chibar2_pvalue`/`variance_lrt` silently returned a p-value of 1.0 for a `NaN`
   `LRT` or log-likelihood instead of refusing it.** `LRT > 0` is `false` for `NaN`, so
   a missing or non-finite input fell through to the "no evidence against the reduced
