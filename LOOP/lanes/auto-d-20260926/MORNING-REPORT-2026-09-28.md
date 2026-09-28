@@ -119,6 +119,14 @@ time). It is capacity: many lanes refreshed PRs against `main` overnight, and st
 full 8-shard suite. The parity lane has put the capacity question to you (for example running the
 Julia 1.10 shards only on demand or for ready-for-review PRs). I stopped pushing to avoid adding load.
 
+## Lane coordination (11:30Z)
+Messaged every live lane whose files overlap mine: the getLV missing-cell fix (build on #529's
+dispatcher), the truncated-NB2 fix (shared last night's evidence that its per-trait objective uses the
+undamped generic kernel), the #504 bootstrap-verdict lane (its 15 PRs touch only refit return lines in
+`confint_family.jl`, separate from #518's guard: no conflict), the formula.jl intercept-claim lane
+(#519/#520 change that file), and "main parity" (merging its trains this morning on your word; none of
+mine has a landing word, so I rebase after). Nothing of mine merges without you.
+
 ## Will auto-d work? (your 01:55Z question, answered with tonight's numbers)
 Gaussian 0.95 and Poisson 0.999: yes. Negative binomial: promising (the fixed kernel picked the true
 K where the old one picked 5) but unmeasured until the NB re-run. Binary: K = 1 reliably, higher K only
