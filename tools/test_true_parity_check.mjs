@@ -375,6 +375,30 @@ test('numeric tier: the real coef,gllvmTMB_multi row relabelled "numeric" is NOT
   }
 });
 
+// --- signed-disposition hatch (review of #561): the signer must be on the maintainer allow-list
+// (an agent name is refused), the date must be a real calendar date not in the future, and a
+// signed row is counted in bound_signed=, never in bound= ---
+test('signed hatch: a signed row is counted in bound_signed=, not in bound=', () => {
+  const { stdout } = run('base', 'C1');
+  assert.match(stdout, /C1 required=3 bound=2 bound_numeric=2 bound_registration_only=0 bound_signed=1\b/);
+});
+for (const [fixture, reason] of [
+  ['c1_signed_by_agent', 'DISPOSITION-SIGNER-NOT-ALLOWED'],
+  ['c1_signed_bad_date', 'DISPOSITION-SIGNED-BAD-DATE'],
+  ['c1_signed_future_date', 'DISPOSITION-SIGNED-BAD-DATE'],
+]) {
+  test(`signed hatch: ${fixture} does not resolve the row (C1 ${reason}, C8 not signed)`, () => {
+    const c1 = run(fixture, 'C1');
+    assert.equal(c1.code, 0);
+    assert.match(c1.stdout, /C1_NOT_MET$/m);
+    assert.match(c1.stdout, new RegExp(`"${reason}":1`));
+    assert.match(c1.stdout, /bound_signed=1\b/); // only the legacy row's real signature counts
+    const c8 = run(fixture, 'C8');
+    assert.match(c8.stdout, /C8_NOT_MET$/m);
+    assert.match(c8.stdout, /isdm\/CAP-ISDM-1FO-PREDICT-EXPORT:REGISTRATION_ONLY_NOT_TWINNED/);
+  });
+}
+
 // --- item 4 / git-mode control: show, existsAsBlob and listDir exercised through real git,
 // the same code path CI runs against origin/main, not the FS fallback ---
 {

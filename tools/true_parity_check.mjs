@@ -153,9 +153,12 @@ function looksPathLike(text) {
 // A DISPOSITION-SIGNED scoreboard row (markdown has no separate signed_by/signed_on columns)
 // records its signer and date as plain tokens in the same free-text cell, e.g.
 // "Disposition: outside_boundary; signed_by: Shinichi Nakagawa; signed_on: 2026-09-27".
+// The same signer allow-list and date check as the case-map rows apply here.
 function hasSignedTokens(text) {
   if (!text) return false;
-  return /signed_by:\s*\S/.test(text) && /signed_on:\s*\d{4}-\d{2}-\d{2}/.test(text);
+  const by = text.match(/signed_by:\s*([^;|]+)/);
+  const on = text.match(/signed_on:\s*([^;|\s]+)/);
+  return !!by && !!on && signatureProblem(by[1], on[1]) === null;
 }
 
 function loadCasemap() {
@@ -243,13 +246,37 @@ function numericReceiptStatus(row) {
 function isValidSha256(s) { return typeof s === 'string' && SHA256_RE.test(s); }
 
 // A DISPOSITION-SIGNED row (case-map JSON schema) needs an actual signer and date on the row,
-// not just the label. The tool never verifies the signer's identity -- that happens in PR
-// review, by a human reading the diff (GATES.md says so) -- it only refuses to treat an
-// unsigned label as if it were signed.
+// not just the label. The tool cannot verify that the named person actually signed -- that
+// happens in PR review, by a human reading the diff (GATES.md says so) -- but it refuses an
+// unsigned label, a signer outside the maintainer allow-list, and a date that is not a real
+// calendar date or lies in the future (review of #561: "Claude Fable (agent)" / "9999-99-99"
+// both passed before).
+const SIGNER_ALLOW = new Set(['Shinichi Nakagawa', 'itchyshin']);
+const SIGNER_DENY_RE = /agent|claude|codex|cursor|fable/i;
+
+// A real YYYY-MM-DD calendar date, no later than the current date anywhere on earth (UTC+14),
+// so a signer's local date is never refused for time-zone reasons alone.
+function isRealPastIsoDate(s) {
+  if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const d = new Date(`${s}T00:00:00Z`);
+  if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== s) return false;
+  const latestToday = new Date(Date.now() + 14 * 3600 * 1000).toISOString().slice(0, 10);
+  return s <= latestToday;
+}
+
+// Returns null when the signature is acceptable, else the reason it is not.
+function signatureProblem(signedBy, signedOn) {
+  if (typeof signedBy !== 'string' || signedBy.trim().length === 0 || typeof signedOn !== 'string' || signedOn.trim().length === 0) {
+    return 'DISPOSITION-SIGNED-UNVERIFIED';
+  }
+  const who = signedBy.trim();
+  if (SIGNER_DENY_RE.test(who) || !SIGNER_ALLOW.has(who)) return 'DISPOSITION-SIGNER-NOT-ALLOWED';
+  if (!isRealPastIsoDate(signedOn.trim())) return 'DISPOSITION-SIGNED-BAD-DATE';
+  return null;
+}
+
 function dispositionSignedProperly(row) {
-  return row.disposition === 'DISPOSITION-SIGNED'
-    && typeof row.signed_by === 'string' && row.signed_by.trim().length > 0
-    && typeof row.signed_on === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(row.signed_on);
+  return row.disposition === 'DISPOSITION-SIGNED' && signatureProblem(row.signed_by, row.signed_on) === null;
 }
 
 // Receipt carry rule (Packet 1 row 1): a row not measured directly against P1 needs a `carry`
@@ -362,7 +389,7 @@ function checkC0() {
 function checkC1() {
   const rows = loadCasemap();
   const req = rows.filter((r) => ['required_core', 'compatibility_adapter'].includes(r.classification));
-  let bound = 0, free = 0, boundNumeric = 0;
+  let bound = 0, free = 0, boundNumeric = 0, boundSigned = 0;
   const unsigned = {};
   const registrationOnly = [];
   const numericLabelOnly = [];
@@ -380,7 +407,10 @@ function checkC1() {
     }
     const d = r.disposition ?? null;
     if (d === 'DISPOSITION-SIGNED') {
-      dispositionSignedProperly(r) ? bound++ : (unsigned['DISPOSITION-SIGNED-UNVERIFIED'] = (unsigned['DISPOSITION-SIGNED-UNVERIFIED'] || 0) + 1);
+      // A signed disposition resolves the row but is counted in bound_signed=, never in bound=
+      // (bound= is numeric evidence only), so a signed registration row cannot pose as a twin.
+      const why = signatureProblem(r.signed_by, r.signed_on);
+      if (why === null) boundSigned++; else unsigned[why] = (unsigned[why] || 0) + 1;
       continue;
     }
     if (d !== null && d !== undefined) { unsigned[d] = (unsigned[d] || 0) + 1; continue; }
@@ -400,7 +430,7 @@ function checkC1() {
     }
   }
   const nUnsigned = Object.values(unsigned).reduce((a, b) => a + b, 0);
-  console.log(`C1 required=${req.length} bound=${bound} bound_numeric=${boundNumeric} bound_registration_only=${registrationOnly.length} free=${free} unsigned_or_blocked=${nUnsigned} ${JSON.stringify(unsigned)} dangling_receipts=${dangling.join(';') || 'none'} stale_carries=${stale.join(';') || 'none'} registration_only=${registrationOnly.join(';') || 'none'} numeric_label_without_numeric_receipt=${numericLabelOnly.join(';') || 'none'}`);
+  console.log(`C1 required=${req.length} bound=${bound} bound_numeric=${boundNumeric} bound_registration_only=${registrationOnly.length} bound_signed=${boundSigned} free=${free} unsigned_or_blocked=${nUnsigned} ${JSON.stringify(unsigned)} dangling_receipts=${dangling.join(';') || 'none'} stale_carries=${stale.join(';') || 'none'} registration_only=${registrationOnly.join(';') || 'none'} numeric_label_without_numeric_receipt=${numericLabelOnly.join(';') || 'none'}`);
   return req.length > 0 && nUnsigned === 0 && free === 0 && dangling.length === 0 && stale.length === 0 && registrationOnly.length === 0 && numericLabelOnly.length === 0;
 }
 

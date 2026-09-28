@@ -148,10 +148,19 @@ A required row is bound only with a resolving receipt (`evidence.receipt`, a pat
 as a blob at the ref) **and** non-empty `executable_case_ids` **and** `evidence_tier: "numeric"`
 backed by a `comparison` block in the receipt (see "Evidence tier" below); no one of these alone
 is enough. A
-`DISPOSITION-SIGNED` row additionally needs `signed_by` (a non-empty name) and `signed_on`
-(`YYYY-MM-DD`) on the row itself; **the tool checks the fields are present, not that the named
-person actually signed — identity is verified in PR review**, by whoever reviews the diff that
-adds the row, the same way any other change to this repo is reviewed. `classification` values
+`DISPOSITION-SIGNED` row additionally needs `signed_by` and `signed_on` on the row itself.
+Since the review of #561 the tool checks both: `signed_by` must be exactly `Shinichi Nakagawa` or
+`itchyshin` (anything containing `agent`, `Claude`, `Codex`, `Cursor` or `Fable` is refused, as is
+any other name; C1 reports `DISPOSITION-SIGNER-NOT-ALLOWED`), and `signed_on` must be a real
+calendar date in `YYYY-MM-DD` form that is not in the future (checked against the latest current
+date anywhere on earth, UTC+14, so a local date is never refused for time-zone reasons; C1 reports
+`DISPOSITION-SIGNED-BAD-DATE`). The same rules apply to `signed_by:` / `signed_on:` tokens in a
+scoreboard cell. A properly signed row is counted in C1's `bound_signed=`, never in `bound=`
+(`bound=` counts numeric evidence only), so a signed registration row cannot read as a twin.
+**The tool still cannot verify that the named person actually signed; an agent can type the
+maintainer's name. Identity is verified in PR review**, by whoever reviews the diff that adds the
+row, the same way any other change to this repo is reviewed. Negative controls:
+`c1_signed_by_agent`, `c1_signed_bad_date` (`9999-99-99`), `c1_signed_future_date`. `classification` values
 this tool understands: `required_core`, `compatibility_adapter` (both feed C1), plus
 `semantic_divergence`, `outside_boundary`, `excluded`, `needs_surface` (C8 requires each of
 these to be either twinned or carry a real signed disposition — none of them are exempt or
