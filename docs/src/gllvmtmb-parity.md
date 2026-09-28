@@ -117,21 +117,36 @@ spatial, animal, kernel, or integrated species-distribution (iSDM) structures,
 the full `traits()` formula grammar, all mixed-family combinations, or
 `column_coef` and slope models. The detailed restrictions appear below.
 
-### What has not been established
+### What parity does not mean
 
-In plain language, the following remain out of scope:
+Parity on this page is agreement between the two packages on the compared
+examples. It does not mean:
 
-- Agreement for every Julia workflow when run through R
-- Support for all `gllvmTMB` 0.7.1 functions and formula combinations, including
-  `column_coef` and slopes
-- Spatial and slope models through the R bridge
-- Correct interval *coverage*, meaning that intervals contain the true value
-  at the stated rate across repeated datasets
-- Agreement for model extensions outside the compared examples
-- Agreement with newer R versions across the full comparison set; the fixed
-  reference remains 0.7.0, with individual exceptions identified below
-- Agreement of fitted values, predictions, and residuals, or recovery of known
-  simulated parameters, as part of the comparisons summarized here
+- that a whole analysis gives the same answer end to end. Agreement is
+  measured on small, controlled examples (`p ≤ 5`, `n ≤ 150`), plus
+  realistic-size checks for Gaussian, Poisson, and negative binomial models
+  only;
+- that the packages agree at the same parameter values. Each package is
+  evaluated at its own optimum;
+- that standard errors and intervals agree for every family and data shape;
+- that intervals have correct *coverage*, meaning that they contain the true
+  value at the stated rate across repeated datasets. Coverage is a separate
+  Julia-only study;
+- that matching function names mean matching models. Similar names can
+  describe different models or parameter scales, and a complete function
+  inventory does not compare analyses;
+- support for all `gllvmTMB` 0.7.1 functions and formula combinations,
+  including `column_coef` and slopes, or for spatial and slope models through
+  the R bridge;
+- that every Julia workflow has an R counterpart or runs through R. The
+  comparison starts from R workflows and checks their Julia counterparts;
+- agreement for model extensions outside the compared examples, or with newer
+  R versions across the full comparison set. The fixed reference remains
+  0.7.0, with individual exceptions identified below;
+- agreement of fitted values, predictions, and residuals, or recovery of known
+  simulated parameters;
+- that the frozen-reference check is a parity result. It is an early warning
+  against one fixed copy of `gllvmTMB`.
 
 ### Capability differences
 

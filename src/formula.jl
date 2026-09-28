@@ -263,6 +263,11 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
         return fit_beta_binomial_gllvm_grouped_cov(Y; X = X, K = K, kwargs...)
     elseif family isa Ordinal
         return fit_ordinal_gllvm_pertrait_cov(Y; X = X, K = K, kwargs...)
+    elseif family isa OrdinalLogit
+        # Same fitter as Ordinal(), but the marker pins the link (see
+        # ordinal_logit()'s docstring): refuse an explicit non-logit `link`.
+        _check_ordinal_logit_link(kwargs)
+        return fit_ordinal_gllvm_pertrait_cov(Y; X = X, K = K, kwargs...)
     elseif family isa ZIPoisson
         return fit_zip_gllvm_cov(Y; X = X, K = K, kwargs...)
     elseif family isa ZINegBin

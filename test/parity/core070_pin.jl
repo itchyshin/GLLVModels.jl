@@ -1,0 +1,53 @@
+# core070_pin.jl -- Core070 gllvmTMB pin selection (D-294/D-295).
+#
+# Split out of parity_helpers.jl so this logic is includable and testable
+# without RCall: it depends only on TOML and the standard library. Included
+# by parity_helpers.jl (for the real parity run) and by
+# test/test_core070_pin.jl (a plain unit test, no RCall / no R install).
+#
+# GLLVM_PARITY_PIN names which entry of tools/core070_oracle_pins.toml this
+# file's frozen-reference constants come from -- same switch, same default
+# ("P0"), and the same strict-on-unknown behavior as tools/parity_oracle.py's
+# Python side of this switch. The TOML file is the shared source of the
+# per-pin commit + companion byte hashes; neither this file nor
+# tools/core070_build_oracle.py hardcodes its own copy.
+
+using TOML
+
+const _CORE070_PIN_ENV_VAR = "GLLVM_PARITY_PIN"
+const _CORE070_PINS_FILE = normpath(joinpath(@__DIR__, "..", "..", "tools", "core070_oracle_pins.toml"))
+
+function _core070_selected_pin()
+    raw = get(ENV, _CORE070_PIN_ENV_VAR, nothing)
+    name = raw === nothing ? "P0" : uppercase(strip(raw))
+    pins = TOML.parsefile(_CORE070_PINS_FILE)
+    haskey(pins, name) || error(
+        "$_CORE070_PIN_ENV_VAR=$(repr(raw)) is not a recognized pin. Set " *
+        "$_CORE070_PIN_ENV_VAR to one of $(sort(collect(keys(pins)))) " *
+        "(case/whitespace insensitive), or leave it unset to use the default (P0)."
+    )
+    return pins[name]
+end
+
+const _CORE070_PIN = _core070_selected_pin()
+const _CORE070_REFERENCE_COMMIT = _CORE070_PIN["reference_commit"]
+const _CORE070_NAMESPACE_SHA256 = _CORE070_PIN["namespace_sha256"]
+const _CORE070_SOURCE_TREE_SHA256 = _CORE070_PIN["source_tree_sha256"]
+const _CORE070_ARCHIVE_SHA256 = _CORE070_PIN["archive_sha256"]
+
+# The frozen-r070-contract.toml manifest is itself pinned to one commit
+# (currently P0) and has not been regenerated for any other pin. Nothing in
+# Core070CaseRegistry.validate_manifest checks that pin, so a
+# GLLVM_PARITY_PIN switch away from the manifest's own frozen commit would
+# otherwise consume it silently. Fail loudly instead.
+function _core070_check_frozen_contract_pin(manifest::AbstractDict, path::AbstractString)
+    contract_commit = get(manifest, "reference_commit", nothing)
+    contract_commit == _CORE070_REFERENCE_COMMIT || throw(ArgumentError(
+        "$path is frozen at reference_commit $(repr(contract_commit)), but " *
+        "$_CORE070_PIN_ENV_VAR selected $(repr(_CORE070_REFERENCE_COMMIT)) -- this " *
+        "manifest has not been regenerated for that pin. Set $_CORE070_PIN_ENV_VAR=P0 " *
+        "(or leave it unset) to use this manifest, or regenerate it for the selected " *
+        "pin before running."
+    ))
+    return nothing
+end

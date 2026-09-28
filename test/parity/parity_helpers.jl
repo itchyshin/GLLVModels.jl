@@ -16,10 +16,10 @@ using .Core070Receipts
 include(joinpath(@__DIR__, "core070_case_registry.jl"))
 include(joinpath(@__DIR__, "..", "..", "tools", "core070_second_order", "r_lib.jl"))
 
-const _CORE070_REFERENCE_COMMIT = "b4d5fee64def88bc768dda1f1f77c29b295edd86"
-const _CORE070_NAMESPACE_SHA256 = "9094613610789faab69c43195d3cfdafb2c7dfef284e6646b10dababa4fa132c"
-const _CORE070_SOURCE_TREE_SHA256 = "f83545faa6543dbb1f64d64bbf5a9498adcdf036cc3da5851f269912698b1cc7"
-const _CORE070_ARCHIVE_SHA256 = "0c2f4323eb9fb19acccf039b8d57b4dd6bda82e2aa8b4a7bb712f36a64b022bc"
+# Pin selection (D-294/D-295) and the frozen-contract pin guard: see
+# core070_pin.jl, split out so it is includable and testable without RCall.
+include(joinpath(@__DIR__, "core070_pin.jl"))
+
 const _CORE070_FAMILY_SMOKE_IDS = Core070CaseRegistry.FAMILY_IDS
 const _CORE070_SOURCE = Ref{Dict{String, Any}}()
 const _CORE070_RUN = Ref{Any}(nothing)
@@ -51,6 +51,7 @@ end
 function _core070_execution_paths(requested::AbstractVector{<:AbstractString})
     paths = String[
         "src", "test/parity/core070_receipts.jl", "test/parity/core070_case_registry.jl", "test/parity/parity_helpers.jl",
+        "test/parity/core070_pin.jl", "tools/core070_oracle_pins.toml",
         "test/parity/parity_trial_inputs.jl", "test/parity/test_negbin_parity.jl", "test/parity/truncnb2_policy.jl", "test/parity/nb2_health.jl",
         "test/parity/family_formula_cases.jl", "test/parity/test_truncated_nbinom2_parity.jl", "docs/dev-log/core070/family-formulas-contract.json",
         "test/parity/poisson_beta_health.jl", "test/parity/test_poisson_parity.jl", "test/parity/test_beta_parity.jl", "docs/dev-log/core070/poisson-beta-required-contract.json", "test/parity/runparity.jl", "test/parity/r_health.R",
@@ -159,7 +160,10 @@ end
 function core070_start_run!()
     _core070_required() || return nothing
     _CORE070_RUN[] === nothing || throw(ArgumentError("CORE-070 run was already started in this Julia process"))
-    Core070CaseRegistry.validate_manifest(TOML.parsefile(joinpath(_core070_root(), "docs/dev-log/core070/frozen-r070-contract.toml")))
+    contract_path = joinpath(_core070_root(), "docs/dev-log/core070/frozen-r070-contract.toml")
+    manifest = TOML.parsefile(contract_path)
+    _core070_check_frozen_contract_pin(manifest, contract_path)
+    Core070CaseRegistry.validate_manifest(manifest)
     requested = core070_requested_case_ids()
     source = _core070_source_pin!()
     root = _core070_root()

@@ -134,7 +134,7 @@ function _family_ci(fit::PoissonFit, Y::AbstractMatrix;
                                            (r, μ) -> Poisson(max(μ, 1e-12)))
     refit = function (Yb)
         fb = try fit_poisson_gllvm(Yb; K = K, link = link, mask = M, hessian = fit.hessian) catch; return nothing end
-        return vcat(fb.β, pack_lambda(fb.Λ))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ)), converged = fb.converged, loglik = fb.loglik)
     end
     return _FamilyCI(θ, nll, _glm_lin_names(p, K), fill(:linear, length(θ)), simulate, refit)
 end

@@ -185,6 +185,10 @@ println(_SHARD === nothing ?
     # most likely to end up in a paper — so untested was the least acceptable
     # place for it. Every assertion is against an independently derived value.
     _shard_include("test_boundary_inference.jl")
+    # P1 twin vs gllvmTMB's R/chibar.R (D-297 case map: a name match alone never
+    # counts as parity; this proves equal outputs on a literal fixture computed by
+    # the real installed R package at the pin).
+    _shard_include("test_chibar2_variance_lrt_p1_twin.jl")
     _shard_include("test_laplace_grad.jl")
     _shard_include("test_poisson_grad_perf.jl")
     _shard_include("test_grouped_laplace.jl")
@@ -240,10 +244,12 @@ println(_SHARD === nothing ?
     _shard_include("test_ordinal_fit.jl")
     _shard_include("test_ordinal_pertrait.jl")
     _shard_include("test_ordinal_probit.jl")
+    _shard_include("test_ordinal_logit_twin.jl")
     _shard_include("test_fit_gllvm.jl")
     _shard_include("test_truncated_formula.jl")
     _shard_include("test_unified_api.jl")
     _shard_include("test_com_poisson.jl")
+    _shard_include("test_com_poisson_mode_search.jl")
     _shard_include("test_gaussian_pervar.jl")
     _shard_include("test_gaussian_pervar_design.jl")
     _shard_include("test_gaussian_fixed_residual.jl")
@@ -254,6 +260,7 @@ println(_SHARD === nothing ?
     _shard_include("test_statsapi.jl")
     _shard_include("test_postfit_zib_tweedie.jl")
     _shard_include("test_ordination.jl")
+    _shard_include("test_extract_latent_scores.jl")
     _shard_include("test_model_selection.jl")
     _shard_include("test_structured_cov.jl")
     _shard_include("test_cross_kernel.jl")
@@ -332,6 +339,8 @@ println(_SHARD === nothing ?
     _shard_include("test_twopart_hessian_kwarg.jl")
     _shard_include("test_beta_hurdle.jl")
     _shard_include("test_beta_binomial.jl")
+    _shard_include("test_beta_binomial_mode_search.jl")
+    _shard_include("test_beta_binomial_verdict_515.jl")
     _shard_include("test_zero_inflated.jl")
     _shard_include("test_missing_data.jl")
     _shard_include("test_missing_response.jl")
@@ -346,6 +355,7 @@ println(_SHARD === nothing ?
     _shard_include("test_offset.jl")
     _shard_include("test_fd_hessian.jl")
     _shard_include("test_confint_family.jl")
+    _shard_include("test_confint_bootstrap_verdict_poisson.jl")
     _shard_include("test_second_order_ordinal_pertrait_ci.jl")
     _shard_include("test_second_order_delta_followup.jl")
     _shard_include("test_second_order_s2_cloglog_ratified.jl")
@@ -391,6 +401,7 @@ println(_SHARD === nothing ?
     _shard_include("test_bridge_ci.jl")
     _shard_include("test_bridge_grouped_dispersion.jl")
     _shard_include("test_bridge_capabilities.jl")
+    _shard_include("test_mixed_mode_search.jl")
     _shard_include("test_bridge_mixed.jl")
     _shard_include("test_bridge_x.jl")
     _shard_include("test_bridge_zib.jl")
