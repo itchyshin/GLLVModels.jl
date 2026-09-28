@@ -3,7 +3,7 @@
 # Gaussian formula routes (pervar, sources, grouping) do, and as gllvmTMB's
 # `value ~ 0 + trait + x` does. Before the fix it built a site-only design with
 # no intercepts, so shifting Y moved logLik.
-using Test, GLLVModels, Random, Distributions, Statistics
+using Test, GLLVModels, Random, Distributions, Statistics, LinearAlgebra
 
 @testset "Gaussian formula with covariates has trait intercepts" begin
     rng = MersenneTwister(11)
@@ -48,4 +48,28 @@ using Test, GLLVModels, Random, Distributions, Statistics
         @test length(g.pars.β) == 1
         @test isapprox(g.logLik, fit_gaussian_gllvm(Y1; K = K, X = Xs).logLik; atol = 1e-8)
     end
+end
+
+# With a phylogeny, per-trait intercepts would absorb the species-constant phylo
+# effect, so `y ~ 1 + x` uses one common intercept plus the shared slope.
+@testset "Gaussian formula with covariates and a phylogeny" begin
+    Random.seed!(21)
+    p, n = 6, 200
+    temp = randn(n)
+    phy = GLLVModels.random_balanced_tree(p; branch_length = 0.5)
+    Σ_phy = Matrix(Symmetric(GLLVModels.sigma_phy_dense(phy; σ²_phy = 1.0)))
+    y = 0.5 .* randn(p, 1) * randn(1, n) .+ 0.4 .* temp'
+    y .+= 0.8 .* (cholesky(Symmetric(Σ_phy)).L * randn(p))
+    y .+= 0.5 .* randn(p, n)
+    f = gllvm(@formula(y ~ 1 + temp), y, (temp = temp,); family = Normal(), K = 1,
+              has_phy_unique = true, Σ_phy = Σ_phy)
+    X = zeros(p, n, 2)
+    X[:, :, 1] .= 1.0
+    for s in 1:n, t in 1:p
+        X[t, s, 2] = temp[s]
+    end
+    ref = fit_gaussian_gllvm(y; K = 1, X = X, has_phy_unique = true, Σ_phy = Σ_phy)
+    @test length(f.pars.β) == 2
+    @test isapprox(f.logLik, ref.logLik; atol = 1e-8)
+    @test maximum(abs.(f.pars.σ_phy)) > 0.1
 end
