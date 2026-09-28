@@ -41,6 +41,127 @@
   because `deviance` and `tidy` now exist in GLLVModels while the frozen P0 contract records them as
   absent (negative controls NEG-DEVIANCE-ABSENT / NEG-TIDY-ABSENT). Left as P0 history.
 
+## 2026-09-27 (delta review fix): `extract_latent_scores()` RRRFit + explicit plain union (PR #531)
+
+- Delta review of the prior dispatch fix confirmed all 47 `getLV` methods
+  across the package were bucketed correctly, with one exception: `RRRFit`
+  was in the generic (now `_PlainGllvmFit`) bucket, but its
+  `getLV(fit, X; rotate)` is a deterministic, fully predictor-driven
+  reduced-rank-regression projection with no latent innovation at all —
+  labelling its result "innovation" is wrong, and passing this wrapper's
+  response `y` where RRRFit expects a covariate design `X` would raise a raw
+  `DimensionMismatch`. Moved to its own `_extract_latent_scores_unit(fit::RRRFit,
+  ...)` method (more specific than, but still a member of,
+  `_PositionalArgGllvmFit` for the completeness accounting below) raising an
+  `ArgumentError` naming the reason and pointing at `getLV(fit, X)` for the
+  constrained axes directly.
+- Replaced the fully generic catch-all `_extract_latent_scores_unit(fit, y;
+  kwargs...) = getLV(fit, y; rotate=false, kwargs...)` method with an
+  explicit `_PlainGllvmFit` union of the 21 verified plain fit types (`NB1Fit`,
+  `GP1Fit`, `ExponentialFit`, `DeltaLogNormalFit`, `HurdlePoissonFit`,
+  `HurdleNBFit`, `DeltaGammaFit`, `ZIPFit`, `ZINBFit`, `ZIBFit`, `TweedieFit`,
+  `COMPoissonFit`, `BetaBinomialFit`, `BetaBinomialGroupedFit`,
+  `BetaHurdleFit`, `GammaGroupedFit`, `NB1GroupedFit`, `NBGroupedFit`,
+  `BetaGroupedFit`, `OrdinalPerTraitFit`, `RowEffectFit`, `RowRandomFit`).
+  New test iterates `Base.uniontypes(GLLVModels.AnyGllvmFit)`, checks each
+  member for a `getLV` method via `methods(getLV)` (not `hasmethod`, which
+  would false-negative on the `AbstractMatrix{<:Real}`/`{<:Integer}` argument
+  constraints), and asserts it is in exactly one of the three dispatch
+  `Union`s. Types with no `getLV` method at all (`MultinomialFit`,
+  `StudentTFit`, the phylo/spatial-only fits, ...) are correctly excluded —
+  they already fail loudly with `MethodError`, unchanged.
+- Noted in the PR body (not fixed, out of scope): `QuadraticFit`,
+  `OrderedBetaFit`, and `MixedFamilyFit` have `getLV` methods but are not
+  members of `AnyGllvmFit`, so `extract_latent_scores` cannot reach them at
+  all (falls through to the `.default`-mirroring fallback).
+- `test/test_extract_latent_scores.jl` 79/79 pass on `julia +1.10` and
+  `julia +1.13` (up from 34: +1 RRRFit refusal test, +44 completeness-union
+  checks, one per `AnyGllvmFit` member with a `getLV` method);
+  `test_postfit.jl` (892/892) unchanged on both versions.
+
+## 2026-09-27 (review fix): `extract_latent_scores()` dispatch correctness (PR #531)
+
+- Independent review of PR #531 found the initial implementation always
+  forwarded `component = :innovation` to `getLV`, but only 7 of ~35 `getLV`
+  methods in this package accept a `component` keyword at all (the seven
+  `X_lv`-capable types: `GllvmFit`, `BinomialFit`, `PoissonFit`, `NBFit`,
+  `BetaFit`, `OrdinalFit`, `GammaFit`) — every other fit type (`NB1Fit`,
+  `TweedieFit`, `NBGroupedFit`, `RowRandomFit`, and more) would raise a plain
+  `MethodError`. Fixed by dispatching on two disjoint `Union`s built by
+  reading every `getLV` method's signature in `src/postfit.jl` and
+  `src/families/*.jl`: `_ComponentAwareGllvmFit` (the seven types, passed
+  `component = :innovation` explicitly) and `_PositionalArgGllvmFit` (types
+  whose `getLV` needs an extra required positional argument beyond `(fit,
+  y)` — `GllvmCovFit`, `ZIPCovFit`, `ConstrainedOrdinationFit`,
+  `FourthCornerFit`, `SPDELatentFit`, and others; these now raise a named
+  `ArgumentError` pointing at the `getLV` call to make directly, rather than
+  silently misrouting the argument as an unsupported keyword). Every other
+  fit type falls through to a generic `getLV(fit, y; rotate = false, ...)`
+  call with no `component` at all, which is exactly the zero-mean score for
+  those types (none of them has an `X_lv`/predictor-informed mean field to
+  distinguish `:total` from `:innovation`).
+- Also fixed: the docstring's false claim that `extract_ordination` is
+  R-only — it exists (`src/extractors.jl`, forwarding to `ordination()`) —
+  and corrected the "differences from R" section (R warns-and-continues on
+  deprecated `level = "B"`/`"W"` aliases where this method throws;
+  `level = :unit_obs` returning `nothing` is categorical, not a per-fit "this
+  model lacks that tier" check, since no fit type here has ever had one).
+- New tests: an `extract_ordination`/`extract_latent_scores` identity check
+  on a no-`X`, no-`X_lv` fit (this identity does *not* hold generally,
+  because `ordination()` never forwards a fixed-effect `X` to `getLV` either
+  — documented as a real, if narrow, gap rather than silently worked
+  around); a shape-only loop over `NB1Fit`/`TweedieFit`/`NBGroupedFit`/
+  `RowRandomFit` (red before the fix: `MethodError` on the `component`
+  keyword); an `ArgumentError`-refusal check via `GllvmCovFit`; a third
+  fixture family (NB2 per-trait dispersion via `NBGroupedFit`, its own
+  `n_sites = 60` fixture — 15 sites was too few for a well-posed per-trait
+  dispersion + rank-2 fit) verified at R's fitted parameters (measured
+  `max|Δz| = 5.7e-11`); and a deprecated-alias rejection check
+  (`level = :B`). Fixture hygiene: `SHA256SUMS.txt` now uses relative file
+  names, and the R script that generated every fixture file
+  (`generate_fixture.R`, with the exact P1 install call and seed in its
+  header) is committed beside the fixtures.
+- `test/test_extract_latent_scores.jl` 34/34 pass on `julia +1.10` and
+  `julia +1.13`; `test_postfit.jl` (892/892) unchanged on both versions.
+
+## 2026-09-27: `extract_latent_scores()` twin of gllvmTMB's P1 export
+
+- Branch `claude/twin-extract-latent-scores` from `origin/main`. Recon at pin
+  P1 (`9539352f66f2db2cc26b1c393e67212a359b60c9`, gllvmTMB 0.7.1) read
+  `R/extract-latent-scores.R`'s generic and four S3 methods, its roxygen, and
+  `tests/testthat/test-extract-latent-scores.R`. Per the P1 case map (PR
+  #526), `.default` and `.gllvmTMB_multi` are proposed `required_core` and
+  are twinned here; `.gllvmTMB_site_trait_sim` and `.gllvmTMB_va` are
+  `excluded` (no Julia site-trait-simulation or variational-fit class) and
+  are not twinned.
+- New `src/extract_latent_scores.jl`: `extract_latent_scores(fit, y;
+  level=:unit)` is `getLV(fit, y; component=:innovation, rotate=false)`
+  (R's `rotate = "none"`, `component = "innovation"` orientation);
+  `level=:unit_obs` always returns `nothing` (this package has no `unit_obs`/
+  `z_W` tier in any fit type — R's own "no such tier" `NULL` case, not an
+  approximation). A fallback method mirrors `extract_latent_scores.default`'s
+  named abort for unsupported types.
+- Verified against a live R fit at P1 (installed to a temporary library from
+  a detached worktree; `R CMD INSTALL` ~1 min, well under the 20-minute
+  budget): Gaussian and Poisson GLLVMs, `n_sites=15`, `p=6` traits, rank 2,
+  fit via `gllvmTMB(value ~ 0 + trait + latent(0 + trait | site, d = 2,
+  unique = FALSE), ...)` — the degenerate single-tier case of R's
+  `gllvmTMB_multi` class (one row per site x trait cell, no replication),
+  which is exactly this package's ordinary p x n GLLVM. At R's own fitted
+  `Λ`/`β` plugged into this package's `getLV`, `|Δz|` is `5.6e-15`
+  (Gaussian, machine precision) and `7.2e-11` (Poisson, Laplace-mode Newton
+  tolerance); at each side's own optimum the rotation-invariant `Λz'`
+  product agrees to `2.4e-6` (Gaussian) / `1.8e-5` (Poisson) absolute.
+  Fixture (`Y`, R's `z_hat`, `Λ`, `β`, `σ_eps`, logLik) stored under
+  `test/fixtures/extract_latent_scores_p1/`, sha256-guarded in
+  `test/test_extract_latent_scores.jl` (tagged `# gllvm-parity-tag: P1`,
+  Julia-only — reads recorded R values, runs no R/RCall).
+- New test 22/22 pass on `julia +1.10` and `julia +1.13`; `test_postfit.jl`
+  (892/892) unchanged on both versions (no regression to the wrapped
+  `getLV`). Registered in `test/runtests.jl`; `CHANGELOG.md` and
+  `docs/src/api.md` updated.
+- Did not touch `src/families/mixed.jl`, `grouped_dispersion.jl`,
+  `model_selection.jl`, `cv.jl`, `_laplace_mode`, or `Project.toml`.
 ## 2026-09-27: One shared pin source for the Core070 parity harness, plus a P1 oracle build (D-294/D-295)
 
 - Branch `claude/true-parity-p1-oracle`, builds on #524 (merged into `main` as `824d22a4b`
