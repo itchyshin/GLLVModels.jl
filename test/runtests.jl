@@ -260,6 +260,7 @@ println(_SHARD === nothing ?
     _shard_include("test_statsapi.jl")
     _shard_include("test_postfit_zib_tweedie.jl")
     _shard_include("test_ordination.jl")
+    _shard_include("test_extract_latent_scores.jl")
     _shard_include("test_model_selection.jl")
     _shard_include("test_structured_cov.jl")
     _shard_include("test_cross_kernel.jl")
