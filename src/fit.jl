@@ -71,12 +71,18 @@ GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime)=
                        λ_phy_init=nothing,
                        σ²_B_init=0.1, σ²_W_init=0.1, σ_phy_init=0.1,
                        β_init=nothing, β_fixed=nothing, alpha_lv_init=nothing,
-                       x_tol=1e-8, f_tol=1e-10,
+                       x_tol=1e-8, f_tol=0.0,
                        g_tol=1e-6, iterations=500) -> GllvmFit
 
 L-BFGS minimisation of the closed-form Gaussian marginal NLL via
 ForwardDiff gradients. Returns a `GllvmFit` with parameter estimates,
 convergence diagnostics, and wall-clock fit time.
+
+Stopping is left to the gradient test (`g_tol`) and the step size (`x_tol`);
+the relative objective-change test is off by default (`f_tol = 0.0`, Optim's
+own default). A relative `f_tol = 1e-10` stopped iterative fits (phylo-unique,
+covariates) with gradients near 3e-3 and Wald SEs up to 0.25% off. Closed-form
+single-variance fits take no L-BFGS steps and are unaffected.
 
 Under the hood the optimisation runs on the profile NLL (σ²_eps and
 optionally β profiled out analytically, MixedModels.jl-style). The
@@ -144,7 +150,7 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
                             β_fixed = nothing,
                             alpha_lv_init = nothing,
                             x_tol = 1e-8,
-                            f_tol = 1e-10,
+                            f_tol = 0.0,
                             g_tol = 1e-6,
                             iterations = 500)
     p, n = size(y)

@@ -172,6 +172,13 @@ include("link_residual.jl")
 include("extractors.jl")                # extract_*/get* post-fit extractor family (core070 Cluster 1)
 include("re_sd.jl")                      # latent_score_sd (renamed from getREsd): TMB-sdreport-style conditional-on-θ̂ random-effect SDs (core070 E-cluster)
 include("families/mixed.jl")             # mixed-family GLLVM (cross-family VCV): fit_mixed_gllvm + MixedFamilyFit. AFTER link_residual + the family fitters so all dispatch targets exist.
+include("families/isdm_sources.jl")      # iSDM: isdm_source()/isdm_sources() declarations (gllvmTMB P1 twin)
+include("families/isdm_formula.jl")      # iSDM: quoted-formula reader (offset, zero or one latent())
+include("families/isdm_table.jl")        # iSDM: long-table assembly and contract refusals
+include("families/isdm_laplace.jl")      # iSDM: per-cell long-row Laplace kernel, cloglog tail copy
+include("families/isdm_grad.jl")         # iSDM: one-step implicit gradient
+include("families/isdm_fit.jl")          # iSDM: fit_isdm_gllvm + IsdmFit
+include("families/isdm_predict.jl")      # iSDM: predict / fitted
 include("boundary_inference.jl")         # χ̄² boundary LRT + boundary-aware profile CI for variance components
 include("confint_family.jl")             # Wald / profile / bootstrap CIs for non-Gaussian families
 include("marginal_target_intervals.jl")  # internal marginal intervals for grouped/precision candidates
@@ -376,6 +383,8 @@ export make_cross_kernel, extract_Gamma, fit_coevolution_gaussian, fit_coevoluti
        tidy, GllvmSummary,
        temporal_indep, temporal_dep, temporal_latent, TemporalTerm, TemporalContractError,
        fit_temporal_gllvm, TemporalGaussianFit, extract_temporal, forecast_temporal,
-       profile_temporal, bootstrap_temporal, compare_temporal, update
+       profile_temporal, bootstrap_temporal, compare_temporal, update,
+       isdm_source, isdm_sources, IsdmSource, IsdmSources, isdm_table, IsdmTable,
+       fit_isdm_gllvm, IsdmFit, isdm_marginal_loglik_laplace
 
 end # module GLLVModels
