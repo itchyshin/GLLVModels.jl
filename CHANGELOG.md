@@ -245,6 +245,23 @@ All notable changes to GLLVModels.jl are documented here.
   conditions, not a general bound — the same reviewer's harsher probe, which
   stacks a 3x Lambda scale together with a ±50% perturbation on every parameter,
   measured up to 8.5e-7 (#503, #507).
+- **Beta grouped kernel (`fit_beta_gllvm_grouped`, the default route for
+  `fit_gllvm(...; family = Beta())`): the per-site Laplace mode search could
+  2-cycle and score a point away from the mode.** Where responses sit near 0 or 1,
+  undamped Fisher scoring overshoots; on one measured site it alternated around the
+  mode and the site value was off by up to 15 log-likelihood units. The search now
+  halves any step that lowers the per-site log-posterior, falls back under
+  `LogitLink` to a step weighted by the larger of the observed and Fisher curvature
+  (the observed Beta weight alone can be negative), then to a 20x Fisher retry, and
+  returns `-Inf` if all fail. On 18,000 simulated sites every site where the old
+  loop converged is bit-identical; the 4 sites it got wrong now match an
+  independent reference. Four whole fits tested gave identical log-likelihoods. On
+  the #480 screen dataset d05 the corrected surface sent L-BFGS to a different
+  stationary point (log-likelihood 269.30, one precision drifting to about 1100 on a
+  flat plateau), which meets the gradient test. The #480 restart (from every `φ = 1`
+  and from the returned point, keeping only a better run) now also fires when a
+  group's precision is more than 100 times the median, and d05 again reaches 272.61.
+  Part of #503.
 - **NB2 grouped kernel (`fit_nb_gllvm_grouped`, the default route for
   `fit_gllvm(...; family = NegativeBinomial())`): the per-site Laplace mode search
   could 2-cycle and report `converged = true` at a poor optimum.** Where a count

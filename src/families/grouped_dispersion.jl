@@ -712,6 +712,73 @@ function _beta_grouped_laplace_weight(hessian::Symbol, f::Beta, μ, me, y, link:
     return φ^2 * ν * me^2 - φ * (ystar - μstar) * μeta2
 end
 
+# Damped per-site mode search for the Beta grouped kernel (#503 class). Before this, the
+# kernel ran undamped Fisher scoring and scored whatever `z` it held at `maxiter`,
+# converged or not. Where the observed curvature exceeds about twice the Fisher
+# curvature (responses near 0 or 1), the step overshoots into a 2-cycle: on one measured
+# site Fisher alternated between z = −0.318 and −0.983 around a mode at −0.555, and the
+# site's Laplace value was off by up to 15 log-likelihood units.
+#
+# Same rule as `_gamma_grouped_mode` (#479): a step that lowers the per-site
+# log-posterior is halved (small steps and accepted full steps are bit-identical to the
+# old loop), and `converged` is true only when a full proposed step is below `tol`.
+# `step_weight` is `:fisher` or `:dominant`. The observed Beta weight can be negative,
+# so the NB2/Gamma observed-Newton fallback is not safe here; `:dominant` uses
+# max(observed, Fisher) per cell instead, which is positive (so `Λ'WΛ + I` is SPD) and
+# never understates the curvature that caused the overshoot. W only sets the step: the
+# mode is the fixed point of `Λ's − z = 0` whatever W is.
+function _beta_grouped_mode(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
+        Λ::AbstractMatrix, β::AbstractVector, link::Link, step_weight::Symbol;
+        mask = nothing, offset = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
+    p, K = size(Λ)
+    off = offset === nothing ? false : offset
+    z = zeros(K)
+    for _ in 1:maxiter
+        η  = _clamp_eta.(β .+ off .+ Λ * z)
+        μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
+        me = mu_eta.(Ref(link), η)
+        s  = _glm_score.(fams, μ, n, me, y)
+        W  = _beta_grouped_laplace_weight.(Ref(:fisher), fams, μ, me, y, Ref(link), η)
+        if step_weight === :dominant
+            Wo = _beta_grouped_laplace_weight.(Ref(:observed), fams, μ, me, y, Ref(link), η)
+            W  = max.(W, Wo)
+        end
+        if mask !== nothing
+            s = ifelse.(mask, s, 0.0)
+            W = ifelse.(mask, W, 0.0)
+        end
+        A  = Symmetric(Λ' * (W .* Λ) + I)
+        Δ  = _safe_solve(A, Λ' * s .- z)
+        (Δ === nothing || !all(isfinite, Δ)) && return z, false
+        maximum(abs, Δ) < tol && return z .+ Δ, true
+        if norm(Δ) <= 1e-3 * (1 + norm(z))
+            z = z .+ Δ
+        else
+            q0 = _grouped_laplace_mode_logpost(fams, y, n, Λ, β, link, z;
+                                               mask = mask, offset = offset)
+            if isfinite(q0)
+                accepted = false
+                step = 1.0
+                for _half in 1:30
+                    ztrial = z .+ step .* Δ
+                    q1 = _grouped_laplace_mode_logpost(fams, y, n, Λ, β, link, ztrial;
+                                                       mask = mask, offset = offset)
+                    if isfinite(q1) && q1 >= q0
+                        z = ztrial
+                        accepted = true
+                        break
+                    end
+                    step *= 0.5
+                end
+                accepted || return z, false
+            else
+                z = z .+ Δ
+            end
+        end
+    end
+    return z, false
+end
+
 # Per-site Laplace log-marginal with per-species Beta precision markers `fams`.
 function _beta_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
         Λ::AbstractMatrix, β::AbstractVector, link::Link;
@@ -719,35 +786,24 @@ function _beta_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::A
         maxiter::Integer = 100, tol::Real = 1e-9)
     p, K = size(Λ)
     off = offset === nothing ? false : offset
-    z = zeros(K)
-    local A
-    for _ in 1:maxiter
-        η  = _clamp_eta.(β .+ off .+ Λ * z)
-        μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
-        me = mu_eta.(Ref(link), η)
-        s  = _glm_score.(fams, μ, n, me, y)
-        # Role separation (2026-08-25). The MODE SEARCH is Fisher-scored,
-        # ALWAYS — `:fisher` here is not the caller's selector. Expected
-        # information is >= 0, so `Λ'WΛ + I` is SPD by construction and every
-        # Newton step is a descent step. The observed weight CAN be negative
-        # (measured: Beta at φ=12, η=−1.2, y=0.87 gives −1.218), which made this
-        # loop an unguarded, possibly-indefinite Newton whenever the caller
-        # asked for `:observed` — and the grouped fitters default to it.
-        # The selector still governs the post-loop log-det below, which is the
-        # only role that needs the observed curvature. The converged mode is
-        # unchanged either way: it is the fixed point of `Λ's − z = 0`, which
-        # does not involve W at all — W only sets the step.
-        W  = _beta_grouped_laplace_weight.(Ref(:fisher), fams, μ, me, y, Ref(link), η)
-        if mask !== nothing
-            s = ifelse.(mask, s, 0.0)
-            W = ifelse.(mask, W, 0.0)
-        end
-        A  = Symmetric(Λ' * (W .* Λ) + I)
-        Δ  = _safe_solve(A, Λ' * s .- z)
-        (Δ === nothing || !all(isfinite, Δ)) && break
-        z  = z .+ Δ
-        maximum(abs, Δ) < tol && break
+    # Role separation (2026-08-25). The MODE SEARCH is Fisher-scored first; the
+    # caller's `hessian` governs only the post-loop log-det below. The observed
+    # weight CAN be negative (measured: Beta at φ=12, η=−1.2, y=0.87 gives −1.218),
+    # which is why the step never uses it alone.
+    z, ok = _beta_grouped_mode(fams, y, n, Λ, β, link, :fisher;
+                               mask = mask, offset = offset, maxiter = maxiter, tol = tol)
+    # Fallback 1: max(observed, Fisher) weight, defined for LogitLink only.
+    if !ok && link isa LogitLink
+        z, ok = _beta_grouped_mode(fams, y, n, Λ, β, link, :dominant;
+                                   mask = mask, offset = offset, maxiter = maxiter, tol = tol)
     end
+    # Fallback 2 (mirrors #507): a genuinely slow site gets a 20x Fisher budget.
+    ok || ((z, ok) = _beta_grouped_mode(fams, y, n, Λ, β, link, :fisher;
+                                        mask = mask, offset = offset,
+                                        maxiter = 20 * maxiter, tol = tol))
+    # A search that did not converge must not produce a finite value. -Inf makes the
+    # fitters' objective return its 1e12 sentinel instead of a garbage surface.
+    ok || return -Inf
     η  = _clamp_eta.(β .+ off .+ Λ * z)
     μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
     me = mu_eta.(Ref(link), η)
@@ -869,7 +925,8 @@ end
 # without Optim's gradient criterion, restart once from the warm start with every
 # log φ = 0 and once from the returned point, and keep the best run only if it lowers
 # the negative log-likelihood by more than 1e-6. A run that meets the gradient
-# criterion is returned as it is. `first_log_phi` indexes the first log φ in θ; the
+# criterion is returned as it is unless it sits on a precision plateau
+# (`_beta_grouped_phi_plateau`, below). `first_log_phi` indexes the first log φ in θ; the
 # log φ block runs to the end of θ.
 # Scale-aware gradient test, as in `_tweedie_verdict`: the residual is judged against
 # `g_tol` scaled by the objective's own size, so a caller's g_tol below the
@@ -877,8 +934,21 @@ end
 _beta_grouped_g_met(res, g_tol) = (gres = Optim.g_residual(res);
     isfinite(gres) && gres <= max(g_tol, g_tol * abs(Optim.minimum(res))))
 
+# A group precision far above the rest is the flat-plateau sign #480 described: as φ grows
+# the Beta tends to a point mass and that group's log-φ gradient goes to zero, so L-BFGS can
+# stop there and still meet the gradient test. Measured on the #480 screen dataset d05
+# after the Beta kernel fix: a stationary point at logLik 269.30 with φ5 ≈ 1139 (about
+# 550x the median, log-φ5 gradient exactly 0), where the restart reaches 272.61. The
+# restart keeps a run only if it is better, so a false trigger costs time, not accuracy.
+function _beta_grouped_phi_plateau(θ, first_log_phi::Integer)
+    lφ = θ[first_log_phi:end]
+    length(lφ) >= 2 || return false
+    return maximum(lφ) - median(lφ) > log(100)
+end
+
 function _beta_grouped_gradient_restart(negll, res, θ_warm, ls, opts, first_log_phi::Integer)
-    _beta_grouped_g_met(res, Optim.g_tol(res)) && return res
+    _beta_grouped_g_met(res, Optim.g_tol(res)) &&
+        !_beta_grouped_phi_plateau(Optim.minimizer(res), first_log_phi) && return res
     θa = copy(θ_warm)
     θa[first_log_phi:end] .= 0.0
     best = res
@@ -899,9 +969,10 @@ ids (relabelled to `1..G` internally; default `1:p` = per-species). L-BFGS over
 `[β; vec(Λ); log φ_1 … log φ_G]`; finite-difference gradient; warm start from
 empirical logit-mean intercepts + SVD loadings + a moderate per-group `φ₀`.
 `converged` is `true` only when the optimizer's gradient criterion (`g_tol`) is met.
-If the first run stops without it, the fit restarts once from the warm start with
-every `φ = 1` and once from the returned point, and keeps the best run only if its
-log-likelihood is higher by more than `1e-6`; `iterations` then counts the kept run
+If the first run stops without it, or stops with one group's precision more than 100
+times the median (a flat-plateau stationary point), the fit restarts once from the warm
+start with every `φ = 1` and once from the returned point, and keeps the best run only
+if its log-likelihood is higher by more than `1e-6`; `iterations` then counts the kept run
 only. This improves the local search but does not guarantee the global maximum. With one
 group this matches [`fit_beta_gllvm`](@ref). `hessian=:observed` (the default)
 uses the exact conditional Beta/logit curvature used by TMB's Laplace objective;

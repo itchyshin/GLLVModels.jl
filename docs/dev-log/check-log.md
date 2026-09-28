@@ -11,6 +11,26 @@
 - New test `test/test_grouped_getlv_mode.jl`, 5 testsets, 308 assertions; the fixture, panel and
   covariate-offset testsets fail on the base (covariate |grad| 0.249). 31 existing test files that
   reach grouped fits, getLV, the bridge or postfit: 2804 assertions pass, 0 fail.
+## 2026-09-27: Beta grouped kernel scores every site at its mode (#503 class)
+
+- Branch `claude/beta-grouped-mode-search-503` from `origin/main`. `_beta_grouped_loglik_site`
+  now calls `_beta_grouped_mode` (damped, #479 rule) with a `LogitLink` fallback whose step
+  weight is max(observed, Fisher), a 20x Fisher retry, then `-Inf`.
+- Before: seed-6 StableRNG panel (φ = 10, K = 1, warm start) 2 of 300 sites off the mode, value
+  off by up to 15.02; undamped Fisher 2-cycles (z = -0.318 / -0.983 around -0.555). Damped
+  Fisher alone does not converge there; the fallback does.
+- After: 18,000 sites (φ in {2, 10, 50}, K in {1, 2, 3}, loadings x1 and x3): 0 off the mode, 0
+  `-Inf`, every previously healthy site bit-identical. Affected cells about 35 to 48% slower.
+  Four whole fits (seeds 6 and 1, K = 1, 2): identical log-likelihoods before and after.
+- New test `test/test_beta_grouped_mode_search.jl`, 604 assertions (fails on the base, worst 15.02).
+- d05 regression found and fixed: with the corrected kernel the fit stopped at 269.2966 (φ5 = 1139,
+  log-φ5 gradient exactly 0, max |grad| 5.7e-6) instead of 272.6094. Both points are stationary;
+  the old optimum still scores 272.6094 under the new kernel (the old kernel scores the new point
+  at -861.3). Maintainer choice (2026-09-27): the #480 restart now also fires when a group's
+  precision is more than 100x the median (`_beta_grouped_phi_plateau`); d05 back to 272.6094,
+  `test_beta_grouped_convergence.jl` 19/19.
+- 32 related test files (every `test_grouped*.jl` and `test_beta*.jl`, bridge grouped and missing-mask,
+  postfit, ordination, fit_gllvm, unified API): 3497 assertions pass, 0 fail. Full `Pkg.test()` not run.
 ## 2026-09-27: Temporal source alone at gllvmTMB P1 (slice 1)
 
 - Branch `claude/temporal-slice1`, draft PR #543. New `src/temporal*.jl`: constructors and
