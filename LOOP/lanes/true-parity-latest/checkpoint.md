@@ -25,7 +25,7 @@ CI is runner-starved (about 24 queued runs across lanes); trains wait, nothing f
 
 - Landing word given for #548, #556, #547 (train scratchpad/train_548_556_547.log, order 548 -> 556 -> 547).
 
-- A3 PR2 started: namespace rows (71, no R needed) re-measured at P1 with tracked receipts (b3n, branch claude/true-parity-p1-namespace, stacked on #539). #544 (ordination X-forward fix, the user's side task) landed on main b3d86fe62.
+- A3 PR2 = draft PR #559 (ac78084cb, base #539 branch: RETARGET to main after #539 merges): namespace 71 rows: 50 pass (registration parity only), 0 fail, 2 retired, 2 blocked, 17 need live R fits; tracked receipts; separate case-map-namespace.json (checker must read several files or fold after #533). r559 reviewing (main question: is registration-only a name match D-295 forbids?). #544 (ordination X-forward fix, the user's side task) landed on main b3d86fe62.
 
 - Temporal slice 2 started (b6b, branch claude/temporal-slice2): unit/unit_obs composition via fit_temporal_gllvm's structure argument; no formula.jl edit (the gllvm() hook still needs the grammar lane).
 - #558 retargeted to main; its train waits for #546 to merge first (scratchpad/train_558.log). Trains #528/#539 and #531 timed out on CI capacity and were restarted (logs ...b.log).
