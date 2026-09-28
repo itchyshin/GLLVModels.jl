@@ -4,7 +4,7 @@ Written first at 18:27 MDT on 2026-09-27 and updated through the night. The newe
 
 ## In five lines
 
-1. Merged overnight on your earlier word: #548 and #531. #546 is in a merge train; #556 failed CI (a test-only package in a P1-tagged test) and is being fixed (CI runners are the bottleneck; each train waits up to 3 h).
+1. Merged overnight on your earlier word: #548 and #531. #556, #546 and #547 each had a CI failure already present at the reviewed head (a test-only package in a P1-tagged test; missing docs pages; a frozen-evidence hash guard); all three are being fixed and will need your word again (CI runners are the bottleneck; each train waits up to 3 h).
 2. Fourteen PRs are reviewed, fixed and ready for your word (below), including the whole A3 re-measurement stack: 52 of 306 required 0.7.0 rows now carry real R-vs-Julia numbers at P1, up from 0.
 3. Four real bugs found and fixed as draft PRs: zero-inflated spurious maxima (#557), two-level ICC bootstrap (#576), truncated NB2 spurious maxima (#581), and a parity-checker hole that let unbacked rows count (#561).
 4. #543 needs your word renewed (its CI failed at the reviewed head; fixed with #563's reviewed optimizer commits).
@@ -61,7 +61,9 @@ Overnight: #548 chibar2_pvalue / variance_lrt twin (4357e4652, 22:58); #531 extr
 ## In progress overnight
 
 - #556 anova twin: its train stopped at 02:06 because the P1 twin CI job failed on both Julia versions: its new P1-tagged test loads JSON3, which only the test environment has. Builder converting the fixture to TOML (a stdlib). This changes #556 after your word, so it will need your word again. #547 was queued behind #556 and waits.
-- #546 train still running; #558 follows it.
+- #546 iSDM build: train stopped 02:12; the Documenter check fails (12 iSDM docstrings not in any manual page); it also failed at the reviewed head, so #546 could never have gone green as reviewed. Builder adding them per the repo's convention; needs your word again after. #558 (stacked) has the same Documenter failure; checked in the same pass.
+- #547 phylo latent: CI red at its reviewed head too: Documenter, and a destination-B test that guards frozen evidence by hashing src/precision_multivariate_fit.jl, which #547 edited. Builder moving #547's additions into a new file so the frozen file stays byte-identical (the frozen evidence is not touched), and fixing the docs build. Needs your word again after.
+- Lesson recorded: I verified reviews but not CI on the reviewed heads before listing PRs as ready. Every "Ready" PR's head has now been checked: #543, #557, #561, #563, #567, #569, #571, #576, #579, #581, #584, #586, #587, #589 and the three spec PRs show no failing required check (some still pending or not yet run).
 - CI note for you: the P1 twin job selects any .jl file whose text contains the tag string, comments included, so quoting the tag in a comment silently enrols a file. A stricter match (tag on line 1) would be a .github change, yours.
 
 ## Goal gates on origin/main right now (23:55, main 5b9af3763)
