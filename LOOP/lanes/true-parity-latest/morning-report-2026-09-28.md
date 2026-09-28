@@ -59,6 +59,8 @@ Overnight: #548 chibar2_pvalue / variance_lrt twin (4357e4652, 22:58); #531 extr
 
 ## In a merge train (word given)
 
+Morning: Shinichi's word "merge #543, then #563; #557; #561 when green". Trains started for #543 (7921c55ab, CI green), #557 (1553f20e7) and #561 (0ee89e37c), each waiting for its own CI; #563 starts after #543 merges (refresh first). Any PR that conflicts after another merges is refreshed and restarted on a verified head.
+
 23:28: #546 refreshed again after #531 merged (512f90dc5); train restarted. #558 follows #546; #547 follows #556.
 
 22:59: #556 refreshed (32d3f2097) and its train started; #547 follows it.
