@@ -1,0 +1,111 @@
+{
+  "schema": "core070-covariance-p1-case-receipt/v1",
+  "case_id": "FIT-MODE-KERNEL-DEP",
+  "verdict": "PASS",
+  "evidence_kind": "numeric_r_vs_julia",
+  "batch": "test/parity/runparity.jl, CORE070_PARITY_REQUIRED=1, GLLVM_PARITY_PIN=P1, 18 covariance case ids",
+  "raw": "docs/dev-log/core070/true-parity-latest/receipts/covariance/runparity-covariance-18/covariance-modes-raw__result.toml",
+  "cell": "docs/dev-log/core070/true-parity-latest/receipts/covariance/runparity-covariance-18/cell-FIT-MODE-KERNEL-DEP.toml",
+  "cell_assertions": {
+    "passed": 176,
+    "broken": 0,
+    "failed": 0,
+    "errored": 0
+  },
+  "run_contract_sha256": "bd4541ed3d153d13a1652716d85ddadac6ffa8b5f11a1e5351e1f47ae4adef9c",
+  "harness_checks_all_true": true,
+  "harness_group_all_checks": true,
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "gllvmtmb_version": "0.7.1",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "cb5688f7eecbeefa714b56d3214fdfaa75b9779e",
+  "host": "local Mac (M1 Ultra), single BLAS/OMP thread, JULIA_NUM_THREADS=4",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "FIT-MODE-KERNEL-DEP",
+        "quantity": "loglik",
+        "r_value": -95.19741612084081,
+        "julia_value": -95.19741612083462,
+        "abs_diff": 6.195932655828074e-12,
+        "tolerance": 1e-06,
+        "tolerance_rule": "tools/core070_covariance_mode_fits.jl (tight-control): abs(native.loglik - r.loglik) <= 1e-6"
+      },
+      {
+        "case_id": "FIT-MODE-KERNEL-DEP",
+        "quantity": "beta",
+        "r_value": [
+          0.6226469526745966,
+          0.04792876346807505,
+          0.22421466167396661
+        ],
+        "julia_value": [
+          0.6226469298132327,
+          0.04792879216454467,
+          0.2242146267679074
+        ],
+        "abs_diff": 5.064150765935032e-08,
+        "tolerance": 1e-05,
+        "tolerance_rule": "tools/core070_covariance_mode_fits.jl (tight-control): isapprox(julia, r; atol=1e-05, rtol=1e-05); abs_diff = norm(julia - r), tolerance = max(atol, rtol*max(norm))"
+      },
+      {
+        "case_id": "FIT-MODE-KERNEL-DEP",
+        "quantity": "source_covariance",
+        "r_value": [
+          [
+            0.7371654736572205,
+            0.16203324251672482,
+            -0.32547331773384186
+          ],
+          [
+            0.16203324251672482,
+            0.707494923853029,
+            0.4438305676403948
+          ],
+          [
+            -0.32547331773384186,
+            0.4438305676403948,
+            0.6161164578860879
+          ]
+        ],
+        "julia_value": [
+          [
+            0.7371653997420953,
+            0.1620335586495244,
+            -0.3254727329787709
+          ],
+          [
+            0.1620335586495244,
+            0.7074948659880871,
+            0.44383055662146415
+          ],
+          [
+            -0.3254727329787709,
+            0.44383055662146415,
+            0.6161159572681423
+          ]
+        ],
+        "abs_diff": 1.0693127879265719e-06,
+        "tolerance": 1.4428818186277364e-05,
+        "tolerance_rule": "tools/core070_covariance_mode_fits.jl (tight-control): isapprox(julia, r; atol=1e-05, rtol=1e-05); abs_diff = norm(julia - r), tolerance = max(atol, rtol*max(norm))"
+      },
+      {
+        "case_id": "FIT-MODE-KERNEL-DEP",
+        "quantity": "residual_variance",
+        "r_value": [
+          0.1783517760750461
+        ],
+        "julia_value": [
+          0.17835179325889433
+        ],
+        "abs_diff": 1.7183848233237597e-08,
+        "tolerance": 1e-05,
+        "tolerance_rule": "tools/core070_covariance_mode_fits.jl (tight-control): isapprox(julia, r; atol=1e-05, rtol=1e-05); abs_diff = norm(julia - r), tolerance = max(atol, rtol*max(norm))"
+      }
+    ]
+  }
+}

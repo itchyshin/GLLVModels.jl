@@ -1,0 +1,165 @@
+{
+  "schema": "core070-covariance-p1-case-receipt/v1",
+  "case_id": "MODE-ORD-COMMON-FORMULA-INTERFACE",
+  "verdict": "PASS",
+  "evidence_kind": "numeric_r_vs_julia",
+  "batch": "test/parity/runparity.jl, CORE070_PARITY_REQUIRED=1, GLLVM_PARITY_PIN=P1, 18 covariance case ids",
+  "raw": "docs/dev-log/core070/true-parity-latest/receipts/covariance/runparity-covariance-18/covariance-formula-fixed-raw__result.toml",
+  "cell": "docs/dev-log/core070/true-parity-latest/receipts/covariance/runparity-covariance-18/cell-MODE-ORD-COMMON-FORMULA-INTERFACE.toml",
+  "cell_assertions": {
+    "passed": 56,
+    "broken": 0,
+    "failed": 0,
+    "errored": 0
+  },
+  "run_contract_sha256": "bd4541ed3d153d13a1652716d85ddadac6ffa8b5f11a1e5351e1f47ae4adef9c",
+  "harness_checks_all_true": true,
+  "harness_group_all_checks": true,
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "gllvmtmb_version": "0.7.1",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "cb5688f7eecbeefa714b56d3214fdfaa75b9779e",
+  "host": "local Mac (M1 Ultra), single BLAS/OMP thread, JULIA_NUM_THREADS=4",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "MODE-ORD-COMMON-FORMULA-INTERFACE",
+        "quantity": "wide_loglik_to_R",
+        "r_value": -58.87492626812123,
+        "julia_value": -58.87492626812123,
+        "abs_diff": 0.0,
+        "tolerance": 1e-06,
+        "tolerance_rule": "test/parity/covariance_formula_cases.jl: abs(wide.loglik - r_loglik) <= 1e-6"
+      },
+      {
+        "case_id": "MODE-ORD-COMMON-FORMULA-INTERFACE",
+        "quantity": "wide_beta_to_R",
+        "r_value": [
+          0.19881516420753162,
+          0.4120629591956626,
+          0.6243498257700406
+        ],
+        "julia_value": [
+          0.19881516420745263,
+          0.41206295919559854,
+          0.6243498257699266
+        ],
+        "abs_diff": 1.5278743286242942e-13,
+        "tolerance": 1e-05,
+        "tolerance_rule": "test/parity/covariance_formula_cases.jl: isapprox(julia, r; atol=1e-05, rtol=1e-05); abs_diff = norm(julia - r), tolerance = max(atol, rtol*max(norm))"
+      },
+      {
+        "case_id": "MODE-ORD-COMMON-FORMULA-INTERFACE",
+        "quantity": "wide_source_covariance_to_R",
+        "r_value": [
+          [
+            0.5182356010387537,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.5182356010387537,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.5182356010387537
+          ]
+        ],
+        "julia_value": [
+          [
+            0.5182355968918857,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.5182355968918857,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.5182355968918857
+          ]
+        ],
+        "abs_diff": 7.182585999226163e-09,
+        "tolerance": 1e-05,
+        "tolerance_rule": "test/parity/covariance_formula_cases.jl: isapprox(julia, r; atol=1e-05, rtol=1e-05); abs_diff = norm(julia - r), tolerance = max(atol, rtol*max(norm))"
+      },
+      {
+        "case_id": "MODE-ORD-COMMON-FORMULA-INTERFACE",
+        "quantity": "long_loglik_to_R",
+        "r_value": -58.87492626812123,
+        "julia_value": -58.87492626812123,
+        "abs_diff": 0.0,
+        "tolerance": 1e-06,
+        "tolerance_rule": "test/parity/covariance_formula_cases.jl: abs(long.loglik - r_loglik) <= 1e-6"
+      },
+      {
+        "case_id": "MODE-ORD-COMMON-FORMULA-INTERFACE",
+        "quantity": "long_beta_to_R",
+        "r_value": [
+          0.19881516420753162,
+          0.4120629591956626,
+          0.6243498257700406
+        ],
+        "julia_value": [
+          0.19881516420745263,
+          0.41206295919559854,
+          0.6243498257699266
+        ],
+        "abs_diff": 1.5278743286242942e-13,
+        "tolerance": 1e-05,
+        "tolerance_rule": "test/parity/covariance_formula_cases.jl: isapprox(julia, r; atol=1e-05, rtol=1e-05); abs_diff = norm(julia - r), tolerance = max(atol, rtol*max(norm))"
+      },
+      {
+        "case_id": "MODE-ORD-COMMON-FORMULA-INTERFACE",
+        "quantity": "long_source_covariance_to_R",
+        "r_value": [
+          [
+            0.5182356010387537,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.5182356010387537,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.5182356010387537
+          ]
+        ],
+        "julia_value": [
+          [
+            0.5182355968918857,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.5182355968918857,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.5182355968918857
+          ]
+        ],
+        "abs_diff": 7.182585999226163e-09,
+        "tolerance": 1e-05,
+        "tolerance_rule": "test/parity/covariance_formula_cases.jl: isapprox(julia, r; atol=1e-05, rtol=1e-05); abs_diff = norm(julia - r), tolerance = max(atol, rtol*max(norm))"
+      }
+    ]
+  }
+}

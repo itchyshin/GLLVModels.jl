@@ -1,0 +1,272 @@
+{
+  "scope": "COVARIANCE_AREA_FORMULA_GRAMMAR_BATCH",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "contract_path": "docs/dev-log/core070/true-parity-latest/covariance-batch-contract-p1.json",
+  "contract_sha256": "1e9e5deac7081c5d7c54d540ecbc9c896d0e0fe44e9aded021d76162317d1054",
+  "process_receipt": {
+    "r_version": "R version 4.6.0 (2026-04-24)",
+    "gllvmTMB_version": "0.7.1",
+    "gllvmTMB_path": "/Users/z3437171/local-scratch/a3cov-oracle/build/library/gllvmTMB",
+    "frozen_library": "/Users/z3437171/local-scratch/a3cov-oracle/build/library"
+  },
+  "source_pin_checks": {
+    "R/brms-sugar.R": true,
+    "R/parse-multi-formula.R": true,
+    "R/missing-predictor.R": true,
+    "R/fit-multi.R": true
+  },
+  "cases": {
+    "CORE070-COV-ANIMAL-FOLDED-UNIQUE-FORMULA": {
+      "case_id": "CORE070-COV-ANIMAL-FOLDED-UNIQUE-FORMULA",
+      "status": "RAN",
+      "ok": true,
+      "covstructs": [
+        {
+          "kind": "phylo_rr",
+          "lhs": "0 + species",
+          "group": "trait",
+          "extra": {
+            "d": 2,
+            ".animal_source": true,
+            "vcv": [
+              [1, 0.5, 0.25, 0.1],
+              [0.5, 1, 0.3, 0.15],
+              [0.25, 0.3, 1, 0.4],
+              [0.1, 0.15, 0.4, 1]
+            ]
+          }
+        },
+        {
+          "kind": "phylo_rr",
+          "lhs": "0 + species",
+          "group": "trait",
+          "extra": {
+            ".phylo_unique": true,
+            ".auto_unique": true,
+            ".animal_source": true,
+            "vcv": [
+              [1, 0.5, 0.25, 0.1],
+              [0.5, 1, 0.3, 0.15],
+              [0.25, 0.3, 1, 0.4],
+              [0.1, 0.15, 0.4, 1]
+            ]
+          }
+        }
+      ],
+      "problems": []
+    },
+    "CORE070-COV-ANIMAL-FOLDED-UNIQUE-NATIVE": {
+      "case_id": "CORE070-COV-ANIMAL-FOLDED-UNIQUE-NATIVE",
+      "status": "SPEC_DEFECT",
+      "spec_defect_reason": "The spec's julia_surface is explicit that no automatic folded/auto-unique reduced-rank loading construction exists in GLLVM.jl yet ('planned: ... with a folded/auto-unique loading constraint reproduced by hand (no automatic constraint construction exists yet)'). Hand-building that constraint from scratch is a model-development task, not a verification task, and is out of scope for this batch. Confirmed by grep: no animal_latent-equivalent folded-loading constructor exists anywhere under src/ at reference_commit b4d5fee6. Left as an open obligation rather than silently skipped.",
+      "ok": null
+    },
+    "CORE070-COV-META-EXACT-FORMULA": {
+      "case_id": "CORE070-COV-META-EXACT-FORMULA",
+      "status": "RAN",
+      "ok": true,
+      "covstructs": [
+        {
+          "kind": "equalto",
+          "lhs": "0 + obs",
+          "group": "grp_V",
+          "extra": {
+            "vcv": [0.2, 0.35, 0.15, 0.5]
+          }
+        }
+      ],
+      "problems": []
+    },
+    "CORE070-COV-META-LEGACY-ADAPTER": {
+      "case_id": "CORE070-COV-META-LEGACY-ADAPTER",
+      "status": "RAN",
+      "ok": true,
+      "covstructs": [
+        {
+          "kind": "equalto",
+          "lhs": "0 + obs",
+          "group": "grp_V",
+          "extra": {
+            "vcv": [0.2, 0.35, 0.15, 0.5]
+          }
+        }
+      ],
+      "problems": [],
+      "reference_covstructs": [
+        {
+          "kind": "equalto",
+          "lhs": "0 + obs",
+          "group": "grp_V",
+          "extra": {
+            "vcv": [0.2, 0.35, 0.15, 0.5]
+          }
+        }
+      ],
+      "reference_problems": [],
+      "identical_to_primary": true
+    },
+    "CORE070-COV-ORD-LATENT-BARE-FORMULA": {
+      "case_id": "CORE070-COV-ORD-LATENT-BARE-FORMULA",
+      "status": "RAN",
+      "ok": true,
+      "covstructs": [
+        {
+          "kind": "rr",
+          "lhs": "0 + trait",
+          "group": "site",
+          "extra": {
+            "lhs_form": "intercept_only"
+          }
+        }
+      ],
+      "problems": []
+    },
+    "CORE070-COV-ORD-LATENT-COMMON-FORMULA": {
+      "case_id": "CORE070-COV-ORD-LATENT-COMMON-FORMULA",
+      "status": "RAN",
+      "ok": true,
+      "covstructs": [
+        {
+          "kind": "rr",
+          "lhs": "0 + trait",
+          "group": "site",
+          "extra": {
+            "lhs_form": "intercept_only"
+          }
+        },
+        {
+          "kind": "diag",
+          "lhs": "0 + trait",
+          "group": "site",
+          "extra": {
+            ".auto_unique": true,
+            "common": true,
+            "lhs_form": "intercept_only"
+          }
+        }
+      ],
+      "problems": []
+    },
+    "CORE070-COV-ORD-LATENT-DEFAULT-FORMULA": {
+      "case_id": "CORE070-COV-ORD-LATENT-DEFAULT-FORMULA",
+      "status": "RAN",
+      "ok": true,
+      "covstructs": [
+        {
+          "kind": "rr",
+          "lhs": "0 + trait",
+          "group": "site",
+          "extra": {
+            "lhs_form": "intercept_only"
+          }
+        },
+        {
+          "kind": "diag",
+          "lhs": "0 + trait",
+          "group": "site",
+          "extra": {
+            ".auto_unique": true,
+            "lhs_form": "intercept_only"
+          }
+        }
+      ],
+      "problems": []
+    },
+    "CORE070-COV-PHYLO-A-ALIAS-ADAPTER": {
+      "case_id": "CORE070-COV-PHYLO-A-ALIAS-ADAPTER",
+      "status": "RAN",
+      "ok": true,
+      "covstructs": [
+        {
+          "kind": "phylo_rr",
+          "lhs": "0 + species",
+          "group": "trait",
+          "extra": {
+            "d": 1,
+            "vcv": [
+              [1, 0.5, 0.25, 0.1],
+              [0.5, 1, 0.3, 0.15],
+              [0.25, 0.3, 1, 0.4],
+              [0.1, 0.15, 0.4, 1]
+            ]
+          }
+        }
+      ],
+      "problems": [],
+      "reference_covstructs": [
+        {
+          "kind": "phylo_rr",
+          "lhs": "0 + species",
+          "group": "trait",
+          "extra": {
+            "d": 1
+          }
+        }
+      ],
+      "reference_problems": [],
+      "identical_to_primary": false
+    },
+    "CORE070-COV-PHYLO-DEP-FORMULA": {
+      "case_id": "CORE070-COV-PHYLO-DEP-FORMULA",
+      "status": "RAN",
+      "ok": true,
+      "covstructs": [
+        {
+          "kind": "phylo_rr",
+          "lhs": "0 + species",
+          "group": "trait",
+          "extra": {
+            "d": ".deferred_n_traits",
+            ".dep": true
+          }
+        }
+      ],
+      "problems": []
+    },
+    "CORE070-COV-PHYLO-FOLDED-UNIQUE-FORMULA": {
+      "case_id": "CORE070-COV-PHYLO-FOLDED-UNIQUE-FORMULA",
+      "status": "RAN",
+      "ok": true,
+      "covstructs": [
+        {
+          "kind": "phylo_rr",
+          "lhs": "0 + species",
+          "group": "trait",
+          "extra": {
+            "d": 1
+          }
+        },
+        {
+          "kind": "phylo_rr",
+          "lhs": "0 + species",
+          "group": "trait",
+          "extra": {
+            ".phylo_unique": true,
+            ".auto_unique": true
+          }
+        }
+      ],
+      "problems": []
+    }
+  },
+  "negative_controls": {
+    "LATENT-COMMON-WITHOUT-UNIQUE-ABORTS": {
+      "id": "LATENT-COMMON-WITHOUT-UNIQUE-ABORTS",
+      "raised": true
+    },
+    "ANIMAL-LATENT-NONLOGICAL-UNIQUE-ABORTS": {
+      "id": "ANIMAL-LATENT-NONLOGICAL-UNIQUE-ABORTS",
+      "raised": true
+    }
+  },
+  "checks": {
+    "source_pins_ok": true,
+    "case_count_matches_contract": true,
+    "spec_defects_present_and_documented": true,
+    "all_executable_cases_ok": true,
+    "negative_control_count_ok": true,
+    "all_negative_controls_raised": true
+  },
+  "all_checks": true,
+  "fixture_sha256": "9ddc610b037b101cf2ef90aa1c5194015d542ef10182b29bc1ac9e28ac3f953f"
+}

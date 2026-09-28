@@ -1,0 +1,14 @@
+contract_sha256 = "bd4541ed3d153d13a1652716d85ddadac6ffa8b5f11a1e5351e1f47ae4adef9c"
+fixture = "test/parity/test_covariance_modes_required.jl"
+status = "success"
+run_id = "0ac5073364c3780f3684c6502a1bbdc2e14baeb80a33c2989c0e3c981ef4b477"
+fixture_sha256 = "f849d3fd3b5714f431350d03bd7d2f240de4c847bb067a0b0db80da365aa1cb6"
+id = "FIT-MODE-ANIMAL-INDEP"
+execution_manifest_sha256 = "75e9a2563010d83622ddd10953d5ee5ec2f75d3e4931c5f092b49309529fe6ce"
+execution_case_ids = ["FIT-MODE-ANIMAL-COMMON", "FIT-MODE-ANIMAL-DEP", "FIT-MODE-ANIMAL-INDEP", "FIT-MODE-KERNEL-COMMON", "FIT-MODE-KERNEL-DEP", "FIT-MODE-KERNEL-INDEP", "FIT-MODE-ORD-DEP"]
+
+[assertions]
+passed = 176
+broken = 0
+failed = 0
+errored = 0

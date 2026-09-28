@@ -1,0 +1,59 @@
+{
+  "schema": "core070-covariance-p1-case-receipt/v1",
+  "case_id": "CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE",
+  "source_id": "covariance/COV-KERNEL-LATENT",
+  "verdict": "PASS",
+  "evidence_kind": "numeric_r_vs_julia",
+  "batch": "tools/core070_wave6_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1 (whole 10-case batch)",
+  "r_call": "gllvmTMB(value ~ 0 + trait + kernel_latent(species, K = C, d = 1, name = \"k1\", unique = FALSE) + kernel_latent(species, K = K2, d = 1, name = \"k2\", unique = FALSE), df, unit = \"site\", trait = \"trait\", family = stats::gaussian(), control = control)",
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/covariance/wave6-conversion-p1/julia-results.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/covariance/wave6-conversion-p1/r-oracle.json"
+  ],
+  "batch_status": "FAIL",
+  "batch_status_note": "The batch receipt reads FAIL and tools/core070_verify_wave6_conversion_batch.py rejects the state because of one unrelated case, CORE070-WAVE6-POSTFIT-NOBS-MULTI (postfit/POSTFIT-SURFACE-nobs.gllvmTMB_multi, kind own_receipt_defect): its frozen expectation is that Julia nobs returns n = 80 while R returns p*n = 400; at the GLLVModels head both return 400, so the recorded defect no longer reproduces. The nine point cases, including this one, pass.",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "gllvmtmb_version": "0.7.1",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "cb5688f7eecbeefa714b56d3214fdfaa75b9779e",
+  "host": "local Mac (M1 Ultra), single BLAS/OMP thread, JULIA_NUM_THREADS=4",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE",
+        "quantity": "logLik_B_tcrossprod",
+        "r_value": [
+          -12.867286995248183,
+          0.24097369282278144,
+          -0.4262507399206884,
+          0.3162584798077435,
+          -0.4262507399206884,
+          0.7539814456698966,
+          -0.5594196173247107,
+          0.3162584798077435,
+          -0.5594196173247107,
+          0.41506367304526437
+        ],
+        "julia_value": [
+          -12.867286991745878,
+          0.2409731384031222,
+          -0.4262504201381116,
+          0.3162585979253902,
+          -0.4262504201381116,
+          0.753982049086192,
+          -0.5594206936562064,
+          0.3162585979253902,
+          -0.5594206936562064,
+          0.4150649380447198
+        ],
+        "max_abs_diff": 1.2649994554081445e-06,
+        "tolerance": 0.0001,
+        "tolerance_rule": "wave6-conversion-batch-contract-p1.json per-case tolerance (carried verbatim from P0); max |r - julia| over the logLik + tcrossprod(B) vector"
+      }
+    ]
+  }
+}

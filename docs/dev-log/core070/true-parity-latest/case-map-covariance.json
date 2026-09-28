@@ -1,0 +1,477 @@
+{
+  "schema": 1,
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "scope": "covariance family: the 17 rows the P1 carry scan lists as PARTIAL_STALE_AT_P1 (7) or DANGLING (10); the 22 NOT_BOUND_AT_P0 covariance rows had no P0 evidence and are out of scope here",
+  "note": "Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with PARITY_CASEMAP pointing at this file. Classifications are carried from docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. Only rows whose every executable case id carries a numeric R-vs-Julia comparison block cite evidence.receipt; rows with an R-only or R-boundary case cite evidence.non_binding_receipts instead, so they read as not bound under both the current checker and the numeric-tier rule proposed in PR #561.",
+  "generator": "tools/core070_covariance_p1_receipts.py",
+  "counts": {
+    "numeric_pass": 2,
+    "numeric_fail": 0,
+    "partial_numeric_bridge_boundary": 7,
+    "r_only_needs_julia_surface": 8,
+    "not_measured": 0
+  },
+  "runtimes_seconds": {
+    "p1_oracle_build_R_CMD_INSTALL": 243.7,
+    "runparity_18_covariance_cases_wall": 55.82,
+    "mode_fits_default_control_baseline_wall": 38.0,
+    "covariance_r_only_grammar_batch_wall": 1.9,
+    "public_r_bridge_boundary_wall": 0.6,
+    "wave6_conversion_batch_wall": 44.94
+  },
+  "rows": [
+    {
+      "source_id": "covariance/COV-ANIMAL-DEP",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "PARTIAL_STALE_AT_P1",
+      "executable_case_ids": [
+        "FIT-MODE-ANIMAL-DEP",
+        "FIT-MODE-ANIMAL-DEP-FORMULA-INTERFACE",
+        "FIT-MODE-ANIMAL-DEP-PUBLIC-R-BRIDGE"
+      ],
+      "disposition": null,
+      "evidence_tier": "partial_numeric_bridge_boundary",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-DEP.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-DEP-FORMULA-INTERFACE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-DEP-PUBLIC-R-BRIDGE.json"
+        ],
+        "tier": "native and formula cases carry numeric R-vs-Julia comparison blocks; the PUBLIC-R-BRIDGE case is an R-side boundary (gllvmTMB engine='julia' refuses the structured term), so the row as a whole has no numeric twin and does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "FIT-MODE-ANIMAL-DEP": "PASS",
+          "FIT-MODE-ANIMAL-DEP-FORMULA-INTERFACE": "PASS",
+          "FIT-MODE-ANIMAL-DEP-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED"
+        }
+      }
+    },
+    {
+      "source_id": "covariance/COV-ANIMAL-INDEP",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "PARTIAL_STALE_AT_P1",
+      "executable_case_ids": [
+        "FIT-MODE-ANIMAL-INDEP",
+        "FIT-MODE-ANIMAL-COMMON",
+        "FIT-MODE-ANIMAL-INDEP-FORMULA-INTERFACE",
+        "FIT-MODE-ANIMAL-COMMON-FORMULA-INTERFACE",
+        "FIT-MODE-ANIMAL-INDEP-PUBLIC-R-BRIDGE",
+        "FIT-MODE-ANIMAL-COMMON-PUBLIC-R-BRIDGE"
+      ],
+      "disposition": null,
+      "evidence_tier": "partial_numeric_bridge_boundary",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-INDEP.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-COMMON.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-INDEP-FORMULA-INTERFACE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-COMMON-FORMULA-INTERFACE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-INDEP-PUBLIC-R-BRIDGE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-COMMON-PUBLIC-R-BRIDGE.json"
+        ],
+        "tier": "native and formula cases carry numeric R-vs-Julia comparison blocks; the PUBLIC-R-BRIDGE case is an R-side boundary (gllvmTMB engine='julia' refuses the structured term), so the row as a whole has no numeric twin and does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "FIT-MODE-ANIMAL-INDEP": "PASS",
+          "FIT-MODE-ANIMAL-COMMON": "PASS",
+          "FIT-MODE-ANIMAL-INDEP-FORMULA-INTERFACE": "PASS",
+          "FIT-MODE-ANIMAL-COMMON-FORMULA-INTERFACE": "PASS",
+          "FIT-MODE-ANIMAL-INDEP-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED",
+          "FIT-MODE-ANIMAL-COMMON-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED"
+        }
+      }
+    },
+    {
+      "source_id": "covariance/COV-KERNEL-DEP",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "PARTIAL_STALE_AT_P1",
+      "executable_case_ids": [
+        "FIT-MODE-KERNEL-DEP",
+        "FIT-MODE-KERNEL-DEP-FORMULA-INTERFACE",
+        "FIT-MODE-KERNEL-DEP-PUBLIC-R-BRIDGE"
+      ],
+      "disposition": null,
+      "evidence_tier": "partial_numeric_bridge_boundary",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-DEP.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-DEP-FORMULA-INTERFACE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-DEP-PUBLIC-R-BRIDGE.json"
+        ],
+        "tier": "native and formula cases carry numeric R-vs-Julia comparison blocks; the PUBLIC-R-BRIDGE case is an R-side boundary (gllvmTMB engine='julia' refuses the structured term), so the row as a whole has no numeric twin and does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "FIT-MODE-KERNEL-DEP": "PASS",
+          "FIT-MODE-KERNEL-DEP-FORMULA-INTERFACE": "PASS",
+          "FIT-MODE-KERNEL-DEP-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED"
+        }
+      }
+    },
+    {
+      "source_id": "covariance/COV-KERNEL-INDEP",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "PARTIAL_STALE_AT_P1",
+      "executable_case_ids": [
+        "FIT-MODE-KERNEL-INDEP",
+        "FIT-MODE-KERNEL-COMMON",
+        "FIT-MODE-KERNEL-INDEP-FORMULA-INTERFACE",
+        "FIT-MODE-KERNEL-COMMON-FORMULA-INTERFACE",
+        "FIT-MODE-KERNEL-INDEP-PUBLIC-R-BRIDGE",
+        "FIT-MODE-KERNEL-COMMON-PUBLIC-R-BRIDGE"
+      ],
+      "disposition": null,
+      "evidence_tier": "partial_numeric_bridge_boundary",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-INDEP.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-COMMON.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-INDEP-FORMULA-INTERFACE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-COMMON-FORMULA-INTERFACE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-INDEP-PUBLIC-R-BRIDGE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-COMMON-PUBLIC-R-BRIDGE.json"
+        ],
+        "tier": "native and formula cases carry numeric R-vs-Julia comparison blocks; the PUBLIC-R-BRIDGE case is an R-side boundary (gllvmTMB engine='julia' refuses the structured term), so the row as a whole has no numeric twin and does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "FIT-MODE-KERNEL-INDEP": "PASS",
+          "FIT-MODE-KERNEL-COMMON": "PASS",
+          "FIT-MODE-KERNEL-INDEP-FORMULA-INTERFACE": "PASS",
+          "FIT-MODE-KERNEL-COMMON-FORMULA-INTERFACE": "PASS",
+          "FIT-MODE-KERNEL-INDEP-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED",
+          "FIT-MODE-KERNEL-COMMON-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED"
+        }
+      }
+    },
+    {
+      "source_id": "covariance/COV-ORD-DEP",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "PARTIAL_STALE_AT_P1",
+      "executable_case_ids": [
+        "FIT-MODE-ORD-DEP",
+        "FIT-MODE-ORD-DEP-FORMULA-INTERFACE",
+        "FIT-MODE-ORD-DEP-PUBLIC-R-BRIDGE"
+      ],
+      "disposition": null,
+      "evidence_tier": "partial_numeric_bridge_boundary",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ORD-DEP.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ORD-DEP-FORMULA-INTERFACE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ORD-DEP-PUBLIC-R-BRIDGE.json"
+        ],
+        "tier": "native and formula cases carry numeric R-vs-Julia comparison blocks; the PUBLIC-R-BRIDGE case is an R-side boundary (gllvmTMB engine='julia' refuses the structured term), so the row as a whole has no numeric twin and does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "FIT-MODE-ORD-DEP": "PASS",
+          "FIT-MODE-ORD-DEP-FORMULA-INTERFACE": "PASS",
+          "FIT-MODE-ORD-DEP-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED"
+        }
+      }
+    },
+    {
+      "source_id": "covariance/COV-ORD-INDEP",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "PARTIAL_STALE_AT_P1",
+      "executable_case_ids": [
+        "MODE-ORD-INDEP",
+        "MODE-ORD-INDEP-FORMULA-INTERFACE",
+        "MODE-ORD-INDEP-PUBLIC-R-BRIDGE"
+      ],
+      "disposition": null,
+      "evidence_tier": "partial_numeric_bridge_boundary",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-INDEP.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-INDEP-FORMULA-INTERFACE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-INDEP-PUBLIC-R-BRIDGE.json"
+        ],
+        "tier": "native and formula cases carry numeric R-vs-Julia comparison blocks; the PUBLIC-R-BRIDGE case is an R-side boundary (gllvmTMB engine='julia' refuses the structured term), so the row as a whole has no numeric twin and does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "MODE-ORD-INDEP": "PASS",
+          "MODE-ORD-INDEP-FORMULA-INTERFACE": "PASS",
+          "MODE-ORD-INDEP-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED"
+        }
+      }
+    },
+    {
+      "source_id": "covariance/COV-ORD-INDEP-COMMON",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "PARTIAL_STALE_AT_P1",
+      "executable_case_ids": [
+        "MODE-ORD-COMMON",
+        "MODE-ORD-COMMON-FORMULA-INTERFACE",
+        "MODE-ORD-COMMON-PUBLIC-R-BRIDGE"
+      ],
+      "disposition": null,
+      "evidence_tier": "partial_numeric_bridge_boundary",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-COMMON.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-COMMON-FORMULA-INTERFACE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-COMMON-PUBLIC-R-BRIDGE.json"
+        ],
+        "tier": "native and formula cases carry numeric R-vs-Julia comparison blocks; the PUBLIC-R-BRIDGE case is an R-side boundary (gllvmTMB engine='julia' refuses the structured term), so the row as a whole has no numeric twin and does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "MODE-ORD-COMMON": "PASS",
+          "MODE-ORD-COMMON-FORMULA-INTERFACE": "PASS",
+          "MODE-ORD-COMMON-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED"
+        }
+      }
+    },
+    {
+      "source_id": "covariance/COV-KERNEL-FOLDED-UNIQUE",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE"
+      ],
+      "disposition": null,
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE.json"
+        ],
+        "tier": "numeric: per-case receipts carry an R-vs-Julia comparison block pinned to P1"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE": "PASS"
+        },
+        "row_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "covariance/COV-KERNEL-LATENT",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE"
+      ],
+      "disposition": null,
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE.json"
+        ],
+        "tier": "numeric: per-case receipts carry an R-vs-Julia comparison block pinned to P1"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE": "PASS"
+        },
+        "row_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "covariance/COV-META-EXACT",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-COV-META-EXACT-FORMULA"
+      ],
+      "disposition": null,
+      "evidence_tier": "r_only",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-COV-META-EXACT-FORMULA.json"
+        ],
+        "tier": "R-only formula-grammar structure check re-run at P1; no Julia comparand exists in this harness, so the row needs a Julia surface before it can bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-COV-META-EXACT-FORMULA": "R_ONLY_PASS"
+        }
+      }
+    },
+    {
+      "source_id": "covariance/COV-META-LEGACY",
+      "classification": "compatibility_adapter",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-COV-META-LEGACY-ADAPTER"
+      ],
+      "disposition": null,
+      "evidence_tier": "r_only",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-COV-META-LEGACY-ADAPTER.json"
+        ],
+        "tier": "R-only formula-grammar structure check re-run at P1; no Julia comparand exists in this harness, so the row needs a Julia surface before it can bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-COV-META-LEGACY-ADAPTER": "R_ONLY_PASS"
+        }
+      }
+    },
+    {
+      "source_id": "covariance/COV-ORD-LATENT-BARE",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-COV-ORD-LATENT-BARE-FORMULA"
+      ],
+      "disposition": null,
+      "evidence_tier": "r_only",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-COV-ORD-LATENT-BARE-FORMULA.json"
+        ],
+        "tier": "R-only formula-grammar structure check re-run at P1; no Julia comparand exists in this harness, so the row needs a Julia surface before it can bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-COV-ORD-LATENT-BARE-FORMULA": "R_ONLY_PASS"
+        }
+      }
+    },
+    {
+      "source_id": "covariance/COV-ORD-LATENT-COMMON",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-COV-ORD-LATENT-COMMON-FORMULA"
+      ],
+      "disposition": null,
+      "evidence_tier": "r_only",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-COV-ORD-LATENT-COMMON-FORMULA.json"
+        ],
+        "tier": "R-only formula-grammar structure check re-run at P1; no Julia comparand exists in this harness, so the row needs a Julia surface before it can bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-COV-ORD-LATENT-COMMON-FORMULA": "R_ONLY_PASS"
+        }
+      }
+    },
+    {
+      "source_id": "covariance/COV-ORD-LATENT-DEFAULT",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-COV-ORD-LATENT-DEFAULT-FORMULA"
+      ],
+      "disposition": null,
+      "evidence_tier": "r_only",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-COV-ORD-LATENT-DEFAULT-FORMULA.json"
+        ],
+        "tier": "R-only formula-grammar structure check re-run at P1; no Julia comparand exists in this harness, so the row needs a Julia surface before it can bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-COV-ORD-LATENT-DEFAULT-FORMULA": "R_ONLY_PASS"
+        }
+      }
+    },
+    {
+      "source_id": "covariance/COV-PHYLO-A-ALIAS",
+      "classification": "compatibility_adapter",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-COV-PHYLO-A-ALIAS-ADAPTER"
+      ],
+      "disposition": null,
+      "evidence_tier": "r_only",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-COV-PHYLO-A-ALIAS-ADAPTER.json"
+        ],
+        "tier": "R-only formula-grammar structure check re-run at P1; no Julia comparand exists in this harness, so the row needs a Julia surface before it can bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-COV-PHYLO-A-ALIAS-ADAPTER": "R_ONLY_PASS"
+        }
+      }
+    },
+    {
+      "source_id": "covariance/COV-PHYLO-DEP",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-COV-PHYLO-DEP-FORMULA"
+      ],
+      "disposition": null,
+      "evidence_tier": "r_only",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-COV-PHYLO-DEP-FORMULA.json"
+        ],
+        "tier": "R-only formula-grammar structure check re-run at P1; no Julia comparand exists in this harness, so the row needs a Julia surface before it can bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-COV-PHYLO-DEP-FORMULA": "R_ONLY_PASS"
+        }
+      }
+    },
+    {
+      "source_id": "covariance/COV-PHYLO-FOLDED-UNIQUE",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-COV-PHYLO-FOLDED-UNIQUE-FORMULA"
+      ],
+      "disposition": null,
+      "evidence_tier": "r_only",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-COV-PHYLO-FOLDED-UNIQUE-FORMULA.json"
+        ],
+        "tier": "R-only formula-grammar structure check re-run at P1; no Julia comparand exists in this harness, so the row needs a Julia surface before it can bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-COV-PHYLO-FOLDED-UNIQUE-FORMULA": "R_ONLY_PASS"
+        }
+      }
+    }
+  ]
+}

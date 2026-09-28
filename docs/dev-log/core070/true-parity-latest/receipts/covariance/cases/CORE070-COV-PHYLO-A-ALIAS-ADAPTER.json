@@ -1,0 +1,64 @@
+{
+  "schema": "core070-covariance-p1-case-receipt/v1",
+  "case_id": "CORE070-COV-PHYLO-A-ALIAS-ADAPTER",
+  "source_id": "covariance/COV-PHYLO-A-ALIAS",
+  "verdict": "R_ONLY_PASS",
+  "evidence_kind": "r_only_formula_grammar",
+  "batch": "tools/core070_covariance_batch.R, GLLVM_PARITY_PIN=P1; verified by tools/core070_verify_covariance_batch.py",
+  "raw": "docs/dev-log/core070/true-parity-latest/receipts/covariance/covariance-batch-p1/covariance-batch-results.json",
+  "r_formula": "value ~ 0 + trait + phylo_latent(species, A = A)",
+  "expected_covstructs": [
+    {
+      "kind": "phylo_rr",
+      "extra_equal": {
+        "vcv": "A"
+      }
+    }
+  ],
+  "observed_covstructs": [
+    {
+      "kind": "phylo_rr",
+      "lhs": "0 + species",
+      "group": "trait",
+      "extra": {
+        "d": 1,
+        "vcv": [
+          [
+            1,
+            0.5,
+            0.25,
+            0.1
+          ],
+          [
+            0.5,
+            1,
+            0.3,
+            0.15
+          ],
+          [
+            0.25,
+            0.3,
+            1,
+            0.4
+          ],
+          [
+            0.1,
+            0.15,
+            0.4,
+            1
+          ]
+        ]
+      }
+    }
+  ],
+  "julia_surface": "GLLVM.jl's covariance-matrix argument is already name-neutral (one Sigma_phy/vcv-style keyword, no A= vs vcv= alias split); this row is a documentation/control check that the alias does NOT collapse to an equivalent bare phylo_rr() term (defect fix applied in the adversarial pass: the exported phylo_rr <- function(species, d = 1) at R/brms-sugar.R:422 has no vcv argument at all, so 'same_rewrite' between the two spellings does not hold and the original literal same_rewrite() target was not callable R).",
+  "why_not_numeric": "The check is a structural fact about gllvmTMB's R formula grammar (parse_multi_formula(desugar_brms_sugar(f))$covstructs). No R-vs-Julia numeric comparison exists for it in this harness; needs a Julia surface before it can bind.",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "gllvmtmb_version": "0.7.1",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "cb5688f7eecbeefa714b56d3214fdfaa75b9779e",
+  "host": "local Mac (M1 Ultra), single BLAS/OMP thread, JULIA_NUM_THREADS=4",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86"
+}

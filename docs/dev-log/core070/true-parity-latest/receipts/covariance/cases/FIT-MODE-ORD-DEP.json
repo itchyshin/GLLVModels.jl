@@ -1,0 +1,98 @@
+{
+  "schema": "core070-covariance-p1-case-receipt/v1",
+  "case_id": "FIT-MODE-ORD-DEP",
+  "verdict": "PASS",
+  "evidence_kind": "numeric_r_vs_julia",
+  "batch": "test/parity/runparity.jl, CORE070_PARITY_REQUIRED=1, GLLVM_PARITY_PIN=P1, 18 covariance case ids",
+  "raw": "docs/dev-log/core070/true-parity-latest/receipts/covariance/runparity-covariance-18/covariance-modes-raw__result.toml",
+  "cell": "docs/dev-log/core070/true-parity-latest/receipts/covariance/runparity-covariance-18/cell-FIT-MODE-ORD-DEP.toml",
+  "cell_assertions": {
+    "passed": 176,
+    "broken": 0,
+    "failed": 0,
+    "errored": 0
+  },
+  "run_contract_sha256": "bd4541ed3d153d13a1652716d85ddadac6ffa8b5f11a1e5351e1f47ae4adef9c",
+  "harness_checks_all_true": true,
+  "harness_group_all_checks": true,
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "gllvmtmb_version": "0.7.1",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "cb5688f7eecbeefa714b56d3214fdfaa75b9779e",
+  "host": "local Mac (M1 Ultra), single BLAS/OMP thread, JULIA_NUM_THREADS=4",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "FIT-MODE-ORD-DEP",
+        "quantity": "loglik",
+        "r_value": -124.02311541591021,
+        "julia_value": -124.02311541590554,
+        "abs_diff": 4.675371201301459e-12,
+        "tolerance": 1e-06,
+        "tolerance_rule": "tools/core070_covariance_mode_fits.jl (tight-control): abs(native.loglik - r.loglik) <= 1e-6"
+      },
+      {
+        "case_id": "FIT-MODE-ORD-DEP",
+        "quantity": "beta",
+        "r_value": [
+          0.17262017764986903,
+          -0.0423671246534017,
+          0.3292474086162497
+        ],
+        "julia_value": [
+          0.17262017805369256,
+          -0.04236712484588828,
+          0.32924740919830764
+        ],
+        "abs_diff": 7.341089793867054e-10,
+        "tolerance": 1e-05,
+        "tolerance_rule": "tools/core070_covariance_mode_fits.jl (tight-control): isapprox(julia, r; atol=1e-05, rtol=1e-05); abs_diff = norm(julia - r), tolerance = max(atol, rtol*max(norm))"
+      },
+      {
+        "case_id": "FIT-MODE-ORD-DEP",
+        "quantity": "total_covariance_U_plus_sigma2_I",
+        "r_value": [
+          [
+            0.8564170498596395,
+            0.31568609807843223,
+            -0.22655903243513234
+          ],
+          [
+            0.31568609807843223,
+            0.6528908260395395,
+            -0.12912785945561472
+          ],
+          [
+            -0.22655903243513234,
+            -0.12912785945561472,
+            0.4930192180189452
+          ]
+        ],
+        "julia_value": [
+          [
+            0.856416598979299,
+            0.3156860553451556,
+            -0.22655902482507723
+          ],
+          [
+            0.3156860553451556,
+            0.6528908671888549,
+            -0.12912782153281818
+          ],
+          [
+            -0.22655902482507723,
+            -0.12912782153281818,
+            0.49301910487518064
+          ]
+        ],
+        "abs_diff": 4.7374278655731745e-07,
+        "tolerance": 1.318372468964643e-05,
+        "tolerance_rule": "tools/core070_covariance_mode_fits.jl (tight-control) (ordinary source: U and sigma^2 not separately identified): isapprox(julia, r; atol=1e-05, rtol=1e-05); abs_diff = norm(julia - r), tolerance = max(atol, rtol*max(norm))"
+      }
+    ]
+  }
+}
