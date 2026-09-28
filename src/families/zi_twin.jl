@@ -181,6 +181,11 @@ _tp_observed_Wc(c::_ZiBinCell, y, ηc, Wc) = _zi_observed_curvature(c, y, ηc)
 # The start (below) and one shrunk-start retry reach the sensible optimum on most
 # measured draws, not all (rates in the decisions note); the floor stops a fit that
 # leaves the sensible basin from running to the singular end.
+#
+# The floor is safe for the optimiser only together with the "within 10% of the
+# floor -> converged = false" rule in fit_zi_gllvm: Optim reports converged = true
+# for a fit stalled at the wall (a line search into the 1e12 sentinel becomes a zero
+# step), so that rule is load-bearing. Do not relax it as redundant.
 # ---------------------------------------------------------------------------
 """
     ZI_LAPLACE_EIGMIN_FLOOR
@@ -476,7 +481,12 @@ function fit_zi_gllvm(Y::AbstractMatrix{<:Real}; family::_ZiTwinFamily, K::Integ
         return (β = β, lz = lz, Λ = Λ, phi = phi, loglik = loglik, converged = conv,
                 iters = iters, mineig = mineig)
     end
-    # An optimum within 10% of the floor sits at the guard.
+    # An optimum within 10% of the floor sits at the guard. This rule is load-bearing,
+    # not belt-and-braces: when a line search runs into the 1e12 sentinel, L-BFGS with
+    # BackTracking takes a zero step and Optim reports converged = true AT the wall
+    # (measured on every wall-stalled fit in the PR #557 review). Without this rule
+    # those fits would be reported converged at a Laplace value that is not a usable
+    # log-likelihood.
     at_guard(r) = isfinite(eigmin_floor) && r.mineig < 1.1 * eigmin_floor
     r = run_from(Λ0)
     if at_guard(r)
