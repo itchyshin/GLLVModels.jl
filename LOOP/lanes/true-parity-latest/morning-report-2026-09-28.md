@@ -61,6 +61,8 @@ Overnight: #548 chibar2_pvalue / variance_lrt twin (4357e4652, 22:58); #531 extr
 
 ## In a merge train (word given)
 
+Fourth word ("merge #576, #581, #586, #587 when green"): #581 train started (clean, eea4d5a38); #576 refreshed (a41b0cac9) and train started; refreshed #584 merged into #586 (fcd4a7a43) and #587 (44bd04713); their train waits for #584 to merge, then merges them in order with merge commits.
+
 #546 (b47f36a15) and #558 (6c0182adb) synced with main (export and runtests lines kept from both sides; all tests and the docs build pass); one train merges them in order with merge commits.
 
 Third word ("merge #567, #569, #571, #579, #584 when green"): all five were green but conflicted with main in check-log only. Refreshed #567 against main (adec8189e) and cascaded each branch into the next (#569 f558685f6, #571 646ebedc2, #579 c89251972, #584 1475e5b7c; fast-forward pushes, log files only), so all five re-run CI at once. One train merges them in order with MERGE COMMITS rather than squash, so each later PR still contains the earlier one's commits and stays clean after it lands (squash would force a full re-sync and CI cycle per PR). Trade-off: #584's intermediate commits (which briefly broke Pkg.test) enter main's history.
