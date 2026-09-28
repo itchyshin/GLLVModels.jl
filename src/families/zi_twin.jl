@@ -21,8 +21,8 @@
 #     (the TWOPART_KNOWN_OPEN census gap in test/test_curvature_census.jl);
 #   * ZINB uses ONE shared scalar dispersion r across traits (R: one phi per trait);
 #   * ZIB uses ONE shared scalar trials count N (R: per-row trials) and admits N = 1.
-# The R-named route below reuses the two-part site Laplace (`twopart_loglik_site`)
-# unchanged, through per-cell markers that carry the cell's own logit_zi / phi / N
+# The R-named route below reuses the two-part mode search (`_twopart_mode_search`)
+# and per-family pieces unchanged, through per-cell markers that carry the cell's own logit_zi / phi / N
 # and supply the observed count curvature via `_tp_observed_Wc`. Julia's own
 # families and fitters are untouched.
 
@@ -157,13 +157,68 @@ _tp_observed_Wc(c::_ZiPoisCell, y, ηc, Wc) = _zi_observed_curvature(c, y, ηc)
 _tp_observed_Wc(c::_ZiNB2Cell, y, ηc, Wc) = _zi_observed_curvature(c, y, ηc)
 _tp_observed_Wc(c::_ZiBinCell, y, ηc, Wc) = _zi_observed_curvature(c, y, ηc)
 
+# ---------------------------------------------------------------------------
+# Laplace breakdown guard (Julia-side; not part of R's model).
+#
+# At y = 0 the observed curvature of the zero-inflation mixture is negative for
+# moderate means (the zero can come from either process, so log f(0 | eta) is locally
+# convex in eta). The site precision A = I + Λ' diag(W_obs) Λ can then fall towards 0
+# while the mode search still converges, and -1/2 logdet(A) inflates the Laplace
+# value. The surface is R's too: gllvmTMB's TMB objective returns the same inflated
+# value at such a point, and R reaches a sensible optimum only through its start.
+# Quadrature on one such dataset (K = 1, 6001-point grid) put the exact marginal at a
+# near-singular Laplace maximum 363 log-likelihood units BELOW the value Laplace
+# reports there, and below the sensible optimum (docs/dev-log/decisions/
+# 2026-09-27-zi-laplace-breakdown-guard.md).
+#
+# A site whose A has an eigenvalue below the floor is treated as a failed Laplace
+# evaluation (-Inf, which the fitter turns into its 1e12 sentinel). Floor = 0.1: half
+# the smallest site eigenvalue measured at any sensible R optimum (0.20 on the P1
+# zi_binomial fixture; >= 0.50 on the NB2 draws and the other two fixtures), so the
+# guard never touches those, while it cuts off the near-singular end (1.8e-4 and 3e-4
+# at the two spurious maxima measured). It does NOT remove Laplace error above the
+# floor: walling at 0.5 left a point with 27 units of Laplace error on the same data.
+# The start (below) is what keeps fits in the sensible basin; the floor stops a fit
+# that leaves it from running to the singular end.
+# ---------------------------------------------------------------------------
+"""
+    ZI_LAPLACE_EIGMIN_FLOOR
+
+Smallest admissible eigenvalue (0.1) of the per-site Laplace precision
+`A = I + Λ' diag(W) Λ` on the [`zi_poisson`](@ref) / [`zi_nbinom2`](@ref) /
+[`zi_binomial`](@ref) route. Below it the site's Laplace value is treated as a
+failed evaluation: a Julia-side guard against a near-singular Laplace breakdown
+that gllvmTMB's own objective shares (see
+`docs/dev-log/decisions/2026-09-27-zi-laplace-breakdown-guard.md`).
+"""
+const ZI_LAPLACE_EIGMIN_FLOOR = 0.1
+
+function _zi_loglik_site(fams, y, Λz, Λ, logit_zi, β; eigmin_floor, maxiter, tol)
+    p, K = size(Λ)
+    ẑ, ok = _twopart_mode_search(fams, y, Λz, Λ, logit_zi, β; maxiter = maxiter, tol = tol)
+    ok || return -Inf
+    ηz = _clamp_eta.(logit_zi .+ Λz * ẑ)
+    ηc = _clamp_eta.(β .+ Λ * ẑ)
+    W = Vector{Float64}(undef, p)
+    ℓ = 0.0
+    @inbounds for t in 1:p
+        _, _, _, W_c, logf = _tp_pieces(fams[t], y[t], ηz[t], ηc[t])
+        W[t] = _tp_observed_Wc(fams[t], y[t], ηc[t], W_c)
+        ℓ += logf
+    end
+    A = Symmetric(Λ' * (W .* Λ) + I)
+    eigmin(A) >= eigmin_floor || return -Inf
+    return ℓ - 0.5 * dot(ẑ, ẑ) - 0.5 * logdet(A)
+end
+
 _zi_cell(::ZiPoisson, logit_zi, phi, N) = _ZiPoisCell(logit_zi)
 _zi_cell(::ZiNbinom2, logit_zi, phi, N) = _ZiNB2Cell(logit_zi, phi)
 _zi_cell(::ZiBinomial, logit_zi, phi, N) = _ZiBinCell(logit_zi, N)
 
 """
     zi_marginal_loglik_laplace(family, Y, Λ, β, logit_zi; phi = nothing,
-                               trials = nothing, maxiter = 100, tol = 1e-9) -> Float64
+                               trials = nothing, eigmin_floor = ZI_LAPLACE_EIGMIN_FLOOR,
+                               maxiter = 100, tol = 1e-9) -> Float64
 
 Laplace log-marginal likelihood of gllvmTMB's zero-inflated GLLVM for
 `family` in `zi_poisson()`, `zi_nbinom2()`, `zi_binomial()`: count linear
@@ -172,11 +227,14 @@ predictor `eta = β_t + Λ_t' z_s`, `z_s ~ N(0, I_K)` per site (column of the p�
 (`zi_nbinom2()` only) and trials `trials` (`zi_binomial()` only; p×n integer
 matrix). The Laplace log-determinant uses the observed curvature, as TMB does.
 With `Λ = 0` the value is the exact independent-mixture log-likelihood. Returns
-`-Inf` if a site's mode search fails.
+`-Inf` if a site's mode search fails, or if a site's Laplace precision has an
+eigenvalue below `eigmin_floor` (default [`ZI_LAPLACE_EIGMIN_FLOOR`](@ref); pass
+`-Inf` for the unguarded value, which is what gllvmTMB's objective returns).
 """
 function zi_marginal_loglik_laplace(family::_ZiTwinFamily, Y::AbstractMatrix,
         Λ::AbstractMatrix, β::AbstractVector, logit_zi::AbstractVector;
-        phi = nothing, trials = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
+        phi = nothing, trials = nothing, eigmin_floor::Real = ZI_LAPLACE_EIGMIN_FLOOR,
+        maxiter::Integer = 100, tol::Real = 1e-9)
     p, n = size(Y)
     K = size(Λ, 2)
     size(Λ, 1) == p || throw(DimensionMismatch("Λ has $(size(Λ, 1)) rows; Y has $p traits"))
@@ -200,8 +258,8 @@ function zi_marginal_loglik_laplace(family::_ZiTwinFamily, Y::AbstractMatrix,
                                 trials === nothing ? 0 : Int(trials[t, s]))
         end
         fams = [c for c in cells]          # concretely typed per-site vector
-        acc += twopart_loglik_site(fams, view(Y, :, s), Λz, Λ, logit_zi, β;
-                                   hessian = :observed, maxiter = maxiter, tol = tol)
+        acc += _zi_loglik_site(fams, view(Y, :, s), Λz, Λ, logit_zi, β;
+                               eigmin_floor = eigmin_floor, maxiter = maxiter, tol = tol)
         isfinite(acc) || return -Inf
     end
     return acc
@@ -222,7 +280,12 @@ Result of [`fit_zi_gllvm`](@ref) (gllvmTMB `zi_poisson()` / `zi_nbinom2()` /
 - `phi`: per-trait NB2 dispersion (`Var = mu + mu^2/phi`) for `:zi_nbinom2`,
   empty otherwise (gllvmTMB's `fit\$report\$phi_nbinom2`);
 - `trials`: the p×n trials matrix for `:zi_binomial`, `nothing` otherwise;
-- `loglik`, `converged`, `iterations`.
+- `loglik`, `converged`, `iterations`;
+- `min_site_eigen`: the smallest eigenvalue of the per-site Laplace precision
+  `A = I + Λ' diag(W) Λ` over sites at the returned point. A fit whose optimum
+  sits at the breakdown guard ([`ZI_LAPLACE_EIGMIN_FLOOR`](@ref), within 10%) is
+  reported with `converged = false`: its Laplace value is not a usable
+  log-likelihood (gllvmTMB's objective shares this surface).
 """
 struct ZiFit
     family::Symbol
@@ -235,6 +298,7 @@ struct ZiFit
     loglik::Float64
     converged::Bool
     iterations::Int
+    min_site_eigen::Float64
 end
 
 function Base.show(io::IO, f::ZiFit)
@@ -248,7 +312,8 @@ end
 function _zi_admit(family::_ZiTwinFamily, Y::AbstractMatrix, trials)
     p, n = size(Y)
     all(y -> isfinite(y) && y >= 0 && y == round(y), Y) || throw(ArgumentError(
-        "$(_zi_rname(family)): Y must hold non-negative integer counts (no missing values)."))
+        "$(_zi_rname(family)): Y must hold non-negative integer counts with no missing " *
+        "values (gllvmTMB masks missing responses row by row; this route does not yet)."))
     if !(family isa ZiBinomial)
         trials === nothing || throw(ArgumentError(
             "$(_zi_rname(family)): `trials` applies to zi_binomial() only."))
@@ -276,7 +341,7 @@ end
 # Warm start. logit_zi follows gllvmTMB's `zi_logit_start()` (R/dispersion-trait-
 # map.R): method of moments on the observed zero share against a naive count-zero
 # probability, clamped to [0.02, 0.8]. β from the positive observations, Λ from an
-# SVD of the working residuals, phi = 1 (R's start).
+# SVD of the working residuals (half scale), NB2 phi from a moment estimate.
 function _zi_twin_warmstart(family::_ZiTwinFamily, Y::AbstractMatrix, N, K::Integer)
     p, n = size(Y)
     β0 = zeros(p); lz0 = zeros(p)
@@ -312,13 +377,31 @@ function _zi_twin_warmstart(family::_ZiTwinFamily, Y::AbstractMatrix, N, K::Inte
     F = svd(Z); kk = min(K, length(F.S))
     Λ0 = zeros(p, K)
     for j in 1:kk
-        Λ0[:, j] = F.U[:, j] .* (F.S[j] / sqrt(n))
+        # Half the SVD scale: the log-count residuals of positive observations
+        # overstate the latent spread (they also carry the count noise), and a start
+        # with large loadings on a trait with many zeros sits near the region where
+        # the zero-inflation Laplace breaks down (see ZI_LAPLACE_EIGMIN_FLOOR).
+        Λ0[:, j] = F.U[:, j] .* (0.5 * F.S[j] / sqrt(n))
     end
-    return β0, lz0, Λ0
+    # NB2 dispersion: moment estimate from the positive counts, Var = m + m^2/phi,
+    # clamped to [0.2, 20] (R starts every trait at phi = 1).
+    logphi0 = zeros(p)
+    if family isa ZiNbinom2
+        for t in 1:p
+            pos = [Y[t, j] for j in 1:n if Y[t, j] > 0]
+            if length(pos) >= 2
+                m = sum(pos) / length(pos)
+                v = sum(abs2, pos .- m) / (length(pos) - 1)
+                logphi0[t] = log(clamp(m^2 / max(v - m, 1e-3 * m), 0.2, 20.0))
+            end
+        end
+    end
+    return β0, lz0, Λ0, logphi0
 end
 
 """
-    fit_zi_gllvm(Y; family, K, trials = nothing, link = nothing,
+    fit_zi_gllvm(Y; family, K, trials = nothing, link = nothing, hessian = nothing,
+                 eigmin_floor = ZI_LAPLACE_EIGMIN_FLOOR,
                  g_tol = 1e-6, iterations = 1000,
                  newton_maxiter = 100, newton_tol = 1e-9) -> ZiFit
 
@@ -339,21 +422,29 @@ use the expected (Fisher) count weight in the log-determinant, and
 `fit_zinb_gllvm` estimates one shared dispersion, `fit_zib_gllvm` takes one
 shared trials count. Only the no-covariate, no-row-effect model is offered on
 this route; `predict`, `confint`, `simulate` and the `@formula` front door with
-covariates are not wired for [`ZiFit`](@ref).
+covariates are not wired for [`ZiFit`](@ref). Missing responses are refused
+(gllvmTMB masks them per row). `hessian` is accepted only as `:observed`.
+`eigmin_floor` sets the Laplace breakdown guard ([`ZI_LAPLACE_EIGMIN_FLOOR`](@ref));
+an optimum at the guard is reported with `converged = false`.
 """
 function fit_zi_gllvm(Y::AbstractMatrix{<:Real}; family::_ZiTwinFamily, K::Integer,
-        trials = nothing, link = nothing,
+        trials = nothing, link = nothing, hessian = nothing,
+        eigmin_floor::Real = ZI_LAPLACE_EIGMIN_FLOOR,
         g_tol::Real = 1e-6, iterations::Integer = 1000,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     link === nothing || _zi_check_link(family, link)
+    (hessian === nothing || hessian === :observed) || throw(ArgumentError(
+        "$(_zi_rname(family)): this route always uses the observed curvature in the " *
+        "Laplace log-determinant, as gllvmTMB does; `hessian = $(repr(hessian))` is not " *
+        "offered. Julia's own ZIPoisson() / ZINegBin() / ZIB(N) routes take `hessian`."))
     K >= 1 || throw(ArgumentError("fit_zi_gllvm: K must be >= 1 (got $K)"))
     N = _zi_admit(family, Y, trials)
     Yf = Matrix{Float64}(Y)
     p, n = size(Yf)
     rr = rr_theta_len(p, K)
     isnb = family isa ZiNbinom2
-    β0, lz0, Λ0 = _zi_twin_warmstart(family, Yf, N, K)
-    θ0 = isnb ? vcat(β0, lz0, pack_lambda(Λ0), zeros(p)) : vcat(β0, lz0, pack_lambda(Λ0))
+    β0, lz0, Λ0, logphi0 = _zi_twin_warmstart(family, Yf, N, K)
+    θ0 = isnb ? vcat(β0, lz0, pack_lambda(Λ0), logphi0) : vcat(β0, lz0, pack_lambda(Λ0))
     function unpack(θ)
         β = θ[1:p]; lz = θ[(p + 1):(2p)]
         Λ = unpack_lambda(θ[(2p + 1):(2p + rr)], p, K)
@@ -364,7 +455,7 @@ function fit_zi_gllvm(Y::AbstractMatrix{<:Real}; family::_ZiTwinFamily, K::Integ
         β, lz, Λ, phi = unpack(θ)
         v = try
             -zi_marginal_loglik_laplace(family, Yf, Λ, β, lz; phi = phi, trials = N,
-                                        maxiter = newton_maxiter, tol = newton_tol)
+                                        eigmin_floor = eigmin_floor, maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
         end
@@ -375,8 +466,38 @@ function fit_zi_gllvm(Y::AbstractMatrix{<:Real}; family::_ZiTwinFamily, K::Integ
                          autodiff = :finite)
     β, lz, Λ, phi = unpack(Optim.minimizer(res))
     zi = @. inv(1 + exp(-lz))
+    loglik, converged, iters = _fit_verdict(res)
+    mineig = _zi_min_site_eigen(family, Yf, Λ, β, lz; phi = phi, trials = N,
+                                maxiter = newton_maxiter, tol = newton_tol)
+    if converged && isfinite(eigmin_floor) && mineig < 1.1 * eigmin_floor
+        converged = false
+        @warn "$(_zi_rname(family)): the optimum sits at the Laplace breakdown guard " *
+              "(smallest site precision eigenvalue $(round(mineig; sigdigits = 3)), floor " *
+              "$(eigmin_floor)). The Laplace approximation is not reliable here and the " *
+              "fit is reported as not converged; gllvmTMB's objective shares this surface."
+    end
     return ZiFit(Symbol(_zi_rname(family)), β, Λ, lz, zi,
-                 phi === nothing ? Float64[] : phi, N, _fit_verdict(res)...)
+                 phi === nothing ? Float64[] : phi, N, loglik, converged, iters, mineig)
+end
+
+# Smallest per-site Laplace precision eigenvalue at given parameters (Inf if n = 0,
+# -Inf if a site's mode search fails).
+function _zi_min_site_eigen(family::_ZiTwinFamily, Y::AbstractMatrix, Λ::AbstractMatrix,
+        β::AbstractVector, logit_zi::AbstractVector; phi = nothing, trials = nothing,
+        maxiter::Integer = 100, tol::Real = 1e-9)
+    p, n = size(Y); K = size(Λ, 2); Λz = zeros(p, K)
+    m = Inf
+    for s in 1:n
+        fams = [_zi_cell(family, Float64(logit_zi[t]), phi === nothing ? NaN : Float64(phi[t]),
+                         trials === nothing ? 0 : Int(trials[t, s])) for t in 1:p]
+        y = view(Y, :, s)
+        ẑ, ok = _twopart_mode_search(fams, y, Λz, Λ, logit_zi, β; maxiter = maxiter, tol = tol)
+        ok || return -Inf
+        ηc = _clamp_eta.(β .+ Λ * ẑ)
+        W = [_tp_observed_Wc(fams[t], y[t], ηc[t], NaN) for t in 1:p]
+        m = min(m, eigmin(Symmetric(Λ' * (W .* Λ) + I)))
+    end
+    return m
 end
 
 _fit_gllvm(family::_ZiTwinFamily, Y::AbstractMatrix; kwargs...) =

@@ -322,7 +322,7 @@ export make_cross_kernel, extract_Gamma, fit_coevolution_gaussian, fit_coevoluti
        fit_zinb_gllvm_cov, ZINBCovFit,
        fit_zib_gllvm, ZIBFit, fit_zib_gllvm_cov, ZIBCovFit, zib_marginal_loglik_laplace, ZIB,
        zi_poisson, zi_nbinom2, zi_binomial, ZiPoisson, ZiNbinom2, ZiBinomial,
-       fit_zi_gllvm, ZiFit, zi_marginal_loglik_laplace,
+       fit_zi_gllvm, ZiFit, zi_marginal_loglik_laplace, ZI_LAPLACE_EIGMIN_FLOOR,
        fit_gllvm,
        fit_dep_gllvm,
        fit_phylo_dep_gllvm,
