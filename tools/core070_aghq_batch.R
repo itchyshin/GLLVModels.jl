@@ -125,6 +125,9 @@ for (case in contract$cases) {
   )
   r_case_results[[cid]] <- list(
     r_assertion_pass = r_assertion_pass,
+    # The value the frozen r_call returned (deparsed), so the receipt shows what
+    # R normalized the input to, not only that its assertion held.
+    r_value = if (r_value$ok) paste(deparse(r_value$value), collapse = " ") else NA_character_,
     r_call_errored = !r_value$ok,
     r_call_error = if (r_value$ok) NA_character_ else r_value$error
   )
