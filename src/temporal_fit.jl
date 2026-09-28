@@ -149,24 +149,57 @@ function fit_temporal_gllvm(long_data; formula, temporal, trait::Symbol=:trait,
         g_tol=Float64(g_tol), max_iterations=Int(iterations))
 end
 
-# LBFGS with the default Hager-Zhang line search; a boundary fit can send a
-# trial step to a singular covariance (objective Inf), which that line search
-# rejects with an assertion. Then rerun from the same start with cubic
-# backtracking, which steps back from an infinite trial value.
+# LBFGS from the same start with two line searches, keeping the lower
+# objective: the default Hager-Zhang search and cubic backtracking. The two
+# can follow different paths on a composed surface (on a temporal_dep +
+# unit-indep panel, Hager-Zhang drifts to the sigma_eps -> 0 limit while
+# backtracking reaches gllvmTMB's optimum); backtracking also steps back from
+# an infinite trial value, which Hager-Zhang rejects with an assertion.
 function _temporal_optimize(objective, theta0, g_tol, iterations)
     options = Optim.Options(g_tol=g_tol, iterations=iterations)
-    res = try
+    hz = try
         Optim.optimize(objective, theta0, Optim.LBFGS(), options; autodiff=:forward)
     catch e
         e isa AssertionError || e isa DomainError || rethrow()
         nothing
     end
-    if res === nothing || !isfinite(Optim.minimum(res))
-        res = Optim.optimize(objective, theta0,
-            Optim.LBFGS(linesearch=Optim.LineSearches.BackTracking(order=3)), options;
-            autodiff=:forward)
+    bt = Optim.optimize(objective, theta0,
+        Optim.LBFGS(linesearch=Optim.LineSearches.BackTracking(order=3)), options;
+        autodiff=:forward)
+    res = hz === nothing || !isfinite(Optim.minimum(hz)) ||
+        Optim.minimum(bt) < Optim.minimum(hz) ? bt : hz
+    x, iters = Optim.minimizer(res), Optim.iterations(res)
+    # LBFGS can stop on a small function or step change a little short of the
+    # gradient tolerance (Optim then still reports convergence). Polish with
+    # Newton steps on the exact ForwardDiff Hessian (while it is positive
+    # definite), halving any step that raises the objective beyond rounding;
+    # the verdict rests on the recomputed gradient.
+    fx = objective(x)
+    for _ in 1:50
+        g = ForwardDiff.gradient(objective, x)
+        all(isfinite, g) || break
+        maximum(abs, g) <= g_tol && return x, iters, true
+        F = cholesky(Symmetric(ForwardDiff.hessian(objective, x)); check=false)
+        issuccess(F) || break
+        step = F \ g
+        accepted = false
+        t = 1.0
+        for _ in 1:30
+            xn = x .- t .* step
+            fn = objective(xn)
+            # Near the optimum a Newton step changes the objective by less
+            # than its rounding error; accept a step within that noise.
+            if isfinite(fn) && fn <= fx + 1e-12 * max(1.0, abs(fx))
+                x, fx, accepted = xn, min(fn, fx), true
+                break
+            end
+            t /= 2
+        end
+        accepted || break
+        iters += 1
     end
-    return Optim.minimizer(res), Optim.iterations(res), Optim.converged(res)
+    g = ForwardDiff.gradient(objective, x)
+    return x, iters, all(isfinite, g) && maximum(abs, g) <= g_tol
 end
 
 function _temporal_fit_result(estimate, y, X, spec, term, cols, formula, trait, coef_names,
