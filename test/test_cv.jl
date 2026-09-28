@@ -272,3 +272,16 @@ end
                                             family = Poisson(), K = K, X = X)
     end
 end
+
+@testset "loading GLLVModels raises no identifier-conflict warning" begin
+    # Regression: a bare `using Distributions` in src/cv.jl re-imported
+    # `Distributions.Multinomial` next to the package's own `Multinomial`,
+    # which src/GLLVModels.jl deliberately leaves out, so precompiling the
+    # package printed "conflicts with an existing identifier". The warning is
+    # emitted when the module is compiled, so load it from source here.
+    cmd = `$(Base.julia_cmd()) --project=$(Base.active_project()) --startup-file=no --compiled-modules=no -e "using GLLVModels"`
+    err = IOBuffer()
+    run(pipeline(ignorestatus(cmd); stdout = devnull, stderr = err))
+    msg = String(take!(err))
+    @test !occursin("conflicts with an existing identifier", msg)
+end
