@@ -31,6 +31,11 @@ CI is runner-starved (about 24 queued runs across lanes); trains wait, nothing f
 - #558 retargeted to main; its train waits for #546 to merge first (scratchpad/train_558.log). Trains #528/#539 and #531 timed out on CI capacity and were restarted (logs ...b.log).
 - Remote Control turned on for this session and the two running sessions (#541 grouped beta-binomial; DRM.jl package completion).
 
+## Overnight updates (18:50 MDT)
+- #557 fix at d0a57e05d (b2z done); fresh review r557b running -> reviews/pr-557b-review.md. Needs Shinichi's landing word.
+- #561 (supersedes #559) at 2d0cf3387 (b3n done); review r561 running -> reviews/pr-561-review.md. Needs Shinichi's word. Old worktree GLLVM.jl-p1-namespace + its remote branch left in place.
+- Trains 531, 543/546, 548/556/547, 558 all still waiting for CI runners at 18:48.
+
 ## Findings to remember
 - Carry scan: 0 of 306 required P0 rows carry; 278 receipts dangling (gitignored .unlazy/), 21 stale. P1 evidence must be re-made (A3); compute is small (10-45 min on kohaku); the harness is the work (#539 is step 1).
 - ordination_uncertainty is name-only (R: TMB joint-precision conditional covariance; Julia: bootstrap + Procrustes).

@@ -23,11 +23,13 @@ Written first at 18:27 MDT on 2026-09-27 and updated through the night. The newe
 
 ## In progress overnight
 
-- #557 zi_* twin: blocking fix (Laplace breakdown guard, recovery test, NB2 start).
-- #559 namespace re-measurement: re-created on main with the evidence-tier fix.
+- #557 zi_* twin: blocking fix DONE at d0a57e05d (sites with a Laplace precision eigenvalue below 0.1 are walled off; optima near the floor report converged = false; NB2 moment start). The reviewer's case now matches R (-3311.4547). Over 20 NB2 draws: silent breakdowns 3 -> 0; 2 draws honestly flagged not converged (R also fails there). Fresh review running.
+- #561 namespace re-measurement (supersedes #559, head 2d0cf3387): 71 rows at P1 give 0 numeric twins, 44 name-only, 6 mismatches, 2 need a Julia surface, 2 retired, 17 not measured. The checker now refuses to count a name-only row (C1 and C8). Fresh review running.
 - Temporal slice 2 (unit/unit_obs composition).
 
 ## Findings worth knowing
+
+- zi_* Laplace can fail outright on some data: on 2 of 20 NB2 draws neither R nor Julia has a usable Laplace optimum. The real fix is adaptive quadrature; that is a decision for you, not overnight work.
 
 - 0 of 306 required 0.7.0 rows carry to P1; 278 receipts had lived in the gitignored .unlazy/. Re-measurement (A3) is the main remaining work; compute is small, the harness is the work.
 - A namespace "pass" was only a name-existence check; the ledger now separates registration-only rows from numeric twins, so a name match cannot count toward parity (D-295 row 5).
