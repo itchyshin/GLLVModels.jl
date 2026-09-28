@@ -1,3 +1,35 @@
+## 2026-09-27: Family rows re-measured at gllvmTMB P1 (A3), tracked receipts
+
+- Branch `claude/true-parity-p1-family`, stacked on `claude/true-parity-p1-data` (PR #579; base
+  `201119a3e`, then merged at `a857516df` after its review fixes), on #571, #569 and #567. Scope: the 21
+  required family rows (20 required_core plus the compatibility_adapter FAMILY-BETA-ALIAS, which the
+  checker counts) the P1 carry scan lists as DANGLING (16) or NO_R_PINS (5). FAMILY-16-LOGIT
+  (NOT_BOUND_AT_P0, empty case list) out of scope. Classifications and dispositions carried unchanged.
+- Harness: runparity family cells now write the R and Julia numbers they compare
+  (`core070_record_values!`, `values-<case>.toml`; tolerances copied from the adjacent `@test`), and a
+  failing cell no longer stops the requested cells after it (the run is still refused). family-links and
+  A6 Student-t batches gain P1 twins (`tools/core070_family_p1_contract.py`, `--check` current) and the
+  shared pin gates. No case, expectation or tolerance edited.
+- Runs from clean commit `7506185cc` (local Mac, one BLAS/OMP thread, JULIA_NUM_THREADS=4): 14 runparity
+  runs (one per fixture scope; a formula case rides with its native case), family-links, A6. Tweedie 912 s
+  in parallel with the rest (355 s summed); wall about 15 min.
+- Counts: 15 numeric pass (FAMILY-01 LOGIT/PROBIT/CLOGLOG, 03, 04, 06-LOG, 06-FIXED-SHAPE, 08,
+  09-FIXED-SHAPE, 09-IDENTITY, 10, 12, 13, 14, 15; worst logLik gap 3.5e-8, worst coefficient 5.3e-6);
+  5 partial (00, 02, 05, 07, 11: public R bridge case not executed, retained inputs not on this host);
+  1 not measured (BETA-ALIAS, admission-only at P0). 06-LOG/06-FIXED-SHAPE and 09-FIXED/09-IDENTITY are
+  one measurement each counted on two rows.
+- Failing cells at P1, recorded with measured values: NB2 native (Julia `converged` false; R gradient
+  4.9e-3 > 1e-4; logLik gap 1.2e-7 within tolerance), NB2 formula (same fixture health), truncated NB2
+  native and formula (R gradient 1.1e-3), Gaussian native/formula group (P1 R random effects are
+  `["z_B"]`, not `["z_B","s_B"]`; every number agrees to 8e-13). NB2 and truncated NB2 also failed in the
+  tracked P0 run `docs/dev-log/core070/totoro-323-track-a-20260924/`. All five sit in partial rows.
+- Checker, PARITY_REF=FS, main and #561 (`92cf39571`): family C1 required=21 bound=15 free=6 (#561
+  bound_numeric=15, numeric_recorded_diff_mismatch=none), C8 6 NOT_TWINNED_NOT_SIGNED; data, fit-input,
+  covariance, postfit, inference lines unchanged. `test_true_parity_check.mjs` passes; family, data,
+  covariance, postfit, inference contract `--check`s and family, data, inference receipt `--check`s
+  current; `test/parity/test_core070_pin.jl` 27/27; `test/test_core070_receipts.jl` 52/52 (repaired for
+  the new active-cell state, plus a value-sink test).
+
 ## 2026-09-27: Data and fit-input at P1, independent review of #579 applied
 
 - Same branch, fast-forward commits only, one concern per commit; no `src/`, GATES.md, P0 evidence or
