@@ -531,7 +531,10 @@ def self_test() -> int:
             NOT_CAPABILITY.clear()
             NOT_CAPABILITY.update(old_not_cap)
 
-    assert DEFAULT_REF == FROZEN_GLLVMTMB_ORACLE, DEFAULT_REF
+    assert DEFAULT_REF == FROZEN_GLLVMTMB_ORACLE, (
+        f"DEFAULT_REF={DEFAULT_REF} (expected the frozen P0 oracle {FROZEN_GLLVMTMB_ORACLE}; "
+        "unset GLLVM_PARITY_PIN, or leave it at P0, before running --self-test)"
+    )
     print("SELFTEST_OK")
     return 0
 
@@ -540,14 +543,14 @@ def main() -> int:
     ap = argparse.ArgumentParser(
         description="Export-surface parity: R NAMESPACE vs GLLVModels.jl exports at a git ref.",
         epilog=(
-            f"Default R pin: frozen gllvmTMB 0.7.0 {FROZEN_GLLVMTMB_ORACLE[:8]}. "
+            f"Default R pin: {DEFAULT_REF[:8]} (GLLVM_PARITY_PIN, see tools/parity_oracle.py). "
             f"Capability CLOSURE uses {CAPABILITY_LEDGER_REF} via parity_capability_closure.sh."
         ),
     )
     ap.add_argument("--gllvmtmb", default=DEFAULT_GLLVMTMB, type=Path,
                      help="path to the gllvmTMB repo")
     ap.add_argument("--ref", default=DEFAULT_REF,
-                     help=f"R NAMESPACE git ref (default: frozen oracle {FROZEN_GLLVMTMB_ORACLE[:8]})")
+                     help=f"R NAMESPACE git ref (default: {DEFAULT_REF[:8]}, via GLLVM_PARITY_PIN)")
     ap.add_argument("--r-ref", default=None,
                      help="alias for --ref on the R NAMESPACE read (P13; same default as --ref)")
     ap.add_argument("--root", default=Path(__file__).resolve().parents[1], type=Path,

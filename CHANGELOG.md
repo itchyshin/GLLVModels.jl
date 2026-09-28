@@ -52,6 +52,23 @@ All notable changes to GLLVModels.jl are documented here.
   and flagged unless it also fails those checks (`require_converged = true`
   rejects it). Interrupts are no longer swallowed; an `ArgumentError` at `K = 1`
   is raised; `mask` reaches the criteria.
+- **`ordinal_logit()`: name-twin of gllvmTMB's `ordinal_logit()` (family_id 20,
+  gllvmTMB >= 0.7.1).** Fits exactly the model `Ordinal()` already fits with
+  `link = LogitLink()` (`fit_ordinal_gllvm_pertrait` /
+  `fit_ordinal_gllvm_pertrait_cov`), so it changes no numerics, but returns
+  its own `OrdinalLogit` marker rather than `Ordinal()` itself: `Ordinal()`
+  carries no link of its own, so a bare alias would let
+  `fit_gllvm(Y; family = ordinal_logit(), link = ProbitLink())` silently fit
+  a probit model under the logit name. `OrdinalLogit` pins the link and
+  refuses any other one, at both the `fit_gllvm` and `@formula` entry points.
+  Twin-verified against a real gllvmTMB 0.7.1 install (commit `9539352f6`) on
+  a fixed fixture dataset: logLik agrees to 3.1e-9 absolute at each side's own
+  optimum (test tolerance `atol = 1e-6`), and Julia's own Laplace marginal
+  evaluated at R's fitted coordinates reproduces R's logLik to 2.7e-11.
+  Per-trait cutpoints agree to at most 5.4e-6 (test tolerance `atol = 1e-3`)
+  and `Lambda * Lambda'` (loadings are only sign-identified) to at most 4.2e-5
+  (test tolerance `atol = 1e-3`) (`test/test_ordinal_logit_twin.jl`, tagged
+  `gllvm-parity-tag: P1`).
 
 ### Fixed
 - **Ordered-beta fits could report `converged = true` at a non-stationary point,
@@ -109,6 +126,61 @@ All notable changes to GLLVModels.jl are documented here.
   continuous in value and derivative across the crossover, so the
   suspected mechanism is this same class of undamped-search sensitivity,
   not a kink in the normalizer.
+- **Mixed-family fits (`fit_mixed_gllvm`) no longer report convergence from a
+  diverged inner search (#503).** The per-site Laplace mode search inside
+  `_mixed_laplace_mode` (a GLLVM where different traits carry different response
+  families on one shared latent block) took undamped Fisher-scoring steps and
+  had no convergence flag: a site could be left far from its stationary point
+  while `_mixed_loglik_site` still returned a finite log-likelihood. A
+  re-measure on `main` across three family mixes (Poisson/Binomial/Gamma;
+  Normal/NegativeBinomial/Beta; a four-trait Poisson/Gamma/Beta/Binomial mix)
+  found 120/1200 finite-non-mode sites using the class audit's own
+  gradient-of-the-score probe. The search now halves any step that lowers the
+  per-site log-posterior. It declares convergence when both the step `|Δ|` is
+  below the caller's `tol` (default `1e-9`) and the Newton decrement `|g'Δ|` is
+  below `1e-6`. The decrement replaces an absolute bound on the
+  gradient `g` because `Λ'WΛ + I` can be badly scaled (a Normal trait whose
+  fitted σ is driven near zero makes `W = 1/σ²` enormous), and there a genuine
+  mode leaves a large raw `g` in the stiff direction purely from rounding. At a
+  mode reached to rounding the step can stall at the floating-point floor
+  (measured 1e-9 to 2e-8) and never fall below `tol`, so a decrement below
+  `1e-12` also counts as convergence, but only when the step can no longer
+  move: at the floor with the step no longer shrinking, or when the line
+  search cannot move `z`. An earlier revision accepted any decrement below
+  `1e-12` outright; that ignored a caller's tighter `tol` (the Gamma
+  cross-kernel test asks for `tol = 1e-13`) and failed that test in CI, so the
+  clause is now restricted to steps that have stopped making progress.
+  Once a full-size step has been rejected in a call, later steps skip
+  the small-step shortcut and go through the line search, because the undamped
+  Fisher map is not always a contraction near the mode (a Gamma trait with
+  shape 0.7 far into its tail oscillates otherwise); this latch is off once the
+  step is at the floating-point floor, where the line search could only compare
+  rounding noise. A site that still cannot certify a stationary point within a
+  20x-widened iteration budget returns `-Inf`, so the fitter's own `1e12`
+  failure sentinel fires instead of a silently wrong log-likelihood.
+  `getLV`/`predict` call `_mixed_laplace_mode` directly and keep their prior
+  no-sentinel behaviour. Whole-fit check (20 simulated datasets, 5 family
+  mixes, Julia 1.10 only): of the 16 fits that were healthy on `main`
+  (converged, every site independently certified stationary), none got worse;
+  15 moved by at most 1.8e-8 in log-likelihood and one (Normal/NB2/Beta) rose
+  by 0.014. Of the 4 fits that were not healthy on `main`, 3 now reach a higher
+  log-likelihood (by 0.24, 14.4 and 1749; `main`'s value in the last case was
+  computed at non-mode sites) and one still hits the outer iteration limit, as
+  on `main`, at the same value. Total fit time was 47.4 s against 45.0 s on
+  `main`; per fit the ratio ranged from 0.08 to 2.1. These figures are specific
+  to those datasets, not a general bound.
+  An independent review of the earlier revision (15 datasets, its own seeds,
+  6 family mixes) found
+  none of 10 healthy fits worse beyond outer-optimiser noise (one lower by
+  1.2e-6 on a flat Gamma-shape ridge, where the kernel reproduces `main`'s value
+  at `main`'s parameters) and a total fit time of 1.5x `main`. It also set the
+  limits of the ill-conditioning argument: with one latent variable it holds
+  down to a Normal σ of about 1e-13, below which rounding keeps `|g'Δ|` above
+  both tolerances and the site returns `-Inf`; with two or more latent
+  variables and σ at or below 1e-9, `A` is too ill-conditioned (condition number
+  above 1e16) for the step to be trusted and the site returns `-Inf` where
+  `main` returned a finite wrong value. A floor on the Normal σ is the remedy
+  and is not in this change.
 - **`confint(..., method = :profile)` and `method = :bootstrap` could accept a
   silently failed inner refit.** `_family_profile_refit` and `_family_bootstrap`
   (`src/confint_family.jl`) judged a refit's success only by `isfinite` on its
