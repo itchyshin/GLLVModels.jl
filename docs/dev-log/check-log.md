@@ -1,3 +1,25 @@
+## 2026-09-27: Postfit and postfit-policy families re-measured at gllvmTMB P1 (A3), tracked receipts
+
+- Branch `claude/true-parity-p1-postfit`, stacked on `claude/true-parity-p1-covariance` (PR #567) at
+  `508d297d0` for its P1 wave6 contract and pin-switch edits. Scope: the 36 postfit rows the P1 carry
+  scan lists as DANGLING (34) or RETIRED (2), and the 16 DANGLING postfit-policy rows. Classifications
+  and dispositions carried unchanged from `required-source-case-map.json`.
+- P1 oracle reused read-only from `/Users/z3437171/local-scratch/a3cov-oracle/build/library`; its
+  `build.json` records reference_commit P1 and source-tree sha256 equal to the P1 entry in
+  `tools/core070_oracle_pins.toml`.
+- `tools/core070_postfit_p1_contract.py` writes five P1 contract twins; reference_commit to P1,
+  postfit-policy source_pins recomputed (three of four R files changed); cases, expectations and
+  tolerances carried verbatim; `--check` passes.
+- Runs (local Mac, one BLAS/OMP thread, JULIA_NUM_THREADS=4), wall seconds: surface-conversion 117
+  (20/20 pass), wave6 48 (9/10, nobs expectation case FAIL), wave7 25 (6/6), wave8 24 (7/7),
+  estimand-rebind 11 (4/4), postfit-policy 29 (15/15 + 2 negative controls), postfit-1 13 (1/1).
+  Verifiers pass on every state except wave6 (rejects the FAIL receipt).
+- Case-map rows (`case-map-postfit.json`): 35 numeric pass, 1 numeric fail, 13 partial (a verdict,
+  own-consistency, exact-integer, empty-length or default-policy case), 1 needs surface (never
+  executed), 2 retired at P1, 0 not measured. Checker, PARITY_REF=FS: C1 required=52 bound=35
+  free=15 unsigned_or_blocked=2 (main and #561 checker; #561 reports bound_numeric=35); C8 17
+  NOT_TWINNED_NOT_SIGNED. `node tools/test_true_parity_check.mjs` passes.
+
 ## 2026-09-27: Covariance family re-measured at gllvmTMB P1 (A3), tracked receipts
 
 - Branch `claude/true-parity-p1-covariance` from `origin/main` `cb5688f7e`. Scope: the 17 covariance
