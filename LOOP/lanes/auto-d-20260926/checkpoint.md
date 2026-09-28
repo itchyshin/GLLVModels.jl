@@ -1,11 +1,9 @@
-# Checkpoint — OVERWRITTEN every arc (a pointer to truth, not a log)
-
-- OVERNIGHT DONE (10:20Z 09-28): all arcs A0-A5 done; see MORNING-REPORT-2026-09-28.md 'In one screen'. Open gates (Shinichi): merges #519/#521/#540 (+stacked #520/#529/#551), #518/#1324; NB re-run approval; Julia-vs-R guard rule; smoke-job NB2 fixture. #518 CI green at 11:00Z (8/8 shards). CARRIED-OVER: local report/checkpoint commits on claude/lane-auto-d-20260926 not pushed (CI capacity; docs only) -> resume: cd ~/local-scratch/lanes/GLLVM.jl-auto-d-20260926 && git push origin claude/lane-auto-d-20260926 (restarts #518 CI). #519/#540 CI still running at close. Never merge/submit.
-- DONE: G0 — ultra-plan approved (ultra-plan.md). Decisions: omitting d means estimate it; gllvmTMB gets the same rule via a spec handed to the Cursor lane; A1 is a feasibility question first.
-- D-292 (2026-09-26): Claude owns gllvmTMB too; build auto-d in R and Julia side by side, each cross-checking the other. A8b becomes a real R build, not a spec.
-- PARKED FOR A POSSIBLE NEW LANE (Shinichi 2026-09-26): the big LASSO/shrinkage investigation (LASSO vs ridge priors, FA and latent-variable models generally). If this lane cannot address it, open a follow-up lane.
-- DONE 15:40Z 09-27: G1 signed off (D-293: "go with your recommendations, push and open draft PRs"). Default :bic_sites applied in both packages (Julia 9ced6500e, R a1d2de16b). Rebased on main; gates re-run: leaf-julia, leaf-docs, leaf-r ALL MET (R 159 expectations). Draft PRs: GLLVModels.jl #518, gllvmTMB #1324 (never merge without Shinichi). Not done (not approved): re-run of 119 NB timeout tasks.
-- NEXT: watch CI on #518/#1324; follow-ups: R latent(d = "auto"), binary ridge sweep (Julia + R), NB init kwargs and Gaussian intercepts (task chips), confint/summary "K was estimated" note.
-- DONE (to 07:40Z 09-27): everything buildable before G1. Ledger re-verified: 8 gates met, 1 abandoned (E2: NB timeouts, handoff written). Final grid 17 687/19 200 datasets (pilot/harvest-report-final.md). Compute ~1,200 core-h vs 300–600 estimate (overrun, reported, not resubmitted). Reconcile: docs/dev-log/plan-actual/2026-09-27-auto-d.md.
-- OPEN: G1 decisions in LOOP/lanes/auto-d-20260926/MORNING-REPORT.md (criterion, Julia API, R API, binary data, resubmit NB timeouts?).
-- NEXT after G1: push claude/lane-auto-d-20260926 and claude/lane-auto-d-r-20260926, open draft PRs (never merge; run agent_mention_check.py on PR bodies). After 11:00Z: task chips for NB init kwargs and Gaussian intercepts; Julia binomial ridge (T7).
+GOAL: see GOAL-2026-09-28-overnight.md (run ended); now on-call for the #606 merge train.
+STATE (2026-09-28 15:20Z): waiting on merge-train #606 (carries #519, #520, #529, #540 + 20 others; grouped-getLV lane owns it).
+DONE: #551 merged with #540 branch, pushed 29bf83a31 (MERGEABLE). #529 merged into #551 locally at 0c5e1f100
+  (one dispatcher, four methods; 1,015 tests pass), NOT pushed. #518 merged main locally at 9ebcd4fa5
+  (runtests conflict, both includes kept; lane tests 232/232), NOT pushed.
+NEXT: when #606 merges -> in the beta-getlv worktree merge origin/main, rerun the 5 grouped tests, push,
+  `gh pr edit 551 --base main`, tell the grouped-getLV lane. #518: push only on that lane's ping.
+OPEN GATES: NB re-run (~5,500 core-h DRAC) awaits Shinichi. Merges are the train's, not ours.
+RESUME: read this file, then `gh pr view 606 --json state`.
