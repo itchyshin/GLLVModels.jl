@@ -3044,6 +3044,16 @@ function _family_profile(ad::_FamilyCI, sel::Vector{Int}, level::Real;
         upper = _profile_bisect_side(dev_hi, θi,  step, cutoff;
                                      max_expand = profile_max_expand,
                                      max_bisect = profile_max_bisect)
+        # Open lower end (2026-09-28). A log-scale parameter's profile deviance can
+        # level off below the cutoff as the parameter goes to 0 (zero-truncated NB2
+        # r on the #581 fixture draw 104: D ≈ 2.35 as r → 0), so no lower crossing
+        # exists and the interval is open at 0. Claim that only when a refit at
+        # 1e-6 × the estimate converges with D still below the cutoff; a failed or
+        # non-finite refit there keeps NaN.
+        if isnan(lower) && ad.kinds[i] === :log
+            D_floor = dev_lo(θi + log(1e-6))
+            (isfinite(D_floor) && D_floor < cutoff) && (lower = -Inf)
+        end
         if ad.kinds[i] === :log
             lower = isnan(lower) ? NaN : exp(lower)
             upper = isnan(upper) ? NaN : exp(upper)
@@ -3204,7 +3214,10 @@ power `p ∈ (1,2)` is held fixed at its fitted value, so only `phi` is profiled
   - `:profile`   — profile-likelihood intervals: invert `D(c)=2(ℓ̂−ℓ_p(c)) ~ χ²₁`
                    by bracket-then-bisection on each side (a constrained refit
                    per candidate). Returns an extra per-term `status` vector
-                   (`:profile` / `:partial` / `:failed`). `profile_iterations`,
+                   (`:profile` / `:partial` / `:failed`). For a log-scale
+                   parameter (dispersion, SD) whose deviance stays below the
+                   cutoff down to 1e-6 × the estimate, the interval is open
+                   at 0 and `lower = 0`. `profile_iterations`,
                    `profile_g_tol`, `profile_max_expand`, and
                    `profile_max_bisect` tune the constrained refits and
                    bracketing budget without changing the default route.

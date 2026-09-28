@@ -380,6 +380,7 @@ println(_SHARD === nothing ?
     _shard_include("test_offset.jl")
     _shard_include("test_fd_hessian.jl")
     _shard_include("test_confint_family.jl")
+    _shard_include("test_family_profile_open_lower.jl")
     _shard_include("test_confint_bootstrap_verdict_poisson.jl")
     _shard_include("test_confint_bootstrap_verdict_binomial.jl")
     _shard_include("test_confint_bootstrap_verdict_gamma.jl")
