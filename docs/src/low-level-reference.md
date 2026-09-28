@@ -223,3 +223,25 @@ GLLVModels.JointGroupedLaplaceResult
 GLLVModels._joint_grouped_state
 GLLVModels._bridge_fit_precision_multivariate
 ```
+
+## iSDM internals
+
+Implementation helpers behind the integrated species distribution model route
+([`fit_isdm_gllvm`](@ref)). They are internal and listed here because
+Documenter's `checkdocs` requires every docstring in the module to appear in some
+`@docs` block. Their presence here is not an admission of a wider public interface.
+
+```@docs
+GLLVModels.isdm_laplace_grad
+GLLVModels._isdm_parse_formula
+GLLVModels._isdm_admitted_law_id
+GLLVModels._isdm_declared_core
+GLLVModels._isdm_prepare_offset
+GLLVModels._isdm_assert_observed_arms
+GLLVModels._isdm_observation_design
+GLLVModels._isdm_dbinom_cloglog
+GLLVModels._isdm_cloglog_score
+GLLVModels._isdm_cloglog_obs_weight
+GLLVModels._isdm_cell_mode
+GLLVModels._isdm_cell_loglik
+```
