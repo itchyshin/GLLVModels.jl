@@ -1,3 +1,15 @@
+## 2026-09-27: NB2 bootstrap refits report their own verdict (part of #504)
+
+- Branch `claude/nb-boot-verdict-504`, stacked on #550 (`1bee7aa0a`). The `NBFit`, `NBGroupedFit`
+  and `NBGroupedCovFit` refit closures return `(θ, converged, loglik, upper_boundary)`;
+  `_nb_r_upper_boundary` flags `r > 1e6` with the grouped point-fit verdict's own comparison.
+- New `test/test_confint_bootstrap_verdict_nb.jl` + literal fixture `test/fixtures/nb_boot_boundary_504.toml`:
+  13 pass, 17 fail, 20 error on the base; 50/50 on Julia 1.10.12 and 1.13.0. Six neighbouring files
+  947/947 on 1.10.12 (per-file; full suite not run).
+- Found, not fixed: `fit_nb_gllvm` reports `converged = true` at r up to 6.3e10 on Poisson data (4/6);
+  the per-species grouped default reports `converged = false` on 6/6 NB(r = 3) datasets.
+- After-task: `docs/dev-log/after-task/2026-09-27-nb-boot-verdict-504.md`.
+
 ## 2026-09-27: BetaBinomial bootstrap refits report their own verdict (#542, part of #504)
 
 - Branch `claude/bb-boot-verdict-542` from `origin/main` @ `97e11be04`. The three beta-binomial
