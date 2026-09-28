@@ -30,11 +30,19 @@ Rows whose case ids include an R-only or R-boundary case are marked
 otherwise, and their receipts are cited under evidence.non_binding_receipts
 (not evidence.receipt), so no checker version counts them as bound.
 
+Provenance (review finding 7): each receipt records glvmodels_commit = HEAD of
+this checkout and glvmodels_worktree_dirty = the tracked paths modified
+outside the output directory. The tool refuses to write when that list is
+non-empty (unless --allow-dirty), and refuses when any harness file listed in
+the runparity run's execution inventory differs from its content at HEAD, so
+the recorded commit is the one the runs used. Run the batches and this tool
+from the same clean commit.
+
 Usage (inputs are the raw run directories, e.g. under local-scratch):
   python3 tools/core070_covariance_p1_receipts.py \
       --runparity DIR --default-modes DIR --wave6 DIR --cov-batch DIR \
       --bridge-tsv FILE --oracle-dir DIR --runtimes JSON \
-      [--numeric-exceptions JSON]
+      [--numeric-exceptions JSON] [--allow-dirty]
 """
 import argparse
 import hashlib
@@ -198,8 +206,30 @@ def copy_batch(src_dir, dest_name, patterns):
     return copied
 
 
-def git_head():
-    return subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+def git(*args, text=True):
+    return subprocess.run(["git", "-C", str(ROOT), *args], check=True, capture_output=True, text=text).stdout
+
+
+def git_state():
+    """HEAD and the tracked paths modified outside the output directory (review finding 7)."""
+    head = git("rev-parse", "HEAD").strip()
+    out_rel = str(OUT.relative_to(ROOT)) + "/"
+    dirty = [line[3:] for line in git("status", "--porcelain", "--untracked-files=no").splitlines()
+             if not line[3:].startswith(out_rel)]
+    return head, dirty
+
+
+def harness_drift(run, head):
+    """Execution-inventory files of the runparity run whose bytes differ from HEAD."""
+    tracked = set(git("ls-tree", "-r", "--name-only", head).splitlines())
+    drift = []
+    for entry in run["execution"]["entries"]:
+        if entry["path"] not in tracked:
+            continue  # untracked inputs (Manifest.toml) are not part of the commit
+        blob = git("show", f"{head}:{entry['path']}", text=False)
+        if hashlib.sha256(blob).hexdigest() != entry["sha256"]:
+            drift.append(entry["path"])
+    return drift
 
 
 def run_verifier(argv, log_name, marker):
@@ -238,10 +268,19 @@ def main():
     ap.add_argument("--runtimes", type=Path, required=True)
     ap.add_argument("--numeric-exceptions", type=Path, default=None,
                     help="JSON {source_id: {signed_by, signed_on, reason}}; signed_by must be the maintainer")
+    ap.add_argument("--allow-dirty", action="store_true",
+                    help="write receipts from a checkout with modified tracked files (recorded, not hidden)")
     args = ap.parse_args()
     runtimes = json.loads(args.runtimes.read_text())
     exceptions = load_exceptions(args.numeric_exceptions)
+    head, dirty = git_state()
+    if dirty and not args.allow_dirty:
+        raise SystemExit("tracked files are modified outside the output directory; commit first or pass "
+                         "--allow-dirty: " + ", ".join(dirty))
     run = tomllib.loads((args.runparity / "run.toml").read_text())
+    drift = harness_drift(run, head)
+    if drift:
+        raise SystemExit(f"the runparity run's harness files differ from HEAD {head}; re-run at HEAD: " + ", ".join(drift))
 
     # batch artifacts (text only; .rds fit objects stay in the local run directory)
     oracle_files = copy_batch(args.oracle_dir / "source", "oracle", ["source.json"]) + \
@@ -271,7 +310,7 @@ def main():
     batch_common = {"pin": "P1", "reference_commit": P1_SHA, "gllvmtmb_version": "0.7.1",
                     "oracle_build_receipt": f"{REC_REL}/oracle/build.json",
                     "oracle_source_receipt": f"{REC_REL}/oracle/source.json",
-                    "glvmodels_commit": git_head(),
+                    "glvmodels_commit": head, "glvmodels_worktree_dirty": dirty,
                     "host": "local Mac (M1 Ultra), single BLAS/OMP thread, JULIA_NUM_THREADS=4",
                     "p0_reference_commit": P0_SHA}
 
@@ -446,6 +485,7 @@ def main():
         "schema": 1, "reference_commit": P1_SHA,
         "scope": "covariance family: the 17 rows the P1 carry scan lists as PARTIAL_STALE_AT_P1 (7) or DANGLING (10); "
                  "the 22 NOT_BOUND_AT_P0 covariance rows had no P0 evidence and are out of scope here",
+        "glvmodels_commit": head,
         "note": ("Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with "
                  "PARITY_CASEMAP pointing at this file. Classifications are carried from "
                  "docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. Only rows "
