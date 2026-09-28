@@ -173,6 +173,27 @@ def main():
     expect("boolean_true_status_is_pass", c == 0 and status_of(root) == "EVIDENCED", status_of(root))
     shutil.rmtree(tmp)
 
+    # Review of #589, finding 2: a valid signature does not outrank a dangling receipt or a stale
+    # carry. The checker's C1 runs both checks first and does not count such a row as signed.
+    sig = dict(disposition="DISPOSITION-SIGNED", signed_by="Shinichi Nakagawa", signed_on="2026-09-27")
+    root, tmp = with_root({"case-map-data.json": [row("data/S", evidence={"receipt": ["docs/does-not-exist.json"]}, **sig)]})
+    c, o = run(root)
+    st = status_of(root, "data-S")
+    expect("signed_with_dangling_receipt_not_signed", c == 0 and st == "DISPOSITION-UNVERIFIED"
+           and "dangling docs/does-not-exist.json" in (root / A.LEDGER / A.OUT_SCOREBOARD).read_text(), st)
+    shutil.rmtree(tmp)
+    root, tmp = with_root({"case-map-data.json": [row("data/S", measured_against="P0", evidence={"receipt": [RP]}, **sig)]})
+    (root / RP).write_text(json.dumps({"comparison": GOOD_CMP}))
+    c, o = run(root)
+    st = status_of(root, "data-S")
+    expect("signed_with_p0_receipt_no_carry_not_signed", c == 0 and st == "DISPOSITION-UNVERIFIED"
+           and "PARTIAL_STALE_AT_P1(no carry.source_pins)" in (root / A.LEDGER / A.OUT_SCOREBOARD).read_text(), st)
+    shutil.rmtree(tmp)
+    root, tmp = with_root({"case-map-data.json": [row("data/S", **sig)]})
+    c, o = run(root)
+    expect("signed_without_receipt_is_signed", c == 0 and status_of(root, "data-S") == "DISPOSITION-SIGNED", status_of(root, "data-S"))
+    shutil.rmtree(tmp)
+
     # Real tree: outputs current, and EVIDENCED count equals the checker's own C1 bound=.
     c, o = run(A.ROOT, "--check")
     expect("real_tree_outputs_current", c == 0, o)

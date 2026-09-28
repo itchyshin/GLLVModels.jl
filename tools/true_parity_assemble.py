@@ -21,7 +21,8 @@ Outputs (all generated; regenerate, never hand-edit):
 Status of a scoreboard row (first rule that applies):
 
   DISPOSITION-SIGNED  disposition "DISPOSITION-SIGNED" with an allowed signer and a real past
-                      date on the row (same rule as the checker).
+                      date on the row, and (if it cites a receipt) no dangling receipt and no
+                      stale carry (the checker's C1 rule and order).
   EVIDENCED           the row binds under the checker's own C1 numeric rule: evidence_tier
                       "numeric", non-empty executable_case_ids, every evidence.receipt a file,
                       carry fresh at P1, and every receipt's comparison block pinned to P1,
@@ -319,21 +320,28 @@ def scoreboard_id(sid: str) -> str:
 
 
 def derive_status(row, root):
-    """Returns (status, reason). Never writes to row."""
+    """Returns (status, reason). Never writes to row.
+
+    Order follows the checker's C1 (not C8): for a row that cites a receipt, a dangling receipt
+    or a stale carry is reported before the disposition is read, so a valid signature cannot
+    make such a row read DISPOSITION-SIGNED. (C8's dispositionSignedProperly short-circuits
+    before its dangling check; the two clauses disagree there, see the PR body of #589.)
+    """
     disp = row.get("disposition")
-    if disp == "DISPOSITION-SIGNED":
-        why = signature_problem(row.get("signed_by"), row.get("signed_on"))
-        return ("DISPOSITION-SIGNED", "") if why is None else ("DISPOSITION-UNVERIFIED", why)
     tier = row.get("evidence_tier")
     paths = receipt_paths(row)
-    if disp is None and tier == "numeric":
+    pre = None
+    if paths:
         dang = [p for p in paths if not (root / p).is_file()]
-        if dang:
-            return "NUMERIC-UNVERIFIED", "dangling " + ",".join(dang)
-        if paths:
-            cp = carry_problem(row)
-            if cp:
-                return "NUMERIC-UNVERIFIED", cp
+        pre = ("dangling " + ",".join(dang)) if dang else carry_problem(row)
+    if disp == "DISPOSITION-SIGNED":
+        if pre:
+            return "DISPOSITION-UNVERIFIED", pre
+        why = signature_problem(row.get("signed_by"), row.get("signed_on"))
+        return ("DISPOSITION-SIGNED", "") if why is None else ("DISPOSITION-UNVERIFIED", why)
+    if disp is None and tier == "numeric":
+        if pre:
+            return "NUMERIC-UNVERIFIED", pre
         if not as_list(row.get("executable_case_ids")):
             return "NUMERIC-UNVERIFIED", "no executable_case_ids"
         prob = numeric_receipt_problem(row, root)
