@@ -122,6 +122,12 @@ STATUS_FIELDS = ["status", "verdict", "batch_status", "harness_pass"]
 RECORDED_DIFF_REL_TOL = 1e-12
 
 
+def is_pass_value(v):
+    # The checker's isPassValue: v === 'PASS' || v === 'pass' || v === true. Strict on type:
+    # in Python 1 == True and 1.0 == True, so a plain `in ("PASS", "pass", True)` would pass them.
+    return v is True or (isinstance(v, str) and v in ("PASS", "pass"))
+
+
 class Fail(Exception):
     pass
 
@@ -214,7 +220,7 @@ def numeric_receipt_problem(row, root):
                 if obj is None:
                     continue
                 for f in STATUS_FIELDS:
-                    if f in obj and obj[f] not in ("PASS", "pass", True):
+                    if f in obj and not is_pass_value(obj[f]):
                         not_passed = f"{pre}{f}={json.dumps(obj[f])} in {p}"
                         break
                 if not_passed:

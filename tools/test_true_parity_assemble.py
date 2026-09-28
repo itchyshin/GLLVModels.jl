@@ -70,6 +70,24 @@ def with_root(maps=None):
     return make_root(tmp, maps), tmp
 
 
+RP = str(A.LEDGER / "receipts/r.json")
+GOOD_CMP = {"pin": "P1", "cases": [{"case_id": "C", "r_value": 1.0, "julia_value": 1.0 + 1e-9, "tolerance": 1e-6}]}
+
+
+def numeric_root(receipt_extra=None, **row_kw):
+    """A root with one numeric row family/N citing RP, whose receipt holds GOOD_CMP."""
+    kw = dict(tier="numeric", executable_case_ids=["C"], evidence={"receipt": [RP]})
+    kw.update(row_kw)
+    root, tmp = with_root({"case-map-family.json": [row("family/N", **kw)]})
+    (root / RP).write_text(json.dumps({"comparison": GOOD_CMP, **(receipt_extra or {})}))
+    return root, tmp
+
+
+def status_of(root, rid="family-N"):
+    m = re.search(rf"^\| {re.escape(rid)} `[^`]*` \| [^|]* \| ([^|]+?) \|", (root / A.LEDGER / A.OUT_SCOREBOARD).read_text(), re.M)
+    return m.group(1) if m else None
+
+
 def main():
     # Positive control: a clean root writes, then --check reads current.
     root, tmp = with_root()
@@ -141,6 +159,18 @@ def main():
     root, tmp = with_root({"case-map-family.json": [row("family/GAUSSIAN-RSZ", tier="not_measured")]})
     c, o = run(root, "--check")
     expect("rsz_suffix_id_fails", c == 1 and "C3/C4/C5" in o, o)
+    shutil.rmtree(tmp)
+
+    # Review of #589, finding 1: numeric 1 is not a pass value (the checker's isPassValue is
+    # strict: "PASS", "pass" or the boolean true only; in Python 1 == True).
+    for val in (1, 1.0):
+        root, tmp = numeric_root({"harness_pass": val})
+        c, o = run(root)
+        expect(f"numeric_{val!r}_status_not_pass", c == 0 and status_of(root) == "NUMERIC-UNVERIFIED", status_of(root))
+        shutil.rmtree(tmp)
+    root, tmp = numeric_root({"harness_pass": True})
+    c, o = run(root)
+    expect("boolean_true_status_is_pass", c == 0 and status_of(root) == "EVIDENCED", status_of(root))
     shutil.rmtree(tmp)
 
     # Real tree: outputs current, and EVIDENCED count equals the checker's own C1 bound=.
