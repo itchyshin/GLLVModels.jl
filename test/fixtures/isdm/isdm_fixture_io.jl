@@ -13,6 +13,8 @@ const ISDM_FIXTURE_SHA256 = Dict(
     "isdm_srcform_pois.csv" => "adf10a0f800b45aa8d47b64888dbd8dbb130150d2bf6a33c98213e861d232197",
     "isdm_srcform_mixed.csv" => "afacde410707af181e653e76e4f3478696e06dce738936eb821775272feee382",
     "cloglog_grid_p1.csv" => "481dddc374098a96ef847e8e9611477ba43f42155a0ef18a8d26cb6496523a46",
+    # export_psi_fixtures.R, stage `fixtures`
+    "isdm_psi4.csv" => "2fb942b074c78f956e0f5d8bb3e06574bdb5730f5951b973e86ba492c786d49f",
 )
 
 function isdm_fixture_path(name::AbstractString; check::Bool = true)
@@ -118,3 +120,30 @@ function isdm_case(name::AbstractString)
 end
 
 const ISDM_CASES = ("predict", "ms3", "srcform_pois", "srcform_mixed")
+
+# The unique-variance cases (R's default latent(..., unique = TRUE)), as the
+# Julia door spells them (the R spelling is in export_psi_fixtures.R).
+isdm_psi_r_values() = TOML.parsefile(joinpath(ISDM_FIXTURE_DIR, "r_values_psi_p1.toml"))
+
+function isdm_psi_case(name::AbstractString)
+    cl = (Binomial(), CLogLogLink())
+    if name == "psi4"
+        return (csv = "isdm_psi4.csv",
+                formula = :(value ~ 0 + trait + trait & env + trait & src_gbif + trait & src_inat +
+                            offset(log_support) + latent(0 + trait | cell_id, d = 1)),
+                family = isdm_sources(gbif = Poisson(), inat = Poisson(), survey = cl))
+    elseif name == "predict_default"
+        return (csv = "isdm_predict.csv",
+                formula = :(value ~ 0 + trait + trait & env + trait & src_gbif + offset(log_support) +
+                            latent(0 + trait | cell_id, d = 1)),
+                family = isdm_sources(gbif = Poisson(), survey = cl))
+    elseif name == "ms3_default"
+        return (csv = "isdm_ms3.csv",
+                formula = :(value ~ 0 + trait + trait & env + trait & src + offset(log_support) +
+                            latent(0 + trait | cell_id, d = 1)),
+                family = isdm_sources(gbif = Poisson(), literature = Poisson(), survey = cl))
+    end
+    error("unknown iSDM unique-variance case $name")
+end
+
+const ISDM_PSI_CASES = ("psi4", "predict_default", "ms3_default")
