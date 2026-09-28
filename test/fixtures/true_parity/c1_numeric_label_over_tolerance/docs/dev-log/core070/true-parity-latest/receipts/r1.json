@@ -1,0 +1,15 @@
+{
+ "case_id": "R1",
+ "result": "PASS",
+ "comparison": {
+  "pin": "P1",
+  "cases": [
+   {
+    "case_id": "CASE-1",
+    "quantity": "loglik",
+    "abs_diff": 0.5,
+    "tolerance": 1e-06
+   }
+  ]
+ }
+}

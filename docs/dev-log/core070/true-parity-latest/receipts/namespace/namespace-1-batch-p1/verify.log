@@ -1,0 +1,3 @@
+CORE070_NAMESPACE_1_CONTRACT_OK exec=50 needs=2 reused_or_reclassify=36 total=90
+CORE070_NAMESPACE_1_CASE_RECEIPTS pin=P1 written=54 pass=48 fail=6 dir=docs/dev-log/core070/true-parity-latest/receipts/namespace/cases
+CORE070_NAMESPACE_1_STATE_OK docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1

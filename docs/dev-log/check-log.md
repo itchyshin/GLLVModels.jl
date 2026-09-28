@@ -228,6 +228,48 @@
   case is an R boundary), 8 R-only needing a Julia surface, 0 not measured. Checker, PARITY_REF=FS:
   C1 required=17 bound=2 free=15 (main and #561 checker); C8 15 NOT_TWINNED_NOT_SIGNED.
   `node tools/test_true_parity_check.mjs` passes; `test/parity/test_core070_pin.jl` 16/16.
+## 2026-09-27: namespace P1 re-measure hardened after review (supersedes #559 as a new PR)
+
+- Branch `claude/true-parity-p1-namespace-v2` from `origin/main` after #539 merged (`cb5688f7e`);
+  the two #559 commits are cherry-picked with `-x`, unchanged.
+- Review finding (fine as a draft, BLOCKING for any EVIDENCED claim): a Tier 0 pass asserted only
+  `isdefined`, and the checker counted it as a bound row, indistinguishable from a numeric twin.
+- `tools/true_parity_check.mjs`: `evidence_tier` ("numeric" / "registration") on case-map rows; C1
+  prints `bound_numeric` / `bound_registration_only` and needs the latter at 0 unless signed; C8
+  reports `REGISTRATION_ONLY_NOT_TWINNED`; missing tier is fail-closed. New FS and git-mode
+  negative controls; the base fixture's bound rows are marked numeric. GATES.md updated, including
+  the expected fold totals (38 + 69 = 107 rows, 90 required).
+- Namespace-1 at P1: the Julia child measures exported / Function / kind / own-method location; an
+  executable row passes only for an exported Function. Row verdicts are measured (failures recorded,
+  verifier checks every verdict against the facts). Re-run at P1: 44 executable PASS, 6
+  registration mismatches (`TwoLevelFit` x2 and `OrdinalFit` are types; `unpack_lambda` and
+  `proportions` x2 are not exported), 2 needs-surface as expected, 2 retirements confirmed.
+- Case map: all rows `evidence_tier: "registration"`; the eight `*-JULIA-BRIDGE-COMPARE` rows are
+  `compatibility_adapter` (circular twin). C1 required=69 bound=0 bound_registration_only=44
+  free=23 blocked=2, C1_NOT_MET; C8_NOT_MET.
+
+## 2026-09-27: namespace rows re-measured at P1 with tracked receipts (arc A3, first family)
+
+- Branch `claude/true-parity-p1-namespace`, stacked on #539 (shared pin source). Scope: the 71
+  namespace rows the P1 carry scan (#534) lists as DANGLING (69) or RETIRED (2).
+- `tools/core070_namespace_1_batch.{R,jl}` and `tools/core070_verify_namespace_1_batch.py` read the
+  pin through `GLLVM_PARITY_PIN` / `tools/core070_oracle_pins.toml` instead of the literal P0 SHA.
+  Default stays P0: same contract, counts and checks (R self-test identical before and after on a
+  P0 readback tree rebuilt with `git show b4d5fee64:<path>`; verifier self-test unchanged).
+- New `tools/core070_namespace_1_p1_contract.py` regenerates
+  `docs/dev-log/core070/true-parity-latest/namespace-1-batch-contract-p1.json` from the P0 contract,
+  reading R bytes with `git show 9539352f6:<path>` (19 of the 22 cited R files changed): 2 exports
+  retired, 4 needs rows promoted because the same-named Julia surface now exists (`deviance`,
+  `tidy`, `check_gllvmTMB`, `confint_inspect`), negative controls re-anchored.
+- Ran at P1: `CORE070_NAMESPACE_1_BATCH_PASS`, `CORE070_NAMESPACE_1_STATE_OK`, 54 per-case receipts
+  under `docs/dev-log/core070/true-parity-latest/receipts/namespace/` (50 executable PASS, 2
+  needs-surface as expected, 2 retirements confirmed). 17 of the 71 rows not re-measured: 5
+  namespace-2 rows need an installed frozen library, 12 cite numeric-fit batches outside this triple.
+- Case-map rows in `case-map-namespace.json` (separate from #533's `case-map.json`); checker via
+  `PARITY_CASEMAP`: C1 required=69 bound=50 free=17 blocked=2, C1_NOT_MET; C8_NOT_MET.
+- Pre-existing, not fixed here: the P0 default Julia self-test already fails at the branch head,
+  because `deviance` and `tidy` now exist in GLLVModels while the frozen P0 contract records them as
+  absent (negative controls NEG-DEVIANCE-ABSENT / NEG-TIDY-ABSENT). Left as P0 history.
 
 ## 2026-09-27: Temporal source alone at gllvmTMB P1 (slice 1)
 

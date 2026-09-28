@@ -1,0 +1,80 @@
+{
+ "schema": 1,
+ "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+ "rows": [
+  {
+   "source_id": "isdm/CAP-ISDM-1FO-PREDICT-EXPORT",
+   "classification": "required_core",
+   "capability": "CAP-ISDM-1FO-PREDICT",
+   "executable_case_ids": [
+    "CASE-1"
+   ],
+   "evidence": {
+    "receipt": "docs/dev-log/core070/true-parity-latest/receipts/r1.json"
+   },
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "disposition": null,
+   "evidence_tier": "numeric",
+   "receipt_status_exception": {
+    "reason": "batch receipt FAIL is caused by an unrelated case; this case passes",
+    "signed_by": "Claude Opus (agent)",
+    "signed_on": "2026-09-27"
+   }
+  },
+  {
+   "source_id": "temporal/CAP-TEMPORAL-1FO-EXPORT",
+   "classification": "required_core",
+   "capability": "CAP-TEMPORAL-1FO",
+   "executable_case_ids": [
+    "CASE-2"
+   ],
+   "evidence": {
+    "receipt": "docs/dev-log/core070/true-parity-latest/receipts/r2.json"
+   },
+   "measured_against": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+   "disposition": null,
+   "carry": {
+    "from_pin": "P0",
+    "source_pins": [
+     {
+      "path": "R/family-gaussian.R",
+      "sha256_at_p0": "0865d0e757f9d3abe261710209dc8249ca82a47d2fbc1e94acb6158597d398d3",
+      "sha256_at_p1": "0865d0e757f9d3abe261710209dc8249ca82a47d2fbc1e94acb6158597d398d3"
+     }
+    ]
+   },
+   "evidence_tier": "numeric"
+  },
+  {
+   "source_id": "legacy/legacy_export_disposition",
+   "classification": "required_core",
+   "executable_case_ids": [],
+   "evidence": {},
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-27"
+  },
+  {
+   "source_id": "spatial/spatial_dep_export",
+   "classification": "outside_boundary",
+   "executable_case_ids": [],
+   "evidence": {},
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-27"
+  },
+  {
+   "source_id": "zi/zi_star_export",
+   "classification": "semantic_divergence",
+   "executable_case_ids": [
+    "CASE-ZI"
+   ],
+   "evidence": {
+    "receipt": "docs/dev-log/core070/true-parity-latest/receipts/r1.json"
+   },
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-27"
+  }
+ ]
+}
