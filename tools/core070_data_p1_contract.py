@@ -19,7 +19,10 @@ What changes, recorded in each output's `regeneration_log`:
     argument, CORE070_P1_R_SOURCE_ROOT for fit-input-2);
   * both twins gain `p0_to_p1_r_function_diff`: for each R function the cases
     call (data) or that the fit path is keyed on (fit-input-2), whether its body
-    is byte-identical at P0 and P1. This is a record, not a gate.
+    is byte-identical at P0 and P1. This is a record, not a gate;
+  * the data twin gains `julia_surface_status_p1_note`: the carried P0
+    julia_surface_status leans on Base.kwarg_decl, which cannot see keywords
+    forwarded through `kwargs...`; the note says what the surface probe found.
 
 Carried verbatim: status, cases / rows (expression, expected, r_call, julia_call,
 acceptance), tolerances, julia_planned_surfaces, needs_new_julia_surface,
@@ -65,6 +68,17 @@ FUNCTIONS = {
         ("kernel_latent", "R/kernel-keywords.R"),
     ],
 }
+
+
+DATA_SURFACE_NOTE = (
+    "Read julia_surface_status (carried verbatim from P0) as a statement about helper-equivalent surfaces only. "
+    "Its parenthetical 'Base.kwarg_decl() over gllvm()/fit_gllvm() to rule out an undocumented keyword' does not "
+    "hold: both entry points end in kwargs..., so kwarg_decl lists only the dispatcher's own keywords, not what it "
+    "forwards. GLLVModels does have fit-time offset= and mask= / missing-in-Y surfaces on the non-Gaussian fitters "
+    "(and offset= / mask= on the default Gaussian path), reachable through fit_gllvm and gllvm; it has no weights "
+    "surface. What it lacks is the helper layer these cases replay: a formula-offset evaluator, a stored or "
+    "predict-time offset accessor, a miss_control constructor, and a normalise_weights adapter. The behavioural "
+    "evidence is tools/core070_data_surface_probe.jl and its tracked receipt next to the data batch.")
 
 
 def git(repo, *argv):
@@ -128,6 +142,11 @@ def build(repo, name):
     contract["p0_contract"] = str(src.relative_to(ROOT))
     contract["p0_contract_sha256"] = sha_bytes(src.read_bytes())
     contract["p0_to_p1_r_function_diff"] = function_diff(repo, name, p0["reference_commit"], p1["reference_commit"])
+    if name == "data":
+        # The P0 julia_surface_status is carried verbatim; this adds a P1 reading note, it edits nothing.
+        contract["julia_surface_status_p1_note"] = DATA_SURFACE_NOTE
+        log.append({"field": "julia_surface_status_p1_note", "added": True,
+                    "why": "Base.kwarg_decl on a kwargs... dispatcher is not a keyword census"})
     contract["regeneration_log"] = {
         "generator": GENERATOR,
         "changes": log,

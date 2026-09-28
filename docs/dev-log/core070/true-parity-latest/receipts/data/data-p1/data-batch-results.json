@@ -3,7 +3,7 @@
   "area": "data",
   "scope": "CORE070_DATA_BATCH",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
-  "contract_sha256": "34c97722bbed62a58e8aa0ceafc477bd4d6df49845f443598ff9dfc45da0a3bc",
+  "contract_sha256": "89754d273dd92624b6fba4a16f292020e9b3fff13f7e8d32dd12365edcba6698",
   "source_pins": {
     "R/weights-shape.R": "1cf6ea530275bb91676e0be633551d8f8070f5dc178ca764ac8ac4c5fcbdb48a",
     "R/offset.R": "df43a6a507da0e593d29bacca030cc4a4dc9d4cbfdac20166f66dee9b8ff1f47",
@@ -13,7 +13,7 @@
   "negative_control_count": 2,
   "all_positive_pass": true,
   "negative_controls_behaved_as_expected": true,
-  "generated_at": "2026-09-27T21:54:26-0600",
+  "generated_at": "2026-09-27T22:23:05-0600",
   "r_version": "R version 4.6.0 (2026-04-24)",
   "cases": [
     {
@@ -44,7 +44,7 @@
       "actual": true,
       "is_error": false,
       "ok": true,
-      "elapsed_seconds": 3.6954879760742188e-05
+      "elapsed_seconds": 3.7908554077148438e-05
     },
     {
       "manifest_case_id": "CORE070-DATA-MISS-INCLUDE-CONTROL",
@@ -59,7 +59,7 @@
       "actual": true,
       "is_error": false,
       "ok": true,
-      "elapsed_seconds": 3.2186508178710938e-05
+      "elapsed_seconds": 3.1948089599609375e-05
     },
     {
       "manifest_case_id": "CORE070-DATA-MISS-MODEL-CONTROL",
@@ -74,7 +74,7 @@
       "actual": true,
       "is_error": false,
       "ok": true,
-      "elapsed_seconds": 2.6941299438476562e-05
+      "elapsed_seconds": 2.9087066650390625e-05
     },
     {
       "manifest_case_id": "CORE070-DATA-OFF-ALL-COUNT-NATIVE",
@@ -89,7 +89,7 @@
       "actual": true,
       "is_error": false,
       "ok": true,
-      "elapsed_seconds": 0.00067496299743652344
+      "elapsed_seconds": 0.0007190704345703125
     },
     {
       "manifest_case_id": "CORE070-DATA-OFF-EXPOSURE-NATIVE",
@@ -104,7 +104,7 @@
       "actual": true,
       "is_error": false,
       "ok": true,
-      "elapsed_seconds": 0.014150142669677734
+      "elapsed_seconds": 0.014569997787475586
     },
     {
       "manifest_case_id": "CORE070-DATA-OFF-MIXED-NATIVE",
@@ -119,7 +119,7 @@
       "actual": true,
       "is_error": false,
       "ok": true,
-      "elapsed_seconds": 0.00015807151794433594
+      "elapsed_seconds": 0.0001468658447265625
     },
     {
       "manifest_case_id": "CORE070-DATA-OFF-NB1-NATIVE",
@@ -134,7 +134,7 @@
       "actual": true,
       "is_error": false,
       "ok": true,
-      "elapsed_seconds": 0.00012111663818359375
+      "elapsed_seconds": 0.00011396408081054688
     },
     {
       "manifest_case_id": "CORE070-DATA-OFF-NONCOUNT-ZERO-NATIVE",
@@ -149,7 +149,7 @@
       "actual": true,
       "is_error": false,
       "ok": true,
-      "elapsed_seconds": 0.00011205673217773438
+      "elapsed_seconds": 0.00010919570922851562
     },
     {
       "manifest_case_id": "CORE070-DATA-OFF-NONE-NATIVE",
@@ -164,7 +164,7 @@
       "actual": true,
       "is_error": false,
       "ok": true,
-      "elapsed_seconds": 0.0001010894775390625
+      "elapsed_seconds": 0.00010085105895996094
     },
     {
       "manifest_case_id": "CORE070-DATA-OFF-PREDICT-POSTFIT-READBACK",
@@ -194,7 +194,7 @@
       "actual": true,
       "is_error": false,
       "ok": true,
-      "elapsed_seconds": 0.0073289871215820312
+      "elapsed_seconds": 0.0070340633392333984
     },
     {
       "manifest_case_id": "CORE070-DATA-OFF-SCALAR-NATIVE",
@@ -209,7 +209,7 @@
       "actual": true,
       "is_error": false,
       "ok": true,
-      "elapsed_seconds": 0.00016498565673828125
+      "elapsed_seconds": 0.00014591217041015625
     },
     {
       "manifest_case_id": "CORE070-DATA-OFF-TRAIN-LEGACY-POSTFIT-READBACK",
@@ -224,7 +224,7 @@
       "actual": true,
       "is_error": false,
       "ok": true,
-      "elapsed_seconds": 3.3855438232421875e-05
+      "elapsed_seconds": 3.6001205444335938e-05
     },
     {
       "manifest_case_id": "CORE070-DATA-OFF-TRAIN-STORED-POSTFIT-READBACK",
@@ -239,7 +239,7 @@
       "actual": true,
       "is_error": false,
       "ok": true,
-      "elapsed_seconds": 4.6968460083007812e-05
+      "elapsed_seconds": 3.2901763916015625e-05
     },
     {
       "manifest_case_id": "CORE070-DATA-W-DF-MASK-DROP-NATIVE",
@@ -254,7 +254,7 @@
       "actual": true,
       "is_error": false,
       "ok": true,
-      "elapsed_seconds": 0.00021505355834960938
+      "elapsed_seconds": 0.00011086463928222656
     },
     {
       "manifest_case_id": "CORE070-DATA-W-DF-MASK-INCLUDE-NATIVE",
@@ -269,7 +269,7 @@
       "actual": true,
       "is_error": false,
       "ok": true,
-      "elapsed_seconds": 0.0050079822540283203
+      "elapsed_seconds": 0.0046989917755126953
     },
     {
       "manifest_case_id": "CORE070-DATA-W-DF-UNIT-NATIVE",
@@ -284,7 +284,7 @@
       "actual": true,
       "is_error": false,
       "ok": true,
-      "elapsed_seconds": 5.9843063354492188e-05
+      "elapsed_seconds": 5.0783157348632812e-05
     },
     {
       "manifest_case_id": "CORE070-DATA-W-FRACTIONAL-NATIVE",
@@ -299,7 +299,7 @@
       "actual": true,
       "is_error": false,
       "ok": true,
-      "elapsed_seconds": 3.5047531127929688e-05
+      "elapsed_seconds": 3.1948089599609375e-05
     },
     {
       "manifest_case_id": "CORE070-DATA-W-LONG-NATIVE",
@@ -314,7 +314,7 @@
       "actual": true,
       "is_error": false,
       "ok": true,
-      "elapsed_seconds": 3.4093856811523438e-05
+      "elapsed_seconds": 3.0994415283203125e-05
     },
     {
       "manifest_case_id": "CORE070-DATA-W-MATRIX-CELLS-NATIVE",
@@ -329,7 +329,7 @@
       "actual": true,
       "is_error": false,
       "ok": true,
-      "elapsed_seconds": 4.4107437133789062e-05
+      "elapsed_seconds": 4.291534423828125e-05
     },
     {
       "manifest_case_id": "CORE070-DATA-W-MATRIX-MASK-DROP-NATIVE",
@@ -344,7 +344,7 @@
       "actual": true,
       "is_error": false,
       "ok": true,
-      "elapsed_seconds": 0.012028932571411133
+      "elapsed_seconds": 0.011603116989135742
     },
     {
       "manifest_case_id": "CORE070-DATA-W-MATRIX-MASK-INCLUDE-NATIVE",
@@ -359,7 +359,7 @@
       "actual": true,
       "is_error": false,
       "ok": true,
-      "elapsed_seconds": 0.00010395050048828125
+      "elapsed_seconds": 9.2029571533203125e-05
     },
     {
       "manifest_case_id": "CORE070-DATA-W-MATRIX-MASK-SCALAR-NATIVE",
@@ -374,7 +374,7 @@
       "actual": true,
       "is_error": false,
       "ok": true,
-      "elapsed_seconds": 5.0067901611328125e-05
+      "elapsed_seconds": 4.7922134399414062e-05
     },
     {
       "manifest_case_id": "CORE070-DATA-W-MATRIX-SCALAR-NATIVE",
@@ -389,7 +389,7 @@
       "actual": true,
       "is_error": false,
       "ok": true,
-      "elapsed_seconds": 3.6001205444335938e-05
+      "elapsed_seconds": 3.2901763916015625e-05
     },
     {
       "manifest_case_id": "CORE070-DATA-W-MATRIX-UNIT-NATIVE",
@@ -404,7 +404,7 @@
       "actual": true,
       "is_error": false,
       "ok": true,
-      "elapsed_seconds": 3.5047531127929688e-05
+      "elapsed_seconds": 3.3855438232421875e-05
     },
     {
       "manifest_case_id": "CORE070-DATA-W-NULL-NATIVE",
@@ -419,7 +419,7 @@
       "actual": true,
       "is_error": false,
       "ok": true,
-      "elapsed_seconds": 8.106231689453125e-05
+      "elapsed_seconds": 2.4080276489257812e-05
     },
     {
       "manifest_case_id": "CORE070-DATA-W-ZERO-NATIVE",
@@ -434,7 +434,7 @@
       "actual": true,
       "is_error": false,
       "ok": true,
-      "elapsed_seconds": 6.198883056640625e-05
+      "elapsed_seconds": 2.6941299438476562e-05
     },
     {
       "manifest_case_id": "CORE070-DATA-W-LONG-NATIVE-NEGATIVE-CONTROL",
@@ -449,7 +449,7 @@
       "actual": false,
       "is_error": false,
       "ok": true,
-      "elapsed_seconds": 4.00543212890625e-05
+      "elapsed_seconds": 3.0040740966796875e-05
     },
     {
       "manifest_case_id": "CORE070-DATA-W-MATRIX-UNIT-NATIVE-NEGATIVE-CONTROL",
@@ -464,7 +464,7 @@
       "actual": false,
       "is_error": false,
       "ok": true,
-      "elapsed_seconds": 4.6014785766601562e-05
+      "elapsed_seconds": 3.2901763916015625e-05
     }
   ],
   "all_checks": true,

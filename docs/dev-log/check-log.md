@@ -1,3 +1,32 @@
+## 2026-09-27: Data and fit-input at P1, independent review of #579 applied
+
+- Same branch, fast-forward commits only, one concern per commit; no `src/`, GATES.md, P0 evidence or
+  classification change. Counts unchanged (data 28 needs_surface_r_side_measured, fit-input 6
+  numeric_pass).
+- Finding 1 (blocking): the data receipts said GLLVModels has no surface for any data case, resting
+  on `Base.kwarg_decl`, which cannot see keywords forwarded through `kwargs...`. New
+  `tools/core070_data_surface_probe.jl` calls weights, offset, mask and missing-in-Y through the
+  public dispatcher on a tiny fixture (non-constant offset) for 9 fitter paths. Result: `offset=` and
+  `mask=` accepted and move logLik on the default Gaussian, Poisson, NB2, NB1, Binomial, Beta, Gamma
+  and the `gllvm(@formula)` Poisson path; missing cells in Y likewise except the Gaussian path
+  (MethodError), with mask and missing giving the same logLik; `pervar=true` refuses all four;
+  `weights=` refused (MethodError) on all 9. The 28 data receipts now say the R side is a helper
+  replay with no fit number, so there is nothing numeric to compare yet, and quote the probe; the data
+  P1 twin gains `julia_surface_status_p1_note`.
+- Finding 4: receipt `--check` compares each receipt's `glvmodels_commit`, `glvmodels_worktree_dirty`
+  and `glvmodels_src_tree`, and each case map's `glvmodels_commit`, with the batch's tracked
+  `run-commit.json`; `tools/test_core070_data_p1_receipts.py` is the negative control (forty-zero
+  commit, wrong src tree, dirty list each fail and are named). Finding 5: the introspection records a
+  repo-relative contract path. Finding 2 (disclosed): GAUSS-DEFAULT and GAUSS-LOADINGS receipts carry
+  `coef_block_note` (coef = trait sample means to 2e-17 Julia, 8e-10 R; only logLik discriminates).
+  Finding 6: data and fit-input-2 runners `shQuote` the path in `sha256_file`; the same unquoted
+  pattern remains in about 20 other `tools/core070_*.R` runners and `tools/core070_source_pin.R`.
+- Re-run from clean `a87510306` at P1: data replay 0.9 s, introspection 1.7 s, probe 56.6 s,
+  fit-input-2 55.0 s; fit-input-2 `r-oracle.json`, `julia-results.json`, `results.tsv` bit-identical
+  to the `10467e0cc` run. Receipt `--check` current (43 receipts, 34 rows); four contract `--check`s
+  current; `test_true_parity_check.mjs` passes; main (`1214e948e`, identical file) and #561
+  (`92cf39571`) give the same C1/C8 lines as before.
+
 ## 2026-09-27: Data and fit-input families re-measured at gllvmTMB P1 (A3), tracked receipts
 
 - Branch `claude/true-parity-p1-data`, stacked on `claude/true-parity-p1-inference` (PR #571) at

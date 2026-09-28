@@ -9,6 +9,12 @@
 # list of gllvm()/fit_gllvm() (via Base.kwarg_decl). This is retained runtime
 # evidence, not an assumption: no R call, no fit, no frozen source involved.
 #
+# Limit: it is a NAME check. Both entry points end in `kwargs...`, so
+# Base.kwarg_decl lists only the dispatcher's own keywords, not what it forwards
+# to the family fitters; it is not a keyword census. The fit-time offset= and
+# mask=/missing-Y surfaces the non-Gaussian fitters do have are exercised
+# behaviourally by tools/core070_data_surface_probe.jl.
+#
 # Usage: julia --project=<repo> tools/core070_data_batch.jl [output.json]
 
 using GLLVModels
@@ -94,7 +100,7 @@ receipt = Dict(
     "schema" => "core070-data-batch-julia-introspection/v1",
     "scope" => "CORE070_DATA_BATCH_JULIA_SURFACE_ABSENCE",
     "reference_commit" => REFERENCE_COMMIT,
-    "contract_path" => CONTRACT_PATH,
+    "contract_path" => relpath(CONTRACT_PATH, joinpath(@__DIR__, "..")),  # repo-relative, no host path
     "julia_version" => string(VERSION),
     "gllvm_package_uuid" => "2dc8e01c-4f48-4476-aaae-e919b4a30df7",
     "gllvm_exported_symbol_count" => length(exported),
