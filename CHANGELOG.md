@@ -466,6 +466,17 @@ All notable changes to GLLVModels.jl are documented here.
   :aghq`) already checked `fb.converged` and is untouched. Other families
   (Binomial, NB, Gamma, ...) still use the bare-vector adapter and are
   migrated one at a time in follow-up PRs.
+- **Exponential, lognormal, Student-t and GP-1 `confint(..., method =
+  :bootstrap)` now report the refit's own convergence verdict (part of
+  #504).** The refit closures for `ExponentialFit`, `LognormalFit`,
+  `StudentTFit` (shared and per-species σ) and `GP1Fit`
+  (`src/confint_family.jl`) returned a bare parameter vector, so a replicate
+  whose refit ended on the fitter's failure verdict (its θ is the finite warm
+  start) was counted as a good draw. They now return `(θ = ..., converged =
+  ..., loglik = ...)`, as Poisson's does since #516; such replicates are
+  excluded and `n_converged` counts only the ones kept. When every replicate
+  converges, bootstrap endpoints are identical to before. No boundary flag is
+  added for the GP-1 dispersion α or the Student-t σ.
 
 ### Changed
 - **Breaking (default change):** `fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm`
