@@ -240,7 +240,10 @@ for cs in cases
             maximum(abs.(jl_vec .- r_vec))
         results[case_id] = Dict{String, Any}("pass" => ok, "kind" => kind, "tolerance" => tol,
                                               "max_abs_diff" => maxdiff, "r_len" => length(r_vec),
-                                              "julia_len" => length(jl_vec), "error" => err)
+                                              "julia_len" => length(jl_vec), "error" => err,
+                                              # PR #569 review finding 3: the Julia vector itself, so the
+                                              # receipt tool recomputes max |R - Julia| instead of trusting it.
+                                              "julia_values" => jl_vec)
         global all_ok &= ok
 
     elseif kind == "verdict"
