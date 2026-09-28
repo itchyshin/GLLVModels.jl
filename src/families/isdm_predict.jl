@@ -105,14 +105,16 @@ Predictions from an integrated species-distribution fit, the twin of gllvmTMB's
 with `est` last.
 
 - In-sample (`newdata = nothing`), `re_form = :all`: `est` is the per-row linear
-  predictor at the latent modes, exactly `fit.eta`.
+  predictor at the latent modes (including the unique effects of a
+  `unique = TRUE` fit), exactly `fit.eta`.
 - `re_form = :zero` (also `nothing`, `0`, `missing`, R's `~0` and `NA`): fixed
   effects plus offset, `X * b_fix + offset`.
 - `newdata`: the fixed design is rebuilt from the fitted basis by column name
   (the response column is not needed), source-observation columns are filled
   only on their source's rows, the offset is re-evaluated against `newdata`, and
-  the latent contribution `Λ[t, :] . zhat[:, s]` is re-added for units seen at
-  fit time; an unseen unit falls back to the fixed-only prediction. The source
+  the latent contribution `Λ[t, :] . zhat[:, s]` (and, on a `unique = TRUE` fit,
+  the unique effect `s_B[t, s]`) is re-added for units seen at fit time; an
+  unseen unit falls back to the fixed-only prediction, as in R. The source
   column must be present, non-missing, and name declared sources.
 - `type = :response` applies each row's own inverse link: `exp(eta)` on count
   rows, `1 - exp(-exp(eta))` on detection rows. It includes the offset, so a
@@ -149,6 +151,7 @@ function predict(fit::IsdmFit; newdata = nothing, type::Symbol = :link, re_form 
             for i in eachindex(est)
                 uid[i] == 0 && continue
                 est[i] += dot(view(fit.Λ, tid[i], :), view(fit.zhat, :, uid[i]))
+                fit.unique && (est[i] += fit.s_B[tid[i], uid[i]])
             end
         end
         fid = tab.sources.fid[srcid]
