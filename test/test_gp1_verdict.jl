@@ -106,17 +106,25 @@ _gp1v_sha(Y) = bytes2hex(sha256(reinterpret(UInt8, vec(Int64.(Y)))))
 
     @testset "healthy fits are unchanged vs origin/main (per Julia version)" begin
         vkey = "main_julia_1_$(VERSION.minor)"
+        # The origin/main logliks were measured on macOS aarch64. Linux CI reaches
+        # a different optimum on some seeds (seed 101: -1256.35 vs -1259.00 on
+        # Julia 1.10), so the literal record only binds where it was measured.
+        # Everywhere, the new log-pmf branch must be unreachable on this data, so
+        # the fix cannot move these fits on any platform.
+        on_record_platform = Sys.isapple() && Sys.ARCH === :aarch64
         for key in healthy_keys
             case = fixture[key]
             Y = reshape(Int64.(case["Y_column_major"]), p, n)
+            @test maximum(Y) < GM._GP1_Y_STABLE
             fit = GM.fit_gp1_gllvm(Y; K = K)
-            if haskey(case, vkey * "_loglik")
+            if on_record_platform && haskey(case, vkey * "_loglik")
                 @test fit.converged == case[vkey * "_converged"]
                 @test fit.loglik ≈ case[vkey * "_loglik"] atol = 1e-8
             else
-                # No origin/main record for this Julia minor version: the
-                # optimum is version-dependent (seeds 101 and 104 differ between
-                # 1.10 and 1.13), so only the plausibility of the fit is checked.
+                # No origin/main record for this Julia minor version or platform:
+                # the optimum is version- and platform-dependent (seeds 101 and
+                # 104 differ between 1.10 and 1.13), so only the plausibility of
+                # the fit is checked.
                 @test fit.converged
                 @test isfinite(fit.loglik) && fit.loglik < 0
             end
