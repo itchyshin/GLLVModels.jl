@@ -135,3 +135,17 @@ unchanged within timing noise. The sweeps took about 12 minutes on four processe
   mode. A Newton step on the observed curvature, or a stopping rule on the inner
   gradient, would be the place to look. Measured on one site of one draw; the same
   mechanism is a plausible cause of the unreliable Wald interval for r noted above.
+- A second, small-r basin on draw 104 (PR #581 CI fix, 2026-09-28). The Julia 1.10
+  Linux CI job failed because the default guarded fit converged at -1687.06 (r = 0.028,
+  smallest site eigenvalue 0.88), 0.72 below the healthy optimum, where Laplace exceeds
+  the exact marginal by 3.74 units. This reproduces bit for bit on a Linux x86_64 AMD
+  EPYC host (Julia 1.10.12), not on aarch64 macOS nor under x86_64 Rosetta with the Zen,
+  Haswell, Sandybridge or Nehalem OpenBLAS kernels. On aarch64, 5 of 16 random starts
+  end in the same basin (1.03 to 1.34 below the healthy optimum, r = 0.001 to 0.009,
+  Laplace minus exact 4.9 to 8.4, eigenvalue 0.74 to 0.83); tight-tolerance restarts stay
+  there, so it is a flat ridge, not an early stop. It is not a breakdown and the guard
+  correctly passes it; it is ordinary Laplace error of the kind in the first bullet. The
+  same CI job's unguarded fit ended at -1721.4, not at the -1663.1 spurious maximum, so
+  the tests no longer depend on any optimiser path: the guard is tested at literal
+  parameter vectors stored in the fixture (breakdown, healthy, small-r basin), and the
+  fit tests accept either basin on draw 104 with measured bounds.

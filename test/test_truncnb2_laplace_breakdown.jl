@@ -53,49 +53,100 @@ end
 
 const _TNB_BD_FITS = Dict{Int, Any}()
 
+# A literal parameter vector [β; pack(Λ); log r] from the fixture, sha256-checked.
+function _tnb_bd_theta(seed, name)
+    d = _TNB_BD["seed$seed"]
+    θ = Float64.(d[name])
+    @test bytes2hex(sha256(reinterpret(UInt8, θ))) == d[name * "_sha256"]
+    p = _TNB_BD["p"]
+    return θ[1:p], GLLVModels.unpack_lambda(θ[(p + 1):(2p)], p, 1), exp(θ[end])
+end
+
+# These tests assert properties of the guard and of the fit that must hold on every
+# platform. They do not pin an optimiser path: L-BFGS here uses finite differences, and
+# the path depends on the BLAS kernel (on Julia 1.10.12 the unguarded seed-104 fit ends
+# at -1663.1 on aarch64 macOS, -1723.1 under x86_64 Rosetta and -1721.4 on the Linux CI
+# runner). What the guard does at a given point is tested at fixed parameters below.
+@testset "truncated NB2: breakdown guard at fixed parameters" begin
+    Y = _tnb_bd_data(104)
+    flr = GLLVModels.TRUNCNB2_LAPLACE_EIGMIN_FLOOR
+    mineig(β, Λ, r) = GLLVModels._truncnb2_min_site_eigen(Y, Λ, β, fill(r, 4))
+    lap(β, Λ, r; kw...) = truncated_nbinom2_marginal_loglik_laplace(Y, Λ, β, r; kw...)
+
+    # The spurious maximum: a near-singular site inflates the unguarded Laplace value
+    # far above both the healthy optimum and the exact marginal at the same point. The
+    # guarded objective walls it off.
+    βb, Λb, rb = _tnb_bd_theta(104, "theta_breakdown")
+    raw = lap(βb, Λb, rb)
+    raw_exact, raw_minA = _tnb_exact_and_minA(Y, βb, Λb, rb)
+    @test raw_minA < 1e-3
+    @test mineig(βb, Λb, rb) ≈ raw_minA rtol = 1e-6
+    @test raw > -1686.335 + 20
+    @test raw - raw_exact > 50
+    @test lap(βb, Λb, rb; eigmin_floor = -Inf) == raw       # public marginal is unguarded by default
+    @test lap(βb, Λb, rb; eigmin_floor = flr) == -Inf
+
+    # The healthy optimum: the guard leaves it untouched, and Laplace is accurate there.
+    βh, Λh, rh = _tnb_bd_theta(104, "theta_healthy")
+    ex_h, minA_h = _tnb_exact_and_minA(Y, βh, Λh, rh)
+    @test minA_h > 5 * flr
+    @test lap(βh, Λh, rh; eigmin_floor = flr) == lap(βh, Λh, rh)
+    @test abs(lap(βh, Λh, rh) - ex_h) < 3.0
+
+    # A second, small-r basin (r = 0.0085), about 1 log unit below the healthy optimum:
+    # not a breakdown (eigenvalue 0.83), so the guard correctly passes it, but the
+    # Laplace value overstates the exact marginal there by about 5 units. The guard is
+    # not designed to catch this; it is recorded so the limit is explicit.
+    βr, Λr, rr = _tnb_bd_theta(104, "theta_ridge")
+    ex_r, minA_r = _tnb_exact_and_minA(Y, βr, Λr, rr)
+    @test minA_r > 5 * flr
+    @test lap(βr, Λr, rr; eigmin_floor = flr) == lap(βr, Λr, rr)
+    @test 3.0 < lap(βr, Λr, rr) - ex_r < 10.0
+    @test lap(βh, Λh, rh) - lap(βr, Λr, rr) > 0.5
+end
+
 @testset "truncated NB2: Laplace breakdown guard (audit F1)" begin
     # Best healthy point known per seed (audit P5 shrunk-start refits; seed 110's
-    # -1637.240 was found by this fix and is 0.016 above the audit's -1637.256). The
-    # data have several maxima, so assert "no worse than the best healthy point known";
-    # the Laplace-vs-exact check below rules out a spurious higher value.
+    # -1637.240 was found by this fix and is 0.016 above the audit's -1637.256).
     healthy = Dict(104 => -1686.335, 106 => -1888.350, 110 => -1637.240)
+    flr = GLLVModels.TRUNCNB2_LAPLACE_EIGMIN_FLOOR
     for seed in (104, 106, 110)
         @testset "seed $seed" begin
             Y = _tnb_bd_data(seed)
             fit = _TNB_BD_FITS[seed] = fit_truncated_nbinom2_gllvm(Y; K = 1)
+            # `exact` is the quadrature marginal at the fitted parameters themselves.
             exact, minA = _tnb_exact_and_minA(Y, fit.β, fit.Λ, fit.r)
-            # No fit reports converged at a near-singular site.
-            @test !(fit.converged && minA < 0.11)
-            # The reported loglik is a usable approximation to the exact marginal there
-            # (healthy Laplace error on these data: 0.06 to 1.6 units; breakdown: 40 to 139).
-            @test abs(fit.loglik - exact) < 3.0
-            # The healthy optimum is reached (the spurious maximum on seed 104 was 23 higher).
-            @test fit.loglik >= healthy[seed] - 0.01
             @test fit.converged
+            # Not at a near-singular site: healthy optima measure 0.74 to 1.1 (16 random
+            # starts per seed, including the seed-104 small-r basin), breakdown points
+            # 8e-6 to 1.3e-4.
+            @test fit.min_site_eigen ≈ minA rtol = 1e-8
+            @test minA > 5 * flr
+            # No spurious maximum above the best healthy point (the breakdown on seed 104
+            # was 23 units above it).
+            @test fit.loglik < healthy[seed] + 0.1
+            if fit.loglik >= healthy[seed] - 0.05
+                # At the healthy optimum the Laplace value is a usable approximation to
+                # the exact marginal (measured -0.2 to 1.7 units; breakdown: 31 to 139).
+                @test abs(fit.loglik - exact) < 3.0
+            else
+                # Seed 104 only: the small-r basin (see the fixed-parameter testset). The
+                # Linux x86_64 default fit (Julia 1.10.12; CI runner, reproduced on an AMD
+                # EPYC host) converges at -1687.06, 0.72 below the healthy optimum, with
+                # r = 0.028, smallest site eigenvalue 0.88, Laplace minus exact 3.74. On aarch64
+                # macOS, 5 of 16 random starts ended in this basin: 1.03 to 1.34 below
+                # the healthy optimum, r = 0.001 to 0.009, Laplace minus exact 4.9 to 8.4,
+                # smallest site eigenvalue 0.74 to 0.83, so not a breakdown.
+                @test seed == 104
+                @test fit.r < 0.05
+                @test fit.loglik >= healthy[seed] - 2.0
+                @test 0.0 < fit.loglik - exact < 10.0
+            end
         end
     end
 end
 
 @testset "truncated NB2: breakdown guard mechanics" begin
-    Y = _tnb_bd_data(104)
-    # The unguarded objective (eigmin_floor = -Inf, main's code path) still ends at a
-    # breakdown point that beats the healthy optimum; this pins the defect the guard
-    # exists for. (-1663.100 on Julia 1.10.12 and -1678.975 on 1.13.0: the L-BFGS path
-    # differs across versions, so the value is not pinned.)
-    raw = fit_truncated_nbinom2_gllvm(Y; K = 1, eigmin_floor = -Inf)
-    raw_exact, _ = _tnb_exact_and_minA(Y, raw.β, raw.Λ, raw.r)
-    @test raw.min_site_eigen < 1e-3
-    @test raw.loglik > _TNB_BD_FITS[104].loglik + 5
-    @test raw.loglik - raw_exact > 20
-    # The guarded objective refuses that point; the public marginal is unguarded by default.
-    @test truncated_nbinom2_marginal_loglik_laplace(Y, raw.Λ, raw.β, raw.r) ≈ raw.loglik atol = 1e-6
-    @test truncated_nbinom2_marginal_loglik_laplace(Y, raw.Λ, raw.β, raw.r;
-              eigmin_floor = GLLVModels.TRUNCNB2_LAPLACE_EIGMIN_FLOOR) == -Inf
-    # The guarded fit records the smallest site eigenvalue at its optimum.
-    fit = _TNB_BD_FITS[104]
-    _, minA = _tnb_exact_and_minA(Y, fit.β, fit.Λ, fit.r)
-    @test fit.min_site_eigen ≈ minA rtol = 1e-8
-    @test fit.min_site_eigen >= 1.1 * GLLVModels.TRUNCNB2_LAPLACE_EIGMIN_FLOOR
     # The flag rule is load-bearing: Optim reports converged = true for a fit stalled
     # at the wall. With a floor above the healthy optimum's eigenvalue (1.01 on seed
     # 106), both the first fit and the retry end at the guard, and the fit must say so.
