@@ -13,6 +13,25 @@ All notable changes to GLLVModels.jl are documented here.
 
 ## Unreleased
 
+### Added
+- **`ordinal_logit()`: name-twin of gllvmTMB's `ordinal_logit()` (family_id 20,
+  gllvmTMB >= 0.7.1).** Fits exactly the model `Ordinal()` already fits with
+  `link = LogitLink()` (`fit_ordinal_gllvm_pertrait` /
+  `fit_ordinal_gllvm_pertrait_cov`), so it changes no numerics, but returns
+  its own `OrdinalLogit` marker rather than `Ordinal()` itself: `Ordinal()`
+  carries no link of its own, so a bare alias would let
+  `fit_gllvm(Y; family = ordinal_logit(), link = ProbitLink())` silently fit
+  a probit model under the logit name. `OrdinalLogit` pins the link and
+  refuses any other one, at both the `fit_gllvm` and `@formula` entry points.
+  Twin-verified against a real gllvmTMB 0.7.1 install (commit `9539352f6`) on
+  a fixed fixture dataset: logLik agrees to 3.1e-9 absolute at each side's own
+  optimum (test tolerance `atol = 1e-6`), and Julia's own Laplace marginal
+  evaluated at R's fitted coordinates reproduces R's logLik to 2.7e-11.
+  Per-trait cutpoints agree to at most 5.4e-6 (test tolerance `atol = 1e-3`)
+  and `Lambda * Lambda'` (loadings are only sign-identified) to at most 4.2e-5
+  (test tolerance `atol = 1e-3`) (`test/test_ordinal_logit_twin.jl`, tagged
+  `gllvm-parity-tag: P1`).
+
 ### Fixed
 - **Ordered-beta fits could report `converged = true` at a non-stationary point,
   with a restart reaching a genuinely better optimum (#501).** The per-site
@@ -43,6 +62,85 @@ All notable changes to GLLVModels.jl are documented here.
   across all three of the issue's flagged seeds (120 sites probed). `getLV`/
   `predict` are unaffected in signature (they take the best available mode
   regardless of convergence, as the shared generic core does).
+- **Conway-Maxwell-Poisson fits no longer report a value from a diverged inner
+  search (#503).** `_compoisson_mode` (`src/families/com_poisson.jl`, this
+  family's own per-site Laplace mode search — it shares no code with the
+  generic `_laplace_mode` core) ran an undamped Newton step every iteration
+  and returned whatever `z` it held at `maxiter`, converged or not, the same
+  defect class as #479/#480/#484/#500/#507/#509: measured 7/266 non-mode
+  stress-probe sites. A step that lowers the per-site log-posterior is now
+  halved, and "converged" requires both the proposed step and the
+  log-posterior gradient itself to be small (mirrors the Student-t grouped
+  fix, #509 — a large, well-conditioned curvature can solve for a tiny step
+  while the gradient is still far from zero). `_compoisson_loglik_site` now
+  returns `-Inf` when a site cannot certify a stationary point, so the
+  fitter's `1e12` sentinel fires instead of a garbage finite value; a
+  genuinely healthy but ill-conditioned site is retried once at a 20x
+  iteration budget before giving up (mirrors #507/#509). Values at sites
+  where the old undamped loop already converged are unchanged (to 1e-8).
+  **Not covered by this fix:** a separate, unconfirmed anomaly noted by a
+  sibling audit (2/10 fits showing an enormous outer finite-difference
+  gradient, no better restart) is documented in this PR's body rather than
+  fixed — restart evidence does not support a missed optimum, and the
+  `compoisson_logz` branch switch this fix's PR re-checked directly is
+  continuous in value and derivative across the crossover, so the
+  suspected mechanism is this same class of undamped-search sensitivity,
+  not a kink in the normalizer.
+- **Mixed-family fits (`fit_mixed_gllvm`) no longer report convergence from a
+  diverged inner search (#503).** The per-site Laplace mode search inside
+  `_mixed_laplace_mode` (a GLLVM where different traits carry different response
+  families on one shared latent block) took undamped Fisher-scoring steps and
+  had no convergence flag: a site could be left far from its stationary point
+  while `_mixed_loglik_site` still returned a finite log-likelihood. A
+  re-measure on `main` across three family mixes (Poisson/Binomial/Gamma;
+  Normal/NegativeBinomial/Beta; a four-trait Poisson/Gamma/Beta/Binomial mix)
+  found 120/1200 finite-non-mode sites using the class audit's own
+  gradient-of-the-score probe. The search now halves any step that lowers the
+  per-site log-posterior. It declares convergence when both the step `|Δ|` is
+  below the caller's `tol` (default `1e-9`) and the Newton decrement `|g'Δ|` is
+  below `1e-6`. The decrement replaces an absolute bound on the
+  gradient `g` because `Λ'WΛ + I` can be badly scaled (a Normal trait whose
+  fitted σ is driven near zero makes `W = 1/σ²` enormous), and there a genuine
+  mode leaves a large raw `g` in the stiff direction purely from rounding. At a
+  mode reached to rounding the step can stall at the floating-point floor
+  (measured 1e-9 to 2e-8) and never fall below `tol`, so a decrement below
+  `1e-12` also counts as convergence, but only when the step can no longer
+  move: at the floor with the step no longer shrinking, or when the line
+  search cannot move `z`. An earlier revision accepted any decrement below
+  `1e-12` outright; that ignored a caller's tighter `tol` (the Gamma
+  cross-kernel test asks for `tol = 1e-13`) and failed that test in CI, so the
+  clause is now restricted to steps that have stopped making progress.
+  Once a full-size step has been rejected in a call, later steps skip
+  the small-step shortcut and go through the line search, because the undamped
+  Fisher map is not always a contraction near the mode (a Gamma trait with
+  shape 0.7 far into its tail oscillates otherwise); this latch is off once the
+  step is at the floating-point floor, where the line search could only compare
+  rounding noise. A site that still cannot certify a stationary point within a
+  20x-widened iteration budget returns `-Inf`, so the fitter's own `1e12`
+  failure sentinel fires instead of a silently wrong log-likelihood.
+  `getLV`/`predict` call `_mixed_laplace_mode` directly and keep their prior
+  no-sentinel behaviour. Whole-fit check (20 simulated datasets, 5 family
+  mixes, Julia 1.10 only): of the 16 fits that were healthy on `main`
+  (converged, every site independently certified stationary), none got worse;
+  15 moved by at most 1.8e-8 in log-likelihood and one (Normal/NB2/Beta) rose
+  by 0.014. Of the 4 fits that were not healthy on `main`, 3 now reach a higher
+  log-likelihood (by 0.24, 14.4 and 1749; `main`'s value in the last case was
+  computed at non-mode sites) and one still hits the outer iteration limit, as
+  on `main`, at the same value. Total fit time was 47.4 s against 45.0 s on
+  `main`; per fit the ratio ranged from 0.08 to 2.1. These figures are specific
+  to those datasets, not a general bound.
+  An independent review of the earlier revision (15 datasets, its own seeds,
+  6 family mixes) found
+  none of 10 healthy fits worse beyond outer-optimiser noise (one lower by
+  1.2e-6 on a flat Gamma-shape ridge, where the kernel reproduces `main`'s value
+  at `main`'s parameters) and a total fit time of 1.5x `main`. It also set the
+  limits of the ill-conditioning argument: with one latent variable it holds
+  down to a Normal σ of about 1e-13, below which rounding keeps `|g'Δ|` above
+  both tolerances and the site returns `-Inf`; with two or more latent
+  variables and σ at or below 1e-9, `A` is too ill-conditioned (condition number
+  above 1e16) for the step to be trusted and the site returns `-Inf` where
+  `main` returned a finite wrong value. A floor on the Normal σ is the remedy
+  and is not in this change.
 - **`confint(..., method = :profile)` and `method = :bootstrap` could accept a
   silently failed inner refit.** `_family_profile_refit` and `_family_bootstrap`
   (`src/confint_family.jl`) judged a refit's success only by `isfinite` on its
@@ -264,6 +362,58 @@ All notable changes to GLLVModels.jl are documented here.
   a fixed `nu`, or via `fit_studentt_gllvm(...; disp_group = :shared)`) shares no code
   with the grouped kernel fixed here and is NOT covered by this PR (measured 78/500
   stress-probe sites non-mode on the same audit).
+- **BetaBinomial fits no longer report convergence from a diverged inner search
+  (#503).** `_beta_binomial_mode` (the single per-site Laplace mode search shared by
+  every `BetaBinom` route — `fit_beta_binomial_gllvm`, its grouped and grouped+X
+  variants, and their `getLV`/`predict`) ran an undamped Newton loop on the clamped
+  observed curvature (`_bb_score_weight` floors the weight to keep `Λ'WΛ + I` SPD, but
+  does not keep any step a descent step) with no convergence flag, so a non-mode site
+  could still return a finite value: the class audit (Λ scaled up to 3x, warm start
+  perturbed ±50%) measured 27/500 non-mode sites. The search now halves any step that
+  lowers the per-site log-posterior and certifies convergence only when the full
+  proposed step is below `tol`; a site that still cannot converge is retried once at a
+  20x iteration budget (mirrors #507/#509) before the fitting objective's per-site
+  log-marginal returns `-Inf`, so the fitter's failure sentinel fires. Values at sites
+  where the old search converged are unchanged: a 220-site stress probe measured 0
+  finite non-stationary sites and 0 false `-Inf` at healthy sites, with a maximum
+  healthy-site value change of 4.3e-11. `getLV`/`predict` are unaffected in their
+  public behaviour (still return `z`) but now run the same damped, retried search.
+- **BetaBinomial fits no longer report `converged = true` at an impossible
+  log-likelihood (#515).** `betabinomial_logp` (`src/families/beta_binomial.jl`)
+  computed the log-pmf as a sum of six `loggamma` terms in `a = μφ`,
+  `b = (1-μ)φ`; each term grows like `φ log φ` while the sum stays O(1), so at
+  large `φ` the Float64 result is dominated by cancellation error (about 2e-10
+  at `φ = 1e6`, 1e-3 at `1e12`, unbounded beyond, against a 256-bit BigFloat
+  reference). The outer L-BFGS search read that error as room to improve and ran
+  `φ` to 1e21 to 1e85, where `fit_beta_binomial_gllvm` reported
+  `converged = true` at loglik up to +1.3e74. Measured on origin/main 1385b0490
+  (Julia 1.10.12, 100 simulated datasets per loading scale): 0/100 at loading
+  sd 0.9, 2/100 at sd 4.5; a third dataset diverges only on Julia 1.13.0. Near-binomial data is far more exposed: an independent review found 4 of 6
+  datasets with true `φ` of 1e3 to 1e5 diverging on main. At
+  `φ >= 1e6` the log-pmf now returns the exact Binomial(N, μ) limit, and a
+  per-family verdict (`_beta_binomial_verdict`) reports `loglik = -Inf`,
+  `converged = false` for a non-finite, sentinel, or positive objective, and
+  `converged = false` when `φ` sits at that boundary. All three diverging
+  datasets now reach an ordinary optimum (loglik -910 to -1072, `φ` 2.8 to
+  11.1) on both Julia versions; 20 healthy fits keep the same loglik (to 12 significant
+  digits) and converged flag. The grouped routes
+  (`fit_beta_binomial_gllvm_grouped`, `fit_beta_binomial_gllvm_grouped_cov`)
+  benefit from the stabilised log-pmf but do not yet have the verdict gate.
+- **Poisson `confint(..., method = :bootstrap)` now reports the refit's own
+  convergence verdict (#504).** The Laplace-route `refit` closure in
+  `_family_ci(fit::PoissonFit, ...)` (`src/confint_family.jl`) returned a bare
+  parameter vector, so `_bootstrap_refit_ok` (the richer `(θ = ..., converged
+  = ..., loglik = ...)` contract added in #508) could only check `isfinite` on
+  it: a replicate whose refit did not converge, or landed on the fitter's own
+  `1e12` failure sentinel, was still counted as a successful draw. The closure
+  now returns the fit's real `converged` and `loglik` alongside `θ`, so such a
+  replicate is excluded and `n_converged` reflects the stricter count. Fits
+  where every replicate already converged are unchanged (bootstrap interval
+  endpoints identical to before, to full precision). This is the first family
+  migrated to the richer contract for #504; the AGHQ route (`objective =
+  :aghq`) already checked `fb.converged` and is untouched. Other families
+  (Binomial, NB, Gamma, ...) still use the bare-vector adapter and are
+  migrated one at a time in follow-up PRs.
 
 ### Changed
 - **Breaking (default change):** `fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm`
