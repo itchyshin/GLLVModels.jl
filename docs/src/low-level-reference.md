@@ -117,6 +117,23 @@ GLLVModels._resolve_kernel
 GLLVModels._fit_gaussian_structured_sources
 ```
 
+## Temporal source internals
+
+The state index, coordinate layout and exact marginal likelihood behind
+[`fit_temporal_gllvm`](@ref), and the port of `TMB::tmbprofile` used by
+[`profile_temporal`](@ref). Not exported; can change without notice.
+
+```@docs
+GLLVModels.TemporalSpec
+GLLVModels.TemporalLayout
+GLLVModels._temporal_parameter_names
+GLLVModels._temporal_trait_block
+GLLVModels.temporal_marginal_nll
+GLLVModels.temporal_marginal_loglik
+GLLVModels._temporal_covariance
+GLLVModels._temporal_tmbprofile
+```
+
 ## Other internal helpers
 
 ```@docs
