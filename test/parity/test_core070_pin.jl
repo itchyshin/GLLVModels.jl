@@ -70,4 +70,20 @@ end
         @test occursin(P0_COMMIT, r.stderr)
         @test occursin(P1_COMMIT, r.stderr)
     end
+
+    @testset "runner manifest path follows the pin; each selected manifest passes its own guard" begin
+        script = """
+            include(raw"$PIN_FILE")
+            rel = _core070_frozen_contract_rel()
+            path = joinpath(raw"$ROOT", rel)
+            _core070_check_frozen_contract_pin(TOML.parsefile(path), path)
+            println(rel)
+            """
+        r0 = run_pin_script(script)
+        @test r0.success
+        @test strip(r0.stdout) == "docs/dev-log/core070/frozen-r070-contract.toml"
+        r1 = run_pin_script(script; pin = "P1")
+        @test r1.success
+        @test strip(r1.stdout) == "docs/dev-log/core070/true-parity-latest/frozen-r070-contract-p1.toml"
+    end
 end

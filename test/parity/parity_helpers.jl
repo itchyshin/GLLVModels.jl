@@ -59,7 +59,7 @@ function _core070_execution_paths(requested::AbstractVector{<:AbstractString})
         "test/parity/test_delta_gamma_parity.jl", "test/parity/fixtures/core070_gaussian_original.toml",
     "test/parity/covariance_formula_cases.jl", "docs/dev-log/core070/covariance-formula-programme-contract.json", "tools/core070_covariance_mode_fits.jl", "tools/core070_source_fixed_residual_pair.jl", "test/parity/fixtures/core070_covariance_modes.R", "test/parity/fixtures/core070_covariance_fits.R", "docs/dev-log/core070/covariance-programme-contract.json",
     "test/parity/fixtures/core070_gaussian_reference.R", "Project.toml", "test/Project.toml",
-        "test/parity/Project.toml", "docs/dev-log/core070/frozen-r070-contract.toml",
+        "test/parity/Project.toml", _core070_frozen_contract_rel(),
     ]
     append!(paths, (_CORE070_FIXTURES[id] for id in requested))
     for manifest in ("Manifest.toml", "test/Manifest.toml", "test/parity/Manifest.toml")
@@ -160,7 +160,7 @@ end
 function core070_start_run!()
     _core070_required() || return nothing
     _CORE070_RUN[] === nothing || throw(ArgumentError("CORE-070 run was already started in this Julia process"))
-    contract_path = joinpath(_core070_root(), "docs/dev-log/core070/frozen-r070-contract.toml")
+    contract_path = joinpath(_core070_root(), _core070_frozen_contract_rel())
     manifest = TOML.parsefile(contract_path)
     _core070_check_frozen_contract_pin(manifest, contract_path)
     Core070CaseRegistry.validate_manifest(manifest)
@@ -171,7 +171,7 @@ function core070_start_run!()
     run = start_run!(_core070_receipt_dir();
         requested_case_ids = requested, family_smoke_case_ids = _CORE070_FAMILY_SMOKE_IDS,
         source = source, inventory = inventory,
-        contract_sha256 = _core070_sha256_file(joinpath(root, "docs/dev-log/core070/frozen-r070-contract.toml")))
+        contract_sha256 = _core070_sha256_file(contract_path))
     try
         _core070_copy_oracle_receipts!(run.dir)
     catch err
