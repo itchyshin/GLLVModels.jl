@@ -1,3 +1,14 @@
+## 2026-09-27: Tweedie bootstrap refits report their own verdict (part of #504)
+
+- Branch `claude/tweedie-boot-verdict-504` from `origin/main` @ `cb5688f7e`. The `TweedieFit`,
+  `TweedieGroupedFit` and `TweediePerTraitPowerFit` refit closures return `(θ, converged, loglik)`;
+  no boundary flag (the power is held fixed in the CI layer and `_tweedie_verdict` already flags a
+  power at the edge of (1, 2)).
+- New `test/test_confint_bootstrap_verdict_tweedie.jl`: 7 pass, 14 fail, 18 error on main; 39/39 on
+  Julia 1.10.12 and 1.13.0 (per-file; full suite not run; about 23 to 25 min per run on a loaded Mac).
+  Four neighbouring files: 407 pass, plus 2 pre-existing broken (one `@test_broken`, one `@test_skip`).
+- After-task: `docs/dev-log/after-task/2026-09-27-tweedie-boot-verdict-504.md`.
+
 ## 2026-09-27: One shared pin source for the Core070 parity harness, plus a P1 oracle build (D-294/D-295)
 
 - Branch `claude/true-parity-p1-oracle`, builds on #524 (merged into `main` as `824d22a4b`
