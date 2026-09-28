@@ -1,6 +1,6 @@
 # Checkpoint — OVERWRITTEN every arc (a pointer to truth, not a log)
 
-- DONE (18:20Z 09-27): GOAL-2026-09-27-owed.md, all five rows. Pushed: #518 through 64a3fc8c4, #1324 0eedd4d9d, #521 a3129233d. LOCAL, unpushed on purpose (pushing restarts #518 CI started 17:15Z): 54d84b6c8 + the after-task/goal/checkpoint commit; push after #518 CI finishes. BLOCKED on merges (Shinichi): NB 24-cell re-run after #521 (estimate first, ~70% slower), Gaussian cells after #519, #518 rebase, #520 retarget. Open: Julia vs R ridge gap at n=120 p=10 (8/10 vs 1/10); getLV grouped non-mode scores (inbox report, task chip).
+- OVERNIGHT (01:10Z 09-28): goal GOAL-2026-09-28-overnight.md; report MORNING-REPORT-2026-09-28.md. DONE: A0, A1 (Julia vs R same data), A2 (Gaussian with intercepts 0.950). RUNNING: A5 binomial ridge grid (ridge/grid_binomial/), #518 CI. NEXT: A5 summary -> design/74 + report; final push. Never merge/submit.
 - DONE: G0 — ultra-plan approved (ultra-plan.md). Decisions: omitting d means estimate it; gllvmTMB gets the same rule via a spec handed to the Cursor lane; A1 is a feasibility question first.
 - D-292 (2026-09-26): Claude owns gllvmTMB too; build auto-d in R and Julia side by side, each cross-checking the other. A8b becomes a real R build, not a spec.
 - PARKED FOR A POSSIBLE NEW LANE (Shinichi 2026-09-26): the big LASSO/shrinkage investigation (LASSO vs ridge priors, FA and latent-variable models generally). If this lane cannot address it, open a follow-up lane.

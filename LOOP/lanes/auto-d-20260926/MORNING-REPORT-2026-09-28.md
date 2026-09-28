@@ -7,6 +7,20 @@ Goal: GOAL-2026-09-28-overnight.md. Written at the start and updated as arcs fin
 2. Approve the NB re-run estimate (about 5,500 core-h; nb-rerun-plan.md). Not submitted.
 3. Julia vs R guard difference under the ridge (A1 below): which Hessian rule should both use?
 
+## "All GitHub Actions green" (your 01:40Z request)
+- #518: `main` merged again (CHANGELOG conflict from tonight's merges); lane tests pass; pushed, CI running.
+- #521: `main` merged (picks up #530's Documenter fix); its two test files pass; pushed, CI running.
+- The only other red check on every PR is the advisory "Frozen R 0.7.0 family smoke" job, which is also
+  red on `main`. Its cells: NB2 (ours), Student-t and truncated NB2 (no owner tonight; the "main parity"
+  lane logs them for you). **NB2 diagnosis:** on the pinned parity dataset both engines put 2 of 5 traits'
+  dispersion at the Poisson boundary (Julia r of about 1e25 and 1e10, on `main` and on #521 alike), so the
+  Julia fit honestly reports `converged = false` (T14 boundary rule) and gllvmTMB's gradient check fails
+  (0.0024 > 1e-4). Log-likelihoods still agree. Not a code bug. Making it green needs **your decision**:
+  replace the hash-pinned fixture with data that has real overdispersion, or accept a boundary fit in
+  that assertion. I changed neither.
+- Coordination: messaged "main parity" (owns the harness pins; asked me not to edit its pin files) and
+  "Package completion planning" (works on DRModels.jl/drmTMB only; no collision).
+
 ## Arcs
 - A0 (#518 CI): DONE. CI on `159631a5b`: all 8 test shards, Documenter and the P1 twin tests pass; only the advisory smoke job fails (as on `main`). Held commits pushed together with A1 (see A4).
 - A1 (Julia vs R ridge on the same data): DONE. gllvmTMB fitted the 40 exact Julia datasets. With the
@@ -22,5 +36,16 @@ Goal: GOAL-2026-09-28-overnight.md. Written at the start and updated as arcs fin
   with `:bic` (grid 0.865), 0 failures. So the Gaussian claim in #518 holds with trait intercepts; after
   #519 merges this only needs a confirming re-run on `main`. Recorded in design/74 (local commit
   `dd383ba22`).
+- A5 (added overnight): DONE. The grid's binomial cells with the default ridge (1,200 datasets,
+  weak loadings 0.8·N(0,1)): exact recovery 0.412 (`bic_sites`) against 0.437 without the ridge;
+  K = 1 always right; K = 2 and 3 found almost only at n = 300; 706 too few, 0 too many. At weak signal
+  the ridge buys safety (never over-selects), not accuracy; its accuracy gain is at strong loadings.
+  **Worth a look:** the docs for `binary_ridge = 2` should say this plainly (design/74 T7 updated).
+
+## Will auto-d work? (your 01:55Z question, answered with tonight's numbers)
+Gaussian 0.95 and Poisson 0.999: yes. Negative binomial: promising (the fixed kernel picked the true
+K where the old one picked 5) but unmeasured until the NB re-run. Binary: K = 1 reliably, higher K only
+with strong signal or large n; it errs towards too few dimensions and reports every attempt. Built in
+both packages as drafts (#518, #1324), CI green apart from the advisory smoke job.
 - A3 (CI watch): RUNNING
 - A4 (this report, checkpoint, final push): PENDING
