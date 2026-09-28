@@ -31,10 +31,14 @@ CI is runner-starved (about 24 queued runs across lanes); trains wait, nothing f
 - #558 retargeted to main; its train waits for #546 to merge first (scratchpad/train_558.log). Trains #528/#539 and #531 timed out on CI capacity and were restarted (logs ...b.log).
 - Remote Control turned on for this session and the two running sessions (#541 grouped beta-binomial; DRM.jl package completion).
 
-## Overnight updates (18:50 MDT)
-- #557 fix at d0a57e05d (b2z done); fresh review r557b running -> reviews/pr-557b-review.md. Needs Shinichi's landing word.
-- #561 (supersedes #559) at 2d0cf3387 (b3n done); review r561 running -> reviews/pr-561-review.md. Needs Shinichi's word. Old worktree GLLVM.jl-p1-namespace + its remote branch left in place.
-- Trains 531, 543/546, 548/556/547, 558 all still waiting for CI runners at 18:48.
+## Overnight state (23:40 MDT; the morning report is the fuller view)
+- Merged overnight (word given): #548 (4357e4652), #531 (5b9af3763).
+- Trains running (tracked bash tasks; logs scratchpad/train_*): #556 (32d3f2097) then #547; #546 (512f90dc5) then #558. Refresh with scratchpad/refresh_pr.sh <N> (union-resolves only CHANGELOG/check-log, checks the PR touches no new files), verify, restart merge_train_v2.sh pinned to the new head. The auto-refresh-and-merge train (v3) was refused by the permission classifier: do not rebuild it.
+- #543: twin job failed on CI Linux at the reviewed head (one fit just above g_tol); cherry-picked #563's reviewed optimizer commits (now 7921c55ab after refresh); NEEDS SHINICHI'S RENEWED WORD.
+- Ready for word (all reviewed, fixes applied): #557 (1834fd515), #561 (92cf39571), #563 (acfd02a69, after #543), #567 (4176a9dce), #569 (073e90e78), #571 (1b99ae6b8), #576 (94fd6abb9), #579 (a857516df), #581 (1dc7c6dc6), #584 (0fb2b9411); specs #525/#535 (9ec406e07)/#545.
+- A3 stack: #567 -> #569 -> #571 -> #579 -> #584 -> {aghq builder, isdm builder} running.
+- Task chip filed: truncated NB2 mode-search jump and r intervals (grouped_dispersion.jl _grouped_laplace_mode oscillation).
+- Waits for Shinichi: Woodbury fix in likelihood.jl (headline Gaussian path); shared post-fit gate in _fit_verdict; nobs ruling (unblocks 4 wave6 rows).
 
 ## Findings to remember
 - Carry scan: 0 of 306 required P0 rows carry; 278 receipts dangling (gitignored .unlazy/), 21 stale. P1 evidence must be re-made (A3); compute is small (10-45 min on kohaku); the harness is the work (#539 is step 1).
