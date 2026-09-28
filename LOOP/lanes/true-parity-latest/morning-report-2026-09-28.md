@@ -61,6 +61,10 @@ Overnight: #548 chibar2_pvalue / variance_lrt twin (4357e4652, 22:58); #531 extr
 
 ## In a merge train (word given)
 
+Second word ("merge #546, then #558; #556; #547 when green"): #556 train started (clean, 73f7952f4); #547 refreshed (3127c0576) and train started; #546 and #558 conflict with main in src/GLLVModels.jl and test/runtests.jl include lines as well as the logs, so a builder is merging main in carefully (then #546 into #558) before their trains.
+
+Lane coordination (messages sent to every active GLLVModels.jl lane): none of the other lanes has a PR with a landing word, so no sequencing conflict. Collision found and flagged: the new truncated NB2 mode-search session would edit src/families/grouped_dispersion.jl, which auto-d's #521/#529/#540/#551 edit; both sessions told to coordinate before either touches it. auto-d's suggested order when you sign off: #519, #521, #540, then #520, #529, #551, then #518. The bootstrap-verdict lane's many PRs (#541, #550, #564 to #595) each add CHANGELOG / check-log / runtests lines and will need a log-only refresh after merges.
+
 After #543 merged: #557 refreshed (77ed9f5ac) and #561 refreshed (530a43d18), trains restarted; #563 conflicts with main in ROADMAP.md as well as the logs (it carries #543's original commits, now squashed on main), so a builder is merging main into it carefully before its train starts.
 
 Morning: Shinichi's word "merge #543, then #563; #557; #561 when green". Trains started for #543 (7921c55ab, CI green), #557 (1553f20e7) and #561 (0ee89e37c), each waiting for its own CI; #563 starts after #543 merges (refresh first). Any PR that conflicts after another merges is refreshed and restarted on a verified head.
