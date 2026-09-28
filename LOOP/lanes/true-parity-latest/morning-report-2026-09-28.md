@@ -34,6 +34,8 @@ One reply that lands everything in a safe order (edit out anything you don't wan
 
 ## Landed on main (2026-09-27)
 
+Morning 2026-09-28: #543 temporal slice 1 (863ee0f78).
+
 Overnight: #548 chibar2_pvalue / variance_lrt twin (4357e4652, 22:58); #531 extract_latent_scores twin (5b9af3763, 23:25).
 
 #522 (beta-binomial verdict, closes #515), #530 (docs phrase), #523 (P1 ledger and check tool), #524 (P1 pin), #514 (mixed bridge mode search), #532 (Documenter per-branch), #528 (ordinal_logit twin), #539 (harness pin source and P1 oracle).
@@ -58,6 +60,8 @@ Overnight: #548 chibar2_pvalue / variance_lrt twin (4357e4652, 22:58); #531 extr
 - #561 namespace re-measurement at P1 (head 0ee89e37c, supersedes #559). Review was BLOCKING; fixed and re-checked by me: a row labelled "numeric" must now cite a receipt with a real R-vs-Julia comparison inside tolerance, or it fails C1 and C8 (the review's mutation now reads C1_NOT_MET / C8_NOT_MET). Signed dispositions accept only "Shinichi Nakagawa" or "itchyshin" with a real, non-future date. Disclosed: at P0, 14 aghq rows now read name-only in C8 (C8 was NOT_MET before and after). Known limit: the checker trusts the numbers written in a receipt; it does not re-run them. 50/50 negative controls pass. Third change DONE at 92cf39571 and re-checked by me (60/60 negative controls): a receipt whose verdict or batch status is not PASS no longer binds (unless you sign a receipt_status_exception on the row), and the checker recomputes R-vs-Julia differences itself, failing any row whose recorded difference disagrees. Effect on the A3 PRs: #567's 2 and #569's 2 wave6 rows stop binding until the nobs case is settled. The only .github/ paths touched are inside test fixtures (mock repo trees), not real CI. Fourth change at c39655fb9: C8 now checks a signed row's receipts for dangling files and stale carries before accepting the signature, as C1 does (62/62 controls; no signed rows exist today, so outputs are byte-identical). Note: #589 and the A3 stack were checked against 92cf39571; the only difference is this C8 fix. Reply: "merge #561 when green".
 
 ## In a merge train (word given)
+
+After #543 merged: #557 refreshed (77ed9f5ac) and #561 refreshed (530a43d18), trains restarted; #563 conflicts with main in ROADMAP.md as well as the logs (it carries #543's original commits, now squashed on main), so a builder is merging main into it carefully before its train starts.
 
 Morning: Shinichi's word "merge #543, then #563; #557; #561 when green". Trains started for #543 (7921c55ab, CI green), #557 (1553f20e7) and #561 (0ee89e37c), each waiting for its own CI; #563 starts after #543 merges (refresh first). Any PR that conflicts after another merges is refreshed and restarted on a verified head.
 
