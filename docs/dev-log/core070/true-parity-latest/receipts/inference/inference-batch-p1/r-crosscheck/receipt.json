@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "scope": "CORE070_INFERENCE_BATCH_R_CROSSCHECK",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "contract_sha256": "b41b4c4308b223b6c254cae7f21b48fb4350bb504ba58cd3de6b097dbc7e38cc",
+  "source_unchanged": true,
+  "in_scope_row_count": 64,
+  "crosscheck_sha256": "cdbdbc6801f24241c3fd5a69406569014d3e197830a241dea9044b1a677cba72",
+  "results_json_sha256": "fc373c9dbb4e0214ca3826e9e31081561ae0b0c091b8d45e8b083cd13ec11f95",
+  "r_version": "R version 4.6.0 (2026-04-24)"
+}

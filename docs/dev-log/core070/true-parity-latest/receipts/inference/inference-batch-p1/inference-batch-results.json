@@ -1,0 +1,447 @@
+{
+  "case_count": 45,
+  "all_checks": true,
+  "julia_version": "1.10.0",
+  "gllvm_pkg_version": "0.3.0",
+  "status": "PASS",
+  "all_positive_pass": true,
+  "source_pins": {
+    "src/confint_bootstrap.jl": "d83c3835ef2b7aa93067f7d706d7545773c0995acb665b7504d716191b83eccf",
+    "src/families/aghq_gaussian_fit.jl": "8d89eb25e13f7f741db65fa2ea5d40564be3fae39a3ebb57d2e363b5fe81c21f",
+    "src/fit.jl": "b93e0e61c584722a6b59ee308639023ed143d00702f9c0b8318512b1778e1dae",
+    "src/confint_derived.jl": "1174ccc116f2dbd1202526930187f45a3b361f82edba2c36e8e31344ad4f8582",
+    "src/confint_profile.jl": "5a191a7add670df448cdd56ffd60893e44ab623e21c2e9dc891dec240dd90b5f",
+    "src/confint.jl": "e576f75ae6b3d89c2a3e05a5ba4eb66c02196db7b4a1776e07e8cb9d61242d7c",
+    "src/confint_derived_wald.jl": "ff1d294d90f83bf1a641a351941a1cf76244480752ce1d8473d5e8b9fbf834b5"
+  },
+  "generated_at_epoch_seconds": 1790563772,
+  "negative_control_count": 2,
+  "scope": "CORE070_INFERENCE_BATCH",
+  "area": "inference",
+  "negative_controls_behaved_as_expected": true,
+  "cases": [
+    {
+      "source_id": "CI-ROUTE-001",
+      "case_id": "CORE070-INFERENCE-LAMBDA-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:term, :estimate, :lower, :upper, :se, :method, :pd_hessian, :boundary_terms, :objective, :gradient_kind)",
+      "actual": "wald_packed",
+      "elapsed_seconds": 4.2670228481292725,
+      "expect": "wald_packed"
+    },
+    {
+      "source_id": "CI-ROUTE-002",
+      "case_id": "CORE070-INFERENCE-LAMBDA-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:lower, :upper, :method)",
+      "actual": "profile",
+      "elapsed_seconds": 0.4227569103240967,
+      "expect": "profile"
+    },
+    {
+      "source_id": "CI-ROUTE-003",
+      "case_id": "CORE070-INFERENCE-LAMBDA-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:term, :estimate, :lower, :upper, :se, :method, :pd_hessian, :boundary_terms, :objective, :gradient_kind)",
+      "actual": "wald_packed",
+      "elapsed_seconds": 0.014837980270385742,
+      "expect": "wald_packed"
+    },
+    {
+      "source_id": "CI-ROUTE-004",
+      "case_id": "CORE070-INFERENCE-LAMBDA-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:term, :estimate, :lower, :upper, :n_converged, :replicates, :converged, :objective)",
+      "actual": "bootstrap",
+      "elapsed_seconds": 2.6964991092681885,
+      "expect": "bootstrap"
+    },
+    {
+      "source_id": "CI-ROUTE-006",
+      "case_id": "CORE070-INFERENCE-LAMBDA-CI-UNSUPPORTED-METHOD-REJECT",
+      "ok": true,
+      "detail": "ArgumentError: method must be :wald, :profile or :bootstrap",
+      "actual": "reject",
+      "elapsed_seconds": 0.0055048465728759766,
+      "expect": "reject"
+    },
+    {
+      "source_id": "CI-ROUTE-007",
+      "case_id": "CORE070-INFERENCE-LAMBDA-CI-UNSUPPORTED-METHOD-REJECT",
+      "ok": true,
+      "detail": "ArgumentError: method must be :wald, :profile or :bootstrap",
+      "actual": "reject",
+      "elapsed_seconds": 0.003220081329345703,
+      "expect": "reject"
+    },
+    {
+      "source_id": "CI-ROUTE-065",
+      "case_id": "CORE070-INFERENCE-BETA-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:lower, :upper, :method)",
+      "actual": "profile",
+      "elapsed_seconds": 0.06807899475097656,
+      "expect": "profile"
+    },
+    {
+      "source_id": "CI-ROUTE-066",
+      "case_id": "CORE070-INFERENCE-BETA-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:term, :estimate, :lower, :upper, :se, :method, :pd_hessian, :boundary_terms, :objective, :gradient_kind)",
+      "actual": "wald_packed",
+      "elapsed_seconds": 0.0037560462951660156,
+      "expect": "wald_packed"
+    },
+    {
+      "source_id": "CI-ROUTE-081",
+      "case_id": "CORE070-INFERENCE-BETA-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:lower, :upper, :method)",
+      "actual": "profile",
+      "elapsed_seconds": 0.048480987548828125,
+      "expect": "profile"
+    },
+    {
+      "source_id": "CI-ROUTE-067",
+      "case_id": "CORE070-INFERENCE-BETA-BOOTSTRAP-FALLBACK-DIVERGENCE",
+      "ok": true,
+      "detail": "propertynames=(:term, :estimate, :lower, :upper, :n_converged, :replicates, :converged, :objective)",
+      "actual": "bootstrap",
+      "elapsed_seconds": 0.06551599502563477,
+      "expect": "bootstrap"
+    },
+    {
+      "source_id": "CI-ROUTE-068",
+      "case_id": "CORE070-INFERENCE-SIGMA-EPS-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:lower, :upper, :method)",
+      "actual": "profile",
+      "elapsed_seconds": 0.04053807258605957,
+      "expect": "profile"
+    },
+    {
+      "source_id": "CI-ROUTE-069",
+      "case_id": "CORE070-INFERENCE-SIGMA-EPS-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:term, :estimate, :lower, :upper, :se, :method, :pd_hessian, :boundary_terms, :objective, :gradient_kind)",
+      "actual": "wald_packed",
+      "elapsed_seconds": 0.003674030303955078,
+      "expect": "wald_packed"
+    },
+    {
+      "source_id": "CI-ROUTE-084",
+      "case_id": "CORE070-INFERENCE-SIGMA-EPS-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:lower, :upper, :method)",
+      "actual": "profile",
+      "elapsed_seconds": 0.04728889465332031,
+      "expect": "profile"
+    },
+    {
+      "source_id": "CI-ROUTE-070",
+      "case_id": "CORE070-INFERENCE-SIGMA-EPS-BOOTSTRAP-FALLBACK-DIVERGENCE",
+      "ok": true,
+      "detail": "propertynames=(:term, :estimate, :lower, :upper, :n_converged, :replicates, :converged, :objective)",
+      "actual": "bootstrap",
+      "elapsed_seconds": 0.029801130294799805,
+      "expect": "bootstrap"
+    },
+    {
+      "source_id": "CI-ROUTE-043",
+      "case_id": "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:lower, :upper, :method)",
+      "actual": "profile",
+      "elapsed_seconds": 9.311583042144775,
+      "expect": "profile"
+    },
+    {
+      "source_id": "CI-ROUTE-055",
+      "case_id": "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:lower, :upper, :method)",
+      "actual": "profile",
+      "elapsed_seconds": 0.015054941177368164,
+      "expect": "profile"
+    },
+    {
+      "source_id": "CI-ROUTE-044",
+      "case_id": "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:term, :estimate, :lower, :upper, :se, :pd_hessian)",
+      "actual": "wald_packed",
+      "elapsed_seconds": 6.500714063644409,
+      "expect": "wald_packed"
+    },
+    {
+      "source_id": "CI-ROUTE-056",
+      "case_id": "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:term, :estimate, :lower, :upper, :se, :pd_hessian)",
+      "actual": "wald_packed",
+      "elapsed_seconds": 0.000308990478515625,
+      "expect": "wald_packed"
+    },
+    {
+      "source_id": "CI-ROUTE-045",
+      "case_id": "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:term, :estimate, :lower, :upper, :n_converged, :replicates)",
+      "actual": "bootstrap",
+      "elapsed_seconds": 0.6533799171447754,
+      "expect": "bootstrap"
+    },
+    {
+      "source_id": "CI-ROUTE-057",
+      "case_id": "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:term, :estimate, :lower, :upper, :n_converged, :replicates)",
+      "actual": "bootstrap",
+      "elapsed_seconds": 0.06567192077636719,
+      "expect": "bootstrap"
+    },
+    {
+      "source_id": "CI-ROUTE-046",
+      "case_id": "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:lower, :upper, :method)",
+      "actual": "profile",
+      "elapsed_seconds": 0.011996030807495117,
+      "expect": "profile"
+    },
+    {
+      "source_id": "CI-ROUTE-058",
+      "case_id": "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:lower, :upper, :method)",
+      "actual": "profile",
+      "elapsed_seconds": 0.007960081100463867,
+      "expect": "profile"
+    },
+    {
+      "source_id": "CI-ROUTE-047",
+      "case_id": "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:term, :estimate, :lower, :upper, :se, :pd_hessian)",
+      "actual": "wald_packed",
+      "elapsed_seconds": 0.004194021224975586,
+      "expect": "wald_packed"
+    },
+    {
+      "source_id": "CI-ROUTE-059",
+      "case_id": "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:term, :estimate, :lower, :upper, :se, :pd_hessian)",
+      "actual": "wald_packed",
+      "elapsed_seconds": 0.00023698806762695312,
+      "expect": "wald_packed"
+    },
+    {
+      "source_id": "CI-ROUTE-048",
+      "case_id": "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:term, :estimate, :lower, :upper, :n_converged, :replicates)",
+      "actual": "bootstrap",
+      "elapsed_seconds": 0.027112960815429688,
+      "expect": "bootstrap"
+    },
+    {
+      "source_id": "CI-ROUTE-060",
+      "case_id": "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:term, :estimate, :lower, :upper, :n_converged, :replicates)",
+      "actual": "bootstrap",
+      "elapsed_seconds": 0.05029487609863281,
+      "expect": "bootstrap"
+    },
+    {
+      "source_id": "CI-ROUTE-061",
+      "case_id": "CORE070-INFERENCE-SIGMA-PHY-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:lower, :upper, :method)",
+      "actual": "profile",
+      "elapsed_seconds": 0.02353692054748535,
+      "expect": "profile"
+    },
+    {
+      "source_id": "CI-ROUTE-062",
+      "case_id": "CORE070-INFERENCE-SIGMA-PHY-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:term, :estimate, :lower, :upper, :se, :pd_hessian)",
+      "actual": "wald_packed",
+      "elapsed_seconds": 0.0034868717193603516,
+      "expect": "wald_packed"
+    },
+    {
+      "source_id": "CI-ROUTE-063",
+      "case_id": "CORE070-INFERENCE-SIGMA-PHY-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:term, :estimate, :lower, :upper, :n_converged, :replicates)",
+      "actual": "bootstrap",
+      "elapsed_seconds": 0.04448199272155762,
+      "expect": "bootstrap"
+    },
+    {
+      "source_id": "CI-ROUTE-022",
+      "case_id": "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:estimate, :lower, :upper, :se_transformed, :transform, :pd_hessian, :method)",
+      "actual": "wald_derived",
+      "elapsed_seconds": 0.9767558574676514,
+      "expect": "wald_derived"
+    },
+    {
+      "source_id": "CI-ROUTE-023",
+      "case_id": "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:lower, :upper, :estimate, :method)",
+      "actual": "profile",
+      "elapsed_seconds": 3.962815046310425,
+      "expect": "profile"
+    },
+    {
+      "source_id": "CI-ROUTE-024",
+      "case_id": "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:estimate, :lower, :upper, :se_transformed, :transform, :pd_hessian, :method)",
+      "actual": "wald_derived",
+      "elapsed_seconds": 0.003389120101928711,
+      "expect": "wald_derived"
+    },
+    {
+      "source_id": "CI-ROUTE-025",
+      "case_id": "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:estimate, :lower, :upper, :n_converged, :n_valid, :replicates)",
+      "actual": "bootstrap",
+      "elapsed_seconds": 0.8870010375976562,
+      "expect": "bootstrap"
+    },
+    {
+      "source_id": "CI-ROUTE-029",
+      "case_id": "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:estimate, :lower, :upper, :se_transformed, :transform, :pd_hessian, :method)",
+      "actual": "wald_derived",
+      "elapsed_seconds": 0.8924319744110107,
+      "expect": "wald_derived"
+    },
+    {
+      "source_id": "CI-ROUTE-030",
+      "case_id": "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:lower, :upper, :estimate, :method)",
+      "actual": "profile",
+      "elapsed_seconds": 2.794013023376465,
+      "expect": "profile"
+    },
+    {
+      "source_id": "CI-ROUTE-032",
+      "case_id": "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:estimate, :lower, :upper, :n_converged, :n_valid, :replicates)",
+      "actual": "bootstrap",
+      "elapsed_seconds": 0.1724228858947754,
+      "expect": "bootstrap"
+    },
+    {
+      "source_id": "CI-ROUTE-034",
+      "case_id": "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:estimate, :lower, :upper, :se_transformed, :transform, :pd_hessian, :method)",
+      "actual": "wald_derived",
+      "elapsed_seconds": 0.003885984420776367,
+      "expect": "wald_derived"
+    },
+    {
+      "source_id": "CI-ROUTE-015",
+      "case_id": "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:lower, :upper, :estimate, :method)",
+      "actual": "profile",
+      "elapsed_seconds": 2.832951068878174,
+      "expect": "profile"
+    },
+    {
+      "source_id": "CI-ROUTE-016",
+      "case_id": "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:lower, :upper, :estimate, :method)",
+      "actual": "profile",
+      "elapsed_seconds": 0.055313825607299805,
+      "expect": "profile"
+    },
+    {
+      "source_id": "CI-ROUTE-017",
+      "case_id": "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:estimate, :lower, :upper, :se_transformed, :transform, :pd_hessian, :method)",
+      "actual": "wald_derived",
+      "elapsed_seconds": 0.8896980285644531,
+      "expect": "wald_derived"
+    },
+    {
+      "source_id": "CI-ROUTE-018",
+      "case_id": "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:estimate, :lower, :upper, :n_converged, :n_valid, :replicates)",
+      "actual": "bootstrap",
+      "elapsed_seconds": 0.1394338607788086,
+      "expect": "bootstrap"
+    },
+    {
+      "source_id": "CI-ROUTE-036",
+      "case_id": "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:estimate, :lower, :upper, :se_transformed, :transform, :pd_hessian, :method)",
+      "actual": "wald_derived",
+      "elapsed_seconds": 0.7944798469543457,
+      "expect": "wald_derived"
+    },
+    {
+      "source_id": "CI-ROUTE-037",
+      "case_id": "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:lower, :upper, :estimate, :method)",
+      "actual": "profile",
+      "elapsed_seconds": 0.06465601921081543,
+      "expect": "profile"
+    },
+    {
+      "source_id": "CI-ROUTE-038",
+      "case_id": "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:estimate, :lower, :upper, :se_transformed, :transform, :pd_hessian, :method)",
+      "actual": "wald_derived",
+      "elapsed_seconds": 0.006109952926635742,
+      "expect": "wald_derived"
+    },
+    {
+      "source_id": "CI-ROUTE-039",
+      "case_id": "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE",
+      "ok": true,
+      "detail": "propertynames=(:estimate, :lower, :upper, :n_converged, :n_valid, :replicates)",
+      "actual": "bootstrap",
+      "elapsed_seconds": 0.17333102226257324,
+      "expect": "bootstrap"
+    },
+    {
+      "source_id": "NEGATIVE-CONTROL-1",
+      "case_id": "n/a",
+      "ok": true,
+      "detail": "wald result must not carry :n_converged",
+      "actual": "false",
+      "elapsed_seconds": 0.0,
+      "expect": "false"
+    },
+    {
+      "source_id": "NEGATIVE-CONTROL-2",
+      "case_id": "n/a",
+      "ok": true,
+      "detail": "bootstrap result must not carry :se",
+      "actual": "false",
+      "elapsed_seconds": 0.0,
+      "expect": "false"
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "schema": "core070-inference-p1-case-receipt/v1",
+  "case_id": "CORE070-INFERENCE-BETA-CI-METHOD-ROUTE",
+  "verdict": "PASS",
+  "evidence_kind": "routing_control_flow",
+  "source_ids": [
+    "inference/CI-ROUTE-065",
+    "inference/CI-ROUTE-066",
+    "inference/CI-ROUTE-081"
+  ],
+  "batch": "tools/core070_inference_batch.R (P1 route probe) + tools/core070_inference_batch.jl, GLLVM_PARITY_PIN=P1",
+  "verifier_output": [
+    "CORE070_INFERENCE_BATCH_JULIA_VERIFIED 45 cases",
+    "CORE070_INFERENCE_BATCH_R_CROSSCHECK_VERIFIED 64 rows",
+    "CORE070_INFERENCE_BATCH_FULLY_VERIFIED"
+  ],
+  "per_row": [
+    {
+      "source_id": "inference/CI-ROUTE-065",
+      "r_route_actual": ".confint_fixef_profile:profile",
+      "r_route_pass": true,
+      "julia_call": "profile_ci(fitA,\"beta[1]\";y=YA) [default]",
+      "julia_route_expected": "profile",
+      "julia_route_actual": "profile",
+      "julia_pass": true
+    },
+    {
+      "source_id": "inference/CI-ROUTE-066",
+      "r_route_actual": "tidy:wald",
+      "r_route_pass": true,
+      "julia_call": "confint(fitA,YA;parm=\"beta[1]\",method=:wald)",
+      "julia_route_expected": "wald_packed",
+      "julia_route_actual": "wald_packed",
+      "julia_pass": true
+    },
+    {
+      "source_id": "inference/CI-ROUTE-081",
+      "r_route_actual": ".confint_fixef_profile:profile",
+      "r_route_pass": true,
+      "julia_call": "profile_ci(fitA,\"beta[1]\";y=YA) [no cached vcov]",
+      "julia_route_expected": "profile",
+      "julia_route_actual": "profile",
+      "julia_pass": true
+    }
+  ],
+  "why_not_numeric": "Routing probe. The R side evaluates only function definitions from the P1 source files and intercepts every CI endpoint, so no model is fit and no interval is computed; the Julia side reports which solver ran. There is no R-vs-Julia number.",
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv"
+  ],
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit_at_receipt_write": "ec36c65bd5925f8cfa33ee2d5fbd5310e2f2efe9",
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+}

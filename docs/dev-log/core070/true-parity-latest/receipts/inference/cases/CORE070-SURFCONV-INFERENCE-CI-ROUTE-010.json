@@ -1,0 +1,62 @@
+{
+  "schema": "core070-inference-p1-case-receipt/v1",
+  "case_id": "CORE070-SURFCONV-INFERENCE-CI-ROUTE-010",
+  "verdict": "PASS",
+  "evidence_kind": "numeric_r_vs_julia",
+  "source_ids": [
+    "inference/CI-ROUTE-010"
+  ],
+  "batch": "tools/core070_surface_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1 (run by PR #569; read, not re-run)",
+  "batch_status": "PASS",
+  "harness_kind": "ci",
+  "harness_pass": true,
+  "r_call": "confint(fit_r, parm='icc', method='wald', level=0.95)",
+  "julia_call": "GLLVM.repeatability_ci(fit_tl, y, individual; method=:wald)",
+  "gllvmtmb_version": "0.7.1",
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/julia-results.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/r-oracle.json"
+  ],
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit_at_receipt_write": "ec36c65bd5925f8cfa33ee2d5fbd5310e2f2efe9",
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-SURFCONV-INFERENCE-CI-ROUTE-010",
+        "quantity": "icc_ci_wald",
+        "max_abs_diff": 1.7715143887375717e-06,
+        "tolerance": 0.001,
+        "tolerance_rule": "surface-conversion-batch-contract-p1.json per-case tolerance (carried verbatim from P0); max |R - Julia| over CI bounds",
+        "n_values": 8,
+        "diff_source": "recomputed from raw R and Julia values",
+        "r_value": [
+          0.5963933398850446,
+          0.1603260116386777,
+          0.1534813790022234,
+          0.44369569948319476,
+          0.8362245253532785,
+          0.500224638122572,
+          0.48013228382646456,
+          0.7431679510426047
+        ],
+        "julia_value": [
+          0.5963915683706559,
+          0.16032540566671577,
+          0.15348092198352503,
+          0.4436940871085764,
+          0.8362248116801454,
+          0.5002249326525043,
+          0.480132065984387,
+          0.7431681777862971
+        ]
+      }
+    ]
+  }
+}

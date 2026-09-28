@@ -1,0 +1,24 @@
+{
+  "status": "PASS",
+  "scope": "CORE070_INFERENCE_BATCH_R_CROSSCHECK",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "contract_sha256": "b41b4c4308b223b6c254cae7f21b48fb4350bb504ba58cd3de6b097dbc7e38cc",
+  "r_route_pins": {
+    "test/parity/fixtures/core070_inference_routes.tsv": "5f75af28288781a5cc516bb94d38e5fdc5107b1712be54fbaabe9d0e79035db0",
+    "tools/core070_inference_routes_p1.R": "afcd10fc3e37d325340755e02fcaa0b2dace2581529a8329c51ba787a6b422ad"
+  },
+  "r_route_results_sha256": "aa78ce4ae49ad3f05891517710bb4e54fbaa1f5b612821bd1a99eba6e5a0df1c",
+  "in_scope_row_count": 64,
+  "all_in_scope_rows_pass_r_routing": true,
+  "retained_input_provenance": {
+    "test/parity/fixtures/core070_inference_routes.tsv": {
+      "sha256": "5f75af28288781a5cc516bb94d38e5fdc5107b1712be54fbaabe9d0e79035db0",
+      "copied_from": "test/parity/fixtures/core070_inference_routes.tsv"
+    },
+    "tools/core070_inference_routes_p1.R": {
+      "sha256": "afcd10fc3e37d325340755e02fcaa0b2dace2581529a8329c51ba787a6b422ad",
+      "copied_from": "tools/core070_inference_routes_p1.R"
+    }
+  },
+  "r_version": "R version 4.6.0 (2026-04-24)"
+}

@@ -1,0 +1,34 @@
+{
+  "schema": "core070-inference-p1-case-receipt/v1",
+  "case_id": "CORE070-SURFCONV-INFERENCE-CI-ROUTE-009",
+  "verdict": "PASS",
+  "evidence_kind": "paired_refusal_pair",
+  "source_ids": [
+    "inference/CI-ROUTE-009"
+  ],
+  "batch": "tools/core070_surface_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1 (run by PR #569; read, not re-run)",
+  "batch_status": "PASS",
+  "harness_kind": "refusal_pair",
+  "harness_pass": true,
+  "r_call": "confint(fit_r, parm='icc', method='profile', level=0.95)  # must raise gllvmTMB_repeatability_profile_withdrawn",
+  "julia_call": "GLLVM.repeatability_ci(fit_tl, y, individual; method=:profile)  # must throw TwoLevelRepeatabilityProfileWithdrawn",
+  "gllvmtmb_version": "0.7.1",
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/julia-results.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/r-oracle.json"
+  ],
+  "measured": {
+    "r_raised": true,
+    "julia_raised": true,
+    "julia_message": "A profile interval for canonical full-covariance two-level repeatability is not currently available. The former profile route estimated only a diagonal-companion ratio and omitted shared latent variance. Request method = :wald or method = :bootstrap instead."
+  },
+  "why_not_numeric": "Both engines must refuse method = profile; there is no number to compare.",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit_at_receipt_write": "ec36c65bd5925f8cfa33ee2d5fbd5310e2f2efe9",
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+}

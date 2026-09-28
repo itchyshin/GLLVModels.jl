@@ -1,0 +1,56 @@
+{
+  "schema": "core070-inference-p1-case-receipt/v1",
+  "case_id": "CORE070-INFERENCE-PROPORTION-CI-UNSUPPORTED-METHOD-REJECT",
+  "verdict": "PASS",
+  "evidence_kind": "reject_error_class",
+  "source_ids": [
+    "inference/CI-ROUTE-040",
+    "inference/CI-ROUTE-041",
+    "inference/CI-ROUTE-042"
+  ],
+  "batch": "tools/core070_inference_remainder_batch.R + .jl, GLLVM_PARITY_PIN=P1",
+  "verifier_output": [
+    "CORE070_INFERENCE_REMAINDER_CONTRACT_VERIFIED executable= 14 needs_surface= 5 total= 19",
+    "CORE070_INFERENCE_REMAINDER_BATCH_VERIFIED 5 negative_controls 2"
+  ],
+  "r_call": "confint.gllvmTMB_multi(object, parm='proportion:shared_unit', method=<'wald_asym'|'fisher-z'|'bogus'>) -> .confint_proportion(method=...) -> switch() default -> cli_abort('Method ... not implemented for proportion. Available: wald, bootstrap.'). .parse_proportion_parm validates the component name ('shared_unit') against a fixed vocabulary only; the method switch's default branch never calls .proportions_wald_ci / .proportions_bootstrap_ci.",
+  "julia_surface": "icc_wald_ci(fit, f; method=<bad>) where f = GLLVM._make_communality_closure(spec, t) [proportion:shared_unit == the :shared component == communality convention, per confint_derived.jl's proportions() docstring: ':shared (== communality)'] -- declares no `method` keyword, raises MethodError",
+  "check": "for each of the 3 bad method strings: R raises an error whose message contains 'not implemented' and 'proportion'; Julia raises MethodError",
+  "measured": {
+    "bogus": {
+      "r_raised": true,
+      "r_message_matches": true,
+      "r_message": "Method \"bogus\" not implemented for `proportion`.\n\u2139 Available: \"wald\", \"bootstrap\".\n\u2192 For point estimates of the proportion decomposition see\n  `extract_proportions()`.",
+      "julia_error_kind": "MethodError",
+      "pass": true
+    },
+    "fisher-z": {
+      "r_raised": true,
+      "r_message_matches": true,
+      "r_message": "Method \"fisher-z\" not implemented for `proportion`.\n\u2139 Available: \"wald\", \"bootstrap\".\n\u2192 For point estimates of the proportion decomposition see\n  `extract_proportions()`.",
+      "julia_error_kind": "MethodError",
+      "pass": true
+    },
+    "wald_asym": {
+      "r_raised": true,
+      "r_message_matches": true,
+      "r_message": "Method \"wald_asym\" not implemented for `proportion`.\n\u2139 Available: \"wald\", \"bootstrap\".\n\u2192 For point estimates of the proportion decomposition see\n  `extract_proportions()`.",
+      "julia_error_kind": "MethodError",
+      "pass": true
+    }
+  },
+  "gllvmtmb_version": "0.7.1",
+  "why_not_numeric": "Both engines must refuse the method; the check is error class and message, not a number.",
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/julia-results.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/r-oracle.json"
+  ],
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit_at_receipt_write": "ec36c65bd5925f8cfa33ee2d5fbd5310e2f2efe9",
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+}
