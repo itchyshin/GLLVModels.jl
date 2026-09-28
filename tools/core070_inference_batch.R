@@ -77,6 +77,23 @@ if (identical(parity_pin, "P1")) {
   }
 }
 
+# Oracle source-pin marker and version (PR #571 review; same rule as the postfit
+# runners, tools/core070_source_pin.R). The route probe parses R source rather
+# than loading gllvmTMB, so at P1 the oracle library the P1 source tree was
+# built into is named by CORE070_P1_ORACLE_LIBRARY; its CORE070_SOURCE_PIN.toml
+# marker and installed version must match the P1 pin. At P0 the retained probe
+# run is used and no library is involved.
+source_pin <- NULL
+if (identical(parity_pin, "P1")) {
+  oracle_library <- Sys.getenv("CORE070_P1_ORACLE_LIBRARY", "")
+  if (!nzchar(oracle_library)) stop("GLLVM_PARITY_PIN=P1 needs CORE070_P1_ORACLE_LIBRARY (the P1 oracle library)")
+  oracle_library <- normalizePath(oracle_library, mustWork = TRUE)
+  .libPaths(c(oracle_library, .libPaths()))
+  stopifnot(normalizePath(find.package("gllvmTMB")) == normalizePath(file.path(oracle_library, "gllvmTMB")))
+  source(file.path(root, "tools/core070_source_pin.R"))
+  source_pin <- core070_source_pin(root, oracle_library, parity_pin, expected_reference)
+}
+
 # Create the destination only after the pin checks pass (PR #571 review F6),
 # so a refused run leaves nothing behind.
 dir.create(destination, recursive = TRUE)
@@ -163,6 +180,7 @@ result <- list(
   retained_input_provenance = provenance,
   r_version = R.version.string
 )
+if (!is.null(source_pin)) result <- c(result, list(gllvmTMB_version = source_pin$version, source_pin = source_pin))
 results_json_path <- file.path(destination, "inference-batch-r-crosscheck.json")
 jsonlite::write_json(result, results_json_path, auto_unbox = TRUE, pretty = TRUE)
 
@@ -177,6 +195,7 @@ receipt <- list(
   results_json_sha256 = sha256_file(results_json_path),
   r_version = R.version.string
 )
+if (!is.null(source_pin)) receipt <- c(receipt, list(gllvmTMB_version = source_pin$version, source_pin = source_pin))
 receipt_path <- file.path(destination, "receipt.json")
 jsonlite::write_json(receipt, receipt_path, auto_unbox = TRUE, pretty = TRUE)
 

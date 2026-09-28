@@ -38,6 +38,7 @@ ROOT = Path(__file__).resolve().parents[1]
 import sys as _sys  # noqa: E402
 _sys.path.insert(0, str(ROOT / "tools"))
 from parity_oracle import R_REF_PINS, SELECTED_PIN  # noqa: E402  (GLLVM_PARITY_PIN; P0 default; unknown pin exits)
+import core070_source_pin_check  # noqa: E402  (PR #571 review: library pin + version, shared with postfit)
 # P0 keeps the frozen contract; P1 reads the twin written by tools/core070_inference_p1_contract.py.
 CONTRACT_PATH = ROOT / ("docs/dev-log/core070/true-parity-latest/inference-remainder-batch-contract-p1.json"
                         if SELECTED_PIN == "P1" else "docs/dev-log/core070/inference-remainder-batch-contract.json")
@@ -191,6 +192,7 @@ def verify_state(state=DEFAULT_STATE):
     need(receipt.get("julia_results_sha256") == sha(julia_path), "julia-results.json changed since receipt")
     need(receipt.get("raw_sha256") == sha(raw_path), "results.tsv changed since receipt")
     need(receipt.get("diagnostics_sha256") == sha(diag_path), "diagnostics.log changed since receipt")
+    core070_source_pin_check.check_source_pin(receipt, SELECTED_PIN, need)
 
     report = json.loads(julia_path.read_text())
     check_report(report, contract, contract_sha256)
@@ -317,7 +319,10 @@ def self_test():
         raise AssertionError(f"accepted invalid inference-remainder contract: {name}")
     print("CORE070_INFERENCE_REMAINDER_CONTRACT_NEGATIVES_PASS", len(contract_mutations))
 
-    return len(mutations) + len(contract_mutations)
+    n_pin = core070_source_pin_check.self_test(SELECTED_PIN)
+    print("CORE070_INFERENCE_REMAINDER_SOURCE_PIN_NEGATIVES_PASS", n_pin)
+
+    return len(mutations) + len(contract_mutations) + n_pin
 
 
 if __name__ == "__main__":

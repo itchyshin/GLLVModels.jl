@@ -76,6 +76,11 @@ for (rel in names(contract$source_pins)) {
   stopifnot(identical(digest, contract$source_pins[[rel]]))
 }
 
+# Oracle source-pin marker and version (PR #571 review; same rule as the postfit
+# runners): required at P1, checked if present at P0; recorded in the receipt.
+source(file.path(root, "tools/core070_source_pin.R"))
+source_pin <- core070_source_pin(root, frozen_library, parity_pin, expected_reference)
+
 # Create the destination only after the pin checks pass (PR #571 review F6),
 # so a refused run leaves nothing behind.
 dir.create(output_dir, recursive = TRUE)
@@ -287,7 +292,8 @@ receipt <- list(
   diagnostics_sha256 = sha256_file(diag_path),
   r_version = R.version.string,
   gllvmTMB_version = as.character(utils::packageVersion("gllvmTMB")),
-  frozen_library = frozen_library
+  frozen_library = frozen_library,
+  source_pin = source_pin
 )
 receipt_path <- file.path(output_dir, "receipt.json")
 jsonlite::write_json(receipt, receipt_path, auto_unbox = TRUE, pretty = TRUE, null = "null")
