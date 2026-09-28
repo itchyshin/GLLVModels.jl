@@ -814,12 +814,26 @@ All notable changes to GLLVModels.jl are documented here.
   `re_form` zero forms, `newdata` rebuilt from the fitted basis by name, unseen
   units falling back to fixed-only; `se_fit` refused). The per-cell long-row Laplace kernel uses a copy of R's
   `gll_dbinom_cloglog` and its observed curvature; the fitter uses the one-step
-  implicit gradient. Zero or one `latent(0 + trait | unit, d = K, unique = FALSE)`
-  term; `K = 0` fits a GLM through the same kernel. R's `latent()` default
-  (`unique = TRUE`) adds a per-trait unique variance that is not ported, so it is
-  refused rather than silently fitting a different model. Missing responses and
-  `weights` are refused in P1. Paired twins against R at P1:
+  implicit gradient. Zero or one `latent(0 + trait | unit, d = K)` term; `K = 0`
+  fits a GLM through the same kernel. R's `latent()` default (`unique = TRUE`) is
+  supported (next entry); `unique = FALSE` fits the loadings-only model. Missing
+  responses and `weights` are refused in P1. Paired twins against R at P1:
   `test/parity/isdm_cases.jl`. Design: `docs/design/isdm-port-spec.md`.
+- **iSDM: the unit-level unique variance of R's default `latent(..., unique = TRUE)`.**
+  `fit_isdm_gllvm` now fits gllvmTMB's `theta_diag_B`: each (unit, trait) carries
+  `s_B(t, s) ~ N(0, exp(theta_diag_B[t])^2)`, shared by that trait's rows in that
+  unit across sources, integrated by Laplace jointly with the latent scores (the
+  kernel takes it as the augmented loadings `[Λ Diagonal(exp.(theta_diag_B))]`).
+  The packed parameter follows R's `opt$par` order, `[b_fix; theta_rr_B;
+  theta_diag_B]`. `IsdmFit` gains `unique`, `theta_diag_B` and `s_B` (the
+  conditional modes); `IsdmTable` gains `unique`; `isdm_marginal_loglik_laplace`
+  takes `theta_diag_B` for a unique table; `predict` re-adds `s_B` on units seen
+  at fit time and not on unseen ones, as R does. `unique = FALSE` fits are
+  bit-identical to before. `K = 0` on a `unique = TRUE` table is refused, as R
+  refuses `latent(d = 0)`. The unique variances are identified only with
+  `p >= 2K + 1` traits; with two traits they run toward zero in R and Julia alike.
+  Paired twins on a new four-trait fixture and on R's default-formula fits of the
+  two-trait fixtures: `test/parity/isdm_unique_cases.jl`.
 - **`predictor::Symbol = :separate | :shared` on `fit_delta_lognormal_gllvm` /
   `fit_delta_gamma_gllvm`** (2026-08-28, maintainer decision "Twin identity
   MODE" — `docs/dev-log/decisions/2026-08-28-arc-decision-batch.md` gate 4):

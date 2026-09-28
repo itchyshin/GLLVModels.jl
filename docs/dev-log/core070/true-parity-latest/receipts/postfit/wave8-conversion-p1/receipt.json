@@ -1,0 +1,43 @@
+{
+  "status": "PASS",
+  "scope": "CORE070_WAVE8_CONVERSION_BATCH",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "contract_sha256": "4c3761a25db96959a1520a6a31820fb96e8455590e4726c6d061dd896bc06794",
+  "source_unchanged": true,
+  "target_source_ids": [
+    "postfit/POSTFIT-SURFACE-deviance.gllvmTMB_multi",
+    "postfit/POSTFIT-SURFACE-extract_coevolution_modules",
+    "postfit/POSTFIT-SURFACE-extract_rotated_loadings_table",
+    "postfit/POSTFIT-SURFACE-imputed.gllvmTMB",
+    "postfit/POSTFIT-SURFACE-predict_cross_covariance",
+    "postfit/POSTFIT-SURFACE-predict_missing",
+    "postfit/POSTFIT-SURFACE-profile_cross_rho",
+    "postfit/POSTFIT-SURFACE-profile_cross_rho_ci",
+    "postfit/POSTFIT-SURFACE-rotate_loadings",
+    "postfit/POSTFIT-SURFACE-simulate_unit_trait",
+    "postfit/POSTFIT-SURFACE-summary.gllvmTMB_multi",
+    "postfit/POSTFIT-SURFACE-tidy.gllvmTMB_multi"
+  ],
+  "case_count": 7,
+  "deferred_count": 5,
+  "expected_case_ids": ["CORE070-WAVE8-DEVIANCE-MULTI", "CORE070-WAVE8-TIDY-FIXED-ESTIMATE", "CORE070-WAVE8-SUMMARY-FIXEF-AND-LOGLIK", "CORE070-WAVE8-ROTATE-LOADINGS-LLT-INVARIANT", "CORE070-WAVE8-EXTRACT-ROTATED-LOADINGS-TABLE-SHAPE", "CORE070-WAVE8-PREDICT-MISSING-ZERO-ROWS", "CORE070-WAVE8-SIMULATE-UNIT-TRAIT-STRUCTURAL"],
+  "oracle_error_count": 0,
+  "julia_exit_code": 0,
+  "julia_elapsed_seconds": 20.9708,
+  "julia_results_sha256": "7878c4fa01d73135efab1c54d8a43cd75dac0e156b9dedccd0c7e3ff93e94b40",
+  "raw_sha256": "05e3133ac25313fb021186744d2afa00cb4faf33e2b6cc41ee8449f73dd0c5ae",
+  "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "r_version": "R version 4.6.0 (2026-04-24)",
+  "gllvmTMB_version": "0.7.1",
+  "frozen_library": "/Users/z3437171/local-scratch/a3cov-oracle/build/library",
+  "source_pin": {
+    "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+    "source_tree_sha256": "86fa00f05ee2ccb8ffef65a82cd59c47b1b2a256a5bad86957a92461a6dbe1db",
+    "installed_tree_sha256": "5d4877193c3727965412546ca49c77588ba3083eab87629080e610cb889516d4",
+    "archive_sha256": "73b665b22c1497d43dc0674eecd5657f2659a726fcad13004de899833e2d5423",
+    "namespace_sha256": "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c",
+    "version": "0.7.1",
+    "marker_path": "/Users/z3437171/local-scratch/a3cov-oracle/build/library/gllvmTMB/CORE070_SOURCE_PIN.toml",
+    "marker_sha256": "5b667a7d5f1718364a2794642cec52eac1ead345ec39fff5051c2c1ca7a62218"
+  }
+}
