@@ -4,7 +4,7 @@
   "scope": "fit-input family: the 6 required rows the P1 carry scan lists as DANGLING, all paid by the wave4 fit-input-2 batch (paired R/Julia fits). The 5 NOT_BOUND_AT_P0 required rows (INPUT-GAUSS-COMMON, INPUT-GAUSS-LOADINGS, INPUT-POISSON-DEFAULT: BLOCKED_NEEDS_JULIA_SURFACE; INPUT-MN-LATENT, INPUT-MN-ANIMAL-LATENT: PARTIAL_PENDING_DECISION_OPEN_QUESTION) and the 3 rejected rows are out of scope.",
   "note": "Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with PARITY_CASEMAP pointing at this file. Classification and disposition are carried from docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. Only rows whose every executable case id carries a numeric R-vs-Julia comparison block within tolerance, from a batch whose verifier passed, with no degenerate comparison, cite evidence.receipt. INPUT-KERNEL-TWO-AUTO and INPUT-KERNEL-TWO are one comparison counted on two rows (see the note).",
   "generator": "tools/core070_data_p1_receipts.py",
-  "glvmodels_commit": "10467e0cc1056b95f293b460aa9918987ff9c2b6",
+  "glvmodels_commit": "a875103063231a5ea233ddcd032572311893b04b",
   "batch_verifiers": {
     "fit-input-2-p1": {
       "tool": "tools/core070_verify_fit_input_2_batch.py",
@@ -32,7 +32,7 @@
     "p0_raw_receipts_available_here": false
   },
   "runtimes_seconds": {
-    "r_fits_plus_julia_child_seconds": 55.1
+    "r_fits_plus_julia_child_seconds": 55.0
   },
   "batch_artifacts": {
     "fit-input-2-p1": [

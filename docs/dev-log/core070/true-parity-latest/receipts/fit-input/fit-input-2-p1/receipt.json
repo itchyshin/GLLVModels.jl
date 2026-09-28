@@ -19,7 +19,7 @@
   "negative_control_case_ids": ["NEG-COEF-SHIFTED", "NEG-LOGLIK-SHIFTED", "NEG-KERNEL-TWO-AUTO-WRONG-MODEL", "NEG-BINOMIAL-SWAPPED-Y"],
   "kernel_two_auto_matches_kernel_two": true,
   "julia_exit_code": 0,
-  "julia_elapsed_seconds": 53.2857,
+  "julia_elapsed_seconds": 52.9591,
   "julia_results_sha256": "0107b24c4b3aa221b80d1dad7d609d72ab0611e22855669582042b76aba741f3",
   "raw_sha256": "1df37df96c86306e62d74f24469a4a648f9229411f28a5adb7fc015e5f40dc94",
   "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",

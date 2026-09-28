@@ -38,27 +38,47 @@
     "surface_absent": true
   },
   "read_from": {
-    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/receipt.json": "c9f0eda84a47016ff46f317fc41350953919286ae5050b5791c527dc01d52de7",
-    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/data-batch-results.json": "636afd2d5a59058b8fdfd655c736d36e8c71fec7bd6a2e2d86bfdb78e0d255db",
+    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/receipt.json": "3bb916c6a8e7d3b29f8a576015861f801d49ff3ffc2efa091aa1038721f1f7e2",
+    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/data-batch-results.json": "ab4cfe6dbb44c4d0eb07b4d9dd4a4a941dc3dc4a41873e5f6ac1dedee8a94849",
     "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/raw.tsv": "bbd13cccb410fd938fd4d4f3654eace2859a60d28937641fbcc159950427c13f",
-    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/data-batch-julia-introspection.json": "308ee5494f30383a2ef9dc45fb5e8f9e549beaf795b5b79f2476ebce5d0f7da3",
-    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/run-commit.json": "941992e3ed93080d9d664c319d0a5626c4ec178d8ff7276ec6644ea11278004c",
+    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/data-batch-julia-introspection.json": "a205feb69805c99dc8cb72fc547514cdc69700b66a2d1493f153fcc906fb2431",
+    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/data-batch-julia-surface-probe.json": "42a25890836296957ae75a3fb2c50f7bf84d732c3329ecc7308c2edbbef0c826",
+    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/run-commit.json": "d1ee2e08f0f9761f131f6dbc39d87414d4fec268e827cb1d631016e31230b485",
     "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/verify.txt": "3c734e295483cd9a97a7cc6a9e4fbe832fda65a9832bc98f95d39b4f2dd58146",
-    "docs/dev-log/core070/true-parity-latest/data-batch-contract-p1.json": "34c97722bbed62a58e8aa0ceafc477bd4d6df49845f443598ff9dfc45da0a3bc"
+    "docs/dev-log/core070/true-parity-latest/data-batch-contract-p1.json": "89754d273dd92624b6fba4a16f292020e9b3fff13f7e8d32dd12365edcba6698"
   },
   "raw": [
     "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/data-batch-results.json",
-    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/data-batch-julia-introspection.json"
+    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/data-batch-julia-introspection.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/data-batch-julia-surface-probe.json"
   ],
+  "julia_fit_time_surface_probe": {
+    "tool": "tools/core070_data_surface_probe.jl",
+    "surfaces": {
+      "weights": {
+        "refused": [
+          "fit_gllvm(Y; family=Normal())",
+          "fit_gllvm(Y; family=Normal(), pervar=true)",
+          "fit_gllvm(Y; family=Poisson())",
+          "fit_gllvm(Y; family=NegativeBinomial(1.0, 0.5))",
+          "fit_gllvm(Y; family=NB1())",
+          "fit_gllvm(Y; family=Binomial())",
+          "fit_gllvm(Y; family=Beta())",
+          "fit_gllvm(Y; family=Gamma())",
+          "gllvm(@formula(y ~ 1), Y, data; family=Poisson())"
+        ]
+      }
+    }
+  },
   "julia_surface": "Julia wide-matrix weight adapter must drop weights at cells masked out by a missing/NA response (drop_masked=true default), returning a vector of length equal to the retained-observation count, in the adapter's native flatten order.",
   "julia_verdict": "SPEC_DEFECT",
-  "why_not_numeric": "The R side replays a pinned P1 helper to an exact identical() expectation; GLLVModels has no surface for it (runtime introspection found none of the planned symbols or keywords), so there is no Julia value to compare.",
+  "why_not_numeric": "The R side replays a pinned P1 helper to an exact identical() expectation. That is a helper replay, not a fit: it produces no fit number, so there is nothing numeric to compare yet. Julia side, from the behavioural surface probe: weights= is refused on every probed path (9 of 9), so GLLVModels has no such surface. The name-level introspection also finds no helper-equivalent symbol (Julia wide-matrix weight adapter must drop weights at cells masked out by a missing/NA response (drop_masked=true default), returning a vector of length equal to the retained-observation count, in the adapter's native flatten order).",
   "pin": "P1",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
   "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit": "10467e0cc1056b95f293b460aa9918987ff9c2b6",
+  "glvmodels_commit": "a875103063231a5ea233ddcd032572311893b04b",
   "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
   "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"

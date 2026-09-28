@@ -22,11 +22,11 @@
   "r_oracle_fixture": "binomial_default",
   "gllvmtmb_version": "0.7.1",
   "read_from": {
-    "docs/dev-log/core070/true-parity-latest/receipts/fit-input/fit-input-2-p1/receipt.json": "c6ee5112d2c91e5fad2fe1cce8b05490a12e015d879c999d28c0357876ff4e21",
+    "docs/dev-log/core070/true-parity-latest/receipts/fit-input/fit-input-2-p1/receipt.json": "09910b3d93ea6a6889e42735f5cdb7ffe3133c194023fd9202448b9171876ecc",
     "docs/dev-log/core070/true-parity-latest/receipts/fit-input/fit-input-2-p1/r-oracle.json": "782bd7e54a60d77220ac5fe6a571747d74115053a3780c51821d209d6e861d4d",
     "docs/dev-log/core070/true-parity-latest/receipts/fit-input/fit-input-2-p1/julia-results.json": "0107b24c4b3aa221b80d1dad7d609d72ab0611e22855669582042b76aba741f3",
     "docs/dev-log/core070/true-parity-latest/receipts/fit-input/fit-input-2-p1/results.tsv": "1df37df96c86306e62d74f24469a4a648f9229411f28a5adb7fc015e5f40dc94",
-    "docs/dev-log/core070/true-parity-latest/receipts/fit-input/fit-input-2-p1/run-commit.json": "941992e3ed93080d9d664c319d0a5626c4ec178d8ff7276ec6644ea11278004c",
+    "docs/dev-log/core070/true-parity-latest/receipts/fit-input/fit-input-2-p1/run-commit.json": "d1ee2e08f0f9761f131f6dbc39d87414d4fec268e827cb1d631016e31230b485",
     "docs/dev-log/core070/true-parity-latest/receipts/fit-input/fit-input-2-p1/verify.txt": "76a228d98020c14716667930a71d0ba2aaea27c22389ba42b32a4cb8cb7301fd",
     "docs/dev-log/core070/true-parity-latest/fit-input-2-batch-contract-p1.json": "90025cc7b8e1a470eb59d1d8d0f0a9cb8d5bc31436f90c0a0abe8fa3d4bd3c1b"
   },
@@ -39,7 +39,7 @@
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
   "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit": "10467e0cc1056b95f293b460aa9918987ff9c2b6",
+  "glvmodels_commit": "a875103063231a5ea233ddcd032572311893b04b",
   "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
   "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
