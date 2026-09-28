@@ -101,6 +101,13 @@ function _twolevel_loglik(y::AbstractMatrix, ind_idx::Vector{Vector{Int}},
         end
         quad_mean = ni * dot(mi, cMean \ mi)
 
+        # Both quadratic forms are ≥ 0 for PD Σ_W / Σ_W + n_i Σ_B. A negative
+        # value means the Woodbury / Cholesky solve lost all precision (extreme
+        # variance ratios, e.g. σ²_W spanning 1e-37 … 1e15); the formula would
+        # then return a huge spurious POSITIVE log-likelihood that the optimiser
+        # happily "converges" to. Report the evaluation as failed instead.
+        (quad_centered < 0 || quad_mean < 0) && return convert(T, -Inf)
+
         logdet_i = logdetMean + (ni - 1) * logdetΣW
         quad_i = quad_mean + quad_centered
         ll += -convert(T, 0.5) * (ni * p * log(twopi) + logdet_i + quad_i)

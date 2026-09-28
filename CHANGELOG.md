@@ -33,6 +33,21 @@ All notable changes to GLLVModels.jl are documented here.
   `gllvm-parity-tag: P1`).
 
 ### Fixed
+- **Two-level Gaussian fits could report `converged = true` at a spurious
+  loglik of +1e22 or more, which collapsed the ICC bootstrap lower bound.**
+  `_twolevel_loglik` (`src/twolevel.jl`) evaluates the within-individual
+  quadratic form through a Woodbury solve. At extreme variance ratios (for
+  example `σ²_W` spanning 1e-37 to 1e15) that solve loses all precision and
+  the quadratic form comes out negative, which is impossible for a positive
+  definite `Σ_W`. L-BFGS then ran to those points. On the CORE070
+  CI-ROUTE-011 fixture (`repeatability_ci(...; method = :bootstrap, nsim =
+  200, seed = 11)`), 8 of the 153 retained bootstrap refits sat there, with
+  repeatability near 0 or 1. They pulled the lower bounds for traits 2 and 4
+  down to 1.1e-7 and 4.5e-40, against gllvmTMB's 0.126 and 0.414. A negative
+  quadratic form now returns `-Inf`, so the optimiser rejects the step. On
+  the same call the lower bounds become 0.60, 0.15, 0.13 and 0.40 (gllvmTMB:
+  0.57, 0.13, 0.13, 0.41). With `nsim = 1000` they are 0.56, 0.13, 0.14 and
+  0.41. The point fit is unchanged.
 - **Ordered-beta fits could report `converged = true` at a non-stationary point,
   with a restart reaching a genuinely better optimum (#501).** The per-site
   inner mode search (`_ordered_beta_mode`, `src/families/ordered_beta.jl`) ran

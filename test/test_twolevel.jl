@@ -49,6 +49,44 @@ end
     end
 
     # ------------------------------------------------------------------
+    # GATE 1b: at extreme variance ratios the Woodbury Σ_W⁻¹ quadratic form
+    # loses all precision and can come out NEGATIVE (impossible for a PD
+    # Σ_W), which turned the log-likelihood into a huge POSITIVE number.
+    # The optimiser then "converged" there (parametric-bootstrap replicates
+    # of the CORE070 CI-ROUTE-011 fixture reported loglik ~ +1e22 with
+    # repeatability ~ 0, collapsing the ICC bootstrap lower bound). The
+    # marginal must never overstate the exact (BigFloat, dense) value.
+    # Parameters are one such replicate fit, verbatim.
+    # ------------------------------------------------------------------
+    @testset "marginal never overstates exact value at extreme variance ratios" begin
+        Λ_B = reshape([-0.9133173413239226, -0.0009085060802649791,
+                       0.08140689784664193, 7.110538275801313], 4, 1)
+        σ²_B = [2.7880521598580705e-15, 6.153275246278945e-22,
+                1.0177929500613746e-19, 4.056049533090739e-21]
+        Λ_W = reshape([-0.6832983940881012, -2.493929718953794,
+                       4.425680962343325, 3.546306331228814], 4, 1)
+        σ²_W = [2.2310698803382298e15, 1.736860948771967e-37,
+                1.5458132733345844e14, 2.89155236951954e11]
+        y = randn(MersenneTwister(1), 4, 12)
+        indiv = repeat(1:4, inner = 3)
+        ll = twolevel_marginal_loglik(y, indiv, Λ_B, σ²_B, Λ_W, σ²_W)
+
+        # Exact reference: the same rotation-trick decomposition in BigFloat
+        # with dense solves (no Woodbury cancellation).
+        SB = big.(Λ_B) * big.(Λ_B)' + Diagonal(big.(σ²_B))
+        SW = big.(Λ_W) * big.(Λ_W)' + Diagonal(big.(σ²_W))
+        ll_exact = big(0)
+        for g in 1:4
+            Yi = big.(y[:, indiv .== g]); ni = size(Yi, 2)
+            mi = vec(sum(Yi, dims = 2)) ./ ni; Yic = Yi .- mi
+            M = SW + ni * SB
+            ll_exact += -(ni * 4 * log(2 * big(pi)) + logdet(M) + (ni - 1) * logdet(SW) +
+                          ni * dot(mi, M \ mi) + sum(Yic .* (SW \ Yic))) / 2
+        end
+        @test ll <= Float64(ll_exact) + 1e-8 * abs(Float64(ll_exact))
+    end
+
+    # ------------------------------------------------------------------
     # GATE 2: AD gradient of the packed NLL matches a central finite
     # difference to ≤ 1e-6.
     # ------------------------------------------------------------------
