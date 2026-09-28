@@ -108,7 +108,7 @@ function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control
         start=base.pars.θ_packed
         res=Optim.optimize(nll,start,Optim.LBFGS(linesearch=Optim.LineSearches.BackTracking(order=3)),
             Optim.Options(iterations=get(kwargs,:iterations,500),g_tol=get(kwargs,:g_tol,1e-6),
-                x_abstol=get(kwargs,:x_tol,1e-8),f_reltol=get(kwargs,:f_tol,1e-10));autodiff=:forward)
+                x_abstol=get(kwargs,:x_tol,1e-8),f_reltol=get(kwargs,:f_tol,0.0));autodiff=:forward)
         t=Optim.minimizer(res)
         base=_gaussian_update(base,t,-nll(t),Optim.iterations(res),_fit_verdict(res)[2],res,time()-t0,fixed)
     end

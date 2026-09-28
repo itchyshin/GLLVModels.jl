@@ -252,6 +252,41 @@
 - Main vs branch over 52 grouped fits per version: every fit with all `φ` below 1e6 is
   bitwise identical (49 on 1.10, 47 on 1.13); boundary fits change only `converged`.
 - After-task: `docs/dev-log/after-task/2026-09-27-bb-grouped-verdict-515.md`.
+## 2026-09-27: iSDM unit-level unique variance, R's default `latent(..., unique = TRUE)` (ISDM-PSI)
+
+- Branch `claude/isdm-psi`, stacked on `claude/isdm-build` (draft PR #546); maintainer decision D-301.
+  `fit_isdm_gllvm` fits gllvmTMB's `theta_diag_B` through augmented loadings
+  `[Λ diag(exp(theta_diag_B))]`; packed order `[b_fix; theta_rr_B; theta_diag_B]` measured from
+  `names(fit$opt$par)` at P1. Edits confined to `src/families/isdm_*.jl`; `unique = FALSE` fits are
+  bit-identical to the #546 head `983c9979b` (all four paired cases, `isequal` on every output).
+- New fixture `isdm_psi4.csv` (4 traits, 80 cells, 3 sources), R default fit at P1: logLik
+  -1197.2250235201839 (door, code 0, max|gradient| 6.2e-4), polished -1197.2250234858263 (code 0);
+  Julia -1197.225023485898, converged. Cross-objective: Julia at R's optimum -1197.2250235197444
+  (gap 4.4e-10); R at Julia's optimum -1197.225023485887 (gap 1.1e-11). Against R's polished optimum:
+  b_fix rel 1.3e-6, Λ Λ' 2.3e-7, exp(theta_diag_B) 4.2e-7 (R sd_B 0.660, 0.335, 0.692, 0.368).
+  Predict link within 3.5e-5 of R's door optimum, including rows on an unseen unit (fixed-only).
+- Two-trait default fits (`predict`, `ms3` fixtures): theta_diag_B runs toward the boundary in both
+  engines (R sd_B 4e-5/2e-5 and 6e-6/4e-5, Julia O(1e-7)); Julia's logLik 1.4e-8 and 2.3e-8 above
+  R's, cross-objective within 1.3e-11 both ways; theta_diag_B documented, not asserted.
+- Tests on Julia 1.10.12 and 1.13.0: `test/test_isdm.jl` 183/183; `test/parity/isdm_cases.jl`
+  admission 41/41, paired 219/219; `test/parity/isdm_unique_cases.jl` 68/68.
+- Finding: the kernel's mode search (copy of the `_mixed_laplace_mode` rule) can accept a mode with a
+  residual step near sqrt(eps)(1 + |z|); the log-determinant is first-order in it, so a cell value can
+  move by ~2.4e-8 between neighbouring parameters (measured, psi4 start). Below every receipt; the
+  finite-difference gradient check polishes modes. Not changed here (it would alter `unique = FALSE`).
+
+## 2026-09-27: Integrated SDM (iSDM) twin of gllvmTMB's public door at P1 (arc A1b)
+
+- Branch `claude/isdm-build` (draft PR #546). New files `src/families/isdm_{sources,formula,table,laplace,grad,fit,predict}.jl`;
+  entry `fit_isdm_gllvm`, type `IsdmFit`, `isdm_sources()` / `isdm_source()`, `predict` / `fitted`.
+  No edits to `formula.jl`, `mixed.jl`, `laplace.jl`, `grouped_dispersion.jl`, `model_selection.jl`,
+  `cv.jl` or `Project.toml`.
+- `test/test_isdm.jl` 158 of 158 on Julia 1.10.12 and 1.13.0. `test/parity/isdm_cases.jl` (tag P1,
+  recorded R values): admission 41 of 41; paired 213 pass, 3 broken (b_fix at R's door optimum on
+  ms3 and the two K = 0 fits, where R's nlminb stops with max|gradient| 3.9e-4 to 9.0e-4; all pass
+  against R's polished optimum). Cross-objective both directions within 1.3e-11 on all four cases.
+- Finding: R's `latent()` default `unique = TRUE` adds `theta_diag_B`, which the spec omits; the Julia
+  door refuses it. Provenance: `docs/dev-log/decisions/2026-09-27-isdm-port-provenance.md`.
 ## 2026-09-27: namespace P1 re-measure hardened after review (supersedes #559 as a new PR)
 
 - Branch `claude/true-parity-p1-namespace-v2` from `origin/main` after #539 merged (`cb5688f7e`);

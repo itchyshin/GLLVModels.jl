@@ -544,6 +544,31 @@ GllvmAnovaTable
 CVResult
 ```
 
+### Integrated species distribution models
+
+Several named data sources (presence-only count streams, detection/non-detection
+surveys) observe one ecological linear predictor per unit and trait. This is the
+Julia twin of gllvmTMB's `gllvmTMB(..., family = isdm_sources(...))` at the P1 pin:
+non-spatial, Laplace, point fit. Everything it reports is relative intensity.
+`latent(0 + trait | unit, d = K)` carries R's default per-trait unit-level unique
+variance (`unique = TRUE`, gllvmTMB's `theta_diag_B`), so the between-unit trait
+covariance is `Λ Λ' + diag(exp(2 theta_diag_B))`; it is identified with at least
+`2K + 1` traits. `unique = FALSE` fits the loadings-only model.
+
+```@docs
+isdm_sources
+isdm_source
+IsdmSources
+IsdmSource
+isdm_table
+IsdmTable
+fit_isdm_gllvm
+IsdmFit
+isdm_marginal_loglik_laplace
+predict(::IsdmFit)
+fitted(::IsdmFit)
+```
+
 ### Family & Distribution Markers
 
 ```@docs
