@@ -1,3 +1,27 @@
+## 2026-09-27: Covariance at P1, independent review of #567 applied
+
+- Same branch, fast-forward commits only. Review findings 1, 2, 6, 7, 10 and 13 applied, one concern
+  per commit; no classification, `src/`, GATES.md or P0 evidence change; the wave6 nobs expectation
+  in the contract is not edited.
+- Finding 1 (blocking): `tools/core070_covariance_p1_receipts.py` runs each batch verifier and refuses
+  a numeric tier when it did not pass, unless a maintainer-signed exception is supplied (none exists).
+  COV-KERNEL-FOLDED-UNIQUE and COV-KERNEL-LATENT are held (`numeric_held_batch_verifier_failed`,
+  non-binding receipts) pending the maintainer's ruling on the wave6 nobs case; their cases pass
+  (7.25e-8, 1.26e-6 vs tol 1e-4).
+- Finding 2: the P1 runner manifest's 34 P0-pinned citations are re-anchored at P1 by the generator
+  (2 identical ranges, 12 changed ranges, 2 file pins, 18 GLLVModels.jl blob pins); `--check` passes.
+- Findings 6, 13: the wave6 and grammar batches record the library's `CORE070_SOURCE_PIN.toml` and
+  their verifiers check it against `tools/core070_oracle_pins.toml`; the required runner's oracle
+  build/source receipts are pin-aware and validated before use. Run requirements documented in
+  `receipts/covariance/README.md`; `oracle/source.json` kept (regenerates byte for byte, but it is the
+  runner's tracked source receipt).
+- Finding 7: all batches re-run from clean commit `ead8f4180`; every R and Julia value bit-identical to
+  the first run; receipts record that commit. Wall: runparity 51 s, default-control mode fits 42 s,
+  wave6 47 s, grammar batch 1 s, bridge under 1 s.
+- Checker, PARITY_REF=FS: C1 required=17 bound=0 free=17 (main and #561 checkers); C8 17
+  NOT_TWINNED_NOT_SIGNED. `test/parity/test_core070_pin.jl` 27/27; `test_parity_oracle_defaults` OK;
+  `node tools/test_true_parity_check.mjs` passes.
+
 ## 2026-09-27: Covariance family re-measured at gllvmTMB P1 (A3), tracked receipts
 
 - Branch `claude/true-parity-p1-covariance` from `origin/main` `cb5688f7e`. Scope: the 17 covariance
