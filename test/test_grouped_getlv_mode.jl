@@ -40,13 +40,15 @@ _glv_warm(Z, K) = (β = vec(mean(Z; dims = 2)); F = svd(Z .- β);
     Λ = reshape(Float64.(d["Lambda_column_major"]), p, K); β = Float64.(d["beta"]); r = Float64(d["r"])
     zref = _glv_nb2_ref(y, Λ, β, r)
     @test norm(_nb2_grad(y, Λ, β, r, zref)) < 1e-10
-    # Premise, recorded rather than asserted: whether the generic kernel 2-cycles at this
-    # site depends on floating-point details. On macOS aarch64 it stops off the mode
-    # (measured 4.7e-4, |grad| 0.066); on Linux x86_64 CI it lands on the mode (2e-10).
-    # The assertions below, that getLV returns the mode, hold on every platform.
+    # Premise, recorded rather than asserted: on origin/main before #601 the generic kernel
+    # 2-cycles at this site and stops off the mode (measured 4.7e-4, |grad| 0.066). #601
+    # (claude/fix-truncnb2-mode-jump) changes `_grouped_laplace_mode`'s small-step branch,
+    # and with it the generic kernel lands on the mode here (2.05e-10; Julia 1.10.12,
+    # macOS aarch64, #601's branch alone). The assertions below, that getLV returns the
+    # mode, hold either way.
     zold = GLLVModels._grouped_laplace_mode([NegativeBinomial(r, 0.5) for _ in 1:p], y,
                                             ones(Int, p), Λ, β, GLLVModels.LogLink())
-    @info "generic-kernel distance from the mode at the 2-cycle site (platform-dependent)" maximum(abs, zold .- zref)
+    @info "generic-kernel distance from the mode at the 2-cycle site (4.7e-4 before #601)" maximum(abs, zold .- zref)
     z = vec(getLV(_nbfit(β, Λ, r), reshape(y, p, 1); rotate = false))
     @test maximum(abs, z .- zref) < 1e-8
     @test norm(_nb2_grad(y, Λ, β, r, z)) < 1e-7
