@@ -222,6 +222,7 @@ println(_SHARD === nothing ?
     _shard_include("test_gamma_x_identity.jl")
     _shard_include("test_gamma_grouped_mode_search.jl")
     _shard_include("test_beta_grouped_mode_search.jl")
+    _shard_include("test_grouped_getlv_offset.jl")
     _shard_include("test_nb1_x_identity.jl")
     _shard_include("test_betabinomial_x_identity.jl")
     _shard_include("test_ordinal_x_identity.jl")
