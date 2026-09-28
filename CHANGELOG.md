@@ -278,9 +278,10 @@ All notable changes to GLLVModels.jl are documented here.
   parameter goes to 0, no lower crossing exists and `confint(...; method = :profile)`
   returned `lower = NaN` with `status = :partial` (zero-truncated NB2 r on the #581
   fixture draw 104: D levels off at about 2.35 as r goes to 0). A refit at 1e-6 times the
-  estimate now confirms the deviance is still below the cutoff, and the bound is reported
-  as 0 with `status = :profile`. A failed or non-finite refit there keeps NaN. Intervals
-  that already had a lower bound are unchanged. `test/test_family_profile_open_lower.jl`.
+  estimate, run before the lower bracket search, now checks whether the deviance is still
+  below the cutoff there; if so the bound is reported as 0 with `status = :profile` and the
+  search (583 s on that draw) is skipped. A failed or non-finite refit falls through to the
+  search. Other log-scale intervals pay one extra refit. `test/test_family_profile_open_lower.jl`.
 - **Gamma and Beta grouped fits no longer treat a large dispersion as a
   boundary.** `fit_gamma_gllvm_grouped`, `fit_gamma_gllvm_grouped_cov`,
   `fit_beta_gllvm_grouped` and `fit_beta_gllvm_grouped_cov` flagged any fitted
