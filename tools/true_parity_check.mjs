@@ -560,7 +560,19 @@ function checkC8() {
   if (rows.length === 0) { console.log('C8 rows=0 EMPTY_SELECTION (vacuous; not a pass)'); return false; }
   const failing = [];
   for (const r of rows) {
-    if (dispositionSignedProperly(r)) continue; // a real, signed-and-dated disposition always resolves the row
+    // Receipts before signatures, in C1's order (review of #589, finding 2): a cited receipt must
+    // resolve, and a C1-scope row citing one must pass the carry rule, before a signature counts.
+    // Otherwise a signed row with a missing receipt or a stale P0 carry passes C8 while failing C1.
+    const paths = rowReceiptPaths(r);
+    if (paths.length > 0) {
+      const dangling = paths.filter((p) => !existsAsBlob(p));
+      if (dangling.length) { failing.push(`${r.source_id}:DANGLING_RECEIPT`); continue; }
+      if (['required_core', 'compatibility_adapter'].includes(r.classification)) {
+        const cs = carryStatus(r);
+        if (cs.stale) { failing.push(`${r.source_id}:STALE_CARRY(${cs.reason})`); continue; }
+      }
+    }
+    if (dispositionSignedProperly(r)) continue; // a real, signed-and-dated disposition resolves the row once its receipts pass
     if (r.classification === 'semantic_divergence') {
       // Name matches alone never count, however many executable_case_ids exist, and however
       // it is classified elsewhere: this branch fires on the label itself.
@@ -573,9 +585,6 @@ function checkC8() {
       failing.push(`${r.source_id}:OUTSIDE_BOUNDARY_NOT_SIGNED`);
       continue;
     }
-    const paths = rowReceiptPaths(r);
-    const dangling = paths.filter((p) => !existsAsBlob(p));
-    if (dangling.length) { failing.push(`${r.source_id}:DANGLING_RECEIPT`); continue; }
     const caseIdsPresent = Array.isArray(r.executable_case_ids) ? r.executable_case_ids.length > 0 : !!r.executable_case_ids;
     const twinned = caseIdsPresent && paths.length > 0;
     if (!twinned) { failing.push(`${r.source_id}:NOT_TWINNED_NOT_SIGNED`); continue; }
