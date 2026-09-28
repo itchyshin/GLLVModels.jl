@@ -1,0 +1,326 @@
+{
+  "status": "FROZEN_FIT_INPUT_2_BATCH_CONTRACT",
+  "area": "fit-input-2",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "scope_note": "M2 'fit-input-2' batch: paired-fit (independent R vs Julia optimizations, n_init=1, se=FALSE) coverage of the 9 unbound `fit-input/` rows in docs/dev-log/core070/required-source-case-map.json (INPUT-ANIMAL-LATENT, INPUT-BINOMIAL-DEFAULT, INPUT-GAUSS-COMMON, INPUT-GAUSS-DEFAULT, INPUT-GAUSS-LOADINGS, INPUT-KERNEL-ONE, INPUT-KERNEL-TWO, INPUT-KERNEL-TWO-AUTO, INPUT-POISSON-DEFAULT). Only the NATIVE-MODEL / FORMULA-INTERFACE planned_case_ids from docs/dev-log/core070/family-required-case-plan.json are in scope; PUBLIC-R-BRIDGE case ids belong to a different agent's lane and are not covered here. Fresh small simulated fixtures are used throughout (n<=15 sites/units, p<=3 traits) rather than the pre-baked .rds artifacts in fit-input-subset.json, following tools/core070_namespace_2_batch.R's own convention -- the point is model-shape fidelity to each case's r_call, not byte-identical replay of a specific prepared dataset.",
+  "runner": "tools/core070_fit_input_2_batch.R",
+  "julia_runner": "tools/core070_fit_input_2_batch.jl",
+  "verifier": "tools/core070_verify_fit_input_2_batch.py",
+  "outer_argv": [
+    "<frozen-library>",
+    "<destination>"
+  ],
+  "source_pins": {
+    "R/animal-keyword.R": "11ecc611a434c2de0f3ed0947ea2652996d638fb4aecbe594fc9e54f987c0b2f",
+    "R/kernel-keywords.R": "fc9a744011232b72a80d57fa9fcf627c74334dd8d3919fd938f36211bf1d11ae",
+    "R/kernel-helpers.R": "3ba87ba05ccc52af3f0ffcf83eb6a08d7bfacebbd0851b9c8090dafc6328f394",
+    "R/unique-keyword.R": "c085328e4404624e07acd963dbeb91ba41ce9015cfb53baf057e881ade19e276",
+    "R/gllvmTMB.R": "a1ad39041f88d08b017500132bac45b5282f246025c488bc1829dc57aeae3faf"
+  },
+  "tolerances": {
+    "loglik_delta": 0.0001,
+    "coef_delta": 0.0001,
+    "justification": "These cases compare INDEPENDENT optimizations (a fresh R gllvmTMB optim() run vs a fresh Julia Optim.LBFGS() run from each engine's own default start), not a same-point objective/gradient evaluation. The established paired-fit precedent in tests/testthat/test-julia-bridge.R (gllvmTMB lane) and tools/core070_namespace_2_batch.jl (this repo, 2026-09-01 calibration note) is 1e-4 absolute logLik/coef for independently-optimized paired fits; same-point identity checks elsewhere in core070 keep the tighter 1e-6..1e-8 band because those compare one shared theta, not two separate optimizer trajectories. 1e-4 is not a widening of any previously accepted contract for THIS batch -- it is this batch's first calibration, set to the already-established cross-batch precedent."
+  },
+  "model_verification_note": "Every EXECUTABLE_NOW row below was numerically spot-checked against a live frozen gllvmTMB 0.7.1 build (library at /private/tmp/structured-rho-library at authoring time) before this contract was frozen, at the exact fixture literals reproduced in tools/core070_fit_input_2_batch.R. Observed agreement at authoring time (single run, not the batch's own re-run): GAUSS-DEFAULT loglik delta 3.6e-9, GAUSS-LOADINGS loglik delta 2.1e-10, BINOMIAL-DEFAULT loglik delta 2.0e-11, ANIMAL-LATENT loglik delta 3.1e-9, KERNEL-ONE loglik delta 4.0e-8. This is why the frozen tolerance (1e-4) is far looser than the observed agreement: it protects against ordinary optimizer-seed/platform drift on re-run, not against a wrong-model mapping (which the authoring-time spot check already ruled out at ~1e-8 tightness).",
+  "critical_finding_kernel_two_auto": "kernel_latent(..., unique = TRUE) requested on TWO OR MORE named tiers is silently reduced by gllvmTMB to the loadings-only (unique = FALSE) fit -- verified live: fitting INPUT-KERNEL-TWO's r_call with `unique = TRUE` added to both kernel_latent() terms reproduces the exact same logLik (-2.588663829612953, identical to 15 decimal places) and the same 3-coefficient parameter count as the plain two-kernel fit, on an authoring-time probe. This matches kernel-keywords.R's own docstring: 'Multi-kernel fits are loadings-only: unique = TRUE ... are not available in that combination' (.unlazy/core070-aghq/oracle-source/readback/R/kernel-keywords.R around the kernel_latent() roxygen block) -- gllvmTMB does not error on the combination, it drops the companion silently. INPUT-KERNEL-TWO-AUTO's Julia mapping therefore uses the SAME two-SourceCovariance call as INPUT-KERNEL-TWO (unique=false on both), NOT SourceCovariance(...; unique=true) -- using unique=true in Julia would fit a genuinely different (non-degenerate) model and silently become a wrong-model comparison, the exact defect class flagged in this task's brief.",
+  "rows": [
+    {
+      "source_id": "fit-input/INPUT-GAUSS-DEFAULT",
+      "status": "EXECUTABLE_NOW",
+      "cases": [
+        {
+          "case_id": "CORE070-FIT-INPUT-GAUSS-DEFAULT-NATIVE-MODEL",
+          "status": "EXECUTABLE_NOW",
+          "r_call": "gllvmTMB(value ~ 0 + trait + latent(0 + trait | site, d = 1), df, unit = 'site', trait = 'trait', family = gaussian(), control = gllvmTMBcontrol(n_init = 1L, se = FALSE))",
+          "julia_call": "GLLVM.fit_gaussian_pervar_gllvm(Y; K = 1, fixed_residual_sd = c)  # c = sd(vec(Y)) / 1000, computed R-side and threaded through; matches gllvmTMB's own auto-suppressed-epsilon convention for ordinary latent()'s default per-trait Psi companion (Sigma = Lambda*Lambda' + Psi)",
+          "acceptance": "paired-fit: |logLik_R - logLik_Julia| <= tolerances.loglik_delta and max|coef_R - coef_Julia| <= tolerances.coef_delta over the 3 trait-intercept coefficients",
+          "evidence": "src/families/gaussian_pervar.jl:184-227 (fit_gaussian_pervar_gllvm docstring + fixed_residual_sd semantics: Lambda*Lambda' + Diagonal(psi^2 .+ c^2))"
+        },
+        {
+          "case_id": "CORE070-FIT-INPUT-GAUSS-DEFAULT-FORMULA-INTERFACE",
+          "status": "EXECUTABLE_NOW",
+          "julia_call": "GLLVM.gllvm(@formula(y ~ 1), Y, data; family = Normal(), K = 1, pervar = true, fixed_residual_sd = c)",
+          "acceptance": "same as NATIVE-MODEL; additionally cross-checked bit-identical to the native fit_gaussian_pervar_gllvm call on the same data",
+          "evidence": "src/formula.jl:172-196 (pervar branch: X = _pervar_formula_design(...); fit_gllvm(Y; family=family, K=K, pervar=true, X=X, kwargs...)); src/families/fit_gllvm.jl:177-183 (pervar=true -> fit_gaussian_pervar_gllvm)"
+        }
+      ]
+    },
+    {
+      "source_id": "fit-input/INPUT-GAUSS-LOADINGS",
+      "status": "PARTIAL_EXECUTABLE",
+      "cases": [
+        {
+          "case_id": "CORE070-FIT-INPUT-GAUSS-LOADINGS-NATIVE-MODEL",
+          "status": "EXECUTABLE_NOW",
+          "r_call": "gllvmTMB(value ~ 0 + trait + latent(0 + trait | site, d = 1, unique = FALSE), df, unit = 'site', trait = 'trait', family = gaussian(), control = gllvmTMBcontrol(n_init = 1L, se = FALSE))",
+          "julia_call": "GLLVM.fit_gaussian_gllvm(Y; K = 1, X = X)  # X is the p x n x p per-species intercept dummy design (X[t,:,t] .= 1), the same convention tools/core070_namespace_2_batch.jl already uses for its own unique=FALSE oracle",
+          "acceptance": "paired-fit: |logLik_R - logLik_Julia| <= tolerances.loglik_delta and max|coef_R - coef_Julia| <= tolerances.coef_delta",
+          "evidence": "src/fit.jl:66-124 (_fit_gaussian_gllvm_exact / fit_gaussian_gllvm docstring: K_W=0, has_diag=false is the plain loadings-only J1 model); numerically identical in shape to tools/core070_namespace_2_batch.R's own oracle_g fit"
+        },
+        {
+          "case_id": "CORE070-FIT-INPUT-GAUSS-LOADINGS-FORMULA-INTERFACE",
+          "status": "NEEDS_NEW_JULIA_SURFACE",
+          "reason": "gllvm(@formula(y ~ 1), Y, data; family = Normal(), K = 1) takes formula.jl's q==0 branch, which calls fit_gaussian_gllvm(Y; K=K) with NO X -- and fit_gaussian_gllvm's own convention is X=nothing means ZERO MEAN, not per-species intercepts. Verified live: this call gives logLik=-33.187092, not the R/native-Julia value -31.978555 (delta 1.21, far outside tolerance) on the authoring-time fixture. The only two @formula routes that DO give per-species intercepts are (a) pervar=true (which unconditionally adds a per-trait unique-variance block GAUSS-LOADINGS must NOT have) and (b) an explicit q>0 site-level covariate design (whose coefficients are shared ACROSS species by construction -- formula.jl:150-151 -- not per-species). formula.jl also explicitly forbids passing X directly alongside a formula ('Do not also supply X with a formula', formula.jl:150). There is no existing @formula front-door path that reproduces a per-species-intercept, loadings-only (no unique block), free-sigma_eps Gaussian model.",
+          "evidence": "src/formula.jl:196-201 (q==0 branch -> fit_gaussian_gllvm(Y;K=K,kwargs...), no X); src/fit.jl:66 (fit_gaussian_gllvm docstring: 'X=nothing means zero mean'); live probe at authoring time (/tmp/probe_formula.jl) reproduced the mismatch"
+        }
+      ]
+    },
+    {
+      "source_id": "fit-input/INPUT-GAUSS-COMMON",
+      "status": "NEEDS_NEW_JULIA_SURFACE",
+      "cases": [
+        {
+          "case_id": "CORE070-FIT-INPUT-GAUSS-COMMON-NATIVE-MODEL",
+          "status": "NEEDS_NEW_JULIA_SURFACE",
+          "r_call": "gllvmTMB(value ~ 0 + trait + latent(0 + trait | site, d = 1, common = TRUE), df, unit = 'site', trait = 'trait', family = gaussian(), control = gllvmTMBcontrol(n_init = 1L, se = FALSE))",
+          "reason": "common = TRUE ties the per-trait unique/diagonal variance to ONE shared scalar (fit-input-subset.json summary for INPUT-GAUSS-COMMON: free_theta_diag_B = 1, vs 3 for INPUT-GAUSS-DEFAULT). Neither of GLLVM.jl's two candidate surfaces supports a tied/shared diagonal-variance parameterisation: fit_gaussian_gllvm's has_diag block (src/fit.jl:90-124) is always per-trait (length p, one free sigma^2_B per trait, no tying option), and fit_gaussian_pervar_gllvm's \u03c8\u00b2 (src/families/gaussian_pervar.jl:184-227) is likewise always per-trait. `grep -n \"common\" src/fit.jl src/families/gaussian_pervar.jl src/packing.jl` returns zero matches anywhere in the ordinary-latent-block code path. The only place a `common` flag exists in this codebase is SourceCovariance.common (src/source_fit.jl:1-46) in the UNRELATED fixed-source-kernel API (fit_gaussian_sources), which ties independent/unique SOURCE variances, not the ordinary latent() unique-diagonal block this row's r_call requests.",
+          "evidence": "src/fit.jl:66-124; src/families/gaussian_pervar.jl:184-227; src/source_fit.jl:1-46 (the only `common` flag in the repo, on the wrong API surface); grep -n \"common\" src/fit.jl src/families/gaussian_pervar.jl src/packing.jl -> no output"
+        },
+        {
+          "case_id": "CORE070-FIT-INPUT-GAUSS-COMMON-FORMULA-INTERFACE",
+          "status": "NEEDS_NEW_JULIA_SURFACE",
+          "reason": "Depends on the native case; no native surface exists to expose through a formula front door.",
+          "evidence": "same as CORE070-FIT-INPUT-GAUSS-COMMON-NATIVE-MODEL"
+        }
+      ]
+    },
+    {
+      "source_id": "fit-input/INPUT-BINOMIAL-DEFAULT",
+      "status": "EXECUTABLE_NOW",
+      "cases": [
+        {
+          "case_id": "CORE070-FIT-INPUT-BINOMIAL-DEFAULT-NATIVE-MODEL",
+          "status": "EXECUTABLE_NOW",
+          "r_call": "gllvmTMB(value ~ 0 + trait + latent(0 + trait | site, d = 1), dfb, unit = 'site', trait = 'trait', family = binomial(), control = gllvmTMBcontrol(n_init = 1L, se = FALSE))",
+          "julia_call": "GLLVM.fit_binomial_gllvm(Y; K = 1)  # Y :: Matrix{Int}, 0/1 single-trial",
+          "acceptance": "paired-fit: |logLik_R - logLik_Julia| <= tolerances.loglik_delta and max|coef_R - coef_Julia| <= tolerances.coef_delta",
+          "evidence": "src/families/binomial.jl:310-335 (fit_binomial_gllvm always carries a p-length species intercept beta, no X kwarg -- matches R's '0+trait' by construction). CRITICAL: R's default latent() Psi companion is auto-SKIPPED for single-trial binomial traits under gllvmTMB's own family-specific identifiability gate ('Skipping the default between-unit Psi for ... binary / categorical-contrast traits'; verified live, R reports npar=6 = 3 beta + 3 lambda, no unique block) -- so R's DEFAULT binomial model reduces to the SAME loadings-only shape fit_binomial_gllvm already implements. This is why BINOMIAL-DEFAULT is executable while POISSON-DEFAULT (whose default Psi is NOT auto-skipped) is not."
+        },
+        {
+          "case_id": "CORE070-FIT-INPUT-BINOMIAL-DEFAULT-FORMULA-INTERFACE",
+          "status": "EXECUTABLE_NOW",
+          "julia_call": "GLLVM.gllvm(@formula(y ~ 1), Y, data; family = Binomial(), K = 1)",
+          "acceptance": "same as NATIVE-MODEL",
+          "evidence": "src/formula.jl:196-201 (q==0 branch -> fit_gllvm(Y;family=family,K=K)); src/families/fit_gllvm.jl:221 (_fit_gllvm(::Binomial,...) = fit_binomial_gllvm(Y;kwargs...)); this route has no zero-mean gap because fit_binomial_gllvm's own convention (unlike fit_gaussian_gllvm) always includes the p-length species intercept unconditionally"
+        }
+      ]
+    },
+    {
+      "source_id": "fit-input/INPUT-POISSON-DEFAULT",
+      "status": "NEEDS_NEW_JULIA_SURFACE",
+      "cases": [
+        {
+          "case_id": "CORE070-FIT-INPUT-POISSON-DEFAULT-NATIVE-MODEL",
+          "status": "NEEDS_NEW_JULIA_SURFACE",
+          "r_call": "gllvmTMB(value ~ 0 + trait + latent(0 + trait | site, d = 1), dfp, unit = 'site', trait = 'trait', family = poisson(), control = gllvmTMBcontrol(n_init = 1L, se = FALSE))",
+          "reason": "R's default latent() model for Poisson counts is NOT auto-skipped the way it is for binomial (fit-input-subset.json summary for INPUT-POISSON-DEFAULT: free_theta_diag_B = 3, i.e. the per-trait unique/diagonal variance block Psi is estimated, same shape as INPUT-GAUSS-DEFAULT). GLLVM.jl's fit_poisson_gllvm (src/families/aghq_poisson_fit.jl, src/families/poisson.jl) has no has_diag / K_W / sigma^2_B kwarg or any other per-trait diagonal random-effect block: `grep -n \"has_diag\\|K_W\\|\\xcf\\x83\\xc2\\xb2_B\\|diag_B\" src/families/poisson.jl src/families/aghq_poisson_fit.jl` returns zero matches. There is no existing Julia surface -- native or otherwise -- for a Poisson GLLVM with a loadings block PLUS a per-trait unique-variance companion.",
+          "evidence": "src/families/poisson.jl (no has_diag/K_W kwarg anywhere in _fit_poisson_gllvm_laplace's signature); src/families/aghq_poisson_fit.jl (aghq wrapper forwards kwargs but adds no such block either); grep -n \"has_diag\\|K_W\\|diag_B\" src/families/poisson.jl src/families/aghq_poisson_fit.jl -> no output"
+        },
+        {
+          "case_id": "CORE070-FIT-INPUT-POISSON-DEFAULT-FORMULA-INTERFACE",
+          "status": "NEEDS_NEW_JULIA_SURFACE",
+          "reason": "Depends on the native case; no native surface exists to expose through a formula front door.",
+          "evidence": "same as CORE070-FIT-INPUT-POISSON-DEFAULT-NATIVE-MODEL"
+        }
+      ]
+    },
+    {
+      "source_id": "fit-input/INPUT-ANIMAL-LATENT",
+      "status": "EXECUTABLE_NOW",
+      "cases": [
+        {
+          "case_id": "CORE070-FIT-INPUT-ANIMAL-LATENT-NATIVE-MODEL",
+          "status": "EXECUTABLE_NOW",
+          "r_call": "gllvmTMB(value ~ 0 + trait + animal_latent(species, A = A, d = 1), df, unit = 'species', trait = 'trait', cluster = 'species', control = gllvmTMBcontrol(n_init = 1L, se = FALSE))",
+          "julia_call": "GLLVM.fit_gaussian_sources(Y; sources = [GLLVM.SourceCovariance(A; groups = 1:n_ids, name = :animal)])  # A is the n_ids x n_ids relatedness matrix; groups=1:n_ids is the identity projection because animal_latent's cluster factor has exactly one row per relatedness-matrix node in this fixture (mirrors animal-keyword.R's own roxygen example: species := paste0('i',1:n_ids), one row per id)",
+          "acceptance": "paired-fit: |logLik_R - logLik_Julia| <= tolerances.loglik_delta and max|coef_R - coef_Julia| <= tolerances.coef_delta",
+          "evidence": ".unlazy/core070-aghq/oracle-source/readback/R/animal-keyword.R:20-80 (animal_latent mirrors phylo_latent; A supplied directly as the relatedness matrix on the cluster factor's levels); src/source_fit.jl:260-290 (fit_gaussian_sources docstring: covariance of vec(Y) = sigma_eps^2 I + sum(kron(P*C*P', B))); live-verified at authoring time to 3.1e-9 logLik agreement (see model_verification_note)"
+        },
+        {
+          "case_id": "CORE070-FIT-INPUT-ANIMAL-LATENT-FORMULA-INTERFACE",
+          "status": "EXECUTABLE_NOW",
+          "julia_call": "GLLVM.gllvm(@formula(y ~ 1), Y, data; family = Normal(), sources = [src])",
+          "acceptance": "same as NATIVE-MODEL; live-verified bit-identical to the native fit_gaussian_sources call (3.1e-9 logLik delta vs the R oracle) at authoring time",
+          "evidence": "src/formula.jl:172-196 (sources branch: family isa Normal() required, K/pervar/X rejected, X and coefficient_names built from the formula's own RHS and forwarded to fit_gaussian_sources)"
+        }
+      ]
+    },
+    {
+      "source_id": "fit-input/INPUT-KERNEL-ONE",
+      "status": "EXECUTABLE_NOW",
+      "cases": [
+        {
+          "case_id": "CORE070-FIT-INPUT-KERNEL-ONE-NATIVE-MODEL",
+          "status": "EXECUTABLE_NOW",
+          "r_call": "gllvmTMB(value ~ 0 + trait + kernel_latent(site, K = A, d = 1, name = 'a'), df, unit = 'site', trait = 'trait', cluster = 'site', control = gllvmTMBcontrol(n_init = 1L, se = FALSE))",
+          "julia_call": "GLLVM.fit_gaussian_sources(Y; sources = [GLLVM.SourceCovariance(A; groups = 1:n_units, name = :a)])",
+          "acceptance": "paired-fit: |logLik_R - logLik_Julia| <= tolerances.loglik_delta and max|coef_R - coef_Julia| <= tolerances.coef_delta",
+          "evidence": "same fit_gaussian_sources mapping as INPUT-ANIMAL-LATENT, single named source; live-verified at authoring time to 4.0e-8 logLik agreement"
+        },
+        {
+          "case_id": "CORE070-FIT-INPUT-KERNEL-ONE-FORMULA-INTERFACE",
+          "status": "EXECUTABLE_NOW",
+          "julia_call": "GLLVM.gllvm(@formula(y ~ 1), Y, data; family = Normal(), sources = [src])",
+          "acceptance": "same as NATIVE-MODEL; live-verified bit-identical to the native call at authoring time",
+          "evidence": "same as CORE070-FIT-INPUT-ANIMAL-LATENT-FORMULA-INTERFACE"
+        }
+      ]
+    },
+    {
+      "source_id": "fit-input/INPUT-KERNEL-TWO",
+      "status": "EXECUTABLE_NOW",
+      "cases": [
+        {
+          "case_id": "CORE070-FIT-INPUT-KERNEL-TWO-NATIVE-MODEL",
+          "status": "EXECUTABLE_NOW",
+          "r_call": "gllvmTMB(value ~ 0 + trait + kernel_latent(site, K = A, d = 1, name = 'a') + kernel_latent(site, K = B, d = 1, name = 'b'), df, unit = 'site', trait = 'trait', cluster = 'site', control = gllvmTMBcontrol(n_init = 1L, se = FALSE))",
+          "julia_call": "GLLVM.fit_gaussian_sources(Y; sources = [GLLVM.SourceCovariance(A; groups = 1:n_units, name = :a), GLLVM.SourceCovariance(B; groups = 1:n_units, name = :b)])",
+          "acceptance": "paired-fit: |logLik_R - logLik_Julia| <= tolerances.loglik_delta and max|coef_R - coef_Julia| <= tolerances.coef_delta",
+          "evidence": "same fit_gaussian_sources mapping, two additive named sources; live-verified at authoring time (bit-identical to 15 decimals against the KERNEL-TWO-AUTO probe of the same fixture, see critical_finding_kernel_two_auto)"
+        },
+        {
+          "case_id": "CORE070-FIT-INPUT-KERNEL-TWO-FORMULA-INTERFACE",
+          "status": "EXECUTABLE_NOW",
+          "julia_call": "GLLVM.gllvm(@formula(y ~ 1), Y, data; family = Normal(), sources = [src_a, src_b])",
+          "acceptance": "same as NATIVE-MODEL",
+          "evidence": "same formula.jl sources branch as CORE070-FIT-INPUT-ANIMAL-LATENT-FORMULA-INTERFACE"
+        }
+      ]
+    },
+    {
+      "source_id": "fit-input/INPUT-KERNEL-TWO-AUTO",
+      "status": "EXECUTABLE_NOW",
+      "cases": [
+        {
+          "case_id": "CORE070-FIT-INPUT-KERNEL-TWO-AUTO-NATIVE-MODEL",
+          "status": "EXECUTABLE_NOW",
+          "r_call": "gllvmTMB(value ~ 0 + trait + kernel_latent(site, K = A, d = 1, name = 'a', unique = TRUE) + kernel_latent(site, K = B, d = 1, name = 'b', unique = TRUE), df, unit = 'site', trait = 'trait', cluster = 'site', control = gllvmTMBcontrol(n_init = 1L, se = FALSE))",
+          "julia_call": "GLLVM.fit_gaussian_sources(Y; sources = [GLLVM.SourceCovariance(A; groups = 1:n_units, name = :a), GLLVM.SourceCovariance(B; groups = 1:n_units, name = :b)])  # unique=false (the SourceCovariance default) on BOTH -- see critical_finding_kernel_two_auto: R silently drops unique=TRUE in the multi-kernel combination, so the correct Julia comparand is the plain loadings-only two-source model, identical to INPUT-KERNEL-TWO's own call",
+          "acceptance": "paired-fit: |logLik_R - logLik_Julia| <= tolerances.loglik_delta and max|coef_R - coef_Julia| <= tolerances.coef_delta. The R runner additionally asserts, as an internal consistency check, that the KERNEL-TWO-AUTO R fit's logLik is within 1e-8 of the KERNEL-TWO R fit's logLik on the SAME fixture -- if gllvmTMB's silent-drop behavior ever changes, this assertion fails loudly instead of the batch silently comparing against a stale mental model.",
+          "evidence": "critical_finding_kernel_two_auto (top of this contract); .unlazy/core070-aghq/oracle-source/readback/R/kernel-keywords.R roxygen block for kernel_latent (unique parameter docs); live-verified at authoring time: R's unique=TRUE two-tier fit reproduced -2.588663829612953 to all 15 printed decimals, identical to the plain two-tier fit on the same fixture"
+        },
+        {
+          "case_id": "CORE070-FIT-INPUT-KERNEL-TWO-AUTO-FORMULA-INTERFACE",
+          "status": "EXECUTABLE_NOW",
+          "julia_call": "GLLVM.gllvm(@formula(y ~ 1), Y, data; family = Normal(), sources = [src_a, src_b])  # same unique=false sources as the native case, for the same reason",
+          "acceptance": "same as NATIVE-MODEL",
+          "evidence": "same formula.jl sources branch as CORE070-FIT-INPUT-ANIMAL-LATENT-FORMULA-INTERFACE, combined with critical_finding_kernel_two_auto"
+        }
+      ]
+    }
+  ],
+  "needs_new_julia_surface": [
+    {
+      "case_id": "CORE070-FIT-INPUT-GAUSS-LOADINGS-FORMULA-INTERFACE",
+      "gap": "gllvm()'s q==0 (bare-intercept) branch for family=Normal() without pervar/sources gives a ZERO-mean fit_gaussian_gllvm(Y;K=K) call, not a per-species-intercept one; there is no @formula route to a loadings-only (no unique block), free-sigma_eps, per-species-intercept Gaussian model.",
+      "file_line": "src/formula.jl:196-201; src/fit.jl:66 (fit_gaussian_gllvm docstring, X=nothing => zero mean)"
+    },
+    {
+      "case_id": "CORE070-FIT-INPUT-GAUSS-COMMON-NATIVE-MODEL",
+      "gap": "no tied/shared-scalar diagonal-variance parameterisation exists for the ordinary latent() block (has_diag and pervar's \u03c8\u00b2 are both always per-trait; the only `common` flag in the repo is on the unrelated SourceCovariance/fit_gaussian_sources API).",
+      "file_line": "src/fit.jl:66-124; src/families/gaussian_pervar.jl:184-227; src/source_fit.jl:1-46"
+    },
+    {
+      "case_id": "CORE070-FIT-INPUT-GAUSS-COMMON-FORMULA-INTERFACE",
+      "gap": "depends on CORE070-FIT-INPUT-GAUSS-COMMON-NATIVE-MODEL",
+      "file_line": "same as above"
+    },
+    {
+      "case_id": "CORE070-FIT-INPUT-POISSON-DEFAULT-NATIVE-MODEL",
+      "gap": "fit_poisson_gllvm has no per-trait diagonal random-effect block (has_diag/K_W/sigma^2_B-equivalent); R's default Poisson latent() model requires exactly that block (free_theta_diag_B=3 in the prepared-input summary).",
+      "file_line": "src/families/poisson.jl; src/families/aghq_poisson_fit.jl"
+    },
+    {
+      "case_id": "CORE070-FIT-INPUT-POISSON-DEFAULT-FORMULA-INTERFACE",
+      "gap": "depends on CORE070-FIT-INPUT-POISSON-DEFAULT-NATIVE-MODEL",
+      "file_line": "same as above"
+    }
+  ],
+  "expected_executable_case_count": 13,
+  "expected_needs_surface_case_count": 5,
+  "negative_controls": [
+    {
+      "control_id": "NEG-COEF-SHIFTED",
+      "description": "Add 1.0 to every Julia coefficient before comparing to the R oracle on the GAUSS-DEFAULT fixture; must fail the coef tolerance."
+    },
+    {
+      "control_id": "NEG-LOGLIK-SHIFTED",
+      "description": "Add 1.0 to the Julia logLik before comparing to the R oracle on the GAUSS-DEFAULT fixture; must fail the loglik tolerance."
+    },
+    {
+      "control_id": "NEG-KERNEL-TWO-AUTO-WRONG-MODEL",
+      "description": "Deliberately fit KERNEL-TWO-AUTO's Julia comparand WITH unique=true on both SourceCovariance sources (the wrong-model mapping this contract explicitly rejects) and confirm its logLik does NOT match the KERNEL-TWO-AUTO R oracle within tolerance -- guards against silently reintroducing the exact defect class this contract documents avoiding."
+    },
+    {
+      "control_id": "NEG-BINOMIAL-SWAPPED-Y",
+      "description": "Compare the Julia BINOMIAL-DEFAULT fit's logLik against the R GAUSS-DEFAULT oracle's logLik (mismatched fixture/family); must fail the loglik tolerance."
+    }
+  ],
+  "p0_contract": "docs/dev-log/core070/fit-input-2-batch-contract.json",
+  "p0_contract_sha256": "7ec7e4c6a1a241cb5b03c445f37b8ef2b69e5384981585af28e6f939dfcc6af2",
+  "p0_to_p1_r_function_diff": [
+    {
+      "function": "gllvmTMB",
+      "file": "R/gllvmTMB.R",
+      "body_identical_p0_p1": false,
+      "body_sha256_p0": "14f23cf0ef0c46e074b4263790965ca5c7dcb41da86dc90ade29ed74928cf788",
+      "body_sha256_p1": "b47f6dadf35d6df05bfb783920da77f418202bd60b65f35f1e4de642c494c35d"
+    },
+    {
+      "function": "animal_latent",
+      "file": "R/animal-keyword.R",
+      "body_identical_p0_p1": false,
+      "body_sha256_p0": "a7da77f88c2aab67d987756a8a0274acadffdc869e2dd95d46437cd247b7edda",
+      "body_sha256_p1": "5fb0a36df388b6afd44c267d7cc0ddb5bbd2937b6a458caacd02ce59babc7a20"
+    },
+    {
+      "function": "kernel_latent",
+      "file": "R/kernel-keywords.R",
+      "body_identical_p0_p1": false,
+      "body_sha256_p0": "37841dda7a8e6237f5c44a5a6b91fcec0ec984927cbc95f040cb78e4109265a0",
+      "body_sha256_p1": "2e6dabd4896833a56b699782e26eb01dc2ce7af411eb1184213337d1e01b1be9"
+    }
+  ],
+  "regeneration_log": {
+    "generator": "tools/core070_data_p1_contract.py",
+    "changes": [
+      {
+        "field": "reference_commit",
+        "p0": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+        "p1": "9539352f66f2db2cc26b1c393e67212a359b60c9"
+      },
+      {
+        "field": "source_pins[R/animal-keyword.R]",
+        "p0": "f7a7da8db1fc487a00f836353433ae9375bfd5ba8a0b9d2a9a21e5cabf1b6076",
+        "p1": "11ecc611a434c2de0f3ed0947ea2652996d638fb4aecbe594fc9e54f987c0b2f",
+        "changed": true
+      },
+      {
+        "field": "source_pins[R/kernel-keywords.R]",
+        "p0": "117cea4f9087ce0a00f46a330020d252b1103ab6e97623a3f9ef69c20d6584ae",
+        "p1": "fc9a744011232b72a80d57fa9fcf627c74334dd8d3919fd938f36211bf1d11ae",
+        "changed": true
+      },
+      {
+        "field": "source_pins[R/kernel-helpers.R]",
+        "p0": "3ba87ba05ccc52af3f0ffcf83eb6a08d7bfacebbd0851b9c8090dafc6328f394",
+        "p1": "3ba87ba05ccc52af3f0ffcf83eb6a08d7bfacebbd0851b9c8090dafc6328f394",
+        "changed": false
+      },
+      {
+        "field": "source_pins[R/unique-keyword.R]",
+        "p0": "c085328e4404624e07acd963dbeb91ba41ce9015cfb53baf057e881ade19e276",
+        "p1": "c085328e4404624e07acd963dbeb91ba41ce9015cfb53baf057e881ade19e276",
+        "changed": false
+      },
+      {
+        "field": "source_pins[R/gllvmTMB.R]",
+        "p0": "bf78912c192311d1ca40704cd81493c2c06773eb3eb7aea14b826a7459dd6f20",
+        "p1": "a1ad39041f88d08b017500132bac45b5282f246025c488bc1829dc57aeae3faf",
+        "changed": true
+      }
+    ],
+    "carried_verbatim": "status, cases/rows (expression, expected, r_call, julia_call, acceptance), tolerances, julia_planned_surfaces, needs_new_julia_surface, negative controls, runner blocks. No case, expectation or tolerance was edited; a P1 mismatch is recorded by the batch as a failure."
+  }
+}
