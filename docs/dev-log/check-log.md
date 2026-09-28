@@ -251,6 +251,18 @@
   case is an R boundary), 8 R-only needing a Julia surface, 0 not measured. Checker, PARITY_REF=FS:
   C1 required=17 bound=2 free=15 (main and #561 checker); C8 15 NOT_TWINNED_NOT_SIGNED.
   `node tools/test_true_parity_check.mjs` passes; `test/parity/test_core070_pin.jl` 16/16.
+## 2026-09-27: Integrated SDM (iSDM) twin of gllvmTMB's public door at P1 (arc A1b)
+
+- Branch `claude/isdm-build` (draft PR #546). New files `src/families/isdm_{sources,formula,table,laplace,grad,fit,predict}.jl`;
+  entry `fit_isdm_gllvm`, type `IsdmFit`, `isdm_sources()` / `isdm_source()`, `predict` / `fitted`.
+  No edits to `formula.jl`, `mixed.jl`, `laplace.jl`, `grouped_dispersion.jl`, `model_selection.jl`,
+  `cv.jl` or `Project.toml`.
+- `test/test_isdm.jl` 158 of 158 on Julia 1.10.12 and 1.13.0. `test/parity/isdm_cases.jl` (tag P1,
+  recorded R values): admission 41 of 41; paired 213 pass, 3 broken (b_fix at R's door optimum on
+  ms3 and the two K = 0 fits, where R's nlminb stops with max|gradient| 3.9e-4 to 9.0e-4; all pass
+  against R's polished optimum). Cross-objective both directions within 1.3e-11 on all four cases.
+- Finding: R's `latent()` default `unique = TRUE` adds `theta_diag_B`, which the spec omits; the Julia
+  door refuses it. Provenance: `docs/dev-log/decisions/2026-09-27-isdm-port-provenance.md`.
 ## 2026-09-27: namespace P1 re-measure hardened after review (supersedes #559 as a new PR)
 
 - Branch `claude/true-parity-p1-namespace-v2` from `origin/main` after #539 merged (`cb5688f7e`);
