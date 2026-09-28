@@ -1,3 +1,26 @@
+## 2026-09-27: Inference family re-measured at gllvmTMB P1 (A3), tracked receipts
+
+- Branch `claude/true-parity-p1-inference`, stacked on `claude/true-parity-p1-postfit` (PR #569) at
+  `28d880acb`, which is stacked on #567. Scope: the 63 inference rows the P1 carry scan lists as
+  DANGLING (45 wave2 inference-batch, 14 wave4 inference-remainder, 4 wave5 surface-conversion).
+  Classifications (all compatibility_adapter) and dispositions carried unchanged.
+- P1 oracle reused read-only from `/Users/z3437171/local-scratch/a3cov-oracle/build/library`
+  (`build.json`: reference_commit P1, source-tree sha256 equal to the P1 pin). The route probe reads
+  `<oracle>/build/source` via CORE070_P1_R_SOURCE_ROOT.
+- `tools/core070_inference_p1_contract.py` writes two P1 twins; `--check` passes. Adaptation: the P0
+  route probe fails 98/98 on the P1 source (P1's confint.gllvmTMB_multi calls
+  `.temporal_assert_no_iid_inference()`, defined in R/temporal.R); the P1 twin
+  `tools/core070_inference_routes_p1.R` also parses R/temporal.R and passes 98/98 with output
+  identical to the P0 probe on P0 source.
+- Runs (local Mac, one BLAS/OMP thread, JULIA_NUM_THREADS=4), wall seconds: route probe + R crosscheck
+  2 (64/64), wave2 Julia 57 (45/45 + 2 negative controls), wave4 remainder 14 (5/5 cases, 14 rows, +
+  2 negative controls). Both verifiers pass at P1. wave5 not re-run (read from #569's P1 run).
+- Case-map rows (`case-map-inference.json`): 2 numeric pass (CI-ROUTE-008/010, max diff 1.8e-6,
+  tolerance 1e-3), 45 routing/control-flow only, 14 error-class only, 2 partial (009 refusal pair,
+  011 structural bootstrap), 0 fail, 0 not measured. Checker, PARITY_REF=FS: C1 required=63 bound=2
+  free=61 (main and #561 checker); C8 61 NOT_TWINNED_NOT_SIGNED. `node tools/test_true_parity_check.mjs`
+  passes.
+
 ## 2026-09-27: Postfit and postfit-policy families re-measured at gllvmTMB P1 (A3), tracked receipts
 
 - Branch `claude/true-parity-p1-postfit`, stacked on `claude/true-parity-p1-covariance` (PR #567) at
