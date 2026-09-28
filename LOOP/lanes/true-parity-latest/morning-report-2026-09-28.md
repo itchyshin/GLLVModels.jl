@@ -11,6 +11,8 @@ Written first at 18:27 MDT on 2026-09-27 and updated through the night. The newe
 
 ## Landed on main (2026-09-27)
 
+Overnight: #548 chibar2_pvalue / variance_lrt twin (4357e4652, 22:58).
+
 #522 (beta-binomial verdict, closes #515), #530 (docs phrase), #523 (P1 ledger and check tool), #524 (P1 pin), #514 (mixed bridge mode search), #532 (Documenter per-branch), #528 (ordinal_logit twin), #539 (harness pin source and P1 oracle).
 
 ## Ready for your word
@@ -27,6 +29,8 @@ Written first at 18:27 MDT on 2026-09-27 and updated through the night. The newe
 - #561 namespace re-measurement at P1 (head 92cf39571, supersedes #559). Review was BLOCKING; fixed and re-checked by me: a row labelled "numeric" must now cite a receipt with a real R-vs-Julia comparison inside tolerance, or it fails C1 and C8 (the review's mutation now reads C1_NOT_MET / C8_NOT_MET). Signed dispositions accept only "Shinichi Nakagawa" or "itchyshin" with a real, non-future date. Disclosed: at P0, 14 aghq rows now read name-only in C8 (C8 was NOT_MET before and after). Known limit: the checker trusts the numbers written in a receipt; it does not re-run them. 50/50 negative controls pass. Third change DONE at 92cf39571 and re-checked by me (60/60 negative controls): a receipt whose verdict or batch status is not PASS no longer binds (unless you sign a receipt_status_exception on the row), and the checker recomputes R-vs-Julia differences itself, failing any row whose recorded difference disagrees. Effect on the A3 PRs: #567's 2 and #569's 2 wave6 rows stop binding until the nobs case is settled. The only .github/ paths touched are inside test fixtures (mock repo trees), not real CI. Reply: "merge #561 when green".
 
 ## In a merge train (word given)
+
+22:59: #556 refreshed (32d3f2097) and its train started; #547 follows it.
 
 22:30: #531 and #548 trains timed out waiting for runners (no failures; advisory smoke red as on main); restarted on the same heads. Other lanes merged #549 and #560 meanwhile; no new conflicts.
 
