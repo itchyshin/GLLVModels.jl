@@ -527,6 +527,47 @@ for (const [fixture, reason] of [
   }
 }
 
+// --- the generated scoreboard is tied back to the case maps (review of #589, finding 5) ---
+// C2/X2 read the scoreboard's status word by design; tools/true_parity_assemble.py --check is
+// what ties that word back to the per-family case maps. Running it here means a hand-edited
+// scoreboard row (e.g. NON-NUMERIC -> EVIDENCED with no case-map change) fails this run.
+{
+  const ASSEMBLER = join(REPO_ROOT, 'tools', 'true_parity_assemble.py');
+  const LEDGER_REL = join('docs', 'dev-log', 'core070', 'true-parity-latest');
+  function runAssemble(root) {
+    try {
+      return { stdout: execFileSync('python3', [ASSEMBLER, '--root', root, '--check'], { encoding: 'utf8' }), code: 0 };
+    } catch (e) {
+      return { stdout: e.stdout || '', code: e.status };
+    }
+  }
+  test('assembler --check: the tracked scoreboard, assembled case map and reverse gap are current', () => {
+    const { stdout, code } = runAssemble(REPO_ROOT);
+    assert.equal(code, 0, stdout);
+    assert.match(stdout, /^ASSEMBLE_OK \d+ rows current$/m);
+  });
+  test('assembler --check: a hand-edited EVIDENCED scoreboard row fails (copy of the tree)', () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'true-parity-assemble-'));
+    try {
+      // Receipts cited by the maps live under docs/dev-log/core070/; fixtures are listed in the board.
+      cpSync(join(REPO_ROOT, 'docs', 'dev-log', 'core070'), join(tmp, 'docs', 'dev-log', 'core070'), { recursive: true });
+      cpSync(join(REPO_ROOT, 'test', 'fixtures'), join(tmp, 'test', 'fixtures'), { recursive: true });
+      const clean = runAssemble(tmp);
+      assert.equal(clean.code, 0, clean.stdout); // positive control on the copy
+      const sb = join(tmp, LEDGER_REL, 'scoreboard.md');
+      const txt = readFileSync(sb, 'utf8');
+      const edited = txt.replace(/^(\| \S+ `[^`]*` \| [^|]* \| )(?!EVIDENCED )[A-Z-]+( \|)/m, '$1EVIDENCED$2');
+      assert.notEqual(edited, txt, 'no non-EVIDENCED row to hand-edit');
+      writeFileSync(sb, edited);
+      const bad = runAssemble(tmp);
+      assert.equal(bad.code, 1, bad.stdout);
+      assert.match(bad.stdout, /^ASSEMBLE_STALE scoreboard\.md$/m);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+}
+
 if (failures > 0) {
   console.log(`\n${failures} control(s) FAILED`);
   process.exit(1);
