@@ -146,7 +146,8 @@ carried rows are expected to land here until WS0d's stale-row scan re-measures t
 
 A required row is bound only with a resolving receipt (`evidence.receipt`, a path that exists
 as a blob at the ref) **and** non-empty `executable_case_ids` **and** `evidence_tier: "numeric"`
-(see "Evidence tier" below); no one of these alone is enough. A
+backed by a `comparison` block in the receipt (see "Evidence tier" below); no one of these alone
+is enough. A
 `DISPOSITION-SIGNED` row additionally needs `signed_by` (a non-empty name) and `signed_on`
 (`YYYY-MM-DD`) on the row itself; **the tool checks the fields are present, not that the named
 person actually signed — identity is verified in PR review**, by whoever reviews the diff that
@@ -173,6 +174,52 @@ registration-only row still resolves if it carries a real signed disposition (`s
 twinned. A missing `evidence_tier` is fail-closed (treated as registration-only). Negative controls
 in `tools/test_true_parity_check.mjs` (`c1_registration_only`, `c1_evidence_tier_missing`,
 `c1_registration_only_signed`, one of them in git mode).
+
+### The numeric tier is verified against the receipt, not trusted (review of #561)
+
+The first cut trusted the label: `"numeric"` was a string on an agent-writable field, and flipping
+one word on the real namespace row `namespace/S3method/coef,gllvmTMB_multi` (a registration receipt
+with no numbers in it) printed `C1_MET` and `C8_MET`. The label can now only lower a row, never
+raise it. A row labelled `"numeric"` counts as numeric only if its cited receipts carry a
+machine-readable comparison block:
+
+```json
+"comparison": {
+  "pin": "P1",
+  "cases": [
+    { "case_id": "CASE-1", "quantity": "coef", "max_abs_diff": 2.4e-06, "tolerance": 1e-04 }
+  ]
+}
+```
+
+- `comparison` is a top-level key of a JSON receipt; `pin` is `"P1"` or the full P1 sha.
+- `cases` is non-empty; each case has a non-empty `case_id`, a `tolerance` that is a finite number
+  greater than 0, and one of: `abs_diff`, `max_abs_diff` (finite, >= 0), or `r_value` +
+  `julia_value` (finite numbers, or equal-length arrays of finite numbers; the tool computes the
+  maximum absolute difference itself).
+- Every case must satisfy difference <= tolerance.
+- The union of `case_id`s across the row's receipts must cover every `executable_case_id` on the row.
+- A malformed block in any cited receipt fails the row; a non-JSON receipt simply carries no block.
+
+The shape follows the per-case records the core070 twin batches already write
+(`max_abs_diff`, `tolerance`, `quantity`, e.g.
+`docs/dev-log/core070/t5-rebind-out/estimand-rebind-02/julia-results.json`), plus the `pin` and a
+`case_id` per case, so a numeric twin batch can emit it with a small wrapper. The R reference
+values in a twin fixture such as `test/fixtures/ordinal_logit_p1.toml` are one side of that
+comparison; the receipt must record both sides, or the difference, with its tolerance.
+
+A `"numeric"` row whose receipts fail any of these rules is reported as
+`NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT`: C1 lists it under `numeric_label_without_numeric_receipt=`
+(with the reason) and is not MET; C8 fails it with that tag. Negative controls:
+`c1_numeric_label_registration_receipt` (numeric label, registration-style receipt; also in git
+mode), `c1_numeric_label_malformed_comparison` (tolerance a string, no difference recorded),
+`c1_numeric_label_over_tolerance` (`abs_diff` above `tolerance`), and the reviewer's mutation run on
+the real `coef,gllvmTMB_multi` row and its real receipts, which went from `C1_MET`/`C8_MET` to
+`C1_NOT_MET`/`C8_NOT_MET`. The positive-control `base` fixture's receipts now carry real blocks.
+
+What this does not do: the tool checks that the receipt records a comparison within tolerance; it
+does not re-run the comparison, and it cannot tell whether the tolerance chosen is reasonable. A
+receipt that records false numbers passes. That is PR review's job, as for any other receipt.
 
 The namespace Tier 0 batch itself was tightened at the same time: at P1 an executable row passes
 only if the Julia symbol is exported and a Function (measured by the Julia child, not typed into

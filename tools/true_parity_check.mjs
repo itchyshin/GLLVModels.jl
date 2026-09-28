@@ -35,6 +35,13 @@
 // `evidence_tier` ("numeric" or "registration"). C1 prints bound_numeric / bound_registration_only
 // and is MET only when no bound row is registration-only (a signed disposition still resolves a
 // row); C8 does not count a registration-only row as twinned. A missing tier is fail-closed.
+//
+// Numeric tier verified against the receipt (review of #561, BLOCKING): the label alone was
+// trusted, so a one-word edit ("registration" -> "numeric") on a namespace row made C1_MET and
+// C8_MET. A row labelled "numeric" now counts as numeric only if its cited receipts carry a
+// machine-readable `comparison` block (schema in numericReceiptStatus below and in GATES.md)
+// pinned to P1 and covering every executable_case_id, each case within its tolerance.
+// Otherwise the row reads NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT and does not bind.
 import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -170,6 +177,69 @@ function rowReceiptPaths(row) {
 // batch). Anything but "numeric" -- including a missing field -- is treated as registration-only.
 function isNumericTier(row) { return row.evidence_tier === 'numeric'; }
 
+// The label can only lower a row, never raise it: "numeric" must be backed by receipt content.
+// A numeric receipt is a JSON file with a top-level `comparison` block:
+//
+//   "comparison": {
+//     "pin": "P1",                      // or the full P1 sha
+//     "cases": [
+//       { "case_id": "CASE-1", "quantity": "coef",
+//         "abs_diff": 2.4e-06,          // or "max_abs_diff" (the core070 receipt spelling), or
+//                                       // "r_value" + "julia_value" (finite numbers, or equal-
+//                                       // length arrays of finite numbers; the tool computes the
+//                                       // max absolute difference itself)
+//         "tolerance": 1e-04 }          // finite number > 0
+//     ]
+//   }
+//
+// Every case must satisfy abs_diff <= tolerance, and the union of case_ids across the row's
+// receipts must cover every executable_case_id. A malformed block in any cited receipt fails the
+// row (it is never skipped). Returns { ok } or { ok: false, reason }.
+function comparisonCaseDiff(c) {
+  const fin = (x) => typeof x === 'number' && Number.isFinite(x);
+  const finArr = (x) => Array.isArray(x) && x.length > 0 && x.every(fin);
+  if (c.abs_diff !== undefined) return fin(c.abs_diff) && c.abs_diff >= 0 ? c.abs_diff : null;
+  if (c.max_abs_diff !== undefined) return fin(c.max_abs_diff) && c.max_abs_diff >= 0 ? c.max_abs_diff : null;
+  if (fin(c.r_value) && fin(c.julia_value)) return Math.abs(c.r_value - c.julia_value);
+  if (finArr(c.r_value) && finArr(c.julia_value) && c.r_value.length === c.julia_value.length) {
+    return Math.max(...c.r_value.map((r, i) => Math.abs(r - c.julia_value[i])));
+  }
+  return null;
+}
+
+function numericReceiptStatus(row) {
+  const paths = rowReceiptPaths(row);
+  if (paths.length === 0) return { ok: false, reason: 'no receipt' };
+  const covered = new Set();
+  let blocks = 0;
+  for (const p of paths) {
+    const txt = show(p);
+    if (txt === null) return { ok: false, reason: `unreadable ${p}` };
+    let j;
+    try { j = JSON.parse(txt); } catch { continue; } // a non-JSON receipt carries no comparison
+    if (!j || typeof j !== 'object' || j.comparison === undefined) continue;
+    const cmp = j.comparison;
+    if (!cmp || typeof cmp !== 'object' || Array.isArray(cmp)) return { ok: false, reason: `malformed comparison in ${p}` };
+    if (cmp.pin !== 'P1' && cmp.pin !== P1_SHA) return { ok: false, reason: `comparison not pinned to P1 in ${p}` };
+    if (!Array.isArray(cmp.cases) || cmp.cases.length === 0) return { ok: false, reason: `comparison has no cases in ${p}` };
+    for (const c of cmp.cases) {
+      if (!c || typeof c.case_id !== 'string' || c.case_id.length === 0) return { ok: false, reason: `comparison case without case_id in ${p}` };
+      const tol = c.tolerance;
+      if (typeof tol !== 'number' || !Number.isFinite(tol) || tol <= 0) return { ok: false, reason: `case ${c.case_id}: tolerance not a finite number > 0` };
+      const d = comparisonCaseDiff(c);
+      if (d === null) return { ok: false, reason: `case ${c.case_id}: no finite abs_diff or r_value/julia_value` };
+      if (d > tol) return { ok: false, reason: `case ${c.case_id}: abs_diff ${d} > tolerance ${tol}` };
+      covered.add(c.case_id);
+    }
+    blocks++;
+  }
+  if (blocks === 0) return { ok: false, reason: 'no comparison block in any receipt' };
+  const ids = Array.isArray(row.executable_case_ids) ? row.executable_case_ids : [row.executable_case_ids];
+  const missing = ids.filter((id) => !covered.has(id));
+  if (missing.length) return { ok: false, reason: `case ids not compared: ${missing.join(',')}` };
+  return { ok: true };
+}
+
 function isValidSha256(s) { return typeof s === 'string' && SHA256_RE.test(s); }
 
 // A DISPOSITION-SIGNED row (case-map JSON schema) needs an actual signer and date on the row,
@@ -295,6 +365,7 @@ function checkC1() {
   let bound = 0, free = 0, boundNumeric = 0;
   const unsigned = {};
   const registrationOnly = [];
+  const numericLabelOnly = [];
   const dangling = [];
   const stale = [];
   for (const r of req) {
@@ -319,15 +390,18 @@ function checkC1() {
     // Evidence tier (D-295 row 5, review of #559): only a row whose receipt records a numeric
     // R-vs-Julia comparison (`evidence_tier: "numeric"`) counts as bound. A registration/existence
     // match ("registration") is a name match, and a missing tier is fail-closed as the same.
+    // The label must also be backed by a numeric comparison block in the receipt (review of #561).
     if (caseIdsPresent && paths.length > 0) {
-      if (isNumericTier(r)) { bound++; boundNumeric++; } else registrationOnly.push(r.source_id);
+      if (!isNumericTier(r)) { registrationOnly.push(r.source_id); continue; }
+      const ns = numericReceiptStatus(r);
+      if (ns.ok) { bound++; boundNumeric++; } else numericLabelOnly.push(`${r.source_id}(${ns.reason})`);
     } else {
       free++;
     }
   }
   const nUnsigned = Object.values(unsigned).reduce((a, b) => a + b, 0);
-  console.log(`C1 required=${req.length} bound=${bound} bound_numeric=${boundNumeric} bound_registration_only=${registrationOnly.length} free=${free} unsigned_or_blocked=${nUnsigned} ${JSON.stringify(unsigned)} dangling_receipts=${dangling.join(';') || 'none'} stale_carries=${stale.join(';') || 'none'} registration_only=${registrationOnly.join(';') || 'none'}`);
-  return req.length > 0 && nUnsigned === 0 && free === 0 && dangling.length === 0 && stale.length === 0 && registrationOnly.length === 0;
+  console.log(`C1 required=${req.length} bound=${bound} bound_numeric=${boundNumeric} bound_registration_only=${registrationOnly.length} free=${free} unsigned_or_blocked=${nUnsigned} ${JSON.stringify(unsigned)} dangling_receipts=${dangling.join(';') || 'none'} stale_carries=${stale.join(';') || 'none'} registration_only=${registrationOnly.join(';') || 'none'} numeric_label_without_numeric_receipt=${numericLabelOnly.join(';') || 'none'}`);
+  return req.length > 0 && nUnsigned === 0 && free === 0 && dangling.length === 0 && stale.length === 0 && registrationOnly.length === 0 && numericLabelOnly.length === 0;
 }
 
 // --- C2..C5: scoreboard tiers, plus C2's boundary-capability cross-check --
@@ -399,7 +473,9 @@ function checkC8() {
     const twinned = caseIdsPresent && paths.length > 0;
     if (!twinned) { failing.push(`${r.source_id}:NOT_TWINNED_NOT_SIGNED`); continue; }
     // A registration-only receipt is a name match, which never counts as a twin (D-295 row 5).
-    if (!isNumericTier(r)) failing.push(`${r.source_id}:REGISTRATION_ONLY_NOT_TWINNED`);
+    if (!isNumericTier(r)) { failing.push(`${r.source_id}:REGISTRATION_ONLY_NOT_TWINNED`); continue; }
+    // A "numeric" label without a numeric comparison block in the receipt is still a name match.
+    if (!numericReceiptStatus(r).ok) failing.push(`${r.source_id}:NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT`);
   }
   console.log(`C8 rows=${rows.length} failing=${failing.join(';') || 'none'}`);
   return failing.length === 0;

@@ -19,7 +19,7 @@
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { mkdtempSync, rmSync, cpSync } from 'node:fs';
+import { mkdtempSync, rmSync, cpSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import assert from 'node:assert/strict';
 
@@ -319,6 +319,62 @@ test('evidence tier: a registration-only row with a real signed disposition does
   }
 });
 
+// --- numeric tier verified against the receipt (review of #561, BLOCKING): the "numeric" label
+// was trusted on its own, so flipping one word on a registration row made C1_MET and C8_MET. A
+// "numeric" row now needs a receipt with a machine-readable comparison block (pin P1, per-case
+// abs_diff or r_value/julia_value, finite tolerance > 0, abs_diff <= tolerance, every
+// executable_case_id covered); otherwise NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT. ---
+for (const [fixture, why] of [
+  ['c1_numeric_label_registration_receipt', /no comparison block in any receipt/],
+  ['c1_numeric_label_malformed_comparison', /tolerance not a finite number > 0/],
+  ['c1_numeric_label_over_tolerance', /abs_diff 0\.5 > tolerance/],
+]) {
+  test(`numeric tier: ${fixture} fails C1 (label without a numeric receipt does not bind)`, () => {
+    const { stdout, code } = run(fixture, 'C1');
+    assert.equal(code, 0);
+    assert.match(stdout, /C1_NOT_MET$/m);
+    assert.match(stdout, /bound_numeric=1\b/);
+    assert.match(stdout, /numeric_label_without_numeric_receipt=isdm\/CAP-ISDM-1FO-PREDICT-EXPORT\(/);
+    assert.match(stdout, why);
+  });
+  test(`numeric tier: ${fixture} fails C8 (NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT)`, () => {
+    const { stdout, code } = run(fixture, 'C8');
+    assert.equal(code, 0);
+    assert.match(stdout, /C8_NOT_MET$/m);
+    assert.match(stdout, /isdm\/CAP-ISDM-1FO-PREDICT-EXPORT:NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT/);
+  });
+}
+// The reviewer's mutation, on the real row and its real receipts: namespace/S3method/coef,
+// gllvmTMB_multi relabelled "numeric" in an otherwise faithful copy. Before this fix it printed
+// C1_MET and C8_MET; it must now be NOT_MET on both.
+test('numeric tier: the real coef,gllvmTMB_multi row relabelled "numeric" is NOT_MET on C1 and C8', () => {
+  const cmPath = 'docs/dev-log/core070/true-parity-latest/case-map-namespace.json';
+  const cm = JSON.parse(readFileSync(join(REPO_ROOT, cmPath), 'utf8'));
+  const row = cm.rows.find((r) => r.source_id === 'namespace/S3method/coef,gllvmTMB_multi');
+  assert.ok(row, 'real row not found in case-map-namespace.json');
+  const dir = mkdtempSync(join(tmpdir(), 'true-parity-mut-'));
+  try {
+    for (const rp of row.evidence.receipt) {
+      mkdirSync(dirname(join(dir, rp)), { recursive: true });
+      cpSync(join(REPO_ROOT, rp), join(dir, rp));
+    }
+    writeFileSync(join(dir, 'case-map.json'), JSON.stringify({ ...cm, rows: [{ ...row, evidence_tier: 'numeric' }] }));
+    for (const mode of ['C1', 'C8']) {
+      let stdout = '';
+      try {
+        stdout = execFileSync('node', [CHECKER, mode], {
+          encoding: 'utf8',
+          env: { ...process.env, PARITY_REF: 'FS', PARITY_FS_ROOT: dir, PARITY_CASEMAP: 'case-map.json' },
+        });
+      } catch (e) { stdout = e.stdout || ''; }
+      assert.match(stdout, new RegExp(`${mode}_NOT_MET$`, 'm'), `${mode}:\n${stdout}`);
+      assert.match(stdout, /NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT|numeric_label_without_numeric_receipt=namespace/);
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 // --- item 4 / git-mode control: show, existsAsBlob and listDir exercised through real git,
 // the same code path CI runs against origin/main, not the FS fallback ---
 {
@@ -362,7 +418,15 @@ test('evidence tier: a registration-only row with a real signed disposition does
     assert.match(good.stdout, /C1_MET$/m);
     assert.match(good.stdout, /bound_numeric=2 bound_registration_only=0\b/);
   });
-  for (const dir of [goodRepo, dirReceiptRepo, defaultPinP0Repo, regOnlyRepo]) {
+  let numLabelRepo;
+  test('git mode: a "numeric" label over a registration receipt does not make C1 MET via a real git ref', () => {
+    numLabelRepo = makeGitRepo('c1_numeric_label_registration_receipt');
+    const { stdout, code } = runGit(numLabelRepo, 'C1');
+    assert.equal(code, 0);
+    assert.match(stdout, /C1_NOT_MET$/m);
+    assert.match(stdout, /numeric_label_without_numeric_receipt=isdm\/CAP-ISDM-1FO-PREDICT-EXPORT\(no comparison block/);
+  });
+  for (const dir of [goodRepo, dirReceiptRepo, defaultPinP0Repo, regOnlyRepo, numLabelRepo]) {
     if (dir) rmSync(dir, { recursive: true, force: true });
   }
 }

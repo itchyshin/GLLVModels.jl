@@ -7,9 +7,8 @@
    {
     "case_id": "CASE-1",
     "quantity": "loglik",
-    "r_value": -522.73266937176049,
-    "julia_value": -522.73266937170001,
-    "tolerance": 1e-06
+    "tolerance": "1e-6",
+    "note": "matches"
    }
   ]
  }

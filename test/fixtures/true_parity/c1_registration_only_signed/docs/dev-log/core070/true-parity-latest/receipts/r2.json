@@ -1,4 +1,15 @@
 {
  "case_id": "R2",
- "result": "PASS"
+ "result": "PASS",
+ "comparison": {
+  "pin": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "cases": [
+   {
+    "case_id": "CASE-2",
+    "quantity": "coef",
+    "max_abs_diff": 2.4231239724170628e-06,
+    "tolerance": 0.0001
+   }
+  ]
+ }
 }
