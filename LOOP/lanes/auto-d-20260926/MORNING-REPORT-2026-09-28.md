@@ -8,6 +8,10 @@
 3. Merge #540 (Beta kernel): green before its `main` merge; CI queued.
 4. Approve the NB re-run (about 5,500 core-h on DRAC; plan and kit in `nb-rerun-plan.md`). Not submitted.
 5. Julia vs R guard rule under the binary ridge (R rejects fits with a non-PD Hessian; Julia does not).
+7. #519 follow-up (from the formula.jl lane, which pushed to #519/#520 on your instruction): a free
+   per-species intercept absorbs a phylogenetic effect (every σ_phy went to about 1e-8 on a test
+   fixture), so `_fit_gaussian_trait_intercepts` now leaves fits with `Σ_phy` unchanged. Open for you:
+   `gllvm(@formula(y ~ 1 + x); Σ_phy)` still builds intercept columns, so the collapse remains there.
 6. The advisory frozen-R smoke job (red on `main` too): its NB2 cell fails because the pinned dataset
    is at the Poisson boundary in both engines; swap the fixture or accept the boundary.
 
