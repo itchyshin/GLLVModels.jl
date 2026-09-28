@@ -149,6 +149,7 @@ include("coevolution_glm.jl")             # cross-family (non-Gaussian) cross-li
 include("postfit.jl")
 include("lv_targets.jl")                # internal eta-scale realised LV targets
 include("ordination.jl")                  # ordination output (site scores + species loadings, canonical rotation)
+include("extract_latent_scores.jl")       # gllvmTMB extract_latent_scores() twin (P1 9539352f6, .default/.gllvmTMB_multi only)
 include("model_selection.jl")             # select_lv: latent-dimension selection by AIC/BIC
 include("cv.jl")                          # cv_gllvm: K-fold cross-validation engine
 include("simulate_fit.jl")               # simulate(fit, …) for the non-Gaussian families
@@ -191,6 +192,10 @@ include("diagnostics.jl")                # check_gllvmTMB / gllvmTMB_diagnose / 
 include("summary_table.jl")              # coef_table: tidy Wald inference table
 include("postfit_tables.jl")             # final missing-surface cluster (core070 §1): deviance, cross-rho profiles,
                                           # predict_cross_covariance, predict_missing, rotate_loadings, tidy, summary, imputed
+include("temporal.jl")                   # temporal source: constructors, pre-pass, TemporalContractError (gllvmTMB P1 port, slice 1)
+include("temporal_likelihood.jl")        # exact Gaussian marginal NLL, K_blockdiag ⊗ Sigma_T + sigma_eps² I
+include("temporal_fit.jl")               # fit_temporal_gllvm / TemporalGaussianFit (separate door; no formula.jl hook)
+include("temporal_methods.jl")           # extract_temporal and the temporal helper routes
 include("formula.jl")                    # @formula front-end (v1: fixed effects → engine)
 include("bridge.jl")                      # R→Julia bridge_fit (JuliaCall flat contract); LAST
 include("bridge_precision_multivariate.jl") # explicit multivariate precision bridge candidate
@@ -351,7 +356,7 @@ export make_cross_kernel, extract_Gamma, fit_coevolution_gaussian, fit_coevoluti
        gamma_marginal_loglik_va, fit_gamma_gllvm_va,
        exponential_marginal_loglik_va, fit_exponential_gllvm_va,
        getLV, getLoadings, rotation, ordination, ordiplot, ordination_uncertainty,
-       extract_lv_effects, lv_effects, predict_spatial,
+       extract_lv_effects, lv_effects, predict_spatial, extract_latent_scores,
        coef_table, GllvmCoefTable, select_lv, LVSelection,
        cv_gllvm, CVResult,
        StatsAPI, coef, vcov, nobs, dof, loglikelihood, stderror, coeftable,
@@ -366,6 +371,9 @@ export make_cross_kernel, extract_Gamma, fit_coevolution_gaussian, fit_coevoluti
        deviance, profile_cross_rho_ci, predict_cross_covariance, predict_missing,
        simulate_unit_trait, profile_cross_rho, rotate_loadings,
        extract_rotated_loadings_table, extract_coevolution_modules, imputed,
-       tidy, GllvmSummary
+       tidy, GllvmSummary,
+       temporal_indep, temporal_dep, temporal_latent, TemporalTerm, TemporalContractError,
+       fit_temporal_gllvm, TemporalGaussianFit, extract_temporal, forecast_temporal,
+       profile_temporal, bootstrap_temporal, compare_temporal
 
 end # module GLLVModels
