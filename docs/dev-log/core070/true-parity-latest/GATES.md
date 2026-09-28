@@ -184,6 +184,28 @@ twinned. A missing `evidence_tier` is fail-closed (treated as registration-only)
 in `tools/test_true_parity_check.mjs` (`c1_registration_only`, `c1_evidence_tier_missing`,
 `c1_registration_only_signed`, one of them in git mode).
 
+### What the fail-closed default does to rows that carry no `evidence_tier`
+
+Disclosed after the review of #561 (an earlier draft of this PR said "P0 behaviour is unchanged";
+that holds for C1 at P0 and for the namespace batch tools, not for C8 at P0):
+
+- **P0.** `docs/dev-log/core070/required-source-case-map.json` (769 rows) has no `evidence_tier`
+  on any row. The 14 `aghq/AGHQ-*` rows bound to `aghq-public-policy-bind-receipt-2026-09-04.json`
+  were counted as twinned by the checker at `cb5688f7e`; they now read
+  `REGISTRATION_ONLY_NOT_TWINNED` in C8 at P0. Measured tally, same case-map, before and after:
+  `7 DANGLING_RECEIPT, 748 NOT_TWINNED_NOT_SIGNED` (14 twinned) becomes `7 DANGLING_RECEIPT,
+  748 NOT_TWINNED_NOT_SIGNED, 14 REGISTRATION_ONLY_NOT_TWINNED`. The verdict is `C8_NOT_MET` before
+  and after; C1 at P0 is unchanged apart from the two new counters. Every P0 row reads as
+  registration-only until `evidence_tier` is back-filled. The tiers are **not** back-filled here:
+  choosing a row's tier is a classification, and classifications are signed by Shinichi (D-295
+  row 3). The aghq receipt records R fits with objective values but no Julia comparison, so it has
+  no `comparison` block and would not bind as numeric under the rule below even if relabelled.
+- **#533's `case-map.json`.** None of its 38 rows carries `evidence_tier` (head `9c1f55038`).
+  After the fold they will read as registration-only (C1 `registration_only=`, C8
+  `REGISTRATION_ONLY_NOT_TWINNED`, or `NOT_TWINNED_NOT_SIGNED` where they have no receipt). That is
+  the expected effect of the fail-closed default, not a regression; the fold PR, or #533, sets the
+  tier per row, and a `"numeric"` tier only binds with a receipt that carries a `comparison` block.
+
 ### The numeric tier is verified against the receipt, not trusted (review of #561)
 
 The first cut trusted the label: `"numeric"` was a string on an agent-writable field, and flipping
