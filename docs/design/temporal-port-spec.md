@@ -755,7 +755,7 @@ where it differs. Slice numbers refer to section 8.
 | sixth-source-regressions.R:1 | ordinary providers stay ordinary without temporal | 2 | T: `fit_gaussian_structured` with `dep` / `latent` and no temporal term has no temporal spec. |
 
 Subtotal: 43 blocks, 150 expectations, of which 2 blocks (2 expectations)
-are partial twins. 14 blocks (32 expectations) need slice 2 (ordinary `unit`
+are partial twins. 13 blocks (20 expectations) need slice 2 (ordinary `unit`
 / `unit_obs` composition and simulate). Inside the twinned set, two further
 partial fences are recorded: the wide-format (`traits()`) equalities in
 sixth-source-engine.R:119, and R's exact bootstrap seeds in
