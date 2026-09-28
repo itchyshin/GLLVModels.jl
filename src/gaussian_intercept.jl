@@ -16,15 +16,35 @@ function _trait_intercept_design(p::Integer, n::Integer)
     return X
 end
 
+# X[t, s, 1] = 1: one intercept shared by every trait. Phylogenetic fits use
+# this, because the phylogenetic effect J_n ⊗ B is constant across sites within
+# a species and a free per-species intercept would absorb it.
+_common_intercept_design(p::Integer, n::Integer) = ones(Float64, p, n, 1)
+
 _has_trait_intercepts(fit::GllvmFit) =
     get(fit.pars, :mean_design, nothing) === :trait_intercepts
 
+_has_common_intercept(fit::GllvmFit) =
+    get(fit.pars, :mean_design, nothing) === :common_intercept
+
+# True when the fit estimated an intercept design without a caller-supplied X.
+_has_intercept_design(fit::GllvmFit) = _has_trait_intercepts(fit) || _has_common_intercept(fit)
+
+# The intercept design of such a fit at `n` sites.
+_intercept_design(fit::GllvmFit, n::Integer) =
+    _has_common_intercept(fit) ? _common_intercept_design(fit.model.p, n) :
+                                 _trait_intercept_design(fit.model.p, n)
+
+# The per-trait intercept values (length p) of such a fit.
+_intercept_mean(fit::GllvmFit) =
+    _has_common_intercept(fit) ? fill(fit.pars.β[1], fit.model.p) : fit.pars.β
+
 # The mean design a post-fit routine should use: the caller's `X` when given,
-# else the intercept design for a fit that estimated trait intercepts (`n`
-# sites), else `nothing` (zero mean).
+# else the intercept design for a fit that estimated intercepts (`n` sites),
+# else `nothing` (zero mean).
 _mean_X(fit::GllvmFit, X, n) =
-    X === nothing && n !== nothing && _has_trait_intercepts(fit) ?
-        _trait_intercept_design(fit.model.p, n) : X
+    X === nothing && n !== nothing && _has_intercept_design(fit) ?
+        _intercept_design(fit, n) : X
 
 # _fit_gaussian_trait_intercepts(Y; K, kwargs...) -> GllvmFit
 #
@@ -39,18 +59,20 @@ _mean_X(fit::GllvmFit, X, n) =
 # `residuals` and `simulate` apply the intercepts when called without `X`.
 # Supplying `X` defines the complete mean instead (no intercept is added) and is
 # passed through unchanged. `lambda_constraint` still requires a zero-mean fit
-# and is passed through unchanged, as is a phylogenetic fit (`Σ_phy` supplied).
+# and is passed through unchanged. A phylogenetic fit (`Σ_phy` supplied) gets one
+# common intercept instead (`pars.mean_design = :common_intercept`, `β` length 1).
 function _fit_gaussian_trait_intercepts(Y::AbstractMatrix; K::Integer, kwargs...)
-    # The phylogenetic effect J_n ⊗ B is constant across sites within a species,
-    # so a free per-species intercept would absorb it and drive σ_phy to zero.
-    if get(kwargs, :X, nothing) !== nothing || get(kwargs, :lambda_constraint, nothing) !== nothing ||
-       get(kwargs, :Σ_phy, nothing) !== nothing
+    if get(kwargs, :X, nothing) !== nothing || get(kwargs, :lambda_constraint, nothing) !== nothing
         return fit_gaussian_gllvm(Y; K = K, kwargs...)
     end
     p, n = size(Y)
     rest = Base.structdiff((; kwargs...), NamedTuple{(:X,)})
-    fit = fit_gaussian_gllvm(Y; K = K, X = _trait_intercept_design(p, n), rest...)
-    pars = merge(fit.pars, (mean_design = :trait_intercepts,))
+    # The phylogenetic effect J_n ⊗ B is constant across sites within a species,
+    # so a free per-species intercept would absorb it and drive σ_phy to zero.
+    common = get(kwargs, :Σ_phy, nothing) !== nothing
+    X = common ? _common_intercept_design(p, n) : _trait_intercept_design(p, n)
+    fit = fit_gaussian_gllvm(Y; K = K, X = X, rest...)
+    pars = merge(fit.pars, (mean_design = common ? :common_intercept : :trait_intercepts,))
     return GllvmFit(fit.model, pars, fit.logLik, fit.n_iter, fit.converged,
                     fit.optim_result, fit.cputime, fit.integration)
 end
