@@ -965,6 +965,12 @@ function _family_ci(fit::BetaGroupedCovFit, Y::AbstractMatrix;
     return _FamilyCI(θ, nll, names, kinds, simulate, refit, boundary)
 end
 
+# `upper_boundary` flags for a beta-binomial refit (#542, option 3): the last `nφ` entries of
+# `θ` are `log φ`; flag those at or past the `_BB_PHI_STABLE` boundary, where the log-pmf is
+# exactly Binomial and `φ` is not identified (see `_bootstrap_upper_boundary`).
+_bb_phi_upper_boundary(θ::AbstractVector, nφ::Integer) =
+    [i > length(θ) - nφ && θ[i] >= log(_BB_PHI_STABLE) for i in eachindex(θ)]
+
 function _family_ci(fit::BetaBinomialGroupedFit, Y::AbstractMatrix;
                     N::Union{Nothing, AbstractMatrix} = nothing,
                     mask = nothing,
@@ -1010,7 +1016,9 @@ function _family_ci(fit::BetaBinomialGroupedFit, Y::AbstractMatrix;
         catch
             return nothing
         end
-        return vcat(fb.β, pack_lambda(fb.Λ), log.(fb.φ))
+        θb = vcat(fb.β, pack_lambda(fb.Λ), log.(fb.φ))
+        return (θ = θb, converged = fb.converged, loglik = fb.loglik,
+                upper_boundary = _bb_phi_upper_boundary(θb, G))
     end
     names = _grouped_dispersion_names(p, K, "phi", G)
     kinds = vcat(fill(:linear, p + rr), fill(:log, G))
@@ -1070,7 +1078,9 @@ function _family_ci(fit::BetaBinomialGroupedCovFit, Y::AbstractMatrix;
         catch
             return nothing
         end
-        return vcat(fb.β, fb.γ[γ_free_idx], pack_lambda(fb.Λ), log.(fb.φ))
+        θb = vcat(fb.β, fb.γ[γ_free_idx], pack_lambda(fb.Λ), log.(fb.φ))
+        return (θ = θb, converged = fb.converged, loglik = fb.loglik,
+                upper_boundary = _bb_phi_upper_boundary(θb, G))
     end
     names = vcat(["beta[$t]" for t in 1:p], ["gamma[$k]" for k in γ_free_idx],
                  _confint_lambda_term_names("Lambda", p, K),
@@ -1432,7 +1442,9 @@ function _family_ci(fit::BetaBinomialFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_beta_binomial_gllvm(Yb; K = K, link = link, N = Nm) catch; return nothing end
-        return vcat(fb.β, pack_lambda(fb.Λ), log(fb.φ))
+        θb = vcat(fb.β, pack_lambda(fb.Λ), log(fb.φ))
+        return (θ = θb, converged = fb.converged, loglik = fb.loglik,
+                upper_boundary = _bb_phi_upper_boundary(θb, 1))
     end
     names = vcat(_glm_lin_names(p, K), "phi")
     kinds = vcat(fill(:linear, length(θ) - 1), :log)
@@ -3015,11 +3027,27 @@ function _bootstrap_refit_ok(raw, m::Integer)
     return (θb, ok)
 end
 
+# Optional `upper_boundary` field on the richer contract (#542, option 3): a length-`m` Bool
+# vector marking the parameters this refit ran to their upper numerical boundary (for the
+# beta-binomial fitters, a Beta precision `φ >= _BB_PHI_STABLE`). Such a replicate is left
+# out of every quantile, like a non-converged one, but it is informative: it says the
+# sampling distribution of that parameter has mass at the boundary. When the flagged share of
+# usable replicates (converged plus boundary) exceeds the upper tail `(1 - level)/2`, that
+# parameter's upper bound is reported as `Inf` instead of a quantile of the interior draws.
+# Adapters that never set the field are unaffected.
+function _bootstrap_upper_boundary(raw, m::Integer)
+    (raw === nothing || raw isa AbstractVector) && return nothing
+    ub = get(raw, :upper_boundary, nothing)
+    (ub === nothing || length(ub) != m || !any(ub)) && return nothing
+    return ub
+end
+
 function _family_bootstrap(ad::_FamilyCI, sel::Vector{Int}, level::Real,
                            n_boot::Integer, seed::Integer, parallel::Bool; retain_replicates::Bool=false)
     m = length(ad.θ)
     reps = fill(NaN, n_boot, m)
     ok = fill(false, n_boot)   # Vector{Bool} (one byte/elt) — safe for concurrent distinct-index writes (a BitVector is not)
+    bnd = fill(false, n_boot, m)   # per-replicate `upper_boundary` flags (Matrix{Bool}, same reason)
     work = function (b)
         rng = MersenneTwister(seed + b)
         raw = try
@@ -3028,7 +3056,10 @@ function _family_bootstrap(ad::_FamilyCI, sel::Vector{Int}, level::Real,
             nothing
         end
         θb, good = _bootstrap_refit_ok(raw, m)
-        if good
+        ub = _bootstrap_upper_boundary(raw, m)
+        if ub !== nothing
+            @inbounds bnd[b, :] .= ub   # excluded from every quantile; counted below
+        elseif good
             @inbounds reps[b, :] .= θb
             ok[b] = true
         end
@@ -3045,6 +3076,7 @@ function _family_bootstrap(ad::_FamilyCI, sel::Vector{Int}, level::Real,
     end
 
     a = (1 - level) / 2
+    n_use = count(ok) + count(b -> any(view(bnd, b, :)), 1:n_boot)
     term = String[]; est = Float64[]; lo = Float64[]; hi = Float64[]
     for i in sel
         col = Float64[]
@@ -3057,6 +3089,9 @@ function _family_bootstrap(ad::_FamilyCI, sel::Vector{Int}, level::Real,
         else
             push!(lo, NaN); push!(hi, NaN)
         end
+        # More than the upper tail of usable replicates sat at this parameter's upper
+        # boundary: the bound is not finite (#542, option 3; see `_bootstrap_upper_boundary`).
+        n_use > 0 && count(view(bnd, :, i)) / n_use > a && (hi[end] = Inf)
     end
     result=(term = term, estimate = est, lower = lo, upper = hi,
             n_converged = count(ok), method = :bootstrap)

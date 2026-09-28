@@ -213,6 +213,45 @@
   load LinearAlgebra); with LinearAlgebra loaded it is 17/17. Full suite not run.
 - After-task: `docs/dev-log/after-task/2026-09-28-twopart-input-check.md`.
 
+## 2026-09-27: BetaBinomial bootstrap refits report their own verdict (#542, part of #504)
+
+- Branch `claude/bb-boot-verdict-542` from `origin/main` @ `97e11be04`. The three beta-binomial
+  refit closures in `src/confint_family.jl` return `(θ, converged, loglik)`, as Poisson's has
+  since #516; `_bootstrap_refit_ok` and `_family_bootstrap` are unchanged. Maintainer choice:
+  option 1 on #542 (exclude non-converged replicates, report `n_converged`).
+- New test `test/test_confint_bootstrap_verdict_betabinomial.jl` with a literal fixture
+  `test/fixtures/beta_binomial_boot_boundary_542.toml` (two Binomial datasets where the ungrouped
+  refit reaches φ >= 1e6 with a finite loglik and θ). 17 pass, 17 fail, 23 error on main (1.10.12);
+  57/57 on the branch on Julia 1.10.12 and 1.13.0 (`JULIA_NUM_THREADS=2 OPENBLAS_NUM_THREADS=1`,
+  per-file, full suite not run).
+- Neighbour: the beta-binomial bootstrap testset in `test/test_confint_family.jl` (`n_converged >= 4`
+  of 8) gives 8 of 8 on main and branch, both versions.
+- Boundary rate, 50 replicates per dataset, Julia 1.10.12, local merge with #541: ungrouped 0 of
+  250; per-species grouped 35 of 150 (23%) at `φ >= 1e6`.
+- Maintainer then chose option 3: refits also flag `φ` at the boundary (`upper_boundary`), and
+  `_family_bootstrap` reports an `Inf` upper bound for a parameter whose flagged share of usable
+  replicates exceeds `(1 - level)/2` (opt-in; other families unchanged). New file 76/76 on
+  1.10.12 and 1.13.0 (28 pass, 19 fail, 29 error on main); seven neighbouring bootstrap files
+  708/708 on 1.10.12. Live per-species grouped bootstrap on healthy_seed_9001 (50 replicates):
+  `φ[1]` and `φ[6]` upper bounds `Inf`, 38 of 50 converged.
+- After-task: `docs/dev-log/after-task/2026-09-27-bb-boot-verdict-542.md`.
+## 2026-09-27: Grouped beta-binomial fits get the #515 verdict (part of #515)
+
+- Branch `claude/bb-grouped-verdict-515` from `origin/main` @ `52ed4281b` (#522 merge).
+  `fit_beta_binomial_gllvm_grouped` and `fit_beta_binomial_gllvm_grouped_cov` now use
+  `_beta_binomial_grouped_verdict`: the shared `_fit_verdict` screen, then
+  `_beta_binomial_verdict` at the largest group `φ`. `_fit_verdict` and `_laplace_mode`
+  are unchanged.
+- On main, per-species fits of three #522 fixture datasets reported `converged = true`
+  with a group `φ` of 8.5e11 to 7.6e15 on Julia 1.10.12 and 1.13.0. New test
+  `test/test_beta_binomial_grouped_verdict_515.jl`: 73 pass, 3 fail, 5 error on main
+  (1.10); the five beta-binomial test files pass 906/906 on the branch on 1.10.12 and
+  1.13.0 (`JULIA_NUM_THREADS=2 OPENBLAS_NUM_THREADS=1`, per-file, full suite not run).
+  Local Documenter build and `tools/check_reader_surface.py` clean after rebasing onto
+  `824d22a4b`.
+- Main vs branch over 52 grouped fits per version: every fit with all `φ` below 1e6 is
+  bitwise identical (49 on 1.10, 47 on 1.13); boundary fits change only `converged`.
+- After-task: `docs/dev-log/after-task/2026-09-27-bb-grouped-verdict-515.md`.
 ## 2026-09-27: Temporal source alone at gllvmTMB P1 (slice 1)
 
 - Branch `claude/temporal-slice1`, draft PR #543. New `src/temporal*.jl`: constructors and

@@ -69,6 +69,7 @@ GLLVModels._aghq_gh_normal
 GLLVModels._tweedie_verdict
 GLLVModels._beta_binomial_verdict
 GLLVModels._gp1_verdict
+GLLVModels._beta_binomial_grouped_verdict
 GLLVModels._mixed_unpack
 GLLVModels._phylo_ordinal_xlv_marginal_loglik
 GLLVModels._gauss_hermite

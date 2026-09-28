@@ -649,6 +649,25 @@ All notable changes to GLLVModels.jl are documented here.
   (to 1e-8) and converged flag on both versions. Test:
   `test/test_gp1_verdict.jl` with the literal fixture
   `test/fixtures/gp1_verdict.toml`.
+  benefit from the stabilised log-pmf; their verdict gate is the next entry.
+- **Grouped BetaBinomial fits no longer report `converged = true` with a
+  group's `φ` past the 1e6 boundary (part of #515).**
+  `fit_beta_binomial_gllvm_grouped` and `fit_beta_binomial_gllvm_grouped_cov`
+  (`src/families/beta_binomial.jl`) now pass the shared `_fit_verdict` result
+  through `_beta_binomial_verdict` at the largest group precision
+  (`_beta_binomial_grouped_verdict`): a positive or non-finite objective
+  reports `loglik = -Inf`, `converged = false`, and any group at `φ >= 1e6`
+  reports `converged = false` with the loglik kept. At that `φ` the log-pmf is
+  exactly Binomial, so the objective is flat in `φ` and Optim's zero-gradient
+  stop says nothing about an optimum in it. Measured on origin/main 52ed4281b
+  (Julia 1.10.12 and 1.13.0; the 13 fixture datasets from #522, per-species
+  and one-group, both routes: 52 fits per version): three per-species fits reported
+  `converged = true` at `φ` from 8.5e11 to 7.6e15 on both versions, and a
+  fourth (seed 9002) crosses 1e6 on 1.13 only. Their logliks are unchanged;
+  only the flag changes. The other fits (49 on 1.10, 47 on 1.13) are
+  bitwise identical to main in loglik, `φ`, iterations and converged flag.
+  Per-species fits that stop just below the boundary (`φ` near 1e5) are not
+  caught; this is a boundary tripwire, not an identifiability test.
 - **Poisson `confint(..., method = :bootstrap)` now reports the refit's own
   convergence verdict (#504).** The Laplace-route `refit` closure in
   `_family_ci(fit::PoissonFit, ...)` (`src/confint_family.jl`) returned a bare
@@ -781,6 +800,26 @@ All notable changes to GLLVModels.jl are documented here.
   bootstrap endpoints are identical to before. These are the last three
   bare-vector refit closures of #504; the other families are migrated on
   their own branches.
+- **BetaBinomial `confint(..., method = :bootstrap)` now reports the refit's own
+  convergence verdict (#542, part of #504).** The refit closures in
+  `_family_ci` for `BetaBinomialFit`, `BetaBinomialGroupedFit` and
+  `BetaBinomialGroupedCovFit` (`src/confint_family.jl`) returned a bare
+  parameter vector, so a replicate whose refit reported `converged = false`
+  was still counted as a good draw. Since #522 that includes a Beta
+  precision at the 1e6 boundary, where the loglik and every parameter
+  (`log φ` about 18 to 29) are finite: on two literal Binomial datasets the
+  ungrouped refit lands there and the old contract accepted it. The closures
+  now return `(θ, converged, loglik)` as Poisson's does since #516, so such
+  replicates are excluded and `n_converged` counts only the ones kept. They
+  also flag each `φ` at the boundary (`upper_boundary`), and when the flagged
+  share of usable replicates for a given `φ` exceeds the upper tail
+  `(1 - level)/2`, that `φ`'s bootstrap upper bound is `Inf` rather than a
+  quantile of the interior draws (option 3 on #542). Its lower bound still
+  comes from the interior draws. On per-species grouped fits of the #522
+  fixture, about a quarter of replicates (35 of 150) had some species at the
+  boundary. `_family_bootstrap` reads the new field only when an adapter sets
+  it, so other families are unchanged, and when every replicate converges the
+  bootstrap endpoints are identical to before.
 
 ### Added
 - **Temporal covariance source, temporal source alone (gllvmTMB P1 port).**
