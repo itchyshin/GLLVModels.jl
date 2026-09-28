@@ -88,6 +88,16 @@ All notable changes to GLLVModels.jl are documented here.
   `gllvm-parity-tag: P1`).
 
 ### Fixed
+- **`getLV` on a plain grouped-dispersion fit had no way to use the fit's `offset`.**
+  `fit_nb_gllvm_grouped`, `fit_nb1_gllvm_grouped`, `fit_beta_gllvm_grouped` and
+  `fit_gamma_gllvm_grouped` accept `offset`, but their `getLV` methods did not, so the
+  scores for an offset fit were the modes of a different linear predictor from the one
+  the fit maximised. The four methods now take `offset = nothing` (p×n, the same matrix
+  given to the fitter), pass it to the grouped mode search, and throw
+  `DimensionMismatch` on a wrong-sized offset. Scores without an offset are unchanged.
+  `test/test_grouped_getlv_offset.jl` checks that a per-trait constant offset gives the
+  same scores as shifting `β` by that constant, for all four families. The `_cov`
+  variants are unaffected: they take no user offset and already pass `Xγ`.
 - **`chibar2_pvalue`/`variance_lrt` silently returned a p-value of 1.0 for a `NaN`
   `LRT` or log-likelihood instead of refusing it.** `LRT > 0` is `false` for `NaN`, so
   a missing or non-finite input fell through to the "no evidence against the reduced

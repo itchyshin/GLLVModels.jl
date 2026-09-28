@@ -1,3 +1,17 @@
+## 2026-09-28: grouped `getLV` honours the fit's `offset`
+
+- Branch `claude/grouped-getlv-offset-20260928`. `getLV` for `NBGroupedFit`, `NB1GroupedFit`,
+  `BetaGroupedFit` and `GammaGroupedFit` now takes `offset = nothing` (p×n, as given to the
+  fitter), passes it to `_grouped_getLV`, and throws `DimensionMismatch` on a wrong size.
+  `_grouped_getLV` itself is unchanged (draft PRs #521/#529/#540/#551 rewrite its internals).
+- Red first: new `test/test_grouped_getlv_offset.jl` errored on all four families on main
+  (`unsupported keyword argument "offset"`); after the fix 24/24 pass. The main check is that a
+  per-trait constant offset equals a β shift (1e-6).
+- Regression subset, one Julia 1.10 session (macOS, 4 threads): every `test_grouped*.jl`, the
+  grouped mode-search tests, `test_bridge_grouped_dispersion.jl`, `test_postfit.jl`,
+  `test_postfit_tables.jl`, 25 files, all pass (`test_grouped_nongaussian_fit.jl` rerun with the
+  test environment for `StableRNGs`: 63/63). Full `Pkg.test()` not run.
+
 ## 2026-09-27: Temporal source alone at gllvmTMB P1 (slice 1)
 
 - Branch `claude/temporal-slice1`, draft PR #543. New `src/temporal*.jl`: constructors and
