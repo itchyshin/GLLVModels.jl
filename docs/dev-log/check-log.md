@@ -8,6 +8,21 @@
   not run. Three neighbouring files: 775/775 on 1.10.12.
 - After-task: `docs/dev-log/after-task/2026-09-27-zi-boot-verdict-504.md`.
 
+## 2026-09-27: Temporal source alone at gllvmTMB P1 (slice 1)
+
+- Branch `claude/temporal-slice1`, draft PR #543. New `src/temporal*.jl`: constructors and
+  pre-pass, exact Gaussian marginal `Z (K ⊗ Sigma_T) Z' + sigma_eps^2 I` (AR1 integer powers,
+  OU), `fit_temporal_gllvm`, `extract_temporal`, `forecast_temporal`, `profile_temporal`
+  (`TMB::tmbprofile` port), `bootstrap_temporal`, `compare_temporal`, `simulate`, in-sample
+  `predict`, `getLV`. Parameters follow R's measured `opt$par` order (`log_sigma_eps` second;
+  spec 3.3 had it last).
+- Receipts from a temporary P1 install (`test/fixtures/temporal_p1/generate_temporal_p1.R`):
+  NLL at R's coordinates vs R objective max 1.7e-11 (21 fits) and 2.3e-13 (32 fixed points);
+  R's objective at Julia's optimum max 7.5e-11; forecast 1e-8; profile traces on R's
+  displacements, values within 9.8e-7; compare 1e-8.
+- `test_temporal_{api,oracles,fit_receipts,helpers}.jl`: 81, 258, 649, 137 passing on Julia
+  1.10 and 1.13 (per-file runs; full suite not run). Docs build exit 0, reader surface pass.
+- After-task: `docs/dev-log/after-task/2026-09-27-temporal-slice1.md`.
 ## 2026-09-27 (delta review fix): `extract_latent_scores()` RRRFit + explicit plain union (PR #531)
 
 - Delta review of the prior dispatch fix confirmed all 47 `getLV` methods

@@ -245,6 +245,20 @@ All notable changes to GLLVModels.jl are documented here.
   conditions, not a general bound — the same reviewer's harsher probe, which
   stacks a 3x Lambda scale together with a ±50% perturbation on every parameter,
   measured up to 8.5e-7 (#503, #507).
+- **NB2 grouped kernel (`fit_nb_gllvm_grouped`, the default route for
+  `fit_gllvm(...; family = NegativeBinomial())`): the per-site Laplace mode search
+  could 2-cycle and report `converged = true` at a poor optimum.** Where a count
+  sits far above its mean, the Fisher weight understates the observed curvature,
+  the undamped step overshoots, and the site returned a value away from its mode.
+  The search now halves any step that lowers the per-site log-posterior, falls
+  back to exact observed-curvature Newton under `LogLink`, then to a 20x Fisher
+  retry, and returns `-Inf` if all fail. Fitted NB2 results change on the default
+  route: on a 48-cell panel 18 fits reached higher log-likelihoods (by up to
+  5,340), 28 were unchanged, and none got genuinely worse. More fits now report
+  `converged = false` through the existing dispersion-boundary warning, and NB2
+  grouped fits run about 70% slower. `fit_nb_gllvm_grouped`,
+  `fit_nb1_gllvm_grouped` and `fit_beta_gllvm_grouped` now accept `β_init` and
+  `Λ_init`, as `fit_nb_gllvm` does (#503, #521).
 - **Gamma grouped fits no longer report convergence from a diverged inner search.**
   The per-site mode search inside `fit_gamma_gllvm_grouped` and its covariate and
   shared-shape routes could diverge at the fitter's own start and still return a
@@ -476,6 +490,22 @@ All notable changes to GLLVModels.jl are documented here.
   counts only the ones kept. When every replicate converges, bootstrap
   endpoints are identical to before. No boundary flag is added for the ZINB
   size `r`.
+
+### Added
+- **Temporal covariance source, temporal source alone (gllvmTMB P1 port).**
+  `temporal_indep`, `temporal_dep` and `temporal_latent` (rank one, optional
+  correlated `psi`) with AR1 or OU time structure fit through the separate door
+  `fit_temporal_gllvm(long_data; formula, temporal)`, unreplicated or
+  replicated. The likelihood is the exact Gaussian marginal
+  `Z (K ⊗ Sigma_T) Z' + sigma_eps^2 I`; parameters follow gllvmTMB's `opt$par`
+  order and names. `extract_temporal` returns the fitted time parameter, state
+  table, loadings and temporal variances; `TemporalGaussianFit` has its own
+  `loglikelihood`, `dof`, `nobs`, `aic` and `bic`, and refusals throw
+  `TemporalContractError` with gllvmTMB's message and condition class. Checked
+  against gllvmTMB P1 receipts: the objective at R's coordinates agrees to
+  1.7e-11 and R's objective at Julia's optimum to 7.5e-11 over 21 fits. Not yet
+  available: `unit` / `unit_obs` composition, cross-source cells, the wide
+  `traits()` form and the R bridge.
 
 ### Changed
 - **Breaking (default change):** `fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm`
