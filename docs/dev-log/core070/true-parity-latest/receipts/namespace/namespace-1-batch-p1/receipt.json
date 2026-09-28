@@ -1,14 +1,14 @@
 {
-  "status": "PASS",
+  "status": "FAIL",
   "scope": "CORE070_NAMESPACE_1_BATCH_TIER0",
   "pin": "P1",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "source_access": "git-show",
   "gllvmtmb_commit_resolved": "9539352f66f2db2cc26b1c393e67212a359b60c9",
-  "julia_commit": "f494a878135995787ad506245deec644b5e4a389",
-  "julia_src_tree": "c8b78a91cc1c87403e41d115c88789a7fff23642",
+  "julia_commit": "c29c1c0b6d8d985e1edd96426edef2621402a03f",
+  "julia_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
   "julia_src_dirty": false,
-  "contract_sha256": "60666db847b119df3fb225735ad6cc3b4b573a11c6e120b37a8963dfbcef6869",
+  "contract_sha256": "fe645d39063248210c66bea21428bd282cd8d0982666940f58422e0c6e34ea51",
   "namespace_sha256": "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c",
   "source_pins": {
     "R/julia-bridge.R": "b588fd8084828586414a52ce4bc728ab75e282f0bd9253c5908d786fe1be26ee",
@@ -40,10 +40,10 @@
   "retired_at_p1_count": 2,
   "reused_or_reclassify_count": 36,
   "julia_exit_code": 0,
-  "julia_elapsed_seconds": 4.0269,
-  "julia_facts_sha256": "9dac4e6113ac1e413724c3cef09089a19de77f584fe21899cf5ebdf71f507cf8",
+  "julia_elapsed_seconds": 3.7107,
+  "julia_facts_sha256": "119680c4f7e95cabe71a0d8bb4710d3b63b6a49dd52cc814494ae97be4bac4e5",
   "r_facts_sha256": "d1bf555c23e8a621ebf35cd88875365369694435c5866f14f606d09b6f85c611",
-  "raw_sha256": "8bffc6c6e34c7b1fe79f37f9a854b69b9d20797cbbdde82536c4f9209721a160",
+  "raw_sha256": "c0c033380dcf43700fb5117c381b01ab1bb47ab128627d6d2a9d7c6450c6f10b",
   "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "r_version": "R version 4.6.0 (2026-04-24)"
 }

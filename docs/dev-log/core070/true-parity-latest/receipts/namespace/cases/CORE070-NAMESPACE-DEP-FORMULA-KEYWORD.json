@@ -29,24 +29,27 @@
  },
  "julia_check": {
   "symbol": "dep",
-  "exists": false,
   "expected_exists": false,
-  "note": "src/formula.jl is a StatsModels @formula-to-design-matrix front end only; it explicitly disclaims parsing 'formula source terms, trees, pedigrees, meshes' (formula.jl:167). No dep/indep covariance-structure keyword grammar exists anywhere in src/."
+  "measured": {
+   "exists": false
+  }
  },
- "julia_commit": "f494a878135995787ad506245deec644b5e4a389",
- "julia_src_tree": "c8b78a91cc1c87403e41d115c88789a7fff23642",
+ "julia_commit": "c29c1c0b6d8d985e1edd96426edef2621402a03f",
+ "julia_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
  "result": "PASS",
  "verifier": {
   "tool": "tools/core070_verify_namespace_1_batch.py",
   "case_verdict": "PASS",
+  "category": "needs_surface_as_expected",
+  "reason": "Julia facts match the recorded needs-surface expectation; not parity",
   "batch_verdict": "CORE070_NAMESPACE_1_STATE_OK"
  },
  "batch_receipt": {
   "path": "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json",
-  "sha256": "4ec45c0e8797474f900932d3f1ecab4cc210507a7d7e9413697d49f2402865b7"
+  "sha256": "33190f383ad320f14e6accc560774a6c46911ab6965f86e320eeb63f3dd82e6b"
  },
  "contract": {
   "path": "docs/dev-log/core070/true-parity-latest/namespace-1-batch-contract-p1.json",
-  "sha256": "60666db847b119df3fb225735ad6cc3b4b573a11c6e120b37a8963dfbcef6869"
+  "sha256": "fe645d39063248210c66bea21428bd282cd8d0982666940f58422e0c6e34ea51"
  }
 }

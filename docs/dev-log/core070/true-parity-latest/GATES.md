@@ -145,7 +145,8 @@ carried rows are expected to land here until WS0d's stale-row scan re-measures t
 ## Case-map row schema (what A0c/A0d must write)
 
 A required row is bound only with a resolving receipt (`evidence.receipt`, a path that exists
-as a blob at the ref) **and** non-empty `executable_case_ids` — neither alone is enough. A
+as a blob at the ref) **and** non-empty `executable_case_ids` **and** `evidence_tier: "numeric"`
+(see "Evidence tier" below); no one of these alone is enough. A
 `DISPOSITION-SIGNED` row additionally needs `signed_by` (a non-empty name) and `signed_on`
 (`YYYY-MM-DD`) on the row itself; **the tool checks the fields are present, not that the named
 person actually signed — identity is verified in PR review**, by whoever reviews the diff that
@@ -155,6 +156,40 @@ this tool understands: `required_core`, `compatibility_adapter` (both feed C1), 
 these to be either twinned or carry a real signed disposition — none of them are exempt or
 silently skipped). A row may carry an optional `capability` field naming the scoreboard row id
 it corresponds to (used by C2's cross-check, control (b) below).
+
+## Evidence tier: a registration match is not a twin (D-295 row 5)
+
+Added after an independent review of the namespace re-measure (PR #559): a Tier 0 namespace receipt
+shows only that the R export is registered and defined and that a same-named Julia symbol exists,
+and the first cut of this tool counted that as a fully bound row, indistinguishable from a numeric
+twin. Every case-map row now carries `evidence_tier`:
+
+- `"numeric"`: the receipt records an actual R-vs-Julia output comparison;
+- `"registration"`: export/existence registration only (the namespace Tier 0 batch).
+
+C1 prints `bound_numeric=N bound_registration_only=M` and is MET only when `M == 0`; a
+registration-only row still resolves if it carries a real signed disposition (`signed_by` +
+`signed_on`). C8 reports a registration-only row as `REGISTRATION_ONLY_NOT_TWINNED` instead of
+twinned. A missing `evidence_tier` is fail-closed (treated as registration-only). Negative controls
+in `tools/test_true_parity_check.mjs` (`c1_registration_only`, `c1_evidence_tier_missing`,
+`c1_registration_only_signed`, one of them in git mode).
+
+The namespace Tier 0 batch itself was tightened at the same time: at P1 an executable row passes
+only if the Julia symbol is exported and a Function (measured by the Julia child, not typed into
+the contract), so an unexported helper or a type no longer passes on its name.
+
+## Namespace rows and the fold into case-map.json (expected totals)
+
+The 71 namespace rows re-measured at P1 (arc A3) live in
+`docs/dev-log/core070/true-parity-latest/case-map-namespace.json` until PR #533's `case-map.json`
+lands, so none of #533's rows are touched; run the checker on them with
+`PARITY_CASEMAP=docs/dev-log/core070/true-parity-latest/case-map-namespace.json`. That file holds
+69 rows (the 2 retired exports are listed in its `retired_at_p1` block and map to #533's
+`retired/...` rows, not duplicated). The recommended next step is to fold these rows into
+`case-map.json` after #533 merges, rather than teach the checker to read several files. **Expected
+totals once folded: 38 + 69 = 107 rows, 90 of them required (`required_core` +
+`compatibility_adapter`).** A folded file with fewer rows, or fewer required rows, means something
+was dropped in the fold.
 
 ## Scoreboard id conventions (what the tool's C2-C5 filters rely on)
 

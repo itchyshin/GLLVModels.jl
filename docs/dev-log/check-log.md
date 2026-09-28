@@ -1,3 +1,23 @@
+## 2026-09-27: namespace P1 re-measure hardened after review (supersedes #559 as a new PR)
+
+- Branch `claude/true-parity-p1-namespace-v2` from `origin/main` after #539 merged (`cb5688f7e`);
+  the two #559 commits are cherry-picked with `-x`, unchanged.
+- Review finding (fine as a draft, BLOCKING for any EVIDENCED claim): a Tier 0 pass asserted only
+  `isdefined`, and the checker counted it as a bound row, indistinguishable from a numeric twin.
+- `tools/true_parity_check.mjs`: `evidence_tier` ("numeric" / "registration") on case-map rows; C1
+  prints `bound_numeric` / `bound_registration_only` and needs the latter at 0 unless signed; C8
+  reports `REGISTRATION_ONLY_NOT_TWINNED`; missing tier is fail-closed. New FS and git-mode
+  negative controls; the base fixture's bound rows are marked numeric. GATES.md updated, including
+  the expected fold totals (38 + 69 = 107 rows, 90 required).
+- Namespace-1 at P1: the Julia child measures exported / Function / kind / own-method location; an
+  executable row passes only for an exported Function. Row verdicts are measured (failures recorded,
+  verifier checks every verdict against the facts). Re-run at P1: 44 executable PASS, 6
+  registration mismatches (`TwoLevelFit` x2 and `OrdinalFit` are types; `unpack_lambda` and
+  `proportions` x2 are not exported), 2 needs-surface as expected, 2 retirements confirmed.
+- Case map: all rows `evidence_tier: "registration"`; the eight `*-JULIA-BRIDGE-COMPARE` rows are
+  `compatibility_adapter` (circular twin). C1 required=69 bound=0 bound_registration_only=44
+  free=23 blocked=2, C1_NOT_MET; C8_NOT_MET.
+
 ## 2026-09-27: namespace rows re-measured at P1 with tracked receipts (arc A3, first family)
 
 - Branch `claude/true-parity-p1-namespace`, stacked on #539 (shared pin source). Scope: the 71
