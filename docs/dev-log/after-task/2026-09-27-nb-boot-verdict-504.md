@@ -55,9 +55,11 @@ excluded and an `r` at the Poisson limit is flagged and can give an `Inf` upper 
 - Neighbours on 1.10.12, each file alone: `test_confint_hessian_consistency.jl` 12/12,
   `test_grouped_hessian_consistency.jl` 23/23, `test_bridge_grouped_dispersion.jl` 129/129,
   `test_bridge_x.jl` 200/200, `test_bridge_capabilities.jl` 242/242, `test_confint_family.jl` 341/341.
-- A live `confint(...; method = :bootstrap, n_boot = 50)` on a per-species grouped fit of nb_r3_seed_1
-  was still running when this report was committed (machine load average above 100); its result is
-  added to the PR when it finishes.
+- Live `confint(fit, Y; method = :bootstrap, n_boot = 50, seed = 1)` on the per-species grouped fit of
+  nb_r3_seed_1 (true r = 3; base fit not converged, r = 1.21, 1.57e17, 2.28, 2.85, 3.08, 2.58e9), this
+  branch, Julia 1.10.12, 94.5 min at load average above 100: `n_converged` 9 of 50; every `r` lower
+  bound `NaN` (fewer than 10 usable replicates); upper bounds `Inf` for r[1], r[4], r[5], r[6] and
+  `NaN` for r[2], r[3].
 
 ## 6. Tests of the Tests
 
@@ -87,8 +89,9 @@ excluded and an `r` at the Poisson limit is flagged and can give an `Inf` upper 
   Same class as #515. Not filed.
 - **The default NB route rarely converges on genuine NB data** at this size (6/6 not converged). Likely
   the two latent variables absorb the extra-Poisson variance so a species' `r` is not identified; the
-  repo already records NB2 boundary cases (#477, NATIVE-06). Its bootstraps will now report `Inf` upper
-  bounds for those species' `r`.
+  repo already records NB2 boundary cases (#477, NATIVE-06). The live bootstrap above shows the effect:
+  9 of 50 replicates usable, no finite `r` lower bound. On main the same call prints finite bounds
+  built from boundary fits. This needs a maintainer decision before the PR leaves draft.
 - Lower-boundary `r` not flagged (see 3a).
 
 ## 11. Team Learning
