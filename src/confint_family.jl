@@ -1795,7 +1795,8 @@ function _family_ci(fit::BetaHurdleFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_beta_hurdle_gllvm(Yb; K = K) catch; return nothing end
-        return vcat(fb.βz, fb.βc, pack_lambda(fb.Λc), log(fb.φ))
+        return (θ = vcat(fb.βz, fb.βc, pack_lambda(fb.Λc), log(fb.φ)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = vcat(_twopart_lin_names(p, K), "phi")
     return _FamilyCI(θ, nll, names, vcat(fill(:linear, length(θ) - 1), :log), sim, refit)
@@ -1820,7 +1821,8 @@ function _family_ci(fit::OrderedBetaFit, Y::AbstractMatrix;
     sim   = _ -> error("bootstrap is not supported for ordered-beta CIs")
     refit = function (Yb)
         fb = try fit_ordered_beta_gllvm(Yb; K = K) catch; return nothing end
-        return vcat(fb.β, pack_lambda(fb.Λ), fb.c0, fb.c1, log(fb.φ))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ), fb.c0, fb.c1, log(fb.φ)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = vcat(_glm_lin_names(p, K), "cut0", "cut1", "phi")
     kinds = vcat(fill(:linear, p + rr + 2), :log)

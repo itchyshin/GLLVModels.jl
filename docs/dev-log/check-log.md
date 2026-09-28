@@ -125,6 +125,15 @@
   suite not run. Four neighbouring files on 1.10.12: 620 pass, 1 broken (a static `@test_broken` on the
   phylo σ_phy sign, unrelated).
 - After-task: `docs/dev-log/after-task/2026-09-27-misc-boot-verdict-504.md`.
+## 2026-09-27: Beta-hurdle and ordered-beta bootstrap refits report their own verdict (part of #504)
+
+- Branch `claude/bhob-boot-verdict-504` from `origin/main` @ `5b9af3763`. The `BetaHurdleFit` and
+  `OrderedBetaFit` refit closures return `(θ, converged, loglik)`; θ unchanged, no boundary flag.
+- New `test/test_confint_bootstrap_verdict_bhob.jl`: 8 pass, 7 fail, 10 error of 25 on main; 25/25 on
+  Julia 1.10.12 (40.5 s; also 25/25 with `--check-bounds=yes`, 41.9 s) and 1.13.0 (28.7 s). Per-file;
+  full suite not run. Neighbours on 1.10.12: `test_confint_family.jl` 341/341, `test_beta_hurdle.jl`
+  62/62, `test_ordered_beta.jl` 49/49.
+- After-task: `docs/dev-log/after-task/2026-09-27-bhob-boot-verdict-504.md`.
 
 ## 2026-09-27: Temporal source alone at gllvmTMB P1 (slice 1)
 
