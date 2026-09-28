@@ -194,6 +194,26 @@ def main():
     expect("signed_without_receipt_is_signed", c == 0 and status_of(root, "data-S") == "DISPOSITION-SIGNED", status_of(root, "data-S"))
     shutil.rmtree(tmp)
 
+    # Review of #589, finding 3: a valid maintainer-signed receipt_status_exception waives a failed
+    # status field (the checker counts the row in bound_signed=, never bound=), so the row reads
+    # DISPOSITION-SIGNED, never EVIDENCED. It waives the status only, not the comparison.
+    exc = {"reason": "batch FAIL is an unrelated case", "signed_by": "Shinichi Nakagawa", "signed_on": "2026-09-27"}
+    root, tmp = numeric_root({"verdict": "FAIL"}, receipt_status_exception=exc)
+    c, o = run(root)
+    txt = (root / A.LEDGER / A.OUT_SCOREBOARD).read_text()
+    expect("signed_status_exception_reads_signed", c == 0 and status_of(root) == "DISPOSITION-SIGNED"
+           and "signed_by: Shinichi Nakagawa; signed_on: 2026-09-27" in txt and "receipt_status_exception" in txt, status_of(root))
+    shutil.rmtree(tmp)
+    root, tmp = numeric_root({"verdict": "FAIL"}, receipt_status_exception=dict(exc, signed_by="Claude (agent)"))
+    c, o = run(root)
+    expect("agent_signed_status_exception_not_signed", c == 0 and status_of(root) == "NUMERIC-UNVERIFIED", status_of(root))
+    shutil.rmtree(tmp)
+    bad_cmp = {"pin": "P1", "cases": [{"case_id": "C", "r_value": 1.0, "julia_value": 2.0, "tolerance": 1e-6}]}
+    root, tmp = numeric_root({"verdict": "FAIL", "comparison": bad_cmp}, receipt_status_exception=exc)
+    c, o = run(root)
+    expect("status_exception_does_not_waive_tolerance", c == 0 and status_of(root) == "NUMERIC-UNVERIFIED", status_of(root))
+    shutil.rmtree(tmp)
+
     # Real tree: outputs current, and EVIDENCED count equals the checker's own C1 bound=.
     c, o = run(A.ROOT, "--check")
     expect("real_tree_outputs_current", c == 0, o)

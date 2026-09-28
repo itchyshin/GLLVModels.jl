@@ -22,7 +22,9 @@ Status of a scoreboard row (first rule that applies):
 
   DISPOSITION-SIGNED  disposition "DISPOSITION-SIGNED" with an allowed signer and a real past
                       date on the row, and (if it cites a receipt) no dangling receipt and no
-                      stale carry (the checker's C1 rule and order).
+                      stale carry (the checker's C1 rule and order). Also a numeric row whose
+                      only problem is a failed receipt status field, waived by a valid
+                      maintainer-signed receipt_status_exception (C1 bound_signed=).
   EVIDENCED           the row binds under the checker's own C1 numeric rule: evidence_tier
                       "numeric", non-empty executable_case_ids, every evidence.receipt a file,
                       carry fresh at P1, and every receipt's comparison block pinned to P1,
@@ -149,6 +151,16 @@ def signature_problem(by, on):
     return None
 
 
+def status_exception_problem(row):
+    # The checker's receiptStatusExceptionProblem.
+    e = row.get("receipt_status_exception")
+    if e is None:
+        return "no receipt_status_exception"
+    if not isinstance(e, dict) or not isinstance(e.get("reason"), str) or not e["reason"].strip():
+        return "receipt_status_exception without a reason"
+    return signature_problem(e.get("signed_by"), e.get("signed_on"))
+
+
 def as_list(x):
     if x is None:
         return []
@@ -204,7 +216,9 @@ def case_diff(c):
     return computed, None
 
 
-def numeric_receipt_problem(row, root):
+def numeric_receipt_problem(row, root, waive_status=False):
+    """None when the row binds numerically, else why not. waive_status=True skips only the
+    receipt status fields (what a valid receipt_status_exception waives in the checker)."""
     paths = receipt_paths(row)
     if not paths:
         return "no receipt"
@@ -257,7 +271,7 @@ def numeric_receipt_problem(row, root):
     missing = [i for i in as_list(row.get("executable_case_ids")) if i not in covered]
     if missing:
         return "case ids not compared: " + ",".join(missing)
-    return not_passed
+    return None if waive_status else not_passed
 
 
 # --- inputs ----------------------------------------------------------------------------------
@@ -345,7 +359,17 @@ def derive_status(row, root):
         if not as_list(row.get("executable_case_ids")):
             return "NUMERIC-UNVERIFIED", "no executable_case_ids"
         prob = numeric_receipt_problem(row, root)
-        return ("EVIDENCED", "") if prob is None else ("NUMERIC-UNVERIFIED", prob)
+        if prob is None:
+            return "EVIDENCED", ""
+        # A maintainer-signed receipt_status_exception waives a failed status field only (the
+        # comparison must still hold). The checker counts such a row in bound_signed=, never in
+        # bound= / bound_numeric=, so it reads DISPOSITION-SIGNED here, never EVIDENCED.
+        if numeric_receipt_problem(row, root, waive_status=True) is None:
+            why = status_exception_problem(row)
+            if why is None:
+                return "DISPOSITION-SIGNED", f"receipt_status_exception: {row['receipt_status_exception']['reason']}; waives {prob}"
+            return "NUMERIC-UNVERIFIED", f"{prob}; {why}"
+        return "NUMERIC-UNVERIFIED", prob
     if disp is not None:
         return ("NEEDS-SURFACE" if "NEEDS_JULIA_SURFACE" in str(disp) else str(disp)), f"disposition {disp}"
     if not paths and not nonbinding_paths(row):
@@ -376,6 +400,9 @@ def build(root: Path, ledger: Path, extra: list[Path]):
         requires = f"{r.get('classification')}; cases: {', '.join(cases) if cases else 'none'}"
         if status == "EVIDENCED":
             receipt = ", ".join(receipt_paths(r))
+        elif status == "DISPOSITION-SIGNED" and r.get("disposition") != "DISPOSITION-SIGNED":
+            e = r["receipt_status_exception"]
+            receipt = f"{', '.join(receipt_paths(r))}; receipt_status_exception signed_by: {e.get('signed_by')}; signed_on: {e.get('signed_on')}"
         elif status == "DISPOSITION-SIGNED":
             receipt = f"Disposition: {r.get('disposition')}; signed_by: {r.get('signed_by')}; signed_on: {r.get('signed_on')}"
         else:
