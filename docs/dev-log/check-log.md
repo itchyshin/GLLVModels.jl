@@ -1,3 +1,45 @@
+## 2026-09-27: Covariance at P1, independent review of #567 applied
+
+- Same branch, fast-forward commits only. Review findings 1, 2, 6, 7, 10 and 13 applied, one concern
+  per commit; no classification, `src/`, GATES.md or P0 evidence change; the wave6 nobs expectation
+  in the contract is not edited.
+- Finding 1 (blocking): `tools/core070_covariance_p1_receipts.py` runs each batch verifier and refuses
+  a numeric tier when it did not pass, unless a maintainer-signed exception is supplied (none exists).
+  COV-KERNEL-FOLDED-UNIQUE and COV-KERNEL-LATENT are held (`numeric_held_batch_verifier_failed`,
+  non-binding receipts) pending the maintainer's ruling on the wave6 nobs case; their cases pass
+  (7.25e-8, 1.26e-6 vs tol 1e-4).
+- Finding 2: the P1 runner manifest's 34 P0-pinned citations are re-anchored at P1 by the generator
+  (2 identical ranges, 12 changed ranges, 2 file pins, 18 GLLVModels.jl blob pins); `--check` passes.
+- Findings 6, 13: the wave6 and grammar batches record the library's `CORE070_SOURCE_PIN.toml` and
+  their verifiers check it against `tools/core070_oracle_pins.toml`; the required runner's oracle
+  build/source receipts are pin-aware and validated before use. Run requirements documented in
+  `receipts/covariance/README.md`; `oracle/source.json` kept (regenerates byte for byte, but it is the
+  runner's tracked source receipt).
+- Finding 7: all batches re-run from clean commit `ead8f4180`; every R and Julia value bit-identical to
+  the first run; receipts record that commit. Wall: runparity 51 s, default-control mode fits 42 s,
+  wave6 47 s, grammar batch 1 s, bridge under 1 s.
+- Checker, PARITY_REF=FS: C1 required=17 bound=0 free=17 (main and #561 checkers); C8 17
+  NOT_TWINNED_NOT_SIGNED. `test/parity/test_core070_pin.jl` 27/27; `test_parity_oracle_defaults` OK;
+  `node tools/test_true_parity_check.mjs` passes.
+
+## 2026-09-27: Covariance family re-measured at gllvmTMB P1 (A3), tracked receipts
+
+- Branch `claude/true-parity-p1-covariance` from `origin/main` `cb5688f7e`. Scope: the 17 covariance
+  rows the P1 carry scan lists as PARTIAL_STALE_AT_P1 (7) or DANGLING (10). Classifications carried
+  unchanged from `required-source-case-map.json`.
+- P1 oracle built locally with `GLLVM_PARITY_PIN=P1 tools/core070_build_oracle.py prepare|build|verify`
+  (source from `git archive` of the gllvmTMB clone, read-only): SOURCE/BUILD/VERIFY PASS, 243.7 s.
+- `tools/core070_covariance_p1_contract.py` regenerates three P1 contracts under
+  `docs/dev-log/core070/true-parity-latest/` (runner manifest header, R-only grammar batch source pins,
+  wave6 reference_commit); cases, expectations and tolerances carried verbatim; `--check` passes.
+- Runs (local Mac, one BLAS/OMP thread, JULIA_NUM_THREADS=4): runparity 18 covariance cases 450/450
+  assertions, 55.8 s; R-only grammar batch 9/9 + 2 negative controls, verifier + 8 mutations pass;
+  public R bridge boundary 9/9 unchanged; wave6 batch 9/10 point cases pass, batch FAIL on the
+  unrelated postfit nobs own-receipt-defect case (Julia nobs now returns p*n = 400, as R does).
+- Case-map rows (`case-map-covariance.json`): 2 numeric pass, 0 numeric fail, 7 partial numeric (bridge
+  case is an R boundary), 8 R-only needing a Julia surface, 0 not measured. Checker, PARITY_REF=FS:
+  C1 required=17 bound=2 free=15 (main and #561 checker); C8 15 NOT_TWINNED_NOT_SIGNED.
+  `node tools/test_true_parity_check.mjs` passes; `test/parity/test_core070_pin.jl` 16/16.
 ## 2026-09-27: iSDM unit-level unique variance, R's default `latent(..., unique = TRUE)` (ISDM-PSI)
 
 - Branch `claude/isdm-psi`, stacked on `claude/isdm-build` (draft PR #546); maintainer decision D-301.
