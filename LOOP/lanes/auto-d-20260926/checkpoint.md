@@ -1,6 +1,6 @@
 # Checkpoint — OVERWRITTEN every arc (a pointer to truth, not a log)
 
-- OVERNIGHT DONE (10:20Z 09-28): all arcs A0-A5 done; see MORNING-REPORT-2026-09-28.md 'In one screen'. Open gates (Shinichi): merges #519/#521/#540 (+stacked #520/#529/#551), #518/#1324; NB re-run approval; Julia-vs-R guard rule; smoke-job NB2 fixture. CI for #518/#519/#540 queued at close (capacity). Never merge/submit.
+- OVERNIGHT DONE (10:20Z 09-28): all arcs A0-A5 done; see MORNING-REPORT-2026-09-28.md 'In one screen'. Open gates (Shinichi): merges #519/#521/#540 (+stacked #520/#529/#551), #518/#1324; NB re-run approval; Julia-vs-R guard rule; smoke-job NB2 fixture. #518 CI green at 11:00Z (8/8 shards). CARRIED-OVER: local report/checkpoint commits on claude/lane-auto-d-20260926 not pushed (CI capacity; docs only) -> resume: cd ~/local-scratch/lanes/GLLVM.jl-auto-d-20260926 && git push origin claude/lane-auto-d-20260926 (restarts #518 CI). #519/#540 CI still running at close. Never merge/submit.
 - DONE: G0 — ultra-plan approved (ultra-plan.md). Decisions: omitting d means estimate it; gllvmTMB gets the same rule via a spec handed to the Cursor lane; A1 is a feasibility question first.
 - D-292 (2026-09-26): Claude owns gllvmTMB too; build auto-d in R and Julia side by side, each cross-checking the other. A8b becomes a real R build, not a spec.
 - PARKED FOR A POSSIBLE NEW LANE (Shinichi 2026-09-26): the big LASSO/shrinkage investigation (LASSO vs ridge priors, FA and latent-variable models generally). If this lane cannot address it, open a follow-up lane.
