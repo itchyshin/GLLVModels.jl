@@ -102,6 +102,36 @@ All notable changes to GLLVModels.jl are documented here.
   same route; `@formula(y ~ 0)`, explicit `X` and `fit_gaussian_gllvm` itself are
   unchanged. Post-fit and interval routines apply the intercepts when `X` is
   omitted. **Gaussian results change for uncentred data.**
+- **Two-level Gaussian fits could report `converged = true` at a spurious
+  loglik of +1e22 or more, which collapsed the ICC bootstrap lower bound; more
+  generally the two-level marginal was inaccurate when a within-individual
+  variance was tiny.** `_twolevel_loglik` (`src/twolevel.jl`) evaluated the
+  within-individual quadratic form through a subtractive Woodbury solve,
+  which cancels terms of size `Λ_W[t,:]² / σ²_W[t]`. Two failure modes
+  followed. (1) Sign: at extreme variance ratios (for example `σ²_W`
+  spanning 1e-37 to 1e15) the quadratic form came out negative, which is
+  impossible for a positive definite `Σ_W`, and L-BFGS ran to those points.
+  On the CORE070 CI-ROUTE-011 fixture (`repeatability_ci(...; method =
+  :bootstrap, nsim = 200, seed = 11)`), 8 of the 153 retained bootstrap
+  refits sat there, with repeatability near 0 or 1. They pulled the lower
+  bounds for traits 2 and 4 down to 1.1e-7 and 4.5e-40, against gllvmTMB's
+  0.126 and 0.414. (2) Precision: before the sign flips, the value is
+  finite but wrong. At the fixture's point fit with one `σ²_W[t]` set to
+  1e-15 the log-likelihood was already overstated by about 0.5 to 1.5 nats
+  against an exact BigFloat evaluation, and by up to 600 nats at 1e-17 to
+  1e-18, with nothing to flag it. `Σ_W` is
+  now factored by a dense `p × p` Cholesky and the quadratic form computed as
+  `‖L⁻¹ Y_ic‖²`, as `src/families/gaussian_pervar.jl` already does. The error
+  against BigFloat is at most 2.5e-14 relative over a sweep of `σ²_W[t]` from
+  1e-12 to 1e-30 and 20 random extreme points. A failed factorisation, or a
+  negative quadratic form, returns `-Inf` so the optimiser rejects the step.
+  On the bootstrap call above the lower bounds become 0.60, 0.15, 0.11 and
+  0.40 (gllvmTMB: 0.57, 0.13, 0.13, 0.41); with `nsim = 1000` they are 0.56,
+  0.13, 0.13 and 0.41. The point fit moves by about 1e-8 in repeatability.
+  Other Woodbury quadratic forms in the package (`likelihood.jl`,
+  `profile.jl`, `reml.jl`, the sparse-phylogenetic paths,
+  `lowrank_cholesky.jl`) are not changed here and are being audited
+  separately.
 - **`chibar2_pvalue`/`variance_lrt` silently returned a p-value of 1.0 for a `NaN`
   `LRT` or log-likelihood instead of refusing it.** `LRT > 0` is `false` for `NaN`, so
   a missing or non-finite input fell through to the "no evidence against the reduced
