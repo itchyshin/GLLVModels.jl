@@ -116,6 +116,25 @@ TIER_TEXT = {
                                  "does not bind"),
 }
 
+# PR #571 review F2: CI-ROUTE-008 (default method) and 010 (method = 'wald') pay with one comparison.
+SAME_MEASUREMENT = {"CORE070-SURFCONV-INFERENCE-CI-ROUTE-008": "CORE070-SURFCONV-INFERENCE-CI-ROUTE-010",
+                    "CORE070-SURFCONV-INFERENCE-CI-ROUTE-010": "CORE070-SURFCONV-INFERENCE-CI-ROUTE-008"}
+SAME_MEASUREMENT_NOTE = (
+    "One measurement counted twice: CI-ROUTE-008 (confint(parm = 'icc'), default method) and CI-ROUTE-010 "
+    "(method = 'wald') have identical R vectors and identical Julia vectors, because both engines' default ICC "
+    "interval is Wald. They are distinct surface rows (default routing versus explicit method), but the numeric "
+    "evidence behind them is one R-vs-Julia comparison. Not reclassified here; whether it counts once or twice "
+    "is for the maintainer.")
+
+# PR #571 review F3: collapsed Julia bootstrap lower bounds on CI-ROUTE-011.
+COLLAPSE_RATIO = 1e-3  # a Julia lower bound below this fraction of R's is called collapsed
+ANOMALY_NOTE = (
+    "Anomaly: the Julia bootstrap lower bounds for {n} ICC entries collapsed ({pairs}). The structural check "
+    "passes (finite, ordered, brackets the point) and endpoints are not compared, so this PASS does not mean "
+    "the bootstraps agree. Root cause found and fixed in draft PR #576: a Woodbury quadratic form went negative "
+    "at extreme variance ratios, so bootstrap refits reported converged with an impossible log-likelihood. This "
+    "receipt predates that fix (PR #569's run); re-measure after #576 lands.")
+
 
 def sha(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
@@ -235,6 +254,12 @@ def wave5_cases():
                  "tolerance_rule": "surface-conversion-batch-contract-p1.json per-case tolerance (carried verbatim from P0); max |R - Julia| over CI bounds",
                  "n_values": len(rv), "diff_source": "recomputed from raw R and Julia values",
                  "r_value": rv, "julia_value": jv}, rv)
+            twin = SAME_MEASUREMENT.get(cid)
+            if twin is not None:
+                identical = (so["oracle_values"][twin] == rv and sj["cases"][twin]["julia_values"] == jv)
+                body["same_measurement_as"] = {"case_id": twin, "identical_r_and_julia_vectors": identical}
+                if identical:
+                    body["note"] = SAME_MEASUREMENT_NOTE
             out[cid] = ("numeric_r_vs_julia", "PASS" if jc["pass"] and diff <= tol else "FAIL", body, [entry])
         else:
             if cc["kind"] == "refusal_pair":
@@ -249,6 +274,15 @@ def wave5_cases():
                     "structural_justification: two independent stochastic bootstraps, so endpoints are not compared. "
                     f"The point legs agree to {pt:.3g} but the contract declares no tolerance for them, and none is invented.")
                 body["point_leg_max_abs_diff_unbound"] = pt
+                collapsed = [{"entry": i + 1, "julia_lower": jl, "r_lower": rl}
+                             for i, (jl, rl) in enumerate(zip(js["lower"], rs["lower"])) if jl < COLLAPSE_RATIO * rl]
+                if collapsed:
+                    pairs = "; ".join(f"entry {c['entry']}: Julia {c['julia_lower']:.3g} vs R {c['r_lower']:.3g}"
+                                      for c in collapsed)
+                    body["anomaly"] = {"collapsed_julia_lower_bounds": collapsed,
+                                       "rule": f"Julia lower bound < {COLLAPSE_RATIO:g} x R lower bound",
+                                       "fix": "draft PR #576", "action": "re-measure after #576 lands",
+                                       "note": ANOMALY_NOTE.format(n=len(collapsed), pairs=pairs)}
             out[cid] = (f"paired_{cc['kind']}", "PASS" if jc["pass"] else "FAIL", body, None)
     return out
 
