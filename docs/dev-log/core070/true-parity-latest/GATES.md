@@ -300,6 +300,24 @@ What this does not do: the tool checks that the receipt records a comparison wit
 does not re-run the comparison, and it cannot tell whether the tolerance chosen is reasonable. A
 receipt that records false numbers passes. That is PR review's job, as for any other receipt.
 
+### Tolerances are author-declared; review them against the harness source
+
+The third tamper test on #567 widened a case's `tolerance` to 1.0 and the row still bound. That is
+by design, not an oversight: the tool has no independent source for what the right bound is for a
+given quantity, so it does not try to judge tolerances automatically. A tolerance is whatever the
+receipt's author (usually the batch harness) declared, and the tool only checks that it is a
+finite number greater than 0 and that the difference sits under it. A reviewer must therefore
+check each numeric row's tolerances against the harness source that produced the receipt (the
+batch contract or script that sets the bound, e.g. a `*-batch-contract-p1.json` or the
+`tools/core070_*_batch.*` script named in the receipt), and treat a tolerance that differs from
+that source, or one that is loose for the quantity compared, as a blocking finding.
+
+Recommendation (not enforced by the tool): give each numeric case-map row a free-text
+`tolerance_source` field naming where its tolerances come from, for example
+`"tolerance_source": "wave6-conversion-batch-contract-p1.json, cases[].tolerance"`. The checker
+ignores the field; it exists so a reviewer can find the source without reverse-engineering the
+receipt.
+
 The namespace Tier 0 batch itself was tightened at the same time: at P1 an executable row passes
 only if the Julia symbol is exported and a Function (measured by the Julia child, not typed into
 the contract), so an unexported helper or a type no longer passes on its name.
