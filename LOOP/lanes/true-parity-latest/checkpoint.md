@@ -37,7 +37,7 @@ CI is runner-starved (about 24 queued runs across lanes); trains wait, nothing f
 - Ready for word: #557 1553f20e7, #561 0ee89e37c, #563 a76afd5fd, A3 stack #567 4176a9dce -> #569 073e90e78 -> #571 1b99ae6b8 -> #579 a857516df -> #584 0fb2b9411 -> #586 befbe3ccc / #587 387102799 -> #589 313a31d66 (ledger assembly), #576 94fd6abb9, #581 eea4d5a38, specs #525/#535/#545.
 - CI at 04:16: green (advisory smoke aside) #543 #567 #569 #571 #576 #579 #584; queued, not started: the ten fixed or refreshed PRs.
 - Decisions: packet-2-draft.md (32 rows + C3-C5 row proposals). Scoreboard: 52 of 306 required rows numeric at P1.
-- Merge procedure: scratchpad/refresh_pr.sh <N> then merge_train_v2.sh N:<head>, one PR at a time in stack order; refresh after every merge (CHANGELOG/check-log conflicts).
+- Merge procedure: scripts/refresh_pr.sh <N> then scripts/merge_train_v2.sh (in this kit; MERGE_METHOD=--squash) N:<head>, one PR at a time in stack order; refresh after every merge (CHANGELOG/check-log conflicts).
 
 ## Findings to remember
 - LESSON (2026-09-28 02:25): a review verdict is not CI. Before listing a PR as ready, check its CURRENT head's check runs exist and pass (a PR that conflicts with its base gets NO pull_request CI runs at all, so "no failures" can mean "never ran"). Three PRs with landing words (#546, #547, #556) were red at their reviewed heads (missing docs pages; a frozen destination-B source-hash guard; a test-only package in a P1-tagged test). The P1 twin job enrols any .jl file whose text contains the tag string, comments included.
