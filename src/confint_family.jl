@@ -521,7 +521,7 @@ function _family_ci(fit::TruncatedPoissonFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_truncated_poisson_gllvm(Yb; K = K, link = link, mask = M) catch; return nothing end
-        return vcat(fb.β, pack_lambda(fb.Λ))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ)), converged = fb.converged, loglik = fb.loglik)
     end
     return _FamilyCI(θ, nll, _glm_lin_names(p, K), fill(:linear, length(θ)), simulate, refit)
 end
@@ -570,7 +570,8 @@ function _family_ci(fit::TruncatedNegBin2Fit, Y::AbstractMatrix;
         catch
             return nothing
         end
-        return vcat(fb.β, pack_lambda(fb.Λ), log(fb.r))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ), log(fb.r)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = vcat(_glm_lin_names(p, K), "r")
     kinds = vcat(fill(:linear, length(θ) - 1), :log)
@@ -619,7 +620,8 @@ function _family_ci(fit::TruncatedNegBin2PerTraitFit, Y::AbstractMatrix;
         catch
             return nothing
         end
-        return vcat(fb.β, pack_lambda(fb.Λ), log.(fb.r))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ), log.(fb.r)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = vcat(_glm_lin_names(p, K), ["r[$t]" for t in 1:p])
     kinds = vcat(fill(:linear, p + rr), fill(:log, p))
