@@ -214,6 +214,18 @@ def main():
     expect("status_exception_does_not_waive_tolerance", c == 0 and status_of(root) == "NUMERIC-UNVERIFIED", status_of(root))
     shutil.rmtree(tmp)
 
+    # Review of #589, finding 4: a malformed carry (a string, or a string in source_pins) is an
+    # ASSEMBLE_FAIL with a message, not an uncaught AttributeError.
+    for label, carry in (("string_carry", "abc"), ("string_source_pin", {"source_pins": ["abc"]})):
+        root, tmp = numeric_root(measured_against="P0", carry=carry)
+        try:
+            c, o = run(root, "--check")
+            ok = c == 1 and "ASSEMBLE_FAIL" in o and "family/N" in o and "carry" in o
+        except Exception as e:  # noqa: BLE001 -- the red state this control exists to catch
+            ok, o = False, f"{type(e).__name__}: {e}"
+        expect(f"malformed_carry_{label}_fails_cleanly", ok, o)
+        shutil.rmtree(tmp)
+
     # Real tree: outputs current, and EVIDENCED count equals the checker's own C1 bound=.
     c, o = run(A.ROOT, "--check")
     expect("real_tree_outputs_current", c == 0, o)

@@ -181,10 +181,16 @@ def carry_problem(row):
         return None
     if ma is None:
         return "PARTIAL_STALE_AT_P1(missing measured_against)"
-    pins = (row.get("carry") or {}).get("source_pins")
+    carry = row.get("carry")
+    if carry is not None and not isinstance(carry, dict):
+        # The checker reads this as stale; a malformed map field is a data error, so fail loudly.
+        raise Fail(f"{row.get('source_id')}: carry is {type(carry).__name__}, not an object")
+    pins = (carry or {}).get("source_pins")
     if not isinstance(pins, list) or not pins:
         return "PARTIAL_STALE_AT_P1(no carry.source_pins)"
     for sp in pins:
+        if not isinstance(sp, dict):
+            raise Fail(f"{row.get('source_id')}: carry.source_pins entry is {type(sp).__name__}, not an object")
         a, b = sp.get("sha256_at_p0"), sp.get("sha256_at_p1")
         if not (isinstance(a, str) and SHA256_RE.match(a) and isinstance(b, str) and SHA256_RE.match(b) and a == b):
             return "PARTIAL_STALE_AT_P1(hash mismatch or not 64-hex sha256)"
