@@ -177,6 +177,7 @@ include("grouped_fit.jl")               # internal joint grouped Gaussian fit an
 include("precision_multivariate_fit.jl") # internal multivariate phylogenetic fit and intervals
 include("grouped_nongaussian_fit.jl")   # internal five-family joint grouping extension
 include("destination_b_postfit.jl")     # explicit population-only Gaussian postfit routes
+include("phylo_latent_precision.jl")    # observation/tip labels on PrecisionMultivariateFit
 include("phylo_latent.jl")              # fit_phylo_latent_gllvm: twin of R's bare Gaussian phylo_latent()
 include("phylo_latent_postfit.jl")      # extract_phylo_signal for the phylo_latent twin
 include("grouped_nongaussian_postfit.jl") # conditional means at zero random effects

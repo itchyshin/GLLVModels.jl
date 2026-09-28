@@ -155,41 +155,6 @@ struct PrecisionMultivariateFit <: StatsAPI.StatisticalModel
     coefficient_names::Vector{Union{String,Symbol}}
     residual_mode::Symbol
     parameter_labels::Vector{String}
-    species_labels::Vector{String}
-    tip_labels::Vector{String}
-end
-
-# Labels default to the precision's own node labels: `tip_labels[t]` names tip
-# `t` and `species_labels[o]` names the tip observation `o` maps to. The
-# `fit_phylo_latent_gllvm` twin overwrites both with the caller's labels.
-function _pmv_default_labels(phy::PrecisionPhy, species_id::AbstractVector{<:Integer})
-    tips = String[phy.node_labels[i] for i in phy.species_aug_id]
-    return tips[species_id], tips
-end
-
-function PrecisionMultivariateFit(beta, loading, unique, residual, mode, rank,
-        phy, species_id, parameters, loglik, converged, gradient_norm,
-        hessian_minimum, hessian_pd, hessian_condition, iterations, reason,
-        response, design, shape, names, residual_mode, parameter_labels)
-    species_labels, tip_labels = _pmv_default_labels(phy, species_id)
-    return PrecisionMultivariateFit(beta, loading, unique, residual, mode, rank,
-        phy, species_id, parameters, loglik, converged, gradient_norm,
-        hessian_minimum, hessian_pd, hessian_condition, iterations, reason,
-        response, design, shape, names, residual_mode, parameter_labels,
-        species_labels, tip_labels)
-end
-
-# Copy of `fit` carrying caller-supplied observation and tip labels.
-function _pmv_with_labels(fit::PrecisionMultivariateFit,
-        species_labels::Vector{String}, tip_labels::Vector{String})
-    length(species_labels) == length(fit.species_id) ||
-        throw(DimensionMismatch("species_labels must have one entry per observation"))
-    length(tip_labels) == fit.phy.n_leaves ||
-        throw(DimensionMismatch("tip_labels must have one entry per tip"))
-    values = [getfield(fit, f) for f in fieldnames(PrecisionMultivariateFit)]
-    values[end - 1] = species_labels
-    values[end] = tip_labels
-    return PrecisionMultivariateFit(values...)
 end
 
 function _pmv_parameter_labels(q::Integer, d::Integer, rank::Integer,
