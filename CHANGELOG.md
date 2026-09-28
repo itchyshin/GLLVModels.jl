@@ -451,6 +451,26 @@ All notable changes to GLLVModels.jl are documented here.
   digits) and converged flag. The grouped routes
   (`fit_beta_binomial_gllvm_grouped`, `fit_beta_binomial_gllvm_grouped_cov`)
   benefit from the stabilised log-pmf but do not yet have the verdict gate.
+- **GP-1 fits no longer report `converged = true` at an impossible
+  log-likelihood when a count is huge.** With one cell of healthy GP-1 data
+  (p = 4, n = 120, K = 1) set to 10^18, `fit_gp1_gllvm` on origin/main
+  863ee0f78 reported `converged = true` at loglik +6795.99 (Julia 1.10.12) and
+  +4939.22 (Julia 1.13.0). The GP-1 log-pmf (`src/families/gp1.jl`) subtracts
+  terms of size `y log y` (about 4e19 at y = 10^18), so near the per-site mode
+  its Float64 value was rounding noise: +9216.0 at the fitted α = 0.0361,
+  μ = 8.23e10, against -59.8232 in 256-bit BigFloat. For α > 0 and y >= 10^6
+  the log-pmf is now evaluated in a rearranged form (Stirling's series with the
+  `y log y` terms cancelled algebraically), which matches the BigFloat
+  reference to 1e-12 relative or 1e-6 absolute across α in {0.036, 0.2, 1},
+  μ from 1 to e^30 and y from 10^6 to 10^18. Below 10^6 the direct formula is
+  unchanged. A per-family verdict (`_gp1_verdict`) now screens each inner
+  `(β, Λ)` solve: a non-finite, sentinel, or positive objective reports
+  `loglik = -Inf`, `converged = false`, so such a point can never be selected
+  as the profile optimum. The same data now fits at loglik -1934.67 (1.10.12)
+  and -1814.33 (1.13.0); six healthy fits keep their origin/main loglik
+  (to 1e-8) and converged flag on both versions. Test:
+  `test/test_gp1_verdict.jl` with the literal fixture
+  `test/fixtures/gp1_verdict.toml`.
 - **Poisson `confint(..., method = :bootstrap)` now reports the refit's own
   convergence verdict (#504).** The Laplace-route `refit` closure in
   `_family_ci(fit::PoissonFit, ...)` (`src/confint_family.jl`) returned a bare
