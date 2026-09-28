@@ -638,6 +638,17 @@ All notable changes to GLLVModels.jl are documented here.
   are identical to before. No boundary flag is added.
   endpoints are identical to before. No boundary flag is added for the ZINB
   size `r`.
+- **Hurdle and delta `confint(..., method = :bootstrap)` now reports the refit's
+  own convergence verdict (part of #504).** The refit closures for
+  `HurdlePoissonFit`, `HurdleNBFit`, `DeltaLogNormalFit` and `DeltaGammaFit`
+  (`src/confint_family.jl`; both the default two-predictor closure and the
+  `predictor = :shared` one for each delta family) returned a bare parameter
+  vector, so a replicate whose refit ended on the fitter's failure sentinel (its
+  θ is the finite warm start) was counted as a good draw. They now return
+  `(θ = ..., converged = ..., loglik = ...)`, as Poisson's does since #516; such
+  replicates are excluded and `n_converged` counts only the ones kept. When every
+  replicate converges, bootstrap endpoints are identical to before. No boundary
+  flag is added for the hurdle-NB size `r`.
 
 ### Added
 - **Temporal covariance source, temporal source alone (gllvmTMB P1 port).**
