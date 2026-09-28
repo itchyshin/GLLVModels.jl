@@ -104,6 +104,17 @@
   69/69 on Julia 1.10.12 (52 s; also 69/69 with `--check-bounds=yes`, 57 s) and 1.13.0 (57 s).
   Per-file; full suite not run. Neighbour `test_confint_family.jl`: 341/341 on 1.10.12.
 - After-task: `docs/dev-log/after-task/2026-09-27-hurdle-delta-boot-verdict-504.md`.
+## 2026-09-27: Zero-truncated bootstrap refits report their own verdict (part of #504)
+
+- Branch `claude/trunc-boot-verdict-504` from `origin/main` @ `4357e4652`. The three refit closures
+  in `_family_ci` for `TruncatedPoissonFit`, `TruncatedNegBin2Fit` and
+  `TruncatedNegBin2PerTraitFit` return `(θ, converged, loglik)`; θ unchanged, no boundary flag.
+- New `test/test_confint_bootstrap_verdict_truncated.jl`: 13 pass, 8 fail, 13 error of 34 on main
+  (with `--check-bounds=yes`); 34/34 on Julia 1.10.12 (46 s; also 34/34 with `--check-bounds=yes`,
+  48 s) and 1.13.0 (42 s). Real failing draw on the truncated-Poisson route only; the two NB2 routes
+  use a labelled stub failed refit. Per-file; full suite not run.
+- Neighbours on 1.10.12: `test_confint_family.jl` 341/341, `test_bridge_capabilities.jl` 242/242.
+- After-task: `docs/dev-log/after-task/2026-09-27-trunc-boot-verdict-504.md`.
 
 ## 2026-09-27: Temporal source alone at gllvmTMB P1 (slice 1)
 
