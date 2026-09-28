@@ -4,7 +4,7 @@
 D-294 re-pin to P1; D-295 Packet 1 + boundary (temporal, phylo latent inside; column grammar, spatial outside); D-296 Packet 1b (iSDM scope); D-297 #526/#533 classes accepted in chat (signature still to be given on #533 by Shinichi himself); D-300 Packets 1c (temporal) and 1d (phylo latent).
 
 ## Landed on main today
-#522 (52ed4281b, closes #515), #530 (d286ac4c5, docs phrase fix), #523 (0a94b1cfc, P1 ledger + check tool), #524 (824d22a4b, additive P1 pin), #514 (855542118, mixed bridge mode search), #532 (97e11be04, Documenter per-branch build, serialised deploy).
+#528 (e9f7d949e, ordinal_logit twin), #539 (cb5688f7e, harness pin source + P1 oracle), #522 (52ed4281b, closes #515), #530 (d286ac4c5, docs phrase fix), #523 (0a94b1cfc, P1 ledger + check tool), #524 (824d22a4b, additive P1 pin), #514 (855542118, mixed bridge mode search), #532 (97e11be04, Documenter per-branch build, serialised deploy).
 
 ## Ready, landing word given, train running (scratchpad/merge_train_v2.sh ignores "Documenter deploy")
 - #528 ordinal_logit twin (5c05e5b30), then #539 harness pin source + P1 oracle (e40179ceb): log scratchpad/train_528_539.log
@@ -25,7 +25,7 @@ CI is runner-starved (about 24 queued runs across lanes); trains wait, nothing f
 
 - Landing word given for #548, #556, #547 (train scratchpad/train_548_556_547.log, order 548 -> 556 -> 547).
 
-- A3 PR2 = draft PR #559 (ac78084cb, base #539 branch: RETARGET to main after #539 merges): namespace 71 rows: 50 pass (registration parity only), 0 fail, 2 retired, 2 blocked, 17 need live R fits; tracked receipts; separate case-map-namespace.json (checker must read several files or fold after #533). r559 reviewing (main question: is registration-only a name match D-295 forbids?). #544 (ordination X-forward fix, the user's side task) landed on main b3d86fe62.
+- A3 PR2 = draft PR #559 (ac78084cb, base #539 branch: RETARGET to main after #539 merges): namespace 71 rows: 50 pass (registration parity only), 0 fail, 2 retired, 2 blocked, 17 need live R fits; tracked receipts; separate case-map-namespace.json (checker must read several files or fold after #533). CLOSED when #539 merged; b3n re-creating on main (v2) + evidence-tier fix (review: Tier 0 pass is isdefined only; checker must separate registration-only from numeric; reviews/pr-559-review.md). #544 (ordination X-forward fix, the user's side task) landed on main b3d86fe62.
 
 - Temporal slice 2 started (b6b, branch claude/temporal-slice2): unit/unit_obs composition via fit_temporal_gllvm's structure argument; no formula.jl edit (the gllvm() hook still needs the grammar lane).
 - #558 retargeted to main; its train waits for #546 to merge first (scratchpad/train_558.log). Trains #528/#539 and #531 timed out on CI capacity and were restarted (logs ...b.log).
