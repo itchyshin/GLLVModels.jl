@@ -1,0 +1,46 @@
+{
+  "schema": "core070-postfit-p1-case-receipt/v1",
+  "case_id": "CORE070-WAVE8-DEVIANCE-MULTI",
+  "verdict": "PASS",
+  "evidence_kind": "numeric_r_vs_julia",
+  "source_ids": [
+    "postfit/POSTFIT-SURFACE-deviance.gllvmTMB_multi"
+  ],
+  "batch": "tools/core070_wave8_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1",
+  "harness_kind": "point",
+  "harness_pass": true,
+  "batch_status": "PASS",
+  "verifier_output": [
+    "CORE070_WAVE8_CONVERSION_CONTRACT_OK cases=7 deferred=5 total_target_rows=12",
+    "CORE070_WAVE8_CONVERSION_STATE_OK /Users/z3437171/local-scratch/a3pf-runs/wave8-conversion-p1"
+  ],
+  "batch_status_note": "",
+  "r_call": "deviance(fit_g)",
+  "julia_call": "GLLVM.deviance(fit_j)",
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave8-conversion-p1/julia-results.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave8-conversion-p1/r-oracle.json"
+  ],
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "gllvmtmb_version": "0.7.1",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit_at_receipt_write": "9d2dd6cbfc1d458c38ee0cc91272ccb2e9cb43f1",
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-WAVE8-DEVIANCE-MULTI",
+        "quantity": null,
+        "max_abs_diff": 2.269189280923456e-09,
+        "tolerance": 0.001,
+        "tolerance_rule": "wave8-conversion-batch-contract-p1.json per-case tolerance (carried verbatim from P0); max |R - Julia| elementwise",
+        "diff_source": "harness-reported (the Julia results file records the max |R - Julia| it bounded, not the Julia vector)"
+      }
+    ]
+  }
+}

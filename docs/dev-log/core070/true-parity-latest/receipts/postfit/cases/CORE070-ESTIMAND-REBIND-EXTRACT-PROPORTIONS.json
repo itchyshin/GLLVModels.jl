@@ -1,0 +1,60 @@
+{
+  "schema": "core070-postfit-p1-case-receipt/v1",
+  "case_id": "CORE070-ESTIMAND-REBIND-EXTRACT-PROPORTIONS",
+  "verdict": "PASS",
+  "evidence_kind": "numeric_r_vs_julia",
+  "source_ids": [
+    "postfit/POSTFIT-SURFACE-extract_proportions"
+  ],
+  "batch": "tools/core070_estimand_rebind_batch.R + .jl, GLLVM_PARITY_PIN=P1 (no contract file)",
+  "harness_kind": "point",
+  "harness_pass": true,
+  "batch_status": "PASS",
+  "verifier_output": [
+    "CORE070_ESTIMAND_REBIND_STATE_OK /Users/z3437171/local-scratch/a3pf-runs/estimand-rebind-p1"
+  ],
+  "batch_status_note": "",
+  "r_call": null,
+  "julia_call": null,
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/estimand-rebind-p1/julia-results.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/estimand-rebind-p1/r-oracle.json"
+  ],
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "gllvmtmb_version": "0.7.1",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit_at_receipt_write": "9d2dd6cbfc1d458c38ee0cc91272ccb2e9cb43f1",
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-ESTIMAND-REBIND-EXTRACT-PROPORTIONS",
+        "quantity": "proportions",
+        "max_abs_diff": 0.0,
+        "tolerance": 0.0001,
+        "tolerance_rule": "tools/core070_verify_estimand_rebind_batch.py TOLERANCE per-case tolerance (carried verbatim from P0); max |R - Julia| elementwise",
+        "n_values": 5,
+        "diff_source": "recomputed from raw R and Julia values",
+        "r_value": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "julia_value": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    ]
+  }
+}

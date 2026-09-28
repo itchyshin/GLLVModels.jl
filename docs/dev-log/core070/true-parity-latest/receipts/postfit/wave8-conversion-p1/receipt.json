@@ -1,0 +1,33 @@
+{
+  "status": "PASS",
+  "scope": "CORE070_WAVE8_CONVERSION_BATCH",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "contract_sha256": "4c3761a25db96959a1520a6a31820fb96e8455590e4726c6d061dd896bc06794",
+  "source_unchanged": true,
+  "target_source_ids": [
+    "postfit/POSTFIT-SURFACE-deviance.gllvmTMB_multi",
+    "postfit/POSTFIT-SURFACE-extract_coevolution_modules",
+    "postfit/POSTFIT-SURFACE-extract_rotated_loadings_table",
+    "postfit/POSTFIT-SURFACE-imputed.gllvmTMB",
+    "postfit/POSTFIT-SURFACE-predict_cross_covariance",
+    "postfit/POSTFIT-SURFACE-predict_missing",
+    "postfit/POSTFIT-SURFACE-profile_cross_rho",
+    "postfit/POSTFIT-SURFACE-profile_cross_rho_ci",
+    "postfit/POSTFIT-SURFACE-rotate_loadings",
+    "postfit/POSTFIT-SURFACE-simulate_unit_trait",
+    "postfit/POSTFIT-SURFACE-summary.gllvmTMB_multi",
+    "postfit/POSTFIT-SURFACE-tidy.gllvmTMB_multi"
+  ],
+  "case_count": 7,
+  "deferred_count": 5,
+  "expected_case_ids": ["CORE070-WAVE8-DEVIANCE-MULTI", "CORE070-WAVE8-TIDY-FIXED-ESTIMATE", "CORE070-WAVE8-SUMMARY-FIXEF-AND-LOGLIK", "CORE070-WAVE8-ROTATE-LOADINGS-LLT-INVARIANT", "CORE070-WAVE8-EXTRACT-ROTATED-LOADINGS-TABLE-SHAPE", "CORE070-WAVE8-PREDICT-MISSING-ZERO-ROWS", "CORE070-WAVE8-SIMULATE-UNIT-TRAIT-STRUCTURAL"],
+  "oracle_error_count": 0,
+  "julia_exit_code": 0,
+  "julia_elapsed_seconds": 21.4394,
+  "julia_results_sha256": "08bf179c2178b4fd32d45ac5e610c9c3df31910dc9f6c68a5298a99241294886",
+  "raw_sha256": "05e3133ac25313fb021186744d2afa00cb4faf33e2b6cc41ee8449f73dd0c5ae",
+  "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "r_version": "R version 4.6.0 (2026-04-24)",
+  "gllvmTMB_version": "0.7.1",
+  "frozen_library": "/Users/z3437171/local-scratch/a3cov-oracle/build/library"
+}

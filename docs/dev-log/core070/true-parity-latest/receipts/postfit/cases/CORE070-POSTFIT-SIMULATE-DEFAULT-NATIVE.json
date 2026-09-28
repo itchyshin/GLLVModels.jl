@@ -1,0 +1,38 @@
+{
+  "schema": "core070-postfit-p1-case-receipt/v1",
+  "case_id": "CORE070-POSTFIT-SIMULATE-DEFAULT-NATIVE",
+  "verdict": "PASS",
+  "evidence_kind": "paired_policy_check",
+  "source_ids": [
+    "postfit-policy/POST-SIMULATE-DEFAULT"
+  ],
+  "batch": "tools/core070_postfit_policy_batch.R + .jl, GLLVM_PARITY_PIN=P1",
+  "harness_pass": true,
+  "verifier_output": [
+    "CORE070_POSTFIT_POLICY_CONTRACT_VERIFIED executable= 15 needs_surface= 8 spec_defect= 1 total= 24",
+    "CORE070_POSTFIT_POLICY_BATCH_VERIFIED 15 negative_controls 2"
+  ],
+  "r_call": "formals(simulate.gllvmTMB_multi)$condition_on_RE literal default FALSE (R/methods-gllvmTMB.R:1371-1381)",
+  "julia_surface": "simulate(fit::_ScalarMuFit, n::Integer; rng=...) (src/simulate_fit.jl:30) -- no condition_on_RE-style keyword exists",
+  "comparand": "signature-level documented-divergence check: R declares an explicit condition_on_RE=FALSE (LV redrawn) default; Julia's simulate() accepts no such keyword at all (always conditions on the fitted mode) -- verified live from both sources' reflection, not hardcoded",
+  "check": "r_simulate_condition_on_re_default == false && !julia_simulate_has_condition_on_re_kwarg",
+  "harness_fields": {
+    "julia_has_condition_on_re_kwarg": false,
+    "pass": true,
+    "r_condition_on_re_default": true
+  },
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-policy-p1/julia-results.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-policy-p1/r-oracle.json"
+  ],
+  "why_not_numeric": "Signature-level documented-divergence check (default and keyword reflection), not a numeric comparison.",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "gllvmtmb_version": "0.7.1",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit_at_receipt_write": "9d2dd6cbfc1d458c38ee0cc91272ccb2e9cb43f1",
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+}

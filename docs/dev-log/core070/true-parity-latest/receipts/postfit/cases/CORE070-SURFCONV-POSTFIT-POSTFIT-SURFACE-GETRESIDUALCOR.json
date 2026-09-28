@@ -1,0 +1,101 @@
+{
+  "schema": "core070-postfit-p1-case-receipt/v1",
+  "case_id": "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETRESIDUALCOR",
+  "verdict": "PASS",
+  "evidence_kind": "numeric_r_vs_julia",
+  "source_ids": [
+    "postfit/POSTFIT-SURFACE-getResidualCor"
+  ],
+  "batch": "tools/core070_surface_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1",
+  "harness_kind": "point",
+  "harness_pass": true,
+  "batch_status": "PASS",
+  "verifier_output": [
+    "CORE070_SURFACE_CONVERSION_CONTRACT_OK cases=20 deferred=21 total_target_rows=41",
+    "CORE070_SURFACE_CONVERSION_STATE_OK /Users/z3437171/local-scratch/a3pf-runs/surface-conversion-p1"
+  ],
+  "batch_status_note": "",
+  "r_call": "getResidualCor(fit_r, level='unit_obs')",
+  "julia_call": "GLLVM.getResidualCor(fit; level=:unit_obs)",
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/julia-results.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/r-oracle.json"
+  ],
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "gllvmtmb_version": "0.7.1",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit_at_receipt_write": "9d2dd6cbfc1d458c38ee0cc91272ccb2e9cb43f1",
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETRESIDUALCOR",
+        "quantity": "residual_cor",
+        "max_abs_diff": 6.120505473550253e-06,
+        "tolerance": 0.0001,
+        "tolerance_rule": "surface-conversion-batch-contract-p1.json per-case tolerance (carried verbatim from P0); max |R - Julia| elementwise",
+        "n_values": 25,
+        "diff_source": "recomputed from raw R and Julia values",
+        "r_value": [
+          1,
+          0.6619086096732503,
+          0.6369810855069427,
+          -0.30263069501458123,
+          0.20086670032919485,
+          0.6619086096732503,
+          1.0000000000000002,
+          -0.15621604383165374,
+          0.514121087863734,
+          0.8672623498901864,
+          0.6369810855069427,
+          -0.15621604383165374,
+          0.9999999999999999,
+          -0.9275013013122919,
+          -0.6272195269798218,
+          -0.30263069501458123,
+          0.514121087863734,
+          -0.9275013013122919,
+          1,
+          0.8728937781852548,
+          0.20086670032919485,
+          0.8672623498901864,
+          -0.6272195269798218,
+          0.8728937781852548,
+          1
+        ],
+        "julia_value": [
+          1.0,
+          0.6619130919796281,
+          0.6369808888894909,
+          -0.3026245745091077,
+          0.20087061474594958,
+          0.6619130919796281,
+          1.0,
+          -0.15621038943083534,
+          0.5141214668770392,
+          0.8672613622125147,
+          0.6369808888894909,
+          -0.15621038943083534,
+          1.0,
+          -0.9274989961091891,
+          -0.6272166134785218,
+          -0.3026245745091077,
+          0.5141214668770392,
+          -0.9274989961091891,
+          1.0,
+          0.8728949617374118,
+          0.20087061474594958,
+          0.8672613622125147,
+          -0.6272166134785218,
+          0.8728949617374118,
+          1.0
+        ]
+      }
+    ]
+  }
+}

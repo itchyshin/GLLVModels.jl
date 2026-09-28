@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "scope": "CORE070_POSTFIT_1_BATCH",
+  "case_id": "CORE070-POSTFIT-COEF-MULTI-READBACK",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "contract_sha256": "a32ef27cd45ad85faf522939da1822aed83e8b24b4a0ebe2c02aaa8c784938c8",
+  "gllvmTMB_lib_path": "/Users/z3437171/local-scratch/a3cov-oracle/build/library/gllvmTMB",
+  "gllvmTMB_version": "0.7.1",
+  "results_sha256": "1a101d1316a9f88fcc467f8fac261cdfd1841f529545c332b3e6dccd47a1d548",
+  "r_runtime": "R version 4.6.0 (2026-04-24)"
+}

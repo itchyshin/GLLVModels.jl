@@ -1,0 +1,61 @@
+{
+  "schema": "core070-postfit-p1-case-receipt/v1",
+  "case_id": "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-CUTPOINTS",
+  "verdict": "PASS",
+  "evidence_kind": "numeric_r_vs_julia",
+  "source_ids": [
+    "postfit/POSTFIT-SURFACE-extract_cutpoints"
+  ],
+  "batch": "tools/core070_surface_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1",
+  "harness_kind": "point",
+  "harness_pass": true,
+  "batch_status": "PASS",
+  "verifier_output": [
+    "CORE070_SURFACE_CONVERSION_CONTRACT_OK cases=20 deferred=21 total_target_rows=41",
+    "CORE070_SURFACE_CONVERSION_STATE_OK /Users/z3437171/local-scratch/a3pf-runs/surface-conversion-p1"
+  ],
+  "batch_status_note": "",
+  "r_call": "extract_cutpoints(fit_r)$tau_estimate",
+  "julia_call": "GLLVM.extract_cutpoints(fit_ord).\u03c4  # free cutpoints only (drop \u03c41=0)",
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/julia-results.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/r-oracle.json"
+  ],
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "gllvmtmb_version": "0.7.1",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit_at_receipt_write": "9d2dd6cbfc1d458c38ee0cc91272ccb2e9cb43f1",
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-CUTPOINTS",
+        "quantity": "cutpoints",
+        "max_abs_diff": 7.153873780030295e-06,
+        "tolerance": 0.0001,
+        "tolerance_rule": "surface-conversion-batch-contract-p1.json per-case tolerance (carried verbatim from P0); max |R - Julia| elementwise",
+        "n_values": 5,
+        "diff_source": "recomputed from raw R and Julia values",
+        "r_value": [
+          0.649298572045697,
+          0.6709689276509879,
+          1.360507467206342,
+          0.7034055490125797,
+          0.9093404467089325
+        ],
+        "julia_value": [
+          0.6493015289804921,
+          0.670967529746165,
+          1.3605037959969895,
+          0.7034127028863597,
+          0.9093403020724838
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "schema": "core070-postfit-p1-case-receipt/v1",
+  "case_id": "CORE070-WAVE7-COMPARE-LOADINGS-SELF-CONSISTENCY",
+  "verdict": "PASS",
+  "evidence_kind": "paired_own_consistency",
+  "source_ids": [
+    "postfit/POSTFIT-SURFACE-compare_loadings"
+  ],
+  "batch": "tools/core070_wave7_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1",
+  "harness_kind": "own_consistency",
+  "harness_pass": true,
+  "batch_status": "PASS",
+  "verifier_output": [
+    "CORE070_WAVE7_CONVERSION_CONTRACT_OK cases=6 deferred=38 total_target_rows=45",
+    "CORE070_WAVE7_CONVERSION_STATE_OK /Users/z3437171/local-scratch/a3pf-runs/wave7-conversion-p1"
+  ],
+  "batch_status_note": "",
+  "r_call": "compare_loadings(getLoadings(fit_g), getLoadings(fit_g))",
+  "julia_call": "GLLVM.compare_loadings(fit_j, fit_j)",
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave7-conversion-p1/julia-results.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave7-conversion-p1/r-oracle.json"
+  ],
+  "measured": {
+    "r_frobenius": 2.1382044634827132e-17,
+    "julia_frobenius": 0.0,
+    "tolerance": 1e-06
+  },
+  "why_not_numeric": "Each engine is checked against itself (Frobenius self-consistency); the two are not compared with each other.",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "gllvmtmb_version": "0.7.1",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit_at_receipt_write": "9d2dd6cbfc1d458c38ee0cc91272ccb2e9cb43f1",
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+}

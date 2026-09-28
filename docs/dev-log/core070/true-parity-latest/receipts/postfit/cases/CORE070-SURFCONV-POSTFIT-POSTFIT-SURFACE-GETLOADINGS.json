@@ -1,0 +1,101 @@
+{
+  "schema": "core070-postfit-p1-case-receipt/v1",
+  "case_id": "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETLOADINGS",
+  "verdict": "PASS",
+  "evidence_kind": "numeric_r_vs_julia",
+  "source_ids": [
+    "postfit/POSTFIT-SURFACE-getLoadings"
+  ],
+  "batch": "tools/core070_surface_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1",
+  "harness_kind": "point",
+  "harness_pass": true,
+  "batch_status": "PASS",
+  "verifier_output": [
+    "CORE070_SURFACE_CONVERSION_CONTRACT_OK cases=20 deferred=21 total_target_rows=41",
+    "CORE070_SURFACE_CONVERSION_STATE_OK /Users/z3437171/local-scratch/a3pf-runs/surface-conversion-p1"
+  ],
+  "batch_status_note": "",
+  "r_call": "crossprod(getLoadings(fit_r))",
+  "julia_call": "GLLVM.getLoadings(fit) |> L -> L'L",
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/julia-results.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/r-oracle.json"
+  ],
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "gllvmtmb_version": "0.7.1",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit_at_receipt_write": "9d2dd6cbfc1d458c38ee0cc91272ccb2e9cb43f1",
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETLOADINGS",
+        "quantity": "loadings_crossprod",
+        "max_abs_diff": 2.423232071391279e-06,
+        "tolerance": 0.0001,
+        "tolerance_rule": "surface-conversion-batch-contract-p1.json per-case tolerance (carried verbatim from P0); max |R - Julia| elementwise",
+        "n_values": 25,
+        "diff_source": "recomputed from raw R and Julia values",
+        "r_value": [
+          0.5716301452636791,
+          0.33830930956542593,
+          0.20217836650556814,
+          -0.13554871486844225,
+          0.03989501702613727,
+          0.33830930956542593,
+          0.4570005406585606,
+          -0.044333761136751526,
+          0.20589634733776188,
+          0.15401463731635578,
+          0.20217836650556814,
+          -0.044333761136751526,
+          0.1762386550981782,
+          -0.23066939684437993,
+          -0.06917088037370278,
+          -0.13554871486844225,
+          0.20589634733776188,
+          -0.23066939684437993,
+          0.3509536268059315,
+          0.13584367214178109,
+          0.03989501702613727,
+          0.15401463731635578,
+          -0.06917088037370278,
+          0.13584367214178109,
+          0.0690090891509891
+        ],
+        "julia_value": [
+          0.5716312010085256,
+          0.3383116045474958,
+          0.20217811505194408,
+          -0.13554656660768025,
+          0.03989606417640671,
+          0.3383116045474958,
+          0.45699970749184404,
+          -0.04433203362786996,
+          0.2058970222644287,
+          0.1540152204168998,
+          0.20217811505194408,
+          -0.04433203362786996,
+          0.17623800001968398,
+          -0.2306691911902857,
+          -0.0691708342220822,
+          -0.13554656660768025,
+          0.2058970222644287,
+          -0.2306691911902857,
+          0.3509560500380029,
+          0.1358451181567998,
+          0.03989606417640671,
+          0.1540152204168998,
+          -0.0691708342220822,
+          0.1358451181567998,
+          0.06900989468592977
+        ]
+      }
+    ]
+  }
+}
