@@ -1,0 +1,22 @@
+name: True-parity check negative controls
+# Fixture-only smoke test for tools/true_parity_check.mjs (docs/dev-log/core070/true-parity-latest/GATES.md):
+# runs against test/fixtures/true_parity/ via PARITY_REF=FS, no gllvmTMB clone, no network.
+# PR-only + workflow_dispatch, ubuntu-only: routine checks default to local-equivalent, cheap
+# CI per AGENTS.md / the maintainer's GitHub Actions cost discipline.
+on:
+  pull_request:
+    paths:
+      - 'tools/true_parity_check.mjs'
+      - 'tools/test_true_parity_check.mjs'
+      - 'test/fixtures/true_parity/**'
+      - '.github/workflows/true-parity-check.yml'
+  workflow_dispatch:
+jobs:
+  negative-controls:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: node tools/test_true_parity_check.mjs

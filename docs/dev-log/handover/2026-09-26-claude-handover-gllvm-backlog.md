@@ -1,5 +1,7 @@
 # Handover: gllvm-backlog lane (2026-09-26)
 
+> Update 2026-09-27: #500 (Fixes #484) merged as `cb3580509` on the maintainer's word, so the lines below that call it waiting are out of date. The overnight run that followed is in `2026-09-27-claude-handover-overnight.md`.
+
 ## Critical Context
 
 This lane landed the backlog the 2026-09-25 true-parity-finish lane left open. It does not move true parity: the true-parity acceptance ledger reads 0 of 10 gates met (191 of 497 required ledger rows are held by BLOCKED or PENDING dispositions, and all 32 gate-tier rows are PARTIAL or OPEN). Ownership: D-220 was amended on 2026-09-26 (Claude owns GLLVModels.jl true parity; Cursor keeps gllvmTMB twin work).

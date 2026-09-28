@@ -93,7 +93,9 @@ end
     # not the mode's.
     v_old, conv_old = _nb2_503_old_site(fams, y, Λ, β)
     @test !conv_old
-    @test v_old == v_on_main
+    # v_on_main was recorded on macOS; Linux CI reproduces it to the last bit or two
+    # (-392.0160180480272 vs ...269), so compare to 1e-12, not bitwise.
+    @test isapprox(v_old, v_on_main; rtol = 1e-12)
     @test abs(v_on_main - v_ref) > 1e-3
     v = GLLVModels._nb_grouped_loglik_site(fams, y, ones(Int, p), Λ, β,
                                            GLLVModels.LogLink())
