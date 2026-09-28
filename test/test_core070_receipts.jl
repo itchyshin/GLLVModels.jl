@@ -11,15 +11,21 @@ module GroupReceiptHarness
 using Test
 import ..Core070Receipts: record_case!, testset_counts
 const _CORE070_RUN = Ref{Any}(nothing)
+const _CORE070_ACTIVE_CELLS = Ref{Vector{String}}(String[])
+const _RECEIPT_DIR = Ref("")
+_core070_receipt_dir() = _RECEIPT_DIR[]
 _core070_required() = true
 core070_case_requested(id) = id in _CORE070_RUN[].requested_case_ids
+using TOML
 end
 helper_ast = Meta.parseall(read(joinpath(@__DIR__, "parity", "parity_helpers.jl"), String))
-group_definition = only(filter(helper_ast.args) do node
-    node isa Expr && node.head == :function && node.args[1] isa Expr &&
-        node.args[1].head == :call && node.args[1].args[1] == :core070_execute_group!
-end)
-Core.eval(GroupReceiptHarness, group_definition)
+for name in (:core070_execute_group!, :core070_record_values!)
+    definition = only(filter(helper_ast.args) do node
+        node isa Expr && node.head == :function && node.args[1] isa Expr &&
+            node.args[1].head == :call && node.args[1].args[1] == name
+    end)
+    Core.eval(GroupReceiptHarness, definition)
+end
 
 _sha(path) = bytes2hex(sha256(read(path)))
 
