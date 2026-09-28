@@ -471,6 +471,62 @@ for (const [fixture, reason] of [
   });
 }
 
+// --- C8 checks receipts before signatures (review of #589, finding 2): C1 rejects a dangling
+// receipt or a stale carry before it looks at a signed disposition, so C8 must too. Otherwise a
+// validly signed row whose receipt is missing, or whose P0 receipt has no valid carry, passes C8
+// while failing C1. Fixtures are derived from `base` in a temp dir by editing the signed
+// required_core row (legacy/legacy_export_disposition, maintainer-signed, no receipt in base). ---
+function runDerived(mutateRow, mode) {
+  const dir = mkdtempSync(join(tmpdir(), 'true-parity-derived-'));
+  try {
+    cpSync(join(FIXTURES, 'base'), dir, { recursive: true });
+    const cm = join(dir, 'docs', 'dev-log', 'core070', 'true-parity-latest', 'case-map.json');
+    const d = JSON.parse(readFileSync(cm, 'utf8'));
+    const row = d.rows.find((r) => r.source_id === 'legacy/legacy_export_disposition');
+    mutateRow(row);
+    writeFileSync(cm, JSON.stringify(d, null, 1));
+    try {
+      const out = execFileSync('node', [CHECKER, mode], {
+        encoding: 'utf8',
+        env: { ...process.env, PARITY_REF: 'FS', PARITY_FS_ROOT: dir },
+      });
+      return { stdout: out, code: 0 };
+    } catch (e) {
+      return { stdout: e.stdout || '', code: e.status };
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+test('C8 receipts first: a validly signed row with a dangling receipt fails C8 (and C1)', () => {
+  const mutate = (r) => {
+    assert.equal(r.signed_by, 'Shinichi Nakagawa');
+    r.evidence = { receipt: 'docs/dev-log/core070/true-parity-latest/receipts/missing.json' };
+    r.measured_against = '9539352f66f2db2cc26b1c393e67212a359b60c9';
+  };
+  const c8 = runDerived(mutate, 'C8');
+  assert.equal(c8.code, 0);
+  assert.match(c8.stdout, /C8_NOT_MET$/m);
+  assert.match(c8.stdout, /legacy\/legacy_export_disposition:DANGLING_RECEIPT/);
+  const c1 = runDerived(mutate, 'C1');
+  assert.match(c1.stdout, /C1_NOT_MET$/m);
+  assert.match(c1.stdout, /dangling_receipts=legacy\/legacy_export_disposition:/);
+});
+test('C8 receipts first: a validly signed row citing a P0 receipt with no carry fails C8 (and C1)', () => {
+  const mutate = (r) => {
+    assert.equal(r.signed_by, 'Shinichi Nakagawa');
+    r.evidence = { receipt: 'docs/dev-log/core070/true-parity-latest/receipts/r1.json' };
+    r.measured_against = 'b4d5fee64def88bc768dda1f1f77c29b295edd86';
+  };
+  const c8 = runDerived(mutate, 'C8');
+  assert.equal(c8.code, 0);
+  assert.match(c8.stdout, /C8_NOT_MET$/m);
+  assert.match(c8.stdout, /legacy\/legacy_export_disposition:STALE_CARRY\(PARTIAL_STALE_AT_P1\(no carry\.source_pins\)\)/);
+  const c1 = runDerived(mutate, 'C1');
+  assert.match(c1.stdout, /C1_NOT_MET$/m);
+  assert.match(c1.stdout, /stale_carries=legacy\/legacy_export_disposition:PARTIAL_STALE_AT_P1\(no carry\.source_pins\)/);
+});
+
 // --- item 4 / git-mode control: show, existsAsBlob and listDir exercised through real git,
 // the same code path CI runs against origin/main, not the FS fallback ---
 {
