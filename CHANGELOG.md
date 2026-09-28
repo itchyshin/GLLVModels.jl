@@ -132,6 +132,30 @@ All notable changes to GLLVModels.jl are documented here.
   `profile.jl`, `reml.jl`, the sparse-phylogenetic paths,
   `lowrank_cholesky.jl`) are not changed here and are being audited
   separately.
+- **Truncated NB2 (shared r) could report `converged = true` at a Laplace
+  breakdown point, including a spurious global maximum.**
+  `fit_truncated_nbinom2_gllvm` uses the observed curvature in the Laplace
+  log-determinant, which is negative for small r, so a site's Laplace
+  precision could approach singularity and inflate the value. On 20 draws
+  (Julia 1.10; p = 4, n = 150, K = 1, r = 0.3), 4 fits converged with a smallest site
+  eigenvalue of 8e-6 to 1.3e-4 and a Laplace value 40 to 139 units above the
+  exact marginal; on one draw that point beat the healthy optimum by 23 units.
+  The fitter now walls off sites whose Laplace precision has an eigenvalue
+  below 0.1 (the zi_* route's floor, PR #557), reports an optimum within 10% of
+  that floor as not converged with a warning, retries once with a moment-based
+  start for r when the first fit ends at the guard (if both end there, the
+  higher-loglik fit is reported, still flagged), and records
+  `min_site_eigen` on `TruncatedNegBin2Fit`. All breakdown draws now reach the
+  healthy optimum (4 of 4 on Julia 1.10, 2 of 2 on a 1.13 sweep); 30 of 34
+  healthy fits are unchanged to 1e-10, one moves to a higher healthy optimum
+  (+2.11), and three end up to 5e-4 lower at a gradient-converged point where
+  main's fit had stopped on `f_converged` alone (gradient norm up to 45) on the
+  upper lip of a pre-existing discontinuity of about 5.5e-4 in the Laplace
+  objective. The public
+  marginal functions and the per-trait fitter are unchanged (`eigmin_floor`
+  defaults to `-Inf` there). Decision note:
+  `docs/dev-log/decisions/2026-09-27-truncnb2-laplace-breakdown-guard.md`;
+  test: `test/test_truncnb2_laplace_breakdown.jl`.
 - **`chibar2_pvalue`/`variance_lrt` silently returned a p-value of 1.0 for a `NaN`
   `LRT` or log-likelihood instead of refusing it.** `LRT > 0` is `false` for `NaN`, so
   a missing or non-finite input fell through to the "no evidence against the reduced

@@ -402,10 +402,14 @@ otherwise convert a typo into a converged-looking garbage fit.
 #### Limits
 
 The outer optimisation is Optim LBFGS with a **finite-difference** gradient over
-the packed vector, not a hand-coded analytic outer gradient. Neither
-`TruncatedNegBin2Fit` nor `TruncatedNegBin2PerTraitFit` has a `confint` dispatch,
-so `confint(fit, Y)` is not available for this family, and there is no R-bridge
-route for it.
+the packed vector, not a hand-coded analytic outer gradient. Both
+`TruncatedNegBin2Fit` and `TruncatedNegBin2PerTraitFit` have a `confint` dispatch
+(`confint(fit, Y; method = :wald | :profile | :bootstrap)`). The interval for the
+dispersion `r` on the shared-r route is under investigation: on one test draw the
+Wald interval was far narrower than a hand-computed profile of `r`, and
+`method = :profile` returned `status = :failed`, so treat Wald and profile
+intervals for `r` with caution until that is resolved. There is no R-bridge route
+for this family.
 
 ### Beta — `Beta()`
 
