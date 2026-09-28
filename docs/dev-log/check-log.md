@@ -1,3 +1,27 @@
+## 2026-09-27: Data and fit-input families re-measured at gllvmTMB P1 (A3), tracked receipts
+
+- Branch `claude/true-parity-p1-data`, stacked on `claude/true-parity-p1-inference` (PR #571) at
+  `1b99ae6b8`, on #569 and #567. Scope: the 28 data rows and 6 fit-input rows the P1 carry scan lists
+  as DANGLING. masks-known (9) not measured: its points stage replays retained frozen inputs under
+  `.unlazy/` that do not exist here, and its Julia side is a hand-coded reconstruction, not GLLVModels.
+  Classifications and dispositions carried unchanged.
+- P1 twins from `tools/core070_data_p1_contract.py` (`--check` current): reference_commit and
+  source_pins recomputed from the P1 bytes; cases, expectations and tolerances verbatim. At P1
+  `R/weights-shape.R` and `R/offset.R` are byte-identical to P0; `miss_control` differs only in two
+  error-message lines. For fit-input-2, `gllvmTMB()`, `animal_latent()` and `kernel_latent()` bodies
+  all changed.
+- Runs from clean commit `10467e0cc` (local Mac, one BLAS/OMP thread, JULIA_NUM_THREADS=4): data R
+  replay 0.8 s, data Julia introspection 1.6 s, fit-input-2 R fits plus Julia child 55.1 s. Both batch
+  verifiers pass at P1 with `--self-test`. Counts: data 28 needs surface (R side measured: 28/28 plus
+  both negative controls; every planned Julia surface absent); fit-input 6 numeric pass (max |dlogLik|
+  5.5e-9, max |dcoef| 2.1e-6 against 1e-4), recomputed from saved R and Julia values. KERNEL-TWO-AUTO
+  is the same measurement as KERNEL-TWO (noted on the receipts and rows).
+- Checker, PARITY_REF=FS, main (`880cad4c7`) and #561 (`92cf39571`): data C1 required=28 bound=0
+  free=28, C8 28 NOT_TWINNED_NOT_SIGNED; fit-input C1 required=6 bound=6 (#561 bound_numeric=6,
+  numeric_recorded_diff_mismatch=none) C1_MET, C8 C8_MET; covariance, postfit and inference lines
+  unchanged. `test_true_parity_check.mjs` passes; all four contract `--check`s and the data and
+  inference receipt `--check`s current; `test/parity/test_core070_pin.jl` 27/27.
+
 ## 2026-09-27: Inference at P1, independent review of #571 applied
 
 - Same branch, fast-forward commits only. Merged #569's review fixes (`073e90e78`; one conflict, this
