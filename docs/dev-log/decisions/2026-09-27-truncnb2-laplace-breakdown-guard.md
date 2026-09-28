@@ -44,9 +44,13 @@ finds the artefact more often, not less.
    `TruncatedNegBin2Fit.min_site_eigen` records the value.
 3. One retry when the first fit ends at the guard, from the same loadings with r from a
    moment estimate (`_truncnb2_moment_logr`: geometric mean over traits of
-   `m^2 / (v - m)`, each clamped to [0.2, 20]) instead of the default 10. Kept only if it
-   ends off the guard; otherwise the first fit is reported flagged (the #557 rule).
-   One measured departure from #557, whose retry scales the loadings by 0.1:
+   `m^2 / (v - m)`, each clamped to [0.2, 20]) instead of the default 10. Kept if it
+   ends off the guard. If both fits end at the guard, the one with the higher loglik is
+   reported, still flagged (a departure from the #557 rule, which keeps the first; review
+   finding 2). On a r = 0.05 draw (seed 604, now in the test fixture) the first fit ends
+   at the wall at -3659.3 with r -> 6e-42 and the retry at -2008.5 (Julia 1.10.12) or
+   -2006.0 (1.13.0); the old rule reported the first. #557 could mirror this.
+   One further measured departure from #557, whose retry scales the loadings by 0.1:
    - The r reset is what matters. From r = 10, a loadings-x-0.1 start fell into poor
      basins on all three audit draws (-2162.8, -2313.7, -1737.6 with r -> 5e-7). With
      the moment r (0.37, 0.37, 0.56 on the three draws), loadings x 0.1 reached the

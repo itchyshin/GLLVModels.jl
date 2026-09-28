@@ -44,7 +44,8 @@ All notable changes to GLLVModels.jl are documented here.
   The fitter now walls off sites whose Laplace precision has an eigenvalue
   below 0.1 (the zi_* route's floor, PR #557), reports an optimum within 10% of
   that floor as not converged with a warning, retries once with a moment-based
-  start for r when the first fit ends at the guard, and records
+  start for r when the first fit ends at the guard (if both end there, the
+  higher-loglik fit is reported, still flagged), and records
   `min_site_eigen` on `TruncatedNegBin2Fit`. All breakdown draws now reach the
   healthy optimum (4 of 4 on Julia 1.10, 2 of 2 on a 1.13 sweep); 30 of 34
   healthy fits are unchanged to 1e-10, one moves to a higher healthy optimum

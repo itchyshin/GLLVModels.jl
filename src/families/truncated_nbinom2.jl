@@ -267,7 +267,8 @@ Throws if any observed cell is `< 1`.
 `eigmin_floor` sets the Laplace breakdown guard
 (`GLLVModels.TRUNCNB2_LAPLACE_EIGMIN_FLOOR` = 0.1; `-Inf` disables it). A fit that
 ends at the guard is retried once with a moment-based start for `r`; if it still ends
-there, it is reported with `converged = false` and a warning.
+there, the higher-loglik of the two fits is reported with `converged = false` and a
+warning.
 """
 function fit_truncated_nbinom2_gllvm(Y::AbstractMatrix; K::Integer,
         link::Link = LogLink(), mask = nothing, offset = nothing,
@@ -361,8 +362,10 @@ function fit_truncated_nbinom2_gllvm(Y::AbstractMatrix; K::Integer,
     f = run_from(Λ0, logr0)
     if at_guard(f)
         # One retry, from the same loadings with r from a moment estimate of the counts
-        # (below) instead of the default 10; kept only if it ends off the guard,
-        # otherwise the first fit is reported flagged. The r reset is what matters: from
+        # (below) instead of the default 10; kept if it ends off the guard. If both end
+        # at the guard, the one with the higher loglik is reported (flagged below): the
+        # first fit can end at the wall far below the retry (-3659 vs -2008 on a r = 0.05
+        # draw with r̂ -> 6e-42 on the first). The r reset is what matters: from
         # r = 10 the default start runs to the breakdown region, and a loadings-x-0.1
         # start with r = 10 fell into poor basins on all 3 audit draws. #557's
         # loadings-x-0.1 start with the moment r reached the healthy optimum on Julia
@@ -370,7 +373,7 @@ function fit_truncated_nbinom2_gllvm(Y::AbstractMatrix; K::Integer,
         # Julia 1.13; the unshrunk loadings reached it on both. Rates: the decisions note
         # 2026-09-27-truncnb2-laplace-breakdown-guard.md.
         f2 = run_from(Λ0, _truncnb2_moment_logr(Yc, msk))
-        at_guard(f2) || (f = f2)
+        (!at_guard(f2) || f2.loglik > f.loglik) && (f = f2)
     end
     converged = f.converged
     if converged && at_guard(f)

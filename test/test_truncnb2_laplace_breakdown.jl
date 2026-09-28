@@ -104,3 +104,16 @@ end
     @test !walled.converged
     @test walled.min_site_eigen < 1.1 * 2.0
 end
+
+@testset "truncated NB2: both fits at the guard report the better one" begin
+    # r = 0.05 draw (PR #581 review, finding 2). The default start (r = 10) ends at the
+    # wall at loglik -3659.3 with r̂ -> 6e-42; the moment-r retry also ends at the wall,
+    # at -2008.5 (Julia 1.10.12) or -2006.0 (1.13.0). Both are flagged; the fit reported
+    # is the retry, not the far worse first fit.
+    Y = _tnb_bd_data(604)
+    fit = fit_truncated_nbinom2_gllvm(Y; K = 1)
+    @test !fit.converged
+    @test fit.min_site_eigen < 1.1 * GLLVModels.TRUNCNB2_LAPLACE_EIGMIN_FLOOR
+    @test fit.loglik > -2100
+    @test fit.r > 1e-3
+end
