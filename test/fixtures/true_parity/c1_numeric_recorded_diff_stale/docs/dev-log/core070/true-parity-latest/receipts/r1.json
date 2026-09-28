@@ -1,0 +1,17 @@
+{
+ "case_id": "R1",
+ "result": "PASS",
+ "comparison": {
+  "pin": "P1",
+  "cases": [
+   {
+    "case_id": "CASE-1",
+    "quantity": "loglik",
+    "r_value": -522.7326693717605,
+    "julia_value": -521.7326693717,
+    "tolerance": 1e-06,
+    "max_abs_diff": 6e-11
+   }
+  ]
+ }
+}
