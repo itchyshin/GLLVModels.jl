@@ -226,6 +226,22 @@ def main():
         expect(f"malformed_carry_{label}_fails_cleanly", ok, o)
         shutil.rmtree(tmp)
 
+    # Review of #589, finding 7: --check --extra-map without --out-dir compared the folded rows with
+    # the tracked outputs and always printed a false ASSEMBLE_STALE. It is now a usage error (2);
+    # with --out-dir the same fold checks clean.
+    root, tmp = with_root()
+    run(root)
+    extra = tmp / "extra-map.json"
+    extra.write_text(json.dumps({"rows": [row("extra/ROW-1", tier="not_measured")]}))
+    try:
+        c, o = run(root, "--check", "--extra-map", str(extra))
+    except SystemExit as e:
+        c, o = e.code, ""
+    expect("check_extra_map_without_out_dir_is_usage_error", c == 2 and "ASSEMBLE_STALE" not in o, f"{c} {o}")
+    c, o = run(root, "--check", "--extra-map", str(extra), "--out-dir", str(tmp / "out"))
+    expect("check_extra_map_with_out_dir_ok", c == 0 and "ASSEMBLE_OK" in o, o)
+    shutil.rmtree(tmp)
+
     # Real tree: outputs current, and EVIDENCED count equals the checker's own C1 bound=.
     c, o = run(A.ROOT, "--check")
     expect("real_tree_outputs_current", c == 0, o)

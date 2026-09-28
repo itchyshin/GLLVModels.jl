@@ -42,8 +42,9 @@ which bucket it reads as, rather than this tool guessing.
 Usage:
   python3 tools/true_parity_assemble.py            # write the outputs
   python3 tools/true_parity_assemble.py --check    # regenerate in memory, fail if stale/conflicting
-  python3 tools/true_parity_assemble.py --extra-map PATH ...   # also fold PATH (e.g. #533's
-        case-map.json fetched with git show) for a conflict scan; with --out-dir, writes there
+  python3 tools/true_parity_assemble.py --extra-map PATH --out-dir DIR   # also fold PATH (e.g.
+        #533's case-map.json fetched with git show) and write to DIR; add --check for a conflict
+        scan that writes nothing. --extra-map without --out-dir is a usage error.
   GLLVMTMB_DIR=/path/to/gllvmTMB python3 tools/true_parity_assemble.py \\
         --refresh-reverse-gap-inputs --julia-names-tsv names.tsv
         where names.tsv is `name<TAB>kind` for names(GLLVModels) at HEAD, e.g.
@@ -606,8 +607,10 @@ def main(argv=None):
             if not a.julia_names_tsv:
                 ap.error("--refresh-reverse-gap-inputs needs --julia-names-tsv")
             refresh_reverse_gap_inputs(root, LEDGER, a.julia_names_tsv)
-        if a.extra_map and not (a.out_dir or a.check):
-            ap.error("--extra-map writes only with --out-dir (the tracked outputs use tracked maps only)")
+        if a.extra_map and not a.out_dir:
+            # Also with --check: the tracked outputs never contain extra rows, so comparing a fold
+            # against them would always read stale.
+            ap.error("--extra-map needs --out-dir (the tracked outputs use tracked maps only)")
         outs = generate(root, LEDGER, a.extra_map)
     except Fail as e:
         print(f"ASSEMBLE_FAIL {e}")
