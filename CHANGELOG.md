@@ -111,6 +111,13 @@ All notable changes to GLLVModels.jl are documented here.
   `gllvm-parity-tag: P1`).
 
 ### Fixed
+- **Student-t fits with estimated ν no longer stop at the Gaussian limit when an interior
+  optimum is higher.** When an estimated ν ran to the ν → ∞ boundary, `fit_studentt_gllvm`
+  kept that fit, although the per-trait ν profile can have a higher interior peak that
+  L-BFGS passed from its start at ν = 3. On the near-Gaussian parity data the default fit
+  ended at ν₁ ≈ 5e9 (logLik −1430.162) while gllvmTMB found ν₁ = 17.7 (−1430.097). Such fits
+  now restart the boundary traits from ν = 20 and ν = 50 and keep the best optimum; fits
+  whose ν stays finite are unchanged, and boundary fits cost up to two extra optimisations.
 - **`chibar2_pvalue`/`variance_lrt` silently returned a p-value of 1.0 for a `NaN`
   `LRT` or log-likelihood instead of refusing it.** `LRT > 0` is `false` for `NaN`, so
   a missing or non-finite input fell through to the "no evidence against the reduced
