@@ -21,16 +21,19 @@
 #   logdet Σ_i = logdet(Σ_W + n_i Σ_B) + (n_i − 1)·logdet(Σ_W)
 #   yᵢ' Σ_i⁻¹ yᵢ = n_i·m_i'(Σ_W + n_i Σ_B)⁻¹ m_i + tr(Y_ic' Σ_W⁻¹ Y_ic)
 # with m_i the per-trait mean over i's observations and Y_ic the centred
-# residuals. Individuals are independent ⇒ ℓ = Σ_i ℓ_i. Both p×p covariances are
-# ΛΛᵀ + diag, inverted by Woodbury on the well-conditioned K×K core so the path
-# stays robust as σ²_W → 0. AD-clean (verified against a central FD gradient).
+# residuals. Individuals are independent ⇒ ℓ = Σ_i ℓ_i. Both p×p covariances
+# (Σ_W and Σ_W + n_i Σ_B) are factored by a dense p×p Cholesky; p is small in the
+# two-level regime. A Woodbury solve on the K×K core is deliberately NOT used for
+# Σ_W: its subtractive form loses the quadratic form when a σ²_W[t] is tiny
+# relative to Λ_W[t,:]² (overstating ℓ by up to hundreds of nats; GATE 1b in
+# test/test_twolevel.jl). AD-clean (verified against a central FD gradient).
 #
 # μ_t (per-trait grand mean) is profiled out analytically as the GLS mean; for
 # the recovery test the data are centred so μ = 0.
 
-# Build Σ = Λ Λᵀ + diag(σ²_diag) DENSELY (for the n_i Σ_B and Σ_W + n_i Σ_B sum,
-# whose Woodbury core would need rank K_B + p; a direct dense p×p chol is simplest
-# and p is small in the two-level regime). Symmetrised before factoring.
+# Build Σ = Λ Λᵀ + diag(σ²_diag) DENSELY (for Σ_W, Σ_B and the Σ_W + n_i Σ_B sum;
+# a direct dense p×p chol is simplest, stays accurate when a diagonal entry is
+# tiny, and p is small in the two-level regime). Symmetrised before factoring.
 function _dense_sigma(Λ::AbstractMatrix, σ²_diag::AbstractVector)
     p = size(Λ, 1)
     T = promote_type(eltype(Λ), eltype(σ²_diag))
