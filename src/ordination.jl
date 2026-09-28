@@ -44,7 +44,6 @@ estimated `β` but does not retain its design throws when `X` is omitted, rather
 than returning scores computed at a zero mean.
 """
 function ordination(fit, Y; rotate::Bool = true, kwargs...)
-    _check_ordination_design(fit, kwargs)
     S = getLV(fit, Y; rotate = false, kwargs...)      # n×K site scores
     L = _loadings(fit)                      # p×K species loadings
     K = size(L, 2)
@@ -54,20 +53,6 @@ function ordination(fit, Y; rotate::Bool = true, kwargs...)
     Sc = S .- mean(S; dims = 1)
     R = Matrix(svd(Sc).V)                   # K×K right singular vectors (principal axes)
     return (sites = S * R, species = L * R, rotation = R)
-end
-
-# getLV(::GllvmFit) treats a missing X as a zero mean, so guard the fits whose
-# design is not retained (a Gaussian integration record falls back to its own).
-_check_ordination_design(fit, kwargs) = nothing
-function _check_ordination_design(fit::GllvmFit, kwargs)
-    _has_gaussian_record(fit) && return nothing
-    β = fit.pars.β
-    if β !== nothing && length(β) > 0 && get(kwargs, :X, nothing) === nothing
-        throw(ArgumentError(
-            "this fit estimated fixed effects β; pass the same X used to fit it, " *
-            "e.g. ordination(fit, Y; X = X)"))
-    end
-    return nothing
 end
 
 """
