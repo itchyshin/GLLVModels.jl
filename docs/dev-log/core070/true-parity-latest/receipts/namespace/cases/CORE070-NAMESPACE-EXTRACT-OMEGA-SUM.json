@@ -1,0 +1,52 @@
+{
+ "schema": "core070-namespace-1-case-receipt/v1",
+ "case_id": "CORE070-NAMESPACE-EXTRACT-OMEGA-SUM",
+ "source_id": "namespace/export/extract_Omega",
+ "bucket": "executable_now",
+ "meaning": "Tier 0 existence/registration parity: the R export/S3 method is registered in the pinned NAMESPACE and defined in the cited R file, and the named Julia symbol is defined in GLLVModels. Not a numeric-output comparison.",
+ "pin": "P1",
+ "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+ "r_sources_read": [
+  {
+   "path": "NAMESPACE",
+   "sha256": "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c",
+   "read_as": "git show 9539352f66f2db2cc26b1c393e67212a359b60c9:NAMESPACE"
+  },
+  {
+   "path": "R/extract-omega.R",
+   "sha256": "dc7e8afdc5875086f2e35f82548138198c6092baa1892a0573aaf94c9b03929b",
+   "read_as": "git show 9539352f66f2db2cc26b1c393e67212a359b60c9:R/extract-omega.R"
+  }
+ ],
+ "r_check": {
+  "namespace_line": "export(extract_Omega)",
+  "definition_pattern": "^extract_Omega\\s*<-\\s*function",
+  "definition_line_hint": 189,
+  "registered": true,
+  "defined": true,
+  "expected_registered": true,
+  "expected_defined": true
+ },
+ "julia_check": {
+  "symbol": "sigma_y_site",
+  "exists": true,
+  "expected_exists": true,
+  "note": "composed: sum of sigma_y_site()-family outputs across tiers (src/confint_derived.jl:191, src/twolevel.jl Sigma_B/Sigma_W) + one link-residual addition -- no single named Julia aggregator function; composition performed by the verifier"
+ },
+ "julia_commit": "f494a878135995787ad506245deec644b5e4a389",
+ "julia_src_tree": "c8b78a91cc1c87403e41d115c88789a7fff23642",
+ "result": "PASS",
+ "verifier": {
+  "tool": "tools/core070_verify_namespace_1_batch.py",
+  "case_verdict": "PASS",
+  "batch_verdict": "CORE070_NAMESPACE_1_STATE_OK"
+ },
+ "batch_receipt": {
+  "path": "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json",
+  "sha256": "4ec45c0e8797474f900932d3f1ecab4cc210507a7d7e9413697d49f2402865b7"
+ },
+ "contract": {
+  "path": "docs/dev-log/core070/true-parity-latest/namespace-1-batch-contract-p1.json",
+  "sha256": "60666db847b119df3fb225735ad6cc3b4b573a11c6e120b37a8963dfbcef6869"
+ }
+}

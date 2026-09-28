@@ -1,0 +1,52 @@
+{
+ "schema": "core070-namespace-1-case-receipt/v1",
+ "case_id": "CORE070-NAMESPACE-PREDICT-JULIA-BRIDGE-COMPARE",
+ "source_id": "namespace/S3method/predict,gllvmTMB_julia",
+ "bucket": "executable_now",
+ "meaning": "Tier 0 existence/registration parity: the R export/S3 method is registered in the pinned NAMESPACE and defined in the cited R file, and the named Julia symbol is defined in GLLVModels. Not a numeric-output comparison.",
+ "pin": "P1",
+ "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+ "r_sources_read": [
+  {
+   "path": "NAMESPACE",
+   "sha256": "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c",
+   "read_as": "git show 9539352f66f2db2cc26b1c393e67212a359b60c9:NAMESPACE"
+  },
+  {
+   "path": "R/julia-bridge.R",
+   "sha256": "b588fd8084828586414a52ce4bc728ab75e282f0bd9253c5908d786fe1be26ee",
+   "read_as": "git show 9539352f66f2db2cc26b1c393e67212a359b60c9:R/julia-bridge.R"
+  }
+ ],
+ "r_check": {
+  "namespace_line": "S3method(predict,gllvmTMB_julia)",
+  "definition_pattern": "^predict\\.gllvmTMB_julia\\s*<-\\s*function",
+  "definition_line_hint": 3167,
+  "registered": true,
+  "defined": true,
+  "expected_registered": true,
+  "expected_defined": true
+ },
+ "julia_check": {
+  "symbol": "predict",
+  "exists": true,
+  "expected_exists": true,
+  "note": "predict(fit::GllvmFit, y; ...) src/postfit.jl:258"
+ },
+ "julia_commit": "f494a878135995787ad506245deec644b5e4a389",
+ "julia_src_tree": "c8b78a91cc1c87403e41d115c88789a7fff23642",
+ "result": "PASS",
+ "verifier": {
+  "tool": "tools/core070_verify_namespace_1_batch.py",
+  "case_verdict": "PASS",
+  "batch_verdict": "CORE070_NAMESPACE_1_STATE_OK"
+ },
+ "batch_receipt": {
+  "path": "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json",
+  "sha256": "4ec45c0e8797474f900932d3f1ecab4cc210507a7d7e9413697d49f2402865b7"
+ },
+ "contract": {
+  "path": "docs/dev-log/core070/true-parity-latest/namespace-1-batch-contract-p1.json",
+  "sha256": "60666db847b119df3fb225735ad6cc3b4b573a11c6e120b37a8963dfbcef6869"
+ }
+}

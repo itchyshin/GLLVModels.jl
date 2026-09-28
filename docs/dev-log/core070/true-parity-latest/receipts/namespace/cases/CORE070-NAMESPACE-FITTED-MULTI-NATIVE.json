@@ -1,0 +1,52 @@
+{
+ "schema": "core070-namespace-1-case-receipt/v1",
+ "case_id": "CORE070-NAMESPACE-FITTED-MULTI-NATIVE",
+ "source_id": "namespace/S3method/fitted,gllvmTMB_multi",
+ "bucket": "executable_now",
+ "meaning": "Tier 0 existence/registration parity: the R export/S3 method is registered in the pinned NAMESPACE and defined in the cited R file, and the named Julia symbol is defined in GLLVModels. Not a numeric-output comparison.",
+ "pin": "P1",
+ "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+ "r_sources_read": [
+  {
+   "path": "NAMESPACE",
+   "sha256": "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c",
+   "read_as": "git show 9539352f66f2db2cc26b1c393e67212a359b60c9:NAMESPACE"
+  },
+  {
+   "path": "R/methods-gllvmTMB.R",
+   "sha256": "6c32924b415646697ab4e471fda8b83108e416d662ba6e607bbeba335dd21616",
+   "read_as": "git show 9539352f66f2db2cc26b1c393e67212a359b60c9:R/methods-gllvmTMB.R"
+  }
+ ],
+ "r_check": {
+  "namespace_line": "S3method(fitted,gllvmTMB_multi)",
+  "definition_pattern": "^fitted\\.gllvmTMB_multi\\s*<-\\s*function",
+  "definition_line_hint": 3330,
+  "registered": true,
+  "defined": true,
+  "expected_registered": true,
+  "expected_defined": true
+ },
+ "julia_check": {
+  "symbol": "fitted",
+  "exists": true,
+  "expected_exists": true,
+  "note": "StatsAPI.fitted(fit::AnyGllvmFit, data; ...) src/postfit.jl:306"
+ },
+ "julia_commit": "f494a878135995787ad506245deec644b5e4a389",
+ "julia_src_tree": "c8b78a91cc1c87403e41d115c88789a7fff23642",
+ "result": "PASS",
+ "verifier": {
+  "tool": "tools/core070_verify_namespace_1_batch.py",
+  "case_verdict": "PASS",
+  "batch_verdict": "CORE070_NAMESPACE_1_STATE_OK"
+ },
+ "batch_receipt": {
+  "path": "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json",
+  "sha256": "4ec45c0e8797474f900932d3f1ecab4cc210507a7d7e9413697d49f2402865b7"
+ },
+ "contract": {
+  "path": "docs/dev-log/core070/true-parity-latest/namespace-1-batch-contract-p1.json",
+  "sha256": "60666db847b119df3fb225735ad6cc3b4b573a11c6e120b37a8963dfbcef6869"
+ }
+}

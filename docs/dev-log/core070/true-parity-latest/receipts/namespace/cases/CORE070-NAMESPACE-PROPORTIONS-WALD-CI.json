@@ -1,0 +1,47 @@
+{
+ "schema": "core070-namespace-1-case-receipt/v1",
+ "case_id": "CORE070-NAMESPACE-PROPORTIONS-WALD-CI",
+ "source_id": "namespace/export/.proportions_wald_ci",
+ "bucket": "retired_at_p1",
+ "meaning": "The export left the NAMESPACE between P0 and P1 (definition still present, unexported). A PASS confirms the retirement; the row is retired, not measured for parity.",
+ "pin": "P1",
+ "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+ "r_sources_read": [
+  {
+   "path": "NAMESPACE",
+   "sha256": "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c",
+   "read_as": "git show 9539352f66f2db2cc26b1c393e67212a359b60c9:NAMESPACE"
+  },
+  {
+   "path": "R/proportions-ci.R",
+   "sha256": "a05e86b8fc335bab960c8c0e5b4257eb3e913296a8acbaa5fec159628f00b00b",
+   "read_as": "git show 9539352f66f2db2cc26b1c393e67212a359b60c9:R/proportions-ci.R"
+  }
+ ],
+ "r_check": {
+  "namespace_line": "export(.proportions_wald_ci)",
+  "definition_pattern": "^\\.proportions_wald_ci\\s*<-\\s*function",
+  "definition_line_hint": 247,
+  "registered": false,
+  "defined": true,
+  "expected_registered": false,
+  "expected_defined": true
+ },
+ "julia_check": null,
+ "julia_commit": "f494a878135995787ad506245deec644b5e4a389",
+ "julia_src_tree": "c8b78a91cc1c87403e41d115c88789a7fff23642",
+ "result": "PASS",
+ "verifier": {
+  "tool": "tools/core070_verify_namespace_1_batch.py",
+  "case_verdict": "PASS",
+  "batch_verdict": "CORE070_NAMESPACE_1_STATE_OK"
+ },
+ "batch_receipt": {
+  "path": "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json",
+  "sha256": "4ec45c0e8797474f900932d3f1ecab4cc210507a7d7e9413697d49f2402865b7"
+ },
+ "contract": {
+  "path": "docs/dev-log/core070/true-parity-latest/namespace-1-batch-contract-p1.json",
+  "sha256": "60666db847b119df3fb225735ad6cc3b4b573a11c6e120b37a8963dfbcef6869"
+ }
+}
