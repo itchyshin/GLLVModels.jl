@@ -1,0 +1,2045 @@
+{
+ "schema": "true-parity-reverse-gap-inputs/v1",
+ "note": "Inputs for reverse-gap.json. julia_exports is names(GLLVModels) at glvmodels_commit (module name dropped); r_names are the export() names and S3 generic names in gllvmTMB's NAMESPACE at P1, read with git show and checked against the namespace contract's sha256.",
+ "glvmodels_commit": "cba170c28047639c4b2543f0a8cde1dbd47a8bb7",
+ "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+ "r_namespace_sha256": "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c",
+ "r_names": [
+  "AIC",
+  "BIC",
+  "Beta",
+  "VP",
+  "add_utm_columns",
+  "animal_coef",
+  "animal_dep",
+  "animal_indep",
+  "animal_latent",
+  "animal_scalar",
+  "animal_slope",
+  "animal_unique",
+  "anova",
+  "betabinomial",
+  "block_V",
+  "bootstrap_Sigma",
+  "bootstrap_temporal",
+  "categorical",
+  "censored_poisson",
+  "check_auto_residual",
+  "check_gllvmTMB",
+  "chibar2_pvalue",
+  "coef",
+  "column_coef",
+  "compare_Sigma_table",
+  "compare_dep_vs_two_psi",
+  "compare_indep_vs_two_psi",
+  "compare_loadings",
+  "compare_temporal",
+  "confint",
+  "confint_inspect",
+  "confirmatory_lambda",
+  "cumulative_logit",
+  "delta_beta",
+  "delta_gamma",
+  "delta_gamma_mix",
+  "delta_gengamma",
+  "delta_lognormal",
+  "delta_lognormal_mix",
+  "delta_poisson_link_gamma",
+  "delta_poisson_link_lognormal",
+  "delta_truncated_nbinom1",
+  "delta_truncated_nbinom2",
+  "dep",
+  "deviance",
+  "df.residual",
+  "diagnose_kernel_separability",
+  "diagnostic_table",
+  "extract_Gamma",
+  "extract_ICC_site",
+  "extract_Omega",
+  "extract_Sigma",
+  "extract_Sigma_B",
+  "extract_Sigma_W",
+  "extract_Sigma_table",
+  "extract_coevolution_modules",
+  "extract_communality",
+  "extract_correlations",
+  "extract_cross_correlations",
+  "extract_cutpoints",
+  "extract_latent_scores",
+  "extract_loadings",
+  "extract_lv_effects",
+  "extract_ordination",
+  "extract_phylo_signal",
+  "extract_proportions",
+  "extract_repeatability",
+  "extract_residual_cor",
+  "extract_residual_cov",
+  "extract_residual_split",
+  "extract_rotated_loadings_table",
+  "extract_temporal",
+  "fitted",
+  "flag_unreliable_loadings",
+  "forecast_temporal",
+  "gamma_mix",
+  "gengamma",
+  "getLV",
+  "getLoadings",
+  "getREsd",
+  "getResidualCor",
+  "getResidualCov",
+  "get_crs",
+  "gllvmTMB",
+  "gllvmTMB_check_consistency",
+  "gllvmTMB_diagnose",
+  "gllvmTMB_wide",
+  "gllvmTMBcontrol",
+  "gllvm_julia_fit",
+  "gllvm_julia_setup",
+  "gr",
+  "impute_model",
+  "imputed",
+  "indep",
+  "isdm_source",
+  "isdm_sources",
+  "kernel_coef",
+  "kernel_dep",
+  "kernel_indep",
+  "kernel_latent",
+  "kernel_scalar",
+  "kernel_slope",
+  "kernel_unique",
+  "latent",
+  "loading_ci",
+  "loading_profile",
+  "logLik",
+  "lognormal",
+  "lognormal_mix",
+  "make_cross_kernel",
+  "make_mesh",
+  "meta",
+  "meta_V",
+  "meta_known_V",
+  "miss_control",
+  "multinomial",
+  "nbinom1",
+  "nbinom2",
+  "nbinom2_mix",
+  "nobs",
+  "ordinal_logit",
+  "ordinal_probit",
+  "ordination_uncertainty",
+  "ordiplot",
+  "pedigree_to_A",
+  "pedigree_to_Ainv_sparse",
+  "phylo",
+  "phylo_coef",
+  "phylo_dep",
+  "phylo_indep",
+  "phylo_latent",
+  "phylo_rr",
+  "phylo_scalar",
+  "phylo_signal_mi",
+  "phylo_slope",
+  "phylo_unique",
+  "plot",
+  "plot_Sigma_comparison",
+  "plot_Sigma_heatmap",
+  "plot_Sigma_table",
+  "plot_anisotropy",
+  "plot_anisotropy2",
+  "plot_correlations",
+  "plot_loadings_confidence_eye",
+  "plot_rotated_loadings",
+  "predict",
+  "predict_cross_covariance",
+  "predict_missing",
+  "predictive_check",
+  "print",
+  "profile_ci_phylo_signal",
+  "profile_ci_total_variance",
+  "profile_cross_rho",
+  "profile_cross_rho_ci",
+  "profile_phylo_signal",
+  "profile_targets",
+  "profile_temporal",
+  "residuals",
+  "ridge_path",
+  "rotate_loadings",
+  "sanity_multi",
+  "scalar",
+  "screen_control",
+  "screen_gllvmTMB",
+  "screen_table",
+  "select_lv",
+  "simulate",
+  "simulate_site_trait",
+  "simulate_unit_trait",
+  "slope",
+  "slope_sd_ci",
+  "spatial",
+  "spatial_coef",
+  "spatial_dep",
+  "spatial_indep",
+  "spatial_latent",
+  "spatial_scalar",
+  "spatial_slope",
+  "spatial_unique",
+  "spde",
+  "standard_errors",
+  "student",
+  "suggest_lambda_constraint",
+  "suggest_lambda_constraints",
+  "summary",
+  "temporal_dep",
+  "temporal_indep",
+  "temporal_latent",
+  "tidy",
+  "tmbprofile_wrapper",
+  "traits",
+  "truncated_nbinom1",
+  "truncated_nbinom2",
+  "truncated_poisson",
+  "tweedie",
+  "update",
+  "variance_lrt",
+  "vcov",
+  "weights",
+  "zi_binomial",
+  "zi_nbinom2",
+  "zi_poisson"
+ ],
+ "julia_exports": [
+  {
+   "name": "@formula",
+   "kind": "Function"
+  },
+  {
+   "name": "AnBSparseSolver",
+   "kind": "Type"
+  },
+  {
+   "name": "AugmentedPhy",
+   "kind": "Type"
+  },
+  {
+   "name": "BetaBinom",
+   "kind": "Type"
+  },
+  {
+   "name": "BetaBinomialFit",
+   "kind": "Type"
+  },
+  {
+   "name": "BetaBinomialGroupedCovFit",
+   "kind": "Type"
+  },
+  {
+   "name": "BetaBinomialGroupedFit",
+   "kind": "Type"
+  },
+  {
+   "name": "BetaFit",
+   "kind": "Type"
+  },
+  {
+   "name": "BetaGroupedCovFit",
+   "kind": "Type"
+  },
+  {
+   "name": "BetaGroupedFit",
+   "kind": "Type"
+  },
+  {
+   "name": "BetaHurdle",
+   "kind": "Type"
+  },
+  {
+   "name": "BetaHurdleFit",
+   "kind": "Type"
+  },
+  {
+   "name": "BinomialFit",
+   "kind": "Type"
+  },
+  {
+   "name": "BranchRECache",
+   "kind": "Type"
+  },
+  {
+   "name": "BranchREFit",
+   "kind": "Type"
+  },
+  {
+   "name": "CLogLogLink",
+   "kind": "Type"
+  },
+  {
+   "name": "COMPoisson",
+   "kind": "Type"
+  },
+  {
+   "name": "COMPoissonFit",
+   "kind": "Type"
+  },
+  {
+   "name": "CVResult",
+   "kind": "Type"
+  },
+  {
+   "name": "CensoredPoisson",
+   "kind": "Type"
+  },
+  {
+   "name": "CensoredPoissonFit",
+   "kind": "Type"
+  },
+  {
+   "name": "CoevolutionGLMFit",
+   "kind": "Type"
+  },
+  {
+   "name": "ConcurrentOrdinationFit",
+   "kind": "Type"
+  },
+  {
+   "name": "ConstrainedOrdinationFit",
+   "kind": "Type"
+  },
+  {
+   "name": "DeltaGamma",
+   "kind": "Type"
+  },
+  {
+   "name": "DeltaGammaFit",
+   "kind": "Type"
+  },
+  {
+   "name": "DeltaLogNormal",
+   "kind": "Type"
+  },
+  {
+   "name": "DeltaLogNormalFit",
+   "kind": "Type"
+  },
+  {
+   "name": "EMPhyloFit",
+   "kind": "Type"
+  },
+  {
+   "name": "EdgePhy",
+   "kind": "Type"
+  },
+  {
+   "name": "ExponentialFit",
+   "kind": "Type"
+  },
+  {
+   "name": "FelsensteinContrasts",
+   "kind": "Type"
+  },
+  {
+   "name": "FourthCornerFit",
+   "kind": "Type"
+  },
+  {
+   "name": "GP1Fit",
+   "kind": "Type"
+  },
+  {
+   "name": "GammaFit",
+   "kind": "Type"
+  },
+  {
+   "name": "GammaGroupedCovFit",
+   "kind": "Type"
+  },
+  {
+   "name": "GammaGroupedFit",
+   "kind": "Type"
+  },
+  {
+   "name": "GaussianPerVarFit",
+   "kind": "Type"
+  },
+  {
+   "name": "GaussianREMLFit",
+   "kind": "Type"
+  },
+  {
+   "name": "GaussianRandomSlopeFit",
+   "kind": "Type"
+  },
+  {
+   "name": "GaussianSourcesFit",
+   "kind": "Type"
+  },
+  {
+   "name": "GeneralizedPoisson1",
+   "kind": "Type"
+  },
+  {
+   "name": "GllvmCoefTable",
+   "kind": "Type"
+  },
+  {
+   "name": "GllvmCovFit",
+   "kind": "Type"
+  },
+  {
+   "name": "GllvmFit",
+   "kind": "Type"
+  },
+  {
+   "name": "GllvmModel",
+   "kind": "Type"
+  },
+  {
+   "name": "GllvmSpeciesCovFit",
+   "kind": "Type"
+  },
+  {
+   "name": "GllvmSummary",
+   "kind": "Type"
+  },
+  {
+   "name": "GroupedGaussianFit",
+   "kind": "Type"
+  },
+  {
+   "name": "GroupedNonGaussianFit",
+   "kind": "Type"
+  },
+  {
+   "name": "GroupingTerm",
+   "kind": "Type"
+  },
+  {
+   "name": "HurdleNB",
+   "kind": "Type"
+  },
+  {
+   "name": "HurdleNBFit",
+   "kind": "Type"
+  },
+  {
+   "name": "HurdlePoisson",
+   "kind": "Type"
+  },
+  {
+   "name": "HurdlePoissonFit",
+   "kind": "Type"
+  },
+  {
+   "name": "IdentityLink",
+   "kind": "Type"
+  },
+  {
+   "name": "JointPhyloGroupedGaussianFit",
+   "kind": "Type"
+  },
+  {
+   "name": "LVSelection",
+   "kind": "Type"
+  },
+  {
+   "name": "LogLink",
+   "kind": "Type"
+  },
+  {
+   "name": "LogitLink",
+   "kind": "Type"
+  },
+  {
+   "name": "Lognormal",
+   "kind": "Type"
+  },
+  {
+   "name": "LognormalFit",
+   "kind": "Type"
+  },
+  {
+   "name": "MixedFamilyFit",
+   "kind": "Type"
+  },
+  {
+   "name": "Multinomial",
+   "kind": "Type"
+  },
+  {
+   "name": "MultinomialFit",
+   "kind": "Type"
+  },
+  {
+   "name": "NB1",
+   "kind": "Type"
+  },
+  {
+   "name": "NB1Fit",
+   "kind": "Type"
+  },
+  {
+   "name": "NB1GroupedCovFit",
+   "kind": "Type"
+  },
+  {
+   "name": "NB1GroupedFit",
+   "kind": "Type"
+  },
+  {
+   "name": "NBFit",
+   "kind": "Type"
+  },
+  {
+   "name": "NBGroupedCovFit",
+   "kind": "Type"
+  },
+  {
+   "name": "NBGroupedFit",
+   "kind": "Type"
+  },
+  {
+   "name": "NodePerSpecies",
+   "kind": "Type"
+  },
+  {
+   "name": "OrderedBeta",
+   "kind": "Type"
+  },
+  {
+   "name": "OrderedBetaFit",
+   "kind": "Type"
+  },
+  {
+   "name": "Ordinal",
+   "kind": "Type"
+  },
+  {
+   "name": "OrdinalFit",
+   "kind": "Type"
+  },
+  {
+   "name": "OrdinalLogit",
+   "kind": "Type"
+  },
+  {
+   "name": "OrdinalPerTraitCovFit",
+   "kind": "Type"
+  },
+  {
+   "name": "OrdinalPerTraitFit",
+   "kind": "Type"
+  },
+  {
+   "name": "PhyloGLMFit",
+   "kind": "Type"
+  },
+  {
+   "name": "PhyloGaussianFit",
+   "kind": "Type"
+  },
+  {
+   "name": "PoissonFit",
+   "kind": "Type"
+  },
+  {
+   "name": "PoissonRandomSlopeFit",
+   "kind": "Type"
+  },
+  {
+   "name": "PrecisionMultivariateFit",
+   "kind": "Type"
+  },
+  {
+   "name": "PrecisionPhy",
+   "kind": "Type"
+  },
+  {
+   "name": "ProbitLink",
+   "kind": "Type"
+  },
+  {
+   "name": "Q_perbranch",
+   "kind": "Function"
+  },
+  {
+   "name": "Q_times_x",
+   "kind": "Function"
+  },
+  {
+   "name": "QuadraticFit",
+   "kind": "Type"
+  },
+  {
+   "name": "RRRFit",
+   "kind": "Type"
+  },
+  {
+   "name": "RelaxedClockFit",
+   "kind": "Type"
+  },
+  {
+   "name": "RowEffectFit",
+   "kind": "Type"
+  },
+  {
+   "name": "RowRandomFit",
+   "kind": "Type"
+  },
+  {
+   "name": "SPDEGaussianFit",
+   "kind": "Type"
+  },
+  {
+   "name": "SPDELatentFit",
+   "kind": "Type"
+  },
+  {
+   "name": "SourceCovariance",
+   "kind": "Type"
+  },
+  {
+   "name": "StatsAPI",
+   "kind": "Other"
+  },
+  {
+   "name": "StudentT",
+   "kind": "Type"
+  },
+  {
+   "name": "StudentTFamily",
+   "kind": "Type"
+  },
+  {
+   "name": "StudentTFit",
+   "kind": "Type"
+  },
+  {
+   "name": "TruncatedNegBin2",
+   "kind": "Type"
+  },
+  {
+   "name": "TruncatedNegBin2Fit",
+   "kind": "Type"
+  },
+  {
+   "name": "TruncatedNegBin2PerTraitFit",
+   "kind": "Type"
+  },
+  {
+   "name": "TruncatedPoisson",
+   "kind": "Type"
+  },
+  {
+   "name": "TruncatedPoissonFit",
+   "kind": "Type"
+  },
+  {
+   "name": "TweedieFit",
+   "kind": "Type"
+  },
+  {
+   "name": "TweedieGroupedFit",
+   "kind": "Type"
+  },
+  {
+   "name": "TweediePerTraitPowerFit",
+   "kind": "Type"
+  },
+  {
+   "name": "TwoLevelFit",
+   "kind": "Type"
+  },
+  {
+   "name": "TwoLevelRepeatabilityProfileWithdrawn",
+   "kind": "Type"
+  },
+  {
+   "name": "ZIB",
+   "kind": "Type"
+  },
+  {
+   "name": "ZIBCovFit",
+   "kind": "Type"
+  },
+  {
+   "name": "ZIBFit",
+   "kind": "Type"
+  },
+  {
+   "name": "ZINBCovFit",
+   "kind": "Type"
+  },
+  {
+   "name": "ZINBFit",
+   "kind": "Type"
+  },
+  {
+   "name": "ZINegBin",
+   "kind": "Type"
+  },
+  {
+   "name": "ZIPCovFit",
+   "kind": "Type"
+  },
+  {
+   "name": "ZIPFit",
+   "kind": "Type"
+  },
+  {
+   "name": "ZIPoisson",
+   "kind": "Type"
+  },
+  {
+   "name": "admit_phylo_precision_payload",
+   "kind": "Function"
+  },
+  {
+   "name": "aic",
+   "kind": "Function"
+  },
+  {
+   "name": "augmented_phy",
+   "kind": "Function"
+  },
+  {
+   "name": "beta_grouped_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "beta_hurdle_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "beta_laplace_grad",
+   "kind": "Function"
+  },
+  {
+   "name": "beta_marginal_loglik_va",
+   "kind": "Function"
+  },
+  {
+   "name": "betabinomial_grouped_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "betabinomial_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "bic",
+   "kind": "Function"
+  },
+  {
+   "name": "binomial_laplace_grad",
+   "kind": "Function"
+  },
+  {
+   "name": "binomial_marginal_loglik_va",
+   "kind": "Function"
+  },
+  {
+   "name": "blup_phylo_sparse",
+   "kind": "Function"
+  },
+  {
+   "name": "bootstrap_Sigma",
+   "kind": "Function"
+  },
+  {
+   "name": "bootstrap_ci",
+   "kind": "Function"
+  },
+  {
+   "name": "branch_blups",
+   "kind": "Function"
+  },
+  {
+   "name": "branch_re_cache",
+   "kind": "Function"
+  },
+  {
+   "name": "branch_re_profile_negll",
+   "kind": "Function"
+  },
+  {
+   "name": "bridge_capabilities",
+   "kind": "Function"
+  },
+  {
+   "name": "bridge_fit",
+   "kind": "Function"
+  },
+  {
+   "name": "build_AnB_sparse",
+   "kind": "Function"
+  },
+  {
+   "name": "build_node_perspecies",
+   "kind": "Function"
+  },
+  {
+   "name": "check_auto_residual",
+   "kind": "Function"
+  },
+  {
+   "name": "check_gllvmTMB",
+   "kind": "Function"
+  },
+  {
+   "name": "chibar2_pvalue",
+   "kind": "Function"
+  },
+  {
+   "name": "clade_detection",
+   "kind": "Function"
+  },
+  {
+   "name": "clade_edges",
+   "kind": "Function"
+  },
+  {
+   "name": "coef",
+   "kind": "Function"
+  },
+  {
+   "name": "coef_table",
+   "kind": "Function"
+  },
+  {
+   "name": "coeftable",
+   "kind": "Function"
+  },
+  {
+   "name": "coevolution_gamma",
+   "kind": "Function"
+  },
+  {
+   "name": "coevolution_glm_marginal_loglik",
+   "kind": "Function"
+  },
+  {
+   "name": "communality",
+   "kind": "Function"
+  },
+  {
+   "name": "communality_B",
+   "kind": "Function"
+  },
+  {
+   "name": "communality_W",
+   "kind": "Function"
+  },
+  {
+   "name": "communality_wald_ci",
+   "kind": "Function"
+  },
+  {
+   "name": "compare_Sigma_table",
+   "kind": "Function"
+  },
+  {
+   "name": "compare_dep_vs_two_psi",
+   "kind": "Function"
+  },
+  {
+   "name": "compare_fits_Sigma_table",
+   "kind": "Function"
+  },
+  {
+   "name": "compare_fits_dep_vs_two_psi",
+   "kind": "Function"
+  },
+  {
+   "name": "compare_fits_indep_vs_two_psi",
+   "kind": "Function"
+  },
+  {
+   "name": "compare_indep_vs_two_psi",
+   "kind": "Function"
+  },
+  {
+   "name": "compare_loadings",
+   "kind": "Function"
+  },
+  {
+   "name": "compoisson_logpdf",
+   "kind": "Function"
+  },
+  {
+   "name": "compoisson_logz",
+   "kind": "Function"
+  },
+  {
+   "name": "compoisson_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "confint",
+   "kind": "Function"
+  },
+  {
+   "name": "confint_constrained",
+   "kind": "Function"
+  },
+  {
+   "name": "confint_fourthcorner",
+   "kind": "Function"
+  },
+  {
+   "name": "confint_inspect",
+   "kind": "Function"
+  },
+  {
+   "name": "confint_lv_effects",
+   "kind": "Function"
+  },
+  {
+   "name": "confint_rrr",
+   "kind": "Function"
+  },
+  {
+   "name": "confint_spde_latent",
+   "kind": "Function"
+  },
+  {
+   "name": "confint_speciescov",
+   "kind": "Function"
+  },
+  {
+   "name": "constrained_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "contrast_transform",
+   "kind": "Function"
+  },
+  {
+   "name": "correlation",
+   "kind": "Function"
+  },
+  {
+   "name": "correlation_B",
+   "kind": "Function"
+  },
+  {
+   "name": "correlation_W",
+   "kind": "Function"
+  },
+  {
+   "name": "correlation_wald_ci",
+   "kind": "Function"
+  },
+  {
+   "name": "cv_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "delta_gamma_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "delta_gamma_marginal_loglik_va",
+   "kind": "Function"
+  },
+  {
+   "name": "delta_lognormal_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "deviance",
+   "kind": "Function"
+  },
+  {
+   "name": "diagnose_kernel_separability",
+   "kind": "Function"
+  },
+  {
+   "name": "diagnostic_table",
+   "kind": "Function"
+  },
+  {
+   "name": "dof",
+   "kind": "Function"
+  },
+  {
+   "name": "edge_W_diag",
+   "kind": "Function"
+  },
+  {
+   "name": "edge_phy",
+   "kind": "Function"
+  },
+  {
+   "name": "em_fa",
+   "kind": "Function"
+  },
+  {
+   "name": "em_fit_phylo",
+   "kind": "Function"
+  },
+  {
+   "name": "em_fit_phylo_squarem",
+   "kind": "Function"
+  },
+  {
+   "name": "em_observed_information",
+   "kind": "Function"
+  },
+  {
+   "name": "estep_edge_moments",
+   "kind": "Function"
+  },
+  {
+   "name": "excess_kurtosis",
+   "kind": "Function"
+  },
+  {
+   "name": "exponential_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "exponential_marginal_loglik_va",
+   "kind": "Function"
+  },
+  {
+   "name": "extract_Gamma",
+   "kind": "Function"
+  },
+  {
+   "name": "extract_ICC_site",
+   "kind": "Function"
+  },
+  {
+   "name": "extract_Omega",
+   "kind": "Function"
+  },
+  {
+   "name": "extract_Sigma",
+   "kind": "Function"
+  },
+  {
+   "name": "extract_Sigma_table",
+   "kind": "Function"
+  },
+  {
+   "name": "extract_coevolution_modules",
+   "kind": "Function"
+  },
+  {
+   "name": "extract_communality",
+   "kind": "Function"
+  },
+  {
+   "name": "extract_correlations",
+   "kind": "Function"
+  },
+  {
+   "name": "extract_cross_correlations",
+   "kind": "Function"
+  },
+  {
+   "name": "extract_cutpoints",
+   "kind": "Function"
+  },
+  {
+   "name": "extract_loadings",
+   "kind": "Function"
+  },
+  {
+   "name": "extract_lv_effects",
+   "kind": "Function"
+  },
+  {
+   "name": "extract_ordination",
+   "kind": "Function"
+  },
+  {
+   "name": "extract_phylo_signal",
+   "kind": "Function"
+  },
+  {
+   "name": "extract_proportions",
+   "kind": "Function"
+  },
+  {
+   "name": "extract_repeatability",
+   "kind": "Function"
+  },
+  {
+   "name": "extract_residual_cor",
+   "kind": "Function"
+  },
+  {
+   "name": "extract_residual_cov",
+   "kind": "Function"
+  },
+  {
+   "name": "extract_rotated_loadings",
+   "kind": "Function"
+  },
+  {
+   "name": "extract_rotated_loadings_table",
+   "kind": "Function"
+  },
+  {
+   "name": "felsenstein_contrast_matrix",
+   "kind": "Function"
+  },
+  {
+   "name": "felsenstein_contrasts",
+   "kind": "Function"
+  },
+  {
+   "name": "find_clade_root",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_animal_dep_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_animal_latent_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_beta_binomial_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_beta_binomial_gllvm_grouped",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_beta_binomial_gllvm_grouped_cov",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_beta_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_beta_gllvm_grouped",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_beta_gllvm_grouped_cov",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_beta_gllvm_va",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_beta_hurdle_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_binomial_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_binomial_gllvm_va",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_branch_re",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_branch_re_dense",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_censored_poisson_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_coevolution_blockna",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_coevolution_gaussian",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_coevolution_glm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_compoisson_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_concurrent_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_constrained_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_delta_gamma_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_delta_gamma_gllvm_va",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_delta_lognormal_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_dep_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_diagnostic_table",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_em_phylo",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_exponential_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_exponential_gllvm_va",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_fourthcorner_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_gamma_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_gamma_gllvm_grouped",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_gamma_gllvm_grouped_cov",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_gamma_gllvm_va",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_gaussian_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_gaussian_mi_fiml",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_gaussian_mi_phylo",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_gaussian_pervar_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_gaussian_random_slope",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_gaussian_reml",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_gaussian_sources",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_gaussian_structured",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_gllvm_cov",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_gllvm_mi",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_gllvm_mi_multi",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_gllvm_speciescov",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_gp1_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_hurdle_nb_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_hurdle_poisson_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_kernel_dep_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_kernel_indep_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_kernel_latent_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_lognormal_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_mixed_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_multinomial_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_nb1_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_nb1_gllvm_grouped",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_nb1_gllvm_grouped_cov",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_nb_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_nb_gllvm_grouped",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_nb_gllvm_grouped_cov",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_nb_gllvm_va",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_ordered_beta_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_ordinal_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_ordinal_gllvm_pertrait",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_ordinal_gllvm_pertrait_cov",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_phylo_dep_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_phylo_gaussian",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_phylo_glm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_phylo_squarem",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_poisson_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_poisson_gllvm_va",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_poisson_random_slope",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_quadratic_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_relaxed_clock",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_row_random_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_roweffect_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_rrr_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_spatial_dep_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_spde_gaussian",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_spde_latent_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_studentt_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_truncated_nbinom2_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_truncated_nbinom2_gllvm_pertrait",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_truncated_poisson_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_tweedie_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_tweedie_gllvm_grouped",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_twolevel_gaussian",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_zib_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_zib_gllvm_cov",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_zinb_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_zinb_gllvm_cov",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_zip_gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_zip_gllvm_cov",
+   "kind": "Function"
+  },
+  {
+   "name": "fitted",
+   "kind": "Function"
+  },
+  {
+   "name": "gamma_grouped_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "gamma_laplace_grad",
+   "kind": "Function"
+  },
+  {
+   "name": "gamma_marginal_loglik_va",
+   "kind": "Function"
+  },
+  {
+   "name": "gaussian_grouped_intercept_loglik",
+   "kind": "Function"
+  },
+  {
+   "name": "gaussian_marginal_loglik_contrasts",
+   "kind": "Function"
+  },
+  {
+   "name": "gaussian_marginal_loglik_edge_phy",
+   "kind": "Function"
+  },
+  {
+   "name": "gaussian_marginal_loglik_sparse_phy",
+   "kind": "Function"
+  },
+  {
+   "name": "gaussian_pervar_marginal_loglik",
+   "kind": "Function"
+  },
+  {
+   "name": "gaussian_reml_loglik",
+   "kind": "Function"
+  },
+  {
+   "name": "getLV",
+   "kind": "Function"
+  },
+  {
+   "name": "getLoadings",
+   "kind": "Function"
+  },
+  {
+   "name": "getREsd",
+   "kind": "Function"
+  },
+  {
+   "name": "getResidualCor",
+   "kind": "Function"
+  },
+  {
+   "name": "getResidualCov",
+   "kind": "Function"
+  },
+  {
+   "name": "gllvm",
+   "kind": "Function"
+  },
+  {
+   "name": "gllvmTMB_check_consistency",
+   "kind": "Function"
+  },
+  {
+   "name": "gllvmTMB_diagnose",
+   "kind": "Function"
+  },
+  {
+   "name": "gp1_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "grad_node_perspecies",
+   "kind": "Function"
+  },
+  {
+   "name": "grouped_gaussian_intervals",
+   "kind": "Function"
+  },
+  {
+   "name": "grouped_gaussian_variance_profile",
+   "kind": "Function"
+  },
+  {
+   "name": "grouped_nongaussian_intervals",
+   "kind": "Function"
+  },
+  {
+   "name": "hurdle_nb_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "hurdle_poisson_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "icc_wald_ci",
+   "kind": "Function"
+  },
+  {
+   "name": "imputed",
+   "kind": "Function"
+  },
+  {
+   "name": "joint_phylo_grouped_intervals",
+   "kind": "Function"
+  },
+  {
+   "name": "latent_score_sd",
+   "kind": "Function"
+  },
+  {
+   "name": "link_residual",
+   "kind": "Function"
+  },
+  {
+   "name": "loading_ci",
+   "kind": "Function"
+  },
+  {
+   "name": "loading_profile",
+   "kind": "Function"
+  },
+  {
+   "name": "loading_profile_exploratory",
+   "kind": "Function"
+  },
+  {
+   "name": "log_det_Q",
+   "kind": "Function"
+  },
+  {
+   "name": "loglikelihood",
+   "kind": "Function"
+  },
+  {
+   "name": "lognormal_marginal_loglik",
+   "kind": "Function"
+  },
+  {
+   "name": "lognormal_response_mean",
+   "kind": "Function"
+  },
+  {
+   "name": "lv_effects",
+   "kind": "Function"
+  },
+  {
+   "name": "make_cross_kernel",
+   "kind": "Function"
+  },
+  {
+   "name": "make_phy",
+   "kind": "Function"
+  },
+  {
+   "name": "matern_correlation",
+   "kind": "Function"
+  },
+  {
+   "name": "mixed_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "nb1_grouped_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "nb1_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "nb_grouped_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "nb_laplace_grad",
+   "kind": "Function"
+  },
+  {
+   "name": "nb_marginal_loglik_va",
+   "kind": "Function"
+  },
+  {
+   "name": "nobs",
+   "kind": "Function"
+  },
+  {
+   "name": "node_blups",
+   "kind": "Function"
+  },
+  {
+   "name": "node_d\u03c3_phy_only",
+   "kind": "Function"
+  },
+  {
+   "name": "node_grad",
+   "kind": "Function"
+  },
+  {
+   "name": "observed_mask",
+   "kind": "Function"
+  },
+  {
+   "name": "ordered_beta_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "ordinal_logit",
+   "kind": "Function"
+  },
+  {
+   "name": "ordination",
+   "kind": "Function"
+  },
+  {
+   "name": "ordination_uncertainty",
+   "kind": "Function"
+  },
+  {
+   "name": "ordiplot",
+   "kind": "Function"
+  },
+  {
+   "name": "path_membership",
+   "kind": "Function"
+  },
+  {
+   "name": "phylo_glm_marginal_loglik",
+   "kind": "Function"
+  },
+  {
+   "name": "phylo_precision_payload",
+   "kind": "Function"
+  },
+  {
+   "name": "phylo_signal",
+   "kind": "Function"
+  },
+  {
+   "name": "phylo_signal_wald_ci",
+   "kind": "Function"
+  },
+  {
+   "name": "poisson_laplace_grad",
+   "kind": "Function"
+  },
+  {
+   "name": "poisson_marginal_loglik_va",
+   "kind": "Function"
+  },
+  {
+   "name": "ppca_init",
+   "kind": "Function"
+  },
+  {
+   "name": "precision_logdet_check",
+   "kind": "Function"
+  },
+  {
+   "name": "precision_multivariate_intervals",
+   "kind": "Function"
+  },
+  {
+   "name": "predict",
+   "kind": "Function"
+  },
+  {
+   "name": "predict_cross_covariance",
+   "kind": "Function"
+  },
+  {
+   "name": "predict_missing",
+   "kind": "Function"
+  },
+  {
+   "name": "predict_spatial",
+   "kind": "Function"
+  },
+  {
+   "name": "predictive_check",
+   "kind": "Function"
+  },
+  {
+   "name": "profile_ci",
+   "kind": "Function"
+  },
+  {
+   "name": "profile_ci_phylo_signal",
+   "kind": "Function"
+  },
+  {
+   "name": "profile_ci_total_variance",
+   "kind": "Function"
+  },
+  {
+   "name": "profile_ci_variance",
+   "kind": "Function"
+  },
+  {
+   "name": "profile_cross_rho",
+   "kind": "Function"
+  },
+  {
+   "name": "profile_cross_rho_ci",
+   "kind": "Function"
+  },
+  {
+   "name": "profile_curve_targets",
+   "kind": "Function"
+  },
+  {
+   "name": "profile_phylo_signal",
+   "kind": "Function"
+  },
+  {
+   "name": "profile_targets",
+   "kind": "Function"
+  },
+  {
+   "name": "qq_max_dev",
+   "kind": "Function"
+  },
+  {
+   "name": "quadratic_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "random_balanced_tree",
+   "kind": "Function"
+  },
+  {
+   "name": "random_slope_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "rank_sum_z",
+   "kind": "Function"
+  },
+  {
+   "name": "raw_loading_wald_ci",
+   "kind": "Function"
+  },
+  {
+   "name": "relatedness_cov",
+   "kind": "Function"
+  },
+  {
+   "name": "repeatability",
+   "kind": "Function"
+  },
+  {
+   "name": "repeatability_bootstrap_ci",
+   "kind": "Function"
+  },
+  {
+   "name": "repeatability_ci",
+   "kind": "Function"
+  },
+  {
+   "name": "repeatability_wald_ci",
+   "kind": "Function"
+  },
+  {
+   "name": "residuals",
+   "kind": "Function"
+  },
+  {
+   "name": "rotate_loadings",
+   "kind": "Function"
+  },
+  {
+   "name": "rotation",
+   "kind": "Function"
+  },
+  {
+   "name": "row_effects",
+   "kind": "Function"
+  },
+  {
+   "name": "row_random_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "rrr_marginal_loglik",
+   "kind": "Function"
+  },
+  {
+   "name": "sanity_multi",
+   "kind": "Function"
+  },
+  {
+   "name": "select_lv",
+   "kind": "Function"
+  },
+  {
+   "name": "shrink_logrates",
+   "kind": "Function"
+  },
+  {
+   "name": "shrinkage_factor",
+   "kind": "Function"
+  },
+  {
+   "name": "sigma_phy_dense",
+   "kind": "Function"
+  },
+  {
+   "name": "sigma_phy_dense_edge",
+   "kind": "Function"
+  },
+  {
+   "name": "sigma_y_site",
+   "kind": "Function"
+  },
+  {
+   "name": "simulate",
+   "kind": "Function"
+  },
+  {
+   "name": "simulate_branch_re",
+   "kind": "Function"
+  },
+  {
+   "name": "simulate_relaxed_bm",
+   "kind": "Function"
+  },
+  {
+   "name": "simulate_unit_trait",
+   "kind": "Function"
+  },
+  {
+   "name": "slope_sd_ci",
+   "kind": "Function"
+  },
+  {
+   "name": "solve_AnB",
+   "kind": "Function"
+  },
+  {
+   "name": "solve_Q",
+   "kind": "Function"
+  },
+  {
+   "name": "spatial_cov",
+   "kind": "Function"
+  },
+  {
+   "name": "spde_fem",
+   "kind": "Function"
+  },
+  {
+   "name": "spde_gaussian_marginal_loglik",
+   "kind": "Function"
+  },
+  {
+   "name": "spde_latent_marginal_loglik",
+   "kind": "Function"
+  },
+  {
+   "name": "spde_mesh_delaunay",
+   "kind": "Function"
+  },
+  {
+   "name": "spde_mesh_grid",
+   "kind": "Function"
+  },
+  {
+   "name": "spde_precision",
+   "kind": "Function"
+  },
+  {
+   "name": "spde_projector",
+   "kind": "Function"
+  },
+  {
+   "name": "spearman",
+   "kind": "Function"
+  },
+  {
+   "name": "standard_errors",
+   "kind": "Function"
+  },
+  {
+   "name": "standardized_loading_wald_ci",
+   "kind": "Function"
+  },
+  {
+   "name": "stderror",
+   "kind": "Function"
+  },
+  {
+   "name": "studentt_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "tidy",
+   "kind": "Function"
+  },
+  {
+   "name": "tmbprofile_wrapper",
+   "kind": "Function"
+  },
+  {
+   "name": "transformed_wald_ci_derived",
+   "kind": "Function"
+  },
+  {
+   "name": "truncated_nbinom2_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "truncated_nbinom2_pertrait_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "truncated_poisson_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "tweedie_cdf",
+   "kind": "Function"
+  },
+  {
+   "name": "tweedie_grouped_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "tweedie_logpdf",
+   "kind": "Function"
+  },
+  {
+   "name": "tweedie_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "twolevel_marginal_loglik",
+   "kind": "Function"
+  },
+  {
+   "name": "variance_lrt",
+   "kind": "Function"
+  },
+  {
+   "name": "vcov",
+   "kind": "Function"
+  },
+  {
+   "name": "welch_t",
+   "kind": "Function"
+  },
+  {
+   "name": "zib_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "zinb_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "zip_marginal_loglik_laplace",
+   "kind": "Function"
+  }
+ ]
+}
