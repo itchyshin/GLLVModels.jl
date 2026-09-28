@@ -175,6 +175,7 @@ coef_table
 loglikelihood
 aic
 bic
+gllvm_anova
 dof
 nobs
 stderror
@@ -539,6 +540,7 @@ AnBSparseSolver
 AugmentedPhy
 GllvmCoefTable
 LVSelection
+GllvmAnovaTable
 CVResult
 ```
 
