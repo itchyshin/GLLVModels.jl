@@ -15,6 +15,8 @@ Written first at 18:27 MDT on 2026-09-27 and updated through the night. The newe
 
 ## Ready for your word
 
+- #563 temporal slice 2 (unit/unit_obs composition; head acfd02a69). Lands after #543 (it contains #543's commits). Review NON-BLOCKING; all fixes applied: receipts regenerated from R match byte-for-byte; NLL/gradient vs R's TMB 3e-9; logLik vs R 9e-8. The optimizer change leaves every slice-1 logLik identical to 1e-12; the Newton polish now respects the iteration cap; all 25 cells are classified (10 interior, 7 flat, 8 on R's degenerate engine fixture) instead of 14 skipping silently. 1.10 and 1.13 both pass. DECISION: keep update() exported? Reply: "merge #563 after #543; keep update exported" (or "make update internal").
+- #535 temporal spec: count typo fixed (13 blocks, 20 expectations; head 9ec406e07). Docs only. Reply: "merge #525, #535, #545 when green" (the three spec PRs).
 - #561 namespace re-measurement at P1 (head 1598b2142, supersedes #559). Review was BLOCKING; fixed and re-checked by me: a row labelled "numeric" must now cite a receipt with a real R-vs-Julia comparison inside tolerance, or it fails C1 and C8 (the review's mutation now reads C1_NOT_MET / C8_NOT_MET). Signed dispositions accept only "Shinichi Nakagawa" or "itchyshin" with a real, non-future date. Disclosed: at P0, 14 aghq rows now read name-only in C8 (C8 was NOT_MET before and after). Known limit: the checker trusts the numbers written in a receipt; it does not re-run them. 50/50 negative controls pass. Reply: "merge #561 when green".
 
 ## In a merge train (word given)
@@ -26,9 +28,10 @@ Written first at 18:27 MDT on 2026-09-27 and updated through the night. The newe
 ## In progress overnight
 
 - #557 zi_* twin: blocking fix DONE at d0a57e05d (sites with a Laplace precision eigenvalue below 0.1 are walled off; optima near the floor report converged = false; NB2 moment start). The reviewer's case now matches R (-3311.4547). Over 20 NB2 draws: silent breakdowns 3 -> 0; 2 draws honestly flagged not converged (R also fails there). Second review NON-BLOCKING (blocker fixed, red-then-green on the saved case; R refits reproduce all three literal fixtures; the guard leaves the twin objective unchanged at R's optima). Builder applying the smaller items: a retry for 1-in-15 Julia-only stalls at the guard, honest wording on recovery range, a zi_poisson/zi_binomial sweep for the floor, missing-value refusal, and moving the R-pinned cases into the P1-tagged test file.
-- #563 temporal slice 2 (unit/unit_obs composition, head 6a3c5890c; retargeted to main so it survives #543's merge): 13 R test blocks twinned; NLL/gradient vs R's TMB 3e-9. Changes the optimizer for slice 1 fits too (two line searches, keep the lower, Newton polish). Adds a new export, update(). Review NON-BLOCKING (receipts regenerated from R match byte-for-byte; the optimizer change leaves every slice-1 logLik identical to 1e-12 and six fits now honestly reach the gradient tolerance; the sigma_eps rule matches R's code exactly). Builder applying the recommended fixes. DECISION FOR YOU: keep update() exported, or keep it internal (name-collision risk only; it matches R's update semantics).
 
 ## Findings worth knowing
+
+- Temporal: on 3 cells built from R's own engine test data, R and Julia both stop at the same saddle point (Hessian eigenvalue about -2.5, logLik equal to 1e-12). Recorded in the test, not investigated; worth a look on the R side.
 
 - Namespace at P1 (#561): 71 R exports give 0 numeric twins, 44 name-only matches, 6 mismatches (Julia counterpart is a type or unexported: extract_Sigma_B/W, extract_cutpoints, extract_loadings, extract_proportions, extract_residual_split), 2 need a Julia function (animal_slope, dep), 2 retired, 17 still need live R fits.
 
