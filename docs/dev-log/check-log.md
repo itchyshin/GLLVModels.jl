@@ -1,3 +1,13 @@
+## 2026-09-27: Gamma bootstrap refits report their own verdict (part of #504)
+
+- Branch `claude/gamma-boot-verdict-main-504` from `origin/main` @ `cb5688f7e`. The `GammaFit`,
+  `GammaGroupedFit` and `GammaGroupedCovFit` refit closures return `(θ, converged, loglik)`; no
+  boundary flag for α (a large α is well identified: α̂ 8.4e7 to 9.2e7 on true-α = 1e8 data).
+- New `test/test_confint_bootstrap_verdict_gamma.jl`: 7 pass, 14 fail, 15 error on main; 36/36 on
+  Julia 1.10.12 and 1.13.0 (per-file; full suite not run).
+  Seven neighbouring files: 926 pass, plus 1 pre-existing `@test_broken` (same on main).
+- After-task: `docs/dev-log/after-task/2026-09-27-gamma-boot-verdict-504.md`.
+
 ## 2026-09-27: One shared pin source for the Core070 parity harness, plus a P1 oracle build (D-294/D-295)
 
 - Branch `claude/true-parity-p1-oracle`, builds on #524 (merged into `main` as `824d22a4b`
