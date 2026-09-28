@@ -38,6 +38,8 @@ Written first at 18:27 MDT on 2026-09-27 and updated through the night. The newe
 
 ## Findings worth knowing
 
+- Audit of every fitter for "impossible loglik reported converged" (reviews/impossible-loglik-audit.md). Three separate numerical causes: density rounding (beta-binomial, fixed #522), near-singular Laplace curvature (zi #557), Woodbury precision loss (two-level #576). New high-risk case: truncated NB2 converges at a Laplace breakdown in 3 of 12 fits, once beating the real optimum; fix being built. Medium: gaussian_marginal_loglik with per-species variances uses the same fragile Woodbury solve (feeds profile CIs and REML). Proposal for you: a shared post-fit check in _fit_verdict (family loglik bound; smallest site eigenvalue for observed-curvature kernels), about 25 one-line call sites.
+
 - The advisory "Frozen R 0.7.0 family smoke" job is red on main and so on every PR. The auto-d lane is taking the NB2 cells (its #521); the Student-t and truncated-NB2 cells (test_studentt_parity.jl, test_truncated_nbinom2_parity.jl) have no owner. Assign if you want all Actions green.
   - auto-d's NB2 diagnosis: not a code bug. On the hash-pinned fixture two traits sit at the Poisson boundary (NB2 dispersion goes to infinity) in both engines, so Julia honestly reports converged = false and R's gradient check fails at the same boundary. Your call: swap the fixture for data with real overdispersion, or accept a boundary fit in those assertions.
 
