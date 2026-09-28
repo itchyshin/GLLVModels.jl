@@ -681,6 +681,18 @@ All notable changes to GLLVModels.jl are documented here.
   before. The ordered-beta adapter's simulator still errors (bootstrap is not
   offered for that family), so only direct callers of its refit see the change.
   No boundary flag is added for the Beta precision φ.
+- **Row-random, multinomial and covariate-GLLVM `confint(..., method =
+  :bootstrap)` now report the refit's own convergence verdict (part of
+  #504).** The refit closures for `RowRandomFit`, `MultinomialFit` and
+  `GllvmCovFit` (`src/confint_family.jl`) returned a bare parameter vector, so
+  a replicate whose refit ended on the fitter's failure verdict (its θ is the
+  finite warm start) was counted as a good draw. They now return `(θ = ...,
+  converged = ..., loglik = ...)`, as Poisson's does since #516, for families
+  with and without a dispersion parameter; such replicates are excluded and
+  `n_converged` counts only the ones kept. When every replicate converges,
+  bootstrap endpoints are identical to before. These are the last three
+  bare-vector refit closures of #504; the other families are migrated on
+  their own branches.
 
 ### Added
 - **Temporal covariance source, temporal source alone (gllvmTMB P1 port).**

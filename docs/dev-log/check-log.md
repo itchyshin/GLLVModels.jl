@@ -134,6 +134,15 @@
   full suite not run. Neighbours on 1.10.12: `test_confint_family.jl` 341/341, `test_beta_hurdle.jl`
   62/62, `test_ordered_beta.jl` 49/49.
 - After-task: `docs/dev-log/after-task/2026-09-27-bhob-boot-verdict-504.md`.
+## 2026-09-28: Row-random, multinomial and covariate-GLLVM bootstrap refits report their own verdict (part of #504)
+
+- Branch `claude/rest-boot-verdict-504` from `origin/main` @ `5b9af3763`. The `RowRandomFit`,
+  `MultinomialFit` and `GllvmCovFit` refit closures return `(θ, converged, loglik)`; θ unchanged,
+  both dispersion branches wrapped, no boundary flag.
+- New `test/test_confint_bootstrap_verdict_rest.jl`: 14 pass, 19 fail, 28 error of 61 on main; 61/61 on
+  Julia 1.10.12 (30 s; also 61/61 with `--check-bounds=yes`, 26 s) and 1.13.0 (23 s). Per-file; full
+  suite not run. Neighbours on 1.10.12: `test_bridge_x.jl` 200/200, `test_confint_family.jl` 341/341.
+- After-task: `docs/dev-log/after-task/2026-09-28-rest-boot-verdict-504.md`.
 
 ## 2026-09-27: Temporal source alone at gllvmTMB P1 (slice 1)
 

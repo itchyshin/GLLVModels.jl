@@ -1486,8 +1486,9 @@ function _family_ci(fit::RowRandomFit, Y::AbstractMatrix;
         catch
             return nothing
         end
-        return hasd ? vcat(fb.β, pack_lambda(fb.Λ), log(fb.σ_row), log(fb.dispersion)) :
-                      vcat(fb.β, pack_lambda(fb.Λ), log(fb.σ_row))
+        θb = hasd ? vcat(fb.β, pack_lambda(fb.Λ), log(fb.σ_row), log(fb.dispersion)) :
+                    vcat(fb.β, pack_lambda(fb.Λ), log(fb.σ_row))
+        return (θ = θb, converged = fb.converged, loglik = fb.loglik)
     end
     names = vcat(_glm_lin_names(p, K), "sigma_row")
     kinds = vcat(fill(:linear, p + rr), :log)
@@ -2626,7 +2627,7 @@ function _family_ci(fit::MultinomialFit, Y::AbstractMatrix;
         end
         fb.n_categories == K || return nothing
         size(fb.γ, 2) == p || return nothing
-        return copy(fb.theta_packed)
+        return (θ = copy(fb.theta_packed), converged = fb.converged, loglik = fb.loglik)
     end
     return _FamilyCI(θ, nll, _multinomial_ci_names(K, p), fill(:linear, length(θ)),
                      sim, refit)
@@ -2687,8 +2688,9 @@ function _family_ci(fit::GllvmCovFit, Y::AbstractMatrix;
             return nothing
         end
         fb_γ_free = fb.γ[γ_free_idx]
-        return has_disp ? vcat(fb.β, fb_γ_free, pack_lambda(fb.Λ), log(fb.dispersion)) :
-                          vcat(fb.β, fb_γ_free, pack_lambda(fb.Λ))
+        θb = has_disp ? vcat(fb.β, fb_γ_free, pack_lambda(fb.Λ), log(fb.dispersion)) :
+                        vcat(fb.β, fb_γ_free, pack_lambda(fb.Λ))
+        return (θ = θb, converged = fb.converged, loglik = fb.loglik)
     end
     names = vcat(["beta[$t]" for t in 1:p], ["gamma[$k]" for k in γ_free_idx],
                  _confint_lambda_term_names("Lambda", p, K))
