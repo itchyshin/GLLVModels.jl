@@ -16,7 +16,10 @@ are read and never written; they stay as history.
 The other two batches need no new contract: wave6 already has its P1 twin
 (tools/core070_covariance_p1_contract.py, PR #567), and the estimand-rebind
 batch has no contract file (its four case ids and tolerance live in the
-runner and verifier, which read GLLVM_PARITY_PIN).
+runner and verifier, which read GLLVM_PARITY_PIN). Its accessor diff is
+written to estimand-rebind-accessor-diff-p1.json instead (review finding 4 on
+PR #569), together with the count of distinct changed accessors across all
+six batches.
 
 What changes, recorded in each output's `regeneration_log`:
 
@@ -83,6 +86,11 @@ ACCESSORS = {
         ("predict_missing", "R/methods-gllvmTMB.R"), ("simulate_unit_trait", "R/simulate-unit-trait.R"),
     ],
     "postfit-1": [("coef.gllvmTMB_multi", "R/vcov-coef.R")],
+    # No contract twin; recorded in estimand-rebind-accessor-diff-p1.json (PR #569 review finding 4).
+    "estimand-rebind": [
+        ("extract_communality", "R/extractors.R"), ("extract_correlations", "R/extract-correlations.R"),
+        ("extract_proportions", "R/extract-omega.R"), ("extract_Omega", "R/extract-omega.R"),
+    ],
     "postfit-policy": [
         ("coef.gllvmTMB_multi", "R/vcov-coef.R"), ("confint.gllvmTMB_multi", "R/z-confint-gllvmTMB.R"),
         ("fitted.gllvmTMB_multi", "R/methods-gllvmTMB.R"), ("logLik.gllvmTMB_multi", "R/methods-gllvmTMB.R"),
@@ -164,6 +172,26 @@ def build(repo, name):
     return json.dumps(contract, indent=2) + "\n"
 
 
+def estimand_record(repo):
+    """Accessor diff for the contract-less estimand-rebind batch, plus the all-batch changed count."""
+    p0, p1 = pins()
+    rows = accessor_diff(repo, "estimand-rebind", p0["reference_commit"], p1["reference_commit"])
+    changed = sorted({r["function"] for n in [*CONTRACTS, "estimand-rebind"]
+                      for r in accessor_diff(repo, n, p0["reference_commit"], p1["reference_commit"])
+                      if not r["body_identical_p0_p1"]})
+    record = {
+        "generator": GENERATOR,
+        "batch": "estimand-rebind (tools/core070_estimand_rebind_batch.R + .jl; no contract file)",
+        "p0_reference_commit": p0["reference_commit"], "p1_reference_commit": p1["reference_commit"],
+        "p0_to_p1_accessor_diff": rows,
+        "changed_accessors_all_postfit_batches": {"count": len(changed), "functions": changed},
+        "note": ("A record, not a gate. The five contract twins carry their own p0_to_p1_accessor_diff; this file "
+                 "adds the four accessors of the estimand-rebind batch, which has no contract. The count is of "
+                 "distinct function names whose body differs between P0 and P1 across all six postfit batches."),
+    }
+    return json.dumps(record, indent=2) + "\n"
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--check", action="store_true")
@@ -172,6 +200,7 @@ def main():
     if not repo:
         raise SystemExit("set GLLVMTMB_DIR to a gllvmTMB clone that contains the P1 commit")
     outputs = {OUT_DIR / f"{n}-batch-contract-p1.json": build(repo, n) for n in CONTRACTS}
+    outputs[OUT_DIR / "estimand-rebind-accessor-diff-p1.json"] = estimand_record(repo)
     if args.check:
         stale = [str(p.relative_to(ROOT)) for p, t in outputs.items() if not p.exists() or p.read_text() != t]
         if stale:
