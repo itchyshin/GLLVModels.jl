@@ -178,8 +178,9 @@ _tp_observed_Wc(c::_ZiBinCell, y, ηc, Wc) = _zi_observed_curvature(c, y, ηc)
 # guard never touches those, while it cuts off the near-singular end (1.8e-4 and 3e-4
 # at the two spurious maxima measured). It does NOT remove Laplace error above the
 # floor: walling at 0.5 left a point with 27 units of Laplace error on the same data.
-# The start (below) is what keeps fits in the sensible basin; the floor stops a fit
-# that leaves it from running to the singular end.
+# The start (below) and one shrunk-start retry reach the sensible optimum on most
+# measured draws, not all (rates in the decisions note); the floor stops a fit that
+# leaves the sensible basin from running to the singular end.
 # ---------------------------------------------------------------------------
 """
     ZI_LAPLACE_EIGMIN_FLOOR
@@ -444,7 +445,6 @@ function fit_zi_gllvm(Y::AbstractMatrix{<:Real}; family::_ZiTwinFamily, K::Integ
     rr = rr_theta_len(p, K)
     isnb = family isa ZiNbinom2
     β0, lz0, Λ0, logphi0 = _zi_twin_warmstart(family, Yf, N, K)
-    θ0 = isnb ? vcat(β0, lz0, pack_lambda(Λ0), logphi0) : vcat(β0, lz0, pack_lambda(Λ0))
     function unpack(θ)
         β = θ[1:p]; lz = θ[(p + 1):(2p)]
         Λ = unpack_lambda(θ[(2p + 1):(2p + rr)], p, K)
@@ -462,14 +462,39 @@ function fit_zi_gllvm(Y::AbstractMatrix{<:Real}; family::_ZiTwinFamily, K::Integ
         return isfinite(v) ? v : 1e12
     end
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
-    res = Optim.optimize(negll, θ0, ls, Optim.Options(g_tol = g_tol, iterations = iterations);
-                         autodiff = :finite)
-    β, lz, Λ, phi = unpack(Optim.minimizer(res))
+    # One L-BFGS run from a start; returns the unpacked optimum, Optim's verdict and the
+    # smallest site eigenvalue there.
+    function run_from(Λstart)
+        θ0 = isnb ? vcat(β0, lz0, pack_lambda(Λstart), logphi0) :
+                    vcat(β0, lz0, pack_lambda(Λstart))
+        res = Optim.optimize(negll, θ0, ls, Optim.Options(g_tol = g_tol, iterations = iterations);
+                             autodiff = :finite)
+        β, lz, Λ, phi = unpack(Optim.minimizer(res))
+        loglik, conv, iters = _fit_verdict(res)
+        mineig = _zi_min_site_eigen(family, Yf, Λ, β, lz; phi = phi, trials = N,
+                                    maxiter = newton_maxiter, tol = newton_tol)
+        return (β = β, lz = lz, Λ = Λ, phi = phi, loglik = loglik, converged = conv,
+                iters = iters, mineig = mineig)
+    end
+    # An optimum within 10% of the floor sits at the guard.
+    at_guard(r) = isfinite(eigmin_floor) && r.mineig < 1.1 * eigmin_floor
+    r = run_from(Λ0)
+    if at_guard(r)
+        # One retry from a shrunk start: loadings at a tenth of the default start
+        # (a twentieth of the SVD scale), with β, logit_zi and the moment NB2 phi reset to
+        # their warm-start values. A default-start fit can stall at the wall on data
+        # where a sensible optimum exists (1 of 35 NB2 draws measured in the PR #557
+        # review; gllvmTMB reached that optimum from its own start, and this retry
+        # reaches it too; scales 0.25 and 0.5 did not). Keep the retry only if it is
+        # off the guard; otherwise report the first fit as flagged. Rates: the
+        # decisions note 2026-09-27-zi-laplace-breakdown-guard.md.
+        r2 = run_from(0.1 .* Λ0)
+        at_guard(r2) || (r = r2)
+    end
+    β, lz, Λ, phi = r.β, r.lz, r.Λ, r.phi
     zi = @. inv(1 + exp(-lz))
-    loglik, converged, iters = _fit_verdict(res)
-    mineig = _zi_min_site_eigen(family, Yf, Λ, β, lz; phi = phi, trials = N,
-                                maxiter = newton_maxiter, tol = newton_tol)
-    if converged && isfinite(eigmin_floor) && mineig < 1.1 * eigmin_floor
+    loglik, converged, iters, mineig = r.loglik, r.converged, r.iters, r.mineig
+    if converged && at_guard(r)
         converged = false
         @warn "$(_zi_rname(family)): the optimum sits at the Laplace breakdown guard " *
               "(smallest site precision eigenvalue $(round(mineig; sigdigits = 3)), floor " *
