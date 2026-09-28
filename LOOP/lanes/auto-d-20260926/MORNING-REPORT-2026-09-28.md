@@ -138,6 +138,12 @@ its base (#521's branch), #540 merged `main`; both check-log only, tests re-run 
 GitHub reports both mergeable. #521 vs `main` and #551 vs #540 are clean (git merge-tree). I told that
 lane how to resolve the one expected conflict when the second of #529/#551 reaches `main`.
 
+## Merge train (13:30Z)
+#521 is on `main`. On your word the getLV lane gates the rest in my order: #529 (retargeted), #540 →
+#551, #519 → #520, #598/#601, then #518 last. Advisory smoke and Documenter deploy are ignored by your
+instruction. #518's 9 held docs commits go in with its conflict-resolution push. With #521 merged, the
+NB re-run only needs your approval of the estimate (nb-rerun-plan.md).
+
 ## Will auto-d work? (your 01:55Z question, answered with tonight's numbers)
 Gaussian 0.95 and Poisson 0.999: yes. Negative binomial: promising (the fixed kernel picked the true
 K where the old one picked 5) but unmeasured until the NB re-run. Binary: K = 1 reliably, higher K only
