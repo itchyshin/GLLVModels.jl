@@ -67,8 +67,10 @@ fit_truncated_nbinom2_gllvm_pertrait
 ### Continuous, Proportion & Ordinal Fitters
 
 Ordinal fitters accept only `LogitLink()` and `ProbitLink()`. Unsupported links
-raise `ArgumentError` before response access; the frozen R 0.7.0 ordinal model
-uses `ProbitLink()`. Julia's default logit model is a separate model choice.
+raise `ArgumentError` before response access; the R 0.7.0 `ordinal_probit()`
+family uses `ProbitLink()`. As of gllvmTMB 0.7.1, R also has `ordinal_logit()`
+(family_id 20), the direct twin of Julia's default logit model; see
+[`ordinal_logit`](@ref).
 
 ```@docs
 fit_beta_gllvm
@@ -162,6 +164,7 @@ rotation
 ordination
 ordiplot
 ordination_uncertainty
+extract_latent_scores
 select_lv
 cv_gllvm
 simulate
@@ -421,6 +424,29 @@ GLLVModels.bootstrap_ci_derived
 
 ---
 
+## Temporal Covariance Source
+
+One AR1 or OU temporal source on long data, the twin of gllvmTMB's
+`temporal_indep()`, `temporal_dep()` and `temporal_latent()` for the temporal
+source alone. Composition with ordinary `unit` / `unit_obs` terms, the
+cross-source cells and the wide `traits()` form are not available yet; see the
+[temporal reference page](temporal.md).
+
+```@docs
+temporal_indep
+temporal_dep
+temporal_latent
+TemporalTerm
+fit_temporal_gllvm
+TemporalGaussianFit
+TemporalContractError
+extract_temporal
+forecast_temporal
+profile_temporal
+bootstrap_temporal
+compare_temporal
+```
+
 ## Types & Link Functions
 
 ### Link Functions
@@ -529,6 +555,8 @@ HurdleNB
 BetaHurdle
 OrderedBeta
 Ordinal
+ordinal_logit
+OrdinalLogit
 ZIPoisson
 ZINegBin
 GLLVModels.ZINB

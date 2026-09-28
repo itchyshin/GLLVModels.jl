@@ -16,7 +16,7 @@
 # Loadings accessor is defined in src/postfit.jl
 
 """
-    ordination(fit, Y; rotate=true) -> (sites, species, rotation)
+    ordination(fit, Y; rotate=true, kwargs...) -> (sites, species, rotation)
 
 Ordination of a fitted GLLVM: site and species coordinates in the shared `K`-
 dimensional latent space, returned as a `NamedTuple` `(sites, species, rotation)`.
@@ -37,10 +37,14 @@ The rotation is orthogonal, so the fit is preserved exactly: the linear-predicto
 contribution `sites * species' == S * L'` for any `R` with `R'R = I`.
 
 `Y` (the `p×n` response matrix) must match what was passed to the fitting call — the
-fit does not store the data.
+fit does not store the data. Any other keyword (`X`, `N`, `X_lv`, `mask`, ...) is
+forwarded to `getLV`, so pass the same design the fit used: a `GllvmFit` with fixed
+effects needs `X = X`, a binomial fit with trials needs `N = N`. A `GllvmFit` that
+estimated `β` but does not retain its design throws when `X` is omitted, rather
+than returning scores computed at a zero mean.
 """
-function ordination(fit, Y; rotate::Bool = true)
-    S = getLV(fit, Y; rotate = false)      # n×K site scores
+function ordination(fit, Y; rotate::Bool = true, kwargs...)
+    S = getLV(fit, Y; rotate = false, kwargs...)      # n×K site scores
     L = _loadings(fit)                      # p×K species loadings
     K = size(L, 2)
     if !rotate
@@ -53,7 +57,7 @@ end
 
 """
     ordiplot(fit, Y; rotate=true, biplot=true, site_labels=nothing,
-             species_labels=nothing)
+             species_labels=nothing, kwargs...)
 
 Tidy, plot-ready ordination DATA for a fitted GLLVM, mirroring R `gllvm`'s
 `ordiplot` / `getLV` interface but as a pure data layer (no plotting backend, no
@@ -78,7 +82,8 @@ like. Returns a `NamedTuple` with fields:
 
 `Y` (the `p×n` response matrix) must match what was passed to the fitting call — the
 fit does not store the data. With `rotate=true` (default) the canonical PRINCIPAL
-rotation is applied (see [`ordination`](@ref)).
+rotation is applied (see [`ordination`](@ref)); other keywords (`X`, `N`, ...) are
+forwarded to `ordination`.
 
 You plot with any backend, e.g.
 
@@ -95,8 +100,8 @@ end
 ```
 """
 function ordiplot(fit, Y; rotate::Bool = true, biplot::Bool = true,
-                  site_labels = nothing, species_labels = nothing)
-    ord = ordination(fit, Y; rotate = rotate)
+                  site_labels = nothing, species_labels = nothing, kwargs...)
+    ord = ordination(fit, Y; rotate = rotate, kwargs...)
     S = ord.sites                                   # n×K
     n = size(S, 1)
     K = size(S, 2)

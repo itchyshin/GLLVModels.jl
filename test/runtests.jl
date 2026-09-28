@@ -185,6 +185,10 @@ println(_SHARD === nothing ?
     # most likely to end up in a paper — so untested was the least acceptable
     # place for it. Every assertion is against an independently derived value.
     _shard_include("test_boundary_inference.jl")
+    # P1 twin vs gllvmTMB's R/chibar.R (D-297 case map: a name match alone never
+    # counts as parity; this proves equal outputs on a literal fixture computed by
+    # the real installed R package at the pin).
+    _shard_include("test_chibar2_variance_lrt_p1_twin.jl")
     _shard_include("test_laplace_grad.jl")
     _shard_include("test_poisson_grad_perf.jl")
     _shard_include("test_grouped_laplace.jl")
@@ -210,6 +214,8 @@ println(_SHARD === nothing ?
     _shard_include("test_fit_verdict_gradient.jl")
     _shard_include("test_grouped_dispersion_tweedie_nb1.jl")
     _shard_include("test_nb1_grouped_mode_search.jl")
+    _shard_include("test_nb2_grouped_mode_search.jl")
+    _shard_include("test_grouped_init_kwargs.jl")
     _shard_include("test_nb_beta_x_identity.jl")
     _shard_include("test_gamma_x_identity.jl")
     _shard_include("test_gamma_grouped_mode_search.jl")
@@ -241,6 +247,7 @@ println(_SHARD === nothing ?
     _shard_include("test_ordinal_fit.jl")
     _shard_include("test_ordinal_pertrait.jl")
     _shard_include("test_ordinal_probit.jl")
+    _shard_include("test_ordinal_logit_twin.jl")
     _shard_include("test_fit_gllvm.jl")
     _shard_include("test_truncated_formula.jl")
     _shard_include("test_unified_api.jl")
@@ -256,6 +263,7 @@ println(_SHARD === nothing ?
     _shard_include("test_statsapi.jl")
     _shard_include("test_postfit_zib_tweedie.jl")
     _shard_include("test_ordination.jl")
+    _shard_include("test_extract_latent_scores.jl")
     _shard_include("test_model_selection.jl")
     _shard_include("test_structured_cov.jl")
     _shard_include("test_cross_kernel.jl")
@@ -396,6 +404,7 @@ println(_SHARD === nothing ?
     _shard_include("test_bridge_ci.jl")
     _shard_include("test_bridge_grouped_dispersion.jl")
     _shard_include("test_bridge_capabilities.jl")
+    _shard_include("test_mixed_mode_search.jl")
     _shard_include("test_bridge_mixed.jl")
     _shard_include("test_bridge_x.jl")
     _shard_include("test_bridge_zib.jl")
@@ -439,4 +448,8 @@ println(_SHARD === nothing ?
     _shard_include("test_postfit_tables.jl")
     _shard_include("test_destination_b_s4_public_phylo_dep_probe_harness.jl")
     _shard_include("test_totoro_323_track_a_harness.jl")
+    _shard_include("test_temporal_api.jl")
+    _shard_include("test_temporal_oracles.jl")
+    _shard_include("test_temporal_fit_receipts.jl")
+    _shard_include("test_temporal_helpers.jl")
 end
