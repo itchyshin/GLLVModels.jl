@@ -72,6 +72,7 @@ Overnight: #548 chibar2_pvalue / variance_lrt twin (4357e4652, 22:58); #531 extr
 
 ## In progress overnight
 
+- #593 grouping-level receipts at P1 (head dcd500984; receipts only, no rows): unit, unit_obs, cluster and cluster2 each have a real R-vs-Julia Gaussian pair at P1, all PASS (logLik gaps 1e-12 to 2e-10; membership-change refits paired too; misspelt keywords refused by both engines). Caveat: the unit intercept gap 2.1e-6 comes from R stopping early; it passes the declared 1e-5 but not the 1e-6 of the older tests. Not yet independently reviewed. These are the receipts Packet 2 row A3 needs, whichever row naming you choose.
 - Lesson recorded: I verified reviews but not CI on the reviewed heads before listing PRs as ready. Every "Ready" PR's head has now been checked: #543, #557, #561, #563, #567, #569, #571, #576, #579, #581, #584, #586, #587, #589 and the three spec PRs show no failing required check (some still pending or not yet run). 02:25: #557, #561, #563, #581, #586 and #587 had NO CI runs at all because they conflicted with main (log files only, so GitHub did not run their workflows); all six refreshed by merging main in (heads above updated), so their CI runs overnight. Check each one's CI before replying with your word.
 - CI note for you: the P1 twin job selects any .jl file whose text contains the tag string, comments included, so quoting the tag in a comment silently enrols a file. A stricter match (tag on line 1) would be a .github change, yours.
 
