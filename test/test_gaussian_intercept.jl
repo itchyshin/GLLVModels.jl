@@ -114,9 +114,9 @@ using Test, GLLVModels, Random, Distributions, Statistics, LinearAlgebra
 end
 
 # The phylogenetic effect J_n ⊗ B is a per-species constant across sites, so a
-# free per-species intercept absorbs it and drives σ_phy to zero. Phylo fits
-# therefore keep fit_gaussian_gllvm's zero mean on the public route.
-@testset "Gaussian phylo fit is not absorbed by trait intercepts" begin
+# free per-species intercept absorbs it and drives σ_phy to zero. Phylo fits on
+# the public route therefore estimate one intercept shared by all species.
+@testset "Gaussian phylo fit uses one common intercept" begin
     Random.seed!(21)
     p, n = 6, 200
     Λ = reshape(0.3 .+ 0.4 .* abs.(randn(p)), p, 1)
@@ -126,9 +126,19 @@ end
     y = Λ * randn(1, n)
     y .+= 0.8 .* (cholesky(Symmetric(Σ_phy)).L * randn(p))
     y .+= 0.5 .* randn(p, n)
-    ref = fit_gaussian_gllvm(y; K = 1, has_phy_unique = true, Σ_phy = Σ_phy)
     f = fit_gllvm(y; family = Normal(), K = 1, has_phy_unique = true, Σ_phy = Σ_phy)
-    @test f.logLik == ref.logLik
-    @test isempty(f.pars.β)
+    ref = fit_gaussian_gllvm(y; K = 1, has_phy_unique = true, Σ_phy = Σ_phy,
+                             X = ones(p, n, 1))
+    @test length(f.pars.β) == 1
+    @test isapprox(f.logLik, ref.logLik; atol = 1e-8)
     @test maximum(abs.(f.pars.σ_phy)) > 0.1
+
+    # A common shift moves only the intercept.
+    f3 = fit_gllvm(y .+ 3.0; family = Normal(), K = 1, has_phy_unique = true, Σ_phy = Σ_phy)
+    @test isapprox(f3.logLik, f.logLik; atol = 1e-6)
+    @test isapprox(f3.pars.β[1], f.pars.β[1] + 3.0; atol = 1e-4)
+
+    # Post-fit helpers apply the common intercept when X is omitted.
+    @test predict(f, y) ≈ predict(f, y; X = ones(p, n, 1))
+    @test residuals(f, y) ≈ residuals(f, y; X = ones(p, n, 1))
 end

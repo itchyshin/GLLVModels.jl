@@ -206,7 +206,7 @@ function simulate(f::GllvmFit,n::Integer;rng=Random.default_rng(),X=nothing,offs
     p,K=f.model.p,f.model.K;q=length(f.pars.β)
     d=_has_gaussian_record(f) ? f.integration.data : nothing
     xx=X===nothing ? (d!==nothing && size(d.responses,2)==n ? d.design : q==0 ? zeros(p,n,0) :
-        _has_trait_intercepts(f) ? _trait_intercept_design(p,n) :
+        _has_intercept_design(f) ? _intercept_design(f,n) :
         throw(ArgumentError("Gaussian simulation requires X at the requested site count"))) : X
     off=offset===nothing ? (d!==nothing && size(d.responses,2)==n ? d.offset :
         d!==nothing && any(!iszero,d.offset) ? throw(ArgumentError("simulation at new site count requires offset")) : zeros(p,n)) : offset

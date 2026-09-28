@@ -82,7 +82,7 @@ function _fitted_mean(fit::GllvmFit, y::AbstractMatrix,
                       X::Union{Nothing, AbstractArray{<:Real, 3}})
     p, n = size(y)
     β = fit.pars.β
-    X === nothing && _has_trait_intercepts(fit) && return repeat(β, 1, n)
+    X === nothing && _has_intercept_design(fit) && return repeat(_intercept_mean(fit), 1, n)
     if β === nothing || length(β) == 0
         return zeros(Float64, p, n)
     end

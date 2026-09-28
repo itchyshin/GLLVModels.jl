@@ -109,7 +109,7 @@ end
 function _cv_gaussian_mean(fit::GllvmFit, X, t::Int, s::Int)
     β = fit.pars.β
     (β === nothing || isempty(β)) && return 0.0
-    X === nothing && _has_trait_intercepts(fit) && return β[t]   # per-trait intercepts (#519)
+    X === nothing && _has_intercept_design(fit) && return _intercept_mean(fit)[t]   # intercepts (#519)
     return dot(view(X, t, s, :), β)
 end
 
