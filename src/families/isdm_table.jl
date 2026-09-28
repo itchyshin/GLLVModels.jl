@@ -22,9 +22,10 @@ row), `trait_id`, `unit_id`, `source_id` (index into `sources.names`), `fid`,
 `lid` (R's per-row family and link ids), `offset`, and the fixed design `X`
 with R-style column names `X_names` (e.g. `"traitsp1:env"`,
 `"isdm_source:gbif:access"`). Also `rows_by_unit` (row indices per unit), the
-level vectors, the latent rank `K` read from the formula, whether the
-mixed-law contract was `admitted`, and the frozen design basis used by
-`predict(...; newdata)`.
+level vectors, the latent rank `K` read from the formula, `unique` (whether the
+`latent()` term carries R's default per-trait unit-level unique variance,
+`theta_diag_B`), whether the mixed-law contract was `admitted`, and the frozen
+design basis used by `predict(...; newdata)`.
 """
 struct IsdmTable
     y::Vector{Float64}
@@ -51,11 +52,12 @@ struct IsdmTable
     fixed_names::Vector{String}    # R names of the ecological (formula) columns
     obs_basis::Dict{Symbol, Any}   # source => (rhs, raw R names) for predict
     formula::Expr
+    unique::Bool                   # latent(..., unique = TRUE): per-trait unit-level Psi
 end
 
 Base.show(io::IO, t::IsdmTable) = print(io, "IsdmTable(", length(t.y), " rows, ",
     length(t.trait_levels), " traits, ", length(t.unit_levels), " units, sources = ",
-    join(t.sources.names, ", "), ", K = ", t.K, ")")
+    join(t.sources.names, ", "), ", K = ", t.K, t.unique ? ", unique" : "", ")")
 
 # A column with no missing values, narrowed to its concrete element type.
 _isdm_narrow(col) = any(ismissing, col) ? col : [v for v in col]
@@ -389,7 +391,19 @@ function isdm_table(formula::Expr, data; family::IsdmSources, trait::Symbol = :t
     for i in 1:n
         push!(rows_by_unit[unit_id[i]], i)
     end
+    # R maps the default Psi off for a trait whose rows are all single-trial
+    # Bernoulli (R/fit-multi.R:7133-7178, `diag_B_skip`). That gate cannot fire
+    # here: every declaration has a count arm and every trait carries every
+    # declared arm, so every trait has count rows. Kept as an internal guard.
+    if pf.unique && pf.K > 0
+        for t in eachindex(trait_levels)
+            any(i -> trait_id[i] == t && fid[i] != 1, 1:n) || error(
+                "Internal: trait $(trait_levels[t]) has only detection rows; R would map its " *
+                "unique variance off, which the integrated door does not implement.")
+        end
+    end
     return IsdmTable(y, nt, trait_id, unit_id, source_id, fid, lid, off, X, Xn, rows_by_unit,
                      trait_levels, unit_levels, family, admitted, pf.K, pf.response, trait, unit,
-                     pf.offset, fixed_rhs, fixed_names, basis, formula)
+                     pf.offset, fixed_rhs, fixed_names, basis, formula,
+                     pf.unique && pf.K > 0)
 end

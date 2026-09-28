@@ -11,17 +11,17 @@
 # `:` binds more loosely than `+` in Julia, so it is accepted only inside
 # parentheses, `(trait:env)`).
 # The reader pulls out `offset(expr)` (R/offset.R:14-16) and zero or one
-# `latent(0 + trait | unit, d = K, unique = FALSE)` (R/parse-multi-formula.R),
+# `latent(0 + trait | unit, d = K[, unique = TRUE/FALSE])` (R/parse-multi-formula.R),
 # refuses every other structured term by name, and hands the remaining fixed
 # right-hand side to StatsModels, whose implicit-intercept and full-rank rules
 # follow R's `model.matrix` (so `0 + trait` gives full dummy coding).
 #
 # R's `latent()` defaults to `unique = TRUE` (R/brms-sugar.R:607), which adds a
-# per-trait unit-level diagonal variance (TMB parameter `theta_diag_B`). The P1
-# port spec (section 1.2) describes the loadings-only model, so the Julia door
-# fits that model and requires `unique = FALSE` to be written explicitly: a
-# call that relies on R's default would otherwise fit a different model from
-# the one R fits under the same text.
+# per-trait unit-level diagonal variance (TMB parameter `theta_diag_B`, a
+# length-p log-SD vector): s_B(t, s) ~ N(0, exp(theta_diag_B[t])^2) enters eta
+# additively for every (trait, unit) and is integrated by Laplace with z_B
+# (src/gllvmTMB.cpp:1211, 1968-1984, 3124 at P1). The reader returns the flag;
+# `unique = FALSE` fits the loadings-only model.
 
 import StatsModels
 import Tables
@@ -42,11 +42,12 @@ function _isdm_refused_structured(ex)
     return any(r -> s == String(r) || startswith(s, String(r) * "_"), _ISDM_REFUSED_CALLS)
 end
 
-# Parse `latent(0 + trait | unit, d = K, unique = FALSE)`; returns (K, unique_false).
+# Parse `latent(0 + trait | unit, d = K[, unique = TRUE/FALSE])`; returns
+# (K, unique). `unique` defaults to TRUE, as R's `latent()` does.
 function _isdm_parse_latent(ex::Expr, trait::Symbol, unit::Symbol)
     bar = length(ex.args) >= 2 ? ex.args[2] : nothing
     (bar isa Expr && bar.head === :call && bar.args[1] === :|) || throw(ArgumentError(
-        "latent() in the integrated door must be written latent(0 + $trait | $unit, d = K, unique = FALSE)."))
+        "latent() in the integrated door must be written latent(0 + $trait | $unit, d = K)."))
     lhs, grp = bar.args[2], bar.args[3]
     lhs_terms = _isdm_flatten_plus(lhs)
     (length(lhs_terms) == 2 && lhs_terms[1] == 0 && lhs_terms[2] === trait) || throw(ArgumentError(
@@ -54,21 +55,29 @@ function _isdm_parse_latent(ex::Expr, trait::Symbol, unit::Symbol)
     grp === unit || throw(ArgumentError(
         "latent() grouping `$grp` must be the unit column `$unit`: the integrated door fits " *
         "one between-unit reduced-rank block (R's rr_B) and nothing else."))
-    d = nothing; uniq = nothing
+    d = nothing; uniq = true
     for a in ex.args[3:end]
         (a isa Expr && a.head === :kw) || throw(ArgumentError(
-            "latent(): unexpected argument `$a`; admitted are d = K and unique = FALSE."))
+            "latent(): unexpected argument `$a`; admitted are d = K and unique = TRUE / FALSE."))
         if a.args[1] === :d
             d = a.args[2]
         elseif a.args[1] === :unique
-            uniq = a.args[2]
+            v = a.args[2]
+            if v === true || v === :TRUE
+                uniq = true
+            elseif v === false || v === :FALSE
+                uniq = false
+            else
+                throw(ArgumentError(
+                    "latent(): `unique` must be the literal TRUE or FALSE; got `$(repr(v))`."))
+            end
         else
             throw(ArgumentError("latent(): argument `$(a.args[1])` is not admitted on the integrated door."))
         end
     end
     (d isa Integer && d >= 1) || throw(ArgumentError(
         "latent(): `d` must be a positive integer literal; got `$(repr(d))`."))
-    return Int(d), (uniq === false || uniq === :FALSE)
+    return Int(d), uniq
 end
 
 # Expr -> StatsModels term, for the admitted fixed-effect grammar.
@@ -95,10 +104,12 @@ _isdm_term_symbols(ex) = ex isa Symbol ? Symbol[ex] :
 """
     _isdm_parse_formula(f::Expr; trait, unit) -> NamedTuple
 
-Split an integrated formula into `(response, fixed, fixed_symbols, offset, K)`:
+Split an integrated formula into `(response, fixed, fixed_symbols, offset, K, unique)`:
 `fixed` is the StatsModels right-hand side (a tuple of terms), `offset` the inner
 expression of `offset(...)` (or `nothing`), and `K` the latent rank (0 without a
-`latent()` term, in which case the fit is a GLM through the same kernel).
+`latent()` term, in which case the fit is a GLM through the same kernel), and
+`unique` the `latent(..., unique = )` flag (R's default `TRUE`; `false` without
+a `latent()` term).
 """
 function _isdm_parse_formula(f::Expr; trait::Symbol, unit::Symbol)
     (f.head === :call && f.args[1] === :~ && length(f.args) == 3) || throw(ArgumentError(
@@ -108,7 +119,7 @@ function _isdm_parse_formula(f::Expr; trait::Symbol, unit::Symbol)
         "The integrated formula needs a single response column on the left-hand side; got `$resp`. " *
         "Multi-trial `cbind(successes, failures)` responses are not admitted: give each visit its own row."))
     offset = nothing
-    K = 0; nlatent = 0
+    K = 0; nlatent = 0; uniq = false
     fixed = Any[]
     for t in _isdm_flatten_plus(f.args[3])
         if t isa Expr && t.head === :call && t.args[1] === :offset
@@ -119,21 +130,11 @@ function _isdm_parse_formula(f::Expr; trait::Symbol, unit::Symbol)
             nlatent += 1
             nlatent == 1 || throw(ArgumentError(
                 "The integrated door admits zero or one latent() term; got more than one."))
-            K, unique_false = _isdm_parse_latent(t, trait, unit)
-            if !unique_false
-                fixed_t = "latent(0 + $trait | $unit, d = $K, unique = FALSE)"
-                corrected = "$resp ~ " * join((u === t ? fixed_t : string(u)
-                                              for u in _isdm_flatten_plus(f.args[3])), " + ")
-                throw(ArgumentError(
-                    "latent(..., unique = TRUE) is R's default and adds a per-trait unit-level unique " *
-                    "variance (theta_diag_B) that the Julia integrated door does not fit. For the " *
-                    "loadings-only model, which R fits under the same text, write:\n    " *
-                    corrected))
-            end
+            K, uniq = _isdm_parse_latent(t, trait, unit)
         elseif _isdm_refused_structured(t)
             throw(ArgumentError(
                 "Structured term `$t` is not admitted on the integrated door (P1 scope: fixed " *
-                "effects, offset(), and zero or one latent(0 + $trait | $unit, d = K, unique = FALSE))."))
+                "effects, offset(), and zero or one latent(0 + $trait | $unit, d = K))."))
         else
             push!(fixed, t)
         end
@@ -141,7 +142,8 @@ function _isdm_parse_formula(f::Expr; trait::Symbol, unit::Symbol)
     isempty(fixed) && throw(ArgumentError("The integrated formula has no fixed-effect terms."))
     terms = Tuple(_isdm_term(t) for t in fixed)
     syms = unique(reduce(vcat, (_isdm_term_symbols(t) for t in fixed); init = Symbol[]))
-    return (response = resp, fixed = terms, fixed_symbols = syms, offset = offset, K = K)
+    return (response = resp, fixed = terms, fixed_symbols = syms, offset = offset, K = K,
+            unique = uniq)
 end
 
 # StatsModels coefficient name -> R model.matrix name ("trait: sp1 & env" ->
