@@ -27,6 +27,7 @@ Written first at 18:27 MDT on 2026-09-27 and updated through the night. The newe
 
 ## In progress overnight
 
+- A3 re-measurement, covariance family (17 rows) at P1 with numeric receipts that fit #561's new rule: builder started 19:50, draft PR to follow.
 - #557 zi_* twin: blocking fix DONE at d0a57e05d (sites with a Laplace precision eigenvalue below 0.1 are walled off; optima near the floor report converged = false; NB2 moment start). The reviewer's case now matches R (-3311.4547). Over 20 NB2 draws: silent breakdowns 3 -> 0; 2 draws honestly flagged not converged (R also fails there). Second review NON-BLOCKING (blocker fixed, red-then-green on the saved case; R refits reproduce all three literal fixtures; the guard leaves the twin objective unchanged at R's optima). Builder applying the smaller items: a retry for 1-in-15 Julia-only stalls at the guard, honest wording on recovery range, a zi_poisson/zi_binomial sweep for the floor, missing-value refusal, and moving the R-pinned cases into the P1-tagged test file.
 
 ## Findings worth knowing
