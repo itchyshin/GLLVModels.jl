@@ -15,7 +15,7 @@ Written first at 18:27 MDT on 2026-09-27 and updated through the night. The newe
 
 ## Ready for your word
 
-(updated overnight)
+- #561 namespace re-measurement at P1 (head 1598b2142, supersedes #559). Review was BLOCKING; fixed and re-checked by me: a row labelled "numeric" must now cite a receipt with a real R-vs-Julia comparison inside tolerance, or it fails C1 and C8 (the review's mutation now reads C1_NOT_MET / C8_NOT_MET). Signed dispositions accept only "Shinichi Nakagawa" or "itchyshin" with a real, non-future date. Disclosed: at P0, 14 aghq rows now read name-only in C8 (C8 was NOT_MET before and after). Known limit: the checker trusts the numbers written in a receipt; it does not re-run them. 50/50 negative controls pass. Reply: "merge #561 when green".
 
 ## In a merge train (word given)
 
@@ -26,11 +26,11 @@ Written first at 18:27 MDT on 2026-09-27 and updated through the night. The newe
 ## In progress overnight
 
 - #557 zi_* twin: blocking fix DONE at d0a57e05d (sites with a Laplace precision eigenvalue below 0.1 are walled off; optima near the floor report converged = false; NB2 moment start). The reviewer's case now matches R (-3311.4547). Over 20 NB2 draws: silent breakdowns 3 -> 0; 2 draws honestly flagged not converged (R also fails there). Fresh review running.
-- #561 namespace re-measurement (supersedes #559, head 2d0cf3387): 71 rows at P1 give 0 numeric twins, 44 name-only, 6 mismatches, 2 need a Julia surface, 2 retired, 17 not measured. The checker now refuses to count a name-only row (C1 and C8). Fresh review running.
 - #563 temporal slice 2 (unit/unit_obs composition, head 6a3c5890c; retargeted to main so it survives #543's merge): 13 R test blocks twinned; NLL/gradient vs R's TMB 3e-9. Changes the optimizer for slice 1 fits too (two line searches, keep the lower, Newton polish). Adds a new export, update(). Fresh review running.
-- #561 review: BLOCKING (a row could self-declare "numeric" and count without numbers; the signed-disposition field accepted any signer). Builder fixing.
 
 ## Findings worth knowing
+
+- Namespace at P1 (#561): 71 R exports give 0 numeric twins, 44 name-only matches, 6 mismatches (Julia counterpart is a type or unexported: extract_Sigma_B/W, extract_cutpoints, extract_loadings, extract_proportions, extract_residual_split), 2 need a Julia function (animal_slope, dep), 2 retired, 17 still need live R fits.
 
 - zi_* Laplace can fail outright on some data: on 2 of 20 NB2 draws neither R nor Julia has a usable Laplace optimum. The real fix is adaptive quadrature; that is a decision for you, not overnight work.
 
