@@ -1,5 +1,5 @@
 {
-  "schema": "core070-postfit-p1-case-receipt/v1",
+  "schema": "core070-postfit-p1-case-receipt/v2",
   "case_id": "CORE070-WAVE8-SUMMARY-FIXEF-AND-LOGLIK",
   "verdict": "PASS",
   "evidence_kind": "numeric_r_vs_julia",
@@ -10,10 +10,14 @@
   "harness_kind": "point",
   "harness_pass": true,
   "batch_status": "PASS",
-  "verifier_output": [
-    "CORE070_WAVE8_CONVERSION_CONTRACT_OK cases=7 deferred=5 total_target_rows=12",
-    "CORE070_WAVE8_CONVERSION_STATE_OK /Users/z3437171/local-scratch/a3pf-runs/wave8-conversion-p1"
-  ],
+  "batch_verifier": {
+    "tool": "tools/core070_verify_wave8_conversion_batch.py",
+    "argv": "tools/core070_verify_wave8_conversion_batch.py {state} --self-test",
+    "status": "PASS",
+    "exit_code": 0,
+    "accept_marker": "CORE070_WAVE8_CONVERSION_STATE_OK",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave8-conversion-p1/verify.txt"
+  },
   "batch_status_note": "",
   "r_call": "c(as.numeric(summary(fit_g)$fixef$Estimate), as.numeric(summary(fit_g)$header$logLik))",
   "julia_call": "s = summary(fit_j, Y_g; X = X_g); vcat([r.estimate for r in s.fixef], s.logLik)",
@@ -27,7 +31,8 @@
   "gllvmtmb_version": "0.7.1",
   "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit_at_receipt_write": "9d2dd6cbfc1d458c38ee0cc91272ccb2e9cb43f1",
+  "glvmodels_commit": "681c4c3ca666e630470bba01a057bc88158b85f3",
+  "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
   "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
   "comparison": {
@@ -39,7 +44,25 @@
         "max_abs_diff": 1.134594640461728e-09,
         "tolerance": 0.0001,
         "tolerance_rule": "wave8-conversion-batch-contract-p1.json per-case tolerance (carried verbatim from P0); max |R - Julia| elementwise",
-        "diff_source": "harness-reported (the Julia results file records the max |R - Julia| it bounded, not the Julia vector)"
+        "n_values": 6,
+        "diff_source": "recomputed from raw R and Julia values",
+        "r_value": [
+          -1.3605902881620823e-14,
+          1.2924446509686475e-14,
+          1.2953993463519705e-14,
+          -4.9899341548117425e-15,
+          1.7505060921958366e-15,
+          -495.85539186606763
+        ],
+        "julia_value": [
+          -1.457167719820518e-17,
+          -2.4980018054066023e-17,
+          -3.8857805861880476e-17,
+          4.718447854656915e-17,
+          -4.302114220422482e-17,
+          -495.85539186493304
+        ],
+        "discriminating": true
       }
     ]
   }

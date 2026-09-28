@@ -1,5 +1,5 @@
 {
-  "schema": "core070-postfit-p1-case-receipt/v1",
+  "schema": "core070-postfit-p1-case-receipt/v2",
   "case_id": "CORE070-WAVE6-POSTFIT-LOGLIK-MULTI",
   "verdict": "PASS",
   "evidence_kind": "numeric_r_vs_julia",
@@ -10,11 +10,14 @@
   "harness_kind": "point",
   "harness_pass": true,
   "batch_status": "FAIL",
-  "verifier_output": [
-    "  File \"/Users/z3437171/local-scratch/GLLVM.jl-a3-postfit/tools/core070_verify_wave6_conversion_batch.py\", line 78, in need",
-    "    raise ValueError(message)",
-    "ValueError: receipt status is not PASS"
-  ],
+  "batch_verifier": {
+    "tool": "tools/core070_verify_wave6_conversion_batch.py",
+    "argv": "tools/core070_verify_wave6_conversion_batch.py {state}",
+    "status": "FAIL",
+    "exit_code": 1,
+    "accept_marker": "CORE070_WAVE6_CONVERSION_STATE_OK",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave6-conversion-p1/verify.txt"
+  },
   "batch_status_note": "The wave6 batch receipt reads FAIL, and tools/core070_verify_wave6_conversion_batch.py rejects the state, because of one case, CORE070-WAVE6-POSTFIT-NOBS-MULTI (own_receipt_defect): its frozen expectation that Julia nobs returns n = 80 no longer holds (Julia now returns p*n = 400, as R does). The other nine cases pass; each case receipt carries its own verdict.",
   "r_call": "as.numeric(logLik(fit_g))",
   "julia_call": "[GLLVM.loglikelihood(fit)]  # StatsAPI.loglikelihood(fit::AnyGllvmFit) = _loglik(fit), src/postfit.jl:580",
@@ -28,7 +31,8 @@
   "gllvmtmb_version": "0.7.1",
   "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit_at_receipt_write": "9d2dd6cbfc1d458c38ee0cc91272ccb2e9cb43f1",
+  "glvmodels_commit": "681c4c3ca666e630470bba01a057bc88158b85f3",
+  "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
   "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
   "comparison": {
@@ -47,7 +51,8 @@
         ],
         "julia_value": [
           -495.8553918649331
-        ]
+        ],
+        "discriminating": true
       }
     ]
   }
