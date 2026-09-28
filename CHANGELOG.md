@@ -191,6 +191,16 @@ All notable changes to GLLVModels.jl are documented here.
   front: they already end on the fitter's failure verdict (`converged = false`), and
   the #504 bootstrap-verdict tests rely on that. Valid data fits exactly as before.
   `test/test_twopart_input_check.jl`.
+- **Grouped per-site mode search no longer 2-cycles around the mode (zero-truncated NB2
+  objective; NB1, truncated-Poisson and censored-Poisson grouped `getLV`).** In
+  `_grouped_laplace_mode`, Fisher scoring overshoots by about 2x where the observed
+  curvature is about twice the Fisher weight, and steps below `1e-3(1 + |z|)` skipped
+  every check. The loop stopped wherever `maxiter` fell, so the truncated-NB2 Laplace
+  objective jumped by 5.5e-4 for a 1e-5 step in log r (seed-103 audit draw, site
+  y = [121, 1, 1, 2]). A step is now halved while the gradient along it at the trial point has
+  turned past minus one half of its starting value, on large and small steps alike; a full
+  step that passes is unchanged. Families without `_laplace_mode_should_backtrack`
+  (NB2, Beta, Gamma, ...) are untouched. `test/test_truncnb2_mode_search.jl`.
 - **`chibar2_pvalue`/`variance_lrt` silently returned a p-value of 1.0 for a `NaN`
   `LRT` or log-likelihood instead of refusing it.** `LRT > 0` is `false` for `NaN`, so
   a missing or non-finite input fell through to the "no evidence against the reduced
