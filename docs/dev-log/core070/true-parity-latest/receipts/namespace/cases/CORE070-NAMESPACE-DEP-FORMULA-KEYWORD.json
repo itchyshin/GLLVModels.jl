@@ -1,0 +1,55 @@
+{
+ "schema": "core070-namespace-1-case-receipt/v1",
+ "case_id": "CORE070-NAMESPACE-DEP-FORMULA-KEYWORD",
+ "source_id": "namespace/export/dep",
+ "bucket": "needs_new_julia_surface",
+ "meaning": "Tier 0 facts match the recorded NEEDS_NEW_JULIA_SURFACE expectation (R side present; Julia surface absent or only partial). A PASS here is NOT parity: the row stays blocked.",
+ "pin": "P1",
+ "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+ "r_sources_read": [
+  {
+   "path": "NAMESPACE",
+   "sha256": "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c",
+   "read_as": "git show 9539352f66f2db2cc26b1c393e67212a359b60c9:NAMESPACE"
+  },
+  {
+   "path": "R/brms-sugar.R",
+   "sha256": "7ea192ddde2dbb807e70322faef0bac8e6cdcfa19df7dd9f805476b02889191a",
+   "read_as": "git show 9539352f66f2db2cc26b1c393e67212a359b60c9:R/brms-sugar.R"
+  }
+ ],
+ "r_check": {
+  "namespace_line": "export(dep)",
+  "definition_pattern": "^dep\\s*<-\\s*function",
+  "definition_line_hint": 1959,
+  "registered": true,
+  "defined": true,
+  "expected_registered": true,
+  "expected_defined": true
+ },
+ "julia_check": {
+  "symbol": "dep",
+  "expected_exists": false,
+  "measured": {
+   "exists": false
+  }
+ },
+ "julia_commit": "c29c1c0b6d8d985e1edd96426edef2621402a03f",
+ "julia_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+ "result": "PASS",
+ "verifier": {
+  "tool": "tools/core070_verify_namespace_1_batch.py",
+  "case_verdict": "PASS",
+  "category": "needs_surface_as_expected",
+  "reason": "Julia facts match the recorded needs-surface expectation; not parity",
+  "batch_verdict": "CORE070_NAMESPACE_1_STATE_OK"
+ },
+ "batch_receipt": {
+  "path": "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json",
+  "sha256": "33190f383ad320f14e6accc560774a6c46911ab6965f86e320eeb63f3dd82e6b"
+ },
+ "contract": {
+  "path": "docs/dev-log/core070/true-parity-latest/namespace-1-batch-contract-p1.json",
+  "sha256": "fe645d39063248210c66bea21428bd282cd8d0982666940f58422e0c6e34ea51"
+ }
+}

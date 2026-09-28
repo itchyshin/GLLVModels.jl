@@ -1,0 +1,23 @@
+grouping P1 batch verifier: PASS
+PASS  R pinned at P1
+PASS  R gllvmTMB version 0.7.1 from the oracle library
+PASS  unit: both engines read the manifest fixture
+PASS  unit: R accepted the keyword and converged (code 0)
+PASS  unit: Julia accepted the keyword, fitted term 'unit', converged
+PASS  unit: misspelt keyword rejected by both calls
+PASS  unit: membership control moves logLik by > 0.001 on both engines
+PASS  unit_obs: both engines read the manifest fixture
+PASS  unit_obs: R accepted the keyword and converged (code 0)
+PASS  unit_obs: Julia accepted the keyword, fitted term 'unit_obs', converged
+PASS  unit_obs: misspelt keyword rejected by both calls
+PASS  unit_obs: membership control moves logLik by > 0.001 on both engines
+PASS  cluster: both engines read the manifest fixture
+PASS  cluster: R accepted the keyword and converged (code 0)
+PASS  cluster: Julia accepted the keyword, fitted term 'cluster', converged
+PASS  cluster: misspelt keyword rejected by both calls
+PASS  cluster: membership control moves logLik by > 0.001 on both engines
+PASS  cluster2: both engines read the manifest fixture
+PASS  cluster2: R accepted the keyword and converged (code 0)
+PASS  cluster2: Julia accepted the keyword, fitted term 'cluster2', converged
+PASS  cluster2: misspelt keyword rejected by both calls
+PASS  cluster2: membership control moves logLik by > 0.001 on both engines
