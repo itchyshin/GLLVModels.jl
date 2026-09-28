@@ -28,6 +28,47 @@ All notable changes to GLLVModels.jl are documented here.
   unit-test inputs and its reachable argument refusals, including a `NaN`
   log-likelihood/LRT (see the paired `Fixed` entry below).
 ### Added
+- **`extract_latent_scores(fit, y; level=:unit)`, the Julia twin of gllvmTMB's
+  `extract_latent_scores()` (P1 pin `9539352f6`, gllvmTMB 0.7.1).** Twins
+  `.default` and `.gllvmTMB_multi`; `level = :unit` is
+  `getLV(fit, y; rotate=false)`, passing `component=:innovation` too on the
+  seven fit types whose `getLV` accepts that keyword (`GllvmFit`,
+  `BinomialFit`, `PoissonFit`, `NBFit`, `BetaFit`, `OrdinalFit`, `GammaFit`;
+  every other fit type has no predictor-informed latent-score mean at all, so
+  `:total` and `:innovation` are structurally identical for it and passing
+  `component` would raise `MethodError`). Fit types whose `getLV` needs an
+  extra required positional argument (`GllvmCovFit`, `ZIPCovFit`,
+  `ConstrainedOrdinationFit`, `FourthCornerFit`, and others — see
+  `src/extract_latent_scores.jl`) raise a named `ArgumentError` pointing at
+  the `getLV` call to make directly, rather than silently misrouting it.
+  `RRRFit` raises its own, differently-worded `ArgumentError`: its
+  `getLV(fit, X; rotate)` is a plain 2-argument call, but `X` there is a
+  deterministic, fully predictor-driven reduced-rank-regression projection
+  with no latent innovation at all, so "innovation" does not apply.
+  `_ComponentAwareGllvmFit`, `_PlainGllvmFit` (the remaining fit types with no
+  `X_lv`/`component` support), and `_PositionalArgGllvmFit` are three
+  explicit, disjoint `Union`s built by reading every `getLV` method's
+  signature; a test asserts every `AnyGllvmFit` member with a `getLV` method
+  is in exactly one of them, so a newly added fit type with an unclassified
+  `getLV` method turns that test red instead of silently defaulting.
+  Verified against a live P1 R fit at each side's own fitted `Λ`/`β`
+  (isolating the shared posterior-mean/mode definition from optimiser-path
+  differences) for three families: Gaussian (test tolerance `1e-8`, measured
+  `5.6e-15` — machine precision), Poisson (test tolerance `1e-6`, measured
+  `7.2e-11` — Laplace-mode Newton tolerance), and NB2 per-trait dispersion via
+  `NBGroupedFit` (test tolerance `1e-6`, measured `5.7e-11`, on a fit where
+  3 of 6 traits' dispersion is boundary-hugging — irrelevant to this
+  identity, which holds at whatever parameters R fitted, not at the truth).
+  `level = :unit_obs` always returns `nothing`: R's within-unit `z_W` tier
+  belongs to gllvmTMB's two-tier `latent(0 + trait | site, d)` trait-table
+  formula grammar (unbalanced replication per unit), which this package's
+  single-tier wide-format `Y` GLLVM engine does not implement at all — not a
+  per-fit "this model happens to lack that tier" check.
+  `extract_latent_scores.gllvmTMB_site_trait_sim` and
+  `extract_latent_scores.gllvmTMB_va` are excluded from this twin per the P1
+  case map (PR #526): Julia has neither a site-trait-simulation class nor a
+  variational-approximation fit class. See
+  `src/extract_latent_scores.jl` and `test/test_extract_latent_scores.jl`.
 - **`ordinal_logit()`: name-twin of gllvmTMB's `ordinal_logit()` (family_id 20,
   gllvmTMB >= 0.7.1).** Fits exactly the model `Ordinal()` already fits with
   `link = LogitLink()` (`fit_ordinal_gllvm_pertrait` /
