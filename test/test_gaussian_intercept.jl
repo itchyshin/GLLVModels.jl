@@ -104,4 +104,31 @@ using Test, GLLVModels, Random, Distributions, Statistics, LinearAlgebra
         f = fit_gaussian_gllvm(Y1; K = 1)
         @test isempty(f.pars.β)
     end
+
+    @testset "check_consistency runs on the public Gaussian route" begin
+        fc = fit_gllvm(Y1; family = Normal(), K = 1)
+        cc = GLLVModels.gllvmTMB_check_consistency(fc, Y1; n_sim = 60, seed = 42)
+        @test length(cc.marginal_bias) == length(fc.pars.θ_packed)
+        @test cc.marginal_p_value > 0.01
+    end
+end
+
+# The phylogenetic effect J_n ⊗ B is a per-species constant across sites, so a
+# free per-species intercept absorbs it and drives σ_phy to zero. Phylo fits
+# therefore keep fit_gaussian_gllvm's zero mean on the public route.
+@testset "Gaussian phylo fit is not absorbed by trait intercepts" begin
+    Random.seed!(21)
+    p, n = 6, 200
+    Λ = reshape(0.3 .+ 0.4 .* abs.(randn(p)), p, 1)
+    Λ[2:2:end] .*= -1.0
+    phy = GLLVModels.random_balanced_tree(p; branch_length = 0.5)
+    Σ_phy = Matrix(Symmetric(GLLVModels.sigma_phy_dense(phy; σ²_phy = 1.0)))
+    y = Λ * randn(1, n)
+    y .+= 0.8 .* (cholesky(Symmetric(Σ_phy)).L * randn(p))
+    y .+= 0.5 .* randn(p, n)
+    ref = fit_gaussian_gllvm(y; K = 1, has_phy_unique = true, Σ_phy = Σ_phy)
+    f = fit_gllvm(y; family = Normal(), K = 1, has_phy_unique = true, Σ_phy = Σ_phy)
+    @test f.logLik == ref.logLik
+    @test isempty(f.pars.β)
+    @test maximum(abs.(f.pars.σ_phy)) > 0.1
 end

@@ -83,9 +83,11 @@ function _fitted_mean(fit::GllvmFit, y::AbstractMatrix,
     p, n = size(y)
     β = fit.pars.β
     X === nothing && _has_trait_intercepts(fit) && return repeat(β, 1, n)
-    if X === nothing || β === nothing || length(β) == 0
+    if β === nothing || length(β) == 0
         return zeros(Float64, p, n)
     end
+    X === nothing && throw(ArgumentError(
+        "this fit estimated fixed effects β; provide the same X to getLV, predict, fitted, or residuals"))
     μ = zeros(Float64, p, n)
     q = size(X, 3)
     @inbounds for s in 1:n, t in 1:p, k in 1:q
@@ -253,9 +255,9 @@ end
 
 In-sample fitted values at the conditional latent scores `ẑ` (see [`getLV`](@ref)):
 `type=:link` returns the linear predictor `η = μ + Λ ẑ` (`μ` the fixed-effect
-mean, `0` without `X`); `type=:response` applies the inverse link (identity for
-the Gaussian family, so both types coincide). No `newdata` — `y` (and `X`) must
-match the fit.
+mean, `0` when the fit has no fixed effects); `type=:response` applies the inverse
+link (identity for the Gaussian family, so both types coincide). No `newdata` — `y`
+(and `X`) must match the fit; a fit that estimated `β` throws when `X` is omitted.
 """
 function predict(fit::GllvmFit, y::AbstractMatrix;
                  type::Symbol = :response,
