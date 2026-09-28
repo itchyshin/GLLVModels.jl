@@ -24,18 +24,30 @@ const _CORE070_FAMILY_SMOKE_IDS = Core070CaseRegistry.FAMILY_IDS
 const _CORE070_SOURCE = Ref{Dict{String, Any}}()
 const _CORE070_RUN = Ref{Any}(nothing)
 _core070_required() = get(ENV, "CORE070_PARITY_REQUIRED", "0") == "1"
-const _CORE070_ORACLE_BUILD_RECEIPT = ".unlazy/core070-aghq/oracle-receipts/build.json"
-const _CORE070_ORACLE_SOURCE_RECEIPT = ".unlazy/core070-aghq/oracle-source/source.json"
+# Oracle build/source receipt paths are pin-aware: see _core070_oracle_receipts_rel()
+# in core070_pin.jl.
 
 const _CORE070_FIXTURES = Core070CaseRegistry.FIXTURES
 
 _core070_root() = normpath(joinpath(@__DIR__, "..", ".."))
 
-function _core070_copy_oracle_receipts!(receipt_dir::AbstractString)
+# The selected pin's oracle build/source receipts, each checked against the pin
+# (reference_commit, source_tree_sha256, archive_sha256; plus namespace_sha256 for
+# source.json) before any use. A stale receipt from another pin is an error.
+function _core070_oracle_receipt_paths()
     root = _core070_root()
-    for rel in (_CORE070_ORACLE_BUILD_RECEIPT, _CORE070_ORACLE_SOURCE_RECEIPT)
-        source = joinpath(root, rel)
-        isfile(source) || throw(ArgumentError("required oracle receipt is missing: $rel"))
+    rel = _core070_oracle_receipts_rel()
+    for kind in (:build, :source)
+        path = joinpath(root, getfield(rel, kind))
+        isfile(path) || throw(ArgumentError("required oracle receipt is missing: $(getfield(rel, kind))"))
+        _core070_check_oracle_receipt(read(path, String), getfield(rel, kind), kind)
+    end
+    return (build = joinpath(root, rel.build), source = joinpath(root, rel.source))
+end
+
+function _core070_copy_oracle_receipts!(receipt_dir::AbstractString)
+    receipts = _core070_oracle_receipt_paths()
+    for source in (receipts.build, receipts.source)
         cp(source, joinpath(receipt_dir, basename(source)); force = false)
     end
     return nothing
@@ -124,6 +136,9 @@ function _core070_source_pin!()
     installed_tree = _core070_tree_sha256(pkg_root; ignore = rel -> rel == "CORE070_SOURCE_PIN.toml")
     get(pin, "installed_tree_sha256", nothing) == installed_tree ||
         throw(ArgumentError("installed gllvmTMB bytes differ from the exact-build source-pin receipt"))
+    receipts = _core070_oracle_receipt_paths()
+    _core070_json_top_string(read(receipts.build, String), "installed_tree_sha256") == installed_tree ||
+        throw(ArgumentError("oracle build receipt does not describe the installed gllvmTMB library"))
     source = Dict{String, Any}(
         "reference_commit" => _CORE070_REFERENCE_COMMIT,
         "archive_sha256" => _CORE070_ARCHIVE_SHA256,
@@ -131,8 +146,8 @@ function _core070_source_pin!()
         "source_marker_sha256" => _core070_sha256_file(marker),
         "source_tree_sha256" => source_tree,
         "installed_tree_sha256" => installed_tree,
-        "oracle_build_receipt_sha256" => _core070_sha256_file(joinpath(_core070_root(), _CORE070_ORACLE_BUILD_RECEIPT)),
-        "oracle_source_receipt_sha256" => _core070_sha256_file(joinpath(_core070_root(), _CORE070_ORACLE_SOURCE_RECEIPT)),
+        "oracle_build_receipt_sha256" => _core070_sha256_file(receipts.build),
+        "oracle_source_receipt_sha256" => _core070_sha256_file(receipts.source),
         "julia_source_tree_sha256" => _core070_tree_sha256(joinpath(@__DIR__, "..", "..", "src")),
         "julia_version" => string(VERSION),
         "julia_machine" => Sys.MACHINE,
