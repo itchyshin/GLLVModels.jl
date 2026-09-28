@@ -34,7 +34,7 @@ One reply that lands everything in a safe order (edit out anything you don't wan
 
 ## Landed on main (2026-09-27)
 
-Morning 2026-09-28: #543 temporal slice 1 (863ee0f78).
+Morning 2026-09-28: #543 temporal slice 1 (863ee0f78); specs #525 iSDM (253f61d42), #535 temporal (011c24112), #545 phylo latent (802cc879e).
 
 Overnight: #548 chibar2_pvalue / variance_lrt twin (4357e4652, 22:58); #531 extract_latent_scores twin (5b9af3763, 23:25).
 
