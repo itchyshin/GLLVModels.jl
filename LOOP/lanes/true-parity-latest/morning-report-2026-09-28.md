@@ -61,6 +61,8 @@ Overnight: #548 chibar2_pvalue / variance_lrt twin (4357e4652, 22:58); #531 extr
 
 ## In a merge train (word given)
 
+After #561 merged (check-log conflicts only): refreshed #546 (46dbb8ef3), #547 (03aa1aeb8), #557 (f97dfbfe0), #563 (dc365bd58), #567 (83b2b562a), and cascaded up the stacks: #558 (b6efad8bb); #569 (6df22c49b), #571 (3d367a519), #579 (1b80ed422), #584 (3558f14a4); #586 (4b7a367b0), #587 (7b9f78911); #589 (0c37d9e6b). All clean against main; trains restarted, the stack as one train #567 to #584, then #586, #587, then #589.
+
 #576 and #581 moved to the grouped-getLV session's Shinichi-approved integration train (24 PRs gated by one integration branch); my duplicate trains stopped, my #576 CI re-runs cancelled, and that session told #581's new head 8250342d7 (Linux test fix; renewed word). #557 refreshed (ace014f88) and in my train.
 
 Fifth word ("merge #589, #593 and #592 when green"): #593 train started (clean, dcd500984). #589 contains the A3 stack, #586/#587 and #561's branch, so #561's train was restarted with a merge commit (squash would have forced #589 into a full re-sync) and the updated #586, #587 and #561 heads were merged into #589 (4dad08533, clean against main). A waiting train merges #589 once #561, #586 and #587 have all merged, then #592 (the handover) last.
