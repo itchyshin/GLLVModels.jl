@@ -149,6 +149,7 @@ include("coevolution_glm.jl")             # cross-family (non-Gaussian) cross-li
 include("postfit.jl")
 include("lv_targets.jl")                # internal eta-scale realised LV targets
 include("ordination.jl")                  # ordination output (site scores + species loadings, canonical rotation)
+include("extract_latent_scores.jl")       # gllvmTMB extract_latent_scores() twin (P1 9539352f6, .default/.gllvmTMB_multi only)
 include("model_selection.jl")             # select_lv: latent-dimension selection by AIC/BIC
 include("cv.jl")                          # cv_gllvm: K-fold cross-validation engine
 include("simulate_fit.jl")               # simulate(fit, …) for the non-Gaussian families
@@ -355,7 +356,7 @@ export make_cross_kernel, extract_Gamma, fit_coevolution_gaussian, fit_coevoluti
        gamma_marginal_loglik_va, fit_gamma_gllvm_va,
        exponential_marginal_loglik_va, fit_exponential_gllvm_va,
        getLV, getLoadings, rotation, ordination, ordiplot, ordination_uncertainty,
-       extract_lv_effects, lv_effects, predict_spatial,
+       extract_lv_effects, lv_effects, predict_spatial, extract_latent_scores,
        coef_table, GllvmCoefTable, select_lv, LVSelection,
        cv_gllvm, CVResult,
        StatsAPI, coef, vcov, nobs, dof, loglikelihood, stderror, coeftable,
