@@ -48,23 +48,19 @@ PIN = "P1"
 # surface exists at the branch head. Located by grep on src/ and confirmed with
 # isdefined + Base.isexported on the loaded module (2026-09-27).
 JULIA_AT_HEAD = {
+    # Only the wording below is authored; the Julia facts themselves (exists, exported, callable,
+    # own-method location) are MEASURED at run time by tools/core070_namespace_1_batch.jl and land
+    # in julia-facts.json and each per-case receipt. A same-name export is a name match: it is not
+    # a claim that the semantics agree (D-295 row 5), except where stated for deviance.
     "CORE070-NAMESPACE-DEVIANCE-MULTI-NATIVE": (
         "deviance",
-        "StatsAPI.deviance(fit::AnyGllvmFit) = -2 * loglikelihood(fit), src/postfit_tables.jl:21 "
-        "(added a9464034d, core070 section 1.1); exported.",
+        "Same name exported. Genuine semantic twin by definition on both sides: R deviance.gllvmTMB_multi "
+        "returns -2 * logLik(object) (R/methods-gllvmTMB.R at P1) and Julia StatsAPI.deviance(fit) returns "
+        "-2 * loglikelihood(fit); numeric output not compared in this Tier 0 batch.",
     ),
-    "CORE070-NAMESPACE-TIDY-MULTI-NATIVE": (
-        "tidy",
-        "tidy(fit::GllvmFit, Y; ...) src/postfit_tables.jl:898 (added df3e61b55, core070 section 1.13); exported.",
-    ),
-    "CORE070-NAMESPACE-CHECK-GLLVMTMB-DIAGNOSTIC": (
-        "check_gllvmTMB",
-        "check_gllvmTMB(fit; ...) src/diagnostics.jl:344 (added 0fc22cddf, core070 diagnostics cluster); exported.",
-    ),
-    "CORE070-NAMESPACE-CONFINT-INSPECT-NATIVE": (
-        "confint_inspect",
-        "confint_inspect(fit::GllvmFit, y; ...) src/diagnostics.jl:702 (added 0fc22cddf, core070 diagnostics cluster); exported.",
-    ),
+    "CORE070-NAMESPACE-TIDY-MULTI-NATIVE": ("tidy", "Same name exported; semantics not compared."),
+    "CORE070-NAMESPACE-CHECK-GLLVMTMB-DIAGNOSTIC": ("check_gllvmTMB", "Same name exported; semantics not compared."),
+    "CORE070-NAMESPACE-CONFINT-INSPECT-NATIVE": ("confint_inspect", "Same name exported; semantics not compared."),
 }
 
 NEGATIVE_CONTROLS = [
@@ -211,6 +207,13 @@ def build():
                         "(GLLVMTMB_DIR), no installed gllvmTMB, no RCall. Julia side is isdefined() on the loaded "
                         "GLLVModels module at the branch head. Not a numeric-output comparison (see P0 "
                         "runner.tier1_followup, still unbuilt)."),
+        "julia_require_exported_callable": True,
+        "row_verdicts": "measured",
+        "row_verdicts_note": ("An executable row passes only if R registers and defines it at P1 AND the Julia "
+                              "symbol is exported and a Function (measured). Rows that fail are recorded as "
+                              "failures in results.tsv and their case receipts; the verifier accepts the batch "
+                              "when every recorded verdict equals the one recomputed from the facts, not only "
+                              "when every row passes."),
         "expected_case_count": len(cases),
         "needs_new_julia_surface_count": len(needs),
         "retired_at_p1_count": len(retired),

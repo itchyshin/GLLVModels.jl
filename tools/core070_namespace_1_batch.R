@@ -359,9 +359,18 @@ julia_ok <- function(row) {
   !is.null(f) && identical(f$exists, row$expected_julia_symbol_exists)
 }
 
+# Contracts with julia_require_exported_callable (P1): an executable row passes only if the Julia
+# symbol is exported AND a Function. isdefined alone let an unexported helper or a type count as a
+# twin (review of #559). P0 keeps its original existence-only rule.
+julia_exported_callable <- function(row) {
+  if (!isTRUE(contract$julia_require_exported_callable)) return(TRUE)
+  f <- julia_report$facts[[row$julia_symbol]]
+  !is.null(f) && isTRUE(f$exported) && isTRUE(f$callable)
+}
+
 exec_pass <- vapply(contract$cases, function(row) {
   r_ok <- isTRUE(r_facts[[row$case_id]]$ok)
-  r_ok && julia_ok(row)
+  r_ok && julia_ok(row) && julia_exported_callable(row)
 }, logical(1))
 names(exec_pass) <- exec_ids
 

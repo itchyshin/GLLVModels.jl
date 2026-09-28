@@ -153,8 +153,48 @@ def verify_contract(contract=None):
 # ---------------------------------------------------------------------------
 # 2. Retained-state checks (receipt.json + results.tsv + facts JSON).
 # ---------------------------------------------------------------------------
+def measured_mode(contract):
+    return contract.get("row_verdicts") == "measured"
+
+
+def recompute_row(contract, bucket, row, rf, jf):
+    """The verdict the facts imply for one row: (verdict, category, reason).
+
+    Categories: registration_twin (executable row: R registered+defined, Julia symbol exported and a
+    Function under julia_require_exported_callable, else merely defined); registration_mismatch (R side
+    fine, Julia symbol defined but not exported or not a Function); r_side_mismatch; julia_absent;
+    needs_surface_as_expected / needs_surface_changed; retirement_confirmed / retirement_not_confirmed.
+    """
+    rf = rf or {}
+    r_ok = (rf.get("registered") is row["expected_r_registered"] and rf.get("defined") is row["expected_r_defined"])
+    if bucket == "retired_at_p1":
+        if r_ok and rf.get("retirement_confirmed") is True:
+            return "PASS", "retirement_confirmed", "export absent from the P1 NAMESPACE; definition still present"
+        return "FAIL", "retirement_not_confirmed", f"registered={rf.get('registered')} defined={rf.get('defined')}"
+    if not r_ok:
+        return "FAIL", "r_side_mismatch", f"R registered={rf.get('registered')} defined={rf.get('defined')}"
+    jf = jf or {}
+    if bucket == "needs_new_julia_surface":
+        if jf.get("exists") is row["expected_julia_symbol_exists"]:
+            return "PASS", "needs_surface_as_expected", "Julia facts match the recorded needs-surface expectation; not parity"
+        return "FAIL", "needs_surface_changed", f"Julia exists={jf.get('exists')}, contract expected {row['expected_julia_symbol_exists']}"
+    if jf.get("exists") is not True:
+        return "FAIL", "julia_absent", f"Julia symbol {row['julia_symbol']} not defined in GLLVModels"
+    if contract.get("julia_require_exported_callable"):
+        problems = []
+        if jf.get("exported") is not True:
+            problems.append("not exported")
+        if jf.get("callable") is not True:
+            problems.append(f"not a Function (kind={jf.get('kind')})")
+        if problems:
+            return "FAIL", "registration_mismatch", f"Julia symbol {row['julia_symbol']} " + " and ".join(problems)
+    return "PASS", "registration_twin", "R registered and defined; Julia symbol present" + (
+        ", exported, a Function" if contract.get("julia_require_exported_callable") else "")
+
+
 def check_state(contract, receipt, results_lines, r_facts, julia_facts):
-    need(receipt["status"] == "PASS", "receipt status is not PASS")
+    if not measured_mode(contract):
+        need(receipt["status"] == "PASS", "receipt status is not PASS")
     need(receipt["scope"] == "CORE070_NAMESPACE_1_BATCH_TIER0", "wrong receipt scope")
     need(receipt["reference_commit"] == contract["reference_commit"], "receipt reference_commit mismatch")
     need(receipt["contract_sha256"] == sha(CONTRACT_PATH), "receipt contract_sha256 does not match the on-disk contract")
@@ -184,15 +224,35 @@ def check_state(contract, receipt, results_lines, r_facts, julia_facts):
         seen[cid] = (verdict, bucket)
 
     need(set(seen.keys()) == (exec_ids | needs_ids | retired_ids), "results.tsv case_id set does not match contract exec+needs(+retired) union")
-    for cid in exec_ids:
+    r_by_case = {x["case_id"]: x for x in r_facts["facts"]} if isinstance(r_facts["facts"], list) else r_facts["facts"]
+
+    if measured_mode(contract):
+        # Every recorded verdict must equal the one the facts imply; failures are allowed but must
+        # be recorded as failures, and the receipt status must say whether all rows passed.
+        all_pass = True
+        for bucket, rows in (("executable_now", contract["cases"]),
+                             ("needs_new_julia_surface", contract["needs_new_julia_surface"]),
+                             ("retired_at_p1", contract.get("retired_at_p1", []))):
+            for row in rows:
+                need(row["case_id"] in r_by_case, f"{row['case_id']}: missing from r-facts.json")
+                jf = None
+                if bucket != "retired_at_p1":
+                    jf = julia_facts["facts"].get(row["julia_symbol"])
+                    need(jf is not None, f"{row['case_id']}: julia symbol {row['julia_symbol']} missing from julia-facts.json")
+                verdict, category, reason = recompute_row(contract, bucket, row, r_by_case[row["case_id"]], jf)
+                need(seen[row["case_id"]] == (verdict, bucket),
+                     f"{row['case_id']}: results.tsv says {seen[row['case_id']]}, facts imply {(verdict, bucket)} ({category}: {reason})")
+                all_pass = all_pass and verdict == "PASS"
+        need(receipt["status"] == ("PASS" if all_pass else "FAIL"),
+             f"receipt status {receipt['status']} disagrees with the recomputed row verdicts (all_pass={all_pass})")
+    for cid in (() if measured_mode(contract) else exec_ids):
         need(seen[cid] == ("PASS", "executable_now"), f"{cid}: expected PASS/executable_now, got {seen[cid]}")
-    for cid in needs_ids:
+    for cid in (() if measured_mode(contract) else needs_ids):
         need(seen[cid] == ("PASS", "needs_new_julia_surface"), f"{cid}: expected PASS/needs_new_julia_surface, got {seen[cid]}")
-    for cid in retired_ids:
+    for cid in (() if measured_mode(contract) else retired_ids):
         need(seen[cid] == ("PASS", "retired_at_p1"), f"{cid}: expected PASS/retired_at_p1, got {seen[cid]}")
 
-    r_by_case = {x["case_id"]: x for x in r_facts["facts"]} if isinstance(r_facts["facts"], list) else r_facts["facts"]
-    for row in contract["cases"] + contract["needs_new_julia_surface"]:
+    for row in ([] if measured_mode(contract) else contract["cases"] + contract["needs_new_julia_surface"]):
         rf = r_by_case.get(row["case_id"])
         need(rf is not None, f"{row['case_id']}: missing from r-facts.json")
         need(rf.get("ok") is True, f"{row['case_id']}: R-side registered+defined check did not pass")
@@ -202,7 +262,7 @@ def check_state(contract, receipt, results_lines, r_facts, julia_facts):
         need(jf.get("exists") == row["expected_julia_symbol_exists"],
              f"{row['case_id']}: julia exists={jf.get('exists')}, expected {row['expected_julia_symbol_exists']}")
 
-    for row in contract.get("retired_at_p1", []):
+    for row in ([] if measured_mode(contract) else contract.get("retired_at_p1", [])):
         rf = r_by_case.get(row["case_id"])
         need(rf is not None, f"{row['case_id']}: missing from r-facts.json")
         need(rf.get("registered") is False and rf.get("defined") is True and rf.get("retirement_confirmed") is True,
@@ -250,9 +310,9 @@ def _synthetic_state(contract):
     ]
     julia_facts = {}
     for r in exec_rows:
-        julia_facts[r["julia_symbol"]] = {"exists": True}
+        julia_facts[r["julia_symbol"]] = {"exists": True, "exported": True, "callable": True, "kind": "Function"}
     for r in needs_rows:
-        julia_facts[r["julia_symbol"]] = {"exists": r["expected_julia_symbol_exists"]}
+        julia_facts.setdefault(r["julia_symbol"], {})["exists"] = r["expected_julia_symbol_exists"]
 
     retired_rows = contract.get("retired_at_p1", [])
     r_facts_list += [
@@ -340,6 +400,31 @@ def run_self_test():
     expect_rejected(f"{absent_sym} (expected-absent) symbol flipped to exists=true", mut_needs_symbol_flipped_to_exist)
     if contract.get("retired_at_p1"):
         expect_rejected("retired export read as registered", mut_retired_read_as_registered)
+
+    if contract.get("julia_require_exported_callable"):
+        probe = contract["cases"][0]
+
+        def mut_unexported_still_pass(r, res, rf, jf):
+            jf["facts"][probe["julia_symbol"]]["exported"] = False  # results.tsv still says PASS
+            return r, res, rf, jf
+
+        def mut_type_still_pass(r, res, rf, jf):
+            jf["facts"][probe["julia_symbol"]].update({"callable": False, "kind": "DataType"})
+            return r, res, rf, jf
+
+        expect_rejected("unexported Julia symbol recorded as PASS", mut_unexported_still_pass)
+        expect_rejected("Julia type (not a Function) recorded as PASS", mut_type_still_pass)
+
+        # A measured failure, recorded honestly (row FAIL, receipt FAIL), must be ACCEPTED: the
+        # batch verifies the recorded verdicts, it does not hide failing rows.
+        r2, res2, rf2, jf2 = deepcopy(receipt), list(results_lines), deepcopy(r_facts), deepcopy(julia_facts)
+        for sym, facts in jf2["facts"].items():
+            if sym == probe["julia_symbol"]:
+                facts["exported"] = False
+        failing = {x["case_id"] for x in contract["cases"] if x["julia_symbol"] == probe["julia_symbol"]}
+        res2 = [l.replace("\tPASS\t", "\tFAIL\t") if l.split("\t")[0] in failing else l for l in res2]
+        r2["status"] = "FAIL"
+        check_state(contract, r2, res2, rf2, jf2)
     expect_rejected("one r-facts entry dropped", mut_drop_one_r_fact)
     expect_rejected("a source pin tampered without updating the receipt", mut_source_pin_tampered)
 
@@ -361,9 +446,10 @@ def run_self_test():
 #    rather than lost; main() still exits nonzero if the batch fails.
 # ---------------------------------------------------------------------------
 BUCKET_MEANING = {
-    "executable_now": "Tier 0 existence/registration parity: the R export/S3 method is registered in the pinned "
-                      "NAMESPACE and defined in the cited R file, and the named Julia symbol is defined in "
-                      "GLLVModels. Not a numeric-output comparison.",
+    "executable_now": "Tier 0 registration check: the R export/S3 method is registered in the pinned NAMESPACE "
+                      "and defined in the cited R file, and the named Julia symbol is defined in GLLVModels "
+                      "(at P1 also exported and a Function). A name match only (evidence_tier registration): "
+                      "semantics and numeric output are not compared, so a PASS is not a twin.",
     "needs_new_julia_surface": "Tier 0 facts match the recorded NEEDS_NEW_JULIA_SURFACE expectation (R side present; "
                                "Julia surface absent or only partial). A PASS here is NOT parity: the row stays blocked.",
     "retired_at_p1": "The export left the NAMESPACE between P0 and P1 (definition still present, unexported). A PASS "
@@ -391,16 +477,12 @@ def case_verdicts(contract, results_lines, r_facts, julia_facts):
                          ("retired_at_p1", contract.get("retired_at_p1", []))):
         for row in rows:
             rf = r_by_case.get(row["case_id"], {})
-            r_ok = (rf.get("registered") is row["expected_r_registered"]
-                    and rf.get("defined") is row["expected_r_defined"])
-            if bucket == "retired_at_p1":
-                jf, j_ok = None, True
-            else:
-                jf = julia_facts["facts"].get(row["julia_symbol"])
-                j_ok = jf is not None and jf.get("exists") is row["expected_julia_symbol_exists"]
+            jf = None if bucket == "retired_at_p1" else julia_facts["facts"].get(row["julia_symbol"])
+            verdict, category, reason = recompute_row(contract, bucket, row, rf, jf)
             runner = seen.get(row["case_id"])
-            ok = r_ok and j_ok and runner == ("PASS", bucket)
-            out.append((bucket, row, rf, jf, runner, "PASS" if ok else "FAIL"))
+            if runner != (verdict, bucket):
+                verdict, category, reason = "FAIL", "runner_disagrees", f"results.tsv {runner} vs facts {verdict}: {reason}"
+            out.append((bucket, row, rf, jf, runner, verdict, category, reason))
     return out
 
 
@@ -418,7 +500,7 @@ def write_case_receipts(contract, state_dir: Path, out_dir: Path, batch_verdict:
             return f"readback tree file {rel}"
     out_dir.mkdir(parents=True, exist_ok=True)
     tally = {"PASS": 0, "FAIL": 0}
-    for bucket, row, rf, jf, runner, verdict in case_verdicts(contract, results_lines, r_facts, julia_facts):
+    for bucket, row, rf, jf, runner, verdict, category, reason in case_verdicts(contract, results_lines, r_facts, julia_facts):
         tally[verdict] += 1
         doc = {
             "schema": "core070-namespace-1-case-receipt/v1",
@@ -441,11 +523,11 @@ def write_case_receipts(contract, state_dir: Path, out_dir: Path, batch_verdict:
                 "expected_registered": row["expected_r_registered"],
                 "expected_defined": row["expected_r_defined"],
             },
+            # Measured facts from julia-facts.json only (no hand-typed note).
             "julia_check": None if bucket == "retired_at_p1" else {
                 "symbol": row["julia_symbol"],
-                "exists": None if jf is None else jf.get("exists"),
                 "expected_exists": row["expected_julia_symbol_exists"],
-                "note": row.get("julia_note"),
+                "measured": jf,
             },
             "julia_commit": receipt.get("julia_commit"),
             "julia_src_tree": receipt.get("julia_src_tree"),
@@ -453,6 +535,8 @@ def write_case_receipts(contract, state_dir: Path, out_dir: Path, batch_verdict:
             "verifier": {
                 "tool": "tools/core070_verify_namespace_1_batch.py",
                 "case_verdict": verdict,
+                "category": category,
+                "reason": reason,
                 "batch_verdict": batch_verdict,
             },
             "batch_receipt": {"path": _rel(receipt_path), "sha256": sha(receipt_path)},

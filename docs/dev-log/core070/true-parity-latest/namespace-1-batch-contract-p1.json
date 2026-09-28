@@ -14,6 +14,9 @@
  "case_plan_annex": "docs/dev-log/core070/namespace-required-case-plan.json",
  "manifest_row_count": 90,
  "triage_note": "Tier 0 at P1: existence/registration parity only, same tier as the P0 batch. R side reads NAMESPACE and the cited R files with `git show <P1>:<path>` from a local gllvmTMB clone (GLLVMTMB_DIR), no installed gllvmTMB, no RCall. Julia side is isdefined() on the loaded GLLVModels module at the branch head. Not a numeric-output comparison (see P0 runner.tier1_followup, still unbuilt).",
+ "julia_require_exported_callable": true,
+ "row_verdicts": "measured",
+ "row_verdicts_note": "An executable row passes only if R registers and defines it at P1 AND the Julia symbol is exported and a Function (measured). Rows that fail are recorded as failures in results.tsv and their case receipts; the verifier accepts the batch when every recorded verdict equals the one recomputed from the facts, not only when every row passes.",
  "expected_case_count": 50,
  "needs_new_julia_surface_count": 2,
  "retired_at_p1_count": 2,
@@ -929,7 +932,7 @@
    "r_definition_pattern": "^deviance\\.gllvmTMB_multi\\s*<-\\s*function",
    "r_namespace_line": "S3method(deviance,gllvmTMB_multi)",
    "julia_symbol": "deviance",
-   "julia_note": "StatsAPI.deviance(fit::AnyGllvmFit) = -2 * loglikelihood(fit), src/postfit_tables.jl:21 (added a9464034d, core070 section 1.1); exported.",
+   "julia_note": "Same name exported. Genuine semantic twin by definition on both sides: R deviance.gllvmTMB_multi returns -2 * logLik(object) (R/methods-gllvmTMB.R at P1) and Julia StatsAPI.deviance(fit) returns -2 * loglikelihood(fit); numeric output not compared in this Tier 0 batch.",
    "expected_r_registered": true,
    "expected_r_defined": true,
    "expected_julia_symbol_exists": true
@@ -945,7 +948,7 @@
    "r_definition_pattern": "^tidy\\.gllvmTMB_multi\\s*<-\\s*function",
    "r_namespace_line": "S3method(tidy,gllvmTMB_multi)",
    "julia_symbol": "tidy",
-   "julia_note": "tidy(fit::GllvmFit, Y; ...) src/postfit_tables.jl:898 (added df3e61b55, core070 section 1.13); exported.",
+   "julia_note": "Same name exported; semantics not compared.",
    "expected_r_registered": true,
    "expected_r_defined": true,
    "expected_julia_symbol_exists": true
@@ -961,7 +964,7 @@
    "r_definition_pattern": "^check_gllvmTMB\\s*<-\\s*function",
    "r_namespace_line": "export(check_gllvmTMB)",
    "julia_symbol": "check_gllvmTMB",
-   "julia_note": "check_gllvmTMB(fit; ...) src/diagnostics.jl:344 (added 0fc22cddf, core070 diagnostics cluster); exported.",
+   "julia_note": "Same name exported; semantics not compared.",
    "expected_r_registered": true,
    "expected_r_defined": true,
    "expected_julia_symbol_exists": true
@@ -977,7 +980,7 @@
    "r_definition_pattern": "^confint_inspect\\s*<-\\s*function",
    "r_namespace_line": "export(confint_inspect)",
    "julia_symbol": "confint_inspect",
-   "julia_note": "confint_inspect(fit::GllvmFit, y; ...) src/diagnostics.jl:702 (added 0fc22cddf, core070 diagnostics cluster); exported.",
+   "julia_note": "Same name exported; semantics not compared.",
    "expected_r_registered": true,
    "expected_r_defined": true,
    "expected_julia_symbol_exists": true
@@ -1610,7 +1613,7 @@
    "julia_symbol_p0": "deviance",
    "julia_symbol_p1": "deviance",
    "expected_julia_symbol_exists_p0": false,
-   "reason": "StatsAPI.deviance(fit::AnyGllvmFit) = -2 * loglikelihood(fit), src/postfit_tables.jl:21 (added a9464034d, core070 section 1.1); exported."
+   "reason": "Same name exported. Genuine semantic twin by definition on both sides: R deviance.gllvmTMB_multi returns -2 * logLik(object) (R/methods-gllvmTMB.R at P1) and Julia StatsAPI.deviance(fit) returns -2 * loglikelihood(fit); numeric output not compared in this Tier 0 batch."
   },
   {
    "case_id": "CORE070-NAMESPACE-TIDY-MULTI-NATIVE",
@@ -1624,7 +1627,7 @@
    "julia_symbol_p0": "tidy",
    "julia_symbol_p1": "tidy",
    "expected_julia_symbol_exists_p0": false,
-   "reason": "tidy(fit::GllvmFit, Y; ...) src/postfit_tables.jl:898 (added df3e61b55, core070 section 1.13); exported."
+   "reason": "Same name exported; semantics not compared."
   },
   {
    "case_id": "CORE070-NAMESPACE-ANIMAL-SLOPE-FIT",
@@ -1644,7 +1647,7 @@
    "julia_symbol_p0": "_fit_verdict",
    "julia_symbol_p1": "check_gllvmTMB",
    "expected_julia_symbol_exists_p0": true,
-   "reason": "check_gllvmTMB(fit; ...) src/diagnostics.jl:344 (added 0fc22cddf, core070 diagnostics cluster); exported."
+   "reason": "Same name exported; semantics not compared."
   },
   {
    "case_id": "CORE070-NAMESPACE-CONFINT-INSPECT-NATIVE",
@@ -1652,7 +1655,7 @@
    "julia_symbol_p0": "_profile_bisect_side",
    "julia_symbol_p1": "confint_inspect",
    "expected_julia_symbol_exists_p0": true,
-   "reason": "confint_inspect(fit::GllvmFit, y; ...) src/diagnostics.jl:702 (added 0fc22cddf, core070 diagnostics cluster); exported."
+   "reason": "Same name exported; semantics not compared."
   },
   {
    "case_id": "CORE070-NAMESPACE-DEP-FORMULA-KEYWORD",

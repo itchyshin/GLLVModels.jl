@@ -35,7 +35,7 @@ class NamespaceOnePinTest(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("pin=P1", r.stdout)
         self.assertIn("exec=50 needs=2 retired=2", r.stdout)
-        self.assertIn("rejected_mutations=6", r.stdout)
+        self.assertIn("rejected_mutations=8", r.stdout)
 
     def test_unknown_pin_refused(self):
         r = run("P9")

@@ -173,6 +173,35 @@ end
 # call it directly without touching disk.
 symbol_exists(mod::Module, sym::AbstractString) = isdefined(mod, Symbol(sym))
 
+# Measured facts about one symbol (review of #559: `isdefined` alone let an unexported helper or
+# a type pass as a twin). `exported` is Base.isexported; `callable` is true only for a Function
+# (a type is constructible but is not the R function's twin); `kind` names what the binding is;
+# `own_methods` / `first_own_method` count and locate methods defined in GLLVModels itself, so a
+# re-exported generic with no GLLVModels method is visible in the receipt.
+function symbol_facts(mod::Module, sym::AbstractString)
+    s = Symbol(sym)
+    exists = isdefined(mod, s)
+    d = Dict{String, Any}("exists" => exists)
+    exists || return d
+    val = getfield(mod, s)
+    d["exported"] = Base.isexported(mod, s)
+    d["callable"] = val isa Function
+    d["kind"] = val isa Function ? "Function" : val isa DataType ? "DataType" :
+                val isa UnionAll ? "UnionAll" : val isa Module ? "Module" : string(typeof(val))
+    if val isa Function
+        own = [m for m in methods(val) if m.module === mod]
+        d["own_methods"] = length(own)
+        if !isempty(own)
+            m = first(sort(own; by = m -> (string(m.file), m.line)))
+            file = string(m.file)
+            root = normpath(joinpath(@__DIR__, ".."))
+            startswith(file, root) && (file = relpath(file, root))
+            d["first_own_method"] = "$(file):$(m.line)"
+        end
+    end
+    return d
+end
+
 const SYNTHETIC_NEG_SYMBOL = "gllvmTMB_julia_bridge_nonexistent_surface_zzz"
 
 function collect_facts(contract)
@@ -187,7 +216,7 @@ function collect_facts(contract)
 
     facts = Dict{String, Any}()
     for sym in symbols
-        facts[sym] = Dict{String, Any}("exists" => symbol_exists(GLLVModels, sym))
+        facts[sym] = symbol_facts(GLLVModels, sym)
     end
     return facts
 end
