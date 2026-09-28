@@ -19,8 +19,10 @@ Written first at 18:27 MDT on 2026-09-27, updated through the night, final at 04
 4. #543 needs your word renewed (its CI failed at the reviewed head; fixed with #563's reviewed optimizer commits).
 5. Packet 2 (packet-2-draft.md) holds every open decision with a reply to paste, and proposes the rows for the three clauses that are empty today.
 
+Handover for main: draft PR #592 (docs only). The goal is NOT done: C0 to C8 are not met on main; everything left waits on your merges, signatures and Packet 2 rulings.
+
 One reply that lands everything in a safe order (edit out anything you don't want):
-"merge #543, then #563; #557; #561; #567, #569, #571, #579, #584 (squash), #586, #587, then #589; #576; #581; #525, #535, #545 when green. #543/#563: keep update exported."
+"merge #543, then #563; #557; #561; #567, #569, #571, #579, #584 (squash), #586, #587, then #589; #576; #581; #525, #535, #545; #546, then #558; #556; #547; #592 (handover) last, when green. #543/#563: keep update exported."
 
 ## What needs you (each has a reply to paste)
 
