@@ -43,7 +43,7 @@ Overnight: #548 chibar2_pvalue / variance_lrt twin (4357e4652, 22:58).
 ## In progress overnight
 
 - #581 truncated NB2 Laplace-breakdown guard (head 5cb29b01d): same design as #557 (floor 0.1, flag near the floor, one retry, here restarting the dispersion from a moment estimate). Silent breakdowns over 40 draws: 6 -> 0, each reaching the healthy optimum; red-then-green 27/27 on 1.10 and 1.13; 23 related test files pass. Review NON-BLOCKING: the 4 changed healthy fits are main's early stops (gradients up to 45 on a small jump in the Laplace objective), not the guard's; the 0.1 floor held on 45 more draws at small dispersion (breakdowns below 2e-4, healthy fits above 0.7, nothing between). Small fixes being applied (wording; report the better of two flagged fits; a stale docs line).
-- A3 family batch (21 rows) at P1: builder started 22:10, stacked on #579.
+- #584 A3 family batch at P1 (head 0fb2b9411; stacked on #579): 15 of 21 rows bind (logLik within 3.5e-8; 13 distinct measurements), 5 partial (R-bridge inputs not on this machine), 1 not measured. Failing cells inside partial rows: NB2 and truncated NB2 (fixture health, failed at P0 too), and a Gaussian group check where P1 R reports one random-effect name where the test expects two. It edits the shared parity harness (runparity continues past a failing cell but still refuses; values recorded per compared quantity in 13 fixture files). Review running.
 
 ## Findings worth knowing
 
