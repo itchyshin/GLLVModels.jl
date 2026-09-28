@@ -1060,7 +1060,7 @@
     ],
     "batch": "namespace-1 Tier 0 at P1",
     "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "tier": "registration mismatch: R export registered+defined at P1, but the Julia symbol is not an exported Function (Julia symbol TwoLevelFit not a Function (kind=DataType)); not a twin, semantics and numeric output not compared (D-295 row 5)"
    },
    "executable_case_ids": [],
    "reason": "Registration mismatch at P1: Julia symbol TwoLevelFit not a Function (kind=DataType). Not twinned.",
@@ -1090,7 +1090,7 @@
     ],
     "batch": "namespace-1 Tier 0 at P1",
     "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "tier": "registration mismatch: R export registered+defined at P1, but the Julia symbol is not an exported Function (Julia symbol TwoLevelFit not a Function (kind=DataType)); not a twin, semantics and numeric output not compared (D-295 row 5)"
    },
    "executable_case_ids": [],
    "reason": "Registration mismatch at P1: Julia symbol TwoLevelFit not a Function (kind=DataType). Not twinned.",
@@ -1236,7 +1236,7 @@
     ],
     "batch": "namespace-1 Tier 0 at P1",
     "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "tier": "registration mismatch: R export registered+defined at P1, but the Julia symbol is not an exported Function (Julia symbol OrdinalFit not a Function (kind=DataType)); not a twin, semantics and numeric output not compared (D-295 row 5)"
    },
    "executable_case_ids": [],
    "reason": "Registration mismatch at P1: Julia symbol OrdinalFit not a Function (kind=DataType). Not twinned.",
@@ -1266,7 +1266,7 @@
     ],
     "batch": "namespace-1 Tier 0 at P1",
     "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "tier": "registration mismatch: R export registered+defined at P1, but the Julia symbol is not an exported Function (Julia symbol unpack_lambda not exported); not a twin, semantics and numeric output not compared (D-295 row 5)"
    },
    "executable_case_ids": [],
    "reason": "Registration mismatch at P1: Julia symbol unpack_lambda not exported. Not twinned.",
@@ -1383,7 +1383,7 @@
     ],
     "batch": "namespace-1 Tier 0 at P1",
     "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "tier": "registration mismatch: R export registered+defined at P1, but the Julia symbol is not an exported Function (Julia symbol proportions not exported); not a twin, semantics and numeric output not compared (D-295 row 5)"
    },
    "executable_case_ids": [],
    "reason": "Registration mismatch at P1: Julia symbol proportions not exported. Not twinned.",
@@ -1500,7 +1500,7 @@
     ],
     "batch": "namespace-1 Tier 0 at P1",
     "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "tier": "registration mismatch: R export registered+defined at P1, but the Julia symbol is not an exported Function (Julia symbol proportions not exported); not a twin, semantics and numeric output not compared (D-295 row 5)"
    },
    "executable_case_ids": [],
    "reason": "Registration mismatch at P1: Julia symbol proportions not exported. Not twinned.",
