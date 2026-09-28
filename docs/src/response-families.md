@@ -1194,7 +1194,21 @@ How this differs from Julia's own routes, which stay available unchanged:
 On the ZIP twin fixture the Julia `ZIPoisson` marginal evaluated at R's optimum
 is 3.62 log-likelihood units away from R's logLik, while the `zi_poisson()`
 route matches to 1.4e-8 (optimum against optimum). Twin evidence:
-`test/test_zi_twin.jl`. Only the no-covariate model is offered on this route,
+`test/test_zi_twin.jl`; known-DGP recovery: `test/test_zi_recovery.jl`.
+
+**Laplace breakdown guard.** At `y = 0` the mixture's observed curvature can be
+negative, so the per-site Laplace precision `A = I + Λ' diag(W) Λ` can approach
+singularity and the Laplace value inflates. On one NB2 dataset the Laplace maximum
+sat 363 log-likelihood units above the exact marginal there, and gllvmTMB's own
+objective returns the same inflated value (R reached the sensible optimum only
+through its start, and stopped in that region with `convergence = 1` on 2 of 20
+draws). This route refuses a site whose `A` has an eigenvalue below
+`ZI_LAPLACE_EIGMIN_FLOOR` (0.1), reports an optimum at the floor with
+`converged = false` (`fit.min_site_eigen` records the value), and starts NB2 fits
+from a moment estimate of `phi`. The guard does not remove Laplace error above the
+floor. Missing responses are refused (gllvmTMB masks them per row).
+
+Only the no-covariate model is offered on this route,
 and `predict`, `confint`, `simulate` and the extractors below are not wired for
 its [`ZiFit`](@ref) result yet.
 

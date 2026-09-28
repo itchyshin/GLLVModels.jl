@@ -483,6 +483,7 @@ BetaHurdleFit
 OrderedBetaFit
 ZIPFit
 ZiFit
+ZI_LAPLACE_EIGMIN_FLOOR
 ZIPCovFit
 ZINBFit
 ZINBCovFit

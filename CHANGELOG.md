@@ -27,6 +27,14 @@ All notable changes to GLLVModels.jl are documented here.
   units off R's logLik at R's optimum on the ZIP fixture), a shared NB2
   dispersion, and a shared trials count. Twin fixtures:
   `test/fixtures/zi_p1.toml`, test `test/test_zi_twin.jl`.
+  The route carries a Julia-side Laplace breakdown guard (`ZI_LAPLACE_EIGMIN_FLOOR`):
+  at y = 0 the mixture's observed curvature can be negative, the site Laplace
+  precision can approach singularity, and the Laplace value then inflates (on one
+  NB2 dataset 363 units above the exact marginal; gllvmTMB's objective returns the
+  same inflated value). Sites below the floor are refused, an optimum at the floor is
+  reported with `converged = false`, and the NB2 start was hardened. Recovery test:
+  `test/test_zi_recovery.jl`; note:
+  `docs/dev-log/decisions/2026-09-27-zi-laplace-breakdown-guard.md`.
 
 ### Fixed
 - **Ordered-beta fits could report `converged = true` at a non-stationary point,

@@ -13,6 +13,13 @@
 - `test/test_zi_twin.jl` 58 of 58 on Julia 1.10.0 and 1.13.0. Neighbours on both versions:
   `test_curvature_census.jl` 66/66, `test_zero_inflated.jl` 29/29, `test_twopart_substrate.jl`
   2/2, `test_twopart_hessian_kwarg.jl` 13/13.
+- Review follow-up (Laplace breakdown): per-site guard `ZI_LAPLACE_EIGMIN_FLOOR = 0.1`, optimum
+  at the floor reported `converged = false`, NB2 start hardened (moment phi, half-scale
+  loadings), `hessian` accept-and-refuse, Julia parameter vectors in the fixture's
+  `r_at_julia` blocks. Reviewer's seed-12 NB2 case: -3012.80 (spurious) before, -3311.4547
+  (R's optimum) after. 20 NB2 draws: 3 silent breakdowns before, 0 after (2 flagged
+  not converged, which R also fails on). New `test/test_zi_recovery.jl`; note
+  `docs/dev-log/decisions/2026-09-27-zi-laplace-breakdown-guard.md`.
 
 ## 2026-09-25: Two-part families no longer score an unfinished mode search (#484)
 
