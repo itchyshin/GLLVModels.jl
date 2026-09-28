@@ -90,6 +90,12 @@ n, p and family, and every place a user reads an interval says it is conditional
     NB2 grouped kernel before #521, whose per-site mode search 2-cycled where y ≫ μ and let
     L-BFGS stop at poor optima reporting convergence. They are kept here as history only; the
     24 NB cells are to be re-run after #521 merges.
+    **Gaussian re-run with trait intercepts (2026-09-28, pre-merge).** #518 + #519 in a throwaway
+    tree, uncentred data (trait means 3 + N(0, 1), same seeds for loadings, scores and noise), all
+    4,800 datasets: exact recovery 0.950 with `:bic_sites` (grid: 0.948) and 0.864 with `:bic`
+    (grid: 0.865), 0 failures. A 50-dataset pre-run chose the same K as the old route on centred data
+    in 50/50. The Gaussian conclusion holds with intercepts. Evidence:
+    `LOOP/lanes/auto-d-20260926/pilot/gaussian_prerun/`.
     Poisson: every BIC rule ≥ 0.95 in every cell. NB: 27–47% of K = 2–4 fits unconverged; small
     cells under-select. Rejecting on the convergence flag alone cost recovery (Poisson, NB), so
     the guard now keeps an unconverged fit unless it is runaway or non-monotone
