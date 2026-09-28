@@ -198,4 +198,13 @@ fitc(d; kw...) = fit_temporal_gllvm(d; formula=@formula(value ~ 0 + trait), temp
         @test extract_temporal(k).parameters.mode == "latent"
         @test "log_sigma_re_int" in k.parameter_names
     end
+
+    @testset "the Newton polish shares the iterations budget" begin
+        for it in (1, 2)
+            f = fitc(dat; unit=:series, structure=[:(1 | series)], iterations=it)
+            @test f.iterations <= it
+            @test f.converged == (f.gradient_norm <= f.g_tol)
+            @test f.converged || f.stopping_reason === :iteration_limit
+        end
+    end
 end

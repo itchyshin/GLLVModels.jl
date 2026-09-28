@@ -211,9 +211,11 @@ function _temporal_optimize(objective, theta0, g_tol, iterations)
     # gradient tolerance (Optim then still reports convergence). Polish with
     # Newton steps on the exact ForwardDiff Hessian (while it is positive
     # definite), halving any step that raises the objective beyond rounding;
-    # the verdict rests on the recomputed gradient.
+    # the verdict rests on the recomputed gradient. The polish shares the
+    # caller's `iterations` budget with LBFGS, so the reported count never
+    # exceeds it.
     fx = objective(x)
-    for _ in 1:50
+    for _ in 1:min(50, max(0, iterations - iters))
         g = ForwardDiff.gradient(objective, x)
         all(isfinite, g) || break
         maximum(abs, g) <= g_tol && return x, iters, true
