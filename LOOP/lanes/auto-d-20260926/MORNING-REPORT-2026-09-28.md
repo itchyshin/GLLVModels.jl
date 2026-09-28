@@ -10,6 +10,8 @@ Goal: GOAL-2026-09-28-overnight.md. Written at the start and updated as arcs fin
 ## "All GitHub Actions green" (your 01:40Z request)
 - #518: `main` merged again (CHANGELOG conflict from tonight's merges); lane tests pass; pushed, CI running.
 - #521: `main` merged (picks up #530's Documenter fix); its two test files pass; pushed, CI running.
+- At 03:05Z every run in the account was queued (main's and other lanes' too): GitHub's concurrent-job
+  limit, not a failure. #518/#521 results will land whenever the queue drains; see the checks on each PR.
 - The only other red check on every PR is the advisory "Frozen R 0.7.0 family smoke" job, which is also
   red on `main`. Its cells: NB2 (ours), Student-t and truncated NB2 (no owner tonight; the "main parity"
   lane logs them for you). **NB2 diagnosis:** on the pinned parity dataset both engines put 2 of 5 traits'
@@ -41,6 +43,13 @@ Goal: GOAL-2026-09-28-overnight.md. Written at the start and updated as arcs fin
   K = 1 always right; K = 2 and 3 found almost only at n = 300; 706 too few, 0 too many. At weak signal
   the ridge buys safety (never over-selects), not accuracy; its accuracy gain is at strong loadings.
   **Worth a look:** the docs for `binary_ridge = 2` should say this plainly (design/74 T7 updated).
+
+- Weak-signal caveat for `binary_ridge = 2`: added to the Julia `select_lv` docstring (local commit
+  `02061d350`, pushes with the next #518 batch). **R side deferred:** a Codex lane
+  (`cran-071-20260927`, CRAN 0.7.1 prep) holds a live lease on gllvmTMB `R/`, `man/`, `tests/`, NEWS
+  and more. My first attempt ran past the refusal (a `;`-chained command); I reverted it at once, so
+  nothing was committed. The one-paragraph roxygen change for `?select_lv` is ready to apply when that
+  lease clears.
 
 ## Will auto-d work? (your 01:55Z question, answered with tonight's numbers)
 Gaussian 0.95 and Poisson 0.999: yes. Negative binomial: promising (the fixed kernel picked the true

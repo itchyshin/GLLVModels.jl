@@ -315,9 +315,10 @@ sel.attempts                  # every K tried, with a status and a reason
 Lower is better. The default, `:bic_sites`, penalises each parameter by
 `log(n)` with `n` the number of sites; `:bic` uses `log(p·n)`, the number of observed cells,
 and picks fewer dimensions at small sample sizes; `:aic` tends to pick one
-too many. In simulations with known `K` (Gaussian, Poisson and negative
-binomial responses, 30 to 300 sites, 10 or 20 species), `:bic_sites`
-recovered the true `K` most often.
+too many. In simulations with known `K` (Gaussian and Poisson responses,
+30 to 300 sites, 10 or 20 species), `:bic_sites` recovered the true `K` most
+often. Negative-binomial recovery is being re-measured on corrected fitting
+code, so no rate is quoted for it yet.
 
 A fit with more latent dimensions contains every fit with fewer, so its
 log-likelihood can never be lower. `select_lv` therefore never chooses a `K`
@@ -326,8 +327,12 @@ whose loadings ran away (a trait's latent standard deviation above 10 on the
 link scale, or, for binary data, one trait's loadings far larger than the
 rest). Such a `K` is refitted once from the smaller solution when the family
 allows it, and otherwise listed in `sel.attempts` with the reason. Binary
-responses are the weak spot: at small sample sizes most fits beyond `K = 1`
-run away, so read `sel.attempts` before trusting the choice.
+responses are the weak spot. Unpenalised fits beyond `K = 1` usually run away,
+so for single-trial binary data the sweep adds a loading ridge
+(`binary_ridge = 2`; `Inf` turns it off). With strong loadings the ridge finds
+the true `K` far more often; with weak loadings it does not raise recovery but
+never picks too many dimensions, and dimensions beyond `K = 1` are found
+mainly with many sites. Read `sel.attempts` before trusting the choice.
 
 If you leave `K` out of `fit_gllvm`, it runs this sweep (by default
 `Kmax = min(5, p − 1)` and `:bic_sites` unless you pass `criterion`) and returns
