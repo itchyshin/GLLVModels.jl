@@ -47,7 +47,7 @@ Overnight: #548 chibar2_pvalue / variance_lrt twin (4357e4652, 22:58); #531 extr
 
 ## In progress overnight
 
-- Ledger assembly tool (builds scoreboard.md, reverse-gap.json and a folded case map from the per-family maps; no classifications): builder started 23:55.
+- #589 ledger assembly (head fa56e49d3; stacked on the A3 stack): builds scoreboard.md, reverse-gap.json and a folded case map from the nine per-family maps; with it every clause is measurable. On the assembled tree: C0 NOT MET (default pin P0, your call); C1 52 of 297 rows numeric (44 name-only, 197 free, 4 blocked on a Julia surface); C2 and X2 52/297; C3, C4 and C5 select NO rows because no realistic-size, real-data or grouping-level rows exist yet (that is new programme work, a compute campaign, not re-measurement); C6 372 Julia-only extras each await your decision; C7 MET; C8 245 failing. No row conflicts between maps. Review running.
 
 ## Goal gates on origin/main right now (23:55, main 5b9af3763)
 
