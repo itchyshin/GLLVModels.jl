@@ -25,9 +25,44 @@ The damped mode search copies the convergence rule of this repository's own
 
 - R's `latent()` defaults to `unique = TRUE` (`R/brms-sugar.R:607`), adding a
   per-trait unit-level unique variance (`theta_diag_B`). The spec's model is
-  loadings-only. The Julia door requires `unique = FALSE` and refuses the
-  default; the paired R fits use `unique = FALSE`. Porting the unique term is a
-  maintainer decision.
+  loadings-only. The first PR required `unique = FALSE` and refused the default;
+  the paired R fits of `export_p1_fixtures.R` use `unique = FALSE`. Maintainer
+  decision D-301 (2026-09-27): port it as a follow-up with a fixture of at least
+  three traits. Ported; see the next section.
+
+## The unit-level unique variance (`latent(..., unique = TRUE)`)
+
+Read from gllvmTMB at P1: `PARAMETER_VECTOR(theta_diag_B)` and
+`PARAMETER_MATRIX(s_B)` (`src/gllvmTMB.cpp:1211-1212`); the density
+`nll -= dnorm(s_B(t, s), 0, exp(theta_diag_B(t)), true)` for every trait and
+unit (`1968-1984`); `eta(o) += s_B(t, s)` (`3124`); `s_B` is in TMB's `random`
+vector with `z_B`. Measured from a real P1 fit: `names(fit$opt$par)` is
+`b_fix..., theta_rr_B..., theta_diag_B...` and the random names are `z_B`, `s_B`;
+R starts `theta_diag_B` at `log(1)` on non-Gaussian fits
+(`R/fit-multi.R:5765-5869`).
+
+Parameterisation in Julia: with `s_B = diag(exp(theta_diag_B)) u`,
+`u ~ N(0, I_p)`, the model is the loadings-only kernel with
+`Λ_aug = [Λ diag(exp(theta_diag_B))]` (`p x (K + p)`) and
+`z_aug = [z; u] ~ N(0, I_{K+p})` (`_isdm_augment`, `src/families/isdm_laplace.jl`).
+The Laplace approximation is invariant to this linear change of variables (the
+Jacobian cancels the change in the Hessian determinant), so the per-cell value
+equals R's joint Laplace over `(z_B, s_B)`; `test/test_isdm.jl` checks it against
+a direct Laplace in the `s_B` scale. Packed `θ = [b_fix; pack(Λ); theta_diag_B]`,
+R's order. Not ported, because it cannot fire on this door: R's per-trait gate
+that maps the default Psi off for a trait whose rows are all single-trial
+Bernoulli (`R/fit-multi.R:7133-7178`, `diag_B_skip`); every declaration has a
+count arm and every trait carries every arm (an internal guard in `isdm_table`
+errors if that ever changes). Nor the Gaussian-only exact convolution
+(`integrate_gaussian_diag_B`): the door has no Gaussian arm.
+
+Fixtures: `test/fixtures/isdm/export_psi_fixtures.R` generates `isdm_psi4.csv`
+(4 traits, 80 cells, 3 sources; seed 20260929, the first of 20260927-20260930
+whose default R fit put every unique SD in the interior) once at P1, and records
+R's default-formula fits of it and of the two-trait `isdm_predict.csv` and
+`isdm_ms3.csv` in `r_values_psi_p1.toml` (the latter reproduce the
+`default_unique_*` values of `r_values_p1.toml` exactly). Julia's estimates:
+`export_julia_psi_estimates.jl`, `julia_estimates_psi_p1.toml`.
 - The spec's `gllvm()` door edits `src/formula.jl`, another lane's file; not
   added. The entry point is `fit_isdm_gllvm`.
 
