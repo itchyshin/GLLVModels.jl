@@ -14,7 +14,7 @@
     "src/confint.jl": "e576f75ae6b3d89c2a3e05a5ba4eb66c02196db7b4a1776e07e8cb9d61242d7c",
     "src/confint_derived_wald.jl": "ff1d294d90f83bf1a641a351941a1cf76244480752ce1d8473d5e8b9fbf834b5"
   },
-  "generated_at_epoch_seconds": 1790563772,
+  "generated_at_epoch_seconds": 1790566526,
   "negative_control_count": 2,
   "scope": "CORE070_INFERENCE_BATCH",
   "area": "inference",
@@ -26,7 +26,7 @@
       "ok": true,
       "detail": "propertynames=(:term, :estimate, :lower, :upper, :se, :method, :pd_hessian, :boundary_terms, :objective, :gradient_kind)",
       "actual": "wald_packed",
-      "elapsed_seconds": 4.2670228481292725,
+      "elapsed_seconds": 4.072281837463379,
       "expect": "wald_packed"
     },
     {
@@ -35,7 +35,7 @@
       "ok": true,
       "detail": "propertynames=(:lower, :upper, :method)",
       "actual": "profile",
-      "elapsed_seconds": 0.4227569103240967,
+      "elapsed_seconds": 0.4281117916107178,
       "expect": "profile"
     },
     {
@@ -44,7 +44,7 @@
       "ok": true,
       "detail": "propertynames=(:term, :estimate, :lower, :upper, :se, :method, :pd_hessian, :boundary_terms, :objective, :gradient_kind)",
       "actual": "wald_packed",
-      "elapsed_seconds": 0.014837980270385742,
+      "elapsed_seconds": 0.015324831008911133,
       "expect": "wald_packed"
     },
     {
@@ -53,7 +53,7 @@
       "ok": true,
       "detail": "propertynames=(:term, :estimate, :lower, :upper, :n_converged, :replicates, :converged, :objective)",
       "actual": "bootstrap",
-      "elapsed_seconds": 2.6964991092681885,
+      "elapsed_seconds": 2.744304895401001,
       "expect": "bootstrap"
     },
     {
@@ -62,7 +62,7 @@
       "ok": true,
       "detail": "ArgumentError: method must be :wald, :profile or :bootstrap",
       "actual": "reject",
-      "elapsed_seconds": 0.0055048465728759766,
+      "elapsed_seconds": 0.005487918853759766,
       "expect": "reject"
     },
     {
@@ -71,7 +71,7 @@
       "ok": true,
       "detail": "ArgumentError: method must be :wald, :profile or :bootstrap",
       "actual": "reject",
-      "elapsed_seconds": 0.003220081329345703,
+      "elapsed_seconds": 0.0028159618377685547,
       "expect": "reject"
     },
     {
@@ -80,7 +80,7 @@
       "ok": true,
       "detail": "propertynames=(:lower, :upper, :method)",
       "actual": "profile",
-      "elapsed_seconds": 0.06807899475097656,
+      "elapsed_seconds": 0.09526300430297852,
       "expect": "profile"
     },
     {
@@ -89,7 +89,7 @@
       "ok": true,
       "detail": "propertynames=(:term, :estimate, :lower, :upper, :se, :method, :pd_hessian, :boundary_terms, :objective, :gradient_kind)",
       "actual": "wald_packed",
-      "elapsed_seconds": 0.0037560462951660156,
+      "elapsed_seconds": 0.0037300586700439453,
       "expect": "wald_packed"
     },
     {
@@ -98,7 +98,7 @@
       "ok": true,
       "detail": "propertynames=(:lower, :upper, :method)",
       "actual": "profile",
-      "elapsed_seconds": 0.048480987548828125,
+      "elapsed_seconds": 0.040412187576293945,
       "expect": "profile"
     },
     {
@@ -107,7 +107,7 @@
       "ok": true,
       "detail": "propertynames=(:term, :estimate, :lower, :upper, :n_converged, :replicates, :converged, :objective)",
       "actual": "bootstrap",
-      "elapsed_seconds": 0.06551599502563477,
+      "elapsed_seconds": 0.05937814712524414,
       "expect": "bootstrap"
     },
     {
@@ -116,7 +116,7 @@
       "ok": true,
       "detail": "propertynames=(:lower, :upper, :method)",
       "actual": "profile",
-      "elapsed_seconds": 0.04053807258605957,
+      "elapsed_seconds": 0.03930091857910156,
       "expect": "profile"
     },
     {
@@ -125,7 +125,7 @@
       "ok": true,
       "detail": "propertynames=(:term, :estimate, :lower, :upper, :se, :method, :pd_hessian, :boundary_terms, :objective, :gradient_kind)",
       "actual": "wald_packed",
-      "elapsed_seconds": 0.003674030303955078,
+      "elapsed_seconds": 0.0033409595489501953,
       "expect": "wald_packed"
     },
     {
@@ -134,7 +134,7 @@
       "ok": true,
       "detail": "propertynames=(:lower, :upper, :method)",
       "actual": "profile",
-      "elapsed_seconds": 0.04728889465332031,
+      "elapsed_seconds": 0.03786897659301758,
       "expect": "profile"
     },
     {
@@ -143,7 +143,7 @@
       "ok": true,
       "detail": "propertynames=(:term, :estimate, :lower, :upper, :n_converged, :replicates, :converged, :objective)",
       "actual": "bootstrap",
-      "elapsed_seconds": 0.029801130294799805,
+      "elapsed_seconds": 0.028534889221191406,
       "expect": "bootstrap"
     },
     {
@@ -152,7 +152,7 @@
       "ok": true,
       "detail": "propertynames=(:lower, :upper, :method)",
       "actual": "profile",
-      "elapsed_seconds": 9.311583042144775,
+      "elapsed_seconds": 9.263360023498535,
       "expect": "profile"
     },
     {
@@ -161,7 +161,7 @@
       "ok": true,
       "detail": "propertynames=(:lower, :upper, :method)",
       "actual": "profile",
-      "elapsed_seconds": 0.015054941177368164,
+      "elapsed_seconds": 0.008447885513305664,
       "expect": "profile"
     },
     {
@@ -170,7 +170,7 @@
       "ok": true,
       "detail": "propertynames=(:term, :estimate, :lower, :upper, :se, :pd_hessian)",
       "actual": "wald_packed",
-      "elapsed_seconds": 6.500714063644409,
+      "elapsed_seconds": 6.509660959243774,
       "expect": "wald_packed"
     },
     {
@@ -179,7 +179,7 @@
       "ok": true,
       "detail": "propertynames=(:term, :estimate, :lower, :upper, :se, :pd_hessian)",
       "actual": "wald_packed",
-      "elapsed_seconds": 0.000308990478515625,
+      "elapsed_seconds": 0.0003540515899658203,
       "expect": "wald_packed"
     },
     {
@@ -188,7 +188,7 @@
       "ok": true,
       "detail": "propertynames=(:term, :estimate, :lower, :upper, :n_converged, :replicates)",
       "actual": "bootstrap",
-      "elapsed_seconds": 0.6533799171447754,
+      "elapsed_seconds": 0.6108529567718506,
       "expect": "bootstrap"
     },
     {
@@ -197,7 +197,7 @@
       "ok": true,
       "detail": "propertynames=(:term, :estimate, :lower, :upper, :n_converged, :replicates)",
       "actual": "bootstrap",
-      "elapsed_seconds": 0.06567192077636719,
+      "elapsed_seconds": 0.0539240837097168,
       "expect": "bootstrap"
     },
     {
@@ -206,7 +206,7 @@
       "ok": true,
       "detail": "propertynames=(:lower, :upper, :method)",
       "actual": "profile",
-      "elapsed_seconds": 0.011996030807495117,
+      "elapsed_seconds": 0.01254892349243164,
       "expect": "profile"
     },
     {
@@ -215,7 +215,7 @@
       "ok": true,
       "detail": "propertynames=(:lower, :upper, :method)",
       "actual": "profile",
-      "elapsed_seconds": 0.007960081100463867,
+      "elapsed_seconds": 0.006083965301513672,
       "expect": "profile"
     },
     {
@@ -224,7 +224,7 @@
       "ok": true,
       "detail": "propertynames=(:term, :estimate, :lower, :upper, :se, :pd_hessian)",
       "actual": "wald_packed",
-      "elapsed_seconds": 0.004194021224975586,
+      "elapsed_seconds": 0.0041730403900146484,
       "expect": "wald_packed"
     },
     {
@@ -233,7 +233,7 @@
       "ok": true,
       "detail": "propertynames=(:term, :estimate, :lower, :upper, :se, :pd_hessian)",
       "actual": "wald_packed",
-      "elapsed_seconds": 0.00023698806762695312,
+      "elapsed_seconds": 0.00019407272338867188,
       "expect": "wald_packed"
     },
     {
@@ -242,7 +242,7 @@
       "ok": true,
       "detail": "propertynames=(:term, :estimate, :lower, :upper, :n_converged, :replicates)",
       "actual": "bootstrap",
-      "elapsed_seconds": 0.027112960815429688,
+      "elapsed_seconds": 0.025990962982177734,
       "expect": "bootstrap"
     },
     {
@@ -251,7 +251,7 @@
       "ok": true,
       "detail": "propertynames=(:term, :estimate, :lower, :upper, :n_converged, :replicates)",
       "actual": "bootstrap",
-      "elapsed_seconds": 0.05029487609863281,
+      "elapsed_seconds": 0.04813098907470703,
       "expect": "bootstrap"
     },
     {
@@ -260,7 +260,7 @@
       "ok": true,
       "detail": "propertynames=(:lower, :upper, :method)",
       "actual": "profile",
-      "elapsed_seconds": 0.02353692054748535,
+      "elapsed_seconds": 0.025892972946166992,
       "expect": "profile"
     },
     {
@@ -269,7 +269,7 @@
       "ok": true,
       "detail": "propertynames=(:term, :estimate, :lower, :upper, :se, :pd_hessian)",
       "actual": "wald_packed",
-      "elapsed_seconds": 0.0034868717193603516,
+      "elapsed_seconds": 0.003720998764038086,
       "expect": "wald_packed"
     },
     {
@@ -278,7 +278,7 @@
       "ok": true,
       "detail": "propertynames=(:term, :estimate, :lower, :upper, :n_converged, :replicates)",
       "actual": "bootstrap",
-      "elapsed_seconds": 0.04448199272155762,
+      "elapsed_seconds": 0.0408627986907959,
       "expect": "bootstrap"
     },
     {
@@ -287,7 +287,7 @@
       "ok": true,
       "detail": "propertynames=(:estimate, :lower, :upper, :se_transformed, :transform, :pd_hessian, :method)",
       "actual": "wald_derived",
-      "elapsed_seconds": 0.9767558574676514,
+      "elapsed_seconds": 0.9957950115203857,
       "expect": "wald_derived"
     },
     {
@@ -296,7 +296,7 @@
       "ok": true,
       "detail": "propertynames=(:lower, :upper, :estimate, :method)",
       "actual": "profile",
-      "elapsed_seconds": 3.962815046310425,
+      "elapsed_seconds": 3.872629165649414,
       "expect": "profile"
     },
     {
@@ -305,7 +305,7 @@
       "ok": true,
       "detail": "propertynames=(:estimate, :lower, :upper, :se_transformed, :transform, :pd_hessian, :method)",
       "actual": "wald_derived",
-      "elapsed_seconds": 0.003389120101928711,
+      "elapsed_seconds": 0.0033028125762939453,
       "expect": "wald_derived"
     },
     {
@@ -314,7 +314,7 @@
       "ok": true,
       "detail": "propertynames=(:estimate, :lower, :upper, :n_converged, :n_valid, :replicates)",
       "actual": "bootstrap",
-      "elapsed_seconds": 0.8870010375976562,
+      "elapsed_seconds": 0.8619790077209473,
       "expect": "bootstrap"
     },
     {
@@ -323,7 +323,7 @@
       "ok": true,
       "detail": "propertynames=(:estimate, :lower, :upper, :se_transformed, :transform, :pd_hessian, :method)",
       "actual": "wald_derived",
-      "elapsed_seconds": 0.8924319744110107,
+      "elapsed_seconds": 0.880622148513794,
       "expect": "wald_derived"
     },
     {
@@ -332,7 +332,7 @@
       "ok": true,
       "detail": "propertynames=(:lower, :upper, :estimate, :method)",
       "actual": "profile",
-      "elapsed_seconds": 2.794013023376465,
+      "elapsed_seconds": 2.762228012084961,
       "expect": "profile"
     },
     {
@@ -341,7 +341,7 @@
       "ok": true,
       "detail": "propertynames=(:estimate, :lower, :upper, :n_converged, :n_valid, :replicates)",
       "actual": "bootstrap",
-      "elapsed_seconds": 0.1724228858947754,
+      "elapsed_seconds": 0.1699841022491455,
       "expect": "bootstrap"
     },
     {
@@ -350,7 +350,7 @@
       "ok": true,
       "detail": "propertynames=(:estimate, :lower, :upper, :se_transformed, :transform, :pd_hessian, :method)",
       "actual": "wald_derived",
-      "elapsed_seconds": 0.003885984420776367,
+      "elapsed_seconds": 0.004023075103759766,
       "expect": "wald_derived"
     },
     {
@@ -359,7 +359,7 @@
       "ok": true,
       "detail": "propertynames=(:lower, :upper, :estimate, :method)",
       "actual": "profile",
-      "elapsed_seconds": 2.832951068878174,
+      "elapsed_seconds": 2.678295135498047,
       "expect": "profile"
     },
     {
@@ -368,7 +368,7 @@
       "ok": true,
       "detail": "propertynames=(:lower, :upper, :estimate, :method)",
       "actual": "profile",
-      "elapsed_seconds": 0.055313825607299805,
+      "elapsed_seconds": 0.0560300350189209,
       "expect": "profile"
     },
     {
@@ -377,7 +377,7 @@
       "ok": true,
       "detail": "propertynames=(:estimate, :lower, :upper, :se_transformed, :transform, :pd_hessian, :method)",
       "actual": "wald_derived",
-      "elapsed_seconds": 0.8896980285644531,
+      "elapsed_seconds": 0.8900799751281738,
       "expect": "wald_derived"
     },
     {
@@ -386,7 +386,7 @@
       "ok": true,
       "detail": "propertynames=(:estimate, :lower, :upper, :n_converged, :n_valid, :replicates)",
       "actual": "bootstrap",
-      "elapsed_seconds": 0.1394338607788086,
+      "elapsed_seconds": 0.14096999168395996,
       "expect": "bootstrap"
     },
     {
@@ -395,7 +395,7 @@
       "ok": true,
       "detail": "propertynames=(:estimate, :lower, :upper, :se_transformed, :transform, :pd_hessian, :method)",
       "actual": "wald_derived",
-      "elapsed_seconds": 0.7944798469543457,
+      "elapsed_seconds": 0.8063528537750244,
       "expect": "wald_derived"
     },
     {
@@ -404,7 +404,7 @@
       "ok": true,
       "detail": "propertynames=(:lower, :upper, :estimate, :method)",
       "actual": "profile",
-      "elapsed_seconds": 0.06465601921081543,
+      "elapsed_seconds": 0.06403183937072754,
       "expect": "profile"
     },
     {
@@ -413,7 +413,7 @@
       "ok": true,
       "detail": "propertynames=(:estimate, :lower, :upper, :se_transformed, :transform, :pd_hessian, :method)",
       "actual": "wald_derived",
-      "elapsed_seconds": 0.006109952926635742,
+      "elapsed_seconds": 0.003679037094116211,
       "expect": "wald_derived"
     },
     {
@@ -422,7 +422,7 @@
       "ok": true,
       "detail": "propertynames=(:estimate, :lower, :upper, :n_converged, :n_valid, :replicates)",
       "actual": "bootstrap",
-      "elapsed_seconds": 0.17333102226257324,
+      "elapsed_seconds": 0.1755669116973877,
       "expect": "bootstrap"
     },
     {

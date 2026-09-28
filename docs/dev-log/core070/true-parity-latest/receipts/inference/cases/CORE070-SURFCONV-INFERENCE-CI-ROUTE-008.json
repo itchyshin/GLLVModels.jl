@@ -1,5 +1,5 @@
 {
-  "schema": "core070-inference-p1-case-receipt/v1",
+  "schema": "core070-inference-p1-case-receipt/v2",
   "case_id": "CORE070-SURFCONV-INFERENCE-CI-ROUTE-008",
   "verdict": "PASS",
   "evidence_kind": "numeric_r_vs_julia",
@@ -8,21 +8,50 @@
   ],
   "batch": "tools/core070_surface_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1 (run by PR #569; read, not re-run)",
   "batch_status": "PASS",
+  "batch_verifier": {
+    "tool": "tools/core070_verify_surface_conversion_batch.py",
+    "argv": "tools/core070_verify_surface_conversion_batch.py {state} --self-test (run by PR #569)",
+    "status": "PASS",
+    "accept_marker": "CORE070_SURFACE_CONVERSION_STATE_OK",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/verify.txt",
+    "note": "run by PR #569 on its raw run; this tool reads the tracked output and checks the marker"
+  },
   "harness_kind": "ci",
   "harness_pass": true,
   "r_call": "confint(fit_r, parm='icc', level=0.95)  # R default method (wald)",
   "julia_call": "GLLVM.repeatability_ci(fit_tl, y, individual)  # default method=:wald",
   "gllvmtmb_version": "0.7.1",
+  "read_from": {
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/julia-results.json": "00506228aaba442f4f3274734843869dc3de5249c6fb24f4a56b12f11f532011",
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/r-oracle.json": "3083644388edf68482c1f15134e472ddeb3edb676275d9faeb948f9f36bddcf7",
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/receipt.json": "930a992fe78849b090bc2fd4a79760079825f96b041268db028fb87c31de62a1",
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/verify.txt": "2f10e6fdf2b3015c8be423eaed43e86f58646ee0d59c2f6d4a8ecef459d5eda5",
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/run-commit.json": "6d3b14ecef64f3e530cbdba2672e8637f2502c1c506e014cd61449798eabd3d1",
+    "docs/dev-log/core070/true-parity-latest/surface-conversion-batch-contract-p1.json": "6e8e74bb16c0f5f997705cb5dd7065a3be254dfdafba693dcb29ef341d3558f6"
+  },
+  "pr569_batch_receipt": {
+    "receipt": "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/receipt.json",
+    "julia_results_sha256": "00506228aaba442f4f3274734843869dc3de5249c6fb24f4a56b12f11f532011",
+    "raw_sha256": "ea2abd503a2baf83e7a447bc7f0238e7a6346299141ae5ab7fdd7937edb97708",
+    "contract_sha256": "6e8e74bb16c0f5f997705cb5dd7065a3be254dfdafba693dcb29ef341d3558f6",
+    "run_commit": "681c4c3ca666e630470bba01a057bc88158b85f3"
+  },
   "raw": [
     "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/julia-results.json",
     "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/r-oracle.json"
   ],
+  "same_measurement_as": {
+    "case_id": "CORE070-SURFCONV-INFERENCE-CI-ROUTE-010",
+    "identical_r_and_julia_vectors": true
+  },
+  "note": "One measurement counted twice: CI-ROUTE-008 (confint(parm = 'icc'), default method) and CI-ROUTE-010 (method = 'wald') have identical R vectors and identical Julia vectors, because both engines' default ICC interval is Wald. They are distinct surface rows (default routing versus explicit method), but the numeric evidence behind them is one R-vs-Julia comparison. Not reclassified here; whether it counts once or twice is for the maintainer.",
   "pin": "P1",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
   "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit_at_receipt_write": "ec36c65bd5925f8cfa33ee2d5fbd5310e2f2efe9",
+  "glvmodels_commit": "61c5eda4822da20591b6fa91869f93c3faf5d369",
+  "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
   "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
   "comparison": {
@@ -55,7 +84,8 @@
           0.5002249326525043,
           0.480132065984387,
           0.7431681777862971
-        ]
+        ],
+        "discriminating": true
       }
     ]
   }

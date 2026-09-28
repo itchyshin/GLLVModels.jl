@@ -1,6 +1,7 @@
 {
   "schema": "core070-inference-route-probe-adaptation/v1",
   "fixture": "test/parity/fixtures/core070_inference_routes.tsv",
+  "glvmodels_commit": "61c5eda4822da20591b6fa91869f93c3faf5d369",
   "runs": {
     "p0_probe_on_p0_source": {
       "script": "tools/core070_inference_routes.R",

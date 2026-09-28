@@ -2,11 +2,32 @@
   "schema": 1,
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "scope": "inference family: the 63 required rows the P1 carry scan lists as DANGLING (45 wave2 inference-batch, 14 wave4 inference-remainder, 4 wave5 surface-conversion). The one NOT_BOUND_AT_P0 row (CI-ROUTE-005, BLOCKED_NEEDS_JULIA_SURFACE) and the 34 out-of-scope rejected/excluded rows are not included.",
-  "note": "Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with PARITY_CASEMAP pointing at this file. Classification and disposition are carried from docs/dev-log/core070/required-source-case-map.json unchanged (all 63 are compatibility_adapter); nothing is signed by an agent. Only rows whose every executable case id carries a numeric R-vs-Julia comparison block within tolerance cite evidence.receipt. Routing (wave2) and error-class (wave4) rows carry no number and cite evidence.non_binding_receipts.",
+  "note": "Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with PARITY_CASEMAP pointing at this file. Classification and disposition are carried from docs/dev-log/core070/required-source-case-map.json unchanged (all 63 are compatibility_adapter); nothing is signed by an agent. Only rows whose every executable case id carries a numeric R-vs-Julia comparison block within tolerance, from a batch whose verifier passed, with no degenerate comparison, cite evidence.receipt. Routing (wave2) and error-class (wave4) rows carry no number and cite evidence.non_binding_receipts. CI-ROUTE-008 and CI-ROUTE-010 are one R-vs-Julia comparison counted on two surface rows (see their notes); the count is left to the maintainer.",
   "generator": "tools/core070_inference_p1_receipts.py",
+  "glvmodels_commit": "61c5eda4822da20591b6fa91869f93c3faf5d369",
+  "batch_verifiers": {
+    "inference-batch-p1": {
+      "tool": "tools/core070_verify_inference_batch.py",
+      "argv": "tools/core070_verify_inference_batch.py --julia-state {julia_state} --r-state {r_state} --self-test",
+      "status": "PASS",
+      "exit_code": 0,
+      "accept_marker": "CORE070_INFERENCE_BATCH_FULLY_VERIFIED",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/verify.txt"
+    },
+    "inference-remainder-p1": {
+      "tool": "tools/core070_verify_inference_remainder_batch.py",
+      "argv": "tools/core070_verify_inference_remainder_batch.py --state {state} --self-test",
+      "status": "PASS",
+      "exit_code": 0,
+      "accept_marker": "CORE070_INFERENCE_REMAINDER_BATCH_VERIFIED",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/verify.txt"
+    }
+  },
   "counts": {
     "numeric_pass": 2,
     "numeric_fail": 0,
+    "numeric_held_batch_verifier_failed": 0,
+    "numeric_non_discriminating": 0,
     "partial_non_numeric_case": 2,
     "routing_control_flow": 45,
     "reject_error_class": 14,
@@ -15,12 +36,12 @@
     "not_measured": 0
   },
   "runtimes_seconds": {
-    "inference_route_probe_p1_wall": 2,
-    "inference_batch_julia_wall": 57,
-    "inference_remainder_batch_wall": 14,
-    "julia_env_instantiate_wall": 13,
-    "surface_conversion_rerun": "not re-run; PR #569 measured it at P1 (117 s batch wall)",
-    "total_batch_wall": 73
+    "route_probes_3x_wall": 3,
+    "inference_route_probe_p1_and_r_crosscheck_wall": 2,
+    "inference_batch_julia_wall": 64,
+    "inference_remainder_batch_wall": 15,
+    "surface_conversion_rerun": "not re-run here; PR #569 re-ran it at P1 from clean commit 681c4c3ca",
+    "total_batch_wall": 84
   },
   "batch_artifacts": {
     "inference-batch-p1": [
@@ -30,18 +51,24 @@
       "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/receipt.json",
       "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/inference-batch-r-crosscheck.json",
       "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/r-comparand-crosscheck.tsv",
-      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv"
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/verify.txt"
     ],
     "inference-remainder-p1": [
       "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/receipt.json",
       "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/results.tsv",
       "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/julia-results.json",
-      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/r-oracle.json"
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/r-oracle.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/verify.txt"
     ],
     "surface-conversion-p1 (from PR #569, read only)": [
       "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/receipt.json",
       "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/julia-results.json",
-      "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/r-oracle.json"
+      "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/r-oracle.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/verify.txt",
+      "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/run-commit.json"
     ]
   },
   "rows": [
@@ -65,6 +92,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-LAMBDA-CI-METHOD-ROUTE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-LAMBDA-CI-METHOD-ROUTE": "PASS"
         },
         "case_kinds": {
@@ -94,6 +124,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-LAMBDA-CI-METHOD-ROUTE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-LAMBDA-CI-METHOD-ROUTE": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-LAMBDA-CI-METHOD-ROUTE": "routing_control_flow"
         }
@@ -119,6 +152,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-LAMBDA-CI-METHOD-ROUTE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-LAMBDA-CI-METHOD-ROUTE": "PASS"
         },
         "case_kinds": {
@@ -148,6 +184,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-LAMBDA-CI-METHOD-ROUTE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-LAMBDA-CI-METHOD-ROUTE": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-LAMBDA-CI-METHOD-ROUTE": "routing_control_flow"
         }
@@ -173,6 +212,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-LAMBDA-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-LAMBDA-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
         },
         "case_kinds": {
@@ -202,6 +244,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-LAMBDA-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-LAMBDA-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-LAMBDA-CI-UNSUPPORTED-METHOD-REJECT": "routing_control_flow"
         }
@@ -229,8 +274,12 @@
         "case_verdicts": {
           "CORE070-SURFCONV-INFERENCE-CI-ROUTE-008": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-SURFCONV-INFERENCE-CI-ROUTE-008": "PASS"
+        },
         "row_verdict": "PASS"
-      }
+      },
+      "note": "One measurement counted twice: CI-ROUTE-008 (confint(parm = 'icc'), default method) and CI-ROUTE-010 (method = 'wald') have identical R vectors and identical Julia vectors, because both engines' default ICC interval is Wald. They are distinct surface rows (default routing versus explicit method), but the numeric evidence behind them is one R-vs-Julia comparison. Not reclassified here; whether it counts once or twice is for the maintainer."
     },
     {
       "source_id": "inference/CI-ROUTE-009",
@@ -252,6 +301,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-SURFCONV-INFERENCE-CI-ROUTE-009": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-SURFCONV-INFERENCE-CI-ROUTE-009": "PASS"
         },
         "case_kinds": {
@@ -281,8 +333,12 @@
         "case_verdicts": {
           "CORE070-SURFCONV-INFERENCE-CI-ROUTE-010": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-SURFCONV-INFERENCE-CI-ROUTE-010": "PASS"
+        },
         "row_verdict": "PASS"
-      }
+      },
+      "note": "One measurement counted twice: CI-ROUTE-008 (confint(parm = 'icc'), default method) and CI-ROUTE-010 (method = 'wald') have identical R vectors and identical Julia vectors, because both engines' default ICC interval is Wald. They are distinct surface rows (default routing versus explicit method), but the numeric evidence behind them is one R-vs-Julia comparison. Not reclassified here; whether it counts once or twice is for the maintainer."
     },
     {
       "source_id": "inference/CI-ROUTE-011",
@@ -306,10 +362,14 @@
         "case_verdicts": {
           "CORE070-SURFCONV-INFERENCE-CI-ROUTE-011": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-SURFCONV-INFERENCE-CI-ROUTE-011": "PASS"
+        },
         "case_kinds": {
           "CORE070-SURFCONV-INFERENCE-CI-ROUTE-011": "paired_bootstrap_structural"
         }
-      }
+      },
+      "note": "Anomaly: the Julia bootstrap lower bounds for 2 ICC entries collapsed (entry 2: Julia 1.06e-07 vs R 0.126; entry 4: Julia 4.53e-40 vs R 0.414). The structural check passes (finite, ordered, brackets the point) and endpoints are not compared, so this PASS does not mean the bootstraps agree. Root cause found and fixed in draft PR #576: a Woodbury quadratic form went negative at extreme variance ratios, so bootstrap refits reported converged with an impossible log-likelihood. This receipt predates that fix (PR #569's run); re-measure after #576 lands."
     },
     {
       "source_id": "inference/CI-ROUTE-012",
@@ -331,6 +391,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-ICC-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-ICC-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
         },
         "case_kinds": {
@@ -360,6 +423,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-ICC-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-ICC-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-ICC-CI-UNSUPPORTED-METHOD-REJECT": "reject_error_class"
         }
@@ -385,6 +451,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-ICC-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-ICC-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
         },
         "case_kinds": {
@@ -414,6 +483,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE": "routing_control_flow"
         }
@@ -439,6 +511,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE": "PASS"
         },
         "case_kinds": {
@@ -468,6 +543,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE": "routing_control_flow"
         }
@@ -493,6 +571,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE": "PASS"
         },
         "case_kinds": {
@@ -522,6 +603,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-PHYLO-SIGNAL-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-PHYLO-SIGNAL-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-PHYLO-SIGNAL-CI-UNSUPPORTED-METHOD-REJECT": "reject_error_class"
         }
@@ -547,6 +631,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-PHYLO-SIGNAL-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-PHYLO-SIGNAL-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
         },
         "case_kinds": {
@@ -576,6 +663,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-PHYLO-SIGNAL-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-PHYLO-SIGNAL-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-PHYLO-SIGNAL-CI-UNSUPPORTED-METHOD-REJECT": "reject_error_class"
         }
@@ -601,6 +691,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE": "PASS"
         },
         "case_kinds": {
@@ -630,6 +723,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE": "routing_control_flow"
         }
@@ -655,6 +751,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE": "PASS"
         },
         "case_kinds": {
@@ -684,6 +783,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE": "routing_control_flow"
         }
@@ -709,6 +811,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-COMMUNALITY-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-COMMUNALITY-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
         },
         "case_kinds": {
@@ -738,6 +843,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-COMMUNALITY-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-COMMUNALITY-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-COMMUNALITY-CI-UNSUPPORTED-METHOD-REJECT": "reject_error_class"
         }
@@ -763,6 +871,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-COMMUNALITY-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-COMMUNALITY-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
         },
         "case_kinds": {
@@ -792,6 +903,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE": "routing_control_flow"
         }
@@ -817,6 +931,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE": "PASS"
         },
         "case_kinds": {
@@ -846,6 +963,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE": "routing_control_flow"
         }
@@ -871,6 +991,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-RHO-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-RHO-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
         },
         "case_kinds": {
@@ -900,6 +1023,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE": "routing_control_flow"
         }
@@ -925,6 +1051,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-RHO-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-RHO-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
         },
         "case_kinds": {
@@ -954,6 +1083,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE": "routing_control_flow"
         }
@@ -979,6 +1111,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE": "PASS"
         },
         "case_kinds": {
@@ -1008,6 +1143,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE": "routing_control_flow"
         }
@@ -1033,6 +1171,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE": "PASS"
         },
         "case_kinds": {
@@ -1062,6 +1203,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-PROPORTION-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-PROPORTION-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-PROPORTION-CI-UNSUPPORTED-METHOD-REJECT": "reject_error_class"
         }
@@ -1087,6 +1231,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-PROPORTION-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-PROPORTION-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
         },
         "case_kinds": {
@@ -1116,6 +1263,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-PROPORTION-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-PROPORTION-CI-UNSUPPORTED-METHOD-REJECT": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-PROPORTION-CI-UNSUPPORTED-METHOD-REJECT": "reject_error_class"
         }
@@ -1141,6 +1291,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE": "PASS"
         },
         "case_kinds": {
@@ -1170,6 +1323,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE": "routing_control_flow"
         }
@@ -1195,6 +1351,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE": "PASS"
         },
         "case_kinds": {
@@ -1224,6 +1383,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE": "routing_control_flow"
         }
@@ -1249,6 +1411,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE": "PASS"
         },
         "case_kinds": {
@@ -1278,6 +1443,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE": "routing_control_flow"
         }
@@ -1303,6 +1471,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE": "PASS"
         },
         "case_kinds": {
@@ -1332,6 +1503,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE": "routing_control_flow"
         }
@@ -1357,6 +1531,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE": "PASS"
         },
         "case_kinds": {
@@ -1386,6 +1563,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE": "routing_control_flow"
         }
@@ -1411,6 +1591,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE": "PASS"
         },
         "case_kinds": {
@@ -1440,6 +1623,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE": "routing_control_flow"
         }
@@ -1465,6 +1651,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-SIGMA-PHY-CI-METHOD-ROUTE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-SIGMA-PHY-CI-METHOD-ROUTE": "PASS"
         },
         "case_kinds": {
@@ -1494,6 +1683,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-SIGMA-PHY-CI-METHOD-ROUTE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-SIGMA-PHY-CI-METHOD-ROUTE": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-SIGMA-PHY-CI-METHOD-ROUTE": "routing_control_flow"
         }
@@ -1519,6 +1711,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-SIGMA-PHY-CI-METHOD-ROUTE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-SIGMA-PHY-CI-METHOD-ROUTE": "PASS"
         },
         "case_kinds": {
@@ -1548,6 +1743,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-BETA-CI-METHOD-ROUTE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-BETA-CI-METHOD-ROUTE": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-BETA-CI-METHOD-ROUTE": "routing_control_flow"
         }
@@ -1573,6 +1771,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-BETA-CI-METHOD-ROUTE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-BETA-CI-METHOD-ROUTE": "PASS"
         },
         "case_kinds": {
@@ -1602,6 +1803,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-BETA-BOOTSTRAP-FALLBACK-DIVERGENCE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-BETA-BOOTSTRAP-FALLBACK-DIVERGENCE": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-BETA-BOOTSTRAP-FALLBACK-DIVERGENCE": "routing_control_flow"
         }
@@ -1627,6 +1831,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-SIGMA-EPS-CI-METHOD-ROUTE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-SIGMA-EPS-CI-METHOD-ROUTE": "PASS"
         },
         "case_kinds": {
@@ -1656,6 +1863,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-SIGMA-EPS-CI-METHOD-ROUTE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-SIGMA-EPS-CI-METHOD-ROUTE": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-SIGMA-EPS-CI-METHOD-ROUTE": "routing_control_flow"
         }
@@ -1681,6 +1891,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-SIGMA-EPS-BOOTSTRAP-FALLBACK-DIVERGENCE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-SIGMA-EPS-BOOTSTRAP-FALLBACK-DIVERGENCE": "PASS"
         },
         "case_kinds": {
@@ -1710,6 +1923,9 @@
         "case_verdicts": {
           "CORE070-INFERENCE-BETA-CI-METHOD-ROUTE": "PASS"
         },
+        "batch_verifier": {
+          "CORE070-INFERENCE-BETA-CI-METHOD-ROUTE": "PASS"
+        },
         "case_kinds": {
           "CORE070-INFERENCE-BETA-CI-METHOD-ROUTE": "routing_control_flow"
         }
@@ -1735,6 +1951,9 @@
       },
       "measured_result": {
         "case_verdicts": {
+          "CORE070-INFERENCE-SIGMA-EPS-CI-METHOD-ROUTE": "PASS"
+        },
+        "batch_verifier": {
           "CORE070-INFERENCE-SIGMA-EPS-CI-METHOD-ROUTE": "PASS"
         },
         "case_kinds": {

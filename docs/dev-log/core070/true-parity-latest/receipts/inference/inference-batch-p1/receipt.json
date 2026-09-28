@@ -1,7 +1,7 @@
 {
   "case_count": 45,
   "negative_control_count": 2,
-  "results_sha256": "c0be21520ee3570c4f8157704f0e45f8c29e410dc51af1fe52ef95b7b82dbbce",
+  "results_sha256": "3c0c44d62296c7f2730e2b4a6d7abb7d963afdfdd09731d7ab2dfb94d22350af",
   "raw_sha256": "1c7b3f4c623f594f99b5e0edece44d0ed3bdc7bf5c5edad0051587de5ecfeaa5",
   "status": "PASS",
   "scope": "CORE070_INFERENCE_BATCH",

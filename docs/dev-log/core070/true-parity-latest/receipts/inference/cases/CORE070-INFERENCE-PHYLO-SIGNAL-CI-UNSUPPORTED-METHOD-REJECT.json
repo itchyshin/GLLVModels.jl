@@ -1,5 +1,5 @@
 {
-  "schema": "core070-inference-p1-case-receipt/v1",
+  "schema": "core070-inference-p1-case-receipt/v2",
   "case_id": "CORE070-INFERENCE-PHYLO-SIGNAL-CI-UNSUPPORTED-METHOD-REJECT",
   "verdict": "PASS",
   "evidence_kind": "reject_error_class",
@@ -9,10 +9,14 @@
     "inference/CI-ROUTE-021"
   ],
   "batch": "tools/core070_inference_remainder_batch.R + .jl, GLLVM_PARITY_PIN=P1",
-  "verifier_output": [
-    "CORE070_INFERENCE_REMAINDER_CONTRACT_VERIFIED executable= 14 needs_surface= 5 total= 19",
-    "CORE070_INFERENCE_REMAINDER_BATCH_VERIFIED 5 negative_controls 2"
-  ],
+  "batch_verifier": {
+    "tool": "tools/core070_verify_inference_remainder_batch.py",
+    "argv": "tools/core070_verify_inference_remainder_batch.py --state {state} --self-test",
+    "status": "PASS",
+    "exit_code": 0,
+    "accept_marker": "CORE070_INFERENCE_REMAINDER_BATCH_VERIFIED",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/verify.txt"
+  },
   "r_call": "confint.gllvmTMB_multi(object, parm='phylo_signal', method=<'wald_asym'|'fisher-z'|'bogus'>) -> .confint_phylo_signal(method=...) -> switch() default -> cli_abort('Method ... not implemented for phylo_signal. Available: profile, wald, bootstrap.'). switch() evaluates only the matched branch, so the default fires without calling profile_ci_phylo_signal / .phylo_signal_wald_ci / .phylo_signal_bootstrap_ci -- no phylogenetic block needed on the fit.",
   "julia_surface": "phylo_signal_wald_ci(fit, t; method=<bad>) -- declares no `method` keyword, raises MethodError",
   "check": "for each of the 3 bad method strings: R raises an error whose message contains 'not implemented' and 'phylo_signal'; Julia raises MethodError",
@@ -41,6 +45,14 @@
   },
   "gllvmtmb_version": "0.7.1",
   "why_not_numeric": "Both engines must refuse the method; the check is error class and message, not a number.",
+  "read_from": {
+    "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/julia-results.json": "5d6a257284adbc7b42cc403a129ca2f539d2a184bc94122a2bf2de0e5ffdcb8b",
+    "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/r-oracle.json": "ef8ce3b20f20a5acf093a13ac1266209bceb5ac505ab117702a24db3aeec23c9",
+    "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/receipt.json": "b3e80d15aa6b7cb724ae3b5b8b3ed5a813c84065dad3400c3e9691e7fe60a0d7",
+    "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/run-commit.json": "b9d2edb34bee2ac66ed45784ccd11944d44d083a7678f15fe6526d023ab90a62",
+    "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/verify.txt": "b5a973267412a40985e8d6412757eac4ecebf8cc9c342d8f961a4aace72c31a2",
+    "docs/dev-log/core070/true-parity-latest/inference-remainder-batch-contract-p1.json": "4f4540a66d9e3dff509b4e5231d714088c3f279e3e1d480774b7f9e0bed3c9e2"
+  },
   "raw": [
     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/julia-results.json",
     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/r-oracle.json"
@@ -50,7 +62,8 @@
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
   "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit_at_receipt_write": "ec36c65bd5925f8cfa33ee2d5fbd5310e2f2efe9",
+  "glvmodels_commit": "61c5eda4822da20591b6fa91869f93c3faf5d369",
+  "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
   "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
 }
