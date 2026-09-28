@@ -85,6 +85,15 @@
   draw fails an ordinal fitter softly under bounds checking, so rejection is tested with a labelled stub.
   Six neighbouring files: 986 pass, 0 fail, 0 broken.
 - After-task: `docs/dev-log/after-task/2026-09-27-ordinal-boot-verdict-504.md`.
+## 2026-09-27: Zero-inflated bootstrap refits report their own verdict (part of #504)
+
+- Branch `claude/zi-boot-verdict-504` from `origin/main` @ `1214e948e`. The `ZIPFit`, `ZIPCovFit`,
+  `ZINBFit`, `ZINBCovFit` and `ZIBFit` refit closures return `(θ, converged, loglik)`; θ unchanged,
+  no boundary flag.
+- New `test/test_confint_bootstrap_verdict_zi.jl`: 11 pass, 22 fail, 25 error of 58 on main; 58/58 on
+  Julia 1.10.12 (106 s; also 58/58 with `--check-bounds=yes`) and 1.13.0 (98 s). Per-file; full suite
+  not run. Three neighbouring files: 775/775 on 1.10.12.
+- After-task: `docs/dev-log/after-task/2026-09-27-zi-boot-verdict-504.md`.
 
 ## 2026-09-27: Temporal source alone at gllvmTMB P1 (slice 1)
 

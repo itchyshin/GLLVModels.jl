@@ -591,6 +591,9 @@ All notable changes to GLLVModels.jl are documented here.
 - **Beta `confint(..., method = :bootstrap)` now reports the refit's own
   convergence verdict (part of #504).** The refit closures for `BetaFit`,
   `BetaGroupedFit` and `BetaGroupedCovFit` (`src/confint_family.jl`)
+- **Zero-inflated `confint(..., method = :bootstrap)` now reports the refit's
+  own convergence verdict (part of #504).** The refit closures for `ZIPFit`,
+  `ZIPCovFit`, `ZINBFit`, `ZINBCovFit` and `ZIBFit` (`src/confint_family.jl`)
   returned a bare parameter vector, so a replicate whose refit ended on the
   fitter's failure sentinel (its θ is the finite warm start) was counted as a
   good draw. They now return `(θ = ..., converged = ..., loglik = ...)`, as
@@ -633,6 +636,8 @@ All notable changes to GLLVModels.jl are documented here.
   A replicate whose category count differs from the original fit is still
   dropped, as before. When every replicate converges, bootstrap endpoints
   are identical to before. No boundary flag is added.
+  endpoints are identical to before. No boundary flag is added for the ZINB
+  size `r`.
 
 ### Added
 - **Temporal covariance source, temporal source alone (gllvmTMB P1 port).**
