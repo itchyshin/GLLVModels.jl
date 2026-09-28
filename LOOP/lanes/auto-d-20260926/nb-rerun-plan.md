@@ -42,6 +42,8 @@ Six cells, rep 1, fitted with the old kernel (#518 head) and the new one (#518 h
 | 300, 20, 3 | 1,467 | 4,626 | 3.15 | **5 / 3** |
 | total | 3,471 | 7,638 | 2.20 | |
 
+Totals are sums of unrounded seconds, so they differ by 1 s from the sum of the rounded rows.
+
 - Cost: 2.2x overall, not the 1.7x #521 measured on its panel, and 3.15x on the heaviest cell,
   which dominates the grid's cost.
 - Accuracy preview (one rep): on 300 × 20, K = 3 the old kernel's logliks fell at K = 3 and 4
