@@ -46,6 +46,7 @@ Overnight: #548 chibar2_pvalue / variance_lrt twin (4357e4652, 22:58); #531 extr
 
 ## In progress overnight
 
+- #586 A3 aghq at P1 (head 8f4427d4a; stacked on #584): 21 rows, none numeric, because neither P0 batch ever compared an R number with a Julia number (7 label-only paired controls; 14 R-only policy rows). Found: several R AGHQ fits pass their P0 assertions while adaptation stalls (max gradient 2.2 to 2.7; one optimizer code 1), because the assertions check only used / k / finite objective. Review running. Your decisions: allow a label-comparison tier or signed dispositions for the 7 controls; add Julia twins for the 14 R-only rows (binomial, Poisson, Gaussian look feasible) or sign dispositions; require convergence in the assertions (a contract edit).
 
 ## Findings worth knowing
 
