@@ -1,3 +1,14 @@
+## 2026-09-27: Hurdle and delta bootstrap refits report their own verdict (part of #504)
+
+- Branch `claude/hurdle-delta-boot-verdict-504` from `origin/main` @ `1214e948e`. The six refit
+  closures in `_family_ci` for `HurdlePoissonFit`, `HurdleNBFit`, `DeltaLogNormalFit` and
+  `DeltaGammaFit` (each delta method has a `predictor = :shared` closure and a default one) return
+  `(θ, converged, loglik)`; θ unchanged, no boundary flag.
+- New `test/test_confint_bootstrap_verdict_hurdle_delta.jl`: 13 pass, 26 fail, 30 error of 69 on main;
+  69/69 on Julia 1.10.12 (52 s; also 69/69 with `--check-bounds=yes`, 57 s) and 1.13.0 (57 s).
+  Per-file; full suite not run. Neighbour `test_confint_family.jl`: 341/341 on 1.10.12.
+- After-task: `docs/dev-log/after-task/2026-09-27-hurdle-delta-boot-verdict-504.md`.
+
 ## 2026-09-27: One shared pin source for the Core070 parity harness, plus a P1 oracle build (D-294/D-295)
 
 - Branch `claude/true-parity-p1-oracle`, builds on #524 (merged into `main` as `824d22a4b`
