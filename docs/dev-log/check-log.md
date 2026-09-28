@@ -1,3 +1,26 @@
+## 2026-09-27: namespace rows re-measured at P1 with tracked receipts (arc A3, first family)
+
+- Branch `claude/true-parity-p1-namespace`, stacked on #539 (shared pin source). Scope: the 71
+  namespace rows the P1 carry scan (#534) lists as DANGLING (69) or RETIRED (2).
+- `tools/core070_namespace_1_batch.{R,jl}` and `tools/core070_verify_namespace_1_batch.py` read the
+  pin through `GLLVM_PARITY_PIN` / `tools/core070_oracle_pins.toml` instead of the literal P0 SHA.
+  Default stays P0: same contract, counts and checks (R self-test identical before and after on a
+  P0 readback tree rebuilt with `git show b4d5fee64:<path>`; verifier self-test unchanged).
+- New `tools/core070_namespace_1_p1_contract.py` regenerates
+  `docs/dev-log/core070/true-parity-latest/namespace-1-batch-contract-p1.json` from the P0 contract,
+  reading R bytes with `git show 9539352f6:<path>` (19 of the 22 cited R files changed): 2 exports
+  retired, 4 needs rows promoted because the same-named Julia surface now exists (`deviance`,
+  `tidy`, `check_gllvmTMB`, `confint_inspect`), negative controls re-anchored.
+- Ran at P1: `CORE070_NAMESPACE_1_BATCH_PASS`, `CORE070_NAMESPACE_1_STATE_OK`, 54 per-case receipts
+  under `docs/dev-log/core070/true-parity-latest/receipts/namespace/` (50 executable PASS, 2
+  needs-surface as expected, 2 retirements confirmed). 17 of the 71 rows not re-measured: 5
+  namespace-2 rows need an installed frozen library, 12 cite numeric-fit batches outside this triple.
+- Case-map rows in `case-map-namespace.json` (separate from #533's `case-map.json`); checker via
+  `PARITY_CASEMAP`: C1 required=69 bound=50 free=17 blocked=2, C1_NOT_MET; C8_NOT_MET.
+- Pre-existing, not fixed here: the P0 default Julia self-test already fails at the branch head,
+  because `deviance` and `tidy` now exist in GLLVModels while the frozen P0 contract records them as
+  absent (negative controls NEG-DEVIANCE-ABSENT / NEG-TIDY-ABSENT). Left as P0 history.
+
 ## 2026-09-27: One shared pin source for the Core070 parity harness, plus a P1 oracle build (D-294/D-295)
 
 - Branch `claude/true-parity-p1-oracle`, builds on #524 (merged into `main` as `824d22a4b`

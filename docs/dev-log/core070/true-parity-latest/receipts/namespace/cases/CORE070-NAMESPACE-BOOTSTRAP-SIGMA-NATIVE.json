@@ -1,0 +1,52 @@
+{
+ "schema": "core070-namespace-1-case-receipt/v1",
+ "case_id": "CORE070-NAMESPACE-BOOTSTRAP-SIGMA-NATIVE",
+ "source_id": "namespace/export/bootstrap_Sigma",
+ "bucket": "executable_now",
+ "meaning": "Tier 0 existence/registration parity: the R export/S3 method is registered in the pinned NAMESPACE and defined in the cited R file, and the named Julia symbol is defined in GLLVModels. Not a numeric-output comparison.",
+ "pin": "P1",
+ "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+ "r_sources_read": [
+  {
+   "path": "NAMESPACE",
+   "sha256": "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c",
+   "read_as": "git show 9539352f66f2db2cc26b1c393e67212a359b60c9:NAMESPACE"
+  },
+  {
+   "path": "R/bootstrap-sigma.R",
+   "sha256": "c30fbad64542b7add009c8a971ce76da6b9b4d500b32737b8358322cac824238",
+   "read_as": "git show 9539352f66f2db2cc26b1c393e67212a359b60c9:R/bootstrap-sigma.R"
+  }
+ ],
+ "r_check": {
+  "namespace_line": "export(bootstrap_Sigma)",
+  "definition_pattern": "^bootstrap_Sigma\\s*<-\\s*function",
+  "definition_line_hint": 202,
+  "registered": true,
+  "defined": true,
+  "expected_registered": true,
+  "expected_defined": true
+ },
+ "julia_check": {
+  "symbol": "bootstrap_ci",
+  "exists": true,
+  "expected_exists": true,
+  "note": "bootstrap_ci(fit; ...) src/confint_bootstrap.jl:258, applied to sigma_y_site()"
+ },
+ "julia_commit": "f494a878135995787ad506245deec644b5e4a389",
+ "julia_src_tree": "c8b78a91cc1c87403e41d115c88789a7fff23642",
+ "result": "PASS",
+ "verifier": {
+  "tool": "tools/core070_verify_namespace_1_batch.py",
+  "case_verdict": "PASS",
+  "batch_verdict": "CORE070_NAMESPACE_1_STATE_OK"
+ },
+ "batch_receipt": {
+  "path": "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json",
+  "sha256": "4ec45c0e8797474f900932d3f1ecab4cc210507a7d7e9413697d49f2402865b7"
+ },
+ "contract": {
+  "path": "docs/dev-log/core070/true-parity-latest/namespace-1-batch-contract-p1.json",
+  "sha256": "60666db847b119df3fb225735ad6cc3b4b573a11c6e120b37a8963dfbcef6869"
+ }
+}

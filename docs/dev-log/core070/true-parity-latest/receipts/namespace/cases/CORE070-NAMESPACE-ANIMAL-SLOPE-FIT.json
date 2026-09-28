@@ -1,0 +1,52 @@
+{
+ "schema": "core070-namespace-1-case-receipt/v1",
+ "case_id": "CORE070-NAMESPACE-ANIMAL-SLOPE-FIT",
+ "source_id": "namespace/export/animal_slope",
+ "bucket": "needs_new_julia_surface",
+ "meaning": "Tier 0 facts match the recorded NEEDS_NEW_JULIA_SURFACE expectation (R side present; Julia surface absent or only partial). A PASS here is NOT parity: the row stays blocked.",
+ "pin": "P1",
+ "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+ "r_sources_read": [
+  {
+   "path": "NAMESPACE",
+   "sha256": "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c",
+   "read_as": "git show 9539352f66f2db2cc26b1c393e67212a359b60c9:NAMESPACE"
+  },
+  {
+   "path": "R/animal-keyword.R",
+   "sha256": "11ecc611a434c2de0f3ed0947ea2652996d638fb4aecbe594fc9e54f987c0b2f",
+   "read_as": "git show 9539352f66f2db2cc26b1c393e67212a359b60c9:R/animal-keyword.R"
+  }
+ ],
+ "r_check": {
+  "namespace_line": "export(animal_slope)",
+  "definition_pattern": "^animal_slope\\s*<-\\s*function",
+  "definition_line_hint": 373,
+  "registered": true,
+  "defined": true,
+  "expected_registered": true,
+  "expected_defined": true
+ },
+ "julia_check": {
+  "symbol": "relatedness_cov",
+  "exists": true,
+  "expected_exists": true,
+  "note": "structured_cov.jl's relatedness_cov() only builds Sigma_phy for random INTERCEPTS (consumed by fit_gaussian_gllvm); families/random_slopes.jl's grouped random-slope path uses an unstructured Sigma_b (no precomputed-relatedness-matrix support). No relatedness/pedigree-structured random-SLOPE fit path exists."
+ },
+ "julia_commit": "f494a878135995787ad506245deec644b5e4a389",
+ "julia_src_tree": "c8b78a91cc1c87403e41d115c88789a7fff23642",
+ "result": "PASS",
+ "verifier": {
+  "tool": "tools/core070_verify_namespace_1_batch.py",
+  "case_verdict": "PASS",
+  "batch_verdict": "CORE070_NAMESPACE_1_STATE_OK"
+ },
+ "batch_receipt": {
+  "path": "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json",
+  "sha256": "4ec45c0e8797474f900932d3f1ecab4cc210507a7d7e9413697d49f2402865b7"
+ },
+ "contract": {
+  "path": "docs/dev-log/core070/true-parity-latest/namespace-1-batch-contract-p1.json",
+  "sha256": "60666db847b119df3fb225735ad6cc3b4b573a11c6e120b37a8963dfbcef6869"
+ }
+}

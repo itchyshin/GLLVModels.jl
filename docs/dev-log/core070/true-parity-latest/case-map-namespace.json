@@ -1,0 +1,1515 @@
+{
+ "schema": 1,
+ "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+ "scope": "namespace family, the 71 rows the P1 carry scan (PR #534) lists as DANGLING (69) or RETIRED (2)",
+ "note": "Separate from case-map.json (PR #533) so none of its 38 rows are touched; read by tools/true_parity_check.mjs with PARITY_CASEMAP pointing at this file. Bound rows cite tracked Tier 0 receipts measured at P1 (existence/registration parity, the same evidence tier that bound them at P0). Classifications are carried from docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent.",
+ "retired_at_p1": [
+  {
+   "source_id": "namespace/export/.proportions_bootstrap_ci",
+   "case_id": "CORE070-NAMESPACE-PROPORTIONS-BOOTSTRAP-CI",
+   "receipt": "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-PROPORTIONS-BOOTSTRAP-CI.json",
+   "ledger_row": "retired/.proportions_bootstrap_ci (PR #533, not duplicated here)",
+   "finding": "export(.proportions_bootstrap_ci) is absent from the P1 NAMESPACE; the definition is still present at R/proportions-ci.R:423 (internal, unexported)."
+  },
+  {
+   "source_id": "namespace/export/.proportions_wald_ci",
+   "case_id": "CORE070-NAMESPACE-PROPORTIONS-WALD-CI",
+   "receipt": "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-PROPORTIONS-WALD-CI.json",
+   "ledger_row": "retired/.proportions_wald_ci (PR #533, not duplicated here)",
+   "finding": "export(.proportions_wald_ci) is absent from the P1 NAMESPACE; the definition is still present at R/proportions-ci.R:247 (internal, unexported)."
+  }
+ ],
+ "rows": [
+  {
+   "source_id": "namespace/S3method/coef,gllvmTMB_julia",
+   "r_export": "coef,gllvmTMB_julia",
+   "r_kind": "s3_method",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/julia-bridge.R:3161",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-COEF-JULIA-BRIDGE-COMPARE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-COEF-JULIA-BRIDGE-COMPARE"
+   ],
+   "reason": "R S3method(coef,gllvmTMB_julia) registered and defined at P1; Julia symbol `coef` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/S3method/coef,gllvmTMB_multi",
+   "r_export": "coef,gllvmTMB_multi",
+   "r_kind": "s3_method",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/vcov-coef.R:59",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-COEF-MULTI-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-COEF-MULTI-NATIVE"
+   ],
+   "reason": "R S3method(coef,gllvmTMB_multi) registered and defined at P1; Julia symbol `coef` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/S3method/confint,gllvmTMB_julia",
+   "r_export": "confint,gllvmTMB_julia",
+   "r_kind": "s3_method",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/julia-bridge.R:3386",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-CONFINT-JULIA-BRIDGE-COMPARE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-CONFINT-JULIA-BRIDGE-COMPARE"
+   ],
+   "reason": "R S3method(confint,gllvmTMB_julia) registered and defined at P1; Julia symbol `confint` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/S3method/confint,gllvmTMB_multi",
+   "r_export": "confint,gllvmTMB_multi",
+   "r_kind": "s3_method",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/z-confint-gllvmTMB.R:1608",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-CONFINT-MULTI-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-CONFINT-MULTI-NATIVE"
+   ],
+   "reason": "R S3method(confint,gllvmTMB_multi) registered and defined at P1; Julia symbol `confint` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/S3method/deviance,gllvmTMB_multi",
+   "r_export": "deviance,gllvmTMB_multi",
+   "r_kind": "s3_method",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/methods-gllvmTMB.R:3355",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-DEVIANCE-MULTI-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-DEVIANCE-MULTI-NATIVE"
+   ],
+   "reason": "R S3method(deviance,gllvmTMB_multi) registered and defined at P1; Julia symbol `deviance` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/S3method/fitted,gllvmTMB_julia",
+   "r_export": "fitted,gllvmTMB_julia",
+   "r_kind": "s3_method",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/julia-bridge.R:3213",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-FITTED-JULIA-BRIDGE-COMPARE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-FITTED-JULIA-BRIDGE-COMPARE"
+   ],
+   "reason": "R S3method(fitted,gllvmTMB_julia) registered and defined at P1; Julia symbol `fitted` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/S3method/fitted,gllvmTMB_multi",
+   "r_export": "fitted,gllvmTMB_multi",
+   "r_kind": "s3_method",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/methods-gllvmTMB.R:3330",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-FITTED-MULTI-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-FITTED-MULTI-NATIVE"
+   ],
+   "reason": "R S3method(fitted,gllvmTMB_multi) registered and defined at P1; Julia symbol `fitted` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/S3method/imputed,gllvmTMB",
+   "r_export": "imputed,gllvmTMB",
+   "r_kind": "s3_method",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/missing-predictor.R:2610",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-IMPUTED-MISSING-PREDICTOR.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-IMPUTED-MISSING-PREDICTOR"
+   ],
+   "reason": "R S3method(imputed,gllvmTMB) registered and defined at P1; Julia symbol `fit_gaussian_mi_fiml` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/S3method/logLik,gllvmTMB_julia",
+   "r_export": "logLik,gllvmTMB_julia",
+   "r_kind": "s3_method",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/julia-bridge.R:3130",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-LOGLIK-JULIA-BRIDGE-COMPARE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-LOGLIK-JULIA-BRIDGE-COMPARE"
+   ],
+   "reason": "R S3method(logLik,gllvmTMB_julia) registered and defined at P1; Julia symbol `loglikelihood` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/S3method/logLik,gllvmTMB_multi",
+   "r_export": "logLik,gllvmTMB_multi",
+   "r_kind": "s3_method",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/methods-gllvmTMB.R:1109",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-LOGLIK-MULTI-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-LOGLIK-MULTI-NATIVE"
+   ],
+   "reason": "R S3method(logLik,gllvmTMB_multi) registered and defined at P1; Julia symbol `loglikelihood` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/S3method/ordiplot,gllvmTMB_multi",
+   "r_export": "ordiplot,gllvmTMB_multi",
+   "r_kind": "s3_method",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/output-methods.R:406",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-ORDIPLOT-MULTI-SCORES.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-ORDIPLOT-MULTI-SCORES"
+   ],
+   "reason": "R S3method(ordiplot,gllvmTMB_multi) registered and defined at P1; Julia symbol `ordiplot` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/S3method/predict,gllvmTMB_julia",
+   "r_export": "predict,gllvmTMB_julia",
+   "r_kind": "s3_method",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/julia-bridge.R:3167",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-PREDICT-JULIA-BRIDGE-COMPARE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-PREDICT-JULIA-BRIDGE-COMPARE"
+   ],
+   "reason": "R S3method(predict,gllvmTMB_julia) registered and defined at P1; Julia symbol `predict` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/S3method/predict,gllvmTMB_multi",
+   "r_export": "predict,gllvmTMB_multi",
+   "r_kind": "s3_method",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/methods-gllvmTMB.R:2786",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-PREDICT-MULTI-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-PREDICT-MULTI-NATIVE"
+   ],
+   "reason": "R S3method(predict,gllvmTMB_multi) registered and defined at P1; Julia symbol `predict` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/S3method/residuals,gllvmTMB_julia",
+   "r_export": "residuals,gllvmTMB_julia",
+   "r_kind": "s3_method",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/julia-bridge.R:3246",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-RESIDUALS-JULIA-BRIDGE-COMPARE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-RESIDUALS-JULIA-BRIDGE-COMPARE"
+   ],
+   "reason": "R S3method(residuals,gllvmTMB_julia) registered and defined at P1; Julia symbol `residuals` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/S3method/residuals,gllvmTMB_multi",
+   "r_export": "residuals,gllvmTMB_multi",
+   "r_kind": "s3_method",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/predictive-diagnostics.R:229",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-RESIDUALS-MULTI-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-RESIDUALS-MULTI-NATIVE"
+   ],
+   "reason": "R S3method(residuals,gllvmTMB_multi) registered and defined at P1; Julia symbol `residuals` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/S3method/simulate,gllvmTMB_julia",
+   "r_export": "simulate,gllvmTMB_julia",
+   "r_kind": "s3_method",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/julia-bridge.R:3293",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-SIMULATE-JULIA-BRIDGE-COMPARE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-SIMULATE-JULIA-BRIDGE-COMPARE"
+   ],
+   "reason": "R S3method(simulate,gllvmTMB_julia) registered and defined at P1; Julia symbol `simulate` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/S3method/simulate,gllvmTMB_multi",
+   "r_export": "simulate,gllvmTMB_multi",
+   "r_kind": "s3_method",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/methods-gllvmTMB.R:1523",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-SIMULATE-MULTI-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-SIMULATE-MULTI-NATIVE"
+   ],
+   "reason": "R S3method(simulate,gllvmTMB_multi) registered and defined at P1; Julia symbol `simulate` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/S3method/stats::nobs,gllvmTMB_multi",
+   "r_export": "stats::nobs,gllvmTMB_multi",
+   "r_kind": "s3_method",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/methods-gllvmTMB.R:1216",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-NOBS-MULTI-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-NOBS-MULTI-NATIVE"
+   ],
+   "reason": "R S3method(stats::nobs,gllvmTMB_multi) registered and defined at P1; Julia symbol `nobs` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/S3method/summary,gllvmTMB_julia",
+   "r_export": "summary,gllvmTMB_julia",
+   "r_kind": "s3_method",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/julia-bridge.R:3489",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-SUMMARY-JULIA-BRIDGE-COMPARE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-SUMMARY-JULIA-BRIDGE-COMPARE"
+   ],
+   "reason": "R S3method(summary,gllvmTMB_julia) registered and defined at P1; Julia symbol `coef_table` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/S3method/summary,gllvmTMB_multi",
+   "r_export": "summary,gllvmTMB_multi",
+   "r_kind": "s3_method",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/methods-gllvmTMB.R:825",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-SUMMARY-MULTI-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-SUMMARY-MULTI-NATIVE"
+   ],
+   "reason": "R S3method(summary,gllvmTMB_multi) registered and defined at P1; Julia symbol `coef_table` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/S3method/tidy,gllvmTMB_multi",
+   "r_export": "tidy,gllvmTMB_multi",
+   "r_kind": "s3_method",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/methods-gllvmTMB.R:1260",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-TIDY-MULTI-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-TIDY-MULTI-NATIVE"
+   ],
+   "reason": "R S3method(tidy,gllvmTMB_multi) registered and defined at P1; Julia symbol `tidy` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/S3method/vcov,gllvmTMB_multi",
+   "r_export": "vcov,gllvmTMB_multi",
+   "r_kind": "s3_method",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/vcov-coef.R:69",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-VCOV-MULTI-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-VCOV-MULTI-NATIVE"
+   ],
+   "reason": "R S3method(vcov,gllvmTMB_multi) registered and defined at P1; Julia symbol `vcov` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/Beta",
+   "r_export": "Beta",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/families.R:217",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-BETA-FAMILY-NATIVE-MODEL.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-BETA-FAMILY-NATIVE-MODEL"
+   ],
+   "reason": "R export(Beta) registered and defined at P1; Julia symbol `fit_beta_gllvm` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/animal_dep",
+   "r_export": "animal_dep",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": null,
+   "executable_case_ids": [],
+   "p0_case_ids": [
+    "SLOPE-ANIMAL-DEP-BAR",
+    "SLOPE-ANIMAL-DEP-DBAR"
+   ],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": null,
+   "reason": "Not re-measured at P1 in this PR.",
+   "not_measured_reason": "P0 evidence came from a non-namespace batch (bulk triage acceptance (maintainer decision round2-3 #9, 2026-09-01)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here."
+  },
+  {
+   "source_id": "namespace/export/animal_indep",
+   "r_export": "animal_indep",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": null,
+   "executable_case_ids": [],
+   "p0_case_ids": [
+    "SLOPE-ANIMAL-INDEP-BAR",
+    "SLOPE-ANIMAL-INDEP-DBAR"
+   ],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": null,
+   "reason": "Not re-measured at P1 in this PR.",
+   "not_measured_reason": "P0 evidence came from a non-namespace batch (bulk triage acceptance (maintainer decision round2-3 #9, 2026-09-01)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here."
+  },
+  {
+   "source_id": "namespace/export/animal_latent",
+   "r_export": "animal_latent",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": null,
+   "executable_case_ids": [],
+   "p0_case_ids": [
+    "SLOPE-ANIMAL-LAT-DEFAULT",
+    "SLOPE-ANIMAL-LAT-NOUNIQUE",
+    "SLOPE-ANIMAL-LAT-RANK4"
+   ],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": null,
+   "reason": "Not re-measured at P1 in this PR.",
+   "not_measured_reason": "P0 evidence came from a non-namespace batch (bulk triage acceptance (maintainer decision round2-3 #9, 2026-09-01)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here."
+  },
+  {
+   "source_id": "namespace/export/animal_scalar",
+   "r_export": "animal_scalar",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/animal-keyword.R:85",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-ANIMAL-SCALAR-FIT.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-ANIMAL-SCALAR-FIT"
+   ],
+   "reason": "R export(animal_scalar) registered and defined at P1; Julia symbol `relatedness_cov` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/animal_slope",
+   "r_export": "animal_slope",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/animal-keyword.R:373",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-ANIMAL-SLOPE-FIT.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [],
+   "planned_case_ids": [
+    "CORE070-NAMESPACE-ANIMAL-SLOPE-FIT"
+   ],
+   "reason": "R side registered and defined at P1; Julia surface still missing or partial at the branch head (see the case receipt's julia_check.note). Measured, not twinned.",
+   "disposition": "BLOCKED_NEEDS_JULIA_SURFACE"
+  },
+  {
+   "source_id": "namespace/export/bootstrap_Sigma",
+   "r_export": "bootstrap_Sigma",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/bootstrap-sigma.R:202",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-BOOTSTRAP-SIGMA-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-BOOTSTRAP-SIGMA-NATIVE"
+   ],
+   "reason": "R export(bootstrap_Sigma) registered and defined at P1; Julia symbol `bootstrap_ci` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/check_gllvmTMB",
+   "r_export": "check_gllvmTMB",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/diagnose.R:1564",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-CHECK-GLLVMTMB-DIAGNOSTIC.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-CHECK-GLLVMTMB-DIAGNOSTIC"
+   ],
+   "reason": "R export(check_gllvmTMB) registered and defined at P1; Julia symbol `check_gllvmTMB` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/confint_inspect",
+   "r_export": "confint_inspect",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/confint-inspect.R:128",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-CONFINT-INSPECT-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-CONFINT-INSPECT-NATIVE"
+   ],
+   "reason": "R export(confint_inspect) registered and defined at P1; Julia symbol `confint_inspect` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/dep",
+   "r_export": "dep",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/brms-sugar.R:1959",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-DEP-FORMULA-KEYWORD.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [],
+   "planned_case_ids": [
+    "CORE070-NAMESPACE-DEP-FORMULA-KEYWORD"
+   ],
+   "reason": "R side registered and defined at P1; Julia surface still missing or partial at the branch head (see the case receipt's julia_check.note). Measured, not twinned.",
+   "disposition": "BLOCKED_NEEDS_JULIA_SURFACE"
+  },
+  {
+   "source_id": "namespace/export/extract_Gamma",
+   "r_export": "extract_Gamma",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/extract-sigma.R:1984",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-GAMMA-BLOCK.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-EXTRACT-GAMMA-BLOCK"
+   ],
+   "reason": "R export(extract_Gamma) registered and defined at P1; Julia symbol `extract_Gamma` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/extract_ICC_site",
+   "r_export": "extract_ICC_site",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/extractors.R:101",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-ICC-SITE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-EXTRACT-ICC-SITE"
+   ],
+   "reason": "R export(extract_ICC_site) registered and defined at P1; Julia symbol `icc_wald_ci` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/extract_Omega",
+   "r_export": "extract_Omega",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/extract-omega.R:189",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-OMEGA-SUM.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-EXTRACT-OMEGA-SUM"
+   ],
+   "reason": "R export(extract_Omega) registered and defined at P1; Julia symbol `sigma_y_site` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/extract_Sigma",
+   "r_export": "extract_Sigma",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/extract-sigma.R:789",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-SIGMA-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-EXTRACT-SIGMA-NATIVE"
+   ],
+   "reason": "R export(extract_Sigma) registered and defined at P1; Julia symbol `sigma_y_site` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/extract_Sigma_B",
+   "r_export": "extract_Sigma_B",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/extractors.R:31",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-SIGMA-B-TWOLEVEL.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-EXTRACT-SIGMA-B-TWOLEVEL"
+   ],
+   "reason": "R export(extract_Sigma_B) registered and defined at P1; Julia symbol `TwoLevelFit` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/extract_Sigma_W",
+   "r_export": "extract_Sigma_W",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/extractors.R:66",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-SIGMA-W-TWOLEVEL.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-EXTRACT-SIGMA-W-TWOLEVEL"
+   ],
+   "reason": "R export(extract_Sigma_W) registered and defined at P1; Julia symbol `TwoLevelFit` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/extract_coevolution_modules",
+   "r_export": "extract_coevolution_modules",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/extract-sigma.R:2468",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-COEVOLUTION-MODULES-SVD.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-EXTRACT-COEVOLUTION-MODULES-SVD"
+   ],
+   "reason": "R export(extract_coevolution_modules) registered and defined at P1; Julia symbol `extract_Gamma` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/extract_communality",
+   "r_export": "extract_communality",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/extractors.R:212",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-COMMUNALITY-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-EXTRACT-COMMUNALITY-NATIVE"
+   ],
+   "reason": "R export(extract_communality) registered and defined at P1; Julia symbol `communality` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/extract_correlations",
+   "r_export": "extract_correlations",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/extract-correlations.R:392",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-CORRELATIONS-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-EXTRACT-CORRELATIONS-NATIVE"
+   ],
+   "reason": "R export(extract_correlations) registered and defined at P1; Julia symbol `correlation` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/extract_cross_correlations",
+   "r_export": "extract_cross_correlations",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/extract-correlations.R:886",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-CROSS-CORRELATIONS-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-EXTRACT-CROSS-CORRELATIONS-NATIVE"
+   ],
+   "reason": "R export(extract_cross_correlations) registered and defined at P1; Julia symbol `correlation` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/extract_cutpoints",
+   "r_export": "extract_cutpoints",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/extract-cutpoints.R:71",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-CUTPOINTS-ORDINAL.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-EXTRACT-CUTPOINTS-ORDINAL"
+   ],
+   "reason": "R export(extract_cutpoints) registered and defined at P1; Julia symbol `OrdinalFit` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/extract_loadings",
+   "r_export": "extract_loadings",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/output-methods.R:87",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-LOADINGS-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-EXTRACT-LOADINGS-NATIVE"
+   ],
+   "reason": "R export(extract_loadings) registered and defined at P1; Julia symbol `unpack_lambda` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/extract_lv_effects",
+   "r_export": "extract_lv_effects",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/extractors.R:674",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-LV-EFFECTS-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-EXTRACT-LV-EFFECTS-NATIVE"
+   ],
+   "reason": "R export(extract_lv_effects) registered and defined at P1; Julia symbol `extract_lv_effects` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/extract_ordination",
+   "r_export": "extract_ordination",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/extractors.R:482",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-ORDINATION-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-EXTRACT-ORDINATION-NATIVE"
+   ],
+   "reason": "R export(extract_ordination) registered and defined at P1; Julia symbol `ordination` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/extract_phylo_signal",
+   "r_export": "extract_phylo_signal",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/extract-omega.R:468",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-PHYLO-SIGNAL-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-EXTRACT-PHYLO-SIGNAL-NATIVE"
+   ],
+   "reason": "R export(extract_phylo_signal) registered and defined at P1; Julia symbol `phylo_signal` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/extract_proportions",
+   "r_export": "extract_proportions",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/extract-omega.R:736",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-PROPORTIONS-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-EXTRACT-PROPORTIONS-NATIVE"
+   ],
+   "reason": "R export(extract_proportions) registered and defined at P1; Julia symbol `proportions` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/extract_repeatability",
+   "r_export": "extract_repeatability",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/extract-repeatability.R:83",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-REPEATABILITY-TWOLEVEL.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-EXTRACT-REPEATABILITY-TWOLEVEL"
+   ],
+   "reason": "R export(extract_repeatability) registered and defined at P1; Julia symbol `repeatability` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/extract_residual_cor",
+   "r_export": "extract_residual_cor",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/output-methods.R:355",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-RESIDUAL-COR-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-EXTRACT-RESIDUAL-COR-NATIVE"
+   ],
+   "reason": "R export(extract_residual_cor) registered and defined at P1; Julia symbol `correlation` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/extract_residual_cov",
+   "r_export": "extract_residual_cov",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/output-methods.R:349",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-RESIDUAL-COV-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-EXTRACT-RESIDUAL-COV-NATIVE"
+   ],
+   "reason": "R export(extract_residual_cov) registered and defined at P1; Julia symbol `sigma_y_site` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/extract_residual_split",
+   "r_export": "extract_residual_split",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/extract-omega.R:95",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-RESIDUAL-SPLIT-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-EXTRACT-RESIDUAL-SPLIT-NATIVE"
+   ],
+   "reason": "R export(extract_residual_split) registered and defined at P1; Julia symbol `proportions` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/extract_rotated_loadings_table",
+   "r_export": "extract_rotated_loadings_table",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/rotate-loadings.R:281",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-ROTATED-LOADINGS-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-EXTRACT-ROTATED-LOADINGS-NATIVE"
+   ],
+   "reason": "R export(extract_rotated_loadings_table) registered and defined at P1; Julia symbol `ordination` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/flag_unreliable_loadings",
+   "r_export": "flag_unreliable_loadings",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/loading-ci.R:378",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-FLAG-UNRELIABLE-LOADINGS-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-FLAG-UNRELIABLE-LOADINGS-NATIVE"
+   ],
+   "reason": "R export(flag_unreliable_loadings) registered and defined at P1; Julia symbol `confint` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/getLV",
+   "r_export": "getLV",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": "R/output-methods.R:169",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-GETLV-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK)",
+    "tier": "existence/registration parity (Tier 0); not a numeric-output comparison"
+   },
+   "executable_case_ids": [
+    "CORE070-NAMESPACE-GETLV-NATIVE"
+   ],
+   "reason": "R export(getLV) registered and defined at P1; Julia symbol `getLV` defined in GLLVModels at the branch head.",
+   "disposition": null
+  },
+  {
+   "source_id": "namespace/export/getLoadings",
+   "r_export": "getLoadings",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": null,
+   "executable_case_ids": [],
+   "p0_case_ids": [
+    "CORE070-SURFCONV-NAMESPACE-EXPORT-GETLOADINGS"
+   ],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": null,
+   "reason": "Not re-measured at P1 in this PR.",
+   "not_measured_reason": "P0 evidence came from a non-namespace batch (surface-conversion wave5 (attempt7)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here."
+  },
+  {
+   "source_id": "namespace/export/getResidualCor",
+   "r_export": "getResidualCor",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": null,
+   "executable_case_ids": [],
+   "p0_case_ids": [
+    "CORE070-SURFCONV-NAMESPACE-EXPORT-GETRESIDUALCOR"
+   ],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": null,
+   "reason": "Not re-measured at P1 in this PR.",
+   "not_measured_reason": "P0 evidence came from a non-namespace batch (surface-conversion wave5 (attempt7)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here."
+  },
+  {
+   "source_id": "namespace/export/getResidualCov",
+   "r_export": "getResidualCov",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": null,
+   "executable_case_ids": [],
+   "p0_case_ids": [
+    "CORE070-SURFCONV-NAMESPACE-EXPORT-GETRESIDUALCOV"
+   ],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": null,
+   "reason": "Not re-measured at P1 in this PR.",
+   "not_measured_reason": "P0 evidence came from a non-namespace batch (surface-conversion wave5 (attempt7)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here."
+  },
+  {
+   "source_id": "namespace/export/gllvmTMB",
+   "r_export": "gllvmTMB",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": null,
+   "executable_case_ids": [],
+   "p0_case_ids": [
+    "CORE070-NAMESPACE2-GLLVMTMB-NATIVE-FIT"
+   ],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": null,
+   "reason": "Not re-measured at P1 in this PR.",
+   "not_measured_reason": "namespace-2 batch needs an installed frozen gllvmTMB library and live R fits (tools/core070_namespace_2_batch.R <frozen-library> <destination>); stopped per brief, no P1 oracle build here."
+  },
+  {
+   "source_id": "namespace/export/gllvmTMB_wide",
+   "r_export": "gllvmTMB_wide",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": null,
+   "executable_case_ids": [],
+   "p0_case_ids": [
+    "CORE070-NAMESPACE2-GLLVMTMB-WIDE-NATIVE-FIT"
+   ],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": null,
+   "reason": "Not re-measured at P1 in this PR.",
+   "not_measured_reason": "namespace-2 batch needs an installed frozen gllvmTMB library and live R fits (tools/core070_namespace_2_batch.R <frozen-library> <destination>); stopped per brief, no P1 oracle build here."
+  },
+  {
+   "source_id": "namespace/export/gllvm_julia_fit",
+   "r_export": "gllvm_julia_fit",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": null,
+   "executable_case_ids": [],
+   "p0_case_ids": [
+    "CORE070-NAMESPACE2-GLLVM-JULIA-FIT-BRIDGE-ADMISSION"
+   ],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": null,
+   "reason": "Not re-measured at P1 in this PR.",
+   "not_measured_reason": "namespace-2 batch needs an installed frozen gllvmTMB library and live R fits (tools/core070_namespace_2_batch.R <frozen-library> <destination>); stopped per brief, no P1 oracle build here."
+  },
+  {
+   "source_id": "namespace/export/gllvm_julia_setup",
+   "r_export": "gllvm_julia_setup",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": null,
+   "executable_case_ids": [],
+   "p0_case_ids": [
+    "CORE070-NAMESPACE2-GLLVM-JULIA-SETUP-BRIDGE-ADMISSION"
+   ],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": null,
+   "reason": "Not re-measured at P1 in this PR.",
+   "not_measured_reason": "namespace-2 batch needs an installed frozen gllvmTMB library and live R fits (tools/core070_namespace_2_batch.R <frozen-library> <destination>); stopped per brief, no P1 oracle build here."
+  },
+  {
+   "source_id": "namespace/export/kernel_dep",
+   "r_export": "kernel_dep",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": null,
+   "executable_case_ids": [],
+   "p0_case_ids": [
+    "CORE070-WAVE6-KERNEL-DEP-FIT"
+   ],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": null,
+   "reason": "Not re-measured at P1 in this PR.",
+   "not_measured_reason": "P0 evidence came from a non-namespace batch (wave6-conversion (attempt7)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here."
+  },
+  {
+   "source_id": "namespace/export/kernel_indep",
+   "r_export": "kernel_indep",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": null,
+   "executable_case_ids": [],
+   "p0_case_ids": [
+    "CORE070-WAVE6-KERNEL-INDEP-FIT"
+   ],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": null,
+   "reason": "Not re-measured at P1 in this PR.",
+   "not_measured_reason": "P0 evidence came from a non-namespace batch (wave6-conversion (attempt7)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here."
+  },
+  {
+   "source_id": "namespace/export/kernel_latent",
+   "r_export": "kernel_latent",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": null,
+   "executable_case_ids": [],
+   "p0_case_ids": [
+    "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-NAMESPACE"
+   ],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": null,
+   "reason": "Not re-measured at P1 in this PR.",
+   "not_measured_reason": "P0 evidence came from a non-namespace batch (wave6-conversion (attempt7)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here."
+  },
+  {
+   "source_id": "namespace/export/kernel_scalar",
+   "r_export": "kernel_scalar",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": null,
+   "executable_case_ids": [],
+   "p0_case_ids": [
+    "CORE070-WAVE6-KERNEL-SCALAR-FIT"
+   ],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": null,
+   "reason": "Not re-measured at P1 in this PR.",
+   "not_measured_reason": "P0 evidence came from a non-namespace batch (wave6-conversion (attempt7)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here."
+  },
+  {
+   "source_id": "namespace/export/kernel_unique",
+   "r_export": "kernel_unique",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": null,
+   "executable_case_ids": [],
+   "p0_case_ids": [
+    "CORE070-WAVE6-KERNEL-LATENT-MULTI-COVARIANCE-EXPORT"
+   ],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": null,
+   "reason": "Not re-measured at P1 in this PR.",
+   "not_measured_reason": "P0 evidence came from a non-namespace batch (wave6-conversion (attempt7)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here."
+  },
+  {
+   "source_id": "namespace/export/nbinom2",
+   "r_export": "nbinom2",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": null,
+   "executable_case_ids": [],
+   "p0_case_ids": [
+    "CORE070-NAMESPACE2-NBINOM2-FAMILY-BRIDGE"
+   ],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": null,
+   "reason": "Not re-measured at P1 in this PR.",
+   "not_measured_reason": "namespace-2 batch needs an installed frozen gllvmTMB library and live R fits (tools/core070_namespace_2_batch.R <frozen-library> <destination>); stopped per brief, no P1 oracle build here."
+  },
+  {
+   "source_id": "namespace/export/sanity_multi",
+   "r_export": "sanity_multi",
+   "r_kind": "export",
+   "classification": "required_core",
+   "arc": "A3",
+   "r_file_line": null,
+   "executable_case_ids": [],
+   "p0_case_ids": [
+    "CORE070-WAVE7-SANITY-MULTI"
+   ],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": null,
+   "reason": "Not re-measured at P1 in this PR.",
+   "not_measured_reason": "P0 evidence came from a non-namespace batch (wave7-conversion (attempt1)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here."
+  }
+ ]
+}
