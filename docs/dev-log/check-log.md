@@ -1,3 +1,19 @@
+## 2026-09-28: GP-1 huge-count log-pmf and per-family verdict
+
+- Branch `claude/gp1-verdict` from origin/main 863ee0f78 (local commits, not pushed).
+  Reproduced: one cell of healthy GP-1 data set to 10^18 made `fit_gp1_gllvm`
+  report `converged = true` at loglik +6795.99 (1.10.12) and +4939.22 (1.13.0).
+  Cause: the direct log-pmf's `y log y` cancellation, +9216.0 in Float64 against
+  -59.8232 in 256-bit BigFloat at the fitted point.
+- Fix: rearranged log-pmf for α > 0, y >= 10^6; new `_gp1_verdict` on each inner
+  solve. Test `test/test_gp1_verdict.jl` + fixture `test/fixtures/gp1_verdict.toml`.
+- RED on origin/main (1.10.12): 235 pass, 33 fail, 10 error of 278. GREEN: 285/285 on
+  1.10.12, 1.10.12 `--check-bounds=yes`, and 1.13.0.
+- Neighbours (1.10.12, each alone): gp1_laplace 101/101, hessian_kwarg 32/32,
+  laplace_dual_safety 37/37, known_sentinel_defects 25 pass + 1 broken (pre-existing
+  `@test_broken`, σ_phy sign), curvature_census 66/66, confint_family 341/341.
+  Local Documenter build exit 0. Full suite not run.
+- After-task: `docs/dev-log/after-task/2026-09-28-gp1-verdict.md`.
 ## 2026-09-27: Temporal source alone at gllvmTMB P1 (slice 1)
 
 - Branch `claude/temporal-slice1`, draft PR #543. New `src/temporal*.jl`: constructors and
