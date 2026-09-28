@@ -250,6 +250,7 @@ println(_SHARD === nothing ?
     _shard_include("test_ordinal_pertrait.jl")
     _shard_include("test_ordinal_probit.jl")
     _shard_include("test_ordinal_logit_twin.jl")
+    _shard_include("test_ordinal_level_check.jl")
     _shard_include("test_fit_gllvm.jl")
     _shard_include("test_truncated_formula.jl")
     _shard_include("test_unified_api.jl")

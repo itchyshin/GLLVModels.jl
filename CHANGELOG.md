@@ -8,6 +8,16 @@
   alias, but `using GLLVM` cannot remain available after a Julia package rename.
   The GitHub repository rename and Pages migration remain separate maintainer
   gates; historical development records retain their original spelling.
+- **Ordinal fitters now reject observed levels below 1.** `fit_ordinal_gllvm`,
+  `fit_ordinal_gllvm_pertrait` and `fit_ordinal_gllvm_pertrait_cov` indexed a
+  per-category count vector by the observed level inside an `@inbounds` loop, and
+  nothing checked that levels were at least 1. A level of 0 or a negative level
+  therefore wrote out of bounds when bounds checks were off (the per-trait routes
+  then returned `converged = false, loglik = -Inf` with no error) and threw a
+  `BoundsError` otherwise. Each fitter now throws an `ArgumentError` naming the
+  offending value before any level-indexed loop. Masked cells are not checked, so
+  a placeholder under `mask = false` is still accepted; valid data is unchanged.
+  Test: `test/test_ordinal_level_check.jl`.
 
 All notable changes to GLLVModels.jl are documented here.
 

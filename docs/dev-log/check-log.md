@@ -143,6 +143,28 @@
   Julia 1.10.12 (30 s; also 61/61 with `--check-bounds=yes`, 26 s) and 1.13.0 (23 s). Per-file; full
   suite not run. Neighbours on 1.10.12: `test_bridge_x.jl` 200/200, `test_confint_family.jl` 341/341.
 - After-task: `docs/dev-log/after-task/2026-09-28-rest-boot-verdict-504.md`.
+## 2026-09-28: ordinal fitters reject observed levels below 1 (branch `claude/ordinal-level-check`)
+
+- Bug: `_pack_initial_ordinal_pertrait` and the shared-cutpoint warm start in
+  `src/families/ordinal.jl` count categories with `counts[Int(Y[t, i])] += 1`
+  inside `@inbounds`, and no ordinal fitter checked that observed levels were at
+  least 1. A level of 0 or -1 wrote out of bounds with bounds checks off.
+- Fix: `_check_ordinal_levels(Y, obs)` runs right after `obs` is built in
+  `fit_ordinal_gllvm`, `fit_ordinal_gllvm_pertrait` and
+  `fit_ordinal_gllvm_pertrait_cov`, before any level-indexed loop. Masked cells
+  are skipped.
+- RED on origin/main `85b7a688d`, `test/test_ordinal_level_check.jl`, Julia
+  1.10.12: 12 pass, 12 fail, 12 error of 36, identical with and without
+  `--check-bounds=yes` (shared route throws `BoundsError`; per-trait routes
+  return without any error).
+- GREEN: 36/36 on Julia 1.10.12, 1.10.12 `--check-bounds=yes`, and 1.13.0.
+- Neighbours on 1.10.12, each file alone: bridge_missing_mask 92/92, bridge_x
+  200/200, confint_family 341/341, core070_link_boundaries 21/21, diagnostics
+  65/65, extractors 92/92, lv_ci 196/196, missing_data 34/34 (needs
+  `using Distributions` first when run alone), ordinal_fit 10/10,
+  ordinal_link_input 49/49, ordinal_logit_twin 29/29, ordinal_pertrait 113/113,
+  ordinal_probit 10/10, ordinal_x_identity 21/21, postfit 1106/1106,
+  second_order_ordinal_pertrait_ci 26 pass + 1 env-gated skip, statsapi 74/74.
 
 ## 2026-09-27: Temporal source alone at gllvmTMB P1 (slice 1)
 
