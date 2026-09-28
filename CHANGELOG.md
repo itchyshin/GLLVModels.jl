@@ -397,6 +397,25 @@ All notable changes to GLLVModels.jl are documented here.
   1.7e-11 and R's objective at Julia's optimum to 7.5e-11 over 21 fits. Not yet
   available: `unit` / `unit_obs` composition, cross-source cells, the wide
   `traits()` form and the R bridge.
+- **Temporal source beside ordinary unit / unit_obs terms (gllvmTMB P1 port,
+  slice 2).** `fit_temporal_gllvm` gains `unit` and `unit_obs` keywords, and its
+  `structure` argument admits `indep`, `dep` and `latent` terms at either level
+  plus the `(1 | g)` random intercept, with gllvmTMB's unit_obs nesting and
+  series/unit partition refusals. The marginal covariance gains the unit and
+  unit_obs trait blocks; the parameter vector follows gllvmTMB's measured
+  `opt$par` order (`theta_rr_B` sits before `theta_temporal_time`). gllvmTMB's
+  sigma_eps suppression rule is ported: a per-row diagonal term in a replicated
+  workflow fixes `sigma_eps` at `max(1e-3 sd(y), 1e-6)` and drops it from the
+  parameter vector. `forecast_temporal`, `profile_temporal`,
+  `bootstrap_temporal` and `compare_temporal` refuse composed fits with R's
+  classes and tier names; `simulate` redraws every ordinary tier;
+  `extract_ordination(fit; level = :unit)` and `update(fit; ...)` are added for
+  temporal fits. The temporal optimiser now runs LBFGS with both line searches
+  and polishes with Newton steps, which reaches gllvmTMB's optimum on a composed
+  panel where one line search stopped at a `sigma_eps -> 0` limit. Checked
+  against 25 gllvmTMB P1 fits: objective and gradient at fixed coordinates
+  within 3.0e-9 and 3.4e-9, an independent dense oracle within 9.1e-13, and
+  R's report `eta` within 1.8e-15. The `gllvm()` formula hook is not included.
 
 ### Changed
 - **Breaking (default change):** `fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm`
