@@ -282,6 +282,43 @@ test('a missing case-map at the ref is a measurement failure (exit 2)', () => {
   assert.match(stdout, /^MEASUREMENT_FAILED/m);
 });
 
+// --- evidence tier (D-295 row 5, review of #559): a registration-only (name/export) match is
+// never a numeric twin. C1 reports bound_numeric / bound_registration_only and is MET only when
+// no bound row is registration-only (unless that row carries a signed disposition); a missing
+// evidence_tier is fail-closed (counted as registration-only). C8 does not count it as twinned. ---
+test('evidence tier: the base fixture\'s numeric rows count as bound_numeric', () => {
+  const { stdout, code } = run('base', 'C1');
+  assert.equal(code, 0);
+  assert.match(stdout, /C1_MET$/m);
+  assert.match(stdout, /bound_numeric=2 bound_registration_only=0\b/);
+});
+test('evidence tier: a registration-only row does not make C1 MET', () => {
+  const { stdout, code } = run('c1_registration_only', 'C1');
+  assert.equal(code, 0);
+  assert.match(stdout, /C1_NOT_MET$/m);
+  assert.match(stdout, /bound_numeric=1 bound_registration_only=1\b/);
+  assert.match(stdout, /registration_only=isdm\/CAP-ISDM-1FO-PREDICT-EXPORT/);
+});
+test('evidence tier: a registration-only row is not twinned for C8', () => {
+  const { stdout, code } = run('c1_registration_only', 'C8');
+  assert.equal(code, 0);
+  assert.match(stdout, /C8_NOT_MET$/m);
+  assert.match(stdout, /isdm\/CAP-ISDM-1FO-PREDICT-EXPORT:REGISTRATION_ONLY_NOT_TWINNED/);
+});
+test('evidence tier: a missing evidence_tier is fail-closed (counted as registration-only)', () => {
+  const { stdout, code } = run('c1_evidence_tier_missing', 'C1');
+  assert.equal(code, 0);
+  assert.match(stdout, /C1_NOT_MET$/m);
+  assert.match(stdout, /bound_registration_only=1\b/);
+});
+test('evidence tier: a registration-only row with a real signed disposition does not block C1 or C8', () => {
+  for (const mode of ['C1', 'C8']) {
+    const { stdout, code } = run('c1_registration_only_signed', mode);
+    assert.equal(code, 0);
+    assert.match(stdout, new RegExp(`${mode}_MET$`, 'm'), `${mode}:\n${stdout}`);
+  }
+});
+
 // --- item 4 / git-mode control: show, existsAsBlob and listDir exercised through real git,
 // the same code path CI runs against origin/main, not the FS fallback ---
 {
@@ -314,7 +351,18 @@ test('a missing case-map at the ref is a measurement failure (exit 2)', () => {
     assert.match(stdout, /C0_NOT_MET$/m);
     assert.match(stdout, /default_pin=P0\b/);
   });
-  for (const dir of [goodRepo, dirReceiptRepo, defaultPinP0Repo]) {
+  let regOnlyRepo;
+  test('git mode: a registration-only row does not make C1 MET via a real git ref; the numeric base does', () => {
+    regOnlyRepo = makeGitRepo('c1_registration_only');
+    const bad = runGit(regOnlyRepo, 'C1');
+    assert.equal(bad.code, 0);
+    assert.match(bad.stdout, /C1_NOT_MET$/m);
+    assert.match(bad.stdout, /bound_registration_only=1\b/);
+    const good = runGit(goodRepo, 'C1');
+    assert.match(good.stdout, /C1_MET$/m);
+    assert.match(good.stdout, /bound_numeric=2 bound_registration_only=0\b/);
+  });
+  for (const dir of [goodRepo, dirReceiptRepo, defaultPinP0Repo, regOnlyRepo]) {
     if (dir) rmSync(dir, { recursive: true, force: true });
   }
 }

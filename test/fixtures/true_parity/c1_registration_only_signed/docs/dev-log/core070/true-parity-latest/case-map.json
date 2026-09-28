@@ -13,8 +13,10 @@
     "receipt": "docs/dev-log/core070/true-parity-latest/receipts/r1.json"
    },
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
-   "disposition": null,
-   "evidence_tier": "numeric"
+   "disposition": "DISPOSITION-SIGNED",
+   "evidence_tier": "registration",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-27"
   },
   {
    "source_id": "temporal/CAP-TEMPORAL-1FO-EXPORT",

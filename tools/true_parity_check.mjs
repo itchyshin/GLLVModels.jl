@@ -30,6 +30,11 @@
 // deferred (name-twin detection from receipt content; a CARRY_VERIFY mode that re-hashes the
 // gllvmTMB tree itself) is stated as a gap, not silently patched over -- see
 // docs/dev-log/core070/true-parity-latest/GATES.md.
+//
+// Evidence tier (review of #559, D-295 row 5 "a name match never counts"): a case-map row carries
+// `evidence_tier` ("numeric" or "registration"). C1 prints bound_numeric / bound_registration_only
+// and is MET only when no bound row is registration-only (a signed disposition still resolves a
+// row); C8 does not count a registration-only row as twinned. A missing tier is fail-closed.
 import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -160,6 +165,11 @@ function rowReceiptPaths(row) {
   return Array.isArray(r) ? r : [r];
 }
 
+// A case-map row's evidence tier: "numeric" (the receipt records an actual R-vs-Julia output
+// comparison) or "registration" (export/existence registration only, e.g. the namespace Tier 0
+// batch). Anything but "numeric" -- including a missing field -- is treated as registration-only.
+function isNumericTier(row) { return row.evidence_tier === 'numeric'; }
+
 function isValidSha256(s) { return typeof s === 'string' && SHA256_RE.test(s); }
 
 // A DISPOSITION-SIGNED row (case-map JSON schema) needs an actual signer and date on the row,
@@ -282,8 +292,9 @@ function checkC0() {
 function checkC1() {
   const rows = loadCasemap();
   const req = rows.filter((r) => ['required_core', 'compatibility_adapter'].includes(r.classification));
-  let bound = 0, free = 0;
+  let bound = 0, free = 0, boundNumeric = 0;
   const unsigned = {};
+  const registrationOnly = [];
   const dangling = [];
   const stale = [];
   for (const r of req) {
@@ -305,11 +316,18 @@ function checkC1() {
     // d === null: bound requires BOTH case ids and a resolving receipt -- case ids alone, or a
     // receipt alone, are not enough.
     const caseIdsPresent = Array.isArray(r.executable_case_ids) ? r.executable_case_ids.length > 0 : !!r.executable_case_ids;
-    (caseIdsPresent && paths.length > 0) ? bound++ : free++;
+    // Evidence tier (D-295 row 5, review of #559): only a row whose receipt records a numeric
+    // R-vs-Julia comparison (`evidence_tier: "numeric"`) counts as bound. A registration/existence
+    // match ("registration") is a name match, and a missing tier is fail-closed as the same.
+    if (caseIdsPresent && paths.length > 0) {
+      if (isNumericTier(r)) { bound++; boundNumeric++; } else registrationOnly.push(r.source_id);
+    } else {
+      free++;
+    }
   }
   const nUnsigned = Object.values(unsigned).reduce((a, b) => a + b, 0);
-  console.log(`C1 required=${req.length} bound=${bound} free=${free} unsigned_or_blocked=${nUnsigned} ${JSON.stringify(unsigned)} dangling_receipts=${dangling.join(';') || 'none'} stale_carries=${stale.join(';') || 'none'}`);
-  return req.length > 0 && nUnsigned === 0 && free === 0 && dangling.length === 0 && stale.length === 0;
+  console.log(`C1 required=${req.length} bound=${bound} bound_numeric=${boundNumeric} bound_registration_only=${registrationOnly.length} free=${free} unsigned_or_blocked=${nUnsigned} ${JSON.stringify(unsigned)} dangling_receipts=${dangling.join(';') || 'none'} stale_carries=${stale.join(';') || 'none'} registration_only=${registrationOnly.join(';') || 'none'}`);
+  return req.length > 0 && nUnsigned === 0 && free === 0 && dangling.length === 0 && stale.length === 0 && registrationOnly.length === 0;
 }
 
 // --- C2..C5: scoreboard tiers, plus C2's boundary-capability cross-check --
@@ -379,7 +397,9 @@ function checkC8() {
     if (dangling.length) { failing.push(`${r.source_id}:DANGLING_RECEIPT`); continue; }
     const caseIdsPresent = Array.isArray(r.executable_case_ids) ? r.executable_case_ids.length > 0 : !!r.executable_case_ids;
     const twinned = caseIdsPresent && paths.length > 0;
-    if (!twinned) failing.push(`${r.source_id}:NOT_TWINNED_NOT_SIGNED`);
+    if (!twinned) { failing.push(`${r.source_id}:NOT_TWINNED_NOT_SIGNED`); continue; }
+    // A registration-only receipt is a name match, which never counts as a twin (D-295 row 5).
+    if (!isNumericTier(r)) failing.push(`${r.source_id}:REGISTRATION_ONLY_NOT_TWINNED`);
   }
   console.log(`C8 rows=${rows.length} failing=${failing.join(';') || 'none'}`);
   return failing.length === 0;

@@ -14,7 +14,7 @@
    },
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "disposition": null,
-   "evidence_tier": "numeric"
+   "evidence_tier": "registration"
   },
   {
    "source_id": "temporal/CAP-TEMPORAL-1FO-EXPORT",
