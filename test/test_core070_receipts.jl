@@ -143,6 +143,30 @@ _sha(path) = bytes2hex(sha256(read(path)))
             @test all(cell["execution_case_ids"] == ["a", "b", "c"] for cell in values(run.cells))
         end
 
+        @testset "value sink writes values-<case>.toml only inside a required cell" begin
+            dir = mkpath(joinpath(tmp, "values-dir"))
+            GroupReceiptHarness._RECEIPT_DIR[] = dir
+            GroupReceiptHarness.core070_record_values!("outside"; julia = 1.0, r = 2.0, test = "t")
+            @test isempty(readdir(dir))
+            run = start_run!(joinpath(tmp, "values-run");
+                requested_case_ids = ["a", "b"], source, inventory, contract_sha256 = "contract")
+            GroupReceiptHarness._CORE070_RUN[] = run
+            GroupReceiptHarness.core070_execute_group!(["a", "b"], fixture, () -> begin
+                @test_throws ArgumentError GroupReceiptHarness.core070_record_values!(
+                    "unnamed"; julia = 1.0, r = 2.0, test = "t")
+                @test_throws ArgumentError GroupReceiptHarness.core070_record_values!(
+                    "foreign"; julia = 1.0, r = 2.0, test = "t", case = "z")
+                GroupReceiptHarness.core070_record_values!("logLik"; julia = -1.5, r = -1.25, rtol = 1e-6,
+                    test = "@test a ≈ b rtol = 1e-6", case = "b")
+            end)
+            values = TOML.parsefile(joinpath(dir, "values-b.toml"))
+            @test values["case_id"] == "b"
+            @test only(values["values"]) == Dict("label" => "logLik", "julia" => -1.5, "r" => -1.25,
+                                                 "rtol" => 1e-6, "atol" => 0.0, "test" => "@test a ≈ b rtol = 1e-6")
+            @test !isfile(joinpath(dir, "values-a.toml"))
+            @test isempty(GroupReceiptHarness._CORE070_ACTIVE_CELLS[])
+        end
+
         @testset "invalid groups fail without erasing earlier cells" begin
             run = start_run!(joinpath(tmp, "bad-group");
                 requested_case_ids = ["a", "b", "c"], source, inventory,
