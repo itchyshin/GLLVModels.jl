@@ -41,6 +41,7 @@ CI is runner-starved (about 24 queued runs across lanes); trains wait, nothing f
 - Waits for Shinichi: Woodbury fix in likelihood.jl (headline Gaussian path); shared post-fit gate in _fit_verdict; nobs ruling (unblocks 4 wave6 rows).
 
 ## Findings to remember
+- LESSON (2026-09-28 02:25): a review verdict is not CI. Before listing a PR as ready, check its CURRENT head's check runs exist and pass (a PR that conflicts with its base gets NO pull_request CI runs at all, so "no failures" can mean "never ran"). Three PRs with landing words (#546, #547, #556) were red at their reviewed heads (missing docs pages; a frozen destination-B source-hash guard; a test-only package in a P1-tagged test). The P1 twin job enrols any .jl file whose text contains the tag string, comments included.
 - Carry scan: 0 of 306 required P0 rows carry; 278 receipts dangling (gitignored .unlazy/), 21 stale. P1 evidence must be re-made (A3); compute is small (10-45 min on kohaku); the harness is the work (#539 is step 1).
 - ordination_uncertainty is name-only (R: TMB joint-precision conditional covariance; Julia: bootstrap + Procrustes).
 - Remaining hardcoded-P0 path that could stamp the wrong pin silently: tools/t4_p6_write_receipt.py:186 (off the CI path).
