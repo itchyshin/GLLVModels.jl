@@ -19,7 +19,7 @@ One reply that lands everything in a safe order (edit out anything you don't wan
 1. Sign the P1 case-map classes on draft PR #533 (one GitHub comment). Draft: "Signed: accept all 38 classes as proposed, except ordination_uncertainty moves to semantic_divergence and chibar2_pvalue / variance_lrt move to required_core (D-297, 2026-09-27)."
 2. Landing words for PRs that became ready overnight: see "Ready for your word" below.
 3. A15 (phylo latent): "promote A15 on the objective and estimate receipts; send the converged-flag rule to the convergence lane (#485)."
-4. CI capacity: trains time out after 3 h waiting for runners. If you want faster merges, approve a CI change such as running the Julia 1.10 shards only on workflow_dispatch or when a PR is marked ready.
+4. CI capacity: 71 runs queued at 02:45 MDT, shared by every lane; jobs wait hours before starting, and my stacked A3 PRs each run the full suite (part of the load is mine). Trains time out after 3 h waiting for runners. If you want faster merges, approve a CI change such as running the Julia 1.10 shards only on workflow_dispatch or when a PR is marked ready.
 
 ## Landed on main (2026-09-27)
 
