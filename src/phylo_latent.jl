@@ -296,13 +296,16 @@ link); it is a documented extra, not part of the twin.
 Optimisation uses finite-difference gradients because the sparse Cholesky
 does not accept automatic-differentiation numbers. `g_tol` is an absolute
 bound on the largest finite-difference gradient entry, and `converged = true`
-requires it. At realistic sizes the objective's numerical floor can sit above
-the default `1e-5`: on the A15 receipt (100 species, 5 replicates, 20 traits,
-`d = 2`, objective about 7372) the optimiser stops at gradient `2e-4` with
-`converged = false` and `stopping_reason = :gradient_not_converged`, although
-the point is within about `2e-10` of the optimum in objective and matches R's
-logLik to `3e-13`. There, `g_tol = 1e-3` gives `converged = true`; inspect
-`gradient_norm` rather than raising `g_tol` blindly. Returns a
+requires it. L-BFGS can stall a hair short of the optimum with the gradient
+just above `g_tol` (where it stalls depends on the platform's BLAS); from such
+a stall the fitter takes at most three Newton steps on the finite-difference
+Hessian, accepting only positive-definite descent steps, and refits from the
+polished point under the same `g_tol`. On the A15 receipt (100 species, 5
+replicates, 20 traits, `d = 2`, objective about 7372) L-BFGS alone stops at
+gradient `2e-4`; after the polish the fit reports `converged = true` with
+gradient `6e-6` and matches R's logLik to `3e-13`. A fit that is genuinely not
+stationary still reports `converged = false`; inspect `gradient_norm` and
+`stopping_reason` rather than raising `g_tol` blindly. Returns a
 [`PrecisionMultivariateFit`](@ref) with `residual_mode = :shared`; use
 `extract_Sigma(fit; level = :phy)` and [`extract_phylo_signal`](@ref).
 """
@@ -378,9 +381,50 @@ function fit_phylo_latent_gllvm(Y::AbstractMatrix{<:Real}, species::AbstractVect
     end
     tip_position = Dict(l => i for (i, l) in enumerate(tip_names))
     species_id = [tip_position[l] for l in obs_labels]
-    fit = fit_precision_multivariate(Y, phy; rank = d,
+    run = s -> fit_precision_multivariate(Y, phy; rank = d,
         mode = unique ? :explicitunique : :barelowrank, residual_mode = :shared,
-        species_id = species_id, X = X, start = start, g_tol = g_tol,
+        species_id = species_id, X = X, start = s, g_tol = g_tol,
         iterations = iterations)
+    fit = _phylo_latent_newton_polish(run(start), run, g_tol)
     return _pmv_with_labels(fit, obs_labels, tip_names)
+end
+
+const _PHYLO_LATENT_POLISH_STEPS = 3
+
+# L-BFGS with a backtracking line search can stall a hair short of the optimum
+# with the finite-difference gradient just above `g_tol`, and where it stalls
+# depends on the platform's BLAS (PR #547: the 50-species tree fit stopped at
+# max |gradient| 1.7e-5 on Linux OpenBLAS, converged on macOS). From such a
+# stall, take at most three Newton steps on the finite-difference Hessian,
+# accepting a step only when it is a descent step with a positive-definite
+# Hessian, then refit from the polished point so the unchanged fitter
+# recomputes every diagnostic and applies the unchanged `g_tol` gate. The
+# convergence criterion is not relaxed; a fit that is genuinely away from a
+# stationary point stays `converged = false`.
+function _phylo_latent_newton_polish(fit::PrecisionMultivariateFit, run, g_tol::Real)
+    (fit.converged || fit.stopping_reason !== :gradient_not_converged ||
+        !isfinite(fit.loglik)) && return fit
+    objective = theta -> _precision_multivariate_nll(fit.response, fit.phy, theta;
+        rank = fit.rank, mode = fit.mode, residual_mode = fit.residual_mode,
+        species_id = fit.species_id, mean_design = fit.mean_design)
+    theta = copy(fit.parameters)
+    value = objective(theta)
+    gradient = similar(theta)
+    _pmv_fd_gradient!(gradient, objective, theta)
+    moved = false
+    for _ in 1:_PHYLO_LATENT_POLISH_STEPS
+        (all(isfinite, gradient) && maximum(abs, gradient) > g_tol) || break
+        H = _fd_hessian(objective, theta)
+        all(isfinite, H) || break
+        F = cholesky(Symmetric(H); check = false)
+        issuccess(F) || break
+        candidate = theta .- (F \ gradient)
+        candidate_value = objective(candidate)
+        (_pmv_valid_objective(candidate_value) && candidate_value <= value) || break
+        theta, value, moved = candidate, candidate_value, true
+        _pmv_fd_gradient!(gradient, objective, theta)
+    end
+    moved || return fit
+    polished = run(theta)
+    return isfinite(polished.loglik) && polished.loglik >= fit.loglik ? polished : fit
 end

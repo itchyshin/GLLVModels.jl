@@ -107,10 +107,23 @@ gradients, explicit looser bounds with measured headroom: R's AD gradient at
 the Julia point `<= 1e-3` (measured 2.0e-4), Julia's FD gradient at R's point
 `<= 1e-2` (measured 4.0e-3), Julia `converged = false` with
 `stopping_reason = :gradient_not_converged` and `gradient_norm <= 1e-3`
-(recorded explicitly, also on the live refit), and the elementwise beta gap
+(recorded explicitly in the stored receipt), and the elementwise beta gap
 `<= 1e-4` absolute (measured 1.6e-5). A scale-aware stopping rule or a Newton
 polish in `fit_precision_multivariate` would close the gap; that belongs to
 the convergence lane (decision-packet item 485), not this PR.
+
+**Update (PR #547 CI fix).** The same stall, at a smaller scale, failed CI on
+Linux: the 50-species tree fit of `test_phylo_latent_twin.jl` stopped at FD
+gradient `1.7e-5` on OpenBLAS (converged on macOS), with logLik within
+`7e-10` relative of the vcv route. `fit_phylo_latent_gllvm` (not the frozen
+`fit_precision_multivariate`) now takes at most three positive-definite Newton
+descent steps from a `gradient_not_converged` stall and refits from the
+polished point under the unchanged `g_tol`. On that Linux fit the polish
+lowers the objective by `4e-13` and the gradient to `8e-8`. The stored A15
+Julia receipt above is unchanged and keeps its recorded stall; the A15 live
+refit now reports `converged = true` (gradient `6.2e-6`, logLik within
+`3e-13` relative of R's, measured on Linux OpenBLAS), and the replay asserts
+that.
 
 ## In-keyword `Ainv`
 

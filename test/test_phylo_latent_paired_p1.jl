@@ -34,6 +34,10 @@ _plp1_present(paths...) = all(p -> haskey(_PLP1_SHA, p) && isfile(_plp1(p)), pat
 # 6e-6). The primary A15 receipt is the cross objective (abs 1e-8) and logLik
 # (rtol 1e-6); the gradients carry explicit looser bounds with measured
 # headroom, and the non-convergence is asserted as recorded, not hidden.
+# The recorded Julia receipt predates the fitter's Newton polish (PR #547 CI
+# fix): the live refit now takes that Newton step itself and reports
+# converged = true under the unchanged g_tol = 1e-5 (measured max |FD
+# gradient| 6.2e-6, logLik within 3e-13 relative of R's, Linux OpenBLAS).
 const _PLP1_A15_BOUNDS = (r_gradient_at_julia = 1e-3,   # measured 2.0e-4
                           julia_gradient_at_r = 1e-2,   # measured 4.0e-3
                           julia_gradient_norm = 1e-3,   # measured 2.0e-4
@@ -126,8 +130,10 @@ function _plp1_case(case, fixture; refit::Bool, stationarity_gap::Bool = false)
         # Live Julia refit from the stored response (this platform, this build).
         fit = pl_fit(fx, case)
         if stationarity_gap
-            @test !fit.converged && fit.stopping_reason === :gradient_not_converged
-            @test fit.gradient_norm <= _PLP1_A15_BOUNDS.julia_gradient_norm
+            # Live refit after the Newton polish: converged under the default
+            # g_tol = 1e-5; the recorded receipt above keeps its stall.
+            @test fit.converged && fit.stopping_reason === :converged
+            @test fit.gradient_norm <= 1e-5
             @test maximum(abs.(fit.beta .- r_theta[1:n_traits])) <= _PLP1_A15_BOUNDS.beta_abs
         else
             @test fit.converged
