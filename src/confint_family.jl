@@ -196,7 +196,7 @@ function _family_ci(fit::BinomialFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_binomial_gllvm(Yb; K = K, link = link, N = Nm, mask = M, hessian = fit.hessian) catch; return nothing end
-        return vcat(fb.β, pack_lambda(fb.Λ))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ)), converged = fb.converged, loglik = fb.loglik)
     end
     return _FamilyCI(θ, nll, _glm_lin_names(p, K), fill(:linear, length(θ)), simulate, refit)
 end
