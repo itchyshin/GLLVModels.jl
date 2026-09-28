@@ -11,13 +11,20 @@
     "docs/dev-log/core070/true-parity-latest/receipts/covariance/wave6-conversion-p1/r-oracle.json"
   ],
   "batch_status": "FAIL",
+  "batch_verifier": {
+    "tool": "tools/core070_verify_wave6_conversion_batch.py",
+    "status": "FAIL",
+    "exit_code": 1,
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/covariance/wave6-conversion-p1/verify.log"
+  },
   "batch_status_note": "The batch receipt reads FAIL and tools/core070_verify_wave6_conversion_batch.py rejects the state because of one unrelated case, CORE070-WAVE6-POSTFIT-NOBS-MULTI (postfit/POSTFIT-SURFACE-nobs.gllvmTMB_multi, kind own_receipt_defect): its frozen expectation is that Julia nobs returns n = 80 while R returns p*n = 400; at the GLLVModels head both return 400, so the recorded defect no longer reproduces. The nine point cases, including this one, pass.",
   "pin": "P1",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "gllvmtmb_version": "0.7.1",
   "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit": "cb5688f7eecbeefa714b56d3214fdfaa75b9779e",
+  "glvmodels_commit": "ead8f4180957dd47111f662efcda6e0734c9de94",
+  "glvmodels_worktree_dirty": [],
   "host": "local Mac (M1 Ultra), single BLAS/OMP thread, JULIA_NUM_THREADS=4",
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
   "comparison": {

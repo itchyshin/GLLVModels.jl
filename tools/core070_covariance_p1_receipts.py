@@ -17,21 +17,40 @@ tolerance = max(atol, rtol * max(norm(a), norm(b))), which is exactly the
 bound isapprox applies. A scalar `abs(a - b) <= tol` check is reported as-is.
 
 A row is marked evidence_tier "numeric" only when every one of its
-executable_case_ids has a comparison block within tolerance. Rows whose case
-ids include an R-only or R-boundary case are marked otherwise, and their
-receipts are cited under evidence.non_binding_receipts (not evidence.receipt),
-so no checker version counts them as bound.
+executable_case_ids has a comparison block within tolerance AND every batch
+those cases came from passed its own verifier (runparity: run status success
+under the tracked P1 manifest; wave6 / covariance batch: the batch verifier
+script, run by this tool, exit 0). A row whose numeric cases pass but whose
+batch verifier rejected the run is held back (evidence_tier
+"numeric_held_batch_verifier_failed", receipts under
+evidence.non_binding_receipts) unless --numeric-exceptions names a signed
+exception for that row whose signed_by is the maintainer (MAINTAINER below)
+and whose signed_on is a date; this tool never writes such an exception.
+Rows whose case ids include an R-only or R-boundary case are marked
+otherwise, and their receipts are cited under evidence.non_binding_receipts
+(not evidence.receipt), so no checker version counts them as bound.
+
+Provenance (review finding 7): each receipt records glvmodels_commit = HEAD of
+this checkout and glvmodels_worktree_dirty = the tracked paths modified
+outside the output directory. The tool refuses to write when that list is
+non-empty (unless --allow-dirty), and refuses when any harness file listed in
+the runparity run's execution inventory differs from its content at HEAD, so
+the recorded commit is the one the runs used. Run the batches and this tool
+from the same clean commit.
 
 Usage (inputs are the raw run directories, e.g. under local-scratch):
   python3 tools/core070_covariance_p1_receipts.py \
       --runparity DIR --default-modes DIR --wave6 DIR --cov-batch DIR \
-      --bridge-tsv FILE --oracle-dir DIR --runtimes JSON
+      --bridge-tsv FILE --oracle-dir DIR --runtimes JSON \
+      [--numeric-exceptions JSON] [--allow-dirty]
 """
 import argparse
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import tomllib
@@ -44,6 +63,10 @@ P0_CASEMAP = ROOT / "docs/dev-log/core070/required-source-case-map.json"
 PINS = tomllib.loads((ROOT / "tools/core070_oracle_pins.toml").read_text())
 P1_SHA = PINS["P1"]["reference_commit"]
 P0_SHA = PINS["P0"]["reference_commit"]
+P1_MANIFEST = OUT / "frozen-r070-contract-p1.toml"
+MAINTAINER = "Shinichi Nakagawa"
+HELD_NOTE = ("held pending the maintainer's ruling on the wave6 nobs expectation; the covariance cases "
+             "themselves pass (7.25e-8, 1.26e-6 vs tol 1e-4)")
 
 # The 17 rows: PARTIAL_STALE_AT_P1 (7) + DANGLING (10) in the P1 carry scan (PR #534 / branch
 # claude/true-parity-p1-carry, carry-scan-p1.json), family covariance.
@@ -183,8 +206,55 @@ def copy_batch(src_dir, dest_name, patterns):
     return copied
 
 
-def git_head():
-    return subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+def git(*args, text=True):
+    return subprocess.run(["git", "-C", str(ROOT), *args], check=True, capture_output=True, text=text).stdout
+
+
+def git_state():
+    """HEAD and the tracked paths modified outside the output directory (review finding 7)."""
+    head = git("rev-parse", "HEAD").strip()
+    out_rel = str(OUT.relative_to(ROOT)) + "/"
+    dirty = [line[3:] for line in git("status", "--porcelain", "--untracked-files=no").splitlines()
+             if not line[3:].startswith(out_rel)]
+    return head, dirty
+
+
+def harness_drift(run, head):
+    """Execution-inventory files of the runparity run whose bytes differ from HEAD."""
+    tracked = set(git("ls-tree", "-r", "--name-only", head).splitlines())
+    drift = []
+    for entry in run["execution"]["entries"]:
+        if entry["path"] not in tracked:
+            continue  # untracked inputs (Manifest.toml) are not part of the commit
+        blob = git("show", f"{head}:{entry['path']}", text=False)
+        if hashlib.sha256(blob).hexdigest() != entry["sha256"]:
+            drift.append(entry["path"])
+    return drift
+
+
+def run_verifier(argv, log_name, marker):
+    """Run a batch verifier at P1, keep its full output as the tracked verify.log."""
+    proc = subprocess.run(argv, cwd=ROOT, capture_output=True, text=True,
+                          env=dict(os.environ, GLLVM_PARITY_PIN="P1"))
+    log = REC / log_name
+    log.parent.mkdir(parents=True, exist_ok=True)
+    log.write_text(proc.stdout + proc.stderr)
+    ok = proc.returncode == 0 and marker in proc.stdout
+    return {"tool": " ".join(argv[1:2]), "status": "PASS" if ok else "FAIL", "exit_code": proc.returncode,
+            "log": f"{REC_REL}/{log_name}"}
+
+
+def load_exceptions(path):
+    """Signed numeric exceptions, keyed by source_id; only the maintainer's signature counts."""
+    if path is None:
+        return {}
+    table = json.loads(path.read_text())
+    for sid, exc in table.items():
+        if exc.get("signed_by") != MAINTAINER or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(exc.get("signed_on", ""))):
+            raise SystemExit(f"numeric exception for {sid} is not signed by {MAINTAINER} with a signed_on date")
+        if not str(exc.get("reason", "")).strip():
+            raise SystemExit(f"numeric exception for {sid} has no reason")
+    return table
 
 
 def main():
@@ -196,23 +266,52 @@ def main():
     ap.add_argument("--bridge-tsv", type=Path, required=True)
     ap.add_argument("--oracle-dir", type=Path, required=True)
     ap.add_argument("--runtimes", type=Path, required=True)
+    ap.add_argument("--numeric-exceptions", type=Path, default=None,
+                    help="JSON {source_id: {signed_by, signed_on, reason}}; signed_by must be the maintainer")
+    ap.add_argument("--allow-dirty", action="store_true",
+                    help="write receipts from a checkout with modified tracked files (recorded, not hidden)")
     args = ap.parse_args()
     runtimes = json.loads(args.runtimes.read_text())
+    exceptions = load_exceptions(args.numeric_exceptions)
+    head, dirty = git_state()
+    if dirty and not args.allow_dirty:
+        raise SystemExit("tracked files are modified outside the output directory; commit first or pass "
+                         "--allow-dirty: " + ", ".join(dirty))
+    run = tomllib.loads((args.runparity / "run.toml").read_text())
+    drift = harness_drift(run, head)
+    if drift:
+        raise SystemExit(f"the runparity run's harness files differ from HEAD {head}; re-run at HEAD: " + ", ".join(drift))
 
     # batch artifacts (text only; .rds fit objects stay in the local run directory)
     oracle_files = copy_batch(args.oracle_dir / "source", "oracle", ["source.json"]) + \
         copy_batch(args.oracle_dir / "build", "oracle", ["build.json"])
     rp_files = copy_batch(args.runparity, "runparity-covariance-18", ["run.toml", "cell-*.toml", "build.json", "*/result.toml"])
     dm_files = copy_batch(args.default_modes, "mode-fits-default-control", ["result.toml"])
-    w6_files = copy_batch(args.wave6, "wave6-conversion-p1", ["*.json", "*.tsv", "*.log"])
-    cb_files = copy_batch(args.cov_batch, "covariance-batch-p1", ["covariance-batch-results.json", "verify.log"])
+    w6_files = copy_batch(args.wave6, "wave6-conversion-p1",
+                          ["*.json", "diagnostics.log", "julia-stderr.log", "julia-stdout.log", "*.tsv"])
+    cb_files = copy_batch(args.cov_batch, "covariance-batch-p1", ["covariance-batch-results.json"])
     br_files = copy_batch(args.bridge_tsv.parent, "bridge-boundary-p1", [args.bridge_tsv.name])
 
-    run = tomllib.loads((args.runparity / "run.toml").read_text())
+    # batch verifiers (finding 1): each batch's own acceptance, recorded on every case receipt
+    manifest_sha = sha(P1_MANIFEST)
+    rp_ok = run.get("status") == "success" and run.get("exit_code") == 0 and run.get("contract_sha256") == manifest_sha
+    verifiers = {
+        "runparity": {"tool": "test/parity/runparity.jl (run.toml status, exit code, manifest sha)",
+                      "status": "PASS" if rp_ok else "FAIL",
+                      "detail": f"status={run.get('status')} exit_code={run.get('exit_code')} "
+                                f"contract_sha256 {'==' if run.get('contract_sha256') == manifest_sha else '!='} "
+                                f"sha256(frozen-r070-contract-p1.toml)"},
+        "wave6": run_verifier(["python3", "tools/core070_verify_wave6_conversion_batch.py", str(args.wave6)],
+                              "wave6-conversion-p1/verify.log", "CORE070_WAVE6_CONVERSION_STATE_OK"),
+        "cov_batch": run_verifier(["python3", "tools/core070_verify_covariance_batch.py", "--results",
+                                   str(args.cov_batch / "covariance-batch-results.json"), "--self-test"],
+                                  "covariance-batch-p1/verify.log", "CORE070_COVARIANCE_BATCH_VERIFIED"),
+    }
     batch_common = {"pin": "P1", "reference_commit": P1_SHA, "gllvmtmb_version": "0.7.1",
                     "oracle_build_receipt": f"{REC_REL}/oracle/build.json",
                     "oracle_source_receipt": f"{REC_REL}/oracle/source.json",
-                    "glvmodels_commit": git_head(), "host": "local Mac (M1 Ultra), single BLAS/OMP thread, JULIA_NUM_THREADS=4",
+                    "glvmodels_commit": head, "glvmodels_worktree_dirty": dirty,
+                    "host": "local Mac (M1 Ultra), single BLAS/OMP thread, JULIA_NUM_THREADS=4",
                     "p0_reference_commit": P0_SHA}
 
     receipts = {}  # case_id -> (path, kind)
@@ -241,12 +340,13 @@ def main():
             "cell_assertions": cell.get("assertions"),
             "run_contract_sha256": run["contract_sha256"],
             "harness_checks_all_true": all(checks.values()), "harness_group_all_checks": group_ok,
+            "batch_verifier": verifiers["runparity"],
             **batch_common,
             "comparison": {"pin": "P1", "cases": entries},
         }
         path = REC / "cases" / f"{cid}.json"
         write_json(path, receipt)
-        receipts[cid] = (str(path.relative_to(ROOT)), "numeric", receipt["verdict"])
+        receipts[cid] = (str(path.relative_to(ROOT)), "numeric", receipt["verdict"], verifiers["runparity"]["status"])
 
     # 2. wave6 kernel_latent cases (the two covariance ones)
     w6_contract = json.loads((OUT / "wave6-conversion-batch-contract-p1.json").read_text())
@@ -263,7 +363,7 @@ def main():
             "batch": "tools/core070_wave6_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1 (whole 10-case batch)",
             "r_call": cc["r_call"],
             "raw": [f"{REC_REL}/wave6-conversion-p1/julia-results.json", f"{REC_REL}/wave6-conversion-p1/r-oracle.json"],
-            "batch_status": w6_receipt["status"],
+            "batch_status": w6_receipt["status"], "batch_verifier": verifiers["wave6"],
             "batch_status_note": ("The batch receipt reads FAIL and tools/core070_verify_wave6_conversion_batch.py rejects "
                                   "the state because of one unrelated case, CORE070-WAVE6-POSTFIT-NOBS-MULTI "
                                   "(postfit/POSTFIT-SURFACE-nobs.gllvmTMB_multi, kind own_receipt_defect): its frozen "
@@ -275,7 +375,7 @@ def main():
         }
         path = REC / "cases" / f"{cid}.json"
         write_json(path, receipt)
-        receipts[cid] = (str(path.relative_to(ROOT)), "numeric", receipt["verdict"])
+        receipts[cid] = (str(path.relative_to(ROOT)), "numeric", receipt["verdict"], verifiers["wave6"]["status"])
 
     # 3. R-only formula-grammar batch (no Julia comparand)
     cb = json.loads((args.cov_batch / "covariance-batch-results.json").read_text())
@@ -292,6 +392,7 @@ def main():
             "r_formula": c.get("r_formula"), "expected_covstructs": c.get("expected_covstructs"),
             "observed_covstructs": entry.get("covstructs"),
             "julia_surface": c.get("julia_surface") or c.get("spec_defect_reason"),
+            "batch_verifier": verifiers["cov_batch"],
             "why_not_numeric": "The check is a structural fact about gllvmTMB's R formula grammar "
                                "(parse_multi_formula(desugar_brms_sugar(f))$covstructs). No R-vs-Julia numeric comparison exists "
                                "for it in this harness; needs a Julia surface before it can bind.",
@@ -299,7 +400,7 @@ def main():
         }
         path = REC / "cases" / f"{cid}.json"
         write_json(path, receipt)
-        receipts[cid] = (str(path.relative_to(ROOT)), "r_only", receipt["verdict"])
+        receipts[cid] = (str(path.relative_to(ROOT)), "r_only", receipt["verdict"], verifiers["cov_batch"]["status"])
 
     # 4. public R bridge boundary (R side only)
     tsv = {}
@@ -323,13 +424,13 @@ def main():
         }
         path = REC / "cases" / f"{cid}.json"
         write_json(path, receipt)
-        receipts[cid] = (str(path.relative_to(ROOT)), "r_boundary", receipt["verdict"])
+        receipts[cid] = (str(path.relative_to(ROOT)), "r_boundary", receipt["verdict"], None)
 
     # ---- case-map rows ----
     p0 = {r["source_id"]: r for r in json.loads(P0_CASEMAP.read_text())["rows"]}
     out_rows = []
-    counts = {"numeric_pass": 0, "numeric_fail": 0, "partial_numeric_bridge_boundary": 0,
-              "r_only_needs_julia_surface": 0, "not_measured": 0}
+    counts = {"numeric_pass": 0, "numeric_fail": 0, "numeric_held_batch_verifier_failed": 0,
+              "partial_numeric_bridge_boundary": 0, "r_only_needs_julia_surface": 0, "not_measured": 0}
     for short in PARTIAL_STALE + DANGLING:
         sid = f"covariance/{short}"
         base = p0[sid]
@@ -346,12 +447,25 @@ def main():
             kinds = {h[1] for h in have}
             verdicts = {i: h[2] for i, h in zip(ids, have)}
             paths = [h[0] for h in have]
-            if kinds == {"numeric"}:
+            batch_ok = {i: h[3] for i, h in zip(ids, have)}
+            if kinds == {"numeric"} and not all(v == "PASS" for v in batch_ok.values()) and sid not in exceptions:
+                # finding 1: a batch whose own verifier rejected the run cannot bind a row
+                row.update(evidence_tier="numeric_held_batch_verifier_failed", measured_against=P1_SHA,
+                           evidence={"non_binding_receipts": paths,
+                                     "tier": "numeric comparison blocks pass, but the batch verifier rejected the "
+                                             "run, so the row does not bind"},
+                           note=HELD_NOTE,
+                           measured_result={"case_verdicts": verdicts, "batch_verifier": batch_ok})
+                counts["numeric_held_batch_verifier_failed"] += 1
+            elif kinds == {"numeric"}:
                 ok = all(v == "PASS" for v in verdicts.values())
                 row.update(evidence_tier="numeric", measured_against=P1_SHA,
                            evidence={"receipt": paths,
                                      "tier": "numeric: per-case receipts carry an R-vs-Julia comparison block pinned to P1"},
-                           measured_result={"case_verdicts": verdicts, "row_verdict": "PASS" if ok else "FAIL"})
+                           measured_result={"case_verdicts": verdicts, "batch_verifier": batch_ok,
+                                            "row_verdict": "PASS" if ok else "FAIL"})
+                if sid in exceptions:
+                    row["numeric_exception"] = exceptions[sid]
                 counts["numeric_pass" if ok else "numeric_fail"] += 1
             else:
                 tier = "partial_numeric_bridge_boundary" if "numeric" in kinds else "r_only"
@@ -371,12 +485,16 @@ def main():
         "schema": 1, "reference_commit": P1_SHA,
         "scope": "covariance family: the 17 rows the P1 carry scan lists as PARTIAL_STALE_AT_P1 (7) or DANGLING (10); "
                  "the 22 NOT_BOUND_AT_P0 covariance rows had no P0 evidence and are out of scope here",
+        "glvmodels_commit": head,
         "note": ("Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with "
                  "PARITY_CASEMAP pointing at this file. Classifications are carried from "
                  "docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. Only rows "
                  "whose every executable case id carries a numeric R-vs-Julia comparison block cite evidence.receipt; "
                  "rows with an R-only or R-boundary case cite evidence.non_binding_receipts instead, so they read as "
-                 "not bound under both the current checker and the numeric-tier rule proposed in PR #561."),
+                 "not bound under both the current checker and the numeric-tier rule proposed in PR #561. "
+                 "A row whose numeric cases pass but whose batch verifier rejected the run is held back the same way "
+                 "(evidence_tier numeric_held_batch_verifier_failed) unless a maintainer-signed numeric_exception is "
+                 "recorded on it."),
         "generator": "tools/core070_covariance_p1_receipts.py",
         "counts": counts, "runtimes_seconds": runtimes,
         "rows": out_rows,

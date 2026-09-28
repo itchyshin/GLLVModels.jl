@@ -58,6 +58,45 @@ root <- normalizePath(".")
 # tools/core070_build_oracle.py (required; no fallback).
 parity_pin <- toupper(trimws(Sys.getenv("GLLVM_PARITY_PIN", "P0")))
 stopifnot(parity_pin %in% c("P0", "P1"))
+
+# Oracle source pin (review finding 6). The expected commit and tree hash come
+# from tools/core070_oracle_pins.toml (the shared pin source), and the library
+# must carry the CORE070_SOURCE_PIN.toml marker written by
+# tools/core070_build_oracle.py build. The marker is required at P1; at P0 a
+# library without one still runs as before, but a marker that is present must
+# match the P0 pin. The record goes into the receipt for the verifier.
+read_flat_toml <- function(path, table = NULL) {
+  lines <- readLines(path, warn = FALSE)
+  if (!is.null(table)) {
+    heads <- grep("^\\[", lines)
+    start <- match(paste0("[", table, "]"), trimws(lines))
+    if (is.na(start)) stop("table [", table, "] not found in ", path)
+    stop_at <- c(heads[heads > start], length(lines) + 1L)[[1L]]
+    lines <- lines[seq.int(start + 1L, stop_at - 1L)]
+  }
+  kv <- regmatches(lines, regexec('^([A-Za-z0-9_]+) = "([^"]*)"$', lines))
+  kv <- kv[lengths(kv) == 3L]
+  stats::setNames(lapply(kv, `[[`, 3L), vapply(kv, `[[`, "", 2L))
+}
+oracle_pin <- read_flat_toml(file.path(root, "tools/core070_oracle_pins.toml"), parity_pin)
+source_pin_marker <- file.path(frozen_library, "gllvmTMB", "CORE070_SOURCE_PIN.toml")
+source_pin <- if (file.exists(source_pin_marker)) {
+  marker <- read_flat_toml(source_pin_marker)
+  c(marker[c("reference_commit", "source_tree_sha256", "installed_tree_sha256",
+             "archive_sha256", "namespace_sha256")],
+    list(marker_path = normalizePath(source_pin_marker), marker_sha256 = sha256_file(source_pin_marker)))
+} else NULL
+if (identical(parity_pin, "P1") && is.null(source_pin)) {
+  stop("GLLVM_PARITY_PIN=P1 needs the CORE070_SOURCE_PIN.toml marker in ", file.path(frozen_library, "gllvmTMB"))
+}
+if (!is.null(source_pin)) {
+  stopifnot(
+    identical(source_pin$reference_commit, oracle_pin$reference_commit),
+    identical(source_pin$source_tree_sha256, oracle_pin$source_tree_sha256),
+    identical(source_pin$archive_sha256, oracle_pin$archive_sha256),
+    identical(source_pin$namespace_sha256, oracle_pin$namespace_sha256)
+  )
+}
 contract_rel <- if (identical(parity_pin, "P1"))
   "docs/dev-log/core070/true-parity-latest/covariance-batch-contract-p1.json" else
   "docs/dev-log/core070/covariance-batch-contract.json"
@@ -68,7 +107,7 @@ readback_root <- if (identical(parity_pin, "P1")) {
 } else file.path(root, ".unlazy/core070-aghq/oracle-source/readback")
 contract <- jsonlite::read_json(file.path(root, contract_rel), simplifyVector = FALSE)
 stopifnot(identical(parity_pin, "P0") ||
-  identical(contract$reference_commit, "9539352f66f2db2cc26b1c393e67212a359b60c9"))
+  identical(contract$reference_commit, oracle_pin$reference_commit))
 stopifnot(identical(contract$run_style, "R_ONLY_FORMULA_GRAMMAR_STRUCTURE_CHECKS"))
 
 pin_ok <- vapply(names(contract$source_pins), function(rel) {
@@ -84,7 +123,8 @@ result <- list(
     r_version = R.version.string,
     gllvmTMB_version = as.character(utils::packageVersion("gllvmTMB")),
     gllvmTMB_path = find.package("gllvmTMB"),
-    frozen_library = frozen_library
+    frozen_library = frozen_library,
+    source_pin = source_pin
   ),
   source_pin_checks = as.list(pin_ok),
   cases = list(),

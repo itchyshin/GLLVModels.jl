@@ -64,3 +64,49 @@ function _core070_check_frozen_contract_pin(manifest::AbstractDict, path::Abstra
     ))
     return nothing
 end
+
+# Oracle build/source receipts per pin (review finding 13). The required run
+# copies both into its receipt directory and hashes them into the run's source
+# record, so they must belong to the selected pin. P0 keeps the historical
+# untracked .unlazy paths; P1 reads the receipts tracked with the covariance
+# evidence (written by tools/core070_build_oracle.py for the P1 build). An
+# unregistered pin is an error, never a silent P0 fallback.
+const _CORE070_ORACLE_RECEIPTS_REL = Dict(
+    "P0" => (build = ".unlazy/core070-aghq/oracle-receipts/build.json",
+             source = ".unlazy/core070-aghq/oracle-source/source.json"),
+    "P1" => (build = "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+             source = "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json"),
+)
+
+function _core070_oracle_receipts_rel()
+    name = _core070_selected_pin_name()
+    haskey(_CORE070_ORACLE_RECEIPTS_REL, name) ||
+        error("no oracle build/source receipt paths are registered for pin $(repr(name))")
+    return _CORE070_ORACLE_RECEIPTS_REL[name]
+end
+
+# Top-level string field of a receipt JSON written by tools/core070_build_oracle.py
+# (json.dumps(indent=2, sort_keys=True)): a top-level key sits at exactly two
+# spaces of indent, so nested keys (source.json's per-file hashes) never match.
+# Exactly one match is required. Kept regex-only so this file needs no JSON package.
+function _core070_json_top_string(text::AbstractString, key::AbstractString)
+    hits = collect(eachmatch(Regex("^  \"" * key * "\": \"([^\"]*)\"", "m"), text))
+    length(hits) == 1 || throw(ArgumentError(
+        "oracle receipt has $(length(hits)) top-level \"$key\" string fields, expected exactly one"))
+    return String(hits[1].captures[1])
+end
+
+# Validate a build.json (kind = :build) or source.json (kind = :source) against the
+# selected pin before it is used; throws naming the first mismatching field.
+function _core070_check_oracle_receipt(text::AbstractString, rel::AbstractString, kind::Symbol)
+    keys = kind === :build ? ("reference_commit", "source_tree_sha256", "archive_sha256") :
+           kind === :source ? ("reference_commit", "source_tree_sha256", "archive_sha256", "namespace_sha256") :
+           throw(ArgumentError("unknown oracle receipt kind $(repr(kind))"))
+    for key in keys
+        got = _core070_json_top_string(text, key)
+        got == _CORE070_PIN[key] || throw(ArgumentError(
+            "oracle $kind receipt $rel has $key = $(repr(got)), but $_CORE070_PIN_ENV_VAR=" *
+            "$(_core070_selected_pin_name()) pins $(repr(_CORE070_PIN[key]))"))
+    end
+    return nothing
+end
