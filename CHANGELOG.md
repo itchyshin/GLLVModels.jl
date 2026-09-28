@@ -401,6 +401,18 @@ All notable changes to GLLVModels.jl are documented here.
   boundary. `_family_bootstrap` reads the new field only when an adapter sets
   it, so other families are unchanged, and when every replicate converges the
   bootstrap endpoints are identical to before.
+- **NB2 `confint(..., method = :bootstrap)` now reports the refit's own
+  convergence verdict (part of #504).** The refit closures for `NBFit`,
+  `NBGroupedFit` and `NBGroupedCovFit` return `(θ, converged, loglik,
+  upper_boundary)` on the #542 contract. `upper_boundary` flags each `r`
+  above 1e6 (the Poisson limit), with the same test `_dispersion_group_boundary`
+  applies to the grouped point fit, so a refit there is left out of every
+  quantile and, when more than the upper tail of usable replicates are
+  flagged for a given `r`, that `r`'s upper bound is `Inf`. This also covers
+  the shared-`r` fitter `fit_nb_gllvm`, which has no boundary verdict of its
+  own: on literal Poisson data it reports `converged = true` at `r = 7.7e6`,
+  and main counted every such replicate with a finite `log r`. When every
+  replicate converges, bootstrap endpoints are identical to before.
 
 ### Changed
 - **Breaking (default change):** `fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm`
