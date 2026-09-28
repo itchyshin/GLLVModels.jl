@@ -1,8 +1,10 @@
 # Known-DGP recovery for the gllvmTMB-semantics zero-inflated route
 # (zi_poisson(), zi_nbinom2(), zi_binomial(); src/families/zi_twin.jl), AGENTS.md
-# design rule 1. Julia-only: simulated data from StableRNGs, plus two literal NB2
-# datasets (sha256-guarded CSVs, R's P1 fit recorded in test/fixtures/zi_recovery_cases.toml)
-# that exercise the Laplace breakdown the route guards against.
+# design rule 1. Julia-only: simulated data from StableRNGs. This file is deliberately
+# NOT tagged `# gllvm-parity-tag: P1`: it needs StableRNGs from test/Project.toml, so it
+# runs under Pkg.test() only, not in the P1 twin job (which runs `julia --project=.`).
+# The R-pinned literal NB2 regression datasets (reviewer seed 12, boundary seed 12,
+# breakdown seed 6) live in the P1-tagged test/test_zi_twin.jl.
 #
 # Setting: p = 4 traits, n = 350 sites, K = 1, zero inflation in [0.15, 0.30],
 # loadings of magnitude 0.4 to 0.6, NB2 dispersion in [1, 2]. Bounds: max |zi error|
@@ -21,10 +23,6 @@ using GLLVModels
 using StableRNGs
 using Distributions
 using LinearAlgebra
-using SHA
-using TOML
-
-const _ZIR_DIR = joinpath(@__DIR__, "fixtures")
 
 function _zir_simulate(fam, seed; p = 4, n = 350)
     rng = StableRNG(seed)
@@ -45,16 +43,6 @@ function _zir_simulate(fam, seed; p = 4, n = 350)
         Y[t, s] = structural ? 0 : y
     end
     return Y, N, (β = β, zi = zi, λ = λ, phi = phi)
-end
-
-function _zir_load_csv(path, p, n)
-    Y = zeros(Int, p, n)
-    for line in readlines(path)[2:end]
-        isempty(line) && continue
-        r = parse.(Int, split(line, ","))
-        Y[r[2], r[1]] = r[3]
-    end
-    return Y
 end
 
 @testset "zi_* known-DGP recovery (p = 4, n = 350, K = 1)" begin
@@ -90,54 +78,4 @@ end
             end
         end
     end
-end
-
-@testset "zi_nbinom2 literal regression cases (Laplace breakdown)" begin
-    cases = TOML.parsefile(joinpath(_ZIR_DIR, "zi_recovery_cases.toml"))
-    for key in ("nb2_reviewer_seed12", "nb2_boundary_seed12")
-        @testset "$key" begin
-            c = cases[key]
-            path = joinpath(_ZIR_DIR, c["data_file"])
-            @test bytes2hex(sha256(read(path))) == c["data_sha256"]
-            Y = _zir_load_csv(path, Int(c["n_traits"]), Int(c["n_unit"]))
-            fit = fit_gllvm(Y; family = zi_nbinom2(), K = 1)
-            llR = Float64(c["r_loglik"])
-            mineig = fit.min_site_eigen
-            @info "zi literal case $key" fit.loglik llR mineig fit.phi
-            @test fit.converged
-            # The spurious point on this surface has a HIGHER Laplace value than R's
-            # optimum (-3012.80 against -3311.45 on the reviewer case), so "not above
-            # R" is the guard; "not below R" checks the route still finds R's optimum.
-            @test abs(fit.loglik - llR) < 1e-4
-            @test mineig > GLLVModels.ZI_LAPLACE_EIGMIN_FLOOR
-            @test maximum(abs.(fit.zi .- Float64.(c["r_zi"]))) < 1e-3
-        end
-    end
-
-    # A draw where the Laplace surface itself leads into the breakdown region (R stops
-    # there with convergence = 1): Julia must not report a converged fit.
-    @testset "nb2_breakdown_seed6" begin
-        c = cases["nb2_breakdown_seed6"]
-        path = joinpath(_ZIR_DIR, c["data_file"])
-        @test bytes2hex(sha256(read(path))) == c["data_sha256"]
-        Y = _zir_load_csv(path, 4, 400)
-        fit = @test_logs (:warn, r"Laplace breakdown guard") match_mode = :any fit_gllvm(
-            Y; family = zi_nbinom2(), K = 1)
-        @info "zi literal case nb2_breakdown_seed6" fit.loglik fit.min_site_eigen fit.converged
-        @test !fit.converged
-        @test fit.min_site_eigen < 1.1 * GLLVModels.ZI_LAPLACE_EIGMIN_FLOOR
-    end
-
-    # The guard itself: at the reviewer case's spurious point the site precision is
-    # near singular, so the guarded marginal refuses it; unguarded, it reports the
-    # inflated Laplace value that R's objective also returns there.
-    c = cases["nb2_reviewer_seed12"]
-    Y = _zir_load_csv(joinpath(_ZIR_DIR, c["data_file"]), 4, 400)
-    sp = c["spurious_point"]
-    args = (zi_nbinom2(), Float64.(Y), reshape(Float64.(sp["Lambda"]), 4, 1),
-            Float64.(sp["beta"]), Float64.(sp["logit_zi"]))
-    @test zi_marginal_loglik_laplace(args...; phi = Float64.(sp["phi"])) == -Inf
-    ll_unguarded = zi_marginal_loglik_laplace(args...; phi = Float64.(sp["phi"]),
-                                              eigmin_floor = -Inf)
-    @test ll_unguarded > Float64(c["r_loglik"]) + 100
 end

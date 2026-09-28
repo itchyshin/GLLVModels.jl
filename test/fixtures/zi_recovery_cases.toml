@@ -1,4 +1,4 @@
-# Literal zi_nbinom2() regression datasets for test/test_zi_recovery.jl.
+# Literal zi_nbinom2() regression datasets for test/test_zi_twin.jl (P1-tagged).
 # R values: gllvmTMB 0.7.1 at commit 9539352f66f2db2cc26b1c393e67212a359b60c9, R 4.6.0,
 # y ~ 0 + trait + latent(0 + trait | site, d = 1, unique = FALSE), family = zi_nbinom2(),
 # gllvmTMBcontrol(se = FALSE). CSV columns: site, trait, y.

@@ -216,3 +216,57 @@ end
         @test gap > 1e-4
     end
 end
+
+# R-pinned literal zi_nbinom2() regression datasets (sha256-guarded CSVs; R's P1 fit
+# recorded in test/fixtures/zi_recovery_cases.toml). They exercise the Laplace breakdown
+# the route guards against (ZI_LAPLACE_EIGMIN_FLOOR) and live here, in the P1-tagged
+# file, so the P1 twin job runs them (they need no StableRNGs).
+@testset "zi_nbinom2 literal regression cases (Laplace breakdown)" begin
+    cases = TOML.parsefile(joinpath(_ZI_FIXTURE_DIR, "zi_recovery_cases.toml"))
+    for key in ("nb2_reviewer_seed12", "nb2_boundary_seed12")
+        @testset "$key" begin
+            c = cases[key]
+            path = joinpath(_ZI_FIXTURE_DIR, c["data_file"])
+            @test bytes2hex(sha256(read(path))) == c["data_sha256"]
+            Y, _ = _load_zi_csv(path, Int(c["n_traits"]), Int(c["n_unit"]))
+            fit = fit_gllvm(Y; family = zi_nbinom2(), K = 1)
+            llR = Float64(c["r_loglik"])
+            mineig = fit.min_site_eigen
+            @info "zi literal case $key" fit.loglik llR mineig fit.phi
+            @test fit.converged
+            # The spurious point on this surface has a HIGHER Laplace value than R's
+            # optimum (-3012.80 against -3311.45 on the reviewer case), so "not above
+            # R" is the guard; "not below R" checks the route still finds R's optimum.
+            @test abs(fit.loglik - llR) < 1e-4
+            @test mineig > GLLVModels.ZI_LAPLACE_EIGMIN_FLOOR
+            @test maximum(abs.(fit.zi .- Float64.(c["r_zi"]))) < 1e-3
+        end
+    end
+
+    # A draw where the Laplace surface itself leads into the breakdown region (R stops
+    # there with convergence = 1): Julia must not report a converged fit.
+    @testset "nb2_breakdown_seed6" begin
+        c = cases["nb2_breakdown_seed6"]
+        path = joinpath(_ZI_FIXTURE_DIR, c["data_file"])
+        @test bytes2hex(sha256(read(path))) == c["data_sha256"]
+        Y, _ = _load_zi_csv(path, 4, 400)
+        fit = @test_logs (:warn, r"Laplace breakdown guard") match_mode = :any fit_gllvm(
+            Y; family = zi_nbinom2(), K = 1)
+        @info "zi literal case nb2_breakdown_seed6" fit.loglik fit.min_site_eigen fit.converged
+        @test !fit.converged
+        @test fit.min_site_eigen < 1.1 * GLLVModels.ZI_LAPLACE_EIGMIN_FLOOR
+    end
+
+    # The guard itself: at the reviewer case's spurious point the site precision is
+    # near singular, so the guarded marginal refuses it; unguarded, it reports the
+    # inflated Laplace value that R's objective also returns there.
+    c = cases["nb2_reviewer_seed12"]
+    Y, _ = _load_zi_csv(joinpath(_ZI_FIXTURE_DIR, c["data_file"]), 4, 400)
+    sp = c["spurious_point"]
+    args = (zi_nbinom2(), Float64.(Y), reshape(Float64.(sp["Lambda"]), 4, 1),
+            Float64.(sp["beta"]), Float64.(sp["logit_zi"]))
+    @test zi_marginal_loglik_laplace(args...; phi = Float64.(sp["phi"])) == -Inf
+    ll_unguarded = zi_marginal_loglik_laplace(args...; phi = Float64.(sp["phi"]),
+                                              eigmin_floor = -Inf)
+    @test ll_unguarded > Float64(c["r_loglik"]) + 100
+end
