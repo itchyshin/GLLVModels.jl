@@ -9,9 +9,12 @@ carry scan lists as DANGLING. Two batches pay them, run at gllvmTMB pin P1
                                  .gllvmTMB_offset_newdata, miss_control) from the P1 source
                                  tree; each case is an identical() expression that must be
                                  TRUE (FALSE for the 2 negative controls). No fit.
-                                 Julia: runtime introspection that none of the planned Julia
-                                 surfaces exists (SPEC_DEFECT). No R-vs-Julia number, so no
-                                 data row can bind: R SIDE ONLY, JULIA SURFACE ABSENT.
+                                 Julia: name-level introspection that none of the planned
+                                 helper-equivalent symbols exists (SPEC_DEFECT), plus a
+                                 behavioural probe of the fit-time weights / offset / mask /
+                                 missing-Y surfaces (tools/core070_data_surface_probe.jl).
+                                 The R side is a helper replay with no fit number, so no data
+                                 row can bind: R SIDE ONLY, NOTHING NUMERIC TO COMPARE YET.
   fit-input-2 (wave4, 6 rows)    R: installed P1 oracle fits seven small fixtures. Julia: native
                                  and formula-interface refits. Each case compares logLik and
                                  the trait-intercept coefficients with the contract tolerance
@@ -55,7 +58,8 @@ Shared gates (PR #567 / #569 / #571):
 Usage:
   python3 tools/core070_data_p1_receipts.py --runs DIR --runtimes JSON [--allow-dirty]
   python3 tools/core070_data_p1_receipts.py --check
-where DIR holds data-p1/ (the R run plus data-batch-julia-introspection.json and
+where DIR holds data-p1/ (the R run plus data-batch-julia-introspection.json,
+data-batch-julia-surface-probe.json and
 run-commit.json), fit-input-2-p1/ (with run-commit.json) and carry-scan-p1.json.
 """
 import argparse
@@ -90,7 +94,7 @@ BATCHES = {
                  "{state}/data-batch-julia-introspection.json", "--self-test"],
                 "CORE070_DATA_BATCH_VERIFIED",
                 ["receipt.json", "data-batch-results.json", "raw.tsv", "data-batch-julia-introspection.json",
-                 "run-commit.json"]),
+                 "data-batch-julia-surface-probe.json", "run-commit.json"]),
     "fit-input-2-p1": ("fit-input",
                        ["tools/core070_verify_fit_input_2_batch.py", "--results", "{state}", "--self-test"],
                        "CORE070_FIT_INPUT_2_BATCH_VERIFIED",
@@ -114,9 +118,21 @@ SAME_MEASUREMENT_NOTE = (
 
 TIER_TEXT = {
     "needs_surface_r_side_measured": (
-        "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation), but GLLVModels has no "
-        "surface to compare it with (runtime introspection: every planned symbol and keyword absent). No "
-        "R-vs-Julia number, so the row does not bind"),
+        "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper "
+        "replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. "
+        "GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / "
+        "missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no "
+        "weights surface (see each receipt's "
+        "julia_fit_time_surface_probe)"),
+}
+
+# Planned-surface group -> which fit-time surface(s) the surface probe exercised for it.
+PROBE_SURFACES = {
+    "miss_control": ("mask", "missing_in_Y"),
+    "offset_preparation": ("offset",),
+    "stored_or_predict_offset_accessor": ("offset",),
+    "weight_normalisation": ("weights",),
+    "weight_shape_adapter": ("weights",),
 }
 COUNT_KEYS = ("numeric_pass", "numeric_fail", "numeric_held_batch_verifier_failed", "numeric_non_discriminating",
               "partial_non_numeric_case", "needs_surface_r_side_measured", "needs_surface_not_executed",
@@ -208,22 +224,60 @@ def read_from(*rels):
 # ---------------------------------------------------------------------------
 # Derivation: case receipts from tracked files only.
 # ---------------------------------------------------------------------------
+def probe_summary(probe, surfaces):
+    """surface -> status -> [paths], plus mask/missing equality, from the tracked surface probe."""
+    out = {}
+    for surface in surfaces:
+        by = {}
+        for p in probe["paths"]:
+            by.setdefault(p["surfaces"][surface]["status"], []).append(p["path"])
+        out[surface] = dict(sorted(by.items()))
+    if "mask" in surfaces:
+        out["mask_loglik_equals_missing_loglik"] = [p["path"] for p in probe["paths"]
+                                                    if p["mask_loglik_equals_missing_loglik"] is True]
+    return out
+
+
+def surface_sentence(summary, surfaces):
+    """Plain statement of what the probe found, for why_not_numeric."""
+    parts = []
+    for surface in surfaces:
+        s = summary[surface]
+        yes = s.get("accepted_changes_loglik", [])
+        other = {k: v for k, v in s.items() if k != "accepted_changes_loglik"}
+        label = {"missing_in_Y": "missing cells in Y", "mask": "mask=", "offset": "offset=",
+                 "weights": "weights="}[surface]
+        if not yes:
+            parts.append(f"{label} is refused on every probed path ({len(s.get('refused', []))} of "
+                         f"{sum(len(v) for v in s.values())}), so GLLVModels has no such surface")
+        else:
+            txt = f"{label} is accepted and moves the maximised logLik on {'; '.join(yes)}"
+            if other:
+                txt += " (" + "; ".join(f"{k} on {', '.join(v)}" for k, v in other.items()) + ")"
+            parts.append(txt)
+    if "mask" in surfaces and summary.get("mask_loglik_equals_missing_loglik"):
+        parts.append("where both are accepted, the mask fit and the missing-cell fit give the same logLik")
+    return "; ".join(parts)
+
+
 def data_cases():
     """case_id -> (evidence_kind, verdict, body, comparison-or-None) for the data batch."""
     d = f"{rec_rel('data')}/data-p1"
     receipt, results = load(ROOT / d / "receipt.json"), load(ROOT / d / "data-batch-results.json")
     intro = load(ROOT / d / "data-batch-julia-introspection.json")
+    probe = load(ROOT / d / "data-batch-julia-surface-probe.json")
     contract = load(ROOT / CONTRACT["data-p1"])
-    if receipt["reference_commit"] != P1_SHA or intro["reference_commit"] != P1_SHA:
-        raise SystemExit("data batch receipt or Julia introspection is not pinned at P1")
+    if receipt["reference_commit"] != P1_SHA or intro["reference_commit"] != P1_SHA \
+            or probe["reference_commit"] != P1_SHA:
+        raise SystemExit("data batch receipt, Julia introspection or surface probe is not pinned at P1")
     if receipt["results_sha256"] != sha(ROOT / d / "data-batch-results.json"):
         raise SystemExit("data-batch-results.json does not match its receipt's results_sha256")
     if receipt["contract_sha256"] != sha(ROOT / CONTRACT["data-p1"]):
         raise SystemExit("data batch receipt does not name the tracked P1 twin's sha256")
     verifier = verifier_block("data-p1")
     reads = read_from(f"{d}/receipt.json", f"{d}/data-batch-results.json", f"{d}/raw.tsv",
-                      f"{d}/data-batch-julia-introspection.json", f"{d}/run-commit.json", f"{d}/verify.txt",
-                      CONTRACT["data-p1"])
+                      f"{d}/data-batch-julia-introspection.json", f"{d}/data-batch-julia-surface-probe.json",
+                      f"{d}/run-commit.json", f"{d}/verify.txt", CONTRACT["data-p1"])
     ccases = {c["manifest_case_id"]: c for c in contract["cases"]}
     out = {}
     for rc in results["cases"]:
@@ -242,7 +296,11 @@ def data_cases():
                 "julia_surface_introspection": {k: surf[k] for k in ("candidate_exported_symbols", "candidate_kwargs",
                                                                      "found_symbols", "found_kwargs", "surface_absent")},
                 "read_from": reads,
-                "raw": [f"{d}/data-batch-results.json", f"{d}/data-batch-julia-introspection.json"]}
+                "raw": [f"{d}/data-batch-results.json", f"{d}/data-batch-julia-introspection.json",
+                        f"{d}/data-batch-julia-surface-probe.json"]}
+        probed = PROBE_SURFACES[group]
+        summary = probe_summary(probe, probed)
+        body["julia_fit_time_surface_probe"] = {"tool": "tools/core070_data_surface_probe.jl", "surfaces": summary}
         if cc["negative_control"]:
             kind = "r_replay_negative_control"
             verdict = "PASS" if rc["ok"] and rc["actual"] is False else "FAIL"
@@ -253,9 +311,17 @@ def data_cases():
             body["julia_surface"] = cc["julia_surface"]
             body["julia_verdict"] = rc["julia_verdict"]
             verdict = "PASS" if rc["ok"] and rc["actual"] is True and surf["surface_absent"] else "FAIL"
-            body["why_not_numeric"] = ("The R side replays a pinned P1 helper to an exact identical() expectation; "
-                                       "GLLVModels has no surface for it (runtime introspection found none of the "
-                                       "planned symbols or keywords), so there is no Julia value to compare.")
+            has_fit_surface = any(summary[x].get("accepted_changes_loglik") for x in probed)
+            body["why_not_numeric"] = (
+                "The R side replays a pinned P1 helper to an exact identical() expectation. That is a helper replay, "
+                "not a fit: it produces no fit number, so there is nothing numeric to compare yet. "
+                "Julia side, from the behavioural surface probe: " + surface_sentence(summary, probed) + ". "
+                + ("What GLLVModels lacks is the helper this case replays (" + cc["julia_surface"] + "); the "
+                   "name-level introspection's surface_absent refers to that helper layer only. A numeric twin "
+                   "would need an R fit that uses this input at P1 and the matching GLLVModels fit."
+                   if has_fit_surface else
+                   "The name-level introspection also finds no helper-equivalent symbol (" + cc["julia_surface"]
+                   + ")."))
             if not surf["surface_absent"]:
                 body["note"] = ("A planned Julia surface now exists (see julia_surface_introspection); the "
                                 "contract's SPEC_DEFECT verdict is stale at this commit.")
@@ -499,7 +565,8 @@ def check():
 # ---------------------------------------------------------------------------
 SCOPE = {
     "data": ("data family: the 28 required rows the P1 carry scan lists as DANGLING, all paid by the wave1 data "
-             "batch (R helper replay against the pinned P1 source plus Julia surface introspection). The 28 "
+             "batch (R helper replay against the pinned P1 source, Julia name-level introspection and a behavioural "
+             "fit-time surface probe). The 28 "
              "rejected data rows are out of scope."),
     "fit-input": ("fit-input family: the 6 required rows the P1 carry scan lists as DANGLING, all paid by the wave4 "
                   "fit-input-2 batch (paired R/Julia fits). The 5 NOT_BOUND_AT_P0 required rows (INPUT-GAUSS-COMMON, "
@@ -510,8 +577,9 @@ SCOPE = {
 NOTE = {
     "data": ("Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with "
              "PARITY_CASEMAP pointing at this file. Classification and disposition are carried from "
-             "docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. No data "
-             "row has a Julia surface to compare, so every row cites evidence.non_binding_receipts and is free."),
+             "docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. The R side "
+             "of every data row is a helper replay with no fit number, so there is nothing numeric to compare yet; "
+             "every row cites evidence.non_binding_receipts and is free."),
     "fit-input": ("Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs "
                   "with PARITY_CASEMAP pointing at this file. Classification and disposition are carried from "
                   "docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. Only "
