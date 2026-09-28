@@ -70,16 +70,38 @@ different data.
 | silent breakdowns after | 0 | 0 |
 | flagged `converged = false` after | 0 | 0 |
 | breakdown draws at the healthy optimum after | 4 of 4 (min eig 0.95 to 1.11, abs(Laplace - exact) at most 1.7) | 2 of 2 (min eig 1.04, 1.09; abs gap at most 1.5) |
-| healthy draws | 14 of 16 bit-identical; 108 within 2.3e-12; 102 moved from -1218.082 to a higher healthy optimum -1215.971 | 15 of 18 bit-identical; 101, 111 and 103 end 1.5e-6, 1.1e-6 and 5.0e-4 lower at the same optimum |
+| healthy draws | 14 of 16 bit-identical; 108 within 2.3e-12; 102 moved from -1218.082 to a higher healthy optimum -1215.971 | 15 of 18 bit-identical; on 101, 111 and 103 main's fit stopped early (see below) and the guarded fit ends at the gradient-converged point 1.5e-6, 1.1e-6 and 5.0e-4 lower |
 
 Where a healthy fit changed, its first L-BFGS run evaluated a walled-off point during a
 line search, which changes the path; the retry did not run (the first fit ended off the
 guard). The healthy optima are therefore unchanged to 1e-10 on 30 of 34 draws, not on
-all: draw 102 (1.10) reaches a better point and draw 103 (1.13) stops 5e-4 short of
-the same one, within the optimiser's g_tol.
+all: draw 102 (1.10) reaches a better point, and on draws 101, 111 and 103 (1.13) the
+guarded fit ends slightly lower.
+
+Those three lower values are not early stops of the guard. The independent review of
+the draft PR inspected Optim's flags and the finite-difference gradient at both end
+points on Julia 1.13.0:
+
+| draw (1.13) | main path: loglik, flags, gradient norm | guarded: loglik, flags, gradient norm |
+|---|---|---|
+| 103 | -1352.048581, `f_converged` only, 45.3 | -1352.049080, `g_converged`, 8.4e-6 |
+| 101 | -1597.341775, `f_converged` only, 0.16 | -1597.341777, `g_converged`, 4.7e-6 |
+| 111 | -1578.782500, `f_converged` only, 0.056 | -1578.782501, `g_converged`, 4.1e-6 |
+
+Main's fits are the ones that stopped early: on `f_converged` alone, at a point where the
+Laplace objective is discontinuous. On draw 103, a step of 1e-5 in log r raises the
+negative log-likelihood by 5.49e-4 in one direction and by 1.5e-8 in the other, so main's
+fit sits on the upper lip of a pre-existing cliff of about 5.5e-4 in the objective. The
+guarded fits are gradient-converged points in a smooth region about 2e-3 away; polishing
+them with the floor off takes 0 iterations. The 5e-4 difference is the height of that
+cliff, not a cost of the wall; the same effect goes the other way on a 1.13 draw in the
+review's own sweep (seed 121: guarded 6.1e-4 higher). The discontinuity exists on main
+and is out of scope here (follow-up note below).
 
 Smallest site eigenvalue at the healthy optima: 0.79 to 2.04 (1.10) and 0.91 to 1.64
-(1.13), against the 0.1 floor.
+(1.13), against the 0.1 floor. The review's wider sweeps (45 draws, r from 0.05 to 0.3)
+add values down to 0.716; every breakdown was below 2e-4, and nothing fell between 0.11
+and 0.7.
 
 Compute: breakdown draws take 1.2x to 3x longer (the retry); healthy draws are
 unchanged within timing noise. The sweeps took about 12 minutes on four processes.
@@ -92,5 +114,20 @@ unchanged within timing noise. The sweeps took about 12 minutes on four processe
   did not break down on the three audit draws (min eig 0.86 to 2.2; some r_t at the
   boundaries), which does not show immunity.
 - The shared-r CI adapter (`_family_ci(::TruncatedNegBin2Fit, ...)`) profiles the
-  unguarded marginal; a profile could walk into the breakdown region. Not probed.
+  unguarded marginal; a profile could walk into the breakdown region. The review probed
+  one draw (104) by a hand profile of r and found no breakdown over the range a 95%
+  interval would cover (smallest eigenvalue at least 0.89). One draw is not a proof.
+  The same probe found that the adapter's own intervals for r are not trustworthy on
+  this family (a Wald interval far narrower than the hand profile, and a profile run
+  that returned `status = :failed`); that is pre-existing and separate from this guard.
 - One DGP, 20 draws. The rate (4 of 20) is a point estimate.
+- The discontinuity in the Laplace objective described above. Follow-up note, not a fix:
+  its likely source is the inner mode solve. On draw 103 (Julia 1.13, main's end point),
+  one site (y = [121, 1, 1, 2]) accounts for the whole 5.5e-4 jump. There the
+  Fisher-scoring iterates of `_grouped_laplace_mode` (`grouped_dispersion.jl`) alternate
+  around the mode (-1.62047, -1.61958, -1.62048, -1.61957, ...) instead of converging,
+  and the solve stops at a point that jumps from 7e-6 to 1.3e-3 away from the true mode
+  (-1.62003) when log r moves by 1e-5; the site's Laplace value is then evaluated off the
+  mode. A Newton step on the observed curvature, or a stopping rule on the inner
+  gradient, would be the place to look. Measured on one site of one draw; the same
+  mechanism is a plausible cause of the unreliable Wald interval for r noted above.

@@ -48,7 +48,10 @@ All notable changes to GLLVModels.jl are documented here.
   `min_site_eigen` on `TruncatedNegBin2Fit`. All breakdown draws now reach the
   healthy optimum (4 of 4 on Julia 1.10, 2 of 2 on a 1.13 sweep); 30 of 34
   healthy fits are unchanged to 1e-10, one moves to a higher healthy optimum
-  (+2.11) and three stop up to 5e-4 short of the same optimum. The public
+  (+2.11), and three end up to 5e-4 lower at a gradient-converged point where
+  main's fit had stopped on `f_converged` alone (gradient norm up to 45) on the
+  upper lip of a pre-existing discontinuity of about 5.5e-4 in the Laplace
+  objective. The public
   marginal functions and the per-trait fitter are unchanged (`eigmin_floor`
   defaults to `-Inf` there). Decision note:
   `docs/dev-log/decisions/2026-09-27-truncnb2-laplace-breakdown-guard.md`;
