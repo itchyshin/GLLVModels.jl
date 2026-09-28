@@ -34,7 +34,8 @@ stopifnot(!dir.exists(output_dir))
 
 sha256_file <- function(path) {
   command <- if (nzchar(Sys.which("sha256sum"))) "sha256sum" else "shasum"
-  argv <- if (identical(command, "sha256sum")) path else c("-a", "256", path)
+  # system2() does not quote its arguments; shQuote keeps a path with spaces one argument.
+  argv <- if (identical(command, "sha256sum")) shQuote(path) else c("-a", "256", shQuote(path))
   line <- system2(command, argv, stdout = TRUE, stderr = TRUE)
   stopifnot(is.null(attr(line, "status")), length(line) >= 1L)
   sub("[[:space:]].*$", "", line[[1L]])
