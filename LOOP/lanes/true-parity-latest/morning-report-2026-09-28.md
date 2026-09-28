@@ -47,6 +47,11 @@ Overnight: #548 chibar2_pvalue / variance_lrt twin (4357e4652, 22:58); #531 extr
 
 ## In progress overnight
 
+- Ledger assembly tool (builds scoreboard.md, reverse-gap.json and a folded case map from the per-family maps; no classifications): builder started 23:55.
+
+## Goal gates on origin/main right now (23:55, main 5b9af3763)
+
+C0 NOT MET (the harness default pin is still P0; flipping it changes what CI runs, your call). C7 MET. C1 to C6, C8 and X2 cannot even be measured on main: they need case-map.json (arrives with #533, waiting for your signature), scoreboard.md and reverse-gap.json. Negative controls pass. A builder is writing a tool that assembles those files from the per-family case maps and receipts (derive only, no classification), as a draft PR, so the clauses become measurable.
 
 ## A3 re-measurement scoreboard at P1 (00:00, from each PR's own checker run)
 
