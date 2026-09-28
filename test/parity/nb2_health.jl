@@ -9,14 +9,28 @@ function parity_nb2_original_Y()
  return Y
 end
 
-"""Record the original NB2 default-oracle health without changing either fit."""
-function parity_nb2_health(Y, K, native; artifact_prefix="nb2", receipt_tag="NB2", case_id="NATIVE-06-NB2")
+"""The NATIVE-06 family-smoke NB2 data, read from `fixtures/nb2_smoke_data.toml` (drawn by
+`fixtures/generate_nb2_smoke_data.jl`, seed 39, per-trait size 1 to 3). On the original data
+both engines put traits 1 and 3 at the Poisson boundary, so the cell's converged/gradient
+rules could not hold; on this draw every trait's dispersion is interior on both engines."""
+function parity_nb2_smoke_Y()
+ d=TOML.parsefile(joinpath(@__DIR__,"fixtures","nb2_smoke_data.toml"))
+ Y=reshape(Int.(d["Y_column_major"]),d["p"],d["n"])
+ h=bytes2hex(sha256(reinterpret(UInt8,vec(Float64.(Y)))))
+ h==d["data_sha256"]=="2bf2d819802a66e9836600caefec6e50802cac047db5d1a14611b4152ff1837c" || error("stored NB2 smoke data changed")
+ return Y
+end
+
+"""Record the NB2 default-oracle health without changing either fit (original data unless
+`data_sha256`/`policy` name the smoke fixture)."""
+function parity_nb2_health(Y, K, native; artifact_prefix="nb2", receipt_tag="NB2", case_id="NATIVE-06-NB2",
+    data_sha256="7abde2731134afe61afee5a7f0c29b58892ad72e550fa41cf8230e9c701a2bf9", policy="nb2_original_default_v1")
  occursin(r"^[a-z][a-z0-9-]*$", artifact_prefix) || throw(ArgumentError("invalid NB2 artifact prefix"))
  occursin(r"^[A-Z][A-Z0-9_]*$", receipt_tag) || throw(ArgumentError("invalid NB2 receipt tag"))
  p,n=size(Y)
  (p,K,n)==(5,2,80) || error("NB2 health is scoped to the original fixture")
  datahash=bytes2hex(sha256(reinterpret(UInt8,vec(Float64.(Y)))))
- datahash=="7abde2731134afe61afee5a7f0c29b58892ad72e550fa41cf8230e9c701a2bf9" || error("original NB2 data changed")
+ datahash==data_sha256 || error("NB2 data changed")
  fixture=joinpath(@__DIR__,"test_negbin_parity.jl");source=read(fixture,String)
  helpers=source[findfirst("function _rand_poisson",source).start:findfirst("@testset \"NB2 GLLVModels",source).start-1]
  dgp=source[findfirst("    Random.seed!(45)",source).start:findfirst("    jl_fit =",source).start-1]
@@ -68,7 +82,7 @@ report=Dict("source"=>_core070_source_pin!(),"data_sha256"=>datahash,
  "loglik_delta"=>abs(native.loglik-r.logLik),"native_nfree"=>length(theta),"r_nfree"=>length(rtheta),
  "samepoint_native_nll"=>objective(rnative))
 report["samepoint_delta"]=report["samepoint_native_nll"]-report["r_objective"]
- report["policy"]="nb2_original_default_v1"
+ report["policy"]=policy
  report["case_id"]=case_id
  report["raw_fits_sha256"]=_core070_sha256_file(rawpath)
  file=joinpath(output,artifact_prefix*"-health.toml")
