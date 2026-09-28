@@ -26,7 +26,7 @@ Written first at 18:27 MDT on 2026-09-27 and updated through the night. The newe
 ## In progress overnight
 
 - #557 zi_* twin: blocking fix DONE at d0a57e05d (sites with a Laplace precision eigenvalue below 0.1 are walled off; optima near the floor report converged = false; NB2 moment start). The reviewer's case now matches R (-3311.4547). Over 20 NB2 draws: silent breakdowns 3 -> 0; 2 draws honestly flagged not converged (R also fails there). Fresh review running.
-- #563 temporal slice 2 (unit/unit_obs composition, head 6a3c5890c; retargeted to main so it survives #543's merge): 13 R test blocks twinned; NLL/gradient vs R's TMB 3e-9. Changes the optimizer for slice 1 fits too (two line searches, keep the lower, Newton polish). Adds a new export, update(). Fresh review running.
+- #563 temporal slice 2 (unit/unit_obs composition, head 6a3c5890c; retargeted to main so it survives #543's merge): 13 R test blocks twinned; NLL/gradient vs R's TMB 3e-9. Changes the optimizer for slice 1 fits too (two line searches, keep the lower, Newton polish). Adds a new export, update(). Review NON-BLOCKING (receipts regenerated from R match byte-for-byte; the optimizer change leaves every slice-1 logLik identical to 1e-12 and six fits now honestly reach the gradient tolerance; the sigma_eps rule matches R's code exactly). Builder applying the recommended fixes. DECISION FOR YOU: keep update() exported, or keep it internal (name-collision risk only; it matches R's update semantics).
 
 ## Findings worth knowing
 
