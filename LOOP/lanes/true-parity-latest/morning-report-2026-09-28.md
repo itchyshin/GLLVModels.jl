@@ -26,6 +26,8 @@ One reply that lands everything in a safe order (edit out anything you don't wan
 
 ## What needs you (each has a reply to paste)
 
+Totoro is back (Shinichi, morning 2026-09-28). The Packet 2 Part A campaigns (C3 realistic-size, C4 real-data) can run there once you approve rows A1 / A2.
+
 0. Packet 2 (packet-2-draft.md in this folder): proposed rows for the three clauses that select nothing today (9 realistic-size, 2 real-data, 4 grouping-level; compute under 3 h on kohaku or Totoro after the A3 stack lands) and every open decision from tonight (32 rows, each with a reply). The most consequential: the wave6 nobs expectation; a "behavioural" tier for executed routing / error-class / label matches (up to 79 rows); splitting the R-bridge case ids; bulk-signing the 372 Julia-only extras as documented extras; the Woodbury fallback in likelihood.jl behind a benchmark and parity re-check.
 1. Sign the P1 case-map classes on draft PR #533 (one GitHub comment). Draft: "Signed: accept all 38 classes as proposed, except ordination_uncertainty moves to semantic_divergence and chibar2_pvalue / variance_lrt move to required_core (D-297, 2026-09-27)."
 2. Landing words for PRs that became ready overnight: see "Ready for your word" below.
