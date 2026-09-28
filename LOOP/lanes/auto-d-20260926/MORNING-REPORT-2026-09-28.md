@@ -12,6 +12,9 @@ Goal: GOAL-2026-09-28-overnight.md. Written at the start and updated as arcs fin
 - #521: `main` merged (picks up #530's Documenter fix); its two test files pass; pushed, CI running.
 - At 03:05Z every run in the account was queued (main's and other lanes' too): GitHub's concurrent-job
   limit, not a failure. #518/#521 results will land whenever the queue drains; see the checks on each PR.
+- At 04:37Z still 25 runs queued account-wide; the 6 running were other lanes' full suites started 1.5 to
+  3.5 h earlier. #518/#521 results will probably land after 05:00. Six docs commits for #518 are held
+  locally (design/74, tutorial, docstring, report) and push once its current run finishes.
 - The only other red check on every PR is the advisory "Frozen R 0.7.0 family smoke" job, which is also
   red on `main`. Its cells: NB2 (ours), Student-t and truncated NB2 (no owner tonight; the "main parity"
   lane logs them for you). **NB2 diagnosis:** on the pinned parity dataset both engines put 2 of 5 traits'
@@ -50,6 +53,22 @@ Goal: GOAL-2026-09-28-overnight.md. Written at the start and updated as arcs fin
   and more. My first attempt ran past the refusal (a `;`-chained command); I reverted it at once, so
   nothing was committed. The one-paragraph roxygen change for `?select_lv` is ready to apply when that
   lease clears.
+
+- Parallel checks (03:40Z onwards): (1) an independent audit re-derived every overnight number from the
+  raw CSVs, and all reproduce exactly (two wording precisions applied, `fe1560d70`); (2) an independent
+  review of #551 approves, with nothing blocking; wording fixed and pushed (`603c0d46c`); the exact merge
+  resolution with #529 is on #551. **Found in passing (pre-existing, both old and new paths):**
+  `getLV` on grouped fits does not apply the fit's automatic missing-cell mask, so a site with a NaN
+  silently gets z = 0.0 (measured 0.0 against -2.16 masked). Worth its own fix PR after #529/#551 land.
+- Tutorial: it still counted negative binomial among the families where `:bic_sites` recovers K best
+  (a withdrawn claim, missed yesterday) and described binary data from before the ridge default.
+  Fixed locally (`8e21e32d1`), pushed with the next #518 batch.
+
+- Runaway thresholds (parallel analysis of the harvest grid): **keep `max_latent_sd = 10`,
+  `ratio_max = 25`**. Recovery is flat across 6 to 20 and 10 to 50. Bigger finding: without the ridge,
+  27 to 29% of binary datasets get no accepted K at all (select_lv errors); with the default ridge, 0 of
+  1,200 do. So the ridge's real value at weak signal is usability, not accuracy. design/74 T7/T8,
+  local commit `a893811b8`.
 
 ## Will auto-d work? (your 01:55Z question, answered with tonight's numbers)
 Gaussian 0.95 and Poisson 0.999: yes. Negative binomial: promising (the fixed kernel picked the true
