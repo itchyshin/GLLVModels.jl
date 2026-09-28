@@ -1,8 +1,30 @@
 # Morning report, 2026-09-28 (overnight run 00:10Z to about 11:00Z)
 
+## In one screen
+**Your decisions, in order:**
+1. Merge #519 (Gaussian intercepts). Merged with `main` again at 07:30Z (real overlap with the new
+   `cv_gllvm` `X` support, resolved; one test threshold changed, please check), CI queued.
+2. Merge #521 (NB2 kernel): green on its last run (8/8 shards, Documenter).
+3. Merge #540 (Beta kernel): green before its `main` merge; CI queued.
+4. Approve the NB re-run (about 5,500 core-h on DRAC; plan and kit in `nb-rerun-plan.md`). Not submitted.
+5. Julia vs R guard rule under the binary ridge (R rejects fits with a non-PD Hessian; Julia does not).
+6. The advisory frozen-R smoke job (red on `main` too): its NB2 cell fails because the pinned dataset
+   is at the Poisson boundary in both engines; swap the fixture or accept the boundary.
+
+**What the night found:**
+- Gaussian with trait intercepts: 0.950 exact recovery (grid 0.948). Holds.
+- Julia vs R on identical data: the n = 120, p = 10 gap was a dataset artefact; one real guard difference.
+- Binary: the default ridge does not raise recovery at weak signal (0.412 vs 0.437) but removes all
+  over-selection and all "no K accepted" failures (0 of 1,200, versus 27 to 29% without it).
+- Runaway thresholds 10 / 25: keep.
+- A pre-existing bug: grouped `getLV` ignores missing cells (NaN site gets z = 0). Task chip waiting.
+- CI capacity: about 71 queued runs account-wide; the parity lane raised it with you.
+
+**CI at 10:15Z:** #518 7 pass / 4 running; #519 and #540 queued; #521 green; #1324 green.
+
 Goal: GOAL-2026-09-28-overnight.md. Written at the start and updated as arcs finish.
 
-## Needs you
+## Needs you (detail)
 1. Review and merge #519 (green), then #521 (green), then #540 (green).
 2. Approve the NB re-run estimate (about 5,500 core-h; nb-rerun-plan.md). Not submitted.
 3. Julia vs R guard difference under the ridge (A1 below): which Hessian rule should both use?
