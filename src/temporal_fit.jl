@@ -1,5 +1,6 @@
-# Fitter for the temporal source (slice 1): the separate door
-# `fit_temporal_gllvm`. No edit to formula.jl (spec section 3.5, step 1).
+# Fitter for the temporal source: the separate door `fit_temporal_gllvm`
+# (slice 1), with ordinary unit / unit_obs terms through its own `structure`
+# argument (slice 2). No edit to formula.jl (spec section 3.5, step 1).
 
 """
     TemporalGaussianFit
@@ -14,8 +15,12 @@ Result of [`fit_temporal_gllvm`](@ref). Fields:
   and `:latent`, else `nothing`; `psi`: temporal diagonal variances
   `exp(2 theta_diag)` for `:indep` and `:latent` with `unique = true`, else
   `nothing`; `Sigma_T`: the trait covariance at one state;
+- `Sigma_B`, `Sigma_W`: trait covariances of the ordinary `unit` and
+  `unit_obs` terms, and `sigma_re_int`: SD of the `(1 | g)` random intercept,
+  each `nothing` when that term is absent;
 - `parameters`, `parameter_names`: the optimizer vector in gllvmTMB's
-  `opt\$par` order and R's `names(opt\$par)`;
+  `opt\$par` order and R's `names(opt\$par)` (without `log_sigma_eps` when
+  gllvmTMB's per-row suppression rule fixes `sigma_eps`);
 - `loglik`, `converged`, `gradient_norm`, `hessian_min_eigenvalue`,
   `hessian_positive_definite`, `iterations`, `stopping_reason`;
 - `term`, `spec`, `y`, `X`, `data`, `formula`, `trait`: what a refit needs.
@@ -34,6 +39,9 @@ struct TemporalGaussianFit <: StatsAPI.StatisticalModel
     loadings::Union{Nothing,Matrix{Float64}}
     psi::Union{Nothing,Vector{Float64}}
     Sigma_T::Matrix{Float64}
+    Sigma_B::Union{Nothing,Matrix{Float64}}
+    Sigma_W::Union{Nothing,Matrix{Float64}}
+    sigma_re_int::Union{Nothing,Float64}
     parameters::Vector{Float64}
     parameter_names::Vector{String}
     loglik::Float64
@@ -75,25 +83,34 @@ function _temporal_start(y, X, L::TemporalLayout)
     theta[L.beta] .= beta
     r = y .- X * beta
     s = length(r) > 1 ? std(r) : 0.0
-    theta[L.log_sigma] = log(max(isfinite(s) ? s : 0.0, 1e-3))  # .gllvmTMB_log_sigma_eps_start
+    L.log_sigma > 0 &&
+        (theta[L.log_sigma] = log(max(isfinite(s) ? s : 0.0, 1e-3)))  # .gllvmTMB_log_sigma_eps_start
     theta[L.time] = 0.0
     if L.rank > 0
         theta[L.rr] .= init_theta_rr(L.p, L.rank)                # init_rr_theta: 0.5 diag, 0 lower
     end
     theta[L.diag] .= 0.0
+    # Ordinary tiers start as gllvmTMB starts them (R/fit-multi.R:5765-5790,
+    # 5869-5885): the unit tier's loadings and log SDs on the residual scale
+    # (`.gllvmTMB_loading_start_scale`), the unit_obs tier at 0.5 loadings and
+    # log SD 0, the random intercept at log SD 0.
+    scale = isfinite(s) && s > 0 ? max(s, 1e-3) : 1.0
+    L.rank_B > 0 && (theta[L.rr_B] .= scale .* init_theta_rr(L.p, L.rank_B))
+    L.rank_W > 0 && (theta[L.rr_W] .= init_theta_rr(L.p, L.rank_W))
+    theta[L.diag_B] .= log(scale); theta[L.diag_W] .= 0.0; theta[L.re_int] .= 0.0
     return theta
 end
 
 """
     fit_temporal_gllvm(long_data; formula, temporal, trait = :trait,
-                       structure = Expr[], start = nothing, g_tol = 1e-6,
-                       iterations = 500)
+                       structure = Expr[], unit = nothing, unit_obs = nothing,
+                       start = nothing, g_tol = 1e-6, iterations = 500)
 
 Fit a Gaussian model with one temporal covariance source to long data (one
 row per series, occasion, trait and optional replicate), by exact maximum
 likelihood. Twin of gllvmTMB P1's `gllvmTMB(value ~ 0 + trait +
-temporal_*(0 + trait | series, time = ...), family = gaussian())` for the
-temporal source alone.
+temporal_*(0 + trait | series, time = ...), family = gaussian())`, alone or
+beside ordinary `unit` / `unit_obs` terms.
 
 `formula` is the mean model, for example `@formula(value ~ 0 + trait)`;
 `temporal` is a [`TemporalTerm`](@ref) from [`temporal_indep`](@ref),
@@ -104,21 +121,40 @@ Tables.jl table. The marginal covariance of the response is
 by the mode. The data are validated as gllvmTMB's temporal pre-pass does, and
 refusals throw [`TemporalContractError`](@ref) with gllvmTMB's message.
 
-The parameter vector follows gllvmTMB's `opt\$par` order and names
-(`b_fix`, `log_sigma_eps`, `theta_temporal_time`, `theta_temporal_rr`,
-`theta_temporal_diag`); `start` supplies it in that order, and
-`iterations = 0` evaluates a fit at `start`. Optimisation is Optim LBFGS
-with ForwardDiff gradients; the final gradient and Hessian are recomputed.
+`structure` holds ordinary terms as quoted expressions, composed with the
+temporal source as in gllvmTMB: `indep(0 + trait | g)`, `dep(0 + trait | g)`
+and `latent(0 + trait | g, d = 1, unique = true)` with `g` the `unit` column
+(the stable unit tier, `Sigma_B`) or the `unit_obs` column (the within-unit
+tier, `Sigma_W`), and the random intercept `(1 | g)`. `unit` defaults to the
+temporal series column; `unit_obs` must be nested in `unit`, and a stable unit
+term requires `series` and `unit` to have the same partition. The marginal
+covariance then gains `J_unit ∘ Sigma_B + J_unit_obs ∘ Sigma_W +
+sigma_re^2 J_g`. As in gllvmTMB, when a unit or unit_obs diagonal term is at
+the per-row level in a replicated workflow, `sigma_eps` is fixed at
+`max(1e-3 sd(y), 1e-6)` and leaves the parameter vector (so `dof` drops by
+one); an unreplicated fit keeps it free.
 
-Not available in this version: ordinary `unit` / `unit_obs` terms beside the
-temporal source, cross-source cells (kernel, phylo, animal, spatial), the wide
-`traits()` form, offsets, non-Gaussian families and the R bridge. Helper
+The parameter vector follows gllvmTMB's `opt\$par` order and names
+(`b_fix`, `log_sigma_eps`, `theta_rr_B`, `theta_temporal_time`,
+`theta_temporal_rr`, `theta_temporal_diag`, `theta_diag_B`, `theta_rr_W`,
+`theta_diag_W`, `log_sigma_re_int`, each present only when used); `start`
+supplies it in that order, and `iterations = 0` evaluates a fit at `start`.
+Optimisation is Optim LBFGS with ForwardDiff gradients; the final gradient and
+Hessian are recomputed.
+
+Not available in this version: cross-source cells (kernel, phylo, animal,
+spatial), more than one ordinary term per level, `common = true`, the
+`gllvm()` formula route, the wide `traits()` form, offsets, non-Gaussian
+families and the R bridge. The helpers `forecast_temporal`,
+`profile_temporal`, `bootstrap_temporal` and `compare_temporal` refuse
+composed fits, as gllvmTMB does. Helper
 routes: [`extract_temporal`](@ref), [`forecast_temporal`](@ref),
 [`profile_temporal`](@ref), [`bootstrap_temporal`](@ref) and
 [`compare_temporal`](@ref).
 """
 function fit_temporal_gllvm(long_data; formula, temporal, trait::Symbol=:trait,
-        structure=Expr[], start=nothing, g_tol::Real=1e-6, iterations::Integer=500)
+        structure=Expr[], unit=nothing, unit_obs=nothing, start=nothing,
+        g_tol::Real=1e-6, iterations::Integer=500)
     temporal isa TemporalTerm ||
         throw(ArgumentError("temporal must be a TemporalTerm from temporal_indep, temporal_dep or temporal_latent"))
     isfinite(g_tol) && g_tol > 0 || throw(ArgumentError("g_tol must be finite and positive"))
@@ -128,8 +164,10 @@ function fit_temporal_gllvm(long_data; formula, temporal, trait::Symbol=:trait,
         throw(ArgumentError("formula must be a StatsModels formula with one response column, such as @formula(value ~ 0 + trait)"))
     spec = _parse_temporal_term(temporal, cols; trait=trait, response=formula.lhs.sym,
         structure=structure)
+    y = Float64.(cols[formula.lhs.sym])
+    spec = _temporal_with_composition(spec,
+        _temporal_composition(spec, structure, cols, y; unit=unit, unit_obs=unit_obs))
     response, X, coef_names = _temporal_design(formula, cols)
-    y = Float64.(cols[response])
     L = TemporalLayout(size(X, 2), spec)
     theta0 = if start === nothing
         _temporal_start(y, X, L)
@@ -222,12 +260,16 @@ function _temporal_fit_result(estimate, y, X, spec, term, cols, formula, trait, 
         (max_iterations > 0 && iterations >= max_iterations) ? :iteration_limit :
         :gradient_not_converged
     Sigma, Lambda, psi = _temporal_trait_block(L, estimate)
+    P = _temporal_cov_pieces(estimate, spec, L)
     theta_time = estimate[L.time]
     return TemporalGaussianFit(collect(estimate[L.beta]), coef_names,
-        exp(estimate[L.log_sigma]), spec.structure === :ar1 ? :phi : :ou_rate,
+        sqrt(P.sigma2), spec.structure === :ar1 ? :phi : :ou_rate,
         _temporal_time_value(spec.structure, theta_time),
         Lambda === nothing ? nothing : Matrix{Float64}(Lambda),
         psi === nothing ? nothing : Vector{Float64}(psi), Matrix{Float64}(Sigma),
+        P.SB === nothing ? nothing : Matrix{Float64}(P.SB),
+        P.SW === nothing ? nothing : Matrix{Float64}(P.SW),
+        P.re2 === nothing ? nothing : sqrt(P.re2),
         collect(Float64, estimate), _temporal_parameter_names(L), -value, converged,
         gradient_norm, min_eig, pd, iterations, reason, term, spec, y, X, cols, formula,
         trait, g_tol, max_iterations)
@@ -250,6 +292,8 @@ function Base.show(io::IO, f::TemporalGaussianFit)
     print(io, "TemporalGaussianFit(temporal_", f.spec.mode, ", :", f.spec.structure, ", ",
         f.spec.workflow, ", ", length(f.spec.traits), " traits, ",
         length(unique(f.spec.pair_table.series)), " series, ", length(f.spec.pair_table.time),
-        " states, ", f.time_parameter, "=", f.time_value, ", loglik=", f.loglik,
-        ", status=", f.stopping_reason, ")")
+        " states, ", f.time_parameter, "=", f.time_value)
+    tiers = _temporal_other_tiers(f)
+    isempty(tiers) || print(io, ", ordinary tiers: ", join(tiers, ", "))
+    print(io, ", loglik=", f.loglik, ", status=", f.stopping_reason, ")")
 end
