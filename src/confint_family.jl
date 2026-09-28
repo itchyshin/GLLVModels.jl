@@ -2108,7 +2108,8 @@ function _family_ci(fit::ZIPFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_zip_gllvm(Yb; K = K) catch; return nothing end
-        return vcat(fb.βz, fb.βc, pack_lambda(fb.Λc))
+        return (θ = vcat(fb.βz, fb.βc, pack_lambda(fb.Λc)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     return _FamilyCI(θ, nll, _twopart_lin_names(p, K), fill(:linear, length(θ)), sim, refit)
 end
@@ -2161,7 +2162,8 @@ function _family_ci(fit::ZIPCovFit, Y::AbstractMatrix;
         catch
             return nothing
         end
-        return vcat(fb.βz, fb.γz[γ_free_idx], fb.βc, fb.γc[γ_free_idx], pack_lambda(fb.Λc))
+        return (θ = vcat(fb.βz, fb.γz[γ_free_idx], fb.βc, fb.γc[γ_free_idx], pack_lambda(fb.Λc)),
+                converged = fb.converged, loglik = fb.loglik)
     end
     names = vcat(["betaz[$t]" for t in 1:p],
                  ["gammaz[$k]" for k in γ_free_idx],
@@ -2199,7 +2201,8 @@ function _family_ci(fit::ZINBFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_zinb_gllvm(Yb; K = K) catch; return nothing end
-        return vcat(fb.βz, fb.βc, pack_lambda(fb.Λc), log(fb.r))
+        return (θ = vcat(fb.βz, fb.βc, pack_lambda(fb.Λc), log(fb.r)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = vcat(_twopart_lin_names(p, K), "r")
     return _FamilyCI(θ, nll, names, vcat(fill(:linear, length(θ) - 1), :log), sim, refit)
@@ -2255,8 +2258,9 @@ function _family_ci(fit::ZINBCovFit, Y::AbstractMatrix;
         catch
             return nothing
         end
-        return vcat(fb.βz, fb.γz[γ_free_idx], fb.βc, fb.γc[γ_free_idx],
-                    pack_lambda(fb.Λc), log(fb.r))
+        return (θ = vcat(fb.βz, fb.γz[γ_free_idx], fb.βc, fb.γc[γ_free_idx],
+                         pack_lambda(fb.Λc), log(fb.r)),
+                converged = fb.converged, loglik = fb.loglik)
     end
     names = vcat(["betaz[$t]" for t in 1:p],
                  ["gammaz[$k]" for k in γ_free_idx],
@@ -2295,7 +2299,8 @@ function _family_ci(fit::ZIBFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_zib_gllvm(Yb; K = K, N = Ntr) catch; return nothing end
-        return vcat(fb.βz, fb.βc, pack_lambda(fb.Λc))
+        return (θ = vcat(fb.βz, fb.βc, pack_lambda(fb.Λc)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     return _FamilyCI(θ, nll, _twopart_lin_names(p, K), fill(:linear, length(θ)), sim, refit)
 end
