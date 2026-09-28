@@ -44,3 +44,25 @@ using GLLVModels, Test, Random, LinearAlgebra
         @test norm(Σ_true - Σ_hat) / norm(Σ_true) < 0.10
     end
 end
+
+@testset "fit_gaussian_gllvm default stops at the optimum, not on f_tol" begin
+    # Regression: the default relative f_tol = 1e-10 stopped iterative fits
+    # (phylo-unique, covariates) after ~29 LBFGS steps with a gradient near
+    # 3e-3, while reporting converged = true; the Wald SEs there were up to
+    # 0.25% off those at the optimum. The default now leaves stopping to g_tol.
+    using Optim: g_residual
+    Random.seed!(30)
+    tree = GLLVModels.augmented_phy("(((((A:0.2,B:0.2):0.2,C:0.4):0.2,(D:0.3,E:0.3):0.3):0.1," *
+                                    "((F:0.2,G:0.2):0.3,H:0.5):0.1):0.1,(I:0.4,J:0.4):0.2);")
+    Σ = GLLVModels.sigma_phy_dense(tree; σ²_phy = 1.0)
+    Λ = reshape([0.7, 0.5, -0.4, 0.3, 0.6, -0.5, 0.4, 0.2, 0.8, -0.3], 10, 1)
+    y = Λ * randn(1, 500) .+ reshape(0.8 .* (cholesky(Symmetric(Σ)).L * randn(10)), 10, 1) .+
+        0.5 .* randn(10, 500)
+    fit = fit_gaussian_gllvm(y; K = 1, has_phy_unique = true, Σ_phy = Σ)
+    @test fit.converged
+    @test g_residual(fit.optim_result) < 1e-5
+    ref = fit_gaussian_gllvm(y; K = 1, has_phy_unique = true, Σ_phy = Σ,
+                             f_tol = 0.0, x_tol = 0.0, g_tol = 1e-9, iterations = 5_000)
+    se, se_ref = confint(fit; y = y, Σ_phy = Σ).se, confint(ref; y = y, Σ_phy = Σ).se
+    @test maximum(abs.(se .- se_ref) ./ abs.(se_ref)) < 1e-4
+end
