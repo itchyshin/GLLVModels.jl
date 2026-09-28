@@ -37,6 +37,11 @@ CI is runner-starved (about 24 queued runs across lanes); trains wait, nothing f
 - Remaining hardcoded-P0 path that could stamp the wrong pin silently: tools/t4_p6_write_receipt.py:186 (off the CI path).
 - Temporal slice 2 needs the grammar lane (#519) to add the gllvm() long-data hook (D-300, 1c-3).
 
+## Overnight mandate (Shinichi, 2026-09-27: "I am going till 5 am - please keep going autonomously by then")
+- Merge only PRs with a landing word already given (#531, #543, #546, #548, #556, #547, #558). Newly ready PRs queue for the morning report.
+- No DRAC, no runs over 3 h, no outward actions beyond draft PRs and PR bodies; no CI config changes.
+- Write the morning report (docs in the lane kit: morning-report-2026-09-28.md) by 04:30; keep it current as things land.
+
 ## Next
 1. When trains finish: confirm merges; re-stack anything that conflicts.
 2. #546 review, then fixes; Shinichi decides unique = TRUE.
