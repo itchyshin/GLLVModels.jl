@@ -76,6 +76,19 @@ end
     # Missing responses: R masks them per row; this route refuses them.
     Ym = Float64.(Y); Ym[1, 1] = NaN
     @test_throws ArgumentError fit_gllvm(Ym; family = zi_poisson(), K = 1)
+    # ... and so does `missing` in a Union{Missing, Int} or Union{Missing, Float64}
+    # matrix (the same refusal, not a MethodError).
+    Ymi = Matrix{Union{Missing, Int}}(Y); Ymi[2, 3] = missing
+    @test_throws ArgumentError fit_gllvm(Ymi; family = zi_poisson(), K = 1)
+    @test_throws ArgumentError fit_zi_gllvm(Ymi; family = zi_nbinom2(), K = 1)
+    Ymf = Matrix{Union{Missing, Float64}}(Float64.(Y)); Ymf[1, 2] = missing
+    @test_throws ArgumentError fit_gllvm(Ymf; family = zi_binomial(), K = 1, trials = 6)
+    err_m = try
+        fit_gllvm(Ymf; family = zi_poisson(), K = 1); nothing
+    catch e
+        e
+    end
+    @test err_m isa ArgumentError && occursin("no missing", err_m.msg)
     @test_throws ArgumentError fit_gllvm(Float64.(Y) .+ 0.5; family = zi_poisson(), K = 1)
     @test_throws ArgumentError fit_gllvm(-Y; family = zi_nbinom2(), K = 1)
     # zi_binomial: trials required; y <= trials; single-trial traits refused (R names

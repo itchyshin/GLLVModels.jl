@@ -317,7 +317,8 @@ end
 # Admission, mirroring R/fit-multi.R for fid 17/18/19.
 function _zi_admit(family::_ZiTwinFamily, Y::AbstractMatrix, trials)
     p, n = size(Y)
-    all(y -> isfinite(y) && y >= 0 && y == round(y), Y) || throw(ArgumentError(
+    # `missing` (in a Union{Missing, Real} matrix) and NaN get the same refusal.
+    all(y -> !ismissing(y) && isfinite(y) && y >= 0 && y == round(y), Y) || throw(ArgumentError(
         "$(_zi_rname(family)): Y must hold non-negative integer counts with no missing " *
         "values (gllvmTMB masks missing responses row by row; this route does not yet)."))
     if !(family isa ZiBinomial)
@@ -428,12 +429,13 @@ use the expected (Fisher) count weight in the log-determinant, and
 `fit_zinb_gllvm` estimates one shared dispersion, `fit_zib_gllvm` takes one
 shared trials count. Only the no-covariate, no-row-effect model is offered on
 this route; `predict`, `confint`, `simulate` and the `@formula` front door with
-covariates are not wired for [`ZiFit`](@ref). Missing responses are refused
+covariates are not wired for [`ZiFit`](@ref). Missing responses (`missing` in a
+`Union{Missing, Real}` matrix, or `NaN`) are refused with an `ArgumentError`
 (gllvmTMB masks them per row). `hessian` is accepted only as `:observed`.
 `eigmin_floor` sets the Laplace breakdown guard ([`ZI_LAPLACE_EIGMIN_FLOOR`](@ref));
 an optimum at the guard is reported with `converged = false`.
 """
-function fit_zi_gllvm(Y::AbstractMatrix{<:Real}; family::_ZiTwinFamily, K::Integer,
+function fit_zi_gllvm(Y::AbstractMatrix{<:Union{Missing, Real}}; family::_ZiTwinFamily, K::Integer,
         trials = nothing, link = nothing, hessian = nothing,
         eigmin_floor::Real = ZI_LAPLACE_EIGMIN_FLOOR,
         g_tol::Real = 1e-6, iterations::Integer = 1000,
