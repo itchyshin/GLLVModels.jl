@@ -1,0 +1,39 @@
+{
+  "status": "PASS",
+  "scope": "CORE070_FIT_INPUT_2_BATCH",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "contract_sha256": "90025cc7b8e1a470eb59d1d8d0f0a9cb8d5bc31436f90c0a0abe8fa3d4bd3c1b",
+  "source_pins": {
+    "R/animal-keyword.R": "11ecc611a434c2de0f3ed0947ea2652996d638fb4aecbe594fc9e54f987c0b2f",
+    "R/kernel-keywords.R": "fc9a744011232b72a80d57fa9fcf627c74334dd8d3919fd938f36211bf1d11ae",
+    "R/kernel-helpers.R": "3ba87ba05ccc52af3f0ffcf83eb6a08d7bfacebbd0851b9c8090dafc6328f394",
+    "R/unique-keyword.R": "c085328e4404624e07acd963dbeb91ba41ce9015cfb53baf057e881ade19e276",
+    "R/gllvmTMB.R": "a1ad39041f88d08b017500132bac45b5282f246025c488bc1829dc57aeae3faf"
+  },
+  "source_unchanged": true,
+  "executable_case_count": 13,
+  "needs_surface_case_count": 5,
+  "negative_control_count": 4,
+  "expected_case_ids": ["CORE070-FIT-INPUT-GAUSS-DEFAULT-NATIVE-MODEL", "CORE070-FIT-INPUT-GAUSS-DEFAULT-FORMULA-INTERFACE", "CORE070-FIT-INPUT-GAUSS-LOADINGS-NATIVE-MODEL", "CORE070-FIT-INPUT-BINOMIAL-DEFAULT-NATIVE-MODEL", "CORE070-FIT-INPUT-BINOMIAL-DEFAULT-FORMULA-INTERFACE", "CORE070-FIT-INPUT-ANIMAL-LATENT-NATIVE-MODEL", "CORE070-FIT-INPUT-ANIMAL-LATENT-FORMULA-INTERFACE", "CORE070-FIT-INPUT-KERNEL-ONE-NATIVE-MODEL", "CORE070-FIT-INPUT-KERNEL-ONE-FORMULA-INTERFACE", "CORE070-FIT-INPUT-KERNEL-TWO-NATIVE-MODEL", "CORE070-FIT-INPUT-KERNEL-TWO-FORMULA-INTERFACE", "CORE070-FIT-INPUT-KERNEL-TWO-AUTO-NATIVE-MODEL", "CORE070-FIT-INPUT-KERNEL-TWO-AUTO-FORMULA-INTERFACE"],
+  "needs_surface_case_ids": ["CORE070-FIT-INPUT-GAUSS-LOADINGS-FORMULA-INTERFACE", "CORE070-FIT-INPUT-GAUSS-COMMON-NATIVE-MODEL", "CORE070-FIT-INPUT-GAUSS-COMMON-FORMULA-INTERFACE", "CORE070-FIT-INPUT-POISSON-DEFAULT-NATIVE-MODEL", "CORE070-FIT-INPUT-POISSON-DEFAULT-FORMULA-INTERFACE"],
+  "negative_control_case_ids": ["NEG-COEF-SHIFTED", "NEG-LOGLIK-SHIFTED", "NEG-KERNEL-TWO-AUTO-WRONG-MODEL", "NEG-BINOMIAL-SWAPPED-Y"],
+  "kernel_two_auto_matches_kernel_two": true,
+  "julia_exit_code": 0,
+  "julia_elapsed_seconds": 53.2857,
+  "julia_results_sha256": "0107b24c4b3aa221b80d1dad7d609d72ab0611e22855669582042b76aba741f3",
+  "raw_sha256": "1df37df96c86306e62d74f24469a4a648f9229411f28a5adb7fc015e5f40dc94",
+  "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "r_version": "R version 4.6.0 (2026-04-24)",
+  "gllvmTMB_version": "0.7.1",
+  "frozen_library": "/Users/z3437171/local-scratch/a3cov-oracle/build/library",
+  "source_pin": {
+    "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+    "source_tree_sha256": "86fa00f05ee2ccb8ffef65a82cd59c47b1b2a256a5bad86957a92461a6dbe1db",
+    "installed_tree_sha256": "5d4877193c3727965412546ca49c77588ba3083eab87629080e610cb889516d4",
+    "archive_sha256": "73b665b22c1497d43dc0674eecd5657f2659a726fcad13004de899833e2d5423",
+    "namespace_sha256": "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c",
+    "version": "0.7.1",
+    "marker_path": "/Users/z3437171/local-scratch/a3cov-oracle/build/library/gllvmTMB/CORE070_SOURCE_PIN.toml",
+    "marker_sha256": "5b667a7d5f1718364a2794642cec52eac1ead345ec39fff5051c2c1ca7a62218"
+  }
+}

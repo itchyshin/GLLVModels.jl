@@ -1,0 +1,290 @@
+{
+  "schema": 1,
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "scope": "fit-input family: the 6 required rows the P1 carry scan lists as DANGLING, all paid by the wave4 fit-input-2 batch (paired R/Julia fits). The 5 NOT_BOUND_AT_P0 required rows (INPUT-GAUSS-COMMON, INPUT-GAUSS-LOADINGS, INPUT-POISSON-DEFAULT: BLOCKED_NEEDS_JULIA_SURFACE; INPUT-MN-LATENT, INPUT-MN-ANIMAL-LATENT: PARTIAL_PENDING_DECISION_OPEN_QUESTION) and the 3 rejected rows are out of scope.",
+  "note": "Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with PARITY_CASEMAP pointing at this file. Classification and disposition are carried from docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. Only rows whose every executable case id carries a numeric R-vs-Julia comparison block within tolerance, from a batch whose verifier passed, with no degenerate comparison, cite evidence.receipt. INPUT-KERNEL-TWO-AUTO and INPUT-KERNEL-TWO are one comparison counted on two rows (see the note).",
+  "generator": "tools/core070_data_p1_receipts.py",
+  "glvmodels_commit": "10467e0cc1056b95f293b460aa9918987ff9c2b6",
+  "batch_verifiers": {
+    "fit-input-2-p1": {
+      "tool": "tools/core070_verify_fit_input_2_batch.py",
+      "argv": "tools/core070_verify_fit_input_2_batch.py --results {state} --self-test",
+      "accept_marker": "CORE070_FIT_INPUT_2_BATCH_VERIFIED",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/fit-input/fit-input-2-p1/verify.txt",
+      "exit_code": 0,
+      "status": "PASS"
+    }
+  },
+  "counts": {
+    "numeric_pass": 6,
+    "numeric_fail": 0,
+    "numeric_held_batch_verifier_failed": 0,
+    "numeric_non_discriminating": 0,
+    "partial_non_numeric_case": 0,
+    "needs_surface_r_side_measured": 0,
+    "needs_surface_not_executed": 0,
+    "retired_at_p1_not_measured": 0,
+    "not_measured": 0
+  },
+  "p0_evidence_summary": {
+    "rows_with_p0_evidence_record": 6,
+    "rows_without_p0_evidence_record": 0,
+    "p0_raw_receipts_available_here": false
+  },
+  "runtimes_seconds": {
+    "r_fits_plus_julia_child_seconds": 55.1
+  },
+  "batch_artifacts": {
+    "fit-input-2-p1": [
+      "docs/dev-log/core070/true-parity-latest/receipts/fit-input/fit-input-2-p1/receipt.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/fit-input/fit-input-2-p1/results.tsv",
+      "docs/dev-log/core070/true-parity-latest/receipts/fit-input/fit-input-2-p1/julia-results.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/fit-input/fit-input-2-p1/r-oracle.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/fit-input/fit-input-2-p1/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/fit-input/fit-input-2-p1/verify.txt"
+    ]
+  },
+  "rows": [
+    {
+      "source_id": "fit-input/INPUT-ANIMAL-LATENT",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-FIT-INPUT-ANIMAL-LATENT-NATIVE-MODEL",
+        "CORE070-FIT-INPUT-ANIMAL-LATENT-FORMULA-INTERFACE"
+      ],
+      "disposition": null,
+      "p0_batch": "fit-input-2 wave4",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "fit-input-2 wave4",
+        "receipts": ".unlazy/core070-aghq/wave4-batches/wave4-fitinput",
+        "preservation_sha256": "767cc80c18063f03d2171a5ad8fe08429444c7124b290fe5e6c392658158902f",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/fit-input/cases/CORE070-FIT-INPUT-ANIMAL-LATENT-NATIVE-MODEL.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/fit-input/cases/CORE070-FIT-INPUT-ANIMAL-LATENT-FORMULA-INTERFACE.json"
+        ],
+        "tier": "numeric: every executable case receipt carries an R-vs-Julia comparison block pinned to P1, within the harness tolerance"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-FIT-INPUT-ANIMAL-LATENT-NATIVE-MODEL": "PASS",
+          "CORE070-FIT-INPUT-ANIMAL-LATENT-FORMULA-INTERFACE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-FIT-INPUT-ANIMAL-LATENT-NATIVE-MODEL": "PASS",
+          "CORE070-FIT-INPUT-ANIMAL-LATENT-FORMULA-INTERFACE": "PASS"
+        },
+        "row_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "fit-input/INPUT-BINOMIAL-DEFAULT",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-FIT-INPUT-BINOMIAL-DEFAULT-NATIVE-MODEL",
+        "CORE070-FIT-INPUT-BINOMIAL-DEFAULT-FORMULA-INTERFACE"
+      ],
+      "disposition": null,
+      "p0_batch": "fit-input-2 wave4",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "fit-input-2 wave4",
+        "receipts": ".unlazy/core070-aghq/wave4-batches/wave4-fitinput",
+        "preservation_sha256": "767cc80c18063f03d2171a5ad8fe08429444c7124b290fe5e6c392658158902f",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/fit-input/cases/CORE070-FIT-INPUT-BINOMIAL-DEFAULT-NATIVE-MODEL.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/fit-input/cases/CORE070-FIT-INPUT-BINOMIAL-DEFAULT-FORMULA-INTERFACE.json"
+        ],
+        "tier": "numeric: every executable case receipt carries an R-vs-Julia comparison block pinned to P1, within the harness tolerance"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-FIT-INPUT-BINOMIAL-DEFAULT-NATIVE-MODEL": "PASS",
+          "CORE070-FIT-INPUT-BINOMIAL-DEFAULT-FORMULA-INTERFACE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-FIT-INPUT-BINOMIAL-DEFAULT-NATIVE-MODEL": "PASS",
+          "CORE070-FIT-INPUT-BINOMIAL-DEFAULT-FORMULA-INTERFACE": "PASS"
+        },
+        "row_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "fit-input/INPUT-GAUSS-DEFAULT",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-FIT-INPUT-GAUSS-DEFAULT-NATIVE-MODEL",
+        "CORE070-FIT-INPUT-GAUSS-DEFAULT-FORMULA-INTERFACE"
+      ],
+      "disposition": null,
+      "p0_batch": "fit-input-2 wave4",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "fit-input-2 wave4",
+        "receipts": ".unlazy/core070-aghq/wave4-batches/wave4-fitinput",
+        "preservation_sha256": "767cc80c18063f03d2171a5ad8fe08429444c7124b290fe5e6c392658158902f",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/fit-input/cases/CORE070-FIT-INPUT-GAUSS-DEFAULT-NATIVE-MODEL.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/fit-input/cases/CORE070-FIT-INPUT-GAUSS-DEFAULT-FORMULA-INTERFACE.json"
+        ],
+        "tier": "numeric: every executable case receipt carries an R-vs-Julia comparison block pinned to P1, within the harness tolerance"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-FIT-INPUT-GAUSS-DEFAULT-NATIVE-MODEL": "PASS",
+          "CORE070-FIT-INPUT-GAUSS-DEFAULT-FORMULA-INTERFACE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-FIT-INPUT-GAUSS-DEFAULT-NATIVE-MODEL": "PASS",
+          "CORE070-FIT-INPUT-GAUSS-DEFAULT-FORMULA-INTERFACE": "PASS"
+        },
+        "row_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "fit-input/INPUT-KERNEL-ONE",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-FIT-INPUT-KERNEL-ONE-NATIVE-MODEL",
+        "CORE070-FIT-INPUT-KERNEL-ONE-FORMULA-INTERFACE"
+      ],
+      "disposition": null,
+      "p0_batch": "fit-input-2 wave4",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "fit-input-2 wave4",
+        "receipts": ".unlazy/core070-aghq/wave4-batches/wave4-fitinput",
+        "preservation_sha256": "767cc80c18063f03d2171a5ad8fe08429444c7124b290fe5e6c392658158902f",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/fit-input/cases/CORE070-FIT-INPUT-KERNEL-ONE-NATIVE-MODEL.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/fit-input/cases/CORE070-FIT-INPUT-KERNEL-ONE-FORMULA-INTERFACE.json"
+        ],
+        "tier": "numeric: every executable case receipt carries an R-vs-Julia comparison block pinned to P1, within the harness tolerance"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-FIT-INPUT-KERNEL-ONE-NATIVE-MODEL": "PASS",
+          "CORE070-FIT-INPUT-KERNEL-ONE-FORMULA-INTERFACE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-FIT-INPUT-KERNEL-ONE-NATIVE-MODEL": "PASS",
+          "CORE070-FIT-INPUT-KERNEL-ONE-FORMULA-INTERFACE": "PASS"
+        },
+        "row_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "fit-input/INPUT-KERNEL-TWO",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-FIT-INPUT-KERNEL-TWO-NATIVE-MODEL",
+        "CORE070-FIT-INPUT-KERNEL-TWO-FORMULA-INTERFACE"
+      ],
+      "disposition": null,
+      "p0_batch": "fit-input-2 wave4",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "fit-input-2 wave4",
+        "receipts": ".unlazy/core070-aghq/wave4-batches/wave4-fitinput",
+        "preservation_sha256": "767cc80c18063f03d2171a5ad8fe08429444c7124b290fe5e6c392658158902f",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/fit-input/cases/CORE070-FIT-INPUT-KERNEL-TWO-NATIVE-MODEL.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/fit-input/cases/CORE070-FIT-INPUT-KERNEL-TWO-FORMULA-INTERFACE.json"
+        ],
+        "tier": "numeric: every executable case receipt carries an R-vs-Julia comparison block pinned to P1, within the harness tolerance"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-FIT-INPUT-KERNEL-TWO-NATIVE-MODEL": "PASS",
+          "CORE070-FIT-INPUT-KERNEL-TWO-FORMULA-INTERFACE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-FIT-INPUT-KERNEL-TWO-NATIVE-MODEL": "PASS",
+          "CORE070-FIT-INPUT-KERNEL-TWO-FORMULA-INTERFACE": "PASS"
+        },
+        "row_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "fit-input/INPUT-KERNEL-TWO-AUTO",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-FIT-INPUT-KERNEL-TWO-AUTO-NATIVE-MODEL",
+        "CORE070-FIT-INPUT-KERNEL-TWO-AUTO-FORMULA-INTERFACE"
+      ],
+      "disposition": null,
+      "p0_batch": "fit-input-2 wave4",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "fit-input-2 wave4",
+        "receipts": ".unlazy/core070-aghq/wave4-batches/wave4-fitinput",
+        "preservation_sha256": "767cc80c18063f03d2171a5ad8fe08429444c7124b290fe5e6c392658158902f",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/fit-input/cases/CORE070-FIT-INPUT-KERNEL-TWO-AUTO-NATIVE-MODEL.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/fit-input/cases/CORE070-FIT-INPUT-KERNEL-TWO-AUTO-FORMULA-INTERFACE.json"
+        ],
+        "tier": "numeric: every executable case receipt carries an R-vs-Julia comparison block pinned to P1, within the harness tolerance"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-FIT-INPUT-KERNEL-TWO-AUTO-NATIVE-MODEL": "PASS",
+          "CORE070-FIT-INPUT-KERNEL-TWO-AUTO-FORMULA-INTERFACE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-FIT-INPUT-KERNEL-TWO-AUTO-NATIVE-MODEL": "PASS",
+          "CORE070-FIT-INPUT-KERNEL-TWO-AUTO-FORMULA-INTERFACE": "PASS"
+        },
+        "row_verdict": "PASS"
+      },
+      "note": "One measurement counted twice: KERNEL-TWO-AUTO reuses KERNEL-TWO's data, gllvmTMB drops unique = TRUE in the two-kernel combination (the contract's critical_finding_kernel_two_auto, re-checked by the R runner at P1), and the contract maps the Julia side to the same two-source model. The R logLik/coefficients and the Julia logLik/coefficients of this case equal those of CORE070-FIT-INPUT-KERNEL-TWO-NATIVE-MODEL. Distinct surface rows, one comparison; whether it counts once or twice is for the maintainer. One measurement counted twice: KERNEL-TWO-AUTO reuses KERNEL-TWO's data, gllvmTMB drops unique = TRUE in the two-kernel combination (the contract's critical_finding_kernel_two_auto, re-checked by the R runner at P1), and the contract maps the Julia side to the same two-source model. The R logLik/coefficients and the Julia logLik/coefficients of this case equal those of CORE070-FIT-INPUT-KERNEL-TWO-FORMULA-INTERFACE. Distinct surface rows, one comparison; whether it counts once or twice is for the maintainer."
+    }
+  ]
+}

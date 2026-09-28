@@ -1,0 +1,65 @@
+{
+  "schema": "core070-data-p1-case-receipt/v1",
+  "case_id": "CORE070-DATA-W-DF-MASK-DROP-NATIVE",
+  "verdict": "PASS",
+  "evidence_kind": "r_replay_julia_surface_absent",
+  "source_ids": [
+    "data/DATA-W-DF-MASK-DROP"
+  ],
+  "batch": "tools/core070_data_batch.R (P1 source tree) + tools/core070_data_batch.jl, GLLVM_PARITY_PIN=P1",
+  "batch_status": "PASS",
+  "batch_verifier": {
+    "tool": "tools/core070_verify_data_batch.py",
+    "argv": "tools/core070_verify_data_batch.py --state {state} --julia-receipt {state}/data-batch-julia-introspection.json --self-test",
+    "status": "PASS",
+    "accept_marker": "CORE070_DATA_BATCH_VERIFIED",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/verify.txt"
+  },
+  "gllvmtmb_version": "0.7.1",
+  "r_expression": "identical(normalise_weights(c(10,20),'wide_df',4L,n_units=2L,n_traits=3L,na_mask=matrix(c(FALSE,TRUE,FALSE,FALSE,FALSE,TRUE),2,3,byrow=TRUE),drop_masked=TRUE),c(10,10,20,20))",
+  "r_expected": "TRUE",
+  "r_actual": true,
+  "r_is_error": false,
+  "r_ok": true,
+  "negative_control": false,
+  "julia_planned_surface_group": "weight_shape_adapter",
+  "julia_surface_introspection": {
+    "candidate_exported_symbols": [
+      "normalise_weights",
+      "normalize_weights",
+      "wide_matrix_weights",
+      "wide_df_weights"
+    ],
+    "candidate_kwargs": [
+      "weights"
+    ],
+    "found_symbols": [],
+    "found_kwargs": [],
+    "surface_absent": true
+  },
+  "read_from": {
+    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/receipt.json": "c9f0eda84a47016ff46f317fc41350953919286ae5050b5791c527dc01d52de7",
+    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/data-batch-results.json": "636afd2d5a59058b8fdfd655c736d36e8c71fec7bd6a2e2d86bfdb78e0d255db",
+    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/raw.tsv": "bbd13cccb410fd938fd4d4f3654eace2859a60d28937641fbcc159950427c13f",
+    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/data-batch-julia-introspection.json": "308ee5494f30383a2ef9dc45fb5e8f9e549beaf795b5b79f2476ebce5d0f7da3",
+    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/run-commit.json": "941992e3ed93080d9d664c319d0a5626c4ec178d8ff7276ec6644ea11278004c",
+    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/verify.txt": "3c734e295483cd9a97a7cc6a9e4fbe832fda65a9832bc98f95d39b4f2dd58146",
+    "docs/dev-log/core070/true-parity-latest/data-batch-contract-p1.json": "34c97722bbed62a58e8aa0ceafc477bd4d6df49845f443598ff9dfc45da0a3bc"
+  },
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/data-batch-results.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/data-batch-julia-introspection.json"
+  ],
+  "julia_surface": "Julia native trait-major weight input must drop masked cells under drop_masked=true, matching R's traits()-route retained order.",
+  "julia_verdict": "SPEC_DEFECT",
+  "why_not_numeric": "The R side replays a pinned P1 helper to an exact identical() expectation; GLLVModels has no surface for it (runtime introspection found none of the planned symbols or keywords), so there is no Julia value to compare.",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "10467e0cc1056b95f293b460aa9918987ff9c2b6",
+  "glvmodels_worktree_dirty": [],
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+}

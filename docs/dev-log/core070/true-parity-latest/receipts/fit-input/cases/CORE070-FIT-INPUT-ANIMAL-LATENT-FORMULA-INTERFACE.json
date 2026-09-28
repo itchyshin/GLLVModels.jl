@@ -1,0 +1,83 @@
+{
+  "schema": "core070-fit-input-p1-case-receipt/v1",
+  "case_id": "CORE070-FIT-INPUT-ANIMAL-LATENT-FORMULA-INTERFACE",
+  "verdict": "PASS",
+  "evidence_kind": "numeric_r_vs_julia",
+  "source_ids": [
+    "fit-input/INPUT-ANIMAL-LATENT"
+  ],
+  "batch": "tools/core070_fit_input_2_batch.R + .jl, GLLVM_PARITY_PIN=P1",
+  "batch_status": "PASS",
+  "batch_verifier": {
+    "tool": "tools/core070_verify_fit_input_2_batch.py",
+    "argv": "tools/core070_verify_fit_input_2_batch.py --results {state} --self-test",
+    "status": "PASS",
+    "accept_marker": "CORE070_FIT_INPUT_2_BATCH_VERIFIED",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/fit-input/fit-input-2-p1/verify.txt"
+  },
+  "harness_pass": true,
+  "r_call": "gllvmTMB(value ~ 0 + trait + animal_latent(species, A = A, d = 1), df, unit = 'species', trait = 'trait', cluster = 'species', control = gllvmTMBcontrol(n_init = 1L, se = FALSE))",
+  "julia_call": "GLLVM.gllvm(@formula(y ~ 1), Y, data; family = Normal(), sources = [src])",
+  "acceptance": "same as NATIVE-MODEL; live-verified bit-identical to the native fit_gaussian_sources call (3.1e-9 logLik delta vs the R oracle) at authoring time",
+  "r_oracle_fixture": "animal_latent",
+  "gllvmtmb_version": "0.7.1",
+  "read_from": {
+    "docs/dev-log/core070/true-parity-latest/receipts/fit-input/fit-input-2-p1/receipt.json": "c6ee5112d2c91e5fad2fe1cce8b05490a12e015d879c999d28c0357876ff4e21",
+    "docs/dev-log/core070/true-parity-latest/receipts/fit-input/fit-input-2-p1/r-oracle.json": "782bd7e54a60d77220ac5fe6a571747d74115053a3780c51821d209d6e861d4d",
+    "docs/dev-log/core070/true-parity-latest/receipts/fit-input/fit-input-2-p1/julia-results.json": "0107b24c4b3aa221b80d1dad7d609d72ab0611e22855669582042b76aba741f3",
+    "docs/dev-log/core070/true-parity-latest/receipts/fit-input/fit-input-2-p1/results.tsv": "1df37df96c86306e62d74f24469a4a648f9229411f28a5adb7fc015e5f40dc94",
+    "docs/dev-log/core070/true-parity-latest/receipts/fit-input/fit-input-2-p1/run-commit.json": "941992e3ed93080d9d664c319d0a5626c4ec178d8ff7276ec6644ea11278004c",
+    "docs/dev-log/core070/true-parity-latest/receipts/fit-input/fit-input-2-p1/verify.txt": "76a228d98020c14716667930a71d0ba2aaea27c22389ba42b32a4cb8cb7301fd",
+    "docs/dev-log/core070/true-parity-latest/fit-input-2-batch-contract-p1.json": "90025cc7b8e1a470eb59d1d8d0f0a9cb8d5bc31436f90c0a0abe8fa3d4bd3c1b"
+  },
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/fit-input/fit-input-2-p1/r-oracle.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/fit-input/fit-input-2-p1/julia-results.json"
+  ],
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "10467e0cc1056b95f293b460aa9918987ff9c2b6",
+  "glvmodels_worktree_dirty": [],
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-FIT-INPUT-ANIMAL-LATENT-FORMULA-INTERFACE",
+        "quantity": "loglik",
+        "max_abs_diff": 3.122732294968955e-09,
+        "tolerance": 0.0001,
+        "tolerance_rule": "fit-input-2-batch-contract-p1.json tolerances.loglik_delta (carried verbatim from P0)",
+        "n_values": 1,
+        "diff_source": "recomputed from raw R and Julia values",
+        "r_value": -16.919555343098907,
+        "julia_value": -16.919555339976174,
+        "discriminating": true
+      },
+      {
+        "case_id": "CORE070-FIT-INPUT-ANIMAL-LATENT-FORMULA-INTERFACE",
+        "quantity": "coef",
+        "max_abs_diff": 5.681706145566068e-07,
+        "tolerance": 0.0001,
+        "tolerance_rule": "fit-input-2-batch-contract-p1.json tolerances.coef_delta (carried verbatim from P0)",
+        "n_values": 3,
+        "diff_source": "recomputed from raw R and Julia values",
+        "r_value": [
+          -0.1354580245559353,
+          -0.2530763839434414,
+          0.6100323250294174
+        ],
+        "julia_value": [
+          -0.1354580564937264,
+          -0.2530761769249427,
+          0.610032893200032
+        ],
+        "discriminating": true
+      }
+    ]
+  }
+}
