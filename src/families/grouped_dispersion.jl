@@ -101,18 +101,11 @@ function _nb_grouped_mode(fams::AbstractVector, y::AbstractVector, n::AbstractVe
     return z, false
 end
 
-# Per-site Laplace log-marginal with per-species NB dispersion markers `fams`.
-function _nb_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
+# The NB2 site-mode chain shared by the likelihood and getLV (#503 follow-up): damped
+# Fisher, observed-Newton under LogLink, then a 20x Fisher retry. Returns (z, converged).
+function _nb_grouped_site_mode(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
         Λ::AbstractMatrix, β::AbstractVector, link::Link;
-        mask = nothing, offset = nothing, hessian::Symbol = :observed,
-        maxiter::Integer = 100, tol::Real = 1e-9)
-    p, K = size(Λ)
-    off = offset === nothing ? false : offset
-    # Role separation (2026-08-25). The MODE SEARCH is Fisher-scored first:
-    # `:fisher` here is not the caller's selector, which governs only the post-loop
-    # log-det below. Expected information is >= 0, so `Λ'WΛ + I` is SPD by
-    # construction. The converged mode is unchanged either way: it is the fixed point
-    # of `Λ's − z = 0`, which does not involve W at all. W only sets the step.
+        mask = nothing, offset = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
     z, ok = _nb_grouped_mode(fams, y, n, Λ, β, link, :fisher;
                              mask = mask, offset = offset, maxiter = maxiter, tol = tol)
     # Fallback 1 (part of #503). Under LogLink the observed NB2 weight μr(r+y)/(r+μ)²
@@ -131,6 +124,23 @@ function _nb_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::Abs
     ok || ((z, ok) = _nb_grouped_mode(fams, y, n, Λ, β, link, :fisher;
                                       mask = mask, offset = offset,
                                       maxiter = 20 * maxiter, tol = tol))
+    return z, ok
+end
+
+# Per-site Laplace log-marginal with per-species NB dispersion markers `fams`.
+function _nb_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
+        Λ::AbstractMatrix, β::AbstractVector, link::Link;
+        mask = nothing, offset = nothing, hessian::Symbol = :observed,
+        maxiter::Integer = 100, tol::Real = 1e-9)
+    p, K = size(Λ)
+    off = offset === nothing ? false : offset
+    # Role separation (2026-08-25). The MODE SEARCH is Fisher-scored first:
+    # `:fisher` here is not the caller's selector, which governs only the post-loop
+    # log-det below. Expected information is >= 0, so `Λ'WΛ + I` is SPD by
+    # construction. The converged mode is unchanged either way: it is the fixed point
+    # of `Λ's − z = 0`, which does not involve W at all. W only sets the step.
+    z, ok = _nb_grouped_site_mode(fams, y, n, Λ, β, link;
+                                  mask = mask, offset = offset, maxiter = maxiter, tol = tol)
     # A search that did not converge must not produce a finite value. -Inf makes the
     # fitters' objective return its 1e12 sentinel instead of a garbage surface (#503,
     # the #479 pattern).
@@ -240,9 +250,12 @@ function _grouped_laplace_mode(fams::AbstractVector, y::AbstractVector,
 end
 
 # getLV must return the z at which the fit's Laplace objective was evaluated. Families
-# whose likelihood kernel has its own mode chain reuse it; where that chain fails (the
-# likelihood returned -Inf there) keep the generic kernel's z. Everything else keeps
-# `_grouped_laplace_mode`.
+# whose likelihood kernel has its own mode chain (NB2, NB1, Gamma, Beta) reuse it; where
+# that chain fails (the likelihood returned -Inf there) keep the generic kernel's z.
+# Everything else keeps `_grouped_laplace_mode`.
+_grouped_site_mode(fams::AbstractVector{<:NegativeBinomial}, a...; kw...) = _nb_grouped_site_mode(fams, a...; kw...)
+_grouped_site_mode(fams::AbstractVector{<:NB1}, a...; kw...)              = _nb1_grouped_site_mode(fams, a...; kw...)
+_grouped_site_mode(fams::AbstractVector{<:Gamma}, a...; kw...)            = _gamma_grouped_site_mode(fams, a...; kw...)
 _grouped_site_mode(fams::AbstractVector{<:Beta}, a...; kw...)             = _beta_grouped_site_mode(fams, a...; kw...)
 _grouped_site_mode(fams::AbstractVector, a...; kw...)                     = (_grouped_laplace_mode(fams, a...; kw...), true)
 function _grouped_getLV_mode(fams, y, n, Λ, β, link; mask = nothing, offset = nothing)
@@ -1267,18 +1280,10 @@ function _gamma_grouped_mode(fams::AbstractVector, y::AbstractVector, n::Abstrac
     return z, false
 end
 
-# Per-site Laplace log-marginal with per-species Gamma shape markers `fams`.
-function _gamma_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
+# The Gamma site-mode chain shared by the likelihood and getLV (#503 follow-up).
+function _gamma_grouped_site_mode(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
         Λ::AbstractMatrix, β::AbstractVector, link::Link;
-        mask = nothing, offset = nothing, hessian::Symbol = :observed,
-        maxiter::Integer = 100, tol::Real = 1e-9)
-    p, K = size(Λ)
-    off = offset === nothing ? false : offset
-    # Role separation (2026-08-25). The MODE SEARCH is Fisher-scored first:
-    # `:fisher` here is not the caller's selector, which governs only the post-loop
-    # log-det below. Expected information is >= 0, so `Λ'WΛ + I` is SPD by
-    # construction. The converged mode is unchanged either way: it is the fixed point
-    # of `Λ's − z = 0`, which does not involve W at all. W only sets the step.
+        mask = nothing, offset = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
     z, ok = _gamma_grouped_mode(fams, y, n, Λ, β, link, :fisher;
                                 mask = mask, offset = offset, maxiter = maxiter, tol = tol)
     # Fallback (#479). Fisher scoring converges only linearly for Gamma/log and can
@@ -1293,6 +1298,23 @@ function _gamma_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::
         z, ok = _gamma_grouped_mode(fams, y, n, Λ, β, link, :observed;
                                     mask = mask, offset = offset, maxiter = maxiter, tol = tol)
     end
+    return z, ok
+end
+
+# Per-site Laplace log-marginal with per-species Gamma shape markers `fams`.
+function _gamma_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
+        Λ::AbstractMatrix, β::AbstractVector, link::Link;
+        mask = nothing, offset = nothing, hessian::Symbol = :observed,
+        maxiter::Integer = 100, tol::Real = 1e-9)
+    p, K = size(Λ)
+    off = offset === nothing ? false : offset
+    # Role separation (2026-08-25). The MODE SEARCH is Fisher-scored first:
+    # `:fisher` here is not the caller's selector, which governs only the post-loop
+    # log-det below. Expected information is >= 0, so `Λ'WΛ + I` is SPD by
+    # construction. The converged mode is unchanged either way: it is the fixed point
+    # of `Λ's − z = 0`, which does not involve W at all. W only sets the step.
+    z, ok = _gamma_grouped_site_mode(fams, y, n, Λ, β, link;
+                                     mask = mask, offset = offset, maxiter = maxiter, tol = tol)
     # A search that did not converge must not produce a finite value. -Inf makes the
     # fitters' objective return its 1e12 sentinel instead of a garbage surface.
     ok || return -Inf
@@ -1721,18 +1743,10 @@ function _nb1_grouped_mode(fams::AbstractVector, y::AbstractVector, n::AbstractV
     return z, false
 end
 
-# Per-site Laplace log-marginal with per-species NB1 dispersion markers `fams`.
-function _nb1_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
+# The NB1 site-mode chain shared by the likelihood and getLV (#503 follow-up).
+function _nb1_grouped_site_mode(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
         Λ::AbstractMatrix, β::AbstractVector, link::Link;
-        mask = nothing, offset = nothing, hessian::Symbol = :observed,
-        maxiter::Integer = 100, tol::Real = 1e-9)
-    p, K = size(Λ)
-    off = offset === nothing ? false : offset
-    # Role separation (2026-08-25). The MODE SEARCH is Fisher-scored first:
-    # `:fisher` here is not the caller's selector, which governs only the post-loop
-    # log-det below. Expected information is >= 0, so `Λ'WΛ + I` is SPD by
-    # construction. The converged mode is unchanged either way: it is the fixed point
-    # of `Λ's − z = 0`, which does not involve W at all. W only sets the step.
+        mask = nothing, offset = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
     z, ok = _nb1_grouped_mode(fams, y, n, Λ, β, link, :fisher;
                               mask = mask, offset = offset, maxiter = maxiter, tol = tol)
     # Larger-budget retry (review of #507, mirrors #509's Student-t fallback). A
@@ -1759,6 +1773,23 @@ function _nb1_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::Ab
         z, ok = _nb1_grouped_mode(fams, y, n, Λ, β, link, :observed;
                                   mask = mask, offset = offset, maxiter = maxiter, tol = tol)
     end
+    return z, ok
+end
+
+# Per-site Laplace log-marginal with per-species NB1 dispersion markers `fams`.
+function _nb1_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
+        Λ::AbstractMatrix, β::AbstractVector, link::Link;
+        mask = nothing, offset = nothing, hessian::Symbol = :observed,
+        maxiter::Integer = 100, tol::Real = 1e-9)
+    p, K = size(Λ)
+    off = offset === nothing ? false : offset
+    # Role separation (2026-08-25). The MODE SEARCH is Fisher-scored first:
+    # `:fisher` here is not the caller's selector, which governs only the post-loop
+    # log-det below. Expected information is >= 0, so `Λ'WΛ + I` is SPD by
+    # construction. The converged mode is unchanged either way: it is the fixed point
+    # of `Λ's − z = 0`, which does not involve W at all. W only sets the step.
+    z, ok = _nb1_grouped_site_mode(fams, y, n, Λ, β, link;
+                                   mask = mask, offset = offset, maxiter = maxiter, tol = tol)
     # A search that did not converge must not produce a finite value. -Inf makes the
     # fitters' objective return its 1e12 sentinel instead of a garbage surface (#503,
     # the #479 pattern).
