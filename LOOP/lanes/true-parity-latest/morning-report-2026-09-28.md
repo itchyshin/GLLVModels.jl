@@ -32,6 +32,8 @@ Written first at 18:27 MDT on 2026-09-27 and updated through the night. The newe
 
 ## Findings worth knowing
 
+- The advisory "Frozen R 0.7.0 family smoke" job is red on main and so on every PR. The auto-d lane is taking the NB2 cells (its #521); the Student-t and truncated-NB2 cells (test_studentt_parity.jl, test_truncated_nbinom2_parity.jl) have no owner. Assign if you want all Actions green.
+
 - Temporal: on 3 cells built from R's own engine test data, R and Julia both stop at the same saddle point (Hessian eigenvalue about -2.5, logLik equal to 1e-12). Recorded in the test, not investigated; worth a look on the R side.
 
 - Namespace at P1 (#561): 71 R exports give 0 numeric twins, 44 name-only matches, 6 mismatches (Julia counterpart is a type or unexported: extract_Sigma_B/W, extract_cutpoints, extract_loadings, extract_proportions, extract_residual_split), 2 need a Julia function (animal_slope, dep), 2 retired, 17 still need live R fits.
