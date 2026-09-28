@@ -251,13 +251,13 @@ def surface_sentence(summary, surfaces):
         s = summary[surface]
         yes = s.get("accepted_changes_loglik", [])
         other = {k: v for k, v in s.items() if k != "accepted_changes_loglik"}
-        label = {"missing_in_Y": "missing cells in Y", "mask": "mask=", "offset": "offset=",
-                 "weights": "weights="}[surface]
+        label, verb = {"missing_in_Y": ("missing cells in Y", "are"), "mask": ("mask=", "is"),
+                       "offset": ("offset=", "is"), "weights": ("weights=", "is")}[surface]
         if not yes:
-            parts.append(f"{label} is refused on every probed path ({len(s.get('refused', []))} of "
+            parts.append(f"{label} {verb} refused on every probed path ({len(s.get('refused', []))} of "
                          f"{sum(len(v) for v in s.values())}), so GLLVModels has no such surface")
         else:
-            txt = f"{label} is accepted and moves the maximised logLik on {'; '.join(yes)}"
+            txt = f"{label} {verb} accepted and move{'' if verb == 'are' else 's'} the maximised logLik on {'; '.join(yes)}"
             if other:
                 txt += " (" + "; ".join(f"{k} on {', '.join(v)}" for k, v in other.items()) + ")"
             parts.append(txt)
@@ -322,11 +322,11 @@ def data_cases():
                 "The R side replays a pinned P1 helper to an exact identical() expectation. That is a helper replay, "
                 "not a fit: it produces no fit number, so there is nothing numeric to compare yet. "
                 "Julia side, from the behavioural surface probe: " + surface_sentence(summary, probed) + ". "
-                + ("What GLLVModels lacks is the helper this case replays (" + cc["julia_surface"] + "); the "
+                + ("What GLLVModels lacks is the helper this case replays (" + cc["julia_surface"].rstrip(".") + "); the "
                    "name-level introspection's surface_absent refers to that helper layer only. A numeric twin "
                    "would need an R fit that uses this input at P1 and the matching GLLVModels fit."
                    if has_fit_surface else
-                   "The name-level introspection also finds no helper-equivalent symbol (" + cc["julia_surface"]
+                   "The name-level introspection also finds no helper-equivalent symbol (" + cc["julia_surface"].rstrip(".")
                    + ")."))
             if not surf["surface_absent"]:
                 body["note"] = ("A planned Julia surface now exists (see julia_surface_introspection); the "
