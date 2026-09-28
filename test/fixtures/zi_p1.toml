@@ -5,7 +5,8 @@
 # value ~ 0 + trait + latent(0 + trait | site, d = 1, unique = FALSE) with
 # gllvmTMBcontrol(se = FALSE). Do not hand-edit those blocks; regenerate them.
 # r_at_julia.r_objective_at_julia_optimum is -fit$tmb_obj$fn() at the Julia
-# optimum written by test/fixtures/gen_zi_p1_julia_params.jl.
+# optimum written by test/fixtures/gen_zi_p1_julia_params.jl; the julia_* vectors are that
+# optimum (theta_rr_B = pack_lambda(Λ), log_phi = log.(phi)).
 gllvmTMB_commit = "9539352f66f2db2cc26b1c393e67212a359b60c9"
 gllvmTMB_version = "0.7.1"
 n_traits = 3
@@ -26,8 +27,11 @@ logit_zi = [-1.1091208967882742, -1.4725689357199778, -0.74921234317094976]
 zi = [0.24803481689695026, 0.18655246237957893, 0.32099295152087537]
 
 [zi_poisson.r_at_julia]
-julia_loglik = -756.60227001590408
-r_objective_at_julia_optimum = -756.60227002023305
+julia_loglik = -756.6022700159042
+julia_beta = [1.3236613495812228, 1.0120394435437441, 1.3502606010451661]
+julia_theta_rr_B = [-0.51759305786460863, 0.49036720587114646, -0.46110634802148798]
+julia_logit_zi = [-1.1091338599321576, -1.4725912661827465, -0.74921752297292477]
+r_objective_at_julia_optimum = -756.6022700202335
 
 [zi_nbinom2]
 data_file = "zi_nbinom2_p1_data.csv"
@@ -46,8 +50,12 @@ zi = [0.17918655454554969, 0.18545640367219249, 0.25566008537922946]
 phi = [1.9285537939189941, 1.9255807459997918, 0.93818873789839086]
 
 [zi_nbinom2.r_at_julia]
-julia_loglik = -1351.8308942064416
-r_objective_at_julia_optimum = -1351.8308942068504
+julia_loglik = -1351.8308942064405
+julia_beta = [1.2592911407927976, 0.98290192759045503, 1.6371332845221591]
+julia_theta_rr_B = [-0.55192293044131324, 0.47451136674105571, -0.4013811205208585]
+julia_logit_zi = [-1.5218588294252464, -1.4797943747349205, -1.0686749253610113]
+julia_log_phi = [0.65677416847121084, 0.65523711291881459, -0.063823941906354764]
+r_objective_at_julia_optimum = -1351.83089420685
 
 [zi_binomial]
 data_file = "zi_binomial_p1_data.csv"
@@ -66,4 +74,7 @@ zi = [0.11966107914065612, 0.2336041632093977, 0.29542609376783274]
 
 [zi_binomial.r_at_julia]
 julia_loglik = -610.67699870339175
-r_objective_at_julia_optimum = -610.67699869897172
+julia_beta = [0.13414547749117409, -0.17686149841358623, 0.33435064160634786]
+julia_theta_rr_B = [-0.87785942714309073, 0.49733282538184626, -0.91944609158839463]
+julia_logit_zi = [-1.9956542097354999, -1.1880666828263706, -0.86916759277391331]
+r_objective_at_julia_optimum = -610.6769986989724

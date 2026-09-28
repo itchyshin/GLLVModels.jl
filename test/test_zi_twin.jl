@@ -70,6 +70,12 @@ end
          2 0 0 1 4 0 3 0 1 0 0 2]
     @test_throws ArgumentError fit_gllvm(Y; family = zi_poisson(), K = 1, link = IdentityLink())
     @test_throws ArgumentError fit_gllvm(Y; family = zi_poisson(), K = 1, trials = 3)
+    # `hessian` is accepted as a keyword and refused (this route is observed-only);
+    # `:observed` is the route's own choice and is admitted.
+    @test_throws ArgumentError fit_gllvm(Y; family = zi_poisson(), K = 1, hessian = :fisher)
+    # Missing responses: R masks them per row; this route refuses them.
+    Ym = Float64.(Y); Ym[1, 1] = NaN
+    @test_throws ArgumentError fit_gllvm(Ym; family = zi_poisson(), K = 1)
     @test_throws ArgumentError fit_gllvm(Float64.(Y) .+ 0.5; family = zi_poisson(), K = 1)
     @test_throws ArgumentError fit_gllvm(-Y; family = zi_nbinom2(), K = 1)
     # zi_binomial: trials required; y <= trials; single-trial traits refused (R names

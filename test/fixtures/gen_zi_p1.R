@@ -130,6 +130,10 @@ for (family in names(cfg)) {
     ll_rj <- -as.numeric(fit$tmb_obj$fn(par_j))
     cat("\n[", family, ".r_at_julia]\n", sep = "")
     cat("julia_loglik = ", fmt(j$loglik), "\n", sep = "")
+    cat("julia_beta = ", vec(j$beta), "\n", sep = "")
+    cat("julia_theta_rr_B = ", vec(j$theta_rr_B), "\n", sep = "")
+    cat("julia_logit_zi = ", vec(j$logit_zi), "\n", sep = "")
+    if (family == "zi_nbinom2") cat("julia_log_phi = ", vec(j$log_phi), "\n", sep = "")
     cat("r_objective_at_julia_optimum = ", fmt(ll_rj), "\n", sep = "")
   }
 }
