@@ -420,6 +420,33 @@ test('receipt status: a receipt_status_exception signed by an agent does not wai
   assert.match(c8.stdout, /NUMERIC_RECEIPT_NOT_PASSED\(verdict="FAIL"/);
 });
 
+// --- recorded diff cross-checked (review of #567, tamper test "stale max_abs_diff, vectors
+// disagree by 1"): when a case records both r_value and julia_value, the tool computes the
+// difference itself and fails the row if a recorded abs_diff/max_abs_diff disagrees with it
+// beyond 1e-12 relative (NUMERIC_RECORDED_DIFF_MISMATCH), whether or not either is within
+// tolerance. ---
+for (const [fixture, why] of [
+  // vectors disagree by 1, recorded max_abs_diff 6e-11 (stale): used to bind on the recorded value
+  ['c1_numeric_recorded_diff_stale', /case CASE-1: recorded max_abs_diff 6e-11 != recomputed 1\.0000000000/],
+  // recorded 1e-7, recomputed 4e-7: both within tolerance 1e-6, still a mismatch
+  ['c1_numeric_recorded_diff_mismatch_within_tol', /case CASE-1: recorded abs_diff 1e-7 != recomputed 3\.99999999/],
+]) {
+  test(`recorded diff: ${fixture} fails C1 (NUMERIC_RECORDED_DIFF_MISMATCH)`, () => {
+    const { stdout, code } = run(fixture, 'C1');
+    assert.equal(code, 0);
+    assert.match(stdout, /C1_NOT_MET$/m);
+    assert.match(stdout, /bound_numeric=1\b/);
+    assert.match(stdout, /numeric_recorded_diff_mismatch=isdm\/CAP-ISDM-1FO-PREDICT-EXPORT\(/);
+    assert.match(stdout, why);
+  });
+  test(`recorded diff: ${fixture} fails C8 (NUMERIC_RECORDED_DIFF_MISMATCH)`, () => {
+    const { stdout, code } = run(fixture, 'C8');
+    assert.equal(code, 0);
+    assert.match(stdout, /C8_NOT_MET$/m);
+    assert.match(stdout, /isdm\/CAP-ISDM-1FO-PREDICT-EXPORT:NUMERIC_RECORDED_DIFF_MISMATCH\(/);
+  });
+}
+
 // --- signed-disposition hatch (review of #561): the signer must be on the maintainer allow-list
 // (an agent name is refused), the date must be a real calendar date not in the future, and a
 // signed row is counted in bound_signed=, never in bound= ---

@@ -228,6 +228,10 @@ machine-readable comparison block:
   greater than 0, and one of: `abs_diff`, `max_abs_diff` (finite, >= 0), or `r_value` +
   `julia_value` (finite numbers, or equal-length arrays of finite numbers; the tool computes the
   maximum absolute difference itself).
+- When a case carries a comparable `r_value` + `julia_value` pair, the tool's own difference is
+  the one judged, and any recorded `abs_diff` / `max_abs_diff` on that case must agree with it to
+  1e-12 relative, or the row fails as `NUMERIC_RECORDED_DIFF_MISMATCH` (see below). A recorded
+  difference stands on its own only when the case carries no comparable pair.
 - Every case must satisfy difference <= tolerance.
 - The union of `case_id`s across the row's receipts must cover every `executable_case_id` on the row.
 - A malformed block in any cited receipt fails the row; a non-JSON receipt simply carries no block.
@@ -276,6 +280,21 @@ tolerance), and a row bound this way counts in `bound_signed=`, never in `bound=
 "FAIL"`), `c1_numeric_receipt_comparison_status_fail` (`batch_status: "FAIL"` inside the
 comparison block), `c1_numeric_receipt_fail_exception_by_agent` (exception signed by an agent
 name: still not bound); positive control `c1_numeric_receipt_fail_signed_exception`.
+
+### A recorded difference is cross-checked against the two sides (review of #567)
+
+A second tamper test left `max_abs_diff` small while the recorded `r_value` and `julia_value`
+disagreed by 1; the row still bound, because the recorded difference was trusted over the vectors.
+Now, when a case has both sides, the tool recomputes the (maximum) absolute difference itself and
+fails the row if a recorded `abs_diff` or `max_abs_diff` disagrees with it beyond 1e-12 relative,
+whether or not either value is within tolerance: C1 lists it under
+`numeric_recorded_diff_mismatch=` and is not MET; C8 fails it as
+`NUMERIC_RECORDED_DIFF_MISMATCH(<case, recorded, recomputed, receipt>)`. There is no signed
+waiver: a receipt whose numbers disagree with each other has to be regenerated. The 1e-12 bound
+was checked against the real case receipts on #567 and #569 (21 cases with both sides and a
+recorded `max_abs_diff`): none disagree. Negative controls: `c1_numeric_recorded_diff_stale`
+(sides differ by 1, recorded 6e-11) and `c1_numeric_recorded_diff_mismatch_within_tol` (recorded
+1e-7, recomputed 4e-7, both under tolerance 1e-6).
 
 What this does not do: the tool checks that the receipt records a comparison within tolerance; it
 does not re-run the comparison, and it cannot tell whether the tolerance chosen is reasonable. A

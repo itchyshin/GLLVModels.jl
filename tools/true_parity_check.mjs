@@ -47,6 +47,8 @@
 // receipt whose own verdict/status/batch_status/harness_pass is not a pass value (e.g. "FAIL")
 // no longer binds: NUMERIC_RECEIPT_NOT_PASSED, unless the row carries a maintainer-signed
 // `receipt_status_exception`, in which case it counts in bound_signed=, not bound_numeric=.
+// And a recorded abs_diff/max_abs_diff that disagrees with the difference the tool recomputes
+// from r_value/julia_value fails the row as NUMERIC_RECORDED_DIFF_MISMATCH.
 import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -203,16 +205,37 @@ function isNumericTier(row) { return row.evidence_tier === 'numeric'; }
 // Every case must satisfy abs_diff <= tolerance, and the union of case_ids across the row's
 // receipts must cover every executable_case_id. A malformed block in any cited receipt fails the
 // row (it is never skipped). Returns { ok } or { ok: false, reason }.
+//
+// Recorded diff cross-check (review of #567, tamper test "stale max_abs_diff, vectors disagree by
+// 1"): when a case carries a comparable r_value + julia_value pair, the tool's own difference is
+// the one judged against tolerance, and every recorded abs_diff / max_abs_diff on that case must
+// agree with it to 1e-12 relative, or the row fails as NUMERIC_RECORDED_DIFF_MISMATCH. A recorded
+// value is used on its own only when the case carries no comparable pair.
+const RECORDED_DIFF_REL_TOL = 1e-12;
+
+// Returns { d } (the difference to judge), or { d: null } when there is none, or
+// { mismatch: reason } when a recorded difference disagrees with the recomputed one.
 function comparisonCaseDiff(c) {
   const fin = (x) => typeof x === 'number' && Number.isFinite(x);
   const finArr = (x) => Array.isArray(x) && x.length > 0 && x.every(fin);
-  if (c.abs_diff !== undefined) return fin(c.abs_diff) && c.abs_diff >= 0 ? c.abs_diff : null;
-  if (c.max_abs_diff !== undefined) return fin(c.max_abs_diff) && c.max_abs_diff >= 0 ? c.max_abs_diff : null;
-  if (fin(c.r_value) && fin(c.julia_value)) return Math.abs(c.r_value - c.julia_value);
-  if (finArr(c.r_value) && finArr(c.julia_value) && c.r_value.length === c.julia_value.length) {
-    return Math.max(...c.r_value.map((r, i) => Math.abs(r - c.julia_value[i])));
+  let computed = null;
+  if (fin(c.r_value) && fin(c.julia_value)) computed = Math.abs(c.r_value - c.julia_value);
+  else if (finArr(c.r_value) && finArr(c.julia_value) && c.r_value.length === c.julia_value.length) {
+    computed = Math.max(...c.r_value.map((r, i) => Math.abs(r - c.julia_value[i])));
   }
-  return null;
+  const recorded = [];
+  for (const k of ['abs_diff', 'max_abs_diff']) {
+    if (c[k] === undefined) continue;
+    if (!fin(c[k]) || c[k] < 0) return { d: null };
+    recorded.push([k, c[k]]);
+  }
+  if (computed === null) return { d: recorded.length ? recorded[0][1] : null };
+  for (const [k, v] of recorded) {
+    if (Math.abs(v - computed) > RECORDED_DIFF_REL_TOL * Math.max(Math.abs(v), Math.abs(computed))) {
+      return { mismatch: `case ${c.case_id}: recorded ${k} ${v} != recomputed ${computed} from r_value/julia_value` };
+    }
+  }
+  return { d: computed };
 }
 
 // Receipt status (review of #567, tamper test "verdict = FAIL, comparison intact"): a comparison
@@ -260,7 +283,9 @@ function numericReceiptStatus(row) {
       if (!c || typeof c.case_id !== 'string' || c.case_id.length === 0) return { ok: false, reason: `comparison case without case_id in ${p}` };
       const tol = c.tolerance;
       if (typeof tol !== 'number' || !Number.isFinite(tol) || tol <= 0) return { ok: false, reason: `case ${c.case_id}: tolerance not a finite number > 0` };
-      const d = comparisonCaseDiff(c);
+      const cd = comparisonCaseDiff(c);
+      if (cd.mismatch) return { ok: false, kind: 'diff_mismatch', reason: `${cd.mismatch} in ${p}` };
+      const d = cd.d;
       if (d === null) return { ok: false, reason: `case ${c.case_id}: no finite abs_diff or r_value/julia_value` };
       if (d > tol) return { ok: false, reason: `case ${c.case_id}: abs_diff ${d} > tolerance ${tol}` };
       covered.add(c.case_id);
@@ -440,6 +465,7 @@ function checkC1() {
   const registrationOnly = [];
   const numericLabelOnly = [];
   const notPassed = [];
+  const diffMismatch = [];
   const dangling = [];
   const stale = [];
   for (const r of req) {
@@ -474,14 +500,15 @@ function checkC1() {
       if (ns.ok) { bound++; boundNumeric++; } else if (ns.kind === 'not_passed') {
         const why = receiptStatusExceptionProblem(r);
         if (why === null) boundSigned++; else notPassed.push(`${r.source_id}(${ns.reason}; ${why})`);
-      } else numericLabelOnly.push(`${r.source_id}(${ns.reason})`);
+      } else if (ns.kind === 'diff_mismatch') diffMismatch.push(`${r.source_id}(${ns.reason})`);
+      else numericLabelOnly.push(`${r.source_id}(${ns.reason})`);
     } else {
       free++;
     }
   }
   const nUnsigned = Object.values(unsigned).reduce((a, b) => a + b, 0);
-  console.log(`C1 required=${req.length} bound=${bound} bound_numeric=${boundNumeric} bound_registration_only=${registrationOnly.length} bound_signed=${boundSigned} free=${free} unsigned_or_blocked=${nUnsigned} ${JSON.stringify(unsigned)} dangling_receipts=${dangling.join(';') || 'none'} stale_carries=${stale.join(';') || 'none'} registration_only=${registrationOnly.join(';') || 'none'} numeric_label_without_numeric_receipt=${numericLabelOnly.join(';') || 'none'} numeric_receipt_not_passed=${notPassed.join(';') || 'none'}`);
-  return req.length > 0 && nUnsigned === 0 && free === 0 && dangling.length === 0 && stale.length === 0 && registrationOnly.length === 0 && numericLabelOnly.length === 0 && notPassed.length === 0;
+  console.log(`C1 required=${req.length} bound=${bound} bound_numeric=${boundNumeric} bound_registration_only=${registrationOnly.length} bound_signed=${boundSigned} free=${free} unsigned_or_blocked=${nUnsigned} ${JSON.stringify(unsigned)} dangling_receipts=${dangling.join(';') || 'none'} stale_carries=${stale.join(';') || 'none'} registration_only=${registrationOnly.join(';') || 'none'} numeric_label_without_numeric_receipt=${numericLabelOnly.join(';') || 'none'} numeric_receipt_not_passed=${notPassed.join(';') || 'none'} numeric_recorded_diff_mismatch=${diffMismatch.join(';') || 'none'}`);
+  return req.length > 0 && nUnsigned === 0 && free === 0 && dangling.length === 0 && stale.length === 0 && registrationOnly.length === 0 && numericLabelOnly.length === 0 && notPassed.length === 0 && diffMismatch.length === 0;
 }
 
 // --- C2..C5: scoreboard tiers, plus C2's boundary-capability cross-check --
@@ -562,6 +589,7 @@ function checkC8() {
       if (receiptStatusExceptionProblem(r) !== null) failing.push(`${r.source_id}:NUMERIC_RECEIPT_NOT_PASSED(${ns.reason})`);
       continue;
     }
+    if (ns.kind === 'diff_mismatch') { failing.push(`${r.source_id}:NUMERIC_RECORDED_DIFF_MISMATCH(${ns.reason})`); continue; }
     failing.push(`${r.source_id}:NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT`);
   }
   console.log(`C8 rows=${rows.length} failing=${failing.join(';') || 'none'}`);
