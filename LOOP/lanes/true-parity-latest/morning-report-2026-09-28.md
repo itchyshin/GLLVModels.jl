@@ -61,6 +61,8 @@ Overnight: #548 chibar2_pvalue / variance_lrt twin (4357e4652, 22:58); #531 extr
 
 ## In a merge train (word given)
 
+Third word ("merge #567, #569, #571, #579, #584 when green"): all five were green but conflicted with main in check-log only. Refreshed #567 against main (adec8189e) and cascaded each branch into the next (#569 f558685f6, #571 646ebedc2, #579 c89251972, #584 1475e5b7c; fast-forward pushes, log files only), so all five re-run CI at once. One train merges them in order with MERGE COMMITS rather than squash, so each later PR still contains the earlier one's commits and stays clean after it lands (squash would force a full re-sync and CI cycle per PR). Trade-off: #584's intermediate commits (which briefly broke Pkg.test) enter main's history.
+
 Second word ("merge #546, then #558; #556; #547 when green"): #556 train started (clean, 73f7952f4); #547 refreshed (3127c0576) and train started; #546 and #558 conflict with main in src/GLLVModels.jl and test/runtests.jl include lines as well as the logs, so a builder is merging main in carefully (then #546 into #558) before their trains.
 
 Lane coordination (messages sent to every active GLLVModels.jl lane): none of the other lanes has a PR with a landing word, so no sequencing conflict. Collision found and flagged: the new truncated NB2 mode-search session would edit src/families/grouped_dispersion.jl, which auto-d's #521/#529/#540/#551 edit; both sessions told to coordinate before either touches it. auto-d's suggested order when you sign off: #519, #521, #540, then #520, #529, #551, then #518. The bootstrap-verdict lane's many PRs (#541, #550, #564 to #595) each add CHANGELOG / check-log / runtests lines and will need a log-only refresh after merges.
