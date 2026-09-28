@@ -90,6 +90,13 @@ Checked each open PR against it:
   committed anyway (steps not chained), leaving conflict markers in a local merge commit. Caught before
   any push, fixed, amended, tree checked for markers, Beta tests re-run (pass), then pushed.
 
+## CI capacity (08:45Z)
+About 71 runs were queued account-wide; #518/#519/#540 had been waiting since about 07:00. I first
+suspected hung runs; the parity lane checked, and they were not hung (their timestamps included queue
+time). It is capacity: many lanes refreshed PRs against `main` overnight, and stacked PRs each run the
+full 8-shard suite. The parity lane has put the capacity question to you (for example running the
+Julia 1.10 shards only on demand or for ready-for-review PRs). I stopped pushing to avoid adding load.
+
 ## Will auto-d work? (your 01:55Z question, answered with tonight's numbers)
 Gaussian 0.95 and Poisson 0.999: yes. Negative binomial: promising (the fixed kernel picked the true
 K where the old one picked 5) but unmeasured until the NB re-run. Binary: K = 1 reliably, higher K only
