@@ -19,13 +19,16 @@ Written first at 18:27 MDT on 2026-09-27 and updated through the night. The newe
 
 ## In a merge train (word given)
 
+19:10: all seven train PRs had gone into conflict with main in CHANGELOG / check-log only. Refreshed the chain heads (#531, #543, #548) by merging main in; checked each refresh adds only main's commits and log lines; trains restarted on the new heads. #546, #556, #547, #558 get the same refresh when the PR ahead of them merges.
+
 #531 extract_latent_scores; #543 temporal slice 1, then #546 iSDM build; #548 chibar2/variance_lrt, then #556 anova, then #547 phylo latent; #558 ISDM-PSI (after #546).
 
 ## In progress overnight
 
 - #557 zi_* twin: blocking fix DONE at d0a57e05d (sites with a Laplace precision eigenvalue below 0.1 are walled off; optima near the floor report converged = false; NB2 moment start). The reviewer's case now matches R (-3311.4547). Over 20 NB2 draws: silent breakdowns 3 -> 0; 2 draws honestly flagged not converged (R also fails there). Fresh review running.
 - #561 namespace re-measurement (supersedes #559, head 2d0cf3387): 71 rows at P1 give 0 numeric twins, 44 name-only, 6 mismatches, 2 need a Julia surface, 2 retired, 17 not measured. The checker now refuses to count a name-only row (C1 and C8). Fresh review running.
-- Temporal slice 2 (unit/unit_obs composition).
+- #563 temporal slice 2 (unit/unit_obs composition, head 6a3c5890c; retargeted to main so it survives #543's merge): 13 R test blocks twinned; NLL/gradient vs R's TMB 3e-9. Changes the optimizer for slice 1 fits too (two line searches, keep the lower, Newton polish). Adds a new export, update(). Fresh review running.
+- #561 review: BLOCKING (a row could self-declare "numeric" and count without numbers; the signed-disposition field accepted any signer). Builder fixing.
 
 ## Findings worth knowing
 
