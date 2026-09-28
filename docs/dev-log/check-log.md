@@ -10,6 +10,37 @@
   against R's polished optimum). Cross-objective both directions within 1.3e-11 on all four cases.
 - Finding: R's `latent()` default `unique = TRUE` adds `theta_diag_B`, which the spec omits; the Julia
   door refuses it. Provenance: `docs/dev-log/decisions/2026-09-27-isdm-port-provenance.md`.
+## 2026-09-27: One shared pin source for the Core070 parity harness, plus a P1 oracle build (D-294/D-295)
+
+- Branch `claude/true-parity-p1-oracle`, builds on #524 (merged into `main` as `824d22a4b`
+  while this PR was in progress: `tools/parity_oracle.py`'s additive `R_REF_PINS` /
+  `GLLVM_PARITY_PIN` switch, P0 default unchanged). First step of re-measuring parity evidence
+  at the P1 gllvmTMB pin (`9539352f66f2db2cc26b1c393e67212a359b60c9`) per the A3 re-measure
+  sizing note (`docs/dev-log/core070/true-parity-latest/reviews/a3-remeasure-sizing.md` on the
+  `true-parity-latest` lane).
+- Added `tools/core070_oracle_pins.toml`: the per-pin `reference_commit` + companion byte hashes
+  (`namespace_sha256`, `source_tree_sha256`, `archive_sha256`) for P0 and P1, read by both
+  `tools/core070_build_oracle.py` and `test/parity/parity_helpers.jl` instead of each hardcoding its
+  own copy. P1's hashes were computed read-only against the local gllvmTMB clone via `git archive`,
+  using the identical algorithm as `core070_build_oracle.py`'s `prepare()`.
+- `tools/parity_oracle.py`: exposed `SELECTED_PIN` (the resolved `GLLVM_PARITY_PIN` name) so other
+  entry points key off it instead of re-deriving the switch.
+- `tools/core070_build_oracle.py`: `REFERENCE`/`NAMESPACE`/`SOURCE_TREE`/`ARCHIVE` now resolve from
+  `parity_oracle.SELECTED_PIN` + `core070_oracle_pins.toml`, cross-checked against
+  `parity_oracle.R_REF_PINS` for the commit SHA. P0 default byte-for-byte unchanged (verified).
+- `test/parity/parity_helpers.jl`: same switch (`GLLVM_PARITY_PIN`, default `"P0"`, strict on an
+  unrecognized value), reading the same TOML file.
+- Did NOT touch the ~130 per-family `core070_<family>_batch.{R,jl}` / `core070_verify_*.py` scripts'
+  own literal P0 asserts, or any tracked contract/receipt/after-task evidence file — those remain
+  historical P0 evidence; regenerating per-family P1 contracts is a separate, later PR per the sizing
+  note's harness change plan. CI.yml's `test-parity` job is untouched (still P0, advisory).
+- Built and verified the P1 oracle once locally (R 4.6.0, `R CMD INSTALL` into an isolated scratch
+  library): `CORE070_ORACLE_SOURCE_PASS`, `CORE070_ORACLE_BUILD_PASS`, `CORE070_ORACLE_VERIFY_PASS`.
+- New `tools/test_core070_build_oracle_pin.py` (6 tests): P0 default / P1-via-env / case-insensitive
+  switch / unrecognized-pin failure for `core070_build_oracle.py`; TOML-vs-`parity_oracle.R_REF_PINS`
+  agreement; and an independent re-derivation of the P1 hashes from a fresh `git archive` (skips if
+  the local gllvmTMB clone is absent). All pass, plus the pre-existing `tools/test_parity_oracle_defaults.py`
+  (8/8) and `tools/parity_ledger.py --self-test`.
 
 ## 2026-09-25: Two-part families no longer score an unfinished mode search (#484)
 
