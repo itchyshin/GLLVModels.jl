@@ -13,6 +13,7 @@ uses, and only then cross-checks that against the runner's own verdict.
 import argparse
 import hashlib
 import json
+import tomllib
 from copy import deepcopy
 from pathlib import Path
 
@@ -41,6 +42,24 @@ FIXTURE_A = [
 ]
 FIXTURE_V = [0.20, 0.35, 0.15, 0.50]
 FIXTURE_OBJECTS = {"A": FIXTURE_A, "V": FIXTURE_V}
+
+
+# Oracle source pin (review finding 6): the batch R script records the
+# CORE070_SOURCE_PIN.toml marker of the library it ran against; it must match
+# the selected pin in tools/core070_oracle_pins.toml. P0 receipts written before
+# the record existed carry none and are accepted only at P0.
+PINS = tomllib.loads((ROOT / "tools/core070_oracle_pins.toml").read_text())
+SOURCE_PIN_KEYS = ("reference_commit", "source_tree_sha256", "archive_sha256", "namespace_sha256")
+
+
+def check_source_pin(record):
+    if record is None and SELECTED_PIN == "P0":
+        return
+    need(isinstance(record, dict), "receipt carries no CORE070_SOURCE_PIN marker record")
+    pin = PINS[SELECTED_PIN]
+    for key in SOURCE_PIN_KEYS:
+        need(record.get(key) == pin[key],
+             f"source pin {key} does not match tools/core070_oracle_pins.toml [{SELECTED_PIN}]")
 
 
 def sha(path):
@@ -124,6 +143,7 @@ def check_report(report, contract):
     receipt = report.get("process_receipt", {})
     for field in ("r_version", "gllvmTMB_version", "gllvmTMB_path", "frozen_library"):
         need(bool(receipt.get(field)), f"missing process receipt field: {field}")
+    check_source_pin(receipt.get("source_pin"))
 
     pin_checks = report.get("source_pin_checks", {})
     need(bool(pin_checks) and all(v is True for v in pin_checks.values()), "a source pin failed")
@@ -181,6 +201,9 @@ def verify(results_path=DEFAULT_RESULTS, self_test=False):
              lambda r: r["cases"].pop("CORE070-COV-PHYLO-DEP-FORMULA")),
             ("retarget contract_sha256 to a stale value",
              lambda r: r.update(contract_sha256="0" * 64)),
+            ("record a library marker whose source tree is not the selected pin's",
+             lambda r: r["process_receipt"].update(
+                 source_pin={**{k: PINS[SELECTED_PIN][k] for k in SOURCE_PIN_KEYS}, "source_tree_sha256": "0" * 64})),
         ]
         for label, mutate in mutations:
             bad = deepcopy(report)

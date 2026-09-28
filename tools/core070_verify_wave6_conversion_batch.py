@@ -44,6 +44,7 @@ import argparse
 from copy import deepcopy
 import hashlib
 import json
+import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -76,6 +77,24 @@ def sha(path):
 def need(ok, message):
     if not ok:
         raise ValueError(message)
+
+
+# Oracle source pin (review finding 6): the batch R script records the
+# CORE070_SOURCE_PIN.toml marker of the library it ran against; it must match
+# the selected pin in tools/core070_oracle_pins.toml. P0 receipts written before
+# the record existed carry none and are accepted only at P0.
+PINS = tomllib.loads((ROOT / "tools/core070_oracle_pins.toml").read_text())
+SOURCE_PIN_KEYS = ("reference_commit", "source_tree_sha256", "archive_sha256", "namespace_sha256")
+
+
+def check_source_pin(record):
+    if record is None and SELECTED_PIN == "P0":
+        return
+    need(isinstance(record, dict), "receipt carries no CORE070_SOURCE_PIN marker record")
+    pin = PINS[SELECTED_PIN]
+    for key in SOURCE_PIN_KEYS:
+        need(record.get(key) == pin[key],
+             f"source pin {key} does not match tools/core070_oracle_pins.toml [{SELECTED_PIN}]")
 
 
 def load_contract():
@@ -166,6 +185,7 @@ def check_state(contract, receipt, results_lines, julia_report):
     need(receipt["deferred_count"] == DEFERRED_COUNT, "receipt deferred_count drift")
     need(receipt["julia_exit_code"] == 0, "julia child exited nonzero")
     need(receipt.get("oracle_error_count", 0) == 0, "R oracle recorded at least one computation error")
+    check_source_pin(receipt.get("source_pin"))
     need(set(receipt["target_source_ids"]) == set(contract["target_source_ids"]),
          "receipt target_source_ids does not match contract")
 
@@ -279,6 +299,7 @@ def _synthetic_state(contract):
         "deferred_count": len(contract["deferred"]),
         "oracle_error_count": 0,
         "julia_exit_code": 0,
+        "source_pin": {k: PINS[SELECTED_PIN][k] for k in SOURCE_PIN_KEYS},
     }
     return receipt, results_lines, julia_report
 
@@ -345,6 +366,16 @@ def run_self_test():
         jr["cases"][cid]["pass"] = True
         return r, res, jr
 
+    def mut_source_pin_other_tree(r, res, jr):
+        r["source_pin"]["source_tree_sha256"] = "0" * 64
+        return r, res, jr
+
+    def mut_source_pin_missing(r, res, jr):
+        r["source_pin"] = "absent"
+        return r, res, jr
+
+    expect_rejected("source pin tree sha does not match the selected pin", mut_source_pin_other_tree)
+    expect_rejected("source pin record is not a marker record", mut_source_pin_missing)
     expect_rejected("contract_sha256 tampered", mut_bad_contract_sha)
     expect_rejected("one verdict flipped to FAIL in results.tsv", mut_flip_one_verdict)
     expect_rejected("max_abs_diff blown past tolerance while pass stays true", mut_tolerance_blown)
