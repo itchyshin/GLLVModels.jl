@@ -51,6 +51,7 @@ makedocs(;
             "API reference" => "api.md",
             "Post-fit extractors" => "postfit-extractors.md",
             "Post-fit tables and prediction" => "postfit-tables.md",
+            "Temporal covariance source" => "temporal.md",
         ],
     ],
     warnonly = false,
