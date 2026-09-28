@@ -42,10 +42,12 @@ Overnight: #548 chibar2_pvalue / variance_lrt twin (4357e4652, 22:58).
 
 ## In progress overnight
 
-- #581 truncated NB2 Laplace-breakdown guard (head 5cb29b01d): same design as #557 (floor 0.1, flag near the floor, one retry, here restarting the dispersion from a moment estimate). Silent breakdowns over 40 draws: 6 -> 0, each reaching the healthy optimum; red-then-green 27/27 on 1.10 and 1.13; 23 related test files pass. Caveat under review: on 4 of 34 healthy draws the optimiser path changed (one ends 5e-4 lower at the same optimum). Review running.
+- #581 truncated NB2 Laplace-breakdown guard (head 5cb29b01d): same design as #557 (floor 0.1, flag near the floor, one retry, here restarting the dispersion from a moment estimate). Silent breakdowns over 40 draws: 6 -> 0, each reaching the healthy optimum; red-then-green 27/27 on 1.10 and 1.13; 23 related test files pass. Review NON-BLOCKING: the 4 changed healthy fits are main's early stops (gradients up to 45 on a small jump in the Laplace objective), not the guard's; the 0.1 floor held on 45 more draws at small dispersion (breakdowns below 2e-4, healthy fits above 0.7, nothing between). Small fixes being applied (wording; report the better of two flagged fits; a stale docs line).
 - A3 family batch (21 rows) at P1: builder started 22:10, stacked on #579.
 
 ## Findings worth knowing
+
+- Truncated NB2's confidence intervals for the dispersion r are broken on main (profile fails after 12 minutes; Wald far too narrow), probably from the same small jump in its Laplace objective. Filed as a separate task chip for you to start.
 
 - Audit of every fitter for "impossible loglik reported converged" (reviews/impossible-loglik-audit.md). Three separate numerical causes: density rounding (beta-binomial, fixed #522), near-singular Laplace curvature (zi #557), Woodbury precision loss (two-level #576). New high-risk case: truncated NB2 converges at a Laplace breakdown in 3 of 12 fits, once beating the real optimum; fix being built. Medium: gaussian_marginal_loglik with per-species variances uses the same fragile Woodbury solve (feeds profile CIs and REML). Not started, needs you: fixing the same Woodbury solve in likelihood.jl touches the headline Gaussian path (speed and parity claims), so it waits for your go. Proposal for you: a shared post-fit check in _fit_verdict (family loglik bound; smallest site eigenvalue for observed-curvature kernels), about 25 one-line call sites.
 
