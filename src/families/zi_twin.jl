@@ -194,8 +194,8 @@ Smallest admissible eigenvalue (0.1) of the per-site Laplace precision
 `A = I + Λ' diag(W) Λ` on the [`zi_poisson`](@ref) / [`zi_nbinom2`](@ref) /
 [`zi_binomial`](@ref) route. Below it the site's Laplace value is treated as a
 failed evaluation: a Julia-side guard against a near-singular Laplace breakdown
-that gllvmTMB's own objective shares (see
-`docs/dev-log/decisions/2026-09-27-zi-laplace-breakdown-guard.md`).
+that gllvmTMB's own objective shares (the repository's decision note on the
+zero-inflated Laplace breakdown guard records the evidence).
 """
 const ZI_LAPLACE_EIGMIN_FLOOR = 0.1
 
