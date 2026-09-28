@@ -328,20 +328,25 @@ function _nparams(fit::NBGroupedFit)
 end
 
 """
-    getLV(fit::NBGroupedFit, Y; N=nothing, rotate=true, mask=nothing) -> n×K matrix
+    getLV(fit::NBGroupedFit, Y; N=nothing, rotate=true, mask=nothing, offset=nothing) -> n×K matrix
 
 Conditional latent-variable scores for a grouped-dispersion NB2 fit, using the
 per-trait dispersion `r_group[group[t]]` in the same Laplace mode equations as
 the grouped likelihood.
+
+Pass the same `offset` (p×n) given to the fitter; the scores are the Laplace
+modes of that fit's objective only when the linear predictor matches.
 """
 function getLV(fit::NBGroupedFit, Y::AbstractMatrix{<:Integer};
                N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing,
-               rotate::Bool = true, mask = nothing)
+               rotate::Bool = true, mask = nothing, offset = nothing)
     p = size(Y, 1)
+    offset === nothing || size(offset) == size(Y) ||
+        throw(DimensionMismatch("offset must have size $(size(Y)); got $(size(offset))"))
     rvec = [fit.r_group[fit.group[t]] for t in 1:p]
     fams = [NegativeBinomial(float(rvec[t]), 0.5) for t in 1:p]
     return _grouped_getLV(Y, fit.Λ, fit.β, fit.link, fams;
-                          N = N, rotate = rotate, mask = mask)
+                          N = N, rotate = rotate, mask = mask, offset = offset)
 end
 
 """
@@ -732,19 +737,24 @@ function _nparams(fit::BetaGroupedFit)
 end
 
 """
-    getLV(fit::BetaGroupedFit, Y; rotate=true, mask=nothing) -> n×K matrix
+    getLV(fit::BetaGroupedFit, Y; rotate=true, mask=nothing, offset=nothing) -> n×K matrix
 
 Conditional latent-variable scores for a grouped-precision Beta fit, using the
 per-trait precision `φ[group[t]]` in the same Laplace mode equations as the
 grouped likelihood.
+
+Pass the same `offset` (p×n) given to the fitter; the scores are the Laplace
+modes of that fit's objective only when the linear predictor matches.
 """
 function getLV(fit::BetaGroupedFit, Y::AbstractMatrix{<:Real};
-               rotate::Bool = true, mask = nothing)
+               rotate::Bool = true, mask = nothing, offset = nothing)
     p = size(Y, 1)
+    offset === nothing || size(offset) == size(Y) ||
+        throw(DimensionMismatch("offset must have size $(size(Y)); got $(size(offset))"))
     φvec = [fit.φ[fit.group[t]] for t in 1:p]
     fams = [Beta(float(φvec[t]), 1.0) for t in 1:p]
     return _grouped_getLV(Y, fit.Λ, fit.β, fit.link, fams;
-                          rotate = rotate, mask = mask)
+                          rotate = rotate, mask = mask, offset = offset)
 end
 
 # Beta grouped fits can stop on a zero-length line-search step, which Optim counts as
@@ -1219,19 +1229,24 @@ function _nparams(fit::GammaGroupedFit)
 end
 
 """
-    getLV(fit::GammaGroupedFit, Y; rotate=true, mask=nothing) -> n×K matrix
+    getLV(fit::GammaGroupedFit, Y; rotate=true, mask=nothing, offset=nothing) -> n×K matrix
 
 Conditional latent-variable scores for a grouped-shape Gamma fit, using the
 per-trait shape `α[group[t]]` in the same Laplace mode equations as the grouped
 likelihood.
+
+Pass the same `offset` (p×n) given to the fitter; the scores are the Laplace
+modes of that fit's objective only when the linear predictor matches.
 """
 function getLV(fit::GammaGroupedFit, Y::AbstractMatrix{<:Real};
-               rotate::Bool = true, mask = nothing)
+               rotate::Bool = true, mask = nothing, offset = nothing)
     p = size(Y, 1)
+    offset === nothing || size(offset) == size(Y) ||
+        throw(DimensionMismatch("offset must have size $(size(Y)); got $(size(offset))"))
     αvec = [fit.α[fit.group[t]] for t in 1:p]
     fams = [Gamma(float(αvec[t]), 1.0) for t in 1:p]
     return _grouped_getLV(Y, fit.Λ, fit.β, fit.link, fams;
-                          rotate = rotate, mask = mask)
+                          rotate = rotate, mask = mask, offset = offset)
 end
 
 """
@@ -1683,20 +1698,25 @@ function _nparams(fit::NB1GroupedFit)
 end
 
 """
-    getLV(fit::NB1GroupedFit, Y; N=nothing, rotate=true, mask=nothing) -> n×K matrix
+    getLV(fit::NB1GroupedFit, Y; N=nothing, rotate=true, mask=nothing, offset=nothing) -> n×K matrix
 
 Conditional latent-variable scores for a grouped-dispersion NB1 fit, using the
 per-trait linear-variance dispersion `φ[group[t]]` in the same Laplace mode
 equations as the grouped likelihood.
+
+Pass the same `offset` (p×n) given to the fitter; the scores are the Laplace
+modes of that fit's objective only when the linear predictor matches.
 """
 function getLV(fit::NB1GroupedFit, Y::AbstractMatrix{<:Integer};
                N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing,
-               rotate::Bool = true, mask = nothing)
+               rotate::Bool = true, mask = nothing, offset = nothing)
     p = size(Y, 1)
+    offset === nothing || size(offset) == size(Y) ||
+        throw(DimensionMismatch("offset must have size $(size(Y)); got $(size(offset))"))
     φvec = [fit.φ[fit.group[t]] for t in 1:p]
     fams = [NB1(float(φvec[t])) for t in 1:p]
     return _grouped_getLV(Y, fit.Λ, fit.β, fit.link, fams;
-                          N = N, rotate = rotate, mask = mask)
+                          N = N, rotate = rotate, mask = mask, offset = offset)
 end
 
 # NB1 grouped fits can stop on a zero-length line-search step, which Optim counts as
