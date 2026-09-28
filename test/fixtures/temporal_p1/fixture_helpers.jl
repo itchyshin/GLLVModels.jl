@@ -18,6 +18,9 @@ const TEMPORAL_P1_SHA256 = Dict(
     "compare.toml" => "0209f6f2836465fbf6069540223406a7505651ec1c68113afbb9f583951975e8",
     "bootstrap.toml" => "a83f83bec3efa0791f83151193eb6e2797bbe4b4c6527a2be6dd9d58d919fa0e",
     "cross_objective.toml" => "680bfefdd6c0d5de7e142eb537363f3a2953c80d1f54c9af7babb1132e5cfb72",
+    # Slice 2 (generate_temporal_p1_slice2.R).
+    "composed.toml" => "bf3cd27d73de9593857be6c6d996266a04c6088875b9a50220a0b2c5051124b5",
+    "composed_cross.toml" => "e5c6e803bfb8d66524bc86465ae9163596fb940033d48d9627b7b166355feb87",
 )
 
 temporal_p1_path(name) = joinpath(TEMPORAL_P1_DIR, name)
@@ -59,6 +62,31 @@ function temporal_p1_fit(F::AbstractDict, c::AbstractDict; kwargs...)
     tbl = temporal_p1_table(F["datasets"][c["dataset"]])
     return fit_temporal_gllvm(tbl; formula=@formula(value ~ 0 + trait),
         temporal=temporal_p1_term(c), kwargs...)
+end
+
+# ---- slice 2: temporal + ordinary unit / unit_obs terms (composed.toml) ----
+const TEMPORAL_P1_STRING_COLS = ("series", "trait", "measurement", "unit_obs", "within_unit")
+
+function temporal_p1_composed_table(ds::AbstractDict)
+    pairs = Pair{Symbol,Any}[]
+    for k in sort(collect(keys(ds)))
+        k in ("value", "value_sha256") && continue
+        push!(pairs, Symbol(k) => (k in TEMPORAL_P1_STRING_COLS ? String.(ds[k]) : temporal_p1_vec(ds[k])))
+    end
+    push!(pairs, :value => temporal_p1_vec(ds["value"]))
+    return (; pairs...)
+end
+
+# The receipt stores the temporal marker and the ordinary terms in Julia syntax.
+temporal_p1_eval(s::AbstractString) = Core.eval(GLLVModels, Meta.parse(s))
+temporal_p1_terms(c::AbstractDict) = Any[Meta.parse(t) for t in c["julia_terms"]]
+
+function temporal_p1_composed_fit(C::AbstractDict, c::AbstractDict; kwargs...)
+    tbl = temporal_p1_composed_table(C["datasets"][c["dataset"]])
+    uo = get(c, "unit_obs", "")
+    return fit_temporal_gllvm(tbl; formula=@formula(value ~ 0 + trait),
+        temporal=temporal_p1_eval(c["julia_temporal"]), structure=temporal_p1_terms(c),
+        unit=:series, unit_obs=isempty(uo) ? nothing : Symbol(uo), kwargs...)
 end
 
 end # if !isdefined
