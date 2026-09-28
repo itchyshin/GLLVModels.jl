@@ -38,7 +38,11 @@ on:
         type: boolean
         default: false
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # Non-PR runs get one group per commit. With cancel-in-progress false, GitHub
+  # still keeps only one PENDING run per group and cancels the older one, so a
+  # shared main group let a burst of merges cancel a queued run before it
+  # started (b3d86fe6, 2026-09-27). PR runs keep one group per ref.
+  group: ${{ github.workflow }}-${{ github.ref }}${{ github.event_name != 'pull_request' && format('-{0}', github.sha) || '' }}
   # Never cancel a run on main: a superseded main run reports no status at all,
   # and "green by absence" is indistinguishable from green. PR runs are the only
   # ones a later push makes genuinely redundant. (Carried over from PR #278.)
