@@ -74,6 +74,22 @@ Goal: GOAL-2026-09-28-overnight.md. Written at the start and updated as arcs fin
   1,200 do. So the ridge's real value at weak signal is usability, not accuracy. design/74 T7/T8,
   local commit `a893811b8`.
 
+## Keeping the PRs mergeable (07:00Z to 07:40Z)
+`main` took several merges overnight (#514, #528, #531, #532, #539, #544, #548, #549, #560, #572).
+Checked each open PR against it:
+- #521: merges cleanly. #551, #520, #529 are stacked (base is another PR), unaffected for now.
+- #518: re-merged `main` again (CHANGELOG only); pushed.
+- **#519: real overlap** with the new `cv_gllvm` Gaussian `X` support (#572) and #544/#549 (refuse a
+  covariate fit without `X`). Resolved: no-`X` folds use the trait-intercept fitter, `X` folds use
+  `main`'s covariate fit; held-out species in a species split keep #519's mapping (main's branch would
+  have indexed out of range); an intercept fit without `X` returns intercepts, a covariate fit without
+  `X` still throws. One test from the cv `X` lane assumed a zero-mean no-`X` model (">10x oracle
+  error"); with intercepts it is about 9x, so the bar is now 5x with the reason in the test. **Please
+  check that test change.** 7 test files, 1,419 assertions, 0 failures. Pushed; details on #519.
+- #540: `check-log.md` conflict only. **My slip:** my resolver failed its own check but the next line
+  committed anyway (steps not chained), leaving conflict markers in a local merge commit. Caught before
+  any push, fixed, amended, tree checked for markers, Beta tests re-run (pass), then pushed.
+
 ## Will auto-d work? (your 01:55Z question, answered with tonight's numbers)
 Gaussian 0.95 and Poisson 0.999: yes. Negative binomial: promising (the fixed kernel picked the true
 K where the old one picked 5) but unmeasured until the NB re-run. Binary: K = 1 reliably, higher K only
