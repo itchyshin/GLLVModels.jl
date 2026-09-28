@@ -38,6 +38,7 @@ Written first at 18:27 MDT on 2026-09-27 and updated through the night. The newe
 
 ## In progress overnight
 
+- #581 truncated NB2 Laplace-breakdown guard (head 5cb29b01d): same design as #557 (floor 0.1, flag near the floor, one retry, here restarting the dispersion from a moment estimate). Silent breakdowns over 40 draws: 6 -> 0, each reaching the healthy optimum; red-then-green 27/27 on 1.10 and 1.13; 23 related test files pass. Caveat under review: on 4 of 34 healthy draws the optimiser path changed (one ends 5e-4 lower at the same optimum). Review running.
 - A3 family batch (21 rows) at P1: builder started 22:10, stacked on #579.
 
 ## Findings worth knowing
