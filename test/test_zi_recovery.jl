@@ -9,15 +9,26 @@
 # Setting: p = 4 traits, n = 350 sites, K = 1, zero inflation in [0.15, 0.30],
 # loadings of magnitude 0.4 to 0.6, NB2 dispersion in [1, 2]. Bounds: max |zi error|
 # < 0.08, max |beta error| < 0.15, max |Lambda Lambda' error| < 0.25, NB2 max
-# |log phi error| < 0.5. These are recovery bounds for one dataset each, not coverage
-# claims. The NB2 cells use larger count means (beta 1.6 to 2.2) than the Poisson
+# |log phi error| < 0.5. These bounds are MEASURED ON THE TWO COMMITTED DRAWS
+# (StableRNG seeds 101 and 102) and are recovery bounds for one dataset each, not
+# coverage claims. Other draws at the same DGP can exceed them while matching R's
+# optimum: in 12 MersenneTwister draws of the NB2 cell (seeds 11 to 22, PR #557 second
+# review), seed 14 had zi error 0.119 (R's logLik identical to 1e-6), seed 13 had
+# log phi error 14.5 (R also puts that trait's phi at 6.4e7) and Lambda Lambda' error
+# 0.48, seed 12 Lambda Lambda' error 0.27, and seeds 11 and 21 ended flagged at the
+# breakdown guard where R errors or reports convergence = 1. So one trait's phi at its
+# boundary occurs in about 1 draw in 6 at n = 350, for R and Julia alike. Do not
+# tighten these bounds, and do not widen them to absorb another draw: a failing new
+# draw is a finding to compare against R, not a tolerance to move.
+# The NB2 cells use larger count means (beta 1.6 to 2.2) than the Poisson
 # cells: at means near e^1 and phi near 1 the NB2 count-zero probability is large
 # and the structural-zero probability and phi trade off; measured on two draws with
 # beta = [1.2, 0.8, 1.4, 1.0], phi = [1.0, 1.5, 1.2, 1.0], R at P1 reached the same
 # optima as Julia (logLik to 1e-4) with zi errors 0.10 and 0.15 (one trait's zi at
 # 0) and log phi error 0.65, so that is an identifiability property of the model at
-# this n, not a recovery failure of the route. At the reviewed setting 7 of 20 R
-# fits also put one trait's phi at its upper boundary.
+# this n, not a recovery failure of the route. The higher means reduce, but at n = 350
+# do not remove, that trade-off (see the spread above). At the reviewed setting 7 of
+# 20 R fits also put one trait's phi at its upper boundary.
 using Test
 using GLLVModels
 using StableRNGs
