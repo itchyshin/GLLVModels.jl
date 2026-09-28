@@ -137,6 +137,9 @@ PROBE_SURFACES = {
     "weight_normalisation": ("weights",),
     "weight_shape_adapter": ("weights",),
 }
+# fit-input-2 fixtures whose trait intercepts are, analytically, the per-trait sample means
+# (Gaussian, 0 + trait, iid sites): the coef block cannot tell a GLLVM from column means there.
+IID_GAUSS_COEF_STEMS = {"GAUSS-DEFAULT": "gauss_default", "GAUSS-LOADINGS": "gauss_loadings"}
 COUNT_KEYS = ("numeric_pass", "numeric_fail", "numeric_held_batch_verifier_failed", "numeric_non_discriminating",
               "partial_non_numeric_case", "needs_surface_r_side_measured", "needs_surface_not_executed",
               "retired_at_p1_not_measured", "not_measured")
@@ -393,6 +396,22 @@ def fit_input_cases():
             body["same_measurement_as"] = {"case_id": twin, "identical_r_and_julia_values": identical}
             if identical:
                 body["note"] = SAME_MEASUREMENT_NOTE.format(twin=twin)
+        if stem in IID_GAUSS_COEF_STEMS:
+            fx = oracle[IID_GAUSS_COEF_STEMS[stem]]
+            p, y = fx["p"], fx["y"]  # y is the p x n matrix, column-major
+            means = [sum(y[i::p]) / len(y[i::p]) for i in range(p)]
+            dj = max(abs(a - b) for a, b in zip(j_coef, means))
+            dr = max(abs(a - b) for a, b in zip(r_coef, means))
+            if max(dj, dr) > 1e-6:
+                raise SystemExit(f"{cid}: coef is not the per-trait sample mean (Julia {dj}, R {dr}); fix the note")
+            body["coef_block_note"] = {
+                "analytically_data_determined": True,
+                "text": ("Gaussian, 0 + trait, iid sites: the maximum-likelihood trait intercepts are the per-trait "
+                         "sample means whatever the latent structure, so any code that returns column means passes "
+                         "this coef block. Only the logLik block discriminates the model on this case. The coef "
+                         "entry is left as discriminating: true under the shared degenerate rule (disclosed, not "
+                         "reclassified)."),
+                "max_abs_julia_coef_minus_trait_mean": dj, "max_abs_r_coef_minus_trait_mean": dr}
         if not any(cid in r["executable_case_ids"] for r in load(P0_CASEMAP)["rows"]):
             body["unbound_case_note"] = ("No required row lists this case id in executable_case_ids "
                                          f"({sid} is NOT_BOUND_AT_P0 with an empty list), so it pays no row here.")
