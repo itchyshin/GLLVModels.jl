@@ -248,6 +248,35 @@ mode), `c1_numeric_label_malformed_comparison` (tolerance a string, no differenc
 the real `coef,gllvmTMB_multi` row and its real receipts, which went from `C1_MET`/`C8_MET` to
 `C1_NOT_MET`/`C8_NOT_MET`. The positive-control `base` fixture's receipts now carry real blocks.
 
+### A receipt that says it failed does not bind (review of #567)
+
+A tamper test on #567's receipts set `verdict` to `"FAIL"` with the comparison block intact, and
+the row still bound. The tool now reads the status fields that real core070 receipts write:
+`verdict`, `batch_status` and `harness_pass` (case receipts) and `status` (batch receipts). Each
+one present at the top level of a cited JSON receipt, or inside its `comparison` block, must hold
+a pass value (`"PASS"`, `"pass"` or `true`); anything else, including `"FAIL"`, `null` or an
+object, fails the row as `NUMERIC_RECEIPT_NOT_PASSED(<field>=<value> in <receipt>; <why the
+exception does not apply>)`. C1 lists it under `numeric_receipt_not_passed=` and is not MET; C8
+fails it with that tag. A missing status field is not a failure (older receipts carry none).
+
+The one waiver is a maintainer-signed field on the case-map row:
+
+```json
+"receipt_status_exception": {
+  "reason": "batch receipt reads FAIL because of one unrelated case; this case passes",
+  "signed_by": "Shinichi Nakagawa",
+  "signed_on": "2026-09-27"
+}
+```
+
+Same signer allow-list and date rule as a signed disposition, plus a non-empty `reason`. It waives
+only the status check (the comparison block must still be valid, pinned to P1 and within
+tolerance), and a row bound this way counts in `bound_signed=`, never in `bound=` or
+`bound_numeric=`. Negative controls: `c1_numeric_receipt_verdict_fail` (top-level `verdict:
+"FAIL"`), `c1_numeric_receipt_comparison_status_fail` (`batch_status: "FAIL"` inside the
+comparison block), `c1_numeric_receipt_fail_exception_by_agent` (exception signed by an agent
+name: still not bound); positive control `c1_numeric_receipt_fail_signed_exception`.
+
 What this does not do: the tool checks that the receipt records a comparison within tolerance; it
 does not re-run the comparison, and it cannot tell whether the tolerance chosen is reasonable. A
 receipt that records false numbers passes. That is PR review's job, as for any other receipt.

@@ -375,6 +375,51 @@ test('numeric tier: the real coef,gllvmTMB_multi row relabelled "numeric" is NOT
   }
 });
 
+// --- receipt status (review of #567, tamper test "verdict = FAIL, comparison intact"): a
+// comparison block within tolerance is not enough when the receipt itself says the run did not
+// pass. A status/verdict/batch_status/harness_pass field that is not a pass value, at the top
+// level or inside the comparison block, fails the row as NUMERIC_RECEIPT_NOT_PASSED; only a
+// maintainer-signed receipt_status_exception on the row waives it, and then the row counts in
+// bound_signed=, never in bound_numeric=. ---
+for (const [fixture, why] of [
+  ['c1_numeric_receipt_verdict_fail', /verdict="FAIL" in docs\/dev-log\/core070\/true-parity-latest\/receipts\/r1\.json/],
+  ['c1_numeric_receipt_comparison_status_fail', /comparison\.batch_status="FAIL" in /],
+]) {
+  test(`receipt status: ${fixture} fails C1 (NUMERIC_RECEIPT_NOT_PASSED)`, () => {
+    const { stdout, code } = run(fixture, 'C1');
+    assert.equal(code, 0);
+    assert.match(stdout, /C1_NOT_MET$/m);
+    assert.match(stdout, /bound_numeric=1\b/);
+    assert.match(stdout, /numeric_label_without_numeric_receipt=none\b/);
+    assert.match(stdout, /numeric_receipt_not_passed=isdm\/CAP-ISDM-1FO-PREDICT-EXPORT\(/);
+    assert.match(stdout, why);
+  });
+  test(`receipt status: ${fixture} fails C8 (NUMERIC_RECEIPT_NOT_PASSED)`, () => {
+    const { stdout, code } = run(fixture, 'C8');
+    assert.equal(code, 0);
+    assert.match(stdout, /C8_NOT_MET$/m);
+    assert.match(stdout, /isdm\/CAP-ISDM-1FO-PREDICT-EXPORT:NUMERIC_RECEIPT_NOT_PASSED\(/);
+  });
+}
+test('receipt status: a maintainer-signed receipt_status_exception binds the row as bound_signed, not bound_numeric', () => {
+  const c1 = run('c1_numeric_receipt_fail_signed_exception', 'C1');
+  assert.equal(c1.code, 0);
+  assert.match(c1.stdout, /C1_MET$/m);
+  assert.match(c1.stdout, /bound=1 bound_numeric=1 bound_registration_only=0 bound_signed=2\b/);
+  assert.match(c1.stdout, /numeric_receipt_not_passed=none\b/);
+  const c8 = run('c1_numeric_receipt_fail_signed_exception', 'C8');
+  assert.match(c8.stdout, /C8_MET$/m);
+});
+test('receipt status: a receipt_status_exception signed by an agent does not waive the FAIL', () => {
+  const c1 = run('c1_numeric_receipt_fail_exception_by_agent', 'C1');
+  assert.match(c1.stdout, /C1_NOT_MET$/m);
+  assert.match(c1.stdout, /numeric_receipt_not_passed=isdm\/CAP-ISDM-1FO-PREDICT-EXPORT\(verdict="FAIL" .*; DISPOSITION-SIGNER-NOT-ALLOWED\)/);
+  assert.match(c1.stdout, /bound_signed=1\b/);
+  const c8 = run('c1_numeric_receipt_fail_exception_by_agent', 'C8');
+  assert.match(c8.stdout, /C8_NOT_MET$/m);
+  assert.match(c8.stdout, /NUMERIC_RECEIPT_NOT_PASSED\(verdict="FAIL"/);
+});
+
 // --- signed-disposition hatch (review of #561): the signer must be on the maintainer allow-list
 // (an agent name is refused), the date must be a real calendar date not in the future, and a
 // signed row is counted in bound_signed=, never in bound= ---
