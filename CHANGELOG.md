@@ -32,8 +32,12 @@ All notable changes to GLLVModels.jl are documented here.
   precision can approach singularity, and the Laplace value then inflates (on one
   NB2 dataset 363 units above the exact marginal; gllvmTMB's objective returns the
   same inflated value). Sites below the floor are refused, an optimum at the floor is
-  reported with `converged = false`, and the NB2 start was hardened. Recovery test:
-  `test/test_zi_recovery.jl`; note:
+  reported with `converged = false`, the NB2 start was hardened, and a fit that ends
+  at the guard is retried once from a shrunk start (35 NB2 draws: 30 converge, the 5
+  flagged are draws gllvmTMB also fails on). Recovery is shown for `|lambda| <= 0.6`
+  only. Missing responses (`missing` or `NaN`) are refused with an `ArgumentError`.
+  Recovery test: `test/test_zi_recovery.jl` (R-pinned breakdown datasets in
+  `test/test_zi_twin.jl`); note:
   `docs/dev-log/decisions/2026-09-27-zi-laplace-breakdown-guard.md`.
 
 ### Fixed

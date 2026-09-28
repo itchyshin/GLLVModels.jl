@@ -1194,7 +1194,14 @@ How this differs from Julia's own routes, which stay available unchanged:
 On the ZIP twin fixture the Julia `ZIPoisson` marginal evaluated at R's optimum
 is 3.62 log-likelihood units away from R's logLik, while the `zi_poisson()`
 route matches to 1.4e-8 (optimum against optimum). Twin evidence:
-`test/test_zi_twin.jl`; known-DGP recovery: `test/test_zi_recovery.jl`.
+`test/test_zi_twin.jl` (which also carries the R-pinned NB2 breakdown datasets);
+known-DGP recovery: `test/test_zi_recovery.jl`. Recovery has been shown only for
+loadings with `|λ| <= 0.6` (p = 4, n = 350, K = 1). With stronger loadings
+(`|λ|` from 0.8 to 1.8, Poisson, measured on three draws) the default starts of both
+gllvmTMB and this route land in a lower basin, far below the log-likelihood at the
+true parameters (on one draw both engines converge to the same point, 711 units below
+it, and both report convergence). That is a start-quality gap shared by both engines,
+not a guard artefact; a multi-start would address it on either side.
 
 **Laplace breakdown guard.** At `y = 0` the mixture's observed curvature can be
 negative, so the per-site Laplace precision `A = I + Λ' diag(W) Λ` can approach
@@ -1205,8 +1212,17 @@ through its start, and stopped in that region with `convergence = 1` on 2 of 20
 draws). This route refuses a site whose `A` has an eigenvalue below
 `ZI_LAPLACE_EIGMIN_FLOOR` (0.1), reports an optimum at the floor with
 `converged = false` (`fit.min_site_eigen` records the value), and starts NB2 fits
-from a moment estimate of `phi`. The guard does not remove Laplace error above the
-floor. Missing responses are refused (gllvmTMB masks them per row).
+from a moment estimate of `phi`. A fit that ends at the guard is retried once from a
+shrunk start (loadings at a tenth of the default start) and the retry is kept only if
+it ends off the guard. Measured on 35 NB2 draws (20 at the reviewer's setting, 15 at
+the recovery-test setting): 30 fits converge off the guard, and the 5 that end flagged
+are all draws on which gllvmTMB also fails (an error or `convergence = 1`). Before the
+retry, one further draw (1 of the 15) stalled at the guard where gllvmTMB reached a
+sensible optimum; the retry reaches that optimum (logLik -3820.2665, matching R). So
+the start and retry reach the sensible optimum on every measured draw where gllvmTMB
+does, not on every dataset. The guard does not remove Laplace error above the floor.
+Missing responses (`missing` or `NaN`) are refused with an `ArgumentError` (gllvmTMB
+masks them per row).
 
 Only the no-covariate model is offered on this route,
 and `predict`, `confint`, `simulate` and the extractors below are not wired for

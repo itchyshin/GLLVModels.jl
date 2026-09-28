@@ -3,7 +3,7 @@
 - Branch `claude/twin-zi` from `origin/main` @ `97e11be04`. New `src/families/zi_twin.jl`:
   R-named constructors, `fit_zi_gllvm` / `ZiFit` / `zi_marginal_loglik_laplace`, and a
   `_fit_gllvm` method so `fit_gllvm(Y; family = zi_poisson(), K)` works. The route reuses
-  `twopart_loglik_site` through per-cell markers that supply the observed count curvature
+  the two-part mode search and pieces through per-cell markers that supply the observed count curvature
   (nested ForwardDiff of the mixture density) to the Laplace log-determinant; Julia's own
   `ZIPoisson` / `ZINegBin` / `ZIB` routes are unchanged.
 - Twin fixtures fitted in R at gllvmTMB `9539352f6` (temporary library): logLik optimum vs
@@ -20,6 +20,15 @@
   (R's optimum) after. 20 NB2 draws: 3 silent breakdowns before, 0 after (2 flagged
   not converged, which R also fails on). New `test/test_zi_recovery.jl`; note
   `docs/dev-log/decisions/2026-09-27-zi-laplace-breakdown-guard.md`.
+- Second review applied (head `d0a57e05d`): one shrunk-start retry (loadings x 0.1) when
+  a fit ends at the guard; the review's Julia-only stall (recovery DGP, MersenneTwister(2))
+  goes from flagged at -3749.88 to converged at -3820.2665 (R -3820.266506). Builder's 20
+  draws: 18 converged, 2 flagged (seeds 6, 10; R fails). Reviewer's 15 draws: 12 converged,
+  3 flagged (all R fails). zi_poisson / zi_binomial 15-draw sweeps: 15/15 converged each,
+  guard never binding, min site eigenvalue at optima 0.318 / 0.549. `missing`-typed Y
+  refused with ArgumentError. R-pinned literal NB2 cases moved into the P1-tagged
+  `test/test_zi_twin.jl`. Julia 1.10.12 and 1.13.0: test_zi_twin 80/80, test_zi_recovery
+  42/42, test_zero_inflated 29/29, test_curvature_census 66/66 (each version).
 
 ## 2026-09-25: Two-part families no longer score an unfinished mode search (#484)
 
