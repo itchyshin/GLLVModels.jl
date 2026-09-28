@@ -587,6 +587,18 @@ All notable changes to GLLVModels.jl are documented here.
   counts only the ones kept. When every replicate converges, bootstrap
   endpoints are identical to before. No boundary flag: NB1's common boundary
   is the Poisson limit `φ → 0`, a lower boundary.
+- **Tweedie `confint(..., method = :bootstrap)` now reports the refit's own
+  convergence verdict (part of #504).** The refit closures for `TweedieFit`,
+  `TweedieGroupedFit` and `TweediePerTraitPowerFit` (`src/confint_family.jl`)
+  returned a bare parameter vector, so a replicate whose refit ended on the
+  fitter's failure sentinel (`_tweedie_verdict`'s `:objective_failed`, with the
+  finite warm start as θ) was counted as a good draw. They now return
+  `(θ = ..., converged = ..., loglik = ...)`, as Poisson's does since #516; such
+  replicates are excluded and `n_converged` counts only the ones kept. When
+  every replicate converges, bootstrap endpoints are identical to before. No
+  boundary flag is added: the power is held fixed in the CI layer, and the
+  Tweedie verdict already reports a power at the edge of (1, 2) as not
+  converged.
 
 ### Added
 - **Temporal covariance source, temporal source alone (gllvmTMB P1 port).**
