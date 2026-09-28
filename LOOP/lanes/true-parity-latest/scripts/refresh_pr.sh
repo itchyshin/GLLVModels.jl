@@ -7,7 +7,7 @@ CLONE="/Users/z3437171/Dropbox/Github Local/GLLVM.jl"
 N=$1
 B=$(gh pr view $N -R $R --json headRefName -q .headRefName)
 git -C "$CLONE" fetch -q origin
-WT=$(mktemp -d "$(dirname $0)/refresh.XXXX"); rmdir "$WT"
+WT=$(mktemp -d "${TMPDIR:-/tmp}/refresh.XXXX"); rmdir "$WT"
 git -C "$CLONE" worktree add -q --detach "$WT" origin/$B || exit 1
 cd "$WT"
 cleanup(){ cd /; git -C "$CLONE" worktree remove --force "$WT" >/dev/null 2>&1; }
