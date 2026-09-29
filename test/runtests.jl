@@ -454,5 +454,7 @@ println(_SHARD === nothing ?
     _shard_include("test_temporal_oracles.jl")
     _shard_include("test_temporal_fit_receipts.jl")
     _shard_include("test_temporal_helpers.jl")
+    _shard_include("test_temporal_composed.jl")
+    _shard_include("test_temporal_composed_receipts.jl")
     _shard_include("test_isdm.jl")
 end

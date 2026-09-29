@@ -1,3 +1,18 @@
+## 2026-09-27: Temporal source beside ordinary unit / unit_obs terms at gllvmTMB P1 (slice 2)
+
+- Branch `claude/temporal-slice2`, stacked on slice 1 (draft PR #543). `fit_temporal_gllvm`
+  gains `unit` / `unit_obs`; its `structure` admits `indep`, `dep`, `latent` at either level
+  and `(1 | g)`; nesting, partition and grouping refusals in R's order; the sigma_eps
+  suppression rule (R/fit-multi.R:6959-6967); R's measured `opt$par` order (`theta_rr_B`
+  before the temporal blocks); composed `simulate`, `extract_ordination(level = :unit)`,
+  `update`; helper refusals name R's tiers. Optimiser: both LBFGS line searches, keep the
+  lower, then Newton polish. No edit to `src/formula.jl` or the other fenced files.
+- Receipts (`test/fixtures/temporal_p1/generate_temporal_p1_slice2.R`, 25 fits + the
+  oracles.R:318 point): fn / gr at fixed coordinates max 3.0e-9 / 3.4e-9; dense oracle
+  9.1e-13; R's fn at Julia's optimum 1.7e-9; |Δ logLik| 9.0e-8; Newton-polished R summary
+  gap 8.0e-8; report `eta` 1.8e-15; unit ordination 8.9e-16.
+- Per-file runs on Julia 1.10 and 1.13 (full suite not run): see the after-task report.
+- After-task: `docs/dev-log/after-task/2026-09-27-temporal-slice2.md`.
 ## 2026-09-27: zi_poisson / zi_nbinom2 / zi_binomial twins of gllvmTMB at P1
 
 - Branch `claude/twin-zi` from `origin/main` @ `97e11be04`. New `src/families/zi_twin.jl`:
@@ -262,6 +277,7 @@
   against R's polished optimum). Cross-objective both directions within 1.3e-11 on all four cases.
 - Finding: R's `latent()` default `unique = TRUE` adds `theta_diag_B`, which the spec omits; the Julia
   door refuses it. Provenance: `docs/dev-log/decisions/2026-09-27-isdm-port-provenance.md`.
+
 ## 2026-09-27: namespace P1 re-measure hardened after review (supersedes #559 as a new PR)
 
 - Branch `claude/true-parity-p1-namespace-v2` from `origin/main` after #539 merged (`cb5688f7e`);

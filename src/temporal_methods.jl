@@ -1,4 +1,4 @@
-# Extractors and helper routes of the temporal source (slice 1).
+# Extractors and helper routes of the temporal source (slices 1 and 2).
 
 _temporal_require_fit(fit, what) = fit isa TemporalGaussianFit ||
     _temporal_abort(what)
@@ -72,10 +72,21 @@ _temporal_convergence_code(f::TemporalGaussianFit) =
     f.stopping_reason === :gradient_not_converged ? 2 : 3
 
 # `.gllvmTMB_predict_unhandled_re_tiers(object, handled = "temporal")`: the
-# ordinary and structured tiers active beside the temporal source. Slice 1 fits
-# the temporal source alone, so this is always empty; the refusals below keep
-# R's check order for when composition arrives.
-_temporal_other_tiers(f::TemporalGaussianFit) = String[]
+# names of the template tiers active beside the temporal source, sorted, as
+# gllvmTMB reports them: `rr_B` / `diag_B` for a unit term (dep: rr only;
+# indep: diag only; latent: rr, plus diag when unique), `rr_W` / `diag_W` for a
+# unit_obs term, `re_int` for `(1 | g)`.
+function _temporal_other_tiers(f::TemporalGaussianFit)
+    c = f.spec.composition
+    out = String[]
+    for (t, lab) in ((c.B, "B"), (c.W, "W"))
+        t === nothing && continue
+        t.rank > 0 && push!(out, "rr_" * lab)
+        t.diag && push!(out, "diag_" * lab)
+    end
+    c.re_int === nothing || push!(out, "re_int")
+    return sort(out)
+end
 
 _temporal_nll_closure(f::TemporalGaussianFit) =
     let rows = _temporal_series_rows(f.spec)
@@ -94,9 +105,24 @@ function _temporal_cross_covariance(f::TemporalGaussianFit, ls, lt, lj, rs, rt, 
 end
 
 # Refit the saved call on new data (gllvmTMB's `update(object, data = )`).
-_temporal_refit(f::TemporalGaussianFit, data) =
-    fit_temporal_gllvm(data; formula=f.formula, temporal=f.term, trait=f.trait,
+_temporal_refit(f::TemporalGaussianFit, data) = update(f; data=data)
+
+"""
+    update(fit::TemporalGaussianFit; data, formula, temporal, trait, structure,
+           unit, unit_obs, g_tol, iterations)
+
+Refit a temporal model, replaying the saved call with any named argument
+replaced, twin of gllvmTMB's `update()` on a temporal fit. Arguments not given
+keep their fitted values (`data` the fitted table, `structure` the ordinary
+terms, `unit` / `unit_obs` the fitted columns).
+"""
+function update(f::TemporalGaussianFit; data=f.data, formula=f.formula, temporal=f.term,
+        trait=f.trait, structure=f.spec.composition.terms,
+        unit=f.spec.composition.unit_col, unit_obs=f.spec.composition.unit_obs_col,
         g_tol=f.g_tol, iterations=f.max_iterations)
+    return fit_temporal_gllvm(data; formula=formula, temporal=temporal, trait=trait,
+        structure=structure, unit=unit, unit_obs=unit_obs, g_tol=g_tol, iterations=iterations)
+end
 
 # ---------------------------------------------------------------------------
 # compare_temporal (R/temporal-selection.R)
@@ -281,6 +307,39 @@ function _temporal_redraw_effect(f::TemporalGaussianFit, rng::AbstractRNG)
         rank > 0 && (out[o] += dot(view(f.loadings, j, :), view(z, 1:rank, s)))
         spec.unique && (out[o] += q[j, s])
     end
+    _temporal_redraw_ordinary!(out, f, rng)
+    return out
+end
+
+# Unconditional redraw of the ordinary tiers composed with the temporal source:
+# per unit (B) and per unit_obs (W) level, `Lambda z + sqrt(psi) s` with
+# standard-normal `z` and `s`; per random-intercept level, `sigma_re u`.
+function _temporal_redraw_ordinary!(out, f::TemporalGaussianFit, rng::AbstractRNG)
+    spec = f.spec; c = spec.composition; p = length(spec.traits)
+    L = TemporalLayout(size(f.X, 2), spec)
+    theta = f.parameters
+    for (tier, rr, dg, rank, ids, nlev) in (
+            (c.B, L.rr_B, L.diag_B, L.rank_B, c.unit_id, length(c.unit_levels)),
+            (c.W, L.rr_W, L.diag_W, L.rank_W, c.unit_obs_id, length(c.unit_obs_levels)))
+        tier === nothing && continue
+        effect = zeros(p, nlev)
+        if rank > 0
+            Lam = unpack_lambda(view(theta, rr), p, rank)
+            effect .+= Lam * reshape(randn(rng, rank * nlev), rank, nlev)
+        end
+        if !isempty(dg)
+            effect .+= exp.(theta[dg]) .* reshape(randn(rng, p * nlev), p, nlev)
+        end
+        for o in eachindex(out)
+            out[o] += effect[spec.trait_id[o], ids[o]]
+        end
+    end
+    if c.re_int !== nothing
+        u = f.sigma_re_int .* randn(rng, maximum(c.re_int_id))
+        for o in eachindex(out)
+            out[o] += u[c.re_int_id[o]]
+        end
+    end
     return out
 end
 
@@ -290,9 +349,11 @@ end
 
 Draw `nsim` Gaussian response vectors (an `n × nsim` matrix, rows in data
 order) from a temporal fit. With `condition_on_RE = true` the draw is centred
-on the fitted predictor, which includes the conditional temporal states; with
+on the fitted predictor, which includes the conditional temporal states and
+the conditional ordinary unit / unit_obs / random-intercept effects; with
 `false` the temporal states are redrawn from their stationary AR1/OU recursion
-before the residual noise is added, as in gllvmTMB.
+and every ordinary tier from its prior before the residual noise is added, as
+in gllvmTMB.
 """
 function simulate(fit::TemporalGaussianFit; nsim::Integer=1, condition_on_RE::Bool=false,
         rng::AbstractRNG=default_rng())
@@ -608,4 +669,47 @@ function getLV(fit::TemporalGaussianFit)
         time=copy(spec.pair_table.time))
     return (scores=sgn.multiplier .* scores, loadings=sgn.multiplier .* fit.loadings,
         pair_index=pair_index, sign=sgn)
+end
+
+"""
+    extract_ordination(fit::TemporalGaussianFit; level = :unit)
+
+Ordination scores of a temporal fit, twin of gllvmTMB's
+`extract_ordination()` on a temporal fit. At `level = :unit` (alias `:B`):
+when the fit has an ordinary unit term with loadings (`latent` or `dep`
+beside the temporal source), the conditional (posterior-mean) unit scores,
+one row per unit level, with the raw unit loadings and `row_id`; otherwise,
+for a rank-one `temporal_latent` fit, the temporal state scores of
+[`getLV`](@ref) with `row_id`, `row_index` (the pair index) and
+`temporal_sign`; otherwise `nothing`. At `level = :unit_obs` (alias `:W`):
+the conditional unit_obs scores of an ordinary unit_obs term with loadings,
+else `nothing`. Returns a `NamedTuple` `(scores, loadings, row_id, ...)`.
+"""
+function extract_ordination(fit::TemporalGaussianFit; level=:unit)
+    lev = Symbol(level)
+    lev in (:unit, :B, :unit_obs, :W) ||
+        throw(ArgumentError("`level` must be :unit (or :B) or :unit_obs (or :W); got $(repr(level))"))
+    spec = fit.spec; c = spec.composition
+    L = TemporalLayout(size(fit.X, 2), spec)
+    if lev in (:unit, :B)
+        if L.rank_B == 0
+            spec.mode === :latent || return nothing
+            lv = getLV(fit)
+            return (scores=lv.scores, loadings=lv.loadings, row_id=copy(lv.pair_index.pair_id),
+                row_index=lv.pair_index, temporal_sign=lv.sign)
+        end
+        rank, rr, ids, levels = L.rank_B, L.rr_B, c.unit_id, c.unit_levels
+    else
+        L.rank_W == 0 && return nothing
+        rank, rr, ids, levels = L.rank_W, L.rr_W, c.unit_obs_id, c.unit_obs_levels
+    end
+    p = length(spec.traits)
+    Lam = Matrix{Float64}(unpack_lambda(view(fit.parameters, rr), p, rank))
+    V = _temporal_covariance(fit.parameters, spec, size(fit.X, 2))
+    w = cholesky(Symmetric(V)) \ (fit.y .- fit.X * fit.beta)
+    scores = zeros(length(levels), rank)
+    for o in eachindex(w), k in 1:rank
+        scores[ids[o], k] += Lam[spec.trait_id[o], k] * w[o]
+    end
+    return (scores=scores, loadings=Lam, row_id=copy(levels))
 end
