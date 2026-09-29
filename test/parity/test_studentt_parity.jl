@@ -210,11 +210,14 @@ end
         jl_diag = fit_studentt_gllvm(Y_diag; K = K_diag, nu = nothing,
                                      disp_group = :species, g_tol = 1e-7,
                                      iterations = 800)
-        @test r_diag.converged
-        @test r_diag.optimizer_code == 0
         # The DGP is the Gaussian limit (ν = 1e6), so an estimated ν at the ν → ∞
-        # boundary is the expected outcome, and the boundary-honesty rule then sets
-        # `converged = false` by design. Accept that, and nothing else.
+        # boundary is the expected outcome on both engines. Julia's boundary-honesty
+        # rule then sets `converged = false` by design, and gllvmTMB's nlminb can end
+        # with "false convergence" (code 1) there: on the same stored draw R 4.5.3 CI
+        # returned code 0 on one run and 1 on the next, with ν = (17.7, 1.5e6, 2e4) and
+        # |Δ logLik| 6e-6 both times. Accept a boundary on either side, and nothing else.
+        r_boundary = any(>(1e6), r_diag.df_vec)
+        @test (r_diag.converged && r_diag.optimizer_code == 0) || r_boundary
         @test jl_diag.converged || jl_diag.nu_boundary
         @test isfinite(r_diag.logLik) && isfinite(jl_diag.loglik)
         # ν is inherently weakly identified near the Gaussian limit. Do not
