@@ -208,22 +208,6 @@ All notable changes to GLLVModels.jl are documented here.
   (a separate issue, recorded as `@test_broken`). Log-likelihoods are unchanged.
   Test: `test/test_gamma_beta_upper_boundary.jl` (literal fixture
   `test/fixtures/gamma_beta_upper_boundary.toml`).
-- **Shared-r NB2 (`fit_nb_gllvm`) reported `converged = true` at the Poisson
-  limit.** On Poisson data the fitted `r` ran to 1e6 or beyond (1.7e7 on the
-  fixture, Julia 1.10; 1.6e7 on 1.13), where the likelihood is flat in `log r`, and
-  the optimizer flag still read converged. The fitter now applies the same boundary
-  verdict as the grouped NB fitters (`_dispersion_group_boundary`, `r` outside
-  `[1e-6, 1e6]`): `converged` is forced `false` and a warning is emitted; the
-  reported `loglik` is unchanged. Fits with `r` inside the bounds are unaffected.
-  Test: `test/test_nb_shared_r_boundary.jl` (literal fixture
-- **Shared-r NB2 (`fit_nb_gllvm`) now warns at the Poisson limit.** On Poisson
-  data the fitted `r` ran to 1e6 or beyond (1.7e7 on the fixture, Julia 1.10; 1.6e7
-  on 1.13) with no message. Maintainer decision 2026-09-29 ("NB upper end: warn only
-  everywhere"): above 1e6 the fitter warns and keeps the optimizer's `converged`
-  (gllvmTMB 0.7.1 itself reaches this end on most ordinary per-trait NB fits); below
-  1e-6 it reports `converged = false`. The reported `loglik` is unchanged. Test:
-  `test/test_nb_shared_r_boundary.jl` (literal fixture
-  `test/fixtures/nb_shared_r_boundary.toml`).
 - **Gaussian `@formula(y ~ x)` fitted no species intercepts (#520).** The
   default Gaussian formula branch passed a site-only design to
   `fit_gaussian_gllvm`. `y ~ x` and `y ~ 1 + x` now fit one intercept per trait
