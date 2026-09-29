@@ -1010,6 +1010,71 @@ end
 _beta_grouped_g_met(res, g_tol) = (gres = Optim.g_residual(res);
     isfinite(gres) && gres <= max(g_tol, g_tol * abs(Optim.minimum(res))))
 
+# Large-precision Beta fits (φ above about 1e5, near-deterministic proportions) can never
+# meet `_beta_grouped_g_met`: the intercept curvature grows like φ (measured 1.1e9 at
+# φ = 9.6e7), so a stationary point to within the objective's own noise (about 1e-6)
+# still shows a raw finite-difference gradient of 1 to 10. There the gradient is judged in
+# standard-error units instead, |g_i| / sqrt(H_ii), against the same scale-aware
+# threshold `max(g_tol, g_tol * |nll|)`, after a diagonal Newton polish that is accepted
+# only when it lowers the objective. `_beta_grouped_curvature_probe` widens each
+# coordinate's step (1e-6 to 0.1) until the symmetric rise clears 1e-4, well above the
+# noise, so g_i and H_ii are measured rather than noise; a coordinate whose symmetric
+# rise never clears it (flat, or falling on both sides) fails the test. Measured on the #620
+# beta_huge fixture: 0.0153 before the polish, 2.5e-4 after two steps (threshold 0.0152).
+# A caller's tiny g_tol still fails (d01, g_tol = 1e-12: 1.9e-4 against 2.7e-10).
+function _beta_grouped_curvature_probe(f, θ, f0)
+    d = length(θ)
+    g = fill(NaN, d); H = fill(NaN, d)
+    e = zeros(d)
+    for i in 1:d
+        h = 1e-6
+        while h <= 0.1
+            e[i] = h
+            fp, fm = f(θ .+ e), f(θ .- e)
+            e[i] = 0.0
+            rise = (fp + fm) / 2 - f0
+            if rise >= 1e-4
+                g[i] = (fp - fm) / (2h); H[i] = 2rise / h^2
+                break
+            end
+            h *= 10
+        end
+        isnan(H[i]) && return g, H, false
+    end
+    return g, H, true
+end
+
+function _beta_grouped_scaled_polish(f, θ, f0, thr; maxit::Integer = 10)
+    for _ in 1:maxit
+        g, H, ok = _beta_grouped_curvature_probe(f, θ, f0)
+        ok || return θ, f0, false      # a coordinate that is flat or not convex
+        maximum(abs.(g) ./ sqrt.(H)) <= thr && return θ, f0, true
+        step = g ./ H
+        t = 1.0; moved = false
+        for _ in 1:20
+            ft = f(θ .- t .* step)
+            if isfinite(ft) && ft < f0
+                θ = θ .- t .* step; f0 = ft; moved = true
+                break
+            end
+            t /= 2
+        end
+        moved || return θ, f0, false
+    end
+    return θ, f0, false
+end
+
+# The Beta grouped verdict: `_fit_verdict`, then the #480 gradient test, then (only when
+# that fails) the standard-error-scaled test above. Returns the point to report.
+function _beta_grouped_verdict(negll, res, g_tol)
+    loglik, conv, iters = _fit_verdict(res)
+    θ̂ = Optim.minimizer(res)
+    (!conv || _beta_grouped_g_met(res, g_tol)) && return θ̂, loglik, conv, iters
+    f0 = Optim.minimum(res)
+    θp, fp, ok = _beta_grouped_scaled_polish(negll, θ̂, f0, max(g_tol, g_tol * abs(f0)))
+    return ok ? (θp, -fp, true, iters) : (θ̂, loglik, false, iters)
+end
+
 # A group precision far above the rest is the flat-plateau sign #480 described: as φ grows
 # the Beta tends to a point mass and that group's log-φ gradient goes to zero, so L-BFGS can
 # stop there and still meet the gradient test. Measured on the #480 screen dataset d05
@@ -1097,14 +1162,12 @@ function fit_beta_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     opts = Optim.Options(g_tol = g_tol, iterations = iterations)
     res = Optim.optimize(negll, θ0, ls, opts; autodiff = :finite)
     res = _beta_grouped_gradient_restart(negll, res, θ0, ls, opts, p + rr + 1)
-    θ̂ = Optim.minimizer(res)
+    θ̂, loglik, conv, iters = _beta_grouped_verdict(negll, res, g_tol)
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     φ̂g = exp.(θ̂[(p + rr + 1):(p + rr + G)])
     boundary = _dispersion_group_lower_boundary(φ̂g)
     any(boundary) && @warn "Beta grouped-dispersion fit reached the per-group lower boundary (φ below 1e-6) for group(s) $(findall(boundary)); those groups' precision is at the near-Bernoulli limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
-    loglik, conv, iters = _fit_verdict(res)
-    conv = conv && _beta_grouped_g_met(res, g_tol)   # #480: a zero-length step is not convergence
     return BetaGroupedFit(β̂, Λ̂, φ̂g, gidx, link, loglik, conv && !any(boundary), iters, hessian,
                           boundary)
 end
@@ -1247,7 +1310,7 @@ function fit_beta_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 
     opts = Optim.Options(g_tol = g_tol, iterations = iterations)
     res = Optim.optimize(negll, θ0, ls, opts; autodiff = :finite)
     res = _beta_grouped_gradient_restart(negll, res, θ0, ls, opts, p + q + rr + 1)
-    θ̂ = Optim.minimizer(res)
+    θ̂, loglik, conv, iters = _beta_grouped_verdict(negll, res, g_tol)
     β̂ = θ̂[1:p]
     γ̂_free = θ̂[(p + 1):(p + q)]
     γ̂ = collect(Float64, _expand_fixed_zero(γ̂_free, γ_fixed_mask))
@@ -1255,8 +1318,6 @@ function fit_beta_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 
     φ̂g = exp.(θ̂[(p + q + rr + 1):(p + q + rr + G)])
     boundary = _dispersion_group_lower_boundary(φ̂g)
     any(boundary) && @warn "Beta grouped-cov fit reached the per-group lower boundary (φ below 1e-6) for group(s) $(findall(boundary)); those groups' precision is at the near-Bernoulli limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
-    loglik, conv, iters = _fit_verdict(res)
-    conv = conv && _beta_grouped_g_met(res, g_tol)   # #480: a zero-length step is not convergence
     return BetaGroupedCovFit(β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, φ̂g, gidx, link,
                              loglik, conv && !any(boundary), iters, hessian, boundary)
 end

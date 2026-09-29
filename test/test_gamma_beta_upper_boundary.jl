@@ -85,22 +85,21 @@ _gbub_disp(f) = hasproperty(f, :α) ? f.α : hasproperty(f, :φ) ? f.φ : f.r_gr
             @test all(>(1e6), est)
             @test all(1e7 .< est .< 1e9)                      # close to the truth 1e8
             @test !any(fit.dispersion_boundary)
-            if c["family"] == "gamma"
-                @test fit.converged                           # was false on main
-            elseif on_record_platform
-                # Beta: no longer flagged, but still converged = false for a separate
-                # reason. The #480 gradient gate (`_beta_grouped_g_met`) needs the
-                # gradient norm below max(g_tol, g_tol * |nll|), which a Beta fit with
-                # φ above about 1e5 does not reach (measured 2026-09-29: φ̂ = 8.3e4,
-                # 8.3e5 and 1.04e6 all converged = false with no boundary flag; the
-                # central-difference gradient at this optimum is 1 to 10 in β and Λ
-                # at every step from 1e-4 to 1e-7). Out of scope here; kept visible.
-                @test_broken fit.converged
-            end
+            # Gamma: was false on main only because of the boundary flag. Beta: also
+            # needed the standard-error-scaled gradient test (`_beta_grouped_verdict`):
+            # with φ above about 1e5 the raw gradient at a stationary point is 1 to 10
+            # (intercept curvature about 1e9), so the #480 raw-gradient gate could never
+            # pass. The diagonal Newton polish that goes with that test can move a Beta
+            # optimum up slightly (beta_huge: +1.2e-4), never down.
+            @test fit.converged
             @test isfinite(fit.loglik)
             if on_record_platform && haskey(c, vkey * "_loglik")
-                # Only the verdict changes; the optimum does not move.
-                @test fit.loglik ≈ c[vkey * "_loglik"] atol = 1e-8
+                if c["family"] == "gamma"
+                    @test fit.loglik ≈ c[vkey * "_loglik"] atol = 1e-8   # verdict only
+                else
+                    @test fit.loglik >= c[vkey * "_loglik"] - 1e-8
+                    @test fit.loglik - c[vkey * "_loglik"] < 1e-2
+                end
             end
         end
     end

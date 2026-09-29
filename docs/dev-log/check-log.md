@@ -1,3 +1,20 @@
+## 2026-09-29: grouped Beta gradient test in standard-error units (Beta option 1, on #620)
+
+- `src/families/grouped_dispersion.jl`: `_beta_grouped_verdict`, `_beta_grouped_scaled_polish`,
+  `_beta_grouped_curvature_probe`; both grouped Beta fitters use the verdict. Only runs when
+  `_beta_grouped_g_met` fails.
+- beta_huge (φ = 9.6e7): scaled gradient 0.0153 before, 2.5e-4 after two polish steps
+  (threshold 0.0152); loglik +1.2e-4. #480 d01 with `g_tol = 1e-12`: 1.9e-4 against 2.7e-10,
+  still not converged.
+- Julia 1.10.12: test_gamma_beta_upper_boundary 118/118 (was 2 fail once the `@test_broken`
+  became `@test`), test_beta_grouped_convergence 19/19, test_grouped_dispersion 20/20,
+  test_grouped_dispersion_beta_gamma 24/24, test_bridge_grouped_dispersion 129/129,
+  test_bridge_x 192/192, test_confint_bootstrap_verdict_beta 36/36, test_confint_family
+  341/341, test_fit_verdict_gradient 13/13, test_known_sentinel_defects 25 + 1 broken
+  (pre-existing), test_grouped_nongaussian_fit 63/63, test_grouped_nongaussian_postfit 38/38,
+  test_grouped_hessian_consistency 23/23, test_nb_beta_x_identity 14/14, and four more.
+  Julia 1.13.0: the four Beta grouped files, all pass.
+
 ## 2026-09-29: Gamma and Beta grouped fits no longer treat a large dispersion as a boundary
 
 - Branch `claude/gamma-beta-upper-boundary` from `origin/main` @ `0ce4a35aa`. New
