@@ -255,9 +255,11 @@ end
             @test cvX.mse < oracle
         else
             # A held-out site (or species) has no latent information: X β is the best
-            # available predictor, and the zero-mean model misses the mean entirely.
+            # available predictor. Without X the Normal route fits only trait intercepts
+            # (#519), so it recovers the mean 3 but misses the 2x slope term entirely
+            # (measured: about 9x the oracle's error on this data).
             @test cvX.mse < 1.15 * oracle
-            @test cv0.mse > 10 * oracle
+            @test cv0.mse > 5 * oracle
         end
     end
 

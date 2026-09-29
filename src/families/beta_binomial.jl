@@ -392,6 +392,27 @@ function _beta_binomial_verdict(optim_converged::Bool, nll::Real, φ::Real)
 end
 
 """
+    _beta_binomial_grouped_verdict(nll, optim_converged, iterations, φg) -> (loglik, converged, iterations)
+
+Convergence contract for [`fit_beta_binomial_gllvm_grouped`](@ref) and
+[`fit_beta_binomial_gllvm_grouped_cov`](@ref) (#515 follow-up). The shared
+`_fit_verdict` screen runs first, so its plateau threshold still applies; its
+result then goes through [`_beta_binomial_verdict`](@ref) at the largest group
+precision `maximum(φg)`. One group at `φ ≥ _BB_PHI_STABLE` is enough: that
+group's Beta has collapsed to a point mass and its `φ` is not identifiable.
+Measured on origin/main 52ed4281b (Julia 1.10.12): a per-species grouped fit
+of genuine beta-binomial data (φ_true = 12, fixture `healthy_seed_9003`)
+reported `converged = true` with one species at `φ ≈ 7.6e15`. Returns the
+triple in `_fit_verdict`'s order, ready for the result constructors.
+"""
+function _beta_binomial_grouped_verdict(nll::Real, optim_converged::Bool,
+        iterations::Integer, φg::AbstractVector{<:Real})
+    ll0, conv0, iters = _fit_verdict(nll, optim_converged, iterations)
+    conv, ll, _reason = _beta_binomial_verdict(conv0, -ll0, maximum(φg))
+    return (ll, conv, iters)
+end
+
+"""
     BetaBinomialFit
 
 Result of `fit_beta_binomial_gllvm`: intercepts `β` (length p), loadings
@@ -712,7 +733,9 @@ function fit_beta_binomial_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     φ̂g = exp.(θ̂[(p + rr + 1):(p + rr + G)])
-    return BetaBinomialGroupedFit(β̂, Λ̂, φ̂g, gidx, link, _fit_verdict(res)...)
+    return BetaBinomialGroupedFit(β̂, Λ̂, φ̂g, gidx, link,
+                                  _beta_binomial_grouped_verdict(Optim.minimum(res), Optim.converged(res),
+                                                                 Optim.iterations(res), φ̂g)...)
 end
 
 # ===========================================================================
@@ -892,5 +915,7 @@ function fit_beta_binomial_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray
     Λ̂ = unpack_lambda(θ̂[(p + q + 1):(p + q + rr)], p, K)
     φ̂g = exp.(θ̂[(p + q + rr + 1):(p + q + rr + G)])
     return BetaBinomialGroupedCovFit(β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, φ̂g, gidx, link,
-                                     _fit_verdict(res)...)
+                                     _beta_binomial_grouped_verdict(Optim.minimum(res),
+                                                                    Optim.converged(res),
+                                                                    Optim.iterations(res), φ̂g)...)
 end

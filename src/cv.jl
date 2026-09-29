@@ -108,6 +108,7 @@ end
 function _cv_gaussian_mean(fit::GllvmFit, X, t::Int, s::Int)
     β = fit.pars.β
     (β === nothing || isempty(β)) && return 0.0
+    X === nothing && _has_intercept_design(fit) && return _intercept_mean(fit)[t]   # intercepts (#519)
     return dot(view(X, t, s, :), β)
 end
 
@@ -443,15 +444,18 @@ function cv_gllvm(Y::AbstractMatrix;
         # Fit model on training fold
         fit_k = if family isa Normal
             if all(train_mask)
-                fit_gaussian_gllvm(Y; K = K_actual, X = X, fit_kw...)
+                X === nothing ? _fit_gaussian_trait_intercepts(Y; K = K_actual, fit_kw...) :
+                                fit_gaussian_gllvm(Y; K = K_actual, X = X, fit_kw...)
             elseif split_mode === :site
                 train_sites = findall(s -> any(view(train_mask, :, s)), 1:n)
                 Xk = X === nothing ? nothing : X[:, train_sites, :]
-                fit_gaussian_gllvm(view(Y, :, train_sites); K = K_actual, X = Xk, fit_kw...)
+                Xk === nothing ? _fit_gaussian_trait_intercepts(view(Y, :, train_sites); K = K_actual, fit_kw...) :
+                                 fit_gaussian_gllvm(view(Y, :, train_sites); K = K_actual, X = Xk, fit_kw...)
             elseif split_mode === :species
                 train_species = findall(t -> any(view(train_mask, t, :)), 1:p)
                 Xk = X === nothing ? nothing : X[train_species, :, :]
-                fit_gaussian_gllvm(view(Y, train_species, :); K = K_actual, X = Xk, fit_kw...)
+                Xk === nothing ? _fit_gaussian_trait_intercepts(view(Y, train_species, :); K = K_actual, fit_kw...) :
+                                 fit_gaussian_gllvm(view(Y, train_species, :); K = K_actual, X = Xk, fit_kw...)
             else
                 # Random cell split: impute unobserved cells with species mean + PPCA refinement
                 Y_imputed = Matrix{Float64}(undef, p, n)
@@ -462,13 +466,15 @@ function cv_gllvm(Y::AbstractMatrix;
                         Y_imputed[t, s] = train_mask[t, s] ? Float64(Y[t, s]) : m_t
                     end
                 end
-                fit_init = fit_gaussian_gllvm(Y_imputed; K = K_actual, X = X, fit_kw...)
+                fit_init = X === nothing ? _fit_gaussian_trait_intercepts(Y_imputed; K = K_actual, fit_kw...) :
+                                           fit_gaussian_gllvm(Y_imputed; K = K_actual, X = X, fit_kw...)
                 Z_init = getLV(fit_init, Y_imputed; X = X, rotate = false)
                 for (t, s) in test_cells
                     Y_imputed[t, s] = _cv_gaussian_mean(fit_init, X, t, s) +
                                       dot(view(fit_init.pars.Λ, t, :), view(Z_init, s, :))
                 end
-                fit_gaussian_gllvm(Y_imputed; K = K_actual, X = X, fit_kw...)
+                X === nothing ? _fit_gaussian_trait_intercepts(Y_imputed; K = K_actual, fit_kw...) :
+                                fit_gaussian_gllvm(Y_imputed; K = K_actual, X = X, fit_kw...)
             end
         else
             if N !== nothing
@@ -500,7 +506,7 @@ function cv_gllvm(Y::AbstractMatrix;
 
             # For species-block split, map to fitted row or use average
             t_idx = findfirst(==(t), train_spec_vec)
-            β_t = if fit_k isa GllvmFit
+            β_t = if fit_k isa GllvmFit && X !== nothing
                 _cv_gaussian_mean(fit_k, X, t, s)   # β is a covariate vector, not per-species
             else
                 (t_idx !== nothing && t_idx <= length(β)) ? β[t_idx] : (isempty(β) ? 0.0 : mean(β))

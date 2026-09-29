@@ -6,7 +6,9 @@
 Fit a Gaussian GLLVM with shared residual SD. Default `aghq=false` retains the
 closed-form Gaussian fitter and its existing keywords. In particular `X=nothing`
 means **zero mean**; a complete `X[p,n,q]` defines all fixed effects. `β_fixed`
-retains the existing fixed-zero coefficient convention.
+retains the existing fixed-zero coefficient convention. The public route
+`fit_gllvm(Y; family = Normal(), K)` without `X` instead estimates one intercept
+per trait (stored in `pars.β`, and applied by post-fit helpers without `X`).
 
 `aghq=3` requests three nodes per latent axis; `true`/`:auto` selects five nodes
 below 20 traits. The ordinary loadings-only block with K≤5 is eligible; additional
@@ -204,6 +206,7 @@ function simulate(f::GllvmFit,n::Integer;rng=Random.default_rng(),X=nothing,offs
     p,K=f.model.p,f.model.K;q=length(f.pars.β)
     d=_has_gaussian_record(f) ? f.integration.data : nothing
     xx=X===nothing ? (d!==nothing && size(d.responses,2)==n ? d.design : q==0 ? zeros(p,n,0) :
+        _has_intercept_design(f) ? _intercept_design(f,n) :
         throw(ArgumentError("Gaussian simulation requires X at the requested site count"))) : X
     off=offset===nothing ? (d!==nothing && size(d.responses,2)==n ? d.offset :
         d!==nothing && any(!iszero,d.offset) ? throw(ArgumentError("simulation at new site count requires offset")) : zeros(p,n)) : offset
