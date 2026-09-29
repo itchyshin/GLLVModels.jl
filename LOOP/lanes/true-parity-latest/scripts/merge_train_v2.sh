@@ -28,7 +28,7 @@ for spec in "$@"; do
     c=$(gh api repos/$R/actions/jobs/$adv/logs 2>/dev/null | grep -oE '[0-9]+ passed, [0-9]+ failed' | tail -1)
     p=$(echo "$c" | awk '{print $1}'); f=$(echo "$c" | awk '{print $3}')
     echo "  advisory: $c"
-    if [ -z "$p" ] || [ "$p" -lt 277 ] || [ "$f" -gt 9 ]; then echo "NOT MERGED #$N: advisory outside main's range; stopping train"; exit 1; fi
+    if [ -z "$p" ] || [ "$p" -lt "${ADV_MIN_PASS:-277}" ] || [ "$f" -gt "${ADV_MAX_FAIL:-9}" ]; then echo "NOT MERGED #$N: advisory outside main's range; stopping train"; exit 1; fi
   fi
   gh pr ready $N -R $R >/dev/null 2>&1
   gh pr merge $N -R $R ${MERGE_METHOD:---merge} --match-head-commit $H --delete-branch >/dev/null 2>&1
