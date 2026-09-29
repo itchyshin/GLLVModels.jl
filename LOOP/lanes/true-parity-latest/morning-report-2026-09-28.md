@@ -63,6 +63,8 @@ Overnight: #548 chibar2_pvalue / variance_lrt twin (4357e4652, 22:58); #531 extr
 
 ## In a merge train (word given)
 
+Shinichi: "merge #584 anyway; merge #547 when green". #584 refreshed (0836c157b), cascaded into #586 (fee6624b1), #587 (972bab408), #589 (799e8dcfe, ledger regenerated); one train merges #584 to #589 with the advisory allowance raised to 15 failures for this train only (#584 exposes previously hidden advisory cells: tight-control groups lacking baseline files, and the family-11 formula health cell). #547 refreshed (af24960ae) and in its own train. Follow-up to file: make the baseline-requiring fixture groups skip cleanly in CI.
+
 Afternoon: every merge makes the other PRs conflict in check-log.md (each PR adds a top entry), and refreshing them all restarted every PR's CI each time. Switched to one group at a time: the A3 stack alone now (refreshed and cascaded again: #567 b4607b17e ... #589 df3ea8ae7, ledger regenerated, counts unchanged); #547, #557 and #563 wait (not refreshed) and go one after another once the stack lands. #603 keeps its train (touches no log file). A standing fix would be for PRs to stop adding top-of-file check-log entries (or a merge queue); that is a process change for you.
 
 After #561 merged (check-log conflicts only): refreshed #546 (46dbb8ef3), #547 (03aa1aeb8), #557 (f97dfbfe0), #563 (dc365bd58), #567 (83b2b562a), and cascaded up the stacks: #558 (b6efad8bb); #569 (6df22c49b), #571 (3d367a519), #579 (1b80ed422), #584 (3558f14a4); #586 (4b7a367b0), #587 (7b9f78911); #589 (0c37d9e6b). All clean against main; trains restarted, the stack as one train #567 to #584, then #586, #587, then #589.
