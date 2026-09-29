@@ -99,6 +99,16 @@
   covariance, postfit, inference contract `--check`s and family, data, inference receipt `--check`s
   current; `test/parity/test_core070_pin.jl` 27/27; `test/test_core070_receipts.jl` 52/52 (repaired for
   the new active-cell state, plus a value-sink test).
+## 2026-09-27: getLV on grouped Beta fits returns the per-site mode
+
+- Branch `claude/beta-getlv-mode-20260927`, stacked on `claude/beta-grouped-mode-search-503` (#540).
+  The Beta mode chain moves verbatim into `_beta_grouped_site_mode`; `_grouped_getLV` calls it through
+  `_grouped_site_mode` (Beta method; generic method keeps `_grouped_laplace_mode`). Same dispatcher as
+  #529, whose NB2/NB1/Gamma methods merge alongside (expect a one-line conflict: keep every method).
+- Before: seed-6 panel, getLV max gradient 0.055 (sites 14 and 78). After: below 1e-6, and with a
+  covariate offset too. Two new testsets in `test/test_beta_grouped_mode_search.jl`.
+- 32 related test files (every `test_grouped*.jl` and `test_beta*.jl`, bridge, postfit, ordination,
+  fit_gllvm, unified API): 3497 pass, 0 fail.
 
 ## 2026-09-27: getLV on grouped NB2, NB1 and Gamma fits returns the per-site mode
 
@@ -133,6 +143,19 @@
   `test_beta_grouped_convergence.jl` 19/19.
 - 32 related test files (every `test_grouped*.jl` and `test_beta*.jl`, bridge grouped and missing-mask,
   postfit, ordination, fit_gllvm, unified API): 3497 assertions pass, 0 fail. Full `Pkg.test()` not run.
+## 2026-09-27: getLV on grouped NB2, NB1 and Gamma fits returns the per-site mode
+
+- Branch `claude/getlv-grouped-mode-20260927`, stacked on `claude/nb-grouped-init-v2` (#521).
+  `_grouped_getLV` now calls each family's likelihood mode chain (`_nb_grouped_site_mode`,
+  `_nb1_grouped_site_mode`, `_gamma_grouped_site_mode`, moved verbatim out of the
+  `*_loglik_site` functions) through `_grouped_site_mode`, dispatched on the marker element type;
+  other families keep `_grouped_laplace_mode`. Log-likelihood values cannot change (pure move,
+  checked by an independent review with comments stripped).
+- Before: NB2 seed-1 panel (K = 1, r = 0.5) 70 of 300 sites off the mode (max |grad| 0.27);
+  Gamma panel 135 of 200 (0.17); fixture site off by 4.7e-4. After: all stationary below 1e-6.
+- New test `test/test_grouped_getlv_mode.jl`, 5 testsets, 308 assertions; the fixture, panel and
+  covariate-offset testsets fail on the base (covariate |grad| 0.249). 31 existing test files that
+  reach grouped fits, getLV, the bridge or postfit: 2804 assertions pass, 0 fail.
 ## 2026-09-27: Binomial bootstrap refit reports its own verdict (part of #504)
 
 - Branch `claude/binom-boot-verdict-504` from `origin/main` @ `cb5688f7e`. The Laplace `BinomialFit`
