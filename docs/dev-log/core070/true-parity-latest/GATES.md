@@ -145,16 +145,195 @@ carried rows are expected to land here until WS0d's stale-row scan re-measures t
 ## Case-map row schema (what A0c/A0d must write)
 
 A required row is bound only with a resolving receipt (`evidence.receipt`, a path that exists
-as a blob at the ref) **and** non-empty `executable_case_ids` — neither alone is enough. A
-`DISPOSITION-SIGNED` row additionally needs `signed_by` (a non-empty name) and `signed_on`
-(`YYYY-MM-DD`) on the row itself; **the tool checks the fields are present, not that the named
-person actually signed — identity is verified in PR review**, by whoever reviews the diff that
-adds the row, the same way any other change to this repo is reviewed. `classification` values
+as a blob at the ref) **and** non-empty `executable_case_ids` **and** `evidence_tier: "numeric"`
+backed by a `comparison` block in the receipt (see "Evidence tier" below); no one of these alone
+is enough. A
+`DISPOSITION-SIGNED` row additionally needs `signed_by` and `signed_on` on the row itself.
+Since the review of #561 the tool checks both: `signed_by` must be exactly `Shinichi Nakagawa` or
+`itchyshin` (anything containing `agent`, `Claude`, `Codex`, `Cursor` or `Fable` is refused, as is
+any other name; C1 reports `DISPOSITION-SIGNER-NOT-ALLOWED`), and `signed_on` must be a real
+calendar date in `YYYY-MM-DD` form that is not in the future (checked against the latest current
+date anywhere on earth, UTC+14, so a local date is never refused for time-zone reasons; C1 reports
+`DISPOSITION-SIGNED-BAD-DATE`). The same rules apply to `signed_by:` / `signed_on:` tokens in a
+scoreboard cell. A properly signed row is counted in C1's `bound_signed=`, never in `bound=`
+(`bound=` counts numeric evidence only), so a signed registration row cannot read as a twin.
+**The tool still cannot verify that the named person actually signed; an agent can type the
+maintainer's name. Identity is verified in PR review**, by whoever reviews the diff that adds the
+row, the same way any other change to this repo is reviewed. Negative controls:
+`c1_signed_by_agent`, `c1_signed_bad_date` (`9999-99-99`), `c1_signed_future_date`. `classification` values
 this tool understands: `required_core`, `compatibility_adapter` (both feed C1), plus
 `semantic_divergence`, `outside_boundary`, `excluded`, `needs_surface` (C8 requires each of
 these to be either twinned or carry a real signed disposition — none of them are exempt or
 silently skipped). A row may carry an optional `capability` field naming the scoreboard row id
 it corresponds to (used by C2's cross-check, control (b) below).
+
+## Evidence tier: a registration match is not a twin (D-295 row 5)
+
+Added after an independent review of the namespace re-measure (PR #559): a Tier 0 namespace receipt
+shows only that the R export is registered and defined and that a same-named Julia symbol exists,
+and the first cut of this tool counted that as a fully bound row, indistinguishable from a numeric
+twin. Every case-map row now carries `evidence_tier`:
+
+- `"numeric"`: the receipt records an actual R-vs-Julia output comparison;
+- `"registration"`: export/existence registration only (the namespace Tier 0 batch).
+
+C1 prints `bound_numeric=N bound_registration_only=M` and is MET only when `M == 0`; a
+registration-only row still resolves if it carries a real signed disposition (`signed_by` +
+`signed_on`). C8 reports a registration-only row as `REGISTRATION_ONLY_NOT_TWINNED` instead of
+twinned. A missing `evidence_tier` is fail-closed (treated as registration-only). Negative controls
+in `tools/test_true_parity_check.mjs` (`c1_registration_only`, `c1_evidence_tier_missing`,
+`c1_registration_only_signed`, one of them in git mode).
+
+### What the fail-closed default does to rows that carry no `evidence_tier`
+
+Disclosed after the review of #561 (an earlier draft of this PR said "P0 behaviour is unchanged";
+that holds for C1 at P0 and for the namespace batch tools, not for C8 at P0):
+
+- **P0.** `docs/dev-log/core070/required-source-case-map.json` (769 rows) has no `evidence_tier`
+  on any row. The 14 `aghq/AGHQ-*` rows bound to `aghq-public-policy-bind-receipt-2026-09-04.json`
+  were counted as twinned by the checker at `cb5688f7e`; they now read
+  `REGISTRATION_ONLY_NOT_TWINNED` in C8 at P0. Measured tally, same case-map, before and after:
+  `7 DANGLING_RECEIPT, 748 NOT_TWINNED_NOT_SIGNED` (14 twinned) becomes `7 DANGLING_RECEIPT,
+  748 NOT_TWINNED_NOT_SIGNED, 14 REGISTRATION_ONLY_NOT_TWINNED`. The verdict is `C8_NOT_MET` before
+  and after; C1 at P0 is unchanged apart from the two new counters. Every P0 row reads as
+  registration-only until `evidence_tier` is back-filled. The tiers are **not** back-filled here:
+  choosing a row's tier is a classification, and classifications are signed by Shinichi (D-295
+  row 3). The aghq receipt records R fits with objective values but no Julia comparison, so it has
+  no `comparison` block and would not bind as numeric under the rule below even if relabelled.
+- **#533's `case-map.json`.** None of its 38 rows carries `evidence_tier` (head `9c1f55038`).
+  After the fold they will read as registration-only (C1 `registration_only=`, C8
+  `REGISTRATION_ONLY_NOT_TWINNED`, or `NOT_TWINNED_NOT_SIGNED` where they have no receipt). That is
+  the expected effect of the fail-closed default, not a regression; the fold PR, or #533, sets the
+  tier per row, and a `"numeric"` tier only binds with a receipt that carries a `comparison` block.
+
+### The numeric tier is verified against the receipt, not trusted (review of #561)
+
+The first cut trusted the label: `"numeric"` was a string on an agent-writable field, and flipping
+one word on the real namespace row `namespace/S3method/coef,gllvmTMB_multi` (a registration receipt
+with no numbers in it) printed `C1_MET` and `C8_MET`. The label can now only lower a row, never
+raise it. A row labelled `"numeric"` counts as numeric only if its cited receipts carry a
+machine-readable comparison block:
+
+```json
+"comparison": {
+  "pin": "P1",
+  "cases": [
+    { "case_id": "CASE-1", "quantity": "coef", "max_abs_diff": 2.4e-06, "tolerance": 1e-04 }
+  ]
+}
+```
+
+- `comparison` is a top-level key of a JSON receipt; `pin` is `"P1"` or the full P1 sha.
+- `cases` is non-empty; each case has a non-empty `case_id`, a `tolerance` that is a finite number
+  greater than 0, and one of: `abs_diff`, `max_abs_diff` (finite, >= 0), or `r_value` +
+  `julia_value` (finite numbers, or equal-length arrays of finite numbers; the tool computes the
+  maximum absolute difference itself).
+- When a case carries a comparable `r_value` + `julia_value` pair, the tool's own difference is
+  the one judged, and any recorded `abs_diff` / `max_abs_diff` on that case must agree with it to
+  1e-12 relative, or the row fails as `NUMERIC_RECORDED_DIFF_MISMATCH` (see below). A recorded
+  difference stands on its own only when the case carries no comparable pair.
+- Every case must satisfy difference <= tolerance.
+- The union of `case_id`s across the row's receipts must cover every `executable_case_id` on the row.
+- A malformed block in any cited receipt fails the row; a non-JSON receipt simply carries no block.
+
+The shape follows the per-case records the core070 twin batches already write
+(`max_abs_diff`, `tolerance`, `quantity`, e.g.
+`docs/dev-log/core070/t5-rebind-out/estimand-rebind-02/julia-results.json`), plus the `pin` and a
+`case_id` per case, so a numeric twin batch can emit it with a small wrapper. The R reference
+values in a twin fixture such as `test/fixtures/ordinal_logit_p1.toml` are one side of that
+comparison; the receipt must record both sides, or the difference, with its tolerance.
+
+A `"numeric"` row whose receipts fail any of these rules is reported as
+`NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT`: C1 lists it under `numeric_label_without_numeric_receipt=`
+(with the reason) and is not MET; C8 fails it with that tag. Negative controls:
+`c1_numeric_label_registration_receipt` (numeric label, registration-style receipt; also in git
+mode), `c1_numeric_label_malformed_comparison` (tolerance a string, no difference recorded),
+`c1_numeric_label_over_tolerance` (`abs_diff` above `tolerance`), and the reviewer's mutation run on
+the real `coef,gllvmTMB_multi` row and its real receipts, which went from `C1_MET`/`C8_MET` to
+`C1_NOT_MET`/`C8_NOT_MET`. The positive-control `base` fixture's receipts now carry real blocks.
+
+### A receipt that says it failed does not bind (review of #567)
+
+A tamper test on #567's receipts set `verdict` to `"FAIL"` with the comparison block intact, and
+the row still bound. The tool now reads the status fields that real core070 receipts write:
+`verdict`, `batch_status` and `harness_pass` (case receipts) and `status` (batch receipts). Each
+one present at the top level of a cited JSON receipt, or inside its `comparison` block, must hold
+a pass value (`"PASS"`, `"pass"` or `true`); anything else, including `"FAIL"`, `null` or an
+object, fails the row as `NUMERIC_RECEIPT_NOT_PASSED(<field>=<value> in <receipt>; <why the
+exception does not apply>)`. C1 lists it under `numeric_receipt_not_passed=` and is not MET; C8
+fails it with that tag. A missing status field is not a failure (older receipts carry none).
+
+The one waiver is a maintainer-signed field on the case-map row:
+
+```json
+"receipt_status_exception": {
+  "reason": "batch receipt reads FAIL because of one unrelated case; this case passes",
+  "signed_by": "Shinichi Nakagawa",
+  "signed_on": "2026-09-27"
+}
+```
+
+Same signer allow-list and date rule as a signed disposition, plus a non-empty `reason`. It waives
+only the status check (the comparison block must still be valid, pinned to P1 and within
+tolerance), and a row bound this way counts in `bound_signed=`, never in `bound=` or
+`bound_numeric=`. Negative controls: `c1_numeric_receipt_verdict_fail` (top-level `verdict:
+"FAIL"`), `c1_numeric_receipt_comparison_status_fail` (`batch_status: "FAIL"` inside the
+comparison block), `c1_numeric_receipt_fail_exception_by_agent` (exception signed by an agent
+name: still not bound); positive control `c1_numeric_receipt_fail_signed_exception`.
+
+### A recorded difference is cross-checked against the two sides (review of #567)
+
+A second tamper test left `max_abs_diff` small while the recorded `r_value` and `julia_value`
+disagreed by 1; the row still bound, because the recorded difference was trusted over the vectors.
+Now, when a case has both sides, the tool recomputes the (maximum) absolute difference itself and
+fails the row if a recorded `abs_diff` or `max_abs_diff` disagrees with it beyond 1e-12 relative,
+whether or not either value is within tolerance: C1 lists it under
+`numeric_recorded_diff_mismatch=` and is not MET; C8 fails it as
+`NUMERIC_RECORDED_DIFF_MISMATCH(<case, recorded, recomputed, receipt>)`. There is no signed
+waiver: a receipt whose numbers disagree with each other has to be regenerated. The 1e-12 bound
+was checked against the real case receipts on #567 and #569 (21 cases with both sides and a
+recorded `max_abs_diff`): none disagree. Negative controls: `c1_numeric_recorded_diff_stale`
+(sides differ by 1, recorded 6e-11) and `c1_numeric_recorded_diff_mismatch_within_tol` (recorded
+1e-7, recomputed 4e-7, both under tolerance 1e-6).
+
+What this does not do: the tool checks that the receipt records a comparison within tolerance; it
+does not re-run the comparison, and it cannot tell whether the tolerance chosen is reasonable. A
+receipt that records false numbers passes. That is PR review's job, as for any other receipt.
+
+### Tolerances are author-declared; review them against the harness source
+
+The third tamper test on #567 widened a case's `tolerance` to 1.0 and the row still bound. That is
+by design, not an oversight: the tool has no independent source for what the right bound is for a
+given quantity, so it does not try to judge tolerances automatically. A tolerance is whatever the
+receipt's author (usually the batch harness) declared, and the tool only checks that it is a
+finite number greater than 0 and that the difference sits under it. A reviewer must therefore
+check each numeric row's tolerances against the harness source that produced the receipt (the
+batch contract or script that sets the bound, e.g. a `*-batch-contract-p1.json` or the
+`tools/core070_*_batch.*` script named in the receipt), and treat a tolerance that differs from
+that source, or one that is loose for the quantity compared, as a blocking finding.
+
+Recommendation (not enforced by the tool): give each numeric case-map row a free-text
+`tolerance_source` field naming where its tolerances come from, for example
+`"tolerance_source": "wave6-conversion-batch-contract-p1.json, cases[].tolerance"`. The checker
+ignores the field; it exists so a reviewer can find the source without reverse-engineering the
+receipt.
+
+The namespace Tier 0 batch itself was tightened at the same time: at P1 an executable row passes
+only if the Julia symbol is exported and a Function (measured by the Julia child, not typed into
+the contract), so an unexported helper or a type no longer passes on its name.
+
+## Namespace rows and the fold into case-map.json (expected totals)
+
+The 71 namespace rows re-measured at P1 (arc A3) live in
+`docs/dev-log/core070/true-parity-latest/case-map-namespace.json` until PR #533's `case-map.json`
+lands, so none of #533's rows are touched; run the checker on them with
+`PARITY_CASEMAP=docs/dev-log/core070/true-parity-latest/case-map-namespace.json`. That file holds
+69 rows (the 2 retired exports are listed in its `retired_at_p1` block and map to #533's
+`retired/...` rows, not duplicated). The recommended next step is to fold these rows into
+`case-map.json` after #533 merges, rather than teach the checker to read several files. **Expected
+totals once folded: 38 + 69 = 107 rows, 90 of them required (`required_core` +
+`compatibility_adapter`).** A folded file with fewer rows, or fewer required rows, means something
+was dropped in the fold.
 
 ## Scoreboard id conventions (what the tool's C2-C5 filters rely on)
 

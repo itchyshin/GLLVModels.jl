@@ -1,0 +1,49 @@
+{
+  "schema": "core070-covariance-p1-case-receipt/v1",
+  "case_id": "CORE070-COV-PHYLO-DEP-FORMULA",
+  "source_id": "covariance/COV-PHYLO-DEP",
+  "verdict": "R_ONLY_PASS",
+  "evidence_kind": "r_only_formula_grammar",
+  "batch": "tools/core070_covariance_batch.R, GLLVM_PARITY_PIN=P1; verified by tools/core070_verify_covariance_batch.py",
+  "raw": "docs/dev-log/core070/true-parity-latest/receipts/covariance/covariance-batch-p1/covariance-batch-results.json",
+  "r_formula": "value ~ 0 + trait + phylo_dep(0 + trait | species)",
+  "expected_covstructs": [
+    {
+      "kind": "phylo_rr",
+      "extra_true": [
+        ".dep"
+      ],
+      "extra_symbol_equal": {
+        "d": ".deferred_n_traits"
+      }
+    }
+  ],
+  "observed_covstructs": [
+    {
+      "kind": "phylo_rr",
+      "lhs": "0 + species",
+      "group": "trait",
+      "extra": {
+        "d": ".deferred_n_traits",
+        ".dep": true
+      }
+    }
+  ],
+  "julia_surface": "No public Julia route for a cross-trait DEPENDENT (correlated-loading) phylogenetic term exists. The phylo_*_xlv.jl kernels are explicitly marked internal reduction-tested proofs, not R grammar support; the exported sparse/contrasts/edge-incidence phylo paths fit a single phylogenetic latent-variable structure without a documented dependent-vs-independent cross-trait loading switch.",
+  "batch_verifier": {
+    "tool": "tools/core070_verify_covariance_batch.py",
+    "status": "PASS",
+    "exit_code": 0,
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/covariance/covariance-batch-p1/verify.log"
+  },
+  "why_not_numeric": "The check is a structural fact about gllvmTMB's R formula grammar (parse_multi_formula(desugar_brms_sugar(f))$covstructs). No R-vs-Julia numeric comparison exists for it in this harness; needs a Julia surface before it can bind.",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "gllvmtmb_version": "0.7.1",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "ead8f4180957dd47111f662efcda6e0734c9de94",
+  "glvmodels_worktree_dirty": [],
+  "host": "local Mac (M1 Ultra), single BLAS/OMP thread, JULIA_NUM_THREADS=4",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86"
+}
