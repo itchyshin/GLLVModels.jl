@@ -105,6 +105,44 @@ All notable changes to GLLVModels.jl are documented here.
   unit-test inputs and its reachable argument refusals, including a `NaN`
   log-likelihood/LRT (see the paired `Fixed` entry below).
 ### Added
+- **`fit_gllvm` estimates the number of latent dimensions when `K` is
+  omitted.** It sweeps `K = 1:Kmax` (default `min(5, p − 1)`) through
+  `select_lv` and returns the chosen fit with a one-line message. Previously
+  omitting `K` threw, so no working call changes. New keyword `Kmax`, valid only
+  when `K` is omitted; `row_eff` and `pervar` still need an explicit `K`.
+- **`select_lv(...; criterion = :bic_sites)`**: BIC with `log(n)`, `n` the
+  number of sites; `LVSelection` gains `bic_sites` and `attempts`.
+- **Loading ridge for binary data.** `fit_binomial_gllvm(...; loading_ridge = τ)`
+  (Laplace route) minimises the negative marginal log-likelihood plus
+  `½Σλ²/τ²`, the same penalty as gllvmTMB's `aghq_ridge`; the fit's reported
+  log-likelihood is the unpenalised one at that optimum, and `fit.loading_ridge`
+  records τ (`Inf` = off, the default). `select_lv` sweeps single-trial binomial
+  data with `binary_ridge = 2` (set `Inf` to turn it off); most unpenalised
+  Bernoulli fits beyond `K = 1` run away at ecological sample sizes. The ridge
+  applies only on the Laplace `fit_binomial_gllvm` route; with `aghq`,
+  `row_eff`, `grouping`, `phylo`, `disp_group` or `pervar` the sweep runs
+  unpenalised and says so in `attempts`. `confint` and `confint_lv_effects`
+  refuse a ridge fit, because it is a penalised estimate.
+
+### Changed
+- **`select_lv` now defaults to `criterion = :bic_sites`** (was `:bic`, which
+  penalises by `log(p·n)` observed cells). In a recovery simulation (17 687
+  datasets with known K; Gaussian, Poisson, negative binomial, binomial; 30 to
+  300 sites, 10 or 20 species) `:bic_sites` recovered the true K most often for
+  Gaussian and Poisson responses; `:bic` picked too few dimensions at small
+  sample sizes. Negative-binomial recovery is being re-measured on the
+  corrected negative-binomial fitting code, so no rate is claimed for it yet. Existing `select_lv` calls without
+  `criterion` may choose a different K; pass `criterion = :bic` for the old rule.
+- **`select_lv` no longer chooses a broken fit.** Every attempted K is recorded
+  in `attempts` with a status. A K whose fit threw, whose log-likelihood fell
+  below a smaller K, or whose loadings ran away (a trait's latent SD above
+  `max_latent_sd = 10` on the link scale, or for binomial data one trait's
+  loadings `ratio_max = 25` times the median) is never chosen; it is first
+  refitted once from the last accepted solution where the family fitter accepts
+  `β_init`/`Λ_init`. A fit whose optimiser did not report convergence is kept
+  and flagged unless it also fails those checks (`require_converged = true`
+  rejects it). Interrupts are no longer swallowed; an `ArgumentError` at `K = 1`
+  is raised; `mask` reaches the criteria.
 - **`extract_latent_scores(fit, y; level=:unit)`, the Julia twin of gllvmTMB's
   `extract_latent_scores()` (P1 pin `9539352f6`, gllvmTMB 0.7.1).** Twins
   `.default` and `.gllvmTMB_multi`; `level = :unit` is
@@ -308,6 +346,8 @@ All notable changes to GLLVModels.jl are documented here.
   across all three of the issue's flagged seeds (120 sites probed). `getLV`/
   `predict` are unaffected in signature (they take the best available mode
   regardless of convergence, as the shared generic core does).
+- The `chibar2_pvalue` notes no longer list choosing K (K vs K+1) as a use case:
+  that test is non-regular and needs a parametric bootstrap.
 - **Conway-Maxwell-Poisson fits no longer report a value from a diverged inner
   search (#503).** `_compoisson_mode` (`src/families/com_poisson.jl`, this
   family's own per-site Laplace mode search — it shares no code with the

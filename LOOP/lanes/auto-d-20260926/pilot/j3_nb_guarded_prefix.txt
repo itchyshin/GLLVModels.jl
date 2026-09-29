@@ -1,0 +1,14 @@
+1294.600833 seconds (16.40 G allocations: 4.247 TiB, 8.59% gc time, 0.54% compilation time: <1% of which was recompilation)
+GLLVModels latent-dimension selection (best K = 5)
+      K   nparams        logLik           AIC           BIC
+      3        97     -19113.13      38420.26      39070.11
+*     5       130     -16719.65       33699.3      34570.23
+  K = 1 not used: runaway — latent SD 12.6 on the link scale for trait 16 (> 10.0)
+  K = 2 not used: runaway — latent SD 26.9 on the link scale for trait 18 (> 10.0)
+  K = 4 not used: runaway — latent SD 10.4 on the link scale for trait 18 (> 10.0)
+
+(K = 1, status = :runaway, loglik = -19473.12645965566, message = "latent SD 12.6 on the link scale for trait 16 (> 10.0)")
+(K = 2, status = :runaway, loglik = -18874.0314452546, message = "latent SD 26.9 on the link scale for trait 18 (> 10.0)")
+(K = 3, status = :ok, loglik = -19113.128376423898, message = "")
+(K = 4, status = :runaway, loglik = -20240.211349303445, message = "latent SD 10.4 on the link scale for trait 18 (> 10.0)")
+(K = 5, status = :ok, loglik = -16719.6484294561, message = "")
