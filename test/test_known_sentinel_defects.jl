@@ -65,12 +65,13 @@ using GLLVModels, Test, Random, LinearAlgebra, Distributions
         # T14 F1 (2026-09-02): this fixture happens to drive one group's dispersion to
         # the Poisson limit (r ≈ 3e9 — the free latent factor absorbs that trait's
         # overdispersion), which the grouped fits now report honestly as
-        # `dispersion_boundary` with `converged = false`. The sentinel screen must
-        # still NOT fire: the log-likelihood is a real, finite answer, and the only
-        # reason for non-convergence is the boundary flag itself.
+        # `dispersion_boundary`. The sentinel screen must still NOT fire: the
+        # log-likelihood is a real, finite answer. Since 2026-09-29 the upper end
+        # (r > 1e6, the Poisson limit) only warns, so `converged` follows the
+        # optimizer verdict; only the lower end (r < 1e-6) would make it false.
         @test isfinite(fh.loglik) && fh.loglik < 0
         @test fh.loglik != -Inf
-        @test fh.converged == !any(fh.dispersion_boundary)
+        @test fh.converged == !any(fh.r_group .< 1e-6)
 
         # The helper itself, at its boundaries.
         @test GLLVModels._fit_verdict(1.0e12, true, 0) == (-Inf, false, 0)

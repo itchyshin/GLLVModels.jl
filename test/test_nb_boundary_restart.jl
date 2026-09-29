@@ -35,7 +35,7 @@ end
         fit = fit_gllvm(Y; family = GLLVModels.NegativeBinomial(), K = 2, g_tol = 1e-7, iterations = 800)
         @test fit.loglik >= -833.181377 - 1e-5
         @test fit.dispersion_boundary[2]
-        @test !fit.converged   # a boundary group is still flagged
+        @test fit.converged   # the upper end (r > 1e6) is warn-only (decision 2026-09-29); the flag above still marks it
     end
 
     @testset "covariate route: fit_nb_gllvm_grouped_cov gets the same restart" begin

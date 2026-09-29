@@ -10,6 +10,22 @@
   1e-6 it reports `converged = false`. The reported `loglik` is unchanged. Test:
   `test/test_nb_shared_r_boundary.jl` (literal fixture
   `test/fixtures/nb_shared_r_boundary.toml`).
+- **Grouped NB fits: the Poisson limit now warns instead of making `converged` false.**
+  Maintainer decision 2026-09-29 ("NB upper end: warn only everywhere"): gllvmTMB 0.7.1
+  itself puts one trait's NB2 dispersion above 1e6 on 4 of 5 ordinary per-trait fits, so
+  flagging the Poisson limit would mark about 80% of normal fits as not converged. In
+  `fit_nb_gllvm_grouped` and `fit_nb_gllvm_grouped_cov` that limit is `r > 1e6`: it only
+  warns, and `r < 1e-6` (unidentified extreme overdispersion) still gives
+  `converged = false`. NB1 (`Var = μ(1+φ)`) has its Poisson limit at the other end, so in
+  `fit_nb1_gllvm_grouped` and `fit_nb1_gllvm_grouped_cov` `φ < 1e-6` only warns and
+  `φ > 1e6` gives `converged = false`. Each warning says whether `converged` is affected. The `dispersion_boundary` field is unchanged and still flags
+  both ends, so the Wald and bootstrap interval code and `_nb_boundary_restart` behave as
+  before. Shared-r `fit_nb_gllvm` and the per-trait truncated NB2 route are handled
+  separately. Changed assertions: `test_nb_boundary_restart.jl`, `test_known_sentinel_defects.jl`,
+  `test_grouped_dispersion.jl`, `test_bridge_x.jl`, `test_gamma_beta_upper_boundary.jl`
+  (upper-end fits now expect the optimizer verdict). New `test_nb_grouped_upper_warn.jl` on
+  literal data (`test/fixtures/nb_grouped_upper_warn.toml` plus `[nb_upper]`).
+
 - **Grouped Beta fits with a large precision now report converged.** With φ above
   about 1e5 (near-deterministic proportions) the intercept curvature grows like φ
   (about 1e9 at φ = 9.6e7), so a stationary point shows a raw finite-difference
