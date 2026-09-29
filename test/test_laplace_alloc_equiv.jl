@@ -9,6 +9,8 @@
 #      within the loop).
 # Kept tiny/fast: small p, K, n; fixed (Λ, β); no optimisation.
 
+using GLLVModels, Test, Distributions
+
 @testset "laplace buffer-reuse equivalence" begin
     # Small fixed Poisson problem.
     p, K, n = 4, 2, 5

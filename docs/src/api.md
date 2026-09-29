@@ -107,6 +107,7 @@ fit_zinb_gllvm
 fit_zinb_gllvm_cov
 fit_zib_gllvm
 fit_zib_gllvm_cov
+fit_zi_gllvm
 ```
 
 ### Grouped Dispersion & Covariate-Extended Fitters
@@ -388,6 +389,7 @@ hurdle_nb_marginal_loglik_laplace
 delta_gamma_marginal_loglik_laplace
 beta_hurdle_marginal_loglik_laplace
 zip_marginal_loglik_laplace
+zi_marginal_loglik_laplace
 zinb_marginal_loglik_laplace
 zib_marginal_loglik_laplace
 row_random_marginal_loglik_laplace
@@ -435,9 +437,9 @@ GLLVModels.bootstrap_ci_derived
 ## Temporal Covariance Source
 
 One AR1 or OU temporal source on long data, the twin of gllvmTMB's
-`temporal_indep()`, `temporal_dep()` and `temporal_latent()` for the temporal
-source alone. Composition with ordinary `unit` / `unit_obs` terms, the
-cross-source cells and the wide `traits()` form are not available yet; see the
+`temporal_indep()`, `temporal_dep()` and `temporal_latent()`, alone or beside
+ordinary `unit` / `unit_obs` terms. The cross-source cells and the wide
+`traits()` form are not available yet; see the
 [temporal reference page](temporal.md).
 
 ```@docs
@@ -453,6 +455,7 @@ forecast_temporal
 profile_temporal
 bootstrap_temporal
 compare_temporal
+update
 ```
 
 ## Types & Link Functions
@@ -514,6 +517,8 @@ HurdleNBFit
 BetaHurdleFit
 OrderedBetaFit
 ZIPFit
+ZiFit
+ZI_LAPLACE_EIGMIN_FLOOR
 ZIPCovFit
 ZINBFit
 ZINBCovFit
@@ -557,6 +562,10 @@ Several named data sources (presence-only count streams, detection/non-detection
 surveys) observe one ecological linear predictor per unit and trait. This is the
 Julia twin of gllvmTMB's `gllvmTMB(..., family = isdm_sources(...))` at the P1 pin:
 non-spatial, Laplace, point fit. Everything it reports is relative intensity.
+`latent(0 + trait | unit, d = K)` carries R's default per-trait unit-level unique
+variance (`unique = TRUE`, gllvmTMB's `theta_diag_B`), so the between-unit trait
+covariance is `Λ Λ' + diag(exp(2 theta_diag_B))`; it is identified with at least
+`2K + 1` traits. `unique = FALSE` fits the loadings-only model.
 
 ```@docs
 isdm_sources
@@ -591,6 +600,12 @@ ZIPoisson
 ZINegBin
 GLLVModels.ZINB
 ZIB
+zi_poisson
+zi_nbinom2
+zi_binomial
+ZiPoisson
+ZiNbinom2
+ZiBinomial
 BetaBinom
 COMPoisson
 TruncatedPoisson

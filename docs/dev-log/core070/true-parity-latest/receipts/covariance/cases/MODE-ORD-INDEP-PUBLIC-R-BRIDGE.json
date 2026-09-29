@@ -1,0 +1,22 @@
+{
+  "schema": "core070-covariance-p1-case-receipt/v1",
+  "case_id": "MODE-ORD-INDEP-PUBLIC-R-BRIDGE",
+  "verdict": "R_BOUNDARY_UNCHANGED",
+  "evidence_kind": "r_public_bridge_boundary",
+  "batch": "tools/core070_covariance_bridge_boundary.R against the P1 oracle library (GLLVModels.jl path poisoned)",
+  "raw": "docs/dev-log/core070/true-parity-latest/receipts/covariance/bridge-boundary-p1/bridge-boundary-p1.tsv",
+  "fixture_id": "MODE-ORD-INDEP",
+  "observed_gate": "GJL-GATE-STRUCTURED-TERMS",
+  "expected_gate_at_p0": "GJL-GATE-STRUCTURED-TERMS",
+  "observed_message": "[GJL-GATE-STRUCTURED-TERMS] engine = 'julia' does not yet support covariance term(s): diag. Use engine = 'tmb' for structured / grouped / phylo / spatial terms.",
+  "why_not_numeric": "gllvmTMB(engine = 'julia') refuses this structured covariance formula before any Julia call, at P1 as at P0. There is no bridge fit to compare; this is R-side boundary evidence only.",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "gllvmtmb_version": "0.7.1",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "ead8f4180957dd47111f662efcda6e0734c9de94",
+  "glvmodels_worktree_dirty": [],
+  "host": "local Mac (M1 Ultra), single BLAS/OMP thread, JULIA_NUM_THREADS=4",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86"
+}

@@ -1,0 +1,51 @@
+{
+  "schema": "core070-inference-p1-case-receipt/v2",
+  "case_id": "CORE070-INFERENCE-BETA-BOOTSTRAP-FALLBACK-DIVERGENCE",
+  "verdict": "PASS",
+  "evidence_kind": "routing_control_flow",
+  "source_ids": [
+    "inference/CI-ROUTE-067"
+  ],
+  "batch": "tools/core070_inference_batch.R (P1 route probe) + tools/core070_inference_batch.jl, GLLVM_PARITY_PIN=P1",
+  "batch_verifier": {
+    "tool": "tools/core070_verify_inference_batch.py",
+    "argv": "tools/core070_verify_inference_batch.py --julia-state {julia_state} --r-state {r_state} --self-test",
+    "status": "PASS",
+    "exit_code": 0,
+    "accept_marker": "CORE070_INFERENCE_BATCH_FULLY_VERIFIED",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/verify.txt"
+  },
+  "per_row": [
+    {
+      "source_id": "inference/CI-ROUTE-067",
+      "r_route_actual": "tidy:wald",
+      "r_route_pass": true,
+      "julia_call": "bootstrap_ci(fitA;parms=\"beta[1]\",y=YA) [real bootstrap, not a wald fallback]",
+      "julia_route_expected": "bootstrap",
+      "julia_route_actual": "bootstrap",
+      "julia_pass": true
+    }
+  ],
+  "why_not_numeric": "Routing probe. The R side evaluates only function definitions from the P1 source files and intercepts every CI endpoint, so no model is fit and no interval is computed; the Julia side reports which solver ran. There is no R-vs-Julia number.",
+  "read_from": {
+    "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json": "3c0c44d62296c7f2730e2b4a6d7abb7d963afdfdd09731d7ab2dfb94d22350af",
+    "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv": "aa78ce4ae49ad3f05891517710bb4e54fbaa1f5b612821bd1a99eba6e5a0df1c",
+    "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/receipt.json": "a4536016490a03509fa69a7d9bc357b579bfc686bc0095541dbebd160d6b1e18",
+    "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/run-commit.json": "b9d2edb34bee2ac66ed45784ccd11944d44d083a7678f15fe6526d023ab90a62",
+    "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/verify.txt": "ac17a988df06e5d6a86887f5b084de0f308d17e464eb670c5930d808fe472d71",
+    "docs/dev-log/core070/true-parity-latest/inference-batch-contract-p1.json": "47b746d9894d1dee2ccc18101e736eb1c26a60ed986d6d0cc5a0b1c2bd18f3b1"
+  },
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv"
+  ],
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "61c5eda4822da20591b6fa91869f93c3faf5d369",
+  "glvmodels_worktree_dirty": [],
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+}

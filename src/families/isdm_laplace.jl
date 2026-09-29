@@ -6,6 +6,9 @@
 # count rows (R fid 2):     y ~ Poisson(exp(eta))
 # detection rows (fid 1):   y ~ Bernoulli(1 - exp(-exp(eta))), evaluated with a
 #                           copy of R's gll_dbinom_cloglog (src/gllvmTMB_cloglog.h)
+# With latent(..., unique = TRUE) (R's default) eta(o) also carries
+# s_B(t(o), s) ~ N(0, exp(theta_diag_B[t])^2); the kernel takes it through the
+# augmented loadings [Lambda diag(exp(theta_diag_B))] (see `_isdm_augment`).
 # Rows are conditionally independent given z_s, and z is independent across
 # cells, so TMB's Laplace approximation over z_B equals a per-cell Laplace with
 # the observed curvature of the joint negative log density:
@@ -130,7 +133,9 @@ lambda' + I_K`, step `A \\ g`. The convergence rule is a copy of
 `_mixed_laplace_mode` in src/families/mixed.jl: converged
 when both the step and the Newton decrement `g'Δ` are small, accepted at the
 floating-point floor or when a stalled line search leaves a decrement below
-`nd_tol`; a step that lowers the cell log-posterior is halved.
+`nd_tol`; a step that lowers the cell log-posterior is halved, except once the
+decrement is below `nd_tol`, where the full step is taken (the log-posterior
+comparison is at rounding level there).
 """
 function _isdm_cell_mode(y::AbstractVector, fid::AbstractVector, tr::AbstractVector,
         eta0::AbstractVector, Λ::AbstractMatrix;
@@ -169,7 +174,13 @@ function _isdm_cell_mode(y::AbstractVector, fid::AbstractVector, tr::AbstractVec
         at_floor = dmax <= sqrt(eps(Float64)) * (1 + norm(z))
         at_floor && dmax >= prev_dmax && decrement < nd_tol && return z .+ Δ, true
         prev_dmax = dmax
-        if (!linesearch_only || at_floor) && norm(Δ) <= 1e-3 * (1 + norm(z))
+        # Below `nd_tol` the log-posterior gain of the step is at rounding level, so the
+        # line search's `q1 >= q0` is decided by rounding: a rejected step used to end
+        # the search up to ~5e-8 short of the mode, and the Laplace value (linear in
+        # that gap through the log-determinant) jumped by ~1e-8, a CPU/BLAS-dependent
+        # spike the outer optimiser could stop on. Take the full step there instead.
+        if ((!linesearch_only || at_floor) && norm(Δ) <= 1e-3 * (1 + norm(z))) ||
+                decrement < nd_tol
             z = z .+ Δ
         else
             q0 = _isdm_cell_logpost(y, fid, tr, eta0, Λ, z)
@@ -254,22 +265,57 @@ function _isdm_cell_loglik(y, fid, tr, eta0, Λ; maxiter::Integer = 100, tol::Re
     return _isdm_cell_value_at(y, fid, tr, eta0, Λ, z), z, true
 end
 
+# The augmented loading matrix of a `unique = TRUE` fit (R's theta_diag_B):
+# s_B(t, s) ~ N(0, exp(theta_d[t])^2) enters eta additively with an identity
+# loading, so with s_B = diag(exp(theta_d)) u, u ~ N(0, I_p), the model is the
+# loadings-only kernel with Lambda_aug = [Lambda diag(exp(theta_d))] and
+# z_aug = [z; u] ~ N(0, I_{K+p}). A linear change of variables leaves the
+# Laplace approximation unchanged (the Jacobian cancels against the Hessian
+# determinant), so this is exactly R's joint Laplace over (z_B, s_B).
+function _isdm_augment(Λ::AbstractMatrix, θd::AbstractVector)
+    p, K = size(Λ)
+    length(θd) == p || throw(DimensionMismatch(
+        "theta_diag_B has length $(length(θd)); the table has $p traits."))
+    T = promote_type(eltype(Λ), eltype(θd))
+    A = zeros(T, p, K + p)
+    A[:, 1:K] .= Λ
+    @inbounds for t in 1:p
+        A[t, K + t] = exp(θd[t])
+    end
+    return A
+end
+
 """
-    isdm_marginal_loglik_laplace(table::IsdmTable, Λ, b; maxiter = 100, tol = 1e-9) -> Real
+    isdm_marginal_loglik_laplace(table::IsdmTable, Λ, b; theta_diag_B = nothing,
+                                 maxiter = 100, tol = 1e-9) -> Real
 
 Laplace log-marginal of an integrated species-distribution model: the sum over
 units (cells) of the per-cell Laplace value, with the observed curvature of the
 summed density in the log-determinant (the curvature TMB obtains by automatic
 differentiation). `Λ` is the `p x K` loading matrix (`K = 0` for a GLM fit),
-`b` the fixed coefficients in the order of `table.X_names`. Returns `-Inf` if
-any cell's mode search fails.
+`b` the fixed coefficients in the order of `table.X_names`. For a table built
+from `latent(..., unique = TRUE)` (R's default), `theta_diag_B` is required: the
+length-`p` vector of log standard deviations of the per-trait unit-level unique
+effects (gllvmTMB's `theta_diag_B`), integrated jointly with the latent scores.
+Returns `-Inf` if any cell's mode search fails.
 """
 function isdm_marginal_loglik_laplace(table::IsdmTable, Λ::AbstractMatrix, b::AbstractVector;
-        maxiter::Integer = 100, tol::Real = 1e-9)
+        theta_diag_B = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
     size(Λ, 1) == length(table.trait_levels) || throw(DimensionMismatch(
         "Λ has $(size(Λ, 1)) rows; the table has $(length(table.trait_levels)) traits."))
     length(b) == size(table.X, 2) || throw(DimensionMismatch(
         "b has length $(length(b)); the design has $(size(table.X, 2)) columns."))
+    if table.unique
+        theta_diag_B === nothing && throw(ArgumentError(
+            "This table was built from latent(..., unique = TRUE): pass `theta_diag_B`, the " *
+            "length-$(length(table.trait_levels)) vector of log standard deviations of the " *
+            "per-trait unit-level unique effects."))
+        Λ = _isdm_augment(Λ, theta_diag_B)
+    else
+        theta_diag_B === nothing || throw(ArgumentError(
+            "`theta_diag_B` was given, but this table was built without a unique variance " *
+            "(latent(..., unique = FALSE) or no latent() term)."))
+    end
     eta0 = table.X * b .+ table.offset
     acc = zero(promote_type(eltype(Λ), eltype(b)))
     for rows in table.rows_by_unit
