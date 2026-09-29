@@ -8,6 +8,19 @@
   alias, but `using GLLVM` cannot remain available after a Julia package rename.
   The GitHub repository rename and Pages migration remain separate maintainer
   gates; historical development records retain their original spelling.
+- **GP-1 fits now reach the true optimum (#611).** The GP-1 inner Laplace mode
+  search did not use the damped backtracking that NB1 and censored Poisson use, so
+  undamped Fisher steps from z = 0 could stop far from a site's conditional mode.
+  Measured on a healthy fixture site: the search stopped at z = 0.705 (log-joint
+  gradient -42.8) while the single mode is at -1.624, and the site's Laplace value
+  was 36.6 too low. That error switched on and off as the parameters moved by
+  1e-6, so `fit_gp1_gllvm` stopped at the edge of the jump and reported
+  `converged = true` at different values from different starts (spread up to 20
+  log-likelihood units on one dataset). GP-1 now opts into the backtracking. On
+  six healthy fixture datasets, five optima move up by 0.23 to 34.9
+  log-likelihood units and one is unchanged, and fits from different starts now
+  agree. GP-1 logliks, AIC and BIC from earlier versions can therefore differ.
+  Test: `test/test_gp1_mode_backtrack.jl`.
 - **Ordinal fitters now reject observed levels below 1.** `fit_ordinal_gllvm`,
   `fit_ordinal_gllvm_pertrait` and `fit_ordinal_gllvm_pertrait_cov` indexed a
   per-category count vector by the observed level inside an `@inbounds` loop, and

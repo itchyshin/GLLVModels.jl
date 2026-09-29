@@ -51,6 +51,15 @@ default_link(::GeneralizedPoisson1) = LogLink()
 # in the score/weight/log-pmf below (and the η-clamp keeps μ bounded).
 _clamp_mu(::GeneralizedPoisson1, μ) = max(μ, 1e-12)
 
+# Opt into the damped mode-search backtracking (#611). Undamped Fisher steps from
+# z = 0 overshoot on sites with large counts and a large loading: on the #611
+# fixture (healthy_seed_101, site 115, y = [0, 38, 79, 1]) the search stopped at
+# ẑ = 0.705 with d(log joint)/dz = -42.8, while the single mode is at -1.624. The
+# site's Laplace value was then 36.6 too low, and the error switched on and off
+# as β moved by 1e-6, so the outer L-BFGS stopped at the edge of that jump and
+# reported converged.
+_laplace_mode_should_backtrack(::GeneralizedPoisson1) = true
+
 # Score wrt η (me = μ): s = y − μ y α/g − μ h/g². α→0 short-circuits to the Poisson
 # score y − μ to avoid 0·(…)/g cancellation noise near the limit.
 function _glm_score(f::GeneralizedPoisson1, μ, n, me, y)
