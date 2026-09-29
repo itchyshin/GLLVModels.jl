@@ -70,8 +70,10 @@ using GLLVModels,Test,Random,LinearAlgebra,Distributions
         @test_throws ArgumentError fit_gaussian_gllvm(Y;K=K,aghq=3,aghq_control=(n_adapt=0,))
         @test_throws ArgumentError fit_gaussian_gllvm(Y;K=K,aghq=3,aghq_control=(ridge=1e-8,))
         @test_throws ArgumentError fit_gaussian_gllvm(Y;K=K,aghq=3,hessian=:fisher)
+        # The public route estimates trait intercepts (2026-09-27-gaussian-trait-intercepts.md).
         gen=fit_gllvm(Y;family=Normal(),K=K,aghq=3)
-        @test gen.integration.actual==:aghq && gen.logLik≈f.logLik
+        genX=fit_gaussian_gllvm(Y;K=K,aghq=3,X=GLLVModels._trait_intercept_design(p,n))
+        @test gen.integration.actual==:aghq && gen.logLik≈genX.logLik && length(gen.pars.β)==p
         form=gllvm(@formula(y~1),Y,(site=collect(1:n),);family=Normal(),K=K,aghq=3)
         @test form.integration.actual==:aghq
         @test occursin("AGHQ",sprint(show,MIME("text/plain"),f))

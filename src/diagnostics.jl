@@ -42,7 +42,8 @@ vectors (rather than TMB's internal joint/marginal split). `estimate =
 TRUE` (the `joint_p_value` re-fit path) is not implemented — that
 field is always `missing`. Any other structure (`K_W>0`, `has_diag`,
 `K_phy>0`, fixed-effect `β`) throws `ArgumentError` rather than
-silently simulating the wrong generative model.
+silently simulating the wrong generative model. The per-trait intercepts
+estimated by `fit_gllvm(Y; family = Normal(), K)` are supported.
 
 Returns a `NamedTuple` with fields mirroring the R object:
 `marginal_p_value`, `marginal_bias` (`Dict{String,Float64}` per
@@ -61,7 +62,7 @@ function gllvmTMB_check_consistency(fit::GllvmFit, y::AbstractMatrix;
         "gllvmTMB_check_consistency only supports the single-tier Gaussian model " *
         "(K_W == 0, has_diag == false, K_phy == 0); the fitted model has structure " *
         "GLLVModels.jl does not yet re-simulate for this check"))
-    isempty(fit.pars.β) || throw(ArgumentError(
+    isempty(fit.pars.β) || _has_intercept_design(fit) || throw(ArgumentError(
         "gllvmTMB_check_consistency does not support fixed-effect design X yet"))
 
     rng = seed === nothing ? default_rng() : MersenneTwister(Int(seed))
@@ -77,6 +78,7 @@ function gllvmTMB_check_consistency(fit::GllvmFit, y::AbstractMatrix;
     for s in 1:n_sim
         Z = randn(rng, K, n)
         ysim = Λ * Z .+ σ_eps .* randn(rng, p, n)
+        _has_intercept_design(fit) && (ysim .+= _intercept_mean(fit))
         nll_s = _confint_reconstruct_nll(fit, ysim, X, Σ_phy)
         scores[s, :] = ForwardDiff.gradient(nll_s, θ̂)
     end

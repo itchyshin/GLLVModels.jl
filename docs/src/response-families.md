@@ -402,10 +402,14 @@ otherwise convert a typo into a converged-looking garbage fit.
 #### Limits
 
 The outer optimisation is Optim LBFGS with a **finite-difference** gradient over
-the packed vector, not a hand-coded analytic outer gradient. Neither
-`TruncatedNegBin2Fit` nor `TruncatedNegBin2PerTraitFit` has a `confint` dispatch,
-so `confint(fit, Y)` is not available for this family, and there is no R-bridge
-route for it.
+the packed vector, not a hand-coded analytic outer gradient. Both
+`TruncatedNegBin2Fit` and `TruncatedNegBin2PerTraitFit` have a `confint` dispatch
+(`confint(fit, Y; method = :wald | :profile | :bootstrap)`). The interval for the
+dispersion `r` on the shared-r route is under investigation: on one test draw the
+Wald interval was far narrower than a hand-computed profile of `r`, and
+`method = :profile` returned `status = :failed`, so treat Wald and profile
+intervals for `r` with caution until that is resolved. There is no R-bridge route
+for this family.
 
 ### Beta — `Beta()`
 
@@ -984,8 +988,8 @@ end
 The formula interface can build the same complete design. `y ~ 1 + site_x`
 includes one intercept per trait and a shared slope. `y ~ 0 + site_x` removes
 the intercepts; `y ~ 0` is a zero-mean model. Omitting the intercept marker
-(`y ~ site_x`) includes trait intercepts. This applies to `pervar=true`; the
-existing shared-variance formula route is unchanged. Complete long tables and
+(`y ~ site_x`) includes trait intercepts. The same design is used with
+`pervar=true` and by the default shared-variance route. Complete long tables and
 categorical contrast choices use the same per-variance route.
 
 ```@example pervar_design
@@ -1166,6 +1170,74 @@ not a supported capability. This study used K = 1 and intercept-only
 zero-inflation only, evaluated point-estimate bias/RMSE and the fitter's own
 convergence diagnostic — **no coverage or SE evaluation was done**, so it says
 nothing about interval calibration for any of the three families.
+
+### `zi_poisson()` / `zi_nbinom2()` / `zi_binomial()` — gllvmTMB twins (P1)
+
+gllvmTMB 0.7.1 (commit `9539352f6`, the P1 pin) exports `zi_poisson()`,
+`zi_nbinom2()` and `zi_binomial()`. The same names in GLLVModels.jl fit R's
+model, not the Julia fitters above:
+
+```julia
+fit = fit_gllvm(Y; family = zi_poisson(), K = 1)
+fit = fit_gllvm(Y; family = zi_nbinom2(), K = 1)
+fit = fit_gllvm(Y; family = zi_binomial(), K = 1, trials = N)  # N: p×n trials
+fit.zi     # per-trait structural-zero probability (R: fit$report$zi)
+fit.phi    # zi_nbinom2 only: per-trait NB2 dispersion, Var = μ + μ²/φ
+```
+
+R's model is a true zero-inflation mixture with a per-trait, intercept-only
+structural-zero probability (no covariates and no latent loadings on the zero
+part), the count process active at every observation, one NB2 dispersion per
+trait, and binomial trials per observation. A `zi_binomial()` trait whose rows
+all have one trial is refused, as in R: with 0/1 data the structural-zero
+probability and the success probability are not separately identified. The
+Laplace log-determinant uses the observed curvature, as TMB does.
+
+How this differs from Julia's own routes, which stay available unchanged:
+
+| | `zi_poisson()` / `zi_nbinom2()` / `zi_binomial()` | `ZIPoisson()` / `ZINegBin()` / `ZIB(N)` |
+|---|---|---|
+| Laplace log-det count weight | observed (as TMB) | expected (Fisher) |
+| NB2 dispersion | one per trait | one shared across traits |
+| binomial trials | per observation, `N = 1` traits refused | one shared integer `N`, `N = 1` admitted |
+| covariates on the count part | not offered | `_cov` fitters |
+
+On the ZIP twin fixture the Julia `ZIPoisson` marginal evaluated at R's optimum
+is 3.62 log-likelihood units away from R's logLik, while the `zi_poisson()`
+route matches to 1.4e-8 (optimum against optimum). Twin evidence:
+`test/test_zi_twin.jl` (which also carries the R-pinned NB2 breakdown datasets);
+known-DGP recovery: `test/test_zi_recovery.jl`. Recovery has been shown only for
+loadings with `|λ| <= 0.6` (p = 4, n = 350, K = 1). With stronger loadings
+(`|λ|` from 0.8 to 1.8, Poisson, measured on three draws) the default starts of both
+gllvmTMB and this route land in a lower basin, far below the log-likelihood at the
+true parameters (on one draw both engines converge to the same point, 711 units below
+it, and both report convergence). That is a start-quality gap shared by both engines,
+not a guard artefact; a multi-start would address it on either side.
+
+**Laplace breakdown guard.** At `y = 0` the mixture's observed curvature can be
+negative, so the per-site Laplace precision `A = I + Λ' diag(W) Λ` can approach
+singularity and the Laplace value inflates. On one NB2 dataset the Laplace maximum
+sat 363 log-likelihood units above the exact marginal there, and gllvmTMB's own
+objective returns the same inflated value (R reached the sensible optimum only
+through its start, and stopped in that region with `convergence = 1` on 2 of 20
+draws). This route refuses a site whose `A` has an eigenvalue below
+`ZI_LAPLACE_EIGMIN_FLOOR` (0.1), reports an optimum at the floor with
+`converged = false` (`fit.min_site_eigen` records the value), and starts NB2 fits
+from a moment estimate of `phi`. A fit that ends at the guard is retried once from a
+shrunk start (loadings at a tenth of the default start) and the retry is kept only if
+it ends off the guard. Measured on 35 NB2 draws (20 at the reviewer's setting, 15 at
+the recovery-test setting): 30 fits converge off the guard, and the 5 that end flagged
+are all draws on which gllvmTMB also fails (an error or `convergence = 1`). Before the
+retry, one further draw (1 of the 15) stalled at the guard where gllvmTMB reached a
+sensible optimum; the retry reaches that optimum (logLik -3820.2665, matching R). So
+the start and retry reach the sensible optimum on every measured draw where gllvmTMB
+does, not on every dataset. The guard does not remove Laplace error above the floor.
+Missing responses (`missing` or `NaN`) are refused with an `ArgumentError` (gllvmTMB
+masks them per row).
+
+Only the no-covariate model is offered on this route,
+and `predict`, `confint`, `simulate` and the extractors below are not wired for
+its [`ZiFit`](@ref) result yet.
 
 ## Extractors
 

@@ -53,6 +53,306 @@
   current; `test/parity/test_core070_pin.jl` 27/27; `test/test_core070_receipts.jl` 52/52 (repaired for
   the new active-cell state, plus a value-sink test).
 
+## 2026-09-27: getLV on grouped NB2, NB1 and Gamma fits returns the per-site mode
+
+- Branch `claude/getlv-grouped-mode-20260927`, stacked on `claude/nb-grouped-init-v2` (#521).
+  `_grouped_getLV` now calls each family's likelihood mode chain (`_nb_grouped_site_mode`,
+  `_nb1_grouped_site_mode`, `_gamma_grouped_site_mode`, moved verbatim out of the
+  `*_loglik_site` functions) through `_grouped_site_mode`, dispatched on the marker element type;
+  other families keep `_grouped_laplace_mode`. Log-likelihood values cannot change (pure move,
+  checked by an independent review with comments stripped).
+- Before: NB2 seed-1 panel (K = 1, r = 0.5) 70 of 300 sites off the mode (max |grad| 0.27);
+  Gamma panel 135 of 200 (0.17); fixture site off by 4.7e-4. After: all stationary below 1e-6.
+- New test `test/test_grouped_getlv_mode.jl`, 5 testsets, 308 assertions; the fixture, panel and
+  covariate-offset testsets fail on the base (covariate |grad| 0.249). 31 existing test files that
+  reach grouped fits, getLV, the bridge or postfit: 2804 assertions pass, 0 fail.
+## 2026-09-27: Beta grouped kernel scores every site at its mode (#503 class)
+
+- Branch `claude/beta-grouped-mode-search-503` from `origin/main`. `_beta_grouped_loglik_site`
+  now calls `_beta_grouped_mode` (damped, #479 rule) with a `LogitLink` fallback whose step
+  weight is max(observed, Fisher), a 20x Fisher retry, then `-Inf`.
+- Before: seed-6 StableRNG panel (φ = 10, K = 1, warm start) 2 of 300 sites off the mode, value
+  off by up to 15.02; undamped Fisher 2-cycles (z = -0.318 / -0.983 around -0.555). Damped
+  Fisher alone does not converge there; the fallback does.
+- After: 18,000 sites (φ in {2, 10, 50}, K in {1, 2, 3}, loadings x1 and x3): 0 off the mode, 0
+  `-Inf`, every previously healthy site bit-identical. Affected cells about 35 to 48% slower.
+  Four whole fits (seeds 6 and 1, K = 1, 2): identical log-likelihoods before and after.
+- New test `test/test_beta_grouped_mode_search.jl`, 604 assertions (fails on the base, worst 15.02).
+- d05 regression found and fixed: with the corrected kernel the fit stopped at 269.2966 (φ5 = 1139,
+  log-φ5 gradient exactly 0, max |grad| 5.7e-6) instead of 272.6094. Both points are stationary;
+  the old optimum still scores 272.6094 under the new kernel (the old kernel scores the new point
+  at -861.3). Maintainer choice (2026-09-27): the #480 restart now also fires when a group's
+  precision is more than 100x the median (`_beta_grouped_phi_plateau`); d05 back to 272.6094,
+  `test_beta_grouped_convergence.jl` 19/19.
+- 32 related test files (every `test_grouped*.jl` and `test_beta*.jl`, bridge grouped and missing-mask,
+  postfit, ordination, fit_gllvm, unified API): 3497 assertions pass, 0 fail. Full `Pkg.test()` not run.
+## 2026-09-27: Binomial bootstrap refit reports its own verdict (part of #504)
+
+- Branch `claude/binom-boot-verdict-504` from `origin/main` @ `cb5688f7e`. The Laplace `BinomialFit`
+  refit closure returns `(θ, converged, loglik)` (#508/#516 contract); AGHQ route unchanged.
+- New `test/test_confint_bootstrap_verdict_binomial.jl`: 7 pass, 8 fail, 14 error on main; 29/29 on
+  Julia 1.10.12 and 1.13.0 (per-file; full suite not run).
+  Six neighbouring files that bootstrap a Binomial fit: 2006/2006 on 1.10.12.
+- After-task: `docs/dev-log/after-task/2026-09-27-binom-boot-verdict-504.md`.
+## 2026-09-27: Gamma bootstrap refits report their own verdict (part of #504)
+
+- Branch `claude/gamma-boot-verdict-main-504` from `origin/main` @ `cb5688f7e`. The `GammaFit`,
+  `GammaGroupedFit` and `GammaGroupedCovFit` refit closures return `(θ, converged, loglik)`; no
+  boundary flag for α (a large α is well identified: α̂ 8.4e7 to 9.2e7 on true-α = 1e8 data).
+- New `test/test_confint_bootstrap_verdict_gamma.jl`: 7 pass, 14 fail, 15 error on main; 36/36 on
+  Julia 1.10.12 and 1.13.0 (per-file; full suite not run).
+  Seven neighbouring files: 926 pass, plus 1 pre-existing `@test_broken` (same on main).
+- After-task: `docs/dev-log/after-task/2026-09-27-gamma-boot-verdict-504.md`.
+## 2026-09-27: Beta bootstrap refits report their own verdict (part of #504)
+
+- Branch `claude/beta-boot-verdict-504` from `origin/main` @ `cb5688f7e`. The `BetaFit`,
+  `BetaGroupedFit` and `BetaGroupedCovFit` refit closures return `(θ, converged, loglik)`; no boundary
+  flag for φ (the near-deterministic end is identified).
+- New `test/test_confint_bootstrap_verdict_beta.jl`: 7 pass, 14 fail, 15 error on main; 36/36 on
+  Julia 1.10.12 and 1.13.0 (per-file; full suite not run).
+  Six neighbouring files: 908/908 on 1.10.12.
+- After-task: `docs/dev-log/after-task/2026-09-27-beta-boot-verdict-504.md`.
+## 2026-09-27: NB1 bootstrap refits report their own verdict (part of #504)
+
+- Branch `claude/nb1-boot-verdict-504` from `origin/main` @ `cb5688f7e`. The `NB1Fit`, `NB1GroupedFit`
+  and `NB1GroupedCovFit` refit closures return `(θ, converged, loglik)`; no boundary flag (the common
+  NB1 boundary, the Poisson limit, is a lower one).
+- New `test/test_confint_bootstrap_verdict_nb1.jl`: 7 pass, 14 fail, 15 error on main; 36/36 on Julia
+  1.10.12 and 1.13.0 (per-file; full suite not run). Four neighbouring files: 585/585 on 1.10.12.
+- After-task: `docs/dev-log/after-task/2026-09-27-nb1-boot-verdict-504.md`.
+## 2026-09-27: Tweedie bootstrap refits report their own verdict (part of #504)
+
+- Branch `claude/tweedie-boot-verdict-504` from `origin/main` @ `cb5688f7e`. The `TweedieFit`,
+  `TweedieGroupedFit` and `TweediePerTraitPowerFit` refit closures return `(θ, converged, loglik)`;
+  no boundary flag (the power is held fixed in the CI layer and `_tweedie_verdict` already flags a
+  power at the edge of (1, 2)).
+- New `test/test_confint_bootstrap_verdict_tweedie.jl`: 7 pass, 14 fail, 18 error on main; 39/39 on
+  Julia 1.10.12 and 1.13.0 (per-file; full suite not run; about 23 to 25 min per run on a loaded Mac).
+  Four neighbouring files: 407 pass, plus 2 pre-existing broken (one `@test_broken`, one `@test_skip`).
+- After-task: `docs/dev-log/after-task/2026-09-27-tweedie-boot-verdict-504.md`.
+## 2026-09-27: Ordinal bootstrap refits report their own verdict (part of #504)
+
+- Branch `claude/ordinal-boot-verdict-504` from `origin/main` @ `880cad4c7`. The `OrdinalFit`,
+  `OrdinalPerTraitFit` and `OrdinalPerTraitCovFit` refit closures return `(θ, converged, loglik)`;
+  the category-count drop is kept; no boundary flag.
+- New `test/test_confint_bootstrap_verdict_ordinal.jl`: 22 pass, 5 fail, 12 error of 39 on main;
+  39/39 on Julia 1.10.12 (21.4 s) and 1.13.0 (27.2 s) (per-file; full suite not run). No data-driven
+  draw fails an ordinal fitter softly under bounds checking, so rejection is tested with a labelled stub.
+  Six neighbouring files: 986 pass, 0 fail, 0 broken.
+- After-task: `docs/dev-log/after-task/2026-09-27-ordinal-boot-verdict-504.md`.
+## 2026-09-27: Zero-inflated bootstrap refits report their own verdict (part of #504)
+
+- Branch `claude/zi-boot-verdict-504` from `origin/main` @ `1214e948e`. The `ZIPFit`, `ZIPCovFit`,
+  `ZINBFit`, `ZINBCovFit` and `ZIBFit` refit closures return `(θ, converged, loglik)`; θ unchanged,
+  no boundary flag.
+- New `test/test_confint_bootstrap_verdict_zi.jl`: 11 pass, 22 fail, 25 error of 58 on main; 58/58 on
+  Julia 1.10.12 (106 s; also 58/58 with `--check-bounds=yes`) and 1.13.0 (98 s). Per-file; full suite
+  not run. Three neighbouring files: 775/775 on 1.10.12.
+- After-task: `docs/dev-log/after-task/2026-09-27-zi-boot-verdict-504.md`.
+## 2026-09-27: Hurdle and delta bootstrap refits report their own verdict (part of #504)
+
+- Branch `claude/hurdle-delta-boot-verdict-504` from `origin/main` @ `1214e948e`. The six refit
+  closures in `_family_ci` for `HurdlePoissonFit`, `HurdleNBFit`, `DeltaLogNormalFit` and
+  `DeltaGammaFit` (each delta method has a `predictor = :shared` closure and a default one) return
+  `(θ, converged, loglik)`; θ unchanged, no boundary flag.
+- New `test/test_confint_bootstrap_verdict_hurdle_delta.jl`: 13 pass, 26 fail, 30 error of 69 on main;
+  69/69 on Julia 1.10.12 (52 s; also 69/69 with `--check-bounds=yes`, 57 s) and 1.13.0 (57 s).
+  Per-file; full suite not run. Neighbour `test_confint_family.jl`: 341/341 on 1.10.12.
+- After-task: `docs/dev-log/after-task/2026-09-27-hurdle-delta-boot-verdict-504.md`.
+## 2026-09-27: Zero-truncated bootstrap refits report their own verdict (part of #504)
+
+- Branch `claude/trunc-boot-verdict-504` from `origin/main` @ `4357e4652`. The three refit closures
+  in `_family_ci` for `TruncatedPoissonFit`, `TruncatedNegBin2Fit` and
+  `TruncatedNegBin2PerTraitFit` return `(θ, converged, loglik)`; θ unchanged, no boundary flag.
+- New `test/test_confint_bootstrap_verdict_truncated.jl`: 13 pass, 8 fail, 13 error of 34 on main
+  (with `--check-bounds=yes`); 34/34 on Julia 1.10.12 (46 s; also 34/34 with `--check-bounds=yes`,
+  48 s) and 1.13.0 (42 s). Real failing draw on the truncated-Poisson route only; the two NB2 routes
+  use a labelled stub failed refit. Per-file; full suite not run.
+- Neighbours on 1.10.12: `test_confint_family.jl` 341/341, `test_bridge_capabilities.jl` 242/242.
+- After-task: `docs/dev-log/after-task/2026-09-27-trunc-boot-verdict-504.md`.
+## 2026-09-27: Exponential, lognormal, Student-t and GP-1 bootstrap refits report their own verdict (part of #504)
+
+- Branch `claude/misc-boot-verdict-504` from `origin/main` @ `5b9af3763`. The `ExponentialFit`,
+  `LognormalFit`, `StudentTFit` and `GP1Fit` refit closures return `(θ, converged, loglik)`; θ
+  unchanged, no boundary flag.
+- New `test/test_confint_bootstrap_verdict_misc.jl`: 14 pass, 19 fail, 24 error of 57 on main; 57/57 on
+  Julia 1.10.12 (67 s; also 57/57 with `--check-bounds=yes`, 67 s) and 1.13.0 (51 s). Per-file; full
+  suite not run. Four neighbouring files on 1.10.12: 620 pass, 1 broken (a static `@test_broken` on the
+  phylo σ_phy sign, unrelated).
+- After-task: `docs/dev-log/after-task/2026-09-27-misc-boot-verdict-504.md`.
+## 2026-09-27: Beta-hurdle and ordered-beta bootstrap refits report their own verdict (part of #504)
+
+- Branch `claude/bhob-boot-verdict-504` from `origin/main` @ `5b9af3763`. The `BetaHurdleFit` and
+  `OrderedBetaFit` refit closures return `(θ, converged, loglik)`; θ unchanged, no boundary flag.
+- New `test/test_confint_bootstrap_verdict_bhob.jl`: 8 pass, 7 fail, 10 error of 25 on main; 25/25 on
+  Julia 1.10.12 (40.5 s; also 25/25 with `--check-bounds=yes`, 41.9 s) and 1.13.0 (28.7 s). Per-file;
+  full suite not run. Neighbours on 1.10.12: `test_confint_family.jl` 341/341, `test_beta_hurdle.jl`
+  62/62, `test_ordered_beta.jl` 49/49.
+- After-task: `docs/dev-log/after-task/2026-09-27-bhob-boot-verdict-504.md`.
+## 2026-09-28: Row-random, multinomial and covariate-GLLVM bootstrap refits report their own verdict (part of #504)
+
+- Branch `claude/rest-boot-verdict-504` from `origin/main` @ `5b9af3763`. The `RowRandomFit`,
+  `MultinomialFit` and `GllvmCovFit` refit closures return `(θ, converged, loglik)`; θ unchanged,
+  both dispersion branches wrapped, no boundary flag.
+- New `test/test_confint_bootstrap_verdict_rest.jl`: 14 pass, 19 fail, 28 error of 61 on main; 61/61 on
+  Julia 1.10.12 (30 s; also 61/61 with `--check-bounds=yes`, 26 s) and 1.13.0 (23 s). Per-file; full
+  suite not run. Neighbours on 1.10.12: `test_bridge_x.jl` 200/200, `test_confint_family.jl` 341/341.
+- After-task: `docs/dev-log/after-task/2026-09-28-rest-boot-verdict-504.md`.
+## 2026-09-28: ordinal fitters reject observed levels below 1 (branch `claude/ordinal-level-check`)
+
+- Bug: `_pack_initial_ordinal_pertrait` and the shared-cutpoint warm start in
+  `src/families/ordinal.jl` count categories with `counts[Int(Y[t, i])] += 1`
+  inside `@inbounds`, and no ordinal fitter checked that observed levels were at
+  least 1. A level of 0 or -1 wrote out of bounds with bounds checks off.
+- Fix: `_check_ordinal_levels(Y, obs)` runs right after `obs` is built in
+  `fit_ordinal_gllvm`, `fit_ordinal_gllvm_pertrait` and
+  `fit_ordinal_gllvm_pertrait_cov`, before any level-indexed loop. Masked cells
+  are skipped.
+- RED on origin/main `85b7a688d`, `test/test_ordinal_level_check.jl`, Julia
+  1.10.12: 12 pass, 12 fail, 12 error of 36, identical with and without
+  `--check-bounds=yes` (shared route throws `BoundsError`; per-trait routes
+  return without any error).
+- GREEN: 36/36 on Julia 1.10.12, 1.10.12 `--check-bounds=yes`, and 1.13.0.
+- Neighbours on 1.10.12, each file alone: bridge_missing_mask 92/92, bridge_x
+  200/200, confint_family 341/341, core070_link_boundaries 21/21, diagnostics
+  65/65, extractors 92/92, lv_ci 196/196, missing_data 34/34 (needs
+  `using Distributions` first when run alone), ordinal_fit 10/10,
+  ordinal_link_input 49/49, ordinal_logit_twin 29/29, ordinal_pertrait 113/113,
+  ordinal_probit 10/10, ordinal_x_identity 21/21, postfit 1106/1106,
+  second_order_ordinal_pertrait_ci 26 pass + 1 env-gated skip, statsapi 74/74.
+## 2026-09-28: grouped `getLV` honours the fit's `offset`
+
+- Branch `claude/grouped-getlv-offset-20260928`. `getLV` for `NBGroupedFit`, `NB1GroupedFit`,
+  `BetaGroupedFit` and `GammaGroupedFit` now takes `offset = nothing` (p×n, as given to the
+  fitter), passes it to `_grouped_getLV`, and throws `DimensionMismatch` on a wrong size.
+  `_grouped_getLV` itself is unchanged (draft PRs #521/#529/#540/#551 rewrite its internals).
+- Red first: new `test/test_grouped_getlv_offset.jl` errored on all four families on main
+  (`unsupported keyword argument "offset"`); after the fix 24/24 pass. The main check is that a
+  per-trait constant offset equals a β shift (1e-6).
+- Regression subset, one Julia 1.10 session (macOS, 4 threads): every `test_grouped*.jl`, the
+  grouped mode-search tests, `test_bridge_grouped_dispersion.jl`, `test_postfit.jl`,
+  `test_postfit_tables.jl`, 25 files, all pass (`test_grouped_nongaussian_fit.jl` rerun with the
+  test environment for `StableRNGs`: 63/63). Full `Pkg.test()` not run.
+
+## 2026-09-28: GP-1 huge-count log-pmf and per-family verdict
+
+- Branch `claude/gp1-verdict` from origin/main 863ee0f78 (local commits, not pushed).
+  Reproduced: one cell of healthy GP-1 data set to 10^18 made `fit_gp1_gllvm`
+  report `converged = true` at loglik +6795.99 (1.10.12) and +4939.22 (1.13.0).
+  Cause: the direct log-pmf's `y log y` cancellation, +9216.0 in Float64 against
+  -59.8232 in 256-bit BigFloat at the fitted point.
+- Fix: rearranged log-pmf for α > 0, y >= 10^6; new `_gp1_verdict` on each inner
+  solve. Test `test/test_gp1_verdict.jl` + fixture `test/fixtures/gp1_verdict.toml`.
+- RED on origin/main (1.10.12): 235 pass, 33 fail, 10 error of 278. GREEN: 285/285 on
+  1.10.12, 1.10.12 `--check-bounds=yes`, and 1.13.0.
+- Neighbours (1.10.12, each alone): gp1_laplace 101/101, hessian_kwarg 32/32,
+  laplace_dual_safety 37/37, known_sentinel_defects 25 pass + 1 broken (pre-existing
+  `@test_broken`, σ_phy sign), curvature_census 66/66, confint_family 341/341.
+  Local Documenter build exit 0. Full suite not run.
+- After-task: `docs/dev-log/after-task/2026-09-28-gp1-verdict.md`.
+## 2026-09-28: Two-part fitters reject observed out-of-support values
+
+- Branch `claude/twopart-input-check` from `origin/main` @ `863ee0f78`; fix commit `dd934d182`.
+  `_check_twopart_support` (src/families/twopart.jl) is called by the twelve public two-part
+  fitters before the warm start. NaN, negatives (all), `Inf` (delta families) and values
+  `>= 1` (beta-hurdle) now throw `ArgumentError` instead of being scored as zeros.
+- `test/test_twopart_input_check.jl`: RED on `863ee0f78` 27 passed, 92 failed; GREEN 119/119
+  on Julia 1.10, 1.10 `--check-bounds=yes` and 1.13.
+- Neighbours on 1.10, one file per process: 23 of 24 files green (beta_hurdle 62, bridge_x
+  8 + 192, bridge_zib 77, bridge_zip_nox 39, confint_family 341, delta_disp_group 57,
+  delta_fit 13, delta_gamma 50, delta_postfit 213, delta_shared_predictor 38, formula 27,
+  hurdle_nb 24, hurdle_poisson 171, offset 29, postfit_zib_tweedie 17,
+  second_order_delta_followup 43 + 1 env-gated `@test_skip`, twopart_hessian_kwarg 13, twopart_mode_search 47,
+  va_vs_laplace 8, zero_inflated 29, zib_x_identity 23, zinb_x_identity 42, zip_x_identity 28).
+  `test_variational_dgamma.jl` errors standalone with `dot` not defined (the file does not
+  load LinearAlgebra); with LinearAlgebra loaded it is 17/17. Full suite not run.
+- After-task: `docs/dev-log/after-task/2026-09-28-twopart-input-check.md`.
+
+## 2026-09-27: BetaBinomial bootstrap refits report their own verdict (#542, part of #504)
+
+- Branch `claude/bb-boot-verdict-542` from `origin/main` @ `97e11be04`. The three beta-binomial
+  refit closures in `src/confint_family.jl` return `(θ, converged, loglik)`, as Poisson's has
+  since #516; `_bootstrap_refit_ok` and `_family_bootstrap` are unchanged. Maintainer choice:
+  option 1 on #542 (exclude non-converged replicates, report `n_converged`).
+- New test `test/test_confint_bootstrap_verdict_betabinomial.jl` with a literal fixture
+  `test/fixtures/beta_binomial_boot_boundary_542.toml` (two Binomial datasets where the ungrouped
+  refit reaches φ >= 1e6 with a finite loglik and θ). 17 pass, 17 fail, 23 error on main (1.10.12);
+  57/57 on the branch on Julia 1.10.12 and 1.13.0 (`JULIA_NUM_THREADS=2 OPENBLAS_NUM_THREADS=1`,
+  per-file, full suite not run).
+- Neighbour: the beta-binomial bootstrap testset in `test/test_confint_family.jl` (`n_converged >= 4`
+  of 8) gives 8 of 8 on main and branch, both versions.
+- Boundary rate, 50 replicates per dataset, Julia 1.10.12, local merge with #541: ungrouped 0 of
+  250; per-species grouped 35 of 150 (23%) at `φ >= 1e6`.
+- Maintainer then chose option 3: refits also flag `φ` at the boundary (`upper_boundary`), and
+  `_family_bootstrap` reports an `Inf` upper bound for a parameter whose flagged share of usable
+  replicates exceeds `(1 - level)/2` (opt-in; other families unchanged). New file 76/76 on
+  1.10.12 and 1.13.0 (28 pass, 19 fail, 29 error on main); seven neighbouring bootstrap files
+  708/708 on 1.10.12. Live per-species grouped bootstrap on healthy_seed_9001 (50 replicates):
+  `φ[1]` and `φ[6]` upper bounds `Inf`, 38 of 50 converged.
+- After-task: `docs/dev-log/after-task/2026-09-27-bb-boot-verdict-542.md`.
+## 2026-09-27: Grouped beta-binomial fits get the #515 verdict (part of #515)
+
+- Branch `claude/bb-grouped-verdict-515` from `origin/main` @ `52ed4281b` (#522 merge).
+  `fit_beta_binomial_gllvm_grouped` and `fit_beta_binomial_gllvm_grouped_cov` now use
+  `_beta_binomial_grouped_verdict`: the shared `_fit_verdict` screen, then
+  `_beta_binomial_verdict` at the largest group `φ`. `_fit_verdict` and `_laplace_mode`
+  are unchanged.
+- On main, per-species fits of three #522 fixture datasets reported `converged = true`
+  with a group `φ` of 8.5e11 to 7.6e15 on Julia 1.10.12 and 1.13.0. New test
+  `test/test_beta_binomial_grouped_verdict_515.jl`: 73 pass, 3 fail, 5 error on main
+  (1.10); the five beta-binomial test files pass 906/906 on the branch on 1.10.12 and
+  1.13.0 (`JULIA_NUM_THREADS=2 OPENBLAS_NUM_THREADS=1`, per-file, full suite not run).
+  Local Documenter build and `tools/check_reader_surface.py` clean after rebasing onto
+  `824d22a4b`.
+- Main vs branch over 52 grouped fits per version: every fit with all `φ` below 1e6 is
+  bitwise identical (49 on 1.10, 47 on 1.13); boundary fits change only `converged`.
+- After-task: `docs/dev-log/after-task/2026-09-27-bb-grouped-verdict-515.md`.
+## 2026-09-27: Temporal source beside ordinary unit / unit_obs terms at gllvmTMB P1 (slice 2)
+
+- Branch `claude/temporal-slice2`, stacked on slice 1 (draft PR #543). `fit_temporal_gllvm`
+  gains `unit` / `unit_obs`; its `structure` admits `indep`, `dep`, `latent` at either level
+  and `(1 | g)`; nesting, partition and grouping refusals in R's order; the sigma_eps
+  suppression rule (R/fit-multi.R:6959-6967); R's measured `opt$par` order (`theta_rr_B`
+  before the temporal blocks); composed `simulate`, `extract_ordination(level = :unit)`,
+  `update`; helper refusals name R's tiers. Optimiser: both LBFGS line searches, keep the
+  lower, then Newton polish. No edit to `src/formula.jl` or the other fenced files.
+- Receipts (`test/fixtures/temporal_p1/generate_temporal_p1_slice2.R`, 25 fits + the
+  oracles.R:318 point): fn / gr at fixed coordinates max 3.0e-9 / 3.4e-9; dense oracle
+  9.1e-13; R's fn at Julia's optimum 1.7e-9; |Δ logLik| 9.0e-8; Newton-polished R summary
+  gap 8.0e-8; report `eta` 1.8e-15; unit ordination 8.9e-16.
+- Per-file runs on Julia 1.10 and 1.13 (full suite not run): see the after-task report.
+- After-task: `docs/dev-log/after-task/2026-09-27-temporal-slice2.md`.
+## 2026-09-27: zi_poisson / zi_nbinom2 / zi_binomial twins of gllvmTMB at P1
+
+- Branch `claude/twin-zi` from `origin/main` @ `97e11be04`. New `src/families/zi_twin.jl`:
+  R-named constructors, `fit_zi_gllvm` / `ZiFit` / `zi_marginal_loglik_laplace`, and a
+  `_fit_gllvm` method so `fit_gllvm(Y; family = zi_poisson(), K)` works. The route reuses
+  the two-part mode search and pieces through per-cell markers that supply the observed count curvature
+  (nested ForwardDiff of the mixture density) to the Laplace log-determinant; Julia's own
+  `ZIPoisson` / `ZINegBin` / `ZIB` routes are unchanged.
+- Twin fixtures fitted in R at gllvmTMB `9539352f6` (temporary library): logLik optimum vs
+  optimum 1.35e-8 (ZIP), 1.04e-8 (ZINB), 1.35e-9 (ZIB); Julia objective at R's optimum within
+  4.3e-9 of R's logLik; R's objective at Julia's optimum within 4.4e-9 of Julia's value. The
+  existing `ZIPoisson` marginal at R's optimum is 3.62 units off R's logLik (Fisher log-det).
+- `test/test_zi_twin.jl` 58 of 58 on Julia 1.10.0 and 1.13.0. Neighbours on both versions:
+  `test_curvature_census.jl` 66/66, `test_zero_inflated.jl` 29/29, `test_twopart_substrate.jl`
+  2/2, `test_twopart_hessian_kwarg.jl` 13/13.
+- Review follow-up (Laplace breakdown): per-site guard `ZI_LAPLACE_EIGMIN_FLOOR = 0.1`, optimum
+  at the floor reported `converged = false`, NB2 start hardened (moment phi, half-scale
+  loadings), `hessian` accept-and-refuse, Julia parameter vectors in the fixture's
+  `r_at_julia` blocks. Reviewer's seed-12 NB2 case: -3012.80 (spurious) before, -3311.4547
+  (R's optimum) after. 20 NB2 draws: 3 silent breakdowns before, 0 after (2 flagged
+  not converged, which R also fails on). New `test/test_zi_recovery.jl`; note
+  `docs/dev-log/decisions/2026-09-27-zi-laplace-breakdown-guard.md`.
+- Second review applied (head `d0a57e05d`): one shrunk-start retry (loadings x 0.1) when
+  a fit ends at the guard; the review's Julia-only stall (recovery DGP, MersenneTwister(2))
+  goes from flagged at -3749.88 to converged at -3820.2665 (R -3820.266506). Builder's 20
+  draws: 18 converged, 2 flagged (seeds 6, 10; R fails). Reviewer's 15 draws: 12 converged,
+  3 flagged (all R fails). zi_poisson / zi_binomial 15-draw sweeps: 15/15 converged each,
+  guard never binding, min site eigenvalue at optima 0.318 / 0.549. `missing`-typed Y
+  refused with ArgumentError. R-pinned literal NB2 cases moved into the P1-tagged
+  `test/test_zi_twin.jl`. Julia 1.10.12 and 1.13.0: test_zi_twin 80/80, test_zi_recovery
+  42/42, test_zero_inflated 29/29, test_curvature_census 66/66 (each version).
 ## 2026-09-27: Data and fit-input at P1, independent review of #579 applied
 
 - Same branch, fast-forward commits only, one concern per commit; no `src/`, GATES.md, P0 evidence or
@@ -286,6 +586,7 @@
   against R's polished optimum). Cross-objective both directions within 1.3e-11 on all four cases.
 - Finding: R's `latent()` default `unique = TRUE` adds `theta_diag_B`, which the spec omits; the Julia
   door refuses it. Provenance: `docs/dev-log/decisions/2026-09-27-isdm-port-provenance.md`.
+
 ## 2026-09-27: namespace P1 re-measure hardened after review (supersedes #559 as a new PR)
 
 - Branch `claude/true-parity-p1-namespace-v2` from `origin/main` after #539 merged (`cb5688f7e`);
