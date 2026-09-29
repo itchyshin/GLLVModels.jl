@@ -100,6 +100,7 @@ fit_zinb_gllvm
 fit_zinb_gllvm_cov
 fit_zib_gllvm
 fit_zib_gllvm_cov
+fit_zi_gllvm
 ```
 
 ### Grouped Dispersion & Covariate-Extended Fitters
@@ -381,6 +382,7 @@ hurdle_nb_marginal_loglik_laplace
 delta_gamma_marginal_loglik_laplace
 beta_hurdle_marginal_loglik_laplace
 zip_marginal_loglik_laplace
+zi_marginal_loglik_laplace
 zinb_marginal_loglik_laplace
 zib_marginal_loglik_laplace
 row_random_marginal_loglik_laplace
@@ -507,6 +509,8 @@ HurdleNBFit
 BetaHurdleFit
 OrderedBetaFit
 ZIPFit
+ZiFit
+ZI_LAPLACE_EIGMIN_FLOOR
 ZIPCovFit
 ZINBFit
 ZINBCovFit
@@ -588,6 +592,12 @@ ZIPoisson
 ZINegBin
 GLLVModels.ZINB
 ZIB
+zi_poisson
+zi_nbinom2
+zi_binomial
+ZiPoisson
+ZiNbinom2
+ZiBinomial
 BetaBinom
 COMPoisson
 TruncatedPoisson

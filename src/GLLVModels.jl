@@ -102,6 +102,7 @@ include("families/beta_binomial.jl")     # Beta-binomial (overdispersed binomial
 include("families/com_poisson.jl")        # Conway–Maxwell–Poisson (under/overdispersed counts) — beyond gllvmTMB
 include("families/ordered_beta.jl")       # ordered-beta (must precede fit_gllvm)
 include("families/fit_gllvm.jl")         # unified fit_gllvm(Y; family) dispatcher
+include("families/zi_twin.jl")           # gllvmTMB zi_poisson/zi_nbinom2/zi_binomial twins (R semantics)
 include("none_dep.jl")                    # none × dep matrix fitter (K = p; no formula sugar)
 include("phylo_dep.jl")                   # phylo × dep matrix fitter (K_phy = p; no formula sugar)
 include("animal_dep.jl")                  # animal × dep matrix fitter (K_phy = p; no formula sugar)
@@ -333,6 +334,8 @@ export make_cross_kernel, extract_Gamma, fit_coevolution_gaussian, fit_coevoluti
        fit_zinb_gllvm, ZINBFit, zinb_marginal_loglik_laplace, ZINegBin,
        fit_zinb_gllvm_cov, ZINBCovFit,
        fit_zib_gllvm, ZIBFit, fit_zib_gllvm_cov, ZIBCovFit, zib_marginal_loglik_laplace, ZIB,
+       zi_poisson, zi_nbinom2, zi_binomial, ZiPoisson, ZiNbinom2, ZiBinomial,
+       fit_zi_gllvm, ZiFit, zi_marginal_loglik_laplace, ZI_LAPLACE_EIGMIN_FLOOR,
        fit_gllvm,
        fit_dep_gllvm,
        fit_phylo_dep_gllvm,
