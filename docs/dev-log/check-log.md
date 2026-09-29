@@ -1,3 +1,19 @@
+## 2026-09-29: Gamma and Beta grouped fits no longer treat a large dispersion as a boundary
+
+- Branch `claude/gamma-beta-upper-boundary` from `origin/main` @ `0ce4a35aa`. New
+  `_dispersion_group_lower_boundary` (lower end `1e-6` only) replaces `_dispersion_group_boundary` at the
+  eight Gamma/Beta grouped sites (plain and `_cov` fitters plus their positional constructors). NB2, NB1,
+  `_nb_boundary_restart` and the truncated-NB2 confint adapter keep both ends.
+- New `test/test_gamma_beta_upper_boundary.jl` on a literal fixture (`test/fixtures/gamma_beta_upper_boundary.toml`,
+  sha256-checked): on main 103 pass, 10 fail, 1 error, 2 broken on Julia 1.10.12 and 1.13.0; after,
+  114 pass, 2 broken on both. Grouped Gamma with true alpha = 1e8 now reports `converged = true`; the Gamma
+  lower end and the NB2 upper end still report `converged = false`; 8 healthy grouped Gamma/Beta fits keep
+  their main loglik to 1e-8.
+- Beta with true phi = 1e8: no longer flagged, but still `converged = false` from the #480 gradient test
+  (fails for phi above about 1e5, independent of the boundary); recorded as `@test_broken` on macOS aarch64.
+- 21 neighbouring files (grouped, Beta/Gamma, bootstrap verdict, bridge, confint_family): 1906 pass,
+  1 broken on 1.10.12; 1907 pass, 1 broken on 1.13.0 (pre-existing `@test_broken`). Full suite not run.
+
 ## 2026-09-27: getLV on grouped Beta fits returns the per-site mode
 
 - Branch `claude/beta-getlv-mode-20260927`, stacked on `claude/beta-grouped-mode-search-503` (#540).

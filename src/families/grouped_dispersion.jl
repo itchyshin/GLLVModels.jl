@@ -377,11 +377,24 @@ end
 #     φ → ∞, mirroring r → ∞ for NB2).
 #   - Beta `φ` (`Var = μ(1-μ)/(1+φ)`): φ < 1e-6 is the maximal-variance
 #     (near-Bernoulli) limit; φ > 1e6 is the near-deterministic collapse
-#     (Var → 0).
+#     (Var → 0), which is identified, so grouped Beta fits flag only the lower
+#     end (`_dispersion_group_lower_boundary` below).
 #   - Gamma `α` (`Var = μ²/α`): α < 1e-6 is extreme overdispersion (Var → ∞);
-#     α > 1e6 is the near-deterministic collapse (Var → 0).
+#     α > 1e6 is the near-deterministic collapse (Var → 0), which is identified,
+#     so grouped Gamma fits flag only the lower end.
 _dispersion_group_boundary(dvec::AbstractVector{<:Real}) =
     Bool[(d > 1e6) || (d < 1e-6) for d in dvec]
+
+# Lower end only, for the Gamma shape α and the Beta precision φ (maintainer
+# decision 2026-09-29). Their upper end is the near-deterministic collapse
+# (Var → 0), which the data identify rather than a flat-likelihood limit: on data
+# drawn with true α = 1e8 or φ = 1e8 the grouped fits estimate 8.9e7 to 1.3e8
+# (test/fixtures/gamma_beta_upper_boundary.toml), so flagging α, φ > 1e6 reported
+# a well-identified optimum as not converged. NB2 r and NB1 φ keep both ends
+# (`_dispersion_group_boundary`), where the large end is the flat Poisson limit.
+# The bootstrap adapters already leave the Gamma/Beta upper end unflagged (#565, #568).
+_dispersion_group_lower_boundary(dvec::AbstractVector{<:Real}) =
+    Bool[d < 1e-6 for d in dvec]
 
 # NB2 grouped fits can stall with a group's log r out at the Poisson boundary, where
 # the likelihood is nearly flat, well below a better point (#477). From the returned
@@ -912,10 +925,11 @@ Result of [`fit_beta_gllvm_grouped`](@ref): intercepts `β` (length p), loadings
 (p×K), the per-group precision vector `φ` (length G), the species→group map `group`
 (length p), the `link`, the maximised Laplace `loglik`, `converged`, and
 `iterations`. The per-species precision is `φ[group[t]]`. `dispersion_boundary`
-(length G, T14 F1, 2026-09-02) flags groups whose fitted `φ[g]` fell outside
-`[1e-6, 1e6]` (see `_dispersion_group_boundary`) — the near-Bernoulli
-maximal-variance limit at the lower end, the near-deterministic collapse at the
-upper end; `converged` is forced `false` whenever any group is flagged, and is
+(length G, T14 F1, 2026-09-02) flags groups whose fitted `φ[g]` fell below
+`1e-6` (see `_dispersion_group_lower_boundary`), the near-Bernoulli
+maximal-variance limit. A large `φ` (the near-deterministic end) is identified by
+the data and is not flagged (2026-09-29); `converged` is forced `false` whenever
+any group is flagged, and is
 `true` only when the optimizer's gradient criterion was met (#480).
 """
 struct BetaGroupedFit
@@ -928,7 +942,7 @@ struct BetaGroupedFit
     converged::Bool
     iterations::Int
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
-    dispersion_boundary::Vector{Bool}   # per-group near-Bernoulli / near-deterministic flag (T14 F1)
+    dispersion_boundary::Vector{Bool}   # per-group near-Bernoulli (lower-end) flag (T14 F1)
 end
 
 # Positional compatibility constructors (2026-08-28 hessian; T14 F1 dispersion_boundary,
@@ -937,7 +951,7 @@ BetaGroupedFit(β, Λ, φ, group, link, loglik, converged, iterations) =
     BetaGroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, :observed)
 BetaGroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian::Symbol) =
     BetaGroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian,
-                   _dispersion_group_boundary(φ))
+                   _dispersion_group_lower_boundary(φ))
 
 function Base.show(io::IO, f::BetaGroupedFit)
     p, K = size(f.Λ)
@@ -1087,8 +1101,8 @@ function fit_beta_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     φ̂g = exp.(θ̂[(p + rr + 1):(p + rr + G)])
-    boundary = _dispersion_group_boundary(φ̂g)
-    any(boundary) && @warn "Beta grouped-dispersion fit reached the per-group boundary (φ outside [1e-6, 1e6]) for group(s) $(findall(boundary)); those groups' precision is at the near-Bernoulli or near-deterministic limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
+    boundary = _dispersion_group_lower_boundary(φ̂g)
+    any(boundary) && @warn "Beta grouped-dispersion fit reached the per-group lower boundary (φ below 1e-6) for group(s) $(findall(boundary)); those groups' precision is at the near-Bernoulli limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
     loglik, conv, iters = _fit_verdict(res)
     conv = conv && _beta_grouped_g_met(res, g_tol)   # #480: a zero-length step is not convergence
     return BetaGroupedFit(β̂, Λ̂, φ̂g, gidx, link, loglik, conv && !any(boundary), iters, hessian,
@@ -1103,8 +1117,9 @@ covariate coefficients `γ` (with `γ_fixed` zero mask), loadings `Λ`, per-grou
 precision `φ`, species→group map `group`, `link`, maximised Laplace `loglik`,
 `converged`, and `iterations`. Linear predictor `η = β + Xγ + Λz` with species
 precision `φ[group[t]]`. `dispersion_boundary` (length G, T14 F1, 2026-09-02)
-flags groups whose fitted `φ[g]` fell outside `[1e-6, 1e6]` (see
-`_dispersion_group_boundary`); `converged` is forced `false` whenever any group
+flags groups whose fitted `φ[g]` fell below `1e-6` (see
+`_dispersion_group_lower_boundary`; a large `φ` is identified and not flagged,
+2026-09-29); `converged` is forced `false` whenever any group
 is flagged, and is `true` only when the optimizer's gradient criterion was met (#480).
 """
 struct BetaGroupedCovFit
@@ -1119,7 +1134,7 @@ struct BetaGroupedCovFit
     converged::Bool
     iterations::Int
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
-    dispersion_boundary::Vector{Bool}   # per-group near-Bernoulli / near-deterministic flag (T14 F1)
+    dispersion_boundary::Vector{Bool}   # per-group near-Bernoulli (lower-end) flag (T14 F1)
 end
 
 # Positional compatibility constructors (2026-08-28 hessian; T14 F1 dispersion_boundary,
@@ -1129,7 +1144,7 @@ BetaGroupedCovFit(β, γ, γ_fixed, Λ, φ, group, link, loglik, converged, iter
 BetaGroupedCovFit(β, γ, γ_fixed, Λ, φ, group, link, loglik, converged, iterations,
                   hessian::Symbol) =
     BetaGroupedCovFit(β, γ, γ_fixed, Λ, φ, group, link, loglik, converged, iterations,
-                      hessian, _dispersion_group_boundary(φ))
+                      hessian, _dispersion_group_lower_boundary(φ))
 
 function Base.show(io::IO, f::BetaGroupedCovFit)
     p, K = size(f.Λ); q = length(f.γ)
@@ -1238,8 +1253,8 @@ function fit_beta_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 
     γ̂ = collect(Float64, _expand_fixed_zero(γ̂_free, γ_fixed_mask))
     Λ̂ = unpack_lambda(θ̂[(p + q + 1):(p + q + rr)], p, K)
     φ̂g = exp.(θ̂[(p + q + rr + 1):(p + q + rr + G)])
-    boundary = _dispersion_group_boundary(φ̂g)
-    any(boundary) && @warn "Beta grouped-cov fit reached the per-group boundary (φ outside [1e-6, 1e6]) for group(s) $(findall(boundary)); those groups' precision is at the near-Bernoulli or near-deterministic limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
+    boundary = _dispersion_group_lower_boundary(φ̂g)
+    any(boundary) && @warn "Beta grouped-cov fit reached the per-group lower boundary (φ below 1e-6) for group(s) $(findall(boundary)); those groups' precision is at the near-Bernoulli limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
     loglik, conv, iters = _fit_verdict(res)
     conv = conv && _beta_grouped_g_met(res, g_tol)   # #480: a zero-length step is not convergence
     return BetaGroupedCovFit(β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, φ̂g, gidx, link,
@@ -1425,10 +1440,11 @@ Result of [`fit_gamma_gllvm_grouped`](@ref): intercepts `β` (length p), loading
 (p×K), the per-group shape vector `α` (length G), the species→group map `group`
 (length p), the `link`, the maximised Laplace `loglik`, `converged`, and
 `iterations`. The per-species shape is `α[group[t]]`. `dispersion_boundary`
-(length G, T14 F1, 2026-09-02) flags groups whose fitted `α[g]` fell outside
-`[1e-6, 1e6]` (see `_dispersion_group_boundary`) — extreme overdispersion at the
-lower end, the near-deterministic collapse at the upper end; `converged` is
-forced `false` whenever any group is flagged.
+(length G, T14 F1, 2026-09-02) flags groups whose fitted `α[g]` fell below
+`1e-6` (see `_dispersion_group_lower_boundary`), the extreme-overdispersion
+limit. A large `α` (the near-deterministic end) is identified by the data and is
+not flagged (2026-09-29); `converged` is forced `false` whenever any group is
+flagged.
 """
 struct GammaGroupedFit
     β::Vector{Float64}
@@ -1440,7 +1456,7 @@ struct GammaGroupedFit
     converged::Bool
     iterations::Int
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
-    dispersion_boundary::Vector{Bool}   # per-group extreme-overdispersion / collapse flag (T14 F1)
+    dispersion_boundary::Vector{Bool}   # per-group extreme-overdispersion (lower-end) flag (T14 F1)
 end
 
 # Positional compatibility constructors (2026-08-28 hessian; T14 F1 dispersion_boundary,
@@ -1449,7 +1465,7 @@ GammaGroupedFit(β, Λ, α, group, link, loglik, converged, iterations) =
     GammaGroupedFit(β, Λ, α, group, link, loglik, converged, iterations, :observed)
 GammaGroupedFit(β, Λ, α, group, link, loglik, converged, iterations, hessian::Symbol) =
     GammaGroupedFit(β, Λ, α, group, link, loglik, converged, iterations, hessian,
-                    _dispersion_group_boundary(α))
+                    _dispersion_group_lower_boundary(α))
 
 function Base.show(io::IO, f::GammaGroupedFit)
     p, K = size(f.Λ)
@@ -1555,8 +1571,8 @@ function fit_gamma_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     α̂g = exp.(θ̂[(p + rr + 1):(p + rr + G)])
-    boundary = _dispersion_group_boundary(α̂g)
-    any(boundary) && @warn "Gamma grouped-dispersion fit reached the per-group boundary (α outside [1e-6, 1e6]) for group(s) $(findall(boundary)); those groups' shape is at the extreme-overdispersion or near-deterministic limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
+    boundary = _dispersion_group_lower_boundary(α̂g)
+    any(boundary) && @warn "Gamma grouped-dispersion fit reached the per-group lower boundary (α below 1e-6) for group(s) $(findall(boundary)); those groups' shape is at the extreme-overdispersion limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
     loglik, conv, iters = _fit_verdict(res)
     return GammaGroupedFit(β̂, Λ̂, α̂g, gidx, link, loglik, conv && !any(boundary), iters, hessian,
                            boundary)
@@ -1570,9 +1586,9 @@ covariate coefficients `γ` (with `γ_fixed` zero mask), loadings `Λ`, per-grou
 shape `α`, species→group map `group`, `link`, maximised Laplace `loglik`,
 `converged`, and `iterations`. Linear predictor `η = β + Xγ + Λz` with species
 shape `α[group[t]]` (`Var = μ²/α`). `dispersion_boundary` (length G, T14 F1,
-2026-09-02) flags groups whose fitted `α[g]` fell outside `[1e-6, 1e6]` (see
-`_dispersion_group_boundary`); `converged` is forced `false` whenever any group
-is flagged.
+2026-09-02) flags groups whose fitted `α[g]` fell below `1e-6` (see
+`_dispersion_group_lower_boundary`; a large `α` is identified and not flagged,
+2026-09-29); `converged` is forced `false` whenever any group is flagged.
 """
 struct GammaGroupedCovFit
     β::Vector{Float64}
@@ -1586,7 +1602,7 @@ struct GammaGroupedCovFit
     converged::Bool
     iterations::Int
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
-    dispersion_boundary::Vector{Bool}   # per-group extreme-overdispersion / collapse flag (T14 F1)
+    dispersion_boundary::Vector{Bool}   # per-group extreme-overdispersion (lower-end) flag (T14 F1)
 end
 
 # Positional compatibility constructors (2026-08-28 hessian; T14 F1 dispersion_boundary,
@@ -1596,7 +1612,7 @@ GammaGroupedCovFit(β, γ, γ_fixed, Λ, α, group, link, loglik, converged, ite
 GammaGroupedCovFit(β, γ, γ_fixed, Λ, α, group, link, loglik, converged, iterations,
                    hessian::Symbol) =
     GammaGroupedCovFit(β, γ, γ_fixed, Λ, α, group, link, loglik, converged, iterations,
-                       hessian, _dispersion_group_boundary(α))
+                       hessian, _dispersion_group_lower_boundary(α))
 
 function Base.show(io::IO, f::GammaGroupedCovFit)
     p, K = size(f.Λ); q = length(f.γ)
@@ -1703,8 +1719,8 @@ function fit_gamma_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real,
     γ̂ = collect(Float64, _expand_fixed_zero(γ̂_free, γ_fixed_mask))
     Λ̂ = unpack_lambda(θ̂[(p + q + 1):(p + q + rr)], p, K)
     α̂g = exp.(θ̂[(p + q + rr + 1):(p + q + rr + G)])
-    boundary = _dispersion_group_boundary(α̂g)
-    any(boundary) && @warn "Gamma grouped-cov fit reached the per-group boundary (α outside [1e-6, 1e6]) for group(s) $(findall(boundary)); those groups' shape is at the extreme-overdispersion or near-deterministic limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
+    boundary = _dispersion_group_lower_boundary(α̂g)
+    any(boundary) && @warn "Gamma grouped-cov fit reached the per-group lower boundary (α below 1e-6) for group(s) $(findall(boundary)); those groups' shape is at the extreme-overdispersion limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
     loglik, conv, iters = _fit_verdict(res)
     return GammaGroupedCovFit(β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, α̂g, gidx, link,
                               loglik, conv && !any(boundary), iters, hessian, boundary)
