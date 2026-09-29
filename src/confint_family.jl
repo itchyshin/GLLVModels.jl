@@ -140,11 +140,24 @@ function _family_ci(fit::PoissonFit, Y::AbstractMatrix;
 end
 
 # --- Binomial --------------------------------------------------------------
+# A loading-ridge fit is a penalised (MAP) estimate: the unpenalised objective used
+# below is not stationary there, and a bootstrap refit without the ridge is a
+# different estimator. Refuse rather than return intervals for neither.
+function _binomial_ridge_ci_guard(fit::BinomialFit)
+    isfinite(fit.loading_ridge) && throw(ArgumentError(
+        "intervals are not available for a fit with a finite loading_ridge " *
+        "(loading_ridge = $(fit.loading_ridge)); this fit is a penalised estimate. " *
+        "select_lv and fit_gllvm with K omitted add this ridge to single-trial binary data " *
+        "(binary_ridge = 2). The point estimates and the chosen K stand; for intervals, refit " *
+        "at that K with loading_ridge = Inf and check that the fit is not a runaway."))
+    return nothing
+end
 function _family_ci(fit::BinomialFit, Y::AbstractMatrix;
                     N::Union{Nothing, AbstractMatrix} = nothing,
                     mask = nothing,
                     objective::Symbol = :fit,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
+    _binomial_ridge_ci_guard(fit)
     if _is_binomial_aghq(fit)
         objective in (:fit,:aghq) || throw(ArgumentError("AGHQ inference must use objective=:fit; Laplace/VA would change the estimator"))
         q,_=_binomial_aghq_problem(fit,Y;N=N,mask=mask,require_identity=true)
@@ -3605,6 +3618,7 @@ function confint_lv_effects(fit::Union{PoissonFit, BinomialFit, NBFit, GammaFit,
     0 < level < 1 || throw(ArgumentError("level must be in (0, 1); got $level"))
     fit.alpha_lv === nothing && throw(ArgumentError(
         "confint_lv_effects requires an X_lv fit (fit_*_gllvm(...; X_lv=...)); this fit has none"))
+    fit isa BinomialFit && _binomial_ridge_ci_guard(fit)
     p, K = size(fit.Λ)
     # B_lv = Λ·α' is invariant under the K×K orthogonal rotation Λ→ΛQ, α→αQ, so
     # the interval is well-posed for any K (not just K = 1).

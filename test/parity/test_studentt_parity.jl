@@ -40,6 +40,20 @@ using GLLVModels, RCall, Test, Random, Distributions
 # taken; see test_delta_lognormal_parity.jl / test_delta_gamma_parity.jl).
 const _ST_SEED = 71
 
+# The seeded draws below differ between Julia versions, so the cells fit stored draws
+# (fixtures/generate_studentt_smoke_data.jl), as NB2 does (decision 2026-09-24): seed 71
+# from Julia 1.10.12 and seed 73 from Julia 1.13.1, the draws that keep both engines off a
+# degenerate boundary. The 1.13 seed-71 draw puts trait 1 at sigma -> 0, nu -> infinity (R
+# stops with false convergence); the 1.10 seed-73 draw stops R at the nu boundary.
+using SHA, TOML
+function _st_stored_Y(file, sha)
+    d = TOML.parsefile(joinpath(@__DIR__, "fixtures", file))
+    Y = reshape(Float64.(d["Y_column_major"]), d["p"], d["n"])
+    bytes2hex(sha256(reinterpret(UInt8, vec(Y)))) == d["data_sha256"] == sha ||
+        error("stored Student-t smoke data changed: $file")
+    return Y
+end
+
 @testset "Student-t GLLVModels parity: GLLVModels.jl vs gllvmTMB (twin fid 9)" begin
 
     Random.seed!(_ST_SEED)
@@ -55,6 +69,9 @@ const _ST_SEED = 71
     for t in 1:p, s in 1:n
         Y[t, s] = η[t, s] + σ_true * rand(TDist(ν_true))
     end
+    # The loop records how the data were drawn; the cells fit the stored 1.10.12 draw.
+    Y = _st_stored_Y("studentt_cell9_data.toml",
+                     "df0f85ee154645daf4296fd79b1e7f49b1215d09724f4224bab7abb4725b6710")
 
     r = fit_gllvmtmb_parity_student(Y, K; df_fixed = ν_true)
     @test r.converged
@@ -185,14 +202,23 @@ const _ST_SEED = 71
         η_diag = β_diag .+ Λ_diag * randn(K_diag, n_diag)
         Y_diag = [η_diag[t, s] + σ_diag[t] * rand(TDist(ν_diag))
                   for t in 1:p_diag, s in 1:n_diag]
+        # Stored 1.13.1 draw (see _st_stored_Y above).
+        Y_diag = _st_stored_Y("studentt_neargauss_data.toml",
+                              "9a9303c242229a98ddf136b7c45f83b7832ea299f4ee0736d4ddfc749e58f56d")
 
         r_diag = fit_gllvmtmb_parity_student(Y_diag, K_diag; df_fixed = nothing)
         jl_diag = fit_studentt_gllvm(Y_diag; K = K_diag, nu = nothing,
                                      disp_group = :species, g_tol = 1e-7,
                                      iterations = 800)
-        @test r_diag.converged
-        @test r_diag.optimizer_code == 0
-        @test jl_diag.converged
+        # The DGP is the Gaussian limit (ν = 1e6), so an estimated ν at the ν → ∞
+        # boundary is the expected outcome on both engines. Julia's boundary-honesty
+        # rule then sets `converged = false` by design, and gllvmTMB's nlminb can end
+        # with "false convergence" (code 1) there: on the same stored draw R 4.5.3 CI
+        # returned code 0 on one run and 1 on the next, with ν = (17.7, 1.5e6, 2e4) and
+        # |Δ logLik| 6e-6 both times. Accept a boundary on either side, and nothing else.
+        r_boundary = any(>(1e6), r_diag.df_vec)
+        @test (r_diag.converged && r_diag.optimizer_code == 0) || r_boundary
+        @test jl_diag.converged || jl_diag.nu_boundary
         @test isfinite(r_diag.logLik) && isfinite(jl_diag.loglik)
         # ν is inherently weakly identified near the Gaussian limit. Do not
         # force its equality or turn cross-evaluation into a substitute for
