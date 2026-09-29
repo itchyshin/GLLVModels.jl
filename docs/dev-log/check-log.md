@@ -1,3 +1,20 @@
+## 2026-09-29: multinomial fitter reports converged = false under complete separation
+
+- Branch `claude/multinomial-separation-verdict` from `origin/main` 0ce4a35aa. New
+  `_multinomial_verdict` in `src/families/multinomial.jl` (the `_gp1_verdict` shape; `_fit_verdict`
+  untouched): converged = false when every observation's `-log p̂_i(y_i)` is at most 1e-4.
+- Before: 12 observations, K = 3, one covariate ordering the categories: converged = true,
+  loglik -1.19e-5, max |θ| 66.0 (Julia 1.10.12 and 1.13.0). After: converged = false, loglik unchanged.
+- New test `test/test_multinomial_separation.jl` on the literal fixture
+  `test/fixtures/multinomial_separation.toml` (sha256-checked). origin/main: 46 pass, 2 fail,
+  2 error of 50 on both 1.10 and 1.13. Branch: 63 of 63 pass on both.
+- Six healthy fits (n 60 to 200, K 3 to 5, p 0 to 2): converged and loglik bit-identical to origin/main
+  on macOS aarch64 (worst observation p̂ 0.007 to 0.28, far from the threshold).
+- Other files calling `fit_multinomial_gllvm`, on 1.10 and 1.13: `test_multinomial.jl` 41/41,
+  `test_core070_link_boundaries.jl` 21/21, `test_second_order_multinomial_ci.jl` 28/28,
+  `test_confint_bootstrap_verdict_rest.jl` 61/61. `test/parity/test_multinomial_parity.jl` not run
+  (needs R and RCall).
+
 ## 2026-09-27: getLV on grouped Beta fits returns the per-site mode
 
 - Branch `claude/beta-getlv-mode-20260927`, stacked on `claude/beta-grouped-mode-search-503` (#540).
