@@ -79,6 +79,13 @@
   (fails for phi above about 1e5, independent of the boundary); recorded as `@test_broken` on macOS aarch64.
 - 21 neighbouring files (grouped, Beta/Gamma, bootstrap verdict, bridge, confint_family): 1906 pass,
   1 broken on 1.10.12; 1907 pass, 1 broken on 1.13.0 (pre-existing `@test_broken`). Full suite not run.
+## 2026-09-29: shared-r NB2 upper end is warn-only (maintainer decision)
+
+- Revised per "NB upper end: warn only everywhere": `_nb_shared_r_verdict` now warns above 1e6 and
+  keeps Optim's verdict; only r below 1e-6 forces converged = false (`_nb_shared_r_lower`). The
+  entry below describes the first version. test_nb_shared_r_boundary 42/42 on Julia 1.10.12 and
+  1.13.0; test_statsapi 74/74, test_nb_fit 8/8, test_nb_boundary_restart 12/12 on 1.10.12.
+
 ## 2026-09-29: shared-r NB2 reports converged = false at the Poisson limit
 
 - Branch `claude/nb-shared-r-boundary-verdict` from `origin/main` 0ce4a35aa. `fit_nb_gllvm` now

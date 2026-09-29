@@ -4,11 +4,11 @@ const GM = GLLVModels
 # Shared-r NB2 boundary verdict. On origin/main 0ce4a35aa, fit_nb_gllvm (one shared
 # dispersion r) on Poisson data (p = 5, n = 60, K = 1) reported converged = true with
 # r = 1.712e7 (Julia 1.10.12) and r = 1.551e7 (Julia 1.13.0): the Poisson limit, where
-# the likelihood is flat in log r and the optimizer's flag says nothing about r. The
-# grouped NB fitters already force converged = false once any r_group leaves
-# [1e-6, 1e6] (`_dispersion_group_boundary`, grouped_dispersion.jl); this file checks
-# the shared-r fitter now does the same, with the loglik left as computed, and that
-# six healthy NB2 fits (r_true 2 to 5) keep their origin/main loglik and flag.
+# the likelihood is flat in log r, with no message. Maintainer decision 2026-09-29 ("NB
+# upper end: warn only everywhere"): above 1e6 the fit warns and keeps the optimizer's
+# verdict; below 1e-6 it reports converged = false. This file checks both ends, that
+# the loglik is left as computed, and that six healthy NB2 fits (r_true 2 to 5) keep
+# their origin/main loglik and flag.
 
 const NBSR_FIXTURE_PATH = joinpath(@__DIR__, "fixtures", "nb_shared_r_boundary.toml")
 
@@ -36,20 +36,23 @@ _nbsr_sha(Y) = bytes2hex(sha256(reinterpret(UInt8, vec(Int64.(Y)))))
         end
     end
 
-    @testset "Poisson data: r at the boundary is never reported converged" begin
+    @testset "Poisson data: the Poisson limit warns and keeps the verdict" begin
         Y = reshape(Int64.(fixture["Y_column_major"]), p, n)
-        fit = GM.fit_nb_gllvm(Y; K = K)
-        # Everywhere: a converged fit must have r inside [1e-6, 1e6].
-        @test !(fit.converged && GM._dispersion_group_boundary([fit.r])[1])
+        fit = @test_logs (:warn, r"Poisson limit") match_mode = :any GM.fit_nb_gllvm(Y; K = K)
+        @test fit.r > 1e6
         @test isfinite(fit.loglik) && fit.loglik < 0
         if on_record_platform && haskey(fixture, vkey * "_loglik")
-            @test fixture[vkey * "_converged"]          # the recorded red state
             @test fixture[vkey * "_r"] > 1e6
-            @test fit.r > 1e6
-            @test fit.converged == false
-            # The verdict only changes the flag: the loglik stays as computed.
+            # Warn only: the flag and the loglik are exactly origin/main's.
+            @test fit.converged == fixture[vkey * "_converged"]
             @test fit.loglik ≈ fixture[vkey * "_loglik"] atol = 1e-8
         end
+    end
+
+    @testset "lower end: r below 1e-6 is not converged" begin
+        @test GM._nb_shared_r_lower(1e-8)
+        @test !GM._nb_shared_r_lower(1e-6)
+        @test !GM._nb_shared_r_lower(1e8)       # the upper end never flags
     end
 
     @testset "healthy NB2 fits are unchanged vs origin/main (per Julia version)" begin
