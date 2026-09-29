@@ -1,0 +1,67 @@
+{
+  "schema": "core070-family-p1-case-receipt/v1",
+  "case_id": "CORE070-FAMILY-15-LOG-NATIVE-MODEL",
+  "verdict": "PASS",
+  "evidence_kind": "numeric_r_vs_julia",
+  "batch": "test/parity/runparity.jl, CORE070_PARITY_REQUIRED=1, GLLVM_PARITY_PIN=P1, run runparity-dispersion",
+  "harness_cell": "NATIVE-16-NB1",
+  "fixture": "test/parity/test_nox_dispersion_parity.jl",
+  "measures": "NB1 log, per-trait dispersion, p=5, n=120, K=1, seed 55; toy fixture, likelihood-level agreement only",
+  "cell_status": "success",
+  "cell_assertions": {
+    "passed": 28,
+    "broken": 0,
+    "failed": 0,
+    "errored": 0
+  },
+  "cell_execution_case_ids": [
+    "NATIVE-05-GAMMA",
+    "NATIVE-09-BETABINOMIAL",
+    "NATIVE-16-NB1"
+  ],
+  "run_status": "success",
+  "run_failure_reason": null,
+  "batch_verifier": {
+    "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
+    "status": "PASS",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/verify.txt"
+  },
+  "read_from": {
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/run.toml": "ef349594d8ece9f5123c842913f3815c86e18705c5b00f701dbcfd24dc344799",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/values-NATIVE-16-NB1.toml": "ba1ab8eb9ee9c4ca0eca28bde49e7ed27432eff59873ec1a9f03b17f1d1ff282",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/run-commit.json": "2e16587a479233a6fe0bf80655a1c208a68a479877cb18647134d745a22f4edd",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/verify.txt": "bceb155915db6b7bf72c7faf4574efe0df936f16c96f5c2c6cc37cc2fc32ea78",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/cell-NATIVE-16-NB1.toml": "8e2e7f5147694fd836ba7fa03aa50c7b89861a6bd6440c798d22561c4c1c4e72"
+  },
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/values-NATIVE-16-NB1.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/cell-NATIVE-16-NB1.toml"
+  ],
+  "registration": "CORE070-FAMILY-15-LOG-NATIVE-MODEL is paid by harness cell NATIVE-16-NB1 by the maintainer's P0 registration decision (docs/dev-log/core070/family-reconciliation-2026-09-01.json); carried unchanged",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "7506185ccbb6ebbd484219a860b35d989301a8cf",
+  "glvmodels_worktree_dirty": [],
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-FAMILY-15-LOG-NATIVE-MODEL",
+        "quantity": "logLik",
+        "max_abs_diff": 1.3612179827759974e-08,
+        "tolerance": 0.0011296667320371558,
+        "tolerance_rule": "the cell's own test, @test jl_logL \u2248 r.logLik rtol = 1e-6 (rtol=1e-06, atol=0; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
+        "n_values": 1,
+        "r_value": -1129.666732037156,
+        "julia_value": -1129.6667320235438,
+        "diff_source": "recomputed from the saved R and Julia values",
+        "discriminating": true
+      }
+    ]
+  }
+}

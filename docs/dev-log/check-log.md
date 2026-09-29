@@ -138,6 +138,68 @@
   1 broken. The new warning fired once, on 1.13 in `test/test_statsapi.jl`, whose NB fit is on
   Poisson data (r = 6.4e7); that test does not assert `converged`.
 
+## 2026-09-27: aghq rows re-measured at gllvmTMB P1 (A3), tracked receipts
+
+- Branch `claude/true-parity-p1-aghq`, stacked on `claude/true-parity-p1-family` (PR #584 at `0fb2b9411`),
+  on #579, #571, #569 and #567. Scope: the 21 required aghq rows (19 required_core plus the
+  compatibility_adapter rows AGHQ-CTRL-NULL and AGHQ-CTRL-TRUE) the P1 carry scan lists as DANGLING (7) or
+  PARTIAL_STALE_AT_P1 (14). Rejected AGHQ-INVALID-* and intentionally_excluded rows out of scope.
+  Classifications and dispositions carried unchanged.
+- No aghq row is numeric. The 7 AGHQ-CTRL rows are a paired control on categorical labels (R's
+  `.gllvmTMB_normalize_aghq` against `GLLVModels._aghq_request`, no fit). The 14 AUTO-K, DEFAULT-OFF and
+  POLICY rows are R-only: public `gllvmTMB()` fits read for `fit$aghq`, with no Julia call in the case. Both
+  kinds cite `non_binding_receipts` under their own tiers, so none binds under the numeric rule.
+- Harness: P1 contracts from `tools/core070_aghq_p1_contract.py` (`--check` current); the control runner
+  and verifier and the policy runner gain the strict pin switch, the source-pin marker check and
+  destination-after-checks; the policy runner at P1 loads the installed P1 oracle instead of
+  `devtools::load_all`; the control R oracle records each call's return value. No case, expectation or
+  tolerance edited.
+- Runs from clean commit `fd92b6551` (local Mac, one BLAS/OMP thread, JULIA_NUM_THREADS=4): control batch
+  4 s, policy bind 10 s. Estimate beforehand under 15 min.
+- Counts: 7 paired_control_categorical_pass, 14 r_only_policy_pass, 0 numeric. Both batch verifiers pass.
+  Health notes on passing rows: AUTO-K-ORDINAL optimizer convergence code 1; AGHQ adaptation stalled for
+  AUTO-K-BINOMIAL, AUTO-K-ORDINAL and POLICY-EXPLICIT (the runner's assertions do not check either). P1
+  objectives agree with the P0 bind's to at most 2.4e-6, R against R (the P0 bind ran on a twin branch that
+  is neither pin).
+- Checker, PARITY_REF=FS, main and #561 (`92cf39571`): aghq C1 required=21 bound=0 free=21 (#561
+  bound_numeric=0, registration_only=none), C8 21 NOT_TWINNED_NOT_SIGNED; family, data, fit-input,
+  covariance, postfit, inference lines unchanged. On the unchanged P0 case map #561 reads the 14 policy rows
+  REGISTRATION_ONLY_NOT_TWINNED and the 7 control rows NOT_TWINNED_NOT_SIGNED. `test_true_parity_check.mjs`
+  passes; aghq, family, data, covariance, postfit, inference contract `--check`s and aghq, family, data,
+  inference receipt `--check`s current; `test/parity/test_core070_pin.jl` 27/27; aghq verifier self-test at
+  P0 and P1.
+
+## 2026-09-27: Family rows re-measured at gllvmTMB P1 (A3), tracked receipts
+
+- Branch `claude/true-parity-p1-family`, stacked on `claude/true-parity-p1-data` (PR #579; base
+  `201119a3e`, then merged at `a857516df` after its review fixes), on #571, #569 and #567. Scope: the 21
+  required family rows (20 required_core plus the compatibility_adapter FAMILY-BETA-ALIAS, which the
+  checker counts) the P1 carry scan lists as DANGLING (16) or NO_R_PINS (5). FAMILY-16-LOGIT
+  (NOT_BOUND_AT_P0, empty case list) out of scope. Classifications and dispositions carried unchanged.
+- Harness: runparity family cells now write the R and Julia numbers they compare
+  (`core070_record_values!`, `values-<case>.toml`; tolerances copied from the adjacent `@test`), and a
+  failing cell no longer stops the requested cells after it (the run is still refused). family-links and
+  A6 Student-t batches gain P1 twins (`tools/core070_family_p1_contract.py`, `--check` current) and the
+  shared pin gates. No case, expectation or tolerance edited.
+- Runs from clean commit `7506185cc` (local Mac, one BLAS/OMP thread, JULIA_NUM_THREADS=4): 14 runparity
+  runs (one per fixture scope; a formula case rides with its native case), family-links, A6. Tweedie 912 s
+  in parallel with the rest (355 s summed); wall about 15 min.
+- Counts: 15 numeric pass (FAMILY-01 LOGIT/PROBIT/CLOGLOG, 03, 04, 06-LOG, 06-FIXED-SHAPE, 08,
+  09-FIXED-SHAPE, 09-IDENTITY, 10, 12, 13, 14, 15; worst logLik gap 3.5e-8, worst coefficient 5.3e-6);
+  5 partial (00, 02, 05, 07, 11: public R bridge case not executed, retained inputs not on this host);
+  1 not measured (BETA-ALIAS, admission-only at P0). 06-LOG/06-FIXED-SHAPE and 09-FIXED/09-IDENTITY are
+  one measurement each counted on two rows.
+- Failing cells at P1, recorded with measured values: NB2 native (Julia `converged` false; R gradient
+  4.9e-3 > 1e-4; logLik gap 1.2e-7 within tolerance), NB2 formula (same fixture health), truncated NB2
+  native and formula (R gradient 1.1e-3), Gaussian native/formula group (P1 R random effects are
+  `["z_B"]`, not `["z_B","s_B"]`; every number agrees to 8e-13). NB2 and truncated NB2 also failed in the
+  tracked P0 run `docs/dev-log/core070/totoro-323-track-a-20260924/`. All five sit in partial rows.
+- Checker, PARITY_REF=FS, main and #561 (`92cf39571`): family C1 required=21 bound=15 free=6 (#561
+  bound_numeric=15, numeric_recorded_diff_mismatch=none), C8 6 NOT_TWINNED_NOT_SIGNED; data, fit-input,
+  covariance, postfit, inference lines unchanged. `test_true_parity_check.mjs` passes; family, data,
+  covariance, postfit, inference contract `--check`s and family, data, inference receipt `--check`s
+  current; `test/parity/test_core070_pin.jl` 27/27; `test/test_core070_receipts.jl` 52/52 (repaired for
+  the new active-cell state, plus a value-sink test).
 ## 2026-09-27: phylo_latent twin at gllvmTMB P1 (A14, A15)
 
 - Branch `claude/phylo-latent-build` from `origin/main` `97e11be04`. New named entry

@@ -1,0 +1,14 @@
+# ---- derived checks ----
+# runparity batch verifier (tools/core070_family_p1_receipts.py), runparity-nb2-formula
+FAIL  run status success, exit code 0, success marker
+PASS  requested case ids are this batch's scope
+PASS  completed == requested
+PASS  every requested cell receipt present
+FAIL  every cell status success
+PASS  every cell names this run and its execution manifest
+PASS  source pinned at P1 (commit, archive, namespace, source tree)
+PASS  oracle build/source receipts are the tracked P1 receipts
+PASS  runner manifest is frozen-r070-contract-p1.toml
+PASS  every requested cell wrote values-<case>.toml
+PASS  harness files in the execution inventory match run commit 7506185ccbb6
+# status FAIL

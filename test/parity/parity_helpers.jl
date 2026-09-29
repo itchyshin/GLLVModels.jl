@@ -197,13 +197,44 @@ function core070_start_run!()
     return nothing
 end
 
+# Measured R and Julia values (A3 family re-measure at gllvmTMB P1). A cell
+# receipt records assertion counts only, which says nothing about how close the
+# two engines were. core070_record_values! keeps the numbers a required cell
+# compares: each call appends one R-vs-Julia pair, with the tolerance of the
+# @test it sits beside (copied, not changed), to values-<case>.toml in the
+# receipt directory, so a receipt can recompute |R - Julia| from saved values.
+# Outside a required cell it does nothing. Inside a fixture group the caller
+# names the case the values belong to.
+const _CORE070_ACTIVE_CELLS = Ref{Vector{String}}(String[])
+
+function core070_record_values!(label::AbstractString; julia::Real, r::Real, rtol::Real = 0.0,
+                                atol::Real = 0.0, test::AbstractString,
+                                case::Union{Nothing, AbstractString} = nothing)
+    active = _CORE070_ACTIVE_CELLS[]
+    isempty(active) && return nothing
+    id = case === nothing ? (length(active) == 1 ? only(active) : throw(ArgumentError(
+        "values recorded inside a fixture group must name their case"))) : String(case)
+    id in active || throw(ArgumentError("$id is not an active required cell"))
+    path = joinpath(_core070_receipt_dir(), "values-$id.toml")
+    table = isfile(path) ? TOML.parsefile(path) : Dict{String, Any}("case_id" => id, "values" => Any[])
+    push!(table["values"], Dict{String, Any}("label" => String(label), "julia" => Float64(julia),
+        "r" => Float64(r), "rtol" => Float64(rtol), "atol" => Float64(atol), "test" => String(test)))
+    open(io -> TOML.print(io, table), path, "w")
+    return nothing
+end
+
 function core070_execute_case!(id::AbstractString, fixture::AbstractString, thunk::Function)
     _core070_required() || return thunk()
     core070_case_requested(id) || return nothing
     run = _CORE070_RUN[]
     run === nothing && throw(ArgumentError("CORE-070 run provenance was not verified"))
-    testset = @testset "CORE-070 required cell: $id" begin
-        thunk()
+    _CORE070_ACTIVE_CELLS[] = [String(id)]
+    testset = try
+        @testset "CORE-070 required cell: $id" begin
+            thunk()
+        end
+    finally
+        _CORE070_ACTIVE_CELLS[] = String[]
     end
     counts = testset_counts(testset)
     return record_case!(run, id, fixture;
@@ -219,8 +250,13 @@ function core070_execute_group!(ids::AbstractVector{<:AbstractString}, fixture::
         "a shared-fixture CORE-070 group must be requested as one complete scope"))
     run = _CORE070_RUN[]
     run === nothing && throw(ArgumentError("CORE-070 run provenance was not verified"))
-    testset = @testset "CORE-070 required fixture group: $(join(active, ", "))" begin
-        thunk()
+    _CORE070_ACTIVE_CELLS[] = active
+    testset = try
+        @testset "CORE-070 required fixture group: $(join(active, ", "))" begin
+            thunk()
+        end
+    finally
+        _CORE070_ACTIVE_CELLS[] = String[]
     end
     counts = testset_counts(testset)
     return [record_case!(run, id, fixture;

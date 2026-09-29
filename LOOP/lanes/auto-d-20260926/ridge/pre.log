@@ -1,0 +1,3 @@
+gllvmTMB is experimental. Use a documented tutorial, inspect fit diagnostics, and read Current limitations and boundaries before treating an estimate or interval as a scientific result. Convergence alone is not enough.
+DONE
+Rscript ridge_binary.R 1  296.63s user 1.44s system 98% cpu 5:01.28 total

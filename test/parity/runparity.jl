@@ -118,24 +118,31 @@ end
 if required
     core070_start_run!()
     try
-        run_required_family_smoke!()
-        run_required_family_group!(Core070CaseRegistry.GAUSSIAN_IDS,
-                                   "test/parity/test_gaussian_original_required.jl")
-        @testset "CORE-070 required interfaces" begin
-            for id in setdiff(Core070CaseRegistry.INTERFACE_IDS, Core070CaseRegistry.GAUSSIAN_IDS)
-                core070_execute_case!(id, _CORE070_FIXTURES[id],
-                    () -> include(joinpath(@__DIR__, basename(_CORE070_FIXTURES[id]))))
+        # One outer testset, so a failing cell is recorded (cell-<id>.toml with its
+        # counts) and the requested cells after it still run. Before this, a failing
+        # top-level cell or group threw at once and later cells never ran. The run is
+        # still refused: core070_finish_run!() rejects any failed cell, which fails
+        # this testset, and the run receipt ends "failed".
+        @testset "CORE-070 required run" begin
+            run_required_family_smoke!()
+            run_required_family_group!(Core070CaseRegistry.GAUSSIAN_IDS,
+                                       "test/parity/test_gaussian_original_required.jl")
+            @testset "CORE-070 required interfaces" begin
+                for id in setdiff(Core070CaseRegistry.INTERFACE_IDS, Core070CaseRegistry.GAUSSIAN_IDS)
+                    core070_execute_case!(id, _CORE070_FIXTURES[id],
+                        () -> include(joinpath(@__DIR__, basename(_CORE070_FIXTURES[id]))))
+                end
             end
+            run_required_family_group!(Core070CaseRegistry.COVARIANCE_FIXED_IDS,
+                                       "test/parity/test_covariance_fixed_required.jl")
+            run_required_family_group!(Core070CaseRegistry.COVARIANCE_MODE_IDS,
+                                       "test/parity/test_covariance_modes_required.jl")
+            run_required_family_group!(Core070CaseRegistry.COVARIANCE_FIXED_FORMULA_IDS,
+                                       "test/parity/test_covariance_fixed_formula_required.jl")
+            run_required_family_group!(Core070CaseRegistry.COVARIANCE_MODE_FORMULA_IDS,
+                                       "test/parity/test_covariance_modes_formula_required.jl")
+            core070_finish_run!()
         end
-        run_required_family_group!(Core070CaseRegistry.COVARIANCE_FIXED_IDS,
-                                   "test/parity/test_covariance_fixed_required.jl")
-        run_required_family_group!(Core070CaseRegistry.COVARIANCE_MODE_IDS,
-                                   "test/parity/test_covariance_modes_required.jl")
-        run_required_family_group!(Core070CaseRegistry.COVARIANCE_FIXED_FORMULA_IDS,
-                                   "test/parity/test_covariance_fixed_formula_required.jl")
-        run_required_family_group!(Core070CaseRegistry.COVARIANCE_MODE_FORMULA_IDS,
-                                   "test/parity/test_covariance_modes_formula_required.jl")
-        core070_finish_run!()
     catch err
         core070_abort_run!(err)
         rethrow()

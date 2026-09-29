@@ -96,6 +96,9 @@ end
         @test d["fd_stability"] <= 1e-4
         @test d["native_objective_delta"] <= 1e-8
         @test abs(d["samepoint_delta"]) <= 1e-6
+        core070_record_values!("objective at the R optimum"; julia = d["samepoint_native_nll"],
+                               r = d["r_objective"], atol = 1e-6,
+                               test = "@test abs(d[\"samepoint_delta\"]) <= 1e-6")
         @test abs(d["r_objective"] + d["r_loglik"]) <= 1e-8
         @test all(isfinite,d["native_parameters"]) && all(isfinite,d["r_parameters"])
     end
@@ -107,6 +110,8 @@ end
         jl_logL = jl_logL, r_logL = r.logLik, r_obj = r.objective,
     )
 
+    core070_record_values!("logLik"; julia = jl_logL, r = r.logLik, rtol = 1e-6,
+                           test = "@test jl_logL ≈ r.logLik rtol = 1e-6")
     @testset "log-likelihood agreement (rtol=1e-6)" begin
         @test jl_logL ≈ r.logLik rtol = 1e-6
         @test r.logLik ≈ -r.objective rtol = 0 atol = 1e-10

@@ -509,6 +509,24 @@ function fit_studentt_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     opts = Optim.Options(g_tol = g_tol, iterations = iterations)
     res = Optim.optimize(negll, θ0, ls, opts; autodiff = :finite)
+    # An estimated ν can run past an interior optimum to the flat ν→∞ limit: the
+    # per-trait ν profile can have an interior peak and a lower rise towards the
+    # Gaussian limit, and L-BFGS from ν₀ = 3 may land on the wrong side (near-Gaussian
+    # parity diagnostic, Julia 1.13 draw: ν₁ → 5e9 at logLik −1430.162, while the
+    # interior optimum ν₁ = 17.7 has −1430.097). So when any estimated ν reaches the
+    # boundary, restart those traits warm from ν = 20 and ν = 50 and keep the best
+    # optimum. Fits whose ν stays finite are untouched.
+    if nu === nothing
+        iν = (p + rr + ndisp + 1):(p + rr + 2 * ndisp)
+        θb = Optim.minimizer(res)
+        at_bound = findall(>(1e6), 1.0 .+ exp.(θb[iν]))
+        for ν_r in (isempty(at_bound) ? () : (20.0, 50.0))
+            θr = copy(θb)
+            θr[iν[at_bound]] .= log(ν_r - 1.0)
+            res_r = Optim.optimize(negll, θr, ls, opts; autodiff = :finite)
+            Optim.minimum(res_r) < Optim.minimum(res) - 1e-8 && (res = res_r)
+        end
+    end
     θ̂ = Optim.minimizer(res)
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
