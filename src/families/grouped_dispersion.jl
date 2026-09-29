@@ -173,7 +173,7 @@ function _grouped_laplace_mode_logpost(fams::AbstractVector, y::AbstractVector,
     q = -0.5 * dot(z, z)
     @inbounds for t in 1:p
         (mask === nothing || mask[t]) || continue
-        q += _glm_logpdf(fams[t], μ[t], n[t], y[t])
+        q += _laplace_mode_merit_term(fams[t], μ[t], n[t], y[t])
     end
     return q
 end
