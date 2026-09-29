@@ -74,3 +74,4 @@ about a day, queue permitting. A run that overruns this estimate stops and re-re
 ## Progress
 
 - 2026-09-28 ~22:30Z: 235 of 943 tasks completed, 95 running, 0 failed; 786 of 4,800 datasets done (3,639 fits, all `ok`), heaviest cells first. Heaviest tasks took 3.7 to 4.0 h against the 5 h sizing, so the run is under its estimate. (The nibi socket was down 19:10 to 22:25Z; reopened with a Duo push.)
+- 2026-09-29 03:27Z: 321 completed, 87 running, 2 FAILED (tasks 388, 389: node c63, `julia: command not found` after `module load`, died in 20 s, no fits). Node fault, not code; no other task ran on c63. Rerun: `sbatch --array=388,389 --exclude=c63 LOOP/lanes/auto-d-20260926/pilot/run_nb_rerun_nibi.sh` (needs Shinichi; about 11 core-h).
