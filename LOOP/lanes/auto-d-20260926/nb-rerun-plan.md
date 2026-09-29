@@ -70,3 +70,7 @@ about a day, queue permitting. A run that overruns this estimate stops and re-re
 - `pilot/run_nb_rerun.sh`: sbatch array over the task map; `--time` and `--array` are placeholders
   until the pre-run ratio is in. Outputs to `out-nbrerun/`, never mixed with `out-rerun/` (old
   kernel, cancelled run).
+
+## Progress
+
+- 2026-09-28 ~22:30Z: 235 of 943 tasks completed, 95 running, 0 failed; 786 of 4,800 datasets done (3,639 fits, all `ok`), heaviest cells first. Heaviest tasks took 3.7 to 4.0 h against the 5 h sizing, so the run is under its estimate. (The nibi socket was down 19:10 to 22:25Z; reopened with a Duo push.)
