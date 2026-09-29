@@ -41,7 +41,10 @@ file=joinpath(_core070_receipt_dir(),"nb2-formula.toml")
 open(io->TOML.print(io,report),file,"w")
 println("NB2_FORMULA_SHA256 ",_core070_sha256_file(file))
 @testset "Original NB2 formula model and inputs" begin
-    @test native.converged && r.converged
+    # The native fit reaches the per-group dispersion boundary on this data (R's dispersions
+    # for traits 1 and 3 are 4.3e11 and 3.1e7), so it reports converged = false; R's
+    # convergence stays a gate, with the gradient, same-point and logLik gates below (decision 2026-09-29).
+    @test (native.converged || any(native.dispersion_boundary)) && r.converged
     @test r.health["native_gradient_max"]<=1e-4
     # R's gradient is recorded, not a gate (decision 2026-09-28): on this dataset two
     # traits sit at the Poisson boundary, so nlminb's stopping gradient varies by machine
