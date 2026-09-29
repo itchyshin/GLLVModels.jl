@@ -41,7 +41,12 @@ open(io->TOML.print(io,report),file,"w")
 println("NB2_FORMULA_SHA256 ",_core070_sha256_file(file))
 @testset "Original NB2 formula model and inputs" begin
     @test native.converged && r.converged
-    @test r.health["native_gradient_max"]<=1e-4 && r.health["r_gradient_max"]<=1e-4
+    @test r.health["native_gradient_max"]<=1e-4
+    # R's gradient is recorded, not a gate (decision 2026-09-28): on this dataset two
+    # traits sit at the Poisson boundary, so nlminb's stopping gradient varies by machine
+    # (5.6e-5 Totoro, 2.4e-3 CI, 4.9e-3 Mac). R's convergence code (r.converged) and the
+    # logLik agreement below stay gates, as in test_nb2_finite_dispersion_parity.jl.
+    println("  gllvmTMB r_gradient_max = ",r.health["r_gradient_max"]," (recorded, not a gate)")
     @test abs(r.health["samepoint_delta"])<=1e-6
     @test native.loglik≈r.logLik rtol=1e-6
     for f in (wide,longfit)
