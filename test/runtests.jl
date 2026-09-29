@@ -354,6 +354,8 @@ println(_SHARD === nothing ?
     _shard_include("test_beta_binomial_verdict_515.jl")
     _shard_include("test_beta_binomial_grouped_verdict_515.jl")
     _shard_include("test_zero_inflated.jl")
+    _shard_include("test_zi_twin.jl")
+    _shard_include("test_zi_recovery.jl")
     _shard_include("test_missing_data.jl")
     _shard_include("test_missing_response.jl")
     _shard_include("test_missing_response_extra.jl")
@@ -476,5 +478,7 @@ println(_SHARD === nothing ?
     _shard_include("test_temporal_oracles.jl")
     _shard_include("test_temporal_fit_receipts.jl")
     _shard_include("test_temporal_helpers.jl")
+    _shard_include("test_temporal_composed.jl")
+    _shard_include("test_temporal_composed_receipts.jl")
     _shard_include("test_isdm.jl")
 end

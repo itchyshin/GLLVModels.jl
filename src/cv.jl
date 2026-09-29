@@ -18,7 +18,6 @@
 using Random
 using LinearAlgebra
 using Statistics
-using Distributions
 using Printf
 
 @doc raw"""

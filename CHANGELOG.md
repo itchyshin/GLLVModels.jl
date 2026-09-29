@@ -24,6 +24,31 @@ All notable changes to GLLVModels.jl are documented here.
 ## Unreleased
 
 ### Added
+- **`zi_poisson()`, `zi_nbinom2()`, `zi_binomial()`: twins of gllvmTMB's
+  zero-inflated family exports at the P1 pin (`9539352f6`), with R's semantics.**
+  A true zero-inflation mixture with a per-trait, intercept-only structural-zero
+  probability, the count process active at every observation, one NB2 dispersion
+  per trait, per-observation binomial trials (single-trial-only traits refused),
+  and a Laplace log-determinant from the observed curvature, as TMB computes it.
+  New `fit_zi_gllvm` / `ZiFit` / `zi_marginal_loglik_laplace`, reachable as
+  `fit_gllvm(Y; family = zi_poisson(), K)`. Julia's own `ZIPoisson()` /
+  `ZINegBin()` / `ZIB(N)` routes are unchanged and remain a documented extra:
+  they use the Fisher count weight in the log-determinant (3.62 log-likelihood
+  units off R's logLik at R's optimum on the ZIP fixture), a shared NB2
+  dispersion, and a shared trials count. Twin fixtures:
+  `test/fixtures/zi_p1.toml`, test `test/test_zi_twin.jl`.
+  The route carries a Julia-side Laplace breakdown guard (`ZI_LAPLACE_EIGMIN_FLOOR`):
+  at y = 0 the mixture's observed curvature can be negative, the site Laplace
+  precision can approach singularity, and the Laplace value then inflates (on one
+  NB2 dataset 363 units above the exact marginal; gllvmTMB's objective returns the
+  same inflated value). Sites below the floor are refused, an optimum at the floor is
+  reported with `converged = false`, the NB2 start was hardened, and a fit that ends
+  at the guard is retried once from a shrunk start (35 NB2 draws: 30 converge, the 5
+  flagged are draws gllvmTMB also fails on). Recovery is shown for `|lambda| <= 0.6`
+  only. Missing responses (`missing` or `NaN`) are refused with an `ArgumentError`.
+  Recovery test: `test/test_zi_recovery.jl` (R-pinned breakdown datasets in
+  `test/test_zi_twin.jl`); note:
+  `docs/dev-log/decisions/2026-09-27-zi-laplace-breakdown-guard.md`.
 - **`gllvm_anova(fits...; test = :chibar)` and `GllvmAnovaTable`** (`src/model_comparison.jl`):
   a twin of gllvmTMB's `anova.gllvmTMB_multi()` / `print.anova.gllvmTMB_multi()`
   (R/aghq-report.R, pin `9539352f66f2db2cc26b1c393e67212a359b60c9`, "P1").
@@ -836,6 +861,25 @@ All notable changes to GLLVModels.jl are documented here.
   1.7e-11 and R's objective at Julia's optimum to 7.5e-11 over 21 fits. Not yet
   available: `unit` / `unit_obs` composition, cross-source cells, the wide
   `traits()` form and the R bridge.
+- **Temporal source beside ordinary unit / unit_obs terms (gllvmTMB P1 port,
+  slice 2).** `fit_temporal_gllvm` gains `unit` and `unit_obs` keywords, and its
+  `structure` argument admits `indep`, `dep` and `latent` terms at either level
+  plus the `(1 | g)` random intercept, with gllvmTMB's unit_obs nesting and
+  series/unit partition refusals. The marginal covariance gains the unit and
+  unit_obs trait blocks; the parameter vector follows gllvmTMB's measured
+  `opt$par` order (`theta_rr_B` sits before `theta_temporal_time`). gllvmTMB's
+  sigma_eps suppression rule is ported: a per-row diagonal term in a replicated
+  workflow fixes `sigma_eps` at `max(1e-3 sd(y), 1e-6)` and drops it from the
+  parameter vector. `forecast_temporal`, `profile_temporal`,
+  `bootstrap_temporal` and `compare_temporal` refuse composed fits with R's
+  classes and tier names; `simulate` redraws every ordinary tier;
+  `extract_ordination(fit; level = :unit)` and `update(fit; ...)` are added for
+  temporal fits. The temporal optimiser now runs LBFGS with both line searches
+  and polishes with Newton steps, which reaches gllvmTMB's optimum on a composed
+  panel where one line search stopped at a `sigma_eps -> 0` limit. Checked
+  against 25 gllvmTMB P1 fits: objective and gradient at fixed coordinates
+  within 3.0e-9 and 3.4e-9, an independent dense oracle within 9.1e-13, and
+  R's report `eta` within 1.8e-15. The `gllvm()` formula hook is not included.
 
 ### Changed
 - **Breaking (default change):** `fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm`

@@ -1,0 +1,317 @@
+{
+  "schema": "core070-inference-remainder-batch-contract/v1",
+  "status": "FROZEN_INFERENCE_REMAINDER_BATCH_CONTRACT",
+  "area": "inference-remainder",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "case_plan": "docs/dev-log/core070/inference-required-case-plan.json",
+  "source_case_map": "docs/dev-log/core070/required-source-case-map.json",
+  "manifest_row_count": 19,
+  "covered_source_ids": [
+    "inference/CI-ROUTE-005",
+    "inference/CI-ROUTE-008",
+    "inference/CI-ROUTE-009",
+    "inference/CI-ROUTE-010",
+    "inference/CI-ROUTE-011",
+    "inference/CI-ROUTE-012",
+    "inference/CI-ROUTE-013",
+    "inference/CI-ROUTE-014",
+    "inference/CI-ROUTE-019",
+    "inference/CI-ROUTE-020",
+    "inference/CI-ROUTE-021",
+    "inference/CI-ROUTE-026",
+    "inference/CI-ROUTE-027",
+    "inference/CI-ROUTE-028",
+    "inference/CI-ROUTE-033",
+    "inference/CI-ROUTE-035",
+    "inference/CI-ROUTE-040",
+    "inference/CI-ROUTE-041",
+    "inference/CI-ROUTE-042"
+  ],
+  "expected_case_count": 5,
+  "needs_new_julia_surface_count": 2,
+  "reclassify_row_count": 0,
+  "spec_defect_note_count": 0,
+  "notes": [
+    "This batch covers the 19 required_core/compatibility_adapter 'inference/' rows",
+    "left unbound after wave-2 (CI-ROUTE-001..004 and CI-ROUTE-034 bound previously).",
+    "Ground truth for R's method-dispatch behaviour was read directly from the",
+    "pinned R/z-confint-gllvmTMB.R source (source_pins below), not from the",
+    "case-plan's templated per-row rationale strings, which repeat boilerplate",
+    "language across all CI-ROUTE-* rows and are not individually reliable for",
+    "the exact abort/withdrawal semantics per estimand.",
+    "R ground truth (confint.gllvmTMB_multi + its .confint_icc / .confint_phylo_signal",
+    "/ .confint_communality / .confint_rho / .confint_proportion internal helpers):",
+    "each of icc/phylo_signal/communality/rho/proportion routes on `parm` BEFORE the",
+    "outer confint.gllvmTMB_multi match.arg(method), then validates `method` itself",
+    "with a `switch(method, ..., cli::cli_abort(...))` or `if/else-if/else` whose",
+    "reject branch fires for any method string outside that estimand's own supported",
+    "set -- and, critically, NEVER touches the fit-structure-dependent estimator",
+    "function (extract_repeatability / .communality_wald_ci / extract_correlations /",
+    ".proportions_wald_ci / profile_ci_phylo_signal / ...): parm-token parsing",
+    "(.parse_communality_parm / .parse_rho_parm / .parse_proportion_parm /",
+    ".parse_pertrait_parm) validates the tier NAME against a fixed string vocabulary",
+    "only, never against what the fit actually contains, so all 5 REJECT cases below",
+    "are safe to exercise on the cheap single-tier Gaussian fixture -- verified by",
+    "reading each dispatcher's branch order directly (see per-case r_call).",
+    "REPAIR (2026-09-01, after a Totoro run failure -- see git history / after-task",
+    "log for the incident): CORE070-INFERENCE-ICC-CI-METHOD-ROUTE (CI-ROUTE-008..011)",
+    "was originally listed as executable, computing icc via GLLVM's ordinary",
+    "GllvmFit + _make_communality_closure route against R's confint(parm='icc',",
+    "method='wald'/'bootstrap'). That crashed on Totoro: R's .confint_icc's wald/",
+    "bootstrap branches call extract_repeatability(), which requires vB > 0 AND",
+    "vW > 0 -- i.e. a genuine TWO-TIER fit (R: value ~ 0 + trait + latent(0 + trait",
+    "| site, d=1) + latent(0 + trait | site_species, d=1), matching",
+    ".unlazy/core070-aghq/oracle-source/readback/R/extract-repeatability.R's own",
+    "@examples block), and aborts on a single-tier fixture with 'Wald repeatability",
+    "needs vB > 0 and vW > 0; refit with ordinary latent or standalone indep at",
+    "each tier.' Building the matching Julia comparand is a DEEPER gap than a",
+    "fixture swap, though: docs/dev-log/core070/namespace-1-batch-contract.json",
+    "maps R's extract_repeatability -- not extract_ICC_site -- to Julia's",
+    "repeatability(fit::TwoLevelFit) in src/twolevel.jl (via fit_twolevel_gaussian),",
+    "a wholly separate struct from GllvmFit (grep confirms no confint*.jl file",
+    "references TwoLevelFit at all, and icc_wald_ci's signature is pinned to",
+    "::GllvmFit, so it cannot dispatch on a TwoLevelFit). repeatability(fit) returns",
+    "ONLY a point estimate -- src/twolevel.jl has zero Wald/profile/bootstrap CI",
+    "machinery for the two-level repeatability/ICC estimand (fit_twolevel_gaussian",
+    "itself does not even retain a Hessian/vcov). So a two-tier fixture on both",
+    "sides would still have no Julia CI function to call; the case has been moved",
+    "to needs_new_julia_surface (source_ids 008-011, case_id unchanged) rather than",
+    "kept executable against a wrong estimand (communality on a single-tier fit is",
+    "NOT the same quantity as vB/(vB+vW) repeatability on a two-tier fit) or forced",
+    "onto a fixture the target Julia function cannot consume.",
+    "icc's own supported set for the (still-reject-only) row cluster 012-014 is",
+    "{wald, bootstrap} -- method='profile' is NOT merely unsupported, it is a",
+    "separate explicit withdrawn-feature abort ('gllvmTMB_repeatability_profile_",
+    "withdrawn'); irrelevant to 012-014 since none of wald_asym/fisher-z/bogus is",
+    "'profile', but recorded for completeness given the needs_new_julia_surface note",
+    "above already touches extract_repeatability.",
+    "rho's own supported set is {fisher-z, wald, bootstrap} -- fisher-z is a VALID",
+    "rho method in R (already bound as CI-ROUTE-034/CORE070-INFERENCE-RHO-CI-METHOD-ROUTE",
+    "in wave2); this batch's rho reject case therefore covers only wald_asym (033) and",
+    "bogus (035), not fisher-z.",
+    "GLLVM.jl has no unified string/Symbol `method=` dispatcher for the derived-quantity",
+    "CIs (icc/phylo_signal/communality/rho/proportion): each method is a distinct",
+    "function (icc_wald_ci, profile_ci_derived, bootstrap_ci_derived, ... none of which",
+    "declare a `method` keyword). The Julia-side reject check therefore calls the",
+    "relevant existing Wald-CI function with an extraneous `method=<bad>` keyword and",
+    "asserts a MethodError is thrown -- a structurally different but equally loud",
+    "rejection mechanism (no such dispatch key exists at all, vs R's validated switch",
+    "default), documented explicitly rather than papered over."
+  ],
+  "cases": [
+    {
+      "case_id": "CORE070-INFERENCE-ICC-CI-UNSUPPORTED-METHOD-REJECT",
+      "source_ids": [
+        "inference/CI-ROUTE-012",
+        "inference/CI-ROUTE-013",
+        "inference/CI-ROUTE-014"
+      ],
+      "r_call": "confint.gllvmTMB_multi(object, parm='icc', method=<'wald_asym'|'fisher-z'|'bogus'>) -> .confint_icc(method=...) -> if/else-if/else default branch -> cli_abort('Method ... not supported for icc. Available: wald, bootstrap.'). The default branch is reached WITHOUT ever calling extract_repeatability(), so this reject path needs no two-tier (vB>0, vW>0) fit -- confirmed by reading .confint_icc's branch order directly (only the wald/bootstrap branch calls extract_repeatability).",
+      "julia_surface": "icc_wald_ci(fit, f; method=<bad>) -- icc_wald_ci declares no `method` keyword, so any of the three bad values raises MethodError at the call site",
+      "check": "for each of the 3 bad method strings: R raises an error whose message contains 'not supported' and 'icc'; Julia raises MethodError",
+      "tolerance": {},
+      "fixture": "shared single-tier Gaussian fixture (p=5, K=2, n=80, unit=site, gaussian(), n_init=1, se=TRUE), same convention as tools/core070_namespace_2_batch.R's oracle_g -- safe for this reject-only path (see r_call)",
+      "evidence_kind": "native"
+    },
+    {
+      "case_id": "CORE070-INFERENCE-PHYLO-SIGNAL-CI-UNSUPPORTED-METHOD-REJECT",
+      "source_ids": [
+        "inference/CI-ROUTE-019",
+        "inference/CI-ROUTE-020",
+        "inference/CI-ROUTE-021"
+      ],
+      "r_call": "confint.gllvmTMB_multi(object, parm='phylo_signal', method=<'wald_asym'|'fisher-z'|'bogus'>) -> .confint_phylo_signal(method=...) -> switch() default -> cli_abort('Method ... not implemented for phylo_signal. Available: profile, wald, bootstrap.'). switch() evaluates only the matched branch, so the default fires without calling profile_ci_phylo_signal / .phylo_signal_wald_ci / .phylo_signal_bootstrap_ci -- no phylogenetic block needed on the fit.",
+      "julia_surface": "phylo_signal_wald_ci(fit, t; method=<bad>) -- declares no `method` keyword, raises MethodError",
+      "check": "for each of the 3 bad method strings: R raises an error whose message contains 'not implemented' and 'phylo_signal'; Julia raises MethodError",
+      "tolerance": {},
+      "fixture": "shared single-tier Gaussian fixture (no phylogenetic block needed -- the method switch fires before any phylo-specific computation)",
+      "evidence_kind": "native"
+    },
+    {
+      "case_id": "CORE070-INFERENCE-COMMUNALITY-CI-UNSUPPORTED-METHOD-REJECT",
+      "source_ids": [
+        "inference/CI-ROUTE-026",
+        "inference/CI-ROUTE-027",
+        "inference/CI-ROUTE-028"
+      ],
+      "r_call": "confint.gllvmTMB_multi(object, parm='communality:unit', method=<'wald_asym'|'fisher-z'|'bogus'>) -> .confint_communality(method=...) -> switch() default -> cli_abort('Method ... not implemented for communality. Available: wald, bootstrap.'). .parse_communality_parm validates tier='unit' against a fixed string vocabulary only (no check against the fit's actual structure), and the method switch's default branch never calls .communality_wald_ci / .communality_bootstrap_ci.",
+      "julia_surface": "communality_wald_ci(fit, t; method=<bad>) -- declares no `method` keyword, raises MethodError",
+      "check": "for each of the 3 bad method strings: R raises an error whose message contains 'not implemented' and 'communality'; Julia raises MethodError",
+      "tolerance": {},
+      "fixture": "shared single-tier Gaussian fixture",
+      "evidence_kind": "native"
+    },
+    {
+      "case_id": "CORE070-INFERENCE-RHO-CI-UNSUPPORTED-METHOD-REJECT",
+      "source_ids": [
+        "inference/CI-ROUTE-033",
+        "inference/CI-ROUTE-035"
+      ],
+      "r_call": "confint.gllvmTMB_multi(object, parm='rho:unit:1,2', method=<'wald_asym'|'bogus'>) -> .confint_rho(method=...) -> else-branch -> cli_abort('Method ... not supported for rho. Available: fisher-z, wald, bootstrap.'). tier='unit' avoids the separate unit_slope/cluster/cluster2 early-abort branches; .parse_rho_parm validates the tier string only, and the method else-branch never calls extract_correlations. NOTE: fisher-z IS a valid rho method in R (CI-ROUTE-034, bound in wave2 as CORE070-INFERENCE-RHO-CI-METHOD-ROUTE); this case therefore covers only wald_asym and bogus, not fisher-z.",
+      "julia_surface": "correlation_wald_ci(fit, i, j; method=<bad>) -- declares no `method` keyword, raises MethodError",
+      "check": "for each of the 2 bad method strings: R raises an error whose message contains 'not supported' and 'rho'; Julia raises MethodError",
+      "tolerance": {},
+      "fixture": "shared single-tier Gaussian fixture",
+      "evidence_kind": "native"
+    },
+    {
+      "case_id": "CORE070-INFERENCE-PROPORTION-CI-UNSUPPORTED-METHOD-REJECT",
+      "source_ids": [
+        "inference/CI-ROUTE-040",
+        "inference/CI-ROUTE-041",
+        "inference/CI-ROUTE-042"
+      ],
+      "r_call": "confint.gllvmTMB_multi(object, parm='proportion:shared_unit', method=<'wald_asym'|'fisher-z'|'bogus'>) -> .confint_proportion(method=...) -> switch() default -> cli_abort('Method ... not implemented for proportion. Available: wald, bootstrap.'). .parse_proportion_parm validates the component name ('shared_unit') against a fixed vocabulary only; the method switch's default branch never calls .proportions_wald_ci / .proportions_bootstrap_ci.",
+      "julia_surface": "icc_wald_ci(fit, f; method=<bad>) where f = GLLVM._make_communality_closure(spec, t) [proportion:shared_unit == the :shared component == communality convention, per confint_derived.jl's proportions() docstring: ':shared (== communality)'] -- declares no `method` keyword, raises MethodError",
+      "check": "for each of the 3 bad method strings: R raises an error whose message contains 'not implemented' and 'proportion'; Julia raises MethodError",
+      "tolerance": {},
+      "fixture": "shared single-tier Gaussian fixture",
+      "evidence_kind": "native"
+    }
+  ],
+  "needs_new_julia_surface": [
+    {
+      "source_ids": [
+        "inference/CI-ROUTE-005"
+      ],
+      "case_id": "CORE070-INFERENCE-LAMBDA-CI-METHOD-ROUTE",
+      "missing_surface": "A standardized-loading/rho Wald CI analogous to R's loading_ci(method='wald_asym', loading_scale='standardized') with 'rho[trait,axis]' parameter naming",
+      "reason": "GLLVM.jl's confint(fit, y; parm='Lambda', method=:wald) computes the RAW-scale loading Wald CI (matching R's method='wald' branch, already bound as CI-ROUTE-003). R's method='wald_asym' is a DISTINCT route: it standardizes each loading to a [-1,1] correlation-like quantity and applies the Fisher-z transform before back-transforming, renaming parameters to rho[trait,axis]. No such standardized-loading closure or entry point exists yet in src/confint.jl or src/confint_derived_wald.jl; the closest building block is the existing Fisher-z machinery (_tw_link(:fisher_z) / _tw_fisher_z / _tw_fisher_z_inv in src/confint_derived_wald.jl) applied to a per-entry closure that does not yet exist. Building it is new src/ engineering (a new public CI function plus a standardized-loading packed-theta closure), out of scope for this coverage batch; recorded here as BLOCKED pending that surface, not fudged as a raw-scale wald pass under a different name."
+    },
+    {
+      "source_ids": [
+        "inference/CI-ROUTE-008",
+        "inference/CI-ROUTE-009",
+        "inference/CI-ROUTE-010",
+        "inference/CI-ROUTE-011"
+      ],
+      "case_id": "CORE070-INFERENCE-ICC-CI-METHOD-ROUTE",
+      "missing_surface": "A Wald/profile/bootstrap confidence interval for the two-level repeatability/ICC estimand R_t = vB[t] / (vB[t] + vW[t]) on GLLVM.jl's TwoLevelFit",
+      "reason": "R's confint(parm='icc', method='wald'/'bootstrap') routes through extract_repeatability(), which requires a genuine TWO-TIER fit (vB>0 from a between/unit-level latent block AND vW>0 from a within/observation-level latent block -- R construction: value ~ 0 + trait + latent(0 + trait | site, d=1) + latent(0 + trait | site_species, d=1), per .unlazy/core070-aghq/oracle-source/readback/R/extract-repeatability.R's own @examples). GLLVM.jl's analogous struct is TwoLevelFit / fit_twolevel_gaussian in src/twolevel.jl (this mapping is itself pinned in docs/dev-log/core070/namespace-1-batch-contract.json: extract_repeatability -> repeatability(fit::TwoLevelFit) src/twolevel.jl:263, NOT icc_wald_ci -- the case-plan's julia_surface text pointing at icc_wald_ci for this row was a misidentification, confirmed wrong by a Totoro run failure in .confint_icc/extract_repeatability's vB/vW guard on a single-tier fixture). repeatability(fit::TwoLevelFit) returns ONLY a bare point estimate: src/twolevel.jl has no Wald, profile, or bootstrap CI machinery for it at all (grep across src/*.jl confirms no confint*.jl file references TwoLevelFit; fit_twolevel_gaussian's Optim.LBFGS fit does not even retain a Hessian/vcov to build one from), and icc_wald_ci's signature is pinned to ::GllvmFit so it cannot dispatch on a TwoLevelFit regardless. Fitting a matched two-tier model on both sides would therefore still leave nothing to call on the Julia side; recorded here as BLOCKED pending that CI surface, not forced onto the wrong estimand (single-tier communality) or a fixture the target function cannot consume."
+    }
+  ],
+  "reclassify_rows": [],
+  "spec_defect_notes": [],
+  "negative_controls": [
+    {
+      "control_id": "NEG-REJECT-ACCEPTED-AS-VALID",
+      "description": "a reject case where the Julia side is (incorrectly) claimed to have returned a numeric CI instead of raising MethodError must be flagged as misbehaved",
+      "check": "julia_error_kind == 'MethodError' is required for a reject case to be marked behaved; 'none' must be rejected"
+    },
+    {
+      "control_id": "NEG-R-REJECT-MESSAGE-WRONG",
+      "description": "an R reject-case error message not containing the expected substring (e.g. 'not supported'/'not implemented' + the estimand name) must be flagged as misbehaved even if R did raise an error",
+      "check": "grepl(expected_substrings, message) required for behaved=TRUE"
+    }
+  ],
+  "source_pins": {
+    "R/z-confint-gllvmTMB.R": "0e995245ce1f0b5c9c5d1676bec982709728e20c980b274d9f4499ea6c6c7a53"
+  },
+  "runner": {
+    "r_script": "tools/core070_inference_remainder_batch.R",
+    "r_outer_argv": "Rscript --vanilla tools/core070_inference_remainder_batch.R <frozen-library> <destination>",
+    "julia_child": "tools/core070_inference_remainder_batch.jl",
+    "julia_argv": "julia --project=. tools/core070_inference_remainder_batch.jl <out.json>",
+    "julia_env": "CORE070_INFERENCE_REMAINDER_R_ORACLE = <path to r-oracle.json written by the R runner>",
+    "verifier": "tools/core070_verify_inference_remainder_batch.py"
+  },
+  "totoro_failed_attempts": [
+    {
+      "run_dir": "totoro:/home/snakagaw/core070-aghq-20260830/tweedie-replay-01/wave4-infrem",
+      "log": "totoro:/home/snakagaw/core070-aghq-20260830/tweedie-replay-01/wave4-infrem-r.log",
+      "failure": "R stage halted in .confint_icc -> extract_repeatability: 'Wald repeatability needs vB > 0 and vW > 0; refit with ordinary latent or standalone indep at each tier.' on the single-tier Gaussian fixture.",
+      "repair": "CORE070-INFERENCE-ICC-CI-METHOD-ROUTE (CI-ROUTE-008..011) moved from cases to needs_new_julia_surface; see the note block and the needs_new_julia_surface entry above."
+    }
+  ],
+  "p0_contract": "docs/dev-log/core070/inference-remainder-batch-contract.json",
+  "p0_contract_sha256": "ff209288a006c06a2e6c110c9afecf5cfc040525ee560c4f65ab755a795f43b3",
+  "p0_to_p1_r_function_diff": [
+    {
+      "function": "confint.gllvmTMB_multi",
+      "file": "R/z-confint-gllvmTMB.R",
+      "body_identical_p0_p1": false,
+      "body_sha256_p0": "0dd3937290b0bdc3861a329901b11613e0aba95aa8b0fe1a962d7caedd677229",
+      "body_sha256_p1": "34c591a2db225bfc12a86d56781b0c5c7182906ef7796b4d44ea90a53d0ed964"
+    },
+    {
+      "function": ".confint_lambda",
+      "file": "R/z-confint-gllvmTMB.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "d562384d5dd0869712b77842e36a301b39bd0354faaa60f98a753e980b938034",
+      "body_sha256_p1": "d562384d5dd0869712b77842e36a301b39bd0354faaa60f98a753e980b938034"
+    },
+    {
+      "function": ".confint_icc",
+      "file": "R/z-confint-gllvmTMB.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "ca3d8f4b391d3a65db919c89bf43301470bb66276c23e8deb4bb517dcd718db9",
+      "body_sha256_p1": "ca3d8f4b391d3a65db919c89bf43301470bb66276c23e8deb4bb517dcd718db9"
+    },
+    {
+      "function": ".confint_phylo_signal",
+      "file": "R/z-confint-gllvmTMB.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "01c4806f4a14e81c8b2daf581530e80a385fbfd0625f5be8deed3ac8e797026b",
+      "body_sha256_p1": "01c4806f4a14e81c8b2daf581530e80a385fbfd0625f5be8deed3ac8e797026b"
+    },
+    {
+      "function": ".confint_communality",
+      "file": "R/z-confint-gllvmTMB.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "544d08210b805ca9750703953ba3320eb56a18f47fa504d4d3c7e24197a0779c",
+      "body_sha256_p1": "544d08210b805ca9750703953ba3320eb56a18f47fa504d4d3c7e24197a0779c"
+    },
+    {
+      "function": ".confint_rho",
+      "file": "R/z-confint-gllvmTMB.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "9d43efc9276bdaec1ee3a09c3228a2e64f2b25b1242e8d82a7c7fe2bb7ab354e",
+      "body_sha256_p1": "9d43efc9276bdaec1ee3a09c3228a2e64f2b25b1242e8d82a7c7fe2bb7ab354e"
+    },
+    {
+      "function": ".confint_proportion",
+      "file": "R/z-confint-gllvmTMB.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "fd75a3bfee770dee1bac3c212d02d3b55b6940fbe5ff603cdb31c43195b390be",
+      "body_sha256_p1": "fd75a3bfee770dee1bac3c212d02d3b55b6940fbe5ff603cdb31c43195b390be"
+    },
+    {
+      "function": ".confint_sigma",
+      "file": "R/z-confint-gllvmTMB.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "9c718d40b7a20ef502a9fbd8c77661a1973010a9adf0402a09330db4274e5945",
+      "body_sha256_p1": "9c718d40b7a20ef502a9fbd8c77661a1973010a9adf0402a09330db4274e5945"
+    },
+    {
+      "function": ".gllvmTMB_mspl_assert_inference",
+      "file": "R/mspl.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "6adeb1d1672c794665925972da2153df8d0209a27cdc06e213c29851417297aa",
+      "body_sha256_p1": "6adeb1d1672c794665925972da2153df8d0209a27cdc06e213c29851417297aa"
+    },
+    {
+      "function": ".gllvmTMB_require_unweighted_inference",
+      "file": "R/fit-multi.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "c38fa94483037f9103fbc22ba1079e84c689cd7ef15934234c204d92781a8965",
+      "body_sha256_p1": "c38fa94483037f9103fbc22ba1079e84c689cd7ef15934234c204d92781a8965"
+    }
+  ],
+  "regeneration_log": {
+    "generator": "tools/core070_inference_p1_contract.py",
+    "changes": [
+      {
+        "field": "reference_commit",
+        "p0": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+        "p1": "9539352f66f2db2cc26b1c393e67212a359b60c9"
+      },
+      {
+        "field": "source_pins[.unlazy/core070-aghq/oracle-source/readback/R/z-confint-gllvmTMB.R] -> source_pins[R/z-confint-gllvmTMB.R]",
+        "p0": "c521f0874fd76b22d93bab9f43108b07603de0044f8b76228c75fd83e8c75893",
+        "p1": "0e995245ce1f0b5c9c5d1676bec982709728e20c980b274d9f4499ea6c6c7a53",
+        "changed": true
+      }
+    ],
+    "carried_verbatim": "status, rows/cases (julia_call, expected_route_tag, r_call, check, tolerance), buckets, needs_new_julia_surface, spec-defect rows, negative_controls, fixtures, runner. No case, expectation or tolerance was edited; a P1 mismatch is recorded by the batch as a failure."
+  }
+}

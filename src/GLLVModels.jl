@@ -103,6 +103,7 @@ include("families/beta_binomial.jl")     # Beta-binomial (overdispersed binomial
 include("families/com_poisson.jl")        # Conway–Maxwell–Poisson (under/overdispersed counts) — beyond gllvmTMB
 include("families/ordered_beta.jl")       # ordered-beta (must precede fit_gllvm)
 include("families/fit_gllvm.jl")         # unified fit_gllvm(Y; family) dispatcher
+include("families/zi_twin.jl")           # gllvmTMB zi_poisson/zi_nbinom2/zi_binomial twins (R semantics)
 include("none_dep.jl")                    # none × dep matrix fitter (K = p; no formula sugar)
 include("phylo_dep.jl")                   # phylo × dep matrix fitter (K_phy = p; no formula sugar)
 include("animal_dep.jl")                  # animal × dep matrix fitter (K_phy = p; no formula sugar)
@@ -201,8 +202,8 @@ include("diagnostics.jl")                # check_gllvmTMB / gllvmTMB_diagnose / 
 include("summary_table.jl")              # coef_table: tidy Wald inference table
 include("postfit_tables.jl")             # final missing-surface cluster (core070 §1): deviance, cross-rho profiles,
                                           # predict_cross_covariance, predict_missing, rotate_loadings, tidy, summary, imputed
-include("temporal.jl")                   # temporal source: constructors, pre-pass, TemporalContractError (gllvmTMB P1 port, slice 1)
-include("temporal_likelihood.jl")        # exact Gaussian marginal NLL, K_blockdiag ⊗ Sigma_T + sigma_eps² I
+include("temporal.jl")                   # temporal source: constructors, pre-pass, unit/unit_obs composition, TemporalContractError (gllvmTMB P1 port)
+include("temporal_likelihood.jl")        # exact Gaussian marginal NLL, K_blockdiag ⊗ Sigma_T (+ unit/unit_obs blocks) + sigma_eps² I
 include("temporal_fit.jl")               # fit_temporal_gllvm / TemporalGaussianFit (separate door; no formula.jl hook)
 include("temporal_methods.jl")           # extract_temporal and the temporal helper routes
 include("formula.jl")                    # @formula front-end (v1: fixed effects → engine)
@@ -334,6 +335,8 @@ export make_cross_kernel, extract_Gamma, fit_coevolution_gaussian, fit_coevoluti
        fit_zinb_gllvm, ZINBFit, zinb_marginal_loglik_laplace, ZINegBin,
        fit_zinb_gllvm_cov, ZINBCovFit,
        fit_zib_gllvm, ZIBFit, fit_zib_gllvm_cov, ZIBCovFit, zib_marginal_loglik_laplace, ZIB,
+       zi_poisson, zi_nbinom2, zi_binomial, ZiPoisson, ZiNbinom2, ZiBinomial,
+       fit_zi_gllvm, ZiFit, zi_marginal_loglik_laplace, ZI_LAPLACE_EIGMIN_FLOOR,
        fit_gllvm,
        fit_dep_gllvm,
        fit_phylo_dep_gllvm,
@@ -384,7 +387,7 @@ export make_cross_kernel, extract_Gamma, fit_coevolution_gaussian, fit_coevoluti
        tidy, GllvmSummary,
        temporal_indep, temporal_dep, temporal_latent, TemporalTerm, TemporalContractError,
        fit_temporal_gllvm, TemporalGaussianFit, extract_temporal, forecast_temporal,
-       profile_temporal, bootstrap_temporal, compare_temporal,
+       profile_temporal, bootstrap_temporal, compare_temporal, update,
        isdm_source, isdm_sources, IsdmSource, IsdmSources, isdm_table, IsdmTable,
        fit_isdm_gllvm, IsdmFit, isdm_marginal_loglik_laplace
 
