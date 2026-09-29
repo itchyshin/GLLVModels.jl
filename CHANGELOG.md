@@ -2,6 +2,14 @@
 
 ## Development
 
+- **Shared-r NB2 (`fit_nb_gllvm`) now warns at the Poisson limit.** On Poisson
+  data the fitted `r` ran to 1e6 or beyond (1.7e7 on the fixture, Julia 1.10; 1.6e7
+  on 1.13) with no message. Maintainer decision 2026-09-29 ("NB upper end: warn only
+  everywhere"): above 1e6 the fitter warns and keeps the optimizer's `converged`
+  (gllvmTMB 0.7.1 itself reaches this end on most ordinary per-trait NB fits); below
+  1e-6 it reports `converged = false`. The reported `loglik` is unchanged. Test:
+  `test/test_nb_shared_r_boundary.jl` (literal fixture
+  `test/fixtures/nb_shared_r_boundary.toml`).
 - **Grouped Beta fits with a large precision now report converged.** With φ above
   about 1e5 (near-deterministic proportions) the intercept curvature grows like φ
   (about 1e9 at φ = 9.6e7), so a stationary point shows a raw finite-difference
