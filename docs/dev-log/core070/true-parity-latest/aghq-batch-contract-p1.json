@@ -1,0 +1,478 @@
+{
+  "schema": "core070-required-case-plan/v1-executable-batch",
+  "status": "FROZEN_AGHQ_CONTROL_BATCH_CONTRACT",
+  "area": "aghq-control",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "manifest_source": "docs/dev-log/core070/required-source-case-map.json",
+  "case_plan_annex": "docs/dev-log/core070/aghq-required-case-plan.json",
+  "source_row_scope": "aghq/ prefixed rows in required-source-case-map.json with classification in {required_core, compatibility_adapter}",
+  "source_row_count": 29,
+  "triage_method": "Every one of the 29 aghq/-prefixed required_core/compatibility_adapter rows in required-source-case-map.json was cross-referenced against its planned_case_id in aghq-required-case-plan.json's source_rows. 7 rows (the AGHQ-CTRL-* normalization control rows) point at a planned_case_id that IS one of the plan's 16 fully-specified paired_control_cases (r_call + r_assertion + julia_call + expected + acceptance_rule all present) -- those 7 are executed by this batch. The other 22 rows (AGHQ-AUTO-K-* and AGHQ-POLICY-* ) point at a *-CONTROL-CONTRACT planned_case_id that appears only in the plan's source_rows bucket, never in paired_control_cases -- no r_call/r_assertion/julia_call/expected is defined for any of them anywhere in the frozen plan, so none is executable; each is recorded verbatim under needs_new_julia_surface with its plan-frozen remaining_obligation as the reason. This batch additionally executes the 9 AGHQ-INVALID-* paired controls from the same 16-item paired_control_cases list even though those 9 rows carry classification=\"rejected\" in required-source-case-map.json (outside the 29-row required_core/compatibility_adapter scope) -- they are still real, fully-specified executable cases in the frozen plan and dropping them would under-cover the plan's own 16-case paired-control set; each such case's source_classification_note records that it is out-of-scope for the 29-row accounting.",
+  "expected_case_count": 16,
+  "needs_new_julia_surface_count": 22,
+  "reclassify_row_count": 0,
+  "spec_defect_note_count": 0,
+  "cases": [
+    {
+      "case_id": "CORE070-AGHQ-CTRL-FALSE-PAIRED-CONTROL",
+      "source_id": "aghq/AGHQ-CTRL-FALSE",
+      "source_classification_note": "required_core_or_compatibility_adapter",
+      "evidence_kind": "control_normalization",
+      "r_call": ".gllvmTMB_normalize_aghq(FALSE)",
+      "r_assertion": "identical(.gllvmTMB_normalize_aghq(FALSE), FALSE)",
+      "julia_call": "GLLVM._aghq_request(false)",
+      "expected": "off",
+      "acceptance_rule": "Frozen R assertion true and native normalization value/error matches; zero fit or interface claim.",
+      "fixture": "test/parity/core070_aghq_controls.toml",
+      "fixture_sha256": "28d7c40ef6dc64c6da549b7b5301f2d0b44e8789a4257dba31dab68f916ea9de"
+    },
+    {
+      "case_id": "CORE070-AGHQ-CTRL-NULL-PAIRED-CONTROL",
+      "source_id": "aghq/AGHQ-CTRL-NULL",
+      "source_classification_note": "required_core_or_compatibility_adapter",
+      "evidence_kind": "control_normalization",
+      "r_call": ".gllvmTMB_normalize_aghq(NULL)",
+      "r_assertion": "identical(.gllvmTMB_normalize_aghq(NULL), FALSE)",
+      "julia_call": "GLLVM._aghq_request(nothing)",
+      "expected": "off",
+      "acceptance_rule": "Frozen R assertion true and native normalization value/error matches; zero fit or interface claim.",
+      "fixture": "test/parity/core070_aghq_controls.toml",
+      "fixture_sha256": "28d7c40ef6dc64c6da549b7b5301f2d0b44e8789a4257dba31dab68f916ea9de"
+    },
+    {
+      "case_id": "CORE070-AGHQ-CTRL-TRUE-PAIRED-CONTROL",
+      "source_id": "aghq/AGHQ-CTRL-TRUE",
+      "source_classification_note": "required_core_or_compatibility_adapter",
+      "evidence_kind": "control_normalization",
+      "r_call": ".gllvmTMB_normalize_aghq(TRUE)",
+      "r_assertion": "identical(.gllvmTMB_normalize_aghq(TRUE), \"auto\")",
+      "julia_call": "GLLVM._aghq_request(true)",
+      "expected": "auto",
+      "acceptance_rule": "Frozen R assertion true and native normalization value/error matches; zero fit or interface claim.",
+      "fixture": "test/parity/core070_aghq_controls.toml",
+      "fixture_sha256": "28d7c40ef6dc64c6da549b7b5301f2d0b44e8789a4257dba31dab68f916ea9de"
+    },
+    {
+      "case_id": "CORE070-AGHQ-CTRL-AUTO-PAIRED-CONTROL",
+      "source_id": "aghq/AGHQ-CTRL-AUTO",
+      "source_classification_note": "required_core_or_compatibility_adapter",
+      "evidence_kind": "control_normalization",
+      "r_call": ".gllvmTMB_normalize_aghq(\"auto\")",
+      "r_assertion": "identical(.gllvmTMB_normalize_aghq(\"auto\"), \"auto\")",
+      "julia_call": "GLLVM._aghq_request(:auto)",
+      "expected": "auto",
+      "acceptance_rule": "Frozen R assertion true and native normalization value/error matches; zero fit or interface claim.",
+      "fixture": "test/parity/core070_aghq_controls.toml",
+      "fixture_sha256": "28d7c40ef6dc64c6da549b7b5301f2d0b44e8789a4257dba31dab68f916ea9de"
+    },
+    {
+      "case_id": "CORE070-AGHQ-CTRL-ONE-PAIRED-CONTROL",
+      "source_id": "aghq/AGHQ-CTRL-ONE",
+      "source_classification_note": "required_core_or_compatibility_adapter",
+      "evidence_kind": "control_normalization",
+      "r_call": ".gllvmTMB_normalize_aghq(1)",
+      "r_assertion": "identical(.gllvmTMB_normalize_aghq(1), 1L)",
+      "julia_call": "GLLVM._aghq_request(1)",
+      "expected": "1",
+      "acceptance_rule": "Frozen R assertion true and native normalization value/error matches; zero fit or interface claim.",
+      "fixture": "test/parity/core070_aghq_controls.toml",
+      "fixture_sha256": "28d7c40ef6dc64c6da549b7b5301f2d0b44e8789a4257dba31dab68f916ea9de"
+    },
+    {
+      "case_id": "CORE070-AGHQ-CTRL-TWO-PAIRED-CONTROL",
+      "source_id": "aghq/AGHQ-CTRL-TWO",
+      "source_classification_note": "required_core_or_compatibility_adapter",
+      "evidence_kind": "control_normalization",
+      "r_call": ".gllvmTMB_normalize_aghq(2)",
+      "r_assertion": "identical(.gllvmTMB_normalize_aghq(2), 2L)",
+      "julia_call": "GLLVM._aghq_request(2)",
+      "expected": "2",
+      "acceptance_rule": "Frozen R assertion true and native normalization value/error matches; zero fit or interface claim.",
+      "fixture": "test/parity/core070_aghq_controls.toml",
+      "fixture_sha256": "28d7c40ef6dc64c6da549b7b5301f2d0b44e8789a4257dba31dab68f916ea9de"
+    },
+    {
+      "case_id": "CORE070-AGHQ-CTRL-NINE-PAIRED-CONTROL",
+      "source_id": "aghq/AGHQ-CTRL-NINE",
+      "source_classification_note": "required_core_or_compatibility_adapter",
+      "evidence_kind": "control_normalization",
+      "r_call": ".gllvmTMB_normalize_aghq(9)",
+      "r_assertion": "identical(.gllvmTMB_normalize_aghq(9), 9L)",
+      "julia_call": "GLLVM._aghq_request(9)",
+      "expected": "9",
+      "acceptance_rule": "Frozen R assertion true and native normalization value/error matches; zero fit or interface claim.",
+      "fixture": "test/parity/core070_aghq_controls.toml",
+      "fixture_sha256": "28d7c40ef6dc64c6da549b7b5301f2d0b44e8789a4257dba31dab68f916ea9de"
+    },
+    {
+      "case_id": "CORE070-AGHQ-INVALID-ZERO-PAIRED-CONTROL",
+      "source_id": "aghq/AGHQ-INVALID-ZERO",
+      "source_classification_note": "rejected_in_required_source_case_map_out_of_29_row_scope",
+      "evidence_kind": "control_normalization",
+      "r_call": ".gllvmTMB_normalize_aghq(0)",
+      "r_assertion": "inherits(try(.gllvmTMB_normalize_aghq(0), silent=TRUE), \"try-error\")",
+      "julia_call": "GLLVM._aghq_request(0)",
+      "expected": "ArgumentError",
+      "acceptance_rule": "Frozen R assertion true and native normalization value/error matches; zero fit or interface claim.",
+      "fixture": "test/parity/core070_aghq_controls.toml",
+      "fixture_sha256": "28d7c40ef6dc64c6da549b7b5301f2d0b44e8789a4257dba31dab68f916ea9de"
+    },
+    {
+      "case_id": "CORE070-AGHQ-INVALID-NEGATIVE-PAIRED-CONTROL",
+      "source_id": "aghq/AGHQ-INVALID-NEGATIVE",
+      "source_classification_note": "rejected_in_required_source_case_map_out_of_29_row_scope",
+      "evidence_kind": "control_normalization",
+      "r_call": ".gllvmTMB_normalize_aghq(-1)",
+      "r_assertion": "inherits(try(.gllvmTMB_normalize_aghq(-1), silent=TRUE), \"try-error\")",
+      "julia_call": "GLLVM._aghq_request(-1)",
+      "expected": "ArgumentError",
+      "acceptance_rule": "Frozen R assertion true and native normalization value/error matches; zero fit or interface claim.",
+      "fixture": "test/parity/core070_aghq_controls.toml",
+      "fixture_sha256": "28d7c40ef6dc64c6da549b7b5301f2d0b44e8789a4257dba31dab68f916ea9de"
+    },
+    {
+      "case_id": "CORE070-AGHQ-INVALID-FRACTION-PAIRED-CONTROL",
+      "source_id": "aghq/AGHQ-INVALID-FRACTION",
+      "source_classification_note": "rejected_in_required_source_case_map_out_of_29_row_scope",
+      "evidence_kind": "control_normalization",
+      "r_call": ".gllvmTMB_normalize_aghq(1.5)",
+      "r_assertion": "inherits(try(.gllvmTMB_normalize_aghq(1.5), silent=TRUE), \"try-error\")",
+      "julia_call": "GLLVM._aghq_request(1.5)",
+      "expected": "ArgumentError",
+      "acceptance_rule": "Frozen R assertion true and native normalization value/error matches; zero fit or interface claim.",
+      "fixture": "test/parity/core070_aghq_controls.toml",
+      "fixture_sha256": "28d7c40ef6dc64c6da549b7b5301f2d0b44e8789a4257dba31dab68f916ea9de"
+    },
+    {
+      "case_id": "CORE070-AGHQ-INVALID-INF-PAIRED-CONTROL",
+      "source_id": "aghq/AGHQ-INVALID-INF",
+      "source_classification_note": "rejected_in_required_source_case_map_out_of_29_row_scope",
+      "evidence_kind": "control_normalization",
+      "r_call": ".gllvmTMB_normalize_aghq(Inf)",
+      "r_assertion": "inherits(try(.gllvmTMB_normalize_aghq(Inf), silent=TRUE), \"try-error\")",
+      "julia_call": "GLLVM._aghq_request(Inf)",
+      "expected": "ArgumentError",
+      "acceptance_rule": "Frozen R assertion true and native normalization value/error matches; zero fit or interface claim.",
+      "fixture": "test/parity/core070_aghq_controls.toml",
+      "fixture_sha256": "28d7c40ef6dc64c6da549b7b5301f2d0b44e8789a4257dba31dab68f916ea9de"
+    },
+    {
+      "case_id": "CORE070-AGHQ-INVALID-NAN-PAIRED-CONTROL",
+      "source_id": "aghq/AGHQ-INVALID-NAN",
+      "source_classification_note": "rejected_in_required_source_case_map_out_of_29_row_scope",
+      "evidence_kind": "control_normalization",
+      "r_call": ".gllvmTMB_normalize_aghq(NaN)",
+      "r_assertion": "inherits(try(.gllvmTMB_normalize_aghq(NaN), silent=TRUE), \"try-error\")",
+      "julia_call": "GLLVM._aghq_request(NaN)",
+      "expected": "ArgumentError",
+      "acceptance_rule": "Frozen R assertion true and native normalization value/error matches; zero fit or interface claim.",
+      "fixture": "test/parity/core070_aghq_controls.toml",
+      "fixture_sha256": "28d7c40ef6dc64c6da549b7b5301f2d0b44e8789a4257dba31dab68f916ea9de"
+    },
+    {
+      "case_id": "CORE070-AGHQ-INVALID-NA-PAIRED-CONTROL",
+      "source_id": "aghq/AGHQ-INVALID-NA",
+      "source_classification_note": "rejected_in_required_source_case_map_out_of_29_row_scope",
+      "evidence_kind": "control_normalization",
+      "r_call": ".gllvmTMB_normalize_aghq(NA_real_)",
+      "r_assertion": "inherits(try(.gllvmTMB_normalize_aghq(NA_real_), silent=TRUE), \"try-error\")",
+      "julia_call": "GLLVM._aghq_request(missing)",
+      "expected": "ArgumentError",
+      "acceptance_rule": "Frozen R assertion true and native normalization value/error matches; zero fit or interface claim.",
+      "fixture": "test/parity/core070_aghq_controls.toml",
+      "fixture_sha256": "28d7c40ef6dc64c6da549b7b5301f2d0b44e8789a4257dba31dab68f916ea9de"
+    },
+    {
+      "case_id": "CORE070-AGHQ-INVALID-VECTOR-PAIRED-CONTROL",
+      "source_id": "aghq/AGHQ-INVALID-VECTOR",
+      "source_classification_note": "rejected_in_required_source_case_map_out_of_29_row_scope",
+      "evidence_kind": "control_normalization",
+      "r_call": ".gllvmTMB_normalize_aghq(c(3,5))",
+      "r_assertion": "inherits(try(.gllvmTMB_normalize_aghq(c(3,5)), silent=TRUE), \"try-error\")",
+      "julia_call": "GLLVM._aghq_request([3,5])",
+      "expected": "ArgumentError",
+      "acceptance_rule": "Frozen R assertion true and native normalization value/error matches; zero fit or interface claim.",
+      "fixture": "test/parity/core070_aghq_controls.toml",
+      "fixture_sha256": "28d7c40ef6dc64c6da549b7b5301f2d0b44e8789a4257dba31dab68f916ea9de"
+    },
+    {
+      "case_id": "CORE070-AGHQ-INVALID-EMPTY-PAIRED-CONTROL",
+      "source_id": "aghq/AGHQ-INVALID-EMPTY",
+      "source_classification_note": "rejected_in_required_source_case_map_out_of_29_row_scope",
+      "evidence_kind": "control_normalization",
+      "r_call": ".gllvmTMB_normalize_aghq(numeric(0))",
+      "r_assertion": "inherits(try(.gllvmTMB_normalize_aghq(numeric(0)), silent=TRUE), \"try-error\")",
+      "julia_call": "GLLVM._aghq_request(Int[])",
+      "expected": "ArgumentError",
+      "acceptance_rule": "Frozen R assertion true and native normalization value/error matches; zero fit or interface claim.",
+      "fixture": "test/parity/core070_aghq_controls.toml",
+      "fixture_sha256": "28d7c40ef6dc64c6da549b7b5301f2d0b44e8789a4257dba31dab68f916ea9de"
+    },
+    {
+      "case_id": "CORE070-AGHQ-INVALID-STRING-PAIRED-CONTROL",
+      "source_id": "aghq/AGHQ-INVALID-STRING",
+      "source_classification_note": "rejected_in_required_source_case_map_out_of_29_row_scope",
+      "evidence_kind": "control_normalization",
+      "r_call": ".gllvmTMB_normalize_aghq(\"9\")",
+      "r_assertion": "inherits(try(.gllvmTMB_normalize_aghq(\"9\"), silent=TRUE), \"try-error\")",
+      "julia_call": "GLLVM._aghq_request(\"9\")",
+      "expected": "ArgumentError",
+      "acceptance_rule": "Frozen R assertion true and native normalization value/error matches; zero fit or interface claim.",
+      "fixture": "test/parity/core070_aghq_controls.toml",
+      "fixture_sha256": "28d7c40ef6dc64c6da549b7b5301f2d0b44e8789a4257dba31dab68f916ea9de"
+    }
+  ],
+  "needs_new_julia_surface": [
+    {
+      "source_id": "aghq/AGHQ-AUTO-K-BINOMIAL",
+      "planned_case_id": "CORE070-AGHQ-AUTO-K-BINOMIAL-CONTROL-CONTRACT",
+      "classification": "required_core",
+      "missing_surface": "docs/dev-log/core070/aghq-required-case-plan.json's source_rows entry for aghq/AGHQ-AUTO-K-BINOMIAL names a planned_case_id (CORE070-AGHQ-AUTO-K-BINOMIAL-CONTROL-CONTRACT) but defines no r_call/r_assertion/julia_call/expected for it -- unlike the 16 paired_control_cases, which carry all four. No Julia surface can be exercised until a concrete native policy call or same-model public fit is named for this row.",
+      "reason": "Name an exact native policy call or same-model public fit; helper source observation alone is insufficient."
+    },
+    {
+      "source_id": "aghq/AGHQ-AUTO-K-DELTA",
+      "planned_case_id": "CORE070-AGHQ-AUTO-K-DELTA-CONTROL-CONTRACT",
+      "classification": "required_core",
+      "missing_surface": "docs/dev-log/core070/aghq-required-case-plan.json's source_rows entry for aghq/AGHQ-AUTO-K-DELTA names a planned_case_id (CORE070-AGHQ-AUTO-K-DELTA-CONTROL-CONTRACT) but defines no r_call/r_assertion/julia_call/expected for it -- unlike the 16 paired_control_cases, which carry all four. No Julia surface can be exercised until a concrete native policy call or same-model public fit is named for this row.",
+      "reason": "Name an exact native policy call or same-model public fit; helper source observation alone is insufficient."
+    },
+    {
+      "source_id": "aghq/AGHQ-AUTO-K-GAUSSIAN",
+      "planned_case_id": "CORE070-AGHQ-AUTO-K-GAUSSIAN-CONTROL-CONTRACT",
+      "classification": "required_core",
+      "missing_surface": "docs/dev-log/core070/aghq-required-case-plan.json's source_rows entry for aghq/AGHQ-AUTO-K-GAUSSIAN names a planned_case_id (CORE070-AGHQ-AUTO-K-GAUSSIAN-CONTROL-CONTRACT) but defines no r_call/r_assertion/julia_call/expected for it -- unlike the 16 paired_control_cases, which carry all four. No Julia surface can be exercised until a concrete native policy call or same-model public fit is named for this row.",
+      "reason": "Name an exact native policy call or same-model public fit; helper source observation alone is insufficient."
+    },
+    {
+      "source_id": "aghq/AGHQ-AUTO-K-NB2",
+      "planned_case_id": "CORE070-AGHQ-AUTO-K-NB2-CONTROL-CONTRACT",
+      "classification": "required_core",
+      "missing_surface": "docs/dev-log/core070/aghq-required-case-plan.json's source_rows entry for aghq/AGHQ-AUTO-K-NB2 names a planned_case_id (CORE070-AGHQ-AUTO-K-NB2-CONTROL-CONTRACT) but defines no r_call/r_assertion/julia_call/expected for it -- unlike the 16 paired_control_cases, which carry all four. No Julia surface can be exercised until a concrete native policy call or same-model public fit is named for this row.",
+      "reason": "Name an exact native policy call or same-model public fit; helper source observation alone is insufficient."
+    },
+    {
+      "source_id": "aghq/AGHQ-AUTO-K-ORDINAL",
+      "planned_case_id": "CORE070-AGHQ-AUTO-K-ORDINAL-CONTROL-CONTRACT",
+      "classification": "required_core",
+      "missing_surface": "docs/dev-log/core070/aghq-required-case-plan.json's source_rows entry for aghq/AGHQ-AUTO-K-ORDINAL names a planned_case_id (CORE070-AGHQ-AUTO-K-ORDINAL-CONTROL-CONTRACT) but defines no r_call/r_assertion/julia_call/expected for it -- unlike the 16 paired_control_cases, which carry all four. No Julia surface can be exercised until a concrete native policy call or same-model public fit is named for this row.",
+      "reason": "Name an exact native policy call or same-model public fit; helper source observation alone is insufficient."
+    },
+    {
+      "source_id": "aghq/AGHQ-AUTO-K-POISSON",
+      "planned_case_id": "CORE070-AGHQ-AUTO-K-POISSON-CONTROL-CONTRACT",
+      "classification": "required_core",
+      "missing_surface": "docs/dev-log/core070/aghq-required-case-plan.json's source_rows entry for aghq/AGHQ-AUTO-K-POISSON names a planned_case_id (CORE070-AGHQ-AUTO-K-POISSON-CONTROL-CONTRACT) but defines no r_call/r_assertion/julia_call/expected for it -- unlike the 16 paired_control_cases, which carry all four. No Julia surface can be exercised until a concrete native policy call or same-model public fit is named for this row.",
+      "reason": "Name an exact native policy call or same-model public fit; helper source observation alone is insufficient."
+    },
+    {
+      "source_id": "aghq/AGHQ-AUTO-K-TWEEDIE",
+      "planned_case_id": "CORE070-AGHQ-AUTO-K-TWEEDIE-CONTROL-CONTRACT",
+      "classification": "required_core",
+      "missing_surface": "docs/dev-log/core070/aghq-required-case-plan.json's source_rows entry for aghq/AGHQ-AUTO-K-TWEEDIE names a planned_case_id (CORE070-AGHQ-AUTO-K-TWEEDIE-CONTROL-CONTRACT) but defines no r_call/r_assertion/julia_call/expected for it -- unlike the 16 paired_control_cases, which carry all four. No Julia surface can be exercised until a concrete native policy call or same-model public fit is named for this row.",
+      "reason": "Name an exact native policy call or same-model public fit; helper source observation alone is insufficient."
+    },
+    {
+      "source_id": "aghq/AGHQ-DEFAULT-OFF",
+      "planned_case_id": "CORE070-AGHQ-DEFAULT-OFF-CONTROL-CONTRACT",
+      "classification": "required_core",
+      "missing_surface": "docs/dev-log/core070/aghq-required-case-plan.json's source_rows entry for aghq/AGHQ-DEFAULT-OFF names a planned_case_id (CORE070-AGHQ-DEFAULT-OFF-CONTROL-CONTRACT) but defines no r_call/r_assertion/julia_call/expected for it -- unlike the 16 paired_control_cases, which carry all four. No Julia surface can be exercised until a concrete native policy call or same-model public fit is named for this row.",
+      "reason": "Name an exact native policy call or same-model public fit; helper source observation alone is insufficient."
+    },
+    {
+      "source_id": "aghq/AGHQ-POLICY-AUTO-ENFORCE-CUTOFF",
+      "planned_case_id": "CORE070-AGHQ-POLICY-AUTO-ENFORCE-CUTOFF-CONTROL-CONTRACT",
+      "classification": "required_core",
+      "missing_surface": "docs/dev-log/core070/aghq-required-case-plan.json's source_rows entry for aghq/AGHQ-POLICY-AUTO-ENFORCE-CUTOFF names a planned_case_id (CORE070-AGHQ-POLICY-AUTO-ENFORCE-CUTOFF-CONTROL-CONTRACT) but defines no r_call/r_assertion/julia_call/expected for it -- unlike the 16 paired_control_cases, which carry all four. No Julia surface can be exercised until a concrete native policy call or same-model public fit is named for this row.",
+      "reason": "Name an exact native policy call or same-model public fit; helper source observation alone is insufficient."
+    },
+    {
+      "source_id": "aghq/AGHQ-POLICY-BAD-COLUMNS",
+      "planned_case_id": "CORE070-AGHQ-POLICY-BAD-COLUMNS-CONTROL-CONTRACT",
+      "classification": "required_core",
+      "missing_surface": "docs/dev-log/core070/aghq-required-case-plan.json's source_rows entry for aghq/AGHQ-POLICY-BAD-COLUMNS names a planned_case_id (CORE070-AGHQ-POLICY-BAD-COLUMNS-CONTROL-CONTRACT) but defines no r_call/r_assertion/julia_call/expected for it -- unlike the 16 paired_control_cases, which carry all four. No Julia surface can be exercised until a concrete native policy call or same-model public fit is named for this row.",
+      "reason": "Name an exact native policy call or same-model public fit; helper source observation alone is insufficient."
+    },
+    {
+      "source_id": "aghq/AGHQ-POLICY-BAD-DIMENSION",
+      "planned_case_id": "CORE070-AGHQ-POLICY-BAD-DIMENSION-CONTROL-CONTRACT",
+      "classification": "required_core",
+      "missing_surface": "docs/dev-log/core070/aghq-required-case-plan.json's source_rows entry for aghq/AGHQ-POLICY-BAD-DIMENSION names a planned_case_id (CORE070-AGHQ-POLICY-BAD-DIMENSION-CONTROL-CONTRACT) but defines no r_call/r_assertion/julia_call/expected for it -- unlike the 16 paired_control_cases, which carry all four. No Julia surface can be exercised until a concrete native policy call or same-model public fit is named for this row.",
+      "reason": "Name an exact native policy call or same-model public fit; helper source observation alone is insufficient."
+    },
+    {
+      "source_id": "aghq/AGHQ-POLICY-BAD-TRAITS",
+      "planned_case_id": "CORE070-AGHQ-POLICY-BAD-TRAITS-CONTROL-CONTRACT",
+      "classification": "required_core",
+      "missing_surface": "docs/dev-log/core070/aghq-required-case-plan.json's source_rows entry for aghq/AGHQ-POLICY-BAD-TRAITS names a planned_case_id (CORE070-AGHQ-POLICY-BAD-TRAITS-CONTROL-CONTRACT) but defines no r_call/r_assertion/julia_call/expected for it -- unlike the 16 paired_control_cases, which carry all four. No Julia surface can be exercised until a concrete native policy call or same-model public fit is named for this row.",
+      "reason": "Name an exact native policy call or same-model public fit; helper source observation alone is insufficient."
+    },
+    {
+      "source_id": "aghq/AGHQ-POLICY-EMPTY-GATE",
+      "planned_case_id": "CORE070-AGHQ-POLICY-EMPTY-GATE-CONTROL-CONTRACT",
+      "classification": "required_core",
+      "missing_surface": "docs/dev-log/core070/aghq-required-case-plan.json's source_rows entry for aghq/AGHQ-POLICY-EMPTY-GATE names a planned_case_id (CORE070-AGHQ-POLICY-EMPTY-GATE-CONTROL-CONTRACT) but defines no r_call/r_assertion/julia_call/expected for it -- unlike the 16 paired_control_cases, which carry all four. No Julia surface can be exercised until a concrete native policy call or same-model public fit is named for this row.",
+      "reason": "Name an exact native policy call or same-model public fit; helper source observation alone is insufficient."
+    },
+    {
+      "source_id": "aghq/AGHQ-POLICY-EXPLICIT",
+      "planned_case_id": "CORE070-AGHQ-POLICY-EXPLICIT-CONTROL-CONTRACT",
+      "classification": "required_core",
+      "missing_surface": "docs/dev-log/core070/aghq-required-case-plan.json's source_rows entry for aghq/AGHQ-POLICY-EXPLICIT names a planned_case_id (CORE070-AGHQ-POLICY-EXPLICIT-CONTROL-CONTRACT) but defines no r_call/r_assertion/julia_call/expected for it -- unlike the 16 paired_control_cases, which carry all four. No Julia surface can be exercised until a concrete native policy call or same-model public fit is named for this row.",
+      "reason": "Name an exact native policy call or same-model public fit; helper source observation alone is insufficient."
+    },
+    {
+      "source_id": "aghq/AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF",
+      "planned_case_id": "CORE070-AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF-CONTROL-CONTRACT",
+      "classification": "required_core",
+      "missing_surface": "docs/dev-log/core070/aghq-required-case-plan.json's source_rows entry for aghq/AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF names a planned_case_id (CORE070-AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF-CONTROL-CONTRACT) but defines no r_call/r_assertion/julia_call/expected for it -- unlike the 16 paired_control_cases, which carry all four. No Julia surface can be exercised until a concrete native policy call or same-model public fit is named for this row.",
+      "reason": "Name an exact native policy call or same-model public fit; helper source observation alone is insufficient."
+    },
+    {
+      "source_id": "aghq/AGHQ-POLICY-MISSING-GATE",
+      "planned_case_id": "CORE070-AGHQ-POLICY-MISSING-GATE-CONTROL-CONTRACT",
+      "classification": "required_core",
+      "missing_surface": "docs/dev-log/core070/aghq-required-case-plan.json's source_rows entry for aghq/AGHQ-POLICY-MISSING-GATE names a planned_case_id (CORE070-AGHQ-POLICY-MISSING-GATE-CONTROL-CONTRACT) but defines no r_call/r_assertion/julia_call/expected for it -- unlike the 16 paired_control_cases, which carry all four. No Julia surface can be exercised until a concrete native policy call or same-model public fit is named for this row.",
+      "reason": "Name an exact native policy call or same-model public fit; helper source observation alone is insufficient."
+    },
+    {
+      "source_id": "aghq/AGHQ-POLICY-NO-QUADRATURE",
+      "planned_case_id": "CORE070-AGHQ-POLICY-NO-QUADRATURE-CONTROL-CONTRACT",
+      "classification": "required_core",
+      "missing_surface": "docs/dev-log/core070/aghq-required-case-plan.json's source_rows entry for aghq/AGHQ-POLICY-NO-QUADRATURE names a planned_case_id (CORE070-AGHQ-POLICY-NO-QUADRATURE-CONTROL-CONTRACT) but defines no r_call/r_assertion/julia_call/expected for it -- unlike the 16 paired_control_cases, which carry all four. No Julia surface can be exercised until a concrete native policy call or same-model public fit is named for this row.",
+      "reason": "Name an exact native policy call or same-model public fit; helper source observation alone is insufficient."
+    },
+    {
+      "source_id": "aghq/AGHQ-POLICY-OFF",
+      "planned_case_id": "CORE070-AGHQ-POLICY-OFF-CONTROL-CONTRACT",
+      "classification": "required_core",
+      "missing_surface": "docs/dev-log/core070/aghq-required-case-plan.json's source_rows entry for aghq/AGHQ-POLICY-OFF names a planned_case_id (CORE070-AGHQ-POLICY-OFF-CONTROL-CONTRACT) but defines no r_call/r_assertion/julia_call/expected for it -- unlike the 16 paired_control_cases, which carry all four. No Julia surface can be exercised until a concrete native policy call or same-model public fit is named for this row.",
+      "reason": "Name an exact native policy call or same-model public fit; helper source observation alone is insufficient."
+    },
+    {
+      "source_id": "aghq/AGHQ-POLICY-SITES-INDEPENDENT",
+      "planned_case_id": "CORE070-AGHQ-POLICY-SITES-INDEPENDENT-CONTROL-CONTRACT",
+      "classification": "required_core",
+      "missing_surface": "docs/dev-log/core070/aghq-required-case-plan.json's source_rows entry for aghq/AGHQ-POLICY-SITES-INDEPENDENT names a planned_case_id (CORE070-AGHQ-POLICY-SITES-INDEPENDENT-CONTROL-CONTRACT) but defines no r_call/r_assertion/julia_call/expected for it -- unlike the 16 paired_control_cases, which carry all four. No Julia surface can be exercised until a concrete native policy call or same-model public fit is named for this row.",
+      "reason": "Name an exact native policy call or same-model public fit; helper source observation alone is insufficient."
+    },
+    {
+      "source_id": "aghq/AGHQ-POLICY-TRAITS19",
+      "planned_case_id": "CORE070-AGHQ-POLICY-TRAITS19-CONTROL-CONTRACT",
+      "classification": "required_core",
+      "missing_surface": "docs/dev-log/core070/aghq-required-case-plan.json's source_rows entry for aghq/AGHQ-POLICY-TRAITS19 names a planned_case_id (CORE070-AGHQ-POLICY-TRAITS19-CONTROL-CONTRACT) but defines no r_call/r_assertion/julia_call/expected for it -- unlike the 16 paired_control_cases, which carry all four. No Julia surface can be exercised until a concrete native policy call or same-model public fit is named for this row.",
+      "reason": "Name an exact native policy call or same-model public fit; helper source observation alone is insufficient."
+    },
+    {
+      "source_id": "aghq/AGHQ-POLICY-TRAITS20",
+      "planned_case_id": "CORE070-AGHQ-POLICY-TRAITS20-CONTROL-CONTRACT",
+      "classification": "required_core",
+      "missing_surface": "docs/dev-log/core070/aghq-required-case-plan.json's source_rows entry for aghq/AGHQ-POLICY-TRAITS20 names a planned_case_id (CORE070-AGHQ-POLICY-TRAITS20-CONTROL-CONTRACT) but defines no r_call/r_assertion/julia_call/expected for it -- unlike the 16 paired_control_cases, which carry all four. No Julia surface can be exercised until a concrete native policy call or same-model public fit is named for this row.",
+      "reason": "Name an exact native policy call or same-model public fit; helper source observation alone is insufficient."
+    },
+    {
+      "source_id": "aghq/AGHQ-POLICY-UNRESOLVED-WIDTH",
+      "planned_case_id": "CORE070-AGHQ-POLICY-UNRESOLVED-WIDTH-CONTROL-CONTRACT",
+      "classification": "required_core",
+      "missing_surface": "docs/dev-log/core070/aghq-required-case-plan.json's source_rows entry for aghq/AGHQ-POLICY-UNRESOLVED-WIDTH names a planned_case_id (CORE070-AGHQ-POLICY-UNRESOLVED-WIDTH-CONTROL-CONTRACT) but defines no r_call/r_assertion/julia_call/expected for it -- unlike the 16 paired_control_cases, which carry all four. No Julia surface can be exercised until a concrete native policy call or same-model public fit is named for this row.",
+      "reason": "Name an exact native policy call or same-model public fit; helper source observation alone is insufficient."
+    }
+  ],
+  "reclassify_rows": [],
+  "spec_defect_notes": [],
+  "fixture_specification": {
+    "control_normalization_fixture": {
+      "kind": "pure control-normalization; no simulated data, no model fit",
+      "toml": "test/parity/core070_aghq_controls.toml",
+      "toml_sha256": "28d7c40ef6dc64c6da549b7b5301f2d0b44e8789a4257dba31dab68f916ea9de",
+      "r_side_function_under_test": ".gllvmTMB_normalize_aghq (R/gllvmTMB.R:2046, accessed as gllvmTMB:::.gllvmTMB_normalize_aghq since it is unexported)",
+      "julia_side_function_under_test": "GLLVM._aghq_request (src/families/aghq_fit_info.jl:37)"
+    }
+  },
+  "source_pins": {
+    "R/gllvmTMB.R": "a1ad39041f88d08b017500132bac45b5282f246025c488bc1829dc57aeae3faf",
+    "R/fit-multi.R": "129d35549c728e96874252c3242f545ff959805c103e29f2803b740bd6da4ddd",
+    "R/aghq-control.R": "e0f6857e090d2928c87cc1186a07e2534ee1f3c4633459dd806b4d40f8969895",
+    "R/aghq-gate.R": "30f2294f1ab3b031e17f410829aacbcf3a8278ca8f37a57a5f6b3e3950b5b70f"
+  },
+  "negative_controls": [
+    {
+      "control_id": "NEG-EXPECTED-VALUE-FLIPPED",
+      "description": "compare CORE070-AGHQ-CTRL-FALSE-PAIRED-CONTROL's actual Julia result (\"off\") against the wrong expected label (\"auto\"); must NOT pass.",
+      "check": "actual_label(\"CORE070-AGHQ-CTRL-FALSE-PAIRED-CONTROL\") == \"auto\" is false"
+    },
+    {
+      "control_id": "NEG-VALID-CASE-MISCLASSIFIED-AS-ERROR",
+      "description": "CORE070-AGHQ-CTRL-ONE-PAIRED-CONTROL returns 1 without throwing; asserting it against expected=\"ArgumentError\" must NOT pass.",
+      "check": "actual_label(\"CORE070-AGHQ-CTRL-ONE-PAIRED-CONTROL\") == \"ArgumentError\" is false"
+    },
+    {
+      "control_id": "NEG-INVALID-CASE-MISCLASSIFIED-AS-VALUE",
+      "description": "CORE070-AGHQ-INVALID-ZERO-PAIRED-CONTROL throws ArgumentError; asserting it against expected=\"off\" must NOT pass.",
+      "check": "actual_label(\"CORE070-AGHQ-INVALID-ZERO-PAIRED-CONTROL\") == \"off\" is false"
+    }
+  ],
+  "rationale_notes": [
+    "No fits are performed anywhere in this batch -- both .gllvmTMB_normalize_aghq and GLLVM._aghq_request are pure scalar-argument normalizers with no data dependency, so the whole batch runs in well under a second once the frozen R library and Julia are loaded; the >60s-Julia-precompile startup floor dominates, not the checks themselves.",
+    "R and Julia are still run as two separate processes (R computing r_assertion, the Julia child computing the native normalization independently and reading only a small boolean oracle back from R) to match the paired_control_cases' own acceptance_rule wording ('Frozen R assertion true and native normalization value/error matches') and to keep the Julia child free of any RCall dependency, per the established batch pattern.",
+    "R/aghq-control.R and R/aghq-gate.R are pinned in source_pins (matching the frozen plan's own source_pins for this annex) even though .gllvmTMB_normalize_aghq itself lives in R/gllvmTMB.R -- all four files are the frozen plan's declared provenance for the AGHQ control-normalization surface as a whole, and R/aghq-control.R plus R/aghq-gate.R gate the downstream aghq= consumption this control feeds (out of scope for THIS batch's 16 cases, but the same provenance set the plan itself pins).",
+    "The 9 AGHQ-INVALID-* cases are executed here even though required-source-case-map.json classifies their source rows 'rejected' (hence outside the 29-row required_core/compatibility_adapter scope this batch is otherwise accounting for) -- see source_classification_note on each such case."
+  ],
+  "runner": {
+    "outer_argv": "Rscript --vanilla tools/core070_aghq_batch.R <frozen-library> <destination>",
+    "inner_invocation": "julia --project=. tools/core070_aghq_batch.jl <julia-results.json> (destination path only; oracle handed via the CORE070_AGHQ_R_ORACLE env var, never RCall)",
+    "self_test": "python3 tools/core070_verify_aghq_batch.py --self-test"
+  },
+  "p0_contract": "docs/dev-log/core070/aghq-batch-contract.json",
+  "p0_contract_sha256": "a96b0dd0bd51e87f2ba9965c83b264f5715da1e47b8c6b37c5511a1878b348ec",
+  "p0_to_p1_r_function_diff": [
+    {
+      "function": ".gllvmTMB_normalize_aghq",
+      "file": "R/gllvmTMB.R",
+      "body_identical_p0_p1": false,
+      "body_sha256_p0": "a9797b35c7571d26ae6f2fd610097f65325208a940da6cc8674c7937e86ff7b7",
+      "body_sha256_p1": "ca43b8286756a65ed8b99ccecd47418b9bb2971a83358761f5262bfdd8130842"
+    }
+  ],
+  "needs_new_julia_surface_p1_note": "needs_new_julia_surface is carried verbatim from P0. Its 22 entries say the frozen case plan names no r_call/r_assertion/julia_call for those rows; that is a statement about the plan, not a probe of GLLVModels. Since this contract was frozen, 14 of the 22 (the AUTO-K, DEFAULT-OFF and POLICY-OFF/-EXPLICIT/-EXPLICIT-BYPASS-CUTOFF/-AUTO-ENFORCE-CUTOFF/-TRAITS19/-TRAITS20 rows) were bound at P0 by the R-only public policy bind (docs/dev-log/core070/aghq-public-policy-bind-receipt-2026-09-04.json); their P1 re-measure is aghq-public-policy-contract-p1.json. The other 8 are intentionally_excluded in the P0 case map.",
+  "regeneration_log": {
+    "generator": "tools/core070_aghq_p1_contract.py",
+    "changes": [
+      {
+        "field": "reference_commit",
+        "p0": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+        "p1": "9539352f66f2db2cc26b1c393e67212a359b60c9"
+      },
+      {
+        "field": "source_pins[R/gllvmTMB.R]",
+        "p0": "bf78912c192311d1ca40704cd81493c2c06773eb3eb7aea14b826a7459dd6f20",
+        "p1": "a1ad39041f88d08b017500132bac45b5282f246025c488bc1829dc57aeae3faf",
+        "changed": true
+      },
+      {
+        "field": "source_pins[R/fit-multi.R]",
+        "p0": "768db11bd09e6de872d4a27b60fd0a096f617434ac84c95db721fac8f8d77c02",
+        "p1": "129d35549c728e96874252c3242f545ff959805c103e29f2803b740bd6da4ddd",
+        "changed": true
+      },
+      {
+        "field": "source_pins[R/aghq-control.R]",
+        "p0": "e0f6857e090d2928c87cc1186a07e2534ee1f3c4633459dd806b4d40f8969895",
+        "p1": "e0f6857e090d2928c87cc1186a07e2534ee1f3c4633459dd806b4d40f8969895",
+        "changed": false
+      },
+      {
+        "field": "source_pins[R/aghq-gate.R]",
+        "p0": "0c7969f587752db2ce23393805e3d016d4892445def694ff63b029cf1adf89b5",
+        "p1": "30f2294f1ab3b031e17f410829aacbcf3a8278ca8f37a57a5f6b3e3950b5b70f",
+        "changed": true
+      },
+      {
+        "field": "needs_new_julia_surface_p1_note",
+        "added": true,
+        "why": "14 of the carried deferrals were bound at P0 by the R-only public policy bind"
+      }
+    ],
+    "carried_verbatim": "status, cases (r_call, r_assertion, julia_call, expected, acceptance_rule, fixture), needs_new_julia_surface, negative controls, fixture specification, rationale notes, runner block. No case or expectation was edited; a P1 mismatch is recorded by the batch as a failure."
+  }
+}
