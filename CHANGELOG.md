@@ -8,6 +8,18 @@
   alias, but `using GLLVM` cannot remain available after a Julia package rename.
   The GitHub repository rename and Pages migration remain separate maintainer
   gates; historical development records retain their original spelling.
+- **`fit_multinomial_gllvm` reports `converged = false` under complete separation.**
+  When a covariate orders every observation into its own category, the softmax MLE
+  does not exist: the log-likelihood approaches 0 only as the slopes run to infinity.
+  L-BFGS stopped on its gradient test along that ridge and the fit reported
+  `converged = true` at loglik -1.19e-5 with slopes of size 66 (12 observations,
+  3 categories, one covariate). A per-family verdict (`_multinomial_verdict`) now
+  reports `converged = false` when every observation's fitted probability of its
+  observed category exceeds 0.9999 (per-observation negative log-likelihood at most
+  `_MN_SEPARATION_NLL = 1e-4`, ten times the default `g_tol`). The log-likelihood is
+  still reported as computed. Quasi-complete separation is not covered. Six healthy
+  fits keep their log-likelihoods exactly. `test/test_multinomial_separation.jl`,
+  fixture `test/fixtures/multinomial_separation.toml`.
 - **Ordinal fitters now reject observed levels below 1.** `fit_ordinal_gllvm`,
   `fit_ordinal_gllvm_pertrait` and `fit_ordinal_gllvm_pertrait_cov` indexed a
   per-category count vector by the observed level inside an `@inbounds` loop, and

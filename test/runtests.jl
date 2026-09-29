@@ -248,6 +248,7 @@ println(_SHARD === nothing ?
     _shard_include("test_studentt_grouped_mode_search.jl")
     _shard_include("test_lognormal.jl")
     _shard_include("test_multinomial.jl")
+    _shard_include("test_multinomial_separation.jl")
     _shard_include("test_zib_x_identity.jl")
     _shard_include("test_ordinal_fit.jl")
     _shard_include("test_ordinal_pertrait.jl")
