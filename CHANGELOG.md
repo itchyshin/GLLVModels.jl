@@ -2,6 +2,17 @@
 
 ## Development
 
+- **Grouped Beta fits with a large precision now report converged.** With φ above
+  about 1e5 (near-deterministic proportions) the intercept curvature grows like φ
+  (about 1e9 at φ = 9.6e7), so a stationary point shows a raw finite-difference
+  gradient of 1 to 10 and never met the #480 gradient gate. When that gate fails,
+  `fit_beta_gllvm_grouped` and `fit_beta_gllvm_grouped_cov` now take a diagonal
+  Newton polish (kept only if it lowers the objective) and judge the gradient in
+  standard-error units, |g_i| / sqrt(H_ii), against the same threshold
+  `max(g_tol, g_tol * |nll|)`. On the φ = 1e8 fixture this reaches 2.5e-4 against
+  0.0152, and the log-likelihood rises by 1.2e-4. Fits that already met the gate are
+  unchanged, and a caller's very small `g_tol` still gives `converged = false` (#480
+  d01 with `g_tol = 1e-12`). Test: `test/test_gamma_beta_upper_boundary.jl`.
 - **Package renamed to GLLVModels.jl.** Install and load it as
   `GLLVModels`; modelling functions such as `gllvm`, `fit_gllvm`, and `bf`
   retain their existing API. `GLLVModels.GLLVM` is a temporary source-level
@@ -181,6 +192,22 @@ All notable changes to GLLVModels.jl are documented here.
   `gllvm-parity-tag: P1`).
 
 ### Fixed
+- **Gamma and Beta grouped fits no longer treat a large dispersion as a
+  boundary.** `fit_gamma_gllvm_grouped`, `fit_gamma_gllvm_grouped_cov`,
+  `fit_beta_gllvm_grouped` and `fit_beta_gllvm_grouped_cov` flagged any fitted
+  shape α or precision φ above `1e6` in `dispersion_boundary` and forced
+  `converged = false`. That rule fits NB r, whose large end is the flat Poisson
+  limit, but a large Gamma α or Beta φ is the near-deterministic end, which the
+  data identify: on data drawn with α = 1e8 or φ = 1e8 the fits estimate 8.9e7
+  to 1.3e8. These routes now flag only the lower end (`1e-6`, via
+  `_dispersion_group_lower_boundary`); NB2 and NB1 grouped fits keep both ends,
+  and the bootstrap adapters already left the Gamma/Beta upper end unflagged
+  (#565, #568). Grouped Gamma fits with a large α now report `converged = true`.
+  Grouped Beta fits with a large φ are no longer flagged but still report
+  `converged = false`: the #480 gradient test is not met for φ above about 1e5
+  (a separate issue, recorded as `@test_broken`). Log-likelihoods are unchanged.
+  Test: `test/test_gamma_beta_upper_boundary.jl` (literal fixture
+  `test/fixtures/gamma_beta_upper_boundary.toml`).
 - **Gaussian `@formula(y ~ x)` fitted no species intercepts (#520).** The
   default Gaussian formula branch passed a site-only design to
   `fit_gaussian_gllvm`. `y ~ x` and `y ~ 1 + x` now fit one intercept per trait
