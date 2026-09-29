@@ -261,6 +261,7 @@ function fit_beta_hurdle_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     p, n = size(Y)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_beta_hurdle_gllvm: hessian must be :observed or :fisher; got :$hessian"))
+    _check_twopart_support("fit_beta_hurdle_gllvm", Y, _tp_unit_ok, "0 (absence) or a value in the open interval (0,1)")
     rr = rr_theta_len(p, K)
 
     # --- Warm start --------------------------------------------------------

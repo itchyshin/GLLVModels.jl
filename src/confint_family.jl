@@ -196,7 +196,7 @@ function _family_ci(fit::BinomialFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_binomial_gllvm(Yb; K = K, link = link, N = Nm, mask = M, hessian = fit.hessian) catch; return nothing end
-        return vcat(fb.β, pack_lambda(fb.Λ))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ)), converged = fb.converged, loglik = fb.loglik)
     end
     return _FamilyCI(θ, nll, _glm_lin_names(p, K), fill(:linear, length(θ)), simulate, refit)
 end
@@ -257,7 +257,8 @@ function _family_ci(fit::NB1Fit, Y::AbstractMatrix;
                                            (rg, μ) -> (m = max(μ, 1e-12); NegativeBinomial(m / fit.φ, 1 / (1 + fit.φ))))
     refit = function (Yb)
         fb = try fit_nb1_gllvm(Yb; K = K, link = link, mask = M, hessian = fit.hessian) catch; return nothing end
-        return vcat(fb.β, pack_lambda(fb.Λ), log(fb.φ))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ), log(fb.φ)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = vcat(_glm_lin_names(p, K), "phi")
     kinds = vcat(fill(:linear, length(θ) - 1), :log)
@@ -294,7 +295,8 @@ function _family_ci(fit::GP1Fit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_gp1_gllvm(Yb; K = K, link = link, mask = M, hessian = fit.hessian) catch; return nothing end
-        return vcat(fb.β, pack_lambda(fb.Λ), fb.α)
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ), fb.α), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = vcat(_glm_lin_names(p, K), "alpha")
     kinds = fill(:linear, length(θ))                      # α is raw/linear, not log
@@ -338,7 +340,8 @@ function _family_ci(fit::BetaFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_beta_gllvm(Yb; K = K, link = link, mask = M, hessian = fit.hessian) catch; return nothing end
-        return vcat(fb.β, pack_lambda(fb.Λ), log(fb.φ))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ), log(fb.φ)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = vcat(_glm_lin_names(p, K), "phi")
     kinds = vcat(fill(:linear, length(θ) - 1), :log)
@@ -382,7 +385,8 @@ function _family_ci(fit::GammaFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_gamma_gllvm(Yb; K = K, link = link, mask = M, hessian = fit.hessian) catch; return nothing end
-        return vcat(fb.β, pack_lambda(fb.Λ), log(fb.α))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ), log(fb.α)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = vcat(_glm_lin_names(p, K), "alpha")
     kinds = vcat(fill(:linear, length(θ) - 1), :log)
@@ -419,7 +423,8 @@ function _family_ci(fit::LognormalFit, Y::AbstractMatrix; kwargs...)
     end
     refit = function (Yb)
         fb = try fit_lognormal_gllvm(Yb; K = K) catch; return nothing end
-        return vcat(fb.β, pack_lambda(fb.Λ), log(fb.σ))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ), log(fb.σ)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = vcat(_glm_lin_names(p, K), "sigma")
     kinds = vcat(fill(:linear, length(θ) - 1), :log)
@@ -475,7 +480,8 @@ function _family_ci(fit::StudentTFit, Y::AbstractMatrix;
             return nothing
         end
         logσb = shared ? [log(fb.σ)] : log.(fb.σ)
-        return vcat(fb.β, pack_lambda(fb.Λ), logσb)
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ), logσb), converged = fb.converged,
+                loglik = fb.loglik)
     end
     σ_names = shared ? ["sigma"] : ["sigma[$t]" for t in 1:p]
     names = vcat(_glm_lin_names(p, K), σ_names)
@@ -521,7 +527,7 @@ function _family_ci(fit::TruncatedPoissonFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_truncated_poisson_gllvm(Yb; K = K, link = link, mask = M) catch; return nothing end
-        return vcat(fb.β, pack_lambda(fb.Λ))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ)), converged = fb.converged, loglik = fb.loglik)
     end
     return _FamilyCI(θ, nll, _glm_lin_names(p, K), fill(:linear, length(θ)), simulate, refit)
 end
@@ -570,7 +576,8 @@ function _family_ci(fit::TruncatedNegBin2Fit, Y::AbstractMatrix;
         catch
             return nothing
         end
-        return vcat(fb.β, pack_lambda(fb.Λ), log(fb.r))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ), log(fb.r)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = vcat(_glm_lin_names(p, K), "r")
     kinds = vcat(fill(:linear, length(θ) - 1), :log)
@@ -619,7 +626,8 @@ function _family_ci(fit::TruncatedNegBin2PerTraitFit, Y::AbstractMatrix;
         catch
             return nothing
         end
-        return vcat(fb.β, pack_lambda(fb.Λ), log.(fb.r))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ), log.(fb.r)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = vcat(_glm_lin_names(p, K), ["r[$t]" for t in 1:p])
     kinds = vcat(fill(:linear, p + rr), fill(:log, p))
@@ -719,7 +727,8 @@ function _family_ci(fit::NB1GroupedFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_nb1_gllvm_grouped(Yb; K = K, group = group, link = link, mask = M, hessian = fit.hessian) catch; return nothing end
-        return vcat(fb.β, pack_lambda(fb.Λ), log.(fb.φ))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ), log.(fb.φ)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = _grouped_dispersion_names(p, K, "phi", G)
     kinds = vcat(fill(:linear, p + rr), fill(:log, G))
@@ -764,7 +773,8 @@ function _family_ci(fit::BetaGroupedFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_beta_gllvm_grouped(Yb; K = K, group = group, link = link, mask = M, hessian = fit.hessian) catch; return nothing end
-        return vcat(fb.β, pack_lambda(fb.Λ), log.(fb.φ))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ), log.(fb.φ)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = _grouped_dispersion_names(p, K, "phi", G)
     kinds = vcat(fill(:linear, p + rr), fill(:log, G))
@@ -883,7 +893,8 @@ function _family_ci(fit::NB1GroupedCovFit, Y::AbstractMatrix;
         catch
             return nothing
         end
-        return vcat(fb.β, fb.γ[γ_free_idx], pack_lambda(fb.Λ), log.(fb.φ))
+        return (θ = vcat(fb.β, fb.γ[γ_free_idx], pack_lambda(fb.Λ), log.(fb.φ)),
+                converged = fb.converged, loglik = fb.loglik)
     end
     names = vcat(["beta[$t]" for t in 1:p], ["gamma[$k]" for k in γ_free_idx],
                  _confint_lambda_term_names("Lambda", p, K),
@@ -943,7 +954,8 @@ function _family_ci(fit::BetaGroupedCovFit, Y::AbstractMatrix;
         catch
             return nothing
         end
-        return vcat(fb.β, fb.γ[γ_free_idx], pack_lambda(fb.Λ), log.(fb.φ))
+        return (θ = vcat(fb.β, fb.γ[γ_free_idx], pack_lambda(fb.Λ), log.(fb.φ)),
+                converged = fb.converged, loglik = fb.loglik)
     end
     names = vcat(["beta[$t]" for t in 1:p], ["gamma[$k]" for k in γ_free_idx],
                  _confint_lambda_term_names("Lambda", p, K),
@@ -952,6 +964,12 @@ function _family_ci(fit::BetaGroupedCovFit, Y::AbstractMatrix;
     boundary = vcat(falses(p + q + rr), fit.dispersion_boundary)   # T14 F1
     return _FamilyCI(θ, nll, names, kinds, simulate, refit, boundary)
 end
+
+# `upper_boundary` flags for a beta-binomial refit (#542, option 3): the last `nφ` entries of
+# `θ` are `log φ`; flag those at or past the `_BB_PHI_STABLE` boundary, where the log-pmf is
+# exactly Binomial and `φ` is not identified (see `_bootstrap_upper_boundary`).
+_bb_phi_upper_boundary(θ::AbstractVector, nφ::Integer) =
+    [i > length(θ) - nφ && θ[i] >= log(_BB_PHI_STABLE) for i in eachindex(θ)]
 
 function _family_ci(fit::BetaBinomialGroupedFit, Y::AbstractMatrix;
                     N::Union{Nothing, AbstractMatrix} = nothing,
@@ -998,7 +1016,9 @@ function _family_ci(fit::BetaBinomialGroupedFit, Y::AbstractMatrix;
         catch
             return nothing
         end
-        return vcat(fb.β, pack_lambda(fb.Λ), log.(fb.φ))
+        θb = vcat(fb.β, pack_lambda(fb.Λ), log.(fb.φ))
+        return (θ = θb, converged = fb.converged, loglik = fb.loglik,
+                upper_boundary = _bb_phi_upper_boundary(θb, G))
     end
     names = _grouped_dispersion_names(p, K, "phi", G)
     kinds = vcat(fill(:linear, p + rr), fill(:log, G))
@@ -1058,7 +1078,9 @@ function _family_ci(fit::BetaBinomialGroupedCovFit, Y::AbstractMatrix;
         catch
             return nothing
         end
-        return vcat(fb.β, fb.γ[γ_free_idx], pack_lambda(fb.Λ), log.(fb.φ))
+        θb = vcat(fb.β, fb.γ[γ_free_idx], pack_lambda(fb.Λ), log.(fb.φ))
+        return (θ = θb, converged = fb.converged, loglik = fb.loglik,
+                upper_boundary = _bb_phi_upper_boundary(θb, G))
     end
     names = vcat(["beta[$t]" for t in 1:p], ["gamma[$k]" for k in γ_free_idx],
                  _confint_lambda_term_names("Lambda", p, K),
@@ -1104,7 +1126,8 @@ function _family_ci(fit::GammaGroupedFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_gamma_gllvm_grouped(Yb; K = K, group = group, link = link, mask = M, hessian = fit.hessian) catch; return nothing end
-        return vcat(fb.β, pack_lambda(fb.Λ), log.(fb.α))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ), log.(fb.α)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = _grouped_dispersion_names(p, K, "alpha", G)
     kinds = vcat(fill(:linear, p + rr), fill(:log, G))
@@ -1162,7 +1185,8 @@ function _family_ci(fit::GammaGroupedCovFit, Y::AbstractMatrix;
         catch
             return nothing
         end
-        return vcat(fb.β, fb.γ[γ_free_idx], pack_lambda(fb.Λ), log.(fb.α))
+        return (θ = vcat(fb.β, fb.γ[γ_free_idx], pack_lambda(fb.Λ), log.(fb.α)),
+                converged = fb.converged, loglik = fb.loglik)
     end
     names = vcat(["beta[$t]" for t in 1:p], ["gamma[$k]" for k in γ_free_idx],
                  _confint_lambda_term_names("Lambda", p, K),
@@ -1223,7 +1247,8 @@ function _family_ci(fit::TweedieFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_tweedie_gllvm(Yb; K = K, link = link, hessian = fit.hessian) catch; return nothing end
-        return vcat(fb.β, pack_lambda(fb.Λ), log(fb.φ))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ), log(fb.φ)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = vcat(_glm_lin_names(p, K), "phi")
     kinds = vcat(fill(:linear, length(θ) - 1), :log)
@@ -1283,7 +1308,8 @@ function _family_ci(fit::TweedieGroupedFit, Y::AbstractMatrix;
             return nothing
         end
         fb isa TweedieGroupedFit || return nothing
-        return vcat(fb.β, pack_lambda(fb.Λ), log.(fb.φ))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ), log.(fb.φ)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = _grouped_dispersion_names(p, K, "phi", G)
     kinds = vcat(fill(:linear, p + rr), fill(:log, G))
@@ -1338,7 +1364,8 @@ function _family_ci(fit::TweediePerTraitPowerFit, Y::AbstractMatrix;
             return nothing
         end
         fb isa TweediePerTraitPowerFit || return nothing
-        return vcat(fb.β, pack_lambda(fb.Λ), log.(fb.φ))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ), log.(fb.φ)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = _grouped_dispersion_names(p, K, "phi", G)
     kinds = vcat(fill(:linear, p + rr), fill(:log, G))
@@ -1372,7 +1399,8 @@ function _family_ci(fit::ExponentialFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_exponential_gllvm(Yb; K = K, link = link, hessian = fit.hessian) catch; return nothing end
-        return vcat(fb.β, pack_lambda(fb.Λ))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     return _FamilyCI(θ, nll, _glm_lin_names(p, K), fill(:linear, length(θ)), simulate, refit)
 end
@@ -1414,7 +1442,9 @@ function _family_ci(fit::BetaBinomialFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_beta_binomial_gllvm(Yb; K = K, link = link, N = Nm) catch; return nothing end
-        return vcat(fb.β, pack_lambda(fb.Λ), log(fb.φ))
+        θb = vcat(fb.β, pack_lambda(fb.Λ), log(fb.φ))
+        return (θ = θb, converged = fb.converged, loglik = fb.loglik,
+                upper_boundary = _bb_phi_upper_boundary(θb, 1))
     end
     names = vcat(_glm_lin_names(p, K), "phi")
     kinds = vcat(fill(:linear, length(θ) - 1), :log)
@@ -1468,8 +1498,9 @@ function _family_ci(fit::RowRandomFit, Y::AbstractMatrix;
         catch
             return nothing
         end
-        return hasd ? vcat(fb.β, pack_lambda(fb.Λ), log(fb.σ_row), log(fb.dispersion)) :
-                      vcat(fb.β, pack_lambda(fb.Λ), log(fb.σ_row))
+        θb = hasd ? vcat(fb.β, pack_lambda(fb.Λ), log(fb.σ_row), log(fb.dispersion)) :
+                    vcat(fb.β, pack_lambda(fb.Λ), log(fb.σ_row))
+        return (θ = θb, converged = fb.converged, loglik = fb.loglik)
     end
     names = vcat(_glm_lin_names(p, K), "sigma_row")
     kinds = vcat(fill(:linear, p + rr), :log)
@@ -1586,7 +1617,8 @@ function _family_ci(fit::DeltaLogNormalFit, Y::AbstractMatrix;
             end
             logσb = shared ? (fb.σ isa Real ? [log(fb.σ)] : nothing) : (fb.σ isa AbstractVector ? log.(fb.σ) : nothing)
             logσb === nothing && return nothing
-            return vcat(fb.βc, pack_lambda(fb.Λc), logσb)
+            return (θ = vcat(fb.βc, pack_lambda(fb.Λc), logσb), converged = fb.converged,
+                    loglik = fb.loglik)
         end
         names = vcat(_twopart_shared_lin_names(p, K), σ_names)
         return _FamilyCI(θ, nll, names, vcat(fill(:linear, p + rr), fill(:log, ndisp)), sim, refit)
@@ -1624,7 +1656,8 @@ function _family_ci(fit::DeltaLogNormalFit, Y::AbstractMatrix;
         end
         logσb = shared ? (fb.σ isa Real ? [log(fb.σ)] : nothing) : (fb.σ isa AbstractVector ? log.(fb.σ) : nothing)
         logσb === nothing && return nothing
-        return vcat(fb.βz, fb.βc, pack_lambda(fb.Λc), logσb)
+        return (θ = vcat(fb.βz, fb.βc, pack_lambda(fb.Λc), logσb), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = vcat(_twopart_lin_names(p, K), σ_names)
     return _FamilyCI(θ, nll, names, vcat(fill(:linear, 2p + rr), fill(:log, ndisp)), sim, refit)
@@ -1693,7 +1726,8 @@ function _family_ci(fit::DeltaGammaFit, Y::AbstractMatrix;
             end
             logαb = shared ? (fb.α isa Real ? [log(fb.α)] : nothing) : (fb.α isa AbstractVector ? log.(fb.α) : nothing)
             logαb === nothing && return nothing
-            return vcat(fb.βc, pack_lambda(fb.Λc), logαb)
+            return (θ = vcat(fb.βc, pack_lambda(fb.Λc), logαb), converged = fb.converged,
+                    loglik = fb.loglik)
         end
         names = vcat(_twopart_shared_lin_names(p, K), α_names)
         return _FamilyCI(θ, nll, names, vcat(fill(:linear, p + rr), fill(:log, ndisp)), sim, refit)
@@ -1735,7 +1769,8 @@ function _family_ci(fit::DeltaGammaFit, Y::AbstractMatrix;
         end
         logαb = shared ? (fb.α isa Real ? [log(fb.α)] : nothing) : (fb.α isa AbstractVector ? log.(fb.α) : nothing)
         logαb === nothing && return nothing
-        return vcat(fb.βz, fb.βc, pack_lambda(fb.Λc), logαb)
+        return (θ = vcat(fb.βz, fb.βc, pack_lambda(fb.Λc), logαb), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = vcat(_twopart_lin_names(p, K), α_names)
     return _FamilyCI(θ, nll, names, vcat(fill(:linear, 2p + rr), fill(:log, ndisp)), sim, refit)
@@ -1773,7 +1808,8 @@ function _family_ci(fit::BetaHurdleFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_beta_hurdle_gllvm(Yb; K = K) catch; return nothing end
-        return vcat(fb.βz, fb.βc, pack_lambda(fb.Λc), log(fb.φ))
+        return (θ = vcat(fb.βz, fb.βc, pack_lambda(fb.Λc), log(fb.φ)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = vcat(_twopart_lin_names(p, K), "phi")
     return _FamilyCI(θ, nll, names, vcat(fill(:linear, length(θ) - 1), :log), sim, refit)
@@ -1798,7 +1834,8 @@ function _family_ci(fit::OrderedBetaFit, Y::AbstractMatrix;
     sim   = _ -> error("bootstrap is not supported for ordered-beta CIs")
     refit = function (Yb)
         fb = try fit_ordered_beta_gllvm(Yb; K = K) catch; return nothing end
-        return vcat(fb.β, pack_lambda(fb.Λ), fb.c0, fb.c1, log(fb.φ))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ), fb.c0, fb.c1, log(fb.φ)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = vcat(_glm_lin_names(p, K), "cut0", "cut1", "phi")
     kinds = vcat(fill(:linear, p + rr + 2), :log)
@@ -2041,7 +2078,8 @@ function _family_ci(fit::HurdlePoissonFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_hurdle_poisson_gllvm(Yb; K = K) catch; return nothing end
-        return vcat(fb.βz, fb.βc, pack_lambda(fb.Λc))
+        return (θ = vcat(fb.βz, fb.βc, pack_lambda(fb.Λc)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     return _FamilyCI(θ, nll, _twopart_lin_names(p, K), fill(:linear, length(θ)), sim, refit)
 end
@@ -2074,7 +2112,8 @@ function _family_ci(fit::HurdleNBFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_hurdle_nb_gllvm(Yb; K = K) catch; return nothing end
-        return vcat(fb.βz, fb.βc, pack_lambda(fb.Λc), log(fb.r))
+        return (θ = vcat(fb.βz, fb.βc, pack_lambda(fb.Λc), log(fb.r)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = vcat(_twopart_lin_names(p, K), "r")
     return _FamilyCI(θ, nll, names, vcat(fill(:linear, length(θ) - 1), :log), sim, refit)
@@ -2108,7 +2147,8 @@ function _family_ci(fit::ZIPFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_zip_gllvm(Yb; K = K) catch; return nothing end
-        return vcat(fb.βz, fb.βc, pack_lambda(fb.Λc))
+        return (θ = vcat(fb.βz, fb.βc, pack_lambda(fb.Λc)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     return _FamilyCI(θ, nll, _twopart_lin_names(p, K), fill(:linear, length(θ)), sim, refit)
 end
@@ -2161,7 +2201,8 @@ function _family_ci(fit::ZIPCovFit, Y::AbstractMatrix;
         catch
             return nothing
         end
-        return vcat(fb.βz, fb.γz[γ_free_idx], fb.βc, fb.γc[γ_free_idx], pack_lambda(fb.Λc))
+        return (θ = vcat(fb.βz, fb.γz[γ_free_idx], fb.βc, fb.γc[γ_free_idx], pack_lambda(fb.Λc)),
+                converged = fb.converged, loglik = fb.loglik)
     end
     names = vcat(["betaz[$t]" for t in 1:p],
                  ["gammaz[$k]" for k in γ_free_idx],
@@ -2199,7 +2240,8 @@ function _family_ci(fit::ZINBFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_zinb_gllvm(Yb; K = K) catch; return nothing end
-        return vcat(fb.βz, fb.βc, pack_lambda(fb.Λc), log(fb.r))
+        return (θ = vcat(fb.βz, fb.βc, pack_lambda(fb.Λc), log(fb.r)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = vcat(_twopart_lin_names(p, K), "r")
     return _FamilyCI(θ, nll, names, vcat(fill(:linear, length(θ) - 1), :log), sim, refit)
@@ -2255,8 +2297,9 @@ function _family_ci(fit::ZINBCovFit, Y::AbstractMatrix;
         catch
             return nothing
         end
-        return vcat(fb.βz, fb.γz[γ_free_idx], fb.βc, fb.γc[γ_free_idx],
-                    pack_lambda(fb.Λc), log(fb.r))
+        return (θ = vcat(fb.βz, fb.γz[γ_free_idx], fb.βc, fb.γc[γ_free_idx],
+                         pack_lambda(fb.Λc), log(fb.r)),
+                converged = fb.converged, loglik = fb.loglik)
     end
     names = vcat(["betaz[$t]" for t in 1:p],
                  ["gammaz[$k]" for k in γ_free_idx],
@@ -2295,7 +2338,8 @@ function _family_ci(fit::ZIBFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_zib_gllvm(Yb; K = K, N = Ntr) catch; return nothing end
-        return vcat(fb.βz, fb.βc, pack_lambda(fb.Λc))
+        return (θ = vcat(fb.βz, fb.βc, pack_lambda(fb.Λc)), converged = fb.converged,
+                loglik = fb.loglik)
     end
     return _FamilyCI(θ, nll, _twopart_lin_names(p, K), fill(:linear, length(θ)), sim, refit)
 end
@@ -2340,7 +2384,8 @@ function _family_ci(fit::OrdinalFit, Y::AbstractMatrix;
     refit = function (Yb)
         fb = try fit_ordinal_gllvm(Yb; K = K, link = fit.link) catch; return nothing end
         fb.C == C || return nothing                 # category-count mismatch ⇒ drop replicate
-        return vcat(pack_lambda(fb.Λ), fb.τ)
+        return (θ = vcat(pack_lambda(fb.Λ), fb.τ), converged = fb.converged,
+                loglik = fb.loglik)
     end
     names = vcat(_confint_lambda_term_names("Lambda", p, K), ["tau[$c]" for c in 1:(C - 1)])
     return _FamilyCI(θ, nll, names, fill(:linear, length(θ)), sim, refit)
@@ -2429,7 +2474,8 @@ function _family_ci(fit::OrdinalPerTraitFit, Y::AbstractMatrix;
     refit = function (Yb)
         fb = try fit_ordinal_gllvm_pertrait(Yb; K = K, link = fit.link) catch; return nothing end
         fb.C == C || return nothing
-        return vcat(fb.β, pack_lambda(fb.Λ), _pack_free_tau_pertrait(fb.τ, C))
+        return (θ = vcat(fb.β, pack_lambda(fb.Λ), _pack_free_tau_pertrait(fb.τ, C)),
+                converged = fb.converged, loglik = fb.loglik)
     end
     names = vcat(["beta[$t]" for t in 1:p],
                  _confint_lambda_term_names("Lambda", p, K),
@@ -2498,8 +2544,9 @@ function _family_ci(fit::OrdinalPerTraitCovFit, Y::AbstractMatrix;
             return nothing
         end
         fb.C == C || return nothing
-        return vcat(fb.β, fb.γ[γ_free_idx], pack_lambda(fb.Λ),
-                    _pack_free_tau_pertrait(fb.τ, C))
+        return (θ = vcat(fb.β, fb.γ[γ_free_idx], pack_lambda(fb.Λ),
+                         _pack_free_tau_pertrait(fb.τ, C)),
+                converged = fb.converged, loglik = fb.loglik)
     end
     names = vcat(["beta[$t]" for t in 1:p],
                  ["gamma[$k]" for k in γ_free_idx],
@@ -2592,7 +2639,7 @@ function _family_ci(fit::MultinomialFit, Y::AbstractMatrix;
         end
         fb.n_categories == K || return nothing
         size(fb.γ, 2) == p || return nothing
-        return copy(fb.theta_packed)
+        return (θ = copy(fb.theta_packed), converged = fb.converged, loglik = fb.loglik)
     end
     return _FamilyCI(θ, nll, _multinomial_ci_names(K, p), fill(:linear, length(θ)),
                      sim, refit)
@@ -2653,8 +2700,9 @@ function _family_ci(fit::GllvmCovFit, Y::AbstractMatrix;
             return nothing
         end
         fb_γ_free = fb.γ[γ_free_idx]
-        return has_disp ? vcat(fb.β, fb_γ_free, pack_lambda(fb.Λ), log(fb.dispersion)) :
-                          vcat(fb.β, fb_γ_free, pack_lambda(fb.Λ))
+        θb = has_disp ? vcat(fb.β, fb_γ_free, pack_lambda(fb.Λ), log(fb.dispersion)) :
+                        vcat(fb.β, fb_γ_free, pack_lambda(fb.Λ))
+        return (θ = θb, converged = fb.converged, loglik = fb.loglik)
     end
     names = vcat(["beta[$t]" for t in 1:p], ["gamma[$k]" for k in γ_free_idx],
                  _confint_lambda_term_names("Lambda", p, K))
@@ -2979,11 +3027,27 @@ function _bootstrap_refit_ok(raw, m::Integer)
     return (θb, ok)
 end
 
+# Optional `upper_boundary` field on the richer contract (#542, option 3): a length-`m` Bool
+# vector marking the parameters this refit ran to their upper numerical boundary (for the
+# beta-binomial fitters, a Beta precision `φ >= _BB_PHI_STABLE`). Such a replicate is left
+# out of every quantile, like a non-converged one, but it is informative: it says the
+# sampling distribution of that parameter has mass at the boundary. When the flagged share of
+# usable replicates (converged plus boundary) exceeds the upper tail `(1 - level)/2`, that
+# parameter's upper bound is reported as `Inf` instead of a quantile of the interior draws.
+# Adapters that never set the field are unaffected.
+function _bootstrap_upper_boundary(raw, m::Integer)
+    (raw === nothing || raw isa AbstractVector) && return nothing
+    ub = get(raw, :upper_boundary, nothing)
+    (ub === nothing || length(ub) != m || !any(ub)) && return nothing
+    return ub
+end
+
 function _family_bootstrap(ad::_FamilyCI, sel::Vector{Int}, level::Real,
                            n_boot::Integer, seed::Integer, parallel::Bool; retain_replicates::Bool=false)
     m = length(ad.θ)
     reps = fill(NaN, n_boot, m)
     ok = fill(false, n_boot)   # Vector{Bool} (one byte/elt) — safe for concurrent distinct-index writes (a BitVector is not)
+    bnd = fill(false, n_boot, m)   # per-replicate `upper_boundary` flags (Matrix{Bool}, same reason)
     work = function (b)
         rng = MersenneTwister(seed + b)
         raw = try
@@ -2992,7 +3056,10 @@ function _family_bootstrap(ad::_FamilyCI, sel::Vector{Int}, level::Real,
             nothing
         end
         θb, good = _bootstrap_refit_ok(raw, m)
-        if good
+        ub = _bootstrap_upper_boundary(raw, m)
+        if ub !== nothing
+            @inbounds bnd[b, :] .= ub   # excluded from every quantile; counted below
+        elseif good
             @inbounds reps[b, :] .= θb
             ok[b] = true
         end
@@ -3009,6 +3076,7 @@ function _family_bootstrap(ad::_FamilyCI, sel::Vector{Int}, level::Real,
     end
 
     a = (1 - level) / 2
+    n_use = count(ok) + count(b -> any(view(bnd, b, :)), 1:n_boot)
     term = String[]; est = Float64[]; lo = Float64[]; hi = Float64[]
     for i in sel
         col = Float64[]
@@ -3021,6 +3089,9 @@ function _family_bootstrap(ad::_FamilyCI, sel::Vector{Int}, level::Real,
         else
             push!(lo, NaN); push!(hi, NaN)
         end
+        # More than the upper tail of usable replicates sat at this parameter's upper
+        # boundary: the bound is not finite (#542, option 3; see `_bootstrap_upper_boundary`).
+        n_use > 0 && count(view(bnd, :, i)) / n_use > a && (hi[end] = Inf)
     end
     result=(term = term, estimate = est, lower = lo, upper = hi,
             n_converged = count(ok), method = :bootstrap)
