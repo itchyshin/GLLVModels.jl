@@ -1,0 +1,56 @@
+{
+  "generator": "tools/core070_postfit_p1_contract.py",
+  "batch": "estimand-rebind (tools/core070_estimand_rebind_batch.R + .jl; no contract file)",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "p1_reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_to_p1_accessor_diff": [
+    {
+      "function": "extract_communality",
+      "file": "R/extractors.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "f5ce092d3ca415359571e7f53c01f18062029e55865f5942291325a2c342db03",
+      "body_sha256_p1": "f5ce092d3ca415359571e7f53c01f18062029e55865f5942291325a2c342db03"
+    },
+    {
+      "function": "extract_correlations",
+      "file": "R/extract-correlations.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "4be6a5550da1a2f9d0ba29aaa1cc1ed2920e6b902c894b44d8ef4d343a6fad7e",
+      "body_sha256_p1": "4be6a5550da1a2f9d0ba29aaa1cc1ed2920e6b902c894b44d8ef4d343a6fad7e"
+    },
+    {
+      "function": "extract_proportions",
+      "file": "R/extract-omega.R",
+      "body_identical_p0_p1": false,
+      "body_sha256_p0": "9f3859e4fa5fd3647ef2b7186c8fe813598e4e75754ef1c89d20e5ded36510b8",
+      "body_sha256_p1": "a8b2ecfeaada94161021cbc9424200258222baa60d07345c16bc2875f40570ba"
+    },
+    {
+      "function": "extract_Omega",
+      "file": "R/extract-omega.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "11417ad878d9ed4d8bb668a5078bb35226b033263ba76163db248ee5eaa26897",
+      "body_sha256_p1": "11417ad878d9ed4d8bb668a5078bb35226b033263ba76163db248ee5eaa26897"
+    }
+  ],
+  "changed_accessors_all_postfit_batches": {
+    "count": 14,
+    "functions": [
+      "check_auto_residual",
+      "confint.gllvmTMB_multi",
+      "deviance.gllvmTMB_multi",
+      "extract_Sigma",
+      "extract_cutpoints",
+      "extract_ordination",
+      "extract_proportions",
+      "extract_repeatability",
+      "getLV",
+      "predict.gllvmTMB_multi",
+      "predict_missing",
+      "simulate.gllvmTMB_multi",
+      "summary.gllvmTMB_multi",
+      "tidy.gllvmTMB_multi"
+    ]
+  },
+  "note": "A record, not a gate. The five contract twins carry their own p0_to_p1_accessor_diff; this file adds the four accessors of the estimand-rebind batch, which has no contract. The count is of distinct function names whose body differs between P0 and P1 across all six postfit batches."
+}

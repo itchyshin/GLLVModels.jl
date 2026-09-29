@@ -1,4 +1,4 @@
-using GLLVModels, Test, LinearAlgebra, Random
+using GLLVModels, Test, LinearAlgebra, Random, Distributions
 
 @testset "Missing data (NA) handling" begin
     Random.seed!(2024)

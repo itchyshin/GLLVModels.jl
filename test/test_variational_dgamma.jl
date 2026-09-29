@@ -1,4 +1,4 @@
-using GLLVModels, Test, Random, Distributions, Statistics
+using GLLVModels, Test, Random, Distributions, Statistics, LinearAlgebra
 
 @testset "Variational (VA) marginal — Delta-Gamma" begin
     @testset "Λc=0 reduces to independent two-part Delta-Gamma loglik (exact)" begin

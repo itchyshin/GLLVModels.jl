@@ -1,0 +1,14 @@
+contract_sha256 = "bc282aed156488eee12c519fb0e8a68b53a508197a89a34d6620f07adaee0765"
+fixture = "test/parity/test_covariance_fixed_required.jl"
+status = "success"
+run_id = "727baaa6b581ce6a6d54215c95716ac1bf5825d44fdeb40720d0329a049780f7"
+fixture_sha256 = "927cdd938b51ea0eae0cb57c7b01830d30ca852d3359145329fa37d23b0cce72"
+id = "MODE-ORD-INDEP"
+execution_manifest_sha256 = "bd5d97ef47adc7a945161ddc6c2f86a4d1926d9effc398a4112fd22ca5476dc8"
+execution_case_ids = ["MODE-ORD-COMMON", "MODE-ORD-INDEP"]
+
+[assertions]
+passed = 27
+broken = 0
+failed = 0
+errored = 0

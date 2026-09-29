@@ -178,6 +178,19 @@ function _grouped_laplace_mode_logpost(fams::AbstractVector, y::AbstractVector,
     return q
 end
 
+# Gradient of that per-site log-posterior, `Λ's − z`: the overshoot test's probe.
+function _grouped_laplace_mode_grad(fams::AbstractVector, y::AbstractVector,
+        n::AbstractVector, Λ::AbstractMatrix, β::AbstractVector, link::Link,
+        z::AbstractVector; mask = nothing, offset = nothing)
+    off = offset === nothing ? false : offset
+    η  = _clamp_eta.(β .+ off .+ Λ * z)
+    μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
+    me = mu_eta.(Ref(link), η)
+    s  = _glm_score.(fams, μ, n, me, y)
+    mask === nothing || (s = ifelse.(mask, s, 0.0))
+    return Λ' * s .- z
+end
+
 function _grouped_laplace_mode(fams::AbstractVector, y::AbstractVector,
         n::AbstractVector, Λ::AbstractMatrix, β::AbstractVector, link::Link;
         mask = nothing, offset = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
@@ -209,7 +222,8 @@ function _grouped_laplace_mode(fams::AbstractVector, y::AbstractVector,
             W = ifelse.(mask, W, 0.0)
         end
         A  = Symmetric(Λ' * (W .* Λ) + I)
-        Δ  = _safe_solve(A, Λ' * s .- z)
+        g  = Λ' * s .- z
+        Δ  = _safe_solve(A, g)
         if Δ === nothing || !all(isfinite, Δ)
             if !restarted
                 z = zeros(K)
@@ -219,29 +233,57 @@ function _grouped_laplace_mode(fams::AbstractVector, y::AbstractVector,
             break
         end
         step_taken = 1.0
-        if norm(Δ) <= 1e-3 * (1 + norm(z)) || !backtrack
+        if !backtrack
             z = z .+ Δ
         else
-            q0 = _grouped_laplace_mode_logpost(fams, y, n, Λ, β, link, z;
-                                               mask = mask, offset = offset)
-            if isfinite(q0)
+            # A trial step must pass two tests; each failure halves it.
+            # (1) Large steps only: it must not lower the per-site log-posterior.
+            # (2) Overshoot guard (2026-09-28): the gradient along Δ at the trial
+            #     point must not have turned past −½ of its starting value, i.e. the
+            #     step may not exceed 1.5 Newton steps along Δ. Test (1) alone let
+            #     Fisher scoring 2-cycle around the mode wherever the observed
+            #     curvature is about twice the Fisher weight W: an overshoot of just
+            #     under 2 still raises the log-posterior, and small steps skipped (1)
+            #     entirely. The loop then stopped wherever `maxiter` fell (truncated
+            #     NB2, y = 121 at μ ≈ 27.5: off by 1.3e-3, a 5.5e-4 jump in the
+            #     Laplace objective for a 1e-5 step in log r). With (2) each accepted
+            #     step contracts the error by at least ½ on a locally quadratic
+            #     log-posterior. A full step that passes is bit-identical to the old
+            #     update.
+            small = norm(Δ) <= 1e-3 * (1 + norm(z))
+            q0 = small ? NaN : _grouped_laplace_mode_logpost(fams, y, n, Λ, β, link, z;
+                                                             mask = mask, offset = offset)
+            if !small && !isfinite(q0)
+                z = z .+ Δ
+            else
+                gΔ = dot(g, Δ)
                 accepted = false
-                step = 1.0
                 for _half in 1:30
-                    ztrial = z .+ step .* Δ
-                    q1 = _grouped_laplace_mode_logpost(fams, y, n, Λ, β, link, ztrial;
-                                                       mask = mask, offset = offset)
-                    if isfinite(q1) && q1 >= q0
+                    ztrial = step_taken == 1.0 ? z .+ Δ : z .+ step_taken .* Δ
+                    ok = true
+                    if !small
+                        q1 = _grouped_laplace_mode_logpost(fams, y, n, Λ, β, link, ztrial;
+                                                           mask = mask, offset = offset)
+                        ok = isfinite(q1) && q1 >= q0
+                    end
+                    if ok && gΔ > 0
+                        g1Δ = dot(_grouped_laplace_mode_grad(fams, y, n, Λ, β, link, ztrial;
+                                                             mask = mask, offset = offset), Δ)
+                        ok = isfinite(g1Δ) && g1Δ >= -0.5 * gΔ
+                    end
+                    if ok
                         z = ztrial
-                        step_taken = step
                         accepted = true
                         break
                     end
-                    step *= 0.5
+                    step_taken *= 0.5
                 end
-                accepted || break
-            else
-                z = z .+ Δ
+                # As before: a large step with no acceptable length ends the search;
+                # a small one takes the last (tiny) trial, which trips the stop test.
+                if !accepted
+                    small || break
+                    z = z .+ step_taken .* Δ
+                end
             end
         end
         step_taken * maximum(abs, Δ) < tol && break
@@ -421,20 +463,25 @@ function _nparams(fit::NBGroupedFit)
 end
 
 """
-    getLV(fit::NBGroupedFit, Y; N=nothing, rotate=true, mask=nothing) -> n×K matrix
+    getLV(fit::NBGroupedFit, Y; N=nothing, rotate=true, mask=nothing, offset=nothing) -> n×K matrix
 
 Conditional latent-variable scores for a grouped-dispersion NB2 fit, using the
 per-trait dispersion `r_group[group[t]]` in the same Laplace mode equations as
 the grouped likelihood.
+
+Pass the same `offset` (p×n) given to the fitter; the scores are the Laplace
+modes of that fit's objective only when the linear predictor matches.
 """
 function getLV(fit::NBGroupedFit, Y::AbstractMatrix{<:Integer};
                N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing,
-               rotate::Bool = true, mask = nothing)
+               rotate::Bool = true, mask = nothing, offset = nothing)
     p = size(Y, 1)
+    offset === nothing || size(offset) == size(Y) ||
+        throw(DimensionMismatch("offset must have size $(size(Y)); got $(size(offset))"))
     rvec = [fit.r_group[fit.group[t]] for t in 1:p]
     fams = [NegativeBinomial(float(rvec[t]), 0.5) for t in 1:p]
     return _grouped_getLV(Y, fit.Λ, fit.β, fit.link, fams;
-                          N = N, rotate = rotate, mask = mask)
+                          N = N, rotate = rotate, mask = mask, offset = offset)
 end
 
 # Warm start shared by the grouped NB2 / Beta / NB1 fitters: `β_init` and `Λ_init` when
@@ -913,19 +960,24 @@ function _nparams(fit::BetaGroupedFit)
 end
 
 """
-    getLV(fit::BetaGroupedFit, Y; rotate=true, mask=nothing) -> n×K matrix
+    getLV(fit::BetaGroupedFit, Y; rotate=true, mask=nothing, offset=nothing) -> n×K matrix
 
 Conditional latent-variable scores for a grouped-precision Beta fit, using the
 per-trait precision `φ[group[t]]` in the same Laplace mode equations as the
 grouped likelihood.
+
+Pass the same `offset` (p×n) given to the fitter; the scores are the Laplace
+modes of that fit's objective only when the linear predictor matches.
 """
 function getLV(fit::BetaGroupedFit, Y::AbstractMatrix{<:Real};
-               rotate::Bool = true, mask = nothing)
+               rotate::Bool = true, mask = nothing, offset = nothing)
     p = size(Y, 1)
+    offset === nothing || size(offset) == size(Y) ||
+        throw(DimensionMismatch("offset must have size $(size(Y)); got $(size(offset))"))
     φvec = [fit.φ[fit.group[t]] for t in 1:p]
     fams = [Beta(float(φvec[t]), 1.0) for t in 1:p]
     return _grouped_getLV(Y, fit.Λ, fit.β, fit.link, fams;
-                          rotate = rotate, mask = mask)
+                          rotate = rotate, mask = mask, offset = offset)
 end
 
 # Beta grouped fits can stop on a zero-length line-search step, which Optim counts as
@@ -1420,19 +1472,24 @@ function _nparams(fit::GammaGroupedFit)
 end
 
 """
-    getLV(fit::GammaGroupedFit, Y; rotate=true, mask=nothing) -> n×K matrix
+    getLV(fit::GammaGroupedFit, Y; rotate=true, mask=nothing, offset=nothing) -> n×K matrix
 
 Conditional latent-variable scores for a grouped-shape Gamma fit, using the
 per-trait shape `α[group[t]]` in the same Laplace mode equations as the grouped
 likelihood.
+
+Pass the same `offset` (p×n) given to the fitter; the scores are the Laplace
+modes of that fit's objective only when the linear predictor matches.
 """
 function getLV(fit::GammaGroupedFit, Y::AbstractMatrix{<:Real};
-               rotate::Bool = true, mask = nothing)
+               rotate::Bool = true, mask = nothing, offset = nothing)
     p = size(Y, 1)
+    offset === nothing || size(offset) == size(Y) ||
+        throw(DimensionMismatch("offset must have size $(size(Y)); got $(size(offset))"))
     αvec = [fit.α[fit.group[t]] for t in 1:p]
     fams = [Gamma(float(αvec[t]), 1.0) for t in 1:p]
     return _grouped_getLV(Y, fit.Λ, fit.β, fit.link, fams;
-                          rotate = rotate, mask = mask)
+                          rotate = rotate, mask = mask, offset = offset)
 end
 
 """
@@ -1893,20 +1950,25 @@ function _nparams(fit::NB1GroupedFit)
 end
 
 """
-    getLV(fit::NB1GroupedFit, Y; N=nothing, rotate=true, mask=nothing) -> n×K matrix
+    getLV(fit::NB1GroupedFit, Y; N=nothing, rotate=true, mask=nothing, offset=nothing) -> n×K matrix
 
 Conditional latent-variable scores for a grouped-dispersion NB1 fit, using the
 per-trait linear-variance dispersion `φ[group[t]]` in the same Laplace mode
 equations as the grouped likelihood.
+
+Pass the same `offset` (p×n) given to the fitter; the scores are the Laplace
+modes of that fit's objective only when the linear predictor matches.
 """
 function getLV(fit::NB1GroupedFit, Y::AbstractMatrix{<:Integer};
                N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing,
-               rotate::Bool = true, mask = nothing)
+               rotate::Bool = true, mask = nothing, offset = nothing)
     p = size(Y, 1)
+    offset === nothing || size(offset) == size(Y) ||
+        throw(DimensionMismatch("offset must have size $(size(Y)); got $(size(offset))"))
     φvec = [fit.φ[fit.group[t]] for t in 1:p]
     fams = [NB1(float(φvec[t])) for t in 1:p]
     return _grouped_getLV(Y, fit.Λ, fit.β, fit.link, fams;
-                          N = N, rotate = rotate, mask = mask)
+                          N = N, rotate = rotate, mask = mask, offset = offset)
 end
 
 # NB1 grouped fits can stop on a zero-length line-search step, which Optim counts as
