@@ -653,6 +653,12 @@ function fit_truncated_nbinom2_gllvm_pertrait(Y::AbstractMatrix; K::Integer,
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     opts = Optim.Options(g_tol = g_tol, iterations = iterations)
     res = Optim.optimize(negll, θ0, ls, opts; autodiff = :finite)
+    # A trait's log r can stall out at the Poisson limit, where the likelihood is nearly
+    # flat, below a better point: on two ordinary draws (p = 4, n = 120, true r_t 2 to 5)
+    # the fit stopped 0.35 and 2.0 log-likelihood units below gllvmTMB with the wrong trait
+    # at the limit. Restart the boundary trait(s) from r = 1 as the NB2 grouped fitters do
+    # (#477); the better fit is kept only if it lowers the objective by more than 1e-6.
+    res = _nb_boundary_restart(negll, res, ls, opts, p + rr + 1)
     θ̂ = Optim.minimizer(res)
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
