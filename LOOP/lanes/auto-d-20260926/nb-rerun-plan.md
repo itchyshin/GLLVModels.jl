@@ -1,6 +1,6 @@
 # NB grid re-run on the corrected NB2 kernel (#521): plan and pre-run test
 
-Status: SUBMITTED 2026-09-28 16:40Z on nibi (Shinichi approved, "1-3 as you recommended"). Smoke job 22840888 (precompile + cheapest row), array 22840890 (943 tasks, `--dependency=afterok`). Code: #518 head be55464e0 in `~/projects/def-snakagaw/snakagaw/auto-d-nbrerun` (`DEPLOYED_SHA`, `SUBMITTED`); scripts `pilot/*_nibi.sh`. Stop and re-report if it overruns about 5,500 core-h (D-287).
+Status: DONE 2026-09-29 (0.934, see Progress); was SUBMITTED 2026-09-28 16:40Z on nibi (Shinichi approved, "1-3 as you recommended"). Smoke job 22840888 (precompile + cheapest row), array 22840890 (943 tasks, `--dependency=afterok`). Code: #518 head be55464e0 in `~/projects/def-snakagaw/snakagaw/auto-d-nbrerun` (`DEPLOYED_SHA`, `SUBMITTED`); scripts `pilot/*_nibi.sh`. Stop and re-report if it overruns about 5,500 core-h (D-287).
 (D-287: a run over 3 h needs a plan, a pre-run test with results, and approval).
 
 ## Why
@@ -76,3 +76,4 @@ about a day, queue permitting. A run that overruns this estimate stops and re-re
 - 2026-09-28 ~22:30Z: 235 of 943 tasks completed, 95 running, 0 failed; 786 of 4,800 datasets done (3,639 fits, all `ok`), heaviest cells first. Heaviest tasks took 3.7 to 4.0 h against the 5 h sizing, so the run is under its estimate. (The nibi socket was down 19:10 to 22:25Z; reopened with a Duo push.)
 - 2026-09-29 03:27Z: 321 completed, 87 running, 2 FAILED (tasks 388, 389: node c63, `julia: command not found` after `module load`, died in 20 s, no fits). Node fault, not code; no other task ran on c63. Rerun: `sbatch --array=388,389 --exclude=c63 LOOP/lanes/auto-d-20260926/pilot/run_nb_rerun_nibi.sh` (needs Shinichi; about 11 core-h).
 - 2026-09-29 07:29Z: 659 completed, 282 running, 0 pending, still only the 2 c63 failures. Interim harvest (2,983 of 4,800 datasets, `pilot/harvest-report-nbrerun-interim.md`): default rule (lenient guard, bic_sites = `len_bic_n`) mean exact recovery 0.919 vs the withdrawn old-kernel 0.895; strict guard 0.64 to 0.67, because the corrected kernel reports converged = false for boundary dispersion at 63% of K = 3 and 89% of K = 4 fits. Light cells are incomplete, so the mean will move.
+- 2026-09-29 10:29Z: array DONE, 941 completed, 2 failed (c63). Final harvest `pilot/harvest-report-nbrerun.md`: 4,794 datasets, default rule 0.934 (old kernel 0.895), bic 0.840, aic 0.793, strict 0.747. 1,888 core-h (accounting `pilot/nbrerun_sacct.txt`). Outputs stay on nibi at `auto-d-nbrerun/out-nbrerun/`.

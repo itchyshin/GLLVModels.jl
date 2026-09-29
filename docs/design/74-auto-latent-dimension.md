@@ -88,8 +88,17 @@ n, p and family, and every place a user reads an interval says it is conditional
     may read optimistic.
     **NB numbers withdrawn (2026-09-27).** Every NB figure on this page was measured with the
     NB2 grouped kernel before #521, whose per-site mode search 2-cycled where y ≫ μ and let
-    L-BFGS stop at poor optima reporting convergence. They are kept here as history only; the
-    24 NB cells are to be re-run after #521 merges.
+    L-BFGS stop at poor optima reporting convergence. They are kept here as history only.
+    **NB re-run on the corrected kernel (2026-09-29, nibi array 22840890, #518 head be55464e0 =
+    main with #521 plus the select_lv lane code; `pilot/harvest-report-nbrerun.md`).** 4,794 of
+    4,800 datasets (tasks 388 and 389, 6 datasets of cell n 120, p 10, K 3, lost to a node fault),
+    1,888 core-h (estimate 3,800 to 5,500). Mean exact recovery over the 24 cells: default rule
+    (`:bic_sites`, lenient guard) **0.934** (withdrawn old-kernel value 0.895), `:bic` 0.840, AIC
+    0.793; the strict guard (reject unconverged) falls to 0.747, because the corrected kernel reports
+    `converged = false` when a dispersion reaches the Poisson boundary, increasingly so as K
+    grows (share of fits `ok`: 0.87, 0.57, 0.28, 0.09, 0.04 for K = 1 to 5). The
+    lenient guard is therefore the right default for NB. Hardest cells: n = 30, p = 10, K = 3
+    (0.36) and n = 60, p = 10, K = 3 (0.69), both under-selection; every n ≥ 120 cell is ≥ 0.92.
     **Gaussian re-run with trait intercepts (2026-09-28, pre-merge).** #518 + #519 in a throwaway
     tree, uncentred data (trait means 3 + N(0, 1), same seeds for loadings, scores and noise), all
     4,800 datasets: exact recovery 0.950 with `:bic_sites` (grid: 0.948) and 0.864 with `:bic`

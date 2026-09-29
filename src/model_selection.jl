@@ -129,8 +129,10 @@ guard: `:bic_sites` (default; penalty `log(n)`, sites), `:bic` (penalty
 `log(p·n)`, observed cells) or `:aic`. The default follows a recovery simulation
 (17 687 datasets with known K): `:bic_sites` recovered the true K most often for
 Gaussian and Poisson responses; `:bic` picked too few dimensions at small n.
-Negative-binomial recovery has not yet been measured on the corrected
-negative-binomial fitting code, so no rate is claimed for it.
+For negative-binomial responses, re-measured on the corrected NB2 fitting code
+(4,794 datasets over 24 cells), `:bic_sites` recovered the true K in 0.934 of
+datasets on average (`:bic` 0.840); its misses, at small n with p = 10 and
+K = 3, pick too few dimensions.
 
 Binary (single-trial `Binomial`) data get a loading ridge during the sweep:
 every fit in the sweep — including a
