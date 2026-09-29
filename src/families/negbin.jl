@@ -172,6 +172,10 @@ depends only on the observed cells.
 Fisher-scored. Default: NB2/log default `:observed` (changed 2026-08-27 on the
 curvature-adjudication campaign evidence). Omitting it is exactly the default-path
 behaviour.
+
+`converged` is forced `false` when the fitted `r` lies outside `[1e-6, 1e6]` (the
+Poisson limit above, unidentified extreme overdispersion below), matching the grouped
+NB fitters; the reported `loglik` is unchanged.
 """
 function fit_nb_gllvm(Y::AbstractMatrix; K::Integer,
         link::Link = LogLink(), mask = nothing, offset = nothing,
@@ -314,12 +318,27 @@ function fit_nb_gllvm(Y::AbstractMatrix; K::Integer,
         Λ̂ = unpack_lambda(@view(θ̂[(cursor + 1):(cursor + rr)]), p, K)
         cursor += rr
         r̂ = exp(θ̂[cursor + 1])
-        return NBFit(β̂, Λ̂, r̂, link, _fit_verdict(res)...,
+        return NBFit(β̂, Λ̂, r̂, link, _nb_shared_r_verdict(res, r̂)...,
                      alpha_hat, collect(Float64, θ̂), hessian)
     else
         β̂ = θ̂[1:p]
         Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
         r̂ = exp(θ̂[p + rr + 1])
-        return NBFit(β̂, Λ̂, r̂, link, _fit_verdict(res)..., nothing, Float64[], hessian)
+        return NBFit(β̂, Λ̂, r̂, link, _nb_shared_r_verdict(res, r̂)..., nothing, Float64[], hessian)
     end
+end
+
+# Shared-r counterpart of the grouped fitters' boundary verdict (T14 F1,
+# grouped_dispersion.jl): a fitted r outside [1e-6, 1e6] (`_dispersion_group_boundary`)
+# is the Poisson limit (upper end) or unidentified extreme overdispersion (lower end),
+# where the likelihood is flat in log r and Optim's convergence flag says nothing about
+# r. Measured on origin/main 0ce4a35aa: Poisson data fitted with fit_nb_gllvm reported
+# converged = true at r = 1.7e7 (fixture test/fixtures/nb_shared_r_boundary.toml). The
+# loglik and iteration count stay as `_fit_verdict` computed them; only `converged` is
+# forced false. Returns the triple in `_fit_verdict`'s order, ready for `NBFit`.
+function _nb_shared_r_verdict(res, r::Real)
+    loglik, conv, iters = _fit_verdict(res)
+    boundary = _dispersion_group_boundary([r])[1]
+    boundary && @warn "NB2 shared-dispersion fit reached the boundary (r = $(round(r; sigdigits = 4)) outside [1e-6, 1e6]); the overdispersion is not distinguishable from the Poisson/extreme-overdispersion limit on this data, and the optimizer convergence flag is unreliable for it." maxlog=1
+    return (loglik, conv && !boundary, iters)
 end

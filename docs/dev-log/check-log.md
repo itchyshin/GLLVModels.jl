@@ -1,3 +1,21 @@
+## 2026-09-29: shared-r NB2 reports converged = false at the Poisson limit
+
+- Branch `claude/nb-shared-r-boundary-verdict` from `origin/main` 0ce4a35aa. `fit_nb_gllvm` now
+  passes its result through `_nb_shared_r_verdict` (new, `src/families/negbin.jl`): `_fit_verdict`
+  first, then `converged` forced `false` with a warning when `_dispersion_group_boundary([r])` flags
+  `r` outside `[1e-6, 1e6]`, as the grouped NB fitters do. Loglik and iterations unchanged. Both the
+  plain and the `X_lv` return paths use it.
+- Before: Poisson data (StableRNG seed 1, p = 5, n = 60, K = 1) fitted `converged = true` at
+  r = 1.712e7 (Julia 1.10.12) and r = 1.551e7 (1.13.0); 10 of 12 Poisson draws had r > 1e6.
+  After: `converged = false`, loglik identical to the recorded origin/main value (atol 1e-8).
+- New test `test/test_nb_shared_r_boundary.jl` with literal fixture
+  `test/fixtures/nb_shared_r_boundary.toml` (sha256-checked; 6 healthy NB2 draws, r_true 2 to 5):
+  38 pass / 2 fail on the base, 40 pass after, on both 1.10 and 1.13 (macOS aarch64).
+- 26 existing test files that call `fit_nb_gllvm` (parity files excluded: they need RCall), run
+  one process per file: 1.10 2706 pass, 0 fail, 1 broken (pre-existing); 1.13 2707 pass, 0 fail,
+  1 broken. The new warning fired once, on 1.13 in `test/test_statsapi.jl`, whose NB fit is on
+  Poisson data (r = 6.4e7); that test does not assert `converged`.
+
 ## 2026-09-27: getLV on grouped Beta fits returns the per-site mode
 
 - Branch `claude/beta-getlv-mode-20260927`, stacked on `claude/beta-grouped-mode-search-503` (#540).
