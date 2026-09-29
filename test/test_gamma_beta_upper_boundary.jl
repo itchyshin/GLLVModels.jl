@@ -111,11 +111,13 @@ _gbub_disp(f) = hasproperty(f, :α) ? f.α : hasproperty(f, :φ) ? f.φ : f.r_gr
         @test fit.converged == false
     end
 
-    @testset "NB2 upper end is still a boundary" begin
+    @testset "NB2 upper end is still flagged, but warn-only for converged" begin
         fit = _gbub_fit(fx, fx["nb_upper"])
         @test all(>(1e6), fit.r_group)
         @test fit.dispersion_boundary == [true]
-        @test fit.converged == false
+        # Maintainer decision 2026-09-29: r > 1e6 only warns; converged is the optimizer
+        # verdict (test_nb_grouped_upper_warn.jl covers the warning and the lower end).
+        @test fit.converged == true
     end
 
     @testset "healthy grouped Gamma/Beta fits unchanged vs origin/main" begin

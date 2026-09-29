@@ -1,3 +1,24 @@
+## 2026-09-29: grouped NB upper dispersion warns only
+
+- Branch `claude/nb-grouped-upper-warn` from `origin/claude/merge-train-20260929`. In the four grouped NB
+  fitters (`fit_nb_gllvm_grouped[_cov]`, `fit_nb1_gllvm_grouped[_cov]`), `converged` = existing verdict
+  && !any(lower-end flag); r (NB1: phi) above 1e6 emits a `@warn` only. `dispersion_boundary` still flags
+  both ends. `_nb_boundary_restart`, `confint_family.jl`, `negbin.jl`, `_fit_verdict` untouched.
+- Changed assertions (old rule: upper end gives converged = false): `test_nb_boundary_restart.jl:38`,
+  `test_known_sentinel_defects.jl:74`, `test_grouped_dispersion.jl:127`, `test_bridge_x.jl:414`,
+  `test_gamma_beta_upper_boundary.jl:120`. No tolerance widened, no check deleted.
+- New `test/test_nb_grouped_upper_warn.jl` (13 checks): NB2 r above 1e6 gives the warning,
+  `dispersion_boundary` true, converged true; r below 1e-6 gives the warning, flag true, converged false.
+- Julia 1.10.12: new 13 of 13; changed files nb_boundary_restart 12/12, known_sentinel 25 pass 1 broken,
+  grouped_dispersion 20/20, bridge_x 192/192 (+8/8), gamma_beta_upper_boundary 118/118. Other files
+  referencing the grouped NB types, all green: confint_family 341/341, bridge_grouped_dispersion 129/129,
+  nb2_grouped_mode_search 38/38, confint_bootstrap_verdict_nb1 36/36, aicbic_newfits 18/18,
+  bridge_missing_mask 92/92, extract_latent_scores 79/79, fit_gllvm 11/11, fit_verdict_gradient 13/13,
+  grouped_dispersion_tweedie_nb1 25/25, grouped_getlv_mode 303/303, grouped_getlv_offset 24/24,
+  grouped_hessian_consistency 23/23, grouped_init_kwargs 16/16, nb1_x_identity 7/7,
+  nb_beta_x_identity 14/14, nb_fit 8/8, unified_api 24/24.
+  Julia 1.13.0 (new and changed files): same tallies. test/parity/*.jl need R and their own harness:
+  errors standalone, not run. Full suite not run.
 ## 2026-09-29: ordered-beta bootstrap simulator
 
 - Branch `claude/ordered-beta-boot-simulator` from `origin/main`. The `OrderedBetaFit` CI adapter's
