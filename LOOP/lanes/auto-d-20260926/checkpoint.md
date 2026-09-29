@@ -12,3 +12,5 @@ RESUME: read this file; `gh pr view 606 --json state`.
 DECISION 2026-09-29 (Shinichi): frozen-R smoke truncated-NB2 cell (test_truncated_nbinom2_parity.jl:80) records R r_gradient_max instead of gating, same as NB2 (#608). Relayed to the truncated-NB2 lane (owner of the file).
 
 PREFERENCE 2026-09-29 (Shinichi): "try to use more sonnets". Route mechanical work (check-log refreshes, test runs, CI/cluster watching, harvests, sweeps) to Sonnet 5 sub-agents (Agent model: "sonnet"); keep judgement calls on the main session.
+
+OWED (2026-09-29): gllvmTMB #1324 R/gllvmTMB.R ("Choosing d automatically") still says NB recovery "has not yet been measured"; update to 0.93 and regenerate man/gllvmTMB.Rd AFTER the 0.7.1 CRAN release lane releases R/gllvmTMB.R, man/gllvmTMB.Rd, inst/COPYRIGHTS (exclusive to it per Shinichi). #1324 adds to both files, so expect a merge conflict there after the release.
