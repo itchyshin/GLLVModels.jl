@@ -81,6 +81,19 @@ end
 _glm_weight(f::StudentTFamily, μ, n, me) =
     (f.ν + one(f.ν)) / ((f.ν + 3 * one(f.ν)) * f.σ^2) * me^2
 
+# Damped mode search without the small-step bypass (#623). The Fisher weight
+# above is (ν+3)/ν times smaller than the observed curvature at small residuals,
+# so for ν < 3 a full Fisher step overshoots the mode by more than a factor of 2
+# and the undamped search cycles: on the #623 fixture (ν = 1.5, σ = 0.3) it
+# alternated between -0.047 and 0.212 around the mode 0.074. Step halving on the
+# log posterior stops the cycle; `_laplace_mode_robust` makes it apply to small
+# steps too and extrapolates along non-concave ridges (see laplace.jl).
+_laplace_mode_should_backtrack(::StudentTFamily) = true
+_laplace_mode_robust(::StudentTFamily) = true
+_laplace_mode_step_weight(f::StudentTFamily, μ, n, me, y, link::IdentityLink, η) =
+    ismissing(y) ? _glm_weight(f, μ, n, me) :
+    max(_glm_obs_weight(f, μ, n, me, y, link, η), _glm_weight(f, μ, n, me))
+
 # Closed-form location–scale t log-density:
 #   ℓ = logΓ((ν+1)/2) − logΓ(ν/2) − ½log(νπ) − log σ − (ν+1)/2 · log(1 + r²/(ν σ²)).
 # Limit the fixed-order series to Float64, including nested ForwardDiff Duals.
