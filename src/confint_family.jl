@@ -1831,7 +1831,33 @@ function _family_ci(fit::OrderedBetaFit, Y::AbstractMatrix;
         end
         return isfinite(v) ? v : 1e12
     end
-    sim   = _ -> error("bootstrap is not supported for ordered-beta CIs")
+    # Draws from exactly the law `ordered_beta_logp` scores (src/families/ordered_beta.jl):
+    # z ~ N(0, I_K), η = β + Λz; P(y=0) = σ(c0 − η), P(y=1) = σ(η − c1), otherwise
+    # y ~ Beta(μφ, (1−μ)φ) with μ = σ(η) clamped to (_OB_MU_LO, _OB_MU_HI) as there.
+    # σ(c0 − η) + σ(η − c1) < 1 because c0 < c1, so one uniform picks the region.
+    sim = function (rng)
+        n = size(Y, 2); c0 = fit.c0; c1 = fit.c1; φ = fit.φ
+        Yb = zeros(Float64, p, n)
+        @inbounds for s in 1:n
+            η = fit.β .+ fit.Λ * randn(rng, K)
+            for t in 1:p
+                p0 = _ob_logistic(c0 - η[t]); p1 = _ob_logistic(η[t] - c1)
+                u = rand(rng)
+                if u < p0
+                    Yb[t, s] = 0.0
+                elseif u < p0 + p1
+                    Yb[t, s] = 1.0
+                else
+                    μ = clamp(_ob_logistic(η[t]), _OB_MU_LO, _OB_MU_HI)
+                    y = rand(rng, Beta(μ * φ, (1 - μ) * φ))
+                    # A Float64 Beta draw can round to exactly 0 or 1 at extreme μφ; the
+                    # likelihood would then score it as a point mass, so keep it interior.
+                    Yb[t, s] = clamp(y, nextfloat(0.0), prevfloat(1.0))
+                end
+            end
+        end
+        return Yb
+    end
     refit = function (Yb)
         fb = try fit_ordered_beta_gllvm(Yb; K = K) catch; return nothing end
         return (θ = vcat(fb.β, pack_lambda(fb.Λ), fb.c0, fb.c1, log(fb.φ)), converged = fb.converged,

@@ -10,10 +10,11 @@
 # reports the refit's verdict. Whether the Beta precision φ needs such a flag is
 # left open and is not tested here.
 #
-# The ordered-beta adapter's `simulate` is a stub that errors (bootstrap is not
-# offered for that family), so its parity draw is a separately simulated data
-# set, and its end-to-end testset supplies its own simulator. The migrated
-# `refit` is still what `_family_bootstrap` calls.
+# When this file was written the ordered-beta adapter's `simulate` was a stub
+# that errored, so its parity draw is a separately simulated data set, and its
+# end-to-end testset supplies its own simulator. The migrated `refit` is still
+# what `_family_bootstrap` calls. The adapter now has a real simulator, tested in
+# test/test_confint_bootstrap_ordered_beta.jl.
 #
 # Assertions are relations (adapter against a direct refit, new contract against
 # the old bare-vector one, counts), so the seeded draw differing across Julia
