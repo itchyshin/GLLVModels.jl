@@ -10,3 +10,5 @@ OPEN GATES: merges (train lane / Shinichi); DRAC submissions (Shinichi).
 RESUME: read this file; `gh pr view 606 --json state`.
 
 DECISION 2026-09-29 (Shinichi): frozen-R smoke truncated-NB2 cell (test_truncated_nbinom2_parity.jl:80) records R r_gradient_max instead of gating, same as NB2 (#608). Relayed to the truncated-NB2 lane (owner of the file).
+
+PREFERENCE 2026-09-29 (Shinichi): "try to use more sonnets". Route mechanical work (check-log refreshes, test runs, CI/cluster watching, harvests, sweeps) to Sonnet 5 sub-agents (Agent model: "sonnet"); keep judgement calls on the main session.
