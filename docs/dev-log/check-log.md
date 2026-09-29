@@ -1,3 +1,16 @@
+## 2026-09-29: grouped NB1 follows the Poisson-limit meaning (review of the grouped warn-only change)
+
+- The first version applied "upper end warns" to NB1 φ numerically. NB1's Poisson limit is φ → 0,
+  so that warned on unidentified overdispersion (φ > 1e6) and still blocked the Poisson limit.
+  Now NB1 grouped: φ < 1e-6 warns only, φ > 1e6 gives converged = false. On the nb_upper counts
+  the NB1 grouped fit reaches φ ≈ 6e-7 and warns "Poisson limit ... converged is not affected".
+- Julia 1.10.12: test_nb_grouped_upper_warn 16/16 (NB1 testset added),
+  test_grouped_dispersion_tweedie_nb1 25/25, test_confint_bootstrap_verdict_nb1 36/36,
+  test_nb1_x_identity 7/7, test_nb1_grouped_mode_search 39/39, test_fit_verdict_gradient 13/13,
+  test_known_sentinel_defects 25 + 1 broken, test_grouped_dispersion 20/20, test_bridge_x 192/192,
+  test_bridge_grouped_dispersion 129/129, test_nb_boundary_restart 12/12,
+  test_gamma_beta_upper_boundary 118/118, test_confint_family 341/341.
+
 ## 2026-09-29: grouped NB upper dispersion warns only
 
 - Branch `claude/nb-grouped-upper-warn` from `origin/claude/merge-train-20260929`. In the four grouped NB

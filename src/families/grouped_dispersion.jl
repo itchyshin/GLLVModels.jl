@@ -391,10 +391,11 @@ _dispersion_group_boundary(dvec::AbstractVector{<:Real}) =
 # drawn with true α = 1e8 or φ = 1e8 the grouped fits estimate 8.9e7 to 1.3e8
 # (test/fixtures/gamma_beta_upper_boundary.toml), so flagging α, φ > 1e6 reported
 # a well-identified optimum as not converged. NB2 r and NB1 φ keep both ends in the
-# `dispersion_boundary` field (`_dispersion_group_boundary`), where the large end is
-# the flat Poisson limit; but the grouped NB fitters let only the lower end make
-# `converged` false (maintainer decision 2026-09-29: gllvmTMB itself puts a trait's
-# dispersion above 1e6 on about 4 of 5 ordinary NB fits, so the upper end warns only).
+# `dispersion_boundary` field (`_dispersion_group_boundary`). For `converged`, the
+# Poisson limit only warns (maintainer decision 2026-09-29: gllvmTMB itself puts a
+# trait's dispersion there on about 4 of 5 ordinary NB fits). That limit is the upper
+# end for NB2 r (so the grouped NB2 fitters use this helper) but the lower end for NB1 φ
+# (so the grouped NB1 fitters test `φ > 1e6` instead).
 # The bootstrap adapters already leave the Gamma/Beta upper end unflagged (#565, #568).
 _dispersion_group_lower_boundary(dvec::AbstractVector{<:Real}) =
     Bool[d < 1e-6 for d in dvec]
@@ -1992,8 +1993,9 @@ Result of [`fit_nb1_gllvm_grouped`](@ref): intercepts `β` (length p), loadings 
 `Var_t = μ_t(1+φ[group[t]])`). `dispersion_boundary` (length G, T14 F1,
 2026-09-02) flags groups whose fitted `φ[g]` fell outside `[1e-6, 1e6]` (see
 `_dispersion_group_boundary`) — the Poisson limit at the lower end, numerically
-flat overdispersion at the upper end. Only the lower end (`φ[g] < 1e-6`) forces
-`converged` to `false`; `φ[g] > 1e6` only warns (maintainer decision 2026-09-29).
+flat overdispersion at the upper end. Only the upper end (`φ[g] > 1e6`) forces
+`converged` to `false`; `φ[g] < 1e-6`, the NB1 Poisson limit, only warns (maintainer
+decision 2026-09-29: the Poisson limit warns only).
 """
 struct NB1GroupedFit
     β::Vector{Float64}
@@ -2142,9 +2144,12 @@ function fit_nb1_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     φ̂g = exp.(θ̂[(p + rr + 1):(p + rr + G)])
     boundary = _dispersion_group_boundary(φ̂g)   # flags BOTH ends; feeds `dispersion_boundary` and the interval code
-    lowb = _dispersion_group_lower_boundary(φ̂g)   # only the lower end blocks `converged` (upper end: warn only)
-    any(lowb) && @warn "NB1 grouped-dispersion fit reached the per-group lower boundary (φ below 1e-6) for group(s) $(findall(lowb)); those groups' dispersion is at the Poisson limit on this data; converged is false for this fit." maxlog=1
-    any(>(1e6), φ̂g) && @warn "NB1 grouped-dispersion fit has φ above 1e6 for group(s) $(findall(>(1e6), φ̂g)); the group's overdispersion is numerically flat (the likelihood carries no information about it). The fit's other estimates are unaffected, and converged is not affected by this." maxlog=1
+    # NB1 (Var = μ(1+φ)) has its Poisson limit at the LOWER end, φ → 0, so the maintainer
+    # decision ("the Poisson limit warns only", 2026-09-29) applies there; φ above 1e6 is
+    # extreme overdispersion the data do not identify and still blocks `converged`.
+    lowb = φ̂g .> 1e6
+    any(lowb) && @warn "NB1 grouped-dispersion fit has φ above 1e6 for group(s) $(findall(lowb)); that overdispersion is numerically flat and not identified from this data; converged is false for this fit." maxlog=1
+    any(<(1e-6), φ̂g) && @warn "NB1 grouped-dispersion fit has φ below 1e-6 for group(s) $(findall(<(1e-6), φ̂g)); the group's dispersion is at the Poisson limit (no overdispersion left to estimate). The fit's other estimates are unaffected, and converged is not affected by this." maxlog=1
     loglik, conv, iters = _fit_verdict(res)
     conv = conv && _nb1_grouped_g_met(res, g_tol)   # #485: a zero-length step is not convergence
     return NB1GroupedFit(β̂, Λ̂, φ̂g, gidx, link, loglik, conv && !any(lowb), iters, hessian,
@@ -2160,8 +2165,9 @@ linear-variance dispersion `φ`, species→group map `group`, `link`, maximised
 Laplace `loglik`, `converged`, and `iterations`. Linear predictor
 `η = β + Xγ + Λz` with species dispersion `φ[group[t]]` (`Var = μ(1+φ)`).
 `dispersion_boundary` (length G, T14 F1, 2026-09-02) flags groups whose fitted
-`φ[g]` fell outside `[1e-6, 1e6]` (see `_dispersion_group_boundary`); only the lower
-end (`< 1e-6`) forces `converged` to `false`, while `φ[g] > 1e6` only warns.
+`φ[g]` fell outside `[1e-6, 1e6]` (see `_dispersion_group_boundary`); only the upper
+end (`> 1e6`, unidentified overdispersion) forces `converged` to `false`, while
+`φ[g] < 1e-6` (the NB1 Poisson limit) only warns.
 """
 struct NB1GroupedCovFit
     β::Vector{Float64}
@@ -2293,9 +2299,12 @@ function fit_nb1_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3
     Λ̂ = unpack_lambda(θ̂[(p + q + 1):(p + q + rr)], p, K)
     φ̂g = exp.(θ̂[(p + q + rr + 1):(p + q + rr + G)])
     boundary = _dispersion_group_boundary(φ̂g)   # flags BOTH ends; feeds `dispersion_boundary` and the interval code
-    lowb = _dispersion_group_lower_boundary(φ̂g)   # only the lower end blocks `converged` (upper end: warn only)
-    any(lowb) && @warn "NB1 grouped-cov fit reached the per-group lower boundary (φ below 1e-6) for group(s) $(findall(lowb)); those groups' dispersion is at the Poisson limit on this data; converged is false for this fit." maxlog=1
-    any(>(1e6), φ̂g) && @warn "NB1 grouped-cov fit has φ above 1e6 for group(s) $(findall(>(1e6), φ̂g)); the group's overdispersion is numerically flat (the likelihood carries no information about it). The fit's other estimates are unaffected, and converged is not affected by this." maxlog=1
+    # NB1 (Var = μ(1+φ)) has its Poisson limit at the LOWER end, φ → 0, so the maintainer
+    # decision ("the Poisson limit warns only", 2026-09-29) applies there; φ above 1e6 is
+    # extreme overdispersion the data do not identify and still blocks `converged`.
+    lowb = φ̂g .> 1e6
+    any(lowb) && @warn "NB1 grouped-cov fit has φ above 1e6 for group(s) $(findall(lowb)); that overdispersion is numerically flat and not identified from this data; converged is false for this fit." maxlog=1
+    any(<(1e-6), φ̂g) && @warn "NB1 grouped-cov fit has φ below 1e-6 for group(s) $(findall(<(1e-6), φ̂g)); the group's dispersion is at the Poisson limit (no overdispersion left to estimate). The fit's other estimates are unaffected, and converged is not affected by this." maxlog=1
     loglik, conv, iters = _fit_verdict(res)
     return NB1GroupedCovFit(β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, φ̂g, gidx, link,
                             loglik, conv && !any(lowb), iters, hessian, boundary)

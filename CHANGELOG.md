@@ -2,15 +2,15 @@
 
 ## Development
 
-- **Grouped NB fits: a large dispersion now warns instead of making `converged` false.**
-  Maintainer decision 2026-09-29: gllvmTMB 0.7.1 itself puts one trait's dispersion above
-  1e6 on 4 of 5 ordinary per-trait NB fits, so flagging that end would mark about 80% of
-  normal fits as not converged. In `fit_nb_gllvm_grouped`, `fit_nb_gllvm_grouped_cov`,
-  `fit_nb1_gllvm_grouped` and `fit_nb1_gllvm_grouped_cov`, `converged` is now the optimizer
-  verdict and `!any(r < 1e-6)` (NB1: `!any(φ < 1e-6)`); an `r` (NB1: `φ`) above 1e6 only
-  emits a warning that the dispersion is at the Poisson limit (NB1: numerically flat) and
-  that the other estimates are unaffected. A value below 1e-6 still gives `converged = false`
-  and a warning that says so. The `dispersion_boundary` field is unchanged and still flags
+- **Grouped NB fits: the Poisson limit now warns instead of making `converged` false.**
+  Maintainer decision 2026-09-29 ("NB upper end: warn only everywhere"): gllvmTMB 0.7.1
+  itself puts one trait's NB2 dispersion above 1e6 on 4 of 5 ordinary per-trait fits, so
+  flagging the Poisson limit would mark about 80% of normal fits as not converged. In
+  `fit_nb_gllvm_grouped` and `fit_nb_gllvm_grouped_cov` that limit is `r > 1e6`: it only
+  warns, and `r < 1e-6` (unidentified extreme overdispersion) still gives
+  `converged = false`. NB1 (`Var = μ(1+φ)`) has its Poisson limit at the other end, so in
+  `fit_nb1_gllvm_grouped` and `fit_nb1_gllvm_grouped_cov` `φ < 1e-6` only warns and
+  `φ > 1e6` gives `converged = false`. Each warning says whether `converged` is affected. The `dispersion_boundary` field is unchanged and still flags
   both ends, so the Wald and bootstrap interval code and `_nb_boundary_restart` behave as
   before. Shared-r `fit_nb_gllvm` and the per-trait truncated NB2 route are handled
   separately. Changed assertions: `test_nb_boundary_restart.jl`, `test_known_sentinel_defects.jl`,

@@ -52,4 +52,18 @@ _nbuw_sha(A, T) = bytes2hex(sha256(reinterpret(UInt8, vec(T.(A)))))
         @test fit.dispersion_boundary == [true]
         @test fit.converged == false
     end
+
+    @testset "NB1: its Poisson limit is the LOWER end (φ < 1e-6), and it only warns" begin
+        # NB1 has Var = μ(1+φ), so the Poisson limit is φ → 0. On the nb_upper counts the
+        # grouped NB1 fit reaches φ ≈ 6e-7 (macOS aarch64, Julia 1.10.12). The warning must
+        # name the Poisson limit and must not claim converged is false; the flag itself is
+        # the optimizer verdict (NB1's own gradient gate), which this rule does not change.
+        Yn = round.(Int, reshape(Float64.(cu["Y_column_major"]), up["p"], up["n"]))
+        fit = nothing
+        @test_logs (:warn, r"Poisson limit.*converged is not affected") match_mode = :any begin
+            fit = GM.fit_nb1_gllvm_grouped(Yn; K = up["K"], group = Int.(cu["group"]))
+        end
+        @test all(<(1e-6), fit.φ)
+        @test fit.dispersion_boundary == [true]
+    end
 end
