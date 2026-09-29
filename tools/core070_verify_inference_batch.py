@@ -26,7 +26,14 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CONTRACT_PATH = ROOT / "docs/dev-log/core070/inference-batch-contract.json"
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, str(ROOT / "tools"))
+from parity_oracle import R_REF_PINS, SELECTED_PIN  # noqa: E402  (GLLVM_PARITY_PIN; P0 default; unknown pin exits)
+import core070_source_pin_check  # noqa: E402  (PR #571 review: library pin + version, shared with postfit)
+# P0 keeps the frozen contract; P1 reads the twin written by tools/core070_inference_p1_contract.py.
+CONTRACT_PATH = ROOT / ("docs/dev-log/core070/true-parity-latest/inference-batch-contract-p1.json"
+                        if SELECTED_PIN == "P1" else "docs/dev-log/core070/inference-batch-contract.json")
+REFERENCE_COMMIT = R_REF_PINS[SELECTED_PIN] if SELECTED_PIN == "P1" else "b4d5fee64def88bc768dda1f1f77c29b295edd86"
 DEFAULT_JULIA_STATE = ROOT / ".unlazy/core070-aghq/inference-batch-01/julia"
 DEFAULT_R_STATE = ROOT / ".unlazy/core070-aghq/inference-batch-01/r-crosscheck"
 
@@ -60,7 +67,7 @@ def check_contract_shape(contract):
     need(contract.get("schema") == "core070-inference-batch-contract/v1", "wrong schema")
     need(contract.get("status") == "FROZEN_INFERENCE_BATCH_CONTRACT", "contract not frozen")
     need(contract.get("area") == "inference", "wrong area")
-    need(contract.get("reference_commit") == "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+    need(contract.get("reference_commit") == REFERENCE_COMMIT,
          "wrong reference commit")
     buckets = contract_rows_by_bucket(contract)
     need(len(buckets["EXECUTABLE_NOW"]) == contract["expected_executable_case_count"] == 45,
@@ -83,6 +90,17 @@ def check_contract_shape(contract):
              f"{row['source_id']}: non-executable row must not carry a julia_call/expected_route_tag")
         need(bool(row.get("reason")), f"{row['source_id']}: non-executable row missing a reason")
     return buckets
+
+
+def check_p1_julia_runner(contract):
+    """PR #571 review F4: at P1 the twin's julia_runner_sha256_at_p1 must be the runner's sha256.
+
+    The P0 field julia_runner_sha256 is carried verbatim as history and is not checked."""
+    if SELECTED_PIN != "P1":
+        return
+    runner = ROOT / str(contract.get("julia_runner", ""))
+    need(runner.is_file() and contract.get("julia_runner_sha256_at_p1") == sha(runner),
+         "julia_runner_sha256_at_p1 does not match the Julia runner")
 
 
 # ---------------------------------------------------------------------------
@@ -126,6 +144,7 @@ def verify_julia_state(state=DEFAULT_JULIA_STATE):
     contract = load_contract()
     contract_sha256 = sha(CONTRACT_PATH)
     buckets = contract_rows_by_bucket(contract)
+    check_p1_julia_runner(contract)
 
     receipt_path = state / "receipt.json"
     results_path = state / "inference-batch-results.json"
@@ -180,6 +199,8 @@ def verify_r_state(state=DEFAULT_R_STATE):
     need(receipt.get("in_scope_row_count") == 64, "R receipt row count wrong")
     need(receipt.get("crosscheck_sha256") == sha(crosscheck_path), "crosscheck tsv changed since receipt")
     need(receipt.get("results_json_sha256") == sha(results_path), "R crosscheck json changed since receipt")
+    # At P1 the crosscheck must record the oracle library's CORE070_SOURCE_PIN marker and version.
+    core070_source_pin_check.check_source_pin(receipt, SELECTED_PIN, need)
 
     result = json.loads(results_path.read_text())
     check_r_crosscheck(result, contract, contract_sha256)
@@ -295,7 +316,27 @@ def self_test():
     need(r_rejected >= 4, "fewer than 4 rejected mutations exercised (R side)")
     print("CORE070_INFERENCE_BATCH_R_NEGATIVES_PASS", r_rejected)
 
-    return rejected + r_rejected
+    n_pin = core070_source_pin_check.self_test(SELECTED_PIN)
+    print("CORE070_INFERENCE_BATCH_SOURCE_PIN_NEGATIVES_PASS", n_pin)
+
+    n_runner = 0
+    if SELECTED_PIN == "P1":
+        check_p1_julia_runner(contract)  # sanity
+        for name, mutate in [("stale runner hash (the P0-era value)",
+                              lambda c: c.update(julia_runner_sha256_at_p1=c["julia_runner_sha256"])),
+                             ("runner hash missing", lambda c: c.pop("julia_runner_sha256_at_p1")),
+                             ("runner path wrong", lambda c: c.update(julia_runner="tools/no_such_runner.jl"))]:
+            bad = deepcopy(contract)
+            mutate(bad)
+            try:
+                check_p1_julia_runner(bad)
+            except ValueError:
+                n_runner += 1
+                continue
+            raise AssertionError(f"accepted a bad P1 Julia runner pin: {name}")
+        print("CORE070_INFERENCE_BATCH_JULIA_RUNNER_PIN_NEGATIVES_PASS", n_runner)
+
+    return rejected + r_rejected + n_pin + n_runner
 
 
 if __name__ == "__main__":

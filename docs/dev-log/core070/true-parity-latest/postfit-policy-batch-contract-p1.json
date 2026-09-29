@@ -1,0 +1,330 @@
+{
+  "schema": "core070-postfit-policy-batch-contract/v1",
+  "status": "FROZEN_POSTFIT_POLICY_BATCH_CONTRACT",
+  "area": "postfit-policy",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "manifest_source": "docs/dev-log/core070/manifest-freeze-work/drafts/postfit-policy.json",
+  "manifest_source_sha256": "f605f2ed957987e301fe53cfa36c5f72362f566730e2e704e08817e8d779fb20",
+  "case_plan_annex": "docs/dev-log/core070/postfit-policy-required-case-plan.json",
+  "case_plan_annex_sha256": "cd9a57d8939ec4535c659e483bb52ea2106b79f71b49cd2da3e09a41700e0d84",
+  "manifest_row_count": 24,
+  "triage_note": "This contract's bucket assignment is an INDEPENDENT re-verification against current GLLVM.jl src/, not a copy of the annex's uncertain/reclassify flags -- two annex rows (POST-LOGNORMAL-RESPONSE-MEAN, POST-TRUNCPOIS-RESPONSE-PARAMETER) claimed 'no family fit type exists'; src/families/lognormal.jl and src/families/truncated_poisson.jl in fact exist at this commit, but neither LognormalFit nor TruncatedPoissonFit has a predict()/fitted() dispatch in src/postfit.jl -- so both stay bucket (b) for the corrected reason (missing predict surface, not missing family).",
+  "expected_case_count": 15,
+  "needs_new_julia_surface_count": 8,
+  "spec_defect_note_count": 1,
+  "source_pins": {
+    "R/vcov-coef.R": "7092603b1d86e5fcaf030e2e0d2c39a27febb08ffea9f46a5390954f116b4a04",
+    "R/methods-gllvmTMB.R": "6c32924b415646697ab4e471fda8b83108e416d662ba6e607bbeba335dd21616",
+    "R/z-confint-gllvmTMB.R": "0e995245ce1f0b5c9c5d1676bec982709728e20c980b274d9f4499ea6c6c7a53",
+    "R/predictive-diagnostics.R": "2a6775ab9e21b036c994864316b8addf6e97957d8a3961b841f6bc519862c029"
+  },
+  "fixture": {
+    "primary": {
+      "description": "The already-verified required Gaussian fixture (test/parity/test_gaussian_parity.jl, CORE070_PARITY_CASE_IDS=NATIVE-01-GAUSSIAN), refit natively in Julia from the same Y/K/X exactly as tools/core070_gaussian_postfit.jl already does -- this contract reuses that idiom (shared fixture setup via include(runparity.jl)), not its retained numbers.",
+      "p_times_n": 400,
+      "reused_idiom_from": "tools/core070_gaussian_postfit.jl"
+    },
+    "empty_design": {
+      "description": "POST-COEF-EMPTY only. Julia side: fit_gaussian_gllvm(Y; K=1) called with no X (a real native fit, fit.pars.\u03b2===nothing). R side: coef.gllvmTMB_multi's empty-X_fix_names branch is evaluated directly against a synthetic mock object (X_fix_names <- character(0)) by parsing just that one function out of the pinned R source and eval()-ing it in the gllvmTMB namespace -- the same parse-one-function-and-eval technique already proven in tools/core070_postfit_probe.R and tools/core070_data_batch.R. No live gllvmTMB() formula fit with zero fixed effects is attempted; the branch is unconditional on X_fix_names length and needs no fitted TMB object to exercise honestly."
+    }
+  },
+  "tolerances": {
+    "coefficient_delta": 1e-06,
+    "loglik_delta": 1e-06,
+    "link_response_residual_delta": 0.0001,
+    "wald_ci_bound_delta": 0.001,
+    "integer_exact": 0
+  },
+  "cases": [
+    {
+      "case_id": "CORE070-POSTFIT-COEF-EMPTY-NATIVE",
+      "source_id": "postfit-policy/POST-COEF-EMPTY",
+      "julia_surface": "StatsAPI.coef(fit::GllvmFit) (src/postfit.jl:633)",
+      "r_call": "coef.gllvmTMB_multi's empty-X_fix_names branch (R/vcov-coef.R:59-64)",
+      "comparand": "length(coef)==0 on both sides",
+      "check": "length(StatsAPI.coef(fit_no_x))==0 && length(r_empty_coef)==0"
+    },
+    {
+      "case_id": "CORE070-POSTFIT-COEF-NAMED-NATIVE",
+      "source_id": "postfit-policy/POST-COEF-NAMED",
+      "julia_surface": "StatsAPI.coef(fit::GllvmFit) (src/postfit.jl:633)",
+      "r_call": "coef.gllvmTMB_multi (R/vcov-coef.R:59-64)",
+      "comparand": "elementwise coefficient_delta <= tolerances.coefficient_delta",
+      "check": "maximum(abs, coef(fit) .- r_coef) <= 1e-6"
+    },
+    {
+      "case_id": "CORE070-POSTFIT-CONFINT-METHODS-WALD-NATIVE",
+      "source_id": "postfit-policy/POST-CONFINT-METHODS",
+      "julia_surface": "confint(fit::GllvmFit; ...) (src/confint.jl:246)",
+      "r_call": "confint.gllvmTMB_multi(object, parm=object$X_fix_names, method='wald') (R/z-confint-gllvmTMB.R:1608-1620, 1331 .confint_wald_targets)",
+      "comparand": "Wald lower/upper bounds for the beta[j] terms, elementwise",
+      "check": "maximum(abs, [julia_lower;julia_upper] .- [r_lower;r_upper]) <= 1e-3"
+    },
+    {
+      "case_id": "CORE070-POSTFIT-FITTED-DEFAULT-NATIVE",
+      "source_id": "postfit-policy/POST-FITTED-DEFAULT",
+      "julia_surface": "StatsAPI.fitted(fit::AnyGllvmFit, data; kwargs...) (src/postfit.jl:306)",
+      "r_call": "fitted.gllvmTMB_multi (R/methods-gllvmTMB.R:2837-2839)",
+      "comparand": "response-scale fitted value delta",
+      "check": "maximum(abs, response .- r_response) <= 1e-4"
+    },
+    {
+      "case_id": "CORE070-POSTFIT-LOGLIK-DF-NATIVE",
+      "source_id": "postfit-policy/POST-LOGLIK-DF",
+      "julia_surface": "StatsAPI.dof(fit::AnyGllvmFit) = _nparams(fit) (src/postfit.jl:573)",
+      "r_call": "attr(logLik(object),'df') non-REML branch (R/methods-gllvmTMB.R:1064-1066)",
+      "comparand": "exact integer equality",
+      "check": "StatsAPI.dof(fit) == r_df"
+    },
+    {
+      "case_id": "CORE070-POSTFIT-LOGLIK-NOBS-NATIVE",
+      "source_id": "postfit-policy/POST-LOGLIK-NOBS",
+      "julia_surface": "StatsAPI.nobs(fit::AnyGllvmFit) (src/postfit.jl:614)",
+      "r_call": "attr(logLik(object),'nobs') (R/methods-gllvmTMB.R:1114 and surrounding)",
+      "comparand": "exact integer equality",
+      "check": "StatsAPI.nobs(fit, Y) == r_loglik_nobs_attr"
+    },
+    {
+      "case_id": "CORE070-POSTFIT-LOGLIK-VALUE-NATIVE",
+      "source_id": "postfit-policy/POST-LOGLIK-VALUE",
+      "julia_surface": "StatsAPI.loglikelihood(fit::AnyGllvmFit) = _loglik(fit) (src/postfit.jl:580)",
+      "r_call": "logLik.gllvmTMB_multi (R/methods-gllvmTMB.R:1026-1063)",
+      "comparand": "logLik value, absolute delta",
+      "check": "abs(fit.logLik - r_loglik) <= 1e-6"
+    },
+    {
+      "case_id": "CORE070-POSTFIT-NOBS-COUNT-NATIVE",
+      "source_id": "postfit-policy/POST-NOBS-COUNT",
+      "julia_surface": "StatsAPI.nobs(fit::AnyGllvmFit) (src/postfit.jl:614)",
+      "r_call": "nobs.gllvmTMB_multi, likelihood_rows-preferring branch (R/methods-gllvmTMB.R:1133-1147)",
+      "comparand": "exact integer equality on complete-data fixture",
+      "check": "StatsAPI.nobs(fit, Y) == r_nobs"
+    },
+    {
+      "case_id": "CORE070-POSTFIT-NOBS-FALLBACK-NATIVE",
+      "source_id": "postfit-policy/POST-NOBS-FALLBACK",
+      "julia_surface": "StatsAPI.nobs(fit::AnyGllvmFit) (src/postfit.jl:614)",
+      "r_call": "nobs.gllvmTMB_multi, no-missing-data fallback branch (R/methods-gllvmTMB.R:1138-1146)",
+      "comparand": "exact integer equality; same numeric value as NOBS-COUNT on this complete fixture, distinct R code branch",
+      "check": "StatsAPI.nobs(fit, Y) == r_nobs"
+    },
+    {
+      "case_id": "CORE070-POSTFIT-PREDICT-DEFAULT-NATIVE",
+      "source_id": "postfit-policy/POST-PREDICT-DEFAULT",
+      "julia_surface": "predict(fit::GllvmFit, y; type::Symbol=:response, ...) (src/postfit.jl:258)",
+      "r_call": "predict.gllvmTMB_multi, type='link' explicit + default-argument reflection (R/methods-gllvmTMB.R:2421-2429)",
+      "comparand": "(a) link-scale value delta at explicit type=:link/'link'; (b) formals(predict.gllvmTMB_multi)$type default is 'link' vs Julia predict()'s literal kwarg default :response -- a documented divergence, recorded not smoothed over",
+      "check": "maximum(abs, link .- r_link) <= 1e-4 && default_type_r == \"link\" && default_type_julia == :response"
+    },
+    {
+      "case_id": "CORE070-POSTFIT-RE-FORM-FULL-NATIVE",
+      "source_id": "postfit-policy/POST-RE-FORM-FULL",
+      "julia_surface": "predict(fit::GllvmFit, y; ...) -- Julia's only mode always includes the fitted LV contribution",
+      "r_call": "predict(fit, re_form=~.) full-conditional route (R/methods-gllvmTMB.R:2158-2163, 2454-2461)",
+      "comparand": "value-level: R's full-conditional link output equals Julia's (only) predict() link output -- same numeric check as PREDICT-DEFAULT's link leg, registered as its own manifest fact",
+      "check": "maximum(abs, link .- r_link) <= 1e-4"
+    },
+    {
+      "case_id": "CORE070-POSTFIT-RESIDUAL-CONDITIONAL-NATIVE",
+      "source_id": "postfit-policy/POST-RESIDUAL-CONDITIONAL",
+      "julia_surface": "residuals(fit::GllvmFit, y; type=:dunnsmyth, ...) (src/postfit.jl:316)",
+      "r_call": "residuals.gllvmTMB_multi(type='randomized_quantile', scale='normal') -- condition_on_RE only governs the separate simulation_rank leg (R/predictive-diagnostics.R:197-201 doc, 233 onward); the randomized_quantile leg used here is unconditionally computed at the fitted mode, the same regime Julia always uses",
+      "comparand": "residual value delta",
+      "check": "maximum(abs, resid .- r_resid) <= 1e-4"
+    },
+    {
+      "case_id": "CORE070-POSTFIT-RESIDUAL-SCALES-NATIVE",
+      "source_id": "postfit-policy/POST-RESIDUAL-SCALES",
+      "julia_surface": "residuals(fit::GllvmFit, y; type=:dunnsmyth, ...) (src/postfit.jl:316) -- normal-quantile by construction",
+      "r_call": "residuals.gllvmTMB_multi(scale='normal') (R/predictive-diagnostics.R:197-201)",
+      "comparand": "same residual value delta as RESIDUAL-CONDITIONAL/-TYPES (one live R call covers all three scale/type/conditioning facts on this fixture)",
+      "check": "maximum(abs, resid .- r_resid) <= 1e-4"
+    },
+    {
+      "case_id": "CORE070-POSTFIT-RESIDUAL-TYPES-NATIVE",
+      "source_id": "postfit-policy/POST-RESIDUAL-TYPES",
+      "julia_surface": "residuals(fit::GllvmFit, y; type=:dunnsmyth, ...) (src/postfit.jl:316) -- exact family-CDF randomized-quantile residual",
+      "r_call": "residuals.gllvmTMB_multi(type='randomized_quantile') (R/predictive-diagnostics.R:157-233)",
+      "comparand": "same residual value delta as RESIDUAL-CONDITIONAL/-SCALES",
+      "check": "maximum(abs, resid .- r_resid) <= 1e-4"
+    },
+    {
+      "case_id": "CORE070-POSTFIT-SIMULATE-DEFAULT-NATIVE",
+      "source_id": "postfit-policy/POST-SIMULATE-DEFAULT",
+      "julia_surface": "simulate(fit::_ScalarMuFit, n::Integer; rng=...) (src/simulate_fit.jl:30) -- no condition_on_RE-style keyword exists",
+      "r_call": "formals(simulate.gllvmTMB_multi)$condition_on_RE literal default FALSE (R/methods-gllvmTMB.R:1371-1381)",
+      "comparand": "signature-level documented-divergence check: R declares an explicit condition_on_RE=FALSE (LV redrawn) default; Julia's simulate() accepts no such keyword at all (always conditions on the fitted mode) -- verified live from both sources' reflection, not hardcoded",
+      "check": "r_simulate_condition_on_re_default == false && !julia_simulate_has_condition_on_re_kwarg"
+    }
+  ],
+  "needs_new_julia_surface": [
+    {
+      "source_id": "postfit-policy/POST-DEVIANCE",
+      "missing_surface": "StatsAPI.deviance(fit::AnyGllvmFit) does not exist in src/postfit.jl (confirmed by grep: only loglikelihood, dof, aic, bic are defined there)",
+      "reason": "one-line addition (-2*StatsAPI.loglikelihood(fit)) but genuinely absent today; do not build it as part of this batch"
+    },
+    {
+      "source_id": "postfit-policy/POST-LOGNORMAL-RESPONSE-MEAN",
+      "missing_surface": "predict()/fitted() has no dispatch for LognormalFit (src/families/lognormal.jl:65 struct exists, fit_lognormal_gllvm exists, but no predict(fit::LognormalFit,...) method anywhere in src/)",
+      "reason": "CORRECTED from the annex: the family fitter exists, but the postfit response-mean surface this fact needs does not"
+    },
+    {
+      "source_id": "postfit-policy/POST-MIXED-LINK-DISPATCH",
+      "missing_surface": "no mixed-family/long-format single-fit architecture exists (every GllvmFit type in src/families/ is single-family; confirmed no long-format/mixed-family construct in src/)",
+      "reason": "architectural gap, not a one-line addition"
+    },
+    {
+      "source_id": "postfit-policy/POST-NOBS-MASK",
+      "missing_surface": "StatsAPI.nobs has no mask-aware overload (src/postfit.jl:607-632 -- no `mask` keyword on any nobs method)",
+      "reason": "mask handling exists on predict/residuals but not nobs"
+    },
+    {
+      "source_id": "postfit-policy/POST-RE-FORM-ZERO",
+      "missing_surface": "no fixed-effects-only predict mode / re_form argument exists on predict() or fitted() (confirmed: no `re_form` token anywhere in src/)",
+      "reason": "would require a new predict keyword dropping the LV/random-effect contribution"
+    },
+    {
+      "source_id": "postfit-policy/POST-SE-GUARD-ADMIT",
+      "missing_surface": "no single se.fit-style admission-guard function exists (confirmed: no `se_guard`/`se.fit`/`admission_guard` token in src/); partial analogs (confint's _has_lv_predictor guard, vcov's missing-sdreport checks) exist but are not a unified per-condition-testable function",
+      "reason": "R's fact is specifically the FIVE-condition unified guard; no single Julia call exists to pair against all five"
+    },
+    {
+      "source_id": "postfit-policy/POST-TIDY-EFFECTS",
+      "missing_surface": "no `tidy()` function exists in GLLVM.jl at all (confirmed by grep: src/summary_table.jl has zero `function tidy`/`tidy(` definitions; the annex's claim of 'a tidy symbol referenced' is a stale/incorrect reading of a comment, not a function)",
+      "reason": "CORRECTED from the annex's 'uncertain' framing to a firm surface-absent finding"
+    },
+    {
+      "source_id": "postfit-policy/POST-TRUNCPOIS-RESPONSE-PARAMETER",
+      "missing_surface": "predict()/fitted() has no dispatch for TruncatedPoissonFit (src/families/truncated_poisson.jl:72 struct exists, fit_truncated_poisson_gllvm exists, but no predict(fit::TruncatedPoissonFit,...) method anywhere in src/; only _nparams is defined for it in src/postfit.jl:545)",
+      "reason": "CORRECTED from the annex: the family fitter exists, but the postfit response-scale surface this fact needs does not"
+    }
+  ],
+  "spec_defect_notes": [
+    {
+      "source_id": "postfit-policy/POST-RE-FORM-NA",
+      "reason": "The manifest row plans zero case_specs (already reclassified 'compatibility_adapter' by the annex, dependent on POST-RE-FORM-ZERO's fixed-effects-only predict mode landing first). No case_id exists for this row, so it cannot be triaged into (a) or (b) as a case; recorded here as an area-level defect rather than silently dropped from the 24-row count (15 executable + 8 needs-new-surface + 1 zero-case row = 24)."
+    }
+  ],
+  "negative_controls": [
+    {
+      "control_id": "NEG-COEF-SHIFTED",
+      "description": "Compare Julia coef(fit) against the R coefficient vector shifted by +1 on every entry; must NOT match within tolerance -- proves the coefficient_delta check is live and discriminating, not a vacuous always-pass",
+      "check": "maximum(abs, coef(fit) .- (r_coef .+ 1.0)) > 1e-6"
+    },
+    {
+      "control_id": "NEG-LOGLIK-SHIFTED",
+      "description": "Compare Julia loglikelihood(fit) against R's logLik value shifted by +1.0; must NOT match within tolerance",
+      "check": "abs(fit.logLik - (r_loglik + 1.0)) > 1e-6"
+    }
+  ],
+  "runner": {
+    "outer": "tools/core070_postfit_policy_batch.R",
+    "inner": "tools/core070_postfit_policy_batch.jl",
+    "outer_argv": [
+      "<frozen-r-library-dir>",
+      "<fresh-output-dir>"
+    ],
+    "outer_usage": "Rscript --vanilla tools/core070_postfit_policy_batch.R <frozen-library> <destination>",
+    "inner_argv": [
+      "<destination>/julia-results.json"
+    ],
+    "inner_invocation": "julia --project=test/parity tools/core070_postfit_policy_batch.jl <destination>/julia-results.json (run by the outer R script as a child process, from the GLLVM.jl package root, with GLLVM_PARITY_TESTS=1, CORE070_PARITY_CASE_IDS=NATIVE-01-GAUSSIAN, R_LIBS=<frozen-library>, GLLVM_PARITY_R_LIBS=<frozen-library> set in its environment)",
+    "runtime_target_seconds": 900
+  },
+  "verifier": "tools/core070_verify_postfit_policy_batch.py",
+  "p0_contract": "docs/dev-log/core070/postfit-policy-batch-contract.json",
+  "p0_contract_sha256": "d694b82e743df6ac9e210edd8e4f783e68510fc809cff29245641b14094baaa1",
+  "p0_to_p1_accessor_diff": [
+    {
+      "function": "coef.gllvmTMB_multi",
+      "file": "R/vcov-coef.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "72531f42c7ee0165cb5708d1508143cad13d935c78cf6b171e50709bc0b28ca6",
+      "body_sha256_p1": "72531f42c7ee0165cb5708d1508143cad13d935c78cf6b171e50709bc0b28ca6"
+    },
+    {
+      "function": "confint.gllvmTMB_multi",
+      "file": "R/z-confint-gllvmTMB.R",
+      "body_identical_p0_p1": false,
+      "body_sha256_p0": "0dd3937290b0bdc3861a329901b11613e0aba95aa8b0fe1a962d7caedd677229",
+      "body_sha256_p1": "34c591a2db225bfc12a86d56781b0c5c7182906ef7796b4d44ea90a53d0ed964"
+    },
+    {
+      "function": "fitted.gllvmTMB_multi",
+      "file": "R/methods-gllvmTMB.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "fcdeecef9ce63852bdaa878e74c8c5d3d06d6864637b8d87b2ace5e38dcfb415",
+      "body_sha256_p1": "fcdeecef9ce63852bdaa878e74c8c5d3d06d6864637b8d87b2ace5e38dcfb415"
+    },
+    {
+      "function": "logLik.gllvmTMB_multi",
+      "file": "R/methods-gllvmTMB.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "52b3c4182260775691c3ce46bbf5b8ae2a80c6dda576c55f0a117e9ace5fa152",
+      "body_sha256_p1": "52b3c4182260775691c3ce46bbf5b8ae2a80c6dda576c55f0a117e9ace5fa152"
+    },
+    {
+      "function": "nobs.gllvmTMB_multi",
+      "file": "R/methods-gllvmTMB.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "1e6abac66a90d533acaad807d32dbe1a2c98837e14f8f5154afd8ed3ae48f5f2",
+      "body_sha256_p1": "1e6abac66a90d533acaad807d32dbe1a2c98837e14f8f5154afd8ed3ae48f5f2"
+    },
+    {
+      "function": "predict.gllvmTMB_multi",
+      "file": "R/methods-gllvmTMB.R",
+      "body_identical_p0_p1": false,
+      "body_sha256_p0": "cbe16cd14413d9894acc0f58c0e55b3704a01079f1544c4f0406a6cd89edf2e1",
+      "body_sha256_p1": "5f580aa6cb69635ade54101267d6e6cfb67814c33e7c0dbed8f251d7605887db"
+    },
+    {
+      "function": "residuals.gllvmTMB_multi",
+      "file": "R/predictive-diagnostics.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "63238bbca87201d702c1574d9f2676258335af209f3a3c76ac2197b867ae1e96",
+      "body_sha256_p1": "63238bbca87201d702c1574d9f2676258335af209f3a3c76ac2197b867ae1e96"
+    },
+    {
+      "function": "simulate.gllvmTMB_multi",
+      "file": "R/methods-gllvmTMB.R",
+      "body_identical_p0_p1": false,
+      "body_sha256_p0": "0571d8de74ec433c129714d729d230861c457c2497db11e0f18dd60c584b117a",
+      "body_sha256_p1": "d8dc98ff8fae6b997bfde51f7bb5bd3cc2595b1876d64900e6f39c639a25170c"
+    }
+  ],
+  "regeneration_log": {
+    "generator": "tools/core070_postfit_p1_contract.py",
+    "changes": [
+      {
+        "field": "reference_commit",
+        "p0": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+        "p1": "9539352f66f2db2cc26b1c393e67212a359b60c9"
+      },
+      {
+        "field": "source_pins[R/vcov-coef.R]",
+        "p0": "7092603b1d86e5fcaf030e2e0d2c39a27febb08ffea9f46a5390954f116b4a04",
+        "p1": "7092603b1d86e5fcaf030e2e0d2c39a27febb08ffea9f46a5390954f116b4a04",
+        "changed": false
+      },
+      {
+        "field": "source_pins[R/methods-gllvmTMB.R]",
+        "p0": "fd5515ec3eb355d0672ca19d7031ce251250d1dbeee80e8c2e772594cbd37fb3",
+        "p1": "6c32924b415646697ab4e471fda8b83108e416d662ba6e607bbeba335dd21616",
+        "changed": true
+      },
+      {
+        "field": "source_pins[R/z-confint-gllvmTMB.R]",
+        "p0": "c521f0874fd76b22d93bab9f43108b07603de0044f8b76228c75fd83e8c75893",
+        "p1": "0e995245ce1f0b5c9c5d1676bec982709728e20c980b274d9f4499ea6c6c7a53",
+        "changed": true
+      },
+      {
+        "field": "source_pins[R/predictive-diagnostics.R]",
+        "p0": "7416069e6e6dcb46bb242f296093131e70d9e8cc35f0d40bd19c728b2c85efc0",
+        "p1": "2a6775ab9e21b036c994864316b8addf6e97957d8a3961b841f6bc519862c029",
+        "changed": true
+      }
+    ],
+    "carried_verbatim": "status, cases (r_call, quantity, tolerance, check, comparand), deferred, rejection_cases, negative_controls, fixtures, runner. No case, expectation or tolerance was edited; a P1 mismatch is recorded by the batch as a failure."
+  }
+}

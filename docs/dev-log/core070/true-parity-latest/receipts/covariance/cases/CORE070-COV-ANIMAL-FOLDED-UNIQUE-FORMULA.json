@@ -1,0 +1,125 @@
+{
+  "schema": "core070-covariance-p1-case-receipt/v1",
+  "case_id": "CORE070-COV-ANIMAL-FOLDED-UNIQUE-FORMULA",
+  "source_id": "covariance/COV-ANIMAL-FOLDED-UNIQUE",
+  "verdict": "R_ONLY_PASS",
+  "evidence_kind": "r_only_formula_grammar",
+  "batch": "tools/core070_covariance_batch.R, GLLVM_PARITY_PIN=P1; verified by tools/core070_verify_covariance_batch.py",
+  "raw": "docs/dev-log/core070/true-parity-latest/receipts/covariance/covariance-batch-p1/covariance-batch-results.json",
+  "r_formula": "value ~ 0 + trait + animal_latent(species, A = A, d = 2, unique = TRUE)",
+  "expected_covstructs": [
+    {
+      "kind": "phylo_rr",
+      "extra_equal": {
+        "vcv": "A"
+      },
+      "extra_true": [
+        ".animal_source"
+      ],
+      "extra_int_equal": {
+        "d": 2
+      }
+    },
+    {
+      "kind": "phylo_rr",
+      "extra_equal": {
+        "vcv": "A"
+      },
+      "extra_true": [
+        ".phylo_unique",
+        ".auto_unique",
+        ".animal_source"
+      ]
+    }
+  ],
+  "observed_covstructs": [
+    {
+      "kind": "phylo_rr",
+      "lhs": "0 + species",
+      "group": "trait",
+      "extra": {
+        "d": 2,
+        ".animal_source": true,
+        "vcv": [
+          [
+            1,
+            0.5,
+            0.25,
+            0.1
+          ],
+          [
+            0.5,
+            1,
+            0.3,
+            0.15
+          ],
+          [
+            0.25,
+            0.3,
+            1,
+            0.4
+          ],
+          [
+            0.1,
+            0.15,
+            0.4,
+            1
+          ]
+        ]
+      }
+    },
+    {
+      "kind": "phylo_rr",
+      "lhs": "0 + species",
+      "group": "trait",
+      "extra": {
+        ".phylo_unique": true,
+        ".auto_unique": true,
+        ".animal_source": true,
+        "vcv": [
+          [
+            1,
+            0.5,
+            0.25,
+            0.1
+          ],
+          [
+            0.5,
+            1,
+            0.3,
+            0.15
+          ],
+          [
+            0.25,
+            0.3,
+            1,
+            0.4
+          ],
+          [
+            0.1,
+            0.15,
+            0.4,
+            1
+          ]
+        ]
+      }
+    }
+  ],
+  "julia_surface": "No Julia formula-grammar entry point exists for animal_latent(); GLLVM.jl (src/formula.jl) only wraps a StatsModels-style site-level design formula. The nearest engine primitive is passing a user-supplied pedigree/GRM matrix directly as the Sigma_phy argument of fit_gaussian_gllvm / sparse_phy_grad.jl, which has no automatic folded/auto-unique reduced-rank loading construction.",
+  "batch_verifier": {
+    "tool": "tools/core070_verify_covariance_batch.py",
+    "status": "PASS",
+    "exit_code": 0,
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/covariance/covariance-batch-p1/verify.log"
+  },
+  "why_not_numeric": "The check is a structural fact about gllvmTMB's R formula grammar (parse_multi_formula(desugar_brms_sugar(f))$covstructs). No R-vs-Julia numeric comparison exists for it in this harness; needs a Julia surface before it can bind.",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "gllvmtmb_version": "0.7.1",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "ead8f4180957dd47111f662efcda6e0734c9de94",
+  "glvmodels_worktree_dirty": [],
+  "host": "local Mac (M1 Ultra), single BLAS/OMP thread, JULIA_NUM_THREADS=4",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86"
+}

@@ -14,6 +14,31 @@ All notable changes to GLLVModels.jl are documented here.
 ## Unreleased
 
 ### Added
+- **`zi_poisson()`, `zi_nbinom2()`, `zi_binomial()`: twins of gllvmTMB's
+  zero-inflated family exports at the P1 pin (`9539352f6`), with R's semantics.**
+  A true zero-inflation mixture with a per-trait, intercept-only structural-zero
+  probability, the count process active at every observation, one NB2 dispersion
+  per trait, per-observation binomial trials (single-trial-only traits refused),
+  and a Laplace log-determinant from the observed curvature, as TMB computes it.
+  New `fit_zi_gllvm` / `ZiFit` / `zi_marginal_loglik_laplace`, reachable as
+  `fit_gllvm(Y; family = zi_poisson(), K)`. Julia's own `ZIPoisson()` /
+  `ZINegBin()` / `ZIB(N)` routes are unchanged and remain a documented extra:
+  they use the Fisher count weight in the log-determinant (3.62 log-likelihood
+  units off R's logLik at R's optimum on the ZIP fixture), a shared NB2
+  dispersion, and a shared trials count. Twin fixtures:
+  `test/fixtures/zi_p1.toml`, test `test/test_zi_twin.jl`.
+  The route carries a Julia-side Laplace breakdown guard (`ZI_LAPLACE_EIGMIN_FLOOR`):
+  at y = 0 the mixture's observed curvature can be negative, the site Laplace
+  precision can approach singularity, and the Laplace value then inflates (on one
+  NB2 dataset 363 units above the exact marginal; gllvmTMB's objective returns the
+  same inflated value). Sites below the floor are refused, an optimum at the floor is
+  reported with `converged = false`, the NB2 start was hardened, and a fit that ends
+  at the guard is retried once from a shrunk start (35 NB2 draws: 30 converge, the 5
+  flagged are draws gllvmTMB also fails on). Recovery is shown for `|lambda| <= 0.6`
+  only. Missing responses (`missing` or `NaN`) are refused with an `ArgumentError`.
+  Recovery test: `test/test_zi_recovery.jl` (R-pinned breakdown datasets in
+  `test/test_zi_twin.jl`); note:
+  `docs/dev-log/decisions/2026-09-27-zi-laplace-breakdown-guard.md`.
 - **`gllvm_anova(fits...; test = :chibar)` and `GllvmAnovaTable`** (`src/model_comparison.jl`):
   a twin of gllvmTMB's `anova.gllvmTMB_multi()` / `print.anova.gllvmTMB_multi()`
   (R/aghq-report.R, pin `9539352f66f2db2cc26b1c393e67212a359b60c9`, "P1").
@@ -808,12 +833,26 @@ All notable changes to GLLVModels.jl are documented here.
   `re_form` zero forms, `newdata` rebuilt from the fitted basis by name, unseen
   units falling back to fixed-only; `se_fit` refused). The per-cell long-row Laplace kernel uses a copy of R's
   `gll_dbinom_cloglog` and its observed curvature; the fitter uses the one-step
-  implicit gradient. Zero or one `latent(0 + trait | unit, d = K, unique = FALSE)`
-  term; `K = 0` fits a GLM through the same kernel. R's `latent()` default
-  (`unique = TRUE`) adds a per-trait unique variance that is not ported, so it is
-  refused rather than silently fitting a different model. Missing responses and
-  `weights` are refused in P1. Paired twins against R at P1:
+  implicit gradient. Zero or one `latent(0 + trait | unit, d = K)` term; `K = 0`
+  fits a GLM through the same kernel. R's `latent()` default (`unique = TRUE`) is
+  supported (next entry); `unique = FALSE` fits the loadings-only model. Missing
+  responses and `weights` are refused in P1. Paired twins against R at P1:
   `test/parity/isdm_cases.jl`. Design: `docs/design/isdm-port-spec.md`.
+- **iSDM: the unit-level unique variance of R's default `latent(..., unique = TRUE)`.**
+  `fit_isdm_gllvm` now fits gllvmTMB's `theta_diag_B`: each (unit, trait) carries
+  `s_B(t, s) ~ N(0, exp(theta_diag_B[t])^2)`, shared by that trait's rows in that
+  unit across sources, integrated by Laplace jointly with the latent scores (the
+  kernel takes it as the augmented loadings `[Λ Diagonal(exp.(theta_diag_B))]`).
+  The packed parameter follows R's `opt$par` order, `[b_fix; theta_rr_B;
+  theta_diag_B]`. `IsdmFit` gains `unique`, `theta_diag_B` and `s_B` (the
+  conditional modes); `IsdmTable` gains `unique`; `isdm_marginal_loglik_laplace`
+  takes `theta_diag_B` for a unique table; `predict` re-adds `s_B` on units seen
+  at fit time and not on unseen ones, as R does. `unique = FALSE` fits are
+  bit-identical to before. `K = 0` on a `unique = TRUE` table is refused, as R
+  refuses `latent(d = 0)`. The unique variances are identified only with
+  `p >= 2K + 1` traits; with two traits they run toward zero in R and Julia alike.
+  Paired twins on a new four-trait fixture and on R's default-formula fits of the
+  two-trait fixtures: `test/parity/isdm_unique_cases.jl`.
 - **`predictor::Symbol = :separate | :shared` on `fit_delta_lognormal_gllvm` /
   `fit_delta_gamma_gllvm`** (2026-08-28, maintainer decision "Twin identity
   MODE" — `docs/dev-log/decisions/2026-08-28-arc-decision-batch.md` gate 4):

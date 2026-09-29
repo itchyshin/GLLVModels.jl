@@ -21,7 +21,14 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CONTRACT_PATH = ROOT / "docs/dev-log/core070/data-batch-contract.json"
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, str(ROOT / "tools"))
+from parity_oracle import R_REF_PINS, SELECTED_PIN  # noqa: E402  (GLLVM_PARITY_PIN; P0 default; unknown pin exits)
+import core070_source_pin_check  # noqa: E402  (library pin + version, shared with postfit / inference)
+# P0 keeps the frozen contract; P1 reads the twin written by tools/core070_data_p1_contract.py.
+CONTRACT_PATH = ROOT / ("docs/dev-log/core070/true-parity-latest/data-batch-contract-p1.json"
+                        if SELECTED_PIN == "P1" else "docs/dev-log/core070/data-batch-contract.json")
+REFERENCE_COMMIT = R_REF_PINS[SELECTED_PIN] if SELECTED_PIN == "P1" else "b4d5fee64def88bc768dda1f1f77c29b295edd86"
 DEFAULT_STATE = ROOT / ".unlazy/core070-aghq/data-batch-01"
 DEFAULT_JULIA_RECEIPT = ROOT / ".unlazy/core070-aghq/data-batch-01/data-batch-julia-introspection.json"
 
@@ -36,7 +43,9 @@ def need(ok, message):
 
 
 def load_contract():
-    return json.loads(CONTRACT_PATH.read_text())
+    contract = json.loads(CONTRACT_PATH.read_text())
+    need(contract["reference_commit"] == REFERENCE_COMMIT, "contract is not pinned at the selected pin")
+    return contract
 
 
 def check_report(report, contract, contract_sha256):
@@ -134,6 +143,7 @@ def verify_state(state=DEFAULT_STATE, julia_receipt_path=DEFAULT_JULIA_RECEIPT):
     need(receipt.get("results_sha256") == sha(results_path), "results file changed since receipt")
     need(receipt.get("raw_sha256") == sha(raw_path), "raw.tsv changed since receipt")
     need(receipt.get("diagnostics_sha256") == sha(diag_path), "diagnostics.log changed since receipt")
+    core070_source_pin_check.check_source_pin(receipt, SELECTED_PIN, need)
 
     # Live source pins are checked only if the readback source is present at the
     # conventional path; contract-side pinning already guards the content, this
@@ -290,7 +300,9 @@ def self_test():
             continue
         raise AssertionError(f"accepted invalid julia-introspection evidence: {name}")
     print("CORE070_DATA_BATCH_JULIA_NEGATIVES_PASS", len(julia_mutations))
-    return len(mutations) + len(julia_mutations)
+    n_pin = core070_source_pin_check.self_test(SELECTED_PIN)
+    print("CORE070_DATA_BATCH_SOURCE_PIN_NEGATIVES_PASS", n_pin)
+    return len(mutations) + len(julia_mutations) + n_pin
 
 
 if __name__ == "__main__":

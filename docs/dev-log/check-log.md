@@ -13,6 +13,257 @@
   gap 8.0e-8; report `eta` 1.8e-15; unit ordination 8.9e-16.
 - Per-file runs on Julia 1.10 and 1.13 (full suite not run): see the after-task report.
 - After-task: `docs/dev-log/after-task/2026-09-27-temporal-slice2.md`.
+## 2026-09-27: zi_poisson / zi_nbinom2 / zi_binomial twins of gllvmTMB at P1
+
+- Branch `claude/twin-zi` from `origin/main` @ `97e11be04`. New `src/families/zi_twin.jl`:
+  R-named constructors, `fit_zi_gllvm` / `ZiFit` / `zi_marginal_loglik_laplace`, and a
+  `_fit_gllvm` method so `fit_gllvm(Y; family = zi_poisson(), K)` works. The route reuses
+  the two-part mode search and pieces through per-cell markers that supply the observed count curvature
+  (nested ForwardDiff of the mixture density) to the Laplace log-determinant; Julia's own
+  `ZIPoisson` / `ZINegBin` / `ZIB` routes are unchanged.
+- Twin fixtures fitted in R at gllvmTMB `9539352f6` (temporary library): logLik optimum vs
+  optimum 1.35e-8 (ZIP), 1.04e-8 (ZINB), 1.35e-9 (ZIB); Julia objective at R's optimum within
+  4.3e-9 of R's logLik; R's objective at Julia's optimum within 4.4e-9 of Julia's value. The
+  existing `ZIPoisson` marginal at R's optimum is 3.62 units off R's logLik (Fisher log-det).
+- `test/test_zi_twin.jl` 58 of 58 on Julia 1.10.0 and 1.13.0. Neighbours on both versions:
+  `test_curvature_census.jl` 66/66, `test_zero_inflated.jl` 29/29, `test_twopart_substrate.jl`
+  2/2, `test_twopart_hessian_kwarg.jl` 13/13.
+- Review follow-up (Laplace breakdown): per-site guard `ZI_LAPLACE_EIGMIN_FLOOR = 0.1`, optimum
+  at the floor reported `converged = false`, NB2 start hardened (moment phi, half-scale
+  loadings), `hessian` accept-and-refuse, Julia parameter vectors in the fixture's
+  `r_at_julia` blocks. Reviewer's seed-12 NB2 case: -3012.80 (spurious) before, -3311.4547
+  (R's optimum) after. 20 NB2 draws: 3 silent breakdowns before, 0 after (2 flagged
+  not converged, which R also fails on). New `test/test_zi_recovery.jl`; note
+  `docs/dev-log/decisions/2026-09-27-zi-laplace-breakdown-guard.md`.
+- Second review applied (head `d0a57e05d`): one shrunk-start retry (loadings x 0.1) when
+  a fit ends at the guard; the review's Julia-only stall (recovery DGP, MersenneTwister(2))
+  goes from flagged at -3749.88 to converged at -3820.2665 (R -3820.266506). Builder's 20
+  draws: 18 converged, 2 flagged (seeds 6, 10; R fails). Reviewer's 15 draws: 12 converged,
+  3 flagged (all R fails). zi_poisson / zi_binomial 15-draw sweeps: 15/15 converged each,
+  guard never binding, min site eigenvalue at optima 0.318 / 0.549. `missing`-typed Y
+  refused with ArgumentError. R-pinned literal NB2 cases moved into the P1-tagged
+  `test/test_zi_twin.jl`. Julia 1.10.12 and 1.13.0: test_zi_twin 80/80, test_zi_recovery
+  42/42, test_zero_inflated 29/29, test_curvature_census 66/66 (each version).
+## 2026-09-27: Data and fit-input at P1, independent review of #579 applied
+
+- Same branch, fast-forward commits only, one concern per commit; no `src/`, GATES.md, P0 evidence or
+  classification change. Counts unchanged (data 28 needs_surface_r_side_measured, fit-input 6
+  numeric_pass).
+- Finding 1 (blocking): the data receipts said GLLVModels has no surface for any data case, resting
+  on `Base.kwarg_decl`, which cannot see keywords forwarded through `kwargs...`. New
+  `tools/core070_data_surface_probe.jl` calls weights, offset, mask and missing-in-Y through the
+  public dispatcher on a tiny fixture (non-constant offset) for 9 fitter paths. Result: `offset=` and
+  `mask=` accepted and move logLik on the default Gaussian, Poisson, NB2, NB1, Binomial, Beta, Gamma
+  and the `gllvm(@formula)` Poisson path; missing cells in Y likewise except the Gaussian path
+  (MethodError), with mask and missing giving the same logLik; `pervar=true` refuses all four;
+  `weights=` refused (MethodError) on all 9. The 28 data receipts now say the R side is a helper
+  replay with no fit number, so there is nothing numeric to compare yet, and quote the probe; the data
+  P1 twin gains `julia_surface_status_p1_note`.
+- Finding 4: receipt `--check` compares each receipt's `glvmodels_commit`, `glvmodels_worktree_dirty`
+  and `glvmodels_src_tree`, and each case map's `glvmodels_commit`, with the batch's tracked
+  `run-commit.json`; `tools/test_core070_data_p1_receipts.py` is the negative control (forty-zero
+  commit, wrong src tree, dirty list each fail and are named). Finding 5: the introspection records a
+  repo-relative contract path. Finding 2 (disclosed): GAUSS-DEFAULT and GAUSS-LOADINGS receipts carry
+  `coef_block_note` (coef = trait sample means to 2e-17 Julia, 8e-10 R; only logLik discriminates).
+  Finding 6: data and fit-input-2 runners `shQuote` the path in `sha256_file`; the same unquoted
+  pattern remains in about 20 other `tools/core070_*.R` runners and `tools/core070_source_pin.R`.
+- Re-run from clean `a87510306` at P1: data replay 0.9 s, introspection 1.7 s, probe 56.6 s,
+  fit-input-2 55.0 s; fit-input-2 `r-oracle.json`, `julia-results.json`, `results.tsv` bit-identical
+  to the `10467e0cc` run. Receipt `--check` current (43 receipts, 34 rows); four contract `--check`s
+  current; `test_true_parity_check.mjs` passes; main (`1214e948e`, identical file) and #561
+  (`92cf39571`) give the same C1/C8 lines as before.
+
+## 2026-09-27: Data and fit-input families re-measured at gllvmTMB P1 (A3), tracked receipts
+
+- Branch `claude/true-parity-p1-data`, stacked on `claude/true-parity-p1-inference` (PR #571) at
+  `1b99ae6b8`, on #569 and #567. Scope: the 28 data rows and 6 fit-input rows the P1 carry scan lists
+  as DANGLING. masks-known (9) not measured: its points stage replays retained frozen inputs under
+  `.unlazy/` that do not exist here, and its Julia side is a hand-coded reconstruction, not GLLVModels.
+  Classifications and dispositions carried unchanged.
+- P1 twins from `tools/core070_data_p1_contract.py` (`--check` current): reference_commit and
+  source_pins recomputed from the P1 bytes; cases, expectations and tolerances verbatim. At P1
+  `R/weights-shape.R` and `R/offset.R` are byte-identical to P0; `miss_control` differs only in two
+  error-message lines. For fit-input-2, `gllvmTMB()`, `animal_latent()` and `kernel_latent()` bodies
+  all changed.
+- Runs from clean commit `10467e0cc` (local Mac, one BLAS/OMP thread, JULIA_NUM_THREADS=4): data R
+  replay 0.8 s, data Julia introspection 1.6 s, fit-input-2 R fits plus Julia child 55.1 s. Both batch
+  verifiers pass at P1 with `--self-test`. Counts: data 28 needs surface (R side measured: 28/28 plus
+  both negative controls; every planned Julia surface absent); fit-input 6 numeric pass (max |dlogLik|
+  5.5e-9, max |dcoef| 2.1e-6 against 1e-4), recomputed from saved R and Julia values. KERNEL-TWO-AUTO
+  is the same measurement as KERNEL-TWO (noted on the receipts and rows).
+- Checker, PARITY_REF=FS, main (`880cad4c7`) and #561 (`92cf39571`): data C1 required=28 bound=0
+  free=28, C8 28 NOT_TWINNED_NOT_SIGNED; fit-input C1 required=6 bound=6 (#561 bound_numeric=6,
+  numeric_recorded_diff_mismatch=none) C1_MET, C8 C8_MET; covariance, postfit and inference lines
+  unchanged. `test_true_parity_check.mjs` passes; all four contract `--check`s and the data and
+  inference receipt `--check`s current; `test/parity/test_core070_pin.jl` 27/27.
+
+## 2026-09-27: Inference at P1, independent review of #571 applied
+
+- Same branch, fast-forward commits only. Merged #569's review fixes (`073e90e78`; one conflict, this
+  file, both entries kept). Review findings F1 to F4 and F6 applied, one concern per commit; no
+  classification, `src/`, GATES.md or P0 evidence change.
+- Shared gates adopted: `tools/core070_inference_p1_receipts.py` runs the wave2 and wave4 batch
+  verifiers at P1 with `--self-test`, tracks `verify.txt` and `run-commit.json`, puts a
+  `batch_verifier` block on every case receipt (wave5 reads #569's tracked `verify.txt`), holds a
+  numeric row whose batch verifier failed (no exception path), flags degenerate comparisons with
+  #569's rule, records `glvmodels_commit` and refuses a dirty tree. The wave4 R runner checks the
+  library's `CORE070_SOURCE_PIN.toml` marker and version (`tools/core070_source_pin.R`); the wave2
+  route probe loads no package, so at P1 it requires `CORE070_P1_ORACLE_LIBRARY` and checks that
+  library's marker and version. Both verifiers check the record (`tools/core070_source_pin_check.py`).
+- F1: every case receipt records `read_from` sha256 for each tracked file it read; wave5 receipts
+  cite #569's `julia_results_sha256`. `--check` re-hashes them and re-derives wave5 and all 63 rows;
+  tamper tests (one byte on #569's julia-results.json, a dropped anomaly block, a mutated row) fail.
+- F2: 008 and 010 receipts and rows note they are one measurement counted twice (identical R and
+  Julia vectors); not reclassified, the count is the maintainer's call.
+- F3: the 011 receipt and row carry an anomaly note (Julia bootstrap lower bounds 1.06e-7 and
+  4.53e-40 vs R 0.126 and 0.414); root cause fixed in draft PR #576; re-measure after it lands.
+- F4: the P1 twin records `julia_runner_sha256_at_p1` (5ba2d5cd...); the P1 verifier checks it.
+  F6: the R runners create the destination only after the pin checks pass.
+- Re-run from clean commit `61c5eda48` (local Mac, one BLAS/OMP thread, JULIA_NUM_THREADS=4), wall
+  84 s: route probes 3 s, R crosscheck 2 s, wave2 Julia 64 s, wave4 15 s. Outcomes identical to the
+  first run; wave5 vectors from #569's re-run bit-identical. Counts unchanged: 2 numeric pass,
+  45 routing, 14 error-class, 2 partial, 0 held, 0 non-discriminating. Checker, PARITY_REF=FS, main
+  (`880cad4c7`) and #561 (`92cf39571`): inference C1 required=63 bound=2 free=61 (#561
+  bound_numeric=2, numeric_recorded_diff_mismatch=none), C8 61 NOT_TWINNED_NOT_SIGNED; postfit C1
+  required=52 bound=29 free=21 unsigned_or_blocked=2, C8 23; covariance C1 required=17 bound=0, C8
+  17. `test_true_parity_check.mjs` passes; inference, postfit and covariance contract `--check`s and
+  the inference receipt `--check` current; `test/parity/test_core070_pin.jl` 27/27.
+
+## 2026-09-27: Inference family re-measured at gllvmTMB P1 (A3), tracked receipts
+
+- Branch `claude/true-parity-p1-inference`, stacked on `claude/true-parity-p1-postfit` (PR #569) at
+  `28d880acb`, which is stacked on #567. Scope: the 63 inference rows the P1 carry scan lists as
+  DANGLING (45 wave2 inference-batch, 14 wave4 inference-remainder, 4 wave5 surface-conversion).
+  Classifications (all compatibility_adapter) and dispositions carried unchanged.
+- P1 oracle reused read-only from `/Users/z3437171/local-scratch/a3cov-oracle/build/library`
+  (`build.json`: reference_commit P1, source-tree sha256 equal to the P1 pin). The route probe reads
+  `<oracle>/build/source` via CORE070_P1_R_SOURCE_ROOT.
+- `tools/core070_inference_p1_contract.py` writes two P1 twins; `--check` passes. Adaptation: the P0
+  route probe fails 98/98 on the P1 source (P1's confint.gllvmTMB_multi calls
+  `.temporal_assert_no_iid_inference()`, defined in R/temporal.R); the P1 twin
+  `tools/core070_inference_routes_p1.R` also parses R/temporal.R and passes 98/98 with output
+  identical to the P0 probe on P0 source.
+- Runs (local Mac, one BLAS/OMP thread, JULIA_NUM_THREADS=4), wall seconds: route probe + R crosscheck
+  2 (64/64), wave2 Julia 57 (45/45 + 2 negative controls), wave4 remainder 14 (5/5 cases, 14 rows, +
+  2 negative controls). Both verifiers pass at P1. wave5 not re-run (read from #569's P1 run).
+- Case-map rows (`case-map-inference.json`): 2 numeric pass (CI-ROUTE-008/010, max diff 1.8e-6,
+  tolerance 1e-3), 45 routing/control-flow only, 14 error-class only, 2 partial (009 refusal pair,
+  011 structural bootstrap), 0 fail, 0 not measured. Checker, PARITY_REF=FS: C1 required=63 bound=2
+  free=61 (main and #561 checker); C8 61 NOT_TWINNED_NOT_SIGNED. `node tools/test_true_parity_check.mjs`
+  passes.
+
+## 2026-09-27: Postfit at P1, independent review of #569 applied
+
+- Same branch, fast-forward commits only. Merged #567's review fixes (`4176a9dce`; one conflict, this
+  file, both entries kept). Review findings 1 to 4 applied, one concern per commit; no classification,
+  `src/`, GATES.md or P0 evidence change; the wave6 nobs expectation is not edited.
+- #567's gate adopted: `tools/core070_postfit_p1_receipts.py` runs each batch verifier, tracks its
+  output as `verify.txt`, puts a `batch_verifier` block on every case receipt, and holds a row whose
+  batch verifier failed (`numeric_held_batch_verifier_failed`; no exception path). confint and logLik
+  (wave6) are held pending the maintainer's ruling on the wave6 nobs expectation.
+- Finding 1: a degenerate-comparison gate (R values one constant, or all |value| < 1e-10) marks
+  extract_communality, extract_proportions, tidy and POST-COEF-NAMED `numeric_non_discriminating`
+  with the reviewer's mutation evidence; none bind. A non-degenerate fixture is left to the maintainer.
+- Finding 2: the six postfit R runners check the library's `CORE070_SOURCE_PIN.toml` and gllvmTMB
+  version against `tools/core070_oracle_pins.toml`; the verifiers check the recorded pin and version.
+- Finding 3: `verify.txt` and `run-commit.json` tracked per batch; wave7 and wave8 Julia children
+  now write `julia_values`, so every wave7/wave8 comparison is recomputed. Postfit-policy still
+  harness-reported (proposal).
+- Finding 4: `estimand-rebind-accessor-diff-p1.json` records extract_proportions as the 14th changed
+  accessor; `--check` covers it.
+- Re-run from clean commit `681c4c3ca`, wall 257 s; all R and Julia values bit-identical to the first
+  run. Counts: 29 numeric pass, 1 numeric fail, 2 held, 4 non-discriminating, 13 partial, 1 needs
+  surface, 2 retired. Checker, PARITY_REF=FS, main and #561 (`92cf39571`): postfit C1 required=52
+  bound=29 free=21 unsigned_or_blocked=2 (#561 bound_numeric=29); C8 23 NOT_TWINNED_NOT_SIGNED.
+  Covariance C1 required=17 bound=0; C8 17. `test_true_parity_check.mjs` passes; both contract
+  `--check`s current; `test/parity/test_core070_pin.jl` 27/27.
+
+## 2026-09-27: Postfit and postfit-policy families re-measured at gllvmTMB P1 (A3), tracked receipts
+
+- Branch `claude/true-parity-p1-postfit`, stacked on `claude/true-parity-p1-covariance` (PR #567) at
+  `508d297d0` for its P1 wave6 contract and pin-switch edits. Scope: the 36 postfit rows the P1 carry
+  scan lists as DANGLING (34) or RETIRED (2), and the 16 DANGLING postfit-policy rows. Classifications
+  and dispositions carried unchanged from `required-source-case-map.json`.
+- P1 oracle reused read-only from `/Users/z3437171/local-scratch/a3cov-oracle/build/library`; its
+  `build.json` records reference_commit P1 and source-tree sha256 equal to the P1 entry in
+  `tools/core070_oracle_pins.toml`.
+- `tools/core070_postfit_p1_contract.py` writes five P1 contract twins; reference_commit to P1,
+  postfit-policy source_pins recomputed (three of four R files changed); cases, expectations and
+  tolerances carried verbatim; `--check` passes.
+- Runs (local Mac, one BLAS/OMP thread, JULIA_NUM_THREADS=4), wall seconds: surface-conversion 117
+  (20/20 pass), wave6 48 (9/10, nobs expectation case FAIL), wave7 25 (6/6), wave8 24 (7/7),
+  estimand-rebind 11 (4/4), postfit-policy 29 (15/15 + 2 negative controls), postfit-1 13 (1/1).
+  Verifiers pass on every state except wave6 (rejects the FAIL receipt).
+- Case-map rows (`case-map-postfit.json`): 35 numeric pass, 1 numeric fail, 13 partial (a verdict,
+  own-consistency, exact-integer, empty-length or default-policy case), 1 needs surface (never
+  executed), 2 retired at P1, 0 not measured. Checker, PARITY_REF=FS: C1 required=52 bound=35
+  free=15 unsigned_or_blocked=2 (main and #561 checker; #561 reports bound_numeric=35); C8 17
+  NOT_TWINNED_NOT_SIGNED. `node tools/test_true_parity_check.mjs` passes.
+
+## 2026-09-27: Covariance at P1, independent review of #567 applied
+
+- Same branch, fast-forward commits only. Review findings 1, 2, 6, 7, 10 and 13 applied, one concern
+  per commit; no classification, `src/`, GATES.md or P0 evidence change; the wave6 nobs expectation
+  in the contract is not edited.
+- Finding 1 (blocking): `tools/core070_covariance_p1_receipts.py` runs each batch verifier and refuses
+  a numeric tier when it did not pass, unless a maintainer-signed exception is supplied (none exists).
+  COV-KERNEL-FOLDED-UNIQUE and COV-KERNEL-LATENT are held (`numeric_held_batch_verifier_failed`,
+  non-binding receipts) pending the maintainer's ruling on the wave6 nobs case; their cases pass
+  (7.25e-8, 1.26e-6 vs tol 1e-4).
+- Finding 2: the P1 runner manifest's 34 P0-pinned citations are re-anchored at P1 by the generator
+  (2 identical ranges, 12 changed ranges, 2 file pins, 18 GLLVModels.jl blob pins); `--check` passes.
+- Findings 6, 13: the wave6 and grammar batches record the library's `CORE070_SOURCE_PIN.toml` and
+  their verifiers check it against `tools/core070_oracle_pins.toml`; the required runner's oracle
+  build/source receipts are pin-aware and validated before use. Run requirements documented in
+  `receipts/covariance/README.md`; `oracle/source.json` kept (regenerates byte for byte, but it is the
+  runner's tracked source receipt).
+- Finding 7: all batches re-run from clean commit `ead8f4180`; every R and Julia value bit-identical to
+  the first run; receipts record that commit. Wall: runparity 51 s, default-control mode fits 42 s,
+  wave6 47 s, grammar batch 1 s, bridge under 1 s.
+- Checker, PARITY_REF=FS: C1 required=17 bound=0 free=17 (main and #561 checkers); C8 17
+  NOT_TWINNED_NOT_SIGNED. `test/parity/test_core070_pin.jl` 27/27; `test_parity_oracle_defaults` OK;
+  `node tools/test_true_parity_check.mjs` passes.
+
+## 2026-09-27: Covariance family re-measured at gllvmTMB P1 (A3), tracked receipts
+
+- Branch `claude/true-parity-p1-covariance` from `origin/main` `cb5688f7e`. Scope: the 17 covariance
+  rows the P1 carry scan lists as PARTIAL_STALE_AT_P1 (7) or DANGLING (10). Classifications carried
+  unchanged from `required-source-case-map.json`.
+- P1 oracle built locally with `GLLVM_PARITY_PIN=P1 tools/core070_build_oracle.py prepare|build|verify`
+  (source from `git archive` of the gllvmTMB clone, read-only): SOURCE/BUILD/VERIFY PASS, 243.7 s.
+- `tools/core070_covariance_p1_contract.py` regenerates three P1 contracts under
+  `docs/dev-log/core070/true-parity-latest/` (runner manifest header, R-only grammar batch source pins,
+  wave6 reference_commit); cases, expectations and tolerances carried verbatim; `--check` passes.
+- Runs (local Mac, one BLAS/OMP thread, JULIA_NUM_THREADS=4): runparity 18 covariance cases 450/450
+  assertions, 55.8 s; R-only grammar batch 9/9 + 2 negative controls, verifier + 8 mutations pass;
+  public R bridge boundary 9/9 unchanged; wave6 batch 9/10 point cases pass, batch FAIL on the
+  unrelated postfit nobs own-receipt-defect case (Julia nobs now returns p*n = 400, as R does).
+- Case-map rows (`case-map-covariance.json`): 2 numeric pass, 0 numeric fail, 7 partial numeric (bridge
+  case is an R boundary), 8 R-only needing a Julia surface, 0 not measured. Checker, PARITY_REF=FS:
+  C1 required=17 bound=2 free=15 (main and #561 checker); C8 15 NOT_TWINNED_NOT_SIGNED.
+  `node tools/test_true_parity_check.mjs` passes; `test/parity/test_core070_pin.jl` 16/16.
+## 2026-09-27: iSDM unit-level unique variance, R's default `latent(..., unique = TRUE)` (ISDM-PSI)
+
+- Branch `claude/isdm-psi`, stacked on `claude/isdm-build` (draft PR #546); maintainer decision D-301.
+  `fit_isdm_gllvm` fits gllvmTMB's `theta_diag_B` through augmented loadings
+  `[Λ diag(exp(theta_diag_B))]`; packed order `[b_fix; theta_rr_B; theta_diag_B]` measured from
+  `names(fit$opt$par)` at P1. Edits confined to `src/families/isdm_*.jl`; `unique = FALSE` fits are
+  bit-identical to the #546 head `983c9979b` (all four paired cases, `isequal` on every output).
+- New fixture `isdm_psi4.csv` (4 traits, 80 cells, 3 sources), R default fit at P1: logLik
+  -1197.2250235201839 (door, code 0, max|gradient| 6.2e-4), polished -1197.2250234858263 (code 0);
+  Julia -1197.225023485898, converged. Cross-objective: Julia at R's optimum -1197.2250235197444
+  (gap 4.4e-10); R at Julia's optimum -1197.225023485887 (gap 1.1e-11). Against R's polished optimum:
+  b_fix rel 1.3e-6, Λ Λ' 2.3e-7, exp(theta_diag_B) 4.2e-7 (R sd_B 0.660, 0.335, 0.692, 0.368).
+  Predict link within 3.5e-5 of R's door optimum, including rows on an unseen unit (fixed-only).
+- Two-trait default fits (`predict`, `ms3` fixtures): theta_diag_B runs toward the boundary in both
+  engines (R sd_B 4e-5/2e-5 and 6e-6/4e-5, Julia O(1e-7)); Julia's logLik 1.4e-8 and 2.3e-8 above
+  R's, cross-objective within 1.3e-11 both ways; theta_diag_B documented, not asserted.
+- Tests on Julia 1.10.12 and 1.13.0: `test/test_isdm.jl` 183/183; `test/parity/isdm_cases.jl`
+  admission 41/41, paired 219/219; `test/parity/isdm_unique_cases.jl` 68/68.
+- Finding: the kernel's mode search (copy of the `_mixed_laplace_mode` rule) can accept a mode with a
+  residual step near sqrt(eps)(1 + |z|); the log-determinant is first-order in it, so a cell value can
+  move by ~2.4e-8 between neighbouring parameters (measured, psi4 start). Below every receipt; the
+  finite-difference gradient check polishes modes. Not changed here (it would alter `unique = FALSE`).
 
 ## 2026-09-27: Integrated SDM (iSDM) twin of gllvmTMB's public door at P1 (arc A1b)
 
