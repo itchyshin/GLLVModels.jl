@@ -2,6 +2,25 @@
 
 ## Development
 
+- **Tweedie and Student-t inner mode search reach the mode (#623).** Both families
+  used the undamped shared `_laplace_mode`. Tweedie with two latent variables could
+  diverge: one fixture site returned z = [-5.2e10, 8.4e8] where the mode is
+  [-1.975, 0.389], and the site's Laplace value was off by 1.35e21. Student-t on the
+  default shared-σ route overshot because its Fisher weight is (ν+3)/ν below the
+  observed curvature, cycling around the mode when ν < 3 and crawling along
+  non-concave ridges. Tweedie now backtracks on the μ-dependent kernel of its
+  log-density (the series normaliser is constant in μ, so no series is evaluated in
+  the line search; the 2026-08-27 opt-in was reverted for that cost). Student-t
+  backtracks on small steps too (a change at rounding level is always accepted) and
+  doubles an accepted full step while that gains more than rounding level.
+  Both take mode-search steps with the weight max(observed, Fisher), as the Beta
+  grouped kernel does (#503). Three hooks in `laplace.jl`
+  (`_laplace_mode_merit_term`, `_laplace_mode_robust`, `_laplace_mode_step_weight`)
+  default to the previous behaviour, so every other family is unchanged. On the
+  audit datasets, bad sites fell from up to 41 per dataset to 0. Known remaining
+  limitation: where the Student-t joint has two peaks, the search reaches a local
+  one (2 of 120 fixture sites); tracked separately. Test:
+  `test/test_mode_search_623.jl`.
 - **Package renamed to GLLVModels.jl.** Install and load it as
   `GLLVModels`; modelling functions such as `gllvm`, `fit_gllvm`, and `bf`
   retain their existing API. `GLLVModels.GLLVM` is a temporary source-level

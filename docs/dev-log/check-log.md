@@ -1,3 +1,22 @@
+## 2026-09-29: Tweedie and shared Student-t mode search (#623)
+
+- Branch `claude/mode-search-623` from `origin/main` 0b7e7bbcf. `src/families/laplace.jl` gains
+  three hooks (`_laplace_mode_merit_term`, `_laplace_mode_robust`, `_laplace_mode_step_weight`)
+  whose defaults leave every other family bit-identical; `tweedie.jl`, `studentt.jl` and the
+  grouped merit in `grouped_dispersion.jl` use them.
+- Audit datasets (13): bad sites (|log-joint gradient| >= 1e-4) up to 41 per dataset before, 0
+  after on all 13 (worst 2.3e-5).
+- New `test/test_mode_search_623.jl` (fixture `test/fixtures/mode_search_623.toml`): origin/main
+  113 pass, 30 fail, 4 error; branch 36 pass + 1 broken on Julia 1.10.12 and 1.13.0. The broken
+  item is two-peaked Student-t sites (2 of 120) reaching a lower local maximum, tracked in #626.
+- First Student-t version regressed `test_studentt.jl` "marginal gradient: FD <= 1e-6" (8e-9 on
+  main, 5.1e-5); fixed by accepting rounding-level changes on small steps and extrapolating only
+  on above-rounding gains. Now 5.5e-9.
+- Julia 1.10.12, per file: 41 Tweedie/Student-t/Laplace files pass (test_studentt_input_validation
+  fails identically on main when run standalone: 27 UndefVarError). Runtime branch vs main:
+  test_tweedie_engine_health 532 s vs 531 s, test_tweedie_grouped_engine_health 257 s vs 253 s,
+  test_tweedie 61 s vs 59 s (the 2026-08-27 opt-in had taken the first to 48 min).
+
 ## 2026-09-27: phylo_latent twin at gllvmTMB P1 (A14, A15)
 
 - Branch `claude/phylo-latent-build` from `origin/main` `97e11be04`. New named entry

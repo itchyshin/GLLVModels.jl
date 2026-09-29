@@ -182,7 +182,8 @@ function _laplace_mode(family, y::AbstractVector, n::AbstractVector,
 
         step_taken = 1.0
         robust = _laplace_mode_robust(family)
-        if !robust && norm(Δ) <= 1e-3 * (1 + norm(z))
+        small = norm(Δ) <= 1e-3 * (1 + norm(z))
+        if !robust && small
             z = z .+ Δ
         elseif !_laplace_mode_should_backtrack(family)
             z = z .+ Δ
@@ -192,20 +193,31 @@ function _laplace_mode(family, y::AbstractVector, n::AbstractVector,
             if isfinite(q0)
                 accepted = false
                 step = 1.0
+                # Robust families check small steps too, but a change at rounding
+                # level must not reject the final polishing steps (the #612
+                # lesson): rejecting them left the mode short and moved the
+                # Student-t marginal's FD-vs-AD gradient gap from 8e-9 to 5e-5.
+                slack = robust && small ? 1e-10 * (1 + abs(q0)) : zero(q0)
                 @inbounds for _half in 1:30
                     ztrial = z .+ step .* Δ
                     q1 = _laplace_mode_logpost(family, y, n, Λ, β, link, ztrial;
                                                mask = mask, offset = offset)
-                    if isfinite(q1) && q1 >= q0
+                    if isfinite(q1) && q1 >= q0 - slack
                         z = ztrial
                         step_taken = step
                         accepted = true
+                        # A doubling is kept only when it gains more than rounding
+                        # level. At convergence doubling a Newton step gains nothing,
+                        # and keeping it on rounding noise would hand ForwardDiff
+                        # z + 2Δ instead of z + Δ (the marginal's AD-vs-FD gap rose
+                        # from 8e-9 to 6.6e-7). Along a non-concave ridge the gain is
+                        # real, and small steps must extrapolate there too.
                         if robust && step == 1.0
                             @inbounds for _dbl in 1:10
                                 zx = z .+ step_taken .* Δ   # z + 2^k Δ from the start
                                 qx = _laplace_mode_logpost(family, y, n, Λ, β, link, zx;
                                                            mask = mask, offset = offset)
-                                (isfinite(qx) && qx > q1) || break
+                                (isfinite(qx) && qx > q1 + 1e-10 * (1 + abs(q1))) || break
                                 z = zx; q1 = qx; step_taken *= 2
                             end
                         end
