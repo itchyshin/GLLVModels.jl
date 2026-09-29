@@ -17,7 +17,10 @@ Eligible independent Gaussian grouping models also have an explicit
 inspect its status and limitations in the grouping guide before using endpoints.
 The explicit Julia multivariate precision route is documented in the
 [development bridge guide](docs/src/precision-bridge-development.md);
-public R `phylo_rr` admission is still closed.
+public R `phylo_rr` admission is still closed. The named Julia twin of R's bare
+Gaussian `phylo_latent(species, d = K)` is `fit_phylo_latent_gllvm(Y, species;
+d, tree)` (species matched by label; paired R and Julia receipts at gllvmTMB
+P1; promotion pending).
 
 [![Build Status](https://github.com/itchyshin/GLLVModels.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/itchyshin/GLLVModels.jl/actions/workflows/CI.yml)
 [![Coverage](https://codecov.io/gh/itchyshin/GLLVModels.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/itchyshin/GLLVModels.jl)

@@ -1,0 +1,60 @@
+{
+  "schema_version": "phylo-latent-p1-r-receipt-1",
+  "case": "struct_phy_dense_rr",
+  "status": "recorded",
+  "source_pin": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "package_version": "0.7.1",
+  "package_path": "/private/tmp/claude-503/-Users-z3437171-Dropbox-Github-Local-GLLVM-jl/5b26a91c-0091-4434-b99f-c6632beb6982/scratchpad/phylo-latent/rlib/gllvmTMB",
+  "dll_path": "/private/tmp/claude-503/-Users-z3437171-Dropbox-Github-Local-GLLVM-jl/5b26a91c-0091-4434-b99f-c6632beb6982/scratchpad/phylo-latent/rlib/gllvmTMB/libs/gllvmTMB.so",
+  "dll_sha256": "cba0f54d5492f0c6d0c5474c19281e3b58d5e2b0709e536684619558aaf55b8d",
+  "data_file_sha256": "9a4c2e1f87a3fbb519400fff8a99fdfb6d66b249d473b0e25833b93b78e7e13c",
+  "data_sha256": "6e1d3d30ebd3a1c40d0513cd09b8a854ac7fe3afffaf6bb2c7f2b037284a5995",
+  "julia_receipt_sha256": "700f14677d5498d832d900ea7939d8ed023c90948f1603891029da18401cd288",
+  "route": "vcv",
+  "formula": "value ~ 0 + trait + phylo_latent(species, d = K, vcv = C)",
+  "call_arguments": "trait = 'trait', unit = 'species', cluster = 'species', family = gaussian(), REML = FALSE, nlminb rel.tol = 1e-12",
+  "parameter_names": ["b_fix", "b_fix", "b_fix", "log_sigma_eps", "theta_rr_phy", "theta_rr_phy", "theta_rr_phy"],
+  "theta_hat": [0.40802558319258742, -0.24723719502703423, 0.28995216730638712, -1.5434232548314859, 0.84109502434019212, 0.45279642017159122, -0.54853963319951093],
+  "objective": 8.6819201189923803,
+  "optimizer_objective": 8.6819201189923803,
+  "loglik": -8.6819201189923803,
+  "gradient": [-3.5203770125594524e-07, 9.8835794356776973e-07, 8.2217288358592973e-08, -6.3201271759031665e-07, 1.0008300162751125e-06, -1.1859457193049529e-07, 1.3777752853006332e-06],
+  "gradient_max_abs": 1.3777752853006332e-06,
+  "convergence": 0,
+  "message": "relative convergence (4)",
+  "iterations": 78,
+  "evaluations": 93,
+  "Sigma_phy": [
+    [0.70744083996982843, 0.3808448160453764, -0.46137395613750271],
+    [0.3808448160453764, 0.20502459812020818, -0.24837678223497628],
+    [-0.46137395613750271, -0.24837678223497628, 0.30089572919065399]
+  ],
+  "Lambda_phy": [
+    0.84109502434019212,
+    0.45279642017159122,
+    -0.54853963319951093
+  ],
+  "log_det_A_phy_rr": -2.7568440248307891,
+  "n_aug_phy": 8,
+  "species_aug_id_zero_based": [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7],
+  "Ainv_triplets": {
+    "i": [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7, 8],
+    "j": [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 8],
+    "x": [1.3684210296952917, -0.63157893030470968, -0.10526315645429364, -0.10526315645429364, -0.63157893030470968, 1.3684210296952914, -0.10526315645429367, -0.10526315645429367, -0.10526315645429364, -0.10526315645429367, 2.3157893914681473, -1.6842104485318592, -0.10526315645429364, -0.10526315645429367, -1.6842104485318592, 2.3157893914681473, 1.716894938130566, -0.94977165742499248, -0.16438355921185968, -0.16438355921185965, -0.94977165742499248, 1.716894938130566, -0.16438355921185957, -0.16438355921185971, -0.16438355921185968, -0.16438355921185957, 2.3561643004841466, -1.6438355395158601, -0.16438355921185965, -0.16438355921185971, -1.6438355395158601, 2.356164300484147]
+  },
+  "Ainv_node_labels": ["s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8"],
+  "hessian": {
+    "pd_hessian": true,
+    "condition_number": 194.97397895900457
+  },
+  "cross": {
+    "julia_theta_r_order": [0.40802563200109665, -0.24723714835882973, 0.28995210694420281, -1.5434232413949307, 0.84109493539154956, 0.45279635569128696, -0.54853958827526927],
+    "r_objective_at_julia_theta": 8.681920118992732,
+    "r_gradient_at_julia_theta": [-6.1989046426602696e-06, 4.3152332963403347e-06, -6.6364925363580255e-06, 4.3976690527114273e-07, -6.9221091594894013e-07, -9.3238440908271082e-06, -5.850295912188066e-06],
+    "r_gradient_max_abs_at_julia_theta": 9.3238440908271082e-06
+  },
+  "elapsed_seconds": 0.53500000000000014,
+  "warnings": [],
+  "session_info": "R version 4.6.0 (2026-04-24)\nPlatform: aarch64-apple-darwin23\nRunning under: macOS Tahoe 26.7\n\nMatrix products: default\nBLAS:   /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libBLAS.dylib \nLAPACK: /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.1\n\nlocale:\n[1] en_AU/en_AU/en_AU/C/en_AU/en_AU\n\ntime zone: America/Edmonton\ntzcode source: internal\n\nattached base packages:\n[1] stats     graphics  grDevices utils     datasets  methods   base     \n\nother attached packages:\n[1] gllvmTMB_0.7.1\n\nloaded via a namespace (and not attached):\n [1] compiler_4.6.0   Matrix_1.7-5     assertthat_0.2.1 generics_0.1.4  \n [5] cli_3.6.6        tools_4.6.0      parallel_4.6.0   TMB_1.9.21      \n [9] Rcpp_1.1.1-1.1   nlme_3.1-169     ape_5.8-1        grid_4.6.0      \n[13] digest_0.6.39    jsonlite_2.0.0   rlang_1.2.0      lattice_0.22-9  ",
+  "qualified": false
+}

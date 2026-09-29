@@ -1,0 +1,60 @@
+{
+  "schema_version": "phylo-latent-p1-r-receipt-1",
+  "case": "struct_phy_tree_rr",
+  "status": "recorded",
+  "source_pin": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "package_version": "0.7.1",
+  "package_path": "/private/tmp/claude-503/-Users-z3437171-Dropbox-Github-Local-GLLVM-jl/5b26a91c-0091-4434-b99f-c6632beb6982/scratchpad/phylo-latent/rlib/gllvmTMB",
+  "dll_path": "/private/tmp/claude-503/-Users-z3437171-Dropbox-Github-Local-GLLVM-jl/5b26a91c-0091-4434-b99f-c6632beb6982/scratchpad/phylo-latent/rlib/gllvmTMB/libs/gllvmTMB.so",
+  "dll_sha256": "cba0f54d5492f0c6d0c5474c19281e3b58d5e2b0709e536684619558aaf55b8d",
+  "data_file_sha256": "9a4c2e1f87a3fbb519400fff8a99fdfb6d66b249d473b0e25833b93b78e7e13c",
+  "data_sha256": "6e1d3d30ebd3a1c40d0513cd09b8a854ac7fe3afffaf6bb2c7f2b037284a5995",
+  "julia_receipt_sha256": "7da419e71edc2268395e84a9687ded92fa466902691374d68e3c53b0f430becd",
+  "route": "tree",
+  "formula": "value ~ 0 + trait + phylo_latent(species, d = K, tree = tree)",
+  "call_arguments": "trait = 'trait', unit = 'species', cluster = 'species', family = gaussian(), REML = FALSE, nlminb rel.tol = 1e-12",
+  "parameter_names": ["b_fix", "b_fix", "b_fix", "log_sigma_eps", "theta_rr_phy", "theta_rr_phy", "theta_rr_phy"],
+  "theta_hat": [0.40802557992426103, -0.24723719748728404, 0.28995216916791999, -1.5434232542063409, 0.84109502727942131, 0.45279642208064746, -0.54853963541033846],
+  "objective": 8.6819200854295282,
+  "optimizer_objective": 8.6819200854295282,
+  "loglik": -8.6819200854295282,
+  "gradient": [-3.2769406876898604e-07, 7.6908673183575419e-07, -4.0226220248568068e-08, -5.7933168037150764e-07, 8.6845342486871377e-07, -3.6080298560672031e-08, 1.2873890828390881e-06],
+  "gradient_max_abs": 1.2873890828390881e-06,
+  "convergence": 0,
+  "message": "relative convergence (4)",
+  "iterations": 78,
+  "evaluations": 93,
+  "Sigma_phy": [
+    [0.70744084491417047, 0.38084481898194655, -0.46137395960930244],
+    [0.38084481898194655, 0.20502459984903584, -0.24837678428322407],
+    [-0.46137395960930244, -0.24837678428322407, 0.30089573161610705]
+  ],
+  "Lambda_phy": [
+    0.84109502727942131,
+    0.45279642208064746,
+    -0.54853963541033846
+  ],
+  "log_det_A_phy_rr": -15.706819081565975,
+  "n_aug_phy": 14,
+  "species_aug_id_zero_based": [6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 9, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 12, 13, 13, 13, 13, 13, 13],
+  "Ainv_triplets": {
+    "i": [1, 2, 3, 1, 2, 7, 8, 1, 3, 9, 10, 4, 5, 6, 4, 5, 11, 12, 4, 6, 13, 14, 2, 7, 2, 8, 3, 9, 3, 10, 5, 11, 5, 12, 6, 13, 6, 14],
+    "j": [1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14],
+    "x": [10, -4, -2, -4, 8, -2, -2, -2, 10, -4, -4, 9.3333333333333321, -4, -2.6666666666666665, -4, 9.3333333333333321, -2.6666666666666665, -2.6666666666666665, -2.6666666666666665, 10.666666666666666, -4, -4, -2, 2, -2, 2, -4, 4, -4, 4, -2.6666666666666665, 2.6666666666666665, -2.6666666666666665, 2.6666666666666665, -4, 4, -4, 4]
+  },
+  "Ainv_node_labels": ["node10", "node11", "node12", "node13", "node14", "node15", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8"],
+  "hessian": {
+    "pd_hessian": true,
+    "condition_number": 194.97397816420033
+  },
+  "cross": {
+    "julia_theta_r_order": [0.40802563160412753, -0.24723714856097773, 0.28995210718498304, -1.5434232413876448, 0.84109493989929141, 0.45279635811076618, -0.54853959121763862],
+    "r_objective_at_julia_theta": 8.6819200854298728,
+    "r_gradient_at_julia_theta": [-6.2019253354993377e-06, 4.3173648519582433e-06, -6.6409745278396977e-06, 4.4271249172668466e-07, -6.9248085572917895e-07, -9.3274356947520517e-06, -5.8544247843795245e-06],
+    "r_gradient_max_abs_at_julia_theta": 9.3274356947520517e-06
+  },
+  "elapsed_seconds": 0.58499999999999996,
+  "warnings": [],
+  "session_info": "R version 4.6.0 (2026-04-24)\nPlatform: aarch64-apple-darwin23\nRunning under: macOS Tahoe 26.7\n\nMatrix products: default\nBLAS:   /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libBLAS.dylib \nLAPACK: /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.1\n\nlocale:\n[1] en_AU/en_AU/en_AU/C/en_AU/en_AU\n\ntime zone: America/Edmonton\ntzcode source: internal\n\nattached base packages:\n[1] stats     graphics  grDevices utils     datasets  methods   base     \n\nother attached packages:\n[1] gllvmTMB_0.7.1\n\nloaded via a namespace (and not attached):\n [1] compiler_4.6.0   Matrix_1.7-5     assertthat_0.2.1 generics_0.1.4  \n [5] cli_3.6.6        tools_4.6.0      parallel_4.6.0   TMB_1.9.21      \n [9] Rcpp_1.1.1-1.1   nlme_3.1-169     ape_5.8-1        grid_4.6.0      \n[13] digest_0.6.39    jsonlite_2.0.0   rlang_1.2.0      lattice_0.22-9  ",
+  "qualified": false
+}
