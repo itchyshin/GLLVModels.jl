@@ -8,3 +8,5 @@ OWED: rerun NB tasks 388,389 (`sbatch --array=388,389 --exclude=c63 ...run_nb_re
   lease (codex:cran-071-20260927) is released.
 OPEN GATES: merges (train lane / Shinichi); DRAC submissions (Shinichi).
 RESUME: read this file; `gh pr view 606 --json state`.
+
+DECISION 2026-09-29 (Shinichi): frozen-R smoke truncated-NB2 cell (test_truncated_nbinom2_parity.jl:80) records R r_gradient_max instead of gating, same as NB2 (#608). Relayed to the truncated-NB2 lane (owner of the file).
