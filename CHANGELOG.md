@@ -463,6 +463,12 @@ All notable changes to GLLVModels.jl are documented here.
   and from the returned point, keeping only a better run) now also fires when a
   group's precision is more than 100 times the median, and d05 again reaches 272.61.
   Part of #503.
+- **`getLV` on grouped Beta fits now returns the per-site mode.** `getLV` (and so
+  the R bridge `scores` and `ordination`) used the generic mode search, which stops
+  off the mode at the same sites the Beta likelihood used to get wrong (off by up to
+  about 4e-4 on the measured panel). It now uses the Beta likelihood's own mode search,
+  so the scores are the modes the fit's objective was evaluated at. Log-likelihoods
+  and estimates do not change.
 - **NB2 grouped kernel (`fit_nb_gllvm_grouped`, the default route for
   `fit_gllvm(...; family = NegativeBinomial())`): the per-site Laplace mode search
   could 2-cycle and report `converged = true` at a poor optimum.** Where a count
