@@ -27,6 +27,26 @@
   `test_core070_link_boundaries.jl` 21/21, `test_second_order_multinomial_ci.jl` 28/28,
   `test_confint_bootstrap_verdict_rest.jl` 61/61. `test/parity/test_multinomial_parity.jl` not run
   (needs R and RCall).
+## 2026-09-29: GP-1 mode search backtracks (#611)
+
+- Branch `claude/gp1-joint-polish-611` from `origin/main` 0ce4a35aa. One line in
+  `src/families/gp1.jl`: `_laplace_mode_should_backtrack(::GeneralizedPoisson1) = true`,
+  as NB1 and censored Poisson already do. `_laplace_mode` itself is unchanged.
+- Diagnosis: at the default optimum of fixture seed 101, a step of 1e-6 in one β
+  raised the nll by 36.64. The jump came from one site (y = [0, 38, 79, 1]), where the
+  undamped search stopped at z = 0.705 with log-joint gradient -42.8; the brute-force
+  mode is -1.624. Six random restarts then gave spreads of 0.81 (seed 101) and 20.09
+  (seed 104), all with `converged = true`; tightening `g_tol` changed nothing.
+- After: every start reaches -1249.34 (seed 101) and -1143.77 (seed 104), spread below
+  1e-3. New `test/test_gp1_mode_backtrack.jl`: 7 of 11 fail on the base, 11/11 pass on
+  Julia 1.10.12 and 1.13.0. `test_gp1_verdict.jl` healthy records re-recorded
+  (`gp1_611_julia_*`; five of six optima move up by 0.23 to 34.9), 291/291 on both.
+- Also run, Julia 1.10.12: test_gp1_laplace 101/101, test_confint_bootstrap_verdict_misc
+  57/57, test_curvature_census 66/66, test_hessian_kwarg 32/32,
+  test_laplace_curvature_contract 134/134, test_known_sentinel_defects 25 pass + 1 broken
+  (pre-existing), test_laplace_dual_safety 37/37.
+  Julia 1.13.0: test_gp1_laplace 101/101, test_confint_bootstrap_verdict_misc 57/57,
+  test_hessian_kwarg 32/32, test_known_sentinel_defects 25 pass + 1 broken.
 
 ## 2026-09-27: getLV on grouped Beta fits returns the per-site mode
 
