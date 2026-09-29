@@ -184,6 +184,15 @@ All notable changes to GLLVModels.jl are documented here.
   `gllvm-parity-tag: P1`).
 
 ### Fixed
+- **Zero-truncated NB2 fits reported `converged = true` at a degenerate dispersion.**
+  With one count of 10^13 in otherwise ordinary data, `fit_truncated_nbinom2_gllvm`
+  stopped at r = 3.1e-46 and `fit_truncated_nbinom2_gllvm_pertrait` at r_1 = 1.7e-52,
+  both flagged converged. Both fitters now report `converged = false` with a warning
+  when any `r` is below 1e-6. Above 1e6 (the Poisson limit) they only warn that `r` is
+  not identified: such fits are usually sound (trait 5 of the seed-58 parity data ends at
+  r = 9.5e9 with the log-likelihood matching gllvmTMB), so this differs from the NB2
+  grouped fitters' `_dispersion_group_boundary`, which flags both ends.
+  `test/test_truncnb2_dispersion_boundary.jl`.
 - **Student-t fits with estimated ν no longer stop at the Gaussian limit when an interior
   optimum is higher.** When an estimated ν ran to the ν → ∞ boundary, `fit_studentt_gllvm`
   kept that fit, although the per-trait ν profile can have a higher interior peak that
