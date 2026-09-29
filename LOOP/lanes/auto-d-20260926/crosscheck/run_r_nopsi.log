@@ -1,0 +1,58 @@
+gllvmTMB is experimental. Use a documented tutorial, inspect fit diagnostics, and read Current limitations and boundaries before treating an estimate or interval as a scientific result. Convergence alone is not enough.
+ℹ `Lambda_B` is identified only up to rotation (d_B = 2).
+• Use `rotate = "varimax"` for a quick rotation after fitting, or
+• see `suggest_lambda_constraint()` for a default `lambda_constraint` matrix to
+  pass to a refit.
+• `extract_Sigma_B()` is rotation-invariant and does not need this.
+ℹ `Lambda_B` is identified only up to rotation (d_B = 3).
+• Use `rotate = "varimax"` for a quick rotation after fitting, or
+• see `suggest_lambda_constraint()` for a default `lambda_constraint` matrix to
+  pass to a refit.
+• `extract_Sigma_B()` is rotation-invariant and does not need this.
+ℹ `Lambda_B` is identified only up to rotation (d_B = 4).
+• Use `rotate = "varimax"` for a quick rotation after fitting, or
+• see `suggest_lambda_constraint()` for a default `lambda_constraint` matrix to
+  pass to a refit.
+• `extract_Sigma_B()` is rotation-invariant and does not need this.
+ℹ `Lambda_B` is identified only up to rotation (d_B = 2).
+• Use `rotate = "varimax"` for a quick rotation after fitting, or
+• see `suggest_lambda_constraint()` for a default `lambda_constraint` matrix to
+  pass to a refit.
+• `extract_Sigma_B()` is rotation-invariant and does not need this.
+ℹ `Lambda_B` is identified only up to rotation (d_B = 3).
+• Use `rotate = "varimax"` for a quick rotation after fitting, or
+• see `suggest_lambda_constraint()` for a default `lambda_constraint` matrix to
+  pass to a refit.
+• `extract_Sigma_B()` is rotation-invariant and does not need this.
+ℹ `Lambda_B` is identified only up to rotation (d_B = 4).
+• Use `rotate = "varimax"` for a quick rotation after fitting, or
+• see `suggest_lambda_constraint()` for a default `lambda_constraint` matrix to
+  pass to a refit.
+• `extract_Sigma_B()` is rotation-invariant and does not need this.
+   d npar     logLik       aic       bic      aicc converged pd_hessian seconds
+1  1   16 -6663.8658 13359.732 13434.685 13360.426      TRUE         NA   3.786
+2  2   23 -2135.7286  4317.457  4425.203  4318.880      TRUE         NA  11.673
+3  3   29 -2126.7169  4311.434  4447.288  4313.694      TRUE         NA   9.495
+4  4   34 -2125.8668  4319.734  4479.010  4322.845      TRUE         NA  14.591
+5  1   16  -650.7772  1333.554  1411.425  1334.131      TRUE         NA   0.826
+6  2   23  -648.1402  1342.280  1454.220  1343.460      TRUE         NA   1.292
+7  3   29  -646.8119  1351.624  1492.765  1353.495      TRUE         NA   1.691
+8  4   34  -646.6574  1361.315  1526.791  1363.888      TRUE         NA   2.805
+9  1   17 -1122.2624  2278.525  2354.370  2279.509      TRUE         NA   0.205
+10 2   24 -1048.3898  2144.780  2251.855  2146.731      TRUE         NA   0.420
+11 3   30 -1045.7752  2151.550  2285.394  2154.605      TRUE         NA   0.535
+12 4   35 -1043.1621  2156.324  2312.476  2160.496      TRUE         NA   0.649
+   error status message  dataset selected_d
+1   <NA>     ok          poisson          2
+2   <NA>     ok          poisson          2
+3   <NA>     ok          poisson          2
+4   <NA>     ok          poisson          2
+5   <NA>     ok         binomial          1
+6   <NA>     ok         binomial          1
+7   <NA>     ok         binomial          1
+8   <NA>     ok         binomial          1
+9   <NA>     ok         gaussian          2
+10  <NA>     ok         gaussian          2
+11  <NA>     ok         gaussian          2
+12  <NA>     ok         gaussian          2
+DONE

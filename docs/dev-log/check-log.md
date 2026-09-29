@@ -20,6 +20,36 @@
   inference lines unchanged. `test_true_parity_check.mjs` passes; isdm, family, data, covariance,
   postfit, inference contract `--check`s and isdm, family, data, inference receipt `--check`s current;
   `test/parity/test_core070_pin.jl` 27/27.
+## 2026-09-27: aghq rows re-measured at gllvmTMB P1 (A3), tracked receipts
+
+- Branch `claude/true-parity-p1-aghq`, stacked on `claude/true-parity-p1-family` (PR #584 at `0fb2b9411`),
+  on #579, #571, #569 and #567. Scope: the 21 required aghq rows (19 required_core plus the
+  compatibility_adapter rows AGHQ-CTRL-NULL and AGHQ-CTRL-TRUE) the P1 carry scan lists as DANGLING (7) or
+  PARTIAL_STALE_AT_P1 (14). Rejected AGHQ-INVALID-* and intentionally_excluded rows out of scope.
+  Classifications and dispositions carried unchanged.
+- No aghq row is numeric. The 7 AGHQ-CTRL rows are a paired control on categorical labels (R's
+  `.gllvmTMB_normalize_aghq` against `GLLVModels._aghq_request`, no fit). The 14 AUTO-K, DEFAULT-OFF and
+  POLICY rows are R-only: public `gllvmTMB()` fits read for `fit$aghq`, with no Julia call in the case. Both
+  kinds cite `non_binding_receipts` under their own tiers, so none binds under the numeric rule.
+- Harness: P1 contracts from `tools/core070_aghq_p1_contract.py` (`--check` current); the control runner
+  and verifier and the policy runner gain the strict pin switch, the source-pin marker check and
+  destination-after-checks; the policy runner at P1 loads the installed P1 oracle instead of
+  `devtools::load_all`; the control R oracle records each call's return value. No case, expectation or
+  tolerance edited.
+- Runs from clean commit `fd92b6551` (local Mac, one BLAS/OMP thread, JULIA_NUM_THREADS=4): control batch
+  4 s, policy bind 10 s. Estimate beforehand under 15 min.
+- Counts: 7 paired_control_categorical_pass, 14 r_only_policy_pass, 0 numeric. Both batch verifiers pass.
+  Health notes on passing rows: AUTO-K-ORDINAL optimizer convergence code 1; AGHQ adaptation stalled for
+  AUTO-K-BINOMIAL, AUTO-K-ORDINAL and POLICY-EXPLICIT (the runner's assertions do not check either). P1
+  objectives agree with the P0 bind's to at most 2.4e-6, R against R (the P0 bind ran on a twin branch that
+  is neither pin).
+- Checker, PARITY_REF=FS, main and #561 (`92cf39571`): aghq C1 required=21 bound=0 free=21 (#561
+  bound_numeric=0, registration_only=none), C8 21 NOT_TWINNED_NOT_SIGNED; family, data, fit-input,
+  covariance, postfit, inference lines unchanged. On the unchanged P0 case map #561 reads the 14 policy rows
+  REGISTRATION_ONLY_NOT_TWINNED and the 7 control rows NOT_TWINNED_NOT_SIGNED. `test_true_parity_check.mjs`
+  passes; aghq, family, data, covariance, postfit, inference contract `--check`s and aghq, family, data,
+  inference receipt `--check`s current; `test/parity/test_core070_pin.jl` 27/27; aghq verifier self-test at
+  P0 and P1.
 
 ## 2026-09-27: Family rows re-measured at gllvmTMB P1 (A3), tracked receipts
 
