@@ -20,6 +20,9 @@ this API is not a full parity or calibrated-inference claim.
 """
 function fit_binomial_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control=(;),kwargs...)
     request=_aghq_request(aghq);c=_aghq_controls(aghq_control)
+    if request!==:off && isfinite(get(kwargs,:loading_ridge,Inf))
+        throw(ArgumentError("fit_binomial_gllvm: loading_ridge is not supported together with aghq (aghq != false)"))
+    end
     request===:off && return _fit_binomial_gllvm_laplace(Y;K=K,kwargs...)
     c=_aghq_controls(merge(c,(mode_maxiter=get(kwargs,:newton_maxiter,c.mode_maxiter),mode_tol=get(kwargs,:newton_tol,c.mode_tol))))
     base_controls=deepcopy((;kwargs...))
@@ -89,7 +92,7 @@ function fit_binomial_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control
         selected.converged,selected.passes,nothing,copy(t),:observed,nothing,info)
 end
 _binomial_with_integration(f::BinomialFit,i)=BinomialFit(f.β,f.Λ,f.link,f.loglik,f.converged,
-    f.iterations,f.alpha_lv,f.theta_packed,f.hessian,f.saturation,i)
+    f.iterations,f.alpha_lv,f.theta_packed,f.hessian,f.saturation,i,f.loading_ridge)
 _is_binomial_aghq(f)=f isa BinomialFit && f.integration!==nothing && f.integration.actual===:aghq
 
 
