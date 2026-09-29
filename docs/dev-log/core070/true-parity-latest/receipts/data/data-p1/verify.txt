@@ -1,0 +1,6 @@
+$ GLLVM_PARITY_PIN=P1 tools/core070_verify_data_batch.py --state {state} --julia-receipt {state}/data-batch-julia-introspection.json --self-test
+# exit code 0
+CORE070_DATA_BATCH_NEGATIVES_PASS 15
+CORE070_DATA_BATCH_JULIA_NEGATIVES_PASS 5
+CORE070_DATA_BATCH_SOURCE_PIN_NEGATIVES_PASS 5
+CORE070_DATA_BATCH_VERIFIED 30 julia_checked True

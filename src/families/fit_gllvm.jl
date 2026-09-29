@@ -7,7 +7,9 @@
 Fit a GLLVM, dispatching on the response `family` — a Distributions.jl
 distribution used as a marker (the GLM.jl convention):
 
-- `Normal()`   → [`fit_gaussian_gllvm`](@ref) — closed-form Gaussian marginal
+- `Normal()`   → [`fit_gaussian_gllvm`](@ref) — closed-form Gaussian marginal. Without `X`,
+  one intercept per trait is estimated (`pars.β`); `fit_gaussian_gllvm` itself treats
+  `X = nothing` as a zero mean. An explicit `X` defines the complete mean.
 - `Binomial()` → [`fit_binomial_gllvm`](@ref) — Laplace marginal (binary / binomial)
 - `Poisson()`  → [`fit_poisson_gllvm`](@ref) — Laplace marginal (counts)
 - `TruncatedPoisson()` → [`fit_truncated_poisson_gllvm`](@ref) — zero-truncated Poisson
@@ -327,7 +329,7 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
                     _fit_gllvm(family, Y; K = K, kwargs...)
 end
 
-_fit_gllvm(::Normal,   Y::AbstractMatrix; kwargs...) = fit_gaussian_gllvm(Y; kwargs...)
+_fit_gllvm(::Normal,   Y::AbstractMatrix; kwargs...) = _fit_gaussian_trait_intercepts(Y; kwargs...)
 _fit_gllvm(::Binomial, Y::AbstractMatrix; kwargs...) = fit_binomial_gllvm(Y; kwargs...)
 _fit_gllvm(::Poisson,  Y::AbstractMatrix; kwargs...) = fit_poisson_gllvm(Y; kwargs...)
 _fit_gllvm(::TruncatedPoisson, Y::AbstractMatrix; kwargs...) =

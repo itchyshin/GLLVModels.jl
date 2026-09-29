@@ -4,10 +4,10 @@ using GLLVModels, Test, Distributions, Random
     Random.seed!(7)
     p, n, K = 5, 120, 2
 
-    # Normal() dispatches to the Gaussian fitter (identical result)
+    # Normal() dispatches to the Gaussian fitter with one intercept per trait
     Yg = 0.7 .* randn(p, K) * randn(K, n) .+ 0.5 .* randn(p, n)
     f1 = fit_gllvm(Yg; family = Normal(), K = K)
-    f2 = fit_gaussian_gllvm(Yg; K = K)
+    f2 = fit_gaussian_gllvm(Yg; K = K, X = GLLVModels._trait_intercept_design(p, n))
     @test f1 isa GllvmFit
     @test f1.logLik ≈ f2.logLik
 

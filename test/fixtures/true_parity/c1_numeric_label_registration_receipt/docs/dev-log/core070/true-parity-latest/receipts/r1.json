@@ -1,0 +1,6 @@
+{
+ "case_id": "CORE070-NAMESPACE-COEF-MULTI-NATIVE",
+ "result": "PASS",
+ "category": "registration_twin",
+ "reason": "R registered and defined; Julia symbol present, exported, a Function"
+}

@@ -1,0 +1,663 @@
+{
+  "schema": "core070-postfit-1-batch-contract/v1",
+  "status": "FROZEN_POSTFIT_1_BATCH_CONTRACT_ONE_EXECUTABLE_CASE_FIFTY_JULIA_SPEC_GAP",
+  "area": "postfit-1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "manifest_source": "docs/dev-log/core070/manifest-freeze-work/drafts/postfit-1.json",
+  "manifest_source_sha256": "adcd4e7c6decd9cfdde811cd0b3444579caa7a7d16781c32a965354d0e51dffc",
+  "case_plan_annex": "docs/dev-log/core070/postfit-1-required-case-plan.json",
+  "case_plan_annex_sha256": "f4ee51479acf07a9916b034425e993faf9743034e28039aa7f3c71422c6cf433",
+  "total_case_count": 51,
+  "bucket_counts": {
+    "EXECUTABLE_NOW": 1,
+    "NEEDS_NEW_JULIA_SURFACE": 50,
+    "SPEC_DEFECT": 0
+  },
+  "triage_method": "Every case's julia_surface text was grepped against src/*.jl and src/families/*.jl (function/struct name search); a hit was then read in full and, where the case's r_call implied a live fit, smoke-tested locally in Julia (and, for the one EXECUTABLE_NOW case, cross-checked against the maintainer's locally installed but UNPINNED gllvmTMB 0.7.1 as a syntax/sanity smoke test only -- not authoritative frozen-oracle evidence). A grep hit alone was not treated as sufficient: several cases (extract_Gamma, getLV, getLoadings, StatsAPI.fitted, extract_lv_effects, ordination) have a same-named or closely-related Julia function but fail on kwarg vocabulary (R's multi-tier `level=` argument has no GLLVM.jl equivalent -- GLLVM.jl's GllvmFit carries one undecomposed covariance, not R's unit/unit_obs/phy/... tier system), calling convention (R reads stored fit state; Julia's fitted()/getLV() require the response matrix `y` as an explicit argument), or fixture mechanism (the *-BRIDGE cases against a `gllvmTMB_julia` RCall bridge fit need the RCall/JuliaCall harness in src/bridge.jl, not a plain native-surface check) -- these were triaged NEEDS_NEW_JULIA_SURFACE with the specific gap recorded, not EXECUTABLE_NOW on symbol-name existence alone.",
+  "five_reclassified_rows_out_of_scope": [
+    "postfit/POSTFIT-SURFACE-.proportions_bootstrap_ci",
+    "postfit/POSTFIT-SURFACE-.proportions_wald_ci",
+    "postfit/POSTFIT-SURFACE-extract_Sigma_B",
+    "postfit/POSTFIT-SURFACE-extract_Sigma_W",
+    "postfit/POSTFIT-SURFACE-imputed"
+  ],
+  "five_reclassified_rows_note": "These 5 postfit-1.json rows carry reclassify.to='compatibility_adapter' with an empty case_specs list already in the frozen manifest draft -- they are not part of the 51-case annex and are not re-triaged here.",
+  "cases": [
+    {
+      "case_id": "CORE070-POSTFIT-BOOTSTRAP-SIGMA-BRIDGE",
+      "source_id": "postfit/POSTFIT-SURFACE-bootstrap_Sigma",
+      "evidence_kind": "bridge",
+      "r_call": "bootstrap_Sigma(fit, n_boot = 999, level = \"unit\", what = \"Sigma\", seed = 1, progress = FALSE) on a gllvmTMB_multi Gaussian latent(0+trait|site,d=1) fit (R/bootstrap-sigma.R:196)",
+      "julia_surface_planned": "GLLVM.jl parametric-bootstrap Sigma CI routine (to be added under confint_bootstrap.jl / confint_derived.jl), called on the paired native fit with the same seed and n_boot",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "bootstrap_Sigma has no Julia counterpart; annex itself says 'to be added under confint_bootstrap.jl / confint_derived.jl'. grep -rn 'bootstrap_Sigma' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-CHECK-AUTO-RESIDUAL-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-check_auto_residual",
+      "evidence_kind": "postfit-readback",
+      "r_call": "check_auto_residual(fit) on canonical multi-trait fits with and without an implicit observation-level residual term (R/check-auto-residual.R:60)",
+      "julia_surface_planned": "GLLVM.jl equivalent double-counting guard over family_id_vec / trait_id metadata on the packed fit",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "check_auto_residual has no Julia counterpart (no double-counting guard over family_id_vec/trait_id metadata). grep -rn 'check_auto_residual' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-CHECK-GLLVMTMB-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-check_gllvmTMB",
+      "evidence_kind": "postfit-readback",
+      "r_call": "check_gllvmTMB(object, gradient_thresh=1e-2, se_thresh=100, ...) on canonical fits spanning healthy, near-boundary, and degenerate cases (R/diagnose.R:1548)",
+      "julia_surface_planned": "GLLVM.jl diagnostic-table equivalent producing the same component/status/value/threshold/message/action rows",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "check_gllvmTMB has no Julia counterpart (no PASS/WARN/FAIL diagnostic-table dashboard). grep -rn 'check_gllvmTMB' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-COEF-MULTI-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-coef.gllvmTMB_multi",
+      "evidence_kind": "postfit-readback",
+      "r_call": "coef(fit) on canonical multi-trait fits (R/vcov-coef.R:59)",
+      "julia_surface_planned": "GLLVM.jl fixed-effect coefficient accessor (named vector keyed the same way as X_fix_names)",
+      "bucket": "EXECUTABLE_NOW",
+      "triage_note": "StatsAPI.coef(fit::AnyGllvmFit) exists (src/postfit.jl:661) and, when the Julia fit is built with an explicit per-species dummy design X (fit_gaussian_gllvm(Y; K=K, X=X)), reproduces R's coef.gllvmTMB_multi() named fixed-effect vector to ~1e-6 on a shared fixture -- verified locally against the maintainer's installed (unpinned 0.7.1) gllvmTMB as a smoke check; see CORE070_POSTFIT_1_BATCH."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-COMPARE-SIGMA-TABLE-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-compare_Sigma_table",
+      "evidence_kind": "postfit-readback",
+      "r_call": "compare_Sigma_table(rows, truth, level=\"unit\", measure=\"correlation\") called on extract_Sigma_table() output against a known-truth R/Sigma matrix (R/extract-sigma-table.R:494)",
+      "julia_surface_planned": "GLLVM.jl equivalent table-vs-truth comparison over the (already-required) extract_Sigma_table output",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "compare_Sigma_table has no Julia counterpart, and its input (extract_Sigma_table output) also does not exist yet. grep -rn 'compare_Sigma_table|extract_Sigma_table' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-COMPARE-DEP-TWO-PSI-BRIDGE",
+      "source_id": "postfit/POSTFIT-SURFACE-compare_dep_vs_two_psi",
+      "evidence_kind": "bridge",
+      "r_call": "compare_dep_vs_two_psi(fit_two_psi, threshold=0.10) on a phylo_latent(unique=TRUE)+indep(0+trait|species) two-psi fit, which internally refits the full dependent-Sigma model via .refit_inputs() (R/extract-two-psi-cross-check.R:488)",
+      "julia_surface_planned": "GLLVM.jl equivalent that refits the dependent-covariance phylogenetic model from the two-psi fixture and reports the same $flag/$agreement diagnostic",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "compare_dep_vs_two_psi has no Julia counterpart; also requires a live refit of the dependent-Sigma phylogenetic model from a two-psi fixture, which is new engine work beyond a missing accessor. grep -rn 'compare_dep_vs_two_psi' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-COMPARE-INDEP-TWO-PSI-BRIDGE",
+      "source_id": "postfit/POSTFIT-SURFACE-compare_indep_vs_two_psi",
+      "evidence_kind": "bridge",
+      "r_call": "compare_indep_vs_two_psi(fit_two_psi, threshold=0.10) on the same two-psi fixture, refitting the cheap diagonal-Sigma model (R/extract-two-psi-cross-check.R:616)",
+      "julia_surface_planned": "GLLVM.jl equivalent diagonal-Sigma refit + agreement diagnostic",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "compare_indep_vs_two_psi has no Julia counterpart (same refit-then-compare structure as the dep-vs-two-psi case). grep -rn 'compare_indep_vs_two_psi' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-COMPARE-LOADINGS-NATIVE",
+      "source_id": "postfit/POSTFIT-SURFACE-compare_loadings",
+      "evidence_kind": "native",
+      "r_call": "compare_loadings(Lambda_a, Lambda_b) on fixed numeric n_traits x d matrix pairs, incl. a case built from fitted loadings vs a hand-rotated copy (R/rotate-loadings.R:428)",
+      "julia_surface_planned": "GLLVM.jl orthogonal-Procrustes loading-alignment helper (SVD of crossprod(Lambda_b, Lambda_a))",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "compare_loadings (orthogonal Procrustes between two loading matrices, SVD of crossprod(Lambda_b,Lambda_a)) has no Julia counterpart. GLLVM.jl's only SVD-rotation helper is src/postfit.jl:_svd_rotation, a single-matrix canonical sign-fixed rotation (not a two-matrix Procrustes alignment) -- different math, and it is unexported (private). grep -rn 'compare_loadings' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-CONFINT-MULTI-WALD-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-confint.gllvmTMB_multi",
+      "evidence_kind": "postfit-readback",
+      "r_call": "confint(fit) (default method=\"wald\") on canonical fixed-effect coefficients (R/z-confint-gllvmTMB.R:1608)",
+      "julia_surface_planned": "GLLVM.jl Wald CI via observed-information Hessian (confint.jl)",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "MISSING NOTE -- fill in"
+    },
+    {
+      "case_id": "CORE070-POSTFIT-CONFINT-MULTI-PROFILE-BRIDGE",
+      "source_id": "postfit/POSTFIT-SURFACE-confint.gllvmTMB_multi",
+      "evidence_kind": "bridge",
+      "r_call": "confint(fit, parm = \"Sigma_unit\", method = \"profile\") on a canonical latent(0+trait|site,d=1) fit",
+      "julia_surface_planned": "GLLVM.jl profile-likelihood CI (confint_profile.jl)",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "confint_profile.jl exists but this case needs a live paired refit (R profile LRT inversion vs Julia confint_profile.jl) on a canonical latent(0+trait|site,d=1) fit sharing R's Sigma_unit parameterisation -- building and verifying that paired fixture is new integration work, not a missing-symbol gap, and is out of scope for this batch (see CORE070-POSTFIT-COEF-MULTI-READBACK for the one case this batch does build)."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-CONFINT-MULTI-BOOTSTRAP-BRIDGE",
+      "source_id": "postfit/POSTFIT-SURFACE-confint.gllvmTMB_multi",
+      "evidence_kind": "bridge",
+      "r_call": "confint(fit, parm = \"Sigma_unit\", method = \"bootstrap\", nsim = 200, seed = 42) on the same fit",
+      "julia_surface_planned": "GLLVM.jl parametric-bootstrap CI (confint_bootstrap.jl) with matched seed/nsim",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "confint_bootstrap.jl exists but the case (nsim=200 bootstrap CI, matched seed) requires 200 paired refits on both sides -- far beyond the <=15 min single-thread local batch budget, and R's bootstrap RNG stream is not portably reproducible against Julia's without a documented parity contract that does not yet exist."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-CONFINT-INSPECT-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-confint_inspect",
+      "evidence_kind": "postfit-readback",
+      "r_call": "confint_inspect(fit, parm = \"sigma_eps\") on a canonical Gaussian fit (R/confint-inspect.R:128)",
+      "julia_surface_planned": "GLLVM.jl profile-shape diagnostic returning bounds + shape flag over the same profile_targets vocabulary",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "confint_inspect (profile-shape diagnostic: bounds + asymmetric/flat_at_mle/boundary flags) has no Julia counterpart. grep -rn 'confint_inspect' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-DEVIANCE-MULTI-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-deviance.gllvmTMB_multi",
+      "evidence_kind": "postfit-readback",
+      "r_call": "deviance(fit) on canonical fits, including a ridged (aghq_ridge finite) fit that carries the MAP-point logLik caveat (R/methods-gllvmTMB.R:2862)",
+      "julia_surface_planned": "GLLVM.jl deviance = -2*loglik(fit), delegating to the existing logLik accessor",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "deviance = -2*loglik(fit) needs a public logLik/loglikelihood accessor; GLLVM.jl only has an internal underscore-prefixed `_loglik` (src/postfit.jl:490), not exported/public. grep -rn 'StatsAPI.loglikelihood|function logLik' src/*.jl: 0 hits for a GllvmFit-family method."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-KERNEL-SEPARABILITY-NATIVE",
+      "source_id": "postfit/POSTFIT-SURFACE-diagnose_kernel_separability",
+      "evidence_kind": "native",
+      "r_call": "diagnose_kernel_separability(phy = K_phy, tip = K_tip, thresholds = c(near_orthogonal=0.25, high=0.70)) on fixed named kernel matrices (R/kernel-helpers.R:581)",
+      "julia_surface_planned": "GLLVM.jl kernel-similarity diagnostic over the same pairwise kernel-matrix inputs",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "diagnose_kernel_separability (pairwise-kernel similarity diagnostic on fixed named matrices, no fit needed) has no Julia counterpart. grep -rn 'diagnose_kernel_separability|kernel_separability' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-DIAGNOSTIC-TABLE-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-diagnostic_table",
+      "evidence_kind": "postfit-readback",
+      "r_call": "diagnostic_table(p, table = \"row_status\"/\"fit_health_status\"/\"data\"/\"check_gllvmTMB\") on predictive_check()/residuals() output from a canonical Poisson fit (R/diagnostic-tables.R:53)",
+      "julia_surface_planned": "GLLVM.jl equivalent table formatter reading the `gllvmTMB_diagnostic`-style attribute off predictive_check/residuals output",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "diagnostic_table (table formatter reading a gllvmTMB_diagnostic-style attribute off predictive_check()/residuals() output) has no Julia counterpart. grep -rn 'diagnostic_table' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-EXTRACT-GAMMA-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-extract_Gamma",
+      "evidence_kind": "postfit-readback",
+      "r_call": "extract_Gamma(fit, level, row_traits, col_traits, scale = \"shape\") on a canonical multi-trait covariance fit (R/extract-sigma.R:1719)",
+      "julia_surface_planned": "GLLVM.jl equivalent cross-block Gamma (coevolutionary-effect) extractor",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "extract_Gamma(fit::GllvmFit; row_traits, col_traits) exists (src/extract_gamma.jl) but does not match the R comparand: no `scale='shape'` kwarg, positional (not name-based) trait indexing by the file's own docstring, and it requires a phylo-latent tier (K_phy>0) fixture that is materially heavier to build than the coef case in this batch -- a genuine surface exists but not the one the spec calls for, so this is triaged NEEDS_NEW rather than EXECUTABLE_NOW."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-EXTRACT-ICC-SITE-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-extract_ICC_site",
+      "evidence_kind": "postfit-readback",
+      "r_call": "extract_ICC_site(fit, link_residual = \"auto\") on a canonical multi-trait fit with both unit and unit_obs Sigma blocks (R/extractors.R:101)",
+      "julia_surface_planned": "GLLVM.jl site-level ICC extractor built from extract_Sigma(level=\"unit\"/\"unit_obs\")",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "extract_ICC_site has no Julia counterpart (built on extract_Sigma(level=...), which also does not exist). grep -rn 'extract_ICC_site' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-EXTRACT-OMEGA-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-extract_Omega",
+      "evidence_kind": "postfit-readback",
+      "r_call": "extract_Omega(fit, tiers = NULL, link_residual = \"auto\") on a canonical multi-tier (phylo + unit) fit (R/extract-omega.R:189)",
+      "julia_surface_planned": "GLLVM.jl Omega (total decomposed variance) extractor over the same tier vocabulary",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "extract_Omega (total decomposed variance over a tier vocabulary) has no Julia counterpart. grep -rn 'extract_Omega' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-EXTRACT-SIGMA-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-extract_Sigma",
+      "evidence_kind": "postfit-readback",
+      "r_call": "extract_Sigma(fit, level = \"unit\"/\"unit_obs\"/\"phy\"/\"unit_slope\"/\"phy_slope\"/\"column_slope\") across the documented level vocabulary on canonical fixtures for each covariance mode (R/extract-sigma.R:686)",
+      "julia_surface_planned": "GLLVM.jl equivalent Sigma extractor over the same level vocabulary",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "extract_Sigma (level=unit/unit_obs/phy/unit_slope/phy_slope/column_slope vocabulary) has no Julia counterpart; GLLVM.jl's GllvmFit has one undecomposed covariance structure, not R's multi-tier Sigma vocabulary. grep -rn 'function extract_Sigma\\b' src/*.jl: 0 hits (only comments in src/link_residual.jl reference the R name)."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-EXTRACT-SIGMA-TABLE-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-extract_Sigma_table",
+      "evidence_kind": "postfit-readback",
+      "r_call": "extract_Sigma_table(fit, level=\"unit\", part=\"total\", measure=\"covariance\", entries=\"unique\") on a canonical multi-trait fit (R/extract-sigma-table.R:310)",
+      "julia_surface_planned": "GLLVM.jl tidy long-format Sigma table with matching estimand/trait_i/trait_j/estimate columns",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "extract_Sigma_table (tidy long-format estimand/trait_i/trait_j/estimate table) has no Julia counterpart. grep -rn 'extract_Sigma_table' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-EXTRACT-COEVOLUTION-MODULES-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-extract_coevolution_modules",
+      "evidence_kind": "postfit-readback",
+      "r_call": "extract_coevolution_modules(fit, level, row_traits, col_traits, scale=\"shape\", n_modules=NULL) on a canonical multi-trait Gamma-bearing fit (R/extract-sigma.R:2203)",
+      "julia_surface_planned": "GLLVM.jl module-detection extractor over the same Gamma block",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "extract_coevolution_modules has no Julia counterpart. grep -rn 'extract_coevolution_modules' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-EXTRACT-COMMUNALITY-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-extract_communality",
+      "evidence_kind": "postfit-readback",
+      "r_call": "extract_communality(fit, level=\"unit\", ci=FALSE) on a canonical multi-trait fit (R/extractors.R:212)",
+      "julia_surface_planned": "GLLVM.jl point-estimate communality (c^2) extractor",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "extract_communality (c^2 point estimate) has no Julia counterpart. grep -rn 'extract_communality' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-EXTRACT-COMMUNALITY-CI-BRIDGE",
+      "source_id": "postfit/POSTFIT-SURFACE-extract_communality",
+      "evidence_kind": "bridge",
+      "r_call": "extract_communality(fit, ci=TRUE, method=\"wald\") on the same fixture, using the logit-transformed-Wald route already documented for GLLVM.jl's confint_derived_wald.jl",
+      "julia_surface_planned": "GLLVM.jl logit-Wald communality CI (confint_derived_wald.jl)",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "Depends on extract_communality point estimate, which does not exist; confint_derived_wald.jl has logit-Wald machinery for other quantities but no communality entry point. grep -rn 'communality' src/confint_derived_wald.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-EXTRACT-CORRELATIONS-POINT-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-extract_correlations",
+      "evidence_kind": "postfit-readback",
+      "r_call": "extract_correlations(fit, tier=\"all\", method=\"none\") on a canonical multi-trait fit (R/extract-correlations.R:392)",
+      "julia_surface_planned": "GLLVM.jl point-estimate correlation extractor over the same tier vocabulary",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "extract_correlations (tier vocabulary, method='none') has no Julia counterpart. grep -rn 'extract_correlations' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-EXTRACT-CORRELATIONS-CI-BRIDGE",
+      "source_id": "postfit/POSTFIT-SURFACE-extract_correlations",
+      "evidence_kind": "bridge",
+      "r_call": "extract_correlations(fit, method=\"fisher-z\") on the same fixture, matching GLLVM.jl's Fisher-z Wald route for [-1,1]-bounded correlations (confint_derived_wald.jl)",
+      "julia_surface_planned": "GLLVM.jl Fisher-z correlation CI",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "Depends on extract_correlations point estimate, which does not exist."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-EXTRACT-CROSS-CORRELATIONS-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-extract_cross_correlations",
+      "evidence_kind": "postfit-readback",
+      "r_call": "extract_cross_correlations(fit, level=\"unit\", contrasts=FALSE, method=\"point\") on a canonical multi-tier fit (R/extract-correlations.R:884)",
+      "julia_surface_planned": "GLLVM.jl equivalent cross-tier correlation extractor",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "extract_cross_correlations has no Julia counterpart. grep -rn 'extract_cross_correlations' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-EXTRACT-CUTPOINTS-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-extract_cutpoints",
+      "evidence_kind": "postfit-readback",
+      "r_call": "extract_cutpoints(fit) on a canonical Ordinal-family fit (R/extract-cutpoints.R:66)",
+      "julia_surface_planned": "GLLVM.jl ordinal cutpoint (tau) extractor -- GLLVM.jl already ships an Ordinal family",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "extract_cutpoints (tau_estimate/tau_se table) has no Julia counterpart as a named function; StatsAPI.coef(fit::OrdinalFit) returns the bare tau point-estimate vector (no SE, no table structure), which is not the same surface. grep -rn 'extract_cutpoints' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-EXTRACT-LOADINGS-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-extract_loadings",
+      "evidence_kind": "postfit-readback",
+      "r_call": "extract_loadings(fit, level=\"unit\", rotate=\"none\") on a canonical latent-factor fit (R/output-methods.R:87; thin wrapper over getLoadings())",
+      "julia_surface_planned": "GLLVM.jl Lambda pack/unpack loadings accessor (packing.jl)",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "extract_loadings (R thin wrapper over getLoadings() with level='unit', rotate='none') maps to GLLVM.jl's getLoadings(fit; rotate::Bool), but GLLVM.jl has no `level` tier concept (single undecomposed covariance) and `rotate` is boolean, not a rotation-method string -- building a faithful paired fixture is bundled with the same open questions as GETLOADINGS-READBACK below and is left out of this batch's scope to keep the one executable case (coef) well-verified rather than stretching to a partial match."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-EXTRACT-LV-EFFECTS-BRIDGE",
+      "source_id": "postfit/POSTFIT-SURFACE-extract_lv_effects",
+      "evidence_kind": "bridge",
+      "r_call": "extract_lv_effects(fit, level=\"unit\", type=\"axis_effect\", method=\"wald\") called on a `gllvmTMB_julia` bridge fit, which R dispatches to `.gllvm_julia_extract_lv_effects()` (R/extractors.R:641, R/julia-bridge.R:1651)",
+      "julia_surface_planned": "GLLVM.jl native latent-axis-effect extractor that the R bridge's `.gllvm_julia_extract_lv_effects()` currently calls into over RCall/JuliaCall",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "extract_lv_effects(fit) exists in Julia (src/postfit.jl, 7 family-specific methods) but the R case is specifically about the `gllvmTMB_julia` RCall bridge fit (R dispatches to `.gllvm_julia_extract_lv_effects()` over RCall/JuliaCall) -- exercising that requires the bridge harness (src/bridge.jl + RCall wiring), a different and heavier evidence mechanism than a plain native-surface check, and is out of scope for this batch."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-EXTRACT-ORDINATION-BRIDGE",
+      "source_id": "postfit/POSTFIT-SURFACE-extract_ordination",
+      "evidence_kind": "bridge",
+      "r_call": "extract_ordination(fit, level=\"unit\", component=\"total\") called on a `gllvmTMB_julia` bridge fit, dispatching to `.gllvm_julia_extract_ordination()` (R/extractors.R:482, R/julia-bridge.R:1538)",
+      "julia_surface_planned": "GLLVM.jl native ordination (latent-score) extractor already backing the R bridge call",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "ordination(fit, Y) exists in Julia (src/ordination.jl) but the R case is specifically the `gllvmTMB_julia` RCall bridge fit path (`.gllvm_julia_extract_ordination()`), same bridge-harness scope note as EXTRACT-LV-EFFECTS-BRIDGE."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-EXTRACT-PHYLO-SIGNAL-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-extract_phylo_signal",
+      "evidence_kind": "postfit-readback",
+      "r_call": "extract_phylo_signal(fit, ci=FALSE) on a canonical sparse-phylogenetic fit (R/extract-omega.R:463)",
+      "julia_surface_planned": "GLLVM.jl phylogenetic-signal (H^2) point-estimate extractor",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "extract_phylo_signal (H^2 point estimate) has no Julia counterpart. grep -rn 'extract_phylo_signal' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-EXTRACT-PHYLO-SIGNAL-CI-BRIDGE",
+      "source_id": "postfit/POSTFIT-SURFACE-extract_phylo_signal",
+      "evidence_kind": "bridge",
+      "r_call": "extract_phylo_signal(fit, ci=TRUE, method=\"profile\") on the same fixture",
+      "julia_surface_planned": "GLLVM.jl H^2 profile CI (confint_derived.jl already documents phylogenetic signal H^2 profile+bootstrap CIs)",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "Depends on extract_phylo_signal point estimate, which does not exist (confint_derived.jl documents H^2 profile/bootstrap CI machinery but there is no extract_phylo_signal entry point wrapping it)."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-EXTRACT-PROPORTIONS-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-extract_proportions",
+      "evidence_kind": "postfit-readback",
+      "r_call": "extract_proportions(fit, link_residual=\"auto\", format=\"long\") on a canonical multi-tier fit (R/extract-omega.R:725)",
+      "julia_surface_planned": "GLLVM.jl variance-proportion extractor over the same tier vocabulary as extract_Omega",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "extract_proportions (variance-proportion table over the same tier vocabulary as extract_Omega) has no Julia counterpart. grep -rn 'extract_proportions' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-EXTRACT-REPEATABILITY-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-extract_repeatability",
+      "evidence_kind": "postfit-readback",
+      "r_call": "extract_repeatability(fit) point estimate on a canonical repeated-measures multi-trait fit (R/extract-repeatability.R:83)",
+      "julia_surface_planned": "GLLVM.jl repeatability point-estimate extractor",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "extract_repeatability has no Julia counterpart. grep -rn 'extract_repeatability' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-EXTRACT-REPEATABILITY-CI-BRIDGE",
+      "source_id": "postfit/POSTFIT-SURFACE-extract_repeatability",
+      "evidence_kind": "bridge",
+      "r_call": "extract_repeatability(fit, method=\"wald\") CI on the same fixture",
+      "julia_surface_planned": "GLLVM.jl repeatability Wald CI",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "Depends on extract_repeatability point estimate, which does not exist."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-EXTRACT-RESIDUAL-COR-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-extract_residual_cor",
+      "evidence_kind": "postfit-readback",
+      "r_call": "extract_residual_cor(fit, level=\"unit\") on a canonical multi-trait fit (R/output-methods.R:342; thin wrapper over getResidualCor())",
+      "julia_surface_planned": "GLLVM.jl residual-correlation accessor",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "extract_residual_cor (thin wrapper over getResidualCor()) has no Julia counterpart on either name. grep -rn 'extract_residual_cor|getResidualCor' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-EXTRACT-RESIDUAL-COV-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-extract_residual_cov",
+      "evidence_kind": "postfit-readback",
+      "r_call": "extract_residual_cov(fit, level=\"unit\") on the same fixture (R/output-methods.R:336; thin wrapper over getResidualCov())",
+      "julia_surface_planned": "GLLVM.jl residual-covariance accessor",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "extract_residual_cov (thin wrapper over getResidualCov()) has no Julia counterpart on either name. grep -rn 'extract_residual_cov|getResidualCov' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-EXTRACT-RESIDUAL-SPLIT-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-extract_residual_split",
+      "evidence_kind": "postfit-readback",
+      "r_call": "extract_residual_split(fit) on canonical fits with and without an explicit observation-level diagonal term (R/extract-omega.R:95)",
+      "julia_surface_planned": "GLLVM.jl equivalent split of implicit-vs-explicit residual variance",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "extract_residual_split (implicit-vs-explicit residual variance split) has no Julia counterpart. grep -rn 'extract_residual_split' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-EXTRACT-ROTATED-LOADINGS-TABLE-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-extract_rotated_loadings_table",
+      "evidence_kind": "postfit-readback",
+      "r_call": "extract_rotated_loadings_table(fit, level=\"unit\", method=\"varimax\", order_axes=TRUE, sign_anchor=\"auto\") on a canonical d>=2 latent-factor fit (R/rotate-loadings.R:281)",
+      "julia_surface_planned": "GLLVM.jl varimax/promax rotation + tidy-table formatter over the same loading matrix",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "extract_rotated_loadings_table (varimax/promax rotation + tidy table) has no Julia counterpart -- GLLVM.jl's only rotation is the canonical sign-fixed SVD rotation (src/postfit.jl:_svd_rotation), not varimax/promax. grep -rn 'varimax|promax|extract_rotated_loadings_table' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-FITTED-MULTI-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-fitted.gllvmTMB_multi",
+      "evidence_kind": "postfit-readback",
+      "r_call": "fitted(fit, type=\"response\") on canonical fits, incl. a multinomial() fit (K rows per observation) (R/methods-gllvmTMB.R, thin wrapper: `predict(object, newdata=NULL, type=type, ...)`)",
+      "julia_surface_planned": "GLLVM.jl fitted-values accessor delegating to the existing predict surface",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "StatsAPI.fitted(fit::AnyGllvmFit, data; kwargs...) exists and delegates to predict(), but the R case explicitly requires coverage 'incl. a multinomial() fit (K rows per observation)', and R's fitted(fit) takes no data argument (reads it off the stored fit) where Julia's fitted(fit, data) requires the response matrix to be passed explicitly -- a real calling-convention mismatch, and the multinomial sub-case adds a second fixture family. Left out of this batch to keep scope to the one well-verified case (coef)."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-FLAG-UNRELIABLE-LOADINGS-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-flag_unreliable_loadings",
+      "evidence_kind": "postfit-readback",
+      "r_call": "flag_unreliable_loadings(fit, null_region=c(-0.1,0.1), level=\"unit\", method=\"wald\") on a canonical latent-factor fit (R/loading-ci.R:363)",
+      "julia_surface_planned": "GLLVM.jl loading-reliability flag built on the loading_ci Wald route",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "flag_unreliable_loadings (built on the loading_ci Wald route) has no Julia counterpart, and its dependency (loading_ci) does not exist either. grep -rn 'flag_unreliable_loadings' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-GETLV-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-getLV",
+      "evidence_kind": "postfit-readback",
+      "r_call": "getLV(fit, level=\"unit\", rotate=\"none\", se=FALSE) on a canonical latent-factor fit, including the `se=TRUE` branch (R/output-methods.R:169)",
+      "julia_surface_planned": "GLLVM.jl latent-score accessor, with an SE branch if implemented",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "getLV(fit, y; rotate::Bool, component::Symbol, ...) exists (src/postfit.jl) but has no `level` tier argument (R: level='unit'/'phy'/...; GLLVM.jl has one undecomposed covariance, not R's multi-tier Sigma) and no `se` branch (R case explicitly requires the se=TRUE branch). Real semantic gaps, not just a naming difference -- left out of this batch's executable-now scope."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-GETLOADINGS-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-getLoadings",
+      "evidence_kind": "postfit-readback",
+      "r_call": "getLoadings(fit, level=\"unit\", rotate=\"none\") on a canonical latent-factor fit, including a `gllvmTMB_julia` bridge fit (which R special-cases when rotate != \"none\") (R/output-methods.R:33)",
+      "julia_surface_planned": "GLLVM.jl native loadings accessor (packing.jl / unpack_Lambda)",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "getLoadings(fit; rotate::Bool) exists (src/postfit.jl) but has no `level` tier argument, and the R case also requires covering a `gllvmTMB_julia` bridge fit (R special-cases loadings for the RCall bridge path) -- out of scope for this batch alongside GETLV-READBACK."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-GETRESD-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-getREsd",
+      "evidence_kind": "postfit-readback",
+      "r_call": "getREsd(fit, block=\"diag_unit\"/\"diag_unit_obs\"/\"diag_species\"/\"phylo\"/\"re_int\"/\"equalto\") on fits covering each block type (R/re-uncertainty.R:99)",
+      "julia_surface_planned": "GLLVM.jl equivalent random-effect-SD accessor over the same block vocabulary",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "getREsd (random-effect-SD accessor over block vocabulary diag_unit/diag_unit_obs/diag_species/phylo/re_int/equalto) has no Julia counterpart. grep -rn 'getREsd' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-GETRESIDUALCOR-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-getResidualCor",
+      "evidence_kind": "postfit-readback",
+      "r_call": "getResidualCor(fit, level=\"unit\") on a canonical multi-trait fit (R/output-methods.R:311)",
+      "julia_surface_planned": "GLLVM.jl residual-correlation accessor",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "getResidualCor has no Julia counterpart. grep -rn 'getResidualCor' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-GETRESIDUALCOV-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-getResidualCov",
+      "evidence_kind": "postfit-readback",
+      "r_call": "getResidualCov(fit, level=\"unit\") on the same fixture (R/output-methods.R:295)",
+      "julia_surface_planned": "GLLVM.jl residual-covariance accessor",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "getResidualCov has no Julia counterpart. grep -rn 'getResidualCov' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-GET-CRS-NATIVE",
+      "source_id": "postfit/POSTFIT-SURFACE-get_crs",
+      "evidence_kind": "native",
+      "r_call": "get_crs(dat, ll_names = c(\"longitude\",\"latitude\")) on a data frame with valid finite lon/lat columns (R/crs.R:71)",
+      "julia_surface_planned": "GLLVM.jl coordinate-validation helper for spatial/kernel workflows, if/when GLLVM.jl exposes a spatial coordinate entry point",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "get_crs (coordinate-validation helper for spatial/kernel workflows) has no Julia counterpart; the annex itself says 'if/when GLLVM.jl exposes a spatial...' surface. grep -rn 'get_crs' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-GLLVMTMB-DIAGNOSE-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-gllvmTMB_diagnose",
+      "evidence_kind": "postfit-readback",
+      "r_call": "gllvmTMB_diagnose(object, gradient_thresh=1e-2, se_thresh=100, big_corr_thresh=0.5, verbose=TRUE) on canonical fits (R/diagnose.R:2005)",
+      "julia_surface_planned": "GLLVM.jl equivalent lighter-weight diagnostic (gradient/SE/correlation checks)",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "gllvmTMB_diagnose (gradient/SE/correlation lighter-weight diagnostic) has no Julia counterpart. grep -rn 'gllvmTMB_diagnose' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-IMPUTE-MODEL-FORMULA",
+      "source_id": "postfit/POSTFIT-SURFACE-impute_model",
+      "evidence_kind": "formula",
+      "r_call": "impute_model(x ~ z, family = gaussian()) constructing an imputation-model spec object, and its error path on a one-sided or non-formula input (R/missing-predictor.R:62)",
+      "julia_surface_planned": "GLLVM.jl imputation-model spec constructor, if/when GLLVM.jl exposes missing-predictor imputation formulas",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "impute_model (imputation-model formula spec constructor) has no Julia counterpart; the annex says 'if/when GLLVM.jl exposes missing-predictor imputation formula spec'. GLLVM.jl's missing_predictor_{fiml,multi,phylo,poisson}.jl files exist but define no impute_model-equivalent formula-spec constructor. grep -rn 'impute_model|ImputeModel' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-IMPUTED-GLLVMTMB-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-imputed.gllvmTMB",
+      "evidence_kind": "postfit-readback",
+      "r_call": "imputed(fit, variable = NULL, rows = \"missing\", se = TRUE) on a canonical fit built with impute_model() and missing predictor values (R/missing-predictor.R:2603)",
+      "julia_surface_planned": "GLLVM.jl imputed-value + SE accessor for the missing-predictor imputation sub-model",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "imputed(fit, variable, rows, se) accessor has no Julia counterpart, and depends on impute_model (also absent). grep -rn 'function imputed\\b' src/*.jl: 0 hits."
+    },
+    {
+      "case_id": "CORE070-POSTFIT-LOADING-CI-READBACK",
+      "source_id": "postfit/POSTFIT-SURFACE-loading_ci",
+      "evidence_kind": "postfit-readback",
+      "r_call": "loading_ci(fit, level=\"unit\", method=\"wald\") on a canonical latent-factor fit (R/loading-ci.R:112)",
+      "julia_surface_planned": "GLLVM.jl loading-entry Wald CI (the confint.jl Wald route already covers signed loadings on the identity/log-scale distinction noted in CLAUDE.md)",
+      "bucket": "NEEDS_NEW_JULIA_SURFACE",
+      "triage_note": "loading_ci (per-loading-entry Wald CI table) has no Julia counterpart as a named function; confint.jl's confint(fit; y) returns a CI over all packed parameters (fixed effects, log_sigma_eps, Lambda jointly), not a loading-only table matching R's loading_ci() output shape. grep -rn 'function loading_ci\\b' src/*.jl: 0 hits."
+    }
+  ],
+  "executable_batch": {
+    "case_id": "CORE070-POSTFIT-COEF-MULTI-READBACK",
+    "source_id": "postfit/POSTFIT-SURFACE-coef.gllvmTMB_multi",
+    "evidence_kind": "postfit-readback",
+    "r_source_file": "R/vcov-coef.R",
+    "r_source_sha256_at_readback": "7092603b1d86e5fcaf030e2e0d2c39a27febb08ffea9f46a5390954f116b4a04",
+    "r_source_path_readback": ".unlazy/core070-aghq/oracle-source/readback/R/vcov-coef.R",
+    "julia_surface": "StatsAPI.coef(fit::AnyGllvmFit) at src/postfit.jl:661",
+    "model": "value ~ 0 + trait + latent(0 + trait | site, d = K, unique = FALSE), family = gaussian(), on Julia side fit_gaussian_gllvm(Y; K=K, X=X) with X the per-species dummy design (X[s,:,s]=1 for species s, matching R's ~0+trait fixed part)",
+    "fixture": {
+      "p": 4,
+      "n": 24,
+      "K": 1,
+      "Y_rows_are_species_cols_are_sites": [
+        [
+          -0.679248,
+          -0.955759,
+          -1.201768,
+          -1.064217,
+          -1.348421,
+          -0.820365,
+          -1.027197,
+          -0.537044,
+          -0.762268,
+          -1.378113,
+          -1.240058,
+          -0.867876,
+          -1.311846,
+          -0.59431,
+          -1.142508,
+          -1.345718,
+          -0.713785,
+          -1.005058,
+          -1.261678,
+          -1.627242,
+          -0.786188,
+          -0.880976,
+          -0.931349,
+          -0.65625
+        ],
+        [
+          -0.122671,
+          -0.08236,
+          -0.416215,
+          0.873748,
+          -2.766152,
+          -0.385518,
+          0.361013,
+          0.215196,
+          -1.374104,
+          -0.068019,
+          -1.091903,
+          -1.599875,
+          0.656074,
+          0.678915,
+          -0.588802,
+          -2.63263,
+          0.901366,
+          1.241725,
+          -1.910814,
+          0.62477,
+          -1.357211,
+          -0.164242,
+          0.143373,
+          2.909883
+        ],
+        [
+          0.54782,
+          0.52967,
+          0.261762,
+          1.020648,
+          -0.47058,
+          0.858582,
+          0.162446,
+          0.123211,
+          -0.362766,
+          0.428353,
+          0.090344,
+          0.035458,
+          0.150531,
+          0.890544,
+          0.035175,
+          -0.104905,
+          0.435647,
+          1.132028,
+          -0.265904,
+          0.80066,
+          -0.322993,
+          0.036311,
+          0.72351,
+          1.752269
+        ],
+        [
+          0.807917,
+          0.724359,
+          0.377489,
+          -0.351314,
+          3.75839,
+          1.295819,
+          0.307064,
+          0.666576,
+          1.993199,
+          1.148773,
+          1.681597,
+          2.356859,
+          0.894569,
+          0.053402,
+          1.390745,
+          3.237937,
+          -0.458466,
+          -1.178907,
+          3.169047,
+          -0.041241,
+          2.354478,
+          0.74174,
+          0.207816,
+          -2.814454
+        ]
+      ],
+      "fixture_provenance": "Deterministic, hand-embedded (not regenerated by either runner at run time): generated once via Random.MersenneTwister(20260901) in Julia (p=4 species, n=24 sites, K=1 latent factor, true beta = [-1, -1/3, 1/3, 1]), rounded to 6 decimals, and frozen into this contract as the single source of truth for both tools/core070_postfit_1_batch.R and tools/core070_postfit_1_batch.jl. Neither runner re-derives Y from a seed -- both read it from here, so no RNG-portability assumption between R and Julia is load-bearing.",
+      "r_dataframe_construction": "df <- data.frame(site = factor(rep(seq_len(n), each = p)), trait = factor(rep(paste0('t', seq_len(p)), times = n), levels = paste0('t', seq_len(p))), value = as.vector(Ymat)) where Ymat is Y reshaped to a p x n matrix in the same row=species/col=site layout as the JSON above (matrix(..., nrow=p, byrow=TRUE)); as.vector() flattens column-major (site-major, species-fastest), matching rep(seq_len(n), each=p) / rep(trait_levels, times=n)."
+    },
+    "comparands": [
+      "R coef.gllvmTMB_multi(fit) named vector (traitt1..traitt4, in trait-factor level order)",
+      "Julia coef(fit_gaussian_gllvm(Y; K=K, X=X)) plain vector, species index 1..p in the same order as the trait factor levels"
+    ],
+    "tolerance": {
+      "comparison": "elementwise_absolute_difference",
+      "max_abs_diff": 0.001
+    },
+    "tolerance_rationale": "Local smoke (this session, unpinned gllvmTMB 0.7.1, not the frozen oracle) showed R vs Julia coef() differing by <2e-6 on this exact fixture (R: -1.0058017 -0.2481031 0.3536588 0.9301411; Julia: -1.00580175 -0.2481022083 0.35365920833 0.93014141667) -- both engines recover the analytic MLE of a linear-Gaussian factor model, which has no cross-engine optimizer ambiguity for beta (unlike Lambda, beta is not subject to the latent-rotation identifiability gauge). 1e-3 leaves headroom for the frozen reference-commit build differing slightly from the locally-installed 0.7.1 used for the smoke check.",
+    "smoke_evidence": {
+      "r_smoke_result": [
+        -1.0058017,
+        -0.2481031,
+        0.3536588,
+        0.9301411
+      ],
+      "julia_smoke_result": [
+        -1.00580175,
+        -0.2481022083333333,
+        0.35365920833333336,
+        0.9301414166666667
+      ],
+      "r_smoke_used_installed_unpinned_gllvmTMB_version": "0.7.1",
+      "r_smoke_disclaimer": "NOT the frozen oracle at reference_commit b4d5fee64def88bc768dda1f1f77c29b295edd86 -- this is a syntax/sanity smoke check only, run once in this session to de-risk tools/core070_postfit_1_batch.R before handing it to Totoro. The retained Totoro run must use the frozen library and is what the verifier's verify_state() checks against."
+    },
+    "r_source_sha256_at_p1": "7092603b1d86e5fcaf030e2e0d2c39a27febb08ffea9f46a5390954f116b4a04"
+  },
+  "p0_contract": "docs/dev-log/core070/postfit-1-batch-contract.json",
+  "p0_contract_sha256": "d558812c7098095a52b52649c4167b489be962e421d3d7838aa7944d11faf78d",
+  "p0_to_p1_accessor_diff": [
+    {
+      "function": "coef.gllvmTMB_multi",
+      "file": "R/vcov-coef.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "72531f42c7ee0165cb5708d1508143cad13d935c78cf6b171e50709bc0b28ca6",
+      "body_sha256_p1": "72531f42c7ee0165cb5708d1508143cad13d935c78cf6b171e50709bc0b28ca6"
+    }
+  ],
+  "regeneration_log": {
+    "generator": "tools/core070_postfit_p1_contract.py",
+    "changes": [
+      {
+        "field": "reference_commit",
+        "p0": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+        "p1": "9539352f66f2db2cc26b1c393e67212a359b60c9"
+      },
+      {
+        "field": "executable_batch.r_source_sha256_at_p1 (added)",
+        "p0_r_source_sha256_at_readback": "7092603b1d86e5fcaf030e2e0d2c39a27febb08ffea9f46a5390954f116b4a04",
+        "p1": "7092603b1d86e5fcaf030e2e0d2c39a27febb08ffea9f46a5390954f116b4a04",
+        "changed": false
+      }
+    ],
+    "carried_verbatim": "status, cases (r_call, quantity, tolerance, check, comparand), deferred, rejection_cases, negative_controls, fixtures, runner. No case, expectation or tolerance was edited; a P1 mismatch is recorded by the batch as a failure."
+  }
+}

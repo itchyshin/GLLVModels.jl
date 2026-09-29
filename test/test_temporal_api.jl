@@ -118,8 +118,9 @@ end
             "Only one temporal covariance term")
         @test refuses(() -> fitq(fx, temporal_dep(:(0 + trait | series), :occasion);
             structure=[:(phylo_indep(0 + trait | series))]), "cannot be combined with another covariance source")
-        # Ordinary unit/unit_obs composition is slice 2: refused, never silently ignored.
-        @test_throws ArgumentError fitq(fx, t; structure=[:(indep(0 + trait | series))])
+        # Ordinary unit/unit_obs composition (slice 2) is admitted and is a composed
+        # fit, never silently ignored (test_temporal_composed.jl twins it).
+        @test GMA._temporal_other_tiers(fitq(fx, t; structure=[:(indep(0 + trait | series))])) == ["diag_B"]
     end
 
     @testset "dedicated state tier (engine.R:12) and extractor labels (methods.R:3)" begin
