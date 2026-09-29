@@ -1,4 +1,4 @@
-using GLLVModels, Test, TOML, SHA, Logging
+using GLLVModels, Test, TOML, SHA
 const GM = GLLVModels
 
 # Grouped NB dispersion: the upper end warns, only the lower end blocks `converged`.
