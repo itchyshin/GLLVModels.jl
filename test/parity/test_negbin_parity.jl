@@ -65,14 +65,17 @@ end
         Y[t, s] = _rand_nb2(μ, r_true)
     end
     # The loop above records how the ORIGINAL data were drawn (Julia 1.12+). This
-    # family-smoke cell now fits the stored smoke draw instead (seed 39, size 1 to 3,
+    # family-smoke cell fits the stored smoke draw instead (seed 39, size 1 to 3,
     # fixtures/generate_nb2_smoke_data.jl): on the original data both engines put
-    # traits 1 and 3 at the Poisson boundary (decision 2026-09-28).
-    Y = parity_nb2_smoke_Y()
+    # traits 1 and 3 at the Poisson boundary (decision 2026-09-28). The swap sits
+    # inside the `jl_fit =` statement on purpose: test_nb2_formula_parity.jl copies
+    # this file's text from `Random.seed!(45)` up to the first `    jl_fit =` to
+    # rebuild the ORIGINAL data, so nothing that changes Y may come before it.
 
     # Public default route — twin-aligned with gllvmTMB default nbinom2().
-    jl_fit = fit_gllvm(Y; family = GLLVModels.NegativeBinomial(), K = K,
-                       g_tol = 1e-7, iterations = 800)
+    jl_fit = (Y = parity_nb2_smoke_Y();
+              fit_gllvm(Y; family = GLLVModels.NegativeBinomial(), K = K,
+                        g_tol = 1e-7, iterations = 800))
     @test jl_fit isa NBGroupedFit
     @test jl_fit.converged
     @test isfinite(jl_fit.loglik)
