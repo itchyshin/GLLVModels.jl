@@ -68,6 +68,8 @@ GLLVModels._fit_verdict
 GLLVModels._aghq_gh_normal
 GLLVModels._tweedie_verdict
 GLLVModels._beta_binomial_verdict
+GLLVModels._gp1_verdict
+GLLVModels._beta_binomial_grouped_verdict
 GLLVModels._mixed_unpack
 GLLVModels._phylo_ordinal_xlv_marginal_loglik
 GLLVModels._gauss_hermite
@@ -118,12 +120,16 @@ GLLVModels._fit_gaussian_structured_sources
 
 ## Temporal source internals
 
-The state index, coordinate layout and exact marginal likelihood behind
-[`fit_temporal_gllvm`](@ref), and the port of `TMB::tmbprofile` used by
+The state index, the ordinary unit / unit_obs composition, the coordinate
+layout and exact marginal likelihood behind [`fit_temporal_gllvm`](@ref), and
+the port of `TMB::tmbprofile` used by
 [`profile_temporal`](@ref). Not exported; can change without notice.
 
 ```@docs
 GLLVModels.TemporalSpec
+GLLVModels.TemporalOrdinaryTier
+GLLVModels.TemporalComposition
+GLLVModels._temporal_composition
 GLLVModels.TemporalLayout
 GLLVModels._temporal_parameter_names
 GLLVModels._temporal_trait_block

@@ -143,7 +143,8 @@ scaffold conservative unless it is deliberately rewired to that same contract.
 - **Families with no GLLVModels.jl path** (`ZNIB`, correlated LVs `lvCor`, structured row
   effects `corAR1/corExp/corCS`) — out of scope per `docs/src/gllvmtmb-parity.md`.
 - **gllvmTMB temporal sources** (`temporal_indep/dep/latent`) — not bridged. The
-  temporal-source-only cell has a native Julia counterpart, `fit_temporal_gllvm`
+  temporal source, alone or beside ordinary `unit` / `unit_obs` terms, has a
+  native Julia counterpart, `fit_temporal_gllvm`
   (`docs/src/temporal.md`); fit it in R with gllvmTMB or in Julia directly.
 - **Ordinal species-specific cutpoints** — GLLVModels.jl uses common ordered cutpoints.
 

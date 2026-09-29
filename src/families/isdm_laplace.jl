@@ -133,7 +133,9 @@ lambda' + I_K`, step `A \\ g`. The convergence rule is a copy of
 `_mixed_laplace_mode` in src/families/mixed.jl: converged
 when both the step and the Newton decrement `g'Δ` are small, accepted at the
 floating-point floor or when a stalled line search leaves a decrement below
-`nd_tol`; a step that lowers the cell log-posterior is halved.
+`nd_tol`; a step that lowers the cell log-posterior is halved, except once the
+decrement is below `nd_tol`, where the full step is taken (the log-posterior
+comparison is at rounding level there).
 """
 function _isdm_cell_mode(y::AbstractVector, fid::AbstractVector, tr::AbstractVector,
         eta0::AbstractVector, Λ::AbstractMatrix;
@@ -172,7 +174,13 @@ function _isdm_cell_mode(y::AbstractVector, fid::AbstractVector, tr::AbstractVec
         at_floor = dmax <= sqrt(eps(Float64)) * (1 + norm(z))
         at_floor && dmax >= prev_dmax && decrement < nd_tol && return z .+ Δ, true
         prev_dmax = dmax
-        if (!linesearch_only || at_floor) && norm(Δ) <= 1e-3 * (1 + norm(z))
+        # Below `nd_tol` the log-posterior gain of the step is at rounding level, so the
+        # line search's `q1 >= q0` is decided by rounding: a rejected step used to end
+        # the search up to ~5e-8 short of the mode, and the Laplace value (linear in
+        # that gap through the log-determinant) jumped by ~1e-8, a CPU/BLAS-dependent
+        # spike the outer optimiser could stop on. Take the full step there instead.
+        if ((!linesearch_only || at_floor) && norm(Δ) <= 1e-3 * (1 + norm(z))) ||
+                decrement < nd_tol
             z = z .+ Δ
         else
             q0 = _isdm_cell_logpost(y, fid, tr, eta0, Λ, z)

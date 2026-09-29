@@ -129,6 +129,55 @@ temporal_latent(formula, time; d=1, structure=:ar1, replicate=nothing, unique=fa
 # ---------------------------------------------------------------------------
 
 """
+    TemporalOrdinaryTier
+
+Internal description of one ordinary covariance term beside the temporal
+source (temporal port slice 2): `level` is `:B` (the stable `unit` tier) or
+`:W` (the `unit_obs` tier); `kind` is `:indep`, `:dep` or `:latent`; `rank`
+is `0`, `p` or `d`; `diag` is true when the tier carries trait-specific
+variances (`indep`, or `latent` with `unique = true`); `group` is the column.
+The trait covariance is `Lambda Lambda'` (rank > 0) plus `diag(exp(2 theta))`
+(`diag`), as gllvmTMB's `theta_rr_B` / `theta_diag_B` (and `_W`) blocks.
+"""
+struct TemporalOrdinaryTier
+    level::Symbol
+    kind::Symbol
+    rank::Int
+    diag::Bool
+    group::Symbol
+end
+
+"""
+    TemporalComposition
+
+Internal record of the ordinary terms composed with the temporal source:
+the `B` (unit) and `W` (unit_obs) tiers, the `(1 | group)` random-intercept
+group (`re_int`), per-row one-based level ids for each, the `unit` and
+`unit_obs` columns, the raw `structure` terms (for a refit), and
+`sigma_fixed`: the residual SD fixed by gllvmTMB's per-row suppression rule
+(R/fit-multi.R:6959-6967), or `nothing` when `log_sigma_eps` is free.
+"""
+struct TemporalComposition
+    B::Union{Nothing,TemporalOrdinaryTier}
+    W::Union{Nothing,TemporalOrdinaryTier}
+    re_int::Union{Nothing,Symbol}
+    unit_col::Union{Nothing,Symbol}
+    unit_obs_col::Union{Nothing,Symbol}
+    unit_levels::Vector{String}
+    unit_id::Vector{Int}
+    unit_obs_levels::Vector{String}
+    unit_obs_id::Vector{Int}
+    re_int_id::Vector{Int}
+    sigma_fixed::Union{Nothing,Float64}
+    terms::Vector{Any}
+end
+
+const _TEMPORAL_NO_COMPOSITION = TemporalComposition(nothing, nothing, nothing, nothing,
+    nothing, String[], Int[], String[], Int[], Int[], nothing, Any[])
+
+_temporal_composed(c::TemporalComposition) = c.B !== nothing || c.W !== nothing || c.re_int !== nothing
+
+"""
     TemporalSpec
 
 Internal state index built by the temporal pre-pass. States are the ordered
@@ -136,6 +185,8 @@ Internal state index built by the temporal pre-pass. States are the ordered
 orders them). `state_id` and `trait_id` are one-based per data row;
 `predecessor` is one-based per state with `0` at a series start; `gap` holds
 integer AR1 gaps and `elapsed` numeric OU gaps (both `0` at a series start).
+`composition` is the [`TemporalComposition`](@ref GLLVModels.TemporalComposition)
+of ordinary unit / unit_obs terms (none after the pre-pass; set by the fit).
 """
 struct TemporalSpec
     mode::Symbol
@@ -156,6 +207,7 @@ struct TemporalSpec
     elapsed::Vector{Float64}
     row_series::Vector{String}
     row_time::Vector{Float64}
+    composition::TemporalComposition
 end
 
 _temporal_isna(x) = x === missing || x === nothing || (x isa AbstractFloat && isnan(x))
@@ -280,9 +332,6 @@ function _parse_temporal_term(term::TemporalTerm, cols::NamedTuple; trait::Symbo
         end
         throw(ArgumentError("temporal cross-source cells ($(source_terms[1])) are not implemented in GLLVModels.jl yet; see docs/design/temporal-port-spec.md section 7, Q1"))
     end
-    isempty(providers) || throw(ArgumentError(
-        "ordinary unit/unit_obs terms beside a temporal source are not implemented in GLLVModels.jl yet (temporal port slice 2)"))
-
     S = length(pairs)
     predecessor = zeros(Int, S); gap = zeros(Int, S); elapsed = zeros(Float64, S)
     for s in 2:S
@@ -296,5 +345,157 @@ function _parse_temporal_term(term::TemporalTerm, cols::NamedTuple; trait::Symbo
     rank = term.mode === :dep ? p : term.mode === :latent ? 1 : 0
     return TemporalSpec(term.mode, term.structure, rank, term.unique, workflow, series,
         time, trait, rep, traits, (pair_id=pair_id, series=pair_series, time=pair_time),
-        state_id, trait_id, predecessor, gap, elapsed, row_series, times)
+        state_id, trait_id, predecessor, gap, elapsed, row_series, times,
+        _TEMPORAL_NO_COMPOSITION)
 end
+
+# ---------------------------------------------------------------------------
+# Ordinary unit / unit_obs terms beside the temporal source (slice 2).
+# R admits `indep`, `dep` and `latent` at the unit and unit_obs levels and the
+# `(1 | g)` random intercept (R/temporal.R:154-158), with the unit_obs nesting
+# check (R/gllvmTMB.R:1178-1186), the series/unit partition check when a stable
+# unit component is present (R/gllvmTMB.R:1253-1264), and the sigma_eps
+# suppression rule (R/fit-multi.R:6959-6967).
+# ---------------------------------------------------------------------------
+
+function _temporal_same_partition(left, right)
+    a = Dict{String,String}(); b = Dict{String,String}()
+    for (l, r) in zip(string.(left), string.(right))
+        get!(a, l, r) == r || return false
+        get!(b, r, l) == l || return false
+    end
+    return true
+end
+
+function _temporal_level_ids(col)
+    labels = string.(col)
+    levels = sort(unique(labels))
+    index = Dict(l => i for (i, l) in enumerate(levels))
+    return levels, [index[l] for l in labels]
+end
+
+_temporal_trait_lhs(lhs, trait::Symbol) =
+    lhs isa Expr && lhs.head === :call && length(lhs.args) == 3 && lhs.args[1] === :+ &&
+    lhs.args[2] == 0 && lhs.args[3] === trait
+
+function _temporal_term_error(ex, trait)
+    throw(ArgumentError("`$(ex)` is not an ordinary term admitted beside a temporal source in " *
+        "GLLVModels.jl. Use `indep(0 + $(trait) | g)`, `dep(0 + $(trait) | g)`, " *
+        "`latent(0 + $(trait) | g, d = 1)` or `(1 | g)`, with `g` the `unit` or `unit_obs` column."))
+end
+
+# One ordinary term -> (kind, group, rank, diag); kind is :indep, :dep,
+# :latent or :re_int. `rank` for :dep is filled in later (it is p).
+function _temporal_ordinary_term(ex, trait::Symbol, p::Integer)
+    ex isa Expr && ex.head === :call || _temporal_term_error(ex, trait)
+    if ex.args[1] === :| && length(ex.args) == 3
+        ex.args[2] == 1 && ex.args[3] isa Symbol || _temporal_term_error(ex, trait)
+        return (:re_int, ex.args[3]::Symbol, 0, false)
+    end
+    head = ex.args[1]
+    head in (:indep, :dep, :latent) || _temporal_term_error(ex, trait)
+    length(ex.args) >= 2 || _temporal_term_error(ex, trait)
+    bar = ex.args[2]
+    (bar isa Expr && bar.head === :call && length(bar.args) == 3 && bar.args[1] === :| &&
+        _temporal_trait_lhs(bar.args[2], trait) && bar.args[3] isa Symbol) ||
+        _temporal_term_error(ex, trait)
+    group = bar.args[3]::Symbol
+    kwargs = Dict{Symbol,Any}()
+    for a in ex.args[3:end]
+        a isa Expr && a.head === :kw && a.args[1] isa Symbol || _temporal_term_error(ex, trait)
+        kwargs[a.args[1]] = a.args[2]
+    end
+    allowed = head === :indep ? (:common,) : head === :dep ? () : (:d, :unique, :common)
+    for k in keys(kwargs)
+        k in allowed || throw(ArgumentError("$(head)(...) does not accept keyword `$(k)` beside a temporal source"))
+    end
+    if get(kwargs, :common, false) !== false
+        throw(ArgumentError("`common = true` is not available for ordinary terms beside a temporal source in GLLVModels.jl"))
+    end
+    head === :indep && return (:indep, group, 0, true)
+    head === :dep && return (:dep, group, p, false)
+    d = get(kwargs, :d, 1)
+    d isa Integer && !(d isa Bool) && 1 <= d <= p ||
+        throw(ArgumentError("latent(...) rank `d` must be an integer between 1 and the number of traits ($(p))"))
+    unique = get(kwargs, :unique, true)            # gllvmTMB's latent() default
+    unique isa Bool || throw(ArgumentError("latent(...) `unique` must be a literal true or false"))
+    return (:latent, group, Int(d), unique)
+end
+
+"""
+    _temporal_composition(spec, structure, cols, y; unit, unit_obs) -> TemporalComposition
+
+Resolve the ordinary terms in `structure` against the `unit` (default: the
+temporal series column) and `unit_obs` columns, in R's check order: unit_obs
+nesting, the series/unit partition when a stable unit component is present,
+then the grouping of each term. Applies gllvmTMB's sigma_eps suppression
+rule: when a unit or unit_obs diagonal term is at the per-row level and the
+workflow is replicated, `sigma_eps` is fixed at `max(1e-3 sd(y), 1e-6)`.
+"""
+function _temporal_composition(spec::TemporalSpec, structure, cols::NamedTuple,
+        y::AbstractVector; unit=nothing, unit_obs=nothing)
+    unit === nothing || unit isa Symbol || throw(ArgumentError("`unit` must be a column name (Symbol) or nothing"))
+    unit_obs === nothing || unit_obs isa Symbol || throw(ArgumentError("`unit_obs` must be a column name (Symbol) or nothing"))
+    unit_col = unit === nothing ? spec.series_col : unit
+    haskey(cols, unit_col) || throw(ArgumentError("`unit` column `$(unit_col)` is not in the data"))
+    n = length(y)
+    if unit_obs !== nothing
+        haskey(cols, unit_obs) || throw(ArgumentError("`unit_obs` column `$(unit_obs)` is not in the data"))
+        owner = Dict{String,String}()
+        for (o, u) in zip(string.(cols[unit_obs]), string.(cols[unit_col]))
+            get!(owner, o, u) == u || _temporal_abort(
+                "Each `unit_obs` level must be nested inside one `unit` level.";
+                action="Use a unit_obs identifier nested within unit.")
+        end
+    end
+    terms = Any[ex for ex in structure]
+    p = length(spec.traits)
+    parsed = [_temporal_ordinary_term(ex, spec.trait_col, p) for ex in terms]
+    stable = any(t -> t[2] === unit_col, parsed)
+    if stable && !_temporal_same_partition(cols[spec.series_col], cols[unit_col])
+        _temporal_abort("The temporal `series` column must have the same partition as `unit` when a stable unit covariance component is included.";
+            info="Temporal states are separate from ordinary units, but the two components must index the same stable entities.",
+            action="Use matching unit groups, even when their labels differ, or omit the stable-unit covariance component.")
+    end
+    B = nothing; W = nothing; re_int = nothing
+    for (ex, (kind, group, rank, dg)) in zip(terms, parsed)
+        if kind === :re_int
+            re_int === nothing || throw(ArgumentError("only one `(1 | g)` term is admitted beside a temporal source in GLLVModels.jl"))
+            haskey(cols, group) || throw(ArgumentError("`(1 | $(group))`: column `$(group)` is not in the data"))
+            re_int = group
+            continue
+        end
+        level = group === unit_col ? :B : (unit_obs !== nothing && group === unit_obs) ? :W : nothing
+        if level === nothing
+            supported = unit_obs === nothing ? "\"$(unit_col)\" (unit)" : "\"$(unit_col)\" (unit), \"$(unit_obs)\" (unit_obs)"
+            throw(ArgumentError("Unsupported grouping \"$(group)\" for `$(ex)`. Supported groupings: $(supported). " *
+                "If you meant the within-unit grouping, pass `unit_obs = :$(group)`."))
+        end
+        tier = TemporalOrdinaryTier(level, kind, rank, dg, group)
+        if level === :B
+            B === nothing || throw(ArgumentError("only one ordinary term per level is admitted beside a temporal source in GLLVModels.jl; found two at the unit level ($(unit_col))"))
+            B = tier
+        else
+            W === nothing || throw(ArgumentError("only one ordinary term per level is admitted beside a temporal source in GLLVModels.jl; found two at the unit_obs level ($(unit_obs))"))
+            W = tier
+        end
+    end
+    unit_levels, unit_id = _temporal_level_ids(cols[unit_col])
+    uo_levels, uo_id = unit_obs === nothing ? (String[], Int[]) : _temporal_level_ids(cols[unit_obs])
+    re_id = re_int === nothing ? Int[] : _temporal_level_ids(cols[re_int])[2]
+    per_row(tier, ids) = tier !== nothing && tier.diag &&
+        length(unique(zip(spec.trait_id, ids))) == n
+    sigma_fixed = nothing
+    if (per_row(W, uo_id) || per_row(B, unit_id)) && spec.workflow !== :unreplicated
+        sigma_fixed = max(1e-3 * std(y), 1e-6)
+        level_lab = per_row(W, uo_id) ? unit_obs : unit_col
+        @info "Auto-suppressing `sigma_eps`: `indep(0 + trait | $(level_lab))` is at the per-row level, so it already absorbs the observation residual. Fixed at $(round(sigma_fixed; sigdigits=3)) (~1/1000 of sd(y)) to keep the Gaussian density well-defined; the row-level residual variance is fully captured by the per-row diagonal term."
+    end
+    return TemporalComposition(B, W, re_int, unit_col, unit_obs, unit_levels, unit_id,
+        uo_levels, uo_id, re_id, sigma_fixed, terms)
+end
+
+_temporal_with_composition(s::TemporalSpec, c::TemporalComposition) = TemporalSpec(s.mode,
+    s.structure, s.rank, s.unique, s.workflow, s.series_col, s.time_col, s.trait_col,
+    s.replicate_col, s.traits, s.pair_table, s.state_id, s.trait_id, s.predecessor, s.gap,
+    s.elapsed, s.row_series, s.row_time, c)
