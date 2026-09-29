@@ -1,3 +1,17 @@
+## 2026-09-29: ordered-beta bootstrap simulator
+
+- Branch `claude/ordered-beta-boot-simulator` from `origin/main`. The `OrderedBetaFit` CI adapter's
+  `simulate` stub is replaced by a draw from the law `ordered_beta_logp` scores (formulas checked
+  against `src/families/ordered_beta.jl`, lines 7-15 and 78-102, including the `μ` clamp).
+- Before (origin/main): `confint(fit, Y; method = :bootstrap, n_boot = 12)` returns all-NaN bounds
+  with `n_converged = 0`; the stub's throw is swallowed per replicate, so there is no error.
+- New test `test/test_confint_bootstrap_ordered_beta.jl`: 0-share, 1-share and interior mean per
+  trait (K = 2, n = 200,000) within 4 analytic Monte Carlo SEs of quadrature values (observed
+  |z| at most 2.12 on Julia 1.10), a joint 1-share that separates a shared per-site z from a
+  per-cell one, and an end-to-end bootstrap on a literal fixture (sha256 checked).
+- Red on origin/main: 5 pass, 4 fail, 1 error on Julia 1.10.12 and 1.13.0. Green: 23 of 23 on both.
+  `test_confint_bootstrap_verdict_bhob.jl` (header comment updated): 25 of 25 on both. Full suite not run.
+
 ## 2026-09-27: getLV on grouped Beta fits returns the per-site mode
 
 - Branch `claude/beta-getlv-mode-20260927`, stacked on `claude/beta-grouped-mode-search-503` (#540).

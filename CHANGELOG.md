@@ -18,6 +18,16 @@
   offending value before any level-indexed loop. Masked cells are not checked, so
   a placeholder under `mask = false` is still accepted; valid data is unchanged.
   Test: `test/test_ordinal_level_check.jl`.
+- **Ordered-beta `confint(..., method = :bootstrap)` now runs.** The `simulate`
+  closure of the `OrderedBetaFit` CI adapter (`src/confint_family.jl`) was a stub
+  that threw; `_family_bootstrap` caught the throw in every replicate, so the call
+  returned NaN bounds with `n_converged = 0` rather than an error. It now draws
+  from the law `ordered_beta_logp` scores: `z ~ N(0, I_K)` per site,
+  `η = β + Λz`, `P(y = 0) = σ(c0 - η)`, `P(y = 1) = σ(η - c1)`, otherwise
+  `y ~ Beta(μφ, (1 - μ)φ)` with `μ = σ(η)` clamped as in the likelihood. Wald and
+  profile intervals are unchanged. Test: `test/test_confint_bootstrap_ordered_beta.jl`
+  (analytic moment checks of the draws, and an end-to-end bootstrap on the
+  literal fixture `test/fixtures/ordered_beta_boot.toml`).
 
 All notable changes to GLLVModels.jl are documented here.
 
