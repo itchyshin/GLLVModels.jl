@@ -213,6 +213,7 @@ println(_SHARD === nothing ?
     _shard_include("test_gp1_mode_backtrack.jl")
     _shard_include("test_grouped_dispersion.jl")
     _shard_include("test_nb_boundary_restart.jl")
+    _shard_include("test_nb_shared_r_boundary.jl")
     _shard_include("test_grouped_dispersion_beta_gamma.jl")
     _shard_include("test_gamma_beta_upper_boundary.jl")
     _shard_include("test_beta_grouped_convergence.jl")
