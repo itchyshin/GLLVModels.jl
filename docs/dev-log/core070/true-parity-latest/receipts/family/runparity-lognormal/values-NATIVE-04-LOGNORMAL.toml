@@ -1,0 +1,9 @@
+case_id = "NATIVE-04-LOGNORMAL"
+
+[[values]]
+label = "logLik"
+julia = -594.6707717158076
+test = "@test jl_logL ≈ r.logLik rtol = 1e-6"
+rtol = 1.0e-6
+r = -594.6707717381977
+atol = 0.0

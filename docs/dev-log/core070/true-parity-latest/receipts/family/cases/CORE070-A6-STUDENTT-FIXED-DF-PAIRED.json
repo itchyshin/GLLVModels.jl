@@ -1,0 +1,147 @@
+{
+  "schema": "core070-family-p1-case-receipt/v1",
+  "case_id": "CORE070-A6-STUDENTT-FIXED-DF-PAIRED",
+  "verdict": "PASS",
+  "evidence_kind": "numeric_r_vs_julia",
+  "batch": "tools/core070_a6_studentt_fixture.jl + .R, GLLVM_PARITY_PIN=P1",
+  "measures": "Student-t identity, df pinned at 6 on both engines, per-trait sigma, p=5, n=250, K=1, seed 20260901; both-engine health required; toy fixture",
+  "pinned_nu_check": {
+    "r_df_student": [
+      5.999999999999999,
+      5.999999999999999,
+      5.999999999999999,
+      5.999999999999999,
+      5.999999999999999
+    ],
+    "julia_nu": [
+      6.0
+    ],
+    "max_abs_diff": 8.881784197001252e-16,
+    "note": "df pinned at 6 on both engines; the fixture's nu check confirms the pin, it cannot discriminate the fits, so it is not a comparison entry"
+  },
+  "fixture_verdict": "PASS",
+  "fixture_messages": [],
+  "both_engine_health": true,
+  "free_nu_case": {
+    "status": "recorded structural divergence, never gating (R per-trait df vs Julia shared nu)",
+    "r_loglik": -1736.3913684439449,
+    "julia_loglik": -1738.8269853649504
+  },
+  "gllvmtmb_version": "0.7.1",
+  "batch_verifier": {
+    "tool": "tools/core070_a6_studentt_fixture.jl",
+    "status": "PASS",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/family/a6-p1/verify.txt"
+  },
+  "read_from": {
+    "docs/dev-log/core070/true-parity-latest/receipts/family/a6-p1/results.toml": "5e5f8b15b13064e692053535115f608bf4253f6106c1da0e6a7f0b6bba0f6e6e",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/a6-p1/r-output.tsv": "c3a087533b6331ee9ce833fece6dc408a1ad5b36bbd9ec243404271908197b96",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/a6-p1/r-output.tsv.source-pin.tsv": "0d6617e254e9ab1b78511b92ecc6c1820b25c05793a787636a91351f9048f088",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/a6-p1/run-commit.json": "2e16587a479233a6fe0bf80655a1c208a68a479877cb18647134d745a22f4edd",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/a6-p1/verify.txt": "405de667b28e5536673c4af0905a982862337241cdb0880a51b5b6decd439159",
+    "docs/dev-log/core070/true-parity-latest/a6-studentt-contract-p1.json": "04f1f4df438c862bf88a12bd3a8c3be5daae4f8396470f07e0d6df8b8af197ad"
+  },
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/family/a6-p1/results.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/a6-p1/r-output.tsv"
+  ],
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "7506185ccbb6ebbd484219a860b35d989301a8cf",
+  "glvmodels_worktree_dirty": [],
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-A6-STUDENTT-FIXED-DF-PAIRED",
+        "quantity": "logLik",
+        "max_abs_diff": 6.1731952882837504e-09,
+        "tolerance": 0.0001,
+        "tolerance_rule": "tools/core070_a6_studentt_fixture.jl PAIRED_TOL (1e-4 absolute, unchanged from P0)",
+        "n_values": 1,
+        "r_value": -1738.1908875549066,
+        "julia_value": -1738.1908875487334,
+        "diff_source": "recomputed from the saved R and Julia values",
+        "discriminating": true
+      },
+      {
+        "case_id": "CORE070-A6-STUDENTT-FIXED-DF-PAIRED",
+        "quantity": "beta",
+        "max_abs_diff": 2.4186025092687302e-06,
+        "tolerance": 0.0001,
+        "tolerance_rule": "tools/core070_a6_studentt_fixture.jl PAIRED_TOL (1e-4 absolute, unchanged from P0)",
+        "n_values": 5,
+        "r_value": [
+          0.5418671432273656,
+          -0.24346023700639977,
+          0.3178544255186865,
+          0.8884870157907517,
+          -0.728738343659264
+        ],
+        "julia_value": [
+          0.5418664969369326,
+          -0.24345991241442572,
+          0.3178544626517426,
+          0.8884845971882425,
+          -0.7287375318153464
+        ],
+        "diff_source": "recomputed from the saved R and Julia values",
+        "discriminating": true
+      },
+      {
+        "case_id": "CORE070-A6-STUDENTT-FIXED-DF-PAIRED",
+        "quantity": "sigma (per trait)",
+        "max_abs_diff": 1.99640074638463e-06,
+        "tolerance": 0.0001,
+        "tolerance_rule": "tools/core070_a6_studentt_fixture.jl PAIRED_TOL (1e-4 absolute, unchanged from P0)",
+        "n_values": 5,
+        "r_value": [
+          0.7108912351164172,
+          0.707570504313768,
+          0.6889215562506174,
+          0.6637118582173136,
+          0.7311895194078535
+        ],
+        "julia_value": [
+          0.7108892387156708,
+          0.7075689114130563,
+          0.6889213792102503,
+          0.6637109110306512,
+          0.731190087968217
+        ],
+        "diff_source": "recomputed from the saved R and Julia values",
+        "discriminating": true
+      },
+      {
+        "case_id": "CORE070-A6-STUDENTT-FIXED-DF-PAIRED",
+        "quantity": "loadings (K=1, sign-aligned)",
+        "max_abs_diff": 3.7280399545758236e-06,
+        "tolerance": 0.0001,
+        "tolerance_rule": "tools/core070_a6_studentt_fixture.jl PAIRED_TOL (1e-4 absolute, unchanged from P0)",
+        "n_values": 5,
+        "r_value": [
+          0.8693947363958788,
+          -0.7352512836218313,
+          0.5824162280743561,
+          0.6437303465198976,
+          -0.407804216846768
+        ],
+        "julia_value": [
+          0.8693939204080139,
+          -0.7352534542076923,
+          0.5824164076649219,
+          0.6437316901774284,
+          -0.4078004888068134
+        ],
+        "diff_source": "recomputed from the saved R and Julia values",
+        "julia_sign_flipped": true,
+        "discriminating": true
+      }
+    ]
+  }
+}

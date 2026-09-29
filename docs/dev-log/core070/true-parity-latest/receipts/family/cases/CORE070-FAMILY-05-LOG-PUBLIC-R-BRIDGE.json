@@ -1,0 +1,19 @@
+{
+  "schema": "core070-family-p1-case-receipt/v1",
+  "case_id": "CORE070-FAMILY-05-LOG-PUBLIC-R-BRIDGE",
+  "verdict": "NOT_EXECUTED",
+  "evidence_kind": "not_executed",
+  "why_not_executed": "Public R bridge case: gllvmTMB(engine = 'julia') and gllvm_julia_fit() calling GLLVModels through JuliaCall. The P0 batch (tools/core070_bridge_models.R) replays bridge-fixtures.json and retained prior R fits kept only under .unlazy/, which are not on this host, and compares the bridge fit with a native GLLVModels fit (Julia against Julia) and with the retained P0 R logLik. Not run at P1 here.",
+  "read_from": {
+    "docs/dev-log/core070/family-reconciliation-2026-09-01.json": "4623b055d75e3eb9e74fdcf4f4105d6559a5664fdd9663b5953cb8e5856e7f10"
+  },
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "7506185ccbb6ebbd484219a860b35d989301a8cf",
+  "glvmodels_worktree_dirty": [],
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+}

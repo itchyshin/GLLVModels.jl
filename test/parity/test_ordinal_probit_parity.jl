@@ -58,5 +58,7 @@ using GLLVModels, RCall, Test, Random
     println("Ordinal-probit diagnostic: Julia = $(jl_fit.loglik), ",
             "R = $r_logL, Δ = $(jl_fit.loglik - r_logL)")
     @test r_logL ≈ -r_obj rtol = 0 atol = 1e-10
+    core070_record_values!("logLik"; julia = jl_fit.loglik, r = r_logL, rtol = 1e-6,
+                           test = "@test jl_fit.loglik ≈ r_logL rtol = 1e-6")
     @test jl_fit.loglik ≈ r_logL rtol = 1e-6
 end

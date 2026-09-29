@@ -3,7 +3,7 @@
 module Core070FamilyFormulas
 using GLLVModels, Test, Random, SHA, TOML
 import Distributions
-using Main: _core070_receipt_dir, _core070_sha256_file, parity_loadings_p5k2
+using Main: _core070_receipt_dir, _core070_sha256_file, parity_loadings_p5k2, core070_record_values!
 
 function run(family::Symbol)
     settings = Dict(
@@ -77,7 +77,9 @@ function run(family::Symbol)
         @test native.converged
         @test length(theta(native)) == nfree
         @test theta(native) ≈ health["native_parameters"] atol=1e-10 rtol=0
-        for fit in (wide, longfit)
+        for (route, fit) in (("wide", wide), ("long", longfit))
+            core070_record_values!("logLik, $route formula"; julia=fit.loglik, r=health["r_loglik"], rtol=1e-6,
+                test="@test fit.loglik ≈ health[\"r_loglik\"] atol=0 rtol=1e-6")
             @test typeof(fit) == typeof(native)
             @test fit.converged
             @test curvature(fit) == curvature(native)

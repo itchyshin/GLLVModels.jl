@@ -11,15 +11,21 @@ module GroupReceiptHarness
 using Test
 import ..Core070Receipts: record_case!, testset_counts
 const _CORE070_RUN = Ref{Any}(nothing)
+const _CORE070_ACTIVE_CELLS = Ref{Vector{String}}(String[])
+const _RECEIPT_DIR = Ref("")
+_core070_receipt_dir() = _RECEIPT_DIR[]
 _core070_required() = true
 core070_case_requested(id) = id in _CORE070_RUN[].requested_case_ids
+using TOML
 end
 helper_ast = Meta.parseall(read(joinpath(@__DIR__, "parity", "parity_helpers.jl"), String))
-group_definition = only(filter(helper_ast.args) do node
-    node isa Expr && node.head == :function && node.args[1] isa Expr &&
-        node.args[1].head == :call && node.args[1].args[1] == :core070_execute_group!
-end)
-Core.eval(GroupReceiptHarness, group_definition)
+for name in (:core070_execute_group!, :core070_record_values!)
+    definition = only(filter(helper_ast.args) do node
+        node isa Expr && node.head == :function && node.args[1] isa Expr &&
+            node.args[1].head == :call && node.args[1].args[1] == name
+    end)
+    Core.eval(GroupReceiptHarness, definition)
+end
 
 _sha(path) = bytes2hex(sha256(read(path)))
 
@@ -135,6 +141,30 @@ _sha(path) = bytes2hex(sha256(read(path)))
             @test invocations[] == 1
             @test TOML.parsefile(joinpath(run.dir, "run.toml"))["actual_assertions"] == 2
             @test all(cell["execution_case_ids"] == ["a", "b", "c"] for cell in values(run.cells))
+        end
+
+        @testset "value sink writes values-<case>.toml only inside a required cell" begin
+            dir = mkpath(joinpath(tmp, "values-dir"))
+            GroupReceiptHarness._RECEIPT_DIR[] = dir
+            GroupReceiptHarness.core070_record_values!("outside"; julia = 1.0, r = 2.0, test = "t")
+            @test isempty(readdir(dir))
+            run = start_run!(joinpath(tmp, "values-run");
+                requested_case_ids = ["a", "b"], source, inventory, contract_sha256 = "contract")
+            GroupReceiptHarness._CORE070_RUN[] = run
+            GroupReceiptHarness.core070_execute_group!(["a", "b"], fixture, () -> begin
+                @test_throws ArgumentError GroupReceiptHarness.core070_record_values!(
+                    "unnamed"; julia = 1.0, r = 2.0, test = "t")
+                @test_throws ArgumentError GroupReceiptHarness.core070_record_values!(
+                    "foreign"; julia = 1.0, r = 2.0, test = "t", case = "z")
+                GroupReceiptHarness.core070_record_values!("logLik"; julia = -1.5, r = -1.25, rtol = 1e-6,
+                    test = "@test a ≈ b rtol = 1e-6", case = "b")
+            end)
+            values = TOML.parsefile(joinpath(dir, "values-b.toml"))
+            @test values["case_id"] == "b"
+            @test only(values["values"]) == Dict("label" => "logLik", "julia" => -1.5, "r" => -1.25,
+                                                 "rtol" => 1e-6, "atol" => 0.0, "test" => "@test a ≈ b rtol = 1e-6")
+            @test !isfile(joinpath(dir, "values-a.toml"))
+            @test isempty(GroupReceiptHarness._CORE070_ACTIVE_CELLS[])
         end
 
         @testset "invalid groups fail without erasing earlier cells" begin

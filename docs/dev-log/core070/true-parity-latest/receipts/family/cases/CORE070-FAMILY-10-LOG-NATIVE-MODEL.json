@@ -1,0 +1,65 @@
+{
+  "schema": "core070-family-p1-case-receipt/v1",
+  "case_id": "CORE070-FAMILY-10-LOG-NATIVE-MODEL",
+  "verdict": "PASS",
+  "evidence_kind": "numeric_r_vs_julia",
+  "batch": "test/parity/runparity.jl, CORE070_PARITY_REQUIRED=1, GLLVM_PARITY_PIN=P1, run runparity-truncated-poisson",
+  "harness_cell": "NATIVE-11-TRUNCATED-POISSON",
+  "fixture": "test/parity/test_truncated_poisson_parity.jl",
+  "measures": "zero-truncated Poisson, p=5, n=60, K=2, seed 53; toy fixture, likelihood-level agreement only",
+  "cell_status": "success",
+  "cell_assertions": {
+    "passed": 8,
+    "broken": 0,
+    "failed": 0,
+    "errored": 0
+  },
+  "cell_execution_case_ids": [
+    "NATIVE-11-TRUNCATED-POISSON"
+  ],
+  "run_status": "success",
+  "run_failure_reason": null,
+  "batch_verifier": {
+    "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
+    "status": "PASS",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-poisson/verify.txt"
+  },
+  "read_from": {
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-poisson/run.toml": "60a0816e5ee521d4ccb660f16d408c63aeae4472d2112c98cee6b8ab5a22bfe0",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-poisson/values-NATIVE-11-TRUNCATED-POISSON.toml": "baf2b7604160d34eadc156da61977da69d7c85af931fbf488e48fa90842b2188",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-poisson/run-commit.json": "2e16587a479233a6fe0bf80655a1c208a68a479877cb18647134d745a22f4edd",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-poisson/verify.txt": "243a7815adeb9aee38a331538ac933db572a0f0e70e32cb3feedc17f559c3507",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-poisson/cell-NATIVE-11-TRUNCATED-POISSON.toml": "3e323ab839a0ac024bba748ed55004c8906293c622c8d70f33e7a654482220ed"
+  },
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-poisson/values-NATIVE-11-TRUNCATED-POISSON.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-poisson/cell-NATIVE-11-TRUNCATED-POISSON.toml"
+  ],
+  "registration": "CORE070-FAMILY-10-LOG-NATIVE-MODEL is paid by harness cell NATIVE-11-TRUNCATED-POISSON by the maintainer's P0 registration decision (docs/dev-log/core070/family-reconciliation-2026-09-01.json); carried unchanged",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "7506185ccbb6ebbd484219a860b35d989301a8cf",
+  "glvmodels_worktree_dirty": [],
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-FAMILY-10-LOG-NATIVE-MODEL",
+        "quantity": "logLik",
+        "max_abs_diff": 2.712454261200037e-09,
+        "tolerance": 0.000618077677658145,
+        "tolerance_rule": "the cell's own test, @test jl_logL \u2248 r.logLik rtol = 1e-6 (rtol=1e-06, atol=0; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
+        "n_values": 1,
+        "r_value": -618.077677658145,
+        "julia_value": -618.0776776554326,
+        "diff_source": "recomputed from the saved R and Julia values",
+        "discriminating": true
+      }
+    ]
+  }
+}

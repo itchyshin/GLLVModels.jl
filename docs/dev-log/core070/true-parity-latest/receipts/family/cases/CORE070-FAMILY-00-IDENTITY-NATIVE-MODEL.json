@@ -1,0 +1,108 @@
+{
+  "schema": "core070-family-p1-case-receipt/v1",
+  "case_id": "CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL",
+  "verdict": "FAIL",
+  "evidence_kind": "numeric_r_vs_julia",
+  "batch": "test/parity/runparity.jl, CORE070_PARITY_REQUIRED=1, GLLVM_PARITY_PIN=P1, run runparity-gaussian",
+  "harness_cell": "CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL",
+  "fixture": "test/parity/test_gaussian_original_required.jl",
+  "measures": "Gaussian identity, default unique, p=4, n=120, K=1, seed 81031 (fixture core070_gaussian_original.toml); toy fixture, likelihood-level agreement only",
+  "cell_status": "failed",
+  "cell_assertions": {
+    "passed": 30,
+    "broken": 0,
+    "failed": 1,
+    "errored": 0
+  },
+  "cell_execution_case_ids": [
+    "CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE",
+    "CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL"
+  ],
+  "run_status": "failed",
+  "run_failure_reason": "one or more cells have failed, skipped, broken, or zero assertions",
+  "batch_verifier": {
+    "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
+    "status": "FAIL",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/verify.txt"
+  },
+  "read_from": {
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/run.toml": "c280907d73e65ff33b4edae59f3e3904b2187e1d68f6050320b9ebad99a4f12f",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/values-CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL.toml": "62ccc46f99913bd1861bf4ae463d92ffd47a5d70758528b9206972ccbbecd5c9",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/run-commit.json": "2e16587a479233a6fe0bf80655a1c208a68a479877cb18647134d745a22f4edd",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/verify.txt": "fd01780fef3f00dd2e7d55c2f7bbec3464ab710a8162e8c9cb88e0f031cdc94d",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/cell-CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL.toml": "86afcecef8334efd23cbbeb428c154a4e734ea4d567dccdee0e537c3528d3a33",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/gaussian-native.toml": "668687199468e2e04f091d01e3f63c202bc952fae5eb55fe2ac2d477957a046a",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/gaussian-formula.toml": "61e496fc831d9a7ab7dd56e5a21d6801db61ba8f8da2fd1b6162ff37fc7152c3",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/gaussian-long.toml": "2c680d505ac899838143fcee883b509e98025c4281241ca8488b87dd3f8cbd34"
+  },
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/values-CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/cell-CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/gaussian-native.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/gaussian-formula.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/gaussian-long.toml"
+  ],
+  "why_fail": "the cell's own assertions did not all pass at P1 (see cell_assertions; the failing assertion may be a health or structure check rather than the compared numbers); this fixture group records one shared count for all its cases, so a failure in any of them fails every case of the group",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "7506185ccbb6ebbd484219a860b35d989301a8cf",
+  "glvmodels_worktree_dirty": [],
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL",
+        "quantity": "objective at a fixed off-optimum point",
+        "max_abs_diff": 3.410605131648481e-13,
+        "tolerance": 1e-06,
+        "tolerance_rule": "the cell's own test, @test point_value_delta<=1e-6 (rtol=0, atol=1e-06; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
+        "n_values": 1,
+        "r_value": 592.7911708880557,
+        "julia_value": 592.7911708880561,
+        "diff_source": "recomputed from the saved R and Julia values",
+        "discriminating": true
+      },
+      {
+        "case_id": "CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL",
+        "quantity": "objective at the R optimum",
+        "max_abs_diff": 7.958078640513122e-13,
+        "tolerance": 1e-06,
+        "tolerance_rule": "the cell's own test, @test record[\"r_endpoint_value_delta\"]<=1e-6 (rtol=0, atol=1e-06; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
+        "n_values": 1,
+        "r_value": 576.2849371937104,
+        "julia_value": 576.2849371937112,
+        "diff_source": "recomputed from the saved R and Julia values",
+        "discriminating": true
+      },
+      {
+        "case_id": "CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL",
+        "quantity": "objective at the Julia optimum",
+        "max_abs_diff": 4.547473508864641e-13,
+        "tolerance": 1e-06,
+        "tolerance_rule": "the cell's own test, @test record[\"native_endpoint_cross_delta\"]<=1e-6 (rtol=0, atol=1e-06; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
+        "n_values": 1,
+        "r_value": 576.2849371937117,
+        "julia_value": 576.2849371937112,
+        "diff_source": "recomputed from the saved R and Julia values",
+        "discriminating": true
+      },
+      {
+        "case_id": "CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL",
+        "quantity": "logLik",
+        "max_abs_diff": 7.958078640513122e-13,
+        "tolerance": 0.001,
+        "tolerance_rule": "the cell's own test, @test record[\"delta_loglik\"]<=1e-3 (rtol=0, atol=0.001; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
+        "n_values": 1,
+        "r_value": -576.2849371937104,
+        "julia_value": -576.2849371937112,
+        "diff_source": "recomputed from the saved R and Julia values",
+        "discriminating": true
+      }
+    ]
+  }
+}

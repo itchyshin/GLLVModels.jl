@@ -1,0 +1,16 @@
+case_id = "CORE070-FAMILY-02-LOG-FORMULA-INTERFACE"
+
+[[values]]
+label = "logLik, wide formula"
+julia = -634.171284410425
+test = "@test fit.loglik ≈ health[\"r_loglik\"] atol=0 rtol=1e-6"
+rtol = 1.0e-6
+r = -634.171284410439
+atol = 0.0
+[[values]]
+label = "logLik, long formula"
+julia = -634.171284410425
+test = "@test fit.loglik ≈ health[\"r_loglik\"] atol=0 rtol=1e-6"
+rtol = 1.0e-6
+r = -634.171284410439
+atol = 0.0
