@@ -493,6 +493,28 @@ function Base.show(io::IO, f::DeltaLogNormalFit)
           f.converged ? "" : ", NOT CONVERGED", ")")
 end
 
+# Up-front support check for the two-part fitters. Every `_tp_pieces` branches on
+# `y > 0`, so an observed NaN or negative value would take the zero branch and be
+# scored as an observed zero (and Beta-hurdle clamps values >= 1 into (0,1)). NaN is
+# not a missing-value marker in this package, so such a value is refused here.
+# `ok` is deliberately loose for counts: a non-integer or huge value (0.5, 1e300,
+# ZIB's N + 1) already ends on the fitter's failure verdict, and the #504 bootstrap
+# verdict tests rely on that soft failure, so only NaN and negatives are refused.
+_tp_count_ok(y) = y >= 0                        # false for NaN
+_tp_positive_ok(y) = y == 0 || (y > 0 && isfinite(y))
+_tp_unit_ok(y) = y == 0 || 0 < y < 1
+
+function _check_twopart_support(fname::AbstractString, Y::AbstractMatrix, ok,
+                                support::AbstractString)
+    for I in CartesianIndices(Y)
+        y = Y[I]
+        ok(y) || throw(ArgumentError(
+            "$fname: observed Y[$(I[1]), $(I[2])] = $y is outside the family's support " *
+            "($support). NaN is not a missing-value marker."))
+    end
+    return nothing
+end
+
 """
     fit_delta_lognormal_gllvm(Y; K, …) -> DeltaLogNormalFit
 
@@ -551,6 +573,7 @@ function fit_delta_lognormal_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         "fit_delta_lognormal_gllvm: predictor must be :separate or :shared; got :$predictor"))
     disp_group in (:shared, :species) || throw(ArgumentError(
         "fit_delta_lognormal_gllvm: disp_group must be :shared or :species; got :$disp_group"))
+    _check_twopart_support("fit_delta_lognormal_gllvm", Y, _tp_positive_ok, "0 or a finite positive real")
     rr = rr_theta_len(p, K)
 
     βz0 = Vector{Float64}(undef, p)
@@ -728,6 +751,7 @@ function fit_hurdle_poisson_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     p, n = size(Y)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_hurdle_poisson_gllvm: hessian must be :observed or :fisher; got :$hessian"))
+    _check_twopart_support("fit_hurdle_poisson_gllvm", Y, _tp_count_ok, "non-negative integer counts")
     rr = rr_theta_len(p, K)
     βz0 = Vector{Float64}(undef, p); βc0 = Vector{Float64}(undef, p)
     @inbounds for t in 1:p
@@ -881,6 +905,7 @@ function fit_hurdle_nb_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     p, n = size(Y)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_hurdle_nb_gllvm: hessian must be :observed or :fisher; got :$hessian"))
+    _check_twopart_support("fit_hurdle_nb_gllvm", Y, _tp_count_ok, "non-negative integer counts")
     rr = rr_theta_len(p, K)
     βz0 = Vector{Float64}(undef, p); βc0 = Vector{Float64}(undef, p)
     @inbounds for t in 1:p
@@ -1126,6 +1151,7 @@ function fit_delta_gamma_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     disp_group in (:shared, :species) || throw(ArgumentError(
         "fit_delta_gamma_gllvm: disp_group must be :shared or :species; got :$disp_group"))
     p, n = size(Y)
+    _check_twopart_support("fit_delta_gamma_gllvm", Y, _tp_positive_ok, "0 or a finite positive real")
     rr = rr_theta_len(p, K)
 
     βz0 = Vector{Float64}(undef, p); βc0 = Vector{Float64}(undef, p)
@@ -1375,6 +1401,7 @@ function fit_zip_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     p, n = size(Y)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_zip_gllvm: hessian must be :observed or :fisher; got :$hessian"))
+    _check_twopart_support("fit_zip_gllvm", Y, _tp_count_ok, "non-negative integer counts")
     rr = rr_theta_len(p, K)
     βz0, βc0, Λc0 = _zi_warmstart(Y, K)
     θ0 = vcat(βz0, βc0, pack_lambda(Λc0))
@@ -1464,6 +1491,7 @@ function fit_zip_gllvm_cov(Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 3
     γ_fixed_mask = _fixed_zero_mask(γ_fixed, q_full, "γ_fixed")
     X_fit, _ = _slice_fixed_X(X, γ_fixed_mask)
     q = size(X_fit, 3)
+    _check_twopart_support("fit_zip_gllvm_cov", Y, _tp_count_ok, "non-negative integer counts")
     rr = rr_theta_len(p, K)
     βz0, βc0, Λc0 = _zi_warmstart(Y, K)
     θ0 = vcat(βz0, zeros(q), βc0, zeros(q), pack_lambda(Λc0))
@@ -1588,6 +1616,7 @@ function fit_zinb_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     p, n = size(Y)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_zinb_gllvm: hessian must be :observed or :fisher; got :$hessian"))
+    _check_twopart_support("fit_zinb_gllvm", Y, _tp_count_ok, "non-negative integer counts")
     rr = rr_theta_len(p, K)
     βz0, βc0, Λc0 = _zi_warmstart(Y, K)
     θ0 = vcat(βz0, βc0, pack_lambda(Λc0), log(10.0))
@@ -1693,6 +1722,7 @@ function fit_zinb_gllvm_cov(Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 
     γ_fixed_mask = _fixed_zero_mask(γ_fixed, q_full, "γ_fixed")
     X_fit, _ = _slice_fixed_X(X, γ_fixed_mask)
     q = size(X_fit, 3)
+    _check_twopart_support("fit_zinb_gllvm_cov", Y, _tp_count_ok, "non-negative integer counts")
     rr = rr_theta_len(p, K)
     nθ = 2p + 2q + rr + 1
     θ0 = if θ_init === nothing
@@ -1895,6 +1925,7 @@ function fit_zib_gllvm(Y::AbstractMatrix{<:Real}; K::Integer, N::Integer,
     p, n = size(Y)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_zib_gllvm: hessian must be :observed or :fisher; got :$hessian"))
+    _check_twopart_support("fit_zib_gllvm", Y, _tp_count_ok, "integer counts 0..N")
     rr = rr_theta_len(p, K)
     βz0, βc0, Λc0 = _zib_warmstart(Y, N, K)
     θ0 = vcat(βz0, βc0, pack_lambda(Λc0))
@@ -1986,6 +2017,7 @@ function fit_zib_gllvm_cov(Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 3
     γ_fixed_mask = _fixed_zero_mask(γ_fixed, q_full, "γ_fixed")
     X_fit, _ = _slice_fixed_X(X, γ_fixed_mask)
     q = size(X_fit, 3)
+    _check_twopart_support("fit_zib_gllvm_cov", Y, _tp_count_ok, "integer counts 0..N")
     rr = rr_theta_len(p, K)
     βz0, βc0, Λc0 = _zib_warmstart(Y, N, K)
     θ0 = vcat(βz0, zeros(q), βc0, zeros(q), pack_lambda(Λc0))

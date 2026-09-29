@@ -1,0 +1,352 @@
+{
+  "schema": 1,
+  "status": "REGENERATED_AT_P1_BEFORE_RUN",
+  "area": "covariance",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "source_draft": "docs/dev-log/core070/manifest-freeze-work/drafts/covariance.json",
+  "source_annex": "docs/dev-log/core070/covariance-required-case-plan.json",
+  "source_subset": "docs/dev-log/core070/covariance-admission-subset.json",
+  "scope_rule": "Only draft rows whose source_id starts with 'covariance/' AND whose case_plan_annex is docs/dev-log/core070/covariance-required-case-plan.json. Rows whose annex is slopes-required-case-plan.json or structured-required-case-plan.json belong to other areas' batches and are out of scope here.",
+  "source_pins": {
+    "R/brms-sugar.R": "7ea192ddde2dbb807e70322faef0bac8e6cdcfa19df7dd9f805476b02889191a",
+    "R/parse-multi-formula.R": "a50f2a4b2053e8f3b8b1779fa9a87c8136503ff2b2275411dfa4490cd0af87d6",
+    "R/missing-predictor.R": "0955b93f3ff226a22d41b7a2cbf26d5f18d007c8157115332c302e35f50e72b5",
+    "R/fit-multi.R": "129d35549c728e96874252c3242f545ff959805c103e29f2803b740bd6da4ddd"
+  },
+  "run_style": "R_ONLY_FORMULA_GRAMMAR_STRUCTURE_CHECKS",
+  "run_style_note": "Every case in this batch checks the R (gllvmTMB) side of a formula-grammar admission fact: gllvmTMB:::parse_multi_formula(gllvmTMB:::desugar_brms_sugar(<formula>)) evaluated against a fixed, deterministic fixture environment, with the resulting covstructs list compared field-by-field against the frozen expectation below. None of these 9 executable cases has a Julia-side grammar entry point to compare against yet (verified by grep over src/formula.jl at reference_commit finding no animal_latent/meta_V/meta_known_V/phylo_latent/phylo_dep/latent grammar keywords); the julia_surface field on each case records that gap verbatim from the adversarially-verified draft spec so the obligation stays visible rather than silently discharged. This batch produces retained R-side oracle evidence only -- it does not claim Julia parity.",
+  "fixture": {
+    "species_levels": [
+      "sp1",
+      "sp2",
+      "sp3",
+      "sp4"
+    ],
+    "site_levels": [
+      "s1",
+      "s2",
+      "s3"
+    ],
+    "trait_levels": [
+      "t1",
+      "t2"
+    ],
+    "A": "4x4 symmetric positive-definite matrix, dimnames = species_levels, hand-specified constant (see tools/core070_covariance_batch.R:FIXTURE_A) so the run is exactly reproducible without RNG",
+    "V": "length-4 strictly positive numeric vector named by species_levels (see tools/core070_covariance_batch.R:FIXTURE_V)",
+    "fixture_note": "No response data or model fit is involved in this batch; only formula objects are constructed and parsed. species/A/V exist solely so the formulas' in-keyword arguments (species=, A=, V=) resolve to real R objects when parse_covstruct_call() evaluates them in the formula's environment."
+  },
+  "comparands_convention": "Structural equality only (kind string, presence/absence of named extra fields, and where noted, identical() to a fixture object or to a quoted language symbol). No floating-point comparands or numeric tolerances apply to any case in this batch -- these are formula-grammar admission facts, not model fits.",
+  "required_health_checks": [
+    "frozen_library_is_the_one_loaded",
+    "source_pin_sha256_matches",
+    "formula_parses_without_error_for_every_non_negative_case",
+    "covstruct_count_matches",
+    "covstruct_kind_sequence_matches",
+    "extra_field_presence_matches",
+    "extra_field_value_matches",
+    "negative_controls_all_raise_the_expected_condition"
+  ],
+  "cases": [
+    {
+      "case_id": "CORE070-COV-ANIMAL-FOLDED-UNIQUE-FORMULA",
+      "source_fact_id": "covariance/COV-ANIMAL-FOLDED-UNIQUE",
+      "evidence_kind": "formula",
+      "status": "executable_r_only",
+      "r_formula": "value ~ 0 + trait + animal_latent(species, A = A, d = 2, unique = TRUE)",
+      "expected_covstructs": [
+        {
+          "kind": "phylo_rr",
+          "extra_equal": {
+            "vcv": "A"
+          },
+          "extra_true": [
+            ".animal_source"
+          ],
+          "extra_int_equal": {
+            "d": 2
+          }
+        },
+        {
+          "kind": "phylo_rr",
+          "extra_equal": {
+            "vcv": "A"
+          },
+          "extra_true": [
+            ".phylo_unique",
+            ".auto_unique",
+            ".animal_source"
+          ]
+        }
+      ],
+      "julia_surface": "No Julia formula-grammar entry point exists for animal_latent(); GLLVM.jl (src/formula.jl) only wraps a StatsModels-style site-level design formula. The nearest engine primitive is passing a user-supplied pedigree/GRM matrix directly as the Sigma_phy argument of fit_gaussian_gllvm / sparse_phy_grad.jl, which has no automatic folded/auto-unique reduced-rank loading construction.",
+      "comparands": [
+        "gllvmTMB term_has() admission fixture (frozen reference b4d5fee6)",
+        "planned GLLVM.jl formula-grammar parse test (not yet implemented)"
+      ],
+      "source_citation": "R/brms-sugar.R:3035-3040 (animal_latent unique=TRUE fold), R/parse-multi-formula.R:254-283 (parse_covstruct_call extra evaluation)"
+    },
+    {
+      "case_id": "CORE070-COV-ANIMAL-FOLDED-UNIQUE-NATIVE",
+      "source_fact_id": "covariance/COV-ANIMAL-FOLDED-UNIQUE",
+      "evidence_kind": "native",
+      "status": "SPEC_DEFECT",
+      "spec_defect_reason": "The spec's julia_surface is explicit that no automatic folded/auto-unique reduced-rank loading construction exists in GLLVM.jl yet ('planned: ... with a folded/auto-unique loading constraint reproduced by hand (no automatic constraint construction exists yet)'). Hand-building that constraint from scratch is a model-development task, not a verification task, and is out of scope for this batch. Confirmed by grep: no animal_latent-equivalent folded-loading constructor exists anywhere under src/ at reference_commit b4d5fee6. Left as an open obligation rather than silently skipped.",
+      "r_call": "gllvmTMB fit using animal_latent(species, A=A, unique=TRUE) on a 2-trait Gaussian response with a supplied relatedness matrix A",
+      "julia_surface": "planned: fit_gaussian_gllvm(Y; Sigma_phy=A, K=2) with a folded/auto-unique loading constraint reproduced by hand (no automatic constraint construction exists yet)",
+      "comparands": [
+        "gllvmTMB fitted logLik/point estimates",
+        "GLLVM.jl fitted logLik/point estimates"
+      ]
+    },
+    {
+      "case_id": "CORE070-COV-META-EXACT-FORMULA",
+      "source_fact_id": "covariance/COV-META-EXACT",
+      "evidence_kind": "formula",
+      "status": "executable_r_only",
+      "r_formula": "value ~ 0 + meta_V(V = V)",
+      "expected_covstructs": [
+        {
+          "kind": "equalto",
+          "extra_equal": {
+            "vcv": "V"
+          }
+        }
+      ],
+      "julia_surface": "No meta-analysis known-sampling-variance family exists in GLLVM.jl. The nearest neighbour, src/families/gaussian_pervar.jl, fits a per-species residual variance as a free parameter rather than accepting a user-supplied, exactly-known per-observation sampling variance V.",
+      "comparands": [
+        "gllvmTMB same_rewrite() grammar-equivalence fixture",
+        "planned GLLVM.jl meta()-equivalent constructor (not yet implemented)"
+      ],
+      "source_citation": "R/brms-sugar.R:1404 (meta_V), R/brms-sugar.R:4541-4546 (meta_V/meta_known_V -> meta(sampling_var=)), R/brms-sugar.R:4726-4729 (meta() -> equalto(0+obs|grp_V, V) -- second-stage rewrite hardcodes a literal reference to a variable named V in the formula environment, independent of the meta_V(V=...) argument's own expression; this case's fixture uses V=V so the two coincide and the assertion holds).",
+      "note": "The desugar of meta() to equalto() references a fixed symbol named V regardless of what expression the user passed to meta_V(V=...); this fixture intentionally names its object V so the documented rewrite target and the case's own argument are the same object, matching the frozen R behaviour rather than masking it."
+    },
+    {
+      "case_id": "CORE070-COV-META-LEGACY-ADAPTER",
+      "source_fact_id": "covariance/COV-META-LEGACY",
+      "evidence_kind": "control",
+      "status": "executable_r_only",
+      "r_formula": "value ~ 0 + meta_known_V(V = V)",
+      "r_formula_reference": "value ~ 0 + meta_V(V = V)",
+      "expected": "identical(parse_multi_formula(desugar_brms_sugar(meta_known_V formula))$covstructs, parse_multi_formula(desugar_brms_sugar(meta_V formula))$covstructs)",
+      "expected_covstructs": [
+        {
+          "kind": "equalto",
+          "extra_equal": {
+            "vcv": "V"
+          }
+        }
+      ],
+      "julia_surface": "Same gap as COV-META-EXACT (no meta() equivalent exists yet). Once meta() lands in GLLVM.jl, this row additionally needs a documented decision on whether GLLVM.jl exposes a meta_known_V-style legacy alias.",
+      "comparands": [
+        "gllvmTMB same_rewrite() legacy-alias fixture",
+        "planned Julia adapter/alias decision (not yet made)"
+      ],
+      "source_citation": "R/brms-sugar.R:1358 (meta_known_V), R/brms-sugar.R:4541-4546 (both meta_V and meta_known_V hit the same rewrite branch)"
+    },
+    {
+      "case_id": "CORE070-COV-ORD-LATENT-BARE-FORMULA",
+      "source_fact_id": "covariance/COV-ORD-LATENT-BARE",
+      "evidence_kind": "formula",
+      "status": "executable_r_only",
+      "r_formula": "value ~ 0 + trait + latent(0 + trait | site, unique = FALSE)",
+      "expected_covstructs": [
+        {
+          "kind": "rr"
+        }
+      ],
+      "julia_surface": "No Julia formula-grammar route for a multi-trait, site-level latent(0+trait|site, ...) covariance term exists. src/families/ordinal.jl fits a single ordinal response and does not build a shared cross-trait site covariance from a unique=/common=/default-auto-unique specification.",
+      "comparands": [
+        "gllvmTMB term_has() grammar-admission fixture",
+        "planned GLLVM.jl multi-trait latent-covariance grammar (not yet implemented)"
+      ],
+      "source_citation": "R/brms-sugar.R:3644 (latent -> rr rewrite target), R/brms-sugar.R:3729-3731 (isFALSE(unique_arg) returns the bare rr() call unmodified, skipping the diag companion fold)"
+    },
+    {
+      "case_id": "CORE070-COV-ORD-LATENT-COMMON-FORMULA",
+      "source_fact_id": "covariance/COV-ORD-LATENT-COMMON",
+      "evidence_kind": "formula",
+      "status": "executable_r_only",
+      "r_formula": "value ~ 0 + trait + latent(0 + trait | site, common = TRUE)",
+      "expected_covstructs": [
+        {
+          "kind": "rr"
+        },
+        {
+          "kind": "diag",
+          "extra_true": [
+            ".auto_unique",
+            "common"
+          ]
+        }
+      ],
+      "julia_surface": "No Julia formula-grammar route for a multi-trait, site-level latent(0+trait|site, ...) covariance term exists.",
+      "comparands": [
+        "gllvmTMB term_has() grammar-admission fixture",
+        "planned GLLVM.jl multi-trait latent-covariance grammar (not yet implemented)"
+      ],
+      "source_citation": "R/brms-sugar.R:3702-3708 (common=TRUE requires unique=TRUE, the default), R/brms-sugar.R:3736-3743 (diag(..., .auto_unique=TRUE, common=TRUE) companion folded via call(\"+\", new_call, psi_call))"
+    },
+    {
+      "case_id": "CORE070-COV-ORD-LATENT-DEFAULT-FORMULA",
+      "source_fact_id": "covariance/COV-ORD-LATENT-DEFAULT",
+      "evidence_kind": "formula",
+      "status": "executable_r_only",
+      "r_formula": "value ~ 0 + trait + latent(0 + trait | site)",
+      "expected_covstructs": [
+        {
+          "kind": "rr"
+        },
+        {
+          "kind": "diag",
+          "extra_true": [
+            ".auto_unique"
+          ],
+          "extra_absent": [
+            "common"
+          ]
+        }
+      ],
+      "julia_surface": "No Julia formula-grammar route for a multi-trait, site-level latent(0+trait|site, ...) covariance term exists.",
+      "comparands": [
+        "gllvmTMB term_has() grammar-admission fixture",
+        "planned GLLVM.jl multi-trait latent-covariance grammar (not yet implemented)"
+      ],
+      "source_citation": "R/brms-sugar.R:598 (latent() defaults unique=TRUE), R/brms-sugar.R:3736-3743 (diag(..., .auto_unique=TRUE) companion folded whenever unique is TRUE and common is not supplied)"
+    },
+    {
+      "case_id": "CORE070-COV-PHYLO-A-ALIAS-ADAPTER",
+      "source_fact_id": "covariance/COV-PHYLO-A-ALIAS",
+      "evidence_kind": "control",
+      "status": "executable_r_only",
+      "r_formula": "value ~ 0 + trait + phylo_latent(species, A = A)",
+      "r_formula_reference": "value ~ 0 + trait + phylo_rr(species, d = 1)",
+      "expected_covstructs": [
+        {
+          "kind": "phylo_rr",
+          "extra_equal": {
+            "vcv": "A"
+          }
+        }
+      ],
+      "expected_covstructs_reference": [
+        {
+          "kind": "phylo_rr",
+          "extra_absent": [
+            "vcv"
+          ]
+        }
+      ],
+      "julia_surface": "GLLVM.jl's covariance-matrix argument is already name-neutral (one Sigma_phy/vcv-style keyword, no A= vs vcv= alias split); this row is a documentation/control check that the alias does NOT collapse to an equivalent bare phylo_rr() term (defect fix applied in the adversarial pass: the exported phylo_rr <- function(species, d = 1) at R/brms-sugar.R:422 has no vcv argument at all, so 'same_rewrite' between the two spellings does not hold and the original literal same_rewrite() target was not callable R).",
+      "comparands": [
+        "gllvmTMB same_rewrite() alias fixture",
+        "GLLVM.jl single Sigma_phy call surface (already implemented, name-neutral)"
+      ],
+      "source_citation": "R/brms-sugar.R:422 (exported phylo_rr(species, d=1), no vcv arg), R/brms-sugar.R:753 (phylo_latent(species,d=1,tree=NULL,vcv=NULL,A=NULL,Ainv=NULL,unique=FALSE)), R/parse-multi-formula.R:254-283 (parse_covstruct_call: extra only contains what the call literally supplies)"
+    },
+    {
+      "case_id": "CORE070-COV-PHYLO-DEP-FORMULA",
+      "source_fact_id": "covariance/COV-PHYLO-DEP",
+      "evidence_kind": "formula",
+      "status": "executable_r_only",
+      "r_formula": "value ~ 0 + trait + phylo_dep(0 + trait | species)",
+      "expected_covstructs": [
+        {
+          "kind": "phylo_rr",
+          "extra_true": [
+            ".dep"
+          ],
+          "extra_symbol_equal": {
+            "d": ".deferred_n_traits"
+          }
+        }
+      ],
+      "julia_surface": "No public Julia route for a cross-trait DEPENDENT (correlated-loading) phylogenetic term exists. The phylo_*_xlv.jl kernels are explicitly marked internal reduction-tested proofs, not R grammar support; the exported sparse/contrasts/edge-incidence phylo paths fit a single phylogenetic latent-variable structure without a documented dependent-vs-independent cross-trait loading switch.",
+      "comparands": [
+        "gllvmTMB term_has() grammar-admission fixture",
+        "planned Julia dependent cross-trait phylogenetic loading route (not yet public)"
+      ],
+      "source_citation": "R/brms-sugar.R:4459-4465 (intercept-only phylo_dep(0+trait|species) -> phylo_rr(species, d=.deferred_n_traits, .dep=TRUE)); .deferred_n_traits is unbound at parse time so parse_covstruct_call's eval() falls back (via tryCatch) to the unevaluated symbol, R/parse-multi-formula.R:277-282"
+    },
+    {
+      "case_id": "CORE070-COV-PHYLO-FOLDED-UNIQUE-FORMULA",
+      "source_fact_id": "covariance/COV-PHYLO-FOLDED-UNIQUE",
+      "evidence_kind": "formula",
+      "status": "executable_r_only",
+      "r_formula": "value ~ 0 + trait + phylo_latent(species, unique = TRUE)",
+      "expected_covstructs": [
+        {
+          "kind": "phylo_rr",
+          "extra_int_equal": {
+            "d": 1
+          }
+        },
+        {
+          "kind": "phylo_rr",
+          "extra_true": [
+            ".phylo_unique",
+            ".auto_unique"
+          ]
+        }
+      ],
+      "julia_surface": "Same grammar gap as COV-ANIMAL-FOLDED-UNIQUE: GLLVM.jl's phylo covariance entry points (sparse_phy.jl, phylo_contrasts.jl, edge_incidence.jl) accept a tree or Sigma_phy matrix and a fixed rank K, with no automatic folded/auto-unique reduced-rank loading construction mirroring .phylo_unique/.auto_unique.",
+      "comparands": [
+        "gllvmTMB term_has() grammar-admission fixture",
+        "planned GLLVM.jl folded/auto-unique phylo loading construction (not yet implemented)"
+      ],
+      "source_citation": "R/brms-sugar.R:3753 (phylo_latent default unique=FALSE), R/brms-sugar.R:3763-3785 (unique=TRUE folds phylo_rr(species,.phylo_unique=TRUE,.auto_unique=TRUE) via call(\"+\", new_call, psi_call))"
+    }
+  ],
+  "negative_controls": [
+    {
+      "id": "LATENT-COMMON-WITHOUT-UNIQUE-ABORTS",
+      "r_formula": "value ~ 0 + trait + latent(0 + trait | site, unique = FALSE, common = TRUE)",
+      "expect": "desugar_brms_sugar() raises a condition (cli_abort) rather than returning a parsed formula",
+      "source_citation": "R/brms-sugar.R (latent(): common=TRUE requires unique=TRUE; isFALSE(unique_arg) && isTRUE(common_arg) aborts)"
+    },
+    {
+      "id": "ANIMAL-LATENT-NONLOGICAL-UNIQUE-ABORTS",
+      "r_formula": "value ~ 0 + trait + animal_latent(species, A = A, d = 2, unique = \"yes\")",
+      "expect": "desugar_brms_sugar() raises a condition (cli_abort) because unique must be a literal TRUE/FALSE",
+      "source_citation": "R/brms-sugar.R (animal_latent(): !is.logical(unique_arg) aborts with 'must be a literal TRUE or FALSE')"
+    }
+  ],
+  "failure_action": "Retain the complete attempt. A parse failure, an unexpected covstructs shape, or a negative control that fails to raise are all recorded verbatim in the results JSON, never silently dropped or downgraded to a pass.",
+  "claim_boundary": "Passing this batch establishes that gllvmTMB's frozen R formula grammar produces the documented covstructs shape for nine specific covariance-area terms, and that two guard conditions still abort as documented. It does NOT establish Julia parity for any of these terms -- no Julia-side formula grammar or model exists yet for any case in this batch, which is why every executable case here is R-only. The tenth case (native Julia model equivalence for the folded/auto-unique animal-model term) is left an open obligation as SPEC_DEFECT rather than claimed.",
+  "p0_contract": "docs/dev-log/core070/covariance-batch-contract.json",
+  "p0_contract_sha256": "5031cea82729fd247ec9daf66b992feba2c73f2f1f295062dfce25fb1007af1e",
+  "regeneration_log": {
+    "generator": "tools/core070_covariance_p1_contract.py",
+    "changes": [
+      {
+        "field": "reference_commit",
+        "p0": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+        "p1": "9539352f66f2db2cc26b1c393e67212a359b60c9"
+      },
+      {
+        "field": "source_pins[R/brms-sugar.R]",
+        "p0": "001f6de37c9d2102470d39af79e21cff2ae4e3c62d2c250243cb0a2782ce27c8",
+        "p1": "7ea192ddde2dbb807e70322faef0bac8e6cdcfa19df7dd9f805476b02889191a",
+        "changed": true
+      },
+      {
+        "field": "source_pins[R/parse-multi-formula.R]",
+        "p0": "d4f10abf481bc972e0d92b5de223745cd306c7a4e5a670cb26ac0baa63b0a87c",
+        "p1": "a50f2a4b2053e8f3b8b1779fa9a87c8136503ff2b2275411dfa4490cd0af87d6",
+        "changed": true
+      },
+      {
+        "field": "source_pins[R/missing-predictor.R]",
+        "p0": "e0b8d4a7299ce18a64b171059e1c2c36ba9ee0f7234bb6d65f3cd36e606cad84",
+        "p1": "0955b93f3ff226a22d41b7a2cbf26d5f18d007c8157115332c302e35f50e72b5",
+        "changed": true
+      },
+      {
+        "field": "source_pins[R/fit-multi.R]",
+        "p0": "768db11bd09e6de872d4a27b60fd0a096f617434ac84c95db721fac8f8d77c02",
+        "p1": "129d35549c728e96874252c3242f545ff959805c103e29f2803b740bd6da4ddd",
+        "changed": true
+      }
+    ],
+    "carried_verbatim": "cases, expected_covstructs, negative_controls, fixture, required_health_checks, claim_boundary. No expectation was edited; a P1 mismatch is recorded by the batch as a failure."
+  }
+}

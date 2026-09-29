@@ -44,7 +44,20 @@ suppressPackageStartupMessages(library(jsonlite))
 stopifnot(normalizePath(find.package("gllvmTMB")) ==
           normalizePath(file.path(frozen_library, "gllvmTMB")))
 
-REFERENCE_COMMIT <- "b4d5fee64def88bc768dda1f1f77c29b295edd86"
+# Pin switch (D-294/D-295): GLLVM_PARITY_PIN unset or "P0" keeps the frozen
+# P0 reference; "P1" records the P1 commit. This batch has no contract
+# file; its fixture and four cases are unchanged at either pin.
+# Any other value stops here rather than falling back to P0.
+parity_pin <- toupper(trimws(Sys.getenv("GLLVM_PARITY_PIN", "P0")))
+if (!parity_pin %in% c("P0", "P1")) stop("GLLVM_PARITY_PIN must be P0 or P1, got '", parity_pin, "'")
+expected_reference <- if (identical(parity_pin, "P1"))
+  "9539352f66f2db2cc26b1c393e67212a359b60c9" else "b4d5fee64def88bc768dda1f1f77c29b295edd86"
+root <- normalizePath(".")
+# Oracle source pin (PR #569 review finding 2): the library's CORE070_SOURCE_PIN.toml
+# marker and gllvmTMB version must match tools/core070_oracle_pins.toml (required at P1).
+source(file.path(root, "tools/core070_source_pin.R"))
+source_pin <- core070_source_pin(root, frozen_library, parity_pin, expected_reference)
+REFERENCE_COMMIT <- expected_reference
 
 # ---------------------------------------------------------------------------
 # gaussian_small -- VERBATIM from tools/core070_surface_conversion_batch.R
@@ -285,7 +298,8 @@ receipt <- list(
   diagnostics_sha256 = sha256_file(diag_path),
   r_version = R.version.string,
   gllvmTMB_version = as.character(utils::packageVersion("gllvmTMB")),
-  frozen_library = frozen_library
+  frozen_library = frozen_library,
+  source_pin = source_pin
 )
 receipt_path <- file.path(output_dir, "receipt.json")
 jsonlite::write_json(receipt, receipt_path, auto_unbox = TRUE, pretty = TRUE, null = "null")

@@ -1,0 +1,16 @@
+{
+  "schema": "core070-postfit-1-r-results/v1",
+  "scope": "CORE070_POSTFIT_1_BATCH",
+  "case_id": "CORE070-POSTFIT-COEF-MULTI-READBACK",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "contract_sha256": "a32ef27cd45ad85faf522939da1822aed83e8b24b4a0ebe2c02aaa8c784938c8",
+  "gllvmTMB_lib_path": "/Users/z3437171/local-scratch/a3cov-oracle/build/library/gllvmTMB",
+  "gllvmTMB_version": "0.7.1",
+  "r_version": "R version 4.6.0 (2026-04-24)",
+  "p": 4,
+  "n": 24,
+  "K": 1,
+  "coef_names": ["traitt1", "traitt2", "traitt3", "traitt4"],
+  "coef": [-1.0058016663529463, -0.24810223420929031, 0.3536599275784259, 0.93014160660127321],
+  "all_checks": true
+}

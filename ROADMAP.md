@@ -85,6 +85,10 @@ Ordered roughly by real-world impact.
       relatedness/kernel builders (`relatedness_cov`); spatial/temporal correlation
       is just another kernel/covariance in that structured-random-effect framework,
       so a bespoke `corAR1`/`corExp`-on-LVs feature is subsumed and not needed for now.
+      gllvmTMB's own AR1/OU temporal source is a separate row: the temporal-source-only
+      cell is ported (`fit_temporal_gllvm`, `docs/src/temporal.md`), and so is
+      `unit`/`unit_obs` composition through its `structure` argument; the `gllvm()`
+      formula hook and the cross-source cells remain open.
 - [x] **SPDE / Matérn-GMRF spatial fields** (Lindgren, Rue & Lindström 2011) —
       `spde_fem` (P1 mass/stiffness), `spde_precision` (sparse `Q(κ,τ)`),
       `spde_projector` (`A`), `matern_correlation`, `spde_mesh_grid` (auto-mesher),

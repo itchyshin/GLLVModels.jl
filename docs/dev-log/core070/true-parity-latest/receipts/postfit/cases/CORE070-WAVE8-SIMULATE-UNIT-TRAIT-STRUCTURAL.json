@@ -1,0 +1,52 @@
+{
+  "schema": "core070-postfit-p1-case-receipt/v2",
+  "case_id": "CORE070-WAVE8-SIMULATE-UNIT-TRAIT-STRUCTURAL",
+  "verdict": "PASS",
+  "evidence_kind": "paired_verdict",
+  "source_ids": [
+    "postfit/POSTFIT-SURFACE-simulate_unit_trait"
+  ],
+  "batch": "tools/core070_wave8_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1",
+  "harness_kind": "verdict",
+  "harness_pass": true,
+  "batch_status": "PASS",
+  "batch_verifier": {
+    "tool": "tools/core070_verify_wave8_conversion_batch.py",
+    "argv": "tools/core070_verify_wave8_conversion_batch.py {state} --self-test",
+    "status": "PASS",
+    "exit_code": 0,
+    "accept_marker": "CORE070_WAVE8_CONVERSION_STATE_OK",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave8-conversion-p1/verify.txt"
+  },
+  "batch_status_note": "",
+  "r_call": "sim <- simulate_unit_trait(n_units = 20, n_obs_per_unit = 3, n_traits = 4, Lambda_B = <4x2>, Lambda_W = <4x1>, psi_B = rep(0.3,4), psi_W = rep(0.3,4), sigma2_eps = 0.4, seed = 1)",
+  "julia_call": "GLLVM.simulate_unit_trait(StableRNG(1); n_units = 20, n_obs_per_unit = 3, n_traits = 4, K_B = 2, K_W = 1, Lambda_B = <4x2>, Lambda_W = <4x1>, psi_B = fill(0.3,4), psi_W = fill(0.3,4), sigma2_eps = 0.4)",
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave8-conversion-p1/julia-results.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave8-conversion-p1/r-oracle.json"
+  ],
+  "measured": {
+    "r_verdict": {
+      "lambda_b_shape_ok": true,
+      "n_rows_ok": true,
+      "all_finite": true,
+      "n_elements": 240
+    },
+    "julia_verdict": {
+      "n_elements_ok": true,
+      "lambda_b_shape_ok": true,
+      "all_finite": true
+    }
+  },
+  "why_not_numeric": "Both engines report a boolean verdict and the harness checks they agree; there is no R-vs-Julia number with a tolerance.",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "gllvmtmb_version": "0.7.1",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "681c4c3ca666e630470bba01a057bc88158b85f3",
+  "glvmodels_worktree_dirty": [],
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+}

@@ -216,3 +216,74 @@ using StableRNGs
     end
 
 end
+
+@testset "cv_gllvm threads a Gaussian X through every split" begin
+    # Regression: the Gaussian CV path passed the full X to fold fits on subset
+    # data, scored sites at a zero mean, and read the covariate β as
+    # per-species intercepts. Each split must now use X[t, s, :] ⋅ β.
+    rng = StableRNG(41)
+    p, n, K = 6, 60, 1
+    x = randn(rng, n)
+    X = zeros(p, n, 2); X[:, :, 1] .= 1.0; X[:, :, 2] .= x'
+    Λ = 0.6 .* randn(rng, p, K)
+    Y = 3.0 .+ 2.0 .* x' .+ Λ * randn(rng, K, n) .+ 0.3 .* randn(rng, p, n)
+
+    @testset "site split: held-out sites are predicted by X β" begin
+        cv = cv_gllvm(Y; k_folds = 3, split = :site, family = Normal(), K = K,
+                      X = X, rng = StableRNG(1))
+        @test all(isfinite, cv.predictions)
+        for s in 1:n
+            @test any(cv.fits) do f
+                isapprox(cv.predictions[:, s],
+                         [dot(X[t, s, :], f.pars.β) for t in 1:p]; atol = 1e-8)
+            end
+        end
+    end
+
+    @testset "$split split: X lowers out-of-sample error" for split in (:random, :site, :species)
+        cvX = cv_gllvm(Y; k_folds = 3, split = split, family = Normal(), K = K,
+                       X = X, rng = StableRNG(2))
+        cv0 = cv_gllvm(Y; k_folds = 3, split = split, family = Normal(), K = K,
+                       rng = StableRNG(2))
+        @test all(isfinite, cvX.predictions)
+        @test all(f -> length(f.pars.β) == 2, cvX.fits)
+        # Oracle: predict every cell at its true mean 3 + 2x.
+        oracle = mean(abs2, Y .- (3.0 .+ 2.0 .* x'))
+        @test abs(mean(Y .- cvX.predictions)) < 0.1
+        if split === :random
+            # Other cells at the same site inform ẑ, so X + LV beats the mean alone.
+            @test cvX.mse < oracle
+        else
+            # A held-out site (or species) has no latent information: X β is the best
+            # available predictor. Without X the Normal route fits only trait intercepts
+            # (#519), so it recovers the mean 3 but misses the 2x slope term entirely
+            # (measured: about 9x the oracle's error on this data).
+            @test cvX.mse < 1.15 * oracle
+            @test cv0.mse > 5 * oracle
+        end
+    end
+
+    @testset "X with the wrong shape is rejected" begin
+        @test_throws ArgumentError cv_gllvm(Y; k_folds = 3, split = :site,
+                                            family = Normal(), K = K, X = X[:, 1:10, :])
+    end
+
+    @testset "non-Gaussian families reject X" begin
+        Yc = rand(StableRNG(3), 0:5, p, n)
+        @test_throws ArgumentError cv_gllvm(Yc; k_folds = 3, split = :site,
+                                            family = Poisson(), K = K, X = X)
+    end
+end
+
+@testset "loading GLLVModels raises no identifier-conflict warning" begin
+    # Regression: a bare `using Distributions` in src/cv.jl re-imported
+    # `Distributions.Multinomial` next to the package's own `Multinomial`,
+    # which src/GLLVModels.jl deliberately leaves out, so precompiling the
+    # package printed "conflicts with an existing identifier". The warning is
+    # emitted when the module is compiled, so load it from source here.
+    cmd = `$(Base.julia_cmd()) --project=$(Base.active_project()) --startup-file=no --compiled-modules=no -e "using GLLVModels"`
+    err = IOBuffer()
+    run(pipeline(ignorestatus(cmd); stdout = devnull, stderr = err))
+    msg = String(take!(err))
+    @test !occursin("conflicts with an existing identifier", msg)
+end
