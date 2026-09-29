@@ -54,7 +54,10 @@ println("NB2_FORMULA_SHA256 ",_core070_sha256_file(file))
     @test native.loglik≈r.logLik rtol=1e-6
     for f in (wide,longfit)
         @test f isa NBGroupedFit
-        @test f.converged
+        # The corrected NB2 kernel reports boundary dispersion as not converged, and on this
+        # data two traits sit at the Poisson boundary. The route-equivalence gates below
+        # (theta equal to the native fit within 1e-10) are what this cell tests (decision 2026-09-29).
+        @test f.converged || any(f.dispersion_boundary)
         @test f.hessian==:observed
         @test length(theta(f))==19
         @test theta(f)≈theta(native) rtol=0 atol=1e-10
