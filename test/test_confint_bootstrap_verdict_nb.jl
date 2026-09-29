@@ -118,11 +118,14 @@ end
 
     @testset "per-species grouped refit flags exactly the species past 1e6" begin
         # poisson_seed_2, group = 1:p: several species' r run far past 1e6 (up to
-        # 1.0e48 on Julia 1.10.12); the grouped fitter reports converged = false.
+        # 1.0e48 on Julia 1.10.12). Since the 2026-09-29 decision ("NB upper end: warn
+        # only everywhere", #630) that end only warns, so `converged` is the optimizer
+        # verdict; only an r below 1e-6 would force it false.
         Yp = _nb504_case("poisson_seed_2")
         p = size(Yp, 1)
         fk = GM.fit_nb_gllvm_grouped(Yp; K = 2, group = collect(1:p))
-        @test any(>(1e6), fk.r_group) && !fk.converged   # the recorded state
+        @test any(>(1e6), fk.r_group)                          # the recorded state
+        @test !any(<(1e-6), fk.r_group) || !fk.converged
         ad = GM._family_ci(fk, Yp)
         m = length(ad.θ)
         raw = ad.refit(Yp)
