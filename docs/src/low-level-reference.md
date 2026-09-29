@@ -67,6 +67,8 @@ GLLVModels._fit_phylo_gamma_xlv
 GLLVModels._fit_verdict
 GLLVModels._aghq_gh_normal
 GLLVModels._tweedie_verdict
+GLLVModels._multinomial_verdict
+GLLVModels._multinomial_max_obs_nll
 GLLVModels._beta_binomial_verdict
 GLLVModels._gp1_verdict
 GLLVModels._beta_binomial_grouped_verdict
