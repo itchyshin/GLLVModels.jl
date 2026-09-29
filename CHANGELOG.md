@@ -1143,6 +1143,22 @@ All notable changes to GLLVModels.jl are documented here.
   unaffected. Pinned by `test/test_fd_hessian.jl`.
 
 ### Added
+- **`fit_phylo_latent_gllvm`: the Julia twin of gllvmTMB's bare Gaussian
+  `phylo_latent(species, d = K)` at P1 (gllvmTMB 0.7.1, gate rows A14/A15).**
+  Built on the R-shaped `PrecisionPhy` / `fit_precision_multivariate` path
+  with one shared residual. Species are matched by label; `tree` (Newick or
+  `AugmentedPhy`, polytomies admitted via R's own precision rule) or a
+  labelled dense `vcv` / `A` with R's `1e-8` ridge; R's refusal sentences
+  (rank, source, labels, coverage with the `droplevels()` hint,
+  non-ultrametric tree). `Ainv` follows R's keyword (`vcv = solve(Ainv)`, then
+  the dense ridged route); `rho != 1` is refused by a labelled Julia scope
+  fence (`GJL-GATE-PHYLO-LATENT-RHO`). `extract_phylo_signal`
+  on a `PrecisionMultivariateFit` now returns R's bare-fit answer
+  (`H2 = 1`, `V_eta = diag(Sigma_phy)`) and refuses `ci = true`;
+  `extract_Sigma` accepts R's `level = :phy`. `PrecisionMultivariateFit`
+  gains `species_labels` and `tip_labels` (filled by the existing
+  constructors, so earlier callers are unchanged). Paired P1 receipts:
+  `docs/dev-log/core070/phylo-latent-p1/`.
 - **Integrated species distribution models (iSDM), the twin of gllvmTMB's public
   door `gllvmTMB(..., family = isdm_sources(...))` at the P1 pin.** New
   `isdm_sources()` / `isdm_source()` declarations (Poisson-log count sources and
