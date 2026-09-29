@@ -1,0 +1,27 @@
+# R replay at P1 of the 20 iSDM admission predicates. Written by
+# test/fixtures/isdm/export_p1_fixtures.R (stage admission). Do not edit.
+gllvmtmb_sha = "9539352f66f2db2cc26b1c393e67212a359b60c9"
+contract_sha256 = "1288c8b599b25a3978a77c6fa0a306164a44e8f97a7d8a9c4eba65560762d766"
+fixture_sha256 = "e47b66580262c88a69e97e2cb73f1178d92d77d2e1afba3b89c062e92c16a68d"
+
+[cases]
+"ISDM-ALIASED" = "TRUE"
+"ISDM-ALIGN" = "TRUE"
+"ISDM-COUNT" = "TRUE"
+"ISDM-EXTRA-SOURCE" = "TRUE"
+"ISDM-LEGACY" = "TRUE"
+"ISDM-MASKED-ARM" = "TRUE"
+"ISDM-MASKED-COLUMNS" = "TRUE"
+"ISDM-MISSING-IN-TRAIT" = "TRUE"
+"ISDM-MISSING-SOURCE" = "TRUE"
+"ISDM-MIXED" = "TRUE"
+"ISDM-NO-OFFSET" = "TRUE"
+"ISDM-NO-TRAITS" = "TRUE"
+"ISDM-SUPPORT" = "TRUE"
+"ISDM-THREE" = "TRUE"
+"ISDM-UNBALANCED" = "TRUE"
+"ISDM-WITHIN-TRAIT-ADMIT" = "TRUE"
+"ISDM-WRAPPER-LAW" = "TRUE"
+"ISDM-WRONG-ID" = "TRUE"
+"ISDM-WRONG-LINK" = "TRUE"
+"ISDM-ZERO-ORDINARY" = "TRUE"

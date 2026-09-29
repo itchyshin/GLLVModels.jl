@@ -1,0 +1,35 @@
+{
+  "status": "PASS",
+  "scope": "CORE070_POSTFIT_POLICY_BATCH",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "contract_sha256": "d8c717d831f5670ca76d369dee4dd08a3682fa250164c76409d0335f803e08b3",
+  "source_pins": {
+    "R/vcov-coef.R": "7092603b1d86e5fcaf030e2e0d2c39a27febb08ffea9f46a5390954f116b4a04",
+    "R/methods-gllvmTMB.R": "6c32924b415646697ab4e471fda8b83108e416d662ba6e607bbeba335dd21616",
+    "R/z-confint-gllvmTMB.R": "0e995245ce1f0b5c9c5d1676bec982709728e20c980b274d9f4499ea6c6c7a53",
+    "R/predictive-diagnostics.R": "2a6775ab9e21b036c994864316b8addf6e97957d8a3961b841f6bc519862c029"
+  },
+  "source_unchanged": true,
+  "case_count": 15,
+  "negative_control_count": 2,
+  "expected_case_ids": ["CORE070-POSTFIT-COEF-EMPTY-NATIVE", "CORE070-POSTFIT-COEF-NAMED-NATIVE", "CORE070-POSTFIT-CONFINT-METHODS-WALD-NATIVE", "CORE070-POSTFIT-FITTED-DEFAULT-NATIVE", "CORE070-POSTFIT-LOGLIK-DF-NATIVE", "CORE070-POSTFIT-LOGLIK-NOBS-NATIVE", "CORE070-POSTFIT-LOGLIK-VALUE-NATIVE", "CORE070-POSTFIT-NOBS-COUNT-NATIVE", "CORE070-POSTFIT-NOBS-FALLBACK-NATIVE", "CORE070-POSTFIT-PREDICT-DEFAULT-NATIVE", "CORE070-POSTFIT-RE-FORM-FULL-NATIVE", "CORE070-POSTFIT-RESIDUAL-CONDITIONAL-NATIVE", "CORE070-POSTFIT-RESIDUAL-SCALES-NATIVE", "CORE070-POSTFIT-RESIDUAL-TYPES-NATIVE", "CORE070-POSTFIT-SIMULATE-DEFAULT-NATIVE"],
+  "negative_control_case_ids": ["NEG-COEF-SHIFTED", "NEG-LOGLIK-SHIFTED"],
+  "julia_exit_code": 0,
+  "julia_elapsed_seconds": 20.9763,
+  "julia_results_sha256": "6ae0ffd604a5d760d48984f4fa3c5996a26e0c7d43e8d3be5f0c0e89c00398e1",
+  "raw_sha256": "e38b7b81ff3438f5c1d0c725ae6f7e94371c149271e9f70d385d3bf4785fbedc",
+  "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "r_version": "R version 4.6.0 (2026-04-24)",
+  "gllvmTMB_version": "0.7.1",
+  "frozen_library": "/Users/z3437171/local-scratch/a3cov-oracle/build/library",
+  "source_pin": {
+    "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+    "source_tree_sha256": "86fa00f05ee2ccb8ffef65a82cd59c47b1b2a256a5bad86957a92461a6dbe1db",
+    "installed_tree_sha256": "5d4877193c3727965412546ca49c77588ba3083eab87629080e610cb889516d4",
+    "archive_sha256": "73b665b22c1497d43dc0674eecd5657f2659a726fcad13004de899833e2d5423",
+    "namespace_sha256": "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c",
+    "version": "0.7.1",
+    "marker_path": "/Users/z3437171/local-scratch/a3cov-oracle/build/library/gllvmTMB/CORE070_SOURCE_PIN.toml",
+    "marker_sha256": "5b667a7d5f1718364a2794642cec52eac1ead345ec39fff5051c2c1ca7a62218"
+  }
+}

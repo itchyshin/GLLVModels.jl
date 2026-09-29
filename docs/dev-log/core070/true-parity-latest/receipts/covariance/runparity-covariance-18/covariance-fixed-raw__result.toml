@@ -1,0 +1,95 @@
+fixture_sha256 = "fbcd0b7f359d2dcbfacfe6e5b611a5f3398100123b7eb0258a049864307840a1"
+data_sha256 = "01a540f2ef2f7a21632a7813fc87ff7740d5163c5c43f56a33795a7bb15d807d"
+
+[source]
+source_marker_sha256 = "5b667a7d5f1718364a2794642cec52eac1ead345ec39fff5051c2c1ca7a62218"
+julia_package_root = "/Users/z3437171/local-scratch/GLLVM.jl-a3-covariance"
+tmb_version = "1.9.21"
+oracle_build_receipt_sha256 = "0a648dc0ee299416b3796fefaa23419c1736f9c7b257aa77a5d8d108e3ba01af"
+matrix_version = "1.7.5"
+julia_machine = "arm64-apple-darwin22.4.0"
+julia_source_tree_sha256 = "d9fc9fd3eaf0cfa594b2d29f7651ffb0691732abbc9b779a44b7e7f6d2fea908"
+source_tree_sha256 = "86fa00f05ee2ccb8ffef65a82cd59c47b1b2a256a5bad86957a92461a6dbe1db"
+julia_version = "1.10.0"
+oracle_source_receipt_sha256 = "3ec6631ba855624d5b0e9e66772d2e3b3049270c17047835333e7663d6eb2ad8"
+julia_project_sha256 = "fc4c59d9d880a8a7843d73c22645eeb45048a0a1d1175d27b995100267edaceb"
+blas_threads = 1
+archive_sha256 = "73b665b22c1497d43dc0674eecd5657f2659a726fcad13004de899833e2d5423"
+namespace_sha256 = "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c"
+installed_tree_sha256 = "5d4877193c3727965412546ca49c77588ba3083eab87629080e610cb889516d4"
+julia_project_path = "/Users/z3437171/local-scratch/GLLVM.jl-a3-covariance/test/parity/Project.toml"
+reference_commit = "9539352f66f2db2cc26b1c393e67212a359b60c9"
+rcall_version = "0.14.14"
+r_library_path = "/Users/z3437171/local-scratch/a3cov-oracle/build/library/gllvmTMB"
+julia_threads = 4
+julia_package_path = "/Users/z3437171/local-scratch/GLLVM.jl-a3-covariance/src/GLLVModels.jl"
+r_version = "R version 4.6.0 (2026-04-24)"
+r_home = "/Library/Frameworks/R.framework/Resources"
+julia_manifest_sha256 = "0d57455d85e9a3b6bcc74c0396fef8afa52cf4728eaa2deda0c32c18bff8e8b0"
+
+[[cases]]
+sigma_eps_fixed = 0.0007475049429920294
+common = false
+native_beta = [0.1988151642074526, 0.41206295919559854, 0.6243498257699266]
+id = "MODE-ORD-INDEP"
+native_dof = 6
+native_loglik = -58.873342724148394
+native_source_variance = [0.5236896918888065, 0.5204842559035965, 0.5105328405681043]
+r_source_sd = [0.7236644522766678, 0.7214466806875859, 0.7145155654925052]
+r_objective = 58.873342724173945
+r_loglik = -58.873342724173945
+r_code = 0
+r_names = ["b_fix", "b_fix", "b_fix", "theta_diag_B", "theta_diag_B", "theta_diag_B"]
+r_beta = [0.19881516420745027, 0.41206295919559455, 0.6243498257699289]
+r_parameters = [0.19881516420745027, 0.41206295919559455, 0.6243498257699289, -0.3234274577351795, -0.32649680413990495, -0.33615049669554686]
+native_parameters = [0.1988151642074526, 0.41206295919559854, 0.6243498257699266, -0.3234279805636839, -0.3264978197042121, -0.33615015662227404]
+native_gradient_max = 5.223348509275638e-8
+r_gradient = [-7.893685705084863e-14, -1.4013790128331038e-13, 8.515410598874951e-14, 1.876954273068204e-5, 3.656718653195902e-5, -1.2277784608113716e-5]
+
+    [cases.checks]
+    reported_objective = true
+    trait_covariance = true
+    native_health = true
+    residual_fixed = true
+    r_code = true
+    reference_residual_rule = true
+    expected_id = true
+    likelihood = true
+    free_parameters = true
+    trait_means = true
+    independent_offdiagonal = true
+    finite_likelihoods = true
+    r_gradient = true
+[[cases]]
+sigma_eps_fixed = 0.0007475049429920294
+common = true
+native_beta = [0.19881516420745263, 0.41206295919559854, 0.6243498257699265]
+id = "MODE-ORD-COMMON"
+native_dof = 4
+native_loglik = -58.874926268121236
+native_source_variance = [0.5182355968918856, 0.5182355968918856, 0.5182355968918856]
+r_source_sd = [0.7198858250019607, 0.7198858250019607, 0.7198858250019607]
+r_objective = 58.87492626812123
+r_loglik = -58.87492626812123
+r_code = 0
+r_names = ["b_fix", "b_fix", "b_fix", "theta_diag_B"]
+r_beta = [0.19881516420753162, 0.4120629591956626, 0.6243498257700406]
+r_parameters = [0.19881516420753162, 0.4120629591956626, 0.6243498257700406, -0.3286626559327661]
+native_parameters = [0.19881516420745263, 0.41206295919559854, 0.6243498257699265, -0.32866265993371485]
+native_gradient_max = 7.105427357601002e-15
+r_gradient = [2.740585536287199e-12, 2.2258028753441295e-12, 3.960776151501477e-12, 4.3210158187052697e-7]
+
+    [cases.checks]
+    reported_objective = true
+    trait_covariance = true
+    native_health = true
+    residual_fixed = true
+    r_code = true
+    reference_residual_rule = true
+    expected_id = true
+    likelihood = true
+    free_parameters = true
+    trait_means = true
+    independent_offdiagonal = true
+    finite_likelihoods = true
+    r_gradient = true

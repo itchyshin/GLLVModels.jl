@@ -162,7 +162,12 @@ isfile(oracle_path) || error("oracle file not found: $oracle_path")
 oracle = json_read(oracle_path)
 
 root = normpath(joinpath(@__DIR__, ".."))
-contract = json_read(joinpath(root, "docs/dev-log/core070/wave8-conversion-batch-contract.json"))
+# GLLVM_PARITY_PIN=P1 reads the P1-regenerated contract (cases verbatim); unset/P0 is unchanged.
+_parity_pin = uppercase(strip(get(ENV, "GLLVM_PARITY_PIN", "P0")))
+_parity_pin in ("P0", "P1") || error("GLLVM_PARITY_PIN must be P0 or P1, got $(repr(_parity_pin))")
+contract = json_read(joinpath(root, _parity_pin == "P1" ?
+    "docs/dev-log/core070/true-parity-latest/wave8-conversion-batch-contract-p1.json" :
+    "docs/dev-log/core070/wave8-conversion-batch-contract.json"))
 cases = contract["cases"]
 length(cases) == contract["expected_case_count"] || error("case count mismatch vs contract")
 Int(contract["expected_case_count"]) == 7 || error("expected_case_count drifted from 7; update this script")
@@ -235,7 +240,10 @@ for cs in cases
             maximum(abs.(jl_vec .- r_vec))
         results[case_id] = Dict{String, Any}("pass" => ok, "kind" => kind, "tolerance" => tol,
                                               "max_abs_diff" => maxdiff, "r_len" => length(r_vec),
-                                              "julia_len" => length(jl_vec), "error" => err)
+                                              "julia_len" => length(jl_vec), "error" => err,
+                                              # PR #569 review finding 3: the Julia vector itself, so the
+                                              # receipt tool recomputes max |R - Julia| instead of trusting it.
+                                              "julia_values" => jl_vec)
         global all_ok &= ok
 
     elseif kind == "verdict"

@@ -1,0 +1,1126 @@
+{
+  "schema": 1,
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "scope": "data family: the 28 required rows the P1 carry scan lists as DANGLING, all paid by the wave1 data batch (R helper replay against the pinned P1 source, Julia name-level introspection and a behavioural fit-time surface probe). The 28 rejected data rows are out of scope.",
+  "note": "Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with PARITY_CASEMAP pointing at this file. Classification and disposition are carried from docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. The R side of every data row is a helper replay with no fit number, so there is nothing numeric to compare yet; every row cites evidence.non_binding_receipts and is free.",
+  "generator": "tools/core070_data_p1_receipts.py",
+  "glvmodels_commit": "a875103063231a5ea233ddcd032572311893b04b",
+  "batch_verifiers": {
+    "data-p1": {
+      "tool": "tools/core070_verify_data_batch.py",
+      "argv": "tools/core070_verify_data_batch.py --state {state} --julia-receipt {state}/data-batch-julia-introspection.json --self-test",
+      "accept_marker": "CORE070_DATA_BATCH_VERIFIED",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/verify.txt",
+      "exit_code": 0,
+      "status": "PASS"
+    }
+  },
+  "counts": {
+    "numeric_pass": 0,
+    "numeric_fail": 0,
+    "numeric_held_batch_verifier_failed": 0,
+    "numeric_non_discriminating": 0,
+    "partial_non_numeric_case": 0,
+    "needs_surface_r_side_measured": 28,
+    "needs_surface_not_executed": 0,
+    "retired_at_p1_not_measured": 0,
+    "not_measured": 0
+  },
+  "p0_evidence_summary": {
+    "rows_with_p0_evidence_record": 28,
+    "rows_without_p0_evidence_record": 0,
+    "p0_raw_receipts_available_here": false
+  },
+  "runtimes_seconds": {
+    "r_replay_seconds": 0.9,
+    "julia_introspection_seconds": 1.7,
+    "julia_surface_probe_seconds": 56.6
+  },
+  "batch_artifacts": {
+    "data-p1": [
+      "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/receipt.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/data-batch-results.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/raw.tsv",
+      "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/data-batch-julia-introspection.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/data-batch-julia-surface-probe.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/verify.txt"
+    ]
+  },
+  "rows": [
+    {
+      "source_id": "data/DATA-MISS-BOTH",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-MISS-BOTH-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-MISS-BOTH-CONTROL.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-MISS-BOTH-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-MISS-BOTH-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-MISS-BOTH-CONTROL": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "data/DATA-MISS-DEFAULT",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-MISS-DEFAULT-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-MISS-DEFAULT-CONTROL.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-MISS-DEFAULT-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-MISS-DEFAULT-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-MISS-DEFAULT-CONTROL": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "data/DATA-MISS-INCLUDE",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-MISS-INCLUDE-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-MISS-INCLUDE-CONTROL.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-MISS-INCLUDE-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-MISS-INCLUDE-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-MISS-INCLUDE-CONTROL": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "data/DATA-MISS-MODEL",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-MISS-MODEL-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-MISS-MODEL-CONTROL.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-MISS-MODEL-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-MISS-MODEL-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-MISS-MODEL-CONTROL": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "data/DATA-OFF-ALL-COUNT",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-OFF-ALL-COUNT-NATIVE"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-ALL-COUNT-NATIVE.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-OFF-ALL-COUNT-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-OFF-ALL-COUNT-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-OFF-ALL-COUNT-NATIVE": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "data/DATA-OFF-EXPOSURE",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-OFF-EXPOSURE-NATIVE"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-EXPOSURE-NATIVE.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-OFF-EXPOSURE-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-OFF-EXPOSURE-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-OFF-EXPOSURE-NATIVE": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "data/DATA-OFF-MIXED",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-OFF-MIXED-NATIVE"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-MIXED-NATIVE.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-OFF-MIXED-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-OFF-MIXED-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-OFF-MIXED-NATIVE": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "data/DATA-OFF-NB1",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-OFF-NB1-NATIVE"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-NB1-NATIVE.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-OFF-NB1-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-OFF-NB1-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-OFF-NB1-NATIVE": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "data/DATA-OFF-NONCOUNT-ZERO",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-OFF-NONCOUNT-ZERO-NATIVE"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-NONCOUNT-ZERO-NATIVE.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-OFF-NONCOUNT-ZERO-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-OFF-NONCOUNT-ZERO-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-OFF-NONCOUNT-ZERO-NATIVE": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "data/DATA-OFF-NONE",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-OFF-NONE-NATIVE"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-NONE-NATIVE.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-OFF-NONE-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-OFF-NONE-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-OFF-NONE-NATIVE": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "data/DATA-OFF-PREDICT",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-OFF-PREDICT-POSTFIT-READBACK"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-PREDICT-POSTFIT-READBACK.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-OFF-PREDICT-POSTFIT-READBACK": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-OFF-PREDICT-POSTFIT-READBACK": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-OFF-PREDICT-POSTFIT-READBACK": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "data/DATA-OFF-PREDICT-NONFINITE-HELPER",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "data/DATA-OFF-SCALAR",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-OFF-SCALAR-NATIVE"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-SCALAR-NATIVE.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-OFF-SCALAR-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-OFF-SCALAR-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-OFF-SCALAR-NATIVE": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "data/DATA-OFF-TRAIN-LEGACY",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-OFF-TRAIN-LEGACY-POSTFIT-READBACK"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-TRAIN-LEGACY-POSTFIT-READBACK.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-OFF-TRAIN-LEGACY-POSTFIT-READBACK": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-OFF-TRAIN-LEGACY-POSTFIT-READBACK": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-OFF-TRAIN-LEGACY-POSTFIT-READBACK": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "data/DATA-OFF-TRAIN-STORED",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-OFF-TRAIN-STORED-POSTFIT-READBACK"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-TRAIN-STORED-POSTFIT-READBACK.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-OFF-TRAIN-STORED-POSTFIT-READBACK": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-OFF-TRAIN-STORED-POSTFIT-READBACK": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-OFF-TRAIN-STORED-POSTFIT-READBACK": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "data/DATA-W-DF-MASK-DROP",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-W-DF-MASK-DROP-NATIVE"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-DF-MASK-DROP-NATIVE.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-W-DF-MASK-DROP-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-W-DF-MASK-DROP-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-W-DF-MASK-DROP-NATIVE": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "data/DATA-W-DF-MASK-INCLUDE",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-W-DF-MASK-INCLUDE-NATIVE"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-DF-MASK-INCLUDE-NATIVE.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-W-DF-MASK-INCLUDE-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-W-DF-MASK-INCLUDE-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-W-DF-MASK-INCLUDE-NATIVE": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "data/DATA-W-DF-UNIT",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-W-DF-UNIT-NATIVE"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-DF-UNIT-NATIVE.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-W-DF-UNIT-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-W-DF-UNIT-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-W-DF-UNIT-NATIVE": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "data/DATA-W-FRACTIONAL",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-W-FRACTIONAL-NATIVE"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-FRACTIONAL-NATIVE.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-W-FRACTIONAL-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-W-FRACTIONAL-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-W-FRACTIONAL-NATIVE": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "data/DATA-W-LONG",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-W-LONG-NATIVE",
+        "CORE070-DATA-W-LONG-NATIVE-NEGATIVE-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-LONG-NATIVE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-LONG-NATIVE-NEGATIVE-CONTROL.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-W-LONG-NATIVE": "PASS",
+          "CORE070-DATA-W-LONG-NATIVE-NEGATIVE-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-W-LONG-NATIVE": "PASS",
+          "CORE070-DATA-W-LONG-NATIVE-NEGATIVE-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-W-LONG-NATIVE": "r_replay_julia_surface_absent",
+          "CORE070-DATA-W-LONG-NATIVE-NEGATIVE-CONTROL": "r_replay_negative_control"
+        }
+      }
+    },
+    {
+      "source_id": "data/DATA-W-MATRIX-CELLS",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-W-MATRIX-CELLS-NATIVE"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-MATRIX-CELLS-NATIVE.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-W-MATRIX-CELLS-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-W-MATRIX-CELLS-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-W-MATRIX-CELLS-NATIVE": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "data/DATA-W-MATRIX-MASK-DROP",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-W-MATRIX-MASK-DROP-NATIVE"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-MATRIX-MASK-DROP-NATIVE.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-W-MATRIX-MASK-DROP-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-W-MATRIX-MASK-DROP-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-W-MATRIX-MASK-DROP-NATIVE": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "data/DATA-W-MATRIX-MASK-INCLUDE",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-W-MATRIX-MASK-INCLUDE-NATIVE"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-MATRIX-MASK-INCLUDE-NATIVE.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-W-MATRIX-MASK-INCLUDE-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-W-MATRIX-MASK-INCLUDE-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-W-MATRIX-MASK-INCLUDE-NATIVE": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "data/DATA-W-MATRIX-MASK-SCALAR",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-W-MATRIX-MASK-SCALAR-NATIVE"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-MATRIX-MASK-SCALAR-NATIVE.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-W-MATRIX-MASK-SCALAR-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-W-MATRIX-MASK-SCALAR-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-W-MATRIX-MASK-SCALAR-NATIVE": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "data/DATA-W-MATRIX-SCALAR",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-W-MATRIX-SCALAR-NATIVE"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-MATRIX-SCALAR-NATIVE.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-W-MATRIX-SCALAR-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-W-MATRIX-SCALAR-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-W-MATRIX-SCALAR-NATIVE": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "data/DATA-W-MATRIX-UNIT",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-W-MATRIX-UNIT-NATIVE",
+        "CORE070-DATA-W-MATRIX-UNIT-NATIVE-NEGATIVE-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-MATRIX-UNIT-NATIVE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-MATRIX-UNIT-NATIVE-NEGATIVE-CONTROL.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-W-MATRIX-UNIT-NATIVE": "PASS",
+          "CORE070-DATA-W-MATRIX-UNIT-NATIVE-NEGATIVE-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-W-MATRIX-UNIT-NATIVE": "PASS",
+          "CORE070-DATA-W-MATRIX-UNIT-NATIVE-NEGATIVE-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-W-MATRIX-UNIT-NATIVE": "r_replay_julia_surface_absent",
+          "CORE070-DATA-W-MATRIX-UNIT-NATIVE-NEGATIVE-CONTROL": "r_replay_negative_control"
+        }
+      }
+    },
+    {
+      "source_id": "data/DATA-W-NULL",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-W-NULL-NATIVE"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-NULL-NATIVE.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-W-NULL-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-W-NULL-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-W-NULL-NATIVE": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "data/DATA-W-ZERO",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-W-ZERO-NATIVE"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-ZERO-NATIVE.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-W-ZERO-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-W-ZERO-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-W-ZERO-NATIVE": "r_replay_julia_surface_absent"
+        }
+      }
+    }
+  ]
+}

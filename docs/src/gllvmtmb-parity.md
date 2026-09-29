@@ -361,9 +361,9 @@ Check these restrictions when translating an R analysis:
   scope for this bridge. (GLLVModels.jl does carry more general SPDE/Matérn-spatial and
   phylogenetic implementations, which gllvm/gllvmTMB lack.) gllvmTMB's own
   temporal source (`temporal_indep`, `temporal_dep`, `temporal_latent`, AR1 or
-  OU on long data) is a different model; its temporal-source-only cell has a
-  Julia counterpart, described on the [temporal page](temporal.md), and is not
-  reached through this bridge.
+  OU on long data) is a different model; the temporal source alone and beside
+  ordinary `unit` / `unit_obs` terms has a Julia counterpart, described on the
+  [temporal page](temporal.md), and is not reached through this bridge.
 - **Per-trait nuisance-parameter intervals** — grouped NB2/NB1/Beta/Gamma CIs
   are supported; grouped Tweedie and per-trait ordinal-cutpoint CI endpoints
   remain unavailable.

@@ -1,0 +1,30 @@
+{
+  "schema": "core070-inference-route-probe-adaptation/v1",
+  "fixture": "test/parity/fixtures/core070_inference_routes.tsv",
+  "glvmodels_commit": "61c5eda4822da20591b6fa91869f93c3faf5d369",
+  "runs": {
+    "p0_probe_on_p0_source": {
+      "script": "tools/core070_inference_routes.R",
+      "source": "git show b4d5fee64def88bc768dda1f1f77c29b295edd86:R/<file>",
+      "pass": 98,
+      "rows": 98
+    },
+    "p0_probe_on_p1_source": {
+      "script": "tools/core070_inference_routes.R",
+      "source": "CORE070_P1_R_SOURCE_ROOT",
+      "pass": 0,
+      "rows": 98,
+      "distinct_errors": [
+        "could not find function \".temporal_assert_no_iid_inference\""
+      ]
+    },
+    "p1_probe_on_p1_source": {
+      "script": "tools/core070_inference_routes_p1.R",
+      "source": "CORE070_P1_R_SOURCE_ROOT",
+      "pass": 98,
+      "rows": 98
+    }
+  },
+  "p0_and_adapted_p1_outputs_identical": true,
+  "note": "The only harness change at P1 is parsing R/temporal.R as well, because P1's confint.gllvmTMB_multi calls .temporal_assert_no_iid_inference() first. With it, every route string, error class and message is identical to the P0 probe on P0 source."
+}

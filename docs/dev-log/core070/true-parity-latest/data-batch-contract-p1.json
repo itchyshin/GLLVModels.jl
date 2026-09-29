@@ -1,0 +1,703 @@
+{
+  "schema": "core070-data-batch-contract/v1",
+  "status": "FROZEN_DATA_BATCH_CONTRACT_ALL_CASES_JULIA_SPEC_DEFECT",
+  "area": "data",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "manifest_source": "docs/dev-log/core070/manifest-freeze-work/drafts/data.json",
+  "case_plan_annex": "docs/dev-log/core070/data-required-case-plan.json",
+  "controls_subset_source": "docs/dev-log/core070/data-controls-subset.json",
+  "expected_case_count": 28,
+  "source_pins": {
+    "R/weights-shape.R": "1cf6ea530275bb91676e0be633551d8f8070f5dc178ca764ac8ac4c5fcbdb48a",
+    "R/offset.R": "df43a6a507da0e593d29bacca030cc4a4dc9d4cbfdac20166f66dee9b8ff1f47",
+    "R/gllvmTMB.R": "a1ad39041f88d08b017500132bac45b5282f246025c488bc1829dc57aeae3faf"
+  },
+  "loading_technique": "R/weights-shape.R and R/offset.R are fully sys.source()-loaded (proven side-effect-free by the already-retained 56-case tools/core070_data_controls.R run); only the single top-level `miss_control <- function(...)` assignment is cherry-picked out of R/gllvmTMB.R by parsing it and eval()-ing just that one expression, exactly as tools/core070_data_controls.R already does. No installed package, model fit, TMB object, or Julia code runs.",
+  "julia_surface_status": "GLLVM.jl has no public or internal surface for any of the four helpers exercised here: no MissingDataControl/miss_control-equivalent constructor, no formula-offset-term evaluator with count-family admission, no stored-training-offset or predict-time-offset accessor on a fit object, and no normalise_weights-equivalent (long/wide_matrix/wide_df, with masking) weight adapter. tools/core070_data_batch.jl checks this at runtime against the loaded GLLVM module (isdefined() over named candidates, plus Base.kwarg_decl() over gllvm()/fit_gllvm() to rule out an undocumented keyword) rather than resting on this claim alone. Every one of the 28 required cases is therefore bound only to the frozen R replay: verdict SPEC_DEFECT, not a defect in the specs -- the annex itself describes each julia_surface as planned, not implemented. This is the same situation, and the same resolution, as docs/dev-log/core070/isdm-batch-contract.json's julia_surface_status for the sibling isdm area.",
+  "tolerances": {
+    "comparison": "exact_boolean_via_r_identical",
+    "numeric_tolerance": null
+  },
+  "health_checks": {
+    "r_runtime": "Rscript available, exit 0",
+    "source_freshness": "all three source_pins sha256 match the source root at run time",
+    "fixture_independence": "expressions are embedded directly in this contract's cases[]; no dependency on test/parity/fixtures/core070_data_controls.R's own `cases` list or expected values at run time (kept only as r_call provenance text)",
+    "isolation": "each case expression is evaluated in a fresh environment chained only to the loaded weights-shape.R/offset.R/miss_control environment, so no case can leak state into a later case",
+    "contract_freshness": "contract sha256 recorded in the receipt for tamper detection",
+    "reference_commit_pin": "receipt.reference_commit must equal this contract's reference_commit",
+    "julia_introspection": "tools/core070_data_batch.jl records, for every planned_surface_group, that none of its candidate_exported_symbols is isdefined on the loaded GLLVM module and none of its candidate_kwargs appears in Base.kwarg_decl(methods(gllvm)) / Base.kwarg_decl(methods(fit_gllvm))"
+  },
+  "julia_planned_surfaces": {
+    "miss_control": {
+      "candidate_exported_symbols": [
+        "MissingDataControl",
+        "miss_control",
+        "MissControl"
+      ],
+      "candidate_kwargs": [
+        "miss"
+      ]
+    },
+    "offset_preparation": {
+      "candidate_exported_symbols": [
+        "prepare_offset",
+        "gll_prepare_offset",
+        "OffsetSpec"
+      ],
+      "candidate_kwargs": [
+        "offset"
+      ]
+    },
+    "stored_or_predict_offset_accessor": {
+      "candidate_exported_symbols": [
+        "offset",
+        "training_offset",
+        "offset_vec",
+        "offset_newdata"
+      ],
+      "candidate_kwargs": []
+    },
+    "weight_normalisation": {
+      "candidate_exported_symbols": [
+        "normalise_weights",
+        "normalize_weights",
+        "WeightSpec"
+      ],
+      "candidate_kwargs": [
+        "weights"
+      ]
+    },
+    "weight_shape_adapter": {
+      "candidate_exported_symbols": [
+        "normalise_weights",
+        "normalize_weights",
+        "wide_matrix_weights",
+        "wide_df_weights"
+      ],
+      "candidate_kwargs": [
+        "weights"
+      ]
+    }
+  },
+  "cases": [
+    {
+      "manifest_case_id": "CORE070-DATA-MISS-BOTH-CONTROL",
+      "source_id": "data/DATA-MISS-BOTH",
+      "fixture_case_id": "DATA-MISS-BOTH",
+      "expression": "identical(miss_control('include','model'),list(response='include',predictor='model',engine='laplace'))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "control",
+      "r_call": "miss_control('include','model') (test/parity/fixtures/core070_data_controls.R#DATA-MISS-BOTH); expected response='include', predictor='model', engine='laplace'.",
+      "julia_surface": "Julia control constructor must accept both response and predictor overrides simultaneously while leaving engine at its default.",
+      "comparands": [
+        "R miss_control('include','model')",
+        "Julia control with both overrides"
+      ],
+      "planned_surface_group": "miss_control",
+      "negative_control": false,
+      "rationale": "Joint-override case closing out the miss_control() default/override family alongside DATA-MISS-DEFAULT/INCLUDE/MODEL."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-MISS-DEFAULT-CONTROL",
+      "source_id": "data/DATA-MISS-DEFAULT",
+      "fixture_case_id": "DATA-MISS-DEFAULT",
+      "expression": "identical(miss_control(),list(response='drop',predictor='fail',engine='laplace'))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "control",
+      "r_call": "miss_control() from frozen R source (test/parity/fixtures/core070_data_controls.R#DATA-MISS-DEFAULT); expected list(response='drop', predictor='fail', engine='laplace').",
+      "julia_surface": "Julia missing-data control constructor (planned: e.g. MissingDataControl() or the fit()-level miss= keyword default) must expose the same three defaults: response drop, predictor fail, engine laplace.",
+      "comparands": [
+        "R miss_control() defaults",
+        "Julia missing-data control defaults"
+      ],
+      "planned_surface_group": "miss_control",
+      "negative_control": false,
+      "rationale": "Pure default-value contract with no Julia counterpart yet; a public fit()-facing control object or keyword set must reproduce these three defaults before the family/data-handling manifest can close."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-MISS-INCLUDE-CONTROL",
+      "source_id": "data/DATA-MISS-INCLUDE",
+      "fixture_case_id": "DATA-MISS-INCLUDE",
+      "expression": "identical(miss_control(response='include'),list(response='include',predictor='fail',engine='laplace'))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "control",
+      "r_call": "miss_control(response='include') (test/parity/fixtures/core070_data_controls.R#DATA-MISS-INCLUDE); expected response='include' with predictor/engine defaults unchanged.",
+      "julia_surface": "Julia control constructor must accept an independent response=override (e.g. :include) leaving predictor/engine defaults untouched.",
+      "comparands": [
+        "R miss_control(response='include')",
+        "Julia control with response override"
+      ],
+      "planned_surface_group": "miss_control",
+      "negative_control": false,
+      "rationale": "Single-argument override case for the same control object; verifies argument independence, not just the all-defaults case."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-MISS-MODEL-CONTROL",
+      "source_id": "data/DATA-MISS-MODEL",
+      "fixture_case_id": "DATA-MISS-MODEL",
+      "expression": "identical(miss_control(predictor='model'),list(response='drop',predictor='model',engine='laplace'))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "control",
+      "r_call": "miss_control(predictor='model') (test/parity/fixtures/core070_data_controls.R#DATA-MISS-MODEL); expected predictor='model' with response/engine defaults unchanged.",
+      "julia_surface": "Julia control constructor must accept an independent predictor=override (e.g. :model) leaving response/engine defaults untouched.",
+      "comparands": [
+        "R miss_control(predictor='model')",
+        "Julia control with predictor override"
+      ],
+      "planned_surface_group": "miss_control",
+      "negative_control": false,
+      "rationale": "Single-argument override case complementary to DATA-MISS-INCLUDE; together they pin that the two axes are independently settable."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-OFF-ALL-COUNT-NATIVE",
+      "source_id": "data/DATA-OFF-ALL-COUNT",
+      "fixture_case_id": "DATA-OFF-ALL-COUNT",
+      "expression": "identical(gll_prepare_offset(quote(e),data.frame(e=c(1,2,4),kind=c('count','continuous','count')),globalenv(),c(5L,10L,11L),rep(0L,3),lapply(c(5L,10L,11L),function(i) list(family=paste0('fid',i))),data.frame(e=c(1,2,4),kind=c('count','continuous','count'))$kind),c(1,2,4))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "native",
+      "r_call": "gll_prepare_offset(quote(e), c(5L,10L,11L), ...) (test/parity/fixtures/core070_data_controls.R#DATA-OFF-ALL-COUNT); expected c(1,2,4) -- nonzero offset admitted for count family ids 5/10/11.",
+      "julia_surface": "Julia offset-preparation surface must admit a nonzero offset for every count-family id in its family registry (the ids paired to 5/10/11 in R's internal family table), rejecting others per DATA-OFF-NONCOUNT-REJECT.",
+      "comparands": [
+        "R count-family id admission set {5,10,11}",
+        "Julia count-family offset admission set"
+      ],
+      "planned_surface_group": "offset_preparation",
+      "negative_control": false,
+      "rationale": "Family-id admission-set case; the Julia family registry's numeric ids differ from R's, so the comparand is the *set of families admitted* (count families), not the literal integer ids -- flagged uncertain only insofar as the id-to-family mapping needs to be pinned once at case-authoring time, not deferred as a separate obligation."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-OFF-EXPOSURE-NATIVE",
+      "source_id": "data/DATA-OFF-EXPOSURE",
+      "fixture_case_id": "DATA-OFF-EXPOSURE",
+      "expression": "identical(gll_prepare_offset(quote(log(e)),data.frame(e=c(1,2,4),kind=c('count','continuous','count')),globalenv(),rep(2L,3),rep(0L,3),lapply(rep(2L,3),function(i) list(family=paste0('fid',i))),data.frame(e=c(1,2,4),kind=c('count','continuous','count'))$kind),log(c(1,2,4)))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "native",
+      "r_call": "gll_prepare_offset(quote(log(e)), ...) (test/parity/fixtures/core070_data_controls.R#DATA-OFF-EXPOSURE); expected log(c(1,2,4)) -- log-exposure offset evaluated per row from data.",
+      "julia_surface": "Julia offset-preparation surface must evaluate a data-column offset expression (log-exposure) row-wise against the training data frame.",
+      "comparands": [
+        "R per-row log(e) offset",
+        "Julia per-row log-exposure offset"
+      ],
+      "planned_surface_group": "offset_preparation",
+      "negative_control": false,
+      "rationale": "The canonical count-model exposure-offset case (formula `offset(log(e))`); required before any Poisson/NB exposure workflow can be claimed."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-OFF-MIXED-NATIVE",
+      "source_id": "data/DATA-OFF-MIXED",
+      "fixture_case_id": "DATA-OFF-MIXED",
+      "expression": "identical(gll_prepare_offset(quote(c(1,0,4)),data.frame(e=c(1,2,4),kind=c('count','continuous','count')),globalenv(),c(2L,0L,5L),rep(0L,3),lapply(c(2L,0L,5L),function(i) list(family=paste0('fid',i))),data.frame(e=c(1,2,4),kind=c('count','continuous','count'))$kind),c(1,0,4))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "native",
+      "r_call": "gll_prepare_offset(quote(c(1,0,4)), c(2L,0L,5L), ...) (test/parity/fixtures/core070_data_controls.R#DATA-OFF-MIXED); expected c(1,0,4) -- a multi-family fit with mixed family ids per row permits zero offset on non-count rows alongside nonzero on count rows.",
+      "julia_surface": "Julia offset-preparation surface must apply the per-row family-id admission rule row-wise within a single multi-family/multi-response fit, not just at the whole-model level.",
+      "comparands": [
+        "R row-wise mixed-family offset admission",
+        "Julia row-wise mixed-family offset admission"
+      ],
+      "planned_surface_group": "offset_preparation",
+      "negative_control": false,
+      "rationale": "Row-wise variant of the family-conditioned offset rule; required for any multi-response/multi-family model where offsets and family ids vary by column."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-OFF-NB1-NATIVE",
+      "source_id": "data/DATA-OFF-NB1",
+      "fixture_case_id": "DATA-OFF-NB1",
+      "expression": "identical(gll_prepare_offset(quote(e),data.frame(e=c(1,2,4),kind=c('count','continuous','count')),globalenv(),rep(15L,3),rep(0L,3),lapply(rep(15L,3),function(i) list(family=paste0('fid',i))),data.frame(e=c(1,2,4),kind=c('count','continuous','count'))$kind),c(1,2,4))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "native",
+      "r_call": "gll_prepare_offset(quote(e), rep(15L,3), ...) (test/parity/fixtures/core070_data_controls.R#DATA-OFF-NB1); expected c(1,2,4) -- NB1 (family id 15) also admits a nonzero offset.",
+      "julia_surface": "Julia offset-preparation surface must admit a nonzero offset for the NB1 family specifically (a count family outside the {5,10,11} block tested in DATA-OFF-ALL-COUNT).",
+      "comparands": [
+        "R NB1 (id 15) offset admission",
+        "Julia NB1 offset admission"
+      ],
+      "planned_surface_group": "offset_preparation",
+      "negative_control": false,
+      "rationale": "Regression-style case isolating NB1 from the other count-family ids; keeps the admission set from silently narrowing to {5,10,11}."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-OFF-NONCOUNT-ZERO-NATIVE",
+      "source_id": "data/DATA-OFF-NONCOUNT-ZERO",
+      "fixture_case_id": "DATA-OFF-NONCOUNT-ZERO",
+      "expression": "identical(gll_prepare_offset(quote(0),data.frame(e=c(1,2,4),kind=c('count','continuous','count')),globalenv(),rep(0L,3),rep(0L,3),lapply(rep(0L,3),function(i) list(family=paste0('fid',i))),data.frame(e=c(1,2,4),kind=c('count','continuous','count'))$kind),rep(0,3))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "native",
+      "r_call": "gll_prepare_offset(quote(0), rep(0L,3), ...) (test/parity/fixtures/core070_data_controls.R#DATA-OFF-NONCOUNT-ZERO); expected rep(0,3) -- an explicit all-zero offset is accepted for a non-count family (offset ids all 0).",
+      "julia_surface": "Julia offset-preparation surface must accept an explicit zero offset for non-count families rather than rejecting the offset() term outright.",
+      "comparands": [
+        "R zero offset on non-count family",
+        "Julia zero offset on non-count family"
+      ],
+      "planned_surface_group": "offset_preparation",
+      "negative_control": false,
+      "rationale": "Pairs with DATA-OFF-NONCOUNT-REJECT (non-zero offset on non-count family rejects); this row is the accepted boundary at zero."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-OFF-NONE-NATIVE",
+      "source_id": "data/DATA-OFF-NONE",
+      "fixture_case_id": "DATA-OFF-NONE",
+      "expression": "identical(gll_prepare_offset(NULL,data.frame(e=c(1,2,4),kind=c('count','continuous','count')),globalenv(),rep(2L,3),rep(0L,3),lapply(rep(2L,3),function(i) list(family=paste0('fid',i))),data.frame(e=c(1,2,4),kind=c('count','continuous','count'))$kind),rep(0,3))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "native",
+      "r_call": "gll_prepare_offset(NULL, ...) via off(NULL) (test/parity/fixtures/core070_data_controls.R#DATA-OFF-NONE); expected rep(0,3) -- absent offset defaults to zero per row.",
+      "julia_surface": "Julia offset-preparation surface (planned: prepare_offset()/offset handling inside the family fit driver) must default an absent offset expression to a zero vector of length n_obs.",
+      "comparands": [
+        "R gll_prepare_offset(NULL,...)",
+        "Julia offset default (no offset given)"
+      ],
+      "planned_surface_group": "offset_preparation",
+      "negative_control": false,
+      "rationale": "Baseline no-offset case anchoring the offset-preparation contract; every other DATA-OFF-* row is a variant of this same helper."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-OFF-PREDICT-POSTFIT-READBACK",
+      "source_id": "data/DATA-OFF-PREDICT",
+      "fixture_case_id": "DATA-OFF-PREDICT",
+      "expression": "identical(.gllvmTMB_offset_newdata(list(formula=y~1,offset_expr=quote(log(e)),tmb_data=list(X_fix=matrix(1,3,1))),data.frame(e=c(1,2,4),kind=c('count','continuous','count'))),log(c(1,2,4)))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "postfit-readback",
+      "r_call": ".gllvmTMB_offset_newdata(fit, d) (test/parity/fixtures/core070_data_controls.R#DATA-OFF-PREDICT); expected log(c(1,2,4)) -- the stored offset expression (log(e)) is re-evaluated against new data at predict time.",
+      "julia_surface": "Julia predict()-time offset handling must re-evaluate the fit's stored offset expression against the supplied newdata rather than reusing the training offset vector.",
+      "comparands": [
+        "R newdata offset re-evaluation",
+        "Julia predict-time offset re-evaluation"
+      ],
+      "planned_surface_group": "stored_or_predict_offset_accessor",
+      "negative_control": false,
+      "rationale": "Core predict-time offset contract; required before any offset-bearing count-family predict() workflow can be claimed against R."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK",
+      "source_id": "data/DATA-OFF-PREDICT-NONFINITE-HELPER",
+      "fixture_case_id": "DATA-OFF-PREDICT-NONFINITE-HELPER",
+      "expression": "identical(.gllvmTMB_offset_newdata(list(formula=y~1,offset_expr=quote(log(e)),tmb_data=list(X_fix=matrix(1,3,1))),data.frame(e=c(0,1,2))),c(-Inf,0,log(2)))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "postfit-readback",
+      "r_call": ".gllvmTMB_offset_newdata(fit, data.frame(e=c(0,1,2))) (test/parity/fixtures/core070_data_controls.R#DATA-OFF-PREDICT-NONFINITE-HELPER); expected c(-Inf,0,log(2)) -- log(0) passes through as -Inf at this helper (no guard at newdata-offset level).",
+      "julia_surface": "Julia predict-time offset evaluator must reproduce the same unguarded arithmetic (log(0) = -Inf propagates rather than erroring) at this specific helper, matching R's documented non-guard here -- any stronger Julia diagnostic must be an explicit, separately tested design choice, not an accidental behavioral divergence.",
+      "comparands": [
+        "R newdata-offset -Inf passthrough for log(0)",
+        "Julia newdata-offset passthrough/guard behavior"
+      ],
+      "planned_surface_group": "stored_or_predict_offset_accessor",
+      "negative_control": false,
+      "rationale": "Deliberately documents a permissive R behavior (source comment: 'this differs from training validation'); Julia may choose to guard here, but the divergence must be an explicit tested decision, so this row is required to make that choice visible rather than silent."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-OFF-SCALAR-NATIVE",
+      "source_id": "data/DATA-OFF-SCALAR",
+      "fixture_case_id": "DATA-OFF-SCALAR",
+      "expression": "identical(gll_prepare_offset(quote(log(2)),data.frame(e=c(1,2,4),kind=c('count','continuous','count')),globalenv(),rep(2L,3),rep(0L,3),lapply(rep(2L,3),function(i) list(family=paste0('fid',i))),data.frame(e=c(1,2,4),kind=c('count','continuous','count'))$kind),rep(log(2),3))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "native",
+      "r_call": "gll_prepare_offset(quote(log(2)), ...) (test/parity/fixtures/core070_data_controls.R#DATA-OFF-SCALAR); expected rep(log(2),3) -- a constant expression broadcasts to all rows.",
+      "julia_surface": "Julia offset-preparation surface must broadcast a constant offset expression/value to a per-row vector of the training length.",
+      "comparands": [
+        "R constant offset broadcast",
+        "Julia constant offset broadcast"
+      ],
+      "planned_surface_group": "offset_preparation",
+      "negative_control": false,
+      "rationale": "Confirms scalar-expression broadcasting, distinct from the per-row exposure case (DATA-OFF-EXPOSURE)."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-OFF-TRAIN-LEGACY-POSTFIT-READBACK",
+      "source_id": "data/DATA-OFF-TRAIN-LEGACY",
+      "fixture_case_id": "DATA-OFF-TRAIN-LEGACY",
+      "expression": "identical(.gllvmTMB_offset_vec(list(formula=y~1,offset_expr=quote(log(e)),tmb_data=list(X_fix=matrix(1,3,1)))),rep(0,3))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "postfit-readback",
+      "r_call": ".gllvmTMB_offset_vec(fit) with no stored offset_vec (test/parity/fixtures/core070_data_controls.R#DATA-OFF-TRAIN-LEGACY); expected rep(0,3) -- fits from before offset_vec was cached fall back to zero.",
+      "julia_surface": "Julia's stored-fit offset accessor (planned: offset(fit) or an internal training-offset getter) must return an all-zero vector when the fit object predates offset caching, matching R's legacy fallback.",
+      "comparands": [
+        "R legacy-fit offset fallback (zero)",
+        "Julia legacy-fit offset fallback"
+      ],
+      "planned_surface_group": "stored_or_predict_offset_accessor",
+      "negative_control": false,
+      "rationale": "Back-compatibility fallback for fit objects saved before offset caching existed; a Julia serialization/versioning story must define the equivalent fallback before this can close."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-OFF-TRAIN-STORED-POSTFIT-READBACK",
+      "source_id": "data/DATA-OFF-TRAIN-STORED",
+      "fixture_case_id": "DATA-OFF-TRAIN-STORED",
+      "expression": "{x<-list(formula=y~1,offset_expr=quote(log(e)),tmb_data=list(X_fix=matrix(1,3,1)));x$tmb_data$offset_vec<-c(1,2,3);identical(.gllvmTMB_offset_vec(x),c(1,2,3))}",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "postfit-readback",
+      "r_call": ".gllvmTMB_offset_vec(fit) with tmb_data$offset_vec set (test/parity/fixtures/core070_data_controls.R#DATA-OFF-TRAIN-STORED); expected the stored vector c(1,2,3) verbatim.",
+      "julia_surface": "Julia's stored-fit offset accessor must return the cached training offset vector unchanged when the fit object carries one.",
+      "comparands": [
+        "R stored offset_vec readback",
+        "Julia stored training-offset readback"
+      ],
+      "planned_surface_group": "stored_or_predict_offset_accessor",
+      "negative_control": false,
+      "rationale": "Positive counterpart to DATA-OFF-TRAIN-LEGACY; together they pin the stored-vs-fallback offset contract on a fitted model object."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-W-DF-MASK-DROP-NATIVE",
+      "source_id": "data/DATA-W-DF-MASK-DROP",
+      "fixture_case_id": "DATA-W-DF-MASK-DROP",
+      "expression": "identical(normalise_weights(c(10,20),'wide_df',4L,n_units=2L,n_traits=3L,na_mask=matrix(c(FALSE,TRUE,FALSE,FALSE,FALSE,TRUE),2,3,byrow=TRUE),drop_masked=TRUE),c(10,10,20,20))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "native",
+      "r_call": "normalise_weights(c(10,20),'wide_df',4L,mask) via w(c(10,20),'wide_df',4L,mask) (test/parity/fixtures/core070_data_controls.R#DATA-W-DF-MASK-DROP); expected c(10,10,20,20) -- traits()-route masked cells dropped, trait-major retained order.",
+      "julia_surface": "Julia native trait-major weight input must drop masked cells under drop_masked=true, matching R's traits()-route retained order.",
+      "comparands": [
+        "R traits()-route masked-drop weight vector (length 4)",
+        "Julia native trait-major masked-drop weight vector"
+      ],
+      "planned_surface_group": "weight_shape_adapter",
+      "negative_control": false,
+      "rationale": "Mask-drop variant of DATA-W-DF-UNIT; direct native reproduction, no adapter transpose needed since this route already matches Julia's trait-major storage."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-W-DF-MASK-INCLUDE-NATIVE",
+      "source_id": "data/DATA-W-DF-MASK-INCLUDE",
+      "fixture_case_id": "DATA-W-DF-MASK-INCLUDE",
+      "expression": "identical(normalise_weights(c(10,20),'wide_df',6L,n_units=2L,n_traits=3L,na_mask=matrix(c(FALSE,TRUE,FALSE,FALSE,FALSE,TRUE),2,3,byrow=TRUE),drop_masked=FALSE),c(10,10,10,20,20,20))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "native",
+      "r_call": "normalise_weights(c(10,20),'wide_df',6L,mask,FALSE) via w(c(10,20),'wide_df',6L,mask,FALSE) (test/parity/fixtures/core070_data_controls.R#DATA-W-DF-MASK-INCLUDE); expected c(10,10,10,20,20,20) -- with drop_masked=FALSE the traits()-route weight at a masked cell is RETAINED (not zeroed), unlike the wide-matrix masked-include case.",
+      "julia_surface": "Julia native trait-major weight input in masked-include mode must retain the per-unit weight value at masked cells rather than zeroing it -- this differs from the wide-matrix masked-include contract (DATA-W-MATRIX-MASK-INCLUDE zeros; this route does not) and both behaviors must be reproduced distinctly, not collapsed to one rule.",
+      "comparands": [
+        "R traits()-route masked-include weight vector (retained, not zeroed)",
+        "Julia native trait-major masked-include weight vector (retained)"
+      ],
+      "planned_surface_group": "weight_shape_adapter",
+      "negative_control": false,
+      "rationale": "Contract explicitly distinguishes this from the wide-matrix masked-include row per data-controls-contract.md ('Site weights retained at masked entries' for traits() vs 'Masked entries zeroed' for the matrix route) -- a real behavioral asymmetry, not a documentation artifact, so both must be separately verified."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-W-DF-UNIT-NATIVE",
+      "source_id": "data/DATA-W-DF-UNIT",
+      "fixture_case_id": "DATA-W-DF-UNIT",
+      "expression": "identical(normalise_weights(c(10,20),'wide_df',6L,n_units=2L,n_traits=3L,na_mask=NULL,drop_masked=TRUE),c(10,10,10,20,20,20))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "native",
+      "r_call": "normalise_weights(c(10,20), shape='wide_df') via w(c(10,20),'wide_df') (test/parity/fixtures/core070_data_controls.R#DATA-W-DF-UNIT); expected c(10,10,10,20,20,20) -- the traits()-route per-unit weight broadcasts in trait-major order.",
+      "julia_surface": "Julia's native traits()-style weight input (trait-major, matching Julia's own binomial-N storage order per the data-controls contract) must broadcast a per-unit weight vector to c(10,10,10,20,20,20) -- the SAME order as Julia's native layout, unlike the wide-matrix route.",
+      "comparands": [
+        "R traits() per-unit weight order (10,10,10,20,20,20)",
+        "Julia native trait-major weight/N order"
+      ],
+      "planned_surface_group": "weight_shape_adapter",
+      "negative_control": false,
+      "rationale": "This is the order that already matches Julia's native trait-major layout (per data-controls-contract.md); evidence_kind is native (direct reproduction), contrasting with the wide-matrix rows which are bridge/adapter cases."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-W-FRACTIONAL-NATIVE",
+      "source_id": "data/DATA-W-FRACTIONAL",
+      "fixture_case_id": "DATA-W-FRACTIONAL",
+      "expression": "identical(normalise_weights(rep(0.5,6),'long',6L,n_units=2L,n_traits=3L,na_mask=NULL,drop_masked=TRUE),rep(0.5,6))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "native",
+      "r_call": "normalise_weights(rep(0.5,6), ...) via w(rep(0.5,6)) (test/parity/fixtures/core070_data_controls.R#DATA-W-FRACTIONAL); expected rep(0.5,6) -- fractional weights are accepted at this helper.",
+      "julia_surface": "Julia weight-normalisation surface must accept fractional weight values without erroring; family-specific trial-count validation (e.g. binomial N must be integer) happens elsewhere.",
+      "comparands": [
+        "R fractional-weight acceptance",
+        "Julia fractional-weight acceptance"
+      ],
+      "planned_surface_group": "weight_normalisation",
+      "negative_control": false,
+      "rationale": "Companion to DATA-W-ZERO; both pin the same deliberate-permissiveness contract for weight values at this layer."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-W-LONG-NATIVE",
+      "source_id": "data/DATA-W-LONG",
+      "fixture_case_id": "DATA-W-LONG",
+      "expression": "identical(normalise_weights(1:6,'long',6L,n_units=2L,n_traits=3L,na_mask=NULL,drop_masked=TRUE),as.numeric(1:6))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "native",
+      "r_call": "normalise_weights(1:6, shape='long') via w(1:6) (test/parity/fixtures/core070_data_controls.R#DATA-W-LONG); expected as.numeric(1:6) -- an exact-length long vector passes through unchanged.",
+      "julia_surface": "Julia weight-normalisation surface must accept an exact-length long weight vector and return it unchanged (no reordering).",
+      "comparands": [
+        "R long-format weight passthrough",
+        "Julia long-format weight passthrough"
+      ],
+      "planned_surface_group": "weight_normalisation",
+      "negative_control": false,
+      "rationale": "Identity case for the long-vector input route."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-W-MATRIX-CELLS-NATIVE",
+      "source_id": "data/DATA-W-MATRIX-CELLS",
+      "fixture_case_id": "DATA-W-MATRIX-CELLS",
+      "expression": "identical(normalise_weights(matrix(1:6,2,3),'wide_matrix',6L,n_units=2L,n_traits=3L,na_mask=NULL,drop_masked=TRUE),as.numeric(1:6))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "bridge",
+      "r_call": "normalise_weights(matrix(1:6,2,3), shape='wide_matrix') via w(matrix(1:6,2,3),'wide_matrix') (test/parity/fixtures/core070_data_controls.R#DATA-W-MATRIX-CELLS); expected as.numeric(1:6) -- a full units x traits weight matrix flattens column-major (R's native matrix storage order).",
+      "julia_surface": "Julia wide-matrix weight adapter must accept a full per-cell weight matrix and flatten/transpose it to Julia's native trait-major storage, matching the general per-cell case of the DATA-W-MATRIX-UNIT ordering contract.",
+      "comparands": [
+        "R full per-cell weight matrix (column-major flatten)",
+        "Julia native per-cell weight layout after adapter transpose"
+      ],
+      "planned_surface_group": "weight_shape_adapter",
+      "negative_control": false,
+      "rationale": "General per-cell case of the same ordering contract as DATA-W-MATRIX-UNIT; required so the adapter is verified beyond the constant-per-unit special case."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-W-MATRIX-MASK-DROP-NATIVE",
+      "source_id": "data/DATA-W-MATRIX-MASK-DROP",
+      "fixture_case_id": "DATA-W-MATRIX-MASK-DROP",
+      "expression": "identical(normalise_weights({m<-matrix(c(FALSE,TRUE,FALSE,FALSE,FALSE,TRUE),2,3,byrow=TRUE);x<-matrix(1:6,2,3);x[m]<-NA_real_;x},'wide_matrix',4L,n_units=2L,n_traits=3L,na_mask=matrix(c(FALSE,TRUE,FALSE,FALSE,FALSE,TRUE),2,3,byrow=TRUE),drop_masked=TRUE),c(1,2,4,5))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "bridge",
+      "r_call": "normalise_weights(wm,'wide_matrix',4L,mask) via w(wm,'wide_matrix',4L,mask) (test/parity/fixtures/core070_data_controls.R#DATA-W-MATRIX-MASK-DROP); expected c(1,2,4,5) -- masked (NA-response) cells are dropped, shrinking the returned vector to n_obs actually retained.",
+      "julia_surface": "Julia wide-matrix weight adapter must drop weights at cells masked out by a missing/NA response (drop_masked=true default), returning a vector of length equal to the retained-observation count, in the adapter's native flatten order.",
+      "comparands": [
+        "R masked-drop weight vector (length 4)",
+        "Julia masked-drop weight vector (native order)"
+      ],
+      "planned_surface_group": "weight_shape_adapter",
+      "negative_control": false,
+      "rationale": "Mask-drop variant of the wide-matrix ordering contract; required for any model with response missingness under the response='drop' default (DATA-MISS-DEFAULT)."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-W-MATRIX-MASK-INCLUDE-NATIVE",
+      "source_id": "data/DATA-W-MATRIX-MASK-INCLUDE",
+      "fixture_case_id": "DATA-W-MATRIX-MASK-INCLUDE",
+      "expression": "identical(normalise_weights({m<-matrix(c(FALSE,TRUE,FALSE,FALSE,FALSE,TRUE),2,3,byrow=TRUE);x<-matrix(1:6,2,3);x[m]<-NA_real_;x},'wide_matrix',6L,n_units=2L,n_traits=3L,na_mask=matrix(c(FALSE,TRUE,FALSE,FALSE,FALSE,TRUE),2,3,byrow=TRUE),drop_masked=FALSE),c(1,2,0,4,5,0))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "bridge",
+      "r_call": "normalise_weights(wm,'wide_matrix',6L,mask,FALSE) via w(wm,'wide_matrix',6L,mask,FALSE) (test/parity/fixtures/core070_data_controls.R#DATA-W-MATRIX-MASK-INCLUDE); expected c(1,2,0,4,5,0) -- with drop_masked=FALSE, masked cells are retained in place and zeroed rather than dropped.",
+      "julia_surface": "Julia wide-matrix weight adapter must support a masked-include mode (drop_masked=false, paired with miss_control(response='include') from DATA-MISS-INCLUDE) that zeros masked cells in place instead of shrinking the vector.",
+      "comparands": [
+        "R masked-include weight vector (zero-filled, full length 6)",
+        "Julia masked-include weight vector (native order)"
+      ],
+      "planned_surface_group": "weight_shape_adapter",
+      "negative_control": false,
+      "rationale": "Companion to DATA-W-MATRIX-MASK-DROP for the response='include' path; both modes must be supported since miss_control's response policy is user-selectable (DATA-MISS-INCLUDE/BOTH)."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-W-MATRIX-MASK-SCALAR-NATIVE",
+      "source_id": "data/DATA-W-MATRIX-MASK-SCALAR",
+      "fixture_case_id": "DATA-W-MATRIX-MASK-SCALAR",
+      "expression": "identical(normalise_weights(2,'wide_matrix',4L,n_units=2L,n_traits=3L,na_mask=matrix(c(FALSE,TRUE,FALSE,FALSE,FALSE,TRUE),2,3,byrow=TRUE),drop_masked=TRUE),rep(2,4))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "native",
+      "r_call": "normalise_weights(2,'wide_matrix',4L,mask) via w(2,'wide_matrix',4L,mask) (test/parity/fixtures/core070_data_controls.R#DATA-W-MATRIX-MASK-SCALAR); expected rep(2,4) -- a scalar weight broadcasts only to the retained (unmasked) cells under drop_masked=TRUE.",
+      "julia_surface": "Julia wide-matrix weight adapter must broadcast a scalar weight to exactly the retained-observation count when combined with masking, not to the full unmasked cell count.",
+      "comparands": [
+        "R scalar broadcast restricted to unmasked cells (length 4)",
+        "Julia scalar broadcast restricted to unmasked cells"
+      ],
+      "planned_surface_group": "weight_shape_adapter",
+      "negative_control": false,
+      "rationale": "Interaction case between scalar broadcast (DATA-W-MATRIX-SCALAR) and masking (DATA-W-MATRIX-MASK-DROP); confirms the two rules compose correctly rather than being tested only in isolation."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-W-MATRIX-SCALAR-NATIVE",
+      "source_id": "data/DATA-W-MATRIX-SCALAR",
+      "fixture_case_id": "DATA-W-MATRIX-SCALAR",
+      "expression": "identical(normalise_weights(2,'wide_matrix',6L,n_units=2L,n_traits=3L,na_mask=NULL,drop_masked=TRUE),rep(2,6))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "native",
+      "r_call": "normalise_weights(2, shape='wide_matrix') via w(2,'wide_matrix') (test/parity/fixtures/core070_data_controls.R#DATA-W-MATRIX-SCALAR); expected rep(2,6) -- a scalar broadcasts to every units*traits cell.",
+      "julia_surface": "Julia wide-matrix weight-normalisation surface must broadcast a scalar weight to every cell of the units*traits response matrix, flattened in the same order as the unmasked case.",
+      "comparands": [
+        "R scalar-to-matrix weight broadcast",
+        "Julia scalar-to-matrix weight broadcast"
+      ],
+      "planned_surface_group": "weight_shape_adapter",
+      "negative_control": false,
+      "rationale": "Scalar-broadcast case for the wide-matrix input route."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-W-MATRIX-UNIT-NATIVE",
+      "source_id": "data/DATA-W-MATRIX-UNIT",
+      "fixture_case_id": "DATA-W-MATRIX-UNIT",
+      "expression": "identical(normalise_weights(c(10,20),'wide_matrix',6L,n_units=2L,n_traits=3L,na_mask=NULL,drop_masked=TRUE),c(10,20,10,20,10,20))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "bridge",
+      "r_call": "normalise_weights(c(10,20), shape='wide_matrix') via w(c(10,20),'wide_matrix') (test/parity/fixtures/core070_data_controls.R#DATA-W-MATRIX-UNIT); expected c(10,20,10,20,10,20) -- R units x traits matrix order (site-major).",
+      "julia_surface": "Julia's wide-matrix weight adapter must reproduce R's units x traits (site-major) flattening order for a per-unit weight vector; per the data-controls contract, Julia's own native binomial N is traits x units (trait-major, matching DATA-W-DF-UNIT order), so a wide-matrix *adapter* into that native layout must transpose -- this case pins the R-side order the adapter must read from.",
+      "comparands": [
+        "R wide-matrix per-unit weight order (10,20,10,20,10,20)",
+        "Julia wide-matrix-adapter input order before transpose to native trait-major layout"
+      ],
+      "planned_surface_group": "weight_shape_adapter",
+      "negative_control": false,
+      "rationale": "This is the ordering-contract row called out explicitly in data-controls-contract.md ('Julia native binomial N is traits x units ... A matrix adapter must transpose the R units x traits matrix'); evidence_kind is bridge because the comparand is an R->Julia adapter transform, not a same-order native reproduction."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-W-NULL-NATIVE",
+      "source_id": "data/DATA-W-NULL",
+      "fixture_case_id": "DATA-W-NULL",
+      "expression": "identical(normalise_weights(NULL,'long',6L,n_units=2L,n_traits=3L,na_mask=NULL,drop_masked=TRUE),NULL)",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "native",
+      "r_call": "normalise_weights(NULL, ...) via w(NULL) (test/parity/fixtures/core070_data_controls.R#DATA-W-NULL); expected NULL.",
+      "julia_surface": "Julia weight-normalisation surface (planned: normalise_weights()/the weights= handling inside fit()) must pass NULL/absent weights through unchanged (equivalent to `nothing` or unweighted fit).",
+      "comparands": [
+        "R normalise_weights(NULL)",
+        "Julia absent-weights passthrough"
+      ],
+      "planned_surface_group": "weight_normalisation",
+      "negative_control": false,
+      "rationale": "Baseline no-weights case anchoring the weight-normalisation contract; every other DATA-W-* row is a variant of this same helper."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-W-ZERO-NATIVE",
+      "source_id": "data/DATA-W-ZERO",
+      "fixture_case_id": "DATA-W-ZERO",
+      "expression": "identical(normalise_weights(rep(0,6),'long',6L,n_units=2L,n_traits=3L,na_mask=NULL,drop_masked=TRUE),rep(0,6))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "native",
+      "r_call": "normalise_weights(rep(0,6), ...) via w(rep(0,6)) (test/parity/fixtures/core070_data_controls.R#DATA-W-ZERO); expected rep(0,6) -- all-zero weights are accepted at this helper (not validated as a degenerate fit here).",
+      "julia_surface": "Julia weight-normalisation surface must accept an all-zero weight vector without erroring; any degenerate-fit rejection belongs at a later fit-time validation stage, not this shape/policy helper.",
+      "comparands": [
+        "R zero-weight acceptance",
+        "Julia zero-weight acceptance"
+      ],
+      "planned_surface_group": "weight_normalisation",
+      "negative_control": false,
+      "rationale": "Pins that weight-value validation (zero, fractional) is deliberately permissive at this layer, matching R's documented separation of concerns from family-specific validation."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-W-LONG-NATIVE-NEGATIVE-CONTROL",
+      "source_id": "data/DATA-W-LONG",
+      "fixture_case_id": "DATA-W-LONG",
+      "expression": "identical(normalise_weights(1:6,'long',6L,n_units=2L,n_traits=3L,na_mask=NULL,drop_masked=TRUE),as.numeric(c(9,9,9,9,9,9)))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "native",
+      "r_call": "normalise_weights(1:6,shape='long') compared against a deliberately wrong literal c(9,9,9,9,9,9)",
+      "julia_surface": "n/a -- negative control, R-side only",
+      "comparands": [
+        "deliberately wrong literal"
+      ],
+      "planned_surface_group": "weight_normalisation",
+      "negative_control": true,
+      "rationale": "Must evaluate to FALSE: the real result (1,2,3,4,5,6) does not equal the wrong literal. If this ever reports TRUE, the identical()-based comparison used throughout this batch is broken (e.g. silently coerced to always-pass) and every other PASS in this batch is untrustworthy."
+    },
+    {
+      "manifest_case_id": "CORE070-DATA-W-MATRIX-UNIT-NATIVE-NEGATIVE-CONTROL",
+      "source_id": "data/DATA-W-MATRIX-UNIT",
+      "fixture_case_id": "DATA-W-MATRIX-UNIT",
+      "expression": "identical(normalise_weights(c(10,20),'wide_matrix',6L,n_units=2L,n_traits=3L,na_mask=NULL,drop_masked=TRUE),c(20,10,20,10,20,10))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "bridge",
+      "r_call": "normalise_weights(c(10,20),shape='wide_matrix') compared against the reversed order c(20,10,20,10,20,10)",
+      "julia_surface": "n/a -- negative control, R-side only",
+      "comparands": [
+        "deliberately reversed order"
+      ],
+      "planned_surface_group": "weight_shape_adapter",
+      "negative_control": true,
+      "rationale": "Must evaluate to FALSE: the real R units-by-traits order is (10,20,10,20,10,20), not its reverse. This is the exact same case data-controls-contract.md cites as the one whose expected-value mutation must flip a batch from all-pass to one-fail; reproducing that here pins that this batch's comparison is equally sensitive to an ordering error, not just a magnitude error."
+    }
+  ],
+  "negative_control_case_ids": [
+    "CORE070-DATA-W-LONG-NATIVE-NEGATIVE-CONTROL",
+    "CORE070-DATA-W-MATRIX-UNIT-NATIVE-NEGATIVE-CONTROL"
+  ],
+  "runtime_budget_seconds": 900,
+  "failure_action": "Retain the complete attempt (results JSON, raw.tsv, diagnostics.log, receipt.json, the Julia introspection receipt). Do not widen the exact identical()-based comparison to a tolerance or a substring match, and do not drop a failing case from expected_case_count.",
+  "claim_boundary": "Passing this batch establishes that the frozen R helper behaviour for these 28 manifest-planned data cases replays correctly, in isolation, against the pinned R source at the reference commit, and that no Julia surface currently exists to compare any of them against (a fact, not a gap in this harness). It does not establish any Julia native/formula/bridge fit, any numeric R-vs-Julia parity, or admission behaviour for the 28 non-manifest reject/error cases in the wider 56-case docs/dev-log/core070/data-controls-subset.json. The family/data-handling manifest cannot close on this evidence alone; it closes only once the planned Julia surfaces above are implemented and a follow-up batch replaces every SPEC_DEFECT verdict with a real R-vs-Julia value comparison.",
+  "p0_contract": "docs/dev-log/core070/data-batch-contract.json",
+  "p0_contract_sha256": "52ede35d598903fa55dc3287a3314450aa527fb5cbb24b7c66c419305e73ad51",
+  "p0_to_p1_r_function_diff": [
+    {
+      "function": "normalise_weights",
+      "file": "R/weights-shape.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "5118861c62e473f6d48f656920acb811d34233afb3e26a1a4fd57a59fb3bd7ac",
+      "body_sha256_p1": "5118861c62e473f6d48f656920acb811d34233afb3e26a1a4fd57a59fb3bd7ac"
+    },
+    {
+      "function": "gll_prepare_offset",
+      "file": "R/offset.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "68392cfa280e3a7307c39d09ecfefef8b2fb0ead79878c0e34d47b110aa8c5ed",
+      "body_sha256_p1": "68392cfa280e3a7307c39d09ecfefef8b2fb0ead79878c0e34d47b110aa8c5ed"
+    },
+    {
+      "function": ".gllvmTMB_offset_vec",
+      "file": "R/offset.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "69c0883ecc43c7929d27db575bcd926238eb87cedc697da82b3112f37c4380d2",
+      "body_sha256_p1": "69c0883ecc43c7929d27db575bcd926238eb87cedc697da82b3112f37c4380d2"
+    },
+    {
+      "function": ".gllvmTMB_offset_newdata",
+      "file": "R/offset.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "84ef278cf76315e04006af9126fe10fca2a9e354b8aed5bc7d54d68d19d6ce57",
+      "body_sha256_p1": "84ef278cf76315e04006af9126fe10fca2a9e354b8aed5bc7d54d68d19d6ce57"
+    },
+    {
+      "function": "miss_control",
+      "file": "R/gllvmTMB.R",
+      "body_identical_p0_p1": false,
+      "body_sha256_p0": "2813332e63e1795672e6387cf33afa40ec986493c569cb66693e725a9394f1e3",
+      "body_sha256_p1": "bd458d3b940470bd5b3d7f3b046b578c1a500ffb3cfd80403f3137bdbdc9fbc7"
+    }
+  ],
+  "julia_surface_status_p1_note": "Read julia_surface_status (carried verbatim from P0) as a statement about helper-equivalent surfaces only. Its parenthetical 'Base.kwarg_decl() over gllvm()/fit_gllvm() to rule out an undocumented keyword' does not hold: both entry points end in kwargs..., so kwarg_decl lists only the dispatcher's own keywords, not what it forwards. GLLVModels does have fit-time offset= and mask= / missing-in-Y surfaces on the non-Gaussian fitters (and offset= / mask= on the default Gaussian path), reachable through fit_gllvm and gllvm; it has no weights surface. What it lacks is the helper layer these cases replay: a formula-offset evaluator, a stored or predict-time offset accessor, a miss_control constructor, and a normalise_weights adapter. The behavioural evidence is tools/core070_data_surface_probe.jl and its tracked receipt next to the data batch.",
+  "regeneration_log": {
+    "generator": "tools/core070_data_p1_contract.py",
+    "changes": [
+      {
+        "field": "reference_commit",
+        "p0": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+        "p1": "9539352f66f2db2cc26b1c393e67212a359b60c9"
+      },
+      {
+        "field": "source_pins[R/weights-shape.R]",
+        "p0": "1cf6ea530275bb91676e0be633551d8f8070f5dc178ca764ac8ac4c5fcbdb48a",
+        "p1": "1cf6ea530275bb91676e0be633551d8f8070f5dc178ca764ac8ac4c5fcbdb48a",
+        "changed": false
+      },
+      {
+        "field": "source_pins[R/offset.R]",
+        "p0": "df43a6a507da0e593d29bacca030cc4a4dc9d4cbfdac20166f66dee9b8ff1f47",
+        "p1": "df43a6a507da0e593d29bacca030cc4a4dc9d4cbfdac20166f66dee9b8ff1f47",
+        "changed": false
+      },
+      {
+        "field": "source_pins[R/gllvmTMB.R]",
+        "p0": "bf78912c192311d1ca40704cd81493c2c06773eb3eb7aea14b826a7459dd6f20",
+        "p1": "a1ad39041f88d08b017500132bac45b5282f246025c488bc1829dc57aeae3faf",
+        "changed": true
+      },
+      {
+        "field": "julia_surface_status_p1_note",
+        "added": true,
+        "why": "Base.kwarg_decl on a kwargs... dispatcher is not a keyword census"
+      }
+    ],
+    "carried_verbatim": "status, cases/rows (expression, expected, r_call, julia_call, acceptance), tolerances, julia_planned_surfaces, needs_new_julia_surface, negative controls, runner blocks. No case, expectation or tolerance was edited; a P1 mismatch is recorded by the batch as a failure."
+  }
+}
