@@ -345,6 +345,16 @@ using GLLVModels, Test, Random, LinearAlgebra, Statistics
         y = 0.5 * randn(p, n)
         fit = fit_gaussian_gllvm(y; K = K, K_W = 1, has_diag = true)
         @test_throws ArgumentError GLLVModels.gllvmTMB_check_consistency(fit, y)
+
+        # A unique phylogenetic effect (has_phy_unique, K_phy = 0) is not
+        # re-simulated either, so the check must refuse it rather than score
+        # phylo-free replicates against the phylo likelihood.
+        phy = GLLVModels.random_balanced_tree(p; branch_length = 0.5)
+        Σ_phy = Matrix(Symmetric(GLLVModels.sigma_phy_dense(phy; σ²_phy = 1.0)))
+        fit_phy = fit_gaussian_gllvm(y; K = K, has_phy_unique = true, Σ_phy = Σ_phy)
+        @test fit_phy.model.K_phy == 0 && fit_phy.model.has_phy_unique
+        @test_throws ArgumentError GLLVModels.gllvmTMB_check_consistency(fit_phy, y;
+                                                                         Σ_phy = Σ_phy)
     end
 
     # ---------------------------------------------------------------------
