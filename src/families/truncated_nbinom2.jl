@@ -163,6 +163,36 @@ end
 
 _laplace_mode_should_backtrack(::TruncatedNegBin2) = true
 
+# ---------------------------------------------------------------------------
+# Laplace breakdown guard (Julia-side; the same design as ZI_LAPLACE_EIGMIN_FLOOR on
+# the zi_* route, PR #557).
+#
+# The observed truncated-NB2 curvature `_truncnb2_observed_weight` is negative for
+# small r (for example -0.033 at r = 0.2, y = 1, mu = 7.4), and it grows more negative
+# as r -> 0. The site precision A = I + Λ' diag(W) Λ can then fall towards 0 while the
+# mode search still converges, and -1/2 logdet(A) inflates the Laplace value. A PD
+# check cannot catch this: at a certified mode A is the negative Hessian of the site
+# log-posterior and is positive semi-definite anyway; the failure is PD but
+# near-singular. Impossible-loglik audit (2026-09-27, F1), p = 4, n = 150, K = 1,
+# r = 0.3: 3 of 12 default fits reported converged = true with a smallest site
+# eigenvalue of 8e-6 to 1.3e-4 and a Laplace value 40 to 139 units above the exact
+# marginal (4001-point quadrature). On one draw the breakdown point was the global
+# maximum of the Laplace objective (-1663.1 vs -1686.3 at the healthy optimum, whose
+# exact marginal is 55 units higher).
+#
+# Floor = 0.1, as on the zi_* route. Healthy truncated-NB2 optima measured 0.79 to
+# 9.6 (audit) and the sweep in docs/dev-log/decisions/
+# 2026-09-27-truncnb2-laplace-breakdown-guard.md, so the guard does not touch them.
+#
+# The floor is safe for the optimiser only together with the "within 10% of the
+# floor -> converged = false" rule in fit_truncated_nbinom2_gllvm: Optim reports
+# converged = true for a fit stalled at the wall (a line search into the 1e12
+# sentinel becomes a zero step), so that rule is load-bearing. Do not relax it as
+# redundant.
+# ---------------------------------------------------------------------------
+# The public marginal functions stay unguarded unless `eigmin_floor` is passed.
+const TRUNCNB2_LAPLACE_EIGMIN_FLOOR = 0.1
+
 """
     truncated_nbinom2_marginal_loglik_laplace(Y, Λ, β, r; link=LogLink(),
                                               hessian=:observed, kwargs...) -> Float64
@@ -172,6 +202,8 @@ Laplace log-marginal for a zero-truncated NB2 GLLVM with shared dispersion `r`.
 
 `hessian=:observed` (the default) uses TMB's observed Laplace curvature;
 `hessian=:fisher` retains the expected-information approximation.
+`eigmin_floor` (default `-Inf`, unguarded) returns `-Inf` when any site's Laplace
+precision has an eigenvalue below it; see `GLLVModels.TRUNCNB2_LAPLACE_EIGMIN_FLOOR` = 0.1.
 
 Implemented as the **equal-`r_t` special case** of
 [`truncated_nbinom2_pertrait_marginal_loglik_laplace`](@ref) rather than through the
@@ -198,6 +230,9 @@ truncated_nbinom2_marginal_loglik_laplace(Y::AbstractMatrix,
 
 Result of [`fit_truncated_nbinom2_gllvm`](@ref): intercepts `β`, loadings `Λ`,
 shared dispersion `r` (`Var = μ + μ²/r` ≡ twin `φ`), link, loglik, convergence.
+`min_site_eigen` is the smallest eigenvalue of the per-site Laplace precision
+`I + Λ' diag(W) Λ` at the optimum; a fit within 10% of the breakdown guard
+(`GLLVModels.TRUNCNB2_LAPLACE_EIGMIN_FLOOR` = 0.1) is reported with `converged = false`.
 """
 struct TruncatedNegBin2Fit
     β::Vector{Float64}
@@ -208,6 +243,7 @@ struct TruncatedNegBin2Fit
     converged::Bool
     iterations::Int
     theta_packed::Vector{Float64}
+    min_site_eigen::Float64
 end
 
 function Base.show(io::IO, f::TruncatedNegBin2Fit)
@@ -219,6 +255,26 @@ function Base.show(io::IO, f::TruncatedNegBin2Fit)
           f.converged ? "" : ", NOT CONVERGED", ")")
 end
 
+# Verdict at the dispersion boundary for the truncated-NB2 fitters. Any r below 1e-6
+# (degenerate: extreme overdispersion) makes the fit not converged, with a warning.
+# Any r above 1e6 (the Poisson limit) only warns: r is not identified there, but the
+# rest of the fit is usually sound, and reporting it as not converged would flag
+# ordinary fits (trait 5 of the seed-58 parity data ends at r = 9.5e9 while the
+# log-likelihood matches gllvmTMB to 8e-7).
+function _truncnb2_dispersion_verdict(converged::Bool, r::AbstractVector{<:Real},
+                                      who::AbstractString)
+    low = findall(<(1e-6), r)
+    high = findall(>(1e6), r)
+    isempty(high) || @warn "$who: r for trait(s) $high is above 1e6 (the Poisson limit); " *
+        "r is not identified for them on this data, but the fit is otherwise reported as is."
+    if !isempty(low)
+        @warn "$who: r for trait(s) $low is below 1e-6 (the dispersion boundary, " *
+              "extreme overdispersion); the fit is degenerate and reported as not converged."
+        converged = false
+    end
+    return converged
+end
+
 """
     fit_truncated_nbinom2_gllvm(Y; K, link=LogLink(), …) -> TruncatedNegBin2Fit
 
@@ -227,10 +283,19 @@ gradient) over `[β; pack(Λ); log r]` (shared scalar `r`; length `p+rr+1`).
 Twin per-trait `log_phi_truncnb2` is [`fit_truncated_nbinom2_gllvm_pertrait`](@ref)
 (Arc1b). Twin-aligned: log link on untruncated `μ`, support `y ≥ 1`.
 Throws if any observed cell is `< 1`.
+
+`eigmin_floor` sets the Laplace breakdown guard
+(`GLLVModels.TRUNCNB2_LAPLACE_EIGMIN_FLOOR` = 0.1; `-Inf` disables it). A fit that
+ends at the guard is retried once with a moment-based start for `r`; if it still ends
+there, the higher-loglik of the two fits is reported with `converged = false` and a
+warning. An estimate of `r` below 1e-6 (the dispersion boundary: extreme
+overdispersion) is reported with `converged = false` and a warning; above 1e6 (the
+Poisson limit, where `r` is not identified) the fit only warns.
 """
 function fit_truncated_nbinom2_gllvm(Y::AbstractMatrix; K::Integer,
         link::Link = LogLink(), mask = nothing, offset = nothing,
         hessian::Symbol = :observed,
+        eigmin_floor::Real = TRUNCNB2_LAPLACE_EIGMIN_FLOOR,
         β_init = nothing, Λ_init = nothing, r_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
@@ -278,8 +343,6 @@ function fit_truncated_nbinom2_gllvm(Y::AbstractMatrix; K::Integer,
     end
     logr0 = r_init === nothing ? log(10.0) : log(float(r_init))
 
-    θ0 = vcat(β0, pack_lambda(Λ0), logr0)
-    N1 = ones(Int, size(Yc))
     function negll(θ)
         β = θ[1:p]
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
@@ -287,7 +350,7 @@ function fit_truncated_nbinom2_gllvm(Y::AbstractMatrix; K::Integer,
         v = try
             -truncated_nbinom2_marginal_loglik_laplace(Yc, Λ, β, r;
                                      link = link, mask = msk, offset = offset,
-                                     hessian = hessian,
+                                     hessian = hessian, eigmin_floor = eigmin_floor,
                                      maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
@@ -296,13 +359,78 @@ function fit_truncated_nbinom2_gllvm(Y::AbstractMatrix; K::Integer,
     end
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     opts = Optim.Options(g_tol = g_tol, iterations = iterations)
-    res = Optim.optimize(negll, θ0, ls, opts; autodiff = :finite)
-    θ̂ = Optim.minimizer(res)
-    β̂ = θ̂[1:p]
-    Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
-    r̂ = exp(θ̂[p + rr + 1])
-    return TruncatedNegBin2Fit(β̂, Λ̂, r̂, link, _fit_verdict(res)...,
-                               collect(Float64, θ̂))
+    # One L-BFGS run from a start; returns the optimum, Optim's verdict and the
+    # smallest site eigenvalue there.
+    function run_from(Λstart, logrstart)
+        res = Optim.optimize(negll, vcat(β0, pack_lambda(Λstart), logrstart), ls, opts;
+                             autodiff = :finite)
+        θ̂ = collect(Float64, Optim.minimizer(res))
+        β̂ = θ̂[1:p]
+        Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
+        r̂ = exp(θ̂[p + rr + 1])
+        loglik, conv, iters = _fit_verdict(res)
+        mineig = _truncnb2_min_site_eigen(Yc, Λ̂, β̂, fill(r̂, p); link = link,
+                     mask = msk, offset = offset, hessian = hessian,
+                     maxiter = newton_maxiter, tol = newton_tol)
+        return (β = β̂, Λ = Λ̂, r = r̂, θ = θ̂, loglik = loglik, converged = conv,
+                iters = iters, mineig = mineig)
+    end
+    # An optimum within 10% of the floor sits at the guard. This rule is load-bearing,
+    # not belt-and-braces: when a line search runs into the 1e12 sentinel, L-BFGS with
+    # BackTracking takes a zero step and Optim reports converged = true AT the wall.
+    # Without this rule those fits would be reported converged at a Laplace value that
+    # is not a usable log-likelihood.
+    at_guard(f) = isfinite(eigmin_floor) && f.mineig < 1.1 * eigmin_floor
+    f = run_from(Λ0, logr0)
+    if at_guard(f)
+        # One retry, from the same loadings with r from a moment estimate of the counts
+        # (below) instead of the default 10; kept if it ends off the guard. If both end
+        # at the guard, the one with the higher loglik is reported (flagged below): the
+        # first fit can end at the wall far below the retry (-3659 vs -2008 on a r = 0.05
+        # draw with r̂ -> 6e-42 on the first). The r reset is what matters: from
+        # r = 10 the default start runs to the breakdown region, and a loadings-x-0.1
+        # start with r = 10 fell into poor basins on all 3 audit draws. #557's
+        # loadings-x-0.1 start with the moment r reached the healthy optimum on Julia
+        # 1.10 but stopped at a genuine local maximum 19 units lower on one audit draw on
+        # Julia 1.13; the unshrunk loadings reached it on both. Rates: the decisions note
+        # 2026-09-27-truncnb2-laplace-breakdown-guard.md.
+        f2 = run_from(Λ0, _truncnb2_moment_logr(Yc, msk))
+        (!at_guard(f2) || f2.loglik > f.loglik) && (f = f2)
+    end
+    converged = f.converged
+    if converged && at_guard(f)
+        converged = false
+        @warn "fit_truncated_nbinom2_gllvm: the optimum sits at the Laplace breakdown " *
+              "guard (smallest site precision eigenvalue $(round(f.mineig; sigdigits = 3)), " *
+              "floor $(eigmin_floor)). The Laplace approximation is not reliable here and " *
+              "the fit is reported as not converged."
+    end
+    # Dispersion boundary (2026-09-29). r < 1e-6 is a degenerate fit (extreme
+    # overdispersion; r = 3.1e-46 with one count of 10^13), yet Optim reports
+    # converged = true, so it is reported as not converged. r > 1e6 is the Poisson
+    # limit: r is not identified, but the fit itself is usually sound (a trait whose
+    # extra variance the latent variable absorbs), so it only warns. Unlike the NB2
+    # grouped fitters' `_dispersion_group_boundary`, which flags both ends.
+    converged = _truncnb2_dispersion_verdict(converged, [f.r], "fit_truncated_nbinom2_gllvm")
+    return TruncatedNegBin2Fit(f.β, f.Λ, f.r, link, f.loglik, converged, f.iters,
+                               f.θ, f.mineig)
+end
+
+# log of a shared-r start for the breakdown retry: the geometric mean over traits of a
+# per-trait NB2 moment estimate m² / (v − m) on the observed counts, each clamped to
+# [0.2, 20] (the clamp of the zi_* route's phi start). Ignores the truncation: it only
+# needs to put r on the right side of 1, and small-r data are strongly overdispersed.
+function _truncnb2_moment_logr(Y::AbstractMatrix, mask)
+    p, n = size(Y)
+    acc = 0.0; cnt = 0
+    for t in 1:p
+        ys = [Float64(Y[t, i]) for i in 1:n if mask === nothing || mask[t, i]]
+        length(ys) >= 2 || continue
+        m = sum(ys) / length(ys)
+        v = sum(abs2, ys .- m) / (length(ys) - 1)
+        acc += log(clamp(m^2 / max(v - m, 1e-3 * m), 0.2, 20.0)); cnt += 1
+    end
+    return cnt == 0 ? log(10.0) : acc / cnt
 end
 
 # ---------------------------------------------------------------------------
@@ -313,7 +441,7 @@ end
 function _truncnb2_pertrait_loglik_site(fams::AbstractVector, y::AbstractVector,
         n::AbstractVector, Λ::AbstractMatrix, β::AbstractVector, link::Link;
         mask = nothing, offset = nothing, hessian::Symbol = :observed,
-        maxiter::Integer = 100, tol::Real = 1e-9)
+        eigmin_floor::Real = -Inf, maxiter::Integer = 100, tol::Real = 1e-9)
     p, K = size(Λ)
     off = offset === nothing ? false : offset
     # NOTE: the mode solve stays on the Fisher weight (`_grouped_laplace_mode`), which
@@ -330,12 +458,41 @@ function _truncnb2_pertrait_loglik_site(fams::AbstractVector, y::AbstractVector,
         W = ifelse.(mask, W, 0.0)
     end
     A = Symmetric(Λ' * (W .* Λ) + I)
+    # Laplace breakdown guard (see TRUNCNB2_LAPLACE_EIGMIN_FLOOR). Skipped entirely at
+    # the default -Inf, so the unguarded value is unchanged bit for bit.
+    (isfinite(eigmin_floor) && eigmin(A) < eigmin_floor) && return -Inf
     ℓ = 0.0
     @inbounds for t in 1:p
         (mask === nothing || mask[t]) || continue
         ℓ += _glm_logpdf(fams[t], μ[t], n[t], y[t])
     end
     return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+end
+
+# Smallest per-site Laplace precision eigenvalue min_s eigmin(I + Λ' diag(W_s) Λ) at the
+# given parameters, with the same mode, weights and mask as the site kernel above.
+function _truncnb2_min_site_eigen(Y::AbstractMatrix, Λ::AbstractMatrix,
+        β::AbstractVector, rvec::AbstractVector; link::Link = LogLink(),
+        mask = nothing, offset = nothing, hessian::Symbol = :observed,
+        maxiter::Integer = 100, tol::Real = 1e-9)
+    p = size(Λ, 1)
+    fams = TruncatedNegBin2.(float.(rvec))
+    n1 = ones(Int, p)
+    m = Inf
+    @inbounds for i in axes(Y, 2)
+        mi = mask   === nothing ? nothing : view(mask, :, i)
+        oi = offset === nothing ? nothing : view(offset, :, i)
+        y = view(Y, :, i)
+        z = _grouped_laplace_mode(fams, y, n1, Λ, β, link;
+                                  mask = mi, offset = oi, maxiter = maxiter, tol = tol)
+        η  = _clamp_eta.(β .+ (oi === nothing ? false : oi) .+ Λ * z)
+        μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
+        me = mu_eta.(Ref(link), η)
+        W  = _truncnb2_laplace_weight.(Ref(hessian), fams, μ, me, y, Ref(link))
+        mi === nothing || (W = ifelse.(mi, W, 0.0))
+        m = min(m, eigmin(Symmetric(Λ' * (W .* Λ) + I)))
+    end
+    return m
 end
 
 """
@@ -401,7 +558,9 @@ Fit a zero-truncated NB2 GLLVM with **per-trait** dispersion by Laplace + LBFGS
 over `[β; pack(Λ); log r_1 … log r_p]` (length `p+rr+p`). Twin-aligned:
 `r_t` ≡ `φ_t = exp(log_phi_truncnb2[t])`; log link on untruncated `μ`;
 support `y ≥ 1`. Score keeps `a = r_t/(r_t+μ)` (Sol 2026-08-15).
-Throws if any observed cell is `< 1`.
+Throws if any observed cell is `< 1`. If any `r_t` ends below 1e-6 (the dispersion
+boundary: extreme overdispersion), the fit is reported with `converged = false` and a
+warning; an `r_t` above 1e6 (the Poisson limit, not identified) only warns.
 
 `hessian=:observed` (the default) uses the exact conditional truncated-NB2/log
 curvature that TMB's Laplace objective uses; `hessian=:fisher` retains the
@@ -494,10 +653,20 @@ function fit_truncated_nbinom2_gllvm_pertrait(Y::AbstractMatrix; K::Integer,
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     opts = Optim.Options(g_tol = g_tol, iterations = iterations)
     res = Optim.optimize(negll, θ0, ls, opts; autodiff = :finite)
+    # A trait's log r can stall out at the Poisson limit, where the likelihood is nearly
+    # flat, below a better point: on two ordinary draws (p = 4, n = 120, true r_t 2 to 5)
+    # the fit stopped 0.35 and 2.0 log-likelihood units below gllvmTMB with the wrong trait
+    # at the limit. Restart the boundary trait(s) from r = 1 as the NB2 grouped fitters do
+    # (#477); the better fit is kept only if it lowers the objective by more than 1e-6.
+    res = _nb_boundary_restart(negll, res, ls, opts, p + rr + 1)
     θ̂ = Optim.minimizer(res)
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     r̂ = exp.(θ̂[(p + rr + 1):(p + rr + p)])
-    return TruncatedNegBin2PerTraitFit(β̂, Λ̂, r̂, link, _fit_verdict(res)...,
+    loglik, converged, iters = _fit_verdict(res)
+    # Dispersion boundary (2026-09-29): see `fit_truncated_nbinom2_gllvm`.
+    converged = _truncnb2_dispersion_verdict(converged, r̂,
+                                             "fit_truncated_nbinom2_gllvm_pertrait")
+    return TruncatedNegBin2PerTraitFit(β̂, Λ̂, r̂, link, loglik, converged, iters,
                                        collect(Float64, θ̂))
 end

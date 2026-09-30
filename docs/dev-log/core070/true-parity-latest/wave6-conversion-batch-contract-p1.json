@@ -1,0 +1,272 @@
+{
+  "schema": "core070-wave6-conversion-batch-contract/v1",
+  "status": "FROZEN_WAVE6_CONVERSION_BATCH_CONTRACT",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "scope": "CORE070_WAVE6_CONVERSION_BATCH",
+  "note": "Conversion batch #2 for BLOCKED_NEEDS_JULIA_SURFACE rows whose Julia surface now exists but was not in wave-5 (docs/dev-log/core070/surface-conversion-batch-contract.json). Two source groups: (1) STRUCTURED-TERM rows unlocked by src/formula.jl's _recognize_source_term / _fit_gaussian_structured_sources recognizer (commit 5371137c; docs/dev-log/core070/formula-recognizer-spec.md); (2) STALE-BLOCKED postfit rows whose Julia functions already exist (src/postfit.jl, src/confint.jl) but were never converted. REPAIR (2026-09-01, wave6-conversion1 forensics): dropped the unused top-level `cluster=` gllvmTMB() argument for every structured-term call (replaced with the proven `unit=\"site\", trait=\"trait\"` convention), replaced regex-derived formula RHS with literal hardcoded R expressions, and moved 3 postfit cases (extract_rotated_loadings_table, flag_unreliable_loadings, fitted.gllvmTMB_multi) from cases[] to deferred[] after unresolvable-without-live-R-source return-shape/gate failures. REPAIR (2026-09-01, wave6-conversion3 forensics): coordinator fixed structured_quantity() to read GaussianSourcesFit.trait_covariances[1] (extract_Sigma has no GaussianSourcesFit method) and flattened the confint k x 2 matrix; moved namespace/export/indep and namespace/export/scalar from cases[] to deferred[] -- the frozen 0.7.0 gllvmTMB engine rejects a lone indep()/scalar() term at ANY grouping ('Custom level=\"source\" is not yet supported', confirmed at both |species and |site), so these two rows are unpairable against the frozen oracle until the 0.7.1 lane; the Julia surfaces themselves exist and are live-paired green in the 0.7.1 bridge lane. See docs/dev-log/core070/wave6-conversion-notes.md.",
+  "target_source_ids": [
+    "namespace/export/indep",
+    "namespace/export/scalar",
+    "namespace/export/kernel_indep",
+    "namespace/export/kernel_dep",
+    "namespace/export/kernel_scalar",
+    "namespace/export/kernel_latent",
+    "namespace/export/kernel_unique",
+    "covariance/COV-KERNEL-LATENT",
+    "covariance/COV-KERNEL-FOLDED-UNIQUE",
+    "postfit/POSTFIT-SURFACE-extract_rotated_loadings_table",
+    "postfit/POSTFIT-SURFACE-extract_lv_effects",
+    "postfit/POSTFIT-SURFACE-flag_unreliable_loadings",
+    "postfit/POSTFIT-SURFACE-fitted.gllvmTMB_multi",
+    "postfit/POSTFIT-SURFACE-logLik.gllvmTMB_multi",
+    "postfit/POSTFIT-SURFACE-confint.gllvmTMB_multi",
+    "postfit/POSTFIT-SURFACE-nobs.gllvmTMB_multi",
+    "postfit/POSTFIT-SURFACE-extract_Gamma",
+    "postfit/POSTFIT-SURFACE-deviance.gllvmTMB_multi"
+  ],
+  "expected_case_count": 10,
+  "expected_deferred_count": 8,
+  "fixtures": {
+    "structured_kernel_small": {
+      "description": "Deterministic (no RNG) p=3 trait x n=12 site fixture, reused VERBATIM from test/parity/fixtures/core070_structured_data.R's df/C/K2 construction (the same fixture cited by structured-required-case-plan.json's STRUCT-KER-SINGLE-PSI/STRUCT-KER-MULTI cases): expand.grid(site=1:12, trait=1:3), species = rep(rep(c('a','b','c'), each=4), 3) (3 species levels, 4 sites each), value = sin(row_index/3) + trait_int/5, C = .7*diag(3)+.3 (species x species kernel), K2 = .6*diag(3)+.4*tcrossprod(c(1,-1,1)) (both PD, dimnamed by species levels a,b,c).",
+      "p": 3,
+      "n_site": 12,
+      "n_species": 3,
+      "species_levels": [
+        "a",
+        "b",
+        "c"
+      ],
+      "r_call_shape": "gllvmTMB(value ~ 0 + trait + TERM, df, unit = \"site\", trait = \"trait\", family = stats::gaussian(), control = gllvmTMBcontrol(n_init = 1L, se = FALSE, aghq = FALSE, aghq_ridge = Inf))",
+      "julia_call_shape": "GLLVM._fit_gaussian_structured_sources(Y, data, [term_expr]; kernel_env = (C = C, K2 = K2))",
+      "repair_note": "wave6-conversion1 forensics: `cluster=\"species\"` was dropped -- the live engine warned it is unused by every formula covariance keyword (dep/indep/scalar/kernel_*); the grouping is embedded entirely in the term itself. Replaced with the SAME `unit=\"site\", trait=\"trait\"` convention already proven working in gaussian_small (tools/core070_surface_conversion_batch.R)."
+    },
+    "gaussian_small": {
+      "description": "Single-tier Gaussian GllvmFit, reused VERBATIM from tools/core070_inference_remainder_batch.R and tools/core070_surface_conversion_batch.R (same seed 42 / Lambda_true / sigma_true), used here for the postfit (\"gllvmTMB_multi\" analog) group.",
+      "p": 5,
+      "K": 2,
+      "n": 80,
+      "seed": 42,
+      "r_formula": "value ~ 0 + trait + latent(0 + trait | site, d = K, unique = FALSE)",
+      "julia_call": "fit_gaussian_gllvm(Y; K=K)"
+    }
+  },
+  "cases": [
+    {
+      "case_id": "CORE070-WAVE6-KERNEL-INDEP-FIT",
+      "source_id": "namespace/export/kernel_indep",
+      "kind": "point",
+      "fixture": "structured_kernel_small",
+      "term_expr": ":(kernel_indep(species, K = C, name = \"k1\"))",
+      "r_call": "gllvmTMB(value ~ 0 + trait + kernel_indep(species, K = C, name = \"k1\"), df, unit = \"site\", trait = \"trait\", family = stats::gaussian(), control = control)",
+      "quantity": "logLik_B_tcrossprod",
+      "tolerance": 0.0001,
+      "notes": "kernel_indep(...) recognizer -> SourceCovariance(C, mode=:indep, common=false). level_name=\"k1\" (explicit name= kwarg)."
+    },
+    {
+      "case_id": "CORE070-WAVE6-KERNEL-DEP-FIT",
+      "source_id": "namespace/export/kernel_dep",
+      "kind": "point",
+      "fixture": "structured_kernel_small",
+      "term_expr": ":(kernel_dep(species, K = C, name = \"k1\"))",
+      "r_call": "gllvmTMB(value ~ 0 + trait + kernel_dep(species, K = C, name = \"k1\"), df, unit = \"site\", trait = \"trait\", family = stats::gaussian(), control = control)",
+      "quantity": "logLik_B_tcrossprod",
+      "tolerance": 0.0001,
+      "notes": "kernel_dep(...) recognizer -> SourceCovariance(C, mode=:dep); full-rank T(T+1)/2 packed triangular. level_name=\"k1\"."
+    },
+    {
+      "case_id": "CORE070-WAVE6-KERNEL-SCALAR-FIT",
+      "source_id": "namespace/export/kernel_scalar",
+      "kind": "point",
+      "fixture": "structured_kernel_small",
+      "term_expr": ":(kernel_scalar(species, K = C, name = \"k1\"))",
+      "r_call": "gllvmTMB(value ~ 0 + trait + kernel_scalar(species, K = C, name = \"k1\"), df, unit = \"site\", trait = \"trait\", family = stats::gaussian(), control = control)",
+      "quantity": "logLik_B_tcrossprod",
+      "tolerance": 0.0001,
+      "notes": "kernel_scalar(...) recognizer -> SourceCovariance(C, mode=:indep, common=true). level_name=\"k1\"."
+    },
+    {
+      "case_id": "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-NAMESPACE",
+      "source_id": "namespace/export/kernel_latent",
+      "kind": "point",
+      "fixture": "structured_kernel_small",
+      "case_ref": "STRUCT-KER-SINGLE-PSI",
+      "term_expr": ":(kernel_latent(species, K = C, d = 1, name = \"k1\", unique = true))",
+      "r_call": "gllvmTMB(value ~ 0 + trait + kernel_latent(species, K = C, d = 1, name = \"k1\", unique = TRUE), df, unit = \"site\", trait = \"trait\", family = stats::gaussian(), control = control)",
+      "quantity": "logLik_B_tcrossprod",
+      "tolerance": 0.0001,
+      "notes": "kernel_latent(..., unique=TRUE) recognizer -> SourceCovariance(C, mode=:latent, rank=1, unique=true); Julia folds R's two-term (phylo_rr + auto-unique phylo_rr) rewrite into ONE source with an added Psi diagonal (formula-recognizer-spec.md Sec 1.4) -- the Julia comparand is the FOLD, not a term-for-term replay. level_name=\"k1\"."
+    },
+    {
+      "case_id": "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE",
+      "source_id": "covariance/COV-KERNEL-FOLDED-UNIQUE",
+      "kind": "point",
+      "fixture": "structured_kernel_small",
+      "case_ref": "STRUCT-KER-SINGLE-PSI",
+      "term_expr": ":(kernel_latent(species, K = C, d = 1, name = \"k1\", unique = true))",
+      "r_call": "gllvmTMB(value ~ 0 + trait + kernel_latent(species, K = C, d = 1, name = \"k1\", unique = TRUE), df, unit = \"site\", trait = \"trait\", family = stats::gaussian(), control = control)",
+      "quantity": "logLik_B_tcrossprod",
+      "tolerance": 0.0001,
+      "notes": "Same fit as CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-NAMESPACE (memoised by RHS string on the R side); pays the covariance/COV-KERNEL-FOLDED-UNIQUE ledger row (case STRUCT-KER-SINGLE-PSI) separately since one paired fit exercises two distinct ledger source_ids."
+    },
+    {
+      "case_id": "CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE",
+      "source_id": "covariance/COV-KERNEL-LATENT",
+      "kind": "point",
+      "fixture": "structured_kernel_small",
+      "case_ref": "STRUCT-KER-MULTI",
+      "term_expr": "[:(kernel_latent(species, K = C, d = 1, name = \"k1\", unique = false)), :(kernel_latent(species, K = K2, d = 1, name = \"k2\", unique = false))]",
+      "r_call": "gllvmTMB(value ~ 0 + trait + kernel_latent(species, K = C, d = 1, name = \"k1\", unique = FALSE) + kernel_latent(species, K = K2, d = 1, name = \"k2\", unique = FALSE), df, unit = \"site\", trait = \"trait\", family = stats::gaussian(), control = control)",
+      "quantity": "logLik_B_tcrossprod",
+      "tolerance": 0.0001,
+      "notes": "Two-source fit; GLLVM._fit_gaussian_structured_sources forwards a Vector{SourceTermSpec} to fit_gaussian_sources(Y; sources=[...]) directly (this recognizer entry point bypasses src/bridge.jl's single-source R<->Julia marshalling restriction noted at formula-recognizer-spec.md Step 7 -- that restriction is bridge-only, fit_gaussian_sources itself already sums an arbitrary-length sources vector, src/source_fit.jl:290-307). Pays covariance/COV-KERNEL-LATENT. level_name=\"k1\" (the first tier's Sigma block)."
+    },
+    {
+      "case_id": "CORE070-WAVE6-KERNEL-LATENT-MULTI-COVARIANCE-EXPORT",
+      "source_id": "namespace/export/kernel_unique",
+      "kind": "point",
+      "fixture": "structured_kernel_small",
+      "case_ref": "STRUCT-KER-SINGLE-PSI",
+      "term_expr": ":(kernel_latent(species, K = C, d = 1, name = \"k1\", unique = true))",
+      "r_call": "gllvmTMB(value ~ 0 + trait + kernel_latent(species, K = C, d = 1, name = \"k1\", unique = TRUE), df, unit = \"site\", trait = \"trait\", family = stats::gaussian(), control = control)",
+      "quantity": "logLik_B_tcrossprod",
+      "tolerance": 0.0001,
+      "notes": "kernel_unique has NO standalone SourceCovariance mode (_source_term_covariance throws for a bare :kernel_unique spec, formula-recognizer-spec.md Sec 1.4); the only Julia surface for kernel_unique is the fold reached via kernel_latent(..., unique=true) on STRUCT-KER-SINGLE-PSI. Pays namespace/export/kernel_unique via that fold, same fit as the two SINGLE-PSI cases above."
+    },
+    {
+      "case_id": "CORE070-WAVE6-POSTFIT-LOGLIK-MULTI",
+      "source_id": "postfit/POSTFIT-SURFACE-logLik.gllvmTMB_multi",
+      "kind": "point",
+      "fixture": "gaussian_small",
+      "quantity": "loglik_scalar",
+      "tolerance": 0.0001,
+      "r_call": "as.numeric(logLik(fit_g))",
+      "julia_call": "[GLLVM.loglikelihood(fit)]  # StatsAPI.loglikelihood(fit::AnyGllvmFit) = _loglik(fit), src/postfit.jl:580",
+      "notes": "R's S3 generic is logLik(); the StatsAPI/Julia idiom is loglikelihood() (same StatsAPI.jl convention the aic/bic exports already use) -- naming convention difference only, not a missing surface."
+    },
+    {
+      "case_id": "CORE070-WAVE6-POSTFIT-CONFINT-MULTI",
+      "source_id": "postfit/POSTFIT-SURFACE-confint.gllvmTMB_multi",
+      "kind": "point",
+      "fixture": "gaussian_small",
+      "quantity": "confint_sigma_eps_bounds",
+      "tolerance": 0.005,
+      "r_call": "as.numeric(confint(fit_g, parm = \"sigma_eps\", level = 0.95))",
+      "julia_call": "GLLVM.confint(fit; parm=\"sigma_eps\", level=0.95)  # src/confint.jl:246",
+      "notes": "confint(fit::GllvmFit; ...) exists and is exported; compares the two-sided 95% Wald CI on sigma_eps (log-scale-endpoint back-transform per this repo's numerical convention floor).",
+      "tolerance_note": "Authoring-time calibration (contract never previously accepted, not a widening): this is the programme's FIRST curvature-level comparison \u2014 sigma_eps Wald CI endpoints from two INDEPENDENTLY fitted models whose SE machinery differs structurally (frozen R: TMB sdreport AD Hessian; Julia: observed-information Hessian in confint.jl). Measured endpoint gap on this fixture 2.06e-3 with point estimates agreeing at the 1e-4 paired-fit class; 5e-3 bounds the SE-machinery difference while still failing on any estimand/transform mismatch (which would show at ~1e-1). Recorded as first SE-level evidence, NOT an SE-parity claim."
+    },
+    {
+      "case_id": "CORE070-WAVE6-POSTFIT-NOBS-MULTI",
+      "source_id": "postfit/POSTFIT-SURFACE-nobs.gllvmTMB_multi",
+      "kind": "own_receipt_defect",
+      "fixture": "gaussian_small",
+      "known_defect_pending_decision": true,
+      "r_call": "as.numeric(nobs(fit_g))",
+      "julia_call": "GLLVM.nobs(fit)  # StatsAPI.nobs(fit::AnyGllvmFit), src/postfit.jl:614",
+      "expected_r_value_formula": "p * n  (R counts observed response CELLS)",
+      "expected_julia_value_formula": "n  (Julia counts UNITS/sites)",
+      "notes": "CONFIRMED, PENDING-DECISION defect: R's nobs.gllvmTMB_multi returns p*n (cell count); Julia's nobs(fit::AnyGllvmFit) returns n (unit count). This case does NOT assert R==Julia -- it asserts EACH engine's own value against its OWN documented formula (R == p*n, Julia == n) and records both numbers verbatim. Never absorbed into a numeric-parity pass; the maintainer disposition (which convention is canonical) is outstanding."
+    }
+  ],
+  "deferred": [
+    {
+      "source_id": "namespace/export/indep",
+      "reason": "frozen-reference gap: lone indep()/scalar() unfittable in gllvmTMB 0.7.0 (custom source level unsupported); pairable only against >=0.7.1; Julia surface exists and is live-paired green in the 0.7.1 bridge lane"
+    },
+    {
+      "source_id": "namespace/export/scalar",
+      "reason": "frozen-reference gap: lone indep()/scalar() unfittable in gllvmTMB 0.7.0 (custom source level unsupported); pairable only against >=0.7.1; Julia surface exists and is live-paired green in the 0.7.1 bridge lane"
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-extract_lv_effects",
+      "reason": "GLLVM.extract_lv_effects(fit::GllvmFit; type=:trait_effect) exists and is exported (src/postfit.jl:353) but HARD-gates on _has_lv_predictor(fit) -- it throws ArgumentError unless the fit came from fit_gaussian_gllvm(...; X_lv=...) (a concurrent/constrained-ordination fit with a predictor-informed latent axis). None of this batch's reused fixtures (gaussian_small, structured_kernel_small) carry an X_lv predictor; gaussian_small is a plain unconstrained-latent fit, so calling extract_lv_effects(fit_g) would throw on the Julia side by design, and the presumed R equivalent (a num.lv.c concurrent-ordination gllvmTMB formula) was never fit either. Building and validating a dedicated X_lv/num.lv.c fixture pair (R + Julia) is a genuine new-fixture slice, out of this lean batch's reuse-only scope; left for a follow-up wave."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-extract_Gamma",
+      "reason": "Julia surface extract_Gamma(fit::GllvmFit; row_traits, col_traits) already exists (src/extract_gamma.jl:36, exported) and is independently tested, so this is NOT a missing-Julia-surface case. It requires a Lambda_phy-bearing fit built via fit_gaussian_gllvm(Y; K_phy>0, Sigma_phy=K*) with K* from make_cross_kernel (a two-lineage cross-kernel construction) -- none of this batch's fixtures (structured_kernel_small, gaussian_small, or wave-5's twolevel_small/ordinal_small) carry a phylo/cross-kernel tier. Per formula-recognizer-spec.md Sec 1.5, the native Sigma_phy= route puts phylogeny on the TRAIT axis and is explicitly NOT the same model as any R gllvmTMB coevolution formula (docs/dev-log/core070/structured-native-mapping.md:49-56) -- confirmed independently here, matching the identical deferral already recorded in docs/dev-log/core070/surface-conversion-batch-contract.json's deferred[] for the same row in wave-5. No defensible R-paired numeric case exists without inventing and validating a dedicated coevolution fixture against a live R gllvmTMB coevolution fit, which is out of this batch's fixture-reuse scope."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-deviance.gllvmTMB_multi",
+      "reason": "No Julia deviance() function or dispatch exists anywhere in src/ for AnyGllvmFit/GllvmFit (grep -rn 'function.*deviance|deviance(fit' src/*.jl matches only confint_profile.jl's LOCAL closures deviance_lower/deviance_upper inside the profile-CI bracket-and-bisect routine, not a public StatsAPI.deviance method; deviance is also absent from src/GLLVM.jl's export list). Composing an ad hoc definition (e.g. -2*loglikelihood(fit) plus a saturated-model term) without reading R's actual deviance.gllvmTMB_multi source (not available in this Julia-only worktree) risks silently asserting the wrong estimand, which this repo's culture treats as worse than an honest defer. Left for a dedicated slice with R source access to confirm R's exact residual-deviance definition before any Julia composition is authored."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-extract_rotated_loadings_table",
+      "reason": "REPAIR (2026-09-01, wave6-conversion1 forensics item 3a): the first attempt's R-side coercion, `t <- extract_rotated_loadings_table(fit_g); t[order(t$trait_i, t$factor_j),]; as.numeric(t$estimate)`, errored 'argument 1 is not a vector' on the live frozen library -- the assumed column names (trait_i, factor_j, estimate) were inferred only from the Julia docstring cross-reference (src/extractors.jl:231, 'mirrors gllvmTMB::extract_rotated_loadings_table()'), never from live R source or a live inspection of the returned object's actual shape (str(extract_rotated_loadings_table(fit_g))). GLLVM.extract_rotated_loadings(fit) itself still exists and is exported (src/extractors.jl:233) -- this is a genuine surface, not a missing one -- but re-guessing the R accessor's column/return shape a second time without live R inspection risks a repeat failure; deferred until a live R session can confirm the actual return structure (str()/names() on the real object), then re-authored with a verified coercion."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-flag_unreliable_loadings",
+      "reason": "DEFERRED per coordinator trace (wave6-conversion1 forensics item 3b): R's flag_unreliable_loadings(fit_g) aborts on gaussian_small with 'Per-entry Wald CIs on Lambda well-defined only for confirmatory fits; no lambda_constraint pins' -- the SAME confirmatory-fit gate that already blocks loading_ci elsewhere in this ledger (gaussian_small is an unconstrained/exploratory-rotation fit, never pinned with a lambda_constraint). This row joins the lambda_constraint-family deferrals: the Julia composition this batch built (confint(fit; parm=\"Lambda\") zero-crossing) compares a DIFFERENT estimand than R's confirmatory-only accessor and is not a valid paired case on this fixture. A valid case needs a lambda_constraint-pinned confirmatory fixture (R + Julia), out of this batch's reuse-only scope."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-fitted.gllvmTMB_multi",
+      "reason": "REPAIR (2026-09-01, wave6-conversion1 forensics item 3c): R's fitted(fit_g) call errored 'list object cannot be coerced' under as.numeric() on the live frozen library -- fitted.gllvmTMB_multi returns a list/matrix structure, not a plain numeric vector, and the correct component to extract (e.g. a $fitted or $mu field) is not resolvable without a live R inspection of the returned object (str(fitted(fit_g))), which this Julia-only worktree cannot perform. GLLVM.fitted(fit::AnyGllvmFit, data) itself still exists (src/postfit.jl:306) -- this is a genuine surface, not a missing one -- but re-guessing the R-side component name a second time without live inspection risks a repeat failure; deferred until a live R session confirms the actual return structure, then re-authored with the verified component selector."
+    }
+  ],
+  "rejection_cases": [
+    {
+      "case_id": "CORE070-WAVE6-REJ-DEP-INDEP",
+      "term_exprs": "[:(dep(0 + trait | species)), :(indep(0 + trait | species))]",
+      "r_call": "gllvmTMB(value ~ 0 + trait + dep(0 + trait | species) + indep(0 + trait | species), df, unit = \"site\", trait = \"trait\", family = stats::gaussian(), control = control)",
+      "expect": "both engines refuse",
+      "julia_error_pattern": "mutually exclusive",
+      "notes": "Julia: GLLVM._check_source_term_exclusions throws ArgumentError (dep+indep same grouping, src/formula.jl:550-551, porting fit-multi.R:1672-1681). R error text recorded verbatim from the live oracle run, not pre-asserted.",
+      "expect_r_raised": true,
+      "expect_julia_raised": true
+    },
+    {
+      "case_id": "CORE070-WAVE6-REJ-DEP-LATENT",
+      "term_exprs": "[:(dep(0 + trait | species)), :(kernel_latent(species, K = C, d = 1, unique = false))]",
+      "r_call": "gllvmTMB(value ~ 0 + trait + dep(0 + trait | species) + kernel_latent(species, K = C, d = 1, unique = FALSE), df, unit = \"site\", trait = \"trait\", family = stats::gaussian(), control = control)",
+      "expect": "both engines refuse",
+      "julia_error_pattern": "over-parameterised",
+      "notes": "Julia: dep+latent same grouping, src/formula.jl:552-553 (fit-multi.R:1642-1656).",
+      "expect_r_raised": true,
+      "expect_julia_raised": true
+    },
+    {
+      "case_id": "CORE070-WAVE6-REJ-KERNEL-UNIQUE-STANDALONE",
+      "term_exprs": "[:(kernel_unique(species, K = C, name = \"k1\"))]",
+      "r_call": "gllvmTMB(value ~ 0 + trait + kernel_unique(species, K = C, name = \"k1\"), df, unit = \"site\", trait = \"trait\", family = stats::gaussian(), control = control)",
+      "expect": "asymmetric documented behavior: R silently FOLDS standalone kernel_unique (fits successfully via the two-term rewrite); Julia refuses with a named error pointing at the kernel_latent(..., unique=true) fold",
+      "julia_error_pattern": "no standalone SourceCovariance mode",
+      "notes": "Julia: _source_term_covariance throws for a bare :kernel_unique spec (src/formula.jl:604-606); the only supported route is the kernel_latent(..., unique=true) fold (see the SINGLE-PSI cases above).",
+      "expect_r_raised": false,
+      "expect_julia_raised": true
+    }
+  ],
+  "negative_controls": [
+    {
+      "case_id": "NEG-WAVE6-BOGUS-QUANTITY",
+      "description": "A quantity key not present in the dispatcher's known-quantity table must be rejected before the tape (both R and Julia stages), never silently skipped."
+    },
+    {
+      "case_id": "NEG-WAVE6-WRONG-FIXTURE",
+      "description": "A case citing a fixture key not in contract.fixtures must be rejected before the tape."
+    },
+    {
+      "case_id": "NEG-WAVE6-BOGUS-TERM-KIND",
+      "description": "GLLVM._recognize_source_term on an Expr whose call head is not one of the 8 recognized kinds must raise ArgumentError, never silently return a spec."
+    }
+  ],
+  "runner": {
+    "totoro_command": "ssh -F ~/.ssh/config -o ControlPath=~/.ssh/cm-%r@%h:%p totoro.biology.ualberta.ca 'cd /project/<...>/GLLVM.jl && OPENBLAS_NUM_THREADS=1 JULIA_NUM_THREADS=1 Rscript --vanilla tools/core070_wave6_conversion_batch.R <frozen-library-path> .unlazy/core070-aghq/wave6-conversion-04'",
+    "verify_command": "python3 tools/core070_verify_wave6_conversion_batch.py .unlazy/core070-aghq/wave6-conversion-04",
+    "self_test_command": "python3 tools/core070_verify_wave6_conversion_batch.py --self-test"
+  },
+  "rejection_case_count": 3,
+  "indep_latent_resolution": "REJ-INDEP-LATENT removed 2026-09-01: wave6-conversion6 receipt showed the frozen R oracle ACCEPTS indep + kernel_latent on one grouping (the diag + reduced-rank model); the Julia recognizer's over-parameterisation gate contradicted the oracle and was removed from src/formula.jl \u2014 oracle behavior is the contract.",
+  "p0_contract": "docs/dev-log/core070/wave6-conversion-batch-contract.json",
+  "p0_contract_sha256": "22f12eb9972480e349ba725c4a7391489a82a333aadf43ed335ecfee88fc1f5e",
+  "regeneration_log": {
+    "generator": "tools/core070_covariance_p1_contract.py",
+    "changes": [
+      {
+        "field": "reference_commit",
+        "p0": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+        "p1": "9539352f66f2db2cc26b1c393e67212a359b60c9"
+      }
+    ],
+    "carried_verbatim": "status, cases (r_call, term_expr, quantity, tolerance), deferred, rejection_cases, negative_controls, fixtures, runner. No tolerance or expectation was edited."
+  }
+}

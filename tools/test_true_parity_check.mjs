@@ -19,7 +19,7 @@
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { mkdtempSync, rmSync, cpSync } from 'node:fs';
+import { mkdtempSync, rmSync, cpSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import assert from 'node:assert/strict';
 
@@ -282,6 +282,251 @@ test('a missing case-map at the ref is a measurement failure (exit 2)', () => {
   assert.match(stdout, /^MEASUREMENT_FAILED/m);
 });
 
+// --- evidence tier (D-295 row 5, review of #559): a registration-only (name/export) match is
+// never a numeric twin. C1 reports bound_numeric / bound_registration_only and is MET only when
+// no bound row is registration-only (unless that row carries a signed disposition); a missing
+// evidence_tier is fail-closed (counted as registration-only). C8 does not count it as twinned. ---
+test('evidence tier: the base fixture\'s numeric rows count as bound_numeric', () => {
+  const { stdout, code } = run('base', 'C1');
+  assert.equal(code, 0);
+  assert.match(stdout, /C1_MET$/m);
+  assert.match(stdout, /bound_numeric=2 bound_registration_only=0\b/);
+});
+test('evidence tier: a registration-only row does not make C1 MET', () => {
+  const { stdout, code } = run('c1_registration_only', 'C1');
+  assert.equal(code, 0);
+  assert.match(stdout, /C1_NOT_MET$/m);
+  assert.match(stdout, /bound_numeric=1 bound_registration_only=1\b/);
+  assert.match(stdout, /registration_only=isdm\/CAP-ISDM-1FO-PREDICT-EXPORT/);
+});
+test('evidence tier: a registration-only row is not twinned for C8', () => {
+  const { stdout, code } = run('c1_registration_only', 'C8');
+  assert.equal(code, 0);
+  assert.match(stdout, /C8_NOT_MET$/m);
+  assert.match(stdout, /isdm\/CAP-ISDM-1FO-PREDICT-EXPORT:REGISTRATION_ONLY_NOT_TWINNED/);
+});
+test('evidence tier: a missing evidence_tier is fail-closed (counted as registration-only)', () => {
+  const { stdout, code } = run('c1_evidence_tier_missing', 'C1');
+  assert.equal(code, 0);
+  assert.match(stdout, /C1_NOT_MET$/m);
+  assert.match(stdout, /bound_registration_only=1\b/);
+});
+test('evidence tier: a registration-only row with a real signed disposition does not block C1 or C8', () => {
+  for (const mode of ['C1', 'C8']) {
+    const { stdout, code } = run('c1_registration_only_signed', mode);
+    assert.equal(code, 0);
+    assert.match(stdout, new RegExp(`${mode}_MET$`, 'm'), `${mode}:\n${stdout}`);
+  }
+});
+
+// --- numeric tier verified against the receipt (review of #561, BLOCKING): the "numeric" label
+// was trusted on its own, so flipping one word on a registration row made C1_MET and C8_MET. A
+// "numeric" row now needs a receipt with a machine-readable comparison block (pin P1, per-case
+// abs_diff or r_value/julia_value, finite tolerance > 0, abs_diff <= tolerance, every
+// executable_case_id covered); otherwise NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT. ---
+for (const [fixture, why] of [
+  ['c1_numeric_label_registration_receipt', /no comparison block in any receipt/],
+  ['c1_numeric_label_malformed_comparison', /tolerance not a finite number > 0/],
+  ['c1_numeric_label_over_tolerance', /abs_diff 0\.5 > tolerance/],
+]) {
+  test(`numeric tier: ${fixture} fails C1 (label without a numeric receipt does not bind)`, () => {
+    const { stdout, code } = run(fixture, 'C1');
+    assert.equal(code, 0);
+    assert.match(stdout, /C1_NOT_MET$/m);
+    assert.match(stdout, /bound_numeric=1\b/);
+    assert.match(stdout, /numeric_label_without_numeric_receipt=isdm\/CAP-ISDM-1FO-PREDICT-EXPORT\(/);
+    assert.match(stdout, why);
+  });
+  test(`numeric tier: ${fixture} fails C8 (NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT)`, () => {
+    const { stdout, code } = run(fixture, 'C8');
+    assert.equal(code, 0);
+    assert.match(stdout, /C8_NOT_MET$/m);
+    assert.match(stdout, /isdm\/CAP-ISDM-1FO-PREDICT-EXPORT:NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT/);
+  });
+}
+// The reviewer's mutation, on the real row and its real receipts: namespace/S3method/coef,
+// gllvmTMB_multi relabelled "numeric" in an otherwise faithful copy. Before this fix it printed
+// C1_MET and C8_MET; it must now be NOT_MET on both.
+test('numeric tier: the real coef,gllvmTMB_multi row relabelled "numeric" is NOT_MET on C1 and C8', () => {
+  const cmPath = 'docs/dev-log/core070/true-parity-latest/case-map-namespace.json';
+  const cm = JSON.parse(readFileSync(join(REPO_ROOT, cmPath), 'utf8'));
+  const row = cm.rows.find((r) => r.source_id === 'namespace/S3method/coef,gllvmTMB_multi');
+  assert.ok(row, 'real row not found in case-map-namespace.json');
+  const dir = mkdtempSync(join(tmpdir(), 'true-parity-mut-'));
+  try {
+    for (const rp of row.evidence.receipt) {
+      mkdirSync(dirname(join(dir, rp)), { recursive: true });
+      cpSync(join(REPO_ROOT, rp), join(dir, rp));
+    }
+    writeFileSync(join(dir, 'case-map.json'), JSON.stringify({ ...cm, rows: [{ ...row, evidence_tier: 'numeric' }] }));
+    for (const mode of ['C1', 'C8']) {
+      let stdout = '';
+      try {
+        stdout = execFileSync('node', [CHECKER, mode], {
+          encoding: 'utf8',
+          env: { ...process.env, PARITY_REF: 'FS', PARITY_FS_ROOT: dir, PARITY_CASEMAP: 'case-map.json' },
+        });
+      } catch (e) { stdout = e.stdout || ''; }
+      assert.match(stdout, new RegExp(`${mode}_NOT_MET$`, 'm'), `${mode}:\n${stdout}`);
+      assert.match(stdout, /NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT|numeric_label_without_numeric_receipt=namespace/);
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// --- receipt status (review of #567, tamper test "verdict = FAIL, comparison intact"): a
+// comparison block within tolerance is not enough when the receipt itself says the run did not
+// pass. A status/verdict/batch_status/harness_pass field that is not a pass value, at the top
+// level or inside the comparison block, fails the row as NUMERIC_RECEIPT_NOT_PASSED; only a
+// maintainer-signed receipt_status_exception on the row waives it, and then the row counts in
+// bound_signed=, never in bound_numeric=. ---
+for (const [fixture, why] of [
+  ['c1_numeric_receipt_verdict_fail', /verdict="FAIL" in docs\/dev-log\/core070\/true-parity-latest\/receipts\/r1\.json/],
+  ['c1_numeric_receipt_comparison_status_fail', /comparison\.batch_status="FAIL" in /],
+]) {
+  test(`receipt status: ${fixture} fails C1 (NUMERIC_RECEIPT_NOT_PASSED)`, () => {
+    const { stdout, code } = run(fixture, 'C1');
+    assert.equal(code, 0);
+    assert.match(stdout, /C1_NOT_MET$/m);
+    assert.match(stdout, /bound_numeric=1\b/);
+    assert.match(stdout, /numeric_label_without_numeric_receipt=none\b/);
+    assert.match(stdout, /numeric_receipt_not_passed=isdm\/CAP-ISDM-1FO-PREDICT-EXPORT\(/);
+    assert.match(stdout, why);
+  });
+  test(`receipt status: ${fixture} fails C8 (NUMERIC_RECEIPT_NOT_PASSED)`, () => {
+    const { stdout, code } = run(fixture, 'C8');
+    assert.equal(code, 0);
+    assert.match(stdout, /C8_NOT_MET$/m);
+    assert.match(stdout, /isdm\/CAP-ISDM-1FO-PREDICT-EXPORT:NUMERIC_RECEIPT_NOT_PASSED\(/);
+  });
+}
+test('receipt status: a maintainer-signed receipt_status_exception binds the row as bound_signed, not bound_numeric', () => {
+  const c1 = run('c1_numeric_receipt_fail_signed_exception', 'C1');
+  assert.equal(c1.code, 0);
+  assert.match(c1.stdout, /C1_MET$/m);
+  assert.match(c1.stdout, /bound=1 bound_numeric=1 bound_registration_only=0 bound_signed=2\b/);
+  assert.match(c1.stdout, /numeric_receipt_not_passed=none\b/);
+  const c8 = run('c1_numeric_receipt_fail_signed_exception', 'C8');
+  assert.match(c8.stdout, /C8_MET$/m);
+});
+test('receipt status: a receipt_status_exception signed by an agent does not waive the FAIL', () => {
+  const c1 = run('c1_numeric_receipt_fail_exception_by_agent', 'C1');
+  assert.match(c1.stdout, /C1_NOT_MET$/m);
+  assert.match(c1.stdout, /numeric_receipt_not_passed=isdm\/CAP-ISDM-1FO-PREDICT-EXPORT\(verdict="FAIL" .*; DISPOSITION-SIGNER-NOT-ALLOWED\)/);
+  assert.match(c1.stdout, /bound_signed=1\b/);
+  const c8 = run('c1_numeric_receipt_fail_exception_by_agent', 'C8');
+  assert.match(c8.stdout, /C8_NOT_MET$/m);
+  assert.match(c8.stdout, /NUMERIC_RECEIPT_NOT_PASSED\(verdict="FAIL"/);
+});
+
+// --- recorded diff cross-checked (review of #567, tamper test "stale max_abs_diff, vectors
+// disagree by 1"): when a case records both r_value and julia_value, the tool computes the
+// difference itself and fails the row if a recorded abs_diff/max_abs_diff disagrees with it
+// beyond 1e-12 relative (NUMERIC_RECORDED_DIFF_MISMATCH), whether or not either is within
+// tolerance. ---
+for (const [fixture, why] of [
+  // vectors disagree by 1, recorded max_abs_diff 6e-11 (stale): used to bind on the recorded value
+  ['c1_numeric_recorded_diff_stale', /case CASE-1: recorded max_abs_diff 6e-11 != recomputed 1\.0000000000/],
+  // recorded 1e-7, recomputed 4e-7: both within tolerance 1e-6, still a mismatch
+  ['c1_numeric_recorded_diff_mismatch_within_tol', /case CASE-1: recorded abs_diff 1e-7 != recomputed 3\.99999999/],
+]) {
+  test(`recorded diff: ${fixture} fails C1 (NUMERIC_RECORDED_DIFF_MISMATCH)`, () => {
+    const { stdout, code } = run(fixture, 'C1');
+    assert.equal(code, 0);
+    assert.match(stdout, /C1_NOT_MET$/m);
+    assert.match(stdout, /bound_numeric=1\b/);
+    assert.match(stdout, /numeric_recorded_diff_mismatch=isdm\/CAP-ISDM-1FO-PREDICT-EXPORT\(/);
+    assert.match(stdout, why);
+  });
+  test(`recorded diff: ${fixture} fails C8 (NUMERIC_RECORDED_DIFF_MISMATCH)`, () => {
+    const { stdout, code } = run(fixture, 'C8');
+    assert.equal(code, 0);
+    assert.match(stdout, /C8_NOT_MET$/m);
+    assert.match(stdout, /isdm\/CAP-ISDM-1FO-PREDICT-EXPORT:NUMERIC_RECORDED_DIFF_MISMATCH\(/);
+  });
+}
+
+// --- signed-disposition hatch (review of #561): the signer must be on the maintainer allow-list
+// (an agent name is refused), the date must be a real calendar date not in the future, and a
+// signed row is counted in bound_signed=, never in bound= ---
+test('signed hatch: a signed row is counted in bound_signed=, not in bound=', () => {
+  const { stdout } = run('base', 'C1');
+  assert.match(stdout, /C1 required=3 bound=2 bound_numeric=2 bound_registration_only=0 bound_signed=1\b/);
+});
+for (const [fixture, reason] of [
+  ['c1_signed_by_agent', 'DISPOSITION-SIGNER-NOT-ALLOWED'],
+  ['c1_signed_bad_date', 'DISPOSITION-SIGNED-BAD-DATE'],
+  ['c1_signed_future_date', 'DISPOSITION-SIGNED-BAD-DATE'],
+]) {
+  test(`signed hatch: ${fixture} does not resolve the row (C1 ${reason}, C8 not signed)`, () => {
+    const c1 = run(fixture, 'C1');
+    assert.equal(c1.code, 0);
+    assert.match(c1.stdout, /C1_NOT_MET$/m);
+    assert.match(c1.stdout, new RegExp(`"${reason}":1`));
+    assert.match(c1.stdout, /bound_signed=1\b/); // only the legacy row's real signature counts
+    const c8 = run(fixture, 'C8');
+    assert.match(c8.stdout, /C8_NOT_MET$/m);
+    assert.match(c8.stdout, /isdm\/CAP-ISDM-1FO-PREDICT-EXPORT:REGISTRATION_ONLY_NOT_TWINNED/);
+  });
+}
+
+// --- C8 checks receipts before signatures (review of #589, finding 2): C1 rejects a dangling
+// receipt or a stale carry before it looks at a signed disposition, so C8 must too. Otherwise a
+// validly signed row whose receipt is missing, or whose P0 receipt has no valid carry, passes C8
+// while failing C1. Fixtures are derived from `base` in a temp dir by editing the signed
+// required_core row (legacy/legacy_export_disposition, maintainer-signed, no receipt in base). ---
+function runDerived(mutateRow, mode) {
+  const dir = mkdtempSync(join(tmpdir(), 'true-parity-derived-'));
+  try {
+    cpSync(join(FIXTURES, 'base'), dir, { recursive: true });
+    const cm = join(dir, 'docs', 'dev-log', 'core070', 'true-parity-latest', 'case-map.json');
+    const d = JSON.parse(readFileSync(cm, 'utf8'));
+    const row = d.rows.find((r) => r.source_id === 'legacy/legacy_export_disposition');
+    mutateRow(row);
+    writeFileSync(cm, JSON.stringify(d, null, 1));
+    try {
+      const out = execFileSync('node', [CHECKER, mode], {
+        encoding: 'utf8',
+        env: { ...process.env, PARITY_REF: 'FS', PARITY_FS_ROOT: dir },
+      });
+      return { stdout: out, code: 0 };
+    } catch (e) {
+      return { stdout: e.stdout || '', code: e.status };
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+test('C8 receipts first: a validly signed row with a dangling receipt fails C8 (and C1)', () => {
+  const mutate = (r) => {
+    assert.equal(r.signed_by, 'Shinichi Nakagawa');
+    r.evidence = { receipt: 'docs/dev-log/core070/true-parity-latest/receipts/missing.json' };
+    r.measured_against = '9539352f66f2db2cc26b1c393e67212a359b60c9';
+  };
+  const c8 = runDerived(mutate, 'C8');
+  assert.equal(c8.code, 0);
+  assert.match(c8.stdout, /C8_NOT_MET$/m);
+  assert.match(c8.stdout, /legacy\/legacy_export_disposition:DANGLING_RECEIPT/);
+  const c1 = runDerived(mutate, 'C1');
+  assert.match(c1.stdout, /C1_NOT_MET$/m);
+  assert.match(c1.stdout, /dangling_receipts=legacy\/legacy_export_disposition:/);
+});
+test('C8 receipts first: a validly signed row citing a P0 receipt with no carry fails C8 (and C1)', () => {
+  const mutate = (r) => {
+    assert.equal(r.signed_by, 'Shinichi Nakagawa');
+    r.evidence = { receipt: 'docs/dev-log/core070/true-parity-latest/receipts/r1.json' };
+    r.measured_against = 'b4d5fee64def88bc768dda1f1f77c29b295edd86';
+  };
+  const c8 = runDerived(mutate, 'C8');
+  assert.equal(c8.code, 0);
+  assert.match(c8.stdout, /C8_NOT_MET$/m);
+  assert.match(c8.stdout, /legacy\/legacy_export_disposition:STALE_CARRY\(PARTIAL_STALE_AT_P1\(no carry\.source_pins\)\)/);
+  const c1 = runDerived(mutate, 'C1');
+  assert.match(c1.stdout, /C1_NOT_MET$/m);
+  assert.match(c1.stdout, /stale_carries=legacy\/legacy_export_disposition:PARTIAL_STALE_AT_P1\(no carry\.source_pins\)/);
+});
+
 // --- item 4 / git-mode control: show, existsAsBlob and listDir exercised through real git,
 // the same code path CI runs against origin/main, not the FS fallback ---
 {
@@ -314,9 +559,69 @@ test('a missing case-map at the ref is a measurement failure (exit 2)', () => {
     assert.match(stdout, /C0_NOT_MET$/m);
     assert.match(stdout, /default_pin=P0\b/);
   });
-  for (const dir of [goodRepo, dirReceiptRepo, defaultPinP0Repo]) {
+  let regOnlyRepo;
+  test('git mode: a registration-only row does not make C1 MET via a real git ref; the numeric base does', () => {
+    regOnlyRepo = makeGitRepo('c1_registration_only');
+    const bad = runGit(regOnlyRepo, 'C1');
+    assert.equal(bad.code, 0);
+    assert.match(bad.stdout, /C1_NOT_MET$/m);
+    assert.match(bad.stdout, /bound_registration_only=1\b/);
+    const good = runGit(goodRepo, 'C1');
+    assert.match(good.stdout, /C1_MET$/m);
+    assert.match(good.stdout, /bound_numeric=2 bound_registration_only=0\b/);
+  });
+  let numLabelRepo;
+  test('git mode: a "numeric" label over a registration receipt does not make C1 MET via a real git ref', () => {
+    numLabelRepo = makeGitRepo('c1_numeric_label_registration_receipt');
+    const { stdout, code } = runGit(numLabelRepo, 'C1');
+    assert.equal(code, 0);
+    assert.match(stdout, /C1_NOT_MET$/m);
+    assert.match(stdout, /numeric_label_without_numeric_receipt=isdm\/CAP-ISDM-1FO-PREDICT-EXPORT\(no comparison block/);
+  });
+  for (const dir of [goodRepo, dirReceiptRepo, defaultPinP0Repo, regOnlyRepo, numLabelRepo]) {
     if (dir) rmSync(dir, { recursive: true, force: true });
   }
+}
+
+// --- the generated scoreboard is tied back to the case maps (review of #589, finding 5) ---
+// C2/X2 read the scoreboard's status word by design; tools/true_parity_assemble.py --check is
+// what ties that word back to the per-family case maps. Running it here means a hand-edited
+// scoreboard row (e.g. NON-NUMERIC -> EVIDENCED with no case-map change) fails this run.
+{
+  const ASSEMBLER = join(REPO_ROOT, 'tools', 'true_parity_assemble.py');
+  const LEDGER_REL = join('docs', 'dev-log', 'core070', 'true-parity-latest');
+  function runAssemble(root) {
+    try {
+      return { stdout: execFileSync('python3', [ASSEMBLER, '--root', root, '--check'], { encoding: 'utf8' }), code: 0 };
+    } catch (e) {
+      return { stdout: e.stdout || '', code: e.status };
+    }
+  }
+  test('assembler --check: the tracked scoreboard, assembled case map and reverse gap are current', () => {
+    const { stdout, code } = runAssemble(REPO_ROOT);
+    assert.equal(code, 0, stdout);
+    assert.match(stdout, /^ASSEMBLE_OK \d+ rows current$/m);
+  });
+  test('assembler --check: a hand-edited EVIDENCED scoreboard row fails (copy of the tree)', () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'true-parity-assemble-'));
+    try {
+      // Receipts cited by the maps live under docs/dev-log/core070/; fixtures are listed in the board.
+      cpSync(join(REPO_ROOT, 'docs', 'dev-log', 'core070'), join(tmp, 'docs', 'dev-log', 'core070'), { recursive: true });
+      cpSync(join(REPO_ROOT, 'test', 'fixtures'), join(tmp, 'test', 'fixtures'), { recursive: true });
+      const clean = runAssemble(tmp);
+      assert.equal(clean.code, 0, clean.stdout); // positive control on the copy
+      const sb = join(tmp, LEDGER_REL, 'scoreboard.md');
+      const txt = readFileSync(sb, 'utf8');
+      const edited = txt.replace(/^(\| \S+ `[^`]*` \| [^|]* \| )(?!EVIDENCED )[A-Z-]+( \|)/m, '$1EVIDENCED$2');
+      assert.notEqual(edited, txt, 'no non-EVIDENCED row to hand-edit');
+      writeFileSync(sb, edited);
+      const bad = runAssemble(tmp);
+      assert.equal(bad.code, 1, bad.stdout);
+      assert.match(bad.stdout, /^ASSEMBLE_STALE scoreboard\.md$/m);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
 }
 
 if (failures > 0) {

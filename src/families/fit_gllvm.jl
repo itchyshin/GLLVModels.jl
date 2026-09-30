@@ -7,7 +7,9 @@
 Fit a GLLVM, dispatching on the response `family` — a Distributions.jl
 distribution used as a marker (the GLM.jl convention):
 
-- `Normal()`   → [`fit_gaussian_gllvm`](@ref) — closed-form Gaussian marginal
+- `Normal()`   → [`fit_gaussian_gllvm`](@ref) — closed-form Gaussian marginal. Without `X`,
+  one intercept per trait is estimated (`pars.β`); `fit_gaussian_gllvm` itself treats
+  `X = nothing` as a zero mean. An explicit `X` defines the complete mean.
 - `Binomial()` → [`fit_binomial_gllvm`](@ref) — Laplace marginal (binary / binomial)
 - `Poisson()`  → [`fit_poisson_gllvm`](@ref) — Laplace marginal (counts)
 - `TruncatedPoisson()` → [`fit_truncated_poisson_gllvm`](@ref) — zero-truncated Poisson
@@ -161,7 +163,7 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
                    grouping=nothing, unit=nothing, unit_obs=nothing,
                    cluster=nothing, cluster2=nothing,
                    phylo=nothing, phylo_rank=nothing, phylo_mode=nothing,
-                   species_id=nothing, kwargs...)
+                   species_id=nothing, Kmax=nothing, kwargs...)
     if phylo !== nothing
         phylo isa PrecisionPhy || throw(ArgumentError("phylo must be a PrecisionPhy"))
         family isa Normal || throw(ArgumentError("explicit precision fitting currently requires Gaussian responses"))
@@ -209,6 +211,27 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
             throw(ArgumentError("fit_gllvm: K=$K and num_lv=$num_lv disagree; pass only one"))
         end
         K = num_lv
+    end
+
+    # --- K omitted: estimate it (lane auto-d-20260926; docs/design/74). -------
+    # Sweep K = 1:Kmax through `select_lv` (guarded: failed, unconverged,
+    # non-monotone and runaway fits are never chosen) and return the chosen fit.
+    # Multinomial v1 has no latent variables, so it keeps its own K-free route.
+    Kmax === nothing || K === nothing || throw(ArgumentError(
+        "fit_gllvm: Kmax is used only when K is omitted (K is estimated); got K=$K and Kmax=$Kmax"))
+    if K === nothing && !(family isa Multinomial)
+        (row_eff === :none && !pervar) || throw(ArgumentError(
+            "fit_gllvm: estimating K is available for the default family route only; " *
+            "supply K with row_eff or pervar (or call select_lv directly)"))
+        p = size(Y, 1)
+        kmax = Kmax === nothing ? min(5, p - 1) : Int(Kmax)
+        kmax >= 1 || throw(ArgumentError("fit_gllvm: cannot estimate K with p = $p response(s)"))
+        sel = select_lv(Y; family = family, Kmax = kmax, disp_group = disp_group, kwargs...)
+        crit = get(kwargs, :criterion, :bic_sites)
+        @info "fit_gllvm: K not supplied; chose K = $(sel.best_k) by $(crit) over K = 1:$kmax " *
+              "(call select_lv for the full comparison). Intervals from this fit are " *
+              "conditional on the chosen K." sel
+        return sel.best
     end
 
     # API B (Curie): NB/Beta/NB1/BetaBinom public default matches gllvmTMB per-trait
@@ -306,7 +329,7 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
                     _fit_gllvm(family, Y; K = K, kwargs...)
 end
 
-_fit_gllvm(::Normal,   Y::AbstractMatrix; kwargs...) = fit_gaussian_gllvm(Y; kwargs...)
+_fit_gllvm(::Normal,   Y::AbstractMatrix; kwargs...) = _fit_gaussian_trait_intercepts(Y; kwargs...)
 _fit_gllvm(::Binomial, Y::AbstractMatrix; kwargs...) = fit_binomial_gllvm(Y; kwargs...)
 _fit_gllvm(::Poisson,  Y::AbstractMatrix; kwargs...) = fit_poisson_gllvm(Y; kwargs...)
 _fit_gllvm(::TruncatedPoisson, Y::AbstractMatrix; kwargs...) =
@@ -320,6 +343,12 @@ _fit_gllvm(::TruncatedNegBin2, Y::AbstractMatrix; kwargs...) =
 _fit_gllvm(::NegativeBinomial, Y::AbstractMatrix; kwargs...) = fit_nb_gllvm(Y; kwargs...)
 _fit_gllvm(::Beta,     Y::AbstractMatrix; kwargs...) = fit_beta_gllvm(Y; kwargs...)
 _fit_gllvm(::Ordinal,  Y::AbstractMatrix; kwargs...) = fit_ordinal_gllvm_pertrait(Y; kwargs...)
+# ordinal_logit(): same fitter as Ordinal(), but the marker pins the link —
+# refuse an explicit non-logit `link` instead of silently overriding it.
+function _fit_gllvm(::OrdinalLogit, Y::AbstractMatrix; kwargs...)
+    _check_ordinal_logit_link(kwargs)
+    return fit_ordinal_gllvm_pertrait(Y; kwargs...)
+end
 _fit_gllvm(::Gamma,    Y::AbstractMatrix; kwargs...) = fit_gamma_gllvm(Y; kwargs...)
 _fit_gllvm(::Exponential, Y::AbstractMatrix; kwargs...) = fit_exponential_gllvm(Y; kwargs...)
 # `StudentTFamily` carries the degrees-of-freedom policy: numeric ν is fixed;

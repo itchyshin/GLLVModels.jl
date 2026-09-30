@@ -1,0 +1,85 @@
+{
+    "theta_r_order": [
+        0.4080256316041275,
+        -0.24723714856097773,
+        0.28995210718498304,
+        -1.5434232413876448,
+        0.8410949398992914,
+        0.4527963581107662,
+        -0.5485395912176386
+    ],
+    "gradient_norm": 9.334047298553624e-6,
+    "objective": 8.68192008542988,
+    "residual_mode": "shared",
+    "stopping_reason": "converged",
+    "data_sha256": "6e1d3d30ebd3a1c40d0513cd09b8a854ac7fe3afffaf6bb2c7f2b037284a5995",
+    "log_det_Q": 15.706819081565975,
+    "git_head": "97e11be0475ca8c40abf2dc916db7a7131e919fa",
+    "qualified": false,
+    "julia_version": "1.10.12",
+    "sigma_eps2": 0.04564567209059156,
+    "status": "recorded",
+    "parameter_labels_julia": [
+        "beta[1]",
+        "beta[2]",
+        "beta[3]",
+        "phylo.loading[1]",
+        "phylo.loading[2]",
+        "phylo.loading[3]",
+        "log_sd_residual_shared"
+    ],
+    "hessian_condition_number": 194.9740343426729,
+    "fit_elapsed_seconds": 4.42780175,
+    "entry": "fit_phylo_latent_gllvm",
+    "source_pin": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+    "iterations": 29,
+    "loglik": -8.68192008542988,
+    "data_file_sha256": "9a4c2e1f87a3fbb519400fff8a99fdfb6d66b249d473b0e25833b93b78e7e13c",
+    "case": "struct_phy_tree_rr",
+    "route": "tree",
+    "n_aug": 14,
+    "converged": true,
+    "Sigma_phy": [
+        [
+            0.7074406979241926,
+            0.3808447256117929,
+            -0.4613738745075816
+        ],
+        [
+            0.3808447256117929,
+            0.20502454191837322,
+            -0.2483767291829152
+        ],
+        [
+            -0.4613738745075816,
+            -0.2483767291829152,
+            0.3008956831332141
+        ]
+    ],
+    "beta": [
+        0.4080256316041275,
+        -0.24723714856097773,
+        0.28995210718498304
+    ],
+    "species_aug_id": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+    ],
+    "hessian_positive_definite": true,
+    "schema_version": "phylo-latent-p1-julia-receipt-1",
+    "theta_julia_order": [
+        0.4080256316041275,
+        -0.24723714856097773,
+        0.28995210718498304,
+        0.8410949398992914,
+        0.4527963581107662,
+        -0.5485395912176386,
+        -1.5434232413876448
+    ]
+}

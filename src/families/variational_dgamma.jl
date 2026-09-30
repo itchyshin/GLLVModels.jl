@@ -138,6 +138,7 @@ function fit_delta_gamma_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         maxiter::Integer = 100, tol::Real = 1e-9)
     p, n = size(Y)
+    _check_twopart_support("fit_delta_gamma_gllvm_va", Y, _tp_positive_ok, "0 or a finite positive real")
     rr = rr_theta_len(p, K)
 
     βz0 = Vector{Float64}(undef, p); βc0 = Vector{Float64}(undef, p)

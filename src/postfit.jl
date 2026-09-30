@@ -76,14 +76,18 @@ function getLoadings(fit; rotate::Bool = true)
     return rotate ? Λ * _svd_rotation(Λ) : copy(Λ)
 end
 
-# Fitted mean μ (p×n): X·β when fixed effects are present, else zeros.
+# Fitted mean μ (p×n): X·β when fixed effects are present, the per-trait
+# intercepts β when the fit estimated them without X, else zeros.
 function _fitted_mean(fit::GllvmFit, y::AbstractMatrix,
                       X::Union{Nothing, AbstractArray{<:Real, 3}})
     p, n = size(y)
     β = fit.pars.β
-    if X === nothing || β === nothing || length(β) == 0
+    X === nothing && _has_intercept_design(fit) && return repeat(_intercept_mean(fit), 1, n)
+    if β === nothing || length(β) == 0
         return zeros(Float64, p, n)
     end
+    X === nothing && throw(ArgumentError(
+        "this fit estimated fixed effects β; provide the same X to getLV, predict, fitted, or residuals"))
     μ = zeros(Float64, p, n)
     q = size(X, 3)
     @inbounds for s in 1:n, t in 1:p, k in 1:q
@@ -251,9 +255,9 @@ end
 
 In-sample fitted values at the conditional latent scores `ẑ` (see [`getLV`](@ref)):
 `type=:link` returns the linear predictor `η = μ + Λ ẑ` (`μ` the fixed-effect
-mean, `0` without `X`); `type=:response` applies the inverse link (identity for
-the Gaussian family, so both types coincide). No `newdata` — `y` (and `X`) must
-match the fit.
+mean, `0` when the fit has no fixed effects); `type=:response` applies the inverse
+link (identity for the Gaussian family, so both types coincide). No `newdata` — `y`
+(and `X`) must match the fit; a fit that estimated `β` throws when `X` is omitted.
 """
 function predict(fit::GllvmFit, y::AbstractMatrix;
                  type::Symbol = :response,

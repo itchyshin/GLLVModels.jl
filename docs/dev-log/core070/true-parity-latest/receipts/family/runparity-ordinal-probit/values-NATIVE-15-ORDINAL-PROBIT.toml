@@ -1,0 +1,9 @@
+case_id = "NATIVE-15-ORDINAL-PROBIT"
+
+[[values]]
+label = "logLik"
+julia = -304.66736396676623
+test = "@test jl_fit.loglik ≈ r_logL rtol = 1e-6"
+rtol = 1.0e-6
+r = -304.6673639722414
+atol = 0.0

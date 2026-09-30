@@ -1,0 +1,9 @@
+case_id = "NATIVE-14-DELTA-GAMMA"
+
+[[values]]
+label = "logLik"
+julia = -725.9597543994767
+test = "@test native.loglik≈r.logLik rtol=1e-6"
+rtol = 1.0e-6
+r = -725.9597543996767
+atol = 0.0

@@ -1,0 +1,69 @@
+{
+  "schema": "core070-family-p1-case-receipt/v1",
+  "case_id": "CORE070-FAMILY-05-LOG-FORMULA-INTERFACE",
+  "verdict": "FAIL",
+  "evidence_kind": "numeric_r_vs_julia",
+  "batch": "test/parity/runparity.jl, CORE070_PARITY_REQUIRED=1, GLLVM_PARITY_PIN=P1, run runparity-nb2-formula",
+  "harness_cell": "CORE070-FAMILY-05-LOG-FORMULA-INTERFACE",
+  "fixture": "test/parity/test_nb2_formula_parity.jl",
+  "measures": "the NATIVE-06-NB2 data: the R-vs-Julia number is the native route against a fresh R fit; the wide and long formula routes are checked against the native route in Julia only (atol 1e-10); toy fixture, likelihood-level agreement only",
+  "cell_status": "failed",
+  "cell_assertions": {
+    "passed": 15,
+    "broken": 0,
+    "failed": 4,
+    "errored": 0
+  },
+  "cell_execution_case_ids": [
+    "CORE070-FAMILY-05-LOG-FORMULA-INTERFACE"
+  ],
+  "run_status": "failed",
+  "run_failure_reason": "one or more cells have failed, skipped, broken, or zero assertions",
+  "batch_verifier": {
+    "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
+    "status": "FAIL",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/verify.txt"
+  },
+  "read_from": {
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/run.toml": "97a9de61ada9881929958c1468735539875d5e740e620a4f773822a40dd38d71",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/values-CORE070-FAMILY-05-LOG-FORMULA-INTERFACE.toml": "269400b98a535a7e29c7720779f394e8b567c6f42212bd1c2fa77b3d194d6f8c",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/run-commit.json": "2e16587a479233a6fe0bf80655a1c208a68a479877cb18647134d745a22f4edd",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/verify.txt": "5e3dfe9dc724007b463733af4836c282472ebcc84cbf73cb00844dff77f3133b",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/cell-CORE070-FAMILY-05-LOG-FORMULA-INTERFACE.toml": "5679cc74a67af14bac46878191274226e00c2ea82eed72b5b692609d96de80bc",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/formula-nb2-health.toml": "4d747e16386800ac7bf9d15e2a603f01bbe945c9a9aba2e8ef827cf716373c7e",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/nb2-formula.toml": "4de21c08c3a76b1ddebbe11912165feb25f68934d3f3d1f4a5a1bbe8cc18d5a9"
+  },
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/values-CORE070-FAMILY-05-LOG-FORMULA-INTERFACE.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/cell-CORE070-FAMILY-05-LOG-FORMULA-INTERFACE.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/formula-nb2-health.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/nb2-formula.toml"
+  ],
+  "why_fail": "the cell's own assertions did not all pass at P1 (see cell_assertions; the failing assertion may be a health or structure check rather than the compared numbers)",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "7506185ccbb6ebbd484219a860b35d989301a8cf",
+  "glvmodels_worktree_dirty": [],
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-FAMILY-05-LOG-FORMULA-INTERFACE",
+        "quantity": "logLik, native route (the formula routes are checked against it)",
+        "max_abs_diff": 1.2128236903663492e-07,
+        "tolerance": 0.000820548534328469,
+        "tolerance_rule": "the cell's own test, @test native.loglik\u2248r.logLik rtol=1e-6 (rtol=1e-06, atol=0; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
+        "n_values": 1,
+        "r_value": -820.548534328469,
+        "julia_value": -820.5485342071867,
+        "diff_source": "recomputed from the saved R and Julia values",
+        "discriminating": true
+      }
+    ]
+  }
+}

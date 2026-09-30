@@ -1,0 +1,12 @@
+rep 3 d 1 status ok          pdHess TRUE  | min eig unpen     0.801  pen      1.04 | max|grad| unpen     0.97 pen  0.00045
+rep 3 d 2 status ok          pdHess TRUE  | min eig unpen      0.14  pen      0.39 | max|grad| unpen      1.1 pen  0.00029
+rep 3 d 3 status unconverged pdHess FALSE | min eig unpen    -0.141  pen     0.109 | max|grad| unpen      1.1 pen  0.00025
+rep 3 d 4 status unconverged pdHess FALSE | min eig unpen    -0.156  pen    0.0944 | max|grad| unpen      1.1 pen   0.0001
+rep 5 d 1 status ok          pdHess TRUE  | min eig unpen      1.24  pen      1.47 | max|grad| unpen     0.71 pen  0.00033
+rep 5 d 2 status ok          pdHess TRUE  | min eig unpen     0.846  pen       1.1 | max|grad| unpen     0.88 pen   0.0003
+rep 5 d 3 status unconverged pdHess FALSE | min eig unpen   -0.0417  pen     0.208 | max|grad| unpen     0.88 pen  0.00024
+rep 5 d 4 status unconverged pdHess FALSE | min eig unpen  -0.00479  pen     0.245 | max|grad| unpen     0.95 pen  0.00024
+rep 6 d 1 status ok          pdHess TRUE  | min eig unpen      1.48  pen      1.72 | max|grad| unpen     0.44 pen  0.00018
+rep 6 d 2 status ok          pdHess TRUE  | min eig unpen     0.186  pen     0.436 | max|grad| unpen     0.58 pen   0.0001
+rep 6 d 3 status unconverged pdHess FALSE | min eig unpen    -0.122  pen     0.128 | max|grad| unpen     0.68 pen  0.00033
+rep 6 d 4 status unconverged pdHess FALSE | min eig unpen    -0.162  pen     0.088 | max|grad| unpen     0.78 pen  0.00026

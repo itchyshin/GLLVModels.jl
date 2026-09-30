@@ -1,0 +1,34 @@
+{
+  "status": "PASS",
+  "scope": "CORE070_FAMILY_LINKS_BATCH",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "contract_sha256": "103d6aaf8703c2b56d948dc6b12687df50590b06e4eb8a27ab457182e7169e56",
+  "source_pins": {
+    "R/families.R": "beed3caa91b0ed77b402f40192a493db693eafdd0bb214aa0ef73c33e4538791",
+    "R/julia-bridge.R": "b588fd8084828586414a52ce4bc728ab75e282f0bd9253c5908d786fe1be26ee",
+    "R/gllvmTMB.R": "a1ad39041f88d08b017500132bac45b5282f246025c488bc1829dc57aeae3faf"
+  },
+  "source_unchanged": true,
+  "case_count": 2,
+  "negative_control_count": 4,
+  "expected_case_ids": ["CORE070-FAMILY-01-PROBIT-NATIVE-MODEL", "CORE070-FAMILY-01-CLOGLOG-NATIVE-MODEL"],
+  "negative_control_case_ids": ["NEG-COEF-SHIFTED-PROBIT", "NEG-LOGLIK-SHIFTED-CLOGLOG", "NEG-LINK-SWAPPED", "NEG-SATURATED-FIT-MUST-FAIL"],
+  "julia_exit_code": 0,
+  "julia_elapsed_seconds": 16.4355,
+  "julia_results_sha256": "b7feaf01340e4208541208db1bc151cf5f7d4b42934210127797f9f333f4d7b1",
+  "raw_sha256": "dddb56993514de9bab25e7d3d136a74551e71be79ce02b12e78b24b2687c19f4",
+  "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "r_version": "R version 4.6.0 (2026-04-24)",
+  "gllvmTMB_version": "0.7.1",
+  "frozen_library": "/Users/z3437171/local-scratch/a3cov-oracle/build/library",
+  "source_pin": {
+    "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+    "source_tree_sha256": "86fa00f05ee2ccb8ffef65a82cd59c47b1b2a256a5bad86957a92461a6dbe1db",
+    "installed_tree_sha256": "5d4877193c3727965412546ca49c77588ba3083eab87629080e610cb889516d4",
+    "archive_sha256": "73b665b22c1497d43dc0674eecd5657f2659a726fcad13004de899833e2d5423",
+    "namespace_sha256": "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c",
+    "version": "0.7.1",
+    "marker_path": "/Users/z3437171/local-scratch/a3cov-oracle/build/library/gllvmTMB/CORE070_SOURCE_PIN.toml",
+    "marker_sha256": "5b667a7d5f1718364a2794642cec52eac1ead345ec39fff5051c2c1ca7a62218"
+  }
+}

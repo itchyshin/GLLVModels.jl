@@ -80,9 +80,23 @@
 
 using GLLVModels
 using Random, Distributions, LinearAlgebra, DelimitedFiles, Statistics
+using SHA, TOML
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
-const REFERENCE_COMMIT = "b4d5fee64def88bc768dda1f1f77c29b295edd86"
+# Pin switch (D-294/D-295): GLLVM_PARITY_PIN unset or "P0" keeps the P0
+# contract; "P1" names the twin written by tools/core070_family_p1_contract.py.
+# The reference commit comes from tools/core070_oracle_pins.toml and must equal
+# the contract's own. Any other value stops.
+const PARITY_PIN = uppercase(strip(get(ENV, "GLLVM_PARITY_PIN", "P0")))
+PARITY_PIN in ("P0", "P1") || error("GLLVM_PARITY_PIN must be P0 or P1, got $(repr(PARITY_PIN))")
+const CONTRACT_PATH = joinpath(ROOT, PARITY_PIN == "P1" ?
+    "docs/dev-log/core070/true-parity-latest/a6-studentt-contract-p1.json" :
+    "docs/dev-log/core070/a6-studentt-contract.json")
+const REFERENCE_COMMIT = TOML.parsefile(joinpath(ROOT, "tools/core070_oracle_pins.toml"))[PARITY_PIN]["reference_commit"]
+let m = match(r"\"reference_commit\": \"([0-9a-f]{40})\"", read(CONTRACT_PATH, String))
+    m !== nothing && m.captures[1] == REFERENCE_COMMIT ||
+        error("$(CONTRACT_PATH) is not pinned at $(PARITY_PIN) $(REFERENCE_COMMIT)")
+end
 const PAIRED_TOL = 1e-4
 
 # ---------------------------------------------------------------------------
@@ -397,6 +411,31 @@ function read_r_result(path::AbstractString, case_prefix::AbstractString)
 end
 
 # ---------------------------------------------------------------------------
+# Optional results file (CORE070_A6_RESULTS_TOML): both sides' values for both
+# cases, the gating verdict and its messages, the pin, and the hashes of the
+# inputs, so a receipt can recompute |R - Julia| from saved values. The R
+# stage's <r_output>.source-pin.tsv, when present, is carried in verbatim.
+# ---------------------------------------------------------------------------
+function write_results(r_output_path, data_path, julia_fixed, r_fixed, julia_free, r_free, ok, messages)
+    path = get(ENV, "CORE070_A6_RESULTS_TOML", "")
+    isempty(path) && return nothing
+    pinfile = r_output_path * ".source-pin.tsv"
+    pin = isfile(pinfile) ? Dict{String, Any}(String(a) => String(b) for (a, b) in
+                                              (split(l, '\t'; limit = 2) for l in eachline(pinfile) if !isempty(l))) :
+          Dict{String, Any}()
+    sha(f) = bytes2hex(open(sha256, f))
+    report = Dict{String, Any}(
+        "parity_pin" => PARITY_PIN, "reference_commit" => REFERENCE_COMMIT,
+        "contract" => relpath(CONTRACT_PATH, ROOT), "contract_sha256" => sha(CONTRACT_PATH),
+        "paired_tol" => PAIRED_TOL, "verdict" => ok ? "PASS" : "FAIL", "messages" => messages,
+        "data_sha256" => sha(data_path), "r_output_sha256" => sha(r_output_path),
+        "r_source_pin" => pin,
+        "julia_fixed" => julia_fixed, "r_fixed" => r_fixed, "julia_free" => julia_free, "r_free" => r_free)
+    open(io -> TOML.print(io, report), path, "w")
+    return nothing
+end
+
+# ---------------------------------------------------------------------------
 # Two-stage generate-or-verify driver.
 # ---------------------------------------------------------------------------
 function main(argv)
@@ -441,6 +480,7 @@ function main(argv)
     end
 
     ok, messages = _a6_compare(julia_fixed, r_fixed)
+    write_results(r_output_path, data_path, julia_fixed, r_fixed, julia_free, r_free, ok, messages)
     if ok
         println("CORE070_A6_STUDENTT_PAIRED_VERIFIED case=fixed tol=$(PAIRED_TOL) reference_commit=$(REFERENCE_COMMIT)")
         return 0

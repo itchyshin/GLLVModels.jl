@@ -300,16 +300,54 @@ aic(fp)                # 2k − 2·logLik
 bic(fp, size(Y, 2))    # k·log(n_sites) − 2·logLik
 ```
 
+### Choosing the number of latent dimensions
+
 To choose `K`, `select_lv` sweeps `K = 1:Kmax`, fits each, and reports the
 criteria:
 
 ```julia
-sel = select_lv(Y; family = Poisson(), Kmax = 3)
-sel.aic; sel.bic; sel.best_k; sel.best     # sel.best is the fitted model at best_k
+sel = select_lv(Y; family = Poisson(), Kmax = 3)   # criterion = :bic_sites by default
+sel.best_k; sel.best          # the chosen K and the fitted model at that K
+sel.bic_sites; sel.aic        # criterion values for every accepted K
+sel.attempts                  # every K tried, with a status and a reason
 ```
 
-Lower AIC/BIC is better; BIC penalises extra factors more and tends to pick a
-smaller `K`. Use `criterion = :aic` to switch.
+Lower is better. The default, `:bic_sites`, penalises each parameter by
+`log(n)` with `n` the number of sites; `:bic` uses `log(p·n)`, the number of observed cells,
+and picks fewer dimensions at small sample sizes; `:aic` tends to pick one
+too many. In simulations with known `K` (Gaussian and Poisson responses,
+30 to 300 sites, 10 or 20 species), `:bic_sites` recovered the true `K` most
+often. Negative-binomial recovery is being re-measured on corrected fitting
+code, so no rate is quoted for it yet.
+
+A fit with more latent dimensions contains every fit with fewer, so its
+log-likelihood can never be lower. `select_lv` therefore never chooses a `K`
+whose fit threw an error, whose log-likelihood fell below a smaller `K`, or
+whose loadings ran away (a trait's latent standard deviation above 10 on the
+link scale, or, for binary data, one trait's loadings far larger than the
+rest). Such a `K` is refitted once from the smaller solution when the family
+allows it, and otherwise listed in `sel.attempts` with the reason. Binary
+responses are the weak spot. Unpenalised fits beyond `K = 1` usually run away,
+so for single-trial binary data the sweep adds a loading ridge
+(`binary_ridge = 2`; `Inf` turns it off). With strong loadings the ridge finds
+the true `K` far more often; with weak loadings it does not raise recovery but
+never picks too many dimensions, and dimensions beyond `K = 1` are found
+mainly with many sites. Read `sel.attempts` before trusting the choice.
+
+If you leave `K` out of `fit_gllvm`, it runs this sweep (by default
+`Kmax = min(5, p − 1)` and `:bic_sites` unless you pass `criterion`) and returns
+the chosen fit with a one-line message.
+
+!!! warning "The chosen K is an estimate"
+    The number of latent dimensions is chosen from the same data the model is
+    then fitted to. Intervals, p-values and tests from that fit are
+    conditional on the chosen number and do not include uncertainty about it;
+    when the top two candidates are close, treat the choice as uncertain.
+    Species correlations, variance partitions and ordination axes all depend
+    on the chosen number, and individual axes can change meaning when it
+    changes. With a misspecified model the chosen number tends to grow with
+    sample size, so read it as the dimensions the data support at this sample
+    size, not as the number of true gradients.
 
 Finally, `simulate` draws a fresh response matrix from scalar-mean GLM-style,
 Tweedie, and covariate fits (useful for posterior-predictive checks):
@@ -512,6 +550,31 @@ Native Julia fits default to `correlation = false` (opt-in — a default flip
 would silently change every existing user's `σ²_phy` by a tree-dependent
 factor). This keeps established Julia estimates on the same scale while making
 the R-compatible convention an explicit choice.
+
+#### Fitting R's `phylo_latent()` model: `fit_phylo_latent_gllvm`
+
+`fit_phylo_latent_gllvm` is the named twin of gllvmTMB's bare Gaussian
+`phylo_latent(species, d = K)`. It always uses the unit-height convention (R's
+fit path), matches species to tips **by label**, and returns a
+`PrecisionMultivariateFit` with one shared residual variance:
+
+```julia
+tree = "(((s1:2,s2:2):1,(s3:1,s4:1):2):1,((s5:1.5,s6:1.5):1,(s7:1,s8:1):1.5):1.5);"
+species = repeat(["s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8"]; inner = 2)
+Y = randn(3, length(species))            # traits x observations
+fit = fit_phylo_latent_gllvm(Y, species; d = 1, tree = tree)
+extract_Sigma(fit; level = :phy, part = :shared).Sigma   # Lambda * Lambda'
+extract_phylo_signal(fit)                # H2 = 1 per trait for this bare model
+```
+
+A labelled dense covariance works too (`vcv = C, tip_labels = labels`, or its
+alias `A = C`); as in R, a `1e-8` ridge is added before inversion, so the tree
+and dense routes agree to about `1e-5` in log-density. Polytomies in a Newick
+tree are admitted as R admits them. Report `Sigma_phy = Lambda * Lambda'`:
+the loadings themselves are fixed only up to rotation and sign of their
+columns. `Ainv = P` (with `tip_labels`) is inverted first and then follows the dense
+route, as R's keyword does. `rho != 1` is refused by a labelled scope fence for
+now.
 
 ## 7. Choosing a family
 

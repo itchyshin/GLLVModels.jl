@@ -1,0 +1,13 @@
+"n","p","K_true","rep","ridge","selected","statuses","secs"
+60,10,1,1,Inf,1,"ok/ok/ok/ok",10.3978929519653
+60,10,1,1,2,1,"ok/ok/ok/ok",3.72958993911743
+60,10,2,1,Inf,NA,"ERROR No `d` in 1:4 was accepted by the guard.
+ℹ d = 1: runaway (latent SD 16.4 on the link scale for trait 3 (> 10)); d = 2:
+  runaway (latent SD 209 on the link scale for trait 6 (> 10)); d = 3: runaway
+  (latent SD 357 on the link scale for trait 9 (> 10)); d = 4: runaway (latent
+  SD 696 on the link scale for trait 9 (> 10))",31.9984209537506
+60,10,2,1,2,1,"ok/ok/ok/ok",4.3766360282898
+120,10,2,1,Inf,1,"ok/ok/ok/runaway",31.3407061100006
+120,10,2,1,2,1,"ok/ok/ok/ok",7.42061591148376
+120,20,2,1,Inf,1,"ok/runaway/runaway/runaway",186.307931184769
+120,20,2,1,2,1,"ok/ok/ok/ok",22.7678680419922

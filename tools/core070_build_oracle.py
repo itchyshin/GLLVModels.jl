@@ -4,6 +4,14 @@
 Preparation is local/read-only against Git. Building runs only when explicitly
 requested, never installs dependencies, and refuses to reuse a build directory.
 A source or build receipt is provenance, not evidence of statistical parity.
+
+Pin selection (D-294/D-295): the git commit this tool builds is named by
+tools/parity_oracle.py's GLLVM_PARITY_PIN switch (default "P0"; set to "P1"
+to target the re-pin target instead) -- that module is the single place that
+reads the environment variable and validates it. The three companion byte
+hashes for whichever pin is selected (NAMESPACE / source tree / archive) live
+in tools/core070_oracle_pins.toml, keyed by the same pin name, so this file
+no longer hardcodes its own copy.
 """
 import argparse
 import hashlib
@@ -12,15 +20,40 @@ import os
 from pathlib import Path
 import subprocess
 import signal
+import sys
 import tarfile
 import tempfile
 import time
+import tomllib
 
-REFERENCE = 'b4d5fee64def88bc768dda1f1f77c29b295edd86'
-NAMESPACE = '9094613610789faab69c43195d3cfdafb2c7dfef284e6646b10dababa4fa132c'
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from parity_oracle import R_REF_PINS, SELECTED_PIN  # noqa: E402
+
 MARKER = 'CORE070_SOURCE_PIN.toml'
-SOURCE_TREE = 'f83545faa6543dbb1f64d64bbf5a9498adcdf036cc3da5851f269912698b1cc7'
-ARCHIVE = '0c2f4323eb9fb19acccf039b8d57b4dd6bda82e2aa8b4a7bb712f36a64b022bc'
+
+_PINS_FILE = Path(__file__).resolve().parent / 'core070_oracle_pins.toml'
+
+
+def _load_pin(pin_name, pins_file=_PINS_FILE):
+    if pin_name not in R_REF_PINS:
+        raise ValueError(f'unknown pin {pin_name!r}; parity_oracle.R_REF_PINS has {sorted(R_REF_PINS)}')
+    table = tomllib.loads(pins_file.read_text())
+    if pin_name not in table:
+        raise ValueError(f'pin {pin_name!r} has no hash entry in {pins_file}')
+    entry = table[pin_name]
+    if entry['reference_commit'] != R_REF_PINS[pin_name]:
+        raise ValueError(
+            f'{pins_file} pin {pin_name!r} reference_commit {entry["reference_commit"]!r} '
+            f'disagrees with tools/parity_oracle.py R_REF_PINS[{pin_name!r}] = {R_REF_PINS[pin_name]!r}'
+        )
+    return entry
+
+
+_PIN = _load_pin(SELECTED_PIN)
+REFERENCE = _PIN['reference_commit']
+NAMESPACE = _PIN['namespace_sha256']
+SOURCE_TREE = _PIN['source_tree_sha256']
+ARCHIVE = _PIN['archive_sha256']
 
 
 def sha(path):

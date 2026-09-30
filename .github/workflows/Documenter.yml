@@ -8,11 +8,16 @@ permissions:
   contents: write      # let GITHUB_TOKEN push the gh-pages branch (Documenter deploy)
   statuses: write
 
+# Build and check per branch: a global group here made GitHub cancel every
+# older PENDING run whenever a newer one queued (one pending run per group,
+# whatever cancel-in-progress says), so most PRs lost their Documenter check.
+# Only the gh-pages push is serialised, in the deploy job below.
+# The same one-pending rule applies within a branch, so non-PR runs (main and
+# tag pushes) get one group per commit: a burst of merges otherwise cancelled
+# a queued main build before it started. PR runs keep one group per ref.
 concurrency:
-  group: documenter-gh-pages
-  # Every Documenter run pushes either the dev site or a PR preview to the
-  # shared gh-pages branch. Queue them so one run cannot stale another's fetch.
-  cancel-in-progress: false
+  group: documenter-${{ github.ref }}${{ github.event_name != 'pull_request' && format('-{0}', github.sha) || '' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   Documenter:
@@ -37,6 +42,35 @@ jobs:
       # Markdown-only scan cannot see. Do this before publishing the site.
       - name: Check rendered reader surface
         run: python3 tools/check_reader_surface.py --rendered docs/build/1
+      - name: Hand the checked build to the deploy job
+        uses: actions/upload-artifact@v6
+        with:
+          name: docs-build
+          path: docs/build
+          include-hidden-files: true
+          retention-days: 1
+
+  deploy:
+    name: Documenter deploy
+    needs: Documenter
+    runs-on: ubuntu-latest
+    # Every deploy pushes the dev site or a PR preview to the shared gh-pages
+    # branch; queue them so one push cannot stale another's fetch.
+    concurrency:
+      group: documenter-gh-pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v6
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v2
+      - name: Install dependencies
+        run: julia --project=docs -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
+      - uses: actions/download-artifact@v7
+        with:
+          name: docs-build
+          path: docs/build
       - name: Deploy checked documentation
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

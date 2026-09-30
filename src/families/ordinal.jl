@@ -35,6 +35,83 @@ function _check_ordinal_link(link::Link)
     return nothing
 end
 
+# Observed ordinal levels must be integers >= 1: the fitters index count vectors
+# by level inside `@inbounds` loops. Masked cells (`obs` false) are not checked.
+function _check_ordinal_levels(Y::AbstractMatrix, obs::AbstractMatrix)
+    for i in eachindex(Y, obs)
+        obs[i] || continue
+        y = Y[i]
+        y >= 1 || throw(ArgumentError(
+            "ordinal response has observed level $y at index $(CartesianIndices(Y)[i]); " *
+            "levels must be integers 1..C"))
+    end
+    return nothing
+end
+
+"""
+    OrdinalLogit
+
+Family marker returned by [`ordinal_logit`](@ref). A distinct type from
+[`Ordinal`](@ref) — not merely `Ordinal()` under another name — so that the
+link stays pinned to `LogitLink()` regardless of what `Ordinal()`'s own
+default link happens to be, and so `fit_gllvm(Y; family = ordinal_logit(),
+link = ProbitLink())` is refused rather than silently fitting a probit model
+under the logit name. The underlying fit (`fit_ordinal_gllvm_pertrait` /
+`fit_ordinal_gllvm_pertrait_cov`) and its result type
+([`OrdinalPerTraitFit`](@ref) / `OrdinalPerTraitCovFit`) are exactly the
+same as `Ordinal()`'s with `link = LogitLink()`; post-fit, `confint`,
+`simulate`, `predict`, and the R bridge all dispatch on that shared result
+type, not on this marker, so this type has no other dispatch surface to
+maintain beyond [`fit_gllvm`](@ref) / [`gllvm`](@ref) itself.
+"""
+struct OrdinalLogit end
+
+default_link(::OrdinalLogit) = LogitLink()
+
+# Both the bare `fit_gllvm` entry point and the `@formula` front door
+# (`src/formula.jl`) reach this: reject any explicitly supplied non-logit
+# `link` up front rather than silently overriding it, since the whole point
+# of a distinct marker is that `ordinal_logit()` never quietly becomes a
+# probit fit.
+function _check_ordinal_logit_link(kwargs)
+    haskey(kwargs, :link) && !(kwargs[:link] isa LogitLink) && throw(ArgumentError(
+        "ordinal_logit() only supports LogitLink(); got $(typeof(kwargs[:link])). " *
+        "Use Ordinal() with link = ProbitLink() for the probit link."))
+    return nothing
+end
+
+"""
+    ordinal_logit(; link::Link = LogitLink())
+
+The Julia twin of `gllvmTMB`'s `ordinal_logit()` response family (`family_id
+20`, gllvmTMB ≥ 0.7.1): a cumulative-**logit** threshold model for K ≥ 3
+ordered categories, with a per-trait intercept and per-trait cutpoints
+(``\\tau_1 = 0`` fixed, ``K_t - 2`` free log-spaced cutpoints). It fits
+exactly the same model as [`Ordinal`](@ref) with `link = LogitLink()` — via
+[`fit_ordinal_gllvm_pertrait`](@ref) / [`fit_ordinal_gllvm_pertrait_cov`](@ref)
+— but returns the distinct [`OrdinalLogit`](@ref) marker, which pins the
+link: `fit_gllvm(Y; family = ordinal_logit(), link = ProbitLink())` throws
+`ArgumentError` rather than silently fitting a probit model under the logit
+name. As in `gllvmTMB`, `link` supports only the logit link and exists for
+API symmetry with the family constructor shape; pass anything else and this
+throws, naming [`Ordinal`](@ref) with `ProbitLink()` as the alternative —
+exactly as R's `ordinal_logit(link = "probit")` names `ordinal_probit()`.
+
+The shared-cutpoint, no-intercept [`fit_ordinal_gllvm`](@ref) route (the
+`Ordinal()` marker's other, non-default fitter) has no `gllvmTMB` twin.
+
+# Examples
+```julia
+fit = fit_gllvm(Y; family = ordinal_logit(), K = 1)
+```
+"""
+function ordinal_logit(; link::Link = LogitLink())
+    link isa LogitLink || throw(ArgumentError(
+        "ordinal_logit supports only LogitLink(); got $(typeof(link)). " *
+        "Use Ordinal() with link = ProbitLink() for the probit link."))
+    return OrdinalLogit()
+end
+
 # Link CDF F and density f = F'. The cumulative model and the analytic
 # score/Fisher-weight are written generically in (F, f), so a new link only
 # swaps these two. Logit (default) keeps its exact prior numerics; probit uses
@@ -432,6 +509,7 @@ function fit_ordinal_gllvm(Y::AbstractMatrix{<:Integer}; K::Integer,
     _check_ordinal_link(link)
     p, n = size(Y)
     obs = mask === nothing ? trues(p, n) : mask
+    _check_ordinal_levels(Y, obs)
     # Category count and warm starts use OBSERVED cells only, so a masked cell's
     # (arbitrary) value never leaks into the fit.
     C = 0
@@ -570,6 +648,7 @@ function fit_ordinal_gllvm_pertrait(Y::AbstractMatrix{<:Integer}; K::Integer,
     _check_ordinal_link(link)
     p, n = size(Y)
     obs = mask === nothing ? trues(p, n) : mask
+    _check_ordinal_levels(Y, obs)
     C = zeros(Int, p)
     @inbounds for t in 1:p, i in 1:n
         obs[t, i] && (C[t] = max(C[t], Int(Y[t, i])))
@@ -679,6 +758,7 @@ function fit_ordinal_gllvm_pertrait_cov(Y::AbstractMatrix{<:Integer};
     X_fit, _ = _slice_fixed_X(X, γ_fixed_mask)
     q = size(X_fit, 3)
     obs = mask === nothing ? trues(p, n) : mask
+    _check_ordinal_levels(Y, obs)
     C = zeros(Int, p)
     @inbounds for t in 1:p, i in 1:n
         obs[t, i] && (C[t] = max(C[t], Int(Y[t, i])))
