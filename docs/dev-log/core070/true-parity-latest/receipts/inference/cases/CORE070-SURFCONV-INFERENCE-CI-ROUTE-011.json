@@ -1,0 +1,120 @@
+{
+  "schema": "core070-inference-p1-case-receipt/v2",
+  "case_id": "CORE070-SURFCONV-INFERENCE-CI-ROUTE-011",
+  "verdict": "PASS",
+  "evidence_kind": "paired_bootstrap_structural",
+  "source_ids": [
+    "inference/CI-ROUTE-011"
+  ],
+  "batch": "tools/core070_surface_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1 (run by PR #569; read, not re-run)",
+  "batch_status": "PASS",
+  "batch_verifier": {
+    "tool": "tools/core070_verify_surface_conversion_batch.py",
+    "argv": "tools/core070_verify_surface_conversion_batch.py {state} --self-test (run by PR #569)",
+    "status": "PASS",
+    "accept_marker": "CORE070_SURFACE_CONVERSION_STATE_OK",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/verify.txt",
+    "note": "run by PR #569 on its raw run; this tool reads the tracked output and checks the marker"
+  },
+  "harness_kind": "bootstrap_structural",
+  "harness_pass": true,
+  "r_call": "confint(fit_r, parm='icc', method='bootstrap', level=0.95, nsim=200)",
+  "julia_call": "GLLVM.repeatability_ci(fit_tl, y, individual; method=:bootstrap, nsim=200, seed=11)",
+  "gllvmtmb_version": "0.7.1",
+  "read_from": {
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/julia-results.json": "00506228aaba442f4f3274734843869dc3de5249c6fb24f4a56b12f11f532011",
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/r-oracle.json": "3083644388edf68482c1f15134e472ddeb3edb676275d9faeb948f9f36bddcf7",
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/receipt.json": "930a992fe78849b090bc2fd4a79760079825f96b041268db028fb87c31de62a1",
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/verify.txt": "2f10e6fdf2b3015c8be423eaed43e86f58646ee0d59c2f6d4a8ecef459d5eda5",
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/run-commit.json": "6d3b14ecef64f3e530cbdba2672e8637f2502c1c506e014cd61449798eabd3d1",
+    "docs/dev-log/core070/true-parity-latest/surface-conversion-batch-contract-p1.json": "6e8e74bb16c0f5f997705cb5dd7065a3be254dfdafba693dcb29ef341d3558f6"
+  },
+  "pr569_batch_receipt": {
+    "receipt": "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/receipt.json",
+    "julia_results_sha256": "00506228aaba442f4f3274734843869dc3de5249c6fb24f4a56b12f11f532011",
+    "raw_sha256": "ea2abd503a2baf83e7a447bc7f0238e7a6346299141ae5ab7fdd7937edb97708",
+    "contract_sha256": "6e8e74bb16c0f5f997705cb5dd7065a3be254dfdafba693dcb29ef341d3558f6",
+    "run_commit": "681c4c3ca666e630470bba01a057bc88158b85f3"
+  },
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/julia-results.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/r-oracle.json"
+  ],
+  "measured": {
+    "r_structural": {
+      "point": [
+        0.73310432583621,
+        0.30418390605455553,
+        0.29038131179091775,
+        0.6030432553074319
+      ],
+      "brackets_point": true,
+      "lower": [
+        0.5712948026325934,
+        0.1261692536242584,
+        0.12687072065805738,
+        0.4143937569909269
+      ],
+      "upper": [
+        0.8287261940665098,
+        0.4680710755063404,
+        0.4408781191622901,
+        0.719546526380621
+      ],
+      "finite": true,
+      "ordered": true
+    },
+    "julia_structural": {
+      "point": [
+        0.7331038103742099,
+        0.3041835543684783,
+        0.29038085945720715,
+        0.6030426156325114
+      ],
+      "brackets_point": true,
+      "lower": [
+        0.5615037788898565,
+        1.0616397834255944e-07,
+        0.08041763921334608,
+        4.531248699060387e-40
+      ],
+      "upper": [
+        0.8657988388339894,
+        0.4709604066904781,
+        0.47235908259508635,
+        0.7286426115022016
+      ],
+      "finite": true,
+      "ordered": true
+    }
+  },
+  "why_not_numeric": "Structural bootstrap check (finite, ordered, brackets the point), per the contract's structural_justification: two independent stochastic bootstraps, so endpoints are not compared. The point legs agree to 6.4e-07 but the contract declares no tolerance for them, and none is invented.",
+  "point_leg_max_abs_diff_unbound": 6.3967492047734e-07,
+  "anomaly": {
+    "collapsed_julia_lower_bounds": [
+      {
+        "entry": 2,
+        "julia_lower": 1.0616397834255944e-07,
+        "r_lower": 0.1261692536242584
+      },
+      {
+        "entry": 4,
+        "julia_lower": 4.531248699060387e-40,
+        "r_lower": 0.4143937569909269
+      }
+    ],
+    "rule": "Julia lower bound < 0.001 x R lower bound",
+    "fix": "draft PR #576",
+    "action": "re-measure after #576 lands",
+    "note": "Anomaly: the Julia bootstrap lower bounds for 2 ICC entries collapsed (entry 2: Julia 1.06e-07 vs R 0.126; entry 4: Julia 4.53e-40 vs R 0.414). The structural check passes (finite, ordered, brackets the point) and endpoints are not compared, so this PASS does not mean the bootstraps agree. Root cause found and fixed in draft PR #576: a Woodbury quadratic form went negative at extreme variance ratios, so bootstrap refits reported converged with an impossible log-likelihood. This receipt predates that fix (PR #569's run); re-measure after #576 lands."
+  },
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "61c5eda4822da20591b6fa91869f93c3faf5d369",
+  "glvmodels_worktree_dirty": [],
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+}

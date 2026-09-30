@@ -1,0 +1,60 @@
+{
+  "schema": "core070-aghq-p1-case-receipt/v1",
+  "case_id": "CORE070-AGHQ-AUTO-K-TWEEDIE-CONTROL-CONTRACT",
+  "verdict": "PASS",
+  "evidence_kind": "r_only_policy_observation",
+  "batch": "tools/core070_aghq_public_policy_bind.R, GLLVM_PARITY_PIN=P1",
+  "measures": "R-side AGHQ policy contract on one toy public fit (or the gllvmTMBcontrol default); R only",
+  "why_not_numeric": "R only: the case runs a public gllvmTMB() fit (or reads formals(gllvmTMBcontrol)) and checks R's own fit$aghq record against the runner's assertion. No Julia call is part of the case, so there is no R-vs-Julia comparison; a pass shows the R contract still holds at P1, not parity.",
+  "julia_side": "none: the case defines no Julia call",
+  "public_call": "gllvmTMB(..., family=tweedie(), latent(..., unique=FALSE), control=gllvmTMBcontrol(aghq='auto', aghq_ridge=Inf))",
+  "fixture": {
+    "p_traits": 5,
+    "n_sites": 30,
+    "seed": 42,
+    "fam": "tweedie"
+  },
+  "expected_k": 9,
+  "runner_detail": "public auto fit",
+  "assertion_pass": true,
+  "observed_p1": {
+    "used": true,
+    "k": 9,
+    "reason": "quadrature on z_B (d = 1, k = 9, 9 nodes); 9 adaptation passes, converged (adaptation mode fixed; gradient below tolerance; max |grad| = 7.42e-05, relative 3.73e-07); final max |mode shift| = 0",
+    "convergence": 0,
+    "objective": 198.93968140574808
+  },
+  "health_flags": [],
+  "p0_observed": {
+    "used": true,
+    "k": 9,
+    "reason": "quadrature on z_B (d = 1, k = 9, 9 nodes); 9 adaptation passes, converged (adaptation mode fixed; gradient below tolerance; max |grad| = 7.42e-05, relative 3.73e-07); final max |mode shift| = 0",
+    "convergence": 0,
+    "objective": 198.93968140574813
+  },
+  "p0_to_p1_objective_abs_diff": 5.684341886080802e-14,
+  "p0_note": "P0 observation from the 2026-09-04 bind, which ran on a gllvmTMB twin branch that is neither pin (see the contract's p0_r_engine_note); the objective difference is R against R across versions, recorded for reference, not a comparison",
+  "batch_status": "PASS",
+  "gllvmtmb_version": "0.7.1",
+  "batch_verifier": {
+    "tool": "tools/core070_aghq_p1_receipts.py (policy receipt checks)",
+    "status": "PASS",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-policy-p1/verify.txt"
+  },
+  "read_from": {
+    "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-policy-p1/receipt.json": "4d9b7525e98ae0b90e29e432f6cee1021be8d97490e662f517234d308f28915c",
+    "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-policy-p1/run-commit.json": "f7a92a98db6631fe1634c769d6e345de5ff401ba3db6d65f2de9031721f80b5a",
+    "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-policy-p1/verify.txt": "4d7750a5d67d607223b4710ff909f9d01a533fe2a9ea9ec99aa1e713e2184bb8",
+    "docs/dev-log/core070/true-parity-latest/aghq-public-policy-contract-p1.json": "ab6e4c01168fecb1d7cc31e6df948e10d8671e02d96a97d847c7d2521e242e0a"
+  },
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-policy-p1/receipt.json"
+  ],
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "glvmodels_commit": "fd92b6551f7ecc99d82eee6f23a4ef42536a778c",
+  "glvmodels_worktree_dirty": [],
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+}

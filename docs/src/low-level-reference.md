@@ -67,7 +67,11 @@ GLLVModels._fit_phylo_gamma_xlv
 GLLVModels._fit_verdict
 GLLVModels._aghq_gh_normal
 GLLVModels._tweedie_verdict
+GLLVModels._multinomial_verdict
+GLLVModels._multinomial_max_obs_nll
 GLLVModels._beta_binomial_verdict
+GLLVModels._gp1_verdict
+GLLVModels._beta_binomial_grouped_verdict
 GLLVModels._mixed_unpack
 GLLVModels._phylo_ordinal_xlv_marginal_loglik
 GLLVModels._gauss_hermite
@@ -118,12 +122,16 @@ GLLVModels._fit_gaussian_structured_sources
 
 ## Temporal source internals
 
-The state index, coordinate layout and exact marginal likelihood behind
-[`fit_temporal_gllvm`](@ref), and the port of `TMB::tmbprofile` used by
+The state index, the ordinary unit / unit_obs composition, the coordinate
+layout and exact marginal likelihood behind [`fit_temporal_gllvm`](@ref), and
+the port of `TMB::tmbprofile` used by
 [`profile_temporal`](@ref). Not exported; can change without notice.
 
 ```@docs
 GLLVModels.TemporalSpec
+GLLVModels.TemporalOrdinaryTier
+GLLVModels.TemporalComposition
+GLLVModels._temporal_composition
 GLLVModels.TemporalLayout
 GLLVModels._temporal_parameter_names
 GLLVModels._temporal_trait_block
@@ -222,4 +230,28 @@ GLLVModels._grouped_gaussian_objective
 GLLVModels.JointGroupedLaplaceResult
 GLLVModels._joint_grouped_state
 GLLVModels._bridge_fit_precision_multivariate
+GLLVModels._phylo_latent_tree_precision
+GLLVModels._phylo_latent_dense_precision
+```
+
+## iSDM internals
+
+Implementation helpers behind the integrated species distribution model route
+([`fit_isdm_gllvm`](@ref)). They are internal and listed here because
+Documenter's `checkdocs` requires every docstring in the module to appear in some
+`@docs` block. Their presence here is not an admission of a wider public interface.
+
+```@docs
+GLLVModels.isdm_laplace_grad
+GLLVModels._isdm_parse_formula
+GLLVModels._isdm_admitted_law_id
+GLLVModels._isdm_declared_core
+GLLVModels._isdm_prepare_offset
+GLLVModels._isdm_assert_observed_arms
+GLLVModels._isdm_observation_design
+GLLVModels._isdm_dbinom_cloglog
+GLLVModels._isdm_cloglog_score
+GLLVModels._isdm_cloglog_obs_weight
+GLLVModels._isdm_cell_mode
+GLLVModels._isdm_cell_loglik
 ```

@@ -2,7 +2,8 @@
 isdefined(@__MODULE__, :parity_nb2_health) || include(joinpath(@__DIR__, "nb2_health.jl"))
 module Core070NB2FormulaCase
 using GLLVModels, RCall, Test, Random, SHA, TOML, LinearAlgebra
-using ..Main: parity_nb2_health, parity_nb2_original_Y, _core070_receipt_dir, _core070_sha256_file, parity_loadings_p5k2
+using ..Main: parity_nb2_health, parity_nb2_original_Y, _core070_receipt_dir, _core070_sha256_file, parity_loadings_p5k2,
+    core070_record_values!
 source=read("test/parity/test_negbin_parity.jl",String)
 helpers=source[findfirst("function _rand_poisson",source).start:findfirst("@testset \"NB2 GLLVModels",source).start-1]
 dgp=source[findfirst("    Random.seed!(45)",source).start:findfirst("    jl_fit =",source).start-1]
@@ -40,13 +41,33 @@ file=joinpath(_core070_receipt_dir(),"nb2-formula.toml")
 open(io->TOML.print(io,report),file,"w")
 println("NB2_FORMULA_SHA256 ",_core070_sha256_file(file))
 @testset "Original NB2 formula model and inputs" begin
-    @test native.converged && r.converged
-    @test r.health["native_gradient_max"]<=1e-4 && r.health["r_gradient_max"]<=1e-4
+    # The native fit reaches the per-group dispersion boundary on this data (R's dispersions
+    # for traits 1 and 3 are 4.3e11 and 3.1e7), so it reports converged = false; R's
+    # convergence stays a gate, with the gradient, same-point and logLik gates below (decision 2026-09-29).
+    # On this data R's nlminb reports relative convergence (4) on some runners and false
+    # convergence (8) on others (two traits at the Poisson boundary). Code 8 is accepted only
+    # with logLik and same-point agreement; any other nonzero code fails (decision 2026-09-30).
+    r_ok = r.converged || (r.health["r_code"] != 0 && occursin("false convergence (8)", r.health["r_message"]) &&
+                           isapprox(native.loglik, r.logLik; rtol=1e-6) && abs(r.health["samepoint_delta"]) <= 1e-6)
+    println("  gllvmTMB r_code = ",r.health["r_code"],", r_message = ",r.health["r_message"],
+            (!r.converged && r_ok) ? " (false convergence accepted only with logLik and same-point agreement)" : "")
+    @test (native.converged || any(native.dispersion_boundary)) && r_ok
+    @test r.health["native_gradient_max"]<=1e-4
+    # R's gradient is recorded, not a gate (decision 2026-09-28): on this dataset two
+    # traits sit at the Poisson boundary, so nlminb's stopping gradient varies by machine
+    # (5.6e-5 Totoro, 2.4e-3 CI, 4.9e-3 Mac). R's convergence code (r.converged) and the
+    # logLik agreement below stay gates, as in test_nb2_finite_dispersion_parity.jl.
+    println("  gllvmTMB r_gradient_max = ",r.health["r_gradient_max"]," (recorded, not a gate)")
     @test abs(r.health["samepoint_delta"])<=1e-6
+    core070_record_values!("logLik, native route (the formula routes are checked against it)";
+        julia=native.loglik, r=r.logLik, rtol=1e-6, test="@test native.loglik≈r.logLik rtol=1e-6")
     @test native.loglik≈r.logLik rtol=1e-6
     for f in (wide,longfit)
         @test f isa NBGroupedFit
-        @test f.converged
+        # The corrected NB2 kernel reports boundary dispersion as not converged, and on this
+        # data two traits sit at the Poisson boundary. The route-equivalence gates below
+        # (theta equal to the native fit within 1e-10) are what this cell tests (decision 2026-09-29).
+        @test f.converged || any(f.dispersion_boundary)
         @test f.hessian==:observed
         @test length(theta(f))==19
         @test theta(f)≈theta(native) rtol=0 atol=1e-10

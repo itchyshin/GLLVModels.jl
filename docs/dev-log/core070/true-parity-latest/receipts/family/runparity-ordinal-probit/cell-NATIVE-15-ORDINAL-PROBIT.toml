@@ -1,0 +1,14 @@
+contract_sha256 = "bc282aed156488eee12c519fb0e8a68b53a508197a89a34d6620f07adaee0765"
+fixture = "test/parity/test_ordinal_probit_parity.jl"
+status = "success"
+run_id = "867492a46ca227d6b64634d08c1ada9bcf8c7c2f56c1e8e7b1e9d18f1b99fec3"
+fixture_sha256 = "c4ed0c71390f1b4bd79db0cf717b981a2cef30be0d2f3a51ff9c3a6f1487e3fb"
+id = "NATIVE-15-ORDINAL-PROBIT"
+execution_manifest_sha256 = "85d7341204dfec19721cf1f102ee994b6ccf9dd35a2c56e48058a4f3c410ada9"
+execution_case_ids = ["NATIVE-15-ORDINAL-PROBIT"]
+
+[assertions]
+passed = 5
+broken = 0
+failed = 0
+errored = 0

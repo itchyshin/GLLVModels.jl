@@ -81,6 +81,54 @@ end
 _glm_weight(f::StudentTFamily, μ, n, me) =
     (f.ν + one(f.ν)) / ((f.ν + 3 * one(f.ν)) * f.σ^2) * me^2
 
+# Damped mode search without the small-step bypass (#623). The Fisher weight
+# above is (ν+3)/ν times smaller than the observed curvature at small residuals,
+# so for ν < 3 a full Fisher step overshoots the mode by more than a factor of 2
+# and the undamped search cycles: on the #623 fixture (ν = 1.5, σ = 0.3) it
+# alternated between -0.047 and 0.212 around the mode 0.074. Step halving on the
+# log posterior stops the cycle; `_laplace_mode_robust` makes it apply to small
+# steps too and extrapolates along non-concave ridges (see laplace.jl).
+_laplace_mode_should_backtrack(::StudentTFamily) = true
+_laplace_mode_robust(::StudentTFamily) = true
+
+# Two-peak joints (#626). The Student-t log joint in z is non-concave wherever a
+# residual exceeds σ√ν, and there it can have a second, higher peak, at which the
+# outlying trait is fitted and the others are treated as outliers instead. A local
+# Newton search from z = 0 reaches the nearer peak: on the #623 fixture
+# `studentt_K1_true`, sites 54 and 103 stopped 0.24 and 2.85 below the global one.
+# So after the search, the observed trait with the largest residual beyond σ√ν
+# gives one extra start, the point reached by moving along its loading row until
+# that trait fits exactly, and the higher peak is kept. It only runs where such a
+# residual exists (a concave joint has one peak), and a restart must beat the first
+# peak by more than rounding level, so single-peak sites keep the same mode.
+function _laplace_mode_alt_starts(f::StudentTFamily, z, y, n, Λ, β, link::IdentityLink;
+        mask = nothing, offset = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
+    off = offset === nothing ? false : offset
+    η = β .+ off .+ Λ * z
+    thr = f.σ * sqrt(f.ν)
+    # One restart, from the most outlying trait: restarting from every outlier cost
+    # 41% more time in test_studentt.jl (58 s -> 82 s) for no extra fixture site.
+    tbest = 0
+    rmax = thr
+    @inbounds for t in eachindex(y)
+        (mask === nothing || mask[t]) || continue
+        r = abs(y[t] - η[t])
+        r > rmax && any(!iszero, view(Λ, t, :)) && (tbest = t; rmax = r)
+    end
+    tbest == 0 && return z
+    q0 = _laplace_mode_logpost(f, y, n, Λ, β, link, z; mask = mask, offset = offset)
+    isfinite(q0) || return z
+    λ = Λ[tbest, :]
+    zt = _laplace_mode(f, y, n, Λ, β, link; mask = mask, offset = offset,
+                       maxiter = maxiter, tol = tol,
+                       z0 = z .+ λ .* ((y[tbest] - η[tbest]) / dot(λ, λ)), alt_starts = false)
+    qt = _laplace_mode_logpost(f, y, n, Λ, β, link, zt; mask = mask, offset = offset)
+    return (isfinite(qt) && qt > q0 + 1e-10 * (1 + abs(q0))) ? zt : z
+end
+_laplace_mode_step_weight(f::StudentTFamily, μ, n, me, y, link::IdentityLink, η) =
+    ismissing(y) ? _glm_weight(f, μ, n, me) :
+    max(_glm_obs_weight(f, μ, n, me, y, link, η), _glm_weight(f, μ, n, me))
+
 # Closed-form location–scale t log-density:
 #   ℓ = logΓ((ν+1)/2) − logΓ(ν/2) − ½log(νπ) − log σ − (ν+1)/2 · log(1 + r²/(ν σ²)).
 # Limit the fixed-order series to Float64, including nested ForwardDiff Duals.
@@ -509,6 +557,24 @@ function fit_studentt_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     opts = Optim.Options(g_tol = g_tol, iterations = iterations)
     res = Optim.optimize(negll, θ0, ls, opts; autodiff = :finite)
+    # An estimated ν can run past an interior optimum to the flat ν→∞ limit: the
+    # per-trait ν profile can have an interior peak and a lower rise towards the
+    # Gaussian limit, and L-BFGS from ν₀ = 3 may land on the wrong side (near-Gaussian
+    # parity diagnostic, Julia 1.13 draw: ν₁ → 5e9 at logLik −1430.162, while the
+    # interior optimum ν₁ = 17.7 has −1430.097). So when any estimated ν reaches the
+    # boundary, restart those traits warm from ν = 20 and ν = 50 and keep the best
+    # optimum. Fits whose ν stays finite are untouched.
+    if nu === nothing
+        iν = (p + rr + ndisp + 1):(p + rr + 2 * ndisp)
+        θb = Optim.minimizer(res)
+        at_bound = findall(>(1e6), 1.0 .+ exp.(θb[iν]))
+        for ν_r in (isempty(at_bound) ? () : (20.0, 50.0))
+            θr = copy(θb)
+            θr[iν[at_bound]] .= log(ν_r - 1.0)
+            res_r = Optim.optimize(negll, θr, ls, opts; autodiff = :finite)
+            Optim.minimum(res_r) < Optim.minimum(res) - 1e-8 && (res = res_r)
+        end
+    end
     θ̂ = Optim.minimizer(res)
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)

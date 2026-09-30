@@ -24,18 +24,30 @@ const _CORE070_FAMILY_SMOKE_IDS = Core070CaseRegistry.FAMILY_IDS
 const _CORE070_SOURCE = Ref{Dict{String, Any}}()
 const _CORE070_RUN = Ref{Any}(nothing)
 _core070_required() = get(ENV, "CORE070_PARITY_REQUIRED", "0") == "1"
-const _CORE070_ORACLE_BUILD_RECEIPT = ".unlazy/core070-aghq/oracle-receipts/build.json"
-const _CORE070_ORACLE_SOURCE_RECEIPT = ".unlazy/core070-aghq/oracle-source/source.json"
+# Oracle build/source receipt paths are pin-aware: see _core070_oracle_receipts_rel()
+# in core070_pin.jl.
 
 const _CORE070_FIXTURES = Core070CaseRegistry.FIXTURES
 
 _core070_root() = normpath(joinpath(@__DIR__, "..", ".."))
 
-function _core070_copy_oracle_receipts!(receipt_dir::AbstractString)
+# The selected pin's oracle build/source receipts, each checked against the pin
+# (reference_commit, source_tree_sha256, archive_sha256; plus namespace_sha256 for
+# source.json) before any use. A stale receipt from another pin is an error.
+function _core070_oracle_receipt_paths()
     root = _core070_root()
-    for rel in (_CORE070_ORACLE_BUILD_RECEIPT, _CORE070_ORACLE_SOURCE_RECEIPT)
-        source = joinpath(root, rel)
-        isfile(source) || throw(ArgumentError("required oracle receipt is missing: $rel"))
+    rel = _core070_oracle_receipts_rel()
+    for kind in (:build, :source)
+        path = joinpath(root, getfield(rel, kind))
+        isfile(path) || throw(ArgumentError("required oracle receipt is missing: $(getfield(rel, kind))"))
+        _core070_check_oracle_receipt(read(path, String), getfield(rel, kind), kind)
+    end
+    return (build = joinpath(root, rel.build), source = joinpath(root, rel.source))
+end
+
+function _core070_copy_oracle_receipts!(receipt_dir::AbstractString)
+    receipts = _core070_oracle_receipt_paths()
+    for source in (receipts.build, receipts.source)
         cp(source, joinpath(receipt_dir, basename(source)); force = false)
     end
     return nothing
@@ -59,7 +71,7 @@ function _core070_execution_paths(requested::AbstractVector{<:AbstractString})
         "test/parity/test_delta_gamma_parity.jl", "test/parity/fixtures/core070_gaussian_original.toml",
     "test/parity/covariance_formula_cases.jl", "docs/dev-log/core070/covariance-formula-programme-contract.json", "tools/core070_covariance_mode_fits.jl", "tools/core070_source_fixed_residual_pair.jl", "test/parity/fixtures/core070_covariance_modes.R", "test/parity/fixtures/core070_covariance_fits.R", "docs/dev-log/core070/covariance-programme-contract.json",
     "test/parity/fixtures/core070_gaussian_reference.R", "Project.toml", "test/Project.toml",
-        "test/parity/Project.toml", "docs/dev-log/core070/frozen-r070-contract.toml",
+        "test/parity/Project.toml", _core070_frozen_contract_rel(),
     ]
     append!(paths, (_CORE070_FIXTURES[id] for id in requested))
     for manifest in ("Manifest.toml", "test/Manifest.toml", "test/parity/Manifest.toml")
@@ -124,6 +136,9 @@ function _core070_source_pin!()
     installed_tree = _core070_tree_sha256(pkg_root; ignore = rel -> rel == "CORE070_SOURCE_PIN.toml")
     get(pin, "installed_tree_sha256", nothing) == installed_tree ||
         throw(ArgumentError("installed gllvmTMB bytes differ from the exact-build source-pin receipt"))
+    receipts = _core070_oracle_receipt_paths()
+    _core070_json_top_string(read(receipts.build, String), "installed_tree_sha256") == installed_tree ||
+        throw(ArgumentError("oracle build receipt does not describe the installed gllvmTMB library"))
     source = Dict{String, Any}(
         "reference_commit" => _CORE070_REFERENCE_COMMIT,
         "archive_sha256" => _CORE070_ARCHIVE_SHA256,
@@ -131,8 +146,8 @@ function _core070_source_pin!()
         "source_marker_sha256" => _core070_sha256_file(marker),
         "source_tree_sha256" => source_tree,
         "installed_tree_sha256" => installed_tree,
-        "oracle_build_receipt_sha256" => _core070_sha256_file(joinpath(_core070_root(), _CORE070_ORACLE_BUILD_RECEIPT)),
-        "oracle_source_receipt_sha256" => _core070_sha256_file(joinpath(_core070_root(), _CORE070_ORACLE_SOURCE_RECEIPT)),
+        "oracle_build_receipt_sha256" => _core070_sha256_file(receipts.build),
+        "oracle_source_receipt_sha256" => _core070_sha256_file(receipts.source),
         "julia_source_tree_sha256" => _core070_tree_sha256(joinpath(@__DIR__, "..", "..", "src")),
         "julia_version" => string(VERSION),
         "julia_machine" => Sys.MACHINE,
@@ -160,7 +175,7 @@ end
 function core070_start_run!()
     _core070_required() || return nothing
     _CORE070_RUN[] === nothing || throw(ArgumentError("CORE-070 run was already started in this Julia process"))
-    contract_path = joinpath(_core070_root(), "docs/dev-log/core070/frozen-r070-contract.toml")
+    contract_path = joinpath(_core070_root(), _core070_frozen_contract_rel())
     manifest = TOML.parsefile(contract_path)
     _core070_check_frozen_contract_pin(manifest, contract_path)
     Core070CaseRegistry.validate_manifest(manifest)
@@ -171,7 +186,7 @@ function core070_start_run!()
     run = start_run!(_core070_receipt_dir();
         requested_case_ids = requested, family_smoke_case_ids = _CORE070_FAMILY_SMOKE_IDS,
         source = source, inventory = inventory,
-        contract_sha256 = _core070_sha256_file(joinpath(root, "docs/dev-log/core070/frozen-r070-contract.toml")))
+        contract_sha256 = _core070_sha256_file(contract_path))
     try
         _core070_copy_oracle_receipts!(run.dir)
     catch err
@@ -182,13 +197,44 @@ function core070_start_run!()
     return nothing
 end
 
+# Measured R and Julia values (A3 family re-measure at gllvmTMB P1). A cell
+# receipt records assertion counts only, which says nothing about how close the
+# two engines were. core070_record_values! keeps the numbers a required cell
+# compares: each call appends one R-vs-Julia pair, with the tolerance of the
+# @test it sits beside (copied, not changed), to values-<case>.toml in the
+# receipt directory, so a receipt can recompute |R - Julia| from saved values.
+# Outside a required cell it does nothing. Inside a fixture group the caller
+# names the case the values belong to.
+const _CORE070_ACTIVE_CELLS = Ref{Vector{String}}(String[])
+
+function core070_record_values!(label::AbstractString; julia::Real, r::Real, rtol::Real = 0.0,
+                                atol::Real = 0.0, test::AbstractString,
+                                case::Union{Nothing, AbstractString} = nothing)
+    active = _CORE070_ACTIVE_CELLS[]
+    isempty(active) && return nothing
+    id = case === nothing ? (length(active) == 1 ? only(active) : throw(ArgumentError(
+        "values recorded inside a fixture group must name their case"))) : String(case)
+    id in active || throw(ArgumentError("$id is not an active required cell"))
+    path = joinpath(_core070_receipt_dir(), "values-$id.toml")
+    table = isfile(path) ? TOML.parsefile(path) : Dict{String, Any}("case_id" => id, "values" => Any[])
+    push!(table["values"], Dict{String, Any}("label" => String(label), "julia" => Float64(julia),
+        "r" => Float64(r), "rtol" => Float64(rtol), "atol" => Float64(atol), "test" => String(test)))
+    open(io -> TOML.print(io, table), path, "w")
+    return nothing
+end
+
 function core070_execute_case!(id::AbstractString, fixture::AbstractString, thunk::Function)
     _core070_required() || return thunk()
     core070_case_requested(id) || return nothing
     run = _CORE070_RUN[]
     run === nothing && throw(ArgumentError("CORE-070 run provenance was not verified"))
-    testset = @testset "CORE-070 required cell: $id" begin
-        thunk()
+    _CORE070_ACTIVE_CELLS[] = [String(id)]
+    testset = try
+        @testset "CORE-070 required cell: $id" begin
+            thunk()
+        end
+    finally
+        _CORE070_ACTIVE_CELLS[] = String[]
     end
     counts = testset_counts(testset)
     return record_case!(run, id, fixture;
@@ -204,8 +250,13 @@ function core070_execute_group!(ids::AbstractVector{<:AbstractString}, fixture::
         "a shared-fixture CORE-070 group must be requested as one complete scope"))
     run = _CORE070_RUN[]
     run === nothing && throw(ArgumentError("CORE-070 run provenance was not verified"))
-    testset = @testset "CORE-070 required fixture group: $(join(active, ", "))" begin
-        thunk()
+    _CORE070_ACTIVE_CELLS[] = active
+    testset = try
+        @testset "CORE-070 required fixture group: $(join(active, ", "))" begin
+            thunk()
+        end
+    finally
+        _CORE070_ACTIVE_CELLS[] = String[]
     end
     counts = testset_counts(testset)
     return [record_case!(run, id, fixture;

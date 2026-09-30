@@ -272,13 +272,22 @@ function Base.show(io::IO, f::TweedieFit)
           f.converged ? "" : ", NOT CONVERGED", ")")
 end
 
-# TweedieED deliberately does NOT opt into the damped mode-search
-# backtracking (audit rider REVERTED same day, 2026-08-27): the backtracking
-# merit function evaluates the log-posterior, and Tweedie's log-density is the
-# infinite series — opting in ballooned the "Tweedie engine health" testset
-# from minutes to 48m20s (measured, full-suite run). The undamped exposure is
-# recorded engine debt; a cheap merit function (series value cached from the
-# objective evaluation, or a quadratic model test) is the eventual fix shape.
+# TweedieED opts into the damped mode-search backtracking (#623). The 2026-08-27
+# opt-in was reverted because the merit function evaluated the full log-density,
+# whose series normaliser made the "Tweedie engine health" testset take 48m20s.
+# The merit now uses only the μ-dependent kernel below: the series term c(y, φ)
+# is constant in μ, so it cancels in every q1 >= q0 comparison and the accepted
+# steps are the same as with the full density. Undamped, the K = 2 search
+# diverged: on the #623 fixture it returned ẑ = [-5.2e10, 8.4e8] where the mode
+# is [-1.975, 0.389], and the site's Laplace value was off by 1.35e21.
+_laplace_mode_should_backtrack(::TweedieED) = true
+function _laplace_mode_merit_term(f::TweedieED, μ, n, y)
+    μ = max(μ, 1e-12)                       # as in `tweedie_logpdf`
+    return (y * μ^(1 - f.p) / (1 - f.p) - μ^(2 - f.p) / (2 - f.p)) / f.φ
+end
+_laplace_mode_step_weight(f::TweedieED, μ, n, me, y, link::LogLink, η) =
+    ismissing(y) ? _glm_weight(f, μ, n, me) :
+    max(_glm_obs_weight(f, μ, n, me, y, link, η), _glm_weight(f, μ, n, me))
 
 """
     fit_tweedie_gllvm(Y; K, link=LogLink(), φ_init=1.0, p_init=1.5, …) -> TweedieFit

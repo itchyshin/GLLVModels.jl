@@ -37,6 +37,8 @@ const _TW_LOGLIK_ATOL = 1e-6
         @test r_fit.health.n_power_free == 0
         @test jl_fit.power_fixed && jl_fit.power == p_true
         @test GLLVModels._nparams(jl_fit) == p + GLLVModels.rr_theta_len(p, K) + p
+        core070_record_values!("logLik, fixed common power"; julia = jl_fit.loglik, r = r_fit.logLik, atol = _TW_LOGLIK_ATOL,
+                               test = "@test isapprox(jl_fit.loglik, r_fit.logLik; atol = _TW_LOGLIK_ATOL)")
         @test isapprox(jl_fit.loglik, r_fit.logLik; atol = _TW_LOGLIK_ATOL)
     end
 
@@ -53,6 +55,8 @@ const _TW_LOGLIK_ATOL = 1e-6
         @test r_fit.health.n_power_free == 1
         @test !jl_fit.power_fixed && 1.0 < jl_fit.power < 2.0
         @test GLLVModels._nparams(jl_fit) == p + GLLVModels.rr_theta_len(p, K) + p + 1
+        core070_record_values!("logLik, estimated shared power"; julia = jl_fit.loglik, r = r_fit.logLik, atol = _TW_LOGLIK_ATOL,
+                               test = "@test isapprox(jl_fit.loglik, r_fit.logLik; atol = _TW_LOGLIK_ATOL)")
         @test isapprox(jl_fit.loglik, r_fit.logLik; atol = _TW_LOGLIK_ATOL)
     end
 
@@ -70,6 +74,8 @@ const _TW_LOGLIK_ATOL = 1e-6
         @test all(pw -> 1.0 < pw < 2.0, jl_fit.power)
         @test all(pw -> 1.0 < pw < 2.0, r_fit.p_vec)
         @test GLLVModels.StatsAPI.dof(jl_fit) == p + GLLVModels.rr_theta_len(p, K) + p + p
+        core070_record_values!("logLik, estimated per-species power"; julia = jl_fit.loglik, r = r_fit.logLik, atol = _TW_LOGLIK_ATOL,
+                               test = "@test isapprox(jl_fit.loglik, r_fit.logLik; atol = _TW_LOGLIK_ATOL)")
         @test isapprox(jl_fit.loglik, r_fit.logLik; atol = _TW_LOGLIK_ATOL)
     end
 end

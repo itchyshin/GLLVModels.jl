@@ -13,26 +13,72 @@
 
 args <- commandArgs(TRUE)
 stopifnot(length(args) == 2L)
-pkg_root <- normalizePath(args[[1]], mustWork = TRUE)
-receipt_path <- args[[2]]
-stopifnot(!file.exists(receipt_path))
 
-suppressPackageStartupMessages({
-  if (!requireNamespace("devtools", quietly = TRUE)) {
-    stop("devtools required to load gllvmTMB source tree", call. = FALSE)
-  }
-  if (!requireNamespace("jsonlite", quietly = TRUE)) {
-    stop("jsonlite required for receipt output", call. = FALSE)
-  }
-  devtools::load_all(pkg_root, quiet = TRUE)
-})
+# Pin switch (D-294/D-295): GLLVM_PARITY_PIN unset or "P0" keeps the original
+# 2026-09-04 behaviour below (devtools::load_all on a gllvmTMB source tree,
+# receipt written to <receipt-json-out>). "P1" runs the same 14 rows against
+# the installed P1 oracle library instead:
+#
+#   GLLVM_PARITY_PIN=P1 Rscript --vanilla tools/core070_aghq_public_policy_bind.R \
+#     <frozen-library> <destination>
+#
+# At P1 the row list is checked against the P1 contract written by
+# tools/core070_aghq_p1_contract.py, the library must carry the
+# CORE070_SOURCE_PIN.toml marker for P1 (tools/core070_source_pin.R), and
+# <destination> (a directory that must not exist) is created only after those
+# checks pass; it receives receipt.json. Any other pin value stops here.
+parity_pin <- toupper(trimws(Sys.getenv("GLLVM_PARITY_PIN", "P0")))
+if (!parity_pin %in% c("P0", "P1")) stop("GLLVM_PARITY_PIN must be P0 or P1, got '", parity_pin, "'")
+p1_reference <- "9539352f66f2db2cc26b1c393e67212a359b60c9"
+p1_contract_rel <- "docs/dev-log/core070/true-parity-latest/aghq-public-policy-contract-p1.json"
 
 sha256_file <- function(path) {
   cmd <- if (nzchar(Sys.which("sha256sum"))) "sha256sum" else "shasum"
-  argv <- if (identical(cmd, "sha256sum")) path else c("-a", "256", path)
+  argv <- if (identical(cmd, "sha256sum")) shQuote(path) else c("-a", "256", shQuote(path))
   line <- system2(cmd, argv, stdout = TRUE, stderr = TRUE)
   stopifnot(is.null(attr(line, "status")), length(line) >= 1L)
   sub("[[:space:]].*$", "", line[[1L]])
+}
+
+if (identical(parity_pin, "P1")) {
+  frozen_library <- normalizePath(args[[1]], mustWork = TRUE)
+  output_dir <- args[[2]]
+  stopifnot(!file.exists(output_dir))
+  receipt_path <- file.path(output_dir, "receipt.json")
+  .libPaths(c(frozen_library, .libPaths()))
+  suppressPackageStartupMessages({
+    library(gllvmTMB)
+    library(jsonlite)
+  })
+  stopifnot(normalizePath(find.package("gllvmTMB")) ==
+            normalizePath(file.path(frozen_library, "gllvmTMB")))
+  root <- normalizePath(".")
+  contract_path <- file.path(root, p1_contract_rel)
+  contract <- jsonlite::read_json(contract_path, simplifyVector = FALSE)
+  stopifnot(identical(contract$reference_commit, p1_reference),
+            identical(contract$status, "P1_AGHQ_PUBLIC_POLICY_CONTRACT"),
+            length(contract$cases) == 14L)
+  source(file.path(root, "tools/core070_source_pin.R"))
+  source_pin <- core070_source_pin(root, frozen_library, parity_pin, p1_reference)
+  # No host path in the receipt: the library is identified by its marker record.
+  source_pin$marker_path <- "gllvmTMB/CORE070_SOURCE_PIN.toml"
+  # Create the destination only after the pin checks pass, so a refused run
+  # leaves nothing behind.
+  dir.create(output_dir, recursive = TRUE)
+} else {
+  pkg_root <- normalizePath(args[[1]], mustWork = TRUE)
+  receipt_path <- args[[2]]
+  stopifnot(!file.exists(receipt_path))
+
+  suppressPackageStartupMessages({
+    if (!requireNamespace("devtools", quietly = TRUE)) {
+      stop("devtools required to load gllvmTMB source tree", call. = FALSE)
+    }
+    if (!requireNamespace("jsonlite", quietly = TRUE)) {
+      stop("jsonlite required for receipt output", call. = FALSE)
+    }
+    devtools::load_all(pkg_root, quiet = TRUE)
+  })
 }
 
 base_ctrl <- function(aghq) {
@@ -252,11 +298,29 @@ expected_ids <- c(
 )
 stopifnot(identical(sort(names(cases)), sort(expected_ids)))
 
-r_ref <- tryCatch(
-  system2("git", c("-C", pkg_root, "rev-parse", "HEAD"), stdout = TRUE),
-  error = function(e) NA_character_
-)
-if (length(r_ref)) r_ref <- r_ref[[1L]]
+if (identical(parity_pin, "P1")) {
+  contract_ids <- vapply(contract$cases, `[[`, "", "row_id")
+  stopifnot(identical(sort(contract_ids), sort(expected_ids)))
+  r_engine <- list(
+    reference_commit = p1_reference,
+    gllvmTMB_version = as.character(utils::packageVersion("gllvmTMB")),
+    r_version = R.version.string,
+    load_method = "library(gllvmTMB) from the installed P1 oracle library (identified by source_pin)"
+  )
+} else {
+  r_ref <- tryCatch(
+    system2("git", c("-C", pkg_root, "rev-parse", "HEAD"), stdout = TRUE),
+    error = function(e) NA_character_
+  )
+  if (length(r_ref)) r_ref <- r_ref[[1L]]
+  r_engine <- list(
+    source_tree = pkg_root,
+    git_head = r_ref,
+    gllvmTMB_version = as.character(utils::packageVersion("gllvmTMB")),
+    r_version = R.version.string,
+    load_method = "devtools::load_all(source_tree)"
+  )
+}
 
 receipt <- list(
   schema = "core070-aghq-public-policy-bind/v1",
@@ -266,17 +330,23 @@ receipt <- list(
   bound_count = sum(vapply(cases, function(x) isTRUE(x$pass), logical(1L))),
   expected_count = 14L,
   cases = cases,
-  r_engine = list(
-    source_tree = pkg_root,
-    git_head = r_ref,
-    gllvmTMB_version = as.character(utils::packageVersion("gllvmTMB")),
-    r_version = R.version.string,
-    load_method = "devtools::load_all(source_tree)"
-  ),
+  r_engine = r_engine,
   model_contract = "Stage1a: latent(..., unique=FALSE), single z_B block, aghq_ridge=Inf",
-  oracle_note = "Frozen engine oracle b4d5fee6; policy reads use R twin HEAD above.",
+  oracle_note = if (identical(parity_pin, "P1")) {
+    "Installed P1 oracle library; no source tree loaded."
+  } else {
+    "Frozen engine oracle b4d5fee6; policy reads use R twin HEAD above."
+  },
   generated_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z", tz = "UTC")
 )
+if (identical(parity_pin, "P1")) {
+  receipt$parity_pin <- parity_pin
+  receipt$reference_commit <- p1_reference
+  receipt$contract <- p1_contract_rel
+  receipt$contract_sha256 <- sha256_file(contract_path)
+  receipt$gllvmTMB_version <- r_engine$gllvmTMB_version
+  receipt$source_pin <- source_pin
+}
 
 dir.create(dirname(receipt_path), recursive = TRUE, showWarnings = FALSE)
 jsonlite::write_json(

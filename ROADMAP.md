@@ -46,6 +46,13 @@ goes beyond standard `gllvm`.
 - [x] Confidence intervals: Wald (FD-Hessian), profile (LRT inversion), parametric bootstrap
 - [x] Derived-quantity CIs
 - [x] Phylogenetic models (sparse precision, contrasts, edge-incidence, relaxed clock, branch RE) — *beyond* `gllvm`
+- [x] **`phylo_latent()` twin** — `fit_phylo_latent_gllvm`: R's bare Gaussian
+      `phylo_latent(species, d = K)` on the `PrecisionPhy` path (label matching, tree or
+      dense `vcv`, R's refusals); A14/A15 paired receipts at gllvmTMB P1 in
+      `docs/dev-log/core070/phylo-latent-p1/`, promotion awaiting the maintainer block.
+      Open: R's global sparse `phylo_vcv` route (no keyword twin), `rho != 1`, `unique = TRUE` pairing, non-Gaussian
+      `phylo_latent()`, and the A15 stationarity gap (both engines above the 1e-4
+      cross-gradient bar)
 - [x] **Phylogenetic GLM for non-Gaussian families** — `fit_phylo_glm` / `PhyloGLMFit`:
       a per-species phylogenetic random intercept (Poisson / NB / Binomial) via an
       augmented-state joint Laplace over the sparse phylogenetic precision (issue #61)
@@ -86,8 +93,9 @@ Ordered roughly by real-world impact.
       is just another kernel/covariance in that structured-random-effect framework,
       so a bespoke `corAR1`/`corExp`-on-LVs feature is subsumed and not needed for now.
       gllvmTMB's own AR1/OU temporal source is a separate row: the temporal-source-only
-      cell is ported (`fit_temporal_gllvm`, `docs/src/temporal.md`); `unit`/`unit_obs`
-      composition and the cross-source cells remain open.
+      cell is ported (`fit_temporal_gllvm`, `docs/src/temporal.md`), and so is
+      `unit`/`unit_obs` composition through its `structure` argument; the `gllvm()`
+      formula hook and the cross-source cells remain open.
 - [x] **SPDE / Matérn-GMRF spatial fields** (Lindgren, Rue & Lindström 2011) —
       `spde_fem` (P1 mass/stiffness), `spde_precision` (sparse `Q(κ,τ)`),
       `spde_projector` (`A`), `matern_correlation`, `spde_mesh_grid` (auto-mesher),

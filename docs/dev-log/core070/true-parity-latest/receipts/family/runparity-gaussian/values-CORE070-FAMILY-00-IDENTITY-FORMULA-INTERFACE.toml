@@ -1,0 +1,16 @@
+case_id = "CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE"
+
+[[values]]
+label = "logLik, wide formula"
+julia = -576.2849371937112
+test = "@test abs(formula_fit.loglik+rvalue)<=1e-3"
+rtol = 0.0
+r = -576.2849371937104
+atol = 0.001
+[[values]]
+label = "logLik, long formula"
+julia = -576.2849371937112
+test = "@test abs(longfit.loglik+rvalue)<=1e-3"
+rtol = 0.0
+r = -576.2849371937104
+atol = 0.001

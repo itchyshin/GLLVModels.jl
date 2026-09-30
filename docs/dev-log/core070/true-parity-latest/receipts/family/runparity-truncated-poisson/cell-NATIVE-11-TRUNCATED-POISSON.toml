@@ -1,0 +1,14 @@
+contract_sha256 = "bc282aed156488eee12c519fb0e8a68b53a508197a89a34d6620f07adaee0765"
+fixture = "test/parity/test_truncated_poisson_parity.jl"
+status = "success"
+run_id = "2c1608d60257b3388f1d3778b40d5a3dd6541ce228ced3ef50289a4c5b12c5df"
+fixture_sha256 = "3dfa4801e9a0ed249a47cac151647cf3093725d59ba8628a2a43bad044dc50c9"
+id = "NATIVE-11-TRUNCATED-POISSON"
+execution_manifest_sha256 = "fae74ced25a0856c67d17d6a656465b62d2a4ddbc471deaa22a8145a583a80b8"
+execution_case_ids = ["NATIVE-11-TRUNCATED-POISSON"]
+
+[assertions]
+passed = 8
+broken = 0
+failed = 0
+errored = 0

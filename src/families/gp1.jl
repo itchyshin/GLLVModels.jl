@@ -51,6 +51,15 @@ default_link(::GeneralizedPoisson1) = LogLink()
 # in the score/weight/log-pmf below (and the η-clamp keeps μ bounded).
 _clamp_mu(::GeneralizedPoisson1, μ) = max(μ, 1e-12)
 
+# Opt into the damped mode-search backtracking (#611). Undamped Fisher steps from
+# z = 0 overshoot on sites with large counts and a large loading: on the #611
+# fixture (healthy_seed_101, site 115, y = [0, 38, 79, 1]) the search stopped at
+# ẑ = 0.705 with d(log joint)/dz = -42.8, while the single mode is at -1.624. The
+# site's Laplace value was then 36.6 too low, and the error switched on and off
+# as β moved by 1e-6, so the outer L-BFGS stopped at the edge of that jump and
+# reported converged.
+_laplace_mode_should_backtrack(::GeneralizedPoisson1) = true
+
 # Score wrt η (me = μ): s = y − μ y α/g − μ h/g². α→0 short-circuits to the Poisson
 # score y − μ to avoid 0·(…)/g cancellation noise near the limit.
 function _glm_score(f::GeneralizedPoisson1, μ, n, me, y)
@@ -69,13 +78,57 @@ function _glm_weight(f::GeneralizedPoisson1, μ, n, me)
     return me^2 / (μ * g^2)                            # me²/Var, Var = μ g²
 end
 
+# Counts at or above this use the rearranged log-pmf below (α > 0 only). The direct
+# formula subtracts terms of size y·log(y) (≈4e19 at y = 10^18), so its Float64
+# rounding error grows like y·log(y)·eps: ≈3e-9 at y = 10^6, but thousands by
+# y = 10^18. Measured at y = 10^18, α = 0.0361, μ = 8.23e10 (the per-site mode of
+# the fit that reported loglik = +6795.99): direct Float64 = +9216.0, 256-bit
+# BigFloat = −59.8232. A positive log-pmf is impossible. Below the threshold the
+# direct formula is kept unchanged, so no fit on ordinary counts moves.
+const _GP1_Y_STABLE = 1e6
+
 # Conditional log-pmf. α→0 delegates to Poisson's logpdf (exact, avoids cancellation).
 function _glm_logpdf(f::GeneralizedPoisson1, μ, n, y)
     a = f.α
     abs(a) < 1e-10 && return logpdf(Poisson(μ), Int(y))
+    a > 0 && y >= _GP1_Y_STABLE && return _gp1_logpdf_large_y(a, μ, y)
     g = 1 + a * μ
     h = 1 + a * y
     return y * (log(μ) - log(g)) + (y - 1) * log(h) - loggamma(y + 1.0) - μ * h / g
+end
+
+# The same log-pmf for α > 0 and large y, rearranged so the y·log(y) terms cancel
+# algebraically instead of in floating point. With g = 1+αμ, h = 1+αy, u = 1/g,
+# v = 1/(αy) and Stirling's lgamma(y+1) = y·log(y) − y + ½log(2πy) + δ(y):
+#   logL = y·(log1p(−u) + u) + y·(log1p(v) − v) + 1/(α g) − log(h) − ½log(2πy) − δ(y),
+# using αμ/g = 1 − u and 1/α − μ/g = 1/(α g). Each remaining term is small or of
+# one sign, so the sum keeps full relative precision near the mode.
+# δ(y) = 1/(12y) − 1/(360y³) + 1/(1260y⁵), truncation error < 1e-33 at y ≥ 10^6.
+function _gp1_logpdf_large_y(a, μ, y)
+    yf = float(y)
+    g = 1 + a * μ
+    h = 1 + a * yf
+    u = 1 / g
+    v = 1 / (a * yf)
+    δ = 1 / (12yf) - 1 / (360yf^3) + 1 / (1260yf^5)
+    return yf * _gp1_log1pmx(-u) + yf * _gp1_log1pmx(v) + 1 / (a * g) -
+           log(h) - 0.5 * log(2π * yf) - δ
+end
+
+# log1p(x) − x without the cancellation of that literal difference at small |x|
+# (it loses relative precision like eps/|x|; measured 1e-11 relative error in the
+# GP-1 log-pmf at μ = 10^6, y = 10^18). For |x| < 0.5, with r = x/(2+x):
+#   log1p(x) − x = −2r²/(1−r) + 2(r³/3 + r⁵/5 + …),
+# 17 odd terms suffice since |r| ≤ 1/3. Generic in the number type (ForwardDiff).
+function _gp1_log1pmx(x)
+    abs(x) < 0.5 || return log1p(x) - x
+    r = x / (2 + x)
+    r2 = r * r
+    s = zero(r)
+    for k in 35:-2:3
+        s = s * r2 + 1 / k
+    end
+    return -2r2 / (1 - r) + 2 * r * r2 * s
 end
 
 # Upper support: α<0 gives finite support y < 1/|α| (h = 1+αy > 0); α≥0 is unbounded.
@@ -123,6 +176,35 @@ gp1_marginal_loglik_laplace(Y::AbstractMatrix, Λ::AbstractMatrix, β::AbstractV
 # ---------------------------------------------------------------------------
 # Fit driver (GP-1 family slice 2).
 # ---------------------------------------------------------------------------
+
+# The Laplace log-marginal sums, per site, a GP-1 log-pmf (≤ 0: a pmf value is
+# never above 1) plus the Laplace correction −½ẑ'ẑ − ½logdet(Λ'WΛ + I). Under the
+# default `hessian = :fisher` the weight W = μ/g² ≥ 0, so logdet ≥ 0 and the
+# correction is ≤ 0. Under `:observed` W can be negative; a positive total there
+# would mean A is near-singular and the Laplace approximation itself has broken
+# down, which is not a usable fit either. The true marginal of a pmf is ≤ 0, and the
+# margin below is floating-point headroom only.
+const _GP1_LOGLIK_MAX = 1e-6
+
+"""
+    _gp1_verdict(optim_converged, nll) -> (converged, loglik, reason)
+
+Convergence contract for [`fit_gp1_gllvm`](@ref)'s inner `(β, Λ)` solves (per the
+#502/#505 rule: a per-family verdict rather than a change to the shared
+`_fit_verdict`). A non-finite objective, one at or above the shared failure
+threshold (`_nll_failed`), or a log-likelihood above `_GP1_LOGLIK_MAX` returns
+`(false, -Inf, :objective_impossible)`. Otherwise it returns
+`(optim_converged, -nll, :ok)`, the same values `_fit_verdict` gives. The
+positive-value check exists because the direct GP-1 log-pmf read back rounding
+noise as data at a count of 10^18 (`fit_gp1_gllvm` reported `converged = true`
+at loglik = +6795.99; see `_GP1_Y_STABLE`).
+"""
+function _gp1_verdict(optim_converged::Bool, nll::Real)
+    _nll_failed(nll) && return (false, -Inf, :objective_impossible)
+    ll = -Float64(nll)
+    ll <= _GP1_LOGLIK_MAX || return (false, -Inf, :objective_impossible)
+    return (optim_converged, ll, :ok)
+end
 
 """
     GP1Fit
@@ -249,7 +331,11 @@ function fit_gp1_gllvm(Y::AbstractMatrix; K::Integer,
         # loglik back to an `nll` convention so `best.nll`/`r.nll < best.nll` below keep
         # working unchanged (a screened failure now reports `Inf`, so it can never win
         # `best`'s min-nll selection against any grid point that actually solved).
-        ll, conv, iters = _fit_verdict(res)
+        # `_gp1_verdict` adds the positive-loglik check to `_fit_verdict`'s sentinel
+        # screen (identical result on every healthy point), so an impossible value
+        # reports `nll = Inf` and never wins `best` below.
+        conv, ll, _reason = _gp1_verdict(Optim.converged(res), Optim.minimum(res))
+        iters = Optim.iterations(res)
         (β = θ̂[1:p], Λ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K),
          nll = -ll, converged = conv, iters = iters)
     end

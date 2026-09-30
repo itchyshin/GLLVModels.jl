@@ -227,6 +227,63 @@ function _multinomial_β_init(y::AbstractVector{Int}, K::Integer)
     return β
 end
 
+# Complete-separation threshold for `_multinomial_verdict`. Under complete
+# separation (some linear combination of the covariates orders every observation
+# into its own category) the softmax MLE does not exist: the log-likelihood rises
+# toward its saturated bound 0 only as the coefficients run to infinity, and L-BFGS
+# stops wherever the gradient first falls below `g_tol`. Along that ridge the
+# gradient entries are sums of the residuals 1{y_i = k} − p̂_ik, so a stop on the
+# default `g_tol = 1e-5` leaves the per-observation negative log-likelihoods
+# −log p̂_i(y_i) ≈ 1 − p̂_i(y_i) of roughly that size (the fixture stopped at a
+# TOTAL of 1.19e-5 over 12 observations). The threshold 1e-4, applied to EVERY
+# observation, means each observed category is fitted with probability above
+# 0.9999, a logit gap of at least log(9999) ≈ 9.2 over every other category; that
+# is ten times the default `g_tol`, so a gradient stop on separated data is caught
+# with room to spare. Healthy data are nowhere near it: the six healthy fits in
+# `test/fixtures/multinomial_separation.toml` have a worst observation at
+# p̂ ≈ 0.007 to 0.28. Not covered: quasi-complete separation (tied observations stay
+# far from p̂ = 1, so the maximum below stays large), and a caller-supplied `g_tol`
+# far above 1e-4, which can stop the ridge walk before every observation clears the
+# threshold.
+const _MN_SEPARATION_NLL = 1e-4
+
+"""
+    _multinomial_max_obs_nll(y, θ, X, K) -> Float64
+
+Largest per-observation negative log-likelihood `−log p̂_i(y_i)` at packed `θ`.
+"""
+function _multinomial_max_obs_nll(y::AbstractVector{Int}, θ::AbstractVector, X,
+        K::Integer)
+    p = X === nothing ? 0 : size(X, 2)
+    β, γ = unpack_multinomial(θ, K, p)
+    worst = 0.0
+    @inbounds for i in eachindex(y)
+        x = p == 0 ? Float64[] : vec(X[i, :])
+        η = multinomial_eta(β, γ, x)
+        worst = max(worst, Float64(_multinomial_logsumexp(η) - η[y[i]]))
+    end
+    return worst
+end
+
+"""
+    _multinomial_verdict(optim_converged, nll, max_obs_nll) -> (converged, loglik, reason)
+
+Convergence contract for [`fit_multinomial_gllvm`](@ref) (per the #502/#505 rule:
+a per-family verdict rather than a change to the shared `_fit_verdict`). A
+failed objective (`_nll_failed`) returns `(false, -Inf, :objective_impossible)`,
+as `_fit_verdict` does. If every observation's negative log-likelihood is at or
+below `_MN_SEPARATION_NLL` (`max_obs_nll`, see that constant's note) the data are
+completely separated, no finite MLE exists, and the result is
+`(false, -nll, :separation)`: the log-likelihood is reported as computed, but the
+fit is not converged. Otherwise `(optim_converged, -nll, :ok)`.
+"""
+function _multinomial_verdict(optim_converged::Bool, nll::Real, max_obs_nll::Real)
+    _nll_failed(nll) && return (false, -Inf, :objective_impossible)
+    ll = -Float64(nll)
+    max_obs_nll <= _MN_SEPARATION_NLL && return (false, ll, :separation)
+    return (optim_converged, ll, :ok)
+end
+
 """
     fit_multinomial_gllvm(Y; X=nothing, n_categories=nothing, …) -> MultinomialFit
 
@@ -280,7 +337,12 @@ function fit_multinomial_gllvm(Y::AbstractVecOrMat;
     res = Optim.optimize(negll, θ0, ls, opts; autodiff = :finite)
     θ̂ = Optim.minimizer(res)
     β̂, γ̂ = unpack_multinomial(θ̂, ncat, p)
+    # `_multinomial_verdict` adds the complete-separation check to `_fit_verdict`'s
+    # sentinel screen (reported converged = true at loglik -1.19e-5 with the slopes
+    # running off, test/fixtures/multinomial_separation.toml).
+    conv, ll, _reason = _multinomial_verdict(Optim.converged(res), Optim.minimum(res),
+                                             _multinomial_max_obs_nll(y, θ̂, X, ncat))
     return MultinomialFit(collect(Float64, β̂), Matrix{Float64}(γ̂), ncat,
-                          LogitLink(), _fit_verdict(res)...,
+                          LogitLink(), ll, conv, Optim.iterations(res),
                           collect(Float64, θ̂))
 end

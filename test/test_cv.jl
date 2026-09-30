@@ -255,9 +255,11 @@ end
             @test cvX.mse < oracle
         else
             # A held-out site (or species) has no latent information: X β is the best
-            # available predictor, and the zero-mean model misses the mean entirely.
+            # available predictor. Without X the Normal route fits only trait intercepts
+            # (#519), so it recovers the mean 3 but misses the 2x slope term entirely
+            # (measured: about 9x the oracle's error on this data).
             @test cvX.mse < 1.15 * oracle
-            @test cv0.mse > 10 * oracle
+            @test cv0.mse > 5 * oracle
         end
     end
 
@@ -271,4 +273,17 @@ end
         @test_throws ArgumentError cv_gllvm(Yc; k_folds = 3, split = :site,
                                             family = Poisson(), K = K, X = X)
     end
+end
+
+@testset "loading GLLVModels raises no identifier-conflict warning" begin
+    # Regression: a bare `using Distributions` in src/cv.jl re-imported
+    # `Distributions.Multinomial` next to the package's own `Multinomial`,
+    # which src/GLLVModels.jl deliberately leaves out, so precompiling the
+    # package printed "conflicts with an existing identifier". The warning is
+    # emitted when the module is compiled, so load it from source here.
+    cmd = `$(Base.julia_cmd()) --project=$(Base.active_project()) --startup-file=no --compiled-modules=no -e "using GLLVModels"`
+    err = IOBuffer()
+    run(pipeline(ignorestatus(cmd); stdout = devnull, stderr = err))
+    msg = String(take!(err))
+    @test !occursin("conflicts with an existing identifier", msg)
 end
