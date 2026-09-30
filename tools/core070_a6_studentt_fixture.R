@@ -63,6 +63,19 @@ stopifnot(p >= 2L, n >= 2L)
 
 library(gllvmTMB)
 
+# Pin switch (D-294/D-295): GLLVM_PARITY_PIN unset or "P0" runs as before; "P1"
+# requires the installed library's CORE070_SOURCE_PIN.toml marker to match the
+# P1 entry of tools/core070_oracle_pins.toml (tools/core070_source_pin.R) and
+# records it beside the readback as <output>.source-pin.tsv. Any other value
+# stops. Nothing is written when a check fails.
+parity_pin <- toupper(trimws(Sys.getenv("GLLVM_PARITY_PIN", "P0")))
+if (!parity_pin %in% c("P0", "P1")) stop("GLLVM_PARITY_PIN must be P0 or P1, got '", parity_pin, "'")
+expected_reference <- if (identical(parity_pin, "P1"))
+  "9539352f66f2db2cc26b1c393e67212a359b60c9" else "b4d5fee64def88bc768dda1f1f77c29b295edd86"
+root <- normalizePath(".")
+source(file.path(root, "tools/core070_source_pin.R"))
+source_pin <- core070_source_pin(root, dirname(find.package("gllvmTMB")), parity_pin, expected_reference)
+
 trait_levels <- paste0("t", seq_len(p))
 df_data <- data.frame(
   site  = factor(rep(seq_len(n), each = p)),
@@ -147,4 +160,11 @@ fixed_rows <- fit_one_case("fixed", student(link = "identity", df = FIXTURE_NU))
 free_rows  <- fit_one_case("free",  student(link = "identity"))
 
 writeLines(c(fixed_rows, free_rows), output_path)
+if (!is.null(source_pin)) {
+  writeLines(c(paste("parity_pin", parity_pin, sep = "\t"),
+               paste("gllvmTMB_version", as.character(utils::packageVersion("gllvmTMB")), sep = "\t"),
+               paste("r_version", R.version.string, sep = "\t"),
+               paste(names(source_pin), unlist(source_pin, use.names = FALSE), sep = "\t")),
+             paste0(output_path, ".source-pin.tsv"))
+}
 cat("CORE070_A6_STUDENTT_R_FIT_PASS", output_path, "\n")

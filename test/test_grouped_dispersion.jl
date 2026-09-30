@@ -93,7 +93,7 @@ using GLLVModels, Test, Random, Distributions, Statistics, LinearAlgebra
     # `dispersion_boundary::Vector{Bool}` flags any group whose fitted r_group
     # falls outside [1e-6, 1e6] (the Poisson limit / extreme-overdispersion
     # limit), mirroring `StudentTFit.nu_boundary`. `converged` is forced false
-    # whenever any group is flagged.
+    # only for the lower end (r < 1e-6); r > 1e6 warns (decision 2026-09-29).
     @testset "dispersion_boundary flag (T14 F1)" begin
         @testset "seed-523 degenerate fixture flags the boundary" begin
             # The exact `_bx_sim(NegativeBinomial(), 3, 70, 1, 1; seed=523)`
@@ -122,7 +122,9 @@ using GLLVModels, Test, Random, Distributions, Statistics, LinearAlgebra
             fit = GLLVModels.fit_nb_gllvm_grouped_cov(Yi; X = X, K = K, group = collect(1:p))
             @test length(fit.dispersion_boundary) == 3
             @test any(fit.dispersion_boundary)
-            @test fit.converged == false
+            # Upper end (r > 1e6) is warn-only since 2026-09-29: `converged` follows the
+            # optimizer verdict and is false only if some r < 1e-6.
+            @test fit.converged == !any(fit.r_group .< 1e-6)
         end
 
         @testset "well-conditioned fixture leaves dispersion_boundary all-false" begin

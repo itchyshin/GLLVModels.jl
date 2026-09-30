@@ -70,4 +70,70 @@ end
         @test occursin(P0_COMMIT, r.stderr)
         @test occursin(P1_COMMIT, r.stderr)
     end
+
+    @testset "runner manifest path follows the pin; each selected manifest passes its own guard" begin
+        script = """
+            include(raw"$PIN_FILE")
+            rel = _core070_frozen_contract_rel()
+            path = joinpath(raw"$ROOT", rel)
+            _core070_check_frozen_contract_pin(TOML.parsefile(path), path)
+            println(rel)
+            """
+        r0 = run_pin_script(script)
+        @test r0.success
+        @test strip(r0.stdout) == "docs/dev-log/core070/frozen-r070-contract.toml"
+        r1 = run_pin_script(script; pin = "P1")
+        @test r1.success
+        @test strip(r1.stdout) == "docs/dev-log/core070/true-parity-latest/frozen-r070-contract-p1.toml"
+    end
+
+    @testset "oracle receipt paths follow the pin; P1 receipts validate against P1 only" begin
+        script = """
+            include(raw"$PIN_FILE")
+            rel = _core070_oracle_receipts_rel()
+            for kind in (:build, :source)
+                path = joinpath(raw"$ROOT", getfield(rel, kind))
+                _core070_check_oracle_receipt(read(path, String), getfield(rel, kind), kind)
+            end
+            println(rel.build)
+            """
+        r1 = run_pin_script(script; pin = "P1")
+        @test r1.success
+        @test strip(r1.stdout) == "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json"
+        # P0 selection keeps the historical .unlazy paths.
+        r0 = run_pin_script("""include(raw"$PIN_FILE"); println(_core070_oracle_receipts_rel().build)""")
+        @test r0.success
+        @test strip(r0.stdout) == ".unlazy/core070-aghq/oracle-receipts/build.json"
+    end
+
+    @testset "a P1 oracle receipt used under P0 fails loud" begin
+        build = joinpath(ROOT, "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json")
+        r = run_pin_script("""
+            include(raw"$PIN_FILE")
+            _core070_check_oracle_receipt(read(raw"$build", String), "build.json", :build)
+            """)
+        @test !r.success
+        @test occursin("reference_commit", r.stderr)
+        @test occursin(P1_COMMIT, r.stderr)
+    end
+
+    @testset "a tampered or ambiguous oracle receipt fails loud" begin
+        build = joinpath(ROOT, "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json")
+        tampered = run_pin_script("""
+            include(raw"$PIN_FILE")
+            text = replace(read(raw"$build", String), r"\"source_tree_sha256\": \"[0-9a-f]+\"" => "\"source_tree_sha256\": \"$(repeat("0", 64))\"")
+            _core070_check_oracle_receipt(text, "build.json", :build)
+            """; pin = "P1")
+        @test !tampered.success
+        @test occursin("source_tree_sha256", tampered.stderr)
+        partial = tempname()
+        write(partial, "{\n  \"reference_commit\": \"$P1_COMMIT\"\n}\n")
+        missing_key = run_pin_script("""
+            include(raw"$PIN_FILE")
+            _core070_check_oracle_receipt(read(raw"$partial", String), "build.json", :build)
+            """; pin = "P1")
+        rm(partial)
+        @test !missing_key.success
+        @test occursin("expected exactly one", missing_key.stderr)
+    end
 end

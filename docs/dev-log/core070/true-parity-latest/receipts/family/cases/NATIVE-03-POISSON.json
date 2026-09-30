@@ -1,0 +1,82 @@
+{
+  "schema": "core070-family-p1-case-receipt/v1",
+  "case_id": "NATIVE-03-POISSON",
+  "verdict": "PASS",
+  "evidence_kind": "numeric_r_vs_julia",
+  "batch": "test/parity/runparity.jl, CORE070_PARITY_REQUIRED=1, GLLVM_PARITY_PIN=P1, run runparity-poisson",
+  "harness_cell": "NATIVE-03-POISSON",
+  "fixture": "test/parity/test_poisson_required.jl",
+  "measures": "Poisson log, p=5, n=60, K=2, seed 44; toy fixture, likelihood-level agreement only",
+  "cell_status": "success",
+  "cell_assertions": {
+    "passed": 16,
+    "broken": 0,
+    "failed": 0,
+    "errored": 0
+  },
+  "cell_execution_case_ids": [
+    "NATIVE-03-POISSON"
+  ],
+  "run_status": "success",
+  "run_failure_reason": null,
+  "batch_verifier": {
+    "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
+    "status": "PASS",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/verify.txt"
+  },
+  "read_from": {
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/run.toml": "057a50d82b132d7befdb3df36e191fe52abbce3757ed7c7055c4de5faf7b94d1",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/values-NATIVE-03-POISSON.toml": "9727e207c0462532082ecf2eb094fdba65392642c2a1a52d18b1344a3a553676",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/run-commit.json": "2e16587a479233a6fe0bf80655a1c208a68a479877cb18647134d745a22f4edd",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/verify.txt": "84868ea743f5dd1fa21ab897bd96e8974be17935bcb24ef3b3bdf5708c3e8d4f",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/cell-NATIVE-03-POISSON.toml": "13b3cb9af344480ef5534363551c6e9c758a9d03b89fcc6e5b045325f91b30e1",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/poisson-fixture.toml": "dc1ab3483b4fa963f4dba0ece73884326809ba78ee98e503a1d6ac14cedcf264",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/poisson-health.toml": "04437917a04e763083066188d6a33d19ac57dfbd5a684d5c9d796bee8040480a",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/poisson-formula.toml": "e052f7e94b7195555d889662e428abf54964e9398b254b071ccf17b987c89eb9"
+  },
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/values-NATIVE-03-POISSON.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/cell-NATIVE-03-POISSON.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/poisson-fixture.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/poisson-health.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/poisson-formula.toml"
+  ],
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "7506185ccbb6ebbd484219a860b35d989301a8cf",
+  "glvmodels_worktree_dirty": [],
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "NATIVE-03-POISSON",
+        "quantity": "logLik",
+        "max_abs_diff": 1.3983481039758772e-11,
+        "tolerance": 0.0006341712844104389,
+        "tolerance_rule": "the cell's own test, checks[\"likelihood\"]=isapprox(native.loglik,r.logLik;rtol=1e-6,atol=0) (rtol=1e-06, atol=0; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
+        "n_values": 1,
+        "r_value": -634.171284410439,
+        "julia_value": -634.171284410425,
+        "diff_source": "recomputed from the saved R and Julia values",
+        "discriminating": true
+      },
+      {
+        "case_id": "NATIVE-03-POISSON",
+        "quantity": "objective at the R optimum",
+        "max_abs_diff": 0.0,
+        "tolerance": 1e-06,
+        "tolerance_rule": "the cell's own test, checks[\"samepoint\"]=abs(report[\"samepoint_delta\"])<=1e-6 (rtol=0, atol=1e-06; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
+        "n_values": 1,
+        "r_value": 634.171284410439,
+        "julia_value": 634.171284410439,
+        "diff_source": "recomputed from the saved R and Julia values",
+        "discriminating": true
+      }
+    ]
+  }
+}

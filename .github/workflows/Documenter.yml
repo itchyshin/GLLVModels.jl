@@ -12,8 +12,11 @@ permissions:
 # older PENDING run whenever a newer one queued (one pending run per group,
 # whatever cancel-in-progress says), so most PRs lost their Documenter check.
 # Only the gh-pages push is serialised, in the deploy job below.
+# The same one-pending rule applies within a branch, so non-PR runs (main and
+# tag pushes) get one group per commit: a burst of merges otherwise cancelled
+# a queued main build before it started. PR runs keep one group per ref.
 concurrency:
-  group: documenter-${{ github.ref }}
+  group: documenter-${{ github.ref }}${{ github.event_name != 'pull_request' && format('-{0}', github.sha) || '' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:

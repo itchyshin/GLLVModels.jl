@@ -86,7 +86,7 @@ implementation detail only.
 | none × latent (`latent()` / ordinary LV GLLVM) | implemented |
 | phylogenetic × indep (`phylo_indep()`) | implemented |
 | phylogenetic × dep (`phylo_dep()`) | implemented (Arc 0 Gaussian function API only) |
-| phylogenetic × latent (`phylo_latent()`) | implemented |
+| phylogenetic × latent (`phylo_latent()`) | implemented; bare Gaussian R twin `fit_phylo_latent_gllvm` with A14/A15 receipts at P1 (promotion pending; `rho != 1` fenced; R's global sparse `phylo_vcv` route has no keyword twin) |
 | animal × indep (`animal_indep()`) | implemented |
 | animal × dep (`animal_dep()`) | implemented (Arc 0 Gaussian function API only) |
 | animal × latent (`animal_latent()`) | implemented (Arc 0 Gaussian function API only) |

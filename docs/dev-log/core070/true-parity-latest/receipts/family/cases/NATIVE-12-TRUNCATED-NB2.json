@@ -1,0 +1,81 @@
+{
+  "schema": "core070-family-p1-case-receipt/v1",
+  "case_id": "NATIVE-12-TRUNCATED-NB2",
+  "verdict": "FAIL",
+  "evidence_kind": "numeric_r_vs_julia",
+  "batch": "test/parity/runparity.jl, CORE070_PARITY_REQUIRED=1, GLLVM_PARITY_PIN=P1, run runparity-truncated-nb2",
+  "harness_cell": "NATIVE-12-TRUNCATED-NB2",
+  "fixture": "test/parity/test_truncated_nbinom2_parity.jl",
+  "measures": "zero-truncated NB2, per-trait dispersion, p=5, n=120, K=1, seed 58; toy fixture, likelihood-level agreement only",
+  "cell_status": "failed",
+  "cell_assertions": {
+    "passed": 20,
+    "broken": 0,
+    "failed": 1,
+    "errored": 0
+  },
+  "cell_execution_case_ids": [
+    "NATIVE-12-TRUNCATED-NB2"
+  ],
+  "run_status": "failed",
+  "run_failure_reason": "one or more cells have failed, skipped, broken, or zero assertions",
+  "batch_verifier": {
+    "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
+    "status": "FAIL",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/verify.txt"
+  },
+  "read_from": {
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/run.toml": "faf5caa45007339dfe79d107e7d3bed54d48f40bc68f6228069b9c438973faf0",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/values-NATIVE-12-TRUNCATED-NB2.toml": "6ec56067e58770ad71c672923d93624342b3877c9671195e6191831330c503fe",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/run-commit.json": "2e16587a479233a6fe0bf80655a1c208a68a479877cb18647134d745a22f4edd",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/verify.txt": "890638e5749a9ed7f4840e0c12bd70d6bed2de36eb28b2ae2eae0265713efc57",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/cell-NATIVE-12-TRUNCATED-NB2.toml": "20df964818dd2de34a0b265bd8b12ac9e6fc0f33995da3d2aff900d30afbf3b3",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/truncnb2-policy.toml": "e63029a0f8c0cb4927be8fc6dfba35b508b48c4cd868efbd183eed9804b8c0d6",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/truncnb2-formula.toml": "1ddd76df556b5664d594535108e261af33202b42a9fdb60b900c5b44e26066a2"
+  },
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/values-NATIVE-12-TRUNCATED-NB2.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/cell-NATIVE-12-TRUNCATED-NB2.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/truncnb2-policy.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/truncnb2-formula.toml"
+  ],
+  "why_fail": "the cell's own assertions did not all pass at P1 (see cell_assertions; the failing assertion may be a health or structure check rather than the compared numbers)",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "7506185ccbb6ebbd484219a860b35d989301a8cf",
+  "glvmodels_worktree_dirty": [],
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "NATIVE-12-TRUNCATED-NB2",
+        "quantity": "objective at the R optimum",
+        "max_abs_diff": 2.5188455765601248e-08,
+        "tolerance": 1e-06,
+        "tolerance_rule": "the cell's own test, @test abs(d[\"samepoint_delta\"])<=1e-6 (rtol=0, atol=1e-06; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
+        "n_values": 1,
+        "r_value": 1375.3913741103972,
+        "julia_value": 1375.3913741355857,
+        "diff_source": "recomputed from the saved R and Julia values",
+        "discriminating": true
+      },
+      {
+        "case_id": "NATIVE-12-TRUNCATED-NB2",
+        "quantity": "logLik",
+        "max_abs_diff": 6.278792170633096e-07,
+        "tolerance": 0.001375391374110397,
+        "tolerance_rule": "the cell's own test, @test jl_logL \u2248 r.logLik rtol = 1e-6 (rtol=1e-06, atol=0; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
+        "n_values": 1,
+        "r_value": -1375.3913741103972,
+        "julia_value": -1375.391373482518,
+        "diff_source": "recomputed from the saved R and Julia values",
+        "discriminating": true
+      }
+    ]
+  }
+}

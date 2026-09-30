@@ -191,6 +191,7 @@ function _confint_reconstruct_nll(fit::GllvmFit, y::AbstractMatrix,
                                   X::Union{Nothing, AbstractArray{<:Real, 3}},
                                   Σ_phy::Union{Nothing, AbstractMatrix})
     _has_gaussian_record(fit) && return _gaussian_record_ci(fit,y;X=X,Σ_phy=Σ_phy).nll
+    X = _mean_X(fit, X, size(y, 2))
     model = fit.model
     q_full = fit.pars.β === nothing ? 0 : length(fit.pars.β)
     β_fixed = _pars_fixed_mask(fit.pars, :β_fixed, q_full)
@@ -261,6 +262,7 @@ function confint(fit::GllvmFit;
         "confint for fit_gaussian_gllvm(...; X_lv=...) is not admitted in the C1 predictor-informed latent-score path; use extract_lv_effects for point estimates"))
     y === nothing && throw(ArgumentError(
         "confint requires the data matrix `y` (the same matrix passed to fit_gaussian_gllvm)"))
+    X = _mean_X(fit, X, size(y, 2))
 
     θ̂ = fit.pars.θ_packed
     n_par = length(θ̂)

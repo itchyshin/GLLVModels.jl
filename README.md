@@ -17,7 +17,10 @@ Eligible independent Gaussian grouping models also have an explicit
 inspect its status and limitations in the grouping guide before using endpoints.
 The explicit Julia multivariate precision route is documented in the
 [development bridge guide](docs/src/precision-bridge-development.md);
-public R `phylo_rr` admission is still closed.
+public R `phylo_rr` admission is still closed. The named Julia twin of R's bare
+Gaussian `phylo_latent(species, d = K)` is `fit_phylo_latent_gllvm(Y, species;
+d, tree)` (species matched by label; paired R and Julia receipts at gllvmTMB
+P1; promotion pending).
 
 [![Build Status](https://github.com/itchyshin/GLLVModels.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/itchyshin/GLLVModels.jl/actions/workflows/CI.yml)
 [![Coverage](https://codecov.io/gh/itchyshin/GLLVModels.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/itchyshin/GLLVModels.jl)
@@ -206,6 +209,14 @@ with sparse random-effect design matrices. `GLLVModels.jl` solves a
   `predict` / `getLV` / `ordination`, and an `@formula` front-end
   (wide formula tables require one row per site, including intercept-only fits;
   an empty table is allowed when there are no covariates)
+- Automatic latent-dimension selection: omitting `K` from `fit_gllvm(Y;
+  family)` sweeps `K` (guarded against non-converged, non-improving, and
+  runaway fits) and returns the chosen fit with a one-line message; call
+  `select_lv` directly for the full per-`K` comparison table
+  (`Kmax`, `criterion = :bic_sites` default). See the tutorial's
+  "Choosing the number of latent dimensions" section — the chosen `K` is
+  an estimate, not ground truth, and downstream intervals are conditional
+  on it.
 - Wald / profile / bootstrap CI routes across scalar-dispersion GLM, grouped
   NB2/NB1/Beta/Gamma, and two-part families; grouped Tweedie, per-trait
   ordinal, and bridge-only edge rows remain status-gated before promotion

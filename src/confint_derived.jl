@@ -528,6 +528,7 @@ function bootstrap_ci_derived(fit::GllvmFit, derived_fn::Function;
             "`y = ...`, `X = ...`, or `n_sites = ...`."))
     end
 
+    X = _mean_X(fit, X, n)
     if q > 0 && X === nothing
         throw(ArgumentError(
             "Fitted model has q = $q fixed effects; pass X to bootstrap_ci_derived."))
@@ -922,6 +923,7 @@ function profile_ci_derived(fit::GllvmFit, derived_fn::Function;
     0 < level < 1 || throw(ArgumentError("level must be in (0, 1); got $level"))
     y === nothing && throw(ArgumentError(
         "profile_ci_derived requires the data matrix `y`"))
+    X = _mean_X(fit, X, size(y, 2))
 
     θ̂ = fit.pars.θ_packed
     g_hat = Float64(derived_fn(θ̂))

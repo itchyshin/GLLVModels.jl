@@ -279,6 +279,8 @@ function _evaluate_binomial_case(Y::AbstractMatrix, K::Integer, link,
         "coef_delta" => coef_delta, "loglik_delta" => loglik_delta,
         "saturated" => saturated, "n_clamp" => n_clamp, "n_wcollapse" => n_wcollapse,
         "julia_loglik" => j_loglik, "r_loglik" => r_loglik,
+        # The coefficient vectors themselves, so the receipt tool recomputes max|R - Julia|.
+        "julia_coef" => j_coef, "r_coef" => r_coef,
     )
 
     if !coef_ok

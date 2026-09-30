@@ -1,0 +1,14 @@
+contract_sha256 = "bc282aed156488eee12c519fb0e8a68b53a508197a89a34d6620f07adaee0765"
+fixture = "test/parity/test_truncated_nbinom2_parity.jl"
+status = "failed"
+run_id = "0e8c00f6358b21dd587fd469a57153d851f50e2ddba716853bdbe03880db6e96"
+fixture_sha256 = "8b1595bb66e7e190687c54cab5412c6453f878769a3379a48627de5c498c6035"
+id = "NATIVE-12-TRUNCATED-NB2"
+execution_manifest_sha256 = "41ece253eaa56d8392b82175df1559ee2372caa26baafabfc515e2f684b84482"
+execution_case_ids = ["NATIVE-12-TRUNCATED-NB2"]
+
+[assertions]
+passed = 20
+broken = 0
+failed = 1
+errored = 0

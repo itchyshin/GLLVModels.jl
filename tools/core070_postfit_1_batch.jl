@@ -19,8 +19,13 @@ using GLLVModels
 using LinearAlgebra
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
-const CONTRACT_PATH = joinpath(ROOT, "docs", "dev-log", "core070", "postfit-1-batch-contract.json")
-const REFERENCE_COMMIT = "b4d5fee64def88bc768dda1f1f77c29b295edd86"
+# GLLVM_PARITY_PIN=P1 reads the P1-regenerated contract (cases verbatim); unset/P0 is unchanged.
+_parity_pin = uppercase(strip(get(ENV, "GLLVM_PARITY_PIN", "P0")))
+_parity_pin in ("P0", "P1") || error("GLLVM_PARITY_PIN must be P0 or P1, got $(repr(_parity_pin))")
+const CONTRACT_PATH = _parity_pin == "P1" ?
+    joinpath(ROOT, "docs", "dev-log", "core070", "true-parity-latest", "postfit-1-batch-contract-p1.json") :
+    joinpath(ROOT, "docs", "dev-log", "core070", "postfit-1-batch-contract.json")
+const REFERENCE_COMMIT = _parity_pin == "P1" ? "9539352f66f2db2cc26b1c393e67212a359b60c9" : "b4d5fee64def88bc768dda1f1f77c29b295edd86"
 
 length(ARGS) == 1 || error("usage: julia tools/core070_postfit_1_batch.jl <destination>")
 destination = ARGS[1]

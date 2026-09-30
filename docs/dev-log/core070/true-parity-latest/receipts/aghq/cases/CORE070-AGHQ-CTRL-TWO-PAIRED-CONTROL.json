@@ -1,0 +1,53 @@
+{
+  "schema": "core070-aghq-p1-case-receipt/v1",
+  "case_id": "CORE070-AGHQ-CTRL-TWO-PAIRED-CONTROL",
+  "verdict": "PASS",
+  "evidence_kind": "paired_control_categorical",
+  "batch": "tools/core070_aghq_batch.R + .jl, GLLVM_PARITY_PIN=P1",
+  "measures": "paired control on categorical labels: the same scalar aghq request normalized by R's .gllvmTMB_normalize_aghq and by GLLVModels._aghq_request; no fit",
+  "why_not_numeric": "A paired control on categorical labels: R's .gllvmTMB_normalize_aghq and GLLVModels._aghq_request each normalize the same scalar aghq request, R's frozen assertion must hold and the Julia label must equal the contract's expected label. There is no fit and no number, so there is no R-vs-Julia comparison block; under the numeric rule this row cannot bind, whatever its verdict.",
+  "r_call": ".gllvmTMB_normalize_aghq(2)",
+  "r_assertion": "identical(.gllvmTMB_normalize_aghq(2), 2L)",
+  "r_value": "2L",
+  "r_call_error": null,
+  "r_assertion_pass": true,
+  "julia_call": "GLLVM._aghq_request(2)",
+  "julia_label": "2",
+  "expected_label": "2",
+  "julia_label_matches_expected": true,
+  "harness_pass": true,
+  "acceptance_rule": "Frozen R assertion true and native normalization value/error matches; zero fit or interface claim.",
+  "negative_controls_behaved": {
+    "NEG-EXPECTED-VALUE-FLIPPED": true,
+    "NEG-INVALID-CASE-MISCLASSIFIED-AS-VALUE": true,
+    "NEG-VALID-CASE-MISCLASSIFIED-AS-ERROR": true
+  },
+  "discrimination_note": "the batch's three negative controls (a flipped expected label, a valid input expected to error, an invalid input expected to return a value) must fail, and did if every entry above is true",
+  "batch_status": "PASS",
+  "gllvmtmb_version": "0.7.1",
+  "batch_verifier": {
+    "tool": "tools/core070_verify_aghq_batch.py --self-test --state, plus tools/core070_aghq_p1_receipts.py tracked-file checks",
+    "status": "PASS",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-control-p1/verify.txt"
+  },
+  "read_from": {
+    "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-control-p1/receipt.json": "422a95d4c0fbaf99f315b7b8b2871454190d236f6fb916f31ac4a3451ff2c8a0",
+    "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-control-p1/julia-results.json": "4df6928f606b6ad0d9183512a78b1a7f96ca00c266a43b7c9edcd3c630c7a89a",
+    "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-control-p1/r-oracle.json": "7f51af43d60280488da6941ed0aed73b0cc7e9c877ee7dc6161be7070e4e432a",
+    "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-control-p1/results.tsv": "9811c0621cf05675201d435f9436748b8f229fa7f9412ec316f7a4814da8f401",
+    "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-control-p1/run-commit.json": "f7a92a98db6631fe1634c769d6e345de5ff401ba3db6d65f2de9031721f80b5a",
+    "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-control-p1/verify.txt": "c0a0a326e31436fa00d5555a8d52414a38e3404476381803e5d258f08678f667",
+    "docs/dev-log/core070/true-parity-latest/aghq-batch-contract-p1.json": "fa7954dbc5b9ae9e5d3f875ca072a5cdec4abe5d22e455bec2890a4c8f13b92d"
+  },
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-control-p1/r-oracle.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-control-p1/julia-results.json"
+  ],
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "glvmodels_commit": "fd92b6551f7ecc99d82eee6f23a4ef42536a778c",
+  "glvmodels_worktree_dirty": [],
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+}

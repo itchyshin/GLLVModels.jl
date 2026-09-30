@@ -1,0 +1,3 @@
+CORE070_WAVE8_CONVERSION_VERIFY_SELF_TEST_OK rejected_mutations=14 cases=7 deferred=5
+CORE070_WAVE8_CONVERSION_CONTRACT_OK cases=7 deferred=5 total_target_rows=12
+CORE070_WAVE8_CONVERSION_STATE_OK /Users/z3437171/local-scratch/a3pf-runs-v2/wave8-conversion-p1

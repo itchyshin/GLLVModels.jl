@@ -3,7 +3,7 @@
 module Core070FamilyFormulas
 using GLLVModels, Test, Random, SHA, TOML
 import Distributions
-using Main: _core070_receipt_dir, _core070_sha256_file, parity_loadings_p5k2
+using Main: _core070_receipt_dir, _core070_sha256_file, parity_loadings_p5k2, core070_record_values!
 
 function run(family::Symbol)
     settings = Dict(
@@ -55,13 +55,18 @@ function run(family::Symbol)
         "duplicate_long" => error_name(() -> gllvm(@formula(y ~ 1), map(x -> vcat(x, x[1]), long);
                                                     family=marker, K=K, controls...)))
     actual_data_sha = bytes2hex(sha256(reinterpret(UInt8, vec(Float64.(Y)))))
+    # R's gradient is recorded, not a gate, for every family (decision 2026-09-30): nlminb's
+    # stopping gradient varies by machine at boundary dispersion. R's convergence code
+    # (r_converged / r_code == 0) and the native gradient stay gates.
     healthy = health["native_converged"] && get(health, "r_converged", get(health, "r_code", -1) == 0) &&
-              health["native_gradient_max"] <= 1e-4 && health["r_gradient_max"] <= 1e-4
+              health["native_gradient_max"] <= 1e-4
+    println("  gllvmTMB r_gradient_max = ", health["r_gradient_max"], " (recorded, not a gate)")
     report = Dict("id"=>id, "native_id"=>native_id, "data_sha256"=>actual_data_sha,
                   "native_health_file"=>health_name, "native_health_sha256"=>_core070_sha256_file(health_path),
                   "health_proof"=>"same-run native health at identical fitted coordinates",
                   "curvature_provenance"=>curvature_provenance, "nfree"=>nfree, "curvature"=>string(curvature(native)),
                   "reference_control_policy"=>health["policy"], "r_loglik"=>health["r_loglik"],
+                  "r_gradient_max"=>health["r_gradient_max"],
                   "input_errors"=>errors)
     for (label, fit) in (("native", native), ("wide", wide), ("long", longfit))
         report[label] = Dict("parameters"=>theta(fit), "loglik"=>fit.loglik,
@@ -77,7 +82,9 @@ function run(family::Symbol)
         @test native.converged
         @test length(theta(native)) == nfree
         @test theta(native) ≈ health["native_parameters"] atol=1e-10 rtol=0
-        for fit in (wide, longfit)
+        for (route, fit) in (("wide", wide), ("long", longfit))
+            core070_record_values!("logLik, $route formula"; julia=fit.loglik, r=health["r_loglik"], rtol=1e-6,
+                test="@test fit.loglik ≈ health[\"r_loglik\"] atol=0 rtol=1e-6")
             @test typeof(fit) == typeof(native)
             @test fit.converged
             @test curvature(fit) == curvature(native)

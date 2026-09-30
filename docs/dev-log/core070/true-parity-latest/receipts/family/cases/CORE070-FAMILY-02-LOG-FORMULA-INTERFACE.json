@@ -1,0 +1,82 @@
+{
+  "schema": "core070-family-p1-case-receipt/v1",
+  "case_id": "CORE070-FAMILY-02-LOG-FORMULA-INTERFACE",
+  "verdict": "PASS",
+  "evidence_kind": "numeric_r_vs_julia",
+  "batch": "test/parity/runparity.jl, CORE070_PARITY_REQUIRED=1, GLLVM_PARITY_PIN=P1, run runparity-poisson",
+  "harness_cell": "CORE070-FAMILY-02-LOG-FORMULA-INTERFACE",
+  "fixture": "test/parity/test_poisson_formula_parity.jl",
+  "measures": "the NATIVE-03-POISSON data refit through gllvm(@formula) wide and long, each compared with that cell's R fit (no separate R formula fit); toy fixture, likelihood-level agreement only",
+  "cell_status": "success",
+  "cell_assertions": {
+    "passed": 22,
+    "broken": 0,
+    "failed": 0,
+    "errored": 0
+  },
+  "cell_execution_case_ids": [
+    "CORE070-FAMILY-02-LOG-FORMULA-INTERFACE"
+  ],
+  "run_status": "success",
+  "run_failure_reason": null,
+  "batch_verifier": {
+    "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
+    "status": "PASS",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/verify.txt"
+  },
+  "read_from": {
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/run.toml": "057a50d82b132d7befdb3df36e191fe52abbce3757ed7c7055c4de5faf7b94d1",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/values-CORE070-FAMILY-02-LOG-FORMULA-INTERFACE.toml": "17642f8951cf458412d6a0b3f5a95a7e0057bab35f2cd85278f083280802bdac",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/run-commit.json": "2e16587a479233a6fe0bf80655a1c208a68a479877cb18647134d745a22f4edd",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/verify.txt": "84868ea743f5dd1fa21ab897bd96e8974be17935bcb24ef3b3bdf5708c3e8d4f",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/cell-CORE070-FAMILY-02-LOG-FORMULA-INTERFACE.toml": "256d1ff0e5d6e45a64e8355128b55d03945aa0aa8066142eaf2e08f41b8796e1",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/poisson-fixture.toml": "dc1ab3483b4fa963f4dba0ece73884326809ba78ee98e503a1d6ac14cedcf264",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/poisson-health.toml": "04437917a04e763083066188d6a33d19ac57dfbd5a684d5c9d796bee8040480a",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/poisson-formula.toml": "e052f7e94b7195555d889662e428abf54964e9398b254b071ccf17b987c89eb9"
+  },
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/values-CORE070-FAMILY-02-LOG-FORMULA-INTERFACE.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/cell-CORE070-FAMILY-02-LOG-FORMULA-INTERFACE.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/poisson-fixture.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/poisson-health.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/poisson-formula.toml"
+  ],
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "7506185ccbb6ebbd484219a860b35d989301a8cf",
+  "glvmodels_worktree_dirty": [],
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-FAMILY-02-LOG-FORMULA-INTERFACE",
+        "quantity": "logLik, wide formula",
+        "max_abs_diff": 1.3983481039758772e-11,
+        "tolerance": 0.0006341712844104389,
+        "tolerance_rule": "the cell's own test, @test fit.loglik \u2248 health[\"r_loglik\"] atol=0 rtol=1e-6 (rtol=1e-06, atol=0; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
+        "n_values": 1,
+        "r_value": -634.171284410439,
+        "julia_value": -634.171284410425,
+        "diff_source": "recomputed from the saved R and Julia values",
+        "discriminating": true
+      },
+      {
+        "case_id": "CORE070-FAMILY-02-LOG-FORMULA-INTERFACE",
+        "quantity": "logLik, long formula",
+        "max_abs_diff": 1.3983481039758772e-11,
+        "tolerance": 0.0006341712844104389,
+        "tolerance_rule": "the cell's own test, @test fit.loglik \u2248 health[\"r_loglik\"] atol=0 rtol=1e-6 (rtol=1e-06, atol=0; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
+        "n_values": 1,
+        "r_value": -634.171284410439,
+        "julia_value": -634.171284410425,
+        "diff_source": "recomputed from the saved R and Julia values",
+        "discriminating": true
+      }
+    ]
+  }
+}

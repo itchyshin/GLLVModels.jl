@@ -1,0 +1,79 @@
+{
+  "schema": "core070-family-p1-case-receipt/v1",
+  "case_id": "NATIVE-06-NB2",
+  "verdict": "FAIL",
+  "evidence_kind": "numeric_r_vs_julia",
+  "batch": "test/parity/runparity.jl, CORE070_PARITY_REQUIRED=1, GLLVM_PARITY_PIN=P1, run runparity-nb2",
+  "harness_cell": "NATIVE-06-NB2",
+  "fixture": "test/parity/test_negbin_parity.jl",
+  "measures": "NB2 log, per-trait dispersion, p=5, n=80, K=2, seed 45; toy fixture, likelihood-level agreement only",
+  "cell_status": "failed",
+  "cell_assertions": {
+    "passed": 16,
+    "broken": 0,
+    "failed": 2,
+    "errored": 0
+  },
+  "cell_execution_case_ids": [
+    "NATIVE-06-NB2"
+  ],
+  "run_status": "failed",
+  "run_failure_reason": "one or more cells have failed, skipped, broken, or zero assertions",
+  "batch_verifier": {
+    "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
+    "status": "FAIL",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/verify.txt"
+  },
+  "read_from": {
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/run.toml": "deb7f3f2dc9ef1e2efcf76ff735fd10faca4c5bba154554f1b915eb0bb6f7a21",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/values-NATIVE-06-NB2.toml": "3976f2cbfc854c9152eaced5cfda847cde2f703e08eb9bcc8a88294dd59e1baf",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/run-commit.json": "2e16587a479233a6fe0bf80655a1c208a68a479877cb18647134d745a22f4edd",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/verify.txt": "229cf86d9a187edd62f93cce6efdd5fd43ebc7a841dac8f508aae9f03d844af6",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/cell-NATIVE-06-NB2.toml": "0f5a9b20feddb476368b00ffecb6d9f0b17ba75e2e532eaa87b58e4443ae1f92",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/nb2-health.toml": "22d0b0a0397bf663998502806627bcba8902f7a41e23e4afcdafaf81787c2ace"
+  },
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/values-NATIVE-06-NB2.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/cell-NATIVE-06-NB2.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/nb2-health.toml"
+  ],
+  "why_fail": "the cell's own assertions did not all pass at P1 (see cell_assertions; the failing assertion may be a health or structure check rather than the compared numbers)",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "7506185ccbb6ebbd484219a860b35d989301a8cf",
+  "glvmodels_worktree_dirty": [],
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "NATIVE-06-NB2",
+        "quantity": "objective at the R optimum",
+        "max_abs_diff": 1.3642420526593924e-12,
+        "tolerance": 1e-06,
+        "tolerance_rule": "the cell's own test, @test abs(d[\"samepoint_delta\"]) <= 1e-6 (rtol=0, atol=1e-06; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
+        "n_values": 1,
+        "r_value": 820.548534328469,
+        "julia_value": 820.5485343284704,
+        "diff_source": "recomputed from the saved R and Julia values",
+        "discriminating": true
+      },
+      {
+        "case_id": "NATIVE-06-NB2",
+        "quantity": "logLik",
+        "max_abs_diff": 1.2128236903663492e-07,
+        "tolerance": 0.000820548534328469,
+        "tolerance_rule": "the cell's own test, @test jl_logL \u2248 r.logLik rtol = 1e-6 (rtol=1e-06, atol=0; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
+        "n_values": 1,
+        "r_value": -820.548534328469,
+        "julia_value": -820.5485342071867,
+        "diff_source": "recomputed from the saved R and Julia values",
+        "discriminating": true
+      }
+    ]
+  }
+}

@@ -409,7 +409,9 @@ end
             # one group is at the boundary, and native/bridge share that verdict
             # (bridge_fit calls the identical fitter, so this is not a coincidence).
             @test any(oracle.dispersion_boundary)
-            @test oracle.converged == false
+            # upper end (r > 1e6) is warn-only since 2026-09-29: converged follows the
+            # optimizer verdict, false only if some r < 1e-6
+            @test oracle.converged == !any(oracle.r_group .< 1e-6)
             @test br.converged == oracle.converged
         end
 

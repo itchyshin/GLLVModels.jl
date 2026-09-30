@@ -17,7 +17,14 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CONTRACT_PATH = ROOT / "docs/dev-log/core070/isdm-batch-contract.json"
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, str(ROOT / "tools"))
+from parity_oracle import R_REF_PINS, SELECTED_PIN  # noqa: E402  (GLLVM_PARITY_PIN; P0 default; unknown pin exits)
+import core070_source_pin_check  # noqa: E402  (library pin + version, shared with data / postfit / inference)
+# P0 keeps the frozen contract; P1 reads the twin written by tools/core070_isdm_p1_contract.py.
+CONTRACT_PATH = ROOT / ("docs/dev-log/core070/true-parity-latest/isdm-batch-contract-p1.json"
+                        if SELECTED_PIN == "P1" else "docs/dev-log/core070/isdm-batch-contract.json")
+REFERENCE_COMMIT = R_REF_PINS[SELECTED_PIN] if SELECTED_PIN == "P1" else "b4d5fee64def88bc768dda1f1f77c29b295edd86"
 DEFAULT_STATE = ROOT / ".unlazy/core070-aghq/isdm-batch-01"
 
 
@@ -31,7 +38,9 @@ def need(ok, message):
 
 
 def load_contract():
-    return json.loads(CONTRACT_PATH.read_text())
+    contract = json.loads(CONTRACT_PATH.read_text())
+    need(contract["reference_commit"] == REFERENCE_COMMIT, "contract is not pinned at the selected pin")
+    return contract
 
 
 def check_report(report, contract, contract_sha256):
@@ -102,12 +111,14 @@ def verify_state(state=DEFAULT_STATE):
     need(receipt.get("results_sha256") == sha(results_path), "results file changed since receipt")
     need(receipt.get("raw_sha256") == sha(raw_path), "raw.tsv changed since receipt")
     need(receipt.get("diagnostics_sha256") == sha(diag_path), "diagnostics.log changed since receipt")
+    core070_source_pin_check.check_source_pin(receipt, SELECTED_PIN, need)
 
     # Live source pins are checked only if the readback source is present at the
     # conventional path recorded for this run; contract-side pinning already
     # guards the *content*, this re-derives it when the tree is available.
+    # The readback is the P0 tree, so this re-derivation applies at P0 only.
     readback_root = ROOT / ".unlazy/core070-aghq/oracle-source/readback"
-    if readback_root.is_dir():
+    if SELECTED_PIN == "P0" and readback_root.is_dir():
         for rel, digest in contract["source_pins"].items():
             local = readback_root / rel
             if local.is_file():
@@ -196,7 +207,9 @@ def self_test():
             continue
         raise AssertionError(f"accepted invalid isdm-batch evidence: {name}")
     print("CORE070_ISDM_BATCH_NEGATIVES_PASS", len(mutations))
-    return len(mutations)
+    n_pin = core070_source_pin_check.self_test(SELECTED_PIN)
+    print("CORE070_ISDM_BATCH_SOURCE_PIN_NEGATIVES_PASS", n_pin)
+    return len(mutations) + n_pin
 
 
 if __name__ == "__main__":

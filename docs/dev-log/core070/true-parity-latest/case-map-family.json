@@ -1,0 +1,1126 @@
+{
+  "schema": 1,
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "scope": "family family: the 21 required rows (required_core, plus the compatibility_adapter row FAMILY-BETA-ALIAS, which tools/true_parity_check.mjs counts as required) the P1 carry scan lists as DANGLING (16) or NO_R_PINS (5). FAMILY-16-LOGIT (NOT_BOUND_AT_P0, empty case list) and the rejected and excluded rows are out of scope.",
+  "note": "Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with PARITY_CASEMAP pointing at this file. Classification and disposition are carried from docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. Only rows whose every executable case id carries passing R-vs-Julia comparison blocks, from a batch whose verifier passed, with no flagged comparison, cite evidence.receipt. Every cell is a toy fixture (p<=5, n<=250): these rows measure likelihood-level agreement on one small data set each, not full family parity.",
+  "generator": "tools/core070_family_p1_receipts.py",
+  "glvmodels_commit": "7506185ccbb6ebbd484219a860b35d989301a8cf",
+  "batch_verifiers": {
+    "runparity-binomial": {
+      "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
+      "status": "PASS",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-binomial/verify.txt"
+    },
+    "runparity-poisson": {
+      "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
+      "status": "PASS",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/verify.txt"
+    },
+    "runparity-lognormal": {
+      "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
+      "status": "PASS",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-lognormal/verify.txt"
+    },
+    "runparity-dispersion": {
+      "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
+      "status": "PASS",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/verify.txt"
+    },
+    "runparity-nb2": {
+      "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
+      "status": "FAIL",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/verify.txt"
+    },
+    "runparity-nb2-formula": {
+      "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
+      "status": "FAIL",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/verify.txt"
+    },
+    "runparity-tweedie": {
+      "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
+      "status": "PASS",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-tweedie/verify.txt"
+    },
+    "runparity-beta": {
+      "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
+      "status": "PASS",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-beta/verify.txt"
+    },
+    "runparity-truncated-poisson": {
+      "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
+      "status": "PASS",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-poisson/verify.txt"
+    },
+    "runparity-truncated-nb2": {
+      "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
+      "status": "FAIL",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/verify.txt"
+    },
+    "runparity-delta-lognormal": {
+      "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
+      "status": "PASS",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-delta-lognormal/verify.txt"
+    },
+    "runparity-delta-gamma": {
+      "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
+      "status": "PASS",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-delta-gamma/verify.txt"
+    },
+    "runparity-ordinal-probit": {
+      "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
+      "status": "PASS",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-ordinal-probit/verify.txt"
+    },
+    "runparity-gaussian": {
+      "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
+      "status": "FAIL",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/verify.txt"
+    },
+    "family-links-p1": {
+      "tool": "tools/core070_verify_family_links_batch.py",
+      "status": "PASS",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/family/family-links-p1/verify.txt"
+    },
+    "a6-p1": {
+      "tool": "tools/core070_a6_studentt_fixture.jl",
+      "status": "PASS",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/family/a6-p1/verify.txt"
+    }
+  },
+  "counts": {
+    "numeric_pass": 15,
+    "numeric_fail": 0,
+    "numeric_held_batch_verifier_failed": 0,
+    "numeric_non_discriminating": 0,
+    "partial_case_not_executed": 5,
+    "not_measured": 1
+  },
+  "p0_evidence_summary": {
+    "rows_with_p0_evidence_record": 21,
+    "rows_without_p0_evidence_record": 0,
+    "p0_raw_receipts_available_here": false
+  },
+  "runtimes_seconds": {
+    "runparity-binomial": 17,
+    "runparity-poisson": 26,
+    "runparity-lognormal": 15,
+    "runparity-dispersion": 28,
+    "runparity-nb2": 26,
+    "runparity-nb2-formula": 55,
+    "runparity-beta": 25,
+    "runparity-truncated-poisson": 11,
+    "runparity-truncated-nb2": 53,
+    "runparity-delta-lognormal": 14,
+    "runparity-delta-gamma": 15,
+    "runparity-ordinal-probit": 10,
+    "runparity-gaussian": 25,
+    "family-links-p1": 18,
+    "a6-p1": 17,
+    "runparity-tweedie": 912,
+    "total_wall_seconds_two_parallel_processes": 912
+  },
+  "batch_artifacts": {
+    "runparity-binomial": [
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-binomial/run.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-binomial/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-binomial/cell-NATIVE-02-BINOMIAL.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-binomial/values-NATIVE-02-BINOMIAL.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-binomial/verify.txt"
+    ],
+    "runparity-poisson": [
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/run.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/cell-NATIVE-03-POISSON.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/cell-CORE070-FAMILY-02-LOG-FORMULA-INTERFACE.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/values-NATIVE-03-POISSON.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/values-CORE070-FAMILY-02-LOG-FORMULA-INTERFACE.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/poisson-fixture.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/poisson-health.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/poisson-formula.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/verify.txt"
+    ],
+    "runparity-lognormal": [
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-lognormal/run.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-lognormal/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-lognormal/cell-NATIVE-04-LOGNORMAL.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-lognormal/values-NATIVE-04-LOGNORMAL.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-lognormal/verify.txt"
+    ],
+    "runparity-dispersion": [
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/run.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/cell-NATIVE-05-GAMMA.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/cell-NATIVE-16-NB1.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/cell-NATIVE-09-BETABINOMIAL.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/values-NATIVE-05-GAMMA.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/values-NATIVE-16-NB1.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/values-NATIVE-09-BETABINOMIAL.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/verify.txt"
+    ],
+    "runparity-nb2": [
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/run.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/cell-NATIVE-06-NB2.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/values-NATIVE-06-NB2.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/nb2-health.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/verify.txt"
+    ],
+    "runparity-nb2-formula": [
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/run.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/cell-CORE070-FAMILY-05-LOG-FORMULA-INTERFACE.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/values-CORE070-FAMILY-05-LOG-FORMULA-INTERFACE.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/formula-nb2-health.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/nb2-formula.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/verify.txt"
+    ],
+    "runparity-tweedie": [
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-tweedie/run.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-tweedie/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-tweedie/cell-NATIVE-07-TWEEDIE.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-tweedie/values-NATIVE-07-TWEEDIE.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-tweedie/verify.txt"
+    ],
+    "runparity-beta": [
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-beta/run.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-beta/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-beta/cell-NATIVE-08-BETA.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-beta/cell-CORE070-FAMILY-07-LOGIT-FORMULA-INTERFACE.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-beta/values-NATIVE-08-BETA.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-beta/values-CORE070-FAMILY-07-LOGIT-FORMULA-INTERFACE.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-beta/beta-fixture.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-beta/beta-health.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-beta/beta-formula.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-beta/verify.txt"
+    ],
+    "runparity-truncated-poisson": [
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-poisson/run.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-poisson/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-poisson/cell-NATIVE-11-TRUNCATED-POISSON.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-poisson/values-NATIVE-11-TRUNCATED-POISSON.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-poisson/verify.txt"
+    ],
+    "runparity-truncated-nb2": [
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/run.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/cell-NATIVE-12-TRUNCATED-NB2.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/cell-CORE070-FAMILY-11-LOG-FORMULA-INTERFACE.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/values-NATIVE-12-TRUNCATED-NB2.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/values-CORE070-FAMILY-11-LOG-FORMULA-INTERFACE.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/truncnb2-policy.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/truncnb2-formula.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/verify.txt"
+    ],
+    "runparity-delta-lognormal": [
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-delta-lognormal/run.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-delta-lognormal/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-delta-lognormal/cell-NATIVE-13-DELTA-LOGNORMAL.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-delta-lognormal/values-NATIVE-13-DELTA-LOGNORMAL.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-delta-lognormal/verify.txt"
+    ],
+    "runparity-delta-gamma": [
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-delta-gamma/run.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-delta-gamma/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-delta-gamma/cell-NATIVE-14-DELTA-GAMMA.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-delta-gamma/values-NATIVE-14-DELTA-GAMMA.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-delta-gamma/verify.txt"
+    ],
+    "runparity-ordinal-probit": [
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-ordinal-probit/run.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-ordinal-probit/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-ordinal-probit/cell-NATIVE-15-ORDINAL-PROBIT.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-ordinal-probit/values-NATIVE-15-ORDINAL-PROBIT.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-ordinal-probit/verify.txt"
+    ],
+    "runparity-gaussian": [
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/run.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/cell-CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/cell-CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/values-CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/values-CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/gaussian-native.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/gaussian-formula.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/gaussian-long.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/verify.txt"
+    ],
+    "family-links-p1": [
+      "docs/dev-log/core070/true-parity-latest/receipts/family/family-links-p1/receipt.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/family-links-p1/results.tsv",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/family-links-p1/julia-results.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/family-links-p1/r-oracle.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/family-links-p1/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/family-links-p1/verify.txt"
+    ],
+    "a6-p1": [
+      "docs/dev-log/core070/true-parity-latest/receipts/family/a6-p1/results.toml",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/a6-p1/r-output.tsv",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/a6-p1/r-output.tsv.source-pin.tsv",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/a6-p1/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/family/a6-p1/verify.txt"
+    ]
+  },
+  "rows": [
+    {
+      "source_id": "family/FAMILY-00-IDENTITY",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "NO_R_PINS",
+      "executable_case_ids": [
+        "CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL",
+        "CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE",
+        "CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE"
+      ],
+      "disposition": null,
+      "p0_batch": "codex-cycle family qualification (pre-dates the evidence-field convention)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "codex-cycle family qualification (pre-dates the evidence-field convention)",
+        "receipts": ".unlazy/core070-aghq/tweedie-replay-01/attempt5/parity-receipts (native+formula) + public-bridge evidence (docs/dev-log/core070, families 02/05/07) \u2014 cross-referenced by docs/dev-log/core070/family-reconciliation-2026-09-01.json which confirmed these are the fully-executed families",
+        "preservation_sha256": null,
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
+      },
+      "evidence_tier": "partial_case_not_executed",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE.json"
+        ],
+        "tier": "some case ids were measured at P1 and at least one was not executed, so the row does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL": "FAIL",
+          "CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE": "FAIL",
+          "CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE": "NOT_EXECUTED"
+        },
+        "batch_verifier": {
+          "CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL": "FAIL",
+          "CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE": "FAIL",
+          "CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE": "n/a"
+        },
+        "discriminating": {
+          "CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL": true,
+          "CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE": true,
+          "CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE": true
+        },
+        "executed_cases_verdict": "FAIL"
+      }
+    },
+    {
+      "source_id": "family/FAMILY-01-CLOGLOG",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-FAMILY-01-CLOGLOG-NATIVE-MODEL"
+      ],
+      "disposition": null,
+      "p0_batch": "family-links wave4 attempt4 (post cloglog curvature repair 26ebf0b6)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "family-links wave4 attempt4 (post cloglog curvature repair 26ebf0b6)",
+        "receipts": ".unlazy/core070-aghq/wave4-batches/wave4-famlinks4",
+        "preservation_sha256": "adaa5dd2da545e7bc7b8438ec65041bbd86bdab1717b33d5ef24e4443708648a",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-01-CLOGLOG-NATIVE-MODEL.json"
+        ],
+        "tier": "numeric: every executable case receipt carries R-vs-Julia comparison blocks pinned to P1, within the harness tolerance, from a batch whose verifier passed"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-FAMILY-01-CLOGLOG-NATIVE-MODEL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-FAMILY-01-CLOGLOG-NATIVE-MODEL": "PASS"
+        },
+        "discriminating": {
+          "CORE070-FAMILY-01-CLOGLOG-NATIVE-MODEL": true
+        },
+        "row_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "family/FAMILY-01-LOGIT",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-FAMILY-01-LOGIT-NATIVE-MODEL"
+      ],
+      "disposition": null,
+      "p0_batch": "family registration decision (round2-3 #9 bulk acceptance)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "family registration decision (round2-3 #9 bulk acceptance)",
+        "receipts": ".unlazy/core070-aghq/tweedie-replay-01/attempt5/parity-receipts",
+        "preservation_sha256": null,
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-01-LOGIT-NATIVE-MODEL.json"
+        ],
+        "tier": "numeric: every executable case receipt carries R-vs-Julia comparison blocks pinned to P1, within the harness tolerance, from a batch whose verifier passed"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-FAMILY-01-LOGIT-NATIVE-MODEL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-FAMILY-01-LOGIT-NATIVE-MODEL": "PASS"
+        },
+        "discriminating": {
+          "CORE070-FAMILY-01-LOGIT-NATIVE-MODEL": true
+        },
+        "row_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "family/FAMILY-01-PROBIT",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-FAMILY-01-PROBIT-NATIVE-MODEL"
+      ],
+      "disposition": null,
+      "p0_batch": "family-links wave4 (attempt2)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "family-links wave4 (attempt2)",
+        "receipts": ".unlazy/core070-aghq/wave4-batches/wave4-famlinks2",
+        "preservation_sha256": "c5dd4780bc07a4e5d256beb96b5ba05c8889c82d95801ad1537ac0ced3ad2719",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-01-PROBIT-NATIVE-MODEL.json"
+        ],
+        "tier": "numeric: every executable case receipt carries R-vs-Julia comparison blocks pinned to P1, within the harness tolerance, from a batch whose verifier passed"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-FAMILY-01-PROBIT-NATIVE-MODEL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-FAMILY-01-PROBIT-NATIVE-MODEL": "PASS"
+        },
+        "discriminating": {
+          "CORE070-FAMILY-01-PROBIT-NATIVE-MODEL": true
+        },
+        "row_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "family/FAMILY-02-LOG",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "NO_R_PINS",
+      "executable_case_ids": [
+        "NATIVE-03-POISSON",
+        "CORE070-FAMILY-02-LOG-FORMULA-INTERFACE",
+        "CORE070-FAMILY-02-LOG-PUBLIC-R-BRIDGE"
+      ],
+      "disposition": null,
+      "p0_batch": "codex-cycle family qualification (pre-dates the evidence-field convention)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "codex-cycle family qualification (pre-dates the evidence-field convention)",
+        "receipts": ".unlazy/core070-aghq/tweedie-replay-01/attempt5/parity-receipts (native+formula) + public-bridge evidence (docs/dev-log/core070, families 02/05/07) \u2014 cross-referenced by docs/dev-log/core070/family-reconciliation-2026-09-01.json which confirmed these are the fully-executed families",
+        "preservation_sha256": null,
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
+      },
+      "evidence_tier": "partial_case_not_executed",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/NATIVE-03-POISSON.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-02-LOG-FORMULA-INTERFACE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-02-LOG-PUBLIC-R-BRIDGE.json"
+        ],
+        "tier": "some case ids were measured at P1 and at least one was not executed, so the row does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "NATIVE-03-POISSON": "PASS",
+          "CORE070-FAMILY-02-LOG-FORMULA-INTERFACE": "PASS",
+          "CORE070-FAMILY-02-LOG-PUBLIC-R-BRIDGE": "NOT_EXECUTED"
+        },
+        "batch_verifier": {
+          "NATIVE-03-POISSON": "PASS",
+          "CORE070-FAMILY-02-LOG-FORMULA-INTERFACE": "PASS",
+          "CORE070-FAMILY-02-LOG-PUBLIC-R-BRIDGE": "n/a"
+        },
+        "discriminating": {
+          "NATIVE-03-POISSON": true,
+          "CORE070-FAMILY-02-LOG-FORMULA-INTERFACE": true,
+          "CORE070-FAMILY-02-LOG-PUBLIC-R-BRIDGE": true
+        },
+        "executed_cases_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "family/FAMILY-03-LOG",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-FAMILY-03-LOG-NATIVE-MODEL"
+      ],
+      "disposition": null,
+      "p0_batch": "family registration decision (round2-3 #9 bulk acceptance)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "family registration decision (round2-3 #9 bulk acceptance)",
+        "receipts": ".unlazy/core070-aghq/tweedie-replay-01/attempt5/parity-receipts",
+        "preservation_sha256": null,
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-03-LOG-NATIVE-MODEL.json"
+        ],
+        "tier": "numeric: every executable case receipt carries R-vs-Julia comparison blocks pinned to P1, within the harness tolerance, from a batch whose verifier passed"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-FAMILY-03-LOG-NATIVE-MODEL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-FAMILY-03-LOG-NATIVE-MODEL": "PASS"
+        },
+        "discriminating": {
+          "CORE070-FAMILY-03-LOG-NATIVE-MODEL": true
+        },
+        "row_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "family/FAMILY-04-LOG",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-FAMILY-04-LOG-NATIVE-MODEL"
+      ],
+      "disposition": null,
+      "p0_batch": "family registration decision (round2-3 #9 bulk acceptance)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "family registration decision (round2-3 #9 bulk acceptance)",
+        "receipts": ".unlazy/core070-aghq/tweedie-replay-01/attempt5/parity-receipts",
+        "preservation_sha256": null,
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-04-LOG-NATIVE-MODEL.json"
+        ],
+        "tier": "numeric: every executable case receipt carries R-vs-Julia comparison blocks pinned to P1, within the harness tolerance, from a batch whose verifier passed"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-FAMILY-04-LOG-NATIVE-MODEL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-FAMILY-04-LOG-NATIVE-MODEL": "PASS"
+        },
+        "discriminating": {
+          "CORE070-FAMILY-04-LOG-NATIVE-MODEL": true
+        },
+        "row_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "family/FAMILY-05-LOG",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "NO_R_PINS",
+      "executable_case_ids": [
+        "NATIVE-06-NB2",
+        "CORE070-FAMILY-05-LOG-FORMULA-INTERFACE",
+        "CORE070-FAMILY-05-LOG-PUBLIC-R-BRIDGE"
+      ],
+      "disposition": null,
+      "p0_batch": "codex-cycle family qualification (pre-dates the evidence-field convention)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "codex-cycle family qualification (pre-dates the evidence-field convention)",
+        "receipts": ".unlazy/core070-aghq/tweedie-replay-01/attempt5/parity-receipts (native+formula) + public-bridge evidence (docs/dev-log/core070, families 02/05/07) \u2014 cross-referenced by docs/dev-log/core070/family-reconciliation-2026-09-01.json which confirmed these are the fully-executed families",
+        "preservation_sha256": null,
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
+      },
+      "evidence_tier": "partial_case_not_executed",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/NATIVE-06-NB2.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-05-LOG-FORMULA-INTERFACE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-05-LOG-PUBLIC-R-BRIDGE.json"
+        ],
+        "tier": "some case ids were measured at P1 and at least one was not executed, so the row does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "NATIVE-06-NB2": "FAIL",
+          "CORE070-FAMILY-05-LOG-FORMULA-INTERFACE": "FAIL",
+          "CORE070-FAMILY-05-LOG-PUBLIC-R-BRIDGE": "NOT_EXECUTED"
+        },
+        "batch_verifier": {
+          "NATIVE-06-NB2": "FAIL",
+          "CORE070-FAMILY-05-LOG-FORMULA-INTERFACE": "FAIL",
+          "CORE070-FAMILY-05-LOG-PUBLIC-R-BRIDGE": "n/a"
+        },
+        "discriminating": {
+          "NATIVE-06-NB2": true,
+          "CORE070-FAMILY-05-LOG-FORMULA-INTERFACE": true,
+          "CORE070-FAMILY-05-LOG-PUBLIC-R-BRIDGE": true
+        },
+        "executed_cases_verdict": "FAIL"
+      }
+    },
+    {
+      "source_id": "family/FAMILY-06-FIXED-SHAPE",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-FAMILY-06-FIXED-SHAPE-NATIVE-MODEL"
+      ],
+      "disposition": null,
+      "p0_batch": "family registration decision (round2-3 #9 bulk acceptance)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "family registration decision (round2-3 #9 bulk acceptance)",
+        "receipts": ".unlazy/core070-aghq/tweedie-replay-01/attempt5/parity-receipts",
+        "preservation_sha256": null,
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-06-FIXED-SHAPE-NATIVE-MODEL.json"
+        ],
+        "tier": "numeric: every executable case receipt carries R-vs-Julia comparison blocks pinned to P1, within the harness tolerance, from a batch whose verifier passed"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-FAMILY-06-FIXED-SHAPE-NATIVE-MODEL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-FAMILY-06-FIXED-SHAPE-NATIVE-MODEL": "PASS"
+        },
+        "discriminating": {
+          "CORE070-FAMILY-06-FIXED-SHAPE-NATIVE-MODEL": true
+        },
+        "row_verdict": "PASS"
+      },
+      "note": "FAMILY-06-LOG and FAMILY-06-FIXED-SHAPE are one measurement (the NATIVE-07-TWEEDIE cell, by the P0 registration) counted on two rows; whether it counts once or twice is for the maintainer."
+    },
+    {
+      "source_id": "family/FAMILY-06-LOG",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-FAMILY-06-LOG-NATIVE-MODEL"
+      ],
+      "disposition": null,
+      "p0_batch": "family registration decision (round2-3 #9 bulk acceptance)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "family registration decision (round2-3 #9 bulk acceptance)",
+        "receipts": ".unlazy/core070-aghq/tweedie-replay-01/attempt5/parity-receipts",
+        "preservation_sha256": null,
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-06-LOG-NATIVE-MODEL.json"
+        ],
+        "tier": "numeric: every executable case receipt carries R-vs-Julia comparison blocks pinned to P1, within the harness tolerance, from a batch whose verifier passed"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-FAMILY-06-LOG-NATIVE-MODEL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-FAMILY-06-LOG-NATIVE-MODEL": "PASS"
+        },
+        "discriminating": {
+          "CORE070-FAMILY-06-LOG-NATIVE-MODEL": true
+        },
+        "row_verdict": "PASS"
+      },
+      "note": "FAMILY-06-LOG and FAMILY-06-FIXED-SHAPE are one measurement (the NATIVE-07-TWEEDIE cell, by the P0 registration) counted on two rows; whether it counts once or twice is for the maintainer."
+    },
+    {
+      "source_id": "family/FAMILY-07-LOGIT",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "NO_R_PINS",
+      "executable_case_ids": [
+        "NATIVE-08-BETA",
+        "CORE070-FAMILY-07-LOGIT-FORMULA-INTERFACE",
+        "CORE070-FAMILY-07-LOGIT-PUBLIC-R-BRIDGE"
+      ],
+      "disposition": null,
+      "p0_batch": "codex-cycle family qualification (pre-dates the evidence-field convention)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "codex-cycle family qualification (pre-dates the evidence-field convention)",
+        "receipts": ".unlazy/core070-aghq/tweedie-replay-01/attempt5/parity-receipts (native+formula) + public-bridge evidence (docs/dev-log/core070, families 02/05/07) \u2014 cross-referenced by docs/dev-log/core070/family-reconciliation-2026-09-01.json which confirmed these are the fully-executed families",
+        "preservation_sha256": null,
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
+      },
+      "evidence_tier": "partial_case_not_executed",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/NATIVE-08-BETA.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-07-LOGIT-FORMULA-INTERFACE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-07-LOGIT-PUBLIC-R-BRIDGE.json"
+        ],
+        "tier": "some case ids were measured at P1 and at least one was not executed, so the row does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "NATIVE-08-BETA": "PASS",
+          "CORE070-FAMILY-07-LOGIT-FORMULA-INTERFACE": "PASS",
+          "CORE070-FAMILY-07-LOGIT-PUBLIC-R-BRIDGE": "NOT_EXECUTED"
+        },
+        "batch_verifier": {
+          "NATIVE-08-BETA": "PASS",
+          "CORE070-FAMILY-07-LOGIT-FORMULA-INTERFACE": "PASS",
+          "CORE070-FAMILY-07-LOGIT-PUBLIC-R-BRIDGE": "n/a"
+        },
+        "discriminating": {
+          "NATIVE-08-BETA": true,
+          "CORE070-FAMILY-07-LOGIT-FORMULA-INTERFACE": true,
+          "CORE070-FAMILY-07-LOGIT-PUBLIC-R-BRIDGE": true
+        },
+        "executed_cases_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "family/FAMILY-08-LOGIT",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-FAMILY-08-LOGIT-NATIVE-MODEL"
+      ],
+      "disposition": null,
+      "p0_batch": "family registration decision (round2-3 #9 bulk acceptance)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "family registration decision (round2-3 #9 bulk acceptance)",
+        "receipts": ".unlazy/core070-aghq/tweedie-replay-01/attempt5/parity-receipts",
+        "preservation_sha256": null,
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-08-LOGIT-NATIVE-MODEL.json"
+        ],
+        "tier": "numeric: every executable case receipt carries R-vs-Julia comparison blocks pinned to P1, within the harness tolerance, from a batch whose verifier passed"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-FAMILY-08-LOGIT-NATIVE-MODEL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-FAMILY-08-LOGIT-NATIVE-MODEL": "PASS"
+        },
+        "discriminating": {
+          "CORE070-FAMILY-08-LOGIT-NATIVE-MODEL": true
+        },
+        "row_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "family/FAMILY-09-FIXED-SHAPE",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-A6-STUDENTT-FIXED-DF-PAIRED"
+      ],
+      "disposition": null,
+      "p0_batch": "A6 studentt fixture (a6-run2)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "A6 studentt fixture (a6-run2)",
+        "receipts": ".unlazy/core070-aghq/a6-studentt/a6-run2",
+        "preservation_sha256": "6b0b6ea78996652a7de9487165fa27be34de3b92589c6adb96e1930825d1be9c",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-A6-STUDENTT-FIXED-DF-PAIRED.json"
+        ],
+        "tier": "numeric: every executable case receipt carries R-vs-Julia comparison blocks pinned to P1, within the harness tolerance, from a batch whose verifier passed"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-A6-STUDENTT-FIXED-DF-PAIRED": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-A6-STUDENTT-FIXED-DF-PAIRED": "PASS"
+        },
+        "discriminating": {
+          "CORE070-A6-STUDENTT-FIXED-DF-PAIRED": true
+        },
+        "row_verdict": "PASS"
+      },
+      "note": "FAMILY-09-FIXED-SHAPE and FAMILY-09-IDENTITY share their one case id (CORE070-A6-STUDENTT-FIXED-DF-PAIRED): one measurement counted on two rows."
+    },
+    {
+      "source_id": "family/FAMILY-09-IDENTITY",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-A6-STUDENTT-FIXED-DF-PAIRED"
+      ],
+      "disposition": null,
+      "p0_batch": "A6 studentt fixture (a6-run2)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "A6 studentt fixture (a6-run2)",
+        "receipts": ".unlazy/core070-aghq/a6-studentt/a6-run2",
+        "preservation_sha256": "6b0b6ea78996652a7de9487165fa27be34de3b92589c6adb96e1930825d1be9c",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-A6-STUDENTT-FIXED-DF-PAIRED.json"
+        ],
+        "tier": "numeric: every executable case receipt carries R-vs-Julia comparison blocks pinned to P1, within the harness tolerance, from a batch whose verifier passed"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-A6-STUDENTT-FIXED-DF-PAIRED": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-A6-STUDENTT-FIXED-DF-PAIRED": "PASS"
+        },
+        "discriminating": {
+          "CORE070-A6-STUDENTT-FIXED-DF-PAIRED": true
+        },
+        "row_verdict": "PASS"
+      },
+      "note": "FAMILY-09-FIXED-SHAPE and FAMILY-09-IDENTITY share their one case id (CORE070-A6-STUDENTT-FIXED-DF-PAIRED): one measurement counted on two rows."
+    },
+    {
+      "source_id": "family/FAMILY-10-LOG",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-FAMILY-10-LOG-NATIVE-MODEL"
+      ],
+      "disposition": null,
+      "p0_batch": "family registration decision (round2-3 #9 bulk acceptance)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "family registration decision (round2-3 #9 bulk acceptance)",
+        "receipts": ".unlazy/core070-aghq/tweedie-replay-01/attempt5/parity-receipts",
+        "preservation_sha256": null,
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-10-LOG-NATIVE-MODEL.json"
+        ],
+        "tier": "numeric: every executable case receipt carries R-vs-Julia comparison blocks pinned to P1, within the harness tolerance, from a batch whose verifier passed"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-FAMILY-10-LOG-NATIVE-MODEL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-FAMILY-10-LOG-NATIVE-MODEL": "PASS"
+        },
+        "discriminating": {
+          "CORE070-FAMILY-10-LOG-NATIVE-MODEL": true
+        },
+        "row_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "family/FAMILY-11-LOG",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "NO_R_PINS",
+      "executable_case_ids": [
+        "NATIVE-12-TRUNCATED-NB2",
+        "CORE070-FAMILY-11-LOG-FORMULA-INTERFACE",
+        "CORE070-FAMILY-11-LOG-PUBLIC-R-BRIDGE"
+      ],
+      "disposition": null,
+      "p0_batch": "codex-cycle family qualification (pre-dates the evidence-field convention)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "codex-cycle family qualification (pre-dates the evidence-field convention)",
+        "receipts": ".unlazy/core070-aghq/tweedie-replay-01/attempt5/parity-receipts (native+formula) + public-bridge evidence (docs/dev-log/core070, families 02/05/07) \u2014 cross-referenced by docs/dev-log/core070/family-reconciliation-2026-09-01.json which confirmed these are the fully-executed families",
+        "preservation_sha256": null,
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
+      },
+      "evidence_tier": "partial_case_not_executed",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/NATIVE-12-TRUNCATED-NB2.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-11-LOG-FORMULA-INTERFACE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-11-LOG-PUBLIC-R-BRIDGE.json"
+        ],
+        "tier": "some case ids were measured at P1 and at least one was not executed, so the row does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "NATIVE-12-TRUNCATED-NB2": "FAIL",
+          "CORE070-FAMILY-11-LOG-FORMULA-INTERFACE": "FAIL",
+          "CORE070-FAMILY-11-LOG-PUBLIC-R-BRIDGE": "NOT_EXECUTED"
+        },
+        "batch_verifier": {
+          "NATIVE-12-TRUNCATED-NB2": "FAIL",
+          "CORE070-FAMILY-11-LOG-FORMULA-INTERFACE": "FAIL",
+          "CORE070-FAMILY-11-LOG-PUBLIC-R-BRIDGE": "n/a"
+        },
+        "discriminating": {
+          "NATIVE-12-TRUNCATED-NB2": true,
+          "CORE070-FAMILY-11-LOG-FORMULA-INTERFACE": true,
+          "CORE070-FAMILY-11-LOG-PUBLIC-R-BRIDGE": true
+        },
+        "executed_cases_verdict": "FAIL"
+      }
+    },
+    {
+      "source_id": "family/FAMILY-12-LOGIT-LOG",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-FAMILY-12-LOGIT-LOG-NATIVE-MODEL"
+      ],
+      "disposition": null,
+      "p0_batch": "family registration decision (round2-3 #9 bulk acceptance)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "family registration decision (round2-3 #9 bulk acceptance)",
+        "receipts": ".unlazy/core070-aghq/tweedie-replay-01/attempt5/parity-receipts",
+        "preservation_sha256": null,
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-12-LOGIT-LOG-NATIVE-MODEL.json"
+        ],
+        "tier": "numeric: every executable case receipt carries R-vs-Julia comparison blocks pinned to P1, within the harness tolerance, from a batch whose verifier passed"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-FAMILY-12-LOGIT-LOG-NATIVE-MODEL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-FAMILY-12-LOGIT-LOG-NATIVE-MODEL": "PASS"
+        },
+        "discriminating": {
+          "CORE070-FAMILY-12-LOGIT-LOG-NATIVE-MODEL": true
+        },
+        "row_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "family/FAMILY-13-LOGIT-LOG",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-FAMILY-13-LOGIT-LOG-NATIVE-MODEL"
+      ],
+      "disposition": null,
+      "p0_batch": "family registration decision (round2-3 #9 bulk acceptance)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "family registration decision (round2-3 #9 bulk acceptance)",
+        "receipts": ".unlazy/core070-aghq/tweedie-replay-01/attempt5/parity-receipts",
+        "preservation_sha256": null,
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-13-LOGIT-LOG-NATIVE-MODEL.json"
+        ],
+        "tier": "numeric: every executable case receipt carries R-vs-Julia comparison blocks pinned to P1, within the harness tolerance, from a batch whose verifier passed"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-FAMILY-13-LOGIT-LOG-NATIVE-MODEL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-FAMILY-13-LOGIT-LOG-NATIVE-MODEL": "PASS"
+        },
+        "discriminating": {
+          "CORE070-FAMILY-13-LOGIT-LOG-NATIVE-MODEL": true
+        },
+        "row_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "family/FAMILY-14-PROBIT",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-FAMILY-14-PROBIT-NATIVE-MODEL"
+      ],
+      "disposition": null,
+      "p0_batch": "family registration decision (round2-3 #9 bulk acceptance)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "family registration decision (round2-3 #9 bulk acceptance)",
+        "receipts": ".unlazy/core070-aghq/tweedie-replay-01/attempt5/parity-receipts",
+        "preservation_sha256": null,
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-14-PROBIT-NATIVE-MODEL.json"
+        ],
+        "tier": "numeric: every executable case receipt carries R-vs-Julia comparison blocks pinned to P1, within the harness tolerance, from a batch whose verifier passed"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-FAMILY-14-PROBIT-NATIVE-MODEL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-FAMILY-14-PROBIT-NATIVE-MODEL": "PASS"
+        },
+        "discriminating": {
+          "CORE070-FAMILY-14-PROBIT-NATIVE-MODEL": true
+        },
+        "row_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "family/FAMILY-15-LOG",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-FAMILY-15-LOG-NATIVE-MODEL"
+      ],
+      "disposition": null,
+      "p0_batch": "family registration decision (round2-3 #9 bulk acceptance)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "family registration decision (round2-3 #9 bulk acceptance)",
+        "receipts": ".unlazy/core070-aghq/tweedie-replay-01/attempt5/parity-receipts",
+        "preservation_sha256": null,
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-15-LOG-NATIVE-MODEL.json"
+        ],
+        "tier": "numeric: every executable case receipt carries R-vs-Julia comparison blocks pinned to P1, within the harness tolerance, from a batch whose verifier passed"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-FAMILY-15-LOG-NATIVE-MODEL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-FAMILY-15-LOG-NATIVE-MODEL": "PASS"
+        },
+        "discriminating": {
+          "CORE070-FAMILY-15-LOG-NATIVE-MODEL": true
+        },
+        "row_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "family/FAMILY-BETA-ALIAS",
+      "classification": "compatibility_adapter",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-FAMILY-BETA-ALIAS-COMPATIBILITY-ADAPTER"
+      ],
+      "disposition": null,
+      "p0_batch": "family registration decision (round2-3 #9 bulk acceptance)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "family registration decision (round2-3 #9 bulk acceptance)",
+        "receipts": ".unlazy/core070-aghq/tweedie-replay-01/attempt5/parity-receipts",
+        "preservation_sha256": null,
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
+      },
+      "evidence_tier": "not_measured",
+      "measured_against": null,
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-BETA-ALIAS-COMPATIBILITY-ADAPTER.json"
+        ],
+        "tier": "no case of this row was executed at P1 (see each receipt's why_not_executed)"
+      }
+    }
+  ]
+}

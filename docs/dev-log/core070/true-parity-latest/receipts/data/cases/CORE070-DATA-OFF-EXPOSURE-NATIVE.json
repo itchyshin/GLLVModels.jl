@@ -1,0 +1,86 @@
+{
+  "schema": "core070-data-p1-case-receipt/v1",
+  "case_id": "CORE070-DATA-OFF-EXPOSURE-NATIVE",
+  "verdict": "PASS",
+  "evidence_kind": "r_replay_julia_surface_absent",
+  "source_ids": [
+    "data/DATA-OFF-EXPOSURE"
+  ],
+  "batch": "tools/core070_data_batch.R (P1 source tree) + tools/core070_data_batch.jl, GLLVM_PARITY_PIN=P1",
+  "batch_status": "PASS",
+  "batch_verifier": {
+    "tool": "tools/core070_verify_data_batch.py",
+    "argv": "tools/core070_verify_data_batch.py --state {state} --julia-receipt {state}/data-batch-julia-introspection.json --self-test",
+    "status": "PASS",
+    "accept_marker": "CORE070_DATA_BATCH_VERIFIED",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/verify.txt"
+  },
+  "gllvmtmb_version": "0.7.1",
+  "r_expression": "identical(gll_prepare_offset(quote(log(e)),data.frame(e=c(1,2,4),kind=c('count','continuous','count')),globalenv(),rep(2L,3),rep(0L,3),lapply(rep(2L,3),function(i) list(family=paste0('fid',i))),data.frame(e=c(1,2,4),kind=c('count','continuous','count'))$kind),log(c(1,2,4)))",
+  "r_expected": "TRUE",
+  "r_actual": true,
+  "r_is_error": false,
+  "r_ok": true,
+  "negative_control": false,
+  "julia_planned_surface_group": "offset_preparation",
+  "julia_surface_introspection": {
+    "candidate_exported_symbols": [
+      "prepare_offset",
+      "gll_prepare_offset",
+      "OffsetSpec"
+    ],
+    "candidate_kwargs": [
+      "offset"
+    ],
+    "found_symbols": [],
+    "found_kwargs": [],
+    "surface_absent": true
+  },
+  "read_from": {
+    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/receipt.json": "3bb916c6a8e7d3b29f8a576015861f801d49ff3ffc2efa091aa1038721f1f7e2",
+    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/data-batch-results.json": "ab4cfe6dbb44c4d0eb07b4d9dd4a4a941dc3dc4a41873e5f6ac1dedee8a94849",
+    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/raw.tsv": "bbd13cccb410fd938fd4d4f3654eace2859a60d28937641fbcc159950427c13f",
+    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/data-batch-julia-introspection.json": "a205feb69805c99dc8cb72fc547514cdc69700b66a2d1493f153fcc906fb2431",
+    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/data-batch-julia-surface-probe.json": "42a25890836296957ae75a3fb2c50f7bf84d732c3329ecc7308c2edbbef0c826",
+    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/run-commit.json": "d1ee2e08f0f9761f131f6dbc39d87414d4fec268e827cb1d631016e31230b485",
+    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/verify.txt": "3c734e295483cd9a97a7cc6a9e4fbe832fda65a9832bc98f95d39b4f2dd58146",
+    "docs/dev-log/core070/true-parity-latest/data-batch-contract-p1.json": "89754d273dd92624b6fba4a16f292020e9b3fff13f7e8d32dd12365edcba6698"
+  },
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/data-batch-results.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/data-batch-julia-introspection.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/data-batch-julia-surface-probe.json"
+  ],
+  "julia_fit_time_surface_probe": {
+    "tool": "tools/core070_data_surface_probe.jl",
+    "surfaces": {
+      "offset": {
+        "accepted_changes_loglik": [
+          "fit_gllvm(Y; family=Normal())",
+          "fit_gllvm(Y; family=Poisson())",
+          "fit_gllvm(Y; family=NegativeBinomial(1.0, 0.5))",
+          "fit_gllvm(Y; family=NB1())",
+          "fit_gllvm(Y; family=Binomial())",
+          "fit_gllvm(Y; family=Beta())",
+          "fit_gllvm(Y; family=Gamma())",
+          "gllvm(@formula(y ~ 1), Y, data; family=Poisson())"
+        ],
+        "refused": [
+          "fit_gllvm(Y; family=Normal(), pervar=true)"
+        ]
+      }
+    }
+  },
+  "julia_surface": "Julia offset-preparation surface must evaluate a data-column offset expression (log-exposure) row-wise against the training data frame.",
+  "julia_verdict": "SPEC_DEFECT",
+  "why_not_numeric": "The R side replays a pinned P1 helper to an exact identical() expectation. That is a helper replay, not a fit: it produces no fit number, so there is nothing numeric to compare yet. Julia side, from the behavioural surface probe: offset= is accepted and moves the maximised logLik on fit_gllvm(Y; family=Normal()); fit_gllvm(Y; family=Poisson()); fit_gllvm(Y; family=NegativeBinomial(1.0, 0.5)); fit_gllvm(Y; family=NB1()); fit_gllvm(Y; family=Binomial()); fit_gllvm(Y; family=Beta()); fit_gllvm(Y; family=Gamma()); gllvm(@formula(y ~ 1), Y, data; family=Poisson()) (refused on fit_gllvm(Y; family=Normal(), pervar=true)). What GLLVModels lacks is the helper this case replays (Julia offset-preparation surface must evaluate a data-column offset expression (log-exposure) row-wise against the training data frame); the name-level introspection's surface_absent refers to that helper layer only. A numeric twin would need an R fit that uses this input at P1 and the matching GLLVModels fit.",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "a875103063231a5ea233ddcd032572311893b04b",
+  "glvmodels_worktree_dirty": [],
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+}
