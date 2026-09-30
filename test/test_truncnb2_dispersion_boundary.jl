@@ -35,11 +35,12 @@ const _TNB2_BD_Y = reshape(Int.(_TNB2_BD["upper_Y_column_major"]),
 end
 
 @testset "truncated NB2 (per-trait r): the fitter applies the verdict" begin
+    # The per-trait fitter restarts any trait whose r ends outside [1e-6, 1e6] from r = 1
+    # before the verdict (`_nb_boundary_restart`), and keeps the restart when it fits
+    # better. A start at r = 1e-9 is replaced that way (it ends at r = 1), so the lower
+    # end cannot be pinned here; the start at r = 1e9 is kept, which shows the verdict
+    # runs on the returned r. The lower-end rule itself is covered by the unit tests.
     p = _TNB2_BD["upper_p"]
-    f = @test_logs (:warn, r"fit_truncated_nbinom2_gllvm_pertrait: .*below 1e-6") match_mode = :any fit_truncated_nbinom2_gllvm_pertrait(
-        _TNB2_BD_Y; K = 1, r_init = [fill(3.0, p - 1); 1e-9], iterations = 0)
-    @test f.r[end] ≈ 1e-9
-    @test !f.converged
     g = @test_logs (:warn, r"fit_truncated_nbinom2_gllvm_pertrait: .*Poisson limit") match_mode = :any fit_truncated_nbinom2_gllvm_pertrait(
         _TNB2_BD_Y; K = 1, r_init = [fill(3.0, p - 1); 1e9], iterations = 0)
     @test g.r[end] ≈ 1e9
