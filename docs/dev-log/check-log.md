@@ -1,3 +1,143 @@
+## 2026-09-29: grouped NB1 follows the Poisson-limit meaning (review of the grouped warn-only change)
+
+- The first version applied "upper end warns" to NB1 φ numerically. NB1's Poisson limit is φ → 0,
+  so that warned on unidentified overdispersion (φ > 1e6) and still blocked the Poisson limit.
+  Now NB1 grouped: φ < 1e-6 warns only, φ > 1e6 gives converged = false. On the nb_upper counts
+  the NB1 grouped fit reaches φ ≈ 6e-7 and warns "Poisson limit ... converged is not affected".
+- Julia 1.10.12: test_nb_grouped_upper_warn 16/16 (NB1 testset added),
+  test_grouped_dispersion_tweedie_nb1 25/25, test_confint_bootstrap_verdict_nb1 36/36,
+  test_nb1_x_identity 7/7, test_nb1_grouped_mode_search 39/39, test_fit_verdict_gradient 13/13,
+  test_known_sentinel_defects 25 + 1 broken, test_grouped_dispersion 20/20, test_bridge_x 192/192,
+  test_bridge_grouped_dispersion 129/129, test_nb_boundary_restart 12/12,
+  test_gamma_beta_upper_boundary 118/118, test_confint_family 341/341.
+
+## 2026-09-29: grouped NB upper dispersion warns only
+
+- Branch `claude/nb-grouped-upper-warn` from `origin/claude/merge-train-20260929`. In the four grouped NB
+  fitters (`fit_nb_gllvm_grouped[_cov]`, `fit_nb1_gllvm_grouped[_cov]`), `converged` = existing verdict
+  && !any(lower-end flag); r (NB1: phi) above 1e6 emits a `@warn` only. `dispersion_boundary` still flags
+  both ends. `_nb_boundary_restart`, `confint_family.jl`, `negbin.jl`, `_fit_verdict` untouched.
+- Changed assertions (old rule: upper end gives converged = false): `test_nb_boundary_restart.jl:38`,
+  `test_known_sentinel_defects.jl:74`, `test_grouped_dispersion.jl:127`, `test_bridge_x.jl:414`,
+  `test_gamma_beta_upper_boundary.jl:120`. No tolerance widened, no check deleted.
+- New `test/test_nb_grouped_upper_warn.jl` (13 checks): NB2 r above 1e6 gives the warning,
+  `dispersion_boundary` true, converged true; r below 1e-6 gives the warning, flag true, converged false.
+- Julia 1.10.12: new 13 of 13; changed files nb_boundary_restart 12/12, known_sentinel 25 pass 1 broken,
+  grouped_dispersion 20/20, bridge_x 192/192 (+8/8), gamma_beta_upper_boundary 118/118. Other files
+  referencing the grouped NB types, all green: confint_family 341/341, bridge_grouped_dispersion 129/129,
+  nb2_grouped_mode_search 38/38, confint_bootstrap_verdict_nb1 36/36, aicbic_newfits 18/18,
+  bridge_missing_mask 92/92, extract_latent_scores 79/79, fit_gllvm 11/11, fit_verdict_gradient 13/13,
+  grouped_dispersion_tweedie_nb1 25/25, grouped_getlv_mode 303/303, grouped_getlv_offset 24/24,
+  grouped_hessian_consistency 23/23, grouped_init_kwargs 16/16, nb1_x_identity 7/7,
+  nb_beta_x_identity 14/14, nb_fit 8/8, unified_api 24/24.
+  Julia 1.13.0 (new and changed files): same tallies. test/parity/*.jl need R and their own harness:
+  errors standalone, not run. Full suite not run.
+## 2026-09-29: ordered-beta bootstrap simulator
+
+- Branch `claude/ordered-beta-boot-simulator` from `origin/main`. The `OrderedBetaFit` CI adapter's
+  `simulate` stub is replaced by a draw from the law `ordered_beta_logp` scores (formulas checked
+  against `src/families/ordered_beta.jl`, lines 7-15 and 78-102, including the `μ` clamp).
+- Before (origin/main): `confint(fit, Y; method = :bootstrap, n_boot = 12)` returns all-NaN bounds
+  with `n_converged = 0`; the stub's throw is swallowed per replicate, so there is no error.
+- New test `test/test_confint_bootstrap_ordered_beta.jl`: 0-share, 1-share and interior mean per
+  trait (K = 2, n = 200,000) within 4 analytic Monte Carlo SEs of quadrature values (observed
+  |z| at most 2.12 on Julia 1.10), a joint 1-share that separates a shared per-site z from a
+  per-cell one, and an end-to-end bootstrap on a literal fixture (sha256 checked).
+- Red on origin/main: 5 pass, 4 fail, 1 error on Julia 1.10.12 and 1.13.0. Green: 23 of 23 on both.
+  `test_confint_bootstrap_verdict_bhob.jl` (header comment updated): 25 of 25 on both. Full suite not run.
+## 2026-09-29: multinomial fitter reports converged = false under complete separation
+
+- Branch `claude/multinomial-separation-verdict` from `origin/main` 0ce4a35aa. New
+  `_multinomial_verdict` in `src/families/multinomial.jl` (the `_gp1_verdict` shape; `_fit_verdict`
+  untouched): converged = false when every observation's `-log p̂_i(y_i)` is at most 1e-4.
+- Before: 12 observations, K = 3, one covariate ordering the categories: converged = true,
+  loglik -1.19e-5, max |θ| 66.0 (Julia 1.10.12 and 1.13.0). After: converged = false, loglik unchanged.
+- New test `test/test_multinomial_separation.jl` on the literal fixture
+  `test/fixtures/multinomial_separation.toml` (sha256-checked). origin/main: 46 pass, 2 fail,
+  2 error of 50 on both 1.10 and 1.13. Branch: 63 of 63 pass on both.
+- Six healthy fits (n 60 to 200, K 3 to 5, p 0 to 2): converged and loglik bit-identical to origin/main
+  on macOS aarch64 (worst observation p̂ 0.007 to 0.28, far from the threshold).
+- Other files calling `fit_multinomial_gllvm`, on 1.10 and 1.13: `test_multinomial.jl` 41/41,
+  `test_core070_link_boundaries.jl` 21/21, `test_second_order_multinomial_ci.jl` 28/28,
+  `test_confint_bootstrap_verdict_rest.jl` 61/61. `test/parity/test_multinomial_parity.jl` not run
+  (needs R and RCall).
+## 2026-09-29: GP-1 mode search backtracks (#611)
+
+- Branch `claude/gp1-joint-polish-611` from `origin/main` 0ce4a35aa. One line in
+  `src/families/gp1.jl`: `_laplace_mode_should_backtrack(::GeneralizedPoisson1) = true`,
+  as NB1 and censored Poisson already do. `_laplace_mode` itself is unchanged.
+- Diagnosis: at the default optimum of fixture seed 101, a step of 1e-6 in one β
+  raised the nll by 36.64. The jump came from one site (y = [0, 38, 79, 1]), where the
+  undamped search stopped at z = 0.705 with log-joint gradient -42.8; the brute-force
+  mode is -1.624. Six random restarts then gave spreads of 0.81 (seed 101) and 20.09
+  (seed 104), all with `converged = true`; tightening `g_tol` changed nothing.
+- After: every start reaches -1249.34 (seed 101) and -1143.77 (seed 104), spread below
+  1e-3. New `test/test_gp1_mode_backtrack.jl`: 7 of 11 fail on the base, 11/11 pass on
+  Julia 1.10.12 and 1.13.0. `test_gp1_verdict.jl` healthy records re-recorded
+  (`gp1_611_julia_*`; five of six optima move up by 0.23 to 34.9), 291/291 on both.
+- Also run, Julia 1.10.12: test_gp1_laplace 101/101, test_confint_bootstrap_verdict_misc
+  57/57, test_curvature_census 66/66, test_hessian_kwarg 32/32,
+  test_laplace_curvature_contract 134/134, test_known_sentinel_defects 25 pass + 1 broken
+  (pre-existing), test_laplace_dual_safety 37/37.
+  Julia 1.13.0: test_gp1_laplace 101/101, test_confint_bootstrap_verdict_misc 57/57,
+  test_hessian_kwarg 32/32, test_known_sentinel_defects 25 pass + 1 broken.
+## 2026-09-29: grouped Beta gradient test in standard-error units (Beta option 1, on #620)
+
+- `src/families/grouped_dispersion.jl`: `_beta_grouped_verdict`, `_beta_grouped_scaled_polish`,
+  `_beta_grouped_curvature_probe`; both grouped Beta fitters use the verdict. Only runs when
+  `_beta_grouped_g_met` fails.
+- beta_huge (φ = 9.6e7): scaled gradient 0.0153 before, 2.5e-4 after two polish steps
+  (threshold 0.0152); loglik +1.2e-4. #480 d01 with `g_tol = 1e-12`: 1.9e-4 against 2.7e-10,
+  still not converged.
+- Julia 1.10.12: test_gamma_beta_upper_boundary 118/118 (was 2 fail once the `@test_broken`
+  became `@test`), test_beta_grouped_convergence 19/19, test_grouped_dispersion 20/20,
+  test_grouped_dispersion_beta_gamma 24/24, test_bridge_grouped_dispersion 129/129,
+  test_bridge_x 192/192, test_confint_bootstrap_verdict_beta 36/36, test_confint_family
+  341/341, test_fit_verdict_gradient 13/13, test_known_sentinel_defects 25 + 1 broken
+  (pre-existing), test_grouped_nongaussian_fit 63/63, test_grouped_nongaussian_postfit 38/38,
+  test_grouped_hessian_consistency 23/23, test_nb_beta_x_identity 14/14, and four more.
+  Julia 1.13.0: the four Beta grouped files, all pass.
+
+## 2026-09-29: Gamma and Beta grouped fits no longer treat a large dispersion as a boundary
+
+- Branch `claude/gamma-beta-upper-boundary` from `origin/main` @ `0ce4a35aa`. New
+  `_dispersion_group_lower_boundary` (lower end `1e-6` only) replaces `_dispersion_group_boundary` at the
+  eight Gamma/Beta grouped sites (plain and `_cov` fitters plus their positional constructors). NB2, NB1,
+  `_nb_boundary_restart` and the truncated-NB2 confint adapter keep both ends.
+- New `test/test_gamma_beta_upper_boundary.jl` on a literal fixture (`test/fixtures/gamma_beta_upper_boundary.toml`,
+  sha256-checked): on main 103 pass, 10 fail, 1 error, 2 broken on Julia 1.10.12 and 1.13.0; after,
+  114 pass, 2 broken on both. Grouped Gamma with true alpha = 1e8 now reports `converged = true`; the Gamma
+  lower end and the NB2 upper end still report `converged = false`; 8 healthy grouped Gamma/Beta fits keep
+  their main loglik to 1e-8.
+- Beta with true phi = 1e8: no longer flagged, but still `converged = false` from the #480 gradient test
+  (fails for phi above about 1e5, independent of the boundary); recorded as `@test_broken` on macOS aarch64.
+- 21 neighbouring files (grouped, Beta/Gamma, bootstrap verdict, bridge, confint_family): 1906 pass,
+  1 broken on 1.10.12; 1907 pass, 1 broken on 1.13.0 (pre-existing `@test_broken`). Full suite not run.
+## 2026-09-29: shared-r NB2 upper end is warn-only (maintainer decision)
+
+- Revised per "NB upper end: warn only everywhere": `_nb_shared_r_verdict` now warns above 1e6 and
+  keeps Optim's verdict; only r below 1e-6 forces converged = false (`_nb_shared_r_lower`). The
+  entry below describes the first version. test_nb_shared_r_boundary 42/42 on Julia 1.10.12 and
+  1.13.0; test_statsapi 74/74, test_nb_fit 8/8, test_nb_boundary_restart 12/12 on 1.10.12.
+
+## 2026-09-29: shared-r NB2 reports converged = false at the Poisson limit
+
+- Branch `claude/nb-shared-r-boundary-verdict` from `origin/main` 0ce4a35aa. `fit_nb_gllvm` now
+  passes its result through `_nb_shared_r_verdict` (new, `src/families/negbin.jl`): `_fit_verdict`
+  first, then `converged` forced `false` with a warning when `_dispersion_group_boundary([r])` flags
+  `r` outside `[1e-6, 1e6]`, as the grouped NB fitters do. Loglik and iterations unchanged. Both the
+  plain and the `X_lv` return paths use it.
+- Before: Poisson data (StableRNG seed 1, p = 5, n = 60, K = 1) fitted `converged = true` at
+  r = 1.712e7 (Julia 1.10.12) and r = 1.551e7 (1.13.0); 10 of 12 Poisson draws had r > 1e6.
+  After: `converged = false`, loglik identical to the recorded origin/main value (atol 1e-8).
+- New test `test/test_nb_shared_r_boundary.jl` with literal fixture
+  `test/fixtures/nb_shared_r_boundary.toml` (sha256-checked; 6 healthy NB2 draws, r_true 2 to 5):
+  38 pass / 2 fail on the base, 40 pass after, on both 1.10 and 1.13 (macOS aarch64).
+- 26 existing test files that call `fit_nb_gllvm` (parity files excluded: they need RCall), run
+  one process per file: 1.10 2706 pass, 0 fail, 1 broken (pre-existing); 1.13 2707 pass, 0 fail,
+  1 broken. The new warning fired once, on 1.13 in `test/test_statsapi.jl`, whose NB fit is on
+  Poisson data (r = 6.4e7); that test does not assert `converged`.
+
 ## 2026-09-27: P1 ledger assembled from the per-family case maps (draft, nothing signed)
 
 - Branch `claude/true-parity-p1-ledger-assembly`: `claude/true-parity-p1-aghq` (`8f4427d4a`) plus merges
@@ -121,6 +261,36 @@
   covariance, postfit, inference contract `--check`s and family, data, inference receipt `--check`s
   current; `test/parity/test_core070_pin.jl` 27/27; `test/test_core070_receipts.jl` 52/52 (repaired for
   the new active-cell state, plus a value-sink test).
+## 2026-09-29: Tweedie and shared Student-t mode search (#623)
+
+- Branch `claude/mode-search-623` from `origin/main` 0b7e7bbcf. `src/families/laplace.jl` gains
+  three hooks (`_laplace_mode_merit_term`, `_laplace_mode_robust`, `_laplace_mode_step_weight`)
+  whose defaults leave every other family bit-identical; `tweedie.jl`, `studentt.jl` and the
+  grouped merit in `grouped_dispersion.jl` use them.
+- Audit datasets (13): bad sites (|log-joint gradient| >= 1e-4) up to 41 per dataset before, 0
+  after on all 13 (worst 2.3e-5).
+- New `test/test_mode_search_623.jl` (fixture `test/fixtures/mode_search_623.toml`): origin/main
+  113 pass, 30 fail, 4 error; branch 36 pass + 1 broken on Julia 1.10.12 and 1.13.0. The broken
+  item is two-peaked Student-t sites (2 of 120) reaching a lower local maximum, tracked in #626.
+- First Student-t version regressed `test_studentt.jl` "marginal gradient: FD <= 1e-6" (8e-9 on
+  main, 5.1e-5); fixed by accepting rounding-level changes on small steps and extrapolating only
+  on above-rounding gains. Now 5.5e-9.
+- Julia 1.10.12, per file: 41 Tweedie/Student-t/Laplace files pass (test_studentt_input_validation
+  fails identically on main when run standalone: 27 UndefVarError). Runtime branch vs main:
+  test_tweedie_engine_health 532 s vs 531 s, test_tweedie_grouped_engine_health 257 s vs 253 s,
+  test_tweedie 61 s vs 59 s (the 2026-08-27 opt-in had taken the first to 48 min).
+
+## 2026-09-27: NB2 bootstrap refits report their own verdict (part of #504)
+
+- Branch `claude/nb-boot-verdict-504`, stacked on #550 (`1bee7aa0a`). The `NBFit`, `NBGroupedFit`
+  and `NBGroupedCovFit` refit closures return `(θ, converged, loglik, upper_boundary)`;
+  `_nb_r_upper_boundary` flags `r > 1e6` with the grouped point-fit verdict's own comparison.
+- New `test/test_confint_bootstrap_verdict_nb.jl` + literal fixture `test/fixtures/nb_boot_boundary_504.toml`:
+  13 pass, 17 fail, 20 error on the base; 50/50 on Julia 1.10.12 and 1.13.0. Six neighbouring files
+  947/947 on 1.10.12 (per-file; full suite not run).
+- Found, not fixed: `fit_nb_gllvm` reports `converged = true` at r up to 6.3e10 on Poisson data (4/6);
+  the per-species grouped default reports `converged = false` on 6/6 NB(r = 3) datasets.
+- After-task: `docs/dev-log/after-task/2026-09-27-nb-boot-verdict-504.md`.
 ## 2026-09-27: phylo_latent twin at gllvmTMB P1 (A14, A15)
 
 - Branch `claude/phylo-latent-build` from `origin/main` `97e11be04`. New named entry

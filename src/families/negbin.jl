@@ -172,6 +172,10 @@ depends only on the observed cells.
 Fisher-scored. Default: NB2/log default `:observed` (changed 2026-08-27 on the
 curvature-adjudication campaign evidence). Omitting it is exactly the default-path
 behaviour.
+
+`converged` is forced `false` when the fitted `r` lies outside `[1e-6, 1e6]` (the
+Poisson limit above, unidentified extreme overdispersion below), matching the grouped
+NB fitters; the reported `loglik` is unchanged.
 """
 function fit_nb_gllvm(Y::AbstractMatrix; K::Integer,
         link::Link = LogLink(), mask = nothing, offset = nothing,
@@ -314,12 +318,34 @@ function fit_nb_gllvm(Y::AbstractMatrix; K::Integer,
         Λ̂ = unpack_lambda(@view(θ̂[(cursor + 1):(cursor + rr)]), p, K)
         cursor += rr
         r̂ = exp(θ̂[cursor + 1])
-        return NBFit(β̂, Λ̂, r̂, link, _fit_verdict(res)...,
+        return NBFit(β̂, Λ̂, r̂, link, _nb_shared_r_verdict(res, r̂)...,
                      alpha_hat, collect(Float64, θ̂), hessian)
     else
         β̂ = θ̂[1:p]
         Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
         r̂ = exp(θ̂[p + rr + 1])
-        return NBFit(β̂, Λ̂, r̂, link, _fit_verdict(res)..., nothing, Float64[], hessian)
+        return NBFit(β̂, Λ̂, r̂, link, _nb_shared_r_verdict(res, r̂)..., nothing, Float64[], hessian)
     end
+end
+
+# Shared-r dispersion verdict. Maintainer decision 2026-09-29 ("NB upper end: warn only
+# everywhere"): a fitted r ABOVE 1e6 is the Poisson limit. There the likelihood is flat in
+# log r, but the other estimates are the Poisson fit's, so the fit only WARNS and keeps
+# Optim's verdict (gllvmTMB 0.7.1 itself puts one trait's dispersion above 1e6 on 4 of 5
+# ordinary per-trait NB fits, so flagging this end would mark most normal fits as failed).
+# Measured on origin/main 0ce4a35aa: Poisson data fitted with fit_nb_gllvm reached r = 1.7e7
+# (fixture test/fixtures/nb_shared_r_boundary.toml) with no message at all. A fitted r
+# BELOW 1e-6 (unidentified extreme overdispersion) still forces converged = false. The
+# loglik and iteration count stay as `_fit_verdict` computed them. Returns the triple in
+# `_fit_verdict`'s order, ready for `NBFit`.
+_nb_shared_r_lower(r::Real) = r < 1e-6
+
+function _nb_shared_r_verdict(res, r::Real)
+    loglik, conv, iters = _fit_verdict(res)
+    if r > 1e6
+        @warn "NB2 shared-dispersion fit reached the Poisson limit (r = $(round(r; sigdigits = 4)) above 1e6): the data show no overdispersion; the other estimates are those of a Poisson fit and are unaffected." maxlog=1
+    end
+    lower = _nb_shared_r_lower(r)
+    lower && @warn "NB2 shared-dispersion fit reached the lower boundary (r = $(round(r; sigdigits = 4)) below 1e-6); the overdispersion is not identified on this data, so converged is set to false." maxlog=1
+    return (loglik, conv && !lower, iters)
 end

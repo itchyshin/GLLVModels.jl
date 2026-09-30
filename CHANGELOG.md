@@ -2,12 +2,91 @@
 
 ## Development
 
+- **Shared-r NB2 (`fit_nb_gllvm`) now warns at the Poisson limit.** On Poisson
+  data the fitted `r` ran to 1e6 or beyond (1.7e7 on the fixture, Julia 1.10; 1.6e7
+  on 1.13) with no message. Maintainer decision 2026-09-29 ("NB upper end: warn only
+  everywhere"): above 1e6 the fitter warns and keeps the optimizer's `converged`
+  (gllvmTMB 0.7.1 itself reaches this end on most ordinary per-trait NB fits); below
+  1e-6 it reports `converged = false`. The reported `loglik` is unchanged. Test:
+  `test/test_nb_shared_r_boundary.jl` (literal fixture
+  `test/fixtures/nb_shared_r_boundary.toml`).
+- **Grouped NB fits: the Poisson limit now warns instead of making `converged` false.**
+  Maintainer decision 2026-09-29 ("NB upper end: warn only everywhere"): gllvmTMB 0.7.1
+  itself puts one trait's NB2 dispersion above 1e6 on 4 of 5 ordinary per-trait fits, so
+  flagging the Poisson limit would mark about 80% of normal fits as not converged. In
+  `fit_nb_gllvm_grouped` and `fit_nb_gllvm_grouped_cov` that limit is `r > 1e6`: it only
+  warns, and `r < 1e-6` (unidentified extreme overdispersion) still gives
+  `converged = false`. NB1 (`Var = μ(1+φ)`) has its Poisson limit at the other end, so in
+  `fit_nb1_gllvm_grouped` and `fit_nb1_gllvm_grouped_cov` `φ < 1e-6` only warns and
+  `φ > 1e6` gives `converged = false`. Each warning says whether `converged` is affected. The `dispersion_boundary` field is unchanged and still flags
+  both ends, so the Wald and bootstrap interval code and `_nb_boundary_restart` behave as
+  before. Shared-r `fit_nb_gllvm` and the per-trait truncated NB2 route are handled
+  separately. Changed assertions: `test_nb_boundary_restart.jl`, `test_known_sentinel_defects.jl`,
+  `test_grouped_dispersion.jl`, `test_bridge_x.jl`, `test_gamma_beta_upper_boundary.jl`
+  (upper-end fits now expect the optimizer verdict). New `test_nb_grouped_upper_warn.jl` on
+  literal data (`test/fixtures/nb_grouped_upper_warn.toml` plus `[nb_upper]`).
+
+- **Grouped Beta fits with a large precision now report converged.** With φ above
+  about 1e5 (near-deterministic proportions) the intercept curvature grows like φ
+  (about 1e9 at φ = 9.6e7), so a stationary point shows a raw finite-difference
+  gradient of 1 to 10 and never met the #480 gradient gate. When that gate fails,
+  `fit_beta_gllvm_grouped` and `fit_beta_gllvm_grouped_cov` now take a diagonal
+  Newton polish (kept only if it lowers the objective) and judge the gradient in
+  standard-error units, |g_i| / sqrt(H_ii), against the same threshold
+  `max(g_tol, g_tol * |nll|)`. On the φ = 1e8 fixture this reaches 2.5e-4 against
+  0.0152, and the log-likelihood rises by 1.2e-4. Fits that already met the gate are
+  unchanged, and a caller's very small `g_tol` still gives `converged = false` (#480
+  d01 with `g_tol = 1e-12`). Test: `test/test_gamma_beta_upper_boundary.jl`.
+- **Tweedie and Student-t inner mode search reach the mode (#623).** Both families
+  used the undamped shared `_laplace_mode`. Tweedie with two latent variables could
+  diverge: one fixture site returned z = [-5.2e10, 8.4e8] where the mode is
+  [-1.975, 0.389], and the site's Laplace value was off by 1.35e21. Student-t on the
+  default shared-σ route overshot because its Fisher weight is (ν+3)/ν below the
+  observed curvature, cycling around the mode when ν < 3 and crawling along
+  non-concave ridges. Tweedie now backtracks on the μ-dependent kernel of its
+  log-density (the series normaliser is constant in μ, so no series is evaluated in
+  the line search; the 2026-08-27 opt-in was reverted for that cost). Student-t
+  backtracks on small steps too (a change at rounding level is always accepted) and
+  doubles an accepted full step while that gains more than rounding level.
+  Both take mode-search steps with the weight max(observed, Fisher), as the Beta
+  grouped kernel does (#503). Three hooks in `laplace.jl`
+  (`_laplace_mode_merit_term`, `_laplace_mode_robust`, `_laplace_mode_step_weight`)
+  default to the previous behaviour, so every other family is unchanged. On the
+  audit datasets, bad sites fell from up to 41 per dataset to 0. Known remaining
+  limitation: where the Student-t joint has two peaks, the search reaches a local
+  one (2 of 120 fixture sites); tracked separately. Test:
+  `test/test_mode_search_623.jl`.
 - **Package renamed to GLLVModels.jl.** Install and load it as
   `GLLVModels`; modelling functions such as `gllvm`, `fit_gllvm`, and `bf`
   retain their existing API. `GLLVModels.GLLVM` is a temporary source-level
   alias, but `using GLLVM` cannot remain available after a Julia package rename.
   The GitHub repository rename and Pages migration remain separate maintainer
   gates; historical development records retain their original spelling.
+- **`fit_multinomial_gllvm` reports `converged = false` under complete separation.**
+  When a covariate orders every observation into its own category, the softmax MLE
+  does not exist: the log-likelihood approaches 0 only as the slopes run to infinity.
+  L-BFGS stopped on its gradient test along that ridge and the fit reported
+  `converged = true` at loglik -1.19e-5 with slopes of size 66 (12 observations,
+  3 categories, one covariate). A per-family verdict (`_multinomial_verdict`) now
+  reports `converged = false` when every observation's fitted probability of its
+  observed category exceeds 0.9999 (per-observation negative log-likelihood at most
+  `_MN_SEPARATION_NLL = 1e-4`, ten times the default `g_tol`). The log-likelihood is
+  still reported as computed. Quasi-complete separation is not covered. Six healthy
+  fits keep their log-likelihoods exactly. `test/test_multinomial_separation.jl`,
+  fixture `test/fixtures/multinomial_separation.toml`.
+- **GP-1 fits now reach the true optimum (#611).** The GP-1 inner Laplace mode
+  search did not use the damped backtracking that NB1 and censored Poisson use, so
+  undamped Fisher steps from z = 0 could stop far from a site's conditional mode.
+  Measured on a healthy fixture site: the search stopped at z = 0.705 (log-joint
+  gradient -42.8) while the single mode is at -1.624, and the site's Laplace value
+  was 36.6 too low. That error switched on and off as the parameters moved by
+  1e-6, so `fit_gp1_gllvm` stopped at the edge of the jump and reported
+  `converged = true` at different values from different starts (spread up to 20
+  log-likelihood units on one dataset). GP-1 now opts into the backtracking. On
+  six healthy fixture datasets, five optima move up by 0.23 to 34.9
+  log-likelihood units and one is unchanged, and fits from different starts now
+  agree. GP-1 logliks, AIC and BIC from earlier versions can therefore differ.
+  Test: `test/test_gp1_mode_backtrack.jl`.
 - **Ordinal fitters now reject observed levels below 1.** `fit_ordinal_gllvm`,
   `fit_ordinal_gllvm_pertrait` and `fit_ordinal_gllvm_pertrait_cov` indexed a
   per-category count vector by the observed level inside an `@inbounds` loop, and
@@ -18,6 +97,16 @@
   offending value before any level-indexed loop. Masked cells are not checked, so
   a placeholder under `mask = false` is still accepted; valid data is unchanged.
   Test: `test/test_ordinal_level_check.jl`.
+- **Ordered-beta `confint(..., method = :bootstrap)` now runs.** The `simulate`
+  closure of the `OrderedBetaFit` CI adapter (`src/confint_family.jl`) was a stub
+  that threw; `_family_bootstrap` caught the throw in every replicate, so the call
+  returned NaN bounds with `n_converged = 0` rather than an error. It now draws
+  from the law `ordered_beta_logp` scores: `z ~ N(0, I_K)` per site,
+  `η = β + Λz`, `P(y = 0) = σ(c0 - η)`, `P(y = 1) = σ(η - c1)`, otherwise
+  `y ~ Beta(μφ, (1 - μ)φ)` with `μ = σ(η)` clamped as in the likelihood. Wald and
+  profile intervals are unchanged. Test: `test/test_confint_bootstrap_ordered_beta.jl`
+  (analytic moment checks of the draws, and an end-to-end bootstrap on the
+  literal fixture `test/fixtures/ordered_beta_boot.toml`).
 
 All notable changes to GLLVModels.jl are documented here.
 
@@ -184,6 +273,22 @@ All notable changes to GLLVModels.jl are documented here.
   `gllvm-parity-tag: P1`).
 
 ### Fixed
+- **Gamma and Beta grouped fits no longer treat a large dispersion as a
+  boundary.** `fit_gamma_gllvm_grouped`, `fit_gamma_gllvm_grouped_cov`,
+  `fit_beta_gllvm_grouped` and `fit_beta_gllvm_grouped_cov` flagged any fitted
+  shape α or precision φ above `1e6` in `dispersion_boundary` and forced
+  `converged = false`. That rule fits NB r, whose large end is the flat Poisson
+  limit, but a large Gamma α or Beta φ is the near-deterministic end, which the
+  data identify: on data drawn with α = 1e8 or φ = 1e8 the fits estimate 8.9e7
+  to 1.3e8. These routes now flag only the lower end (`1e-6`, via
+  `_dispersion_group_lower_boundary`); NB2 and NB1 grouped fits keep both ends,
+  and the bootstrap adapters already left the Gamma/Beta upper end unflagged
+  (#565, #568). Grouped Gamma fits with a large α now report `converged = true`.
+  Grouped Beta fits with a large φ are no longer flagged but still report
+  `converged = false`: the #480 gradient test is not met for φ above about 1e5
+  (a separate issue, recorded as `@test_broken`). Log-likelihoods are unchanged.
+  Test: `test/test_gamma_beta_upper_boundary.jl` (literal fixture
+  `test/fixtures/gamma_beta_upper_boundary.toml`).
 - **Zero-truncated NB2 fits reported `converged = true` at a degenerate dispersion.**
   With one count of 10^13 in otherwise ordinary data, `fit_truncated_nbinom2_gllvm`
   stopped at r = 3.1e-46 and `fit_truncated_nbinom2_gllvm_pertrait` at r_1 = 1.7e-52,
@@ -915,6 +1020,18 @@ All notable changes to GLLVModels.jl are documented here.
   boundary. `_family_bootstrap` reads the new field only when an adapter sets
   it, so other families are unchanged, and when every replicate converges the
   bootstrap endpoints are identical to before.
+- **NB2 `confint(..., method = :bootstrap)` now reports the refit's own
+  convergence verdict (part of #504).** The refit closures for `NBFit`,
+  `NBGroupedFit` and `NBGroupedCovFit` return `(θ, converged, loglik,
+  upper_boundary)` on the #542 contract. `upper_boundary` flags each `r`
+  above 1e6 (the Poisson limit), with the same test `_dispersion_group_boundary`
+  applies to the grouped point fit, so a refit there is left out of every
+  quantile and, when more than the upper tail of usable replicates are
+  flagged for a given `r`, that `r`'s upper bound is `Inf`. This also covers
+  the shared-`r` fitter `fit_nb_gllvm`, which has no boundary verdict of its
+  own: on literal Poisson data it reports `converged = true` at `r = 7.7e6`,
+  and main counted every such replicate with a finite `log r`. When every
+  replicate converges, bootstrap endpoints are identical to before.
 
 ### Added
 - **Temporal covariance source, temporal source alone (gllvmTMB P1 port).**

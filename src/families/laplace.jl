@@ -33,9 +33,39 @@ _laplace_mode_should_backtrack(family) = false
 _laplace_mode_should_backtrack(family::Union{
     Poisson, Binomial, NegativeBinomial, Beta, Gamma, Exponential,
 }) = true
-# NB1 and TweedieED also opt in — declared in their own family files (they
-# are defined AFTER this one in the include order; 2026-08-27 audit rider:
+# NB1, TweedieED, StudentTFamily and others opt in in their own family files
+# (they are defined AFTER this one in the include order; 2026-08-27 audit rider:
 # the grouped solver's backtrack gate silently no-opped for them).
+
+# The backtracking merit is the per-site log posterior, and only DIFFERENCES of
+# it are compared (q1 >= q0), so a family may drop terms of its log-density that
+# do not depend on μ. TweedieED does (#623): its series normaliser c(y, φ) is
+# the expensive part and is constant in μ. Default: the full log-density, so
+# every other family's search is bit-identical.
+_laplace_mode_merit_term(family, μ, n, y) = _glm_logpdf(family, μ, n, y)
+
+# Robust step control, for families whose log joint in z need not be concave
+# (StudentTFamily, #623). Two changes, both only for families that opt in:
+# (1) small steps (norm(Δ) <= 1e-3 (1 + norm(z))) no longer skip the line search.
+#     Student-t's Fisher weight is (ν+3)/ν times smaller than the observed
+#     curvature near the mode, so for ν < 3 even small steps overshoot by more
+#     than a factor of 2 and the unchecked search settles into a period-2 cycle.
+# (2) an accepted full step is extrapolated (doubled while the log posterior keeps
+#     rising, at most 2^10). Residuals beyond σ√ν make the joint non-concave, and
+#     there the search crawled along a flat ridge: on the #623 fixture one site's
+#     log joint was still 1.9 below its mode after the default 100 iterations.
+_laplace_mode_robust(family) = false
+
+# Weight of the mode-search Newton step. Default: the Fisher weight, so the search
+# is unchanged for every family that does not override it. TweedieED/log and
+# StudentTFamily/identity use max(observed, Fisher) (#623), as the Beta grouped
+# kernel does (#503): the observed curvature makes the step a true Newton step near
+# the mode (quadratic, not linear, convergence), and taking the larger of the two
+# never lengthens a step beyond the Fisher one. Measured on the #623 fixtures with
+# the Fisher weight and backtracking only: Student-t sites still needed more than
+# 100 iterations (|grad| up to 1.03 at the cap), and one Tweedie site stalled at
+# |grad| = 1e-2 after 10,000.
+_laplace_mode_step_weight(family, μ, n, me, y, link, η) = _glm_weight(family, μ, n, me)
 
 function _laplace_mode_logpost(family, y::AbstractVector, n::AbstractVector,
         Λ::AbstractMatrix, β::AbstractVector, link::Link, z::AbstractVector;
@@ -47,7 +77,7 @@ function _laplace_mode_logpost(family, y::AbstractVector, n::AbstractVector,
     q = -0.5 * dot(z, z)
     @inbounds for t in 1:p
         (mask === nothing || mask[t]) || continue
-        q += _glm_logpdf(family, μ[t], n[t], y[t])
+        q += _laplace_mode_merit_term(family, μ[t], n[t], y[t])
     end
     return q
 end
@@ -127,7 +157,7 @@ function _laplace_mode(family, y::AbstractVector, n::AbstractVector,
         μ  .= _clamp_mu.(Ref(family), linkinv.(Ref(link), η))
         me .= mu_eta.(Ref(link), η)
         s  .= _glm_score.(Ref(family), μ, n, me, y)
-        W  .= _glm_weight.(Ref(family), μ, n, me)
+        W  .= _laplace_mode_step_weight.(Ref(family), μ, n, me, y, Ref(link), η)
         if mask !== nothing
             s .= ifelse.(mask, s, zero(T))        # masked ⇒ no contribution (NaN safe)
             W .= ifelse.(mask, W, zero(T))
@@ -151,7 +181,9 @@ function _laplace_mode(family, y::AbstractVector, n::AbstractVector,
         end
 
         step_taken = 1.0
-        if norm(Δ) <= 1e-3 * (1 + norm(z))
+        robust = _laplace_mode_robust(family)
+        small = norm(Δ) <= 1e-3 * (1 + norm(z))
+        if !robust && small
             z = z .+ Δ
         elseif !_laplace_mode_should_backtrack(family)
             z = z .+ Δ
@@ -161,14 +193,34 @@ function _laplace_mode(family, y::AbstractVector, n::AbstractVector,
             if isfinite(q0)
                 accepted = false
                 step = 1.0
+                # Robust families check small steps too, but a change at rounding
+                # level must not reject the final polishing steps (the #612
+                # lesson): rejecting them left the mode short and moved the
+                # Student-t marginal's FD-vs-AD gradient gap from 8e-9 to 5e-5.
+                slack = robust && small ? 1e-10 * (1 + abs(q0)) : zero(q0)
                 @inbounds for _half in 1:30
                     ztrial = z .+ step .* Δ
                     q1 = _laplace_mode_logpost(family, y, n, Λ, β, link, ztrial;
                                                mask = mask, offset = offset)
-                    if isfinite(q1) && q1 >= q0
+                    if isfinite(q1) && q1 >= q0 - slack
                         z = ztrial
                         step_taken = step
                         accepted = true
+                        # A doubling is kept only when it gains more than rounding
+                        # level. At convergence doubling a Newton step gains nothing,
+                        # and keeping it on rounding noise would hand ForwardDiff
+                        # z + 2Δ instead of z + Δ (the marginal's AD-vs-FD gap rose
+                        # from 8e-9 to 6.6e-7). Along a non-concave ridge the gain is
+                        # real, and small steps must extrapolate there too.
+                        if robust && step == 1.0
+                            @inbounds for _dbl in 1:10
+                                zx = z .+ step_taken .* Δ   # z + 2^k Δ from the start
+                                qx = _laplace_mode_logpost(family, y, n, Λ, β, link, zx;
+                                                           mask = mask, offset = offset)
+                                (isfinite(qx) && qx > q1 + 1e-10 * (1 + abs(q1))) || break
+                                z = zx; q1 = qx; step_taken *= 2
+                            end
+                        end
                         break
                     end
                     step *= 0.5

@@ -215,6 +215,15 @@ function _family_ci(fit::BinomialFit, Y::AbstractMatrix;
 end
 
 # --- Negative binomial -----------------------------------------------------
+# `upper_boundary` flags for an NB2 refit (#504; the #542 option-3 contract, see
+# `_bootstrap_upper_boundary`): the last `nr` entries of `θ` are `log r`. Flag those past the
+# upper end of `_dispersion_group_boundary` (`r > 1e6`, the Poisson limit, where the likelihood
+# is flat in `r`), with the same comparison so the bootstrap and the grouped point-fit verdict
+# agree. The lower boundary (`r < 1e-6`) is not flagged; such a refit is reported as not
+# converged by the grouped fitters and is simply left out.
+_nb_r_upper_boundary(θ::AbstractVector, nr::Integer) =
+    [i > length(θ) - nr && exp(θ[i]) > 1e6 for i in eachindex(θ)]
+
 function _family_ci(fit::NBFit, Y::AbstractMatrix;
                     mask = nothing,
                     objective::Symbol = :laplace,
@@ -242,7 +251,9 @@ function _family_ci(fit::NBFit, Y::AbstractMatrix;
                                            (rg, μ) -> (m = max(μ, 1e-12); NegativeBinomial(fit.r, fit.r / (fit.r + m))))
     refit = function (Yb)
         fb = try fit_nb_gllvm(Yb; K = K, link = link, mask = M, hessian = fit.hessian) catch; return nothing end
-        return vcat(fb.β, pack_lambda(fb.Λ), log(fb.r))
+        θb = vcat(fb.β, pack_lambda(fb.Λ), log(fb.r))
+        return (θ = θb, converged = fb.converged, loglik = fb.loglik,
+                upper_boundary = _nb_r_upper_boundary(θb, 1))
     end
     names = vcat(_glm_lin_names(p, K), "r")
     kinds = vcat(fill(:linear, length(θ) - 1), :log)
@@ -695,7 +706,9 @@ function _family_ci(fit::NBGroupedFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try fit_nb_gllvm_grouped(Yb; K = K, group = group, link = link, mask = M, hessian = fit.hessian) catch; return nothing end
-        return vcat(fb.β, pack_lambda(fb.Λ), log.(fb.r_group))
+        θb = vcat(fb.β, pack_lambda(fb.Λ), log.(fb.r_group))
+        return (θ = θb, converged = fb.converged, loglik = fb.loglik,
+                upper_boundary = _nb_r_upper_boundary(θb, length(fb.r_group)))
     end
     names = _grouped_dispersion_names(p, K, "r", G)
     kinds = vcat(fill(:linear, p + rr), fill(:log, G))
@@ -846,7 +859,9 @@ function _family_ci(fit::NBGroupedCovFit, Y::AbstractMatrix;
         catch
             return nothing
         end
-        return vcat(fb.β, fb.γ[γ_free_idx], pack_lambda(fb.Λ), log.(fb.r_group))
+        θb = vcat(fb.β, fb.γ[γ_free_idx], pack_lambda(fb.Λ), log.(fb.r_group))
+        return (θ = θb, converged = fb.converged, loglik = fb.loglik,
+                upper_boundary = _nb_r_upper_boundary(θb, length(fb.r_group)))
     end
     names = vcat(["beta[$t]" for t in 1:p], ["gamma[$k]" for k in γ_free_idx],
                  _confint_lambda_term_names("Lambda", p, K),
@@ -1844,7 +1859,33 @@ function _family_ci(fit::OrderedBetaFit, Y::AbstractMatrix;
         end
         return isfinite(v) ? v : 1e12
     end
-    sim   = _ -> error("bootstrap is not supported for ordered-beta CIs")
+    # Draws from exactly the law `ordered_beta_logp` scores (src/families/ordered_beta.jl):
+    # z ~ N(0, I_K), η = β + Λz; P(y=0) = σ(c0 − η), P(y=1) = σ(η − c1), otherwise
+    # y ~ Beta(μφ, (1−μ)φ) with μ = σ(η) clamped to (_OB_MU_LO, _OB_MU_HI) as there.
+    # σ(c0 − η) + σ(η − c1) < 1 because c0 < c1, so one uniform picks the region.
+    sim = function (rng)
+        n = size(Y, 2); c0 = fit.c0; c1 = fit.c1; φ = fit.φ
+        Yb = zeros(Float64, p, n)
+        @inbounds for s in 1:n
+            η = fit.β .+ fit.Λ * randn(rng, K)
+            for t in 1:p
+                p0 = _ob_logistic(c0 - η[t]); p1 = _ob_logistic(η[t] - c1)
+                u = rand(rng)
+                if u < p0
+                    Yb[t, s] = 0.0
+                elseif u < p0 + p1
+                    Yb[t, s] = 1.0
+                else
+                    μ = clamp(_ob_logistic(η[t]), _OB_MU_LO, _OB_MU_HI)
+                    y = rand(rng, Beta(μ * φ, (1 - μ) * φ))
+                    # A Float64 Beta draw can round to exactly 0 or 1 at extreme μφ; the
+                    # likelihood would then score it as a point mass, so keep it interior.
+                    Yb[t, s] = clamp(y, nextfloat(0.0), prevfloat(1.0))
+                end
+            end
+        end
+        return Yb
+    end
     refit = function (Yb)
         fb = try fit_ordered_beta_gllvm(Yb; K = K) catch; return nothing end
         return (θ = vcat(fb.β, pack_lambda(fb.Λ), fb.c0, fb.c1, log(fb.φ)), converged = fb.converged,
