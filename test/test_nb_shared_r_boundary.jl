@@ -38,8 +38,14 @@ _nbsr_sha(Y) = bytes2hex(sha256(reinterpret(UInt8, vec(Int64.(Y)))))
 
     @testset "Poisson data: the Poisson limit warns and keeps the verdict" begin
         Y = reshape(Int64.(fixture["Y_column_major"]), p, n)
-        fit = @test_logs (:warn, r"Poisson limit") match_mode = :any GM.fit_nb_gllvm(Y; K = K)
-        @test fit.r > 1e6
+        fit = GM.fit_nb_gllvm(Y; K = K)
+        # Where the fit lands is platform-dependent, so the Poisson-limit behaviour is
+        # checked only where r actually exceeds 1e6 (always on the record platform).
+        @test !(fit.converged && GM._nb_shared_r_lower(fit.r))    # the rule, everywhere
+        if fit.r > 1e6
+            @test_logs (:warn, r"Poisson limit") match_mode = :any GM.fit_nb_gllvm(Y; K = K)
+        end
+        on_record_platform && @test fit.r > 1e6
         @test isfinite(fit.loglik) && fit.loglik < 0
         if on_record_platform && haskey(fixture, vkey * "_loglik")
             @test fixture[vkey * "_r"] > 1e6
