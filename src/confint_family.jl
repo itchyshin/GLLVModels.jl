@@ -3038,22 +3038,31 @@ function _family_profile(ad::_FamilyCI, sel::Vector{Int}, level::Real;
         # Seed the first candidate near the Wald bound (θ̂ ± √cutoff·SE) so the
         # bracket is found in ~1 refit; false-position root-finding does the rest.
         step = max(sqrt(cutoff) * sei, 1e-3)
-        lower = _profile_bisect_side(dev_lo, θi, -step, cutoff;
-                                     max_expand = profile_max_expand,
-                                     max_bisect = profile_max_bisect)
-        upper = _profile_bisect_side(dev_hi, θi,  step, cutoff;
-                                     max_expand = profile_max_expand,
-                                     max_bisect = profile_max_bisect)
         # Open lower end (2026-09-28). A log-scale parameter's profile deviance can
         # level off below the cutoff as the parameter goes to 0 (zero-truncated NB2
         # r on the #581 fixture draw 104: D ≈ 2.35 as r → 0), so no lower crossing
-        # exists and the interval is open at 0. Claim that only when a refit at
-        # 1e-6 × the estimate converges with D still below the cutoff; a failed or
-        # non-finite refit there keeps NaN.
-        if isnan(lower) && ad.kinds[i] === :log
-            D_floor = dev_lo(θi + log(1e-6))
-            (isfinite(D_floor) && D_floor < cutoff) && (lower = -Inf)
+        # exists and the interval is open at 0. Check that first, with one refit at
+        # 1e-6 × the estimate, so the lower bracket search (a refit per expansion
+        # step; 583 s on draw 104) is not walked for nothing. The probe uses its own
+        # warm start, so a floor far from θ̂ cannot degrade the search's start. Only
+        # a refit that converges with D below the cutoff claims the open end; a
+        # failed or non-finite one falls through to the search as before.
+        lower = NaN
+        open_lower = false
+        if ad.kinds[i] === :log
+            ll_f, ok_f, _ = _family_profile_refit(ad, i, θi + log(1e-6), copy(warm_lo);
+                                                  g_tol = profile_g_tol,
+                                                  iterations = profile_iterations)
+            D_floor = ok_f ? 2.0 * (ll_full - ll_f) : NaN
+            open_lower = isfinite(D_floor) && D_floor < cutoff
+            open_lower && (lower = -Inf)
         end
+        open_lower || (lower = _profile_bisect_side(dev_lo, θi, -step, cutoff;
+                                                    max_expand = profile_max_expand,
+                                                    max_bisect = profile_max_bisect))
+        upper = _profile_bisect_side(dev_hi, θi,  step, cutoff;
+                                     max_expand = profile_max_expand,
+                                     max_bisect = profile_max_bisect)
         if ad.kinds[i] === :log
             lower = isnan(lower) ? NaN : exp(lower)
             upper = isnan(upper) ? NaN : exp(upper)

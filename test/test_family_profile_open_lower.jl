@@ -34,3 +34,15 @@ end
     @test isnan(ci.lower[1])
     @test ci.status[1] === :partial
 end
+
+@testset "family profile: open lower end is found without walking the lower search" begin
+    # Floor first: when D at 1e-6 × the estimate is already below the cutoff, the
+    # lower bracket search (a refit per expansion step, 583 s on the #581 draw 104)
+    # is skipped. Record every u the objective sees; apart from the Wald Hessian's
+    # stencil near û = 0, nothing may land between the floor and the estimate.
+    us = Float64[]
+    g(u) = (push!(us, u); 1.175 * (1 - exp(u))^2)
+    ci = _OPL._family_profile(_opl_ad(g), [2], 0.95)
+    @test ci.lower[1] == 0.0
+    @test count(u -> log(1e-6) + 1 < u < -0.5, us) == 0
+end
