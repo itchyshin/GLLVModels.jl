@@ -1,9 +1,6 @@
 # Proposed gllvmTMB fix: test the penalised Hessian under the loading ridge
 
-Status: DRAFT, not applied. Shinichi approved the direction on 2026-09-28 (relax R's Hessian rejection under
-the ridge). Apply on branch `claude/lane-auto-d-r-20260926` (#1324) once the Codex CRAN lease
-(`codex:cran-071-20260927`, covers `R/` and `tests/`) is released. Evidence: `pdhess_check.log` in this
-folder and design/74 T7.
+Status: APPLIED on gllvmTMB #1324 at 215f9544f (2026-09-29). Matched K = 3 cell after the fix: bic_sites 9/10 (was 4/10), bic 4/10 (was 3/10), 0 rejected; `R_pdhessfix_n120_p20_K3.csv`.
 
 ## Why
 
