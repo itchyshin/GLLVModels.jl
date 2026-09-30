@@ -44,7 +44,14 @@ println("NB2_FORMULA_SHA256 ",_core070_sha256_file(file))
     # The native fit reaches the per-group dispersion boundary on this data (R's dispersions
     # for traits 1 and 3 are 4.3e11 and 3.1e7), so it reports converged = false; R's
     # convergence stays a gate, with the gradient, same-point and logLik gates below (decision 2026-09-29).
-    @test (native.converged || any(native.dispersion_boundary)) && r.converged
+    # On this data R's nlminb reports relative convergence (4) on some runners and false
+    # convergence (8) on others (two traits at the Poisson boundary). Code 8 is accepted only
+    # with logLik and same-point agreement; any other nonzero code fails (decision 2026-09-30).
+    r_ok = r.converged || (r.health["r_code"] != 0 && occursin("false convergence (8)", r.health["r_message"]) &&
+                           isapprox(native.loglik, r.logLik; rtol=1e-6) && abs(r.health["samepoint_delta"]) <= 1e-6)
+    println("  gllvmTMB r_code = ",r.health["r_code"],", r_message = ",r.health["r_message"],
+            (!r.converged && r_ok) ? " (false convergence accepted only with logLik and same-point agreement)" : "")
+    @test (native.converged || any(native.dispersion_boundary)) && r_ok
     @test r.health["native_gradient_max"]<=1e-4
     # R's gradient is recorded, not a gate (decision 2026-09-28): on this dataset two
     # traits sit at the Poisson boundary, so nlminb's stopping gradient varies by machine
