@@ -1,0 +1,250 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "temporal/forecast_temporal"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#543",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "9b7f4804d978b56686273ceea03a792bfd1cc544",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/temporal_p1/forecast.toml",
+      "sha256": "41fc640a5892e7952cb4df331f84a799b91facf0cda4ae92a73dce55fe0b72fd"
+    },
+    {
+      "path": "test/fixtures/temporal_p1/fits.toml",
+      "sha256": "4c2ea4d92ad5abd137fdaf23fbc372f46694f742a7116b012d08d78e5242678c"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_temporal_helpers.jl",
+      "sha256": "cc5faa412338a0b43c643dec20deba6ead1946ea48f53064da42bd1c699a9389"
+    },
+    {
+      "path": "test/fixtures/temporal_p1/fixture_helpers.jl",
+      "sha256": "b367578faaf9640985460514564aa450d25f384bc5627216762ec6b0b79acbcc"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-FORECAST-TEMPORAL-AR1-EST",
+        "quantity": "forecast est, AR1 temporal_indep fit at R's coordinates (12 future cells)",
+        "r_source": "test/fixtures/temporal_p1/forecast.toml [ar1.est]",
+        "julia_source": "GLLVModels.forecast_temporal(fit, future; se_fit = true).est, as at test/test_temporal_helpers.jl:44",
+        "r_value": [
+          0.7499999999684759,
+          0.8927075869368325,
+          0.7499999999775097,
+          0.851827276887228,
+          0.9999999999684783,
+          1.142707586936835,
+          0.999999999977514,
+          1.1018272768872324,
+          1.2499999999684808,
+          1.3927075869368375,
+          1.2499999999775182,
+          1.3518272768872364
+        ],
+        "julia_value": [
+          0.7499999999684759,
+          0.8927075869368325,
+          0.7499999999775097,
+          0.851827276887228,
+          0.9999999999684783,
+          1.142707586936835,
+          0.999999999977514,
+          1.1018272768872324,
+          1.2499999999684808,
+          1.3927075869368375,
+          1.249999999977518,
+          1.3518272768872364
+        ],
+        "abs_diff": 2.220446049250313e-16,
+        "tolerance": 1e-08,
+        "tolerance_source": "test/test_temporal_helpers.jl:44",
+        "tolerance_source_line": "@test maximum(abs, fc.est .- temporal_p1_vec(R[\"ar1\"][\"est\"])) <= 1e-8",
+        "note": "fit forecast__indep__ar1 at R par (program-forecast.R:47)."
+      },
+      {
+        "case_id": "P1-JULIA-FORECAST-TEMPORAL-AR1-SE-FIT",
+        "quantity": "forecast se.fit, AR1 temporal_indep fit at R's coordinates",
+        "r_source": "test/fixtures/temporal_p1/forecast.toml [ar1.se_fit]",
+        "julia_source": "GLLVModels.forecast_temporal(fit, future; se_fit = true).se_fit, as at test/test_temporal_helpers.jl:45",
+        "r_value": [
+          0.09407416661419757,
+          0.09407416661419757,
+          0.11556720887494641,
+          0.11556720887494641,
+          0.09407416661419887,
+          0.09407416661419887,
+          0.115567208874948,
+          0.115567208874948,
+          0.09407416661418862,
+          0.09407416661418862,
+          0.11556720887493542,
+          0.11556720887493542
+        ],
+        "julia_value": [
+          0.09407416661419757,
+          0.09407416661419757,
+          0.11556720887494641,
+          0.11556720887494641,
+          0.09407416661419887,
+          0.09407416661419887,
+          0.11556720887494801,
+          0.11556720887494801,
+          0.09407416661418862,
+          0.09407416661418862,
+          0.11556720887493542,
+          0.11556720887493542
+        ],
+        "abs_diff": 1.3877787807814457e-17,
+        "tolerance": 1e-08,
+        "tolerance_source": "test/test_temporal_helpers.jl:45",
+        "tolerance_source_line": "@test maximum(abs, fc.se_fit .- temporal_p1_vec(R[\"ar1\"][\"se_fit\"])) <= 1e-8",
+        "note": "fit forecast__indep__ar1 at R par."
+      },
+      {
+        "case_id": "P1-JULIA-FORECAST-TEMPORAL-AR1-NEGATIVE-EST",
+        "quantity": "forecast est, AR1 fit with negative persistence (phi = -0.6)",
+        "r_source": "test/fixtures/temporal_p1/forecast.toml [ar1.negative_est]",
+        "julia_source": "GLLVModels.forecast_temporal(fit, future; se_fit = true).est, as at test/test_temporal_helpers.jl:51",
+        "r_value": [
+          0.7499999999829209,
+          0.630000000074109,
+          0.7500000000102661,
+          0.8219999999555533,
+          0.9999999999829349,
+          0.8800000000741229,
+          1.0000000000102718,
+          1.071999999955559,
+          1.2499999999829483,
+          1.1300000000741366,
+          1.2500000000102771,
+          1.3219999999555643
+        ],
+        "julia_value": [
+          0.7499999999829209,
+          0.630000000074109,
+          0.7500000000102661,
+          0.8219999999555533,
+          0.999999999982935,
+          0.8800000000741229,
+          1.0000000000102718,
+          1.071999999955559,
+          1.2499999999829485,
+          1.1300000000741364,
+          1.2500000000102771,
+          1.3219999999555643
+        ],
+        "abs_diff": 2.220446049250313e-16,
+        "tolerance": 1e-08,
+        "tolerance_source": "test/test_temporal_helpers.jl:51",
+        "tolerance_source_line": "@test maximum(abs, fn.est .- temporal_p1_vec(R[\"ar1\"][\"negative_est\"])) <= 1e-8",
+        "note": "negative_par from the fixture."
+      },
+      {
+        "case_id": "P1-JULIA-FORECAST-TEMPORAL-AR1-NEGATIVE-SE-FIT",
+        "quantity": "forecast se.fit, AR1 fit with negative persistence (phi = -0.6)",
+        "r_source": "test/fixtures/temporal_p1/forecast.toml [ar1.negative_se_fit]",
+        "julia_source": "GLLVModels.forecast_temporal(fit, future; se_fit = true).se_fit, as at test/test_temporal_helpers.jl:52",
+        "r_value": [
+          0.10741871324645905,
+          0.10741871324645905,
+          0.125270669893508,
+          0.125270669893508,
+          0.10741871324646053,
+          0.10741871324646053,
+          0.1252706698935097,
+          0.1252706698935097,
+          0.10741871324644883,
+          0.10741871324644883,
+          0.12527066989349608,
+          0.12527066989349608
+        ],
+        "julia_value": [
+          0.10741871324645905,
+          0.10741871324645905,
+          0.125270669893508,
+          0.125270669893508,
+          0.10741871324646053,
+          0.10741871324646053,
+          0.1252706698935097,
+          0.1252706698935097,
+          0.10741871324644883,
+          0.10741871324644883,
+          0.12527066989349608,
+          0.12527066989349608
+        ],
+        "abs_diff": 0.0,
+        "tolerance": 1e-08,
+        "tolerance_source": "test/test_temporal_helpers.jl:52",
+        "tolerance_source_line": "@test maximum(abs, fn.se_fit .- temporal_p1_vec(R[\"ar1\"][\"negative_se_fit\"])) <= 1e-8",
+        "note": "negative_par from the fixture."
+      },
+      {
+        "case_id": "P1-JULIA-FORECAST-TEMPORAL-OU-EST",
+        "quantity": "forecast est, OU temporal_indep fit at R's coordinates (6 future cells)",
+        "r_source": "test/fixtures/temporal_p1/forecast.toml [ou.est]",
+        "julia_source": "GLLVModels.forecast_temporal(fit, future; se_fit = true).est, as at test/test_temporal_helpers.jl:57",
+        "r_value": [
+          0.7509929343451677,
+          0.8897888625728545,
+          1.0009929342800372,
+          1.1397888625077242,
+          1.2509929344062876,
+          1.3897888626339743
+        ],
+        "julia_value": [
+          0.7509929343451677,
+          0.8897888625728545,
+          1.0009929342800372,
+          1.1397888625077242,
+          1.2509929344062876,
+          1.3897888626339743
+        ],
+        "abs_diff": 0.0,
+        "tolerance": 1e-08,
+        "tolerance_source": "test/test_temporal_helpers.jl:57",
+        "tolerance_source_line": "@test maximum(abs, fco.est .- temporal_p1_vec(R[\"ou\"][\"est\"])) <= 1e-8",
+        "note": "fit forecast__indep__ou at R par (program-forecast.R:104)."
+      },
+      {
+        "case_id": "P1-JULIA-FORECAST-TEMPORAL-OU-SE-FIT",
+        "quantity": "forecast se.fit, OU temporal_indep fit at R's coordinates",
+        "r_source": "test/fixtures/temporal_p1/forecast.toml [ou.se_fit]",
+        "julia_source": "GLLVModels.forecast_temporal(fit, future; se_fit = true).se_fit, as at test/test_temporal_helpers.jl:58",
+        "r_value": [
+          0.09659314975327248,
+          0.09659314975327248,
+          0.09659314975825498,
+          0.09659314975825498,
+          0.09659314973905125,
+          0.09659314973905125
+        ],
+        "julia_value": [
+          0.09659314975327248,
+          0.09659314975327248,
+          0.09659314975825498,
+          0.09659314975825498,
+          0.09659314973905125,
+          0.09659314973905125
+        ],
+        "abs_diff": 0.0,
+        "tolerance": 1e-08,
+        "tolerance_source": "test/test_temporal_helpers.jl:58",
+        "tolerance_source_line": "@test maximum(abs, fco.se_fit .- temporal_p1_vec(R[\"ou\"][\"se_fit\"])) <= 1e-8",
+        "note": "fit forecast__indep__ou at R par."
+      }
+    ]
+  }
+}

@@ -11,9 +11,23 @@
    "classification": "required_core",
    "reason": "AR1/OU process with unstructured per-trait covariance; native temporal source with no Julia twin yet.",
    "arc": "A6",
-   "executable_case_ids": [],
-   "evidence": {},
-   "measured_against": null,
+   "executable_case_ids": [
+    "P1-JULIA-TEMPORAL-DEP-NLL-AT-R-COORDINATES",
+    "P1-JULIA-TEMPORAL-DEP-NLL-AT-R-TIGHT-COORDINATES",
+    "P1-JULIA-TEMPORAL-DEP-CROSS-OBJECTIVE-AT-JULIA-OPTIMUM",
+    "P1-JULIA-TEMPORAL-DEP-SIGMA-T-AT-R-COORDINATES",
+    "P1-JULIA-TEMPORAL-DEP-AIC-AT-R-COORDINATES",
+    "P1-JULIA-TEMPORAL-DEP-BIC-AT-R-COORDINATES",
+    "P1-JULIA-TEMPORAL-DEP-LOGLIK-AT-OPTIMA"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/temporal/temporal_dep.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_temporal_fit_receipts.jl (itchyshin/GLLVModels.jl#563), against R-at-P1 values copied from test/fixtures/temporal_p1/fits.toml; each case within the tolerance asserted in test/test_temporal_fit_receipts.jl"
+   },
+   "measured_against": "P1",
    "disposition": null
   },
   {
@@ -24,9 +38,23 @@
    "classification": "required_core",
    "reason": "AR1/OU process with per-trait independent covariance; R's most-documented temporal source, no Julia twin yet.",
    "arc": "A6",
-   "executable_case_ids": [],
-   "evidence": {},
-   "measured_against": null,
+   "executable_case_ids": [
+    "P1-JULIA-TEMPORAL-INDEP-NLL-AT-R-COORDINATES",
+    "P1-JULIA-TEMPORAL-INDEP-NLL-AT-R-TIGHT-COORDINATES",
+    "P1-JULIA-TEMPORAL-INDEP-CROSS-OBJECTIVE-AT-JULIA-OPTIMUM",
+    "P1-JULIA-TEMPORAL-INDEP-SIGMA-T-AT-R-COORDINATES",
+    "P1-JULIA-TEMPORAL-INDEP-AIC-AT-R-COORDINATES",
+    "P1-JULIA-TEMPORAL-INDEP-BIC-AT-R-COORDINATES",
+    "P1-JULIA-TEMPORAL-INDEP-LOGLIK-AT-OPTIMA"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/temporal/temporal_indep.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_temporal_fit_receipts.jl (itchyshin/GLLVModels.jl#563), against R-at-P1 values copied from test/fixtures/temporal_p1/fits.toml; each case within the tolerance asserted in test/test_temporal_fit_receipts.jl"
+   },
+   "measured_against": "P1",
    "disposition": null
   },
   {
@@ -37,9 +65,25 @@
    "classification": "required_core",
    "reason": "AR1/OU rank-one latent-loading temporal family; no Julia twin yet.",
    "arc": "A6",
-   "executable_case_ids": [],
-   "evidence": {},
-   "measured_against": null,
+   "executable_case_ids": [
+    "P1-JULIA-TEMPORAL-LATENT-NLL-AT-R-COORDINATES",
+    "P1-JULIA-TEMPORAL-LATENT-NLL-AT-R-TIGHT-COORDINATES",
+    "P1-JULIA-TEMPORAL-LATENT-CROSS-OBJECTIVE-AT-JULIA-OPTIMUM",
+    "P1-JULIA-TEMPORAL-LATENT-SIGMA-T-AT-R-COORDINATES",
+    "P1-JULIA-TEMPORAL-LATENT-AIC-AT-R-COORDINATES",
+    "P1-JULIA-TEMPORAL-LATENT-BIC-AT-R-COORDINATES",
+    "P1-JULIA-TEMPORAL-LATENT-LOGLIK-AT-OPTIMA",
+    "P1-JULIA-TEMPORAL-LATENT-GETLV-SCORES",
+    "P1-JULIA-TEMPORAL-LATENT-LOADINGS-AT-R-COORDINATES"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/temporal/temporal_latent.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_temporal_fit_receipts.jl (itchyshin/GLLVModels.jl#563), against R-at-P1 values copied from test/fixtures/temporal_p1/fits.toml; each case within the tolerance asserted in test/test_temporal_fit_receipts.jl"
+   },
+   "measured_against": "P1",
    "disposition": null
   },
   {
@@ -50,9 +94,19 @@
    "classification": "required_core",
    "reason": "Extracts temporal covariance-provider state/parameters; depends on the temporal_* twins landing first.",
    "arc": "A6",
-   "executable_case_ids": [],
-   "evidence": {},
-   "measured_against": null,
+   "executable_case_ids": [
+    "P1-JULIA-EXTRACT-TEMPORAL-TIME-VALUE",
+    "P1-JULIA-EXTRACT-TEMPORAL-VARIANCE",
+    "P1-JULIA-EXTRACT-TEMPORAL-LOADINGS"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/temporal/extract_temporal.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_temporal_fit_receipts.jl (itchyshin/GLLVModels.jl#563), against R-at-P1 values copied from test/fixtures/temporal_p1/fits.toml; each case within the tolerance asserted in test/test_temporal_fit_receipts.jl"
+   },
+   "measured_against": "P1",
    "disposition": null
   },
   {
@@ -63,9 +117,22 @@
    "classification": "required_core",
    "reason": "Forecasts a native temporal covariance model; bounded contract (unreplicated Gaussian temporal_indep only).",
    "arc": "A6",
-   "executable_case_ids": [],
-   "evidence": {},
-   "measured_against": null,
+   "executable_case_ids": [
+    "P1-JULIA-FORECAST-TEMPORAL-AR1-EST",
+    "P1-JULIA-FORECAST-TEMPORAL-AR1-SE-FIT",
+    "P1-JULIA-FORECAST-TEMPORAL-AR1-NEGATIVE-EST",
+    "P1-JULIA-FORECAST-TEMPORAL-AR1-NEGATIVE-SE-FIT",
+    "P1-JULIA-FORECAST-TEMPORAL-OU-EST",
+    "P1-JULIA-FORECAST-TEMPORAL-OU-SE-FIT"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/temporal/forecast_temporal.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_temporal_helpers.jl (itchyshin/GLLVModels.jl#543), against R-at-P1 values copied from test/fixtures/temporal_p1/forecast.toml; each case within the tolerance asserted in test/test_temporal_helpers.jl"
+   },
+   "measured_against": "P1",
    "disposition": null
   },
   {
@@ -76,9 +143,18 @@
    "classification": "required_core",
    "reason": "Parametric bootstrap for the temporal persistence parameter; same bounded contract as forecast_temporal.",
    "arc": "A6",
-   "executable_case_ids": [],
-   "evidence": {},
-   "measured_against": null,
+   "executable_case_ids": [
+    "P1-JULIA-BOOTSTRAP-TEMPORAL-TIME-ESTIMATE-MEAN",
+    "P1-JULIA-BOOTSTRAP-TEMPORAL-TIME-ESTIMATE-LOG-SD"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/temporal/bootstrap_temporal.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_temporal_helpers.jl (itchyshin/GLLVModels.jl#543), against R-at-P1 values copied from test/fixtures/temporal_p1/bootstrap.toml; each case within the tolerance asserted in test/test_temporal_helpers.jl"
+   },
+   "measured_against": "P1",
    "disposition": null
   },
   {
@@ -89,9 +165,20 @@
    "classification": "required_core",
    "reason": "Profiles the temporal persistence/decay parameter; depends on the temporal_* twins.",
    "arc": "A6",
-   "executable_case_ids": [],
-   "evidence": {},
-   "measured_against": null,
+   "executable_case_ids": [
+    "P1-JULIA-PROFILE-TEMPORAL-ESTIMATE",
+    "P1-JULIA-PROFILE-TEMPORAL-TRACE-THETA",
+    "P1-JULIA-PROFILE-TEMPORAL-TRACE-VALUE",
+    "P1-JULIA-PROFILE-TEMPORAL-FINITE-BOUNDS"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/temporal/profile_temporal.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_temporal_helpers.jl (itchyshin/GLLVModels.jl#543), against R-at-P1 values copied from test/fixtures/temporal_p1/profile.toml; each case within the tolerance asserted in test/test_temporal_helpers.jl"
+   },
+   "measured_against": "P1",
    "disposition": null
   },
   {
@@ -102,9 +189,18 @@
    "classification": "required_core",
    "reason": "Compares supplied temporal model candidates (model-selection helper); depends on the temporal_* twins.",
    "arc": "A6",
-   "executable_case_ids": [],
-   "evidence": {},
-   "measured_against": null,
+   "executable_case_ids": [
+    "P1-JULIA-COMPARE-TEMPORAL-LOGLIK",
+    "P1-JULIA-COMPARE-TEMPORAL-AIC"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/temporal/compare_temporal.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_temporal_helpers.jl (itchyshin/GLLVModels.jl#543), against R-at-P1 values copied from test/fixtures/temporal_p1/compare.toml; each case within the tolerance asserted in test/test_temporal_helpers.jl"
+   },
+   "measured_against": "P1",
    "disposition": null
   },
   {
@@ -115,9 +211,21 @@
    "classification": "required_core",
    "reason": "Cumulative-logit ordinal-threshold family for the multivariate engine, distinct from R's missing-predictor cumulative_logit; no Julia twin under this name yet.",
    "arc": "A2 (small)",
-   "executable_case_ids": [],
-   "evidence": {},
-   "measured_against": null,
+   "executable_case_ids": [
+    "P1-JULIA-ORDINAL-LOGIT-LOGLIK-OPTIMUM",
+    "P1-JULIA-ORDINAL-LOGIT-CROSS-OBJECTIVE-AT-R-PARAMETERS",
+    "P1-JULIA-ORDINAL-LOGIT-CUTPOINT-2",
+    "P1-JULIA-ORDINAL-LOGIT-CUTPOINT-3",
+    "P1-JULIA-ORDINAL-LOGIT-LAMBDA-LAMBDA-T"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/ordinal/ordinal_logit.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_ordinal_logit_twin.jl (itchyshin/GLLVModels.jl#528), against R-at-P1 values copied from test/fixtures/ordinal_logit_p1.toml; each case within the tolerance asserted in test/test_ordinal_logit_twin.jl"
+   },
+   "measured_against": "P1",
    "disposition": null
   },
   {
@@ -128,9 +236,21 @@
    "classification": "required_core",
    "reason": "Per-unit latent-variable score point extraction; Julia has latent-variable fits but no matching extractor API.",
    "arc": "A2 (small)",
-   "executable_case_ids": [],
-   "evidence": {},
-   "measured_against": null,
+   "executable_case_ids": [
+    "P1-JULIA-ELS-GAUSSIAN-Z-AT-R-PARAMETERS",
+    "P1-JULIA-ELS-POISSON-Z-AT-R-PARAMETERS",
+    "P1-JULIA-ELS-NB2-Z-AT-R-PARAMETERS",
+    "P1-JULIA-ELS-GAUSSIAN-LAMBDA-Z-OWN-OPTIMUM",
+    "P1-JULIA-ELS-POISSON-LAMBDA-Z-OWN-OPTIMUM"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/latent-scores/extract_latent_scores.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_extract_latent_scores.jl (itchyshin/GLLVModels.jl#531), against R-at-P1 values copied from test/fixtures/extract_latent_scores_p1/; each case within the tolerance asserted in test/test_extract_latent_scores.jl"
+   },
+   "measured_against": "P1",
    "disposition": null
   },
   {
@@ -154,9 +274,21 @@
    "classification": "required_core",
    "reason": "Delegates to component fits' extract_latent_scores(); twins Julia's own multi-fit extraction once extract_latent_scores lands.",
    "arc": "A2 (small)",
-   "executable_case_ids": [],
-   "evidence": {},
-   "measured_against": null,
+   "executable_case_ids": [
+    "P1-JULIA-ELS-GAUSSIAN-Z-AT-R-PARAMETERS",
+    "P1-JULIA-ELS-POISSON-Z-AT-R-PARAMETERS",
+    "P1-JULIA-ELS-NB2-Z-AT-R-PARAMETERS",
+    "P1-JULIA-ELS-GAUSSIAN-LAMBDA-Z-OWN-OPTIMUM",
+    "P1-JULIA-ELS-POISSON-LAMBDA-Z-OWN-OPTIMUM"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/latent-scores/extract_latent_scores.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_extract_latent_scores.jl (itchyshin/GLLVModels.jl#531), against R-at-P1 values copied from test/fixtures/extract_latent_scores_p1/; each case within the tolerance asserted in test/test_extract_latent_scores.jl"
+   },
+   "measured_against": "P1",
    "disposition": null
   },
   {
@@ -327,9 +459,17 @@
    "classification": "required_core",
    "reason": "Self-Liang chi-bar-square p-value for a boundary LRT. Julia has both `chibar2_pvalue` and `variance_lrt` names in src/boundary_inference.jl, but a name match never counts (D-295 Packet 1 row 5) -- semantic equality is unchecked until a twin test shows equal outputs.",
    "arc": "A2 (small)",
-   "executable_case_ids": [],
-   "evidence": {},
-   "measured_against": null,
+   "executable_case_ids": [
+    "P1-JULIA-CHIBAR2-PVALUE"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/boundary-inference/chibar2_pvalue.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_chibar2_variance_lrt_p1_twin.jl (itchyshin/GLLVModels.jl#548), against R-at-P1 values copied from test/parity/fixtures/chibar2_p1_fixture.toml; each case within the tolerance asserted in test/test_chibar2_variance_lrt_p1_twin.jl"
+   },
+   "measured_against": "P1",
    "disposition": null
   },
   {
@@ -340,9 +480,18 @@
    "classification": "required_core",
    "reason": "Self-Liang LRT wrapper for one or more variance-component boundaries, used by anova(). Same name-only-match caveat as chibar2_pvalue.",
    "arc": "A2 (small)",
-   "executable_case_ids": [],
-   "evidence": {},
-   "measured_against": null,
+   "executable_case_ids": [
+    "P1-JULIA-VARIANCE-LRT-LRT",
+    "P1-JULIA-VARIANCE-LRT-PVALUE"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/boundary-inference/variance_lrt.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_chibar2_variance_lrt_p1_twin.jl (itchyshin/GLLVModels.jl#548), against R-at-P1 values copied from test/parity/fixtures/chibar2_p1_fixture.toml; each case within the tolerance asserted in test/test_chibar2_variance_lrt_p1_twin.jl"
+   },
+   "measured_against": "P1",
    "disposition": null
   },
   {

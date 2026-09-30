@@ -1,0 +1,137 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "ordinal/ordinal_logit"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#528",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "9b7f4804d978b56686273ceea03a792bfd1cc544",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/ordinal_logit_p1.toml",
+      "sha256": "c1f73e3af808857dd033005505325bfdc145cb02ab78ab8c7d2bdf76e1377e9d"
+    },
+    {
+      "path": "test/fixtures/ordinal_logit_p1_data.csv",
+      "sha256": "cf946246fda929f76c44c4f3b3d96c4a08c39f4305524ebff5204af1e1797766"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_ordinal_logit_twin.jl",
+      "sha256": "0230fff45e1b51845389890cc4e46cd8318e4f92d07fee20cd351e2f723165d0"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-ORDINAL-LOGIT-LOGLIK-OPTIMUM",
+        "quantity": "logLik at each side's own optimum",
+        "r_source": "test/fixtures/ordinal_logit_p1.toml [r_reference.loglik]",
+        "julia_source": "GLLVModels.fit_gllvm(Y; family = ordinal_logit(), K = 1).loglik, as at test/test_ordinal_logit_twin.jl:111",
+        "r_value": -522.7326693717605,
+        "julia_value": -522.7326693686491,
+        "abs_diff": 3.1113813747651875e-09,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_ordinal_logit_twin.jl:130",
+        "tolerance_source_line": "@test isapprox(fit.loglik, r[\"loglik\"]; atol = 1e-6)",
+        "note": "Y is read from test/fixtures/ordinal_logit_p1_data.csv (sha256 checked against the fixture), as in the test."
+      },
+      {
+        "case_id": "P1-JULIA-ORDINAL-LOGIT-CROSS-OBJECTIVE-AT-R-PARAMETERS",
+        "quantity": "Julia Laplace marginal evaluated at R's fitted (beta, Lambda, tau)",
+        "r_source": "test/fixtures/ordinal_logit_p1.toml [r_reference.loglik]",
+        "julia_source": "GLLVModels.ordinal_marginal_loglik_laplace_pertrait(Y, Lambda_r, beta_r, tau_r, C; link = LogitLink()), as at test/test_ordinal_logit_twin.jl:148",
+        "r_value": -522.7326693717605,
+        "julia_value": -522.7326693717331,
+        "abs_diff": 2.7398527890909463e-11,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_ordinal_logit_twin.jl:150",
+        "tolerance_source_line": "@test isapprox(ll_at_r, r[\"loglik\"]; atol = 1e-6)",
+        "note": "Likelihood-function identity at R's parameters, independent of either optimiser's path."
+      },
+      {
+        "case_id": "P1-JULIA-ORDINAL-LOGIT-CUTPOINT-2",
+        "quantity": "cutpoint_2 per trait (t1, t2, t3)",
+        "r_source": "test/fixtures/ordinal_logit_p1.toml [r_reference.cutpoint_2]",
+        "julia_source": "GLLVModels fit.tau[:, 2] from the same fit, as compared at test/test_ordinal_logit_twin.jl:155",
+        "r_value": [
+          0.6189052360341044,
+          0.9185186081830748,
+          0.512991058792618
+        ],
+        "julia_value": [
+          0.6189030114177502,
+          0.9185235748420759,
+          0.5129896653027187
+        ],
+        "abs_diff": 4.966659001071072e-06,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_ordinal_logit_twin.jl:155",
+        "tolerance_source_line": "@test isapprox(fit.τ[t, 2], r[\"cutpoint_2\"][t]; atol = 1e-3)",
+        "note": "Per-trait assertion in the test; vector case takes the maximum."
+      },
+      {
+        "case_id": "P1-JULIA-ORDINAL-LOGIT-CUTPOINT-3",
+        "quantity": "cutpoint_3 per trait (t1, t2, t3)",
+        "r_source": "test/fixtures/ordinal_logit_p1.toml [r_reference.cutpoint_3]",
+        "julia_source": "GLLVModels fit.tau[:, 3] from the same fit, as compared at test/test_ordinal_logit_twin.jl:156",
+        "r_value": [
+          1.432188109282964,
+          1.5975186560786583,
+          1.2741824298429623
+        ],
+        "julia_value": [
+          1.4321892792240822,
+          1.5975240977156697,
+          1.2741839287639065
+        ],
+        "abs_diff": 5.441637011438516e-06,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_ordinal_logit_twin.jl:156",
+        "tolerance_source_line": "@test isapprox(fit.τ[t, 3], r[\"cutpoint_3\"][t]; atol = 1e-3)",
+        "note": "Per-trait assertion in the test; vector case takes the maximum."
+      },
+      {
+        "case_id": "P1-JULIA-ORDINAL-LOGIT-LAMBDA-LAMBDA-T",
+        "quantity": "Lambda Lambda' (3 x 3, flattened column-major)",
+        "r_source": "test/fixtures/ordinal_logit_p1.toml [r_reference.lambda_lambda_t]",
+        "julia_source": "GLLVModels fit.Λ * fit.Λ' from the same fit, as compared at test/test_ordinal_logit_twin.jl:164",
+        "r_value": [
+          0.8751818420657986,
+          -1.55321092301649,
+          1.439167021455215,
+          -1.55321092301649,
+          2.756529049646761,
+          -2.55413198757989,
+          1.439167021455215,
+          -2.55413198757989,
+          2.3665958502468065
+        ],
+        "julia_value": [
+          0.8751972296720435,
+          -1.5532126657551326,
+          1.4391898170565263,
+          -1.5532126657551326,
+          2.7564867703776588,
+          -2.55413040225876,
+          1.4391898170565263,
+          -2.55413040225876,
+          2.3666292114468286
+        ],
+        "abs_diff": 4.22792691021634e-05,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_ordinal_logit_twin.jl:164",
+        "tolerance_source_line": "@test isapprox(LLt_julia, Matrix(LLt_r); atol = 1e-3)",
+        "note": "Sign-free loading target (K = 1 loadings are identified only up to sign). R matrix is symmetric, so row/column-major flattening agree."
+      }
+    ]
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "temporal/bootstrap_temporal"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#543",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "9b7f4804d978b56686273ceea03a792bfd1cc544",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/temporal_p1/bootstrap.toml",
+      "sha256": "a83f83bec3efa0791f83151193eb6e2797bbe4b4c6527a2be6dd9d58d919fa0e"
+    },
+    {
+      "path": "test/fixtures/temporal_p1/fits.toml",
+      "sha256": "4c2ea4d92ad5abd137fdaf23fbc372f46694f742a7116b012d08d78e5242678c"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_temporal_helpers.jl",
+      "sha256": "cc5faa412338a0b43c643dec20deba6ead1946ea48f53064da42bd1c699a9389"
+    },
+    {
+      "path": "test/fixtures/temporal_p1/fixture_helpers.jl",
+      "sha256": "b367578faaf9640985460514564aa450d25f384bc5627216762ec6b0b79acbcc"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-BOOTSTRAP-TEMPORAL-TIME-ESTIMATE-MEAN",
+        "quantity": "mean of the bootstrap time_estimate distribution, Julia vs R (n_boot = 200)",
+        "r_source": "test/fixtures/temporal_p1/bootstrap.toml [time_estimate_mean]",
+        "julia_source": "mean of GLLVModels.bootstrap_temporal(fit; n_boot = 200, seed = 260931).time_estimate over converged replicates, as at test/test_temporal_helpers.jl:244",
+        "r_value": 0.7226486047410728,
+        "julia_value": 0.7132749556545548,
+        "abs_diff": 0.009373649086518054,
+        "tolerance": 0.046109911176139495,
+        "tolerance_source": "test/test_temporal_helpers.jl:244",
+        "tolerance_source_line": "@test abs(mean(te) - rmean) <= 4 * se",
+        "note": "bootstrap_temporal is stochastic, so the test's acceptance is statistical, and this case records exactly that band. n_boot = 200, seed = 260931, fit sim_indep__indep__ar1; 200 of 200 Julia replicates converged (R: 200). Tolerance is the test's 4 standard errors of the difference of means, se = sqrt(sd_R^2 / n_R + sd_J^2 / n_J), evaluated from this run (0.046109911176139495)."
+      },
+      {
+        "case_id": "P1-JULIA-BOOTSTRAP-TEMPORAL-TIME-ESTIMATE-LOG-SD",
+        "quantity": "log sd of the bootstrap time_estimate distribution, Julia vs R (n_boot = 200)",
+        "r_source": "test/fixtures/temporal_p1/bootstrap.toml [time_estimate_sd] (log scale)",
+        "julia_source": "log(sd of GLLVModels.bootstrap_temporal(...).time_estimate over converged replicates), as at test/test_temporal_helpers.jl:245",
+        "r_value": -2.1605723435851196,
+        "julia_value": -2.1603009477191986,
+        "abs_diff": 0.0002713958659210647,
+        "tolerance": 0.28768207245178085,
+        "tolerance_source": "test/test_temporal_helpers.jl:245",
+        "tolerance_source_line": "@test 0.75 <= std(te) / rsd <= 1 / 0.75",
+        "note": "bootstrap_temporal is stochastic, so the test's acceptance is statistical, and this case records exactly that band. n_boot = 200, seed = 260931, fit sim_indep__indep__ar1; 200 of 200 Julia replicates converged (R: 200). The test asserts the ratio sd_J / sd_R lies in [0.75, 1/0.75]; on the log scale that is |log sd_J - log sd_R| <= log(1/0.75) = 0.28768207245178085, the same band."
+      }
+    ]
+  }
+}

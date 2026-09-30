@@ -1,0 +1,265 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "temporal/temporal_dep"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#563",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "9b7f4804d978b56686273ceea03a792bfd1cc544",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/temporal_p1/fits.toml",
+      "sha256": "4c2ea4d92ad5abd137fdaf23fbc372f46694f742a7116b012d08d78e5242678c"
+    },
+    {
+      "path": "test/fixtures/temporal_p1/cross_objective.toml",
+      "sha256": "680bfefdd6c0d5de7e142eb537363f3a2953c80d1f54c9af7babb1132e5cfb72"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_temporal_fit_receipts.jl",
+      "sha256": "3dc0d2dc7f64a7e3322b4fe2440223c50c9735901430440f078646094014ae9a"
+    },
+    {
+      "path": "test/fixtures/temporal_p1/fixture_helpers.jl",
+      "sha256": "b367578faaf9640985460514564aa450d25f384bc5627216762ec6b0b79acbcc"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-TEMPORAL-DEP-NLL-AT-R-COORDINATES",
+        "quantity": "Julia NLL at R's opt$par vs R's objective, per fit",
+        "r_source": "test/fixtures/temporal_p1/fits.toml [fits.objective]",
+        "julia_source": "-GLLVModels.fit_temporal_gllvm(...; start = R par, iterations = 0).loglik, as at test/test_temporal_fit_receipts.jl:46",
+        "r_value": [
+          47.49399758841067,
+          777.7806791399393,
+          765.2869515917954,
+          438.8542134683628
+        ],
+        "julia_value": [
+          47.49399758841069,
+          777.7806791399405,
+          765.2869515917945,
+          438.8542134683628
+        ],
+        "abs_diff": 1.2505552149377763e-12,
+        "tolerance": 1e-08,
+        "tolerance_source": "test/test_temporal_fit_receipts.jl:46",
+        "tolerance_source_line": "@test abs(-at_r.loglik - c[\"objective\"]) <= 1e-8",
+        "note": "Fits (fixture order): profile_ar1__dep__ar1, sim_ar1__dep__ar1, sim_ou__dep__ou, sim_rep__dep__ar1."
+      },
+      {
+        "case_id": "P1-JULIA-TEMPORAL-DEP-NLL-AT-R-TIGHT-COORDINATES",
+        "quantity": "Julia NLL at R's tight-tolerance opt$par vs R's tight objective, per fit",
+        "r_source": "test/fixtures/temporal_p1/fits.toml [fits.objective_tight]",
+        "julia_source": "-GLLVModels.fit_temporal_gllvm(...; start = R par_tight, iterations = 0).loglik, as at test/test_temporal_fit_receipts.jl:47",
+        "r_value": [
+          47.49399758841067,
+          777.7806791291131,
+          765.2869515755457,
+          438.8542134662887
+        ],
+        "julia_value": [
+          47.49399758841069,
+          777.7806791291122,
+          765.2869515755461,
+          438.8542134662884
+        ],
+        "abs_diff": 9.094947017729282e-13,
+        "tolerance": 1e-08,
+        "tolerance_source": "test/test_temporal_fit_receipts.jl:47",
+        "tolerance_source_line": "@test abs(-at_rt.loglik - c[\"objective_tight\"]) <= 1e-8",
+        "note": "Fits (fixture order): profile_ar1__dep__ar1, sim_ar1__dep__ar1, sim_ou__dep__ou, sim_rep__dep__ar1."
+      },
+      {
+        "case_id": "P1-JULIA-TEMPORAL-DEP-CROSS-OBJECTIVE-AT-JULIA-OPTIMUM",
+        "quantity": "R's objective at the recorded Julia optimum vs Julia NLL there, per fit",
+        "r_source": "test/fixtures/temporal_p1/cross_objective.toml [cells.r_fn_at_julia_par]",
+        "julia_source": "-GLLVModels.fit_temporal_gllvm(...; start = recorded julia_par, iterations = 0).loglik, as at test/test_temporal_fit_receipts.jl:55",
+        "r_value": [
+          47.49399758837152,
+          777.7806791211236,
+          765.2869515755423,
+          438.85421346628755
+        ],
+        "julia_value": [
+          47.49399758837151,
+          777.7806791211245,
+          765.2869515755435,
+          438.8542134662879
+        ],
+        "abs_diff": 1.2505552149377763e-12,
+        "tolerance": 1e-08,
+        "tolerance_source": "test/test_temporal_fit_receipts.jl:55",
+        "tolerance_source_line": "@test abs(-at_j.loglik - xc[\"r_fn_at_julia_par\"]) <= 1e-8",
+        "note": "Fits (fixture order): profile_ar1__dep__ar1, sim_ar1__dep__ar1, sim_ou__dep__ou, sim_rep__dep__ar1."
+      },
+      {
+        "case_id": "P1-JULIA-TEMPORAL-DEP-SIGMA-T-AT-R-COORDINATES",
+        "quantity": "Temporal covariance Sigma_T at R's coordinates (all fits, flattened)",
+        "r_source": "test/fixtures/temporal_p1/fits.toml [fits.Sigma_T]",
+        "julia_source": "GLLVModels fit.Sigma_T at R par, as compared at test/test_temporal_fit_receipts.jl:129",
+        "r_value": [
+          0.08215203031521853,
+          -0.13757763305333037,
+          -0.15220856869339078,
+          -0.13757763305333037,
+          0.5393520237096858,
+          0.09655915646171909,
+          -0.15220856869339078,
+          0.09655915646171909,
+          0.3631567595123454,
+          1.1748827269570339,
+          -0.37825002181733636,
+          0.555668557897626,
+          -0.37825002181733636,
+          0.7380679292712928,
+          -0.32913800263422005,
+          0.555668557897626,
+          -0.32913800263422005,
+          0.906562917155777,
+          1.0260116133238244,
+          -0.3529789280979456,
+          0.39369620122557414,
+          -0.3529789280979456,
+          0.5459161689460023,
+          -0.30582063631721734,
+          0.39369620122557414,
+          -0.30582063631721734,
+          0.7112903460941412,
+          0.8339387578351876,
+          -0.2434061078902781,
+          0.34492903031048816,
+          -0.2434061078902781,
+          0.524346268560592,
+          -0.23292807698304707,
+          0.34492903031048816,
+          -0.23292807698304707,
+          0.41757888257555303
+        ],
+        "julia_value": [
+          0.08215203031521853,
+          -0.13757763305333037,
+          -0.15220856869339078,
+          -0.13757763305333037,
+          0.5393520237096858,
+          0.09655915646171909,
+          -0.15220856869339078,
+          0.09655915646171909,
+          0.3631567595123454,
+          1.1748827269570339,
+          -0.37825002181733636,
+          0.555668557897626,
+          -0.37825002181733636,
+          0.7380679292712928,
+          -0.32913800263422005,
+          0.555668557897626,
+          -0.32913800263422005,
+          0.906562917155777,
+          1.0260116133238244,
+          -0.3529789280979456,
+          0.39369620122557414,
+          -0.3529789280979456,
+          0.5459161689460023,
+          -0.30582063631721734,
+          0.39369620122557414,
+          -0.30582063631721734,
+          0.7112903460941411,
+          0.8339387578351876,
+          -0.2434061078902781,
+          0.34492903031048816,
+          -0.2434061078902781,
+          0.524346268560592,
+          -0.23292807698304707,
+          0.34492903031048816,
+          -0.23292807698304707,
+          0.4175788825755531
+        ],
+        "abs_diff": 1.1102230246251565e-16,
+        "tolerance": 1e-12,
+        "tolerance_source": "test/test_temporal_fit_receipts.jl:129",
+        "tolerance_source_line": "@test vec(at_r.Sigma_T) ≈ temporal_p1_vec(c[\"Sigma_T\"]) atol = 1e-12",
+        "note": "Fits (fixture order): profile_ar1__dep__ar1, sim_ar1__dep__ar1, sim_ou__dep__ou, sim_rep__dep__ar1."
+      },
+      {
+        "case_id": "P1-JULIA-TEMPORAL-DEP-AIC-AT-R-COORDINATES",
+        "quantity": "AIC at R's coordinates, per fit",
+        "r_source": "test/fixtures/temporal_p1/fits.toml [fits.AIC]",
+        "julia_source": "GLLVModels aic(fit) at R par, as at test/test_temporal_fit_receipts.jl:133",
+        "r_value": [
+          116.98799517682134,
+          1577.5613582798785,
+          1552.5739031835908,
+          899.7084269367256
+        ],
+        "julia_value": [
+          116.98799517682139,
+          1577.561358279881,
+          1552.573903183589,
+          899.7084269367256
+        ],
+        "abs_diff": 2.5011104298755527e-12,
+        "tolerance": 1e-08,
+        "tolerance_source": "test/test_temporal_fit_receipts.jl:133",
+        "tolerance_source_line": "@test abs(aic(at_r) - c[\"AIC\"]) <= 1e-8",
+        "note": "Fits (fixture order): profile_ar1__dep__ar1, sim_ar1__dep__ar1, sim_ou__dep__ou, sim_rep__dep__ar1."
+      },
+      {
+        "case_id": "P1-JULIA-TEMPORAL-DEP-BIC-AT-R-COORDINATES",
+        "quantity": "BIC at R's coordinates, per fit",
+        "r_source": "test/fixtures/temporal_p1/fits.toml [fits.BIC]",
+        "julia_source": "GLLVModels bic(fit) at R par, as at test/test_temporal_fit_receipts.jl:134",
+        "r_value": [
+          134.40670349983856,
+          1625.9275844872561,
+          1600.9401293909684,
+          942.4555712826773
+        ],
+        "julia_value": [
+          134.40670349983859,
+          1625.9275844872586,
+          1600.9401293909666,
+          942.4555712826773
+        ],
+        "abs_diff": 2.5011104298755527e-12,
+        "tolerance": 1e-08,
+        "tolerance_source": "test/test_temporal_fit_receipts.jl:134",
+        "tolerance_source_line": "@test abs(bic(at_r) - c[\"BIC\"]) <= 1e-8",
+        "note": "Fits (fixture order): profile_ar1__dep__ar1, sim_ar1__dep__ar1, sim_ou__dep__ou, sim_rep__dep__ar1."
+      },
+      {
+        "case_id": "P1-JULIA-TEMPORAL-DEP-LOGLIK-AT-OPTIMA",
+        "quantity": "logLik at each side's own optimum, per fit",
+        "r_source": "test/fixtures/temporal_p1/fits.toml [fits.objective_tight] (negated)",
+        "julia_source": "GLLVModels.fit_temporal_gllvm(...; g_tol, iterations).loglik, as at test/test_temporal_fit_receipts.jl:59",
+        "r_value": [
+          -47.49399758841067,
+          -777.7806791291131,
+          -765.2869515755457,
+          -438.8542134662887
+        ],
+        "julia_value": [
+          -47.49399758837151,
+          -777.7806791211241,
+          -765.2869515755435,
+          -438.8542134662878
+        ],
+        "abs_diff": 7.989001460373402e-09,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_temporal_fit_receipts.jl:70",
+        "tolerance_source_line": "@test abs(dll) <= 1e-6",
+        "note": "Fits compared: profile_ar1__dep__ar1, sim_ar1__dep__ar1, sim_ou__dep__ou, sim_rep__dep__ar1. No fit was excluded. Julia fit settings g_tol = 1.0e-8, iterations = 2000, as the test."
+      }
+    ]
+  }
+}
