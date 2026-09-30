@@ -193,6 +193,14 @@ All notable changes to GLLVModels.jl are documented here.
   r = 9.5e9 with the log-likelihood matching gllvmTMB), so this differs from the NB2
   grouped fitters' `_dispersion_group_boundary`, which flags both ends.
   `test/test_truncnb2_dispersion_boundary.jl`.
+- **Per-trait zero-truncated NB2 fits could stop at a worse optimum with the wrong trait at
+  the Poisson limit.** On two ordinary draws (p = 4, n = 120, true r_t 2 to 5),
+  `fit_truncated_nbinom2_gllvm_pertrait` ended 0.35 and 2.0 log-likelihood units below
+  gllvmTMB's fit of the same model, with one trait's r stalled near 1e9 where the
+  likelihood is nearly flat. The fitter now restarts any trait whose r ends outside
+  `[1e-6, 1e6]` from r = 1, as the NB2 grouped fitters do (`_nb_boundary_restart`, #477),
+  and keeps the restart only if it improves the fit. Both draws then match gllvmTMB's
+  log-likelihood to four decimal places. `test/test_truncnb2_pertrait_boundary_restart.jl`.
 - **Student-t fits with estimated ν no longer stop at the Gaussian limit when an interior
   optimum is higher.** When an estimated ν ran to the ν → ∞ boundary, `fit_studentt_gllvm`
   kept that fit, although the per-trait ν profile can have a higher interior peak that
