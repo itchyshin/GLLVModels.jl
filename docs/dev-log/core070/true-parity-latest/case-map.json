@@ -258,9 +258,19 @@
    "classification": "required_core",
    "reason": "TRUE zero-inflation mixture (per-trait, intercept-only structural-zero probability); Julia's own zero-inflated/two-part family is a hurdle-style construction, not R's mixture semantics. A name match never counts (D-295 Packet 1 row 5); Julia's design stays a documented extra until a twin with R's semantics exists.",
    "arc": "A2 (medium)",
-   "executable_case_ids": [],
-   "evidence": {},
-   "measured_against": null,
+   "executable_case_ids": [
+    "P1-FIXTURE-ZI-POISSON-LOGLIK-OPTIMUM",
+    "P1-FIXTURE-ZI-POISSON-CROSS-OBJECTIVE-R-AT-JULIA-OPTIMUM",
+    "P1-FIXTURE-ZI-POISSON-BETA"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/fixture-twins/zi/zi_poisson.json"
+    ],
+    "tier": "numeric: recorded R-at-P1 vs Julia pairs copied mechanically from test/fixtures/zi_p1.toml (itchyshin/GLLVModels.jl#557) by tools/true_parity_fixture_receipts.py; each within the tolerance asserted in test/test_zi_twin.jl"
+   },
+   "measured_against": "P1",
    "disposition": null
   },
   {
@@ -271,9 +281,19 @@
    "classification": "required_core",
    "reason": "TRUE zero-inflation mixture reusing ordinary per-trait NB2 dispersion; Julia's two-part ZI uses one scalar dispersion across species. Same D-295 row 5 divergence rule as zi_poisson.",
    "arc": "A2 (medium)",
-   "executable_case_ids": [],
-   "evidence": {},
-   "measured_against": null,
+   "executable_case_ids": [
+    "P1-FIXTURE-ZI-NBINOM2-LOGLIK-OPTIMUM",
+    "P1-FIXTURE-ZI-NBINOM2-CROSS-OBJECTIVE-R-AT-JULIA-OPTIMUM",
+    "P1-FIXTURE-ZI-NBINOM2-BETA"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/fixture-twins/zi/zi_nbinom2.json"
+    ],
+    "tier": "numeric: recorded R-at-P1 vs Julia pairs copied mechanically from test/fixtures/zi_p1.toml (itchyshin/GLLVModels.jl#557) by tools/true_parity_fixture_receipts.py; each within the tolerance asserted in test/test_zi_twin.jl"
+   },
+   "measured_against": "P1",
    "disposition": null
   },
   {
@@ -284,9 +304,19 @@
    "classification": "required_core",
    "reason": "TRUE zero-inflation mixture over multi-trial (binomial) data. Same D-295 row 5 divergence rule as zi_poisson.",
    "arc": "A2 (medium)",
-   "executable_case_ids": [],
-   "evidence": {},
-   "measured_against": null,
+   "executable_case_ids": [
+    "P1-FIXTURE-ZI-BINOMIAL-LOGLIK-OPTIMUM",
+    "P1-FIXTURE-ZI-BINOMIAL-CROSS-OBJECTIVE-R-AT-JULIA-OPTIMUM",
+    "P1-FIXTURE-ZI-BINOMIAL-BETA"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/fixture-twins/zi/zi_binomial.json"
+    ],
+    "tier": "numeric: recorded R-at-P1 vs Julia pairs copied mechanically from test/fixtures/zi_p1.toml (itchyshin/GLLVModels.jl#557) by tools/true_parity_fixture_receipts.py; each within the tolerance asserted in test/test_zi_twin.jl"
+   },
+   "measured_against": "P1",
    "disposition": null
   },
   {

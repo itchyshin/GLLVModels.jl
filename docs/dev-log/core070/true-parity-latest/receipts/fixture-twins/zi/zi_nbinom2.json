@@ -1,0 +1,73 @@
+{
+  "schema": "true-parity-fixture-twin-receipt/v1",
+  "source_ids": [
+    "zi/zi_nbinom2"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "recorded_fixture_pair",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#557",
+  "generator": "tools/true_parity_fixture_receipts.py",
+  "source_fixture": {
+    "path": "test/fixtures/zi_p1.toml",
+    "sha256": "905228a7b872b624eb27661397aacb9b4ce643060b94c4ad10d92d3c98cd6214"
+  },
+  "source_test": {
+    "path": "test/test_zi_twin.jl",
+    "sha256": "be8896ae714944260fcac92204ab30442a3bd647f235e4c67fcd73bf15de7f40"
+  },
+  "what_this_is_not": "Values are copied from the tracked fixture; the Julia side is the optimum recorded there, not a fresh fit made by this tool.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-FIXTURE-ZI-NBINOM2-LOGLIK-OPTIMUM",
+        "quantity": "logLik at the optimum",
+        "r_source": "test/fixtures/zi_p1.toml [zi_nbinom2.r_reference.loglik]",
+        "julia_source": "test/fixtures/zi_p1.toml [zi_nbinom2.r_at_julia.julia_loglik]",
+        "r_value": -1351.8308942168758,
+        "julia_value": -1351.8308942064405,
+        "abs_diff": 1.0435314834467135e-08,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_zi_twin.jl:195",
+        "tolerance_source_line": "@test d_opt < 1e-6",
+        "note": "Test asserts |fit.loglik - R logLik|; the fixture's julia_loglik is the recorded Julia optimum (header of zi_p1.toml), and line 198 asserts a rerun reproduces it to 1e-6."
+      },
+      {
+        "case_id": "P1-FIXTURE-ZI-NBINOM2-CROSS-OBJECTIVE-R-AT-JULIA-OPTIMUM",
+        "quantity": "R objective at the Julia optimum vs Julia logLik there",
+        "r_source": "test/fixtures/zi_p1.toml [zi_nbinom2.r_at_julia.r_objective_at_julia_optimum]",
+        "julia_source": "test/fixtures/zi_p1.toml [zi_nbinom2.r_at_julia.julia_loglik]",
+        "r_value": -1351.83089420685,
+        "julia_value": -1351.8308942064405,
+        "abs_diff": 4.0949998947326094e-10,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_zi_twin.jl:197",
+        "tolerance_source_line": "@test d_cross_r < 1e-6",
+        "note": "Both sides are stored in the fixture exactly as the test reads them."
+      },
+      {
+        "case_id": "P1-FIXTURE-ZI-NBINOM2-BETA",
+        "quantity": "per-trait fixed intercept beta",
+        "r_source": "test/fixtures/zi_p1.toml [zi_nbinom2.r_reference.beta]",
+        "julia_source": "test/fixtures/zi_p1.toml [zi_nbinom2.r_at_julia.julia_beta]",
+        "r_value": [
+          1.2592968421439144,
+          0.9828995979772025,
+          1.637134554525574
+        ],
+        "julia_value": [
+          1.2592911407927976,
+          0.982901927590455,
+          1.6371332845221591
+        ],
+        "abs_diff": 5.7013511167713915e-06,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_zi_twin.jl:200",
+        "tolerance_source_line": "@test d_beta < 1e-3",
+        "note": "Test asserts max|fit.beta - R beta|; the fixture's julia_beta is the recorded Julia optimum."
+      }
+    ]
+  }
+}
