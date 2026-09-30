@@ -1,3 +1,19 @@
+## 2026-09-27: P1 ledger assembled from the per-family case maps (draft, nothing signed)
+
+- Branch `claude/true-parity-p1-ledger-assembly`: `claude/true-parity-p1-aghq` (`8f4427d4a`) plus merges
+  of `claude/true-parity-p1-isdm` (`d1eb87947`) and `claude/true-parity-p1-namespace-v2` (`92cf39571`).
+  Both merges conflicted only in this file (pure prepends on both sides, base empty); kept both entries.
+- `tools/true_parity_assemble.py` writes `scoreboard.md`, `case-map-assembled.json` and `reverse-gap.json`
+  from the nine tracked `case-map-<family>.json` files (297 rows, no duplicate source ids, no conflicts).
+  `--check` current; `tools/test_true_parity_assemble.py` 13/13 (conflicting duplicate id fails, missing
+  map fails, unbucketed tier fails, hand-edited scoreboard fails, EVIDENCED count equals checker C1
+  `bound=`). `node tools/test_true_parity_check.mjs` passes.
+- Checker, PARITY_REF=FS, PARITY_CASEMAP=case-map-assembled.json: C0 NOT_MET (default_pin=P0), C1 NOT_MET
+  (required=297 bound_numeric=52 registration_only=44 free=197 blocked=4), C2 NOT_MET (52/297 done), C3/C4/C5
+  NOT_MET (empty selection), C6 NOT_MET (372 items, decision null), C7 MET, C8 NOT_MET (245 failing), X2
+  NOT_MET (52/297). With PR #533's `case-map.json` folded in scratch only: 335 rows, 318 required, no
+  conflicts, same verdicts.
+
 ## 2026-09-27: isdm rows re-measured at gllvmTMB P1 (A3), tracked receipts
 
 - Branch `claude/true-parity-p1-isdm`, stacked on `claude/true-parity-p1-family` (PR #584 at
@@ -50,6 +66,29 @@
   passes; aghq, family, data, covariance, postfit, inference contract `--check`s and aghq, family, data,
   inference receipt `--check`s current; `test/parity/test_core070_pin.jl` 27/27; aghq verifier self-test at
   P0 and P1.
+
+## 2026-09-27: isdm rows re-measured at gllvmTMB P1 (A3), tracked receipts
+
+- Branch `claude/true-parity-p1-isdm`, stacked on `claude/true-parity-p1-family` (PR #584 at
+  `0fb2b9411`), on #579, #571, #569 and #567. Scope: the 20 required_core isdm rows the P1 carry scan
+  lists as DANGLING (P0 receipts under the absent `.unlazy/core070-aghq/wave1-batches`). The 17
+  rejected isdm rows and the NOT_BOUND_AT_P0 exports `isdm_source` / `isdm_sources` out of scope.
+  Classifications and dispositions carried unchanged.
+- Harness: P1 twin `isdm-batch-contract-p1.json` (`tools/core070_isdm_p1_contract.py`, `--check`
+  current; `R/isdm-sources.R` and `R/fit-multi.R` changed at P1, `R/offset.R` identical; five of the
+  nine loaded functions changed body). Runner and verifier take GLLVM_PARITY_PIN strictly, check the
+  oracle marker and version, create the destination after the pin checks. No case, expectation or
+  tolerance edited.
+- Run from clean commit `361516c7d` (local Mac, one BLAS/OMP thread): 20 of 20 predicates TRUE, batch
+  wall 1 s; verifier PASS at P1 with self-test (10 + 5). Agrees case for case with the independent
+  installed-namespace replay in #546's `test/fixtures/isdm/admission_p1.toml`.
+- Counts: 20 `needs_surface_r_side_measured` (R boolean replay, no number, no Julia side at the run
+  commit), 0 bound. Mapping onto #546 / #558's P1 twins proposed in the PR body, not applied.
+- Checker, PARITY_REF=FS, main and #561 (`92cf39571`): isdm C1 required=20 bound=0 free=20 (#561
+  bound_numeric=0), C8 20 NOT_TWINNED_NOT_SIGNED; data, fit-input, family, covariance, postfit,
+  inference lines unchanged. `test_true_parity_check.mjs` passes; isdm, family, data, covariance,
+  postfit, inference contract `--check`s and isdm, family, data, inference receipt `--check`s current;
+  `test/parity/test_core070_pin.jl` 27/27.
 
 ## 2026-09-27: Family rows re-measured at gllvmTMB P1 (A3), tracked receipts
 
@@ -626,6 +665,7 @@
   case is an R boundary), 8 R-only needing a Julia surface, 0 not measured. Checker, PARITY_REF=FS:
   C1 required=17 bound=2 free=15 (main and #561 checker); C8 15 NOT_TWINNED_NOT_SIGNED.
   `node tools/test_true_parity_check.mjs` passes; `test/parity/test_core070_pin.jl` 16/16.
+
 ## 2026-09-27: iSDM unit-level unique variance, R's default `latent(..., unique = TRUE)` (ISDM-PSI)
 
 - Branch `claude/isdm-psi`, stacked on `claude/isdm-build` (draft PR #546); maintainer decision D-301.
