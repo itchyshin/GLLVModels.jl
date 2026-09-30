@@ -1,0 +1,810 @@
+{
+  "schema": 1,
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "scope": "isdm family: the 20 required rows the P1 carry scan lists as DANGLING, all paid by the wave1 isdm admission batch (R admission-predicate replay against the pinned P1 source; no fit, no Julia side). The 17 rejected isdm rows and the two NOT_BOUND_AT_P0 namespace exports (isdm_source, isdm_sources) are out of scope.",
+  "note": "Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with PARITY_CASEMAP pointing at this file. Classification and disposition are carried from docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. The R side of every isdm row is a boolean predicate replay with no fit number and there is no Julia side at the run commit, so every row cites evidence.non_binding_receipts and is free. Draft PR #546's P1 iSDM twins are not used here; mapping them onto these rows is a proposal for the maintainer (PR body).",
+  "generator": "tools/core070_isdm_p1_receipts.py",
+  "glvmodels_commit": "361516c7d03bea1d49b7b5639c04b153c0e77f94",
+  "batch_verifiers": {
+    "isdm-p1": {
+      "tool": "tools/core070_verify_isdm_batch.py",
+      "argv": "tools/core070_verify_isdm_batch.py --state {state} --self-test",
+      "accept_marker": "CORE070_ISDM_BATCH_VERIFIED",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/isdm/isdm-p1/verify.txt",
+      "exit_code": 0,
+      "status": "PASS"
+    }
+  },
+  "counts": {
+    "numeric_pass": 0,
+    "numeric_fail": 0,
+    "numeric_held_batch_verifier_failed": 0,
+    "numeric_non_discriminating": 0,
+    "needs_surface_r_side_measured": 20,
+    "measured_held_batch_verifier_failed": 0,
+    "measured_fail": 0,
+    "not_measured": 0
+  },
+  "p0_evidence_summary": {
+    "rows_with_p0_evidence_record": 20,
+    "rows_without_p0_evidence_record": 0,
+    "p0_raw_receipts_available_here": false
+  },
+  "runtimes_seconds": {
+    "r_batch_wall": 1,
+    "r_case_eval_sum": 0.162,
+    "verifier_note": "seconds; local Mac, one BLAS/OMP thread"
+  },
+  "batch_artifacts": {
+    "isdm-p1": [
+      "docs/dev-log/core070/true-parity-latest/receipts/isdm/isdm-p1/receipt.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/isdm/isdm-p1/isdm-batch-results.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/isdm/isdm-p1/raw.tsv",
+      "docs/dev-log/core070/true-parity-latest/receipts/isdm/isdm-p1/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/isdm/isdm-p1/verify.txt"
+    ]
+  },
+  "rows": [
+    {
+      "source_id": "isdm/ISDM-ALIASED",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-ISDM-ALIASED-PAIRED-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "isdm-batch-01 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "isdm-batch-01 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-ALIASED-PAIRED-CONTROL.json"
+        ],
+        "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-ISDM-ALIASED-PAIRED-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-ISDM-ALIASED-PAIRED-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-ISDM-ALIASED-PAIRED-CONTROL": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "isdm/ISDM-ALIGN",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-ISDM-ALIGN-PAIRED-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "isdm-batch-01 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "isdm-batch-01 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-ALIGN-PAIRED-CONTROL.json"
+        ],
+        "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-ISDM-ALIGN-PAIRED-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-ISDM-ALIGN-PAIRED-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-ISDM-ALIGN-PAIRED-CONTROL": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "isdm/ISDM-COUNT",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-ISDM-COUNT-PAIRED-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "isdm-batch-01 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "isdm-batch-01 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-COUNT-PAIRED-CONTROL.json"
+        ],
+        "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-ISDM-COUNT-PAIRED-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-ISDM-COUNT-PAIRED-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-ISDM-COUNT-PAIRED-CONTROL": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "isdm/ISDM-EXTRA-SOURCE",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-ISDM-EXTRA-SOURCE-PAIRED-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "isdm-batch-01 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "isdm-batch-01 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-EXTRA-SOURCE-PAIRED-CONTROL.json"
+        ],
+        "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-ISDM-EXTRA-SOURCE-PAIRED-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-ISDM-EXTRA-SOURCE-PAIRED-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-ISDM-EXTRA-SOURCE-PAIRED-CONTROL": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "isdm/ISDM-LEGACY",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-ISDM-LEGACY-PAIRED-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "isdm-batch-01 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "isdm-batch-01 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-LEGACY-PAIRED-CONTROL.json"
+        ],
+        "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-ISDM-LEGACY-PAIRED-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-ISDM-LEGACY-PAIRED-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-ISDM-LEGACY-PAIRED-CONTROL": "r_replay_julia_surface_absent"
+        }
+      },
+      "note": "ISDM-LEGACY replays R's legacy two-source route (family_var = \"isdm_family\", fixed names gbif / survey_pa). Packet 1b item 2 (signed 2026-09-27, vault decision D-296) records it as an R-only backward-compatibility disposition that GLLVModels will not twin. That disposition is not written into this row (dispositions are the maintainer's to record in the case map); the row stays required and free."
+    },
+    {
+      "source_id": "isdm/ISDM-MASKED-ARM",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-ISDM-MASKED-ARM-PAIRED-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "isdm-batch-01 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "isdm-batch-01 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-MASKED-ARM-PAIRED-CONTROL.json"
+        ],
+        "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-ISDM-MASKED-ARM-PAIRED-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-ISDM-MASKED-ARM-PAIRED-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-ISDM-MASKED-ARM-PAIRED-CONTROL": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "isdm/ISDM-MASKED-COLUMNS",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-ISDM-MASKED-COLUMNS-PAIRED-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "isdm-batch-01 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "isdm-batch-01 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-MASKED-COLUMNS-PAIRED-CONTROL.json"
+        ],
+        "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-ISDM-MASKED-COLUMNS-PAIRED-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-ISDM-MASKED-COLUMNS-PAIRED-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-ISDM-MASKED-COLUMNS-PAIRED-CONTROL": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "isdm/ISDM-MISSING-IN-TRAIT",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-ISDM-MISSING-IN-TRAIT-PAIRED-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "isdm-batch-01 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "isdm-batch-01 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-MISSING-IN-TRAIT-PAIRED-CONTROL.json"
+        ],
+        "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-ISDM-MISSING-IN-TRAIT-PAIRED-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-ISDM-MISSING-IN-TRAIT-PAIRED-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-ISDM-MISSING-IN-TRAIT-PAIRED-CONTROL": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "isdm/ISDM-MISSING-SOURCE",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-ISDM-MISSING-SOURCE-PAIRED-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "isdm-batch-01 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "isdm-batch-01 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-MISSING-SOURCE-PAIRED-CONTROL.json"
+        ],
+        "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-ISDM-MISSING-SOURCE-PAIRED-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-ISDM-MISSING-SOURCE-PAIRED-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-ISDM-MISSING-SOURCE-PAIRED-CONTROL": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "isdm/ISDM-MIXED",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-ISDM-MIXED-PAIRED-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "isdm-batch-01 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "isdm-batch-01 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-MIXED-PAIRED-CONTROL.json"
+        ],
+        "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-ISDM-MIXED-PAIRED-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-ISDM-MIXED-PAIRED-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-ISDM-MIXED-PAIRED-CONTROL": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "isdm/ISDM-NO-OFFSET",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-ISDM-NO-OFFSET-PAIRED-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "isdm-batch-01 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "isdm-batch-01 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-NO-OFFSET-PAIRED-CONTROL.json"
+        ],
+        "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-ISDM-NO-OFFSET-PAIRED-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-ISDM-NO-OFFSET-PAIRED-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-ISDM-NO-OFFSET-PAIRED-CONTROL": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "isdm/ISDM-NO-TRAITS",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-ISDM-NO-TRAITS-PAIRED-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "isdm-batch-01 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "isdm-batch-01 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-NO-TRAITS-PAIRED-CONTROL.json"
+        ],
+        "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-ISDM-NO-TRAITS-PAIRED-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-ISDM-NO-TRAITS-PAIRED-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-ISDM-NO-TRAITS-PAIRED-CONTROL": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "isdm/ISDM-SUPPORT",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-ISDM-SUPPORT-PAIRED-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "isdm-batch-01 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "isdm-batch-01 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-SUPPORT-PAIRED-CONTROL.json"
+        ],
+        "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-ISDM-SUPPORT-PAIRED-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-ISDM-SUPPORT-PAIRED-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-ISDM-SUPPORT-PAIRED-CONTROL": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "isdm/ISDM-THREE",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-ISDM-THREE-PAIRED-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "isdm-batch-01 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "isdm-batch-01 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-THREE-PAIRED-CONTROL.json"
+        ],
+        "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-ISDM-THREE-PAIRED-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-ISDM-THREE-PAIRED-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-ISDM-THREE-PAIRED-CONTROL": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "isdm/ISDM-UNBALANCED",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-ISDM-UNBALANCED-PAIRED-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "isdm-batch-01 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "isdm-batch-01 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-UNBALANCED-PAIRED-CONTROL.json"
+        ],
+        "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-ISDM-UNBALANCED-PAIRED-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-ISDM-UNBALANCED-PAIRED-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-ISDM-UNBALANCED-PAIRED-CONTROL": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "isdm/ISDM-WITHIN-TRAIT-ADMIT",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-ISDM-WITHIN-TRAIT-ADMIT-PAIRED-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "isdm-batch-01 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "isdm-batch-01 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-WITHIN-TRAIT-ADMIT-PAIRED-CONTROL.json"
+        ],
+        "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-ISDM-WITHIN-TRAIT-ADMIT-PAIRED-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-ISDM-WITHIN-TRAIT-ADMIT-PAIRED-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-ISDM-WITHIN-TRAIT-ADMIT-PAIRED-CONTROL": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "isdm/ISDM-WRAPPER-LAW",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-ISDM-WRAPPER-LAW-PAIRED-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "isdm-batch-01 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "isdm-batch-01 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-WRAPPER-LAW-PAIRED-CONTROL.json"
+        ],
+        "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-ISDM-WRAPPER-LAW-PAIRED-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-ISDM-WRAPPER-LAW-PAIRED-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-ISDM-WRAPPER-LAW-PAIRED-CONTROL": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "isdm/ISDM-WRONG-ID",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-ISDM-WRONG-ID-PAIRED-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "isdm-batch-01 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "isdm-batch-01 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-WRONG-ID-PAIRED-CONTROL.json"
+        ],
+        "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-ISDM-WRONG-ID-PAIRED-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-ISDM-WRONG-ID-PAIRED-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-ISDM-WRONG-ID-PAIRED-CONTROL": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "isdm/ISDM-WRONG-LINK",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-ISDM-WRONG-LINK-PAIRED-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "isdm-batch-01 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "isdm-batch-01 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-WRONG-LINK-PAIRED-CONTROL.json"
+        ],
+        "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-ISDM-WRONG-LINK-PAIRED-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-ISDM-WRONG-LINK-PAIRED-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-ISDM-WRONG-LINK-PAIRED-CONTROL": "r_replay_julia_surface_absent"
+        }
+      }
+    },
+    {
+      "source_id": "isdm/ISDM-ZERO-ORDINARY",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-ISDM-ZERO-ORDINARY-PAIRED-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "isdm-batch-01 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "isdm-batch-01 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-ZERO-ORDINARY-PAIRED-CONTROL.json"
+        ],
+        "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-ISDM-ZERO-ORDINARY-PAIRED-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-ISDM-ZERO-ORDINARY-PAIRED-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-ISDM-ZERO-ORDINARY-PAIRED-CONTROL": "r_replay_julia_surface_absent"
+        }
+      }
+    }
+  ]
+}
