@@ -1,3 +1,19 @@
+## 2026-09-30: Student-t mode search keeps the higher of two peaks (#626)
+
+- Branch `claude/studentt-two-peak-626` from `origin/main`. `_laplace_mode` gains `z0` and
+  `alt_starts` keywords and a `_laplace_mode_alt_starts` hook (default returns the mode found);
+  `StudentTFamily/IdentityLink` restarts once from the most outlying trait's fitted point and keeps
+  the higher peak (strictly higher by more than 1e-10(1+|q|)).
+- test_mode_search_623 (now asserting the global mode everywhere): origin/main 32 pass, 1 fail
+  (max |ẑ - ref| = 1.307 on studentt_K1_true); branch 33/33 on Julia 1.10.12 and 1.13.0.
+- Julia 1.10.12, restricted load path: test_studentt 42/42 (AD-vs-FD relerr 5.5e-9),
+  test_studentt_disp_group 26/26, test_studentt_grouped_mode_search 785/785, test_statsapi 74/74,
+  test_mixed_mode_search 362/362, test_second_order_studentt_ci, test_confint_bootstrap_verdict_misc
+  57/57, the Laplace census/contract/oracle/dual-safety files, test_hessian_kwarg 32/32,
+  test_gp1_mode_backtrack 11/11, test_tweedie 14/14, and others; all pass.
+- Cost: test_studentt 74 s vs 58 s on main (same machine, load ~17 to 20). Restarting from every
+  outlying trait cost 82 s for no extra fixture site, so only the most outlying trait restarts.
+
 ## 2026-09-29: grouped NB1 follows the Poisson-limit meaning (review of the grouped warn-only change)
 
 - The first version applied "upper end warns" to NB1 φ numerically. NB1's Poisson limit is φ → 0,
