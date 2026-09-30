@@ -273,6 +273,14 @@ All notable changes to GLLVModels.jl are documented here.
   `gllvm-parity-tag: P1`).
 
 ### Fixed
+- **Family profile intervals report 0 for an open lower end on a log-scale parameter.**
+  When a dispersion or SD's profile deviance stays below the chi-square cutoff as the
+  parameter goes to 0, no lower crossing exists and `confint(...; method = :profile)`
+  returned `lower = NaN` with `status = :partial` (zero-truncated NB2 r on the #581
+  fixture draw 104: D levels off at about 2.35 as r goes to 0). A refit at 1e-6 times the
+  estimate now confirms the deviance is still below the cutoff, and the bound is reported
+  as 0 with `status = :profile`. A failed or non-finite refit there keeps NaN. Intervals
+  that already had a lower bound are unchanged. `test/test_family_profile_open_lower.jl`.
 - **Gamma and Beta grouped fits no longer treat a large dispersion as a
   boundary.** `fit_gamma_gllvm_grouped`, `fit_gamma_gllvm_grouped_cov`,
   `fit_beta_gllvm_grouped` and `fit_beta_gllvm_grouped_cov` flagged any fitted
