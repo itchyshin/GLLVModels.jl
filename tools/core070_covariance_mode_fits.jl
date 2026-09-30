@@ -12,7 +12,16 @@ include(joinpath(@__DIR__, "..", "test", "parity", "parity_helpers.jl"))
 length(ARGS) in (1,2) || error("expected fresh output directory and optional tight-control")
 control_policy = length(ARGS) == 2 ? ARGS[2] : "default"
 control_policy in ("default","tight-control") || error("invalid control policy")
-control_policy == "tight-control" && !isdir("baseline") && error("retained baseline required")
+# Tight-control runs compare each case against the retained baseline in ./baseline. CI
+# has no retained baseline, so the required-parity test opts in with
+# CORE070_BASELINE_OPTIONAL=1 (maintainer decision 2026-09-29, "covariance option 1").
+# Without that opt-in a missing baseline is still an error, so retained-evidence runs
+# stay fail-closed. When the comparison is skipped, the report records
+# baseline_compared = false and no case claims baseline_data_map_unchanged.
+baseline_compared = isdir("baseline")
+baseline_optional = get(ENV, "CORE070_BASELINE_OPTIONAL", "") == "1"
+control_policy == "tight-control" && !baseline_compared && !baseline_optional &&
+    error("retained baseline required")
 output = abspath(ARGS[1])
 ispath(output) && error("output directory must be fresh: $output")
 mkpath(output)
@@ -65,6 +74,7 @@ function _write_report(path, rows)
     report = Dict(
         "matrix_encoding" => "rows",
         "control_policy" => control_policy,
+        "baseline_compared" => baseline_compared,
         "source" => source_pin,
         "fixture" => _CORE070_COVARIANCE_FITS_FIXTURE,
         "fixture_sha256" => bytes2hex(sha256(read(_CORE070_COVARIANCE_FITS_FIXTURE))),
@@ -284,9 +294,11 @@ for index in eachindex(_CORE070_COVARIANCE_FITS_IDS)
         "r_covariance_parameterization" => covariance_field == expected_field &&
             covariance_map == expected_covariance_map && r_covariance_free == expected_covariance_free,
         "r_residual_parameterization" => sigma_map == "unmapped" && r_sigma_free == 1,
-        "baseline_data_map_unchanged" => rcopy(Bool,R".core070_baseline_same"),
         "native_fit_available" => native !== nothing,
     )
+    # Only claim the baseline check when a retained baseline was actually compared.
+    baseline_compared &&
+        (base_checks["baseline_data_map_unchanged"] = rcopy(Bool, R".core070_baseline_same"))
     checks = copy(base_checks)
     if native !== nothing
         merge!(checks, Dict(
