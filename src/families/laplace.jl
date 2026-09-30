@@ -56,6 +56,11 @@ _laplace_mode_merit_term(family, μ, n, y) = _glm_logpdf(family, μ, n, y)
 #     log joint was still 1.9 below its mode after the default 100 iterations.
 _laplace_mode_robust(family) = false
 
+# A family whose log joint in z can have more than one peak may search again from
+# other starting points and keep the highest peak (#626, StudentTFamily). Default:
+# return the mode found, so every other family is unchanged.
+_laplace_mode_alt_starts(family, z, y, n, Λ, β, link; kwargs...) = z
+
 # Weight of the mode-search Newton step. Default: the Fisher weight, so the search
 # is unchanged for every family that does not override it. TweedieED/log and
 # StudentTFamily/identity use max(observed, Fisher) (#623), as the Beta grouped
@@ -132,13 +137,14 @@ LaplaceModeWorkspace(::Type{T}, p::Integer, K::Integer) where {T} =
 function _laplace_mode(family, y::AbstractVector, n::AbstractVector,
         Λ::AbstractMatrix, β::AbstractVector, link::Link;
         mask = nothing, offset = nothing, maxiter::Integer = 100, tol::Real = 1e-9,
-        ws = nothing)
+        ws = nothing, z0 = nothing, alt_starts::Bool = true)
     p = size(Λ, 1)
     K = size(Λ, 2)
     off = offset === nothing ? false : offset    # additive identity ⇒ no-offset path unchanged
     T = promote_type(Base.nonmissingtype(eltype(y)), eltype(n), eltype(Λ), eltype(β))
     offset === nothing || (T = promote_type(T, Base.nonmissingtype(eltype(offset))))
-    z = zeros(T, K)
+    z0 === nothing || (T = promote_type(T, eltype(z0)))
+    z = z0 === nothing ? zeros(T, K) : convert(Vector{T}, collect(z0))
     # Per-call buffers, reused across Newton iterations. Each is written in place
     # with the SAME broadcast / BLAS expression as the allocating version, so the
     # computed values and FP-operation order are bit-identical.
@@ -232,7 +238,9 @@ function _laplace_mode(family, y::AbstractVector, n::AbstractVector,
         end
         step_taken * maximum(abs, Δ) < tol && break
     end
-    return z
+    alt_starts || return z
+    return _laplace_mode_alt_starts(family, z, y, n, Λ, β, link;
+                                    mask = mask, offset = offset, maxiter = maxiter, tol = tol)
 end
 
 # ===========================================================================

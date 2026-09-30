@@ -2,6 +2,17 @@
 
 ## Development
 
+- **Student-t (shared σ) Laplace mode search reaches the higher of two peaks (#626).**
+  The Student-t log joint in z is non-concave wherever a residual exceeds σ√ν, and
+  there it can have a second, higher peak. The local Newton search from z = 0 reached
+  the nearer one: on the #623 fixture two of 120 sites stopped 0.24 and 2.85 below the
+  global mode, so their Laplace values were too low by about that much. After the
+  search, the trait with the largest residual beyond σ√ν now gives one restart (from
+  the point that fits that trait exactly), and the higher peak is kept. Single-peak
+  sites keep the same mode, and other families are unchanged (new hook
+  `_laplace_mode_alt_starts`, default a no-op). Cost: `test_studentt.jl` takes about
+  74 s against 58 s on main on the same machine. Test: `test/test_mode_search_623.jl`
+  now requires the global mode at every site.
 - **Shared-r NB2 (`fit_nb_gllvm`) now warns at the Poisson limit.** On Poisson
   data the fitted `r` ran to 1e6 or beyond (1.7e7 on the fixture, Julia 1.10; 1.6e7
   on 1.13) with no message. Maintainer decision 2026-09-29 ("NB upper end: warn only

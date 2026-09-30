@@ -90,6 +90,41 @@ _glm_weight(f::StudentTFamily, μ, n, me) =
 # steps too and extrapolates along non-concave ridges (see laplace.jl).
 _laplace_mode_should_backtrack(::StudentTFamily) = true
 _laplace_mode_robust(::StudentTFamily) = true
+
+# Two-peak joints (#626). The Student-t log joint in z is non-concave wherever a
+# residual exceeds σ√ν, and there it can have a second, higher peak, at which the
+# outlying trait is fitted and the others are treated as outliers instead. A local
+# Newton search from z = 0 reaches the nearer peak: on the #623 fixture
+# `studentt_K1_true`, sites 54 and 103 stopped 0.24 and 2.85 below the global one.
+# So after the search, the observed trait with the largest residual beyond σ√ν
+# gives one extra start, the point reached by moving along its loading row until
+# that trait fits exactly, and the higher peak is kept. It only runs where such a
+# residual exists (a concave joint has one peak), and a restart must beat the first
+# peak by more than rounding level, so single-peak sites keep the same mode.
+function _laplace_mode_alt_starts(f::StudentTFamily, z, y, n, Λ, β, link::IdentityLink;
+        mask = nothing, offset = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
+    off = offset === nothing ? false : offset
+    η = β .+ off .+ Λ * z
+    thr = f.σ * sqrt(f.ν)
+    # One restart, from the most outlying trait: restarting from every outlier cost
+    # 41% more time in test_studentt.jl (58 s -> 82 s) for no extra fixture site.
+    tbest = 0
+    rmax = thr
+    @inbounds for t in eachindex(y)
+        (mask === nothing || mask[t]) || continue
+        r = abs(y[t] - η[t])
+        r > rmax && any(!iszero, view(Λ, t, :)) && (tbest = t; rmax = r)
+    end
+    tbest == 0 && return z
+    q0 = _laplace_mode_logpost(f, y, n, Λ, β, link, z; mask = mask, offset = offset)
+    isfinite(q0) || return z
+    λ = Λ[tbest, :]
+    zt = _laplace_mode(f, y, n, Λ, β, link; mask = mask, offset = offset,
+                       maxiter = maxiter, tol = tol,
+                       z0 = z .+ λ .* ((y[tbest] - η[tbest]) / dot(λ, λ)), alt_starts = false)
+    qt = _laplace_mode_logpost(f, y, n, Λ, β, link, zt; mask = mask, offset = offset)
+    return (isfinite(qt) && qt > q0 + 1e-10 * (1 + abs(q0))) ? zt : z
+end
 _laplace_mode_step_weight(f::StudentTFamily, μ, n, me, y, link::IdentityLink, η) =
     ismissing(y) ? _glm_weight(f, μ, n, me) :
     max(_glm_obs_weight(f, μ, n, me, y, link, η), _glm_weight(f, μ, n, me))
