@@ -255,6 +255,26 @@ function Base.show(io::IO, f::TruncatedNegBin2Fit)
           f.converged ? "" : ", NOT CONVERGED", ")")
 end
 
+# Verdict at the dispersion boundary for the truncated-NB2 fitters. Any r below 1e-6
+# (degenerate: extreme overdispersion) makes the fit not converged, with a warning.
+# Any r above 1e6 (the Poisson limit) only warns: r is not identified there, but the
+# rest of the fit is usually sound, and reporting it as not converged would flag
+# ordinary fits (trait 5 of the seed-58 parity data ends at r = 9.5e9 while the
+# log-likelihood matches gllvmTMB to 8e-7).
+function _truncnb2_dispersion_verdict(converged::Bool, r::AbstractVector{<:Real},
+                                      who::AbstractString)
+    low = findall(<(1e-6), r)
+    high = findall(>(1e6), r)
+    isempty(high) || @warn "$who: r for trait(s) $high is above 1e6 (the Poisson limit); " *
+        "r is not identified for them on this data, but the fit is otherwise reported as is."
+    if !isempty(low)
+        @warn "$who: r for trait(s) $low is below 1e-6 (the dispersion boundary, " *
+              "extreme overdispersion); the fit is degenerate and reported as not converged."
+        converged = false
+    end
+    return converged
+end
+
 """
     fit_truncated_nbinom2_gllvm(Y; K, link=LogLink(), …) -> TruncatedNegBin2Fit
 
@@ -268,7 +288,9 @@ Throws if any observed cell is `< 1`.
 (`GLLVModels.TRUNCNB2_LAPLACE_EIGMIN_FLOOR` = 0.1; `-Inf` disables it). A fit that
 ends at the guard is retried once with a moment-based start for `r`; if it still ends
 there, the higher-loglik of the two fits is reported with `converged = false` and a
-warning.
+warning. An estimate of `r` below 1e-6 (the dispersion boundary: extreme
+overdispersion) is reported with `converged = false` and a warning; above 1e6 (the
+Poisson limit, where `r` is not identified) the fit only warns.
 """
 function fit_truncated_nbinom2_gllvm(Y::AbstractMatrix; K::Integer,
         link::Link = LogLink(), mask = nothing, offset = nothing,
@@ -383,6 +405,13 @@ function fit_truncated_nbinom2_gllvm(Y::AbstractMatrix; K::Integer,
               "floor $(eigmin_floor)). The Laplace approximation is not reliable here and " *
               "the fit is reported as not converged."
     end
+    # Dispersion boundary (2026-09-29). r < 1e-6 is a degenerate fit (extreme
+    # overdispersion; r = 3.1e-46 with one count of 10^13), yet Optim reports
+    # converged = true, so it is reported as not converged. r > 1e6 is the Poisson
+    # limit: r is not identified, but the fit itself is usually sound (a trait whose
+    # extra variance the latent variable absorbs), so it only warns. Unlike the NB2
+    # grouped fitters' `_dispersion_group_boundary`, which flags both ends.
+    converged = _truncnb2_dispersion_verdict(converged, [f.r], "fit_truncated_nbinom2_gllvm")
     return TruncatedNegBin2Fit(f.β, f.Λ, f.r, link, f.loglik, converged, f.iters,
                                f.θ, f.mineig)
 end
@@ -529,7 +558,9 @@ Fit a zero-truncated NB2 GLLVM with **per-trait** dispersion by Laplace + LBFGS
 over `[β; pack(Λ); log r_1 … log r_p]` (length `p+rr+p`). Twin-aligned:
 `r_t` ≡ `φ_t = exp(log_phi_truncnb2[t])`; log link on untruncated `μ`;
 support `y ≥ 1`. Score keeps `a = r_t/(r_t+μ)` (Sol 2026-08-15).
-Throws if any observed cell is `< 1`.
+Throws if any observed cell is `< 1`. If any `r_t` ends below 1e-6 (the dispersion
+boundary: extreme overdispersion), the fit is reported with `converged = false` and a
+warning; an `r_t` above 1e6 (the Poisson limit, not identified) only warns.
 
 `hessian=:observed` (the default) uses the exact conditional truncated-NB2/log
 curvature that TMB's Laplace objective uses; `hessian=:fisher` retains the
@@ -626,6 +657,10 @@ function fit_truncated_nbinom2_gllvm_pertrait(Y::AbstractMatrix; K::Integer,
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     r̂ = exp.(θ̂[(p + rr + 1):(p + rr + p)])
-    return TruncatedNegBin2PerTraitFit(β̂, Λ̂, r̂, link, _fit_verdict(res)...,
+    loglik, converged, iters = _fit_verdict(res)
+    # Dispersion boundary (2026-09-29): see `fit_truncated_nbinom2_gllvm`.
+    converged = _truncnb2_dispersion_verdict(converged, r̂,
+                                             "fit_truncated_nbinom2_gllvm_pertrait")
+    return TruncatedNegBin2PerTraitFit(β̂, Λ̂, r̂, link, loglik, converged, iters,
                                        collect(Float64, θ̂))
 end
