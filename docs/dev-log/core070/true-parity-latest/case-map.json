@@ -1,7 +1,7 @@
 {
  "schema": 1,
  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
- "note": "P1 case-map rows for the +25 exports / +11 S3 methods / -2 removed exports since gllvmTMB 0.7.0 (D-295 Packet 1 row 3). Every classification here is PROPOSED for the maintainer to sign in PR review; disposition is null on every row -- nothing is signed by an agent.",
+ "note": "P1 case-map rows for the +25 exports / +11 S3 methods / -2 removed exports since gllvmTMB 0.7.0 (D-295 Packet 1 row 3). Classes signed by the maintainer on PR #533 on 2026-09-30 (https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263), with the moves recorded there. Rows classified outside_boundary, semantic_divergence, excluded or retired carry that signature as their disposition; required_core rows keep disposition null until a numeric twin receipt binds them.",
  "rows": [
   {
    "source_id": "temporal/temporal_dep",
@@ -170,7 +170,10 @@
    "executable_case_ids": [],
    "evidence": {},
    "measured_against": null,
-   "disposition": null
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-30",
+   "signature_ref": "https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263"
   },
   {
    "source_id": "latent-scores/extract_latent_scores.gllvmTMB_va",
@@ -183,33 +186,42 @@
    "executable_case_ids": [],
    "evidence": {},
    "measured_against": null,
-   "disposition": null
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-30",
+   "signature_ref": "https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263"
   },
   {
    "source_id": "ordination/ordination_uncertainty",
    "r_export": "ordination_uncertainty",
    "r_kind": "export",
    "r_file_line": "R/ordination-uncertainty.R:171",
-   "classification": "required_core",
+   "classification": "semantic_divergence",
    "reason": "Wald-form per-unit covariance of ordination (latent) scores; needs a Julia surface.",
    "arc": "A2 (medium)",
    "executable_case_ids": [],
    "evidence": {},
    "measured_against": null,
-   "disposition": null
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-30",
+   "signature_ref": "https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263"
   },
   {
    "source_id": "ordination/print.gllvmTMB_ordination_uncertainty",
    "r_export": "print.gllvmTMB_ordination_uncertainty",
    "r_kind": "s3_method",
    "r_file_line": "R/ordination-uncertainty.R:303",
-   "classification": "required_core",
+   "classification": "semantic_divergence",
    "reason": "Printer for ordination_uncertainty's result table; twins its display once ordination_uncertainty lands.",
    "arc": "A2 (medium)",
    "executable_case_ids": [],
    "evidence": {},
    "measured_against": null,
-   "disposition": null
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-30",
+   "signature_ref": "https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263"
   },
   {
    "source_id": "select-lv/select_lv",
@@ -222,7 +234,8 @@
    "executable_case_ids": [],
    "evidence": {},
    "measured_against": null,
-   "disposition": null
+   "disposition": null,
+   "signed_fence": "Julia does not yet reject fits with a non-positive-definite Hessian as R does (signed 2026-09-30, https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263)"
   },
   {
    "source_id": "select-lv/print.gllvmTMB_select_lv",
@@ -242,7 +255,7 @@
    "r_export": "zi_poisson",
    "r_kind": "export",
    "r_file_line": "R/families.R:511",
-   "classification": "semantic_divergence",
+   "classification": "required_core",
    "reason": "TRUE zero-inflation mixture (per-trait, intercept-only structural-zero probability); Julia's own zero-inflated/two-part family is a hurdle-style construction, not R's mixture semantics. A name match never counts (D-295 Packet 1 row 5); Julia's design stays a documented extra until a twin with R's semantics exists.",
    "arc": "A2 (medium)",
    "executable_case_ids": [],
@@ -255,7 +268,7 @@
    "r_export": "zi_nbinom2",
    "r_kind": "export",
    "r_file_line": "R/families.R:517",
-   "classification": "semantic_divergence",
+   "classification": "required_core",
    "reason": "TRUE zero-inflation mixture reusing ordinary per-trait NB2 dispersion; Julia's two-part ZI uses one scalar dispersion across species. Same D-295 row 5 divergence rule as zi_poisson.",
    "arc": "A2 (medium)",
    "executable_case_ids": [],
@@ -268,7 +281,7 @@
    "r_export": "zi_binomial",
    "r_kind": "export",
    "r_file_line": "R/families.R:523",
-   "classification": "semantic_divergence",
+   "classification": "required_core",
    "reason": "TRUE zero-inflation mixture over multi-trial (binomial) data. Same D-295 row 5 divergence rule as zi_poisson.",
    "arc": "A2 (medium)",
    "executable_case_ids": [],
@@ -281,7 +294,7 @@
    "r_export": "chibar2_pvalue",
    "r_kind": "export",
    "r_file_line": "R/chibar.R:93",
-   "classification": "semantic_divergence",
+   "classification": "required_core",
    "reason": "Self-Liang chi-bar-square p-value for a boundary LRT. Julia has both `chibar2_pvalue` and `variance_lrt` names in src/boundary_inference.jl, but a name match never counts (D-295 Packet 1 row 5) -- semantic equality is unchecked until a twin test shows equal outputs.",
    "arc": "A2 (small)",
    "executable_case_ids": [],
@@ -294,7 +307,7 @@
    "r_export": "variance_lrt",
    "r_kind": "export",
    "r_file_line": "R/chibar.R:144",
-   "classification": "semantic_divergence",
+   "classification": "required_core",
    "reason": "Self-Liang LRT wrapper for one or more variance-component boundaries, used by anova(). Same name-only-match caveat as chibar2_pvalue.",
    "arc": "A2 (small)",
    "executable_case_ids": [],
@@ -378,7 +391,10 @@
    "executable_case_ids": [],
    "evidence": {},
    "measured_against": null,
-   "disposition": null
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-30",
+   "signature_ref": "https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263"
   },
   {
    "source_id": "column-coef/animal_coef",
@@ -391,7 +407,10 @@
    "executable_case_ids": [],
    "evidence": {},
    "measured_against": null,
-   "disposition": null
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-30",
+   "signature_ref": "https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263"
   },
   {
    "source_id": "column-coef/phylo_coef",
@@ -404,7 +423,10 @@
    "executable_case_ids": [],
    "evidence": {},
    "measured_against": null,
-   "disposition": null
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-30",
+   "signature_ref": "https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263"
   },
   {
    "source_id": "column-coef/kernel_coef",
@@ -417,7 +439,10 @@
    "executable_case_ids": [],
    "evidence": {},
    "measured_against": null,
-   "disposition": null
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-30",
+   "signature_ref": "https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263"
   },
   {
    "source_id": "column-coef/spatial_coef",
@@ -430,7 +455,10 @@
    "executable_case_ids": [],
    "evidence": {},
    "measured_against": null,
-   "disposition": null
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-30",
+   "signature_ref": "https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263"
   },
   {
    "source_id": "column-coef/slope",
@@ -443,7 +471,10 @@
    "executable_case_ids": [],
    "evidence": {},
    "measured_against": null,
-   "disposition": null
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-30",
+   "signature_ref": "https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263"
   },
   {
    "source_id": "column-coef/kernel_slope",
@@ -456,7 +487,10 @@
    "executable_case_ids": [],
    "evidence": {},
    "measured_against": null,
-   "disposition": null
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-30",
+   "signature_ref": "https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263"
   },
   {
    "source_id": "spatial/spatial_slope",
@@ -469,7 +503,10 @@
    "executable_case_ids": [],
    "evidence": {},
    "measured_against": null,
-   "disposition": null
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-30",
+   "signature_ref": "https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263"
   },
   {
    "source_id": "retired/.proportions_wald_ci",
@@ -482,7 +519,10 @@
    "executable_case_ids": [],
    "evidence": {},
    "measured_against": null,
-   "disposition": null
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-30",
+   "signature_ref": "https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263"
   },
   {
    "source_id": "retired/.proportions_bootstrap_ci",
@@ -495,7 +535,10 @@
    "executable_case_ids": [],
    "evidence": {},
    "measured_against": null,
-   "disposition": null
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-30",
+   "signature_ref": "https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263"
   }
  ]
 }
