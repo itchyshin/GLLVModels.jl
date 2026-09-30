@@ -1,3 +1,25 @@
+## 2026-09-27: isdm rows re-measured at gllvmTMB P1 (A3), tracked receipts
+
+- Branch `claude/true-parity-p1-isdm`, stacked on `claude/true-parity-p1-family` (PR #584 at
+  `0fb2b9411`), on #579, #571, #569 and #567. Scope: the 20 required_core isdm rows the P1 carry scan
+  lists as DANGLING (P0 receipts under the absent `.unlazy/core070-aghq/wave1-batches`). The 17
+  rejected isdm rows and the NOT_BOUND_AT_P0 exports `isdm_source` / `isdm_sources` out of scope.
+  Classifications and dispositions carried unchanged.
+- Harness: P1 twin `isdm-batch-contract-p1.json` (`tools/core070_isdm_p1_contract.py`, `--check`
+  current; `R/isdm-sources.R` and `R/fit-multi.R` changed at P1, `R/offset.R` identical; five of the
+  nine loaded functions changed body). Runner and verifier take GLLVM_PARITY_PIN strictly, check the
+  oracle marker and version, create the destination after the pin checks. No case, expectation or
+  tolerance edited.
+- Run from clean commit `361516c7d` (local Mac, one BLAS/OMP thread): 20 of 20 predicates TRUE, batch
+  wall 1 s; verifier PASS at P1 with self-test (10 + 5). Agrees case for case with the independent
+  installed-namespace replay in #546's `test/fixtures/isdm/admission_p1.toml`.
+- Counts: 20 `needs_surface_r_side_measured` (R boolean replay, no number, no Julia side at the run
+  commit), 0 bound. Mapping onto #546 / #558's P1 twins proposed in the PR body, not applied.
+- Checker, PARITY_REF=FS, main and #561 (`92cf39571`): isdm C1 required=20 bound=0 free=20 (#561
+  bound_numeric=0), C8 20 NOT_TWINNED_NOT_SIGNED; data, fit-input, family, covariance, postfit,
+  inference lines unchanged. `test_true_parity_check.mjs` passes; isdm, family, data, covariance,
+  postfit, inference contract `--check`s and isdm, family, data, inference receipt `--check`s current;
+  `test/parity/test_core070_pin.jl` 27/27.
 ## 2026-09-27: aghq rows re-measured at gllvmTMB P1 (A3), tracked receipts
 
 - Branch `claude/true-parity-p1-aghq`, stacked on `claude/true-parity-p1-family` (PR #584 at `0fb2b9411`),
