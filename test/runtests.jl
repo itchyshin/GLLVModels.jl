@@ -122,6 +122,8 @@ println(_SHARD === nothing ?
     _shard_include("test_gaussian_empty_design.jl")
     _shard_include("test_profile_failure_bounds.jl")
     _shard_include("test_aghq_binomial.jl")
+    # P1 numeric twins of the aghq policy rows vs gllvmTMB (Poisson / binomial / Gaussian fits).
+    _shard_include("test_aghq_p1_twin.jl")
     _shard_include("test_aghq_public_binomial.jl")
     _shard_include("test_aghq_gate.jl")
     _shard_include("test_aghq_kd_bound.jl")
@@ -279,6 +281,8 @@ println(_SHARD === nothing ?
     _shard_include("test_ordination.jl")
     _shard_include("test_extract_latent_scores.jl")
     _shard_include("test_model_selection.jl")
+    # P1 numeric twin of select_lv() vs gllvmTMB R/select-lv.R (Gaussian rank sweep).
+    _shard_include("test_select_lv_p1_twin.jl")
     _shard_include("test_binomial_ridge.jl")
     _shard_include("test_model_comparison.jl")
     _shard_include("test_structured_cov.jl")

@@ -1,0 +1,99 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "select-lv/select_lv"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#518",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "a86d2279a8447fcf42c05a5751c9ba49a7c7da40",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/select_lv_p1.toml",
+      "sha256": "faeece8a902796677d987fffa23f0b5238d3ea298da70e78064c3eadcf529a93"
+    },
+    {
+      "path": "test/fixtures/select_lv_p1_data.csv",
+      "sha256": "cdba824f343e4c60282d071d4340440bafdc51e739062233d7a61a1090686027"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_select_lv_p1_twin.jl",
+      "sha256": "4658d7d3d0dec520175994d3b270520f5e46490b176aa946520b54e5a397c057"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-SELECT-LV-LOGLIK",
+        "quantity": "per-rank logLik, K = 1:3 (each side's own optimum)",
+        "r_source": "test/fixtures/select_lv_p1.toml [r_reference.loglik]",
+        "julia_source": "GLLVModels.select_lv(Y; family = Normal(), Kmax = 3, criterion = :bic).loglik, as called at test/test_select_lv_p1_twin.jl:71",
+        "r_value": [
+          -1183.6445883535566,
+          -1032.949029054481,
+          -1030.9576313768791
+        ],
+        "julia_value": [
+          -1183.6445883495571,
+          -1032.9490290232577,
+          -1030.9576313522716
+        ],
+        "abs_diff": 3.122318048554007e-08,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_select_lv_p1_twin.jl:76",
+        "tolerance_source_line": "@test isapprox(sel.loglik, Float64.(r[\"loglik\"]); atol = 1e-6, rtol = 0)",
+        "note": "Rank sweep 1:3 on the fixture data (sha256 checked); vector case, abs_diff is the maximum over ranks. The test asserts npar and the selected rank (2, the true rank) exactly; both match R here. R reports converged and a positive-definite Hessian at every rank, so the sweep stays clear of the signed Hessian fence."
+      },
+      {
+        "case_id": "P1-JULIA-SELECT-LV-AIC",
+        "quantity": "per-rank AIC, K = 1:3",
+        "r_source": "test/fixtures/select_lv_p1.toml [r_reference.aic]",
+        "julia_source": "select_lv(...).aic, as called at test/test_select_lv_p1_twin.jl:71",
+        "r_value": [
+          2393.2891767071133,
+          2101.898058108962,
+          2105.9152627537583
+        ],
+        "julia_value": [
+          2393.2891766991143,
+          2101.8980580465154,
+          2105.9152627045432
+        ],
+        "abs_diff": 6.244636097108014e-08,
+        "tolerance": 2e-06,
+        "tolerance_source": "test/test_select_lv_p1_twin.jl:77",
+        "tolerance_source_line": "@test isapprox(sel.aic,    Float64.(r[\"aic\"]);    atol = 2e-6, rtol = 0)",
+        "note": "Rank sweep 1:3 on the fixture data (sha256 checked); vector case, abs_diff is the maximum over ranks. The test asserts npar and the selected rank (2, the true rank) exactly; both match R here. R reports converged and a positive-definite Hessian at every rank, so the sweep stays clear of the signed Hessian fence."
+      },
+      {
+        "case_id": "P1-JULIA-SELECT-LV-BIC",
+        "quantity": "per-rank BIC, penalty log(p*n) = log(900) (R's default criterion), K = 1:3",
+        "r_source": "test/fixtures/select_lv_p1.toml [r_reference.bic]",
+        "julia_source": "select_lv(...).bic, as called at test/test_select_lv_p1_twin.jl:71",
+        "r_value": [
+          2455.7203086303293,
+          2188.341163848799,
+          2211.5679475468933
+        ],
+        "julia_value": [
+          2455.7203086223303,
+          2188.341163786353,
+          2211.5679474976782
+        ],
+        "abs_diff": 6.244636097108014e-08,
+        "tolerance": 2e-06,
+        "tolerance_source": "test/test_select_lv_p1_twin.jl:78",
+        "tolerance_source_line": "@test isapprox(sel.bic,    Float64.(r[\"bic\"]);    atol = 2e-6, rtol = 0)",
+        "note": "Rank sweep 1:3 on the fixture data (sha256 checked); vector case, abs_diff is the maximum over ranks. The test asserts npar and the selected rank (2, the true rank) exactly; both match R here. R reports converged and a positive-definite Hessian at every rank, so the sweep stays clear of the signed Hessian fence."
+      }
+    ]
+  }
+}

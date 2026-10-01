@@ -46,7 +46,7 @@
 # OPENBLAS_NUM_THREADS=1 JULIA_NUM_THREADS=4: a few minutes.
 
 using GLLVModels, TOML, SHA, Statistics, Random, LinearAlgebra
-using Distributions: Normal   # root-project dependency; family marker for the namespace numeric twins (section 6)
+using Distributions: Normal   # root-project dependency; family marker for select_lv (section 7) and the namespace numeric twins (section 9)
 const GMJ = GLLVModels
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
@@ -57,6 +57,7 @@ const CHECK_FRACTION = 1e-3        # of the case tolerance
 const CHECK_EPS_MULT = 100         # rounding allowance, in eps(Float64) * max(1, |value|)
 
 include(joinpath(ROOT, "test", "fixtures", "temporal_p1", "fixture_helpers.jl"))
+include(joinpath(ROOT, "test", "fixtures", "aghq_p1", "aghq_p1_helpers.jl"))   # the aghq twin test includes the same file
 
 # ---------------------------------------------------------------------------------------------
 # Small utilities
@@ -870,9 +871,308 @@ function receipts_temporal()
     return out
 end
 
+# =============================================================================================
+# 5. aghq/*   test/test_aghq_p1_twin.jl
+#    Ten policy rows twinned against R at P1: Poisson / binomial / Gaussian fits with the same
+#    aghq request R was given. Per row: the integration used (used flag and node count, vector
+#    case, integers compared with the test's <= 0.5), logLik at each side's optimum, intercepts,
+#    loadings (sign-aligned to R's, a fixed +-1 on the single axis) and, for Gaussian, the residual
+#    SD. R values are copied from test/fixtures/aghq_p1/aghq_p1.toml; Julia values come from
+#    aghq_p1_fit in test/fixtures/aghq_p1/aghq_p1_helpers.jl, the function the test calls.
+#    AGHQ-POLICY-TRAITS20 is the same observation as AGHQ-POLICY-AUTO-ENFORCE-CUTOFF.
+# =============================================================================================
+function receipts_aghq()
+    fxp = "test/fixtures/aghq_p1/aghq_p1.toml"
+    hp = "test/fixtures/aghq_p1/aghq_p1_helpers.jl"
+    tp = "test/test_aghq_p1_twin.jl"
+    fx = TOML.parsefile(joinpath(ROOT, fxp))
+    fx["gllvmtmb_commit"] == P1_SHA || fail("aghq fixture is not pinned at P1")
+    rows = ["AGHQ-AUTO-K-POISSON", "AGHQ-AUTO-K-BINOMIAL", "AGHQ-AUTO-K-GAUSSIAN", "AGHQ-DEFAULT-OFF",
+        "AGHQ-POLICY-OFF", "AGHQ-POLICY-EXPLICIT", "AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF",
+        "AGHQ-POLICY-AUTO-ENFORCE-CUTOFF", "AGHQ-POLICY-TRAITS19", "AGHQ-POLICY-TRAITS20"]
+    for (_, ds) in fx["dataset"]
+        sha_file("test/fixtures/aghq_p1/" * ds["file"]) == ds["sha256"] || fail("aghq data csv $(ds["file"]) drifted")
+    end
+    fits = Dict{String,Any}()
+    out = Pair{String,Receipt}[]
+    callc = cite(tp, "aghq_p1_fit(fx, id)"; nth = 2)
+    for row in rows
+        id = aghq_p1_fit_id(row)
+        r = fx["case"][id]["r"]
+        r["converged"] === true || fail("$row: R did not converge; not a valid twin")
+        j = get!(fits, id) do
+            aghq_p1_fit(fx, id)
+        end
+        j.converged || fail("$row: Julia fit did not converge")
+        j.used && j.reason !== :converged && fail("$row: Julia AGHQ reason is $(j.reason), not :converged")
+        c = fx["case"][id]; ds = fx["dataset"][c["dataset"]]
+        short = replace(row, "AGHQ-" => "")
+        pre = "P1-JULIA-AGHQ-$short"
+        desc = "$(ds["family"]) p = $(ds["p"]), n = $(ds["n_unit"]) (seed $(ds["seed"])), aghq request \"$(c["aghq_request"])\""
+        rsrc(f) = "$fxp [case.$id.r].$f"
+        jsrc(f) = "GLLVModels fit_$(ds["family"] == "gaussian" ? "gllvm(Normal())" : ds["family"] * "_gllvm")(...; K = 1, aghq = $(c["aghq_request"] == "default" ? "false" : repr(aghq_p1_request(c["aghq_request"])))) via $hp aghq_p1_fit, as called at $callc: $f"
+        note = "Data read from test/fixtures/aghq_p1/$(ds["file"]) (sha256 checked); $desc. R and Julia both converged (R: " *
+               (r["used"] ? "aghq\$converged" : "optimiser code 0") * "; Julia: fit.converged" * (j.used ? " and reason :converged" : "") * ")."
+        cases = Any[
+            mkcase("$pre-DECISION", "integration actually used: [AGHQ used (1/0), node count k] (Laplace = [0, 0])",
+                rsrc("used, k"), jsrc("integration.actual, integration.k"),
+                Float64[r["used"], r["k"]], Float64[j.used, j.nodes],
+                test_tolerance(tp, "maximum(abs.(dec_j .- dec_r))"),
+                note * " Integers, so the test's <= 0.5 is exact equality."),
+            mkcase("$pre-LOGLIK", "logLik at each side's own optimum",
+                rsrc("loglik"), jsrc("loglik"), r["loglik"], j.loglik,
+                test_tolerance(tp, "isapprox(j.loglik, r[\"loglik\"]"), note),
+            mkcase("$pre-BETA", "per-trait intercepts at each side's own optimum",
+                rsrc("beta"), jsrc("beta"), Float64.(r["beta"]), j.beta,
+                test_tolerance(tp, "isapprox(j.beta,"), note),
+            mkcase("$pre-LAMBDA", "loadings at each side's own optimum, sign-aligned to R",
+                rsrc("lambda"), jsrc("lambda (times +-1 so that sum(lambda_julia * lambda_R) >= 0)"), Float64.(r["lambda"]), j.lambda,
+                test_tolerance(tp, "isapprox(j.lambda,"), note * " The single latent axis is identified up to sign; Julia's loadings are multiplied by the +-1 the test applies."),
+        ]
+        if ds["family"] == "gaussian"
+            push!(cases, mkcase("$pre-SIGMA-EPS", "residual SD at each side's own optimum",
+                rsrc("sigma_eps"), jsrc("pars.σ_eps"), r["sigma_eps"], j.sigma_eps,
+                test_tolerance(tp, "isapprox(j.sigma_eps,"), note))
+        end
+        push!(out, "aghq/$row.json" => Receipt(["aghq/$row"], "itchyshin/GLLVModels.jl#586",
+            ["$fxp", "test/fixtures/aghq_p1/" * ds["file"], hp], [tp], NOT_A_FIXTURE_PAIR, cases))
+    end
+    return out
+end
+
+# 6. isdm: the integrated SDM through R's public door, R-at-P1 fits vs Julia
+#    test/parity/isdm_cases.jl "iSDM P1 paired twins" (itchyshin/GLLVModels.jl#546)
+#    Four paired fits (predict, ms3, srcform_pois, srcform_mixed). The R side is r_values_p1.toml;
+#    the Julia side is the same table, marginal and fit the test builds.
+# =============================================================================================
+using Distributions: Poisson, Binomial
+include(joinpath(ROOT, "test", "fixtures", "isdm", "isdm_fixture_io.jl"))
+
+# Which isdm rows each paired fit is evidence for (decided in
+# docs/dev-log/core070/true-parity-latest/audit-isdm-546-2026-10-01.md).
+const ISDM_FIT_ROWS = Dict(
+    "predict"       => ["isdm/ISDM-MIXED", "isdm/ISDM-SUPPORT", "isdm/ISDM-WITHIN-TRAIT-ADMIT"],
+    "ms3"           => ["isdm/ISDM-SUPPORT", "isdm/ISDM-THREE", "isdm/ISDM-WITHIN-TRAIT-ADMIT"],
+    "srcform_pois"  => ["isdm/ISDM-MASKED-COLUMNS", "isdm/ISDM-SUPPORT"],
+    "srcform_mixed" => ["isdm/ISDM-MASKED-COLUMNS", "isdm/ISDM-MIXED", "isdm/ISDM-SUPPORT", "isdm/ISDM-WITHIN-TRAIT-ADMIT"],
+)
+
+function receipts_isdm()
+    tp = "test/parity/isdm_cases.jl"
+    rvp = "test/fixtures/isdm/r_values_p1.toml"
+    jep = "test/fixtures/isdm/julia_estimates_p1.toml"
+    RV = isdm_r_values()
+    JE = TOML.parsefile(joinpath(ROOT, jep))
+    RV["gllvmtmb_sha"] == P1_SHA || fail("isdm r_values_p1.toml is not pinned at P1")
+    out = Pair{String,Receipt}[]
+    function by_name_(names_from, vals, names_to)
+        Set(names_from) == Set(names_to) || fail("isdm coefficient names do not pair: $names_from vs $names_to")
+        return [vals[findfirst(==(n), names_from)] for n in names_to]
+    end
+    f_ll = "isdm_marginal_loglik_laplace(tab, RΛ, rb) - r[\"loglik\"]"
+    f_x = "abs(RV[\"xobj\"][name] - jll)"
+    f_b = "maximum(abs.(ft.b_fix .- rb))"
+    f_e = "maximum(abs.(ft.eta .- Float64.(r[\"eta\"])))"
+    tol_ll = test_tolerance(tp, f_ll)
+    tol_x = test_tolerance(tp, f_x)
+    tol_b = test_tolerance(tp, f_b)
+    tol_e = test_tolerance(tp, f_e)
+    for name in ISDM_CASES
+        r = RV["cases"][name]; j = JE["julia"][name]
+        c = isdm_case(name)
+        csvp = "test/fixtures/isdm/" * c.csv
+        bytes2hex(open(sha256, joinpath(ROOT, csvp))) == r["fixture_sha256"] || fail("isdm $name fixture sha256 drifted")
+        dat = read_isdm_csv(c.csv)
+        length(dat.value) == r["fixture_rows"] || fail("isdm $name fixture row count")
+        tab = isdm_table(c.formula, dat; family = c.family)
+        rb = by_name_(r["b_fix_names"], Float64.(r["b_fix"]), tab.X_names)
+        K = Int(r["K"])
+        RΛ = K == 0 ? zeros(2, 0) : reshape(Float64.(r["Lambda_B_colmajor"]), :, K)
+        ll_at_r = isdm_marginal_loglik_laplace(tab, RΛ, rb)
+        jb = by_name_(j["b_fix_names"], Float64.(j["b_fix"]), tab.X_names)
+        JΛ = j["K"] == 0 ? zeros(2, 0) : GMJ.unpack_lambda(Float64.(j["theta_rr_B"]), 2, Int(j["K"]))
+        jll = isdm_marginal_loglik_laplace(tab, JΛ, jb)
+        ft = fit_isdm_gllvm(tab)
+        (ft.converged && all(ft.cell_converged)) || fail("isdm $name fresh fit did not converge")
+        r["convergence"] == 0 || fail("isdm $name: R did not converge")
+        pre = "P1-JULIA-ISDM-" * uppercase(replace(name, "_" => "-"))
+        cases = [
+            mkcase("$pre-LOGLIK-AT-R-OPTIMUM", "Julia Laplace marginal at R's fitted (b_fix, Lambda) vs R's logLik",
+                "$rvp [cases.$name].loglik (R nlminb optimum through gllvmTMB(family = isdm_sources(...)) at P1)",
+                "GLLVModels.isdm_marginal_loglik_laplace(isdm_table(formula, data; family), Lambda_R, b_fix_R), as at $(cite(tp, f_ll))",
+                r["loglik"], ll_at_r, tol_ll,
+                "Same data (sha256 checked), same parameter vector, same Laplace objective: the Julia design and offset must reproduce R's. Coefficients are paired by name, as in the test."),
+            mkcase("$pre-CROSS-OBJECTIVE-AT-JULIA-OPTIMUM", "R's objective at Julia's optimum vs Julia's logLik there",
+                "$rvp [xobj].$name (R TMB objective evaluated at the recorded Julia estimate, sign flipped to logLik)",
+                "GLLVModels.isdm_marginal_loglik_laplace(...) at the recorded Julia estimate in $jep [julia.$name], as at $(cite(tp, f_x))",
+                RV["xobj"][name], jll, tol_x,
+                "The recorded Julia estimate is the fit the test reproduces to 1e-8 on a fresh run; this receipt evaluates the objective at that recorded point, as the test does at the cited line."),
+            mkcase("$pre-B-FIX", "fresh Julia fit b_fix vs R b_fix (paired by coefficient name; maximum absolute difference)",
+                "$rvp [cases.$name].b_fix",
+                "GLLVModels.fit_isdm_gllvm(tab).b_fix, as at $(cite(tp, f_b))",
+                rb, ft.b_fix, tol_b,
+                "R's nlminb stops with max abs gradient 3.9e-4 to 9.0e-4 on the K = 0 fits, so this is a loose absolute bound; the test records the same finding. The test also asserts Julia's logLik is not below R's (one-sided), which is not a case here."),
+            mkcase("$pre-ETA", "fresh Julia fit linear predictor vs R's (maximum absolute difference over all rows)",
+                "$rvp [cases.$name].eta",
+                "GLLVModels.fit_isdm_gllvm(tab).eta, as at $(cite(tp, f_e))",
+                Float64.(r["eta"]), ft.eta, tol_e,
+                "Row order is the fixture's; R's eta and Julia's eta are both per long-table row."),
+        ]
+        push!(out, "isdm/$name.json" => Receipt(copy(ISDM_FIT_ROWS[name]), "itchyshin/GLLVModels.jl#546",
+            [rvp, jep, csvp], [tp, "test/fixtures/isdm/isdm_fixture_io.jl"],
+            NOT_A_FIXTURE_PAIR * " The check is a fit-level logLik and estimate comparison on one fitted case; it does not restate any admission predicate.",
+            cases))
+    end
+    return out
+end
 
 # =============================================================================================
-# 6. namespace numeric twins   test/test_namespace_numeric_p1_twin.jl (this PR)
+# 7. select-lv/select_lv   test/test_select_lv_p1_twin.jl
+#    Gaussian rank sweep K = 1:3 vs R's select_lv() at P1 (criterion = bic, d_max = 3). The test also
+#    asserts npar and the selected rank EXACTLY (integers, no tolerance literal), so those have no
+#    numeric case here. print.gllvmTMB_select_lv has nothing numeric to compare and is not bound.
+# =============================================================================================
+function _load_select_lv_csv(path::AbstractString, trait_names::Vector{String}, n_unit::Integer)
+    Y = zeros(Float64, length(trait_names), n_unit)
+    open(path) do io
+        readline(io)
+        for line in eachline(io)
+            isempty(line) && continue
+            parts = split(line, ",")
+            unit = parse(Int, strip(parts[1], '"'))
+            t = findfirst(==(strip(parts[2], '"')), trait_names)
+            t === nothing && error("unrecognised trait in $path")
+            Y[t, unit] = parse(Float64, parts[3])
+        end
+    end
+    return Y
+end
+
+function receipts_select_lv()
+    fxp = "test/fixtures/select_lv_p1.toml"
+    tp = "test/test_select_lv_p1_twin.jl"
+    fx = TOML.parsefile(joinpath(ROOT, fxp))
+    fx["gllvmtmb_commit"] == P1_SHA || fail("select_lv fixture is not pinned at P1")
+    datap = "test/fixtures/" * fx["data_file"]
+    bytes2hex(sha256(read(joinpath(ROOT, datap)))) == fx["data_sha256"] || fail("select_lv data csv drifted")
+    r = fx["r_reference"]
+    (all(r["converged"]) && all(r["pd_hessian"])) || fail("select_lv fixture has a non-converged or non-PD-Hessian rank; not a valid twin (fence)")
+    Y = _load_select_lv_csv(joinpath(ROOT, datap), String.(fx["trait_names"]), Int(fx["n_unit"]))
+    Ks = Int.(r["d"])
+    sel = select_lv(Y; family = Normal(), Kmax = maximum(Ks), criterion = :bic)       # test line cited below
+    sel.K == Ks || fail("select_lv accepted ranks $(sel.K), expected $Ks")
+    sel.nparams == Int.(r["npar"]) || fail("select_lv npar differs from R")
+    sel.best_k == Int(r["selected_d"]) || fail("select_lv selected rank differs from R")
+    callc = cite(tp, "sel = select_lv(Y; family = Normal()")
+    note = "Rank sweep 1:3 on the fixture data (sha256 checked); vector case, abs_diff is the maximum over ranks. The test asserts npar and the selected rank (2, the true rank) exactly; both match R here. R reports converged and a positive-definite Hessian at every rank, so the sweep stays clear of the signed Hessian fence."
+    cases = [
+        mkcase("P1-JULIA-SELECT-LV-LOGLIK", "per-rank logLik, K = 1:3 (each side's own optimum)",
+            "$fxp [r_reference.loglik]", "GLLVModels.select_lv(Y; family = Normal(), Kmax = 3, criterion = :bic).loglik, as called at $callc",
+            Float64.(r["loglik"]), sel.loglik, test_tolerance(tp, "isapprox(sel.loglik, Float64.(r[\"loglik\"])"), note),
+        mkcase("P1-JULIA-SELECT-LV-AIC", "per-rank AIC, K = 1:3",
+            "$fxp [r_reference.aic]", "select_lv(...).aic, as called at $callc",
+            Float64.(r["aic"]), sel.aic, test_tolerance(tp, "isapprox(sel.aic,"), note),
+        mkcase("P1-JULIA-SELECT-LV-BIC", "per-rank BIC, penalty log(p*n) = log(900) (R's default criterion), K = 1:3",
+            "$fxp [r_reference.bic]", "select_lv(...).bic, as called at $callc",
+            Float64.(r["bic"]), sel.bic, test_tolerance(tp, "isapprox(sel.bic,"), note),
+    ]
+    return ["select-lv/select_lv.json" => Receipt(["select-lv/select_lv"], "itchyshin/GLLVModels.jl#518",
+        [fxp, datap], [tp], NOT_A_FIXTURE_PAIR, cases)]
+end
+
+# =============================================================================================
+# 8. model-comparison: AIC / BIC / anova (case-map.json) and logLik (namespace map)
+#    test/test_model_comparison.jl (itchyshin/GLLVModels.jl#556), gllvmTMB P1 anova twin fixture
+# =============================================================================================
+function receipts_model_comparison()
+    fxp = "test/fixtures/gllvmtmb_anova_fixture.toml"
+    tp = "test/test_model_comparison.jl"
+    fx = TOML.parsefile(joinpath(ROOT, fxp))
+    fx["meta"]["gllvmtmb_pin"] == P1_SHA || fail("anova fixture is not pinned at P1")
+    per_model = fx["per_model"]
+    length(per_model) == 3 || fail("anova fixture does not hold 3 models")
+    npar_r = Int[m["npar"] for m in per_model]
+    loglik_r = Float64[m["loglik"] for m in per_model]
+    d_r = Union{Missing,Int}[m["d"] for m in per_model]
+    aic_r = Float64[m["aic"] for m in per_model]
+    bic_r = Float64[m["bic"] for m in per_model]
+    p_r = Int(fx["meta"]["p_trait"])
+
+    # End-to-end fits, exactly as the test's "end-to-end" testset builds them.
+    Yw = fx["Y_wide"]
+    p = length(Yw); n = length(Yw[1])
+    Y = Matrix{Float64}(undef, p, n)
+    for i in 1:p, j in 1:n
+        Y[i, j] = Yw[i][j]
+    end
+    X = zeros(p, n, p)
+    for t in 1:p, s in 1:n
+        X[t, s, t] = 1.0
+    end
+    fits = [fit_gaussian_gllvm(Y; X = X, K = K) for K in 1:3]
+    fitc = cite(tp, "fits = [fit_gaussian_gllvm(Y; X = X, K = K) for K in 1:3]")
+    e2e_note = "Julia fits the fixture's own response matrix (Y_wide) with fit_gaussian_gllvm(Y; X = per-species intercepts, K), K = 1, 2, 3, as in the test; R's values are the recorded P1 gllvmTMB fits of the same data and nested ranks. The test uses this looser tolerance because the two optimisers are independent."
+    ref_chibar = fx["anova_chibar"]; ref_chisq = fx["anova_chisq"]
+    ORIGIN = "itchyshin/GLLVModels.jl#556"
+
+    c_aic = mkcase("P1-JULIA-MODEL-COMPARISON-AIC-E2E", "aic(fit) at each side's own optimum, ranks d = 1, 2, 3",
+        "$fxp [[per_model]].aic", "GLLVModels.aic(fit_gaussian_gllvm(Y; X, K)), as at $(cite(tp, "aic(fits[i]) ≈ aic_r[i]")); fits as at $fitc",
+        aic_r, [Float64(aic(f)) for f in fits], test_tolerance(tp, "aic(fits[i]) ≈ aic_r[i]"),
+        e2e_note * " The test's separate formula-twin assertion on R's own logLik and df (aic_formula) is not used: it evaluates an inline expression, not a package function.")
+    c_bic = mkcase("P1-JULIA-MODEL-COMPARISON-BIC-E2E", "bic(fit, nobs(fit, Y)) at each side's own optimum, ranks d = 1, 2, 3",
+        "$fxp [[per_model]].bic", "GLLVModels.bic(fit, nobs(fit, Y)), as at $(cite(tp, "bic(fits[i], nobs(fits[i], Y)) ≈ bic_r[i]")); fits as at $fitc",
+        bic_r, [Float64(bic(f, nobs(f, Y))) for f in fits], test_tolerance(tp, "bic(fits[i], nobs(fits[i], Y)) ≈ bic_r[i]"),
+        e2e_note * " The test also asserts nobs equality and dof equality exactly (integers, no tolerance), so those have no numeric case.")
+    c_ll = mkcase("P1-JULIA-MODEL-COMPARISON-LOGLIK-E2E", "loglikelihood(fit) at each side's own optimum, ranks d = 1, 2, 3",
+        "$fxp [[per_model]].loglik", "GLLVModels.loglikelihood(fit_gaussian_gllvm(Y; X, K)), as at $(cite(tp, "loglikelihood(fits[i]) ≈ loglik_r[i]")); fits as at $fitc",
+        loglik_r, [Float64(loglikelihood(f)) for f in fits], test_tolerance(tp, "loglikelihood(fits[i]) ≈ loglik_r[i]"),
+        e2e_note)
+
+    # anova: definition twin (_anova_core on R's recorded npar / logLik / d) and end-to-end twin.
+    tabc = GLLVModels._anova_core(npar_r, loglik_r, d_r, p_r; test = :chibar)
+    cc = cite(tp, "GLLVModels._anova_core(npar_r, loglik_r, d_r, p_r; test = :chibar)")
+    tabq = GLLVModels._anova_core(npar_r, loglik_r, d_r, p_r; test = :chisq)
+    cq = cite(tp, "GLLVModels._anova_core(npar_r, loglik_r, d_r, p_r; test = :chisq)")
+    core_note(kind) = "GLLVModels._anova_core is called on R's recorded npar, logLik and rank d (no Julia fitting), so this isolates the LRT / $kind arithmetic. Rows 2 and 3 are compared (row 1 has no test statistic). The test also asserts the df column and the test-label text exactly, so those have no numeric case."
+    rl(ref, k) = [Float64(ref[k][i]) for i in 2:3]
+    lrt6 = "tab.LRT[i] ≈ Float64(ref[\"LRT\"][i]) atol=1e-6"
+    pv6 = "tab.pvalue[i] ≈ Float64(ref[\"pvalue\"][i]) atol=1e-6"
+    cases = [
+        mkcase("P1-JULIA-ANOVA-CHIBAR-LRT", "anova LRT statistic, test = :chibar (definition twin)",
+            "$fxp [anova_chibar].LRT[2:3]", "GLLVModels._anova_core(...; test = :chibar).LRT[2:3], as called at $cc",
+            rl(ref_chibar, "LRT"), [Float64(tabc.LRT[i]) for i in 2:3], test_tolerance(tp, lrt6; nth = 1, after = "≈ Float64"), core_note("chi-bar-square p-value")),
+        mkcase("P1-JULIA-ANOVA-CHIBAR-PVALUE", "anova p-value, test = :chibar (definition twin)",
+            "$fxp [anova_chibar].pvalue[2:3]", "GLLVModels._anova_core(...; test = :chibar).pvalue[2:3], as called at $cc",
+            rl(ref_chibar, "pvalue"), [Float64(tabc.pvalue[i]) for i in 2:3], test_tolerance(tp, pv6; nth = 1, after = "≈ Float64"), core_note("chi-bar-square p-value")),
+        mkcase("P1-JULIA-ANOVA-CHISQ-LRT", "anova LRT statistic, test = :chisq (definition twin)",
+            "$fxp [anova_chisq].LRT[2:3]", "GLLVModels._anova_core(...; test = :chisq).LRT[2:3], as called at $cq",
+            rl(ref_chisq, "LRT"), [Float64(tabq.LRT[i]) for i in 2:3], test_tolerance(tp, lrt6; nth = 2, after = "≈ Float64"), core_note("chi-square p-value")),
+        mkcase("P1-JULIA-ANOVA-CHISQ-PVALUE", "anova p-value, test = :chisq (definition twin)",
+            "$fxp [anova_chisq].pvalue[2:3]", "GLLVModels._anova_core(...; test = :chisq).pvalue[2:3], as called at $cq",
+            rl(ref_chisq, "pvalue"), [Float64(tabq.pvalue[i]) for i in 2:3], test_tolerance(tp, pv6; nth = 2, after = "≈ Float64"), core_note("chi-square p-value")),
+    ]
+    taba = gllvm_anova(fits...; test = :chibar)
+    ca = cite(tp, "tab = gllvm_anova(fits...; test = :chibar)")
+    push!(cases,
+        mkcase("P1-JULIA-ANOVA-E2E-LRT", "gllvm_anova(fits...; test = :chibar).LRT[2:3] on the Julia fits",
+            "$fxp [anova_chibar].LRT[2:3]", "GLLVModels.gllvm_anova(fits...; test = :chibar).LRT[2:3], as called at $ca; fits as at $fitc",
+            rl(ref_chibar, "LRT"), [Float64(taba.LRT[i]) for i in 2:3], test_tolerance(tp, "tab.LRT[i] ≈ Float64(ref[\"LRT\"][i]) atol=1e-2"; after = "≈ Float64"), e2e_note),
+        mkcase("P1-JULIA-ANOVA-E2E-PVALUE", "gllvm_anova(fits...; test = :chibar).pvalue[2:3] on the Julia fits",
+            "$fxp [anova_chibar].pvalue[2:3]", "GLLVModels.gllvm_anova(fits...; test = :chibar).pvalue[2:3], as called at $ca; fits as at $fitc",
+            rl(ref_chibar, "pvalue"), [Float64(taba.pvalue[i]) for i in 2:3], test_tolerance(tp, "tab.pvalue[i] ≈ Float64(ref[\"pvalue\"][i]) atol=1e-2"; after = "≈ Float64"), e2e_note))
+
+    mk(ids, cs) = Receipt(ids, ORIGIN, [fxp], [tp], NOT_A_FIXTURE_PAIR, cs)
+    return [
+        "model-comparison/AIC.json" => mk(["model-comparison/AIC.gllvmTMB_multi"], [c_aic]),
+        "model-comparison/BIC.json" => mk(["model-comparison/BIC.gllvmTMB_multi"], [c_bic]),
+        "model-comparison/anova.json" => mk(["model-comparison/anova.gllvmTMB_multi"], cases),
+        "model-comparison/logLik.json" => mk(["namespace/S3method/logLik,gllvmTMB_multi"], [c_ll]),
+    ]
+end
+
+
+# =============================================================================================
+# 9. namespace numeric twins   test/test_namespace_numeric_p1_twin.jl (itchyshin/GLLVModels.jl#652)
 #    extract_loadings, extract_rotated_loadings_table (one rank-2 Gaussian fit), extract_lv_effects
 #    (predictor-informed fit), extract_communality, extract_Sigma_B, extract_Sigma_W (two-level fit),
 #    each against R at P1 from test/fixtures/ns_numeric_p1.toml. vcov (Julia's public vcov is
@@ -1010,6 +1310,8 @@ function build()
     out = Pair{String,Receipt}[]
     for (name, f) in (("chibar", receipts_chibar), ("ordinal", receipts_ordinal),
             ("latent-scores", receipts_latent_scores), ("temporal", receipts_temporal),
+            ("aghq", receipts_aghq), ("model-comparison", receipts_model_comparison),
+            ("select-lv", receipts_select_lv), ("isdm", receipts_isdm),
             ("namespace-numeric", receipts_namespace_numeric))
         t0 = time()
         append!(out, f())

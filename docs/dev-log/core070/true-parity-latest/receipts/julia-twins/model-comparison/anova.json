@@ -1,0 +1,146 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "model-comparison/anova.gllvmTMB_multi"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#556",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "9b7f4804d978b56686273ceea03a792bfd1cc544",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/gllvmtmb_anova_fixture.toml",
+      "sha256": "b06237b50c5a5f8a7fe916a04554fa8d2a2ea014c100c5b2cf61415b40227d78"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_model_comparison.jl",
+      "sha256": "478ad5e2c31d0697e3791ffe5edb2ff7f10008a94f9ceaaa42728b9cc37c097b"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-ANOVA-CHIBAR-LRT",
+        "quantity": "anova LRT statistic, test = :chibar (definition twin)",
+        "r_source": "test/fixtures/gllvmtmb_anova_fixture.toml [anova_chibar].LRT[2:3]",
+        "julia_source": "GLLVModels._anova_core(...; test = :chibar).LRT[2:3], as called at test/test_model_comparison.jl:66",
+        "r_value": [
+          28.435461739725753,
+          2.420337819766161
+        ],
+        "julia_value": [
+          28.435461739725753,
+          2.4203378197661607
+        ],
+        "abs_diff": 4.440892098500626e-16,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_model_comparison.jl:72",
+        "tolerance_source_line": "@test tab.LRT[i] ≈ Float64(ref[\"LRT\"][i]) atol=1e-6",
+        "note": "GLLVModels._anova_core is called on R's recorded npar, logLik and rank d (no Julia fitting), so this isolates the LRT / chi-bar-square p-value arithmetic. Rows 2 and 3 are compared (row 1 has no test statistic). The test also asserts the df column and the test-label text exactly, so those have no numeric case."
+      },
+      {
+        "case_id": "P1-JULIA-ANOVA-CHIBAR-PVALUE",
+        "quantity": "anova p-value, test = :chibar (definition twin)",
+        "r_source": "test/fixtures/gllvmtmb_anova_fixture.toml [anova_chibar].pvalue[2:3]",
+        "julia_source": "GLLVModels._anova_core(...; test = :chibar).pvalue[2:3], as called at test/test_model_comparison.jl:66",
+        "r_value": [
+          6.549614697112614e-07,
+          0.1344212785745005
+        ],
+        "julia_value": [
+          6.549614697112612e-07,
+          0.13442127857450037
+        ],
+        "abs_diff": 1.3877787807814457e-16,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_model_comparison.jl:73",
+        "tolerance_source_line": "@test tab.pvalue[i] ≈ Float64(ref[\"pvalue\"][i]) atol=1e-6",
+        "note": "GLLVModels._anova_core is called on R's recorded npar, logLik and rank d (no Julia fitting), so this isolates the LRT / chi-bar-square p-value arithmetic. Rows 2 and 3 are compared (row 1 has no test statistic). The test also asserts the df column and the test-label text exactly, so those have no numeric case."
+      },
+      {
+        "case_id": "P1-JULIA-ANOVA-CHISQ-LRT",
+        "quantity": "anova LRT statistic, test = :chisq (definition twin)",
+        "r_source": "test/fixtures/gllvmtmb_anova_fixture.toml [anova_chisq].LRT[2:3]",
+        "julia_source": "GLLVModels._anova_core(...; test = :chisq).LRT[2:3], as called at test/test_model_comparison.jl:81",
+        "r_value": [
+          28.435461739725753,
+          2.420337819766161
+        ],
+        "julia_value": [
+          28.435461739725753,
+          2.4203378197661607
+        ],
+        "abs_diff": 4.440892098500626e-16,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_model_comparison.jl:84",
+        "tolerance_source_line": "@test tab.LRT[i] ≈ Float64(ref[\"LRT\"][i]) atol=1e-6",
+        "note": "GLLVModels._anova_core is called on R's recorded npar, logLik and rank d (no Julia fitting), so this isolates the LRT / chi-square p-value arithmetic. Rows 2 and 3 are compared (row 1 has no test statistic). The test also asserts the df column and the test-label text exactly, so those have no numeric case."
+      },
+      {
+        "case_id": "P1-JULIA-ANOVA-CHISQ-PVALUE",
+        "quantity": "anova p-value, test = :chisq (definition twin)",
+        "r_source": "test/fixtures/gllvmtmb_anova_fixture.toml [anova_chisq].pvalue[2:3]",
+        "julia_source": "GLLVModels._anova_core(...; test = :chisq).pvalue[2:3], as called at test/test_model_comparison.jl:81",
+        "r_value": [
+          2.942568129740311e-06,
+          0.2981469152159105
+        ],
+        "julia_value": [
+          2.9425681297403105e-06,
+          0.29814691521591047
+        ],
+        "abs_diff": 5.551115123125783e-17,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_model_comparison.jl:85",
+        "tolerance_source_line": "@test tab.pvalue[i] ≈ Float64(ref[\"pvalue\"][i]) atol=1e-6",
+        "note": "GLLVModels._anova_core is called on R's recorded npar, logLik and rank d (no Julia fitting), so this isolates the LRT / chi-square p-value arithmetic. Rows 2 and 3 are compared (row 1 has no test statistic). The test also asserts the df column and the test-label text exactly, so those have no numeric case."
+      },
+      {
+        "case_id": "P1-JULIA-ANOVA-E2E-LRT",
+        "quantity": "gllvm_anova(fits...; test = :chibar).LRT[2:3] on the Julia fits",
+        "r_source": "test/fixtures/gllvmtmb_anova_fixture.toml [anova_chibar].LRT[2:3]",
+        "julia_source": "GLLVModels.gllvm_anova(fits...; test = :chibar).LRT[2:3], as called at test/test_model_comparison.jl:128; fits as at test/test_model_comparison.jl:118",
+        "r_value": [
+          28.435461739725753,
+          2.420337819766161
+        ],
+        "julia_value": [
+          28.435461735276164,
+          2.4203378189935734
+        ],
+        "abs_diff": 4.44958914158633e-09,
+        "tolerance": 0.01,
+        "tolerance_source": "test/test_model_comparison.jl:132",
+        "tolerance_source_line": "@test tab.LRT[i] ≈ Float64(ref[\"LRT\"][i]) atol=1e-2",
+        "note": "Julia fits the fixture's own response matrix (Y_wide) with fit_gaussian_gllvm(Y; X = per-species intercepts, K), K = 1, 2, 3, as in the test; R's values are the recorded P1 gllvmTMB fits of the same data and nested ranks. The test uses this looser tolerance because the two optimisers are independent."
+      },
+      {
+        "case_id": "P1-JULIA-ANOVA-E2E-PVALUE",
+        "quantity": "gllvm_anova(fits...; test = :chibar).pvalue[2:3] on the Julia fits",
+        "r_source": "test/fixtures/gllvmtmb_anova_fixture.toml [anova_chibar].pvalue[2:3]",
+        "julia_source": "GLLVModels.gllvm_anova(fits...; test = :chibar).pvalue[2:3], as called at test/test_model_comparison.jl:128; fits as at test/test_model_comparison.jl:118",
+        "r_value": [
+          6.549614697112614e-07,
+          0.1344212785745005
+        ],
+        "julia_value": [
+          6.549614711441458e-07,
+          0.13442127863282727
+        ],
+        "abs_diff": 5.832676008843407e-11,
+        "tolerance": 0.01,
+        "tolerance_source": "test/test_model_comparison.jl:133",
+        "tolerance_source_line": "@test tab.pvalue[i] ≈ Float64(ref[\"pvalue\"][i]) atol=1e-2",
+        "note": "Julia fits the fixture's own response matrix (Y_wide) with fit_gaussian_gllvm(Y; X = per-species intercepts, K), K = 1, 2, 3, as in the test; R's values are the recorded P1 gllvmTMB fits of the same data and nested ranks. The test uses this looser tolerance because the two optimisers are independent."
+      }
+    ]
+  }
+}

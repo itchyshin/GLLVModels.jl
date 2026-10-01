@@ -1,0 +1,53 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "namespace/S3method/logLik,gllvmTMB_multi"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#556",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "9b7f4804d978b56686273ceea03a792bfd1cc544",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/gllvmtmb_anova_fixture.toml",
+      "sha256": "b06237b50c5a5f8a7fe916a04554fa8d2a2ea014c100c5b2cf61415b40227d78"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_model_comparison.jl",
+      "sha256": "478ad5e2c31d0697e3791ffe5edb2ff7f10008a94f9ceaaa42728b9cc37c097b"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-MODEL-COMPARISON-LOGLIK-E2E",
+        "quantity": "loglikelihood(fit) at each side's own optimum, ranks d = 1, 2, 3",
+        "r_source": "test/fixtures/gllvmtmb_anova_fixture.toml [[per_model]].loglik",
+        "julia_source": "GLLVModels.loglikelihood(fit_gaussian_gllvm(Y; X, K)), as at test/test_model_comparison.jl:122; fits as at test/test_model_comparison.jl:118",
+        "r_value": [
+          -110.39930516971195,
+          -96.18157429984907,
+          -94.971405389966
+        ],
+        "julia_value": [
+          -110.3993051667172,
+          -96.18157429907912,
+          -94.97140538958233
+        ],
+        "abs_diff": 2.9947528901175247e-09,
+        "tolerance": 0.0001,
+        "tolerance_source": "test/test_model_comparison.jl:122",
+        "tolerance_source_line": "@test loglikelihood(fits[i]) ≈ loglik_r[i] atol=1e-4",
+        "note": "Julia fits the fixture's own response matrix (Y_wide) with fit_gaussian_gllvm(Y; X = per-species intercepts, K), K = 1, 2, 3, as in the test; R's values are the recorded P1 gllvmTMB fits of the same data and nested ranks. The test uses this looser tolerance because the two optimisers are independent."
+      }
+    ]
+  }
+}

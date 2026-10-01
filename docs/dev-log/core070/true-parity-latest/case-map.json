@@ -363,11 +363,21 @@
    "classification": "required_core",
    "reason": "Rank-selection by AIC/BIC/AICc from a fitted sequence, paired with anova(test=\"chibar\"). Built by the auto-d lane (#518, gllvmTMB #1324); this ledger only records it -- Shinichi signs this row (D-295 Packet 1 row 6). Fence: R rejects fits with a non-positive-definite Hessian; Julia's select_lv does not currently reproduce that rejection.",
    "arc": "auto-d lane (#518)",
-   "executable_case_ids": [],
-   "evidence": {},
-   "measured_against": null,
+   "executable_case_ids": [
+    "P1-JULIA-SELECT-LV-LOGLIK",
+    "P1-JULIA-SELECT-LV-AIC",
+    "P1-JULIA-SELECT-LV-BIC"
+   ],
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/select-lv/select_lv.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_select_lv_p1_twin.jl, against R-at-P1 values copied from test/fixtures/select_lv_p1.toml (Gaussian rank sweep K = 1:3, criterion bic; R converged with a positive-definite Hessian at every rank); each case within the tolerance asserted in test/test_select_lv_p1_twin.jl. npar and the selected rank are asserted exactly in the test and match; the signed Hessian fence is not exercised by this fixture"
+   },
+   "measured_against": "P1",
    "disposition": null,
-   "signed_fence": "Julia does not yet reject fits with a non-positive-definite Hessian as R does (signed 2026-09-30, https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263)"
+   "signed_fence": "Julia does not yet reject fits with a non-positive-definite Hessian as R does (signed 2026-09-30, https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263)",
+   "evidence_tier": "numeric"
   },
   {
    "source_id": "select-lv/print.gllvmTMB_select_lv",
@@ -502,10 +512,18 @@
    "classification": "required_core",
    "reason": "Wraps stats::AIC() with fit-compatibility checks (penalty k=2 default); Julia already has an `aic` extractor but no matching S3-dispatched twin surface for a multi-fit object.",
    "arc": "A2 (small)",
-   "executable_case_ids": [],
-   "evidence": {},
-   "measured_against": null,
-   "disposition": null
+   "executable_case_ids": [
+    "P1-JULIA-MODEL-COMPARISON-AIC-E2E"
+   ],
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/model-comparison/AIC.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_model_comparison.jl (itchyshin/GLLVModels.jl#556), against R-at-P1 values copied from test/fixtures/gllvmtmb_anova_fixture.toml; each case within the tolerance asserted in test/test_model_comparison.jl"
+   },
+   "measured_against": "P1",
+   "disposition": null,
+   "evidence_tier": "numeric"
   },
   {
    "source_id": "model-comparison/BIC.gllvmTMB_multi",
@@ -515,10 +533,18 @@
    "classification": "required_core",
    "reason": "Wraps stats::BIC() with fit-compatibility checks; same S3-twin gap as AIC.gllvmTMB_multi.",
    "arc": "A2 (small)",
-   "executable_case_ids": [],
-   "evidence": {},
-   "measured_against": null,
-   "disposition": null
+   "executable_case_ids": [
+    "P1-JULIA-MODEL-COMPARISON-BIC-E2E"
+   ],
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/model-comparison/BIC.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_model_comparison.jl (itchyshin/GLLVModels.jl#556), against R-at-P1 values copied from test/fixtures/gllvmtmb_anova_fixture.toml; each case within the tolerance asserted in test/test_model_comparison.jl"
+   },
+   "measured_against": "P1",
+   "disposition": null,
+   "evidence_tier": "numeric"
   },
   {
    "source_id": "model-comparison/anova.gllvmTMB_multi",
@@ -528,10 +554,23 @@
    "classification": "required_core",
    "reason": "Sequential rank/fixed-effect LRT via chi-bar-square (approx) or chi-square, with a rank-step caveat; Julia has no anova-style model-comparison surface yet.",
    "arc": "A2 (small)",
-   "executable_case_ids": [],
-   "evidence": {},
-   "measured_against": null,
-   "disposition": null
+   "executable_case_ids": [
+    "P1-JULIA-ANOVA-CHIBAR-LRT",
+    "P1-JULIA-ANOVA-CHIBAR-PVALUE",
+    "P1-JULIA-ANOVA-CHISQ-LRT",
+    "P1-JULIA-ANOVA-CHISQ-PVALUE",
+    "P1-JULIA-ANOVA-E2E-LRT",
+    "P1-JULIA-ANOVA-E2E-PVALUE"
+   ],
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/model-comparison/anova.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_model_comparison.jl (itchyshin/GLLVModels.jl#556), against R-at-P1 values copied from test/fixtures/gllvmtmb_anova_fixture.toml; each case within the tolerance asserted in test/test_model_comparison.jl"
+   },
+   "measured_against": "P1",
+   "disposition": null,
+   "evidence_tier": "numeric"
   },
   {
    "source_id": "model-comparison/print.anova.gllvmTMB_multi",
