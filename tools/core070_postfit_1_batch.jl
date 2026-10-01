@@ -20,7 +20,7 @@ using LinearAlgebra
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
 # GLLVM_PARITY_PIN=P1 reads the P1-regenerated contract (cases verbatim); unset/P0 is unchanged.
-_parity_pin = uppercase(strip(get(ENV, "GLLVM_PARITY_PIN", "P0")))
+_parity_pin = uppercase(strip(get(ENV, "GLLVM_PARITY_PIN", "P1")))
 _parity_pin in ("P0", "P1") || error("GLLVM_PARITY_PIN must be P0 or P1, got $(repr(_parity_pin))")
 const CONTRACT_PATH = _parity_pin == "P1" ?
     joinpath(ROOT, "docs", "dev-log", "core070", "true-parity-latest", "postfit-1-batch-contract-p1.json") :
