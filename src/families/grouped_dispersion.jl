@@ -408,7 +408,9 @@ _dispersion_group_lower_boundary(dvec::AbstractVector{<:Real}) =
 # negative log-likelihood by more than 1e-6. Fits that never reach the boundary are
 # returned unchanged. The likelihood can have several maxima on small data, so this
 # is a better local search, not a guarantee of the global maximum.
-function _nb_boundary_restart(negll, res, ls, opts, first_log_r::Integer)
+# `grad` (optional, −∇negll closure or `nothing`): when given, the restarts use the same
+# exact-gradient optimiser as the main fit (`_optimize_with_analytic`).
+function _nb_boundary_restart(negll, res, ls, opts, first_log_r::Integer; grad = nothing)
     θ = Optim.minimizer(res)
     bd = findall(_dispersion_group_boundary(exp.(θ[first_log_r:end])))
     isempty(bd) && return res
@@ -417,7 +419,9 @@ function _nb_boundary_restart(negll, res, ls, opts, first_log_r::Integer)
     for groups in trials
         θs = copy(θ)
         θs[first_log_r - 1 .+ groups] .= 0.0
-        trial = Optim.optimize(negll, θs, ls, opts; autodiff = :finite)
+        trial = grad === nothing ?
+            Optim.optimize(negll, θs, ls, opts; autodiff = :finite) :
+            _optimize_with_analytic(negll, grad, θs, ls, opts)
         Optim.minimum(trial) < Optim.minimum(best) - 1e-6 && (best = trial)
     end
     return best
@@ -435,10 +439,11 @@ end
 # a round keeps nothing. Extra rounds matter at p = 24 (#615): there the first refit
 # often stopped at the cap just short of convergence, and a species below 1e3 could
 # keep crawling up the ridge. A group fixed at 1e10 reports r_group = 1e10, which the
-# fitters already treat as the Poisson limit (warn only). Returns
-# `(θ, nll, converged, iterations)`; a converged fit is returned unchanged.
+# fitters already treat as the Poisson limit (warn only).
+# `grad` (optional, full-θ exact gradient) is restricted to the free coordinates in
+# every round. Returns `(θ, nll, converged, iterations)`; a converged fit is returned unchanged.
 function _nb_poisson_ridge_polish(negll, res, ls, opts, first_log_r::Integer;
-                                  rounds::Integer = 3)
+                                  rounds::Integer = 3, grad = nothing)
     θ = Optim.minimizer(res)
     f0 = Optim.minimum(res)
     conv = Optim.converged(res)
@@ -455,7 +460,13 @@ function _nb_poisson_ridge_polish(negll, res, ls, opts, first_log_r::Integer;
             θs = copy(θ)
             θs[fixed] .= log(1e10)
             sub(x) = negll(setindex!(copy(θs), x, free))
-            trial = Optim.optimize(sub, θs[free], ls, opts; autodiff = :finite)
+            # With an exact full-θ gradient, restrict it to the free coordinates.
+            trial = grad === nothing ?
+                Optim.optimize(sub, θs[free], ls, opts; autodiff = :finite) :
+                _optimize_with_analytic(sub, x -> begin
+                        g = grad(setindex!(copy(θs), x, free))
+                        g === nothing ? nothing : g[free]
+                    end, θs[free], ls, opts)
             f1 = Optim.minimum(trial)
             if f1 <= f0 + 1e-6 && (Optim.converged(trial) || f1 < f0)
                 θs[free] = Optim.minimizer(trial)
@@ -723,6 +734,53 @@ function getLV(fit::NBGroupedCovFit, Y::AbstractMatrix{<:Integer},
                           rotate = rotate, mask = mask, offset = O)
 end
 
+# −∇θ of `fit_nb_gllvm_grouped_cov`'s objective, θ = [β; γ_free; pack(Λ); log r_1..r_G],
+# or `nothing` (finite-difference fallback) when a site's mode search fails or the AD
+# pass errors. Mode: the objective's own chain (`_nb_grouped_site_mode`); log-det weight:
+# `_nb_grouped_laplace_weight` at the objective's `hessian`.
+function _nb_grouped_cov_negll_grad(Yc, X_fit, θ, p, q, K, rr, G, gidx, link, msk,
+                                    hessian, maxiter, tol)
+    try
+        n = size(Yc, 2)
+        N1 = ones(Int, p)
+        β = θ[1:p]; γ = θ[(p + 1):(p + q)]
+        Λ = unpack_lambda(θ[(p + q + 1):(p + q + rr)], p, K)
+        rg = exp.(θ[(p + q + rr + 1):(p + q + rr + G)])
+        fams = [NegativeBinomial(float(rg[gidx[t]]), 0.5) for t in 1:p]
+        O = _build_offset(X_fit, γ)
+        ẑs = Vector{Vector{Float64}}(undef, n)
+        for s in 1:n
+            mi = msk === nothing ? nothing : view(msk, :, s)
+            z, ok = _nb_grouped_site_mode(fams, view(Yc, :, s), N1, Λ, β, link;
+                                          mask = mi, offset = view(O, :, s),
+                                          maxiter = maxiter, tol = tol)
+            ok || return nothing
+            ẑs[s] = z
+        end
+        function marg(θd)
+            βd = θd[1:p]; γd = θd[(p + 1):(p + q)]
+            Λd = unpack_lambda(θd[(p + q + 1):(p + q + rr)], p, K)
+            rgd = exp.(θd[(p + q + rr + 1):(p + q + rr + G)])
+            famsd = [NegativeBinomial(rgd[gidx[t]], 0.5) for t in 1:p]
+            Od = _build_offset(X_fit, γd)
+            acc = zero(eltype(θd))
+            for s in 1:n
+                y = view(Yc, :, s)
+                mi = msk === nothing ? nothing : view(msk, :, s)
+                ldw = (t, μ, me, η) -> _nb_grouped_laplace_weight(hessian, famsd[t], μ, me,
+                                                                  y[t], link)
+                acc += _cov_site_diffable(famsd, y, N1, Λd, βd .+ view(Od, :, s), link,
+                                          ẑs[s], ldw; mask = mi)
+            end
+            return acc
+        end
+        g = ForwardDiff.gradient(marg, θ)
+        return all(isfinite, g) ? -g : nothing
+    catch
+        return nothing
+    end
+end
+
 """
     fit_nb_gllvm_grouped_cov(Y; X, K, group=1:p, link=LogLink(), mask=nothing,
                              γ_fixed=nothing, hessian=:observed, …) -> NBGroupedCovFit
@@ -788,9 +846,19 @@ function fit_nb_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3}
     end
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     opts = Optim.Options(g_tol = g_tol, iterations = iterations)
-    res = Optim.optimize(negll, θ0, ls, opts; autodiff = :finite)
-    res = _nb_boundary_restart(negll, res, ls, opts, p + q + rr + 1)
-    θ̂, nll, conv0, iters0 = _nb_poisson_ridge_polish(negll, res, ls, opts, p + q + rr + 1)
+    # Exact gradient (implicit one-Newton-step + ForwardDiff, `_cov_site_diffable` in
+    # covariates.jl) under LogLink, the only link whose observed log-det weight the
+    # objective defines; other links keep the finite-difference gradient.
+    grad = link isa LogLink ?
+        (θ -> _nb_grouped_cov_negll_grad(Yc, X_fit, θ, p, q, K, rr, G, gidx, link, msk,
+                                         hessian, newton_maxiter, newton_tol)) : nothing
+    # Dense BFGS on the exact-gradient route (see `_COV_BFGS` in covariates.jl for why).
+    ls_ad = grad === nothing ? ls : _COV_BFGS()
+    res = grad === nothing ? Optim.optimize(negll, θ0, ls, opts; autodiff = :finite) :
+                             _optimize_with_analytic(negll, grad, θ0, ls_ad, opts)
+    res = _nb_boundary_restart(negll, res, ls_ad, opts, p + q + rr + 1; grad = grad)
+    θ̂, nll, conv0, iters0 = _nb_poisson_ridge_polish(negll, res, ls_ad, opts, p + q + rr + 1;
+                                                     grad = grad)
     β̂ = θ̂[1:p]
     γ̂_free = θ̂[(p + 1):(p + q)]
     γ̂ = collect(Float64, _expand_fixed_zero(γ̂_free, γ_fixed_mask))
