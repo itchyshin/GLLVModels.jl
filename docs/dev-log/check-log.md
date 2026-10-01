@@ -1,3 +1,13 @@
+## 2026-10-01: bootstrap boundary flag is per parameter
+
+- `src/confint_family.jl` `_family_bootstrap`: a converged refit with `upper_boundary` flags now
+  fills its unflagged parameters' replicate columns; flagged columns stay NaN and still count toward
+  the `Inf` upper-bound rule. `n_converged` still counts fully interior replicates only.
+- New `test/test_confint_bootstrap_boundary_per_param.jl` (synthetic adapter, no fits): origin/main
+  5 pass, 2 fail (unflagged intervals NaN); branch 7/7, Julia 1.10.12, restricted load path.
+- Also run, Julia 1.10.12: test_confint_bootstrap_verdict_betabinomial 76/76, _nb 51/51, _nb1 36/36,
+  _truncated 34/34, _beta 36/36, _gamma 36/36, test_confint_family 341/341,
+  test_nb_grouped_upper_warn 18/18.
 ## 2026-10-01: aghq numeric twins at gllvmTMB P1 (10 rows)
 
 - Branch `claude/true-parity-aghq-twins` from `origin/main` (`9ad7b0036`). Maintainer approved the feasible
