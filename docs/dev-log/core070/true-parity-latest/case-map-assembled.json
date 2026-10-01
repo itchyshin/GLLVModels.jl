@@ -41,7 +41,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-namespace.json",
-   "sha256": "775c101914f22a424becbfa63272395a38b5d27647f94fc9754f3b53fe9b142a",
+   "sha256": "7a07cb1d277743cd16c25638f36362454d761d6d7aac43bdacd7f4b7a7f827f1",
    "rows": 69
   },
   {
@@ -7147,18 +7147,26 @@
    "r_file_line": "R/extractors.R:31",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/extract_Sigma_B.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-SIGMA-B-TWOLEVEL.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration mismatch: R export registered+defined at P1, but the Julia symbol is not an exported Function (Julia symbol TwoLevelFit not a Function (kind=DataType)); not a twin, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-EXTRACT-SIGMA-B-TWOLEVEL"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_namespace_numeric_p1_twin.jl, against R extract_Sigma_B(fit)$Sigma_B values copied from test/fixtures/ns_numeric_p1.toml (a two-level Gaussian fit's between-tier covariance (5 x 5), Julia extract_Sigma(fit; level = :unit).Sigma), each case within the tolerance asserted in that test. R converged with a positive-definite Hessian. The Tier 0 registration receipts are kept un-cited under registration_receipts (the registration batch receipt carries a batch-level FAIL status, which would block the numeric binding if cited); the superseded case ids are in registration_case_ids."
    },
-   "executable_case_ids": [],
+   "executable_case_ids": [
+    "P1-JULIA-SIGMA-B-TWOLEVEL"
+   ],
    "reason": "Registration mismatch at P1: Julia symbol TwoLevelFit not a Function (kind=DataType). Not twinned.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "FAIL",
     "category": "registration_mismatch",
@@ -7177,18 +7185,26 @@
    "r_file_line": "R/extractors.R:66",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/extract_Sigma_W.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-SIGMA-W-TWOLEVEL.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration mismatch: R export registered+defined at P1, but the Julia symbol is not an exported Function (Julia symbol TwoLevelFit not a Function (kind=DataType)); not a twin, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-EXTRACT-SIGMA-W-TWOLEVEL"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_namespace_numeric_p1_twin.jl, against R extract_Sigma_W(fit)$Sigma_W values copied from test/fixtures/ns_numeric_p1.toml (a two-level Gaussian fit's within-tier covariance (5 x 5), Julia extract_Sigma(fit; level = :unit_obs).Sigma), each case within the tolerance asserted in that test. R converged with a positive-definite Hessian. The Tier 0 registration receipts are kept un-cited under registration_receipts (the registration batch receipt carries a batch-level FAIL status, which would block the numeric binding if cited); the superseded case ids are in registration_case_ids."
    },
-   "executable_case_ids": [],
+   "executable_case_ids": [
+    "P1-JULIA-SIGMA-W-TWOLEVEL"
+   ],
    "reason": "Registration mismatch at P1: Julia symbol TwoLevelFit not a Function (kind=DataType). Not twinned.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "FAIL",
     "category": "registration_mismatch",
@@ -7236,20 +7252,27 @@
    "r_file_line": "R/extractors.R:212",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/extract_communality.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-COMMUNALITY-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-EXTRACT-COMMUNALITY-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_namespace_numeric_p1_twin.jl, against R extract_communality(fit, level = ...) values copied from test/fixtures/ns_numeric_p1.toml (a two-level Gaussian fit's per-trait communality at the unit and unit_obs tiers, Julia extract_communality(fit; level = ...)), each case within the tolerance asserted in that test. R converged with a positive-definite Hessian. The Tier 0 registration receipts are kept un-cited under registration_receipts (the registration batch receipt carries a batch-level FAIL status, which would block the numeric binding if cited); the superseded case ids are in registration_case_ids."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-EXTRACT-COMMUNALITY-NATIVE"
+    "P1-JULIA-COMMUNALITY-UNIT",
+    "P1-JULIA-COMMUNALITY-UNIT-OBS"
    ],
    "reason": "R export(extract_communality) registered and defined at P1; Julia `communality` is an exported Function (measured). Name match only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -7353,18 +7376,26 @@
    "r_file_line": "R/output-methods.R:87",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/extract_loadings.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-LOADINGS-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration mismatch: R export registered+defined at P1, but the Julia symbol is not an exported Function (Julia symbol unpack_lambda not exported); not a twin, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-EXTRACT-LOADINGS-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_namespace_numeric_p1_twin.jl, against R extract_loadings(fit, rotate = \"none\") values copied from test/fixtures/ns_numeric_p1.toml (a rank-2 Gaussian fit's raw lower-triangular loading matrix (6 x 2), Julia extract_loadings(fit; rotate = false)), each case within the tolerance asserted in that test. R converged with a positive-definite Hessian. The Tier 0 registration receipts are kept un-cited under registration_receipts (the registration batch receipt carries a batch-level FAIL status, which would block the numeric binding if cited); the superseded case ids are in registration_case_ids."
    },
-   "executable_case_ids": [],
+   "executable_case_ids": [
+    "P1-JULIA-EXTRACT-LOADINGS-RAW"
+   ],
    "reason": "Registration mismatch at P1: Julia symbol unpack_lambda not exported. Not twinned.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "FAIL",
     "category": "registration_mismatch",
@@ -7383,20 +7414,27 @@
    "r_file_line": "R/extractors.R:674",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/extract_lv_effects.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-LV-EFFECTS-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-EXTRACT-LV-EFFECTS-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_namespace_numeric_p1_twin.jl, against R extract_lv_effects(fit, type = ...) estimates copied from test/fixtures/ns_numeric_p1.toml (a predictor-informed rank-2 Gaussian fit's trait-scale B_lv and latent-axis alpha, Julia extract_lv_effects(fit; type = ...)), each case within the tolerance asserted in that test. R converged with a positive-definite Hessian. The Tier 0 registration receipts are kept un-cited under registration_receipts (the registration batch receipt carries a batch-level FAIL status, which would block the numeric binding if cited); the superseded case ids are in registration_case_ids."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-EXTRACT-LV-EFFECTS-NATIVE"
+    "P1-JULIA-LV-EFFECTS-TRAIT",
+    "P1-JULIA-LV-EFFECTS-AXIS"
    ],
    "reason": "R export(extract_lv_effects) registered and defined at P1; Julia `extract_lv_effects` is an exported Function (measured). Name match only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -7617,20 +7655,29 @@
    "r_file_line": "R/rotate-loadings.R:281",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/extract_rotated_loadings_table.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-ROTATED-LOADINGS-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-EXTRACT-ROTATED-LOADINGS-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_namespace_numeric_p1_twin.jl, against R extract_rotated_loadings_table(fit, method = \"varimax\") values copied from test/fixtures/ns_numeric_p1.toml (a rank-2 Gaussian fit's varimax table (raw and standardized loadings, axis variance, axis share), Julia extract_rotated_loadings_table(fit, Y; method = :varimax)), each case within the tolerance asserted in that test. R converged with a positive-definite Hessian. The Tier 0 registration receipts are kept un-cited under registration_receipts (the registration batch receipt carries a batch-level FAIL status, which would block the numeric binding if cited); the superseded case ids are in registration_case_ids."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-EXTRACT-ROTATED-LOADINGS-NATIVE"
+    "P1-JULIA-ROTATED-LOADINGS-TABLE-RAW",
+    "P1-JULIA-ROTATED-LOADINGS-TABLE-AXIS-VARIANCE",
+    "P1-JULIA-ROTATED-LOADINGS-TABLE-AXIS-SHARE",
+    "P1-JULIA-ROTATED-LOADINGS-TABLE-STANDARDIZED"
    ],
    "reason": "R export(extract_rotated_loadings_table) registered and defined at P1; Julia `ordination` is an exported Function (measured). Name match only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",

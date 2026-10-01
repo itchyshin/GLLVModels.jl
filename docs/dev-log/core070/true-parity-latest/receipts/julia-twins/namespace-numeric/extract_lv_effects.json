@@ -1,0 +1,98 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "namespace/export/extract_lv_effects"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#PENDING",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "a86d2279a8447fcf42c05a5751c9ba49a7c7da40",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/ns_numeric_p1.toml",
+      "sha256": "f7b6f252ecbfef1e6401e678abdf76d14f6caf0cac5190083d3521930a35474f"
+    },
+    {
+      "path": "test/fixtures/ns_lv_p1_data.csv",
+      "sha256": "5608b9d2fd65f316008a364e02623d2d9ceebc33bdb47a1159a6107eaec6798c"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_namespace_numeric_p1_twin.jl",
+      "sha256": "4f76e159872a2f56c982e5500cefa1a9f10e786b0d4042dc3f7b014b44ca7a9e"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-LV-EFFECTS-TRAIT",
+        "quantity": "type = trait_effect: B_lv = Lambda alpha', 6 x 2 (trait x predictor), rotation-stable",
+        "r_source": "test/fixtures/ns_numeric_p1.toml [lv.trait_effect]",
+        "julia_source": "GLLVModels.extract_lv_effects(fit; type = :trait_effect), as called at test/test_namespace_numeric_p1_twin.jl:113; fit as at test/test_namespace_numeric_p1_twin.jl:109",
+        "r_value": [
+          0.6670668285866946,
+          0.18819160360716017,
+          0.25182809514331783,
+          0.6158786653867898,
+          -0.17503744207544544,
+          0.40645434181737505,
+          -0.46002696337369925,
+          0.6712305473363377,
+          -0.8394557272117174,
+          0.023510797552518746,
+          0.8943321887517782,
+          -0.6832546785346902
+        ],
+        "julia_value": [
+          0.6670660422944938,
+          0.1881936434601482,
+          0.251826436815451,
+          0.6158783811411068,
+          -0.17503439730038822,
+          0.40645209306622765,
+          -0.4600266311695327,
+          0.6712325943599383,
+          -0.8394585515026955,
+          0.023511678196620298,
+          0.8943331872995034,
+          -0.6832562394199989
+        ],
+        "abs_diff": 3.04477505722045e-06,
+        "tolerance": 2e-05,
+        "tolerance_source": "test/test_namespace_numeric_p1_twin.jl:114",
+        "tolerance_source_line": "@test isapprox(Bj, _ns_mat(l[\"trait_effect\"], p, 2); atol = 2e-5, rtol = 0)",
+        "note": "Rank-2 Gaussian fit with two unit-level predictors (x1, x2) on the fixture data (sha256 checked); R: latent(0 + trait | unit, d = 2, lv = ~ x1 + x2, unique = FALSE) converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Point estimates only; standard errors are not compared."
+      },
+      {
+        "case_id": "P1-JULIA-LV-EFFECTS-AXIS",
+        "quantity": "type = axis_effect: alpha, 2 x 2 (predictor x latent axis)",
+        "r_source": "test/fixtures/ns_numeric_p1.toml [lv.axis_effect]",
+        "julia_source": "GLLVModels.extract_lv_effects(fit; type = :axis_effect), as called at test/test_namespace_numeric_p1_twin.jl:116; fit as at test/test_namespace_numeric_p1_twin.jl:109",
+        "r_value": [
+          0.7420706389059084,
+          -0.5117515786955367,
+          0.1876202875106176,
+          0.735000433071714
+        ],
+        "julia_value": [
+          0.7420718688660147,
+          -0.5117526605700069,
+          0.18761352494426842,
+          0.7350089291020819
+        ],
+        "abs_diff": 8.496030367899365e-06,
+        "tolerance": 5e-05,
+        "tolerance_source": "test/test_namespace_numeric_p1_twin.jl:117",
+        "tolerance_source_line": "@test isapprox(Aj, _ns_mat(l[\"axis_effect\"], 2, 2); atol = 5e-5, rtol = 0)",
+        "note": "Rank-2 Gaussian fit with two unit-level predictors (x1, x2) on the fixture data (sha256 checked); R: latent(0 + trait | unit, d = 2, lv = ~ x1 + x2, unique = FALSE) converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Point estimates only; standard errors are not compared. Axis effects are rotation dependent in general; both engines use the same lower-triangular Lambda convention here, so they are compared without alignment."
+      }
+    ]
+  }
+}

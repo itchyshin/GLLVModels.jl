@@ -1,0 +1,101 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "namespace/export/extract_Sigma_W"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#PENDING",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "a86d2279a8447fcf42c05a5751c9ba49a7c7da40",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/ns_numeric_p1.toml",
+      "sha256": "f7b6f252ecbfef1e6401e678abdf76d14f6caf0cac5190083d3521930a35474f"
+    },
+    {
+      "path": "test/fixtures/ns_twolevel_p1_data.csv",
+      "sha256": "a7431c767661f619b5b1d104f8cd9fe1d65a9e69ec715d53e2afe5b9374cb8ee"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_namespace_numeric_p1_twin.jl",
+      "sha256": "4f76e159872a2f56c982e5500cefa1a9f10e786b0d4042dc3f7b014b44ca7a9e"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-SIGMA-W-TWOLEVEL",
+        "quantity": "within-tier total covariance Sigma_W, 5 x 5",
+        "r_source": "test/fixtures/ns_numeric_p1.toml [two.sigma_unit_obs]",
+        "julia_source": "GLLVModels.extract_Sigma(fit; level = :unit_obs).Sigma, as called at test/test_namespace_numeric_p1_twin.jl:135; fit as at test/test_namespace_numeric_p1_twin.jl:127",
+        "r_value": [
+          1.0256403232626874,
+          -0.4653563998946468,
+          0.34320211815524404,
+          0.37993212705217705,
+          -0.5937766577607806,
+          -0.4653563998946468,
+          0.6635527748111192,
+          -0.2536417830940171,
+          -0.2807869097026562,
+          0.4388276245017957,
+          0.34320211815524404,
+          -0.2536417830940171,
+          0.6925627014756676,
+          0.20708141583963072,
+          -0.3236370452155521,
+          0.37993212705217705,
+          -0.2807869097026562,
+          0.20708141583963072,
+          0.5934855329708384,
+          -0.358273170464544,
+          -0.5937766577607806,
+          0.4388276245017957,
+          -0.3236370452155521,
+          -0.358273170464544,
+          0.9784525824746764
+        ],
+        "julia_value": [
+          1.025643022530846,
+          -0.4653584644345149,
+          0.3432056996552614,
+          0.37993529077326216,
+          -0.5937795840712602,
+          -0.4653584644345149,
+          0.6635551822897994,
+          -0.2536441387055803,
+          -0.2807889253845057,
+          0.43882928323741094,
+          0.3432056996552614,
+          -0.2536441387055803,
+          0.6925675830611779,
+          0.2070841447122731,
+          -0.3236402100598432,
+          0.37993529077326216,
+          -0.2807889253845057,
+          0.2070841447122731,
+          0.5934907574998114,
+          -0.3582759186065899,
+          -0.5937795840712602,
+          0.43882928323741094,
+          -0.3236402100598432,
+          -0.3582759186065899,
+          0.978457560890873
+        ],
+        "abs_diff": 5.224528973002407e-06,
+        "tolerance": 0.0001,
+        "tolerance_source": "test/test_namespace_numeric_p1_twin.jl:135",
+        "tolerance_source_line": "@test isapprox(extract_Sigma(fit; level = :unit_obs).Sigma, _ns_mat(t[\"sigma_unit_obs\"], p2, p2); atol = 1e-4, rtol = 0)",
+        "note": "Two-level Gaussian fit, p = 5, 120 units x 4 observations (sha256 checked); R: latent(d = 1) + unique at unit and at unit_obs, converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). R's observation-level residual sigma_eps is pinned near 0 by gllvmTMB when unique() is present, matching the Julia two-level model, which has no separate sigma_eps. The Julia call is extract_Sigma(fit; level = ...) on the two-level fit, the accessor that carries the legacy extract_Sigma_B / extract_Sigma_W payload (R: extract_Sigma_B(fit)$Sigma_B, soft-deprecated at 0.7.0 in favour of extract_Sigma(level = ...)); the registered Julia symbol for these rows is the TwoLevelFit type, not a function."
+      }
+    ]
+  }
+}
