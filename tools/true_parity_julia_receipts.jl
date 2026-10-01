@@ -46,6 +46,7 @@
 # OPENBLAS_NUM_THREADS=1 JULIA_NUM_THREADS=4: a few minutes.
 
 using GLLVModels, TOML, SHA, Statistics, Random, LinearAlgebra
+using Distributions: Normal   # root-project dependency; family marker for select_lv (section 5)
 const GMJ = GLLVModels
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
@@ -869,13 +870,68 @@ function receipts_temporal()
     return out
 end
 
+# =============================================================================================
+# 5. select-lv/select_lv   test/test_select_lv_p1_twin.jl (this PR)
+#    Gaussian rank sweep K = 1:3 vs R's select_lv() at P1 (criterion = bic, d_max = 3). The test also
+#    asserts npar and the selected rank EXACTLY (integers, no tolerance literal), so those have no
+#    numeric case here. print.gllvmTMB_select_lv has nothing numeric to compare and is not bound.
+# =============================================================================================
+function _load_select_lv_csv(path::AbstractString, trait_names::Vector{String}, n_unit::Integer)
+    Y = zeros(Float64, length(trait_names), n_unit)
+    open(path) do io
+        readline(io)
+        for line in eachline(io)
+            isempty(line) && continue
+            parts = split(line, ",")
+            unit = parse(Int, strip(parts[1], '"'))
+            t = findfirst(==(strip(parts[2], '"')), trait_names)
+            t === nothing && error("unrecognised trait in $path")
+            Y[t, unit] = parse(Float64, parts[3])
+        end
+    end
+    return Y
+end
+
+function receipts_select_lv()
+    fxp = "test/fixtures/select_lv_p1.toml"
+    tp = "test/test_select_lv_p1_twin.jl"
+    fx = TOML.parsefile(joinpath(ROOT, fxp))
+    fx["gllvmtmb_commit"] == P1_SHA || fail("select_lv fixture is not pinned at P1")
+    datap = "test/fixtures/" * fx["data_file"]
+    bytes2hex(sha256(read(joinpath(ROOT, datap)))) == fx["data_sha256"] || fail("select_lv data csv drifted")
+    r = fx["r_reference"]
+    (all(r["converged"]) && all(r["pd_hessian"])) || fail("select_lv fixture has a non-converged or non-PD-Hessian rank; not a valid twin (fence)")
+    Y = _load_select_lv_csv(joinpath(ROOT, datap), String.(fx["trait_names"]), Int(fx["n_unit"]))
+    Ks = Int.(r["d"])
+    sel = select_lv(Y; family = Normal(), Kmax = maximum(Ks), criterion = :bic)       # test line cited below
+    sel.K == Ks || fail("select_lv accepted ranks $(sel.K), expected $Ks")
+    sel.nparams == Int.(r["npar"]) || fail("select_lv npar differs from R")
+    sel.best_k == Int(r["selected_d"]) || fail("select_lv selected rank differs from R")
+    callc = cite(tp, "sel = select_lv(Y; family = Normal()")
+    note = "Rank sweep 1:3 on the fixture data (sha256 checked); vector case, abs_diff is the maximum over ranks. The test asserts npar and the selected rank (2, the true rank) exactly; both match R here. R reports converged and a positive-definite Hessian at every rank, so the sweep stays clear of the signed Hessian fence."
+    cases = [
+        mkcase("P1-JULIA-SELECT-LV-LOGLIK", "per-rank logLik, K = 1:3 (each side's own optimum)",
+            "$fxp [r_reference.loglik]", "GLLVModels.select_lv(Y; family = Normal(), Kmax = 3, criterion = :bic).loglik, as called at $callc",
+            Float64.(r["loglik"]), sel.loglik, test_tolerance(tp, "isapprox(sel.loglik, Float64.(r[\"loglik\"])"), note),
+        mkcase("P1-JULIA-SELECT-LV-AIC", "per-rank AIC, K = 1:3",
+            "$fxp [r_reference.aic]", "select_lv(...).aic, as called at $callc",
+            Float64.(r["aic"]), sel.aic, test_tolerance(tp, "isapprox(sel.aic,"), note),
+        mkcase("P1-JULIA-SELECT-LV-BIC", "per-rank BIC, penalty log(p*n) = log(900) (R's default criterion), K = 1:3",
+            "$fxp [r_reference.bic]", "select_lv(...).bic, as called at $callc",
+            Float64.(r["bic"]), sel.bic, test_tolerance(tp, "isapprox(sel.bic,"), note),
+    ]
+    return ["select-lv/select_lv.json" => Receipt(["select-lv/select_lv"], "itchyshin/GLLVModels.jl#518",
+        [fxp, datap], [tp], NOT_A_FIXTURE_PAIR, cases)]
+end
+
 # ---------------------------------------------------------------------------------------------
 # Driver
 # ---------------------------------------------------------------------------------------------
 function build()
     out = Pair{String,Receipt}[]
     for (name, f) in (("chibar", receipts_chibar), ("ordinal", receipts_ordinal),
-            ("latent-scores", receipts_latent_scores), ("temporal", receipts_temporal))
+            ("latent-scores", receipts_latent_scores), ("temporal", receipts_temporal),
+            ("select-lv", receipts_select_lv))
         t0 = time()
         append!(out, f())
         @info "built $name receipts" seconds = round(time() - t0; digits = 1)

@@ -42,6 +42,7 @@ Listed for the reader only. Binding a twin receipt to a case-map row is a mappin
 decision for the PR that measures it, not something this tool does.
 
 - `test/fixtures/gen_ordinal_logit_p1.R`
+- `test/fixtures/gen_select_lv_p1.R`
 - `test/fixtures/gen_zi_p1.R`
 - `test/fixtures/gen_zi_p1_julia_params.jl`
 - `test/fixtures/isdm/admission_p1.toml`
@@ -53,6 +54,8 @@ decision for the PR that measures it, not something this tool does.
 - `test/fixtures/isdm/r_values_psi_p1.toml`
 - `test/fixtures/ordinal_logit_p1.toml`
 - `test/fixtures/ordinal_logit_p1_data.csv`
+- `test/fixtures/select_lv_p1.toml`
+- `test/fixtures/select_lv_p1_data.csv`
 - `test/fixtures/temporal_p1/generate_temporal_p1.R`
 - `test/fixtures/temporal_p1/generate_temporal_p1_slice2.R`
 - `test/fixtures/zi_binomial_p1_data.csv`
