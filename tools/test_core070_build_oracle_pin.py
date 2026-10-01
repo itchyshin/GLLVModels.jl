@@ -62,8 +62,13 @@ def _build_oracle_constants(pin_value=None):
 
 
 class PinSelectionFollowsGllvmParityPin(unittest.TestCase):
-    def test_default_is_p0(self):
+    def test_default_is_p1(self):
         out = _build_oracle_constants()
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertEqual(out.stdout.splitlines()[0], parity_oracle.P1_GLLVMTMB_ORACLE)
+
+    def test_p0_selectable(self):
+        out = _build_oracle_constants("P0")
         self.assertEqual(out.returncode, 0, out.stderr)
         reference, namespace, source_tree, archive = out.stdout.splitlines()
         self.assertEqual(reference, parity_oracle.FROZEN_GLLVMTMB_ORACLE)

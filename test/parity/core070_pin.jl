@@ -7,7 +7,7 @@
 #
 # GLLVM_PARITY_PIN names which entry of tools/core070_oracle_pins.toml this
 # file's frozen-reference constants come from -- same switch, same default
-# ("P0"), and the same strict-on-unknown behavior as tools/parity_oracle.py's
+# ("P1"), and the same strict-on-unknown behavior as tools/parity_oracle.py's
 # Python side of this switch. The TOML file is the shared source of the
 # per-pin commit + companion byte hashes; neither this file nor
 # tools/core070_build_oracle.py hardcodes its own copy.
@@ -17,7 +17,7 @@ using TOML
 const _CORE070_PIN_ENV_VAR = "GLLVM_PARITY_PIN"
 const _CORE070_PINS_FILE = normpath(joinpath(@__DIR__, "..", "..", "tools", "core070_oracle_pins.toml"))
 
-_core070_selected_pin_name() = (raw = get(ENV, _CORE070_PIN_ENV_VAR, nothing); raw === nothing ? "P0" : uppercase(strip(raw)))
+_core070_selected_pin_name() = (raw = get(ENV, _CORE070_PIN_ENV_VAR, nothing); raw === nothing ? "P1" : uppercase(strip(raw)))
 
 function _core070_selected_pin()
     raw = get(ENV, _CORE070_PIN_ENV_VAR, nothing)
@@ -26,7 +26,7 @@ function _core070_selected_pin()
     haskey(pins, name) || error(
         "$_CORE070_PIN_ENV_VAR=$(repr(raw)) is not a recognized pin. Set " *
         "$_CORE070_PIN_ENV_VAR to one of $(sort(collect(keys(pins)))) " *
-        "(case/whitespace insensitive), or leave it unset to use the default (P0)."
+        "(case/whitespace insensitive), or leave it unset to use the default (P1)."
     )
     return pins[name]
 end

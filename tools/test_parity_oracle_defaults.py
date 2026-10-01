@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Smoke: parity tools default to frozen gllvmTMB 0.7.0 oracle (P13), plus the
-additive P1 pin and its opt-in GLLVM_PARITY_PIN switch (D-294/D-295)."""
+"""Smoke: parity tools default to the P1 gllvmTMB pin (default flipped from the
+frozen 0.7.0 oracle P0), with P0 still selectable via GLLVM_PARITY_PIN=P0
+(D-294/D-295)."""
 import argparse
 import os
 import subprocess
@@ -14,7 +15,7 @@ sys.path.insert(0, str(TOOLS))
 # Scrub the switch before importing, so this test file's own module-level
 # import of parity_oracle/parity_ledger (and every test below that reads
 # their already-imported attributes rather than spawning a clean subprocess)
-# reflects the P0 default regardless of whatever the ambient shell exports.
+# reflects the default pin regardless of whatever the ambient shell exports.
 os.environ.pop("GLLVM_PARITY_PIN", None)
 
 import parity_oracle  # noqa: E402
@@ -47,8 +48,8 @@ class ParityOracleDefaults(unittest.TestCase):
         )
         self.assertEqual(
             parity_oracle.DEFAULT_R_REF,
-            parity_oracle.FROZEN_GLLVMTMB_ORACLE,
-            "DEFAULT_R_REF drifted from the frozen P0 oracle -- if GLLVM_PARITY_PIN "
+            parity_oracle.P1_GLLVMTMB_ORACLE,
+            "DEFAULT_R_REF is not the P1 default -- if GLLVM_PARITY_PIN "
             "is exported in this shell, unset it before running this test",
         )
         self.assertEqual(parity_ledger.DEFAULT_REF, parity_oracle.DEFAULT_R_REF)
@@ -60,7 +61,7 @@ class ParityOracleDefaults(unittest.TestCase):
         ns = ap.parse_args([])
         self.assertEqual(
             ns.ref,
-            parity_oracle.FROZEN_GLLVMTMB_ORACLE,
+            parity_oracle.P1_GLLVMTMB_ORACLE,
             "unset GLLVM_PARITY_PIN before running this test if it is exported",
         )
         self.assertIsNone(ns.r_ref)
@@ -87,12 +88,16 @@ class ParityOracleDefaults(unittest.TestCase):
         self.assertEqual(parity_oracle.R_REF_PINS["P0"], parity_oracle.FROZEN_GLLVMTMB_ORACLE)
         self.assertEqual(parity_oracle.R_REF_PINS["P1"], parity_oracle.P1_GLLVMTMB_ORACLE)
 
-    def test_default_stays_p0_without_the_switch(self):
-        # The re-pin is additive: with GLLVM_PARITY_PIN unset, DEFAULT_R_REF
-        # (and everything derived from it, e.g. parity_ledger.DEFAULT_REF)
-        # must stay exactly what it is today. Flipping the default is a
-        # separate, later PR (see tools/parity_oracle.py docstring).
+    def test_default_is_p1_without_the_switch(self):
+        # With GLLVM_PARITY_PIN unset, DEFAULT_R_REF (and everything derived
+        # from it, e.g. parity_ledger.DEFAULT_REF) is the P1 pin.
         out = _default_r_ref_in_subprocess()
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertEqual(out.stdout.strip(), parity_oracle.P1_GLLVMTMB_ORACLE)
+
+    def test_pin_switch_selects_p0_when_set(self):
+        # P0 stays selectable (the frozen-R CI job relies on this).
+        out = _default_r_ref_in_subprocess("P0")
         self.assertEqual(out.returncode, 0, out.stderr)
         self.assertEqual(out.stdout.strip(), parity_oracle.FROZEN_GLLVMTMB_ORACLE)
 

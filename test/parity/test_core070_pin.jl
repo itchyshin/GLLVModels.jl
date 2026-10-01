@@ -3,7 +3,7 @@
 # No RCall, no R install: core070_pin.jl depends only on TOML + the standard
 # library, so this test spawns small subprocesses (needed because the pin is
 # resolved into `const`s at include-time -- a fresh process per scenario is
-# the simplest way to exercise both GLLVM_PARITY_PIN=<unset> and ="P1" without
+# the simplest way to exercise both GLLVM_PARITY_PIN=<unset> and ="P0"/"P1" without
 # redefining consts). Not included by runtests.jl or runparity.jl; run
 # directly:
 #   julia --project=. test/parity/test_core070_pin.jl
@@ -30,8 +30,14 @@ function run_pin_script(script::AbstractString; pin::Union{Nothing,AbstractStrin
 end
 
 @testset "core070_pin.jl" begin
-    @testset "P0 is the default" begin
+    @testset "P1 is the default" begin
         r = run_pin_script("""include(raw"$PIN_FILE"); println(_CORE070_REFERENCE_COMMIT)""")
+        @test r.success
+        @test strip(r.stdout) == P1_COMMIT
+    end
+
+    @testset "GLLVM_PARITY_PIN=P0 selects the P0 commit" begin
+        r = run_pin_script("""include(raw"$PIN_FILE"); println(_CORE070_REFERENCE_COMMIT)"""; pin = "P0")
         @test r.success
         @test strip(r.stdout) == P0_COMMIT
     end
@@ -54,7 +60,7 @@ end
             manifest = TOML.parsefile(raw"$CONTRACT_FILE")
             _core070_check_frozen_contract_pin(manifest, raw"$CONTRACT_FILE")
             println("PIN_GUARD_OK")
-            """)
+            """; pin = "P0")
         @test r.success
         @test occursin("PIN_GUARD_OK", r.stdout)
     end
@@ -79,7 +85,7 @@ end
             _core070_check_frozen_contract_pin(TOML.parsefile(path), path)
             println(rel)
             """
-        r0 = run_pin_script(script)
+        r0 = run_pin_script(script; pin = "P0")
         @test r0.success
         @test strip(r0.stdout) == "docs/dev-log/core070/frozen-r070-contract.toml"
         r1 = run_pin_script(script; pin = "P1")
@@ -101,7 +107,7 @@ end
         @test r1.success
         @test strip(r1.stdout) == "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json"
         # P0 selection keeps the historical .unlazy paths.
-        r0 = run_pin_script("""include(raw"$PIN_FILE"); println(_core070_oracle_receipts_rel().build)""")
+        r0 = run_pin_script("""include(raw"$PIN_FILE"); println(_core070_oracle_receipts_rel().build)"""; pin = "P0")
         @test r0.success
         @test strip(r0.stdout) == ".unlazy/core070-aghq/oracle-receipts/build.json"
     end
@@ -111,7 +117,7 @@ end
         r = run_pin_script("""
             include(raw"$PIN_FILE")
             _core070_check_oracle_receipt(read(raw"$build", String), "build.json", :build)
-            """)
+            """; pin = "P0")
         @test !r.success
         @test occursin("reference_commit", r.stderr)
         @test occursin(P1_COMMIT, r.stderr)

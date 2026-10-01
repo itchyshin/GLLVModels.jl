@@ -22,7 +22,7 @@ using GLLVModels
 # GLLVM_PARITY_PIN=P1 names the P1-regenerated contract and the P1 reference
 # commit (tools/core070_data_p1_contract.py; planned surfaces verbatim);
 # unset/P0 is unchanged. Any other value stops here.
-const PARITY_PIN = uppercase(strip(get(ENV, "GLLVM_PARITY_PIN", "P0")))
+const PARITY_PIN = uppercase(strip(get(ENV, "GLLVM_PARITY_PIN", "P1")))
 PARITY_PIN in ("P0", "P1") || error("GLLVM_PARITY_PIN must be P0 or P1, got $(repr(PARITY_PIN))")
 const CONTRACT_PATH = PARITY_PIN == "P1" ?
     joinpath(@__DIR__, "..", "docs", "dev-log", "core070", "true-parity-latest", "data-batch-contract-p1.json") :
