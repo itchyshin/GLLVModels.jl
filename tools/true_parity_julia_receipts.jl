@@ -1312,7 +1312,7 @@ end
 #     tidy (fixed effects), coef and deviance read test/fixtures/postfit_twins_p1.toml.
 # =============================================================================================
 function receipts_postfit_twins()
-    ORIGIN = "itchyshin/GLLVModels.jl#ORIGIN_PR"
+    ORIGIN = "itchyshin/GLLVModels.jl#660"
     out = Pair{String,Receipt}[]
     dir = "test/fixtures/"
     mk(rel, sid, fixs, tests, cs) = push!(out, "postfit-twins/$rel.json" => Receipt([sid], ORIGIN, fixs, tests, NOT_A_FIXTURE_PAIR, cs))
