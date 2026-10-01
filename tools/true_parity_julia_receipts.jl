@@ -1330,7 +1330,7 @@ function receipts_namespace_numeric_b()
     fx["gllvmtmb_commit"] == P1_SHA || fail("namespace numeric (b) fixture is not pinned at P1")
     dir = "test/fixtures/"
     p, n = Int(fx["p"]), Int(fx["n_unit"])
-    ORIGIN = "itchyshin/GLLVModels.jl#661"
+    ORIGIN = "itchyshin/GLLVModels.jl#663"
     function chk(sec)
         d = fx[sec]
         datap = dir * d["data_file"]
