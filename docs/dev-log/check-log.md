@@ -8,6 +8,23 @@
 - Also run, Julia 1.10.12: test_confint_bootstrap_verdict_betabinomial 76/76, _nb 51/51, _nb1 36/36,
   _truncated 34/34, _beta 36/36, _gamma 36/36, test_confint_family 341/341,
   test_nb_grouped_upper_warn 18/18.
+## 2026-10-01: aghq numeric twins at gllvmTMB P1 (10 rows)
+
+- Branch `claude/true-parity-aghq-twins` from `origin/main` (`9ad7b0036`). Maintainer approved the feasible
+  aghq Julia twins on 2026-10-01. New: `test/test_aghq_p1_twin.jl`, `test/fixtures/aghq_p1/` (generator
+  `gen_aghq_p1.R`, fixture `aghq_p1.toml`, five CSVs, shared helper), receipts under
+  `receipts/julia-twins/aghq/`, an aghq section in `tools/true_parity_julia_receipts.jl`, and an overlay in
+  `tools/core070_aghq_p1_receipts.py` (`--apply-twins`) that adds the twin evidence fields to the rows.
+- Rows: AUTO-K-POISSON, -BINOMIAL, -GAUSSIAN, DEFAULT-OFF, POLICY-OFF, -EXPLICIT, -EXPLICIT-BYPASS-CUTOFF,
+  -AUTO-ENFORCE-CUTOFF, -TRAITS19, -TRAITS20 (same fit as AUTO-ENFORCE-CUTOFF). Not twinned: AUTO-K-NB2,
+  -DELTA, -ORDINAL, -TWEEDIE (no `aghq=` in Julia) and the 7 AGHQ-CTRL rows (label controls, no number).
+- R oracle: gllvmTMB 0.7.1 built from the P1 worktree at `9539352f6`; all 1247 top-level R functions
+  deparse identically to the P1 source. Generator guards the library path.
+- Convergence required on both sides. Policy-bind toy data stall; simulated data with a real factor and 10
+  binomial trials per cell used instead. Poisson p = 5 was hard on both engines: R rejected 9 seeds, Julia a
+  further 4 (no_merit_descent, logLik 3e-5 to 2e-4 below R); the 10th candidate converged on both.
+- Julia 1.10.0, OPENBLAS_NUM_THREADS=1, JULIA_NUM_THREADS=4: test 78/78 (53 s); receipt tool 162 s; R
+  generator 18 s.
 
 ## 2026-09-30: Student-t mode search keeps the higher of two peaks (#626)
 

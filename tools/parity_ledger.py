@@ -47,7 +47,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from parity_oracle import CAPABILITY_LEDGER_REF, DEFAULT_R_REF, FROZEN_GLLVMTMB_ORACLE
+from parity_oracle import CAPABILITY_LEDGER_REF, DEFAULT_R_REF, P1_GLLVMTMB_ORACLE
 
 DEFAULT_GLLVMTMB = "/Users/z3437171/Dropbox/Github Local/gllvmTMB"
 DEFAULT_REF = DEFAULT_R_REF
@@ -531,9 +531,9 @@ def self_test() -> int:
             NOT_CAPABILITY.clear()
             NOT_CAPABILITY.update(old_not_cap)
 
-    assert DEFAULT_REF == FROZEN_GLLVMTMB_ORACLE, (
-        f"DEFAULT_REF={DEFAULT_REF} (expected the frozen P0 oracle {FROZEN_GLLVMTMB_ORACLE}; "
-        "unset GLLVM_PARITY_PIN, or leave it at P0, before running --self-test)"
+    assert DEFAULT_REF == P1_GLLVMTMB_ORACLE, (
+        f"DEFAULT_REF={DEFAULT_REF} (expected the P1 default {P1_GLLVMTMB_ORACLE}; "
+        "unset GLLVM_PARITY_PIN, or leave it at P1, before running --self-test)"
     )
     print("SELFTEST_OK")
     return 0

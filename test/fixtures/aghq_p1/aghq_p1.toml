@@ -1,0 +1,179 @@
+# Twin fixture for the aghq policy rows (gllvmTMB 0.7.1 at P1). Generated once by
+# gen_aghq_p1.R from the CSVs in this directory (sha256 guarded). Do not hand-edit
+# the [case.*.r] blocks; regenerate them from the script.
+gllvmtmb_commit = "9539352f66f2db2cc26b1c393e67212a359b60c9"
+gllvmtmb_version = "0.7.1"
+r_version = "R version 4.6.0 (2026-04-24)"
+
+[dataset.poisson_p5]
+file = "aghq_poisson_p5.csv"
+sha256 = "ae4e3ee636988df2d751234ed0fa4464c2f9ecf026e5f52631b503a5ec842df6"
+family = "poisson"
+seed = 20260113
+p = 5
+n_unit = 150
+rejected_seeds = [20260100, 20260101, 20260102, 20260104, 20260105, 20260106, 20260108, 20260109, 20260112]
+julia_rejected_seeds = [20260103, 20260107, 20260110, 20260111]
+trait_names = ["t1", "t2", "t3", "t4", "t5"]
+
+[dataset.gaussian_p5]
+file = "aghq_gaussian_p5.csv"
+sha256 = "184f0a6bea6ef653f445cc6487b2c292f22b9097b736c08c4d4c610351b97152"
+family = "gaussian"
+seed = 20260200
+p = 5
+n_unit = 150
+rejected_seeds = []
+julia_rejected_seeds = []
+trait_names = ["t1", "t2", "t3", "t4", "t5"]
+
+[dataset.binomial_p5]
+file = "aghq_binomial_p5.csv"
+sha256 = "f69d5228f66542b907ae5463075423a039260cbaf96feb78f232447fce734e73"
+family = "binomial"
+seed = 20260300
+p = 5
+n_unit = 100
+rejected_seeds = []
+julia_rejected_seeds = []
+trait_names = ["t1", "t2", "t3", "t4", "t5"]
+
+[dataset.binomial_p19]
+file = "aghq_binomial_p19.csv"
+sha256 = "264662fb9c09f1ac1bad8b71d784ba1dae2df0c4e0fb929091a460b8ab139c72"
+family = "binomial"
+seed = 20260400
+p = 19
+n_unit = 100
+rejected_seeds = []
+julia_rejected_seeds = []
+trait_names = ["t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9", "t10", "t11", "t12", "t13", "t14", "t15", "t16", "t17", "t18", "t19"]
+
+[dataset.binomial_p20]
+file = "aghq_binomial_p20.csv"
+sha256 = "d1a032f98c23c1a32653f7514176b68b3566c0afb1c386945a7d4ba8747a91a6"
+family = "binomial"
+seed = 20260500
+p = 20
+n_unit = 100
+rejected_seeds = []
+julia_rejected_seeds = []
+trait_names = ["t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9", "t10", "t11", "t12", "t13", "t14", "t15", "t16", "t17", "t18", "t19", "t20"]
+
+[case.AGHQ-AUTO-K-POISSON]
+dataset = "poisson_p5"
+aghq_request = "auto"
+
+[case.AGHQ-AUTO-K-POISSON.r]
+used = true
+k = 5
+converged = true
+loglik = -1331.4858554550558
+beta = [-0.12480096324501676, 0.38743045066768617, 0.40578786838667319, 0.73724123182557011, 0.81534846609227574]
+lambda = [1.118873130840687, -0.80701098550730044, 0.71700924200095228, -0.591032324952387, 0.95497917856159609]
+reason = "quadrature on z_B (d = 1, k = 5, 5 nodes); 11 adaptation passes, converged (adaptation mode fixed; gradient below tolerance; max |grad| = 0.000878, relative 6.59e-07); final max |mode shift| = 9.65e-05"
+
+[case.AGHQ-AUTO-K-BINOMIAL]
+dataset = "binomial_p5"
+aghq_request = "auto"
+
+[case.AGHQ-AUTO-K-BINOMIAL.r]
+used = true
+k = 5
+converged = true
+loglik = -979.26046164833383
+beta = [-0.38207090116989595, -0.16995253340949759, 0.072054842186403428, 0.30449373300181687, 0.67179984000666826]
+lambda = [0.79344454962255317, -0.64150521150471596, 0.54045449972718895, -0.29305707063467151, 0.52796926135813338]
+reason = "quadrature on z_B (d = 1, k = 5, 5 nodes); 9 adaptation passes, converged (adaptation mode fixed; gradient below tolerance; max |grad| = 0.000488, relative 4.99e-07); final max |mode shift| = 1.92e-05"
+
+[case.AGHQ-AUTO-K-GAUSSIAN]
+dataset = "gaussian_p5"
+aghq_request = "auto"
+
+[case.AGHQ-AUTO-K-GAUSSIAN.r]
+used = true
+k = 5
+converged = true
+loglik = -745.76517715022135
+beta = [-0.39949608754100113, -0.12098971320674085, 0.13432306839086133, 0.34098130443261215, 0.65495041701583867]
+lambda = [1.0371884268135749, -0.81806224144578121, 0.6649206413904577, -0.61545282961661874, 0.8594469081018814]
+sigma_eps = 0.50191389886826066
+reason = "quadrature on z_B (d = 1, k = 5, 5 nodes); 11 adaptation passes, converged (adaptation mode fixed; gradient below tolerance; max |grad| = 0.000184, relative 2.47e-07); final max |mode shift| = 8.98e-07"
+
+[case.AGHQ-DEFAULT-OFF]
+dataset = "poisson_p5"
+aghq_request = "default"
+
+[case.AGHQ-DEFAULT-OFF.r]
+used = false
+k = 0
+converged = true
+loglik = -1330.7237120730206
+beta = [-0.12287858857312758, 0.38422849452353219, 0.40744973556947894, 0.7359298168052919, 0.81735790263718011]
+lambda = [1.11888734805905, -0.81208118268286533, 0.71625321157736632, -0.59329867280269921, 0.95450170223299613]
+reason = "aghq not requested"
+
+[case.AGHQ-POLICY-OFF]
+dataset = "binomial_p5"
+aghq_request = "false"
+
+[case.AGHQ-POLICY-OFF.r]
+used = false
+k = 0
+converged = true
+loglik = -979.63695857472567
+beta = [-0.38209246923704093, -0.16999217345267831, 0.072066863232529907, 0.3045358401689201, 0.67199120069140339]
+lambda = [0.78887261067597492, -0.63938984759808182, 0.53939712475447033, -0.29352428075909831, 0.52768683490882851]
+reason = "aghq not requested"
+
+[case.AGHQ-POLICY-EXPLICIT]
+dataset = "binomial_p5"
+aghq_request = "3"
+
+[case.AGHQ-POLICY-EXPLICIT.r]
+used = true
+k = 3
+converged = true
+loglik = -979.28961011929835
+beta = [-0.38208639443547443, -0.17006815788086438, 0.072135726144453197, 0.30447368038178929, 0.67196808729959123]
+lambda = [0.79697310840783087, -0.64440244276297332, 0.5429543607244891, -0.29453006396903625, 0.53043877879356438]
+reason = "quadrature on z_B (d = 1, k = 3, 3 nodes); 23 adaptation passes, converged (adaptation mode fixed; gradient below tolerance; max |grad| = 0.000108, relative 1.1e-07); final max |mode shift| = 1.89e-06"
+
+[case.AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF]
+dataset = "binomial_p20"
+aghq_request = "9"
+
+[case.AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF.r]
+used = true
+k = 9
+converged = true
+loglik = -3728.4121739212783
+beta = [-0.20100148128506817, -0.36850967647259009, -0.22007887053654235, -0.31429183731996496, -0.10648206374625777, -0.054925430696545381, -0.11934698524743755, 0.10136741397133811, -0.14967900978686693, 0.069084673073975075, 0.17323623390265985, 0.2193725122515196, 0.25165096153498384, 0.36028488977088885, 0.44708592660024077, 0.53509755411269411, 0.40060171769945879, 0.62038229613507501, 0.49713846929531041, 0.66782763451098526]
+lambda = [0.79767829279020852, -0.78268552795827773, 0.61189770522083031, -0.4900567512668752, 0.84101868407412461, 0.82178620614134035, -0.77969316123596666, 0.53763634066512311, -0.57785802272196707, 0.76861977836148554, 0.87519900298101139, -0.66934394807658837, 0.61245035156925998, -0.59846790704433672, 0.85216012751929759, 1.0566582450503037, -0.72182100893431989, 0.68706904295003879, -0.57888270308853629, 0.79607377809098601]
+reason = "quadrature on z_B (d = 1, k = 9, 9 nodes); 23 adaptation passes, converged (adaptation mode fixed; gradient below tolerance; max |grad| = 0.000238, relative 6.39e-08); final max |mode shift| = 4.08e-06"
+
+[case.AGHQ-POLICY-AUTO-ENFORCE-CUTOFF]
+dataset = "binomial_p20"
+aghq_request = "auto"
+
+[case.AGHQ-POLICY-AUTO-ENFORCE-CUTOFF.r]
+used = false
+k = 0
+converged = true
+loglik = -3728.551546786276
+beta = [-0.20104595175803347, -0.36848174812422496, -0.22011234856255835, -0.31427316463603833, -0.10652488360673468, -0.054964392913136692, -0.1193118235304212, 0.10134512525454352, -0.14965316909112197, 0.069047660715405482, 0.17320103480657717, 0.21941100861353091, 0.25162755271711307, 0.36032061476748278, 0.44705447268800774, 0.53506004036302801, 0.4006478780467882, 0.62036185722383441, 0.49717409695742953, 0.66781202446790111]
+lambda = [0.79750837044373957, -0.78253217115149554, 0.61183889825664084, -0.49004141116060024, 0.84081609094709686, 0.8215926943069628, -0.77953062416162977, 0.53760007561872269, -0.57780678992274903, 0.76846572137918023, 0.87497646374181159, -0.66925715590389034, 0.61238593331832825, -0.59842779629608744, 0.85196641868432388, 1.0563340520154878, -0.72172066192563922, 0.68698514638366059, -0.57885513029807512, 0.79593208829470763]
+reason = "laplace: auto: n_traits = 20 >= cutoff 20 -- Pinheiro & Chao (2006) measure the AGHQ-over-Laplace gain falling to three-decimal agreement by cluster size ~30 at d=3 (and already small at d=2, n=20); declining to Laplace rather than paying k^(q+1) cost for a near-vanished gain"
+
+[case.AGHQ-POLICY-TRAITS19]
+dataset = "binomial_p19"
+aghq_request = "auto"
+
+[case.AGHQ-POLICY-TRAITS19.r]
+used = true
+k = 5
+converged = true
+loglik = -3554.2041723147531
+beta = [-0.35170761306537424, -0.35336973894323537, -0.36032626932391359, -0.082670961515543512, -0.28366053350589987, -0.19642107420257779, -0.027406301161848164, -0.048880108959818404, -0.01978898762050163, 0.0095444959902971273, -0.0076865223804222747, 0.34577141616749002, 0.24327559386267486, 0.35940096952923356, 0.48607865702618691, 0.40139111600967359, 0.58900928202601499, 0.47352168119558224, 0.7130891550807702]
+lambda = [0.80824432511105626, -0.68468650590626867, 0.54356699408265252, -0.45826356677001179, 0.62449014942424041, 0.83963970020170187, -0.61189316590692533, 0.52397884474606315, -0.40825806636174006, 0.65776392330138933, 0.89680816334393243, -0.57685283872362325, 0.45596546958223649, -0.42795245802878024, 0.76197750677881793, 0.80888234809221593, -0.63898742413959841, 0.46805952270306916, -0.47511921455593564]
+reason = "quadrature on z_B (d = 1, k = 5, 5 nodes); 5 adaptation passes, converged (adaptation mode fixed; gradient below tolerance; max |grad| = 0.00191, relative 5.37e-07); final max |mode shift| = 6.36e-05"

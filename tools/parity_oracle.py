@@ -7,16 +7,14 @@ post-dates the oracle commit and is absent at ``DEFAULT_R_REF``.
 
 P1 re-pin (D-294/D-295, 2026-09-27): the maintainer re-targeted the true-parity
 programme at gllvmTMB ``main`` ``9539352f6`` (0.7.1, untagged as of 2026-09-27).
-This is ADDITIVE -- ``FROZEN_GLLVMTMB_ORACLE`` / ``DEFAULT_R_REF`` are unchanged
-and every P0 receipt, pin string, and test that asserts P0 stays valid.
-``P1_GLLVMTMB_ORACLE`` is a second, independently selectable pin; set the
-``GLLVM_PARITY_PIN`` environment variable to ``"P1"`` (case/whitespace
-insensitive) to have ``DEFAULT_R_REF`` resolve to it instead. An unrecognized
+``FROZEN_GLLVMTMB_ORACLE`` (P0) is unchanged and every P0 receipt and pin string
+stays valid. ``P1_GLLVMTMB_ORACLE`` is now the DEFAULT (``_DEFAULT_PIN = "P1"``);
+set the ``GLLVM_PARITY_PIN`` environment variable to ``"P0"`` (case/whitespace
+insensitive) to have ``DEFAULT_R_REF`` resolve to the frozen oracle instead. An unrecognized
 value raises ``SystemExit`` at import time rather than silently falling back
 to P0.
 
-Flipping the *default* is a one-token change once P1 twin tests exist: set
-``_DEFAULT_PIN = "P1"`` below. Nothing else in this module changes -- see
+The default is the single token ``_DEFAULT_PIN`` below -- see
 ``docs/dev-log/core070/true-parity-latest/GATES.md`` clause C0, which checks
 for exactly that token.
 """
@@ -44,15 +42,14 @@ R_REF_PINS = {
 # Explicit, documented pin switch. Set the GLLVM_PARITY_PIN environment
 # variable (any case, surrounding whitespace ignored: "p1", " P1 " and "P1"
 # all select P1) to make DEFAULT_R_REF resolve to a pin other than the
-# default below. This PR does NOT flip the default itself; every existing P0
-# test and tool (tools/parity_ledger.py's --self-test,
-# tools/test_parity_oracle_defaults.py) keeps behaving exactly as today
-# unless a caller opts in via this variable.
+# default below. The default is P1; set GLLVM_PARITY_PIN=P0 to select the
+# frozen 0.7.0 oracle (the CI "Frozen R 0.7.0 family smoke" job does so
+# explicitly).
 _PIN_ENV_VAR = "GLLVM_PARITY_PIN"
 
-# The only line that changes when the programme re-points the default pin
-# (a separate PR, once P1 twin tests exist): set this to "P1".
-_DEFAULT_PIN = "P0"
+# The only line that changes when the programme re-points the default pin.
+# Flipped P0 -> P1 (maintainer-approved); C0 in GATES.md reads this token.
+_DEFAULT_PIN = "P1"
 
 _raw_pin = os.environ.get(_PIN_ENV_VAR)
 if _raw_pin is None:

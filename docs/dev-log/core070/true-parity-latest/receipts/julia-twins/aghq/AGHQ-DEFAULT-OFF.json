@@ -1,0 +1,122 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "aghq/AGHQ-DEFAULT-OFF"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#586",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "a86d2279a8447fcf42c05a5751c9ba49a7c7da40",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/aghq_p1/aghq_p1.toml",
+      "sha256": "6b4f5e0ccd59216891f01055c22944ddf68287854b8b6d50307c3ed72353f745"
+    },
+    {
+      "path": "test/fixtures/aghq_p1/aghq_poisson_p5.csv",
+      "sha256": "ae4e3ee636988df2d751234ed0fa4464c2f9ecf026e5f52631b503a5ec842df6"
+    },
+    {
+      "path": "test/fixtures/aghq_p1/aghq_p1_helpers.jl",
+      "sha256": "d92bd93aaf1b1a8f420cf063167d253c576e56fba0dac9a1bd5b1025315723ab"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_aghq_p1_twin.jl",
+      "sha256": "20a808b76c1a5bf6f4821e437c998b56113f9649f0fa2fbb16f67d1735fbaa6d"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-AGHQ-DEFAULT-OFF-DECISION",
+        "quantity": "integration actually used: [AGHQ used (1/0), node count k] (Laplace = [0, 0])",
+        "r_source": "test/fixtures/aghq_p1/aghq_p1.toml [case.AGHQ-DEFAULT-OFF.r].used, k",
+        "julia_source": "GLLVModels fit_poisson_gllvm(...; K = 1, aghq = false) via test/fixtures/aghq_p1/aghq_p1_helpers.jl aghq_p1_fit, as called at test/test_aghq_p1_twin.jl:62: integration.actual, integration.k",
+        "r_value": [
+          0.0,
+          0.0
+        ],
+        "julia_value": [
+          0.0,
+          0.0
+        ],
+        "abs_diff": 0.0,
+        "tolerance": 0.5,
+        "tolerance_source": "test/test_aghq_p1_twin.jl:73",
+        "tolerance_source_line": "@test maximum(abs.(dec_j .- dec_r)) <= 0.5",
+        "note": "Data read from test/fixtures/aghq_p1/aghq_poisson_p5.csv (sha256 checked); poisson p = 5, n = 150 (seed 20260113), aghq request \"default\". R and Julia both converged (R: optimiser code 0; Julia: fit.converged). Integers, so the test's <= 0.5 is exact equality."
+      },
+      {
+        "case_id": "P1-JULIA-AGHQ-DEFAULT-OFF-LOGLIK",
+        "quantity": "logLik at each side's own optimum",
+        "r_source": "test/fixtures/aghq_p1/aghq_p1.toml [case.AGHQ-DEFAULT-OFF.r].loglik",
+        "julia_source": "GLLVModels fit_poisson_gllvm(...; K = 1, aghq = false) via test/fixtures/aghq_p1/aghq_p1_helpers.jl aghq_p1_fit, as called at test/test_aghq_p1_twin.jl:62: loglik",
+        "r_value": -1330.7237120730206,
+        "julia_value": -1330.7237120446955,
+        "abs_diff": 2.8325075618340634e-08,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_aghq_p1_twin.jl:74",
+        "tolerance_source_line": "@test isapprox(j.loglik, r[\"loglik\"]; atol = 1e-6, rtol = 0)",
+        "note": "Data read from test/fixtures/aghq_p1/aghq_poisson_p5.csv (sha256 checked); poisson p = 5, n = 150 (seed 20260113), aghq request \"default\". R and Julia both converged (R: optimiser code 0; Julia: fit.converged)."
+      },
+      {
+        "case_id": "P1-JULIA-AGHQ-DEFAULT-OFF-BETA",
+        "quantity": "per-trait intercepts at each side's own optimum",
+        "r_source": "test/fixtures/aghq_p1/aghq_p1.toml [case.AGHQ-DEFAULT-OFF.r].beta",
+        "julia_source": "GLLVModels fit_poisson_gllvm(...; K = 1, aghq = false) via test/fixtures/aghq_p1/aghq_p1_helpers.jl aghq_p1_fit, as called at test/test_aghq_p1_twin.jl:62: beta",
+        "r_value": [
+          -0.12287858857312758,
+          0.3842284945235322,
+          0.40744973556947894,
+          0.7359298168052919,
+          0.8173579026371801
+        ],
+        "julia_value": [
+          -0.12290316215609567,
+          0.3842395515519409,
+          0.40743975191170656,
+          0.7359396441870877,
+          0.8173422827963377
+        ],
+        "abs_diff": 2.4573582968090424e-05,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_aghq_p1_twin.jl:75",
+        "tolerance_source_line": "@test isapprox(j.beta, Float64.(r[\"beta\"]); atol = 1e-3, rtol = 0)",
+        "note": "Data read from test/fixtures/aghq_p1/aghq_poisson_p5.csv (sha256 checked); poisson p = 5, n = 150 (seed 20260113), aghq request \"default\". R and Julia both converged (R: optimiser code 0; Julia: fit.converged)."
+      },
+      {
+        "case_id": "P1-JULIA-AGHQ-DEFAULT-OFF-LAMBDA",
+        "quantity": "loadings at each side's own optimum, sign-aligned to R",
+        "r_source": "test/fixtures/aghq_p1/aghq_p1.toml [case.AGHQ-DEFAULT-OFF.r].lambda",
+        "julia_source": "GLLVModels fit_poisson_gllvm(...; K = 1, aghq = false) via test/fixtures/aghq_p1/aghq_p1_helpers.jl aghq_p1_fit, as called at test/test_aghq_p1_twin.jl:62: lambda (times +-1 so that sum(lambda_julia * lambda_R) >= 0)",
+        "r_value": [
+          1.11888734805905,
+          -0.8120811826828653,
+          0.7162532115773663,
+          -0.5932986728026992,
+          0.9545017022329961
+        ],
+        "julia_value": [
+          1.1188966191920058,
+          -0.8120775820950188,
+          0.716256735211535,
+          -0.5932924634738933,
+          0.9545018698403365
+        ],
+        "abs_diff": 9.271132955790407e-06,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_aghq_p1_twin.jl:76",
+        "tolerance_source_line": "@test isapprox(j.lambda, Float64.(r[\"lambda\"]); atol = 1e-3, rtol = 0)",
+        "note": "Data read from test/fixtures/aghq_p1/aghq_poisson_p5.csv (sha256 checked); poisson p = 5, n = 150 (seed 20260113), aghq request \"default\". R and Julia both converged (R: optimiser code 0; Julia: fit.converged). The single latent axis is identified up to sign; Julia's loadings are multiplied by the +-1 the test applies."
+      }
+    ]
+  }
+}

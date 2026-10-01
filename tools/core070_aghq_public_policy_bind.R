@@ -14,7 +14,7 @@
 args <- commandArgs(TRUE)
 stopifnot(length(args) == 2L)
 
-# Pin switch (D-294/D-295): GLLVM_PARITY_PIN unset or "P0" keeps the original
+# Pin switch (D-294/D-295): GLLVM_PARITY_PIN unset means P1; "P0" keeps the original
 # 2026-09-04 behaviour below (devtools::load_all on a gllvmTMB source tree,
 # receipt written to <receipt-json-out>). "P1" runs the same 14 rows against
 # the installed P1 oracle library instead:
@@ -27,7 +27,7 @@ stopifnot(length(args) == 2L)
 # CORE070_SOURCE_PIN.toml marker for P1 (tools/core070_source_pin.R), and
 # <destination> (a directory that must not exist) is created only after those
 # checks pass; it receives receipt.json. Any other pin value stops here.
-parity_pin <- toupper(trimws(Sys.getenv("GLLVM_PARITY_PIN", "P0")))
+parity_pin <- toupper(trimws(Sys.getenv("GLLVM_PARITY_PIN", "P1")))
 if (!parity_pin %in% c("P0", "P1")) stop("GLLVM_PARITY_PIN must be P0 or P1, got '", parity_pin, "'")
 p1_reference <- "9539352f66f2db2cc26b1c393e67212a359b60c9"
 p1_contract_rel <- "docs/dev-log/core070/true-parity-latest/aghq-public-policy-contract-p1.json"

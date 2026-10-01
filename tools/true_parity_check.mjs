@@ -513,9 +513,16 @@ function checkC1() {
 
 // --- C2..C5: scoreboard tiers, plus C2's boundary-capability cross-check --
 
+// The assembled scoreboard prefixes every id with its family (`data-RD-01`, `grouping-GRP-..`), so a
+// tier marker is recognised after any `<family>-` prefix (one or more hyphenated segments). A marker buried mid-word
+// (`family-NB2RD-X`) is deliberately not matched.
+const isRD = (r) => /^(?:[a-z0-9_]+-)*RD-/i.test(r.id);
+const isGRP = (r) => /^(?:[a-z0-9_]+-)*GRP-/i.test(r.id);
+const isRSZ = (r) => /-RSZ$/i.test(r.id);
+
 function checkC2() {
   const rows = scoreboardRows();
-  const boardOk = report('C2 P1-boundary capabilities', rows, (r) => !/-RSZ$/i.test(r.id) && !/^RD-/i.test(r.id) && !/^GRP-/i.test(r.id));
+  const boardOk = report('C2 P1-boundary capabilities', rows, (r) => !isRSZ(r) && !isRD(r) && !isGRP(r));
   // Cross-check against the case-map: every row carrying a "capability" tag must resolve to
   // a scoreboard row id, or C2 fails even if every scoreboard row itself is done (control (b)).
   const cm = loadCasemap();
@@ -525,9 +532,9 @@ function checkC2() {
   return boardOk && missing.length === 0;
 }
 
-function checkC3() { return report('C3 realistic-size', scoreboardRows(), (r) => /-RSZ$/i.test(r.id)); }
-function checkC4() { return report('C4 real-data workflows', scoreboardRows(), (r) => /^RD-/i.test(r.id)); }
-function checkC5() { return report('C5 grouping levels', scoreboardRows(), (r) => /^GRP-/i.test(r.id)); }
+function checkC3() { return report('C3 realistic-size', scoreboardRows(), isRSZ); }
+function checkC4() { return report('C4 real-data workflows', scoreboardRows(), isRD); }
+function checkC5() { return report('C5 grouping levels', scoreboardRows(), isGRP); }
 
 // --- C6: reverse-gap list, one written decision per item, from a fixed vocabulary ----
 

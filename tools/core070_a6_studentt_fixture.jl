@@ -83,11 +83,11 @@ using Random, Distributions, LinearAlgebra, DelimitedFiles, Statistics
 using SHA, TOML
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
-# Pin switch (D-294/D-295): GLLVM_PARITY_PIN unset or "P0" keeps the P0
+# Pin switch (D-294/D-295): GLLVM_PARITY_PIN unset means P1; "P0" keeps the P0
 # contract; "P1" names the twin written by tools/core070_family_p1_contract.py.
 # The reference commit comes from tools/core070_oracle_pins.toml and must equal
 # the contract's own. Any other value stops.
-const PARITY_PIN = uppercase(strip(get(ENV, "GLLVM_PARITY_PIN", "P0")))
+const PARITY_PIN = uppercase(strip(get(ENV, "GLLVM_PARITY_PIN", "P1")))
 PARITY_PIN in ("P0", "P1") || error("GLLVM_PARITY_PIN must be P0 or P1, got $(repr(PARITY_PIN))")
 const CONTRACT_PATH = joinpath(ROOT, PARITY_PIN == "P1" ?
     "docs/dev-log/core070/true-parity-latest/a6-studentt-contract-p1.json" :

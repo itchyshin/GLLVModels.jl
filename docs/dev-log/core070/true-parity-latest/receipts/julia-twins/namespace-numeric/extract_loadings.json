@@ -1,0 +1,75 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "namespace/export/extract_loadings"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#652",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "a86d2279a8447fcf42c05a5751c9ba49a7c7da40",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/ns_numeric_p1.toml",
+      "sha256": "f7b6f252ecbfef1e6401e678abdf76d14f6caf0cac5190083d3521930a35474f"
+    },
+    {
+      "path": "test/fixtures/ns_gauss_p1_data.csv",
+      "sha256": "e714fa10411f6a66150c534506dec87cf1c748fed4c55ae13942828f1fca0326"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_namespace_numeric_p1_twin.jl",
+      "sha256": "4f76e159872a2f56c982e5500cefa1a9f10e786b0d4042dc3f7b014b44ca7a9e"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-EXTRACT-LOADINGS-RAW",
+        "quantity": "raw (rotate = none) lower-triangular loading matrix, 6 x 2",
+        "r_source": "test/fixtures/ns_numeric_p1.toml [main.loadings]",
+        "julia_source": "GLLVModels.extract_loadings(fit; rotate = false), as called at test/test_namespace_numeric_p1_twin.jl:90; fit as at test/test_namespace_numeric_p1_twin.jl:85",
+        "r_value": [
+          0.9449654236734252,
+          0.00186581940124497,
+          0.594617142573408,
+          0.8145975022385746,
+          -0.44708772580061673,
+          0.7111135471532497,
+          0.0,
+          0.8717553524629954,
+          -0.6686395553138914,
+          0.50400724899081,
+          0.7539144370781885,
+          -0.3318492808890514
+        ],
+        "julia_value": [
+          0.9449645249776482,
+          0.0018755843731833558,
+          0.5946091960731436,
+          0.8146022942941131,
+          -0.4470788782863568,
+          0.7111089306124747,
+          0.0,
+          0.8717534995621862,
+          -0.6686398514011241,
+          0.5040038903490855,
+          0.7539142415624577,
+          -0.3318510054872962
+        ],
+        "abs_diff": 9.764971938385674e-06,
+        "tolerance": 5e-05,
+        "tolerance_source": "test/test_namespace_numeric_p1_twin.jl:91",
+        "tolerance_source_line": "@test isapprox(L, _ns_mat(m[\"loadings\"], p, 2); atol = 5e-5, rtol = 0)",
+        "note": "Rank-2 Gaussian fit on the fixture data (sha256 checked), R: latent(0 + trait | unit, d = 2, unique = FALSE) converged with a positive-definite Hessian; both fits reach the same optimum (logLik within 1e-6, asserted in the test). Matrix cases are compared elementwise (maximum absolute difference). Both engines use the same lower-triangular, native-sign convention, so no rotation or sign alignment is applied."
+      }
+    ]
+  }
+}

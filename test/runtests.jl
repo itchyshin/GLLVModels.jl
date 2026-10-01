@@ -122,6 +122,8 @@ println(_SHARD === nothing ?
     _shard_include("test_gaussian_empty_design.jl")
     _shard_include("test_profile_failure_bounds.jl")
     _shard_include("test_aghq_binomial.jl")
+    # P1 numeric twins of the aghq policy rows vs gllvmTMB (Poisson / binomial / Gaussian fits).
+    _shard_include("test_aghq_p1_twin.jl")
     _shard_include("test_aghq_public_binomial.jl")
     _shard_include("test_aghq_gate.jl")
     _shard_include("test_aghq_kd_bound.jl")
@@ -279,6 +281,8 @@ println(_SHARD === nothing ?
     _shard_include("test_ordination.jl")
     _shard_include("test_extract_latent_scores.jl")
     _shard_include("test_model_selection.jl")
+    # P1 numeric twin of select_lv() vs gllvmTMB R/select-lv.R (Gaussian rank sweep).
+    _shard_include("test_select_lv_p1_twin.jl")
     _shard_include("test_binomial_ridge.jl")
     _shard_include("test_model_comparison.jl")
     _shard_include("test_structured_cov.jl")
@@ -487,6 +491,8 @@ println(_SHARD === nothing ?
     _shard_include("test_derived_ci_surfaces.jl")
     _shard_include("test_extractors.jl")
     _shard_include("test_postfit_tables.jl")
+    # P1 numeric twins of six gllvmTMB namespace rows (loadings, rotated table, lv effects, communality, Sigma_B/W).
+    _shard_include("test_namespace_numeric_p1_twin.jl")
     _shard_include("test_destination_b_s4_public_phylo_dep_probe_harness.jl")
     _shard_include("test_totoro_323_track_a_harness.jl")
     _shard_include("test_temporal_api.jl")
