@@ -46,6 +46,7 @@
 # OPENBLAS_NUM_THREADS=1 JULIA_NUM_THREADS=4: a few minutes.
 
 using GLLVModels, TOML, SHA, Statistics, Random, LinearAlgebra
+using Distributions: Normal   # root-project dependency; family marker for select_lv (section 5)
 const GMJ = GLLVModels
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
@@ -56,6 +57,7 @@ const CHECK_FRACTION = 1e-3        # of the case tolerance
 const CHECK_EPS_MULT = 100         # rounding allowance, in eps(Float64) * max(1, |value|)
 
 include(joinpath(ROOT, "test", "fixtures", "temporal_p1", "fixture_helpers.jl"))
+include(joinpath(ROOT, "test", "fixtures", "aghq_p1", "aghq_p1_helpers.jl"))   # the aghq twin test includes the same file
 
 # ---------------------------------------------------------------------------------------------
 # Small utilities
@@ -869,13 +871,83 @@ function receipts_temporal()
     return out
 end
 
+# =============================================================================================
+# 6. aghq/*   test/test_aghq_p1_twin.jl (this PR)
+#    Ten policy rows twinned against R at P1: Poisson / binomial / Gaussian fits with the same
+#    aghq request R was given. Per row: the integration used (used flag and node count, vector
+#    case, integers compared with the test's <= 0.5), logLik at each side's optimum, intercepts,
+#    loadings (sign-aligned to R's, a fixed +-1 on the single axis) and, for Gaussian, the residual
+#    SD. R values are copied from test/fixtures/aghq_p1/aghq_p1.toml; Julia values come from
+#    aghq_p1_fit in test/fixtures/aghq_p1/aghq_p1_helpers.jl, the function the test calls.
+#    AGHQ-POLICY-TRAITS20 is the same observation as AGHQ-POLICY-AUTO-ENFORCE-CUTOFF.
+# =============================================================================================
+function receipts_aghq()
+    fxp = "test/fixtures/aghq_p1/aghq_p1.toml"
+    hp = "test/fixtures/aghq_p1/aghq_p1_helpers.jl"
+    tp = "test/test_aghq_p1_twin.jl"
+    fx = TOML.parsefile(joinpath(ROOT, fxp))
+    fx["gllvmtmb_commit"] == P1_SHA || fail("aghq fixture is not pinned at P1")
+    rows = ["AGHQ-AUTO-K-POISSON", "AGHQ-AUTO-K-BINOMIAL", "AGHQ-AUTO-K-GAUSSIAN", "AGHQ-DEFAULT-OFF",
+        "AGHQ-POLICY-OFF", "AGHQ-POLICY-EXPLICIT", "AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF",
+        "AGHQ-POLICY-AUTO-ENFORCE-CUTOFF", "AGHQ-POLICY-TRAITS19", "AGHQ-POLICY-TRAITS20"]
+    for (_, ds) in fx["dataset"]
+        sha_file("test/fixtures/aghq_p1/" * ds["file"]) == ds["sha256"] || fail("aghq data csv $(ds["file"]) drifted")
+    end
+    fits = Dict{String,Any}()
+    out = Pair{String,Receipt}[]
+    callc = cite(tp, "aghq_p1_fit(fx, id)"; nth = 2)
+    for row in rows
+        id = aghq_p1_fit_id(row)
+        r = fx["case"][id]["r"]
+        r["converged"] === true || fail("$row: R did not converge; not a valid twin")
+        j = get!(fits, id) do
+            aghq_p1_fit(fx, id)
+        end
+        j.converged || fail("$row: Julia fit did not converge")
+        j.used && j.reason !== :converged && fail("$row: Julia AGHQ reason is $(j.reason), not :converged")
+        c = fx["case"][id]; ds = fx["dataset"][c["dataset"]]
+        short = replace(row, "AGHQ-" => "")
+        pre = "P1-JULIA-AGHQ-$short"
+        desc = "$(ds["family"]) p = $(ds["p"]), n = $(ds["n_unit"]) (seed $(ds["seed"])), aghq request \"$(c["aghq_request"])\""
+        rsrc(f) = "$fxp [case.$id.r].$f"
+        jsrc(f) = "GLLVModels fit_$(ds["family"] == "gaussian" ? "gllvm(Normal())" : ds["family"] * "_gllvm")(...; K = 1, aghq = $(c["aghq_request"] == "default" ? "false" : repr(aghq_p1_request(c["aghq_request"])))) via $hp aghq_p1_fit, as called at $callc: $f"
+        note = "Data read from test/fixtures/aghq_p1/$(ds["file"]) (sha256 checked); $desc. R and Julia both converged (R: " *
+               (r["used"] ? "aghq\$converged" : "optimiser code 0") * "; Julia: fit.converged" * (j.used ? " and reason :converged" : "") * ")."
+        cases = Any[
+            mkcase("$pre-DECISION", "integration actually used: [AGHQ used (1/0), node count k] (Laplace = [0, 0])",
+                rsrc("used, k"), jsrc("integration.actual, integration.k"),
+                Float64[r["used"], r["k"]], Float64[j.used, j.nodes],
+                test_tolerance(tp, "maximum(abs.(dec_j .- dec_r))"),
+                note * " Integers, so the test's <= 0.5 is exact equality."),
+            mkcase("$pre-LOGLIK", "logLik at each side's own optimum",
+                rsrc("loglik"), jsrc("loglik"), r["loglik"], j.loglik,
+                test_tolerance(tp, "isapprox(j.loglik, r[\"loglik\"]"), note),
+            mkcase("$pre-BETA", "per-trait intercepts at each side's own optimum",
+                rsrc("beta"), jsrc("beta"), Float64.(r["beta"]), j.beta,
+                test_tolerance(tp, "isapprox(j.beta,"), note),
+            mkcase("$pre-LAMBDA", "loadings at each side's own optimum, sign-aligned to R",
+                rsrc("lambda"), jsrc("lambda (times +-1 so that sum(lambda_julia * lambda_R) >= 0)"), Float64.(r["lambda"]), j.lambda,
+                test_tolerance(tp, "isapprox(j.lambda,"), note * " The single latent axis is identified up to sign; Julia's loadings are multiplied by the +-1 the test applies."),
+        ]
+        if ds["family"] == "gaussian"
+            push!(cases, mkcase("$pre-SIGMA-EPS", "residual SD at each side's own optimum",
+                rsrc("sigma_eps"), jsrc("pars.σ_eps"), r["sigma_eps"], j.sigma_eps,
+                test_tolerance(tp, "isapprox(j.sigma_eps,"), note))
+        end
+        push!(out, "aghq/$row.json" => Receipt(["aghq/$row"], "itchyshin/GLLVModels.jl#586",
+            ["$fxp", "test/fixtures/aghq_p1/" * ds["file"], hp], [tp], NOT_A_FIXTURE_PAIR, cases))
+    end
+    return out
+end
+
 # ---------------------------------------------------------------------------------------------
 # Driver
 # ---------------------------------------------------------------------------------------------
 function build()
     out = Pair{String,Receipt}[]
     for (name, f) in (("chibar", receipts_chibar), ("ordinal", receipts_ordinal),
-            ("latent-scores", receipts_latent_scores), ("temporal", receipts_temporal))
+            ("latent-scores", receipts_latent_scores), ("temporal", receipts_temporal),
+            ("aghq", receipts_aghq))
         t0 = time()
         append!(out, f())
         @info "built $name receipts" seconds = round(time() - t0; digits = 1)
