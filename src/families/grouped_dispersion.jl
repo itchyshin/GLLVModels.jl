@@ -721,20 +721,6 @@ function getLV(fit::NBGroupedCovFit, Y::AbstractMatrix{<:Integer},
                           rotate = rotate, mask = mask, offset = O)
 end
 
-"""
-    fit_nb_gllvm_grouped_cov(Y; X, K, group=1:p, link=LogLink(), mask=nothing,
-                             γ_fixed=nothing, hessian=:observed, …) -> NBGroupedCovFit
-
-Fit a negative-binomial GLLVM with **grouped / per-trait dispersion** and
-**shared site covariates** `X` (`p×n×q`). Working vector
-`[β; γ_free; pack(Λ); log r_1 … log r_G]`; offset `O = Xγ` is passed into the
-grouped Laplace marginal. Default `hessian=:observed` matches TMB; identity
-checks against shared [`fit_gllvm_cov`](@ref) should force `hessian=:fisher`.
-Groups that end at the Poisson boundary get the same restart as
-[`fit_nb_gllvm_grouped`](@ref) (together and each on its own, kept only if better).
-Public / bridge default under X for NB2 (twin API B). Keep `fit_gllvm_cov` for
-the shared-`r` + X opt-in.
-"""
 # −∇θ of `fit_nb_gllvm_grouped_cov`'s objective, θ = [β; γ_free; pack(Λ); log r_1..r_G],
 # or `nothing` (finite-difference fallback) when a site's mode search fails or the AD
 # pass errors. Mode: the objective's own chain (`_nb_grouped_site_mode`); log-det weight:
@@ -782,6 +768,20 @@ function _nb_grouped_cov_negll_grad(Yc, X_fit, θ, p, q, K, rr, G, gidx, link, m
     end
 end
 
+"""
+    fit_nb_gllvm_grouped_cov(Y; X, K, group=1:p, link=LogLink(), mask=nothing,
+                             γ_fixed=nothing, hessian=:observed, …) -> NBGroupedCovFit
+
+Fit a negative-binomial GLLVM with **grouped / per-trait dispersion** and
+**shared site covariates** `X` (`p×n×q`). Working vector
+`[β; γ_free; pack(Λ); log r_1 … log r_G]`; offset `O = Xγ` is passed into the
+grouped Laplace marginal. Default `hessian=:observed` matches TMB; identity
+checks against shared [`fit_gllvm_cov`](@ref) should force `hessian=:fisher`.
+Groups that end at the Poisson boundary get the same restart as
+[`fit_nb_gllvm_grouped`](@ref) (together and each on its own, kept only if better).
+Public / bridge default under X for NB2 (twin API B). Keep `fit_gllvm_cov` for
+the shared-`r` + X opt-in.
+"""
 function fit_nb_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3},
         K::Integer, group::AbstractVector{<:Integer} = collect(1:size(Y, 1)),
         link::Link = LogLink(), mask = nothing, γ_fixed = nothing,
