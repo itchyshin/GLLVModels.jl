@@ -2,6 +2,18 @@
 
 ## Development
 
+- **Per-species NB2 fits: up to three more polish rounds when still not converged (#615).**
+  After #655, 128 of the 1,440 per-species fits in the #615 grid still reported
+  `converged = false`, 90 of them at p = 24 with common r = 20. Tracing 11 of them
+  showed two causes. The refit stopped at the 500-iteration cap just short of
+  convergence, and a species below r = 1e3 could keep crawling up the ridge. A fit
+  that is still not converged now runs up to three more rounds from where it stopped.
+  Each round fixes the species then above 1e3 at r = 1e10 and refits the rest, falling
+  back to a plain continuation with nothing fixed. A round is kept only if it is no
+  worse. Converged fits are unchanged, and a fit can now reach a finite optimum that
+  the old polish left behind. Applies to the same three fitters as #655. Test:
+  `test/test_nb_grouped_poisson_ridge.jl` (new literal fixture
+  `test/fixtures/nb_grouped_poisson_ridge_p24.toml`).
 - **Per-species NB2 fits no longer stall on the ridge to the Poisson limit (#615).**
   As a species' r grows, the likelihood in log r flattens but keeps rising, so L-BFGS
   could crawl toward r = ∞ until the 500-iteration cap and report `converged = false`.

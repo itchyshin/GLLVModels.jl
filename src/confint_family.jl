@@ -2883,11 +2883,20 @@ end
 # ---------------------------------------------------------------------------
 # Wald
 # ---------------------------------------------------------------------------
-function _family_wald(ad::_FamilyCI, sel::Vector{Int}, level::Real; hessian=nothing)
+# `covariance = true` additionally returns `covariance`, the full inverse
+# observed information over `sel` (used by `vcov(fit, Y)`). It is built from
+# the same factorisation as the SEs and never regularised: when the joint
+# Hessian is PD it is the full inverse; otherwise it is the inverse of the
+# conditioned sub-Hessian on the retained indices. Rows/columns of any entry
+# whose SE is NaN are NaN, off-diagonals are symmetrised (the solve is
+# symmetric only up to rounding), and the diagonal is set to se.^2 so diag(vcov) is
+# bit-identical to the squared SEs reported here.
+function _family_wald(ad::_FamilyCI, sel::Vector{Int}, level::Real; hessian=nothing, covariance::Bool=false)
     m = length(ad.θ)
     H = hessian===nothing ? _fd_hessian(ad.nll, ad.θ) : hessian
     size(H)==(m,m) || throw(DimensionMismatch("Wald Hessian dimension mismatch"))
     se=fill(NaN,m);pd=false
+    V=fill(NaN,m,m)
     boundary_terms = String[]
     if all(isfinite,H)
         Hsym = Symmetric((H .+ H') ./ 2)
@@ -2898,10 +2907,10 @@ function _family_wald(ad::_FamilyCI, sel::Vector{Int}, level::Real; hessian=noth
             nothing
         end
         if factor!==nothing
-            covariance=factor \ Matrix{Float64}(I,m,m)
-            variances=diag(covariance)
+            Σfull=factor \ Matrix{Float64}(I,m,m)
+            variances=diag(Σfull)
             pd=all(v->isfinite(v) && v>0,variances)
-            pd && (se .= sqrt.(variances))
+            pd && (se .= sqrt.(variances); V .= Σfull)
         end
         # T14 F1 (2026-09-03): a parameter the FIT flags as at a boundary
         # (`dispersion_boundary`) is conditioned out even when the joint
@@ -2921,10 +2930,12 @@ function _family_wald(ad::_FamilyCI, sel::Vector{Int}, level::Real; hessian=noth
             # NaN default, it never flips `pd` back to true.
             bidx = _wald_boundary_indices(Hsym, findall(ad.boundary))
             rem = setdiff(1:m, bidx)
+            V .= NaN
             if !isempty(rem)
                 Hsub = Symmetric((H[rem, rem] .+ H[rem, rem]') ./ 2)
                 if isposdef(Hsub)
                     Σsub = inv(Hsub)
+                    V[rem, rem] .= Σsub
                     dΣ = diag(Σsub)
                     for (k, i) in enumerate(rem)
                         v = dΣ[k]
@@ -2950,8 +2961,17 @@ function _family_wald(ad::_FamilyCI, sel::Vector{Int}, level::Real; hessian=noth
             push!(hi, isfinite(sei) ? θi + z * sei : NaN)
         end
     end
-    return (term = term, estimate = est, lower = lo, upper = hi, se = ses,
-            method = :wald, pd_hessian = pd, boundary_terms = boundary_terms)
+    result = (term = term, estimate = est, lower = lo, upper = hi, se = ses,
+              method = :wald, pd_hessian = pd, boundary_terms = boundary_terms)
+    covariance || return result
+    bad = findall(!isfinite, se)
+    V[bad, :] .= NaN
+    V[:, bad] .= NaN
+    V .= (V .+ V') ./ 2   # the solve is symmetric only up to rounding
+    for i in 1:m
+        isfinite(se[i]) && (V[i, i] = se[i]^2)
+    end
+    return merge(result, (covariance = V[sel, sel],))
 end
 
 # ---------------------------------------------------------------------------
@@ -3185,6 +3205,30 @@ end
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
+# Argument validation and `_FamilyCI` adapter construction shared by
+# `confint(fit::_CIFit, Y)` and `vcov(fit::_CIFit, Y)`.
+function _family_confint_setup(fit, Y; method, level, N, X, mask, objective, newton_maxiter, newton_tol)
+    0 < level < 1 || throw(ArgumentError("level must be in (0, 1); got $level"))
+    is_aghq=_is_aghq_fit(fit)
+    objective===:fit && (objective=is_aghq ? :aghq : :laplace)
+    is_aghq && objective!==:aghq && throw(ArgumentError("AGHQ intervals require the fitted frozen objective; use objective=:fit"))
+    objective in (:laplace, :va, :aghq) && (objective!==:aghq || is_aghq) ||
+        throw(ArgumentError("objective must select :fit or an available estimator; got :$objective"))
+    if objective === :va && !(fit isa Union{PoissonFit, NBFit, BinomialFit, BetaFit, GammaFit, DeltaGammaFit})
+        throw(ArgumentError("objective=:va is only available for Poisson/NB/Binomial/Beta/Gamma/Delta-Gamma fits"))
+    end
+    if objective === :va && method !== :wald
+        throw(ArgumentError("objective=:va currently supports method=:wald only"))
+    end
+    if objective === :va && mask !== nothing
+        throw(ArgumentError("objective=:va is not routed for masked confidence intervals; use objective=:laplace"))
+    end
+    ad = _family_ci(fit, Y; N = N, X = X, objective = objective,
+                    mask = mask,
+                    newton_maxiter = newton_maxiter, newton_tol = newton_tol)
+    return ad, is_aghq
+end
+
 """
     confint(fit, Y; method = :wald, level = 0.95, parm = nothing, N = nothing,
             mask = nothing,
@@ -3299,24 +3343,9 @@ function confint(fit::_CIFit, Y::AbstractMatrix;
                  profile_g_tol::Real = 1e-4,
                  profile_max_expand::Integer = 20,
                  profile_max_bisect::Integer = 30)
-    0 < level < 1 || throw(ArgumentError("level must be in (0, 1); got $level"))
-    is_aghq=_is_aghq_fit(fit)
-    objective===:fit && (objective=is_aghq ? :aghq : :laplace)
-    is_aghq && objective!==:aghq && throw(ArgumentError("AGHQ intervals require the fitted frozen objective; use objective=:fit"))
-    objective in (:laplace, :va, :aghq) && (objective!==:aghq || is_aghq) ||
-        throw(ArgumentError("objective must select :fit or an available estimator; got :$objective"))
-    if objective === :va && !(fit isa Union{PoissonFit, NBFit, BinomialFit, BetaFit, GammaFit, DeltaGammaFit})
-        throw(ArgumentError("objective=:va is only available for Poisson/NB/Binomial/Beta/Gamma/Delta-Gamma fits"))
-    end
-    if objective === :va && method !== :wald
-        throw(ArgumentError("objective=:va currently supports method=:wald only"))
-    end
-    if objective === :va && mask !== nothing
-        throw(ArgumentError("objective=:va is not routed for masked confidence intervals; use objective=:laplace"))
-    end
-    ad = _family_ci(fit, Y; N = N, X = X, objective = objective,
-                    mask = mask,
-                    newton_maxiter = newton_maxiter, newton_tol = newton_tol)
+    ad, is_aghq = _family_confint_setup(fit, Y; method = method, level = level, N = N, X = X,
+                                        mask = mask, objective = objective,
+                                        newton_maxiter = newton_maxiter, newton_tol = newton_tol)
     sel = _family_select(parm, ad.names)
     isempty(sel) && throw(ArgumentError("parm selector matched no parameters"))
     if method === :wald
@@ -3335,6 +3364,35 @@ function confint(fit::_CIFit, Y::AbstractMatrix;
     else
         throw(ArgumentError("method must be :wald, :profile, or :bootstrap; got :$method"))
     end
+end
+
+# Same keyword surface and validation as `confint(fit::_CIFit, Y)`; only the
+# Wald method has a covariance.
+function StatsAPI.vcov(fit::_CIFit, Y::AbstractMatrix;
+                       method::Symbol = :wald,
+                       level::Real = 0.95,
+                       parm = nothing,
+                       N::Union{Nothing, AbstractMatrix} = nothing,
+                       X::Union{Nothing, AbstractMatrix{<:Real}, AbstractArray{<:Real, 3}} = nothing,
+                       mask = nothing,
+                       n_boot::Integer = 200,
+                       seed::Integer = 0,
+                       parallel::Bool = false,
+                       objective::Symbol = :fit,
+                       newton_maxiter::Integer = 100,
+                       newton_tol::Real = 1e-9,
+                       profile_iterations::Integer = 200,
+                       profile_g_tol::Real = 1e-4,
+                       profile_max_expand::Integer = 20,
+                       profile_max_bisect::Integer = 30)
+    method === :wald || throw(ArgumentError("vcov is the Wald (observed-information) covariance; method must be :wald"))
+    ad, is_aghq = _family_confint_setup(fit, Y; method = method, level = level, N = N, X = X,
+                                        mask = mask, objective = objective,
+                                        newton_maxiter = newton_maxiter, newton_tol = newton_tol)
+    sel = _family_select(parm, ad.names)
+    isempty(sel) && throw(ArgumentError("parm selector matched no parameters"))
+    return _family_wald(ad, sel, level; hessian = is_aghq ? ForwardDiff.hessian(ad.nll, ad.θ) : nothing,
+                        covariance = true).covariance
 end
 
 # ---------------------------------------------------------------------------

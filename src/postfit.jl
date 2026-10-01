@@ -694,28 +694,41 @@ function StatsAPI.coef(fit::AnyGllvmFit)
 end
 
 """
-    vcov(fit, [Y]; kwargs...) -> AbstractMatrix
+    vcov(fit, [Y]; kwargs...) -> Matrix{Float64}
 
-Return the asymptotic variance-covariance matrix of estimated parameters for `fit`
-via observed information.
+Return the asymptotic variance-covariance matrix of the estimated parameters of
+`fit`: the full inverse observed information on the working scale that
+`confint(fit, Y; method = :wald)` uses (log scale for SD/dispersion terms), in
+the same term order as `confint(...).term`. `parm` selects a sub-block. The
+diagonal equals the squared Wald standard errors. When the Hessian is not
+positive definite the SE convention is followed: entries whose SE is NaN have
+NaN rows and columns (all NaN if the Hessian cannot be inverted); nothing is
+regularised.
 """
 function StatsAPI.vcov(fit::GllvmFit; y = nothing, kwargs...)
     y_mat = y !== nothing ? y : (hasproperty(fit, :y) ? fit.y : nothing)
     y_mat === nothing && throw(ArgumentError("`y` matrix must be supplied to compute vcov for GllvmFit: vcov(fit, y)"))
     _has_gaussian_record(fit) && return _gaussian_record_vcov(fit,y_mat;kwargs...)
-    ci = confint(fit; y = y_mat, kwargs...)
-    return Diagonal(ci.se .^ 2)
+    return _gaussian_legacy_vcov(fit, y_mat; kwargs...)
 end
 
 function StatsAPI.vcov(fit::GllvmFit, Y::AbstractMatrix; kwargs...)
     _has_gaussian_record(fit) && return _gaussian_record_vcov(fit,Y;kwargs...)
-    ci = confint(fit; y = Y, kwargs...)
-    return Diagonal(ci.se .^ 2)
+    return _gaussian_legacy_vcov(fit, Y; kwargs...)
 end
 
-function StatsAPI.vcov(fit::AnyGllvmFit, Y::AbstractMatrix; kwargs...)
-    ci = confint(fit, Y; method = :wald, kwargs...)
-    return Diagonal(ci.se .^ 2)
+# Same keyword surface and validation as `confint(fit::GllvmFit; ...)`.
+function _gaussian_legacy_vcov(fit::GllvmFit, y::AbstractMatrix;
+                               level::Real = 0.95,
+                               parm::Union{Nothing, AbstractString, Symbol, AbstractVector} = nothing,
+                               X::Union{Nothing, AbstractArray{<:Real, 3}} = nothing,
+                               Σ_phy::Union{Nothing, AbstractMatrix} = nothing, kwargs...)
+    isempty(kwargs) || throw(ArgumentError("extra inference controls require retained Gaussian integration data"))
+    0 < level < 1 || throw(ArgumentError("level must be in (0, 1); got $level"))
+    _, terms, _, V, _, _ = _confint_gaussian_wald_covariance(fit, y, X, Σ_phy)
+    sel = _confint_select_indices(parm, terms)
+    isempty(sel) && throw(ArgumentError("parm selector matched no parameters"))
+    return V[sel, sel]
 end
 
 """

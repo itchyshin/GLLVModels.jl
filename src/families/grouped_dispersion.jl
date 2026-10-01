@@ -430,42 +430,55 @@ end
 # Toward the Poisson limit the likelihood in log r flattens but keeps rising, so
 # L-BFGS can crawl along that ridge until the iteration cap and report a fit that is
 # not converged (#615: per-species fits at p = 12, n = 60 stopped at r = 1.8e4 and
-# 9.5e5 after 500 iterations). Only for such a fit: fix the groups with r > 1e3 at
-# r = 1e10 (all of them, then each alone when there are several), refit the other
-# parameters, and keep the first refit that is no worse than the stalled point (by
-# 1e-6) and either converged or strictly better. A group fixed there reports
-# r_group = 1e10, which the fitters already treat as the Poisson limit (warn only).
-# `grad` (optional, full-θ exact gradient) is restricted to the free coordinates.
-# Returns `(θ, nll, converged, iterations)`; a converged fit is returned unchanged.
-function _nb_poisson_ridge_polish(negll, res, ls, opts, first_log_r::Integer; grad = nothing)
+# 9.5e5 after 500 iterations). Only for such a fit, run up to `rounds` more fits from
+# the current point. Each round fixes the groups with r > 1e3 at r = 1e10 and refits
+# the other parameters. In the first round, when several groups qualify, it also tries
+# each one alone; every round finally tries a plain continuation with nothing fixed.
+# A round keeps its first refit that is no worse than the current point (by 1e-6) and
+# either converged or strictly better, and the rounds stop once the fit converges or
+# a round keeps nothing. Extra rounds matter at p = 24 (#615): there the first refit
+# often stopped at the cap just short of convergence, and a species below 1e3 could
+# keep crawling up the ridge. A group fixed at 1e10 reports r_group = 1e10, which the
+# fitters already treat as the Poisson limit (warn only).
+# `grad` (optional, full-θ exact gradient) is restricted to the free coordinates in
+# every round. Returns `(θ, nll, converged, iterations)`; a converged fit is returned unchanged.
+function _nb_poisson_ridge_polish(negll, res, ls, opts, first_log_r::Integer;
+                                  rounds::Integer = 3, grad = nothing)
     θ = Optim.minimizer(res)
     f0 = Optim.minimum(res)
-    out = (θ, f0, Optim.converged(res), Optim.iterations(res))
-    (Optim.converged(res) || _nll_failed(f0)) && return out
-    cand = findall(>(1e3), exp.(θ[first_log_r:end]))
-    isempty(cand) && return out
-    trials = length(cand) == 1 ? [cand] : vcat([cand], [[g] for g in cand])
-    for groups in trials
-        fixed = first_log_r - 1 .+ groups
-        free = setdiff(eachindex(θ), fixed)
-        θs = copy(θ)
-        θs[fixed] .= log(1e10)
-        sub(x) = negll(setindex!(copy(θs), x, free))
-        # With an exact full-θ gradient, restrict it to the free coordinates.
-        trial = grad === nothing ?
-            Optim.optimize(sub, θs[free], ls, opts; autodiff = :finite) :
-            _optimize_with_analytic(sub, x -> begin
-                    g = grad(setindex!(copy(θs), x, free))
-                    g === nothing ? nothing : g[free]
-                end, θs[free], ls, opts)
-        f1 = Optim.minimum(trial)
-        if f1 <= f0 + 1e-6 && (Optim.converged(trial) || f1 < f0)
-            θs[free] = Optim.minimizer(trial)
-            return (θs, f1, Optim.converged(trial),
-                    Optim.iterations(res) + Optim.iterations(trial))
+    conv = Optim.converged(res)
+    iters = Optim.iterations(res)
+    (conv || _nll_failed(f0)) && return (θ, f0, conv, iters)
+    for round in 1:rounds
+        cand = findall(>(1e3), exp.(θ[first_log_r:end]))
+        trials = round == 1 && length(cand) > 1 ? vcat([cand], [[g] for g in cand]) : [cand]
+        isempty(cand) || push!(trials, Int[])
+        kept = false
+        for groups in trials
+            fixed = first_log_r - 1 .+ groups
+            free = setdiff(eachindex(θ), fixed)
+            θs = copy(θ)
+            θs[fixed] .= log(1e10)
+            sub(x) = negll(setindex!(copy(θs), x, free))
+            # With an exact full-θ gradient, restrict it to the free coordinates.
+            trial = grad === nothing ?
+                Optim.optimize(sub, θs[free], ls, opts; autodiff = :finite) :
+                _optimize_with_analytic(sub, x -> begin
+                        g = grad(setindex!(copy(θs), x, free))
+                        g === nothing ? nothing : g[free]
+                    end, θs[free], ls, opts)
+            f1 = Optim.minimum(trial)
+            if f1 <= f0 + 1e-6 && (Optim.converged(trial) || f1 < f0)
+                θs[free] = Optim.minimizer(trial)
+                θ, f0, conv = θs, f1, Optim.converged(trial)
+                iters += Optim.iterations(trial)
+                kept = true
+                break
+            end
         end
+        (conv || !kept) && break
     end
-    return out
+    return (θ, f0, conv, iters)
 end
 
 """
