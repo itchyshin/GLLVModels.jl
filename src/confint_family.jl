@@ -605,7 +605,10 @@ function _family_ci(fit::TruncatedNegBin2Fit, Y::AbstractMatrix;
     end
     names = vcat(_glm_lin_names(p, K), "r")
     kinds = vcat(fill(:linear, length(θ) - 1), :log)
-    return _FamilyCI(θ, nll, names, kinds, simulate, refit)
+    # T14 F1, as for the per-trait adapter below: an r at the Poisson limit is conditioned
+    # out of the Wald Hessian instead of getting a meaningless finite SE.
+    boundary = vcat(falses(p + rr), _dispersion_group_boundary([fit.r]))
+    return _FamilyCI(θ, nll, names, kinds, simulate, refit, boundary)
 end
 
 # Zero-truncated NB2 (per-trait r): packing [β; pack(Λ); log r_1 … log r_p].
@@ -3103,11 +3106,14 @@ end
 # Optional `upper_boundary` field on the richer contract (#542, option 3): a length-`m` Bool
 # vector marking the parameters this refit ran to their upper numerical boundary (for the
 # beta-binomial fitters, a Beta precision `φ >= _BB_PHI_STABLE`). Such a replicate is left
-# out of every quantile, like a non-converged one, but it is informative: it says the
-# sampling distribution of that parameter has mass at the boundary. When the flagged share of
-# usable replicates (converged plus boundary) exceeds the upper tail `(1 - level)/2`, that
-# parameter's upper bound is reported as `Inf` instead of a quantile of the interior draws.
-# Adapters that never set the field are unaffected.
+# out of the FLAGGED parameters' quantiles only: a converged refit with one dispersion at
+# its limit is still a valid draw for every other parameter, as the point fit is. (It was
+# once dropped from every quantile; where a per-group dispersion sits at the limit on most
+# draws, that left no usable replicate and made the β and Λ intervals NaN too, #645.) The
+# flag is informative: it says the sampling distribution of that parameter has mass at the
+# boundary. When the flagged share of usable replicates (converged plus boundary) exceeds
+# the upper tail `(1 - level)/2`, that parameter's upper bound is reported as `Inf` instead
+# of a quantile of the interior draws. Adapters that never set the field are unaffected.
 function _bootstrap_upper_boundary(raw, m::Integer)
     (raw === nothing || raw isa AbstractVector) && return nothing
     ub = get(raw, :upper_boundary, nothing)
@@ -3131,7 +3137,12 @@ function _family_bootstrap(ad::_FamilyCI, sel::Vector{Int}, level::Real,
         θb, good = _bootstrap_refit_ok(raw, m)
         ub = _bootstrap_upper_boundary(raw, m)
         if ub !== nothing
-            @inbounds bnd[b, :] .= ub   # excluded from every quantile; counted below
+            @inbounds bnd[b, :] .= ub   # counted below for the Inf upper-bound rule
+            if good                     # a converged refit still informs the other parameters
+                @inbounds for j in 1:m
+                    ub[j] || (reps[b, j] = θb[j])
+                end
+            end
         elseif good
             @inbounds reps[b, :] .= θb
             ok[b] = true

@@ -60,7 +60,9 @@ seed_base <- c(poisson_p5 = 20260100L, gaussian_p5 = 20260200L, binomial_p5 = 20
                binomial_p19 = 20260400L, binomial_p20 = 20260500L)
 ## Seeds at which R converged but the Julia fit did NOT (test/test_aghq_p1_twin.jl guards
 ## this; found by running the Julia fits on each candidate dataset). Julia's AGHQ adaptation
-## stalled (reason no_merit_descent, logLik 3e-5 to 2e-4 below R's, parameters ~1e-3 off) on these Poisson datasets,
+## stopped (reason no_merit_descent, logLik 2.8e-5 to 2.2e-4 ABOVE R's, parameters ~1e-3 off) on these Poisson datasets;
+## both engines accept steps on the re-centred objective but certify on the frozen-node gradient, so R's optimum is a fixed point, not a minimum
+## (see docs/dev-log/core070/true-parity-latest/aghq-fixed-point-note-2026-10-01.md),
 ## so they are not used. Recorded in the fixture as julia_rejected_seeds. Extend this list
 ## (never the test tolerances) if a regenerated dataset fails the Julia convergence guard.
 julia_skip <- c("poisson_p5:20260103", "poisson_p5:20260107", "poisson_p5:20260110", "poisson_p5:20260111")

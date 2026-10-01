@@ -427,6 +427,47 @@ function _nb_boundary_restart(negll, res, ls, opts, first_log_r::Integer; grad =
     return best
 end
 
+# Toward the Poisson limit the likelihood in log r flattens but keeps rising, so
+# L-BFGS can crawl along that ridge until the iteration cap and report a fit that is
+# not converged (#615: per-species fits at p = 12, n = 60 stopped at r = 1.8e4 and
+# 9.5e5 after 500 iterations). Only for such a fit: fix the groups with r > 1e3 at
+# r = 1e10 (all of them, then each alone when there are several), refit the other
+# parameters, and keep the first refit that is no worse than the stalled point (by
+# 1e-6) and either converged or strictly better. A group fixed there reports
+# r_group = 1e10, which the fitters already treat as the Poisson limit (warn only).
+# `grad` (optional, full-θ exact gradient) is restricted to the free coordinates.
+# Returns `(θ, nll, converged, iterations)`; a converged fit is returned unchanged.
+function _nb_poisson_ridge_polish(negll, res, ls, opts, first_log_r::Integer; grad = nothing)
+    θ = Optim.minimizer(res)
+    f0 = Optim.minimum(res)
+    out = (θ, f0, Optim.converged(res), Optim.iterations(res))
+    (Optim.converged(res) || _nll_failed(f0)) && return out
+    cand = findall(>(1e3), exp.(θ[first_log_r:end]))
+    isempty(cand) && return out
+    trials = length(cand) == 1 ? [cand] : vcat([cand], [[g] for g in cand])
+    for groups in trials
+        fixed = first_log_r - 1 .+ groups
+        free = setdiff(eachindex(θ), fixed)
+        θs = copy(θ)
+        θs[fixed] .= log(1e10)
+        sub(x) = negll(setindex!(copy(θs), x, free))
+        # With an exact full-θ gradient, restrict it to the free coordinates.
+        trial = grad === nothing ?
+            Optim.optimize(sub, θs[free], ls, opts; autodiff = :finite) :
+            _optimize_with_analytic(sub, x -> begin
+                    g = grad(setindex!(copy(θs), x, free))
+                    g === nothing ? nothing : g[free]
+                end, θs[free], ls, opts)
+        f1 = Optim.minimum(trial)
+        if f1 <= f0 + 1e-6 && (Optim.converged(trial) || f1 < f0)
+            θs[free] = Optim.minimizer(trial)
+            return (θs, f1, Optim.converged(trial),
+                    Optim.iterations(res) + Optim.iterations(trial))
+        end
+    end
+    return out
+end
+
 """
     NBGroupedFit
 
@@ -597,7 +638,7 @@ function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVect
     opts = Optim.Options(g_tol = g_tol, iterations = iterations)
     res = Optim.optimize(negll, θ0, ls, opts; autodiff = :finite)
     res = _nb_boundary_restart(negll, res, ls, opts, p + rr + 1)
-    θ̂ = Optim.minimizer(res)
+    θ̂, nll, conv0, iters0 = _nb_poisson_ridge_polish(negll, res, ls, opts, p + rr + 1)
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     r̂g = exp.(θ̂[(p + rr + 1):(p + rr + G)])
@@ -605,7 +646,7 @@ function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVect
     lowb = _dispersion_group_lower_boundary(r̂g)   # only the lower end blocks `converged` (upper end: warn only)
     any(lowb) && @warn "NB2 grouped-dispersion fit reached the per-group lower boundary (r_group below 1e-6) for group(s) $(findall(lowb)); those groups' overdispersion is extreme and not identified from this data; converged is false for this fit." maxlog=1
     any(>(1e6), r̂g) && @warn "NB2 grouped-dispersion fit has r_group above 1e6 for group(s) $(findall(>(1e6), r̂g)); the group's dispersion is at the Poisson limit (no overdispersion left to estimate). The fit's other estimates are unaffected, and converged is not affected by this." maxlog=1
-    loglik, conv, iters = _fit_verdict(res)
+    loglik, conv, iters = _fit_verdict(nll, conv0, iters0)
     return NBGroupedFit(β̂, Λ̂, r̂g, gidx, link, loglik, conv && !any(lowb), iters, hessian,
                         boundary)
 end
@@ -803,7 +844,8 @@ function fit_nb_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3}
     res = grad === nothing ? Optim.optimize(negll, θ0, ls, opts; autodiff = :finite) :
                              _optimize_with_analytic(negll, grad, θ0, ls_ad, opts)
     res = _nb_boundary_restart(negll, res, ls_ad, opts, p + q + rr + 1; grad = grad)
-    θ̂ = Optim.minimizer(res)
+    θ̂, nll, conv0, iters0 = _nb_poisson_ridge_polish(negll, res, ls_ad, opts, p + q + rr + 1;
+                                                     grad = grad)
     β̂ = θ̂[1:p]
     γ̂_free = θ̂[(p + 1):(p + q)]
     γ̂ = collect(Float64, _expand_fixed_zero(γ̂_free, γ_fixed_mask))
@@ -813,7 +855,7 @@ function fit_nb_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3}
     lowb = _dispersion_group_lower_boundary(r̂g)   # only the lower end blocks `converged` (upper end: warn only)
     any(lowb) && @warn "NB2 grouped-cov fit reached the per-group lower boundary (r_group below 1e-6) for group(s) $(findall(lowb)); those groups' overdispersion is extreme and not identified from this data; converged is false for this fit." maxlog=1
     any(>(1e6), r̂g) && @warn "NB2 grouped-cov fit has r_group above 1e6 for group(s) $(findall(>(1e6), r̂g)); the group's dispersion is at the Poisson limit (no overdispersion left to estimate). The fit's other estimates are unaffected, and converged is not affected by this." maxlog=1
-    loglik, conv, iters = _fit_verdict(res)
+    loglik, conv, iters = _fit_verdict(nll, conv0, iters0)
     return NBGroupedCovFit(β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, r̂g, gidx, link,
                            loglik, conv && !any(lowb), iters, hessian, boundary)
 end

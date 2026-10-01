@@ -61,7 +61,7 @@ Every new test was run against origin/main first and failed there for the stated
 
 - Fixed: truncated-NB2 mode 2-cycle and objective jump (#601); large-step 2-cycle found through the #605 profile (#601); open lower profile end reported as NaN (#605); slow open-end search (#607); degenerate r reported converged (#621); per-trait fit stuck at a worse optimum with the wrong trait at the Poisson limit (#627); runner-dependent R-gradient gate in the parity cell (#613).
 - Diagnosed, fixed by other lanes: `parity_nb2_smoke_Y` undefined in the NB2 formula case, from #608 (fixed in #631); the R-gradient gate in `family_formula_cases.jl` (#634).
-- Deferred: truncated-NB2 `_family_ci` adapters still pass `boundary = false` for r; they lack the `dispersion_boundary` field other NB routes have. Not started.
+- Deferred, then taken (claude/truncnb2-ci-boundary): only the shared-r truncated-NB2 `_family_ci` adapter lacked the Wald `boundary` flag for r (the per-trait adapter already set it; corrected 2026-10-01). The bootstrap refits stay unflagged on purpose: flagging would drop every per-trait replicate.
 
 ## 8. Consistency Audit
 
