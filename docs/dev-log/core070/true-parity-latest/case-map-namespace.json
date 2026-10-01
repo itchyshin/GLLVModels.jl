@@ -295,19 +295,25 @@
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
     "receipt": [
-     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-LOGLIK-MULTI-NATIVE.json",
-     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/model-comparison/logLik.json"
     ],
     "batch": "namespace-1 Tier 0 at P1",
     "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "tier": "numeric: Julia loglikelihood(fit) recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_model_comparison.jl (itchyshin/GLLVModels.jl#556), against R-at-P1 logLik values copied from test/fixtures/gllvmtmb_anova_fixture.toml, within the tolerance asserted there. The Tier 0 registration receipts are kept un-cited under registration_receipts (the registration batch receipt carries a batch-level FAIL status, which would block the numeric binding if cited); superseded case ids are in registration_case_ids.",
+    "registration_receipts": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-LOGLIK-MULTI-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
+    ],
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-LOGLIK-MULTI-NATIVE"
+    ]
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-LOGLIK-MULTI-NATIVE"
+    "P1-JULIA-MODEL-COMPARISON-LOGLIK-E2E"
    ],
    "reason": "R S3method(logLik,gllvmTMB_multi) registered and defined at P1; Julia `loglikelihood` is an exported Function (measured). Name match only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
