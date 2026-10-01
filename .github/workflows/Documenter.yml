@@ -55,9 +55,17 @@ jobs:
     needs: Documenter
     runs-on: ubuntu-latest
     # Every deploy pushes the dev site or a PR preview to the shared gh-pages
-    # branch; queue them so one push cannot stale another's fetch.
+    # branch. One repo-wide concurrency group cannot serialise them: GitHub keeps
+    # ONE pending job per group, so each newly queued deploy (from any PR)
+    # cancelled the one already waiting, and most PRs showed "Documenter
+    # deploy: cancelled". So the group is per source: main/tag pushes share one
+    # (a newer dev-site deploy superseding a waiting older one is what we want),
+    # and each PR has its own. Races BETWEEN groups are handled by the retry in
+    # the deploy step: deploydocs clones gh-pages fresh and pushes without
+    # force, so a push that lost a race fails cleanly and the next attempt
+    # re-fetches and pushes on top.
     concurrency:
-      group: documenter-gh-pages
+      group: documenter-gh-pages-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v6
@@ -75,4 +83,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
-        run: julia --project=docs docs/deploy.jl
+        run: |
+          for attempt in 1 2 3 4 5; do
+            julia --project=docs docs/deploy.jl && exit 0
+            echo "deploy attempt $attempt failed (likely a gh-pages push race); retrying"
+            sleep $(( 10 + RANDOM % 30 ))
+          done
+          exit 1
