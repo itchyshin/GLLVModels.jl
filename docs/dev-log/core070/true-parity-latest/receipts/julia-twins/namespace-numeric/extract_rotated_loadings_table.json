@@ -10,7 +10,7 @@
   "origin_pr": "itchyshin/GLLVModels.jl#652",
   "generator": "tools/true_parity_julia_receipts.jl",
   "julia_version": "1.10.0",
-  "gllvmodels_commit": "a86d2279a8447fcf42c05a5751c9ba49a7c7da40",
+  "gllvmodels_commit": "3fcf206986f934686204a3f70b7fe50edc27771d",
   "source_fixtures": [
     {
       "path": "test/fixtures/ns_numeric_p1.toml",
@@ -24,7 +24,7 @@
   "source_tests": [
     {
       "path": "test/test_namespace_numeric_p1_twin.jl",
-      "sha256": "4f76e159872a2f56c982e5500cefa1a9f10e786b0d4042dc3f7b014b44ca7a9e"
+      "sha256": "6a25daa1156e96165130a425a76d0278f38656355b41342d64a7739713d6d011"
     }
   ],
   "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
@@ -35,7 +35,7 @@
         "case_id": "P1-JULIA-ROTATED-LOADINGS-TABLE-RAW",
         "quantity": "varimax-rotated raw loadings, table column `loading` (12 values)",
         "r_source": "test/fixtures/ns_numeric_p1.toml [main.rot_raw_loading]",
-        "julia_source": "GLLVModels.extract_rotated_loadings_table(fit, Y; method = :varimax, loading_scale = :raw).loading, as called at test/test_namespace_numeric_p1_twin.jl:93",
+        "julia_source": "GLLVModels.extract_rotated_loadings_table(fit, Y; method = :varimax, loading_scale = :raw).loading, as called at test/test_namespace_numeric_p1_twin.jl:99",
         "r_value": [
           -0.32892639229338444,
           0.8165895575812108,
@@ -66,7 +66,7 @@
         ],
         "abs_diff": 6.507820141882226e-05,
         "tolerance": 0.0002,
-        "tolerance_source": "test/test_namespace_numeric_p1_twin.jl:95",
+        "tolerance_source": "test/test_namespace_numeric_p1_twin.jl:101",
         "tolerance_source_line": "@test isapprox(tr.loading, Float64.(m[\"rot_raw_loading\"]); atol = 2e-4, rtol = 0)",
         "note": "Rank-2 Gaussian fit on the fixture data (sha256 checked), R: latent(0 + trait | unit, d = 2, unique = FALSE) converged with a positive-definite Hessian; both fits reach the same optimum (logLik within 1e-6, asserted in the test). Matrix cases are compared elementwise (maximum absolute difference). Varimax, order_axes = true and sign_anchor = auto on both sides; the table is axis-major (6 traits for axis 1, then axis 2) and the test asserts the axis column exactly."
       },
@@ -74,7 +74,7 @@
         "case_id": "P1-JULIA-ROTATED-LOADINGS-TABLE-AXIS-VARIANCE",
         "quantity": "table column `axis_variance`, one value per axis (2 values)",
         "r_source": "test/fixtures/ns_numeric_p1.toml [main.rot_raw_axis_variance]",
-        "julia_source": "same call as test/test_namespace_numeric_p1_twin.jl:93, .axis_variance at the first row of each axis",
+        "julia_source": "same call as test/test_namespace_numeric_p1_twin.jl:99, .axis_variance at the first row of each axis",
         "r_value": [
           2.5617128378237948,
           2.193529323973499
@@ -85,7 +85,7 @@
         ],
         "abs_diff": 7.720870181548989e-05,
         "tolerance": 0.0003,
-        "tolerance_source": "test/test_namespace_numeric_p1_twin.jl:96",
+        "tolerance_source": "test/test_namespace_numeric_p1_twin.jl:102",
         "tolerance_source_line": "@test isapprox(tr.axis_variance[[1, p + 1]], Float64.(m[\"rot_raw_axis_variance\"]); atol = 3e-4, rtol = 0)",
         "note": "Rank-2 Gaussian fit on the fixture data (sha256 checked), R: latent(0 + trait | unit, d = 2, unique = FALSE) converged with a positive-definite Hessian; both fits reach the same optimum (logLik within 1e-6, asserted in the test). Matrix cases are compared elementwise (maximum absolute difference). Varimax, order_axes = true and sign_anchor = auto on both sides; the table is axis-major (6 traits for axis 1, then axis 2) and the test asserts the axis column exactly."
       },
@@ -93,7 +93,7 @@
         "case_id": "P1-JULIA-ROTATED-LOADINGS-TABLE-AXIS-SHARE",
         "quantity": "table column `axis_share`, one value per axis (2 values)",
         "r_source": "test/fixtures/ns_numeric_p1.toml [main.rot_raw_axis_share]",
-        "julia_source": "same call as test/test_namespace_numeric_p1_twin.jl:93, .axis_share at the first row of each axis",
+        "julia_source": "same call as test/test_namespace_numeric_p1_twin.jl:99, .axis_share at the first row of each axis",
         "r_value": [
           0.538713434702465,
           0.46128656529753503
@@ -104,7 +104,7 @@
         ],
         "abs_diff": 1.3990718283674042e-05,
         "tolerance": 0.0001,
-        "tolerance_source": "test/test_namespace_numeric_p1_twin.jl:97",
+        "tolerance_source": "test/test_namespace_numeric_p1_twin.jl:103",
         "tolerance_source_line": "@test isapprox(tr.axis_share[[1, p + 1]], Float64.(m[\"rot_raw_axis_share\"]); atol = 1e-4, rtol = 0)",
         "note": "Rank-2 Gaussian fit on the fixture data (sha256 checked), R: latent(0 + trait | unit, d = 2, unique = FALSE) converged with a positive-definite Hessian; both fits reach the same optimum (logLik within 1e-6, asserted in the test). Matrix cases are compared elementwise (maximum absolute difference). Varimax, order_axes = true and sign_anchor = auto on both sides; the table is axis-major (6 traits for axis 1, then axis 2) and the test asserts the axis column exactly."
       },
@@ -112,7 +112,7 @@
         "case_id": "P1-JULIA-ROTATED-LOADINGS-TABLE-STANDARDIZED",
         "quantity": "varimax-rotated standardized loadings, `loading` with loading_scale = standardized (12 values)",
         "r_source": "test/fixtures/ns_numeric_p1.toml [main.rot_std_loading]",
-        "julia_source": "GLLVModels.extract_rotated_loadings_table(fit, Y; method = :varimax, loading_scale = :standardized).loading, as called at test/test_namespace_numeric_p1_twin.jl:98",
+        "julia_source": "GLLVModels.extract_rotated_loadings_table(fit, Y; method = :varimax, loading_scale = :standardized).loading, as called at test/test_namespace_numeric_p1_twin.jl:104",
         "r_value": [
           -0.34808299230116546,
           0.9367165741243849,
@@ -143,7 +143,7 @@
         ],
         "abs_diff": 7.156639237596019e-05,
         "tolerance": 0.0002,
-        "tolerance_source": "test/test_namespace_numeric_p1_twin.jl:99",
+        "tolerance_source": "test/test_namespace_numeric_p1_twin.jl:105",
         "tolerance_source_line": "@test isapprox(ts.loading, Float64.(m[\"rot_std_loading\"]); atol = 2e-4, rtol = 0)",
         "note": "Rank-2 Gaussian fit on the fixture data (sha256 checked), R: latent(0 + trait | unit, d = 2, unique = FALSE) converged with a positive-definite Hessian; both fits reach the same optimum (logLik within 1e-6, asserted in the test). Matrix cases are compared elementwise (maximum absolute difference). Varimax, order_axes = true and sign_anchor = auto on both sides; the table is axis-major (6 traits for axis 1, then axis 2) and the test asserts the axis column exactly."
       }
