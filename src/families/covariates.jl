@@ -186,6 +186,124 @@ function _marginal_loglik_offset(family, Y::AbstractMatrix, N::AbstractMatrix,
     return acc
 end
 
+# --- exact gradient for the covariate fitters (2026-10-01) ---
+#
+# Until this change `fit_gllvm_cov` and `fit_nb_gllvm_grouped_cov` drove L-BFGS with
+# `autodiff = :finite`: 2·nθ full marginal evaluations (each n per-site Newton mode
+# searches) per gradient, plus finite-difference noise that kept the fits from reaching
+# `g_tol` (fungi 100 sites x 10 species ran to the 500-iteration cap, unconverged).
+#
+# This is the `src/laplace_grad.jl` construction with an offset: solve each site's mode
+# ẑ once at the primal θ (the SAME mode search the objective uses), then evaluate the
+# site marginal at the differentiable one-Newton-step point
+#       z(θ) = ẑ + H(ẑ,θ)⁻¹ (Λ's(ẑ;θ) − ẑ),
+# with H = Λ'W_obsΛ + I the exact Hessian of the per-site log-posterior, and take
+# ForwardDiff through it. z(θ̂) = ẑ and dz/dθ is the implicit dẑ/dθ, so the result is
+# the exact gradient of the objective, log-det and implicit terms included. The log-det
+# weight is the one the objective's own kernel uses (`_laplace_site_off` for
+# `fit_gllvm_cov`, `_nb_grouped_loglik_site` for the grouped NB2 route).
+#
+# `fams` is indexable per species (a vector), so the one kernel serves the shared-
+# dispersion route (all entries equal) and the per-trait-dispersion NB2 route.
+
+# Exact per-cell curvature −∂²ℓ/∂η² of the coded log-density (the implicit step's
+# weight). Equal to the Fisher weight where the family declares so.
+_cov_obs_weight(f, μ, n, me, y, link::Link, η) =
+    _glm_weight_matches_observed(f, link) ? _glm_weight(f, μ, n, me) :
+                                            _glm_obs_weight(f, μ, n, me, y, link, η)
+
+# Differentiable per-site Laplace marginal at the implicit-step point. `η0 = β + O[:, s]`
+# and `Λ` may carry duals; `ẑ` is the concrete (Float64) converged mode. `logdet_w(t, μ,
+# me, η)` returns the objective's log-det weight for cell t.
+function _cov_site_diffable(fams, y::AbstractVector, n::AbstractVector, Λ::AbstractMatrix,
+        η0::AbstractVector, link::Link, ẑ::AbstractVector, logdet_w; mask = nothing)
+    p = size(Λ, 1)
+    obs(t) = mask === nothing || mask[t]
+    η  = _clamp_eta.(η0 .+ Λ * ẑ)
+    μ  = [_clamp_mu(fams[t], linkinv(link, η[t])) for t in 1:p]
+    me = mu_eta.(Ref(link), η)
+    T  = eltype(μ)
+    s  = [obs(t) ? _glm_score(fams[t], μ[t], n[t], me[t], y[t]) : zero(T) for t in 1:p]
+    Wo = [obs(t) ? _cov_obs_weight(fams[t], μ[t], n[t], me[t], y[t], link, η[t]) : zero(T)
+          for t in 1:p]
+    H  = Λ' * (Wo .* Λ) + I
+    z  = ẑ .+ (Matrix(H) \ (Λ' * s .- ẑ))
+
+    ηz  = _clamp_eta.(η0 .+ Λ * z)
+    μz  = [_clamp_mu(fams[t], linkinv(link, ηz[t])) for t in 1:p]
+    mez = mu_eta.(Ref(link), ηz)
+    Tz  = eltype(μz)
+    W   = [obs(t) ? logdet_w(t, μz[t], mez[t], ηz[t]) : zero(Tz) for t in 1:p]
+    A   = Matrix(Λ' * (W .* Λ) + I)
+    ℓ = zero(Tz)
+    @inbounds for t in 1:p
+        obs(t) || continue
+        ℓ += _glm_logpdf(fams[t], μz[t], n[t], y[t])
+    end
+    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+end
+
+# Optimiser for the exact-gradient route: dense BFGS, not L-BFGS. These objectives are
+# ill-conditioned (fungi 100 x 10: R's own cond(H) is 1.2e8, with near-separated species
+# pushing intercepts and loadings far out). With the exact gradient, L-BFGS (m = 10) crawled
+# along the flat valley and hit the 500-iteration cap short of the optimum (negll 531.74 after
+# 500 iterations, 531.30 after 3000, against 530.484071); dense BFGS reaches 530.484071
+# (R's value, to 1e-8) in 190 iterations. The inverse-Hessian cost is O(nθ²) per step,
+# negligible next to the per-site mode searches at the θ sizes these fitters meet.
+_COV_BFGS() = Optim.BFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
+
+# Families whose marker can carry a ForwardDiff dual dispersion (NB1's field is
+# Float64-typed, so NB1 keeps the finite-difference gradient).
+_cov_ad_ok(::NB1) = false
+_cov_ad_ok(f)     = true
+
+# −∇θ of `fit_gllvm_cov`'s objective, θ = [β; γ_free; pack(Λ); (log disp)], or
+# `nothing` when any site's mode search fails (the objective is the 1e12 sentinel there)
+# or the AD pass errors; `_optimize_with_analytic` then falls back to a central finite
+# difference at that θ.
+function _cov_negll_grad(family, Yc, Nm, X_fit, θ, p, q, K, rr, has_disp, lk, msk,
+                         maxiter, tol)
+    try
+        n = size(Yc, 2)
+        β = θ[1:p]; γ = θ[(p + 1):(p + q)]
+        Λ = unpack_lambda(θ[(p + q + 1):(p + q + rr)], p, K)
+        fam = _cov_family(family, has_disp ? exp(θ[p + q + rr + 1]) : NaN)
+        O = _build_offset(X_fit, γ)
+        ẑs = Vector{Vector{Float64}}(undef, n)
+        for s in 1:n
+            mi = msk === nothing ? nothing : view(msk, :, s)
+            z, ok = _laplace_mode_off_conv(fam, view(Yc, :, s), view(Nm, :, s), Λ,
+                                           β .+ view(O, :, s), lk;
+                                           mask = mi, maxiter = maxiter, tol = tol)
+            ok || return nothing
+            ẑs[s] = z
+        end
+        hess = _default_hessian(fam, lk)
+        function marg(θd)
+            βd = θd[1:p]; γd = θd[(p + 1):(p + q)]
+            Λd = unpack_lambda(θd[(p + q + 1):(p + q + rr)], p, K)
+            fd = has_disp ? _cov_family(family, exp(θd[p + q + rr + 1])) : fam
+            fams = fill(fd, p)
+            fisher = hess === :fisher || _glm_weight_matches_observed(fd, lk)
+            Od = _build_offset(X_fit, γd)
+            acc = zero(eltype(θd))
+            for s in 1:n
+                y = view(Yc, :, s); nt = view(Nm, :, s)
+                mi = msk === nothing ? nothing : view(msk, :, s)
+                ldw = (t, μ, me, η) -> fisher ? _glm_weight(fd, μ, nt[t], me) :
+                                                _glm_obs_weight(fd, μ, nt[t], me, y[t], lk, η)
+                acc += _cov_site_diffable(fams, y, nt, Λd, βd .+ view(Od, :, s), lk, ẑs[s],
+                                          ldw; mask = mi)
+            end
+            return acc
+        end
+        g = ForwardDiff.gradient(marg, θ)
+        return all(isfinite, g) ? -g : nothing
+    catch
+        return nothing
+    end
+end
+
 # Offset matrix O[t,s] = Σ_k X[t,s,k]·γ_k from X::(p,n,q) and γ::length-q.
 function _build_offset(X::AbstractArray{<:Real, 3}, γ::AbstractVector)
     p, n, q = size(X)
@@ -320,8 +438,10 @@ this shared-dispersion path remains the explicit opt-in. `X` is the `(p, n, q)`
 covariate array
 (same contract as the Gaussian engine); `γ` (length q) are coefficients shared
 across species (encode species-specific responses by block-expanding `X`). `Y` is
-`p × n`; `N` supplies Binomial trial counts (default all-ones). Finite-difference
-gradient. `γ_fixed` optionally fixes selected covariate coefficients to zero;
+`p × n`; `N` supplies Binomial trial counts (default all-ones). Exact gradient
+(ForwardDiff through the implicit one-Newton-step construction of
+`src/laplace_grad.jl`), with a central finite difference at any θ where it is not
+available; NB1 keeps the finite-difference gradient. `γ_fixed` optionally fixes selected covariate coefficients to zero;
 pass a Bool vector of length `size(X, 3)`, an integer index vector, or a Dict
 index=>0.
 
@@ -390,8 +510,14 @@ function fit_gllvm_cov(Y::AbstractMatrix; family, X::AbstractArray{<:Real, 3},
         return isfinite(v) ? v : 1e12
     end
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
-    res = Optim.optimize(negll, θ0, ls, Optim.Options(g_tol = g_tol, iterations = iterations);
-                         autodiff = :finite)
+    opts = Optim.Options(g_tol = g_tol, iterations = iterations)
+    res = if _cov_ad_ok(family)
+        grad = θ -> _cov_negll_grad(family, Yc, Nm, X_fit, θ, p, q, K, rr, has_disp, lk,
+                                    msk, newton_maxiter, newton_tol)
+        _optimize_with_analytic(negll, grad, θ0, _COV_BFGS(), opts)
+    else
+        Optim.optimize(negll, θ0, ls, opts; autodiff = :finite)
+    end
     θ̂ = Optim.minimizer(res)
     β̂ = θ̂[1:p]
     γ̂_free = θ̂[(p + 1):(p + q)]
