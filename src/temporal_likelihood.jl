@@ -215,8 +215,21 @@ function temporal_marginal_nll(theta::AbstractVector, y::AbstractVector,
     blocks = series_rows === nothing ? _temporal_series_rows(spec) : series_rows
     P = _temporal_cov_pieces(theta, spec, L)
     residual = y .- X * theta[L.beta]
+    # Low-rank route (latent mode without unique, no composed terms): the block
+    # covariance is A (K ⊗ I_rank) A' + sigma^2 I, so the dense (traits x
+    # occasions) Cholesky is replaced by one of size rank x occasions.
+    Lambda = L.rank > 0 && !L.unique && !_temporal_composed(spec.composition) ?
+        unpack_lambda(view(theta, L.rr), L.p, L.rank) : nothing
     nll = zero(T)
     for rows in blocks
+        if Lambda !== nothing
+            v = _temporal_block_nll_lowrank(spec, P, Lambda, rows, residual)
+            if v !== nothing
+                v === Inf && return T(Inf)
+                nll += v
+                continue
+            end
+        end
         m = length(rows)
         V = Matrix{T}(undef, m, m)
         for jb in 1:m, ib in jb:m
@@ -232,6 +245,64 @@ function temporal_marginal_nll(theta::AbstractVector, y::AbstractVector,
         nll += (m * log(2pi) + logdet(F) + dot(z, z)) / 2
     end
     return nll
+end
+
+# Negative log-likelihood of one series block when its covariance is
+# A G A' + sigma^2 I: G = K ⊗ I_r over the block's distinct occasions (K the
+# temporal correlation, r the latent rank) and row o of A is
+# e_{time(o)} ⊗ Lambda[trait(o), :]. With G = Lg Lg' (Lg = chol(K) ⊗ I_r) and
+# M = I + Lg' A'A Lg / sigma^2, the determinant lemma and Woodbury give
+#   logdet V = m log sigma^2 + logdet M,
+#   r' V^-1 r = r'r / sigma^2 - |chol(M) \ (Lg' A'r / sigma^2)|^2,
+# the same value as the dense block at O((r T)^3) instead of O((p T)^3).
+# Returns `nothing` (caller uses the dense block) when the block gains nothing,
+# two distinct AR1 occasions share a rounded lag of 0, or K is numerically
+# singular, and `Inf` when M is not positive definite or not finite.
+function _temporal_block_nll_lowrank(spec::TemporalSpec, P, Lambda::AbstractMatrix,
+        rows::AbstractVector{Int}, residual::AbstractVector)
+    m = length(rows)
+    r = size(Lambda, 2)
+    times = unique(spec.row_time[rows])
+    nt = length(times)
+    nt * r < m || return nothing
+    Ta = typeof(P.a)
+    K = Matrix{Ta}(undef, nt, nt)
+    for j in 1:nt, i in j:nt
+        if i != j && spec.structure === :ar1 && round(times[i] - times[j]) == 0
+            return nothing
+        end
+        c = _temporal_corr(spec.structure, P.a, times[i], times[j])
+        K[i, j] = c
+        K[j, i] = c
+    end
+    FK = cholesky(Symmetric(K, :L); check=false)
+    issuccess(FK) || return nothing   # numerically singular K (e.g. OU kappa -> 0): dense block
+    s2 = P.sigma2
+    TT = promote_type(Ta, eltype(Lambda), typeof(s2), eltype(residual))
+    n = nt * r
+    H = zeros(TT, n, n)   # A'A, block diagonal over occasions
+    b = zeros(TT, n)      # A'r
+    rr = zero(TT)
+    for o in rows
+        k = findfirst(==(spec.row_time[o]), times)
+        j = spec.trait_id[o]
+        off = (k - 1) * r
+        e = residual[o]
+        rr += e * e
+        for l2 in 1:r
+            b[off + l2] += Lambda[j, l2] * e
+            for l1 in 1:r
+                H[off + l1, off + l2] += Lambda[j, l1] * Lambda[j, l2]
+            end
+        end
+    end
+    Lg = kron(Matrix(FK.L), Matrix{TT}(I, r, r))
+    M = Matrix{TT}(I, n, n) .+ (Lg' * H * Lg) ./ s2
+    all(isfinite, M) || return Inf
+    FM = cholesky(Symmetric(M, :L); check=false)
+    issuccess(FM) || return Inf
+    z = FM.L \ ((Lg' * b) ./ s2)
+    return (m * log(2pi) + m * log(s2) + logdet(FM) + rr / s2 - dot(z, z)) / 2
 end
 
 """Positive twin of [`temporal_marginal_nll`](@ref)."""
