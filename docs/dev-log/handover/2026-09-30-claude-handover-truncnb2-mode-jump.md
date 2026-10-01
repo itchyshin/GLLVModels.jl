@@ -52,7 +52,7 @@ FINDINGS-OF-RECORD: none on unmerged branches; every code finding is in merged P
 
 None owed. Optional follow-ups, each a separate decision for the maintainer:
 
-1. Give the truncated-NB2 `_family_ci` adapters a `dispersion_boundary` flag, as the other NB routes have (currently `boundary = false` for r).
+1. Give the shared-r truncated-NB2 `_family_ci` adapter the Wald `boundary` flag for r; the per-trait adapter already had it (corrected 2026-10-01). Taken in claude/truncnb2-ci-boundary; its bootstrap refits stay unflagged on purpose.
 2. Probe the shared-r truncated-NB2 fitter for the wrong-optimum stall #627 fixed on the per-trait fitter.
 3. Decide whether the Gaussian `profile_ci` and `phylo_beta_xlv.jl` should also report 0 for an open lower end (they share `_profile_bisect_side`, which #605 and #607 left unchanged).
 

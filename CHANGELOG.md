@@ -293,6 +293,13 @@ All notable changes to GLLVModels.jl are documented here.
   did not contain. The bounds are now on the parameter's own scale ([-2.50, 2.50] for that
   fit, which is wide because the parameter is weakly identified there).
   `test/test_profile_sigma_phy_identity.jl`.
+- **Zero-truncated NB2 (shared r) Wald intervals now treat r at the Poisson limit as a
+  boundary.** The shared-r `_family_ci` adapter now sets the fit-level boundary flag for an
+  r above 1e6, as the per-trait adapter already did, so the Wald interval conditions that r
+  out of the Hessian instead of giving it a meaningless finite standard error. The bootstrap
+  refits still do not report `upper_boundary`: the bootstrap drops a flagged replicate from
+  every parameter's quantiles, and on per-trait data with one trait at the limit every
+  refit is flagged, so it would leave no intervals. `test/test_truncnb2_ci_boundary.jl`.
 - **Family profile intervals report 0 for an open lower end on a log-scale parameter.**
   When a dispersion or SD's profile deviance stays below the chi-square cutoff as the
   parameter goes to 0, no lower crossing exists and `confint(...; method = :profile)`
