@@ -281,6 +281,8 @@ println(_SHARD === nothing ?
     _shard_include("test_ordination.jl")
     _shard_include("test_extract_latent_scores.jl")
     _shard_include("test_model_selection.jl")
+    # P1 numeric twin of select_lv() vs gllvmTMB R/select-lv.R (Gaussian rank sweep).
+    _shard_include("test_select_lv_p1_twin.jl")
     _shard_include("test_binomial_ridge.jl")
     _shard_include("test_model_comparison.jl")
     _shard_include("test_structured_cov.jl")

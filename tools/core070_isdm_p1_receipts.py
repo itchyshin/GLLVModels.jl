@@ -260,7 +260,29 @@ def p0_evidence(base):
                     "(batch name, preservation sha256) remains."}
 
 
-def build_rows(in_scope, receipts):
+WIRED_PREFIXES = (f"{OUT_REL}/receipts/julia-twins/", f"{OUT_REL}/receipts/fixture-twins/")
+
+
+def wired_overlay(row, committed):
+    """A row later rewired to a Julia-twin or fixture-twin receipt (a numeric R-vs-Julia comparison) keeps
+    those evidence fields. Everything this tool derives stays derived and is still compared; the R predicate
+    case ids and receipts move to r_predicate_case_ids / non_binding_receipts. Returns True if applied."""
+    ev = (committed or {}).get("evidence") or {}
+    paths = ev.get("receipt")
+    if not isinstance(paths, list) or not paths or not all(isinstance(x, str) and x.startswith(WIRED_PREFIXES) for x in paths):
+        return False
+    if committed.get("evidence_tier") != "numeric" or not committed.get("executable_case_ids"):
+        return False
+    row["r_predicate_case_ids"] = row["executable_case_ids"]
+    row["executable_case_ids"] = committed["executable_case_ids"]
+    row["evidence_tier"] = "numeric"
+    row["measured_against"] = committed.get("measured_against")
+    row["evidence"] = {**row["evidence"], "receipt": paths, "tier": ev.get("tier")}
+    return True
+
+
+def build_rows(in_scope, receipts, committed_rows=None):
+    committed_by_id = {r["source_id"]: r for r in (committed_rows or [])}
     p0 = {r["source_id"]: r for r in load(P0_CASEMAP)["rows"]}
     counts = {k: 0 for k in COUNT_KEYS}
     out_rows = []
@@ -295,6 +317,9 @@ def build_rows(in_scope, receipts):
                    measured_result={"case_verdicts": verdicts, "batch_verifier": batch_ok,
                                     "case_kinds": {i: h[1] for i, h in zip(ids, have)}})
         counts[tier] += 1
+        if wired_overlay(row, committed_by_id.get(sid)):
+            counts[tier] -= 1
+            counts["numeric_pass"] += 1
         notes = [h[4] for h in have if h[4]]
         if notes:
             row["note"] = " ".join(dict.fromkeys(notes))
@@ -366,7 +391,7 @@ def check():
     cm = load(ROOT / CASEMAP_REL)
     n_rows = 0
     try:
-        rows, counts = build_rows([r["source_id"] for r in cm["rows"]], receipts)
+        rows, counts = build_rows([r["source_id"] for r in cm["rows"]], receipts, cm["rows"])
         n_rows = len(rows)
         if rows != cm["rows"]:
             bad = [a["source_id"] for a, b in zip(rows, cm["rows"]) if a != b] or ["row count"]
@@ -440,7 +465,8 @@ def main():
     carry = load(runs / "carry-scan-p1.json")
     in_scope = [r["source_id"] for r in carry["rows"]
                 if r["source_id"].startswith(FAMILY + "/") and r["status"] == "DANGLING"]
-    rows, counts = build_rows(in_scope, receipts)
+    old_map = ROOT / CASEMAP_REL
+    rows, counts = build_rows(in_scope, receipts, load(old_map)["rows"] if old_map.is_file() else None)
     write_json(ROOT / CASEMAP_REL, {
         "schema": 1, "reference_commit": P1_SHA, "scope": SCOPE, "note": NOTE,
         "generator": "tools/core070_isdm_p1_receipts.py", "glvmodels_commit": head,
