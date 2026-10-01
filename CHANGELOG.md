@@ -2,6 +2,19 @@
 
 ## Development
 
+- **Per-species NB2 fits no longer stall on the ridge to the Poisson limit (#615).**
+  As a species' r grows, the likelihood in log r flattens but keeps rising, so L-BFGS
+  could crawl toward r = ∞ until the 500-iteration cap and report `converged = false`.
+  In the #615 grid only 10 to 50% of per-species fits converged at p = 24, and the three
+  stalls examined were all on this ridge. Such a fit is now refit with the species at
+  r > 1e3 fixed at r = 1e10 (all together, then each alone), and the refit is kept
+  only if it is no worse than the stalled point. On two stalled grid fits (p = 12, n = 60) the refit converges, 2.7e-4
+  and 3.6e-5 log-likelihood units higher, at a cost of 10 to 20 s per fit. The fixed
+  species report `r_group = 1e10`, which already triggers the Poisson-limit warning.
+  Converged fits are unchanged. Applies to `fit_nb_gllvm_grouped`,
+  `fit_nb_gllvm_grouped_cov` and `fit_truncated_nbinom2_gllvm_pertrait`. Test:
+  `test/test_nb_grouped_poisson_ridge.jl` (literal fixture
+  `test/fixtures/nb_grouped_poisson_ridge.toml`).
 - **Bootstrap intervals no longer lose every parameter when one dispersion sits at its
   limit.** `_family_bootstrap` dropped a refit with any `upper_boundary` flag from all
   parameters' quantiles. Where a per-group dispersion sits at the limit on most draws

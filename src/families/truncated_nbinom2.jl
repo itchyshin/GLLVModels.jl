@@ -659,11 +659,13 @@ function fit_truncated_nbinom2_gllvm_pertrait(Y::AbstractMatrix; K::Integer,
     # at the limit. Restart the boundary trait(s) from r = 1 as the NB2 grouped fitters do
     # (#477); the better fit is kept only if it lowers the objective by more than 1e-6.
     res = _nb_boundary_restart(negll, res, ls, opts, p + rr + 1)
-    θ̂ = Optim.minimizer(res)
+    # A non-converged fit crawling toward the Poisson limit is refit with those traits
+    # fixed at r = 1e10 (#615; `_nb_poisson_ridge_polish`).
+    θ̂, nll, conv0, iters0 = _nb_poisson_ridge_polish(negll, res, ls, opts, p + rr + 1)
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     r̂ = exp.(θ̂[(p + rr + 1):(p + rr + p)])
-    loglik, converged, iters = _fit_verdict(res)
+    loglik, converged, iters = _fit_verdict(nll, conv0, iters0)
     # Dispersion boundary (2026-09-29): see `fit_truncated_nbinom2_gllvm`.
     converged = _truncnb2_dispersion_verdict(converged, r̂,
                                              "fit_truncated_nbinom2_gllvm_pertrait")
