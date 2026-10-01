@@ -147,20 +147,27 @@
    "r_file_line": "R/methods-gllvmTMB.R:3355",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE8-DEVIANCE-MULTI.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-DEVIANCE-MULTI-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-DEVIANCE-MULTI-NATIVE"
+    ],
+    "cross_cited_from": "postfit/POSTFIT-SURFACE-deviance.gllvmTMB_multi",
+    "tier": "numeric: re-cited, not recomputed. The cited P1 receipt belongs to the postfit row postfit/POSTFIT-SURFACE-deviance.gllvmTMB_multi (same R accessor at the P1 pin, run in the live R oracle, against the Julia accessor; max abs difference within the tolerance recorded in the receipt). The case ids replace the Tier 0 registration case ids (kept un-cited under registration_receipts and registration_case_ids)."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-DEVIANCE-MULTI-NATIVE"
+    "CORE070-WAVE8-DEVIANCE-MULTI"
    ],
    "reason": "R S3method(deviance,gllvmTMB_multi) registered and defined at P1; Julia `deviance` is an exported Function (measured). Name match only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -206,20 +213,27 @@
    "r_file_line": "R/methods-gllvmTMB.R:3330",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE7-FITTED-MULTI.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-FITTED-MULTI-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-FITTED-MULTI-NATIVE"
+    ],
+    "cross_cited_from": "postfit/POSTFIT-SURFACE-fitted.gllvmTMB_multi",
+    "tier": "numeric: re-cited, not recomputed. The cited P1 receipt belongs to the postfit row postfit/POSTFIT-SURFACE-fitted.gllvmTMB_multi (same R accessor at the P1 pin, run in the live R oracle, against the Julia accessor; max abs difference within the tolerance recorded in the receipt). The case ids replace the Tier 0 registration case ids (kept un-cited under registration_receipts and registration_case_ids)."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-FITTED-MULTI-NATIVE"
+    "CORE070-WAVE7-FITTED-MULTI"
    ],
    "reason": "R S3method(fitted,gllvmTMB_multi) registered and defined at P1; Julia `fitted` is an exported Function (measured). Name match only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -388,20 +402,27 @@
    "r_file_line": "R/methods-gllvmTMB.R:2786",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE7-PREDICT-MULTI.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-PREDICT-MULTI-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-PREDICT-MULTI-NATIVE"
+    ],
+    "cross_cited_from": "postfit/POSTFIT-SURFACE-predict.gllvmTMB_multi",
+    "tier": "numeric: re-cited, not recomputed. The cited P1 receipt belongs to the postfit row postfit/POSTFIT-SURFACE-predict.gllvmTMB_multi (same R accessor at the P1 pin, run in the live R oracle, against the Julia accessor; max abs difference within the tolerance recorded in the receipt). The case ids replace the Tier 0 registration case ids (kept un-cited under registration_receipts and registration_case_ids)."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-PREDICT-MULTI-NATIVE"
+    "CORE070-WAVE7-PREDICT-MULTI"
    ],
    "reason": "R S3method(predict,gllvmTMB_multi) registered and defined at P1; Julia `predict` is an exported Function (measured). Name match only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -447,20 +468,27 @@
    "r_file_line": "R/predictive-diagnostics.R:229",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE7-RESIDUALS-MULTI.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-RESIDUALS-MULTI-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-RESIDUALS-MULTI-NATIVE"
+    ],
+    "cross_cited_from": "postfit/POSTFIT-SURFACE-residuals.gllvmTMB_multi",
+    "tier": "numeric: re-cited, not recomputed. The cited P1 receipt belongs to the postfit row postfit/POSTFIT-SURFACE-residuals.gllvmTMB_multi (same R accessor at the P1 pin, run in the live R oracle, against the Julia accessor; max abs difference within the tolerance recorded in the receipt). The case ids replace the Tier 0 registration case ids (kept un-cited under registration_receipts and registration_case_ids)."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-RESIDUALS-MULTI-NATIVE"
+    "CORE070-WAVE7-RESIDUALS-MULTI"
    ],
    "reason": "R S3method(residuals,gllvmTMB_multi) registered and defined at P1; Julia `residuals` is an exported Function (measured). Name match only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -594,20 +622,27 @@
    "r_file_line": "R/methods-gllvmTMB.R:825",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE8-SUMMARY-FIXEF-AND-LOGLIK.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-SUMMARY-MULTI-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-SUMMARY-MULTI-NATIVE"
+    ],
+    "cross_cited_from": "postfit/POSTFIT-SURFACE-summary.gllvmTMB_multi",
+    "tier": "numeric: re-cited, not recomputed. The cited P1 receipt belongs to the postfit row postfit/POSTFIT-SURFACE-summary.gllvmTMB_multi (same R accessor at the P1 pin, run in the live R oracle, against the Julia accessor; max abs difference within the tolerance recorded in the receipt). The case ids replace the Tier 0 registration case ids (kept un-cited under registration_receipts and registration_case_ids)."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-SUMMARY-MULTI-NATIVE"
+    "CORE070-WAVE8-SUMMARY-FIXEF-AND-LOGLIK"
    ],
    "reason": "R S3method(summary,gllvmTMB_multi) registered and defined at P1; Julia `coef_table` is an exported Function (measured). Name match only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -973,20 +1008,27 @@
    "r_file_line": "R/extractors.R:101",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-ICC-SITE.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-ICC-SITE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-EXTRACT-ICC-SITE"
+    ],
+    "cross_cited_from": "postfit/POSTFIT-SURFACE-extract_ICC_site",
+    "tier": "numeric: re-cited, not recomputed. The cited P1 receipt belongs to the postfit row postfit/POSTFIT-SURFACE-extract_ICC_site (same R accessor at the P1 pin, run in the live R oracle, against the Julia accessor; max abs difference within the tolerance recorded in the receipt). The case ids replace the Tier 0 registration case ids (kept un-cited under registration_receipts and registration_case_ids)."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-EXTRACT-ICC-SITE"
+    "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-ICC-SITE"
    ],
    "reason": "R export(extract_ICC_site) registered and defined at P1; Julia `icc_wald_ci` is an exported Function (measured). Name match only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -1002,20 +1044,27 @@
    "r_file_line": "R/extract-omega.R:189",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-ESTIMAND-REBIND-EXTRACT-OMEGA.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-OMEGA-SUM.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-EXTRACT-OMEGA-SUM"
+    ],
+    "cross_cited_from": "postfit/POSTFIT-SURFACE-extract_Omega",
+    "tier": "numeric: re-cited, not recomputed. The cited P1 receipt belongs to the postfit row postfit/POSTFIT-SURFACE-extract_Omega (same R accessor at the P1 pin, run in the live R oracle, against the Julia accessor; max abs difference within the tolerance recorded in the receipt). The case ids replace the Tier 0 registration case ids (kept un-cited under registration_receipts and registration_case_ids)."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-EXTRACT-OMEGA-SUM"
+    "CORE070-ESTIMAND-REBIND-EXTRACT-OMEGA"
    ],
    "reason": "R export(extract_Omega) registered and defined at P1; Julia `sigma_y_site` is an exported Function (measured). Name match only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -1031,20 +1080,27 @@
    "r_file_line": "R/extract-sigma.R:789",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-SIGMA.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-SIGMA-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-EXTRACT-SIGMA-NATIVE"
+    ],
+    "cross_cited_from": "postfit/POSTFIT-SURFACE-extract_Sigma",
+    "tier": "numeric: re-cited, not recomputed. The cited P1 receipt belongs to the postfit row postfit/POSTFIT-SURFACE-extract_Sigma (same R accessor at the P1 pin, run in the live R oracle, against the Julia accessor; max abs difference within the tolerance recorded in the receipt). The case ids replace the Tier 0 registration case ids (kept un-cited under registration_receipts and registration_case_ids)."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-EXTRACT-SIGMA-NATIVE"
+    "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-SIGMA"
    ],
    "reason": "R export(extract_Sigma) registered and defined at P1; Julia `sigma_y_site` is an exported Function (measured). Name match only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -1178,20 +1234,27 @@
    "r_file_line": "R/extract-correlations.R:392",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-ESTIMAND-REBIND-EXTRACT-CORRELATIONS.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-CORRELATIONS-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-EXTRACT-CORRELATIONS-NATIVE"
+    ],
+    "cross_cited_from": "postfit/POSTFIT-SURFACE-extract_correlations",
+    "tier": "numeric: re-cited, not recomputed. The cited P1 receipt belongs to the postfit row postfit/POSTFIT-SURFACE-extract_correlations (same R accessor at the P1 pin, run in the live R oracle, against the Julia accessor; max abs difference within the tolerance recorded in the receipt). The case ids replace the Tier 0 registration case ids (kept un-cited under registration_receipts and registration_case_ids)."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-EXTRACT-CORRELATIONS-NATIVE"
+    "CORE070-ESTIMAND-REBIND-EXTRACT-CORRELATIONS"
    ],
    "reason": "R export(extract_correlations) registered and defined at P1; Julia `correlation` is an exported Function (measured). Name match only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -1236,18 +1299,24 @@
    "r_file_line": "R/extract-cutpoints.R:71",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-CUTPOINTS.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-CUTPOINTS-ORDINAL.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration mismatch: R export registered+defined at P1, but the Julia symbol is not an exported Function (Julia symbol OrdinalFit not a Function (kind=DataType)); not a twin, semantics and numeric output not compared (D-295 row 5)"
+    "cross_cited_from": "postfit/POSTFIT-SURFACE-extract_cutpoints",
+    "tier": "numeric: re-cited, not recomputed. The cited P1 receipt belongs to the postfit row postfit/POSTFIT-SURFACE-extract_cutpoints (same R accessor at the P1 pin, run in the live R oracle, against the Julia accessor; max abs difference within the tolerance recorded in the receipt). The case ids replace the Tier 0 registration case ids (kept un-cited under registration_receipts and registration_case_ids)."
    },
-   "executable_case_ids": [],
+   "executable_case_ids": [
+    "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-CUTPOINTS"
+   ],
    "reason": "Registration mismatch at P1: Julia symbol OrdinalFit not a Function (kind=DataType). Not twinned.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "FAIL",
     "category": "registration_mismatch",
@@ -1325,20 +1394,27 @@
    "r_file_line": "R/extractors.R:482",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-ORDINATION.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-ORDINATION-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-EXTRACT-ORDINATION-NATIVE"
+    ],
+    "cross_cited_from": "postfit/POSTFIT-SURFACE-extract_ordination",
+    "tier": "numeric: re-cited, not recomputed. The cited P1 receipt belongs to the postfit row postfit/POSTFIT-SURFACE-extract_ordination (same R accessor at the P1 pin, run in the live R oracle, against the Julia accessor; max abs difference within the tolerance recorded in the receipt). The case ids replace the Tier 0 registration case ids (kept un-cited under registration_receipts and registration_case_ids)."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-EXTRACT-ORDINATION-NATIVE"
+    "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-ORDINATION"
    ],
    "reason": "R export(extract_ordination) registered and defined at P1; Julia `ordination` is an exported Function (measured). Name match only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -1413,20 +1489,27 @@
    "r_file_line": "R/extract-repeatability.R:83",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-REPEATABILITY.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-REPEATABILITY-TWOLEVEL.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-EXTRACT-REPEATABILITY-TWOLEVEL"
+    ],
+    "cross_cited_from": "postfit/POSTFIT-SURFACE-extract_repeatability",
+    "tier": "numeric: re-cited, not recomputed. The cited P1 receipt belongs to the postfit row postfit/POSTFIT-SURFACE-extract_repeatability (same R accessor at the P1 pin, run in the live R oracle, against the Julia accessor; max abs difference within the tolerance recorded in the receipt). The case ids replace the Tier 0 registration case ids (kept un-cited under registration_receipts and registration_case_ids)."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-EXTRACT-REPEATABILITY-TWOLEVEL"
+    "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-REPEATABILITY"
    ],
    "reason": "R export(extract_repeatability) registered and defined at P1; Julia `repeatability` is an exported Function (measured). Name match only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -1442,20 +1525,27 @@
    "r_file_line": "R/output-methods.R:355",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-RESIDUAL-COR.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-RESIDUAL-COR-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-EXTRACT-RESIDUAL-COR-NATIVE"
+    ],
+    "cross_cited_from": "postfit/POSTFIT-SURFACE-extract_residual_cor",
+    "tier": "numeric: re-cited, not recomputed. The cited P1 receipt belongs to the postfit row postfit/POSTFIT-SURFACE-extract_residual_cor (same R accessor at the P1 pin, run in the live R oracle, against the Julia accessor; max abs difference within the tolerance recorded in the receipt). The case ids replace the Tier 0 registration case ids (kept un-cited under registration_receipts and registration_case_ids)."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-EXTRACT-RESIDUAL-COR-NATIVE"
+    "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-RESIDUAL-COR"
    ],
    "reason": "R export(extract_residual_cor) registered and defined at P1; Julia `correlation` is an exported Function (measured). Name match only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -1471,20 +1561,27 @@
    "r_file_line": "R/output-methods.R:349",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-RESIDUAL-COV.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-RESIDUAL-COV-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-EXTRACT-RESIDUAL-COV-NATIVE"
+    ],
+    "cross_cited_from": "postfit/POSTFIT-SURFACE-extract_residual_cov",
+    "tier": "numeric: re-cited, not recomputed. The cited P1 receipt belongs to the postfit row postfit/POSTFIT-SURFACE-extract_residual_cov (same R accessor at the P1 pin, run in the live R oracle, against the Julia accessor; max abs difference within the tolerance recorded in the receipt). The case ids replace the Tier 0 registration case ids (kept un-cited under registration_receipts and registration_case_ids)."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-EXTRACT-RESIDUAL-COV-NATIVE"
+    "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-RESIDUAL-COV"
    ],
    "reason": "R export(extract_residual_cov) registered and defined at P1; Julia `sigma_y_site` is an exported Function (measured). Name match only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -1588,20 +1685,27 @@
    "r_file_line": "R/output-methods.R:169",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETLV.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-GETLV-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-GETLV-NATIVE"
+    ],
+    "cross_cited_from": "postfit/POSTFIT-SURFACE-getLV",
+    "tier": "numeric: re-cited, not recomputed. The cited P1 receipt belongs to the postfit row postfit/POSTFIT-SURFACE-getLV (same R accessor at the P1 pin, run in the live R oracle, against the Julia accessor; max abs difference within the tolerance recorded in the receipt). The case ids replace the Tier 0 registration case ids (kept un-cited under registration_receipts and registration_case_ids)."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-GETLV-NATIVE"
+    "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETLV"
    ],
    "reason": "R export(getLV) registered and defined at P1; Julia `getLV` is an exported Function (measured). Name match only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -1615,16 +1719,24 @@
    "classification": "required_core",
    "arc": "A3",
    "r_file_line": null,
-   "executable_case_ids": [],
+   "executable_case_ids": [
+    "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETLOADINGS"
+   ],
    "p0_case_ids": [
     "CORE070-SURFCONV-NAMESPACE-EXPORT-GETLOADINGS"
    ],
-   "evidence": {},
-   "measured_against": null,
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETLOADINGS.json"
+    ],
+    "cross_cited_from": "postfit/POSTFIT-SURFACE-getLoadings",
+    "tier": "numeric: re-cited, not recomputed. The cited P1 receipt belongs to the postfit row postfit/POSTFIT-SURFACE-getLoadings (same R accessor at the P1 pin, run in the live R oracle, against the Julia accessor; max abs difference within the tolerance recorded in the receipt). The case ids replace the Tier 0 registration case ids."
+   },
+   "measured_against": "P1",
    "disposition": null,
    "reason": "Not re-measured at P1 in this PR.",
    "not_measured_reason": "P0 evidence came from a non-namespace batch (surface-conversion wave5 (attempt7)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here.",
-   "evidence_tier": "registration"
+   "evidence_tier": "numeric"
   },
   {
    "source_id": "namespace/export/getResidualCor",
@@ -1633,16 +1745,24 @@
    "classification": "required_core",
    "arc": "A3",
    "r_file_line": null,
-   "executable_case_ids": [],
+   "executable_case_ids": [
+    "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETRESIDUALCOR"
+   ],
    "p0_case_ids": [
     "CORE070-SURFCONV-NAMESPACE-EXPORT-GETRESIDUALCOR"
    ],
-   "evidence": {},
-   "measured_against": null,
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETRESIDUALCOR.json"
+    ],
+    "cross_cited_from": "postfit/POSTFIT-SURFACE-getResidualCor",
+    "tier": "numeric: re-cited, not recomputed. The cited P1 receipt belongs to the postfit row postfit/POSTFIT-SURFACE-getResidualCor (same R accessor at the P1 pin, run in the live R oracle, against the Julia accessor; max abs difference within the tolerance recorded in the receipt). The case ids replace the Tier 0 registration case ids."
+   },
+   "measured_against": "P1",
    "disposition": null,
    "reason": "Not re-measured at P1 in this PR.",
    "not_measured_reason": "P0 evidence came from a non-namespace batch (surface-conversion wave5 (attempt7)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here.",
-   "evidence_tier": "registration"
+   "evidence_tier": "numeric"
   },
   {
    "source_id": "namespace/export/getResidualCov",
@@ -1651,16 +1771,24 @@
    "classification": "required_core",
    "arc": "A3",
    "r_file_line": null,
-   "executable_case_ids": [],
+   "executable_case_ids": [
+    "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETRESIDUALCOV"
+   ],
    "p0_case_ids": [
     "CORE070-SURFCONV-NAMESPACE-EXPORT-GETRESIDUALCOV"
    ],
-   "evidence": {},
-   "measured_against": null,
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETRESIDUALCOV.json"
+    ],
+    "cross_cited_from": "postfit/POSTFIT-SURFACE-getResidualCov",
+    "tier": "numeric: re-cited, not recomputed. The cited P1 receipt belongs to the postfit row postfit/POSTFIT-SURFACE-getResidualCov (same R accessor at the P1 pin, run in the live R oracle, against the Julia accessor; max abs difference within the tolerance recorded in the receipt). The case ids replace the Tier 0 registration case ids."
+   },
+   "measured_against": "P1",
    "disposition": null,
    "reason": "Not re-measured at P1 in this PR.",
    "not_measured_reason": "P0 evidence came from a non-namespace batch (surface-conversion wave5 (attempt7)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here.",
-   "evidence_tier": "registration"
+   "evidence_tier": "numeric"
   },
   {
    "source_id": "namespace/export/gllvmTMB",
