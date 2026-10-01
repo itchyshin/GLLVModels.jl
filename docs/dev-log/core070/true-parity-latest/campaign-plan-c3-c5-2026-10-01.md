@@ -11,9 +11,9 @@ Terms. A *row* is one scoreboard line (`| id | requires | status | receipt | not
 | Clause | Rows proposed | New compute | Where |
 |---|---|---|---|
 | C3 realistic size | 8 EVIDENCED rows | about 45 min point estimate, about 1.7 h upper bound, serial | Totoro |
-| C4 real data | 5 EVIDENCED rows plus 3 signed-disposition rows (8) | about 50 min point, about 2 h upper bound, serial | Totoro (urbanisation and bridge checks may stay on the Mac) |
+| C4 real data | 5 EVIDENCED rows plus 3 signed-disposition rows (8) | about 55 min point, about 2.7 h upper bound, serial | Totoro (urbanisation and bridge checks may stay on the Mac) |
 | C5 grouping levels | 4 EVIDENCED rows | none new (receipts exist from PR #593); about 5 min to re-verify | Mac |
-| Total | 20 rows (17 EVIDENCED, 3 DISPOSITION-SIGNED) | about 1.6 h point, about 4 h upper bound, serial | wall time about 1 h with at most 8 parallel jobs |
+| Total | 20 rows (17 EVIDENCED, 3 DISPOSITION-SIGNED) | about 1.7 h point, about 4.7 h upper bound, serial | wall time about 1 h with at most 8 parallel jobs |
 
 Because the serial upper bound exceeds 3 hours, this plan treats the campaign as over the D-287 line. It needs your approval, and section 4 gives the pre-run test that must come first. The point estimate alone would be under the line; I am not relying on it, because 5 of the 8 C3 cells and 2 of the 5 C4 fits have never been timed.
 
@@ -140,9 +140,9 @@ Extrapolation check. From the reduced cells alone, the Poisson target cell (p = 
 | C4 beetle | 20 | 60 | X: scaling the P0 NB2 p = 50, n = 2000 confint (3898 s) by (68/50)^2.6 x (87/2000) gives about 6 min of confint, then add the fit, covariates and the R side |
 | C4 fungi subsample | 8 | 20 | X: binomial confint about 17 s at p = 20, n = 250, scaled to p = 60, n = 300 about 6 min, plus fit and R |
 | C4 eight-class checks | +30 percent | +50 percent | G (the ACC checks add overhead on each run) |
-| **C4 total, serial** | **about 55** | **about 135** | |
+| **C4 total, serial** | **about 55** | **about 160** | |
 | C5 four rows | 5 | 10 | receipts exist; re-verify hashes and replay only |
-| **Campaign total, serial** | **about 1.7 h** | **about 4.3 h** | |
+| **Campaign total, serial** | **about 1.7 h** | **about 4.7 h** | |
 
 With 8 parallel jobs the wall time is set by the longest single job (beetle, 20 to 60 min) plus setup: about 1 h point, about 1.5 h upper. The serial sum is what D-287 is guarding against, and the upper bound is over 3 h, so approval is required.
 
