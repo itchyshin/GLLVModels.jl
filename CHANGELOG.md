@@ -2,6 +2,16 @@
 
 ## Development
 
+- **Per-species NB2 polish refits use dense BFGS instead of L-BFGS (#615).** After
+  #659, 17 of the 1,440 per-species fits in the #615 grid still reported
+  `converged = false`, all with common r = 20 at p = 24. They were at their optimum to
+  about 1e-6, with a real gradient of 2e-4 to 4e-4 (finite differences agree from
+  h = 1e-4 to 1e-7), but L-BFGS gained only 1e-8 to 1e-6 per further 500-iteration
+  run. From the same points, dense BFGS converged in 59 to 109 iterations. The polish
+  refits now use BFGS (new keyword `alg`); the first fit, the rounds and the rule for
+  keeping a refit are unchanged. Test: `test/test_nb_grouped_poisson_ridge.jl`, whose
+  p = 24 fixture is now seed 656001 (fails on main, macOS and Linux); the file runs
+  in about 2 min, down from about 4.
 - **Per-species NB2 fits: up to three more polish rounds when still not converged (#615).**
   After #655, 128 of the 1,440 per-species fits in the #615 grid still reported
   `converged = false`, 90 of them at p = 24 with common r = 20. Tracing 11 of them

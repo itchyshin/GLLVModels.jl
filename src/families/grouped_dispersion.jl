@@ -437,8 +437,13 @@ end
 # keep crawling up the ridge. A group fixed at 1e10 reports r_group = 1e10, which the
 # fitters already treat as the Poisson limit (warn only). Returns
 # `(θ, nll, converged, iterations)`; a converged fit is returned unchanged.
+# The refits use dense BFGS (`alg`), not the caller's L-BFGS `ls`: near the optimum
+# L-BFGS crawls (#615: on 17 common-r p = 24 fits still not converged after three
+# rounds, each further L-BFGS round gained 1e-8 to 1e-6), while BFGS from the same
+# points converged on 6 of 6 in 59 to 109 iterations against 3 of 6 for L-BFGS.
 function _nb_poisson_ridge_polish(negll, res, ls, opts, first_log_r::Integer;
-                                  rounds::Integer = 3)
+                                  rounds::Integer = 3,
+                                  alg = Optim.BFGS(linesearch = Optim.LineSearches.BackTracking(order = 3)))
     θ = Optim.minimizer(res)
     f0 = Optim.minimum(res)
     conv = Optim.converged(res)
@@ -455,7 +460,7 @@ function _nb_poisson_ridge_polish(negll, res, ls, opts, first_log_r::Integer;
             θs = copy(θ)
             θs[fixed] .= log(1e10)
             sub(x) = negll(setindex!(copy(θs), x, free))
-            trial = Optim.optimize(sub, θs[free], ls, opts; autodiff = :finite)
+            trial = Optim.optimize(sub, θs[free], alg, opts; autodiff = :finite)
             f1 = Optim.minimum(trial)
             if f1 <= f0 + 1e-6 && (Optim.converged(trial) || f1 < f0)
                 θs[free] = Optim.minimizer(trial)
