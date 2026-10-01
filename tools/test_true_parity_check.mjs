@@ -527,6 +527,78 @@ test('C8 receipts first: a validly signed row citing a P0 receipt with no carry 
   assert.match(c1.stdout, /stale_carries=legacy\/legacy_export_disposition:PARTIAL_STALE_AT_P1\(no carry\.source_pins\)/);
 });
 
+// --- family-prefixed ids: the assembled scoreboard writes `data-RD-01` / `grouping-GRP-..`, so C4
+// and C5 must select by the tier marker AFTER an optional `<family>-` prefix. Fixtures are the base
+// scoreboard with row ids and statuses rewritten in a temp copy. ---
+function runScoreboard(edit, mode) {
+  const dir = mkdtempSync(join(tmpdir(), 'true-parity-board-'));
+  try {
+    cpSync(join(FIXTURES, 'base'), dir, { recursive: true });
+    const sb = join(dir, 'docs', 'dev-log', 'core070', 'true-parity-latest', 'scoreboard.md');
+    writeFileSync(sb, edit(readFileSync(sb, 'utf8')));
+    try {
+      const out = execFileSync('node', [CHECKER, mode], {
+        encoding: 'utf8',
+        env: { ...process.env, PARITY_REF: 'FS', PARITY_FS_ROOT: dir },
+      });
+      return { stdout: out, code: 0 };
+    } catch (e) {
+      return { stdout: e.stdout || '', code: e.status };
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+const rowDone = (id, tier) => (t) => t.replace(`| ${id} |`, `| ${tier} |`);
+const rowNotDone = (id, tier) => (t) => t.replace(new RegExp(`\\| ${id} \\|([^|]*)\\| EVIDENCED \\|`), `| ${tier} |$1| NOT_DONE |`);
+for (const [mode, baseId, prefixed, label] of [
+  ['C4', 'RD-1', 'data-RD-01', 'real-data'],
+  ['C5', 'GRP-1', 'grouping-GRP-LEVEL-01', 'grouping'],
+]) {
+  test(`prefixed ${label} row (${prefixed}) that is NOT_DONE makes ${mode} NOT_MET (selected, not vacuous)`, () => {
+    const { stdout, code } = runScoreboard(rowNotDone(baseId, prefixed), mode);
+    assert.equal(code, 0);
+    assert.match(stdout, new RegExp(`${mode}_NOT_MET$`, 'm'));
+    assert.match(stdout, new RegExp(`rows=1 done=0 not_done=${prefixed}:NOT_DONE`));
+    assert.doesNotMatch(stdout, /EMPTY_SELECTION/);
+  });
+  test(`prefixed ${label} row (${prefixed}) that is DONE makes ${mode} MET when it is the only row`, () => {
+    const { stdout, code } = runScoreboard(rowDone(baseId, prefixed), mode);
+    assert.equal(code, 0);
+    assert.match(stdout, new RegExp(`${mode}_MET$`, 'm'));
+    assert.match(stdout, /rows=1 done=1 not_done=none/);
+  });
+  test(`prefixed ${label} row is excluded from C2's board (selected by its own tier, not C2)`, () => {
+    const { stdout } = runScoreboard(rowNotDone(baseId, prefixed), 'C2');
+    assert.doesNotMatch(stdout, new RegExp(`${prefixed}:NOT_DONE`));
+  });
+}
+test('a multi-hyphen family prefix (postfit-policy-RD-01) NOT_DONE selects C4 with rows=1', () => {
+  const { stdout, code } = runScoreboard(rowNotDone('RD-1', 'postfit-policy-RD-01'), 'C4');
+  assert.equal(code, 0);
+  assert.match(stdout, /C4_NOT_MET$/m);
+  assert.match(stdout, /rows=1 done=0 not_done=postfit-policy-RD-01:NOT_DONE/);
+});
+test('a row whose id only contains RD mid-word (family-NB2RD-X) is NOT selected by C4', () => {
+  // Rename the only RD row to the mid-word id: C4 must see no rows (vacuous), not select it.
+  const { stdout, code } = runScoreboard(rowNotDone('RD-1', 'family-NB2RD-X'), 'C4');
+  assert.equal(code, 0);
+  assert.match(stdout, /C4_NOT_MET$/m);
+  assert.match(stdout, /C4 real-data workflows rows=0 EMPTY_SELECTION/);
+  // ...and it stays in C2's board, where an unselected non-tier row belongs.
+  const c2 = runScoreboard(rowNotDone('RD-1', 'family-NB2RD-X'), 'C2');
+  assert.match(c2.stdout, /family-NB2RD-X:NOT_DONE/);
+});
+test('a row whose id only contains GRP mid-word (family-NB2GRP-X) is NOT selected by C5', () => {
+  const { stdout } = runScoreboard(rowNotDone('GRP-1', 'family-NB2GRP-X'), 'C5');
+  assert.match(stdout, /C5 grouping levels rows=0 EMPTY_SELECTION/);
+});
+test('a family-prefixed RSZ suffix row still selects C3 (suffix rule unchanged)', () => {
+  const { stdout } = runScoreboard(rowNotDone('CAP-X-RSZ', 'size-CAP-X-RSZ'), 'C3');
+  assert.match(stdout, /C3_NOT_MET$/m);
+  assert.match(stdout, /rows=1 done=0 not_done=size-CAP-X-RSZ:NOT_DONE/);
+});
+
 // --- item 4 / git-mode control: show, existsAsBlob and listDir exercised through real git,
 // the same code path CI runs against origin/main, not the FS fallback ---
 {
