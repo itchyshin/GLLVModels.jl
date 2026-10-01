@@ -605,7 +605,10 @@ function _family_ci(fit::TruncatedNegBin2Fit, Y::AbstractMatrix;
     end
     names = vcat(_glm_lin_names(p, K), "r")
     kinds = vcat(fill(:linear, length(θ) - 1), :log)
-    return _FamilyCI(θ, nll, names, kinds, simulate, refit)
+    # T14 F1, as for the per-trait adapter below: an r at the Poisson limit is conditioned
+    # out of the Wald Hessian instead of getting a meaningless finite SE.
+    boundary = vcat(falses(p + rr), _dispersion_group_boundary([fit.r]))
+    return _FamilyCI(θ, nll, names, kinds, simulate, refit, boundary)
 end
 
 # Zero-truncated NB2 (per-trait r): packing [β; pack(Λ); log r_1 … log r_p].

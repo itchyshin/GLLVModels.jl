@@ -396,6 +396,7 @@ println(_SHARD === nothing ?
     _shard_include("test_confint_bootstrap_verdict_zi.jl")
     _shard_include("test_confint_bootstrap_verdict_hurdle_delta.jl")
     _shard_include("test_confint_bootstrap_verdict_truncated.jl")
+    _shard_include("test_truncnb2_ci_boundary.jl")
     _shard_include("test_confint_bootstrap_verdict_misc.jl")
     _shard_include("test_confint_bootstrap_verdict_bhob.jl")
     _shard_include("test_confint_bootstrap_ordered_beta.jl")
