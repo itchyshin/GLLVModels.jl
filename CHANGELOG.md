@@ -2,6 +2,14 @@
 
 ## Development
 
+- **Bootstrap intervals no longer lose every parameter when one dispersion sits at its
+  limit.** `_family_bootstrap` dropped a refit with any `upper_boundary` flag from all
+  parameters' quantiles. Where a per-group dispersion sits at the limit on most draws
+  (12 of 12 truncated-NB2 per-trait refits in #645), no replicate was left and the β
+  and Λ intervals were NaN as well. A converged flagged refit now contributes to every
+  unflagged parameter; the flagged parameters are still left out and still count
+  toward the `Inf` upper-bound rule. Test:
+  `test/test_confint_bootstrap_boundary_per_param.jl`.
 - **Student-t (shared σ) Laplace mode search reaches the higher of two peaks (#626).**
   The Student-t log joint in z is non-concave wherever a residual exceeds σ√ν, and
   there it can have a second, higher peak. The local Newton search from z = 0 reached
