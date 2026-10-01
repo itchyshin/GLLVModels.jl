@@ -284,6 +284,15 @@ All notable changes to GLLVModels.jl are documented here.
   `gllvm-parity-tag: P1`).
 
 ### Fixed
+- **Gaussian `profile_ci` returned exponentiated bounds for the signed `sigma_phy[t]`.**
+  `sigma_phy` (the per-trait phylogenetic unique effect, `has_phy_unique = true`) is on an
+  identity, signed link, as the Wald `confint` already treats it, but `profile_ci` labelled
+  it `:log_sd` and applied `exp` to its bounds. `profile_ci`, `tmbprofile_wrapper`,
+  `profile_phylo_signal` and the bridge's Gaussian profile route returned intervals on the
+  wrong scale, for example [0.082, 12.19] around an estimate of -0.217, which the interval
+  did not contain. The bounds are now on the parameter's own scale ([-2.50, 2.50] for that
+  fit, which is wide because the parameter is weakly identified there).
+  `test/test_profile_sigma_phy_identity.jl`.
 - **Family profile intervals report 0 for an open lower end on a log-scale parameter.**
   When a dispersion or SD's profile deviance stays below the chi-square cutoff as the
   parameter goes to 0, no lower crossing exists and `confint(...; method = :profile)`

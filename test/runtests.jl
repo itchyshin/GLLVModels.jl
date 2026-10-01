@@ -97,6 +97,7 @@ println(_SHARD === nothing ?
     _shard_include("test_lowrank_cholesky.jl")
     _shard_include("test_confint.jl")
     _shard_include("test_confint_profile.jl")
+    _shard_include("test_profile_sigma_phy_identity.jl")
     _shard_include("test_profile_rootfind.jl")
     _shard_include("test_confint_bootstrap.jl")
     _shard_include("test_confint_derived.jl")

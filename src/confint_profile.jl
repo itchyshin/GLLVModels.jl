@@ -115,9 +115,10 @@ function _profile_all_term_names(fit::GllvmFit)
     end
 
     if has_phy_unique
+        # σ_phy uses an identity (signed) link — profile bounds stay on the raw scale.
         for t in 1:p
             push!(terms, "sigma_phy[$t]")
-            push!(kinds, :log_sd)
+            push!(kinds, :linear)
         end
     end
 
@@ -744,9 +745,9 @@ end
 """
     profile_phylo_signal(fit::GllvmFit, t::Integer; kwargs...) -> NamedTuple
 
-Bare profile-CURVE variant scoped to the per-trait phylogenetic-unique SD
-`sigma_phy[t]` (a raw packed parameter, present iff the fit used
-`has_phy_unique = true`).
+Bare profile-CURVE variant scoped to the per-trait phylogenetic-unique scale
+`sigma_phy[t]` (a raw packed parameter on an identity, signed link — no `exp`
+back-transform; present iff the fit used `has_phy_unique = true`).
 
 Honest scope note: this is NOT the composite phylogenetic-SIGNAL summary
 `phylo_signal(fit)[t]` (an H²-like ratio of variance components) that
