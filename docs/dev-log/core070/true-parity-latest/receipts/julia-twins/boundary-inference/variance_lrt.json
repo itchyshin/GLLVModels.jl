@@ -1,0 +1,82 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "boundary-inference/variance_lrt"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#548",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "9b7f4804d978b56686273ceea03a792bfd1cc544",
+  "source_fixtures": [
+    {
+      "path": "test/parity/fixtures/chibar2_p1_fixture.toml",
+      "sha256": "eefc9095fd49b6692412db8fda8c85bf4836100eaf23e8db22cefa46c3a4b640"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_chibar2_variance_lrt_p1_twin.jl",
+      "sha256": "59fe55e9097b8af42d8466f88291fc940193cb5738b1572478e91944cc570cf6"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-VARIANCE-LRT-LRT",
+        "quantity": "variance_lrt(...).LRT over the 5 fixture rows",
+        "r_source": "test/parity/fixtures/chibar2_p1_fixture.toml [[variance_lrt]].LRT",
+        "julia_source": "GLLVModels.variance_lrt(ll_full, ll_reduced; n_boundary).LRT, as called at test/test_chibar2_variance_lrt_p1_twin.jl:62",
+        "r_value": [
+          3.799999999999983,
+          4.0,
+          6.0,
+          -10.0,
+          0.0
+        ],
+        "julia_value": [
+          3.799999999999983,
+          4.0,
+          6.0,
+          -10.0,
+          0.0
+        ],
+        "abs_diff": 0.0,
+        "tolerance": 1e-12,
+        "tolerance_source": "test/test_chibar2_variance_lrt_p1_twin.jl:63",
+        "tolerance_source_line": "@test r.LRT ≈ row[\"LRT\"] atol = 1e-12",
+        "note": "The test also asserts n_boundary equality (exact, no tolerance), so it has no numeric case."
+      },
+      {
+        "case_id": "P1-JULIA-VARIANCE-LRT-PVALUE",
+        "quantity": "variance_lrt(...).pvalue over the 5 fixture rows",
+        "r_source": "test/parity/fixtures/chibar2_p1_fixture.toml [[variance_lrt]].pvalue",
+        "julia_source": "GLLVModels.variance_lrt(ll_full, ll_reduced; n_boundary).pvalue, as called at test/test_chibar2_variance_lrt_p1_twin.jl:62",
+        "r_value": [
+          0.025626291428685027,
+          0.02275013194817915,
+          0.01959970630968081,
+          1.0,
+          1.0
+        ],
+        "julia_value": [
+          0.02562629142868502,
+          0.022750131948179205,
+          0.01959970630968081,
+          1.0,
+          1.0
+        ],
+        "abs_diff": 5.551115123125783e-17,
+        "tolerance": 1e-12,
+        "tolerance_source": "test/test_chibar2_variance_lrt_p1_twin.jl:64",
+        "tolerance_source_line": "@test r.pvalue ≈ row[\"pvalue\"] atol = 1e-12",
+        "note": "Self-Liang chi-bar-square p-value through the variance-component wrapper."
+      }
+    ]
+  }
+}

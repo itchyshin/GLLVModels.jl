@@ -1,0 +1,106 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "temporal/compare_temporal"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#543",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "9b7f4804d978b56686273ceea03a792bfd1cc544",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/temporal_p1/compare.toml",
+      "sha256": "0209f6f2836465fbf6069540223406a7505651ec1c68113afbb9f583951975e8"
+    },
+    {
+      "path": "test/fixtures/temporal_p1/fits.toml",
+      "sha256": "4c2ea4d92ad5abd137fdaf23fbc372f46694f742a7116b012d08d78e5242678c"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_temporal_helpers.jl",
+      "sha256": "cc5faa412338a0b43c643dec20deba6ead1946ea48f53064da42bd1c699a9389"
+    },
+    {
+      "path": "test/fixtures/temporal_p1/fixture_helpers.jl",
+      "sha256": "b367578faaf9640985460514564aa450d25f384bc5627216762ec6b0b79acbcc"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-COMPARE-TEMPORAL-LOGLIK",
+        "quantity": "compare_temporal(...).logLik over the three fixture candidate sets (concatenated)",
+        "r_source": "test/fixtures/temporal_p1/compare.toml [selection|all_modes|replicated].logLik",
+        "julia_source": "GLLVModels.compare_temporal(; model = fit, ...).logLik on fits at R's coordinates, as at test/test_temporal_helpers.jl:185",
+        "r_value": [
+          -34.64491647949242,
+          -35.961688292259254,
+          -818.1876943906699,
+          -777.7806791399393,
+          -803.1163855008341,
+          -777.7806791322722,
+          -448.2858274328373,
+          -438.8542134683628,
+          -438.85421346637406
+        ],
+        "julia_value": [
+          -34.64491647949241,
+          -35.96168829225925,
+          -818.1876943906711,
+          -777.7806791399405,
+          -803.116385500834,
+          -777.7806791322735,
+          -448.2858274328369,
+          -438.8542134683628,
+          -438.854213466374
+        ],
+        "abs_diff": 1.2505552149377763e-12,
+        "tolerance": 1e-08,
+        "tolerance_source": "test/test_temporal_helpers.jl:185",
+        "tolerance_source_line": "@test maximum(abs, out.logLik .- temporal_p1_vec(r[\"logLik\"])) <= 1e-8",
+        "note": "Sets: selection (ar1, ou); all_modes (indep, dep, latent, latent_unique); replicated (indep, dep, latent_unique). df is asserted equal (exact) by the test and by this script, but has no tolerance, so it is not a case."
+      },
+      {
+        "case_id": "P1-JULIA-COMPARE-TEMPORAL-AIC",
+        "quantity": "compare_temporal(...).AIC over the three fixture candidate sets (concatenated)",
+        "r_source": "test/fixtures/temporal_p1/compare.toml [selection|all_modes|replicated].AIC",
+        "julia_source": "GLLVModels.compare_temporal(...).AIC, as at test/test_temporal_helpers.jl:187",
+        "r_value": [
+          85.28983295898485,
+          87.92337658451851,
+          1652.3753887813398,
+          1577.5613582798785,
+          1622.2327710016682,
+          1577.5613582645444,
+          912.5716548656746,
+          899.7084269367256,
+          899.7084269327481
+        ],
+        "julia_value": [
+          85.28983295898482,
+          87.9233765845185,
+          1652.3753887813423,
+          1577.561358279881,
+          1622.232771001668,
+          1577.561358264547,
+          912.5716548656738,
+          899.7084269367256,
+          899.708426932748
+        ],
+        "abs_diff": 2.5011104298755527e-12,
+        "tolerance": 1e-08,
+        "tolerance_source": "test/test_temporal_helpers.jl:187",
+        "tolerance_source_line": "@test maximum(abs, out.AIC .- temporal_p1_vec(r[\"AIC\"])) <= 1e-8",
+        "note": "Sets: selection (ar1, ou); all_modes (indep, dep, latent, latent_unique); replicated (indep, dep, latent_unique)."
+      }
+    ]
+  }
+}

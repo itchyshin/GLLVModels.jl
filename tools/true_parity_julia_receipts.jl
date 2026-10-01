@@ -1,0 +1,947 @@
+#!/usr/bin/env julia
+# Julia-side receipts for the true-parity checker (tools/true_parity_check.mjs, clauses C1/C8).
+#
+# Companion of tools/true_parity_fixture_receipts.py. That tool can only bind a row whose fixture
+# stores BOTH the R value and the Julia value. The rows handled here have fixtures holding only
+# R's side; their twin tests compute the Julia side when they run. This script runs the SAME Julia
+# computation the twin test runs, against the same tracked R fixture, and writes the fresh Julia
+# value next to the R value copied from the fixture.
+#
+# Rules this file keeps
+#   * R values are copied from the tracked fixtures (parsed with the TOML stdlib / the same
+#     helper the tests use). Nothing on the R side is recomputed, refitted or typed here. The only
+#     transform is the one the test itself applies (a fixed +-1 sign alignment of a latent score,
+#     and atanh/log on the profile bounds, both named in the case note).
+#   * The Julia side is computed by calling the package functions with the inputs and settings
+#     the test uses. The computation for each case is copied from the test, and the test file:line
+#     is recorded in `julia_source` (line numbers are looked up in the test text at run time, so a
+#     moved or edited test changes the citation rather than leaving a stale one).
+#   * A tolerance is READ from the existing assertion in the test (file:line recorded with the
+#     line's text; the line must contain the quoted fragment, so an edited assertion fails this
+#     script). Quantities the test does not assert have no case.
+#   * A case whose recomputed difference exceeds its tolerance aborts the run (exit 1); nothing
+#     is written for it, and the row must not be bound.
+#   * src/, the tests and the fixtures are not modified.
+#
+# Usage (from the repository root; see "Environment" below)
+#   OPENBLAS_NUM_THREADS=1 JULIA_NUM_THREADS=4 julia --project=. tools/true_parity_julia_receipts.jl
+#   OPENBLAS_NUM_THREADS=1 JULIA_NUM_THREADS=4 julia --project=. tools/true_parity_julia_receipts.jl --check
+#
+# --check re-runs every computation and compares with the committed receipts, STRICTLY:
+#   * fixture and test sha256, case ids, R values and tolerances must be identical;
+#   * every recomputed Julia value must equal the committed one within
+#       1e-3 * tolerance + 100 * eps * max(1, |value|)
+#     per element (a thousandth of the tolerance, never the tolerance itself). Bitwise identity is
+#     not required, because optimiser-driven values can differ in the last digits across Julia or
+#     BLAS builds; a change in a value larger than this allowance means the code or fixture moved
+#     and the receipts must be regenerated and reviewed;
+#   * each case must still satisfy abs_diff <= tolerance.
+#   Julia version and GLLVModels source commit are reported if they differ from the receipt
+#   (informational; the value check above is what fails).
+#
+# Environment: runs under the package's own project (`--project=.`). It uses only GLLVModels,
+# Distributions-free stdlib pieces (TOML, SHA, Statistics, Random, LinearAlgebra) and, for the
+# temporal rows, test/fixtures/temporal_p1/fixture_helpers.jl, which the temporal tests include.
+# No package from test/Project.toml is needed. Runtime on a Mac Studio with
+# OPENBLAS_NUM_THREADS=1 JULIA_NUM_THREADS=4: a few minutes.
+
+using GLLVModels, TOML, SHA, Statistics, Random, LinearAlgebra
+const GMJ = GLLVModels
+
+const ROOT = normpath(joinpath(@__DIR__, ".."))
+const OUT_DIR = "docs/dev-log/core070/true-parity-latest/receipts/julia-twins"
+const P1_SHA = "9539352f66f2db2cc26b1c393e67212a359b60c9"
+const GENERATOR = "tools/true_parity_julia_receipts.jl"
+const CHECK_FRACTION = 1e-3        # of the case tolerance
+const CHECK_EPS_MULT = 100         # rounding allowance, in eps(Float64) * max(1, |value|)
+
+include(joinpath(ROOT, "test", "fixtures", "temporal_p1", "fixture_helpers.jl"))
+
+# ---------------------------------------------------------------------------------------------
+# Small utilities
+# ---------------------------------------------------------------------------------------------
+struct Fail <: Exception
+    msg::String
+end
+fail(msg) = throw(Fail(msg))
+
+sha_file(rel) = bytes2hex(sha256(read(joinpath(ROOT, rel))))
+filelines(rel) = readlines(joinpath(ROOT, rel))
+
+"""Line number of the line of `rel` containing `frag`. Without `nth` the fragment must occur on
+exactly one line (so a citation can never silently point at the wrong assertion)."""
+function findline(rel, frag; nth = nothing)
+    hits = [n for (n, l) in enumerate(filelines(rel)) if occursin(frag, l)]
+    isempty(hits) && fail("$rel: fragment $(repr(frag)) not found")
+    if nth === nothing
+        length(hits) == 1 || fail("$rel: fragment $(repr(frag)) is on $(length(hits)) lines $(hits); make it unique or give nth")
+        return hits[1]
+    end
+    nth <= length(hits) || fail("$rel: fragment $(repr(frag)) occurrence $nth not found")
+    return hits[nth]
+end
+
+"""Tolerance literal of the assertion on the test line containing `frag` (`nth`-th such line).
+The literal read is the first `<=`, `<` or `atol =` number AFTER the fragment on that line."""
+function test_tolerance(rel, frag; nth = nothing, after = frag)
+    n = findline(rel, frag; nth)
+    text = filelines(rel)[n]
+    i = findfirst(after, text)
+    i === nothing && fail("$rel:$n: $(repr(after)) not on the line")
+    rest = text[nextind(text, last(i)):end]
+    m = match(r"(?:<=|<|atol\s*=)\s*([0-9]+(?:\.[0-9]+)?(?:e-?[0-9]+)?)", rest)
+    m === nothing && fail("$rel:$n: no tolerance literal after $(repr(after)) in $(strip(text))")
+    return parse(Float64, m.captures[1]), "$rel:$n", String(strip(text))
+end
+
+cite(rel, frag; nth = nothing) = "$rel:$(findline(rel, frag; nth))"
+
+asvec(x::Number) = Float64(x)
+asvec(x::AbstractArray) = vec(Float64.(x))
+asvec(x::AbstractVector) = Float64.(x)
+
+absdiff(r::Number, j::Number) = abs(r - j)
+function absdiff(r::AbstractVector, j::AbstractVector)
+    (length(r) == length(j) && !isempty(r)) || fail("vector length mismatch $(length(r)) vs $(length(j))")
+    return maximum(abs.(r .- j))
+end
+
+struct Case
+    fields::Vector{Pair{String,Any}}
+end
+
+"""Build one comparison case. `tol` is (value, "file:line", line text) from `test_tolerance`
+(or an explicit triple for the two derived statistical bounds of bootstrap_temporal)."""
+function mkcase(id, quantity, r_source, julia_source, r, j, tol, note)
+    rv, jv = asvec(r), asvec(j)
+    d = absdiff(rv, jv)
+    t, src, line = tol
+    d <= t || fail("$id: abs diff $d > tolerance $t ($src); do not bind the row")
+    return Case(Pair{String,Any}[
+        "case_id" => id, "quantity" => quantity, "r_source" => r_source, "julia_source" => julia_source,
+        "r_value" => rv, "julia_value" => jv, "abs_diff" => d, "tolerance" => t,
+        "tolerance_source" => src, "tolerance_source_line" => line, "note" => note])
+end
+
+struct Receipt
+    source_ids::Vector{String}
+    origin_pr::String
+    fixtures::Vector{String}
+    tests::Vector{String}
+    what_this_is_not::String
+    cases::Vector{Case}
+end
+
+gllvmodels_commit() = strip(read(setenv(`git log -1 --format=%H -- src Project.toml`; dir = ROOT), String))
+
+# ---------------------------------------------------------------------------------------------
+# JSON: a writer that reproduces Python's json.dumps(obj, indent=2, ensure_ascii=False) byte for
+# byte (so the receipts share the exact layout of the zi receipts), and a small reader for --check.
+# ---------------------------------------------------------------------------------------------
+function pyfloat(x::Float64)
+    isfinite(x) || fail("non-finite number in receipt")
+    x == 0 && return signbit(x) ? "-0.0" : "0.0"
+    s = string(x)
+    neg = startswith(s, "-")
+    neg && (s = s[2:end])
+    mant, ex = occursin('e', s) ? (split(s, 'e')...,) : (s, "0")
+    ex10 = parse(Int, ex)
+    ip, fp = occursin('.', mant) ? (split(mant, '.')...,) : (mant, "")
+    digits = ip * fp
+    pointpos = length(ip) + ex10                      # value = 0.DIGITS * 10^pointpos after strip
+    lead = length(digits) - length(lstrip(==('0'), digits))
+    digits = lstrip(==('0'), digits)
+    pointpos -= lead
+    digits = rstrip(==('0'), digits)
+    isempty(digits) && (digits = "0")
+    e = pointpos - 1                                  # scientific exponent
+    body = if e < -4 || e >= 16
+        m = length(digits) == 1 ? digits : digits[1] * "." * digits[2:end]
+        m * "e" * (e < 0 ? "-" : "+") * lpad(string(abs(e)), 2, '0')
+    elseif e >= 0
+        intpart = length(digits) > e + 1 ? digits[1:e+1] : rpad(digits, e + 1, '0')
+        frac = length(digits) > e + 1 ? digits[e+2:end] : "0"
+        intpart * "." * frac
+    else
+        "0." * "0"^(-e - 1) * digits
+    end
+    return neg ? "-" * body : body
+end
+
+function jstring(s::AbstractString)
+    io = IOBuffer()
+    print(io, '"')
+    for c in s
+        c == '"' ? print(io, "\\\"") : c == '\\' ? print(io, "\\\\") :
+        c == '\n' ? print(io, "\\n") : c == '\t' ? print(io, "\\t") :
+        c == '\r' ? print(io, "\\r") : c < ' ' ? print(io, "\\u", lpad(string(Int(c), base = 16), 4, '0')) :
+        print(io, c)
+    end
+    print(io, '"')
+    return String(take!(io))
+end
+
+function jwrite(io::IO, x, ind::Int = 0)
+    pad(n) = " "^(2n)
+    if x isa AbstractString
+        print(io, jstring(x))
+    elseif x isa Bool
+        print(io, x ? "true" : "false")
+    elseif x isa Integer
+        print(io, x)
+    elseif x isa Real
+        print(io, pyfloat(Float64(x)))
+    elseif x isa Case
+        jwrite(io, x.fields, ind)
+    elseif x isa AbstractVector{<:Pair}
+        if isempty(x)
+            print(io, "{}")
+        else
+            println(io, "{")
+            for (i, (k, v)) in enumerate(x)
+                print(io, pad(ind + 1), jstring(k), ": ")
+                jwrite(io, v, ind + 1)
+                println(io, i < length(x) ? "," : "")
+            end
+            print(io, pad(ind), "}")
+        end
+    elseif x isa AbstractVector
+        if isempty(x)
+            print(io, "[]")
+        else
+            println(io, "[")
+            for (i, v) in enumerate(x)
+                print(io, pad(ind + 1))
+                jwrite(io, v, ind + 1)
+                println(io, i < length(x) ? "," : "")
+            end
+            print(io, pad(ind), "]")
+        end
+    else
+        fail("cannot serialise $(typeof(x))")
+    end
+end
+
+function jrender(x)
+    io = IOBuffer()
+    jwrite(io, x)
+    println(io)
+    return String(take!(io))
+end
+
+# Minimal JSON reader (objects -> Dict, arrays -> Vector, numbers -> Float64/Int, strings, bool, null).
+function jparse(s::AbstractString)
+    i = Ref(1)
+    peekc() = i[] <= lastindex(s) ? s[i[]] : '\0'
+    function ws()
+        while i[] <= lastindex(s) && isspace(s[i[]])
+            i[] = nextind(s, i[])
+        end
+    end
+    function val()
+        ws()
+        c = peekc()
+        if c == '{'
+            i[] += 1; d = Dict{String,Any}(); ws()
+            if peekc() == '}'; i[] += 1; return d; end
+            while true
+                ws(); k = str(); ws(); peekc() == ':' || fail("json: ':' expected"); i[] += 1
+                d[k] = val(); ws()
+                if peekc() == ','; i[] += 1; continue; end
+                peekc() == '}' || fail("json: '}' expected"); i[] += 1; return d
+            end
+        elseif c == '['
+            i[] += 1; a = Any[]; ws()
+            if peekc() == ']'; i[] += 1; return a; end
+            while true
+                push!(a, val()); ws()
+                if peekc() == ','; i[] += 1; continue; end
+                peekc() == ']' || fail("json: ']' expected"); i[] += 1; return a
+            end
+        elseif c == '"'
+            return str()
+        elseif startswith(SubString(s, i[]), "true"); i[] += 4; return true
+        elseif startswith(SubString(s, i[]), "false"); i[] += 5; return false
+        elseif startswith(SubString(s, i[]), "null"); i[] += 4; return nothing
+        else
+            m = match(r"^-?[0-9]+(\.[0-9]+)?([eE][-+]?[0-9]+)?", SubString(s, i[]))
+            m === nothing && fail("json: bad token at $(i[])")
+            i[] += length(m.match)
+            return (m.captures[1] === nothing && m.captures[2] === nothing) ? parse(Int, m.match) : parse(Float64, m.match)
+        end
+    end
+    function str()
+        peekc() == '"' || fail("json: string expected"); i[] += 1
+        io = IOBuffer()
+        while true
+            c = peekc(); i[] = nextind(s, i[])
+            if c == '"'; break
+            elseif c == '\\'
+                e = peekc(); i[] = nextind(s, i[])
+                if e == 'u'
+                    print(io, Char(parse(Int, SubString(s, i[], i[] + 3), base = 16))); i[] += 4
+                else
+                    print(io, e == 'n' ? '\n' : e == 't' ? '\t' : e == 'r' ? '\r' : e)
+                end
+            else
+                print(io, c)
+            end
+        end
+        return String(take!(io))
+    end
+    v = val(); ws()
+    i[] > lastindex(s) || fail("json: trailing characters")
+    return v
+end
+
+# ---------------------------------------------------------------------------------------------
+# Receipt assembly
+# ---------------------------------------------------------------------------------------------
+function receipt_object(r::Receipt)
+    return Pair{String,Any}[
+        "schema" => "true-parity-julia-twin-receipt/v1",
+        "source_ids" => r.source_ids,
+        "verdict" => "PASS",
+        "evidence_kind" => "julia_recomputed_vs_recorded_r",
+        "pin" => "P1",
+        "reference_commit" => P1_SHA,
+        "origin_pr" => r.origin_pr,
+        "generator" => GENERATOR,
+        "julia_version" => string(VERSION),
+        "gllvmodels_commit" => gllvmodels_commit(),
+        "source_fixtures" => [Pair{String,Any}["path" => p, "sha256" => sha_file(p)] for p in r.fixtures],
+        "source_tests" => [Pair{String,Any}["path" => p, "sha256" => sha_file(p)] for p in r.tests],
+        "what_this_is_not" => r.what_this_is_not,
+        "comparison" => Pair{String,Any}["pin" => "P1", "cases" => r.cases],
+    ]
+end
+
+const NOT_A_FIXTURE_PAIR = "R values are copied from the tracked fixture. Julia values are computed " *
+    "fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin " *
+    "test with the same inputs and settings; R was not run and is not recomputed here."
+
+# =============================================================================================
+# 1. boundary-inference: chibar2_pvalue, variance_lrt
+#    test/test_chibar2_variance_lrt_p1_twin.jl (itchyshin/GLLVModels.jl#548)
+# =============================================================================================
+function receipts_chibar()
+    fxp = "test/parity/fixtures/chibar2_p1_fixture.toml"
+    tp = "test/test_chibar2_variance_lrt_p1_twin.jl"
+    fx = TOML.parsefile(joinpath(ROOT, fxp))
+    fx["gllvmtmb_pin_sha"] == P1_SHA || fail("chibar fixture is not pinned at P1")
+
+    rows = fx["chibar2_pvalue"]
+    r_p = [Float64(row["pvalue"]) for row in rows]
+    j_p = [Float64(chibar2_pvalue(row["LRT"], row["q"])) for row in rows]          # test line cited below
+    tol_p = test_tolerance(tp, "chibar2_pvalue(LRT, q) ≈ pvalue")
+    c1 = mkcase("P1-JULIA-CHIBAR2-PVALUE", "chibar2_pvalue(LRT, q) over the fixture grid (q = 1,2,3; 17 LRT values each)",
+        "$fxp [[chibar2_pvalue]].pvalue ($(length(rows)) rows, fixture order)",
+        "GLLVModels.chibar2_pvalue(row.LRT, row.q), as called at $(cite(tp, "chibar2_pvalue(LRT, q) ≈ pvalue"))",
+        r_p, j_p, tol_p,
+        "Closed-form chi-bar-square survival values. One vector case: abs_diff is the maximum over all rows, each of which the test asserts separately at this tolerance.")
+    r1 = Receipt(["boundary-inference/chibar2_pvalue"], "itchyshin/GLLVModels.jl#548", [fxp], [tp],
+        NOT_A_FIXTURE_PAIR, [c1])
+
+    vrows = fx["variance_lrt"]
+    vr = [variance_lrt(row["ll_full"], row["ll_reduced"]; n_boundary = row["n_boundary"]) for row in vrows]  # test line ~61
+    cl = mkcase("P1-JULIA-VARIANCE-LRT-LRT", "variance_lrt(...).LRT over the 5 fixture rows",
+        "$fxp [[variance_lrt]].LRT", "GLLVModels.variance_lrt(ll_full, ll_reduced; n_boundary).LRT, as called at $(cite(tp, "variance_lrt(row["))",
+        [Float64(row["LRT"]) for row in vrows], [Float64(r.LRT) for r in vr], test_tolerance(tp, "r.LRT ≈ row"),
+        "The test also asserts n_boundary equality (exact, no tolerance), so it has no numeric case.")
+    cp = mkcase("P1-JULIA-VARIANCE-LRT-PVALUE", "variance_lrt(...).pvalue over the 5 fixture rows",
+        "$fxp [[variance_lrt]].pvalue", "GLLVModels.variance_lrt(ll_full, ll_reduced; n_boundary).pvalue, as called at $(cite(tp, "variance_lrt(row["))",
+        [Float64(row["pvalue"]) for row in vrows], [Float64(r.pvalue) for r in vr], test_tolerance(tp, "r.pvalue ≈ row"),
+        "Self-Liang chi-bar-square p-value through the variance-component wrapper.")
+    r2 = Receipt(["boundary-inference/variance_lrt"], "itchyshin/GLLVModels.jl#548", [fxp], [tp],
+        NOT_A_FIXTURE_PAIR, [cl, cp])
+    return ["boundary-inference/chibar2_pvalue.json" => r1, "boundary-inference/variance_lrt.json" => r2]
+end
+
+# =============================================================================================
+# 2. ordinal/ordinal_logit   test/test_ordinal_logit_twin.jl (itchyshin/GLLVModels.jl#528)
+# =============================================================================================
+# Verbatim from test/test_ordinal_logit_twin.jl (_load_ordinal_logit_csv).
+function _load_ordinal_logit_csv(path::AbstractString, trait_names::Vector{String}, n_unit::Integer)
+    Y = zeros(Int, length(trait_names), n_unit)
+    open(path) do io
+        readline(io)                          # header: "unit","trait","value"
+        for line in eachline(io)
+            isempty(line) && continue
+            parts = split(line, ",")
+            unit = parse(Int, strip(parts[1], '"'))
+            trait = strip(parts[2], '"')
+            value = parse(Int, parts[3])
+            t = findfirst(==(trait), trait_names)
+            t === nothing && error("unrecognised trait \"$trait\" in $path")
+            Y[t, unit] = value
+        end
+    end
+    return Y
+end
+
+function receipts_ordinal()
+    fxp = "test/fixtures/ordinal_logit_p1.toml"
+    tp = "test/test_ordinal_logit_twin.jl"
+    fixture = TOML.parsefile(joinpath(ROOT, fxp))
+    fixture["gllvmtmb_commit"] == P1_SHA || fail("ordinal fixture is not pinned at P1")
+    trait_names = String.(fixture["trait_names"])
+    n_unit = Int(fixture["n_unit"])
+    datap = "test/fixtures/" * fixture["data_file"]
+    bytes2hex(sha256(read(joinpath(ROOT, datap)))) == fixture["data_sha256"] || fail("ordinal data csv drifted")
+
+    Y = _load_ordinal_logit_csv(joinpath(ROOT, datap), trait_names, n_unit)
+    fit = fit_gllvm(Y; family = ordinal_logit(), K = 1)                               # test line ~118
+    fit.converged || fail("ordinal fit did not converge")
+    r = fixture["r_reference"]
+
+    # (2) Laplace marginal AT R's fitted (beta, Lambda, tau), exactly as in the test.
+    β_r = Float64.(r["b_fix"])
+    λ_r = Float64.(r["lambda_b"])
+    Λ_r = reshape(λ_r, length(trait_names), 1)
+    cp2 = Float64.(r["cutpoint_2"])
+    cp3 = Float64.(r["cutpoint_3"])
+    τ_r = zeros(length(trait_names), 3)
+    for t in eachindex(trait_names)
+        τ_r[t, 2] = cp2[t]
+        τ_r[t, 3] = cp3[t]
+    end
+    C = fill(4, length(trait_names))
+    ll_at_r = GLLVModels.ordinal_marginal_loglik_laplace_pertrait(Y, Λ_r, β_r, τ_r, C; link = LogitLink())
+
+    LLt_julia = fit.Λ * fit.Λ'
+    LLt_r = reduce(hcat, [Float64.(row) for row in r["lambda_lambda_t"]])'
+
+    fitc = cite(tp, "fit = fit_gllvm(Y; family = ordinal_logit(), K = 1)")
+    cases = [
+        mkcase("P1-JULIA-ORDINAL-LOGIT-LOGLIK-OPTIMUM", "logLik at each side's own optimum",
+            "$fxp [r_reference.loglik]", "GLLVModels.fit_gllvm(Y; family = ordinal_logit(), K = 1).loglik, as at $fitc",
+            r["loglik"], fit.loglik, test_tolerance(tp, "isapprox(fit.loglik, r[\"loglik\"]"),
+            "Y is read from test/fixtures/ordinal_logit_p1_data.csv (sha256 checked against the fixture), as in the test."),
+        mkcase("P1-JULIA-ORDINAL-LOGIT-CROSS-OBJECTIVE-AT-R-PARAMETERS", "Julia Laplace marginal evaluated at R's fitted (beta, Lambda, tau)",
+            "$fxp [r_reference.loglik]",
+            "GLLVModels.ordinal_marginal_loglik_laplace_pertrait(Y, Lambda_r, beta_r, tau_r, C; link = LogitLink()), as at $(cite(tp, "ll_at_r = GLLVModels.ordinal_marginal_loglik_laplace_pertrait"))",
+            r["loglik"], ll_at_r, test_tolerance(tp, "isapprox(ll_at_r, r[\"loglik\"]"),
+            "Likelihood-function identity at R's parameters, independent of either optimiser's path."),
+        mkcase("P1-JULIA-ORDINAL-LOGIT-CUTPOINT-2", "cutpoint_2 per trait (t1, t2, t3)",
+            "$fxp [r_reference.cutpoint_2]", "GLLVModels fit.tau[:, 2] from the same fit, as compared at $(cite(tp, "fit.τ[t, 2], r[\"cutpoint_2\"][t]"))",
+            cp2, [fit.τ[t, 2] for t in eachindex(trait_names)], test_tolerance(tp, "fit.τ[t, 2], r[\"cutpoint_2\"][t]"),
+            "Per-trait assertion in the test; vector case takes the maximum."),
+        mkcase("P1-JULIA-ORDINAL-LOGIT-CUTPOINT-3", "cutpoint_3 per trait (t1, t2, t3)",
+            "$fxp [r_reference.cutpoint_3]", "GLLVModels fit.tau[:, 3] from the same fit, as compared at $(cite(tp, "fit.τ[t, 3], r[\"cutpoint_3\"][t]"))",
+            cp3, [fit.τ[t, 3] for t in eachindex(trait_names)], test_tolerance(tp, "fit.τ[t, 3], r[\"cutpoint_3\"][t]"),
+            "Per-trait assertion in the test; vector case takes the maximum."),
+        mkcase("P1-JULIA-ORDINAL-LOGIT-LAMBDA-LAMBDA-T", "Lambda Lambda' (3 x 3, flattened column-major)",
+            "$fxp [r_reference.lambda_lambda_t]", "GLLVModels fit.Λ * fit.Λ' from the same fit, as compared at $(cite(tp, "isapprox(LLt_julia, Matrix(LLt_r)"))",
+            Matrix(LLt_r), LLt_julia, test_tolerance(tp, "isapprox(LLt_julia, Matrix(LLt_r)"),
+            "Sign-free loading target (K = 1 loadings are identified only up to sign). R matrix is symmetric, so row/column-major flattening agree."),
+    ]
+    return ["ordinal/ordinal_logit.json" => Receipt(["ordinal/ordinal_logit"], "itchyshin/GLLVModels.jl#528",
+        [fxp, datap], [tp], NOT_A_FIXTURE_PAIR, cases)]
+end
+
+# =============================================================================================
+# 3. latent-scores/extract_latent_scores (+ .gllvmTMB_multi)
+#    test/test_extract_latent_scores.jl (itchyshin/GLLVModels.jl#531)
+#    The R z matrices in the fixture come from extract_latent_scores() called on a fit of class
+#    gllvmTMB_multi (test header; generate_fixture.R), i.e. the .gllvmTMB_multi method through the
+#    generic, so one receipt backs both rows. `.default` is not bound: see the PR text.
+# =============================================================================================
+_els_read_csv(path) = (lines = readlines(path); permutedims(reduce(hcat, [parse.(Float64, split(l, ',')) for l in lines[2:end]])))
+_els_read_vector(path) = parse.(Float64, readlines(path))
+_els_read_scalar(path) = parse(Float64, only(readlines(path)))
+
+function receipts_latent_scores()
+    dir = "test/fixtures/extract_latent_scores_p1"
+    tp = "test/test_extract_latent_scores.jl"
+    sums = Dict(split(l)[2] => split(l)[1] for l in readlines(joinpath(ROOT, dir, "SHA256SUMS.txt")) if !isempty(strip(l)))
+    used = String[]
+    function load(name, f)
+        path = joinpath(ROOT, dir, name)
+        bytes2hex(sha256(read(path))) == sums[name] || fail("$dir/$name sha256 differs from SHA256SUMS.txt")
+        push!(used, "$dir/$name")
+        return f(path)
+    end
+    Y_gauss_sites = load("Y_gauss.csv", _els_read_csv)
+    Y_pois_sites = load("Y_pois.csv", _els_read_csv)
+    z_r_gauss = load("z_gauss_unit.csv", _els_read_csv)
+    z_r_pois = load("z_pois_unit.csv", _els_read_csv)
+    Lambda_r_gauss = load("Lambda_gauss_hat.csv", _els_read_csv)
+    Lambda_r_pois = load("Lambda_pois_hat.csv", _els_read_csv)
+    beta_r_gauss = load("beta_gauss_hat.txt", _els_read_vector)
+    beta_r_pois = load("beta_pois_hat.txt", _els_read_vector)
+    sigma_eps_r = load("sigma_eps_hat.txt", _els_read_scalar)
+
+    Y_gauss = permutedims(Y_gauss_sites)
+    Y_pois = Int.(permutedims(Y_pois_sites))
+    p, n = size(Y_gauss)
+    K = size(z_r_gauss, 2)
+    X = zeros(p, n, p)
+    for i in 1:p, s in 1:n
+        X[i, s, i] = 1.0
+    end
+
+    # Gaussian own optimum (test "Gaussian: own optimum").
+    fit = fit_gaussian_gllvm(Y_gauss; K = K, X = X)
+    z = extract_latent_scores(fit, Y_gauss; level = :unit, X = X)
+    Lambda_j = getLoadings(fit; rotate = false)
+    LZt_j_g = Lambda_j * z'
+    LZt_r_g = Lambda_r_gauss * z_r_gauss'
+
+    # Gaussian at R's fitted parameters (test "Gaussian: at R's fitted parameters").
+    fit0 = fit_gaussian_gllvm(Y_gauss; K = K, X = X)
+    fit_atR = GLLVModels.GllvmFit(fit0.model,
+        merge(fit0.pars, (Λ = Lambda_r_gauss, β = beta_r_gauss, σ_eps = sigma_eps_r)),
+        fit0.logLik, fit0.n_iter, fit0.converged, fit0.optim_result, fit0.cputime,
+        fit0.integration)
+    z_atR_g = extract_latent_scores(fit_atR, Y_gauss; level = :unit, X = X)
+
+    # Poisson own optimum and at R's parameters.
+    fitp = fit_poisson_gllvm(Y_pois; K = K)
+    zp = extract_latent_scores(fitp, Y_pois; level = :unit)
+    LZt_j_p = getLoadings(fitp; rotate = false) * zp'
+    LZt_r_p = Lambda_r_pois * z_r_pois'
+    fit0p = fit_poisson_gllvm(Y_pois; K = K)
+    fit_atR_p = GLLVModels.PoissonFit(beta_r_pois, Lambda_r_pois, fit0p.link, fit0p.loglik,
+        fit0p.converged, fit0p.iterations, fit0p.alpha_lv, fit0p.theta_packed, fit0p.hessian,
+        fit0p.integration)
+    z_atR_p = extract_latent_scores(fit_atR_p, Y_pois; level = :unit)
+
+    # NB2 (NBGroupedFit, per-trait dispersion) at R's parameters.
+    Y_nb2_sites = load("Y_nb2.csv", _els_read_csv)
+    z_r_nb2 = load("z_nb2_unit.csv", _els_read_csv)
+    Lambda_r_nb2 = load("Lambda_nb2_hat.csv", _els_read_csv)
+    beta_r_nb2 = load("beta_nb2_hat.txt", _els_read_vector)
+    phi_r_nb2 = load("phi_nb2_hat.txt", _els_read_vector)
+    Y_nb2 = Int.(permutedims(Y_nb2_sites))
+    fit_atR_nb = GLLVModels.NBGroupedFit(beta_r_nb2, Lambda_r_nb2, phi_r_nb2,
+        collect(1:size(Y_nb2, 1)), LogLink(), NaN, true, 0)
+    z_atR_nb = extract_latent_scores(fit_atR_nb, Y_nb2; level = :unit)
+
+    calc = "GLLVModels.extract_latent_scores(fit, Y; level = :unit)"
+    function c(id, q, rsrc, jsrc, r, j, tol, note)
+        return mkcase(id, q, rsrc, jsrc, r, j, tol, note)
+    end
+    cases = [
+        c("P1-JULIA-ELS-GAUSSIAN-Z-AT-R-PARAMETERS", "Gaussian K = 2 latent scores (15 x 2, column-major) at R's fitted parameters",
+            "$dir/z_gauss_unit.csv (R extract_latent_scores(level = \"unit\"))",
+            "$calc on a GllvmFit carrying R's Lambda, beta, sigma_eps, as at $(cite(tp, "z_atR = extract_latent_scores(fit_atR, Y_gauss"))",
+            z_r_gauss, z_atR_g, test_tolerance(tp, "isapprox(z_atR, z_r_gauss"),
+            "Isolates the definition of the score from optimiser differences, as the test does."),
+        c("P1-JULIA-ELS-POISSON-Z-AT-R-PARAMETERS", "Poisson K = 2 latent scores (15 x 2, column-major) at R's fitted parameters",
+            "$dir/z_pois_unit.csv (R extract_latent_scores(level = \"unit\"))",
+            "$calc on a PoissonFit carrying R's beta and Lambda, as at $(cite(tp, "z_atR = extract_latent_scores(fit_atR, Y_pois"))",
+            z_r_pois, z_atR_p, test_tolerance(tp, "isapprox(z_atR, z_r_pois"),
+            "Laplace-Newton posterior mode at R's parameters."),
+        c("P1-JULIA-ELS-NB2-Z-AT-R-PARAMETERS", "NB2 (per-trait dispersion) K = 2 latent scores (60 x 2, column-major) at R's fitted parameters",
+            "$dir/z_nb2_unit.csv (R extract_latent_scores(level = \"unit\"))",
+            "$calc on an NBGroupedFit carrying R's beta, Lambda, phi, as at $(cite(tp, "z_atR = extract_latent_scores(fit_atR, Y_nb2"))",
+            z_r_nb2, z_atR_nb, test_tolerance(tp, "isapprox(z_atR, z_r_nb2"),
+            "Own (larger) fixture dataset, see generate_fixture.R."),
+        c("P1-JULIA-ELS-GAUSSIAN-LAMBDA-Z-OWN-OPTIMUM", "Gaussian Lambda z' (6 x 15, column-major), each side at its own optimum",
+            "$dir/Lambda_gauss_hat.csv and z_gauss_unit.csv (Lambda_R z_R')",
+            "GLLVModels getLoadings(fit; rotate = false) * extract_latent_scores(fit, Y; level = :unit, X)', as at $(cite(tp, "LZt_j = Lambda_j * z'", nth = 1))",
+            LZt_r_g, LZt_j_g, test_tolerance(tp, "isapprox(LZt_j, LZt_r", nth = 1),
+            "Rotation- and sign-invariant product: (Lambda, z) are identified only up to an orthogonal rotation."),
+        c("P1-JULIA-ELS-POISSON-LAMBDA-Z-OWN-OPTIMUM", "Poisson Lambda z' (6 x 15, column-major), each side at its own optimum",
+            "$dir/Lambda_pois_hat.csv and z_pois_unit.csv (Lambda_R z_R')",
+            "GLLVModels getLoadings(fit; rotate = false) * extract_latent_scores(fit, Y; level = :unit)', as at $(cite(tp, "LZt_j = Lambda_j * z'", nth = 2))",
+            LZt_r_p, LZt_j_p, test_tolerance(tp, "isapprox(LZt_j, LZt_r", nth = 2),
+            "Rotation- and sign-invariant product."),
+    ]
+    note = NOT_A_FIXTURE_PAIR * " The R z matrices were produced by extract_latent_scores() on a fit of class gllvmTMB_multi."
+    return ["latent-scores/extract_latent_scores.json" => Receipt(
+        ["latent-scores/extract_latent_scores", "latent-scores/extract_latent_scores.gllvmTMB_multi"],
+        "itchyshin/GLLVModels.jl#531", [dir * "/SHA256SUMS.txt"; unique(used)], [tp], note, cases)]
+end
+
+# =============================================================================================
+# 4. temporal/*   test/test_temporal_fit_receipts.jl (#563) and test/test_temporal_helpers.jl (#543)
+# =============================================================================================
+const TFR = "test/test_temporal_fit_receipts.jl"
+const TH = "test/test_temporal_helpers.jl"
+const TDIR = "test/fixtures/temporal_p1"
+
+# Verbatim from test/test_temporal_helpers.jl (theta_scale).
+theta_scale(structure, v) = ismissing(v) ? missing :
+    structure == "ar1" ? atanh(v / (1 - 1e-6)) : log(v)
+
+struct TFit
+    c::Dict{String,Any}
+    at_r
+    at_rt
+    at_j
+    cross::Dict{String,Any}
+end
+
+function temporal_fits()
+    F = temporal_p1_load("fits.toml")
+    F["gllvmTMB_commit"] == P1_SHA || fail("fits.toml not pinned at P1")
+    temporal_p1_sha("fits.toml") == TEMPORAL_P1_SHA256["fits.toml"] || fail("fits.toml sha differs from the test's table")
+    Xc = temporal_p1_load("cross_objective.toml")
+    temporal_p1_sha("cross_objective.toml") == TEMPORAL_P1_SHA256["cross_objective.toml"] || fail("cross_objective.toml sha differs")
+    cross = Dict(c["id"] => c for c in Xc["cells"])
+    fits = TFit[]
+    for c in F["fits"]
+        rpar = temporal_p1_vec(c["par"]); rtight = temporal_p1_vec(c["par_tight"])
+        at_r = temporal_p1_fit(F, c; start = rpar, iterations = 0)                    # TFR:~38
+        at_rt = temporal_p1_fit(F, c; start = rtight, iterations = 0)
+        xc = cross[c["id"]]
+        at_j = temporal_p1_fit(F, c; start = temporal_p1_vec(xc["julia_par"]), iterations = 0)
+        push!(fits, TFit(c, at_r, at_rt, at_j, xc))
+    end
+    return F, fits
+end
+
+fixture_paths(names...) = [TDIR * "/" * n for n in names]
+
+function mode_row(F, fits, which::Function, source_id, stem)
+    sel = filter(f -> which(f.c), fits)
+    ids = [f.c["id"] for f in sel]
+    fxs = "$TDIR/fits.toml"
+    idnote = "Fits (fixture order): " * join(ids, ", ") * "."
+    cases = Case[]
+    catv(f) = vcat(f...)
+    push!(cases, mkcase("P1-JULIA-$(stem)-NLL-AT-R-COORDINATES", "Julia NLL at R's opt\$par vs R's objective, per fit",
+        "$fxs [fits.objective]", "-GLLVModels.fit_temporal_gllvm(...; start = R par, iterations = 0).loglik, as at $(cite(TFR, "@test abs(-at_r.loglik - c[\"objective\"])"))",
+        [f.c["objective"] for f in sel], [-f.at_r.loglik for f in sel],
+        test_tolerance(TFR, "@test abs(-at_r.loglik - c[\"objective\"])"), idnote))
+    push!(cases, mkcase("P1-JULIA-$(stem)-NLL-AT-R-TIGHT-COORDINATES", "Julia NLL at R's tight-tolerance opt\$par vs R's tight objective, per fit",
+        "$fxs [fits.objective_tight]", "-GLLVModels.fit_temporal_gllvm(...; start = R par_tight, iterations = 0).loglik, as at $(cite(TFR, "@test abs(-at_rt.loglik - c[\"objective_tight\"])"))",
+        [f.c["objective_tight"] for f in sel], [-f.at_rt.loglik for f in sel],
+        test_tolerance(TFR, "@test abs(-at_rt.loglik - c[\"objective_tight\"])"), idnote))
+    push!(cases, mkcase("P1-JULIA-$(stem)-CROSS-OBJECTIVE-AT-JULIA-OPTIMUM", "R's objective at the recorded Julia optimum vs Julia NLL there, per fit",
+        "$TDIR/cross_objective.toml [cells.r_fn_at_julia_par]", "-GLLVModels.fit_temporal_gllvm(...; start = recorded julia_par, iterations = 0).loglik, as at $(cite(TFR, "@test abs(-at_j.loglik - xc[\"r_fn_at_julia_par\"])"))",
+        [f.cross["r_fn_at_julia_par"] for f in sel], [-f.at_j.loglik for f in sel],
+        test_tolerance(TFR, "@test abs(-at_j.loglik - xc[\"r_fn_at_julia_par\"])"), idnote))
+    push!(cases, mkcase("P1-JULIA-$(stem)-SIGMA-T-AT-R-COORDINATES", "Temporal covariance Sigma_T at R's coordinates (all fits, flattened)",
+        "$fxs [fits.Sigma_T]", "GLLVModels fit.Sigma_T at R par, as compared at $(cite(TFR, "vec(at_r.Sigma_T)"))",
+        catv([temporal_p1_vec(f.c["Sigma_T"]) for f in sel]), catv([vec(f.at_r.Sigma_T) for f in sel]),
+        test_tolerance(TFR, "vec(at_r.Sigma_T)"), idnote))
+    push!(cases, mkcase("P1-JULIA-$(stem)-AIC-AT-R-COORDINATES", "AIC at R's coordinates, per fit",
+        "$fxs [fits.AIC]", "GLLVModels aic(fit) at R par, as at $(cite(TFR, "abs(aic(at_r) - c[\"AIC\"])"))",
+        [f.c["AIC"] for f in sel], [aic(f.at_r) for f in sel], test_tolerance(TFR, "abs(aic(at_r) - c[\"AIC\"])"), idnote))
+    push!(cases, mkcase("P1-JULIA-$(stem)-BIC-AT-R-COORDINATES", "BIC at R's coordinates, per fit",
+        "$fxs [fits.BIC]", "GLLVModels bic(fit) at R par, as at $(cite(TFR, "abs(bic(at_r) - c[\"BIC\"])"))",
+        [f.c["BIC"] for f in sel], [bic(f.at_r) for f in sel], test_tolerance(TFR, "abs(bic(at_r) - c[\"BIC\"])"), idnote))
+    return sel, cases
+end
+
+function optimum_case(F, sel, stem)
+    # test/test_temporal_fit_receipts.jl "(iii) between optima": a fit is held to |dll| <= 1e-6 when
+    # Julia does not sit at a higher optimum than R's stopping point; cells where it does are
+    # handled by the test through R's own objective (they are the cross-objective cases above) and
+    # are listed here, not silently dropped.
+    used, dropped = TFit[], String[]
+    rv, jv = Float64[], Float64[]
+    for f in sel
+        jf = temporal_p1_fit(F, f.c; g_tol = TEMPORAL_P1_GTOL, iterations = TEMPORAL_P1_ITERATIONS)
+        dll = jf.loglik - (-f.c["objective_tight"])
+        dll >= -1e-8 || fail("$(f.c["id"]): Julia optimum is worse than R's by $dll")
+        if dll > 1e-6
+            push!(dropped, f.c["id"])
+        else
+            push!(used, f); push!(rv, -f.c["objective_tight"]); push!(jv, jf.loglik)
+        end
+    end
+    isempty(used) && return nothing
+    note = "Fits compared: " * join([f.c["id"] for f in used], ", ") * ". " *
+        (isempty(dropped) ? "No fit was excluded." :
+         "Excluded, because Julia reached a higher local optimum than R's stopping point (the test checks those through R's own objective at Julia's point instead, see the cross-objective case): " *
+         join(dropped, ", ") * ".") * " Julia fit settings g_tol = $(TEMPORAL_P1_GTOL), iterations = $(TEMPORAL_P1_ITERATIONS), as the test."
+    return mkcase("P1-JULIA-$(stem)-LOGLIK-AT-OPTIMA", "logLik at each side's own optimum, per fit",
+        "$TDIR/fits.toml [fits.objective_tight] (negated)", "GLLVModels.fit_temporal_gllvm(...; g_tol, iterations).loglik, as at $(cite(TFR, "dll = jf.loglik - (-c[\"objective_tight\"])"))",
+        rv, jv, test_tolerance(TFR, "@test abs(dll) <= 1e-6"; after = "abs(dll)"), note)
+end
+
+function receipts_temporal()
+    F, fits = temporal_fits()
+    fitf = "$TDIR/fits.toml"
+    common_fx = fixture_paths("fits.toml", "cross_objective.toml")
+    out = Pair{String,Receipt}[]
+    not_pair = NOT_A_FIXTURE_PAIR
+
+    # -- temporal_indep / temporal_dep / temporal_latent --------------------------------------
+    for (mode_pred, sid, stem) in (
+            (c -> c["mode"] == "indep", "temporal/temporal_indep", "TEMPORAL-INDEP"),
+            (c -> c["mode"] == "dep", "temporal/temporal_dep", "TEMPORAL-DEP"),
+            (c -> c["mode"] == "latent", "temporal/temporal_latent", "TEMPORAL-LATENT"))
+        sel, cases = mode_row(F, fits, mode_pred, sid, stem)
+        oc = optimum_case(F, sel, stem)
+        oc === nothing || push!(cases, oc)
+        if sid == "temporal/temporal_latent"
+            # getLV vs R's reported conditional scores and loadings (TFR: getLV block).
+            lvs = [(f, getLV(f.at_r)) for f in sel]
+            zr = Float64[]; zj = Float64[]; lr = Float64[]; lj = Float64[]
+            for (f, lv) in lvs
+                z = temporal_p1_vec(f.c["report_z_temporal_state"])
+                length(z) == size(lv.scores, 1) || fail("$(f.c["id"]): score length")
+                append!(zr, lv.sign.multiplier .* z); append!(zj, lv.scores[:, 1])
+                append!(lr, temporal_p1_vec(f.c["report_Lambda_temporal"])); append!(lj, vec(f.at_r.loadings))
+            end
+            push!(cases, mkcase("P1-JULIA-TEMPORAL-LATENT-GETLV-SCORES", "conditional latent state scores at R's coordinates, per fit (concatenated)",
+                "$fitf [fits.report_z_temporal_state] times the +-1 sign multiplier of getLV's anchor", "GLLVModels.getLV(fit).scores[:, 1] at R par, as at $(cite(TFR, "lv.scores[:, 1] .- lv.sign.multiplier .* zR"))",
+                zr, zj, test_tolerance(TFR, "@test d <= 1e-10"; after = "@test d"),
+                "The R score is multiplied by getLV's sign multiplier (exactly +1 or -1), as the test does, because a rank-one loading is identified only up to sign."))
+            push!(cases, mkcase("P1-JULIA-TEMPORAL-LATENT-LOADINGS-AT-R-COORDINATES", "temporal loadings at R's coordinates, per fit (concatenated)",
+                "$fitf [fits.report_Lambda_temporal]", "GLLVModels fit.loadings at R par, as compared at $(cite(TFR, "vec(at_r.loadings)"))",
+                lr, lj, test_tolerance(TFR, "vec(at_r.loadings)"), "Compared at R's own coordinates, so no sign alignment is needed."))
+        end
+        push!(out, "temporal/$(split(sid, '/')[2]).json" => Receipt([sid], "itchyshin/GLLVModels.jl#563",
+            [fitf, "$TDIR/cross_objective.toml"], [TFR, "$TDIR/fixture_helpers.jl"], not_pair, cases))
+    end
+
+    # -- extract_temporal (all 21 fits) ---------------------------------------------------------
+    tv_r = Float64[]; tv_j = Float64[]; va_r = Float64[]; va_j = Float64[]; ld_r = Float64[]; ld_j = Float64[]
+    for f in fits
+        e = extract_temporal(f.at_r)
+        push!(tv_r, f.c["time_value"]); push!(tv_j, e.time.value)
+        append!(va_r, temporal_p1_vec(f.c["variance"])); append!(va_j, e.variance.value)
+        if haskey(f.c, "loadings")
+            append!(ld_r, temporal_p1_vec(f.c["loadings"])); append!(ld_j, vec(e.loadings))
+        end
+    end
+    xid = "Fits: all $(length(fits)) in fits.toml."
+    xcases = [
+        mkcase("P1-JULIA-EXTRACT-TEMPORAL-TIME-VALUE", "extract_temporal(fit).time.value at R's coordinates, per fit",
+            "$fitf [fits.time_value]", "GLLVModels.extract_temporal(fit).time.value, as at $(cite(TFR, "abs(e.time.value - c[\"time_value\"])"))",
+            tv_r, tv_j, test_tolerance(TFR, "abs(e.time.value - c[\"time_value\"])"), xid),
+        mkcase("P1-JULIA-EXTRACT-TEMPORAL-VARIANCE", "extract_temporal(fit).variance.value at R's coordinates (all fits, concatenated)",
+            "$fitf [fits.variance]", "GLLVModels.extract_temporal(fit).variance.value, as at $(cite(TFR, "e.variance.value ≈"))",
+            va_r, va_j, test_tolerance(TFR, "e.variance.value ≈"), xid),
+        mkcase("P1-JULIA-EXTRACT-TEMPORAL-LOADINGS", "extract_temporal(fit).loadings at R's coordinates (fits that have loadings, concatenated)",
+            "$fitf [fits.loadings]", "GLLVModels.extract_temporal(fit).loadings, as at $(cite(TFR, "vec(e.loadings) ≈"))",
+            ld_r, ld_j, test_tolerance(TFR, "vec(e.loadings) ≈"),
+            "Fits with loadings: dep and latent modes. " * xid),
+    ]
+    push!(out, "temporal/extract_temporal.json" => Receipt(["temporal/extract_temporal"], "itchyshin/GLLVModels.jl#563",
+        [fitf], [TFR, "$TDIR/fixture_helpers.jl"], not_pair, xcases))
+
+    # -- forecast_temporal -----------------------------------------------------------------------
+    R = temporal_p1_load("forecast.toml")
+    R["gllvmTMB_commit"] == P1_SHA || fail("forecast.toml not pinned")
+    byid = Dict(f.c["id"] => f for f in fits)
+    fa = byid[R["ar1"]["fit_id"]].at_r
+    future = (series = String.(R["ar1"]["future_series"]), occasion = temporal_p1_vec(R["ar1"]["future_occasion"]),
+        trait = String.(R["ar1"]["future_trait"]))
+    fc = forecast_temporal(fa, future; se_fit = true)
+    cfit = byid[R["ar1"]["fit_id"]].c
+    neg = temporal_p1_fit(F, cfit; start = temporal_p1_vec(R["ar1"]["negative_par"]), iterations = 0)
+    fn = forecast_temporal(neg, future; se_fit = true)
+    fo = byid[R["ou"]["fit_id"]].at_r
+    future_ou = (series = String.(R["ou"]["future_series"]), elapsed = temporal_p1_vec(R["ou"]["future_elapsed"]),
+        trait = String.(R["ou"]["future_trait"]))
+    fco = forecast_temporal(fo, future_ou; se_fit = true)
+    ffx = "$TDIR/forecast.toml"
+    function fcase(id, q, key, field, fcobj, callnote, frag)
+        return mkcase(id, q, "$ffx [$key.$field]", "GLLVModels.forecast_temporal(fit, future; se_fit = true).$(field == "est" || endswith(field, "_est") ? "est" : "se_fit"), as at $(cite(TH, frag))",
+            temporal_p1_vec(R[key][field]), getproperty(fcobj, (field == "est" || endswith(field, "_est")) ? :est : :se_fit),
+            test_tolerance(TH, frag), callnote)
+    end
+    fcases = [
+        fcase("P1-JULIA-FORECAST-TEMPORAL-AR1-EST", "forecast est, AR1 temporal_indep fit at R's coordinates (12 future cells)", "ar1", "est", fc,
+            "fit $(R["ar1"]["fit_id"]) at R par (program-forecast.R:47).", "fc.est .- temporal_p1_vec(R[\"ar1\"][\"est\"])"),
+        fcase("P1-JULIA-FORECAST-TEMPORAL-AR1-SE-FIT", "forecast se.fit, AR1 temporal_indep fit at R's coordinates", "ar1", "se_fit", fc,
+            "fit $(R["ar1"]["fit_id"]) at R par.", "fc.se_fit .- temporal_p1_vec(R[\"ar1\"][\"se_fit\"])"),
+        fcase("P1-JULIA-FORECAST-TEMPORAL-AR1-NEGATIVE-EST", "forecast est, AR1 fit with negative persistence (phi = -0.6)", "ar1", "negative_est", fn,
+            "negative_par from the fixture.", "fn.est .- temporal_p1_vec(R[\"ar1\"][\"negative_est\"])"),
+        fcase("P1-JULIA-FORECAST-TEMPORAL-AR1-NEGATIVE-SE-FIT", "forecast se.fit, AR1 fit with negative persistence (phi = -0.6)", "ar1", "negative_se_fit", fn,
+            "negative_par from the fixture.", "fn.se_fit .- temporal_p1_vec(R[\"ar1\"][\"negative_se_fit\"])"),
+        fcase("P1-JULIA-FORECAST-TEMPORAL-OU-EST", "forecast est, OU temporal_indep fit at R's coordinates (6 future cells)", "ou", "est", fco,
+            "fit $(R["ou"]["fit_id"]) at R par (program-forecast.R:104).", "fco.est .- temporal_p1_vec(R[\"ou\"][\"est\"])"),
+        fcase("P1-JULIA-FORECAST-TEMPORAL-OU-SE-FIT", "forecast se.fit, OU temporal_indep fit at R's coordinates", "ou", "se_fit", fco,
+            "fit $(R["ou"]["fit_id"]) at R par.", "fco.se_fit .- temporal_p1_vec(R[\"ou\"][\"se_fit\"])"),
+    ]
+    push!(out, "temporal/forecast_temporal.json" => Receipt(["temporal/forecast_temporal"], "itchyshin/GLLVModels.jl#543",
+        [ffx, fitf], [TH, "$TDIR/fixture_helpers.jl"], not_pair, fcases))
+
+    # -- compare_temporal -------------------------------------------------------------------------
+    Cc = temporal_p1_load("compare.toml")
+    Cc["gllvmTMB_commit"] == P1_SHA || fail("compare.toml not pinned")
+    ll_r = Float64[]; ll_j = Float64[]; aic_r = Float64[]; aic_j = Float64[]; used = String[]
+    for key in ("selection", "all_modes", "replicated")
+        r = Cc[key]
+        fs = [byid[id].at_r for id in r["fit_ids"]]
+        res = compare_temporal(; (Symbol(m) => f for (m, f) in zip(r["model"], fs))...)
+        append!(ll_r, temporal_p1_vec(r["logLik"])); append!(ll_j, res.logLik)
+        append!(aic_r, temporal_p1_vec(r["AIC"])); append!(aic_j, res.AIC)
+        push!(used, "$key ($(join(r["model"], ", ")))")
+        res.df == Int.(r["df"]) || fail("compare_temporal df differs from R in $key")
+    end
+    cfx = "$TDIR/compare.toml"
+    ccases = [
+        mkcase("P1-JULIA-COMPARE-TEMPORAL-LOGLIK", "compare_temporal(...).logLik over the three fixture candidate sets (concatenated)",
+            "$cfx [selection|all_modes|replicated].logLik", "GLLVModels.compare_temporal(; model = fit, ...).logLik on fits at R's coordinates, as at $(cite(TH, "out.logLik .- temporal_p1_vec(r[\"logLik\"])"))",
+            ll_r, ll_j, test_tolerance(TH, "out.logLik .- temporal_p1_vec(r[\"logLik\"])"),
+            "Sets: " * join(used, "; ") * ". df is asserted equal (exact) by the test and by this script, but has no tolerance, so it is not a case."),
+        mkcase("P1-JULIA-COMPARE-TEMPORAL-AIC", "compare_temporal(...).AIC over the three fixture candidate sets (concatenated)",
+            "$cfx [selection|all_modes|replicated].AIC", "GLLVModels.compare_temporal(...).AIC, as at $(cite(TH, "out.AIC .- temporal_p1_vec(r[\"AIC\"])"))",
+            aic_r, aic_j, test_tolerance(TH, "out.AIC .- temporal_p1_vec(r[\"AIC\"])"),
+            "Sets: " * join(used, "; ") * "."),
+    ]
+    push!(out, "temporal/compare_temporal.json" => Receipt(["temporal/compare_temporal"], "itchyshin/GLLVModels.jl#543",
+        [cfx, fitf], [TH, "$TDIR/fixture_helpers.jl"], not_pair, ccases))
+
+    # -- profile_temporal -------------------------------------------------------------------------
+    P = temporal_p1_load("profile.toml")
+    P["gllvmTMB_commit"] == P1_SHA || fail("profile.toml not pinned")
+    est_r = Float64[]; est_j = Float64[]; th_r = Float64[]; th_j = Float64[]; tv_r2 = Float64[]; tv_j2 = Float64[]
+    bd_r = Float64[]; bd_j = Float64[]; bd_ids = String[]; bd_skipped = String[]
+    for key in ("ar1", "ar1_constrained", "ou", "ar1_default")
+        r = P[key]
+        c = byid[r["fit_id"]].c
+        f = byid[r["fit_id"]].at_r
+        idx = GMJ.TemporalLayout(size(f.X, 2), f.spec).time
+        pr = isempty(r["parm_range_offset"]) ? (-Inf, Inf) : Tuple(f.parameters[idx] .+ temporal_p1_vec(r["parm_range_offset"]))
+        o = profile_temporal(f; ystep = r["ystep"], ytol = r["ytol"], parm_range = pr)
+        push!(est_r, r["estimate"]); push!(est_j, o.estimate)
+        for side in (:lower, :upper)
+            rv = temporal_p1_num(r[String(side)]); jv = getproperty(o, side)
+            ismissing(rv) == ismissing(jv) || fail("profile $key $side: missing pattern differs from R")
+            if !ismissing(rv) && !ismissing(jv) && isfinite(rv)
+                isfinite(jv) || fail("profile $key $side: Julia bound infinite, R finite")
+                push!(bd_r, theta_scale(c["structure"], rv)); push!(bd_j, theta_scale(c["structure"], jv))
+                push!(bd_ids, "$key.$side")
+            else
+                push!(bd_skipped, "$key.$side (R: $(r[String(side)]); Julia agrees on missing/infinite)")
+            end
+        end
+        tr = GMJ._temporal_tmbprofile(f; ystep = r["ystep"], ytol = r["ytol"], parm_range = pr)
+        rt = temporal_p1_vec(r["trace_theta"])
+        length(tr.theta) == length(rt) || fail("profile $key trace length differs")
+        append!(th_r, rt); append!(th_j, tr.theta)
+        rvv = [temporal_p1_num(v) for v in r["trace_value"]]
+        all(ismissing.(rvv) .== ismissing.(tr.value)) || fail("profile $key trace missing pattern differs")
+        for (a, b) in zip(rvv, tr.value)
+            (ismissing(a) || ismissing(b)) && continue
+            push!(tv_r2, a); push!(tv_j2, b)
+        end
+    end
+    pfx = "$TDIR/profile.toml"
+    pcases = [
+        mkcase("P1-JULIA-PROFILE-TEMPORAL-ESTIMATE", "profile_temporal(fit).estimate over the four fixture profiles",
+            "$pfx [ar1|ar1_constrained|ou|ar1_default].estimate", "GLLVModels.profile_temporal(fit; ystep, ytol, parm_range).estimate on the fit at R's coordinates, as at $(cite(TH, "abs(out.estimate - r[\"estimate\"])"))",
+            est_r, est_j, test_tolerance(TH, "abs(out.estimate - r[\"estimate\"])"), "Profiles: ar1, ar1_constrained, ou, ar1_default."),
+        mkcase("P1-JULIA-PROFILE-TEMPORAL-TRACE-THETA", "profile walk: visited theta displacements (concatenated over the four profiles)",
+            "$pfx [*].trace_theta", "GLLVModels._temporal_tmbprofile(fit; ...).theta, as at $(cite(TH, "tr.theta .- rt"))",
+            th_r, th_j, test_tolerance(TH, "tr.theta .- rt"), "The walk must visit the same displacements as TMB::tmbprofile."),
+        mkcase("P1-JULIA-PROFILE-TEMPORAL-TRACE-VALUE", "profile walk: profiled objective values (concatenated; positions where both sides are non-missing)",
+            "$pfx [*].trace_value", "GLLVModels._temporal_tmbprofile(fit; ...).value, as at $(cite(TH, "d = maximum(abs, skipmissing(rv .- tr.value))"))",
+            tv_r2, tv_j2, test_tolerance(TH, "@test d <= 1e-5"; after = "@test d"),
+            "The test asserts the missing pattern is identical (this script asserts it too) and compares the rest."),
+    ]
+    if !isempty(bd_r)
+        push!(pcases, mkcase("P1-JULIA-PROFILE-TEMPORAL-FINITE-BOUNDS", "profile_temporal lower/upper bounds that are finite in R, on the theta scale",
+            "$pfx [*].lower/upper, mapped to theta by atanh(v / (1 - 1e-6)) (AR1) or log(v) (OU), as the test does",
+            "GLLVModels.profile_temporal(...).lower/upper mapped the same way, as at $(cite(TH, "theta_scale(c[\"structure\"], jv) - theta_scale(c[\"structure\"], rv)"))",
+            bd_r, bd_j, test_tolerance(TH, "theta_scale(c[\"structure\"], jv) - theta_scale(c[\"structure\"], rv)"),
+            "Bounds compared: " * join(bd_ids, ", ") * ". Not numeric cases (the test asserts agreement of the missing/infinite pattern, not a tolerance): " * join(bd_skipped, "; ") * "."))
+    end
+    push!(out, "temporal/profile_temporal.json" => Receipt(["temporal/profile_temporal"], "itchyshin/GLLVModels.jl#543",
+        [pfx, fitf], [TH, "$TDIR/fixture_helpers.jl"], not_pair, pcases))
+
+    # -- bootstrap_temporal ------------------------------------------------------------------------
+    B = temporal_p1_load("bootstrap.toml")
+    B["gllvmTMB_commit"] == P1_SHA || fail("bootstrap.toml not pinned")
+    cb = only(filter(c -> c["id"] == B["fit_id"], F["fits"]))
+    fi = temporal_p1_fit(F, cb)
+    jb = bootstrap_temporal(fi; n_boot = 200, seed = 260931)                          # TH: jb = bootstrap_temporal(fi; n_boot=200, seed=260931)
+    ok = isempty.(jb.error)
+    (sum(ok) >= 190 && B["n_converged"] >= 190) || fail("fewer than 190 converged bootstrap replicates")
+    te = Float64.(jb.time_estimate[ok])
+    rmean = B["time_estimate_mean"]; rsd = B["time_estimate_sd"]
+    se = sqrt(rsd^2 / B["n_converged"] + std(te)^2 / length(te))
+    bfx = "$TDIR/bootstrap.toml"
+    bcite_mean = cite(TH, "abs(mean(te) - rmean) <= 4 * se")
+    bcite_sd = cite(TH, "0.75 <= std(te) / rsd <= 1 / 0.75")
+    bnote = "bootstrap_temporal is stochastic, so the test's acceptance is statistical, and this case records exactly that band. n_boot = 200, seed = 260931, fit $(B["fit_id"]); $(sum(ok)) of 200 Julia replicates converged (R: $(B["n_converged"]))."
+    bcases = [
+        mkcase("P1-JULIA-BOOTSTRAP-TEMPORAL-TIME-ESTIMATE-MEAN", "mean of the bootstrap time_estimate distribution, Julia vs R (n_boot = 200)",
+            "$bfx [time_estimate_mean]", "mean of GLLVModels.bootstrap_temporal(fit; n_boot = 200, seed = 260931).time_estimate over converged replicates, as at $bcite_mean",
+            rmean, mean(te), (4 * se, bcite_mean, "@test abs(mean(te) - rmean) <= 4 * se"),
+            bnote * " Tolerance is the test's 4 standard errors of the difference of means, se = sqrt(sd_R^2 / n_R + sd_J^2 / n_J), evaluated from this run ($(4 * se))."),
+        mkcase("P1-JULIA-BOOTSTRAP-TEMPORAL-TIME-ESTIMATE-LOG-SD", "log sd of the bootstrap time_estimate distribution, Julia vs R (n_boot = 200)",
+            "$bfx [time_estimate_sd] (log scale)", "log(sd of GLLVModels.bootstrap_temporal(...).time_estimate over converged replicates), as at $bcite_sd",
+            log(rsd), log(std(te)), (log(1 / 0.75), bcite_sd, "@test 0.75 <= std(te) / rsd <= 1 / 0.75"),
+            bnote * " The test asserts the ratio sd_J / sd_R lies in [0.75, 1/0.75]; on the log scale that is |log sd_J - log sd_R| <= log(1/0.75) = $(log(1 / 0.75)), the same band."),
+    ]
+    push!(out, "temporal/bootstrap_temporal.json" => Receipt(["temporal/bootstrap_temporal"], "itchyshin/GLLVModels.jl#543",
+        [bfx, fitf], [TH, "$TDIR/fixture_helpers.jl"], not_pair, bcases))
+    return out
+end
+
+# ---------------------------------------------------------------------------------------------
+# Driver
+# ---------------------------------------------------------------------------------------------
+function build()
+    out = Pair{String,Receipt}[]
+    for (name, f) in (("chibar", receipts_chibar), ("ordinal", receipts_ordinal),
+            ("latent-scores", receipts_latent_scores), ("temporal", receipts_temporal))
+        t0 = time()
+        append!(out, f())
+        @info "built $name receipts" seconds = round(time() - t0; digits = 1)
+    end
+    return out
+end
+
+function compare_receipt(rel, new::Receipt)
+    path = joinpath(ROOT, OUT_DIR, rel)
+    isfile(path) || return ["missing file $rel"]
+    old = jparse(read(path, String))
+    probs = String[]
+    obj = Dict(receipt_object(new))
+    for k in ("schema", "source_ids", "evidence_kind", "pin", "reference_commit", "origin_pr", "generator", "source_fixtures", "source_tests", "what_this_is_not")
+        jparse(jrender(obj[k])) == old[k] || push!(probs, "$rel: field $k differs from the committed receipt")
+    end
+    old["julia_version"] == string(VERSION) || @info "$rel: receipt was generated on Julia $(old["julia_version"]), this run is $VERSION (informational)"
+    old["gllvmodels_commit"] == gllvmodels_commit() || @info "$rel: receipt names src commit $(old["gllvmodels_commit"][1:9]), current src commit is $(gllvmodels_commit()[1:9]) (informational)"
+    oc = Dict(c["case_id"] => c for c in old["comparison"]["cases"])
+    nc = Dict(String(c.fields[1].second) => Dict(c.fields) for c in new.cases)
+    Set(keys(oc)) == Set(keys(nc)) || push!(probs, "$rel: case ids differ ($(sort(collect(symdiff(keys(oc), keys(nc))))))")
+    for (id, n) in nc
+        haskey(oc, id) || continue
+        o = oc[id]
+        ov, nv = asvec(o["julia_value"]), asvec(n["julia_value"])
+        asvec(o["r_value"]) == asvec(n["r_value"]) || push!(probs, "$id: R value differs from the fixture")
+        o["tolerance"] == n["tolerance"] || push!(probs, "$id: tolerance differs ($(o["tolerance"]) vs $(n["tolerance"]))")
+        o["tolerance_source"] == n["tolerance_source"] || push!(probs, "$id: tolerance_source differs")
+        length(ov) == length(nv) || (push!(probs, "$id: julia_value length differs"); continue)
+        allow = CHECK_FRACTION * o["tolerance"] .+ CHECK_EPS_MULT * eps(Float64) .* max.(1.0, abs.(ov))
+        worst = maximum(abs.(ov .- nv) ./ allow)
+        worst <= 1 || push!(probs, "$id: recomputed Julia value moved by more than the strict allowance (max |Δ| / allowance = $(round(worst; sigdigits = 3)))")
+        n["abs_diff"] <= n["tolerance"] || push!(probs, "$id: abs_diff now exceeds tolerance")
+    end
+    return probs
+end
+
+function main(args)
+    check = "--check" in args
+    t0 = time()
+    receipts = try
+        build()
+    catch e
+        e isa Fail || rethrow()
+        println("FAIL ", e.msg)
+        return 1
+    end
+    if check
+        probs = String[]
+        for (rel, r) in receipts
+            append!(probs, compare_receipt(rel, r))
+        end
+        if isempty(probs)
+            println("OK $(length(receipts)) Julia receipts reproduce within $(CHECK_FRACTION) x tolerance ($(round(time() - t0; digits = 1)) s, Julia $VERSION)")
+            return 0
+        end
+        foreach(p -> println("STALE ", p), probs)
+        return 1
+    end
+    for (rel, r) in receipts
+        p = joinpath(ROOT, OUT_DIR, rel)
+        mkpath(dirname(p))
+        write(p, jrender(receipt_object(r)))
+    end
+    println("wrote $(length(receipts)) receipts under $OUT_DIR ($(round(time() - t0; digits = 1)) s, Julia $VERSION)")
+    return 0
+end
+
+exit(main(ARGS))
