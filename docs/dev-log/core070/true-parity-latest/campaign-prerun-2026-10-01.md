@@ -132,3 +132,39 @@ The two real-data CSVs are derived from GPL-2 package data and stay on Totoro. T
 ## 8. Cleanup
 
 Every process started for this pre-run has exited (checked by process listing after the last job; the 3 capped Julia jobs were ended by `timeout`, the three capped diagnostics likewise). Nothing is running from this lane. Files remain under the lane directory on Totoro for the maintainer to inspect or delete.
+
+## 9. Re-run after speed fixes (2026-10-01)
+
+Only the three cells that hit the cap were re-run, Julia side only, on Totoro in the same lane directory. R timings and logLik are the ones in section 2 (not re-run). Same data files (same sha256 as section 7), same harness `prerun_J.jl`, Julia 1.12.6, the same resolved `Manifest.toml` as the pre-run, one thread of BLAS, `JULIA_NUM_THREADS=2`, 900 s cap per cell. Three processes ran at once. Each Julia fit time still includes first-call compile time.
+
+Code under test: temporal at `origin/claude/temporal-fit-speed` 95923d724d2ae7a8ac6895ab4cc72ac395b3653a (PR #657); beetle and fungi at `origin/claude/covariate-fit-speed` 4f373d13a28f16f0c32c34c522f1f98ecceae903 (PR #658).
+
+### 9.1 Per-cell results
+
+| Cell | Julia fit wall before | Julia fit wall now (s) | Julia converged | Julia logLik | R logLik | Julia minus R |
+|---|---|---|---|---|---|---|
+| C3 temporal AR(1), 25 series x 20 times, d = 1 | over 900 s | 26.9 (34 iterations, gradient norm 6.6e-12) | true | -9721.0184628622 | -9721.0184631054 | +2.4e-7 |
+| C4 fungi, 300 sites x 59 species, binomial, shared slopes | over 900 s | 49.2 | true | -5792.1862523888 | -5792.1862524503 | +6.2e-8 |
+| C4 beetle, 87 sites x 68 species, NB2, shared slopes | over 900 s | 53.7 (142 iterations) | true | -9122.4300167255 | -8933.7812030706 | -188.65 |
+
+Temporal and fungi now finish in well under a minute and agree with R to inside 1e-6, so both are feasible and pass at this size. Beetle is fast but does not agree with R.
+
+### 9.2 The beetle gap, split by mechanism
+
+- Environment: ruled out. The two sides read the same file, and the model is the same (68 intercepts, 3 shared slopes, 135 loading parameters, 68 dispersions, 274 parameters on both sides).
+- Objective: ruled out. I dumped R's estimates (intercepts, slopes, loadings, dispersions) and evaluated Julia's Laplace objective at R's point. Julia gives -8933.781203, R reports -8933.7812031. The two objectives are the same function to 1e-6 at that point, including the loading packing.
+- Convergence: not a simple stop. Julia reports converged = true after 142 iterations, at a point that is 188.65 log-likelihood units lower than a point it can evaluate for itself.
+- Different basin: this is the mechanism. Julia's optimiser settles in a worse local optimum. R's point is a degenerate one (pdHess FALSE, cond(H) 3.4e8, one species at a dispersion of 8e8, i.e. the Poisson limit, loadings as large as 13.4). Julia's point has dispersions from 0.005 to 1306 and loadings from -28 to 22, with a different slope vector (Julia -0.053, -0.149, -0.311 against R -0.047, -0.458, -0.169). This matches the 20-species diagnostic in section 4 (Julia 28.7 below R). It is therefore a Julia-side finding that repeats at full size and grows with the number of species.
+- Real disagreement about the target: none shown. R's higher point is a valid value of the shared objective, but R itself stopped with a non-positive-definite Hessian, so R's optimum is not a clean one either.
+
+Consequence for the campaign: beetle cannot be written as a parity row on current code. The speed fix removed the cost barrier and exposed a basin or start-value problem in the NB2 covariate fitter. It needs its own lane (multi-start or a start from the fixed-effect fit, plus a check on the boundary restart). I did not attempt a fix.
+
+### 9.3 Updated campaign estimate
+
+Measured now: temporal 0.5 min, fungi 0.8 min, beetle 0.9 min (Julia), R 2 to 20 s each. The three open-ended rows in the section 6 table become: C3 temporal about 1 min (was more than 15), C4 fungi about 1 min (was more than 15), C4 beetle about 1 min but with a known 188.65 gap. The serial total is therefore about 40 to 45 minutes for the rows in the section 6 table plus about 3 minutes for these, so about 45 to 50 minutes, well under the 3 hour line, and 8-way parallel wall time is set by NB2 (about 4 minutes of Julia fit plus confint). Option 1 of section 6 (drop the three rows) is no longer needed for cost. Revised recommendation: run temporal and fungi at the stated size; run beetle only after the NB2 covariate fitter's basin problem is addressed, or run it and record the 188.65 gap as the expected result. Both choices are yours. The estimate depends on #657 and #658 being merged; on `main` as of the pre-run these cells still do not finish.
+
+Scope of what this re-run does NOT cover: R was not re-run, so R's own run-to-run variation at beetle (a single start, pdHess FALSE) is unmeasured; Julia had one start only; coefficients and standard errors other than the beetle slopes were not compared; the bridge route is still not exercised; the temporal and fungi cells ran on one dataset each.
+
+### 9.4 Provenance and cleanup
+
+Lane copies on Totoro: `jl-temporal` and `jl-cov` under `~/hsq_work/true-parity-prerun-20261001` (made by `git archive`), logs and summaries in `cells/<cell>/rerun_j.log` and `cells/<cell>/out/rerun_<cell>_J_summary.txt`, R estimates for the beetle cross-check in `cells/beetle/R_*.txt`. Every process started for this re-run has exited (checked by process listing at the end). Nothing is running from this lane.
