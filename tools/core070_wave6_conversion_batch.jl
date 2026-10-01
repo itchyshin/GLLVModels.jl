@@ -144,7 +144,7 @@ oracle = json_read(oracle_path)
 
 root = normpath(joinpath(@__DIR__, ".."))
 # GLLVM_PARITY_PIN=P1 reads the P1-regenerated contract (cases verbatim); unset/P0 is unchanged.
-_wave6_pin = uppercase(strip(get(ENV, "GLLVM_PARITY_PIN", "P0")))
+_wave6_pin = uppercase(strip(get(ENV, "GLLVM_PARITY_PIN", "P1")))
 _wave6_pin in ("P0", "P1") || error("GLLVM_PARITY_PIN must be P0 or P1")
 contract = json_read(joinpath(root, _wave6_pin == "P1" ?
     "docs/dev-log/core070/true-parity-latest/wave6-conversion-batch-contract-p1.json" :

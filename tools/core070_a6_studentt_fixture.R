@@ -68,7 +68,7 @@ library(gllvmTMB)
 # P1 entry of tools/core070_oracle_pins.toml (tools/core070_source_pin.R) and
 # records it beside the readback as <output>.source-pin.tsv. Any other value
 # stops. Nothing is written when a check fails.
-parity_pin <- toupper(trimws(Sys.getenv("GLLVM_PARITY_PIN", "P0")))
+parity_pin <- toupper(trimws(Sys.getenv("GLLVM_PARITY_PIN", "P1")))
 if (!parity_pin %in% c("P0", "P1")) stop("GLLVM_PARITY_PIN must be P0 or P1, got '", parity_pin, "'")
 expected_reference <- if (identical(parity_pin, "P1"))
   "9539352f66f2db2cc26b1c393e67212a359b60c9" else "b4d5fee64def88bc768dda1f1f77c29b295edd86"

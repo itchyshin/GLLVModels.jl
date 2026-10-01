@@ -111,6 +111,8 @@ jobs:
     # receipts remain the authority; this job still runs and still uploads
     # its receipts and failures. No engine gate or tolerance was changed.
     continue-on-error: true
+    env:
+      GLLVM_PARITY_PIN: P0  # this job rebuilds/compares the frozen 0.7.0 oracle; the repo default is P1
     # Not run on pull requests: it has failed the same 9 assertions on main
     # since 2026-09-25 on every PR, so on a PR it carries no signal and only
     # adds a red mark and a queued job. It still runs on pushes to main and on

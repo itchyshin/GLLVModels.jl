@@ -24,8 +24,15 @@ def run(pin=None):
 
 
 class NamespaceOnePinTest(unittest.TestCase):
-    def test_default_is_p0_original_counts(self):
+    def test_default_is_p1(self):
+        # Default pin flipped P0 -> P1 (tools/parity_oracle.py _DEFAULT_PIN).
         r = run()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("pin=P1", r.stdout)
+        self.assertIn("exec=50 needs=2 retired=2", r.stdout)
+
+    def test_p0_selectable_original_counts(self):
+        r = run("P0")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("pin=P0", r.stdout)
         self.assertIn("exec=48 needs=6 retired=0", r.stdout)
