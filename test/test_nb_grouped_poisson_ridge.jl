@@ -28,17 +28,38 @@ const GM = GLLVModels
         @test iters > Optim.iterations(res)
     end
 
-    @testset "finite optimum: the stalled point is kept" begin
-        # The optimum sits near log r = 9 (r ≈ 8e3), so fixing r = 1e10 is worse. Not a
+    @testset "finite optimum: the fit continues to it, nothing fixed" begin
+        # The optimum sits near log r = 9 (r ≈ 8e3), so fixing r = 1e10 is worse and is
+        # not kept; the plain continuation reaches the finite optimum instead. Not a
         # quadratic, which L-BFGS would solve within the three allowed iterations.
         f(θ) = (θ[1] - 1)^2 + (θ[2] - 9)^4 + exp(θ[1] * θ[2] / 20)
         res = Optim.optimize(f, [0.0, 7.5], ls, short; autodiff = :finite)
         @test !Optim.converged(res)
         θ, nll, conv, iters = GM._nb_poisson_ridge_polish(f, res, ls, opts, 2)
-        @test θ == Optim.minimizer(res)
-        @test nll == Optim.minimum(res)
-        @test !conv
-        @test iters == Optim.iterations(res)
+        ref = Optim.optimize(f, [0.0, 7.5], ls, opts; autodiff = :finite)
+        @test Optim.converged(ref)
+        @test conv
+        @test θ[2] < log(1e10)
+        @test θ ≈ Optim.minimizer(ref) atol = 1e-3
+        @test nll <= Optim.minimum(res)
+        @test iters > Optim.iterations(res)
+    end
+
+    @testset "rounds: a cap-limited refit is continued" begin
+        # A ridge to the limit in θ[2] plus a slow, ill-conditioned valley in the rest:
+        # one refit with the iteration cap below stops short, and further rounds finish.
+        f(θ) = (θ[1] - 1)^2 + 1e3 * (θ[3] - θ[1]^2)^2 + exp(-θ[2])
+        cap = Optim.Options(g_tol = 1e-8, iterations = 15)
+        res = Optim.optimize(f, [-1.0, 8.0, 2.0], ls, Optim.Options(g_tol = 1e-8, iterations = 3);
+                             autodiff = :finite)
+        @test !Optim.converged(res)
+        θ1, _, conv1, _ = GM._nb_poisson_ridge_polish(f, res, ls, cap, 2; rounds = 1)
+        θ, nll, conv, iters = GM._nb_poisson_ridge_polish(f, res, ls, cap, 2; rounds = 20)
+        @test !conv1
+        @test conv
+        @test θ[2] == log(1e10)
+        @test θ[1] ≈ 1 atol = 1e-3
+        @test nll <= Optim.minimum(res)
     end
 
     @testset "a converged fit is returned unchanged" begin
@@ -58,6 +79,18 @@ const GM = GLLVModels
         fit = GM.fit_nb_gllvm_grouped(Y; K = K, group = collect(1:p))
         @test fit.converged
         @test isfinite(fit.loglik)
+        rvec = fit.r_group[fit.group]
+        @test fit.loglik ≈ GM.nb_grouped_marginal_loglik_laplace(Y, fit.Λ, fit.β, rvec;
+                                                             maxiter = 100, tol = 1e-9) rtol = 1e-10
+    end
+
+    @testset "p = 24 fit whose first refit stopped at the cap" begin
+        fixture = TOML.parsefile(joinpath(@__DIR__, "fixtures", "nb_grouped_poisson_ridge_p24.toml"))
+        p, n, K = fixture["p"], fixture["n"], fixture["K"]
+        Y = reshape(Int64.(fixture["Y_column_major"]), p, n)
+        fit = GM.fit_nb_gllvm_grouped(Y; K = K, group = collect(1:p))
+        @test fit.converged
+        @test fit.loglik >= fixture["loglik_main"]
         rvec = fit.r_group[fit.group]
         @test fit.loglik ≈ GM.nb_grouped_marginal_loglik_laplace(Y, fit.Λ, fit.β, rvec;
                                                              maxiter = 100, tol = 1e-9) rtol = 1e-10
