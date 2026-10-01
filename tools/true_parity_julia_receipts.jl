@@ -46,7 +46,7 @@
 # OPENBLAS_NUM_THREADS=1 JULIA_NUM_THREADS=4: a few minutes.
 
 using GLLVModels, TOML, SHA, Statistics, Random, LinearAlgebra
-using Distributions: Normal   # root-project dependency; family marker for select_lv (section 7) and the namespace numeric twins (section 9)
+using Distributions: Normal, NegativeBinomial   # root-project dependency; family marker for select_lv (section 7) and the namespace numeric twins (section 9)
 const GMJ = GLLVModels
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
@@ -1175,9 +1175,9 @@ end
 # 9. namespace numeric twins   test/test_namespace_numeric_p1_twin.jl (itchyshin/GLLVModels.jl#652)
 #    extract_loadings, extract_rotated_loadings_table (one rank-2 Gaussian fit), extract_lv_effects
 #    (predictor-informed fit), extract_communality, extract_Sigma_B, extract_Sigma_W (two-level fit),
-#    each against R at P1 from test/fixtures/ns_numeric_p1.toml. vcov (Julia's public vcov is
-#    diagonal only) and the single-level communality split are NOT bound; see
-#    test/fixtures/repro_namespace_twin_gaps_p1.jl.
+#    each against R at P1 from test/fixtures/ns_numeric_p1.toml, plus vcov (the trait-mean block of the
+#    full covariance, itchyshin/GLLVModels.jl#656). The single-level communality split is NOT bound;
+#    see test/fixtures/repro_namespace_twin_gaps_p1.jl.
 # =============================================================================================
 function _ns_load_csv(path::AbstractString, trait_names::Vector{String}, n_cols::Integer;
                       x_cols::Vector{Int} = Int[], obs_col::Union{Nothing,Int} = nothing)
@@ -1256,6 +1256,21 @@ function receipts_namespace_numeric()
             "$fxp [main.rot_std_loading]", "GLLVModels.extract_rotated_loadings_table(fit, Y; method = :varimax, loading_scale = :standardized).loading, as called at $ctabs",
             Float64.(m["rot_std_loading"]), trs.loading, test_tolerance(tp, "Float64.(m[\"rot_std_loading\"])"), note2)])
 
+    # ---- main fit: vcov.gllvmTMB_multi (the full-covariance fix, itchyshin/GLLVModels.jl#656) ----
+    Vj = vcov(fit, Y)
+    Vjb = Vj[1:p, 1:p]
+    tpv = "test/test_namespace_numeric_p1_twin.jl"
+    (Vj isa Matrix{Float64} && issymmetric(Vj)) || fail("vcov is not a symmetric Matrix{Float64}")
+    maximum(abs, (Vjb - Diagonal(diag(Vjb)))) > 1e-3 || fail("Julia vcov trait-mean block is diagonal")
+    tolv = test_tolerance(tpv, "@test isapprox(diag(Vb), diag(Vr)")
+    tolv[1] == test_tolerance(tpv, "@test isapprox(offd(Vb), offd(Vr)")[1] || fail("vcov diagonal and off-diagonal tolerances differ")
+    push!(out, "namespace-numeric/vcov.json" => Receipt(["namespace/S3method/vcov,gllvmTMB_multi"], "itchyshin/GLLVModels.jl#656",
+        [fxp, datap1], [tp], NOT_A_FIXTURE_PAIR, [
+        mkcase("P1-JULIA-VCOV-TRAIT-MEAN", "vcov(fit): covariance of the six trait means (fixed-effect block of the inverse joint Hessian), 6 x 6 row-major, off-diagonals included",
+            "$fxp [main.vcov]", "GLLVModels.vcov(fit, Y)[1:p, 1:p], as called at " * cite(tp, "V = vcov(fit, Y)") * "; fit as at $fitc",
+            _ns_mat(m["vcov"], p, p), Vjb, tolv,
+            note1 * " Both blocks are at the joint optimum on the natural scale of the trait means (trait order t1..t6), so no reparameterisation map is needed; the test asserts the diagonal and the off-diagonal parts separately at the same tolerance and that R's block is not diagonal (largest off-diagonal above 1e-3). Julia's vcov returned only a diagonal before itchyshin/GLLVModels.jl#656.")]))
+
     # ---- lv fit: extract_lv_effects ----
     l, datap2 = chk("lv")
     Y2, X2, _ = _ns_load_csv(joinpath(ROOT, datap2), tn, n; x_cols = [4, 5])
@@ -1303,6 +1318,76 @@ function receipts_namespace_numeric()
     return out
 end
 
+# =============================================================================================
+# 10. namespace numeric twins (b)   test/test_namespace_numeric_p1_twin_b.jl
+#    tidy.gllvmTMB_multi (fixed effects of the rank-2 Gaussian fit), and the Beta and nbinom2 family
+#    exports (one-axis latent fits), each against R at P1 from test/fixtures/ns_numeric_p1_b.toml.
+# =============================================================================================
+function receipts_namespace_numeric_b()
+    fxp = "test/fixtures/ns_numeric_p1_b.toml"
+    tp = "test/test_namespace_numeric_p1_twin_b.jl"
+    fx = TOML.parsefile(joinpath(ROOT, fxp))
+    fx["gllvmtmb_commit"] == P1_SHA || fail("namespace numeric (b) fixture is not pinned at P1")
+    dir = "test/fixtures/"
+    p, n = Int(fx["p"]), Int(fx["n_unit"])
+    ORIGIN = "itchyshin/GLLVModels.jl#661"
+    function chk(sec)
+        d = fx[sec]
+        datap = dir * d["data_file"]
+        bytes2hex(sha256(read(joinpath(ROOT, datap)))) == d["data_sha256"] || fail("$sec data csv drifted")
+        (d["converged"] === true && d["pd_hessian"] === true) || fail("$sec R fit not converged with a PD Hessian; not a valid twin")
+        return d, datap
+    end
+    out = Pair{String,Receipt}[]
+    mk(rel, sid, fixs, cs) = push!(out, "namespace-numeric/$rel.json" => Receipt([sid], ORIGIN, fixs, [tp], NOT_A_FIXTURE_PAIR, cs))
+
+    # ---- tidy ----
+    t, datap = chk("tidy")
+    Y, _, _ = _ns_load_csv(joinpath(ROOT, datap), String.(fx["trait_names"]), n)
+    fit = fit_gllvm(Y; family = Normal(), K = 2)
+    fit.converged || fail("tidy Julia fit did not converge")
+    abs(fit.logLik - Float64(t["loglik"])) <= 1e-6 || fail("tidy logLik differs from R")
+    tb = tidy(fit, Y)
+    length(tb) == p == length(t["terms"]) || fail("tidy row count differs from R")
+    fitc = cite(tp, "fit = fit_gllvm(Y; family = Normal(), K = 2)")
+    tcall = cite(tp, "tb = tidy(fit, Y)")
+    noteT = "Rank-2 Gaussian fit on the fixture data (sha256 checked; the same data as the main fit of the extract_loadings twin), R: latent(0 + trait | unit, d = 2, unique = FALSE) converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Rows are the six trait intercepts in trait order (R terms traitt1..traitt6, Julia beta[1..6]); the test asserts the row count and the identity link on both sides, and the numbers are compared elementwise."
+    mk("tidy", "namespace/S3method/tidy,gllvmTMB_multi", [fxp, datap], [
+        mkcase("P1-JULIA-TIDY-ESTIMATE", "tidy(fit) fixed rows, column `estimate`, 6 trait intercepts",
+            "$fxp [tidy.estimate]", "GLLVModels.tidy(fit, Y), field estimate, as called at $tcall; fit as at $fitc",
+            Float64.(t["estimate"]), [r.estimate for r in tb], test_tolerance(tp, "[r.estimate for r in tb]"), noteT),
+        mkcase("P1-JULIA-TIDY-STD-ERROR", "tidy(fit) fixed rows, column `std.error`, 6 Wald standard errors",
+            "$fxp [tidy.std_error]", "GLLVModels.tidy(fit, Y), field std_error, as called at $tcall; fit as at $fitc",
+            Float64.(t["std_error"]), [r.std_error for r in tb], test_tolerance(tp, "[r.std_error for r in tb]"), noteT)])
+
+    # ---- Beta, nbinom2 ----
+    for (k, (sec, sid, fam, fld, famtxt, rfam)) in enumerate((
+            ("beta", "namespace/export/Beta", GLLVModels.Beta(), :φ, "fit_gllvm(Y; family = GLLVModels.Beta(), K = 1)", "Beta()"),
+            ("nb2", "namespace/export/nbinom2", NegativeBinomial(1.0, 0.5), :r_group, "fit_gllvm(Y; family = NegativeBinomial(1.0, 0.5), K = 1)", "nbinom2()")))
+        b, datab = chk(sec)
+        Yb, _, _ = _ns_load_csv(joinpath(ROOT, datab), String.(fx["trait_names"]), n)
+        f = fit_gllvm(Yb; family = fam, K = 1)
+        f.converged || fail("$sec Julia fit did not converge")
+        f.group == collect(1:p) || fail("$sec dispersion is not per trait")
+        abs(f.loglik - Float64(b["loglik"])) <= 1e-6 || fail("$sec logLik differs from R")
+        fc = cite(tp, "fit = fit_gllvm(Y; family = " * (k == 1 ? "GLLVModels.Beta()" : "NegativeBinomial(1.0, 0.5)") * ", K = 1)")
+        note = "One-axis latent fit, p = 6, n = 200 (sha256 checked); R: value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE), family = $rfam, converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Dispersion is per trait on both sides. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda' (6 x 6)."
+        L = f.Λ * f.Λ'
+        mk(sec == "beta" ? "Beta" : "nbinom2", sid, [fxp, datab], [
+            mkcase("P1-JULIA-$(uppercase(sec))-INTERCEPTS", "trait intercepts (6 values) of a family = $rfam latent fit",
+                "$fxp [$sec.beta]", "GLLVModels.fit_gllvm(...).β, fit as at $fc",
+                Float64.(b["beta"]), f.β, test_tolerance(tp, "@test isapprox(bj, Float64.(b[\"beta\"])"; nth = k), note),
+            mkcase("P1-JULIA-$(uppercase(sec))-LAMBDA-LAMBDAT", "Lambda Lambda' (6 x 6) of a family = $rfam latent fit",
+                "$fxp [$sec.lambda_lambdat]", "GLLVModels.fit_gllvm(...).Λ * Λ', fit as at $fc",
+                _ns_mat(b["lambda_lambdat"], p, p), L, test_tolerance(tp, "@test isapprox(LLt, _nsb_mat(b[\"lambda_lambdat\"], p, p)"; nth = k), note),
+            mkcase("P1-JULIA-$(uppercase(sec))-DISPERSION", "per-trait dispersion phi (6 values) of a family = $rfam latent fit",
+                "$fxp [$sec.phi]", "GLLVModels.fit_gllvm(...).$(fld), fit as at $fc",
+                Float64.(b["phi"]), getproperty(f, fld), test_tolerance(tp, "@test isapprox(phij, Float64.(b[\"phi\"])"; nth = k),
+                note * (sec == "beta" ? " R reports phi_beta; Julia the Beta precision phi." : " R reports exp(log_phi_nbinom2) with variance mu + mu^2/phi; Julia the NB size r (the same parameter)."))])
+    end
+    return out
+end
+
 # ---------------------------------------------------------------------------------------------
 # Driver
 # ---------------------------------------------------------------------------------------------
@@ -1312,7 +1397,8 @@ function build()
             ("latent-scores", receipts_latent_scores), ("temporal", receipts_temporal),
             ("aghq", receipts_aghq), ("model-comparison", receipts_model_comparison),
             ("select-lv", receipts_select_lv), ("isdm", receipts_isdm),
-            ("namespace-numeric", receipts_namespace_numeric))
+            ("namespace-numeric", receipts_namespace_numeric),
+            ("namespace-numeric-b", receipts_namespace_numeric_b))
         t0 = time()
         append!(out, f())
         @info "built $name receipts" seconds = round(time() - t0; digits = 1)

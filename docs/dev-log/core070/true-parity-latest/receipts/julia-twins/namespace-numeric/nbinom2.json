@@ -1,0 +1,177 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "namespace/export/nbinom2"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#661",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "3fcf206986f934686204a3f70b7fe50edc27771d",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/ns_numeric_p1_b.toml",
+      "sha256": "6da8061f786b3bd46bce2a925dc8020566da1239e100b62fb0fa16b85b8bf868"
+    },
+    {
+      "path": "test/fixtures/ns_nb2_p1_data.csv",
+      "sha256": "6ce6692f0f665674858ef50061aef3b16ee3c1e74230d4ce561276dcd5d4956b"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_namespace_numeric_p1_twin_b.jl",
+      "sha256": "4e2e88b814cced649c411548782cd87fdd981b9c39b207c1fe642e7d79eaabfe"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-NB2-INTERCEPTS",
+        "quantity": "trait intercepts (6 values) of a family = nbinom2() latent fit",
+        "r_source": "test/fixtures/ns_numeric_p1_b.toml [nb2.beta]",
+        "julia_source": "GLLVModels.fit_gllvm(...).β, fit as at test/test_namespace_numeric_p1_twin_b.jl:98",
+        "r_value": [
+          1.0777888505683415,
+          0.6822949573634293,
+          1.186956745879617,
+          0.9590167684251673,
+          1.3121516602708116,
+          0.8441570240329127
+        ],
+        "julia_value": [
+          1.077789552284013,
+          0.6822908774919917,
+          1.1869629167029012,
+          0.9590172652446194,
+          1.3121498436095738,
+          0.8441573077336915
+        ],
+        "abs_diff": 6.170823284135096e-06,
+        "tolerance": 5e-05,
+        "tolerance_source": "test/test_namespace_numeric_p1_twin_b.jl:104",
+        "tolerance_source_line": "@test isapprox(bj, Float64.(b[\"beta\"]); atol = 5e-5, rtol = 0)",
+        "note": "One-axis latent fit, p = 6, n = 200 (sha256 checked); R: value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE), family = nbinom2(), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Dispersion is per trait on both sides. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda' (6 x 6)."
+      },
+      {
+        "case_id": "P1-JULIA-NB2-LAMBDA-LAMBDAT",
+        "quantity": "Lambda Lambda' (6 x 6) of a family = nbinom2() latent fit",
+        "r_source": "test/fixtures/ns_numeric_p1_b.toml [nb2.lambda_lambdat]",
+        "julia_source": "GLLVModels.fit_gllvm(...).Λ * Λ', fit as at test/test_namespace_numeric_p1_twin_b.jl:98",
+        "r_value": [
+          0.6751938325514186,
+          -0.4450717935407916,
+          0.6219209328243979,
+          0.3358689959122231,
+          -0.5550164212702439,
+          0.3708821571769354,
+          -0.4450717935407916,
+          0.2933807920861478,
+          -0.40995555893445984,
+          -0.22139689256420156,
+          0.3658536884525338,
+          -0.24447673975820233,
+          0.6219209328243979,
+          -0.40995555893445984,
+          0.5728512732759803,
+          0.30936887923752815,
+          -0.511225538220482,
+          0.34161949656410556,
+          0.3358689959122231,
+          -0.22139689256420156,
+          0.30936887923752815,
+          0.16707495977681955,
+          -0.27608784194964653,
+          0.18449193657776825,
+          -0.5550164212702439,
+          0.3658536884525338,
+          -0.511225538220482,
+          -0.27608784194964653,
+          0.45622932708907715,
+          -0.3048690282188779,
+          0.3708821571769354,
+          -0.24447673975820233,
+          0.34161949656410556,
+          0.18449193657776825,
+          -0.3048690282188779,
+          0.2037245719387429
+        ],
+        "julia_value": [
+          0.6752055863340117,
+          -0.445077257829614,
+          0.6219262236650812,
+          0.33587241572027093,
+          -0.5550201670018292,
+          0.3708907226992451,
+          -0.445077257829614,
+          0.2933828887771307,
+          -0.4099569431942631,
+          -0.22139801090957914,
+          0.3658542804874084,
+          -0.24448113160569176,
+          0.6219262236650812,
+          -0.4099569431942631,
+          0.5728510479043485,
+          0.3093692756251033,
+          -0.5112244381678671,
+          0.34162434557620475,
+          0.33587241572027093,
+          -0.22139801090957914,
+          0.3093692756251033,
+          0.16707545364703977,
+          -0.27608771022838674,
+          0.1844948642643622,
+          -0.5550201670018292,
+          0.3658542804874084,
+          -0.5112244381678671,
+          -0.27608771022838674,
+          0.4562275431565418,
+          -0.30487281950616607,
+          0.3708907226992451,
+          -0.24448113160569176,
+          0.34162434557620475,
+          0.1844948642643622,
+          -0.30487281950616607,
+          0.20373043554222017
+        ],
+        "abs_diff": 1.1753782593104667e-05,
+        "tolerance": 0.0001,
+        "tolerance_source": "test/test_namespace_numeric_p1_twin_b.jl:106",
+        "tolerance_source_line": "@test isapprox(LLt, _nsb_mat(b[\"lambda_lambdat\"], p, p); atol = 1e-4, rtol = 0)",
+        "note": "One-axis latent fit, p = 6, n = 200 (sha256 checked); R: value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE), family = nbinom2(), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Dispersion is per trait on both sides. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda' (6 x 6)."
+      },
+      {
+        "case_id": "P1-JULIA-NB2-DISPERSION",
+        "quantity": "per-trait dispersion phi (6 values) of a family = nbinom2() latent fit",
+        "r_source": "test/fixtures/ns_numeric_p1_b.toml [nb2.phi]",
+        "julia_source": "GLLVModels.fit_gllvm(...).r_group, fit as at test/test_namespace_numeric_p1_twin_b.jl:98",
+        "r_value": [
+          2.051450966489931,
+          4.750556693796102,
+          5.85785042611562,
+          6.548489407423879,
+          3.107045002169908,
+          3.003183544636989
+        ],
+        "julia_value": [
+          2.051466188899733,
+          4.750322043587803,
+          5.857476195175429,
+          6.548228555063189,
+          3.1069527862748427,
+          3.003266818001819
+        ],
+        "abs_diff": 0.0003742309401912891,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_namespace_numeric_p1_twin_b.jl:108",
+        "tolerance_source_line": "@test isapprox(phij, Float64.(b[\"phi\"]); atol = 1e-3, rtol = 0)",
+        "note": "One-axis latent fit, p = 6, n = 200 (sha256 checked); R: value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE), family = nbinom2(), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Dispersion is per trait on both sides. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda' (6 x 6). R reports exp(log_phi_nbinom2) with variance mu + mu^2/phi; Julia the NB size r (the same parameter)."
+      }
+    ]
+  }
+}

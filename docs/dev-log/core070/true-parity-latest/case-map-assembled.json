@@ -41,7 +41,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-namespace.json",
-   "sha256": "54c4cf215ab9d172682f972b579630041a51cd4ac2680c281b9ea2c3a1b51c01",
+   "sha256": "a36aa7061449fb9a20cf28f7e5a2de37fd15699d6874cd92133665483d183b96",
    "rows": 69
   },
   {
@@ -6993,20 +6993,27 @@
    "r_file_line": "R/methods-gllvmTMB.R:1260",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/tidy.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-TIDY-MULTI-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-TIDY-MULTI-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_namespace_numeric_p1_twin_b.jl, against R tidy(fit, effects = \"fixed\") values copied from test/fixtures/ns_numeric_p1_b.toml (a rank-2 Gaussian fit's six trait-intercept estimates and Wald standard errors; Julia tidy(fit, Y)), each case within the tolerance asserted in that test. R converged with a positive-definite Hessian. The Tier 0 registration receipts are kept un-cited under registration_receipts (the registration batch receipt carries a batch-level FAIL status, which would block the numeric binding if cited); the superseded case ids are in registration_case_ids."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-TIDY-MULTI-NATIVE"
+    "P1-JULIA-TIDY-ESTIMATE",
+    "P1-JULIA-TIDY-STD-ERROR"
    ],
    "reason": "R S3method(tidy,gllvmTMB_multi) registered and defined at P1; Julia `tidy` is an exported Function (measured). Name match only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -7022,20 +7029,26 @@
    "r_file_line": "R/vcov-coef.R:69",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/vcov.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-VCOV-MULTI-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-VCOV-MULTI-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_namespace_numeric_p1_twin.jl, against R vcov(fit) values copied from test/fixtures/ns_numeric_p1.toml (the covariance of a rank-2 Gaussian fit's six trait means, off-diagonals included; Julia vcov(fit, Y)[1:p, 1:p]), each case within the tolerance asserted in that test. R converged with a positive-definite Hessian. The Tier 0 registration receipts are kept un-cited under registration_receipts (the registration batch receipt carries a batch-level FAIL status, which would block the numeric binding if cited); the superseded case ids are in registration_case_ids."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-VCOV-MULTI-NATIVE"
+    "P1-JULIA-VCOV-TRAIT-MEAN"
    ],
    "reason": "R S3method(vcov,gllvmTMB_multi) registered and defined at P1; Julia `vcov` is an exported Function (measured). Name match only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -7051,20 +7064,28 @@
    "r_file_line": "R/families.R:217",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/Beta.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-BETA-FAMILY-NATIVE-MODEL.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-BETA-FAMILY-NATIVE-MODEL"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_namespace_numeric_p1_twin_b.jl, against a family = Beta() latent fit values copied from test/fixtures/ns_numeric_p1_b.toml (intercepts, Lambda Lambda' and per-trait dispersion of a one-axis latent fit, p = 6, n = 200; Julia fit_gllvm(Y; family = GLLVModels.Beta(), K = 1)), each case within the tolerance asserted in that test. R converged with a positive-definite Hessian. The Tier 0 registration receipts are kept un-cited under registration_receipts (the registration batch receipt carries a batch-level FAIL status, which would block the numeric binding if cited); the superseded case ids are in registration_case_ids."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-BETA-FAMILY-NATIVE-MODEL"
+    "P1-JULIA-BETA-INTERCEPTS",
+    "P1-JULIA-BETA-LAMBDA-LAMBDAT",
+    "P1-JULIA-BETA-DISPERSION"
    ],
    "reason": "R export(Beta) registered and defined at P1; Julia `fit_beta_gllvm` is an exported Function (measured). Name match only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -8340,17 +8361,25 @@
    "r_kind": "export",
    "classification": "required_core",
    "arc": "A3",
-   "r_file_line": null,
-   "executable_case_ids": [],
+   "r_file_line": "R/families.R:301",
+   "executable_case_ids": [
+    "P1-JULIA-NB2-INTERCEPTS",
+    "P1-JULIA-NB2-LAMBDA-LAMBDAT",
+    "P1-JULIA-NB2-DISPERSION"
+   ],
    "p0_case_ids": [
     "CORE070-NAMESPACE2-NBINOM2-FAMILY-BRIDGE"
    ],
-   "evidence": {},
-   "measured_against": null,
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/nbinom2.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_namespace_numeric_p1_twin_b.jl, against a family = nbinom2() latent fit values copied from test/fixtures/ns_numeric_p1_b.toml (intercepts, Lambda Lambda' and per-trait dispersion of a one-axis latent fit, p = 6, n = 200; Julia fit_gllvm(Y; family = NegativeBinomial(1.0, 0.5), K = 1)), each case within the tolerance asserted in that test. R converged with a positive-definite Hessian."
+   },
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "disposition": null,
-   "reason": "Not re-measured at P1 in this PR.",
-   "not_measured_reason": "namespace-2 batch needs an installed frozen gllvmTMB library and live R fits (tools/core070_namespace_2_batch.R <frozen-library> <destination>); stopped per brief, no P1 oracle build here.",
-   "evidence_tier": "registration"
+   "reason": "R export(nbinom2) is a family constructor; its capability is the NB2 likelihood it selects, compared here on a one-axis latent fit against Julia fit_gllvm with a NegativeBinomial family.",
+   "evidence_tier": "numeric"
   },
   {
    "source_id": "namespace/export/sanity_multi",
