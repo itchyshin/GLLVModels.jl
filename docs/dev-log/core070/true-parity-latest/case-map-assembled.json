@@ -36,7 +36,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-isdm.json",
-   "sha256": "3eab474decd43891bf585f34607b5afbe790ef0b88e98b74cc2cceb035deb767",
+   "sha256": "93150a523f1b084d77d398bbdbee85886b84db3efa5a6096c4a54d5d30ad091b",
    "rows": 20
   },
   {
@@ -5520,7 +5520,10 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-ISDM-ALIASED-PAIRED-CONTROL"
+    "P1-JULIA-ISDM-ADM-ALIASED-LOGLIK-AT-R-OPTIMUM",
+    "P1-JULIA-ISDM-ADM-ALIASED-CROSS-OBJECTIVE-AT-JULIA-OPTIMUM",
+    "P1-JULIA-ISDM-ADM-ALIASED-B-FIX",
+    "P1-JULIA-ISDM-ADM-ALIASED-ETA"
    ],
    "disposition": null,
    "p0_batch": "isdm-batch-01 (wave1)",
@@ -5532,13 +5535,16 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
-   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence_tier": "numeric",
+   "measured_against": "P1",
    "evidence": {
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-ALIASED-PAIRED-CONTROL.json"
     ],
-    "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/parity/isdm_admission_twins.jl (itchyshin/GLLVModels.jl#660), against R-at-P1 values copied from test/fixtures/isdm/r_values_admission_p1.toml; each case within the tolerance asserted in that test. The cited fit is built to reach this row's path through R's public door (a fit-level logLik, estimate and linear-predictor comparison, not a restatement of the admission predicate). The R admission-predicate replay is kept un-cited under non_binding_receipts and r_predicate_case_ids.",
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/isdm/adm_aliased.json"
+    ]
    },
    "measured_result": {
     "case_verdicts": {
@@ -5550,7 +5556,10 @@
     "case_kinds": {
      "CORE070-ISDM-ALIASED-PAIRED-CONTROL": "r_replay_julia_surface_absent"
     }
-   }
+   },
+   "r_predicate_case_ids": [
+    "CORE070-ISDM-ALIASED-PAIRED-CONTROL"
+   ]
   },
   {
    "source_id": "isdm/ISDM-ALIGN",
@@ -5558,7 +5567,10 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-ISDM-ALIGN-PAIRED-CONTROL"
+    "P1-JULIA-ISDM-ADM-ALIGN-LOGLIK-AT-R-OPTIMUM",
+    "P1-JULIA-ISDM-ADM-ALIGN-CROSS-OBJECTIVE-AT-JULIA-OPTIMUM",
+    "P1-JULIA-ISDM-ADM-ALIGN-B-FIX",
+    "P1-JULIA-ISDM-ADM-ALIGN-ETA"
    ],
    "disposition": null,
    "p0_batch": "isdm-batch-01 (wave1)",
@@ -5570,13 +5582,16 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
-   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence_tier": "numeric",
+   "measured_against": "P1",
    "evidence": {
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-ALIGN-PAIRED-CONTROL.json"
     ],
-    "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/parity/isdm_admission_twins.jl (itchyshin/GLLVModels.jl#660), against R-at-P1 values copied from test/fixtures/isdm/r_values_admission_p1.toml; each case within the tolerance asserted in that test. The cited fit is built to reach this row's path through R's public door (a fit-level logLik, estimate and linear-predictor comparison, not a restatement of the admission predicate). The R admission-predicate replay is kept un-cited under non_binding_receipts and r_predicate_case_ids.",
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/isdm/adm_align.json"
+    ]
    },
    "measured_result": {
     "case_verdicts": {
@@ -5588,7 +5603,10 @@
     "case_kinds": {
      "CORE070-ISDM-ALIGN-PAIRED-CONTROL": "r_replay_julia_surface_absent"
     }
-   }
+   },
+   "r_predicate_case_ids": [
+    "CORE070-ISDM-ALIGN-PAIRED-CONTROL"
+   ]
   },
   {
    "source_id": "isdm/ISDM-COUNT",
@@ -5929,7 +5947,10 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-ISDM-NO-OFFSET-PAIRED-CONTROL"
+    "P1-JULIA-ISDM-ADM-NOOFFSET-LOGLIK-AT-R-OPTIMUM",
+    "P1-JULIA-ISDM-ADM-NOOFFSET-CROSS-OBJECTIVE-AT-JULIA-OPTIMUM",
+    "P1-JULIA-ISDM-ADM-NOOFFSET-B-FIX",
+    "P1-JULIA-ISDM-ADM-NOOFFSET-ETA"
    ],
    "disposition": null,
    "p0_batch": "isdm-batch-01 (wave1)",
@@ -5941,13 +5962,16 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
-   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence_tier": "numeric",
+   "measured_against": "P1",
    "evidence": {
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-NO-OFFSET-PAIRED-CONTROL.json"
     ],
-    "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/parity/isdm_admission_twins.jl (itchyshin/GLLVModels.jl#660), against R-at-P1 values copied from test/fixtures/isdm/r_values_admission_p1.toml; each case within the tolerance asserted in that test. The cited fit is built to reach this row's path through R's public door (a fit-level logLik, estimate and linear-predictor comparison, not a restatement of the admission predicate). The R admission-predicate replay is kept un-cited under non_binding_receipts and r_predicate_case_ids.",
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/isdm/adm_nooffset.json"
+    ]
    },
    "measured_result": {
     "case_verdicts": {
@@ -5959,7 +5983,10 @@
     "case_kinds": {
      "CORE070-ISDM-NO-OFFSET-PAIRED-CONTROL": "r_replay_julia_surface_absent"
     }
-   }
+   },
+   "r_predicate_case_ids": [
+    "CORE070-ISDM-NO-OFFSET-PAIRED-CONTROL"
+   ]
   },
   {
    "source_id": "isdm/ISDM-NO-TRAITS",
@@ -6114,7 +6141,10 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-ISDM-UNBALANCED-PAIRED-CONTROL"
+    "P1-JULIA-ISDM-ADM-UNBALANCED-LOGLIK-AT-R-OPTIMUM",
+    "P1-JULIA-ISDM-ADM-UNBALANCED-CROSS-OBJECTIVE-AT-JULIA-OPTIMUM",
+    "P1-JULIA-ISDM-ADM-UNBALANCED-B-FIX",
+    "P1-JULIA-ISDM-ADM-UNBALANCED-ETA"
    ],
    "disposition": null,
    "p0_batch": "isdm-batch-01 (wave1)",
@@ -6126,13 +6156,16 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
-   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence_tier": "numeric",
+   "measured_against": "P1",
    "evidence": {
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-UNBALANCED-PAIRED-CONTROL.json"
     ],
-    "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/parity/isdm_admission_twins.jl (itchyshin/GLLVModels.jl#660), against R-at-P1 values copied from test/fixtures/isdm/r_values_admission_p1.toml; each case within the tolerance asserted in that test. The cited fit is built to reach this row's path through R's public door (a fit-level logLik, estimate and linear-predictor comparison, not a restatement of the admission predicate). The R admission-predicate replay is kept un-cited under non_binding_receipts and r_predicate_case_ids.",
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/isdm/adm_unbalanced.json"
+    ]
    },
    "measured_result": {
     "case_verdicts": {
@@ -6144,7 +6177,10 @@
     "case_kinds": {
      "CORE070-ISDM-UNBALANCED-PAIRED-CONTROL": "r_replay_julia_surface_absent"
     }
-   }
+   },
+   "r_predicate_case_ids": [
+    "CORE070-ISDM-UNBALANCED-PAIRED-CONTROL"
+   ]
   },
   {
    "source_id": "isdm/ISDM-WITHIN-TRAIT-ADMIT",
@@ -6323,7 +6359,10 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-ISDM-ZERO-ORDINARY-PAIRED-CONTROL"
+    "P1-JULIA-ISDM-ADM-ZEROORD-LOGLIK-AT-R-OPTIMUM",
+    "P1-JULIA-ISDM-ADM-ZEROORD-CROSS-OBJECTIVE-AT-JULIA-OPTIMUM",
+    "P1-JULIA-ISDM-ADM-ZEROORD-B-FIX",
+    "P1-JULIA-ISDM-ADM-ZEROORD-ETA"
    ],
    "disposition": null,
    "p0_batch": "isdm-batch-01 (wave1)",
@@ -6335,13 +6374,16 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
-   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence_tier": "numeric",
+   "measured_against": "P1",
    "evidence": {
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-ZERO-ORDINARY-PAIRED-CONTROL.json"
     ],
-    "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/parity/isdm_admission_twins.jl (itchyshin/GLLVModels.jl#660), against R-at-P1 values copied from test/fixtures/isdm/r_values_admission_p1.toml; each case within the tolerance asserted in that test. The cited fit is built to reach this row's path through R's public door (a fit-level logLik, estimate and linear-predictor comparison, not a restatement of the admission predicate). The R admission-predicate replay is kept un-cited under non_binding_receipts and r_predicate_case_ids.",
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/isdm/adm_zeroord.json"
+    ]
    },
    "measured_result": {
     "case_verdicts": {
@@ -6353,7 +6395,10 @@
     "case_kinds": {
      "CORE070-ISDM-ZERO-ORDINARY-PAIRED-CONTROL": "r_replay_julia_surface_absent"
     }
-   }
+   },
+   "r_predicate_case_ids": [
+    "CORE070-ISDM-ZERO-ORDINARY-PAIRED-CONTROL"
+   ]
   },
   {
    "source_id": "namespace/S3method/coef,gllvmTMB_julia",

@@ -1027,6 +1027,98 @@ function receipts_isdm()
 end
 
 # =============================================================================================
+# 6b. isdm admission twins: five more R-at-P1 vs Julia fitted cases, each built to reach one positive
+#     admission that the four fits above do not (audit-isdm-546-2026-10-01.md).
+#     test/parity/isdm_admission_twins.jl (itchyshin/GLLVModels.jl#660)
+# =============================================================================================
+include(joinpath(ROOT, "test", "fixtures", "isdm", "isdm_admission_cases.jl"))
+
+const ISDM_ADM_ROWS = Dict(
+    "adm_aliased"    => "isdm/ISDM-ALIASED",
+    "adm_align"      => "isdm/ISDM-ALIGN",
+    "adm_nooffset"   => "isdm/ISDM-NO-OFFSET",
+    "adm_zeroord"    => "isdm/ISDM-ZERO-ORDINARY",
+    "adm_unbalanced" => "isdm/ISDM-UNBALANCED",
+)
+const ISDM_ADM_PATH = Dict(
+    "adm_aliased"    => "an aliased candidate column (an exact multiple of access) is dropped by the QR rank rule, in both engines, leaving the same coefficient list",
+    "adm_align"      => "the family list is declared survey-first while the data's source levels put gbif first, so both engines re-order the list by name",
+    "adm_nooffset"   => "the formula has no offset() term, so the offset evaluates to zeros on a mixed (cloglog-admitted) declaration",
+    "adm_zeroord"    => "an all-count declaration (the mixed contract is not admitted, so the cloglog offset exception is off) with an identically zero offset column",
+    "adm_unbalanced" => "a latent-variable fit on a cell x trait x source grid with 12 rows removed (every trait still carries every source)",
+)
+
+function receipts_isdm_admission()
+    tp = "test/parity/isdm_admission_twins.jl"
+    rvp = "test/fixtures/isdm/r_values_admission_p1.toml"
+    jep = "test/fixtures/isdm/julia_estimates_admission_p1.toml"
+    RV = isdm_admission_r_values()
+    JE = TOML.parsefile(joinpath(ROOT, jep))
+    RV["gllvmtmb_sha"] == P1_SHA || fail("isdm admission r_values_admission_p1.toml is not pinned at P1")
+    out = Pair{String,Receipt}[]
+    function by_name_(names_from, vals, names_to)
+        Set(names_from) == Set(names_to) || fail("isdm admission coefficient names do not pair: $names_from vs $names_to")
+        return [vals[findfirst(==(n), names_from)] for n in names_to]
+    end
+    f_ll = "isdm_marginal_loglik_laplace(tab, RΛ, rb) - r[\"loglik\"]"
+    f_x = "abs(ARV[\"xobj\"][name] - jll)"
+    f_b = "maximum(abs.(ft.b_fix .- rb))"
+    f_e = "maximum(abs.(ft.eta .- Float64.(r[\"eta\"])))"
+    tol_ll = test_tolerance(tp, f_ll)
+    tol_x = test_tolerance(tp, f_x)
+    tol_b = test_tolerance(tp, f_b)
+    tol_e = test_tolerance(tp, f_e)
+    for name in ISDM_ADMISSION_CASES
+        r = RV["cases"][name]; j = JE["julia"][name]
+        c = isdm_admission_case(name)
+        csvp = "test/fixtures/isdm/" * c.csv
+        bytes2hex(open(sha256, joinpath(ROOT, csvp))) == r["fixture_sha256"] || fail("isdm admission $name fixture sha256 drifted")
+        dat = read_isdm_csv(c.csv)
+        length(dat.value) == r["fixture_rows"] || fail("isdm admission $name fixture row count")
+        tab = isdm_table(c.formula, dat; family = c.family)
+        rb = by_name_(r["b_fix_names"], Float64.(r["b_fix"]), tab.X_names)
+        K = Int(r["K"])
+        RΛ = K == 0 ? zeros(2, 0) : reshape(Float64.(r["Lambda_B_colmajor"]), :, K)
+        ll_at_r = isdm_marginal_loglik_laplace(tab, RΛ, rb)
+        jb = by_name_(j["b_fix_names"], Float64.(j["b_fix"]), tab.X_names)
+        JΛ = j["K"] == 0 ? zeros(2, 0) : GMJ.unpack_lambda(Float64.(j["theta_rr_B"]), 2, Int(j["K"]))
+        jll = isdm_marginal_loglik_laplace(tab, JΛ, jb)
+        ft = fit_isdm_gllvm(tab)
+        (ft.converged && all(ft.cell_converged)) || fail("isdm admission $name fresh fit did not converge")
+        r["convergence"] == 0 || fail("isdm admission $name: R did not converge")
+        pre = "P1-JULIA-ISDM-" * uppercase(replace(name, "_" => "-"))
+        path = ISDM_ADM_PATH[name]
+        cases = [
+            mkcase("$pre-LOGLIK-AT-R-OPTIMUM", "Julia Laplace marginal at R's fitted (b_fix, Lambda) vs R's logLik",
+                "$rvp [cases.$name].loglik (R nlminb optimum through gllvmTMB(family = isdm_sources(...)) at P1)",
+                "GLLVModels.isdm_marginal_loglik_laplace(isdm_table(formula, data; family), Lambda_R, b_fix_R), as at $(cite(tp, f_ll))",
+                r["loglik"], ll_at_r, tol_ll,
+                "Path exercised: $path. Same data (sha256 checked), same parameter vector, same Laplace objective. Coefficients are paired by name, as in the test."),
+            mkcase("$pre-CROSS-OBJECTIVE-AT-JULIA-OPTIMUM", "R's objective at Julia's optimum vs Julia's logLik there",
+                "$rvp [xobj].$name (R TMB objective evaluated at the recorded Julia estimate, sign flipped to logLik)",
+                "GLLVModels.isdm_marginal_loglik_laplace(...) at the recorded Julia estimate in $jep [julia.$name], as at $(cite(tp, f_x))",
+                RV["xobj"][name], jll, tol_x,
+                "Path exercised: $path. The recorded Julia estimate is the fit the test reproduces to 1e-8 on a fresh run."),
+            mkcase("$pre-B-FIX", "fresh Julia fit b_fix vs R b_fix (paired by coefficient name; maximum absolute difference)",
+                "$rvp [cases.$name].b_fix",
+                "GLLVModels.fit_isdm_gllvm(tab).b_fix, as at $(cite(tp, f_b))",
+                rb, ft.b_fix, tol_b,
+                "Path exercised: $path. The test also asserts Julia's logLik is not below R's (one-sided), which is not a case here."),
+            mkcase("$pre-ETA", "fresh Julia fit linear predictor vs R's (maximum absolute difference over all rows)",
+                "$rvp [cases.$name].eta",
+                "GLLVModels.fit_isdm_gllvm(tab).eta, as at $(cite(tp, f_e))",
+                Float64.(r["eta"]), ft.eta, tol_e,
+                "Path exercised: $path. Row order is the fixture's."),
+        ]
+        push!(out, "isdm/$name.json" => Receipt([ISDM_ADM_ROWS[name]], "itchyshin/GLLVModels.jl#660",
+            [rvp, jep, csvp], [tp, "test/fixtures/isdm/isdm_fixture_io.jl", "test/fixtures/isdm/isdm_admission_cases.jl"],
+            NOT_A_FIXTURE_PAIR * " The check is a fit-level logLik and estimate comparison on one fitted case built to reach this row's path; it does not restate any admission predicate.",
+            cases))
+    end
+    return out
+end
+
+# =============================================================================================
 # 7. select-lv/select_lv   test/test_select_lv_p1_twin.jl
 #    Gaussian rank sweep K = 1:3 vs R's select_lv() at P1 (criterion = bic, d_max = 3). The test also
 #    asserts npar and the selected rank EXACTLY (integers, no tolerance literal), so those have no
@@ -1312,6 +1404,7 @@ function build()
             ("latent-scores", receipts_latent_scores), ("temporal", receipts_temporal),
             ("aghq", receipts_aghq), ("model-comparison", receipts_model_comparison),
             ("select-lv", receipts_select_lv), ("isdm", receipts_isdm),
+            ("isdm-admission", receipts_isdm_admission),
             ("namespace-numeric", receipts_namespace_numeric))
         t0 = time()
         append!(out, f())
