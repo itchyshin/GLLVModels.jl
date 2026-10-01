@@ -1,0 +1,86 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "postfit/POSTFIT-SURFACE-extract_communality"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#ORIGIN_PR",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "3fcf206986f934686204a3f70b7fe50edc27771d",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/ns_numeric_p1.toml",
+      "sha256": "f7b6f252ecbfef1e6401e678abdf76d14f6caf0cac5190083d3521930a35474f"
+    },
+    {
+      "path": "test/fixtures/ns_twolevel_p1_data.csv",
+      "sha256": "a7431c767661f619b5b1d104f8cd9fe1d65a9e69ec715d53e2afe5b9374cb8ee"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_namespace_numeric_p1_twin.jl",
+      "sha256": "6a25daa1156e96165130a425a76d0278f38656355b41342d64a7739713d6d011"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-POSTFIT-COMMUNALITY-UNIT",
+        "quantity": "per-trait communality at level = unit (between tier), 5 non-constant values",
+        "r_source": "test/fixtures/ns_numeric_p1.toml [two.communality_unit]",
+        "julia_source": "GLLVModels.extract_communality(fit; level = :unit), as called at test/test_namespace_numeric_p1_twin.jl:149; fit as at test/test_namespace_numeric_p1_twin.jl:145",
+        "r_value": [
+          0.6075920154805649,
+          0.3986071393268257,
+          0.3574815822666531,
+          0.46189810023774713,
+          0.07568303617036466
+        ],
+        "julia_value": [
+          0.6076415155569683,
+          0.3986104170182583,
+          0.3574811605989285,
+          0.46189110494361535,
+          0.0756836877380853
+        ],
+        "abs_diff": 4.950007640347476e-05,
+        "tolerance": 0.0002,
+        "tolerance_source": "test/test_namespace_numeric_p1_twin.jl:149",
+        "tolerance_source_line": "@test isapprox(extract_communality(fit; level = :unit), Float64.(t[\"communality_unit\"]); atol = 2e-4, rtol = 0)",
+        "note": "Two-level Gaussian fit, p = 5, 120 units x 4 observations (sha256 checked); R: latent(d = 1) + unique at unit and at unit_obs, converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Replaces the postfit batch case CORE070-ESTIMAND-REBIND-EXTRACT-COMMUNALITY, whose unique = FALSE fixture returned 1 for every trait (a constant 1.0 implementation passed): here the R communalities are five distinct values between 0.08 and 0.61 at the unit tier and between 0.27 and 0.61 at the unit_obs tier."
+      },
+      {
+        "case_id": "P1-JULIA-POSTFIT-COMMUNALITY-UNIT-OBS",
+        "quantity": "per-trait communality at level = unit_obs (within tier), 5 non-constant values",
+        "r_source": "test/fixtures/ns_numeric_p1.toml [two.communality_unit_obs]",
+        "julia_source": "GLLVModels.extract_communality(fit; level = :unit_obs), as called at test/test_namespace_numeric_p1_twin.jl:150; fit as at test/test_namespace_numeric_p1_twin.jl:145",
+        "r_value": [
+          0.6139312865844077,
+          0.5182998217025957,
+          0.27010086037137127,
+          0.3862665034043345,
+          0.5722576471337896
+        ],
+        "julia_value": [
+          0.6139330995550979,
+          0.5182996454449728,
+          0.2701030853592493,
+          0.386267378742386,
+          0.5722571800054963
+        ],
+        "abs_diff": 2.2249878780522536e-06,
+        "tolerance": 0.0002,
+        "tolerance_source": "test/test_namespace_numeric_p1_twin.jl:150",
+        "tolerance_source_line": "@test isapprox(extract_communality(fit; level = :unit_obs), Float64.(t[\"communality_unit_obs\"]); atol = 2e-4, rtol = 0)",
+        "note": "Two-level Gaussian fit, p = 5, 120 units x 4 observations (sha256 checked); R: latent(d = 1) + unique at unit and at unit_obs, converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Replaces the postfit batch case CORE070-ESTIMAND-REBIND-EXTRACT-COMMUNALITY, whose unique = FALSE fixture returned 1 for every trait (a constant 1.0 implementation passed): here the R communalities are five distinct values between 0.08 and 0.61 at the unit tier and between 0.27 and 0.61 at the unit_obs tier."
+      }
+    ]
+  }
+}

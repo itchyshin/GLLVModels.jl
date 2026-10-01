@@ -1303,6 +1303,105 @@ function receipts_namespace_numeric()
     return out
 end
 
+# =============================================================================================
+# 10. postfit twins   test/test_postfit_twins_p1.jl and test/test_namespace_numeric_p1_twin.jl
+#     Five postfit rows whose batch cases were NON-DISCRIMINATING (R values constant or ~1e-14),
+#     PARTIAL (table-shape check only) or never executed (POST-DEVIANCE), bound to twins on
+#     non-degenerate fixtures: extract_communality (two-level fit) and
+#     extract_rotated_loadings_table (rank-2 fit) reuse the R values of ns_numeric_p1.toml;
+#     tidy (fixed effects), coef and deviance read test/fixtures/postfit_twins_p1.toml.
+# =============================================================================================
+function receipts_postfit_twins()
+    ORIGIN = "itchyshin/GLLVModels.jl#ORIGIN_PR"
+    out = Pair{String,Receipt}[]
+    dir = "test/fixtures/"
+    mk(rel, sid, fixs, tests, cs) = push!(out, "postfit-twins/$rel.json" => Receipt([sid], ORIGIN, fixs, tests, NOT_A_FIXTURE_PAIR, cs))
+
+    # ---- shared with section 9: ns_numeric_p1.toml ----
+    nsp = "test/fixtures/ns_numeric_p1.toml"
+    tpn = "test/test_namespace_numeric_p1_twin.jl"
+    ns = TOML.parsefile(joinpath(ROOT, nsp))
+    ns["gllvmtmb_commit"] == P1_SHA || fail("namespace numeric fixture is not pinned at P1")
+    tn = String.(ns["trait_names"]); p, n = Int(ns["p"]), Int(ns["n_unit"])
+    function chk(sec)
+        d = ns[sec]
+        datap = dir * d["data_file"]
+        bytes2hex(sha256(read(joinpath(ROOT, datap)))) == d["data_sha256"] || fail("$sec data csv drifted")
+        (d["converged"] === true && d["pd_hessian"] === true) || fail("$sec R fit not converged with a PD Hessian; not a valid twin")
+        return d, datap
+    end
+
+    # ---- two-level fit: extract_communality (unit, unit_obs) ----
+    t, datap3 = chk("two")
+    Y3, _, ind = _ns_load_csv(joinpath(ROOT, datap3), String.(t["trait_names"]), Int(t["n_obs"]); obs_col = 2)
+    fit3 = fit_twolevel_gaussian(Y3, ind; K_B = 1, K_W = 1)
+    fit3.converged || fail("two-level Julia fit did not converge")
+    abs(fit3.loglik - Float64(t["loglik"])) <= 1e-6 || fail("two-level logLik differs from R")
+    fit3c = cite(tpn, "fit = fit_twolevel_gaussian(Y, ind; K_B = 1, K_W = 1)")
+    noteC = "Two-level Gaussian fit, p = 5, 120 units x 4 observations (sha256 checked); R: latent(d = 1) + unique at unit and at unit_obs, converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Replaces the postfit batch case CORE070-ESTIMAND-REBIND-EXTRACT-COMMUNALITY, whose unique = FALSE fixture returned 1 for every trait (a constant 1.0 implementation passed): here the R communalities are five distinct values between 0.08 and 0.61 at the unit tier and between 0.27 and 0.61 at the unit_obs tier."
+    mk("extract_communality", "postfit/POSTFIT-SURFACE-extract_communality", [nsp, datap3], [tpn], [
+        mkcase("P1-JULIA-POSTFIT-COMMUNALITY-UNIT", "per-trait communality at level = unit (between tier), 5 non-constant values",
+            "$nsp [two.communality_unit]", "GLLVModels.extract_communality(fit; level = :unit), as called at " * cite(tpn, "extract_communality(fit; level = :unit)") * "; fit as at $fit3c",
+            Float64.(t["communality_unit"]), extract_communality(fit3; level = :unit), test_tolerance(tpn, "Float64.(t[\"communality_unit\"])"), noteC),
+        mkcase("P1-JULIA-POSTFIT-COMMUNALITY-UNIT-OBS", "per-trait communality at level = unit_obs (within tier), 5 non-constant values",
+            "$nsp [two.communality_unit_obs]", "GLLVModels.extract_communality(fit; level = :unit_obs), as called at " * cite(tpn, "extract_communality(fit; level = :unit_obs)") * "; fit as at $fit3c",
+            Float64.(t["communality_unit_obs"]), extract_communality(fit3; level = :unit_obs), test_tolerance(tpn, "Float64.(t[\"communality_unit_obs\"])"), noteC)])
+
+    # ---- main fit: extract_rotated_loadings_table ----
+    m, datap1 = chk("main")
+    Y, _, _ = _ns_load_csv(joinpath(ROOT, datap1), tn, n)
+    fit = fit_gllvm(Y; family = Normal(), K = 2)
+    fit.converged || fail("main Julia fit did not converge")
+    abs(fit.logLik - Float64(m["loglik"])) <= 1e-6 || fail("main logLik differs from R")
+    fitc = cite(tpn, "fit = fit_gllvm(Y; family = Normal(), K = 2)")
+    trr = extract_rotated_loadings_table(fit, Y; method = :varimax, loading_scale = :raw)
+    trs = extract_rotated_loadings_table(fit, Y; method = :varimax, loading_scale = :standardized)
+    ctab = cite(tpn, "tr = extract_rotated_loadings_table(fit, Y; method = :varimax, loading_scale = :raw)")
+    ctabs = cite(tpn, "ts = extract_rotated_loadings_table(fit, Y; method = :varimax, loading_scale = :standardized)")
+    noteR = "Rank-2 Gaussian fit on the fixture data (sha256 checked), R: latent(0 + trait | unit, d = 2, unique = FALSE) converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Varimax, order_axes = true and sign_anchor = auto on both sides; the table is axis-major (6 traits for axis 1, then axis 2). Replaces the postfit batch case CORE070-WAVE8-EXTRACT-ROTATED-LOADINGS-TABLE-SHAPE, which compared table shape only."
+    mk("extract_rotated_loadings_table", "postfit/POSTFIT-SURFACE-extract_rotated_loadings_table", [nsp, datap1], [tpn], [
+        mkcase("P1-JULIA-POSTFIT-ROTATED-LOADINGS-TABLE-RAW", "varimax-rotated raw loadings, table column `loading` (12 values)",
+            "$nsp [main.rot_raw_loading]", "GLLVModels.extract_rotated_loadings_table(fit, Y; method = :varimax, loading_scale = :raw).loading, as called at $ctab; fit as at $fitc",
+            Float64.(m["rot_raw_loading"]), trr.loading, test_tolerance(tpn, "Float64.(m[\"rot_raw_loading\"])"), noteR),
+        mkcase("P1-JULIA-POSTFIT-ROTATED-LOADINGS-TABLE-AXIS-VARIANCE", "table column `axis_variance`, one value per axis (2 values)",
+            "$nsp [main.rot_raw_axis_variance]", "same call as $ctab, .axis_variance at the first row of each axis",
+            Float64.(m["rot_raw_axis_variance"]), trr.axis_variance[[1, p + 1]], test_tolerance(tpn, "Float64.(m[\"rot_raw_axis_variance\"])"), noteR),
+        mkcase("P1-JULIA-POSTFIT-ROTATED-LOADINGS-TABLE-AXIS-SHARE", "table column `axis_share`, one value per axis (2 values)",
+            "$nsp [main.rot_raw_axis_share]", "same call as $ctab, .axis_share at the first row of each axis",
+            Float64.(m["rot_raw_axis_share"]), trr.axis_share[[1, p + 1]], test_tolerance(tpn, "Float64.(m[\"rot_raw_axis_share\"])"), noteR),
+        mkcase("P1-JULIA-POSTFIT-ROTATED-LOADINGS-TABLE-STANDARDIZED", "varimax-rotated standardized loadings, `loading` with loading_scale = standardized (12 values)",
+            "$nsp [main.rot_std_loading]", "GLLVModels.extract_rotated_loadings_table(fit, Y; method = :varimax, loading_scale = :standardized).loading, as called at $ctabs; fit as at $fitc",
+            Float64.(m["rot_std_loading"]), trs.loading, test_tolerance(tpn, "Float64.(m[\"rot_std_loading\"])"), noteR)])
+
+    # ---- uncentred main fit: tidy (fixed), coef, deviance ----
+    pfp = "test/fixtures/postfit_twins_p1.toml"
+    tpp = "test/test_postfit_twins_p1.jl"
+    pf = TOML.parsefile(joinpath(ROOT, pfp))
+    pf["gllvmtmb_commit"] == P1_SHA || fail("postfit twin fixture is not pinned at P1")
+    q = pf["main"]
+    datapq = dir * q["data_file"]
+    bytes2hex(sha256(read(joinpath(ROOT, datapq)))) == q["data_sha256"] || fail("postfit twin data csv drifted")
+    (q["converged"] === true && q["pd_hessian"] === true) || fail("postfit twin R fit not converged with a PD Hessian; not a valid twin")
+    abs(fit.logLik - Float64(q["loglik"])) <= 1e-6 || fail("postfit twin logLik differs from R")
+    fitq = cite(tpp, "fit = fit_gllvm(Y; family = Normal(), K = 2)")
+    noteU = "Rank-2 Gaussian fit on UNCENTRED data (trait means 0.5, -0.3, 0.2, 0.8, -0.6, 0.1; sha256 checked); R: value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE) converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). The R values are far from zero (smallest |value| about 0.058) and pairwise distinct, so a constant or zero implementation fails. The postfit batch fixture these rows replace was row-centred (R values ~1e-14)."
+    Rcoef = Float64.(q["coef"])
+    rows = tidy(fit, Y)
+    mk("tidy", "postfit/POSTFIT-SURFACE-tidy.gllvmTMB_multi", [pfp, datapq], [tpp], [
+        mkcase("P1-JULIA-POSTFIT-TIDY-FIXED", "tidy(fit)\$estimate, fixed effects (6 trait means)",
+            "$pfp [main.tidy_estimate]", "[r.estimate for r in GLLVModels.tidy(fit, Y)], as called at " * cite(tpp, "rows = tidy(fit, Y)") * "; fit as at $fitq",
+            Float64.(q["tidy_estimate"]), [r.estimate for r in rows], test_tolerance(tpp, "[r.estimate for r in rows]"), noteU)])
+    mk("coef", "postfit-policy/POST-COEF-NAMED", [pfp, datapq], [tpp], [
+        mkcase("P1-JULIA-POSTFIT-COEF-NAMED", "coef(fit), 6 fixed-effect coefficients (trait means)",
+            "$pfp [main.coef]", "StatsAPI.coef(fit), as called at " * cite(tpp, "@test isapprox(coef(fit), Float64.(m[\"coef\"])") * "; fit as at $fitq",
+            Rcoef, coef(fit), test_tolerance(tpp, "@test isapprox(coef(fit), Float64.(m[\"coef\"])"), noteU * " Compared elementwise by value; the R names (traitt1, ..., traitt6) are asserted equal to \"trait\" * trait name in the test, Julia's coef is unnamed.")])
+    mk("deviance", "postfit-policy/POST-DEVIANCE", [pfp, datapq], [tpp], [
+        mkcase("P1-JULIA-POSTFIT-DEVIANCE", "deviance(fit), scalar",
+            "$pfp [main.deviance]", "StatsAPI.deviance(fit), as called at " * cite(tpp, "@test isapprox(deviance(fit)") * "; fit as at $fitq",
+            Float64(q["deviance"]), deviance(fit), test_tolerance(tpp, "@test isapprox(deviance(fit)"), noteU * " Julia's deviance is -2 logLik; R's is read from deviance(fit), so the comparison is R's own deviance against that identity, not a copy of the log-likelihood guard.")])
+    return out
+end
+
 # ---------------------------------------------------------------------------------------------
 # Driver
 # ---------------------------------------------------------------------------------------------
@@ -1312,7 +1411,8 @@ function build()
             ("latent-scores", receipts_latent_scores), ("temporal", receipts_temporal),
             ("aghq", receipts_aghq), ("model-comparison", receipts_model_comparison),
             ("select-lv", receipts_select_lv), ("isdm", receipts_isdm),
-            ("namespace-numeric", receipts_namespace_numeric))
+            ("namespace-numeric", receipts_namespace_numeric),
+            ("postfit-twins", receipts_postfit_twins))
         t0 = time()
         append!(out, f())
         @info "built $name receipts" seconds = round(time() - t0; digits = 1)
