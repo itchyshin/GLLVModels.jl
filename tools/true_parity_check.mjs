@@ -514,10 +514,10 @@ function checkC1() {
 // --- C2..C5: scoreboard tiers, plus C2's boundary-capability cross-check --
 
 // The assembled scoreboard prefixes every id with its family (`data-RD-01`, `grouping-GRP-..`), so a
-// tier marker is recognised after one optional `<family>-` segment. A marker buried mid-word
+// tier marker is recognised after any `<family>-` prefix (one or more hyphenated segments). A marker buried mid-word
 // (`family-NB2RD-X`) is deliberately not matched.
-const isRD = (r) => /^(?:[a-z0-9_]+-)?RD-/i.test(r.id);
-const isGRP = (r) => /^(?:[a-z0-9_]+-)?GRP-/i.test(r.id);
+const isRD = (r) => /^(?:[a-z0-9_]+-)*RD-/i.test(r.id);
+const isGRP = (r) => /^(?:[a-z0-9_]+-)*GRP-/i.test(r.id);
 const isRSZ = (r) => /-RSZ$/i.test(r.id);
 
 function checkC2() {
