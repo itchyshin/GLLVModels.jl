@@ -203,6 +203,80 @@ function _confint_reconstruct_nll(fit::GllvmFit, y::AbstractMatrix,
     return θ -> gaussian_nll_packed(θ, y; spec = spec, X = X_free, Σ_phy = Σ_phy)
 end
 
+# Observed-information covariance for the legacy (no retained integration
+# record) Gaussian GllvmFit path, shared by `confint(fit::GllvmFit; ...)` and
+# `vcov(fit::GllvmFit, Y)`. Returns (θ̂, terms, kinds, Σ, se_all, pd) over the
+# full θ_packed layout. Σ = inv((H + Hᵀ)/2) with H the ForwardDiff Hessian of
+# the marginal NLL at θ̂ — no regularisation. Non-PD convention (unchanged from
+# the SE code): if the Hessian errors, is non-finite, or cannot be inverted,
+# every SE is NaN and Σ is all-NaN; if it inverts but a diagonal entry is
+# non-finite or non-positive, that SE is NaN and pd = false. For Σ, the rows
+# and columns of such entries are set to NaN (a covariance with an invalid
+# variance is not reported), off-diagonals are symmetrised (inv() is
+# symmetric only up to rounding), and the diagonal is set to se_all.^2 so that
+# diag(vcov) is bit-identical to the squared Wald SEs that `confint` reports.
+function _confint_gaussian_wald_covariance(fit::GllvmFit, y,
+                                           X::Union{Nothing, AbstractArray{<:Real, 3}},
+                                           Σ_phy::Union{Nothing, AbstractMatrix})
+    _has_lv_predictor(fit) && throw(ArgumentError(
+        "confint for fit_gaussian_gllvm(...; X_lv=...) is not admitted in the C1 predictor-informed latent-score path; use extract_lv_effects for point estimates"))
+    y === nothing && throw(ArgumentError(
+        "confint requires the data matrix `y` (the same matrix passed to fit_gaussian_gllvm)"))
+    X = _mean_X(fit, X, size(y, 2))
+
+    θ̂ = fit.pars.θ_packed
+    n_par = length(θ̂)
+
+    terms, kinds = _confint_all_term_names(fit)
+    length(terms) == n_par || error(
+        "Internal: term-name vector length ($(length(terms))) does not match θ_packed length ($n_par). " *
+        "This is a packing layout bug.")
+
+    nll = _confint_reconstruct_nll(fit, y, X, Σ_phy)
+
+    H = nothing
+    pd = true
+    try
+        H = ForwardDiff.hessian(nll, θ̂)
+    catch
+        H = nothing
+        pd = false
+    end
+
+    se_all = fill(NaN, n_par)
+    V = fill(NaN, n_par, n_par)
+    if H !== nothing && all(isfinite, H)
+        Σ = nothing
+        try
+            Hsym = (H .+ H') ./ 2
+            Σ = inv(Hsym)
+        catch
+            Σ = nothing
+            pd = false
+        end
+
+        if Σ !== nothing
+            diagΣ = diag(Σ)
+            for i in 1:n_par
+                v = diagΣ[i]
+                if isfinite(v) && v > 0
+                    se_all[i] = sqrt(v)
+                else
+                    pd = false
+                end
+            end
+            ok = findall(isfinite, se_all)
+            V[ok, ok] .= (Σ[ok, ok] .+ Σ[ok, ok]') ./ 2   # inv() is symmetric only to rounding
+            for i in ok
+                V[i, i] = se_all[i]^2
+            end
+        end
+    else
+        pd = false
+    end
+    return θ̂, terms, kinds, V, se_all, pd
+end
+
 """
     confint(fit::GllvmFit; level=0.95, parm=nothing,
             y=nothing, X=nothing, Σ_phy=nothing) -> NamedTuple
@@ -258,56 +332,7 @@ function confint(fit::GllvmFit;
     isempty(kwargs) || throw(ArgumentError("extra inference controls require retained Gaussian integration data"))
 
     0 < level < 1 || throw(ArgumentError("level must be in (0, 1); got $level"))
-    _has_lv_predictor(fit) && throw(ArgumentError(
-        "confint for fit_gaussian_gllvm(...; X_lv=...) is not admitted in the C1 predictor-informed latent-score path; use extract_lv_effects for point estimates"))
-    y === nothing && throw(ArgumentError(
-        "confint requires the data matrix `y` (the same matrix passed to fit_gaussian_gllvm)"))
-    X = _mean_X(fit, X, size(y, 2))
-
-    θ̂ = fit.pars.θ_packed
-    n_par = length(θ̂)
-
-    terms, kinds = _confint_all_term_names(fit)
-    length(terms) == n_par || error(
-        "Internal: term-name vector length ($(length(terms))) does not match θ_packed length ($n_par). " *
-        "This is a packing layout bug.")
-
-    nll = _confint_reconstruct_nll(fit, y, X, Σ_phy)
-
-    H = nothing
-    pd = true
-    try
-        H = ForwardDiff.hessian(nll, θ̂)
-    catch
-        H = nothing
-        pd = false
-    end
-
-    se_all = fill(NaN, n_par)
-    if H !== nothing && all(isfinite, H)
-        Σ = nothing
-        try
-            Hsym = (H .+ H') ./ 2
-            Σ = inv(Hsym)
-        catch
-            Σ = nothing
-            pd = false
-        end
-
-        if Σ !== nothing
-            diagΣ = diag(Σ)
-            for i in 1:n_par
-                v = diagΣ[i]
-                if isfinite(v) && v > 0
-                    se_all[i] = sqrt(v)
-                else
-                    pd = false
-                end
-            end
-        end
-    else
-        pd = false
-    end
+    θ̂, terms, kinds, _, se_all, pd = _confint_gaussian_wald_covariance(fit, y, X, Σ_phy)
 
     sel = _confint_select_indices(parm, terms)
     isempty(sel) && throw(ArgumentError("parm selector matched no parameters"))

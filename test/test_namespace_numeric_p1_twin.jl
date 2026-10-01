@@ -24,14 +24,20 @@
 # the comments) and are not loosened to pass: loadings, effects, communality and
 # Sigma differ only by the two optimisers' convergence noise (~1e-5).
 #
-# NOT bound here (reproducer: test/fixtures/repro_namespace_twin_gaps_p1.jl): vcov()
-# (Julia's public vcov for GllvmFit is diagonal only) and the single-level
-# communality / proportions split under unique (the decomposition is not identified
-# from one observation per cell, so the engines split it differently).
+# vcov.gllvmTMB_multi is bound on the main fit: R's fixed-effect (trait-mean) block of
+# the inverse joint Hessian against the beta[1:p] block of Julia's vcov(fit, Y). Both
+# are on the natural scale of the trait means, in trait order t1..t6; the block is
+# invariant to how each engine parameterises the variance terms (both are evaluated at
+# the joint optimum), so no reparameterisation map is needed.
+#
+# NOT bound here (reproducer: test/fixtures/repro_namespace_twin_gaps_p1.jl): the
+# single-level communality / proportions split under unique (the decomposition is not
+# identified from one observation per cell, so the engines split it differently).
 using Test
 using GLLVModels
 using Distributions: Normal
 using TOML
+using LinearAlgebra
 using SHA
 
 const _NS_DIR = joinpath(@__DIR__, "fixtures")
@@ -97,6 +103,18 @@ _ns_mat(v, nrow, ncol) = permutedims(reshape(Float64.(v), ncol, nrow))   # row-m
             @test isapprox(tr.axis_share[[1, p + 1]], Float64.(m["rot_raw_axis_share"]); atol = 1e-4, rtol = 0)
             ts = extract_rotated_loadings_table(fit, Y; method = :varimax, loading_scale = :standardized)
             @test isapprox(ts.loading, Float64.(m["rot_std_loading"]); atol = 2e-4, rtol = 0)
+            # vcov.gllvmTMB_multi: full trait-mean covariance, off-diagonals included
+            # (itchyshin/GLLVModels.jl#652 found Julia returning Diagonal(se^2)).
+            Vr = _ns_mat(m["vcov"], p, p)
+            V = vcov(fit, Y)
+            @test V isa Matrix{Float64}
+            @test confint(fit, Y).term[1:p] == ["beta[$j]" for j in 1:p]
+            Vb = V[1:p, 1:p]
+            offd(A) = A - Diagonal(diag(A))
+            @test maximum(abs, offd(Vr)) > 1e-3                       # R's block is not diagonal
+            @test isapprox(diag(Vb), diag(Vr); atol = 1e-6, rtol = 0)   # observed 4.4e-8
+            @test isapprox(offd(Vb), offd(Vr); atol = 1e-6, rtol = 0)   # observed 4.6e-8 (1.2e-5 relative)
+            @test issymmetric(V)
         end
 
         @testset "lv: extract_lv_effects" begin
