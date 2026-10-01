@@ -573,6 +573,12 @@ for (const [mode, baseId, prefixed, label] of [
     assert.doesNotMatch(stdout, new RegExp(`${prefixed}:NOT_DONE`));
   });
 }
+test('a multi-hyphen family prefix (postfit-policy-RD-01) NOT_DONE selects C4 with rows=1', () => {
+  const { stdout, code } = runScoreboard(rowNotDone('RD-1', 'postfit-policy-RD-01'), 'C4');
+  assert.equal(code, 0);
+  assert.match(stdout, /C4_NOT_MET$/m);
+  assert.match(stdout, /rows=1 done=0 not_done=postfit-policy-RD-01:NOT_DONE/);
+});
 test('a row whose id only contains RD mid-word (family-NB2RD-X) is NOT selected by C4', () => {
   // Rename the only RD row to the mid-word id: C4 must see no rows (vacuous), not select it.
   const { stdout, code } = runScoreboard(rowNotDone('RD-1', 'family-NB2RD-X'), 'C4');
