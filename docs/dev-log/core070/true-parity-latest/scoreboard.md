@@ -17,7 +17,7 @@ Inputs:
 - `docs/dev-log/core070/true-parity-latest/case-map-family.json` (21 rows, sha256 `f8204dfc5aba484ccf99af8b5508c75f4dce898aaa33fb550b0e8219020e975b`)
 - `docs/dev-log/core070/true-parity-latest/case-map-fit-input.json` (6 rows, sha256 `1f8648158d3b9eaeb97a77385ab8164174f37b14b964206487f388222ec7b1be`)
 - `docs/dev-log/core070/true-parity-latest/case-map-inference.json` (63 rows, sha256 `de305bd492f8dfa9c1b97ddeb0ea57c4472c04e8d8be3c72505d97ef204f15c8`)
-- `docs/dev-log/core070/true-parity-latest/case-map-isdm.json` (20 rows, sha256 `93150a523f1b084d77d398bbdbee85886b84db3efa5a6096c4a54d5d30ad091b`)
+- `docs/dev-log/core070/true-parity-latest/case-map-isdm.json` (20 rows, sha256 `ea9446e58da1a38cbae435ef235870bb7f43c1ac418b766e0d41d9279f666a11`)
 - `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `54c4cf215ab9d172682f972b579630041a51cd4ac2680c281b9ea2c3a1b51c01`)
 - `docs/dev-log/core070/true-parity-latest/case-map-postfit.json` (52 rows, sha256 `bcba4c750ee3dde0072fcb6a4186f27d8c0d944b21b6745fb6d2ca8b79995ca4`)
 

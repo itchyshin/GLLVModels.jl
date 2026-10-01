@@ -36,7 +36,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-isdm.json",
-   "sha256": "93150a523f1b084d77d398bbdbee85886b84db3efa5a6096c4a54d5d30ad091b",
+   "sha256": "ea9446e58da1a38cbae435ef235870bb7f43c1ac418b766e0d41d9279f666a11",
    "rows": 20
   },
   {
@@ -5541,7 +5541,7 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-ALIASED-PAIRED-CONTROL.json"
     ],
-    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/parity/isdm_admission_twins.jl (itchyshin/GLLVModels.jl#660), against R-at-P1 values copied from test/fixtures/isdm/r_values_admission_p1.toml; each case within the tolerance asserted in that test. The cited fit is built to reach this row's path through R's public door (a fit-level logLik, estimate and linear-predictor comparison, not a restatement of the admission predicate). The R admission-predicate replay is kept un-cited under non_binding_receipts and r_predicate_case_ids.",
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/parity/isdm_admission_twins.jl (itchyshin/GLLVModels.jl#661), against R-at-P1 values copied from test/fixtures/isdm/r_values_admission_p1.toml; each case within the tolerance asserted in that test. The cited fit is built to reach this row's path through R's public door (a fit-level logLik, estimate and linear-predictor comparison, not a restatement of the admission predicate). The R admission-predicate replay is kept un-cited under non_binding_receipts and r_predicate_case_ids.",
     "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/isdm/adm_aliased.json"
     ]
@@ -5588,7 +5588,7 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-ALIGN-PAIRED-CONTROL.json"
     ],
-    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/parity/isdm_admission_twins.jl (itchyshin/GLLVModels.jl#660), against R-at-P1 values copied from test/fixtures/isdm/r_values_admission_p1.toml; each case within the tolerance asserted in that test. The cited fit is built to reach this row's path through R's public door (a fit-level logLik, estimate and linear-predictor comparison, not a restatement of the admission predicate). The R admission-predicate replay is kept un-cited under non_binding_receipts and r_predicate_case_ids.",
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/parity/isdm_admission_twins.jl (itchyshin/GLLVModels.jl#661), against R-at-P1 values copied from test/fixtures/isdm/r_values_admission_p1.toml; each case within the tolerance asserted in that test. The cited fit is built to reach this row's path through R's public door (a fit-level logLik, estimate and linear-predictor comparison, not a restatement of the admission predicate). The R admission-predicate replay is kept un-cited under non_binding_receipts and r_predicate_case_ids.",
     "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/isdm/adm_align.json"
     ]
@@ -5968,7 +5968,7 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-NO-OFFSET-PAIRED-CONTROL.json"
     ],
-    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/parity/isdm_admission_twins.jl (itchyshin/GLLVModels.jl#660), against R-at-P1 values copied from test/fixtures/isdm/r_values_admission_p1.toml; each case within the tolerance asserted in that test. The cited fit is built to reach this row's path through R's public door (a fit-level logLik, estimate and linear-predictor comparison, not a restatement of the admission predicate). The R admission-predicate replay is kept un-cited under non_binding_receipts and r_predicate_case_ids.",
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/parity/isdm_admission_twins.jl (itchyshin/GLLVModels.jl#661), against R-at-P1 values copied from test/fixtures/isdm/r_values_admission_p1.toml; each case within the tolerance asserted in that test. The cited fit is built to reach this row's path through R's public door (a fit-level logLik, estimate and linear-predictor comparison, not a restatement of the admission predicate). The R admission-predicate replay is kept un-cited under non_binding_receipts and r_predicate_case_ids.",
     "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/isdm/adm_nooffset.json"
     ]
@@ -6162,7 +6162,7 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-UNBALANCED-PAIRED-CONTROL.json"
     ],
-    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/parity/isdm_admission_twins.jl (itchyshin/GLLVModels.jl#660), against R-at-P1 values copied from test/fixtures/isdm/r_values_admission_p1.toml; each case within the tolerance asserted in that test. The cited fit is built to reach this row's path through R's public door (a fit-level logLik, estimate and linear-predictor comparison, not a restatement of the admission predicate). The R admission-predicate replay is kept un-cited under non_binding_receipts and r_predicate_case_ids.",
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/parity/isdm_admission_twins.jl (itchyshin/GLLVModels.jl#661), against R-at-P1 values copied from test/fixtures/isdm/r_values_admission_p1.toml; each case within the tolerance asserted in that test. The cited fit is built to reach this row's path through R's public door (a fit-level logLik, estimate and linear-predictor comparison, not a restatement of the admission predicate). The R admission-predicate replay is kept un-cited under non_binding_receipts and r_predicate_case_ids.",
     "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/isdm/adm_unbalanced.json"
     ]
@@ -6380,7 +6380,7 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-ZERO-ORDINARY-PAIRED-CONTROL.json"
     ],
-    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/parity/isdm_admission_twins.jl (itchyshin/GLLVModels.jl#660), against R-at-P1 values copied from test/fixtures/isdm/r_values_admission_p1.toml; each case within the tolerance asserted in that test. The cited fit is built to reach this row's path through R's public door (a fit-level logLik, estimate and linear-predictor comparison, not a restatement of the admission predicate). The R admission-predicate replay is kept un-cited under non_binding_receipts and r_predicate_case_ids.",
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/parity/isdm_admission_twins.jl (itchyshin/GLLVModels.jl#661), against R-at-P1 values copied from test/fixtures/isdm/r_values_admission_p1.toml; each case within the tolerance asserted in that test. The cited fit is built to reach this row's path through R's public door (a fit-level logLik, estimate and linear-predictor comparison, not a restatement of the admission predicate). The R admission-predicate replay is kept un-cited under non_binding_receipts and r_predicate_case_ids.",
     "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/isdm/adm_zeroord.json"
     ]

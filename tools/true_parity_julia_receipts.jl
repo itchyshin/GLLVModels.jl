@@ -1029,7 +1029,7 @@ end
 # =============================================================================================
 # 6b. isdm admission twins: five more R-at-P1 vs Julia fitted cases, each built to reach one positive
 #     admission that the four fits above do not (audit-isdm-546-2026-10-01.md).
-#     test/parity/isdm_admission_twins.jl (itchyshin/GLLVModels.jl#660)
+#     test/parity/isdm_admission_twins.jl (itchyshin/GLLVModels.jl#661)
 # =============================================================================================
 include(joinpath(ROOT, "test", "fixtures", "isdm", "isdm_admission_cases.jl"))
 
@@ -1110,7 +1110,7 @@ function receipts_isdm_admission()
                 Float64.(r["eta"]), ft.eta, tol_e,
                 "Path exercised: $path. Row order is the fixture's."),
         ]
-        push!(out, "isdm/$name.json" => Receipt([ISDM_ADM_ROWS[name]], "itchyshin/GLLVModels.jl#660",
+        push!(out, "isdm/$name.json" => Receipt([ISDM_ADM_ROWS[name]], "itchyshin/GLLVModels.jl#661",
             [rvp, jep, csvp], [tp, "test/fixtures/isdm/isdm_fixture_io.jl", "test/fixtures/isdm/isdm_admission_cases.jl"],
             NOT_A_FIXTURE_PAIR * " The check is a fit-level logLik and estimate comparison on one fitted case built to reach this row's path; it does not restate any admission predicate.",
             cases))
