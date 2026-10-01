@@ -781,6 +781,32 @@ function _nb_grouped_cov_negll_grad(Yc, X_fit, θ, p, q, K, rr, G, gidx, link, m
     end
 end
 
+# Shared-slope least squares start: Z[t,i] ≈ β_t + Σ_k γ_k X[t,i,k]. Per-trait centring removes
+# β; γ solves the pooled normal equations; returns (β, γ, residual matrix).
+function _cov_ols_start(Z::AbstractMatrix, X::AbstractArray{<:Real, 3})
+    p, n = size(Z); q = size(X, 3)
+    zbar = vec(sum(Z; dims = 2)) ./ n
+    Zc = Z .- zbar
+    q == 0 && return zbar, Float64[], Zc
+    Xbar = sum(X; dims = 2) ./ n
+    Xc = X .- Xbar
+    A = zeros(q, q); b = zeros(q)
+    @inbounds for k in 1:q
+        b[k] = sum(view(Xc, :, :, k) .* Zc)
+        for l in k:q
+            A[k, l] = A[l, k] = sum(view(Xc, :, :, k) .* view(Xc, :, :, l))
+        end
+    end
+    γ = (Symmetric(A) + 1e-8 * I) \ b
+    β = zbar .- [sum(γ[k] * Xbar[t, 1, k] for k in 1:q) for t in 1:p]
+    R = copy(Zc)
+    @inbounds for k in 1:q
+        R .-= γ[k] .* view(Xc, :, :, k)
+    end
+    return β, γ, R
+end
+
+
 """
     fit_nb_gllvm_grouped_cov(Y; X, K, group=1:p, link=LogLink(), mask=nothing,
                              γ_fixed=nothing, hessian=:observed, …) -> NBGroupedCovFit
@@ -790,6 +816,10 @@ Fit a negative-binomial GLLVM with **grouped / per-trait dispersion** and
 `[β; γ_free; pack(Λ); log r_1 … log r_G]`; offset `O = Xγ` is passed into the
 grouped Laplace marginal. Default `hessian=:observed` matches TMB; identity
 checks against shared [`fit_gllvm_cov`](@ref) should force `hessian=:fisher`.
+`starts = :both` (default) fits from two starting points, the trait-mean start with `γ = 0`
+and a covariate-adjusted least-squares start, and keeps the higher log-likelihood (ties keep
+the first; differences under 1e-6 are ties); `starts = :default` runs only the first, at about half the cost. The NB2
+covariate objective has several local optima and neither start wins everywhere.
 Groups that end at the Poisson boundary get the same restart as
 [`fit_nb_gllvm_grouped`](@ref) (together and each on its own, kept only if better).
 Public / bridge default under X for NB2 (twin API B). Keep `fit_gllvm_cov` for
@@ -798,9 +828,11 @@ the shared-`r` + X opt-in.
 function fit_nb_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3},
         K::Integer, group::AbstractVector{<:Integer} = collect(1:size(Y, 1)),
         link::Link = LogLink(), mask = nothing, γ_fixed = nothing,
-        hessian::Symbol = :observed,
+        hessian::Symbol = :observed, starts::Symbol = :both,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    starts in (:both, :default) ||
+        throw(ArgumentError("starts must be :both or :default; got :$starts"))
     p, n = size(Y)
     size(X, 1) == p && size(X, 2) == n ||
         throw(DimensionMismatch("X must be (p, n, q) = ($p, $n, q); got $(size(X))"))
@@ -854,11 +886,29 @@ function fit_nb_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3}
                                          hessian, newton_maxiter, newton_tol)) : nothing
     # Dense BFGS on the exact-gradient route (see `_COV_BFGS` in covariates.jl for why).
     ls_ad = grad === nothing ? ls : _COV_BFGS()
-    res = grad === nothing ? Optim.optimize(negll, θ0, ls, opts; autodiff = :finite) :
-                             _optimize_with_analytic(negll, grad, θ0, ls_ad, opts)
-    res = _nb_boundary_restart(negll, res, ls_ad, opts, p + q + rr + 1; grad = grad)
-    θ̂, nll, conv0, iters0 = _nb_poisson_ridge_polish(negll, res, ls_ad, opts, p + q + rr + 1;
-                                                     grad = grad)
+    function _fit_from(θstart)
+        r = grad === nothing ? Optim.optimize(negll, θstart, ls, opts; autodiff = :finite) :
+                               _optimize_with_analytic(negll, grad, θstart, ls_ad, opts)
+        r = _nb_boundary_restart(negll, r, ls_ad, opts, p + q + rr + 1; grad = grad)
+        return _nb_poisson_ridge_polish(negll, r, ls_ad, opts, p + q + rr + 1; grad = grad)
+    end
+    θ̂, nll, conv0, iters0 = _fit_from(θ0)
+    if starts === :both && q > 0
+        # The objective is multimodal and the start picks the basin. Second start: shared-slope
+        # least squares for β, γ and loadings from the SVD of what is left (gllvmTMB's start).
+        # Keep the better fit; differences under 1e-6 count as ties and keep the default-start fit.
+        β1, γ1, Zc1 = _cov_ols_start(Zemp, X_fit)
+        F1 = svd(Zc1); kk1 = min(K, length(F1.S))
+        Λ1 = zeros(p, K)
+        @inbounds for j in 1:kk1
+            Λ1[:, j] = F1.U[:, j] .* (F1.S[j] / sqrt(n))
+        end
+        θ1 = vcat(β1, γ1, pack_lambda(Λ1), fill(log(10.0), G))
+        θ̂2, nll2, conv2, iters2 = _fit_from(θ1)
+        if isfinite(nll2) && nll2 < nll - 1e-6
+            θ̂, nll, conv0, iters0 = θ̂2, nll2, conv2, iters2
+        end
+    end
     β̂ = θ̂[1:p]
     γ̂_free = θ̂[(p + 1):(p + q)]
     γ̂ = collect(Float64, _expand_fixed_zero(γ̂_free, γ_fixed_mask))
