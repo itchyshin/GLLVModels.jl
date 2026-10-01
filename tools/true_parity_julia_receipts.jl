@@ -869,13 +869,101 @@ function receipts_temporal()
     return out
 end
 
+# =============================================================================================
+# 5. isdm: the integrated SDM through R's public door, R-at-P1 fits vs Julia
+#    test/parity/isdm_cases.jl "iSDM P1 paired twins" (itchyshin/GLLVModels.jl#546)
+#    Four paired fits (predict, ms3, srcform_pois, srcform_mixed). The R side is r_values_p1.toml;
+#    the Julia side is the same table, marginal and fit the test builds.
+# =============================================================================================
+using Distributions: Poisson, Binomial
+include(joinpath(ROOT, "test", "fixtures", "isdm", "isdm_fixture_io.jl"))
+
+# Which isdm rows each paired fit is evidence for (decided in
+# docs/dev-log/core070/true-parity-latest/audit-isdm-546-2026-10-01.md).
+const ISDM_FIT_ROWS = Dict(
+    "predict"       => ["isdm/ISDM-MIXED", "isdm/ISDM-SUPPORT", "isdm/ISDM-WITHIN-TRAIT-ADMIT"],
+    "ms3"           => ["isdm/ISDM-SUPPORT", "isdm/ISDM-THREE", "isdm/ISDM-WITHIN-TRAIT-ADMIT"],
+    "srcform_pois"  => ["isdm/ISDM-MASKED-COLUMNS", "isdm/ISDM-SUPPORT"],
+    "srcform_mixed" => ["isdm/ISDM-MASKED-COLUMNS", "isdm/ISDM-MIXED", "isdm/ISDM-SUPPORT", "isdm/ISDM-WITHIN-TRAIT-ADMIT"],
+)
+
+function receipts_isdm()
+    tp = "test/parity/isdm_cases.jl"
+    rvp = "test/fixtures/isdm/r_values_p1.toml"
+    jep = "test/fixtures/isdm/julia_estimates_p1.toml"
+    RV = isdm_r_values()
+    JE = TOML.parsefile(joinpath(ROOT, jep))
+    RV["gllvmtmb_sha"] == P1_SHA || fail("isdm r_values_p1.toml is not pinned at P1")
+    out = Pair{String,Receipt}[]
+    function by_name_(names_from, vals, names_to)
+        Set(names_from) == Set(names_to) || fail("isdm coefficient names do not pair: $names_from vs $names_to")
+        return [vals[findfirst(==(n), names_from)] for n in names_to]
+    end
+    f_ll = "isdm_marginal_loglik_laplace(tab, RΛ, rb) - r[\"loglik\"]"
+    f_x = "abs(RV[\"xobj\"][name] - jll)"
+    f_b = "maximum(abs.(ft.b_fix .- rb))"
+    f_e = "maximum(abs.(ft.eta .- Float64.(r[\"eta\"])))"
+    tol_ll = test_tolerance(tp, f_ll)
+    tol_x = test_tolerance(tp, f_x)
+    tol_b = test_tolerance(tp, f_b)
+    tol_e = test_tolerance(tp, f_e)
+    for name in ISDM_CASES
+        r = RV["cases"][name]; j = JE["julia"][name]
+        c = isdm_case(name)
+        csvp = "test/fixtures/isdm/" * c.csv
+        bytes2hex(open(sha256, joinpath(ROOT, csvp))) == r["fixture_sha256"] || fail("isdm $name fixture sha256 drifted")
+        dat = read_isdm_csv(c.csv)
+        length(dat.value) == r["fixture_rows"] || fail("isdm $name fixture row count")
+        tab = isdm_table(c.formula, dat; family = c.family)
+        rb = by_name_(r["b_fix_names"], Float64.(r["b_fix"]), tab.X_names)
+        K = Int(r["K"])
+        RΛ = K == 0 ? zeros(2, 0) : reshape(Float64.(r["Lambda_B_colmajor"]), :, K)
+        ll_at_r = isdm_marginal_loglik_laplace(tab, RΛ, rb)
+        jb = by_name_(j["b_fix_names"], Float64.(j["b_fix"]), tab.X_names)
+        JΛ = j["K"] == 0 ? zeros(2, 0) : GMJ.unpack_lambda(Float64.(j["theta_rr_B"]), 2, Int(j["K"]))
+        jll = isdm_marginal_loglik_laplace(tab, JΛ, jb)
+        ft = fit_isdm_gllvm(tab)
+        (ft.converged && all(ft.cell_converged)) || fail("isdm $name fresh fit did not converge")
+        r["convergence"] == 0 || fail("isdm $name: R did not converge")
+        pre = "P1-JULIA-ISDM-" * uppercase(replace(name, "_" => "-"))
+        cases = [
+            mkcase("$pre-LOGLIK-AT-R-OPTIMUM", "Julia Laplace marginal at R's fitted (b_fix, Lambda) vs R's logLik",
+                "$rvp [cases.$name].loglik (R nlminb optimum through gllvmTMB(family = isdm_sources(...)) at P1)",
+                "GLLVModels.isdm_marginal_loglik_laplace(isdm_table(formula, data; family), Lambda_R, b_fix_R), as at $(cite(tp, f_ll))",
+                r["loglik"], ll_at_r, tol_ll,
+                "Same data (sha256 checked), same parameter vector, same Laplace objective: the Julia design and offset must reproduce R's. Coefficients are paired by name, as in the test."),
+            mkcase("$pre-CROSS-OBJECTIVE-AT-JULIA-OPTIMUM", "R's objective at Julia's optimum vs Julia's logLik there",
+                "$rvp [xobj].$name (R TMB objective evaluated at the recorded Julia estimate, sign flipped to logLik)",
+                "GLLVModels.isdm_marginal_loglik_laplace(...) at the recorded Julia estimate in $jep [julia.$name], as at $(cite(tp, f_x))",
+                RV["xobj"][name], jll, tol_x,
+                "The recorded Julia estimate is the fit the test reproduces to 1e-8 on a fresh run; this receipt evaluates the objective at that recorded point, as the test does at the cited line."),
+            mkcase("$pre-B-FIX", "fresh Julia fit b_fix vs R b_fix (paired by coefficient name; maximum absolute difference)",
+                "$rvp [cases.$name].b_fix",
+                "GLLVModels.fit_isdm_gllvm(tab).b_fix, as at $(cite(tp, f_b))",
+                rb, ft.b_fix, tol_b,
+                "R's nlminb stops with max abs gradient 3.9e-4 to 9.0e-4 on the K = 0 fits, so this is a loose absolute bound; the test records the same finding. The test also asserts Julia's logLik is not below R's (one-sided), which is not a case here."),
+            mkcase("$pre-ETA", "fresh Julia fit linear predictor vs R's (maximum absolute difference over all rows)",
+                "$rvp [cases.$name].eta",
+                "GLLVModels.fit_isdm_gllvm(tab).eta, as at $(cite(tp, f_e))",
+                Float64.(r["eta"]), ft.eta, tol_e,
+                "Row order is the fixture's; R's eta and Julia's eta are both per long-table row."),
+        ]
+        push!(out, "isdm/$name.json" => Receipt(copy(ISDM_FIT_ROWS[name]), "itchyshin/GLLVModels.jl#546",
+            [rvp, jep, csvp], [tp, "test/fixtures/isdm/isdm_fixture_io.jl"],
+            NOT_A_FIXTURE_PAIR * " The check is a fit-level logLik and estimate comparison on one fitted case; it does not restate any admission predicate.",
+            cases))
+    end
+    return out
+end
+
 # ---------------------------------------------------------------------------------------------
 # Driver
 # ---------------------------------------------------------------------------------------------
 function build()
     out = Pair{String,Receipt}[]
     for (name, f) in (("chibar", receipts_chibar), ("ordinal", receipts_ordinal),
-            ("latent-scores", receipts_latent_scores), ("temporal", receipts_temporal))
+            ("latent-scores", receipts_latent_scores), ("temporal", receipts_temporal),
+            ("isdm", receipts_isdm))
         t0 = time()
         append!(out, f())
         @info "built $name receipts" seconds = round(time() - t0; digits = 1)
