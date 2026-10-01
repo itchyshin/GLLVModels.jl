@@ -20,10 +20,21 @@ run at gllvmTMB pin P1 (GLLVM_PARITY_PIN=P1):
                     gllvmTMBcontrol) read for fit$aghq and checked against the
                     runner's assertion. R only: no Julia call is part of any case.
 
-So no aghq row is numeric. Neither batch writes a `comparison` block, and every
-row cites its receipts under evidence.non_binding_receipts: under the #561
-numeric rule none of these rows binds, whatever its verdict. The tiers say what
-each row does measure (paired_control_categorical_*, r_only_policy_*).
+Neither batch writes a `comparison` block, so a row paid by a batch alone cites its
+receipts under evidence.non_binding_receipts and does not bind under the #561 numeric
+rule, whatever its verdict. The tiers say what each row does measure
+(paired_control_categorical_*, r_only_policy_*).
+
+Julia twins (overlay). Ten of the 14 policy rows have a same-model Julia surface and a
+numeric twin: R-at-P1 fits recorded in test/fixtures/aghq_p1/aghq_p1.toml against Julia
+fits of the same data (test/test_aghq_p1_twin.jl), receipts written by
+tools/true_parity_julia_receipts.jl under receipts/julia-twins/aghq/. Where such a receipt
+exists, build_rows adds the evidence fields it supports to that row: the twin receipt under
+evidence.receipt, executable_case_ids set to the twin's case ids (the R-only case id moves
+to evidence.r_only_case_ids; its receipt stays under evidence.non_binding_receipts), and
+evidence_tier numeric. Classification, disposition and every other field are untouched.
+`--apply-twins` re-derives rows, counts and numeric_rows from the tracked receipts and
+rewrites those fields of case-map-aghq.json; `--check` verifies them.
 
 Shared gates (PR #567 / #569 / #571 / #579 / #584):
 
@@ -47,6 +58,7 @@ Shared gates (PR #567 / #569 / #571 / #579 / #584):
 Usage:
   python3 tools/core070_aghq_p1_receipts.py --runs DIR --runtimes JSON [--allow-dirty]
   python3 tools/core070_aghq_p1_receipts.py --check
+  python3 tools/core070_aghq_p1_receipts.py --apply-twins
 where DIR holds aghq-control-p1/ and aghq-policy-p1/ (each with run-commit.json)
 and carry-scan-p1.json.
 """
@@ -404,6 +416,36 @@ TIER_TEXT = {
 }
 
 
+TWIN_REL = f"{OUT_REL}/receipts/julia-twins/aghq"
+TWIN_TIER = ("numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as "
+             "test/test_aghq_p1_twin.jl, against R-at-P1 values copied from test/fixtures/aghq_p1/aghq_p1.toml "
+             "(integration used and node count, logLik, intercepts, loadings and, for Gaussian, the residual SD, at each "
+             "side's own optimum); both engines converged; each case within the tolerance asserted in the test")
+
+
+def twin_overlay(sid, row, counts):
+    """Add the numeric-twin evidence fields to `row` when a Julia twin receipt exists for it."""
+    path = ROOT / TWIN_REL / f"{sid.split('/', 1)[1]}.json"
+    if not path.is_file():
+        return
+    rec = load(path)
+    rel = str(path.relative_to(ROOT))
+    ok = (rec.get("schema") == "true-parity-julia-twin-receipt/v1" and rec.get("source_ids") == [sid]
+          and rec.get("verdict") == "PASS" and rec.get("pin") == "P1" and rec.get("reference_commit") == P1_SHA
+          and rec.get("evidence_kind") == "julia_recomputed_vs_recorded_r")
+    if not ok:
+        raise SystemExit(f"{rel}: not a passing P1 Julia twin receipt for {sid}")
+    case_ids = [c["case_id"] for c in rec["comparison"]["cases"]]
+    counts[row["evidence_tier"]] -= 1
+    counts["numeric_pass"] += 1
+    prior = row["executable_case_ids"]
+    row["executable_case_ids"] = case_ids
+    row["evidence_tier"] = "numeric"
+    row["evidence"] = {"receipt": [rel], "non_binding_receipts": row["evidence"]["non_binding_receipts"],
+                       "r_only_case_ids": prior, "tier": TWIN_TIER}
+    row["measured_result"] = {**row["measured_result"], "twin_case_ids": case_ids, "twin_verdict": rec["verdict"]}
+
+
 def build_rows(in_scope, carry_status, receipts):
     p0 = {r["source_id"]: r for r in load(P0_CASEMAP)["rows"]}
     counts = {k: 0 for k in COUNT_KEYS}
@@ -438,6 +480,7 @@ def build_rows(in_scope, carry_status, receipts):
                    evidence={"non_binding_receipts": paths, "tier": TIER_TEXT[prefix]},
                    measured_result={**result, "row_verdict": verdict} if verdict else result)
         counts[tier] += 1
+        twin_overlay(sid, row, counts)
         out_rows.append(row)
     return out_rows, counts
 
@@ -519,6 +562,22 @@ def check():
     print("CORE070_AGHQ_P1_RECEIPTS_CURRENT", len(tracked), "case receipts,", len(rows), "rows")
 
 
+def apply_twins():
+    """Re-derive rows, counts, numeric_rows and note of case-map-aghq.json from the tracked receipts
+    (batch receipts plus any Julia twin receipts). Nothing else in the file changes."""
+    tracked = {p.stem: (str(p.relative_to(ROOT)), load(p)) for p in sorted((ROOT / REC_REL / "cases").glob("*.json"))}
+    receipts = {cid: receipt_info(path, rec) for cid, (path, rec) in tracked.items()}
+    cm = load(ROOT / CASEMAP_REL)
+    rows, counts = build_rows([r["source_id"] for r in cm["rows"]],
+                              {r["source_id"]: r["carry_scan_status"] for r in cm["rows"]}, receipts)
+    cm["rows"], cm["counts"] = rows, counts
+    cm["numeric_rows"] = [r["source_id"] for r in rows if r["evidence_tier"].startswith("numeric")]
+    cm["note"] = NOTE
+    write_json(ROOT / CASEMAP_REL, cm)
+    print(json.dumps(counts))
+    print("numeric rows", len(cm["numeric_rows"]))
+
+
 # ---------------------------------------------------------------------------
 # write
 # ---------------------------------------------------------------------------
@@ -528,10 +587,14 @@ COPY = {
 }
 NOTE = ("Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with "
         "PARITY_CASEMAP pointing at this file. Classification and disposition are carried from "
-        "docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. No aghq row is "
-        "numeric: 7 rows are a paired control on categorical labels (no fit) and 14 are R-only policy observations "
-        "(no Julia side), so every row cites its receipts under evidence.non_binding_receipts and none binds under "
-        "the numeric rule. The policy fixtures are toys (p of 5 to 20 traits, n of 30 to 40 sites, d = 1).")
+        "docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. The two batches measure no "
+        "number against Julia: 7 rows are a paired control on categorical labels (no fit) and 14 are R-only policy "
+        "observations (no Julia side), so a row paid by a batch alone cites its receipts under "
+        "evidence.non_binding_receipts and does not bind under the numeric rule. Ten of the 14 policy rows (Poisson, "
+        "binomial and Gaussian fits, which expose aghq= in Julia) additionally carry a numeric Julia twin receipt "
+        "(receipts/julia-twins/aghq/, test/test_aghq_p1_twin.jl) under evidence.receipt with evidence_tier numeric. The "
+        "policy fixtures of the batch are toys (p of 5 to 20 traits, n of 30 to 40 sites, d = 1); the twins use simulated "
+        "data with a real latent factor.")
 
 
 def copy_batch(batch, run_dir):
@@ -555,9 +618,14 @@ def main():
                     help="write receipts from a checkout with modified tracked files (recorded, not hidden)")
     ap.add_argument("--check", action="store_true",
                     help="verify the tracked receipts against the files they read; write nothing")
+    ap.add_argument("--apply-twins", action="store_true",
+                    help="re-derive the case-map rows from the tracked receipts and Julia twin receipts")
     args = ap.parse_args()
     if args.check:
         check()
+        return
+    if args.apply_twins:
+        apply_twins()
         return
     if args.runs is None or args.runtimes is None:
         ap.error("--runs and --runtimes are required unless --check")

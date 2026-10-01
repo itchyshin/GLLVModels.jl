@@ -1,0 +1,182 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "aghq/AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#586",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "a86d2279a8447fcf42c05a5751c9ba49a7c7da40",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/aghq_p1/aghq_p1.toml",
+      "sha256": "6b4f5e0ccd59216891f01055c22944ddf68287854b8b6d50307c3ed72353f745"
+    },
+    {
+      "path": "test/fixtures/aghq_p1/aghq_binomial_p20.csv",
+      "sha256": "d1a032f98c23c1a32653f7514176b68b3566c0afb1c386945a7d4ba8747a91a6"
+    },
+    {
+      "path": "test/fixtures/aghq_p1/aghq_p1_helpers.jl",
+      "sha256": "d92bd93aaf1b1a8f420cf063167d253c576e56fba0dac9a1bd5b1025315723ab"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_aghq_p1_twin.jl",
+      "sha256": "20a808b76c1a5bf6f4821e437c998b56113f9649f0fa2fbb16f67d1735fbaa6d"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF-DECISION",
+        "quantity": "integration actually used: [AGHQ used (1/0), node count k] (Laplace = [0, 0])",
+        "r_source": "test/fixtures/aghq_p1/aghq_p1.toml [case.AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF.r].used, k",
+        "julia_source": "GLLVModels fit_binomial_gllvm(...; K = 1, aghq = 9) via test/fixtures/aghq_p1/aghq_p1_helpers.jl aghq_p1_fit, as called at test/test_aghq_p1_twin.jl:62: integration.actual, integration.k",
+        "r_value": [
+          1.0,
+          9.0
+        ],
+        "julia_value": [
+          1.0,
+          9.0
+        ],
+        "abs_diff": 0.0,
+        "tolerance": 0.5,
+        "tolerance_source": "test/test_aghq_p1_twin.jl:73",
+        "tolerance_source_line": "@test maximum(abs.(dec_j .- dec_r)) <= 0.5",
+        "note": "Data read from test/fixtures/aghq_p1/aghq_binomial_p20.csv (sha256 checked); binomial p = 20, n = 100 (seed 20260500), aghq request \"9\". R and Julia both converged (R: aghq$converged; Julia: fit.converged and reason :converged). Integers, so the test's <= 0.5 is exact equality."
+      },
+      {
+        "case_id": "P1-JULIA-AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF-LOGLIK",
+        "quantity": "logLik at each side's own optimum",
+        "r_source": "test/fixtures/aghq_p1/aghq_p1.toml [case.AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF.r].loglik",
+        "julia_source": "GLLVModels fit_binomial_gllvm(...; K = 1, aghq = 9) via test/fixtures/aghq_p1/aghq_p1_helpers.jl aghq_p1_fit, as called at test/test_aghq_p1_twin.jl:62: loglik",
+        "r_value": -3728.4121739212783,
+        "julia_value": -3728.4121739097836,
+        "abs_diff": 1.1494648788357154e-08,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_aghq_p1_twin.jl:74",
+        "tolerance_source_line": "@test isapprox(j.loglik, r[\"loglik\"]; atol = 1e-6, rtol = 0)",
+        "note": "Data read from test/fixtures/aghq_p1/aghq_binomial_p20.csv (sha256 checked); binomial p = 20, n = 100 (seed 20260500), aghq request \"9\". R and Julia both converged (R: aghq$converged; Julia: fit.converged and reason :converged)."
+      },
+      {
+        "case_id": "P1-JULIA-AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF-BETA",
+        "quantity": "per-trait intercepts at each side's own optimum",
+        "r_source": "test/fixtures/aghq_p1/aghq_p1.toml [case.AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF.r].beta",
+        "julia_source": "GLLVModels fit_binomial_gllvm(...; K = 1, aghq = 9) via test/fixtures/aghq_p1/aghq_p1_helpers.jl aghq_p1_fit, as called at test/test_aghq_p1_twin.jl:62: beta",
+        "r_value": [
+          -0.20100148128506817,
+          -0.3685096764725901,
+          -0.22007887053654235,
+          -0.31429183731996496,
+          -0.10648206374625777,
+          -0.05492543069654538,
+          -0.11934698524743755,
+          0.10136741397133811,
+          -0.14967900978686693,
+          0.06908467307397508,
+          0.17323623390265985,
+          0.2193725122515196,
+          0.25165096153498384,
+          0.36028488977088885,
+          0.44708592660024077,
+          0.5350975541126941,
+          0.4006017176994588,
+          0.620382296135075,
+          0.4971384692953104,
+          0.6678276345109853
+        ],
+        "julia_value": [
+          -0.20101334819527955,
+          -0.3684979181135244,
+          -0.22008877816754555,
+          -0.31428448949009835,
+          -0.10649454413597564,
+          -0.05493763450443987,
+          -0.11933538393459854,
+          0.1013588267001039,
+          -0.149670454240211,
+          0.06907323969146519,
+          0.17322315432574822,
+          0.21938295417912368,
+          0.25164190091640454,
+          0.36029324065239493,
+          0.4470734130579491,
+          0.5350814641337088,
+          0.4006125619474522,
+          0.6203720024159504,
+          0.497147206737167,
+          0.6678161027913775
+        ],
+        "abs_diff": 1.608997898527864e-05,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_aghq_p1_twin.jl:75",
+        "tolerance_source_line": "@test isapprox(j.beta, Float64.(r[\"beta\"]); atol = 1e-3, rtol = 0)",
+        "note": "Data read from test/fixtures/aghq_p1/aghq_binomial_p20.csv (sha256 checked); binomial p = 20, n = 100 (seed 20260500), aghq request \"9\". R and Julia both converged (R: aghq$converged; Julia: fit.converged and reason :converged)."
+      },
+      {
+        "case_id": "P1-JULIA-AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF-LAMBDA",
+        "quantity": "loadings at each side's own optimum, sign-aligned to R",
+        "r_source": "test/fixtures/aghq_p1/aghq_p1.toml [case.AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF.r].lambda",
+        "julia_source": "GLLVModels fit_binomial_gllvm(...; K = 1, aghq = 9) via test/fixtures/aghq_p1/aghq_p1_helpers.jl aghq_p1_fit, as called at test/test_aghq_p1_twin.jl:62: lambda (times +-1 so that sum(lambda_julia * lambda_R) >= 0)",
+        "r_value": [
+          0.7976782927902085,
+          -0.7826855279582777,
+          0.6118977052208303,
+          -0.4900567512668752,
+          0.8410186840741246,
+          0.8217862061413403,
+          -0.7796931612359667,
+          0.5376363406651231,
+          -0.5778580227219671,
+          0.7686197783614855,
+          0.8751990029810114,
+          -0.6693439480765884,
+          0.61245035156926,
+          -0.5984679070443367,
+          0.8521601275192976,
+          1.0566582450503037,
+          -0.7218210089343199,
+          0.6870690429500388,
+          -0.5788827030885363,
+          0.796073778090986
+        ],
+        "julia_value": [
+          0.7976801102560209,
+          -0.782686932750129,
+          0.6118991015230677,
+          -0.4900578288404722,
+          0.8410204176135572,
+          0.8217879752429058,
+          -0.779694455850183,
+          0.5376375307633053,
+          -0.5778593176113773,
+          0.7686215353086079,
+          0.8752011856699672,
+          -0.6693455277273261,
+          0.6124517176173179,
+          -0.5984698679727564,
+          0.852162468382909,
+          1.0566600849342211,
+          -0.721821870875695,
+          0.6870708040024464,
+          -0.5788842218498244,
+          0.7960759811414629
+        ],
+        "abs_diff": 2.340863611394184e-06,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_aghq_p1_twin.jl:76",
+        "tolerance_source_line": "@test isapprox(j.lambda, Float64.(r[\"lambda\"]); atol = 1e-3, rtol = 0)",
+        "note": "Data read from test/fixtures/aghq_p1/aghq_binomial_p20.csv (sha256 checked); binomial p = 20, n = 100 (seed 20260500), aghq request \"9\". R and Julia both converged (R: aghq$converged; Julia: fit.converged and reason :converged). The single latent axis is identified up to sign; Julia's loadings are multiplied by the +-1 the test applies."
+      }
+    ]
+  }
+}
