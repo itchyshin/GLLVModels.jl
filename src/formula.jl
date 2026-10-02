@@ -255,6 +255,9 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
                family isa ZIPoisson ? fit_zip_gllvm(Y; K = K, kwargs...) :
                family isa ZINegBin ? fit_zinb_gllvm(Y; K = K, kwargs...) :
                family isa ZIB ? fit_gllvm(Y; family = family, K = K, kwargs...) :
+               # NB keeps gllvmTMB's per-trait r here; bare fit_gllvm defaults to shared r (#615).
+               family isa NegativeBinomial && !haskey(kwargs, :disp_group) ?
+                                fit_gllvm(Y; family = family, K = K, disp_group = :species, kwargs...) :
                                 fit_gllvm(Y; family = family, K = K, kwargs...)
     end
 

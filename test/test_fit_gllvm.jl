@@ -29,7 +29,9 @@ using GLLVModels, Test, Distributions, Random
     Yc = [rand(0:5) for _ in 1:p, _ in 1:n]
     @test fit_gllvm(Yc; family = Poisson(), K = 1) isa PoissonFit
 
-    @test fit_gllvm(Yc; family = NegativeBinomial(), K = 1) isa NBGroupedFit
+    # NB2 public default is one shared r since #615; per-species r is opt-in
+    @test fit_gllvm(Yc; family = NegativeBinomial(), K = 1) isa NBFit
+    @test fit_gllvm(Yc; family = NegativeBinomial(), K = 1, disp_group = :species) isa NBGroupedFit
 
     # Beta() public default is per-species precision (proportions in (0,1))
     Yp = clamp.(rand(p, n), 1e-3, 1 - 1e-3)
