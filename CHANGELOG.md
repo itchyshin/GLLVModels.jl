@@ -20,6 +20,11 @@
   comment corrections for the contrasts no-loadings case and the `em_fa` init. Test:
   `test/test_robustness_sweep.jl`.
 
+- **Derived-profile CI: constraint gate on refits (#137).** A constrained refit in
+  `profile_ci_derived` whose achieved `g(θ)` misses the target by more than 0.05
+  (R's `.fix_and_refit_constraint_tol`) is now a failed refit instead of a silently
+  under-enforced one. Valid refits are unchanged. Test: `test/test_derived_ci_sweep.jl`.
+
 - **Breaking: `fit_gllvm(Y; family = NegativeBinomial())` now fits one shared `r` (#615).**
   Maintainer decision 2026-10-01. On the #615 grid (72 cells, 20 reps), shared r
   recovered r better in every common-r cell and per-species r took 110 to 260 times
