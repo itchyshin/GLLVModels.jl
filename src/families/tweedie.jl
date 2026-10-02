@@ -59,31 +59,53 @@ end
 #   logW_j = j·[ -α·log y + α·log(p-1) - (1-α)·log φ - log(2-p) ]
 #            - logΓ(j+1) - logΓ(-jα)
 #   log a  = -log y + logsumexp_j logW_j
-# The summand peaks near j* ≈ y^{2-p} / (φ (2-p)); we sum a window around j*,
-# expanding until the boundary terms fall ≳ 37 below the running max.
+# logW_j is concave in j (single mode near j* ≈ y^{2-p} / (φ (2-p))). Single
+# allocation-free pass: climb from the j* guess to the true mode, then sum
+# outward in both directions until a term falls ≥ 37 below the mode (the old
+# implementation rebuilt a doubling window from scratch on every pass, #575).
 function _tweedie_logA(y::Float64, φ::Float64, p::Float64)
     α = (2.0 - p) / (1.0 - p)              # < 0 for 1 < p < 2
-    # Per-j linear coefficient of the leading term.
     a = -α * log(y) + α * log(p - 1.0) - (1.0 - α) * log(φ) - log(2.0 - p)
-    logW(j) = j * a - loggamma(j + 1.0) - loggamma(-j * α)
+    nα = -α
+    @inline logW(j) = j * a - loggamma(j + 1.0) - loggamma(j * nα)
 
     jstar = max(1, round(Int, y^(2.0 - p) / (φ * (2.0 - p))))
-    drop = 37.0
-    cap = 5000
-    W = 1
-    local lo, hi, m, terms
+    # climb to the mode
+    j0 = jstar
+    w0 = logW(float(j0))
     while true
-        lo = max(1, jstar - W)
-        hi = jstar + W
-        terms = Float64[logW(float(j)) for j in lo:hi]
-        m = maximum(terms)
-        edge = max(terms[1], terms[end])
-        if (m - edge) ≥ drop || W ≥ cap
+        wu = logW(float(j0 + 1))
+        if wu > w0
+            j0 += 1; w0 = wu
+        elseif j0 > 1
+            wd = logW(float(j0 - 1))
+            if wd > w0
+                j0 -= 1; w0 = wd
+            else
+                break
+            end
+        else
             break
         end
-        W *= 2
     end
-    return -log(y) + _tweedie_logsumexp(terms)
+    drop = 37.0
+    cap = 5000
+    s = 1.0                                # sum of exp(logW_j - w0), mode term = 1
+    j = j0 + 1
+    while j <= j0 + cap
+        d = logW(float(j)) - w0
+        s += exp(d)
+        d < -drop && break
+        j += 1
+    end
+    j = j0 - 1
+    while j >= 1 && j >= j0 - cap
+        d = logW(float(j)) - w0
+        s += exp(d)
+        d < -drop && break
+        j -= 1
+    end
+    return -log(y) + w0 + log(s)
 end
 
 """

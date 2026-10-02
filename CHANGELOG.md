@@ -2,6 +2,16 @@
 
 ## Development
 
+- **Tweedie series density is allocation-free and about 390x faster (#575).** `_tweedie_logA`
+  rebuilt a doubling window of `loggamma` terms from scratch on every pass and allocated
+  a vector each time, which dominated `fit_tweedie_gllvm_grouped`. It now climbs to the
+  mode and sums outward in one pass with the same 37-nat truncation. Measured on
+  vegan::varespec (species present in >= 12 plots, 8 species x 24 plots, K = 1,
+  1 thread): 8,000 density calls 3.11 s to 0.008 s; `fit_tweedie_gllvm_grouped` 141.5 s
+  to 4.7 s, log-likelihood identical (-352.3148323214431). Max relative difference in
+  `log a(y, phi, p)` vs the old code over a 250-point grid (y 1e-6 to 5000, p 1.01 to
+  1.99): 8.9e-16. Test: `test/test_tweedie_speed.jl` (the allocation assertion fails on
+  the previous code: 2,496 bytes per call).
 - **Per-species NB2 polish refits use dense BFGS instead of L-BFGS (#615).** After
   #659, 17 of the 1,440 per-species fits in the #615 grid still reported
   `converged = false`, all with common r = 20 at p = 24. They were close to their
