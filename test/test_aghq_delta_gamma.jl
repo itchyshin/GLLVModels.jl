@@ -5,7 +5,9 @@ function _dg_draw(rng,ηz,ηc,α)
 end
 @testset "Delta-Gamma AGHQ" begin
     rng=MersenneTwister(20261101)
-    p,n=3,15
+    # n = 15 put one Laplace dispersion on its boundary (alpha ~ 1e6), so the AGHQ fit was
+    # ill-conditioned and fell back to Laplace on some BLAS paths; n = 40 is interior.
+    p,n=3,40
     β0=[0.3,0.0,0.5];λ0=[0.8,-0.6,0.5];α0=[2.0,3.0,1.5]
     z0=randn(rng,n)
     Y=[_dg_draw(rng,β0[t]+λ0[t]*z0[s],β0[t]+λ0[t]*z0[s],α0[t]) for t in 1:p,s in 1:n]
