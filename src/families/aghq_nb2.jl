@@ -104,7 +104,7 @@ end
 
 Result of [`fit_nb_gllvm_grouped_aghq`](@ref): the fields of `NBGroupedFit` plus
 `theta_packed` (`β`, packed `Λ`, `log r_group`) and `integration`
-([`AGHQFitInfo`](@ref)) recording the actual route (`:aghq`, or `:laplace`
+(`AGHQFitInfo`) recording the actual route (`:aghq`, or `:laplace`
 with a reason when the request was declined). `loglik` is the AGHQ log
 likelihood when `integration.actual === :aghq`. Point estimates only:
 `predict`/`confint`/`simulate` have no AGHQ route for this type.
