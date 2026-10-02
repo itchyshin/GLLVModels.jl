@@ -12,6 +12,39 @@
   scalar `fit_nb1_gllvm` (no failing reproduction found), `fit_nb1_gllvm_grouped_cov`
   (another lane's file), the other `_fit_verdict(res)` sites, and ordered beta (#501).
 
+- **Input validation sweep (#134 #139 #141 #150 #151 #153 #159 #162).** `gaussian_marginal_loglik`
+  now throws `ArgumentError` when `Λ_phy`/`σ_phy` are given without `Σ_phy` (#134) or when
+  `size(Λ_B, 1) != p` (#150); `low_rank_chol` rejects non-positive `d` (#151); `augmented_phy`
+  rejects unary and multifurcating nodes per node (#153); `size(::LowRankPlusDiagChol, i)` returns 1
+  for `i > 2` (#159); the edge wrapper validates loadings before building the dense `Σ_phy` (#162);
+  `bridge_fit` accepts integral doubles for `d` and rejects non-integral values (#139);
+  `correlation` returns `NaN` (with a warning) for traits with non-positive variance (#141).
+  Valid inputs are numerically unchanged. Test: `test/test_input_validation.jl`.
+
+- **Robustness sweep (#138, #143, #145, #146, #147, #158, #161).** The bridge no longer turns
+  every `getLV` failure into empty scores (only a missing method does, with a warning).
+  Transformed-Wald CIs report non-PD when the Hessian is indefinite. `em_fa` takes an `rng`
+  keyword and its default start is now reproducible (fixed-seed). The SQUAREM premature-stop
+  fallback returns the best of polished / warm-start plain-EM, not the known-worse point. The
+  Beta family clamps y to [1e-12, 1-1e-12] like gllvmTMB (interior unchanged). Docstring and
+  comment corrections for the contrasts no-loadings case and the `em_fa` init. Test:
+  `test/test_robustness_sweep.jl`.
+
+- **Derived-profile CI: constraint gate on refits (#137).** A constrained refit in
+  `profile_ci_derived` whose achieved `g(θ)` misses the target by more than 0.05
+  (R's `.fix_and_refit_constraint_tol`) is now a failed refit instead of a silently
+  under-enforced one. Valid refits are unchanged. Test: `test/test_derived_ci_sweep.jl`.
+
+- **Tweedie series density is allocation-free and about 390x faster (#575).** `_tweedie_logA`
+  rebuilt a doubling window of `loggamma` terms from scratch on every pass and allocated
+  a vector each time, which dominated `fit_tweedie_gllvm_grouped`. It now climbs to the
+  mode and sums outward in one pass with the same 37-nat truncation. Measured on
+  vegan::varespec (species present in >= 12 plots, 8 species x 24 plots, K = 1,
+  1 thread): 8,000 density calls 3.11 s to 0.008 s; `fit_tweedie_gllvm_grouped` 141.5 s
+  to 4.7 s, log-likelihood identical (-352.3148323214431). Max relative difference in
+  `log a(y, phi, p)` vs the old code over a 250-point grid (y 1e-6 to 5000, p 1.01 to
+  1.99): 8.9e-16. Test: `test/test_tweedie_speed.jl` (the allocation assertion fails on
+  the previous code: 2,496 bytes per call).
 - **Breaking: `fit_gllvm(Y; family = NegativeBinomial())` now fits one shared `r` (#615).**
   Maintainer decision 2026-10-01. On the #615 grid (72 cells, 20 reps), shared r
   recovered r better in every common-r cell and per-species r took 110 to 260 times

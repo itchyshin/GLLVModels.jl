@@ -94,6 +94,8 @@ include("families/gamma.jl")             # Gamma (positive continuous) family pi
 include("families/tweedie.jl")           # Tweedie (compound Poisson–Gamma, 1<p<2) — biomass/abundance with zeros
 include("families/grouped_dispersion.jl") # Grouped / species-specific dispersion (disp.group)
 include("families/aghq_nb2.jl")          # NB2 (per-trait / grouped r) AGHQ problem + fitter
+include("families/aghq_ordinal.jl")      # Ordinal (cumulative logit/probit) AGHQ problem + fitter
+include("families/aghq_tweedie.jl")      # Tweedie (per-group phi, fixed/shared/per-trait power) AGHQ problem + fitter
 include("families/exponential.jl")       # Exponential (positive continuous, no dispersion) — Gamma(α=1)
 include("families/studentt.jl")          # Student-t (heavy-tailed continuous, fixed ν) family pieces
 include("families/lognormal.jl")         # one-part lognormal (twin fid 3)

@@ -112,6 +112,8 @@ function gaussian_marginal_loglik(y::AbstractMatrix, Λ_B::AbstractMatrix, σ_ep
     # Element types must promote with σ², the existing T (data + Λ_B), and any
     # provided Λ_W / σ²_B / σ²_W (relevant under AD with Duals).
     Td = T
+    size(Λ_B, 1) == p ||
+        throw(ArgumentError("Λ_B first dim ($(size(Λ_B, 1))) must equal p ($p)"))
     if Λ_W !== nothing
         size(Λ_W, 1) == p ||
             throw(ArgumentError("Λ_W first dim ($(size(Λ_W, 1))) must equal p ($p)"))
@@ -131,6 +133,9 @@ function gaussian_marginal_loglik(y::AbstractMatrix, Λ_B::AbstractMatrix, σ_ep
     # Phylogenetic block: Σ_phy is the (p × p) species covariance supplied by
     # the caller. Without Σ_phy the J3 branch is skipped and the code falls
     # back to the J2 site-stacked Woodbury path.
+    if Σ_phy === nothing && (Λ_phy !== nothing || σ_phy !== nothing)
+        throw(ArgumentError("Σ_phy must be supplied when Λ_phy or σ_phy is non-nothing"))
+    end
     has_phy = Σ_phy !== nothing && (Λ_phy !== nothing || σ_phy !== nothing)
     if Σ_phy !== nothing
         size(Σ_phy, 1) == p ||
@@ -148,9 +153,6 @@ function gaussian_marginal_loglik(y::AbstractMatrix, Λ_B::AbstractMatrix, σ_ep
         length(σ_phy) == p ||
             throw(ArgumentError("σ_phy length ($(length(σ_phy))) must equal p ($p)"))
         Td = promote_type(Td, eltype(σ_phy))
-    end
-    if has_phy && Σ_phy === nothing
-        throw(ArgumentError("Σ_phy must be supplied when Λ_phy or σ_phy is non-nothing"))
     end
 
     d_total = Vector{Td}(undef, p)

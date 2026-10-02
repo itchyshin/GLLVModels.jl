@@ -69,7 +69,14 @@ dense `gaussian_marginal_loglik` in that case.
 
 Returns the FULL marginal log-likelihood of y (not the contrasts'
 log-likelihood alone) — numerically identical to the dense path to
-the limits of floating-point precision.
+the limits of floating-point precision, for matched model specifications.
+
+Matching caveat: when neither `Λ_phy` nor `σ_phy` is supplied, this function
+adds a trait-homogeneous BM block (implicit loading `ones(p)`, covariance
+`σ²_phy · V_tree`). That corresponds to the dense call
+`gaussian_marginal_loglik(...; σ_phy = ones(p), Σ_phy = σ²_phy · V_tree)`,
+NOT to the dense no-loadings call `gaussian_marginal_loglik(...; Σ_phy = ...)`,
+which has no phylogenetic block and therefore returns a different value.
 """
 function gaussian_marginal_loglik_contrasts(y::AbstractMatrix,
                                             Λ_B::AbstractMatrix,
