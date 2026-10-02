@@ -35,6 +35,17 @@
   `log a(y, phi, p)` vs the old code over a 250-point grid (y 1e-6 to 5000, p 1.01 to
   1.99): 8.9e-16. Test: `test/test_tweedie_speed.jl` (the allocation assertion fails on
   the previous code: 2,496 bytes per call).
+
+- **`fit_phylo_gaussian` no longer reports `converged = true` after a zero-length step
+  (part of #505, the remaining #485 class).** Optim also counts a zero-length line-search
+  step as convergence, so a start the finite-difference gradient cannot leave could be
+  reported converged at a gradient of ~1e9 or NaN (reproduced with log-variance starts of
+  (30, -30)). The fitter now also requires the scale-aware gradient test
+  `gres <= max(g_tol, g_tol * |nll|)` already used by `_tweedie_verdict`. Estimates and
+  log-likelihoods are unchanged; only `converged` can flip to `false`. Not covered here:
+  scalar `fit_nb1_gllvm` (no failing reproduction found), `fit_nb1_gllvm_grouped_cov`
+  (another lane's file), the other `_fit_verdict(res)` sites, and ordered beta (#501).
+
 - **Breaking: `fit_gllvm(Y; family = NegativeBinomial())` now fits one shared `r` (#615).**
   Maintainer decision 2026-10-01. On the #615 grid (72 cells, 20 reps), shared r
   recovered r better in every common-r cell and per-species r took 110 to 260 times

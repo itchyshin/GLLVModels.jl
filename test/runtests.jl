@@ -520,5 +520,6 @@ println(_SHARD === nothing ?
     _shard_include("test_robustness_sweep.jl")
     _shard_include("test_derived_ci_sweep.jl")
     _shard_include("test_tweedie_speed.jl")
+    _shard_include("test_zerostep_verdict_sweep.jl")
 end
 include("test_readme_quickstart.jl")
