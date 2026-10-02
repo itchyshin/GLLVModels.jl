@@ -41,12 +41,12 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-namespace.json",
-   "sha256": "54c4cf215ab9d172682f972b579630041a51cd4ac2680c281b9ea2c3a1b51c01",
+   "sha256": "a36aa7061449fb9a20cf28f7e5a2de37fd15699d6874cd92133665483d183b96",
    "rows": 69
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-postfit.json",
-   "sha256": "bcba4c750ee3dde0072fcb6a4186f27d8c0d944b21b6745fb6d2ca8b79995ca4",
+   "sha256": "79b608e11e3ac7ea4ccfc9f98e5cc7d1625d9a8632093c22fb2a5a0ebbe06b14",
    "rows": 52
   }
  ],
@@ -7038,20 +7038,27 @@
    "r_file_line": "R/methods-gllvmTMB.R:1260",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/tidy.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-TIDY-MULTI-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-TIDY-MULTI-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_namespace_numeric_p1_twin_b.jl, against R tidy(fit, effects = \"fixed\") values copied from test/fixtures/ns_numeric_p1_b.toml (a rank-2 Gaussian fit's six trait-intercept estimates and Wald standard errors; Julia tidy(fit, Y)), each case within the tolerance asserted in that test. R converged with a positive-definite Hessian. The Tier 0 registration receipts are kept un-cited under registration_receipts (the registration batch receipt carries a batch-level FAIL status, which would block the numeric binding if cited); the superseded case ids are in registration_case_ids."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-TIDY-MULTI-NATIVE"
+    "P1-JULIA-TIDY-ESTIMATE",
+    "P1-JULIA-TIDY-STD-ERROR"
    ],
    "reason": "R S3method(tidy,gllvmTMB_multi) registered and defined at P1; Julia `tidy` is an exported Function (measured). Name match only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -7067,20 +7074,26 @@
    "r_file_line": "R/vcov-coef.R:69",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/vcov.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-VCOV-MULTI-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-VCOV-MULTI-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_namespace_numeric_p1_twin.jl, against R vcov(fit) values copied from test/fixtures/ns_numeric_p1.toml (the covariance of a rank-2 Gaussian fit's six trait means, off-diagonals included; Julia vcov(fit, Y)[1:p, 1:p]), each case within the tolerance asserted in that test. R converged with a positive-definite Hessian. The Tier 0 registration receipts are kept un-cited under registration_receipts (the registration batch receipt carries a batch-level FAIL status, which would block the numeric binding if cited); the superseded case ids are in registration_case_ids."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-VCOV-MULTI-NATIVE"
+    "P1-JULIA-VCOV-TRAIT-MEAN"
    ],
    "reason": "R S3method(vcov,gllvmTMB_multi) registered and defined at P1; Julia `vcov` is an exported Function (measured). Name match only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -7096,20 +7109,28 @@
    "r_file_line": "R/families.R:217",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/Beta.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-BETA-FAMILY-NATIVE-MODEL.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-BETA-FAMILY-NATIVE-MODEL"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_namespace_numeric_p1_twin_b.jl, against a family = Beta() latent fit values copied from test/fixtures/ns_numeric_p1_b.toml (intercepts, Lambda Lambda' and per-trait dispersion of a one-axis latent fit, p = 6, n = 200; Julia fit_gllvm(Y; family = GLLVModels.Beta(), K = 1)), each case within the tolerance asserted in that test. R converged with a positive-definite Hessian. The Tier 0 registration receipts are kept un-cited under registration_receipts (the registration batch receipt carries a batch-level FAIL status, which would block the numeric binding if cited); the superseded case ids are in registration_case_ids."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-BETA-FAMILY-NATIVE-MODEL"
+    "P1-JULIA-BETA-INTERCEPTS",
+    "P1-JULIA-BETA-LAMBDA-LAMBDAT",
+    "P1-JULIA-BETA-DISPERSION"
    ],
    "reason": "R export(Beta) registered and defined at P1; Julia `fit_beta_gllvm` is an exported Function (measured). Name match only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -8385,17 +8406,25 @@
    "r_kind": "export",
    "classification": "required_core",
    "arc": "A3",
-   "r_file_line": null,
-   "executable_case_ids": [],
+   "r_file_line": "R/families.R:301",
+   "executable_case_ids": [
+    "P1-JULIA-NB2-INTERCEPTS",
+    "P1-JULIA-NB2-LAMBDA-LAMBDAT",
+    "P1-JULIA-NB2-DISPERSION"
+   ],
    "p0_case_ids": [
     "CORE070-NAMESPACE2-NBINOM2-FAMILY-BRIDGE"
    ],
-   "evidence": {},
-   "measured_against": null,
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/nbinom2.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_namespace_numeric_p1_twin_b.jl, against a family = nbinom2() latent fit values copied from test/fixtures/ns_numeric_p1_b.toml (intercepts, Lambda Lambda' and per-trait dispersion of a one-axis latent fit, p = 6, n = 200; Julia fit_gllvm(Y; family = NegativeBinomial(1.0, 0.5), K = 1)), each case within the tolerance asserted in that test. R converged with a positive-definite Hessian."
+   },
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "disposition": null,
-   "reason": "Not re-measured at P1 in this PR.",
-   "not_measured_reason": "namespace-2 batch needs an installed frozen gllvmTMB library and live R fits (tools/core070_namespace_2_batch.R <frozen-library> <destination>); stopped per brief, no P1 oracle build here.",
-   "evidence_tier": "registration"
+   "reason": "R export(nbinom2) is a family constructor; its capability is the NB2 likelihood it selects, compared here on a one-axis latent fit against Julia fit_gllvm with a NegativeBinomial family.",
+   "evidence_tier": "numeric"
   },
   {
    "source_id": "namespace/export/sanity_multi",
@@ -8675,16 +8704,23 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-ESTIMAND-REBIND-EXTRACT-COMMUNALITY"
+    "P1-JULIA-POSTFIT-COMMUNALITY-UNIT",
+    "P1-JULIA-POSTFIT-COMMUNALITY-UNIT-OBS"
    ],
    "disposition": null,
-   "evidence_tier": "numeric_non_discriminating",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/extract_communality.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-ESTIMAND-REBIND-EXTRACT-COMMUNALITY.json"
     ],
-    "tier": "numeric comparison blocks pass, but at least one is degenerate (the R values are one constant or all ~0), so a constant or zero implementation would pass too; the row does not bind"
+    "batch_case_ids": [
+     "CORE070-ESTIMAND-REBIND-EXTRACT-COMMUNALITY"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as the cited twin test, against R-at-P1 values copied from a tracked fixture (an R fit that converged with a positive-definite Hessian, on a non-degenerate fixture: the R values are not one constant and not ~0), each case within the tolerance asserted in that test. The batch case this row carried is superseded; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "note": "Measured on the unique = FALSE Gaussian fixture (tools/core070_estimand_rebind_batch.R), where communality is identically 1 for every trait: R and Julia both return [1, 1, 1, 1, 1]. Reviewer mutation: a Julia extract_communality that returns a constant 1.0 still PASSES the batch; 0.99 * s/t FAILS. The harness bounds |R - Julia| correctly, but this fixture cannot distinguish a wrong implementation. A non-degenerate fixture (unique = TRUE) is a new case, i.e. a contract change for the maintainer.",
    "measured_result": {
@@ -8696,7 +8732,12 @@
     },
     "discriminating": {
      "CORE070-ESTIMAND-REBIND-EXTRACT-COMMUNALITY": false
-    }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-POSTFIT-COMMUNALITY-UNIT",
+     "P1-JULIA-POSTFIT-COMMUNALITY-UNIT-OBS"
+    ],
+    "twin_verdict": "PASS"
    }
   },
   {
@@ -8924,16 +8965,25 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-WAVE8-EXTRACT-ROTATED-LOADINGS-TABLE-SHAPE"
+    "P1-JULIA-POSTFIT-ROTATED-LOADINGS-TABLE-RAW",
+    "P1-JULIA-POSTFIT-ROTATED-LOADINGS-TABLE-AXIS-VARIANCE",
+    "P1-JULIA-POSTFIT-ROTATED-LOADINGS-TABLE-AXIS-SHARE",
+    "P1-JULIA-POSTFIT-ROTATED-LOADINGS-TABLE-STANDARDIZED"
    ],
    "disposition": null,
-   "evidence_tier": "partial_non_numeric_case",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/extract_rotated_loadings_table.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE8-EXTRACT-ROTATED-LOADINGS-TABLE-SHAPE.json"
     ],
-    "tier": "measured at P1 and the harness passes, but at least one case is a verdict, own-consistency, exact-integer, empty-length or default-policy check with no R-vs-Julia number and tolerance, so the row does not bind"
+    "batch_case_ids": [
+     "CORE070-WAVE8-EXTRACT-ROTATED-LOADINGS-TABLE-SHAPE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as the cited twin test, against R-at-P1 values copied from a tracked fixture (an R fit that converged with a positive-definite Hessian, on a non-degenerate fixture: the R values are not one constant and not ~0), each case within the tolerance asserted in that test. The batch case this row carried is superseded; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -8944,7 +8994,14 @@
     },
     "case_kinds": {
      "CORE070-WAVE8-EXTRACT-ROTATED-LOADINGS-TABLE-SHAPE": "paired_verdict"
-    }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-POSTFIT-ROTATED-LOADINGS-TABLE-RAW",
+     "P1-JULIA-POSTFIT-ROTATED-LOADINGS-TABLE-AXIS-VARIANCE",
+     "P1-JULIA-POSTFIT-ROTATED-LOADINGS-TABLE-AXIS-SHARE",
+     "P1-JULIA-POSTFIT-ROTATED-LOADINGS-TABLE-STANDARDIZED"
+    ],
+    "twin_verdict": "PASS"
    }
   },
   {
@@ -9341,16 +9398,22 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-WAVE8-TIDY-FIXED-ESTIMATE"
+    "P1-JULIA-POSTFIT-TIDY-FIXED"
    ],
    "disposition": null,
-   "evidence_tier": "numeric_non_discriminating",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/tidy.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE8-TIDY-FIXED-ESTIMATE.json"
     ],
-    "tier": "numeric comparison blocks pass, but at least one is degenerate (the R values are one constant or all ~0), so a constant or zero implementation would pass too; the row does not bind"
+    "batch_case_ids": [
+     "CORE070-WAVE8-TIDY-FIXED-ESTIMATE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as the cited twin test, against R-at-P1 values copied from a tracked fixture (an R fit that converged with a positive-definite Hessian, on a non-degenerate fixture: the R values are not one constant and not ~0), each case within the tolerance asserted in that test. The batch case this row carried is superseded; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "note": "Fixed-effect estimates on row-centred data: the R oracle is about 1e-14 per coefficient and the harness difference (1.4e-14) equals max |R|, i.e. Julia returns about 0. A Julia tidy that returned zeros would pass. An uncentred fixture is a contract change for the maintainer.",
    "measured_result": {
@@ -9362,7 +9425,11 @@
     },
     "discriminating": {
      "CORE070-WAVE8-TIDY-FIXED-ESTIMATE": false
-    }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-POSTFIT-TIDY-FIXED"
+    ],
+    "twin_verdict": "PASS"
    }
   },
   {
@@ -9434,16 +9501,22 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-POSTFIT-COEF-NAMED-NATIVE"
+    "P1-JULIA-POSTFIT-COEF-NAMED"
    ],
    "disposition": null,
-   "evidence_tier": "numeric_non_discriminating",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/coef.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-COEF-NAMED-NATIVE.json"
     ],
-    "tier": "numeric comparison blocks pass, but at least one is degenerate (the R values are one constant or all ~0), so a constant or zero implementation would pass too; the row does not bind"
+    "batch_case_ids": [
+     "CORE070-POSTFIT-COEF-NAMED-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as the cited twin test, against R-at-P1 values copied from a tracked fixture (an R fit that converged with a positive-definite Hessian, on a non-degenerate fixture: the R values are not one constant and not ~0), each case within the tolerance asserted in that test. The batch case this row carried is superseded; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "note": "Same row-centred fixture as tidy: R coef values are about 1e-14 and the harness delta (1.359e-14) equals max |R|, so a Julia coef returning zeros would pass. An uncentred fixture is a contract change for the maintainer.",
    "measured_result": {
@@ -9455,7 +9528,11 @@
     },
     "discriminating": {
      "CORE070-POSTFIT-COEF-NAMED-NATIVE": false
-    }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-POSTFIT-COEF-NAMED"
+    ],
+    "twin_verdict": "PASS"
    }
   },
   {
@@ -9492,13 +9569,28 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-POSTFIT-DEVIANCE-NATIVE"
+    "P1-JULIA-POSTFIT-DEVIANCE"
    ],
    "disposition": null,
-   "evidence_tier": "needs_surface_not_executed",
-   "measured_against": null,
-   "evidence": {},
-   "reason": "Its executable case CORE070-POSTFIT-DEVIANCE-NATIVE was never authored into the postfit-policy batch (the P0 contract lists POST-DEVIANCE under needs_new_julia_surface), so nothing ran at P1. deviance.gllvmTMB_multi is measured numerically at P1 under a different case id (CORE070-WAVE8-DEVIANCE-MULTI, row postfit/POSTFIT-SURFACE-deviance.gllvmTMB_multi); rebinding is a maintainer decision."
+   "evidence_tier": "numeric",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/deviance.json"
+    ],
+    "non_binding_receipts": [],
+    "batch_case_ids": [
+     "CORE070-POSTFIT-DEVIANCE-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as the cited twin test, against R-at-P1 values copied from a tracked fixture (an R fit that converged with a positive-definite Hessian, on a non-degenerate fixture: the R values are not one constant and not ~0), each case within the tolerance asserted in that test. The batch case this row carried is superseded; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+   },
+   "reason": "Its executable case CORE070-POSTFIT-DEVIANCE-NATIVE was never authored into the postfit-policy batch (the P0 contract lists POST-DEVIANCE under needs_new_julia_surface), so nothing ran at P1. deviance.gllvmTMB_multi is measured numerically at P1 under a different case id (CORE070-WAVE8-DEVIANCE-MULTI, row postfit/POSTFIT-SURFACE-deviance.gllvmTMB_multi); rebinding is a maintainer decision.",
+   "measured_result": {
+    "twin_case_ids": [
+     "P1-JULIA-POSTFIT-DEVIANCE"
+    ],
+    "twin_verdict": "PASS"
+   }
   },
   {
    "source_id": "postfit-policy/POST-FITTED-DEFAULT",

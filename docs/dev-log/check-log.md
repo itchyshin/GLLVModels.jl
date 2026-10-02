@@ -1,3 +1,23 @@
+## 2026-10-01: postfit numeric twins at gllvmTMB P1 (5 rows, #660)
+
+- Branch `claude/true-parity-cov-postfit-family-twins` from `origin/main` (`3fcf20698`). New:
+  `test/test_postfit_twins_p1.jl`, `test/fixtures/gen_postfit_twins_p1.R`, `test/fixtures/postfit_twins_p1.toml`,
+  receipts under `receipts/julia-twins/postfit-twins/`, a section 10 in `tools/true_parity_julia_receipts.jl`,
+  and an overlay in `tools/core070_postfit_p1_receipts.py` (`--apply-twins`, `--check-twins`).
+- Rows bound: POSTFIT-SURFACE-extract_communality (two-level fit, was NON-DISCRIMINATING),
+  -extract_rotated_loadings_table (was PARTIAL, shape only), -tidy.gllvmTMB_multi (was NON-DISCRIMINATING),
+  POST-COEF-NAMED (was NON-DISCRIMINATING), POST-DEVIANCE (was NOT-MEASURED). The first two reuse R values
+  already in `ns_numeric_p1.toml`; the other three read the new fixture (same data as the namespace main fit,
+  uncentred; R coef/tidy/deviance; R refit reproduces the recorded logLik to 1e-12).
+- R oracle: gllvmTMB 0.7.1 built from the P1 worktree at `9539352f6`; all 1247 top-level R functions deparse
+  identically to the P1 source. Lane-local library only.
+- Left, with reasons: extract_proportions (Julia `extract_proportions` is single-level and, with a unique
+  term, splits variance differently from R; see `repro_namespace_twin_gaps_p1.jl`), compare_loadings (R is a
+  Procrustes distance, Julia a rotation-free `||LL'-L2L2'||`: different quantities), sanity_multi,
+  check_auto_residual, predict_missing, simulate_unit_trait, POST-COEF-EMPTY, POST-PREDICT-DEFAULT,
+  POST-SIMULATE-DEFAULT (verdict or default-policy checks, no R number), the four integer-equality rows and
+  all covariance and family rows (public-bridge boundary or unexecuted formula/bridge cases).
+
 ## 2026-10-01: bootstrap boundary flag is per parameter
 
 - `src/confint_family.jl` `_family_bootstrap`: a converged refit with `upper_boundary` flags now
