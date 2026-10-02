@@ -6,9 +6,8 @@
 # test/fixtures/aghq_p1/gen_aghq_p1.R against a lane-local gllvmTMB install at the pin; it
 # records R version, commit, seeds and the data sha256s) and the same data are fitted here.
 #
-# Rows (13): AGHQ-AUTO-K-{POISSON,NB2,ORDINAL,TWEEDIE,BINOMIAL,GAUSSIAN}, AGHQ-DEFAULT-OFF,
-# AGHQ-POLICY-{OFF,EXPLICIT,EXPLICIT-BYPASS-CUTOFF,AUTO-ENFORCE-CUTOFF,TRAITS19,TRAITS20}. The
-# delta AUTO-K row has no `aghq=` surface in Julia and is not twinned.
+# Rows (14): AGHQ-AUTO-K-{POISSON,NB2,ORDINAL,TWEEDIE,DELTA,BINOMIAL,GAUSSIAN}, AGHQ-DEFAULT-OFF,
+# AGHQ-POLICY-{OFF,EXPLICIT,EXPLICIT-BYPASS-CUTOFF,AUTO-ENFORCE-CUTOFF,TRAITS19,TRAITS20}.
 #
 # Model on both sides: eta_tj = beta_j + lambda_j z_t, z_t ~ N(0, 1) (one latent axis, no
 # loading ridge; R: aghq_ridge = Inf), Gaussian with one residual SD, binomial with 10
@@ -35,7 +34,7 @@ using SHA
 include(joinpath(@__DIR__, "fixtures", "aghq_p1", "aghq_p1_helpers.jl"))
 
 const _AGHQ_P1_ROWS = [
-    "AGHQ-AUTO-K-POISSON", "AGHQ-AUTO-K-NB2", "AGHQ-AUTO-K-ORDINAL", "AGHQ-AUTO-K-TWEEDIE", "AGHQ-AUTO-K-BINOMIAL", "AGHQ-AUTO-K-GAUSSIAN", "AGHQ-DEFAULT-OFF",
+    "AGHQ-AUTO-K-POISSON", "AGHQ-AUTO-K-NB2", "AGHQ-AUTO-K-ORDINAL", "AGHQ-AUTO-K-TWEEDIE", "AGHQ-AUTO-K-DELTA", "AGHQ-AUTO-K-BINOMIAL", "AGHQ-AUTO-K-GAUSSIAN", "AGHQ-DEFAULT-OFF",
     "AGHQ-POLICY-OFF", "AGHQ-POLICY-EXPLICIT", "AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF",
     "AGHQ-POLICY-AUTO-ENFORCE-CUTOFF", "AGHQ-POLICY-TRAITS19", "AGHQ-POLICY-TRAITS20"]
 

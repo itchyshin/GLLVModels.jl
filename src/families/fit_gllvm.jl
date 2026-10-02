@@ -378,8 +378,16 @@ end
 # named fitters' own `:species` default (`accept delta dispersion A`, 2026-09-24).
 _fit_gllvm(::DeltaLogNormal, Y::AbstractMatrix; disp_group = :species, kwargs...) =
     fit_delta_lognormal_gllvm(Y; disp_group = disp_group, kwargs...)
-_fit_gllvm(::DeltaGamma, Y::AbstractMatrix; disp_group = :species, kwargs...) =
-    fit_delta_gamma_gllvm(Y; disp_group = disp_group, kwargs...)
+# `aghq` / `aghq_control` are peeled here so the Laplace fitter's keyword set is
+# untouched; `aghq = false` (default) is exactly the previous call.
+function _fit_delta_gamma_route(Y::AbstractMatrix; disp_group = :species, aghq = false,
+        aghq_control = (;), kwargs...)
+    _aghq_request(aghq) === :off &&
+        return fit_delta_gamma_gllvm(Y; disp_group = disp_group, kwargs...)
+    return fit_delta_gamma_gllvm_aghq(Y; disp_group = disp_group, aghq = aghq,
+                                      aghq_control = aghq_control, kwargs...)
+end
+_fit_gllvm(::DeltaGamma, Y::AbstractMatrix; kwargs...) = _fit_delta_gamma_route(Y; kwargs...)
 _fit_gllvm(::GeneralizedPoisson1, Y::AbstractMatrix; kwargs...) = fit_gp1_gllvm(Y; kwargs...)
 _fit_gllvm(::ZIPoisson, Y::AbstractMatrix; kwargs...) = fit_zip_gllvm(Y; kwargs...)
 _fit_gllvm(::ZINegBin, Y::AbstractMatrix; kwargs...) = fit_zinb_gllvm(Y; kwargs...)
