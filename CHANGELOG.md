@@ -2,6 +2,15 @@
 
 ## Development
 
+- **Derived-profile CI: constraint gate and boundary clamp (#137, #142).** A constrained
+  refit in `profile_ci_derived` whose achieved `g(θ)` misses the target by more than 0.05
+  (R's `.fix_and_refit_constraint_tol`) is now a failed refit instead of a silently
+  under-enforced one. New `profile_ci_communality` and `profile_ci_correlation` apply the
+  existing boundary clamp (`boundary` flag) with R's limits `[0.001, 0.999]` and
+  `[-0.999, 0.999]`, so a flat or overshooting profile gives the edge rather than NaN or a
+  value outside the support. Interior results are unchanged. Test:
+  `test/test_derived_ci_sweep.jl`.
+
 - **Per-species NB2 fits: up to three more polish rounds when still not converged (#615).**
   After #655, 128 of the 1,440 per-species fits in the #615 grid still reported
   `converged = false`, 90 of them at p = 24 with common r = 20. Tracing 11 of them

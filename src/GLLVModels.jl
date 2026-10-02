@@ -254,6 +254,7 @@ export make_cross_kernel, extract_Gamma, fit_coevolution_gaussian, fit_coevoluti
        standardized_loading_wald_ci, raw_loading_wald_ci, loading_ci,
        loading_profile_exploratory, loading_profile,
        profile_ci_total_variance, profile_ci_phylo_signal,
+       profile_ci_communality, profile_ci_correlation,
        slope_sd_ci, standard_errors,
        latent_score_sd, getREsd, bootstrap_Sigma, tmbprofile_wrapper, profile_targets, profile_curve_targets,
        profile_phylo_signal,
