@@ -6,9 +6,9 @@
 # test/fixtures/aghq_p1/gen_aghq_p1.R against a lane-local gllvmTMB install at the pin; it
 # records R version, commit, seeds and the data sha256s) and the same data are fitted here.
 #
-# Rows (10): AGHQ-AUTO-K-{POISSON,BINOMIAL,GAUSSIAN}, AGHQ-DEFAULT-OFF, AGHQ-POLICY-{OFF,
-# EXPLICIT,EXPLICIT-BYPASS-CUTOFF,AUTO-ENFORCE-CUTOFF,TRAITS19,TRAITS20}. The NB2, delta,
-# ordinal and Tweedie AUTO-K rows have no `aghq=` surface in Julia and are not twinned.
+# Rows (13): AGHQ-AUTO-K-{POISSON,NB2,ORDINAL,TWEEDIE,BINOMIAL,GAUSSIAN}, AGHQ-DEFAULT-OFF,
+# AGHQ-POLICY-{OFF,EXPLICIT,EXPLICIT-BYPASS-CUTOFF,AUTO-ENFORCE-CUTOFF,TRAITS19,TRAITS20}. The
+# delta AUTO-K row has no `aghq=` surface in Julia and is not twinned.
 #
 # Model on both sides: eta_tj = beta_j + lambda_j z_t, z_t ~ N(0, 1) (one latent axis, no
 # loading ridge; R: aghq_ridge = Inf), Gaussian with one residual SD, binomial with 10
@@ -35,7 +35,7 @@ using SHA
 include(joinpath(@__DIR__, "fixtures", "aghq_p1", "aghq_p1_helpers.jl"))
 
 const _AGHQ_P1_ROWS = [
-    "AGHQ-AUTO-K-POISSON", "AGHQ-AUTO-K-NB2", "AGHQ-AUTO-K-BINOMIAL", "AGHQ-AUTO-K-GAUSSIAN", "AGHQ-DEFAULT-OFF",
+    "AGHQ-AUTO-K-POISSON", "AGHQ-AUTO-K-NB2", "AGHQ-AUTO-K-ORDINAL", "AGHQ-AUTO-K-TWEEDIE", "AGHQ-AUTO-K-BINOMIAL", "AGHQ-AUTO-K-GAUSSIAN", "AGHQ-DEFAULT-OFF",
     "AGHQ-POLICY-OFF", "AGHQ-POLICY-EXPLICIT", "AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF",
     "AGHQ-POLICY-AUTO-ENFORCE-CUTOFF", "AGHQ-POLICY-TRAITS19", "AGHQ-POLICY-TRAITS20"]
 
@@ -77,6 +77,15 @@ const _AGHQ_P1_ROWS = [
                 # NB2 dispersions are compared on the log scale (the optimised scale; the AGHQ
                 # surface is flat in phi, so phi itself differs by up to 9e-4 absolute at values of 2-6).
                 haskey(r, "phi") && @test isapprox(log.(j.phi), log.(Float64.(r["phi"])); atol = 1e-3, rtol = 0)
+                # Ordinal cutpoints: both engines fix tau_1 = 0 and report the C_t - 2 free
+                # log-increments (R: ordinal_log_increments; Julia: log diff of tau), so they are
+                # compared on that scale; probit link, per-trait intercepts and cutpoints.
+                haskey(r, "log_incr") && @test isapprox(j.log_incr, Float64.(r["log_incr"]); atol = 1e-3, rtol = 0)
+                # Tweedie (per-trait dispersion and per-trait power, gllvmTMB's tweedie()):
+                # phi on the log scale (as NB2; the AGHQ surface is flat in phi), power on
+                # its natural (1, 2) scale, both as each engine reports them. Tolerances fixed
+                # before any Tweedie twin number was computed.
+                haskey(r, "power") && @test isapprox(j.power, Float64.(r["power"]); atol = 1e-3, rtol = 0)
                 haskey(r, "sigma_eps") && @test isapprox(j.sigma_eps, r["sigma_eps"]; atol = 1e-3, rtol = 0)
             end
         end

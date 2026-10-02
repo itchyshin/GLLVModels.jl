@@ -99,6 +99,8 @@ function _correlation_packed(θ::AbstractVector, spec::NamedTuple,
                              i::Integer, j::Integer)
     u = _derived_unpack(θ, spec)
     Σ = _sigma_y_site_from_unpacked(u, spec)
+    # Degenerate (non-positive) variance: NaN, consistent with `correlation`.
+    (Σ[i, i] > 0 && Σ[j, j] > 0) || return oftype(Σ[i, j], NaN)
     return Σ[i, j] / sqrt(Σ[i, i] * Σ[j, j])
 end
 
@@ -159,13 +161,22 @@ function _tw_sigma_from_hessian(fit::GllvmFit, y::AbstractMatrix,
     catch
         return (nothing, false)
     end
-    (H === nothing || !all(isfinite, H)) && return (nothing, false)
+    return _tw_sigma_from_hessian_matrix(H)
+end
+
+# Σ = inv(H) only when the (symmetrised) observed information is positive
+# definite; an indefinite-but-invertible H (saddle / non-converged fit) is
+# reported as non-PD rather than yielding a finite CI flagged valid (#143).
+function _tw_sigma_from_hessian_matrix(H::AbstractMatrix)
+    (isempty(H) || !all(isfinite, H)) && return (nothing, false)
+    Hs = Symmetric((H .+ H') ./ 2)
+    isposdef(Hs) || return (nothing, false)
     Σ = try
-        inv((H .+ H') ./ 2)
+        inv(Hs)
     catch
         return (nothing, false)
     end
-    return (Σ, true)
+    return (Matrix(Σ), true)
 end
 
 # ---------------------------------------------------------------------------

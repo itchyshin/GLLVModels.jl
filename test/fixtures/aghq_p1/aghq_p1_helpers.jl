@@ -31,17 +31,21 @@ function aghq_p1_fit(fx, caseid)
     Y, N = aghq_p1_load(ds); aghq = aghq_p1_request(c["aghq_request"]); fam = ds["family"]
     fit = fam == "poisson" ? GLLVModels.fit_poisson_gllvm(round.(Int, Y); K = 1, aghq = aghq) :
           fam == "gaussian" ? GLLVModels.fit_gllvm(Y; family = Normal(), K = 1, aghq = aghq) :
+          fam == "ordinal" ? GLLVModels.fit_gllvm(round.(Int, Y); family = GLLVModels.Ordinal(), K = 1, link = GLLVModels.ProbitLink(), aghq = aghq) :
+          fam == "tweedie" ? GLLVModels.fit_gllvm(Y; family = GLLVModels.TweedieED(1.0, 1.5), K = 1, disp_group = :species, power_group = :species, aghq = aghq) :
           fam == "nb2" ? GLLVModels.fit_gllvm(round.(Int, Y); family = NegativeBinomial(), K = 1, disp_group = :species, aghq = aghq) :
           GLLVModels.fit_binomial_gllvm(round.(Int, Y); K = 1, N = round.(Int, N), aghq = aghq)
     gauss = fit isa GLLVModels.GllvmFit
     ll = gauss ? fit.logLik : fit.loglik
-    phi = fam == "nb2" ? Float64.(fit.r_group) : nothing
+    phi = fam == "nb2" ? Float64.(fit.r_group) : fam == "tweedie" ? Float64.(fit.φ) : nothing
+    power = fam == "tweedie" ? Float64.(fit.power) : nothing
+    log_incr = fam == "ordinal" ? GLLVModels._ord_psi_from_tau(fit.τ, fit.C) : nothing
     beta = Float64.(gauss ? fit.pars.β : fit.β)
     lam = vec(Float64.(gauss ? fit.pars.Λ : fit.Λ))
     s = sum(lam .* Float64.(r["lambda"])) < 0 ? -1.0 : 1.0
     info = fit.integration
     used = info !== nothing && info.actual === :aghq
-    return (; phi, loglik = Float64(ll), beta, lambda = s .* lam, converged = fit.converged,
+    return (; phi, power, log_incr, loglik = Float64(ll), beta, lambda = s .* lam, converged = fit.converged,
         sigma_eps = gauss ? Float64(fit.pars.σ_eps) : NaN,
         used, nodes = used ? info.k : 0,
         reason = info === nothing ? :none : info.reason, actual = info === nothing ? :laplace : info.actual)

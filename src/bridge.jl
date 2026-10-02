@@ -243,11 +243,16 @@ end
 _bridge_loadings(fit) = Matrix{Float64}(getLoadings(fit; rotate = true))
 
 # Defensive latent-score extraction: getLV signatures vary per family; if a call
-# does not apply, scores degrade to empty rather than failing the whole fit.
+# does not apply (no matching method), scores degrade to empty rather than
+# failing the whole fit. Only `MethodError` is treated that way (with a one-time
+# warning); any other exception (non-PD residual covariance, dimension mismatch,
+# a real bug) propagates so it is not reported as a successful fit (#138).
 function _bridge_scores(f)
     try
         return Matrix{Float64}(f())
-    catch
+    catch e
+        e isa MethodError || rethrow()
+        @warn "latent scores unavailable for this fit (getLV has no applicable method); returning empty scores" maxlog = 1
         return zeros(Float64, 0, 0)
     end
 end
@@ -485,7 +490,7 @@ Confidence intervals are routed through `options` (all optional):
 """
 function bridge_fit(; y,
                     family = nothing,
-                    d::Integer = 1,
+                    d::Real = 1,
                     N = nothing,
                     X = nothing,
                     X_lv = nothing,
@@ -495,6 +500,10 @@ function bridge_fit(; y,
                     sources = nothing,
                     phylo = nothing,
                     options = Dict{String,Any}())
+    # R numeric literals reach Julia as Float64: accept any integral Real.
+    (isfinite(d) && d == round(d)) || throw(ArgumentError(
+        "bridge_fit: d must be an integer (got $d)"))
+    d = Int(d)
     phylo_model = String(_bridge_get(options, "phylo_model", "diagnostic"))
     phylo_model in ("diagnostic", "multivariate") || throw(ArgumentError(
         "bridge_fit: phylo_model must be diagnostic or multivariate"))
