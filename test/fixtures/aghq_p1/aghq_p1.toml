@@ -16,6 +16,17 @@ rejected_seeds = [20260100, 20260101, 20260102, 20260104, 20260105, 20260106, 20
 julia_rejected_seeds = [20260103, 20260107, 20260110, 20260111]
 trait_names = ["t1", "t2", "t3", "t4", "t5"]
 
+[dataset.nb2_p5]
+file = "aghq_nb2_p5.csv"
+sha256 = "794009d0b10102e4eec6d72d279b9f6574d1b39aedf0530dbe08cfe3003ef309"
+family = "nb2"
+seed = 20260600
+p = 5
+n_unit = 150
+rejected_seeds = []
+julia_rejected_seeds = []
+trait_names = ["t1", "t2", "t3", "t4", "t5"]
+
 [dataset.gaussian_p5]
 file = "aghq_gaussian_p5.csv"
 sha256 = "184f0a6bea6ef653f445cc6487b2c292f22b9097b736c08c4d4c610351b97152"
@@ -85,6 +96,20 @@ loglik = -979.26046164833383
 beta = [-0.38207090116989595, -0.16995253340949759, 0.072054842186403428, 0.30449373300181687, 0.67179984000666826]
 lambda = [0.79344454962255317, -0.64150521150471596, 0.54045449972718895, -0.29305707063467151, 0.52796926135813338]
 reason = "quadrature on z_B (d = 1, k = 5, 5 nodes); 9 adaptation passes, converged (adaptation mode fixed; gradient below tolerance; max |grad| = 0.000488, relative 4.99e-07); final max |mode shift| = 1.92e-05"
+
+[case.AGHQ-AUTO-K-NB2]
+dataset = "nb2_p5"
+aghq_request = "auto"
+
+[case.AGHQ-AUTO-K-NB2.r]
+used = true
+k = 5
+converged = true
+loglik = -1363.4077846923799
+beta = [0.10734552823560631, 0.22346718991320302, 0.38782126674681433, 0.70353856186031127, 0.90047784771633888]
+lambda = [0.67016311663470141, -0.71298507648583009, 0.62754852947591755, -0.52661180457629275, 0.71073848486813684]
+phi = [2.4101673426798449, 2.8978357469853786, 5.1017502318931003, 3.1816356609673733, 6.0835475039459928]
+reason = "quadrature on z_B (d = 1, k = 5, 5 nodes); 126 adaptation passes, converged (adaptation mode fixed; gradient below tolerance; max |grad| = 0.000538, relative 3.94e-07); final max |mode shift| = 0"
 
 [case.AGHQ-AUTO-K-GAUSSIAN]
 dataset = "gaussian_p5"

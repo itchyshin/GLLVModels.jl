@@ -432,8 +432,13 @@ function _fit_gllvm_grouped(::TruncatedNegBin2, Y::AbstractMatrix; group, kwargs
     return fit_truncated_nbinom2_gllvm_pertrait(Y; kwargs...)
 end
 
-_fit_gllvm_grouped(::NegativeBinomial, Y::AbstractMatrix; kwargs...) =
-    fit_nb_gllvm_grouped(Y; kwargs...)
+# `aghq` / `aghq_control` are peeled here so the Laplace fitter's keyword set is
+# untouched; `aghq = false` (default) is exactly the previous call.
+function _fit_gllvm_grouped(::NegativeBinomial, Y::AbstractMatrix; aghq = false,
+        aghq_control = (;), kwargs...)
+    _aghq_request(aghq) === :off && return fit_nb_gllvm_grouped(Y; kwargs...)
+    return fit_nb_gllvm_grouped_aghq(Y; aghq = aghq, aghq_control = aghq_control, kwargs...)
+end
 _fit_gllvm_grouped(::Beta,  Y::AbstractMatrix; kwargs...) = fit_beta_gllvm_grouped(Y; kwargs...)
 _fit_gllvm_grouped(::Gamma, Y::AbstractMatrix; kwargs...) = fit_gamma_gllvm_grouped(Y; kwargs...)
 _fit_gllvm_grouped(::NB1,   Y::AbstractMatrix; kwargs...) = fit_nb1_gllvm_grouped(Y; kwargs...)
