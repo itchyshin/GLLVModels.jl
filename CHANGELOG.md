@@ -11,6 +11,18 @@
   comment corrections for the contrasts no-loadings case and the `em_fa` init. Test:
   `test/test_robustness_sweep.jl`.
 
+- **Breaking: `fit_gllvm(Y; family = NegativeBinomial())` now fits one shared `r` (#615).**
+  Maintainer decision 2026-10-01. On the #615 grid (72 cells, 20 reps), shared r
+  recovered r better in every common-r cell and per-species r took 110 to 260 times
+  longer; per-species r is better when r really varies across species. Bare
+  `NegativeBinomial()` on `fit_gllvm` (and so `cv_gllvm` and `select_lv`) now returns
+  an `NBFit` from `fit_nb_gllvm`; pass `disp_group = :species` for the previous
+  per-species fit (`NBGroupedFit`). Unchanged: `gllvm(@formula(...))` with or without
+  covariates and the R bridge keep per-trait r, gllvmTMB's estimand, and Beta, NB1
+  and BetaBinom keep their per-species defaults. Because the forced `:species` is
+  gone, bare NB with `row_eff = :random` or `:fixed` now fits instead of throwing.
+  The gllvmTMB parity tests and the tests of the per-species route now pass
+  `disp_group = :species` explicitly.
 - **Per-species NB2 polish refits use dense BFGS instead of L-BFGS (#615).** After
   #659, 17 of the 1,440 per-species fits in the #615 grid still reported
   `converged = false`, all with common r = 20 at p = 24. They were close to their

@@ -16,8 +16,8 @@ distribution used as a marker (the GLM.jl convention):
 - `CensoredPoisson()` → [`fit_censored_poisson_gllvm`](@ref) — right-censored Poisson (Julia-forward)
 - `Lognormal()` → [`fit_lognormal_gllvm`](@ref) — one-part lognormal (twin fid 3)
 - `TruncatedNegBin2()` → [`fit_truncated_nbinom2_gllvm`](@ref) — zero-truncated NB2 (shared `r`)
-- `NegativeBinomial()` → [`fit_nb_gllvm_grouped`](@ref) with per-species `r`
-  (twin-aligned default; shared-`r` via [`fit_nb_gllvm`](@ref))
+- `NegativeBinomial()` → [`fit_nb_gllvm`](@ref) with one shared `r` (default since
+  #615); per-species `r` (gllvmTMB's estimand) via `disp_group = :species`
 - `Beta()`     → [`fit_beta_gllvm_grouped`](@ref) with per-species `φ`
   (twin-aligned default; shared-`φ` via [`fit_beta_gllvm`](@ref))
 - `NB1()`      → [`fit_nb1_gllvm_grouped`](@ref) with per-species linear-variance `φ`
@@ -82,9 +82,12 @@ the plain-call behaviour when they are at their defaults (regression safe):
   - `:random` → [`fit_row_random_gllvm`](@ref) — per-site random intercept `ρ_s ~ N(0, σ_row²)`.
 
 - `disp_group` — grouped / species-specific dispersion (gllvm's `disp.group`).
-  For `NegativeBinomial`, `Beta`, `NB1`, and `BetaBinom` only, `disp_group = nothing`
-  is coerced to `:species` (per-trait φ / `r`, matching gllvmTMB). Pass a length-`p`
-  integer vector of group ids for custom grouping, or `:species` explicitly. Routes to:
+  For `Beta`, `NB1`, and `BetaBinom`, `disp_group = nothing` is coerced to `:species`
+  (per-trait φ, matching gllvmTMB). For `NegativeBinomial`, `disp_group = nothing` fits
+  one shared `r` ([`fit_nb_gllvm`](@ref); maintainer decision 2026-10-01, #615); pass
+  `disp_group = :species` for per-trait `r` as in gllvmTMB. `gllvm(@formula(...))` and the
+  R bridge keep per-trait `r`. Pass a length-`p` integer vector of group ids for custom
+  grouping, or `:species` explicitly. Routes to:
   - `NegativeBinomial` → [`fit_nb_gllvm_grouped`](@ref) (per-group `r`)
   - `Beta`             → [`fit_beta_gllvm_grouped`](@ref) (per-group `φ`)
   - `Gamma`            → [`fit_gamma_gllvm_grouped`](@ref) (per-species shape `α`; opt-in only)
@@ -145,7 +148,8 @@ two of them. Therefore at most one of `row_eff != :none`, effective
 fit_gllvm(Y; family = Normal(),   K = 2)                          # Gaussian
 fit_gllvm(Y; family = Binomial(), K = 2, link = LogitLink())      # binary
 fit_gllvm(Y; family = Poisson(),  K = 2, row_eff = :random)       # random row effect
-fit_gllvm(Y; family = NegativeBinomial(1.0, 0.5), K = 2)          # per-species r (default)
+fit_gllvm(Y; family = NegativeBinomial(1.0, 0.5), K = 2)          # shared r (default)
+fit_gllvm(Y; family = NegativeBinomial(), K = 2, disp_group = :species)  # per-species r
 fit_gllvm(Y; family = Beta(), K = 2)                              # per-species φ (default)
 fit_gllvm(Y; family = NB1(),  K = 2)                              # per-species linear-variance φ
 fit_gllvm(Y; family = BetaBinom(), K = 2, N = trials)             # per-species φ; N is p×n, required
@@ -245,8 +249,14 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
     # alignment-pending.md): their public default now matches gllvmTMB's per-trait
     # `log_sigma_lognormal_delta` / `log_phi_gamma_delta` too. Shared dispersion
     # remains available via `disp_group = :shared` on either the named fitters or here.
+    # NB2 is the exception (maintainer decision 2026-10-01, #615): bare
+    # `fit_gllvm(Y; family = NegativeBinomial())` fits one shared `r` (fit_nb_gllvm).
+    # On the #615 grid shared r recovered r better whenever r was common, and per-species
+    # r cost 110 to 260 times the time; per-species r stays one keyword away
+    # (`disp_group = :species`). The R bridge and `@formula` keep per-trait r (gllvmTMB's
+    # estimand): the formula front-end passes `disp_group = :species` itself.
     if disp_group === nothing &&
-       (family isa NegativeBinomial || family isa Beta || family isa NB1 ||
+       (family isa Beta || family isa NB1 ||
         family isa BetaBinom || (family isa StudentTFamily && family.ν === nothing) ||
         family isa DeltaLogNormal || family isa DeltaGamma)
         disp_group = :species
@@ -432,8 +442,13 @@ function _fit_gllvm_grouped(::TruncatedNegBin2, Y::AbstractMatrix; group, kwargs
     return fit_truncated_nbinom2_gllvm_pertrait(Y; kwargs...)
 end
 
-_fit_gllvm_grouped(::NegativeBinomial, Y::AbstractMatrix; kwargs...) =
-    fit_nb_gllvm_grouped(Y; kwargs...)
+# `aghq` / `aghq_control` are peeled here so the Laplace fitter's keyword set is
+# untouched; `aghq = false` (default) is exactly the previous call.
+function _fit_gllvm_grouped(::NegativeBinomial, Y::AbstractMatrix; aghq = false,
+        aghq_control = (;), kwargs...)
+    _aghq_request(aghq) === :off && return fit_nb_gllvm_grouped(Y; kwargs...)
+    return fit_nb_gllvm_grouped_aghq(Y; aghq = aghq, aghq_control = aghq_control, kwargs...)
+end
 _fit_gllvm_grouped(::Beta,  Y::AbstractMatrix; kwargs...) = fit_beta_gllvm_grouped(Y; kwargs...)
 _fit_gllvm_grouped(::Gamma, Y::AbstractMatrix; kwargs...) = fit_gamma_gllvm_grouped(Y; kwargs...)
 _fit_gllvm_grouped(::NB1,   Y::AbstractMatrix; kwargs...) = fit_nb1_gllvm_grouped(Y; kwargs...)
