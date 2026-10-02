@@ -2,6 +2,15 @@
 
 ## Development
 
+- **Input validation sweep (#134 #139 #141 #150 #151 #153 #159 #162).** `gaussian_marginal_loglik`
+  now throws `ArgumentError` when `Λ_phy`/`σ_phy` are given without `Σ_phy` (#134) or when
+  `size(Λ_B, 1) != p` (#150); `low_rank_chol` rejects non-positive `d` (#151); `augmented_phy`
+  rejects unary and multifurcating nodes per node (#153); `size(::LowRankPlusDiagChol, i)` returns 1
+  for `i > 2` (#159); the edge wrapper validates loadings before building the dense `Σ_phy` (#162);
+  `bridge_fit` accepts integral doubles for `d` and rejects non-integral values (#139);
+  `correlation` returns `NaN` (with a warning) for traits with non-positive variance (#141).
+  Valid inputs are numerically unchanged. Test: `test/test_input_validation.jl`.
+
 - **Breaking: `fit_gllvm(Y; family = NegativeBinomial())` now fits one shared `r` (#615).**
   Maintainer decision 2026-10-01. On the #615 grid (72 cells, 20 reps), shared r
   recovered r better in every common-r cell and per-species r took 110 to 260 times

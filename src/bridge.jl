@@ -485,7 +485,7 @@ Confidence intervals are routed through `options` (all optional):
 """
 function bridge_fit(; y,
                     family = nothing,
-                    d::Integer = 1,
+                    d::Real = 1,
                     N = nothing,
                     X = nothing,
                     X_lv = nothing,
@@ -495,6 +495,10 @@ function bridge_fit(; y,
                     sources = nothing,
                     phylo = nothing,
                     options = Dict{String,Any}())
+    # R numeric literals reach Julia as Float64: accept any integral Real.
+    (isfinite(d) && d == round(d)) || throw(ArgumentError(
+        "bridge_fit: d must be an integer (got $d)"))
+    d = Int(d)
     phylo_model = String(_bridge_get(options, "phylo_model", "diagnostic"))
     phylo_model in ("diagnostic", "multivariate") || throw(ArgumentError(
         "bridge_fit: phylo_model must be diagnostic or multivariate"))

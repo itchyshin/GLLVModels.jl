@@ -276,14 +276,29 @@ Cross-trait correlation derived from `Σ_y_site`:
 
 Diagonal entries are exactly 1.0. The off-diagonals are the *site-level*
 correlations driven by the shared loadings Λ_B.
+
+Degenerate traits: the correlation is undefined for a trait whose
+`Σ_y_site[t, t] ≤ 0` (zero variance, or a round-off negative). Every entry
+of row and column `t` — including the diagonal — is then `NaN`, and one
+warning naming the affected traits is emitted per call. No `DomainError`
+or silent `Inf` is produced.
 """
 function correlation(fit::GllvmFit)
     Σ = sigma_y_site(fit)
     p = size(Σ, 1)
     R = similar(Σ, Float64)
+    bad = [t for t in 1:p if !(Σ[t, t] > 0)]
+    isempty(bad) || @warn "correlation: trait(s) $(bad) have non-positive variance " *
+        "Σ_y_site[t, t] ≤ 0; their correlations are returned as NaN" maxlog = 1
     @inbounds for j in 1:p, i in 1:p
-        denom = sqrt(Σ[i, i] * Σ[j, j])
-        R[i, j] = Σ[i, j] / denom
+        if Σ[i, i] > 0 && Σ[j, j] > 0
+            denom = sqrt(Σ[i, i] * Σ[j, j])
+            # the product can underflow to 0 although each variance is positive
+            denom > 0 || (denom = sqrt(Σ[i, i]) * sqrt(Σ[j, j]))
+            R[i, j] = Σ[i, j] / denom
+        else
+            R[i, j] = NaN
+        end
     end
     return R
 end
