@@ -4,9 +4,9 @@
 # Same-model bar: per-trait intercepts + latent unique=FALSE (no Ψ) +
 # per-trait NB2 dispersion (R default log_phi_nbinom2[p]; Julia #132).
 #
-# Julia parity entry: plain fit_gllvm(...; family=NegativeBinomial()) defaults
-# to per-trait φ (disp_group=:species → NBGroupedFit). Shared-r remains
-# fit_nb_gllvm (named). Inventory #132 / default-route-phi-20260801.
+# Julia parity entry: fit_gllvm(...; family=NegativeBinomial(), disp_group=:species)
+# → NBGroupedFit (per-trait φ, R's default). Bare NegativeBinomial() fits one shared r
+# since #615 (maintainer decision 2026-10-01). Inventory #132 / default-route-phi-20260801.
 
 using GLLVModels, RCall, Test, Random, LinearAlgebra
 include(joinpath(@__DIR__, "nb2_health.jl"))
@@ -72,9 +72,9 @@ end
     # this file's text from `Random.seed!(45)` up to the first `    jl_fit =` to
     # rebuild the ORIGINAL data, so nothing that changes Y may come before it.
 
-    # Public default route — twin-aligned with gllvmTMB default nbinom2().
+    # Per-trait route, twin-aligned with gllvmTMB default nbinom2().
     jl_fit = (Y = parity_nb2_smoke_Y();
-              fit_gllvm(Y; family = GLLVModels.NegativeBinomial(), K = K,
+              fit_gllvm(Y; family = GLLVModels.NegativeBinomial(), K = K, disp_group = :species,
                         g_tol = 1e-7, iterations = 800))
     @test jl_fit isa NBGroupedFit
     @test jl_fit.converged

@@ -28,14 +28,14 @@
 # The R fit never ran at test time and Julia's fits are not re-tuned to match it.
 using Test
 using GLLVModels
-using Distributions: Normal
+using Distributions: Normal, NegativeBinomial
 using TOML
 using SHA
 
 include(joinpath(@__DIR__, "fixtures", "aghq_p1", "aghq_p1_helpers.jl"))
 
 const _AGHQ_P1_ROWS = [
-    "AGHQ-AUTO-K-POISSON", "AGHQ-AUTO-K-BINOMIAL", "AGHQ-AUTO-K-GAUSSIAN", "AGHQ-DEFAULT-OFF",
+    "AGHQ-AUTO-K-POISSON", "AGHQ-AUTO-K-NB2", "AGHQ-AUTO-K-BINOMIAL", "AGHQ-AUTO-K-GAUSSIAN", "AGHQ-DEFAULT-OFF",
     "AGHQ-POLICY-OFF", "AGHQ-POLICY-EXPLICIT", "AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF",
     "AGHQ-POLICY-AUTO-ENFORCE-CUTOFF", "AGHQ-POLICY-TRAITS19", "AGHQ-POLICY-TRAITS20"]
 
@@ -74,6 +74,9 @@ const _AGHQ_P1_ROWS = [
                 @test isapprox(j.loglik, r["loglik"]; atol = 1e-6, rtol = 0)
                 @test isapprox(j.beta, Float64.(r["beta"]); atol = 1e-3, rtol = 0)
                 @test isapprox(j.lambda, Float64.(r["lambda"]); atol = 1e-3, rtol = 0)
+                # NB2 dispersions are compared on the log scale (the optimised scale; the AGHQ
+                # surface is flat in phi, so phi itself differs by up to 9e-4 absolute at values of 2-6).
+                haskey(r, "phi") && @test isapprox(log.(j.phi), log.(Float64.(r["phi"])); atol = 1e-3, rtol = 0)
                 haskey(r, "sigma_eps") && @test isapprox(j.sigma_eps, r["sigma_eps"]; atol = 1e-3, rtol = 0)
             end
         end

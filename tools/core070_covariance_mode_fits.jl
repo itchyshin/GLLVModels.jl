@@ -22,6 +22,13 @@ baseline_compared = isdir("baseline")
 baseline_optional = get(ENV, "CORE070_BASELINE_OPTIONAL", "") == "1"
 control_policy == "tight-control" && !baseline_compared && !baseline_optional &&
     error("retained baseline required")
+# Set only by test/parity/test_covariance_modes_required.jl for its default-control
+# baseline subprocess, whose R-gradient failures are known and recorded (see
+# docs/dev-log/core070/covariance-mode-fits-contract.md).  It never applies to the
+# tight-control gate run.
+baseline_build = get(ENV, "CORE070_BASELINE_BUILD", "") == "1"
+baseline_build && control_policy == "tight-control" &&
+    error("CORE070_BASELINE_BUILD must not be set for a tight-control run")
 output = abspath(ARGS[1])
 ispath(output) && error("output directory must be fresh: $output")
 mkpath(output)
@@ -363,6 +370,12 @@ for index in eachindex(_CORE070_COVARIANCE_FITS_IDS)
     println(id, " r_grad=", r_gradient_max, " checks=", checks)
 end
 
+if baseline_build
+    println("CORE070_BASELINE_BUILD: default-control baseline; assertions skipped. Expected under default R controls: ",
+        "r_gradient fails for FIT-MODE-ORD-DEP, FIT-MODE-ANIMAL-DEP and FIT-MODE-KERNEL-DEP, and ",
+        "structured_source_covariance also fails for FIT-MODE-ANIMAL-DEP and FIT-MODE-KERNEL-DEP ",
+        "(see docs/dev-log/core070/covariance-mode-fits-contract.md). Only the saved .rds evidence is used.")
+else
 @testset "Core070 fitted Gaussian covariance modes" begin
     @test length(rows) == length(_CORE070_COVARIANCE_FITS_IDS)
     @test [row["id"] for row in rows] == _CORE070_COVARIANCE_FITS_IDS
@@ -376,3 +389,4 @@ end
     end
 end
 println("CORE070_COVARIANCE_MODE_FITS_PASS")
+end
