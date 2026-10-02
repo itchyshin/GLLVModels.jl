@@ -26,6 +26,15 @@ Nine draft PRs, none merged.
 | gllvmTMB #1340 | #1167 | one-iteration termination flag; #897 not fixed |
 | gllvmTMB #1341 | #1326 #1320 | README |
 
+### Second wave (approved 2026-10-02)
+
+| PR | Issues fixed | Notes |
+|---|---|---|
+| GLLVModels.jl #677 | #575 | Tweedie series density about 390× faster; values unchanged (8.9e-16) |
+| GLLVModels.jl #679 | part of #505 | `fit_phylo_gaussian` verdict only; scalar NB1 change dropped (no failing reproduction) |
+| GLLVModels.jl #680 | #573 | ZIP/ZINB never end below their nested count fit |
+| gllvmTMB #1342 | #1330, #1334 | R-side warnings only; root causes still open |
+
 Closed with a verified comment: GLLVModels.jl #152, #129, #482, #499 and gllvmTMB #1163.
 
 ## 3a. Decisions and Rejected Alternatives
@@ -93,8 +102,8 @@ on every slice.
 ## 7a. Issue Ledger
 
 Fixed (PR open):
-- GLLVModels.jl: 134, 137, 138, 139, 141, 143, 145, 146, 147, 150, 151, 153, 158, 159, 161, 162, 498 (item 1), 536, 537, 538, 574
-- gllvmTMB: 1149, 1167, 1320, 1326, 1333, 1335
+- GLLVModels.jl: 134, 137, 138, 139, 141, 143, 145, 146, 147, 150, 151, 153, 158, 159, 161, 162, 498 (item 1), 536, 537, 538, 573, 574, 575; #505 in part (phylo Gaussian only)
+- gllvmTMB: 1149, 1167, 1320, 1326, 1333, 1335; warnings only for 1330 and 1334 (issues stay open)
 
 Closed as already fixed: GLLVModels.jl 129, 152, 482, 499; gllvmTMB 1163.
 
@@ -105,7 +114,6 @@ Needs the maintainer:
 Carried over: #555 (NB postfit methods) waits for NB PR #662 to merge.
 
 Deferred:
-- heavy runs: #573, #575
 - NB lane: #615, #553, #554, #552, #477, #503
 - parity lane: #476
 
@@ -155,6 +163,11 @@ Deferred:
   "failed before: yes". Keep it as a standing gate.
 - Agents that launch `Pkg.test` with `test_args` start the whole suite and can orphan it. Briefs
   should forbid full-suite runs explicitly and ask agents to kill what they start.
+
+- CI caught a regression the targeted tests missed. The #153 binary-tree check went into the
+  Newick parser that the phylo-latent route shares, and that route admits polytomies as R
+  does. Fixed by moving the check into `augmented_phy` (`137602057`). A check placed in a
+  shared helper hits every caller; grep the helper's callers before tightening it.
 
 ## 12. Cross-Product Coverage
 
