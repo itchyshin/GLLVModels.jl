@@ -46,7 +46,7 @@
 # OPENBLAS_NUM_THREADS=1 JULIA_NUM_THREADS=4: a few minutes.
 
 using GLLVModels, TOML, SHA, Statistics, Random, LinearAlgebra
-using Distributions: Normal   # root-project dependency; family marker for select_lv (section 7) and the namespace numeric twins (section 9)
+using Distributions: Normal, NegativeBinomial   # root-project dependency; family marker for select_lv (section 7) and the namespace numeric twins (section 9)
 const GMJ = GLLVModels
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
@@ -1267,9 +1267,9 @@ end
 # 9. namespace numeric twins   test/test_namespace_numeric_p1_twin.jl (itchyshin/GLLVModels.jl#652)
 #    extract_loadings, extract_rotated_loadings_table (one rank-2 Gaussian fit), extract_lv_effects
 #    (predictor-informed fit), extract_communality, extract_Sigma_B, extract_Sigma_W (two-level fit),
-#    each against R at P1 from test/fixtures/ns_numeric_p1.toml. vcov (Julia's public vcov is
-#    diagonal only) and the single-level communality split are NOT bound; see
-#    test/fixtures/repro_namespace_twin_gaps_p1.jl.
+#    each against R at P1 from test/fixtures/ns_numeric_p1.toml, plus vcov (the trait-mean block of the
+#    full covariance, itchyshin/GLLVModels.jl#656). The single-level communality split is NOT bound;
+#    see test/fixtures/repro_namespace_twin_gaps_p1.jl.
 # =============================================================================================
 function _ns_load_csv(path::AbstractString, trait_names::Vector{String}, n_cols::Integer;
                       x_cols::Vector{Int} = Int[], obs_col::Union{Nothing,Int} = nothing)
@@ -1348,6 +1348,21 @@ function receipts_namespace_numeric()
             "$fxp [main.rot_std_loading]", "GLLVModels.extract_rotated_loadings_table(fit, Y; method = :varimax, loading_scale = :standardized).loading, as called at $ctabs",
             Float64.(m["rot_std_loading"]), trs.loading, test_tolerance(tp, "Float64.(m[\"rot_std_loading\"])"), note2)])
 
+    # ---- main fit: vcov.gllvmTMB_multi (the full-covariance fix, itchyshin/GLLVModels.jl#656) ----
+    Vj = vcov(fit, Y)
+    Vjb = Vj[1:p, 1:p]
+    tpv = "test/test_namespace_numeric_p1_twin.jl"
+    (Vj isa Matrix{Float64} && issymmetric(Vj)) || fail("vcov is not a symmetric Matrix{Float64}")
+    maximum(abs, (Vjb - Diagonal(diag(Vjb)))) > 1e-3 || fail("Julia vcov trait-mean block is diagonal")
+    tolv = test_tolerance(tpv, "@test isapprox(diag(Vb), diag(Vr)")
+    tolv[1] == test_tolerance(tpv, "@test isapprox(offd(Vb), offd(Vr)")[1] || fail("vcov diagonal and off-diagonal tolerances differ")
+    push!(out, "namespace-numeric/vcov.json" => Receipt(["namespace/S3method/vcov,gllvmTMB_multi"], "itchyshin/GLLVModels.jl#656",
+        [fxp, datap1], [tp], NOT_A_FIXTURE_PAIR, [
+        mkcase("P1-JULIA-VCOV-TRAIT-MEAN", "vcov(fit): covariance of the six trait means (fixed-effect block of the inverse joint Hessian), 6 x 6 row-major, off-diagonals included",
+            "$fxp [main.vcov]", "GLLVModels.vcov(fit, Y)[1:p, 1:p], as called at " * cite(tp, "V = vcov(fit, Y)") * "; fit as at $fitc",
+            _ns_mat(m["vcov"], p, p), Vjb, tolv,
+            note1 * " Both blocks are at the joint optimum on the natural scale of the trait means (trait order t1..t6), so no reparameterisation map is needed; the test asserts the diagonal and the off-diagonal parts separately at the same tolerance and that R's block is not diagonal (largest off-diagonal above 1e-3). Julia's vcov returned only a diagonal before itchyshin/GLLVModels.jl#656.")]))
+
     # ---- lv fit: extract_lv_effects ----
     l, datap2 = chk("lv")
     Y2, X2, _ = _ns_load_csv(joinpath(ROOT, datap2), tn, n; x_cols = [4, 5])
@@ -1395,6 +1410,175 @@ function receipts_namespace_numeric()
     return out
 end
 
+# =============================================================================================
+# 10. postfit twins   test/test_postfit_twins_p1.jl and test/test_namespace_numeric_p1_twin.jl
+#     Five postfit rows whose batch cases were NON-DISCRIMINATING (R values constant or ~1e-14),
+#     PARTIAL (table-shape check only) or never executed (POST-DEVIANCE), bound to twins on
+#     non-degenerate fixtures: extract_communality (two-level fit) and
+#     extract_rotated_loadings_table (rank-2 fit) reuse the R values of ns_numeric_p1.toml;
+#     tidy (fixed effects), coef and deviance read test/fixtures/postfit_twins_p1.toml.
+# =============================================================================================
+function receipts_postfit_twins()
+    ORIGIN = "itchyshin/GLLVModels.jl#660"
+    out = Pair{String,Receipt}[]
+    dir = "test/fixtures/"
+    mk(rel, sid, fixs, tests, cs) = push!(out, "postfit-twins/$rel.json" => Receipt([sid], ORIGIN, fixs, tests, NOT_A_FIXTURE_PAIR, cs))
+
+    # ---- shared with section 9: ns_numeric_p1.toml ----
+    nsp = "test/fixtures/ns_numeric_p1.toml"
+    tpn = "test/test_namespace_numeric_p1_twin.jl"
+    ns = TOML.parsefile(joinpath(ROOT, nsp))
+    ns["gllvmtmb_commit"] == P1_SHA || fail("namespace numeric fixture is not pinned at P1")
+    tn = String.(ns["trait_names"]); p, n = Int(ns["p"]), Int(ns["n_unit"])
+    function chk(sec)
+        d = ns[sec]
+        datap = dir * d["data_file"]
+        bytes2hex(sha256(read(joinpath(ROOT, datap)))) == d["data_sha256"] || fail("$sec data csv drifted")
+        (d["converged"] === true && d["pd_hessian"] === true) || fail("$sec R fit not converged with a PD Hessian; not a valid twin")
+        return d, datap
+    end
+
+    # ---- two-level fit: extract_communality (unit, unit_obs) ----
+    t, datap3 = chk("two")
+    Y3, _, ind = _ns_load_csv(joinpath(ROOT, datap3), String.(t["trait_names"]), Int(t["n_obs"]); obs_col = 2)
+    fit3 = fit_twolevel_gaussian(Y3, ind; K_B = 1, K_W = 1)
+    fit3.converged || fail("two-level Julia fit did not converge")
+    abs(fit3.loglik - Float64(t["loglik"])) <= 1e-6 || fail("two-level logLik differs from R")
+    fit3c = cite(tpn, "fit = fit_twolevel_gaussian(Y, ind; K_B = 1, K_W = 1)")
+    noteC = "Two-level Gaussian fit, p = 5, 120 units x 4 observations (sha256 checked); R: latent(d = 1) + unique at unit and at unit_obs, converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Replaces the postfit batch case CORE070-ESTIMAND-REBIND-EXTRACT-COMMUNALITY, whose unique = FALSE fixture returned 1 for every trait (a constant 1.0 implementation passed): here the R communalities are five distinct values between 0.08 and 0.61 at the unit tier and between 0.27 and 0.61 at the unit_obs tier."
+    mk("extract_communality", "postfit/POSTFIT-SURFACE-extract_communality", [nsp, datap3], [tpn], [
+        mkcase("P1-JULIA-POSTFIT-COMMUNALITY-UNIT", "per-trait communality at level = unit (between tier), 5 non-constant values",
+            "$nsp [two.communality_unit]", "GLLVModels.extract_communality(fit; level = :unit), as called at " * cite(tpn, "extract_communality(fit; level = :unit)") * "; fit as at $fit3c",
+            Float64.(t["communality_unit"]), extract_communality(fit3; level = :unit), test_tolerance(tpn, "Float64.(t[\"communality_unit\"])"), noteC),
+        mkcase("P1-JULIA-POSTFIT-COMMUNALITY-UNIT-OBS", "per-trait communality at level = unit_obs (within tier), 5 non-constant values",
+            "$nsp [two.communality_unit_obs]", "GLLVModels.extract_communality(fit; level = :unit_obs), as called at " * cite(tpn, "extract_communality(fit; level = :unit_obs)") * "; fit as at $fit3c",
+            Float64.(t["communality_unit_obs"]), extract_communality(fit3; level = :unit_obs), test_tolerance(tpn, "Float64.(t[\"communality_unit_obs\"])"), noteC)])
+
+    # ---- main fit: extract_rotated_loadings_table ----
+    m, datap1 = chk("main")
+    Y, _, _ = _ns_load_csv(joinpath(ROOT, datap1), tn, n)
+    fit = fit_gllvm(Y; family = Normal(), K = 2)
+    fit.converged || fail("main Julia fit did not converge")
+    abs(fit.logLik - Float64(m["loglik"])) <= 1e-6 || fail("main logLik differs from R")
+    fitc = cite(tpn, "fit = fit_gllvm(Y; family = Normal(), K = 2)")
+    trr = extract_rotated_loadings_table(fit, Y; method = :varimax, loading_scale = :raw)
+    trs = extract_rotated_loadings_table(fit, Y; method = :varimax, loading_scale = :standardized)
+    ctab = cite(tpn, "tr = extract_rotated_loadings_table(fit, Y; method = :varimax, loading_scale = :raw)")
+    ctabs = cite(tpn, "ts = extract_rotated_loadings_table(fit, Y; method = :varimax, loading_scale = :standardized)")
+    noteR = "Rank-2 Gaussian fit on the fixture data (sha256 checked), R: latent(0 + trait | unit, d = 2, unique = FALSE) converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Varimax, order_axes = true and sign_anchor = auto on both sides; the table is axis-major (6 traits for axis 1, then axis 2). Replaces the postfit batch case CORE070-WAVE8-EXTRACT-ROTATED-LOADINGS-TABLE-SHAPE, which compared table shape only."
+    mk("extract_rotated_loadings_table", "postfit/POSTFIT-SURFACE-extract_rotated_loadings_table", [nsp, datap1], [tpn], [
+        mkcase("P1-JULIA-POSTFIT-ROTATED-LOADINGS-TABLE-RAW", "varimax-rotated raw loadings, table column `loading` (12 values)",
+            "$nsp [main.rot_raw_loading]", "GLLVModels.extract_rotated_loadings_table(fit, Y; method = :varimax, loading_scale = :raw).loading, as called at $ctab; fit as at $fitc",
+            Float64.(m["rot_raw_loading"]), trr.loading, test_tolerance(tpn, "Float64.(m[\"rot_raw_loading\"])"), noteR),
+        mkcase("P1-JULIA-POSTFIT-ROTATED-LOADINGS-TABLE-AXIS-VARIANCE", "table column `axis_variance`, one value per axis (2 values)",
+            "$nsp [main.rot_raw_axis_variance]", "same call as $ctab, .axis_variance at the first row of each axis",
+            Float64.(m["rot_raw_axis_variance"]), trr.axis_variance[[1, p + 1]], test_tolerance(tpn, "Float64.(m[\"rot_raw_axis_variance\"])"), noteR),
+        mkcase("P1-JULIA-POSTFIT-ROTATED-LOADINGS-TABLE-AXIS-SHARE", "table column `axis_share`, one value per axis (2 values)",
+            "$nsp [main.rot_raw_axis_share]", "same call as $ctab, .axis_share at the first row of each axis",
+            Float64.(m["rot_raw_axis_share"]), trr.axis_share[[1, p + 1]], test_tolerance(tpn, "Float64.(m[\"rot_raw_axis_share\"])"), noteR),
+        mkcase("P1-JULIA-POSTFIT-ROTATED-LOADINGS-TABLE-STANDARDIZED", "varimax-rotated standardized loadings, `loading` with loading_scale = standardized (12 values)",
+            "$nsp [main.rot_std_loading]", "GLLVModels.extract_rotated_loadings_table(fit, Y; method = :varimax, loading_scale = :standardized).loading, as called at $ctabs; fit as at $fitc",
+            Float64.(m["rot_std_loading"]), trs.loading, test_tolerance(tpn, "Float64.(m[\"rot_std_loading\"])"), noteR)])
+
+    # ---- uncentred main fit: tidy (fixed), coef, deviance ----
+    pfp = "test/fixtures/postfit_twins_p1.toml"
+    tpp = "test/test_postfit_twins_p1.jl"
+    pf = TOML.parsefile(joinpath(ROOT, pfp))
+    pf["gllvmtmb_commit"] == P1_SHA || fail("postfit twin fixture is not pinned at P1")
+    q = pf["main"]
+    datapq = dir * q["data_file"]
+    bytes2hex(sha256(read(joinpath(ROOT, datapq)))) == q["data_sha256"] || fail("postfit twin data csv drifted")
+    (q["converged"] === true && q["pd_hessian"] === true) || fail("postfit twin R fit not converged with a PD Hessian; not a valid twin")
+    abs(fit.logLik - Float64(q["loglik"])) <= 1e-6 || fail("postfit twin logLik differs from R")
+    fitq = cite(tpp, "fit = fit_gllvm(Y; family = Normal(), K = 2)")
+    noteU = "Rank-2 Gaussian fit on UNCENTRED data (trait means 0.5, -0.3, 0.2, 0.8, -0.6, 0.1; sha256 checked); R: value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE) converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). The R values are far from zero (smallest |value| about 0.058) and pairwise distinct, so a constant or zero implementation fails. The postfit batch fixture these rows replace was row-centred (R values ~1e-14)."
+    Rcoef = Float64.(q["coef"])
+    rows = tidy(fit, Y)
+    mk("tidy", "postfit/POSTFIT-SURFACE-tidy.gllvmTMB_multi", [pfp, datapq], [tpp], [
+        mkcase("P1-JULIA-POSTFIT-TIDY-FIXED", "tidy(fit)\$estimate, fixed effects (6 trait means)",
+            "$pfp [main.tidy_estimate]", "[r.estimate for r in GLLVModels.tidy(fit, Y)], as called at " * cite(tpp, "rows = tidy(fit, Y)") * "; fit as at $fitq",
+            Float64.(q["tidy_estimate"]), [r.estimate for r in rows], test_tolerance(tpp, "[r.estimate for r in rows]"), noteU)])
+    mk("coef", "postfit-policy/POST-COEF-NAMED", [pfp, datapq], [tpp], [
+        mkcase("P1-JULIA-POSTFIT-COEF-NAMED", "coef(fit), 6 fixed-effect coefficients (trait means)",
+            "$pfp [main.coef]", "StatsAPI.coef(fit), as called at " * cite(tpp, "@test isapprox(coef(fit), Float64.(m[\"coef\"])") * "; fit as at $fitq",
+            Rcoef, coef(fit), test_tolerance(tpp, "@test isapprox(coef(fit), Float64.(m[\"coef\"])"), noteU * " Compared elementwise by value; the R names (traitt1, ..., traitt6) are asserted equal to \"trait\" * trait name in the test, Julia's coef is unnamed.")])
+    mk("deviance", "postfit-policy/POST-DEVIANCE", [pfp, datapq], [tpp], [
+        mkcase("P1-JULIA-POSTFIT-DEVIANCE", "deviance(fit), scalar",
+            "$pfp [main.deviance]", "StatsAPI.deviance(fit), as called at " * cite(tpp, "@test isapprox(deviance(fit)") * "; fit as at $fitq",
+            Float64(q["deviance"]), deviance(fit), test_tolerance(tpp, "@test isapprox(deviance(fit)"), noteU * " Julia's deviance is -2 logLik; R's is read from deviance(fit), so the comparison is R's own deviance against that identity, not a copy of the log-likelihood guard.")])
+    return out
+end
+
+# =============================================================================================
+# 11. namespace numeric twins (b)   test/test_namespace_numeric_p1_twin_b.jl
+#    tidy.gllvmTMB_multi (fixed effects of the rank-2 Gaussian fit), and the Beta and nbinom2 family
+#    exports (one-axis latent fits), each against R at P1 from test/fixtures/ns_numeric_p1_b.toml.
+# =============================================================================================
+function receipts_namespace_numeric_b()
+    fxp = "test/fixtures/ns_numeric_p1_b.toml"
+    tp = "test/test_namespace_numeric_p1_twin_b.jl"
+    fx = TOML.parsefile(joinpath(ROOT, fxp))
+    fx["gllvmtmb_commit"] == P1_SHA || fail("namespace numeric (b) fixture is not pinned at P1")
+    dir = "test/fixtures/"
+    p, n = Int(fx["p"]), Int(fx["n_unit"])
+    ORIGIN = "itchyshin/GLLVModels.jl#663"
+    function chk(sec)
+        d = fx[sec]
+        datap = dir * d["data_file"]
+        bytes2hex(sha256(read(joinpath(ROOT, datap)))) == d["data_sha256"] || fail("$sec data csv drifted")
+        (d["converged"] === true && d["pd_hessian"] === true) || fail("$sec R fit not converged with a PD Hessian; not a valid twin")
+        return d, datap
+    end
+    out = Pair{String,Receipt}[]
+    mk(rel, sid, fixs, cs) = push!(out, "namespace-numeric/$rel.json" => Receipt([sid], ORIGIN, fixs, [tp], NOT_A_FIXTURE_PAIR, cs))
+
+    # ---- tidy ----
+    t, datap = chk("tidy")
+    Y, _, _ = _ns_load_csv(joinpath(ROOT, datap), String.(fx["trait_names"]), n)
+    fit = fit_gllvm(Y; family = Normal(), K = 2)
+    fit.converged || fail("tidy Julia fit did not converge")
+    abs(fit.logLik - Float64(t["loglik"])) <= 1e-6 || fail("tidy logLik differs from R")
+    tb = tidy(fit, Y)
+    length(tb) == p == length(t["terms"]) || fail("tidy row count differs from R")
+    fitc = cite(tp, "fit = fit_gllvm(Y; family = Normal(), K = 2)")
+    tcall = cite(tp, "tb = tidy(fit, Y)")
+    noteT = "Rank-2 Gaussian fit on the fixture data (sha256 checked; the same data as the main fit of the extract_loadings twin), R: latent(0 + trait | unit, d = 2, unique = FALSE) converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Rows are the six trait intercepts in trait order (R terms traitt1..traitt6, Julia beta[1..6]); the test asserts the row count and the identity link on both sides, and the numbers are compared elementwise."
+    mk("tidy", "namespace/S3method/tidy,gllvmTMB_multi", [fxp, datap], [
+        mkcase("P1-JULIA-TIDY-ESTIMATE", "tidy(fit) fixed rows, column `estimate`, 6 trait intercepts",
+            "$fxp [tidy.estimate]", "GLLVModels.tidy(fit, Y), field estimate, as called at $tcall; fit as at $fitc",
+            Float64.(t["estimate"]), [r.estimate for r in tb], test_tolerance(tp, "[r.estimate for r in tb]"), noteT),
+        mkcase("P1-JULIA-TIDY-STD-ERROR", "tidy(fit) fixed rows, column `std.error`, 6 Wald standard errors",
+            "$fxp [tidy.std_error]", "GLLVModels.tidy(fit, Y), field std_error, as called at $tcall; fit as at $fitc",
+            Float64.(t["std_error"]), [r.std_error for r in tb], test_tolerance(tp, "[r.std_error for r in tb]"), noteT)])
+
+    # ---- Beta, nbinom2 ----
+    for (k, (sec, sid, fam, fld, famtxt, rfam)) in enumerate((
+            ("beta", "namespace/export/Beta", GLLVModels.Beta(), :φ, "fit_gllvm(Y; family = GLLVModels.Beta(), K = 1)", "Beta()"),
+            ("nb2", "namespace/export/nbinom2", NegativeBinomial(1.0, 0.5), :r_group, "fit_gllvm(Y; family = NegativeBinomial(1.0, 0.5), K = 1)", "nbinom2()")))
+        b, datab = chk(sec)
+        Yb, _, _ = _ns_load_csv(joinpath(ROOT, datab), String.(fx["trait_names"]), n)
+        f = fit_gllvm(Yb; family = fam, K = 1)
+        f.converged || fail("$sec Julia fit did not converge")
+        f.group == collect(1:p) || fail("$sec dispersion is not per trait")
+        abs(f.loglik - Float64(b["loglik"])) <= 1e-6 || fail("$sec logLik differs from R")
+        fc = cite(tp, "fit = fit_gllvm(Y; family = " * (k == 1 ? "GLLVModels.Beta()" : "NegativeBinomial(1.0, 0.5)") * ", K = 1)")
+        note = "One-axis latent fit, p = 6, n = 200 (sha256 checked); R: value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE), family = $rfam, converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Dispersion is per trait on both sides. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda' (6 x 6)."
+        L = f.Λ * f.Λ'
+        mk(sec == "beta" ? "Beta" : "nbinom2", sid, [fxp, datab], [
+            mkcase("P1-JULIA-$(uppercase(sec))-INTERCEPTS", "trait intercepts (6 values) of a family = $rfam latent fit",
+                "$fxp [$sec.beta]", "GLLVModels.fit_gllvm(...).β, fit as at $fc",
+                Float64.(b["beta"]), f.β, test_tolerance(tp, "@test isapprox(bj, Float64.(b[\"beta\"])"; nth = k), note),
+            mkcase("P1-JULIA-$(uppercase(sec))-LAMBDA-LAMBDAT", "Lambda Lambda' (6 x 6) of a family = $rfam latent fit",
+                "$fxp [$sec.lambda_lambdat]", "GLLVModels.fit_gllvm(...).Λ * Λ', fit as at $fc",
+                _ns_mat(b["lambda_lambdat"], p, p), L, test_tolerance(tp, "@test isapprox(LLt, _nsb_mat(b[\"lambda_lambdat\"], p, p)"; nth = k), note),
+            mkcase("P1-JULIA-$(uppercase(sec))-DISPERSION", "per-trait dispersion phi (6 values) of a family = $rfam latent fit",
+                "$fxp [$sec.phi]", "GLLVModels.fit_gllvm(...).$(fld), fit as at $fc",
+                Float64.(b["phi"]), getproperty(f, fld), test_tolerance(tp, "@test isapprox(phij, Float64.(b[\"phi\"])"; nth = k),
+                note * (sec == "beta" ? " R reports phi_beta; Julia the Beta precision phi." : " R reports exp(log_phi_nbinom2) with variance mu + mu^2/phi; Julia the NB size r (the same parameter)."))])
+    end
+    return out
+end
+
 # ---------------------------------------------------------------------------------------------
 # Driver
 # ---------------------------------------------------------------------------------------------
@@ -1405,7 +1589,9 @@ function build()
             ("aghq", receipts_aghq), ("model-comparison", receipts_model_comparison),
             ("select-lv", receipts_select_lv), ("isdm", receipts_isdm),
             ("isdm-admission", receipts_isdm_admission),
-            ("namespace-numeric", receipts_namespace_numeric))
+            ("namespace-numeric", receipts_namespace_numeric),
+            ("postfit-twins", receipts_postfit_twins),
+            ("namespace-numeric-b", receipts_namespace_numeric_b))
         t0 = time()
         append!(out, f())
         @info "built $name receipts" seconds = round(time() - t0; digits = 1)

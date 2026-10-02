@@ -10,7 +10,7 @@
   "origin_pr": "itchyshin/GLLVModels.jl#518",
   "generator": "tools/true_parity_julia_receipts.jl",
   "julia_version": "1.10.0",
-  "gllvmodels_commit": "a86d2279a8447fcf42c05a5751c9ba49a7c7da40",
+  "gllvmodels_commit": "3fcf206986f934686204a3f70b7fe50edc27771d",
   "source_fixtures": [
     {
       "path": "test/fixtures/select_lv_p1.toml",

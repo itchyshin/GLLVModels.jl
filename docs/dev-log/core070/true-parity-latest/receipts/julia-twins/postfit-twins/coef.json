@@ -1,0 +1,63 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "postfit-policy/POST-COEF-NAMED"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#660",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "3fcf206986f934686204a3f70b7fe50edc27771d",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/postfit_twins_p1.toml",
+      "sha256": "6f1d459081779e83a4efd5e0ec63acc3fe1828ef2105e0e08478ec2561f19922"
+    },
+    {
+      "path": "test/fixtures/ns_gauss_p1_data.csv",
+      "sha256": "e714fa10411f6a66150c534506dec87cf1c748fed4c55ae13942828f1fca0326"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_postfit_twins_p1.jl",
+      "sha256": "12e68d6359ba42b0fa46075bf994a358447cd41dde00d695294c6797f72a55a6"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-POSTFIT-COEF-NAMED",
+        "quantity": "coef(fit), 6 fixed-effect coefficients (trait means)",
+        "r_source": "test/fixtures/postfit_twins_p1.toml [main.coef]",
+        "julia_source": "StatsAPI.coef(fit), as called at test/test_postfit_twins_p1.jl:59; fit as at test/test_postfit_twins_p1.jl:52",
+        "r_value": [
+          0.5582060338056996,
+          -0.19181654412747803,
+          0.0928342017364656,
+          0.8417865231650219,
+          -0.5158543500540521,
+          0.058444463325015
+        ],
+        "julia_value": [
+          0.5582060338057427,
+          -0.19181654412777674,
+          0.0928342017363344,
+          0.8417865231651739,
+          -0.5158543500539483,
+          0.05844446332495955
+        ],
+        "abs_diff": 2.9870550477539837e-13,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_postfit_twins_p1.jl:59",
+        "tolerance_source_line": "@test isapprox(coef(fit), Float64.(m[\"coef\"]); atol = 1e-6, rtol = 0)   # POST-COEF-NAMED (observed 3e-13)",
+        "note": "Rank-2 Gaussian fit on UNCENTRED data (trait means 0.5, -0.3, 0.2, 0.8, -0.6, 0.1; sha256 checked); R: value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE) converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). The R values are far from zero (smallest |value| about 0.058) and pairwise distinct, so a constant or zero implementation fails. The postfit batch fixture these rows replace was row-centred (R values ~1e-14). Compared elementwise by value; the R names (traitt1, ..., traitt6) are asserted equal to \"trait\" * trait name in the test, Julia's coef is unnamed."
+      }
+    ]
+  }
+}
