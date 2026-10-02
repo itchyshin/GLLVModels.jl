@@ -2,6 +2,15 @@
 
 ## Development
 
+- **Robustness sweep (#138, #143, #145, #146, #147, #158, #161).** The bridge no longer turns
+  every `getLV` failure into empty scores (only a missing method does, with a warning).
+  Transformed-Wald CIs report non-PD when the Hessian is indefinite. `em_fa` takes an `rng`
+  keyword and its default start is now reproducible (fixed-seed). The SQUAREM premature-stop
+  fallback returns the best of polished / warm-start plain-EM, not the known-worse point. The
+  Beta family clamps y to [1e-12, 1-1e-12] like gllvmTMB (interior unchanged). Docstring and
+  comment corrections for the contrasts no-loadings case and the `em_fa` init. Test:
+  `test/test_robustness_sweep.jl`.
+
 - **Per-species NB2 fits: up to three more polish rounds when still not converged (#615).**
   After #655, 128 of the 1,440 per-species fits in the #615 grid still reported
   `converged = false`, 90 of them at p = 24 with common r = 20. Tracing 11 of them
