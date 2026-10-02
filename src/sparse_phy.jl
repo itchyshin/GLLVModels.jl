@@ -188,11 +188,6 @@ function _parse_node!(c::_NewickCursor,
         _peek(c) == ')' ||
             error("expected ')' at position $(c.i) in Newick string")
         _advance(c)
-        # binary trees only: reject unary and multifurcating nodes per node
-        # (the global 2p-1 count alone can be satisfied by a mix of both).
-        length(children_local) == 2 ||
-            error("tree is not binary (internal node with $(length(children_local)) " *
-                  "children at position $(c.i); every internal node must have exactly two)")
         # internal node label (optional, discarded — minimal grammar)
         name = ""
         if _peek(c) != ':' && _peek(c) != ',' && _peek(c) != ')' && _peek(c) != ';'
@@ -298,6 +293,19 @@ function augmented_phy(newick::AbstractString; correlation::Bool = false)
     p = length(leaf_indices)
     n_total == 2 * p - 1 ||
         error("tree is not binary (got $n_total nodes for $p leaves; expected $(2p - 1))")
+    # Binary trees only, checked per node: the global 2p-1 count alone can be
+    # satisfied by a polytomy plus a unary node (#153). The check lives here, not
+    # in the shared `_parse_node!`, because the phylo-latent route admits polytomies.
+    n_children = zeros(Int, n_total)
+    for par in node_parent
+        par > 0 && (n_children[par] += 1)
+    end
+    for i in 1:n_total
+        node_is_leaf[i] && continue
+        n_children[i] == 2 ||
+            error("tree is not binary (an internal node has $(n_children[i]) " *
+                  "children; every internal node must have exactly two)")
+    end
     perm = Vector{Int}(undef, n_total)   # perm[new_idx] = old_idx
     new_idx_of = Vector{Int}(undef, n_total)
     for (new_i, old_i) in enumerate(leaf_indices)
