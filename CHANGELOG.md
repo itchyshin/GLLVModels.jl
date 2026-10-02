@@ -2,6 +2,19 @@
 
 ## Development
 
+- **`fit_phylo_gaussian` and `fit_nb1_gllvm` no longer report `converged = true` after a
+  zero-length step (#505, the remaining #485 class).** Optim also counts a zero-length
+  line-search step as convergence, so a start the finite-difference gradient cannot leave
+  could be reported converged at a gradient of ~1e9 or NaN (reproduced for
+  `fit_phylo_gaussian` with log-variance starts of (30, -30)). Both fitters now also
+  require the scale-aware gradient test `gres <= max(g_tol, g_tol * |nll|)` already used by
+  `_tweedie_verdict` and `fit_nb1_gllvm_grouped`. Estimates and log-likelihoods are
+  unchanged; only `converged` can flip to `false`. The NB1 scalar route could not be made
+  to stall in a deterministic test, so its change is covered by the helper contract and a
+  converged-implies-stationary relation. Not covered here: `fit_nb1_gllvm_grouped_cov`
+  (in `grouped_dispersion.jl`, another lane), the ~100 other `_fit_verdict(res)` sites,
+  and ordered beta (#501, fixed at its cause by the damped mode search).
+
 - **Per-species NB2 polish refits use dense BFGS instead of L-BFGS (#615).** After
   #659, 17 of the 1,440 per-species fits in the #615 grid still reported
   `converged = false`, all with common r = 20 at p = 24. They were close to their
