@@ -97,4 +97,29 @@ using GLLVModels, Test, Random, LinearAlgebra
         @test all(isfinite, R2)
         @test all(==(1.0), diag(R2))
     end
+
+    @testset "#141 cases the old correlation() got wrong" begin
+        Random.seed!(5)
+        y = randn(3, 40)
+        fit = fit_gaussian_gllvm(y; K = 1, has_diag = true)
+        @test fit.pars.σ²_B !== nothing
+        mk(Λ, σ²_B) = GLLVModels.GllvmFit(fit.model,
+            merge(fit.pars, (Λ = Λ, σ_eps = 0.0, σ²_B = σ²_B,
+                             σ²_W = fit.pars.σ²_W === nothing ? nothing : zero(fit.pars.σ²_W))),
+            fit.logLik, fit.n_iter, fit.converged, fit.optim_result, fit.cputime)
+        quiet(f) = Test.@test_logs min_level = Base.CoreLogging.Error f()
+        # (a) Σ[i,i]·Σ[j,j] underflows to 0 although each variance is positive:
+        # the old code returned Inf (1e-200 / sqrt(0)).
+        tiny = mk(fill(1e-100, 3, 1), zeros(3))
+        Ra = quiet(() -> GLLVModels.correlation(tiny))
+        @test all(isfinite, Ra)
+        @test all(≈(1.0), Ra)
+        # (b) tiny negative round-off variance: the old code hit sqrt of a
+        # negative product (DomainError).
+        σ²neg = [0.0, -1e-18, 0.0]
+        neg = mk(reshape([0.5, 0.0, 0.4], 3, 1), σ²neg)
+        Rb = quiet(() -> GLLVModels.correlation(neg))
+        @test isnan(Rb[2, 1]) && isnan(Rb[1, 2]) && isnan(Rb[2, 2])
+        @test isfinite(Rb[1, 3]) && Rb[1, 3] ≈ 1.0
+    end
 end

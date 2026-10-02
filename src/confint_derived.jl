@@ -289,10 +289,16 @@ function correlation(fit::GllvmFit)
     R = similar(Σ, Float64)
     bad = [t for t in 1:p if !(Σ[t, t] > 0)]
     isempty(bad) || @warn "correlation: trait(s) $(bad) have non-positive variance " *
-        "Σ_y_site[t, t] ≤ 0; their correlations are returned as NaN"
+        "Σ_y_site[t, t] ≤ 0; their correlations are returned as NaN" maxlog = 1
     @inbounds for j in 1:p, i in 1:p
-        R[i, j] = (Σ[i, i] > 0 && Σ[j, j] > 0) ?
-            Σ[i, j] / sqrt(Σ[i, i] * Σ[j, j]) : NaN
+        if Σ[i, i] > 0 && Σ[j, j] > 0
+            denom = sqrt(Σ[i, i] * Σ[j, j])
+            # the product can underflow to 0 although each variance is positive
+            denom > 0 || (denom = sqrt(Σ[i, i]) * sqrt(Σ[j, j]))
+            R[i, j] = Σ[i, j] / denom
+        else
+            R[i, j] = NaN
+        end
     end
     return R
 end
