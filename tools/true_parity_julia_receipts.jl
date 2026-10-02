@@ -1554,14 +1554,14 @@ function receipts_namespace_numeric_b()
     # ---- Beta, nbinom2 ----
     for (k, (sec, sid, fam, fld, famtxt, rfam)) in enumerate((
             ("beta", "namespace/export/Beta", GLLVModels.Beta(), :φ, "fit_gllvm(Y; family = GLLVModels.Beta(), K = 1)", "Beta()"),
-            ("nb2", "namespace/export/nbinom2", NegativeBinomial(1.0, 0.5), :r_group, "fit_gllvm(Y; family = NegativeBinomial(1.0, 0.5), K = 1)", "nbinom2()")))
+            ("nb2", "namespace/export/nbinom2", NegativeBinomial(1.0, 0.5), :r_group, "fit_gllvm(Y; family = NegativeBinomial(1.0, 0.5), disp_group = :species, K = 1)", "nbinom2()")))
         b, datab = chk(sec)
         Yb, _, _ = _ns_load_csv(joinpath(ROOT, datab), String.(fx["trait_names"]), n)
-        f = fit_gllvm(Yb; family = fam, K = 1)
+        f = sec == "nb2" ? fit_gllvm(Yb; family = fam, disp_group = :species, K = 1) : fit_gllvm(Yb; family = fam, K = 1)
         f.converged || fail("$sec Julia fit did not converge")
         f.group == collect(1:p) || fail("$sec dispersion is not per trait")
         abs(f.loglik - Float64(b["loglik"])) <= 1e-6 || fail("$sec logLik differs from R")
-        fc = cite(tp, "fit = fit_gllvm(Y; family = " * (k == 1 ? "GLLVModels.Beta()" : "NegativeBinomial(1.0, 0.5)") * ", K = 1)")
+        fc = cite(tp, "fit = fit_gllvm(Y; family = " * (k == 1 ? "GLLVModels.Beta()" : "NegativeBinomial(1.0, 0.5), disp_group = :species") * ", K = 1)")
         note = "One-axis latent fit, p = 6, n = 200 (sha256 checked); R: value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE), family = $rfam, converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Dispersion is per trait on both sides. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda' (6 x 6)."
         L = f.Λ * f.Λ'
         mk(sec == "beta" ? "Beta" : "nbinom2", sid, [fxp, datab], [
