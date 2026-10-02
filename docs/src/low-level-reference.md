@@ -83,7 +83,7 @@ GLLVModels._source_fixed_sigma
 ## Internal AGHQ adaptation and optimization
 
 These helpers expose the frozen-node surrogate used by the opt-in public
-Poisson, binomial, Gaussian, NB2, ordinal and Tweedie candidates. They are internal implementation interfaces. Passing their
+Poisson, binomial, Gaussian, NB2, ordinal, Tweedie and Delta-Gamma candidates. They are internal implementation interfaces. Passing their
 checks alone does not establish public parity for other response families.
 
 ```@docs
@@ -102,6 +102,9 @@ GLLVModels.OrdinalPerTraitAGHQFit
 GLLVModels.aghq_tweedie_problem
 GLLVModels.fit_tweedie_gllvm_grouped_aghq
 GLLVModels.TweedieGroupedAGHQFit
+GLLVModels.aghq_delta_gamma_problem
+GLLVModels.fit_delta_gamma_gllvm_aghq
+GLLVModels.DeltaGammaAGHQFit
 GLLVModels.aghq_outer_optimize
 GLLVModels.aghq_multistart_optimize
 GLLVModels._fit_poisson_gllvm_laplace
