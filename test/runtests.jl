@@ -510,3 +510,4 @@ println(_SHARD === nothing ?
     _shard_include("test_temporal_composed_receipts.jl")
     _shard_include("test_isdm.jl")
 end
+include("test_readme_quickstart.jl")
