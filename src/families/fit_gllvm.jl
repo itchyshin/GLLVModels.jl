@@ -448,8 +448,13 @@ end
 _fit_gllvm_grouped(::Beta,  Y::AbstractMatrix; kwargs...) = fit_beta_gllvm_grouped(Y; kwargs...)
 _fit_gllvm_grouped(::Gamma, Y::AbstractMatrix; kwargs...) = fit_gamma_gllvm_grouped(Y; kwargs...)
 _fit_gllvm_grouped(::NB1,   Y::AbstractMatrix; kwargs...) = fit_nb1_gllvm_grouped(Y; kwargs...)
-_fit_gllvm_grouped(::TweedieED, Y::AbstractMatrix; kwargs...) =
-    fit_tweedie_gllvm_grouped(Y; kwargs...)
+# `aghq` / `aghq_control` are peeled here so the Laplace fitter's keyword set is
+# untouched; `aghq = false` (default) is exactly the previous call.
+function _fit_gllvm_grouped(::TweedieED, Y::AbstractMatrix; aghq = false,
+        aghq_control = (;), kwargs...)
+    _aghq_request(aghq) === :off && return fit_tweedie_gllvm_grouped(Y; kwargs...)
+    return fit_tweedie_gllvm_grouped_aghq(Y; aghq = aghq, aghq_control = aghq_control, kwargs...)
+end
 _fit_gllvm_grouped(family::StudentTFamily, Y::AbstractMatrix; group = nothing, kwargs...) =
     fit_studentt_gllvm(Y; nu = family.ν, disp_group = :species, kwargs...)
 

@@ -120,6 +120,7 @@ println(_SHARD === nothing ?
     _shard_include("test_aghq_public_poisson.jl")
     _shard_include("test_aghq_nb2.jl")
     _shard_include("test_aghq_ordinal.jl")
+    _shard_include("test_aghq_tweedie.jl")
     _shard_include("test_aghq_gaussian.jl")
     _shard_include("test_aghq_public_gaussian.jl")
     _shard_include("test_gaussian_empty_design.jl")
