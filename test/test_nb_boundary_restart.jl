@@ -22,7 +22,8 @@ end
         # b4d5fee64) reaches -835.369277 with every r finite; that point is a local
         # maximum (a point with trait 3 at the Poisson limit is 0.317 higher).
         Y = _nb2_restart_fixture("nb2_restart_seed46.toml")
-        fit = fit_gllvm(Y; family = GLLVModels.NegativeBinomial(), K = 2, g_tol = 1e-7, iterations = 800)
+        fit = fit_gllvm(Y; family = GLLVModels.NegativeBinomial(), K = 2, disp_group = :species,
+                        g_tol = 1e-7, iterations = 800)
         @test fit isa NBGroupedFit
         @test fit.loglik >= -835.369277 - 1e-5
     end
@@ -32,7 +33,8 @@ end
         # -833.6085; resetting group 5 alone gives -833.1814 with trait 2 still at the
         # boundary, which is the better point.
         Y = _nb2_restart_fixture("nb2_restart_seed52.toml")
-        fit = fit_gllvm(Y; family = GLLVModels.NegativeBinomial(), K = 2, g_tol = 1e-7, iterations = 800)
+        fit = fit_gllvm(Y; family = GLLVModels.NegativeBinomial(), K = 2, disp_group = :species,
+                        g_tol = 1e-7, iterations = 800)
         @test fit.loglik >= -833.181377 - 1e-5
         @test fit.dispersion_boundary[2]
         @test fit.converged   # the upper end (r > 1e6) is warn-only (decision 2026-09-29); the flag above still marks it

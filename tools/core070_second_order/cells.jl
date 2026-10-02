@@ -298,7 +298,7 @@ function cell_nb2()
     end
 
     t0 = time()
-    fit = fit_gllvm(Y; family = GLLVModels.NegativeBinomial(), K = K, g_tol = 1e-7, iterations = 800)
+    fit = fit_gllvm(Y; family = GLLVModels.NegativeBinomial(), K = K, disp_group = :species, g_tol = 1e-7, iterations = 800)
     wall_fit = time() - t0
     ci = confint(fit, Float64.(Y); method = :wald)
     ad = GLLVModels._family_ci(fit, Float64.(Y); objective = :laplace)

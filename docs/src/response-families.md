@@ -19,7 +19,7 @@ fit_gllvm(Yb; family = Binomial(), K = 2, link = LogitLink())
 # Count data — Laplace marginal
 fit_gllvm(Yc; family = Poisson(), K = 2)
 
-# Overdispersed counts — per-species r by default (NBGroupedFit)
+# Overdispersed counts: one shared r by default (NBFit); disp_group = :species for per-species r
 fit_gllvm(Yc; family = NegativeBinomial(), K = 2)
 
 # Proportions in (0,1) — per-species φ by default (BetaGroupedFit)
@@ -234,16 +234,22 @@ is no R-bridge route for it.
 ### Negative Binomial — `NegativeBinomial()`
 
 ```julia
-fit = fit_gllvm(Yc; family = NegativeBinomial(), K = 2)   # per-species r (default)
+fit = fit_gllvm(Yc; family = NegativeBinomial(), K = 2)   # shared r (default)
+fit = fit_gllvm(Yc; family = NegativeBinomial(), K = 2, disp_group = :species)   # per-species r
 ```
 
 For overdispersed counts. The NB2 variance function is Var = μ + μ²/r. The
-public `fit_gllvm` default estimates **per-species** dispersion (returns
-`NBGroupedFit`; `fit.r_group`), matching gllvmTMB's length-`p` `log_phi_nbinom2`.
-With shared site covariates (`@formula` / bridge `X`), the default is
+public `fit_gllvm` default estimates **one shared** `r` (returns `NBFit`, via
+[`fit_nb_gllvm`](@ref)). This was chosen on a simulation grid: when the true `r`
+is common to all species, shared `r` recovers it better, and per-species `r`
+costs 110 to 260 times the fitting time. Per-species `r` is better when `r`
+really varies across species. Pass `disp_group = :species` for per-species `r`
+(returns `NBGroupedFit`; `fit.r_group`). The `@formula` front end (with or
+without covariates) and the R bridge keep per-trait `r`, matching gllvmTMB's
+length-`p` `log_phi_nbinom2`; with shared site covariates the per-trait route is
 [`fit_nb_gllvm_grouped_cov`](@ref) (per-trait `r` + shared `γ`). As `r → ∞` the
-negative binomial collapses to Poisson. For a single shared `r` across species,
-call [`fit_nb_gllvm`](@ref) (no-X) or [`fit_gllvm_cov`](@ref) (with X).
+negative binomial collapses to Poisson. For a single shared `r` with covariates,
+call [`fit_gllvm_cov`](@ref).
 
 The NB2 route is still experimental for demanding fits. The recorded R
 comparison currently fails the stricter likelihood and fit-health checks: its
@@ -892,15 +898,17 @@ starting value.
 
 ### Per-species and grouped dispersion
 
-For `NegativeBinomial`, `Beta`, `NB1`, and `BetaBinom`, the public `fit_gllvm`
-default already uses per-species dispersion (`disp_group = :species`). Pass an
-integer `disp_group` vector for custom grouping, or call the named shared fitters
-(`fit_nb_gllvm` / `fit_beta_gllvm` / `fit_nb1_gllvm` /
-`fit_beta_binomial_gllvm`) for one dispersion across all species.
+For `Beta`, `NB1`, and `BetaBinom`, the public `fit_gllvm` default already uses
+per-species dispersion (`disp_group = :species`). Pass an integer `disp_group`
+vector for custom grouping, or call the named shared fitters (`fit_beta_gllvm` /
+`fit_nb1_gllvm` / `fit_beta_binomial_gllvm`) for one dispersion across all
+species.
 
-The remaining dispersion families (`Gamma`, Tweedie) still default to a shared
-parameter on `fit_gllvm` / their named drivers; use a `_grouped` driver or
-`disp_group = :species` to vary by species (gllvm's `disp.group`):
+`NegativeBinomial` defaults to one shared `r` on `fit_gllvm` (`NBFit`); pass
+`disp_group = :species` for per-species `r`. The remaining dispersion families
+(`Gamma`, Tweedie) also default to a shared parameter on `fit_gllvm` / their
+named drivers; use a `_grouped` driver or `disp_group = :species` to vary by
+species (gllvm's `disp.group`):
 
 ```julia
 fit_nb_gllvm_grouped(Yc;  K = 2, group = group)   # NB2 dispersion r per group
@@ -915,7 +923,8 @@ fit_tweedie_gllvm_grouped(Yc; K = 2)             # Tweedie dispersion φ per spe
 per-species. The beta-binomial drivers additionally need the trial counts `N`.)
 
 ```julia
-fit_gllvm(Yc; family = NegativeBinomial(), K = 2)                 # default = per-species
+fit_gllvm(Yc; family = NegativeBinomial(), K = 2)                 # default = shared r
+fit_gllvm(Yc; family = NegativeBinomial(), K = 2, disp_group = :species)  # per-species r
 fit_gllvm(Yc; family = NB1(), K = 2)                              # default = per-species
 fit_gllvm(Yb; family = BetaBinom(), K = 2, N = trials)            # default = per-species; N required
 fit_gllvm(Yp; family = Beta(), K = 2, disp_group = group)         # custom groups
