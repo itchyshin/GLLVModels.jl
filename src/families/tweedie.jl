@@ -43,17 +43,6 @@ _default_hessian(::TweedieED, ::LogLink) = :observed
 _glm_obs_weight(f::TweedieED, μ, n, me, y, link::LogLink, η) =
     μ^(1.0 - f.p) * ((2.0 - f.p) * μ + (f.p - 1.0) * y) / f.φ
 
-# Numerically-safe log-sum-exp over a vector of log-weights.
-@inline function _tweedie_logsumexp(logw::AbstractVector)
-    m = maximum(logw)
-    (isfinite(m) || return m)
-    s = 0.0
-    @inbounds for lw in logw
-        s += exp(lw - m)
-    end
-    return m + log(s)
-end
-
 # log a(y, φ, p): the μ-free Dunn–Smyth normalising series (1 < p < 2, y > 0).
 #   α = (2-p)/(1-p)  (α < 0 here)
 #   logW_j = j·[ -α·log y + α·log(p-1) - (1-α)·log φ - log(2-p) ]
