@@ -33,14 +33,15 @@ The tool and its default-control failures date from a20b89d57 (2026-08-31), wher
 - (b) Check too strict at default R controls: yes, as designed and already documented.
 - (c) Fixture or receipt mismatch: no.
 
-## Proposal for the maintainer (not applied)
+## Change applied (option 1, at the coordinator's request)
 
-The only defect is log noise: the baseline subprocess prints "Test Failed" blocks and a red testset summary that look like a regression to a reader. Two options, neither changes a gate in the required run:
+The noise is removed without touching any check, tolerance or key.
 
-1. In test/parity/test_covariance_modes_required.jl, pass an environment variable (for example CORE070_BASELINE_BUILD=1) to the subprocess, and in tools/core070_covariance_mode_fits.jl skip the final assertion testset when it is set, printing one line "default-control baseline build: gradient failures expected, see covariance-mode-fits-contract.md". Retained-evidence runs by hand keep asserting as before.
-2. Leave it and add a comment in the workflow step. Cheapest, but the noise stays.
+- test/parity/test_covariance_modes_required.jl starts the default-control baseline subprocess with CORE070_BASELINE_BUILD=1 (via addenv, so the variable exists in that child only). Before the tight-control run it errors if the variable is set in its own environment, so a leak is a hard failure rather than silently skipped assertions.
+- tools/core070_covariance_mode_fits.jl reads the variable. It errors if the variable is set together with the tight-control policy. When it is set under default controls, the final assertion testset is skipped and one line is printed naming the cases and keys expected to fail (r_gradient for the three DEP cases; structured_source_covariance also for ANIMAL-DEP and KERNEL-DEP) with a pointer to covariance-mode-fits-contract.md. The CORE070_COVARIANCE_MODE_FITS_PASS line is not printed in that mode.
+- With the variable unset, which covers the tight gate run and hand-run retained-evidence runs, the tool asserts exactly as before.
 
-I recommend option 1. It touches the parity test and tool, which the lane brief did not authorise me to change, so I have left it for a decision.
+How it was checked: the tool needs the pinned R oracle and the parity Julia environment, which are not instantiated on this Mac, so the full tool was not run. Instead I ran the modified guard and the modified assertion block verbatim in a stub with one failing check, over the four combinations. Variable unset (default or tight): the assertion fails as before. Variable set, default policy: assertions skipped and the expectation line printed. Variable set, tight policy: error "must not be set for a tight-control run". The CI Frozen R job will be the end-to-end check on the next run.
 
 ## Not done
 
