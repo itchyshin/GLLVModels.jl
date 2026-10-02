@@ -121,6 +121,7 @@ println(_SHARD === nothing ?
     _shard_include("test_aghq_nb2.jl")
     _shard_include("test_aghq_ordinal.jl")
     _shard_include("test_aghq_tweedie.jl")
+    _shard_include("test_aghq_delta_gamma.jl")
     _shard_include("test_aghq_gaussian.jl")
     _shard_include("test_aghq_public_gaussian.jl")
     _shard_include("test_gaussian_empty_design.jl")
@@ -519,6 +520,7 @@ println(_SHARD === nothing ?
     _shard_include("test_isdm.jl")
     # #573: ZIP/ZINB fits never end below the nested Poisson / shared-r NB2 fit.
     _shard_include("test_zip_zinb_stall.jl")
+    _shard_include("test_zerostep_verdict_sweep.jl")
     _shard_include("test_input_validation.jl")
     _shard_include("test_robustness_sweep.jl")
     _shard_include("test_derived_ci_sweep.jl")

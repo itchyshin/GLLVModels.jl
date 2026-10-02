@@ -33,15 +33,18 @@ function aghq_p1_fit(fx, caseid)
           fam == "gaussian" ? GLLVModels.fit_gllvm(Y; family = Normal(), K = 1, aghq = aghq) :
           fam == "ordinal" ? GLLVModels.fit_gllvm(round.(Int, Y); family = GLLVModels.Ordinal(), K = 1, link = GLLVModels.ProbitLink(), aghq = aghq) :
           fam == "tweedie" ? GLLVModels.fit_gllvm(Y; family = GLLVModels.TweedieED(1.0, 1.5), K = 1, disp_group = :species, power_group = :species, aghq = aghq) :
+          fam == "delta_gamma" ? GLLVModels.fit_gllvm(Y; family = GLLVModels.DeltaGamma(), K = 1, predictor = :shared, disp_group = :species, aghq = aghq) :
           fam == "nb2" ? GLLVModels.fit_gllvm(round.(Int, Y); family = NegativeBinomial(), K = 1, disp_group = :species, aghq = aghq) :
           GLLVModels.fit_binomial_gllvm(round.(Int, Y); K = 1, N = round.(Int, N), aghq = aghq)
+    delta = fit isa GLLVModels.DeltaGammaAGHQFit
     gauss = fit isa GLLVModels.GllvmFit
     ll = gauss ? fit.logLik : fit.loglik
-    phi = fam == "nb2" ? Float64.(fit.r_group) : fam == "tweedie" ? Float64.(fit.φ) : nothing
+    phi = fam == "nb2" ? Float64.(fit.r_group) : fam == "tweedie" ? Float64.(fit.φ) :
+          delta ? 1 ./ sqrt.(Float64.(fit.α)) : nothing   # R's delta-gamma phi is the CV: shape = 1/phi^2
     power = fam == "tweedie" ? Float64.(fit.power) : nothing
     log_incr = fam == "ordinal" ? GLLVModels._ord_psi_from_tau(fit.τ, fit.C) : nothing
-    beta = Float64.(gauss ? fit.pars.β : fit.β)
-    lam = vec(Float64.(gauss ? fit.pars.Λ : fit.Λ))
+    beta = Float64.(gauss ? fit.pars.β : delta ? fit.βc : fit.β)
+    lam = vec(Float64.(gauss ? fit.pars.Λ : delta ? fit.Λc : fit.Λ))
     s = sum(lam .* Float64.(r["lambda"])) < 0 ? -1.0 : 1.0
     info = fit.integration
     used = info !== nothing && info.actual === :aghq
