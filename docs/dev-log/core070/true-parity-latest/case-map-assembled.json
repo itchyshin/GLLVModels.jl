@@ -6,7 +6,7 @@
  "inputs": [
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-aghq.json",
-   "sha256": "14260c8c84c876205943112f90cb2d098832c37d00dc166ff1b993e3f1d4f8a3",
+   "sha256": "f043ba11e58494f7a4c51495e1154a5bbbf7f0616c6606901b141615b482bc21",
    "rows": 21
   },
   {
@@ -365,7 +365,12 @@
    "arc": "A3",
    "carry_scan_status": "PARTIAL_STALE_AT_P1",
    "executable_case_ids": [
-    "CORE070-AGHQ-AUTO-K-TWEEDIE-CONTROL-CONTRACT"
+    "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-DECISION",
+    "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-LOGLIK",
+    "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-BETA",
+    "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-LAMBDA",
+    "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-LOG-PHI",
+    "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-POWER"
    ],
    "disposition": null,
    "p0_batch": "t8-aghq-public-policy-bind",
@@ -378,13 +383,19 @@
     "note": "P0 receipt is tracked. It records an R-only observation made on a gllvmTMB twin branch (1005cf12e189dae0bb870556b15b908f0f755459) that is neither pin; no Julia call is part of the case."
    },
    "p0_case_map_reading_561": "REGISTRATION_ONLY_NOT_TWINNED: the P0 row cites evidence.receipt but carries no evidence_tier, and a missing tier reads as registration-only",
-   "evidence_tier": "r_only_policy_pass",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/aghq/AGHQ-AUTO-K-TWEEDIE.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-AUTO-K-TWEEDIE-CONTROL-CONTRACT.json"
     ],
-    "tier": "R-only policy observation, measured at P1; no Julia side, so it does not bind"
+    "r_only_case_ids": [
+     "CORE070-AGHQ-AUTO-K-TWEEDIE-CONTROL-CONTRACT"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_aghq_p1_twin.jl, against R-at-P1 values copied from test/fixtures/aghq_p1/aghq_p1.toml (integration used and node count, logLik, intercepts, loadings and, for Gaussian, the residual SD, at each side's own optimum); both engines converged; each case within the tolerance asserted in the test"
    },
    "measured_result": {
     "case_verdicts": {
@@ -393,7 +404,16 @@
     "batch_verifier": {
      "CORE070-AGHQ-AUTO-K-TWEEDIE-CONTROL-CONTRACT": "PASS"
     },
-    "row_verdict": "PASS"
+    "row_verdict": "PASS",
+    "twin_case_ids": [
+     "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-DECISION",
+     "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-LOGLIK",
+     "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-BETA",
+     "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-LAMBDA",
+     "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-LOG-PHI",
+     "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-POWER"
+    ],
+    "twin_verdict": "PASS"
    }
   },
   {
