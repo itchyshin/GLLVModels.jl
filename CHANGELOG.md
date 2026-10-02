@@ -2,6 +2,16 @@
 
 ## Development
 
+- **Ordinal (per-trait) logit no longer stalls with `converged = true` (#574); binomial runaway-loading warning (#498).**
+  The per-site Laplace mode search for per-trait ordinal fits was an undamped Newton iteration
+  that could overshoot into a far worse site mode, giving the marginal ~50-unit cliffs under
+  1e-5 parameter steps; L-BFGS then stopped on a zero-length step (|g| ~ 1e6) and reported
+  convergence tens of logLik units below the optimum (simulated 13 x 75, K = 2: -1425.3 from a
+  1.7 x probit start vs the true -1348.36). The search now halves a step that lowers the site
+  log-posterior; accepted full steps are unchanged. `fit_binomial_gllvm` now warns, without
+  changing estimates or `converged`, when loadings run away (gllvmTMB's rule: a trait's max |Λ|
+  at least 25 x the typical size, or at least 8). Tests: `test/test_convergence_sweep.jl`.
+
 - **Per-species NB2 fits: up to three more polish rounds when still not converged (#615).**
   After #655, 128 of the 1,440 per-species fits in the #615 grid still reported
   `converged = false`, 90 of them at p = 24 with common r = 20. Tracing 11 of them
