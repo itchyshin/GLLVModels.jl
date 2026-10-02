@@ -323,12 +323,17 @@ function em_fit_phylo_squarem(y::AbstractMatrix, K_B::Integer,
                               σ_phy_init = σ_phy_warm,
                               tol = tol, max_iter = max_iter,
                               assert_monotone = assert_monotone)
-            # The polish proved θ_sq is not a maximum; return the better point.
-            if isfinite(fb.logLik) && fb.logLik > ll_sq
+            # The polish proved θ_sq is not a maximum; return the best of
+            # {θ_polish, plain-EM-from-warm-start}, never the known-worse θ_sq (#146).
+            if isfinite(fb.logLik) && fb.logLik > ll_polish
                 return EMPhyloFit(fb.Λ_B, fb.σ_eps, fb.σ_phy, fb.logLik,
                                   fb.n_iter, fb.converged, fb.loglik_trace,
                                   fb.blup_phy, fb.blup_phi, true)
             end
+            # θ_polish is the best candidate: fall through to the common tail,
+            # which recomputes BLUPs and log-lik at θ.
+            θ = θ_polish
+            fallback_used = true
         end
     end
 

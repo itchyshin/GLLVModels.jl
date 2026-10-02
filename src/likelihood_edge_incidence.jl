@@ -102,16 +102,17 @@ function gaussian_marginal_loglik_edge_phy(y::AbstractMatrix,
         throw(ArgumentError("y first dim ($p) must equal phy.n_leaves " *
                             "($(phy.n_leaves))"))
 
-    # Σ_phy is built from the tree topology + σ²_phy + branch lengths.
-    # AD-friendly: closed form, no sparse Cholesky on Duals.
-    Σ_phy = sigma_phy_dense_edge(phy, σ²_phy)
-
     # At least one phylogenetic-block component must be supplied — otherwise
     # the J3 path collapses and the dense routine would skip the phy block
-    # entirely, which is not what the user asked for.
+    # entirely, which is not what the user asked for. Checked before the
+    # O(p²) Σ_phy build below so the error path allocates nothing large.
     if Λ_phy === nothing && σ_phy === nothing
         throw(ArgumentError("phy specified but no Λ_phy or σ_phy supplied"))
     end
+
+    # Σ_phy is built from the tree topology + σ²_phy + branch lengths.
+    # AD-friendly: closed form, no sparse Cholesky on Duals.
+    Σ_phy = sigma_phy_dense_edge(phy, σ²_phy)
 
     # Delegate to the dense J3 implementation — it is already
     # Dual-compatible and tested. Reach into the GLLVModels module since this

@@ -2,7 +2,7 @@
 
 This is a reference tour of the general latent-variable model interface. It is
 not one serial, copy-and-run analysis: later sections deliberately use symbolic
-data names (`Y`, `N`, `Yp`, `Yc`, and `Yo`) whose required support is described
+data names (`Y`, `N`, `Yb`, `Yp`, `Yc`, and `Yo`) whose required support is described
 next to each family. Do not run the snippets as one workflow or substitute an
 undefined matrix into them.
 
@@ -19,6 +19,10 @@ Return here after that first fit to identify a response family, an interface,
 or a supported extension. The matrix convention for the multivariate snippets
 is **`Y` is `p × n`**: `p` species or responses (rows) by `n` sites or
 observations (columns).
+
+The snippets use family markers such as `Poisson()` and `Normal()` from
+Distributions.jl, which is a separate package. Install it once with
+`import Pkg; Pkg.add("Distributions")` before running them.
 
 ```julia
 using GLLVModels, Distributions, Random

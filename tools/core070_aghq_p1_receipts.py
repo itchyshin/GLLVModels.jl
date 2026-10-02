@@ -25,7 +25,7 @@ receipts under evidence.non_binding_receipts and does not bind under the #561 nu
 rule, whatever its verdict. The tiers say what each row does measure
 (paired_control_categorical_*, r_only_policy_*).
 
-Julia twins (overlay). Eleven of the 14 policy rows have a same-model Julia surface and a
+Julia twins (overlay). Thirteen of the 14 policy rows have a same-model Julia surface and a
 numeric twin: R-at-P1 fits recorded in test/fixtures/aghq_p1/aghq_p1.toml against Julia
 fits of the same data (test/test_aghq_p1_twin.jl), receipts written by
 tools/true_parity_julia_receipts.jl under receipts/julia-twins/aghq/. Where such a receipt
@@ -590,7 +590,7 @@ NOTE = ("Separate from case-map.json so none of its rows are touched; read by to
         "docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. The two batches measure no "
         "number against Julia: 7 rows are a paired control on categorical labels (no fit) and 14 are R-only policy "
         "observations (no Julia side), so a row paid by a batch alone cites its receipts under "
-        "evidence.non_binding_receipts and does not bind under the numeric rule. Eleven of the 14 policy rows (Poisson, NB2, "
+        "evidence.non_binding_receipts and does not bind under the numeric rule. Thirteen of the 14 policy rows (Poisson, NB2, ordinal-probit, Tweedie, "
         "binomial and Gaussian fits, which expose aghq= in Julia) additionally carry a numeric Julia twin receipt "
         "(receipts/julia-twins/aghq/, test/test_aghq_p1_twin.jl) under evidence.receipt with evidence_tier numeric. The "
         "policy fixtures of the batch are toys (p of 5 to 20 traits, n of 30 to 40 sites, d = 1); the twins use simulated "

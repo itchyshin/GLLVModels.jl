@@ -11,8 +11,14 @@
 # with ψ = digamma, ψ′ = trigamma.
 _clamp_mu(::Beta, μ) = clamp(μ, 1e-6, 1 - 1e-6)
 
+# Boundary guard: clamp y into [1e-12, 1-1e-12], matching gllvmTMB's y_safe
+# (gllvmTMB.cpp, Beta branch) so exact 0/1 proportions do not give log(0) (#147).
+# A no-op for interior y.
+_clamp_y(::Beta, y) = clamp(y, 1e-12, 1 - 1e-12)
+
 function _glm_score(f::Beta, μ, n, me, y)
     φ = f.α
+    y = _clamp_y(f, y)
     ystar = log(y) - log1p(-y)                      # logit(y)
     μstar = digamma(μ * φ) - digamma((1 - μ) * φ)
     return φ * (ystar - μstar) * me
@@ -24,7 +30,7 @@ function _glm_weight(f::Beta, μ, n, me)
     return φ^2 * ν * me^2
 end
 
-_glm_logpdf(f::Beta, μ, n, y) = logpdf(Beta(μ * f.α, (1 - μ) * f.α), y)
+_glm_logpdf(f::Beta, μ, n, y) = logpdf(Beta(μ * f.α, (1 - μ) * f.α), _clamp_y(f, y))
 
 """
     beta_marginal_loglik_laplace(Y, Λ, β, φ; link=LogitLink(), kwargs...) -> Float64
