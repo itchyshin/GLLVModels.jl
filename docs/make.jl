@@ -32,7 +32,6 @@ makedocs(;
             "Common pitfalls" => "pitfalls.md",
         ],
         "Choose a scientific question" => [
-            "Traits and repeated outcomes" => "tutorial.md",
             "First phylogenetic Gaussian model" => "vignettes/phylogenetic-gllvm.md",
             "First community abundance model" => "vignettes/community-abundance.md",
             "Morphometrics" => "morphometrics.md",
@@ -48,6 +47,7 @@ makedocs(;
             "Response families" => "response-families.md",
         ],
         "Function reference" => [
+            "General-model interface tour" => "tutorial.md",
             "API reference" => "api.md",
             "Post-fit extractors" => "postfit-extractors.md",
             "Post-fit tables and prediction" => "postfit-tables.md",

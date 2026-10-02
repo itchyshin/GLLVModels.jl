@@ -11,10 +11,13 @@
 """
     em_fa(y::AbstractMatrix, K::Integer;
           λ_init = nothing, ψ_init = nothing,
-          tol = 1e-8, max_iter = 500)
+          tol = 1e-8, max_iter = 500,
+          rng::AbstractRNG = MersenneTwister(0))
         -> (Λ, ψ, loglik, n_iter, converged)
 
-EM for factor analysis. `y` is (p, n). Returns Λ (p × K), ψ (p-vector of
+EM for factor analysis. `y` is (p, n). The default initial loadings are drawn
+from `rng` (a fixed-seed `MersenneTwister(0)` by default, so calls are
+reproducible; pass your own `rng` to vary the start). Returns Λ (p × K), ψ (p-vector of
 positive idiosyncratic variances), final log-likelihood, iteration count,
 and convergence flag.
 
@@ -36,15 +39,21 @@ by the previous M-step) so monotone non-decrease is testable.
 """
 function em_fa(y::AbstractMatrix, K::Integer;
                λ_init = nothing, ψ_init = nothing,
-               tol = 1e-8, max_iter = 500)
+               tol = 1e-8, max_iter = 500,
+               rng::AbstractRNG = MersenneTwister(0))
     p, n = size(y)
     @assert K ≥ 1 && K < p
 
     # Initialisation -------------------------------------------------
     Λ = if isnothing(λ_init)
-        # Small noise with positive diagonal entries; upper-triangular
-        # zeros above the K-th column to break rotational symmetry.
-        Λ_init = 0.1 .* randn(p, K)
+        # Small noise with positive diagonal entries and zeros above the
+        # diagonal of the leading K x K block. This only fixes a starting
+        # point: the M-step below (Λ_new = S_yη / S_ηη) is an unconstrained
+        # p x K solve, so it does NOT keep Λ triangular or fix the rotation;
+        # the returned Λ is rotation-arbitrary (only ΛΛ' is identified).
+        # `rng` defaults to a fixed-seed MersenneTwister so calls are
+        # reproducible; pass your own `rng` to vary the start.
+        Λ_init = 0.1 .* randn(rng, p, K)
         for k in 1:K
             Λ_init[k, k] = abs(Λ_init[k, k]) + 0.5
         end
