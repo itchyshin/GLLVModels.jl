@@ -10,7 +10,7 @@
   "origin_pr": "itchyshin/GLLVModels.jl#563",
   "generator": "tools/true_parity_julia_receipts.jl",
   "julia_version": "1.10.0",
-  "gllvmodels_commit": "9b7f4804d978b56686273ceea03a792bfd1cc544",
+  "gllvmodels_commit": "3fcf206986f934686204a3f70b7fe50edc27771d",
   "source_fixtures": [
     {
       "path": "test/fixtures/temporal_p1/fits.toml",
@@ -73,7 +73,7 @@
           47.49399758841069,
           777.7806791291122,
           765.2869515755461,
-          438.8542134662884
+          438.85421346628834
         ],
         "abs_diff": 9.094947017729282e-13,
         "tolerance": 1e-08,
@@ -96,7 +96,7 @@
           47.49399758837151,
           777.7806791211245,
           765.2869515755435,
-          438.8542134662879
+          438.8542134662877
         ],
         "abs_diff": 1.2505552149377763e-12,
         "tolerance": 1e-08,

@@ -84,7 +84,7 @@ const GM = GLLVModels
                                                              maxiter = 100, tol = 1e-9) rtol = 1e-10
     end
 
-    @testset "p = 24 fit whose first refit stopped at the cap" begin
+    @testset "p = 24 fit whose L-BFGS refits crawled (#659 rounds, BFGS refits)" begin
         fixture = TOML.parsefile(joinpath(@__DIR__, "fixtures", "nb_grouped_poisson_ridge_p24.toml"))
         p, n, K = fixture["p"], fixture["n"], fixture["K"]
         Y = reshape(Int64.(fixture["Y_column_major"]), p, n)
