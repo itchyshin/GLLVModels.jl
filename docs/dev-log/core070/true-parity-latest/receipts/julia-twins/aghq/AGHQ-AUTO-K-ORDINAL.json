@@ -1,0 +1,157 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "aghq/AGHQ-AUTO-K-ORDINAL"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#586",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "4e83f9fb51615c410a053f3097fc8eeffc908fb6",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/aghq_p1/aghq_p1.toml",
+      "sha256": "1dde00be6b1b4530fb4541ae30dd0cfdb4a568d833c704946e7b63c641323ebc"
+    },
+    {
+      "path": "test/fixtures/aghq_p1/aghq_ordinal_p5.csv",
+      "sha256": "35d1c974ffe3e4be14611034087939d85a430ccc00fb88e3411d49328a72cffa"
+    },
+    {
+      "path": "test/fixtures/aghq_p1/aghq_p1_helpers.jl",
+      "sha256": "e87d887139815834b0df848482b486c6ad5a0807505707e5e10baac8e09b580c"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_aghq_p1_twin.jl",
+      "sha256": "81f9a0344c732a6db31a7223ba5792a7fda3fab4717663e038302dae61e4d997"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-AGHQ-AUTO-K-ORDINAL-DECISION",
+        "quantity": "integration actually used: [AGHQ used (1/0), node count k] (Laplace = [0, 0])",
+        "r_source": "test/fixtures/aghq_p1/aghq_p1.toml [case.AGHQ-AUTO-K-ORDINAL.r].used, k",
+        "julia_source": "GLLVModels fit_gllvm(Ordinal(), link = ProbitLink())(...; K = 1, aghq = :auto) via test/fixtures/aghq_p1/aghq_p1_helpers.jl aghq_p1_fit, as called at test/test_aghq_p1_twin.jl:62: integration.actual, integration.k",
+        "r_value": [
+          1.0,
+          9.0
+        ],
+        "julia_value": [
+          1.0,
+          9.0
+        ],
+        "abs_diff": 0.0,
+        "tolerance": 0.5,
+        "tolerance_source": "test/test_aghq_p1_twin.jl:73",
+        "tolerance_source_line": "@test maximum(abs.(dec_j .- dec_r)) <= 0.5",
+        "note": "Data read from test/fixtures/aghq_p1/aghq_ordinal_p5.csv (sha256 checked); ordinal p = 5, n = 150 (seed 20260700), aghq request \"auto\". R and Julia both converged (R: aghq$converged; Julia: fit.converged and reason :converged). Integers, so the test's <= 0.5 is exact equality."
+      },
+      {
+        "case_id": "P1-JULIA-AGHQ-AUTO-K-ORDINAL-LOGLIK",
+        "quantity": "logLik at each side's own optimum",
+        "r_source": "test/fixtures/aghq_p1/aghq_p1.toml [case.AGHQ-AUTO-K-ORDINAL.r].loglik",
+        "julia_source": "GLLVModels fit_gllvm(Ordinal(), link = ProbitLink())(...; K = 1, aghq = :auto) via test/fixtures/aghq_p1/aghq_p1_helpers.jl aghq_p1_fit, as called at test/test_aghq_p1_twin.jl:62: loglik",
+        "r_value": -928.6327599840657,
+        "julia_value": -928.6327599800538,
+        "abs_diff": 4.011894816358108e-09,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_aghq_p1_twin.jl:74",
+        "tolerance_source_line": "@test isapprox(j.loglik, r[\"loglik\"]; atol = 1e-6, rtol = 0)",
+        "note": "Data read from test/fixtures/aghq_p1/aghq_ordinal_p5.csv (sha256 checked); ordinal p = 5, n = 150 (seed 20260700), aghq request \"auto\". R and Julia both converged (R: aghq$converged; Julia: fit.converged and reason :converged)."
+      },
+      {
+        "case_id": "P1-JULIA-AGHQ-AUTO-K-ORDINAL-BETA",
+        "quantity": "per-trait intercepts at each side's own optimum",
+        "r_source": "test/fixtures/aghq_p1/aghq_p1.toml [case.AGHQ-AUTO-K-ORDINAL.r].beta",
+        "julia_source": "GLLVModels fit_gllvm(Ordinal(), link = ProbitLink())(...; K = 1, aghq = :auto) via test/fixtures/aghq_p1/aghq_p1_helpers.jl aghq_p1_fit, as called at test/test_aghq_p1_twin.jl:62: beta",
+        "r_value": [
+          0.3004923349396447,
+          0.13234634396240272,
+          0.7541277495868484,
+          0.9020180132606516,
+          1.123405026046828
+        ],
+        "julia_value": [
+          0.30049159321524826,
+          0.13234994078874363,
+          0.7541254008851302,
+          0.9020185953186646,
+          1.1233970100753128
+        ],
+        "abs_diff": 8.01597151522948e-06,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_aghq_p1_twin.jl:75",
+        "tolerance_source_line": "@test isapprox(j.beta, Float64.(r[\"beta\"]); atol = 1e-3, rtol = 0)",
+        "note": "Data read from test/fixtures/aghq_p1/aghq_ordinal_p5.csv (sha256 checked); ordinal p = 5, n = 150 (seed 20260700), aghq request \"auto\". R and Julia both converged (R: aghq$converged; Julia: fit.converged and reason :converged)."
+      },
+      {
+        "case_id": "P1-JULIA-AGHQ-AUTO-K-ORDINAL-LAMBDA",
+        "quantity": "loadings at each side's own optimum, sign-aligned to R",
+        "r_source": "test/fixtures/aghq_p1/aghq_p1.toml [case.AGHQ-AUTO-K-ORDINAL.r].lambda",
+        "julia_source": "GLLVModels fit_gllvm(Ordinal(), link = ProbitLink())(...; K = 1, aghq = :auto) via test/fixtures/aghq_p1/aghq_p1_helpers.jl aghq_p1_fit, as called at test/test_aghq_p1_twin.jl:62: lambda (times +-1 so that sum(lambda_julia * lambda_R) >= 0)",
+        "r_value": [
+          0.7414069662816763,
+          -1.1741844940696058,
+          0.7417728529478131,
+          -0.29381902494456325,
+          0.95095791868387
+        ],
+        "julia_value": [
+          0.7414071997487627,
+          -1.17420641340569,
+          0.7417698392978395,
+          -0.29381942534175537,
+          0.9509491292523504
+        ],
+        "abs_diff": 2.1919336084197383e-05,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_aghq_p1_twin.jl:76",
+        "tolerance_source_line": "@test isapprox(j.lambda, Float64.(r[\"lambda\"]); atol = 1e-3, rtol = 0)",
+        "note": "Data read from test/fixtures/aghq_p1/aghq_ordinal_p5.csv (sha256 checked); ordinal p = 5, n = 150 (seed 20260700), aghq request \"auto\". R and Julia both converged (R: aghq$converged; Julia: fit.converged and reason :converged). The single latent axis is identified up to sign; Julia's loadings are multiplied by the +-1 the test applies."
+      },
+      {
+        "case_id": "P1-JULIA-AGHQ-AUTO-K-ORDINAL-LOG-INCREMENTS",
+        "quantity": "free cutpoint log-increments (tau_1 = 0 fixed) at each side's own optimum",
+        "r_source": "test/fixtures/aghq_p1/aghq_p1.toml [case.AGHQ-AUTO-K-ORDINAL.r].log_incr",
+        "julia_source": "GLLVModels fit_gllvm(Ordinal(), link = ProbitLink())(...; K = 1, aghq = :auto) via test/fixtures/aghq_p1/aghq_p1_helpers.jl aghq_p1_fit, as called at test/test_aghq_p1_twin.jl:62: log diff of tau (per trait, trait by trait)",
+        "r_value": [
+          0.09171847900302264,
+          -0.3387946682859035,
+          0.1342937792346836,
+          0.3989841102344242,
+          0.13131327487250405,
+          -0.1960464676222159,
+          -0.11332526853839217,
+          -0.12055160308551711,
+          -0.05382764038223643,
+          0.1102611581316057
+        ],
+        "julia_value": [
+          0.09171860458849844,
+          -0.338795201210175,
+          0.13430509340096256,
+          0.39899597063544434,
+          0.13131133437834872,
+          -0.1960485396927352,
+          -0.11332501494309671,
+          -0.1205517490563181,
+          -0.0538337132783233,
+          0.11025667345404566
+        ],
+        "abs_diff": 1.1860401020136191e-05,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_aghq_p1_twin.jl:83",
+        "tolerance_source_line": "haskey(r, \"log_incr\") && @test isapprox(j.log_incr, Float64.(r[\"log_incr\"]); atol = 1e-3, rtol = 0)",
+        "note": "Data read from test/fixtures/aghq_p1/aghq_ordinal_p5.csv (sha256 checked); ordinal p = 5, n = 150 (seed 20260700), aghq request \"auto\". R and Julia both converged (R: aghq$converged; Julia: fit.converged and reason :converged). R's ordinal_log_increments and Julia's log cutpoint spacings, per trait in trait order; probit link, per-trait intercepts and cutpoints."
+      }
+    ]
+  }
+}

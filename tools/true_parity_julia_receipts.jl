@@ -873,7 +873,7 @@ end
 
 # =============================================================================================
 # 5. aghq/*   test/test_aghq_p1_twin.jl
-#    Eleven policy rows twinned against R at P1: Poisson / NB2 / binomial / Gaussian fits with the same
+#    Twelve policy rows twinned against R at P1: Poisson / NB2 / ordinal-probit / binomial / Gaussian fits with the same
 #    aghq request R was given. Per row: the integration used (used flag and node count, vector
 #    case, integers compared with the test's <= 0.5), logLik at each side's optimum, intercepts,
 #    loadings (sign-aligned to R's, a fixed +-1 on the single axis) and, for Gaussian, the residual
@@ -887,7 +887,7 @@ function receipts_aghq()
     tp = "test/test_aghq_p1_twin.jl"
     fx = TOML.parsefile(joinpath(ROOT, fxp))
     fx["gllvmtmb_commit"] == P1_SHA || fail("aghq fixture is not pinned at P1")
-    rows = ["AGHQ-AUTO-K-POISSON", "AGHQ-AUTO-K-NB2", "AGHQ-AUTO-K-BINOMIAL", "AGHQ-AUTO-K-GAUSSIAN", "AGHQ-DEFAULT-OFF",
+    rows = ["AGHQ-AUTO-K-POISSON", "AGHQ-AUTO-K-NB2", "AGHQ-AUTO-K-ORDINAL", "AGHQ-AUTO-K-BINOMIAL", "AGHQ-AUTO-K-GAUSSIAN", "AGHQ-DEFAULT-OFF",
         "AGHQ-POLICY-OFF", "AGHQ-POLICY-EXPLICIT", "AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF",
         "AGHQ-POLICY-AUTO-ENFORCE-CUTOFF", "AGHQ-POLICY-TRAITS19", "AGHQ-POLICY-TRAITS20"]
     for (_, ds) in fx["dataset"]
@@ -910,7 +910,7 @@ function receipts_aghq()
         pre = "P1-JULIA-AGHQ-$short"
         desc = "$(ds["family"]) p = $(ds["p"]), n = $(ds["n_unit"]) (seed $(ds["seed"])), aghq request \"$(c["aghq_request"])\""
         rsrc(f) = "$fxp [case.$id.r].$f"
-        jsrc(f) = "GLLVModels $(ds["family"] == "gaussian" ? "fit_gllvm(Normal())" : ds["family"] == "nb2" ? "fit_gllvm(NegativeBinomial(), disp_group = :species)" : "fit_" * ds["family"] * "_gllvm")(...; K = 1, aghq = $(c["aghq_request"] == "default" ? "false" : repr(aghq_p1_request(c["aghq_request"])))) via $hp aghq_p1_fit, as called at $callc: $f"
+        jsrc(f) = "GLLVModels $(ds["family"] == "gaussian" ? "fit_gllvm(Normal())" : ds["family"] == "nb2" ? "fit_gllvm(NegativeBinomial(), disp_group = :species)" : ds["family"] == "ordinal" ? "fit_gllvm(Ordinal(), link = ProbitLink())" : "fit_" * ds["family"] * "_gllvm")(...; K = 1, aghq = $(c["aghq_request"] == "default" ? "false" : repr(aghq_p1_request(c["aghq_request"])))) via $hp aghq_p1_fit, as called at $callc: $f"
         note = "Data read from test/fixtures/aghq_p1/$(ds["file"]) (sha256 checked); $desc. R and Julia both converged (R: " *
                (r["used"] ? "aghq\$converged" : "optimiser code 0") * "; Julia: fit.converged" * (j.used ? " and reason :converged" : "") * ")."
         cases = Any[
@@ -938,6 +938,11 @@ function receipts_aghq()
             push!(cases, mkcase("$pre-LOG-PHI", "per-trait NB2 dispersion log(phi) at each side's own optimum",
                 rsrc("phi (log)"), jsrc("r_group (log)"), log.(Float64.(r["phi"])), log.(j.phi),
                 test_tolerance(tp, "isapprox(log.(j.phi)"), note * " Compared on the log scale, the optimised scale; R's phi is Julia's r (Var = mu + mu^2/phi)."))
+        end
+        if ds["family"] == "ordinal"
+            push!(cases, mkcase("$pre-LOG-INCREMENTS", "free cutpoint log-increments (tau_1 = 0 fixed) at each side's own optimum",
+                rsrc("log_incr"), jsrc("log diff of tau (per trait, trait by trait)"), Float64.(r["log_incr"]), j.log_incr,
+                test_tolerance(tp, "isapprox(j.log_incr,"), note * " R's ordinal_log_increments and Julia's log cutpoint spacings, per trait in trait order; probit link, per-trait intercepts and cutpoints."))
         end
         push!(out, "aghq/$row.json" => Receipt(["aghq/$row"], "itchyshin/GLLVModels.jl#586",
             ["$fxp", "test/fixtures/aghq_p1/" * ds["file"], hp], [tp], NOT_A_FIXTURE_PAIR, cases))

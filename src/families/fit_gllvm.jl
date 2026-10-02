@@ -342,12 +342,18 @@ _fit_gllvm(::TruncatedNegBin2, Y::AbstractMatrix; kwargs...) =
     fit_truncated_nbinom2_gllvm(Y; kwargs...)
 _fit_gllvm(::NegativeBinomial, Y::AbstractMatrix; kwargs...) = fit_nb_gllvm(Y; kwargs...)
 _fit_gllvm(::Beta,     Y::AbstractMatrix; kwargs...) = fit_beta_gllvm(Y; kwargs...)
-_fit_gllvm(::Ordinal,  Y::AbstractMatrix; kwargs...) = fit_ordinal_gllvm_pertrait(Y; kwargs...)
+# `aghq` / `aghq_control` are peeled here so the Laplace fitter's keyword set is
+# untouched; `aghq = false` (default) is exactly the previous call.
+function _fit_ordinal_route(Y::AbstractMatrix; aghq = false, aghq_control = (;), kwargs...)
+    _aghq_request(aghq) === :off && return fit_ordinal_gllvm_pertrait(Y; kwargs...)
+    return fit_ordinal_gllvm_pertrait_aghq(Y; aghq = aghq, aghq_control = aghq_control, kwargs...)
+end
+_fit_gllvm(::Ordinal,  Y::AbstractMatrix; kwargs...) = _fit_ordinal_route(Y; kwargs...)
 # ordinal_logit(): same fitter as Ordinal(), but the marker pins the link —
 # refuse an explicit non-logit `link` instead of silently overriding it.
 function _fit_gllvm(::OrdinalLogit, Y::AbstractMatrix; kwargs...)
     _check_ordinal_logit_link(kwargs)
-    return fit_ordinal_gllvm_pertrait(Y; kwargs...)
+    return _fit_ordinal_route(Y; kwargs...)
 end
 _fit_gllvm(::Gamma,    Y::AbstractMatrix; kwargs...) = fit_gamma_gllvm(Y; kwargs...)
 _fit_gllvm(::Exponential, Y::AbstractMatrix; kwargs...) = fit_exponential_gllvm(Y; kwargs...)
