@@ -516,4 +516,5 @@ println(_SHARD === nothing ?
     _shard_include("test_temporal_composed.jl")
     _shard_include("test_temporal_composed_receipts.jl")
     _shard_include("test_isdm.jl")
+    _shard_include("test_input_validation.jl")
 end
