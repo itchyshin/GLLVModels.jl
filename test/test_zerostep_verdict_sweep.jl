@@ -2,9 +2,11 @@ using GLLVModels, Test, Random, LinearAlgebra, Distributions, Optim
 
 # #505 (the remaining #485 class): fitters that trusted `Optim.converged(res)` after a
 # zero-length line-search step. Each family gets its own verdict (per the #502 decision):
-# `converged` additionally requires `gres <= max(g_tol, g_tol * |nll|)`, the rule already
-# used by `_tweedie_verdict`, `_beta_grouped_g_met` and `_nb1_grouped_g_met`. Estimates
-# are untouched; only the `converged` flag changes.
+# `converged` additionally requires a finite gradient residual no larger than
+# `max(g_tol, 1e-2 * max(1, |nll|))`. That bound catches the 1e8+ stall but sits about three
+# orders of magnitude above the finite-difference noise of healthy fits, which straddles
+# `g_tol * |nll|` differently on macOS and Linux (#679 CI). Estimates are untouched; only
+# the `converged` flag changes.
 #
 # Platform robustness (as in test_fit_verdict_gradient.jl): live-RNG fixtures are never
 # asserted to land on one outcome; relations ("converged => small independent gradient")
@@ -45,6 +47,10 @@ end
         @test !GLLVModels._phylo_g_met(_ZS505FakeResult(NaN, 12.0), g_tol)
         @test GLLVModels._phylo_g_met(_ZS505FakeResult(1e-7, 12.0), g_tol)
         @test GLLVModels._phylo_g_met(_ZS505FakeResult(5e-5, 12.0), g_tol)  # < g_tol*|nll|
+        # #679 CI: a healthy fit Optim stopped on f/x criteria, measured on macOS at
+        # gres 3.23e-4, nll 30.7 (just above g_tol*|nll|); Linux lands on either side.
+        @test GLLVModels._phylo_g_met(_ZS505FakeResult(3.23e-4, 30.7), g_tol)
+        @test !GLLVModels._phylo_g_met(_ZS505FakeResult(0.5, 12.0), g_tol)   # > 1e-2*|nll|
     end
 
     @testset "cliff start: old code said converged = true at a huge/NaN gradient" begin

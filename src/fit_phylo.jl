@@ -130,11 +130,15 @@ end
 
 # #505 (the #485 class): Optim's `converged` also fires on a zero-length line-search step
 # (x/f criteria), so a start the finite-difference gradient cannot descend from (e.g. a
-# variance start near the exp-scale cliff) reports `converged = true` at a gradient of 1e9
-# or NaN. Same scale-aware rule as `_nb1_grouped_g_met` / `_tweedie_verdict`:
-# `gres <= max(g_tol, g_tol * |nll|)`; a non-finite residual never passes.
+# variance start near the exp-scale cliff) reports `converged = true` at a gradient of
+# 1e8-1e15 or NaN. This check only has to catch that stall. It must NOT re-impose the
+# optimiser's own g_tol: healthy fits that Optim stops on its f/x criteria end with a
+# finite-difference residual of 1e-5 to 3e-4, right at `g_tol * |nll|`, and which side they
+# land on differs between macOS and Linux (#679 CI). A relative bound of 1e-2 leaves about
+# three orders of magnitude on each side. A non-finite residual never passes.
+const _PHYLO_STALL_RTOL = 1e-2
 _phylo_g_met(res, g_tol) = (gres = Optim.g_residual(res);
-    isfinite(gres) && gres <= max(g_tol, g_tol * abs(Optim.minimum(res))))
+    isfinite(gres) && gres <= max(g_tol, _PHYLO_STALL_RTOL * max(1.0, abs(Optim.minimum(res)))))
 
 """
     fit_phylo_gaussian(phy, y; profile_mu=true, μ0, logσ²phy0, logσ²eps0,

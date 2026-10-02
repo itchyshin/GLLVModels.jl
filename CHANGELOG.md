@@ -6,8 +6,11 @@
   (part of #505, the remaining #485 class).** Optim also counts a zero-length line-search
   step as convergence, so a start the finite-difference gradient cannot leave could be
   reported converged at a gradient of ~1e9 or NaN (reproduced with log-variance starts of
-  (30, -30)). The fitter now also requires the scale-aware gradient test
-  `gres <= max(g_tol, g_tol * |nll|)` already used by `_tweedie_verdict`. Estimates and
+  (30, -30)). The fitter now also requires a finite gradient residual no larger than
+  `max(g_tol, 1e-2 * max(1, |nll|))`. The stall residuals are 1e8 to 1e15. Healthy
+  fits stopped on f/x criteria sit at 1e-5 to 3e-4, which straddles `g_tol * |nll|`
+  differently on macOS and Linux, so that tighter bound wrongly flagged a healthy animal-Ainv
+  fit in CI. Estimates and
   log-likelihoods are unchanged; only `converged` can flip to `false`. Not covered here:
   scalar `fit_nb1_gllvm` (no failing reproduction found), `fit_nb1_gllvm_grouped_cov`
   (another lane's file), the other `_fit_verdict(res)` sites, and ordered beta (#501).
