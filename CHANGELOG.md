@@ -25,6 +25,16 @@
   (R's `.fix_and_refit_constraint_tol`) is now a failed refit instead of a silently
   under-enforced one. Valid refits are unchanged. Test: `test/test_derived_ci_sweep.jl`.
 
+- **Tweedie series density is allocation-free and about 390x faster (#575).** `_tweedie_logA`
+  rebuilt a doubling window of `loggamma` terms from scratch on every pass and allocated
+  a vector each time, which dominated `fit_tweedie_gllvm_grouped`. It now climbs to the
+  mode and sums outward in one pass with the same 37-nat truncation. Measured on
+  vegan::varespec (species present in >= 12 plots, 8 species x 24 plots, K = 1,
+  1 thread): 8,000 density calls 3.11 s to 0.008 s; `fit_tweedie_gllvm_grouped` 141.5 s
+  to 4.7 s, log-likelihood identical (-352.3148323214431). Max relative difference in
+  `log a(y, phi, p)` vs the old code over a 250-point grid (y 1e-6 to 5000, p 1.01 to
+  1.99): 8.9e-16. Test: `test/test_tweedie_speed.jl` (the allocation assertion fails on
+  the previous code: 2,496 bytes per call).
 - **Breaking: `fit_gllvm(Y; family = NegativeBinomial())` now fits one shared `r` (#615).**
   Maintainer decision 2026-10-01. On the #615 grid (72 cells, 20 reps), shared r
   recovered r better in every common-r cell and per-species r took 110 to 260 times
