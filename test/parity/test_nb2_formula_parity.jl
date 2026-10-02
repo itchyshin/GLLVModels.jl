@@ -8,7 +8,7 @@ source=read("test/parity/test_negbin_parity.jl",String)
 helpers=source[findfirst("function _rand_poisson",source).start:findfirst("@testset \"NB2 GLLVModels",source).start-1]
 dgp=source[findfirst("    Random.seed!(45)",source).start:findfirst("    jl_fit =",source).start-1]
 include_string(@__MODULE__,helpers*dgp,"original_nb2_fixture")
-native=fit_gllvm(Y;family=GLLVModels.NegativeBinomial(),K=K,g_tol=1e-7,iterations=800)
+native=fit_gllvm(Y;family=GLLVModels.NegativeBinomial(),K=K,disp_group=:species,g_tol=1e-7,iterations=800)
 r=parity_nb2_health(Y,K,native; artifact_prefix="formula-nb2", receipt_tag="FORMULA",
     case_id="CORE070-FAMILY-05-LOG-FORMULA-INTERFACE")
 wide=gllvm(@formula(y ~ 1),Y,(site=collect(1:n),);

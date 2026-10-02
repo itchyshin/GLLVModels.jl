@@ -42,7 +42,7 @@ end
     K = d["K"]
     @test bytes2hex(sha256(reinterpret(UInt8, vec(Float64.(Y))))) == d["data_sha256"]
 
-    jl = fit_gllvm(Y; family = GLLVModels.NegativeBinomial(), K = K, g_tol = 1e-7, iterations = 800)
+    jl = fit_gllvm(Y; family = GLLVModels.NegativeBinomial(), K = K, disp_group = :species, g_tol = 1e-7, iterations = 800)
     rs = _nb2_r_side(Y, K)
     _nb2_report("NB2 interior maximum (seed $(d["seed"]), r_true $(d["r_true"]), n $(d["n"]))", jl, rs)
 
@@ -57,7 +57,7 @@ end
 @testset "NATIVE-06 data: both engines put traits 1 and 3 at the Poisson boundary (developer check, #476)" begin
     Y = parity_nb2_original_Y()
     K = 2
-    jl = fit_gllvm(Y; family = GLLVModels.NegativeBinomial(), K = K, g_tol = 1e-7, iterations = 800)
+    jl = fit_gllvm(Y; family = GLLVModels.NegativeBinomial(), K = K, disp_group = :species, g_tol = 1e-7, iterations = 800)
     rs = _nb2_r_side(Y, K)
     _nb2_report("NATIVE-06 data, boundary agreement", jl, rs)
 

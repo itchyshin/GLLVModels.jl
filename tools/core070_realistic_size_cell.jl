@@ -232,7 +232,7 @@ elseif fam == "nb2"
     Yi = Y
 
     t0 = time()
-    fit = fit_gllvm(Yi; family = GLLVModels.NegativeBinomial(), K = K, g_tol = 1e-7, iterations = 800)
+    fit = fit_gllvm(Yi; family = GLLVModels.NegativeBinomial(), K = K, disp_group = :species, g_tol = 1e-7, iterations = 800)
     wall_fit = time() - t0
     push!(summary_lines, "converged=$(fit.converged)")
     push!(summary_lines, "logLik=$(fit.loglik)")

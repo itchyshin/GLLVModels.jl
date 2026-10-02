@@ -142,17 +142,19 @@ gllvm(@formula(y ~ 1), Y, site_data; family = OrderedBeta(), K = 2)
 Ordered-beta is a no-X surface: covariates and row effects are not admitted.
 The twin has no ordered-beta family, so there is no R-parity claim.
 
-For **NB2, NB1, Beta, and the beta-binomial**, `fit_gllvm` defaults to
+For **NB1, Beta, and the beta-binomial**, `fit_gllvm` defaults to
 **per-species** dispersion (matching gllvmTMB). Shared dispersion remains available
-via the named fitters `fit_nb_gllvm` / `fit_nb1_gllvm` / `fit_beta_gllvm` /
-`fit_beta_binomial_gllvm`. Other dispersion families
+via the named fitters `fit_nb1_gllvm` / `fit_beta_gllvm` /
+`fit_beta_binomial_gllvm`. **NB2** defaults to one shared `r` (`NBFit`); pass
+`disp_group = :species` for per-species `r`. Other dispersion families
 still default to one shared parameter; to vary by species (or by groups —
 gllvm's `disp.group`), use
 `disp_group = :species` on `fit_gllvm`, or the matching `_grouped` driver with a
 length-`p` `group` vector (default `1:p`):
 
 ```julia
-fit_gllvm(Y; family = NegativeBinomial(), K = 2) # NB2 per-species r (default)
+fit_gllvm(Y; family = NegativeBinomial(), K = 2) # NB2 shared r (default)
+fit_gllvm(Y; family = NegativeBinomial(), K = 2, disp_group = :species) # NB2 per-species r
 fit_nb_gllvm(Y; K = 2)                           # NB2 shared r (named)
 fit_nb_gllvm_grouped(Y;  K = 2, group = group)   # NB2 r per custom group
 fit_gllvm(Y; family = NB1(), K = 2)              # NB1 per-species φ (default)
