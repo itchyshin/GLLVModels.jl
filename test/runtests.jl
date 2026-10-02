@@ -515,4 +515,6 @@ println(_SHARD === nothing ?
     _shard_include("test_temporal_composed.jl")
     _shard_include("test_temporal_composed_receipts.jl")
     _shard_include("test_isdm.jl")
+    # #573: ZIP/ZINB fits never end below the nested Poisson / shared-r NB2 fit.
+    _shard_include("test_zip_zinb_stall.jl")
 end
