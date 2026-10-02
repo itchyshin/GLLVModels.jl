@@ -52,10 +52,10 @@ const _GROUPED_INIT_CASES = (
     @test_throws ArgumentError fitter(Y; K = K, group = grp, Λ_init = zeros(p, K + 1))
 end
 
-@testset "fit_gllvm NegativeBinomial default route forwards β_init / Λ_init" begin
+@testset "fit_gllvm NegativeBinomial per-species route forwards β_init / Λ_init" begin
     Y = _grouped_init_data(:nb)
-    base = fit_gllvm(Y; family = NegativeBinomial(), K = 2)
-    held = fit_gllvm(Y; family = NegativeBinomial(), K = 2,
+    base = fit_gllvm(Y; family = NegativeBinomial(), K = 2, disp_group = :species)
+    held = fit_gllvm(Y; family = NegativeBinomial(), K = 2, disp_group = :species,
                      β_init = base.β, Λ_init = base.Λ, iterations = 0)
     @test held.β == base.β
     @test held.Λ == base.Λ
