@@ -11,6 +11,15 @@
   `correlation` returns `NaN` (with a warning) for traits with non-positive variance (#141).
   Valid inputs are numerically unchanged. Test: `test/test_input_validation.jl`.
 
+- **Robustness sweep (#138, #143, #145, #146, #147, #158, #161).** The bridge no longer turns
+  every `getLV` failure into empty scores (only a missing method does, with a warning).
+  Transformed-Wald CIs report non-PD when the Hessian is indefinite. `em_fa` takes an `rng`
+  keyword and its default start is now reproducible (fixed-seed). The SQUAREM premature-stop
+  fallback returns the best of polished / warm-start plain-EM, not the known-worse point. The
+  Beta family clamps y to [1e-12, 1-1e-12] like gllvmTMB (interior unchanged). Docstring and
+  comment corrections for the contrasts no-loadings case and the `em_fa` init. Test:
+  `test/test_robustness_sweep.jl`.
+
 - **Breaking: `fit_gllvm(Y; family = NegativeBinomial())` now fits one shared `r` (#615).**
   Maintainer decision 2026-10-01. On the #615 grid (72 cells, 20 reps), shared r
   recovered r better in every common-r cell and per-species r took 110 to 260 times

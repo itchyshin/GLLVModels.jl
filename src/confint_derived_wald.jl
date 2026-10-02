@@ -161,13 +161,22 @@ function _tw_sigma_from_hessian(fit::GllvmFit, y::AbstractMatrix,
     catch
         return (nothing, false)
     end
-    (H === nothing || !all(isfinite, H)) && return (nothing, false)
+    return _tw_sigma_from_hessian_matrix(H)
+end
+
+# Σ = inv(H) only when the (symmetrised) observed information is positive
+# definite; an indefinite-but-invertible H (saddle / non-converged fit) is
+# reported as non-PD rather than yielding a finite CI flagged valid (#143).
+function _tw_sigma_from_hessian_matrix(H::AbstractMatrix)
+    (isempty(H) || !all(isfinite, H)) && return (nothing, false)
+    Hs = Symmetric((H .+ H') ./ 2)
+    isposdef(Hs) || return (nothing, false)
     Σ = try
-        inv((H .+ H') ./ 2)
+        inv(Hs)
     catch
         return (nothing, false)
     end
-    return (Σ, true)
+    return (Matrix(Σ), true)
 end
 
 # ---------------------------------------------------------------------------
