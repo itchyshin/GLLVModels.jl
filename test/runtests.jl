@@ -224,6 +224,7 @@ println(_SHARD === nothing ?
     _shard_include("test_nb_grouped_upper_warn.jl")
     _shard_include("test_nb_grouped_poisson_ridge.jl")
     _shard_include("test_nb_cov_ridge_polish_grad.jl")
+    _shard_include("test_nb_cov_two_starts.jl")
     _shard_include("test_beta_grouped_convergence.jl")
     _shard_include("test_fit_verdict_gradient.jl")
     _shard_include("test_grouped_dispersion_tweedie_nb1.jl")
@@ -499,6 +500,10 @@ println(_SHARD === nothing ?
     _shard_include("test_postfit_tables.jl")
     # P1 numeric twins of six gllvmTMB namespace rows (loadings, rotated table, lv effects, communality, Sigma_B/W).
     _shard_include("test_namespace_numeric_p1_twin.jl")
+    # P1 numeric twins of three more namespace rows (tidy fixed effects, Beta, nbinom2).
+    _shard_include("test_namespace_numeric_p1_twin_b.jl")
+    # P1 numeric twins of three gllvmTMB postfit rows (tidy fixed effects, coef, deviance) on an uncentred fit.
+    _shard_include("test_postfit_twins_p1.jl")
     _shard_include("test_destination_b_s4_public_phylo_dep_probe_harness.jl")
     _shard_include("test_totoro_323_track_a_harness.jl")
     _shard_include("test_temporal_api.jl")
