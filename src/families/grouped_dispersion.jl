@@ -442,8 +442,13 @@ end
 # fitters already treat as the Poisson limit (warn only).
 # `grad` (optional, full-θ exact gradient) is restricted to the free coordinates in
 # every round. Returns `(θ, nll, converged, iterations)`; a converged fit is returned unchanged.
+# The refits use dense BFGS (`alg`), not the caller's `ls`: near the optimum L-BFGS
+# crawls (#615: 17 common-r p = 24 fits stayed non-converged after three L-BFGS
+# rounds, while BFGS from the same points converged on 17 of 17 within 126
+# iterations). `alg` matches `_COV_BFGS()`, so the exact-gradient route is unchanged.
 function _nb_poisson_ridge_polish(negll, res, ls, opts, first_log_r::Integer;
-                                  rounds::Integer = 3, grad = nothing)
+                                  rounds::Integer = 3, grad = nothing,
+                                  alg = Optim.BFGS(linesearch = Optim.LineSearches.BackTracking(order = 3)))
     θ = Optim.minimizer(res)
     f0 = Optim.minimum(res)
     conv = Optim.converged(res)
@@ -462,11 +467,11 @@ function _nb_poisson_ridge_polish(negll, res, ls, opts, first_log_r::Integer;
             sub(x) = negll(setindex!(copy(θs), x, free))
             # With an exact full-θ gradient, restrict it to the free coordinates.
             trial = grad === nothing ?
-                Optim.optimize(sub, θs[free], ls, opts; autodiff = :finite) :
+                Optim.optimize(sub, θs[free], alg, opts; autodiff = :finite) :
                 _optimize_with_analytic(sub, x -> begin
                         g = grad(setindex!(copy(θs), x, free))
                         g === nothing ? nothing : g[free]
-                    end, θs[free], ls, opts)
+                    end, θs[free], alg, opts)
             f1 = Optim.minimum(trial)
             if f1 <= f0 + 1e-6 && (Optim.converged(trial) || f1 < f0)
                 θs[free] = Optim.minimizer(trial)

@@ -46,8 +46,22 @@ batch: {"glvmodels_commit": <HEAD at launch>, "dirty": [<porcelain lines>]})
 that names this HEAD with an empty dirty list. Run the batches and this tool
 from the same clean commit.
 
+Julia twins (overlay). Rows whose batch case was non-discriminating, a shape-only check or never
+executed can be bound by a numeric twin on a non-degenerate fixture: R-at-P1 values recorded in a
+tracked fixture (test/fixtures/ns_numeric_p1.toml, test/fixtures/postfit_twins_p1.toml) against Julia
+fits of the same data (test/test_namespace_numeric_p1_twin.jl, test/test_postfit_twins_p1.jl), receipts
+written by tools/true_parity_julia_receipts.jl under receipts/julia-twins/postfit-twins/. Where such a
+receipt exists, the row gains the evidence fields it supports: the twin receipt under evidence.receipt,
+executable_case_ids set to the twin's case ids (the batch case ids move to evidence.batch_case_ids and
+the batch receipts stay under evidence.non_binding_receipts), evidence_tier numeric. Classification,
+disposition and every other field are untouched; a row's `note` or `reason` still describes the
+superseded batch case. `--apply-twins` re-applies the overlay to the tracked case-map-postfit.json
+(idempotent) and `--check-twins` verifies that file is exactly that re-derivation.
+
 Usage (inputs are the raw run directories under local-scratch):
   python3 tools/core070_postfit_p1_receipts.py --runs DIR --runtimes JSON [--allow-dirty]
+  python3 tools/core070_postfit_p1_receipts.py --apply-twins
+  python3 tools/core070_postfit_p1_receipts.py --check-twins
 where DIR holds surface-conversion-p1/, wave6-conversion-p1/, wave7-conversion-p1/,
 wave8-conversion-p1/, estimand-rebind-p1/, postfit-policy-p1/, postfit-1-r-p1/,
 postfit-1-julia-p1/, each with its run-commit.json.
@@ -283,13 +297,100 @@ def harness_entry(case_id, quantity, diff, tol, rule, r_values):
     return mark_degenerate(e, r_values)
 
 
+TWIN_REL = "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins"
+TWIN_TIER = ("numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as "
+             "the cited twin test, against R-at-P1 values copied from a tracked fixture (an R fit that converged with a "
+             "positive-definite Hessian, on a non-degenerate fixture: the R values are not one constant and not ~0), "
+             "each case within the tolerance asserted in that test. The batch case this row carried is superseded; its "
+             "receipt is kept under non_binding_receipts and its ids under batch_case_ids")
+TWIN_FILES = {  # source_id -> twin receipt stem
+    "postfit/POSTFIT-SURFACE-extract_communality": "extract_communality",
+    "postfit/POSTFIT-SURFACE-extract_rotated_loadings_table": "extract_rotated_loadings_table",
+    "postfit/POSTFIT-SURFACE-tidy.gllvmTMB_multi": "tidy",
+    "postfit-policy/POST-COEF-NAMED": "coef",
+    "postfit-policy/POST-DEVIANCE": "deviance",
+}
+
+
+def tier_count_key(tier):
+    return "numeric_pass" if tier == "numeric" else tier
+
+
+def twin_overlay(row):
+    """Add the numeric-twin evidence fields to `row` when a Julia twin receipt exists for it (idempotent)."""
+    sid = row["source_id"]
+    if sid not in TWIN_FILES:
+        return row
+    path = ROOT / TWIN_REL / f"{TWIN_FILES[sid]}.json"
+    if not path.is_file():
+        return row
+    rec = load(path)
+    rel = str(path.relative_to(ROOT))
+    ok = (rec.get("schema") == "true-parity-julia-twin-receipt/v1" and rec.get("source_ids") == [sid]
+          and rec.get("verdict") == "PASS" and rec.get("pin") == "P1" and rec.get("reference_commit") == P1_SHA
+          and rec.get("evidence_kind") == "julia_recomputed_vs_recorded_r")
+    if not ok:
+        raise SystemExit(f"{rel}: not a passing P1 Julia twin receipt for {sid}")
+    case_ids = [c["case_id"] for c in rec["comparison"]["cases"]]
+    ev = row.get("evidence") or {}
+    prior_ids = ev.get("batch_case_ids", row["executable_case_ids"])
+    row["executable_case_ids"] = case_ids
+    row["evidence_tier"] = "numeric"
+    row["measured_against"] = P1_SHA
+    row["evidence"] = {"receipt": [rel], "non_binding_receipts": ev.get("non_binding_receipts", []),
+                       "batch_case_ids": prior_ids, "tier": TWIN_TIER}
+    row["measured_result"] = {**(row.get("measured_result") or {}), "twin_case_ids": case_ids,
+                              "twin_verdict": rec["verdict"]}
+    return row
+
+
+def apply_twins():
+    cm = load(OUT / "case-map-postfit.json")
+    cm["rows"] = [twin_overlay(r) for r in cm["rows"]]
+    counts = {k: 0 for k in cm["counts"]}
+    for r in cm["rows"]:
+        counts[tier_count_key(r["evidence_tier"])] += 1
+    cm["counts"] = counts
+    write_json(OUT / "case-map-postfit.json", cm)
+    print(json.dumps(counts))
+
+
+def check_twins():
+    cur = load(OUT / "case-map-postfit.json")
+    import copy
+    exp = copy.deepcopy(cur)
+    exp["rows"] = [twin_overlay(r) for r in exp["rows"]]
+    counts = {k: 0 for k in exp["counts"]}
+    for r in exp["rows"]:
+        counts[tier_count_key(r["evidence_tier"])] += 1
+    exp["counts"] = counts
+    bad = [a["source_id"] for a, b in zip(cur["rows"], exp["rows"]) if a != b]
+    if bad or cur["counts"] != counts:
+        print("STALE\n  rows differ from the twin overlay: " + ", ".join(bad) + f"\n  counts {cur['counts']} vs {counts}")
+        raise SystemExit(1)
+    n = sum(1 for r in cur["rows"] if r["source_id"] in TWIN_FILES and (ROOT / TWIN_REL / f"{TWIN_FILES[r['source_id']]}.json").is_file())
+    print("CORE070_POSTFIT_TWINS_CURRENT", n, "twin rows,", len(cur["rows"]), "rows")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--runs", type=Path, required=True)
-    ap.add_argument("--runtimes", type=Path, required=True)
+    ap.add_argument("--runs", type=Path)
+    ap.add_argument("--runtimes", type=Path)
+    ap.add_argument("--apply-twins", action="store_true",
+                    help="re-apply the Julia twin overlay to the tracked case-map-postfit.json")
+    ap.add_argument("--check-twins", action="store_true",
+                    help="verify case-map-postfit.json equals its twin-overlay re-derivation; write nothing")
     ap.add_argument("--allow-dirty", action="store_true",
                     help="write receipts from a checkout with modified tracked files (recorded, not hidden)")
     args = ap.parse_args()
+    if args.check_twins:
+        check_twins()
+        return
+    if args.apply_twins:
+        apply_twins()
+        return
+    if args.runs is None or args.runtimes is None:
+        ap.error("--runs and --runtimes are required unless --apply-twins or --check-twins")
     runs = args.runs
     runtimes = load(args.runtimes)
     head, dirty = git_state()
@@ -538,6 +639,11 @@ def main():
                            measured_result={"case_verdicts": verdicts, "batch_verifier": batch_ok,
                                             "case_kinds": {i: h[1] for i, h in zip(ids, have)}})
                 counts["partial_non_numeric_case"] += 1
+        before = row["evidence_tier"]
+        twin_overlay(row)
+        if row["evidence_tier"] != before:
+            counts[tier_count_key(before)] -= 1
+            counts[tier_count_key(row["evidence_tier"])] += 1
         out_rows.append(row)
 
     casemap = {

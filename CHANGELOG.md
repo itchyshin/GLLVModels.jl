@@ -11,6 +11,19 @@
   `correlation` returns `NaN` (with a warning) for traits with non-positive variance (#141).
   Valid inputs are numerically unchanged. Test: `test/test_input_validation.jl`.
 
+- **Per-species NB2 polish refits use dense BFGS instead of L-BFGS (#615).** After
+  #659, 17 of the 1,440 per-species fits in the #615 grid still reported
+  `converged = false`, all with common r = 20 at p = 24. They were close to their
+  optimum, with a real gradient left over (finite differences agree from h = 1e-4 to
+  1e-6), and each further 500-iteration L-BFGS run gained at most 9e-5. From the same
+  points, dense BFGS converged on 17 of 17 within 126 iterations. The polish refits
+  now use BFGS (new keyword `alg`); the first fit, the rounds and the rule for keeping
+  a refit are unchanged, and the exact-gradient route of `fit_nb_gllvm_grouped_cov`
+  (#658) already used the same BFGS. Rerunning the 389 grid fits that reach the
+  polish: all 389 converge (1,440 of 1,440 in the grid), total time 68.4 h down to
+  45.9 h, log-likelihood within -4.6e-6 to +3.4e-4 of before. Test:
+  `test/test_nb_grouped_poisson_ridge.jl`, whose p = 24 fixture is now seed 656001
+  (fails on main, macOS and Linux); the file runs in about 2 min, down from about 4.
 - **Per-species NB2 fits: up to three more polish rounds when still not converged (#615).**
   After #655, 128 of the 1,440 per-species fits in the #615 grid still reported
   `converged = false`, 90 of them at p = 24 with common r = 20. Tracing 11 of them
