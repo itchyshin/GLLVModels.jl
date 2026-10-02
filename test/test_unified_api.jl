@@ -96,11 +96,19 @@ end
 
         Ynb = _count_data(; p = p, n = n, seed = 556, hi = 8)
         Random.seed!(12)
-        anb = fit_gllvm(Ynb; family = NegativeBinomial(1.0, 0.5), K = K, iterations = iters)
+        anb = fit_gllvm(Ynb; family = NegativeBinomial(1.0, 0.5), K = K, iterations = iters,
+                        disp_group = :species)
         Random.seed!(12)
         bnb = fit_nb_gllvm_grouped(Ynb; K = K, group = collect(1:p), iterations = iters)
         @test anb isa GLLVModels.NBGroupedFit
         @test isapprox(anb.loglik, bnb.loglik; atol = 1e-6)
+        # Bare NegativeBinomial() is the shared-r engine since #615.
+        Random.seed!(12)
+        snb = fit_gllvm(Ynb; family = NegativeBinomial(1.0, 0.5), K = K, iterations = iters)
+        Random.seed!(12)
+        tnb = fit_nb_gllvm(Ynb; K = K, iterations = iters)
+        @test snb isa GLLVModels.NBFit
+        @test isapprox(snb.loglik, tnb.loglik; atol = 1e-6)
     end
 
     # ------------------------------------------------------------------

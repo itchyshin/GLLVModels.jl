@@ -93,6 +93,7 @@ include("families/ordinal.jl")           # Ordinal (cumulative-logit) family pie
 include("families/gamma.jl")             # Gamma (positive continuous) family pieces (Phase 3)
 include("families/tweedie.jl")           # Tweedie (compound Poisson–Gamma, 1<p<2) — biomass/abundance with zeros
 include("families/grouped_dispersion.jl") # Grouped / species-specific dispersion (disp.group)
+include("families/aghq_nb2.jl")          # NB2 (per-trait / grouped r) AGHQ problem + fitter
 include("families/exponential.jl")       # Exponential (positive continuous, no dispersion) — Gamma(α=1)
 include("families/studentt.jl")          # Student-t (heavy-tailed continuous, fixed ν) family pieces
 include("families/lognormal.jl")         # one-part lognormal (twin fid 3)

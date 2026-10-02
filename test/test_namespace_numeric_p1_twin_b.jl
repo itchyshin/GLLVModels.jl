@@ -95,7 +95,7 @@ _nsb_mat(v, nrow, ncol) = permutedims(reshape(Float64.(v), ncol, nrow))
             @test bytes2hex(sha256(read(dp))) == b["data_sha256"]
             @test b["converged"] && b["pd_hessian"]
             Y = _nsb_load_csv(dp, p, n)
-            fit = fit_gllvm(Y; family = NegativeBinomial(1.0, 0.5), K = 1)
+            fit = fit_gllvm(Y; family = NegativeBinomial(1.0, 0.5), disp_group = :species, K = 1)
             @test fit.converged
             @test fit.group == collect(1:p)                 # one dispersion per trait, as in R
             @test isapprox(fit.loglik, Float64(b["loglik"]); atol = 1e-6, rtol = 0)
