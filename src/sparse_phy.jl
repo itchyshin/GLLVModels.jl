@@ -188,6 +188,11 @@ function _parse_node!(c::_NewickCursor,
         _peek(c) == ')' ||
             error("expected ')' at position $(c.i) in Newick string")
         _advance(c)
+        # binary trees only: reject unary and multifurcating nodes per node
+        # (the global 2p-1 count alone can be satisfied by a mix of both).
+        length(children_local) == 2 ||
+            error("tree is not binary (internal node with $(length(children_local)) " *
+                  "children at position $(c.i); every internal node must have exactly two)")
         # internal node label (optional, discarded — minimal grammar)
         name = ""
         if _peek(c) != ':' && _peek(c) != ',' && _peek(c) != ')' && _peek(c) != ';'

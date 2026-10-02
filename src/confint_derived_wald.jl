@@ -99,6 +99,8 @@ function _correlation_packed(θ::AbstractVector, spec::NamedTuple,
                              i::Integer, j::Integer)
     u = _derived_unpack(θ, spec)
     Σ = _sigma_y_site_from_unpacked(u, spec)
+    # Degenerate (non-positive) variance: NaN, consistent with `correlation`.
+    (Σ[i, i] > 0 && Σ[j, j] > 0) || return oftype(Σ[i, j], NaN)
     return Σ[i, j] / sqrt(Σ[i, i] * Σ[j, j])
 end
 
