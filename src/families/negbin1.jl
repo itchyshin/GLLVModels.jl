@@ -221,9 +221,5 @@ function fit_nb1_gllvm(Y::AbstractMatrix; K::Integer,
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     φ̂ = exp(θ̂[p + rr + 1])
-    loglik, conv, iters = _fit_verdict(res)
-    # #505 (the #485 class): a zero-length line-search step is not convergence. Same
-    # scale-aware rule as `fit_nb1_gllvm_grouped`; estimates are untouched.
-    conv = conv && _nb1_grouped_g_met(res, g_tol)
-    return NB1Fit(β̂, Λ̂, φ̂, link, loglik, conv, iters, hessian)
+    return NB1Fit(β̂, Λ̂, φ̂, link, _fit_verdict(res)..., hessian)
 end
