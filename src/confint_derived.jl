@@ -699,6 +699,9 @@ function _derived_safe_nll(θ::AbstractVector, y::AbstractMatrix,
     return isfinite(v) ? v : T(_DERIVED_NLL_BARRIER)
 end
 
+# Absolute tolerance on |g(θ_refit) − c| (R: `.fix_and_refit_constraint_tol`).
+const _DERIVED_CONSTRAINT_TOL = 0.05
+
 # Constrained refit returning (ll_profile, success, θ_warm_new, g_at_min).
 # Uses an increasing-w (augmented-Lagrangian-flavoured) schedule, a
 # PosDef-safe NLL, and BackTracking line search — see the block comment
@@ -789,6 +792,13 @@ function _derived_refit_with_fixed(fit::GllvmFit,
         derived_fn_packed(θ_min)
     catch
         return (NaN, false, θ_min, NaN)
+    end
+    # Constraint-satisfaction gate, mirroring R's `.fix_and_refit_nll()`
+    # (R/profile-derived.R `.fix_and_refit_constraint_tol` = 0.05): a refit whose
+    # achieved g(θ) misses the target c by more than the tolerance did not
+    # enforce the constraint, so its deviance is not a profile deviance.
+    if !isfinite(g_at_min) || abs(g_at_min - c_float) > _DERIVED_CONSTRAINT_TOL
+        return (NaN, false, θ_min, g_at_min)
     end
     return (-nll_unpen, true, θ_min, g_at_min)
 end
