@@ -1107,55 +1107,6 @@ function profile_ci_total_variance(fit::GllvmFit, t::Integer;
 end
 
 """
-    profile_ci_communality(fit::GllvmFit, t::Integer; level=0.95, y=nothing,
-                           X=nothing, Σ_phy=nothing, kwargs...)
-        -> NamedTuple
-
-Profile-likelihood CI for the per-trait communality `c²[t]` (see
-[`communality`](@ref)). Thin wrapper around [`profile_ci_derived`](@ref) with
-[`_profile_ci_bounded`](@ref) applied using R's `profile_ci_communality`
-floor/ceiling `[0.001, 0.999]`: a bound outside it is clamped to the edge, and
-a `NaN` bound whose deviance at the edge is still below the χ²₁ cutoff is
-reported as that edge. The returned NamedTuple carries `boundary::Bool`.
-"""
-function profile_ci_communality(fit::GllvmFit, t::Integer;
-                                level::Real = 0.95,
-                                y::Union{Nothing, AbstractMatrix} = nothing,
-                                X::Union{Nothing, AbstractArray{<:Real, 3}} = nothing,
-                                Σ_phy::Union{Nothing, AbstractMatrix} = nothing,
-                                kwargs...)
-    spec = _derived_spec(fit)
-    f = _make_communality_closure(spec, t)
-    r = profile_ci_derived(fit, f; level = level, y = y, X = X, Σ_phy = Σ_phy,
-                           kwargs...)
-    return _profile_ci_bounded(fit, f, r; level = level, y = y, X = X, Σ_phy = Σ_phy,
-                               lo_bound = 0.001, hi_bound = 0.999)
-end
-
-"""
-    profile_ci_correlation(fit::GllvmFit, i::Integer, j::Integer; level=0.95,
-                           y=nothing, X=nothing, Σ_phy=nothing, kwargs...)
-        -> NamedTuple
-
-Profile-likelihood CI for the cross-trait correlation `ρ[i, j]` (see
-[`correlation`](@ref)). As [`profile_ci_communality`](@ref) but with R's
-`profile_ci_correlation` limits `[-0.999, 0.999]`.
-"""
-function profile_ci_correlation(fit::GllvmFit, i::Integer, j::Integer;
-                                level::Real = 0.95,
-                                y::Union{Nothing, AbstractMatrix} = nothing,
-                                X::Union{Nothing, AbstractArray{<:Real, 3}} = nothing,
-                                Σ_phy::Union{Nothing, AbstractMatrix} = nothing,
-                                kwargs...)
-    spec = _derived_spec(fit)
-    f = _make_correlation_closure(spec, i, j)
-    r = profile_ci_derived(fit, f; level = level, y = y, X = X, Σ_phy = Σ_phy,
-                           kwargs...)
-    return _profile_ci_bounded(fit, f, r; level = level, y = y, X = X, Σ_phy = Σ_phy,
-                               lo_bound = -0.999, hi_bound = 0.999)
-end
-
-"""
     profile_ci_phylo_signal(fit::GllvmFit, t::Integer; level=0.95, y=nothing,
                             X=nothing, Σ_phy=nothing, kwargs...)
         -> NamedTuple

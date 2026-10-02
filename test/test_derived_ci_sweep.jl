@@ -1,6 +1,6 @@
 using GLLVModels, Test, Random, LinearAlgebra
 
-# Derived-profile CI sweep (#137 constraint gate, #142 natural-boundary clamp).
+# Derived-profile CI sweep (#137 constraint gate).
 # Pinned values were computed on the unmodified tree.
 @testset "derived CI sweep" begin
     Random.seed!(11)
@@ -32,34 +32,5 @@ using GLLVModels, Test, Random, LinearAlgebra
         @test ci.method === :profile
         @test ci.lower ≈ 0.5976702559327752 rtol = 1e-5
         @test ci.upper ≈ 0.7971364185161999 rtol = 1e-5
-    end
-
-    @testset "#142 communality/correlation profile CIs clamp to natural limits" begin
-        # Near-singular one-factor data: communality of trait 1 is ≈ 1 and the
-        # raw profile upper bound overshoots 1 (1.0575 before the clamp).
-        Random.seed!(11)
-        y2 = [1.0; 1.0; 0.5; 0.2] * randn(1, 80) + 0.02 * randn(4, 80)
-        fit2 = fit_gaussian_gllvm(y2; K = 1)
-        ci = GLLVModels.profile_ci_communality(fit2, 1; y = y2)
-        @test ci.upper ≤ 0.999 + 1e-12      # R's q_hi_ceiling
-        @test ci.boundary
-        @test ci.lower ≥ 0.001
-        @test ci.lower < ci.upper
-        @test ci.method === :profile
-        # correlation limits are ±0.999
-        cr = GLLVModels.profile_ci_correlation(fit2, 1, 2; y = y2)
-        @test -0.999 - 1e-12 ≤ cr.lower
-        @test cr.upper ≤ 0.999 + 1e-12
-    end
-
-    @testset "#142 control: interior results equal profile_ci_derived" begin
-        ci = GLLVModels.profile_ci_communality(fit, 1; y = y)
-        @test !ci.boundary
-        @test ci.lower ≈ 0.5976702559327752 rtol = 1e-5
-        @test ci.upper ≈ 0.7971364185161999 rtol = 1e-5
-        cr = GLLVModels.profile_ci_correlation(fit, 1, 2; y = y)
-        @test !cr.boundary
-        @test cr.lower ≈ 0.5218132123952197 rtol = 1e-5
-        @test cr.upper ≈ 0.7335094545985572 rtol = 1e-5
     end
 end
