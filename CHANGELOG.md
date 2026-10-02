@@ -5,7 +5,8 @@
 - **Derived-profile CI: constraint gate and boundary clamp (#137, #142).** A constrained
   refit in `profile_ci_derived` whose achieved `g(θ)` misses the target by more than 0.05
   (R's `.fix_and_refit_constraint_tol`) is now a failed refit instead of a silently
-  under-enforced one. New `profile_ci_communality` and `profile_ci_correlation` apply the
+  under-enforced one. New internal (not exported) `GLLVModels.profile_ci_communality` and
+  `GLLVModels.profile_ci_correlation` apply the
   existing boundary clamp (`boundary` flag) with R's limits `[0.001, 0.999]` and
   `[-0.999, 0.999]`, so a flat or overshooting profile gives the edge rather than NaN or a
   value outside the support. Interior results are unchanged. Test:
