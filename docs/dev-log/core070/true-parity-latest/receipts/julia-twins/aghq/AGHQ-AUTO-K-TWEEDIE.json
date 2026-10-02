@@ -1,0 +1,172 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "aghq/AGHQ-AUTO-K-TWEEDIE"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#586",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "309042d17082f3b0f090312c679e1020942691d9",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/aghq_p1/aghq_p1.toml",
+      "sha256": "a4f143ccab8d71720348f408620b5cb988600d98fcf40861462fcbd940c2fcbb"
+    },
+    {
+      "path": "test/fixtures/aghq_p1/aghq_tweedie_p5.csv",
+      "sha256": "6d905dadd4b1eda3da3f8cd73c0aa1fe5fac35607c7522ecc3919f1fcc2beb51"
+    },
+    {
+      "path": "test/fixtures/aghq_p1/aghq_p1_helpers.jl",
+      "sha256": "aacd17fc2645f81a8f6a2afec38e3e58c45b3fe3d2c0f3755755ea9cd43a2e25"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_aghq_p1_twin.jl",
+      "sha256": "48a93993dfa19b98de0c72d52cb6f9291f0b0df71503fbea172d4d0868b8f672"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-DECISION",
+        "quantity": "integration actually used: [AGHQ used (1/0), node count k] (Laplace = [0, 0])",
+        "r_source": "test/fixtures/aghq_p1/aghq_p1.toml [case.AGHQ-AUTO-K-TWEEDIE.r].used, k",
+        "julia_source": "GLLVModels fit_gllvm(TweedieED(1.0, 1.5), disp_group = :species, power_group = :species)(...; K = 1, aghq = :auto) via test/fixtures/aghq_p1/aghq_p1_helpers.jl aghq_p1_fit, as called at test/test_aghq_p1_twin.jl:62: integration.actual, integration.k",
+        "r_value": [
+          1.0,
+          9.0
+        ],
+        "julia_value": [
+          1.0,
+          9.0
+        ],
+        "abs_diff": 0.0,
+        "tolerance": 0.5,
+        "tolerance_source": "test/test_aghq_p1_twin.jl:73",
+        "tolerance_source_line": "@test maximum(abs.(dec_j .- dec_r)) <= 0.5",
+        "note": "Data read from test/fixtures/aghq_p1/aghq_tweedie_p5.csv (sha256 checked); tweedie p = 5, n = 150 (seed 20260800), aghq request \"auto\". R and Julia both converged (R: aghq$converged; Julia: fit.converged and reason :converged). Integers, so the test's <= 0.5 is exact equality."
+      },
+      {
+        "case_id": "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-LOGLIK",
+        "quantity": "logLik at each side's own optimum",
+        "r_source": "test/fixtures/aghq_p1/aghq_p1.toml [case.AGHQ-AUTO-K-TWEEDIE.r].loglik",
+        "julia_source": "GLLVModels fit_gllvm(TweedieED(1.0, 1.5), disp_group = :species, power_group = :species)(...; K = 1, aghq = :auto) via test/fixtures/aghq_p1/aghq_p1_helpers.jl aghq_p1_fit, as called at test/test_aghq_p1_twin.jl:62: loglik",
+        "r_value": -1567.716115604683,
+        "julia_value": -1567.7161156323853,
+        "abs_diff": 2.770229912130162e-08,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_aghq_p1_twin.jl:74",
+        "tolerance_source_line": "@test isapprox(j.loglik, r[\"loglik\"]; atol = 1e-6, rtol = 0)",
+        "note": "Data read from test/fixtures/aghq_p1/aghq_tweedie_p5.csv (sha256 checked); tweedie p = 5, n = 150 (seed 20260800), aghq request \"auto\". R and Julia both converged (R: aghq$converged; Julia: fit.converged and reason :converged)."
+      },
+      {
+        "case_id": "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-BETA",
+        "quantity": "per-trait intercepts at each side's own optimum",
+        "r_source": "test/fixtures/aghq_p1/aghq_p1.toml [case.AGHQ-AUTO-K-TWEEDIE.r].beta",
+        "julia_source": "GLLVModels fit_gllvm(TweedieED(1.0, 1.5), disp_group = :species, power_group = :species)(...; K = 1, aghq = :auto) via test/fixtures/aghq_p1/aghq_p1_helpers.jl aghq_p1_fit, as called at test/test_aghq_p1_twin.jl:62: beta",
+        "r_value": [
+          -0.014177023019423737,
+          1.1285739464505244,
+          0.7223357540146242,
+          0.30799284324040777,
+          1.4108909873887314
+        ],
+        "julia_value": [
+          -0.014173316839052865,
+          1.1285687714217771,
+          0.722343178927622,
+          0.3079900407916923,
+          1.4108990807524247
+        ],
+        "abs_diff": 8.093363693228994e-06,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_aghq_p1_twin.jl:75",
+        "tolerance_source_line": "@test isapprox(j.beta, Float64.(r[\"beta\"]); atol = 1e-3, rtol = 0)",
+        "note": "Data read from test/fixtures/aghq_p1/aghq_tweedie_p5.csv (sha256 checked); tweedie p = 5, n = 150 (seed 20260800), aghq request \"auto\". R and Julia both converged (R: aghq$converged; Julia: fit.converged and reason :converged)."
+      },
+      {
+        "case_id": "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-LAMBDA",
+        "quantity": "loadings at each side's own optimum, sign-aligned to R",
+        "r_source": "test/fixtures/aghq_p1/aghq_p1.toml [case.AGHQ-AUTO-K-TWEEDIE.r].lambda",
+        "julia_source": "GLLVModels fit_gllvm(TweedieED(1.0, 1.5), disp_group = :species, power_group = :species)(...; K = 1, aghq = :auto) via test/fixtures/aghq_p1/aghq_p1_helpers.jl aghq_p1_fit, as called at test/test_aghq_p1_twin.jl:62: lambda (times +-1 so that sum(lambda_julia * lambda_R) >= 0)",
+        "r_value": [
+          -0.9691343331274824,
+          0.7592055108088793,
+          -0.5702879422661268,
+          0.6453495264223343,
+          -0.8436935356093975
+        ],
+        "julia_value": [
+          -0.9691322112066802,
+          0.7592109295447327,
+          -0.5702831491731596,
+          0.6453514764267951,
+          -0.8436825558019936
+        ],
+        "abs_diff": 1.0979807403943553e-05,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_aghq_p1_twin.jl:76",
+        "tolerance_source_line": "@test isapprox(j.lambda, Float64.(r[\"lambda\"]); atol = 1e-3, rtol = 0)",
+        "note": "Data read from test/fixtures/aghq_p1/aghq_tweedie_p5.csv (sha256 checked); tweedie p = 5, n = 150 (seed 20260800), aghq request \"auto\". R and Julia both converged (R: aghq$converged; Julia: fit.converged and reason :converged). The single latent axis is identified up to sign; Julia's loadings are multiplied by the +-1 the test applies."
+      },
+      {
+        "case_id": "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-LOG-PHI",
+        "quantity": "per-trait Tweedie dispersion log(phi) at each side's own optimum",
+        "r_source": "test/fixtures/aghq_p1/aghq_p1.toml [case.AGHQ-AUTO-K-TWEEDIE.r].phi (log)",
+        "julia_source": "GLLVModels fit_gllvm(TweedieED(1.0, 1.5), disp_group = :species, power_group = :species)(...; K = 1, aghq = :auto) via test/fixtures/aghq_p1/aghq_p1_helpers.jl aghq_p1_fit, as called at test/test_aghq_p1_twin.jl:62: φ (log)",
+        "r_value": [
+          0.3733550275414462,
+          -0.3205431926624752,
+          0.3995238811849491,
+          -0.3178463824717996,
+          0.31163957641640183
+        ],
+        "julia_value": [
+          0.3733441762172571,
+          -0.32056780347517266,
+          0.3995298316104103,
+          -0.3178398246255502,
+          0.31164990823721833
+        ],
+        "abs_diff": 2.461081269744536e-05,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_aghq_p1_twin.jl:79",
+        "tolerance_source_line": "haskey(r, \"phi\") && @test isapprox(log.(j.phi), log.(Float64.(r[\"phi\"])); atol = 1e-3, rtol = 0)",
+        "note": "Data read from test/fixtures/aghq_p1/aghq_tweedie_p5.csv (sha256 checked); tweedie p = 5, n = 150 (seed 20260800), aghq request \"auto\". R and Julia both converged (R: aghq$converged; Julia: fit.converged and reason :converged). Compared on the log scale, the optimised scale; same Var = phi mu^power on both sides."
+      },
+      {
+        "case_id": "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-POWER",
+        "quantity": "per-trait Tweedie power (1, 2) at each side's own optimum",
+        "r_source": "test/fixtures/aghq_p1/aghq_p1.toml [case.AGHQ-AUTO-K-TWEEDIE.r].power",
+        "julia_source": "GLLVModels fit_gllvm(TweedieED(1.0, 1.5), disp_group = :species, power_group = :species)(...; K = 1, aghq = :auto) via test/fixtures/aghq_p1/aghq_p1_helpers.jl aghq_p1_fit, as called at test/test_aghq_p1_twin.jl:62: power",
+        "r_value": [
+          1.4185544600629916,
+          1.3240941329558868,
+          1.3548040117075475,
+          1.2965623480143815,
+          1.3162637116847058
+        ],
+        "julia_value": [
+          1.4185504569330811,
+          1.3240762634909142,
+          1.3548051344240437,
+          1.296564249040106,
+          1.3162673408953376
+        ],
+        "abs_diff": 1.7869464972619653e-05,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_aghq_p1_twin.jl:88",
+        "tolerance_source_line": "haskey(r, \"power\") && @test isapprox(j.power, Float64.(r[\"power\"]); atol = 1e-3, rtol = 0)",
+        "note": "Data read from test/fixtures/aghq_p1/aghq_tweedie_p5.csv (sha256 checked); tweedie p = 5, n = 150 (seed 20260800), aghq request \"auto\". R and Julia both converged (R: aghq$converged; Julia: fit.converged and reason :converged). Compared on the natural scale both engines report (R: 1 + plogis(logit_p_tweedie); Julia: 1 + 1/(1+exp(-xi))); per-trait power and per-trait dispersion, gllvmTMB's tweedie()."
+      }
+    ]
+  }
+}

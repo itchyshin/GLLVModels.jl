@@ -22,6 +22,12 @@ struct AGHQNB2Data
     offset::Matrix{Float64}
     group::Vector{Int}
 end
+struct AGHQTweedieData
+    responses::Matrix{Float64}
+    mask::BitMatrix
+    offset::Matrix{Float64}
+    group::Vector{Int}
+end
 struct AGHQOrdinalData
     responses::Matrix{Float64}
     mask::BitMatrix
@@ -41,7 +47,7 @@ struct AGHQFitInfo{C,B,R} <: AbstractIntegrationInfo
     base_controls::B
     result::R
     caches::Vector{AGHQAdaptation}
-    data::Union{Nothing,AGHQPoissonData,AGHQBinomialData,AGHQGaussianData,AGHQNB2Data,AGHQOrdinalData}
+    data::Union{Nothing,AGHQPoissonData,AGHQBinomialData,AGHQGaussianData,AGHQNB2Data,AGHQOrdinalData,AGHQTweedieData}
     input_digest::String
     mode_gradient_max::Float64
 end
@@ -99,3 +105,7 @@ _aghq_data_digest(d::AGHQNB2Data)=bytes2hex(SHA.sha256(
 _aghq_data_digest(d::AGHQOrdinalData)=bytes2hex(SHA.sha256(
     string(size(d.responses))*"|"*join(vec(d.responses),",")*"|"*join(vec(d.mask),",")*
     "|"*join(d.C,",")*"|"*(d.probit ? "probit" : "logit")))
+
+_aghq_data_digest(d::AGHQTweedieData)=bytes2hex(SHA.sha256(
+    string(size(d.responses))*"|"*join(vec(d.responses),",")*"|"*join(vec(d.mask),",")*
+    "|"*join(vec(ifelse.(d.mask,d.offset,0.0)),",")*"|"*join(d.group,",")))
