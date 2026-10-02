@@ -101,6 +101,7 @@ include("families/studentt.jl")          # Student-t (heavy-tailed continuous, f
 include("families/lognormal.jl")         # one-part lognormal (twin fid 3)
 include("families/multinomial.jl")       # unordered categorical FE softmax (twin fid 16; v1 no LV)
 include("families/twopart.jl")           # Two-part substrate + Delta-lognormal / Delta-Gamma / Hurdle (Phase 3)
+include("families/aghq_delta_gamma.jl")  # Delta-Gamma (shared latent, per-trait alpha) AGHQ problem + fitter
 include("families/beta_hurdle.jl")       # Beta-hurdle (Bernoulli × Beta) two-part family
 include("families/beta_binomial.jl")     # Beta-binomial (overdispersed binomial) — twin fid 8
 include("families/com_poisson.jl")        # Conway–Maxwell–Poisson (under/overdispersed counts) — beyond gllvmTMB

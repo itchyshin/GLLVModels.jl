@@ -49,6 +49,17 @@ rejected_seeds = []
 julia_rejected_seeds = []
 trait_names = ["t1", "t2", "t3", "t4", "t5"]
 
+[dataset.delta_gamma_p5]
+file = "aghq_delta_gamma_p5.csv"
+sha256 = "0339fc4d3390a3e29662507b7c14011d66bac47092a4d66bba62317688180337"
+family = "delta_gamma"
+seed = 20260900
+p = 5
+n_unit = 150
+rejected_seeds = []
+julia_rejected_seeds = []
+trait_names = ["t1", "t2", "t3", "t4", "t5"]
+
 [dataset.gaussian_p5]
 file = "aghq_gaussian_p5.csv"
 sha256 = "184f0a6bea6ef653f445cc6487b2c292f22b9097b736c08c4d4c610351b97152"
@@ -161,6 +172,20 @@ lambda = [-0.96913433312748243, 0.75920551080887932, -0.57028794226612678, 0.645
 phi = [1.4525999612904119, 0.7257547053536334, 1.4911145808973516, 0.72771456954201386, 1.3656623873838807]
 power = [1.4185544600629916, 1.3240941329558868, 1.3548040117075475, 1.2965623480143815, 1.3162637116847058]
 reason = "quadrature on z_B (d = 1, k = 9, 9 nodes); 14 adaptation passes, converged (adaptation mode fixed; gradient below tolerance; max |grad| = 0.000342, relative 2.18e-07); final max |mode shift| = 2.99e-06"
+
+[case.AGHQ-AUTO-K-DELTA]
+dataset = "delta_gamma_p5"
+aghq_request = "auto"
+
+[case.AGHQ-AUTO-K-DELTA.r]
+used = true
+k = 5
+converged = true
+loglik = -981.25857737920217
+beta = [-0.53374092156128217, -0.060284312224434908, -0.13951787929615062, 0.4254509972538506, 0.46557322447578819]
+lambda = [0.89747138752503419, -0.49716044956338196, 0.74237023572131999, -0.28479783355865612, 0.62877805251094565]
+phi = [0.57372978963366505, 0.73574654805149509, 0.39592335679753632, 0.74101109713692814, 1.0789570857562882]
+reason = "quadrature on z_B (d = 1, k = 5, 5 nodes); 11 adaptation passes, converged (adaptation mode fixed; gradient below tolerance; max |grad| = 0.000481, relative 4.9e-07); final max |mode shift| = 8.59e-05"
 
 [case.AGHQ-AUTO-K-GAUSSIAN]
 dataset = "gaussian_p5"
