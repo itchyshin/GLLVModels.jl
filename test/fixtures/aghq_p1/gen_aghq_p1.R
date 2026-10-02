@@ -30,14 +30,21 @@ stopifnot(nzchar(rlib), startsWith(normalizePath(find.package("gllvmTMB")), norm
 
 make_data <- function(fam, p, n, seed, lam_scale, size = 10L) {
   set.seed(seed)
-  mu <- if (fam == "poisson") seq(0.1, 0.9, length.out = p) else seq(-0.4, 0.6, length.out = p)
+  mu <- if (fam %in% c("poisson", "nb2")) seq(0.1, 0.9, length.out = p) else seq(-0.4, 0.6, length.out = p)
   lam <- lam_scale * rep(c(0.9, -0.7, 0.6, -0.5, 0.8), length.out = p)
   z <- rnorm(n)
   eta <- outer(z, lam) + matrix(mu, n, p, byrow = TRUE)
   Y <- switch(fam,
     poisson  = matrix(rpois(n * p, exp(eta)), n, p),
+    nb2      = matrix(rnbinom(n * p, mu = exp(eta), size = rep(c(2, 3, 4, 2.5, 5), length.out = p)[col(eta)]), n, p),
     binomial = matrix(rbinom(n * p, size, plogis(eta)), n, p),
-    gaussian = eta + matrix(rnorm(n * p, sd = 0.5), n, p))
+    gaussian = eta + matrix(rnorm(n * p, sd = 0.5), n, p),
+    ordinal  = {  # probit threshold model: 4 ordered categories, y* = eta + N(0, 1)
+      ystar <- eta + matrix(rnorm(n * p), n, p)
+      Yo <- matrix(findInterval(ystar, c(-0.5, 0.5, 1.5)) + 1L, n, p)
+      stopifnot(all(apply(Yo, 2, function(v) length(unique(v)) == 4L)))  # C = 4 on every trait
+      Yo
+    })
   tr <- paste0("t", seq_len(p))
   df <- data.frame(unit = factor(rep(seq_len(n), each = p), levels = seq_len(n)),
                    trait = factor(rep(tr, n), levels = tr), value = as.vector(t(Y)))
@@ -52,11 +59,13 @@ make_data <- function(fam, p, n, seed, lam_scale, size = 10L) {
 ## julia_rejected_seeds. GLLVM_AGHQ_SKIP_SEEDS="name:seed,name:seed" adds Julia rejections.
 specs <- list(
   poisson_p5   = list(fam = "poisson",  p = 5L,  n = 150L, lam = 1.0),
+  nb2_p5       = list(fam = "nb2",      p = 5L,  n = 150L, lam = 1.0),
+  ordinal_p5   = list(fam = "ordinal",  p = 5L,  n = 150L, lam = 1.0),
   gaussian_p5  = list(fam = "gaussian", p = 5L,  n = 150L, lam = 1.0),
   binomial_p5  = list(fam = "binomial", p = 5L,  n = 100L, lam = 1.0),
   binomial_p19 = list(fam = "binomial", p = 19L, n = 100L, lam = 1.0),
   binomial_p20 = list(fam = "binomial", p = 20L, n = 100L, lam = 1.0))
-seed_base <- c(poisson_p5 = 20260100L, gaussian_p5 = 20260200L, binomial_p5 = 20260300L,
+seed_base <- c(poisson_p5 = 20260100L, nb2_p5 = 20260600L, ordinal_p5 = 20260700L, gaussian_p5 = 20260200L, binomial_p5 = 20260300L,
                binomial_p19 = 20260400L, binomial_p20 = 20260500L)
 ## Seeds at which R converged but the Julia fit did NOT (test/test_aghq_p1_twin.jl guards
 ## this; found by running the Julia fits on each candidate dataset). Julia's AGHQ adaptation
@@ -68,7 +77,7 @@ seed_base <- c(poisson_p5 = 20260100L, gaussian_p5 = 20260200L, binomial_p5 = 20
 julia_skip <- c("poisson_p5:20260103", "poisson_p5:20260107", "poisson_p5:20260110", "poisson_p5:20260111")
 skip <- c(julia_skip, strsplit(Sys.getenv("GLLVM_AGHQ_SKIP_SEEDS", ""), ",")[[1]])
 
-fam_obj <- function(f) switch(f, poisson = poisson(), gaussian = gaussian(), binomial = binomial())
+fam_obj <- function(f) switch(f, poisson = poisson(), gaussian = gaussian(), binomial = binomial(), nb2 = nbinom2(), ordinal = ordinal_probit())
 fit_case <- function(ds, aghq, default_control = FALSE) {
   d <- ds$df
   ctrl <- if (default_control) gllvmTMBcontrol(n_init = 1L, init_jitter = 0, se = FALSE)
@@ -90,12 +99,16 @@ fit_case <- function(ds, aghq, default_control = FALSE) {
   list(used = used, k = if (used) as.integer(fit$aghq$k) else 0L, converged = conv, loglik = ll,
        beta = unname(par[names(par) == "b_fix"]), lambda = as.numeric(fit$report$Lambda_B),
        sigma_eps = if (ds$fam == "gaussian") as.numeric(fit$report$sigma_eps)[1] else NA_real_,
+       phi = if (ds$fam == "nb2") unname(exp(par[names(par) == "log_phi_nbinom2"])) else NULL,
+       log_incr = if (ds$fam == "ordinal") unname(par[names(par) == "ordinal_log_increments"]) else NULL,
        reason = as.character(fit$aghq$reason), grad_rel = if (used) fit$aghq$grad_rel else NA_real_)
 }
 
 cases <- list(
   list(id = "AGHQ-AUTO-K-POISSON",   ds = "poisson_p5",   aghq = "auto", expect_used = TRUE,  expect_k = 5L),
   list(id = "AGHQ-AUTO-K-BINOMIAL",  ds = "binomial_p5",  aghq = "auto", expect_used = TRUE,  expect_k = 5L),
+  list(id = "AGHQ-AUTO-K-NB2",       ds = "nb2_p5",       aghq = "auto", expect_used = TRUE,  expect_k = 5L),
+  list(id = "AGHQ-AUTO-K-ORDINAL",   ds = "ordinal_p5",   aghq = "auto", expect_used = TRUE,  expect_k = 9L),
   list(id = "AGHQ-AUTO-K-GAUSSIAN",  ds = "gaussian_p5",  aghq = "auto", expect_used = TRUE,  expect_k = 5L),
   list(id = "AGHQ-DEFAULT-OFF",      ds = "poisson_p5",   aghq = NA,     expect_used = FALSE, expect_k = 0L, default_control = TRUE),
   list(id = "AGHQ-POLICY-OFF",       ds = "binomial_p5",  aghq = FALSE,  expect_used = FALSE, expect_k = 0L),
@@ -170,6 +183,8 @@ for (cs in cases) {
   w("loglik = %s", fmt(r$loglik))
   w("beta = %s", vec(r$beta)); w("lambda = %s", vec(r$lambda))
   if (!is.na(r$sigma_eps)) w("sigma_eps = %s", fmt(r$sigma_eps))
+  if (!is.null(r$phi)) w("phi = %s", vec(r$phi))
+  if (!is.null(r$log_incr)) w("log_incr = %s", vec(r$log_incr))
   w("reason = \"%s\"", gsub("\"", "'", r$reason))
 }
 close(con)

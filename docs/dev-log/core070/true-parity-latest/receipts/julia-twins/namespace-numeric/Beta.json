@@ -24,7 +24,7 @@
   "source_tests": [
     {
       "path": "test/test_namespace_numeric_p1_twin_b.jl",
-      "sha256": "4e2e88b814cced649c411548782cd87fdd981b9c39b207c1fe642e7d79eaabfe"
+      "sha256": "07c8426d1336ae44f711083e4c676c3e0fbf8bb91c53907475f7b709b048e3ff"
     }
   ],
   "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",

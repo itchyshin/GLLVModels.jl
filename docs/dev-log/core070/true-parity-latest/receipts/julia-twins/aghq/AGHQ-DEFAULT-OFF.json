@@ -10,11 +10,11 @@
   "origin_pr": "itchyshin/GLLVModels.jl#586",
   "generator": "tools/true_parity_julia_receipts.jl",
   "julia_version": "1.10.0",
-  "gllvmodels_commit": "3fcf206986f934686204a3f70b7fe50edc27771d",
+  "gllvmodels_commit": "4e83f9fb51615c410a053f3097fc8eeffc908fb6",
   "source_fixtures": [
     {
       "path": "test/fixtures/aghq_p1/aghq_p1.toml",
-      "sha256": "6b4f5e0ccd59216891f01055c22944ddf68287854b8b6d50307c3ed72353f745"
+      "sha256": "1dde00be6b1b4530fb4541ae30dd0cfdb4a568d833c704946e7b63c641323ebc"
     },
     {
       "path": "test/fixtures/aghq_p1/aghq_poisson_p5.csv",
@@ -22,13 +22,13 @@
     },
     {
       "path": "test/fixtures/aghq_p1/aghq_p1_helpers.jl",
-      "sha256": "d92bd93aaf1b1a8f420cf063167d253c576e56fba0dac9a1bd5b1025315723ab"
+      "sha256": "e87d887139815834b0df848482b486c6ad5a0807505707e5e10baac8e09b580c"
     }
   ],
   "source_tests": [
     {
       "path": "test/test_aghq_p1_twin.jl",
-      "sha256": "20a808b76c1a5bf6f4821e437c998b56113f9649f0fa2fbb16f67d1735fbaa6d"
+      "sha256": "81f9a0344c732a6db31a7223ba5792a7fda3fab4717663e038302dae61e4d997"
     }
   ],
   "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",

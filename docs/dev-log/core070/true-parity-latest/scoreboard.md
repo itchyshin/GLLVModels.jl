@@ -11,7 +11,7 @@ Pin: gllvmTMB P1 `9539352f66f2db2cc26b1c393e67212a359b60c9`.
 
 Inputs:
 
-- `docs/dev-log/core070/true-parity-latest/case-map-aghq.json` (21 rows, sha256 `8fdcd43309b18e07d30a17c7634353674de41eac6b1fd592db3c58e678c58fba`)
+- `docs/dev-log/core070/true-parity-latest/case-map-aghq.json` (21 rows, sha256 `14260c8c84c876205943112f90cb2d098832c37d00dc166ff1b993e3f1d4f8a3`)
 - `docs/dev-log/core070/true-parity-latest/case-map-covariance.json` (17 rows, sha256 `1eaf07951ac7570023a85ac766ee8eb2195bbf1c296df72165c20f9be0fb60ec`)
 - `docs/dev-log/core070/true-parity-latest/case-map-data.json` (28 rows, sha256 `d139743bf409f0b05e4e3f2d7b4dd5a54d80e3a74adab830979689a87d9d91bc`)
 - `docs/dev-log/core070/true-parity-latest/case-map-family.json` (21 rows, sha256 `f8204dfc5aba484ccf99af8b5508c75f4dce898aaa33fb550b0e8219020e975b`)
@@ -25,7 +25,7 @@ Inputs:
 
 | `family` | EVIDENCED | REGISTRATION-ONLY | HELD | PARTIAL | NEEDS-SURFACE | NON-NUMERIC | NON-DISCRIMINATING | FAIL | NOT-MEASURED | total |
 |---|---|---|---|---|---|---|---|---|---|---|
-| `aghq` | 10 | 0 | 0 | 0 | 0 | 11 | 0 | 0 | 0 | 21 |
+| `aghq` | 12 | 0 | 0 | 0 | 0 | 9 | 0 | 0 | 0 | 21 |
 | `covariance` | 0 | 0 | 2 | 7 | 0 | 8 | 0 | 0 | 0 | 17 |
 | `data` | 0 | 0 | 0 | 0 | 28 | 0 | 0 | 0 | 0 | 28 |
 | `family` | 15 | 0 | 0 | 5 | 0 | 0 | 0 | 0 | 1 | 21 |
@@ -34,7 +34,7 @@ Inputs:
 | `isdm` | 10 | 0 | 0 | 0 | 10 | 0 | 0 | 0 | 0 | 20 |
 | `namespace` | 29 | 25 | 0 | 0 | 2 | 0 | 0 | 0 | 13 | 69 |
 | `postfit` | 34 | 0 | 2 | 12 | 2 | 0 | 1 | 1 | 0 | 52 |
-| `all` | 106 | 25 | 4 | 26 | 42 | 78 | 1 | 1 | 14 | 297 |
+| `all` | 108 | 25 | 4 | 26 | 42 | 76 | 1 | 1 | 14 | 297 |
 
 ## P1 twin fixtures present at this head, not bound to any row
 
@@ -89,8 +89,8 @@ decision for the PR that measures it, not something this tool does.
 | aghq-AGHQ-AUTO-K-BINOMIAL `aghq/AGHQ-AUTO-K-BINOMIAL` | required_core; cases: P1-JULIA-AGHQ-AUTO-K-BINOMIAL-DECISION, P1-JULIA-AGHQ-AUTO-K-BINOMIAL-LOGLIK, P1-JULIA-AGHQ-AUTO-K-BINOMIAL-BETA, P1-JULIA-AGHQ-AUTO-K-BINOMIAL-LAMBDA | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/aghq/AGHQ-AUTO-K-BINOMIAL.json | family aghq; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | aghq-AGHQ-AUTO-K-DELTA `aghq/AGHQ-AUTO-K-DELTA` | required_core; cases: CORE070-AGHQ-AUTO-K-DELTA-CONTROL-CONTRACT | NON-NUMERIC | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-AUTO-K-DELTA-CONTROL-CONTRACT.json | family aghq; evidence_tier r_only_policy_pass; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | aghq-AGHQ-AUTO-K-GAUSSIAN `aghq/AGHQ-AUTO-K-GAUSSIAN` | required_core; cases: P1-JULIA-AGHQ-AUTO-K-GAUSSIAN-DECISION, P1-JULIA-AGHQ-AUTO-K-GAUSSIAN-LOGLIK, P1-JULIA-AGHQ-AUTO-K-GAUSSIAN-BETA, P1-JULIA-AGHQ-AUTO-K-GAUSSIAN-LAMBDA, P1-JULIA-AGHQ-AUTO-K-GAUSSIAN-SIGMA-EPS | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/aghq/AGHQ-AUTO-K-GAUSSIAN.json | family aghq; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| aghq-AGHQ-AUTO-K-NB2 `aghq/AGHQ-AUTO-K-NB2` | required_core; cases: CORE070-AGHQ-AUTO-K-NB2-CONTROL-CONTRACT | NON-NUMERIC | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-AUTO-K-NB2-CONTROL-CONTRACT.json | family aghq; evidence_tier r_only_policy_pass; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| aghq-AGHQ-AUTO-K-ORDINAL `aghq/AGHQ-AUTO-K-ORDINAL` | required_core; cases: CORE070-AGHQ-AUTO-K-ORDINAL-CONTROL-CONTRACT | NON-NUMERIC | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-AUTO-K-ORDINAL-CONTROL-CONTRACT.json | family aghq; evidence_tier r_only_policy_pass; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| aghq-AGHQ-AUTO-K-NB2 `aghq/AGHQ-AUTO-K-NB2` | required_core; cases: P1-JULIA-AGHQ-AUTO-K-NB2-DECISION, P1-JULIA-AGHQ-AUTO-K-NB2-LOGLIK, P1-JULIA-AGHQ-AUTO-K-NB2-BETA, P1-JULIA-AGHQ-AUTO-K-NB2-LAMBDA, P1-JULIA-AGHQ-AUTO-K-NB2-LOG-PHI | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/aghq/AGHQ-AUTO-K-NB2.json | family aghq; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| aghq-AGHQ-AUTO-K-ORDINAL `aghq/AGHQ-AUTO-K-ORDINAL` | required_core; cases: P1-JULIA-AGHQ-AUTO-K-ORDINAL-DECISION, P1-JULIA-AGHQ-AUTO-K-ORDINAL-LOGLIK, P1-JULIA-AGHQ-AUTO-K-ORDINAL-BETA, P1-JULIA-AGHQ-AUTO-K-ORDINAL-LAMBDA, P1-JULIA-AGHQ-AUTO-K-ORDINAL-LOG-INCREMENTS | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/aghq/AGHQ-AUTO-K-ORDINAL.json | family aghq; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | aghq-AGHQ-AUTO-K-POISSON `aghq/AGHQ-AUTO-K-POISSON` | required_core; cases: P1-JULIA-AGHQ-AUTO-K-POISSON-DECISION, P1-JULIA-AGHQ-AUTO-K-POISSON-LOGLIK, P1-JULIA-AGHQ-AUTO-K-POISSON-BETA, P1-JULIA-AGHQ-AUTO-K-POISSON-LAMBDA | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/aghq/AGHQ-AUTO-K-POISSON.json | family aghq; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | aghq-AGHQ-AUTO-K-TWEEDIE `aghq/AGHQ-AUTO-K-TWEEDIE` | required_core; cases: CORE070-AGHQ-AUTO-K-TWEEDIE-CONTROL-CONTRACT | NON-NUMERIC | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-AUTO-K-TWEEDIE-CONTROL-CONTRACT.json | family aghq; evidence_tier r_only_policy_pass; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | aghq-AGHQ-CTRL-AUTO `aghq/AGHQ-CTRL-AUTO` | required_core; cases: CORE070-AGHQ-CTRL-AUTO-PAIRED-CONTROL | NON-NUMERIC | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-CTRL-AUTO-PAIRED-CONTROL.json | family aghq; evidence_tier paired_control_categorical_pass; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
