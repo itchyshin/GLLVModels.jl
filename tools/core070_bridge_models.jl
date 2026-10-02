@@ -5,7 +5,7 @@ function core070_bridge_native(y, family, k)
     Y = Matrix{Float64}(y); p,n = size(Y); K=Int(k)
     marker = family == "poisson" ? GLLVModels.Poisson() :
              family == "beta" ? GLLVModels.Beta() : GLLVModels.NegativeBinomial()
-    fit = fit_gllvm(Y; family=marker, K=K)
+    fit = family in ("poisson","beta") ? fit_gllvm(Y; family=marker, K=K) : fit_gllvm(Y; family=marker, K=K, disp_group=:species)
     dispersion = family == "poisson" ? Float64[] :
                  family == "beta" ? fit.φ : fit.r_group
     rr = GLLVModels.rr_theta_len(p,K)

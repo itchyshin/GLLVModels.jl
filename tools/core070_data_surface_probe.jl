@@ -56,7 +56,7 @@ const PATHS = [
     ("fit_gllvm(Y; family=Normal())", :gaussian, fitter(Normal())),
     ("fit_gllvm(Y; family=Normal(), pervar=true)", :gaussian, fitter(Normal(); pervar = true)),
     ("fit_gllvm(Y; family=Poisson())", :count, fitter(Poisson())),
-    ("fit_gllvm(Y; family=NegativeBinomial(1.0, 0.5))", :count, fitter(NegativeBinomial(1.0, 0.5))),
+    ("fit_gllvm(Y; family=NegativeBinomial(1.0, 0.5), disp_group=:species)", :count, fitter(NegativeBinomial(1.0, 0.5); disp_group = :species)),
     ("fit_gllvm(Y; family=NB1())", :count, fitter(NB1())),
     ("fit_gllvm(Y; family=Binomial())", :binary, fitter(Binomial())),
     ("fit_gllvm(Y; family=Beta())", :unit, fitter(Beta())),
