@@ -25,6 +25,16 @@ vectors, controls, convergence, observed caches and input identity. AGHQ converg
 and inference refer to the **frozen-node surrogate**, not its moving-node derivative.
 This route does not establish full R↔Julia parity.
 
+**Number of sites.** The Gaussian fitter requires `n_sites ≥ p` and throws an
+`ArgumentError` otherwise; the masked / offset / `aghq` route above inherits this
+because its warm start is the closed-form fit. So do `fit_gllvm` with `Normal()`
+or `Lognormal()` (a Gaussian fit to `log(Y)`, see [`fit_lognormal_gllvm`](@ref)) and
+the R bridge's `"gaussian"` and `"lognormal"` families. The Laplace fitters
+(`fit_gllvm` with `Poisson()`, `Binomial()`, `NegativeBinomial()` and the rest) have
+no such condition and accept `n_sites < p`; with few sites, check the `converged`
+flag and the saturation warnings. The Gaussian likelihood itself is valid for
+`n_sites < p`; only this fitter refuses (#149).
+
 **`lambda_constraint`:** fits a confirmatory model in which specific loadings
 are held fixed at given values instead of estimated, mirroring R gllvmTMB's
 `lambda_constraint = list(unit = M)`. Pass a `p × K` matrix of raw `Λ` values
