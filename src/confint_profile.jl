@@ -396,9 +396,9 @@ Returns a NamedTuple with fields:
   - `lower::Float64` — lower CI bound on the raw scale for SD-style
     parameters (σ_eps, σ_B, σ_W, σ_phy), native scale for β / Λ.
     `σ_phy` is a signed parameter (#136), so this interval can cross zero.
-    When `K_phy = 0`, its sign can flip independently within each group of
-    rows that `Σ_phy` links (for example each daughter clade of the root
-    when the root edge has length zero); when `K_phy ≥ 1`, it is not
+    When `K_phy = 0`, the sign of each group of rows that `Σ_phy` links can
+    flip on its own (for a tree-derived `Σ_phy`, each daughter clade of the
+    root); when `K_phy ≥ 1`, it is not
     identified separately from `Λ_phy` and a per-entry interval is not
     interpretable. It is not gllvmTMB's
     `phylo_unique` scale; see the gllvmTMB parity page.
@@ -759,9 +759,8 @@ Bare profile-CURVE variant scoped to the per-trait phylogenetic-unique scale
 back-transform; present iff the fit used `has_phy_unique = true`).
 
 `σ_phy` is a signed parameter (#136), so this curve can extend below zero.
-When `K_phy = 0`, its sign can flip independently within each group of rows
-that `Σ_phy` links (for example each daughter clade of the root when the root
-edge has length zero); when `K_phy ≥ 1`, it is not identified separately from
+When `K_phy = 0`, the sign of each group of rows that `Σ_phy` links can flip
+on its own (for a tree-derived `Σ_phy`, each daughter clade of the root); when `K_phy ≥ 1`, it is not identified separately from
 `Λ_phy` and a per-entry interval is not interpretable. It is not gllvmTMB's `phylo_unique` scale; see the gllvmTMB
 parity page.
 

@@ -7,15 +7,19 @@
   document the difference. The docstrings of `fit_gaussian_gllvm` (and the
   internal exact fitter), `gaussian_marginal_loglik`, `confint`, `profile_ci`,
   `profile_phylo_signal` and the EM fitters, and the gllvmTMB parity page, now
-  say which sign flips leave the likelihood unchanged: when `K_phy = 0`, a
-  flip within each group of rows that `Σ_phy` links (so each root daughter
-  clade on a tree with a zero-length root edge); when `K_phy ≥ 1`, `σ_phy` is
-  not separately identified from `Λ_phy`. The fitter docstrings and the
+  say which sign flips leave the likelihood unchanged: when `K_phy = 0`, the
+  sign of each group of rows that `Σ_phy` links (for a tree-derived `Σ_phy`,
+  always at least the root's two daughter clades, since the root edge is
+  dropped); when `K_phy ≥ 1`, `σ_phy` is not separately identified from
+  `Λ_phy`. The fitter docstrings and the
   parity page add that `X_lv` fits skip the sign-pattern search and sign
   anchor, and that gllvmTMB's `phylo_unique` (`phylo_indep()`) is a different
   model term, with `fit_kernel_indep_gllvm` and
-  `fit_phylo_latent_gllvm(...; unique = true)` as the Julia counterparts. No
-  code or numbers change.
+  `fit_phylo_latent_gllvm(...; unique = true)` as the Julia counterparts.
+  `docs/src/structured-dependence.md` now calls `σ_phy` per-trait signed
+  scales, and stale comments that described the dense fit as `σ_phy > 0` are
+  corrected (including a testset name in `test/test_em_phylo.jl`). No code or
+  numbers change.
 
 - **`fit_phylo_gaussian` no longer reports `converged = true` after a zero-length step
   (part of #505, the remaining #485 class).** Optim also counts a zero-length line-search

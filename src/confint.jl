@@ -308,9 +308,8 @@ identity (signed) link — its Wald CI is the plain `θ̂ ± z * SE`. β and
 Λ entries are reported on their native (linear) scale.
 
 `σ_phy` is a signed parameter (#136), so this interval can cross zero. When
-`K_phy = 0`, its sign can flip independently within each group of rows that
-`Σ_phy` links (for example each daughter clade of the root when the root edge
-has length zero); when `K_phy ≥ 1`, it is not identified separately from
+`K_phy = 0`, the sign of each group of rows that `Σ_phy` links can flip on its
+own (for a tree-derived `Σ_phy`, each daughter clade of the root); when `K_phy ≥ 1`, it is not identified separately from
 `Λ_phy` and a per-entry interval is not interpretable. It is not gllvmTMB's `phylo_unique` scale; see the gllvmTMB
 parity page.
 

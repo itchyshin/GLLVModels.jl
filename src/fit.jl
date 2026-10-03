@@ -137,9 +137,11 @@ through `B = (Λ_phy_aug * Λ_phy_aug') .* Σ_phy`. When `K_phy = 0`, signs are
 identified only within each group of rows that `Σ_phy` links by nonzero
 entries: inside a group the relative signs set the sign of each cross-trait
 entry `B[t, t′]`, but each group's sign can flip on its own without changing
-the likelihood. For a tree whose root edge has length zero, each daughter
-clade of the root is such a group; only when `Σ_phy` links all rows is the
-global flip `σ_phy → -σ_phy` the sole symmetry. The magnitudes `abs.(σ_phy)`
+the likelihood. For a tree-derived `Σ_phy` the root's daughter clades are
+always separate groups, because `sigma_phy_dense` drops the root edge, so the
+global sign anchor pins only the clade that holds the largest `abs(σ_phy)`;
+the global flip `σ_phy → -σ_phy` is the sole symmetry only for a supplied
+`Σ_phy` that links all rows. The magnitudes `abs.(σ_phy)`
 are the per-row scales. When `K_phy ≥ 1`, `σ_phy` is not identified
 separately from `Λ_phy`, because rotating it together with a column of
 `Λ_phy` leaves the likelihood unchanged; read the implied `B`, and do not
@@ -583,8 +585,8 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
     # B[t,t'] = σ_phy[t]·σ_phy[t']·Σ_phy[t,t'] are bilinear in σ_phy so a
     # *global* sign flip leaves B unchanged). When K_phy = 0 it is the only
     # such symmetry only if Σ_phy links all rows; with zero blocks in Σ_phy
-    # (e.g. a zero-length root edge) each block can also flip on its own,
-    # and this anchor does not pin those.
+    # (always the case for a tree-derived Σ_phy, whose root edge is dropped)
+    # each block can also flip on its own, and this anchor does not pin those.
     # Convention: flip so the largest-magnitude entry has non-negative
     # sign. Estimates are then deterministic up to the flip.
     if has_phy_unique && rec.σ_phy !== nothing

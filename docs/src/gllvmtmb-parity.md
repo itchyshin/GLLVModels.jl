@@ -376,9 +376,11 @@ Check these restrictions when translating an R analysis:
   `K_phy = 0`, signs are identified only within each group of rows that
   `Σ_phy` links by nonzero entries: inside a group the relative signs set the
   sign of each cross-trait entry of `B`, but each group's sign can flip on its
-  own. On a tree whose root edge has length zero, each daughter clade of the
-  root is such a group; the global flip is the only symmetry only when
-  `Σ_phy` links all rows. With `K_phy ≥ 1`, `σ_phy` is not identified
+  own. For a tree-derived `Σ_phy` the root's daughter clades are always
+  separate groups, because `sigma_phy_dense` drops the root edge, so the
+  global sign anchor pins only the clade with the largest `abs(σ_phy)`; the
+  global flip is the only symmetry only for a supplied `Σ_phy` that links all
+  rows. With `K_phy ≥ 1`, `σ_phy` is not identified
   separately from `Λ_phy`; read the implied `B`, not per-entry intervals.
   With `X_lv`, the fitter skips both its sign-pattern search and its sign
   anchor. gllvmTMB's `phylo_unique` term (now spelled `phylo_indep()` on its

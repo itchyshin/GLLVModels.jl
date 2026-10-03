@@ -66,8 +66,8 @@ caller — typically a species-trait covariance derived from a tree):
   - `Λ_phy::AbstractMatrix` (p × K_phy): phylo-latent loadings.
   - `σ_phy::AbstractVector` (length p): per-row phylo-unique scales.
     `σ_phy` is a signed parameter (#136), so its entries can be negative.
-    When `K_phy = 0`, its sign can flip independently within each group of
-    rows that `Σ_phy` links; when `K_phy ≥ 1`, it is not identified
+    When `K_phy = 0`, the sign of each group of rows that `Σ_phy` links can
+    flip on its own; when `K_phy ≥ 1`, it is not identified
     separately from `Λ_phy`. It is not gllvmTMB's
     `phylo_unique` scale; see the gllvmTMB parity page.
 With Λ_phy_aug = hcat(Λ_phy, σ_phy) the marginal covariance of vec(y)

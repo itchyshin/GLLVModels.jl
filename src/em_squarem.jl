@@ -158,8 +158,9 @@ signed row-model parameter of `fit_gaussian_gllvm` with no `Λ_phy` columns,
 so it enters the likelihood only through `B = (σ_phy * σ_phy') .* Σ_phy`.
 Signs are identified only within each group of rows that `Σ_phy` links by
 nonzero entries (inside a group the relative signs set the sign of each
-`B[t, t′]`); each group's sign can flip on its own, so on a tree whose root
-edge has length zero each daughter clade of the root can flip independently.
+`B[t, t′]`); each group's sign can flip on its own. For a tree-derived
+`Σ_phy` the root's daughter clades are always separate groups, because
+`sigma_phy_dense` drops the root edge.
 Read `abs.(σ_phy)` as the per-row scales, and the sign pattern within each
 group up to one flip. EM can stop in a worse sign pattern;
 compare its log-likelihood with `fit_gaussian_gllvm` on the same data, or
