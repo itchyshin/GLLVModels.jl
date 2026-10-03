@@ -13,7 +13,7 @@ Inputs:
 
 - `docs/dev-log/core070/true-parity-latest/case-map-aghq.json` (21 rows, sha256 `6ea352a0f4af7caf2795f59c1c4790701ecc2e5c774c840451ae146213fc4047`)
 - `docs/dev-log/core070/true-parity-latest/case-map-covariance.json` (17 rows, sha256 `1eaf07951ac7570023a85ac766ee8eb2195bbf1c296df72165c20f9be0fb60ec`)
-- `docs/dev-log/core070/true-parity-latest/case-map-data.json` (28 rows, sha256 `457504ac04c6949e5067ef66f8053fc8665bdc10f82022a3d3cef9d295ce84cd`)
+- `docs/dev-log/core070/true-parity-latest/case-map-data.json` (28 rows, sha256 `6ef1e62869329642defdb2f80fd92aed084246d75b23143f59d452d09423067c`)
 - `docs/dev-log/core070/true-parity-latest/case-map-family.json` (21 rows, sha256 `f8204dfc5aba484ccf99af8b5508c75f4dce898aaa33fb550b0e8219020e975b`)
 - `docs/dev-log/core070/true-parity-latest/case-map-fit-input.json` (6 rows, sha256 `1f8648158d3b9eaeb97a77385ab8164174f37b14b964206487f388222ec7b1be`)
 - `docs/dev-log/core070/true-parity-latest/case-map-inference.json` (63 rows, sha256 `de305bd492f8dfa9c1b97ddeb0ea57c4472c04e8d8be3c72505d97ef204f15c8`)
@@ -27,14 +27,14 @@ Inputs:
 |---|---|---|---|---|---|---|---|---|---|---|
 | `aghq` | 14 | 0 | 0 | 0 | 0 | 7 | 0 | 0 | 0 | 21 |
 | `covariance` | 0 | 0 | 2 | 7 | 0 | 8 | 0 | 0 | 0 | 17 |
-| `data` | 7 | 0 | 0 | 0 | 21 | 0 | 0 | 0 | 0 | 28 |
+| `data` | 6 | 0 | 0 | 0 | 22 | 0 | 0 | 0 | 0 | 28 |
 | `family` | 15 | 0 | 0 | 5 | 0 | 0 | 0 | 0 | 1 | 21 |
 | `fit-input` | 6 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 6 |
 | `inference` | 2 | 0 | 0 | 2 | 0 | 59 | 0 | 0 | 0 | 63 |
 | `isdm` | 10 | 0 | 0 | 0 | 10 | 0 | 0 | 0 | 0 | 20 |
 | `namespace` | 29 | 25 | 0 | 0 | 2 | 0 | 0 | 0 | 13 | 69 |
 | `postfit` | 34 | 0 | 2 | 12 | 2 | 0 | 1 | 1 | 0 | 52 |
-| `all` | 117 | 25 | 4 | 26 | 35 | 74 | 1 | 1 | 14 | 297 |
+| `all` | 116 | 25 | 4 | 26 | 36 | 74 | 1 | 1 | 14 | 297 |
 
 ## P1 twin fixtures present at this head, not bound to any row
 
@@ -141,7 +141,7 @@ decision for the PR that measures it, not something this tool does.
 | data-DATA-OFF-NONE `data/DATA-OFF-NONE` | required_core; cases: P1-JULIA-DATA-POIS_NONE-LOGLIK, P1-JULIA-DATA-POIS_NONE-INTERCEPTS, P1-JULIA-DATA-POIS_NONE-LAMBDA-LAMBDAT | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-NONE.json | family data; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | data-DATA-OFF-PREDICT `data/DATA-OFF-PREDICT` | required_core; cases: CORE070-DATA-OFF-PREDICT-POSTFIT-READBACK | NEEDS-SURFACE | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-PREDICT-POSTFIT-READBACK.json | family data; evidence_tier needs_surface_r_side_measured; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | data-DATA-OFF-PREDICT-NONFINITE-HELPER `data/DATA-OFF-PREDICT-NONFINITE-HELPER` | required_core; cases: CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK | NEEDS-SURFACE | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK.json | family data; evidence_tier needs_surface_r_side_measured; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| data-DATA-OFF-SCALAR `data/DATA-OFF-SCALAR` | required_core; cases: P1-JULIA-DATA-POIS_SCALAR-LOGLIK, P1-JULIA-DATA-POIS_SCALAR-INTERCEPTS, P1-JULIA-DATA-POIS_SCALAR-LAMBDA-LAMBDAT | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-SCALAR.json | family data; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| data-DATA-OFF-SCALAR `data/DATA-OFF-SCALAR` | required_core; cases: CORE070-DATA-OFF-SCALAR-NATIVE | NEEDS-SURFACE | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-SCALAR-NATIVE.json, non-binding docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-SCALAR.json | family data; evidence_tier needs_surface_r_side_measured; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | data-DATA-OFF-TRAIN-LEGACY `data/DATA-OFF-TRAIN-LEGACY` | required_core; cases: CORE070-DATA-OFF-TRAIN-LEGACY-POSTFIT-READBACK | NEEDS-SURFACE | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-TRAIN-LEGACY-POSTFIT-READBACK.json | family data; evidence_tier needs_surface_r_side_measured; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | data-DATA-OFF-TRAIN-STORED `data/DATA-OFF-TRAIN-STORED` | required_core; cases: CORE070-DATA-OFF-TRAIN-STORED-POSTFIT-READBACK | NEEDS-SURFACE | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-TRAIN-STORED-POSTFIT-READBACK.json | family data; evidence_tier needs_surface_r_side_measured; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | data-DATA-W-DF-MASK-DROP `data/DATA-W-DF-MASK-DROP` | required_core; cases: CORE070-DATA-W-DF-MASK-DROP-NATIVE | NEEDS-SURFACE | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-DF-MASK-DROP-NATIVE.json | family data; evidence_tier needs_surface_r_side_measured; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |

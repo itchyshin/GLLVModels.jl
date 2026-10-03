@@ -462,7 +462,6 @@ TWIN_TIER = ("numeric: Julia values recomputed by tools/true_parity_julia_receip
              "non_binding_receipts and its ids under batch_case_ids")
 TWIN_FILES = {  # source_id -> twin receipt stem
     "data/DATA-OFF-NONE": "OFF-NONE",
-    "data/DATA-OFF-SCALAR": "OFF-SCALAR",
     "data/DATA-OFF-EXPOSURE": "OFF-EXPOSURE",
     "data/DATA-OFF-NB1": "OFF-NB1",
     "data/DATA-OFF-NONCOUNT-ZERO": "OFF-NONCOUNT-ZERO",
@@ -471,16 +470,31 @@ TWIN_FILES = {  # source_id -> twin receipt stem
 }
 
 
-# A twin receipt that records a true measurement but does not twin its row: cited as non-binding.
-# DATA-OFF-ALL-COUNT's R case prepares offsets across a mixed family vector in one model (count and
-# continuous families together). Julia has no per-trait family mix (the DATA-OFF-MIXED reason), and a
-# single-family NB2 fit is the capability DATA-OFF-EXPOSURE and DATA-OFF-NB1 already pay for, so the
-# row is not bound on it.
+# A twin receipt that records a true measurement but does not twin its row: cited as non-binding,
+# with the reason on the row (`twin_not_bound`).
 NONBINDING_TWINS = {
     "data/DATA-OFF-ALL-COUNT": ("OFF-ALL-COUNT",
-        "The NB2 exposure-offset fit twin (receipt cited as non-binding) is a single-family fit. The R case "
-        "prepares offsets across a mixed count and continuous family vector in one model, which Julia cannot "
-        "fit (no per-trait family mix, as for DATA-OFF-MIXED), so the row does not bind on it."),
+        "The NB2 exposure-offset fit twin (receipt cited as non-binding) covers one count family. The R case "
+        "prepares offsets for three count families in one model (family ids 5, 10, 11: nbinom2, truncated "
+        "Poisson, truncated nbinom2). Julia has no per-trait family mix (as for DATA-OFF-MIXED) and the twin "
+        "does not cover the truncated families, so the row does not bind on it."),
+    "data/DATA-OFF-SCALAR": ("OFF-SCALAR",
+        "The twin passes the scalar already broadcast (offset = fill(log(2), p, n)), so it never exercises the "
+        "capability the row names: broadcasting a constant offset to every row. Julia's own scalar input "
+        "fit_gllvm(Y; family=Poisson(), offset=log(2)) is accepted but returns logLik -Inf with converged "
+        "false (probed on 4ae7e109d, also for 1.0 and 0.0). The row can bind once the scalar input is fixed "
+        "and the twin uses it."),
+}
+# Rows that bind, with a stated limit of what the twin covers.
+SCOPE_NOTES = {
+    "data/DATA-MISS-DEFAULT": "The twin covers response = 'drop' (missing responses dropped by default). The R "
+        "case also asserts predictor = 'fail' (a missing covariate is refused); that part is not exercised. R's "
+        "drop and include optima agree here, so this row and DATA-MISS-INCLUDE check two Julia input forms "
+        "(missing entries in Y, and mask=) against numerically identical R fits.",
+    "data/DATA-OFF-NONCOUNT-ZERO": "A zero offset cannot tell 'applied' from 'ignored', so this is a plain rank-2 "
+        "Gaussian fit match plus acceptance of offset = zeros(p, n). Known differences, recorded not bound: "
+        "Julia applies a nonzero Gaussian offset where R refuses it, and Julia refuses the scalar form "
+        "offset = 0.0 with a DimensionMismatch.",
 }
 
 
@@ -527,6 +541,8 @@ def twin_overlay(sid, row, counts):
                        "batch_case_ids": prior_ids, "tier": TWIN_TIER}
     row["measured_result"] = {**(row.get("measured_result") or {}), "twin_case_ids": case_ids,
                               "twin_verdict": rec["verdict"]}
+    if sid in SCOPE_NOTES:
+        row["scope_note"] = SCOPE_NOTES[sid]
     counts["numeric_pass"] += 1
 
 

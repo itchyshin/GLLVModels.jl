@@ -1605,7 +1605,7 @@ end
 
 # =============================================================================================
 # 12. data twins   test/test_data_twins_p1.jl
-#     Eight `data` rows (offset and missing-response handling) whose batch cases were R helper
+#     `data` rows (offset and missing-response handling) whose batch cases were R helper
 #     replays with no fit number, bound to fit-level twins: R-at-P1 fits recorded in
 #     test/fixtures/data_twins_p1.toml against Julia fits of the same data. Weights rows are not
 #     here (Julia refuses weights= on every fitter); the stored/predict-offset, mixed-family and
