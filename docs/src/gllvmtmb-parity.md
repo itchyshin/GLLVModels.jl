@@ -367,6 +367,23 @@ Check these restrictions when translating an R analysis:
 - **Per-trait nuisance-parameter intervals** — grouped NB2/NB1/Beta/Gamma CIs
   are supported; grouped Tweedie and per-trait ordinal-cutpoint CI endpoints
   remain unavailable.
+- **Scale of the phylo-unique SD (`σ_phy`, #136).** Julia estimates the
+  per-trait phylo-unique standard deviation on a *signed identity* scale, while
+  gllvmTMB's C++ uses a *positive log link* (`log_sd_phy_diag`). The overall
+  sign (flipping every entry together) is not identified, so the fit anchors it
+  by reporting the largest-magnitude entry as positive. When you
+  compare with gllvmTMB, use the absolute value `abs.(pars.σ_phy)`; where the two
+  engines fit the same model, the point estimates should agree in absolute
+  value. Wald intervals differ in shape near zero: Julia's is the plain
+  `σ̂ ± z * SE`, which is symmetric and can cross zero, while gllvmTMB's
+  `exp(log σ̂ ± z * SE_log)` is always positive and asymmetric. Profile bounds
+  (`profile_ci`, `profile_phylo_signal`) are on the same signed scale. With a
+  tree covariance whose off-diagonals are positive, a fit whose entries have
+  mixed signs encodes negative cross-trait phylogenetic covariance, which the
+  log link cannot represent. This is a deliberate choice,
+  kept as is, and has not been compared numerically against R for the
+  intervals; the point-estimate agreement is the expected consequence of the
+  parameterisation, not a new measured result.
 
 ## Why likelihood approximations can differ
 

@@ -2,6 +2,18 @@
 
 ## Development
 
+- **Documented: the phylo-unique SD `σ_phy` is signed in Julia and positive in gllvmTMB (#136).**
+  Maintainer decision: keep the Julia behaviour and document it. Julia estimates the
+  per-trait phylo-unique SD on a signed identity scale (the sign is not identified, so the
+  fit anchors it and you should report `abs(σ_phy)`), while gllvmTMB's C++ uses a positive
+  log link. Point estimates should agree in absolute value, and Wald intervals differ in
+  shape near zero (Julia's is symmetric and can cross zero, gllvmTMB's is positive and
+  asymmetric). The note is added to the docstrings of `fit_gaussian_gllvm`,
+  `gaussian_marginal_loglik`, `confint` (Wald) and `profile_phylo_signal`, and to the
+  "Further differences from R" list on the gllvmTMB parity page. A comment in
+  `src/confint_profile.jl` that wrongly said the profile bounds for `σ_phy` are
+  exponentiated was corrected. Docs and comments only: no returned number changes.
+
 - **`fit_phylo_gaussian` no longer reports `converged = true` after a zero-length step
   (part of #505, the remaining #485 class).** Optim also counts a zero-length line-search
   step as convergence, so a start the finite-difference gradient cannot leave could be

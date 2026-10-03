@@ -307,6 +307,13 @@ scale internally. The CI bounds returned for those entries are on the
 identity (signed) link — its Wald CI is the plain `θ̂ ± z * SE`. β and
 Λ entries are reported on their native (linear) scale.
 
+Note on `sigma_phy[t]` (#136): gllvmTMB's C++ uses a positive log link for the
+phylo-unique SD, so its Wald interval is `exp(log σ̂ ± z * SE_log)`. The two
+intervals differ in shape near zero: Julia's is symmetric and can cross zero,
+gllvmTMB's stays positive and is asymmetric. The sign of `σ_phy` is not
+identified (the fit anchors it), so compare `abs(σ̂)`. This is a deliberate,
+documented difference.
+
 The Hessian is computed via ForwardDiff at the fitted parameter vector
 stored on `fit.pars.θ_packed`. The function needs the original data
 matrix `y` (and optionally `X`, `Σ_phy`) to reconstruct the NLL closure.

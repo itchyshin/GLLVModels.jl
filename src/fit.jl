@@ -129,6 +129,18 @@ The fit's `pars` NamedTuple always contains
 with fixed entries set to zero, `alpha_lv` is a `q_lv × K` matrix or `nothing`,
 and `Λ_W`, `σ²_B`, `σ²_W`, `Λ_phy`, `σ_phy` are `nothing` when the
 corresponding flag is off.
+
+Scale of the phylo-unique SD `σ_phy` (#136): Julia estimates it on a signed
+identity scale, not on a positive log scale as gllvmTMB's C++ does
+(`log_sd_phy_diag`). The sign is not identified: flipping the sign of every
+entry together leaves the likelihood unchanged, so the fitter anchors it
+(the largest-magnitude entry is reported positive). Report and compare
+`abs.(σ_phy)`, not the raw signed values. Where both engines fit the same
+model, the point estimates should agree in absolute value, while Wald
+intervals differ in shape near zero: Julia's is the plain `σ̂ ± z * SE` and
+can cross zero, gllvmTMB's is `exp(log σ̂ ± z * SE_log)` and stays positive
+and asymmetric. This is a deliberate choice, kept as is (see the
+"Further differences from R" section of the gllvmTMB parity page).
 """
 function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
                             K::Integer,

@@ -39,6 +39,17 @@ silently fitting the wrong model. The returned fit's `pars.lambda_constraint`
 records the normalised pin matrix, which [`loading_profile`](@ref) reads to
 determine which entries are free. No cross-package numeric comparison
 against R's own `lambda_constraint` fits has been published yet.
+
+**Scale of the phylo-unique SD `pars.σ_phy` (#136):** with `has_phy_unique = true`
+Julia estimates the per-trait SD on a signed identity scale, whereas gllvmTMB's
+C++ uses a positive log link. The sign is not identified (flipping every entry
+together leaves the likelihood unchanged, so the fit anchors it: the
+largest-magnitude entry is reported positive), so report and compare
+`abs.(pars.σ_phy)`. Where both engines fit the same model, point estimates should
+agree in absolute value, but Wald intervals differ in shape near zero: Julia's
+`σ̂ ± z * SE` is symmetric and can cross zero, while gllvmTMB's is positive and
+asymmetric. This is a deliberate choice, kept as is; see the "Further differences
+from R" section of the gllvmTMB parity page.
 """
 function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control=(;),
         mask=nothing,offset=nothing,hessian=:observed,lambda_constraint=nothing,kwargs...)
