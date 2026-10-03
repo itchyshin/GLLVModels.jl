@@ -2,23 +2,68 @@
 
 ## Development
 
-- **`fit_gllvm(...; offset = c)` with a scalar `c` now works, and an offset shape it cannot
-  broadcast is refused with an `ArgumentError`.** A scalar offset (the analogue of R's
-  `offset(log(2))`) was accepted by the count and continuous routes but returned
-  `loglik = -Inf`, `converged = false` (the Gaussian route threw a `DimensionMismatch`). Cause: the
-  Laplace marginal slices the offset per unit (`view(offset, :, i)`), which throws on a
-  scalar, and every fitter runs its objective inside `try ... catch` that turns any exception
-  into a sentinel value, so the optimiser saw a flat objective and stopped at the warm start
-  (0 iterations). The dispatcher now applies Julia's own broadcast rule once, before any fitting:
-  a real scalar becomes `fill(c, p, n)`; a `p×n` matrix is passed through untouched; a `1×n`
-  matrix (one offset per unit), a `p×1` matrix or a length-`p` vector (one offset per trait) is
-  stretched to `p×n`. Anything else (a length-`n` vector, an `n×p` matrix, a non-finite scalar)
-  throws an `ArgumentError` naming the accepted shapes. The length-`p` vector and the `1×n`
-  matrix already worked on the count and continuous Laplace routes and give identical fits;
-  they and the `p×1` matrix (which returned a `-Inf` or wrong fit) now also work on the
-  Gaussian and AGHQ routes. Direct calls to the named fitters
+- **`fit_gllvm(...; offset = c)` with a scalar `c` now works, and an offset it cannot read
+  unambiguously is refused with an `ArgumentError`.** A scalar offset (the analogue of R's
+  `offset(log(2))`) was accepted by the count, continuous and two-part routes but returned
+  `loglik = -Inf`, `converged = false`; the Normal, Lognormal and AGHQ routes threw a
+  `DimensionMismatch`. Cause: the Laplace marginal slices the offset per unit
+  (`view(offset, :, i)`), which throws on a scalar, and every fitter runs its objective inside
+  `try ... catch` that turns any exception into a sentinel value, so the optimiser saw a flat
+  objective and stopped at the warm start (0 iterations). The dispatcher now applies Julia's own
+  broadcast rule once, before any fitting (the same rule applies to `gllvm(@formula(...))`): a
+  real scalar becomes `fill(c, p, n)`; a `p×n` matrix is passed through untouched (always read as
+  traits × units, so for `p == n` an `n×p` matrix is read transposed); a `1×n` matrix (one offset
+  per unit), a `p×1` matrix or a length-`p` vector (one offset per trait) is stretched to `p×n`.
+  Refused with an `ArgumentError` that says what to pass: a length-`n` vector or an `n×p` matrix
+  when `p ≠ n`; a bare vector when `p == n` (it cannot be told from a per-unit vector, and read per
+  trait the intercepts absorb it, so a per-unit effort vector silently did nothing; pass
+  `reshape(o, 1, n)` or `reshape(o, p, 1)`); a non-finite scalar; and a `NaN`, `Inf` or `missing`
+  at an observed cell (the two-part and zero-inflated routes turned it into a `-Inf` fit; a cell
+  that is masked out or `missing` in `Y` may still carry one). The routes that take no offset at
+  all (the families `StudentTFamily`, `Ordinal`/`OrdinalLogit` also with `aghq`, `COMPoisson`,
+  `BetaBinom`, `BetaHurdle`, `OrderedBeta`, `Multinomial`, and the `pervar`, `row_eff`, `grouping`
+  and `phylo` routes) now raise `ArgumentError: offset is not supported for ...` naming the route,
+  not a raw `MethodError` or a misleading shape error; `offset = nothing` is "no offset" on every
+  route.
+
+  **Fits made with the old calls.** Measured against the code before this change: a scalar gave
+  `-Inf` or threw, as above. A `1×n` matrix was correct on the Laplace routes and threw on Normal,
+  Lognormal and AGHQ. A length-`p` vector was correct on the Laplace count, continuous and most
+  two-part routes (the family code adds it by broadcast) and threw on Normal, Lognormal and AGHQ;
+  **`DeltaGamma` is the exception**, where the warm start indexed the vector as a matrix under
+  `@inbounds` (an out-of-bounds read), so a length-`p` offset could return a converged but wrong
+  fit (the review measured logLik -411.1 against -213.7 for the same offsets as a `p×n` matrix).
+  **A `p×1` matrix was wrong on every route that did not throw**: a finite, wrong fit on Poisson,
+  Binomial and zero-truncated Poisson, and an unconverged or `-Inf` fit on NB2, NB1, Beta, Gamma,
+  Exponential, the delta, hurdle and zero-inflated families and Tweedie. A per-unit effort vector
+  passed bare with `p == n` was read per trait and had no effect. Anyone who fitted with those
+  calls should refit with the call that now works. Direct calls to the named fitters
   (`fit_poisson_gllvm(Y; K, offset = c)` and the rest) are not covered: they still take a `p×n`
   matrix. Test: `test/test_offset.jl`.
+
+- **`fit_gllvm(Y; family = Lognormal(), offset = ...)` now applies the offset.**
+  `fit_lognormal_gllvm` centred `log(Y)` by its offset-free trait means and only then handed the
+  offset to a zero-mean Gaussian fit, so the intercepts never absorbed it: a constant offset
+  changed the logLik (scalar `log(2)`, p = 6, n = 40: -270.25 against -184.42 without it, both
+  reported converged) and the offset was not in `β`. A `p×n` matrix offset was already wrong this
+  way before the scalar work; the scalar, `1×n`, `p×1` and length-`p` forms threw a
+  `DimensionMismatch`, and without this fix the scalar work would have turned them into the same
+  silent wrong fit. The offset is now subtracted from `log(Y)`
+  before the trait means are taken, as for the other families (`η = β + offset + Λz`, `β` the
+  offset-free intercept): a constant offset leaves the logLik unchanged and shifts `β` by exactly
+  its negative, and a non-constant offset gives the Normal fit of `log(Y)` with that offset
+  (minus `Σ log y`). Earlier Lognormal fits made with an offset were wrong and should be refitted.
+  `LognormalFit` stores no offset, and has no `predict`/`fitted` method that would need it back.
+
+- **Zero-inflated, hurdle and delta fits start from the offset-free warm start.** The count-part
+  intercept start of `fit_zip_gllvm`, `fit_zinb_gllvm`, `fit_zib_gllvm`, `fit_hurdle_poisson_gllvm`,
+  `fit_hurdle_nb_gllvm`, `fit_delta_lognormal_gllvm` and `fit_delta_gamma_gllvm` ignored the offset
+  (`fit_delta_gamma_gllvm` removed it from the loadings start only), so with an offset the optimiser
+  began a constant away from the optimum and on some data stopped at a different local optimum
+  than the same fit without one (a constant offset must leave the logLik unchanged: ZIP differed by
+  4.5 and ZINB by 3.4 on two simulated data sets, both reported converged). The start now removes
+  each trait's mean offset over its positive cells, so a constant offset runs the no-offset path
+  shifted by its negative. Fits without an offset are bit-identical.
 
 - **`fit_phylo_gaussian` no longer reports `converged = true` after a zero-length step
   (part of #505, the remaining #485 class).** Optim also counts a zero-length line-search
