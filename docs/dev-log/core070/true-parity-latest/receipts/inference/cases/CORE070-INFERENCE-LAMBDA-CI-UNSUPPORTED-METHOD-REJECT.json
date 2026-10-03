@@ -58,24 +58,69 @@
   "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
   "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
-  "behaviour_not_bound": [
-    {
-      "source_id": "inference/CI-ROUTE-006",
-      "reason": "refusal_not_observed",
-      "text": "R's refusal is not recorded for this row. The probe stubs .confint_lambda, so the raw R record is only the dispatch label '.confint_lambda:fisher-z' (actual_class 'route_boundary;error;condition'), not a refusal; the one R refusal for a bad Lambda method sits on the different guard row CI-ROUTE-098 (method bogus). Julia refuses only on AGHQ-record Gaussian fits and returns Wald for any method on structured fits (inference-batch-contract-p1.json known_findings.lambda_reject_validation_boundary). Leave unbound until .confint_lambda is observed directly in R with this method.",
-      "evidence": {
-        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-006",
-        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-006"
-      }
+  "behaviour": {
+    "pin": "P1",
+    "ruling": "itchyshin/GLLVModels.jl#684 item 2",
+    "read_from": {
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json": "3c0c44d62296c7f2730e2b4a6d7abb7d963afdfdd09731d7ab2dfb94d22350af",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv": "aa78ce4ae49ad3f05891517710bb4e54fbaa1f5b612821bd1a99eba6e5a0df1c",
+      "test/parity/fixtures/core070_inference_routes.tsv": "5f75af28288781a5cc516bb94d38e5fdc5107b1712be54fbaabe9d0e79035db0",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json": "5fab5a5ac9abc8004eb767bbbad4fc8af82ec6ed835261ee0403073e7cf3ea49",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/receipt.json": "9153f019c33858ffbe57b2ab7da6b139cb3d43bbb756da45be3ed07ffe586aea",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/run-commit.json": "4888106ac46c81310457c7699fba43caaca2eeaf4440f2f77e53f09abaeff27c",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/verify.txt": "303ad3fd98e8194e031cfcf376b39fb5c751fa348fe7f3af603705e0837c373d",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/r-lambda-reject/r-oracle.json": "c37a34dc900c165a8d4ccbffae0fea66a3ad6444a12acb3c29c22ae0223d0a98",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/r-lambda-reject/receipt.json": "911e062f903a88ef5b4029f8084f5900085a65eedb1442219a9171c55bea1a65"
     },
-    {
-      "source_id": "inference/CI-ROUTE-007",
-      "reason": "refusal_not_observed",
-      "text": "R's refusal is not recorded for this row. The probe stubs .confint_lambda, so the raw R record is only the dispatch label '.confint_lambda:bogus' (actual_class 'route_boundary;error;condition'), not a refusal; the one R refusal for a bad Lambda method sits on the different guard row CI-ROUTE-098 (method bogus). Julia refuses only on AGHQ-record Gaussian fits and returns Wald for any method on structured fits (inference-batch-contract-p1.json known_findings.lambda_reject_validation_boundary). Leave unbound until .confint_lambda is observed directly in R with this method.",
-      "evidence": {
-        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-007",
-        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-007"
+    "cases": [
+      {
+        "case_id": "CORE070-INFERENCE-LAMBDA-CI-UNSUPPORTED-METHOD-REJECT",
+        "source_id": "inference/CI-ROUTE-006",
+        "kind": "refusal",
+        "r_observed": "'arg' should be one of \u201cwald\u201d, \u201cwald_asym\u201d, \u201cprofile\u201d, \u201cbootstrap\u201d",
+        "julia_observed": "ArgumentError: confint: method = :fisher-z is not available for Gaussian GllvmFit (retained data record) / parm Lambda_B[1,1]; available: :wald, :profile, :bootstrap",
+        "requested_method": "fisher-z",
+        "julia_call": "confint(fitA, YA; parm=\"Lambda_B[1,1]\", method=Symbol(\"fisher-z\"))",
+        "julia_error_type": "ArgumentError",
+        "r_control": {
+          "kind": "live_call",
+          "call": "confint(fit, parm = \"Lambda\", method = \"wald\")",
+          "result": "interval, 10 rows",
+          "source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/r-lambda-reject/r-oracle.json#calls.wald"
+        },
+        "julia_control": {
+          "call": "confint(fitA, YA; parm=\"Lambda_B[1,1]\", method=:wald)",
+          "result": "wald_packed interval",
+          "source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json#CI-ROUTE-006"
+        },
+        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/r-lambda-reject/r-oracle.json#calls.fisher-z",
+        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json#CI-ROUTE-006",
+        "r_call": "confint(fit, parm = \"Lambda\", level = 0.95, method = <m>)"
+      },
+      {
+        "case_id": "CORE070-INFERENCE-LAMBDA-CI-UNSUPPORTED-METHOD-REJECT",
+        "source_id": "inference/CI-ROUTE-007",
+        "kind": "refusal",
+        "r_observed": "'arg' should be one of \u201cwald\u201d, \u201cwald_asym\u201d, \u201cprofile\u201d, \u201cbootstrap\u201d",
+        "julia_observed": "ArgumentError: confint: method = :bogus is not available for Gaussian GllvmFit (retained data record) / parm Lambda_B[1,1]; available: :wald, :profile, :bootstrap",
+        "requested_method": "bogus",
+        "julia_call": "confint(fitA, YA; parm=\"Lambda_B[1,1]\", method=Symbol(\"bogus\"))",
+        "julia_error_type": "ArgumentError",
+        "r_control": {
+          "kind": "live_call",
+          "call": "confint(fit, parm = \"Lambda\", method = \"wald\")",
+          "result": "interval, 10 rows",
+          "source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/r-lambda-reject/r-oracle.json#calls.wald"
+        },
+        "julia_control": {
+          "call": "confint(fitA, YA; parm=\"Lambda_B[1,1]\", method=:wald)",
+          "result": "wald_packed interval",
+          "source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json#CI-ROUTE-007"
+        },
+        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/r-lambda-reject/r-oracle.json#calls.bogus",
+        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json#CI-ROUTE-007",
+        "r_call": "confint(fit, parm = \"Lambda\", level = 0.95, method = <m>)"
       }
-    }
-  ]
+    ]
+  }
 }
