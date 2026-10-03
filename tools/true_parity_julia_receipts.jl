@@ -1614,10 +1614,11 @@ function receipts_namespace_numeric_b()
 end
 
 # =============================================================================================
-# 12. c1-behaviour: behavioural receipts for two C1 rows (itchyshin/GLLVModels.jl#684 item 2)
+# 12. c1-behaviour: behavioural receipts for three C1 rows (itchyshin/GLLVModels.jl#684 item 2)
 #     test/test_c1_behaviour_p1.jl; raw R side under test/fixtures/c1_behaviour_p1/
 #       model-comparison/print.anova.gllvmTMB_multi   printed fields
 #       latent-scores/extract_latent_scores.default   refusal on an object with no method
+#       model-comparison/update.gllvmTMB_multi        replay, data override, two refusals
 # =============================================================================================
 include(joinpath(ROOT, "test", "fixtures", "c1_behaviour_p1", "helpers.jl"))   # the c1b_* helpers the twin test includes
 
@@ -1684,7 +1685,48 @@ function receipts_c1_behaviour()
         "note" => "The three labels are derived by c1b_refusal_labels from the raw records: whether the call signalled an error and returned nothing, whether the message names the offending class, whether it states the accepted inputs. Each is true of every object tried, on both engines. The exception class names differ (R: rlang_error from cli::cli_abort; Julia: ArgumentError) and are recorded here, not compared."]
     refusal_not = "This does not claim the engines raise the same exception class (rlang_error vs ArgumentError), the same message text, or the same behaviour for a class one engine does handle. R's .gllvmTMB_site_trait_sim and .gllvmTMB_va methods are excluded from the Julia twin by the P1 case map (PR #526). Julia's own MethodError for fit types with no getLV method is a different path from this fallback and is not measured here."
 
+    # update.gllvmTMB_multi: R replays a temporal fit's saved call; Julia's update(::TemporalGaussianFit).
+    r_upd = c1b_update_r_observation(rec)
+    j_upd, j_upd_types = c1b_julia_update_observation(rec)
+    r_ul, j_ul = c1b_update_labels(r_upd), c1b_update_labels(j_upd)
+    update_sid = "model-comparison/update.gllvmTMB_multi"
+    u = rec["update"]
+    panel = "a $(length(u["value"]))-row temporal panel (4 series x 5 occasions x 3 traits; seed $(u["seed"]); the [update] table of $C1B_FIXTURE_DIR/r_c1_behaviour.toml)"
+    r_fit = "gllvmTMB($(u["formula"]), unit = \"series\", family = gaussian()) at P1 on $panel"
+    j_fit = "fit_temporal_gllvm(tbl; formula = @formula(value ~ 0 + trait), temporal = temporal_indep(:(0 + trait | series), :occasion), unit = :series) on the same panel, as produced by c1b_julia_update_observation in $C1B_FIXTURE_DIR/helpers.jl"
+    update_cases = [
+        Pair{String,Any}["case_id" => "CORE070-C1-UPDATE-REPLAY", "source_id" => update_sid, "kind" => "route",
+            "r_observed" => r_ul.replay, "julia_observed" => j_ul.replay,
+            "r_source" => "update(fit) on $r_fit; the refit's response and log-likelihood are the recorded [update.replay] values",
+            "julia_source" => "update(fit) on the Julia fit: $j_fit",
+            "r_loglik_original" => r_upd.original.loglik, "r_loglik_replay" => r_upd.replay.loglik,
+            "julia_loglik_original" => j_upd.original.loglik, "julia_loglik_replay" => j_upd.replay.loglik,
+            "note" => "The route is the replay of the saved call with nothing replaced. The label is true when a fit comes back whose response equals the original's (to 1e-12) and whose log-likelihood equals the original's (to 1e-6, the tolerance of R's own temporal update test). The two engines' log-likelihoods are recorded here; their agreement is the temporal numeric twins' claim, not this case's."],
+        Pair{String,Any}["case_id" => "CORE070-C1-UPDATE-DATA-OVERRIDE", "source_id" => update_sid, "kind" => "route",
+            "r_observed" => r_ul.override, "julia_observed" => j_ul.override,
+            "r_source" => "update(fit, data = changed) on $r_fit; changed\$value = value + 0.01 * (1:60)",
+            "julia_source" => "update(fit; data = changed) on the Julia fit: $j_fit",
+            "r_loglik_override" => r_upd.override.loglik, "julia_loglik_override" => j_upd.override.loglik,
+            "note" => "The route is a refit on the supplied table: the refit's response equals the supplied column (to 1e-12), differs from the original, and the log-likelihood moves by more than 1e-6."],
+        Pair{String,Any}["case_id" => "CORE070-C1-UPDATE-UNNAMED-REFUSED", "source_id" => update_sid, "kind" => "refusal",
+            "r_observed" => r_ul.unnamed, "julia_observed" => j_ul.unnamed,
+            "r_source" => "update(fit, changed), an unnamed override, on $r_fit (the [update.unnamed] record)",
+            "julia_source" => "update(fit, changed) on the Julia fit: $j_fit; every Julia override is a keyword",
+            "r_condition_classes" => String.(u["unnamed"]["condition_classes"]), "julia_exception_type" => j_upd_types.unnamed,
+            "r_message" => String(u["unnamed"]["message"]),
+            "note" => "Both engines refuse and return no model. R refuses on purpose (cli_abort: named overrides only). Julia has no positional method, so the refusal is a MethodError, not a message written for this case. The condition types and messages are recorded, not compared."],
+        Pair{String,Any}["case_id" => "CORE070-C1-UPDATE-NO-CALL-REFUSED", "source_id" => update_sid, "kind" => "refusal",
+            "r_observed" => r_ul.nocall, "julia_observed" => j_ul.nocall,
+            "r_source" => "update(fit) on an ordinary fit (latent(0 + trait | site, d = 1), no temporal term) at P1, which keeps no call, so update.gllvmTMB_multi falls to stats::update.default (the [update.nocall] record)",
+            "julia_source" => "update(fit) on a GllvmFit from fit_gaussian_gllvm(Y; K = 1), Y the same responses as a traits x units matrix; Julia defines update for TemporalGaussianFit only, as produced by c1b_julia_update_observation in $C1B_FIXTURE_DIR/helpers.jl",
+            "r_condition_classes" => String.(u["nocall"]["condition_classes"]), "julia_exception_type" => j_upd_types.nocall,
+            "r_message" => String(u["nocall"]["message"]),
+            "note" => "Both engines refuse and return no model on a fit with no saved call. R's message comes from stats::update.default; Julia's is the MethodError for a type with no update method. The condition types and messages are recorded, not compared."],
+    ]
+    update_not = "This compares four behaviours of update() on one temporal panel and one ordinary fit. It does not claim identical condition types or messages. R's evaluate = FALSE (returns the rebuilt call), R's formula override through the saved call, R's 'does not retain a public call' refusal for a temporal fit with no call, and R's variational (gllvmTMB_va) replay have no Julia counterpart here and are not compared. Julia's update also takes keyword overrides (temporal, trait, structure, unit, unit_obs, g_tol, iterations) that R reaches through the call; only data is compared. The temporal numeric fits themselves are the temporal twins' claim."
+
     return [
+        "model-comparison/update.json" => BehaviourReceipt([update_sid], C1B_ORIGIN, fixtures, [tp], update_not, update_cases),
         "model-comparison/print.anova.json" => BehaviourReceipt([anova_sid], C1B_ORIGIN, fixtures, [tp], anova_not, anova_cases),
         "latent-scores/extract_latent_scores.default.json" => BehaviourReceipt([refusal_sid], C1B_ORIGIN, fixtures, [tp], refusal_not, [refusal_case]),
     ]

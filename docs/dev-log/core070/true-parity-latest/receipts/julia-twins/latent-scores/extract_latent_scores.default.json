@@ -14,7 +14,7 @@
   "source_fixtures": [
     {
       "path": "test/fixtures/c1_behaviour_p1/r_c1_behaviour.toml",
-      "sha256": "753f9007eb2454e2cd097e0de17ebe27c64ecfce9434e90dfa7fb8365e020759"
+      "sha256": "d50622d355dd85f1c37017fd91158b7d653059d315d1aaa4fc62ccc4df3b88a9"
     },
     {
       "path": "test/fixtures/c1_behaviour_p1/r_anova_print.txt",
@@ -22,7 +22,7 @@
     },
     {
       "path": "test/fixtures/c1_behaviour_p1/helpers.jl",
-      "sha256": "5337dcd8248e8e183e22c13ec8cf60b16ed1ed656b6ad5eb71939f2c158beacf"
+      "sha256": "05234886705816d18d65d4b1b6619ae0b8c4e8cd7c49604e39d61e4911ea3823"
     },
     {
       "path": "test/fixtures/gllvmtmb_anova_fixture.toml",
@@ -32,7 +32,7 @@
   "source_tests": [
     {
       "path": "test/test_c1_behaviour_p1.jl",
-      "sha256": "31cb84c8756f745ea0b0e1940a9ac56ff789df61ea778d5c6e7ea7af72cad252"
+      "sha256": "8453b3ed0105811c279a7d1ccbfd1b4edc20fe6b1c79eea01c7e4f5829e03e05"
     }
   ],
   "what_this_is_not": "This does not claim the engines raise the same exception class (rlang_error vs ArgumentError), the same message text, or the same behaviour for a class one engine does handle. R's .gllvmTMB_site_trait_sim and .gllvmTMB_va methods are excluded from the Julia twin by the P1 case map (PR #526). Julia's own MethodError for fit types with no getLV method is a different path from this fallback and is not measured here.",
