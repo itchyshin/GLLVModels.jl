@@ -22,7 +22,7 @@ Inputs:
 - `docs/dev-log/core070/true-parity-latest/case-map-inference.json` (63 rows, sha256 `3340c4c9b86c6ae53266fac7b9b889a840741cd1520a2fcd0961570c099f5804`)
 - `docs/dev-log/core070/true-parity-latest/case-map-isdm.json` (20 rows, sha256 `ede6b50934984e606cc844e0ff9ec951825827a23fcf44cb5724ce5c8b9a2ddf`)
 - `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `a36aa7061449fb9a20cf28f7e5a2de37fd15699d6874cd92133665483d183b96`)
-- `docs/dev-log/core070/true-parity-latest/case-map-postfit.json` (52 rows, sha256 `79b608e11e3ac7ea4ccfc9f98e5cc7d1625d9a8632093c22fb2a5a0ebbe06b14`)
+- `docs/dev-log/core070/true-parity-latest/case-map-postfit.json` (52 rows, sha256 `66d1a30daf1177e1e6a1203ea07a15a482ef8146326ff4d22975cc81fe4e61dd`)
 
 ## Totals by family
 
@@ -36,8 +36,8 @@ Inputs:
 | `inference` | 2 | 17 | 0 | 0 | 2 | 0 | 42 | 0 | 0 | 0 | 63 |
 | `isdm` | 11 | 0 | 0 | 0 | 0 | 9 | 0 | 0 | 0 | 0 | 20 |
 | `namespace` | 29 | 0 | 25 | 0 | 0 | 2 | 0 | 0 | 0 | 13 | 69 |
-| `postfit` | 34 | 0 | 0 | 2 | 12 | 2 | 0 | 1 | 1 | 0 | 52 |
-| `all` | 117 | 17 | 25 | 4 | 26 | 35 | 57 | 1 | 1 | 14 | 297 |
+| `postfit` | 37 | 0 | 0 | 2 | 9 | 2 | 0 | 1 | 1 | 0 | 52 |
+| `all` | 120 | 17 | 25 | 4 | 23 | 35 | 57 | 1 | 1 | 14 | 297 |
 
 ## P1 twin fixtures present at this head, not bound to any row
 
@@ -380,10 +380,10 @@ decision for the PR that measures it, not something this tool does.
 | postfit-policy-POST-CONFINT-METHODS `postfit-policy/POST-CONFINT-METHODS` | required_core; cases: CORE070-POSTFIT-CONFINT-METHODS-WALD-NATIVE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-CONFINT-METHODS-WALD-NATIVE.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-policy-POST-DEVIANCE `postfit-policy/POST-DEVIANCE` | required_core; cases: P1-JULIA-POSTFIT-DEVIANCE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/deviance.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-policy-POST-FITTED-DEFAULT `postfit-policy/POST-FITTED-DEFAULT` | required_core; cases: CORE070-POSTFIT-FITTED-DEFAULT-NATIVE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-FITTED-DEFAULT-NATIVE.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| postfit-policy-POST-LOGLIK-DF `postfit-policy/POST-LOGLIK-DF` | required_core; cases: CORE070-POSTFIT-LOGLIK-DF-NATIVE | PARTIAL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-LOGLIK-DF-NATIVE.json | family postfit; evidence_tier partial_non_numeric_case; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| postfit-policy-POST-LOGLIK-NOBS `postfit-policy/POST-LOGLIK-NOBS` | required_core; cases: CORE070-POSTFIT-LOGLIK-NOBS-NATIVE | PARTIAL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-LOGLIK-NOBS-NATIVE.json | family postfit; evidence_tier partial_non_numeric_case; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| postfit-policy-POST-LOGLIK-DF `postfit-policy/POST-LOGLIK-DF` | required_core; cases: CORE070-POSTFIT-LOGLIK-DF-NATIVE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-LOGLIK-DF-NATIVE.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| postfit-policy-POST-LOGLIK-NOBS `postfit-policy/POST-LOGLIK-NOBS` | required_core; cases: CORE070-POSTFIT-LOGLIK-NOBS-NATIVE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-LOGLIK-NOBS-NATIVE.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-policy-POST-LOGLIK-VALUE `postfit-policy/POST-LOGLIK-VALUE` | required_core; cases: CORE070-POSTFIT-LOGLIK-VALUE-NATIVE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-LOGLIK-VALUE-NATIVE.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| postfit-policy-POST-NOBS-COUNT `postfit-policy/POST-NOBS-COUNT` | required_core; cases: CORE070-POSTFIT-NOBS-COUNT-NATIVE | PARTIAL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-NOBS-COUNT-NATIVE.json | family postfit; evidence_tier partial_non_numeric_case; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| postfit-policy-POST-NOBS-COUNT `postfit-policy/POST-NOBS-COUNT` | required_core; cases: CORE070-POSTFIT-NOBS-COUNT-NATIVE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-NOBS-COUNT-NATIVE.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-policy-POST-NOBS-FALLBACK `postfit-policy/POST-NOBS-FALLBACK` | required_core; cases: CORE070-POSTFIT-NOBS-FALLBACK-NATIVE | PARTIAL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-NOBS-FALLBACK-NATIVE.json | family postfit; evidence_tier partial_non_numeric_case; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-policy-POST-PREDICT-DEFAULT `postfit-policy/POST-PREDICT-DEFAULT` | required_core; cases: CORE070-POSTFIT-PREDICT-DEFAULT-NATIVE | PARTIAL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-PREDICT-DEFAULT-NATIVE.json | family postfit; evidence_tier partial_non_numeric_case; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-policy-POST-RE-FORM-FULL `postfit-policy/POST-RE-FORM-FULL` | required_core; cases: CORE070-POSTFIT-RE-FORM-FULL-NATIVE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-RE-FORM-FULL-NATIVE.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
