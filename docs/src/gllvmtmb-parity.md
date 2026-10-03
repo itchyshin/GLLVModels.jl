@@ -186,7 +186,7 @@ not establish agreement for its uncertainty or for other family combinations.
 |-----------|:---:|-------|
 | Latent-variable ordination (loadings) | ✅ | any `K`; canonical SVD rotation |
 | Fixed-effect covariates (`Xβ`) | ✅ Gaussian · ✅ non-Gaussian (GLM families) | Shared site-X: Poisson/Binomial via `fit_gllvm_cov`; NB2/NB1/Beta/Gamma public/bridge default via `fit_*_gllvm_grouped_cov` (per-trait φ/α + shared `γ`; NB1 = `fit_nb1_gllvm_grouped_cov`); Ordinal via `fit_ordinal_gllvm_pertrait_cov` (per-trait cutpoints τ₁=0 / K−2 + shared `γ`; checked against R's `ordinal_probit`). Shared-dispersion + X remains `fit_gllvm_cov` where that path exists (incl. shared-φ NB1 opt-in). Gaussian `β_fixed` / non-Gaussian `γ_fixed` zero masks supported. |
-| Between / within (multilevel) | ✅ Gaussian | `K_W` + per-trait diagonal |
+| Between / within (multilevel) | ✅ Gaussian | `fit_twolevel_gaussian` (repeated observations per unit, grouped by `individual`). `K_W` and `has_diag` in `fit_gaussian_gllvm` do not give this split: with one column of `Y` per unit, only the sum of the two tiers is identified (see [Model](model.md), Identifiability) |
 | Phylogenetic random effect | ✅ ⚡ | fast **O(p)** sparse path, benchmarked to p = 10⁴ |
 | Animal model (relatedness / GRM) | ✅ Gaussian | `relatedness_cov`, via the `Σ_phy` input |
 | Spatial (Matérn / exponential) | ✅ Gaussian | `spatial_cov`, via the `Σ_phy` input |
@@ -367,6 +367,32 @@ Check these restrictions when translating an R analysis:
 - **Per-trait nuisance-parameter intervals** — grouped NB2/NB1/Beta/Gamma CIs
   are supported; grouped Tweedie and per-trait ordinal-cutpoint CI endpoints
   remain unavailable.
+- **`σ_phy` from `fit_gaussian_gllvm` is not gllvmTMB's `phylo_unique` scale
+  (#136).** In the Julia row model, `σ_phy` is a signed parameter that enters
+  the likelihood only as the last column of the augmented phylogenetic
+  loading `Λ_phy_aug = hcat(Λ_phy, σ_phy)`, through
+  `B = (Λ_phy_aug * Λ_phy_aug') .* Σ_phy` (the EM fitters `em_fit_phylo` and
+  `em_fit_phylo_squarem` are the case with no `Λ_phy` columns). With
+  `K_phy = 0`, signs are identified only within each group of rows that
+  `Σ_phy` links by nonzero entries: inside a group the relative signs set the
+  sign of each cross-trait entry of `B`, but each group's sign can flip on its
+  own. For a tree-derived `Σ_phy` the root's daughter clades are always
+  separate groups, because `sigma_phy_dense` drops the root edge, so the
+  global sign anchor pins only the clade with the largest `abs(σ_phy)`; the
+  global flip is the only symmetry only for a supplied `Σ_phy` that links all
+  rows. With `K_phy ≥ 1`, `σ_phy` is not identified
+  separately from `Λ_phy`; read the implied `B`, not per-entry intervals.
+  With `X_lv`, the fitter skips both its sign-pattern search and its sign
+  anchor. gllvmTMB's `phylo_unique` term (now spelled `phylo_indep()` on its
+  own, or `phylo_latent(..., unique = TRUE)` when paired with a latent term)
+  is a different model term: an independent phylogenetic field for each trait
+  with its own scale (`exp(log_sd_phy_diag[t])` in the phylo_diag block of
+  gllvmTMB's `src/gllvmTMB.cpp`, for the paired form). The two are not one
+  parameter on two links: compare fitted models (log-likelihood, implied
+  covariance), and do not expect the parameters to agree, even in absolute
+  value. The Julia counterparts are `fit_kernel_indep_gllvm` for a standalone
+  `phylo_indep()` and `fit_phylo_latent_gllvm(...; unique = true)` for the
+  paired form (the latter a documented extra, not yet a verified twin).
 
 ## Why likelihood approximations can differ
 

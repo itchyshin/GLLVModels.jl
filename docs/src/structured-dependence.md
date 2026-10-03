@@ -33,7 +33,7 @@ where:
 
 - `Λ_B` (p × K) are the unit-tier loadings estimated freely,
 - `η_s ~ N(0, I_K)` are independent site-level latent variables,
-- `Λ_phy` (p × K_phy) and/or per-trait SDs `σ_phy` (length p) capture structured dependence,
+- `Λ_phy` (p × K_phy) and/or per-trait signed scales `σ_phy` (length p) capture structured dependence,
 - `u ~ MVN(0, B)` is drawn once and shared across all columns,
 - `ε[t, s] ~ N(0, σ²_eps)` is the residual.
 
@@ -174,7 +174,7 @@ See [`spatial_cov`](@ref) and [`relatedness_cov`](@ref) for the full signatures.
 
 In these row-structured models, pass the result as `Σ_phy` to `fit_gaussian_gllvm`.
 The ordering and dimension must match the rows, not arbitrary observation groups. The
-`has_phy_unique = true` flag activates per-trait structured SDs (`σ_phy`);
+`has_phy_unique = true` flag activates per-trait structured signed scales (`σ_phy`);
 `K_phy` activates structured latent axes (`Λ_phy`). Both can be used together.
 
 ## [Fixed covariance among source groups](@id fixed-source-groups)
