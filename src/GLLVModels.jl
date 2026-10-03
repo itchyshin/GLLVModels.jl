@@ -176,6 +176,7 @@ include("confint_derived_wald.jl")       # transformed-Wald CIs for bounded deri
 # adds methods to). Additive: the ::GllvmFit methods are unchanged.
 include("link_residual.jl")
 include("extractors.jl")                # extract_*/get* post-fit extractor family (core070 Cluster 1)
+include("families/nb_grouped_postfit.jl") # predict/fitted/residuals/getResidualCor for NBGroupedFit + NBGroupedCovFit (#555). AFTER extractors.jl (getResidualCor, _canonical_level) and link_residual.jl (_latent_correlation).
 include("re_sd.jl")                      # latent_score_sd (renamed from getREsd): TMB-sdreport-style conditional-on-θ̂ random-effect SDs (core070 E-cluster)
 include("families/mixed.jl")             # mixed-family GLLVM (cross-family VCV): fit_mixed_gllvm + MixedFamilyFit. AFTER link_residual + the family fitters so all dispatch targets exist.
 include("families/isdm_sources.jl")      # iSDM: isdm_source()/isdm_sources() declarations (gllvmTMB P1 twin)

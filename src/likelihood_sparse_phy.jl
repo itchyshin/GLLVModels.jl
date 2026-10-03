@@ -6,9 +6,13 @@
 # marginalised inside the sparse linear solve.
 #
 # Setup matches the J3 dense path:
-#     y[t, s] = (Λ_B η_s)[t] + sum_k Λ_W[t,k] η_W[k, t, s]
+#     y[t, s] = (Λ_B η_s)[t] + sum_k Λ_W[t,k] η_W[k, s]
 #             + s_B[t, s] + s_W[t, s] + z_phy[t] + X[t,s,:]' β + ε[t,s]
-#     A = Λ_B Λ_B' + diag(d_total)
+#     A = Λ_B Λ_B' + Λ_W Λ_W' + diag(d_total)
+# (the W-tier scores are shared by all traits of a unit, so Λ_W enters with
+# its full cross-trait block, as in the C++ twin: issue #135. Below, Λ_W is
+# stacked next to Λ_B and every "Λ_B" in the Woodbury algebra is that
+# stacked p × (K_B + K_W) matrix.)
 #     B = (Λ_aug Λ_aug') ∘ Σ_phy
 #     Σ_y_full = I_n ⊗ A + J_n ⊗ B          (column-major vec)
 # After the rotation trick used in the dense path, the marginal log-lik
@@ -138,7 +142,6 @@ function gaussian_marginal_loglik_sparse_phy(y::AbstractMatrix,
                                              phy::Union{AugmentedPhy,PrecisionPhy},
                                              σ²_phy::Real = 1.0)
     p, n = size(y)
-    K_B  = size(Λ_B, 2)
     σ²   = σ_eps^2
 
     p == phy.n_leaves ||
@@ -171,17 +174,16 @@ function gaussian_marginal_loglik_sparse_phy(y::AbstractMatrix,
     # For AD callers, the dense `gaussian_marginal_loglik` is the
     # appropriate path.
     resid64 = Matrix{Float64}(resid)
-    Λ_B64   = Matrix{Float64}(Λ_B)
+    # W tier stacked next to Λ_B (full Λ_W Λ_W' block, issue #135); with no
+    # W tier this is Λ_B alone, as before.
+    Λ_B64   = Λ_W === nothing ? Matrix{Float64}(Λ_B) :
+              hcat(Matrix{Float64}(Λ_B), Matrix{Float64}(Λ_W))
+    K_B     = size(Λ_B64, 2)
 
-    # ----- 2. Build d_total[t] = σ²_eps + (Λ_W Λ_W')[t,t] + σ²_B[t] + σ²_W[t]
+    # ----- 2. Build d_total[t] = σ²_eps + σ²_B[t] + σ²_W[t]
     d_total = Vector{Float64}(undef, p)
     @inbounds for t in 1:p
         v = float(σ²)
-        if Λ_W !== nothing
-            for k in 1:size(Λ_W, 2)
-                v += Λ_W[t, k]^2
-            end
-        end
         σ²_B !== nothing && (v += σ²_B[t])
         σ²_W !== nothing && (v += σ²_W[t])
         d_total[t] = v

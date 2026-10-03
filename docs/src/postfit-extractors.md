@@ -16,6 +16,15 @@ variance; `:unit_obs` selects the `Λ_W` source and its diagonal variance.
 Supported levels depend on the fit type: `extract_Sigma` for `GllvmFit`
 does not accept `:phy`.
 
+For a `GllvmFit`, each column of `Y` is one unit observed once, so the data
+do not separate the `:unit` and `:unit_obs` tiers. With `K_W > 0` (or with
+`has_diag = true`, for the diagonal variances) only their sum is
+identified, and a tier-scoped value depends on the starting values. Use
+`level = :site`, `sigma_y_site` or `correlation` for the identified total.
+To separate the tiers, fit repeated observations of each unit with
+`fit_twolevel_gaussian`. The Identifiability section of [Model](model.md)
+gives the details.
+
 Choose the denominator to match your biological question:
 
 - `extract_communality`, `extract_correlations`, and `extract_proportions`

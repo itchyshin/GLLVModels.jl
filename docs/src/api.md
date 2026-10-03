@@ -690,6 +690,9 @@ the ordinary loadings-only route. See the executed Gaussian quickstart.
 `bootstrap_ci` use recorded data and estimator identity. Gaussian `vcov` for a
 recorded fit returns the full working-parameter covariance, not only its diagonal;
 `confint` transforms residual-SD estimates/bounds to the natural scale while
-standard errors remain on the working scale. Legacy `bootstrap_ci` outputs
-working-scale bounds. Failed bootstrap attempts remain visible. This is an
+standard errors remain on the working scale. `bootstrap_ci` returns the same
+residual-SD terms on the natural scale (estimate and percentile bounds), with its
+`replicates` kept on the working scale. Failed and non-converged bootstrap attempts
+are excluded from the bounds and remain visible (`converged`, `n_used`, `n_dropped`).
+This is an
 experimental option, not a complete R-parity or calibrated-inference claim.

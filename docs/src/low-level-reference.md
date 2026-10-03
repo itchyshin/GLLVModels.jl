@@ -196,13 +196,15 @@ holds its reusable buffers.
 
 ### `_profile_ci_bounded`
 
-Boundary-aware wrapper around the generic derived-quantity profiler
-(`src/confint_derived.jl`) used by [`profile_ci_total_variance`](@ref) and
-[`profile_ci_phylo_signal`](@ref) (see
+Boundary-aware post-processing of an existing derived-quantity profile result
+(`src/confint_derived.jl`). It applies the same rules as the `bounds` keyword
+of [`GLLVModels.profile_ci_derived`](@ref), which [`profile_ci_total_variance`](@ref)
+and [`profile_ci_phylo_signal`](@ref) now use (see
 [Derived confidence intervals](derived-confidence-intervals.md)): clamps a
-bound that overshoots the quantity's natural feasible range, and reports a
+bound that overshoots the quantity's natural feasible range, reports a
 deviance plateau at the range edge as `boundary = true` rather than a bare
-`NaN`/`:partial`.
+`NaN`/`:partial`, and leaves a `NaN` bound `NaN` when the deviance at the edge
+is above the cutoff.
 
 ### `_principal_angles`
 

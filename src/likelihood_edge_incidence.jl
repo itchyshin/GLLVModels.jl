@@ -4,7 +4,7 @@
 # The model is identical to the J3 path in `likelihood.jl` and to the
 # augmented-Q path in `likelihood_sparse_phy.jl`:
 #
-#     y[t, s] = (Λ_B η_s)[t] + sum_k Λ_W[t,k] η_W[k,t,s]
+#     y[t, s] = (Λ_B η_s)[t] + sum_k Λ_W[t,k] η_W[k,s]
 #             + s_B[t,s] + s_W[t,s] + z_phy[t]
 #             + X[t,s,:]' β + ε[t,s]
 #
@@ -12,7 +12,8 @@
 #
 #     Σ_y_full = I_n ⊗ A + J_n ⊗ B
 #
-# where A = Λ_B Λ_B' + diag(d_total) and B = (Λ_phy_aug Λ_phy_aug') ⊙ Σ_phy,
+# where A = Λ_B Λ_B' + Λ_W Λ_W' + diag(d_total) (W tier shared across traits
+# within a unit, issue #135) and B = (Λ_phy_aug Λ_phy_aug') ⊙ Σ_phy,
 # Λ_phy_aug = hcat(Λ_phy, σ_phy) (as in the dense path).
 #
 # What's different here is **how Σ_phy is produced**. The dense path takes

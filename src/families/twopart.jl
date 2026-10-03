@@ -1422,6 +1422,30 @@ function _zi_warmstart(Y::AbstractMatrix, K::Integer; offset = nothing)
     return βz0, βc0, Λc0
 end
 
+# Nested-model guard for the zero-inflated count fitters (#573). ZIP nests Poisson and
+# ZINB nests the shared-r NB2 (π → 0), so a ZI maximum is never below the nested
+# maximum. The ZI surface is multimodal, though: from `_zi_warmstart` (π up to 0.8 from
+# the excess-zero share) L-BFGS can settle in a basin where structural zeros absorb the
+# zeros the latent factors explain elsewhere. On mvabund::spider (12 × 28, K = 2) the
+# warm-start ZIP fit stopped at −888.23 (no negative curvature, max|∇| ≈ 0.01) while the
+# nested Poisson fit is −845.69, and the same ZIP objective started from the Poisson
+# optimum reaches −838.2. So: if the warm-start fit ends below the nested fit, refit
+# from the nested optimum with π ≈ 0 (β^z = −10) and keep the better of the two fits.
+# A fit already at or above the nested optimum is returned unchanged (bit-identical);
+# the cost is one nested fit, plus a refit only when the guard fires.
+const _ZI_NESTED_BETAZ = -10.0
+
+function _zi_nested_guard(negll, res, nested_loglik::Real, θ_nested::AbstractVector,
+        g_tol::Real, iterations::Integer)
+    isfinite(nested_loglik) || return res
+    -Optim.minimum(res) >= nested_loglik - 1e-6 && return res
+    ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
+    res2 = Optim.optimize(negll, θ_nested, ls,
+                          Optim.Options(g_tol = g_tol, iterations = iterations);
+                          autodiff = :finite)
+    return Optim.minimum(res2) < Optim.minimum(res) ? res2 : res
+end
+
 """
     fit_zip_gllvm(Y; K, …) -> ZIPFit
 
@@ -1464,6 +1488,12 @@ function fit_zip_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     res = Optim.optimize(negll, θ0, ls, Optim.Options(g_tol = g_tol, iterations = iterations);
                          autodiff = :finite)
+    # #573: never end below the nested Poisson fit (see `_zi_nested_guard`).
+    pf = try fit_poisson_gllvm(Y; K = K, offset = offset) catch; nothing end
+    if pf !== nothing
+        θn = vcat(fill(_ZI_NESTED_BETAZ, p), pf.β, pack_lambda(pf.Λ))
+        res = _zi_nested_guard(negll, res, pf.loglik, θn, g_tol, iterations)
+    end
     θ̂ = Optim.minimizer(res)
     βz = θ̂[1:p]; βc = θ̂[(p + 1):(2p)]
     Λc = unpack_lambda(θ̂[(2p + 1):(2p + rr)], p, K)
@@ -1682,6 +1712,12 @@ function fit_zinb_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     res = Optim.optimize(negll, θ0, ls, Optim.Options(g_tol = g_tol, iterations = iterations);
                          autodiff = :finite)
+    # #573: never end below the nested shared-r NB2 fit (see `_zi_nested_guard`).
+    nb = try fit_nb_gllvm(Y; K = K, offset = offset) catch; nothing end
+    if nb !== nothing
+        θn = vcat(fill(_ZI_NESTED_BETAZ, p), nb.β, pack_lambda(nb.Λ), log(nb.r))
+        res = _zi_nested_guard(negll, res, nb.loglik, θn, g_tol, iterations)
+    end
     θ̂ = Optim.minimizer(res)
     βz = θ̂[1:p]; βc = θ̂[(p + 1):(2p)]
     Λc = unpack_lambda(θ̂[(2p + 1):(2p + rr)], p, K)

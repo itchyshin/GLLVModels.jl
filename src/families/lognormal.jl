@@ -100,7 +100,9 @@ Per-trait intercepts `β_t = mean_s (log(Y[t,s]) − offset[t,s])` are removed b
 [`fit_gaussian_gllvm`](@ref) estimates `(Λ, σ)` on the centred log scale
 (profile-admissible Identity path). Reported `loglik` is the y-scale marginal
 at fitted `(β, Λ, σ)` including `−Σ log y`. Remaining keywords pass through to
-`fit_gaussian_gllvm`.
+`fit_gaussian_gllvm`. Because it reuses that fitter, it also inherits its
+`n_sites ≥ p` requirement and throws an `ArgumentError` with fewer sites than
+traits; the Laplace-fitted families do not have this requirement (#149).
 
 `offset` is the known additive term on the log scale, `log(y) = β + offset + Λz + ε`
 (for example log-exposure), as for the other families. It is subtracted from `log(Y)` before

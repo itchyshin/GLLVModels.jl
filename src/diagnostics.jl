@@ -452,6 +452,12 @@ named structured-covariance kernels (spatial, phylogenetic,
 `ar1`, …); this port only checks the two loading-tier case GLLVModels.jl
 currently fits (`Λ_B` vs `Λ_W`). Single-tier fits (`K_W == 0`) return
 `separable = missing` — there is nothing to separate.
+
+**Caveat for `GllvmFit`:** each column of `y` is one unit observed once, so
+the data identify only `Λ_B Λ_Bᵀ + Λ_W Λ_Wᵀ`, never the split between the
+two tiers (#135). The angle reported for such a fit reflects the
+starting values, and `separable = true` does not mean the tiers are
+identified.
 """
 function diagnose_kernel_separability(fit; angle_tol::Real = 1e-3)
     if !(fit isa GllvmFit) || fit.model.K_W == 0 || fit.pars.Λ_W === nothing
@@ -480,7 +486,7 @@ _sigma_eps_or_zero(fit) = (hasfield(typeof(fit), :pars) && haskey(fit.pars, :σ_
 
 # For a GllvmFit, use the full-tier sigma_y_site (Λ_B, Λ_W, σ²_B, σ²_W,
 # σ_eps — every non-phylo tier the fit carries), not just Λ (== Λ_B) and
-# σ_eps: the naive ΛΛᵀ + diag(σ_eps²) silently drops the W-tier's diagonal
+# σ_eps: the naive ΛΛᵀ + diag(σ_eps²) silently drops the W-tier's
 # contribution, which can report a spuriously inflated implied correlation
 # on a genuinely well-separated multi-tier fit. Other fit types (single-Λ,
 # single-σ_eps by construction) keep the exact ΛΛᵀ + diag(σ_eps²) formula.
