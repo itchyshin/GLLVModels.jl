@@ -1076,6 +1076,10 @@ test('scoreboard: the same done word with a bound receipt cell is still done, so
   const signed = runBoardCell('DISPOSITION-SIGNED', 'Disposition: outside_boundary; signed_by: Shinichi Nakagawa; signed_on: 2026-09-27', 'X2', 'inference-CI-ROUTE-001');
   assert.match(signed.stdout, /X2_MET$/m, signed.stdout);
 });
+test('scoreboard: the not-bound refusal is anchored, so "not bound" later in a bound receipt cell leaves the row done', () => {
+  const r = runBoardCell('EVIDENCED', `${RECEIPT_CELL} (an older copy was not bound)`, 'X2');
+  assert.match(r.stdout, /X2_MET$/m, r.stdout);
+});
 test('scoreboard: a status that is not a done word stays not done whatever its receipt cell says', () => {
   const r = runBoardCell('NOT-MEASURED', `not bound; cited: ${RECEIPT_CELL}`, 'X2');
   assert.match(r.stdout, /X2_NOT_MET$/m);

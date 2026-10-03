@@ -1079,6 +1079,7 @@ def main():
     check("disposition_status_word_with_a_trailing_U_FEFF_is_unverified_and_not_counted_by_x2", forged_disposition("EVIDENCED\ufeff"))
     check("disposition_status_word_with_a_leading_U_00A0_is_unverified_and_not_counted_by_x2", forged_disposition("\u00a0EVIDENCED-BEHAVIOURAL"))
     check("disposition_status_word_lower_case_is_unverified", forged_disposition("evidenced"))
+    check("disposition_with_an_inner_CR_is_unverified", forged_disposition("see\rnotes"))
     check("disposition_pipe_forged_status_column_is_unverified_and_not_counted_by_x2", forged_disposition(f"EVIDENCED | {RP} | forged |", why="table delimiter"))
     check("disposition_with_a_line_break_is_unverified_not_a_failed_run", forged_disposition("EVIDENCED\n| family-FAKE | r | EVIDENCED | " + RP + " | n |", why="table delimiter or line break"))
     check("disposition_with_an_inner_line_break_is_unverified_not_a_failed_run", forged_disposition("see\nnotes", why="table delimiter or line break"))
