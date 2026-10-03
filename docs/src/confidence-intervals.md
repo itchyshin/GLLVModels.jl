@@ -128,6 +128,13 @@ profile_ci(fit, "sigma_eps"; y = y)       # profile likelihood
 bootstrap_ci(fit; y = y, n_boot = 500)    # parametric bootstrap
 ```
 
+All three report the SD terms (`sigma_eps`, `sigma_B[t]`, `sigma_W[t]`) on the raw
+positive scale, so the same term name means the same quantity across methods; the
+signed `sigma_phy[t]`, `beta` and `Lambda_*` terms are reported as they are.
+`bootstrap_ci` leaves out refits that errored or did not converge when it takes the
+percentiles, and returns `n_used` and `n_dropped` (it warns when more than half of
+the refits are dropped).
+
 and derived-quantity CIs (Σ_y entries, communality, correlation, phylogenetic
 signal H²) via [`confint_derived`-family helpers](covariance-correlation.md).
 

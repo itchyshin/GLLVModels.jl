@@ -492,7 +492,19 @@ Returns a NamedTuple with fields:
   - `n_converged::Int`       — number of bootstrap fits that converged
   - `n_valid::Int`           — number of replicates with a finite derived value
   - `replicates::Vector{Float64}` — the n_boot derived-quantity samples
-                                    (with `NaN` for failed refits)
+                                    (with `NaN` for failed refits; values from
+                                    refits that did not converge are kept for
+                                    inspection but are not used for the bounds)
+  - `converged::Vector{Bool}` — per refit: did it converge
+  - `n_used::Int`            — replicates that entered the percentiles
+                               (converged and finite)
+  - `n_dropped::Int`         — `n_boot - n_used`
+
+A refit that errors or does not converge is dropped from the percentile
+computation, as in gllvmTMB's `bootstrap_Sigma`; `n_used` and `n_dropped`
+report the counts, and one warning is issued per call when more than half of
+the refits are dropped. The bounds are `NaN` when fewer than 10 replicates are
+used.
 
 Pass `y`, `X`, `Σ_phy` matching what was originally passed to
 `fit_gaussian_gllvm` (the bootstrap needs them to simulate and refit).
@@ -509,15 +521,22 @@ function bootstrap_ci_derived(fit::GllvmFit, derived_fn::Function;
                               n_sites::Union{Nothing, Integer} = nothing,
                               X::Union{Nothing, AbstractArray{<:Real, 3}} = nothing,
                               Σ_phy::Union{Nothing, AbstractMatrix} = nothing,
-                              verbose::Bool = false)
+                              verbose::Bool = false,
+                              # Internal test seam, not API (see `bootstrap_ci`, #140).
+                              _refit::Function = fit_gaussian_gllvm)
 
     0 < level < 1 || throw(ArgumentError("level must be in (0, 1); got $level"))
     n_boot ≥ 1   || throw(ArgumentError("n_boot must be ≥ 1; got $n_boot"))
 
     if _has_gaussian_record(fit)
         data=y===nothing ? fit.integration.data.responses : y
-        return _gaussian_record_bootstrap_derived(fit,derived_fn;Y=data,X=X,Σ_phy=Σ_phy,
+        r=_gaussian_record_bootstrap_derived(fit,derived_fn;Y=data,X=X,Σ_phy=Σ_phy,
             n_sites=n_sites,n_boot=n_boot,level=level,seed=seed)
+        # The record refit already keeps only converged refits, and its percentiles use
+        # the finite derived values among them (`n_valid`), so those are the ones used (#140).
+        n_dropped=n_boot-r.n_valid
+        _bootstrap_warn_dropped("bootstrap_ci_derived",n_dropped,n_boot)
+        return merge(r,(n_used=r.n_valid,n_dropped=n_dropped))
     end
 
     model = fit.model
@@ -592,24 +611,22 @@ function bootstrap_ci_derived(fit::GllvmFit, derived_fn::Function;
 
     rng = MersenneTwister(seed)
     replicates = fill(NaN, n_boot)
-    n_converged = 0
+    converged = fill(false, n_boot)
 
     y_b = Matrix{Float64}(undef, p, n)
 
     for b in 1:n_boot
         _derived_simulate!(rng, y_b, μ̂, L_site, L_phy, Λ_phy_aug)
         try
-            fit_b = fit_gaussian_gllvm(y_b;
-                                       K = K_B,
-                                       K_W = K_W,
-                                       has_diag = has_diag,
-                                       K_phy = K_phy,
-                                       has_phy_unique = has_phy_unique,
-                                       Σ_phy = Σ_phy,
-                                       X = X)
-            if fit_b.converged
-                n_converged += 1
-            end
+            fit_b = _refit(y_b;
+                           K = K_B,
+                           K_W = K_W,
+                           has_diag = has_diag,
+                           K_phy = K_phy,
+                           has_phy_unique = has_phy_unique,
+                           Σ_phy = Σ_phy,
+                           X = X)
+            converged[b] = fit_b.converged
             v = call_derived(fit_b)
             if isfinite(v)
                 replicates[b] = v
@@ -620,9 +637,16 @@ function bootstrap_ci_derived(fit::GllvmFit, derived_fn::Function;
     end
 
     α = (1 - level) / 2
-    valid = filter(isfinite, replicates)
-    n_valid = length(valid)
-    lower, upper = if n_valid ≥ 10
+    n_valid = count(isfinite, replicates)
+    n_converged = count(converged)
+    # Percentiles over converged refits only (#140): a finite derived value from a
+    # refit that stopped far from the optimum is not a draw from the estimator.
+    usable = [converged[b] && isfinite(replicates[b]) for b in 1:n_boot]
+    valid = replicates[usable]
+    n_used = length(valid)
+    n_dropped = n_boot - n_used
+    _bootstrap_warn_dropped("bootstrap_ci_derived", n_dropped, n_boot)
+    lower, upper = if n_used ≥ 10
         (_derived_percentile(valid, α), _derived_percentile(valid, 1 - α))
     else
         (NaN, NaN)
@@ -633,7 +657,10 @@ function bootstrap_ci_derived(fit::GllvmFit, derived_fn::Function;
             upper       = upper,
             n_converged = n_converged,
             n_valid     = n_valid,
-            replicates  = replicates)
+            replicates  = replicates,
+            converged   = converged,
+            n_used      = n_used,
+            n_dropped   = n_dropped)
 end
 
 # ---------------------------------------------------------------------------

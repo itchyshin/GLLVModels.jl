@@ -58,7 +58,7 @@ using GLLVModels,Test,Random,LinearAlgebra,Distributions
             @test ok && abs(ll+ad.nll(tc))<1e-8
             @test GLLVModels._tw_sigma_from_hessian(f,Y,nothing,nothing)[1]≈vcov(f,Y)
             nb=bootstrap_ci(f;y=Y,n_boot=2,seed=13,parms="sigma_eps")
-            @test size(nb.replicates)==(2,1) && nb.estimate==f.pars.θ_packed[1:1]
+            @test size(nb.replicates)==(2,1) && nb.estimate≈[f.pars.σ_eps] # raw scale (#156); replicates stay packed
             @test_throws ArgumentError bootstrap_ci(f;y=Y,n_sites=n+1,n_boot=2)
         end
         @test f.integration.input_digest==GLLVModels._aghq_data_digest(f.integration.data)
