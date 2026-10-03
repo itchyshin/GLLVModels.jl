@@ -340,6 +340,27 @@ the true `K` far more often; with weak loadings it does not raise recovery but
 never picks too many dimensions, and dimensions beyond `K = 1` are found
 mainly with many sites. Read `sel.attempts` before trusting the choice.
 
+Printing `sel` shows the table gllvmTMB's `select_lv` prints, with the same labels
+(`*` marks the chosen row; `d` is `K`, `npar` the parameter count). For Gaussian data
+with true rank 2 (6 traits, 150 sites):
+
+```
+GLLVModels latent-dimension selection (criterion = bic_sites, best K = 2)
+   d npar    logLik      AIC      BIC     AICc conv pdHess
+   1   13 -1183.645 2393.289 2455.720 2393.700 TRUE     NA
+ * 2   18 -1032.949 2101.898 2188.341 2102.674 TRUE     NA
+   3   22 -1030.958 2105.915 2211.568 2107.069 TRUE     NA
+  pdHess = NA: not determined. It needs select_lv(...; pd_hessian = true) (one Hessian per K) and a fit type with a Wald route.
+```
+
+`AICc` is `AIC + 2k(k+1)/(n − k − 1)` with the same `n` (`p·n` observed cells) as `BIC`,
+and `NA` when `n − k − 1 ≤ 0`; `conv` is the optimiser's convergence flag. `pdHess` is
+`NA` ("not determined") by default, because it needs a Hessian per `K`; pass
+`pd_hessian = true` to fill it (`TRUE` when the Wald observed information at the optimum
+is usable). None of the three columns changes which `K` is chosen, and, unlike R, a
+rank with `conv = FALSE` or `pdHess = FALSE` stays eligible, so read them before
+trusting the choice.
+
 If you leave `K` out of `fit_gllvm`, it runs this sweep (by default
 `Kmax = min(5, p − 1)` and `:bic_sites` unless you pass `criterion`) and returns
 the chosen fit with a one-line message.
