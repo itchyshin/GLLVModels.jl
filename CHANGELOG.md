@@ -97,6 +97,31 @@
   optimum, and on some data it now stops at a different one than before (the review compared 132
   fits with non-constant offsets: 8 differed by more than 1e-4 in logLik, four higher and four
   lower, all reported converged).
+- **NB1 near its Poisson limit (φ → 0): accurate density, and per-species fits converge.**
+  Two defects, found while checking the NB1 grouped fitters after #615.
+  - Precision: the NB1 density, score and observed and Fisher curvatures differenced
+    loggamma, digamma or trigamma of r = μ/φ, which loses the result as r grows. At
+    φ = 1e-6 the derivative in log φ was 40 times too large, so the gradient was noise
+    near the limit. The density now uses the NB2 routine (`_nb2_logpdf_mean` with
+    r = μ/φ), and the digamma and trigamma differences are summed directly
+    (`_nb1_rise_diffs`). Against a BigFloat reference over φ from 5 to 1e-12, the
+    largest relative error is now 4e-15 for the density and 4e-14 for the curvature.
+    This applies to every NB1 fit.
+  - Ridge: like NB2 in #615, per-species fits crawled toward φ = 0 until the iteration
+    cap. `fit_nb1_gllvm_grouped` and `fit_nb1_gllvm_grouped_cov` now use the NB2
+    Poisson-limit polish, mirrored: groups with φ < 1e-3 are fixed at φ = 1e-10, the
+    rest is refit with BFGS, and a refit is kept only if it is no worse. The fitter
+    already warns at φ < 1e-6.
+  - Evidence: on main, 6 of 6 per-species fits in the hardest cells (p = 24) failed to
+    converge, while shared φ converged on all 6. On the 72-cell NB1 grid (p = 6, 12, 24;
+    n = 60, 120, 300; K = 1, 2; φ = 0.1, 1, 5 or varied on [0.05, 5]; 20 reps) with
+    these fixes, 1,432 of 1,440 per-species fits converge, and so do all shared-φ fits.
+    The 8 that do not are spread over cells. Shared φ recovers φ better in all 54
+    common-φ cells. Per-species φ recovers φ better in 17 of 18 varied-φ cells and gives
+    better loadings in 16 of 18, at 7 to 15 times the fitting time.
+  - Test: `test/test_nb1_poisson_ridge.jl` (literal fixture
+    `test/fixtures/nb1_grouped_poisson_ridge.toml`; it fails on main on macOS and
+    Linux).
 - **Beta and Gamma fits now optimise the link they are asked for (bug fix).**
   `fit_beta_gllvm` and `fit_gamma_gllvm` accepted `link = ...`, used it for the warm start and
   stored it on the fit, but built their objective without it. Any Beta fit with a non-logit link
@@ -548,6 +573,56 @@
   profile intervals are unchanged. Test: `test/test_confint_bootstrap_ordered_beta.jl`
   (analytic moment checks of the draws, and an end-to-end bootstrap on the
   literal fixture `test/fixtures/ordered_beta_boot.toml`).
+- **`confint` on a fit made with an `offset` now infers on that offset (silent wrong-answer fix).**
+  `confint(fit, Y)` rebuilt the marginal log-likelihood from `Y`, `N`, `X` and `mask` only, so a
+  fit made with an `offset` (log-exposure, effort) got the Hessian, profile refits and bootstrap
+  draws of an offset-free model, with no warning. Measured on Poisson fits with `p = 5`, `n = 80`,
+  `K = 1` and offset `0.5 * randn(p, n)` over 30 seeds: at the fit's own optimum the offset-free
+  log-likelihood sat 45 to 130 below the fit's, the standard errors were off by a median of 10%
+  (up to a factor of 2), and in one seed the offset-free Hessian was not positive definite
+  (smallest eigenvalue -243 against +26.9 for the fit's own objective), so `confint` reported
+  `pd_hessian = false` and no interval for 3 of the 10 terms on a regular fit. `confint(fit, Y; offset = O)` (also
+  `vcov`, `coef_table`, and `confint_lv_effects` for Wald and profile) now takes the offset given
+  to the fitter (a scalar, a `p x n` matrix, `p x 1`, `1 x n`, or a length-`p` vector, the shapes
+  `fit_gllvm` stretches to `p x n`) and uses it in the Wald Hessian, the profile refits and the
+  bootstrap draws and refits. This holds for every fit type whose fitter takes an offset: Poisson,
+  Binomial, NB2, NB1, GP1, Beta, Gamma, Exponential, the NB2 / NB1 / Beta / Gamma / Tweedie
+  grouped-dispersion fits without covariates, truncated Poisson and NB2, and the delta, hurdle
+  and zero-inflated two-part families (`predictor = :shared` delta fits put the offset on both
+  parts, as the fitters do). Fit objects have no field for the offset (adding one would touch
+  every fit constructor), so `confint` checks that the objective it rebuilds reproduces
+  `fit.loglik` at the fitted values and throws an `ArgumentError` otherwise: a fit made with an
+  offset and a call without it, or with a different one, is refused instead of answered with the
+  intervals of another model. The same check refuses a wrong `N` or a dropped `mask` on those fit
+  types. Also refused: an offset for a fit type whose fitter takes none, an offset with
+  `objective = :va` (the variational marginal has no offset route), and an offset with
+  `confint_lv_effects(...; method = :bootstrap)`. `confint_lv_effects(...; method = :bootstrap)`
+  now runs the same objective check as the Wald and profile routes, so an `X_lv` fit made with an
+  offset and bootstrapped without it is refused (it used to return before the check and refit an
+  offset-free model). The check compares like with like: a variational fit
+  (`fit_{poisson,nb,binomial,beta,gamma,exponential,delta_gamma}_gllvm_va`, whose `loglik` is the
+  ELBO) is compared with the variational objective, and a `hessian = :fisher` fit of
+  `DeltaGammaFit` (separate or shared predictor), `TruncatedNegBin2Fit` or
+  `TruncatedNegBin2PerTraitFit` (whose structs do not record the curvature) with the Fisher
+  objective, so offset-free calls on those fits run exactly as before. The Wald, profile and
+  bootstrap objective itself is unchanged for them (the adapters of these four types still use
+  the `:observed` curvature on a `:fisher` fit, as before). The error text names the possible
+  causes (offset, `N`, `X`, `mask`, variational objective, curvature, non-default link). **Behaviour
+  change for Beta fits with a link other than logit and Gamma fits with a link other than log:**
+  `fit_beta_gllvm` and `fit_gamma_gllvm` optimise the default-link objective (their marginal call
+  carries no `link`), so the fit's own objective cannot be rebuilt from its `link`; `confint`
+  returned `pd_hessian = false` there and now throws an `ArgumentError` saying the fit's own
+  objective could not be reproduced (a known issue with non-default links), rather than computing
+  on the wrong objective. The check cannot see a wrong offset at cells that do not enter the
+  likelihood (masked cells; the `y = 0` cells of hurdle and separate-predictor delta fits, where
+  the offset sits on the positive part only), and an offset error below about `3e-4` per cell
+  passes. Unchanged: AGHQ Poisson and binomial fits keep their offset and need no keyword, and the
+  Gaussian route already read the offset from the fit. Fits without an offset give the same
+  intervals (checked bit for bit on Poisson, NB2, Gamma, ZIP, Delta-Gamma, grouped NB2 and
+  Binomial, on the variational fits of all seven families, and on `hessian = :fisher` fits of
+  the four types above: Wald, `vcov` and `coef_table` on all of them, and one profile and one
+  bootstrap on a variational Poisson fit and a `:fisher` truncated NB2 fit). Test:
+  `test/test_confint_offset.jl`.
 
 All notable changes to GLLVModels.jl are documented here.
 
