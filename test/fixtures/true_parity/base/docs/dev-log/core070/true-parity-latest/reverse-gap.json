@@ -1,10 +1,22 @@
 [
  {
   "source_id": "SourceCovariance",
-  "decision": "KEPT_AS_JULIA_EXTRA"
+  "decision": "KEPT_AS_JULIA_EXTRA",
+  "basis": "fixture: documented Julia extra, see docs/src/gllvmtmb-parity.md",
+  "ruling": {
+   "ref": "itchyshin/GLLVModels.jl#684 item 3",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-02"
+  }
  },
  {
   "source_id": "TwoPartZI",
-  "decision": "KEPT_AS_JULIA_EXTRA"
+  "decision": "KEPT_AS_JULIA_EXTRA",
+  "basis": "fixture: documented Julia extra, see docs/src/gllvmtmb-parity.md",
+  "ruling": {
+   "ref": "itchyshin/GLLVModels.jl#684 item 3",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-02"
+  }
  }
 ]
