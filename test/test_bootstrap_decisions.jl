@@ -1,4 +1,4 @@
-using GLLVModels, Test, Random, LinearAlgebra, Statistics, StableRNGs, Logging
+using GLLVModels, Test, Random, LinearAlgebra, Statistics, StableRNGs
 
 # Bootstrap decisions (#140, #156).
 #
@@ -167,14 +167,14 @@ _bd_draws(term, col) = _bd_is_log_sd(term) ? exp.(col) : col
         @test ci.estimate[1] ≈ fit.pars.σ_eps rtol = 1e-12
         @test all(ci.lower .< ci.upper)
         # a quarter dropped: no warning
-        @test_logs min_level = Logging.Warn bootstrap_ci(fit; y = y, n_boot = nb, seed = 7,
+        @test_logs min_level = Base.CoreLogging.Warn bootstrap_ci(fit; y = y, n_boot = nb, seed = 7,
                                           _refit = _bd_refit(b -> b % 4 == 0, Bool[]))
     end
 
     @testset "#140 warning only when more than half are dropped" begin
         nb = 40
         # exactly half dropped: no warning
-        half = @test_logs min_level = Logging.Warn bootstrap_ci(fit; y = y, n_boot = nb, seed = 7,
+        half = @test_logs min_level = Base.CoreLogging.Warn bootstrap_ci(fit; y = y, n_boot = nb, seed = 7,
                                                  _refit = _bd_refit(b -> iseven(b), Bool[]))
         @test half.n_dropped == 20 && half.n_used == 20
         # three quarters dropped: exactly one warning, naming the counts
@@ -210,7 +210,7 @@ _bd_draws(term, col) = _bd_is_log_sd(term) ? exp.(col) : col
         @test d.n_used == 30 && d.n_dropped == 10
         @test d.n_valid == nb                   # n_valid keeps its meaning: finite derived values
         @test d.converged == used
-        @test_logs min_level = Logging.Warn GLLVModels.bootstrap_ci_derived(fit, sig; y = y, n_boot = nb, seed = 7,
+        @test_logs min_level = Base.CoreLogging.Warn GLLVModels.bootstrap_ci_derived(fit, sig; y = y, n_boot = nb, seed = 7,
                                                   _refit = _bd_refit(b -> b % 4 == 0, Bool[]))
         # more than half dropped: one warning
         flags2 = Bool[]
