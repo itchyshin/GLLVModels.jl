@@ -1,8 +1,9 @@
 # gllvm-parity-tag: P1
 #
-# Behavioural twins for three C1 rows (itchyshin/GLLVModels.jl#684 item 2), against gllvmTMB at P1
+# Behavioural twins for the four C1 rows (itchyshin/GLLVModels.jl#684 item 2), against gllvmTMB at P1
 # (9539352f66f2db2cc26b1c393e67212a359b60c9, 0.7.1):
 #   print.anova.gllvmTMB_multi  -- the printed comparison table (R/aghq-report.R)
+#   print.gllvmTMB_select_lv -- the printed rank-selection table: column labels and marker (R/select-lv.R)
 #   extract_latent_scores.default -- the refusal on an object with no method (R/extract-latent-scores.R)
 #   update.gllvmTMB_multi -- replay of the saved call, data override, and the refusals (R/methods-gllvmTMB.R)
 # No R at test time. R's side is recorded in test/fixtures/c1_behaviour_p1/ by
@@ -16,8 +17,15 @@
 # headings, and the three properties of the refusal named in c1b_refusal_labels. For update() it
 # compares four behaviours (c1b_update_labels); it does not claim R's evaluate = FALSE, R's
 # formula override, or R's "does not retain a public call" refusal have Julia counterparts.
+# For print.gllvmTMB_select_lv it compares the eight column labels and the marker convention; the
+# title line (R: "gllvmTMB latent-rank selection ... selected d"; Julia: "GLLVModels latent-dimension
+# selection ... best K") and the numbers are recorded, not compared. R drops a rank that did not
+# converge, or has a confirmed non-positive-definite Hessian, from the selection and Julia keeps it
+# selectable; this fixture has no such rank, so the marker agrees here and the difference is not
+# exercised.
 using Test
 using GLLVModels
+using SHA
 using TOML
 
 include(joinpath(@__DIR__, "fixtures", "c1_behaviour_p1", "helpers.jl"))
@@ -32,7 +40,8 @@ include(joinpath(@__DIR__, "fixtures", "c1_behaviour_p1", "helpers.jl"))
         @test !isempty(prov)
         @test all(p -> p["deparse_identical"] === true, prov)
         @test Set(p["name"] for p in prov) ⊇ Set(["print.anova.gllvmTMB_multi", "anova.gllvmTMB_multi",
-                                                  "extract_latent_scores.default", "update.gllvmTMB_multi"])
+                                                  "extract_latent_scores.default", "update.gllvmTMB_multi",
+                                                  "select_lv", "print.gllvmTMB_select_lv"])
         # The raw printed table is the file the hash was taken from.
         txt = c1b_r_anova_print(rec)
         @test occursin("Likelihood-ratio comparison", txt)
@@ -86,5 +95,35 @@ include(joinpath(@__DIR__, "fixtures", "c1_behaviour_p1", "helpers.jl"))
         @test j_types.unnamed == "MethodError" && j_types.nocall == "MethodError"
         @test rec["update"]["unnamed"]["condition_classes"][1] == "rlang_error"
         @test rec["update"]["nocall"]["condition_classes"][1] == "simpleError"
+    end
+
+    @testset "print.gllvmTMB_select_lv: column labels and marker" begin
+        s = rec["select_lv"]
+        fx = TOML.parsefile(C1B_SELECT_LV_FIXTURE)
+        # R's side was recorded on the data of the numeric select_lv twin, and equals its recorded sweep.
+        csv = joinpath(dirname(C1B_SELECT_LV_FIXTURE), fx["data_file"])
+        @test bytes2hex(sha256(read(csv))) == s["data_sha256"] == fx["data_sha256"]
+        @test Int.(s["npar"]) == Int.(fx["r_reference"]["npar"])
+        @test Int(s["selected_d"]) == Int(fx["r_reference"]["selected_d"]) == 2
+        for k in ("loglik", "aic", "bic", "aicc")
+            @test isapprox(Float64.(s[k]), Float64.(fx["r_reference"][k]); atol = 1e-6, rtol = 0)
+        end
+        @test all(Bool.(s["converged"])) && all(Bool.(s["pd_hessian"]))
+        # The stored text is the file the hash was taken from.
+        r_txt = c1b_r_select_lv_print(rec)
+        @test bytes2hex(sha256(codeunits(r_txt))) == s["print_sha256"]
+
+        j_txt, sel = c1b_julia_select_lv_print()
+        r_t, j_t = c1b_select_lv_table(r_txt), c1b_select_lv_table(j_txt)
+        @test sel.best_k == 2 && all(x -> x === true, sel.pd_hessian)
+        @test length(r_t.rows) == length(j_t.rows) == 3
+        # Compared: the column labels, in order, and the marker convention.
+        @test r_t.labels == ["d", "npar", "logLik", "AIC", "BIC", "AICc", "conv", "pdHess"]
+        @test j_t.labels == r_t.labels
+        @test c1b_select_lv_marker_labels(j_t) == c1b_select_lv_marker_labels(r_t) ==
+              ["marks exactly one row, with *", "the marked row has the smallest value of the criterion column"]
+        # Recorded, not compared: both title lines name the criterion; their other words differ.
+        @test occursin("criterion = bic", r_t.title) && occursin("criterion = bic", j_t.title)
+        @test r_t.title != j_t.title
     end
 end

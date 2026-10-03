@@ -136,7 +136,7 @@ function nb_lv_nll_packed(params::AbstractVector, Y::AbstractMatrix,
 
     lv_offset = _lv_mean_eta(Λ, X_lv, alpha_lv)
     off = offset === nothing ? lv_offset : offset .+ lv_offset
-    return -nb_marginal_loglik_laplace(Y, Λ, β, r; mask = mask, offset = off,
+    return -nb_marginal_loglik_laplace(Y, Λ, β, r; link = link, mask = mask, offset = off,
                                        maxiter = maxiter, tol = tol)
 end
 
@@ -300,8 +300,10 @@ function fit_nb_gllvm(Y::AbstractMatrix; K::Integer,
             return isfinite(v) ? v : 1e12
         end
         Optim.optimize(negll_lv, θ0_lv, ls, opts; autodiff = :finite)
-    elseif gradient === :analytic && offset === nothing &&
+    elseif gradient === :analytic && offset === nothing && link isa LogLink &&
            hessian === _default_hessian(NegativeBinomial(1.0, 0.5), link)
+        # `nb_laplace_grad` is derived for the log link only; any other link takes the
+        # :finite path below, which differentiates the actual objective.
         ag = θ -> begin
             β = θ[1:p]; Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K); rv = exp(θ[p + rr + 1])
             try -nb_laplace_grad(Yc, Λ, β, rv; mask = msk) catch; nothing end

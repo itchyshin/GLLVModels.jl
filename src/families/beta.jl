@@ -129,7 +129,7 @@ function beta_lv_nll_packed(params::AbstractVector, Y::AbstractMatrix,
 
     lv_offset = _lv_mean_eta(Λ, X_lv, alpha_lv)
     off = offset === nothing ? lv_offset : offset .+ lv_offset
-    return -beta_marginal_loglik_laplace(Y, Λ, β, φ; mask = mask, offset = off,
+    return -beta_marginal_loglik_laplace(Y, Λ, β, φ; link = link, mask = mask, offset = off,
                                          maxiter = maxiter, tol = tol)
 end
 
@@ -151,8 +151,9 @@ Fit a Beta GLLVM by L-BFGS over `[β; vec(Λ); log φ]` on the Laplace marginal
 (`beta_marginal_loglik_laplace`), jointly estimating the precision `φ`
 (`Var = μ(1−μ)/(1+φ)`). `Y` is a p×n matrix of proportions in (0,1); `K` the latent
 dimension. The default analytic Laplace gradient is used on the plain
-no-mask/no-offset path, with an internal finite-difference fallback; masked or
-offset fits use finite differences. Warm start = empirical logit-mean intercepts +
+no-mask/no-offset path with the logit link, with an internal finite-difference
+fallback; masked or offset fits, and any other `link`, use finite differences of
+the objective for that link. Warm start = empirical logit-mean intercepts +
 an SVD loadings init + a moderate `φ₀`.
 
 `hessian` selects the Laplace log-det curvature only (`:fisher` expected /
@@ -249,8 +250,8 @@ function fit_beta_gllvm(Y::AbstractMatrix; K::Integer,
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         φ = exp(θ[p + rr + 1])
         v = try
-            -beta_marginal_loglik_laplace(Yc, Λ, β, φ; mask = msk, offset = offset,
-                                          hessian = hessian,
+            -beta_marginal_loglik_laplace(Yc, Λ, β, φ; link = link, mask = msk,
+                                          offset = offset, hessian = hessian,
                                           maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
@@ -273,12 +274,15 @@ function fit_beta_gllvm(Y::AbstractMatrix; K::Integer,
             return isfinite(v) ? v : 1e12
         end
         Optim.optimize(negll_lv, θ0_lv, ls, opts; autodiff = :finite)
-    elseif gradient === :analytic && offset === nothing &&
+    elseif gradient === :analytic && offset === nothing && link isa LogitLink &&
            hessian === _default_hessian(Beta(1.0, 1.0), link)
         # The analytic gradient implements the DEFAULT curvature's objective (the two
         # moved together in the 2026-08-25 role-separation work). A non-default
         # `hessian` therefore falls through to :finite below, which differentiates the
-        # actual objective and cannot desynchronise from it.
+        # actual objective and cannot desynchronise from it. The same holds for the
+        # link: `beta_laplace_grad` is derived for the logit link only (its score,
+        # weight and log-det are hand-written in `μ(1−μ)`), so any other link also
+        # takes the :finite path.
         ag = θ -> begin
             β = θ[1:p]; Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K); fv = exp(θ[p + rr + 1])
             try -beta_laplace_grad(Yc, Λ, β, fv; mask = msk) catch; nothing end

@@ -5,11 +5,13 @@
 #   model-comparison/print.anova.gllvmTMB_multi   (R/aghq-report.R)
 #   latent-scores/extract_latent_scores.default   (R/extract-latent-scores.R)
 #   model-comparison/update.gllvmTMB_multi        (R/methods-gllvmTMB.R)
+#   select-lv/print.gllvmTMB_select_lv            (R/select-lv.R)
 # Records what gllvmTMB at P1 (9539352f66f2db2cc26b1c393e67212a359b60c9, 0.7.1) actually
 # produces: the printed table of anova() on three nested Gaussian fits, the condition
 # raised by extract_latent_scores() on four objects it has no method for, and what update()
 # does on a temporal fit (replay, data override, an unnamed override) and on an ordinary fit
-# that keeps no call. Nothing is typed by
+# that keeps no call, and the printed table of select_lv() on the P1 select_lv fixture data
+# (test/fixtures/select_lv_p1_data.csv, the data of the numeric select_lv twin, PR #644). Nothing is typed by
 # hand: the Julia side and the receipt writer (tools/true_parity_julia_receipts.jl) read these
 # raw files and derive every label from them.
 #
@@ -17,7 +19,7 @@
 #   GLLVM_P1_RLIB=<lane-local library holding gllvmTMB 0.7.1 built from the pin> \
 #   GLLVMTMB_CLONE=<path of a gllvmTMB clone that has the pin> \
 #     Rscript tools/core070_c1_behaviour_p1.R
-# Writes test/fixtures/c1_behaviour_p1/{r_c1_behaviour.toml, r_anova_print.txt}.
+# Writes test/fixtures/c1_behaviour_p1/{r_c1_behaviour.toml, r_anova_print.txt, r_select_lv_print.txt}.
 #
 # Provenance check (the convention of the other P1 twin generators). The installed functions
 # are the ones that run, so before recording anything this script reads the SAME functions
@@ -48,7 +50,9 @@ PINNED_FUNCTIONS <- list(
                                           ".gllvmTMB_anova_global_check", ".gllvmTMB_anova_classify_step")),
   list(file = "R/chibar.R", names = "chibar2_pvalue"),
   list(file = "R/extract-latent-scores.R", names = c("extract_latent_scores", "extract_latent_scores.default")),
-  list(file = "R/methods-gllvmTMB.R", names = "update.gllvmTMB_multi")
+  list(file = "R/methods-gllvmTMB.R", names = "update.gllvmTMB_multi"),
+  list(file = "R/select-lv.R", names = c("select_lv", "print.gllvmTMB_select_lv", ".select_lv_aicc",
+                                         ".select_lv_set_d", ".select_lv_count_latent", ".select_lv_isTRUE_vec"))
 )
 sha256_text <- function(lines) {
   tmp <- tempfile(); on.exit(unlink(tmp))
@@ -163,6 +167,31 @@ upd <- list(
                   temporal_active = isTRUE(override$temporal$active)),
   unnamed = unnamed, nocall = nocall)
 
+# --- print.gllvmTMB_select_lv on the select_lv P1 fixture data -------------------------------
+# The same call as test/fixtures/gen_select_lv_p1.R (default control, so sdreport() runs and pdHess is
+# known), on the CSV the numeric twin and the Julia side both read. The CSV is hash-checked against
+# test/fixtures/select_lv_p1.toml first. R's printed text is stored verbatim; the numbers are recorded
+# for reference and are not compared with Julia's.
+sl_fx_path <- "test/fixtures/select_lv_p1.toml"
+sl_csv_path <- "test/fixtures/select_lv_p1_data.csv"
+sl_csv_sha <- unname(sub(" .*", "", system2("shasum", c("-a", "256", shQuote(sl_csv_path)), stdout = TRUE)))
+sl_fx_lines <- readLines(sl_fx_path)
+sl_fx_sha <- sub("^data_sha256 = \"(.*)\"$", "\\1", grep("^data_sha256 = ", sl_fx_lines, value = TRUE))
+if (!identical(sl_csv_sha, sl_fx_sha)) stop("select_lv data csv does not match test/fixtures/select_lv_p1.toml")
+sl_dat <- read.csv(sl_csv_path, stringsAsFactors = FALSE)
+sl_dat$unit  <- factor(sl_dat$unit, levels = unique(sl_dat$unit))
+sl_dat$trait <- factor(sl_dat$trait, levels = unique(sl_dat$trait))
+set.seed(20260930L)
+sl_sel <- select_lv(
+  value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE),
+  data = sl_dat, unit = "unit", trait = "trait", d_max = 3L, criterion = "bic")
+sl_tab <- sl_sel$table
+stopifnot(nrow(sl_tab) == 3L, all(sl_tab$converged), all(sl_tab$pd_hessian), all(is.na(sl_tab$error)))
+old_width <- options(width = 80L)   # the 8-column table fits on one line; recorded in the fixture
+sl_printed <- capture.output(print(sl_sel))
+options(old_width)
+writeLines(sl_printed, file.path(out_dir, "r_select_lv_print.txt"), useBytes = TRUE)
+
 # --- write the TOML ------------------------------------------------------------------------
 tq <- function(s) {
   s <- gsub("\\", "\\\\", s, fixed = TRUE); s <- gsub("\"", "\\\"", s, fixed = TRUE)
@@ -228,5 +257,27 @@ for (nm in c("unnamed", "nocall")) {
   w("message = %s", tq(x$message))
   w("returned_class = %s", tq(x$returned_class))
 }
+
+tnums2 <- function(v) paste0("[", paste(sprintf("%.17g", v), collapse = ", "), "]")
+tlgl <- function(v) paste0("[", paste(tolower(as.character(v)), collapse = ", "), "]")
+w("")
+w("[select_lv]")
+w("# select_lv(value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE), data, unit = \"unit\",")
+w("#           trait = \"trait\", d_max = 3, criterion = \"bic\") on the select_lv P1 fixture data.")
+w("data_file = \"../select_lv_p1_data.csv\"")
+w("data_sha256 = %s", tq(sl_csv_sha))
+w("print_file = \"r_select_lv_print.txt\"")
+w("print_sha256 = %s", tq(sha256_text(sl_printed)))
+w("print_width_option = %d", 80L)
+w("criterion = %s", tq(sl_sel$criterion))
+w("selected_d = %d", sl_sel$selected_d)
+w("d = [%s]", paste(sl_tab$d, collapse = ", "))
+w("npar = [%s]", paste(sl_tab$npar, collapse = ", "))
+w("loglik = %s", tnums2(sl_tab$logLik))
+w("aic = %s", tnums2(sl_tab$aic))
+w("bic = %s", tnums2(sl_tab$bic))
+w("aicc = %s", tnums2(sl_tab$aicc))
+w("converged = %s", tlgl(sl_tab$converged))
+w("pd_hessian = %s", tlgl(sl_tab$pd_hessian))
 close(con)
 cat("wrote", out_dir, "\n")
