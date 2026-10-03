@@ -18,28 +18,51 @@
   when `p ≠ n`; a bare vector when `p == n` (it cannot be told from a per-unit vector, and read per
   trait the intercepts absorb it, so a per-unit effort vector silently did nothing; pass
   `reshape(o, 1, n)` or `reshape(o, p, 1)`); a non-finite scalar; and a `NaN`, `Inf` or `missing`
-  at an observed cell (the two-part and zero-inflated routes turned it into a `-Inf` fit; a cell
-  that is masked out or `missing` in `Y` may still carry one). The routes that take no offset at
-  all (the families `StudentTFamily`, `Ordinal`/`OrdinalLogit` also with `aghq`, `COMPoisson`,
-  `BetaBinom`, `BetaHurdle`, `OrderedBeta`, `Multinomial`, and the `pervar`, `row_eff`, `grouping`
-  and `phylo` routes) now raise `ArgumentError: offset is not supported for ...` naming the route,
-  not a raw `MethodError` or a misleading shape error; `offset = nothing` is "no offset" on every
-  route.
+  at an observed cell (the two-part and zero-inflated routes turned it into a `-Inf` fit). A cell
+  that is masked out (`mask` is `false` there) or `missing` in `Y` may still carry one, and
+  `missing` there is read as `NaN` (Poisson and Gamma used to throw a `MethodError` on it); the
+  routes with no `mask` (Lognormal and the two-part and zero-inflated families) have no such cell,
+  so a non-finite offset anywhere is refused and the message says so. The routes that take no
+  offset at all (the families `StudentTFamily`, `Ordinal`/`OrdinalLogit` also with `aghq`,
+  `COMPoisson`, `BetaBinom`, `BetaHurdle`, `OrderedBeta`, `Multinomial`, the gllvmTMB-twin
+  zero-inflated markers `ZiPoisson`/`ZiNbinom2`/`ZiBinomial`, and the `pervar`, `row_eff`,
+  `grouping` and `phylo` routes) now raise `ArgumentError: offset is not supported for ...` naming
+  the route, not a raw `MethodError` or a misleading shape error; `offset = nothing` is "no
+  offset" on every route.
+
+  **The named fitters take the same shapes.** The same check now runs first thing in every named
+  fitter that takes an `offset` keyword (`fit_gaussian_gllvm`, `fit_poisson_gllvm`,
+  `fit_binomial_gllvm`, `fit_nb_gllvm`, `fit_nb1_gllvm`, `fit_beta_gllvm`, `fit_gamma_gllvm`,
+  `fit_exponential_gllvm`, `fit_gp1_gllvm`, `fit_censored_poisson_gllvm`,
+  `fit_truncated_poisson_gllvm`, `fit_truncated_nbinom2_gllvm` and its `_pertrait` form, the
+  `_grouped` and `_aghq` fitters, `fit_lognormal_gllvm`, and the seven two-part and zero-inflated
+  fitters `fit_zip_gllvm`, `fit_zinb_gllvm`, `fit_zib_gllvm`, `fit_hurdle_poisson_gllvm`,
+  `fit_hurdle_nb_gllvm`, `fit_delta_lognormal_gllvm`, `fit_delta_gamma_gllvm`). A direct call
+  therefore broadcasts a scalar, stretches a length-`p` vector or a `1×n` / `p×1` matrix, and
+  raises the same `ArgumentError` (naming the fitter you called) for any other shape, instead of
+  handing it to the engine unchecked. Fits without an offset are bit-identical to before (checked
+  against the commit before this work: 65 two-part fits and 30 fits across the other named
+  fitters, same logLik, convergence flag, iteration count and parameters). The two-part warm
+  start also checks the shape it indexes, so it cannot read past the end of an offset.
 
   **Fits made with the old calls.** Measured against the code before this change: a scalar gave
   `-Inf` or threw, as above. A `1×n` matrix was correct on the Laplace routes and threw on Normal,
-  Lognormal and AGHQ. A length-`p` vector was correct on the Laplace count, continuous and most
-  two-part routes (the family code adds it by broadcast) and threw on Normal, Lognormal and AGHQ;
-  **`DeltaGamma` is the exception**, where the warm start indexed the vector as a matrix under
-  `@inbounds` (an out-of-bounds read), so a length-`p` offset could return a converged but wrong
-  fit (the review measured logLik -411.1 against -213.7 for the same offsets as a `p×n` matrix).
+  Lognormal and AGHQ. A length-`p` vector was correct on the Laplace count and continuous routes
+  and on six of the seven two-part fitters (ZIP, ZINB, ZIB, hurdle-Poisson, hurdle-NB,
+  delta-lognormal: the engine adds it by broadcast, a per-trait constant is absorbed, and 35 of
+  36 fits, six simulated data sets each, reproduced the no-offset logLik; the 36th, a ZINB fit,
+  was 0.139 lower, a different local optimum reached from the unshifted start) and threw on
+  Normal, Lognormal and AGHQ; **`DeltaGamma` is the exception**, where the warm start indexed
+  the vector as a matrix under `@inbounds` (an out-of-bounds read), so a length-`p` offset could
+  return a converged but wrong fit (the review measured logLik -411.1 against -213.7 for the
+  same offsets as a `p×n` matrix).
   **A `p×1` matrix was wrong on every route that did not throw**: a finite, wrong fit on Poisson,
   Binomial and zero-truncated Poisson, and an unconverged or `-Inf` fit on NB2, NB1, Beta, Gamma,
   Exponential, the delta, hurdle and zero-inflated families and Tweedie. A per-unit effort vector
-  passed bare with `p == n` was read per trait and had no effect. Anyone who fitted with those
-  calls should refit with the call that now works. Direct calls to the named fitters
-  (`fit_poisson_gllvm(Y; K, offset = c)` and the rest) are not covered: they still take a `p×n`
-  matrix. Test: `test/test_offset.jl`.
+  passed bare with `p == n` was read per trait and had no effect. These measurements apply to
+  direct calls of the named fitters too, which passed the offset to the engine as given. Anyone
+  who fitted with those calls should refit with the call that now works. Test:
+  `test/test_offset.jl`.
 
 - **`fit_gllvm(Y; family = Lognormal(), offset = ...)` now applies the offset.**
   `fit_lognormal_gllvm` centred `log(Y)` by its offset-free trait means and only then handed the
@@ -54,6 +77,12 @@
   its negative, and a non-constant offset gives the Normal fit of `log(Y)` with that offset
   (minus `Σ log y`). Earlier Lognormal fits made with an offset were wrong and should be refitted.
   `LognormalFit` stores no offset, and has no `predict`/`fitted` method that would need it back.
+  `fit_lognormal_gllvm` (and `fit_gllvm(...; family = Lognormal(), mask = ...)`) now also refuses a
+  `mask` with an `ArgumentError`. It was accepted before but only reached the Gaussian fit of the
+  centred log-responses: the trait means and the `-Σ log y` term ran over every cell, so a masked
+  fit came back with wrong intercepts and logLik (two masked cells of 180: `β` off by up to 0.009
+  and logLik 1.6 lower than the masked Normal fit of `log(Y)` minus `Σ log y` over the observed
+  cells). Refit masked data without the mask, or on the observed cells.
 
 - **Zero-inflated, hurdle and delta fits start from the offset-free warm start.** The count-part
   intercept start of `fit_zip_gllvm`, `fit_zinb_gllvm`, `fit_zib_gllvm`, `fit_hurdle_poisson_gllvm`,
@@ -63,7 +92,11 @@
   than the same fit without one (a constant offset must leave the logLik unchanged: ZIP differed by
   4.5 and ZINB by 3.4 on two simulated data sets, both reported converged). The start now removes
   each trait's mean offset over its positive cells, so a constant offset runs the no-offset path
-  shifted by its negative. Fits without an offset are bit-identical.
+  shifted by its negative. Fits without an offset are bit-identical. This is a better start, not
+  a search for the global optimum: with a non-constant offset a fit can still stop at a local
+  optimum, and on some data it now stops at a different one than before (the review compared 132
+  fits with non-constant offsets: 8 differed by more than 1e-4 in logLik, four higher and four
+  lower, all reported converged).
 
 - **`fit_phylo_gaussian` no longer reports `converged = true` after a zero-length step
   (part of #505, the remaining #485 class).** Optim also counts a zero-length line-search
