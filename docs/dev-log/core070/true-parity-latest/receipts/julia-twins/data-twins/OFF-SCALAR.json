@@ -1,0 +1,163 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "data/DATA-OFF-SCALAR"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#685",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "896a0a2286c224fe9979d3cf7e7e2c6be27f9357",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/data_twins_p1.toml",
+      "sha256": "1ce70fee8e0fb87015ae1b24d6be105265ce53edb4fae9bed25b0597de974996"
+    },
+    {
+      "path": "test/fixtures/data_twins_pois_p1_data.csv",
+      "sha256": "99cde7a42ea6a15b490bba3ecb370c44f5df0e2c3365e4afa791cc497315faa4"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_data_twins_p1.jl",
+      "sha256": "07842797d28c18e5ce75609e90d47124bfda5d2253f9ac99be903010c6be9b15"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-DATA-POIS_SCALAR-LOGLIK",
+        "quantity": "maximised logLik of the pois_scalar fit",
+        "r_source": "test/fixtures/data_twins_p1.toml [pois_scalar.loglik]",
+        "julia_source": "fit.loglik, fit as at test/test_data_twins_p1.jl:87",
+        "r_value": -1855.7748108187802,
+        "julia_value": -1855.7748108083024,
+        "abs_diff": 1.047783371177502e-08,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_data_twins_p1.jl:76",
+        "tolerance_source_line": "@test isapprox(fit.loglik, Float64(d[\"loglik\"]); atol = 1e-6, rtol = 0)",
+        "note": "Poisson, K = 1, p = 6, n = 150 (sha256 checked); R: value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE), family = poisson(), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'. R: + offset(log(2)); Julia: offset = fill(log(2), 6, 150). A constant offset is absorbed by the intercepts, so the logLik equals the no-offset fit and the intercepts are shifted by -log(2) in both engines (the intercept case carries the discriminating number)."
+      },
+      {
+        "case_id": "P1-JULIA-DATA-POIS_SCALAR-INTERCEPTS",
+        "quantity": "trait intercepts (6 values) of the pois_scalar fit; the offset is not absorbed into them",
+        "r_source": "test/fixtures/data_twins_p1.toml [pois_scalar.beta]",
+        "julia_source": "fit.β, fit as at test/test_data_twins_p1.jl:87",
+        "r_value": [
+          0.4792009108317066,
+          0.05101219402080482,
+          -0.3704568373120436,
+          0.32016016695801314,
+          -0.10995836663389805,
+          0.23860903968879138
+        ],
+        "julia_value": [
+          0.4791897934475364,
+          0.05101835758617284,
+          -0.3704652301592248,
+          0.3201575463280751,
+          -0.109950225647089,
+          0.23860625689477832
+        ],
+        "abs_diff": 1.1117384170145073e-05,
+        "tolerance": 0.0001,
+        "tolerance_source": "test/test_data_twins_p1.jl:77",
+        "tolerance_source_line": "@test isapprox(fit.β, Float64.(d[\"beta\"]); atol = 1e-4, rtol = 0)",
+        "note": "Poisson, K = 1, p = 6, n = 150 (sha256 checked); R: value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE), family = poisson(), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'. R: + offset(log(2)); Julia: offset = fill(log(2), 6, 150). A constant offset is absorbed by the intercepts, so the logLik equals the no-offset fit and the intercepts are shifted by -log(2) in both engines (the intercept case carries the discriminating number)."
+      },
+      {
+        "case_id": "P1-JULIA-DATA-POIS_SCALAR-LAMBDA-LAMBDAT",
+        "quantity": "Lambda Lambda' (6 x 6) of the pois_scalar fit",
+        "r_source": "test/fixtures/data_twins_p1.toml [pois_scalar.lambda_lambdat]",
+        "julia_source": "fit.Λ * fit.Λ', fit as at test/test_data_twins_p1.jl:87",
+        "r_value": [
+          1.1722868464400746,
+          -0.663399780797671,
+          0.6455945992213129,
+          0.4271111154541298,
+          -1.0137664272036646,
+          0.3998797908698811,
+          -0.663399780797671,
+          0.37541943808280637,
+          -0.365343445512653,
+          -0.24170314733886472,
+          0.573692716615607,
+          -0.22629287909702597,
+          0.6455945992213129,
+          -0.365343445512653,
+          0.3555378854666979,
+          0.2352160055722951,
+          -0.5582952092843672,
+          0.22021933804623653,
+          0.4271111154541298,
+          -0.24170314733886472,
+          0.2352160055722951,
+          0.15561370964661436,
+          -0.3693557688954577,
+          0.14569224592483707,
+          -1.0137664272036646,
+          0.573692716615607,
+          -0.5582952092843672,
+          -0.3693557688954577,
+          0.8766816518040823,
+          -0.3458067521035097,
+          0.3998797908698811,
+          -0.22629287909702597,
+          0.22021933804623653,
+          0.14569224592483707,
+          -0.3458067521035097,
+          0.13640334499335688
+        ],
+        "julia_value": [
+          1.1722920311979463,
+          -0.6634027791618997,
+          0.6456017833176021,
+          0.4271143669287051,
+          -1.0137689799619896,
+          0.39988248011447725,
+          -0.6634027791618997,
+          0.37542117125030505,
+          -0.3653475464190514,
+          -0.2417050107821075,
+          0.5736942168306417,
+          -0.22629442287943277,
+          0.6456017833176021,
+          -0.3653475464190514,
+          0.3555442257821587,
+          0.2352193733569616,
+          -0.5583003585435218,
+          0.22022229564723525,
+          0.4271143669287051,
+          -0.2417050107821075,
+          0.2352193733569616,
+          0.15561539068937422,
+          -0.36935787718863305,
+          0.1456936904752668,
+          -1.0137689799619896,
+          0.5736942168306417,
+          -0.5583003585435218,
+          -0.36935787718863305,
+          0.8766821895760518,
+          -0.3458084190473122,
+          0.39988248011447725,
+          -0.22629442287943277,
+          0.22022229564723525,
+          0.1456936904752668,
+          -0.3458084190473122,
+          0.1364045763742844
+        ],
+        "abs_diff": 7.184096289192254e-06,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_data_twins_p1.jl:78",
+        "tolerance_source_line": "@test isapprox(fit.Λ * fit.Λ', _dt_mat(d[\"lambda_lambdat\"], p, p); atol = 1e-3, rtol = 0)",
+        "note": "Poisson, K = 1, p = 6, n = 150 (sha256 checked); R: value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE), family = poisson(), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'. R: + offset(log(2)); Julia: offset = fill(log(2), 6, 150). A constant offset is absorbed by the intercepts, so the logLik equals the no-offset fit and the intercepts are shifted by -log(2) in both engines (the intercept case carries the discriminating number)."
+      }
+    ]
+  }
+}

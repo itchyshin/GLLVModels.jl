@@ -1,0 +1,163 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "data/DATA-OFF-NONE"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#685",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "896a0a2286c224fe9979d3cf7e7e2c6be27f9357",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/data_twins_p1.toml",
+      "sha256": "1ce70fee8e0fb87015ae1b24d6be105265ce53edb4fae9bed25b0597de974996"
+    },
+    {
+      "path": "test/fixtures/data_twins_pois_p1_data.csv",
+      "sha256": "99cde7a42ea6a15b490bba3ecb370c44f5df0e2c3365e4afa791cc497315faa4"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_data_twins_p1.jl",
+      "sha256": "07842797d28c18e5ce75609e90d47124bfda5d2253f9ac99be903010c6be9b15"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-DATA-POIS_NONE-LOGLIK",
+        "quantity": "maximised logLik of the pois_none fit",
+        "r_source": "test/fixtures/data_twins_p1.toml [pois_none.loglik]",
+        "julia_source": "fit.loglik, fit as at test/test_data_twins_p1.jl:85",
+        "r_value": -1855.7748108191886,
+        "julia_value": -1855.774810808303,
+        "abs_diff": 1.0885514711844735e-08,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_data_twins_p1.jl:76",
+        "tolerance_source_line": "@test isapprox(fit.loglik, Float64(d[\"loglik\"]); atol = 1e-6, rtol = 0)",
+        "note": "Poisson, K = 1, p = 6, n = 150 (sha256 checked); R: value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE), family = poisson(), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'. No offset on either side: replaces the helper replay that a NULL offset gives rep(0, n); here the whole fit agrees."
+      },
+      {
+        "case_id": "P1-JULIA-DATA-POIS_NONE-INTERCEPTS",
+        "quantity": "trait intercepts (6 values) of the pois_none fit; the offset is not absorbed into them",
+        "r_source": "test/fixtures/data_twins_p1.toml [pois_none.beta]",
+        "julia_source": "fit.β, fit as at test/test_data_twins_p1.jl:85",
+        "r_value": [
+          1.1723375622856336,
+          0.7441618957817066,
+          0.3226851990540277,
+          1.0133030595703243,
+          0.5831971940170618,
+          0.9317537974087764
+        ],
+        "julia_value": [
+          1.1723369743189946,
+          0.7441655380203223,
+          0.32268195023881485,
+          1.0133047270438822,
+          0.5831969554912723,
+          0.931753437959181
+        ],
+        "abs_diff": 3.6422386157086706e-06,
+        "tolerance": 0.0001,
+        "tolerance_source": "test/test_data_twins_p1.jl:77",
+        "tolerance_source_line": "@test isapprox(fit.β, Float64.(d[\"beta\"]); atol = 1e-4, rtol = 0)",
+        "note": "Poisson, K = 1, p = 6, n = 150 (sha256 checked); R: value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE), family = poisson(), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'. No offset on either side: replaces the helper replay that a NULL offset gives rep(0, n); here the whole fit agrees."
+      },
+      {
+        "case_id": "P1-JULIA-DATA-POIS_NONE-LAMBDA-LAMBDAT",
+        "quantity": "Lambda Lambda' (6 x 6) of the pois_none fit",
+        "r_source": "test/fixtures/data_twins_p1.toml [pois_none.lambda_lambdat]",
+        "julia_source": "fit.Λ * fit.Λ', fit as at test/test_data_twins_p1.jl:85",
+        "r_value": [
+          1.17227903631324,
+          -0.6633952153772766,
+          0.6455918363975404,
+          0.4271109916929736,
+          -1.0137534736144345,
+          0.39987760207780687,
+          -0.6633952153772766,
+          0.37541677207632645,
+          -0.3653418018116961,
+          -0.2417030242349667,
+          0.5736852601944926,
+          -0.2262915907711174,
+          0.6455918363975404,
+          -0.3653418018116961,
+          0.35553721111820696,
+          0.23521649789100407,
+          -0.5582894058597238,
+          0.22021865738685356,
+          0.4271109916929736,
+          -0.2417030242349667,
+          0.23521649789100407,
+          0.15561465621586928,
+          -0.36935340310219594,
+          0.14569237689039738,
+          -1.0137534736144345,
+          0.5736852601944926,
+          -0.5582894058597238,
+          -0.36935340310219594,
+          0.8766650886271803,
+          -0.3458027445426978,
+          0.39987760207780687,
+          -0.2262915907711174,
+          0.22021865738685356,
+          0.14569237689039738,
+          -0.3458027445426978,
+          0.13640276051202033
+        ],
+        "julia_value": [
+          1.1722920285080993,
+          -0.6634027775263565,
+          0.6456017812806493,
+          0.42711436599173935,
+          -1.0137689768589984,
+          0.39988247860835213,
+          -0.6634027775263565,
+          0.37542117026060096,
+          -0.36534754520390983,
+          -0.24170501021057741,
+          0.5736942149766274,
+          -0.22629442198844724,
+          0.6456017812806493,
+          -0.36534754520390983,
+          0.35554422435439054,
+          0.23521937263852763,
+          -0.5583003563541751,
+          0.22022229462826173,
+          0.42711436599173935,
+          -0.24170501021057741,
+          0.23521937263852763,
+          0.1556153903636862,
+          -0.36935787609531956,
+          0.14569368994121037,
+          -1.0137689768589984,
+          0.5736942149766274,
+          -0.5583003563541751,
+          -0.36935787609531956,
+          0.8766821862208372,
+          -0.34580841747985036,
+          0.39988247860835213,
+          -0.22629442198844724,
+          0.22022229462826173,
+          0.14569368994121037,
+          -0.34580841747985036,
+          0.13640457565975372
+        ],
+        "abs_diff": 1.709759365686736e-05,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_data_twins_p1.jl:78",
+        "tolerance_source_line": "@test isapprox(fit.Λ * fit.Λ', _dt_mat(d[\"lambda_lambdat\"], p, p); atol = 1e-3, rtol = 0)",
+        "note": "Poisson, K = 1, p = 6, n = 150 (sha256 checked); R: value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE), family = poisson(), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'. No offset on either side: replaces the helper replay that a NULL offset gives rep(0, n); here the whole fit agrees."
+      }
+    ]
+  }
+}
