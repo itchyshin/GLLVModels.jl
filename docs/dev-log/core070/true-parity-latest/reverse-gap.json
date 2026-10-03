@@ -5,7 +5,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/AnBSparseSolver",
@@ -13,7 +13,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/AugmentedPhy",
@@ -21,7 +21,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/BetaBinom",
@@ -29,7 +29,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/BetaBinomialFit",
@@ -37,7 +37,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/BetaBinomialGroupedCovFit",
@@ -45,7 +45,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/BetaBinomialGroupedFit",
@@ -53,7 +53,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/BetaFit",
@@ -61,7 +61,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/BetaGroupedCovFit",
@@ -69,7 +69,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/BetaGroupedFit",
@@ -77,7 +77,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/BetaHurdle",
@@ -85,7 +85,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/BetaHurdleFit",
@@ -93,7 +93,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/BinomialFit",
@@ -101,7 +101,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/BranchRECache",
@@ -109,7 +109,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/BranchREFit",
@@ -117,7 +117,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/CLogLogLink",
@@ -125,7 +125,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/COMPoisson",
@@ -133,7 +133,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/COMPoissonFit",
@@ -141,7 +141,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/CVResult",
@@ -149,7 +149,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/CensoredPoisson",
@@ -157,7 +157,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/CensoredPoissonFit",
@@ -165,7 +165,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/CoevolutionGLMFit",
@@ -173,7 +173,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/ConcurrentOrdinationFit",
@@ -181,7 +181,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/ConstrainedOrdinationFit",
@@ -189,7 +189,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/DeltaGamma",
@@ -197,7 +197,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/DeltaGammaFit",
@@ -205,7 +205,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/DeltaLogNormal",
@@ -213,7 +213,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/DeltaLogNormalFit",
@@ -221,7 +221,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/EMPhyloFit",
@@ -229,7 +229,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/EdgePhy",
@@ -237,7 +237,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/ExponentialFit",
@@ -245,7 +245,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/FelsensteinContrasts",
@@ -253,7 +253,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/FourthCornerFit",
@@ -261,7 +261,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/GP1Fit",
@@ -269,7 +269,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/GammaFit",
@@ -277,7 +277,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/GammaGroupedCovFit",
@@ -285,7 +285,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/GammaGroupedFit",
@@ -293,7 +293,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/GaussianPerVarFit",
@@ -301,7 +301,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/GaussianREMLFit",
@@ -309,7 +309,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/GaussianRandomSlopeFit",
@@ -317,7 +317,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/GaussianSourcesFit",
@@ -325,7 +325,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/GeneralizedPoisson1",
@@ -333,7 +333,15 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+ },
+ {
+  "source_id": "julia-export/GllvmAnovaTable",
+  "name": "GllvmAnovaTable",
+  "kind": "Type",
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/GllvmCoefTable",
@@ -341,7 +349,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/GllvmCovFit",
@@ -349,7 +357,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/GllvmFit",
@@ -357,7 +365,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/GllvmModel",
@@ -365,7 +373,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/GllvmSpeciesCovFit",
@@ -373,7 +381,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/GllvmSummary",
@@ -381,7 +389,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/GroupedGaussianFit",
@@ -389,7 +397,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/GroupedNonGaussianFit",
@@ -397,7 +405,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/GroupingTerm",
@@ -405,7 +413,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/HurdleNB",
@@ -413,7 +421,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/HurdleNBFit",
@@ -421,7 +429,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/HurdlePoisson",
@@ -429,7 +437,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/HurdlePoissonFit",
@@ -437,7 +445,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/IdentityLink",
@@ -445,7 +453,39 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+ },
+ {
+  "source_id": "julia-export/IsdmFit",
+  "name": "IsdmFit",
+  "kind": "Type",
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+ },
+ {
+  "source_id": "julia-export/IsdmSource",
+  "name": "IsdmSource",
+  "kind": "Type",
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+ },
+ {
+  "source_id": "julia-export/IsdmSources",
+  "name": "IsdmSources",
+  "kind": "Type",
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+ },
+ {
+  "source_id": "julia-export/IsdmTable",
+  "name": "IsdmTable",
+  "kind": "Type",
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/JointPhyloGroupedGaussianFit",
@@ -453,7 +493,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/LVSelection",
@@ -461,7 +501,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/LogLink",
@@ -469,7 +509,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/LogitLink",
@@ -477,7 +517,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/Lognormal",
@@ -485,7 +525,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/LognormalFit",
@@ -493,7 +533,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/MixedFamilyFit",
@@ -501,7 +541,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/Multinomial",
@@ -509,7 +549,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/MultinomialFit",
@@ -517,7 +557,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/NB1",
@@ -525,7 +565,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/NB1Fit",
@@ -533,7 +573,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/NB1GroupedCovFit",
@@ -541,7 +581,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/NB1GroupedFit",
@@ -549,7 +589,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/NBFit",
@@ -557,7 +597,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/NBGroupedCovFit",
@@ -565,7 +605,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/NBGroupedFit",
@@ -573,7 +613,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/NodePerSpecies",
@@ -581,7 +621,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/OrderedBeta",
@@ -589,7 +629,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/OrderedBetaFit",
@@ -597,7 +637,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/Ordinal",
@@ -605,7 +645,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/OrdinalLogit",
@@ -613,7 +653,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/OrdinalPerTraitCovFit",
@@ -621,7 +661,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/OrdinalPerTraitFit",
@@ -629,7 +669,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/PhyloGLMFit",
@@ -637,7 +677,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/PhyloGaussianFit",
@@ -645,7 +685,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/PoissonFit",
@@ -653,7 +693,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/PoissonRandomSlopeFit",
@@ -661,7 +701,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/PrecisionMultivariateFit",
@@ -669,7 +709,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/PrecisionPhy",
@@ -677,7 +717,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/ProbitLink",
@@ -685,7 +725,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/Q_perbranch",
@@ -693,7 +733,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/Q_times_x",
@@ -701,7 +741,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/QuadraticFit",
@@ -709,7 +749,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/RRRFit",
@@ -717,7 +757,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/RelaxedClockFit",
@@ -725,7 +765,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/RowEffectFit",
@@ -733,7 +773,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/RowRandomFit",
@@ -741,7 +781,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/SPDEGaussianFit",
@@ -749,7 +789,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/SPDELatentFit",
@@ -757,7 +797,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/SourceCovariance",
@@ -765,7 +805,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/StatsAPI",
@@ -773,7 +813,7 @@
   "kind": "Other",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/StudentT",
@@ -781,7 +821,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/StudentTFamily",
@@ -789,7 +829,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/StudentTFit",
@@ -797,7 +837,31 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+ },
+ {
+  "source_id": "julia-export/TemporalContractError",
+  "name": "TemporalContractError",
+  "kind": "Type",
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+ },
+ {
+  "source_id": "julia-export/TemporalGaussianFit",
+  "name": "TemporalGaussianFit",
+  "kind": "Type",
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+ },
+ {
+  "source_id": "julia-export/TemporalTerm",
+  "name": "TemporalTerm",
+  "kind": "Type",
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/TruncatedNegBin2",
@@ -805,7 +869,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/TruncatedNegBin2Fit",
@@ -813,7 +877,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/TruncatedNegBin2PerTraitFit",
@@ -821,7 +885,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/TruncatedPoisson",
@@ -829,7 +893,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/TruncatedPoissonFit",
@@ -837,7 +901,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/TweedieFit",
@@ -845,7 +909,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/TweedieGroupedFit",
@@ -853,7 +917,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/TweediePerTraitPowerFit",
@@ -861,7 +925,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/TwoLevelRepeatabilityProfileWithdrawn",
@@ -869,7 +933,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/ZIB",
@@ -877,7 +941,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/ZIBCovFit",
@@ -885,7 +949,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/ZIBFit",
@@ -893,7 +957,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/ZINBCovFit",
@@ -901,7 +965,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/ZINBFit",
@@ -909,7 +973,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/ZINegBin",
@@ -917,7 +981,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/ZIPCovFit",
@@ -925,7 +989,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/ZIPFit",
@@ -933,7 +997,7 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/ZIPoisson",
@@ -941,7 +1005,47 @@
   "kind": "Type",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+ },
+ {
+  "source_id": "julia-export/ZI_LAPLACE_EIGMIN_FLOOR",
+  "name": "ZI_LAPLACE_EIGMIN_FLOOR",
+  "kind": "Other",
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+ },
+ {
+  "source_id": "julia-export/ZiBinomial",
+  "name": "ZiBinomial",
+  "kind": "Type",
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+ },
+ {
+  "source_id": "julia-export/ZiFit",
+  "name": "ZiFit",
+  "kind": "Type",
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+ },
+ {
+  "source_id": "julia-export/ZiNbinom2",
+  "name": "ZiNbinom2",
+  "kind": "Type",
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+ },
+ {
+  "source_id": "julia-export/ZiPoisson",
+  "name": "ZiPoisson",
+  "kind": "Type",
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/admit_phylo_precision_payload",
@@ -949,7 +1053,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/aic",
@@ -957,7 +1061,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/augmented_phy",
@@ -965,7 +1069,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/beta_grouped_marginal_loglik_laplace",
@@ -973,7 +1077,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/beta_hurdle_marginal_loglik_laplace",
@@ -981,7 +1085,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/beta_laplace_grad",
@@ -989,7 +1093,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/beta_marginal_loglik_va",
@@ -997,7 +1101,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/betabinomial_grouped_marginal_loglik_laplace",
@@ -1005,7 +1109,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/betabinomial_marginal_loglik_laplace",
@@ -1013,7 +1117,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/bic",
@@ -1021,7 +1125,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/binomial_laplace_grad",
@@ -1029,7 +1133,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/binomial_marginal_loglik_va",
@@ -1037,7 +1141,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/blup_phylo_sparse",
@@ -1045,7 +1149,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/branch_blups",
@@ -1053,7 +1157,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/branch_re_cache",
@@ -1061,7 +1165,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/branch_re_profile_negll",
@@ -1069,7 +1173,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/bridge_capabilities",
@@ -1077,7 +1181,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/bridge_fit",
@@ -1085,7 +1189,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/build_AnB_sparse",
@@ -1093,7 +1197,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/build_node_perspecies",
@@ -1101,7 +1205,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/clade_detection",
@@ -1109,7 +1213,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/clade_edges",
@@ -1117,7 +1221,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/coeftable",
@@ -1125,7 +1229,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/coevolution_gamma",
@@ -1133,7 +1237,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/coevolution_glm_marginal_loglik",
@@ -1141,7 +1245,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/communality_B",
@@ -1149,7 +1253,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/communality_W",
@@ -1157,7 +1261,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/communality_wald_ci",
@@ -1165,7 +1269,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/compare_fits_Sigma_table",
@@ -1173,7 +1277,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/compare_fits_dep_vs_two_psi",
@@ -1181,7 +1285,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/compare_fits_indep_vs_two_psi",
@@ -1189,7 +1293,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/compoisson_logpdf",
@@ -1197,7 +1301,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/compoisson_logz",
@@ -1205,7 +1309,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/compoisson_marginal_loglik_laplace",
@@ -1213,7 +1317,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/confint_constrained",
@@ -1221,7 +1325,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/confint_fourthcorner",
@@ -1229,7 +1333,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/confint_lv_effects",
@@ -1237,7 +1341,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/confint_rrr",
@@ -1245,7 +1349,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/confint_spde_latent",
@@ -1253,7 +1357,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/confint_speciescov",
@@ -1261,7 +1365,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/constrained_marginal_loglik_laplace",
@@ -1269,7 +1373,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/contrast_transform",
@@ -1277,7 +1381,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/correlation_B",
@@ -1285,7 +1389,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/correlation_W",
@@ -1293,7 +1397,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/correlation_wald_ci",
@@ -1301,7 +1405,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/cv_gllvm",
@@ -1309,7 +1413,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/delta_gamma_marginal_loglik_laplace",
@@ -1317,7 +1421,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/delta_gamma_marginal_loglik_va",
@@ -1325,7 +1429,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/delta_lognormal_marginal_loglik_laplace",
@@ -1333,7 +1437,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/dof",
@@ -1341,7 +1445,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/edge_W_diag",
@@ -1349,7 +1453,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/edge_phy",
@@ -1357,7 +1461,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/em_fa",
@@ -1365,7 +1469,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/em_fit_phylo",
@@ -1373,7 +1477,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/em_fit_phylo_squarem",
@@ -1381,7 +1485,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/em_observed_information",
@@ -1389,7 +1493,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/estep_edge_moments",
@@ -1397,7 +1501,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/excess_kurtosis",
@@ -1405,7 +1509,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/exponential_marginal_loglik_laplace",
@@ -1413,7 +1517,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/exponential_marginal_loglik_va",
@@ -1421,7 +1525,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/extract_rotated_loadings",
@@ -1429,7 +1533,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/felsenstein_contrast_matrix",
@@ -1437,7 +1541,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/felsenstein_contrasts",
@@ -1445,7 +1549,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/find_clade_root",
@@ -1453,7 +1557,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_animal_dep_gllvm",
@@ -1461,7 +1565,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_animal_latent_gllvm",
@@ -1469,7 +1573,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_beta_binomial_gllvm",
@@ -1477,7 +1581,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_beta_binomial_gllvm_grouped",
@@ -1485,7 +1589,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_beta_binomial_gllvm_grouped_cov",
@@ -1493,7 +1597,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_beta_gllvm_grouped",
@@ -1501,7 +1605,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_beta_gllvm_grouped_cov",
@@ -1509,7 +1613,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_beta_gllvm_va",
@@ -1517,7 +1621,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_beta_hurdle_gllvm",
@@ -1525,7 +1629,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_binomial_gllvm",
@@ -1533,7 +1637,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_binomial_gllvm_va",
@@ -1541,7 +1645,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_branch_re",
@@ -1549,7 +1653,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_branch_re_dense",
@@ -1557,7 +1661,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_censored_poisson_gllvm",
@@ -1565,7 +1669,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_coevolution_blockna",
@@ -1573,7 +1677,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_coevolution_gaussian",
@@ -1581,7 +1685,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_coevolution_glm",
@@ -1589,7 +1693,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_compoisson_gllvm",
@@ -1597,7 +1701,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_concurrent_gllvm",
@@ -1605,7 +1709,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_constrained_gllvm",
@@ -1613,7 +1717,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_delta_gamma_gllvm",
@@ -1621,7 +1725,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_delta_gamma_gllvm_va",
@@ -1629,7 +1733,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_delta_lognormal_gllvm",
@@ -1637,7 +1741,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_dep_gllvm",
@@ -1645,7 +1749,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_diagnostic_table",
@@ -1653,7 +1757,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_em_phylo",
@@ -1661,7 +1765,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_exponential_gllvm",
@@ -1669,7 +1773,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_exponential_gllvm_va",
@@ -1677,7 +1781,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_fourthcorner_gllvm",
@@ -1685,7 +1789,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_gamma_gllvm",
@@ -1693,7 +1797,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_gamma_gllvm_grouped",
@@ -1701,7 +1805,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_gamma_gllvm_grouped_cov",
@@ -1709,7 +1813,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_gamma_gllvm_va",
@@ -1717,7 +1821,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_gaussian_gllvm",
@@ -1725,7 +1829,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_gaussian_mi_phylo",
@@ -1733,7 +1837,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_gaussian_pervar_gllvm",
@@ -1741,7 +1845,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_gaussian_random_slope",
@@ -1749,7 +1853,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_gaussian_reml",
@@ -1757,7 +1861,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_gaussian_sources",
@@ -1765,7 +1869,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_gaussian_structured",
@@ -1773,7 +1877,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_gllvm",
@@ -1781,7 +1885,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_gllvm_cov",
@@ -1789,7 +1893,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_gllvm_mi",
@@ -1797,7 +1901,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_gllvm_mi_multi",
@@ -1805,7 +1909,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_gllvm_speciescov",
@@ -1813,7 +1917,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_gp1_gllvm",
@@ -1821,7 +1925,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_hurdle_nb_gllvm",
@@ -1829,7 +1933,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_hurdle_poisson_gllvm",
@@ -1837,7 +1941,15 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+ },
+ {
+  "source_id": "julia-export/fit_isdm_gllvm",
+  "name": "fit_isdm_gllvm",
+  "kind": "Function",
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_kernel_dep_gllvm",
@@ -1845,7 +1957,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_kernel_indep_gllvm",
@@ -1853,7 +1965,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_kernel_latent_gllvm",
@@ -1861,7 +1973,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_lognormal_gllvm",
@@ -1869,7 +1981,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_mixed_gllvm",
@@ -1877,7 +1989,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_multinomial_gllvm",
@@ -1885,7 +1997,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_nb1_gllvm",
@@ -1893,7 +2005,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_nb1_gllvm_grouped",
@@ -1901,7 +2013,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_nb1_gllvm_grouped_cov",
@@ -1909,7 +2021,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_nb_gllvm",
@@ -1917,7 +2029,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_nb_gllvm_grouped",
@@ -1925,7 +2037,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_nb_gllvm_grouped_cov",
@@ -1933,7 +2045,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_nb_gllvm_va",
@@ -1941,7 +2053,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_ordered_beta_gllvm",
@@ -1949,7 +2061,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_ordinal_gllvm",
@@ -1957,7 +2069,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_ordinal_gllvm_pertrait",
@@ -1965,7 +2077,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_ordinal_gllvm_pertrait_cov",
@@ -1973,7 +2085,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_phylo_dep_gllvm",
@@ -1981,7 +2093,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_phylo_gaussian",
@@ -1989,7 +2101,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_phylo_glm",
@@ -1997,7 +2109,15 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+ },
+ {
+  "source_id": "julia-export/fit_phylo_latent_gllvm",
+  "name": "fit_phylo_latent_gllvm",
+  "kind": "Function",
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_phylo_squarem",
@@ -2005,7 +2125,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_poisson_gllvm",
@@ -2013,7 +2133,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_poisson_gllvm_va",
@@ -2021,7 +2141,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_poisson_random_slope",
@@ -2029,7 +2149,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_quadratic_gllvm",
@@ -2037,7 +2157,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_relaxed_clock",
@@ -2045,7 +2165,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_row_random_gllvm",
@@ -2053,7 +2173,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_roweffect_gllvm",
@@ -2061,7 +2181,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_rrr_gllvm",
@@ -2069,7 +2189,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_spatial_dep_gllvm",
@@ -2077,7 +2197,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_spde_gaussian",
@@ -2085,7 +2205,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_spde_latent_gllvm",
@@ -2093,7 +2213,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_studentt_gllvm",
@@ -2101,7 +2221,15 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+ },
+ {
+  "source_id": "julia-export/fit_temporal_gllvm",
+  "name": "fit_temporal_gllvm",
+  "kind": "Function",
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_truncated_nbinom2_gllvm",
@@ -2109,7 +2237,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_truncated_nbinom2_gllvm_pertrait",
@@ -2117,7 +2245,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_truncated_poisson_gllvm",
@@ -2125,7 +2253,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_tweedie_gllvm",
@@ -2133,7 +2261,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_tweedie_gllvm_grouped",
@@ -2141,7 +2269,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_twolevel_gaussian",
@@ -2149,7 +2277,15 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+ },
+ {
+  "source_id": "julia-export/fit_zi_gllvm",
+  "name": "fit_zi_gllvm",
+  "kind": "Function",
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_zib_gllvm",
@@ -2157,7 +2293,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_zib_gllvm_cov",
@@ -2165,7 +2301,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_zinb_gllvm",
@@ -2173,7 +2309,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_zinb_gllvm_cov",
@@ -2181,7 +2317,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_zip_gllvm",
@@ -2189,7 +2325,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_zip_gllvm_cov",
@@ -2197,7 +2333,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/gamma_grouped_marginal_loglik_laplace",
@@ -2205,7 +2341,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/gamma_laplace_grad",
@@ -2213,7 +2349,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/gamma_marginal_loglik_va",
@@ -2221,7 +2357,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/gaussian_grouped_intercept_loglik",
@@ -2229,7 +2365,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/gaussian_marginal_loglik_contrasts",
@@ -2237,7 +2373,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/gaussian_marginal_loglik_edge_phy",
@@ -2245,7 +2381,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/gaussian_marginal_loglik_sparse_phy",
@@ -2253,7 +2389,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/gaussian_pervar_marginal_loglik",
@@ -2261,7 +2397,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/gaussian_reml_loglik",
@@ -2269,7 +2405,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/gllvm",
@@ -2277,7 +2413,15 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+ },
+ {
+  "source_id": "julia-export/gllvm_anova",
+  "name": "gllvm_anova",
+  "kind": "Function",
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/gp1_marginal_loglik_laplace",
@@ -2285,7 +2429,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/grad_node_perspecies",
@@ -2293,7 +2437,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/grouped_gaussian_intervals",
@@ -2301,7 +2445,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/grouped_gaussian_variance_profile",
@@ -2309,7 +2453,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/grouped_nongaussian_intervals",
@@ -2317,7 +2461,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/hurdle_nb_marginal_loglik_laplace",
@@ -2325,7 +2469,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/hurdle_poisson_marginal_loglik_laplace",
@@ -2333,7 +2477,23 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+ },
+ {
+  "source_id": "julia-export/isdm_marginal_loglik_laplace",
+  "name": "isdm_marginal_loglik_laplace",
+  "kind": "Function",
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+ },
+ {
+  "source_id": "julia-export/isdm_table",
+  "name": "isdm_table",
+  "kind": "Function",
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/joint_phylo_grouped_intervals",
@@ -2341,7 +2501,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/latent_score_sd",
@@ -2349,7 +2509,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/link_residual",
@@ -2357,7 +2517,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/loading_profile_exploratory",
@@ -2365,7 +2525,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/log_det_Q",
@@ -2373,7 +2533,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/lognormal_marginal_loglik",
@@ -2381,7 +2541,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/lognormal_response_mean",
@@ -2389,7 +2549,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/lv_effects",
@@ -2397,7 +2557,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/make_phy",
@@ -2405,7 +2565,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/matern_correlation",
@@ -2413,7 +2573,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/mixed_marginal_loglik_laplace",
@@ -2421,7 +2581,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/nb1_grouped_marginal_loglik_laplace",
@@ -2429,7 +2589,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/nb1_marginal_loglik_laplace",
@@ -2437,7 +2597,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/nb_grouped_marginal_loglik_laplace",
@@ -2445,7 +2605,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/nb_laplace_grad",
@@ -2453,7 +2613,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/nb_marginal_loglik_va",
@@ -2461,7 +2621,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/node_blups",
@@ -2469,7 +2629,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/node_d\u03c3_phy_only",
@@ -2477,7 +2637,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/node_grad",
@@ -2485,7 +2645,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/observed_mask",
@@ -2493,7 +2653,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/ordered_beta_marginal_loglik_laplace",
@@ -2501,7 +2661,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/path_membership",
@@ -2509,7 +2669,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/phylo_glm_marginal_loglik",
@@ -2517,7 +2677,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/phylo_precision_payload",
@@ -2525,7 +2685,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/phylo_signal_wald_ci",
@@ -2533,7 +2693,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/poisson_laplace_grad",
@@ -2541,7 +2701,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/poisson_marginal_loglik_va",
@@ -2549,7 +2709,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/ppca_init",
@@ -2557,7 +2717,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/precision_logdet_check",
@@ -2565,7 +2725,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/precision_multivariate_intervals",
@@ -2573,7 +2733,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/predict_spatial",
@@ -2581,7 +2741,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/profile_ci",
@@ -2589,7 +2749,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/profile_ci_variance",
@@ -2597,7 +2757,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/profile_curve_targets",
@@ -2605,7 +2765,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/qq_max_dev",
@@ -2613,7 +2773,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/quadratic_marginal_loglik_laplace",
@@ -2621,7 +2781,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/random_balanced_tree",
@@ -2629,7 +2789,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/random_slope_marginal_loglik_laplace",
@@ -2637,7 +2797,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/rank_sum_z",
@@ -2645,7 +2805,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/raw_loading_wald_ci",
@@ -2653,7 +2813,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/repeatability_bootstrap_ci",
@@ -2661,7 +2821,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/repeatability_ci",
@@ -2669,7 +2829,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/repeatability_wald_ci",
@@ -2677,7 +2837,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/rotation",
@@ -2685,7 +2845,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/row_effects",
@@ -2693,7 +2853,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/row_random_marginal_loglik_laplace",
@@ -2701,7 +2861,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/rrr_marginal_loglik",
@@ -2709,7 +2869,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/shrink_logrates",
@@ -2717,7 +2877,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/shrinkage_factor",
@@ -2725,7 +2885,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/sigma_phy_dense",
@@ -2733,7 +2893,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/sigma_phy_dense_edge",
@@ -2741,7 +2901,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/simulate_branch_re",
@@ -2749,7 +2909,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/simulate_relaxed_bm",
@@ -2757,7 +2917,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/solve_AnB",
@@ -2765,7 +2925,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/solve_Q",
@@ -2773,7 +2933,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/spatial_cov",
@@ -2781,7 +2941,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/spde_fem",
@@ -2789,7 +2949,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/spde_gaussian_marginal_loglik",
@@ -2797,7 +2957,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/spde_latent_marginal_loglik",
@@ -2805,7 +2965,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/spde_mesh_delaunay",
@@ -2813,7 +2973,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/spde_mesh_grid",
@@ -2821,7 +2981,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/spde_precision",
@@ -2829,7 +2989,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/spde_projector",
@@ -2837,7 +2997,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/spearman",
@@ -2845,7 +3005,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/standardized_loading_wald_ci",
@@ -2853,7 +3013,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/stderror",
@@ -2861,7 +3021,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/studentt_marginal_loglik_laplace",
@@ -2869,7 +3029,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/transformed_wald_ci_derived",
@@ -2877,7 +3037,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/truncated_nbinom2_marginal_loglik_laplace",
@@ -2885,7 +3045,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/truncated_nbinom2_pertrait_marginal_loglik_laplace",
@@ -2893,7 +3053,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/truncated_poisson_marginal_loglik_laplace",
@@ -2901,7 +3061,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/tweedie_cdf",
@@ -2909,7 +3069,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/tweedie_grouped_marginal_loglik_laplace",
@@ -2917,7 +3077,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/tweedie_logpdf",
@@ -2925,7 +3085,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/tweedie_marginal_loglik_laplace",
@@ -2933,7 +3093,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/twolevel_marginal_loglik",
@@ -2941,7 +3101,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/welch_t",
@@ -2949,7 +3109,15 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+ },
+ {
+  "source_id": "julia-export/zi_marginal_loglik_laplace",
+  "name": "zi_marginal_loglik_laplace",
+  "kind": "Function",
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/zib_marginal_loglik_laplace",
@@ -2957,7 +3125,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/zinb_marginal_loglik_laplace",
@@ -2965,7 +3133,7 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/zip_marginal_loglik_laplace",
@@ -2973,6 +3141,6 @@
   "kind": "Function",
   "status": "unsigned",
   "decision": null,
-  "derived_from": "names(GLLVModels) at cba170c28047; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  }
 ]
