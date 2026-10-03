@@ -46,7 +46,7 @@
 # OPENBLAS_NUM_THREADS=1 JULIA_NUM_THREADS=4: a few minutes.
 
 using GLLVModels, TOML, SHA, Statistics, Random, LinearAlgebra
-using Distributions: Normal, NegativeBinomial   # root-project dependency; family marker for select_lv (section 7) and the namespace numeric twins (section 9)
+using Distributions: Normal, NegativeBinomial, Poisson   # root-project dependency; family marker for select_lv (section 7) and the namespace numeric twins (section 9)
 const GMJ = GLLVModels
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
@@ -1644,6 +1644,122 @@ function receipts_namespace_numeric_b()
     return out
 end
 
+
+# =============================================================================================
+# 12. data twins   test/test_data_twins_p1.jl
+#     `data` rows (offset and missing-response handling) whose batch cases were R helper
+#     replays with no fit number, bound to fit-level twins: R-at-P1 fits recorded in
+#     test/fixtures/data_twins_p1.toml against Julia fits of the same data. Weights rows are not
+#     here (Julia refuses weights= on every fitter); the stored/predict-offset, mixed-family and
+#     modelled-predictor rows have no Julia surface to fit.
+# =============================================================================================
+function _dt_load(path, col, p, n)
+    hdr = split(readline(path), ",")
+    ci = findfirst(==("\"" * col * "\""), hdr)
+    ci === nothing && fail("column $col not found in $path")
+    M = Matrix{Union{Missing,Float64}}(missing, p, n)
+    open(path) do io
+        readline(io)
+        for line in eachline(io)
+            isempty(line) && continue
+            a = split(line, ",")
+            M[parse(Int, strip(a[2], ['"', 't'])), parse(Int, strip(a[1], '"'))] = a[ci] == "NA" ? missing : parse(Float64, a[ci])
+        end
+    end
+    return M
+end
+_dt_counts(M) = any(ismissing, M) ? Matrix{Union{Missing,Int}}(M) : Int.(M)
+
+function receipts_data_twins()
+    ORIGIN = "itchyshin/GLLVModels.jl#689"
+    fxp = "test/fixtures/data_twins_p1.toml"
+    tp = "test/test_data_twins_p1.jl"
+    fx = TOML.parsefile(joinpath(ROOT, fxp))
+    fx["gllvmtmb_commit"] == P1_SHA || fail("data twins fixture is not pinned at P1")
+    dir = "test/fixtures/"
+    p, n = Int(fx["p"]), Int(fx["n_unit"])
+    out = Pair{String,Receipt}[]
+    function chk(sec)
+        d = fx[sec]
+        datap = dir * d["data_file"]
+        bytes2hex(sha256(read(joinpath(ROOT, datap)))) == d["data_sha256"] || fail("$sec data csv drifted")
+        (d["converged"] === true && d["pd_hessian"] === true) || fail("$sec R fit not converged with a PD Hessian; not a valid twin")
+        return d, datap
+    end
+    # one receipt: logLik, intercepts, Lambda Lambda' (and dispersion where the family has one)
+    function twin(rel, sid, sec, jfit, jsrc, note; phi = nothing, extra_fix = String[])
+        d, datap = chk(sec)
+        jfit.converged || fail("$sec Julia fit did not converge")
+        ll = hasproperty(jfit, :loglik) ? jfit.loglik : jfit.logLik
+        cs = Case[
+            mkcase("P1-JULIA-DATA-$(uppercase(sec))-LOGLIK", "maximised logLik of the $sec fit",
+                "$fxp [$sec.loglik]", "fit.loglik, fit as at $jsrc",
+                Float64(d["loglik"]), ll, test_tolerance(tp, "@test isapprox(fit.loglik, Float64(d[\"loglik\"])"), note),
+            mkcase("P1-JULIA-DATA-$(uppercase(sec))-INTERCEPTS", "trait intercepts (6 values) of the $sec fit; the offset is not absorbed into them",
+                "$fxp [$sec.beta]", "fit.β, fit as at $jsrc",
+                Float64.(d["beta"]), jfit.β, test_tolerance(tp, "@test isapprox(fit.β, Float64.(d[\"beta\"])"), note),
+            mkcase("P1-JULIA-DATA-$(uppercase(sec))-LAMBDA-LAMBDAT", "Lambda Lambda' (6 x 6) of the $sec fit",
+                "$fxp [$sec.lambda_lambdat]", "fit.Λ * fit.Λ', fit as at $jsrc",
+                _ns_mat(d["lambda_lambdat"], p, p), jfit.Λ * jfit.Λ', test_tolerance(tp, "@test isapprox(fit.Λ * fit.Λ'"), note)]
+        if phi !== nothing
+            fld, frag = phi
+            push!(cs, mkcase("P1-JULIA-DATA-$(uppercase(sec))-DISPERSION", "per-trait dispersion (6 values) of the $sec fit",
+                "$fxp [$sec.phi]", "fit.$(fld), fit as at $jsrc",
+                Float64.(d["phi"]), getproperty(jfit, fld), test_tolerance(tp, frag), note))
+        end
+        push!(out, "data-twins/$rel.json" => Receipt([sid], ORIGIN, [fxp, datap], [tp], NOT_A_FIXTURE_PAIR, cs))
+    end
+    pois = joinpath(ROOT, dir, "data_twins_pois_p1_data.csv")
+    Yc = _dt_counts(_dt_load(pois, "value", p, n))
+    Ona = _dt_load(pois, "value_na", p, n)
+    E = Float64.(_dt_load(pois, "e", p, n))
+    base = "Poisson, K = 1, p = 6, n = 150 (sha256 checked); R: value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE), family = poisson(), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+
+    f0 = fit_gllvm(Yc; family = Poisson(), K = 1)
+    twin("OFF-NONE", "data/DATA-OFF-NONE", "pois_none", f0, cite(tp, "f0 = fit_gllvm(Yc; family = Poisson(), K = 1)"),
+        base * " No offset on either side: replaces the helper replay that a NULL offset gives rep(0, n); here the whole fit agrees.")
+    fs = fit_gllvm(Yc; family = Poisson(), K = 1, offset = fill(log(2), p, n))
+    twin("OFF-SCALAR", "data/DATA-OFF-SCALAR", "pois_scalar", fs, cite(tp, "fs = fit_gllvm(Yc; family = Poisson(), K = 1, offset = fill(log(2), p, n))"),
+        base * " R: + offset(log(2)); Julia: offset = fill(log(2), 6, 150). A constant offset is absorbed by the intercepts, so the logLik equals the no-offset fit and the intercepts are shifted by -log(2) in both engines (the intercept case carries the discriminating number).")
+    fe = fit_gllvm(Yc; family = Poisson(), K = 1, offset = log.(E))
+    twin("OFF-EXPOSURE", "data/DATA-OFF-EXPOSURE", "pois_exposure", fe, cite(tp, "fe = fit_gllvm(Yc; family = Poisson(), K = 1, offset = log.(E))"),
+        base * " R: + offset(log(e)) with e = the data column e (varies by cell, 0.5 to 3); Julia: offset = log.(E). The exposure offset moves the logLik by more than 150 against the no-offset fit.")
+    Ym = _dt_counts(Ona)
+    fm = fit_gllvm(Ym; family = Poisson(), K = 1)
+    twin("MISS-DEFAULT", "data/DATA-MISS-DEFAULT", "pois_na_drop", fm, cite(tp, "fm = fit_gllvm(Ym; family = Poisson(), K = 1)"),
+        base * " 12 response cells are NA (column value_na). R: default miss_control() (response = drop: the cell is dropped, the unit keeps its other traits); Julia: the same matrix with 12 `missing` entries.")
+    fi = fit_gllvm(Yc; family = Poisson(), K = 1, mask = .!ismissing.(Ona))
+    twin("MISS-INCLUDE", "data/DATA-MISS-INCLUDE", "pois_na_include", fi, cite(tp, "fi = fit_gllvm(Yc; family = Poisson(), K = 1, mask = .!ismissing.(Ona))"),
+        base * " 12 response cells are NA (column value_na). R: missing = miss_control(response = \"include\") (cells kept and masked out of the likelihood); Julia: mask = the observed-cell matrix. R documents that include reaches the drop optimum (asserted in the generator and the test); the Julia mask fit equals the Julia missing-cell fit to 1e-8 (asserted in the test).")
+
+    nb2 = joinpath(ROOT, dir, "data_twins_nb2_p1_data.csv"); nb1 = joinpath(ROOT, dir, "data_twins_nb1_p1_data.csv")
+    f2 = fit_gllvm(_dt_counts(_dt_load(nb2, "value", p, n)); family = NegativeBinomial(1.0, 0.5), disp_group = :species, K = 1,
+        offset = log.(Float64.(_dt_load(nb2, "e", p, n))))
+    f2.group == collect(1:p) || fail("nb2 dispersion is not per trait")
+    twin("OFF-ALL-COUNT", "data/DATA-OFF-ALL-COUNT", "nb2_exposure", f2, cite(tp, "f2 = fit_gllvm(_dt_counts(_dt_load(nb2"),
+        "nbinom2 one-axis latent fit, p = 6, n = 150 (sha256 checked), R: + offset(log(e)), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Dispersion is per trait on both sides. Scope: every trait is one count family (the batch case mixed three count families on three rows, which Julia has no fit for), so this exercises a non-Poisson count family accepting a nonzero offset, not a family mix.";
+        phi = (:r_group, "@test isapprox(f2.r_group, Float64.(d[\"phi\"])"))
+    f1 = fit_gllvm(_dt_counts(_dt_load(nb1, "value", p, n)); family = NB1(), K = 1, offset = log.(Float64.(_dt_load(nb1, "e", p, n))))
+    twin("OFF-NB1", "data/DATA-OFF-NB1", "nb1_exposure", f1, cite(tp, "f1 = fit_gllvm(_dt_counts(_dt_load(nb1"),
+        "nbinom1 one-axis latent fit, p = 6, n = 150 (sha256 checked), R: family = nbinom1() + offset(log(e)), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Dispersion is per trait on both sides (R phi_nbinom1, Julia NB1 phi, variance mu (1 + phi)).";
+        phi = (:φ, "@test isapprox(f1.φ, Float64.(d[\"phi\"])"))
+
+    g, gdatap = chk("gauss_zero")
+    ng = Int(fx["n_unit_gauss"])
+    Yg = Float64.(_dt_load(joinpath(ROOT, gdatap), "value", p, ng))
+    fg = fit_gllvm(Yg; family = Normal(), K = 2, offset = zeros(p, ng))
+    fg.converged || fail("gauss_zero Julia fit did not converge")
+    noteG = "Rank-2 Gaussian fit on ns_gauss_p1_data.csv (p = 6, n = 200, sha256 checked), R: value ~ 0 + trait + offset(0) + latent(0 + trait | unit, d = 2, unique = FALSE), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test); R's fit equals R's plain fit (asserted in the generator). Julia: offset = zeros(6, 200). Scope: a ZERO offset on a non-count trait, the one offset R allows there. R refuses a nonzero offset on a Gaussian trait (message recorded in the fixture); Julia accepts one (asserted in the test), so that behaviour is a difference, not a match, and is not compared."
+    push!(out, "data-twins/OFF-NONCOUNT-ZERO.json" => Receipt(["data/DATA-OFF-NONCOUNT-ZERO"], ORIGIN, [fxp, gdatap], [tp], NOT_A_FIXTURE_PAIR, Case[
+        mkcase("P1-JULIA-DATA-GAUSS_ZERO-LOGLIK", "maximised logLik of the Gaussian fit with a zero offset",
+            "$fxp [gauss_zero.loglik]", "fg.logLik, fit as at " * cite(tp, "fg = fit_gllvm(Y; family = Normal(), K = 2, offset = zeros(p, ng))"),
+            Float64(g["loglik"]), fg.logLik, test_tolerance(tp, "@test isapprox(fg.logLik, Float64(g[\"loglik\"])"), noteG),
+        mkcase("P1-JULIA-DATA-GAUSS_ZERO-INTERCEPTS", "trait intercepts (6 values) of the Gaussian fit with a zero offset",
+            "$fxp [gauss_zero.beta]", "coef(fg), fit as at " * cite(tp, "fg = fit_gllvm(Y; family = Normal(), K = 2, offset = zeros(p, ng))"),
+            Float64.(g["beta"]), coef(fg), test_tolerance(tp, "@test isapprox(coef(fg), Float64.(g[\"beta\"])"), noteG)]))
+    return out
+end
+
 # ---------------------------------------------------------------------------------------------
 # Driver
 # ---------------------------------------------------------------------------------------------
@@ -1656,7 +1772,8 @@ function build()
             ("isdm-admission", receipts_isdm_admission),
             ("namespace-numeric", receipts_namespace_numeric),
             ("postfit-twins", receipts_postfit_twins),
-            ("namespace-numeric-b", receipts_namespace_numeric_b))
+            ("namespace-numeric-b", receipts_namespace_numeric_b),
+            ("data-twins", receipts_data_twins))
         t0 = time()
         append!(out, f())
         @info "built $name receipts" seconds = round(time() - t0; digits = 1)

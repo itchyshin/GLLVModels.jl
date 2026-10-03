@@ -16,7 +16,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-data.json",
-   "sha256": "0b3adcc3b97636baf445aea0ff605a0c3db01af9a6d45e6cd05d6db8e86bbb99",
+   "sha256": "7557c33db9ff3fbc2cb897b9a6053027d9a211ceeda776beacaa30db0af95de9",
    "rows": 36
   },
   {
@@ -1632,7 +1632,9 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-DATA-MISS-DEFAULT-CONTROL"
+    "P1-JULIA-DATA-POIS_NA_DROP-LOGLIK",
+    "P1-JULIA-DATA-POIS_NA_DROP-INTERCEPTS",
+    "P1-JULIA-DATA-POIS_NA_DROP-LAMBDA-LAMBDAT"
    ],
    "disposition": null,
    "p0_batch": "data-batch attempt-data-r3 (wave1)",
@@ -1644,13 +1646,19 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/MISS-DEFAULT.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-MISS-DEFAULT-CONTROL.json"
     ],
-    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+    "batch_case_ids": [
+     "CORE070-DATA-MISS-DEFAULT-CONTROL"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_data_twins_p1.jl, against R-at-P1 values copied from test/fixtures/data_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -1661,8 +1669,15 @@
     },
     "case_kinds": {
      "CORE070-DATA-MISS-DEFAULT-CONTROL": "r_replay_julia_surface_absent"
-    }
-   }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-DATA-POIS_NA_DROP-LOGLIK",
+     "P1-JULIA-DATA-POIS_NA_DROP-INTERCEPTS",
+     "P1-JULIA-DATA-POIS_NA_DROP-LAMBDA-LAMBDAT"
+    ],
+    "twin_verdict": "PASS"
+   },
+   "scope_note": "The twin covers response = 'drop' (missing responses dropped by default). The R case also asserts predictor = 'fail' (a missing covariate is refused); that part is not exercised. R's drop and include optima agree here, so this row and DATA-MISS-INCLUDE check two Julia input forms (missing entries in Y, and mask=) against numerically identical R fits."
   },
   {
    "source_id": "data/DATA-MISS-INCLUDE",
@@ -1670,7 +1685,9 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-DATA-MISS-INCLUDE-CONTROL"
+    "P1-JULIA-DATA-POIS_NA_INCLUDE-LOGLIK",
+    "P1-JULIA-DATA-POIS_NA_INCLUDE-INTERCEPTS",
+    "P1-JULIA-DATA-POIS_NA_INCLUDE-LAMBDA-LAMBDAT"
    ],
    "disposition": null,
    "p0_batch": "data-batch attempt-data-r3 (wave1)",
@@ -1682,13 +1699,19 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/MISS-INCLUDE.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-MISS-INCLUDE-CONTROL.json"
     ],
-    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+    "batch_case_ids": [
+     "CORE070-DATA-MISS-INCLUDE-CONTROL"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_data_twins_p1.jl, against R-at-P1 values copied from test/fixtures/data_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -1699,7 +1722,13 @@
     },
     "case_kinds": {
      "CORE070-DATA-MISS-INCLUDE-CONTROL": "r_replay_julia_surface_absent"
-    }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-DATA-POIS_NA_INCLUDE-LOGLIK",
+     "P1-JULIA-DATA-POIS_NA_INCLUDE-INTERCEPTS",
+     "P1-JULIA-DATA-POIS_NA_INCLUDE-LAMBDA-LAMBDAT"
+    ],
+    "twin_verdict": "PASS"
    }
   },
   {
@@ -1762,7 +1791,8 @@
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
     "non_binding_receipts": [
-     "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-ALL-COUNT-NATIVE.json"
+     "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-ALL-COUNT-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-ALL-COUNT.json"
     ],
     "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
    },
@@ -1776,7 +1806,8 @@
     "case_kinds": {
      "CORE070-DATA-OFF-ALL-COUNT-NATIVE": "r_replay_julia_surface_absent"
     }
-   }
+   },
+   "twin_not_bound": "The NB2 exposure-offset fit twin (receipt cited as non-binding) covers one count family. The R case prepares offsets for three count families in one model (family ids 5, 10, 11: nbinom2, truncated Poisson, truncated nbinom2). Julia has no per-trait family mix (as for DATA-OFF-MIXED) and the twin does not cover the truncated families, so the row does not bind on it."
   },
   {
    "source_id": "data/DATA-OFF-EXPOSURE",
@@ -1784,7 +1815,9 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-DATA-OFF-EXPOSURE-NATIVE"
+    "P1-JULIA-DATA-POIS_EXPOSURE-LOGLIK",
+    "P1-JULIA-DATA-POIS_EXPOSURE-INTERCEPTS",
+    "P1-JULIA-DATA-POIS_EXPOSURE-LAMBDA-LAMBDAT"
    ],
    "disposition": null,
    "p0_batch": "data-batch attempt-data-r3 (wave1)",
@@ -1796,13 +1829,19 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-EXPOSURE.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-EXPOSURE-NATIVE.json"
     ],
-    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+    "batch_case_ids": [
+     "CORE070-DATA-OFF-EXPOSURE-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_data_twins_p1.jl, against R-at-P1 values copied from test/fixtures/data_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -1813,7 +1852,13 @@
     },
     "case_kinds": {
      "CORE070-DATA-OFF-EXPOSURE-NATIVE": "r_replay_julia_surface_absent"
-    }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-DATA-POIS_EXPOSURE-LOGLIK",
+     "P1-JULIA-DATA-POIS_EXPOSURE-INTERCEPTS",
+     "P1-JULIA-DATA-POIS_EXPOSURE-LAMBDA-LAMBDAT"
+    ],
+    "twin_verdict": "PASS"
    }
   },
   {
@@ -1860,7 +1905,10 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-DATA-OFF-NB1-NATIVE"
+    "P1-JULIA-DATA-NB1_EXPOSURE-LOGLIK",
+    "P1-JULIA-DATA-NB1_EXPOSURE-INTERCEPTS",
+    "P1-JULIA-DATA-NB1_EXPOSURE-LAMBDA-LAMBDAT",
+    "P1-JULIA-DATA-NB1_EXPOSURE-DISPERSION"
    ],
    "disposition": null,
    "p0_batch": "data-batch attempt-data-r3 (wave1)",
@@ -1872,13 +1920,19 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-NB1.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-NB1-NATIVE.json"
     ],
-    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+    "batch_case_ids": [
+     "CORE070-DATA-OFF-NB1-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_data_twins_p1.jl, against R-at-P1 values copied from test/fixtures/data_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -1889,7 +1943,14 @@
     },
     "case_kinds": {
      "CORE070-DATA-OFF-NB1-NATIVE": "r_replay_julia_surface_absent"
-    }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-DATA-NB1_EXPOSURE-LOGLIK",
+     "P1-JULIA-DATA-NB1_EXPOSURE-INTERCEPTS",
+     "P1-JULIA-DATA-NB1_EXPOSURE-LAMBDA-LAMBDAT",
+     "P1-JULIA-DATA-NB1_EXPOSURE-DISPERSION"
+    ],
+    "twin_verdict": "PASS"
    }
   },
   {
@@ -1898,7 +1959,8 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-DATA-OFF-NONCOUNT-ZERO-NATIVE"
+    "P1-JULIA-DATA-GAUSS_ZERO-LOGLIK",
+    "P1-JULIA-DATA-GAUSS_ZERO-INTERCEPTS"
    ],
    "disposition": null,
    "p0_batch": "data-batch attempt-data-r3 (wave1)",
@@ -1910,13 +1972,19 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-NONCOUNT-ZERO.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-NONCOUNT-ZERO-NATIVE.json"
     ],
-    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+    "batch_case_ids": [
+     "CORE070-DATA-OFF-NONCOUNT-ZERO-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_data_twins_p1.jl, against R-at-P1 values copied from test/fixtures/data_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -1927,8 +1995,14 @@
     },
     "case_kinds": {
      "CORE070-DATA-OFF-NONCOUNT-ZERO-NATIVE": "r_replay_julia_surface_absent"
-    }
-   }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-DATA-GAUSS_ZERO-LOGLIK",
+     "P1-JULIA-DATA-GAUSS_ZERO-INTERCEPTS"
+    ],
+    "twin_verdict": "PASS"
+   },
+   "scope_note": "A zero offset cannot tell 'applied' from 'ignored', so this is a plain rank-2 Gaussian fit match plus acceptance of offset = zeros(p, n). Known differences, recorded not bound: Julia applies a nonzero Gaussian offset where R refuses it, and Julia refuses the scalar form offset = 0.0 with a DimensionMismatch."
   },
   {
    "source_id": "data/DATA-OFF-NONE",
@@ -1936,7 +2010,9 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-DATA-OFF-NONE-NATIVE"
+    "P1-JULIA-DATA-POIS_NONE-LOGLIK",
+    "P1-JULIA-DATA-POIS_NONE-INTERCEPTS",
+    "P1-JULIA-DATA-POIS_NONE-LAMBDA-LAMBDAT"
    ],
    "disposition": null,
    "p0_batch": "data-batch attempt-data-r3 (wave1)",
@@ -1948,13 +2024,19 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-NONE.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-NONE-NATIVE.json"
     ],
-    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+    "batch_case_ids": [
+     "CORE070-DATA-OFF-NONE-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_data_twins_p1.jl, against R-at-P1 values copied from test/fixtures/data_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -1965,7 +2047,13 @@
     },
     "case_kinds": {
      "CORE070-DATA-OFF-NONE-NATIVE": "r_replay_julia_surface_absent"
-    }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-DATA-POIS_NONE-LOGLIK",
+     "P1-JULIA-DATA-POIS_NONE-INTERCEPTS",
+     "P1-JULIA-DATA-POIS_NONE-LAMBDA-LAMBDAT"
+    ],
+    "twin_verdict": "PASS"
    }
   },
   {
@@ -2066,7 +2154,8 @@
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
     "non_binding_receipts": [
-     "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-SCALAR-NATIVE.json"
+     "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-SCALAR-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-SCALAR.json"
     ],
     "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
    },
@@ -2080,7 +2169,8 @@
     "case_kinds": {
      "CORE070-DATA-OFF-SCALAR-NATIVE": "r_replay_julia_surface_absent"
     }
-   }
+   },
+   "twin_not_bound": "The twin passes the scalar already broadcast (offset = fill(log(2), p, n)), so it never exercises the capability the row names: broadcasting a constant offset to every row. Julia's own scalar input fit_gllvm(Y; family=Poisson(), offset=log(2)) is accepted but returns logLik -Inf with converged false (probed on 4ae7e109d, also for 1.0 and 0.0). The row can bind once the scalar input is fixed and the twin uses it."
   },
   {
    "source_id": "data/DATA-OFF-TRAIN-LEGACY",

@@ -508,6 +508,8 @@ println(_SHARD === nothing ?
     _shard_include("test_namespace_numeric_p1_twin_b.jl")
     # P1 numeric twins of three gllvmTMB postfit rows (tidy fixed effects, coef, deviance) on an uncentred fit.
     _shard_include("test_postfit_twins_p1.jl")
+    # P1 fit-level twins of core070 data rows (six bind; see tools/core070_data_p1_receipts.py) (offset and missing-response handling).
+    _shard_include("test_data_twins_p1.jl")
     _shard_include("test_destination_b_s4_public_phylo_dep_probe_harness.jl")
     _shard_include("test_totoro_323_track_a_harness.jl")
     _shard_include("test_temporal_api.jl")
