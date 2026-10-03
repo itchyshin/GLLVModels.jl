@@ -337,6 +337,45 @@ NOT_COVERED_COMMON = [
 ]
 
 
+
+def read_text(p):
+    p = Path(p)
+    return p.read_text() if p.exists() else None
+
+
+def trim_log(text, limit=1500):
+    """Warnings and notes from an engine log, minus progress noise, for the receipt."""
+    if not text: return None
+    keep = [l for l in text.splitlines() if l.strip() and not l.startswith(("DONE", "Precompil", "WROTE")) and "experimental" not in l.lower()]
+    s = "\n".join(keep)
+    return (s[:limit] + " ...[trimmed]") if len(s) > limit else (s or None)
+
+
+def run_context(raw, cell):
+    """Where and when the jobs ran, from the driver's own logs (copied into <raw>/run) or the Mac run's start file."""
+    base = Path(raw); ctx = OrderedDict()
+    if cell == "urban":
+        st = read_text(base / "run_mac_urban" / "start.txt")
+        ctx["host"] = "Mac Studio (the maintainer's machine; the urbanisation matrix is local and not copied)"
+        if st: ctx["start"] = st.strip().splitlines()
+        return ctx
+    jl, st, en = read_text(base / "run/jobs.log"), read_text(base / "run/start.txt"), read_text(base / "run/end.txt")
+    if jl is None: return None
+    ctx["host"] = "totoro.biology.ualberta.ca (384 cores, shared); lane directory ~/hsq_work/true-parity-campaign-20261002"
+    if st: ctx["driver_start"] = st.strip().splitlines()
+    if en: ctx["driver_end"] = en.strip().splitlines()
+    ctx["jobs"] = [l for l in jl.splitlines() if l.split()[1:2] == [cell]]
+    ctx["caps"] = "at most 8 concurrent jobs, OPENBLAS_NUM_THREADS=1, JULIA_NUM_THREADS=2, R single-threaded; each job under timeout at twice its written estimate"
+    return ctx
+
+
+def data_meta(raw, cell):
+    for n in (f"{cell}.meta.json", f"{cell}_wide.meta.json"):
+        p = Path(raw) / "data_meta" / n
+        if p.exists(): return json.loads(p.read_text())
+    return None
+
+
 def process(raw, out_root, apply):
     results = []   # (row spec, receipt path, binds, receipt)
     camp = out_root / LEDGER / "receipts"
@@ -387,6 +426,8 @@ def process(raw, out_root, apply):
         extra = OrderedDict(
             cell=OrderedDict((k, R.get(k)) for k in ("formula",)) | OrderedDict(data_sha256=R["data_sha256"], data_file=J.get("data_file"),
                               p=J.get("p"), n=J.get("n")),
+            data_meta=data_meta(raw, cell), run=run_context(raw, cell),
+            engine_messages=OrderedDict(R=trim_log(read_text(Path(raw) / "logs" / f"R_{cell}.log")), julia=trim_log(read_text(Path(raw) / "logs" / f"J_{cell}.log"))),
             p1_source_sha256=R["p1_source_sha256"], gllvmTMB_deparse_check=R["deparse_check"],
             reasons=reasons(legs, cases), not_covered=NOT_COVERED_COMMON)
         rc = build_receipt(sid, cell, clause, cases, legs, eng_r, eng_j, extra, dict(note=f"receipts/{fam}/{CAMPAIGN_DIR}/raw/{cell}_*.gz", hashes=hashes), binds)
