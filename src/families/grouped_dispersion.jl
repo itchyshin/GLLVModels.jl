@@ -1990,8 +1990,9 @@ function _nb1_grouped_laplace_weight(hessian::Symbol, f::NB1, μ, me, y, link::L
         "hessian=:observed is currently supported only for NB1 with LogLink()"))
     φ = float(f.φ)
     r = μ / φ
-    s_μ = (digamma(y + r) - digamma(r) - log1p(φ)) / φ
-    return -μ * s_μ - (μ / φ)^2 * (trigamma(y + r) - trigamma(r))
+    d1, d2 = _nb1_rise_diffs(r, Int(y))   # stable toward φ → 0 (negbin1.jl)
+    s_μ = (d1 - log1p(φ)) / φ
+    return -μ * s_μ - (μ / φ)^2 * d2
 end
 
 # Per-site mode search for the NB1 grouped kernel (#503, the #479 pattern). Returns
