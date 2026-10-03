@@ -491,16 +491,16 @@
         "CAMPAIGN-C3-COV-PHYLO-LATENT-RSZ-SIGMA-PHY"
       ],
       "disposition": null,
-      "evidence_tier": "numeric",
+      "evidence_tier": "partial_case_not_executed",
       "measured_against": "P1",
       "evidence": {
-        "receipt": [
+        "non_binding_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/covariance/campaign/COV-PHYLO-LATENT-RSZ.json"
         ],
-        "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
+        "tier": "measured, does not bind. Every number is inside its tolerance, but a required leg is not signed: the R side is the tracked PR #547 receipt, which records qualified = false until the maintainer signs the dated promotion block (D-300 answer 9). No agent may sign it, so the receipt stays unqualified until then"
       },
       "measured_result": {
-        "verdict": "PASS",
+        "verdict": "NUMERIC_PASS_NOT_BINDING",
         "max_abs_diff_by_case": {
           "CAMPAIGN-C3-COV-PHYLO-LATENT-RSZ-LOGLIK": 2.2646418074145913e-09,
           "CAMPAIGN-C3-COV-PHYLO-LATENT-RSZ-SIGMA-PHY": 4.352562274601013e-06

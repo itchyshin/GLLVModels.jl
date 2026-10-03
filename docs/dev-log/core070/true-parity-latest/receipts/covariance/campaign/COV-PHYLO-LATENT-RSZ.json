@@ -5,8 +5,8 @@
  "pin": "P1",
  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
  "ruling": "itchyshin/GLLVModels.jl#684 item 4",
- "verdict": "PASS",
- "row_status": "binds: the plan's pass rule holds on both engines",
+ "verdict": "NUMERIC_PASS_NOT_BINDING",
+ "row_status": "does not bind: a required leg is not signed: the R side is the tracked PR #547 receipt, which records qualified = false until the maintainer signs the dated promotion block (D-300 answer 9). No agent may sign it, so the receipt stays unqualified until then",
  "pass_rule": {
   "rule": "both engines converged (R convergence 0 with a positive-definite Hessian; Julia converged true) and every listed quantity within tolerance",
   "legs": {
@@ -15,6 +15,7 @@
    "Julia_converged_true": true,
    "same_data_sha256": true,
    "R_version_0_7_1_from_P1_library": true,
+   "R_side_receipt_qualified_by_maintainer": false,
    "every_quantity_within_tolerance": true
   }
  },
@@ -24,10 +25,11 @@
   "data_file_sha256": "f3bace851f60f337a8274859644135a84792b9e9ab35c07f757a7ade336706d4"
  },
  "what_this_is": "R values are the tracked P1 R receipt of PR #547 (fitted once at P1 and kept). The Julia fit is NEW: fit_phylo_latent_gllvm on the same literal fixture at the commit above. The #547 Julia receipt recorded converged = false (gradient stall); current main converges, and this receipt uses the current fit.",
+ "r_side_qualification": "NOT BINDING, on purpose. The R receipt (docs/dev-log/core070/phylo-latent-p1/cov_phylo_latent_rsz/r-receipt.json) records qualified = false, and docs/dev-log/core070/phylo-latent-p1/README.md says every receipt stays unqualified until the maintainer signs the dated promotion block (D-300 answer 9). The measurement is kept as a non-binding receipt: both numbers are inside tolerance, but the row binds only after the maintainer signs that block. No agent may sign it.",
  "julia_script": "tools/phylo_latent/compare_phylo_latent_p1.jl, command: julia --project=. tools/phylo_latent/compare_phylo_latent_p1.jl fit cov_phylo_latent_rsz docs/dev-log/core070/phylo-latent-p1/a15-fixture.json <out>/phylo_J.json (output committed as raw/phylo_J.json.gz)",
  "not_covered": [
   "One dataset and one seed per row: a spot check at this size, not a scaling study or a coverage study.",
-  "R was not re-run: its values are the PR #547 receipt's.",
+  "R was not re-run: its values are the PR #547 receipt's, which is unqualified until the maintainer signs the D-300 answer 9 promotion block.",
   "cond(H) (R 83030, Julia 82761 here) is recorded, not compared."
  ],
  "engines": {
@@ -42,7 +44,8 @@
    "pd_hessian": true,
    "cond_H": 83029.86176710331,
    "wall_fit_sec": 3.375,
-   "dll_sha256": "cba0f54d5492f0c6d0c5474c19281e3b58d5e2b0709e536684619558aaf55b8d"
+   "dll_sha256": "cba0f54d5492f0c6d0c5474c19281e3b58d5e2b0709e536684619558aaf55b8d",
+   "qualified": false
   },
   "julia": {
    "engine": "GLLVModels.fit_phylo_latent_gllvm, fresh fit on current main",

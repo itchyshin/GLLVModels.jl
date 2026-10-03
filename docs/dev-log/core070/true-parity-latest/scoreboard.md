@@ -12,8 +12,8 @@ Pin: gllvmTMB P1 `9539352f66f2db2cc26b1c393e67212a359b60c9`.
 Inputs:
 
 - `docs/dev-log/core070/true-parity-latest/case-map-aghq.json` (21 rows, sha256 `6ea352a0f4af7caf2795f59c1c4790701ecc2e5c774c840451ae146213fc4047`)
-- `docs/dev-log/core070/true-parity-latest/case-map-covariance.json` (19 rows, sha256 `cd0b57eefac4c043541c75012c109196b746e9a81f8d1c0d923c19da12ca22dc`)
-- `docs/dev-log/core070/true-parity-latest/case-map-data.json` (36 rows, sha256 `3915ed00cacd53bbaccdaf515e4eee5d4b40d752db4d46de48c6c605cc2bf6d4`)
+- `docs/dev-log/core070/true-parity-latest/case-map-covariance.json` (19 rows, sha256 `d23ab57e75e98ba56767f4179f49c5f2787aeeac9e56294974ed38a18f710363`)
+- `docs/dev-log/core070/true-parity-latest/case-map-data.json` (36 rows, sha256 `0b3adcc3b97636baf445aea0ff605a0c3db01af9a6d45e6cd05d6db8e86bbb99`)
 - `docs/dev-log/core070/true-parity-latest/case-map-family.json` (26 rows, sha256 `537991192134fd7aef08d7e065c61d5b3063efde3d63513b88493dd6a82db6fc`)
 - `docs/dev-log/core070/true-parity-latest/case-map-fit-input.json` (10 rows, sha256 `568c054ed5f3786b96c9acb796e28d98e4523c4edc5fe5ad9f69ab150cee3639`)
 - `docs/dev-log/core070/true-parity-latest/case-map-inference.json` (63 rows, sha256 `de305bd492f8dfa9c1b97ddeb0ea57c4472c04e8d8be3c72505d97ef204f15c8`)
@@ -26,15 +26,15 @@ Inputs:
 | `family` | EVIDENCED | REGISTRATION-ONLY | HELD | PARTIAL | NEEDS-SURFACE | NON-NUMERIC | NON-DISCRIMINATING | FAIL | NOT-MEASURED | total |
 |---|---|---|---|---|---|---|---|---|---|---|
 | `aghq` | 14 | 0 | 0 | 0 | 0 | 7 | 0 | 0 | 0 | 21 |
-| `covariance` | 2 | 0 | 2 | 7 | 0 | 8 | 0 | 0 | 0 | 19 |
-| `data` | 0 | 0 | 0 | 0 | 28 | 0 | 0 | 5 | 3 | 36 |
+| `covariance` | 1 | 0 | 2 | 8 | 0 | 8 | 0 | 0 | 0 | 19 |
+| `data` | 0 | 0 | 0 | 1 | 28 | 0 | 0 | 4 | 3 | 36 |
 | `family` | 19 | 0 | 0 | 5 | 0 | 0 | 0 | 1 | 1 | 26 |
 | `fit-input` | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
 | `inference` | 2 | 0 | 0 | 2 | 0 | 59 | 0 | 0 | 0 | 63 |
 | `isdm` | 11 | 0 | 0 | 0 | 9 | 0 | 0 | 1 | 0 | 21 |
 | `namespace` | 29 | 25 | 0 | 0 | 2 | 0 | 0 | 0 | 13 | 69 |
 | `postfit` | 34 | 0 | 2 | 12 | 2 | 0 | 1 | 1 | 0 | 52 |
-| `all` | 121 | 25 | 4 | 26 | 41 | 74 | 1 | 8 | 17 | 317 |
+| `all` | 120 | 25 | 4 | 28 | 41 | 74 | 1 | 7 | 17 | 317 |
 
 ## P1 twin fixtures present at this head, not bound to any row
 
@@ -124,7 +124,7 @@ decision for the PR that measures it, not something this tool does.
 | covariance-COV-PHYLO-A-ALIAS `covariance/COV-PHYLO-A-ALIAS` | compatibility_adapter; cases: CORE070-COV-PHYLO-A-ALIAS-ADAPTER | NON-NUMERIC | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-COV-PHYLO-A-ALIAS-ADAPTER.json | family covariance; evidence_tier r_only; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | covariance-COV-PHYLO-DEP `covariance/COV-PHYLO-DEP` | required_core; cases: CORE070-COV-PHYLO-DEP-FORMULA | NON-NUMERIC | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-COV-PHYLO-DEP-FORMULA.json | family covariance; evidence_tier r_only; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | covariance-COV-PHYLO-FOLDED-UNIQUE `covariance/COV-PHYLO-FOLDED-UNIQUE` | required_core; cases: CORE070-COV-PHYLO-FOLDED-UNIQUE-FORMULA | NON-NUMERIC | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-COV-PHYLO-FOLDED-UNIQUE-FORMULA.json | family covariance; evidence_tier r_only; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| covariance-COV-PHYLO-LATENT-RSZ `covariance/COV-PHYLO-LATENT-RSZ` | required_core; cases: CAMPAIGN-C3-COV-PHYLO-LATENT-RSZ-LOGLIK, CAMPAIGN-C3-COV-PHYLO-LATENT-RSZ-SIGMA-PHY | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/covariance/campaign/COV-PHYLO-LATENT-RSZ.json | family covariance; evidence_tier numeric; measured_against P1 |
+| covariance-COV-PHYLO-LATENT-RSZ `covariance/COV-PHYLO-LATENT-RSZ` | required_core; cases: CAMPAIGN-C3-COV-PHYLO-LATENT-RSZ-LOGLIK, CAMPAIGN-C3-COV-PHYLO-LATENT-RSZ-SIGMA-PHY | PARTIAL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/covariance/campaign/COV-PHYLO-LATENT-RSZ.json | family covariance; evidence_tier partial_case_not_executed; measured_against P1 |
 | covariance-COV-TEMPORAL-RSZ `covariance/COV-TEMPORAL-RSZ` | required_core; cases: CAMPAIGN-C3-COV-TEMPORAL-RSZ-LOGLIK, CAMPAIGN-C3-COV-TEMPORAL-RSZ-TEMPORAL-PHI, CAMPAIGN-C3-COV-TEMPORAL-RSZ-TEMPORAL-LOADINGS | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/covariance/campaign/COV-TEMPORAL-RSZ.json | family covariance; evidence_tier numeric; measured_against P1 |
 | data-DATA-MISS-BOTH `data/DATA-MISS-BOTH` | required_core; cases: CORE070-DATA-MISS-BOTH-CONTROL | NEEDS-SURFACE | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-MISS-BOTH-CONTROL.json | family data; evidence_tier needs_surface_r_side_measured; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | data-DATA-MISS-DEFAULT `data/DATA-MISS-DEFAULT` | required_core; cases: CORE070-DATA-MISS-DEFAULT-CONTROL | NEEDS-SURFACE | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-MISS-DEFAULT-CONTROL.json | family data; evidence_tier needs_surface_r_side_measured; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
@@ -155,7 +155,7 @@ decision for the PR that measures it, not something this tool does.
 | data-DATA-W-NULL `data/DATA-W-NULL` | required_core; cases: CORE070-DATA-W-NULL-NATIVE | NEEDS-SURFACE | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-NULL-NATIVE.json | family data; evidence_tier needs_surface_r_side_measured; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | data-DATA-W-ZERO `data/DATA-W-ZERO` | required_core; cases: CORE070-DATA-W-ZERO-NATIVE | NEEDS-SURFACE | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-ZERO-NATIVE.json | family data; evidence_tier needs_surface_r_side_measured; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | data-RD-URBANISATION-BINOMIAL `data/RD-URBANISATION-BINOMIAL` | required_core; cases: CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-LOGLIK, CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-BETA, CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-LLT, CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-ETA | FAIL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-URBANISATION-BINOMIAL.json | family data; evidence_tier numeric_fail; measured_against P1 |
-| data-RD-CRABS-GAUSSIAN `data/RD-CRABS-GAUSSIAN` | required_core; cases: CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LOGLIK, CAMPAIGN-C4-RD-CRABS-GAUSSIAN-BETA, CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LLT, CAMPAIGN-C4-RD-CRABS-GAUSSIAN-ETA | FAIL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-CRABS-GAUSSIAN.json | family data; evidence_tier numeric_fail; measured_against P1 |
+| data-RD-CRABS-GAUSSIAN `data/RD-CRABS-GAUSSIAN` | required_core; cases: CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LOGLIK, CAMPAIGN-C4-RD-CRABS-GAUSSIAN-BETA, CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LLT, CAMPAIGN-C4-RD-CRABS-GAUSSIAN-ETA | PARTIAL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-CRABS-GAUSSIAN.json | family data; evidence_tier partial_case_not_executed; measured_against P1 |
 | data-RD-SPIDER-NB2 `data/RD-SPIDER-NB2` | required_core; cases: CAMPAIGN-C4-RD-SPIDER-NB2-LOGLIK, CAMPAIGN-C4-RD-SPIDER-NB2-BETA, CAMPAIGN-C4-RD-SPIDER-NB2-LLT, CAMPAIGN-C4-RD-SPIDER-NB2-ETA | FAIL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-SPIDER-NB2.json | family data; evidence_tier numeric_fail; measured_against P1 |
 | data-RD-BEETLE-NB2 `data/RD-BEETLE-NB2` | required_core; cases: CAMPAIGN-C4-RD-BEETLE-NB2-LOGLIK, CAMPAIGN-C4-RD-BEETLE-NB2-BETA, CAMPAIGN-C4-RD-BEETLE-NB2-LLT, CAMPAIGN-C4-RD-BEETLE-NB2-ETA | FAIL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-BEETLE-NB2.json | family data; evidence_tier numeric_fail; measured_against P1 |
 | data-RD-FUNGI-BINOMIAL `data/RD-FUNGI-BINOMIAL` | required_core; cases: CAMPAIGN-C4-RD-FUNGI-BINOMIAL-LOGLIK, CAMPAIGN-C4-RD-FUNGI-BINOMIAL-BETA, CAMPAIGN-C4-RD-FUNGI-BINOMIAL-LLT, CAMPAIGN-C4-RD-FUNGI-BINOMIAL-ETA | FAIL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-FUNGI-BINOMIAL.json | family data; evidence_tier numeric_fail; measured_against P1 |

@@ -21,9 +21,13 @@ Pass rule (campaign plan section 1.1, as PROPOSED in PR #650): BOTH engines conv
 with a positive-definite Hessian; Julia `converged` true; iSDM also every cell converged) AND every
 listed quantity is within its tolerance AND both engines read the same data bytes AND every gllvmTMB
 function used deparses identically to its P1 source. A C4 row also needs the engine = "julia" bridge route and
-the plan's eight acceptance classes to have been run (plan section 1.3); neither was, so no C4 row binds yet.
-A row that meets the whole rule binds (evidence_tier "numeric", evidence.receipt). Otherwise the receipt is cited as non-binding with the reason and the row is left
-unbound; no tolerance is widened and nothing is re-run to get a pass.
+the plan's eight acceptance classes to have been run (plan section 1.3); neither was, so no C4 row binds yet. The phylo
+row (COV-PHYLO-LATENT-RSZ) takes its R side from the tracked PR #547 receipt, which records qualified = false until the
+maintainer signs the dated promotion block (D-300 answer 9); the row therefore does not bind, and no agent may sign that block.
+A row that meets the whole rule binds (evidence_tier "numeric", evidence.receipt). Otherwise the receipt is cited as
+non-binding with the reason and the row is left unbound; no tolerance is widened and nothing is re-run to get a pass.
+A row whose numbers are all inside tolerance and whose only failing leg is a required step that was not run or not
+signed (the C4 bridge leg, the phylo qualification) reads partial_case_not_executed, never numeric_fail.
 
 A relative tolerance is recorded as a discrepancy statistic against zero (r_value = 0, julia_value =
 |J - R| / |R| per element), because the checker compares absolute differences; the raw R and Julia
@@ -250,6 +254,23 @@ def pass_rule(R, J, cases):
 
 
 BRIDGE_LEG = "engine_julia_bridge_route_and_eight_acceptance_classes_run"
+QUAL_LEG = "R_side_receipt_qualified_by_maintainer"
+# Legs that say "a required step was not run or not signed", as opposed to "a number or a convergence flag failed".
+# A row whose only failing legs are these, with every number inside tolerance, is partial_case_not_executed (PARTIAL),
+# never numeric_fail (FAIL): nothing disagrees, a required step is missing.
+OPEN_LEGS = (BRIDGE_LEG, QUAL_LEG)
+LEG_TEXT = {
+    BRIDGE_LEG: ('a required leg was not run: the engine = "julia" bridge route and the plan\'s eight acceptance classes '
+                 '(the C4 clause needs them, see GATES.md and plan section 1.3). The direct-engine comparison does not say the bridge workflow passes'),
+    QUAL_LEG: ("a required leg is not signed: the R side is the tracked PR #547 receipt, which records qualified = false "
+               "until the maintainer signs the dated promotion block (D-300 answer 9). No agent may sign it, so the receipt stays unqualified until then"),
+    "R_convergence_0": "R did not converge (optimizer convergence code is not 0)",
+    "R_pdHess_true": "R's Hessian is not positive definite (pdHess is false)",
+    "Julia_converged_true": "Julia did not report converged (or a cell did not converge)",
+    "same_data_sha256": "the two engines did not record the same data sha256",
+    "gllvmTMB_deparse_identical_to_P1": "a named gllvmTMB entry point does not deparse identically to its P1 source",
+    "R_version_0_7_1_from_P1_library": "R side is not gllvmTMB 0.7.1 from the P1 library",
+}
 
 
 def add_c4_leg(legs, clause):
@@ -259,8 +280,13 @@ def add_c4_leg(legs, clause):
     return legs
 
 
+def numbers_ok(legs):
+    """Every leg except the open (not-run / not-signed) ones holds."""
+    return all(v for k, v in legs.items() if k not in OPEN_LEGS)
+
+
 def reasons(legs, cases):
-    out = [k for k, v in legs.items() if not v and k != "every_quantity_within_tolerance"]
+    out = [LEG_TEXT.get(k, k) for k, v in legs.items() if not v and k != "every_quantity_within_tolerance"]
     for c in cases:
         if not c.ok:
             out.append(f"{c.quantity}: " + (c.problem if c.problem else f"{c.mode} difference {c.diff:.6g} > tolerance {c.tol:g}"))
@@ -287,6 +313,9 @@ def build_phylo(raw):
     legs["Julia_converged_true"] = jr.get("converged") is True
     legs["same_data_sha256"] = rr.get("data_file_sha256") == jr.get("data_file_sha256") and bool(rr.get("data_file_sha256"))
     legs["R_version_0_7_1_from_P1_library"] = rr.get("package_version") == "0.7.1" and rr.get("source_pin") == P1
+    # The R side is the PR #547 receipt, which records qualified = false until the maintainer signs the dated promotion
+    # block (D-300 answer 9; phylo-latent-p1/README.md). No agent signs it, so this leg is false and the row never binds on it.
+    legs[QUAL_LEG] = rr.get("qualified") is True
     legs["every_quantity_within_tolerance"] = all(c.ok for c in cases)
     return dict(sid=sid, cell="phylo", clause="C3", cases=cases, legs=legs, R=rr, J=jr, raw_files=[("r-receipt (tracked, PR #547)", PHY / "cov_phylo_latent_rsz/r-receipt.json"), ("julia fit on current main", p)])
 
@@ -326,9 +355,9 @@ def build_receipt(sid, cell, clause, cases, legs, eng_r, eng_j, extra, raw_refs,
     rcpt["schema"] = SCHEMA
     rcpt["source_id"] = sid; rcpt["clause"] = clause
     rcpt["pin"] = "P1"; rcpt["reference_commit"] = P1; rcpt["ruling"] = RULING
-    # a row whose numbers all pass but whose C4 bridge leg is open is recorded as measured, not as FAIL and not as PASS
-    only_bridge = not binds and all(v for k, v in legs.items() if k != BRIDGE_LEG)
-    rcpt["verdict"] = "PASS" if binds else ("NUMERIC_PASS_NOT_BINDING" if only_bridge else "FAIL")
+    # a row whose numbers all pass but whose only failing legs are required steps not run or not signed (the C4 bridge leg, the
+    # phylo qualification) is recorded as measured, not as FAIL and not as PASS
+    rcpt["verdict"] = "PASS" if binds else ("NUMERIC_PASS_NOT_BINDING" if numbers_ok(legs) else "FAIL")
     why = extra.pop("reasons", [])
     rcpt["row_status"] = "binds: the plan's pass rule holds on both engines" if binds else "does not bind: " + "; ".join(why)
     rcpt["pass_rule"] = OrderedDict(rule="both engines converged (R convergence 0 with a positive-definite Hessian; Julia converged true) and every listed quantity within tolerance",
@@ -414,7 +443,8 @@ def process(raw, out_root, apply):
             rr, jr = ph["R"], ph["J"]
             eng_r = OrderedDict(engine="R gllvmTMB (tracked P1 receipt of PR #547, recorded 2026-09-29)", gllvmTMB_version=rr["package_version"], source_pin=rr["source_pin"],
                                 formula=rr["formula"], convergence=rr["convergence"], optimizer_message=rr["message"], gradient_max_abs=rr["gradient_max_abs"], pd_hessian=rr["hessian"]["pd_hessian"],
-                                cond_H=rr["hessian"]["condition_number"], wall_fit_sec=rr["elapsed_seconds"], dll_sha256=rr["dll_sha256"])
+                                cond_H=rr["hessian"]["condition_number"], wall_fit_sec=rr["elapsed_seconds"], dll_sha256=rr["dll_sha256"],
+                                qualified=rr.get("qualified"))
             eng_j = OrderedDict(engine="GLLVModels.fit_phylo_latent_gllvm, fresh fit on current main", julia_version=jr["julia_version"], gllvmodels_commit=jr["git_head"],
                                 converged=jr["converged"], stopping_reason=jr["stopping_reason"], gradient_norm=jr["gradient_norm"], iterations=jr["iterations"],
                                 hessian_positive_definite=jr["hessian_positive_definite"], cond_H=jr["hessian_condition_number"], wall_fit_sec=jr["fit_elapsed_seconds"])
@@ -429,9 +459,12 @@ def process(raw, out_root, apply):
                                  data_file_sha256=rr["data_file_sha256"]),
                 what_this_is="R values are the tracked P1 R receipt of PR #547 (fitted once at P1 and kept). The Julia fit is NEW: fit_phylo_latent_gllvm on the same literal fixture at the commit above. "
                              "The #547 Julia receipt recorded converged = false (gradient stall); current main converges, and this receipt uses the current fit.",
+                r_side_qualification=("NOT BINDING, on purpose. The R receipt (docs/dev-log/core070/phylo-latent-p1/cov_phylo_latent_rsz/r-receipt.json) records qualified = false, and "
+                                      "docs/dev-log/core070/phylo-latent-p1/README.md says every receipt stays unqualified until the maintainer signs the dated promotion block (D-300 answer 9). "
+                                      "The measurement is kept as a non-binding receipt: both numbers are inside tolerance, but the row binds only after the maintainer signs that block. No agent may sign it."),
                 julia_script="tools/phylo_latent/compare_phylo_latent_p1.jl, command: julia --project=. tools/phylo_latent/compare_phylo_latent_p1.jl fit cov_phylo_latent_rsz docs/dev-log/core070/phylo-latent-p1/a15-fixture.json <out>/phylo_J.json (output committed as raw/phylo_J.json.gz)",
                 reasons=reasons(ph["legs"], ph["cases"]),
-                not_covered=NOT_COVERED_COMMON[:1] + ["R was not re-run: its values are the PR #547 receipt's.", "cond(H) (R 83030, Julia 82761 here) is recorded, not compared."])
+                not_covered=NOT_COVERED_COMMON[:1] + ["R was not re-run: its values are the PR #547 receipt's, which is unqualified until the maintainer signs the D-300 answer 9 promotion block.", "cond(H) (R 83030, Julia 82761 here) is recorded, not compared."])
             rc = build_receipt(sid, cell, clause, ph["cases"], ph["legs"], eng_r, eng_j, extra, dict(note=str(jgz.relative_to(out_root)), hashes=hashes), binds)
             results.append((sid, fam, clause, rc, binds, rdir / f"{slug(sid)}.json"))
             continue
@@ -501,7 +534,9 @@ def process(raw, out_root, apply):
 # ---- case-map rows ------------------------------------------------------------------------------
 def row_for(sid, clause, rc, binds, rel_receipt):
     cases = [c["case_id"] for c in rc["comparison"]["cases"]]
-    tier = "numeric" if binds else "numeric_fail"
+    # every number inside tolerance, only a required step not run or not signed: PARTIAL, not FAIL (nothing disagrees)
+    open_only = (not binds) and rc["verdict"] == "NUMERIC_PASS_NOT_BINDING"
+    tier = "numeric" if binds else ("partial_case_not_executed" if open_only else "numeric_fail")
     row = OrderedDict()
     row["source_id"] = sid
     row["classification"] = "required_core"
@@ -517,7 +552,8 @@ def row_for(sid, clause, rc, binds, rel_receipt):
         ev["tier"] = "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
     else:
         ev["non_binding_receipts"] = [rel_receipt]
-        ev["tier"] = "measured, does not bind: " + rc["row_status"].replace("does not bind: ", "")
+        why = rc["row_status"].replace("does not bind: ", "")
+        ev["tier"] = ("measured, does not bind. Every number is inside its tolerance, but " + why) if open_only else "measured, does not bind: " + why
     row["evidence"] = ev
     row["measured_result"] = OrderedDict(verdict=rc["verdict"],
         max_abs_diff_by_case={c["case_id"]: c["max_abs_diff"] for c in rc["comparison"]["cases"]},

@@ -11,12 +11,12 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-covariance.json",
-   "sha256": "cd0b57eefac4c043541c75012c109196b746e9a81f8d1c0d923c19da12ca22dc",
+   "sha256": "d23ab57e75e98ba56767f4179f49c5f2787aeeac9e56294974ed38a18f710363",
    "rows": 19
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-data.json",
-   "sha256": "3915ed00cacd53bbaccdaf515e4eee5d4b40d752db4d46de48c6c605cc2bf6d4",
+   "sha256": "0b3adcc3b97636baf445aea0ff605a0c3db01af9a6d45e6cd05d6db8e86bbb99",
    "rows": 36
   },
   {
@@ -1533,16 +1533,16 @@
     "CAMPAIGN-C3-COV-PHYLO-LATENT-RSZ-SIGMA-PHY"
    ],
    "disposition": null,
-   "evidence_tier": "numeric",
+   "evidence_tier": "partial_case_not_executed",
    "measured_against": "P1",
    "evidence": {
-    "receipt": [
+    "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/campaign/COV-PHYLO-LATENT-RSZ.json"
     ],
-    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
+    "tier": "measured, does not bind. Every number is inside its tolerance, but a required leg is not signed: the R side is the tracked PR #547 receipt, which records qualified = false until the maintainer signs the dated promotion block (D-300 answer 9). No agent may sign it, so the receipt stays unqualified until then"
    },
    "measured_result": {
-    "verdict": "PASS",
+    "verdict": "NUMERIC_PASS_NOT_BINDING",
     "max_abs_diff_by_case": {
      "CAMPAIGN-C3-COV-PHYLO-LATENT-RSZ-LOGLIK": 2.2646418074145913e-09,
      "CAMPAIGN-C3-COV-PHYLO-LATENT-RSZ-SIGMA-PHY": 4.352562274601013e-06
@@ -2680,7 +2680,7 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-URBANISATION-BINOMIAL.json"
     ],
-    "tier": "measured, does not bind: engine_julia_bridge_route_and_eight_acceptance_classes_run; beta: abs difference 0.000231344 > tolerance 0.0001; LLt: abs difference 0.00164848 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000821878 > tolerance 1e-06"
+    "tier": "measured, does not bind: a required leg was not run: the engine = \"julia\" bridge route and the plan's eight acceptance classes (the C4 clause needs them, see GATES.md and plan section 1.3). The direct-engine comparison does not say the bridge workflow passes; beta: abs difference 0.000231344 > tolerance 0.0001; LLt: abs difference 0.00164848 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000821878 > tolerance 1e-06"
    },
    "measured_result": {
     "verdict": "FAIL",
@@ -2711,13 +2711,13 @@
     "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-ETA"
    ],
    "disposition": null,
-   "evidence_tier": "numeric_fail",
+   "evidence_tier": "partial_case_not_executed",
    "measured_against": "P1",
    "evidence": {
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-CRABS-GAUSSIAN.json"
     ],
-    "tier": "measured, does not bind: engine_julia_bridge_route_and_eight_acceptance_classes_run"
+    "tier": "measured, does not bind. Every number is inside its tolerance, but a required leg was not run: the engine = \"julia\" bridge route and the plan's eight acceptance classes (the C4 clause needs them, see GATES.md and plan section 1.3). The direct-engine comparison does not say the bridge workflow passes"
    },
    "measured_result": {
     "verdict": "NUMERIC_PASS_NOT_BINDING",
@@ -2754,7 +2754,7 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-SPIDER-NB2.json"
     ],
-    "tier": "measured, does not bind: engine_julia_bridge_route_and_eight_acceptance_classes_run; logLik: abs difference 1.45732e-06 > tolerance 1e-06; LLt: abs difference 0.000161728 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 6.73994e-05 > tolerance 1e-06"
+    "tier": "measured, does not bind: a required leg was not run: the engine = \"julia\" bridge route and the plan's eight acceptance classes (the C4 clause needs them, see GATES.md and plan section 1.3). The direct-engine comparison does not say the bridge workflow passes; logLik: abs difference 1.45732e-06 > tolerance 1e-06; LLt: abs difference 0.000161728 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 6.73994e-05 > tolerance 1e-06"
    },
    "measured_result": {
     "verdict": "FAIL",
@@ -2791,7 +2791,7 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-BEETLE-NB2.json"
     ],
-    "tier": "measured, does not bind: R_pdHess_true; engine_julia_bridge_route_and_eight_acceptance_classes_run; logLik: abs difference 9.08069e-06 > tolerance 1e-06; beta: abs difference 0.000287141 > tolerance 0.0001; LLt: abs difference 0.00463293 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000869455 > tolerance 1e-06"
+    "tier": "measured, does not bind: R's Hessian is not positive definite (pdHess is false); a required leg was not run: the engine = \"julia\" bridge route and the plan's eight acceptance classes (the C4 clause needs them, see GATES.md and plan section 1.3). The direct-engine comparison does not say the bridge workflow passes; logLik: abs difference 9.08069e-06 > tolerance 1e-06; beta: abs difference 0.000287141 > tolerance 0.0001; LLt: abs difference 0.00463293 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000869455 > tolerance 1e-06"
    },
    "measured_result": {
     "verdict": "FAIL",
@@ -2828,7 +2828,7 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-FUNGI-BINOMIAL.json"
     ],
-    "tier": "measured, does not bind: engine_julia_bridge_route_and_eight_acceptance_classes_run; beta: abs difference 0.000123933 > tolerance 0.0001; LLt: abs difference 0.000474438 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000328279 > tolerance 1e-06"
+    "tier": "measured, does not bind: a required leg was not run: the engine = \"julia\" bridge route and the plan's eight acceptance classes (the C4 clause needs them, see GATES.md and plan section 1.3). The direct-engine comparison does not say the bridge workflow passes; beta: abs difference 0.000123933 > tolerance 0.0001; LLt: abs difference 0.000474438 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000328279 > tolerance 1e-06"
    },
    "measured_result": {
     "verdict": "FAIL",

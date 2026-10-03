@@ -493,11 +493,20 @@ confirmation; every receipt says so in `tolerance_status`.
   `tools/true_parity/campaign/data/` with their sha256, and `--check` verifies the receipts' data pin against them.
 - **Pass rule.** Both engines converged (R convergence 0 with a positive-definite Hessian; Julia `converged`
   true) and every listed quantity inside its tolerance, on the same data bytes, with every gllvmTMB function
-  used deparsing identically to its P1 source. A C4 row also needs the `engine = "julia"` bridge route and the
-  plan's eight acceptance classes (plan section 1.3); neither has been run, so no C4 row binds yet. A row that
-  meets the whole rule binds (`evidence_tier` numeric). A row
-  that does not is cited under `non_binding_receipts` with the reason, tier `numeric_fail`, and stays open.
-  No tolerance is widened and nothing is re-run to get a pass.
+  used deparsing identically to its P1 source. A C4 row also needs the
+  `engine = "julia"` bridge route and the plan's eight acceptance classes (plan section 1.3); neither has been run, so
+  no C4 row binds yet. A row that meets the whole rule binds (`evidence_tier` numeric).
+  A row that does not is cited under `non_binding_receipts` with every reason, and stays open. Its tier says which kind of
+  failure it is. If every number is inside tolerance and the only failing leg is a required step that was not run or not
+  signed (the C4 bridge leg, the phylo qualification below), the tier is `partial_case_not_executed` (scoreboard PARTIAL)
+  and the `evidence.tier` sentence names the missing leg. If a number or a convergence flag also fails, the tier is
+  `numeric_fail` (FAIL) and the sentence lists every failing leg and number. No tolerance is widened and nothing is
+  re-run to get a pass.
+- **Phylo row (`covariance/COV-PHYLO-LATENT-RSZ`) does not bind.** Its R side is the tracked PR #547 receipt
+  (`phylo-latent-p1/cov_phylo_latent_rsz/r-receipt.json`), which records `qualified = false`; the README there says every
+  receipt stays unqualified until the maintainer signs the dated promotion block (D-300 answer 9). The measurement is kept
+  as a non-binding receipt (both numbers are inside tolerance), the pass rule has a leg
+  `R_side_receipt_qualified_by_maintainer` that is false, and the row reads PARTIAL. No agent may sign the block.
 - **Relative tolerances** are carried as a discrepancy against zero (r_value 0, julia_value the relative
   difference), because the checker compares absolute differences; the raw vectors are stored beside it.
 - **Disposition rows.** `data/RD-PHYLO-DISPOSITION`, `data/RD-TEMPORAL-DISPOSITION` and

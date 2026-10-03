@@ -267,6 +267,18 @@ def main():
     wr = subprocess.run([sys.executable, str(HERE / "true_parity" / "campaign" / "write_receipts.py"), "--check"],
                         capture_output=True, text=True)
     expect("real_tree_campaign_receipts_rederive", wr.returncode == 0 and "CAMPAIGN_RECEIPTS_OK" in wr.stdout, wr.stdout + wr.stderr)
+    # Row tiers: a measured row that fails no number but lacks a required step reads PARTIAL, never FAIL; a row that also
+    # misses a tolerance keeps numeric_fail; the phylo row does not bind (its R receipt is unqualified until the maintainer signs).
+    def camp_row(mapname, sid):
+        return next(r for r in json.loads((A.ROOT / A.LEDGER / mapname).read_text())["rows"] if r["source_id"] == sid)
+    crabs = camp_row("case-map-data.json", "data/RD-CRABS-GAUSSIAN"); spider = camp_row("case-map-data.json", "data/RD-SPIDER-NB2")
+    phylo = camp_row("case-map-covariance.json", "covariance/COV-PHYLO-LATENT-RSZ")
+    expect("crabs_is_partial_not_fail", crabs["evidence_tier"] == "partial_case_not_executed" and "bridge route" in crabs["evidence"]["tier"], crabs["evidence"]["tier"])
+    expect("row_with_failed_tolerance_stays_numeric_fail", spider["evidence_tier"] == "numeric_fail" and "bridge route" in spider["evidence"]["tier"] and "logLik" in spider["evidence"]["tier"], spider["evidence"]["tier"])
+    expect("phylo_row_does_not_bind", phylo["evidence_tier"] == "partial_case_not_executed" and "receipt" not in phylo["evidence"] and "qualified = false" in phylo["evidence"]["tier"], json.dumps(phylo["evidence"]))
+
+    # ... and a hand edit that keeps the receipt self-consistent must still fail: a changed value (with a matching
+    # max_abs_diff and flag), a widened tolerance, and a changed large-vector difference.
 
     # ... and a hand edit that keeps the receipt self-consistent must still fail: a changed value (with a matching
     # max_abs_diff and flag), a widened tolerance, and a changed large-vector difference.
@@ -294,6 +306,12 @@ def main():
         c["max_abs_diff"] = 1e-9
     tamper("campaign_check_catches_consistent_value_edit", edit_case("family/campaign/POISSON-LOG-RSZ.json", "LLt", nudge))
     tamper("campaign_check_catches_widened_tolerance", edit_case("family/campaign/POISSON-LOG-RSZ.json", "beta", lambda c: c.update(tolerance=1.0)))
+    def edit_leg(rel, leg, value):
+        def go(rec):
+            f = rec / rel; d = json.loads(f.read_text()); d["pass_rule"]["legs"][leg] = value
+            f.write_text(json.dumps(d, indent=1) + "\n")
+        return go
+    tamper("campaign_check_catches_phylo_qualification_forged", edit_leg("covariance/campaign/COV-PHYLO-LATENT-RSZ.json", "R_side_receipt_qualified_by_maintainer", True))
     tamper("campaign_check_catches_large_vector_diff_edit", edit_case("data/campaign/RD-CRABS-GAUSSIAN.json", "linear predictor on the training data (link scale)", lambda c: c.update(max_abs_diff=1e-12)))
 
     # Real tree: outputs current, and EVIDENCED count equals the checker's own C1 bound=.
