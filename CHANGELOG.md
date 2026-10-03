@@ -22,8 +22,9 @@
   missing `se` field).
 - **`confint` reaches the derived quantities by `parm`.** `parm = "communality[t]"`, `"icc[t]"`
   (`"repeatability"`), `"rho[i,j]"` (`"correlation"`), `"proportion:<component>[t]"` and
-  `"phylo_signal[t]"` (leave `[..]` out for every trait or pair; gllvmTMB's `communality:unit:t`,
-  `rho:unit:i,j`, `proportion:shared_unit:t` spellings also work) take `method = :wald` (the default;
+  `"phylo_signal[t]"` (leave `[..]` out for every trait or pair; gllvmTMB's tier spellings such as
+  `communality:unit:t` are refused, because they name gllvmTMB's aligned estimands, which differ
+  from these quantities) take `method = :wald` (the default;
   `communality_wald_ci`, `icc_wald_ci`, `correlation_wald_ci`, `phylo_signal_wald_ci`, with one Hessian
   for all requested quantities), `:profile` (`profile_ci_derived`, or `profile_ci_phylo_signal`,
   clamped to the quantity's natural range) and `:bootstrap` (`bootstrap_ci_derived`). The intervals equal

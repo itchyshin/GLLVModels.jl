@@ -160,10 +160,12 @@ is refused by name. The default is still `method = :wald`.
 | any term name (`"sigma_eps"`, `"Lambda"`, ...) | the packed parameter | observed information | `profile_ci` | `bootstrap_ci` |
 
 The derived intervals are the direct functions' own, value for value. The profile
-route clamps to the quantity's natural range. Each quantity has one definition
-on a Gaussian `GllvmFit`, so only the `unit` tier is accepted, and the component
-of a `proportion` is one of `shared`, `unique_B`, `unique_W`, `unique_Wd`,
-`residual` (gllvmTMB's `shared_unit` and `unique_unit` also work). The bootstrap
+route clamps to the quantity's natural range. The component of a `proportion` is
+one of `shared`, `unique_B`, `unique_W`, `unique_Wd`, `residual`. gllvmTMB's tier
+spellings (`communality:unit:t`, `rho:unit:i,j`, `proportion:shared_unit:t`) are
+refused with an error: they name gllvmTMB's aligned estimands
+(`extract_communality`, `extract_correlations`, `extract_proportions`), which
+differ from `communality(fit)`, `correlation(fit)` and `proportions(fit)`. The bootstrap
 runs one set of refits per requested quantity, as gllvmTMB does, so ask for the
 traits you need. gllvmTMB withdrew its profile interval for icc, communality,
 rho and proportion; the profile route here is the existing penalty-based

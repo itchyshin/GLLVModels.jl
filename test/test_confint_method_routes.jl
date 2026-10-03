@@ -238,7 +238,7 @@ end
         @test icc.estimate[1] ≈ extract_ICC_site(fitS)[2] atol = 1e-12
 
         # proportion components
-        pshared = confint(fitS, YS; parm = "proportion:shared_unit[1]", method = :wald, kw...)
+        pshared = confint(fitS, YS; parm = "proportion:shared[1]", method = :wald, kw...)
         c1 = communality_wald_ci(fitS, 1; y = YS, Σ_phy = Σ_phy)
         @test pshared.term == ["proportion:shared[1]"]
         @test isequal((pshared.lower[1], pshared.upper[1]), (c1.lower, c1.upper))
@@ -252,11 +252,15 @@ end
         @test all_c.term == ["communality[1]", "communality[2]", "communality[3]"]
         one_by_one = [communality_wald_ci(fitS, t; y = YS, Σ_phy = Σ_phy) for t in 1:3]
         @test isequal(all_c.lower, [d.lower for d in one_by_one]) && isequal(all_c.upper, [d.upper for d in one_by_one])
-        # R-style spellings reach the same quantity
-        @test isequal(confint(fitS, YS; parm = "communality:unit:2", method = :wald, kw...).lower,
-                      confint(fitS, YS; parm = "communality[2]", method = :wald, kw...).lower)
+        # gllvmTMB's tier spellings name its aligned estimands (extract_communality,
+        # extract_correlations, extract_proportions), which differ from these quantities,
+        # so they are refused rather than silently mapped (review of #709).
+        for bad in ("communality:unit:2", "correlation:unit:1,2", "rho:unit:1,2",
+                    "proportion:shared_unit[1]", "proportion:unique_unit[1]")
+            @test_throws ArgumentError confint(fitS, YS; parm = bad, method = :wald, kw...)
+        end
         @test isequal(confint(fitS, YS; parm = "repeatability[2]", method = :wald, kw...).lower, icc.lower)
-        @test isequal(confint(fitS, YS; parm = "correlation:unit:1,2", method = :wald, kw...).lower, rho.lower)
+        @test isequal(confint(fitS, YS; parm = "correlation[1,2]", method = :wald, kw...).lower, rho.lower)
         # a vector of derived names concatenates in order
         two = confint(fitS, YS; parm = ["communality[1]", "rho[1,2]"], method = :wald, kw...)
         @test two.term == ["communality[1]", "rho[1,2]"] && two.transform == [:logit, :fisher_z]

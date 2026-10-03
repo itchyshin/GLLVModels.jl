@@ -363,10 +363,9 @@ bootstrap refits would drop the pins.
 Leave out `[t]` for every trait (`[i,j]` for every pair); separate several traits
 or pairs with `;`, as in `"rho[1,2;1,3]"`; or pass a vector of these names. The
 components are `shared`, `unique_B`, `unique_W`, `unique_Wd` and `residual` (see
-[`GLLVModels.proportions`](@ref)), and gllvmTMB's `shared_unit` and `unique_unit` are
-accepted for `shared` and `unique_B`. gllvmTMB's `communality:unit:t`,
-`rho:unit:i,j` and `proportion:shared_unit:t` spellings work too. Each quantity
-has one definition on a Gaussian `GllvmFit`, so only the `unit` tier is accepted.
+[`GLLVModels.proportions`](@ref)). gllvmTMB's tier spellings (`communality:unit:t`,
+`rho:unit:i,j`, `proportion:shared_unit:t`) are refused: they name gllvmTMB's aligned
+estimands, which differ from these quantities.
 
 The result carries `term` (for example `"communality[2]"`), `estimate`, `lower`
 and `upper` per quantity, and `method`. `:wald` adds `se_transformed`,
@@ -630,18 +629,18 @@ const _CONFINT_DERIVED_METHODS = (communality = (:wald, :profile, :bootstrap),
                                   proportion = (:wald, :profile, :bootstrap),
                                   phylo_signal = (:wald, :profile, :bootstrap))
 
-# `proportions(fit; component)` names, plus gllvmTMB's spelling of the two that
-# have one exact counterpart.
+# `proportions(fit; component)` names. gllvmTMB's `shared_unit` / `unique_unit` are not
+# accepted: its proportions are the aligned `extract_proportions` estimands, which differ
+# from `proportions(fit)` (review of #709), so the same word would name a different number.
 const _CONFINT_PROPORTION_COMPONENTS = Dict(
-    "shared" => :shared, "shared_unit" => :shared,
-    "unique_B" => :unique_B, "unique_unit" => :unique_B,
+    "shared" => :shared,
+    "unique_B" => :unique_B,
     "unique_W" => :unique_W, "unique_Wd" => :unique_Wd, "residual" => :residual)
 
 const _CONFINT_DERIVED_FORMS =
     "communality[t], icc[t] (or repeatability), rho[i,j] (or correlation), " *
     "proportion:<component>[t], phylo_signal[t]; leave out [..] for every trait " *
-    "(every pair for rho); separate several traits or pairs with ';'; " *
-    "gllvmTMB's communality:unit:t, rho:unit:i,j and proportion:shared_unit:t also work"
+    "(every pair for rho); separate several traits or pairs with ';'"
 
 # `nothing` when `s` does not start with a derived-quantity name (it is then an
 # ordinary packed-term selector).
@@ -671,10 +670,16 @@ end
 function _confint_expand_derived(fit::GllvmFit, pr)
     p = fit.model.p
     kind, word, raw = pr.kind, pr.word, pr.raw
-    tier_ok = word === nothing || word in ("unit", "B")
+    # gllvmTMB's tier spellings (communality:unit:t, rho:unit:i,j) select its aligned
+    # estimands (extract_communality, extract_correlations), which differ from the
+    # communality(fit) / correlation(fit) quantities this route computes; refuse them
+    # rather than let one name mean two numbers.
+    tier_msg(q, form) = "confint: gllvmTMB's tier spelling \"$raw\" names its aligned $q estimand, " *
+        "which differs from the $q this route computes; write $form instead (see the " *
+        "confint docstring for which quantity that is)"
+    tier_ok = word === nothing
     if kind === :rho
-        tier_ok || throw(ArgumentError(
-            "confint: only the unit tier is defined for rho on a Gaussian GllvmFit; got \"$word\" in parm \"$raw\""))
+        tier_ok || throw(ArgumentError(tier_msg("correlation", "rho[i,j]")))
         p >= 2 || throw(ArgumentError("confint: rho needs at least two traits"))
         pairs = if pr.spec === nothing
             [(i, j) for i in 1:p for j in (i + 1):p]
@@ -694,8 +699,7 @@ function _confint_expand_derived(fit::GllvmFit, pr)
     end
     comp = :none
     if kind === :communality
-        tier_ok || throw(ArgumentError(
-            "confint: only the unit tier is defined for communality on a Gaussian GllvmFit; got \"$word\" in parm \"$raw\""))
+        tier_ok || throw(ArgumentError(tier_msg("communality", "communality[t]")))
     elseif kind === :proportion
         comp = word === nothing ? :shared : get(_CONFINT_PROPORTION_COMPONENTS, word, nothing)
         comp === nothing && throw(ArgumentError(
