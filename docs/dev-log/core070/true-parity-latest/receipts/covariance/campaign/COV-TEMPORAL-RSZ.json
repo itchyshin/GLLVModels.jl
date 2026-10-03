@@ -63,7 +63,7 @@
    "Reproduction of the first run: logLik -9721.018462862192 in both runs (identical), iterations 34 in both, hessian_min_eigenvalue 16.49245545483805 in both; wall_fit_sec 25.23 in the first run and 24.90 in this one.",
    "The raw file committed for this row (temporal_J.toml.gz) is the re-run's output."
   ],
-  "caps": "at most 8 concurrent jobs, OPENBLAS_NUM_THREADS=1, JULIA_NUM_THREADS=2, R single-threaded; each job under timeout at twice its written estimate"
+  "caps": "at most 8 concurrent jobs, OPENBLAS_NUM_THREADS=1, JULIA_NUM_THREADS=2, R single-threaded; each Julia job under the timeout shown as cap= in its job line (twice its written estimate, except fungi, whose cap was 300 s against a 2 min estimate); R jobs under 600 s"
  },
  "engine_messages": {
   "R": null,

@@ -54,7 +54,7 @@
    "J fungi rc=0 wall=60s cap=300s 2026-10-03T00:46:46Z",
    "R fungi rc=0 wall=16s cap=600s 2026-10-03T00:47:33Z"
   ],
-  "caps": "at most 8 concurrent jobs, OPENBLAS_NUM_THREADS=1, JULIA_NUM_THREADS=2, R single-threaded; each job under timeout at twice its written estimate"
+  "caps": "at most 8 concurrent jobs, OPENBLAS_NUM_THREADS=1, JULIA_NUM_THREADS=2, R single-threaded; each Julia job under the timeout shown as cap= in its job line (twice its written estimate, except fungi, whose cap was 300 s against a 2 min estimate); R jobs under 600 s"
  },
  "engine_messages": {
   "R": "Warning message:\nThis fit shows a runaway trait loading; treat it as unusable until checked.\n\u2022 sp54 prevalence=0.0433; max_loading=2.62; relative_loading=2.24;\n  saturated_fit=0.653\n\u2139 near-constant binomial trait with dominant loading or saturated fitted\n  probabilities\n\u2192 remove or re-code the near-constant binary indicator; lowering rank will not\n  resolve quasi-separation by itself\n\u2192 Full check: `gllvmTMB_diagnose(fit)`. Silence this with\n  `gllvmTMBcontrol(warn_runaway = FALSE)`.\nThis warning is displayed once per session. ",

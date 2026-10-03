@@ -390,7 +390,7 @@ def run_context(raw, cell):
     ctx["jobs"] = [l for l in jl.splitlines() if l.split()[1:2] == [cell]]
     rr = read_text(base / "run" / f"rerun_{cell}.txt")
     if rr: ctx["rerun"] = rr.strip().splitlines()
-    ctx["caps"] = "at most 8 concurrent jobs, OPENBLAS_NUM_THREADS=1, JULIA_NUM_THREADS=2, R single-threaded; each job under timeout at twice its written estimate"
+    ctx["caps"] = "at most 8 concurrent jobs, OPENBLAS_NUM_THREADS=1, JULIA_NUM_THREADS=2, R single-threaded; each Julia job under the timeout shown as cap= in its job line (twice its written estimate, except fungi, whose cap was 300 s against a 2 min estimate); R jobs under 600 s"
     return ctx
 
 

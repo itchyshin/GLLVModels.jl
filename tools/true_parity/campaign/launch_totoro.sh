@@ -28,7 +28,7 @@ for c in gaussian poisson nb2 binomial ordinal temporal isdm crabs spider beetle
   Rscript "$TPC/gen_data.R" "$c" . > "logs/gen_$c.log" 2>&1 || echo "GEN FAILED $c"
 done
 
-# cell : cap in seconds for the Julia job (twice the written estimate); R jobs are capped at 600 s
+# cell : cap in seconds for the Julia job (twice the written estimate, except fungi: 300 s against a 2 min estimate); R jobs are capped at 600 s
 CAPS_J="nb2:1440 beetle:600 fungi:300 ordinal:600 poisson:360 binomial:360 isdm:240 gaussian:180 temporal:180 crabs:180 spider:180"
 run_one() {  # engine:cell:cap
   IFS=: read -r eng cell cap <<< "$1"

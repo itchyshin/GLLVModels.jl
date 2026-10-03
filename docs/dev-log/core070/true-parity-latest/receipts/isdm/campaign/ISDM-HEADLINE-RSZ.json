@@ -55,7 +55,7 @@
    "J isdm rc=0 wall=46s cap=240s 2026-10-03T00:46:32Z",
    "R isdm rc=0 wall=19s cap=600s 2026-10-03T00:47:48Z"
   ],
-  "caps": "at most 8 concurrent jobs, OPENBLAS_NUM_THREADS=1, JULIA_NUM_THREADS=2, R single-threaded; each job under timeout at twice its written estimate"
+  "caps": "at most 8 concurrent jobs, OPENBLAS_NUM_THREADS=1, JULIA_NUM_THREADS=2, R single-threaded; each Julia job under the timeout shown as cap= in its job line (twice its written estimate, except fungi, whose cap was 300 s against a 2 min estimate); R jobs under 600 s"
  },
  "engine_messages": {
   "R": null,
