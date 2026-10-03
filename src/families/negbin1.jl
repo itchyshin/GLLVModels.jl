@@ -87,6 +87,9 @@ function _nb1_fisher_mu(μ::Real, φ::Real)
         E += P * S
         cum += P
     end
+    # Mass beyond the y cap (large μ): count it as the old formula did, ψ'(r) − 0 per
+    # unit of mass, so that case is unchanged; without it the weight collapses there.
+    y >= 10_000 && (E += (1 - cum) * trigamma(r))
     return max(E / φ^2, 1e-12)
 end
 
