@@ -16,7 +16,7 @@
     "accept_marker": "CORE070_POSTFIT_POLICY_BATCH_VERIFIED",
     "log": "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-policy-p1/verify.txt"
   },
-  "r_call": "attr(logLik(object),'df') non-REML branch (R/methods-gllvmTMB.R:1064-1066)",
+  "r_call": "attr(logLik(object),'df') non-REML branch (R/methods-gllvmTMB.R:1147-1148 at P1 9539352f6)",
   "julia_surface": "StatsAPI.dof(fit::AnyGllvmFit) = _nparams(fit) (src/postfit.jl:573)",
   "comparand": "exact integer equality",
   "check": "StatsAPI.dof(fit) == r_df",

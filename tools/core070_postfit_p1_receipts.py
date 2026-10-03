@@ -326,8 +326,22 @@ INTEGER_EQUALITY = {
     "CORE070-POSTFIT-LOGLIK-DF-NATIVE": ("df", "attr(logLik(object), 'df')"),
     "CORE070-POSTFIT-LOGLIK-NOBS-NATIVE": ("loglik_nobs_attr", "attr(logLik(object), 'nobs')"),
     "CORE070-POSTFIT-NOBS-COUNT-NATIVE": ("nobs", "nobs(object), likelihood_rows-preferring branch"),
-    "CORE070-POSTFIT-NOBS-FALLBACK-NATIVE": ("nobs", "nobs(object), no-missing-data fallback branch"),
+    "CORE070-POSTFIT-NOBS-FALLBACK-NATIVE": ("nobs", "nobs(object), as.integer(nobs(fit_r)) on the likelihood_rows branch"),
 }
+# Receipt text for the four cases, with line numbers read from git show 9539352f6:R/methods-gllvmTMB.R (P1), not P0.
+INTEGER_TEXT = {
+    "CORE070-POSTFIT-LOGLIK-DF-NATIVE": {
+        "r_call": "attr(logLik(object),'df') non-REML branch (R/methods-gllvmTMB.R:1147-1148 at P1 9539352f6)"},
+    "CORE070-POSTFIT-LOGLIK-NOBS-NATIVE": {
+        "r_call": "attr(logLik(object),'nobs') (R/methods-gllvmTMB.R:1196-1202 at P1 9539352f6)"},
+    "CORE070-POSTFIT-NOBS-COUNT-NATIVE": {
+        "r_call": "nobs.gllvmTMB_multi, likelihood_rows-preferring branch (R/methods-gllvmTMB.R:1216-1224 at P1 9539352f6)"},
+    "CORE070-POSTFIT-NOBS-FALLBACK-NATIVE": {
+        "r_call": "nobs.gllvmTMB_multi called on the fixture fit (R/methods-gllvmTMB.R:1216-1231 at P1 9539352f6). "
+                  "The fixture fit has a non-NULL fit$missing_data$counts$likelihood_rows (400), so nobs() returns at line 1223 "
+                  "and the is_y_observed / length(y) fallback (lines 1225-1230) is NOT executed by this oracle.",
+        "comparand": "exact integer equality; the same measurement as NOBS-COUNT (R's likelihood_rows branch). "
+                     "The R no-missing-data fallback branch is not separately executed by this evidence."}}
 INTEGER_RULING = "itchyshin/GLLVModels.jl#684 item 1"
 INTEGER_RULE = (f"integer_equality, tolerance 0.5 ({INTEGER_RULING}): both values are integers, so within 0.5 means equal; "
                 "the contract's integer_exact = 0 is the same condition")
@@ -375,6 +389,7 @@ def apply_integer_equality():
                              f"{pj['cases'][cid]}; stop and report")
         rec["comparison"] = {"pin": "P1", "cases": [integer_entry(cid, pj["cases"][cid], po)]}
         rec["why_not_numeric"] = INTEGER_WHY
+        rec.update(INTEGER_TEXT[cid])
         rec["evidence_kind"] = "numeric_r_vs_julia"
         write_json(path, rec)
         recs[cid] = (str(path.relative_to(ROOT)), rec)
@@ -449,6 +464,18 @@ def check_twins():
     bad = [a["source_id"] for a, b in zip(cur["rows"], exp["rows"]) if a != b]
     if bad or cur["counts"] != counts:
         print("STALE\n  rows differ from the twin overlay: " + ", ".join(bad) + f"\n  counts {cur['counts']} vs {counts}")
+        raise SystemExit(1)
+    raw = REC / "postfit-policy-p1"
+    pj, po = load(raw / "julia-results.json"), load(raw / "r-oracle.json")
+    drift = []
+    for cid in INTEGER_EQUALITY:
+        rec = load(REC / "cases" / f"{cid}.json")
+        if (rec.get("comparison") != {"pin": "P1", "cases": [integer_entry(cid, pj["cases"][cid], po)]}
+                or rec["harness_fields"] != pj["cases"][cid]
+                or any(rec.get(k) != v for k, v in INTEGER_TEXT[cid].items())):
+            drift.append(cid)
+    if drift:
+        print("STALE\n  integer-equality receipts differ from the raw re-derivation: " + ", ".join(drift))
         raise SystemExit(1)
     n = sum(1 for r in cur["rows"] if r["source_id"] in TWIN_FILES and (ROOT / TWIN_REL / f"{TWIN_FILES[r['source_id']]}.json").is_file())
     print("CORE070_POSTFIT_TWINS_CURRENT", n, "twin rows,", len(cur["rows"]), "rows")
@@ -627,6 +654,7 @@ def main():
                        "numeric parity, so the case carries no comparison block.")
             elif cid in INTEGER_EQUALITY:
                 body["why_not_numeric"] = INTEGER_WHY
+                body.update(INTEGER_TEXT[cid])
                 emit(cid, "numeric_r_vs_julia", "PASS" if passed else "FAIL", body, [integer_entry(cid, jc, po)])
                 continue
             elif "length" in (c.get("comparand") or ""):
