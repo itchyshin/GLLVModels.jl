@@ -153,6 +153,8 @@ function fit_exponential_gllvm(Y::AbstractMatrix; K::Integer,
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_exponential_gllvm: hessian must be :observed or :fisher; got :$hessian"))
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
+                               caller = "fit_exponential_gllvm")
     rr = rr_theta_len(p, K)
 
     msk = _resolve_obs_mask(mask, Y)                  # NA handling

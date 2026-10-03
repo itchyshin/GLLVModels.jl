@@ -567,6 +567,8 @@ function fit_delta_lognormal_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
+                               caller = "fit_delta_lognormal_gllvm", maskable = false)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_delta_lognormal_gllvm: hessian must be :observed or :fisher; got :$hessian"))
     predictor in (:separate, :shared) || throw(ArgumentError(
@@ -605,6 +607,7 @@ function fit_delta_lognormal_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     σ0vec = [nres_t[t] > 1 ? max(sqrt(sumsq_t[t] / (nres_t[t] - 1)), 0.1) : σ0 for t in 1:p]
     ndisp = disp_group === :shared ? 1 : p
     Zc = [Y[t, j] > 0 ? log(Y[t, j]) - βc0[t] : 0.0 for t in 1:p, j in 1:n]
+    _tp_offset_warmstart!(βc0, Zc, Y, offset)
     F = svd(Zc); kk = min(K, length(F.S))
     Λc0 = zeros(p, K)
     @inbounds for j in 1:kk
@@ -749,6 +752,8 @@ function fit_hurdle_poisson_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
+                               caller = "fit_hurdle_poisson_gllvm", maskable = false)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_hurdle_poisson_gllvm: hessian must be :observed or :fisher; got :$hessian"))
     _check_twopart_support("fit_hurdle_poisson_gllvm", Y, _tp_count_ok, "non-negative integer counts")
@@ -767,6 +772,7 @@ function fit_hurdle_poisson_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         βc0[t] = c == 0 ? 0.0 : log(max(s / c, 1.0))
     end
     Zc = [Y[t, j] > 0 ? log(max(Y[t, j], 0.5)) - βc0[t] : 0.0 for t in 1:p, j in 1:n]
+    _tp_offset_warmstart!(βc0, Zc, Y, offset)
     F = svd(Zc); kk = min(K, length(F.S))
     Λc0 = zeros(p, K)
     @inbounds for j in 1:kk
@@ -903,6 +909,8 @@ function fit_hurdle_nb_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
+                               caller = "fit_hurdle_nb_gllvm", maskable = false)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_hurdle_nb_gllvm: hessian must be :observed or :fisher; got :$hessian"))
     _check_twopart_support("fit_hurdle_nb_gllvm", Y, _tp_count_ok, "non-negative integer counts")
@@ -921,6 +929,7 @@ function fit_hurdle_nb_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         βc0[t] = c == 0 ? 0.0 : log(max(s / c, 1.0))
     end
     Zc = [Y[t, j] > 0 ? log(max(Y[t, j], 0.5)) - βc0[t] : 0.0 for t in 1:p, j in 1:n]
+    _tp_offset_warmstart!(βc0, Zc, Y, offset)
     F = svd(Zc); kk = min(K, length(F.S))
     Λc0 = zeros(p, K)
     @inbounds for j in 1:kk
@@ -1151,6 +1160,8 @@ function fit_delta_gamma_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     disp_group in (:shared, :species) || throw(ArgumentError(
         "fit_delta_gamma_gllvm: disp_group must be :shared or :species; got :$disp_group"))
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
+                               caller = "fit_delta_gamma_gllvm", maskable = false)
     _check_twopart_support("fit_delta_gamma_gllvm", Y, _tp_positive_ok, "0 or a finite positive real")
     rr = rr_theta_len(p, K)
 
@@ -1186,11 +1197,9 @@ function fit_delta_gamma_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     α0vec = [nres_t[t] > 1 ? clamp((nres_t[t] - 1) / sumsq_t[t], 0.1, 100.0) : α0 for t in 1:p]
     ndisp = disp_group === :shared ? 1 : p
     Zc = [Y[t, j] > 0 ? log(max(Y[t, j], 1e-6)) - βc0[t] : 0.0 for t in 1:p, j in 1:n]
-    # Offset (on the positive-part predictor η^c = β^c + offset + Λ^c z): remove it
-    # from the loadings warm start so the SVD sees the offset-free residual.
-    offset === nothing || (@inbounds for t in 1:p, j in 1:n
-        Y[t, j] > 0 && (Zc[t, j] -= offset[t, j])
-    end)
+    # Offset (on the positive-part predictor η^c = β^c + offset + Λ^c z): remove it from
+    # the intercept start and from the residual the loadings' SVD start sees.
+    _tp_offset_warmstart!(βc0, Zc, Y, offset)
     F = svd(Zc); kk = min(K, length(F.S))
     Λc0 = zeros(p, K)
     @inbounds for j in 1:kk
@@ -1351,9 +1360,42 @@ function Base.show(io::IO, f::ZIPFit)
           f.converged ? "" : ", NOT CONVERGED", ")")
 end
 
+# Offset-aware warm start for the count / positive part. The start of the count-part
+# intercept `βc0` is a (log or logit) mean of the positive responses, which already contains
+# the offset, and `Zc` is the residual the loadings' SVD start sees. Take each trait's mean
+# offset over its positive cells out of `βc0`, and the offset out of `Zc`, so the start is
+# the offset-free start. A constant offset c then leaves the optimiser's path exactly the
+# no-offset path shifted by -c, so the maximum is reached at the same logLik (the absorption
+# identity); without this the start sat c away from the optimum and some data converged to
+# a different local optimum. `nothing` leaves both untouched.
+function _tp_offset_warmstart!(βc0::AbstractVector, Zc::AbstractMatrix, Y::AbstractMatrix, offset)
+    offset === nothing && return βc0
+    p, n = size(Y)
+    # The named fitters normalise `offset` to p×n before they get here; this guards the
+    # helper itself, because an unchecked `offset[t, j]` read of the wrong shape reaches
+    # memory the vector does not own (a NaN start, a throw, or a wrong converged fit).
+    size(offset) == (p, n) || throw(ArgumentError(
+        "offset must be a $(p)×$(n) matrix (traits × units) here; got " *
+        "$(_describe_offset(offset)). Pass a $(p)×$(n) matrix, or use fit_gllvm, which also " *
+        "accepts a scalar, a length-$(p) vector and the 1×$(n) / $(p)×1 matrices."))
+    for t in 1:p
+        s = 0.0; c = 0
+        for j in 1:n
+            Y[t, j] > 0 && (s += offset[t, j]; c += 1)
+        end
+        sh = c == 0 ? 0.0 : s / c
+        βc0[t] -= sh
+        for j in 1:n
+            Y[t, j] > 0 && (Zc[t, j] += sh - offset[t, j])
+        end
+    end
+    return βc0
+end
+
 # Shared warm start for zero-inflated count fits: structural-zero logits from the
-# excess-zero fraction, count log-mean from the positive counts, SVD loadings.
-function _zi_warmstart(Y::AbstractMatrix, K::Integer)
+# excess-zero fraction, count log-mean from the positive counts, SVD loadings (offset-aware
+# through `_tp_offset_warmstart!`).
+function _zi_warmstart(Y::AbstractMatrix, K::Integer; offset = nothing)
     p, n = size(Y)
     βz0 = Vector{Float64}(undef, p); βc0 = Vector{Float64}(undef, p)
     @inbounds for t in 1:p
@@ -1371,6 +1413,7 @@ function _zi_warmstart(Y::AbstractMatrix, K::Integer)
         βz0[t] = log(excess / (1 - excess))
     end
     Zc = [Y[t, j] > 0 ? log(max(Y[t, j], 0.5)) - βc0[t] : 0.0 for t in 1:p, j in 1:n]
+    _tp_offset_warmstart!(βc0, Zc, Y, offset)
     F = svd(Zc); kk = min(K, length(F.S))
     Λc0 = zeros(p, K)
     @inbounds for j in 1:kk
@@ -1423,11 +1466,13 @@ function fit_zip_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
+                               caller = "fit_zip_gllvm", maskable = false)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_zip_gllvm: hessian must be :observed or :fisher; got :$hessian"))
     _check_twopart_support("fit_zip_gllvm", Y, _tp_count_ok, "non-negative integer counts")
     rr = rr_theta_len(p, K)
-    βz0, βc0, Λc0 = _zi_warmstart(Y, K)
+    βz0, βc0, Λc0 = _zi_warmstart(Y, K; offset = offset)
     θ0 = vcat(βz0, βc0, pack_lambda(Λc0))
     function negll(θ)
         βz = θ[1:p]; βc = θ[(p + 1):(2p)]
@@ -1644,11 +1689,13 @@ function fit_zinb_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
+                               caller = "fit_zinb_gllvm", maskable = false)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_zinb_gllvm: hessian must be :observed or :fisher; got :$hessian"))
     _check_twopart_support("fit_zinb_gllvm", Y, _tp_count_ok, "non-negative integer counts")
     rr = rr_theta_len(p, K)
-    βz0, βc0, Λc0 = _zi_warmstart(Y, K)
+    βz0, βc0, Λc0 = _zi_warmstart(Y, K; offset = offset)
     θ0 = vcat(βz0, βc0, pack_lambda(Λc0), log(10.0))
     function negll(θ)
         βz = θ[1:p]; βc = θ[(p + 1):(2p)]
@@ -1912,7 +1959,7 @@ end
 # Warm start for the zero-inflated binomial fit: success-logit intercept from the
 # positive-part success fraction, structural-zero logit from the excess-zero share
 # (over the binomial-zero rate), SVD loadings of the logit residuals.
-function _zib_warmstart(Y::AbstractMatrix, N::Integer, K::Integer)
+function _zib_warmstart(Y::AbstractMatrix, N::Integer, K::Integer; offset = nothing)
     p, n = size(Y)
     βz0 = Vector{Float64}(undef, p); βc0 = Vector{Float64}(undef, p)
     _logit(x) = (xx = clamp(x, 1e-3, 1 - 1e-3); log(xx / (1 - xx)))
@@ -1930,6 +1977,7 @@ function _zib_warmstart(Y::AbstractMatrix, N::Integer, K::Integer)
         βz0[t] = log(excess / (1 - excess))
     end
     Zc = [Y[t, j] > 0 ? _logit(Y[t, j] / N) - βc0[t] : 0.0 for t in 1:p, j in 1:n]
+    _tp_offset_warmstart!(βc0, Zc, Y, offset)
     F = svd(Zc); kk = min(K, length(F.S))
     Λc0 = zeros(p, K)
     @inbounds for j in 1:kk
@@ -1959,11 +2007,13 @@ function fit_zib_gllvm(Y::AbstractMatrix{<:Real}; K::Integer, N::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
+                               caller = "fit_zib_gllvm", maskable = false)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_zib_gllvm: hessian must be :observed or :fisher; got :$hessian"))
     _check_twopart_support("fit_zib_gllvm", Y, _tp_count_ok, "integer counts 0..N")
     rr = rr_theta_len(p, K)
-    βz0, βc0, Λc0 = _zib_warmstart(Y, N, K)
+    βz0, βc0, Λc0 = _zib_warmstart(Y, N, K; offset = offset)
     θ0 = vcat(βz0, βc0, pack_lambda(Λc0))
     function negll(θ)
         βz = θ[1:p]; βc = θ[(p + 1):(2p)]

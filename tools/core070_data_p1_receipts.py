@@ -462,6 +462,7 @@ TWIN_TIER = ("numeric: Julia values recomputed by tools/true_parity_julia_receip
              "non_binding_receipts and its ids under batch_case_ids")
 TWIN_FILES = {  # source_id -> twin receipt stem
     "data/DATA-OFF-NONE": "OFF-NONE",
+    "data/DATA-OFF-SCALAR": "OFF-SCALAR",
     "data/DATA-OFF-EXPOSURE": "OFF-EXPOSURE",
     "data/DATA-OFF-NB1": "OFF-NB1",
     "data/DATA-OFF-NONCOUNT-ZERO": "OFF-NONCOUNT-ZERO",
@@ -478,23 +479,22 @@ NONBINDING_TWINS = {
         "prepares offsets for three count families in one model (family ids 5, 10, 11: nbinom2, truncated "
         "Poisson, truncated nbinom2). Julia has no per-trait family mix (as for DATA-OFF-MIXED) and the twin "
         "does not cover the truncated families, so the row does not bind on it."),
-    "data/DATA-OFF-SCALAR": ("OFF-SCALAR",
-        "The twin passes the scalar already broadcast (offset = fill(log(2), p, n)), so it never exercises the "
-        "capability the row names: broadcasting a constant offset to every row. Julia's own scalar input "
-        "fit_gllvm(Y; family=Poisson(), offset=log(2)) is accepted but returns logLik -Inf with converged "
-        "false (probed on 4ae7e109d, also for 1.0 and 0.0). The row can bind once the scalar input is fixed "
-        "and the twin uses it."),
 }
 # Rows that bind, with a stated limit of what the twin covers.
 SCOPE_NOTES = {
+    "data/DATA-OFF-SCALAR": "The twin is one Poisson fit with a constant offset: R takes offset(log(2)) in the "
+        "formula, Julia takes the scalar keyword offset = log(2) and broadcasts it to every cell "
+        "(fit_gllvm; scalar input returned logLik -Inf before that was fixed). It does not exercise other "
+        "families, and through fit_gllvm the offset reaches Julia as a value, not as an expression evaluated "
+        "against the data as in R's formula.",
     "data/DATA-MISS-DEFAULT": "The twin covers response = 'drop' (missing responses dropped by default). The R "
         "case also asserts predictor = 'fail' (a missing covariate is refused); that part is not exercised. R's "
         "drop and include optima agree here, so this row and DATA-MISS-INCLUDE check two Julia input forms "
         "(missing entries in Y, and mask=) against numerically identical R fits.",
     "data/DATA-OFF-NONCOUNT-ZERO": "A zero offset cannot tell 'applied' from 'ignored', so this is a plain rank-2 "
         "Gaussian fit match plus acceptance of offset = zeros(p, n). Known differences, recorded not bound: "
-        "Julia applies a nonzero Gaussian offset where R refuses it, and Julia refuses the scalar form "
-        "offset = 0.0 with a DimensionMismatch.",
+        "Julia applies a nonzero Gaussian offset where R refuses it. (The scalar form offset = 0.0 is "
+        "now broadcast like any scalar offset; see DATA-OFF-SCALAR.)",
 }
 
 

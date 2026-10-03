@@ -147,6 +147,7 @@ convergence means the frozen-node gradient rule, not re-adapted stationarity.
 `aghq_control` is as for Poisson. `hessian` must be `:observed`.
 """
 function fit_nb_gllvm_grouped_aghq(Y::AbstractMatrix;K::Integer,group=nothing,aghq=:auto,aghq_control=(;),kwargs...)
+    kwargs=_entry_offset_kwargs(kwargs,Y,"fit_nb_gllvm_grouped_aghq")
     request=_aghq_request(aghq);request===:off && throw(ArgumentError("fit_nb_gllvm_grouped_aghq needs aghq != false; call fit_nb_gllvm_grouped"))
     c=_aghq_controls(aghq_control)
     c=_aghq_controls(merge(c,(mode_maxiter=get(kwargs,:newton_maxiter,c.mode_maxiter),mode_tol=get(kwargs,:newton_tol,c.mode_tol))))

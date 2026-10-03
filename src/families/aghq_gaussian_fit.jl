@@ -94,6 +94,7 @@ latter a documented extra, not yet a verified twin).
 function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control=(;),
         mask=nothing,offset=nothing,hessian=:observed,lambda_constraint=nothing,kwargs...)
     hessian===:observed || throw(ArgumentError("Gaussian integration uses observed curvature"))
+    offset=_normalize_offset(offset,size(Y,1),size(Y,2);Y=Y,mask=mask,caller="fit_gaussian_gllvm")
     if lambda_constraint!==nothing
         aghq===false || throw(ArgumentError(
             "lambda_constraint does not yet support aghq in Stage 1; use the default aghq=false"))

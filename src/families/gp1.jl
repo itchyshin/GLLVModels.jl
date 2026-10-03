@@ -287,6 +287,8 @@ function fit_gp1_gllvm(Y::AbstractMatrix; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
+                               caller = "fit_gp1_gllvm")
     rr = rr_theta_len(p, K)
     hessian in (:fisher, :observed) || throw(ArgumentError(
         "fit_gp1_gllvm: hessian must be :fisher or :observed; got :$hessian"))

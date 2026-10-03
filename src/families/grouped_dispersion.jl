@@ -628,6 +628,8 @@ function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVect
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
+                               caller = "fit_nb_gllvm_grouped")
     length(group) == p || throw(ArgumentError("length(group)=$(length(group)) must equal p=$p"))
     rr = rr_theta_len(p, K)
     # relabel groups to 1..G, build species→group index
@@ -1315,6 +1317,8 @@ function fit_beta_gllvm_grouped(Y::AbstractMatrix; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
+                               caller = "fit_beta_gllvm_grouped")
     length(group) == p || throw(ArgumentError("length(group)=$(length(group)) must equal p=$p"))
     rr = rr_theta_len(p, K)
     # relabel groups to 1..G, build species→group index
@@ -1776,6 +1780,8 @@ function fit_gamma_gllvm_grouped(Y::AbstractMatrix; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
+                               caller = "fit_gamma_gllvm_grouped")
     length(group) == p || throw(ArgumentError("length(group)=$(length(group)) must equal p=$p"))
     rr = rr_theta_len(p, K)
     # relabel groups to 1..G, build species→group index
@@ -2283,6 +2289,8 @@ function fit_nb1_gllvm_grouped(Y::AbstractMatrix; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
+                               caller = "fit_nb1_gllvm_grouped")
     length(group) == p || throw(ArgumentError("length(group)=$(length(group)) must equal p=$p"))
     rr = rr_theta_len(p, K)
     # relabel groups to 1..G, build species→group index
@@ -2795,6 +2803,8 @@ function fit_tweedie_gllvm_grouped(Y::AbstractMatrix{<:Real}; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
+                               caller = "fit_tweedie_gllvm_grouped")
     length(group) == p || throw(ArgumentError("length(group)=$(length(group)) must equal p=$p"))
     hessian in (:fisher, :observed) || throw(ArgumentError(
         "fit_tweedie_gllvm_grouped: hessian must be :fisher or :observed; got :$hessian"))
