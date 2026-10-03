@@ -263,6 +263,11 @@ def main():
     expect("check_extra_map_with_out_dir_ok", c == 0 and "ASSEMBLE_OK" in o, o)
     shutil.rmtree(tmp)
 
+    # Campaign receipts (itchyshin/GLLVModels.jl#684 item 4): every comparison block re-derives from the committed raw files.
+    wr = subprocess.run([sys.executable, str(HERE / "true_parity" / "campaign" / "write_receipts.py"), "--check"],
+                        capture_output=True, text=True)
+    expect("real_tree_campaign_receipts_rederive", wr.returncode == 0 and "CAMPAIGN_RECEIPTS_OK" in wr.stdout, wr.stdout + wr.stderr)
+
     # Real tree: outputs current, and EVIDENCED count equals the checker's own C1 bound=.
     c, o = run(A.ROOT, "--check")
     expect("real_tree_outputs_current", c == 0, o)
