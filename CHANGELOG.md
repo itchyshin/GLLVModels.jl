@@ -2,6 +2,31 @@
 
 ## Development
 
+- **Fewer sites than species (`n_sites < p`): tested and documented, no returned number
+  changes (#149).** The `n_sites >= p` requirement exists only in the closed-form
+  Gaussian fitter (the `@assert` in `src/fit.jl`); no non-Gaussian route enforces it.
+  On a 12-trait, 8-site grid at K = 1 and 2, Poisson, binomial, NB2, NB1, beta, gamma,
+  exponential, ordinal, COM-Poisson, ZIP, hurdle-Poisson, both delta families,
+  beta-binomial and the fixed and random row-effect routes all run and return a
+  finite log-likelihood; several report `converged = false` (binomial typically runs into
+  the Laplace saturation region and warns), which is the flag doing its job; beta at
+  K = 2 returned an inflated log-likelihood (about 6.7e6) with `converged = false`, a
+  separate small-data behaviour that this change does not touch. Poisson
+  also runs down to 2 sites, through the `gllvm(@formula(...))` route, with `X_lv`, and
+  with a mask. The Laplace objective itself has no n-dependence: at fixed parameters
+  the n = 16 log-likelihood equals the sum of its two n = 8 halves, and each equals a
+  hand-written per-site Newton/Laplace reference to 1e-9. The Gaussian closed-form
+  route keeps its guard, as decided (so does the masked / offset / `aghq` Gaussian route,
+  whose warm start is the closed-form fit). The guard is stricter than the mathematics
+  needs: the Gaussian likelihood is exact at n < p, and the real condition for a bounded
+  maximum is that K stays below the rank of the centred data. In a scratch run with the
+  guard removed, K = 1 on 5 traits and 3 sites fitted normally, while K at or above that
+  rank drove the residual SD to 0 (unbounded likelihood) and 2 sites crashed with a
+  `DomainError`. Replacing the guard by a rank rule is a separate decision. Documented in
+  the `fit_gaussian_gllvm` docstring and `docs/src/pitfalls.md`. Fits with n >= p are
+  numerically unchanged (pinned from the tree before the change). Test:
+  `test/test_n_lt_p.jl`.
+
 - **`fit_phylo_gaussian` no longer reports `converged = true` after a zero-length step
   (part of #505, the remaining #485 class).** Optim also counts a zero-length line-search
   step as convergence, so a start the finite-difference gradient cannot leave could be

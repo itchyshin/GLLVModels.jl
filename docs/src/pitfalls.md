@@ -30,6 +30,15 @@ two; the non-Gaussian fitters use L-BFGS over a Laplace marginal. Always check
 the `converged` flag — if it is `false`, try a different start or more
 iterations. Standardising responses to a common scale helps the Gaussian path.
 
+## Fewer sites than species (`n < p`)
+
+`fit_gaussian_gllvm` (and `fit_gllvm(Y; family = Normal(), K)`) requires
+`n_sites ≥ p` and throws an `AssertionError` below that. The non-Gaussian fitters
+(Poisson, binomial, negative binomial and the other Laplace families) have no such
+condition and fit with `n_sites < p`. Treat such fits as weakly identified: check
+`converged`, expect binomial fits to reach the Laplace saturation region sooner
+(the fit then warns and reports it through `saturation`), and prefer a small `K`.
+
 ## Use the O(p) path for large phylogenies
 
 The dense Gaussian fit with a phylogenetic covariance is `O(p³)` and assumes
