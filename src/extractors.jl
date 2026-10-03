@@ -588,6 +588,83 @@ function extract_proportions(fit::GllvmFit; component::Symbol = :shared, level::
     return [(isfinite(t) && t > 0) ? s / t : NaN for (s, t) in zip(shared_unit, total)]
 end
 
+# Variance components of a two-level Gaussian fit, in gllvmTMB's order and names
+# (`shared_unit`, `unique_unit`, `shared_unit_obs`, `unique_unit_obs`), each kept only if
+# some trait has a positive value, as R's `add_comp()` does.
+function _twolevel_components(fit::TwoLevelFit)
+    comps = Pair{Symbol, Vector{Float64}}[]
+    add!(name, v) = any(>(0), v) && push!(comps, name => Vector{Float64}(v))
+    add!(:shared_unit, vec(sum(abs2, fit.Λ_B; dims = 2)))
+    add!(:unique_unit, fit.σ²_B)
+    add!(:shared_unit_obs, vec(sum(abs2, fit.Λ_W; dims = 2)))
+    add!(:unique_unit_obs, fit.σ²_W)
+    return comps
+end
+
+"""
+    extract_proportions(fit::TwoLevelFit; format::Symbol = :long) -> NamedTuple
+
+Per-trait variance-share decomposition of a two-level Gaussian fit
+([`fit_twolevel_gaussian`](@ref)), mirroring `gllvmTMB::extract_proportions()`
+with `link_residual = "none"` (a Gaussian fit has no link residual to add). The
+components, in R's order and names, are `:shared_unit` (`diag(Λ_B Λ_Bᵀ)`),
+`:unique_unit` (`σ²_B`), `:shared_unit_obs` (`diag(Λ_W Λ_Wᵀ)`) and
+`:unique_unit_obs` (`σ²_W`); a component enters only if some trait has a
+positive value. Each trait's proportion is its component variance over the row
+sum of all entering components; a trait whose total is not finite and positive
+gets `NaN`.
+
+`format = :long` (default) returns the columns `(trait, component, variance,
+proportion)` with one row per (component, trait), component-major as in R, where
+`trait` is the integer trait index and `component` a `Symbol`. `format = :wide`
+returns `(trait, <one column per component proportion>, total_variance)`. Unlike
+the [`GllvmFit`](@ref) method, which returns only the `:shared` proportion vector,
+this method returns every component.
+"""
+function extract_proportions(fit::TwoLevelFit; format::Symbol = :long)
+    format in (:long, :wide) || throw(ArgumentError("format must be :long or :wide; got $(format)"))
+    comps = _twolevel_components(fit)
+    isempty(comps) && throw(ArgumentError("No identifiable variance components in this fit."))
+    p = size(fit.Λ_B, 1)
+    total = zeros(Float64, p)
+    for (_, v) in comps
+        total .+= v
+    end
+    ok = [isfinite(t) && t > 0 for t in total]
+    prop(v) = [ok[t] ? v[t] / total[t] : NaN for t in 1:p]
+    if format === :long
+        return (trait = repeat(collect(1:p), length(comps)),
+                component = reduce(vcat, [fill(c, p) for (c, _) in comps]),
+                variance = reduce(vcat, [v for (_, v) in comps]),
+                proportion = reduce(vcat, [prop(v) for (_, v) in comps]))
+    end
+    cnames = Tuple(c for (c, _) in comps)
+    cols = Tuple(prop(v) for (_, v) in comps)
+    return merge((trait = collect(1:p),), NamedTuple{cnames}(cols), (total_variance = total,))
+end
+
+"""
+    extract_residual_split(fit::TwoLevelFit) -> NamedTuple
+
+Per-trait split of the observation-level variance of a two-level Gaussian fit,
+mirroring `gllvmTMB::extract_residual_split()`. Returns the columns
+`(trait, sigma2_d, sigma2_e, sigma2_total)`: `sigma2_d` is the distribution-specific
+residual, `0` for a Gaussian fit (identity link, as in R); `sigma2_e` is the
+estimated observation-level diagonal variance `σ²_W`; `sigma2_total = sigma2_d +
+sigma2_e`. In a [`TwoLevelFit`](@ref) every observation carries its own per-trait
+diagonal term, which is the "genuine observation-level diagonal" case in which
+R reports `σ²_W` (and not `0`) as `sigma2_e`. Only the Gaussian two-level fit
+exists in this package, so the non-Gaussian `sigma2_d` values R reports for
+binomial, Poisson and the other families are not reachable here.
+"""
+function extract_residual_split(fit::TwoLevelFit)
+    p = length(fit.σ²_W)
+    sigma2_d = zeros(Float64, p)
+    sigma2_e = Vector{Float64}(fit.σ²_W)
+    return (trait = collect(1:p), sigma2_d = sigma2_d, sigma2_e = sigma2_e,
+            sigma2_total = sigma2_d .+ sigma2_e)
+end
+
 """
     extract_phylo_signal(fit::GllvmFit; Σ_phy = nothing) -> Vector
 
@@ -704,8 +781,9 @@ end
 # ---------------------------------------------------------------------------
 # Still blocked (no stub — see docs/dev-log/core070/extractors-slice-notes.md
 # for the full accounting):
-#   * extract_residual_split — needs the per-family link-residual bank wired
-#     to an explicit OLRE fit tag; GLLVModels.jl's K_W tier is not that tag.
+#   * extract_residual_split for a GllvmFit and for the non-Gaussian families —
+#     needs the per-family link-residual bank wired to an explicit OLRE fit tag;
+#     only the Gaussian TwoLevelFit method exists (see its docstring).
 #   * extract_coevolution_modules — needs a module/eigen-decomposition of Γ
 #     that no coevolution fit type currently computes.
 #   * getREsd — needs TMB-sdreport-style marginal SDs of the random effects

@@ -73,6 +73,7 @@ extract_communality
 extract_correlations
 extract_cross_correlations
 extract_proportions
+extract_residual_split
 extract_Omega
 extract_ICC_site
 extract_repeatability
@@ -83,8 +84,10 @@ extract_phylo_signal
 
 ## What is not here
 
-`extract_residual_split` (an OLRE-specific σ²_d/σ²_e/σ²_total decomposition)
-and `extract_coevolution_modules`'s companion accessor are not implemented —
+`extract_residual_split` exists only for the Gaussian two-level fit
+(`TwoLevelFit`), where σ²_d is zero; the non-Gaussian σ²_d values and the
+`GllvmFit` method are not implemented. `extract_coevolution_modules`'s
+companion accessor is not implemented either —
 see [Post-fit tables and prediction](postfit-tables.md) for
 `extract_coevolution_modules` itself, and
 [Diagnostics and model comparison](diagnostics.md) for `getREsd`'s replacement
