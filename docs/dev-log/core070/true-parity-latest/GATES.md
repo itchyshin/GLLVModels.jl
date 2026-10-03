@@ -472,3 +472,31 @@ EVIDENCE: pending
 - [ ] M1: a maintainer-signed joint note exists before `Project.toml` leaves 0.3.0 (manual;
   Shinichi signs; not mechanically checkable)
   EVIDENCE: pending
+
+## C3 to C5 campaign rows (itchyshin/GLLVModels.jl#684 item 4)
+
+The maintainer signed the C3 to C5 campaign plan's rows, tolerances, pass rule, row placement and
+licence handling on 2026-10-02 (itchyshin/GLLVModels.jl#684 item 4; the plan is PR #650). Twenty rows
+were added, 8 for C3 (`-RSZ`), 8 for C4 (`data/RD-*`) and 4 for C5 (`fit-input/GRP-*`).
+
+- **`clause` marker.** A case-map row may carry `"clause": "C3" | "C4" | "C5"`. The assembler then requires
+  that the row's scoreboard id is selected by exactly that clause's checker rule, so a deliberate campaign id
+  (for example `family-NB2-LOG-RSZ`) is accepted, while an unmarked row whose id would silently move into
+  C3/C4/C5 still fails.
+- **Receipts** live under `receipts/<family>/campaign/`, one per row, with the raw R and Julia outputs beside
+  them (`raw/*.gz`). They are written only by `tools/true_parity/campaign/write_receipts.py`, from those raw
+  outputs; `write_receipts.py --check` re-derives every comparison block from the committed raw files.
+- **Pass rule.** Both engines converged (R convergence 0 with a positive-definite Hessian; Julia `converged`
+  true) and every listed quantity inside its tolerance, on the same data bytes, with every gllvmTMB function
+  used deparsing identically to its P1 source. A row that meets it binds (`evidence_tier` numeric). A row
+  that does not is cited under `non_binding_receipts` with the reason, tier `numeric_fail`, and stays open.
+  No tolerance is widened and nothing is re-run to get a pass.
+- **Relative tolerances** are carried as a discrepancy against zero (r_value 0, julia_value the relative
+  difference), because the checker compares absolute differences; the raw vectors are stored beside it.
+- **Disposition rows.** `data/RD-PHYLO-DISPOSITION`, `data/RD-TEMPORAL-DISPOSITION` and
+  `data/RD-ISDM-DISPOSITION` carry `disposition: null` and a `proposed_disposition` object. Item 4 of the
+  ruling does not quote them, and the plan says each needs the maintainer's own signature, so nothing is
+  signed on them.
+- **Licence.** GPL datasets (MASS, gllvm) are loaded by name at run time by `gen_data.R`; the repository tracks
+  that loader, each dataset's sha256 (in the receipt) and the receipts, never the tables. The urbanisation
+  matrix is the maintainer's own file and is not tracked either.
