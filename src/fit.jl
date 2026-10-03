@@ -157,7 +157,12 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
     @assert K ≥ 1
     @assert K_W ≥ 0
     @assert K_phy ≥ 0
-    @assert n ≥ p "Need n_sites ≥ p for a well-posed Gaussian GLLVM"
+    n ≥ p || throw(ArgumentError(
+        "fit_gaussian_gllvm needs n_sites ≥ p (got n_sites = $n, p = $p). This " *
+        "closed-form Gaussian fitter is used by family = Normal() and by " *
+        "family = Lognormal(), which fits a Gaussian GLLVM to log(Y). The " *
+        "Laplace-fitted families (Poisson, Binomial, NegativeBinomial and the " *
+        "rest) accept n_sites < p."))
 
     if (K_phy > 0 || has_phy_unique) && Σ_phy === nothing
         throw(ArgumentError(

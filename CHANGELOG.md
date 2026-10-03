@@ -2,30 +2,43 @@
 
 ## Development
 
-- **Fewer sites than species (`n_sites < p`): tested and documented, no returned number
-  changes (#149).** The `n_sites >= p` requirement exists only in the closed-form
-  Gaussian fitter (the `@assert` in `src/fit.jl`); no non-Gaussian route enforces it.
-  On a 12-trait, 8-site grid at K = 1 and 2, Poisson, binomial, NB2, NB1, beta, gamma,
-  exponential, ordinal, COM-Poisson, ZIP, hurdle-Poisson, both delta families,
-  beta-binomial and the fixed and random row-effect routes all run and return a
-  finite log-likelihood; several report `converged = false` (binomial typically runs into
-  the Laplace saturation region and warns), which is the flag doing its job; beta at
-  K = 2 returned an inflated log-likelihood (about 6.7e6) with `converged = false`, a
-  separate small-data behaviour that this change does not touch. Poisson
-  also runs down to 2 sites, through the `gllvm(@formula(...))` route, with `X_lv`, and
-  with a mask. The Laplace objective itself has no n-dependence: at fixed parameters
-  the n = 16 log-likelihood equals the sum of its two n = 8 halves, and each equals a
-  hand-written per-site Newton/Laplace reference to 1e-9. The Gaussian closed-form
-  route keeps its guard, as decided (so does the masked / offset / `aghq` Gaussian route,
-  whose warm start is the closed-form fit). The guard is stricter than the mathematics
-  needs: the Gaussian likelihood is exact at n < p, and the real condition for a bounded
-  maximum is that K stays below the rank of the centred data. In a scratch run with the
+- **Fewer sites than species (`n_sites < p`), part of #149; the issue stays open.** The
+  closed-form Gaussian fitter's `n_sites >= p` check is now an `ArgumentError` that reports
+  `n_sites` and `p` and names the routes that use it, in place of an `@assert`
+  (`AssertionError: Need n_sites ≥ p for a well-posed Gaussian GLLVM`). The condition is
+  unchanged and no returned number changes. Every route built on `fit_gaussian_gllvm`
+  inherits the check: `family = Normal()` (also through `@formula`), the masked / offset /
+  `aghq` Gaussian route (its warm start is the closed-form fit), `family = Lognormal()`
+  (a Gaussian fit to `log(Y)`, so not a Laplace route), and the R bridge's `"gaussian"`
+  and `"lognormal"` families. Two visible effects: code that caught `AssertionError` here must
+  now catch `ArgumentError`; and with `n_sites < p`, `select_lv(Y; family = Normal())`
+  and `fit_gllvm(Y; family = Normal())` with `K` omitted now stop at K = 1 with this
+  error, where before every K failed and `select_lv` threw
+  `ErrorException: select_lv: no K in 1:Kmax was accepted`.
+  The Laplace-fitted families needed no change. On a 12-trait, 8-site grid, Poisson,
+  binomial, NB2, NB1, beta, gamma, exponential, ordinal, COM-Poisson, ZIP, hurdle-Poisson,
+  both delta families, beta-binomial and Poisson with fixed or random row effects (at
+  K = 1 and 2), and Student-t (fixed and estimated degrees of freedom), truncated and
+  censored Poisson, truncated NB2, GP1, ZINB, ZIB, hurdle-NB, beta-hurdle, ordered beta,
+  Tweedie, ordinal logit and probit, binomial probit, the `ZiPoisson` / `ZiNbinom2`
+  markers and the bridge's `"poisson"` family (at K = 1) all run and return a finite
+  log-likelihood. Several report `converged = false` (binomial typically runs into the
+  Laplace saturation region and warns), which is the flag doing its job; beta at K = 2
+  returned an inflated log-likelihood (about 6.7e6) with `converged = false`, a separate
+  small-data behaviour that this change does not touch. Poisson also runs down to 2
+  sites, through `gllvm(@formula(...))`, with `X_lv`, and with a mask. The Laplace
+  objective itself has no n-dependence: at fixed parameters the n = 16 log-likelihood
+  equals the sum of its two n = 8 halves, and each equals a hand-written per-site
+  Newton/Laplace reference to 1e-9.
+  The Gaussian guard is kept because the approved scope relaxed the Laplace routes only.
+  It is not a property of the likelihood, which is exact at n < p: a bounded maximum
+  needs K below the rank of the (centred) data, not n >= p. In a scratch run with the
   guard removed, K = 1 on 5 traits and 3 sites fitted normally, while K at or above that
   rank drove the residual SD to 0 (unbounded likelihood) and 2 sites crashed with a
-  `DomainError`. Replacing the guard by a rank rule is a separate decision. Documented in
-  the `fit_gaussian_gllvm` docstring and `docs/src/pitfalls.md`. Fits with n >= p are
-  numerically unchanged (pinned from the tree before the change). Test:
-  `test/test_n_lt_p.jl`.
+  `DomainError`. Whether to replace the guard by a rank rule is an open maintainer
+  decision. Documented in the `fit_gaussian_gllvm` and `fit_lognormal_gllvm` docstrings
+  and `docs/src/pitfalls.md`. Fits with n >= p are numerically unchanged (pinned from the
+  tree before the change). Test: `test/test_n_lt_p.jl`.
 
 - **`fit_phylo_gaussian` no longer reports `converged = true` after a zero-length step
   (part of #505, the remaining #485 class).** Optim also counts a zero-length line-search

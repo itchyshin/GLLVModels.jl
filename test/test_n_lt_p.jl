@@ -1,10 +1,13 @@
 using GLLVModels, Test, Random, LinearAlgebra, Distributions, SpecialFunctions, StableRNGs
 using StatsModels: @formula
 
-# #149: the Julia closed-form Gaussian fit asserts n_sites >= p, while R's Laplace
-# engine has no such gate. Maintainer decision: the Laplace (non-Gaussian) routes
-# must accept n < p; the Gaussian closed-form route keeps its guard. This file
-# pins both halves. It also records that the Gaussian LIKELIHOOD itself has no
+# #149: the Julia closed-form Gaussian fit refuses n_sites < p, while R's Laplace
+# engine has no such gate. Approved scope: the Laplace routes must accept n < p
+# (they already did; nothing in src/ had to change for them). The closed-form
+# Gaussian fitter keeps its guard for now, as a proper ArgumentError, and so does
+# every route built on it, Lognormal() included. Whether to replace the guard by
+# a rank rule is an open maintainer decision, so #149 stays open. This file pins
+# both halves. It also records that the Gaussian LIKELIHOOD itself has no
 # n >= p dependence: the guard belongs to the fitter (see the last testset).
 #
 # Every expected value below is computed outside the package: a hand-written
@@ -191,15 +194,63 @@ end
     @test fn.loglik ≈ -228.77530606765785 rtol = 1e-6
 end
 
-@testset "#149 Gaussian closed-form route keeps its n >= p guard; its likelihood does not need it" begin
-    # The decision keeps the guard on the Gaussian closed-form fitter (and, through
-    # its warm start, on the masked / offset / aghq Gaussian route). If a later
-    # change relaxes it, replace these two checks with the new rule (the real
-    # mathematical condition is K below the rank of the centred data, not n >= p).
+@testset "#149 closed-form Gaussian routes keep the n >= p guard, as an ArgumentError" begin
+    # The approved scope covers the Laplace routes only, so the closed-form
+    # Gaussian fitter keeps its guard, and so does every route built on it: the
+    # public Normal() route, the masked / offset / aghq route (its warm start is
+    # the closed-form fit), the K-selection sweep and the R bridge. The guard is a
+    # validation error (ArgumentError), not an @assert. Replacing n >= p by a rank
+    # rule is an open maintainer decision; if it lands, replace these checks with
+    # the new rule.
     Yg = randn(StableRNG(149), 5, 3)           # p = 5 > n = 3
-    @test_throws AssertionError fit_gllvm(Yg; family = Normal(), K = 1)
-    @test_throws AssertionError GLLVModels.fit_gaussian_gllvm(Yg; K = 1)
+    @test_throws ArgumentError fit_gllvm(Yg; family = Normal(), K = 1)
+    @test_throws ArgumentError GLLVModels.fit_gaussian_gllvm(Yg; K = 1)
+    mask = trues(5, 3); mask[2, 3] = false
+    @test_throws ArgumentError GLLVModels.fit_gaussian_gllvm(Yg; K = 1, mask = mask)
+    @test_throws ArgumentError GLLVModels.fit_gaussian_gllvm(Yg; K = 1, offset = zeros(5, 3))
+    @test_throws ArgumentError _nltp_quiet(() -> GLLVModels.fit_gaussian_gllvm(Yg; K = 1, aghq = 3))
+    @test_throws ArgumentError bridge_fit(; y = Yg, family = "gaussian", d = 1)
+    # With K omitted the sweep surfaces the misconfiguration at K = 1 instead of
+    # reporting that every K failed.
+    @test_throws ArgumentError select_lv(Yg; family = Normal(), Kmax = 2)
+    @test_throws ArgumentError _nltp_quiet(() -> fit_gllvm(Yg; family = Normal()))
+    err = try GLLVModels.fit_gaussian_gllvm(Yg; K = 1); nothing catch e; e end
+    @test err isa ArgumentError
+    @test occursin("n_sites = 3", sprint(showerror, err))
+    @test occursin("p = 5", sprint(showerror, err))
 
+    # The boundary is n_sites = p (allowed), and the value returned there is the
+    # closed-form marginal at the returned parameters (dense MvNormal reference).
+    Ye = randn(StableRNG(150), 5, 5)
+    fe = GLLVModels.fit_gaussian_gllvm(Ye; K = 1)
+    Λe, σe = Matrix(fe.pars.Λ), fe.pars.σ_eps
+    Σe = Symmetric(Λe * Λe' + σe^2 * I)
+    @test fe.logLik ≈ sum(logpdf(MvNormal(zeros(5), Σe), Ye[:, i]) for i in 1:5) atol = 1e-8
+end
+
+@testset "#149 Lognormal reuses the Gaussian fitter: n < p refused, n >= p fits" begin
+    # family = Lognormal() fits a Gaussian GLLVM to log(Y) with the closed-form
+    # fitter, so it is not a Laplace route and inherits the guard, with an error
+    # that names it.
+    Yl = exp.(randn(StableRNG(151), 5, 3))     # p = 5 > n = 3
+    @test_throws ArgumentError fit_gllvm(Yl; family = Lognormal(), K = 1)
+    @test_throws ArgumentError bridge_fit(; y = Yl, family = "lognormal", d = 1)
+    err = try GLLVModels.fit_lognormal_gllvm(Yl; K = 1); nothing catch e; e end
+    @test err isa ArgumentError
+    @test occursin("Lognormal", sprint(showerror, err))
+    @test occursin("n_sites = 3", sprint(showerror, err))
+
+    # n >= p (p = 6, n = 8): the fit runs and its loglik is the y-scale lognormal
+    # marginal at the returned parameters (dense MvNormal on log y, minus sum log y).
+    Y6 = exp.(0.3 .+ 0.6 .* randn(StableRNG(152), 6, 8))
+    fl = fit_gllvm(Y6; family = Lognormal(), K = 1)
+    @test isfinite(fl.loglik)
+    Σl = Symmetric(fl.Λ * fl.Λ' + fl.σ^2 * I)
+    dense = sum(logpdf(MvNormal(fl.β, Σl), log.(Y6[:, i])) for i in 1:8) - sum(log, Y6)
+    @test fl.loglik ≈ dense atol = 1e-8
+end
+
+@testset "#149 the Gaussian likelihood itself is exact at n < p" begin
     # The closed-form marginal itself is exact at n < p: compare with a dense MvNormal.
     rng = StableRNG(7)
     p, n, K, σ = _NLTP_P, _NLTP_N, 2, 0.5
