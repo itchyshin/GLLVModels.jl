@@ -31,6 +31,23 @@
   changing estimates or `converged`, when loadings run away (gllvmTMB's rule: a trait's max |Λ|
   at least 25 x the typical size, or at least 8). Tests: `test/test_convergence_sweep.jl`.
 
+- **ZIP and ZINB fits no longer stop below the Poisson / NB2 fit they contain (#573).**
+  A zero-inflated model contains its count model (zero-inflation probability 0), so its
+  best fit can never be worse. On mvabund::spider (12 x 28, K = 2) `fit_zip_gllvm` stopped
+  at -888.23 against Poisson -845.69, and `fit_zinb_gllvm` at -744.98 against the
+  shared-r NB2 -713.73. The cause was the starting point, not the per-site mode search:
+  the ZI surface has a second basin where structural zeros absorb the zeros that the
+  latent factors explain, and the excess-zero warm start (zero-inflation up to 0.8) led
+  L-BFGS into it. At the -888.23 endpoint every site search converges, the gradient is
+  about 0.01 and the Hessian has no material negative curvature. Both fitters now also
+  fit the nested model (`fit_poisson_gllvm` / `fit_nb_gllvm`). If the ZI fit ends below
+  it, they refit from the nested optimum with zero-inflation near 0 (beta_z = -10) and
+  keep the better fit. A fit already at or above the nested fit is returned
+  bit-identically; the extra cost is one nested fit, plus a refit only when needed.
+  spider now gives ZIP -843.07 and ZINB -713.08 (both `converged = false`; the fits that
+  push beta_z toward -Inf leave nearly flat directions). Test:
+  `test/test_zip_zinb_stall.jl` (spider subsets; fails on main).
+
 - **`fit_phylo_gaussian` no longer reports `converged = true` after a zero-length step
   (part of #505, the remaining #485 class).** Optim also counts a zero-length line-search
   step as convergence, so a start the finite-difference gradient cannot leave could be
