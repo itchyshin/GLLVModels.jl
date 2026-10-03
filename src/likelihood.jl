@@ -59,7 +59,7 @@ The per-trait diagonal contribution is
 Without phylogeny, the site covariance is
 `A = Λ_B Λ_B' + Λ_W Λ_W' + diag(d_total)`: the W-tier scores are shared by
 all traits of a unit, so `Λ_W` contributes its full cross-trait block, as in
-the gllvmTMB C++ engine (issue #135). `A` is inverted via Woodbury on
+the gllvmTMB C++ engine (#135). `A` is inverted via Woodbury on
 `hcat(Λ_B, Λ_W)` (cost O(p K² + K³) per site, K = K_B + K_W).
 
 Fixed effects: pass both `X::Array{<:Real, 3}` of shape (p, n_sites, q)

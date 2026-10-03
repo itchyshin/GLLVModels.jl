@@ -180,7 +180,7 @@ end
 The per-site (within-species) trait covariance
 `Σ_y_site = Λ_B Λ_B' + Λ_W Λ_W' + diag(d_total)` where
 `d_total[t] = σ²_B[t] + σ²_W[t] + σ²_eps`. The W tier contributes its full
-cross-trait block `Λ_W Λ_W'`, as in gllvmTMB (issue #135). For J1,
+cross-trait block `Λ_W Λ_W'`, as in gllvmTMB (#135). For J1,
 `Λ_W = nothing`, `σ²_B = σ²_W = 0`, so the diagonal collapses to `σ²_eps`.
 
 The phylogenetic block is *not* included — for J3, the phylo
@@ -204,7 +204,7 @@ end
 Per-trait communality `c²[t] = (Λ_B Λ_B')[t, t] / Σ_y_site[t, t]`. This
 is the fraction of the per-site trait variance explained by the unit-tier
 latent factors `Λ_B`. Values are in [0, 1]. The W-tier block `Λ_W Λ_W'` is
-also shared across traits (issue #135) but is not counted here.
+also shared across traits (#135) but is not counted here.
 
 With `K_W > 0`, each column of `y` is one unit observed once, so the data
 identify only `Λ_B Λ_B' + Λ_W Λ_W'`, not how it splits between the tiers.
@@ -228,7 +228,7 @@ sum to 1 (when has_diag and W tier are off, only `:shared` and `:residual`
 are non-zero).
 
 Despite its name, `:unique_W` is the diagonal of the W-tier block
-`Λ_W Λ_W'`, which also covaries across traits (issue #135). With one unit
+`Λ_W Λ_W'`, which also covaries across traits (#135). With one unit
 per column of `y`, the data identify only the sum of the `:shared` and
 `:unique_W` shares, and only the sum of the `:unique_B`, `:unique_Wd` and
 `:residual` shares. With `K_W > 0` or `has_diag = true`, the individual

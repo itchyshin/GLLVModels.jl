@@ -128,7 +128,7 @@ the missing-surface work order); requesting them throws `ArgumentError`.
 
 Identification: each column of `y` is one unit observed once, so the data
 identify only the sum of the two tiers, `Λ_B Λ_Bᵀ + Λ_W Λ_Wᵀ` and
-`σ²_B + σ²_W + σ²_eps`, not the split (issue #135). With `K_W > 0` (for the
+`σ²_B + σ²_W + σ²_eps`, not the split (#135). With `K_W > 0` (for the
 loadings) or `has_diag = true` (for the diagonal), the `:unit` and
 `:unit_obs` results depend on the starting values and should not be
 interpreted; `:site` uses only the identified total. A `GllvmFit` with

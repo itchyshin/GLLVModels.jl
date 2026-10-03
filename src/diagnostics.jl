@@ -455,7 +455,7 @@ currently fits (`Λ_B` vs `Λ_W`). Single-tier fits (`K_W == 0`) return
 
 **Caveat for `GllvmFit`:** each column of `y` is one unit observed once, so
 the data identify only `Λ_B Λ_Bᵀ + Λ_W Λ_Wᵀ`, never the split between the
-two tiers (issue #135). The angle reported for such a fit reflects the
+two tiers (#135). The angle reported for such a fit reflects the
 starting values, and `separable = true` does not mean the tiers are
 identified.
 """
