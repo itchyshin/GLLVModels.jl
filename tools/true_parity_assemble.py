@@ -44,7 +44,13 @@ Status of a scoreboard row (first rule that applies):
   BEHAVIOURAL-UNVERIFIED
                       evidence_tier "behavioural" but the rule above does not hold (reason given).
   DISPOSITION-UNVERIFIED / NEEDS-SURFACE / <disposition>
-                      a non-null disposition that is not a valid signature.
+                      a non-null disposition that is not a valid signature. It never becomes a status
+                      word the assembler itself writes (RESERVED_STATUS_WORDS): after trimming and
+                      upper-casing, a disposition equal to `EVIDENCED`, `EVIDENCED-BEHAVIOURAL`,
+                      `DISPOSITION-SIGNED` without a signature, or any other such word is
+                      DISPOSITION-UNVERIFIED, and so is one that is not a string, is blank, or carries a
+                      `|` or a line break (disposition_status). Text containing NEEDS_JULIA_SURFACE reads
+                      NEEDS-SURFACE; any other plain string is copied and is not done.
   NOT-MEASURED        no receipt and no non-binding receipt cited at all.
   otherwise           the row's evidence_tier, collated into a bucket by TIER_BUCKET below
                       (the tier string itself is copied verbatim into the notes column).
@@ -66,9 +72,11 @@ ruling, onto the matching item, whose status becomes "decided". A decision namin
 item fails the run (stale). Nothing here is a signature: the file carries the ruling. The tool refuses
 to copy a ruling it does not recognise (C6_RULINGS: only #684 item 3, dated 2026-10-02, covering
 KEPT_AS_JULIA_EXTRA and EXCLUDED_INTERNAL_HELPER), a signer outside the allow-list, a decision word
-the ruling does not cover, an empty criterion, a generator that is not a file in the tree, a basis with
-no visible character, or a KEPT_AS_JULIA_EXTRA basis that cites no docs/src/... file that exists; the
-checker's C6 judges the same.
+the ruling does not cover, an empty criterion, a generator that is not a file in the tree (an absolute path,
+a path with a ".." segment anywhere, a directory), a basis with
+no visible character, or a KEPT_AS_JULIA_EXTRA basis that does not cite, exactly as docs/src/<path>.md, an
+existing .md file under docs/src (every token of the basis that contains "docs/src" must be such a path;
+kept_basis_problem has the rule); the checker's C6 judges the same.
 
 Reverse gap: a Julia export has a gllvmTMB counterpart when its name equals an R export or S3 generic
 name after removing "_" and "." and lower-casing (tools/parity_ledger.py norm()), or is the Julia side
@@ -200,6 +208,11 @@ STATUS_ORDER = [
     "PARTIAL", "NEEDS-SURFACE", "NON-NUMERIC", "NON-DISCRIMINATING", "FAIL", "NOT-MEASURED",
     "NO-TIER", "DISPOSITION-UNVERIFIED",
 ]
+# Every word this tool itself writes into the Status column: the statuses derive_status emits (STATUS_ORDER
+# lists them all) and the buckets TIER_BUCKET maps a tier to. A row's `disposition` is free text from the case
+# map; it is copied into the Status column only when it is none of these (disposition_status), because the
+# checker reads three of them (DONE in tools/true_parity_check.mjs) as done and X2 counts them.
+RESERVED_STATUS_WORDS = frozenset(STATUS_ORDER) | frozenset(TIER_BUCKET.values())
 
 # --- checker rules, ported from tools/true_parity_check.mjs (keep in step) -------------------
 
@@ -698,6 +711,28 @@ def scoreboard_id(sid: str, clause=None) -> str:
     return s
 
 
+def disposition_status(disp):
+    """(status, reason) for a row whose disposition is not null and not DISPOSITION-SIGNED.
+
+    The disposition is free text from the case map and becomes the Status column, so it must never read as
+    a status this tool or the checker trusts. After trimming (JS trim() and Python strip(), the union of the
+    two sets) and upper-casing, a disposition equal to any RESERVED_STATUS_WORDS entry is DISPOSITION-UNVERIFIED:
+    `EVIDENCED`, `EVIDENCED-BEHAVIOURAL`, `DISPOSITION-SIGNED` without a signature, and the rest. So is a
+    disposition that is not a string, is blank, or carries a table delimiter or line break (a `|` would shift
+    the columns the checker splits the row into). Text containing NEEDS_JULIA_SURFACE reads NEEDS-SURFACE; any
+    other plain string is copied as it is, and the checker does not count it done."""
+    if not isinstance(disp, str):
+        return "DISPOSITION-UNVERIFIED", f"disposition is not a string ({type(disp).__name__})"
+    key = js_trim(cell(disp)).upper()
+    if not key:
+        return "DISPOSITION-UNVERIFIED", "disposition is blank"
+    if key in RESERVED_STATUS_WORDS:
+        return "DISPOSITION-UNVERIFIED", f"disposition {cell(disp)} is a reserved status word, not a signature"
+    if "|" in disp or "\n" in disp or "\r" in disp:
+        return "DISPOSITION-UNVERIFIED", "disposition contains a table delimiter or line break"
+    return ("NEEDS-SURFACE" if "NEEDS_JULIA_SURFACE" in disp else cell(disp)), f"disposition {disp}"
+
+
 def derive_status(row, root, equiv=None, cites=None):
     """Returns (status, reason). Never writes to row.
 
@@ -741,7 +776,7 @@ def derive_status(row, root, equiv=None, cites=None):
         prob = behavioural_receipt_problem(row, root, equiv if equiv is not None else behaviour_equivalence(root), cites)
         return ("EVIDENCED-BEHAVIOURAL", "") if prob is None else ("BEHAVIOURAL-UNVERIFIED", prob)
     if disp is not None:
-        return ("NEEDS-SURFACE" if "NEEDS_JULIA_SURFACE" in str(disp) else str(disp)), f"disposition {disp}"
+        return disposition_status(disp)
     if not paths and not nonbinding_paths(row):
         return "NOT-MEASURED", "no receipt cited"
     if tier not in TIER_BUCKET:
@@ -911,22 +946,35 @@ def namespace_receipt_counterparts(root: Path, ledger: Path):
     return out
 
 
-# A documented Julia extra must be documented: the basis cites at least one docs/src/... file (no `..` or
-# dot-leading segment) and every cited docs/src file exists. The checker's DOCS_SRC_RE, same text. Lookarounds,
-# not \b, so both engines read the same text (Python's \b is Unicode-aware, JS's is not).
-DOCS_SRC_RE = re.compile(r"(?<![A-Za-z0-9_])docs/src/(?:[A-Za-z0-9_-][A-Za-z0-9._-]*/)*[A-Za-z0-9_-][A-Za-z0-9._-]*\.(?:md|jl|toml|json|txt)(?![A-Za-z0-9_])")
+# A documented Julia extra must be documented: the basis names at least one page under docs/src, and every page it
+# names is an existing .md file written exactly as docs/src/<path>.md. The basis is read as tokens, as the checker
+# reads it: it is split at ASCII whitespace and at ( ) [ ] { } < > " ' ` , ; : ! ? # (so "docs/src/a.md#sec" and
+# "(docs/src/a.md)" name docs/src/a.md), trailing dots are dropped, and every token that contains "docs/src" must
+# then BE a page path: it starts with docs/src/, has no "..", "." or dot-leading segment and no empty one, ends in
+# .md, and has nothing after it. So "page.md.bak", "page.md~", "./docs/src/page.md", a URL, a directory and an
+# existing .json, .txt, .jl or .toml file are not citations, and a malformed citation beside a good one fails too.
+# The checker's DOCS_SRC_SPLIT_RE and DOCS_SRC_PAGE_RE, the same text (the delimiter set is explicit ASCII so both
+# engines split the same way; \x22 \x27 \x60 are the quote, apostrophe and backtick).
+DOCS_SRC_SPLIT_RE = re.compile(r"[ \t\n\r\f\v()\[\]{}<>\x22\x27\x60,;:!?#]+")
+DOCS_SRC_PAGE_RE = re.compile(r"^docs/src/(?:[A-Za-z0-9_-][A-Za-z0-9._-]*/)*[A-Za-z0-9_-][A-Za-z0-9._-]*\.md$")
 
 
-def docs_src_paths(basis):
-    return sorted(set(DOCS_SRC_RE.findall(basis)))
+def docs_src_citations(basis):
+    """(pages, malformed): the tokens of `basis` that contain "docs/src", split into exact page paths and the rest."""
+    tokens = sorted({t.rstrip(".") for t in DOCS_SRC_SPLIT_RE.split(basis)} - {""})
+    tokens = [t for t in tokens if "docs/src" in t]
+    return ([t for t in tokens if DOCS_SRC_PAGE_RE.fullmatch(t)], [t for t in tokens if not DOCS_SRC_PAGE_RE.fullmatch(t)])
 
 
 def kept_basis_problem(basis, root: Path):
     """The checker's keptBasisProblem, resolved against the tree under `root`."""
-    paths = docs_src_paths(basis)
-    if not paths:
-        return "KEPT_AS_JULIA_EXTRA basis must cite a docs/src/... file"
-    dangling = [q for q in paths if not (root / q).is_file()]
+    pages, malformed = docs_src_citations(basis)
+    not_exact = "not an exact docs/src/<path>.md page"
+    if not pages:
+        return "KEPT_AS_JULIA_EXTRA basis must cite a docs/src/... file" + (f"; {not_exact}: {','.join(malformed)}" if malformed else "")
+    if malformed:
+        return f"KEPT_AS_JULIA_EXTRA basis cites {','.join(malformed)}, which is {not_exact}"
+    dangling = [q for q in pages if not (root / q).is_file()]
     if dangling:
         return f"KEPT_AS_JULIA_EXTRA basis cites {','.join(dangling)}, which does not exist in the tree"
     return None
@@ -964,7 +1012,10 @@ def load_reverse_gap_decisions(root: Path, ledger: Path):
     gen = d.get("generator")
     if not isinstance(gen, str) or not gen.strip():
         raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: generator must be a non-empty string")
-    # The generator is the committed script that produced the file: it must be a file inside the tree.
+    # The generator is the committed script that produced the file: it must be a file inside the tree, named
+    # without a ".." segment anywhere (a "tools/../tools/gen.py" that resolves back into the tree is refused too).
+    if ".." in re.split(r"[\\/]", gen):
+        raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: generator {json.dumps(gen)} is not a file in the tree (a path with a '..' segment is refused)")
     gpath = (root / gen)
     try:
         inside = not Path(gen).is_absolute() and gpath.resolve().is_relative_to(root.resolve())

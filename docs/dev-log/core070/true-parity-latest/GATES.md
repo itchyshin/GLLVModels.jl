@@ -589,18 +589,27 @@ date). That ruling covers `KEPT_AS_JULIA_EXTRA` and `EXCLUDED_INTERNAL_HELPER` o
 `unsigned_decision=` (no signed ruling covers it) and C6 fails. A new ruling is a new entry in
 `C6_RULINGS`, added in review. The assembler refuses to copy a ruling it does not recognise (unknown
 `ref`, wrong date, signer outside the allow-list), a decision word the ruling does not cover, and a
-file with an empty `criterion`, a `generator` that is not a file inside the tree (an absolute path, a
-`..` path and a directory are refused), a `basis` with no visible character, or a
+file with an empty `criterion`, a `generator` that is not a file inside the tree (an absolute path, a path
+with a `..` segment anywhere, such as `tools/../tools/gen.py`, and a directory are refused; only the
+assembler reads the generator, the checker does not), a `basis` with no visible character, or a
 `KEPT_AS_JULIA_EXTRA` basis that fails the documented-extra rule below. C6 also prints
 `decision_counts=` per vocabulary word.
 
-Basis rules. An `EXCLUDED_INTERNAL_HELPER` basis must be visible text. A `KEPT_AS_JULIA_EXTRA` basis must
-also cite at least one `docs/src/...` file (a path with no `..` or dot-leading segment, ending in `.md`,
-`.jl`, `.toml`, `.json` or `.txt`), and every `docs/src` file it cites must resolve to a file at the
-ref (the checker, `git cat-file` at the ref) or in the tree (the assembler). A documented extra is
-documented, and a basis such as `.` or `x` is not a citation. The reasons print as
-`unsigned_decision=<id>(KEPT_AS_JULIA_EXTRA basis must cite a docs/src/... file)` and
-`(KEPT_AS_JULIA_EXTRA basis cites <path>, which does not resolve at the ref)`.
+Basis rules. An `EXCLUDED_INTERNAL_HELPER` basis must be visible text. A `KEPT_AS_JULIA_EXTRA` basis must also
+cite at least one page under `docs/src`, and every page it cites must be an existing `.md` file written exactly as
+`docs/src/<path>.md`. The basis is read as tokens: it is split at ASCII whitespace and at `( ) [ ] { } < > " ' `
+`` ` `` `, ; : ! ? #` (so `(docs/src/a.md)`, `docs/src/a.md#sec` and `docs/src/a.md:12` cite `docs/src/a.md`), trailing
+dots are dropped, and every token that contains `docs/src` must then be a page path: it starts with `docs/src/`, has
+no `..`, `.`, dot-leading or empty segment, ends in `.md` and has nothing after that. A token that is not such a path
+fails the basis even beside a good citation: `docs/src/page.md.bak`, `docs/src/page.md~`, `./docs/src/page.md`,
+`other/docs/src/page.md`, a URL, `docs/src/` alone, and an existing `.json`, `.txt`, `.jl` or `.toml` file under
+`docs/src`. Each cited page must resolve to a file at the ref (the checker, `git cat-file`) or in the tree (the
+assembler). The delimiter set and the page pattern are the same text in both tools (`DOCS_SRC_SPLIT_RE`,
+`DOCS_SRC_PAGE_RE`) and a control runs both on one corpus. The reasons print as
+`unsigned_decision=<id>(KEPT_AS_JULIA_EXTRA basis must cite a docs/src/... file[; not an exact docs/src/<path>.md page: <tokens>])`,
+`(KEPT_AS_JULIA_EXTRA basis cites <tokens>, which is not an exact docs/src/<path>.md page)` and
+`(KEPT_AS_JULIA_EXTRA basis cites <path>, which does not resolve at the ref)`. Case is not checked beyond what the
+file system or git gives: on a case-insensitive file system the assembler can accept a page whose case differs.
 
 Reverse-gap matching. `reverse-gap.json` lists the Julia exports that have no gllvmTMB counterpart. A
 Julia export has one when its name equals an R export or S3 generic name after removing `_` and `.`
@@ -619,7 +628,7 @@ with no path, `.`, a path outside `docs/src`, a `..` path, a dot-leading segment
 present and one missing file, and a directory; a `KEPT_AS_JULIA_EXTRA` basis citing an existing file
 binds, also in git mode; an `EXCLUDED_INTERNAL_HELPER` basis, a `KEPT_AS_JULIA_EXTRA` basis and a ruling
 `ref` made only of U+FEFF, U+200B, U+0085 or blanks. Assembler: a generator that does not exist, is a
-directory, is outside the tree or is an absolute path; the same basis controls; reverse-gap names that
+directory, is outside the tree, is an absolute path or has a `..` segment that resolves back into the tree; the same basis controls; reverse-gap names that
 match after `norm()`; `decisions_*`,
 `decision_for_non_item_is_stale_and_fails`, `decisions_file_*_fails`, and `c6_*_matches_checker`
 (the two tools' copies of the vocabulary, ruling table and named rows must not drift).
@@ -629,6 +638,57 @@ match after `norm()`; `decisions_*`,
 Add the C3 to C5 rows proposed in PR #650 (the beetle row included now that #662 is merged) and run
 the campaign on Totoro. This is data, not a rule: those PRs add rows and receipts, and the checker
 selects them by the existing `-RSZ`, `RD-` and `GRP-` id conventions below.
+
+### Hardening after the independent review of #687
+
+The review of the merged PR #687 left the follow-ups below. Each has controls that fail on the code before the
+change. None is a new ruling or a new signature.
+
+**A disposition is never a status word.** The Status column of `scoreboard.md` is written by
+`tools/true_parity_assemble.py`; a case-map row's `disposition` is free text. Before this change a non-null
+`disposition` that was not a valid signature was copied into the Status column as it stood, so a row with
+`"disposition": "EVIDENCED"` and a receipt that exists read as done, and X2 counted it. Now
+(`disposition_status`) a disposition that equals a reserved status word reads `DISPOSITION-UNVERIFIED`, with the
+reason `reserved status word`. The reserved words (`RESERVED_STATUS_WORDS`) are every status the assembler writes:
+the entries of `STATUS_ORDER` and the buckets of `TIER_BUCKET`. The comparison is made after trimming (with the
+characters of both JS `trim()` and Python `strip()`) and upper-casing, so `" evidenced "`, `"EVIDENCED"` followed by
+U+FEFF and `"EVIDENCED-BEHAVIOURAL"` all match. A disposition also reads `DISPOSITION-UNVERIFIED` when it is not a
+string, is blank, or contains `|`, a line feed or a carriage return (a `|` shifts the columns the checker splits a
+row into). Text that contains `NEEDS_JULIA_SURFACE` still reads `NEEDS-SURFACE`, and any other plain string is still
+copied into the column as it is; the checker counts none of those as done. The statuses `DISPOSITION-SIGNED`,
+`EVIDENCED` and `EVIDENCED-BEHAVIOURAL` come only from the signature path and the binding rules.
+
+**The checker agrees.** C2 to C5 and X2 read the Status word of a scoreboard row, and `--check` is what ties the word
+to the case maps. The checker now also refuses a done word (`EVIDENCED`, `EVIDENCED-BEHAVIOURAL`,
+`DISPOSITION-SIGNED`) on a row whose receipt cell begins with `not bound`, which is how the assembler writes every row
+it did not bind; the row reads `STATUS_NOT_BOUND`. A scoreboard written by hand with another receipt cell is not
+affected. The tracked scoreboard has no done row with such a cell, so no count changes.
+
+**A ruling ref is looked up by own property.** The checker finds a C6 ruling with
+`Object.prototype.hasOwnProperty.call(C6_RULINGS, ref)`. A lookup with `in` would accept the names every object
+inherits (`constructor`, `__proto__`, `toString`) and then crash with exit 1 and no verdict. Each such ref is
+reported as `ruling ref "<ref>" is not a recognised signed ruling` with `C6_NOT_MET` and exit 0, in the checker
+(group "C6 scope") and in the assembler (`c6_ruling_ref_*_is_not_a_recognised_ruling`). The control was checked by
+replacing the lookup with `in`: it fails, and the 29 other C6 controls that existed before it all still passed.
+
+**The generator path refuses `..` segments.** `reverse-gap-decisions.json` names the committed script that wrote
+it in `generator`. The assembler refuses the path when any segment, split at a slash or a backslash, is `..`, even when the path
+resolves to a file inside the tree (`tools/../tools/gen.py`). It still refuses an absolute path, a path that resolves
+outside the tree, a directory and a missing file. Controls: `c6_generator_with_a_dotdot_segment_is_refused_*`, and
+`c6_generator_with_a_plain_in_tree_path_still_ok` for the positive case.
+
+**The cited `docs/src` page is matched exactly.** See "Basis rules" under ruling 3. Before this change a basis
+cited a page when the text merely contained one: `docs/src/page.md.bak` cited `page.md`, `other/docs/src/page.md`
+counted, and an existing `docs/src/assets/x.json` counted. Controls: checker group "C6 exact page" (also in git mode),
+assembler `c6_kept_basis_exact_page_*`, and `kept_basis_accept_and_refuse_agree_between_checker_and_assembler`.
+The tracked decisions (261 `KEPT_AS_JULIA_EXTRA`, 57 `EXCLUDED_INTERNAL_HELPER`) all cite plain `docs/src/*.md`
+pages, so C6 reads the same decided count as before.
+
+Controls. Assembler: `disposition_status_word_*`, `disposition_pipe_forged_*`, `disposition_with_*line_break*`,
+`every_reserved_status_word_*`, `non_string_or_blank_disposition_*`, `plain_dispositions_*`,
+`reserved_status_words_cover_*`, `checker_done_set_is_a_subset_*`. Checker (group "scoreboard"): a done word on a
+`not bound` row is not done for each of the three words (X2 and C2), the same words with a bound cell are done, and
+a non-done word stays not done.
 
 ## Clauses
 
