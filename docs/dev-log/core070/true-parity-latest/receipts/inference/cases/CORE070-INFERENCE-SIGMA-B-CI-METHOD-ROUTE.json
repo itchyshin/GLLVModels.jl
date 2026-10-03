@@ -128,28 +128,6 @@
         "julia_call": "confint(fitS,YS;parm=\"sigma_B[1]\",method=:wald,\u03a3_phy=\u03a3_phy) [Sigma_B alias]",
         "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-056",
         "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-056"
-      },
-      {
-        "case_id": "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE",
-        "source_id": "inference/CI-ROUTE-045",
-        "kind": "route",
-        "r_observed": ".confint_sigma:bootstrap",
-        "julia_observed": "sigma_B:bootstrap",
-        "requested_method": "bootstrap",
-        "julia_call": "bootstrap_ci(fitS;parms=\"sigma_B[1]\",y=YS,\u03a3_phy=\u03a3_phy)",
-        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-045",
-        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-045"
-      },
-      {
-        "case_id": "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE",
-        "source_id": "inference/CI-ROUTE-057",
-        "kind": "route",
-        "r_observed": ".confint_sigma:bootstrap",
-        "julia_observed": "sigma_B:bootstrap",
-        "requested_method": "bootstrap",
-        "julia_call": "bootstrap_ci(fitS;parms=\"sigma_B[1]\",y=YS,\u03a3_phy=\u03a3_phy) [Sigma_B alias]",
-        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-057",
-        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-057"
       }
     ]
   },
@@ -172,6 +150,26 @@
         "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-055",
         "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-055",
         "fixture": "test/parity/fixtures/core070_inference_routes.tsv#CI-ROUTE-055"
+      }
+    },
+    {
+      "source_id": "inference/CI-ROUTE-045",
+      "reason": "public_route_differs",
+      "text": "R's confint(method = 'bootstrap') for a Sigma parm refits through .confint_sigma_bootstrap (route '.confint_sigma:bootstrap'). Julia's public confint(fit, y; parm, method = :bootstrap) on this structured fit does not refit: it falls through to the one-argument Wald confint and ignores method (src/confint.jl:366-369 at 61c5eda48; inference-batch-contract-p1.json known_findings.lambda_reject_validation_boundary), so a Julia user who makes this request gets a Wald interval. The harness called bootstrap_ci(fitS;parms=\"sigma_B[1]\",y=YS,\u03a3_phy=\u03a3_phy) directly, which is not the request R's row makes. Not the same route for the same request, so no entry.",
+      "evidence": {
+        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-045",
+        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-045",
+        "contract": "docs/dev-log/core070/true-parity-latest/inference-batch-contract-p1.json"
+      }
+    },
+    {
+      "source_id": "inference/CI-ROUTE-057",
+      "reason": "public_route_differs",
+      "text": "R's confint(method = 'bootstrap') for a Sigma parm refits through .confint_sigma_bootstrap (route '.confint_sigma:bootstrap'). Julia's public confint(fit, y; parm, method = :bootstrap) on this structured fit does not refit: it falls through to the one-argument Wald confint and ignores method (src/confint.jl:366-369 at 61c5eda48; inference-batch-contract-p1.json known_findings.lambda_reject_validation_boundary), so a Julia user who makes this request gets a Wald interval. The harness called bootstrap_ci(fitS;parms=\"sigma_B[1]\",y=YS,\u03a3_phy=\u03a3_phy) [Sigma_B alias] directly, which is not the request R's row makes. Not the same route for the same request, so no entry.",
+      "evidence": {
+        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-057",
+        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-057",
+        "contract": "docs/dev-log/core070/true-parity-latest/inference-batch-contract-p1.json"
       }
     }
   ]

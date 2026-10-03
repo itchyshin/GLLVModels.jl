@@ -89,17 +89,6 @@
     "cases": [
       {
         "case_id": "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE",
-        "source_id": "inference/CI-ROUTE-032",
-        "kind": "route",
-        "r_observed": ".confint_rho:bootstrap",
-        "julia_observed": "rho:bootstrap",
-        "requested_method": "bootstrap",
-        "julia_call": "GLLVM.bootstrap_ci_derived(fitS, f->correlation(f)[1,2]; y=YS,\u03a3_phy=\u03a3_phy)",
-        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-032",
-        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-032"
-      },
-      {
-        "case_id": "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE",
         "source_id": "inference/CI-ROUTE-034",
         "kind": "route",
         "r_observed": ".confint_rho:fisher-z",
@@ -129,6 +118,16 @@
       "evidence": {
         "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-030,CI-ROUTE-087",
         "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-030"
+      }
+    },
+    {
+      "source_id": "inference/CI-ROUTE-032",
+      "reason": "not_exported",
+      "text": "R's confint(parm, method = 'bootstrap') serves a derived quantity (route '.confint_rho:bootstrap'). Julia's side of this row is GLLVM.bootstrap_ci_derived(fitS, f->correlation(f)[1,2]; y=YS,\u03a3_phy=\u03a3_phy), an internal function that GLLVModels does not export (src/GLLVModels.jl export list), so a Julia user cannot make this request through the public API; the harness chose the function. The same shape as the DEFAULT rows CI-ROUTE-022, 029 and 036, which are also left unbound. No entry.",
+      "evidence": {
+        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-032",
+        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-032",
+        "contract": "docs/dev-log/core070/true-parity-latest/inference-batch-contract-p1.json"
       }
     }
   ]

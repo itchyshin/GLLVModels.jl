@@ -89,17 +89,6 @@
     "cases": [
       {
         "case_id": "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE",
-        "source_id": "inference/CI-ROUTE-016",
-        "kind": "route",
-        "r_observed": ".confint_phylo_signal:profile",
-        "julia_observed": "phylo_signal:profile",
-        "requested_method": "profile",
-        "julia_call": "GLLVM.profile_ci_derived(fitS, phylo_signal_closure_1; y=YS,\u03a3_phy=\u03a3_phy)",
-        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-016",
-        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-016"
-      },
-      {
-        "case_id": "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE",
         "source_id": "inference/CI-ROUTE-017",
         "kind": "route",
         "r_observed": ".confint_phylo_signal:wald",
@@ -108,17 +97,6 @@
         "julia_call": "phylo_signal_wald_ci(fitS,1;y=YS,\u03a3_phy=\u03a3_phy)",
         "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-017",
         "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-017"
-      },
-      {
-        "case_id": "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE",
-        "source_id": "inference/CI-ROUTE-018",
-        "kind": "route",
-        "r_observed": ".confint_phylo_signal:bootstrap",
-        "julia_observed": "phylo_signal:bootstrap",
-        "requested_method": "bootstrap",
-        "julia_call": "GLLVM.bootstrap_ci_derived(fitS, f->phylo_signal(f)[1]; y=YS,\u03a3_phy=\u03a3_phy)",
-        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-018",
-        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-018"
       }
     ]
   },
@@ -131,6 +109,26 @@
         "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-015",
         "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-015",
         "fixture": "test/parity/fixtures/core070_inference_routes.tsv#CI-ROUTE-015"
+      }
+    },
+    {
+      "source_id": "inference/CI-ROUTE-016",
+      "reason": "not_exported",
+      "text": "R's confint(parm, method = 'profile') serves a derived quantity (route '.confint_phylo_signal:profile'). Julia's side of this row is GLLVM.profile_ci_derived(fitS, phylo_signal_closure_1; y=YS,\u03a3_phy=\u03a3_phy), an internal function that GLLVModels does not export (src/GLLVModels.jl export list), so a Julia user cannot make this request through the public API; the harness chose the function. The same shape as the DEFAULT rows CI-ROUTE-022, 029 and 036, which are also left unbound. No entry.",
+      "evidence": {
+        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-016",
+        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-016",
+        "contract": "docs/dev-log/core070/true-parity-latest/inference-batch-contract-p1.json"
+      }
+    },
+    {
+      "source_id": "inference/CI-ROUTE-018",
+      "reason": "not_exported",
+      "text": "R's confint(parm, method = 'bootstrap') serves a derived quantity (route '.confint_phylo_signal:bootstrap'). Julia's side of this row is GLLVM.bootstrap_ci_derived(fitS, f->phylo_signal(f)[1]; y=YS,\u03a3_phy=\u03a3_phy), an internal function that GLLVModels does not export (src/GLLVModels.jl export list), so a Julia user cannot make this request through the public API; the harness chose the function. The same shape as the DEFAULT rows CI-ROUTE-022, 029 and 036, which are also left unbound. No entry.",
+      "evidence": {
+        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-018",
+        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-018",
+        "contract": "docs/dev-log/core070/true-parity-latest/inference-batch-contract-p1.json"
       }
     }
   ]

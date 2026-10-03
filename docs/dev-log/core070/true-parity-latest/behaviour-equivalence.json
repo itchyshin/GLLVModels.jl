@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "pin": "P1",
-  "citation_note": "R file:line citations are at gllvmTMB P1 (9539352f6). Julia file:line citations are at the commit that ran the cited receipt (61c5eda48 for the inference rows, fd92b6551 for the aghq rows, 681c4c3ca for CI-ROUTE-009), not at current main: src has changed since, so the lines may have moved. The labels were re-run at the PR head during review and matched the recorded ones.",
+  "citation_note": "R file:line citations are at gllvmTMB P1 (9539352f6). Julia file:line citations are at the commit that ran the cited receipt (61c5eda48 for the inference rows, fd92b6551 for the aghq rows, 681c4c3ca for CI-ROUTE-009), not at current main: src has changed since, so the lines may have moved.",
   "classes": [
     {
       "kind": "route",
@@ -128,17 +128,6 @@
     },
     {
       "kind": "route",
-      "canonical": "phylo_signal:profile",
-      "r": [
-        ".confint_phylo_signal:profile"
-      ],
-      "julia": [
-        "phylo_signal:profile"
-      ],
-      "basis": "R: .confint_phylo_signal profile branch calls profile_ci_phylo_signal (R/z-confint-gllvmTMB.R:894, :911); Julia: GLLVM.profile_ci_derived with the phylogenetic-signal closure (src/confint_derived.jl:913 at 61c5eda48, not exported); both profile the derived quantity."
-    },
-    {
-      "kind": "route",
       "canonical": "lambda:bootstrap",
       "r": [
         ".confint_lambda:bootstrap"
@@ -147,63 +136,6 @@
         "lambda:bootstrap"
       ],
       "basis": "R: .confint_lambda bootstrap branch calls .loading_ci_bootstrap (R/z-confint-gllvmTMB.R:346-368); Julia: bootstrap_ci(fit; parms=\"Lambda_B[1,1]\", y) (src/confint_bootstrap.jl:258 at 61c5eda48); both refit simulated data."
-    },
-    {
-      "kind": "route",
-      "canonical": "sigma:bootstrap",
-      "r": [
-        ".confint_sigma:bootstrap"
-      ],
-      "julia": [
-        "sigma_B:bootstrap",
-        "sigma_W:bootstrap",
-        "sigma_phy:bootstrap"
-      ],
-      "basis": "R: .confint_sigma method bootstrap calls .confint_sigma_bootstrap, which calls bootstrap_Sigma (R/z-confint-gllvmTMB.R:1803-1807, :1816, :1827); Julia: bootstrap_ci(fit; parms=sigma_*, y, \u03a3_phy) (src/confint_bootstrap.jl:258 at 61c5eda48); both refit simulated data."
-    },
-    {
-      "kind": "route",
-      "canonical": "communality:bootstrap",
-      "r": [
-        ".confint_communality:bootstrap"
-      ],
-      "julia": [
-        "communality:bootstrap"
-      ],
-      "basis": "R: .confint_communality bootstrap branch (R/z-confint-gllvmTMB.R:941, :991); Julia: GLLVM.bootstrap_ci_derived with the communality closure (src/confint_derived.jl:489 at 61c5eda48, not exported)."
-    },
-    {
-      "kind": "route",
-      "canonical": "rho:bootstrap",
-      "r": [
-        ".confint_rho:bootstrap"
-      ],
-      "julia": [
-        "rho:bootstrap"
-      ],
-      "basis": "R: .confint_rho method bootstrap calls extract_correlations(method = \"bootstrap\") (R/z-confint-gllvmTMB.R:1034, :1061); Julia: GLLVM.bootstrap_ci_derived with the correlation closure (src/confint_derived.jl:489 at 61c5eda48)."
-    },
-    {
-      "kind": "route",
-      "canonical": "phylo_signal:bootstrap",
-      "r": [
-        ".confint_phylo_signal:bootstrap"
-      ],
-      "julia": [
-        "phylo_signal:bootstrap"
-      ],
-      "basis": "R: .confint_phylo_signal bootstrap branch (R/z-confint-gllvmTMB.R:894, :921); Julia: GLLVM.bootstrap_ci_derived with the phylogenetic-signal closure (src/confint_derived.jl:489 at 61c5eda48)."
-    },
-    {
-      "kind": "route",
-      "canonical": "proportion:bootstrap",
-      "r": [
-        ".confint_proportion:bootstrap"
-      ],
-      "julia": [
-        "proportion:bootstrap"
-      ],
-      "basis": "R: .confint_proportion bootstrap branch (R/z-confint-gllvmTMB.R:1188, :1213); Julia: GLLVM.bootstrap_ci_derived with the shared-proportion closure (src/confint_derived.jl:489 at 61c5eda48)."
     },
     {
       "kind": "refusal",
