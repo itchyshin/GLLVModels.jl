@@ -27,8 +27,8 @@ Usage:
   wrong_close_guard.py --body-file pr_body.md          # intended = nothing
 Exit status: 0 clean, 1 an unintended reference found, 2 usage error.
 An intended entry is `N` (any repo) or `owner/repo#N`. With
-`--intended-from-body`, a line `intended-closes: 12, 13` (also inside an HTML
-comment, so it stays invisible) in a body file adds to the intended set; this
+`--intended-from-body`, an HTML comment `<!-- intended-closes: 12, 13 -->` in a body file adds to
+the intended set; this
 is how the CI wiring (.github/workflows/wrong-close-guard.yml) learns it.
 """
 import argparse
@@ -139,7 +139,7 @@ def main(argv=None):
         texts.append((f"body {f}", open(f, encoding="utf-8").read()))
     if a.intended_from_body:
         for src, text in texts:
-            for m in re.finditer(r"intended-closes:[ \t]*([^\n>]*)", text, re.I):
+            for m in re.finditer(r"<!--[ \t]*intended-closes:[ \t]*([^\n>]*)", text, re.I):
                 try:
                     intended |= parse_intended(m.group(1).rstrip(" -\t"))
                 except ValueError as e:
