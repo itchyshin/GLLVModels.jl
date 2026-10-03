@@ -48,6 +48,32 @@
   push beta_z toward -Inf leave nearly flat directions). Test:
   `test/test_zip_zinb_stall.jl` (spider subsets; fails on main).
 
+- **Bootstrap CIs: drop non-converged refits (#140) and report SDs on the raw scale (#156).**
+  `bootstrap_ci` and `bootstrap_ci_derived` now leave out refits that did not converge when
+  they take the percentile bounds. Before, a refit that stopped at the iteration cap far from
+  the optimum, with finite but biased estimates, was mixed into the percentiles while
+  `n_converged` was reported separately. This is the rule gllvmTMB's `bootstrap_Sigma` uses
+  (`opt$convergence != 0` is excluded and counted in `n_failed`). Both functions now return
+  `converged` (per refit), `n_used` (refits that entered the percentiles) and `n_dropped`
+  (`n_boot - n_used`), and warn once per call when more than half of the refits are dropped.
+  The old fields keep their meaning; `replicates` still holds every refit, so non-converged
+  rows remain available for inspection. `bootstrap_ci_derived` and `bootstrap_ci` use
+  `n_used >= 10` as the floor for finite bounds, as before but counted over used refits.
+  Separately, `bootstrap_ci` returned `sigma_eps`, `sigma_B[t]` and `sigma_W[t]` on the log
+  scale (the packed value) under the same term names `confint` and `profile_ci` report on the
+  raw scale. It now returns them on the raw scale: `estimate` is `exp(log sd)` and the
+  bounds are percentiles of `exp(draws)`. The signed `sigma_phy[t]`, `beta` and `Lambda_*`
+  terms are not transformed, and `replicates` stays on the packed scale. **Numbers that
+  change:** for every fit, the `sigma_eps`/`sigma_B`/`sigma_W` rows of `bootstrap_ci`
+  (estimate, lower, upper; also the bridge's bootstrap CI table) are now `exp()` of what was
+  returned before, e.g. an estimate of -0.68 becomes 0.51; this also applies to the
+  Gaussian-record route (`aghq`, `mask`, `offset` fits). Bounds of any term change only when
+  some refits did not converge. Tests: `test/test_bootstrap_decisions.jl`; two older
+  assertions that encoded the log-scale output were updated (`test_confint_bootstrap.jl`,
+  `test_aghq_public_gaussian.jl`). Not covered: `bootstrap_Sigma` calls `bootstrap_ci_derived`
+  once per entry, so it can repeat the dropped-refit warning and its `n_valid` can exceed the
+  refits used for its bounds (`confint_derived_wald.jl`, another lane's file).
+
 - **`fit_phylo_gaussian` no longer reports `converged = true` after a zero-length step
   (part of #505, the remaining #485 class).** Optim also counts a zero-length line-search
   step as convergence, so a start the finite-difference gradient cannot leave could be

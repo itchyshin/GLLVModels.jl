@@ -188,6 +188,22 @@ function _bootstrap_simulate!(rng::AbstractRNG, y_out::AbstractMatrix,
 end
 
 # ---------------------------------------------------------------------------
+# Dropped-refit warning shared by `bootstrap_ci` and `bootstrap_ci_derived`
+# (#140). A refit is dropped when it errors or does not converge; the percentile
+# bounds are computed from the remaining ones. gllvmTMB's `bootstrap_Sigma` drops
+# the same refits (`opt$convergence != 0`), counts them in `n_failed` and warns
+# when a summary loses more than 20% of its replicates. Here the warning is
+# raised once per call, when more than half of the `n_boot` refits are dropped.
+# ---------------------------------------------------------------------------
+function _bootstrap_warn_dropped(who::AbstractString, n_dropped::Integer, n_boot::Integer)
+    2 * n_dropped > n_boot || return nothing
+    @warn "$who: $n_dropped of $n_boot bootstrap refits were dropped (failed or did not " *
+          "converge); the percentile bounds use only the remaining $(n_boot - n_dropped). " *
+          "Treat these intervals with caution."
+    return nothing
+end
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -208,11 +224,32 @@ Parametric bootstrap CIs for the fitted parameters in `fit`. Returns a
 NamedTuple with fields:
 
   - `term::Vector{String}`         — parameter names (θ_packed order)
-  - `estimate::Vector{Float64}`    — original MLE (`fit.pars.θ_packed`)
-  - `lower::Vector{Float64}`       — percentile `100·(1-level)/2`
-  - `upper::Vector{Float64}`       — percentile `100·(1+level)/2`
+  - `estimate::Vector{Float64}`    — original MLE, on the scale the term name says
+  - `lower::Vector{Float64}`       — percentile `100·(1-level)/2`, same scale
+  - `upper::Vector{Float64}`       — percentile `100·(1+level)/2`, same scale
   - `n_converged::Int`             — number of bootstrap fits that converged
-  - `replicates::Matrix{Float64}`  — `n_boot × n_params` matrix of bootstrap θ̂_b
+  - `replicates::Matrix{Float64}`  — `n_boot × n_params` matrix of bootstrap θ̂_b,
+                                     on the packed (working) scale; rows of
+                                     refits that errored are `NaN`, rows of
+                                     refits that did not converge are kept for
+                                     inspection but are not used for the bounds
+  - `converged::Vector{Bool}`      — per refit: did it converge
+  - `n_used::Int`                  — refits that entered the percentiles
+  - `n_dropped::Int`               — `n_boot - n_used` (errored or not converged)
+
+**Scale.** `sigma_eps`, `sigma_B[t]` and `sigma_W[t]` are stored on the log
+scale in `θ_packed`. Like [`confint`](@ref) and [`profile_ci`](@ref),
+`bootstrap_ci` returns them on the raw (positive) scale: the bounds are
+percentiles of `exp(θ̂_b)`, and `estimate` is `exp(θ̂)`. `sigma_phy[t]` uses an
+identity (signed) link and is reported as is, as are `beta` and `Lambda_*`.
+`replicates` stays on the packed scale, so apply `exp` to the SD columns before
+comparing them with the bounds.
+
+**Non-converged refits.** A refit that errors or whose optimiser did not
+converge (`fit_b.converged == false`) is dropped from the percentile
+computation, as in gllvmTMB's `bootstrap_Sigma`. `n_used` and `n_dropped` report
+how many refits were used and dropped, and one warning is issued per call when
+more than half are dropped.
 
 `n_sites` is required because `GllvmFit` does not record it. Supply
 either `n_sites` directly, or pass the original `y` (or `X`) — the
@@ -239,11 +276,13 @@ Accepts a `String` (single term name) or `Vector{String}`.
      has_phy_unique, Σ_phy, X)` so the bootstrap model matches the
      original spec.
    - Record the resulting θ_packed and convergence flag.
-3. Compute percentile CIs over the non-NaN replicates per parameter.
+3. Compute percentile CIs over the converged replicates per parameter
+   (SD parameters back-transformed to the raw scale first).
 
-Replicates whose refit errors out are recorded as `NaN` (and excluded
-from the percentile calculation); a parameter with fewer than 10
-converged replicates returns `NaN` bounds.
+Replicates whose refit errors out are recorded as `NaN`, and replicates whose
+refit did not converge are flagged in `converged`; both are excluded from the
+percentile calculation. A parameter with fewer than 10 usable replicates
+returns `NaN` bounds.
 
 # Example
 
@@ -264,7 +303,10 @@ function bootstrap_ci(fit::GllvmFit;
                       X::Union{Nothing, AbstractArray{<:Real, 3}} = nothing,
                       Σ_phy::Union{Nothing, AbstractMatrix} = nothing,
                       parms::Union{Nothing, AbstractString, AbstractVector} = nothing,
-                      verbose::Bool = false)
+                      verbose::Bool = false,
+                      # Internal test seam, not API: the function that refits each
+                      # replicate (lets tests inject a non-converged refit, #140).
+                      _refit::Function = fit_gaussian_gllvm)
 
     0 < level < 1 || throw(ArgumentError("level must be in (0, 1); got $level"))
     n_boot ≥ 1   || throw(ArgumentError("n_boot must be ≥ 1; got $n_boot"))
@@ -275,12 +317,17 @@ function bootstrap_ci(fit::GllvmFit;
         data=y===nothing ? fit.integration.data.responses : y
         n_sites===nothing || n_sites==size(data,2) || throw(ArgumentError("Gaussian integration bootstrap preserves the fitted site count"))
         ad=_gaussian_record_ci(fit,data;X=X,Σ_phy=Σ_phy)
-        # This legacy alias returns working-scale sigma, unlike confint.
-        working=_FamilyCI(ad.θ,ad.nll,ad.names,fill(:linear,length(ad.θ)),ad.simulate,ad.refit)
         sel=_confint_select_indices(parms,ad.names)
-        r=_family_bootstrap(working,sel,level,n_boot,seed,false;retain_replicates=true)
+        # `ad.kinds` marks the log-SD terms, so estimate and bounds come back on the raw
+        # scale (#156), as from `confint`. `replicates` stays on the packed scale.
+        r=_family_bootstrap(ad,sel,level,n_boot,seed,false;retain_replicates=true)
+        # `_family_bootstrap` already keeps only converged refits (`_gaussian_record_refit`
+        # returns `nothing` otherwise), so `n_converged` is the number used (#140).
+        n_dropped=n_boot-r.n_converged
+        _bootstrap_warn_dropped("bootstrap_ci",n_dropped,n_boot)
         return (term=r.term,estimate=r.estimate,lower=r.lower,upper=r.upper,n_converged=r.n_converged,
-            replicates=r.replicates[:,sel],converged=r.converged,objective=fit.integration.actual)
+            replicates=r.replicates[:,sel],converged=r.converged,objective=fit.integration.actual,
+            n_used=r.n_converged,n_dropped=n_dropped)
     end
 
     model = fit.model
@@ -371,7 +418,7 @@ function bootstrap_ci(fit::GllvmFit;
     rng = MersenneTwister(seed)
 
     replicates = fill(NaN, n_boot, n_params)
-    n_converged = 0
+    converged = fill(false, n_boot)
 
     y_b = Matrix{Float64}(undef, p, n)
 
@@ -381,21 +428,19 @@ function bootstrap_ci(fit::GllvmFit;
 
         # Refit on y_b under the original spec.
         try
-            fit_b = fit_gaussian_gllvm(y_b;
-                                       K = K_B,
-                                       K_W = K_W,
-                                       has_diag = has_diag,
-                                       K_phy = K_phy,
-                                       has_phy_unique = has_phy_unique,
-                                       Σ_phy = Σ_phy,
-                                       X = X,
-                                       β_fixed = β_fixed)
+            fit_b = _refit(y_b;
+                           K = K_B,
+                           K_W = K_W,
+                           has_diag = has_diag,
+                           K_phy = K_phy,
+                           has_phy_unique = has_phy_unique,
+                           Σ_phy = Σ_phy,
+                           X = X,
+                           β_fixed = β_fixed)
             θ_b = fit_b.pars.θ_packed
             if length(θ_b) == n_params
                 replicates[b, :] = θ_b
-                if fit_b.converged
-                    n_converged += 1
-                end
+                converged[b] = fit_b.converged
             else
                 verbose && @info "Bootstrap rep $b: θ_packed length mismatch ($(length(θ_b)) vs $n_params)"
             end
@@ -405,23 +450,36 @@ function bootstrap_ci(fit::GllvmFit;
         end
     end
 
-    # ----- Percentile CIs
+    # ----- Build canonical term names and parameter kinds
+    terms = _bootstrap_term_names(fit)
+    length(terms) == n_params || error(
+        "Internal: term-name vector length ($(length(terms))) does not match " *
+        "θ_packed length ($n_params). This is a packing layout bug.")
+    # `:log_sd` entries (sigma_eps, sigma_B, sigma_W) are log(σ) in θ_packed; the
+    # kinds come from the same layout `confint` and `profile_ci` use (#156).
+    terms_ci, kinds = _confint_all_term_names(fit)
+    terms_ci == terms || error(
+        "Internal: bootstrap term names differ from the confint term layout. " *
+        "This is a packing layout bug.")
+    to_raw(j, v) = kinds[j] === :log_sd ? exp(v) : v
+
+    # ----- Percentile CIs over the converged refits only (#140), on the raw scale (#156)
+    usable = [converged[b] && all(isfinite, view(replicates, b, :)) for b in 1:n_boot]
+    n_converged = count(converged)
+    n_used = count(usable)
+    n_dropped = n_boot - n_used
+    _bootstrap_warn_dropped("bootstrap_ci", n_dropped, n_boot)
     α = (1 - level) / 2
     lower = fill(NaN, n_params)
     upper = fill(NaN, n_params)
     for j in 1:n_params
-        col = filter(!isnan, replicates[:, j])
+        col = [to_raw(j, v) for v in view(replicates, usable, j)]
         if length(col) ≥ 10
             lower[j] = quantile(col, α)
             upper[j] = quantile(col, 1 - α)
         end
     end
-
-    # ----- Build canonical term names
-    terms = _bootstrap_term_names(fit)
-    length(terms) == n_params || error(
-        "Internal: term-name vector length ($(length(terms))) does not match " *
-        "θ_packed length ($n_params). This is a packing layout bug.")
+    estimate = [to_raw(j, θ̂[j]) for j in 1:n_params]
 
     # ----- Optionally subset by `parms`
     sel = if parms === nothing
@@ -439,9 +497,12 @@ function bootstrap_ci(fit::GllvmFit;
     end
 
     return (term       = terms[sel],
-            estimate   = θ̂[sel],
+            estimate   = estimate[sel],
             lower      = lower[sel],
             upper      = upper[sel],
             n_converged = n_converged,
-            replicates = replicates[:, sel])
+            replicates = replicates[:, sel],
+            converged  = converged,
+            n_used     = n_used,
+            n_dropped  = n_dropped)
 end
