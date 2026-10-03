@@ -245,10 +245,33 @@
   intervals of another model. The same check refuses a wrong `N` or a dropped `mask` on those fit
   types. Also refused: an offset for a fit type whose fitter takes none, an offset with
   `objective = :va` (the variational marginal has no offset route), and an offset with
-  `confint_lv_effects(...; method = :bootstrap)`. Unchanged: AGHQ Poisson and binomial fits keep
-  their offset and need no keyword, and the Gaussian route already read the offset from the fit.
-  Fits without an offset give the same intervals (checked bit for bit on Poisson, NB2, Gamma,
-  ZIP, Delta-Gamma, grouped NB2 and Binomial). Test: `test/test_confint_offset.jl`.
+  `confint_lv_effects(...; method = :bootstrap)`. `confint_lv_effects(...; method = :bootstrap)`
+  now runs the same objective check as the Wald and profile routes, so an `X_lv` fit made with an
+  offset and bootstrapped without it is refused (it used to return before the check and refit an
+  offset-free model). The check compares like with like: a variational fit
+  (`fit_{poisson,nb,binomial,beta,gamma,exponential,delta_gamma}_gllvm_va`, whose `loglik` is the
+  ELBO) is compared with the variational objective, and a `hessian = :fisher` fit of
+  `DeltaGammaFit` (separate or shared predictor), `TruncatedNegBin2Fit` or
+  `TruncatedNegBin2PerTraitFit` (whose structs do not record the curvature) with the Fisher
+  objective, so offset-free calls on those fits run exactly as before. The Wald, profile and
+  bootstrap objective itself is unchanged for them (the adapters of these four types still use
+  the `:observed` curvature on a `:fisher` fit, as before). The error text names the possible
+  causes (offset, `N`, `X`, `mask`, variational objective, curvature, non-default link). **Behaviour
+  change for Beta fits with a link other than logit and Gamma fits with a link other than log:**
+  `fit_beta_gllvm` and `fit_gamma_gllvm` optimise the default-link objective (their marginal call
+  carries no `link`), so the fit's own objective cannot be rebuilt from its `link`; `confint`
+  returned `pd_hessian = false` there and now throws an `ArgumentError` saying the fit's own
+  objective could not be reproduced (a known issue with non-default links), rather than computing
+  on the wrong objective. The check cannot see a wrong offset at cells that do not enter the
+  likelihood (masked cells; the `y = 0` cells of hurdle and separate-predictor delta fits, where
+  the offset sits on the positive part only), and an offset error below about `3e-4` per cell
+  passes. Unchanged: AGHQ Poisson and binomial fits keep their offset and need no keyword, and the
+  Gaussian route already read the offset from the fit. Fits without an offset give the same
+  intervals (checked bit for bit on Poisson, NB2, Gamma, ZIP, Delta-Gamma, grouped NB2 and
+  Binomial, on the variational fits of all seven families, and on `hessian = :fisher` fits of
+  the four types above: Wald, `vcov` and `coef_table` on all of them, and one profile and one
+  bootstrap on a variational Poisson fit and a `:fisher` truncated NB2 fit). Test:
+  `test/test_confint_offset.jl`.
 
 All notable changes to GLLVModels.jl are documented here.
 

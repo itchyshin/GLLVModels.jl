@@ -3471,7 +3471,18 @@ the offset (Laplace fits have no field for it), so `confint` checks that the obj
 rebuilds reproduces `fit.loglik` at the fitted values and throws an `ArgumentError`
 otherwise: a fit made with an offset and a call without it (or with a different one) is
 refused instead of returning the intervals of an offset-free model. On these fit types
-the same check also refuses a wrong `N` or a dropped `mask`. AGHQ Poisson / binomial fits
+the same check also refuses a wrong `N` or a dropped `mask`. The check compares like with
+like: a variational fit (`fit_*_gllvm_va`, whose `loglik` is the ELBO) is compared with
+the variational objective and a `hessian = :fisher` fit of a family whose fit does not
+record the curvature (`DeltaGammaFit`, `TruncatedNegBin2Fit` and its per-trait form) with
+the Fisher one, so offset-free calls on those fits run as before. A Beta fit with a
+link other than logit, or a Gamma fit with a link other than log, is refused with a
+message saying that the fit's own objective could not be reproduced (a known issue with
+non-default links: the fitter and `confint` do not build the same objective for them).
+The check cannot see a wrong offset at cells that do not enter the likelihood (masked
+cells; the `y = 0` cells of a hurdle or separate-predictor delta fit, where the offset
+sits on the positive part only), and an offset error below about `3e-4` per cell passes;
+the bootstrap draws do use the offset at those cells. AGHQ Poisson / binomial fits
 keep their offset and need no keyword. Offsets are accepted for the fit types whose
 fitters take one (`PoissonFit`, `BinomialFit`, `NBFit`, `NB1Fit`, `GP1Fit`, `BetaFit`,
 `GammaFit`, `ExponentialFit`, the NB2 / NB1 / Beta / Gamma / Tweedie grouped-dispersion
@@ -3955,8 +3966,9 @@ likelihood-ratio statistic by constrained refit — asymmetry- and
 boundary-respecting; `se` is `NaN` since the interval need not be symmetric), or
 `:bootstrap` (percentiles of `B_lv`). A fit made with an `offset` needs the same
 `offset` here (`method = :wald` or `:profile`; the bootstrap simulator has no offset route
-and refuses it); the objective is checked against `fit.loglik` and a mismatch throws, as in
-[`confint`](@ref). For `method = :profile`,
+and refuses one); the objective is checked against `fit.loglik` for every method, the
+bootstrap included, and a mismatch throws, as in [`confint`](@ref): a fit made with an
+offset is refused when bootstrapped without it. For `method = :profile`,
 `profile_indices` selects entries of `vec(B_lv)` in column-major order; `nothing`
 profiles every entry. Bootstrap refits use each family's default optimiser
 iteration cap unless `bootstrap_iterations` is supplied.
