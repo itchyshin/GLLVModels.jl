@@ -213,11 +213,13 @@
   Newton/Laplace reference to 1e-9.
   The Gaussian `n_sites >= p` check is replaced by a rank rule where one is sound. It is not a
   property of the likelihood, which is exact at n < p: a bounded maximum needs K below the rank
-  of the centred data. With no `X`, or only per-trait intercepts (centred per trait), K at or
-  above that rank is refused and a smaller K fits. A design with other columns (slopes, shared
-  columns) keeps the `n_sites >= p` refusal, because the estimated coefficients can lower the
-  rank below that of the least-squares residual. Fits with `has_diag`, `K_phy`,
-  `has_phy_unique` or `X_lv` refuse any rank-deficient data. Masked fits are not covered. Documented in the `fit_gaussian_gllvm` and `fit_lognormal_gllvm` docstrings
+  of the centred data. With no `X`, or exactly one free intercept per trait and nothing else (centred per trait), K at or
+  above that rank is refused and a smaller K fits. Any other design (slopes, shared columns,
+  intercepts for only some traits, a fixed intercept) keeps the `n_sites >= p` refusal and gets no
+  rank check, because the estimated coefficients can lower the rank below that of any residual.
+  Fits with `has_diag`, `K_phy`, `has_phy_unique` or `X_lv` refuse rank-deficient data in the
+  first two cases only; the duplicated or collinear trait check does not run for other designs.
+  Masked fits are not covered. Documented in the `fit_gaussian_gllvm` and `fit_lognormal_gllvm` docstrings
   and `docs/src/pitfalls.md`. Fits with n >= p are numerically unchanged (pinned from the
   tree before the change). Test: `test/test_n_lt_p.jl`.
 
