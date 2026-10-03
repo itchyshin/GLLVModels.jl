@@ -22,7 +22,7 @@
 #   * A case whose recomputed difference exceeds its tolerance aborts the run (exit 1); nothing
 #     is written for it, and the row must not be bound.
 #   * src/, the tests and the fixtures are not modified.
-#   * Section 12 ("c1-behaviour") writes BEHAVIOUR receipts (itchyshin/GLLVModels.jl#684 item 2) for
+#   * Section 13 ("c1-behaviour") writes BEHAVIOUR receipts (itchyshin/GLLVModels.jl#684 item 2) for
 #     rows whose R behaviour is a printed table or a refusal, so there is no number to compare. Its
 #     receipts carry a top-level `behaviour` block (schema in docs/dev-log/core070/true-parity-latest/
 #     GATES.md, "Ruling 2"), not a `comparison` block. Every label is derived from a raw artefact
