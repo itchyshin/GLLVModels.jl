@@ -66,6 +66,48 @@ deparse_identical = true
 source_sha256 = "6c32924b415646697ab4e471fda8b83108e416d662ba6e607bbeba335dd21616"
 source_lines = 4627
 
+[[provenance]]
+file = "R/select-lv.R"
+name = "select_lv"
+deparse_identical = true
+source_sha256 = "694eadacf44a779923971a37c6c219ed5009f82ea77595225897f1271cec8a9a"
+source_lines = 377
+
+[[provenance]]
+file = "R/select-lv.R"
+name = "print.gllvmTMB_select_lv"
+deparse_identical = true
+source_sha256 = "694eadacf44a779923971a37c6c219ed5009f82ea77595225897f1271cec8a9a"
+source_lines = 377
+
+[[provenance]]
+file = "R/select-lv.R"
+name = ".select_lv_aicc"
+deparse_identical = true
+source_sha256 = "694eadacf44a779923971a37c6c219ed5009f82ea77595225897f1271cec8a9a"
+source_lines = 377
+
+[[provenance]]
+file = "R/select-lv.R"
+name = ".select_lv_set_d"
+deparse_identical = true
+source_sha256 = "694eadacf44a779923971a37c6c219ed5009f82ea77595225897f1271cec8a9a"
+source_lines = 377
+
+[[provenance]]
+file = "R/select-lv.R"
+name = ".select_lv_count_latent"
+deparse_identical = true
+source_sha256 = "694eadacf44a779923971a37c6c219ed5009f82ea77595225897f1271cec8a9a"
+source_lines = 377
+
+[[provenance]]
+file = "R/select-lv.R"
+name = ".select_lv_isTRUE_vec"
+deparse_identical = true
+source_sha256 = "694eadacf44a779923971a37c6c219ed5009f82ea77595225897f1271cec8a9a"
+source_lines = 377
+
 [[refusal]]
 object_class = "character"
 raised = true
@@ -135,3 +177,22 @@ raised = true
 condition_classes = ["simpleError", "error", "condition"]
 message = "need an object with call component"
 returned_class = ""
+
+[select_lv]
+# select_lv(value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE), data, unit = "unit",
+#           trait = "trait", d_max = 3, criterion = "bic") on the select_lv P1 fixture data.
+data_file = "../select_lv_p1_data.csv"
+data_sha256 = "cdba824f343e4c60282d071d4340440bafdc51e739062233d7a61a1090686027"
+print_file = "r_select_lv_print.txt"
+print_sha256 = "ea020902fce362d01b06b856ba5b00855fdefa29482a897993aa1dc738d9d7da"
+print_width_option = 80
+criterion = "bic"
+selected_d = 2
+d = [1, 2, 3]
+npar = [13, 18, 22]
+loglik = [-1183.6445883537917, -1032.949029054203, -1030.9576313658865]
+aic = [2393.2891767075835, 2101.8980581084061, 2105.9152627317731]
+bic = [2455.7203086307995, 2188.3411638482435, 2211.567947524908]
+aicc = [2393.7000119220306, 2102.6744485737863, 2107.0691965972233]
+converged = [true, true, true]
+pd_hessian = [true, true, true]
