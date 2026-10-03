@@ -19,7 +19,7 @@
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { mkdtempSync, rmSync, cpSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, rmSync, cpSync, readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import assert from 'node:assert/strict';
 
@@ -1409,6 +1409,15 @@ test('C6: the docs/src check applies to KEPT_AS_JULIA_EXTRA only, in git mode to
       // Receipts cited by the maps live under docs/dev-log/core070/; fixtures are listed in the board.
       cpSync(join(REPO_ROOT, 'docs', 'dev-log', 'core070'), join(tmp, 'docs', 'dev-log', 'core070'), { recursive: true });
       cpSync(join(REPO_ROOT, 'test', 'fixtures'), join(tmp, 'test', 'fixtures'), { recursive: true });
+      // The C6 decisions file names the script that wrote it and, for a documented Julia extra, the docs/src
+      // pages that render it; the assembler requires both in the tree.
+      cpSync(join(REPO_ROOT, 'docs', 'src'), join(tmp, 'docs', 'src'), { recursive: true });
+      const decisionsPath = join(REPO_ROOT, LEDGER_REL, 'reverse-gap-decisions.json');
+      if (existsSync(decisionsPath)) {
+        const gen = JSON.parse(readFileSync(decisionsPath, 'utf8')).generator;
+        mkdirSync(dirname(join(tmp, gen)), { recursive: true });
+        cpSync(join(REPO_ROOT, gen), join(tmp, gen));
+      }
       const clean = runAssemble(tmp);
       assert.equal(clean.code, 0, clean.stdout); // positive control on the copy
       const sb = join(tmp, LEDGER_REL, 'scoreboard.md');

@@ -64,6 +64,13 @@ StudentTFamily(ν::Real) = StudentTFamily(float(ν), 1.0)
 StudentTFamily(::Nothing) = StudentTFamily(nothing, 1.0)
 StudentTFamily() = StudentTFamily(nothing, 1.0)
 
+"""
+    StudentT
+
+Alias of [`StudentTFamily`](@ref), exported under both names: `StudentT(ν)`,
+`StudentT(ν, σ)` and `StudentT()` construct the same Student-t family marker. See
+[`StudentTFamily`](@ref) for the roles of `ν` and `σ`.
+"""
 const StudentT = StudentTFamily
 
 default_link(::StudentTFamily) = IdentityLink()
