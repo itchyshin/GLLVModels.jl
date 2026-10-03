@@ -41,12 +41,12 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-namespace.json",
-   "sha256": "a36aa7061449fb9a20cf28f7e5a2de37fd15699d6874cd92133665483d183b96",
+   "sha256": "c82397d374443190e23d70dea17ae96df4e93b5c820e391117661c5a7f7f9b49",
    "rows": 69
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-postfit.json",
-   "sha256": "d2add19ad01149d198338b43bf525a812504172d102f5333da4949f28e7cf3f6",
+   "sha256": "db4944f55b4d78e996bc52b09b71b0fe98ca27b96e3365da583f14900b86c4de",
    "rows": 52
   }
  ],
@@ -8735,18 +8735,28 @@
    "r_file_line": "R/extract-omega.R:736",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/extract_proportions.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-PROPORTIONS-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration mismatch: R export registered+defined at P1, but the Julia symbol is not an exported Function (Julia symbol proportions not exported); not a twin, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-EXTRACT-PROPORTIONS-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_variance_decomp_receipt.jl with the same calls and settings as the cited twin test, against R-at-P1 values copied from a tracked fixture (R extract_proportions(fit) on a one-tier latent + unique fit (shared_unit proportion) and on a two-level fit (variance and proportion of all four components), Julia extract_proportions(fit)), each case within the tolerance asserted in that test. R converged with a positive-definite Hessian. The Tier 0 registration receipts are kept un-cited under registration_receipts (the registration batch receipt carries a batch-level FAIL status, which would block the numeric binding if cited); the superseded case ids are in registration_case_ids."
    },
-   "executable_case_ids": [],
+   "executable_case_ids": [
+    "P1-JULIA-PROPORTIONS-ONE-TIER-SHARED-UNIT",
+    "P1-JULIA-PROPORTIONS-TWO-LEVEL-PROPORTION",
+    "P1-JULIA-PROPORTIONS-TWO-LEVEL-VARIANCE"
+   ],
    "reason": "Registration mismatch at P1: Julia symbol proportions not exported. Not twinned.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "FAIL",
     "category": "registration_mismatch",
@@ -8873,18 +8883,27 @@
    "r_file_line": "R/extract-omega.R:95",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/extract_residual_split.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-RESIDUAL-SPLIT-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration mismatch: R export registered+defined at P1, but the Julia symbol is not an exported Function (Julia symbol proportions not exported); not a twin, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-EXTRACT-RESIDUAL-SPLIT-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_variance_decomp_receipt.jl with the same calls and settings as the cited twin test, against R-at-P1 values copied from a tracked fixture (R extract_residual_split(fit) on a two-level Gaussian fit: sigma2_e and sigma2_total; sigma2_d is 0 in both engines (Gaussian) and is asserted in the test only, Julia extract_residual_split(fit)), each case within the tolerance asserted in that test. R converged with a positive-definite Hessian. The Tier 0 registration receipts are kept un-cited under registration_receipts (the registration batch receipt carries a batch-level FAIL status, which would block the numeric binding if cited); the superseded case ids are in registration_case_ids."
    },
-   "executable_case_ids": [],
+   "executable_case_ids": [
+    "P1-JULIA-RESIDUAL-SPLIT-SIGMA2-E",
+    "P1-JULIA-RESIDUAL-SPLIT-SIGMA2-TOTAL"
+   ],
    "reason": "Registration mismatch at P1: Julia symbol proportions not exported. Not twinned.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "FAIL",
     "category": "registration_mismatch",
@@ -9691,18 +9710,26 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-ESTIMAND-REBIND-EXTRACT-PROPORTIONS"
+    "P1-JULIA-POSTFIT-PROPORTIONS-ONE-TIER-SHARED-UNIT",
+    "P1-JULIA-POSTFIT-PROPORTIONS-TWO-LEVEL-PROPORTION",
+    "P1-JULIA-POSTFIT-PROPORTIONS-TWO-LEVEL-VARIANCE"
    ],
    "disposition": null,
-   "evidence_tier": "numeric_non_discriminating",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/extract_proportions.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-ESTIMAND-REBIND-EXTRACT-PROPORTIONS.json"
     ],
-    "tier": "numeric comparison blocks pass, but at least one is degenerate (the R values are one constant or all ~0), so a constant or zero implementation would pass too; the row does not bind"
+    "batch_case_ids": [
+     "CORE070-ESTIMAND-REBIND-EXTRACT-PROPORTIONS"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_variance_decomp_receipt.jl with the same calls and settings as the cited twin test, against R-at-P1 values copied from a tracked fixture (a one-tier R fit and a two-level R fit, each converged with a positive-definite Hessian, on non-degenerate fixtures: the R values are not one constant and not ~0), each case within the tolerance asserted in that test. The batch case this row carried is superseded; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
-   "note": "Same unique = FALSE fixture as extract_communality: the compared proportion vectors are all 1, so a constant implementation would pass (same structure as the reviewer's communality mutation). A non-degenerate fixture is a contract change for the maintainer.",
+   "note": "The batch case used the unique = FALSE Gaussian fixture, where every compared proportion is 1 (a constant implementation passed). The twin compares R's extract_proportions() with the Julia accessors on (a) a one-tier latent + unique fit (shared_unit proportion, six values between 0.66 and 0.82; the Julia :unit denominator is the identified total, #701) and (b) a two-level fit, where the new Julia TwoLevelFit method returns all four components (shared_unit, unique_unit, shared_unit_obs, unique_unit_obs) with R's names, order and denominator: variance and proportion, 20 values each. Gaussian only, so R's link_residual component (0 for a Gaussian fit) is absent in both.",
    "measured_result": {
     "case_verdicts": {
      "CORE070-ESTIMAND-REBIND-EXTRACT-PROPORTIONS": "PASS"
@@ -9712,7 +9739,13 @@
     },
     "discriminating": {
      "CORE070-ESTIMAND-REBIND-EXTRACT-PROPORTIONS": false
-    }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-POSTFIT-PROPORTIONS-ONE-TIER-SHARED-UNIT",
+     "P1-JULIA-POSTFIT-PROPORTIONS-TWO-LEVEL-PROPORTION",
+     "P1-JULIA-POSTFIT-PROPORTIONS-TWO-LEVEL-VARIANCE"
+    ],
+    "twin_verdict": "PASS"
    }
   },
   {
