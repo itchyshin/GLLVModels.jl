@@ -823,7 +823,6 @@ function _derived_bisect_side(D::Function, x0::Real, step_init::Real,
     abs_step = abs(step_init)
 
     x_in = float(x0)
-    D_in = 0.0
     x_out = x_in + sign_step * abs_step
     D_out = NaN
     found = false
@@ -841,7 +840,6 @@ function _derived_bisect_side(D::Function, x0::Real, step_init::Real,
             break
         end
         x_in = x_out
-        D_in = D_val
         n_in_advances += 1
         abs_step *= 2
         x_out = x_in + sign_step * abs_step
@@ -856,20 +854,23 @@ function _derived_bisect_side(D::Function, x0::Real, step_init::Real,
         return NaN
     end
 
-    lo, hi = x_in, x_out
-    D_lo, D_hi = D_in, D_out
+    return _derived_bisect_bracket(D, x_in, x_out, cutoff;
+                                   max_bisect = max_bisect, tol_x = tol_x)
+end
+
+# Bisect a bracket whose inner point `x_in` has D < cutoff and whose outer
+# point `x_out` has D ≥ cutoff (or a failed refit). `x_out` may lie on either
+# side of `x_in`. A failed refit at a midpoint counts as a crossing.
+function _derived_bisect_bracket(D::Function, x_in::Real, x_out::Real, cutoff::Real;
+                                 max_bisect::Integer = 30, tol_x::Real = 1e-4)
+    lo, hi = float(x_in), float(x_out)
     for _ in 1:max_bisect
         mid = (lo + hi) / 2
         D_mid = D(mid)
-        if !isfinite(D_mid)
+        if !isfinite(D_mid) || D_mid ≥ cutoff
             hi = mid
-            D_hi = Inf
-        elseif D_mid ≥ cutoff
-            hi = mid
-            D_hi = D_mid
         else
             lo = mid
-            D_lo = D_mid
         end
         if abs(hi - lo) < tol_x
             break
@@ -878,13 +879,61 @@ function _derived_bisect_side(D::Function, x0::Real, step_init::Real,
     return (lo + hi) / 2
 end
 
+# ---------------------------------------------------------------------------
+# Natural-bounds handling for a derived-quantity profile CI (#142).
+#
+# A derived quantity often has a natural support: [0, 1] for communality,
+# ICC and phylogenetic signal, [-1, 1] for a correlation, [0, Inf) for a
+# variance. The bracket-then-bisect search does not know it, so a bound can
+# overshoot the support (constrained refits just past the edge still meet
+# the 0.05 constraint tolerance), or the search can stop with NaN when the
+# profile stays below the cutoff out to the edge. Given the support
+# [lo_bound, hi_bound], each side is post-processed:
+#   - a finite bound outside the support is set to the edge (boundary);
+#   - a NaN bound with a finite edge: the deviance is evaluated AT the
+#     edge. Below the cutoff, the profile is flat to the edge and the bound
+#     is the edge (boundary). Above the cutoff, the crossing lies between
+#     the estimate and the edge and is found by bisection. If the refit at
+#     the edge fails, the side stays NaN.
+# A finite bound inside the support is returned untouched, so interior
+# results do not change. Because the estimate must lie in the support, every
+# finite result satisfies lower <= estimate <= upper.
+# ---------------------------------------------------------------------------
+function _derived_check_bounds(bounds::Tuple{Real, Real}, estimate::Real)
+    lo, hi = float(bounds[1]), float(bounds[2])
+    lo < hi || throw(ArgumentError(
+        "bounds must satisfy lower < upper; got $(bounds)"))
+    lo ≤ estimate ≤ hi || throw(ArgumentError(
+        "bounds $(bounds) do not contain the estimate $(estimate)"))
+    return lo, hi
+end
+
+# One side of the natural-bounds post-processing. `D(c)` is the profile
+# deviance at c (NaN on a failed refit); `lower_side` says which side `bound`
+# and `edge` are on. Returns (bound, at_edge::Bool).
+function _derived_bound_side(D::Function, bound::Real, estimate::Real,
+                             edge::Real, cutoff::Real, lower_side::Bool;
+                             max_bisect::Integer = 30)
+    isfinite(edge) || return (bound, false)
+    if isfinite(bound)
+        outside = lower_side ? bound < edge : bound > edge
+        return outside ? (float(edge), true) : (bound, false)
+    end
+    D_edge = D(edge)
+    isfinite(D_edge) || return (bound, false)
+    D_edge ≤ cutoff && return (float(edge), true)
+    return (_derived_bisect_bracket(D, estimate, edge, cutoff;
+                                    max_bisect = max_bisect), false)
+end
+
 """
     profile_ci_derived(fit::GllvmFit, derived_fn::Function;
                        level = 0.95, y = nothing,
                        X = nothing, Σ_phy = nothing,
                        penalty_weight = 1e6,
                        initial_step = nothing,
-                       max_expand = 20, max_bisect = 30)
+                       max_expand = 20, max_bisect = 30,
+                       bounds = nothing)
         -> NamedTuple{(:lower, :upper, :estimate, :method)}
 
 Profile-likelihood CI for a scalar-valued *derived quantity*
@@ -904,7 +953,14 @@ helpers:
 ```julia
 spec = GLLVModels._derived_spec(fit)
 f_c1 = θ -> GLLVModels._communality_packed(θ, spec, 1)
-ci   = GLLVModels.profile_ci_derived(fit, f_c1; y = y)
+ci   = GLLVModels.profile_ci_derived(fit, f_c1; y = y, bounds = (0, 1))
+```
+
+For a correlation, pass its natural support `bounds = (-1, 1)`:
+
+```julia
+f_ρ12 = GLLVModels._make_correlation_closure(spec, 1, 2)
+ci    = GLLVModels.profile_ci_derived(fit, f_ρ12; y = y, bounds = (-1, 1))
 ```
 
 Or, for σ²_eps (sanity check vs the parameter profile CI on σ_eps):
@@ -929,12 +985,29 @@ inside the bisection grows the step rapidly, while a small first step
 keeps the very first constrained refit close to θ̂ (where the safe-NLL
 barrier is rarely triggered).
 
+`bounds` (default `nothing`) gives the natural support `(lo, hi)` of the
+quantity: `(0, 1)` for a communality, ICC or phylogenetic signal, `(-1, 1)`
+for a correlation, `(0, Inf)` for a variance. The search itself does not
+change; each side of its result is then checked against the support:
+  - a bound outside `[lo, hi]` (a constrained refit just past the edge can
+    still meet the constraint tolerance) is set to the edge;
+  - a `NaN` bound is resolved at the edge: if the deviance at the edge is
+    below the χ²₁ cutoff (the profile is flat out to the edge), the bound is
+    the edge; if it is above, the bound is found by bisection between the
+    estimate and the edge; if the refit at the edge fails, it stays `NaN`.
+A bound already inside the support is returned unchanged. `bounds` must
+contain the estimate, so every finite result satisfies
+`lower ≤ estimate ≤ upper`. With `bounds = nothing` no check is made, and a
+bound may lie outside the support or be `NaN` on a flat profile.
+
 Returns a NamedTuple with fields:
   - `estimate::Float64` — `g(θ̂)` at the original MLE
   - `lower::Float64`    — lower CI bound (NaN if bracket failed)
   - `upper::Float64`    — upper CI bound (NaN if bracket failed)
   - `method::Symbol`    — `:profile` (both bounds), `:partial`
                           (one side NaN), or `:failed` (both NaN)
+  - `boundary::Bool`    — only when `bounds` is given: `true` when a bound
+                          was set to an edge of the support
 """
 function profile_ci_derived(fit::GllvmFit, derived_fn::Function;
                             level::Real = 0.95,
@@ -944,7 +1017,8 @@ function profile_ci_derived(fit::GllvmFit, derived_fn::Function;
                             penalty_weight::Real = 1e6,
                             initial_step::Union{Nothing, Real} = nothing,
                             max_expand::Integer = 20,
-                            max_bisect::Integer = 30)
+                            max_bisect::Integer = 30,
+                            bounds::Union{Nothing, Tuple{Real, Real}} = nothing)
     0 < level < 1 || throw(ArgumentError("level must be in (0, 1); got $level"))
     y === nothing && throw(ArgumentError(
         "profile_ci_derived requires the data matrix `y`"))
@@ -954,6 +1028,7 @@ function profile_ci_derived(fit::GllvmFit, derived_fn::Function;
     g_hat = Float64(derived_fn(θ̂))
     isfinite(g_hat) || throw(ArgumentError(
         "derived_fn returned a non-finite value at the MLE: $g_hat"))
+    lo_b, hi_b = bounds === nothing ? (-Inf, Inf) : _derived_check_bounds(bounds, g_hat)
 
     cutoff = quantile(Chisq(1), level)
     ll_full = fit.logLik
@@ -999,6 +1074,15 @@ function profile_ci_derived(fit::GllvmFit, derived_fn::Function;
                                  max_expand = max_expand,
                                  max_bisect = max_bisect)
 
+    boundary = false
+    if bounds !== nothing
+        lower, at_lo = _derived_bound_side(deviance_lower, lower, g_hat, lo_b, cutoff,
+                                           true; max_bisect = max_bisect)
+        upper, at_hi = _derived_bound_side(deviance_upper, upper, g_hat, hi_b, cutoff,
+                                           false; max_bisect = max_bisect)
+        boundary = at_lo || at_hi
+    end
+
     method = if isnan(lower) && isnan(upper)
         :failed
     elseif isnan(lower) || isnan(upper)
@@ -1006,24 +1090,17 @@ function profile_ci_derived(fit::GllvmFit, derived_fn::Function;
     else
         :profile
     end
-    return (lower = lower, upper = upper,
-            estimate = g_hat, method = method)
+    r = (lower = lower, upper = upper, estimate = g_hat, method = method)
+    return bounds === nothing ? r : merge(r, (; boundary = boundary))
 end
 
 # ---------------------------------------------------------------------------
-# Feasible-range clamp + boundary flag for a profile_ci_derived result.
-#
-# profile_ci_derived's bracket-then-bisect walk has no notion of the derived
-# quantity's natural feasible range [lo_bound, hi_bound]: a bound can
-# overshoot past it (numerical slack near a genuinely near-boundary
-# optimum), or the deviance can plateau below the χ²₁ cutoff all the way out
-# to the range edge without ever crossing it (max_expand exhausted → NaN /
-# :partial, indistinguishable from an unrelated bracketing failure). This
-# wrapper (1) clamps any bound that violates the feasible range back to the
-# edge, and (2) for a NaN bound with a finite edge, evaluates the deviance
-# AT the edge itself — if it is still below cutoff, the CI plateaus at the
-# boundary and that is reported as the bound with `boundary = true`, rather
-# than a bare NaN/:partial.
+# Feasible-range clamp + boundary flag for an existing profile_ci_derived
+# result `r` (computed without `bounds`). Applies the same natural-bounds
+# rules as `profile_ci_derived(...; bounds = (lo_bound, hi_bound))` (see
+# `_derived_bound_side`), with each edge refit warm-started from θ̂ rather
+# than from the search path. profile_ci_total_variance and
+# profile_ci_phylo_signal now pass `bounds` directly.
 # ---------------------------------------------------------------------------
 function _profile_ci_bounded(fit::GllvmFit, derived_fn::Function, r::NamedTuple;
                              level::Real, y::AbstractMatrix,
@@ -1031,31 +1108,15 @@ function _profile_ci_bounded(fit::GllvmFit, derived_fn::Function, r::NamedTuple;
                              Σ_phy::Union{Nothing, AbstractMatrix},
                              lo_bound::Real, hi_bound::Real)
     cutoff = quantile(Chisq(1), level)
-    lower, upper, boundary = r.lower, r.upper, false
-
-    if isfinite(lower) && lower < lo_bound
-        lower, boundary = float(lo_bound), true
-    elseif isnan(lower) && isfinite(lo_bound)
-        ll_c, ok, _, _ = _derived_refit_with_fixed(fit, derived_fn, lo_bound, y, X, Σ_phy)
-        if ok
-            D = 2.0 * (fit.logLik - ll_c)
-            if isfinite(D) && D ≤ cutoff
-                lower, boundary = float(lo_bound), true
-            end
-        end
+    lo_b, hi_b = _derived_check_bounds((lo_bound, hi_bound), r.estimate)
+    X = _mean_X(fit, X, size(y, 2))
+    D = function(c)
+        ll_c, ok, _, _ = _derived_refit_with_fixed(fit, derived_fn, c, y, X, Σ_phy)
+        return ok ? 2.0 * (fit.logLik - ll_c) : NaN
     end
-
-    if isfinite(upper) && upper > hi_bound
-        upper, boundary = float(hi_bound), true
-    elseif isnan(upper) && isfinite(hi_bound)
-        ll_c, ok, _, _ = _derived_refit_with_fixed(fit, derived_fn, hi_bound, y, X, Σ_phy)
-        if ok
-            D = 2.0 * (fit.logLik - ll_c)
-            if isfinite(D) && D ≤ cutoff
-                upper, boundary = float(hi_bound), true
-            end
-        end
-    end
+    lower, at_lo = _derived_bound_side(D, r.lower, r.estimate, lo_b, cutoff, true)
+    upper, at_hi = _derived_bound_side(D, r.upper, r.estimate, hi_b, cutoff, false)
+    boundary = at_lo || at_hi
 
     method = if isnan(lower) && isnan(upper)
         :failed
@@ -1101,11 +1162,12 @@ applied — the total variance is strictly positive but unbounded above, so
 the raw-scale bracket-then-bisect search (mirroring how this file already
 profiles `σ²_eps`) can in principle return a `lower` bound that drifted at
 or below `0`, or a plateau that never crosses the χ²₁ cutoff before the
-bracket expansion gives up. [`_profile_ci_bounded`](@ref) is applied to the
-result: any `lower < 0` is clamped to `0`, and a `NaN` `lower` whose
-deviance-at-`0` is itself still below cutoff is reported as `lower = 0`
-instead — both cases set the additional `boundary::Bool` field on the
-returned NamedTuple.
+bracket expansion gives up. The search therefore runs with
+`bounds = (0, Inf)` (see [`profile_ci_derived`](@ref)): any `lower < 0` is
+clamped to `0`, and a `NaN` `lower` is resolved at `0` (reported as `0` when
+the deviance there is still below cutoff, found by bisection between the
+estimate and `0` when it is above). A bound set to `0` sets the additional
+`boundary::Bool` field on the returned NamedTuple.
 """
 function profile_ci_total_variance(fit::GllvmFit, t::Integer;
                                    level::Real = 0.95,
@@ -1115,10 +1177,8 @@ function profile_ci_total_variance(fit::GllvmFit, t::Integer;
                                    kwargs...)
     spec = _derived_spec(fit)
     f = _make_total_variance_closure(spec, t)
-    r = profile_ci_derived(fit, f; level = level, y = y, X = X, Σ_phy = Σ_phy,
-                           kwargs...)
-    return _profile_ci_bounded(fit, f, r; level = level, y = y, X = X, Σ_phy = Σ_phy,
-                               lo_bound = 0.0, hi_bound = Inf)
+    return profile_ci_derived(fit, f; level = level, y = y, X = X, Σ_phy = Σ_phy,
+                              bounds = (0.0, Inf), kwargs...)
 end
 
 """
@@ -1136,11 +1196,12 @@ unit diagonal when omitted), consistent with `phylo_signal`/
 `phylo_signal_wald_ci`. `t` is a 1-based trait index; all keyword
 arguments forward to `profile_ci_derived`.
 
-`H²[t] ∈ [0, 1]` (see [`phylo_signal`](@ref)): [`_profile_ci_bounded`](@ref)
-is applied to the result, clamping any bound outside `[0, 1]` back to the
-edge and reporting a boundary plateau (deviance-at-`0`-or-`1` already below
-the χ²₁ cutoff) as that edge instead of `NaN`/`:partial`. The returned
-NamedTuple carries the additional `boundary::Bool` field.
+`H²[t] ∈ [0, 1]` (see [`phylo_signal`](@ref)): the search runs with
+`bounds = (0, 1)` (see [`profile_ci_derived`](@ref)), clamping any bound
+outside `[0, 1]` back to the edge and reporting a boundary plateau
+(deviance-at-`0`-or-`1` already below the χ²₁ cutoff) as that edge instead
+of `NaN`/`:partial`. The returned NamedTuple carries the additional
+`boundary::Bool` field.
 """
 function profile_ci_phylo_signal(fit::GllvmFit, t::Integer;
                                  level::Real = 0.95,
@@ -1151,10 +1212,8 @@ function profile_ci_phylo_signal(fit::GllvmFit, t::Integer;
     spec = _derived_spec(fit)
     diag_Σphy = Σ_phy === nothing ? nothing : diag(Σ_phy)
     f = _make_phylo_signal_closure(spec, t; diag_Σphy = diag_Σphy)
-    r = profile_ci_derived(fit, f; level = level, y = y, X = X, Σ_phy = Σ_phy,
-                           kwargs...)
-    return _profile_ci_bounded(fit, f, r; level = level, y = y, X = X, Σ_phy = Σ_phy,
-                               lo_bound = 0.0, hi_bound = 1.0)
+    return profile_ci_derived(fit, f; level = level, y = y, X = X, Σ_phy = Σ_phy,
+                              bounds = (0.0, 1.0), kwargs...)
 end
 
 """

@@ -2,6 +2,26 @@
 
 ## Development
 
+- **Derived-quantity profile CIs: natural-bounds clamp (#142).** `profile_ci_derived` takes a
+  new keyword `bounds = (lo, hi)`, the natural support of the quantity: `(0, 1)` for a
+  communality, ICC or phylogenetic signal, `(-1, 1)` for a correlation. A bound outside the
+  support is set to the edge. A `NaN` bound is resolved at the edge: it becomes the edge when
+  the deviance there is below the chi-square cutoff (a flat profile), and is found by bisection
+  between the estimate and the edge when the deviance there is above it. A new `boundary` field
+  is `true` when a bound was set to an edge. `bounds` must contain the estimate, so finite
+  bounds always satisfy `lower <= estimate <= upper`. On #670's near-singular fit, the
+  communality of trait 1 (estimate 0.99967) had upper bound 1.0435; with `bounds = (0, 1)` it
+  is 1.0. Without `bounds` the result is unchanged and has no `boundary` field, and a bound
+  inside the support is never changed. The limits are the natural ones, not R's 0.001/0.999,
+  so the interval always contains its estimate. `profile_ci_total_variance` and
+  `profile_ci_phylo_signal` now pass `bounds` (`(0, Inf)` and `(0, 1)`) instead of
+  post-processing with `_profile_ci_bounded`. Changed numbers for these two, only when a side
+  was `NaN`: a `NaN` bound whose edge deviance is above the cutoff is now a finite bisected
+  bound, and the edge refit now includes the fitted intercepts of a `fit_gllvm` Normal fit
+  when `X = nothing` (it omitted them before, which left such a side `NaN`).
+  `_profile_ci_bounded` applies the same rules and throws `ArgumentError` when the bounds do not
+  contain the estimate. Test: `test/test_derived_decisions.jl`.
+
 - **`fit_phylo_gaussian` no longer reports `converged = true` after a zero-length step
   (part of #505, the remaining #485 class).** Optim also counts a zero-length line-search
   step as convergence, so a start the finite-difference gradient cannot leave could be
