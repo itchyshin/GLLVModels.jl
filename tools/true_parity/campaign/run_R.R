@@ -5,7 +5,8 @@
 # write_receipts.py reads this file and run_J.jl's TOML and writes the receipts.
 #
 # Usage: Rscript run_R.R <cell>      (env: GLLVMTMB_P1_LIB, GLLVMTMB_P1_SRC, CAMPAIGN_DATA, CAMPAIGN_OUT,
-#                                     CAMPAIGN_SMALL=1 for the development runs, never a receipt)
+#                                     CAMPAIGN_SMALL=1 for the development runs, never a receipt,
+#                                     CAMPAIGN_POLISH=1 to also write <cell>_R_polish.json, see the polish block below)
 # The P1 guard (below) refuses to run unless
 #   (a) the loaded gllvmTMB is the library under GLLVMTMB_P1_LIB and reports version 0.7.1,
 #   (b) every P1 source file listed in p1_source_sha256.json hashes to its recorded P1 value in
@@ -168,3 +169,48 @@ if (kind == "isdm") {
 }
 write_json(out, file.path(out_dir, paste0(cell, sfx, "_R.json")), auto_unbox = TRUE, digits = NA, pretty = FALSE, null = "null", na = "null")
 cat("DONE", cell, "logLik", out$logLik, "conv", out$convergence, "pdHess", out$pdHess, "wall_fit", round(wall_fit, 1), "\n")
+
+## ---- optional convergence polish (CAMPAIGN_POLISH=1; DRAFT rule docs/dev-log/w1-11-convergence-parity-rule-DRAFT.md) ----
+# Runs AFTER the main JSON is written (so the default output is unaffected even if this block is slow) and writes a SEPARATE file, so the <cell>_R.json that write_receipts.py reads is byte-for-byte
+# what a run without the option writes. Same objective (fit$tmb_obj) throughout; nothing is refit from scratch.
+#   stage 0: the nlminb optimum the fit returned (gradient max-abs = out$max_abs_gradient above)
+#   stage 1: nlminb restarted from stage 0 with rel.tol = 1e-13 (x.tol = 0, generous iteration caps)
+#   stage 2: ONE Newton step from stage 1 using TMB's gradient and Hessian: par - solve(H, g); H is the inverse of TMB's
+#            sdreport covariance at that point (obj$he does not exist for random-effect models; see the comment below).
+# The Newton step is kept whatever the objective does; f before/after and the Hessian's smallest eigenvalue are recorded.
+if (nzchar(Sys.getenv("CAMPAIGN_POLISH"))) {
+  obj <- fit$tmb_obj
+  gmax <- function(par) max(abs(obj$gr(par)))
+  ll <- function(par) -obj$fn(par)
+  rec <- function(par) list(logLik = ll(par), max_abs_gradient = gmax(par))
+  stage0 <- rec(opt$par)
+  t2 <- Sys.time()
+  tight <- nlminb(opt$par, obj$fn, obj$gr, control = list(rel.tol = 1e-13, x.tol = 0, iter.max = 500L, eval.max = 1000L))
+  stage1 <- c(rec(tight$par), list(convergence = tight$convergence, message = tight$message, iterations = tight$iterations))
+  g1 <- as.numeric(obj$gr(tight$par))
+  # TMB provides no obj$he for a model with random effects ("Hessian not yet implemented for models with random effects"), and
+  # optimHess(par, obj$gr) over the Laplace gradient took 14 min on this cell (measured), against 5 s for sdreport. So the Hessian is
+  # the one TMB itself reports: solve(TMB::sdreport(obj, par.fixed = par)$cov.fixed), the inverse of the Hessian sdreport uses.
+  H_src <- "solve(TMB::sdreport(obj, par.fixed = par)$cov.fixed)"
+  sdr1 <- tryCatch(TMB::sdreport(obj, par.fixed = tight$par, getJointPrecision = FALSE), error = function(e) NULL)
+  H <- if (!is.null(sdr1) && isTRUE(sdr1$pdHess)) tryCatch(solve(sdr1$cov.fixed), error = function(e) NULL) else NULL
+  if (is.null(H)) { H <- diag(length(g1)); H_src <- "FAILED: sdreport Hessian not positive definite"; skip_newton <- TRUE } else skip_newton <- FALSE
+  H <- (H + t(H)) / 2
+  ev <- eigen(H, symmetric = TRUE, only.values = TRUE)$values
+  step <- if (skip_newton) NULL else tryCatch(as.numeric(solve(H, g1)), error = function(e) NULL)
+  if (is.null(step)) { stage2 <- list(skipped = H_src) ; par2 <- tight$par } else {
+    par2 <- tight$par - step
+    stage2 <- c(rec(par2), list(step_max_abs = max(abs(step)), hessian_source = H_src, hessian_min_eig = min(ev), hessian_max_eig = max(ev)))
+  }
+  rep2 <- tryCatch({ obj$fn(par2); obj$report(obj$env$last.par) }, error = function(e) NULL)
+  pol <- list(engine = "R gllvmTMB", cell = cell, small = SMALL, note = "scratch convergence polish; never a receipt until N9 is signed",
+              n_par = length(opt$par), stage0_nlminb_default = stage0, stage1_nlminb_rel_tol_1e13 = stage1, stage2_newton_step = stage2,
+              wall_polish_sec = as.numeric(Sys.time() - t2, units = "secs"))
+  if (kind == "latent" && !is.null(rep2$Lambda_B)) {
+    L2 <- as.matrix(rep2$Lambda_B); pol$LLt_polished <- unname(L2 %*% t(L2))
+    pol$LLt_polished_vs_default_max_abs_diff <- max(abs(L2 %*% t(L2) - out$LLt))
+  }
+  if (!is.null(rep2$Lambda_B)) pol$Lambda_B_report_ok <- TRUE
+  write_json(pol, file.path(out_dir, paste0(cell, sfx, "_R_polish.json")), auto_unbox = TRUE, digits = NA, pretty = TRUE, null = "null", na = "null")
+  cat("POLISH", cell, "grad", stage0$max_abs_gradient, "->", stage1$max_abs_gradient, "->", if (is.null(stage2$skipped)) stage2$max_abs_gradient else NA, "\n")
+}
