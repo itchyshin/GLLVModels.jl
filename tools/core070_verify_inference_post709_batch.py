@@ -34,7 +34,7 @@ EXPECTED_ROUTE = {"CI-ROUTE-015", "CI-ROUTE-016", "CI-ROUTE-018", "CI-ROUTE-022"
                   "CI-ROUTE-045", "CI-ROUTE-048", "CI-ROUTE-057", "CI-ROUTE-060", "CI-ROUTE-063"}
 EXPECTED_REFUSAL = {"CI-ROUTE-006", "CI-ROUTE-007", "CI-ROUTE-012", "CI-ROUTE-013", "CI-ROUTE-014", "CI-ROUTE-019",
                     "CI-ROUTE-020", "CI-ROUTE-021", "CI-ROUTE-026", "CI-ROUTE-027", "CI-ROUTE-028", "CI-ROUTE-033",
-                    "CI-ROUTE-035", "CI-ROUTE-040", "CI-ROUTE-041", "CI-ROUTE-042"}
+                    "CI-ROUTE-035", "CI-ROUTE-034", "CI-ROUTE-040", "CI-ROUTE-041", "CI-ROUTE-042"}
 ROUTE_TAG = {"DEFAULT": "wald_derived", "profile": "profile", "bootstrap": "bootstrap"}
 
 

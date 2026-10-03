@@ -173,6 +173,13 @@ refusal_rows!(rows, "communality", "COMMUNALITY", "communality[1]",
 refusal_rows!(rows, "rho", "RHO", "rho[1,2]", [("CI-ROUTE-033", "wald_asym"), ("CI-ROUTE-035", "bogus")])
 refusal_rows!(rows, "proportion", "PROPORTION", "proportion:shared[1]",
               [("CI-ROUTE-040", "wald_asym"), ("CI-ROUTE-041", "fisher-z"), ("CI-ROUTE-042", "bogus")])
+# CI-ROUTE-034 asks R for Fisher-z on rho, which R accepts. Julia's public route refuses it (observed for the
+# record, reported = false: the row does not bind from this).
+push!(rows, Row("CI-ROUTE-034", PS * "RHO-CI-METHOD-ROUTE", "rho", "fisher-z", "refusal",
+                "confint(fitS, YS; parm=\"rho[1,2]\", method=Symbol(\"fisher-z\"), Σ_phy)",
+                () -> confint(fitS, YS; parm = "rho[1,2]", method = FZ, Σ_phy = Σ_phy),
+                "confint(fitS, YS; parm=\"rho[1,2]\", method=:wald, Σ_phy)",
+                () -> confint(fitS, YS; parm = "rho[1,2]", method = :wald, Σ_phy = Σ_phy), false))
 let ctl = () -> confint(fitA, YA; parm = "Lambda_B[1,1]", method = :wald)
     for (sid, meth) in [("CI-ROUTE-006", "fisher-z"), ("CI-ROUTE-007", "bogus")]
         sym = Symbol(meth)
