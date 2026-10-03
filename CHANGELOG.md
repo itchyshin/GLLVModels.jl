@@ -222,6 +222,33 @@
   profile intervals are unchanged. Test: `test/test_confint_bootstrap_ordered_beta.jl`
   (analytic moment checks of the draws, and an end-to-end bootstrap on the
   literal fixture `test/fixtures/ordered_beta_boot.toml`).
+- **`confint` on a fit made with an `offset` now infers on that offset (silent wrong-answer fix).**
+  `confint(fit, Y)` rebuilt the marginal log-likelihood from `Y`, `N`, `X` and `mask` only, so a
+  fit made with an `offset` (log-exposure, effort) got the Hessian, profile refits and bootstrap
+  draws of an offset-free model, with no warning. Measured on Poisson fits with `p = 5`, `n = 80`,
+  `K = 1` and offset `0.5 * randn(p, n)` over 30 seeds: at the fit's own optimum the offset-free
+  log-likelihood sat 45 to 130 below the fit's, the standard errors were off by a median of 10%
+  (up to a factor of 2), and in one seed the offset-free Hessian was not positive definite
+  (smallest eigenvalue -243 against +26.9 for the fit's own objective), so `confint` reported
+  `pd_hessian = false` and no interval for 3 of the 10 terms on a regular fit. `confint(fit, Y; offset = O)` (also
+  `vcov`, `coef_table`, and `confint_lv_effects` for Wald and profile) now takes the offset given
+  to the fitter (a scalar, a `p x n` matrix, `p x 1`, `1 x n`, or a length-`p` vector, the shapes
+  `fit_gllvm` stretches to `p x n`) and uses it in the Wald Hessian, the profile refits and the
+  bootstrap draws and refits. This holds for every fit type whose fitter takes an offset: Poisson,
+  Binomial, NB2, NB1, GP1, Beta, Gamma, Exponential, the NB2 / NB1 / Beta / Gamma / Tweedie
+  grouped-dispersion fits without covariates, truncated Poisson and NB2, and the delta, hurdle
+  and zero-inflated two-part families (`predictor = :shared` delta fits put the offset on both
+  parts, as the fitters do). Fit objects have no field for the offset (adding one would touch
+  every fit constructor), so `confint` checks that the objective it rebuilds reproduces
+  `fit.loglik` at the fitted values and throws an `ArgumentError` otherwise: a fit made with an
+  offset and a call without it, or with a different one, is refused instead of answered with the
+  intervals of another model. The same check refuses a wrong `N` or a dropped `mask` on those fit
+  types. Also refused: an offset for a fit type whose fitter takes none, an offset with
+  `objective = :va` (the variational marginal has no offset route), and an offset with
+  `confint_lv_effects(...; method = :bootstrap)`. Unchanged: AGHQ Poisson and binomial fits keep
+  their offset and need no keyword, and the Gaussian route already read the offset from the fit.
+  Fits without an offset give the same intervals (checked bit for bit on Poisson, NB2, Gamma,
+  ZIP, Delta-Gamma, grouped NB2 and Binomial). Test: `test/test_confint_offset.jl`.
 
 All notable changes to GLLVModels.jl are documented here.
 
