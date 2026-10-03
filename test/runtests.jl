@@ -523,10 +523,18 @@ println(_SHARD === nothing ?
     _shard_include("test_temporal_composed.jl")
     _shard_include("test_temporal_composed_receipts.jl")
     _shard_include("test_isdm.jl")
+    _shard_include("test_convergence_sweep.jl")
+    # #573: ZIP/ZINB fits never end below the nested Poisson / shared-r NB2 fit.
+    _shard_include("test_zip_zinb_stall.jl")
     _shard_include("test_zerostep_verdict_sweep.jl")
     _shard_include("test_input_validation.jl")
     _shard_include("test_robustness_sweep.jl")
     _shard_include("test_derived_ci_sweep.jl")
     _shard_include("test_tweedie_speed.jl")
+    _shard_include("test_nb_grouped_postfit.jl")
+    _shard_include("test_bootstrap_decisions.jl")
+    _shard_include("test_derived_decisions.jl")
+    _shard_include("test_n_lt_p.jl")
+    _shard_include("test_wtier_crosscov.jl")
 end
 include("test_readme_quickstart.jl")

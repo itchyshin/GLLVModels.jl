@@ -28,9 +28,11 @@
 #      near the MLE, since D ≈ (c−θ̂)²/SE²), with a bisection safeguard — a few
 #      refits instead of ~log2(width/tol) bisections, at the same crossing.
 #
-# The result on log-SD-style parameters (σ_eps, σ_B, σ_W, σ_phy) is
-# converted to the raw scale via exp(.) to match the convention of
-# src/confint.jl: bounds are reported on the natural (positive) scale.
+# The result on log-SD-style parameters (σ_eps, σ_B, σ_W) is converted to
+# the raw scale via exp(.) to match the convention of src/confint.jl: bounds
+# are reported on the natural (positive) scale. σ_phy is the exception: it is
+# packed on an identity (signed) scale, so its bounds stay on that raw scale
+# and can be negative (#136).
 #
 # Constrained-refit mechanics: Optim.jl has no first-class
 # "hold parameter k fixed" interface, so we instead define a closure
@@ -393,6 +395,13 @@ be supplied so this function can reconstruct the NLL closure. `X` and
 Returns a NamedTuple with fields:
   - `lower::Float64` — lower CI bound on the raw scale for SD-style
     parameters (σ_eps, σ_B, σ_W, σ_phy), native scale for β / Λ.
+    `σ_phy` is a signed parameter (#136), so this interval can cross zero.
+    When `K_phy = 0`, the sign of each group of rows that `Σ_phy` links can
+    flip on its own (for a tree-derived `Σ_phy`, each daughter clade of the
+    root); when `K_phy ≥ 1`, it is not
+    identified separately from `Λ_phy` and a per-entry interval is not
+    interpretable. It is not gllvmTMB's
+    `phylo_unique` scale; see the gllvmTMB parity page.
   - `upper::Float64` — upper CI bound, same scale convention.
   - `method::Symbol` — `:profile` if both bounds were bracketed,
     `:partial` if only one side was found (the other is NaN), or
@@ -752,6 +761,12 @@ end
 Bare profile-CURVE variant scoped to the per-trait phylogenetic-unique scale
 `sigma_phy[t]` (a raw packed parameter on an identity, signed link — no `exp`
 back-transform; present iff the fit used `has_phy_unique = true`).
+
+`σ_phy` is a signed parameter (#136), so this curve can extend below zero.
+When `K_phy = 0`, the sign of each group of rows that `Σ_phy` links can flip
+on its own (for a tree-derived `Σ_phy`, each daughter clade of the root); when `K_phy ≥ 1`, it is not identified separately from
+`Λ_phy` and a per-entry interval is not interpretable. It is not gllvmTMB's `phylo_unique` scale; see the gllvmTMB
+parity page.
 
 Honest scope note: this is NOT the composite phylogenetic-SIGNAL summary
 `phylo_signal(fit)[t]` (an H²-like ratio of variance components) that

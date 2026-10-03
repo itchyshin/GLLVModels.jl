@@ -108,8 +108,8 @@ Implied trait covariance at one tier of a fitted Gaussian GLLVM, mirroring
                   `Σ_W = Λ_W Λ_Wᵀ + diag(σ²_W) + σ²_eps·I`.
   - `:site`     — the full per-site covariance `sigma_y_site(fit)` (a GLLVModels.jl
                   extension not present in the R tier vocabulary; combines
-                  both tiers' diagonal contributions with the Gaussian
-                  residual, excluding the phylogenetic block).
+                  both tiers, including the full `Λ_W Λ_Wᵀ` block, with the
+                  Gaussian residual, excluding the phylogenetic block).
 
 Legacy aliases `:B`/`:W` are accepted for `:unit`/`:unit_obs`.
 
@@ -125,6 +125,16 @@ Legacy aliases `:B`/`:W` are accepted for `:unit`/`:unit_obs`.
 Deviation from R: GLLVModels.jl has no `phy`/`spatial`/`*_slope` tiers yet (those
 augmented-block tiers belong to structured-term recognizers, Cluster 3 of
 the missing-surface work order); requesting them throws `ArgumentError`.
+
+Identification: each column of `y` is one unit observed once, so the data
+identify only the sum of the two tiers, `Λ_B Λ_Bᵀ + Λ_W Λ_Wᵀ` and
+`σ²_B + σ²_W + σ²_eps`, not the split (#135). With `K_W > 0` (for the
+loadings) or `has_diag = true` (for the diagonal), the `:unit` and
+`:unit_obs` results depend on the starting values and should not be
+interpreted; `:site` uses only the identified total. A `GllvmFit` with
+`K_W > 0` matches a single-tier fit with `K + K_W` axes. To separate the
+tiers, fit repeated observations per unit with
+[`fit_twolevel_gaussian`](@ref) and use the [`TwoLevelFit`](@ref) method.
 """
 function extract_Sigma(fit::GllvmFit; level::Symbol = :unit, part::Symbol = :total)
     lvl = _canonical_level(level)
@@ -324,6 +334,12 @@ against R's `gaussian_small` oracle fixture, `unique = FALSE`, no W tier:
 (forwards to [`communality`](@ref)): shared / `sigma_y_site(fit)`, i.e.
 every non-phylo tier the fit carries plus `σ_eps²`. The two estimands agree
 only when `σ_eps == 0` and there is no W-tier.
+
+With `K_W > 0` or `has_diag = true`, a `GllvmFit` does not identify the split
+between the `:unit` and `:unit_obs` tiers (one unit per column of `y`), so
+the tier-scoped value depends on the starting values; see
+[`extract_Sigma(::GllvmFit)`](@ref). With `K_W > 0` this holds for
+`level = :total` too, because its numerator is `Λ_B Λ_Bᵀ` alone.
 """
 function extract_communality(fit::GllvmFit; level::Symbol = :unit)
     lvl = _validate_communality_level(level)
@@ -369,7 +385,13 @@ twin.
 `level = :total` recovers GLLVModels.jl's original TOTAL-variance estimand
 (forwards to [`correlation`](@ref)): `ρ_ij = Σ_y_site,ij / √(Σ_y_site,ii ·
 Σ_y_site,jj)`, standardising by every non-phylo tier plus `σ_eps²`. The two
-estimands agree only when `σ_eps == 0` and there is no W-tier.
+estimands agree only when `σ_eps == 0` and there is no W-tier. `level = :total`
+uses only the identified total, so it is the safe choice for a `K_W > 0` fit.
+
+With `K_W > 0` or `has_diag = true`, a `GllvmFit` does not identify the split
+between the `:unit` and `:unit_obs` tiers (one unit per column of `y`), so
+the tier-scoped value depends on the starting values; see
+[`extract_Sigma(::GllvmFit)`](@ref).
 """
 function extract_correlations(fit::GllvmFit; level::Symbol = :unit)
     lvl = _validate_communality_level(level)
@@ -529,6 +551,11 @@ Any other `component` (`:unique_W`, `:unique_B`, `:unique_Wd`, `:residual`),
 or `level = :total`, forwards unchanged to the existing [`proportions`](@ref)
 generic (GLLVModels.jl's original TOTAL-variance composition, `sigma_y_site(fit)`
 denominator) — those components/level are not part of this alignment slice.
+
+With `K_W > 0` or `has_diag = true`, a `GllvmFit` does not identify the split
+between the `:unit` and `:unit_obs` tiers (one unit per column of `y`), so
+the tier-scoped value depends on the starting values; see
+[`extract_Sigma(::GllvmFit)`](@ref).
 """
 function extract_proportions(fit::GllvmFit; component::Symbol = :shared, level::Symbol = :unit)
     (component !== :shared || level === :total) && return proportions(fit; component = component)
@@ -573,6 +600,11 @@ Per-trait unit-level intraclass correlation `ICC_t = v_B,t / (v_B,t + v_W,t)`,
 `GllvmFit` is Gaussian-only so there is no implicit link residual to add).
 NaN where `v_B,t + v_W,t` is not finite-positive, matching R's
 `.safe_icc_ratio()`.
+
+With `K_W > 0` or `has_diag = true`, a `GllvmFit` does not identify the split
+between the `:unit` and `:unit_obs` tiers (one unit per column of `y`), so
+the tier-scoped value depends on the starting values; see
+[`extract_Sigma(::GllvmFit)`](@ref).
 """
 function extract_ICC_site(fit::GllvmFit)
     vB = diag(extract_Sigma(fit; level = :unit, part = :total).Sigma)
