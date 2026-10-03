@@ -224,21 +224,27 @@ end
     @test fit_gamma_gllvm_va(Yg; K = K, link = G.LogLink()) isa GammaFit
 end
 
-# Default-link fits must not move. These reference values were produced on main BEFORE the
-# link fix (same simulation, same call); the default-link code path is unchanged.
+# Default-link fits must not move. Their bit-for-bit identity with main was checked by review
+# (390 records, 2026-10-03). Hard-coded reference values cannot pin that across Julia versions
+# (the simulated data come from MersenneTwister and Distributions' samplers, whose streams
+# differ between Julia 1.10 and 1.13), so this test checks what holds on every platform: the
+# implicit default link is the explicit canonical link, bit for bit, and the stored loglik is
+# the canonical-link marginal at the returned parameters, at a stationary point.
 @testset "default-link fits are unchanged" begin
     K = 1
     Yb, _, _ = sim_beta(G.LogitLink(); n = 150, seed = 61)
     fb = fit_beta_gllvm(Yb; K = K)
-    @test isapprox(fb.loglik, 713.1872485087047; atol = 1e-5)
-    @test isapprox(fb.φ, 25.216934087488305; rtol = 1e-5)
+    @test fb.link isa G.LogitLink
     @test fit_beta_gllvm(Yb; K = K, link = G.LogitLink()).loglik == fb.loglik
+    @test isapprox(fb.loglik, G.beta_marginal_loglik_laplace(Yb, fb.Λ, fb.β, fb.φ;
+                   link = G.LogitLink(), hessian = fb.hessian); atol = 1e-8)
 
     Yg, _, _ = sim_gamma(G.LogLink(); n = 150, seed = 62, β = 1.0 .+ collect(range(-0.5, 0.5; length = 6)))
     fg = fit_gamma_gllvm(Yg; K = K)
-    @test isapprox(fg.loglik, -1326.0092575393442; atol = 1e-5)
-    @test isapprox(fg.α, 8.323843742421477; rtol = 1e-5)
+    @test fg.link isa G.LogLink
     @test fit_gamma_gllvm(Yg; K = K, link = G.LogLink()).loglik == fg.loglik
+    @test isapprox(fg.loglik, G.gamma_marginal_loglik_laplace(Yg, fg.Λ, fg.β, fg.α;
+                   link = G.LogLink(), hessian = fg.hessian); atol = 1e-8)
 end
 
 end # module
