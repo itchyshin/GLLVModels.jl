@@ -1,0 +1,128 @@
+{
+ "schema": "true-parity-campaign-receipt/v1",
+ "source_id": "fit-input/GRP-CLUSTER2",
+ "clause": "C5",
+ "pin": "P1",
+ "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+ "ruling": "itchyshin/GLLVModels.jl#684 item 4",
+ "verdict": "PASS",
+ "row_status": "binds: the plan's pass rule holds on both engines",
+ "pass_rule": {
+  "rule": "both engines converged (R convergence 0 with a positive-definite Hessian; Julia converged true) and every listed quantity within tolerance",
+  "legs": {
+   "name_parity_PASS": true,
+   "negative_control_rejected_on_both_sides": true,
+   "receipt_verdict_PASS": true,
+   "R_convergence_0": true,
+   "Julia_converged_true": true,
+   "paired_logLik_within_1e-6": true,
+   "replay_hashes_verified": true,
+   "replay_name_parity_PASS": true,
+   "replay_logLik_within_1e-6_of_receipt": true
+  }
+ },
+ "level": "cluster2",
+ "source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/grouping/cluster2.json",
+ "source_receipt_sha256": "67cdc6c50c3d724c909b85e279b460254c0248266429c7db30c7b34a1c0dc90f",
+ "name_parity": "PASS",
+ "name_parity_method": "measured by calling each engine with the keyword (the paired fit) and with a misspelt keyword (negative control); signatures were not read",
+ "paired_fit": {
+  "model": "value_ti = beta_t + u_{t,g(i)} + eps_ti, u_{t,g} ~ N(0, sd_t^2) diagonal (indep), eps ~ N(0, sigma_eps^2), ML",
+  "r": {
+   "call": "value ~ 0 + trait + indep(0 + trait | cluster2_id); unit = unit, cluster2 = cluster2_id",
+   "convergence": 0,
+   "optimizer_message": "relative convergence (4)",
+   "max_abs_gradient": 2.19172312040477e-05,
+   "fit_seconds": 0.0254650115966797
+  },
+  "julia": {
+   "call": "fit_gllvm(Y; family=Normal(), grouping=[GroupingTerm(:cluster2; mode=:indep)], cluster2=<labels>, iterations=1000)",
+   "converged": true,
+   "iterations": 8,
+   "fit_seconds": 0.08032679557800293,
+   "start": "fitter default (independent of R)"
+  },
+  "structural_zero": {
+   "Sigma_offdiag_r": 0,
+   "Sigma_offdiag_julia": 0.0,
+   "note": "diagonal by construction on both engines; recorded, not compared"
+  }
+ },
+ "replay": {
+  "level": "cluster2",
+  "glvmodels_commit_of_replay": "896a0a2286c224fe9979d3cf7e7e2c6be27f9357",
+  "oracle_reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "gllvmTMB_version": "0.7.1",
+  "R_version": "R version 4.6.0 (2026-04-24)",
+  "julia_version": "1.10.0",
+  "host": "w-kw3k3y6229.psych.ualberta.ca",
+  "fixture_sha256_verified": true,
+  "name_parity_pass": true,
+  "r_convergence": 0,
+  "julia_converged": true,
+  "replay_r_logLik": -59.9317788136872,
+  "replay_julia_logLik": -59.931778813682065,
+  "replay_abs_logLik_r_vs_julia": 5.137223979545524e-12,
+  "receipt_r_logLik": -59.9317788136872,
+  "receipt_julia_logLik": -59.931778813682065,
+  "max_abs_logLik_vs_receipt": 0.0,
+  "wall_seconds": {
+   "r_all_levels": 2.028308868408203,
+   "julia_all_levels_including_compile": 6.079855918884277
+  },
+  "threads": {
+   "OPENBLAS_NUM_THREADS": "1",
+   "JULIA_NUM_THREADS": "4"
+  }
+ },
+ "not_covered": [
+  "Gaussian only; non-Gaussian pairing of grouping levels is out of scope here.",
+  "Diagonal (indep) trait covariance only; latent (rank-reduced) and full (dep) forms are not paired.",
+  "One grouping term per fit; joint terms (e.g. unit + unit_obs, cluster + cluster2) are not paired.",
+  "Two traits, one small toy fixture per level; no realistic-size, recovery, interval or coverage evidence.",
+  "Point estimates and logLik only; no standard errors, confidence intervals or REML.",
+  "Direct engines only (R TMB engine vs Julia fit_gllvm); the engine = 'julia' R bridge is not exercised.",
+  "C5 pairing is Gaussian only: the non-Gaussian numerical pairing of grouping levels is fenced here, not measured."
+ ],
+ "engines": {
+  "R": {
+   "engine": "R gllvmTMB 0.7.1 (P1)",
+   "call": "value ~ 0 + trait + indep(0 + trait | cluster2_id); unit = unit, cluster2 = cluster2_id",
+   "convergence": 0,
+   "optimizer_message": "relative convergence (4)",
+   "max_abs_gradient": 2.19172312040477e-05,
+   "fit_seconds": 0.0254650115966797
+  },
+  "julia": {
+   "engine": "GLLVModels.fit_gllvm",
+   "call": "fit_gllvm(Y; family=Normal(), grouping=[GroupingTerm(:cluster2; mode=:indep)], cluster2=<labels>, iterations=1000)",
+   "converged": true,
+   "iterations": 8,
+   "fit_seconds": 0.08032679557800293,
+   "glvmodels_commit_of_source_receipt": "db5b9ed2e2467e296b153e24671874a017496907"
+  }
+ },
+ "comparison": {
+  "pin": "P1",
+  "cases": [
+   {
+    "case_id": "grouping-p1/cluster2/logLik",
+    "quantity": "logLik",
+    "r_value": -59.9317788136872,
+    "julia_value": -59.931778813682065,
+    "diff_source": "recomputed by the checker from r_value and julia_value",
+    "max_abs_diff": 5.137223979545524e-12,
+    "tolerance": 1e-06,
+    "tolerance_rule": "1e-6 absolute on the marginal log-likelihood",
+    "tolerance_status": "twin: #576 reports 1e-8, #563 reports 9e-8",
+    "n_values": 1,
+    "within_tolerance": true
+   }
+  ]
+ },
+ "read_from": {
+  "docs/dev-log/core070/true-parity-latest/receipts/grouping/cluster2.json": "67cdc6c50c3d724c909b85e279b460254c0248266429c7db30c7b34a1c0dc90f",
+  "docs/dev-log/core070/true-parity-latest/receipts/grouping/fixtures/cluster2.csv": "f66c68823cfde7850eae6f239b3c07b7a93694d0a6623a6be258e832a53ef1b8",
+  "docs/dev-log/core070/true-parity-latest/receipts/fit-input/campaign/raw/c5_replay_cluster2.json.gz (uncompressed sha256)": "b77afd208d4fc8af455f6e38bd478c7314ccb08462b51ce0eec74e1127427238"
+ }
+}

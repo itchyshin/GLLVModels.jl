@@ -1,0 +1,348 @@
+{
+ "schema": "true-parity-campaign-receipt/v1",
+ "source_id": "data/RD-FUNGI-BINOMIAL",
+ "clause": "C4",
+ "pin": "P1",
+ "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+ "ruling": "itchyshin/GLLVModels.jl#684 item 4",
+ "verdict": "FAIL",
+ "row_status": "does not bind: beta: abs difference 0.000123933 > tolerance 0.0001; LLt: abs difference 0.000474438 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000328279 > tolerance 1e-06",
+ "pass_rule": {
+  "rule": "both engines converged (R convergence 0 with a positive-definite Hessian; Julia converged true) and every listed quantity within tolerance",
+  "legs": {
+   "R_convergence_0": true,
+   "R_pdHess_true": true,
+   "Julia_converged_true": true,
+   "same_data_sha256": true,
+   "gllvmTMB_deparse_identical_to_P1": true,
+   "R_version_0_7_1_from_P1_library": true,
+   "every_quantity_within_tolerance": false
+  }
+ },
+ "cell": {
+  "formula": "value ~ 0 + trait + TEMPR + PRECIP + logAREA + latent(0 + trait | site, d = 2, unique = FALSE)",
+  "data_sha256": "498b84b93d2759785272cf33e7620f556033cb28c8a017596e146d6b5318b1bb",
+  "data_file": "fungi_wide.csv",
+  "p": 59,
+  "n": 300
+ },
+ "data_meta": {
+  "cell": "fungi",
+  "small": false,
+  "source": "gllvm::fungi (gllvm 2.0.15), GPL-2; loaded by name, not tracked",
+  "seed": 20261004,
+  "rule": "species with prevalence in [.05,.60] (59 qualify), 300 sites by seeded draw, covariates TEMPR PRECIP log.AREA scaled",
+  "file": "fungi_wide.csv",
+  "rows": 300,
+  "cols": 63,
+  "csv_sha256": "498b84b93d2759785272cf33e7620f556033cb28c8a017596e146d6b5318b1bb",
+  "R_version": "R version 4.6.1 (2026-06-24)"
+ },
+ "run": {
+  "host": "totoro.biology.ualberta.ca (384 cores, shared); lane directory ~/hsq_work/true-parity-campaign-20261002",
+  "driver_start": [
+   "2026-10-03T00:45:43Z",
+   " 18:45:43 up 3 days,  6:22,  8 users,  load average: 24.47, 25.77, 27.77"
+  ],
+  "driver_end": [
+   "2026-10-03T00:58:39Z",
+   " 18:58:39 up 3 days,  6:35,  8 users,  load average: 15.78, 17.11, 21.96"
+  ],
+  "jobs": [
+   "J fungi rc=0 wall=60s cap=300s 2026-10-03T00:46:46Z",
+   "R fungi rc=0 wall=16s cap=600s 2026-10-03T00:47:33Z"
+  ],
+  "caps": "at most 8 concurrent jobs, OPENBLAS_NUM_THREADS=1, JULIA_NUM_THREADS=2, R single-threaded; each job under timeout at twice its written estimate"
+ },
+ "engine_messages": {
+  "R": "Warning message:\nThis fit shows a runaway trait loading; treat it as unusable until checked.\n\u2022 sp54 prevalence=0.0433; max_loading=2.62; relative_loading=2.24;\n  saturated_fit=0.653\n\u2139 near-constant binomial trait with dominant loading or saturated fitted\n  probabilities\n\u2192 remove or re-code the near-constant binary indicator; lowering rank will not\n  resolve quasi-separation by itself\n\u2192 Full check: `gllvmTMB_diagnose(fit)`. Silence this with\n  `gllvmTMBcontrol(warn_runaway = FALSE)`.\nThis warning is displayed once per session. ",
+  "julia": null
+ },
+ "p1_source_sha256": {
+  "R/gllvmTMB.R": "a1ad39041f88d08b017500132bac45b5282f246025c488bc1829dc57aeae3faf",
+  "R/families.R": "beed3caa91b0ed77b402f40192a493db693eafdd0bb214aa0ef73c33e4538791",
+  "R/isdm-sources.R": "e06bbe7bc3c88697080173f0e1b68f3e5a1947729124e72d34587730cd1b6f73",
+  "R/extract-sigma.R": "dbd337827707a7ca04c31ee57d6caf143b08e633d30a495f809f5b8728f90a14",
+  "R/extract-cutpoints.R": "38c195646d91db683cbb31da1e3ba60fb1d857d5c0637f0877514176b11bc151",
+  "R/methods-gllvmTMB.R": "6c32924b415646697ab4e471fda8b83108e416d662ba6e607bbeba335dd21616",
+  "R/temporal.R": "93ec5bfe19b2f64afa04c50d9a7a8c85d2b0d9b9a6410eeceb5504895b280902",
+  "DESCRIPTION": "ce3ba8fd8787a096e0c1142a2145cef167869325c937c8436c8916a526552283"
+ },
+ "gllvmTMB_deparse_check": [
+  {
+   "name": "gllvmTMB",
+   "file": "R/gllvmTMB.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "gllvmTMBcontrol",
+   "file": "R/gllvmTMB.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "nbinom2",
+   "file": "R/families.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "ordinal_logit",
+   "file": "R/families.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "isdm_sources",
+   "file": "R/isdm-sources.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "extract_Sigma",
+   "file": "R/extract-sigma.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "extract_cutpoints",
+   "file": "R/extract-cutpoints.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "predict.gllvmTMB_multi",
+   "file": "R/methods-gllvmTMB.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "extract_temporal",
+   "file": "R/temporal.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "temporal_latent",
+   "file": "R/temporal.R",
+   "identical_deparse": true
+  }
+ ],
+ "not_covered": [
+  "One dataset and one seed per row: a spot check at this size, not a scaling study or a coverage study.",
+  "Direct engines only (R TMB fit against a direct Julia fit); R's engine = 'julia' bridge route is not exercised.",
+  "Julia starts from its own default start, never from R's coordinates; wall times include first-call Julia compilation.",
+  "cond(H) of the two engines is recorded but not compared (different parameter bases)."
+ ],
+ "engines": {
+  "R": {
+   "engine": "R gllvmTMB",
+   "gllvmTMB_version": "0.7.1",
+   "loaded_from_library": "Rlib/gllvmTMB",
+   "TMB_version": "1.9.25",
+   "R_version": "R version 4.6.1 (2026-06-24)",
+   "host": "totoro",
+   "formula": "value ~ 0 + trait + TEMPR + PRECIP + logAREA + latent(0 + trait | site, d = 2, unique = FALSE)",
+   "convergence": 0,
+   "optimizer_message": "relative convergence (4)",
+   "pdHess": true,
+   "max_abs_gradient": 0.00386035726088885,
+   "n_par": 179,
+   "cond_H": 27395.3024487908,
+   "wall_fit_sec": 6.77555561065674,
+   "wall_sdreport_sec": 9.05299115180969,
+   "finished_utc": "2026-10-03T00:47:24Z"
+  },
+  "julia": {
+   "engine": "GLLVModels.jl",
+   "julia_version": "1.12.6",
+   "gllvmodels_commit": "896a0a2286c224fe9979d3cf7e7e2c6be27f9357",
+   "host": "totoro",
+   "call": "gllvm(@formula(y ~ 1 + <3 covariates>), Y, covdata; family = Binomial(), K = 2)",
+   "converged": true,
+   "iterations": 154,
+   "pd_hessian": null,
+   "cond_H": null,
+   "wall_fit_sec": 44.4677529335022,
+   "wall_confint_sec": null,
+   "wall_vcov_sec": null,
+   "JULIA_NUM_THREADS": 2,
+   "OPENBLAS_NUM_THREADS": "1"
+  }
+ },
+ "comparison": {
+  "pin": "P1",
+  "cases": [
+   {
+    "case_id": "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-LOGLIK",
+    "quantity": "logLik",
+    "r_value": -5792.18625245028,
+    "julia_value": -5792.186252388768,
+    "diff_source": "recomputed by the checker from r_value and julia_value",
+    "max_abs_diff": 6.151276465971023e-08,
+    "tolerance": 1e-06,
+    "tolerance_rule": "1e-6 absolute on the marginal log-likelihood",
+    "tolerance_status": "twin: 1e-6 absolute on logLik, as the P0 worst case (2.3e-7) and every P1 twin",
+    "n_values": 1,
+    "within_tolerance": true
+   },
+   {
+    "case_id": "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-BETA",
+    "quantity": "beta",
+    "r_value": [
+     0.286409188414912,
+     -0.329553101533957,
+     -0.210957146011055,
+     -0.507593977702854,
+     -0.717707743243652,
+     -1.32375352448297,
+     -1.57298599535124,
+     -1.47323956093337,
+     -1.01902937987776,
+     -1.73824519638977,
+     -1.39980549342684,
+     -2.75488837417572,
+     -1.21984831653053,
+     -1.21208343202235,
+     -2.55740805177324,
+     -2.16537293074704,
+     -2.04545647828916,
+     -2.30182643378425,
+     -2.70075562277214,
+     -3.30875011553212,
+     -2.49270424048759,
+     -1.92862631589812,
+     -3.57522798254356,
+     -2.24658845625065,
+     -3.22528602948345,
+     -2.32002921545415,
+     -2.63873284243038,
+     -3.68702037871576,
+     -3.32470540160977,
+     -2.80325622768252,
+     -2.94003938902263,
+     -2.61045911679337,
+     -2.58935293929574,
+     -2.81572298159081,
+     -2.65860034895494,
+     -3.33746460143333,
+     -2.47296309965005,
+     -2.66842848480764,
+     -2.58267374179392,
+     -3.7512991859398,
+     -2.91180855646915,
+     -4.12642964476476,
+     -2.69297533802107,
+     -3.04443550571716,
+     -4.88594449678002,
+     -2.49738550140248,
+     -6.08290992300083,
+     -3.39993329757161,
+     -4.34543053777005,
+     -2.76546435656578,
+     -3.63552083522703,
+     -4.38996618202965,
+     -3.30381043528687,
+     -5.55145011088071,
+     -3.16573184022541,
+     -3.19644721792411,
+     -3.6895237696571,
+     -3.56834213993752,
+     -3.19724759922341,
+     0.0974470390914102,
+     -0.0486696692011703,
+     0.0221938547822144
+    ],
+    "julia_value": [
+     0.28640697137896626,
+     -0.3295501269081049,
+     -0.21095974444684976,
+     -0.5075949758826325,
+     -0.7177101881692458,
+     -1.323756042132513,
+     -1.5729835289811582,
+     -1.4732342614329812,
+     -1.019031547237929,
+     -1.7382522182630264,
+     -1.39980921598338,
+     -2.754886686684379,
+     -1.2198548055917162,
+     -1.2120822782026421,
+     -2.557409746847729,
+     -2.1653792500685474,
+     -2.0454462719328275,
+     -2.3018301197161724,
+     -2.7007499774168546,
+     -3.308754707759493,
+     -2.4927054035664558,
+     -1.9286324849721688,
+     -3.575218900957389,
+     -2.246589473835264,
+     -3.2252874119735604,
+     -2.320025302588366,
+     -2.6387319073720774,
+     -3.6870190659640523,
+     -3.32470832067331,
+     -2.8032501975817286,
+     -2.940038259230932,
+     -2.6104498427988485,
+     -2.589355224517802,
+     -2.815724111490775,
+     -2.6586030086994183,
+     -3.337461674181129,
+     -2.472963196935388,
+     -2.668426265236272,
+     -2.5826705329101314,
+     -3.7512976759462235,
+     -2.911807105103311,
+     -4.12643237877856,
+     -2.6929728013657215,
+     -3.0444256351168866,
+     -4.885874625361759,
+     -2.49739403305014,
+     -6.082858000745621,
+     -3.3999347392407326,
+     -4.345435631850671,
+     -2.765472557756954,
+     -3.635517537290316,
+     -4.3899500666721485,
+     -3.3038084513176873,
+     -5.551574043405938,
+     -3.1657317017939395,
+     -3.1964482315708955,
+     -3.689524348665202,
+     -3.5683404500872498,
+     -3.197244488866836,
+     0.0974518819226022,
+     -0.04866930796909813,
+     0.022195839472086278
+    ],
+    "diff_source": "recomputed by the checker from r_value and julia_value",
+    "max_abs_diff": 0.000123932525228021,
+    "tolerance": 0.0001,
+    "tolerance_rule": "1e-4 absolute per fixed-effect estimate",
+    "tolerance_status": "PROPOSED in the campaign plan, approved by ruling 4",
+    "n_values": 62,
+    "within_tolerance": false
+   },
+   {
+    "case_id": "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-LLT",
+    "quantity": "LLt",
+    "diff_source": "max over 3481 values, from the committed raw files (receipts/data/campaign/raw/fungi_*.gz); re-derived by write_receipts.py --check",
+    "max_abs_diff": 0.00047443752671583184,
+    "tolerance": 0.0001,
+    "tolerance_rule": "1e-4 absolute per element of Lambda Lambda' (rotation and sign invariant)",
+    "tolerance_status": "PROPOSED in the campaign plan, approved by ruling 4",
+    "n_values": 3481,
+    "within_tolerance": false
+   },
+   {
+    "case_id": "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-ETA",
+    "quantity": "linear predictor on the training data (link scale)",
+    "diff_source": "max over 17700 values, from the committed raw files (receipts/data/campaign/raw/fungi_*.gz); re-derived by write_receipts.py --check",
+    "max_abs_diff": 0.00032827901245191526,
+    "tolerance": 1e-06,
+    "tolerance_rule": "1e-6 absolute, link scale on the training data",
+    "tolerance_status": "PROPOSED in the campaign plan, approved by ruling 4",
+    "n_values": 17700,
+    "within_tolerance": false
+   }
+  ]
+ },
+ "read_from": {
+  "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/raw/fungi_R.json.gz (uncompressed sha256)": "154a6072ba447a017952094decc7ff8819bfec2d39615b98931ba497031a13bd",
+  "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/raw/fungi_J.toml.gz (uncompressed sha256)": "dd9a23ad6129cc0d5d70a53e0a2ec2234e8afd8d892b53a504e9ae4934e58c4a"
+ }
+}

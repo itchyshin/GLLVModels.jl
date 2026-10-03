@@ -285,6 +285,118 @@
         "row_verdict": "PASS"
       },
       "note": "One measurement counted twice: KERNEL-TWO-AUTO reuses KERNEL-TWO's data, gllvmTMB drops unique = TRUE in the two-kernel combination (the contract's critical_finding_kernel_two_auto, re-checked by the R runner at P1), and the contract maps the Julia side to the same two-source model. The R logLik/coefficients and the Julia logLik/coefficients of this case equal those of CORE070-FIT-INPUT-KERNEL-TWO-NATIVE-MODEL. Distinct surface rows, one comparison; whether it counts once or twice is for the maintainer. One measurement counted twice: KERNEL-TWO-AUTO reuses KERNEL-TWO's data, gllvmTMB drops unique = TRUE in the two-kernel combination (the contract's critical_finding_kernel_two_auto, re-checked by the R runner at P1), and the contract maps the Julia side to the same two-source model. The R logLik/coefficients and the Julia logLik/coefficients of this case equal those of CORE070-FIT-INPUT-KERNEL-TWO-FORMULA-INTERFACE. Distinct surface rows, one comparison; whether it counts once or twice is for the maintainer."
+    },
+    {
+      "source_id": "fit-input/GRP-UNIT",
+      "classification": "required_core",
+      "arc": "campaign-C5",
+      "clause": "C5",
+      "executable_case_ids": [
+        "grouping-p1/unit/logLik"
+      ],
+      "disposition": null,
+      "evidence_tier": "numeric",
+      "measured_against": "P1",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/fit-input/campaign/GRP-UNIT.json"
+        ],
+        "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule of the C3 to C5 campaign plan, approved by itchyshin/GLLVModels.jl#684 item 4)"
+      },
+      "measured_result": {
+        "verdict": "PASS",
+        "max_abs_diff_by_case": {
+          "grouping-p1/unit/logLik": 1.9188917121937266e-10
+        },
+        "within_tolerance_by_case": {
+          "grouping-p1/unit/logLik": true
+        }
+      },
+      "ruling": "itchyshin/GLLVModels.jl#684 item 4"
+    },
+    {
+      "source_id": "fit-input/GRP-UNIT-OBS",
+      "classification": "required_core",
+      "arc": "campaign-C5",
+      "clause": "C5",
+      "executable_case_ids": [
+        "grouping-p1/unit_obs/logLik"
+      ],
+      "disposition": null,
+      "evidence_tier": "numeric",
+      "measured_against": "P1",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/fit-input/campaign/GRP-UNIT-OBS.json"
+        ],
+        "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule of the C3 to C5 campaign plan, approved by itchyshin/GLLVModels.jl#684 item 4)"
+      },
+      "measured_result": {
+        "verdict": "PASS",
+        "max_abs_diff_by_case": {
+          "grouping-p1/unit_obs/logLik": 1.3358203432289883e-12
+        },
+        "within_tolerance_by_case": {
+          "grouping-p1/unit_obs/logLik": true
+        }
+      },
+      "ruling": "itchyshin/GLLVModels.jl#684 item 4"
+    },
+    {
+      "source_id": "fit-input/GRP-CLUSTER",
+      "classification": "required_core",
+      "arc": "campaign-C5",
+      "clause": "C5",
+      "executable_case_ids": [
+        "grouping-p1/cluster/logLik"
+      ],
+      "disposition": null,
+      "evidence_tier": "numeric",
+      "measured_against": "P1",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/fit-input/campaign/GRP-CLUSTER.json"
+        ],
+        "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule of the C3 to C5 campaign plan, approved by itchyshin/GLLVModels.jl#684 item 4)"
+      },
+      "measured_result": {
+        "verdict": "PASS",
+        "max_abs_diff_by_case": {
+          "grouping-p1/cluster/logLik": 2.4300561562995426e-12
+        },
+        "within_tolerance_by_case": {
+          "grouping-p1/cluster/logLik": true
+        }
+      },
+      "ruling": "itchyshin/GLLVModels.jl#684 item 4"
+    },
+    {
+      "source_id": "fit-input/GRP-CLUSTER2",
+      "classification": "required_core",
+      "arc": "campaign-C5",
+      "clause": "C5",
+      "executable_case_ids": [
+        "grouping-p1/cluster2/logLik"
+      ],
+      "disposition": null,
+      "evidence_tier": "numeric",
+      "measured_against": "P1",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/fit-input/campaign/GRP-CLUSTER2.json"
+        ],
+        "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule of the C3 to C5 campaign plan, approved by itchyshin/GLLVModels.jl#684 item 4)"
+      },
+      "measured_result": {
+        "verdict": "PASS",
+        "max_abs_diff_by_case": {
+          "grouping-p1/cluster2/logLik": 5.137223979545524e-12
+        },
+        "within_tolerance_by_case": {
+          "grouping-p1/cluster2/logLik": true
+        }
+      },
+      "ruling": "itchyshin/GLLVModels.jl#684 item 4"
     }
   ]
 }

@@ -1121,6 +1121,251 @@
           "CORE070-DATA-W-ZERO-NATIVE": "r_replay_julia_surface_absent"
         }
       }
+    },
+    {
+      "source_id": "data/RD-URBANISATION-BINOMIAL",
+      "classification": "required_core",
+      "arc": "campaign-C4",
+      "clause": "C4",
+      "executable_case_ids": [
+        "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-LOGLIK",
+        "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-BETA",
+        "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-LLT",
+        "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-ETA"
+      ],
+      "disposition": null,
+      "evidence_tier": "numeric_fail",
+      "measured_against": "P1",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-URBANISATION-BINOMIAL.json"
+        ],
+        "tier": "measured, does not bind: beta: abs difference 0.000231344 > tolerance 0.0001; LLt: abs difference 0.00164848 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000821878 > tolerance 1e-06"
+      },
+      "measured_result": {
+        "verdict": "FAIL",
+        "max_abs_diff_by_case": {
+          "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-LOGLIK": 1.1885913409059867e-07,
+          "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-BETA": 0.0002313439396757211,
+          "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-LLT": 0.0016484796389644174,
+          "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-ETA": 0.0008218778164135188
+        },
+        "within_tolerance_by_case": {
+          "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-LOGLIK": true,
+          "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-BETA": false,
+          "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-LLT": false,
+          "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-ETA": false
+        }
+      },
+      "ruling": "itchyshin/GLLVModels.jl#684 item 4"
+    },
+    {
+      "source_id": "data/RD-CRABS-GAUSSIAN",
+      "classification": "required_core",
+      "arc": "campaign-C4",
+      "clause": "C4",
+      "executable_case_ids": [
+        "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LOGLIK",
+        "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-BETA",
+        "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LLT",
+        "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-ETA"
+      ],
+      "disposition": null,
+      "evidence_tier": "numeric",
+      "measured_against": "P1",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-CRABS-GAUSSIAN.json"
+        ],
+        "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule of the C3 to C5 campaign plan, approved by itchyshin/GLLVModels.jl#684 item 4)"
+      },
+      "measured_result": {
+        "verdict": "PASS",
+        "max_abs_diff_by_case": {
+          "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LOGLIK": 5.8479827202972956e-08,
+          "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-BETA": 5.734798325107704e-08,
+          "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LLT": 1.4340849061461602e-06,
+          "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-ETA": 1.6242267664168253e-07
+        },
+        "within_tolerance_by_case": {
+          "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LOGLIK": true,
+          "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-BETA": true,
+          "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LLT": true,
+          "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-ETA": true
+        }
+      },
+      "ruling": "itchyshin/GLLVModels.jl#684 item 4"
+    },
+    {
+      "source_id": "data/RD-SPIDER-NB2",
+      "classification": "required_core",
+      "arc": "campaign-C4",
+      "clause": "C4",
+      "executable_case_ids": [
+        "CAMPAIGN-C4-RD-SPIDER-NB2-LOGLIK",
+        "CAMPAIGN-C4-RD-SPIDER-NB2-BETA",
+        "CAMPAIGN-C4-RD-SPIDER-NB2-LLT",
+        "CAMPAIGN-C4-RD-SPIDER-NB2-ETA"
+      ],
+      "disposition": null,
+      "evidence_tier": "numeric_fail",
+      "measured_against": "P1",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-SPIDER-NB2.json"
+        ],
+        "tier": "measured, does not bind: logLik: abs difference 1.45732e-06 > tolerance 1e-06; LLt: abs difference 0.000161728 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 6.73994e-05 > tolerance 1e-06"
+      },
+      "measured_result": {
+        "verdict": "FAIL",
+        "max_abs_diff_by_case": {
+          "CAMPAIGN-C4-RD-SPIDER-NB2-LOGLIK": 1.4573231510439655e-06,
+          "CAMPAIGN-C4-RD-SPIDER-NB2-BETA": 4.9511286195569326e-05,
+          "CAMPAIGN-C4-RD-SPIDER-NB2-LLT": 0.00016172778977541213,
+          "CAMPAIGN-C4-RD-SPIDER-NB2-ETA": 6.739944245026663e-05
+        },
+        "within_tolerance_by_case": {
+          "CAMPAIGN-C4-RD-SPIDER-NB2-LOGLIK": false,
+          "CAMPAIGN-C4-RD-SPIDER-NB2-BETA": true,
+          "CAMPAIGN-C4-RD-SPIDER-NB2-LLT": false,
+          "CAMPAIGN-C4-RD-SPIDER-NB2-ETA": false
+        }
+      },
+      "ruling": "itchyshin/GLLVModels.jl#684 item 4"
+    },
+    {
+      "source_id": "data/RD-BEETLE-NB2",
+      "classification": "required_core",
+      "arc": "campaign-C4",
+      "clause": "C4",
+      "executable_case_ids": [
+        "CAMPAIGN-C4-RD-BEETLE-NB2-LOGLIK",
+        "CAMPAIGN-C4-RD-BEETLE-NB2-BETA",
+        "CAMPAIGN-C4-RD-BEETLE-NB2-LLT",
+        "CAMPAIGN-C4-RD-BEETLE-NB2-ETA"
+      ],
+      "disposition": null,
+      "evidence_tier": "numeric_fail",
+      "measured_against": "P1",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-BEETLE-NB2.json"
+        ],
+        "tier": "measured, does not bind: R_pdHess_true; logLik: abs difference 9.08069e-06 > tolerance 1e-06; beta: abs difference 0.000287141 > tolerance 0.0001; LLt: abs difference 0.00463293 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000869455 > tolerance 1e-06"
+      },
+      "measured_result": {
+        "verdict": "FAIL",
+        "max_abs_diff_by_case": {
+          "CAMPAIGN-C4-RD-BEETLE-NB2-LOGLIK": 9.080691597773694e-06,
+          "CAMPAIGN-C4-RD-BEETLE-NB2-BETA": 0.00028714120128903176,
+          "CAMPAIGN-C4-RD-BEETLE-NB2-LLT": 0.004632934295180746,
+          "CAMPAIGN-C4-RD-BEETLE-NB2-ETA": 0.0008694545642065066
+        },
+        "within_tolerance_by_case": {
+          "CAMPAIGN-C4-RD-BEETLE-NB2-LOGLIK": false,
+          "CAMPAIGN-C4-RD-BEETLE-NB2-BETA": false,
+          "CAMPAIGN-C4-RD-BEETLE-NB2-LLT": false,
+          "CAMPAIGN-C4-RD-BEETLE-NB2-ETA": false
+        }
+      },
+      "ruling": "itchyshin/GLLVModels.jl#684 item 4"
+    },
+    {
+      "source_id": "data/RD-FUNGI-BINOMIAL",
+      "classification": "required_core",
+      "arc": "campaign-C4",
+      "clause": "C4",
+      "executable_case_ids": [
+        "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-LOGLIK",
+        "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-BETA",
+        "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-LLT",
+        "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-ETA"
+      ],
+      "disposition": null,
+      "evidence_tier": "numeric_fail",
+      "measured_against": "P1",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-FUNGI-BINOMIAL.json"
+        ],
+        "tier": "measured, does not bind: beta: abs difference 0.000123933 > tolerance 0.0001; LLt: abs difference 0.000474438 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000328279 > tolerance 1e-06"
+      },
+      "measured_result": {
+        "verdict": "FAIL",
+        "max_abs_diff_by_case": {
+          "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-LOGLIK": 6.151276465971023e-08,
+          "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-BETA": 0.000123932525228021,
+          "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-LLT": 0.00047443752671583184,
+          "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-ETA": 0.00032827901245191526
+        },
+        "within_tolerance_by_case": {
+          "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-LOGLIK": true,
+          "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-BETA": false,
+          "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-LLT": false,
+          "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-ETA": false
+        }
+      },
+      "ruling": "itchyshin/GLLVModels.jl#684 item 4"
+    },
+    {
+      "source_id": "data/RD-PHYLO-DISPOSITION",
+      "classification": "outside_boundary",
+      "arc": "campaign-C4",
+      "clause": "C4",
+      "executable_case_ids": [],
+      "disposition": null,
+      "evidence_tier": "not_measured",
+      "measured_against": "P1",
+      "evidence": {
+        "tier": "no measurement: this row awaits the maintainer's own signed disposition; nothing is signed here"
+      },
+      "proposed_disposition": {
+        "capability": "phylo-structured real data",
+        "text": "gllvm::fungi ships a phylogeny (fungi$tree), so a real phylo workflow exists. Blocked at the bridge gate GJL-GATE-STRUCTURED-TERMS until gllvmTMB #1236 (A4a) lands; revisit at P2.",
+        "status": "PROPOSED, UNSIGNED: the campaign plan says each of these three rows needs the maintainer's own signature, and itchyshin/GLLVModels.jl#684 does not quote them",
+        "draft_signature": "Proposed disposition outside_boundary until P2: real-data phylo needs the structured-term bridge route (gllvmTMB #1236). signed_by: Shinichi Nakagawa; signed_on: <date you sign>."
+      },
+      "ruling": "itchyshin/GLLVModels.jl#684 item 4 (row added); disposition itself unsigned"
+    },
+    {
+      "source_id": "data/RD-TEMPORAL-DISPOSITION",
+      "classification": "outside_boundary",
+      "arc": "campaign-C4",
+      "clause": "C4",
+      "executable_case_ids": [],
+      "disposition": null,
+      "evidence_tier": "not_measured",
+      "measured_against": "P1",
+      "evidence": {
+        "tier": "no measurement: this row awaits the maintainer's own signed disposition; nothing is signed here"
+      },
+      "proposed_disposition": {
+        "capability": "temporal real data",
+        "text": "None of gllvm, vegan, MASS, ape ships a multivariate ecological time series the plan would call a real workflow; no bridge route for temporal at P1 (D-296).",
+        "status": "PROPOSED, UNSIGNED: the campaign plan says each of these three rows needs the maintainer's own signature, and itchyshin/GLLVModels.jl#684 does not quote them",
+        "draft_signature": "Proposed disposition outside_boundary at P1: no real temporal dataset in the checked packages and no bridge route (D-296). signed_by: Shinichi Nakagawa; signed_on: <date you sign>."
+      },
+      "ruling": "itchyshin/GLLVModels.jl#684 item 4 (row added); disposition itself unsigned"
+    },
+    {
+      "source_id": "data/RD-ISDM-DISPOSITION",
+      "classification": "outside_boundary",
+      "arc": "campaign-C4",
+      "clause": "C4",
+      "executable_case_ids": [],
+      "disposition": null,
+      "evidence_tier": "not_measured",
+      "measured_against": "P1",
+      "evidence": {
+        "tier": "no measurement: this row awaits the maintainer's own signed disposition; nothing is signed here"
+      },
+      "proposed_disposition": {
+        "capability": "integrated SDM real data",
+        "text": "No real multi-source dataset in the packages checked; no bridge route for iSDM at P1 (D-296, D-300 row 1c-5).",
+        "status": "PROPOSED, UNSIGNED: the campaign plan says each of these three rows needs the maintainer's own signature, and itchyshin/GLLVModels.jl#684 does not quote them",
+        "draft_signature": "Proposed disposition outside_boundary at P1: no real multi-source dataset available and no bridge route (D-296, D-300 row 1c-5). signed_by: Shinichi Nakagawa; signed_on: <date you sign>."
+      },
+      "ruling": "itchyshin/GLLVModels.jl#684 item 4 (row added); disposition itself unsigned"
     }
   ]
 }

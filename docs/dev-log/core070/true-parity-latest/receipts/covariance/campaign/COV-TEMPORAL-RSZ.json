@@ -1,0 +1,259 @@
+{
+ "schema": "true-parity-campaign-receipt/v1",
+ "source_id": "covariance/COV-TEMPORAL-RSZ",
+ "clause": "C3",
+ "pin": "P1",
+ "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+ "ruling": "itchyshin/GLLVModels.jl#684 item 4",
+ "verdict": "PASS",
+ "row_status": "binds: the plan's pass rule holds on both engines",
+ "pass_rule": {
+  "rule": "both engines converged (R convergence 0 with a positive-definite Hessian; Julia converged true) and every listed quantity within tolerance",
+  "legs": {
+   "R_convergence_0": true,
+   "R_pdHess_true": true,
+   "Julia_converged_true": true,
+   "same_data_sha256": true,
+   "gllvmTMB_deparse_identical_to_P1": true,
+   "R_version_0_7_1_from_P1_library": true,
+   "every_quantity_within_tolerance": true
+  }
+ },
+ "cell": {
+  "formula": "value ~ 0 + trait + temporal_latent(0 + trait | series, time = occasion, d = 1, structure = \"ar1\", unique = FALSE)",
+  "data_sha256": "f0ac0008345314a095dadd0f892b1709c772962ca9979ed15848cf568dcf2681",
+  "data_file": "temporal.csv",
+  "p": null,
+  "n": null
+ },
+ "data_meta": {
+  "cell": "temporal",
+  "small": false,
+  "seed": 20261002,
+  "p": 20,
+  "n_series": 25,
+  "n_time": 20,
+  "K": 1,
+  "dgp": "Gaussian, AR(1) latent (phi = 0.6), rank 1 (the only rank P1 admits for temporal), sigma_eps = 0.6",
+  "file": "temporal.csv",
+  "rows": 10000,
+  "cols": 4,
+  "csv_sha256": "f0ac0008345314a095dadd0f892b1709c772962ca9979ed15848cf568dcf2681",
+  "R_version": "R version 4.6.1 (2026-06-24)"
+ },
+ "run": {
+  "host": "totoro.biology.ualberta.ca (384 cores, shared); lane directory ~/hsq_work/true-parity-campaign-20261002",
+  "driver_start": [
+   "2026-10-03T00:45:43Z",
+   " 18:45:43 up 3 days,  6:22,  8 users,  load average: 24.47, 25.77, 27.77"
+  ],
+  "driver_end": [
+   "2026-10-03T00:58:39Z",
+   " 18:58:39 up 3 days,  6:35,  8 users,  load average: 15.78, 17.11, 21.96"
+  ],
+  "jobs": [
+   "J temporal rc=0 wall=32s cap=180s 2026-10-03T00:46:48Z",
+   "R temporal rc=0 wall=3s cap=600s 2026-10-03T00:47:36Z"
+  ],
+  "caps": "at most 8 concurrent jobs, OPENBLAS_NUM_THREADS=1, JULIA_NUM_THREADS=2, R single-threaded; each job under timeout at twice its written estimate"
+ },
+ "engine_messages": {
+  "R": null,
+  "julia": null
+ },
+ "p1_source_sha256": {
+  "R/gllvmTMB.R": "a1ad39041f88d08b017500132bac45b5282f246025c488bc1829dc57aeae3faf",
+  "R/families.R": "beed3caa91b0ed77b402f40192a493db693eafdd0bb214aa0ef73c33e4538791",
+  "R/isdm-sources.R": "e06bbe7bc3c88697080173f0e1b68f3e5a1947729124e72d34587730cd1b6f73",
+  "R/extract-sigma.R": "dbd337827707a7ca04c31ee57d6caf143b08e633d30a495f809f5b8728f90a14",
+  "R/extract-cutpoints.R": "38c195646d91db683cbb31da1e3ba60fb1d857d5c0637f0877514176b11bc151",
+  "R/methods-gllvmTMB.R": "6c32924b415646697ab4e471fda8b83108e416d662ba6e607bbeba335dd21616",
+  "R/temporal.R": "93ec5bfe19b2f64afa04c50d9a7a8c85d2b0d9b9a6410eeceb5504895b280902",
+  "DESCRIPTION": "ce3ba8fd8787a096e0c1142a2145cef167869325c937c8436c8916a526552283"
+ },
+ "gllvmTMB_deparse_check": [
+  {
+   "name": "gllvmTMB",
+   "file": "R/gllvmTMB.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "gllvmTMBcontrol",
+   "file": "R/gllvmTMB.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "nbinom2",
+   "file": "R/families.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "ordinal_logit",
+   "file": "R/families.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "isdm_sources",
+   "file": "R/isdm-sources.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "extract_Sigma",
+   "file": "R/extract-sigma.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "extract_cutpoints",
+   "file": "R/extract-cutpoints.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "predict.gllvmTMB_multi",
+   "file": "R/methods-gllvmTMB.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "extract_temporal",
+   "file": "R/temporal.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "temporal_latent",
+   "file": "R/temporal.R",
+   "identical_deparse": true
+  }
+ ],
+ "not_covered": [
+  "One dataset and one seed per row: a spot check at this size, not a scaling study or a coverage study.",
+  "Direct engines only (R TMB fit against a direct Julia fit); R's engine = 'julia' bridge route is not exercised.",
+  "Julia starts from its own default start, never from R's coordinates; wall times include first-call Julia compilation.",
+  "cond(H) of the two engines is recorded but not compared (different parameter bases)."
+ ],
+ "engines": {
+  "R": {
+   "engine": "R gllvmTMB",
+   "gllvmTMB_version": "0.7.1",
+   "loaded_from_library": "Rlib/gllvmTMB",
+   "TMB_version": "1.9.25",
+   "R_version": "R version 4.6.1 (2026-06-24)",
+   "host": "totoro",
+   "formula": "value ~ 0 + trait + temporal_latent(0 + trait | series, time = occasion, d = 1, structure = \"ar1\", unique = FALSE)",
+   "convergence": 0,
+   "optimizer_message": "relative convergence (4)",
+   "pdHess": true,
+   "max_abs_gradient": 0.0435016747949959,
+   "n_par": 42,
+   "cond_H": 2257.09007020467,
+   "wall_fit_sec": 1.88888669013977,
+   "wall_sdreport_sec": 0.301635026931763,
+   "finished_utc": "2026-10-03T00:47:35Z"
+  },
+  "julia": {
+   "engine": "GLLVModels.jl",
+   "julia_version": "1.12.6",
+   "gllvmodels_commit": "896a0a2286c224fe9979d3cf7e7e2c6be27f9357",
+   "host": "totoro",
+   "call": "fit_temporal_gllvm(tbl; formula = @formula(value ~ 0 + trait), temporal = temporal_latent(:(0 + trait | series), :occasion; d = 1, structure = :ar1, unique = false), g_tol = 1e-8, iterations = 2000)",
+   "converged": true,
+   "iterations": 34,
+   "pd_hessian": true,
+   "cond_H": null,
+   "wall_fit_sec": 25.232894897460938,
+   "wall_confint_sec": null,
+   "wall_vcov_sec": null,
+   "JULIA_NUM_THREADS": 2,
+   "OPENBLAS_NUM_THREADS": "1",
+   "gradient_norm": 6.565414878423326e-12
+  }
+ },
+ "comparison": {
+  "pin": "P1",
+  "cases": [
+   {
+    "case_id": "CAMPAIGN-C3-COV-TEMPORAL-RSZ-LOGLIK",
+    "quantity": "logLik",
+    "r_value": -9721.01846310536,
+    "julia_value": -9721.018462862192,
+    "diff_source": "recomputed by the checker from r_value and julia_value",
+    "max_abs_diff": 2.4316796043422073e-07,
+    "tolerance": 1e-06,
+    "tolerance_rule": "1e-6 absolute on the marginal log-likelihood",
+    "tolerance_status": "twin: 1e-6 absolute on logLik, as the P0 worst case (2.3e-7) and every P1 twin",
+    "n_values": 1,
+    "within_tolerance": true
+   },
+   {
+    "case_id": "CAMPAIGN-C3-COV-TEMPORAL-RSZ-TEMPORAL-PHI",
+    "quantity": "temporal_phi",
+    "r_value": 0.637856869128713,
+    "julia_value": 0.6378742024686006,
+    "diff_source": "recomputed by the checker from r_value and julia_value",
+    "max_abs_diff": 1.733333988762631e-05,
+    "tolerance": 0.0001,
+    "tolerance_rule": "1e-4 absolute on the AR(1) persistence phi",
+    "tolerance_status": "PROPOSED in the campaign plan, approved by ruling 4",
+    "n_values": 1,
+    "within_tolerance": true
+   },
+   {
+    "case_id": "CAMPAIGN-C3-COV-TEMPORAL-RSZ-TEMPORAL-LOADINGS",
+    "quantity": "temporal_loadings",
+    "r_value": [
+     0.619551677371523,
+     -0.137565807857169,
+     -1.20106333440885,
+     -0.586028674905356,
+     0.603521659767052,
+     -0.984478518865757,
+     1.05482494430645,
+     0.42838498790971,
+     -0.968478541196909,
+     0.56144744572206,
+     0.120768051396718,
+     0.599322706433666,
+     -0.232756110430421,
+     -0.799750582384708,
+     -0.442889665178844,
+     -0.414528562289556,
+     0.363104747978305,
+     0.298194827711659,
+     0.067764477565904,
+     -0.186449276178426
+    ],
+    "julia_value": [
+     0.6195698601708785,
+     -0.137569566344048,
+     -1.2010973974109267,
+     -0.5860459624988548,
+     0.6035395423459712,
+     -0.984508448667777,
+     1.054856064013107,
+     0.42839745713273336,
+     -0.9685072886344377,
+     0.561464461102604,
+     0.12077183281139406,
+     0.5993391780977086,
+     -0.23276324616074975,
+     -0.7997745163990319,
+     -0.4429019429511922,
+     -0.41454057325669047,
+     0.36311513838727477,
+     0.29820431863765867,
+     0.06776717248509101,
+     -0.18645432102026316
+    ],
+    "diff_source": "recomputed by the checker from r_value and julia_value",
+    "max_abs_diff": 3.406300207675628e-05,
+    "tolerance": 0.0001,
+    "tolerance_rule": "1e-4 absolute per loading (public sign orientation, R/temporal.R:466-483)",
+    "tolerance_status": "PROPOSED in the campaign plan, approved by ruling 4",
+    "n_values": 20,
+    "within_tolerance": true
+   }
+  ]
+ },
+ "read_from": {
+  "docs/dev-log/core070/true-parity-latest/receipts/covariance/campaign/raw/temporal_R.json.gz (uncompressed sha256)": "a819b06ef9d13073f69f6b065183eb6f73bcc4ed8f5a6b2c0aca001b8fa22cc5",
+  "docs/dev-log/core070/true-parity-latest/receipts/covariance/campaign/raw/temporal_J.toml.gz (uncompressed sha256)": "703bcc63bee1def316bab2cae5fcf20e892e402aa76ee7600b89a0d731ee1a77"
+ }
+}
