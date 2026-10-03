@@ -39,29 +39,19 @@
 # for them, and none is added here, per AGENTS.md "do not change existing
 # behaviour".
 #
-# `update.gllvmTMB_multi` (R/methods-gllvmTMB.R) has NO twin in this file.
-# Reading its R definition shows it is not a general "re-fit with changed
-# arguments" method: it delegates to `stats::update.default(object, ...)`,
-# which replays the fit's *stored call* (`getCall(object)` / `object$call`).
-# That call is stored ONLY for two cases (R/gllvmTMB.R:1467-1472): a
-# `gllvmTMB_va` (variational) fit, or an active `temporal_latent` fit. Every
-# OTHER ordinary ML/REML gllvmTMB fit (the great majority: plain Gaussian,
-# Poisson, Binomial, ... fits) has NO stored call at all, so R's OWN
-# `update()` is not merely narrower on those fits, it errors ("need an
-# object with a call component") — VA and temporal are the only cases where
-# it actually works, and both are R-only capabilities with no Julia
-# equivalent at all (temporal per gllvmTMB-exports-recon.md; GLLVModels.jl
-# has no variational-fit class that retains a call either). GLLVModels.jl
-# fit structs (`GllvmFit` and every other `AnyGllvmFit` member,
-# src/postfit.jl:9) do not retain the original `gllvm(formula, Y, data; ...)`
-# call or the `data`/`Y` arguments for ANY fit — only the fitted parameters
-# and design metadata. There is therefore nothing to replay for any
-# GLLVModels.jl fit: an `update()` twin would have to either silently refit
-# from scratch on caller-supplied arguments (not what R's `update()`
-# contracts to do) or fail on every call, the same as R's own `update()`
-# does outside its two narrow working cases. Per this PR's task brief, this
-# is a documented STOP rather than a fabricated partial implementation, see
-# the PR description.
+# `update.gllvmTMB_multi` (R/methods-gllvmTMB.R) has no twin in THIS file, and none
+# for an ordinary fit. R's method is not a general "re-fit with changed arguments":
+# it replays the fit's stored call, and that call is stored only for a
+# `gllvmTMB_va` (variational) fit or an active `temporal_latent` fit
+# (R/gllvmTMB.R:1467-1472). Every other ML/REML gllvmTMB fit has no stored call, so
+# R's own `update()` errors on it ("need an object with a call component").
+# GLLVModels.jl's ordinary fit structs (`GllvmFit` and the other `AnyGllvmFit`
+# members, src/postfit.jl:9) keep no call either, so there is nothing to replay and
+# no `update` method for them. The temporal case DOES have a Julia twin:
+# `update(::TemporalGaussianFit; ...)` in src/temporal_methods.jl replays the saved
+# term, formula and data with named overrides, and
+# test/test_c1_behaviour_p1.jl compares its behaviour with R's. Only the variational
+# case has no Julia equivalent.
 
 # Best-effort latent rank of a fit, used only to classify anova() steps
 # (see `gllvm_anova` below). Reuses `_loadings` (src/postfit.jl), which
