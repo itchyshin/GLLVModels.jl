@@ -1655,9 +1655,6 @@ end
 
 # Count-family simulation (Poisson / NB share the loop; `make` builds the
 # per-cell Distributions sampler from (rng, μ)).
-_glm_simulate_counts(rng::AbstractRNG, β::AbstractVector, Λ::AbstractMatrix,
-                     link::Link, n::Integer, make) =
-    _glm_simulate_counts(rng, β, Λ, link, n, nothing, make)
 function _glm_simulate_counts(rng::AbstractRNG, β::AbstractVector, Λ::AbstractMatrix,
                               link::Link, n::Integer, offset, make)
     p, K = size(Λ)
