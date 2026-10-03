@@ -17,7 +17,7 @@ Inputs:
 - `docs/dev-log/core070/true-parity-latest/case-map-family.json` (21 rows, sha256 `f8204dfc5aba484ccf99af8b5508c75f4dce898aaa33fb550b0e8219020e975b`)
 - `docs/dev-log/core070/true-parity-latest/case-map-fit-input.json` (6 rows, sha256 `1f8648158d3b9eaeb97a77385ab8164174f37b14b964206487f388222ec7b1be`)
 - `docs/dev-log/core070/true-parity-latest/case-map-inference.json` (63 rows, sha256 `de305bd492f8dfa9c1b97ddeb0ea57c4472c04e8d8be3c72505d97ef204f15c8`)
-- `docs/dev-log/core070/true-parity-latest/case-map-isdm.json` (20 rows, sha256 `ea9446e58da1a38cbae435ef235870bb7f43c1ac418b766e0d41d9279f666a11`)
+- `docs/dev-log/core070/true-parity-latest/case-map-isdm.json` (20 rows, sha256 `ede6b50934984e606cc844e0ff9ec951825827a23fcf44cb5724ce5c8b9a2ddf`)
 - `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `a36aa7061449fb9a20cf28f7e5a2de37fd15699d6874cd92133665483d183b96`)
 - `docs/dev-log/core070/true-parity-latest/case-map-postfit.json` (52 rows, sha256 `79b608e11e3ac7ea4ccfc9f98e5cc7d1625d9a8632093c22fb2a5a0ebbe06b14`)
 
@@ -31,10 +31,10 @@ Inputs:
 | `family` | 15 | 0 | 0 | 5 | 0 | 0 | 0 | 0 | 1 | 21 |
 | `fit-input` | 6 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 6 |
 | `inference` | 2 | 0 | 0 | 2 | 0 | 59 | 0 | 0 | 0 | 63 |
-| `isdm` | 10 | 0 | 0 | 0 | 10 | 0 | 0 | 0 | 0 | 20 |
+| `isdm` | 11 | 0 | 0 | 0 | 9 | 0 | 0 | 0 | 0 | 20 |
 | `namespace` | 29 | 25 | 0 | 0 | 2 | 0 | 0 | 0 | 13 | 69 |
 | `postfit` | 34 | 0 | 2 | 12 | 2 | 0 | 1 | 1 | 0 | 52 |
-| `all` | 116 | 25 | 4 | 26 | 36 | 74 | 1 | 1 | 14 | 297 |
+| `all` | 117 | 25 | 4 | 26 | 35 | 74 | 1 | 1 | 14 | 297 |
 
 ## P1 twin fixtures present at this head, not bound to any row
 
@@ -252,7 +252,7 @@ decision for the PR that measures it, not something this tool does.
 | isdm-ISDM-COUNT `isdm/ISDM-COUNT` | required_core; cases: CORE070-ISDM-COUNT-PAIRED-CONTROL | NEEDS-SURFACE | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-COUNT-PAIRED-CONTROL.json | family isdm; evidence_tier needs_surface_r_side_measured; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | isdm-ISDM-EXTRA-SOURCE `isdm/ISDM-EXTRA-SOURCE` | required_core; cases: CORE070-ISDM-EXTRA-SOURCE-PAIRED-CONTROL | NEEDS-SURFACE | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-EXTRA-SOURCE-PAIRED-CONTROL.json | family isdm; evidence_tier needs_surface_r_side_measured; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | isdm-ISDM-LEGACY `isdm/ISDM-LEGACY` | required_core; cases: CORE070-ISDM-LEGACY-PAIRED-CONTROL | NEEDS-SURFACE | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-LEGACY-PAIRED-CONTROL.json | family isdm; evidence_tier needs_surface_r_side_measured; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| isdm-ISDM-MASKED-ARM `isdm/ISDM-MASKED-ARM` | required_core; cases: CORE070-ISDM-MASKED-ARM-PAIRED-CONTROL | NEEDS-SURFACE | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-MASKED-ARM-PAIRED-CONTROL.json | family isdm; evidence_tier needs_surface_r_side_measured; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| isdm-ISDM-MASKED-ARM `isdm/ISDM-MASKED-ARM` | required_core; cases: P1-JULIA-ISDM-ADM-MASKEDNA-LOGLIK-AT-R-OPTIMUM, P1-JULIA-ISDM-ADM-MASKEDNA-FIT-LOGLIK, P1-JULIA-ISDM-ADM-MASKEDNA-B-FIX | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/isdm/adm_maskedna.json | family isdm; evidence_tier numeric; measured_against P1 |
 | isdm-ISDM-MASKED-COLUMNS `isdm/ISDM-MASKED-COLUMNS` | required_core; cases: P1-JULIA-ISDM-SRCFORM-POIS-LOGLIK-AT-R-OPTIMUM, P1-JULIA-ISDM-SRCFORM-POIS-CROSS-OBJECTIVE-AT-JULIA-OPTIMUM, P1-JULIA-ISDM-SRCFORM-POIS-B-FIX, P1-JULIA-ISDM-SRCFORM-POIS-ETA, P1-JULIA-ISDM-SRCFORM-MIXED-LOGLIK-AT-R-OPTIMUM, P1-JULIA-ISDM-SRCFORM-MIXED-CROSS-OBJECTIVE-AT-JULIA-OPTIMUM, P1-JULIA-ISDM-SRCFORM-MIXED-B-FIX, P1-JULIA-ISDM-SRCFORM-MIXED-ETA | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/isdm/srcform_pois.json, docs/dev-log/core070/true-parity-latest/receipts/julia-twins/isdm/srcform_mixed.json | family isdm; evidence_tier numeric; measured_against P1 |
 | isdm-ISDM-MISSING-IN-TRAIT `isdm/ISDM-MISSING-IN-TRAIT` | required_core; cases: CORE070-ISDM-MISSING-IN-TRAIT-PAIRED-CONTROL | NEEDS-SURFACE | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-MISSING-IN-TRAIT-PAIRED-CONTROL.json | family isdm; evidence_tier needs_surface_r_side_measured; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | isdm-ISDM-MISSING-SOURCE `isdm/ISDM-MISSING-SOURCE` | required_core; cases: CORE070-ISDM-MISSING-SOURCE-PAIRED-CONTROL | NEEDS-SURFACE | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-MISSING-SOURCE-PAIRED-CONTROL.json | family isdm; evidence_tier needs_surface_r_side_measured; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |

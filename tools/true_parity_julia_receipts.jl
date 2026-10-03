@@ -1063,6 +1063,7 @@ const ISDM_ADM_ROWS = Dict(
     "adm_zeroord"    => "isdm/ISDM-ZERO-ORDINARY",
     "adm_unbalanced" => "isdm/ISDM-UNBALANCED",
 )
+const ISDM_MASKED_ROW = "isdm/ISDM-MASKED-ARM"
 const ISDM_ADM_PATH = Dict(
     "adm_aliased"    => "an aliased candidate column (an exact multiple of access) is dropped by the QR rank rule, in both engines, leaving the same coefficient list",
     "adm_align"      => "the family list is declared survey-first while the data's source levels put gbif first, so both engines re-order the list by name",
@@ -1138,6 +1139,47 @@ function receipts_isdm_admission()
             NOT_A_FIXTURE_PAIR * " The check is a fit-level logLik and estimate comparison on one fitted case built to reach this row's path; it does not restate any admission predicate.",
             cases))
     end
+    # ISDM-MASKED-ARM twin: both engines drop rows whose response is NA and fit the rest.
+    rp = RV["reproducers"]["adm_maskedna"]
+    mcsv = "test/fixtures/isdm/" * rp["fixture"]
+    bytes2hex(open(sha256, joinpath(ROOT, mcsv))) == rp["fixture_sha256"] || fail("isdm adm_maskedna fixture sha256 drifted")
+    mdat = read_isdm_csv(rp["fixture"])
+    count(ismissing, mdat.value) == rp["na_rows"] || fail("isdm adm_maskedna NA row count")
+    mform = :(value ~ 0 + trait + trait & env + trait & src_gbif + offset(log_support))
+    mfam = isdm_sources(gbif = Poisson(), survey = (Binomial(), CLogLogLink()))
+    mtab = isdm_table(mform, mdat; family = mfam)   # warns: dropped 10 row(s)
+    length(mtab.y) == rp["rows"] - rp["na_rows"] || fail("isdm adm_maskedna kept-row count")
+    rbn = by_name_(rp["b_fix_names"], Float64.(rp["b_fix"]), mtab.X_names)
+    ll_at_r = isdm_marginal_loglik_laplace(mtab, zeros(2, 0), rbn)
+    mft = fit_isdm_gllvm(mtab)
+    (mft.converged && all(mft.cell_converged)) || fail("isdm adm_maskedna fresh fit did not converge")
+    rp["convergence"] == 0 || fail("isdm adm_maskedna: R did not converge")
+    g_ll = "isdm_marginal_loglik_laplace(tab, zeros(2, 0), rbn) - rp[\"loglik\"]"
+    g_fl = "abs(ft.loglik - rp[\"loglik\"])"
+    g_b = "maximum(abs.(ft.b_fix .- rbn))"
+    mpath = "10 of 160 rows have an NA response; both engines drop them before fitting (R: drop_missing_response_rows, response = \"drop\"; Julia: isdm_table warns and drops), leaving 150 rows"
+    mpre = "P1-JULIA-ISDM-ADM-MASKEDNA"
+    mcases = [
+        mkcase("$mpre-LOGLIK-AT-R-OPTIMUM", "Julia Laplace marginal at R's fitted b_fix on the kept rows vs R's logLik",
+            "$rvp [reproducers.adm_maskedna].loglik (R nlminb optimum through gllvmTMB(family = isdm_sources(...)) at P1, NA rows dropped by R)",
+            "GLLVModels.isdm_marginal_loglik_laplace(isdm_table(formula, data_with_NA; family), zeros(2, 0), b_fix_R), as at $(cite(tp, g_ll))",
+            rp["loglik"], ll_at_r, test_tolerance(tp, g_ll),
+            "Path exercised: $mpath. Same file (sha256 checked), same parameter vector, same Laplace objective. Coefficients are paired by name."),
+        mkcase("$mpre-FIT-LOGLIK", "fresh Julia fit logLik on the kept rows vs R's logLik",
+            "$rvp [reproducers.adm_maskedna].loglik",
+            "GLLVModels.fit_isdm_gllvm(isdm_table(formula, data_with_NA; family)).loglik, as at $(cite(tp, g_fl))",
+            rp["loglik"], mft.loglik, test_tolerance(tp, g_fl),
+            "Path exercised: $mpath. Each side's own optimum."),
+        mkcase("$mpre-B-FIX", "fresh Julia fit b_fix vs R b_fix (paired by coefficient name; maximum absolute difference)",
+            "$rvp [reproducers.adm_maskedna].b_fix",
+            "GLLVModels.fit_isdm_gllvm(tab).b_fix, as at $(cite(tp, g_b))",
+            rbn, mft.b_fix, test_tolerance(tp, g_b),
+            "Path exercised: $mpath. R's linear predictor was not recorded for this fixture, so there is no ETA case; with no latent term eta = X b, which the test checks against X at R's b_fix."),
+    ]
+    push!(out, "isdm/adm_maskedna.json" => Receipt([ISDM_MASKED_ROW], "itchyshin/GLLVModels.jl#661",
+        [rvp, mcsv], [tp, "test/fixtures/isdm/isdm_fixture_io.jl"],
+        NOT_A_FIXTURE_PAIR * " The check is a fit-level logLik and estimate comparison on one fitted case built to reach this row's path; it does not restate any admission predicate.",
+        mcases))
     return out
 end
 
