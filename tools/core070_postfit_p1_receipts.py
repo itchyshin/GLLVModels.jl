@@ -59,7 +59,7 @@ superseded batch case. `--apply-twins` re-applies the overlay to the tracked cas
 (idempotent) and `--check-twins` verifies that file is exactly that re-derivation.
 
 Integer equality (itchyshin/GLLVModels.jl#684 item 1). The four exact-integer postfit-policy cases
-(POST-LOGLIK-DF, POST-LOGLIK-NOBS, POST-NOBS-COUNT, POST-NOBS-FALLBACK) carry a comparison block of
+(POST-LOGLIK-DF, POST-LOGLIK-NOBS, POST-NOBS-COUNT; POST-NOBS-FALLBACK stays unbound, see FALLBACK_WHY) carry a comparison block of
 kind "integer_equality" with tolerance 0.5, so "within tolerance" can only mean "equal". r_value is read
 from the R oracle (r-oracle.json), julia_value from the Julia results (julia-results.json); the R number
 the harness itself recorded must agree with the oracle or the tool stops. Those rows are then
@@ -326,22 +326,33 @@ INTEGER_EQUALITY = {
     "CORE070-POSTFIT-LOGLIK-DF-NATIVE": ("df", "attr(logLik(object), 'df')"),
     "CORE070-POSTFIT-LOGLIK-NOBS-NATIVE": ("loglik_nobs_attr", "attr(logLik(object), 'nobs')"),
     "CORE070-POSTFIT-NOBS-COUNT-NATIVE": ("nobs", "nobs(object), likelihood_rows-preferring branch"),
-    "CORE070-POSTFIT-NOBS-FALLBACK-NATIVE": ("nobs", "nobs(object), as.integer(nobs(fit_r)) on the likelihood_rows branch"),
 }
 # Receipt text for the four cases, with line numbers read from git show 9539352f6:R/methods-gllvmTMB.R (P1), not P0.
 INTEGER_TEXT = {
     "CORE070-POSTFIT-LOGLIK-DF-NATIVE": {
-        "r_call": "attr(logLik(object),'df') non-REML branch (R/methods-gllvmTMB.R:1147-1148 at P1 9539352f6)"},
+        "r_call": "attr(logLik(object),'df') non-REML branch (R/methods-gllvmTMB.R:1147-1148 at P1 9539352f6)",
+        "julia_surface": "StatsAPI.dof(fit::AnyGllvmFit) = _nparams(fit) (src/postfit.jl:573 at the measured commit 681c4c3ca)"},
     "CORE070-POSTFIT-LOGLIK-NOBS-NATIVE": {
-        "r_call": "attr(logLik(object),'nobs') (R/methods-gllvmTMB.R:1196-1202 at P1 9539352f6)"},
+        "r_call": "attr(logLik(object),'nobs') (R/methods-gllvmTMB.R:1196-1202 at P1 9539352f6)",
+        "julia_surface": "StatsAPI.nobs(fit::AnyGllvmFit, Y; mask) (src/postfit.jl:622 at the measured commit 681c4c3ca)"},
     "CORE070-POSTFIT-NOBS-COUNT-NATIVE": {
-        "r_call": "nobs.gllvmTMB_multi, likelihood_rows-preferring branch (R/methods-gllvmTMB.R:1216-1224 at P1 9539352f6)"},
-    "CORE070-POSTFIT-NOBS-FALLBACK-NATIVE": {
+        "r_call": "nobs.gllvmTMB_multi, likelihood_rows-preferring branch (R/methods-gllvmTMB.R:1216-1224 at P1 9539352f6)",
+        "julia_surface": "StatsAPI.nobs(fit::AnyGllvmFit, Y; mask) (src/postfit.jl:622 at the measured commit 681c4c3ca)"},
+}
+# POST-NOBS-FALLBACK stays unbound (review of #688): on the fixture fit R's nobs() returns on the likelihood_rows
+# branch, so the no-missing-data fallback branch this row names is never executed. Its receipt keeps no comparison.
+FALLBACK_CID = "CORE070-POSTFIT-NOBS-FALLBACK-NATIVE"
+FALLBACK_TEXT = {
         "r_call": "nobs.gllvmTMB_multi called on the fixture fit (R/methods-gllvmTMB.R:1216-1231 at P1 9539352f6). "
                   "The fixture fit has a non-NULL fit$missing_data$counts$likelihood_rows (400), so nobs() returns at line 1223 "
                   "and the is_y_observed / length(y) fallback (lines 1225-1230) is NOT executed by this oracle.",
         "comparand": "exact integer equality; the same measurement as NOBS-COUNT (R's likelihood_rows branch). "
-                     "The R no-missing-data fallback branch is not separately executed by this evidence."}}
+                     "The R no-missing-data fallback branch is not separately executed by this evidence.",
+        "julia_surface": "StatsAPI.nobs(fit::AnyGllvmFit, Y; mask) (src/postfit.jl:622 at the measured commit 681c4c3ca)"}
+FALLBACK_WHY = ("Not numeric for this row: R's nobs() returned on the likelihood_rows branch (fit$missing_data$counts"
+                "$likelihood_rows is 400 on this fixture), so the fallback branch POST-NOBS-FALLBACK names was not executed. "
+                "The integers agree (400 = 400), but they measure NOBS-COUNT's branch. A fit where R reaches the fallback "
+                "is needed before this row can bind.")
 INTEGER_RULING = "itchyshin/GLLVModels.jl#684 item 1"
 INTEGER_RULE = (f"integer_equality, tolerance 0.5 ({INTEGER_RULING}): both values are integers, so within 0.5 means equal; "
                 "the contract's integer_exact = 0 is the same condition")
@@ -388,14 +399,33 @@ def apply_integer_equality():
             raise SystemExit(f"{cid}: receipt harness_fields {rec['harness_fields']} != raw julia-results.json "
                              f"{pj['cases'][cid]}; stop and report")
         rec["comparison"] = {"pin": "P1", "cases": [integer_entry(cid, pj["cases"][cid], po)]}
-        rec["why_not_numeric"] = INTEGER_WHY
+        rec.pop("why_not_numeric", None)
+        rec["numeric_note"] = INTEGER_WHY
         rec.update(INTEGER_TEXT[cid])
         rec["evidence_kind"] = "numeric_r_vs_julia"
         write_json(path, rec)
         recs[cid] = (str(path.relative_to(ROOT)), rec)
+    fpath = REC / "cases" / f"{FALLBACK_CID}.json"
+    frec = load(fpath)
+    frec.pop("comparison", None)
+    frec.pop("numeric_note", None)
+    frec.update(FALLBACK_TEXT)
+    frec["why_not_numeric"] = FALLBACK_WHY
+    frec["evidence_kind"] = "paired_policy_check"
+    write_json(fpath, frec)
     cm = load(OUT / "case-map-postfit.json")
     for row in cm["rows"]:
         ids = row["executable_case_ids"]
+        if ids == [FALLBACK_CID]:
+            row.update(evidence_tier="partial_non_numeric_case", measured_against=P1_SHA,
+                       evidence={"non_binding_receipts": [str(fpath.relative_to(ROOT))],
+                                 "tier": "measured at P1 and the integers agree, but R's nobs() never reached the "
+                                         "fallback branch this row names on this fixture (it returned on the "
+                                         "likelihood_rows branch), so the row does not bind"},
+                       measured_result={"case_verdicts": {FALLBACK_CID: frec["verdict"]},
+                                        "batch_verifier": {FALLBACK_CID: frec["batch_verifier"]["status"]},
+                                        "case_kinds": {FALLBACK_CID: "paired_policy_check"}})
+            continue
         if len(ids) == 1 and ids[0] in INTEGER_EQUALITY:
             path, rec = recs[ids[0]]
             if rec["verdict"] != "PASS" or rec["batch_verifier"]["status"] != "PASS":
@@ -474,6 +504,10 @@ def check_twins():
                 or rec["harness_fields"] != pj["cases"][cid]
                 or any(rec.get(k) != v for k, v in INTEGER_TEXT[cid].items())):
             drift.append(cid)
+    frec = load(REC / "cases" / f"{FALLBACK_CID}.json")
+    frow = next(r for r in cur["rows"] if r["executable_case_ids"] == [FALLBACK_CID])
+    if "comparison" in frec or frow["evidence_tier"] == "numeric" or any(frec.get(k) != v for k, v in FALLBACK_TEXT.items()):
+        drift.append(FALLBACK_CID + " (must stay unbound)")
     if drift:
         print("STALE\n  integer-equality receipts differ from the raw re-derivation: " + ", ".join(drift))
         raise SystemExit(1)
@@ -652,8 +686,11 @@ def main():
                 why = ("The link-scale value leg is numeric (delta recorded), but the fact this case pays is a documented "
                        "default divergence (R predict type default 'link', Julia :response). A default that differs is not "
                        "numeric parity, so the case carries no comparison block.")
+            elif cid == FALLBACK_CID:
+                why = FALLBACK_WHY
+                body.update(FALLBACK_TEXT)
             elif cid in INTEGER_EQUALITY:
-                body["why_not_numeric"] = INTEGER_WHY
+                body["numeric_note"] = INTEGER_WHY
                 body.update(INTEGER_TEXT[cid])
                 emit(cid, "numeric_r_vs_julia", "PASS" if passed else "FAIL", body, [integer_entry(cid, jc, po)])
                 continue

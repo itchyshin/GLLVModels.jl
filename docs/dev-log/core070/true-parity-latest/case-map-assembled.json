@@ -46,7 +46,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-postfit.json",
-   "sha256": "2eecadd17c136481edab0c2bf4b6238450894963b4fbd34292d6e5425c812d3b",
+   "sha256": "66d1a30daf1177e1e6a1203ea07a15a482ef8146326ff4d22975cc81fe4e61dd",
    "rows": 52
   }
  ],
@@ -9811,13 +9811,13 @@
     "CORE070-POSTFIT-NOBS-FALLBACK-NATIVE"
    ],
    "disposition": null,
-   "evidence_tier": "numeric",
+   "evidence_tier": "partial_non_numeric_case",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "receipt": [
+    "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-NOBS-FALLBACK-NATIVE.json"
     ],
-    "tier": "numeric: every executable case receipt carries an integer_equality comparison block pinned to P1 (tolerance 0.5, so the integers must be equal), under itchyshin/GLLVModels.jl#684 item 1"
+    "tier": "measured at P1 and the integers agree, but R's nobs() never reached the fallback branch this row names on this fixture (it returned on the likelihood_rows branch), so the row does not bind"
    },
    "measured_result": {
     "case_verdicts": {
@@ -9826,7 +9826,9 @@
     "batch_verifier": {
      "CORE070-POSTFIT-NOBS-FALLBACK-NATIVE": "PASS"
     },
-    "row_verdict": "PASS"
+    "case_kinds": {
+     "CORE070-POSTFIT-NOBS-FALLBACK-NATIVE": "paired_policy_check"
+    }
    }
   },
   {

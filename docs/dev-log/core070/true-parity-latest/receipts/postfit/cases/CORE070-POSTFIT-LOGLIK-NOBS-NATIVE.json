@@ -17,7 +17,7 @@
     "log": "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-policy-p1/verify.txt"
   },
   "r_call": "attr(logLik(object),'nobs') (R/methods-gllvmTMB.R:1196-1202 at P1 9539352f6)",
-  "julia_surface": "StatsAPI.nobs(fit::AnyGllvmFit) (src/postfit.jl:614)",
+  "julia_surface": "StatsAPI.nobs(fit::AnyGllvmFit, Y; mask) (src/postfit.jl:622 at the measured commit 681c4c3ca)",
   "comparand": "exact integer equality",
   "check": "StatsAPI.nobs(fit, Y) == r_loglik_nobs_attr",
   "harness_fields": {
@@ -29,7 +29,6 @@
     "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-policy-p1/julia-results.json",
     "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-policy-p1/r-oracle.json"
   ],
-  "why_not_numeric": "Exact integer equality (contract tolerances.integer_exact = 0). The row now binds as numeric under itchyshin/GLLVModels.jl#684 item 1: the comparison block records R and Julia integers with tolerance 0.5, which for integers means equal.",
   "pin": "P1",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
@@ -56,5 +55,6 @@
         "diff_source": "recomputed from r-oracle.json['loglik_nobs_attr'] and julia-results.json cases['CORE070-POSTFIT-LOGLIK-NOBS-NATIVE']['julia']"
       }
     ]
-  }
+  },
+  "numeric_note": "Exact integer equality (contract tolerances.integer_exact = 0). The row now binds as numeric under itchyshin/GLLVModels.jl#684 item 1: the comparison block records R and Julia integers with tolerance 0.5, which for integers means equal."
 }
