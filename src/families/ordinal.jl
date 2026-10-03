@@ -269,10 +269,36 @@ function _ordinal_laplace_mode_pertrait(y::AbstractVector, Λ::AbstractMatrix,
         A = Symmetric(Λ' * (W .* Λ) + I)
         Δ = _safe_solve(A, Λ' * s .- z)
         (Δ === nothing || !all(isfinite, Δ)) && break
-        z = z .+ Δ
-        maximum(abs, Δ) < tol && break
+        # #574: undamped Newton can overshoot and land in a different, far worse
+        # site mode, making the marginal jump by tens of logLik units under a 1e-5
+        # parameter change (a cliff that stalls L-BFGS with converged = true).
+        # Halve the step until the penalised site log-posterior does not decrease.
+        # A full step that already improves it is taken unchanged.
+        q0 = _ordinal_site_logpost_pertrait(y, Λ, β, τ, C, link, z, mask, offset)
+        α = 1.0
+        znew = z .+ Δ
+        for _ in 1:30
+            q1 = _ordinal_site_logpost_pertrait(y, Λ, β, τ, C, link, znew, mask, offset)
+            (isfinite(q1) && q1 >= q0 - 1e-12) && break
+            α /= 2
+            znew = z .+ α .* Δ
+        end
+        z = znew
+        maximum(abs, α .* Δ) < tol && break
     end
     return z
+end
+
+# Penalised site log-posterior ℓ(z) − ‖z‖²/2 used by the damped mode search (#574).
+function _ordinal_site_logpost_pertrait(y, Λ, β, τ, C, link, z, mask, offset)
+    η = offset === nothing ? _clamp_eta.(β .+ Λ * z) :
+        _clamp_eta.(β .+ offset .+ Λ * z)
+    ℓ = 0.0
+    @inbounds for t in eachindex(η)
+        (mask !== nothing && !mask[t]) && continue
+        ℓ += log(max(_ord_prob(Int(y[t]), η[t], _trait_cutpoints(τ, C, t), link), 1e-12))
+    end
+    return ℓ - 0.5 * dot(z, z)
 end
 
 function ordinal_loglik_site_pertrait(y::AbstractVector, Λ::AbstractMatrix,

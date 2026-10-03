@@ -15,13 +15,16 @@
 #   Λ_phy = σ_eps · L_phy
 #   σ_phy = σ_eps · ρ_phy   (identity link — ρ_phy is signed)
 # Then per-site site covariance Σ_y_site = σ²_eps · Ã with
-#   Ã = L_B L_B' + diag(d̃)
-#   d̃[t] = (L_W L_W')[t,t] + τ_B[t] + τ_W[t] + 1
+#   Ã = L_B L_B' + L_W L_W' + diag(d̃) = L_U L_U' + diag(d̃),  L_U = hcat(L_B, L_W)
+#   d̃[t] = τ_B[t] + τ_W[t] + 1
+# The W tier enters with its full cross-trait block L_W L_W', as in the C++
+# twin (issue #135).
 #
 # Phylogenetic block (J3) — same trick: Σ_y_full = σ²_eps · (I_n ⊗ Ã + J_n ⊗ B̃)
 # with B̃ = (L_phy_aug L_phy_aug') .* Σ_phy, L_phy_aug = hcat(L_phy, ρ_phy).
-# Joint sign flip (ρ_phy → -ρ_phy, φ → -φ) is the lone non-identifiable
-# symmetry; fit.jl applies a global sign anchor post-hoc.
+# The joint sign flip (ρ_phy → -ρ_phy, φ → -φ) leaves the likelihood unchanged;
+# when K_phy = 0 and Σ_phy has zero blocks (always so for a tree-derived Σ_phy,
+# whose root edge is dropped), a flip of one block does too. fit.jl applies a global sign anchor post-hoc.
 #
 # Profile σ²_eps: -2ℓ has the form
 #   -2ℓ = n·p·log(2π) + n·p·log(σ²_eps) + (logdet pieces in Ã)
@@ -132,7 +135,8 @@ function gaussian_profile_nll(params::AbstractVector, y::AbstractMatrix;
     end
 
     # ----- Build d̃ (per-trait diag) — all variance components in σ²_eps units.
-    # d̃[t] = (L_W L_W')[t,t] + τ_B[t] + τ_W[t] + 1
+    # d̃[t] = τ_B[t] + τ_W[t] + 1. The W tier is not diagonal: L_W is stacked
+    # next to L_B in L_U (issue #135); with no W tier L_U is L_B itself.
     Td = promote_type(eltype(y), eltype(L_B))
     if has_diag
         Td = promote_type(Td, eltype(log_τ_B), eltype(log_τ_W))
@@ -150,14 +154,11 @@ function gaussian_profile_nll(params::AbstractVector, y::AbstractMatrix;
         Td = promote_type(Td, eltype(L_phy))
     end
 
+    L_U = K_W > 0 ? hcat(L_B, L_W) : L_B
+
     d_tilde = Vector{Td}(undef, p)
     @inbounds for t in 1:p
         v = one(Td)
-        if K_W > 0
-            for k in 1:K_W
-                v += L_W[t, k]^2
-            end
-        end
         if has_diag
             v += exp(2 * log_τ_B[t])
             v += exp(2 * log_τ_W[t])
@@ -173,8 +174,8 @@ function gaussian_profile_nll(params::AbstractVector, y::AbstractMatrix;
             d_inv[t] = one(Td) / d_tilde[t]
         end
 
-        DinvL = d_inv .* L_B                         # p × K_B
-        A_K = I + L_B' * DinvL                       # K_B × K_B
+        DinvL = d_inv .* L_U                         # p × (K_B + K_W)
+        A_K = I + L_U' * DinvL                       # (K_B + K_W) square
         cA = cholesky(Symmetric(A_K))
 
         logdet_A_tilde = sum(log, d_tilde) + logdet(cA)
@@ -205,7 +206,7 @@ function gaussian_profile_nll(params::AbstractVector, y::AbstractMatrix;
 
             # Ã⁻¹ y (p × n)
             Dinv_y = d_inv .* y                       # p × n
-            LtDy = L_B' * Dinv_y                      # K_B × n
+            LtDy = L_U' * Dinv_y                      # (K_B + K_W) × n
             zy = cA \ LtDy
             Ainv_y = Dinv_y .- DinvL * zy             # p × n
 
@@ -216,7 +217,7 @@ function gaussian_profile_nll(params::AbstractVector, y::AbstractMatrix;
             for j in 1:q
                 Xj = @view X[:, :, j]
                 Dinv_Xj = d_inv .* Xj
-                LtDXj = L_B' * Dinv_Xj
+                LtDXj = L_U' * Dinv_Xj
                 zXj = cA \ LtDXj
                 @inbounds Ainv_X[:, :, j] = Dinv_Xj .- DinvL * zXj
             end
@@ -255,7 +256,7 @@ function gaussian_profile_nll(params::AbstractVector, y::AbstractMatrix;
                 end
             end
             Dinv_r = d_inv .* resid
-            LtDr = L_B' * Dinv_r
+            LtDr = L_U' * Dinv_r
             z = cA \ LtDr
             Ainv_r = Dinv_r .- DinvL * z
             quad = sum(resid .* Ainv_r)
@@ -277,7 +278,7 @@ function gaussian_profile_nll(params::AbstractVector, y::AbstractMatrix;
     else
         # ----- Phy path (J3). β stays as a parameter; σ²_eps still profiled.
         # Build Ã and B̃ in σ²_eps units.
-        A_tilde = L_B * L_B'
+        A_tilde = L_U * L_U'
         @inbounds for t in 1:p
             A_tilde[t, t] += d_tilde[t]
         end
@@ -415,8 +416,8 @@ function profile_recover(params::AbstractVector, y::AbstractMatrix;
         L_W = unpack_lambda(θ_rr_W, p, K_W)
     end
     if has_phy_unique
-        # Identity link: ρ_phy is signed (joint flip with φ is the lone
-        # non-identifiable symmetry).
+        # Identity link: ρ_phy is signed (a joint flip with φ, and with zero
+        # blocks in Σ_phy a per-block flip, leaves the likelihood unchanged).
         ρ_phy = collect(params[(cursor + 1):(cursor + p)])
         cursor += p
     end
@@ -427,14 +428,11 @@ function profile_recover(params::AbstractVector, y::AbstractMatrix;
     end
 
     n = size(y, 2)
+    # W tier stacked next to L_B (full L_W L_W' block, issue #135).
+    L_U = K_W > 0 ? hcat(L_B, L_W) : L_B
     d_tilde = Vector{Float64}(undef, p)
     @inbounds for t in 1:p
         v = 1.0
-        if K_W > 0
-            for k in 1:K_W
-                v += L_W[t, k]^2
-            end
-        end
         if has_diag
             v += exp(2 * log_τ_B[t])
             v += exp(2 * log_τ_W[t])
@@ -444,8 +442,8 @@ function profile_recover(params::AbstractVector, y::AbstractMatrix;
 
     if !has_phy
         d_inv = 1 ./ d_tilde
-        DinvL = d_inv .* L_B
-        A_K = I + L_B' * DinvL
+        DinvL = d_inv .* L_U
+        A_K = I + L_U' * DinvL
         cA = cholesky(Symmetric(A_K))
         logdet_A_tilde = sum(log, d_tilde) + logdet(cA)
 
@@ -453,14 +451,14 @@ function profile_recover(params::AbstractVector, y::AbstractMatrix;
             M = zeros(Float64, q, q)
             vvec = zeros(Float64, q)
             Dinv_y = d_inv .* y
-            LtDy = L_B' * Dinv_y
+            LtDy = L_U' * Dinv_y
             zy = cA \ LtDy
             Ainv_y = Dinv_y .- DinvL * zy
             Ainv_X = Array{Float64}(undef, p, n, q)
             for j in 1:q
                 Xj = @view X[:, :, j]
                 Dinv_Xj = d_inv .* Xj
-                LtDXj = L_B' * Dinv_Xj
+                LtDXj = L_U' * Dinv_Xj
                 zXj = cA \ LtDXj
                 @inbounds Ainv_X[:, :, j] = Dinv_Xj .- DinvL * zXj
             end
@@ -493,7 +491,7 @@ function profile_recover(params::AbstractVector, y::AbstractMatrix;
                 end
             end
             Dinv_r = d_inv .* resid
-            LtDr = L_B' * Dinv_r
+            LtDr = L_U' * Dinv_r
             z = cA \ LtDr
             Ainv_r = Dinv_r .- DinvL * z
             quad = sum(resid .* Ainv_r)
@@ -516,7 +514,7 @@ function profile_recover(params::AbstractVector, y::AbstractMatrix;
                 Λ_phy = nothing, σ_phy = nothing)
     else
         # Phy path — β is just whatever was passed (not profiled).
-        A_tilde = L_B * L_B'
+        A_tilde = L_U * L_U'
         @inbounds for t in 1:p
             A_tilde[t, t] += d_tilde[t]
         end

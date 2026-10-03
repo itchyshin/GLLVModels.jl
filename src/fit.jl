@@ -94,7 +94,18 @@ unchanged.
 
 Optional extensions:
 - J2-A-WD: `K_W::Integer = 0` (W-tier rank), `has_diag::Bool = false`
-  (per-trait diagonal RE σ²_B, σ²_W).
+  (per-trait diagonal RE σ²_B, σ²_W). The W-tier scores are shared by all
+  traits of a unit, so `Λ_W` adds the full `Λ_W Λ_Wᵀ` block to the per-unit
+  covariance, as in gllvmTMB. With one unit per column of `y`, only
+  `Λ Λᵀ + Λ_W Λ_Wᵀ` is identified, not the split between the two tiers
+  (likewise only `σ²_B + σ²_W + σ²_eps`). A `K_W > 0` fit reaches the same
+  log-likelihood and `sigma_y_site` as a single-tier fit with `K + K_W` axes;
+  how `Λ` and `Λ_W` share that covariance depends on the starting values, so
+  tier-scoped summaries (`communality`, `proportions`, `extract_Sigma` at
+  `level = :unit` / `:unit_obs`, `getLV`) and Wald SEs of single `Λ` / `Λ_W`
+  entries should not be interpreted. To separate between-unit from
+  within-unit variation, use `fit_twolevel_gaussian` on repeated
+  observations per unit.
 - J3 phylogenetic: `K_phy::Integer = 0` (Λ_phy rank),
   `has_phy_unique::Bool = false` (per-trait σ_phy), and
   `Σ_phy::AbstractMatrix` (p × p species covariance, required when
@@ -129,6 +140,35 @@ The fit's `pars` NamedTuple always contains
 with fixed entries set to zero, `alpha_lv` is a `q_lv × K` matrix or `nothing`,
 and `Λ_W`, `σ²_B`, `σ²_W`, `Λ_phy`, `σ_phy` are `nothing` when the
 corresponding flag is off.
+
+Note on `σ_phy` (#136; see the gllvmTMB parity page): `σ_phy` is a signed
+parameter of the row model. It enters the likelihood only as the last column
+of the augmented phylogenetic loading `Λ_phy_aug = hcat(Λ_phy, σ_phy)`,
+through `B = (Λ_phy_aug * Λ_phy_aug') .* Σ_phy`. When `K_phy = 0`, signs are
+identified only within each group of rows that `Σ_phy` links by nonzero
+entries: inside a group the relative signs set the sign of each cross-trait
+entry `B[t, t′]`, but each group's sign can flip on its own without changing
+the likelihood. For a tree-derived `Σ_phy` the root's daughter clades are
+always separate groups, because `sigma_phy_dense` drops the root edge, so the
+global sign anchor pins only the clade that holds the largest `abs(σ_phy)`;
+the global flip `σ_phy → -σ_phy` is the sole symmetry only for a supplied
+`Σ_phy` that links all rows. The magnitudes `abs.(σ_phy)`
+are the per-row scales. When `K_phy ≥ 1`, `σ_phy` is not identified
+separately from `Λ_phy`, because rotating it together with a column of
+`Λ_phy` leaves the likelihood unchanged; read the implied `B`, and do not
+interpret per-entry intervals for `sigma_phy[t]`. With `X_lv`, the fitter
+skips both its sign-pattern search and its sign anchor, so it can stop at a
+sign pattern that is not the best one. gllvmTMB's `phylo_unique` term (now
+spelled `phylo_indep()` on its own, or `phylo_latent(..., unique = TRUE)`
+when paired with a latent term) is a different model term: an independent
+phylogenetic field for each trait with its own scale
+(`exp(log_sd_phy_diag[t])` in the phylo_diag block of gllvmTMB's
+`src/gllvmTMB.cpp`, for the paired form). Compare the fitted models
+(log-likelihood, implied covariance), not these parameters, and do not expect
+them to agree, even in absolute value. The Julia counterparts of those
+gllvmTMB terms are `fit_kernel_indep_gllvm` for a standalone `phylo_indep()`
+and `fit_phylo_latent_gllvm(...; unique = true)` for the paired form (the
+latter a documented extra, not yet a verified twin).
 """
 function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
                             K::Integer,
@@ -157,7 +197,12 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
     @assert K ≥ 1
     @assert K_W ≥ 0
     @assert K_phy ≥ 0
-    @assert n ≥ p "Need n_sites ≥ p for a well-posed Gaussian GLLVM"
+    n ≥ p || throw(ArgumentError(
+        "fit_gaussian_gllvm needs n_sites ≥ p (got n_sites = $n, p = $p). This " *
+        "closed-form Gaussian fitter is used by family = Normal() and by " *
+        "family = Lognormal(), which fits a Gaussian GLLVM to log(Y). The " *
+        "Laplace-fitted families (Poisson, Binomial, NegativeBinomial and the " *
+        "rest) accept n_sites < p."))
 
     if (K_phy > 0 || has_phy_unique) && Σ_phy === nothing
         throw(ArgumentError(
@@ -552,9 +597,12 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
 
     # Post-hoc global sign anchor for σ_phy (identity-link, signed).
     # The marginal likelihood is invariant under the joint flip
-    # (σ_phy → -σ_phy, φ → -φ); this is the lone non-identifiable
-    # symmetry (cross terms B[t,t'] = σ_phy[t]·σ_phy[t']·Σ_phy[t,t'] are
-    # bilinear in σ_phy so a *global* sign flip leaves B unchanged).
+    # (σ_phy → -σ_phy, φ → -φ) (cross terms
+    # B[t,t'] = σ_phy[t]·σ_phy[t']·Σ_phy[t,t'] are bilinear in σ_phy so a
+    # *global* sign flip leaves B unchanged). When K_phy = 0 it is the only
+    # such symmetry only if Σ_phy links all rows; with zero blocks in Σ_phy
+    # (always the case for a tree-derived Σ_phy, whose root edge is dropped)
+    # each block can also flip on its own, and this anchor does not pin those.
     # Convention: flip so the largest-magnitude entry has non-negative
     # sign. Estimates are then deterministic up to the flip.
     if has_phy_unique && rec.σ_phy !== nothing

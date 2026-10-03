@@ -170,6 +170,13 @@ For fits with `X_lv`, `component` chooses which latent-score layer to return:
 `:mean` is `X_lv * alpha_lv`, `:innovation` is the zero-mean posterior latent
 score, and `:total` is their sum. `rotate=true` applies the canonical
 [`rotation`](@ref) to whichever component is returned.
+
+These are scores for the unit-tier loadings `Λ` only; with a W tier,
+`Λ_W Λ_Wᵀ` is part of `Ψ`. With `K_W > 0`, each column of `y` is one unit
+observed once, so the data do not identify how the covariance splits
+between `Λ` and `Λ_W` (#135), and these scores depend on the starting
+values. A single-tier fit with `K + K_W` axes has the same likelihood and
+gives scores for the whole identified block.
 """
 function getLV(fit::GllvmFit, y::AbstractMatrix;
                X::Union{Nothing, AbstractArray{<:Real, 3}} = nothing,
