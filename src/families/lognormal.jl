@@ -108,12 +108,19 @@ the trait means are taken, so a constant offset is absorbed by the intercepts (s
 `β` shifted by `−offset`), and `β` is the offset-free intercept. It takes the shapes
 [`fit_gllvm`](@ref) documents (a scalar, a `p×n`, `1×n` or `p×1` matrix, a length-`p` vector;
 anything else throws an `ArgumentError`), and a non-finite offset at any cell is refused.
-This fitter has no `mask`, so every cell is observed.
+This fitter does not support `mask` (passing one throws an `ArgumentError`): the trait means
+and the y-scale `loglik` run over every cell.
 """
 function fit_lognormal_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         link::Link = LogLink(), offset = nothing, kwargs...)
     link isa LogLink || throw(ArgumentError(
         "fit_lognormal_gllvm: only LogLink is supported (twin lognormal)"))
+    # `mask` would reach the Gaussian fit of the centred log-responses but not the trait means
+    # or the `-Σ log y` term, which run over every cell, so a masked fit came back with the
+    # wrong intercepts and logLik. Refuse it rather than return that.
+    get(kwargs, :mask, nothing) === nothing || throw(ArgumentError(
+        "fit_lognormal_gllvm: mask is not supported (the trait means and the y-scale " *
+        "logLik run over every cell, so a masked fit would be silently wrong); drop the mask"))
     p, n = size(Y)
     # `offset` is made a p×n matrix here (see `_normalize_offset`); with no mask every cell is
     # observed, so a non-finite offset anywhere is refused.
