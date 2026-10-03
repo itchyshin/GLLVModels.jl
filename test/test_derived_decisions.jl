@@ -27,8 +27,11 @@ using GLLVModels, Test, Random, LinearAlgebra
     upper_unmodified = 0.7971364185161999
 
     @testset "#142 near-singular fit: upper bound above 1 is clamped to 1" begin
-        # #670's fit2: trait 1 communality is 0.99967 and the raw profile
-        # upper bound overshoots the support (1.0435).
+        # #670's fit2: trait 1 communality is 0.99967. On macOS the raw profile
+        # upper bound overshoots the support (1.0435); whether it does depends on
+        # the optimiser path, so the clamp is asserted only when it overshoots.
+        # The clamp itself is pinned deterministically by the side() unit tests
+        # and the exactly-flat profile below.
         Random.seed!(11)
         y2 = [1.0; 1.0; 0.5; 0.2] * randn(1, 80) + 0.02 * randn(4, 80)
         fit2 = fit_gaussian_gllvm(y2; K = 1)
@@ -40,22 +43,30 @@ using GLLVModels, Test, Random, LinearAlgebra
 
         f2_c1 = GLLVModels._make_communality_closure(spec2, 1)
         raw = GLLVModels.profile_ci_derived(fit2, f2_c1; y = y2)
-        @test raw.upper > 1                       # the defect: outside [0, 1]
         ci = GLLVModels.profile_ci_derived(fit2, f2_c1; y = y2, bounds = (0, 1))
         @test ci.estimate ≈ c2_hand rtol = 1e-10
-        @test ci.upper == 1.0
-        @test ci.boundary
+        if raw.upper > 1                          # the defect: outside [0, 1]
+            @test ci.upper == 1.0
+            @test ci.boundary
+        else
+            @test ci.upper == raw.upper
+        end
+        @test ci.upper ≤ 1
         @test ci.method === :profile
         @test 0 ≤ ci.lower ≤ ci.estimate ≤ ci.upper
         @test ci.lower == raw.lower               # the interior side is untouched
 
         f2_ρ = GLLVModels._make_correlation_closure(spec2, 1, 2)
         raw_ρ = GLLVModels.profile_ci_derived(fit2, f2_ρ; y = y2)
-        @test raw_ρ.upper > 1
         cr = GLLVModels.profile_ci_derived(fit2, f2_ρ; y = y2, bounds = (-1, 1))
         @test cr.estimate ≈ ρ12_hand rtol = 1e-10
-        @test cr.upper == 1.0
-        @test cr.boundary
+        if raw_ρ.upper > 1
+            @test cr.upper == 1.0
+            @test cr.boundary
+        else
+            @test cr.upper == raw_ρ.upper
+        end
+        @test cr.upper ≤ 1
         @test -1 ≤ cr.lower ≤ cr.estimate ≤ cr.upper
     end
 
@@ -187,8 +198,9 @@ using GLLVModels, Test, Random, LinearAlgebra
 
     @testset "#142 profile_ci_total_variance and profile_ci_phylo_signal use the natural bounds" begin
         # Phylogenetic signal near 1: a strong trait-level phylogenetic effect
-        # and a small site-level variance. The raw profile upper bound
-        # overshoots 1; the wrapper must return exactly 1 with boundary = true.
+        # and a small site-level variance. On macOS the raw profile upper bound
+        # overshoots 1 (on Linux, Julia 1, it lands at 0.968), so the clamp is
+        # asserted only when it overshoots; otherwise the bound is unchanged.
         rng = MersenneTwister(11)
         pp, Kp, np_ = 3, 1, 300
         Σ_phy = Matrix{Float64}(I, pp, pp)
@@ -202,11 +214,15 @@ using GLLVModels, Test, Random, LinearAlgebra
         fH = GLLVModels._make_phylo_signal_closure(GLLVModels._derived_spec(fp), 1;
                                                    diag_Σphy = diag(Σ_phy))
         raw_H = GLLVModels.profile_ci_derived(fp, fH; y = yp, Σ_phy = Σ_phy)
-        @test raw_H.upper > 1                     # the defect: outside [0, 1]
         ph = GLLVModels.profile_ci_phylo_signal(fp, 1; y = yp, Σ_phy = Σ_phy)
         @test ph.estimate ≈ H2_hand rtol = 1e-10
-        @test ph.upper == 1.0
-        @test ph.boundary
+        if raw_H.upper > 1                        # the defect: outside [0, 1]
+            @test ph.upper == 1.0
+            @test ph.boundary
+        else
+            @test ph.upper == raw_H.upper
+        end
+        @test ph.upper ≤ 1
         @test ph.method === :profile
         @test ph.lower == raw_H.lower             # the interior side is untouched
         @test 0 ≤ ph.lower ≤ ph.estimate ≤ ph.upper
