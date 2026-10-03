@@ -74,8 +74,9 @@ to copy a ruling it does not recognise (C6_RULINGS: only #684 item 3, dated 2026
 KEPT_AS_JULIA_EXTRA and EXCLUDED_INTERNAL_HELPER), a signer outside the allow-list, a decision word
 the ruling does not cover, an empty criterion, a generator that is not a file in the tree (an absolute path,
 a path with a ".." segment anywhere, a directory), a basis with
-no visible character, or a KEPT_AS_JULIA_EXTRA basis that cites no docs/src/... file that exists; the
-checker's C6 judges the same.
+no visible character, or a KEPT_AS_JULIA_EXTRA basis that does not cite, exactly as docs/src/<path>.md, an
+existing .md file under docs/src (every token of the basis that contains "docs/src" must be such a path;
+kept_basis_problem has the rule); the checker's C6 judges the same.
 
 Reverse gap: a Julia export has a gllvmTMB counterpart when its name equals an R export or S3 generic
 name after removing "_" and "." and lower-casing (tools/parity_ledger.py norm()), or is the Julia side
@@ -945,22 +946,35 @@ def namespace_receipt_counterparts(root: Path, ledger: Path):
     return out
 
 
-# A documented Julia extra must be documented: the basis cites at least one docs/src/... file (no `..` or
-# dot-leading segment) and every cited docs/src file exists. The checker's DOCS_SRC_RE, same text. Lookarounds,
-# not \b, so both engines read the same text (Python's \b is Unicode-aware, JS's is not).
-DOCS_SRC_RE = re.compile(r"(?<![A-Za-z0-9_])docs/src/(?:[A-Za-z0-9_-][A-Za-z0-9._-]*/)*[A-Za-z0-9_-][A-Za-z0-9._-]*\.(?:md|jl|toml|json|txt)(?![A-Za-z0-9_])")
+# A documented Julia extra must be documented: the basis names at least one page under docs/src, and every page it
+# names is an existing .md file written exactly as docs/src/<path>.md. The basis is read as tokens, as the checker
+# reads it: it is split at ASCII whitespace and at ( ) [ ] { } < > " ' ` , ; : ! ? # (so "docs/src/a.md#sec" and
+# "(docs/src/a.md)" name docs/src/a.md), trailing dots are dropped, and every token that contains "docs/src" must
+# then BE a page path: it starts with docs/src/, has no "..", "." or dot-leading segment and no empty one, ends in
+# .md, and has nothing after it. So "page.md.bak", "page.md~", "./docs/src/page.md", a URL, a directory and an
+# existing .json, .txt, .jl or .toml file are not citations, and a malformed citation beside a good one fails too.
+# The checker's DOCS_SRC_SPLIT_RE and DOCS_SRC_PAGE_RE, the same text (the delimiter set is explicit ASCII so both
+# engines split the same way; \x22 \x27 \x60 are the quote, apostrophe and backtick).
+DOCS_SRC_SPLIT_RE = re.compile(r"[ \t\n\r\f\v()\[\]{}<>\x22\x27\x60,;:!?#]+")
+DOCS_SRC_PAGE_RE = re.compile(r"^docs/src/(?:[A-Za-z0-9_-][A-Za-z0-9._-]*/)*[A-Za-z0-9_-][A-Za-z0-9._-]*\.md$")
 
 
-def docs_src_paths(basis):
-    return sorted(set(DOCS_SRC_RE.findall(basis)))
+def docs_src_citations(basis):
+    """(pages, malformed): the tokens of `basis` that contain "docs/src", split into exact page paths and the rest."""
+    tokens = sorted({t.rstrip(".") for t in DOCS_SRC_SPLIT_RE.split(basis)} - {""})
+    tokens = [t for t in tokens if "docs/src" in t]
+    return ([t for t in tokens if DOCS_SRC_PAGE_RE.fullmatch(t)], [t for t in tokens if not DOCS_SRC_PAGE_RE.fullmatch(t)])
 
 
 def kept_basis_problem(basis, root: Path):
     """The checker's keptBasisProblem, resolved against the tree under `root`."""
-    paths = docs_src_paths(basis)
-    if not paths:
-        return "KEPT_AS_JULIA_EXTRA basis must cite a docs/src/... file"
-    dangling = [q for q in paths if not (root / q).is_file()]
+    pages, malformed = docs_src_citations(basis)
+    not_exact = "not an exact docs/src/<path>.md page"
+    if not pages:
+        return "KEPT_AS_JULIA_EXTRA basis must cite a docs/src/... file" + (f"; {not_exact}: {','.join(malformed)}" if malformed else "")
+    if malformed:
+        return f"KEPT_AS_JULIA_EXTRA basis cites {','.join(malformed)}, which is {not_exact}"
+    dangling = [q for q in pages if not (root / q).is_file()]
     if dangling:
         return f"KEPT_AS_JULIA_EXTRA basis cites {','.join(dangling)}, which does not exist in the tree"
     return None

@@ -38,6 +38,9 @@ def make_root(tmp: Path, maps: dict | None = None) -> Path:
     (tmp / "test/fixtures").mkdir(parents=True)
     (tmp / "docs/src").mkdir(parents=True)
     (tmp / "docs/src/page.md").write_text("# page\n")  # a docs/src file a KEPT_AS_JULIA_EXTRA basis can cite
+    for rel in ("docs/src/assets/x.json", "docs/src/notes.txt", "docs/src/code.jl", "docs/src/cfg.toml", "docs/src/real.md.bak", "docs/src/sub/deep.md"):
+        (tmp / rel).parent.mkdir(parents=True, exist_ok=True)
+        (tmp / rel).write_text("x\n")  # existing docs/src files that are not exact .md page citations, plus one nested page
     (tmp / "tools").mkdir(parents=True)
     (tmp / "tools/gen.py").write_text("# the committed generator of reverse-gap-decisions.json\n")
     for name in A.EXPECTED_MAPS:
@@ -928,6 +931,35 @@ def main():
                               ("missing_file", "docs/src/missing.md", "docs/src/missing.md, which does not exist in the tree"),
                               ("one_missing_one_present", "docs/src/page.md and docs/src/gone.md", "docs/src/gone.md, which does not exist")):
         decision_fail(f"c6_kept_basis_{label}_fails", why, decisions=kept(basis))
+    # Review of #687 follow-up 3: the cited page is matched exactly (an existing .md file written docs/src/<path>.md).
+    NOT_EXACT = "not an exact docs/src/<path>.md page: "
+    for label, basis, bad in (
+            ("bak_suffix_on_an_existing_page", "see docs/src/page.md.bak", "docs/src/page.md.bak"),
+            ("existing_bak_file", "docs/src/real.md.bak", "docs/src/real.md.bak"),
+            ("mdx_suffix", "docs/src/page.mdx", "docs/src/page.mdx"),
+            ("tilde_suffix", "docs/src/page.md~", "docs/src/page.md~"),
+            ("trailing_slash", "docs/src/page.md/", "docs/src/page.md/"),
+            ("existing_json", "docs/src/assets/x.json", "docs/src/assets/x.json"),
+            ("existing_txt", "see docs/src/notes.txt", "docs/src/notes.txt"),
+            ("existing_jl", "see docs/src/code.jl", "docs/src/code.jl"),
+            ("existing_toml", "see docs/src/cfg.toml", "docs/src/cfg.toml"),
+            ("dot_slash_prefix", "./docs/src/page.md", "./docs/src/page.md"),
+            ("dot_dot_slash_prefix", "../docs/src/page.md", "../docs/src/page.md"),
+            ("directory_prefix", "other/docs/src/page.md", "other/docs/src/page.md"),
+            ("absolute_prefix", "/abs/docs/src/page.md", "/abs/docs/src/page.md"),
+            ("letter_before_docs", "xdocs/src/page.md", "xdocs/src/page.md"),
+            ("url", "https://example.org/docs/src/page.md", "//example.org/docs/src/page.md"),
+            ("dot_dot_segment_resolving_to_a_page", "docs/src/../src/page.md", "docs/src/../src/page.md"),
+            ("dot_dot_after_a_directory", "docs/src/sub/../page.md", "docs/src/sub/../page.md"),
+            ("dot_segment", "docs/src/./page.md", "docs/src/./page.md"),
+            ("doubled_slash", "docs/src//page.md", "docs/src//page.md"),
+            ("directory_only", "see docs/src/", "docs/src/"),
+            ("no_break_space_after_the_page", "docs/src/page.md" + chr(0xa0), None)):
+        decision_fail(f"c6_kept_basis_exact_page_{label}_fails", "must cite a docs/src/... file; " + (NOT_EXACT + bad if bad else "not an exact"), decisions=kept(basis))
+    for label, basis, bad in (("good_beside_a_bak", "docs/src/page.md and docs/src/gone.md.bak", "docs/src/gone.md.bak"),
+                              ("good_beside_a_dot_slash_copy", "docs/src/page.md and ./docs/src/page.md", "./docs/src/page.md"),
+                              ("good_beside_the_directory", "docs/src/ and docs/src/page.md", "docs/src/")):
+        decision_fail(f"c6_kept_basis_exact_page_{label}_fails", f"cites {bad}, which is not an exact docs/src/<path>.md page", decisions=kept(basis))
     for name, ch in INVIS:
         decision_fail(f"c6_helper_basis_U{name}_fails", "basis must be a non-empty string", decisions=helper(ch))
         decision_fail(f"c6_kept_basis_U{name}_fails", "basis must be a non-empty string", decisions=kept(ch))
@@ -945,6 +977,10 @@ def main():
                 shutil.rmtree(tmp)
         check(name, f)
     decisions_ok("c6_kept_basis_citing_an_existing_docs_src_file_ok", kept("see docs/src/page.md, section extras."))
+    for i, basis in enumerate(("docs/src/page.md", "(docs/src/page.md)", "`docs/src/page.md`", "docs/src/page.md:12", "see docs/src/page.md.",
+                               "[extras](docs/src/page.md#x)", "docs/src/page.md;docs/src/sub/deep.md", "docs/src/sub/deep.md",
+                               "documented in\ndocs/src/page.md\nand elsewhere", "a \"docs/src/page.md\" b", "'docs/src/page.md'")):
+        decisions_ok(f"c6_kept_basis_exact_page_accepted_{i}", kept(basis))
     decisions_ok("c6_helper_basis_with_a_visible_character_ok", helper("."))
     decisions_ok("c6_generator_with_a_plain_in_tree_path_still_ok", helper("."), generator="tools/gen.py")
 
@@ -1117,8 +1153,40 @@ def main():
            re.findall(r"'([a-z_]+)'", re.search(r"const RECEIPT_STATUS_FIELDS = \[(.*?)\];", mjs).group(1)) == A.STATUS_FIELDS
            and "const BEHAVIOURAL_STATUS_FIELDS = [...RECEIPT_STATUS_FIELDS, 'result'];" in mjs
            and A.BEHAVIOURAL_STATUS_FIELDS == A.STATUS_FIELDS + ["result"], "RECEIPT_STATUS_FIELDS or BEHAVIOURAL_STATUS_FIELDS drifted")
-    js_docs = re.search(r"const DOCS_SRC_RE = /(.*)/g;", mjs).group(1).replace("\\/", "/")
-    expect("docs_src_regex_matches_checker", js_docs == A.DOCS_SRC_RE.pattern, f"{js_docs} != {A.DOCS_SRC_RE.pattern}")
+    js_split = re.search(r"const DOCS_SRC_SPLIT_RE = /(.*)/;", mjs).group(1).replace("\\/", "/")
+    js_page = re.search(r"const DOCS_SRC_PAGE_RE = /(.*)/;", mjs).group(1).replace("\\/", "/")
+    expect("docs_src_split_regex_matches_checker", js_split == A.DOCS_SRC_SPLIT_RE.pattern, f"{js_split} != {A.DOCS_SRC_SPLIT_RE.pattern}")
+    expect("docs_src_page_regex_matches_checker", js_page == A.DOCS_SRC_PAGE_RE.pattern, f"{js_page} != {A.DOCS_SRC_PAGE_RE.pattern}")
+
+    # The two tools must accept and refuse the same bases: run the checker's C6 on the corpus and compare, item by item,
+    # with the assembler's kept_basis_problem over the same tree.
+    def basis_agreement():
+        if not shutil.which("node"):
+            return True, "node not available"
+        corpus = ["docs/src/page.md", "see docs/src/page.md, section extras.", "x docs/src/page.md#extras", "(docs/src/page.md)", "docs/src/page.md.",
+                  "docs/src/sub/deep.md", "docs/src/page.md and docs/src/sub/deep.md", "docs/src/page.md.bak", "docs/src/real.md.bak", "docs/src/page.mdx",
+                  "docs/src/page.md~", "docs/src/page.md/", "docs/src/assets/x.json", "docs/src/notes.txt", "docs/src/code.jl", "docs/src/cfg.toml",
+                  "./docs/src/page.md", "../docs/src/page.md", "other/docs/src/page.md", "/abs/docs/src/page.md", "xdocs/src/page.md",
+                  "https://example.org/docs/src/page.md", "docs/src/../src/page.md", "docs/src/sub/../page.md", "docs/src/./page.md", "docs/src//page.md",
+                  "docs/src/", "docs/src", "docs/src/missing.md", "docs/src/page.md and docs/src/gone.md", "docs/src/page.md and docs/src/gone.md.bak",
+                  "docs/src/page.md" + chr(0xa0), chr(0xa0) + "docs/src/page.md", "docs/src/page.md" + chr(0xfeff), "docs/src/page.md\u2028", "DOCS/SRC/page.md",
+                  "docs\\src\\page.md", "nothing here", ".", "docs/src/.hidden.md", "docs/src/a b.md", "docs/src/pa\tge.md", "docs/src/page.md\tdocs/src/sub/deep.md",
+                  "a,docs/src/page.md,b", "a;docs/src/page.md;b", "a'docs/src/page.md'b", "<docs/src/page.md>", "docs/src/page.md!", "docs/src/page.md?", "docs/src/page.md..."]
+        root, tmp = with_root()
+        try:
+            items = [{"source_id": f"julia-export/b{i}", "decision": "KEPT_AS_JULIA_EXTRA", "basis": b,
+                      "ruling": {"ref": "itchyshin/GLLVModels.jl#684 item 3", "signed_by": "Shinichi Nakagawa", "signed_on": "2026-10-02"}}
+                     for i, b in enumerate(corpus)]
+            (root / A.LEDGER / "reverse-gap.json").write_text(json.dumps(items))
+            env = dict(os.environ, PARITY_REF="FS", PARITY_FS_ROOT=str(root))
+            out = subprocess.run(["node", str(HERE / "true_parity_check.mjs"), "C6"], env=env, capture_output=True, text=True).stdout
+            refused_js = {int(m) for m in re.findall(r"julia-export/b(\d+)\(KEPT_AS_JULIA_EXTRA basis ", out)}
+            refused_py = {i for i, b in enumerate(corpus) if A.kept_basis_problem(b, root) is not None}
+            diff = sorted(refused_js ^ refused_py)
+            return bool(refused_py) and len(refused_py) < len(corpus) and not diff, f"differ on {[(i, corpus[i]) for i in diff]}; js refused {len(refused_js)}, py refused {len(refused_py)}"
+        finally:
+            shutil.rmtree(tmp)
+    check("kept_basis_accept_and_refuse_agree_between_checker_and_assembler", basis_agreement)
 
     # Real tree: outputs current, and EVIDENCED count equals the checker's own C1 bound=.
     c, o = run(A.ROOT, "--check")

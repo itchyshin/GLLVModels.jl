@@ -595,13 +595,21 @@ assembler reads the generator, the checker does not), a `basis` with no visible 
 `KEPT_AS_JULIA_EXTRA` basis that fails the documented-extra rule below. C6 also prints
 `decision_counts=` per vocabulary word.
 
-Basis rules. An `EXCLUDED_INTERNAL_HELPER` basis must be visible text. A `KEPT_AS_JULIA_EXTRA` basis must
-also cite at least one `docs/src/...` file (a path with no `..` or dot-leading segment, ending in `.md`,
-`.jl`, `.toml`, `.json` or `.txt`), and every `docs/src` file it cites must resolve to a file at the
-ref (the checker, `git cat-file` at the ref) or in the tree (the assembler). A documented extra is
-documented, and a basis such as `.` or `x` is not a citation. The reasons print as
-`unsigned_decision=<id>(KEPT_AS_JULIA_EXTRA basis must cite a docs/src/... file)` and
-`(KEPT_AS_JULIA_EXTRA basis cites <path>, which does not resolve at the ref)`.
+Basis rules. An `EXCLUDED_INTERNAL_HELPER` basis must be visible text. A `KEPT_AS_JULIA_EXTRA` basis must also
+cite at least one page under `docs/src`, and every page it cites must be an existing `.md` file written exactly as
+`docs/src/<path>.md`. The basis is read as tokens: it is split at ASCII whitespace and at `( ) [ ] { } < > " ' `
+`` ` `` `, ; : ! ? #` (so `(docs/src/a.md)`, `docs/src/a.md#sec` and `docs/src/a.md:12` cite `docs/src/a.md`), trailing
+dots are dropped, and every token that contains `docs/src` must then be a page path: it starts with `docs/src/`, has
+no `..`, `.`, dot-leading or empty segment, ends in `.md` and has nothing after that. A token that is not such a path
+fails the basis even beside a good citation: `docs/src/page.md.bak`, `docs/src/page.md~`, `./docs/src/page.md`,
+`other/docs/src/page.md`, a URL, `docs/src/` alone, and an existing `.json`, `.txt`, `.jl` or `.toml` file under
+`docs/src`. Each cited page must resolve to a file at the ref (the checker, `git cat-file`) or in the tree (the
+assembler). The delimiter set and the page pattern are the same text in both tools (`DOCS_SRC_SPLIT_RE`,
+`DOCS_SRC_PAGE_RE`) and a control runs both on one corpus. The reasons print as
+`unsigned_decision=<id>(KEPT_AS_JULIA_EXTRA basis must cite a docs/src/... file[; not an exact docs/src/<path>.md page: <tokens>])`,
+`(KEPT_AS_JULIA_EXTRA basis cites <tokens>, which is not an exact docs/src/<path>.md page)` and
+`(KEPT_AS_JULIA_EXTRA basis cites <path>, which does not resolve at the ref)`. Case is not checked beyond what the
+file system or git gives: on a case-insensitive file system the assembler can accept a page whose case differs.
 
 Reverse-gap matching. `reverse-gap.json` lists the Julia exports that have no gllvmTMB counterpart. A
 Julia export has one when its name equals an R export or S3 generic name after removing `_` and `.`
@@ -668,6 +676,13 @@ it in `generator`. The assembler refuses the path when any segment, split at a s
 resolves to a file inside the tree (`tools/../tools/gen.py`). It still refuses an absolute path, a path that resolves
 outside the tree, a directory and a missing file. Controls: `c6_generator_with_a_dotdot_segment_is_refused_*`, and
 `c6_generator_with_a_plain_in_tree_path_still_ok` for the positive case.
+
+**The cited `docs/src` page is matched exactly.** See "Basis rules" under ruling 3. Before this change a basis
+cited a page when the text merely contained one: `docs/src/page.md.bak` cited `page.md`, `other/docs/src/page.md`
+counted, and an existing `docs/src/assets/x.json` counted. Controls: checker group "C6 exact page" (also in git mode),
+assembler `c6_kept_basis_exact_page_*`, and `kept_basis_accept_and_refuse_agree_between_checker_and_assembler`.
+The tracked decisions (261 `KEPT_AS_JULIA_EXTRA`, 57 `EXCLUDED_INTERNAL_HELPER`) all cite plain `docs/src/*.md`
+pages, so C6 reads the same decided count as before.
 
 Controls. Assembler: `disposition_status_word_*`, `disposition_pipe_forged_*`, `disposition_with_*line_break*`,
 `every_reserved_status_word_*`, `non_string_or_blank_disposition_*`, `plain_dispositions_*`,
