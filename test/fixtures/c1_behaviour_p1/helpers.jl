@@ -163,3 +163,85 @@ function c1b_update_labels(o)
     refusal(x) = x.raised && !x.returned ? "signals an error and returns no model" : "does not refuse"
     return (replay = replay, override = override, unnamed = refusal(o.unnamed), nocall = refusal(o.nocall))
 end
+
+# ---- print.gllvmTMB_select_lv -------------------------------------------------------------
+# select-lv/print.gllvmTMB_select_lv. R prints, for a select_lv() result, a title line, then
+# print(df, row.names = FALSE) of a data frame whose first column is a one-character marker
+# (header ""), then the columns d npar logLik AIC BIC AICc conv pdHess (R/select-lv.R:349-369
+# at P1). Julia's show method for LVSelection (src/model_selection.jl) prints the same layout.
+# Both engines are observed on the data of the numeric select_lv twin, test/fixtures/select_lv_p1_data.csv.
+# R's text is stored verbatim in r_select_lv_print.txt; Julia's is produced here by calling select_lv with
+# pd_hessian = true (without it Julia prints NA in the pdHess column, R prints TRUE or FALSE).
+const C1B_SELECT_LV_FIXTURE = joinpath(@__DIR__, "..", "select_lv_p1.toml")
+
+c1b_r_select_lv_print(rec) = read(joinpath(C1B_DIR, rec["select_lv"]["print_file"]), String)
+
+# Y (traits x units) from the CSV that holds R's data, as the numeric select_lv twin loads it.
+function c1b_select_lv_data(fx)
+    path = joinpath(dirname(C1B_SELECT_LV_FIXTURE), fx["data_file"])
+    trait_names = String.(fx["trait_names"])
+    Y = zeros(Float64, length(trait_names), Int(fx["n_unit"]))
+    open(path) do io
+        readline(io)
+        for line in eachline(io)
+            isempty(line) && continue
+            parts = split(line, ",")
+            t = findfirst(==(strip(parts[2], '"')), trait_names)
+            t === nothing && error("unrecognised trait in $path")
+            Y[t, parse(Int, strip(parts[1], '"'))] = parse(Float64, parts[3])
+        end
+    end
+    return Y
+end
+
+# Julia side: the sweep K = 1:3 on that data, printed. Returns the text and the LVSelection.
+function c1b_julia_select_lv_print()
+    fx = TOML.parsefile(C1B_SELECT_LV_FIXTURE)
+    Y = c1b_select_lv_data(fx)
+    sel = select_lv(Y; Kmax = 3, criterion = :bic, pd_hessian = true)   # family defaults to Normal()
+    return sprint(show, MIME"text/plain"(), sel), sel
+end
+
+# Split a printed table into title, column labels, marker cells and body cells. The layout is
+# print(df, row.names = FALSE): every line starts with a blank, the marker cell is the one
+# character at position 2, and the other cells are the whitespace-separated tokens after it. The
+# marker column's own label is empty, so the column labels are the tokens of the header line.
+# A table row is a line of that shape with one token per label; the first line that is not one
+# ends the table (notes and failed-fit lines follow it).
+function c1b_select_lv_table(text::AbstractString)
+    lines = String.(split(chomp(text), '\n'))
+    length(lines) >= 3 || error("printed select_lv table too short")
+    labels = String.(split(strip(lines[2])))
+    markers = Char[]
+    rows = Vector{String}[]
+    for l in lines[3:end]
+        (length(l) >= 3 && l[1] == ' ' && l[2] in (' ', '*') && l[3] == ' ') || break
+        cells = String.(split(l[3:end]))
+        length(cells) == length(labels) || break
+        push!(markers, l[2])
+        push!(rows, cells)
+    end
+    isempty(rows) && error("no table rows after the header line")
+    return (title = lines[1], header = lines[2], labels = labels, markers = markers, rows = rows)
+end
+
+# Three statements about the marker, each derived from the printed table alone, so the same
+# code reads both engines: which character marks a row, how many rows carry it, and whether the
+# marked row has the smallest value in the column of the criterion the title names.
+function c1b_select_lv_marker_labels(t)
+    marked = findall(!=(' '), t.markers)
+    chars = unique(t.markers[marked])
+    count_label = length(chars) == 1 ?
+        "marks " * (length(marked) == 1 ? "exactly one row" : "$(length(marked)) rows") * ", with " * only(chars) :
+        "uses $(length(chars)) different marker characters"
+    crit = match(r"criterion = (\w+)", t.title)
+    crit === nothing && error("no 'criterion = ' in the title line: $(t.title)")
+    ccol = findfirst(l -> lowercase(l) == lowercase(crit.captures[1]), t.labels)
+    ccol === nothing && error("title names criterion $(crit.captures[1]) but no column of that name")
+    val(c) = c == "NA" ? Inf : parse(Float64, c)
+    best = argmin([val(r[ccol]) for r in t.rows])
+    min_label = length(marked) == 1 && only(marked) == best ?
+        "the marked row has the smallest value of the criterion column" :
+        "the marked row is not the one with the smallest value of the criterion column"
+    return [count_label, min_label]
+end

@@ -10,11 +10,11 @@
   "origin_pr": "itchyshin/GLLVModels.jl#684 item 2",
   "generator": "tools/true_parity_julia_receipts.jl",
   "julia_version": "1.10.0",
-  "gllvmodels_commit": "896a0a2286c224fe9979d3cf7e7e2c6be27f9357",
+  "gllvmodels_commit": "78b9a1eec6aa684ba5e2652c8098a91096004361",
   "source_fixtures": [
     {
       "path": "test/fixtures/c1_behaviour_p1/r_c1_behaviour.toml",
-      "sha256": "d50622d355dd85f1c37017fd91158b7d653059d315d1aaa4fc62ccc4df3b88a9"
+      "sha256": "31b7e4d57e4e3cb128c959afcf072d65a6857c95f1ac90eddaaa31a55a1d5a0e"
     },
     {
       "path": "test/fixtures/c1_behaviour_p1/r_anova_print.txt",
@@ -22,7 +22,7 @@
     },
     {
       "path": "test/fixtures/c1_behaviour_p1/helpers.jl",
-      "sha256": "05234886705816d18d65d4b1b6619ae0b8c4e8cd7c49604e39d61e4911ea3823"
+      "sha256": "f9ca518e4d9f25b338c25b4037d7716f4a9429367d38227c651bfb66d935612d"
     },
     {
       "path": "test/fixtures/gllvmtmb_anova_fixture.toml",
@@ -32,7 +32,7 @@
   "source_tests": [
     {
       "path": "test/test_c1_behaviour_p1.jl",
-      "sha256": "8453b3ed0105811c279a7d1ccbfd1b4edc20fe6b1c79eea01c7e4f5829e03e05"
+      "sha256": "9f41ef192b07abe81c3262c4db651d5200b5cd9fe466fcfc46be41baa7177b66"
     }
   ],
   "what_this_is_not": "This compares the printed column labels and section headings only. It does not claim identical title text, identical note wording, identical number formatting or identical numbers; the numbers are the numeric anova twin's. R's print method takes a digits argument; the Julia show method has none, and that is not compared.",

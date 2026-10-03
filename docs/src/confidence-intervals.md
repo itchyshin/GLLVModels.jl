@@ -25,6 +25,25 @@ confint(fit, Y; method = :bootstrap, n_boot = 500)       # parametric bootstrap
 marginal likelihood. The call returns a `NamedTuple` with `term`, `estimate`,
 `lower`, `upper`, and `method` (plus method-specific extras below).
 
+A fit made with an `offset` (the known additive term in `η = β + offset + Λz`, such
+as log-exposure or effort) is inferred on that offset: pass the same one,
+`confint(fit, Y; offset = O)`, as you pass `N` and `mask`. The Wald Hessian, the
+profile refits and the bootstrap all use it. A fit object does not store the
+offset, so `confint` checks that the objective it rebuilds reproduces the fit's own
+log-likelihood and refuses (with an `ArgumentError`) when it does not, for example
+when the offset is left out, instead of returning the intervals of an offset-free
+model. The check compares like with like, so offset-free fits from the variational
+fitters (`fit_*_gllvm_va`) and `hessian = :fisher` fits of the delta-gamma and
+truncated NB2 families are not refused. It cannot see a wrong offset at cells that
+do not enter the likelihood (masked cells; the `y = 0` cells of hurdle and
+separate-predictor delta fits, where the offset sits on the positive part only), and
+the bootstrap draws do use the offset there. AGHQ Poisson and binomial fits keep
+their offset and need no keyword. The same keyword is accepted by `vcov`,
+`coef_table` and `confint_lv_effects` (Wald and profile; the bootstrap of
+`confint_lv_effects` refuses an offset but still checks the fit, so an offset fit is
+not bootstrapped as if it had none). See [`confint`](@ref) for the fit types that
+take an offset.
+
 The generic entry point currently accepts the fitted types in its `_CIFit`
 dispatch: ordinary family fits (including Poisson, Binomial, NB/NB1, GP1,
 Beta, Gamma, Exponential, Tweedie, Beta-Binomial, row-random, lognormal,
