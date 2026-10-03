@@ -464,12 +464,42 @@ TWIN_FILES = {  # source_id -> twin receipt stem
     "data/DATA-OFF-NONE": "OFF-NONE",
     "data/DATA-OFF-SCALAR": "OFF-SCALAR",
     "data/DATA-OFF-EXPOSURE": "OFF-EXPOSURE",
-    "data/DATA-OFF-ALL-COUNT": "OFF-ALL-COUNT",
     "data/DATA-OFF-NB1": "OFF-NB1",
     "data/DATA-OFF-NONCOUNT-ZERO": "OFF-NONCOUNT-ZERO",
     "data/DATA-MISS-DEFAULT": "MISS-DEFAULT",
     "data/DATA-MISS-INCLUDE": "MISS-INCLUDE",
 }
+
+
+# A twin receipt that records a true measurement but does not twin its row: cited as non-binding.
+# DATA-OFF-ALL-COUNT's R case prepares offsets across a mixed family vector in one model (count and
+# continuous families together). Julia has no per-trait family mix (the DATA-OFF-MIXED reason), and a
+# single-family NB2 fit is the capability DATA-OFF-EXPOSURE and DATA-OFF-NB1 already pay for, so the
+# row is not bound on it.
+NONBINDING_TWINS = {
+    "data/DATA-OFF-ALL-COUNT": ("OFF-ALL-COUNT",
+        "The NB2 exposure-offset fit twin (receipt cited as non-binding) is a single-family fit. The R case "
+        "prepares offsets across a mixed count and continuous family vector in one model, which Julia cannot "
+        "fit (no per-trait family mix, as for DATA-OFF-MIXED), so the row does not bind on it."),
+}
+
+
+def nonbinding_twin_note(sid, row):
+    """Cite a non-binding twin receipt on `row` without changing its tier (idempotent)."""
+    if sid not in NONBINDING_TWINS:
+        return
+    stem, why = NONBINDING_TWINS[sid]
+    path = ROOT / TWIN_REL / f"{stem}.json"
+    if not path.is_file():
+        return
+    rel = str(path.relative_to(ROOT))
+    ev = row.get("evidence") or {}
+    nb = list(ev.get("non_binding_receipts", []))
+    if rel not in nb:
+        nb.append(rel)
+    ev["non_binding_receipts"] = nb
+    row["evidence"] = ev
+    row["twin_not_bound"] = why
 
 
 def twin_overlay(sid, row, counts):
@@ -568,6 +598,7 @@ def build_rows(in_scope, receipts):
             row["note"] = " ".join(dict.fromkeys(notes))
         if row["evidence_tier"] == "needs_surface_r_side_measured":
             twin_overlay(sid, row, counts)
+            nonbinding_twin_note(sid, row)
         out_rows.append(row)
     return out_rows, counts
 
