@@ -144,13 +144,16 @@ NOTE = ("Separate from case-map.json so none of its rows are touched; read by to
         "nothing is signed by an agent. Only rows whose every executable case id carries a numeric R-vs-Julia "
         "comparison block within tolerance, from a batch whose verifier passed, with no degenerate "
         "comparison, cite evidence.receipt as numeric rows. Routing (wave2) and error-class (wave4) rows carry no "
-        "number. A routing or error-class row binds as evidence_tier behavioural (itchyshin/GLLVModels.jl#684 item 2) "
-        "when its receipt's behaviour block shows both engines giving the same route, refusal or error class through "
-        "behaviour-equivalence.json (tools/core070_behaviour_receipts.py); it then cites evidence.receipt. A row whose "
-        "raw record shows R and Julia doing different things has no behaviour entry and stays under "
-        "evidence.non_binding_receipts, with the reason in the receipt's behaviour_not_bound. CI-ROUTE-008 and "
-        "CI-ROUTE-010 are one R-vs-Julia comparison counted on two surface rows (see their notes); the count is left "
-        "to the maintainer.")
+        "number. A routing or error-class row in the frozen scope of itchyshin/GLLVModels.jl#684 item 2 binds as "
+        "evidence_tier behavioural when its receipt's behaviour block shows both engines giving the same route, refusal "
+        "or error class through behaviour-equivalence.json (tools/core070_behaviour_receipts.py); it then cites "
+        "evidence.receipt. A row whose raw record shows R and Julia doing different things, or whose Julia side is not "
+        "something a Julia user can call through the public API (the Sigma bootstrap rows and the derived-quantity "
+        "profile and bootstrap rows), has no behaviour entry and stays under evidence.non_binding_receipts, with the "
+        "reason in the receipt's behaviour_not_bound. CI-ROUTE-009 carries a behaviour block as non-binding evidence "
+        "only: it is not in the frozen scope, so it stays partial_non_numeric_case until the maintainer confirms that "
+        "ruling 2 covers it. CI-ROUTE-008 and CI-ROUTE-010 are one R-vs-Julia comparison counted on two surface rows "
+        "(see their notes); the count is left to the maintainer.")
 
 
 def sha(path):

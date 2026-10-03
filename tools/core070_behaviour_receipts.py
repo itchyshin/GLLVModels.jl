@@ -3,17 +3,26 @@
 
 Ruling 2 of itchyshin/GLLVModels.jl#684 (the behavioural tier, GATES.md "Rulings of 2026-10-02")
 closes a row whose R behaviour is a routing decision, a refusal or an error class when a receipt
-shows both engines giving the same behaviour. This tool writes that evidence. It reads only tracked
-raw artefacts (nothing is re-run, nothing is typed by hand) and adds to each case receipt:
+shows both engines giving the same behaviour. The tier covers a frozen list of rows (the 59
+inference routing and error-class rows and four named C1 rows); a row outside that list never
+binds behaviourally. This tool writes the evidence. It reads only tracked raw artefacts (nothing
+is re-run, nothing is typed by hand) and adds to each case receipt:
 
-  behaviour              the S1 block: one entry per bound row, scoped by source_id, holding the
-                         label R produced and the label Julia produced for that row's case
+  behaviour              the S1 block: one entry per row that can bind, scoped by source_id (every
+                         entry carries source_id, because the inference receipts share case ids
+                         across rows), holding the label R produced and the label Julia produced
   behaviour_not_bound    one record per row that gets no entry, with the exact reason and the raw
                          evidence for it
 
-and it writes behaviour-equivalence.json from CLASSES below. Every class names a route, refusal or
-error class that R and Julia spell differently, and its basis cites the P1 R function and the Julia
-function that implement the same behaviour. A label in no class stands for itself.
+and it writes behaviour-equivalence.json from CLASSES below. Every class lists the exact raw labels
+of both engines for one route, refusal or error class, and its basis cites the P1 R function and
+the Julia function that implement the same behaviour. A label in no class stands for itself, and no
+entry here relies on that: both labels of every entry are listed in one class.
+
+The 7 aghq/AGHQ-CTRL-* rows and inference/CI-ROUTE-009 are not in the frozen list. Their receipts
+keep a behaviour block as non-binding evidence, their rows stay at paired_control_categorical_pass
+and partial_non_numeric_case, and each carries a one-line note that binding them needs the
+maintainer to confirm that ruling 2 covers them.
 
 Raw artefacts read (all tracked under docs/dev-log/core070/true-parity-latest/receipts/):
 
@@ -44,6 +53,16 @@ thing, even if the two labels look alike:
              The 14 derived-quantity error-class rows: Julia's MethodError fires for every method value
              (the *_wald_ci functions take no method keyword), valid or not, so it is not the refusal R
              gives for a method outside its supported set. No error class is mapped; no entry is written.
+  public_route_differs
+             The Sigma bootstrap rows (CI-ROUTE-045, 048, 057, 060, 063): Julia's public
+             confint(fit, Y; parm, method = :bootstrap) on a structured fit falls through to the
+             one-argument Wald confint and ignores method, so the request does not take the route R
+             takes. The harness called bootstrap_ci directly, which is not the request R's row makes.
+  not_exported
+             The derived-quantity profile and bootstrap rows (CI-ROUTE-016, 018, 025, 032, 039):
+             Julia's side is GLLVM.profile_ci_derived / GLLVM.bootstrap_ci_derived, which are not
+             exported, so a Julia user cannot make the request. Same treatment as the DEFAULT rows
+             CI-ROUTE-022, 029 and 036, where the harness chose the function.
   withdrawn  R routes `profile` for communality, rho or proportion to a function that, at P1, raises
              gllvmTMB_nonlinear_profile_withdrawn (the same probe records the guard row), while Julia
              returns a profile interval.
@@ -151,32 +170,11 @@ CLASSES = [
     cls("route", "sigma_eps:profile", [".confint_profile_targets:profile"], ["sigma_eps:profile"],
         f"R: profile_targets() parm sigma_eps with method profile calls .confint_profile_targets ({RZ}:1266, called at "
         f":1746); Julia: profile_ci(fit, \"sigma_eps\"; y) (src/confint_profile.jl:532-537, :406 at {RUN_JULIA})."),
-    cls("route", "phylo_signal:profile", [".confint_phylo_signal:profile"], ["phylo_signal:profile"],
-        f"R: .confint_phylo_signal profile branch calls profile_ci_phylo_signal ({RZ}:894, :911); Julia: "
-        f"GLLVM.profile_ci_derived with the phylogenetic-signal closure (src/confint_derived.jl:913 at {RUN_JULIA}, not "
-        f"exported); both profile the derived quantity."),
-    # --- bootstrap ---
+    # --- bootstrap (Lambda only: the Sigma and derived-quantity bootstrap rows are not bound, see the not_bound reasons) ---
     cls("route", "lambda:bootstrap", [".confint_lambda:bootstrap"], ["lambda:bootstrap"],
         f"R: .confint_lambda bootstrap branch calls .loading_ci_bootstrap ({RZ}:346-368); Julia: bootstrap_ci(fit; "
         f"parms=\"Lambda_B[1,1]\", y) (src/confint_bootstrap.jl:258 at {RUN_JULIA}); both refit simulated data."),
-    cls("route", "sigma:bootstrap", [".confint_sigma:bootstrap"],
-        ["sigma_B:bootstrap", "sigma_W:bootstrap", "sigma_phy:bootstrap"],
-        f"R: .confint_sigma method bootstrap calls .confint_sigma_bootstrap, which calls bootstrap_Sigma "
-        f"({RZ}:1803-1807, :1816, :1827); Julia: bootstrap_ci(fit; parms=sigma_*, y, Σ_phy) "
-        f"(src/confint_bootstrap.jl:258 at {RUN_JULIA}); both refit simulated data."),
-    cls("route", "communality:bootstrap", [".confint_communality:bootstrap"], ["communality:bootstrap"],
-        f"R: .confint_communality bootstrap branch ({RZ}:941, :991); Julia: GLLVM.bootstrap_ci_derived with the "
-        f"communality closure (src/confint_derived.jl:489 at {RUN_JULIA}, not exported)."),
-    cls("route", "rho:bootstrap", [".confint_rho:bootstrap"], ["rho:bootstrap"],
-        f"R: .confint_rho method bootstrap calls extract_correlations(method = \"bootstrap\") ({RZ}:1034, :1061); "
-        f"Julia: GLLVM.bootstrap_ci_derived with the correlation closure (src/confint_derived.jl:489 at {RUN_JULIA})."),
-    cls("route", "phylo_signal:bootstrap", [".confint_phylo_signal:bootstrap"], ["phylo_signal:bootstrap"],
-        f"R: .confint_phylo_signal bootstrap branch ({RZ}:894, :921); Julia: GLLVM.bootstrap_ci_derived with the "
-        f"phylogenetic-signal closure (src/confint_derived.jl:489 at {RUN_JULIA})."),
-    cls("route", "proportion:bootstrap", [".confint_proportion:bootstrap"], ["proportion:bootstrap"],
-        f"R: .confint_proportion bootstrap branch ({RZ}:1188, :1213); Julia: GLLVM.bootstrap_ci_derived with the "
-        f"shared-proportion closure (src/confint_derived.jl:489 at {RUN_JULIA})."),
-    # --- CI-ROUTE-009: profile interval for two-level repeatability is withdrawn in both ---
+    # --- CI-ROUTE-009: profile interval for two-level repeatability is withdrawn in both (non-binding: outside the frozen scope) ---
     cls("refusal", "icc:profile-withdrawn",
         ["A profile interval for canonical full-covariance repeatability is not currently available."],
         ["A profile interval for canonical full-covariance two-level repeatability is not currently available."],
@@ -184,7 +182,7 @@ CLASSES = [
         f"Julia: repeatability_ci throws TwoLevelRepeatabilityProfileWithdrawn for method=:profile "
         f"(src/twolevel.jl:605-612 at {RUN_SURF}). Both refuse the same request, name the same reason (the old "
         f"profile estimated only a diagonal-companion ratio) and point to wald or bootstrap."),
-    # --- aghq request normalisation ---
+    # --- aghq request normalisation (non-binding: outside the frozen scope) ---
     cls("route", "aghq:off", ["FALSE"], ["off"],
         f"R: .gllvmTMB_normalize_aghq maps NULL and FALSE to FALSE, the Laplace approximation (R/gllvmTMB.R:2492); "
         f"Julia: _aghq_request maps false and nothing to :off (src/families/aghq_fit_info.jl:38 at {RUN_AGHQ})."),
@@ -210,8 +208,7 @@ def equivalence_doc():
             "citation_note": (f"R file:line citations are at gllvmTMB P1 ({P1_SHA[:9]}). Julia file:line citations are at "
                               f"the commit that ran the cited receipt ({RUN_JULIA} for the inference rows, {RUN_AGHQ} "
                               "for the aghq rows, " + RUN_SURF + " for CI-ROUTE-009), not at current main: src has "
-                              "changed since, so the lines may have moved. The labels were re-run at the PR head "
-                              "during review and matched the recorded ones."),
+                              "changed since, so the lines may have moved."),
             "classes": CLASSES}
 
 
@@ -245,6 +242,10 @@ def first_sentence(msg):
     m = re.match(r"(.+?\.)(\s|$)", flat)
     return m.group(1) if m else flat
 
+
+SIGMA_TARGETS = ("sigma_B", "sigma_W", "sigma_phy")
+DERIVED_TARGETS = ("communality", "rho", "phylo_signal", "proportion")
+NOT_EXPORTED_CALLS = ("GLLVM.profile_ci_derived", "GLLVM.bootstrap_ci_derived")
 
 TARGETS = {"LAMBDA": "lambda", "BETA": "beta", "SIGMA-EPS": "sigma_eps", "SIGMA-B": "sigma_B", "SIGMA-W": "sigma_W",
            "SIGMA-PHY": "sigma_phy", "COMMUNALITY": "communality", "RHO": "rho", "PHYLO-SIGNAL": "phylo_signal",
@@ -330,6 +331,32 @@ def wave2(case_id, rec):
                          f"(parm {fx['parm']}, method profile). Julia returned a profile interval ({pr['julia_call']}). "
                          f"R refuses, Julia computes: not the same behaviour."),
                 "evidence": {"r": f"{ib}/r-crosscheck/p1-route-probe-results.tsv#{n},{g}", "julia": f"{ib}/inference-batch-results.json#{n}"}})
+            continue
+        if target in SIGMA_TARGETS and j["actual"] == "bootstrap":
+            not_bound.append({
+                "source_id": sid, "reason": "public_route_differs",
+                "text": (f"R's confint(method = 'bootstrap') for a Sigma parm refits through .confint_sigma_bootstrap "
+                         f"(route {r['actual']!r}). Julia's public confint(fit, y; parm, method = :bootstrap) on this "
+                         f"structured fit does not refit: it falls through to the one-argument Wald confint and ignores "
+                         f"method (src/confint.jl:366-369 at {RUN_JULIA}; inference-batch-contract-p1.json "
+                         f"known_findings.lambda_reject_validation_boundary), so a Julia user who makes this request gets "
+                         f"a Wald interval. The harness called {pr['julia_call']} directly, which is not the request R's "
+                         f"row makes. Not the same route for the same request, so no entry."),
+                "evidence": {"r": f"{ib}/r-crosscheck/p1-route-probe-results.tsv#{n}",
+                             "julia": f"{ib}/inference-batch-results.json#{n}",
+                             "contract": f"{LEDGER}/inference-batch-contract-p1.json"}})
+            continue
+        if target in DERIVED_TARGETS and pr["julia_call"].startswith(NOT_EXPORTED_CALLS):
+            not_bound.append({
+                "source_id": sid, "reason": "not_exported",
+                "text": (f"R's confint(parm, method = {method!r}) serves a derived quantity (route {r['actual']!r}). "
+                         f"Julia's side of this row is {pr['julia_call']}, an internal function that GLLVModels does not "
+                         f"export (src/GLLVModels.jl export list), so a Julia user cannot make this request through the "
+                         f"public API; the harness chose the function. The same shape as the DEFAULT rows CI-ROUTE-022, "
+                         f"029 and 036, which are also left unbound. No entry."),
+                "evidence": {"r": f"{ib}/r-crosscheck/p1-route-probe-results.tsv#{n}",
+                             "julia": f"{ib}/inference-batch-results.json#{n}",
+                             "contract": f"{LEDGER}/inference-batch-contract-p1.json"}})
             continue
         kind = "route"
         r_label, j_label = r["actual"], f"{target}:{j['actual']}"
@@ -475,10 +502,66 @@ def assembler():
     return _ASM
 
 
+_CITES = None
+
+
+def citers():
+    """case id -> source_ids of every row (any tier) in the ledger's case maps that lists it, as the assembler
+    and the checker count them. An entry without source_id covers a case id only when one row cites it."""
+    global _CITES
+    if _CITES is None:
+        by_id = assembler().load_maps(ROOT, Path(LEDGER), [])[0]
+        _CITES = {}
+        for sid, (_family, r) in by_id.items():
+            for cid in r.get("executable_case_ids") or []:
+                if isinstance(cid, str):
+                    _CITES.setdefault(cid, set()).add(sid)
+    return _CITES
+
+
+OUT_OF_SCOPE_NOTE = (f"Not bound: behaviour block kept as non-binding evidence only (R and Julia give the same label), "
+                     f"but this row is not in the frozen scope of {RULING}; binding it needs the maintainer to confirm "
+                     f"ruling 2 covers it.")
+NOT_BOUND_ROW_NOTES = {
+    "public_route_differs": ("Not bound behaviourally: Julia's public confint(fit, Y; parm, method = :bootstrap) on this "
+                             "structured fit returns a Wald interval, so the request does not take the same route as "
+                             "R's; the harness called bootstrap_ci directly (receipt behaviour_not_bound)."),
+    "not_exported": ("Not bound behaviourally: Julia's side is the unexported GLLVM.profile_ci_derived / "
+                     "GLLVM.bootstrap_ci_derived, so a Julia user cannot make this request; the harness called an "
+                     "internal function (receipt behaviour_not_bound)."),
+}
+
+
+def _add_note(row, text):
+    row["note"] = " ".join(dict.fromkeys(n for n in (row.get("note"), text) if n))
+
+
+def _annotate(row, paths):
+    """A one-line note on a row that stays unbound for a reason this tool records: an entry that matches but sits
+    outside the frozen scope, or a not-bound record whose reason has a row note."""
+    asm = assembler()
+    sid = row.get("source_id")
+    index = asm.behaviour_equivalence(ROOT)
+    for p in paths:
+        rec = load(ROOT / p)
+        for nb in rec.get("behaviour_not_bound") or []:
+            if nb.get("source_id") == sid and nb.get("reason") in NOT_BOUND_ROW_NOTES:
+                _add_note(row, NOT_BOUND_ROW_NOTES[nb["reason"]])
+        if asm.behavioural_eligible_source_id(sid):
+            continue
+        for e in (rec.get("behaviour") or {}).get("cases") or []:
+            if e.get("source_id") == sid and all(
+                    asm._labels_match(index, e["kind"], a, b)
+                    for a, b in zip(asm.as_list(e["r_observed"]), asm.as_list(e["julia_observed"]))):
+                _add_note(row, OUT_OF_SCOPE_NOTE)
+
+
 def overlay_row(row, counts):
     """Flip `row` to evidence_tier behavioural when its cited receipts' behaviour blocks bind it under the
-    assembler's port of the checker's rule. Moves evidence.non_binding_receipts to evidence.receipt, sets the
-    tier text, and nothing else. Updates `counts` (tier count down, `behavioural` up). Returns True if flipped."""
+    assembler's port of the checker's rule (frozen scope, class identity, entries scoped by source_id where a
+    case id has several citers). Moves evidence.non_binding_receipts to evidence.receipt, sets the tier text,
+    and nothing else. Updates `counts` (tier count down, `behavioural` up). Returns True if flipped.
+    A row that is not flipped gets a one-line note when this tool records why (see _annotate)."""
     if row.get("evidence_tier") not in OVERLAY_TIERS or row.get("measured_against") != P1_SHA:
         return False
     paths = list((row.get("evidence") or {}).get("non_binding_receipts") or [])
@@ -486,7 +569,8 @@ def overlay_row(row, counts):
         return False
     asm = assembler()
     cand = dict(row, evidence_tier="behavioural", evidence={"receipt": paths})
-    if asm.behavioural_receipt_problem(cand, ROOT, asm.behaviour_equivalence(ROOT)) is not None:
+    if asm.behavioural_receipt_problem(cand, ROOT, asm.behaviour_equivalence(ROOT), citers()) is not None:
+        _annotate(row, paths)
         return False
     counts[row["evidence_tier"]] -= 1
     counts["behavioural"] = counts.get("behavioural", 0) + 1
@@ -500,7 +584,7 @@ def row_problem(row):
     asm = assembler()
     paths = list((row.get("evidence") or {}).get("non_binding_receipts") or (row.get("evidence") or {}).get("receipt") or [])
     cand = dict(row, evidence_tier="behavioural", evidence={"receipt": paths})
-    return asm.behavioural_receipt_problem(cand, ROOT, asm.behaviour_equivalence(ROOT))
+    return asm.behavioural_receipt_problem(cand, ROOT, asm.behaviour_equivalence(ROOT), citers())
 
 
 # ---------------------------------------------------------------------------

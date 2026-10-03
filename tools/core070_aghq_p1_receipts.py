@@ -100,8 +100,7 @@ IN_SCOPE_STATUS = ("DANGLING", "PARTIAL_STALE_AT_P1", "NO_R_PINS")
 COUNT_KEYS = ("numeric_pass", "numeric_fail",
               "paired_control_categorical_pass", "paired_control_categorical_fail",
               "paired_control_categorical_held_batch_verifier_failed",
-              "r_only_policy_pass", "r_only_policy_fail", "r_only_policy_held_batch_verifier_failed",
-              "behavioural")
+              "r_only_policy_pass", "r_only_policy_fail", "r_only_policy_held_batch_verifier_failed")
 
 WHY_NOT_NUMERIC = {
     CONTROL: ("A paired control on categorical labels: R's .gllvmTMB_normalize_aghq and GLLVModels._aghq_request "
@@ -483,7 +482,7 @@ def build_rows(in_scope, carry_status, receipts):
                    measured_result={**result, "row_verdict": verdict} if verdict else result)
         counts[tier] += 1
         twin_overlay(sid, row, counts)
-        behaviour.overlay_row(row, counts)  # a control row whose receipt carries a matching behaviour block
+        behaviour.overlay_row(row, counts)  # notes a control row whose behaviour block is outside the frozen scope
         out_rows.append(row)
     return out_rows, counts
 
@@ -599,9 +598,10 @@ NOTE = ("Separate from case-map.json so none of its rows are touched; read by to
         "binomial and Gaussian fits, which expose aghq= in Julia) additionally carry a numeric Julia twin receipt "
         "(receipts/julia-twins/aghq/, test/test_aghq_p1_twin.jl) under evidence.receipt with evidence_tier numeric. The "
         "policy fixtures of the batch are toys (p of 5 to 20 traits, n of 30 to 40 sites, d = 1); the twins use simulated "
-        "data with a real latent factor. The 7 control rows also carry a behaviour block (tools/core070_behaviour_receipts.py): "
-        "both engines normalise the same scalar request to the same label, so they bind as evidence_tier behavioural "
-        "(itchyshin/GLLVModels.jl#684 item 2), a behavioural row and not a numeric one.")
+        "data with a real latent factor. The 7 control rows also carry a behaviour block (tools/core070_behaviour_receipts.py) as "
+        "non-binding evidence: both engines normalise the same scalar request to the same label, but these rows are not "
+        "in the frozen scope of itchyshin/GLLVModels.jl#684 item 2, so they stay at paired_control_categorical_pass until "
+        "the maintainer confirms that ruling 2 covers them.")
 
 
 def copy_batch(batch, run_dir):
