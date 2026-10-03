@@ -10,8 +10,9 @@
 #   6. weights and multi-trial refusals           R/fit-multi.R:3462-3480
 #   7. every source x trait arm observed          R/isdm-sources.R:445-477
 #
-# Missing responses are refused up front (scope decision D-296: R's
-# `miss_control(response = "include")` masking is a separate missing-data row).
+# Rows with a missing response are dropped up front with a warning, as R at P1
+# does (drop_missing_response_rows, miss_control(response = "drop")). R's
+# `response = "include"` masking is a separate missing-data row.
 
 """
     IsdmTable
@@ -285,7 +286,16 @@ must match the number of distinct levels in `isdm_source`."), the
 within-trait scale rule, the observation-formula checks, the offset gate
 ("offsets are supported for count families (poisson, nbinom) only"), weights
 ("`weights` is not admitted for the integrated multi-source model."), multi-trial
-detection rows, and the observed-arm check. Missing responses are refused.
+detection rows, and the observed-arm check.
+
+Rows whose response is missing (`missing` or `NaN`) are dropped before any
+check runs, exactly as R's `gllvmTMB` does at P1 (`miss_control(response =
+\"drop\")`): the kept rows alone define the selector levels, units, traits,
+offset and covariates, and the observed-arm check then needs every declared
+source x trait arm to keep at least one observed response. A `@warn` states how
+many rows were dropped and from which source. If every response is missing the
+call throws an `ArgumentError`. `weights` and `n_trials`, if given per row, are
+subset the same way.
 
 Factor levels (traits, units, sources, and categorical covariates in the main
 and observation formulas) are ordered by Julia's byte order,
@@ -302,12 +312,32 @@ function isdm_table(formula::Expr, data; family::IsdmSources, trait::Symbol = :t
     for key in (pf.response, trait, unit)
         haskey(cols, key) || throw(ArgumentError("column `$key` not found in `data`."))
     end
-    n = length(getproperty(cols, pf.response))
+    ycol0 = getproperty(cols, pf.response)
+    # Rows whose response is NA are dropped before anything else, as R's
+    # gllvmTMB does at P1 (drop_missing_response_rows, miss_control(response =
+    # "drop")): every later step (selector levels, offset, covariates, units,
+    # the observed-arm check) sees only the kept rows. R informs; Julia warns.
+    na_row = [ismissing(v) || (v isa AbstractFloat && isnan(v)) for v in ycol0]
+    if any(na_row)
+        all(na_row) && throw(ArgumentError(
+            "All response rows are missing. Check the response column `$(pf.response)` " *
+            "was read correctly; at least one observed value is required to fit a model."))
+        by_src = ""
+        if haskey(cols, :isdm_source)
+            lab = string.(getproperty(cols, :isdm_source)[na_row])
+            by_src = " (by source: " * join(("$s: $(count(==(s), lab))" for s in sort(unique(lab))), ", ") * ")"
+        end
+        @warn "isdm_table: dropped $(count(na_row)) row(s) with a missing response in " *
+              "`$(pf.response)`$(by_src) before fitting, as R's gllvmTMB does. A unit keeps " *
+              "every other row it has; every declared source x trait arm must still keep at " *
+              "least one observed response."
+        keep = findall(!, na_row)
+        cols = map(v -> v isa AbstractVector && length(v) == length(na_row) ? v[keep] : v, cols)
+        n_trials === nothing || length(n_trials) != length(na_row) || (n_trials = collect(n_trials)[keep])
+        weights === nothing || !(weights isa AbstractVector) || length(weights) != length(na_row) || (weights = weights[keep])
+    end
     ycol = getproperty(cols, pf.response)
-    any(ismissing, ycol) && throw(ArgumentError(
-        "The integrated door refuses missing responses in P1 ($(count(ismissing, ycol)) " *
-        "missing in `$(pf.response)`); drop those rows. Masked-response fitting is a separate " *
-        "missing-data capability."))
+    n = length(ycol)
 
     # 1. selector alignment by name (R/fit-multi.R:1432-1452).
     haskey(cols, :isdm_source) || throw(ArgumentError(
@@ -367,8 +397,8 @@ function isdm_table(formula::Expr, data; family::IsdmSources, trait::Symbol = :t
             "as likelihood multipliers on an all-count declaration; that route is fenced here."))
     end
 
-    # 7. every declared source x trait arm observed (all rows are observed:
-    # missing responses were refused above).
+    # 7. every declared source x trait arm observed (all kept rows are observed:
+    # missing-response rows were dropped above).
     _isdm_assert_observed_arms(sel, trait_lab, trues(n), family.names)
 
     # Julia-side value checks (the densities below assume them).
