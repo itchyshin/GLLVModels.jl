@@ -25,8 +25,9 @@
 #   fungi   gllvm::fungi presence/absence. Species with prevalence in [0.05, 0.60] over all 1666 sites,
 #           most prevalent first, at most 60 (59 qualify); 300 sites by a seeded draw (seed 20261004);
 #           covariates TEMPR, PRECIP, log.AREA, scaled.
-#   urban   the maintainer's own binary model matrix (path in env URBMAP_ROOT), items as in
-#           tools/wedge_a_acc_urbanisation_scout.R. Never copied, never tracked.
+#   urban   the maintainer's own binary model matrix, read from the checkout named by the environment variable
+#           URBMAP_ROOT (required; there is no default path), items as in tools/wedge_a_acc_urbanisation_scout.R.
+#           Never copied, never tracked; the row's per-observation raw outputs are kept off the public repo too.
 args <- commandArgs(trailingOnly = TRUE)
 cell <- args[1]
 outdir <- if (length(args) >= 2) args[2] else "."
@@ -145,7 +146,9 @@ if (cell %in% c("gaussian", "poisson", "nb2", "binomial", "ordinal")) {
   d <- data.frame(site = seq_along(sites), Xs, Yn, check.names = FALSE); f <- file.path(dd, "fungi_wide.csv")
   meta$rule <- "species with prevalence in [.05,.60] (59 qualify), 300 sites by seeded draw, covariates TEMPR PRECIP log.AREA scaled"
 } else if (cell == "urban") {
-  root <- Sys.getenv("URBMAP_ROOT", "/Users/z3437171/Dropbox/Github Local/urbanisation_map")
+  root <- Sys.getenv("URBMAP_ROOT")
+  if (!nzchar(root)) stop("The urbanisation matrix is the maintainer's unpublished data and is not in this repository. ",
+                          "Set the environment variable URBMAP_ROOT to your local urbanisation_map checkout, then rerun: URBMAP_ROOT=/path/to/urbanisation_map Rscript gen_data.R urban")
   rds <- file.path(root, "data/processed/model_matrix_primary.rds"); stopifnot(file.exists(rds))
   Mp <- readRDS(rds); cols_pri <- setdiff(names(Mp), c("review_id", "level_individual"))
   mpf <- file.path(root, "outputs/tables/main_pruning.csv")
