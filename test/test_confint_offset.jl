@@ -566,6 +566,11 @@ end
     # an offset-free X_lv fit bootstraps as before
     b0 = confint_lv_effects(f0, Y, X; method = :bootstrap, n_boot = 4, seed = 1)
     @test length(b0.term) == p
+    # the message names every way the rebuilt objective can fail to be the fit's own
+    msg = try confint_lv_effects(fo, Y, X); "" catch e; e isa ArgumentError ? e.msg : rethrow() end
+    for word in ("offset", "`N`", "`X_lv`")
+        @test occursin(word, msg)
+    end
 end
 
 # ---------------------------------------------------------------------------------------
@@ -650,6 +655,44 @@ end
         f2 = fitter(Yo; offset = O)
         @test confint(f2, Yo; offset = O).pd_hessian isa Bool
         @test_throws ArgumentError confint(f2, Yo)
+    end
+end
+
+@testset "the refusal names every cause, and a non-default link is not blamed on the offset" begin
+    p, n, K = 5, 80, 1
+    rng = MersenneTwister(18)
+    O = 0.5 .* randn(rng, p, n)
+    Y = _gen_counts(rng, p, n, K, O; kind = :poisson)
+    f = fit_poisson_gllvm(Y; K = K, offset = O)
+    msg = try confint(f, Y); "" catch e; e isa ArgumentError ? e.msg : rethrow() end
+    @test !isempty(msg)
+    # offset, N, X, mask, the variational objective, the curvature, a non-default link
+    for word in ("offset", "`N`", "`X`", "`mask`", "variational", "hessian = :fisher", "link")
+        @test occursin(word, msg)
+    end
+    # a wrong offset gets the same text (it is told what to pass, not only that something is off)
+    msg2 = try confint(f, Y; offset = O .+ 0.3); "" catch e; e isa ArgumentError ? e.msg : rethrow() end
+    @test occursin("the offset you passed", msg2)
+
+    # Beta (probit) and Gamma (identity): the fitters optimise the default-link objective while
+    # the adapters rebuild the one for the fit's link, so the fit's own objective cannot be
+    # reproduced. Offset-free calls are refused (they returned pd_hessian = false before), and
+    # the text says that, not that an offset is missing. When the fitters are fixed these calls
+    # succeed and the second branch applies.
+    Zp = zeros(p, n)
+    Yb = _sim_generic(rng, p, n, K, Zp, (r, t, η) -> clamp(rand(r, Beta(5 / (1 + exp(-η)), 5 * (1 - 1 / (1 + exp(-η))))), 1e-4, 1 - 1e-4))
+    Yg = _gen_gamma(rng, p, n, K, Zp)
+    @testset "$(nm)" for (nm, fit, Yx) in (
+            ("Beta, probit link", fit_beta_gllvm(Yb; K = K, link = GM.ProbitLink()), Yb),
+            ("Gamma, identity link", fit_gamma_gllvm(Yg; K = K, link = GM.IdentityLink()), Yg))
+        r = try confint(fit, Yx); nothing catch e; e end
+        if r === nothing
+            @test true
+        else
+            @test r isa ArgumentError
+            @test occursin("non-default link", r.msg)
+            @test !occursin("If the fit was made with an `offset`", r.msg)
+        end
     end
 end
 

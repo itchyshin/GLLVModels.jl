@@ -184,6 +184,13 @@ const _CurvatureUnrecordedCIFit = Union{DeltaGammaFit, TruncatedNegBin2Fit, Trun
 _ci_reproduces(rebuilt::Real, ll::Real) =
     isfinite(rebuilt) && abs(rebuilt - ll) <= _CI_OBJECTIVE_RTOL * max(1.0, abs(ll))
 
+# Beta fits with a link other than logit and Gamma fits with a link other than log:
+# `fit_beta_gllvm` / `fit_gamma_gllvm` optimise the default-link objective (their marginal
+# call carries no `link`), so the fit's own objective cannot be rebuilt from its `link`.
+# Known issue, tracked outside this file; refused rather than computed on the wrong objective.
+_ci_nondefault_link(fit) = (fit isa BetaFit && !(fit.link isa LogitLink)) ||
+                           (fit isa GammaFit && !(fit.link isa LogLink))
+
 # `alt(kind)` returns the log-likelihood of another objective at the fitted values:
 # `:fisher` (the adapter's objective with Fisher curvature) or `:va` (the variational one).
 function _check_ci_objective(fit, ad::_FamilyCI, offset, objective::Symbol, alt)
@@ -200,12 +207,26 @@ function _check_ci_objective(fit, ad::_FamilyCI, offset, objective::Symbol, alt)
     # A variational fit: its `loglik` is the ELBO. It never had an offset, so only an
     # offset-free call can be one (a variational fit given an offset stays refused).
     offset === nothing && fit isa _VACIFit && _ci_reproduces(alt(:va), ll) && return nothing
+    rr = round(rebuilt; digits = 4); lr = round(ll; digits = 4)
+    if _ci_nondefault_link(fit)
+        throw(ArgumentError(
+            "confint: could not reproduce this fit's own objective: rebuilt from Y it gives " *
+            "log-likelihood $rr at the fitted values, but the fit reports $lr. This is a known " *
+            "issue with a non-default link on $(nameof(typeof(fit))) (the fitter and `confint` do not " *
+            "build the same objective for it), so intervals would belong to a different model and " *
+            "none are returned. A fit with the default link ($(fit isa BetaFit ? "LogitLink" : "LogLink")) " *
+            "is not affected."))
+    end
     given = offset === nothing ? "no offset" : "the offset you passed"
     throw(ArgumentError(
-        "confint: the objective rebuilt from Y with $given gives log-likelihood $(round(rebuilt; digits = 4)) " *
-        "at the fitted values, but the fit reports $(round(ll; digits = 4)). Intervals computed on that " *
-        "objective would belong to a different model. If the fit was made with an `offset`, pass the same " *
-        "one: confint(fit, Y; offset = O); `N`, `X` and `mask` must also be the ones used in the fit."))
+        "confint: the objective rebuilt from Y with $given gives log-likelihood $rr at the fitted " *
+        "values, but the fit reports $lr, so intervals computed on it would belong to a different " *
+        "model. Possible causes: the fit was made with an `offset` that was not passed " *
+        "(confint(fit, Y; offset = O)), or with a different one; `N`, `X` or `mask` differ from " *
+        "those used in the fit; the fit used another objective than the Laplace marginal rebuilt " *
+        "here (a variational fit, or `hessian = :fisher` on a family whose fit does not record " *
+        "it); the fit has a non-default `link` on a Beta or Gamma family (a known issue); or " *
+        "`newton_maxiter` / `newton_tol` differ from the fit's."))
 end
 
 # --- Poisson ---------------------------------------------------------------
@@ -3984,13 +4005,16 @@ function confint_lv_effects(fit::Union{PoissonFit, BinomialFit, NBFit, GammaFit,
     # given here. The bootstrap simulates from and refits the offset-free model, so an offset
     # fit has to be refused there too, not only on the Wald and profile routes.
     let rebuilt = -nll(fit.theta_packed)
-        abs(rebuilt - fit.loglik) <= _CI_OBJECTIVE_RTOL * max(1.0, abs(fit.loglik)) ||
+        if !_ci_reproduces(rebuilt, fit.loglik)
             throw(ArgumentError(
                 "confint_lv_effects: the objective rebuilt from Y " *
                 (O === nothing ? "with no offset" : "with the offset you passed") *
                 " gives log-likelihood $(round(rebuilt; digits = 4)) at the fitted values, but the fit " *
-                "reports $(round(fit.loglik; digits = 4)). If the fit was made with an `offset`, pass the " *
-                "same one: confint_lv_effects(fit, Y, X_lv; offset = O); `N` must also be the one used in the fit."))
+                "reports $(round(fit.loglik; digits = 4)), so intervals computed on it would belong to a " *
+                "different model. Possible causes: the fit was made with an `offset` that was not passed " *
+                "(confint_lv_effects(fit, Y, X_lv; offset = O)), or with a different one; `N` or " *
+                "`X_lv` differ from those used in the fit."))
+        end
     end
     method === :bootstrap &&
         return _lv_bootstrap(fit, Y, X_lv, N, q_lv, level, n_boot, seed;
