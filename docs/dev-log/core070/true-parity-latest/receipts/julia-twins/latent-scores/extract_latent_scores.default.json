@@ -1,0 +1,116 @@
+{
+  "schema": "true-parity-julia-behaviour-receipt/v1",
+  "source_ids": [
+    "latent-scores/extract_latent_scores.default"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "behaviour_observed_on_both_engines",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#684 item 2",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "896a0a2286c224fe9979d3cf7e7e2c6be27f9357",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/c1_behaviour_p1/r_c1_behaviour.toml",
+      "sha256": "d50622d355dd85f1c37017fd91158b7d653059d315d1aaa4fc62ccc4df3b88a9"
+    },
+    {
+      "path": "test/fixtures/c1_behaviour_p1/r_anova_print.txt",
+      "sha256": "824bd153906902373b66f4bb5296dd80db7326512870ce50f9f8c6bfc7fd2fdb"
+    },
+    {
+      "path": "test/fixtures/c1_behaviour_p1/helpers.jl",
+      "sha256": "05234886705816d18d65d4b1b6619ae0b8c4e8cd7c49604e39d61e4911ea3823"
+    },
+    {
+      "path": "test/fixtures/gllvmtmb_anova_fixture.toml",
+      "sha256": "b06237b50c5a5f8a7fe916a04554fa8d2a2ea014c100c5b2cf61415b40227d78"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_c1_behaviour_p1.jl",
+      "sha256": "8453b3ed0105811c279a7d1ccbfd1b4edc20fe6b1c79eea01c7e4f5829e03e05"
+    }
+  ],
+  "what_this_is_not": "This does not claim the engines raise the same exception class (rlang_error vs ArgumentError), the same message text, or the same behaviour for a class one engine does handle. R's .gllvmTMB_site_trait_sim and .gllvmTMB_va methods are excluded from the Julia twin by the P1 case map (PR #526). Julia's own MethodError for fit types with no getLV method is a different path from this fallback and is not measured here.",
+  "behaviour": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-C1-EXTRACT-LATENT-SCORES-DEFAULT-REFUSAL",
+        "source_id": "latent-scores/extract_latent_scores.default",
+        "kind": "refusal",
+        "r_observed": [
+          "signals an error and returns no value",
+          "message names the offending class",
+          "message states the accepted inputs"
+        ],
+        "julia_observed": [
+          "signals an error and returns no value",
+          "message names the offending class",
+          "message states the accepted inputs"
+        ],
+        "r_source": "test/fixtures/c1_behaviour_p1/r_c1_behaviour.toml [[refusal]] (extract_latent_scores(x, level = \"unit\") at P1 on a character, an integer vector, a list and NULL)",
+        "julia_source": "GLLVModels.extract_latent_scores(x) on a String, a Vector{Int}, a Dict and nothing, as produced by c1b_julia_refusals in test/fixtures/c1_behaviour_p1/helpers.jl",
+        "objects_tried": {
+          "r": [
+            "character",
+            "integer",
+            "list",
+            "NULL"
+          ],
+          "julia": [
+            "String",
+            "Vector{Int64}",
+            "Dict{String, Int64}",
+            "Nothing"
+          ]
+        },
+        "r_condition_classes": [
+          [
+            "rlang_error",
+            "error",
+            "condition"
+          ],
+          [
+            "rlang_error",
+            "error",
+            "condition"
+          ],
+          [
+            "rlang_error",
+            "error",
+            "condition"
+          ],
+          [
+            "rlang_error",
+            "error",
+            "condition"
+          ]
+        ],
+        "julia_exception_types": [
+          "ArgumentError",
+          "ArgumentError",
+          "ArgumentError",
+          "ArgumentError"
+        ],
+        "r_messages": [
+          "No method for `extract_latent_scores()` for objects of class\n<character>.\nℹ Expected a fitted <gllvmTMB_multi> object or a <gllvmTMB_site_trait_sim> from\n  `simulate_site_trait()`.",
+          "No method for `extract_latent_scores()` for objects of class <integer>.\nℹ Expected a fitted <gllvmTMB_multi> object or a <gllvmTMB_site_trait_sim> from\n  `simulate_site_trait()`.",
+          "No method for `extract_latent_scores()` for objects of class <list>.\nℹ Expected a fitted <gllvmTMB_multi> object or a <gllvmTMB_site_trait_sim> from\n  `simulate_site_trait()`.",
+          "No method for `extract_latent_scores()` for objects of class <NULL>.\nℹ Expected a fitted <gllvmTMB_multi> object or a <gllvmTMB_site_trait_sim> from\n  `simulate_site_trait()`."
+        ],
+        "julia_messages": [
+          "no extract_latent_scores method for String; expected a fitted GLLVModels fit object (see AnyGllvmFit in src/postfit.jl)",
+          "no extract_latent_scores method for Vector{Int64}; expected a fitted GLLVModels fit object (see AnyGllvmFit in src/postfit.jl)",
+          "no extract_latent_scores method for Dict{String, Int64}; expected a fitted GLLVModels fit object (see AnyGllvmFit in src/postfit.jl)",
+          "no extract_latent_scores method for Nothing; expected a fitted GLLVModels fit object (see AnyGllvmFit in src/postfit.jl)"
+        ],
+        "note": "The three labels are derived by c1b_refusal_labels from the raw records: whether the call signalled an error and returned nothing, whether the message names the offending class, whether it states the accepted inputs. Each is true of every object tried, on both engines. The exception class names differ (R: rlang_error from cli::cli_abort; Julia: ArgumentError) and are recorded here, not compared."
+      }
+    ]
+  }
+}

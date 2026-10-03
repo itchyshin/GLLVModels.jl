@@ -1041,4 +1041,11 @@ function em_observed_information(emf::EMPhyloFit, y::AbstractMatrix,
             term = terms, pd = pd)
 end
 
+"""
+    fit_em_phylo(y, K_B, Σ_phy; kwargs...) -> EMPhyloFit
+
+Alias of [`em_fit_phylo`](@ref), spelled with the `fit_` prefix of the other fitters.
+Same arguments and the same [`EMPhyloFit`](@ref) result; see [`em_fit_phylo`](@ref)
+for the keyword arguments.
+"""
 const fit_em_phylo = em_fit_phylo
