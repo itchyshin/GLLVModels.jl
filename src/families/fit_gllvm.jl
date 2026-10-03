@@ -19,7 +19,9 @@
 # non-finite value (NaN, Inf, missing) at an OBSERVED cell: the two-part and zero-inflated
 # routes turn it into a `-Inf`, unconverged fit. Non-finite values at cells that are not
 # observed (`mask[t, s] == false`, or `missing` in `Y`) are allowed: the engines never read
-# them (see also `aghq_gaussian_fit.jl`, which keeps them deliberately).
+# them (see also `aghq_gaussian_fit.jl`, which keeps them deliberately). `missing` there is
+# read as NaN (the returned matrix is then a plain `Float64` matrix), so it behaves exactly
+# like NaN on every route that honours `mask`.
 #
 # The fitters below do not check the shape themselves, and their objectives run inside
 # `try ... catch` that turns any exception into a sentinel value, so a scalar offset used to
@@ -65,6 +67,10 @@ function _normalize_offset(offset, p::Integer, n::Integer; Y = nothing, mask = n
         "stretched along its length-1 side), or a length-$(p) vector (one offset per trait); " *
         "got $(_describe_offset(offset)). For one offset per unit, pass reshape(o, 1, $(n))."))
     _check_offset_observed(O, Y, mask, caller, maskable)
+    # `missing` is allowed only at unobserved cells (checked above); the engines never read
+    # such a cell, but a `Union{Missing, Float64}` matrix would make the arithmetic around it
+    # throw, so read it as NaN, which every mask-aware route already accepts there.
+    eltype(O) <: Real || (O = map(o -> o isa Real ? float(o) : NaN, O))
     return O
 end
 
@@ -241,7 +247,7 @@ That is Julia's own broadcast rule. Any other shape (a length-`n` vector when `p
 accepted shapes, instead of returning a `-Inf`, unconverged fit. A non-finite entry (`NaN`,
 `Inf`, `missing`) in a matrix or vector offset throws too when it sits at an observed cell;
 at a cell that is not observed (`mask` is `false` there, or `Y` is `missing` there) it is
-ignored. Only the families that take a `mask` can have
+ignored, and `missing` there is read as `NaN`. Only the families that take a `mask` can have
 such a cell: `Lognormal` and the two-part and zero-inflated families have no `mask`, so every
 cell is observed and a non-finite offset anywhere is refused. The check happens once here,
 so every family route below sees a `p×n` matrix; the named fitters (`fit_poisson_gllvm`,
