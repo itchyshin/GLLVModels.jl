@@ -4,13 +4,17 @@
 
 - **Docs: `σ_phy` is not gllvmTMB's `phylo_unique` scale (#136).** Maintainer
   decision (2026-10-02 issue sweep): keep Julia's signed row-model `σ_phy` and
-  document the difference. The docstrings of `fit_gaussian_gllvm`, the aghq
-  fitter, `gaussian_marginal_loglik`, `confint`, `profile_ci`,
+  document the difference. The docstrings of `fit_gaussian_gllvm` (and the
+  internal exact fitter), `gaussian_marginal_loglik`, `confint`, `profile_ci`,
   `profile_phylo_signal` and the EM fitters, and the gllvmTMB parity page, now
-  say which sign flips are unidentified (only the global flip when
-  `K_phy = 0`; `σ_phy` is not separately identified from `Λ_phy` when
-  `K_phy ≥ 1`), that `X_lv` fits skip the sign-pattern search, and that
-  gllvmTMB's `phylo_unique` (`phylo_indep()`) is a different model term. No
+  say which sign flips leave the likelihood unchanged: when `K_phy = 0`, a
+  flip within each group of rows that `Σ_phy` links (so each root daughter
+  clade on a tree with a zero-length root edge); when `K_phy ≥ 1`, `σ_phy` is
+  not separately identified from `Λ_phy`. The fitter docstrings and the
+  parity page add that `X_lv` fits skip the sign-pattern search and sign
+  anchor, and that gllvmTMB's `phylo_unique` (`phylo_indep()`) is a different
+  model term, with `fit_kernel_indep_gllvm` and
+  `fit_phylo_latent_gllvm(...; unique = true)` as the Julia counterparts. No
   code or numbers change.
 
 - **`fit_phylo_gaussian` no longer reports `converged = true` after a zero-length step

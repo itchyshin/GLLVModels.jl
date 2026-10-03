@@ -373,21 +373,24 @@ Check these restrictions when translating an R analysis:
   loading `Λ_phy_aug = hcat(Λ_phy, σ_phy)`, through
   `B = (Λ_phy_aug * Λ_phy_aug') .* Σ_phy` (the EM fitters `em_fit_phylo` and
   `em_fit_phylo_squarem` are the case with no `Λ_phy` columns). With
-  `K_phy = 0`, only a global flip of `σ_phy` leaves the likelihood unchanged;
-  the relative signs are identified and set the sign of each cross-trait
-  entry of `B`, so read `σ_phy` up to one overall sign. With `K_phy ≥ 1`,
-  `σ_phy` is not identified separately from `Λ_phy`; read the implied `B`,
-  not per-entry intervals. With `X_lv`, the fitter skips its sign-pattern
-  search. gllvmTMB's `phylo_unique` term (now `phylo_indep()`, or
-  `phylo_latent(..., unique = TRUE)` alongside a latent term) is a different
-  model term: an independent phylogenetic field for each trait with its own
-  scale (`exp(log_sd_phy_diag[t])` in the phylo_diag block of gllvmTMB's
-  `src/gllvmTMB.cpp` when fitted with a latent term). The two are not one
+  `K_phy = 0`, signs are identified only within each group of rows that
+  `Σ_phy` links by nonzero entries: inside a group the relative signs set the
+  sign of each cross-trait entry of `B`, but each group's sign can flip on its
+  own. On a tree whose root edge has length zero, each daughter clade of the
+  root is such a group; the global flip is the only symmetry only when
+  `Σ_phy` links all rows. With `K_phy ≥ 1`, `σ_phy` is not identified
+  separately from `Λ_phy`; read the implied `B`, not per-entry intervals.
+  With `X_lv`, the fitter skips both its sign-pattern search and its sign
+  anchor. gllvmTMB's `phylo_unique` term (now spelled `phylo_indep()` on its
+  own, or `phylo_latent(..., unique = TRUE)` when paired with a latent term)
+  is a different model term: an independent phylogenetic field for each trait
+  with its own scale (`exp(log_sd_phy_diag[t])` in the phylo_diag block of
+  gllvmTMB's `src/gllvmTMB.cpp`, for the paired form). The two are not one
   parameter on two links: compare fitted models (log-likelihood, implied
   covariance), and do not expect the parameters to agree, even in absolute
-  value. The Julia model with gllvmTMB's structure is
-  `fit_precision_multivariate(...; mode = :explicitunique)`; agreement with
-  gllvmTMB there is not yet established.
+  value. The Julia counterparts are `fit_kernel_indep_gllvm` for a standalone
+  `phylo_indep()` and `fit_phylo_latent_gllvm(...; unique = true)` for the
+  paired form (the latter a documented extra, not yet a verified twin).
 
 ## Why likelihood approximations can differ
 
