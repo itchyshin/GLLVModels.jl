@@ -272,6 +272,8 @@ end
     @test fl.loglik ≈ dense atol = 1e-8
 end
 
+Xi_(p, n) = (X = zeros(p, n, p); for t in 1:p; X[t, :, t] .= 1; end; X)
+
 @testset "#149 rank rule: scale-aware rank, strict variants, non-finite input" begin
     G = GLLVModels.fit_gaussian_gllvm
     rankerr(f) = try f(); nothing catch e; e end
@@ -302,22 +304,36 @@ end
     Yi = randn(StableRNG(166), 3, 8); Yi[2, 2] = Inf
     @test_throws ArgumentError G(Yi; K = 1)
 
-    # Efficient residualisation equals the dense least-squares residual, for a
-    # mixed design: per-trait intercepts, a shared covariate, a trait-specific
-    # covariate, a collinear and a zero column, with one coefficient fixed.
-    p, n = 4, 9
-    Y = randn(StableRNG(167), p, n)
-    X = zeros(p, n, p + 4)
-    for t in 1:p; X[t, :, t] .= 1; end
-    X[:, :, p + 1] .= randn(StableRNG(168), 1, n)          # shared across traits
-    X[:, :, p + 2] .= randn(StableRNG(169), p, n)          # fixed below
-    X[:, :, p + 3] .= X[:, :, 1] .+ X[:, :, p + 1]         # collinear
-    fixed = falses(p + 4); fixed[p + 2] = true
-    got = GLLVModels._gaussian_residualise(Y, X, fixed)
-    keep = findall(!, fixed)
-    D = reshape(X[:, :, keep], p * n, length(keep))
-    ref = reshape(vec(Y) .- D * (pinv(D) * vec(Y)), p, n)
-    @test got ≈ ref atol = 1e-8
+    # Slope designs are not covered by the rank rule: n < p is refused, as on
+    # main (the estimated slopes can lower the rank below the OLS residual's).
+    function slopes(p, n, seed)
+        Y = randn(StableRNG(seed), p, n)
+        X = zeros(p, n, p); r = StableRNG(seed + 1)
+        for t in 1:p; X[t, :, t] .= randn(r, n); end
+        return Y, X
+    end
+    Y5, X5 = slopes(5, 2, 5)
+    @test_throws ArgumentError G(Y5; K = 1, X = X5)
+    Y6, X6 = slopes(6, 3, 5)
+    @test_throws ArgumentError G(Y6; K = 2, X = X6)
+    Xm = cat(Xi_(6, 3), X6; dims = 3)                   # intercepts + slopes
+    @test_throws ArgumentError G(Y6; K = 2, X = Xm)
+    Xs = reshape(repeat(randn(StableRNG(9), 1, 3), 6, 1), 6, 3, 1)  # shared column
+    @test_throws ArgumentError G(Y6; K = 1, X = Xs)
+    # With n >= p a slope design is accepted, as on main.
+    Ya, Xa = slopes(3, 8, 7)
+    @test isfinite(G(Ya; K = 1, X = Xa).logLik)
+
+    # Per-trait intercepts only: n < p fits with K below the centred rank, and a
+    # fixed intercept is not centred.
+    Yc2 = randn(StableRNG(170), 5, 3)
+    Xc2 = Xi_(5, 3)
+    @test isfinite(G(Yc2; K = 1, X = Xc2).logLik)
+    @test_throws ArgumentError G(Yc2; K = 2, X = Xc2)  # centred rank is 2
+
+    # A trait with a large offset and tiny noise is not zero after centring.
+    Yo = randn(StableRNG(171), 3, 10); Yo[1, :] .= 1e5 .+ 1e-6 .* Yo[1, :]
+    @test !isrank(rankerr(() -> G(Yo; K = 2, X = Xi_(3, 10))))
 end
 
 @testset "#149 the Gaussian likelihood itself is exact at n < p" begin

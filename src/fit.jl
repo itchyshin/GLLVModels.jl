@@ -63,66 +63,41 @@ end
 GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime)=
     GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime,nothing)
 
-# Residual of `y` after least-squares regression on the free columns of `X`
-# (`p × n × q`), without forming the dense `(p n) × q` design. A column that is
-# supported on a single trait row (a per-trait intercept or slope) is handled
-# trait by trait; the remaining "shared" columns are projected on those local
-# blocks first (Frisch-Waugh) and solved through `q_shared × q_shared` normal
-# equations. Rank-deficient columns are handled by pivoted QR (local blocks)
-# and an eigen pseudo-inverse (shared block); only the residual is used.
-function _gaussian_residualise(y::AbstractMatrix, X::AbstractArray{<:Real,3}, β_fixed)
-    p, n = size(y)
-    q_full = size(X, 3)
-    fmask = _fixed_zero_mask(β_fixed, q_full, "β_fixed")
-    local_cols = [Int[] for _ in 1:p]
-    shared = Int[]
-    for j in 1:q_full
+# Classify the free columns of `X` (`p × n × q`). Returns the set of traits that
+# carry a free per-trait intercept (a column constant over sites, nonzero on
+# exactly one trait row and zero elsewhere), or `nothing` when some free column
+# is anything else (shared column, slope, mixed). All-zero columns are ignored.
+function _per_trait_intercept_rows(X::AbstractArray{<:Real,3}, β_fixed)
+    p, n, q = size(X)
+    fmask = _fixed_zero_mask(β_fixed, q, "β_fixed")
+    rows = Int[]
+    for j in 1:q
         fmask[j] && continue
         Xj = @view X[:, :, j]
-        rows = findall(r -> any(!iszero, @view Xj[r, :]), 1:p)
-        if length(rows) == 1
-            push!(local_cols[rows[1]], j)
-        elseif length(rows) > 1
-            push!(shared, j)
-        end
+        nz = [t for t in 1:p if any(!iszero, @view Xj[t, :])]
+        isempty(nz) && continue
+        length(nz) == 1 || return nothing
+        t = nz[1]
+        v = Xj[t, 1]
+        all(==(v), @view Xj[t, :]) || return nothing
+        push!(rows, t)
     end
-    R = Matrix{Float64}(y)
-    qs = length(shared)
-    Dg = qs > 0 ? Array{Float64,3}(X[:, :, shared]) : zeros(0, 0, 0)
-    for t in 1:p
-        cols = local_cols[t]
-        isempty(cols) && continue
-        A = Matrix{Float64}(X[t, :, cols])                  # n × q_t
-        R[t, :] .-= A * (A \ R[t, :])
-        if qs > 0
-            B = Matrix{Float64}(Dg[t, :, :])                # n × q_s
-            Dg[t, :, :] .= B .- A * (A \ B)
-        end
-    end
-    if qs > 0
-        D = reshape(Dg, p * n, qs)
-        G = Symmetric(D' * D)
-        bvec = D' * vec(R)
-        E = eigen(G)
-        tol = maximum(abs, E.values) * qs * eps()
-        inv_vals = [v > tol ? inv(v) : 0.0 for v in E.values]
-        β = E.vectors * (inv_vals .* (E.vectors' * bvec))
-        R = reshape(vec(R) .- D * β, p, n)
-    end
-    return R
+    return unique(rows)
 end
 
-# Rank of the data after giving every trait unit norm, so that a trait on a
-# tiny scale is not judged rank deficient. A trait whose residual is zero
-# relative to its original size (a zero trait, or one that the estimated
-# intercepts absorb completely) makes the data rank deficient.
-function _scale_aware_rank(Yeff::AbstractMatrix, y::AbstractMatrix)
-    p, n = size(Yeff)
-    M = Matrix{Float64}(Yeff)
+# Rank of the data after centring the traits in `centre` (those with a free
+# intercept) and giving every trait unit norm, so a trait on a tiny scale is
+# not judged rank deficient. A trait is zero when its centred norm is at most
+# `64 eps` times the norm of its uncentred row (a zero trait, or a constant
+# trait that its intercept absorbs completely).
+function _scale_aware_rank(y::AbstractMatrix, centre)
+    p, n = size(y)
+    M = Matrix{Float64}(y)
     for t in 1:p
+        n0 = norm(@view M[t, :])
+        t in centre && (M[t, :] .-= sum(@view M[t, :]) / n)
         nr = norm(@view M[t, :])
-        n0 = norm(@view y[t, :])
-        if n0 == 0 || nr <= 1e-10 * n0
+        if n0 == 0 || nr <= 64 * eps() * n0
             M[t, :] .= 0.0
         else
             M[t, :] ./= nr
@@ -132,21 +107,24 @@ function _scale_aware_rank(Yeff::AbstractMatrix, y::AbstractMatrix)
 end
 
 # Identifiability guard for the closed-form Gaussian fitter (#149). It replaces
-# the former `n_sites ≥ p` rule.
+# the former `n_sites ≥ p` rule, but only where a sound replacement exists.
 #
-# `strict = false` (plain isotropic fit, complete data): the likelihood is
-# bounded when the number of latent axes is below the rank of the data the
-# fitter sees, unless that rank is already full (`rank == p`). With
-# `rank < p` and `K_total ≥ rank`, `ΛΛᵀ` can reproduce every sampled direction
-# and the residual variance runs to zero (probabilistic PCA). When `X` has free
-# columns the data are first residualised on `X` by least squares, which
-# centres them when `X` carries per-trait intercepts. The rank is computed
-# after scaling every trait to unit norm.
+# The rank rule applies when `X` is absent or every free column of `X` is a
+# per-trait intercept. The fitter estimates the intercepts jointly with the
+# loadings, so the smallest rank the data can have after removing the mean is
+# the rank of the per-trait centred data (`(Y - μ1')(I - 11'/n)` equals the
+# centred `Y`). With `rank < p` and `K_total ≥ rank`, `ΛΛᵀ` can reproduce
+# every remaining direction and the residual variance runs to zero
+# (probabilistic PCA), so those fits are refused.
+#
+# Any other `X` (shared columns, slopes, mixed) keeps the former rule: refuse
+# `n_sites < p`, and make no boundedness claim. Estimated coefficients can lower
+# the rank below that of the least-squares residual.
 #
 # `strict = true` (per-trait diagonal terms, phylogenetic blocks, `X_lv`): the
 # rank rule is not sufficient, because a duplicated, collinear or zero trait
 # gives an unbounded likelihood even with `K` below the rank, as a per-trait
-# variance can collapse. These fits are refused whenever the effective data
+# variance can collapse. These fits are refused whenever the (centred) data
 # are rank deficient, which includes every `n_sites < p` fit.
 #
 # Masked fits are not covered: the masked route reaches this check on a
@@ -157,20 +135,32 @@ function _check_gaussian_rank(y::AbstractMatrix, K_total::Integer, X, β_fixed;
     all(isfinite, y) || throw(ArgumentError(
         "fit_gaussian_gllvm: y contains Infs or NaNs; the Gaussian fitter " *
         "needs complete finite responses."))
-    Yeff = y
+    centre = Int[]
     if X !== nothing
         size(X, 1) == p && size(X, 2) == n || return nothing  # reported later
         all(isfinite, X) || throw(ArgumentError(
             "fit_gaussian_gllvm: X contains Infs or NaNs."))
-        Yeff = _gaussian_residualise(y, X, β_fixed)
+        rows = _per_trait_intercept_rows(X, β_fixed)
+        if rows === nothing
+            n ≥ p || throw(ArgumentError(
+                "fit_gaussian_gllvm needs n_sites ≥ p when X has columns other " *
+                "than per-trait intercepts (got n_sites = $n, p = $p). The " *
+                "coefficients are estimated jointly with the loadings, and the " *
+                "Gaussian likelihood can then be unbounded; the rank rule that " *
+                "admits n_sites < p applies only when X is absent or holds " *
+                "per-trait intercepts. The Laplace-fitted families (Poisson, " *
+                "Binomial, NegativeBinomial and the rest) accept n_sites < p."))
+            return nothing
+        end
+        centre = rows
     end
-    r = _scale_aware_rank(Yeff, y)
+    r = _scale_aware_rank(y, centre)
     if strict
         r < p && throw(ArgumentError(
             "fit_gaussian_gllvm: this fit has per-trait variance terms " *
             "(has_diag, a phylogenetic block, or X_lv), and these require the " *
             "data the fitter sees to have full rank (rank = $r, p = $p, " *
-            "n_sites = $n; centred by the estimated intercepts when X is " *
+            "n_sites = $n; centred by the per-trait intercepts when X is " *
             "supplied). A subset of traits is linearly dependent, so a " *
             "per-trait variance can collapse and the likelihood is unbounded. " *
             "Use more sites, drop the dependent trait, or drop the per-trait " *
@@ -179,7 +169,7 @@ function _check_gaussian_rank(y::AbstractMatrix, K_total::Integer, X, β_fixed;
         throw(ArgumentError(
             "fit_gaussian_gllvm: the number of latent axes K = $K_total must be " *
             "below the rank of the data the fitter sees (rank = $r, p = $p, " *
-            "n_sites = $n; centred by the estimated intercepts when X is " *
+            "n_sites = $n; centred by the per-trait intercepts when X is " *
             "supplied). Otherwise the Gaussian likelihood is unbounded. Use a " *
             "smaller K, or more sites, or drop the trait that is a linear " *
             "combination of the others. The Laplace-fitted families (Poisson, " *
