@@ -1,0 +1,93 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "isdm/ISDM-MASKED-ARM"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#661",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "896a0a2286c224fe9979d3cf7e7e2c6be27f9357",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/isdm/r_values_admission_p1.toml",
+      "sha256": "265ad7cab70bc66ea850fa6253572e19fdad7769553d2e5db53a1b7322aa88bd"
+    },
+    {
+      "path": "test/fixtures/isdm/adm_maskedna.csv",
+      "sha256": "c415f32671d5bbfd872a8f4107ca531d127da739064574204910bae8f9491d1c"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/parity/isdm_admission_twins.jl",
+      "sha256": "0fe992cc13fdb747ea5cdb251b12b299a90bafdedbec7fa6a1d5a1f6f2667181"
+    },
+    {
+      "path": "test/fixtures/isdm/isdm_fixture_io.jl",
+      "sha256": "c0e718199a8b2854c9d3d809744d62f084763024fc0b0a0273487178337c2187"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here. The check is a fit-level logLik and estimate comparison on one fitted case built to reach this row's path; it does not restate any admission predicate.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-ISDM-ADM-MASKEDNA-LOGLIK-AT-R-OPTIMUM",
+        "quantity": "Julia Laplace marginal at R's fitted b_fix on the kept rows vs R's logLik",
+        "r_source": "test/fixtures/isdm/r_values_admission_p1.toml [reproducers.adm_maskedna].loglik (R nlminb optimum through gllvmTMB(family = isdm_sources(...)) at P1, NA rows dropped by R)",
+        "julia_source": "GLLVModels.isdm_marginal_loglik_laplace(isdm_table(formula, data_with_NA; family), zeros(2, 0), b_fix_R), as at test/parity/isdm_admission_twins.jl:115",
+        "r_value": -148.3543659652695,
+        "julia_value": -148.3543659652694,
+        "abs_diff": 8.526512829121202e-14,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/parity/isdm_admission_twins.jl:115",
+        "tolerance_source_line": "@test abs(isdm_marginal_loglik_laplace(tab, zeros(2, 0), rbn) - rp[\"loglik\"]) <= 1e-6",
+        "note": "Path exercised: 10 of 160 rows have an NA response; both engines drop them before fitting (R: drop_missing_response_rows, response = \"drop\"; Julia: isdm_table warns and drops), leaving 150 rows. Same file (sha256 checked), same parameter vector, same Laplace objective. Coefficients are paired by name."
+      },
+      {
+        "case_id": "P1-JULIA-ISDM-ADM-MASKEDNA-FIT-LOGLIK",
+        "quantity": "fresh Julia fit logLik on the kept rows vs R's logLik",
+        "r_source": "test/fixtures/isdm/r_values_admission_p1.toml [reproducers.adm_maskedna].loglik",
+        "julia_source": "GLLVModels.fit_isdm_gllvm(isdm_table(formula, data_with_NA; family)).loglik, as at test/parity/isdm_admission_twins.jl:119",
+        "r_value": -148.3543659652695,
+        "julia_value": -148.35436596519077,
+        "abs_diff": 7.87281351222191e-11,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/parity/isdm_admission_twins.jl:119",
+        "tolerance_source_line": "@test abs(ft.loglik - rp[\"loglik\"]) <= 1e-6",
+        "note": "Path exercised: 10 of 160 rows have an NA response; both engines drop them before fitting (R: drop_missing_response_rows, response = \"drop\"; Julia: isdm_table warns and drops), leaving 150 rows. Each side's own optimum."
+      },
+      {
+        "case_id": "P1-JULIA-ISDM-ADM-MASKEDNA-B-FIX",
+        "quantity": "fresh Julia fit b_fix vs R b_fix (paired by coefficient name; maximum absolute difference)",
+        "r_source": "test/fixtures/isdm/r_values_admission_p1.toml [reproducers.adm_maskedna].b_fix",
+        "julia_source": "GLLVModels.fit_isdm_gllvm(tab).b_fix, as at test/parity/isdm_admission_twins.jl:120",
+        "r_value": [
+          0.4594339294223085,
+          0.5680016978188621,
+          0.20053809094553865,
+          -0.44054265834438083,
+          -0.529451992734009,
+          -0.6047798381399617
+        ],
+        "julia_value": [
+          0.45943341971760754,
+          0.5680017103154432,
+          0.20053783797619956,
+          -0.4405417949266799,
+          -0.5294501340555794,
+          -0.6047795408351655
+        ],
+        "abs_diff": 1.8586784296115155e-06,
+        "tolerance": 0.0001,
+        "tolerance_source": "test/parity/isdm_admission_twins.jl:120",
+        "tolerance_source_line": "@test maximum(abs.(ft.b_fix .- rbn)) <= 1e-4",
+        "note": "Path exercised: 10 of 160 rows have an NA response; both engines drop them before fitting (R: drop_missing_response_rows, response = \"drop\"; Julia: isdm_table warns and drops), leaving 150 rows. R's linear predictor was not recorded for this fixture, so there is no ETA case; with no latent term eta = X b, which the test checks against X at R's b_fix."
+      }
+    ]
+  }
+}

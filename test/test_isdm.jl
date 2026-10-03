@@ -177,9 +177,10 @@ end
     @test_first_line "The integrated multi-source model admits only single-trial detection rows" isdm_table(
         _DOOR_FORMULA, door; family = dfam, n_trials = door.succ .+ door.fail)
 
-    # Julia-side scope refusal (D-296): missing responses.
+    # Missing responses: rows are dropped with a warning, as R's gllvmTMB does at P1.
     dm = merge(door, (value = Union{Missing, Float64}[missing; door.value[2:end]],))
-    @test_throws r"refuses missing responses" isdm_table(_DOOR_FORMULA, dm; family = dfam)
+    tdm = @test_logs (:warn, r"dropped 1 row\(s\) with a missing response") isdm_table(_DOOR_FORMULA, dm; family = dfam)
+    @test length(tdm.y) == length(door.value) - 1
     # R's latent() default, unique = TRUE, is admitted (the unit-level unique
     # variance, theta_diag_B); a non-literal `unique` is refused.
     fdef = :(value ~ 0 + trait + trait & isdm_gbif + offset(log_support) + latent(0 + trait | cell_id, d = 1))
