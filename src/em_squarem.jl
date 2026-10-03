@@ -153,16 +153,18 @@ moved halfway toward −1, and α = −1 makes θ' = θ2 (two EM steps) exactly.
 per-cycle monotonicity does NOT rule out the global path-dependence above, which
 is what the safety check guards.
 
-Note on `σ_phy` (#136; see the gllvmTMB parity page): `σ_phy` is the signed
-row-model parameter of `fit_gaussian_gllvm` with no `Λ_phy` columns, so the
-augmented phylogenetic loading is `σ_phy` itself and it enters the likelihood
-only through `B = (σ_phy * σ_phy') .* Σ_phy`. Its sign is not identified, so
-read `abs.(σ_phy)`, the per-row scale. gllvmTMB's `phylo_unique` is a
-different model term, an independent phylogenetic field for each trait with
-its own scale (`exp(log_sd_phy_diag[t])` in the phylo_unique block of
-gllvmTMB's `src/gllvmTMB.cpp`, used when it is fitted with `phylo_latent`).
-Compare the fitted models (log-likelihood, implied covariance), not these
-parameters, and do not expect them to agree, even in absolute value.
+Note on `σ_phy` (#136; see the gllvmTMB parity page): here `σ_phy` is the
+signed row-model parameter of `fit_gaussian_gllvm` with no `Λ_phy` columns,
+so it enters the likelihood only through `B = (σ_phy * σ_phy') .* Σ_phy`.
+Only a global flip `σ_phy → -σ_phy` leaves the likelihood unchanged: the
+relative signs are identified, because they set the sign of each `B[t, t′]`,
+so read `σ_phy` up to one overall sign. EM can stop in a worse sign pattern;
+compare its log-likelihood with `fit_gaussian_gllvm` on the same data, or
+warm-start EM from that fit. gllvmTMB's `phylo_unique` (now `phylo_indep()`,
+or `phylo_latent(..., unique = TRUE)`) is a different model term, an
+independent phylogenetic field per trait with its own scale, so compare
+fitted models, not these parameters, and do not expect them to agree, even in
+absolute value.
 """
 function em_fit_phylo_squarem(y::AbstractMatrix, K_B::Integer,
                               Σ_phy::AbstractMatrix;

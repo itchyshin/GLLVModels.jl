@@ -41,17 +41,26 @@ determine which entries are free. No cross-package numeric comparison
 against R's own `lambda_constraint` fits has been published yet.
 
 **Note on `σ_phy` (#136; see the gllvmTMB parity page):** `σ_phy` is a signed
-parameter of the row model that enters the likelihood only as the last column
-of the augmented phylogenetic loading `Λ_phy_aug = hcat(Λ_phy, σ_phy)`, through
-`B = (Λ_phy_aug * Λ_phy_aug') .* Σ_phy`. Its sign is not identified, so read
-`abs.(σ_phy)` (the per-row scale when `K_phy = 0`); when `K_phy ≥ 1`, `σ_phy`
-is not identified separately from `Λ_phy` either, so read the implied `B`.
-gllvmTMB's `phylo_unique` is a different model term, an independent
-phylogenetic field for each trait with its own scale
-(`exp(log_sd_phy_diag[t])` in the phylo_unique block of gllvmTMB's
-`src/gllvmTMB.cpp`, used when it is fitted with `phylo_latent`). Compare the
-fitted models (log-likelihood, implied covariance), not these parameters, and
-do not expect them to agree, even in absolute value.
+parameter of the row model. It enters the likelihood only as the last column
+of the augmented phylogenetic loading `Λ_phy_aug = hcat(Λ_phy, σ_phy)`,
+through `B = (Λ_phy_aug * Λ_phy_aug') .* Σ_phy`. When `K_phy = 0`, only a
+global flip `σ_phy → -σ_phy` leaves the likelihood unchanged: the relative
+signs are identified, because they set the sign of each cross-trait entry
+`B[t, t′]`, so read `σ_phy` up to one overall sign (its magnitudes are the
+per-row scales). When `K_phy ≥ 1`, `σ_phy` is not identified separately from
+`Λ_phy`, because rotating it together with a column of `Λ_phy` leaves the
+likelihood unchanged; read the implied `B`, and do not interpret per-entry
+intervals for `sigma_phy[t]`. With `X_lv`, the fitter skips its sign-pattern
+search, so it can stop at a sign pattern that is not the best one. gllvmTMB's
+`phylo_unique` term (now spelled `phylo_indep()`, or
+`phylo_latent(..., unique = TRUE)` alongside a latent term) is a different
+model term: an independent phylogenetic field for each trait with its own
+scale (`exp(log_sd_phy_diag[t])` in the phylo_diag block of gllvmTMB's
+`src/gllvmTMB.cpp` when fitted with a latent term). Compare the fitted models
+(log-likelihood, implied covariance), not these parameters, and do not expect
+them to agree, even in absolute value. The Julia model with gllvmTMB's
+structure is `fit_precision_multivariate(...; mode = :explicitunique)`;
+agreement with gllvmTMB there is not yet established.
 """
 function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control=(;),
         mask=nothing,offset=nothing,hessian=:observed,lambda_constraint=nothing,kwargs...)

@@ -64,14 +64,12 @@ the J1 behaviour exactly (D = σ²_eps I).
 Phylogenetic extension (`Σ_phy::AbstractMatrix`, p × p, supplied by
 caller — typically a species-trait covariance derived from a tree):
   - `Λ_phy::AbstractMatrix` (p × K_phy): phylo-latent loadings.
-  - `σ_phy::AbstractVector` (length p): per-row phylo-unique scales, a
-    signed parameter (#136). It enters only as the last column of
-    `Λ_phy_aug` below, so its sign is not identified, and with
-    `K_phy ≥ 1` it is not identified separately from `Λ_phy` either.
-    gllvmTMB's `phylo_unique` (an independent phylogenetic field per
-    trait, scaled by `exp(log_sd_phy_diag[t])` when fitted with
-    `phylo_latent`) is a different model term, not this parameter; see
-    the gllvmTMB parity page.
+  - `σ_phy::AbstractVector` (length p): per-row phylo-unique scales.
+    `σ_phy` is a signed parameter (#136), so its entries can be negative.
+    When `K_phy = 0`, only its overall sign is unidentified; when
+    `K_phy ≥ 1`, it is not identified separately from `Λ_phy` and a
+    per-entry interval is not interpretable. It is not gllvmTMB's
+    `phylo_unique` scale; see the gllvmTMB parity page.
 With Λ_phy_aug = hcat(Λ_phy, σ_phy) the marginal covariance of vec(y)
 is `I_n ⊗ A + J_n ⊗ B` where `B = (Λ_phy_aug Λ_phy_aug') .* Σ_phy`.
 The rotation trick (J_n has rank 1) reduces this to two p×p Cholesky
@@ -388,8 +386,9 @@ function gaussian_nll_packed(params::AbstractVector, y::AbstractMatrix;
 
     if has_phy_unique
         # Identity link: σ_phy is a signed loading-like vector (entries may
-        # be negative). Joint sign flip (σ_phy → -σ_phy, φ → -φ) is the lone
-        # non-identifiable symmetry; fit.jl applies a global sign anchor.
+        # be negative). When K_phy = 0, the joint sign flip
+        # (σ_phy → -σ_phy, φ → -φ) is the lone non-identifiable symmetry;
+        # fit.jl applies a global sign anchor.
         σ_phy = @view params[(cursor + 1):(cursor + p)]
         cursor += p
     else

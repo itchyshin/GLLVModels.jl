@@ -2,24 +2,16 @@
 
 ## Development
 
-- **Documented: `σ_phy` from `fit_gaussian_gllvm` and the phylo EM fitters is not
-  gllvmTMB's `phylo_unique` SD (#136).** Docs and comments only, no engine change,
-  as recommended in row 25 of `docs/dev-log/owed/2026-09-25-true-parity-decision-packet.md`.
-  Julia's `σ_phy` is a signed parameter of the row model that enters the likelihood
-  only as the last column of the augmented phylogenetic loading
-  `Λ_phy_aug = hcat(Λ_phy, σ_phy)`, so its sign is not identified, and with
-  `K_phy ≥ 1` it is not identified separately from `Λ_phy` either. gllvmTMB's
-  `phylo_unique` is a different model term, an independent phylogenetic field for
-  each trait with its own scale, so compare fitted models (log-likelihood, implied
-  covariance), not these parameters. The note is in the docstrings of
-  `fit_gaussian_gllvm`, `gaussian_marginal_loglik`, `confint` (Wald),
-  `profile_phylo_signal`, `em_fit_phylo` (alias `fit_em_phylo`) and
-  `em_fit_phylo_squarem` (alias `fit_phylo_squarem`), and in the "Further
-  differences from R" list on the gllvmTMB parity page; the `profile_ci`
-  docstring now says its `sigma_phy[t]` bounds are signed. A comment in
-  `src/confint_profile.jl` that said the profile bounds for `σ_phy` are
-  exponentiated was corrected: they stay on the signed scale. No returned number
-  changes.
+- **Docs: `σ_phy` is not gllvmTMB's `phylo_unique` scale (#136).** Maintainer
+  decision (2026-10-02 issue sweep): keep Julia's signed row-model `σ_phy` and
+  document the difference. The docstrings of `fit_gaussian_gllvm`, the aghq
+  fitter, `gaussian_marginal_loglik`, `confint`, `profile_ci`,
+  `profile_phylo_signal` and the EM fitters, and the gllvmTMB parity page, now
+  say which sign flips are unidentified (only the global flip when
+  `K_phy = 0`; `σ_phy` is not separately identified from `Λ_phy` when
+  `K_phy ≥ 1`), that `X_lv` fits skip the sign-pattern search, and that
+  gllvmTMB's `phylo_unique` (`phylo_indep()`) is a different model term. No
+  code or numbers change.
 
 - **`fit_phylo_gaussian` no longer reports `converged = true` after a zero-length step
   (part of #505, the remaining #485 class).** Optim also counts a zero-length line-search

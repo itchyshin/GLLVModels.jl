@@ -511,15 +511,15 @@ end
 # those coordinates, so the EM step is monotone by construction.
 #
 # σ_phy is left SIGNED (no abs / no projection). The dense fit
-# (`fit_gaussian_gllvm`) restricts σ_phy = exp(log_σ_phy) > 0; the two agree
-# when the optimum is interior to the positive orthant (all σ_phy
-# comfortably > 0), which is the regime this EM targets. A hard non-negativity
-# projection is intentionally NOT used: clamping σ_phy[t] to 0 creates an
-# absorbing boundary that traps EM away from an interior MLE, whereas naïve
-# abs() overshoots the 0 boundary and breaks monotonicity. The honest scope is
-# therefore "interior optimum"; the boundary case is documented as a known
-# limitation. The reported σ_phy take the global sign convention σ_phy[1] ≥ 0
-# (flipping ALL signs jointly is the only φ-orientation symmetry that leaves
+# (`fit_gaussian_gllvm`) also fits a signed σ_phy (identity link, no positivity
+# constraint), so both target the same signed MLE; the dense fit adds a
+# single-flip sign-pattern search that EM lacks, so EM can stop in a worse sign
+# pattern. A hard non-negativity projection is intentionally NOT used: clamping
+# σ_phy[t] to 0 creates an absorbing boundary that traps EM away from an
+# interior MLE, whereas naïve abs() overshoots the 0 boundary and breaks
+# monotonicity. After the loop, `em_fit_phylo` reports σ_phy with the global
+# sign convention σ_phy[argmax(abs.(σ_phy))] ≥ 0 (flipping ALL signs jointly
+# is the only φ-orientation symmetry that leaves
 # every B[t,t'] = σ_phy[t] σ_phy[t'] Σ_phy[t,t'] unchanged).
 function _mstep_dense(y::AbstractMatrix, ss)
     p, n = size(y)
@@ -769,10 +769,10 @@ const EM_DEFAULT_TOL = 1e-9
                  tol=1e-9, max_iter=1000, assert_monotone=true,
                  phy=nothing, force_dense_estep=false) -> EMPhyloFit
 
-Gradient-free EM fit of the Gaussian phylo_unique GLLVM: `K_B` site latent
-factors plus one per-trait phylogenetic random effect with covariance
-`(σ_phy σ_phy') ∘ Σ_phy`. Matches `fit_gaussian_gllvm(y; K = K_B,
-has_phy_unique = true, Σ_phy = Σ_phy)`.
+Gradient-free EM fit of the Gaussian phylogenetic row-model GLLVM (signed
+σ_phy): `K_B` site latent factors plus one per-trait phylogenetic random
+effect with covariance `(σ_phy σ_phy') ∘ Σ_phy`. Matches
+`fit_gaussian_gllvm(y; K = K_B, has_phy_unique = true, Σ_phy = Σ_phy)`.
 
 `y` is (p, n_sites). `Σ_phy` is the fixed (p × p) tree-derived species
 covariance. Warm-started from PPCA (`ppca_init`) unless `λ_init`/`σ_eps_init`
@@ -796,16 +796,18 @@ the only option when `phy` is omitted, since an `AugmentedPhy` cannot be
 recovered from the dense `Σ_phy` alone). When `phy === nothing` the dense path
 is always used regardless of `force_dense_estep`.
 
-Note on `σ_phy` (#136; see the gllvmTMB parity page): `σ_phy` is the signed
-row-model parameter of `fit_gaussian_gllvm` with no `Λ_phy` columns, so the
-augmented phylogenetic loading is `σ_phy` itself and it enters the likelihood
-only through `B = (σ_phy * σ_phy') .* Σ_phy`. Its sign is not identified, so
-read `abs.(σ_phy)`, the per-row scale. gllvmTMB's `phylo_unique` is a
-different model term, an independent phylogenetic field for each trait with
-its own scale (`exp(log_sd_phy_diag[t])` in the phylo_unique block of
-gllvmTMB's `src/gllvmTMB.cpp`, used when it is fitted with `phylo_latent`).
-Compare the fitted models (log-likelihood, implied covariance), not these
-parameters, and do not expect them to agree, even in absolute value.
+Note on `σ_phy` (#136; see the gllvmTMB parity page): here `σ_phy` is the
+signed row-model parameter of `fit_gaussian_gllvm` with no `Λ_phy` columns,
+so it enters the likelihood only through `B = (σ_phy * σ_phy') .* Σ_phy`.
+Only a global flip `σ_phy → -σ_phy` leaves the likelihood unchanged: the
+relative signs are identified, because they set the sign of each `B[t, t′]`,
+so read `σ_phy` up to one overall sign. EM can stop in a worse sign pattern;
+compare its log-likelihood with `fit_gaussian_gllvm` on the same data, or
+warm-start EM from that fit. gllvmTMB's `phylo_unique` (now `phylo_indep()`,
+or `phylo_latent(..., unique = TRUE)`) is a different model term, an
+independent phylogenetic field per trait with its own scale, so compare
+fitted models, not these parameters, and do not expect them to agree, even in
+absolute value.
 """
 function em_fit_phylo(y::AbstractMatrix, K_B::Integer, Σ_phy::AbstractMatrix;
                       λ_init = nothing, σ_eps_init = nothing,
@@ -914,8 +916,9 @@ function em_fit_phylo(y::AbstractMatrix, K_B::Integer, Σ_phy::AbstractMatrix;
     # Global φ-orientation convention: flipping ALL σ_phy signs jointly leaves
     # every B[t,t'] = σ_phy[t] σ_phy[t'] Σ_phy[t,t'] unchanged (and flips μ_φ,
     # leaving the data-scale BLUP μ_z = diag(σ_phy) μ_φ invariant). Anchor the
-    # sign so the dominant-magnitude trait's σ_phy is ≥ 0, matching the dense
-    # fit's σ_phy = exp(log_σ_phy) > 0 convention for interior optima.
+    # sign so σ_phy[argmax(abs.(σ_phy))] ≥ 0, the same post-hoc anchor that
+    # `fit_gaussian_gllvm` (without `X_lv`) applies to its signed,
+    # identity-link σ_phy.
     t_anchor = argmax(abs.(σ_phy))
     if σ_phy[t_anchor] < 0
         σ_phy = -σ_phy

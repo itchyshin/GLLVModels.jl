@@ -20,8 +20,8 @@
 #
 # Phylogenetic block (J3) — same trick: Σ_y_full = σ²_eps · (I_n ⊗ Ã + J_n ⊗ B̃)
 # with B̃ = (L_phy_aug L_phy_aug') .* Σ_phy, L_phy_aug = hcat(L_phy, ρ_phy).
-# Joint sign flip (ρ_phy → -ρ_phy, φ → -φ) is the lone non-identifiable
-# symmetry; fit.jl applies a global sign anchor post-hoc.
+# When K_phy = 0, the joint sign flip (ρ_phy → -ρ_phy, φ → -φ) is the lone
+# non-identifiable symmetry; fit.jl applies a global sign anchor post-hoc.
 #
 # Profile σ²_eps: -2ℓ has the form
 #   -2ℓ = n·p·log(2π) + n·p·log(σ²_eps) + (logdet pieces in Ã)

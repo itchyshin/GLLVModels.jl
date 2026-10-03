@@ -367,24 +367,27 @@ Check these restrictions when translating an R analysis:
 - **Per-trait nuisance-parameter intervals** — grouped NB2/NB1/Beta/Gamma CIs
   are supported; grouped Tweedie and per-trait ordinal-cutpoint CI endpoints
   remain unavailable.
-- **`σ_phy` from `fit_gaussian_gllvm` is not gllvmTMB's `phylo_unique` SD
-  (#136).** In the row model of the
-  [structured dependence page](structured-dependence.md), `σ_phy` is a signed
-  parameter that enters the likelihood only as the last column of the
-  augmented phylogenetic loading `Λ_phy_aug = hcat(Λ_phy, σ_phy)`, through
-  `B = (Λ_phy_aug * Λ_phy_aug') .* Σ_phy` (the same holds for `em_fit_phylo`
-  and `em_fit_phylo_squarem`, which have no `Λ_phy` columns). Its sign is not
-  identified, so read `abs.(σ_phy)` (the per-row scale when `K_phy = 0`); when
-  `K_phy ≥ 1`, `σ_phy` is not identified separately from `Λ_phy` either, so
-  read the implied `B`. gllvmTMB's `phylo_unique` is a different model term:
-  an independent phylogenetic field for each trait, with its own scale. When
-  it is fitted with `phylo_latent`, the phylo_unique block of gllvmTMB's
-  `src/gllvmTMB.cpp` scales trait `t`'s field by `exp(log_sd_phy_diag[t])`;
-  fitted alone, those scales are the diagonal entries of a `Lambda_phy`
-  constrained to be diagonal (gllvmTMB `R/fit-multi.R`). The two are therefore
-  not one parameter on two links. Compare the fitted models (log-likelihood,
-  implied covariance), not these parameters, and do not expect them to agree,
-  even in absolute value.
+- **`σ_phy` from `fit_gaussian_gllvm` is not gllvmTMB's `phylo_unique` scale
+  (#136).** In the Julia row model, `σ_phy` is a signed parameter that enters
+  the likelihood only as the last column of the augmented phylogenetic
+  loading `Λ_phy_aug = hcat(Λ_phy, σ_phy)`, through
+  `B = (Λ_phy_aug * Λ_phy_aug') .* Σ_phy` (the EM fitters `em_fit_phylo` and
+  `em_fit_phylo_squarem` are the case with no `Λ_phy` columns). With
+  `K_phy = 0`, only a global flip of `σ_phy` leaves the likelihood unchanged;
+  the relative signs are identified and set the sign of each cross-trait
+  entry of `B`, so read `σ_phy` up to one overall sign. With `K_phy ≥ 1`,
+  `σ_phy` is not identified separately from `Λ_phy`; read the implied `B`,
+  not per-entry intervals. With `X_lv`, the fitter skips its sign-pattern
+  search. gllvmTMB's `phylo_unique` term (now `phylo_indep()`, or
+  `phylo_latent(..., unique = TRUE)` alongside a latent term) is a different
+  model term: an independent phylogenetic field for each trait with its own
+  scale (`exp(log_sd_phy_diag[t])` in the phylo_diag block of gllvmTMB's
+  `src/gllvmTMB.cpp` when fitted with a latent term). The two are not one
+  parameter on two links: compare fitted models (log-likelihood, implied
+  covariance), and do not expect the parameters to agree, even in absolute
+  value. The Julia model with gllvmTMB's structure is
+  `fit_precision_multivariate(...; mode = :explicitunique)`; agreement with
+  gllvmTMB there is not yet established.
 
 ## Why likelihood approximations can differ
 
