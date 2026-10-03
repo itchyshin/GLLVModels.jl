@@ -330,10 +330,29 @@ def load_maps(root: Path, ledger: Path, extra: list[Path]):
 
 # --- derivation ------------------------------------------------------------------------------
 
-def scoreboard_id(sid: str) -> str:
+# The checker's C3/C4/C5 id selectors (tools/true_parity_check.mjs isRSZ / isRD / isGRP), ported.
+CLAUSE_ID = {
+    "C3": re.compile(r"-RSZ$", re.I),
+    "C4": re.compile(r"^(?:[a-z0-9_]+-)*RD-", re.I),
+    "C5": re.compile(r"^(?:[a-z0-9_]+-)*GRP-", re.I),
+}
+
+
+def scoreboard_id(sid: str, clause=None) -> str:
+    """A row may carry `"clause": "C3" | "C4" | "C5"` to say it is deliberately a C3/C4/C5 row (the true-parity
+    campaign rows, itchyshin/GLLVModels.jl#684 item 4). Then its scoreboard id must be selected by exactly that
+    clause's checker rule, or the run fails. Without the marker, an id that would silently move the row into
+    C3/C4/C5 still fails, as before."""
     s = re.sub(r"[^A-Za-z0-9_-]+", "-", sid).strip("-")
     if not re.match(r"^[A-Za-z0-9]", s):
         raise Fail(f"cannot form a scoreboard id from {sid!r}")
+    if clause is not None:
+        if clause not in CLAUSE_ID:
+            raise Fail(f"{sid}: clause {clause!r} is not one of C3, C4, C5")
+        picked = [c for c, rx in CLAUSE_ID.items() if rx.search(s)]
+        if picked != [clause]:
+            raise Fail(f"{sid}: declares clause {clause} but scoreboard id {s} is selected by {picked or 'no clause'} in the checker")
+        return s
     if re.search(r"-RSZ$", s, re.I) or re.match(r"^(RD|GRP)-", s, re.I):
         # Would silently move the row into C3/C4/C5 (GATES.md id conventions).
         raise Fail(f"scoreboard id {s} collides with a C3/C4/C5 id convention")
@@ -397,7 +416,7 @@ def build(root: Path, ledger: Path, extra: list[Path]):
     rows_out, table, ids_seen = [], [], {}
     counts: "dict[str, Counter]" = {}
     for sid, (family, r) in by_id.items():
-        bid = scoreboard_id(sid)
+        bid = scoreboard_id(sid, r.get("clause"))
         if bid in ids_seen:
             raise Fail(f"scoreboard id {bid} formed from both {ids_seen[bid]} and {sid}")
         ids_seen[bid] = sid

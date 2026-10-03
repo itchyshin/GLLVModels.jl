@@ -161,6 +161,27 @@ def main():
     expect("rsz_suffix_id_fails", c == 1 and "C3/C4/C5" in o, o)
     shutil.rmtree(tmp)
 
+    # Campaign rows (itchyshin/GLLVModels.jl#684 item 4): a row that declares its clause may carry a C3/C4/C5 id,
+    # but only the id its declared clause selects.
+    root, tmp = with_root({"case-map-family.json": [row("family/GAUSSIAN-RSZ", tier="not_measured", clause="C3")]})
+    c, o = run(root, "--check")
+    expect("declared_clause_rsz_id_allowed", c == 1 and "ASSEMBLE_STALE" in o and "C3/C4/C5" not in o, o)
+    c, o = run(root)
+    expect("declared_clause_rsz_id_written", c == 0 and "| family-GAUSSIAN-RSZ" in (root / A.LEDGER / A.OUT_SCOREBOARD).read_text(), o)
+    shutil.rmtree(tmp)
+    root, tmp = with_root({"case-map-family.json": [row("family/GAUSSIAN-RSZ", tier="not_measured", clause="C4")]})
+    c, o = run(root, "--check")
+    expect("declared_clause_mismatch_fails", c == 1 and "declares clause C4" in o, o)
+    shutil.rmtree(tmp)
+    root, tmp = with_root({"case-map-data.json": [row("data/RD-X", tier="not_measured", clause="C4")]})
+    c, o = run(root)
+    expect("declared_clause_rd_id_selected_by_c4", c == 0 and "| data-RD-X" in (root / A.LEDGER / A.OUT_SCOREBOARD).read_text(), o)
+    shutil.rmtree(tmp)
+    root, tmp = with_root({"case-map-data.json": [row("data/PLAIN", tier="not_measured", clause="C9")]})
+    c, o = run(root, "--check")
+    expect("declared_clause_unknown_fails", c == 1 and "not one of C3, C4, C5" in o, o)
+    shutil.rmtree(tmp)
+
     # Review of #589, finding 1: numeric 1 is not a pass value (the checker's isPassValue is
     # strict: "PASS", "pass" or the boolean true only; in Python 1 == True).
     for val in (1, 1.0):
