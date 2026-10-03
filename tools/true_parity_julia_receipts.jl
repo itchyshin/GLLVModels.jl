@@ -22,10 +22,21 @@
 #   * A case whose recomputed difference exceeds its tolerance aborts the run (exit 1); nothing
 #     is written for it, and the row must not be bound.
 #   * src/, the tests and the fixtures are not modified.
+#   * Section 12 ("c1-behaviour") writes BEHAVIOUR receipts (itchyshin/GLLVModels.jl#684 item 2) for
+#     rows whose R behaviour is a printed table or a refusal, so there is no number to compare. Its
+#     receipts carry a top-level `behaviour` block (schema in docs/dev-log/core070/true-parity-latest/
+#     GATES.md, "Ruling 2"), not a `comparison` block. Every label is derived from a raw artefact
+#     (R's printed text and recorded conditions under test/fixtures/c1_behaviour_p1/, the text Julia
+#     prints and the exception Julia raises, produced fresh here) by the same helper file the twin
+#     test includes; no label is typed. --check requires these labels to be identical to the
+#     committed ones.
 #
 # Usage (from the repository root; see "Environment" below)
 #   OPENBLAS_NUM_THREADS=1 JULIA_NUM_THREADS=4 julia --project=. tools/true_parity_julia_receipts.jl
 #   OPENBLAS_NUM_THREADS=1 JULIA_NUM_THREADS=4 julia --project=. tools/true_parity_julia_receipts.jl --check
+#
+# Add --only=<section> (repeatable, e.g. --only=c1-behaviour) to write or check just that section.
+# The names are the ones listed in build() below.
 #
 # --check re-runs every computation and compares with the committed receipts, STRICTLY:
 #   * fixture and test sha256, case ids, R values and tolerances must be identical;
@@ -1760,11 +1771,149 @@ function receipts_data_twins()
     return out
 end
 
+# =============================================================================================
+# 13. c1-behaviour: behavioural receipts for three C1 rows (itchyshin/GLLVModels.jl#684 item 2)
+#     test/test_c1_behaviour_p1.jl; raw R side under test/fixtures/c1_behaviour_p1/
+#       model-comparison/print.anova.gllvmTMB_multi   printed fields
+#       latent-scores/extract_latent_scores.default   refusal on an object with no method
+#       model-comparison/update.gllvmTMB_multi        replay, data override, two refusals
+# =============================================================================================
+include(joinpath(ROOT, "test", "fixtures", "c1_behaviour_p1", "helpers.jl"))   # the c1b_* helpers the twin test includes
+
+"""A receipt for the behavioural tier: a `behaviour` block, no `comparison` block."""
+struct BehaviourReceipt
+    source_ids::Vector{String}
+    origin_pr::String
+    fixtures::Vector{String}
+    tests::Vector{String}
+    what_this_is_not::String
+    cases::Vector{Vector{Pair{String,Any}}}
+end
+
+const C1B_ORIGIN = "itchyshin/GLLVModels.jl#684 item 2"
+const C1B_FIXTURE_DIR = "test/fixtures/c1_behaviour_p1"
+
+function receipts_c1_behaviour()
+    rec = c1b_r_record()
+    rec["gllvmtmb_commit"] == P1_SHA || fail("c1 behaviour fixture is not pinned at P1")
+    all(p -> p["deparse_identical"] === true, rec["provenance"]) || fail("c1 behaviour fixture: an installed R function differs from the pinned source")
+    tp = "test/test_c1_behaviour_p1.jl"
+    fixtures = ["$C1B_FIXTURE_DIR/r_c1_behaviour.toml", "$C1B_FIXTURE_DIR/r_anova_print.txt",
+                "$C1B_FIXTURE_DIR/helpers.jl", "test/fixtures/gllvmtmb_anova_fixture.toml"]
+
+    # print.anova.gllvmTMB_multi: the header line and the section headings, read from the raw text.
+    r_txt = c1b_r_anova_print(rec)
+    j_txt = c1b_julia_anova_print()
+    r_fields, j_fields = c1b_header_fields(r_txt), c1b_header_fields(j_txt)
+    r_heads, j_heads = c1b_section_headings(r_txt), c1b_section_headings(j_txt)
+    function header_line(t)
+        ls = split(t, '\n')
+        return String(strip(ls[1 + findfirst(l -> !isempty(strip(l)), ls[2:end])]))
+    end
+    anova_sid = "model-comparison/print.anova.gllvmTMB_multi"
+    anova_cases = [
+        Pair{String,Any}["case_id" => "CORE070-C1-PRINT-ANOVA-FIELDS", "source_id" => anova_sid, "kind" => "printed_fields",
+            "r_observed" => r_fields, "julia_observed" => j_fields,
+            "r_source" => "$C1B_FIXTURE_DIR/r_anova_print.txt, header line (print.anova.gllvmTMB_multi at P1 on anova() of three nested Gaussian fits, d = 1, 2, 3)",
+            "julia_source" => "show(io, MIME\"text/plain\"(), gllvm_anova(fits...; test = :chibar)) on Julia fits of the same data, header line, as produced by c1b_julia_anova_print in $C1B_FIXTURE_DIR/helpers.jl",
+            "r_header_line" => header_line(r_txt), "julia_header_line" => header_line(j_txt),
+            "note" => "The labels are the whitespace-separated tokens of the printed header line, in order. The numbers beneath them are not compared here; the numeric anova twin (model-comparison/anova.json) owns them."],
+        Pair{String,Any}["case_id" => "CORE070-C1-PRINT-ANOVA-SECTIONS", "source_id" => anova_sid, "kind" => "printed_fields",
+            "r_observed" => r_heads, "julia_observed" => j_heads,
+            "r_source" => "$C1B_FIXTURE_DIR/r_anova_print.txt, lines that are one capitalised word and a colon",
+            "julia_source" => "the same show(...) text, same rule, as produced by c1b_julia_anova_print in $C1B_FIXTURE_DIR/helpers.jl",
+            "note" => "Both printers follow the table with a Notes: section when a row carries a note (here, the chi-bar-square rank steps). The title lines differ by engine name (R: gllvmTMB fits; Julia: GLLVModels.jl fits) and the note texts are worded for each package; neither is compared."],
+    ]
+    anova_not = "This compares the printed column labels and section headings only. It does not claim identical title text, identical note wording, identical number formatting or identical numbers; the numbers are the numeric anova twin's. R's print method takes a digits argument; the Julia show method has none, and that is not compared."
+
+    # extract_latent_scores.default: the refusal on four objects with no method.
+    r_recs = c1b_r_refusals(rec)
+    j_recs, j_exc = c1b_julia_refusals()
+    length(r_recs) == length(j_recs) || fail("refusal objects differ in number")
+    refusal_sid = "latent-scores/extract_latent_scores.default"
+    refusal_case = Pair{String,Any}["case_id" => "CORE070-C1-EXTRACT-LATENT-SCORES-DEFAULT-REFUSAL", "source_id" => refusal_sid,
+        "kind" => "refusal",
+        "r_observed" => c1b_refusal_labels(r_recs), "julia_observed" => c1b_refusal_labels(j_recs),
+        "r_source" => "$C1B_FIXTURE_DIR/r_c1_behaviour.toml [[refusal]] (extract_latent_scores(x, level = \"unit\") at P1 on a character, an integer vector, a list and NULL)",
+        "julia_source" => "GLLVModels.extract_latent_scores(x) on a String, a Vector{Int}, a Dict and nothing, as produced by c1b_julia_refusals in $C1B_FIXTURE_DIR/helpers.jl",
+        "objects_tried" => Pair{String,Any}["r" => [r.object_class for r in r_recs], "julia" => [r.object_class for r in j_recs]],
+        "r_condition_classes" => [String.(r["condition_classes"]) for r in rec["refusal"]],
+        "julia_exception_types" => j_exc,
+        "r_messages" => [r.message for r in r_recs], "julia_messages" => [r.message for r in j_recs],
+        "note" => "The three labels are derived by c1b_refusal_labels from the raw records: whether the call signalled an error and returned nothing, whether the message names the offending class, whether it states the accepted inputs. Each is true of every object tried, on both engines. The exception class names differ (R: rlang_error from cli::cli_abort; Julia: ArgumentError) and are recorded here, not compared."]
+    refusal_not = "This does not claim the engines raise the same exception class (rlang_error vs ArgumentError), the same message text, or the same behaviour for a class one engine does handle. R's .gllvmTMB_site_trait_sim and .gllvmTMB_va methods are excluded from the Julia twin by the P1 case map (PR #526). Julia's own MethodError for fit types with no getLV method is a different path from this fallback and is not measured here."
+
+    # update.gllvmTMB_multi: R replays a temporal fit's saved call; Julia's update(::TemporalGaussianFit).
+    r_upd = c1b_update_r_observation(rec)
+    j_upd, j_upd_types = c1b_julia_update_observation(rec)
+    r_ul, j_ul = c1b_update_labels(r_upd), c1b_update_labels(j_upd)
+    update_sid = "model-comparison/update.gllvmTMB_multi"
+    u = rec["update"]
+    panel = "a $(length(u["value"]))-row temporal panel (4 series x 5 occasions x 3 traits; seed $(u["seed"]); the [update] table of $C1B_FIXTURE_DIR/r_c1_behaviour.toml)"
+    r_fit = "gllvmTMB($(u["formula"]), unit = \"series\", family = gaussian()) at P1 on $panel"
+    j_fit = "fit_temporal_gllvm(tbl; formula = @formula(value ~ 0 + trait), temporal = temporal_indep(:(0 + trait | series), :occasion), unit = :series) on the same panel, as produced by c1b_julia_update_observation in $C1B_FIXTURE_DIR/helpers.jl"
+    update_cases = [
+        Pair{String,Any}["case_id" => "CORE070-C1-UPDATE-REPLAY", "source_id" => update_sid, "kind" => "route",
+            "r_observed" => r_ul.replay, "julia_observed" => j_ul.replay,
+            "r_source" => "update(fit) on $r_fit; the refit's response and log-likelihood are the recorded [update.replay] values",
+            "julia_source" => "update(fit) on the Julia fit: $j_fit",
+            "r_loglik_original" => r_upd.original.loglik, "r_loglik_replay" => r_upd.replay.loglik,
+            "julia_loglik_original" => j_upd.original.loglik, "julia_loglik_replay" => j_upd.replay.loglik,
+            "note" => "The route is the replay of the saved call with nothing replaced. The label is true when a fit comes back whose response equals the original's (to 1e-12) and whose log-likelihood equals the original's (to 1e-6, the tolerance of R's own temporal update test). The two engines' log-likelihoods are recorded here; their agreement is the temporal numeric twins' claim, not this case's."],
+        Pair{String,Any}["case_id" => "CORE070-C1-UPDATE-DATA-OVERRIDE", "source_id" => update_sid, "kind" => "route",
+            "r_observed" => r_ul.override, "julia_observed" => j_ul.override,
+            "r_source" => "update(fit, data = changed) on $r_fit; changed\$value = value + 0.01 * (1:60)",
+            "julia_source" => "update(fit; data = changed) on the Julia fit: $j_fit",
+            "r_loglik_override" => r_upd.override.loglik, "julia_loglik_override" => j_upd.override.loglik,
+            "note" => "The route is a refit on the supplied table: the refit's response equals the supplied column (to 1e-12), differs from the original, and the log-likelihood moves by more than 1e-6."],
+        Pair{String,Any}["case_id" => "CORE070-C1-UPDATE-UNNAMED-REFUSED", "source_id" => update_sid, "kind" => "refusal",
+            "r_observed" => r_ul.unnamed, "julia_observed" => j_ul.unnamed,
+            "r_source" => "update(fit, changed), an unnamed override, on $r_fit (the [update.unnamed] record)",
+            "julia_source" => "update(fit, changed) on the Julia fit: $j_fit; every Julia override is a keyword",
+            "r_condition_classes" => String.(u["unnamed"]["condition_classes"]), "julia_exception_type" => j_upd_types.unnamed,
+            "r_message" => String(u["unnamed"]["message"]),
+            "note" => "Both engines refuse and return no model. R refuses on purpose (cli_abort: named overrides only). Julia has no positional method, so the refusal is a MethodError, not a message written for this case. The condition types and messages are recorded, not compared."],
+        Pair{String,Any}["case_id" => "CORE070-C1-UPDATE-NO-CALL-REFUSED", "source_id" => update_sid, "kind" => "refusal",
+            "r_observed" => r_ul.nocall, "julia_observed" => j_ul.nocall,
+            "r_source" => "update(fit) on an ordinary fit (latent(0 + trait | site, d = 1), no temporal term) at P1, which keeps no call, so update.gllvmTMB_multi falls to stats::update.default (the [update.nocall] record)",
+            "julia_source" => "update(fit) on a GllvmFit from fit_gaussian_gllvm(Y; K = 1), Y the same responses as a traits x units matrix; Julia defines update for TemporalGaussianFit only, as produced by c1b_julia_update_observation in $C1B_FIXTURE_DIR/helpers.jl",
+            "r_condition_classes" => String.(u["nocall"]["condition_classes"]), "julia_exception_type" => j_upd_types.nocall,
+            "r_message" => String(u["nocall"]["message"]),
+            "note" => "Both engines refuse and return no model on a fit with no saved call. R's message comes from stats::update.default; Julia's is the MethodError for a type with no update method. The condition types and messages are recorded, not compared."],
+    ]
+    update_not = "This compares four behaviours of update() on one temporal panel and one ordinary fit. It does not claim identical condition types or messages. R's evaluate = FALSE (returns the rebuilt call), R's formula override through the saved call, R's 'does not retain a public call' refusal for a temporal fit with no call, and R's variational (gllvmTMB_va) replay have no Julia counterpart here and are not compared. Julia's update also takes keyword overrides (temporal, trait, structure, unit, unit_obs, g_tol, iterations) that R reaches through the call; only data is compared. The temporal numeric fits themselves are the temporal twins' claim."
+
+    return [
+        "model-comparison/update.json" => BehaviourReceipt([update_sid], C1B_ORIGIN, fixtures, [tp], update_not, update_cases),
+        "model-comparison/print.anova.json" => BehaviourReceipt([anova_sid], C1B_ORIGIN, fixtures, [tp], anova_not, anova_cases),
+        "latent-scores/extract_latent_scores.default.json" => BehaviourReceipt([refusal_sid], C1B_ORIGIN, fixtures, [tp], refusal_not, [refusal_case]),
+    ]
+end
+
+function receipt_object(r::BehaviourReceipt)
+    return Pair{String,Any}[
+        "schema" => "true-parity-julia-behaviour-receipt/v1",
+        "source_ids" => r.source_ids,
+        "verdict" => "PASS",
+        "evidence_kind" => "behaviour_observed_on_both_engines",
+        "pin" => "P1",
+        "reference_commit" => P1_SHA,
+        "origin_pr" => r.origin_pr,
+        "generator" => GENERATOR,
+        "julia_version" => string(VERSION),
+        "gllvmodels_commit" => gllvmodels_commit(),
+        "source_fixtures" => [Pair{String,Any}["path" => p, "sha256" => sha_file(p)] for p in r.fixtures],
+        "source_tests" => [Pair{String,Any}["path" => p, "sha256" => sha_file(p)] for p in r.tests],
+        "what_this_is_not" => r.what_this_is_not,
+        "behaviour" => Pair{String,Any}["pin" => "P1", "cases" => r.cases],
+    ]
+end
+
 # ---------------------------------------------------------------------------------------------
 # Driver
 # ---------------------------------------------------------------------------------------------
-function build()
-    out = Pair{String,Receipt}[]
+function build(only::Vector{String} = String[])
+    out = Pair{String,Any}[]
     for (name, f) in (("chibar", receipts_chibar), ("ordinal", receipts_ordinal),
             ("latent-scores", receipts_latent_scores), ("temporal", receipts_temporal),
             ("aghq", receipts_aghq), ("model-comparison", receipts_model_comparison),
@@ -1773,7 +1922,9 @@ function build()
             ("namespace-numeric", receipts_namespace_numeric),
             ("postfit-twins", receipts_postfit_twins),
             ("namespace-numeric-b", receipts_namespace_numeric_b),
-            ("data-twins", receipts_data_twins))
+            ("data-twins", receipts_data_twins),
+            ("c1-behaviour", receipts_c1_behaviour))
+        isempty(only) || name in only || continue
         t0 = time()
         append!(out, f())
         @info "built $name receipts" seconds = round(time() - t0; digits = 1)
@@ -1811,11 +1962,29 @@ function compare_receipt(rel, new::Receipt)
     return probs
 end
 
+function compare_receipt(rel, new::BehaviourReceipt)
+    path = joinpath(ROOT, OUT_DIR, rel)
+    isfile(path) || return ["missing file $rel"]
+    old = jparse(read(path, String))
+    probs = String[]
+    obj = Dict(receipt_object(new))
+    # Behaviour labels are strings, so --check is exact: the whole receipt (labels, raw artefacts,
+    # fixture and test hashes) must equal the committed one, except the two informational fields.
+    for k in ("schema", "source_ids", "verdict", "evidence_kind", "pin", "reference_commit", "origin_pr", "generator",
+              "source_fixtures", "source_tests", "what_this_is_not", "behaviour")
+        jparse(jrender(obj[k])) == old[k] || push!(probs, "$rel: field $k differs from the committed receipt")
+    end
+    old["julia_version"] == string(VERSION) || @info "$rel: receipt was generated on Julia $(old["julia_version"]), this run is $VERSION (informational)"
+    old["gllvmodels_commit"] == gllvmodels_commit() || @info "$rel: receipt names src commit $(old["gllvmodels_commit"][1:9]), current src commit is $(gllvmodels_commit()[1:9]) (informational)"
+    return probs
+end
+
 function main(args)
     check = "--check" in args
+    only = String[a[8:end] for a in args if startswith(a, "--only=")]   # e.g. --only=c1-behaviour
     t0 = time()
     receipts = try
-        build()
+        build(only)
     catch e
         e isa Fail || rethrow()
         println("FAIL ", e.msg)
