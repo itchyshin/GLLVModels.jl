@@ -267,6 +267,11 @@ def main():
     wr = subprocess.run([sys.executable, str(HERE / "true_parity" / "campaign" / "write_receipts.py"), "--check"],
                         capture_output=True, text=True)
     expect("real_tree_campaign_receipts_rederive", wr.returncode == 0 and "CAMPAIGN_RECEIPTS_OK" in wr.stdout, wr.stdout + wr.stderr)
+    # The urbanisation row has no committed raw outputs (unpublished data): --check must say so, never pass silently.
+    expect("campaign_check_says_urbanisation_not_rederived",
+           "raw outputs kept off the public repo; re-derive locally with URBMAP_ROOT set" in wr.stdout and "internal consistency only" in wr.stdout, wr.stdout)
+    expect("urbanisation_raw_outputs_not_committed",
+           not list((A.ROOT / A.LEDGER / "receipts/data/campaign/raw").glob("urban_*")), "urban raw outputs are in the tree")
     # Receipt wording: relative cases are named as such and say where the raw values are; cond(H) says how each engine computes it;
     # the C5 rule claims no R Hessian leg (the #593 receipts record none).
     nb2 = json.loads((A.ROOT / A.LEDGER / "receipts/family/campaign/NB2-LOG-RSZ.json").read_text())
@@ -291,10 +296,7 @@ def main():
 
     # ... and a hand edit that keeps the receipt self-consistent must still fail: a changed value (with a matching
     # max_abs_diff and flag), a widened tolerance, and a changed large-vector difference.
-
-    # ... and a hand edit that keeps the receipt self-consistent must still fail: a changed value (with a matching
-    # max_abs_diff and flag), a widened tolerance, and a changed large-vector difference.
-    def tamper(label, edit):
+    def tamper(label, edit, needle="DERIVATION DRIFT"):
         with tempfile.TemporaryDirectory() as td:
             led = Path(td) / A.LEDGER
             shutil.copytree(A.ROOT / A.LEDGER, led, ignore=shutil.ignore_patterns("*.md"))
@@ -303,7 +305,7 @@ def main():
             edit(led / "receipts")
             r = subprocess.run([sys.executable, str(HERE / "true_parity" / "campaign" / "write_receipts.py"), "--check", "--root", td],
                                capture_output=True, text=True)
-            expect(label, r.returncode == 1 and "CAMPAIGN_RECEIPTS_BAD" in r.stdout and "DERIVATION DRIFT" in r.stdout, r.stdout + r.stderr)
+            expect(label, r.returncode == 1 and "CAMPAIGN_RECEIPTS_BAD" in r.stdout and needle in r.stdout, r.stdout + r.stderr)
 
     def edit_case(rel, quantity, fn):
         def go(rec):
@@ -324,6 +326,10 @@ def main():
             f.write_text(json.dumps(d, indent=1) + "\n")
         return go
     tamper("campaign_check_catches_phylo_qualification_forged", edit_leg("covariance/campaign/COV-PHYLO-LATENT-RSZ.json", "R_side_receipt_qualified_by_maintainer", True))
+    # the urbanisation summary receipt is not re-derivable, but a self-contradicting edit must still fail
+    def urban_flag(c): c["within_tolerance"] = not c["within_tolerance"]
+    tamper("campaign_check_catches_urbanisation_summary_inconsistency",
+           edit_case("data/campaign/RD-URBANISATION-BINOMIAL.json", "logLik", urban_flag), needle="SUMMARY INCONSISTENT")
     tamper("campaign_check_catches_large_vector_diff_edit", edit_case("data/campaign/RD-CRABS-GAUSSIAN.json", "linear predictor on the training data (link scale)", lambda c: c.update(max_abs_diff=1e-12)))
 
     # Real tree: outputs current, and EVIDENCED count equals the checker's own C1 bound=.

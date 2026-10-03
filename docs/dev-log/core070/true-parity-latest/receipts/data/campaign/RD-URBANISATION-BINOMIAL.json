@@ -120,6 +120,7 @@
   "Julia starts from its own default start, never from R's coordinates; wall times include first-call Julia compilation.",
   "cond(H) of the two engines is recorded where computed but never compared (different parameter bases); see cond_H_statement for this receipt."
  ],
+ "raw_outputs_off_repo": "raw outputs kept off the public repo; re-derive locally with URBMAP_ROOT set. The urbanisation matrix is the maintainer's unpublished data and its redistribution status is unconfirmed, so the per-observation raw outputs (linear predictors, loadings) are not committed. This receipt keeps summary values only: logLik, the fixed effects, the maximum differences, wall times, the data file's sha256 and the sha256 of the two raw files (read_from). write_receipts.py --check cannot re-derive this row from the repository; it prints that and checks the receipt's internal consistency. With the retained raw files, run write_receipts.py --check --local-raw DIR.",
  "engines": {
   "R": {
    "engine": "R gllvmTMB",
@@ -294,7 +295,7 @@
    {
     "case_id": "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-LLT",
     "quantity": "LLt",
-    "diff_source": "max over 2601 values, from the committed raw files (receipts/data/campaign/raw/urban_*.gz); re-derived by write_receipts.py --check",
+    "diff_source": "max over 2601 values, from raw files that are not committed (raw outputs kept off the public repo; re-derive locally with URBMAP_ROOT set); this receipt records the maximum only",
     "max_abs_diff": 0.0016484796389644174,
     "tolerance": 0.0001,
     "tolerance_rule": "1e-4 absolute per element of Lambda Lambda' (rotation and sign invariant)",
@@ -305,7 +306,7 @@
    {
     "case_id": "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-ETA",
     "quantity": "linear predictor on the training data (link scale)",
-    "diff_source": "max over 9741 values, from the committed raw files (receipts/data/campaign/raw/urban_*.gz); re-derived by write_receipts.py --check",
+    "diff_source": "max over 9741 values, from raw files that are not committed (raw outputs kept off the public repo; re-derive locally with URBMAP_ROOT set); this receipt records the maximum only",
     "max_abs_diff": 0.0008218778164135188,
     "tolerance": 1e-06,
     "tolerance_rule": "1e-6 absolute, link scale on the training data",
@@ -316,7 +317,7 @@
   ]
  },
  "read_from": {
-  "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/raw/urban_R.json.gz (uncompressed sha256)": "88235d7b5d880c935b4f3754a59e490b1021f1abb1eb29d321ac8354fd97d469",
-  "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/raw/urban_J.toml.gz (uncompressed sha256)": "24f2218653ce9a945be1a11665394145f6678b56bd1b52fac54982f605aee1b3"
+  "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/raw/urban_R.json.gz (uncompressed sha256; this raw file is NOT in the repo)": "88235d7b5d880c935b4f3754a59e490b1021f1abb1eb29d321ac8354fd97d469",
+  "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/raw/urban_J.toml.gz (uncompressed sha256; this raw file is NOT in the repo)": "24f2218653ce9a945be1a11665394145f6678b56bd1b52fac54982f605aee1b3"
  }
 }

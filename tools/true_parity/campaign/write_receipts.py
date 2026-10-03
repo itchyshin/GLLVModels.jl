@@ -39,9 +39,15 @@ predictors) carry max_abs_diff only, with the raw files committed (gzip). `--che
 block, pass-rule legs, verdict and engine blocks, and every campaign case-map row, from those committed raw files and
 fails on any difference.
 
+Urbanisation (privacy). The urbanisation matrix is the maintainer's unpublished data, so the row's per-observation raw
+outputs (linear predictors, loadings) are NOT committed. Its receipt keeps only summary values (logLik, fixed effects,
+max differences, wall times, the data file's sha256 and the recorded sha256 of the two raw files). `--check` prints
+that the raw outputs are kept off the public repo and checks the summary receipt only for internal consistency; give
+`--local-raw DIR` (a directory holding the maintainer's retained urban_R.json and urban_J.toml) to rebuild it in full.
+
 Usage:
   python3 write_receipts.py --raw DIR [--apply]       # default: print what would be written
-  python3 write_receipts.py --check                   # rebuild every campaign receipt and row from the committed raw files; fail on drift
+  python3 write_receipts.py --check [--local-raw DIR] # rebuild every campaign receipt and row from the committed raw files; fail on drift
 """
 from __future__ import annotations
 import argparse, gzip, hashlib, json, math, os, subprocess, sys, tempfile, tomllib
@@ -98,6 +104,8 @@ class Case:
                 d["r_value"] = self.r if len(self.r) > 1 else self.r[0]
                 d["julia_value"] = self.j if len(self.j) > 1 else self.j[0]
                 d["diff_source"] = "recomputed by the checker from r_value and julia_value"
+            elif raw_note == NOTE_OFF_REPO:
+                d["diff_source"] = f"max over {len(self.r)} values, from raw files that are not committed ({NOTE_OFF_REPO}); this receipt records the maximum only"
             else:
                 d["diff_source"] = f"max over {len(self.r)} values, from the committed raw files ({raw_note}); re-derived by write_receipts.py --check"
             d["max_abs_diff"] = self.diff
@@ -171,6 +179,9 @@ DISPOSITIONS = {
 }
 C5 = [("fit-input/GRP-UNIT", "unit"), ("fit-input/GRP-UNIT-OBS", "unit_obs"), ("fit-input/GRP-CLUSTER", "cluster"), ("fit-input/GRP-CLUSTER2", "cluster2")]
 CAMPAIGN_DIR = "campaign"
+# Cells whose per-observation raw outputs are NOT committed: the urbanisation matrix is the maintainer's unpublished data.
+OFF_REPO = {"urban": "data/RD-URBANISATION-BINOMIAL"}
+NOTE_OFF_REPO = "raw outputs kept off the public repo; re-derive locally with URBMAP_ROOT set"
 SYNTH = ("gaussian", "poisson", "nb2", "binomial", "ordinal", "temporal", "isdm")   # synthetic cells: data committed under campaign/data/
 COVS = {"spider": ["ConWate", "BareSand", "CovMoss"], "beetle": ["pH", "Moist", "Org"], "fungi": ["TEMPR", "PRECIP", "logAREA"]}
 
@@ -469,14 +480,16 @@ def data_meta(raw, cell):
     return None
 
 
-def process(raw, out_root, apply):
+def process(raw, out_root, apply, quiet=False):
     results = []   # (row spec, receipt path, binds, receipt)
     camp = out_root / LEDGER / "receipts"
     # --- C3 / C4 executable cells
     for sid, fam, cell, clause, quants in ROWS:
         if cell == "phylo":
             ph = build_phylo(raw)
-            if ph is None: print(f"skip {sid}: no phylo_J.json"); continue
+            if ph is None:
+                if not quiet: print(f"skip {sid}: no phylo_J.json")
+                continue
             binds = all(ph["legs"].values())
             rdir = camp / fam / CAMPAIGN_DIR
             rr, jr = ph["R"], ph["J"]
@@ -512,16 +525,23 @@ def process(raw, out_root, apply):
             continue
         rp, jp = Path(raw) / f"{cell}_R.json", Path(raw) / f"{cell}_J.toml"
         if not (rp.exists() and jp.exists()):
-            print(f"skip {sid}: raw outputs missing ({rp.name}, {jp.name})"); continue
+            if not quiet: print(f"skip {sid}: raw outputs missing ({rp.name}, {jp.name})")
+            continue
         R, J = load_r(rp), load_j(jp)
-        if not J.get("DONE"): print(f"skip {sid}: Julia run not finished"); continue
+        if not J.get("DONE"):
+            if not quiet: print(f"skip {sid}: Julia run not finished")
+            continue
         cases = cases_for(sid, cell, clause, quants, R, J)
         legs = add_c4_leg(pass_rule(R, J, cases), clause); binds = all(legs.values())
         eng_r, eng_j = engine_blocks(cell, R, J)
         rdir = camp / fam / CAMPAIGN_DIR
         hashes = OrderedDict()
+        off = cell in OFF_REPO
         for src, nm in ((rp, f"{cell}_R.json"), (jp, f"{cell}_J.toml")):
             dst = rdir / "raw" / (nm + ".gz")
+            if off:   # recorded, never committed: the sha256 lets the maintainer's retained copy be verified
+                hashes[str(dst.relative_to(out_root)) + " (uncompressed sha256; this raw file is NOT in the repo)"] = sha_file(src)
+                continue
             if apply: gz_write(dst, src)
             hashes[str(dst.relative_to(out_root)) + " (uncompressed sha256)"] = sha_file(src)
         extra = OrderedDict(
@@ -533,7 +553,13 @@ def process(raw, out_root, apply):
             p1_source_sha256=R["p1_source_sha256"], gllvmTMB_deparse_check=R["deparse_check"],
             cond_H_statement=cond_statement(R, J),
             reasons=reasons(legs, cases), not_covered=NOT_COVERED_COMMON)
-        rc = build_receipt(sid, cell, clause, cases, legs, eng_r, eng_j, extra, dict(note=f"receipts/{fam}/{CAMPAIGN_DIR}/raw/{cell}_*.gz", hashes=hashes), binds)
+        if off:
+            extra["raw_outputs_off_repo"] = (NOTE_OFF_REPO + ". The urbanisation matrix is the maintainer's unpublished data and its redistribution status is unconfirmed, so the "
+                "per-observation raw outputs (linear predictors, loadings) are not committed. This receipt keeps summary values only: logLik, the fixed effects, the maximum "
+                "differences, wall times, the data file's sha256 and the sha256 of the two raw files (read_from). write_receipts.py --check cannot re-derive this row from the "
+                "repository; it prints that and checks the receipt's internal consistency. With the retained raw files, run write_receipts.py --check --local-raw DIR.")
+        note = NOTE_OFF_REPO if off else f"receipts/{fam}/{CAMPAIGN_DIR}/raw/{cell}_*.gz"
+        rc = build_receipt(sid, cell, clause, cases, legs, eng_r, eng_j, extra, dict(note=note, hashes=hashes), binds)
         results.append((sid, fam, clause, rc, binds, rdir / f"{slug(sid)}.json"))
     # --- C5
     for sid, level in C5:
@@ -634,10 +660,11 @@ def update_map(out_root, fam, rows_new):
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--raw"); ap.add_argument("--apply", action="store_true")
     ap.add_argument("--check", action="store_true"); ap.add_argument("--root", type=Path, default=ROOT)
+    ap.add_argument("--local-raw", help="with --check: a directory holding the maintainer's retained urban_R.json and urban_J.toml (not in the repo)")
     a = ap.parse_args()
     out_root = a.root
     if a.check:
-        return check(out_root)
+        return check(out_root, a.local_raw)
     if not a.raw: ap.error("--raw is required")
     res = process(a.raw, out_root, a.apply)
     rows_by_fam = {}
@@ -659,7 +686,28 @@ def norm(x):
     return json.loads(json.dumps(clean(x), allow_nan=False))
 
 
-def check(out_root):
+def summary_problems(rc, sid, clause):
+    """Internal consistency of a committed receipt whose raw files are not in the repo: the recorded differences, flags, legs,
+    verdict and rule text must agree with each other. This is NOT a re-derivation from raw outputs."""
+    out = []
+    flags = []
+    for c in rc["comparison"]["cases"]:
+        d = c.get("max_abs_diff")
+        if "r_value" in c and "julia_value" in c and "convention" not in c:
+            if d != maxabs(flat(c["r_value"]), flat(c["julia_value"])): out.append(f"{c['case_id']}: max_abs_diff is not the difference of the recorded r_value and julia_value")
+        ok = d is not None and math.isfinite(d) and d <= c["tolerance"]
+        if bool(c.get("within_tolerance")) != ok: out.append(f"{c['case_id']}: within_tolerance disagrees with max_abs_diff and tolerance")
+        flags.append(ok)
+    legs = rc["pass_rule"]["legs"]
+    if legs.get("every_quantity_within_tolerance") != all(flags): out.append("leg every_quantity_within_tolerance disagrees with the case flags")
+    binds = all(legs.values())
+    want = "PASS" if binds else ("NUMERIC_PASS_NOT_BINDING" if numbers_ok(legs) else "FAIL")
+    if rc["verdict"] != want: out.append(f"verdict {rc['verdict']} but the legs give {want}")
+    if rc["pass_rule"]["rule"] != rule_text(None, clause): out.append("rule text differs from the rule applied")
+    return out, binds
+
+
+def check(out_root, local_raw=None):
     """Rebuild every campaign receipt and case-map row from the committed raw files and fail on any difference.
 
     1. every raw file's sha256 still equals the one the receipt recorded;
@@ -667,29 +715,52 @@ def check(out_root):
     3. for each result, the committed receipt's verdict, row status, pass-rule legs, comparison block (values,
        tolerances, differences, flags), engine blocks and source ids must equal the rebuilt ones, and the committed
        case-map row must equal the rebuilt row. A hand edit to a value, a tolerance or a flag therefore fails.
-    The receipt text fields that come from the engines' logs and run directories (not committed as raw) are not rebuilt."""
+    The receipt text fields that come from the engines' logs and run directories (not committed as raw) are not rebuilt.
+
+    A row whose raw outputs are kept off the public repo (OFF_REPO: the urbanisation matrix is unpublished) is NOT re-derived:
+    --check says so, checks the committed summary receipt for internal consistency and its case-map row against that receipt,
+    and rebuilds it in full only when --local-raw DIR supplies the retained raw files (checked against the recorded sha256)."""
     bad = 0
     recdir = out_root / LEDGER / "receipts"
+    local = {}
+    for cell in OFF_REPO:
+        rf, jf = (Path(local_raw) / f"{cell}_R.json", Path(local_raw) / f"{cell}_J.toml") if local_raw else (None, None)
+        if rf and rf.exists() and jf.exists(): local[cell] = (rf, jf)
     for p in sorted(recdir.glob("*/campaign/*.json")):
         rc = json.loads(p.read_text())
         for k, h in rc.get("read_from", {}).items():
-            path = k.replace(" (uncompressed sha256)", "")
+            path = k.split(" (uncompressed sha256")[0]
             f = out_root / path
+            if "NOT in the repo" in k:   # an off-repo raw file: verify the maintainer's retained copy only when it was supplied
+                cell = next((c for c in OFF_REPO if Path(path).name.startswith(c + "_")), None)
+                if cell in local:
+                    got = sha_file(local[cell][0] if path.endswith(".json.gz") else local[cell][1])
+                    if got != h: print(f"HASH DRIFT {path} (--local-raw copy) in {p.name}"); bad += 1
+                continue
             if not f.exists(): print(f"MISSING {path} for {p.name}"); bad += 1; continue
             got = sha_bytes(gz_read(f)) if path.endswith(".gz") else sha_file(f)
             if got != h: print(f"HASH DRIFT {path} in {p.name}"); bad += 1
+    summary_only = []
     with tempfile.TemporaryDirectory() as tmp:
         for gz in sorted(recdir.glob("*/campaign/raw/*.gz")):
             (Path(tmp) / gz.name[:-3]).write_bytes(gz_read(gz))
+        for cell, (rf, jf) in local.items():
+            (Path(tmp) / rf.name).write_bytes(rf.read_bytes()); (Path(tmp) / jf.name).write_bytes(jf.read_bytes())
         man = json.loads((out_root / "tools/true_parity/campaign/data/data_sha256.json").read_text())["sha256"]
         for cell, h in man.items():   # the committed synthetic data are the bytes both engines read
             f = out_root / f"tools/true_parity/campaign/data/{cell}.csv.gz"
             if not f.exists() or sha_bytes(gz_read(f)) != h: print(f"SYNTHETIC DATA DRIFT {cell}"); bad += 1
             rf = Path(tmp) / f"{cell}_R.json"
             if rf.exists() and json.loads(rf.read_text()).get("data_sha256") != h: print(f"DATA PIN DRIFT {cell}: the receipt's data sha256 is not the committed file's"); bad += 1
-        res = process(tmp, out_root, False)
+        res = process(tmp, out_root, False, quiet=True)
         want = {str(path.relative_to(out_root)) for _, _, _, _, _, path in res}
         have = {str(p.relative_to(out_root)) for p in recdir.glob("*/campaign/*.json")}
+        off_paths = {}
+        for cell, sid in OFF_REPO.items():
+            if cell in local: continue
+            fam = next(r[1] for r in ROWS if r[2] == cell)
+            off_paths[sid] = (fam, recdir / fam / CAMPAIGN_DIR / f"{slug(sid)}.json")
+        have -= {str(pp.relative_to(out_root)) for _, pp in off_paths.values()}
         if want != have: print(f"RECEIPT SET DRIFT rebuilt-only {sorted(want - have)} committed-only {sorted(have - want)}"); bad += 1
         maps = {}
         def row_of(fam, sid):
@@ -704,9 +775,19 @@ def check(out_root):
                     print(f"DERIVATION DRIFT {k} in {path.name}"); bad += 1
             row_old = row_of(fam, sid); row_new = norm(row_for(sid, clause, rc_new, binds, rel))
             if row_old != row_new: print(f"CASE-MAP ROW DRIFT {sid}"); bad += 1
+        for sid, (fam, path) in off_paths.items():
+            print(f"NOTE {sid}: {NOTE_OFF_REPO}. Not re-derived here; checking the committed summary receipt for internal consistency only.")
+            summary_only.append(sid)
+            if not path.exists(): print(f"MISSING {path.relative_to(out_root)}"); bad += 1; continue
+            rc_old = json.loads(path.read_text())
+            probs, binds = summary_problems(rc_old, sid, rc_old.get("clause"))
+            for q in probs: print(f"SUMMARY INCONSISTENT {sid}: {q}"); bad += 1
+            if row_of(fam, sid) != norm(row_for(sid, rc_old.get("clause"), rc_old, binds, str(path.relative_to(out_root)))):
+                print(f"CASE-MAP ROW DRIFT {sid}"); bad += 1
         for sid, d in DISPOSITIONS.items():
             if row_of("data", sid) != norm(disposition_row(sid, d)): print(f"CASE-MAP ROW DRIFT {sid}"); bad += 1
-    print("CAMPAIGN_RECEIPTS_OK" if not bad else f"CAMPAIGN_RECEIPTS_BAD {bad}")
+    tail = f" ({len(summary_only)} row checked for internal consistency only, not re-derived: {', '.join(summary_only)})" if summary_only else ""
+    print(("CAMPAIGN_RECEIPTS_OK" + tail) if not bad else f"CAMPAIGN_RECEIPTS_BAD {bad}" + tail)
     return 1 if bad else 0
 
 

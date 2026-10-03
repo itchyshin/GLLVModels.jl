@@ -491,6 +491,8 @@ confirmation; every receipt says so in `tolerance_status`.
   blocks, and each campaign case-map row, from the committed raw files, and fails on any difference (a hand-edited
   value, tolerance or flag fails). The seven synthetic data files are committed (gzip) under
   `tools/true_parity/campaign/data/` with their sha256, and `--check` verifies the receipts' data pin against them.
+  One row is the exception: the urbanisation matrix is unpublished, so `data/RD-URBANISATION-BINOMIAL` has no committed
+  raw outputs (see **Urbanisation** below), and `--check` says so on every run instead of re-deriving it.
 - **Pass rule.** Both engines converged (R convergence 0 with a positive-definite Hessian; Julia `converged`
   true) and every listed quantity inside its tolerance, on the same data bytes, with the ten named gllvmTMB entry
   points that `run_R.R` calls (`gllvmTMB`, `gllvmTMBcontrol`, `nbinom2`, `ordinal_logit`, `isdm_sources`, `extract_Sigma`,
@@ -536,5 +538,14 @@ confirmation; every receipt says so in `tolerance_status`.
   signed on them. Their classification stays `required_core` (the plan proposes `outside_boundary`, but a classification
   change is the maintainer's to sign), so on the assembled fold C1 still requires them.
 - **Licence.** GPL datasets (MASS, gllvm) are loaded by name at run time by `gen_data.R`; the repository tracks
-  that loader, each dataset's sha256 (in the receipt) and the receipts, never the tables. The urbanisation
-  matrix is the maintainer's own file and is not tracked either.
+  that loader, each dataset's sha256 (in the receipt) and the receipts, never the tables. The GPL datasets' raw R and
+  Julia outputs are committed, as they are for the other public data.
+- **Urbanisation.** The urbanisation matrix is the maintainer's own unpublished data, and its redistribution status is
+  unconfirmed. It is not tracked, and neither are the per-observation raw outputs of its row (linear predictors,
+  loadings). `receipts/data/campaign/RD-URBANISATION-BINOMIAL.json` keeps only summary values (logLik, the fixed effects,
+  the maximum differences, wall times, the data file's sha256 and the sha256 of the two uncommitted raw files).
+  `write_receipts.py --check` prints "raw outputs kept off the public repo; re-derive locally with URBMAP_ROOT set" for
+  this row and checks only the receipt's internal consistency and its case-map row; with the retained raw files,
+  `--check --local-raw DIR` rebuilds it in full. `gen_data.R urban` requires the `URBMAP_ROOT` environment variable and
+  stops with a message when it is unset: it has no default path. The row's raw outputs were first pushed in an earlier
+  commit of this branch; they are removed from the branch tip but remain in the branch history on GitHub.
