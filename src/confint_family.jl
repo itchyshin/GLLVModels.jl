@@ -88,14 +88,108 @@ function _ci_mask(mask, Y::AbstractMatrix)
     return M
 end
 
+# ---------------------------------------------------------------------------
+# Offsets (known additive term in η = β + offset + Λz, e.g. log-exposure).
+#
+# A fit object does not store the offset it was made with (the AGHQ Poisson / binomial
+# fits keep it in `fit.integration`, and the Gaussian record route in
+# `fit.integration.data`; no other fit type has a field for it, and adding one to the
+# ~25 fit structs would touch every constructor). `confint` rebuilds the objective from
+# the data, exactly as it does for `mask`, `N` and `X`, so the same `offset` the fitter
+# received must be passed again: `confint(fit, Y; offset = O)`.
+#
+# That would still leave one silent failure, a fit made with an offset and a `confint`
+# call that omits it (or passes another). `_check_ci_objective` closes it: the rebuilt
+# objective must reproduce `fit.loglik` at the fitted values, which it does only for the
+# objective the fit was made with. Otherwise it refuses.
+# ---------------------------------------------------------------------------
+
+# Fit types whose fitter takes an `offset` keyword (verified per fitter). For any other
+# type an offset was never part of the fit, so a non-`nothing` offset is refused rather
+# than ignored.
+const _OffsetCIFit = Union{PoissonFit, BinomialFit, NBFit, NB1Fit, GP1Fit, BetaFit, GammaFit,
+                           ExponentialFit, TruncatedPoissonFit, TruncatedNegBin2Fit,
+                           TruncatedNegBin2PerTraitFit, NBGroupedFit, NB1GroupedFit,
+                           BetaGroupedFit, GammaGroupedFit, TweedieGroupedFit,
+                           TweediePerTraitPowerFit, DeltaLogNormalFit, DeltaGammaFit,
+                           HurdlePoissonFit, HurdleNBFit, ZIPFit, ZINBFit, ZIBFit}
+
+# Offset column for unit `s` in a simulation (0 when there is no offset).
+_ci_offcol(::Nothing, s::Integer) = 0.0
+_ci_offcol(O::AbstractMatrix, s::Integer) = view(O, :, s)
+
+# The same shapes `fit_gllvm` stretches to p×n: a real scalar, a p×n matrix, a 1×n or p×1
+# matrix, a length-p vector (one per trait). A bare vector when p == n is ambiguous (one
+# per trait or one per unit) and refused. Non-finite values are refused at observed cells.
+function _ci_offset(offset, Y::AbstractMatrix, mask)
+    offset === nothing && return nothing
+    p, n = size(Y)
+    O = nothing
+    if offset isa Real
+        isfinite(offset) || throw(ArgumentError(
+            "confint: a scalar offset must be finite; got $offset"))
+        O = fill(float(offset), p, n)
+    elseif offset isa AbstractMatrix
+        r, c = size(offset)
+        if (r == p || r == 1) && (c == n || c == 1)
+            O = Matrix{Float64}(r == p && c == n ? offset : repeat(offset, r == p ? 1 : p, c == n ? 1 : n))
+        end
+    elseif offset isa AbstractVector
+        if p == n && length(offset) == p
+            throw(ArgumentError(
+                "confint: a bare length-$p offset vector is ambiguous when the number of traits " *
+                "equals the number of units (p = n = $p). Pass reshape(o, 1, $n) for one offset " *
+                "per unit, or reshape(o, $p, 1) for one per trait."))
+        elseif length(offset) == p
+            O = repeat(Vector{Float64}(offset), 1, n)
+        end
+    end
+    O === nothing && throw(ArgumentError(
+        "confint: offset must be the offset given to the fitter: a real scalar, a $(p)×$(n) " *
+        "matrix (traits × units, the layout of Y), a $(p)×1 or 1×$(n) matrix, or a length-$(p) " *
+        "vector (one per trait); got " *
+        (offset isa AbstractArray ? "an array of size $(size(offset))" : "a value of type $(typeof(offset))") * "."))
+    @inbounds for s in 1:n, t in 1:p
+        (mask === nothing || mask[t, s]) && !isfinite(O[t, s]) && throw(ArgumentError(
+            "confint: offset must be finite at every observed cell; got $(O[t, s]) at trait $t, unit $s."))
+    end
+    return O
+end
+
+# The objective `ad` rebuilds must be the fit's own. At the fitted values it reproduces the
+# fit's log-likelihood only if the same data and the same offset went in; a fit made with
+# an offset, checked without it (or with another), is off by tens of log-likelihood units
+# (Poisson, p = 5, n = 80, offset 0.5 * randn: 45 to 130 over 30 seeds), far beyond the
+# optimiser and mode-search noise this tolerance allows for. VA objectives and AGHQ fits
+# are not compared here: their log-likelihood is another integral, and the AGHQ route
+# already checks its stored input digest.
+const _CI_OBJECTIVE_RTOL = 1e-5
+
+function _check_ci_objective(fit, ad::_FamilyCI, offset, objective::Symbol)
+    objective === :va && return nothing
+    fit isa _OffsetCIFit || return nothing
+    hasproperty(fit, :loglik) || return nothing
+    ll = fit.loglik
+    isfinite(ll) || return nothing
+    rebuilt = -ad.nll(ad.θ)
+    abs(rebuilt - ll) <= _CI_OBJECTIVE_RTOL * max(1.0, abs(ll)) && return nothing
+    given = offset === nothing ? "no offset" : "the offset you passed"
+    throw(ArgumentError(
+        "confint: the objective rebuilt from Y with $given gives log-likelihood $(round(rebuilt; digits = 4)) " *
+        "at the fitted values, but the fit reports $(round(ll; digits = 4)). Intervals computed on that " *
+        "objective would belong to a different model. If the fit was made with an `offset`, pass the same " *
+        "one: confint(fit, Y; offset = O); `N`, `X` and `mask` must also be the ones used in the fit."))
+end
+
 # --- Poisson ---------------------------------------------------------------
 function _family_ci(fit::PoissonFit, Y::AbstractMatrix;
+                    offset = nothing,
                     mask = nothing,
                     objective::Symbol = :fit,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
     if _is_poisson_aghq(fit)
         objective in (:fit,:aghq) || throw(ArgumentError("AGHQ inference must use objective=:fit; Laplace/VA would change the estimator"))
-        q,_=_poisson_aghq_problem(fit,Y;mask=mask,require_identity=true)
+        q,_=_poisson_aghq_problem(fit,Y;mask=mask,offset=offset,require_identity=true)
         i=fit.integration;p,K=size(fit.Λ);n=size(Y,2)
         theta=copy(fit.theta_packed);nll=t->q.objective(t,i.caches)
         draw=rng->_poisson_aghq_simulate(fit,n;rng=rng)
@@ -123,17 +217,17 @@ function _family_ci(fit::PoissonFit, Y::AbstractMatrix;
         v = try
             objective === :va ?
                 -poisson_marginal_loglik_va(Y, Λ, β; maxiter = newton_maxiter, tol = newton_tol) :
-                -poisson_marginal_loglik_laplace(Y, Λ, β, link; mask = M, hessian = fit.hessian,
+                -poisson_marginal_loglik_laplace(Y, Λ, β, link; mask = M, offset = offset, hessian = fit.hessian,
                                                  maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
         end
         return isfinite(v) ? v : 1e12
     end
-    simulate = rng -> _glm_simulate_counts(rng, fit.β, fit.Λ, link, n,
+    simulate = rng -> _glm_simulate_counts(rng, fit.β, fit.Λ, link, n, offset,
                                            (r, μ) -> Poisson(max(μ, 1e-12)))
     refit = function (Yb)
-        fb = try fit_poisson_gllvm(Yb; K = K, link = link, mask = M, hessian = fit.hessian) catch; return nothing end
+        fb = try fit_poisson_gllvm(Yb; K = K, link = link, mask = M, offset = offset, hessian = fit.hessian) catch; return nothing end
         return (θ = vcat(fb.β, pack_lambda(fb.Λ)), converged = fb.converged, loglik = fb.loglik)
     end
     return _FamilyCI(θ, nll, _glm_lin_names(p, K), fill(:linear, length(θ)), simulate, refit)
@@ -153,6 +247,7 @@ function _binomial_ridge_ci_guard(fit::BinomialFit)
     return nothing
 end
 function _family_ci(fit::BinomialFit, Y::AbstractMatrix;
+                    offset = nothing,
                     N::Union{Nothing, AbstractMatrix} = nothing,
                     mask = nothing,
                     objective::Symbol = :fit,
@@ -160,7 +255,7 @@ function _family_ci(fit::BinomialFit, Y::AbstractMatrix;
     _binomial_ridge_ci_guard(fit)
     if _is_binomial_aghq(fit)
         objective in (:fit,:aghq) || throw(ArgumentError("AGHQ inference must use objective=:fit; Laplace/VA would change the estimator"))
-        q,_=_binomial_aghq_problem(fit,Y;N=N,mask=mask,require_identity=true)
+        q,_=_binomial_aghq_problem(fit,Y;N=N,mask=mask,offset=offset,require_identity=true)
         i=fit.integration;p,K=size(fit.Λ);n=size(Y,2)
         theta=copy(fit.theta_packed);nll=t->q.objective(t,i.caches)
         draw=rng->_binomial_aghq_simulate(fit,n;rng=rng)
@@ -189,7 +284,7 @@ function _family_ci(fit::BinomialFit, Y::AbstractMatrix;
         v = try
             objective === :va ?
                 -binomial_marginal_loglik_va(Y, Nm, Λ, β; maxiter = newton_maxiter, tol = newton_tol) :
-                -binomial_marginal_loglik_laplace(Y, Nm, Λ, β, link; mask = M, hessian = fit.hessian,
+                -binomial_marginal_loglik_laplace(Y, Nm, Λ, β, link; mask = M, offset = offset, hessian = fit.hessian,
                                                   maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
@@ -199,7 +294,7 @@ function _family_ci(fit::BinomialFit, Y::AbstractMatrix;
     simulate = function (rng)
         Yb = Matrix{Int}(undef, p, n)
         @inbounds for s in 1:n
-            η = fit.β .+ fit.Λ * randn(rng, K)
+            η = fit.β .+ fit.Λ * randn(rng, K) .+ _ci_offcol(offset, s)
             for t in 1:p
                 μ = clamp(linkinv(link, _clamp_eta(η[t])), 1e-12, 1 - 1e-12)
                 Yb[t, s] = rand(rng, Binomial(Nm[t, s], μ))
@@ -208,7 +303,7 @@ function _family_ci(fit::BinomialFit, Y::AbstractMatrix;
         return Yb
     end
     refit = function (Yb)
-        fb = try fit_binomial_gllvm(Yb; K = K, link = link, N = Nm, mask = M, hessian = fit.hessian) catch; return nothing end
+        fb = try fit_binomial_gllvm(Yb; K = K, link = link, N = Nm, mask = M, offset = offset, hessian = fit.hessian) catch; return nothing end
         return (θ = vcat(fb.β, pack_lambda(fb.Λ)), converged = fb.converged, loglik = fb.loglik)
     end
     return _FamilyCI(θ, nll, _glm_lin_names(p, K), fill(:linear, length(θ)), simulate, refit)
@@ -225,6 +320,7 @@ _nb_r_upper_boundary(θ::AbstractVector, nr::Integer) =
     [i > length(θ) - nr && exp(θ[i]) > 1e6 for i in eachindex(θ)]
 
 function _family_ci(fit::NBFit, Y::AbstractMatrix;
+                    offset = nothing,
                     mask = nothing,
                     objective::Symbol = :laplace,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
@@ -240,17 +336,17 @@ function _family_ci(fit::NBFit, Y::AbstractMatrix;
         v = try
             objective === :va ?
                 -nb_marginal_loglik_va(Y, Λ, β, r; maxiter = newton_maxiter, tol = newton_tol) :
-                -nb_marginal_loglik_laplace(Y, Λ, β, r; link = link, mask = M, hessian = fit.hessian,
+                -nb_marginal_loglik_laplace(Y, Λ, β, r; link = link, mask = M, offset = offset, hessian = fit.hessian,
                                             maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
         end
         return isfinite(v) ? v : 1e12
     end
-    simulate = rng -> _glm_simulate_counts(rng, fit.β, fit.Λ, link, n,
+    simulate = rng -> _glm_simulate_counts(rng, fit.β, fit.Λ, link, n, offset,
                                            (rg, μ) -> (m = max(μ, 1e-12); NegativeBinomial(fit.r, fit.r / (fit.r + m))))
     refit = function (Yb)
-        fb = try fit_nb_gllvm(Yb; K = K, link = link, mask = M, hessian = fit.hessian) catch; return nothing end
+        fb = try fit_nb_gllvm(Yb; K = K, link = link, mask = M, offset = offset, hessian = fit.hessian) catch; return nothing end
         θb = vcat(fb.β, pack_lambda(fb.Λ), log(fb.r))
         return (θ = θb, converged = fb.converged, loglik = fb.loglik,
                 upper_boundary = _nb_r_upper_boundary(θb, 1))
@@ -262,6 +358,7 @@ end
 
 # --- Negative binomial type-1 (NB1, linear variance Var = μ(1+φ)) -----------
 function _family_ci(fit::NB1Fit, Y::AbstractMatrix;
+                    offset = nothing,
                     mask = nothing,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
     p, K = size(fit.Λ); n = size(Y, 2); rr = rr_theta_len(p, K); link = fit.link
@@ -270,17 +367,17 @@ function _family_ci(fit::NB1Fit, Y::AbstractMatrix;
     nll = function (θv)
         β = θv[1:p]; Λ = unpack_lambda(θv[(p + 1):(p + rr)], p, K); φ = exp(θv[p + rr + 1])
         v = try
-            -nb1_marginal_loglik_laplace(Y, Λ, β, φ; link = link, mask = M, hessian = fit.hessian,
+            -nb1_marginal_loglik_laplace(Y, Λ, β, φ; link = link, mask = M, offset = offset, hessian = fit.hessian,
                                          maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
         end
         return isfinite(v) ? v : 1e12
     end
-    simulate = rng -> _glm_simulate_counts(rng, fit.β, fit.Λ, link, n,
+    simulate = rng -> _glm_simulate_counts(rng, fit.β, fit.Λ, link, n, offset,
                                            (rg, μ) -> (m = max(μ, 1e-12); NegativeBinomial(m / fit.φ, 1 / (1 + fit.φ))))
     refit = function (Yb)
-        fb = try fit_nb1_gllvm(Yb; K = K, link = link, mask = M, hessian = fit.hessian) catch; return nothing end
+        fb = try fit_nb1_gllvm(Yb; K = K, link = link, mask = M, offset = offset, hessian = fit.hessian) catch; return nothing end
         return (θ = vcat(fb.β, pack_lambda(fb.Λ), log(fb.φ)), converged = fb.converged,
                 loglik = fb.loglik)
     end
@@ -291,6 +388,7 @@ end
 
 # --- Generalized Poisson type-1 (GP-1, Var = μ(1+α μ)², signed dispersion α) ----
 function _family_ci(fit::GP1Fit, Y::AbstractMatrix;
+                    offset = nothing,
                     mask = nothing,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
     p, K = size(fit.Λ); n = size(Y, 2); rr = rr_theta_len(p, K); link = fit.link
@@ -299,7 +397,7 @@ function _family_ci(fit::GP1Fit, Y::AbstractMatrix;
     nll = function (θv)
         β = θv[1:p]; Λ = unpack_lambda(θv[(p + 1):(p + rr)], p, K); α = θv[p + rr + 1]
         v = try
-            -gp1_marginal_loglik_laplace(Y, Λ, β, α; link = link, mask = M, hessian = fit.hessian,
+            -gp1_marginal_loglik_laplace(Y, Λ, β, α; link = link, mask = M, offset = offset, hessian = fit.hessian,
                                          maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
@@ -310,7 +408,7 @@ function _family_ci(fit::GP1Fit, Y::AbstractMatrix;
         fam = GeneralizedPoisson1(fit.α)
         Yb = Matrix{Int}(undef, p, n)
         @inbounds for s in 1:n
-            η = fit.β .+ fit.Λ * randn(rng, K)
+            η = fit.β .+ fit.Λ * randn(rng, K) .+ _ci_offcol(offset, s)
             for t in 1:p
                 Yb[t, s] = _rand_gp1(rng, fam, linkinv(link, _clamp_eta(η[t])))
             end
@@ -318,7 +416,7 @@ function _family_ci(fit::GP1Fit, Y::AbstractMatrix;
         return Yb
     end
     refit = function (Yb)
-        fb = try fit_gp1_gllvm(Yb; K = K, link = link, mask = M, hessian = fit.hessian) catch; return nothing end
+        fb = try fit_gp1_gllvm(Yb; K = K, link = link, mask = M, offset = offset, hessian = fit.hessian) catch; return nothing end
         return (θ = vcat(fb.β, pack_lambda(fb.Λ), fb.α), converged = fb.converged,
                 loglik = fb.loglik)
     end
@@ -329,6 +427,7 @@ end
 
 # --- Beta ------------------------------------------------------------------
 function _family_ci(fit::BetaFit, Y::AbstractMatrix;
+                    offset = nothing,
                     mask = nothing,
                     objective::Symbol = :laplace,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
@@ -344,7 +443,7 @@ function _family_ci(fit::BetaFit, Y::AbstractMatrix;
         v = try
             objective === :va ?
                 -beta_marginal_loglik_va(Y, Λ, β, φ; maxiter = newton_maxiter, tol = newton_tol) :
-                -beta_marginal_loglik_laplace(Y, Λ, β, φ; link = link, mask = M, hessian = fit.hessian,
+                -beta_marginal_loglik_laplace(Y, Λ, β, φ; link = link, mask = M, offset = offset, hessian = fit.hessian,
                                               maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
@@ -354,7 +453,7 @@ function _family_ci(fit::BetaFit, Y::AbstractMatrix;
     simulate = function (rng)
         Yb = Matrix{Float64}(undef, p, n); φ = fit.φ
         @inbounds for s in 1:n
-            η = fit.β .+ fit.Λ * randn(rng, K)
+            η = fit.β .+ fit.Λ * randn(rng, K) .+ _ci_offcol(offset, s)
             for t in 1:p
                 μ = clamp(linkinv(link, _clamp_eta(η[t])), 1e-6, 1 - 1e-6)
                 Yb[t, s] = clamp(rand(rng, Beta(μ * φ, (1 - μ) * φ)), 1e-6, 1 - 1e-6)
@@ -363,7 +462,7 @@ function _family_ci(fit::BetaFit, Y::AbstractMatrix;
         return Yb
     end
     refit = function (Yb)
-        fb = try fit_beta_gllvm(Yb; K = K, link = link, mask = M, hessian = fit.hessian) catch; return nothing end
+        fb = try fit_beta_gllvm(Yb; K = K, link = link, mask = M, offset = offset, hessian = fit.hessian) catch; return nothing end
         return (θ = vcat(fb.β, pack_lambda(fb.Λ), log(fb.φ)), converged = fb.converged,
                 loglik = fb.loglik)
     end
@@ -374,6 +473,7 @@ end
 
 # --- Gamma -----------------------------------------------------------------
 function _family_ci(fit::GammaFit, Y::AbstractMatrix;
+                    offset = nothing,
                     mask = nothing,
                     objective::Symbol = :laplace,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
@@ -389,7 +489,7 @@ function _family_ci(fit::GammaFit, Y::AbstractMatrix;
         v = try
             objective === :va ?
                 -gamma_marginal_loglik_va(Y, Λ, β, α; maxiter = newton_maxiter, tol = newton_tol) :
-                -gamma_marginal_loglik_laplace(Y, Λ, β, α; link = link, mask = M, hessian = fit.hessian,
+                -gamma_marginal_loglik_laplace(Y, Λ, β, α; link = link, mask = M, offset = offset, hessian = fit.hessian,
                                                maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
@@ -399,7 +499,7 @@ function _family_ci(fit::GammaFit, Y::AbstractMatrix;
     simulate = function (rng)
         Yb = Matrix{Float64}(undef, p, n); α = fit.α
         @inbounds for s in 1:n
-            η = fit.β .+ fit.Λ * randn(rng, K)
+            η = fit.β .+ fit.Λ * randn(rng, K) .+ _ci_offcol(offset, s)
             for t in 1:p
                 μ = max(linkinv(link, _clamp_eta(η[t])), 1e-12)
                 Yb[t, s] = rand(rng, Gamma(α, μ / α))
@@ -408,7 +508,7 @@ function _family_ci(fit::GammaFit, Y::AbstractMatrix;
         return Yb
     end
     refit = function (Yb)
-        fb = try fit_gamma_gllvm(Yb; K = K, link = link, mask = M, hessian = fit.hessian) catch; return nothing end
+        fb = try fit_gamma_gllvm(Yb; K = K, link = link, mask = M, offset = offset, hessian = fit.hessian) catch; return nothing end
         return (θ = vcat(fb.β, pack_lambda(fb.Λ), log(fb.α)), converged = fb.converged,
                 loglik = fb.loglik)
     end
@@ -517,6 +617,7 @@ end
 # truncated_poisson_marginal_loglik_laplace. Bridge ci_method guard stays
 # until after foreign #357.
 function _family_ci(fit::TruncatedPoissonFit, Y::AbstractMatrix;
+                    offset = nothing,
                     mask = nothing,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
     p, K = size(fit.Λ); n = size(Y, 2); rr = rr_theta_len(p, K); link = fit.link
@@ -527,7 +628,7 @@ function _family_ci(fit::TruncatedPoissonFit, Y::AbstractMatrix;
         β = θv[1:p]; Λ = unpack_lambda(θv[(p + 1):(p + rr)], p, K)
         v = try
             -truncated_poisson_marginal_loglik_laplace(Yi, Λ, β, link;
-                mask = M, maxiter = newton_maxiter, tol = newton_tol)
+                mask = M, offset = offset, maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
         end
@@ -536,7 +637,7 @@ function _family_ci(fit::TruncatedPoissonFit, Y::AbstractMatrix;
     simulate = function (rng)
         Yb = Matrix{Int}(undef, p, n)
         @inbounds for s in 1:n
-            η = fit.β .+ fit.Λ * randn(rng, K)
+            η = fit.β .+ fit.Λ * randn(rng, K) .+ _ci_offcol(offset, s)
             for t in 1:p
                 μ = max(linkinv(link, _clamp_eta(η[t])), 1e-12)
                 # Reject-sample zeros (support y ≥ 1).
@@ -550,7 +651,7 @@ function _family_ci(fit::TruncatedPoissonFit, Y::AbstractMatrix;
         return Yb
     end
     refit = function (Yb)
-        fb = try fit_truncated_poisson_gllvm(Yb; K = K, link = link, mask = M) catch; return nothing end
+        fb = try fit_truncated_poisson_gllvm(Yb; K = K, link = link, mask = M, offset = offset) catch; return nothing end
         return (θ = vcat(fb.β, pack_lambda(fb.Λ)), converged = fb.converged, loglik = fb.loglik)
     end
     return _FamilyCI(θ, nll, _glm_lin_names(p, K), fill(:linear, length(θ)), simulate, refit)
@@ -563,6 +664,7 @@ end
 # all-false): a shared `r` at the Poisson limit is not conditioned out of the
 # joint Wald Hessian. Left unfixed here; tracked in #499.
 function _family_ci(fit::TruncatedNegBin2Fit, Y::AbstractMatrix;
+                    offset = nothing,
                     mask = nothing,
                     hessian::Symbol = :observed,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
@@ -576,7 +678,7 @@ function _family_ci(fit::TruncatedNegBin2Fit, Y::AbstractMatrix;
         r = exp(θv[p + rr + 1])
         v = try
             -truncated_nbinom2_marginal_loglik_laplace(Yi, Λ, β, r;
-                link = link, mask = M, hessian = hessian,
+                link = link, mask = M, offset = offset, hessian = hessian,
                 maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
@@ -586,7 +688,7 @@ function _family_ci(fit::TruncatedNegBin2Fit, Y::AbstractMatrix;
     simulate = function (rng)
         Yb = Matrix{Int}(undef, p, n)
         @inbounds for s in 1:n
-            η = fit.β .+ fit.Λ * randn(rng, K)
+            η = fit.β .+ fit.Λ * randn(rng, K) .+ _ci_offcol(offset, s)
             for t in 1:p
                 μ = max(linkinv(link, _clamp_eta(η[t])), 1e-12)
                 Yb[t, s] = _rand_ztnb(rng, fit.r, μ)
@@ -596,7 +698,7 @@ function _family_ci(fit::TruncatedNegBin2Fit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try
-            fit_truncated_nbinom2_gllvm(Yb; K = K, link = link, mask = M, hessian = hessian)
+            fit_truncated_nbinom2_gllvm(Yb; K = K, link = link, mask = M, offset = offset, hessian = hessian)
         catch
             return nothing
         end
@@ -616,6 +718,7 @@ end
 # length-p vector on the fit — no group-index indirection is needed (twin
 # `log_phi_truncnb2[t]`, matching gllvmTMB's default per-trait dispersion).
 function _family_ci(fit::TruncatedNegBin2PerTraitFit, Y::AbstractMatrix;
+                    offset = nothing,
                     mask = nothing,
                     hessian::Symbol = :observed,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
@@ -629,7 +732,7 @@ function _family_ci(fit::TruncatedNegBin2PerTraitFit, Y::AbstractMatrix;
         rvec = exp.(θv[(p + rr + 1):(p + rr + p)])
         v = try
             -truncated_nbinom2_pertrait_marginal_loglik_laplace(Yi, Λ, β, rvec;
-                link = link, mask = M, hessian = hessian,
+                link = link, mask = M, offset = offset, hessian = hessian,
                 maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
@@ -639,7 +742,7 @@ function _family_ci(fit::TruncatedNegBin2PerTraitFit, Y::AbstractMatrix;
     simulate = function (rng)
         Yb = Matrix{Int}(undef, p, n)
         @inbounds for s in 1:n
-            η = fit.β .+ fit.Λ * randn(rng, K)
+            η = fit.β .+ fit.Λ * randn(rng, K) .+ _ci_offcol(offset, s)
             for t in 1:p
                 μ = max(linkinv(link, _clamp_eta(η[t])), 1e-12)
                 Yb[t, s] = _rand_ztnb(rng, fit.r[t], μ)
@@ -649,7 +752,7 @@ function _family_ci(fit::TruncatedNegBin2PerTraitFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try
-            fit_truncated_nbinom2_gllvm_pertrait(Yb; K = K, link = link, mask = M, hessian = hessian)
+            fit_truncated_nbinom2_gllvm_pertrait(Yb; K = K, link = link, mask = M, offset = offset, hessian = hessian)
         catch
             return nothing
         end
@@ -673,6 +776,7 @@ _grouped_dispersion_names(p::Integer, K::Integer, parameter::AbstractString, G::
     vcat(_glm_lin_names(p, K), ["$(parameter)[$g]" for g in 1:G])
 
 function _family_ci(fit::NBGroupedFit, Y::AbstractMatrix;
+                    offset = nothing,
                     mask = nothing,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
     p, K = size(fit.Λ); n = size(Y, 2); rr = rr_theta_len(p, K)
@@ -687,7 +791,7 @@ function _family_ci(fit::NBGroupedFit, Y::AbstractMatrix;
         rvec = [rg[group[t]] for t in 1:p]
         v = try
             -nb_grouped_marginal_loglik_laplace(Yi, Λ, β, rvec; link = link,
-                                                mask = M, hessian = fit.hessian,
+                                                mask = M, offset = offset, hessian = fit.hessian,
                                                 maxiter = newton_maxiter,
                                                 tol = newton_tol)
         catch
@@ -698,7 +802,7 @@ function _family_ci(fit::NBGroupedFit, Y::AbstractMatrix;
     simulate = function (rng)
         Yb = Matrix{Int}(undef, p, n)
         @inbounds for s in 1:n
-            η = fit.β .+ fit.Λ * randn(rng, K)
+            η = fit.β .+ fit.Λ * randn(rng, K) .+ _ci_offcol(offset, s)
             for t in 1:p
                 μ = max(linkinv(link, _clamp_eta(η[t])), 1e-12)
                 r = fit.r_group[group[t]]
@@ -708,7 +812,7 @@ function _family_ci(fit::NBGroupedFit, Y::AbstractMatrix;
         return Yb
     end
     refit = function (Yb)
-        fb = try fit_nb_gllvm_grouped(Yb; K = K, group = group, link = link, mask = M, hessian = fit.hessian) catch; return nothing end
+        fb = try fit_nb_gllvm_grouped(Yb; K = K, group = group, link = link, mask = M, offset = offset, hessian = fit.hessian) catch; return nothing end
         θb = vcat(fb.β, pack_lambda(fb.Λ), log.(fb.r_group))
         return (θ = θb, converged = fb.converged, loglik = fb.loglik,
                 upper_boundary = _nb_r_upper_boundary(θb, length(fb.r_group)))
@@ -720,6 +824,7 @@ function _family_ci(fit::NBGroupedFit, Y::AbstractMatrix;
 end
 
 function _family_ci(fit::NB1GroupedFit, Y::AbstractMatrix;
+                    offset = nothing,
                     mask = nothing,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
     p, K = size(fit.Λ); n = size(Y, 2); rr = rr_theta_len(p, K)
@@ -734,7 +839,7 @@ function _family_ci(fit::NB1GroupedFit, Y::AbstractMatrix;
         φvec = [φg[group[t]] for t in 1:p]
         v = try
             -nb1_grouped_marginal_loglik_laplace(Yi, Λ, β, φvec; link = link,
-                                                 mask = M, hessian = fit.hessian,
+                                                 mask = M, offset = offset, hessian = fit.hessian,
                                                  maxiter = newton_maxiter,
                                                  tol = newton_tol)
         catch
@@ -745,7 +850,7 @@ function _family_ci(fit::NB1GroupedFit, Y::AbstractMatrix;
     simulate = function (rng)
         Yb = Matrix{Int}(undef, p, n)
         @inbounds for s in 1:n
-            η = fit.β .+ fit.Λ * randn(rng, K)
+            η = fit.β .+ fit.Λ * randn(rng, K) .+ _ci_offcol(offset, s)
             for t in 1:p
                 μ = max(linkinv(link, _clamp_eta(η[t])), 1e-12)
                 φ = fit.φ[group[t]]
@@ -755,7 +860,7 @@ function _family_ci(fit::NB1GroupedFit, Y::AbstractMatrix;
         return Yb
     end
     refit = function (Yb)
-        fb = try fit_nb1_gllvm_grouped(Yb; K = K, group = group, link = link, mask = M, hessian = fit.hessian) catch; return nothing end
+        fb = try fit_nb1_gllvm_grouped(Yb; K = K, group = group, link = link, mask = M, offset = offset, hessian = fit.hessian) catch; return nothing end
         return (θ = vcat(fb.β, pack_lambda(fb.Λ), log.(fb.φ)), converged = fb.converged,
                 loglik = fb.loglik)
     end
@@ -766,6 +871,7 @@ function _family_ci(fit::NB1GroupedFit, Y::AbstractMatrix;
 end
 
 function _family_ci(fit::BetaGroupedFit, Y::AbstractMatrix;
+                    offset = nothing,
                     mask = nothing,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
     p, K = size(fit.Λ); n = size(Y, 2); rr = rr_theta_len(p, K)
@@ -780,7 +886,7 @@ function _family_ci(fit::BetaGroupedFit, Y::AbstractMatrix;
         φvec = [φg[group[t]] for t in 1:p]
         v = try
             -beta_grouped_marginal_loglik_laplace(Yf, Λ, β, φvec; link = link,
-                                                  mask = M, hessian = fit.hessian,
+                                                  mask = M, offset = offset, hessian = fit.hessian,
                                                   maxiter = newton_maxiter,
                                                   tol = newton_tol)
         catch
@@ -791,7 +897,7 @@ function _family_ci(fit::BetaGroupedFit, Y::AbstractMatrix;
     simulate = function (rng)
         Yb = Matrix{Float64}(undef, p, n)
         @inbounds for s in 1:n
-            η = fit.β .+ fit.Λ * randn(rng, K)
+            η = fit.β .+ fit.Λ * randn(rng, K) .+ _ci_offcol(offset, s)
             for t in 1:p
                 μ = clamp(linkinv(link, _clamp_eta(η[t])), 1e-6, 1 - 1e-6)
                 φ = fit.φ[group[t]]
@@ -801,7 +907,7 @@ function _family_ci(fit::BetaGroupedFit, Y::AbstractMatrix;
         return Yb
     end
     refit = function (Yb)
-        fb = try fit_beta_gllvm_grouped(Yb; K = K, group = group, link = link, mask = M, hessian = fit.hessian) catch; return nothing end
+        fb = try fit_beta_gllvm_grouped(Yb; K = K, group = group, link = link, mask = M, offset = offset, hessian = fit.hessian) catch; return nothing end
         return (θ = vcat(fb.β, pack_lambda(fb.Λ), log.(fb.φ)), converged = fb.converged,
                 loglik = fb.loglik)
     end
@@ -1121,6 +1227,7 @@ function _family_ci(fit::BetaBinomialGroupedCovFit, Y::AbstractMatrix;
 end
 
 function _family_ci(fit::GammaGroupedFit, Y::AbstractMatrix;
+                    offset = nothing,
                     mask = nothing,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
     p, K = size(fit.Λ); n = size(Y, 2); rr = rr_theta_len(p, K)
@@ -1135,7 +1242,7 @@ function _family_ci(fit::GammaGroupedFit, Y::AbstractMatrix;
         αvec = [αg[group[t]] for t in 1:p]
         v = try
             -gamma_grouped_marginal_loglik_laplace(Yf, Λ, β, αvec; link = link,
-                                                   mask = M, hessian = fit.hessian,
+                                                   mask = M, offset = offset, hessian = fit.hessian,
                                                    maxiter = newton_maxiter,
                                                    tol = newton_tol)
         catch
@@ -1146,7 +1253,7 @@ function _family_ci(fit::GammaGroupedFit, Y::AbstractMatrix;
     simulate = function (rng)
         Yb = Matrix{Float64}(undef, p, n)
         @inbounds for s in 1:n
-            η = fit.β .+ fit.Λ * randn(rng, K)
+            η = fit.β .+ fit.Λ * randn(rng, K) .+ _ci_offcol(offset, s)
             for t in 1:p
                 μ = max(linkinv(link, _clamp_eta(η[t])), 1e-12)
                 α = fit.α[group[t]]
@@ -1156,7 +1263,7 @@ function _family_ci(fit::GammaGroupedFit, Y::AbstractMatrix;
         return Yb
     end
     refit = function (Yb)
-        fb = try fit_gamma_gllvm_grouped(Yb; K = K, group = group, link = link, mask = M, hessian = fit.hessian) catch; return nothing end
+        fb = try fit_gamma_gllvm_grouped(Yb; K = K, group = group, link = link, mask = M, offset = offset, hessian = fit.hessian) catch; return nothing end
         return (θ = vcat(fb.β, pack_lambda(fb.Λ), log.(fb.α)), converged = fb.converged,
                 loglik = fb.loglik)
     end
@@ -1292,6 +1399,7 @@ end
 # shared power on the fitter is therefore treated as a plug-in (same contract
 # as shared-φ Tweedie). `TweediePerTraitPowerFit` stays out of `_CIFit`.
 function _family_ci(fit::TweedieGroupedFit, Y::AbstractMatrix;
+                    offset = nothing,
                     mask = nothing,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
     p, K = size(fit.Λ); n = size(Y, 2); rr = rr_theta_len(p, K)
@@ -1307,7 +1415,7 @@ function _family_ci(fit::TweedieGroupedFit, Y::AbstractMatrix;
         φvec = [φg[group[t]] for t in 1:p]
         v = try
             -tweedie_grouped_marginal_loglik_laplace(Yf, Λ, β, φvec, pw; link = link,
-                                                     mask = M, hessian = fit.hessian,
+                                                     mask = M, offset = offset, hessian = fit.hessian,
                                                      maxiter = newton_maxiter,
                                                      tol = newton_tol)
         catch
@@ -1318,7 +1426,7 @@ function _family_ci(fit::TweedieGroupedFit, Y::AbstractMatrix;
     simulate = function (rng)
         Yb = Matrix{Float64}(undef, p, n)
         @inbounds for s in 1:n
-            η = fit.β .+ fit.Λ * randn(rng, K)
+            η = fit.β .+ fit.Λ * randn(rng, K) .+ _ci_offcol(offset, s)
             for t in 1:p
                 μ = max(linkinv(link, _clamp_eta(η[t])), 1e-12)
                 Yb[t, s] = _rand_tweedie(rng, μ, fit.φ[group[t]], pw)
@@ -1330,10 +1438,10 @@ function _family_ci(fit::TweedieGroupedFit, Y::AbstractMatrix;
         fb = try
             if fit.power_fixed
                 fit_tweedie_gllvm_grouped(Yb; K = K, group = group, power = pw,
-                                          link = link, mask = M, hessian = fit.hessian)
+                                          link = link, mask = M, offset = offset, hessian = fit.hessian)
             else
                 fit_tweedie_gllvm_grouped(Yb; K = K, group = group, power_group = :shared,
-                                          link = link, mask = M, hessian = fit.hessian)
+                                          link = link, mask = M, offset = offset, hessian = fit.hessian)
             end
         catch
             return nothing
@@ -1353,6 +1461,7 @@ end
 # Same contract as `TweedieGroupedFit`: profile only group φ on the log scale;
 # each `fit.power[t]` is held fixed for Wald / profile / bootstrap.
 function _family_ci(fit::TweediePerTraitPowerFit, Y::AbstractMatrix;
+                    offset = nothing,
                     mask = nothing,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
     p, K = size(fit.Λ); n = size(Y, 2); rr = rr_theta_len(p, K)
@@ -1368,7 +1477,7 @@ function _family_ci(fit::TweediePerTraitPowerFit, Y::AbstractMatrix;
         φvec = [φg[group[t]] for t in 1:p]
         v = try
             -tweedie_grouped_marginal_loglik_laplace(Yf, Λ, β, φvec, pw; link = link,
-                                                     mask = M, hessian = fit.hessian,
+                                                     mask = M, offset = offset, hessian = fit.hessian,
                                                      maxiter = newton_maxiter,
                                                      tol = newton_tol)
         catch
@@ -1379,7 +1488,7 @@ function _family_ci(fit::TweediePerTraitPowerFit, Y::AbstractMatrix;
     simulate = function (rng)
         Yb = Matrix{Float64}(undef, p, n)
         @inbounds for s in 1:n
-            η = fit.β .+ fit.Λ * randn(rng, K)
+            η = fit.β .+ fit.Λ * randn(rng, K) .+ _ci_offcol(offset, s)
             for t in 1:p
                 μ = max(linkinv(link, _clamp_eta(η[t])), 1e-12)
                 Yb[t, s] = _rand_tweedie(rng, μ, fit.φ[group[t]], pw[t])
@@ -1390,7 +1499,7 @@ function _family_ci(fit::TweediePerTraitPowerFit, Y::AbstractMatrix;
     refit = function (Yb)
         fb = try
             fit_tweedie_gllvm_grouped(Yb; K = K, group = group, power_group = :species,
-                                      link = link, mask = M, hessian = fit.hessian)
+                                      link = link, mask = M, offset = offset, hessian = fit.hessian)
         catch
             return nothing
         end
@@ -1406,13 +1515,16 @@ end
 
 # --- Exponential (positive continuous, no dispersion) ----------------------
 function _family_ci(fit::ExponentialFit, Y::AbstractMatrix;
+                    offset = nothing,
+                    mask = nothing,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
     p, K = size(fit.Λ); n = size(Y, 2); rr = rr_theta_len(p, K); link = fit.link
+    M = _ci_mask(mask, Y)
     θ = vcat(fit.β, pack_lambda(fit.Λ))
     nll = function (θv)
         β = θv[1:p]; Λ = unpack_lambda(θv[(p + 1):(p + rr)], p, K)
         v = try
-            -exponential_marginal_loglik_laplace(Y, Λ, β; link = link, hessian = fit.hessian, maxiter = newton_maxiter, tol = newton_tol)
+            -exponential_marginal_loglik_laplace(Y, Λ, β; link = link, mask = M, offset = offset, hessian = fit.hessian, maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
         end
@@ -1421,7 +1533,7 @@ function _family_ci(fit::ExponentialFit, Y::AbstractMatrix;
     simulate = function (rng)
         Yb = Matrix{Float64}(undef, p, n)
         @inbounds for s in 1:n
-            η = fit.β .+ fit.Λ * randn(rng, K)
+            η = fit.β .+ fit.Λ * randn(rng, K) .+ _ci_offcol(offset, s)
             for t in 1:p
                 Yb[t, s] = rand(rng, Exponential(max(linkinv(link, _clamp_eta(η[t])), 1e-12)))
             end
@@ -1429,7 +1541,7 @@ function _family_ci(fit::ExponentialFit, Y::AbstractMatrix;
         return Yb
     end
     refit = function (Yb)
-        fb = try fit_exponential_gllvm(Yb; K = K, link = link, hessian = fit.hessian) catch; return nothing end
+        fb = try fit_exponential_gllvm(Yb; K = K, link = link, mask = M, offset = offset, hessian = fit.hessian) catch; return nothing end
         return (θ = vcat(fb.β, pack_lambda(fb.Λ)), converged = fb.converged,
                 loglik = fb.loglik)
     end
@@ -1543,12 +1655,15 @@ end
 
 # Count-family simulation (Poisson / NB share the loop; `make` builds the
 # per-cell Distributions sampler from (rng, μ)).
+_glm_simulate_counts(rng::AbstractRNG, β::AbstractVector, Λ::AbstractMatrix,
+                     link::Link, n::Integer, make) =
+    _glm_simulate_counts(rng, β, Λ, link, n, nothing, make)
 function _glm_simulate_counts(rng::AbstractRNG, β::AbstractVector, Λ::AbstractMatrix,
-                              link::Link, n::Integer, make)
+                              link::Link, n::Integer, offset, make)
     p, K = size(Λ)
     Yb = Matrix{Int}(undef, p, n)
     @inbounds for s in 1:n
-        η = β .+ Λ * randn(rng, K)
+        η = β .+ Λ * randn(rng, K) .+ _ci_offcol(offset, s)
         for t in 1:p
             μ = linkinv(link, _clamp_eta(η[t]))
             Yb[t, s] = rand(rng, make(rng, μ))
@@ -1593,6 +1708,7 @@ end
 # `accept delta dispersion A` (maintainer paste, 2026-09-24); `:shared` remains
 # an explicit opt-in and both branches below stay exercised.
 function _family_ci(fit::DeltaLogNormalFit, Y::AbstractMatrix;
+                    offset = nothing,
                     hessian::Symbol = :observed,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
     p, K = size(fit.Λc); n = size(Y, 2); rr = rr_theta_len(p, K)
@@ -1621,7 +1737,7 @@ function _family_ci(fit::DeltaLogNormalFit, Y::AbstractMatrix;
             σv = shared ? exp(θv[p + rr + 1]) : exp.(θv[(p + rr + 1):(p + rr + ndisp)])
             v = try
                 -delta_lognormal_marginal_loglik_laplace(Y, Λ, βv, βv, σv; Λz = Λ,
-                    hessian = hessian, maxiter = newton_maxiter, tol = newton_tol)
+                    offsetz = offset, offsetc = offset, hessian = hessian, maxiter = newton_maxiter, tol = newton_tol)
             catch
                 return 1e12
             end
@@ -1630,7 +1746,7 @@ function _family_ci(fit::DeltaLogNormalFit, Y::AbstractMatrix;
         sim = function (rng)
             Yb = zeros(Float64, p, n)
             @inbounds for s in 1:n
-                η = β .+ fit.Λc * randn(rng, K)
+                η = β .+ fit.Λc * randn(rng, K) .+ _ci_offcol(offset, s)
                 for t in 1:p
                     π = inv(1 + exp(-η[t]))
                     σt = shared ? fit.σ : fit.σ[t]
@@ -1642,7 +1758,7 @@ function _family_ci(fit::DeltaLogNormalFit, Y::AbstractMatrix;
         refit = function (Yb)
             fb = try
                 fit_delta_lognormal_gllvm(Yb; K = K, predictor = :shared,
-                    disp_group = fit.disp_group)
+                    disp_group = fit.disp_group, offset = offset)
             catch
                 return nothing
             end
@@ -1660,7 +1776,7 @@ function _family_ci(fit::DeltaLogNormalFit, Y::AbstractMatrix;
         Λc = unpack_lambda(θv[(2p + 1):(2p + rr)], p, K)
         σv = shared ? exp(θv[2p + rr + 1]) : exp.(θv[(2p + rr + 1):(2p + rr + ndisp)])
         v = try
-            -delta_lognormal_marginal_loglik_laplace(Y, Λc, βz, βc, σv; hessian = hessian,
+            -delta_lognormal_marginal_loglik_laplace(Y, Λc, βz, βc, σv; offsetc = offset, hessian = hessian,
                 maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
@@ -1670,7 +1786,7 @@ function _family_ci(fit::DeltaLogNormalFit, Y::AbstractMatrix;
     sim = function (rng)
         Yb = zeros(Float64, p, n)
         @inbounds for s in 1:n
-            ηc = fit.βc .+ fit.Λc * randn(rng, K)
+            ηc = fit.βc .+ fit.Λc * randn(rng, K) .+ _ci_offcol(offset, s)
             for t in 1:p
                 π = inv(1 + exp(-fit.βz[t]))
                 σt = shared ? fit.σ : fit.σ[t]
@@ -1681,7 +1797,7 @@ function _family_ci(fit::DeltaLogNormalFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try
-            fit_delta_lognormal_gllvm(Yb; K = K, disp_group = fit.disp_group)
+            fit_delta_lognormal_gllvm(Yb; K = K, disp_group = fit.disp_group, offset = offset)
         catch
             return nothing
         end
@@ -1696,6 +1812,7 @@ end
 
 # --- Delta-Gamma -----------------------------------------------------------
 function _family_ci(fit::DeltaGammaFit, Y::AbstractMatrix;
+                    offset = nothing,
                     objective::Symbol = :laplace,
                     hessian::Symbol = :observed,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
@@ -1728,7 +1845,7 @@ function _family_ci(fit::DeltaGammaFit, Y::AbstractMatrix;
                     -delta_gamma_marginal_loglik_va(Y, Λ, βv, βv, αv; Λz = Λ,
                         maxiter = newton_maxiter, tol = newton_tol) :
                     -delta_gamma_marginal_loglik_laplace(Y, Λ, βv, βv, αv; Λz = Λ,
-                        hessian = hessian, maxiter = newton_maxiter, tol = newton_tol)
+                        offsetz = offset, offsetc = offset, hessian = hessian, maxiter = newton_maxiter, tol = newton_tol)
             catch
                 return 1e12
             end
@@ -1737,7 +1854,7 @@ function _family_ci(fit::DeltaGammaFit, Y::AbstractMatrix;
         sim = function (rng)
             Yb = zeros(Float64, p, n)
             @inbounds for s in 1:n
-                η = β .+ fit.Λc * randn(rng, K)
+                η = β .+ fit.Λc * randn(rng, K) .+ _ci_offcol(offset, s)
                 for t in 1:p
                     π = inv(1 + exp(-η[t]))
                     if rand(rng) < π
@@ -1751,7 +1868,7 @@ function _family_ci(fit::DeltaGammaFit, Y::AbstractMatrix;
         refit = function (Yb)
             fb = try
                 fit_delta_gamma_gllvm(Yb; K = K, predictor = :shared,
-                    disp_group = fit.disp_group)
+                    disp_group = fit.disp_group, offset = offset)
             catch
                 return nothing
             end
@@ -1771,7 +1888,7 @@ function _family_ci(fit::DeltaGammaFit, Y::AbstractMatrix;
         v = try
             objective === :va ?
                 -delta_gamma_marginal_loglik_va(Y, Λc, βz, βc, αv; maxiter = newton_maxiter, tol = newton_tol) :
-                -delta_gamma_marginal_loglik_laplace(Y, Λc, βz, βc, αv; hessian = hessian,
+                -delta_gamma_marginal_loglik_laplace(Y, Λc, βz, βc, αv; offsetc = offset, hessian = hessian,
                     maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
@@ -1781,7 +1898,7 @@ function _family_ci(fit::DeltaGammaFit, Y::AbstractMatrix;
     sim = function (rng)
         Yb = zeros(Float64, p, n)
         @inbounds for s in 1:n
-            ηc = fit.βc .+ fit.Λc * randn(rng, K)
+            ηc = fit.βc .+ fit.Λc * randn(rng, K) .+ _ci_offcol(offset, s)
             for t in 1:p
                 π = inv(1 + exp(-fit.βz[t]))
                 if rand(rng) < π
@@ -1794,7 +1911,7 @@ function _family_ci(fit::DeltaGammaFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try
-            fit_delta_gamma_gllvm(Yb; K = K, disp_group = fit.disp_group)
+            fit_delta_gamma_gllvm(Yb; K = K, disp_group = fit.disp_group, offset = offset)
         catch
             return nothing
         end
@@ -2109,6 +2226,7 @@ end
 
 # --- Hurdle-Poisson --------------------------------------------------------
 function _family_ci(fit::HurdlePoissonFit, Y::AbstractMatrix;
+                    offset = nothing,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
     p, K = size(fit.Λc); n = size(Y, 2); rr = rr_theta_len(p, K)
     θ = vcat(fit.βz, fit.βc, pack_lambda(fit.Λc))
@@ -2116,7 +2234,7 @@ function _family_ci(fit::HurdlePoissonFit, Y::AbstractMatrix;
         βz = θv[1:p]; βc = θv[(p + 1):(2p)]
         Λc = unpack_lambda(θv[(2p + 1):(2p + rr)], p, K)
         v = try
-            -hurdle_poisson_marginal_loglik_laplace(Y, Λc, βz, βc; maxiter = newton_maxiter, tol = newton_tol)
+            -hurdle_poisson_marginal_loglik_laplace(Y, Λc, βz, βc; offsetc = offset, maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
         end
@@ -2125,7 +2243,7 @@ function _family_ci(fit::HurdlePoissonFit, Y::AbstractMatrix;
     sim = function (rng)
         Yb = zeros(Int, p, n)
         @inbounds for s in 1:n
-            ηc = fit.βc .+ fit.Λc * randn(rng, K)
+            ηc = fit.βc .+ fit.Λc * randn(rng, K) .+ _ci_offcol(offset, s)
             for t in 1:p
                 π = inv(1 + exp(-fit.βz[t]))
                 rand(rng) < π && (Yb[t, s] = _rand_ztpois(rng, exp(ηc[t])))
@@ -2134,7 +2252,7 @@ function _family_ci(fit::HurdlePoissonFit, Y::AbstractMatrix;
         return Yb
     end
     refit = function (Yb)
-        fb = try fit_hurdle_poisson_gllvm(Yb; K = K) catch; return nothing end
+        fb = try fit_hurdle_poisson_gllvm(Yb; K = K, offset = offset) catch; return nothing end
         return (θ = vcat(fb.βz, fb.βc, pack_lambda(fb.Λc)), converged = fb.converged,
                 loglik = fb.loglik)
     end
@@ -2143,6 +2261,7 @@ end
 
 # --- Hurdle-NB -------------------------------------------------------------
 function _family_ci(fit::HurdleNBFit, Y::AbstractMatrix;
+                    offset = nothing,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
     p, K = size(fit.Λc); n = size(Y, 2); rr = rr_theta_len(p, K)
     θ = vcat(fit.βz, fit.βc, pack_lambda(fit.Λc), log(fit.r))
@@ -2150,7 +2269,7 @@ function _family_ci(fit::HurdleNBFit, Y::AbstractMatrix;
         βz = θv[1:p]; βc = θv[(p + 1):(2p)]
         Λc = unpack_lambda(θv[(2p + 1):(2p + rr)], p, K); r = exp(θv[2p + rr + 1])
         v = try
-            -hurdle_nb_marginal_loglik_laplace(Y, Λc, βz, βc, r; maxiter = newton_maxiter, tol = newton_tol)
+            -hurdle_nb_marginal_loglik_laplace(Y, Λc, βz, βc, r; offsetc = offset, maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
         end
@@ -2159,7 +2278,7 @@ function _family_ci(fit::HurdleNBFit, Y::AbstractMatrix;
     sim = function (rng)
         Yb = zeros(Int, p, n)
         @inbounds for s in 1:n
-            ηc = fit.βc .+ fit.Λc * randn(rng, K)
+            ηc = fit.βc .+ fit.Λc * randn(rng, K) .+ _ci_offcol(offset, s)
             for t in 1:p
                 π = inv(1 + exp(-fit.βz[t]))
                 rand(rng) < π && (Yb[t, s] = _rand_ztnb(rng, fit.r, exp(ηc[t])))
@@ -2168,7 +2287,7 @@ function _family_ci(fit::HurdleNBFit, Y::AbstractMatrix;
         return Yb
     end
     refit = function (Yb)
-        fb = try fit_hurdle_nb_gllvm(Yb; K = K) catch; return nothing end
+        fb = try fit_hurdle_nb_gllvm(Yb; K = K, offset = offset) catch; return nothing end
         return (θ = vcat(fb.βz, fb.βc, pack_lambda(fb.Λc), log(fb.r)), converged = fb.converged,
                 loglik = fb.loglik)
     end
@@ -2178,6 +2297,7 @@ end
 
 # --- Zero-inflated Poisson -------------------------------------------------
 function _family_ci(fit::ZIPFit, Y::AbstractMatrix;
+                    offset = nothing,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
     p, K = size(fit.Λc); n = size(Y, 2); rr = rr_theta_len(p, K)
     θ = vcat(fit.βz, fit.βc, pack_lambda(fit.Λc))
@@ -2185,7 +2305,7 @@ function _family_ci(fit::ZIPFit, Y::AbstractMatrix;
         βz = θv[1:p]; βc = θv[(p + 1):(2p)]
         Λc = unpack_lambda(θv[(2p + 1):(2p + rr)], p, K)
         v = try
-            -zip_marginal_loglik_laplace(Y, Λc, βz, βc; maxiter = newton_maxiter, tol = newton_tol)
+            -zip_marginal_loglik_laplace(Y, Λc, βz, βc; offsetc = offset, maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
         end
@@ -2194,7 +2314,7 @@ function _family_ci(fit::ZIPFit, Y::AbstractMatrix;
     sim = function (rng)
         Yb = zeros(Int, p, n)
         @inbounds for s in 1:n
-            ηc = fit.βc .+ fit.Λc * randn(rng, K)
+            ηc = fit.βc .+ fit.Λc * randn(rng, K) .+ _ci_offcol(offset, s)
             for t in 1:p
                 π = inv(1 + exp(-fit.βz[t]))
                 Yb[t, s] = rand(rng) < π ? 0 : rand(rng, Poisson(exp(ηc[t])))
@@ -2203,7 +2323,7 @@ function _family_ci(fit::ZIPFit, Y::AbstractMatrix;
         return Yb
     end
     refit = function (Yb)
-        fb = try fit_zip_gllvm(Yb; K = K) catch; return nothing end
+        fb = try fit_zip_gllvm(Yb; K = K, offset = offset) catch; return nothing end
         return (θ = vcat(fb.βz, fb.βc, pack_lambda(fb.Λc)), converged = fb.converged,
                 loglik = fb.loglik)
     end
@@ -2271,6 +2391,7 @@ end
 
 # --- Zero-inflated NB ------------------------------------------------------
 function _family_ci(fit::ZINBFit, Y::AbstractMatrix;
+                    offset = nothing,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
     p, K = size(fit.Λc); n = size(Y, 2); rr = rr_theta_len(p, K)
     θ = vcat(fit.βz, fit.βc, pack_lambda(fit.Λc), log(fit.r))
@@ -2278,7 +2399,7 @@ function _family_ci(fit::ZINBFit, Y::AbstractMatrix;
         βz = θv[1:p]; βc = θv[(p + 1):(2p)]
         Λc = unpack_lambda(θv[(2p + 1):(2p + rr)], p, K); r = exp(θv[2p + rr + 1])
         v = try
-            -zinb_marginal_loglik_laplace(Y, Λc, βz, βc, r; maxiter = newton_maxiter, tol = newton_tol)
+            -zinb_marginal_loglik_laplace(Y, Λc, βz, βc, r; offsetc = offset, maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
         end
@@ -2287,7 +2408,7 @@ function _family_ci(fit::ZINBFit, Y::AbstractMatrix;
     sim = function (rng)
         Yb = zeros(Int, p, n)
         @inbounds for s in 1:n
-            ηc = fit.βc .+ fit.Λc * randn(rng, K)
+            ηc = fit.βc .+ fit.Λc * randn(rng, K) .+ _ci_offcol(offset, s)
             for t in 1:p
                 π = inv(1 + exp(-fit.βz[t])); μ = exp(ηc[t])
                 Yb[t, s] = rand(rng) < π ? 0 : rand(rng, NegativeBinomial(fit.r, fit.r / (fit.r + μ)))
@@ -2296,7 +2417,7 @@ function _family_ci(fit::ZINBFit, Y::AbstractMatrix;
         return Yb
     end
     refit = function (Yb)
-        fb = try fit_zinb_gllvm(Yb; K = K) catch; return nothing end
+        fb = try fit_zinb_gllvm(Yb; K = K, offset = offset) catch; return nothing end
         return (θ = vcat(fb.βz, fb.βc, pack_lambda(fb.Λc), log(fb.r)), converged = fb.converged,
                 loglik = fb.loglik)
     end
@@ -2369,6 +2490,7 @@ end
 
 # --- Zero-inflated binomial ------------------------------------------------
 function _family_ci(fit::ZIBFit, Y::AbstractMatrix;
+                    offset = nothing,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
     p, K = size(fit.Λc); n = size(Y, 2); rr = rr_theta_len(p, K); Ntr = fit.N
     θ = vcat(fit.βz, fit.βc, pack_lambda(fit.Λc))
@@ -2376,7 +2498,7 @@ function _family_ci(fit::ZIBFit, Y::AbstractMatrix;
         βz = θv[1:p]; βc = θv[(p + 1):(2p)]
         Λc = unpack_lambda(θv[(2p + 1):(2p + rr)], p, K)
         v = try
-            -zib_marginal_loglik_laplace(Y, Λc, βz, βc, Ntr; maxiter = newton_maxiter, tol = newton_tol)
+            -zib_marginal_loglik_laplace(Y, Λc, βz, βc, Ntr; offsetc = offset, maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
         end
@@ -2385,7 +2507,7 @@ function _family_ci(fit::ZIBFit, Y::AbstractMatrix;
     sim = function (rng)
         Yb = zeros(Int, p, n)
         @inbounds for s in 1:n
-            ηc = fit.βc .+ fit.Λc * randn(rng, K)
+            ηc = fit.βc .+ fit.Λc * randn(rng, K) .+ _ci_offcol(offset, s)
             for t in 1:p
                 π = inv(1 + exp(-fit.βz[t])); μ = inv(1 + exp(-ηc[t]))
                 Yb[t, s] = rand(rng) < π ? 0 : rand(rng, Binomial(Ntr, μ))
@@ -2394,7 +2516,7 @@ function _family_ci(fit::ZIBFit, Y::AbstractMatrix;
         return Yb
     end
     refit = function (Yb)
-        fb = try fit_zib_gllvm(Yb; K = K, N = Ntr) catch; return nothing end
+        fb = try fit_zib_gllvm(Yb; K = K, N = Ntr, offset = offset) catch; return nothing end
         return (θ = vcat(fb.βz, fb.βc, pack_lambda(fb.Λc)), converged = fb.converged,
                 loglik = fb.loglik)
     end
@@ -3207,7 +3329,8 @@ end
 # ---------------------------------------------------------------------------
 # Argument validation and `_FamilyCI` adapter construction shared by
 # `confint(fit::_CIFit, Y)` and `vcov(fit::_CIFit, Y)`.
-function _family_confint_setup(fit, Y; method, level, N, X, mask, objective, newton_maxiter, newton_tol)
+function _family_confint_setup(fit, Y; method, level, N, X, mask, objective, newton_maxiter, newton_tol,
+                               offset = nothing)
     0 < level < 1 || throw(ArgumentError("level must be in (0, 1); got $level"))
     is_aghq=_is_aghq_fit(fit)
     objective===:fit && (objective=is_aghq ? :aghq : :laplace)
@@ -3223,15 +3346,26 @@ function _family_confint_setup(fit, Y; method, level, N, X, mask, objective, new
     if objective === :va && mask !== nothing
         throw(ArgumentError("objective=:va is not routed for masked confidence intervals; use objective=:laplace"))
     end
+    O = nothing
+    if offset !== nothing
+        fit isa _OffsetCIFit || throw(ArgumentError(
+            "confint: offset is not supported for $(nameof(typeof(fit))): its fitter takes no offset, so " *
+            "a fit of this type was not made with one. Drop the offset keyword."))
+        objective === :va && throw(ArgumentError(
+            "confint: objective = :va has no offset route (the variational marginal takes no offset); " *
+            "use objective = :laplace with the offset"))
+        O = _ci_offset(offset, Y, mask === nothing ? nothing : _ci_mask(mask, Y))
+    end
     ad = _family_ci(fit, Y; N = N, X = X, objective = objective,
-                    mask = mask,
+                    mask = mask, offset = O,
                     newton_maxiter = newton_maxiter, newton_tol = newton_tol)
+    is_aghq || _check_ci_objective(fit, ad, O, objective)
     return ad, is_aghq
 end
 
 """
     confint(fit, Y; method = :wald, level = 0.95, parm = nothing, N = nothing,
-            mask = nothing,
+            mask = nothing, offset = nothing,
             n_boot = 200, seed = 0, parallel = false, objective = :fit,
             newton_maxiter = 100, newton_tol = 1e-9,
             profile_iterations = 200, profile_g_tol = 1e-4,
@@ -3258,6 +3392,26 @@ response-mask fits, pass the same Boolean `mask` matrix used by the fitter;
 masked cells are ignored by the likelihood and by bootstrap refits.
 `StudentTFit` admits Wald only when `ν` was pinned at fit time
 (`estimated_nu == false`); free / estimated ν remains a contract §6 holdout.
+
+**Offsets.** A fit made with an `offset` (the known additive term in
+`η = β + offset + Λz`, such as log-exposure) is inferred on that offset: pass the same
+`offset` you gave the fitter, `confint(fit, Y; offset = O)`, as you pass `N`, `X` and
+`mask`. It may be a real scalar, a `p×n` matrix (traits × units, the layout of `Y`), a
+`p×1` or `1×n` matrix, or a length-`p` vector (one per trait); a bare vector is refused
+when `p == n` because it cannot be told from a per-unit vector. The Wald Hessian, the
+profile refits and the bootstrap draws and refits all use it. Fit objects do not store
+the offset (Laplace fits have no field for it), so `confint` checks that the objective it
+rebuilds reproduces `fit.loglik` at the fitted values and throws an `ArgumentError`
+otherwise: a fit made with an offset and a call without it (or with a different one) is
+refused instead of returning the intervals of an offset-free model. On these fit types
+the same check also refuses a wrong `N` or a dropped `mask`. AGHQ Poisson / binomial fits
+keep their offset and need no keyword. Offsets are accepted for the fit types whose
+fitters take one (`PoissonFit`, `BinomialFit`, `NBFit`, `NB1Fit`, `GP1Fit`, `BetaFit`,
+`GammaFit`, `ExponentialFit`, the NB2 / NB1 / Beta / Gamma / Tweedie grouped-dispersion
+fits without covariates, `TruncatedPoissonFit`, `TruncatedNegBin2Fit` and its per-trait
+form, and the delta, hurdle and zero-inflated families `DeltaLogNormalFit`,
+`DeltaGammaFit`, `HurdlePoissonFit`, `HurdleNBFit`, `ZIPFit`, `ZINBFit`, `ZIBFit`). Any
+other fit type refuses a non-`nothing` offset, and `objective = :va` has no offset route.
 
 Term names are `beta[t]` / `Lambda[i,k]` (+ a dispersion `r`/`phi`/`alpha`/`sigma`) for
 the GLM families, `beta[k]` / `gamma[k,j]` (category indices `k≥2`) for
@@ -3333,6 +3487,7 @@ function confint(fit::_CIFit, Y::AbstractMatrix;
                  N::Union{Nothing, AbstractMatrix} = nothing,
                  X::Union{Nothing, AbstractMatrix{<:Real}, AbstractArray{<:Real, 3}} = nothing,
                  mask = nothing,
+                 offset = nothing,
                  n_boot::Integer = 200,
                  seed::Integer = 0,
                  parallel::Bool = false,
@@ -3344,7 +3499,7 @@ function confint(fit::_CIFit, Y::AbstractMatrix;
                  profile_max_expand::Integer = 20,
                  profile_max_bisect::Integer = 30)
     ad, is_aghq = _family_confint_setup(fit, Y; method = method, level = level, N = N, X = X,
-                                        mask = mask, objective = objective,
+                                        mask = mask, objective = objective, offset = offset,
                                         newton_maxiter = newton_maxiter, newton_tol = newton_tol)
     sel = _family_select(parm, ad.names)
     isempty(sel) && throw(ArgumentError("parm selector matched no parameters"))
@@ -3375,6 +3530,7 @@ function StatsAPI.vcov(fit::_CIFit, Y::AbstractMatrix;
                        N::Union{Nothing, AbstractMatrix} = nothing,
                        X::Union{Nothing, AbstractMatrix{<:Real}, AbstractArray{<:Real, 3}} = nothing,
                        mask = nothing,
+                       offset = nothing,
                        n_boot::Integer = 200,
                        seed::Integer = 0,
                        parallel::Bool = false,
@@ -3387,7 +3543,7 @@ function StatsAPI.vcov(fit::_CIFit, Y::AbstractMatrix;
                        profile_max_bisect::Integer = 30)
     method === :wald || throw(ArgumentError("vcov is the Wald (observed-information) covariance; method must be :wald"))
     ad, is_aghq = _family_confint_setup(fit, Y; method = method, level = level, N = N, X = X,
-                                        mask = mask, objective = objective,
+                                        mask = mask, objective = objective, offset = offset,
                                         newton_maxiter = newton_maxiter, newton_tol = newton_tol)
     sel = _family_select(parm, ad.names)
     isempty(sel) && throw(ArgumentError("parm selector matched no parameters"))
@@ -3549,19 +3705,23 @@ function _lv_effects_from_packed_gaussian(θ::AbstractVector, p::Integer, K::Int
 end
 
 # Per-family packed-objective closure for the observed-information Hessian.
-_lv_packed_nll(fit::PoissonFit, Y, X_lv, q_lv, N) =
-    θ -> poisson_lv_nll_packed(θ, Y, size(fit.Λ, 1), size(fit.Λ, 2), fit.link; X_lv = X_lv, q_lv = q_lv)
-function _lv_packed_nll(fit::BinomialFit, Y, X_lv, q_lv, N)
+_lv_packed_nll(fit::PoissonFit, Y, X_lv, q_lv, N, offset = nothing) =
+    θ -> poisson_lv_nll_packed(θ, Y, size(fit.Λ, 1), size(fit.Λ, 2), fit.link; X_lv = X_lv, q_lv = q_lv,
+                               offset = offset)
+function _lv_packed_nll(fit::BinomialFit, Y, X_lv, q_lv, N, offset = nothing)
     Nm = N === nothing ? fill(1, size(Y, 1), size(Y, 2)) : Matrix{Int}(N)
     return θ -> binomial_lv_nll_packed(θ, Y, Nm, size(fit.Λ, 1), size(fit.Λ, 2), fit.link;
-                                       X_lv = X_lv, q_lv = q_lv)
+                                       X_lv = X_lv, q_lv = q_lv, offset = offset)
 end
-_lv_packed_nll(fit::NBFit, Y, X_lv, q_lv, N) =
-    θ -> nb_lv_nll_packed(θ, Y, size(fit.Λ, 1), size(fit.Λ, 2), fit.link; X_lv = X_lv, q_lv = q_lv)
-_lv_packed_nll(fit::GammaFit, Y, X_lv, q_lv, N) =
-    θ -> gamma_lv_nll_packed(θ, Y, size(fit.Λ, 1), size(fit.Λ, 2), fit.link; X_lv = X_lv, q_lv = q_lv)
-_lv_packed_nll(fit::BetaFit, Y, X_lv, q_lv, N) =
-    θ -> beta_lv_nll_packed(θ, Y, size(fit.Λ, 1), size(fit.Λ, 2), fit.link; X_lv = X_lv, q_lv = q_lv)
+_lv_packed_nll(fit::NBFit, Y, X_lv, q_lv, N, offset = nothing) =
+    θ -> nb_lv_nll_packed(θ, Y, size(fit.Λ, 1), size(fit.Λ, 2), fit.link; X_lv = X_lv, q_lv = q_lv,
+                          offset = offset)
+_lv_packed_nll(fit::GammaFit, Y, X_lv, q_lv, N, offset = nothing) =
+    θ -> gamma_lv_nll_packed(θ, Y, size(fit.Λ, 1), size(fit.Λ, 2), fit.link; X_lv = X_lv, q_lv = q_lv,
+                             offset = offset)
+_lv_packed_nll(fit::BetaFit, Y, X_lv, q_lv, N, offset = nothing) =
+    θ -> beta_lv_nll_packed(θ, Y, size(fit.Λ, 1), size(fit.Λ, 2), fit.link; X_lv = X_lv, q_lv = q_lv,
+                            offset = offset)
 
 function _lv_effects_from_packed_ordinal(θ::AbstractVector, p::Integer, K::Integer,
                                          q_lv::Integer)
@@ -3715,7 +3875,7 @@ function _lv_effect_profile(nll::Function, x̂::AbstractVector, p::Integer, K::I
 end
 
 """
-    confint_lv_effects(fit, Y, X_lv; N=nothing, level=0.95) -> NamedTuple
+    confint_lv_effects(fit, Y, X_lv; N=nothing, offset=nothing, level=0.95) -> NamedTuple
 
 Wald confidence intervals for the predictor-informed latent-score trait-effect
 matrix `B_lv = Λ·α'` of an `X_lv` fit (`fit_*_gllvm(...; X_lv=...)` for Poisson,
@@ -3726,7 +3886,10 @@ the packed MLE pushed through the delta method onto `B_lv`, returning
 entries of `vec(B_lv)`. `method = :wald` (delta method), `:profile` (invert the
 likelihood-ratio statistic by constrained refit — asymmetry- and
 boundary-respecting; `se` is `NaN` since the interval need not be symmetric), or
-`:bootstrap` (percentiles of `B_lv`). For `method = :profile`,
+`:bootstrap` (percentiles of `B_lv`). A fit made with an `offset` needs the same
+`offset` here (`method = :wald` or `:profile`; the bootstrap simulator has no offset route
+and refuses it); the objective is checked against `fit.loglik` and a mismatch throws, as in
+[`confint`](@ref). For `method = :profile`,
 `profile_indices` selects entries of `vec(B_lv)` in column-major order; `nothing`
 profiles every entry. Bootstrap refits use each family's default optimiser
 iteration cap unless `bootstrap_iterations` is supplied.
@@ -3738,7 +3901,8 @@ phylo/animal/spatial/kernel sources) stays gated.
 """
 function confint_lv_effects(fit::Union{PoissonFit, BinomialFit, NBFit, GammaFit, BetaFit},
                             Y::AbstractMatrix, X_lv::AbstractMatrix;
-                            N::Union{Nothing, AbstractMatrix} = nothing, level::Real = 0.95,
+                            N::Union{Nothing, AbstractMatrix} = nothing, offset = nothing,
+                            level::Real = 0.95,
                             method::Symbol = :wald, n_boot::Integer = 200,
                             seed::Integer = 0,
                             bootstrap_iterations::Union{Nothing, Integer} = nothing,
@@ -3764,10 +3928,26 @@ function confint_lv_effects(fit::Union{PoissonFit, BinomialFit, NBFit, GammaFit,
         throw(ArgumentError("method must be :wald, :bootstrap, or :profile; got :$method"))
     profile_indices === nothing || method === :profile ||
         throw(ArgumentError("profile_indices is only supported with method=:profile"))
-    method === :bootstrap &&
+    O = _ci_offset(offset, Y, nothing)
+    if method === :bootstrap
+        O === nothing || throw(ArgumentError(
+            "confint_lv_effects: method = :bootstrap has no offset route (the simulator draws from " *
+            "the offset-free model); use method = :wald or :profile with the offset"))
         return _lv_bootstrap(fit, Y, X_lv, N, q_lv, level, n_boot, seed;
                              bootstrap_iterations = bootstrap_iterations)
-    nll = _lv_packed_nll(fit, Y, X_lv, q_lv, N)
+    end
+    nll = _lv_packed_nll(fit, Y, X_lv, q_lv, N, O)
+    # Same rule as `confint(fit, Y)`: the rebuilt objective must reproduce the fit's own
+    # log-likelihood, or the fit used an offset (or N) that was not given here.
+    let rebuilt = -nll(fit.theta_packed)
+        abs(rebuilt - fit.loglik) <= _CI_OBJECTIVE_RTOL * max(1.0, abs(fit.loglik)) ||
+            throw(ArgumentError(
+                "confint_lv_effects: the objective rebuilt from Y " *
+                (O === nothing ? "with no offset" : "with the offset you passed") *
+                " gives log-likelihood $(round(rebuilt; digits = 4)) at the fitted values, but the fit " *
+                "reports $(round(fit.loglik; digits = 4)). If the fit was made with an `offset`, pass the " *
+                "same one: confint_lv_effects(fit, Y, X_lv; offset = O); `N` must also be the one used in the fit."))
+    end
     if method === :profile
         wse = _lv_effect_wald(nll, fit.theta_packed, p, K, q_lv, level).se
         return _lv_effect_profile(nll, fit.theta_packed, p, K, q_lv, level,
