@@ -282,7 +282,7 @@ export make_cross_kernel, extract_Gamma, fit_coevolution_gaussian, fit_coevoluti
        extract_Sigma, extract_Sigma_table, extract_loadings, extract_rotated_loadings,
        extract_communality, extract_correlations, extract_cross_correlations,
        extract_residual_cov, extract_residual_cor, getResidualCov, getResidualCor,
-       extract_ordination, extract_cutpoints, extract_proportions, extract_phylo_signal,
+       extract_ordination, extract_cutpoints, extract_proportions, extract_residual_split, extract_phylo_signal,
        extract_repeatability, extract_ICC_site, extract_Omega,
        chibar2_pvalue, variance_lrt, profile_ci_variance,
        augmented_phy, AugmentedPhy, random_balanced_tree, sigma_phy_dense, make_phy,
