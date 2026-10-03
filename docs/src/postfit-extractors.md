@@ -29,7 +29,11 @@ Choose the denominator to match your biological question:
 
 - `extract_communality`, `extract_correlations`, and `extract_proportions`
   default to `level = :unit`. They describe the selected source alone and
-  exclude Gaussian observation noise `σ_eps²`.
+  exclude Gaussian observation noise `σ_eps²`. The exception is a Gaussian
+  fit with `has_diag = true` and `K_W == 0`: the data identify only the sum
+  `σ²_B + σ²_W + σ_eps²`, so the `:unit` source uses the identified
+  denominator `sigma_y_site(fit)`, as `gllvmTMB` does, and
+  `extract_communality(fit)` equals `communality(fit)`.
 - `communality(fit)` and `extract_communality(fit; level = :total)` describe
   the unit latent fraction of `sigma_y_site(fit)`. That denominator includes
   the other site-specific variances and observation noise, but excludes the
@@ -50,6 +54,10 @@ are zero. A source with zero total variance has an undefined fraction.
 Check the individual accessor's definition when comparing outputs:
 `extract_Sigma(fit; level = :unit_obs)` includes observation noise, unlike
 the source-only `extract_communality` denominator at that level.
+`extract_Sigma` and `extract_ICC_site` still report the fitted split of the
+diagonal between `:unit` and `:unit_obs` on a `has_diag = true`, `K_W == 0`
+fit, where that split is not identified; the `:unit` extractors above use the
+identified sum instead.
 `extract_Sigma(fit; level = :site)` returns `sigma_y_site(fit)`.
 
 ```@docs
