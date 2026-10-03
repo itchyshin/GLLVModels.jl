@@ -194,6 +194,14 @@
   corrected (including a testset name in `test/test_em_phylo.jl`). No code or
   numbers change.
 
+- **`select_lv` result prints the same nine fields as gllvmTMB's `print.gllvmTMB_select_lv`.**
+  `LVSelection` gains `aicc` (R's formula `AIC + 2k(k+1)/(n - k - 1)`, `n` the same `p*n`
+  as BIC, `NaN` when `n - k - 1 <= 0`), `converged` (the optimiser's flag, R's `conv`),
+  `pd_hessian` (R's `pdHess`, `missing` = NA unless `select_lv(...; pd_hessian = true)`)
+  and `criterion`. `show` prints `d npar logLik AIC BIC AICc conv pdHess` in R's order and
+  layout, with R's rounding and `TRUE`/`FALSE`/`NA`. Which `K` is chosen and the default
+  criterion are unchanged; `LVSelection` is now built with 13 positional fields. Julia still
+  keeps a rank with `conv = false` or `pdHess = false` eligible, where R drops it.
 - **`fit_phylo_gaussian` no longer reports `converged = true` after a zero-length step
   (part of #505, the remaining #485 class).** Optim also counts a zero-length line-search
   step as convergence, so a start the finite-difference gradient cannot leave could be

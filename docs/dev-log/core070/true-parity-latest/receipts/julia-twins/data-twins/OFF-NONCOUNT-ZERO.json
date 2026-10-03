@@ -1,0 +1,76 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "data/DATA-OFF-NONCOUNT-ZERO"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#689",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "896a0a2286c224fe9979d3cf7e7e2c6be27f9357",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/data_twins_p1.toml",
+      "sha256": "1ce70fee8e0fb87015ae1b24d6be105265ce53edb4fae9bed25b0597de974996"
+    },
+    {
+      "path": "test/fixtures/ns_gauss_p1_data.csv",
+      "sha256": "e714fa10411f6a66150c534506dec87cf1c748fed4c55ae13942828f1fca0326"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_data_twins_p1.jl",
+      "sha256": "07842797d28c18e5ce75609e90d47124bfda5d2253f9ac99be903010c6be9b15"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-DATA-GAUSS_ZERO-LOGLIK",
+        "quantity": "maximised logLik of the Gaussian fit with a zero offset",
+        "r_source": "test/fixtures/data_twins_p1.toml [gauss_zero.loglik]",
+        "julia_source": "fg.logLik, fit as at test/test_data_twins_p1.jl:132",
+        "r_value": -1367.5955985303726,
+        "julia_value": -1367.5955985207163,
+        "abs_diff": 9.656332622398622e-09,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_data_twins_p1.jl:134",
+        "tolerance_source_line": "@test isapprox(fg.logLik, Float64(g[\"loglik\"]); atol = 1e-6, rtol = 0)",
+        "note": "Rank-2 Gaussian fit on ns_gauss_p1_data.csv (p = 6, n = 200, sha256 checked), R: value ~ 0 + trait + offset(0) + latent(0 + trait | unit, d = 2, unique = FALSE), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test); R's fit equals R's plain fit (asserted in the generator). Julia: offset = zeros(6, 200). Scope: a ZERO offset on a non-count trait, the one offset R allows there. R refuses a nonzero offset on a Gaussian trait (message recorded in the fixture); Julia accepts one (asserted in the test), so that behaviour is a difference, not a match, and is not compared."
+      },
+      {
+        "case_id": "P1-JULIA-DATA-GAUSS_ZERO-INTERCEPTS",
+        "quantity": "trait intercepts (6 values) of the Gaussian fit with a zero offset",
+        "r_source": "test/fixtures/data_twins_p1.toml [gauss_zero.beta]",
+        "julia_source": "coef(fg), fit as at test/test_data_twins_p1.jl:132",
+        "r_value": [
+          0.5582060338056996,
+          -0.19181654412747803,
+          0.0928342017364656,
+          0.8417865231650219,
+          -0.5158543500540521,
+          0.058444463325015
+        ],
+        "julia_value": [
+          0.5582060338057427,
+          -0.19181654412777674,
+          0.0928342017363344,
+          0.8417865231651739,
+          -0.5158543500539483,
+          0.05844446332495955
+        ],
+        "abs_diff": 2.9870550477539837e-13,
+        "tolerance": 0.0001,
+        "tolerance_source": "test/test_data_twins_p1.jl:136",
+        "tolerance_source_line": "@test isapprox(coef(fg), Float64.(g[\"beta\"]); atol = 1e-4, rtol = 0)",
+        "note": "Rank-2 Gaussian fit on ns_gauss_p1_data.csv (p = 6, n = 200, sha256 checked), R: value ~ 0 + trait + offset(0) + latent(0 + trait | unit, d = 2, unique = FALSE), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test); R's fit equals R's plain fit (asserted in the generator). Julia: offset = zeros(6, 200). Scope: a ZERO offset on a non-count trait, the one offset R allows there. R refuses a nonzero offset on a Gaussian trait (message recorded in the fixture); Julia accepts one (asserted in the test), so that behaviour is a difference, not a match, and is not compared."
+      }
+    ]
+  }
+}
