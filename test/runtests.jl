@@ -249,6 +249,7 @@ println(_SHARD === nothing ?
     _shard_include("test_zinb_x_identity.jl")
     _shard_include("test_beta_fit.jl")
     _shard_include("test_gamma_fit.jl")
+    _shard_include("test_link_honoured.jl")
     _shard_include("test_tweedie.jl")
     _shard_include("test_tweedie_engine_health.jl")
     _shard_include("test_tweedie_grouped_engine_health.jl")

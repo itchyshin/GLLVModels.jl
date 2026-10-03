@@ -27,6 +27,37 @@
   - Test: `test/test_nb1_poisson_ridge.jl` (literal fixture
     `test/fixtures/nb1_grouped_poisson_ridge.toml`; it fails on main on macOS and
     Linux).
+- **Beta and Gamma fits now optimise the link they are asked for (bug fix).**
+  `fit_beta_gllvm` and `fit_gamma_gllvm` accepted `link = ...`, used it for the warm start and
+  stored it on the fit, but built their objective without it. Any Beta fit with a non-logit link
+  (probit, cloglog, identity) and any Gamma fit with a non-log link (identity) therefore
+  optimised the logit / log model, reported `converged = true`, and stored a `loglik` that is
+  the logit / log marginal, not the marginal of the requested link. Measured on simulated data
+  (p = 8, n = 150): the stored `loglik` differed from the requested-link Laplace marginal at the
+  returned parameters by 388 to 510 (Beta probit), 2681 to 2707 (Beta cloglog), 17210 to 17416
+  (Beta identity) and 5104 to 5651 (Gamma identity) log-likelihood units. The bug was in the
+  first commit of each fitter (2026-05-31, `79a6929b0` and `abee8a2ac`), so it affects every
+  release that contains them. Default-link fits (Beta logit, Gamma log) were never affected and
+  are bit-identical before and after this change. The fix passes `link` to the objective, the
+  predictor-informed (`X_lv`) objective (`beta_lv_nll_packed`, `gamma_lv_nll_packed`) and the
+  Gamma warm start, and restricts the hand-coded analytic gradients (logit-only for Beta,
+  log-only for Gamma) to their own link; other links use finite differences of the real
+  objective. Same pattern, fixed here: the NB2 `X_lv` objective (`nb_lv_nll_packed`) dropped
+  `link`, and the Poisson and NB2 analytic gradients (log-link only) were also used for
+  identity-link fits, which then stopped at a point where the true gradient is 12.1 (Poisson)
+  and 3.9 (NB2) with `converged = true`, 24.7 and 13.2 log-likelihood units below the optimum.
+  The variational fitters `fit_beta_gllvm_va`, `fit_binomial_gllvm_va`, `fit_nb_gllvm_va`,
+  `fit_gamma_gllvm_va`, `fit_exponential_gllvm_va` and `fit_delta_gamma_gllvm_va` accept a
+  `link` keyword but their ELBO is derived for one link only (logit for Beta and Binomial, log
+  for the rest); a different link was silently ignored. They now throw `ArgumentError` for any
+  other link. Not changed here: the per-trait grouped Beta and Gamma fitters (what `fit_gllvm`
+  and the `@formula` front end call for Beta) honour the link in their objective, but their
+  default `hessian = :observed` is only supported for the logit / log link, so a non-default
+  link returns `loglik = -Inf, converged = false` (loud, not silent). Beta works with
+  `hessian = :fisher`; grouped Gamma with the identity link still fails because its warm
+  start is on the log scale. Left for a follow-up. The R bridge routes for Beta and Gamma pass
+  the default link only, so bridge results were not affected. Test:
+  `test/test_link_honoured.jl`.
 - **`NBGroupedFit` and `NBGroupedCovFit` gain `predict`, `fitted`, `residuals` and
   `getResidualCor` (#555).** The default per-species NB2 routes (`fit_nb_gllvm_grouped`
   and `fit_nb_gllvm_grouped_cov`) had `getLV` and `confint` but threw a `MethodError` on
