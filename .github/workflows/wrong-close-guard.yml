@@ -6,6 +6,8 @@ on:
   pull_request:
     types: [opened, edited, synchronize, reopened]
   workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   guard:
     if: github.event_name == 'pull_request'
@@ -26,6 +28,6 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           printf '%s\n\n%s\n' "$PR_TITLE" "$PR_BODY" > "$RUNNER_TEMP/pr_body.md"
-          python3 tools/wrong_close_guard.py --intended-from-body \
+          python3 tools/wrong_close_guard.py --intended-from-body --repo "$GITHUB_REPOSITORY" \
             --body-file "$RUNNER_TEMP/pr_body.md" \
             --git-range "$BASE_SHA..$HEAD_SHA"

@@ -72,6 +72,37 @@ class Syntax(unittest.TestCase):
         self.assertEqual(bad("fixes a&#35; and src/a#b"), [])
 
 
+class Review(unittest.TestCase):
+    def test_commit_text_not_markdown_stripped(self):
+        r = g.check([("c", "<!-- Closes #5 -->\n```\nCloses #6\n```", False)], set())
+        self.assertEqual(sorted(n for _, n, *_ in r), [5, 6])
+
+    def test_fence_length_and_type(self):
+        self.assertEqual(bad("````\n```\nx\n````\nCloses #7"), [(None, 7)])
+        self.assertEqual(bad("~~~\n```\nCloses #8\n~~~"), [])
+
+    def test_emphasis_underscore_keywords(self):
+        self.assertEqual(bad("__fixes__ #1"), [(None, 1)])
+        self.assertEqual(bad("_fixes_ #2"), [(None, 2)])
+        self.assertEqual(bad("**Fixes:** #3"), [(None, 3)])
+
+    def test_repo_scoping(self):
+        old = g._DEFAULT_REPO[0]
+        try:
+            g._DEFAULT_REPO[0] = "o/r"
+            self.assertEqual(bad("Fixes other/repo#897", "897"), [("other/repo", 897)])
+            self.assertEqual(bad("Fixes #3", "o/r#3"), [])
+            self.assertEqual(bad("Fixes o/r#3", "3"), [])
+        finally:
+            g._DEFAULT_REPO[0] = old
+
+    def test_cli_error_codes(self):
+        run = lambda *x: subprocess.run([sys.executable, g.__file__, *x],
+                                        capture_output=True, text=True).returncode
+        self.assertEqual(run("--body-file", "/nonexistent/x.md"), 2)
+        self.assertEqual(run("--git-range", "nonexist..alsonot"), 2)
+
+
 class Cli(unittest.TestCase):
     def run_cli(self, body, intended=""):
         with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False) as f:

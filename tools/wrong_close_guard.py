@@ -17,9 +17,11 @@ What counts as a possible closure (case-insensitive):
     `fix(scope): text (refs #149)` or `Does not fix #142`.
 Keywords are GitHub's documented list: close, closes, closed, fix, fixes,
 fixed, resolve, resolves, resolved. A keyword inside a longer word
-(`prefix`, `fixture`, `unresolved`) is ignored. Fenced code blocks and HTML
-comments are skipped (GitHub does not link inside code; HTML comments are
-hidden), so quote a keyword there if you must write one.
+(`prefix`, `fixture`, `unresolved`) is ignored. Fenced code blocks (CommonMark fence rules) and HTML comments are skipped in
+PR bodies only; commit messages and titles are scanned raw. Routine text such
+as `fix(x): y (#12)` is flagged on purpose (loose form); reword it. The
+`intended-closes` comment is an accident guard, not a security control: any
+PR author can edit it.
 
 Usage:
   wrong_close_guard.py --intended 701,149 --body-file pr_body.md \
@@ -37,7 +39,7 @@ import subprocess
 import sys
 
 KEYWORD = r"(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)"
-KW_RE = re.compile(r"(?<![A-Za-z0-9_])" + KEYWORD + r"(?![A-Za-z0-9_])", re.I)
+KW_RE = re.compile(r"(?<![A-Za-z0-9])" + KEYWORD + r"(?![A-Za-z0-9])", re.I)
 # A reference: owner/repo#N, a GitHub issue URL, or a bare #N.
 REF_RE = re.compile(
     r"(?:https?://github\.com/(?P<uo>[\w.-]+)/(?P<ur>[\w.-]+)/(?:issues|pull)/(?P<un>\d+))"
@@ -45,8 +47,11 @@ REF_RE = re.compile(
     r"|(?:(?<![\w/&])#(?P<bn>\d+))"
 )
 STRICT_RE = re.compile(
-    r"(?<![A-Za-z0-9_])" + KEYWORD + r"(?![A-Za-z0-9_])\s*:?\s*(?=" + REF_RE.pattern + ")", re.I
+    r"(?<![A-Za-z0-9])" + KEYWORD + r"(?![A-Za-z0-9])[\s*_`]*:?[\s*_`]*(?=" + REF_RE.pattern + ")", re.I
 )
+
+
+_DEFAULT_REPO = [None]  # set from --repo; bare #N then means this repo
 
 
 def _ref_key(m):
@@ -55,25 +60,33 @@ def _ref_key(m):
         return (f"{m.group('uo')}/{m.group('ur')}".lower(), int(m.group("un")))
     if m.group("rn"):
         return (f"{m.group('ro')}/{m.group('rr')}".lower(), int(m.group("rn")))
-    return (None, int(m.group("bn")))
+    return (_DEFAULT_REPO[0], int(m.group("bn")))
 
 
-def _strip_hidden(text):
+def _strip_hidden(text, strip=True):
+    """Return the lines GitHub could link. Commit messages and titles are not
+    markdown-stripped (`strip=False`): a keyword there may still close."""
+    if not strip:
+        return text.splitlines()
     text = re.sub(r"<!--.*?-->", "", text, flags=re.S)
-    out, fenced = [], False
+    out, fence = [], None  # fence = (char, length) while inside a fenced block
     for line in text.splitlines():
-        if re.match(r"\s*(```|~~~)", line):
-            fenced = not fenced
-            continue
-        if not fenced:
+        m = re.match(r"\s{0,3}(`{3,}|~{3,})(.*)$", line)
+        if fence is None:
+            if m and not (m.group(1)[0] == "`" and "`" in m.group(2)):
+                fence = (m.group(1)[0], len(m.group(1)))
+                continue
             out.append(line)
+        elif m and m.group(1)[0] == fence[0] and len(m.group(1)) >= fence[1] \
+                and not m.group(2).strip():
+            fence = None
     return out
 
 
-def find_refs(text):
+def find_refs(text, strip=True, repo=None):
     """Yield (repo, number, line, form) for every possible closing reference."""
     seen = set()
-    for line in _strip_hidden(text):
+    for line in _strip_hidden(text, strip):
         kws = [m.start() for m in KW_RE.finditer(line)]
         if not kws:
             continue
@@ -96,16 +109,21 @@ def parse_intended(spec):
         m = re.fullmatch(r"(?:([\w.-]+/[\w.-]+))?#?(\d+)", tok)
         if not m:
             raise ValueError(f"cannot parse intended issue {tok!r}")
-        out.add((m.group(1).lower() if m.group(1) else None, int(m.group(2))))
+        out.add((m.group(1).lower() if m.group(1) else _DEFAULT_REPO[0], int(m.group(2))))
     return out
 
 
 def check(texts, intended):
-    """Return the list of (repo, num, line, form, source) outside `intended`."""
+    """Return the list of (repo, num, line, form, source) outside `intended`.
+    `texts` items are (source, text) or (source, text, strip). A bare intended
+    `N` matches any repo unless --repo is given, in which case it means that repo."""
     bad = []
-    for source, text in texts:
-        for repo, num, line, form in find_refs(text):
-            if (repo, num) in intended or (None, num) in intended:
+    for item in texts:
+        source, text = item[0], item[1]
+        strip = item[2] if len(item) > 2 else True
+        for repo, num, line, form in find_refs(text, strip):
+            if (repo, num) in intended or ((None, num) in intended and
+                                           (_DEFAULT_REPO[0] is None or repo == _DEFAULT_REPO[0])):
                 continue
             bad.append((repo, num, line, form, source))
     return bad
@@ -128,29 +146,37 @@ def main(argv=None):
     ap.add_argument("--commits-file", action="append", default=[])
     ap.add_argument("--git-range", help="e.g. origin/main..HEAD; checks each commit message")
     ap.add_argument("--text", action="append", default=[])
+    ap.add_argument("--repo", help="owner/repo the text belongs to (e.g. $GITHUB_REPOSITORY); "
+                    "bare #N and bare intended N then mean this repo only")
     a = ap.parse_args(argv)
+    _DEFAULT_REPO[0] = a.repo.lower() if a.repo else None
     try:
         intended = parse_intended(a.intended)
     except ValueError as e:
         print(f"WRONG_CLOSE_GUARD usage error: {e}", file=sys.stderr)
         return 2
     texts = []
-    for f in a.body_file:
-        texts.append((f"body {f}", open(f, encoding="utf-8").read()))
+    try:
+        for f in a.body_file:
+            texts.append((f"body {f}", open(f, encoding="utf-8").read()))
+        n_body = len(texts)
+        for f in a.commits_file:
+            texts.append((f"commits {f}", open(f, encoding="utf-8").read(), False))
+        for t in a.text:
+            texts.append(("text", t))
+        if a.git_range:
+            texts.extend((src, body, False) for src, body in _git_messages(a.git_range))
+    except (OSError, subprocess.CalledProcessError) as e:
+        print(f"WRONG_CLOSE_GUARD usage error: {e}", file=sys.stderr)
+        return 2
     if a.intended_from_body:
-        for src, text in texts:
+        for _src, text, *_ in texts[:n_body]:
             for m in re.finditer(r"<!--[ \t]*intended-closes:[ \t]*([^\n>]*)", text, re.I):
                 try:
                     intended |= parse_intended(m.group(1).rstrip(" -\t"))
                 except ValueError as e:
                     print(f"WRONG_CLOSE_GUARD usage error: {e}", file=sys.stderr)
                     return 2
-    for f in a.commits_file:
-        texts.append((f"commits {f}", open(f, encoding="utf-8").read()))
-    for t in a.text:
-        texts.append(("text", t))
-    if a.git_range:
-        texts.extend(_git_messages(a.git_range))
     if not texts:
         print("WRONG_CLOSE_GUARD usage error: nothing to check", file=sys.stderr)
         return 2
