@@ -1145,6 +1145,18 @@ test('C6 scope: both covered words stay valid with the pinned ref and date', () 
   const r = runTree(c6Items([helper(), kept({ source_id: 'julia-export/x' })]), 'C6');
   assert.match(r.stdout, /C6_MET$/m, r.stdout);
 });
+// A ruling ref is looked up by own property: C6_RULINGS is an object literal, so `ref in C6_RULINGS` would accept the
+// names every object inherits and then crash on `.words.has` (exit 1, no verdict). Each of these must be reported as an
+// unrecognised ruling with the verdict C6_NOT_MET and exit 0.
+test('C6 scope: a ruling ref that is an inherited Object.prototype name is not a recognised ruling (own-property lookup)', () => {
+  for (const ref of ['constructor', '__proto__', 'toString', 'hasOwnProperty', 'valueOf', 'isPrototypeOf']) {
+    const r = runTree(c6Items([helper({ ruling: { ...RULING, ref } })]), 'C6');
+    assert.equal(r.code, 0, `${ref}: exit ${r.code}, stdout ${r.stdout}`);
+    assert.match(r.stdout, /C6_NOT_MET$/m, ref);
+    assert.match(r.stdout, /invalid_decision=none /, ref);
+    assert.match(r.stdout, new RegExp(`\\(ruling ref "${ref}" is not a recognised signed ruling\\)`), ref);
+  }
+});
 test('C6: an unknown decision word still fails (EXCLUDED_HELPER, and a case variant)', () => {
   for (const word of ['EXCLUDED_HELPER', 'excluded_internal_helper', 'EXCLUDED_INTERNAL_HELPER ']) {
     const r = runTree(c6Items([helper({ decision: word })]), 'C6');

@@ -655,6 +655,13 @@ to the case maps. The checker now also refuses a done word (`EVIDENCED`, `EVIDEN
 it did not bind; the row reads `STATUS_NOT_BOUND`. A scoreboard written by hand with another receipt cell is not
 affected. The tracked scoreboard has no done row with such a cell, so no count changes.
 
+**A ruling ref is looked up by own property.** The checker finds a C6 ruling with
+`Object.prototype.hasOwnProperty.call(C6_RULINGS, ref)`. A lookup with `in` would accept the names every object
+inherits (`constructor`, `__proto__`, `toString`) and then crash with exit 1 and no verdict. Each such ref is
+reported as `ruling ref "<ref>" is not a recognised signed ruling` with `C6_NOT_MET` and exit 0, in the checker
+(group "C6 scope") and in the assembler (`c6_ruling_ref_*_is_not_a_recognised_ruling`). The control was checked by
+replacing the lookup with `in`: it fails, and the 29 other C6 controls that existed before it all still passed.
+
 Controls. Assembler: `disposition_status_word_*`, `disposition_pipe_forged_*`, `disposition_with_*line_break*`,
 `every_reserved_status_word_*`, `non_string_or_blank_disposition_*`, `plain_dispositions_*`,
 `reserved_status_words_cover_*`, `checker_done_set_is_a_subset_*`. Checker (group "scoreboard"): a done word on a

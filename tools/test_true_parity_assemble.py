@@ -912,6 +912,8 @@ def main():
         check(name, f)
     kept = lambda basis: {"julia_only": {"decision": "KEPT_AS_JULIA_EXTRA", "basis": basis}}  # noqa: E731
     helper = lambda basis: {"julia_only": {"decision": "EXCLUDED_INTERNAL_HELPER", "basis": basis}}  # noqa: E731
+    for ref in ("constructor", "__proto__", "toString", "hasOwnProperty", "valueOf", "isPrototypeOf"):
+        decision_fail(f"c6_ruling_ref_{ref}_is_not_a_recognised_ruling", "is not a recognised signed ruling", ruling=dict(RULING, ref=ref))
     decision_fail("c6_generator_that_does_not_exist_fails", "is not a file in the tree", generator="tools/does_not_exist.py")
     decision_fail("c6_generator_that_is_a_directory_fails", "is not a file in the tree", generator="tools")
     decision_fail("c6_generator_outside_the_tree_fails", "is not a file in the tree", generator="../outside.py")
