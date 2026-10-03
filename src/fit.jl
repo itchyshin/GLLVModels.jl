@@ -63,6 +63,46 @@ end
 GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime)=
     GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime,nothing)
 
+# Identifiability guard for the closed-form Gaussian fitter (#149). The
+# likelihood is bounded only when the number of latent axes is below the rank
+# of the data the fitter sees, unless that rank is already full (`rank == p`):
+# with `rank < p` and `K_total ≥ rank`, `ΛΛᵀ` can reproduce every sampled
+# direction exactly and the residual variance runs to zero, so the maximum is
+# not attained. This replaces the former `n_sites ≥ p` rule, which refused
+# fits with `n < p` and small `K` that are well posed, and accepted
+# rank-deficient data with `n ≥ p` that are not. When the fit estimates
+# regression coefficients (`X` with free columns) the data are first
+# residualised on `X` by least squares, which centres them when `X` carries
+# per-trait intercepts.
+function _check_gaussian_rank(y::AbstractMatrix, K_total::Integer, X, β_fixed)
+    p, n = size(y)
+    Yeff = Matrix{Float64}(y)
+    if X !== nothing
+        size(X, 1) == p && size(X, 2) == n || return nothing  # reported later
+        mask = _fixed_zero_mask(β_fixed, size(X, 3), "β_fixed")
+        Xf, _ = _slice_fixed_X(X, mask)
+        q = size(Xf, 3)
+        if q > 0
+            D = reshape(Xf, p * n, q)
+            r = vec(Yeff) .- D * (D \ vec(Yeff))
+            Yeff = reshape(r, p, n)
+        end
+    end
+    r = rank(Yeff)
+    if r < p && K_total ≥ r
+        throw(ArgumentError(
+            "fit_gaussian_gllvm: the number of latent axes K = $K_total must be " *
+            "below the rank of the data the fitter sees (rank = $r, p = $p, " *
+            "n_sites = $n; centred by the estimated intercepts when X is " *
+            "supplied). Otherwise the Gaussian likelihood is unbounded. Use a " *
+            "smaller K, or more sites, or drop the trait that is a linear " *
+            "combination of the others. The Laplace-fitted families (Poisson, " *
+            "Binomial, NegativeBinomial and the rest) have no such condition " *
+            "on n_sites."))
+    end
+    return nothing
+end
+
 """
     fit_gaussian_gllvm(y; K, K_W=0, has_diag=false, K_phy=0,
                        has_phy_unique=false, Σ_phy=nothing, X=nothing,
@@ -197,12 +237,7 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
     @assert K ≥ 1
     @assert K_W ≥ 0
     @assert K_phy ≥ 0
-    n ≥ p || throw(ArgumentError(
-        "fit_gaussian_gllvm needs n_sites ≥ p (got n_sites = $n, p = $p). This " *
-        "closed-form Gaussian fitter is used by family = Normal() and by " *
-        "family = Lognormal(), which fits a Gaussian GLLVM to log(Y). The " *
-        "Laplace-fitted families (Poisson, Binomial, NegativeBinomial and the " *
-        "rest) accept n_sites < p."))
+    _check_gaussian_rank(y, K + K_W, X, β_fixed)
 
     if (K_phy > 0 || has_phy_unique) && Σ_phy === nothing
         throw(ArgumentError(
