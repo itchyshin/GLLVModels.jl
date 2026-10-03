@@ -391,15 +391,9 @@
   "source_id": "julia-export/EdgePhy",
   "name": "EdgePhy",
   "kind": "Type",
-  "status": "decided",
-  "decision": "EXCLUDED_INTERNAL_HELPER",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt",
-  "basis": "no docstring and not mentioned by name in docs/src/**/*.md or README.md",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/ExponentialFit",
@@ -1057,15 +1051,9 @@
   "source_id": "julia-export/NodePerSpecies",
   "name": "NodePerSpecies",
   "kind": "Type",
-  "status": "decided",
-  "decision": "EXCLUDED_INTERNAL_HELPER",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt",
-  "basis": "no docstring and not mentioned by name in docs/src/**/*.md or README.md",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/OrderedBeta",
@@ -1401,15 +1389,9 @@
   "source_id": "julia-export/StudentT",
   "name": "StudentT",
   "kind": "Type",
-  "status": "decided",
-  "decision": "EXCLUDED_INTERNAL_HELPER",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt",
-  "basis": "no docstring and not mentioned by name in docs/src/**/*.md or README.md",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/StudentTFamily",
@@ -1991,15 +1973,9 @@
   "source_id": "julia-export/branch_re_cache",
   "name": "branch_re_cache",
   "kind": "Function",
-  "status": "decided",
-  "decision": "EXCLUDED_INTERNAL_HELPER",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt",
-  "basis": "no docstring and not mentioned by name in docs/src/**/*.md or README.md",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/branch_re_profile_negll",
@@ -3023,15 +2999,9 @@
   "source_id": "julia-export/fit_em_phylo",
   "name": "fit_em_phylo",
   "kind": "Function",
-  "status": "decided",
-  "decision": "EXCLUDED_INTERNAL_HELPER",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt",
-  "basis": "no docstring and not mentioned by name in docs/src/**/*.md or README.md",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_exponential_gllvm",
@@ -3653,15 +3623,9 @@
   "source_id": "julia-export/fit_phylo_squarem",
   "name": "fit_phylo_squarem",
   "kind": "Function",
-  "status": "decided",
-  "decision": "EXCLUDED_INTERNAL_HELPER",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt",
-  "basis": "no docstring and not mentioned by name in docs/src/**/*.md or README.md",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no same-named gllvmTMB export or S3 generic at P1 and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_poisson_gllvm",
