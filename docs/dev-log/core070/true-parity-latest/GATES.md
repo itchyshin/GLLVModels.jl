@@ -475,9 +475,11 @@ EVIDENCE: pending
 
 ## C3 to C5 campaign rows (itchyshin/GLLVModels.jl#684 item 4)
 
-The maintainer signed the C3 to C5 campaign plan's rows, tolerances, pass rule, row placement and
-licence handling on 2026-10-02 (itchyshin/GLLVModels.jl#684 item 4; the plan is PR #650). Twenty rows
-were added, 8 for C3 (`-RSZ`), 8 for C4 (`data/RD-*`) and 4 for C5 (`fit-input/GRP-*`).
+The maintainer's ruling (itchyshin/GLLVModels.jl#684 item 4, 2026-10-02) is to add the rows proposed in PR #650
+(beetle included) and run the campaign on Totoro. Twenty rows were added, 8 for C3 (`-RSZ`), 8 for C4
+(`data/RD-*`) and 4 for C5 (`fit-input/GRP-*`). The ruling does not quote the plan's tolerances, pass rule, row
+placement or licence handling. They are carried here AS PROPOSED in PR #650 and still wait for the maintainer's
+confirmation; every receipt says so in `tolerance_status`.
 
 - **`clause` marker.** A case-map row may carry `"clause": "C3" | "C4" | "C5"`. The assembler then requires
   that the row's scoreboard id is selected by exactly that clause's checker rule, so a deliberate campaign id
@@ -485,10 +487,15 @@ were added, 8 for C3 (`-RSZ`), 8 for C4 (`data/RD-*`) and 4 for C5 (`fit-input/G
   C3/C4/C5 still fails.
 - **Receipts** live under `receipts/<family>/campaign/`, one per row, with the raw R and Julia outputs beside
   them (`raw/*.gz`). They are written only by `tools/true_parity/campaign/write_receipts.py`, from those raw
-  outputs; `write_receipts.py --check` re-derives every comparison block from the committed raw files.
+  outputs. `write_receipts.py --check` rebuilds each receipt's comparison block, pass-rule legs, verdict and engine
+  blocks, and each campaign case-map row, from the committed raw files, and fails on any difference (a hand-edited
+  value, tolerance or flag fails). The seven synthetic data files are committed (gzip) under
+  `tools/true_parity/campaign/data/` with their sha256, and `--check` verifies the receipts' data pin against them.
 - **Pass rule.** Both engines converged (R convergence 0 with a positive-definite Hessian; Julia `converged`
   true) and every listed quantity inside its tolerance, on the same data bytes, with every gllvmTMB function
-  used deparsing identically to its P1 source. A row that meets it binds (`evidence_tier` numeric). A row
+  used deparsing identically to its P1 source. A C4 row also needs the `engine = "julia"` bridge route and the
+  plan's eight acceptance classes (plan section 1.3); neither has been run, so no C4 row binds yet. A row that
+  meets the whole rule binds (`evidence_tier` numeric). A row
   that does not is cited under `non_binding_receipts` with the reason, tier `numeric_fail`, and stays open.
   No tolerance is widened and nothing is re-run to get a pass.
 - **Relative tolerances** are carried as a discrepancy against zero (r_value 0, julia_value the relative
@@ -496,7 +503,8 @@ were added, 8 for C3 (`-RSZ`), 8 for C4 (`data/RD-*`) and 4 for C5 (`fit-input/G
 - **Disposition rows.** `data/RD-PHYLO-DISPOSITION`, `data/RD-TEMPORAL-DISPOSITION` and
   `data/RD-ISDM-DISPOSITION` carry `disposition: null` and a `proposed_disposition` object. Item 4 of the
   ruling does not quote them, and the plan says each needs the maintainer's own signature, so nothing is
-  signed on them.
+  signed on them. Their classification stays `required_core` (the plan proposes `outside_boundary`, but a classification
+  change is the maintainer's to sign), so on the assembled fold C1 still requires them.
 - **Licence.** GPL datasets (MASS, gllvm) are loaded by name at run time by `gen_data.R`; the repository tracks
   that loader, each dataset's sha256 (in the receipt) and the receipts, never the tables. The urbanisation
   matrix is the maintainer's own file and is not tracked either.
