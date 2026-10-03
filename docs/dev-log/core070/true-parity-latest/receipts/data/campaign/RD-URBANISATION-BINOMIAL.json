@@ -1,0 +1,323 @@
+{
+ "schema": "true-parity-campaign-receipt/v1",
+ "source_id": "data/RD-URBANISATION-BINOMIAL",
+ "clause": "C4",
+ "pin": "P1",
+ "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+ "ruling": "itchyshin/GLLVModels.jl#684 item 4",
+ "verdict": "FAIL",
+ "row_status": "does not bind: a required leg was not run: the engine = \"julia\" bridge route and the plan's eight acceptance classes (the C4 clause needs them, see GATES.md and plan section 1.3). The direct-engine comparison does not say the bridge workflow passes; beta: abs difference 0.000231344 > tolerance 0.0001; LLt: abs difference 0.00164848 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000821878 > tolerance 1e-06",
+ "pass_rule": {
+  "rule": "both engines converged (R convergence 0 with a positive-definite Hessian; Julia converged true), both read the same data bytes, the ten named gllvmTMB entry points that run_R.R calls (gllvmTMB, gllvmTMBcontrol, nbinom2, ordinal_logit, isdm_sources, extract_Sigma, extract_cutpoints, predict.gllvmTMB_multi, extract_temporal, temporal_latent) deparse identically to their P1 source; internal gllvmTMB functions and the compiled library are not deparse-checked, they are trusted by the recorded version 0.7.1, the library path and the sha256 of the P1 source files, and every listed quantity is within its tolerance; and the engine = \"julia\" bridge route and the plan's eight acceptance classes were run (plan section 1.3), which this campaign did not do",
+  "legs": {
+   "R_convergence_0": true,
+   "R_pdHess_true": true,
+   "Julia_converged_true": true,
+   "same_data_sha256": true,
+   "gllvmTMB_deparse_identical_to_P1": true,
+   "R_version_0_7_1_from_P1_library": true,
+   "every_quantity_within_tolerance": false,
+   "engine_julia_bridge_route_and_eight_acceptance_classes_run": false
+  }
+ },
+ "cell": {
+  "formula": "value ~ 0 + trait + latent(0 + trait | review, d = 2, unique = FALSE)",
+  "data_sha256": "60951ec25cee8bfa1f46889ffb9aad160f9ab00f279ebf2a19da6e8efd59b049",
+  "data_file": "urban_wide.csv",
+  "p": 51,
+  "n": 191,
+  "data_committed_copy": null
+ },
+ "data_meta": {
+  "cell": "urban",
+  "small": false,
+  "source": "the maintainer's own urbanisation_map model_matrix_primary.rds; local file, not tracked, redistribution unconfirmed",
+  "source_rds_sha256": "25559e6cb1144ba7f374198af0b8648695d93b76a00b53dde6788f429645fb07",
+  "item_names_hash_note": "item columns it01..itNN follow the order of `items` (names not copied)",
+  "file": "urban_wide.csv",
+  "rows": 191,
+  "cols": 52,
+  "csv_sha256": "60951ec25cee8bfa1f46889ffb9aad160f9ab00f279ebf2a19da6e8efd59b049",
+  "R_version": "R version 4.6.0 (2026-04-24)"
+ },
+ "run": {
+  "host": "Mac Studio (the maintainer's machine; the urbanisation matrix is local and not copied)",
+  "start": [
+   "2026-10-03T00:47:56Z",
+   "18:47  up 1 day, 10:22, 16 users, load averages: 21.45 25.44 27.17"
+  ]
+ },
+ "engine_messages": {
+  "R": null,
+  "julia": null
+ },
+ "p1_source_sha256": {
+  "R/gllvmTMB.R": "a1ad39041f88d08b017500132bac45b5282f246025c488bc1829dc57aeae3faf",
+  "R/families.R": "beed3caa91b0ed77b402f40192a493db693eafdd0bb214aa0ef73c33e4538791",
+  "R/isdm-sources.R": "e06bbe7bc3c88697080173f0e1b68f3e5a1947729124e72d34587730cd1b6f73",
+  "R/extract-sigma.R": "dbd337827707a7ca04c31ee57d6caf143b08e633d30a495f809f5b8728f90a14",
+  "R/extract-cutpoints.R": "38c195646d91db683cbb31da1e3ba60fb1d857d5c0637f0877514176b11bc151",
+  "R/methods-gllvmTMB.R": "6c32924b415646697ab4e471fda8b83108e416d662ba6e607bbeba335dd21616",
+  "R/temporal.R": "93ec5bfe19b2f64afa04c50d9a7a8c85d2b0d9b9a6410eeceb5504895b280902",
+  "DESCRIPTION": "ce3ba8fd8787a096e0c1142a2145cef167869325c937c8436c8916a526552283"
+ },
+ "gllvmTMB_deparse_check": [
+  {
+   "name": "gllvmTMB",
+   "file": "R/gllvmTMB.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "gllvmTMBcontrol",
+   "file": "R/gllvmTMB.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "nbinom2",
+   "file": "R/families.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "ordinal_logit",
+   "file": "R/families.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "isdm_sources",
+   "file": "R/isdm-sources.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "extract_Sigma",
+   "file": "R/extract-sigma.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "extract_cutpoints",
+   "file": "R/extract-cutpoints.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "predict.gllvmTMB_multi",
+   "file": "R/methods-gllvmTMB.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "extract_temporal",
+   "file": "R/temporal.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "temporal_latent",
+   "file": "R/temporal.R",
+   "identical_deparse": true
+  }
+ ],
+ "cond_H_statement": "R cond(H) 15633.4, computed as kappa(solve(sdr$cov.fixed), exact = FALSE): a 1-norm condition-number ESTIMATE (LAPACK) of the inverse of TMB's sdreport covariance of all fixed parameters, in gllvmTMB's own parameter coordinates. Julia cond(H) NOT recorded for this row: C4 quantities need no standard errors; the p = 51 finite-difference Hessian is the expensive step. The two are different estimators in different parameter bases: recorded, never compared like for like.",
+ "not_covered": [
+  "One dataset and one seed per row: a spot check at this size, not a scaling study or a coverage study.",
+  "Direct engines only (R TMB fit against a direct Julia fit); R's engine = 'julia' bridge route is not exercised.",
+  "Julia starts from its own default start, never from R's coordinates; wall times include first-call Julia compilation.",
+  "cond(H) of the two engines is recorded where computed but never compared (different parameter bases); see cond_H_statement for this receipt."
+ ],
+ "raw_outputs_off_repo": "raw outputs kept off the public repo; re-derive locally with URBMAP_ROOT set. The urbanisation matrix is the maintainer's unpublished data and its redistribution status is unconfirmed, so the per-observation raw outputs (linear predictors, loadings) are not committed. This receipt keeps summary values only: logLik, the fixed effects, the maximum differences, wall times, the data file's sha256 and the sha256 of the two raw files (read_from). write_receipts.py --check cannot re-derive this row from the repository; it prints that and checks the receipt's internal consistency. With the retained raw files, run write_receipts.py --check --local-raw DIR.",
+ "engines": {
+  "R": {
+   "engine": "R gllvmTMB",
+   "gllvmTMB_version": "0.7.1",
+   "loaded_from_library": "Rlib/gllvmTMB",
+   "TMB_version": "1.9.21",
+   "R_version": "R version 4.6.0 (2026-04-24)",
+   "host": "w-kw3k3y6229.psych.ualberta.ca",
+   "formula": "value ~ 0 + trait + latent(0 + trait | review, d = 2, unique = FALSE)",
+   "convergence": 0,
+   "optimizer_message": "relative convergence (4)",
+   "pdHess": true,
+   "max_abs_gradient": 0.000182821891849816,
+   "n_par": 152,
+   "cond_H": 15633.3523349649,
+   "cond_H_method": "kappa(solve(sdr$cov.fixed), exact = FALSE): a 1-norm condition-number ESTIMATE (LAPACK) of the inverse of TMB's sdreport covariance of all fixed parameters, in gllvmTMB's own parameter coordinates",
+   "wall_fit_sec": 5.06643104553223,
+   "wall_sdreport_sec": 4.79235315322876,
+   "finished_utc": "2026-10-03T00:48:02Z"
+  },
+  "julia": {
+   "engine": "GLLVModels.jl",
+   "julia_version": "1.10.0",
+   "gllvmodels_commit": "f318d9d9a59888ed815d8d52cff1ef80129f358e",
+   "host": "w-kw3k3y6229.psych.ualberta.ca",
+   "call": "fit_binomial_gllvm(Y; K = 2, link = ProbitLink())",
+   "converged": true,
+   "iterations": 115,
+   "pd_hessian": null,
+   "cond_H": null,
+   "cond_H_method": "cond(Symmetric(vcov(fit, Y))): the exact 2-norm condition number (ratio of the extreme eigenvalues) of the full inverse observed information (Wald covariance) of the Julia fit, in the Julia fit's own parameter coordinates",
+   "wall_fit_sec": 294.3421220779419,
+   "wall_confint_sec": null,
+   "wall_vcov_sec": null,
+   "JULIA_NUM_THREADS": 2,
+   "OPENBLAS_NUM_THREADS": "1"
+  }
+ },
+ "comparison": {
+  "pin": "P1",
+  "cases": [
+   {
+    "case_id": "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-LOGLIK",
+    "quantity": "logLik",
+    "r_value": -4417.36975070805,
+    "julia_value": -4417.3697505891905,
+    "diff_source": "recomputed by the checker from r_value and julia_value",
+    "max_abs_diff": 1.1885913409059867e-07,
+    "tolerance": 1e-06,
+    "tolerance_rule": "1e-6 absolute on the marginal log-likelihood",
+    "tolerance_status": "twin: 1e-6 absolute on logLik, as the P0 worst case (2.3e-7) and every P1 twin",
+    "n_values": 1,
+    "within_tolerance": true
+   },
+   {
+    "case_id": "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-BETA",
+    "quantity": "beta",
+    "r_value": [
+     1.34367228586776,
+     1.15133704592017,
+     0.92497046795726,
+     0.645713397317101,
+     0.679772762881995,
+     0.558824835899452,
+     0.887395837989139,
+     0.501841142575141,
+     0.0432731564242386,
+     -0.00232760448330991,
+     -0.028254575921831,
+     -0.0892712314194545,
+     -0.173524132203716,
+     -0.262039120814728,
+     -0.292832970993774,
+     -0.39024467143047,
+     -0.453856090941268,
+     -0.43730338822081,
+     -0.357694185291867,
+     -0.447503615682408,
+     -0.75393606212509,
+     -0.670703446140839,
+     -0.58426485138753,
+     -0.667853860428181,
+     -0.680051186936161,
+     -0.745655087452238,
+     -0.840804895885926,
+     -2.36553151823767,
+     -0.904737275744401,
+     -0.960357551290327,
+     -1.26526835940359,
+     -1.29332922371927,
+     -0.967180862469928,
+     -0.981516783939391,
+     -1.25179041738981,
+     -1.09930285837416,
+     -1.51927674168517,
+     -2.05670679797073,
+     -1.18605987968876,
+     -1.4853820573503,
+     -1.34537242434341,
+     -1.35328525257298,
+     -1.37266715288339,
+     -1.37908433210836,
+     -1.71496474317602,
+     -1.42511907997607,
+     -1.70794727430962,
+     -1.38626571051762,
+     -1.90734687350368,
+     -1.65841331189183,
+     -1.70503250079865
+    ],
+    "julia_value": [
+     1.3436715261311478,
+     1.1513379875076653,
+     0.9249701000458573,
+     0.645712819542091,
+     0.6797736292114909,
+     0.5588254769819967,
+     0.8873906674679443,
+     0.5018418483568928,
+     0.043273410972282635,
+     -0.0023267635196552987,
+     -0.028253648898141973,
+     -0.08927117197646761,
+     -0.17352362725475334,
+     -0.2620401288975353,
+     -0.29283396516995647,
+     -0.39024379300735695,
+     -0.45385394970184934,
+     -0.4373032434108494,
+     -0.35769376435881084,
+     -0.4475040161748774,
+     -0.7539419296721501,
+     -0.6707025820471245,
+     -0.584265756053856,
+     -0.6678524752589708,
+     -0.6800494640099839,
+     -0.7456563380831106,
+     -0.8408071954529066,
+     -2.3657628621773457,
+     -0.9047375948865808,
+     -0.9603599601198524,
+     -1.2652542927954933,
+     -1.2933319543197483,
+     -0.9671805754721775,
+     -0.981515964846033,
+     -1.2517922382558417,
+     -1.09929777768097,
+     -1.5192743213602342,
+     -2.056685257456859,
+     -1.1860613483950335,
+     -1.4853761839029633,
+     -1.3453735024619269,
+     -1.3532866777043873,
+     -1.3726656217419184,
+     -1.3790807934640634,
+     -1.7149534486113827,
+     -1.425117297111749,
+     -1.707947831954267,
+     -1.3862629551554744,
+     -1.9073369603356105,
+     -1.6584127779189926,
+     -1.7050331369513394
+    ],
+    "diff_source": "recomputed by the checker from r_value and julia_value",
+    "max_abs_diff": 0.0002313439396757211,
+    "tolerance": 0.0001,
+    "tolerance_rule": "1e-4 absolute per fixed-effect estimate",
+    "tolerance_status": "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer",
+    "n_values": 51,
+    "within_tolerance": false
+   },
+   {
+    "case_id": "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-LLT",
+    "quantity": "LLt",
+    "diff_source": "max over 2601 values, from raw files that are not committed (raw outputs kept off the public repo; re-derive locally with URBMAP_ROOT set); this receipt records the maximum only",
+    "max_abs_diff": 0.0016484796389644174,
+    "tolerance": 0.0001,
+    "tolerance_rule": "1e-4 absolute per element of Lambda Lambda' (rotation and sign invariant)",
+    "tolerance_status": "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer",
+    "n_values": 2601,
+    "within_tolerance": false
+   },
+   {
+    "case_id": "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-ETA",
+    "quantity": "linear predictor on the training data (link scale)",
+    "diff_source": "max over 9741 values, from raw files that are not committed (raw outputs kept off the public repo; re-derive locally with URBMAP_ROOT set); this receipt records the maximum only",
+    "max_abs_diff": 0.0008218778164135188,
+    "tolerance": 1e-06,
+    "tolerance_rule": "1e-6 absolute, link scale on the training data",
+    "tolerance_status": "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer",
+    "n_values": 9741,
+    "within_tolerance": false
+   }
+  ]
+ },
+ "read_from": {
+  "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/raw/urban_R.json.gz (uncompressed sha256; this raw file is NOT in the repo)": "88235d7b5d880c935b4f3754a59e490b1021f1abb1eb29d321ac8354fd97d469",
+  "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/raw/urban_J.toml.gz (uncompressed sha256; this raw file is NOT in the repo)": "24f2218653ce9a945be1a11665394145f6678b56bd1b52fac54982f605aee1b3"
+ }
+}

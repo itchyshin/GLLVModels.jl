@@ -1,0 +1,190 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "data/DATA-OFF-NB1"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#689",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "896a0a2286c224fe9979d3cf7e7e2c6be27f9357",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/data_twins_p1.toml",
+      "sha256": "1ce70fee8e0fb87015ae1b24d6be105265ce53edb4fae9bed25b0597de974996"
+    },
+    {
+      "path": "test/fixtures/data_twins_nb1_p1_data.csv",
+      "sha256": "1bb79eea870b9f3f7770b2f8801e673f8020dbb823ca41436ac03640402028c2"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_data_twins_p1.jl",
+      "sha256": "07842797d28c18e5ce75609e90d47124bfda5d2253f9ac99be903010c6be9b15"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-DATA-NB1_EXPOSURE-LOGLIK",
+        "quantity": "maximised logLik of the nb1_exposure fit",
+        "r_source": "test/fixtures/data_twins_p1.toml [nb1_exposure.loglik]",
+        "julia_source": "fit.loglik, fit as at test/test_data_twins_p1.jl:123",
+        "r_value": -1833.2877911650555,
+        "julia_value": -1833.2877911234918,
+        "abs_diff": 4.156368049734738e-08,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_data_twins_p1.jl:76",
+        "tolerance_source_line": "@test isapprox(fit.loglik, Float64(d[\"loglik\"]); atol = 1e-6, rtol = 0)",
+        "note": "nbinom1 one-axis latent fit, p = 6, n = 150 (sha256 checked), R: family = nbinom1() + offset(log(e)), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Dispersion is per trait on both sides (R phi_nbinom1, Julia NB1 phi, variance mu (1 + phi))."
+      },
+      {
+        "case_id": "P1-JULIA-DATA-NB1_EXPOSURE-INTERCEPTS",
+        "quantity": "trait intercepts (6 values) of the nb1_exposure fit; the offset is not absorbed into them",
+        "r_source": "test/fixtures/data_twins_p1.toml [nb1_exposure.beta]",
+        "julia_source": "fit.β, fit as at test/test_data_twins_p1.jl:123",
+        "r_value": [
+          0.8727225131062478,
+          0.2540245190687141,
+          -0.3892122717934455,
+          0.5243707141148795,
+          0.04320995881047352,
+          0.24467906636527256
+        ],
+        "julia_value": [
+          0.8727286686986665,
+          0.2540190737618663,
+          -0.3892150834314696,
+          0.5243666468301397,
+          0.04322083269335651,
+          0.24468127476940468
+        ],
+        "abs_diff": 1.087388288299046e-05,
+        "tolerance": 0.0001,
+        "tolerance_source": "test/test_data_twins_p1.jl:77",
+        "tolerance_source_line": "@test isapprox(fit.β, Float64.(d[\"beta\"]); atol = 1e-4, rtol = 0)",
+        "note": "nbinom1 one-axis latent fit, p = 6, n = 150 (sha256 checked), R: family = nbinom1() + offset(log(e)), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Dispersion is per trait on both sides (R phi_nbinom1, Julia NB1 phi, variance mu (1 + phi))."
+      },
+      {
+        "case_id": "P1-JULIA-DATA-NB1_EXPOSURE-LAMBDA-LAMBDAT",
+        "quantity": "Lambda Lambda' (6 x 6) of the nb1_exposure fit",
+        "r_source": "test/fixtures/data_twins_p1.toml [nb1_exposure.lambda_lambdat]",
+        "julia_source": "fit.Λ * fit.Λ', fit as at test/test_data_twins_p1.jl:123",
+        "r_value": [
+          0.7664710758460337,
+          -0.5058192801877821,
+          0.6452554263523238,
+          0.3810204613954916,
+          -0.74997104654759,
+          0.2846823316603432,
+          -0.5058192801877821,
+          0.33380665268715365,
+          -0.42582511666801054,
+          -0.2514478387943744,
+          0.4949303723009401,
+          -0.18787116255322342,
+          0.6452554263523238,
+          -0.42582511666801054,
+          0.5432097548854604,
+          0.32076294594069427,
+          -0.6313648389899224,
+          0.23966047132007892,
+          0.3810204613954916,
+          -0.2514478387943744,
+          0.32076294594069427,
+          0.1894090939332405,
+          -0.3728181312953079,
+          0.14151844313321146,
+          -0.74997104654759,
+          0.4949303723009401,
+          -0.6313648389899224,
+          -0.3728181312953079,
+          0.7338262178241308,
+          -0.27855389842760825,
+          0.2846823316603432,
+          -0.18787116255322342,
+          0.23966047132007892,
+          0.14151844313321146,
+          -0.27855389842760825,
+          0.10573657964863571
+        ],
+        "julia_value": [
+          0.7664728854675703,
+          -0.5058203076522824,
+          0.6452527880196991,
+          0.3810134444971052,
+          -0.7499684112833518,
+          0.2846842619750671,
+          -0.5058203076522824,
+          0.3338072206916638,
+          -0.42582323515660286,
+          -0.2514431252158571,
+          0.49492847003116697,
+          -0.18787237449130095,
+          0.6452527880196991,
+          -0.42582323515660286,
+          0.5432040302289475,
+          0.32075496993578645,
+          -0.6313585483354477,
+          0.23966055059166808,
+          0.3810134444971052,
+          -0.2514431252158571,
+          0.32075496993578645,
+          0.1894016704830858,
+          -0.3728090752653006,
+          0.14151646236392001,
+          -0.7499684112833518,
+          0.49492847003116697,
+          -0.6313585483354477,
+          -0.3728090752653006,
+          0.7338193282333302,
+          -0.2785541507323784,
+          0.2846842619750671,
+          -0.18787237449130095,
+          0.23966055059166808,
+          0.14151646236392001,
+          -0.2785541507323784,
+          0.1057377639221364
+        ],
+        "abs_diff": 9.056030007281723e-06,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_data_twins_p1.jl:78",
+        "tolerance_source_line": "@test isapprox(fit.Λ * fit.Λ', _dt_mat(d[\"lambda_lambdat\"], p, p); atol = 1e-3, rtol = 0)",
+        "note": "nbinom1 one-axis latent fit, p = 6, n = 150 (sha256 checked), R: family = nbinom1() + offset(log(e)), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Dispersion is per trait on both sides (R phi_nbinom1, Julia NB1 phi, variance mu (1 + phi))."
+      },
+      {
+        "case_id": "P1-JULIA-DATA-NB1_EXPOSURE-DISPERSION",
+        "quantity": "per-trait dispersion (6 values) of the nb1_exposure fit",
+        "r_source": "test/fixtures/data_twins_p1.toml [nb1_exposure.phi]",
+        "julia_source": "fit.φ, fit as at test/test_data_twins_p1.jl:123",
+        "r_value": [
+          1.6822444642434482,
+          1.0136020913524717,
+          1.0017600729721827,
+          1.0351270033521043,
+          1.6607376779110545,
+          1.4999383790454237
+        ],
+        "julia_value": [
+          1.6822780967912148,
+          1.0136051768458574,
+          1.0017605685313564,
+          1.0351321509842564,
+          1.6607807526242893,
+          1.4999570801657884
+        ],
+        "abs_diff": 4.307471323472534e-05,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_data_twins_p1.jl:125",
+        "tolerance_source_line": "compare(\"nb1_exposure\", f1; extra = d -> @test isapprox(f1.φ, Float64.(d[\"phi\"]); atol = 1e-3, rtol = 0))",
+        "note": "nbinom1 one-axis latent fit, p = 6, n = 150 (sha256 checked), R: family = nbinom1() + offset(log(e)), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Dispersion is per trait on both sides (R phi_nbinom1, Julia NB1 phi, variance mu (1 + phi))."
+      }
+    ]
+  }
+}

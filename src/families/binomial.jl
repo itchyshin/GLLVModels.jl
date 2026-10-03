@@ -119,18 +119,6 @@ binomial_marginal_loglik_laplace(Y::AbstractMatrix, N::AbstractMatrix,
 # Fit driver (Binomial slice 4).
 # ---------------------------------------------------------------------------
 
-"""
-    BinomialFit
-
-Result of [`fit_binomial_gllvm`](@ref): intercepts `β` (length p), loadings `Λ`
-(p×K), the `link`, the maximised Laplace `loglik`, the optimiser `converged`
-flag, and `iterations`. Fits using `X_lv` additionally retain `alpha_lv`, the
-raw latent-axis coefficients for the predictor-informed score mean; use
-[`extract_lv_effects`](@ref) for the rotation-stable trait-scale product
-`Λ * alpha_lv'`. `loading_ridge` records the `loading_ridge` fit kwarg (`Inf`
-when the loading ridge was off); `loglik` is always the UNPENALISED Laplace
-marginal, evaluated at the (possibly ridge-penalised) optimum.
-"""
 # Post-fit Laplace saturation health (2026-08-28, the diagnosed cloglog
 # pathology). A SATURATED cell is one whose per-site conditional mode drives
 # the linear predictor to (or past) the link's μ-saturation thresholds
@@ -151,6 +139,18 @@ struct LaplaceSaturationHealth
     hessian_used::Symbol
 end
 
+"""
+    BinomialFit
+
+Result of [`fit_binomial_gllvm`](@ref): intercepts `β` (length p), loadings `Λ`
+(p×K), the `link`, the maximised Laplace `loglik`, the optimiser `converged`
+flag, and `iterations`. Fits using `X_lv` additionally retain `alpha_lv`, the
+raw latent-axis coefficients for the predictor-informed score mean; use
+[`extract_lv_effects`](@ref) for the rotation-stable trait-scale product
+`Λ * alpha_lv'`. `loading_ridge` records the `loading_ridge` fit kwarg (`Inf`
+when the loading ridge was off); `loglik` is always the UNPENALISED Laplace
+marginal, evaluated at the (possibly ridge-penalised) optimum.
+"""
 struct BinomialFit
     β::Vector{Float64}
     Λ::Matrix{Float64}
@@ -317,6 +317,39 @@ function _warn_saturation(sat::Union{Nothing, LaplaceSaturationHealth}, link::Li
             "documented cloglog pathology.")
     end
     return sat
+end
+
+# Runaway-loading screen (#498 item 1), mirroring gllvmTMB's binomial check
+# (R/diagnose.R, `.gllvmTMB_max_loading_by_trait` + the O-rule thresholds): per
+# trait m_t = max_k |Λ[t,k]|; relative_t = m_t / max(median(m), MAD(m)) over
+# traits with m > 0 (MAD with constant 1). A trait is flagged when
+# relative_t >= 25 (`loading_runaway_thresh`) or m_t >= 8 (`loading_absolute_thresh`,
+# a link-scale latent SD this large is a fitted probability indistinguishable from
+# 0/1). Diagnostic only: estimates and `converged` are untouched.
+const _BINOMIAL_LOADING_RUNAWAY_THRESH = 25.0
+const _BINOMIAL_LOADING_ABSOLUTE_THRESH = 8.0
+
+function _binomial_runaway_loadings(Λ::AbstractMatrix)
+    m = vec(maximum(abs, Λ; dims = 2))
+    pos = filter(x -> isfinite(x) && x > 0, m)
+    typical = isempty(pos) ? NaN : median(pos)
+    spread = length(pos) > 1 ? median(abs.(pos .- median(pos))) : NaN
+    cands = filter(x -> isfinite(x) && x > 0, [typical, spread])
+    denom = isempty(cands) ? NaN : maximum(cands)
+    return [t for t in eachindex(m) if isfinite(m[t]) &&
+            ((isfinite(denom) && m[t] / denom >= _BINOMIAL_LOADING_RUNAWAY_THRESH) ||
+             m[t] >= _BINOMIAL_LOADING_ABSOLUTE_THRESH)]
+end
+
+function _warn_runaway_loadings(Λ::AbstractMatrix)
+    idx = _binomial_runaway_loadings(Λ)
+    isempty(idx) && return idx
+    @warn string("Binomial fit has runaway loadings on trait(s) ", join(idx, ", "),
+        " (max |Λ| = ", round(maximum(abs, Λ); sigdigits = 3), "): a loading this far above ",
+        "the rest, or this large on the link scale, is an improper solution (Heywood case); ",
+        "quasi-complete separation produces this at ordinary prevalence. Treat the fit as ",
+        "unusable rather than interpreting it; try loading_ridge or a lower K.")
+    return idx
 end
 
 """
@@ -536,6 +569,7 @@ function _fit_binomial_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         sat = isfinite(ll) ?
             _warn_saturation(_laplace_saturation_health(Yc, Nm, Λ̂, β̂, link, hessian;
                                                         mask = msk), link, Λ̂) : nothing
+        _warn_runaway_loadings(Λ̂)
         return BinomialFit(β̂, Λ̂, link, ll, conv, iters,
                            alpha_hat, collect(Float64, θ̂), hessian, sat, nothing, loading_ridge)
     else
@@ -555,6 +589,7 @@ function _fit_binomial_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         sat = isfinite(ll) ?
             _warn_saturation(_laplace_saturation_health(Yc, Nm, Λ̂, β̂, link, hessian;
                                                         mask = msk), link, Λ̂) : nothing
+        _warn_runaway_loadings(Λ̂)
         return BinomialFit(β̂, Λ̂, link, ll, conv, iters, nothing, Float64[], hessian, sat, nothing, loading_ridge)
     end
 end

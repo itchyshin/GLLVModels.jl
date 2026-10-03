@@ -54,5 +54,25 @@
   "glvmodels_commit": "61c5eda4822da20591b6fa91869f93c3faf5d369",
   "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
-  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "behaviour": {
+    "pin": "P1",
+    "ruling": "itchyshin/GLLVModels.jl#684 item 2",
+    "read_from": {
+      "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/r-oracle.json": "3083644388edf68482c1f15134e472ddeb3edb676275d9faeb948f9f36bddcf7",
+      "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/julia-results.json": "00506228aaba442f4f3274734843869dc3de5249c6fb24f4a56b12f11f532011"
+    },
+    "cases": [
+      {
+        "case_id": "CORE070-SURFCONV-INFERENCE-CI-ROUTE-009",
+        "source_id": "inference/CI-ROUTE-009",
+        "kind": "refusal",
+        "r_observed": "A profile interval for canonical full-covariance repeatability is not currently available.",
+        "julia_observed": "A profile interval for canonical full-covariance two-level repeatability is not currently available.",
+        "requested_method": "profile",
+        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/r-oracle.json#oracle_values.CORE070-SURFCONV-INFERENCE-CI-ROUTE-009",
+        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/julia-results.json#cases.CORE070-SURFCONV-INFERENCE-CI-ROUTE-009"
+      }
+    ]
+  }
 }

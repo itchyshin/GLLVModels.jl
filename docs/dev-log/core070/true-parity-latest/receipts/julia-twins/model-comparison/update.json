@@ -1,0 +1,104 @@
+{
+  "schema": "true-parity-julia-behaviour-receipt/v1",
+  "source_ids": [
+    "model-comparison/update.gllvmTMB_multi"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "behaviour_observed_on_both_engines",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#684 item 2",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "896a0a2286c224fe9979d3cf7e7e2c6be27f9357",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/c1_behaviour_p1/r_c1_behaviour.toml",
+      "sha256": "d50622d355dd85f1c37017fd91158b7d653059d315d1aaa4fc62ccc4df3b88a9"
+    },
+    {
+      "path": "test/fixtures/c1_behaviour_p1/r_anova_print.txt",
+      "sha256": "824bd153906902373b66f4bb5296dd80db7326512870ce50f9f8c6bfc7fd2fdb"
+    },
+    {
+      "path": "test/fixtures/c1_behaviour_p1/helpers.jl",
+      "sha256": "05234886705816d18d65d4b1b6619ae0b8c4e8cd7c49604e39d61e4911ea3823"
+    },
+    {
+      "path": "test/fixtures/gllvmtmb_anova_fixture.toml",
+      "sha256": "b06237b50c5a5f8a7fe916a04554fa8d2a2ea014c100c5b2cf61415b40227d78"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_c1_behaviour_p1.jl",
+      "sha256": "8453b3ed0105811c279a7d1ccbfd1b4edc20fe6b1c79eea01c7e4f5829e03e05"
+    }
+  ],
+  "what_this_is_not": "This compares four behaviours of update() on one temporal panel and one ordinary fit. It does not claim identical condition types or messages. R's evaluate = FALSE (returns the rebuilt call), R's formula override through the saved call, R's 'does not retain a public call' refusal for a temporal fit with no call, and R's variational (gllvmTMB_va) replay have no Julia counterpart here and are not compared. Julia's update also takes keyword overrides (temporal, trait, structure, unit, unit_obs, g_tol, iterations) that R reaches through the call; only data is compared. The temporal numeric fits themselves are the temporal twins' claim.",
+  "behaviour": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-C1-UPDATE-REPLAY",
+        "source_id": "model-comparison/update.gllvmTMB_multi",
+        "kind": "route",
+        "r_observed": "replays the saved call: returns a refit with the original response and log-likelihood",
+        "julia_observed": "replays the saved call: returns a refit with the original response and log-likelihood",
+        "r_source": "update(fit) on gllvmTMB(value ~ 0 + trait + temporal_indep(0 + trait | series, time = occasion), unit = \"series\", family = gaussian()) at P1 on a 60-row temporal panel (4 series x 5 occasions x 3 traits; seed 20261002; the [update] table of test/fixtures/c1_behaviour_p1/r_c1_behaviour.toml); the refit's response and log-likelihood are the recorded [update.replay] values",
+        "julia_source": "update(fit) on the Julia fit: fit_temporal_gllvm(tbl; formula = @formula(value ~ 0 + trait), temporal = temporal_indep(:(0 + trait | series), :occasion), unit = :series) on the same panel, as produced by c1b_julia_update_observation in test/fixtures/c1_behaviour_p1/helpers.jl",
+        "r_loglik_original": -79.77732159465506,
+        "r_loglik_replay": -79.77732159465506,
+        "julia_loglik_original": -79.77732158610436,
+        "julia_loglik_replay": -79.77732158610436,
+        "note": "The route is the replay of the saved call with nothing replaced. The label is true when a fit comes back whose response equals the original's (to 1e-12) and whose log-likelihood equals the original's (to 1e-6, the tolerance of R's own temporal update test). The two engines' log-likelihoods are recorded here; their agreement is the temporal numeric twins' claim, not this case's."
+      },
+      {
+        "case_id": "CORE070-C1-UPDATE-DATA-OVERRIDE",
+        "source_id": "model-comparison/update.gllvmTMB_multi",
+        "kind": "route",
+        "r_observed": "refits on the supplied data: the response is the supplied column and the log-likelihood moves",
+        "julia_observed": "refits on the supplied data: the response is the supplied column and the log-likelihood moves",
+        "r_source": "update(fit, data = changed) on gllvmTMB(value ~ 0 + trait + temporal_indep(0 + trait | series, time = occasion), unit = \"series\", family = gaussian()) at P1 on a 60-row temporal panel (4 series x 5 occasions x 3 traits; seed 20261002; the [update] table of test/fixtures/c1_behaviour_p1/r_c1_behaviour.toml); changed$value = value + 0.01 * (1:60)",
+        "julia_source": "update(fit; data = changed) on the Julia fit: fit_temporal_gllvm(tbl; formula = @formula(value ~ 0 + trait), temporal = temporal_indep(:(0 + trait | series), :occasion), unit = :series) on the same panel, as produced by c1b_julia_update_observation in test/fixtures/c1_behaviour_p1/helpers.jl",
+        "r_loglik_override": -80.51501408505987,
+        "julia_loglik_override": -80.51501407367144,
+        "note": "The route is a refit on the supplied table: the refit's response equals the supplied column (to 1e-12), differs from the original, and the log-likelihood moves by more than 1e-6."
+      },
+      {
+        "case_id": "CORE070-C1-UPDATE-UNNAMED-REFUSED",
+        "source_id": "model-comparison/update.gllvmTMB_multi",
+        "kind": "refusal",
+        "r_observed": "signals an error and returns no model",
+        "julia_observed": "signals an error and returns no model",
+        "r_source": "update(fit, changed), an unnamed override, on gllvmTMB(value ~ 0 + trait + temporal_indep(0 + trait | series, time = occasion), unit = \"series\", family = gaussian()) at P1 on a 60-row temporal panel (4 series x 5 occasions x 3 traits; seed 20261002; the [update] table of test/fixtures/c1_behaviour_p1/r_c1_behaviour.toml) (the [update.unnamed] record)",
+        "julia_source": "update(fit, changed) on the Julia fit: fit_temporal_gllvm(tbl; formula = @formula(value ~ 0 + trait), temporal = temporal_indep(:(0 + trait | series), :occasion), unit = :series) on the same panel, as produced by c1b_julia_update_observation in test/fixtures/c1_behaviour_p1/helpers.jl; every Julia override is a keyword",
+        "r_condition_classes": [
+          "rlang_error",
+          "error",
+          "condition"
+        ],
+        "julia_exception_type": "MethodError",
+        "r_message": "Temporal `update()` accepts named argument overrides only.\n→ Use named formula, data, or fitting-argument overrides.",
+        "note": "Both engines refuse and return no model. R refuses on purpose (cli_abort: named overrides only). Julia has no positional method, so the refusal is a MethodError, not a message written for this case. The condition types and messages are recorded, not compared."
+      },
+      {
+        "case_id": "CORE070-C1-UPDATE-NO-CALL-REFUSED",
+        "source_id": "model-comparison/update.gllvmTMB_multi",
+        "kind": "refusal",
+        "r_observed": "signals an error and returns no model",
+        "julia_observed": "signals an error and returns no model",
+        "r_source": "update(fit) on an ordinary fit (latent(0 + trait | site, d = 1), no temporal term) at P1, which keeps no call, so update.gllvmTMB_multi falls to stats::update.default (the [update.nocall] record)",
+        "julia_source": "update(fit) on a GllvmFit from fit_gaussian_gllvm(Y; K = 1), Y the same responses as a traits x units matrix; Julia defines update for TemporalGaussianFit only, as produced by c1b_julia_update_observation in test/fixtures/c1_behaviour_p1/helpers.jl",
+        "r_condition_classes": [
+          "simpleError",
+          "error",
+          "condition"
+        ],
+        "julia_exception_type": "MethodError",
+        "r_message": "need an object with call component",
+        "note": "Both engines refuse and return no model on a fit with no saved call. R's message comes from stats::update.default; Julia's is the MethodError for a type with no update method. The condition types and messages are recorded, not compared."
+      }
+    ]
+  }
+}

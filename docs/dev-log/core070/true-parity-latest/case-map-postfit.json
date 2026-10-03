@@ -64,11 +64,11 @@
     }
   },
   "counts": {
-    "numeric_pass": 34,
+    "numeric_pass": 37,
     "numeric_fail": 1,
     "numeric_held_batch_verifier_failed": 2,
     "numeric_non_discriminating": 1,
-    "partial_non_numeric_case": 12,
+    "partial_non_numeric_case": 9,
     "needs_surface_not_executed": 0,
     "retired_at_p1_not_measured": 0,
     "not_measured": 2
@@ -1329,13 +1329,13 @@
       ],
       "disposition": null,
       "uncertain": true,
-      "evidence_tier": "partial_non_numeric_case",
+      "evidence_tier": "numeric",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-LOGLIK-DF-NATIVE.json"
         ],
-        "tier": "measured at P1 and the harness passes, but at least one case is a verdict, own-consistency, exact-integer, empty-length or default-policy check with no R-vs-Julia number and tolerance, so the row does not bind"
+        "tier": "numeric: every executable case receipt carries an integer_equality comparison block pinned to P1 (tolerance 0.5, so the integers must be equal), under itchyshin/GLLVModels.jl#684 item 1"
       },
       "measured_result": {
         "case_verdicts": {
@@ -1344,9 +1344,7 @@
         "batch_verifier": {
           "CORE070-POSTFIT-LOGLIK-DF-NATIVE": "PASS"
         },
-        "case_kinds": {
-          "CORE070-POSTFIT-LOGLIK-DF-NATIVE": "paired_policy_check"
-        }
+        "row_verdict": "PASS"
       }
     },
     {
@@ -1358,13 +1356,13 @@
         "CORE070-POSTFIT-LOGLIK-NOBS-NATIVE"
       ],
       "disposition": null,
-      "evidence_tier": "partial_non_numeric_case",
+      "evidence_tier": "numeric",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-LOGLIK-NOBS-NATIVE.json"
         ],
-        "tier": "measured at P1 and the harness passes, but at least one case is a verdict, own-consistency, exact-integer, empty-length or default-policy check with no R-vs-Julia number and tolerance, so the row does not bind"
+        "tier": "numeric: every executable case receipt carries an integer_equality comparison block pinned to P1 (tolerance 0.5, so the integers must be equal), under itchyshin/GLLVModels.jl#684 item 1"
       },
       "measured_result": {
         "case_verdicts": {
@@ -1373,9 +1371,7 @@
         "batch_verifier": {
           "CORE070-POSTFIT-LOGLIK-NOBS-NATIVE": "PASS"
         },
-        "case_kinds": {
-          "CORE070-POSTFIT-LOGLIK-NOBS-NATIVE": "paired_policy_check"
-        }
+        "row_verdict": "PASS"
       }
     },
     {
@@ -1414,13 +1410,13 @@
         "CORE070-POSTFIT-NOBS-COUNT-NATIVE"
       ],
       "disposition": null,
-      "evidence_tier": "partial_non_numeric_case",
+      "evidence_tier": "numeric",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-NOBS-COUNT-NATIVE.json"
         ],
-        "tier": "measured at P1 and the harness passes, but at least one case is a verdict, own-consistency, exact-integer, empty-length or default-policy check with no R-vs-Julia number and tolerance, so the row does not bind"
+        "tier": "numeric: every executable case receipt carries an integer_equality comparison block pinned to P1 (tolerance 0.5, so the integers must be equal), under itchyshin/GLLVModels.jl#684 item 1"
       },
       "measured_result": {
         "case_verdicts": {
@@ -1429,9 +1425,7 @@
         "batch_verifier": {
           "CORE070-POSTFIT-NOBS-COUNT-NATIVE": "PASS"
         },
-        "case_kinds": {
-          "CORE070-POSTFIT-NOBS-COUNT-NATIVE": "paired_policy_check"
-        }
+        "row_verdict": "PASS"
       }
     },
     {
@@ -1449,7 +1443,7 @@
         "non_binding_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-NOBS-FALLBACK-NATIVE.json"
         ],
-        "tier": "measured at P1 and the harness passes, but at least one case is a verdict, own-consistency, exact-integer, empty-length or default-policy check with no R-vs-Julia number and tolerance, so the row does not bind"
+        "tier": "measured at P1 and the integers agree, but R's nobs() never reached the fallback branch this row names on this fixture (it returned on the likelihood_rows branch), so the row does not bind"
       },
       "measured_result": {
         "case_verdicts": {

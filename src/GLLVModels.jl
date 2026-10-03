@@ -176,6 +176,7 @@ include("confint_derived_wald.jl")       # transformed-Wald CIs for bounded deri
 # adds methods to). Additive: the ::GllvmFit methods are unchanged.
 include("link_residual.jl")
 include("extractors.jl")                # extract_*/get* post-fit extractor family (core070 Cluster 1)
+include("families/nb_grouped_postfit.jl") # predict/fitted/residuals/getResidualCor for NBGroupedFit + NBGroupedCovFit (#555). AFTER extractors.jl (getResidualCor, _canonical_level) and link_residual.jl (_latent_correlation).
 include("re_sd.jl")                      # latent_score_sd (renamed from getREsd): TMB-sdreport-style conditional-on-θ̂ random-effect SDs (core070 E-cluster)
 include("families/mixed.jl")             # mixed-family GLLVM (cross-family VCV): fit_mixed_gllvm + MixedFamilyFit. AFTER link_residual + the family fitters so all dispatch targets exist.
 include("families/isdm_sources.jl")      # iSDM: isdm_source()/isdm_sources() declarations (gllvmTMB P1 twin)
@@ -220,7 +221,22 @@ include("bridge_precision_multivariate.jl") # explicit multivariate precision br
 # Ordination naming: the implemented z_s ~ N(B'x_s, I) model (covariate-informed LV
 # mean PLUS residual) is gllvm's *concurrent* ordination (num.lv.c). Expose the
 # accurate name as an alias of the as-built `*_constrained` API.
+"""
+    fit_concurrent_gllvm(Y; family, X, K, kwargs...) -> ConstrainedOrdinationFit
+
+Alias of [`fit_constrained_gllvm`](@ref) under gllvm's name for the model it fits: the
+latent mean `z_s ~ N(B'x_s, I)` (a covariate-driven mean plus a residual) is gllvm's
+concurrent ordination (`num.lv.c`). Same arguments and the same
+[`ConstrainedOrdinationFit`](@ref) result.
+"""
 const fit_concurrent_gllvm = fit_constrained_gllvm
+
+"""
+    ConcurrentOrdinationFit
+
+Alias of [`ConstrainedOrdinationFit`](@ref), the result type of
+[`fit_concurrent_gllvm`](@ref) and [`fit_constrained_gllvm`](@ref).
+"""
 const ConcurrentOrdinationFit = ConstrainedOrdinationFit
 
 # Public API

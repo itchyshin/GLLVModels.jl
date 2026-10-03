@@ -36,6 +36,17 @@ using LinearAlgebra
 # root) come out of the Newick walk and are kept around so that
 # `log_det_Q` and `solve_Q` can do their O(p) tree traversals without
 # having to round-trip through B.
+"""
+    EdgePhy{T}
+
+Edge-incidence representation of a rooted bifurcating phylogeny, built by
+[`edge_phy`](@ref) from a Newick string. Fields: `n_leaves`, `n_nodes` (`2p − 1`),
+`n_edges` (`2p − 2`), the sparse node-by-edge incidence matrix `B`, `branch_lengths`,
+`leaf_indices` and `leaf_names`, `root_index`, and the tree-walk arrays `node_parent`,
+`node_edge` and `node_children`. It is the tree argument of [`sigma_phy_dense_edge`](@ref),
+[`log_det_Q`](@ref), [`solve_Q`](@ref), [`path_membership`](@ref) and
+[`fit_branch_re`](@ref).
+"""
 struct EdgePhy{T}
     n_leaves::Int
     n_nodes::Int                            # 2p − 1 for a binary tree
