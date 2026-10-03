@@ -65,5 +65,46 @@
   "glvmodels_commit": "61c5eda4822da20591b6fa91869f93c3faf5d369",
   "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
-  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "behaviour": {
+    "pin": "P1",
+    "ruling": "itchyshin/GLLVModels.jl#684 item 2",
+    "read_from": {
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/r-oracle.json": "ef8ce3b20f20a5acf093a13ac1266209bceb5ac505ab117702a24db3aeec23c9",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/julia-results.json": "5d6a257284adbc7b42cc403a129ca2f539d2a184bc94122a2bf2de0e5ffdcb8b",
+      "test/parity/fixtures/core070_inference_routes.tsv": "5f75af28288781a5cc516bb94d38e5fdc5107b1712be54fbaabe9d0e79035db0"
+    },
+    "cases": [
+      {
+        "case_id": "CORE070-INFERENCE-COMMUNALITY-CI-UNSUPPORTED-METHOD-REJECT",
+        "source_id": "inference/CI-ROUTE-026",
+        "kind": "error_class",
+        "r_observed": "Method \"wald_asym\" not implemented for `communality`.",
+        "julia_observed": "communality:MethodError",
+        "requested_method": "wald_asym",
+        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/r-oracle.json#communality_reject.wald_asym",
+        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/julia-results.json#CORE070-INFERENCE-COMMUNALITY-CI-UNSUPPORTED-METHOD-REJECT.methods.wald_asym"
+      },
+      {
+        "case_id": "CORE070-INFERENCE-COMMUNALITY-CI-UNSUPPORTED-METHOD-REJECT",
+        "source_id": "inference/CI-ROUTE-027",
+        "kind": "error_class",
+        "r_observed": "Method \"fisher-z\" not implemented for `communality`.",
+        "julia_observed": "communality:MethodError",
+        "requested_method": "fisher-z",
+        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/r-oracle.json#communality_reject.fisher-z",
+        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/julia-results.json#CORE070-INFERENCE-COMMUNALITY-CI-UNSUPPORTED-METHOD-REJECT.methods.fisher-z"
+      },
+      {
+        "case_id": "CORE070-INFERENCE-COMMUNALITY-CI-UNSUPPORTED-METHOD-REJECT",
+        "source_id": "inference/CI-ROUTE-028",
+        "kind": "error_class",
+        "r_observed": "Method \"bogus\" not implemented for `communality`.",
+        "julia_observed": "communality:MethodError",
+        "requested_method": "bogus",
+        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/r-oracle.json#communality_reject.bogus",
+        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/julia-results.json#CORE070-INFERENCE-COMMUNALITY-CI-UNSUPPORTED-METHOD-REJECT.methods.bogus"
+      }
+    ]
+  }
 }

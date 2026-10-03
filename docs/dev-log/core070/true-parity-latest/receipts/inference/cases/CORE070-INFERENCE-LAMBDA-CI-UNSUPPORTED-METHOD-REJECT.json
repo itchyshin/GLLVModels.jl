@@ -57,5 +57,48 @@
   "glvmodels_commit": "61c5eda4822da20591b6fa91869f93c3faf5d369",
   "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
-  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "behaviour": {
+    "pin": "P1",
+    "ruling": "itchyshin/GLLVModels.jl#684 item 2",
+    "read_from": {
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json": "3c0c44d62296c7f2730e2b4a6d7abb7d963afdfdd09731d7ab2dfb94d22350af",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv": "aa78ce4ae49ad3f05891517710bb4e54fbaa1f5b612821bd1a99eba6e5a0df1c",
+      "test/parity/fixtures/core070_inference_routes.tsv": "5f75af28288781a5cc516bb94d38e5fdc5107b1712be54fbaabe9d0e79035db0"
+    },
+    "cases": [
+      {
+        "case_id": "CORE070-INFERENCE-LAMBDA-CI-UNSUPPORTED-METHOD-REJECT",
+        "source_id": "inference/CI-ROUTE-006",
+        "kind": "refusal",
+        "r_observed": ".confint_lambda:fisher-z",
+        "julia_observed": "lambda:reject",
+        "requested_method": "fisher-z",
+        "julia_call": "confint(fitA,YA;parm=\"Lambda_B[1,1]\",method=:fisher_z)",
+        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-006",
+        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-006",
+        "r_corroboration": {
+          "probe_row": "CI-ROUTE-098",
+          "actual": "'arg' should be one of \u201cwald\u201d, \u201cwald_asym\u201d, \u201cprofile\u201d, \u201cbootstrap\u201d",
+          "note": "R's probe stubs .confint_lambda for this row, so the refusal itself is read from P1 source (match.arg, R/z-confint-gllvmTMB.R:270) and this guard row, which observed the same match.arg error for a bad method"
+        }
+      },
+      {
+        "case_id": "CORE070-INFERENCE-LAMBDA-CI-UNSUPPORTED-METHOD-REJECT",
+        "source_id": "inference/CI-ROUTE-007",
+        "kind": "refusal",
+        "r_observed": ".confint_lambda:bogus",
+        "julia_observed": "lambda:reject",
+        "requested_method": "bogus",
+        "julia_call": "confint(fitA,YA;parm=\"Lambda_B[1,1]\",method=:bogus)",
+        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-007",
+        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-007",
+        "r_corroboration": {
+          "probe_row": "CI-ROUTE-098",
+          "actual": "'arg' should be one of \u201cwald\u201d, \u201cwald_asym\u201d, \u201cprofile\u201d, \u201cbootstrap\u201d",
+          "note": "R's probe stubs .confint_lambda for this row, so the refusal itself is read from P1 source (match.arg, R/z-confint-gllvmTMB.R:270) and this guard row, which observed the same match.arg error for a bad method"
+        }
+      }
+    ]
+  }
 }

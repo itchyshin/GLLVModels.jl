@@ -1,5 +1,350 @@
 {
- "schema": 1,
- "pin": "P1",
- "classes": []
+  "schema": 1,
+  "pin": "P1",
+  "classes": [
+    {
+      "kind": "route",
+      "canonical": "lambda:wald",
+      "r": [
+        ".confint_lambda:wald"
+      ],
+      "julia": [
+        "lambda:wald_packed"
+      ],
+      "basis": "R: confint.gllvmTMB_multi sends parm Lambda to .confint_lambda (R/z-confint-gllvmTMB.R:1627-1640, wald branch :285); Julia: confint(fit, y; parm, method=:wald) (src/confint.jl:359-368, default method=:wald at :364) reaches _gaussian_record_confint (src/families/aghq_gaussian_fit.jl:240), the Wald interval, so a call with no method and an explicit wald call take the Wald route in both."
+    },
+    {
+      "kind": "route",
+      "canonical": "sigma:wald",
+      "r": [
+        ".confint_sigma:wald"
+      ],
+      "julia": [
+        "sigma_B:wald_packed",
+        "sigma_W:wald_packed",
+        "sigma_phy:wald_packed"
+      ],
+      "basis": "R: .confint_sigma sends method wald to .confint_sigma_wald (R/z-confint-gllvmTMB.R:1803-1810, :1891); Julia: confint(fit, y; parm=sigma_*, method=:wald, \u03a3_phy) takes the one-argument Wald confint(fit) for structured fits (src/confint.jl:246, :359-368), which is Wald whatever method is passed."
+    },
+    {
+      "kind": "route",
+      "canonical": "beta:wald",
+      "r": [
+        "tidy:wald"
+      ],
+      "julia": [
+        "beta:wald_packed"
+      ],
+      "basis": "R: fixed-effect parm with method wald goes through tidy(object, \"fixed\") (R/z-confint-gllvmTMB.R:1774-1776); Julia: confint(fit, y; parm=\"beta[1]\", method=:wald) reaches _gaussian_record_confint (src/families/aghq_gaussian_fit.jl:240); both give the Wald interval for a fixed effect."
+    },
+    {
+      "kind": "route",
+      "canonical": "sigma_eps:wald",
+      "r": [
+        ".confint_wald_targets:wald"
+      ],
+      "julia": [
+        "sigma_eps:wald_packed"
+      ],
+      "basis": "R: profile_targets() parm sigma_eps with method wald goes to .confint_wald_targets (R/z-confint-gllvmTMB.R:1331, called at :1762); Julia: confint(fit, y; parm=\"sigma_eps\", method=:wald) reaches _gaussian_record_confint (src/families/aghq_gaussian_fit.jl:240); both give the Wald interval."
+    },
+    {
+      "kind": "route",
+      "canonical": "communality:wald",
+      "r": [
+        ".confint_communality:wald"
+      ],
+      "julia": [
+        "communality:wald_derived"
+      ],
+      "basis": "R: .confint_communality wald branch (R/z-confint-gllvmTMB.R:941, :969); Julia: communality_wald_ci (src/confint_derived_wald.jl:375 at 61c5eda48), a logit-scale Wald interval. Julia has no dispatcher, so a call with no method is this Wald function, which is also R's default for communality (R/z-confint-gllvmTMB.R:1681)."
+    },
+    {
+      "kind": "route",
+      "canonical": "proportion:wald",
+      "r": [
+        ".confint_proportion:wald"
+      ],
+      "julia": [
+        "proportion:wald_derived"
+      ],
+      "basis": "R: .confint_proportion wald branch (R/z-confint-gllvmTMB.R:1188, :1207); Julia: icc_wald_ci (src/confint_derived_wald.jl:395 at 61c5eda48), a logit-scale Wald interval for a proportion. It is also R's default for proportion (R/z-confint-gllvmTMB.R:1705)."
+    },
+    {
+      "kind": "route",
+      "canonical": "phylo_signal:wald",
+      "r": [
+        ".confint_phylo_signal:wald"
+      ],
+      "julia": [
+        "phylo_signal:wald_derived"
+      ],
+      "basis": "R: .confint_phylo_signal wald branch (R/z-confint-gllvmTMB.R:894, :916); Julia: phylo_signal_wald_ci (src/confint_derived_wald.jl:412 at 61c5eda48), a logit-scale Wald interval."
+    },
+    {
+      "kind": "route",
+      "canonical": "rho:fisher-z",
+      "r": [
+        ".confint_rho:fisher-z"
+      ],
+      "julia": [
+        "rho:wald_derived"
+      ],
+      "basis": "R: .confint_rho with method fisher-z calls extract_correlations(method = \"fisher-z\") (R/z-confint-gllvmTMB.R:1034, :1061), and fisher-z is R's default for rho (R/z-confint-gllvmTMB.R:1693); Julia: correlation_wald_ci (src/confint_derived_wald.jl:358 at 61c5eda48), a Fisher-z transformed Wald interval."
+    },
+    {
+      "kind": "route",
+      "canonical": "lambda:profile",
+      "r": [
+        ".confint_lambda:profile"
+      ],
+      "julia": [
+        "lambda:profile"
+      ],
+      "basis": "R: .confint_lambda profile branch calls loading_profile (R/z-confint-gllvmTMB.R:372-393); Julia: profile_ci(fit, \"Lambda_B[1,1]\"; y) (src/confint_profile.jl:532-537, :406 at 61c5eda48), the profile-likelihood interval."
+    },
+    {
+      "kind": "route",
+      "canonical": "beta:profile",
+      "r": [
+        ".confint_fixef_profile:profile"
+      ],
+      "julia": [
+        "beta:profile"
+      ],
+      "basis": "R: fixed-effect parm with method profile calls .confint_fixef_profile (R/z-confint-gllvmTMB.R:1776-1777, defined :2098); Julia: profile_ci(fit, \"beta[1]\"; y) (src/confint_profile.jl:532-537, :406 at 61c5eda48); both profile the likelihood and need no cached standard errors."
+    },
+    {
+      "kind": "route",
+      "canonical": "sigma_eps:profile",
+      "r": [
+        ".confint_profile_targets:profile"
+      ],
+      "julia": [
+        "sigma_eps:profile"
+      ],
+      "basis": "R: profile_targets() parm sigma_eps with method profile calls .confint_profile_targets (R/z-confint-gllvmTMB.R:1266, called at :1746); Julia: profile_ci(fit, \"sigma_eps\"; y) (src/confint_profile.jl:532-537, :406 at 61c5eda48)."
+    },
+    {
+      "kind": "route",
+      "canonical": "phylo_signal:profile",
+      "r": [
+        ".confint_phylo_signal:profile"
+      ],
+      "julia": [
+        "phylo_signal:profile"
+      ],
+      "basis": "R: .confint_phylo_signal profile branch calls profile_ci_phylo_signal (R/z-confint-gllvmTMB.R:894, :911); Julia: GLLVM.profile_ci_derived with the phylogenetic-signal closure (src/confint_derived.jl:913 at 61c5eda48, not exported); both profile the derived quantity."
+    },
+    {
+      "kind": "route",
+      "canonical": "lambda:bootstrap",
+      "r": [
+        ".confint_lambda:bootstrap"
+      ],
+      "julia": [
+        "lambda:bootstrap"
+      ],
+      "basis": "R: .confint_lambda bootstrap branch calls .loading_ci_bootstrap (R/z-confint-gllvmTMB.R:346-368); Julia: bootstrap_ci(fit; parms=\"Lambda_B[1,1]\", y) (src/confint_bootstrap.jl:258 at 61c5eda48); both refit simulated data."
+    },
+    {
+      "kind": "route",
+      "canonical": "sigma:bootstrap",
+      "r": [
+        ".confint_sigma:bootstrap"
+      ],
+      "julia": [
+        "sigma_B:bootstrap",
+        "sigma_W:bootstrap",
+        "sigma_phy:bootstrap"
+      ],
+      "basis": "R: .confint_sigma method bootstrap calls .confint_sigma_bootstrap, which calls bootstrap_Sigma (R/z-confint-gllvmTMB.R:1803-1807, :1816, :1827); Julia: bootstrap_ci(fit; parms=sigma_*, y, \u03a3_phy) (src/confint_bootstrap.jl:258 at 61c5eda48); both refit simulated data."
+    },
+    {
+      "kind": "route",
+      "canonical": "communality:bootstrap",
+      "r": [
+        ".confint_communality:bootstrap"
+      ],
+      "julia": [
+        "communality:bootstrap"
+      ],
+      "basis": "R: .confint_communality bootstrap branch (R/z-confint-gllvmTMB.R:941, :991); Julia: GLLVM.bootstrap_ci_derived with the communality closure (src/confint_derived.jl:489 at 61c5eda48, not exported)."
+    },
+    {
+      "kind": "route",
+      "canonical": "rho:bootstrap",
+      "r": [
+        ".confint_rho:bootstrap"
+      ],
+      "julia": [
+        "rho:bootstrap"
+      ],
+      "basis": "R: .confint_rho method bootstrap calls extract_correlations(method = \"bootstrap\") (R/z-confint-gllvmTMB.R:1034, :1061); Julia: GLLVM.bootstrap_ci_derived with the correlation closure (src/confint_derived.jl:489 at 61c5eda48)."
+    },
+    {
+      "kind": "route",
+      "canonical": "phylo_signal:bootstrap",
+      "r": [
+        ".confint_phylo_signal:bootstrap"
+      ],
+      "julia": [
+        "phylo_signal:bootstrap"
+      ],
+      "basis": "R: .confint_phylo_signal bootstrap branch (R/z-confint-gllvmTMB.R:894, :921); Julia: GLLVM.bootstrap_ci_derived with the phylogenetic-signal closure (src/confint_derived.jl:489 at 61c5eda48)."
+    },
+    {
+      "kind": "route",
+      "canonical": "proportion:bootstrap",
+      "r": [
+        ".confint_proportion:bootstrap"
+      ],
+      "julia": [
+        "proportion:bootstrap"
+      ],
+      "basis": "R: .confint_proportion bootstrap branch (R/z-confint-gllvmTMB.R:1188, :1213); Julia: GLLVM.bootstrap_ci_derived with the shared-proportion closure (src/confint_derived.jl:489 at 61c5eda48)."
+    },
+    {
+      "kind": "refusal",
+      "canonical": "lambda:method-outside-supported-set",
+      "r": [
+        ".confint_lambda:fisher-z",
+        ".confint_lambda:bogus"
+      ],
+      "julia": [
+        "lambda:reject"
+      ],
+      "basis": "R: the probe records the dispatcher handing the literal method to .confint_lambda, whose first statement is match.arg(method, c(\"wald\", \"wald_asym\", \"profile\", \"bootstrap\")) (R/z-confint-gllvmTMB.R:261-270), so both strings are refused; the same probe observes that error for Lambda with a bad method (row CI-ROUTE-098). Julia: _gaussian_record_confint throws ArgumentError for a method other than wald, profile or bootstrap (src/families/aghq_gaussian_fit.jl:247 at 61c5eda48). Julia refuses only on AGHQ-record Gaussian fits (inference-batch-contract-p1.json known_findings.lambda_reject_validation_boundary); the case measured is one."
+    },
+    {
+      "kind": "error_class",
+      "canonical": "icc:unsupported-method-refused",
+      "r": [
+        "Method \"wald_asym\" not supported for `icc`.",
+        "Method \"fisher-z\" not supported for `icc`.",
+        "Method \"bogus\" not supported for `icc`."
+      ],
+      "julia": [
+        "icc:MethodError"
+      ],
+      "basis": "R: .confint_icc raises a cli_abort (rlang_error) for a method other than wald or bootstrap (R/z-confint-gllvmTMB.R:855, :878-882); Julia: icc_wald_ci has no method keyword (src/confint_derived_wald.jl:395 at 61c5eda48), so the same call raises MethodError. Both refuse the same request; Julia's refusal is structural (a function chosen per method), not a validated message."
+    },
+    {
+      "kind": "error_class",
+      "canonical": "phylo_signal:unsupported-method-refused",
+      "r": [
+        "Method \"wald_asym\" not implemented for `phylo_signal`.",
+        "Method \"fisher-z\" not implemented for `phylo_signal`.",
+        "Method \"bogus\" not implemented for `phylo_signal`."
+      ],
+      "julia": [
+        "phylo_signal:MethodError"
+      ],
+      "basis": "R: .confint_phylo_signal raises a cli_abort (rlang_error) from the switch default (R/z-confint-gllvmTMB.R:894, :928-931); Julia: phylo_signal_wald_ci has no method keyword (src/confint_derived_wald.jl:412 at 61c5eda48), so the same call raises MethodError. Both refuse the same request; Julia's refusal is structural."
+    },
+    {
+      "kind": "error_class",
+      "canonical": "communality:unsupported-method-refused",
+      "r": [
+        "Method \"wald_asym\" not implemented for `communality`.",
+        "Method \"fisher-z\" not implemented for `communality`.",
+        "Method \"bogus\" not implemented for `communality`."
+      ],
+      "julia": [
+        "communality:MethodError"
+      ],
+      "basis": "R: .confint_communality raises a cli_abort (rlang_error) from the switch default (R/z-confint-gllvmTMB.R:941, :1012-1015); Julia: communality_wald_ci has no method keyword (src/confint_derived_wald.jl:375 at 61c5eda48), so the same call raises MethodError. Both refuse the same request; Julia's refusal is structural."
+    },
+    {
+      "kind": "error_class",
+      "canonical": "rho:unsupported-method-refused",
+      "r": [
+        "Method \"wald_asym\" not supported for `rho`.",
+        "Method \"bogus\" not supported for `rho`."
+      ],
+      "julia": [
+        "rho:MethodError"
+      ],
+      "basis": "R: .confint_rho raises a cli_abort (rlang_error) in its else branch (R/z-confint-gllvmTMB.R:1034, :1086-1090); Julia: correlation_wald_ci has no method keyword (src/confint_derived_wald.jl:358 at 61c5eda48), so the same call raises MethodError. Both refuse the same request; Julia's refusal is structural."
+    },
+    {
+      "kind": "error_class",
+      "canonical": "proportion:unsupported-method-refused",
+      "r": [
+        "Method \"wald_asym\" not implemented for `proportion`.",
+        "Method \"fisher-z\" not implemented for `proportion`.",
+        "Method \"bogus\" not implemented for `proportion`."
+      ],
+      "julia": [
+        "proportion:MethodError"
+      ],
+      "basis": "R: .confint_proportion raises a cli_abort (rlang_error) from the switch default (R/z-confint-gllvmTMB.R:1188, :1219-1226); Julia: icc_wald_ci has no method keyword (src/confint_derived_wald.jl:395 at 61c5eda48), so the same call raises MethodError. Both refuse the same request; Julia's refusal is structural."
+    },
+    {
+      "kind": "refusal",
+      "canonical": "icc:profile-withdrawn",
+      "r": [
+        "A profile interval for canonical full-covariance repeatability is not currently available."
+      ],
+      "julia": [
+        "A profile interval for canonical full-covariance two-level repeatability is not currently available."
+      ],
+      "basis": "R: .confint_icc raises gllvmTMB_repeatability_profile_withdrawn for method profile (R/z-confint-gllvmTMB.R:855, :862-867); Julia: repeatability_ci throws TwoLevelRepeatabilityProfileWithdrawn for method=:profile (src/twolevel.jl:605-612 at 681c4c3ca). Both refuse the same request, name the same reason (the old profile estimated only a diagonal-companion ratio) and point to wald or bootstrap."
+    },
+    {
+      "kind": "route",
+      "canonical": "aghq:off",
+      "r": [
+        "FALSE"
+      ],
+      "julia": [
+        "off"
+      ],
+      "basis": "R: .gllvmTMB_normalize_aghq maps NULL and FALSE to FALSE, the Laplace approximation (R/gllvmTMB.R:2492); Julia: _aghq_request maps false and nothing to :off (src/families/aghq_fit_info.jl:38 at fd92b6551)."
+    },
+    {
+      "kind": "route",
+      "canonical": "aghq:auto",
+      "r": [
+        "\"auto\""
+      ],
+      "julia": [
+        "auto"
+      ],
+      "basis": "R: .gllvmTMB_normalize_aghq maps \"auto\" and TRUE to \"auto\" (R/gllvmTMB.R:2493-2494); Julia: _aghq_request maps true and :auto to :auto (src/families/aghq_fit_info.jl:39 at fd92b6551)."
+    },
+    {
+      "kind": "route",
+      "canonical": "aghq:nodes=1",
+      "r": [
+        "1L"
+      ],
+      "julia": [
+        "1"
+      ],
+      "basis": "R: .gllvmTMB_normalize_aghq keeps a single positive integer as integer (R/gllvmTMB.R:2495-2498); Julia: _aghq_request keeps a positive Integer as Int (src/families/aghq_fit_info.jl:40-42 at fd92b6551); one node."
+    },
+    {
+      "kind": "route",
+      "canonical": "aghq:nodes=2",
+      "r": [
+        "2L"
+      ],
+      "julia": [
+        "2"
+      ],
+      "basis": "R: .gllvmTMB_normalize_aghq keeps a single positive integer as integer (R/gllvmTMB.R:2495-2498); Julia: _aghq_request keeps a positive Integer as Int (src/families/aghq_fit_info.jl:40-42 at fd92b6551); two nodes."
+    },
+    {
+      "kind": "route",
+      "canonical": "aghq:nodes=9",
+      "r": [
+        "9L"
+      ],
+      "julia": [
+        "9"
+      ],
+      "basis": "R: .gllvmTMB_normalize_aghq keeps a single positive integer as integer (R/gllvmTMB.R:2495-2498); Julia: _aghq_request keeps a positive Integer as Int (src/families/aghq_fit_info.jl:40-42 at fd92b6551); nine nodes."
+    }
+  ]
 }

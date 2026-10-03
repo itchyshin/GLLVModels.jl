@@ -47,5 +47,16 @@
   "glvmodels_commit": "61c5eda4822da20591b6fa91869f93c3faf5d369",
   "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
-  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "behaviour_not_bound": [
+    {
+      "source_id": "inference/CI-ROUTE-067",
+      "reason": "fallback",
+      "text": "R fell back to another method and Julia ran the method asked for. Asked for bootstrap. R's probe recorded route 'tidy:wald' with the message 'Bootstrap on fixed effects is not implemented; falling back to `method = \"wald\"`.'; Julia's solver was 'bootstrap'. Different behaviour, so no entry.",
+      "evidence": {
+        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-067",
+        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-067"
+      }
+    }
+  ]
 }
