@@ -610,10 +610,21 @@
    "classification": "required_core",
    "reason": "Refit wrapper for a temporal-latent model; depends on the temporal_* twins (A6) landing first.",
    "arc": "A2 (small); depends on A6",
-   "executable_case_ids": [],
-   "evidence": {},
-   "measured_against": null,
-   "disposition": null
+   "executable_case_ids": [
+    "CORE070-C1-UPDATE-REPLAY",
+    "CORE070-C1-UPDATE-DATA-OVERRIDE",
+    "CORE070-C1-UPDATE-UNNAMED-REFUSED",
+    "CORE070-C1-UPDATE-NO-CALL-REFUSED"
+   ],
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/model-comparison/update.json"
+    ],
+    "tier": "behavioural (itchyshin/GLLVModels.jl#684 item 2, route and refusal): update() at P1 and GLLVModels.update() on a temporal fit were each run on the same 60-row temporal_indep panel. Replaying the saved call returns a refit with the original response and log-likelihood on both engines; update with data = changed refits on the supplied column on both; an unnamed override and an update on an ordinary fit that keeps no call each signal an error and return no model on both. The labels are derived from the raw records in test/fixtures/c1_behaviour_p1/ and from the fresh Julia run by tools/true_parity_julia_receipts.jl (test/test_c1_behaviour_p1.jl). The condition types differ (R rlang_error / simpleError, Julia MethodError) and are recorded, not equated. R's evaluate = FALSE, formula override and the no-saved-call refusal for a temporal fit are not compared"
+   },
+   "measured_against": "P1",
+   "disposition": null,
+   "evidence_tier": "behavioural"
   },
   {
    "source_id": "column-coef/column_coef",
