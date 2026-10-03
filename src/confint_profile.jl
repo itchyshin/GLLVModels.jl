@@ -403,6 +403,10 @@ Failure modes (each side independently):
     `max_expand` geometric expansions → that bound is `NaN`.
   - A constrained refit at a candidate value fails → bracket contracts
     inward on that side, still typically yielding a finite bound.
+
+`confint(fit, y; parm, method = :profile)` calls this function for each selected
+term and returns the bounds with the term names and estimates; see
+[`confint`](@ref).
 """
 function profile_ci(fit::GllvmFit, param_index::Integer;
                     level::Real = 0.95,
