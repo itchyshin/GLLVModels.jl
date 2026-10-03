@@ -745,12 +745,20 @@ function _gaussian_legacy_vcov(fit::GllvmFit, y::AbstractMatrix;
     return V[sel, sel]
 end
 
+# `confint` takes `method` for a Gaussian fit, but only the Wald route has standard errors.
+function _stderror_wald_only(kwargs)
+    get(kwargs, :method, :wald) === :wald || throw(ArgumentError(
+        "stderror is the Wald standard error; method must be :wald, got $(repr(kwargs[:method]))"))
+    return nothing
+end
+
 """
     stderror(fit, [Y]; kwargs...) -> Vector{Float64}
 
 Return the standard errors of estimated parameters for `fit`.
 """
 function StatsAPI.stderror(fit::GllvmFit; y = nothing, kwargs...)
+    _stderror_wald_only(kwargs)
     y_mat = y !== nothing ? y : (hasproperty(fit, :y) ? fit.y : nothing)
     y_mat === nothing && throw(ArgumentError("`y` matrix must be supplied to compute stderror for GllvmFit: stderror(fit, y)"))
     ci = confint(fit; y = y_mat, kwargs...)
@@ -758,6 +766,7 @@ function StatsAPI.stderror(fit::GllvmFit; y = nothing, kwargs...)
 end
 
 function StatsAPI.stderror(fit::GllvmFit, Y::AbstractMatrix; kwargs...)
+    _stderror_wald_only(kwargs)
     ci = confint(fit; y = Y, kwargs...)
     return copy(ci.se)
 end

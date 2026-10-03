@@ -157,6 +157,47 @@ the refits are dropped).
 and derived-quantity CIs (Σ_y entries, communality, correlation, phylogenetic
 signal H²) via [`confint_derived`-family helpers](covariance-correlation.md).
 
+### One call for the Gaussian fit: `method` and derived `parm`
+
+`confint(fit, y; method, parm)` reaches the same three methods, and the derived
+quantities, without choosing among the helper functions:
+
+```julia
+confint(fit, y; parm = "sigma_eps", method = :profile)        # profile_ci for each term
+confint(fit, y; parm = "Lambda", method = :bootstrap, n_boot = 500)
+confint(fit, y; parm = "communality")                         # transformed Wald, every trait
+confint(fit, y; parm = "rho[1,2]", method = :bootstrap, n_boot = 500)
+confint(fit, y; parm = "icc[2]", method = :wald)
+confint(fit, y; parm = "phylo_signal[1]", method = :profile)
+```
+
+A call either runs the method it names or throws an `ArgumentError` that lists
+the methods available for that fit and `parm`; it never hands back a Wald
+interval for a profile or bootstrap request, and a keyword the route does not use
+is refused by name. The default is still `method = :wald`.
+
+| `parm` | quantity | `:wald` | `:profile` | `:bootstrap` |
+|--------|----------|---------|------------|--------------|
+| `"communality[t]"` | `communality(fit)[t]` | `communality_wald_ci` (logit) | `profile_ci_derived` | `bootstrap_ci_derived` |
+| `"icc[t]"`, `"repeatability[t]"` | `extract_ICC_site(fit)[t]` | `icc_wald_ci` (logit) | `profile_ci_derived` | `bootstrap_ci_derived` |
+| `"rho[i,j]"`, `"correlation[i,j]"` | `correlation(fit)[i,j]` | `correlation_wald_ci` (Fisher-z) | `profile_ci_derived` | `bootstrap_ci_derived` |
+| `"proportion:<component>[t]"` | `proportions(fit; component)[t]` | `icc_wald_ci` (logit) | `profile_ci_derived` | `bootstrap_ci_derived` |
+| `"phylo_signal[t]"` | `phylo_signal(fit)[t]` | `phylo_signal_wald_ci` (logit) | `profile_ci_phylo_signal` | `bootstrap_ci_derived` |
+| any term name (`"sigma_eps"`, `"Lambda"`, ...) | the packed parameter | observed information | `profile_ci` | `bootstrap_ci` |
+
+The derived intervals are the direct functions' own, value for value. The profile
+route clamps to the quantity's natural range. The component of a `proportion` is
+one of `shared`, `unique_B`, `unique_W`, `unique_Wd`, `residual`. gllvmTMB's tier
+spellings (`communality:unit:t`, `rho:unit:i,j`, `proportion:shared_unit:t`) are
+refused with an error: they name gllvmTMB's aligned estimands
+(`extract_communality`, `extract_correlations`, `extract_proportions`), which
+differ from `communality(fit)`, `correlation(fit)` and `proportions(fit)`. The bootstrap
+runs one set of refits per requested quantity, as gllvmTMB does, so ask for the
+traits you need. gllvmTMB withdrew its profile interval for icc, communality,
+rho and proportion; the profile route here is the existing penalty-based
+`profile_ci_derived` and is exploratory. A fit made with `lambda_constraint`
+pins takes `method = :wald` only. See [`confint`](@ref) for the keywords.
+
 ### Confirmatory fits and `loading_profile` (D3 Stage 1)
 
 `fit_gaussian_gllvm(y; K, lambda_constraint = M)` fits a **confirmatory**

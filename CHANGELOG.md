@@ -97,6 +97,38 @@
   optimum, and on some data it now stops at a different one than before (the review compared 132
   fits with non-constant offsets: 8 differed by more than 1e-4 in logLik, four higher and four
   lower, all reported converged).
+- **`confint(fit, Y; method = ...)` on a Gaussian fit runs the method you ask for or refuses it by name.**
+  On a fit without a retained data record (the default `fit_gaussian_gllvm(Y; K)` and every
+  structured fit with `has_diag`, `K_W`, `K_phy` or `has_phy_unique`), `method = :profile` and
+  `method = :bootstrap` returned the Wald interval (route tag `wald_packed`), `method = :bogus` was
+  accepted, and every other keyword (`n_boot`, `seed`, `mask`, a misspelling) was dropped. Measured on
+  the inference-batch fixtures (structured `sigma_B[1]`, plain `sigma_eps`): `:wald`, `:profile`,
+  `:bootstrap` and `:bogus` all gave the same Wald interval. Now `:profile` calls `profile_ci` for each
+  selected term (fields `status` and `method`), `:bootstrap` calls `bootstrap_ci` (fields `n_converged`,
+  `replicates`, `method`), and an unknown or non-Symbol `method`, an unknown keyword, or a data-less
+  profile or bootstrap request is an `ArgumentError` that names what is available, for example
+  `method = :bogus is not available for Gaussian GllvmFit / parm sigma_B[1]; available: :wald, :profile, :bootstrap`.
+  The keyword-only form `confint(fit; y = Y, method = ...)` takes the same routes, and a fit made with
+  `lambda_constraint` pins takes `:wald` only (profile and bootstrap refits would drop the pins). The
+  default call is unchanged: 21 outputs (the default and `:wald` calls in both forms, the record
+  route's profile and bootstrap, `vcov`, `stderror`, and the non-Gaussian `confint` and `coef_table`)
+  compared bit for bit against main. `stderror` on a Gaussian fit refuses a
+  non-Wald `method` with an `ArgumentError` (it would otherwise reach the new routes and fail on the
+  missing `se` field).
+- **`confint` reaches the derived quantities by `parm`.** `parm = "communality[t]"`, `"icc[t]"`
+  (`"repeatability"`), `"rho[i,j]"` (`"correlation"`), `"proportion:<component>[t]"` and
+  `"phylo_signal[t]"` (leave `[..]` out for every trait or pair; gllvmTMB's tier spellings such as
+  `communality:unit:t` are refused, because they name gllvmTMB's aligned estimands, which differ
+  from these quantities) take `method = :wald` (the default;
+  `communality_wald_ci`, `icc_wald_ci`, `correlation_wald_ci`, `phylo_signal_wald_ci`, with one Hessian
+  for all requested quantities), `:profile` (`profile_ci_derived`, or `profile_ci_phylo_signal`,
+  clamped to the quantity's natural range) and `:bootstrap` (`bootstrap_ci_derived`). The intervals equal
+  the direct functions' value for value (`test/test_confint_method_routes.jl`). `icc` is
+  `extract_ICC_site`. gllvmTMB (9539352f6) withdrew the profile interval for icc, communality, rho and
+  proportion, and `confint(...; method = :profile)` here still returns the exploratory penalty-based
+  profile for them; refusing it is one edit to `_CONFINT_DERIVED_METHODS`. Until PR #696 lands,
+  `bootstrap_ci` reports SD terms on the log scale; the new bootstrap route converts them so
+  its SD terms are on the raw scale, and the conversion does nothing once #696 is in.
 - **NB1 near its Poisson limit (φ → 0): accurate density, and per-species fits converge.**
   Two defects, found while checking the NB1 grouped fitters after #615.
   - Precision: the NB1 density, score and observed and Fisher curvatures differenced

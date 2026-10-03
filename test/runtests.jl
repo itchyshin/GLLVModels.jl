@@ -102,6 +102,7 @@ println(_SHARD === nothing ?
     _shard_include("test_confint_bootstrap.jl")
     _shard_include("test_confint_derived.jl")
     _shard_include("test_confint_derived_wald.jl")
+    _shard_include("test_confint_method_routes.jl")
     _shard_include("test_profile_derived_fix.jl")
     _shard_include("test_takahashi_selinv.jl")
     _shard_include("test_em_louis.jl")

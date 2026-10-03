@@ -77,6 +77,10 @@
 //     covers KEPT_AS_JULIA_EXTRA and EXCLUDED_INTERNAL_HELPER), the date must be that ruling's, and
 //     the signer must pass the signature rule, else it is listed under unsigned_decision=. A
 //     KEPT_AS_JULIA_EXTRA basis must also cite a docs/src/... file that resolves at the ref.
+//   Review of #687, follow-up: C2 to C5 and X2 read a scoreboard row's Status word, so a done word on a row
+//     whose receipt cell begins "not bound" (how true_parity_assemble.py writes a row it did not bind) is
+//     STATUS_NOT_BOUND, not done. The assembler no longer turns a case-map disposition into a done word
+//     (disposition_status); this guard keeps the two tools in agreement.
 import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -710,6 +714,10 @@ function evaluateScoreboardRow(r) {
   if (r.status === 'EVIDENCED-BEHAVIOURAL' && (isRSZ(r) || isRD(r) || isGRP(r) || !behaviouralEligibleBoardId(r.id))) {
     return { ok: false, reason: 'BEHAVIOURAL_NOT_ALLOWED_FOR_THIS_ROW' };
   }
+  // The assembler writes "not bound; cited: ..." in the receipt cell of every row it did not bind, whatever the
+  // case map said. A done word beside that cell did not come from a binding rule (an old assembler copied a
+  // disposition such as "EVIDENCED" into the Status column, and the cited path then resolved), so it is not done.
+  if (/^not bound\b/i.test(r.receiptText)) return { ok: false, reason: 'STATUS_NOT_BOUND' };
   const extracted = extractPaths(r.receiptText);
   if (extracted.length === 0) {
     if (r.status === 'DISPOSITION-SIGNED' && hasSignedTokens(r.receiptText)) return { ok: true };
@@ -871,14 +879,28 @@ function checkC5() { return report('C5 grouping levels', scoreboardRows(), isGRP
 
 // --- C6: reverse-gap list, one written decision per item, from a fixed vocabulary ----
 
-// A documented Julia extra must be documented: the basis cites at least one docs/src/... file (no `..`
-// or dot-leading segment) and every cited docs/src file resolves to a blob at the ref. Shared with
-// tools/true_parity_assemble.py (docs_src_paths). Lookarounds, not \b, so both engines read the same text.
-const DOCS_SRC_RE = /(?<![A-Za-z0-9_])docs\/src\/(?:[A-Za-z0-9_-][A-Za-z0-9._-]*\/)*[A-Za-z0-9_-][A-Za-z0-9._-]*\.(?:md|jl|toml|json|txt)(?![A-Za-z0-9_])/g;
+// A documented Julia extra must be documented: the basis names at least one page under docs/src, and every
+// page it names is an existing .md file written exactly as docs/src/<path>.md. The basis is read as tokens: it is
+// split at ASCII whitespace and at ( ) [ ] { } < > " ' ` , ; : ! ? # (so "docs/src/a.md#sec", "(docs/src/a.md)" and
+// "docs/src/a.md:12" name docs/src/a.md), trailing dots are dropped (a sentence's full stop), and every token that
+// contains "docs/src" must then BE a page path: it starts with docs/src/, has no ".." or "." or dot-leading segment
+// and no empty one, ends in .md, and has nothing after it. So "page.md.bak", "page.md~", "./docs/src/page.md",
+// "other/docs/src/page.md", a URL, a directory and an existing .json, .txt, .jl or .toml file are not citations,
+// and a malformed citation beside a good one fails too. Shared with tools/true_parity_assemble.py
+// (DOCS_SRC_SPLIT_RE, DOCS_SRC_PAGE_RE: the same text; the delimiter set is explicit ASCII so both engines
+// split the same way).
+const DOCS_SRC_SPLIT_RE = /[ \t\n\r\f\v()\[\]{}<>\x22\x27\x60,;:!?#]+/;
+const DOCS_SRC_PAGE_RE = /^docs\/src\/(?:[A-Za-z0-9_-][A-Za-z0-9._-]*\/)*[A-Za-z0-9_-][A-Za-z0-9._-]*\.md$/;
+function docsSrcCitations(basis) {
+  const tokens = [...new Set(basis.split(DOCS_SRC_SPLIT_RE).map((t) => t.replace(/\.+$/, '')).filter((t) => t.includes('docs/src')))].sort();
+  return { pages: tokens.filter((t) => DOCS_SRC_PAGE_RE.test(t)), malformed: tokens.filter((t) => !DOCS_SRC_PAGE_RE.test(t)) };
+}
 function keptBasisProblem(basis) {
-  const paths = [...new Set(basis.match(DOCS_SRC_RE) || [])];
-  if (paths.length === 0) return 'KEPT_AS_JULIA_EXTRA basis must cite a docs/src/... file';
-  const dangling = paths.filter((q) => !existsAsBlob(q));
+  const { pages, malformed } = docsSrcCitations(basis);
+  const notExact = 'not an exact docs/src/<path>.md page';
+  if (pages.length === 0) return `KEPT_AS_JULIA_EXTRA basis must cite a docs/src/... file${malformed.length ? `; ${notExact}: ${malformed.join(',')}` : ''}`;
+  if (malformed.length) return `KEPT_AS_JULIA_EXTRA basis cites ${malformed.join(',')}, which is ${notExact}`;
+  const dangling = pages.filter((q) => !existsAsBlob(q));
   if (dangling.length) return `KEPT_AS_JULIA_EXTRA basis cites ${dangling.join(',')}, which does not resolve at the ref`;
   return null;
 }
