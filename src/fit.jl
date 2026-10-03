@@ -63,33 +63,119 @@ end
 GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime)=
     GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime,nothing)
 
-# Identifiability guard for the closed-form Gaussian fitter (#149). The
-# likelihood is bounded only when the number of latent axes is below the rank
-# of the data the fitter sees, unless that rank is already full (`rank == p`):
-# with `rank < p` and `K_total ≥ rank`, `ΛΛᵀ` can reproduce every sampled
-# direction exactly and the residual variance runs to zero, so the maximum is
-# not attained. This replaces the former `n_sites ≥ p` rule, which refused
-# fits with `n < p` and small `K` that are well posed, and accepted
-# rank-deficient data with `n ≥ p` that are not. When the fit estimates
-# regression coefficients (`X` with free columns) the data are first
-# residualised on `X` by least squares, which centres them when `X` carries
-# per-trait intercepts.
-function _check_gaussian_rank(y::AbstractMatrix, K_total::Integer, X, β_fixed)
+# Residual of `y` after least-squares regression on the free columns of `X`
+# (`p × n × q`), without forming the dense `(p n) × q` design. A column that is
+# supported on a single trait row (a per-trait intercept or slope) is handled
+# trait by trait; the remaining "shared" columns are projected on those local
+# blocks first (Frisch-Waugh) and solved through `q_shared × q_shared` normal
+# equations. Rank-deficient columns are handled by pivoted QR (local blocks)
+# and an eigen pseudo-inverse (shared block); only the residual is used.
+function _gaussian_residualise(y::AbstractMatrix, X::AbstractArray{<:Real,3}, β_fixed)
     p, n = size(y)
-    Yeff = Matrix{Float64}(y)
-    if X !== nothing
-        size(X, 1) == p && size(X, 2) == n || return nothing  # reported later
-        mask = _fixed_zero_mask(β_fixed, size(X, 3), "β_fixed")
-        Xf, _ = _slice_fixed_X(X, mask)
-        q = size(Xf, 3)
-        if q > 0
-            D = reshape(Xf, p * n, q)
-            r = vec(Yeff) .- D * (D \ vec(Yeff))
-            Yeff = reshape(r, p, n)
+    q_full = size(X, 3)
+    fmask = _fixed_zero_mask(β_fixed, q_full, "β_fixed")
+    local_cols = [Int[] for _ in 1:p]
+    shared = Int[]
+    for j in 1:q_full
+        fmask[j] && continue
+        Xj = @view X[:, :, j]
+        rows = findall(r -> any(!iszero, @view Xj[r, :]), 1:p)
+        if length(rows) == 1
+            push!(local_cols[rows[1]], j)
+        elseif length(rows) > 1
+            push!(shared, j)
         end
     end
-    r = rank(Yeff)
-    if r < p && K_total ≥ r
+    R = Matrix{Float64}(y)
+    qs = length(shared)
+    Dg = qs > 0 ? Array{Float64,3}(X[:, :, shared]) : zeros(0, 0, 0)
+    for t in 1:p
+        cols = local_cols[t]
+        isempty(cols) && continue
+        A = Matrix{Float64}(X[t, :, cols])                  # n × q_t
+        R[t, :] .-= A * (A \ R[t, :])
+        if qs > 0
+            B = Matrix{Float64}(Dg[t, :, :])                # n × q_s
+            Dg[t, :, :] .= B .- A * (A \ B)
+        end
+    end
+    if qs > 0
+        D = reshape(Dg, p * n, qs)
+        G = Symmetric(D' * D)
+        bvec = D' * vec(R)
+        E = eigen(G)
+        tol = maximum(abs, E.values) * qs * eps()
+        inv_vals = [v > tol ? inv(v) : 0.0 for v in E.values]
+        β = E.vectors * (inv_vals .* (E.vectors' * bvec))
+        R = reshape(vec(R) .- D * β, p, n)
+    end
+    return R
+end
+
+# Rank of the data after giving every trait unit norm, so that a trait on a
+# tiny scale is not judged rank deficient. A trait whose residual is zero
+# relative to its original size (a zero trait, or one that the estimated
+# intercepts absorb completely) makes the data rank deficient.
+function _scale_aware_rank(Yeff::AbstractMatrix, y::AbstractMatrix)
+    p, n = size(Yeff)
+    M = Matrix{Float64}(Yeff)
+    for t in 1:p
+        nr = norm(@view M[t, :])
+        n0 = norm(@view y[t, :])
+        if n0 == 0 || nr <= 1e-10 * n0
+            M[t, :] .= 0.0
+        else
+            M[t, :] ./= nr
+        end
+    end
+    return rank(M)
+end
+
+# Identifiability guard for the closed-form Gaussian fitter (#149). It replaces
+# the former `n_sites ≥ p` rule.
+#
+# `strict = false` (plain isotropic fit, complete data): the likelihood is
+# bounded when the number of latent axes is below the rank of the data the
+# fitter sees, unless that rank is already full (`rank == p`). With
+# `rank < p` and `K_total ≥ rank`, `ΛΛᵀ` can reproduce every sampled direction
+# and the residual variance runs to zero (probabilistic PCA). When `X` has free
+# columns the data are first residualised on `X` by least squares, which
+# centres them when `X` carries per-trait intercepts. The rank is computed
+# after scaling every trait to unit norm.
+#
+# `strict = true` (per-trait diagonal terms, phylogenetic blocks, `X_lv`): the
+# rank rule is not sufficient, because a duplicated, collinear or zero trait
+# gives an unbounded likelihood even with `K` below the rank, as a per-trait
+# variance can collapse. These fits are refused whenever the effective data
+# are rank deficient, which includes every `n_sites < p` fit.
+#
+# Masked fits are not covered: the masked route reaches this check on a
+# mean-imputed matrix, so the rank rule says nothing about them.
+function _check_gaussian_rank(y::AbstractMatrix, K_total::Integer, X, β_fixed;
+                              strict::Bool = false)
+    p, n = size(y)
+    all(isfinite, y) || throw(ArgumentError(
+        "fit_gaussian_gllvm: y contains Infs or NaNs; the Gaussian fitter " *
+        "needs complete finite responses."))
+    Yeff = y
+    if X !== nothing
+        size(X, 1) == p && size(X, 2) == n || return nothing  # reported later
+        all(isfinite, X) || throw(ArgumentError(
+            "fit_gaussian_gllvm: X contains Infs or NaNs."))
+        Yeff = _gaussian_residualise(y, X, β_fixed)
+    end
+    r = _scale_aware_rank(Yeff, y)
+    if strict
+        r < p && throw(ArgumentError(
+            "fit_gaussian_gllvm: this fit has per-trait variance terms " *
+            "(has_diag, a phylogenetic block, or X_lv), and these require the " *
+            "data the fitter sees to have full rank (rank = $r, p = $p, " *
+            "n_sites = $n; centred by the estimated intercepts when X is " *
+            "supplied). A subset of traits is linearly dependent, so a " *
+            "per-trait variance can collapse and the likelihood is unbounded. " *
+            "Use more sites, drop the dependent trait, or drop the per-trait " *
+            "terms. The Laplace-fitted families have no such condition on n_sites."))
+    elseif r < p && K_total ≥ r
         throw(ArgumentError(
             "fit_gaussian_gllvm: the number of latent axes K = $K_total must be " *
             "below the rank of the data the fitter sees (rank = $r, p = $p, " *
@@ -237,7 +323,9 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
     @assert K ≥ 1
     @assert K_W ≥ 0
     @assert K_phy ≥ 0
-    _check_gaussian_rank(y, K + K_W, X, β_fixed)
+    _check_gaussian_rank(y, K + K_W, X, β_fixed;
+                         strict = has_diag || K_phy > 0 || has_phy_unique ||
+                                  X_lv !== nothing)
 
     if (K_phy > 0 || has_phy_unique) && Σ_phy === nothing
         throw(ArgumentError(

@@ -272,6 +272,54 @@ end
     @test fl.loglik ≈ dense atol = 1e-8
 end
 
+@testset "#149 rank rule: scale-aware rank, strict variants, non-finite input" begin
+    G = GLLVModels.fit_gaussian_gllvm
+    rankerr(f) = try f(); nothing catch e; e end
+    isrank(e) = e isa ArgumentError && occursin("rank", sprint(showerror, e))
+
+    # A trait on a tiny scale is not rank deficient (n = p = 5, K = 4 < p).
+    Ys = randn(StableRNG(160), 5, 5); Ys[1, :] .*= 1e-20
+    @test !isrank(rankerr(() -> G(Ys; K = 4)))
+
+    # Strict variants refuse any rank-deficient data (scale-aware rank < p).
+    Random.seed!(2)
+    Yd = randn(5, 12); Yd[2, :] .= Yd[1, :]            # duplicated trait
+    @test_throws ArgumentError G(Yd; K = 1, has_diag = true)
+    @test isrank(rankerr(() -> G(Yd; K = 1, has_diag = true)))
+    Yz = randn(StableRNG(161), 5, 12); Yz[3, :] .= 0   # zero trait
+    @test_throws ArgumentError G(Yz; K = 1, has_diag = true)
+    Σ6 = let A = randn(StableRNG(163), 6, 6); Symmetric(A * A' + I) end
+    @test_throws ArgumentError G(randn(StableRNG(2), 6, 4); K = 3, K_phy = 1, Σ_phy = Σ6)
+    @test_throws ArgumentError G(randn(StableRNG(2), 6, 4); K = 1, has_phy_unique = true, Σ_phy = Σ6)
+    @test_throws ArgumentError G(randn(StableRNG(2), 6, 4); K = 1, has_diag = true)
+    # Full-rank data still fit under the strict variants.
+    @test isfinite(G(randn(StableRNG(164), 4, 12); K = 1, has_diag = true).logLik)
+
+    # Non-finite input gives a clear error, not a LAPACK argument error.
+    Yn = randn(StableRNG(165), 3, 8); Yn[1, 1] = NaN
+    e = rankerr(() -> G(Yn; K = 1))
+    @test e isa ArgumentError && occursin("NaN", sprint(showerror, e))
+    Yi = randn(StableRNG(166), 3, 8); Yi[2, 2] = Inf
+    @test_throws ArgumentError G(Yi; K = 1)
+
+    # Efficient residualisation equals the dense least-squares residual, for a
+    # mixed design: per-trait intercepts, a shared covariate, a trait-specific
+    # covariate, a collinear and a zero column, with one coefficient fixed.
+    p, n = 4, 9
+    Y = randn(StableRNG(167), p, n)
+    X = zeros(p, n, p + 4)
+    for t in 1:p; X[t, :, t] .= 1; end
+    X[:, :, p + 1] .= randn(StableRNG(168), 1, n)          # shared across traits
+    X[:, :, p + 2] .= randn(StableRNG(169), p, n)          # fixed below
+    X[:, :, p + 3] .= X[:, :, 1] .+ X[:, :, p + 1]         # collinear
+    fixed = falses(p + 4); fixed[p + 2] = true
+    got = GLLVModels._gaussian_residualise(Y, X, fixed)
+    keep = findall(!, fixed)
+    D = reshape(X[:, :, keep], p * n, length(keep))
+    ref = reshape(vec(Y) .- D * (pinv(D) * vec(Y)), p, n)
+    @test got ≈ ref atol = 1e-8
+end
+
 @testset "#149 the Gaussian likelihood itself is exact at n < p" begin
     # The closed-form marginal itself is exact at n < p: compare with a dense MvNormal.
     rng = StableRNG(7)
