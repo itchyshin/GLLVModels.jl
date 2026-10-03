@@ -1,6 +1,7 @@
 {
   "schema": 1,
   "pin": "P1",
+  "citation_note": "R file:line citations are at gllvmTMB P1 (9539352f6). Julia file:line citations are at the commit that ran the cited receipt (61c5eda48 for the inference rows, fd92b6551 for the aghq rows, 681c4c3ca for CI-ROUTE-009), not at current main: src has changed since, so the lines may have moved. The labels were re-run at the PR head during review and matched the recorded ones.",
   "classes": [
     {
       "kind": "route",
@@ -57,7 +58,7 @@
       "julia": [
         "communality:wald_derived"
       ],
-      "basis": "R: .confint_communality wald branch (R/z-confint-gllvmTMB.R:941, :969); Julia: communality_wald_ci (src/confint_derived_wald.jl:375 at 61c5eda48), a logit-scale Wald interval. Julia has no dispatcher, so a call with no method is this Wald function, which is also R's default for communality (R/z-confint-gllvmTMB.R:1681)."
+      "basis": "R: .confint_communality wald branch (R/z-confint-gllvmTMB.R:941, :969); Julia: communality_wald_ci (src/confint_derived_wald.jl:375 at 61c5eda48), a logit-scale Wald interval. The Julia call is an explicit function chosen by name, so only rows that ask for wald by name use this class."
     },
     {
       "kind": "route",
@@ -68,7 +69,7 @@
       "julia": [
         "proportion:wald_derived"
       ],
-      "basis": "R: .confint_proportion wald branch (R/z-confint-gllvmTMB.R:1188, :1207); Julia: icc_wald_ci (src/confint_derived_wald.jl:395 at 61c5eda48), a logit-scale Wald interval for a proportion. It is also R's default for proportion (R/z-confint-gllvmTMB.R:1705)."
+      "basis": "R: .confint_proportion wald branch (R/z-confint-gllvmTMB.R:1188, :1207); Julia: icc_wald_ci (src/confint_derived_wald.jl:395 at 61c5eda48), a logit-scale Wald interval for a proportion. The Julia call is an explicit function chosen by name, so only rows that ask for wald by name use this class."
     },
     {
       "kind": "route",
@@ -90,7 +91,7 @@
       "julia": [
         "rho:wald_derived"
       ],
-      "basis": "R: .confint_rho with method fisher-z calls extract_correlations(method = \"fisher-z\") (R/z-confint-gllvmTMB.R:1034, :1061), and fisher-z is R's default for rho (R/z-confint-gllvmTMB.R:1693); Julia: correlation_wald_ci (src/confint_derived_wald.jl:358 at 61c5eda48), a Fisher-z transformed Wald interval."
+      "basis": "R: .confint_rho with method fisher-z calls extract_correlations(method = \"fisher-z\") (R/z-confint-gllvmTMB.R:1034, :1061); Julia: correlation_wald_ci (src/confint_derived_wald.jl:358 at 61c5eda48), a Fisher-z transformed Wald interval. The Julia call is an explicit function chosen by name."
     },
     {
       "kind": "route",
@@ -206,82 +207,6 @@
     },
     {
       "kind": "refusal",
-      "canonical": "lambda:method-outside-supported-set",
-      "r": [
-        ".confint_lambda:fisher-z",
-        ".confint_lambda:bogus"
-      ],
-      "julia": [
-        "lambda:reject"
-      ],
-      "basis": "R: the probe records the dispatcher handing the literal method to .confint_lambda, whose first statement is match.arg(method, c(\"wald\", \"wald_asym\", \"profile\", \"bootstrap\")) (R/z-confint-gllvmTMB.R:261-270), so both strings are refused; the same probe observes that error for Lambda with a bad method (row CI-ROUTE-098). Julia: _gaussian_record_confint throws ArgumentError for a method other than wald, profile or bootstrap (src/families/aghq_gaussian_fit.jl:247 at 61c5eda48). Julia refuses only on AGHQ-record Gaussian fits (inference-batch-contract-p1.json known_findings.lambda_reject_validation_boundary); the case measured is one."
-    },
-    {
-      "kind": "error_class",
-      "canonical": "icc:unsupported-method-refused",
-      "r": [
-        "Method \"wald_asym\" not supported for `icc`.",
-        "Method \"fisher-z\" not supported for `icc`.",
-        "Method \"bogus\" not supported for `icc`."
-      ],
-      "julia": [
-        "icc:MethodError"
-      ],
-      "basis": "R: .confint_icc raises a cli_abort (rlang_error) for a method other than wald or bootstrap (R/z-confint-gllvmTMB.R:855, :878-882); Julia: icc_wald_ci has no method keyword (src/confint_derived_wald.jl:395 at 61c5eda48), so the same call raises MethodError. Both refuse the same request; Julia's refusal is structural (a function chosen per method), not a validated message."
-    },
-    {
-      "kind": "error_class",
-      "canonical": "phylo_signal:unsupported-method-refused",
-      "r": [
-        "Method \"wald_asym\" not implemented for `phylo_signal`.",
-        "Method \"fisher-z\" not implemented for `phylo_signal`.",
-        "Method \"bogus\" not implemented for `phylo_signal`."
-      ],
-      "julia": [
-        "phylo_signal:MethodError"
-      ],
-      "basis": "R: .confint_phylo_signal raises a cli_abort (rlang_error) from the switch default (R/z-confint-gllvmTMB.R:894, :928-931); Julia: phylo_signal_wald_ci has no method keyword (src/confint_derived_wald.jl:412 at 61c5eda48), so the same call raises MethodError. Both refuse the same request; Julia's refusal is structural."
-    },
-    {
-      "kind": "error_class",
-      "canonical": "communality:unsupported-method-refused",
-      "r": [
-        "Method \"wald_asym\" not implemented for `communality`.",
-        "Method \"fisher-z\" not implemented for `communality`.",
-        "Method \"bogus\" not implemented for `communality`."
-      ],
-      "julia": [
-        "communality:MethodError"
-      ],
-      "basis": "R: .confint_communality raises a cli_abort (rlang_error) from the switch default (R/z-confint-gllvmTMB.R:941, :1012-1015); Julia: communality_wald_ci has no method keyword (src/confint_derived_wald.jl:375 at 61c5eda48), so the same call raises MethodError. Both refuse the same request; Julia's refusal is structural."
-    },
-    {
-      "kind": "error_class",
-      "canonical": "rho:unsupported-method-refused",
-      "r": [
-        "Method \"wald_asym\" not supported for `rho`.",
-        "Method \"bogus\" not supported for `rho`."
-      ],
-      "julia": [
-        "rho:MethodError"
-      ],
-      "basis": "R: .confint_rho raises a cli_abort (rlang_error) in its else branch (R/z-confint-gllvmTMB.R:1034, :1086-1090); Julia: correlation_wald_ci has no method keyword (src/confint_derived_wald.jl:358 at 61c5eda48), so the same call raises MethodError. Both refuse the same request; Julia's refusal is structural."
-    },
-    {
-      "kind": "error_class",
-      "canonical": "proportion:unsupported-method-refused",
-      "r": [
-        "Method \"wald_asym\" not implemented for `proportion`.",
-        "Method \"fisher-z\" not implemented for `proportion`.",
-        "Method \"bogus\" not implemented for `proportion`."
-      ],
-      "julia": [
-        "proportion:MethodError"
-      ],
-      "basis": "R: .confint_proportion raises a cli_abort (rlang_error) from the switch default (R/z-confint-gllvmTMB.R:1188, :1219-1226); Julia: icc_wald_ci has no method keyword (src/confint_derived_wald.jl:395 at 61c5eda48), so the same call raises MethodError. Both refuse the same request; Julia's refusal is structural."
-    },
-    {
-      "kind": "refusal",
       "canonical": "icc:profile-withdrawn",
       "r": [
         "A profile interval for canonical full-covariance repeatability is not currently available."
@@ -311,7 +236,7 @@
       "julia": [
         "auto"
       ],
-      "basis": "R: .gllvmTMB_normalize_aghq maps \"auto\" and TRUE to \"auto\" (R/gllvmTMB.R:2493-2494); Julia: _aghq_request maps true and :auto to :auto (src/families/aghq_fit_info.jl:39 at fd92b6551)."
+      "basis": "R: .gllvmTMB_normalize_aghq maps \"auto\" and TRUE to \"auto\" (R/gllvmTMB.R:2493-2494); Julia: _aghq_request maps true and :auto to :auto (src/families/aghq_fit_info.jl:39 at fd92b6551). Julia rejects the string \"auto\" itself with ArgumentError, so the Julia side is given the symbol :auto."
     },
     {
       "kind": "route",
@@ -344,7 +269,7 @@
       "julia": [
         "9"
       ],
-      "basis": "R: .gllvmTMB_normalize_aghq keeps a single positive integer as integer (R/gllvmTMB.R:2495-2498); Julia: _aghq_request keeps a positive Integer as Int (src/families/aghq_fit_info.jl:40-42 at fd92b6551); nine nodes."
+      "basis": "R: .gllvmTMB_normalize_aghq keeps a single positive integer as integer (R/gllvmTMB.R:2495-2498); Julia: _aghq_request keeps a positive Integer as Int (src/families/aghq_fit_info.jl:40-42 at fd92b6551); nine nodes. Julia rejects a whole-number float such as 9.0 with ArgumentError, so the Julia side is given Int 9."
     }
   ]
 }

@@ -22,7 +22,7 @@ Raw artefacts read (all tracked under docs/dev-log/core070/true-parity-latest/re
                                      (R, the endpoint the dispatcher chose), plus the probe fixture
                                      test/parity/fixtures/core070_inference_routes.tsv for the method
                                      each row asked for
-  inference wave4 (14 error rows)    inference/inference-remainder-p1/r-oracle.json and julia-results.json
+  inference wave4 (14 error rows)    inference/inference-remainder-p1/r-oracle.json and julia-results.json (read for the not-bound record only)
   inference wave5 (CI-ROUTE-009)     postfit/surface-conversion-p1/r-oracle.json and julia-results.json
   aghq control (7 rows)              aghq/aghq-control-p1/r-oracle.json and julia-results.json
 
@@ -37,12 +37,21 @@ thing, even if the two labels look alike:
 
   fallback   R's message says it fell back to another method while Julia ran the method asked for
              (CI-ROUTE-067, CI-ROUTE-070: bootstrap on fixed effects and sigma_eps).
+  refusal_not_observed
+             The Lambda reject rows (CI-ROUTE-006, CI-ROUTE-007): R's probe stubs .confint_lambda, so
+             the raw R record is a dispatch label, not a refusal. Julia refuses only on AGHQ-record fits.
+  no_valid_method_control
+             The 14 derived-quantity error-class rows: Julia's MethodError fires for every method value
+             (the *_wald_ci functions take no method keyword), valid or not, so it is not the refusal R
+             gives for a method outside its supported set. No error class is mapped; no entry is written.
   withdrawn  R routes `profile` for communality, rho or proportion to a function that, at P1, raises
              gllvmTMB_nonlinear_profile_withdrawn (the same probe records the guard row), while Julia
              returns a profile interval.
   default    The row asked for the DEFAULT method and R's default is profile, but the Julia harness
              called an explicit profile function. Julia's own default is Wald, so Julia's default was
-             not exercised and is not the same route.
+             not exercised and is not the same route. The same holds for a DEFAULT row whose Julia call
+             is an explicit *_wald_ci function (CI-ROUTE-022, 029, 036): Julia has no default-method
+             dispatcher for derived quantities, so the harness chose the function, not Julia's default.
 
 `--check` re-derives every block and the equivalence file and exits nonzero on any difference.
 `--write` writes them. Row tiers are not changed here: the case-map generators call overlay_row()
@@ -118,19 +127,19 @@ CLASSES = [
     # --- Wald, derived quantities (Julia picks the method by function name) ---
     cls("route", "communality:wald", [".confint_communality:wald"], ["communality:wald_derived"],
         f"R: .confint_communality wald branch ({RZ}:941, :969); Julia: communality_wald_ci "
-        f"(src/confint_derived_wald.jl:375 at {RUN_JULIA}), a logit-scale Wald interval. Julia has no dispatcher, so a "
-        f"call with no method is this Wald function, which is also R's default for communality ({RZ}:1681)."),
+        f"(src/confint_derived_wald.jl:375 at {RUN_JULIA}), a logit-scale Wald interval. The Julia call is an explicit "
+        f"function chosen by name, so only rows that ask for wald by name use this class."),
     cls("route", "proportion:wald", [".confint_proportion:wald"], ["proportion:wald_derived"],
         f"R: .confint_proportion wald branch ({RZ}:1188, :1207); Julia: icc_wald_ci "
-        f"(src/confint_derived_wald.jl:395 at {RUN_JULIA}), a logit-scale Wald interval for a proportion. It is also "
-        f"R's default for proportion ({RZ}:1705)."),
+        f"(src/confint_derived_wald.jl:395 at {RUN_JULIA}), a logit-scale Wald interval for a proportion. The Julia call is an explicit "
+        f"function chosen by name, so only rows that ask for wald by name use this class."),
     cls("route", "phylo_signal:wald", [".confint_phylo_signal:wald"], ["phylo_signal:wald_derived"],
         f"R: .confint_phylo_signal wald branch ({RZ}:894, :916); Julia: phylo_signal_wald_ci "
         f"(src/confint_derived_wald.jl:412 at {RUN_JULIA}), a logit-scale Wald interval."),
     cls("route", "rho:fisher-z", [".confint_rho:fisher-z"], ["rho:wald_derived"],
-        f"R: .confint_rho with method fisher-z calls extract_correlations(method = \"fisher-z\") ({RZ}:1034, :1061), "
-        f"and fisher-z is R's default for rho ({RZ}:1693); Julia: correlation_wald_ci "
-        f"(src/confint_derived_wald.jl:358 at {RUN_JULIA}), a Fisher-z transformed Wald interval."),
+        f"R: .confint_rho with method fisher-z calls extract_correlations(method = \"fisher-z\") ({RZ}:1034, :1061); "
+        f"Julia: correlation_wald_ci (src/confint_derived_wald.jl:358 at {RUN_JULIA}), a Fisher-z transformed Wald "
+        f"interval. The Julia call is an explicit function chosen by name."),
     # --- profile ---
     cls("route", "lambda:profile", [".confint_lambda:profile"], ["lambda:profile"],
         f"R: .confint_lambda profile branch calls loading_profile ({RZ}:372-393); Julia: profile_ci(fit, "
@@ -167,50 +176,6 @@ CLASSES = [
     cls("route", "proportion:bootstrap", [".confint_proportion:bootstrap"], ["proportion:bootstrap"],
         f"R: .confint_proportion bootstrap branch ({RZ}:1188, :1213); Julia: GLLVM.bootstrap_ci_derived with the "
         f"shared-proportion closure (src/confint_derived.jl:489 at {RUN_JULIA})."),
-    # --- refusals of a method outside the supported set (Lambda) ---
-    cls("refusal", "lambda:method-outside-supported-set", [".confint_lambda:fisher-z", ".confint_lambda:bogus"],
-        ["lambda:reject"],
-        f"R: the probe records the dispatcher handing the literal method to .confint_lambda, whose first statement is "
-        f"match.arg(method, c(\"wald\", \"wald_asym\", \"profile\", \"bootstrap\")) ({RZ}:261-270), so both strings are "
-        f"refused; the same probe observes that error for Lambda with a bad method (row CI-ROUTE-098). Julia: "
-        f"_gaussian_record_confint throws ArgumentError for a method other than wald, profile or bootstrap "
-        f"(src/families/aghq_gaussian_fit.jl:247 at {RUN_JULIA}). Julia refuses only on AGHQ-record Gaussian fits "
-        f"(inference-batch-contract-p1.json known_findings.lambda_reject_validation_boundary); the case measured is one."),
-    # --- error classes: an unsupported method string on a derived quantity ---
-    cls("error_class", "icc:unsupported-method-refused",
-        ["Method \"wald_asym\" not supported for `icc`.", "Method \"fisher-z\" not supported for `icc`.",
-         "Method \"bogus\" not supported for `icc`."], ["icc:MethodError"],
-        f"R: .confint_icc raises a cli_abort (rlang_error) for a method other than wald or bootstrap "
-        f"({RZ}:855, :878-882); Julia: icc_wald_ci has no method keyword (src/confint_derived_wald.jl:395 at "
-        f"{RUN_JULIA}), so the same call raises MethodError. Both refuse the same request; Julia's refusal is structural "
-        f"(a function chosen per method), not a validated message."),
-    cls("error_class", "phylo_signal:unsupported-method-refused",
-        ["Method \"wald_asym\" not implemented for `phylo_signal`.",
-         "Method \"fisher-z\" not implemented for `phylo_signal`.",
-         "Method \"bogus\" not implemented for `phylo_signal`."], ["phylo_signal:MethodError"],
-        f"R: .confint_phylo_signal raises a cli_abort (rlang_error) from the switch default ({RZ}:894, :928-931); "
-        f"Julia: phylo_signal_wald_ci has no method keyword (src/confint_derived_wald.jl:412 at {RUN_JULIA}), so the "
-        f"same call raises MethodError. Both refuse the same request; Julia's refusal is structural."),
-    cls("error_class", "communality:unsupported-method-refused",
-        ["Method \"wald_asym\" not implemented for `communality`.",
-         "Method \"fisher-z\" not implemented for `communality`.",
-         "Method \"bogus\" not implemented for `communality`."], ["communality:MethodError"],
-        f"R: .confint_communality raises a cli_abort (rlang_error) from the switch default ({RZ}:941, :1012-1015); "
-        f"Julia: communality_wald_ci has no method keyword (src/confint_derived_wald.jl:375 at {RUN_JULIA}), so the "
-        f"same call raises MethodError. Both refuse the same request; Julia's refusal is structural."),
-    cls("error_class", "rho:unsupported-method-refused",
-        ["Method \"wald_asym\" not supported for `rho`.", "Method \"bogus\" not supported for `rho`."],
-        ["rho:MethodError"],
-        f"R: .confint_rho raises a cli_abort (rlang_error) in its else branch ({RZ}:1034, :1086-1090); Julia: "
-        f"correlation_wald_ci has no method keyword (src/confint_derived_wald.jl:358 at {RUN_JULIA}), so the same call "
-        f"raises MethodError. Both refuse the same request; Julia's refusal is structural."),
-    cls("error_class", "proportion:unsupported-method-refused",
-        ["Method \"wald_asym\" not implemented for `proportion`.",
-         "Method \"fisher-z\" not implemented for `proportion`.",
-         "Method \"bogus\" not implemented for `proportion`."], ["proportion:MethodError"],
-        f"R: .confint_proportion raises a cli_abort (rlang_error) from the switch default ({RZ}:1188, :1219-1226); "
-        f"Julia: icc_wald_ci has no method keyword (src/confint_derived_wald.jl:395 at {RUN_JULIA}), so the same call "
-        f"raises MethodError. Both refuse the same request; Julia's refusal is structural."),
     # --- CI-ROUTE-009: profile interval for two-level repeatability is withdrawn in both ---
     cls("refusal", "icc:profile-withdrawn",
         ["A profile interval for canonical full-covariance repeatability is not currently available."],
@@ -225,7 +190,8 @@ CLASSES = [
         f"Julia: _aghq_request maps false and nothing to :off (src/families/aghq_fit_info.jl:38 at {RUN_AGHQ})."),
     cls("route", "aghq:auto", ["\"auto\""], ["auto"],
         f"R: .gllvmTMB_normalize_aghq maps \"auto\" and TRUE to \"auto\" (R/gllvmTMB.R:2493-2494); Julia: _aghq_request "
-        f"maps true and :auto to :auto (src/families/aghq_fit_info.jl:39 at {RUN_AGHQ})."),
+        f"maps true and :auto to :auto (src/families/aghq_fit_info.jl:39 at {RUN_AGHQ}). Julia rejects the string "
+        f"\"auto\" itself with ArgumentError, so the Julia side is given the symbol :auto."),
     cls("route", "aghq:nodes=1", ["1L"], ["1"],
         f"R: .gllvmTMB_normalize_aghq keeps a single positive integer as integer (R/gllvmTMB.R:2495-2498); Julia: "
         f"_aghq_request keeps a positive Integer as Int (src/families/aghq_fit_info.jl:40-42 at {RUN_AGHQ}); one node."),
@@ -234,12 +200,19 @@ CLASSES = [
         f"_aghq_request keeps a positive Integer as Int (src/families/aghq_fit_info.jl:40-42 at {RUN_AGHQ}); two nodes."),
     cls("route", "aghq:nodes=9", ["9L"], ["9"],
         f"R: .gllvmTMB_normalize_aghq keeps a single positive integer as integer (R/gllvmTMB.R:2495-2498); Julia: "
-        f"_aghq_request keeps a positive Integer as Int (src/families/aghq_fit_info.jl:40-42 at {RUN_AGHQ}); nine nodes."),
+        f"_aghq_request keeps a positive Integer as Int (src/families/aghq_fit_info.jl:40-42 at {RUN_AGHQ}); nine nodes. Julia rejects a whole-number float such as "
+        f"9.0 with ArgumentError, so the Julia side is given Int 9."),
 ]
 
 
 def equivalence_doc():
-    return {"schema": 1, "pin": "P1", "classes": CLASSES}
+    return {"schema": 1, "pin": "P1",
+            "citation_note": (f"R file:line citations are at gllvmTMB P1 ({P1_SHA[:9]}). Julia file:line citations are at "
+                              f"the commit that ran the cited receipt ({RUN_JULIA} for the inference rows, {RUN_AGHQ} "
+                              "for the aghq rows, " + RUN_SURF + " for CI-ROUTE-009), not at current main: src has "
+                              "changed since, so the lines may have moved. The labels were re-run at the PR head "
+                              "during review and matched the recorded ones."),
+            "classes": CLASSES}
 
 
 # ---------------------------------------------------------------------------
@@ -333,6 +306,17 @@ def wave2(case_id, rec):
                 "evidence": {"r": f"{ib}/r-crosscheck/p1-route-probe-results.tsv#{n}", "julia": f"{ib}/inference-batch-results.json#{n}",
                              "fixture": f"{FIXTURE}#{n}"}})
             continue
+        if method == "DEFAULT" and not pr["julia_call"].startswith("confint("):
+            not_bound.append({
+                "source_id": sid, "reason": "default",
+                "text": (f"The row asks for the DEFAULT method, but the Julia harness called an explicit function "
+                         f"({pr['julia_call']}). Julia has no default-method dispatcher for derived quantities (the "
+                         f"exported entries are the per-method *_wald_ci functions), so Julia's default was not "
+                         f"exercised, the same shape as the other DEFAULT rows left unbound. Whether the exported "
+                         f"Wald function counts as Julia's default is not signed under {RULING}."),
+                "evidence": {"r": f"{ib}/r-crosscheck/p1-route-probe-results.tsv#{n}", "julia": f"{ib}/inference-batch-results.json#{n}",
+                             "fixture": f"{FIXTURE}#{n}"}})
+            continue
         if r["actual"].endswith(":profile") and target in ("communality", "rho", "proportion"):
             guards = [g for g, f in fixture.items() if f["stage"] == "guard" and f["parm"] == fx["parm"]
                       and f["method"] == "profile"]
@@ -354,15 +338,19 @@ def wave2(case_id, rec):
                  "r_source": f"{ib}/r-crosscheck/p1-route-probe-results.tsv#{n}",
                  "julia_source": f"{ib}/inference-batch-results.json#{n}"}
         if j["actual"] == "reject":
-            entry["kind"] = "refusal"
             bogus = [rid for rid, f in fixture.items() if f["stage"] == "guard" and f["parm"] == fx["parm"]
                      and f["method"] == "bogus"]
-            if len(bogus) != 1 or "'arg' should be one of" not in rprobe[bogus[0]]["actual"]:
-                raise SystemExit(f"{sid}: expected one match.arg guard row for parm {fx['parm']}, found {bogus}")
-            entry["r_corroboration"] = {"probe_row": bogus[0], "actual": rprobe[bogus[0]]["actual"],
-                                        "note": "R's probe stubs .confint_lambda for this row, so the refusal itself is "
-                                                "read from P1 source (match.arg, R/z-confint-gllvmTMB.R:270) and this "
-                                                "guard row, which observed the same match.arg error for a bad method"}
+            not_bound.append({
+                "source_id": sid, "reason": "refusal_not_observed",
+                "text": (f"R's refusal is not recorded for this row. The probe stubs .confint_lambda, so the raw R record is "
+                         f"only the dispatch label {r['actual']!r} (actual_class {r['actual_class']!r}), not a refusal; "
+                         f"the one R refusal for a bad Lambda method sits on the different guard row {', '.join(bogus)} "
+                         f"(method bogus). Julia refuses only on AGHQ-record Gaussian fits and returns Wald for any "
+                         f"method on structured fits (inference-batch-contract-p1.json known_findings."
+                         f"lambda_reject_validation_boundary). Leave unbound until .confint_lambda is observed directly "
+                         f"in R with this method."),
+                "evidence": {"r": f"{ib}/r-crosscheck/p1-route-probe-results.tsv#{n}", "julia": f"{ib}/inference-batch-results.json#{n}"}})
+            continue
         entries.append(entry)
     rf = reads(f"{ib}/inference-batch-results.json", f"{ib}/r-crosscheck/p1-route-probe-results.tsv", FIXTURE)
     return entries, not_bound, rf
@@ -376,7 +364,7 @@ def wave4(case_id, rec):
     key = {"icc": "icc_reject", "phylo_signal": "phylo_reject", "communality": "communality_reject",
            "rho": "rho_reject", "proportion": "proportion_reject"}[target]
     jc = rj["cases"][case_id]["methods"]
-    entries = []
+    not_bound = []
     for sid in rec["source_ids"]:
         n = sid.split("/")[-1]
         method = fixture[n]["method"]
@@ -384,12 +372,20 @@ def wave4(case_id, rec):
             raise SystemExit(f"{sid}: method {method} is not in the raw oracle for {case_id}")
         r, j = ro[key][method], jc[method]
         r_label = first_sentence(r["message"]) if r["raised"] and r["matches"] else "no-error-raised"
-        j_label = f"{target}:{j['julia_error_kind']}" if j["julia_error_kind"] else f"{target}:no-error-raised"
-        entries.append({"case_id": case_id, "source_id": sid, "kind": "error_class", "r_observed": r_label,
-                        "julia_observed": j_label, "requested_method": method,
-                        "r_source": f"{rb}/r-oracle.json#{key}.{method}",
-                        "julia_source": f"{rb}/julia-results.json#{case_id}.methods.{method}"})
-    return entries, [], reads(f"{rb}/r-oracle.json", f"{rb}/julia-results.json", FIXTURE)
+        j_label = j["julia_error_kind"] or "no-error-raised"
+        not_bound.append({
+            "source_id": sid, "reason": "no_valid_method_control",
+            "text": (f"R raised its validated cli_abort ({r_label!r}) and Julia raised {j_label}, but the Julia error is "
+                     f"structural, not the same refusal. The *_wald_ci function takes no method keyword, so the call "
+                     f"raises MethodError for every method value, including a valid one, while R's error fires only "
+                     f"for a method outside its supported set. The harness has no valid-method control, and "
+                     f"inference-batch-contract-p1.json known_findings.derived_quantity_reject_spec_defect_reason "
+                     f"records that no Julia call this comparand can run against exists for these quantities. A "
+                     f"MethodError counting as the same error class is not signed under {RULING}."),
+            "evidence": {"r": f"{rb}/r-oracle.json#{key}.{method}",
+                         "julia": f"{rb}/julia-results.json#{case_id}.methods.{method}",
+                         "contract": f"{LEDGER}/inference-batch-contract-p1.json"}})
+    return [], not_bound, reads(f"{rb}/r-oracle.json", f"{rb}/julia-results.json", FIXTURE)
 
 
 def wave5(case_id, rec):
@@ -420,6 +416,10 @@ def aghq(case_id, rec):
     j_label = rj["julia_label"] if rj["julia_pass"] else "error"
     entries = [{"case_id": case_id, "source_id": sid, "kind": "route", "r_observed": r_label,
                 "julia_observed": j_label, "r_call": rec["r_call"], "julia_call": rec["julia_call"],
+                "dialect_note": ("The two engines are given the same scalar request in their own spelling. Julia's "
+                                 "_aghq_request rejects R's own literals 'auto' (a string) and 9 as a whole-number "
+                                 "float with ArgumentError (tools/core070_aghq_controls_run.jl:23, the dialect "
+                                 "check), so the accepted-input sets differ even where the labels agree."),
                 "r_source": f"{d}/r-oracle.json#cases.{case_id}", "julia_source": f"{d}/julia-results.json#cases.{case_id}"}]
     return entries, [], reads(f"{d}/r-oracle.json", f"{d}/julia-results.json")
 

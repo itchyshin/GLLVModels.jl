@@ -66,6 +66,7 @@
         "julia_observed": "off",
         "r_call": ".gllvmTMB_normalize_aghq(FALSE)",
         "julia_call": "GLLVM._aghq_request(false)",
+        "dialect_note": "The two engines are given the same scalar request in their own spelling. Julia's _aghq_request rejects R's own literals 'auto' (a string) and 9 as a whole-number float with ArgumentError (tools/core070_aghq_controls_run.jl:23, the dialect check), so the accepted-input sets differ even where the labels agree.",
         "r_source": "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-control-p1/r-oracle.json#cases.CORE070-AGHQ-CTRL-FALSE-PAIRED-CONTROL",
         "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-control-p1/julia-results.json#cases.CORE070-AGHQ-CTRL-FALSE-PAIRED-CONTROL"
       }

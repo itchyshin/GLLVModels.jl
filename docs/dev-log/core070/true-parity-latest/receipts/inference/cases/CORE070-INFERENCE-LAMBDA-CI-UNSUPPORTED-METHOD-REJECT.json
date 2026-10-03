@@ -58,47 +58,24 @@
   "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
   "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
-  "behaviour": {
-    "pin": "P1",
-    "ruling": "itchyshin/GLLVModels.jl#684 item 2",
-    "read_from": {
-      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json": "3c0c44d62296c7f2730e2b4a6d7abb7d963afdfdd09731d7ab2dfb94d22350af",
-      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv": "aa78ce4ae49ad3f05891517710bb4e54fbaa1f5b612821bd1a99eba6e5a0df1c",
-      "test/parity/fixtures/core070_inference_routes.tsv": "5f75af28288781a5cc516bb94d38e5fdc5107b1712be54fbaabe9d0e79035db0"
-    },
-    "cases": [
-      {
-        "case_id": "CORE070-INFERENCE-LAMBDA-CI-UNSUPPORTED-METHOD-REJECT",
-        "source_id": "inference/CI-ROUTE-006",
-        "kind": "refusal",
-        "r_observed": ".confint_lambda:fisher-z",
-        "julia_observed": "lambda:reject",
-        "requested_method": "fisher-z",
-        "julia_call": "confint(fitA,YA;parm=\"Lambda_B[1,1]\",method=:fisher_z)",
-        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-006",
-        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-006",
-        "r_corroboration": {
-          "probe_row": "CI-ROUTE-098",
-          "actual": "'arg' should be one of \u201cwald\u201d, \u201cwald_asym\u201d, \u201cprofile\u201d, \u201cbootstrap\u201d",
-          "note": "R's probe stubs .confint_lambda for this row, so the refusal itself is read from P1 source (match.arg, R/z-confint-gllvmTMB.R:270) and this guard row, which observed the same match.arg error for a bad method"
-        }
-      },
-      {
-        "case_id": "CORE070-INFERENCE-LAMBDA-CI-UNSUPPORTED-METHOD-REJECT",
-        "source_id": "inference/CI-ROUTE-007",
-        "kind": "refusal",
-        "r_observed": ".confint_lambda:bogus",
-        "julia_observed": "lambda:reject",
-        "requested_method": "bogus",
-        "julia_call": "confint(fitA,YA;parm=\"Lambda_B[1,1]\",method=:bogus)",
-        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-007",
-        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-007",
-        "r_corroboration": {
-          "probe_row": "CI-ROUTE-098",
-          "actual": "'arg' should be one of \u201cwald\u201d, \u201cwald_asym\u201d, \u201cprofile\u201d, \u201cbootstrap\u201d",
-          "note": "R's probe stubs .confint_lambda for this row, so the refusal itself is read from P1 source (match.arg, R/z-confint-gllvmTMB.R:270) and this guard row, which observed the same match.arg error for a bad method"
-        }
+  "behaviour_not_bound": [
+    {
+      "source_id": "inference/CI-ROUTE-006",
+      "reason": "refusal_not_observed",
+      "text": "R's refusal is not recorded for this row. The probe stubs .confint_lambda, so the raw R record is only the dispatch label '.confint_lambda:fisher-z' (actual_class 'route_boundary;error;condition'), not a refusal; the one R refusal for a bad Lambda method sits on the different guard row CI-ROUTE-098 (method bogus). Julia refuses only on AGHQ-record Gaussian fits and returns Wald for any method on structured fits (inference-batch-contract-p1.json known_findings.lambda_reject_validation_boundary). Leave unbound until .confint_lambda is observed directly in R with this method.",
+      "evidence": {
+        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-006",
+        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-006"
       }
-    ]
-  }
+    },
+    {
+      "source_id": "inference/CI-ROUTE-007",
+      "reason": "refusal_not_observed",
+      "text": "R's refusal is not recorded for this row. The probe stubs .confint_lambda, so the raw R record is only the dispatch label '.confint_lambda:bogus' (actual_class 'route_boundary;error;condition'), not a refusal; the one R refusal for a bad Lambda method sits on the different guard row CI-ROUTE-098 (method bogus). Julia refuses only on AGHQ-record Gaussian fits and returns Wald for any method on structured fits (inference-batch-contract-p1.json known_findings.lambda_reject_validation_boundary). Leave unbound until .confint_lambda is observed directly in R with this method.",
+      "evidence": {
+        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-007",
+        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-007"
+      }
+    }
+  ]
 }

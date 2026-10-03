@@ -174,15 +174,53 @@ def derivation_refuses_when_per_row_disagrees_with_raw():
 
 @test
 def fallback_withdrawn_and_default_rows_get_no_entry():
-    want = {"CORE070-INFERENCE-BETA-BOOTSTRAP-FALLBACK-DIVERGENCE": ({"inference/CI-ROUTE-067"}, "fallback"),
-            "CORE070-INFERENCE-SIGMA-EPS-BOOTSTRAP-FALLBACK-DIVERGENCE": ({"inference/CI-ROUTE-070"}, "fallback"),
-            "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE": ({"inference/CI-ROUTE-023"}, "withdrawn"),
-            "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE": ({"inference/CI-ROUTE-030"}, "withdrawn"),
-            "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE": ({"inference/CI-ROUTE-037"}, "withdrawn"),
-            "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE": ({"inference/CI-ROUTE-015"}, "default")}
-    for cid, (sids, why) in want.items():
+    want = {"CORE070-INFERENCE-BETA-BOOTSTRAP-FALLBACK-DIVERGENCE": {"inference/CI-ROUTE-067": "fallback"},
+            "CORE070-INFERENCE-SIGMA-EPS-BOOTSTRAP-FALLBACK-DIVERGENCE": {"inference/CI-ROUTE-070": "fallback"},
+            "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE": {"inference/CI-ROUTE-023": "withdrawn",
+                                                              "inference/CI-ROUTE-022": "default"},
+            "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE": {"inference/CI-ROUTE-030": "withdrawn",
+                                                      "inference/CI-ROUTE-029": "default"},
+            "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE": {"inference/CI-ROUTE-037": "withdrawn",
+                                                             "inference/CI-ROUTE-036": "default"},
+            "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE": {"inference/CI-ROUTE-015": "default"}}
+    for cid, expect in want.items():
         _, nb, _ = B.wave2(cid, case_receipt(cid))
-        assert {n["source_id"] for n in nb} == sids and {n["reason"] for n in nb} == {why}, cid
+        assert {n["source_id"]: n["reason"] for n in nb} == expect, cid
+
+
+@test
+def derived_quantity_error_rows_get_no_entry():
+    """A keyword MethodError is not the same refusal as R's validated error (review of PR 690)."""
+    cases = [f"CORE070-INFERENCE-{t}-CI-UNSUPPORTED-METHOD-REJECT"
+             for t in ("ICC", "PHYLO-SIGNAL", "COMMUNALITY", "RHO", "PROPORTION")]
+    total = 0
+    for cid in cases:
+        rec = case_receipt(cid)
+        entries, nb, _ = B.wave4(cid, rec)
+        assert entries == [] and len(nb) == len(rec["source_ids"]), cid
+        assert {n["reason"] for n in nb} == {"no_valid_method_control"}, cid
+        assert "behaviour" not in rec, cid
+        total += len(nb)
+    assert total == 14, total
+
+
+@test
+def lambda_reject_rows_get_no_entry():
+    """R's probe stubs .confint_lambda, so no R refusal is recorded for these rows."""
+    cid = "CORE070-INFERENCE-LAMBDA-CI-UNSUPPORTED-METHOD-REJECT"
+    entries, nb, _ = B.wave2(cid, case_receipt(cid))
+    assert entries == [] and {n["reason"] for n in nb} == {"refusal_not_observed"}, nb
+
+
+@test
+def unbound_rows_are_not_flipped_by_overlay():
+    counts = {"reject_error_class": 3, "routing_control_flow": 3, "behavioural": 0}
+    for sid, cid, tier in (("inference/CI-ROUTE-012", "CORE070-INFERENCE-ICC-CI-UNSUPPORTED-METHOD-REJECT", "reject_error_class"),
+                           ("inference/CI-ROUTE-006", "CORE070-INFERENCE-LAMBDA-CI-UNSUPPORTED-METHOD-REJECT", "routing_control_flow"),
+                           ("inference/CI-ROUTE-022", "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE", "routing_control_flow")):
+        r = row_for(sid, cid, tier=tier)
+        assert B.overlay_row(r, counts) is False and r["evidence_tier"] == tier, sid
+    assert counts["behavioural"] == 0
 
 
 def main():

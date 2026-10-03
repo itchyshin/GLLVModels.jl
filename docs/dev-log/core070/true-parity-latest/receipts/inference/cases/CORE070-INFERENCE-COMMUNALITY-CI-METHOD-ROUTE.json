@@ -89,17 +89,6 @@
     "cases": [
       {
         "case_id": "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE",
-        "source_id": "inference/CI-ROUTE-022",
-        "kind": "route",
-        "r_observed": ".confint_communality:wald",
-        "julia_observed": "communality:wald_derived",
-        "requested_method": "DEFAULT",
-        "julia_call": "communality_wald_ci(fitS,1;y=YS,\u03a3_phy=\u03a3_phy) [default]",
-        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-022",
-        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-022"
-      },
-      {
-        "case_id": "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE",
         "source_id": "inference/CI-ROUTE-024",
         "kind": "route",
         "r_observed": ".confint_communality:wald",
@@ -123,6 +112,16 @@
     ]
   },
   "behaviour_not_bound": [
+    {
+      "source_id": "inference/CI-ROUTE-022",
+      "reason": "default",
+      "text": "The row asks for the DEFAULT method, but the Julia harness called an explicit function (communality_wald_ci(fitS,1;y=YS,\u03a3_phy=\u03a3_phy) [default]). Julia has no default-method dispatcher for derived quantities (the exported entries are the per-method *_wald_ci functions), so Julia's default was not exercised, the same shape as the other DEFAULT rows left unbound. Whether the exported Wald function counts as Julia's default is not signed under itchyshin/GLLVModels.jl#684 item 2.",
+      "evidence": {
+        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-022",
+        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-022",
+        "fixture": "test/parity/fixtures/core070_inference_routes.tsv#CI-ROUTE-022"
+      }
+    },
     {
       "source_id": "inference/CI-ROUTE-023",
       "reason": "withdrawn",
