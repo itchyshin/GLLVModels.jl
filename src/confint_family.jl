@@ -102,6 +102,14 @@ end
 # call that omits it (or passes another). `_check_ci_objective` closes it: the rebuilt
 # objective must reproduce `fit.loglik` at the fitted values, which it does only for the
 # objective the fit was made with. Otherwise it refuses.
+#
+# "The objective the fit was made with" is not always the one the adapter builds by default,
+# and the check compares like with like. A variational fit (`fit_<family>_gllvm_va`) stores
+# its ELBO in `loglik`, so it is compared with the variational objective (a variational
+# fitter takes no offset, so only an offset-free call can be one). A fit made with
+# `hessian = :fisher` on a type whose struct does not record the curvature (Delta-Gamma,
+# the two truncated NB2 fits) is compared with the `:fisher` objective as well. In both
+# cases the Wald / profile / bootstrap objective stays what it was before the check existed.
 # ---------------------------------------------------------------------------
 
 # Fit types whose fitter takes an `offset` keyword (verified per fitter). For any other
@@ -160,19 +168,38 @@ end
 # fit's log-likelihood only if the same data and the same offset went in; a fit made with
 # an offset, checked without it (or with another), is off by tens of log-likelihood units
 # (Poisson, p = 5, n = 80, offset 0.5 * randn: 45 to 130 over 30 seeds), far beyond the
-# optimiser and mode-search noise this tolerance allows for. VA objectives and AGHQ fits
-# are not compared here: their log-likelihood is another integral, and the AGHQ route
-# already checks its stored input digest.
+# optimiser and mode-search noise this tolerance allows for. AGHQ fits are not compared
+# here: their log-likelihood is another integral, and the AGHQ route already checks its
+# stored input digest.
 const _CI_OBJECTIVE_RTOL = 1e-5
 
-function _check_ci_objective(fit, ad::_FamilyCI, offset, objective::Symbol)
+# Fit types with a variational fitter (`fit_<family>_gllvm_va`): the ELBO it maximises is
+# what `fit.loglik` holds, and the fitter takes no offset.
+const _VACIFit = Union{PoissonFit, NBFit, BinomialFit, BetaFit, GammaFit, ExponentialFit, DeltaGammaFit}
+
+# Fit types whose struct does not record the Laplace curvature (`hessian = :observed` or
+# `:fisher`): their adapters rebuild `:observed`.
+const _CurvatureUnrecordedCIFit = Union{DeltaGammaFit, TruncatedNegBin2Fit, TruncatedNegBin2PerTraitFit}
+
+_ci_reproduces(rebuilt::Real, ll::Real) =
+    isfinite(rebuilt) && abs(rebuilt - ll) <= _CI_OBJECTIVE_RTOL * max(1.0, abs(ll))
+
+# `alt(kind)` returns the log-likelihood of another objective at the fitted values:
+# `:fisher` (the adapter's objective with Fisher curvature) or `:va` (the variational one).
+function _check_ci_objective(fit, ad::_FamilyCI, offset, objective::Symbol, alt)
     objective === :va && return nothing
     fit isa _OffsetCIFit || return nothing
     hasproperty(fit, :loglik) || return nothing
     ll = fit.loglik
     isfinite(ll) || return nothing
     rebuilt = -ad.nll(ad.θ)
-    abs(rebuilt - ll) <= _CI_OBJECTIVE_RTOL * max(1.0, abs(ll)) && return nothing
+    _ci_reproduces(rebuilt, ll) && return nothing
+    # Same data, same offset, the other curvature: a `hessian = :fisher` fit of a type that does
+    # not record it. The interval objective stays the adapter's, as before the check.
+    fit isa _CurvatureUnrecordedCIFit && _ci_reproduces(alt(:fisher), ll) && return nothing
+    # A variational fit: its `loglik` is the ELBO. It never had an offset, so only an
+    # offset-free call can be one (a variational fit given an offset stays refused).
+    offset === nothing && fit isa _VACIFit && _ci_reproduces(alt(:va), ll) && return nothing
     given = offset === nothing ? "no offset" : "the offset you passed"
     throw(ArgumentError(
         "confint: the objective rebuilt from Y with $given gives log-likelihood $(round(rebuilt; digits = 4)) " *
@@ -3356,7 +3383,29 @@ function _family_confint_setup(fit, Y; method, level, N, X, mask, objective, new
     ad = _family_ci(fit, Y; N = N, X = X, objective = objective,
                     mask = mask, offset = O,
                     newton_maxiter = newton_maxiter, newton_tol = newton_tol)
-    is_aghq || _check_ci_objective(fit, ad, O, objective)
+    if !is_aghq
+        # Log-likelihood of an alternative objective at the fitted values, for the two fits
+        # that legitimately differ from the adapter's default (see `_check_ci_objective`).
+        alt = function (kind::Symbol)
+            try
+                if kind === :fisher
+                    a = _family_ci(fit, Y; N = N, X = X, objective = objective, mask = mask, offset = O,
+                                   hessian = :fisher, newton_maxiter = newton_maxiter, newton_tol = newton_tol)
+                    return -a.nll(a.θ)
+                elseif fit isa ExponentialFit
+                    return exponential_marginal_loglik_va(Y, fit.Λ, fit.β; maxiter = newton_maxiter, tol = newton_tol)
+                else
+                    a = _family_ci(fit, Y; N = N, X = X, objective = :va, mask = nothing, offset = nothing,
+                                   newton_maxiter = newton_maxiter, newton_tol = newton_tol)
+                    return -a.nll(a.θ)
+                end
+            catch e
+                e isa InterruptException && rethrow()
+                return NaN
+            end
+        end
+        _check_ci_objective(fit, ad, O, objective, alt)
+    end
     return ad, is_aghq
 end
 

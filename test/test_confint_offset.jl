@@ -567,4 +567,90 @@ end
     b0 = confint_lv_effects(f0, Y, X; method = :bootstrap, n_boot = 4, seed = 1)
     @test length(b0.term) == p
 end
+
+# ---------------------------------------------------------------------------------------
+# The check must refuse a different objective, not a different way of fitting the same one.
+# An offset-free confint is the route main takes: the Wald table of the adapter built
+# directly, with no check in front of it. These references bypass the check.
+# ---------------------------------------------------------------------------------------
+function _unguarded_wald(fit, Y; covariance = false, kw...)
+    ad = GM._family_ci(fit, Y; objective = :laplace, kw...)
+    return GM._family_wald(ad, collect(1:length(ad.θ)), 0.95; covariance = covariance)
+end
+
+function _same_as_main(fit, Y; kw...)
+    ref = _unguarded_wald(fit, Y; kw...)
+    ci = confint(fit, Y; kw...)
+    ok = isequal(ci.se, ref.se) && isequal(ci.lower, ref.lower) && isequal(ci.upper, ref.upper) &&
+         isequal(ci.estimate, ref.estimate) && ci.pd_hessian == ref.pd_hessian
+    V = vcov(fit, Y; kw...)
+    ok &= isequal(V, _unguarded_wald(fit, Y; covariance = true, kw...).covariance)
+    ct = coef_table(fit, Y; kw...)
+    ok &= ct.term == ci.term && isequal(ct.std_error, ci.se)
+    return ok
+end
+
+@testset "offset-free variational fits are not refused (default objective)" begin
+    p, n, K = 6, 80, 1
+    rng = MersenneTwister(2026)
+    Z = zeros(p, n)
+    Nm = fill(6, p, n)
+    Yb = _sim_generic(rng, p, n, K, Z, (r, t, η) -> clamp(rand(r, Beta(5 / (1 + exp(-η)), 5 * (1 - 1 / (1 + exp(-η))))), 1e-4, 1 - 1e-4))
+    rows = Any[
+        ("Poisson", let Y = _gen_counts(rng, p, n, K, Z; kind = :poisson); (fit_poisson_gllvm_va(Y; K = K), Y, (;)) end),
+        ("NB2", let Y = _gen_counts(rng, p, n, K, Z; kind = :nb); (fit_nb_gllvm_va(Y; K = K), Y, (;)) end),
+        ("Binomial (N)", let Y = _gen_binomial(rng, p, n, K, Z, Nm); (fit_binomial_gllvm_va(Y; N = Nm, K = K), Y, (N = Nm,)) end),
+        ("Beta", (fit_beta_gllvm_va(Yb; K = K), Yb, (;))),
+        ("Gamma", let Y = _gen_gamma(rng, p, n, K, Z); (fit_gamma_gllvm_va(Y; K = K), Y, (;)) end),
+        ("Exponential", let Y = _gen_exponential(rng, p, n, K, Z); (fit_exponential_gllvm_va(Y; K = K), Y, (;)) end),
+        ("Delta-Gamma", let Y = _gen_delta_gamma(rng, p, n, K, Z); (fit_delta_gamma_gllvm_va(Y; K = K), Y, (;)) end),
+    ]
+    @testset "$(r[1]): runs and equals the unchecked Wald table" for r in rows
+        fit, Y, kw = r[2]
+        # the fit stores the ELBO, which is not the Laplace marginal the default objective rebuilds
+        ad = GM._family_ci(fit, Y; objective = :laplace, kw...)
+        @test abs(-ad.nll(ad.θ) - fit.loglik) > 1e-4
+        @test _same_as_main(fit, Y; kw...)
+        # a variational fit takes no offset, so one passed with it is refused
+        @test_throws ArgumentError confint(fit, Y; kw..., offset = fill(0.5, p, n))
+    end
+end
+
+@testset "offset-free hessian = :fisher fits are not refused" begin
+    p, n, K = 6, 80, 1
+    rng = MersenneTwister(2026)
+    Z = zeros(p, n)
+    O = 0.5 .* randn(rng, p, n)
+    tnb(O) = _sim_generic(rng, p, n, K, O, (r, t, η) -> GM._rand_ztnb(r, 3.0, exp(η)))
+    # name, fit(Y; offset, hessian), data generator
+    builders = Any[
+        ("Delta-Gamma (separate)", (Y; kw...) -> fit_delta_gamma_gllvm(Y; K = K, kw...),
+            O -> _gen_delta_gamma(rng, p, n, K, O; shared = false)),
+        ("Delta-Gamma (shared)", (Y; kw...) -> fit_delta_gamma_gllvm(Y; K = K, predictor = :shared, kw...),
+            O -> _gen_delta_gamma(rng, p, n, K, O; shared = true)),
+        ("Truncated NB2", (Y; kw...) -> fit_truncated_nbinom2_gllvm(Y; K = K, kw...), tnb),
+        ("Truncated NB2 (per trait)", (Y; kw...) -> fit_truncated_nbinom2_gllvm_pertrait(Y; K = K, kw...), tnb),
+    ]
+    @testset "$(b[1])" for b in builders
+        _, fitter, gen = b
+        Y = gen(Z)
+        f = fitter(Y; hessian = :fisher)
+        # the fit's own objective is the :fisher one; the adapter rebuilds the :observed one, so
+        # the log-likelihoods differ, yet this is the offset-free route main took
+        ad = GM._family_ci(f, Y; objective = :laplace)
+        @test abs(-ad.nll(ad.θ) - f.loglik) > 1e-4
+        @test _same_as_main(f, Y)
+        # with an offset: accepted when it is passed, refused when dropped or wrong
+        Yo = gen(O)
+        fo = fitter(Yo; offset = O, hessian = :fisher)
+        @test confint(fo, Yo; offset = O).pd_hessian isa Bool
+        @test_throws ArgumentError confint(fo, Yo)
+        @test_throws ArgumentError confint(fo, Yo; offset = O .+ 0.3)
+        # and the :observed fit of the same data still checks out as before
+        f2 = fitter(Yo; offset = O)
+        @test confint(f2, Yo; offset = O).pd_hessian isa Bool
+        @test_throws ArgumentError confint(f2, Yo)
+    end
+end
+
 end  # outer testset
