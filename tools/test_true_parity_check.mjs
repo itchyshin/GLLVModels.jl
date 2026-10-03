@@ -716,6 +716,16 @@ for (const [name, over, why] of [
     assert.match(c8.stdout, /NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT/);
   });
 }
+test('integer equality: unsafe integers (2^53 and beyond) are refused, so the checker and the assembler agree', () => {
+  for (const [r, j] of [[9007199254740993, 9007199254740992], [9007199254740992, 9007199254740992], [-9007199254740992, -9007199254740992]]) {
+    const m = intCase({ kind: 'integer_equality', r_value: r, julia_value: j, tolerance: 0.5 });
+    const c1 = runTree(m, 'C1');
+    assert.match(c1.stdout, /C1_NOT_MET$/m, `${r} ${j}`);
+    assert.match(c1.stdout, /integer_equality needs integer r_value and julia_value/);
+  }
+  const edge = intCase({ kind: 'integer_equality', r_value: 9007199254740991, julia_value: 9007199254740991, tolerance: 0.5 });
+  assert.match(runTree(edge, 'C1').stdout, /C1_MET$/m);
+});
 test('integer equality: a case with no kind keeps today rule (tolerance 0.5 on non-integers still judged by difference)', () => {
   const m = intCase({ r_value: 15.2, julia_value: 15.2, tolerance: 0.5 });
   assert.match(runTree(m, 'C1').stdout, /C1_MET$/m);
@@ -893,35 +903,144 @@ test('behavioural: a behavioural label cannot ride on another row numeric receip
   assert.match(c1.stdout, /numeric_label_without_numeric_receipt=isdm\/CAP-ISDM-1FO-PREDICT-EXPORT\(no comparison block/);
 });
 
-// Scoreboard: EVIDENCED-BEHAVIOURAL is done and counted in done_behavioural; BEHAVIOURAL-UNVERIFIED is not.
-function runBoard(status, mode) {
+// Scope of the behavioural tier (review of the first cut: any row could relabel itself behavioural).
+// Only inference/* rows and the four named C1 rows are covered by itchyshin/GLLVModels.jl#684 item 2.
+test('behavioural scope: a row outside inference/* and the four named rows does not bind, even with a valid block', () => {
+  for (const sid of ['isdm/CAP-ISDM-1FO-PREDICT-EXPORT-2', 'postfit/POSTFIT-SURFACE-extract_proportions', 'data/RD-01', 'inference2/CI-ROUTE-001', 'x/inference/CI-ROUTE-001']) {
+    const m = ({ readJ, writeJ }) => { bTree({ row: { source_id: sid } })({ readJ, writeJ }); };
+    const c1 = runTree(m, 'C1');
+    assert.match(c1.stdout, /C1_NOT_MET$/m, sid);
+    assert.match(c1.stdout, /bound_behavioural=0 /, sid);
+    assert.match(c1.stdout, new RegExp(`behavioural_label_without_behavioural_receipt=${sid.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}\\(source_id not covered by itchyshin/GLLVModels\\.jl#684 item 2`), sid);
+    const c8 = runTree(m, 'C8');
+    assert.match(c8.stdout, /C8_NOT_MET$/m, sid);
+    assert.match(c8.stdout, /BEHAVIOURAL_LABEL_WITHOUT_BEHAVIOURAL_RECEIPT\(source_id not covered/, sid);
+  }
+});
+test('behavioural scope: each of the four named C1 rows binds like an inference row', () => {
+  for (const sid of ['latent-scores/extract_latent_scores.default', 'select-lv/print.gllvmTMB_select_lv', 'model-comparison/print.anova.gllvmTMB_multi', 'model-comparison/update.gllvmTMB_multi', 'inference/CI-ROUTE-099']) {
+    const m = bTree({ row: { source_id: sid } });
+    const c1 = runTree(m, 'C1');
+    assert.match(c1.stdout, /C1_MET$/m, `${sid}\n${c1.stdout}`);
+    assert.match(c1.stdout, /bound_behavioural=1 /, sid);
+    assert.match(runTree(m, 'C8').stdout, /C8_MET$/m, sid);
+  }
+});
+test('behavioural scope: a cited receipt whose own comparison is out of tolerance does not bind a relabelled row', () => {
+  const bad = { pin: 'P1', cases: [{ case_id: 'CASE-B', quantity: 'q', r_value: 1, julia_value: 99, tolerance: 1e-6 }] };
+  const m = bTree({ receipt: { ...bReceipt(), comparison: bad } });
+  const c1 = runTree(m, 'C1');
+  assert.match(c1.stdout, /C1_NOT_MET$/m);
+  assert.match(c1.stdout, /bound_behavioural=0 /);
+  assert.match(c1.stdout, /cited receipt's own comparison fails: case CASE-B: abs_diff 98 > tolerance 0\.000001/);
+  assert.match(runTree(m, 'C8').stdout, /C8_NOT_MET$/m);
+  const good = { pin: 'P1', cases: [{ case_id: 'CASE-B', quantity: 'q', r_value: 1, julia_value: 1, tolerance: 1e-6 }] };
+  assert.match(runTree(bTree({ receipt: { ...bReceipt(), comparison: good } }), 'C1').stdout, /C1_MET$/m);
+});
+test('behavioural: a case-level verdict of FAIL does not bind', () => {
+  for (const over of [{ verdict: 'FAIL' }, { harness_pass: false }, { status: 'error' }]) {
+    const c1 = runTree(bTree({ receipt: bReceipt({}, {}, [bCase(over)]) }), 'C1');
+    assert.match(c1.stdout, /C1_NOT_MET$/m, JSON.stringify(over));
+    assert.match(c1.stdout, /receipt did not pass: behaviour\.cases\[CASE-B\]\./);
+  }
+});
+test('behavioural: canonicalisation is side-specific (R label in the Julia slot does not match)', () => {
+  const eqv = eq(waldClass);
+  const swapped = bTree({ receipt: bReceipt({}, {}, [bCase({ r_observed: 'wald_packed', julia_observed: '.confint_lambda:wald' })]), equivalence: eqv });
+  assert.match(runTree(swapped, 'C1').stdout, /C1_NOT_MET$/m);
+  const ok = bTree({ receipt: bReceipt({}, {}, [bCase({ r_observed: '.confint_lambda:wald', julia_observed: 'wald_packed' })]), equivalence: eqv });
+  assert.match(runTree(ok, 'C1').stdout, /C1_MET$/m);
+});
+test('behavioural: the carry rule is applied inside the behavioural check for a row outside C1 scope (C8)', () => {
+  const m = bTree({ row: { classification: 'extra_surface', measured_against: 'b4d5fee64def88bc768dda1f1f77c29b295edd86' } });
+  const c8 = runTree(m, 'C8');
+  assert.match(c8.stdout, /C8_NOT_MET$/m);
+  assert.match(c8.stdout, /inference\/CI-ROUTE-001:BEHAVIOURAL_LABEL_WITHOUT_BEHAVIOURAL_RECEIPT\(PARTIAL_STALE_AT_P1/);
+  const fresh = runTree(bTree({ row: { classification: 'extra_surface' } }), 'C8');
+  assert.match(fresh.stdout, /C8_MET$/m, fresh.stdout);
+});
+test('behaviour-equivalence.json is validated whether or not a behavioural row exists (C1 and C8)', () => {
+  const noRows = (equivalence) => ({ writeJ }) => writeJ('behaviour-equivalence.json', equivalence);
+  const cases = [
+    ['schema 2', { schema: 2, pin: 'P1', classes: [] }, /schema must be 1/],
+    ['pin P0', { schema: 1, pin: 'P0', classes: [] }, /pin must be P1/],
+    ['classes not an array', { schema: 1, pin: 'P1', classes: {} }, /classes must be an array/],
+    ['ambiguous label', eq(waldClass, { ...waldClass, canonical: 'other' }), /ambiguous table/],
+    ['duplicate canonical in one kind', eq(waldClass, { ...waldClass, r: ['profile'], julia: ['profile_x'] }), /duplicate canonical "wald" for kind route/],
+    ['empty basis', eq({ ...waldClass, basis: '' }), /empty basis/],
+  ];
+  for (const [name, table, why] of cases) {
+    for (const mode of ['C1', 'C8']) {
+      const r = runTree(noRows(table), mode);
+      assert.equal(r.code, 2, `${name} ${mode}: ${r.stdout}`);
+      assert.match(r.stdout, why, name);
+    }
+  }
+  const sameCanonicalOtherKind = runTree(noRows(eq(waldClass, { ...waldClass, kind: 'refusal' })), 'C1');
+  assert.equal(sameCanonicalOtherKind.code, 0, 'one canonical label may serve two kinds');
+  assert.equal(runTree(noRows(eq()), 'C1').code, 0);
+});
+
+// Scoreboard: EVIDENCED-BEHAVIOURAL is done only on a row ruling 2 covers (an inference- id) and is counted
+// in done_behavioural; BEHAVIOURAL-UNVERIFIED is not done; it never closes a C3, C4 or C5 row.
+const RECEIPT_CELL = `${L}/receipts/r1.json`;
+function runBoard(status, mode, id = 'inference-CI-ROUTE-001') {
   return runTree(({ dir }) => {
     const sb = join(dir, L, 'scoreboard.md');
-    writeFileSync(sb, readFileSync(sb, 'utf8').replace(/^(\| RD-1 \|[^|]*\| )EVIDENCED( \|)/m, `$1${status}$2`));
+    writeFileSync(sb, `${readFileSync(sb, 'utf8')}| ${id} | routing | ${status} | ${RECEIPT_CELL} | fixture |\n`);
   }, mode);
 }
-test('scoreboard: EVIDENCED-BEHAVIOURAL counts as done and is reported as done_behavioural', () => {
+function runBoardEdit(status, mode, rowId) {
+  return runTree(({ dir }) => {
+    const sb = join(dir, L, 'scoreboard.md');
+    const re = new RegExp(`^(\\| ${rowId} \\|[^|]*\\| )EVIDENCED( \\|)`, 'm');
+    const t = readFileSync(sb, 'utf8');
+    assert.match(t, re);
+    writeFileSync(sb, t.replace(re, `$1${status}$2`));
+  }, mode);
+}
+test('scoreboard: EVIDENCED-BEHAVIOURAL on an inference- row is done and reported as done_behavioural', () => {
   const x2 = runBoard('EVIDENCED-BEHAVIOURAL', 'X2');
   assert.match(x2.stdout, /X2_MET$/m, x2.stdout);
-  assert.match(x2.stdout, /rows=5 done=5 not_done=none done_behavioural=1$/m);
-  const c4 = runBoard('EVIDENCED-BEHAVIOURAL', 'C4');
-  assert.match(c4.stdout, /C4 real-data workflows rows=1 done=1 not_done=none done_behavioural=1$/m);
-  assert.match(c4.stdout, /C4_MET$/m);
+  assert.match(x2.stdout, /rows=6 done=6 not_done=none done_behavioural=1$/m);
+  const c2 = runBoard('EVIDENCED-BEHAVIOURAL', 'C2');
+  assert.match(c2.stdout, /C2 P1-boundary capabilities rows=3 done=3 not_done=none done_behavioural=1$/m);
+  assert.match(c2.stdout, /C2_MET$/m);
+});
+test('scoreboard: EVIDENCED-BEHAVIOURAL never closes C3, C4 or C5 (campaign clauses are numeric)', () => {
+  for (const [mode, rowId, label] of [['C3', 'CAP-X-RSZ', 'realistic-size'], ['C4', 'RD-1', 'real-data workflows'], ['C5', 'GRP-1', 'grouping levels']]) {
+    const r = runBoardEdit('EVIDENCED-BEHAVIOURAL', mode, rowId);
+    assert.match(r.stdout, new RegExp(`^${mode} ${label} rows=1 done=0 not_done=${rowId}:BEHAVIOURAL_NOT_ALLOWED_FOR_THIS_ROW done_behavioural=0$`, 'm'), r.stdout);
+    assert.match(r.stdout, new RegExp(`${mode}_NOT_MET$`, 'm'));
+    const x2 = runBoardEdit('EVIDENCED-BEHAVIOURAL', 'X2', rowId);
+    assert.match(x2.stdout, /X2_NOT_MET$/m);
+  }
+  const rsz = runBoard('EVIDENCED-BEHAVIOURAL', 'C3', 'inference-X-RSZ');
+  assert.match(rsz.stdout, /inference-X-RSZ:BEHAVIOURAL_NOT_ALLOWED_FOR_THIS_ROW/);
+  assert.match(rsz.stdout, /C3_NOT_MET$/m);
+});
+test('scoreboard: EVIDENCED-BEHAVIOURAL on a row ruling 2 does not cover is not done (C2 and X2)', () => {
+  const r = runBoardEdit('EVIDENCED-BEHAVIOURAL', 'C2', 'CAP-ISDM-1FO-PREDICT');
+  assert.match(r.stdout, /C2_NOT_MET$/m);
+  assert.match(r.stdout, /CAP-ISDM-1FO-PREDICT:BEHAVIOURAL_NOT_ALLOWED_FOR_THIS_ROW/);
+  assert.match(runBoardEdit('EVIDENCED-BEHAVIOURAL', 'X2', 'CAP-TEMPORAL-1FO').stdout, /X2_NOT_MET$/m);
+  assert.match(runBoard('EVIDENCED-BEHAVIOURAL', 'X2', 'inference2-CI').stdout, /inference2-CI:BEHAVIOURAL_NOT_ALLOWED_FOR_THIS_ROW/);
+  assert.match(runBoard('EVIDENCED-BEHAVIOURAL', 'X2', 'select-lv-print-gllvmTMB_select_lv').stdout, /X2_MET$/m);
 });
 test('scoreboard: BEHAVIOURAL-UNVERIFIED is not done; plain EVIDENCED reports done_behavioural=0', () => {
   const bad = runBoard('BEHAVIOURAL-UNVERIFIED', 'X2');
   assert.match(bad.stdout, /X2_NOT_MET$/m);
-  assert.match(bad.stdout, /RD-1:NOT_DONE/);
+  assert.match(bad.stdout, /inference-CI-ROUTE-001:NOT_DONE/);
   assert.match(bad.stdout, /done_behavioural=0$/m);
-  assert.match(runBoard('EVIDENCED', 'X2').stdout, /done=5 not_done=none done_behavioural=0$/m);
+  assert.match(runBoard('EVIDENCED', 'X2').stdout, /done=6 not_done=none done_behavioural=0$/m);
 });
 test('scoreboard: an EVIDENCED-BEHAVIOURAL row with no receipt path is not done', () => {
   const r = runTree(({ dir }) => {
     const sb = join(dir, L, 'scoreboard.md');
-    writeFileSync(sb, readFileSync(sb, 'utf8').replace(/^(\| RD-1 \|[^|]*\| )EVIDENCED( \| )[^|]*\|/m, '$1EVIDENCED-BEHAVIOURAL$2|'));
-  }, 'C4');
-  assert.match(r.stdout, /C4_NOT_MET$/m);
-  assert.match(r.stdout, /RD-1:NO_RECEIPT_PATH/);
+    writeFileSync(sb, `${readFileSync(sb, 'utf8')}| inference-CI-ROUTE-001 | routing | EVIDENCED-BEHAVIOURAL | | fixture |\n`);
+  }, 'X2');
+  assert.match(r.stdout, /X2_NOT_MET$/m);
+  assert.match(r.stdout, /inference-CI-ROUTE-001:NO_RECEIPT_PATH/);
 });
 
 // Ruling 3: C6 decisions. The base fixture's two items now carry a basis and a ruling.
@@ -954,6 +1073,29 @@ for (const [name, item, why] of [
     assert.match(r.stdout, why);
   });
 }
+// Scope of the C6 signature (review of the first cut): the ruling ref is an allow-list, a ruling covers only
+// the words it names, and signed_on is pinned to the ruling's date.
+for (const [name, item, why] of [
+  ['an unrecognised ruling ref', helper({ ruling: { ...RULING, ref: 'anything' } }), /\(ruling ref "anything" is not a recognised signed ruling\)/],
+  ['a bare #684 reference with no item', helper({ ruling: { ...RULING, ref: '#684' } }), /not a recognised signed ruling/],
+  ['PORT_TO_MATCH_R under the item 3 ruling', helper({ decision: 'PORT_TO_MATCH_R' }), /\(decision PORT_TO_MATCH_R is not covered by itchyshin\/GLLVModels\.jl#684 item 3\)/],
+  ['DEPRECATE_AND_REMOVE under the item 3 ruling', helper({ decision: 'DEPRECATE_AND_REMOVE' }), /decision DEPRECATE_AND_REMOVE is not covered/],
+  ['RENAME_TO_AVOID_COLLISION under the item 3 ruling', helper({ decision: 'RENAME_TO_AVOID_COLLISION' }), /decision RENAME_TO_AVOID_COLLISION is not covered/],
+  ['a signed_on date other than the ruling date', helper({ ruling: { ...RULING, signed_on: '2026-01-01' } }), /\(ruling signed_on "2026-01-01" is not the date of itchyshin\/GLLVModels\.jl#684 item 3\)/],
+  ['a signed_on date after the ruling date', helper({ ruling: { ...RULING, signed_on: '2026-10-03' } }), /is not the date of|BAD-DATE/],
+]) {
+  test(`C6 scope: ${name} is unsigned_decision and fails`, () => {
+    const r = runTree(c6Items([item]), 'C6');
+    assert.equal(r.code, 0);
+    assert.match(r.stdout, /C6_NOT_MET$/m);
+    assert.match(r.stdout, /invalid_decision=none /);
+    assert.match(r.stdout, why);
+  });
+}
+test('C6 scope: both covered words stay valid with the pinned ref and date', () => {
+  const r = runTree(c6Items([helper(), helper({ source_id: 'julia-export/x', decision: 'KEPT_AS_JULIA_EXTRA' })]), 'C6');
+  assert.match(r.stdout, /C6_MET$/m, r.stdout);
+});
 test('C6: an unknown decision word still fails (EXCLUDED_HELPER, and a case variant)', () => {
   for (const word of ['EXCLUDED_HELPER', 'excluded_internal_helper', 'EXCLUDED_INTERNAL_HELPER ']) {
     const r = runTree(c6Items([helper({ decision: word })]), 'C6');

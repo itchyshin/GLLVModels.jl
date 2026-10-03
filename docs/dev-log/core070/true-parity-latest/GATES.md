@@ -147,7 +147,9 @@ carried rows are expected to land here until WS0d's stale-row scan re-measures t
 A required row is bound only with a resolving receipt (`evidence.receipt`, a path that exists
 as a blob at the ref) **and** non-empty `executable_case_ids` **and** `evidence_tier: "numeric"`
 backed by a `comparison` block in the receipt (see "Evidence tier" below); no one of these alone
-is enough. A
+is enough. The one other tier that binds is `evidence_tier: "behavioural"`, only for the rows
+itchyshin/GLLVModels.jl#684 item 2 covers and backed by a `behaviour` block (see "Rulings of
+2026-10-02", ruling 2). A
 `DISPOSITION-SIGNED` row additionally needs `signed_by` and `signed_on` on the row itself.
 Since the review of #561 the tool checks both: `signed_by` must be exactly `Shinichi Nakagawa` or
 `itchyshin` (anything containing `agent`, `Claude`, `Codex`, `Cursor` or `Fable` is refused, as is
@@ -363,15 +365,17 @@ Rows that compare an exact integer (`POST-LOGLIK-DF`, `POST-LOGLIK-NOBS`, `POST-
   "r_value": 15, "julia_value": 15, "tolerance": 0.5 }
 ```
 
-`r_value` and `julia_value` must both be integers (`Number.isInteger`), or equal-length non-empty
-arrays of integers, and `tolerance` must be exactly 0.5. Then "within tolerance" can only mean
+`r_value` and `julia_value` must both be safe integers (`Number.isSafeInteger`, so 2^53 and beyond
+are refused in both tools), or equal-length non-empty arrays of them, and `tolerance` must be
+exactly 0.5. Then "within tolerance" can only mean
 "equal". A case with no `kind` is judged as before. Any other `kind` fails the row. The row keeps
 `evidence_tier: "numeric"` and counts in `bound_numeric=`.
 
 Negative controls (`tools/test_true_parity_check.mjs`, group "integer equality"): 15 vs 15 binds;
 equal integer vectors bind; off by one (15 vs 16); non-integer values (15.2 vs 15.2); tolerance 1;
-vector length mismatch; abs_diff with no values; unknown kind; and a case with no `kind` keeps
-today's rule. Assembler: `integer_equality_*`, `unknown_comparison_kind_unverified`,
+vector length mismatch; abs_diff with no values; unknown kind; unsafe integers (9007199254740993 vs
+9007199254740992, and 2^53 itself) are refused while 9007199254740991 binds; and a case with no
+`kind` keeps today's rule. Assembler: `integer_equality_*`, `unknown_comparison_kind_unverified`,
 `no_kind_case_keeps_todays_rule`.
 
 ### Ruling 2: the behavioural tier (item 2)
@@ -381,6 +385,18 @@ A row whose R behaviour is a refusal, a printed summary, a routing decision or a
 `print.anova.gllvmTMB_multi`, `update.gllvmTMB_multi`, `extract_latent_scores.default`) has no
 number to compare. It closes when a receipt shows both engines giving the same refusal, route,
 error class or printed fields. It counts as behavioural, not numeric.
+
+Scope. The tier exists for those rows and no others. A row binds behaviourally only if its
+`source_id` starts with `inference/` or is exactly one of the four named C1 rows
+(`latent-scores/extract_latent_scores.default`, `select-lv/print.gllvmTMB_select_lv`,
+`model-comparison/print.anova.gllvmTMB_multi`, `model-comparison/update.gllvmTMB_multi`). Any other
+row that says `evidence_tier: "behavioural"` (a numeric row, a data, grouping or realistic-size row)
+reads `BEHAVIOURAL_LABEL_WITHOUT_BEHAVIOURAL_RECEIPT` with the reason "source_id not covered by
+itchyshin/GLLVModels.jl#684 item 2". The `inference/` prefix also matches the few inference rows that
+are numeric today; the ruling text names the 59 routing and error-class rows, so review should not
+accept a behavioural label on a numeric inference row. The list lives in `tools/true_parity_check.mjs`
+(`behaviouralEligibleSourceId`) and is copied into `tools/true_parity_assemble.py`; a test fails if
+the two drift.
 
 A receipt carries a top-level `behaviour` block:
 
@@ -415,7 +431,11 @@ canonical label:
 `canonical(kind, side, label)` is the canonical of the class of that kind whose list for that side
 holds the label, else the label itself. A label in two classes of the same kind and side makes the
 table ambiguous and the run `MEASUREMENT_FAILED` (exit 2). Every class needs a non-empty `basis`.
-A case matches when the two canonical labels are equal (element by element for arrays).
+Two classes of the same kind may not share a `canonical` label (that would merge unrelated labels
+silently): add the labels to the existing class. A wrong `schema` or `pin`, a malformed class, an
+ambiguous label and a duplicate canonical are all `MEASUREMENT_FAILED` on C1 and C8 even when no
+behavioural row exists yet, and the assembler fails on the same table. A case matches when the two
+canonical labels are equal (element by element for arrays).
 
 A row with `evidence_tier: "behavioural"` binds when all of these hold:
 
@@ -427,14 +447,22 @@ A row with `evidence_tier: "behavioural"` binds when all of these hold:
    or the row's own).
 5. Every applicable entry matches.
 6. No cited receipt has a failed `status`, `verdict`, `batch_status` or `harness_pass`, at the top
-   level or in the `behaviour` block.
+   level, in the `behaviour` block, or on a behaviour case.
+7. The row's `source_id` is in the scope above.
+8. If a cited receipt also carries a `comparison` block, that block holds under the numeric rule
+   (pinned to P1, every case within tolerance). A numeric failure is not hidden by relabelling the
+   row.
 
 It counts in the C1 counter `bound_behavioural=`, never in `bound=` or `bound_numeric=`. C8 accepts
 it as twinned (behaviourally). A behavioural label that fails the rule is reported as
 `BEHAVIOURAL_LABEL_WITHOUT_BEHAVIOURAL_RECEIPT` (C1 list
 `behavioural_label_without_behavioural_receipt=`, C8 failing tag of the same name) with the reason.
 The scoreboard status is `EVIDENCED-BEHAVIOURAL` (or `BEHAVIOURAL-UNVERIFIED` with a reason). The
-checker counts `EVIDENCED-BEHAVIOURAL` as done and prints `done_behavioural=` on C2 to C5 and X2.
+checker counts `EVIDENCED-BEHAVIOURAL` as done and prints `done_behavioural=` on C2 to C5 and X2,
+with two limits. It counts only on a row ruling 2 covers (an `inference-` scoreboard id, or the slug
+of a named C1 row), and it never counts on a C3 (`-RSZ`), C4 (`RD-`) or C5 (`GRP-`) row: those are
+numeric campaign clauses and read `BEHAVIOURAL_NOT_ALLOWED_FOR_THIS_ROW`. The assembler emits the
+status only for rows in scope.
 
 Negative controls (group "behavioural"): matching labels bind and never touch `bound_numeric`;
 route mismatch with no class; mismatch rescued by a class; a class of another kind does not
@@ -443,8 +471,15 @@ another `source_id` does not cover (and one scoped to the row does); a scoped mi
 beside a matching unscoped entry; receipt verdict FAIL (top level and in the block); tier
 behavioural with only a numeric block; wrong pin; empty or blank label; array length mismatch;
 invalid kind; stale carry; dangling receipt; no case ids; an unknown tier stays registration-only.
-Scoreboard controls: `EVIDENCED-BEHAVIOURAL` counts as done with `done_behavioural=1`;
-`BEHAVIOURAL-UNVERIFIED` does not. Assembler: `behavioural_*`.
+Scope controls (group "behavioural scope"): rows outside `inference/*` and the four named rows do
+not bind, each named row does; a cited receipt with an out-of-tolerance `comparison` does not bind a
+relabelled row; a case-level `verdict` FAIL does not bind. Mutation controls: the carry check inside
+the behavioural check (C8, row outside C1 scope), side-specific canonicalisation (an R label in the
+Julia slot), and the equivalence table's `schema`, `pin`, ambiguity, duplicate-canonical and
+empty-basis checks with no behavioural row present. Scoreboard controls: `EVIDENCED-BEHAVIOURAL`
+counts as done with `done_behavioural=1` on an `inference-` row; it does not close C3, C4 or C5,
+and does not count on a row outside the scope; `BEHAVIOURAL-UNVERIFIED` does not count. Assembler:
+`behavioural_*`.
 
 What this does not do: no row changes tier in the PR that adds the rule. Receipts and the
 equivalence classes arrive with the PRs that measure the rows.
@@ -471,14 +506,25 @@ Names with no clear classification stay out of the file and remain undecided.
 
 The checker's C6 vocabulary is `KEPT_AS_JULIA_EXTRA`, `PORT_TO_MATCH_R`, `DEPRECATE_AND_REMOVE`,
 `RENAME_TO_AVOID_COLLISION`, `EXCLUDED_INTERNAL_HELPER`. A decided item also needs a non-empty
-`basis` and a `ruling` with a non-empty `ref` and a `signed_by` and `signed_on` that pass the
-signature rule (allow-list, real past date). Otherwise it is listed under `unsigned_decision=`
-and C6 fails. C6 also prints `decision_counts=` per vocabulary word.
+`basis` and a `ruling`. The ruling `ref` must be `itchyshin/GLLVModels.jl#684 item 3`, the only
+ruling the tool recognises (`C6_RULINGS` in the checker, copied into the assembler); `signed_on`
+must be `2026-10-02`, its date; and `signed_by` must pass the signature rule (allow-list, real past
+date). That ruling covers `KEPT_AS_JULIA_EXTRA` and `EXCLUDED_INTERNAL_HELPER` only. A decision
+`PORT_TO_MATCH_R`, `DEPRECATE_AND_REMOVE` or `RENAME_TO_AVOID_COLLISION` is listed under
+`unsigned_decision=` (no signed ruling covers it) and C6 fails. A new ruling is a new entry in
+`C6_RULINGS`, added in review. The assembler refuses to copy a ruling it does not recognise (unknown
+`ref`, wrong date, signer outside the allow-list), a decision word the ruling does not cover, and a
+file with an empty `criterion` or `generator`. C6 also prints `decision_counts=` per vocabulary
+word.
 
 Negative controls (group "C6"): `EXCLUDED_INTERNAL_HELPER` with basis and ruling is valid; no
 ruling; ruling without a `ref`; ruling signed by an agent name; signer outside the allow-list;
 future date; no signer; no basis; unknown decision word (`EXCLUDED_HELPER`, a case variant); an
-undecided item still fails. Assembler: `decisions_*`, `decision_for_non_item_is_stale_and_fails`.
+undecided item still fails. Scope controls (group "C6 scope"): unrecognised ruling ref, a bare
+`#684`, `PORT_TO_MATCH_R`, `DEPRECATE_AND_REMOVE` and `RENAME_TO_AVOID_COLLISION` under the item 3
+ruling, a `signed_on` other than 2026-10-02. Assembler: `decisions_*`,
+`decision_for_non_item_is_stale_and_fails`, `decisions_file_*_fails`, and `c6_*_matches_checker`
+(the two tools' copies of the vocabulary, ruling table and named rows must not drift).
 
 ### Ruling 4 (item 4)
 

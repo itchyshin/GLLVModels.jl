@@ -4,7 +4,7 @@
   "decision": "KEPT_AS_JULIA_EXTRA",
   "basis": "fixture: documented Julia extra",
   "ruling": {
-   "ref": "fixture ruling",
+   "ref": "itchyshin/GLLVModels.jl#684 item 3",
    "signed_by": "Shinichi Nakagawa",
    "signed_on": "2026-10-02"
   }
@@ -14,7 +14,7 @@
   "decision": "KEPT_AS_JULIA_EXTRA",
   "basis": "fixture: documented Julia extra",
   "ruling": {
-   "ref": "fixture ruling",
+   "ref": "itchyshin/GLLVModels.jl#684 item 3",
    "signed_by": "Shinichi Nakagawa",
    "signed_on": "2026-10-02"
   }

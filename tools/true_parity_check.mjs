@@ -61,10 +61,16 @@
 //     canonicalised label for every executable case id, via behaviour-equivalence.json. It counts
 //     in C1 `bound_behavioural=`, never in bound= or bound_numeric=. A behavioural label without a
 //     valid matching block is BEHAVIOURAL_LABEL_WITHOUT_BEHAVIOURAL_RECEIPT. The scoreboard status
-//     EVIDENCED-BEHAVIOURAL counts as done (printed as done_behavioural=).
+//     EVIDENCED-BEHAVIOURAL counts as done (printed as done_behavioural=), but only on a row the
+//     ruling covers and never on a C3, C4 or C5 row.
+//     Scope (review of PR #687): the tier binds only for source_id inference/* and the four named C1
+//     rows (behaviouralEligibleSourceId); a comparison block in a cited receipt must itself hold; the
+//     equivalence table is validated by C1 and C8 even with no behavioural row.
 //   Ruling 3 (C6): EXCLUDED_INTERNAL_HELPER joins the decision vocabulary. A decided reverse-gap
-//     item also needs a non-empty basis and a `ruling` {ref, signed_by, signed_on} that passes the
-//     signature rule, else it is listed under unsigned_decision=.
+//     item also needs a non-empty basis and a `ruling` {ref, signed_by, signed_on}: the ref must be
+//     a ruling in C6_RULINGS (only itchyshin/GLLVModels.jl#684 item 3, dated 2026-10-02, which
+//     covers KEPT_AS_JULIA_EXTRA and EXCLUDED_INTERNAL_HELPER), the date must be that ruling's, and
+//     the signer must pass the signature rule, else it is listed under unsigned_decision=.
 import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -116,8 +122,28 @@ const C6_DECISION_VOCAB = new Set([
   'RENAME_TO_AVOID_COLLISION',
   'EXCLUDED_INTERNAL_HELPER',
 ]);
+// C6 decisions are signed by a ruling, and a ruling covers only the words it names. The table is the
+// ONLY signature the tool accepts on a reverse-gap decision: itchyshin/GLLVModels.jl#684 item 3, signed
+// 2026-10-02, covers exactly these two words. A new ruling is a new entry here, added in review.
+const C6_RULINGS = {
+  'itchyshin/GLLVModels.jl#684 item 3': { signed_on: '2026-10-02', words: new Set(['KEPT_AS_JULIA_EXTRA', 'EXCLUDED_INTERNAL_HELPER']) },
+};
 const BEHAVIOUR_EQUIVALENCE = 'docs/dev-log/core070/true-parity-latest/behaviour-equivalence.json';
 const BEHAVIOUR_KINDS = new Set(['route', 'refusal', 'error_class', 'printed_fields']);
+// Scope of the behavioural tier (itchyshin/GLLVModels.jl#684 item 2): the inference routing and
+// error-class rows (source_id inference/...) and the four named C1 rows. Any other row that says
+// `evidence_tier: "behavioural"` is not covered by the ruling and does not bind.
+const BEHAVIOURAL_NAMED_SOURCE_IDS = new Set([
+  'latent-scores/extract_latent_scores.default',
+  'select-lv/print.gllvmTMB_select_lv',
+  'model-comparison/print.anova.gllvmTMB_multi',
+  'model-comparison/update.gllvmTMB_multi',
+]);
+const behaviouralEligibleSourceId = (sid) => typeof sid === 'string' && (sid.startsWith('inference/') || BEHAVIOURAL_NAMED_SOURCE_IDS.has(sid));
+// The assembler writes a scoreboard id as the source_id with every run of other characters turned into '-'.
+const scoreboardSlug = (sid) => sid.replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
+const BEHAVIOURAL_ELIGIBLE_BOARD_IDS = new Set([...BEHAVIOURAL_NAMED_SOURCE_IDS].map(scoreboardSlug));
+const behaviouralEligibleBoardId = (id) => id.startsWith('inference-') || BEHAVIOURAL_ELIGIBLE_BOARD_IDS.has(id);
 
 const git = (...a) => execFileSync('git', a, { encoding: 'utf8', maxBuffer: 64 << 20, stdio: ['ignore', 'pipe', 'pipe'] });
 const die = (m) => { console.log(`MEASUREMENT_FAILED ${m}`); process.exit(2); };
@@ -285,19 +311,43 @@ function receiptNotPassed(j, p, blockKey = 'comparison') {
 // Ruling 1 (itchyshin/GLLVModels.jl#684 item 1): exact-integer rows (a degrees of freedom, an
 // observation count) may record tolerance 0.5 instead of a small float. The case must say so with
 // `"kind": "integer_equality"`; r_value and julia_value must then both be integers (finite numbers
-// with Number.isInteger, or equal-length non-empty arrays of them) and tolerance exactly 0.5, so
+// with Number.isSafeInteger so 2^53 and beyond are refused, or equal-length non-empty arrays of them) and tolerance exactly 0.5, so
 // "within tolerance" can only mean "equal". A case with no `kind` is judged as before; any other
 // kind fails the row (it is never read as numeric by default). Returns null, or why not.
 function integerEqualityProblem(c) {
   if (c.kind === undefined) return null;
   if (c.kind !== 'integer_equality') return `unknown comparison kind ${JSON.stringify(c.kind)}`;
-  const isInt = (x) => typeof x === 'number' && Number.isInteger(x);
+  const isInt = (x) => typeof x === 'number' && Number.isSafeInteger(x);
   const ints = (x) => isInt(x) || (Array.isArray(x) && x.length > 0 && x.every(isInt));
   if (!ints(c.r_value) || !ints(c.julia_value)) return 'integer_equality needs integer r_value and julia_value';
   if (Array.isArray(c.r_value) !== Array.isArray(c.julia_value) || (Array.isArray(c.r_value) && c.r_value.length !== c.julia_value.length)) {
     return 'integer_equality needs r_value and julia_value of the same shape and length';
   }
   if (c.tolerance !== 0.5) return 'integer_equality needs tolerance exactly 0.5';
+  return null;
+}
+
+// One `comparison` block, judged case by case (pin, tolerance, integer equality, recorded difference,
+// within tolerance). Adds each compared case id to `covered`. Returns null when the block holds, else
+// { ok: false, reason, kind? }. numericReceiptStatus uses it for numeric rows; behaviouralReceiptStatus
+// uses it so that a behavioural row cannot cite a receipt whose own comparison is out of tolerance.
+function checkComparisonBlock(cmp, p, covered) {
+  if (!cmp || typeof cmp !== 'object' || Array.isArray(cmp)) return { ok: false, reason: `malformed comparison in ${p}` };
+  if (cmp.pin !== 'P1' && cmp.pin !== P1_SHA) return { ok: false, reason: `comparison not pinned to P1 in ${p}` };
+  if (!Array.isArray(cmp.cases) || cmp.cases.length === 0) return { ok: false, reason: `comparison has no cases in ${p}` };
+  for (const c of cmp.cases) {
+    if (!c || typeof c.case_id !== 'string' || c.case_id.length === 0) return { ok: false, reason: `comparison case without case_id in ${p}` };
+    const tol = c.tolerance;
+    if (typeof tol !== 'number' || !Number.isFinite(tol) || tol <= 0) return { ok: false, reason: `case ${c.case_id}: tolerance not a finite number > 0` };
+    const intProblem = integerEqualityProblem(c);
+    if (intProblem) return { ok: false, reason: `case ${c.case_id}: ${intProblem}` };
+    const cd = comparisonCaseDiff(c);
+    if (cd.mismatch) return { ok: false, kind: 'diff_mismatch', reason: `${cd.mismatch} in ${p}` };
+    const d = cd.d;
+    if (d === null) return { ok: false, reason: `case ${c.case_id}: no finite abs_diff or r_value/julia_value` };
+    if (d > tol) return { ok: false, reason: `case ${c.case_id}: abs_diff ${d} > tolerance ${tol}${c.kind === 'integer_equality' ? ' (integer_equality: the integers differ)' : ''}` };
+    covered.add(c.case_id);
+  }
   return null;
 }
 
@@ -315,23 +365,8 @@ function numericReceiptStatus(row) {
     if (!j || typeof j !== 'object') continue;
     if (notPassed === null) notPassed = receiptNotPassed(j, p);
     if (j.comparison === undefined) continue;
-    const cmp = j.comparison;
-    if (!cmp || typeof cmp !== 'object' || Array.isArray(cmp)) return { ok: false, reason: `malformed comparison in ${p}` };
-    if (cmp.pin !== 'P1' && cmp.pin !== P1_SHA) return { ok: false, reason: `comparison not pinned to P1 in ${p}` };
-    if (!Array.isArray(cmp.cases) || cmp.cases.length === 0) return { ok: false, reason: `comparison has no cases in ${p}` };
-    for (const c of cmp.cases) {
-      if (!c || typeof c.case_id !== 'string' || c.case_id.length === 0) return { ok: false, reason: `comparison case without case_id in ${p}` };
-      const tol = c.tolerance;
-      if (typeof tol !== 'number' || !Number.isFinite(tol) || tol <= 0) return { ok: false, reason: `case ${c.case_id}: tolerance not a finite number > 0` };
-      const intProblem = integerEqualityProblem(c);
-      if (intProblem) return { ok: false, reason: `case ${c.case_id}: ${intProblem}` };
-      const cd = comparisonCaseDiff(c);
-      if (cd.mismatch) return { ok: false, kind: 'diff_mismatch', reason: `${cd.mismatch} in ${p}` };
-      const d = cd.d;
-      if (d === null) return { ok: false, reason: `case ${c.case_id}: no finite abs_diff or r_value/julia_value` };
-      if (d > tol) return { ok: false, reason: `case ${c.case_id}: abs_diff ${d} > tolerance ${tol}${c.kind === 'integer_equality' ? ' (integer_equality: the integers differ)' : ''}` };
-      covered.add(c.case_id);
-    }
+    const bad = checkComparisonBlock(j.comparison, p, covered);
+    if (bad) return bad;
     blocks++;
   }
   if (blocks === 0) return { ok: false, reason: 'no comparison block in any receipt' };
@@ -394,9 +429,13 @@ function loadEquivalence() {
     if (t.pin !== 'P1' && t.pin !== P1_SHA) die(`${BEHAVIOUR_EQUIVALENCE}: pin must be P1`);
     if (!Array.isArray(t.classes)) die(`${BEHAVIOUR_EQUIVALENCE}: classes must be an array`);
     const nonEmpty = (x) => typeof x === 'string' && x.trim().length > 0;
+    const canonicalSeen = new Set();
     t.classes.forEach((cls, i) => {
       if (!cls || typeof cls !== 'object' || !BEHAVIOUR_KINDS.has(cls.kind)) die(`${BEHAVIOUR_EQUIVALENCE}: class ${i} has no valid kind`);
       if (!nonEmpty(cls.canonical)) die(`${BEHAVIOUR_EQUIVALENCE}: class ${i} has no canonical label`);
+      // Two classes of one kind with the same canonical label would merge unrelated labels silently.
+      if (canonicalSeen.has(`${cls.kind}\u0000${cls.canonical}`)) die(`${BEHAVIOUR_EQUIVALENCE}: duplicate canonical ${JSON.stringify(cls.canonical)} for kind ${cls.kind} (add the labels to the existing class)`);
+      canonicalSeen.add(`${cls.kind}\u0000${cls.canonical}`);
       if (!nonEmpty(cls.basis)) die(`${BEHAVIOUR_EQUIVALENCE}: class ${i} (${cls.canonical}) has an empty basis`);
       for (const side of ['r', 'julia']) {
         if (!Array.isArray(cls[side]) || !cls[side].every(nonEmpty)) die(`${BEHAVIOUR_EQUIVALENCE}: class ${i} (${cls.canonical}) ${side} must be an array of non-empty labels`);
@@ -433,6 +472,9 @@ function observedShapeProblem(c) {
 function behaviouralReceiptStatus(row) {
   const paths = rowReceiptPaths(row);
   if (paths.length === 0) return { ok: false, reason: 'no receipt' };
+  // Scope: the ruling covers the inference routing and error-class rows and four named C1 rows only.
+  // Any other row labelled behavioural (a numeric row, a campaign row) does not bind on typed labels.
+  if (!behaviouralEligibleSourceId(row.source_id)) return { ok: false, reason: 'source_id not covered by itchyshin/GLLVModels.jl#684 item 2 (inference/* and four named C1 rows only)' };
   loadEquivalence(); // a malformed or ambiguous table is a measurement failure, whatever the row says
   const cs = carryStatus(row);
   if (cs.stale) return { ok: false, reason: cs.reason };
@@ -448,6 +490,11 @@ function behaviouralReceiptStatus(row) {
     try { j = JSON.parse(txt); } catch { continue; }
     if (!j || typeof j !== 'object') continue;
     if (notPassed === null) notPassed = receiptNotPassed(j, p, 'behaviour');
+    // A comparison block in a cited receipt must itself hold: a numeric failure is not hidden by relabelling the row.
+    if (j.comparison !== undefined) {
+      const bad = checkComparisonBlock(j.comparison, p, new Set());
+      if (bad) return { ok: false, reason: `cited receipt's own comparison fails: ${bad.reason}` };
+    }
     if (j.behaviour === undefined) continue;
     const b = j.behaviour;
     if (!b || typeof b !== 'object' || Array.isArray(b)) return { ok: false, reason: `malformed behaviour block in ${p}` };
@@ -459,6 +506,10 @@ function behaviouralReceiptStatus(row) {
       if (!BEHAVIOUR_KINDS.has(c.kind)) return { ok: false, reason: `case ${c.case_id}: kind ${JSON.stringify(c.kind)} is not one of ${[...BEHAVIOUR_KINDS].join('|')}` };
       const shape = observedShapeProblem(c);
       if (shape) return { ok: false, reason: `case ${c.case_id}: ${shape}` };
+      if (notPassed === null) {
+        const f = RECEIPT_STATUS_FIELDS.find((k) => Object.prototype.hasOwnProperty.call(c, k) && !isPassValue(c[k]));
+        if (f) notPassed = `behaviour.cases[${c.case_id}].${f}=${JSON.stringify(c[f])} in ${p}`;
+      }
       entries.push(c);
     }
     blocks++;
@@ -557,6 +608,11 @@ function scoreboardRows() {
 // silent "not done".
 function evaluateScoreboardRow(r) {
   if (!DONE.has(r.status)) return { ok: false, reason: 'NOT_DONE' };
+  // EVIDENCED-BEHAVIOURAL is only for the rows ruling 2 covers (inference-*, or a named C1 row); it never
+  // closes a C3 (realistic size), C4 (real data) or C5 (grouping) row, which are numeric campaign clauses.
+  if (r.status === 'EVIDENCED-BEHAVIOURAL' && (isRSZ(r) || isRD(r) || isGRP(r) || !behaviouralEligibleBoardId(r.id))) {
+    return { ok: false, reason: 'BEHAVIOURAL_NOT_ALLOWED_FOR_THIS_ROW' };
+  }
   const extracted = extractPaths(r.receiptText);
   if (extracted.length === 0) {
     if (r.status === 'DISPOSITION-SIGNED' && hasSignedTokens(r.receiptText)) return { ok: true };
@@ -629,6 +685,7 @@ function checkC0() {
 // --- C1: required rows bound, receipts resolve, carry rule applied --------
 
 function checkC1() {
+  loadEquivalence(); // a malformed or ambiguous equivalence table is a measurement failure even with no behavioural row yet
   const rows = loadCasemap();
   const req = rows.filter((r) => ['required_core', 'compatibility_adapter'].includes(r.classification));
   let bound = 0, free = 0, boundNumeric = 0, boundSigned = 0, boundBehavioural = 0;
@@ -740,7 +797,10 @@ function checkC6() {
     if (!nonEmpty(it.basis)) why = 'no basis';
     else if (!rl || typeof rl !== 'object' || Array.isArray(rl)) why = 'no ruling';
     else if (!nonEmpty(rl.ref)) why = 'ruling without a ref';
+    else if (!Object.prototype.hasOwnProperty.call(C6_RULINGS, rl.ref)) why = `ruling ref ${JSON.stringify(rl.ref)} is not a recognised signed ruling`;
+    else if (!C6_RULINGS[rl.ref].words.has(it.decision)) why = `decision ${it.decision} is not covered by ${rl.ref}`;
     else why = signatureProblem(rl.signed_by, rl.signed_on);
+    if (why === null && rl.signed_on.trim() !== C6_RULINGS[rl.ref].signed_on) why = `ruling signed_on ${JSON.stringify(rl.signed_on)} is not the date of ${rl.ref}`;
     if (why !== null) unsignedDecision.push(`${id}(${why})`);
   }
   console.log(`C6 items=${items.length} invalid_decision=${invalid.join(',') || 'none'} (vocabulary: ${[...C6_DECISION_VOCAB].join('|')}) unsigned_decision=${unsignedDecision.join(',') || 'none'} decision_counts=${Object.entries(counts).map(([d, n]) => `${d}:${n}`).join(',')}`);
@@ -760,6 +820,7 @@ function checkC7() {
 // --- C8: every export twinned or signed; name matches and unsigned dispositions never count --
 
 function checkC8() {
+  loadEquivalence();
   const rows = loadCasemap();
   if (rows.length === 0) { console.log('C8 rows=0 EMPTY_SELECTION (vacuous; not a pass)'); return false; }
   const failing = [];

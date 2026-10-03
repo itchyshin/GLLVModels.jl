@@ -95,10 +95,10 @@ def beh_case(**kw):
 
 
 def behavioural_root(cases=None, receipt_extra=None, equiv=None, block_extra=None, **row_kw):
-    """A root with one behavioural row family/N citing BR, whose receipt holds a behaviour block."""
+    """A root with one behavioural row inference/N citing BR, whose receipt holds a behaviour block."""
     kw = dict(tier="behavioural", executable_case_ids=["C"], evidence={"receipt": [BR]})
     kw.update(row_kw)
-    root, tmp = with_root({"case-map-family.json": [row("family/N", **kw)]})
+    root, tmp = with_root({"case-map-family.json": [row(kw.pop("sid", "inference/N"), **kw)]})
     blk = {"pin": "P1", "cases": cases if cases is not None else [beh_case()]}
     blk.update(block_extra or {})
     (root / BR).write_text(json.dumps({"behaviour": blk, **(receipt_extra or {})}))
@@ -278,12 +278,12 @@ def main():
     def behaves(name, status, root, tmp, want_bound=None, contains=None):
         c, o = run(root)
         txt = (root / A.LEDGER / A.OUT_SCOREBOARD).read_text()
-        ok = c == 0 and status_of(root) == status and (contains is None or contains in txt)
+        ok = c == 0 and status_of(root, "inference-N") == status and (contains is None or contains in txt)
         if ok and want_bound is not None:
             out = checker_c1(root)
             m = re.search(r"\bbound_behavioural=(\d+)", out or "")
             ok = out is None or (m is not None and int(m.group(1)) == want_bound)
-        expect(name, ok, f"{status_of(root)} {o}")
+        expect(name, ok, f"{status_of(root, 'inference-N')} {o}")
         shutil.rmtree(tmp)
 
     root, tmp = behavioural_root()
@@ -304,10 +304,10 @@ def main():
     root, tmp = behavioural_root(cases=[beh_case(kind="refusal", r_observed="r_wald", julia_observed="jl_wald")],
                                  equiv={"schema": 1, "pin": "P1", "classes": [WALD]})
     behaves("behavioural_class_of_other_kind_does_not_rescue", "BEHAVIOURAL-UNVERIFIED", root, tmp, want_bound=0)
-    root, tmp = behavioural_root(cases=[beh_case(source_id="family/OTHER")])
+    root, tmp = behavioural_root(cases=[beh_case(source_id="inference/OTHER")])
     behaves("behavioural_entry_scoped_to_other_row_does_not_cover", "BEHAVIOURAL-UNVERIFIED", root, tmp, want_bound=0,
             contains="without an applicable behaviour entry")
-    root, tmp = behavioural_root(cases=[beh_case(source_id="family/N")])
+    root, tmp = behavioural_root(cases=[beh_case(source_id="inference/N")])
     behaves("behavioural_entry_scoped_to_this_row_covers", "EVIDENCED-BEHAVIOURAL", root, tmp, want_bound=1)
     root, tmp = behavioural_root(executable_case_ids=["C", "C2"])
     behaves("behavioural_uncovered_case_id_unverified", "BEHAVIOURAL-UNVERIFIED", root, tmp, want_bound=0, contains="C2")
@@ -343,6 +343,46 @@ def main():
     c, o = run(root, "--check")
     expect("behavioural_empty_basis_fails_run", c == 1 and "empty basis" in o, o)
     shutil.rmtree(tmp)
+    # Scope of the behavioural tier: inference/* rows and four named C1 rows only.
+    for sid in ("isdm/X", "postfit/POSTFIT-SURFACE-nobs", "inference2/N", "data/RD-01"):
+        root, tmp = behavioural_root(sid=sid)
+        rid = A.scoreboard_id(sid)
+        c, o = run(root)
+        out = checker_c1(root)
+        m = re.search(r"\bbound_behavioural=(\d+)", out or "")
+        expect(f"behavioural_scope_{rid}_not_covered",
+               c == 0 and status_of(root, rid) == "BEHAVIOURAL-UNVERIFIED" and "not covered by itchyshin/GLLVModels.jl#684 item 2" in (root / A.LEDGER / A.OUT_SCOREBOARD).read_text()
+               and (out is None or (m is not None and int(m.group(1)) == 0)), f"{status_of(root, rid)} {o}")
+        shutil.rmtree(tmp)
+    for sid in A.BEHAVIOURAL_NAMED_SOURCE_IDS:
+        root, tmp = behavioural_root(sid=sid)
+        rid = A.scoreboard_id(sid)
+        c, o = run(root)
+        out = checker_c1(root)
+        m = re.search(r"\bbound_behavioural=(\d+)", out or "")
+        expect(f"behavioural_scope_named_row_{rid}_evidenced",
+               c == 0 and status_of(root, rid) == "EVIDENCED-BEHAVIOURAL" and (out is None or (m is not None and int(m.group(1)) == 1)), f"{status_of(root, rid)} {o}")
+        shutil.rmtree(tmp)
+    bad_cmp = {"pin": "P1", "cases": [{"case_id": "C", "r_value": 1.0, "julia_value": 99.0, "tolerance": 1e-6}]}
+    root, tmp = behavioural_root(receipt_extra={"comparison": bad_cmp})
+    behaves("behavioural_cited_receipt_failing_comparison_unverified", "BEHAVIOURAL-UNVERIFIED", root, tmp, want_bound=0,
+            contains="cited receipt's own comparison fails")
+    root, tmp = behavioural_root(receipt_extra={"comparison": GOOD_CMP})
+    behaves("behavioural_cited_receipt_passing_comparison_ok", "EVIDENCED-BEHAVIOURAL", root, tmp, want_bound=1)
+    for label, over in (("verdict", {"verdict": "FAIL"}), ("harness_pass", {"harness_pass": False})):
+        root, tmp = behavioural_root(cases=[beh_case(**over)])
+        behaves(f"behavioural_case_level_{label}_unverified", "BEHAVIOURAL-UNVERIFIED", root, tmp, want_bound=0, contains="receipt did not pass")
+    root, tmp = behavioural_root(cases=[beh_case(r_observed="jl_wald", julia_observed="r_wald")], equiv={"schema": 1, "pin": "P1", "classes": [WALD]})
+    behaves("behavioural_canonicalisation_is_side_specific", "BEHAVIOURAL-UNVERIFIED", root, tmp, want_bound=0)
+    dupc = dict(WALD, r=["other_r"], julia=["other_j"])
+    root, tmp = behavioural_root(equiv={"schema": 1, "pin": "P1", "classes": [WALD, dupc]})
+    c, o = run(root, "--check")
+    expect("behavioural_duplicate_canonical_fails_run", c == 1 and "duplicate canonical" in o, o)
+    shutil.rmtree(tmp)
+    root, tmp = behavioural_root(equiv={"schema": 1, "pin": "P1", "classes": [WALD, dict(WALD, kind="refusal")]})
+    c, o = run(root)
+    expect("behavioural_same_canonical_in_two_kinds_ok", c == 0 and status_of(root, "inference-N") == "EVIDENCED-BEHAVIOURAL", o)
+    shutil.rmtree(tmp)
     # A numeric row is not read as behavioural, and a behavioural row never reads EVIDENCED.
     root, tmp = numeric_root()
     run(root)
@@ -377,6 +417,9 @@ def main():
     int_root("integer_equality_length_mismatch_unverified", "NUMERIC-UNVERIFIED", 0, r_value=[1, 2], julia_value=[1])
     int_root("integer_equality_bool_is_not_integer", "NUMERIC-UNVERIFIED", 0, r_value=True, julia_value=True)
     int_root("unknown_comparison_kind_unverified", "NUMERIC-UNVERIFIED", 0, kind="close_enough")
+    int_root("integer_equality_unsafe_integer_unverified", "NUMERIC-UNVERIFIED", 0, r_value=9007199254740993, julia_value=9007199254740992)
+    int_root("integer_equality_2_pow_53_unverified", "NUMERIC-UNVERIFIED", 0, r_value=9007199254740992, julia_value=9007199254740992)
+    int_root("integer_equality_max_safe_integer_evidenced", "EVIDENCED", 1, r_value=9007199254740991, julia_value=9007199254740991)
     root, tmp = with_root({"case-map-family.json": [row("family/N", tier="numeric", executable_case_ids=["C"], evidence={"receipt": [RP]})]})
     c15 = int_cmp(r_value=15.2, julia_value=15.2)
     del c15["comparison"]["cases"][0]["kind"]
@@ -435,6 +478,27 @@ def main():
         c, o = run(root, "--check")
         expect(f"decisions_file_{label}_fails", c == 1 and "ASSEMBLE_FAIL" in o and "julia_only" in o, o)
         shutil.rmtree(tmp)
+    # The tool refuses to copy a signature it does not recognise (review of the first cut).
+    for label, over, why in (
+            ("unrecognised_ref", {"ruling": dict(RULING, ref="anything")}, "not a recognised signed ruling"),
+            ("wrong_date", {"ruling": dict(RULING, signed_on="2026-01-01")}, "is not the date of"),
+            ("agent_signer", {"ruling": dict(RULING, signed_by="Claude Opus (agent)")}, "signature rejected"),
+            ("uncovered_word_port", {"decisions": {"julia_only": {"decision": "PORT_TO_MATCH_R", "basis": "x"}}}, "is not covered by"),
+            ("uncovered_word_deprecate", {"decisions": {"julia_only": {"decision": "DEPRECATE_AND_REMOVE", "basis": "x"}}}, "is not covered by"),
+            ("uncovered_word_rename", {"decisions": {"julia_only": {"decision": "RENAME_TO_AVOID_COLLISION", "basis": "x"}}}, "is not covered by"),
+            ("missing_criterion", {"criterion": " "}, "criterion must be a non-empty string"),
+            ("missing_generator", {"generator": None}, "generator must be a non-empty string")):
+        root, tmp = with_root()
+        (root / DEC).write_text(json.dumps(decisions(**over)))
+        c, o = run(root, "--check")
+        expect(f"decisions_file_{label}_fails", c == 1 and "ASSEMBLE_FAIL" in o and why in o, o)
+        shutil.rmtree(tmp)
+    root, tmp = with_root()
+    (root / DEC).write_text(json.dumps(decisions(decisions={"julia_only": {"decision": "KEPT_AS_JULIA_EXTRA", "basis": "documented"}})))
+    c, o = run(root)
+    rg = json.loads((root / A.LEDGER / A.OUT_REVERSE_GAP).read_text())
+    expect("decisions_file_kept_as_julia_extra_ok", c == 0 and rg[0]["decision"] == "KEPT_AS_JULIA_EXTRA" and rg[0]["status"] == "decided", o)
+    shutil.rmtree(tmp)
     for label, over in (("no_ruling", {"ruling": None}), ("ruling_missing_signed_on", {"ruling": {"ref": "r", "signed_by": "x"}}),
                         ("bad_schema", {"schema": 2})):
         root, tmp = with_root()
@@ -442,6 +506,18 @@ def main():
         c, o = run(root, "--check")
         expect(f"decisions_file_{label}_fails", c == 1 and "ASSEMBLE_FAIL" in o, o)
         shutil.rmtree(tmp)
+
+    # The two tools carry copies of the C6 vocabulary, the C6 ruling table and the behavioural scope; they must not drift.
+    mjs = (HERE / "true_parity_check.mjs").read_text()
+    vocab = re.search(r"const C6_DECISION_VOCAB = new Set\(\[(.*?)\]\);", mjs, re.S).group(1)
+    expect("c6_vocab_matches_checker", re.findall(r"'([A-Z_]+)'", vocab) == list(A.C6_DECISION_VOCAB), vocab)
+    rtable = re.search(r"const C6_RULINGS = \{(.*?)\n\};", mjs, re.S).group(1)
+    ref = re.search(r"'([^']+#684 item 3)': \{ signed_on: '([0-9-]+)', words: new Set\(\[([^\]]*)\]\)", rtable)
+    expect("c6_rulings_match_checker",
+           ref is not None and list(A.C6_RULINGS) == [ref.group(1)] and A.C6_RULINGS[ref.group(1)]["signed_on"] == ref.group(2)
+           and re.findall(r"'([A-Z_]+)'", ref.group(3)) == list(A.C6_RULINGS[ref.group(1)]["words"]), rtable)
+    named = re.search(r"const BEHAVIOURAL_NAMED_SOURCE_IDS = new Set\(\[(.*?)\]\);", mjs, re.S).group(1)
+    expect("behavioural_named_ids_match_checker", re.findall(r"'([^']+)'", named) == list(A.BEHAVIOURAL_NAMED_SOURCE_IDS), named)
 
     # Real tree: outputs current, and EVIDENCED count equals the checker's own C1 bound=.
     c, o = run(A.ROOT, "--check")
