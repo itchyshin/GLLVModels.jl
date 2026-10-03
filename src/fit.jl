@@ -94,7 +94,18 @@ unchanged.
 
 Optional extensions:
 - J2-A-WD: `K_W::Integer = 0` (W-tier rank), `has_diag::Bool = false`
-  (per-trait diagonal RE σ²_B, σ²_W).
+  (per-trait diagonal RE σ²_B, σ²_W). The W-tier scores are shared by all
+  traits of a unit, so `Λ_W` adds the full `Λ_W Λ_Wᵀ` block to the per-unit
+  covariance, as in gllvmTMB. With one unit per column of `y`, only
+  `Λ Λᵀ + Λ_W Λ_Wᵀ` is identified, not the split between the two tiers
+  (likewise only `σ²_B + σ²_W + σ²_eps`). A `K_W > 0` fit reaches the same
+  log-likelihood and `sigma_y_site` as a single-tier fit with `K + K_W` axes;
+  how `Λ` and `Λ_W` share that covariance depends on the starting values, so
+  tier-scoped summaries (`communality`, `proportions`, `extract_Sigma` at
+  `level = :unit` / `:unit_obs`, `getLV`) and Wald SEs of single `Λ` / `Λ_W`
+  entries should not be interpreted. To separate between-unit from
+  within-unit variation, use `fit_twolevel_gaussian` on repeated
+  observations per unit.
 - J3 phylogenetic: `K_phy::Integer = 0` (Λ_phy rank),
   `has_phy_unique::Bool = false` (per-trait σ_phy), and
   `Σ_phy::AbstractMatrix` (p × p species covariance, required when

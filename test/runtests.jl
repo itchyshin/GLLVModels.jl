@@ -530,5 +530,6 @@ println(_SHARD === nothing ?
     _shard_include("test_bootstrap_decisions.jl")
     _shard_include("test_derived_decisions.jl")
     _shard_include("test_n_lt_p.jl")
+    _shard_include("test_wtier_crosscov.jl")
 end
 include("test_readme_quickstart.jl")

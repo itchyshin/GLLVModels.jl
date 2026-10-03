@@ -53,6 +53,11 @@ surface).
 
 `diagnose_kernel_separability` checks only the two-tier `Λ_B` vs `Λ_W` case
 GLLVModels.jl currently fits; single-tier fits report `separable = missing`.
+For a `GllvmFit`, each column of `Y` is one unit observed once, so the data
+never separate `Λ_B` from `Λ_W`: only `Λ_B Λ_B' + Λ_W Λ_W'` is identified.
+The reported angle then reflects the starting values, and
+`separable = true` does not mean the two tiers are identified (see the
+Identifiability section of [Model](model.md)).
 
 `fit_diagnostic_table` computes its summary rows directly from the raw fit
 (unlike R's `diagnostic_table`, which reads metadata already attached by a

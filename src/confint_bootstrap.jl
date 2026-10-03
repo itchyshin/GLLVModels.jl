@@ -124,8 +124,8 @@ end
 # ---------------------------------------------------------------------------
 # Per-site covariance reconstruction.
 #
-# A = Λ_B Λ_B' + diag(d_total)
-# d_total[t] = (Λ_W Λ_W')[t,t] + σ²_B[t] + σ²_W[t] + σ²_eps
+# A = Λ_B Λ_B' + Λ_W Λ_W' + diag(d_total)   (full W-tier block, issue #135)
+# d_total[t] = σ²_B[t] + σ²_W[t] + σ²_eps
 # ---------------------------------------------------------------------------
 function _bootstrap_site_cov(fit::GllvmFit)
     p   = fit.model.p
@@ -134,13 +134,11 @@ function _bootstrap_site_cov(fit::GllvmFit)
     σ² = fit.pars.σ_eps^2
     Λ_B = fit.pars.Λ
     A = Λ_B * Λ_B'
+    if K_W > 0 && fit.pars.Λ_W !== nothing
+        A = A + fit.pars.Λ_W * fit.pars.Λ_W'
+    end
     @inbounds for t in 1:p
         v = σ²
-        if K_W > 0 && fit.pars.Λ_W !== nothing
-            for k in 1:size(fit.pars.Λ_W, 2)
-                v += fit.pars.Λ_W[t, k]^2
-            end
-        end
         if has_diag && fit.pars.σ²_B !== nothing
             v += fit.pars.σ²_B[t]
         end

@@ -145,9 +145,10 @@ function _derived_unpack(θ::AbstractVector, spec::NamedTuple)
 end
 
 # ---------------------------------------------------------------------------
-# Σ_y_site = Λ_B Λ_B' + diag(d_total) — the per-site (within-species)
-# trait covariance. The phylogenetic block (rank-1 across species) is not
-# part of the per-site covariance; it contributes only to the species-level
+# Σ_y_site = Λ_B Λ_B' + Λ_W Λ_W' + diag(d_total) — the per-site (within-species)
+# trait covariance. The W tier carries its full cross-trait block (issue #135).
+# The phylogenetic block (rank-1 across species) is not part of the per-site
+# covariance; it contributes only to the species-level
 # shared variance. Following the bootstrap-sigma R convention.
 # ---------------------------------------------------------------------------
 function _sigma_y_site_from_unpacked(u::NamedTuple, spec::NamedTuple)
@@ -157,13 +158,11 @@ function _sigma_y_site_from_unpacked(u::NamedTuple, spec::NamedTuple)
     σ² = u.σ_eps^2
     Λ_B = u.Λ_B
     A = Λ_B * Λ_B'
+    if K_W > 0 && u.Λ_W !== nothing
+        A = A + u.Λ_W * u.Λ_W'
+    end
     @inbounds for t in 1:p
         v = σ²
-        if K_W > 0 && u.Λ_W !== nothing
-            for k in 1:size(u.Λ_W, 2)
-                v += u.Λ_W[t, k]^2
-            end
-        end
         if has_diag && u.σ²_B !== nothing
             v += u.σ²_B[t]
         end
@@ -179,8 +178,9 @@ end
     sigma_y_site(fit::GllvmFit) -> Matrix
 
 The per-site (within-species) trait covariance
-`Σ_y_site = Λ_B Λ_B' + diag(d_total)` where
-`d_total[t] = (Λ_W Λ_W')[t,t] + σ²_B[t] + σ²_W[t] + σ²_eps`. For J1,
+`Σ_y_site = Λ_B Λ_B' + Λ_W Λ_W' + diag(d_total)` where
+`d_total[t] = σ²_B[t] + σ²_W[t] + σ²_eps`. The W tier contributes its full
+cross-trait block `Λ_W Λ_W'`, as in gllvmTMB (issue #135). For J1,
 `Λ_W = nothing`, `σ²_B = σ²_W = 0`, so the diagonal collapses to `σ²_eps`.
 
 The phylogenetic block is *not* included — for J3, the phylo
@@ -202,8 +202,14 @@ end
     communality(fit::GllvmFit) -> Vector
 
 Per-trait communality `c²[t] = (Λ_B Λ_B')[t, t] / Σ_y_site[t, t]`. This
-is the fraction of the per-site trait variance explained by the shared
-latent factors. Values are in [0, 1].
+is the fraction of the per-site trait variance explained by the unit-tier
+latent factors `Λ_B`. Values are in [0, 1]. The W-tier block `Λ_W Λ_W'` is
+also shared across traits (issue #135) but is not counted here.
+
+With `K_W > 0`, each column of `y` is one unit observed once, so the data
+identify only `Λ_B Λ_B' + Λ_W Λ_W'`, not how it splits between the tiers.
+This value then depends on the starting values and should not be
+interpreted; see the Identifiability section of the Model page.
 """
 function communality(fit::GllvmFit)
     spec = _derived_spec(fit)
@@ -217,9 +223,17 @@ end
     proportions(fit::GllvmFit; component::Symbol = :shared) -> Vector
 
 Per-trait variance decomposition. Each entry is in [0, 1]; the
-`:shared`, `:unique_W`, `:unique_B`, and `:residual` shares sum to 1
-(when has_diag and W tier are off, only `:shared` and `:residual` are
-non-zero).
+`:shared`, `:unique_W`, `:unique_B`, `:unique_Wd` and `:residual` shares
+sum to 1 (when has_diag and W tier are off, only `:shared` and `:residual`
+are non-zero).
+
+Despite its name, `:unique_W` is the diagonal of the W-tier block
+`Λ_W Λ_W'`, which also covaries across traits (issue #135). With one unit
+per column of `y`, the data identify only the sum of the `:shared` and
+`:unique_W` shares, and only the sum of the `:unique_B`, `:unique_Wd` and
+`:residual` shares. With `K_W > 0` or `has_diag = true`, the individual
+shares within each sum depend on the starting values and should not be
+interpreted; see the Identifiability section of the Model page.
 
 `component` can be:
   - `:shared`    — `(Λ_B Λ_B')[t,t] / Σ_y_site[t,t]`   (== communality)
@@ -275,7 +289,9 @@ Cross-trait correlation derived from `Σ_y_site`:
 `ρ[i, j] = Σ_y_site[i, j] / sqrt(Σ_y_site[i, i] · Σ_y_site[j, j])`.
 
 Diagonal entries are exactly 1.0. The off-diagonals are the *site-level*
-correlations driven by the shared loadings Λ_B.
+correlations driven by the loadings Λ_B and, when present, Λ_W. They depend
+only on the identified total `Σ_y_site`, so they do not depend on how a
+`K_W > 0` fit splits the covariance between the two tiers.
 
 Degenerate traits: the correlation is undefined for a trait whose
 `Σ_y_site[t, t] ≤ 0` (zero variance, or a round-off negative). Every entry
@@ -414,13 +430,11 @@ function _derived_site_cov(fit::GllvmFit)
     σ² = fit.pars.σ_eps^2
     Λ_B = fit.pars.Λ
     A = Λ_B * Λ_B'
+    if K_W > 0 && fit.pars.Λ_W !== nothing
+        A = A + fit.pars.Λ_W * fit.pars.Λ_W'      # full W-tier block (issue #135)
+    end
     @inbounds for t in 1:p
         v = σ²
-        if K_W > 0 && fit.pars.Λ_W !== nothing
-            for k in 1:size(fit.pars.Λ_W, 2)
-                v += fit.pars.Λ_W[t, k]^2
-            end
-        end
         if has_diag && fit.pars.σ²_B !== nothing
             v += fit.pars.σ²_B[t]
         end

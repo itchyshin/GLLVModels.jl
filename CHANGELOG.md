@@ -134,6 +134,47 @@
   and `docs/src/pitfalls.md`. Fits with n >= p are numerically unchanged (pinned from the
   tree before the change). Test: `test/test_n_lt_p.jl`.
 
+- **The W-tier reduced-rank term now carries the full cross-trait covariance, as in
+  gllvmTMB (#135).** The W-tier scores are now one vector per unit, shared by all traits,
+  so `Λ_W` adds the whole `Λ_W Λ_Wᵀ` block to the per-unit covariance:
+  `Σ = Λ_B Λ_Bᵀ + Λ_W Λ_Wᵀ + diag(σ²_B + σ²_W + σ²_eps)`. Before, only the diagonal of
+  `Λ_W Λ_Wᵀ` was used, so the W tier acted as extra per-trait variance and the
+  off-diagonal pattern of `Λ_W` was never estimated. The C++ engine adds
+  `sum_k Lambda_W(t, k) * z_W(k, ss)` with `z_W` shared within a unit; at a fixed
+  parameter point the Julia log-likelihood now equals the gllvmTMB objective to 1e-8
+  (fixture provenance: `test/fixtures/gen_wtier_crosscov_twin.R`). Changed numbers, for
+  models with `K_W > 0` (or `Λ_W` passed) only: `gaussian_marginal_loglik`,
+  `gaussian_nll_packed`, `gaussian_profile_nll` / `profile_recover`,
+  `gaussian_marginal_loglik_sparse_phy`, `gaussian_marginal_loglik_edge_phy` and
+  `gaussian_reml_loglik` return different values; `fit_gaussian_gllvm(...; K_W > 0)`
+  returns different estimates and log-likelihoods; `sigma_y_site`, `correlation`,
+  `extract_Sigma(fit; level = :site)` and `getLV` now include the off-diagonal
+  `Λ_W Λ_Wᵀ` terms (diagonals are unchanged at fixed parameters); parametric-bootstrap
+  and derived-CI replicates are drawn from the full covariance. Models without a W tier
+  give the same log-likelihoods as before (pinned in the new test). Parameter packing and
+  the public API are unchanged. Note: with one unit per column of `y`, only
+  `Λ Λᵀ + Λ_W Λ_Wᵀ` is identified, not the split between the two tiers; in our checks a
+  `K = 1, K_W = 1` fit reaches the same log-likelihood as a single-tier `K = 2` fit.
+  (`σ²_B`, `σ²_W` and `σ²_eps` were already identified only through their sum.) So for a
+  `K_W > 0` fit, any output that reports one tier on its own depends on the starting
+  values and should not be interpreted: `communality`, `proportions`, `extract_Sigma` at
+  `level = :unit` or `:unit_obs`, the default tier-scoped `extract_communality`,
+  `extract_correlations`, `extract_proportions` and `extract_ICC_site`, `getLV`, and
+  the `diagnose_kernel_separability` angle. In our checks two fits of the same data from
+  different starts agreed in log-likelihood (to 2e-12) and `sigma_y_site` (to 3e-9) but
+  not in `Λ` or `communality`, and Wald SEs for single `Λ` / `Λ_W` entries were `NaN` or
+  in the thousands. Use `sigma_y_site`, `correlation` or `extract_Sigma(fit; level =
+  :site)` for the identified total, or `fit_twolevel_gaussian` with repeated observations
+  per unit for a between / within split. These caveats are now in the docstrings, the
+  Model page (Terms, closed form and Identifiability, which still described the old
+  diagonal-only W tier), the post-fit extractor and diagnostics pages, and the gllvmTMB
+  parity page, whose "Between / within (multilevel)" row now points to
+  `fit_twolevel_gaussian` instead of `K_W`. No returned numbers change from this
+  documentation. The
+  `test/test_W_and_diag.jl` dense reference and recovery fixture now use the shared-score
+  model (recovery moved to p = 8 traits, n = 1000, because the rank-2 model at p = 5 hits
+  a zero unique variance on that seed). Test: `test/test_wtier_crosscov.jl`.
+
 - **`fit_phylo_gaussian` no longer reports `converged = true` after a zero-length step
   (part of #505, the remaining #485 class).** Optim also counts a zero-length line-search
   step as convergence, so a start the finite-difference gradient cannot leave could be
