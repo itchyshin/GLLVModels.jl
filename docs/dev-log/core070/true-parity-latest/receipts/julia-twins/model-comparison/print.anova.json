@@ -1,0 +1,90 @@
+{
+  "schema": "true-parity-julia-behaviour-receipt/v1",
+  "source_ids": [
+    "model-comparison/print.anova.gllvmTMB_multi"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "behaviour_observed_on_both_engines",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#684 item 2",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "896a0a2286c224fe9979d3cf7e7e2c6be27f9357",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/c1_behaviour_p1/r_c1_behaviour.toml",
+      "sha256": "753f9007eb2454e2cd097e0de17ebe27c64ecfce9434e90dfa7fb8365e020759"
+    },
+    {
+      "path": "test/fixtures/c1_behaviour_p1/r_anova_print.txt",
+      "sha256": "824bd153906902373b66f4bb5296dd80db7326512870ce50f9f8c6bfc7fd2fdb"
+    },
+    {
+      "path": "test/fixtures/c1_behaviour_p1/helpers.jl",
+      "sha256": "5337dcd8248e8e183e22c13ec8cf60b16ed1ed656b6ad5eb71939f2c158beacf"
+    },
+    {
+      "path": "test/fixtures/gllvmtmb_anova_fixture.toml",
+      "sha256": "b06237b50c5a5f8a7fe916a04554fa8d2a2ea014c100c5b2cf61415b40227d78"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_c1_behaviour_p1.jl",
+      "sha256": "31cb84c8756f745ea0b0e1940a9ac56ff789df61ea778d5c6e7ea7af72cad252"
+    }
+  ],
+  "what_this_is_not": "This compares the printed column labels and section headings only. It does not claim identical title text, identical note wording, identical number formatting or identical numbers; the numbers are the numeric anova twin's. R's print method takes a digits argument; the Julia show method has none, and that is not compared.",
+  "behaviour": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-C1-PRINT-ANOVA-FIELDS",
+        "source_id": "model-comparison/print.anova.gllvmTMB_multi",
+        "kind": "printed_fields",
+        "r_observed": [
+          "model",
+          "d",
+          "npar",
+          "logLik",
+          "deviance",
+          "df",
+          "LRT",
+          "test",
+          "p.value"
+        ],
+        "julia_observed": [
+          "model",
+          "d",
+          "npar",
+          "logLik",
+          "deviance",
+          "df",
+          "LRT",
+          "test",
+          "p.value"
+        ],
+        "r_source": "test/fixtures/c1_behaviour_p1/r_anova_print.txt, header line (print.anova.gllvmTMB_multi at P1 on anova() of three nested Gaussian fits, d = 1, 2, 3)",
+        "julia_source": "show(io, MIME\"text/plain\"(), gllvm_anova(fits...; test = :chibar)) on Julia fits of the same data, header line, as produced by c1b_julia_anova_print in test/fixtures/c1_behaviour_p1/helpers.jl",
+        "r_header_line": "model d npar  logLik deviance df   LRT         test   p.value",
+        "julia_header_line": "model          d       npar     logLik   deviance         df        LRT       test    p.value",
+        "note": "The labels are the whitespace-separated tokens of the printed header line, in order. The numbers beneath them are not compared here; the numeric anova twin (model-comparison/anova.json) owns them."
+      },
+      {
+        "case_id": "CORE070-C1-PRINT-ANOVA-SECTIONS",
+        "source_id": "model-comparison/print.anova.gllvmTMB_multi",
+        "kind": "printed_fields",
+        "r_observed": [
+          "Notes:"
+        ],
+        "julia_observed": [
+          "Notes:"
+        ],
+        "r_source": "test/fixtures/c1_behaviour_p1/r_anova_print.txt, lines that are one capitalised word and a colon",
+        "julia_source": "the same show(...) text, same rule, as produced by c1b_julia_anova_print in test/fixtures/c1_behaviour_p1/helpers.jl",
+        "note": "Both printers follow the table with a Notes: section when a row carries a note (here, the chi-bar-square rank steps). The title lines differ by engine name (R: gllvmTMB fits; Julia: GLLVModels.jl fits) and the note texts are worded for each package; neither is compared."
+      }
+    ]
+  }
+}
