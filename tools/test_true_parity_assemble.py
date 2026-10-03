@@ -267,6 +267,18 @@ def main():
     wr = subprocess.run([sys.executable, str(HERE / "true_parity" / "campaign" / "write_receipts.py"), "--check"],
                         capture_output=True, text=True)
     expect("real_tree_campaign_receipts_rederive", wr.returncode == 0 and "CAMPAIGN_RECEIPTS_OK" in wr.stdout, wr.stdout + wr.stderr)
+    # Receipt wording: relative cases are named as such and say where the raw values are; cond(H) says how each engine computes it;
+    # the C5 rule claims no R Hessian leg (the #593 receipts record none).
+    nb2 = json.loads((A.ROOT / A.LEDGER / "receipts/family/campaign/NB2-LOG-RSZ.json").read_text())
+    rel = [c for c in nb2["comparison"]["cases"] if "convention" in c]
+    expect("relative_cases_named_and_located", len(rel) == 2 and all(c["quantity"].endswith("relative difference") and "r_raw" in c and "julia_raw" in c
+           and "raw_values_location" in c for c in rel), json.dumps([c["quantity"] for c in rel]))
+    expect("cond_H_method_stated", "exact = FALSE" in nb2["cond_H_statement"] and "exact 2-norm" in nb2["cond_H_statement"]
+           and "kappa" in nb2["engines"]["R"]["cond_H_method"] and "2-norm" in nb2["engines"]["julia"]["cond_H_method"], nb2["cond_H_statement"])
+    tmpl = json.loads((A.ROOT / A.LEDGER / "receipts/covariance/campaign/COV-TEMPORAL-RSZ.json").read_text())
+    expect("temporal_cond_H_method_names_its_hessian", "ForwardDiff" in tmpl["engines"]["julia"]["cond_H_method"], tmpl["engines"]["julia"]["cond_H_method"])
+    grp = json.loads((A.ROOT / A.LEDGER / "receipts/fit-input/campaign/GRP-UNIT.json").read_text())
+    expect("c5_rule_claims_no_hessian_leg", "R_pdHess_true" not in grp["pass_rule"]["legs"] and "no R Hessian leg" in grp["pass_rule"]["rule"], grp["pass_rule"]["rule"])
     # Row tiers: a measured row that fails no number but lacks a required step reads PARTIAL, never FAIL; a row that also
     # misses a tolerance keeps numeric_fail; the phylo row does not bind (its R receipt is unqualified until the maintainer signs).
     def camp_row(mapname, sid):

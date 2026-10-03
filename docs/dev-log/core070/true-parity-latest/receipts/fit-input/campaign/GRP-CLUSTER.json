@@ -8,7 +8,7 @@
  "verdict": "PASS",
  "row_status": "binds: the plan's pass rule holds on both engines",
  "pass_rule": {
-  "rule": "both engines converged (R convergence 0 with a positive-definite Hessian; Julia converged true) and every listed quantity within tolerance",
+  "rule": "the rule applied to the four grouping rows, taken from the merged PR #593 receipts, which record no R Hessian leg, so none is claimed: name parity PASS with the misspelt-keyword negative control rejected by both engines; the #593 receipt's own verdict PASS; R convergence 0 and Julia converged true in the paired fit; the paired logLik within 1e-6; and a replay on current main that verifies the fixture hashes, passes name parity again and reproduces the receipt's logLik within 1e-6",
   "legs": {
    "name_parity_PASS": true,
    "negative_control_rejected_on_both_sides": true,

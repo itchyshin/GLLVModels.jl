@@ -8,7 +8,7 @@
  "verdict": "FAIL",
  "row_status": "does not bind: LLt: abs difference 0.000129891 > tolerance 0.0001",
  "pass_rule": {
-  "rule": "both engines converged (R convergence 0 with a positive-definite Hessian; Julia converged true) and every listed quantity within tolerance",
+  "rule": "both engines converged (R convergence 0 with a positive-definite Hessian; Julia converged true), both read the same data bytes, the ten named gllvmTMB entry points that run_R.R calls (gllvmTMB, gllvmTMBcontrol, nbinom2, ordinal_logit, isdm_sources, extract_Sigma, extract_cutpoints, predict.gllvmTMB_multi, extract_temporal, temporal_latent) deparse identically to their P1 source; internal gllvmTMB functions and the compiled library are not deparse-checked, they are trusted by the recorded version 0.7.1, the library path and the sha256 of the P1 source files, and every listed quantity is within its tolerance",
   "legs": {
    "R_convergence_0": true,
    "R_pdHess_true": true,
@@ -123,7 +123,7 @@
    "identical_deparse": true
   }
  ],
- "cond_H_statement": "R cond(H) 1250.14. Julia cond(H) 763.786.",
+ "cond_H_statement": "R cond(H) 1250.14, computed as kappa(solve(sdr$cov.fixed), exact = FALSE): a 1-norm condition-number ESTIMATE (LAPACK) of the inverse of TMB's sdreport covariance of all fixed parameters, in gllvmTMB's own parameter coordinates. Julia cond(H) 763.786, computed as cond(Symmetric(vcov(fit, Y))): the exact 2-norm condition number (ratio of the extreme eigenvalues) of the full inverse observed information (Wald covariance) of the Julia fit, in the Julia fit's own parameter coordinates. The two are different estimators in different parameter bases: recorded, never compared like for like.",
  "not_covered": [
   "One dataset and one seed per row: a spot check at this size, not a scaling study or a coverage study.",
   "Direct engines only (R TMB fit against a direct Julia fit); R's engine = 'julia' bridge route is not exercised.",
@@ -145,6 +145,7 @@
    "max_abs_gradient": 0.000430188546080568,
    "n_par": 99,
    "cond_H": 1250.13808805707,
+   "cond_H_method": "kappa(solve(sdr$cov.fixed), exact = FALSE): a 1-norm condition-number ESTIMATE (LAPACK) of the inverse of TMB's sdreport covariance of all fixed parameters, in gllvmTMB's own parameter coordinates",
    "wall_fit_sec": 5.38750720024109,
    "wall_sdreport_sec": 4.72377800941467,
    "finished_utc": "2026-10-03T00:47:06Z"
@@ -159,6 +160,7 @@
    "iterations": 56,
    "pd_hessian": true,
    "cond_H": 763.7859695437758,
+   "cond_H_method": "cond(Symmetric(vcov(fit, Y))): the exact 2-norm condition number (ratio of the extreme eigenvalues) of the full inverse observed information (Wald covariance) of the Julia fit, in the Julia fit's own parameter coordinates",
    "wall_fit_sec": 56.498603105545044,
    "wall_confint_sec": 82.9199321269989,
    "wall_vcov_sec": 83.86148405075073,

@@ -19,21 +19,25 @@ Julia fit on the same literal fixture), and the merged PR #593 grouping receipts
 
 Pass rule (campaign plan section 1.1, as PROPOSED in PR #650): BOTH engines converged (R convergence 0
 with a positive-definite Hessian; Julia `converged` true; iSDM also every cell converged) AND every
-listed quantity is within its tolerance AND both engines read the same data bytes AND every gllvmTMB
-function used deparses identically to its P1 source. A C4 row also needs the engine = "julia" bridge route and
-the plan's eight acceptance classes to have been run (plan section 1.3); neither was, so no C4 row binds yet. The phylo
-row (COV-PHYLO-LATENT-RSZ) takes its R side from the tracked PR #547 receipt, which records qualified = false until the
-maintainer signs the dated promotion block (D-300 answer 9); the row therefore does not bind, and no agent may sign that block.
+listed quantity is within its tolerance AND both engines read the same data bytes AND the ten named gllvmTMB entry points
+that run_R.R calls deparse identically to their P1 source (internal gllvmTMB functions and the compiled library are not
+deparse-checked: they are trusted by the recorded version 0.7.1, the library path and the sha256 of the P1 source
+files). A C4 row also needs the engine = "julia" bridge route and the plan's eight acceptance classes to have been run
+(plan section 1.3); neither was, so no C4 row binds yet. The phylo row (COV-PHYLO-LATENT-RSZ) takes its R side from the
+tracked PR #547 receipt, which records qualified = false until the maintainer signs the dated promotion block (D-300
+answer 9); the row therefore does not bind, and no agent may sign that block. C5 rows follow their own rule (see RULE_C5).
 A row that meets the whole rule binds (evidence_tier "numeric", evidence.receipt). Otherwise the receipt is cited as
 non-binding with the reason and the row is left unbound; no tolerance is widened and nothing is re-run to get a pass.
 A row whose numbers are all inside tolerance and whose only failing leg is a required step that was not run or not
 signed (the C4 bridge leg, the phylo qualification) reads partial_case_not_executed, never numeric_fail.
 
 A relative tolerance is recorded as a discrepancy statistic against zero (r_value = 0, julia_value =
-|J - R| / |R| per element), because the checker compares absolute differences; the raw R and Julia
-vectors are stored beside it. Vectors of 1000+ values (linear predictors) carry max_abs_diff only, with
-the raw files committed (gzip). `--check` rebuilds every receipt's comparison block, pass-rule legs, verdict and
-engine blocks, and every campaign case-map row, from those committed raw files and fails on any difference.
+|J - R| / |R| per element), because the checker compares absolute differences; the r_value is therefore NOT an R
+measurement. The case's quantity name says "relative difference" and `raw_values_location` says where the raw R and
+Julia values are (r_raw / julia_raw in the same block, and the committed raw files). Vectors of 1000+ values (linear
+predictors) carry max_abs_diff only, with the raw files committed (gzip). `--check` rebuilds every receipt's comparison
+block, pass-rule legs, verdict and engine blocks, and every campaign case-map row, from those committed raw files and
+fails on any difference.
 
 Usage:
   python3 write_receipts.py --raw DIR [--apply]       # default: print what would be written
@@ -75,6 +79,8 @@ class Case:
     """One comparison case. mode abs: judged on max |R - J|. mode rel: judged on max |J - R| / |R|."""
     def __init__(self, cid, quantity, r, j, tol, rule, tol_status, mode="abs"):
         r, j = flat(r), flat(j)
+        # a relative tolerance is carried as a discrepancy statistic, so the quantity says so (r_value is not an R measurement)
+        if mode == "rel": quantity = f"{quantity} relative difference"
         self.cid, self.quantity, self.tol, self.rule, self.tol_status, self.mode = cid, quantity, tol, rule, tol_status, mode
         self.problem = None
         if len(r) != len(j) or not r: self.problem = f"length mismatch or empty (R {len(r)}, Julia {len(j)})"
@@ -96,8 +102,10 @@ class Case:
                 d["diff_source"] = f"max over {len(self.r)} values, from the committed raw files ({raw_note}); re-derived by write_receipts.py --check"
             d["max_abs_diff"] = self.diff
         else:
-            d["convention"] = ("relative-difference statistic: r_value is the target 0; julia_value is |J - R| / |R| per element "
+            d["convention"] = ("relative-difference statistic, NOT an R measurement: r_value is the target 0; julia_value is |J - R| / |R| per element "
                                "(the checker compares absolute differences, so a relative tolerance is carried this way)")
+            d["raw_values_location"] = ("the raw R values are r_raw and the raw Julia values are julia_raw, in this block; the full engine outputs are "
+                                        "the committed raw/<cell>_R.json.gz and raw/<cell>_J.toml.gz named in read_from")
             d["r_value"] = [0.0] * len(self.r) if len(self.r) > 1 else 0.0
             d["julia_value"] = [abs(b - a) / abs(a) if a != 0 else (0.0 if b == a else None) for a, b in zip(self.r, self.j)] if len(self.r) > 1 else (abs(self.j[0] - self.r[0]) / abs(self.r[0]) if self.r[0] != 0 else 0.0)
             d["r_raw"] = self.r if len(self.r) > 1 else self.r[0]
@@ -225,14 +233,26 @@ def cases_for(sid, cell, clause, quants, R, J):
     return cs
 
 
+# How each engine's cond(H) is computed (they are different estimators in different parameter bases: recorded, never compared).
+R_COND_METHOD = "kappa(solve(sdr$cov.fixed), exact = FALSE): a 1-norm condition-number ESTIMATE (LAPACK) of the inverse of TMB's sdreport covariance of all fixed parameters, in gllvmTMB's own parameter coordinates"
+J_COND_METHOD = "cond(Symmetric(vcov(fit, Y))): the exact 2-norm condition number (ratio of the extreme eigenvalues) of the full inverse observed information (Wald covariance) of the Julia fit, in the Julia fit's own parameter coordinates"
+J_COND_METHOD_TEMPORAL = ("exact ratio of the extreme eigenvalues of the ForwardDiff Hessian of the temporal negative log-likelihood at fit.parameters, in the optimiser's coordinates "
+                          "(rebuilt in run_J.jl from the fit's own objective, not through the Wald vcov used for the other cells)")
+R_COND_METHOD_PHYLO = "kappa(sd$cov.fixed, exact = TRUE) in tools/phylo_latent/r_reference_p1.R (PR #547): the exact 2-norm condition number of TMB's sdreport covariance of all fixed parameters, in gllvmTMB's own coordinates"
+J_COND_METHOD_PHYLO = "cond(H) of the finite-difference Hessian of the marginal negative log-likelihood at the fit's optimum (the fit's own Hessian diagnostic, exact 2-norm), in the Julia optimiser's coordinates"
+
+
+def j_cond_method(J): return J_COND_METHOD_TEMPORAL if J.get("cond_H_basis") else J_COND_METHOD
+
+
 def engine_blocks(cell, R, J):
     r = OrderedDict(engine=R["engine"], gllvmTMB_version=R["gllvmTMB_version"], loaded_from_library=Path(R["gllvmTMB_loaded_from"]).parent.name + "/" + Path(R["gllvmTMB_loaded_from"]).name,
                     TMB_version=R["TMB_version"], R_version=R["R_version"], host=R["host"], formula=R["formula"],
                     convergence=R["convergence"], optimizer_message=R["message"], pdHess=R["pdHess"], max_abs_gradient=R["max_abs_gradient"],
-                    n_par=R["n_par"], cond_H=R.get("cond_H"), wall_fit_sec=R["wall_fit_sec"], wall_sdreport_sec=R["wall_sdreport_sec"], finished_utc=R["finished_utc"])
+                    n_par=R["n_par"], cond_H=R.get("cond_H"), cond_H_method=R_COND_METHOD, wall_fit_sec=R["wall_fit_sec"], wall_sdreport_sec=R["wall_sdreport_sec"], finished_utc=R["finished_utc"])
     j = OrderedDict(engine=J["engine"], julia_version=J["julia_version"], gllvmodels_commit=J["gllvmodels_commit"], host=J["host"], call=J["call"],
                     converged=J["converged"], iterations=J.get("iterations"), pd_hessian=J.get("pd_hessian", J.get("hessian_positive_definite")),
-                    cond_H=J.get("cond_H"), wall_fit_sec=J["wall_fit_sec"], wall_confint_sec=J.get("wall_confint_sec"), wall_vcov_sec=J.get("wall_vcov_sec"),
+                    cond_H=J.get("cond_H"), cond_H_method=j_cond_method(J), wall_fit_sec=J["wall_fit_sec"], wall_confint_sec=J.get("wall_confint_sec"), wall_vcov_sec=J.get("wall_vcov_sec"),
                     JULIA_NUM_THREADS=J.get("JULIA_NUM_THREADS"), OPENBLAS_NUM_THREADS=J.get("OPENBLAS_NUM_THREADS"))
     if "cells_converged" in J: j["cells_converged"] = J["cells_converged"]
     if "dispersion_boundary" in J: j["dispersion_boundary"] = J["dispersion_boundary"]
@@ -350,6 +370,26 @@ def write_json(p, obj):
     p.write_text(json.dumps(clean(obj), indent=1, allow_nan=False) + "\n")
 
 
+# The rule actually applied, per kind of row. Each text names only legs that the receipt's `legs` record.
+RULE_SCOPE_P1 = ("the ten named gllvmTMB entry points that run_R.R calls (gllvmTMB, gllvmTMBcontrol, nbinom2, ordinal_logit, isdm_sources, extract_Sigma, "
+                 "extract_cutpoints, predict.gllvmTMB_multi, extract_temporal, temporal_latent) deparse identically to their P1 source; internal gllvmTMB "
+                 "functions and the compiled library are not deparse-checked, they are trusted by the recorded version 0.7.1, the library path and the sha256 of the P1 source files")
+RULE_C3 = ("both engines converged (R convergence 0 with a positive-definite Hessian; Julia converged true), both read the same data bytes, " + RULE_SCOPE_P1 +
+           ", and every listed quantity is within its tolerance")
+RULE_C4 = RULE_C3 + ("; and the engine = \"julia\" bridge route and the plan's eight acceptance classes were run (plan section 1.3), which this campaign did not do")
+RULE_PHYLO = ("R side taken from the tracked PR #547 receipt (R was not re-run, so there is no deparse check): R convergence 0 with a positive-definite Hessian, "
+              "Julia converged true on a fresh fit, the same data bytes, R recorded as gllvmTMB 0.7.1 at the P1 pin, every listed quantity within its tolerance, "
+              "and the #547 R receipt promoted (qualified true) by the maintainer's own dated signature (D-300 answer 9), which is not signed")
+RULE_C5 = ("the rule applied to the four grouping rows, taken from the merged PR #593 receipts, which record no R Hessian leg, so none is claimed: "
+           "name parity PASS with the misspelt-keyword negative control rejected by both engines; the #593 receipt's own verdict PASS; "
+           "R convergence 0 and Julia converged true in the paired fit; the paired logLik within 1e-6; and a replay on current main that verifies "
+           "the fixture hashes, passes name parity again and reproduces the receipt's logLik within 1e-6")
+
+
+def rule_text(cell, clause):
+    return RULE_C5 if clause == "C5" else RULE_PHYLO if cell == "phylo" else RULE_C4 if clause == "C4" else RULE_C3
+
+
 def build_receipt(sid, cell, clause, cases, legs, eng_r, eng_j, extra, raw_refs, binds):
     rcpt = OrderedDict()
     rcpt["schema"] = SCHEMA
@@ -360,8 +400,7 @@ def build_receipt(sid, cell, clause, cases, legs, eng_r, eng_j, extra, raw_refs,
     rcpt["verdict"] = "PASS" if binds else ("NUMERIC_PASS_NOT_BINDING" if numbers_ok(legs) else "FAIL")
     why = extra.pop("reasons", [])
     rcpt["row_status"] = "binds: the plan's pass rule holds on both engines" if binds else "does not bind: " + "; ".join(why)
-    rcpt["pass_rule"] = OrderedDict(rule="both engines converged (R convergence 0 with a positive-definite Hessian; Julia converged true) and every listed quantity within tolerance",
-                                    legs=legs)
+    rcpt["pass_rule"] = OrderedDict(rule=rule_text(cell, clause), legs=legs)
     rcpt.update(extra)
     rcpt["engines"] = OrderedDict(R=eng_r, julia=eng_j)
     rcpt["comparison"] = OrderedDict(pin="P1", cases=[c.block(raw_refs["note"]) for c in cases])
@@ -378,16 +417,16 @@ NOT_COVERED_COMMON = [
 
 
 def cond_statement(R, J):
-    """Say plainly, per receipt, where each engine's cond(H) is and is not recorded."""
+    """Say plainly, per receipt, how each engine's cond(H) is computed and where it is and is not recorded."""
     rc = R.get("cond_H"); jc = J.get("cond_H")
-    out = [f"R cond(H) {rc:.6g}." if isinstance(rc, (int, float)) and math.isfinite(rc) else "R cond(H) not recorded."]
-    if isinstance(jc, (int, float)) and math.isfinite(jc): out.append(f"Julia cond(H) {jc:.6g}.")
+    out = [f"R cond(H) {rc:.6g}, computed as {R_COND_METHOD}." if isinstance(rc, (int, float)) and math.isfinite(rc) else "R cond(H) not recorded."]
+    if isinstance(jc, (int, float)) and math.isfinite(jc): out.append(f"Julia cond(H) {jc:.6g}, computed as {j_cond_method(J)}.")
     else:
         why = J.get("cond_H_error") or J.get("ci_skipped") or J.get("confint_error")
         if isinstance(jc, float): why = why or "the Hessian is not positive definite or not finite, so cond(H) is NaN"
         out.append("Julia cond(H) NOT recorded for this row: " + (why or "the runner did not compute it") + ".")
+    out.append("The two are different estimators in different parameter bases: recorded, never compared like for like.")
     return " ".join(out)
-
 
 
 def read_text(p):
@@ -443,11 +482,11 @@ def process(raw, out_root, apply):
             rr, jr = ph["R"], ph["J"]
             eng_r = OrderedDict(engine="R gllvmTMB (tracked P1 receipt of PR #547, recorded 2026-09-29)", gllvmTMB_version=rr["package_version"], source_pin=rr["source_pin"],
                                 formula=rr["formula"], convergence=rr["convergence"], optimizer_message=rr["message"], gradient_max_abs=rr["gradient_max_abs"], pd_hessian=rr["hessian"]["pd_hessian"],
-                                cond_H=rr["hessian"]["condition_number"], wall_fit_sec=rr["elapsed_seconds"], dll_sha256=rr["dll_sha256"],
+                                cond_H=rr["hessian"]["condition_number"], cond_H_method=R_COND_METHOD_PHYLO, wall_fit_sec=rr["elapsed_seconds"], dll_sha256=rr["dll_sha256"],
                                 qualified=rr.get("qualified"))
             eng_j = OrderedDict(engine="GLLVModels.fit_phylo_latent_gllvm, fresh fit on current main", julia_version=jr["julia_version"], gllvmodels_commit=jr["git_head"],
                                 converged=jr["converged"], stopping_reason=jr["stopping_reason"], gradient_norm=jr["gradient_norm"], iterations=jr["iterations"],
-                                hessian_positive_definite=jr["hessian_positive_definite"], cond_H=jr["hessian_condition_number"], wall_fit_sec=jr["fit_elapsed_seconds"])
+                                hessian_positive_definite=jr["hessian_positive_definite"], cond_H=jr["hessian_condition_number"], cond_H_method=J_COND_METHOD_PHYLO, wall_fit_sec=jr["fit_elapsed_seconds"])
             hashes = OrderedDict()
             hashes["docs/dev-log/core070/phylo-latent-p1/a15-fixture.json"] = sha_file(PHY / "a15-fixture.json")
             hashes["docs/dev-log/core070/phylo-latent-p1/cov_phylo_latent_rsz/r-receipt.json"] = sha_file(PHY / "cov_phylo_latent_rsz/r-receipt.json")
@@ -463,6 +502,9 @@ def process(raw, out_root, apply):
                                       "docs/dev-log/core070/phylo-latent-p1/README.md says every receipt stays unqualified until the maintainer signs the dated promotion block (D-300 answer 9). "
                                       "The measurement is kept as a non-binding receipt: both numbers are inside tolerance, but the row binds only after the maintainer signs that block. No agent may sign it."),
                 julia_script="tools/phylo_latent/compare_phylo_latent_p1.jl, command: julia --project=. tools/phylo_latent/compare_phylo_latent_p1.jl fit cov_phylo_latent_rsz docs/dev-log/core070/phylo-latent-p1/a15-fixture.json <out>/phylo_J.json (output committed as raw/phylo_J.json.gz)",
+                cond_H_statement=(f"R cond(H) {rr['hessian']['condition_number']:.6g}, computed as {R_COND_METHOD_PHYLO}. "
+                                  f"Julia cond(H) {jr['hessian_condition_number']:.6g}, computed as {J_COND_METHOD_PHYLO}. "
+                                  "The two are different estimators in different parameter bases: recorded, never compared like for like."),
                 reasons=reasons(ph["legs"], ph["cases"]),
                 not_covered=NOT_COVERED_COMMON[:1] + ["R was not re-run: its values are the PR #547 receipt's, which is unqualified until the maintainer signs the D-300 answer 9 promotion block.", "cond(H) (R 83030, Julia 82761 here) is recorded, not compared."])
             rc = build_receipt(sid, cell, clause, ph["cases"], ph["legs"], eng_r, eng_j, extra, dict(note=str(jgz.relative_to(out_root)), hashes=hashes), binds)

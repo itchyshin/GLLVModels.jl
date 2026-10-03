@@ -8,7 +8,7 @@
  "verdict": "NUMERIC_PASS_NOT_BINDING",
  "row_status": "does not bind: a required leg is not signed: the R side is the tracked PR #547 receipt, which records qualified = false until the maintainer signs the dated promotion block (D-300 answer 9). No agent may sign it, so the receipt stays unqualified until then",
  "pass_rule": {
-  "rule": "both engines converged (R convergence 0 with a positive-definite Hessian; Julia converged true) and every listed quantity within tolerance",
+  "rule": "R side taken from the tracked PR #547 receipt (R was not re-run, so there is no deparse check): R convergence 0 with a positive-definite Hessian, Julia converged true on a fresh fit, the same data bytes, R recorded as gllvmTMB 0.7.1 at the P1 pin, every listed quantity within its tolerance, and the #547 R receipt promoted (qualified true) by the maintainer's own dated signature (D-300 answer 9), which is not signed",
   "legs": {
    "R_convergence_0": true,
    "R_pdHess_true": true,
@@ -27,6 +27,7 @@
  "what_this_is": "R values are the tracked P1 R receipt of PR #547 (fitted once at P1 and kept). The Julia fit is NEW: fit_phylo_latent_gllvm on the same literal fixture at the commit above. The #547 Julia receipt recorded converged = false (gradient stall); current main converges, and this receipt uses the current fit.",
  "r_side_qualification": "NOT BINDING, on purpose. The R receipt (docs/dev-log/core070/phylo-latent-p1/cov_phylo_latent_rsz/r-receipt.json) records qualified = false, and docs/dev-log/core070/phylo-latent-p1/README.md says every receipt stays unqualified until the maintainer signs the dated promotion block (D-300 answer 9). The measurement is kept as a non-binding receipt: both numbers are inside tolerance, but the row binds only after the maintainer signs that block. No agent may sign it.",
  "julia_script": "tools/phylo_latent/compare_phylo_latent_p1.jl, command: julia --project=. tools/phylo_latent/compare_phylo_latent_p1.jl fit cov_phylo_latent_rsz docs/dev-log/core070/phylo-latent-p1/a15-fixture.json <out>/phylo_J.json (output committed as raw/phylo_J.json.gz)",
+ "cond_H_statement": "R cond(H) 83029.9, computed as kappa(sd$cov.fixed, exact = TRUE) in tools/phylo_latent/r_reference_p1.R (PR #547): the exact 2-norm condition number of TMB's sdreport covariance of all fixed parameters, in gllvmTMB's own coordinates. Julia cond(H) 82761.3, computed as cond(H) of the finite-difference Hessian of the marginal negative log-likelihood at the fit's optimum (the fit's own Hessian diagnostic, exact 2-norm), in the Julia optimiser's coordinates. The two are different estimators in different parameter bases: recorded, never compared like for like.",
  "not_covered": [
   "One dataset and one seed per row: a spot check at this size, not a scaling study or a coverage study.",
   "R was not re-run: its values are the PR #547 receipt's, which is unqualified until the maintainer signs the D-300 answer 9 promotion block.",
@@ -43,6 +44,7 @@
    "gradient_max_abs": 0.003973869319346184,
    "pd_hessian": true,
    "cond_H": 83029.86176710331,
+   "cond_H_method": "kappa(sd$cov.fixed, exact = TRUE) in tools/phylo_latent/r_reference_p1.R (PR #547): the exact 2-norm condition number of TMB's sdreport covariance of all fixed parameters, in gllvmTMB's own coordinates",
    "wall_fit_sec": 3.375,
    "dll_sha256": "cba0f54d5492f0c6d0c5474c19281e3b58d5e2b0709e536684619558aaf55b8d",
    "qualified": false
@@ -57,6 +59,7 @@
    "iterations": 0,
    "hessian_positive_definite": true,
    "cond_H": 82761.2656783602,
+   "cond_H_method": "cond(H) of the finite-difference Hessian of the marginal negative log-likelihood at the fit's optimum (the fit's own Hessian diagnostic, exact 2-norm), in the Julia optimiser's coordinates",
    "wall_fit_sec": 19.888091417
   }
  },

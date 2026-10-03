@@ -8,7 +8,7 @@
  "verdict": "PASS",
  "row_status": "binds: the plan's pass rule holds on both engines",
  "pass_rule": {
-  "rule": "both engines converged (R convergence 0 with a positive-definite Hessian; Julia converged true) and every listed quantity within tolerance",
+  "rule": "both engines converged (R convergence 0 with a positive-definite Hessian; Julia converged true), both read the same data bytes, the ten named gllvmTMB entry points that run_R.R calls (gllvmTMB, gllvmTMBcontrol, nbinom2, ordinal_logit, isdm_sources, extract_Sigma, extract_cutpoints, predict.gllvmTMB_multi, extract_temporal, temporal_latent) deparse identically to their P1 source; internal gllvmTMB functions and the compiled library are not deparse-checked, they are trusted by the recorded version 0.7.1, the library path and the sha256 of the P1 source files, and every listed quantity is within its tolerance",
   "legs": {
    "R_convergence_0": true,
    "R_pdHess_true": true,
@@ -131,7 +131,7 @@
    "identical_deparse": true
   }
  ],
- "cond_H_statement": "R cond(H) 2257.09. Julia cond(H) 1153.13.",
+ "cond_H_statement": "R cond(H) 2257.09, computed as kappa(solve(sdr$cov.fixed), exact = FALSE): a 1-norm condition-number ESTIMATE (LAPACK) of the inverse of TMB's sdreport covariance of all fixed parameters, in gllvmTMB's own parameter coordinates. Julia cond(H) 1153.13, computed as exact ratio of the extreme eigenvalues of the ForwardDiff Hessian of the temporal negative log-likelihood at fit.parameters, in the optimiser's coordinates (rebuilt in run_J.jl from the fit's own objective, not through the Wald vcov used for the other cells). The two are different estimators in different parameter bases: recorded, never compared like for like.",
  "not_covered": [
   "One dataset and one seed per row: a spot check at this size, not a scaling study or a coverage study.",
   "Direct engines only (R TMB fit against a direct Julia fit); R's engine = 'julia' bridge route is not exercised.",
@@ -153,6 +153,7 @@
    "max_abs_gradient": 0.0435016747949959,
    "n_par": 42,
    "cond_H": 2257.09007020467,
+   "cond_H_method": "kappa(solve(sdr$cov.fixed), exact = FALSE): a 1-norm condition-number ESTIMATE (LAPACK) of the inverse of TMB's sdreport covariance of all fixed parameters, in gllvmTMB's own parameter coordinates",
    "wall_fit_sec": 1.88888669013977,
    "wall_sdreport_sec": 0.301635026931763,
    "finished_utc": "2026-10-03T00:47:35Z"
@@ -167,6 +168,7 @@
    "iterations": 34,
    "pd_hessian": true,
    "cond_H": 1153.1321323462207,
+   "cond_H_method": "exact ratio of the extreme eigenvalues of the ForwardDiff Hessian of the temporal negative log-likelihood at fit.parameters, in the optimiser's coordinates (rebuilt in run_J.jl from the fit's own objective, not through the Wald vcov used for the other cells)",
    "wall_fit_sec": 24.895818948745728,
    "wall_confint_sec": null,
    "wall_vcov_sec": null,

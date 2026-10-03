@@ -8,7 +8,7 @@
  "verdict": "NUMERIC_PASS_NOT_BINDING",
  "row_status": "does not bind: a required leg was not run: the engine = \"julia\" bridge route and the plan's eight acceptance classes (the C4 clause needs them, see GATES.md and plan section 1.3). The direct-engine comparison does not say the bridge workflow passes",
  "pass_rule": {
-  "rule": "both engines converged (R convergence 0 with a positive-definite Hessian; Julia converged true) and every listed quantity within tolerance",
+  "rule": "both engines converged (R convergence 0 with a positive-definite Hessian; Julia converged true), both read the same data bytes, the ten named gllvmTMB entry points that run_R.R calls (gllvmTMB, gllvmTMBcontrol, nbinom2, ordinal_logit, isdm_sources, extract_Sigma, extract_cutpoints, predict.gllvmTMB_multi, extract_temporal, temporal_latent) deparse identically to their P1 source; internal gllvmTMB functions and the compiled library are not deparse-checked, they are trusted by the recorded version 0.7.1, the library path and the sha256 of the P1 source files, and every listed quantity is within its tolerance; and the engine = \"julia\" bridge route and the plan's eight acceptance classes were run (plan section 1.3), which this campaign did not do",
   "legs": {
    "R_convergence_0": true,
    "R_pdHess_true": true,
@@ -120,7 +120,7 @@
    "identical_deparse": true
   }
  ],
- "cond_H_statement": "R cond(H) 5898.2. Julia cond(H) 1737.27.",
+ "cond_H_statement": "R cond(H) 5898.2, computed as kappa(solve(sdr$cov.fixed), exact = FALSE): a 1-norm condition-number ESTIMATE (LAPACK) of the inverse of TMB's sdreport covariance of all fixed parameters, in gllvmTMB's own parameter coordinates. Julia cond(H) 1737.27, computed as cond(Symmetric(vcov(fit, Y))): the exact 2-norm condition number (ratio of the extreme eigenvalues) of the full inverse observed information (Wald covariance) of the Julia fit, in the Julia fit's own parameter coordinates. The two are different estimators in different parameter bases: recorded, never compared like for like.",
  "not_covered": [
   "One dataset and one seed per row: a spot check at this size, not a scaling study or a coverage study.",
   "Direct engines only (R TMB fit against a direct Julia fit); R's engine = 'julia' bridge route is not exercised.",
@@ -142,6 +142,7 @@
    "max_abs_gradient": 0.0192433263059218,
    "n_par": 26,
    "cond_H": 5898.20000928773,
+   "cond_H_method": "kappa(solve(sdr$cov.fixed), exact = FALSE): a 1-norm condition-number ESTIMATE (LAPACK) of the inverse of TMB's sdreport covariance of all fixed parameters, in gllvmTMB's own parameter coordinates",
    "wall_fit_sec": 0.722391128540039,
    "wall_sdreport_sec": 0.0423803329467773,
    "finished_utc": "2026-10-03T00:47:34Z"
@@ -156,6 +157,7 @@
    "iterations": 0,
    "pd_hessian": true,
    "cond_H": 1737.2739938351713,
+   "cond_H_method": "cond(Symmetric(vcov(fit, Y))): the exact 2-norm condition number (ratio of the extreme eigenvalues) of the full inverse observed information (Wald covariance) of the Julia fit, in the Julia fit's own parameter coordinates",
    "wall_fit_sec": 12.101539134979248,
    "wall_confint_sec": 4.6726250648498535,
    "wall_vcov_sec": 0.024049997329711914,
