@@ -141,14 +141,15 @@ end
         @test emf1.logLik ≈ ll rtol = 1e-12
     end
 
-    @testset "HONEST NOTE: unconstrained EM can exceed the σ_phy>0 dense fit" begin
-        # `fit_gaussian_gllvm` restricts σ_phy = exp(log_σ_phy) > 0. The EM
-        # per-trait WLS is unconstrained in the sign of σ_phy. When the GLOBAL
-        # optimum over signed σ_phy uses a negative coupling, EM (correctly)
-        # finds a HIGHER likelihood than the constrained dense fit — i.e. the
-        # two optimise different feasible sets. This is a valid negative
-        # result, not a bug: EM still monotonically increases its own
-        # likelihood. Seed 17 is such a fixture.
+    @testset "HONEST NOTE: EM reaches a mixed-sign σ_phy optimum, no worse than the dense fit" begin
+        # `fit_gaussian_gllvm` fits a signed σ_phy (identity link, with a
+        # single-flip sign-pattern search and a global sign anchor); it no
+        # longer restricts σ_phy = exp(log_σ_phy) > 0, which is the case this
+        # test was first written for. The EM per-trait WLS is also
+        # unconstrained in the sign of σ_phy. Seed 17 is a fixture whose
+        # optimum over signed σ_phy uses a negative coupling: EM reaches a
+        # mixed-sign σ_phy, and its likelihood is at least the dense fit's
+        # (to 1e-6). EM still monotonically increases its own likelihood.
         tree = augmented_phy("(((A:0.3,B:0.3):0.2,(C:0.3,D:0.3):0.2):0.2,(E:0.4,F:0.4):0.2);")
         p    = tree.n_leaves
         Λ_B  = reshape([0.8, 0.6, 0.4, -0.3, 0.5, -0.2], p, 1)
@@ -158,9 +159,9 @@ end
         emf = em_fit_phylo(y, 1, Σ; tol = 1e-10, max_iter = 10_000)
         # EM monotone (its own invariant holds regardless of the dense fit).
         @test minimum(diff(emf.loglik_trace)) ≥ -1e-9
-        # Here EM finds a signed-σ_phy optimum the constrained fit cannot reach.
+        # Here EM finds a mixed-sign σ_phy optimum.
         @test !all(emf.σ_phy .> 0)
-        # EM's likelihood is ≥ the dense fit's (it optimises a larger set).
+        # EM's likelihood is ≥ the dense fit's (both optimise signed σ_phy).
         @test emf.logLik ≥ fit.logLik - 1e-6
     end
 end

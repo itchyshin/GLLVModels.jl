@@ -292,8 +292,13 @@ println(_SHARD === nothing ?
     _shard_include("test_model_selection.jl")
     # P1 numeric twin of select_lv() vs gllvmTMB R/select-lv.R (Gaussian rank sweep).
     _shard_include("test_select_lv_p1_twin.jl")
+    # select_lv result: the nine fields R prints (AICc, conv, pdHess added).
+    _shard_include("test_select_lv_print.jl")
     _shard_include("test_binomial_ridge.jl")
     _shard_include("test_model_comparison.jl")
+    # P1 behavioural twins (itchyshin/GLLVModels.jl#684 item 2): print.anova table fields and the
+    # extract_latent_scores refusal vs gllvmTMB R/aghq-report.R and R/extract-latent-scores.R.
+    _shard_include("test_c1_behaviour_p1.jl")
     _shard_include("test_structured_cov.jl")
     _shard_include("test_cross_kernel.jl")
     _shard_include("test_extract_gamma.jl")
@@ -521,10 +526,18 @@ println(_SHARD === nothing ?
     _shard_include("test_temporal_composed.jl")
     _shard_include("test_temporal_composed_receipts.jl")
     _shard_include("test_isdm.jl")
+    _shard_include("test_convergence_sweep.jl")
+    # #573: ZIP/ZINB fits never end below the nested Poisson / shared-r NB2 fit.
+    _shard_include("test_zip_zinb_stall.jl")
     _shard_include("test_zerostep_verdict_sweep.jl")
     _shard_include("test_input_validation.jl")
     _shard_include("test_robustness_sweep.jl")
     _shard_include("test_derived_ci_sweep.jl")
     _shard_include("test_tweedie_speed.jl")
+    _shard_include("test_nb_grouped_postfit.jl")
+    _shard_include("test_bootstrap_decisions.jl")
+    _shard_include("test_derived_decisions.jl")
+    _shard_include("test_n_lt_p.jl")
+    _shard_include("test_wtier_crosscov.jl")
 end
 include("test_readme_quickstart.jl")

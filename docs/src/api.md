@@ -238,6 +238,7 @@ correlation_B
 correlation_W
 row_effects
 extract_lv_effects
+lv_effects
 extract_Gamma
 coevolution_gamma
 ```
@@ -281,12 +282,14 @@ sigma_phy_dense
 node_grad
 node_dσ_phy_only
 node_blups
+NodePerSpecies
 build_node_perspecies
 grad_node_perspecies
 FelsensteinContrasts
 felsenstein_contrast_matrix
 felsenstein_contrasts
 contrast_transform
+EdgePhy
 edge_phy
 sigma_phy_dense_edge
 log_det_Q
@@ -294,6 +297,7 @@ solve_Q
 Q_times_x
 path_membership
 simulate_branch_re
+branch_re_cache
 branch_blups
 branch_re_profile_negll
 fit_branch_re
@@ -305,8 +309,10 @@ build_AnB_sparse
 solve_AnB
 blup_phylo_sparse
 em_fit_phylo
+fit_em_phylo
 em_observed_information
 em_fit_phylo_squarem
+fit_phylo_squarem
 edge_W_diag
 Q_perbranch
 simulate_relaxed_bm
@@ -491,6 +497,7 @@ NBGroupedFit
 NBGroupedCovFit
 NB1GroupedFit
 NB1GroupedCovFit
+BinomialFit
 BetaFit
 BetaGroupedFit
 BetaGroupedCovFit
@@ -585,6 +592,7 @@ fitted(::IsdmFit)
 
 ```@docs
 StudentTFamily
+StudentT
 Lognormal
 Multinomial
 DeltaLogNormal
@@ -608,6 +616,7 @@ ZiNbinom2
 ZiBinomial
 BetaBinom
 COMPoisson
+GeneralizedPoisson1
 TruncatedPoisson
 CensoredPoisson
 TruncatedNegBin2
@@ -690,6 +699,9 @@ the ordinary loadings-only route. See the executed Gaussian quickstart.
 `bootstrap_ci` use recorded data and estimator identity. Gaussian `vcov` for a
 recorded fit returns the full working-parameter covariance, not only its diagonal;
 `confint` transforms residual-SD estimates/bounds to the natural scale while
-standard errors remain on the working scale. Legacy `bootstrap_ci` outputs
-working-scale bounds. Failed bootstrap attempts remain visible. This is an
+standard errors remain on the working scale. `bootstrap_ci` returns the same
+residual-SD terms on the natural scale (estimate and percentile bounds), with its
+`replicates` kept on the working scale. Failed and non-converged bootstrap attempts
+are excluded from the bounds and remain visible (`converged`, `n_used`, `n_dropped`).
+This is an
 experimental option, not a complete R-parity or calibrated-inference claim.

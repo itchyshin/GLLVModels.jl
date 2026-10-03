@@ -100,7 +100,9 @@ Per-trait intercepts `β_t = mean_s log(Y[t,s])` are removed before
 [`fit_gaussian_gllvm`](@ref) estimates `(Λ, σ)` on the centred log scale
 (profile-admissible Identity path). Reported `loglik` is the y-scale marginal
 at fitted `(β, Λ, σ)` including `−Σ log y`. Remaining keywords pass through to
-`fit_gaussian_gllvm`.
+`fit_gaussian_gllvm`. Because it reuses that fitter, it also inherits its
+`n_sites ≥ p` requirement and throws an `ArgumentError` with fewer sites than
+traits; the Laplace-fitted families do not have this requirement (#149).
 """
 function fit_lognormal_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         link::Link = LogLink(), kwargs...)

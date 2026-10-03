@@ -3,21 +3,25 @@
 # Single-tier (J1):  y[t,s] = (Λ_B η_s)[t] + X[t,s,:]' β + ε[t,s]
 # With W tier and diagonal random effects (J2-A-WD), the engine adds
 # per-observation terms:
-#   y[t,s] = (Λ_B η_s)[t] + sum_k Λ_W[t,k] η_W[k,t,s]
+#   y[t,s] = (Λ_B η_s)[t] + sum_k Λ_W[t,k] η_W[k,s]
 #          + s_B[t,s] + s_W[t,s] + X[t,s,:]' β + ε[t,s]
-# where η_s ~ N(0, I_{K_B}), η_W[:,t,s] ~ N(0, I_{K_W}) (per (t, s)!),
+# where η_s ~ N(0, I_{K_B}), η_W[:,s] ~ N(0, I_{K_W}) (one score vector per
+# unit, shared by all traits, as in the C++ twin: issue #135),
 # s_B[t,s] ~ N(0, σ²_B[t]), s_W[t,s] ~ N(0, σ²_W[t]), ε ~ N(0, σ²_eps).
 #
 # Marginal site covariance (per site s):
-#   Σ_y_site = Λ_B Λ_B' + diag(d_total)
-#   d_total[t] = (Λ_W Λ_W')[t,t] + σ²_B[t] + σ²_W[t] + σ²_eps
-# because the W tier and diag REs are independent across (t, s) and so
-# contribute only to the per-trait diagonal of cov(y[:, s]).
+#   Σ_y_site = Λ_B Λ_B' + Λ_W Λ_W' + diag(d_total)
+#   d_total[t] = σ²_B[t] + σ²_W[t] + σ²_eps
+# The W tier adds the full Λ_W Λ_W' block (cross-trait terms included); only
+# the diag REs and ε are independent across (t, s). In this one-unit-per-
+# column layout the B and W tiers are not separately identified: only
+# Λ_B Λ_B' + Λ_W Λ_W' enters the likelihood.
 #
-# Generalised Woodbury (D = diag(d_total)):
-#   Σ⁻¹ = D⁻¹ - D⁻¹ Λ_B (I + Λ_B' D⁻¹ Λ_B)⁻¹ Λ_B' D⁻¹
-#   logdet(Σ) = sum(log.(d_total)) + logdet(I + Λ_B' D⁻¹ Λ_B)
-# When D = σ²_eps I (the J1 case) this collapses to the J1 formula.
+# Generalised Woodbury (D = diag(d_total), Λ_U = hcat(Λ_B, Λ_W)):
+#   Σ⁻¹ = D⁻¹ - D⁻¹ Λ_U (I + Λ_U' D⁻¹ Λ_U)⁻¹ Λ_U' D⁻¹
+#   logdet(Σ) = sum(log.(d_total)) + logdet(I + Λ_U' D⁻¹ Λ_U)
+# When D = σ²_eps I and there is no W tier (the J1 case) this collapses to
+# the J1 formula.
 #
 # Phylogenetic extension (J3):
 # Two extra contributions, both *species-level* (shared across sites):
@@ -28,7 +32,7 @@
 # Letting Λ_phy_aug = hcat(Λ_phy, σ_phy) (p × (K_phy + 1)), the marginal
 # covariance of y_full = vec(y) (column-major) becomes:
 #   Σ_y_full = I_n ⊗ A + J_n ⊗ B
-# where A = Λ_B Λ_B' + diag(d_total) (the J2 site covariance) and
+# where A = Λ_B Λ_B' + Λ_W Λ_W' + diag(d_total) (the J2 site covariance) and
 #       B = (Λ_phy_aug Λ_phy_aug') .* Σ_phy
 # (Hadamard product with the supplied species covariance Σ_phy, p × p).
 # J_n = 1_n 1_n' is rank 1: eigenvalue n with eigenvector 1_n/√n, and
@@ -51,9 +55,12 @@ and optional W tier (`Λ_W`, p × K_W) and per-trait diagonal random
 effects (`σ²_B`, `σ²_W`, length p, positive variances).
 
 The per-trait diagonal contribution is
-    d_total[t] = (Λ_W Λ_W')[t,t] + σ²_B[t] + σ²_W[t] + σ²_eps.
-Without phylogeny, the site covariance is `A = Λ_B Λ_B' + diag(d_total)`,
-inverted via Woodbury (cost O(p K_B² + K_B³) per site).
+    d_total[t] = σ²_B[t] + σ²_W[t] + σ²_eps.
+Without phylogeny, the site covariance is
+`A = Λ_B Λ_B' + Λ_W Λ_W' + diag(d_total)`: the W-tier scores are shared by
+all traits of a unit, so `Λ_W` contributes its full cross-trait block, as in
+the gllvmTMB C++ engine (#135). `A` is inverted via Woodbury on
+`hcat(Λ_B, Λ_W)` (cost O(p K² + K³) per site, K = K_B + K_W).
 
 Fixed effects: pass both `X::Array{<:Real, 3}` of shape (p, n_sites, q)
 and `β::Vector` of length q, or neither.
@@ -64,7 +71,12 @@ the J1 behaviour exactly (D = σ²_eps I).
 Phylogenetic extension (`Σ_phy::AbstractMatrix`, p × p, supplied by
 caller — typically a species-trait covariance derived from a tree):
   - `Λ_phy::AbstractMatrix` (p × K_phy): phylo-latent loadings.
-  - `σ_phy::AbstractVector` (length p): per-trait phylo-unique SDs.
+  - `σ_phy::AbstractVector` (length p): per-row phylo-unique scales.
+    `σ_phy` is a signed parameter (#136), so its entries can be negative.
+    When `K_phy = 0`, the sign of each group of rows that `Σ_phy` links can
+    flip on its own; when `K_phy ≥ 1`, it is not identified
+    separately from `Λ_phy`. It is not gllvmTMB's
+    `phylo_unique` scale; see the gllvmTMB parity page.
 With Λ_phy_aug = hcat(Λ_phy, σ_phy) the marginal covariance of vec(y)
 is `I_n ⊗ A + J_n ⊗ B` where `B = (Λ_phy_aug Λ_phy_aug') .* Σ_phy`.
 The rotation trick (J_n has rank 1) reduces this to two p×p Cholesky
@@ -108,7 +120,7 @@ function gaussian_marginal_loglik(y::AbstractMatrix, Λ_B::AbstractMatrix, σ_ep
         end
     end
 
-    # Build per-trait diagonal d_total[t] = (Λ_W Λ_W')[t,t] + σ²_B[t] + σ²_W[t] + σ²
+    # Build per-trait diagonal d_total[t] = σ²_B[t] + σ²_W[t] + σ²
     # Element types must promote with σ², the existing T (data + Λ_B), and any
     # provided Λ_W / σ²_B / σ²_W (relevant under AD with Duals).
     Td = T
@@ -155,15 +167,15 @@ function gaussian_marginal_loglik(y::AbstractMatrix, Λ_B::AbstractMatrix, σ_ep
         Td = promote_type(Td, eltype(σ_phy))
     end
 
+    # W tier (issue #135, matches the C++ twin): the W-tier score vector is
+    # shared by all traits of a unit, so Λ_W enters as the full Λ_W Λ_W' block,
+    # not only its diagonal. Stack it next to Λ_B for the solves below; with no
+    # W tier Λ_U is Λ_B itself and the computation is unchanged.
+    Λ_U = Λ_W === nothing ? Λ_B : hcat(Λ_B, Λ_W)
+
     d_total = Vector{Td}(undef, p)
     @inbounds for t in 1:p
         v = convert(Td, σ²)
-        if Λ_W !== nothing
-            K_W = size(Λ_W, 2)
-            for k in 1:K_W
-                v += Λ_W[t, k]^2
-            end
-        end
         if σ²_B !== nothing
             v += σ²_B[t]
         end
@@ -174,30 +186,30 @@ function gaussian_marginal_loglik(y::AbstractMatrix, Λ_B::AbstractMatrix, σ_ep
     end
 
     if !has_phy
-        # ----- J2-A-WD path: site-stacked Woodbury, A = Λ_B Λ_B' + diag(d_total)
-        #   Σ_y = Λ_B Λ_B' + diag(d_total)
-        #   Σ_y⁻¹ r = D⁻¹ r - D⁻¹ Λ_B (I + Λ_B' D⁻¹ Λ_B)⁻¹ Λ_B' D⁻¹ r
-        #   logdet(Σ_y) = sum(log.(d_total)) + logdet(I + Λ_B' D⁻¹ Λ_B)
+        # ----- J2-A-WD path: site-stacked Woodbury, A = Λ_U Λ_U' + diag(d_total)
+        #   Σ_y = Λ_B Λ_B' + Λ_W Λ_W' + diag(d_total) = Λ_U Λ_U' + diag(d_total)
+        #   Σ_y⁻¹ r = D⁻¹ r - D⁻¹ Λ_U (I + Λ_U' D⁻¹ Λ_U)⁻¹ Λ_U' D⁻¹ r
+        #   logdet(Σ_y) = sum(log.(d_total)) + logdet(I + Λ_U' D⁻¹ Λ_U)
         d_inv = Vector{Td}(undef, p)
         @inbounds for t in 1:p
             d_inv[t] = one(Td) / d_total[t]
         end
 
-        # A_K = I_K + Λ_B' D⁻¹ Λ_B  (K × K, cheap)
-        DinvΛ = (d_inv) .* Λ_B                          # p × K, broadcast scales rows
-        A_K   = I + Λ_B' * DinvΛ                        # K × K
+        # A_K = I_K + Λ_U' D⁻¹ Λ_U  (K × K, cheap)
+        DinvΛ = (d_inv) .* Λ_U                          # p × K, broadcast scales rows
+        A_K   = I + Λ_U' * DinvΛ                        # K × K
         cA    = cholesky(Symmetric(A_K))
 
         logdet_Σ = sum(log, d_total) + logdet(cA)
 
         # quadratic form Σ_s r_s' Σ_y⁻¹ r_s
         #   D⁻¹ r              -> Dinv_r  (p × n)
-        #   Λ_B' D⁻¹ r         -> ΛtDr    (K × n)
-        #   (I + Λ_B' D⁻¹ Λ_B)⁻¹ Λ_B' D⁻¹ r -> z (K × n) via cA \
-        #   D⁻¹ Λ_B z          -> DinvΛz (p × n)
-        #   Σ⁻¹ r = D⁻¹ r - D⁻¹ Λ_B z
+        #   Λ_U' D⁻¹ r         -> ΛtDr    (K × n)
+        #   (I + Λ_U' D⁻¹ Λ_U)⁻¹ Λ_U' D⁻¹ r -> z (K × n) via cA \
+        #   D⁻¹ Λ_U z          -> DinvΛz (p × n)
+        #   Σ⁻¹ r = D⁻¹ r - D⁻¹ Λ_U z
         Dinv_r = d_inv .* resid                          # p × n
-        ΛtDr   = Λ_B' * Dinv_r                           # K × n
+        ΛtDr   = Λ_U' * Dinv_r                           # K × n
         z      = cA \ ΛtDr                               # K × n
         DinvΛz = DinvΛ * z                               # p × n
         Σinv_r = Dinv_r .- DinvΛz                        # p × n
@@ -207,11 +219,11 @@ function gaussian_marginal_loglik(y::AbstractMatrix, Λ_B::AbstractMatrix, σ_ep
         return -convert(Tout, 0.5) * (n * p * log(convert(Tout, 2π)) + n * logdet_Σ + quad)
     else
         # ----- J3 phylogenetic path via rotation trick.
-        # Build A = Λ_B Λ_B' + diag(d_total) (full p × p) and
+        # Build A = Λ_B Λ_B' + Λ_W Λ_W' + diag(d_total) (full p × p) and
         #       B = (Λ_phy_aug Λ_phy_aug') .* Σ_phy.
         # Λ_phy_aug = hcat(Λ_phy, σ_phy) when both supplied, else whichever
         # is non-nothing (as a p × K_aug matrix).
-        A = Λ_B * Λ_B'
+        A = Λ_U * Λ_U'
         @inbounds for t in 1:p
             A[t, t] += d_total[t]
         end
@@ -381,8 +393,10 @@ function gaussian_nll_packed(params::AbstractVector, y::AbstractMatrix;
 
     if has_phy_unique
         # Identity link: σ_phy is a signed loading-like vector (entries may
-        # be negative). Joint sign flip (σ_phy → -σ_phy, φ → -φ) is the lone
-        # non-identifiable symmetry; fit.jl applies a global sign anchor.
+        # be negative). When K_phy = 0, flipping σ_phy (with φ) on any group
+        # of rows that Σ_phy links leaves the likelihood unchanged; the global
+        # flip is the only such symmetry when Σ_phy links all rows. fit.jl
+        # applies a global sign anchor.
         σ_phy = @view params[(cursor + 1):(cursor + p)]
         cursor += p
     else
