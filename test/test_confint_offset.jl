@@ -319,13 +319,16 @@ end
         θ = vcat(f.β, GM.pack_lambda(f.Λ))
         nll = θv -> -GM.poisson_marginal_loglik_laplace(Ys, GM.unpack_lambda(θv[(p + 1):end], p, 1), θv[1:p],
                         f.link; offset = Os, hessian = f.hessian, maxiter = 100, tol = 1e-9)
-        # What confint used to report: the Hessian of the offset-free objective at the
-        # fit's optimum is indefinite, although the fit's own Hessian is positive definite.
+        # What confint used to use: the offset-free objective, which is a different function
+        # at the fit's optimum (on the Julia 1.10 stream of this seed its Hessian was
+        # indefinite, min eigenvalue about -243; the exact magnitudes depend on the RNG stream,
+        # which differs across Julia versions, so the test checks the portable facts).
         free = GM._family_ci(f, Ys)                    # no offset: the old objective
+        @test abs(-free.nll(θ) - f.loglik) > 1.0       # not the fit's objective
         Hfree = _ref_hessian(free.nll, θ)
-        @test minimum(eigvals(Symmetric((Hfree .+ Hfree') ./ 2))) < -100
         ref = _ref_wald(nll, θ)
-        @test ref.mineig > 20
+        @test maximum(abs.(Hfree .- _ref_hessian(nll, θ))) > 1.0   # a different curvature
+        @test ref.mineig > 0                           # the fit's own Hessian is positive definite
         ci = confint(f, Ys; offset = Os)
         @test ci.pd_hessian
         @test isapprox(ci.se, ref.se; rtol = 5e-3)
