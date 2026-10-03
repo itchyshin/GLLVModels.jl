@@ -36,7 +36,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-isdm.json",
-   "sha256": "ea9446e58da1a38cbae435ef235870bb7f43c1ac418b766e0d41d9279f666a11",
+   "sha256": "ede6b50934984e606cc844e0ff9ec951825827a23fcf44cb5724ce5c8b9a2ddf",
    "rows": 20
   },
   {
@@ -5906,7 +5906,9 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-ISDM-MASKED-ARM-PAIRED-CONTROL"
+    "P1-JULIA-ISDM-ADM-MASKEDNA-LOGLIK-AT-R-OPTIMUM",
+    "P1-JULIA-ISDM-ADM-MASKEDNA-FIT-LOGLIK",
+    "P1-JULIA-ISDM-ADM-MASKEDNA-B-FIX"
    ],
    "disposition": null,
    "p0_batch": "isdm-batch-01 (wave1)",
@@ -5918,13 +5920,16 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
-   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "evidence_tier": "numeric",
+   "measured_against": "P1",
    "evidence": {
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-MASKED-ARM-PAIRED-CONTROL.json"
     ],
-    "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/parity/isdm_admission_twins.jl (this PR, following itchyshin/GLLVModels.jl#661), against R-at-P1 values copied from test/fixtures/isdm/r_values_admission_p1.toml; each case within the tolerance asserted in that test. The cited fit is built to reach this row's path through R's public door: R drops the NA-response rows and fits the rest, and the Julia door now does the same with a warning (a fit-level logLik and estimate comparison, not a restatement of the admission predicate; R's eta was not recorded for this fixture, so there is no eta case). The R admission-predicate replay is kept un-cited under non_binding_receipts and r_predicate_case_ids.",
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/isdm/adm_maskedna.json"
+    ]
    },
    "measured_result": {
     "case_verdicts": {
@@ -5936,7 +5941,10 @@
     "case_kinds": {
      "CORE070-ISDM-MASKED-ARM-PAIRED-CONTROL": "r_replay_julia_surface_absent"
     }
-   }
+   },
+   "r_predicate_case_ids": [
+    "CORE070-ISDM-MASKED-ARM-PAIRED-CONTROL"
+   ]
   },
   {
    "source_id": "isdm/ISDM-MASKED-COLUMNS",

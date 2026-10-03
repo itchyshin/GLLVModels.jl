@@ -8,9 +8,9 @@
 #   adm_nooffset   ISDM-NO-OFFSET     no offset() term
 #   adm_zeroord    ISDM-ZERO-ORDINARY all-count declaration (cloglog exception off), zero offset
 #   adm_unbalanced ISDM-UNBALANCED    latent fit on an incomplete cell x trait x source grid
-# Two rows stay free and are recorded as reproducers below: ISDM-MASKED-ARM
-# (R fits NA responses, the Julia door refuses them) and ISDM-WRAPPER-LAW (both
-# engines refuse a logit-binomial source inside isdm_sources).
+# ISDM-MASKED-ARM is a twin below (both engines drop NA-response rows and fit the rest;
+# Julia warns). ISDM-WRAPPER-LAW stays free, recorded as a reproducer (both engines
+# refuse a logit-binomial source inside isdm_sources).
 #
 # Julia-only: the R side ran ONCE, from test/fixtures/isdm/export_admission_twins_p1.R,
 # and its numbers are recorded in test/fixtures/isdm/r_values_admission_p1.toml.
@@ -95,27 +95,40 @@ for name in ISDM_ADMISSION_CASES
     end
 end
 
-@testset "reproducer: ISDM-MASKED-ARM (rows stay free)" begin
-    # R at P1 fits NA responses (dropped before fitting); the Julia integrated door
-    # refuses missing responses by design (isdm_table, "Masked-response fitting is a
-    # separate missing-data capability"). The engines disagree on admission, so no
-    # twin is bound. Reproducer: R's recorded fit, Julia's refusal, and Julia on the
-    # rows R keeps (which agrees with R), showing the gap is the door and not the model.
+@testset "twin: ISDM-MASKED-ARM (NA responses are dropped, as in R)" begin
+    # R at P1 drops rows with an NA response before fitting (drop_missing_response_rows,
+    # miss_control(response = "drop")) and informs. The Julia door now does the same and
+    # warns with the count and the source. R's recorded fit on the fixture (10 NA rows)
+    # is compared with Julia's fit of the same file: logLik 1e-6, b_fix 1e-4. R's eta
+    # was not recorded for this fixture; with no latent term eta = X b, so Julia's eta
+    # is checked against X at R's b_fix (also 1e-4).
     rp = ARV["reproducers"]["adm_maskedna"]
     dat = read_isdm_csv(rp["fixture"])
     @test bytes2hex(open(sha256, isdm_fixture_path(rp["fixture"]))) == rp["fixture_sha256"]
     @test count(ismissing, dat.value) == rp["na_rows"] == 10
     form = :(value ~ 0 + trait + trait & env + trait & src_gbif + offset(log_support))
     fam = isdm_sources(gbif = Poisson(), survey = (Binomial(), CLogLogLink()))
-    @test_throws ArgumentError isdm_table(form, dat; family = fam)
-    err = try; isdm_table(form, dat; family = fam); catch e; sprint(showerror, e); end
-    @test occursin("refuses missing responses", err)
+    tab = @test_logs (:warn, r"dropped 10 row\(s\) with a missing response in `value` \(by source: [^)]*\)") isdm_table(form, dat; family = fam)
+    @test length(tab.y) == rp["rows"] - rp["na_rows"] == 150
+    @test all(isfinite, tab.y) && all(isfinite, tab.offset)
+    rbn = adm_by_name(rp["b_fix_names"], Float64.(rp["b_fix"]), tab.X_names)
+    @test abs(isdm_marginal_loglik_laplace(tab, zeros(2, 0), rbn) - rp["loglik"]) <= 1e-6
+    ft = fit_isdm_gllvm(tab)
+    @test ft.converged && all(ft.cell_converged)
+    @test rp["convergence"] == 0
+    @test abs(ft.loglik - rp["loglik"]) <= 1e-6
+    @test maximum(abs.(ft.b_fix .- rbn)) <= 1e-4
+    @test maximum(abs.(ft.eta .- (tab.X * rbn .+ tab.offset))) <= 1e-4
+    # Dropping the NA rows by hand gives the identical table (no warning).
     keep = findall(!ismissing, dat.value)
     kept = NamedTuple{keys(dat)}(Tuple([v[keep] for v in values(dat)]))
     kept = merge(kept, (value = Float64.(kept.value),))
-    @test length(keep) == rp["rows"] - rp["na_rows"]
-    ft = fit_isdm_gllvm(isdm_table(form, kept; family = fam))
-    @test ft.converged && abs(ft.loglik - rp["loglik"]) <= 1e-6
+    tab2 = @test_logs isdm_table(form, kept; family = fam)
+    @test tab2.y == tab.y && tab2.X == tab.X && tab2.offset == tab.offset && tab2.unit_levels == tab.unit_levels
+    # An arm left with no observed response is still refused, after the drop.
+    allna = merge(dat, (value = Union{Missing, Float64}[s == "survey" ? missing : v for (s, v) in zip(dat.isdm_source, dat.value)],))
+    @test_logs (:warn, r"dropped") @test_throws ArgumentError isdm_table(form, allna; family = fam)
+    @test_throws r"All response rows are missing" isdm_table(form, merge(dat, (value = Union{Missing, Float64}[missing for _ in dat.value],)); family = fam)
 end
 
 @testset "reproducer: ISDM-WRAPPER-LAW (rows stay free)" begin
