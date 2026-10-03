@@ -57,5 +57,25 @@
   "glvmodels_commit": "61c5eda4822da20591b6fa91869f93c3faf5d369",
   "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
-  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "behaviour_not_bound": [
+    {
+      "source_id": "inference/CI-ROUTE-006",
+      "reason": "refusal_not_observed",
+      "text": "R's refusal is not recorded for this row. The probe stubs .confint_lambda, so the raw R record is only the dispatch label '.confint_lambda:fisher-z' (actual_class 'route_boundary;error;condition'), not a refusal; the one R refusal for a bad Lambda method sits on the different guard row CI-ROUTE-098 (method bogus). Julia refuses only on AGHQ-record Gaussian fits and returns Wald for any method on structured fits (inference-batch-contract-p1.json known_findings.lambda_reject_validation_boundary). Leave unbound until .confint_lambda is observed directly in R with this method.",
+      "evidence": {
+        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-006",
+        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-006"
+      }
+    },
+    {
+      "source_id": "inference/CI-ROUTE-007",
+      "reason": "refusal_not_observed",
+      "text": "R's refusal is not recorded for this row. The probe stubs .confint_lambda, so the raw R record is only the dispatch label '.confint_lambda:bogus' (actual_class 'route_boundary;error;condition'), not a refusal; the one R refusal for a bad Lambda method sits on the different guard row CI-ROUTE-098 (method bogus). Julia refuses only on AGHQ-record Gaussian fits and returns Wald for any method on structured fits (inference-batch-contract-p1.json known_findings.lambda_reject_validation_boundary). Leave unbound until .confint_lambda is observed directly in R with this method.",
+      "evidence": {
+        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-007",
+        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-007"
+      }
+    }
+  ]
 }

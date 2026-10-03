@@ -2,7 +2,7 @@
   "schema": 1,
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "scope": "aghq family: the 21 required rows (19 required_core, plus 2 compatibility_adapter rows, which tools/true_parity_check.mjs counts as required) the P1 carry scan lists as DANGLING (7) or PARTIAL_STALE_AT_P1 (14). The rejected AGHQ-INVALID-* rows and the intentionally_excluded rows are out of scope.",
-  "note": "Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with PARITY_CASEMAP pointing at this file. Classification and disposition are carried from docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. The two batches measure no number against Julia: 7 rows are a paired control on categorical labels (no fit) and 14 are R-only policy observations (no Julia side), so a row paid by a batch alone cites its receipts under evidence.non_binding_receipts and does not bind under the numeric rule. All 14 policy rows (Poisson, NB2, ordinal-probit, Tweedie, delta-gamma, binomial and Gaussian fits, which expose aghq= in Julia) additionally carry a numeric Julia twin receipt (receipts/julia-twins/aghq/, test/test_aghq_p1_twin.jl) under evidence.receipt with evidence_tier numeric. The policy fixtures of the batch are toys (p of 5 to 20 traits, n of 30 to 40 sites, d = 1); the twins use simulated data with a real latent factor.",
+  "note": "Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with PARITY_CASEMAP pointing at this file. Classification and disposition are carried from docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. The two batches measure no number against Julia: 7 rows are a paired control on categorical labels (no fit) and 14 are R-only policy observations (no Julia side), so a row paid by a batch alone cites its receipts under evidence.non_binding_receipts and does not bind under the numeric rule. All 14 policy rows (Poisson, NB2, ordinal-probit, Tweedie, delta-gamma, binomial and Gaussian fits, which expose aghq= in Julia) additionally carry a numeric Julia twin receipt (receipts/julia-twins/aghq/, test/test_aghq_p1_twin.jl) under evidence.receipt with evidence_tier numeric. The policy fixtures of the batch are toys (p of 5 to 20 traits, n of 30 to 40 sites, d = 1); the twins use simulated data with a real latent factor. The 7 control rows also carry a behaviour block (tools/core070_behaviour_receipts.py) as non-binding evidence: both engines normalise the same scalar request to the same label, but these rows are not in the frozen scope of itchyshin/GLLVModels.jl#684 item 2, so they stay at paired_control_categorical_pass until the maintainer confirms that ruling 2 covers them.",
   "generator": "tools/core070_aghq_p1_receipts.py",
   "glvmodels_commit": "fd92b6551f7ecc99d82eee6f23a4ef42536a778c",
   "carry_scan": {
@@ -494,7 +494,8 @@
           "CORE070-AGHQ-CTRL-AUTO-PAIRED-CONTROL": "PASS"
         },
         "row_verdict": "PASS"
-      }
+      },
+      "note": "Not bound: behaviour block kept as non-binding evidence only (R and Julia give the same label), but this row is not in the frozen scope of itchyshin/GLLVModels.jl#684 item 2; binding it needs the maintainer to confirm ruling 2 covers it."
     },
     {
       "source_id": "aghq/AGHQ-CTRL-FALSE",
@@ -531,7 +532,8 @@
           "CORE070-AGHQ-CTRL-FALSE-PAIRED-CONTROL": "PASS"
         },
         "row_verdict": "PASS"
-      }
+      },
+      "note": "Not bound: behaviour block kept as non-binding evidence only (R and Julia give the same label), but this row is not in the frozen scope of itchyshin/GLLVModels.jl#684 item 2; binding it needs the maintainer to confirm ruling 2 covers it."
     },
     {
       "source_id": "aghq/AGHQ-CTRL-NINE",
@@ -568,7 +570,8 @@
           "CORE070-AGHQ-CTRL-NINE-PAIRED-CONTROL": "PASS"
         },
         "row_verdict": "PASS"
-      }
+      },
+      "note": "Not bound: behaviour block kept as non-binding evidence only (R and Julia give the same label), but this row is not in the frozen scope of itchyshin/GLLVModels.jl#684 item 2; binding it needs the maintainer to confirm ruling 2 covers it."
     },
     {
       "source_id": "aghq/AGHQ-CTRL-NULL",
@@ -605,7 +608,8 @@
           "CORE070-AGHQ-CTRL-NULL-PAIRED-CONTROL": "PASS"
         },
         "row_verdict": "PASS"
-      }
+      },
+      "note": "Not bound: behaviour block kept as non-binding evidence only (R and Julia give the same label), but this row is not in the frozen scope of itchyshin/GLLVModels.jl#684 item 2; binding it needs the maintainer to confirm ruling 2 covers it."
     },
     {
       "source_id": "aghq/AGHQ-CTRL-ONE",
@@ -642,7 +646,8 @@
           "CORE070-AGHQ-CTRL-ONE-PAIRED-CONTROL": "PASS"
         },
         "row_verdict": "PASS"
-      }
+      },
+      "note": "Not bound: behaviour block kept as non-binding evidence only (R and Julia give the same label), but this row is not in the frozen scope of itchyshin/GLLVModels.jl#684 item 2; binding it needs the maintainer to confirm ruling 2 covers it."
     },
     {
       "source_id": "aghq/AGHQ-CTRL-TRUE",
@@ -679,7 +684,8 @@
           "CORE070-AGHQ-CTRL-TRUE-PAIRED-CONTROL": "PASS"
         },
         "row_verdict": "PASS"
-      }
+      },
+      "note": "Not bound: behaviour block kept as non-binding evidence only (R and Julia give the same label), but this row is not in the frozen scope of itchyshin/GLLVModels.jl#684 item 2; binding it needs the maintainer to confirm ruling 2 covers it."
     },
     {
       "source_id": "aghq/AGHQ-CTRL-TWO",
@@ -716,7 +722,8 @@
           "CORE070-AGHQ-CTRL-TWO-PAIRED-CONTROL": "PASS"
         },
         "row_verdict": "PASS"
-      }
+      },
+      "note": "Not bound: behaviour block kept as non-binding evidence only (R and Julia give the same label), but this row is not in the frozen scope of itchyshin/GLLVModels.jl#684 item 2; binding it needs the maintainer to confirm ruling 2 covers it."
     },
     {
       "source_id": "aghq/AGHQ-DEFAULT-OFF",
