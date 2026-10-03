@@ -10,6 +10,18 @@ retains the existing fixed-zero coefficient convention. The public route
 `fit_gllvm(Y; family = Normal(), K)` without `X` instead estimates one intercept
 per trait (stored in `pars.β`, and applied by post-fit helpers without `X`).
 
+**W tier (`K_W`, `has_diag`; #135):** `K_W > 0` adds a second loading block
+`Λ_W` whose scores are shared by all traits of a unit, so it contributes the
+full `Λ_W Λ_Wᵀ` to the per-unit covariance, as in gllvmTMB. Each column of `Y`
+is one unit observed once, so only `Λ Λᵀ + Λ_W Λ_Wᵀ` (and only
+`σ²_B + σ²_W + σ²_eps`) is identified: the fit matches a single-tier fit with
+`K + K_W` axes, and the split between the tiers depends on the starting
+values. Do not interpret tier-scoped summaries (`communality`, `proportions`,
+`extract_Sigma` at `level = :unit` / `:unit_obs`, `getLV`) or Wald SEs of
+single `Λ` / `Λ_W` entries from such a fit. For a between-unit /
+within-unit decomposition, use [`fit_twolevel_gaussian`](@ref) on repeated
+observations per unit.
+
 `aghq=3` requests three nodes per latent axis; `true`/`:auto` selects five nodes
 below 20 traits. The ordinary loadings-only block with K≤5 is eligible; additional
 random blocks or predictor-informed latent scores retain exact Gaussian/Laplace

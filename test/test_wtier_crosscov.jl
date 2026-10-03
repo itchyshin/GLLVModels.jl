@@ -168,6 +168,45 @@ end
         @test correlation(fit) ≈ Σ_hat ./ sqrt.(diag(Σ_hat) * diag(Σ_hat)') atol = 1e-10
     end
 
+    @testset "only the tier sum is identified (documented caveat, one unit per column)" begin
+        # docs/src/model.md, Identifiability: rotating the stacked loadings
+        # [Λ_B Λ_W] by an orthogonal Q that mixes the two blocks, and moving
+        # variance from σ²_W to σ²_B, leaves the covariance (so the likelihood)
+        # unchanged, while tier-scoped summaries such as communality move.
+        Λ_W1 = Λ_W[:, 1:1]
+        ϑ = 0.7
+        Q = [cos(ϑ) -sin(ϑ); sin(ϑ) cos(ϑ)]
+        U = hcat(Λ_B, Λ_W1) * Q
+        @test U * U' ≈ Λ_B * Λ_B' + Λ_W1 * Λ_W1'
+        @test maximum(abs, U[:, 1:1] - Λ_B) > 0.1
+        Σ_ref = Λ_B * Λ_B' + Λ_W1 * Λ_W1' + Diagonal(σ²_B .+ σ²_W .+ σ_eps^2)
+        ref = _wtier_ref_loglik(R, Σ_ref)
+        @test GLLVModels.gaussian_marginal_loglik(y, Λ_B, σ_eps; X = X, β = β,
+                  Λ_W = Λ_W1, σ²_B = σ²_B, σ²_W = σ²_W) ≈ ref atol = 1e-8
+        @test GLLVModels.gaussian_marginal_loglik(y, U[:, 1:1], σ_eps; X = X, β = β,
+                  Λ_W = U[:, 2:2], σ²_B = σ²_B .+ 0.5 .* σ²_W,
+                  σ²_W = 0.5 .* σ²_W) ≈ ref atol = 1e-8
+
+        # On a fitted model: the identified total (sigma_y_site, correlation)
+        # does not move under the mixed rotation; communality (Λ_B only) does.
+        nf = 40
+        yf = [sin(0.37 * t * s + 0.5 * t) + 0.5 * cos(1.3 * s) * (t - 2.5) / 2
+              for t in 1:p, s in 1:nf]
+        fit = fit_gaussian_gllvm(yf; K = 1, K_W = 1, has_diag = true,
+                                 λ_W_init = reshape([0.3, 0.2, -0.2, 0.25], p, 1))
+        Uf = hcat(fit.pars.Λ, fit.pars.Λ_W) * Q
+        fitq = GLLVModels.GllvmFit(fit.model,
+                   merge(fit.pars, (Λ = Uf[:, 1:1], Λ_W = Uf[:, 2:2])),
+                   fit.logLik, fit.n_iter, fit.converged, fit.optim_result, fit.cputime)
+        Σ_hat = fit.pars.Λ * fit.pars.Λ' + fit.pars.Λ_W * fit.pars.Λ_W' +
+                Diagonal(fit.pars.σ²_B .+ fit.pars.σ²_W .+ fit.pars.σ_eps^2)
+        @test sigma_y_site(fitq) ≈ Σ_hat atol = 1e-10
+        @test correlation(fitq) ≈ Σ_hat ./ sqrt.(diag(Σ_hat) * diag(Σ_hat)') atol = 1e-10
+        @test communality(fitq) ≈ diag(Uf[:, 1:1] * Uf[:, 1:1]') ./ diag(Σ_hat) atol = 1e-10
+        @test communality(fit) ≈ diag(fit.pars.Λ * fit.pars.Λ') ./ diag(Σ_hat) atol = 1e-10
+        @test maximum(abs, communality(fitq) - communality(fit)) > 1e-3
+    end
+
     @testset "models without a W-tier rr term are unchanged (pinned before the fix)" begin
         # Values computed on the unmodified tree (origin/main 896a0a228) with the
         # same inputs; the fix must not move them.

@@ -202,8 +202,14 @@ end
     communality(fit::GllvmFit) -> Vector
 
 Per-trait communality `c²[t] = (Λ_B Λ_B')[t, t] / Σ_y_site[t, t]`. This
-is the fraction of the per-site trait variance explained by the shared
-latent factors. Values are in [0, 1].
+is the fraction of the per-site trait variance explained by the unit-tier
+latent factors `Λ_B`. Values are in [0, 1]. The W-tier block `Λ_W Λ_W'` is
+also shared across traits (issue #135) but is not counted here.
+
+With `K_W > 0`, each column of `y` is one unit observed once, so the data
+identify only `Λ_B Λ_B' + Λ_W Λ_W'`, not how it splits between the tiers.
+This value then depends on the starting values and should not be
+interpreted; see the Identifiability section of the Model page.
 """
 function communality(fit::GllvmFit)
     spec = _derived_spec(fit)
@@ -217,9 +223,17 @@ end
     proportions(fit::GllvmFit; component::Symbol = :shared) -> Vector
 
 Per-trait variance decomposition. Each entry is in [0, 1]; the
-`:shared`, `:unique_W`, `:unique_B`, and `:residual` shares sum to 1
-(when has_diag and W tier are off, only `:shared` and `:residual` are
-non-zero).
+`:shared`, `:unique_W`, `:unique_B`, `:unique_Wd` and `:residual` shares
+sum to 1 (when has_diag and W tier are off, only `:shared` and `:residual`
+are non-zero).
+
+Despite its name, `:unique_W` is the diagonal of the W-tier block
+`Λ_W Λ_W'`, which also covaries across traits (issue #135). With one unit
+per column of `y`, the data identify only the sum of the `:shared` and
+`:unique_W` shares, and only the sum of the `:unique_B`, `:unique_Wd` and
+`:residual` shares. With `K_W > 0` or `has_diag = true`, the individual
+shares within each sum depend on the starting values and should not be
+interpreted; see the Identifiability section of the Model page.
 
 `component` can be:
   - `:shared`    — `(Λ_B Λ_B')[t,t] / Σ_y_site[t,t]`   (== communality)
@@ -275,7 +289,9 @@ Cross-trait correlation derived from `Σ_y_site`:
 `ρ[i, j] = Σ_y_site[i, j] / sqrt(Σ_y_site[i, i] · Σ_y_site[j, j])`.
 
 Diagonal entries are exactly 1.0. The off-diagonals are the *site-level*
-correlations driven by the shared loadings Λ_B.
+correlations driven by the loadings Λ_B and, when present, Λ_W. They depend
+only on the identified total `Σ_y_site`, so they do not depend on how a
+`K_W > 0` fit splits the covariance between the two tiers.
 
 Degenerate traits: the correlation is undefined for a trait whose
 `Σ_y_site[t, t] ≤ 0` (zero variance, or a round-off negative). Every entry

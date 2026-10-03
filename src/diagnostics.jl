@@ -452,6 +452,12 @@ named structured-covariance kernels (spatial, phylogenetic,
 `ar1`, …); this port only checks the two loading-tier case GLLVModels.jl
 currently fits (`Λ_B` vs `Λ_W`). Single-tier fits (`K_W == 0`) return
 `separable = missing` — there is nothing to separate.
+
+**Caveat for `GllvmFit`:** each column of `y` is one unit observed once, so
+the data identify only `Λ_B Λ_Bᵀ + Λ_W Λ_Wᵀ`, never the split between the
+two tiers (issue #135). The angle reported for such a fit reflects the
+starting values, and `separable = true` does not mean the tiers are
+identified.
 """
 function diagnose_kernel_separability(fit; angle_tol::Real = 1e-3)
     if !(fit isa GllvmFit) || fit.model.K_W == 0 || fit.pars.Λ_W === nothing
