@@ -21,6 +21,16 @@
   families (`NB1GroupedFit`, `BetaGroupedFit`, `GammaGroupedFit`, `TweedieGroupedFit`), and
   `NBGroupedAGHQFit`. Test: `test/test_nb_grouped_postfit.jl`.
 
+- **Ordinal (per-trait) logit no longer stalls with `converged = true` (#574); binomial runaway-loading warning (#498).**
+  The per-site Laplace mode search for per-trait ordinal fits was an undamped Newton iteration
+  that could overshoot into a far worse site mode, giving the marginal ~50-unit cliffs under
+  1e-5 parameter steps; L-BFGS then stopped on a zero-length step (|g| ~ 1e6) and reported
+  convergence tens of logLik units below the optimum (simulated 13 x 75, K = 2: -1425.3 from a
+  1.7 x probit start vs the true -1348.36). The search now halves a step that lowers the site
+  log-posterior; accepted full steps are unchanged. `fit_binomial_gllvm` now warns, without
+  changing estimates or `converged`, when loadings run away (gllvmTMB's rule: a trait's max |Λ|
+  at least 25 x the typical size, or at least 8). Tests: `test/test_convergence_sweep.jl`.
+
 - **`fit_phylo_gaussian` no longer reports `converged = true` after a zero-length step
   (part of #505, the remaining #485 class).** Optim also counts a zero-length line-search
   step as convergence, so a start the finite-difference gradient cannot leave could be
