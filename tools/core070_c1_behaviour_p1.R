@@ -4,9 +4,12 @@
 # R side of the behavioural twins for two C1 rows (itchyshin/GLLVModels.jl#684 item 2):
 #   model-comparison/print.anova.gllvmTMB_multi   (R/aghq-report.R)
 #   latent-scores/extract_latent_scores.default   (R/extract-latent-scores.R)
+#   model-comparison/update.gllvmTMB_multi        (R/methods-gllvmTMB.R)
 # Records what gllvmTMB at P1 (9539352f66f2db2cc26b1c393e67212a359b60c9, 0.7.1) actually
-# produces: the printed table of anova() on three nested Gaussian fits, and the condition
-# raised by extract_latent_scores() on four objects it has no method for. Nothing is typed by
+# produces: the printed table of anova() on three nested Gaussian fits, the condition
+# raised by extract_latent_scores() on four objects it has no method for, and what update()
+# does on a temporal fit (replay, data override, an unnamed override) and on an ordinary fit
+# that keeps no call. Nothing is typed by
 # hand: the Julia side and the receipt writer (tools/true_parity_julia_receipts.jl) read these
 # raw files and derive every label from them.
 #
@@ -44,7 +47,8 @@ PINNED_FUNCTIONS <- list(
   list(file = "R/aghq-report.R", names = c("anova.gllvmTMB_multi", "print.anova.gllvmTMB_multi",
                                           ".gllvmTMB_anova_global_check", ".gllvmTMB_anova_classify_step")),
   list(file = "R/chibar.R", names = "chibar2_pvalue"),
-  list(file = "R/extract-latent-scores.R", names = c("extract_latent_scores", "extract_latent_scores.default"))
+  list(file = "R/extract-latent-scores.R", names = c("extract_latent_scores", "extract_latent_scores.default")),
+  list(file = "R/methods-gllvmTMB.R", names = "update.gllvmTMB_multi")
 )
 sha256_text <- function(lines) {
   tmp <- tempfile(); on.exit(unlink(tmp))
@@ -124,6 +128,41 @@ observe_refusal <- function(x) {
 }
 refusals <- lapply(objects, function(o) c(list(object_class = class(o$x)[1]), observe_refusal(o$x)))
 
+# --- update() on a temporal fit, and on an ordinary fit that keeps no call -------------------
+set.seed(20261002L)
+udat <- expand.grid(series = paste0("s", 1:4), occasion = 1:5, trait = paste0("t", 1:3),
+                    KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE)
+udat$value <- rnorm(nrow(udat))
+uctrl <- gllvmTMBcontrol(se = FALSE)
+tfit <- suppressWarnings(gllvmTMB(value ~ 0 + trait + temporal_indep(0 + trait | series, time = occasion),
+                                  data = udat, unit = "series", family = gaussian(), control = uctrl, silent = TRUE))
+stopifnot(isTRUE(tfit$temporal$active), tfit$opt$convergence == 0L)
+uchanged <- udat; uchanged$value <- uchanged$value + 0.01 * seq_len(nrow(uchanged))
+replay <- suppressWarnings(update(tfit))
+override <- suppressWarnings(update(tfit, data = uchanged))
+observe_error <- function(expr) {
+  res <- tryCatch(list(raised = FALSE, value = expr), error = function(e) list(raised = TRUE, cond = e))
+  if (res$raised) list(raised = TRUE, condition_classes = class(res$cond), message = cli::ansi_strip(conditionMessage(res$cond)),
+                       returned_class = "")
+  else list(raised = FALSE, condition_classes = character(), message = "", returned_class = paste(class(res$value), collapse = "/"))
+}
+unnamed <- observe_error(suppressWarnings(update(tfit, uchanged)))
+# An ordinary (non-temporal) fit: one latent factor over units = series x occasion, no saved call.
+udat$site <- factor(paste(udat$series, udat$occasion, sep = "_"))
+ofit <- suppressWarnings(gllvmTMB(value ~ 0 + trait + latent(0 + trait | site, d = 1), data = udat, unit = "site",
+                                  family = gaussian(), control = uctrl, silent = TRUE))
+stopifnot(!isTRUE(ofit$temporal$active), is.null(ofit$call))
+nocall <- observe_error(suppressWarnings(update(ofit)))
+upd <- list(
+  data = list(series = udat$series, occasion = udat$occasion, trait = udat$trait, value = udat$value),
+  changed_value = uchanged$value,
+  original = list(loglik = as.numeric(logLik(tfit)), response = tfit$data$value, temporal_active = isTRUE(tfit$temporal$active)),
+  replay = list(class = class(replay), loglik = as.numeric(logLik(replay)), response = replay$data$value,
+                temporal_active = isTRUE(replay$temporal$active)),
+  override = list(class = class(override), loglik = as.numeric(logLik(override)), response = override$data$value,
+                  temporal_active = isTRUE(override$temporal$active)),
+  unnamed = unnamed, nocall = nocall)
+
 # --- write the TOML ------------------------------------------------------------------------
 tq <- function(s) {
   s <- gsub("\\", "\\\\", s, fixed = TRUE); s <- gsub("\"", "\\\"", s, fixed = TRUE)
@@ -160,6 +199,34 @@ for (r in refusals) {
   w("message = %s", tq(r$message))
   w("returned_class = %s", tq(r$returned_class))
   w("warnings = %s", tarr(r$warnings))
+}
+tnums <- function(v) paste0("[", paste(sprintf("%.17g", v), collapse = ", "), "]")
+w("")
+w("[update]")
+w("seed = %d", 20261002L)
+w("formula = %s", tq("value ~ 0 + trait + temporal_indep(0 + trait | series, time = occasion)"))
+w("series = %s", tarr(as.character(upd$data$series)))
+w("occasion = %s", tnums(upd$data$occasion))
+w("trait = %s", tarr(as.character(upd$data$trait)))
+w("value = %s", tnums(upd$data$value))
+w("changed_value = %s", tnums(upd$changed_value))
+for (nm in c("original", "replay", "override")) {
+  x <- upd[[nm]]
+  w("")
+  w("[update.%s]", nm)
+  if (!is.null(x$class)) w("class = %s", tarr(x$class))
+  w("loglik = %.17g", x$loglik)
+  w("response = %s", tnums(x$response))
+  w("temporal_active = %s", if (x$temporal_active) "true" else "false")
+}
+for (nm in c("unnamed", "nocall")) {
+  x <- upd[[nm]]
+  w("")
+  w("[update.%s]", nm)
+  w("raised = %s", if (x$raised) "true" else "false")
+  w("condition_classes = %s", tarr(x$condition_classes))
+  w("message = %s", tq(x$message))
+  w("returned_class = %s", tq(x$returned_class))
 }
 close(con)
 cat("wrote", out_dir, "\n")

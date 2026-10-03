@@ -92,3 +92,74 @@ function c1b_refusal_labels(records)
         "message states the accepted inputs" : "message does not always state the accepted inputs"
     return [outcome, names_class, states_accepted]
 end
+
+# ---- update() -----------------------------------------------------------------------------
+# model-comparison/update.gllvmTMB_multi. R's method replays the saved public call of a temporal
+# fit with named overrides; on any fit that keeps no call it falls to stats::update.default,
+# which errors. Julia's twin is update(::TemporalGaussianFit; ...) (src/temporal_methods.jl),
+# and Julia has no update method for any other fit. Both sides are observed on the same panel,
+# recorded literally in the [update] table of r_c1_behaviour.toml. An observation is
+#   (original = (loglik, response),
+#    replay = (returned, loglik, response), override = (returned, loglik, response),
+#    changed_response,
+#    unnamed = (raised, returned), nocall = (raised, returned)).
+c1b_update_r_observation(rec) = begin
+    u = rec["update"]
+    f64(v) = Float64.(v)
+    (original = (loglik = Float64(u["original"]["loglik"]), response = f64(u["original"]["response"])),
+     replay = (returned = true, loglik = Float64(u["replay"]["loglik"]), response = f64(u["replay"]["response"])),
+     override = (returned = true, loglik = Float64(u["override"]["loglik"]), response = f64(u["override"]["response"])),
+     changed_response = f64(u["changed_value"]),
+     unnamed = (raised = Bool(u["unnamed"]["raised"]), returned = !isempty(u["unnamed"]["returned_class"])),
+     nocall = (raised = Bool(u["nocall"]["raised"]), returned = !isempty(u["nocall"]["returned_class"])))
+end
+
+# Julia side: fit the temporal model on R's panel, then call update() the four ways. The
+# exception types are returned beside the observation (recorded, not compared).
+function c1b_julia_update_observation(rec)
+    u = rec["update"]
+    tbl = (series = String.(u["series"]), occasion = Float64.(u["occasion"]), trait = String.(u["trait"]),
+           value = Float64.(u["value"]))
+    f = fit_temporal_gllvm(tbl; formula = @formula(value ~ 0 + trait),
+        temporal = temporal_indep(:(0 + trait | series), :occasion), unit = :series)
+    replay = update(f)
+    changed = merge(tbl, (value = Float64.(u["changed_value"]),))
+    override = update(f; data = changed)
+    attempt(thunk) = try
+        thunk(); (raised = false, returned = true, type = "")
+    catch e
+        (raised = true, returned = false, type = string(typeof(e)))
+    end
+    unnamed = attempt(() -> update(f, changed))
+    # An ordinary fit: the same responses as a traits x units matrix (units = series x occasion).
+    Y = Matrix{Float64}(reshape(tbl.value, 20, 3)')
+    ordinary = fit_gaussian_gllvm(Y; K = 1)
+    nocall = attempt(() -> update(ordinary))
+    obs = (original = (loglik = f.loglik, response = copy(f.y)),
+           replay = (returned = replay isa TemporalGaussianFit, loglik = replay.loglik, response = copy(replay.y)),
+           override = (returned = override isa TemporalGaussianFit, loglik = override.loglik, response = copy(override.y)),
+           changed_response = Float64.(u["changed_value"]),
+           unnamed = (raised = unnamed.raised, returned = unnamed.returned),
+           nocall = (raised = nocall.raised, returned = nocall.returned))
+    return obs, (unnamed = unnamed.type, nocall = nocall.type)
+end
+
+# The labels. They say the same thing about both engines. The log-likelihood threshold is a
+# behavioural predicate (a replay reproduces the fit), not a parity tolerance: R's own temporal
+# update test uses 1e-6 on the objective.
+const C1B_UPDATE_LL_TOL = 1e-6
+const C1B_UPDATE_RESPONSE_TOL = 1e-12
+function c1b_update_labels(o)
+    same_y(a, b) = length(a) == length(b) && maximum(abs.(a .- b)) <= C1B_UPDATE_RESPONSE_TOL
+    replay = (o.replay.returned && same_y(o.replay.response, o.original.response) &&
+              abs(o.replay.loglik - o.original.loglik) <= C1B_UPDATE_LL_TOL) ?
+        "replays the saved call: returns a refit with the original response and log-likelihood" :
+        "does not replay the saved call"
+    override = (o.override.returned && same_y(o.override.response, o.changed_response) &&
+                !same_y(o.override.response, o.original.response) &&
+                abs(o.override.loglik - o.original.loglik) > C1B_UPDATE_LL_TOL) ?
+        "refits on the supplied data: the response is the supplied column and the log-likelihood moves" :
+        "does not refit on the supplied data"
+    refusal(x) = x.raised && !x.returned ? "signals an error and returns no model" : "does not refuse"
+    return (replay = replay, override = override, unnamed = refusal(o.unnamed), nocall = refusal(o.nocall))
+end
