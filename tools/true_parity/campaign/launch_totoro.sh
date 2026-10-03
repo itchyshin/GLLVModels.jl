@@ -29,7 +29,7 @@ for c in gaussian poisson nb2 binomial ordinal temporal isdm crabs spider beetle
 done
 
 # cell : cap in seconds for the Julia job (twice the written estimate); R jobs are capped at 600 s
-CAPS_J="nb2:1440 beetle:1200 fungi:1200 ordinal:600 poisson:360 binomial:360 isdm:240 gaussian:180 temporal:180 crabs:180 spider:180"
+CAPS_J="nb2:1440 beetle:600 fungi:300 ordinal:600 poisson:360 binomial:360 isdm:240 gaussian:180 temporal:180 crabs:180 spider:180"
 run_one() {  # engine:cell:cap
   IFS=: read -r eng cell cap <<< "$1"
   t0=$(date +%s)
