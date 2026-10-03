@@ -331,6 +331,21 @@ Xi_(p, n) = (X = zeros(p, n, p); for t in 1:p; X[t, :, t] .= 1; end; X)
     @test isfinite(G(Yc2; K = 1, X = Xc2).logLik)
     @test_throws ArgumentError G(Yc2; K = 2, X = Xc2)  # centred rank is 2
 
+    # Intercepts for only some traits, or a fixed intercept, give no rank claim:
+    # n < p is refused (mu = (2, -1) makes the data rank 1 = K here).
+    Yp3 = [3.0 4; 0 1; 1 2]
+    Xpart = Xi_(3, 2)[:, :, 1:2]
+    @test_throws ArgumentError G(Yp3; K = 1, X = Xpart)
+    @test_throws ArgumentError G(Yp3; K = 1, X = Xi_(3, 2), β_fixed = [false, false, true])
+    # Strict variants with a non-intercept X: n < p refused, as on main.
+    Ysp, Xsp = slopes(4, 3, 11)
+    @test_throws ArgumentError G(Ysp; K = 1, has_diag = true, X = Xsp)
+    # The strict message mentions centring only when centring happened.
+    es = rankerr(() -> G(Yd; K = 1, has_diag = true))
+    @test !occursin("centred", sprint(showerror, es))
+    es2 = rankerr(() -> G(randn(StableRNG(172), 5, 3); K = 1, has_diag = true, X = Xi_(5, 3)))
+    @test occursin("centred", sprint(showerror, es2))
+
     # A trait with a large offset and tiny noise is not zero after centring.
     Yo = randn(StableRNG(171), 3, 10); Yo[1, :] .= 1e5 .+ 1e-6 .* Yo[1, :]
     @test !isrank(rankerr(() -> G(Yo; K = 2, X = Xi_(3, 10))))

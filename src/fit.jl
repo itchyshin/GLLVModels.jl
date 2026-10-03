@@ -82,7 +82,7 @@ function _per_trait_intercept_rows(X::AbstractArray{<:Real,3}, β_fixed)
         all(==(v), @view Xj[t, :]) || return nothing
         push!(rows, t)
     end
-    return unique(rows)
+    return rows
 end
 
 # Rank of the data after centring the traits in `centre` (those with a free
@@ -109,16 +109,19 @@ end
 # Identifiability guard for the closed-form Gaussian fitter (#149). It replaces
 # the former `n_sites ≥ p` rule, but only where a sound replacement exists.
 #
-# The rank rule applies when `X` is absent or every free column of `X` is a
-# per-trait intercept. The fitter estimates the intercepts jointly with the
-# loadings, so the smallest rank the data can have after removing the mean is
-# the rank of the per-trait centred data (`(Y - μ1')(I - 11'/n)` equals the
+# The rank rule applies when `X` is absent (zero-mean model, uncentred rank) or
+# holds exactly one free per-trait intercept for every trait and no other free
+# column. The fitter estimates the intercepts jointly with the loadings, so the
+# smallest rank the data can have after removing the means is the rank of the
+# per-trait centred data (`(Y - μ1')(I - 11'/n)` equals the
 # centred `Y`). With `rank < p` and `K_total ≥ rank`, `ΛΛᵀ` can reproduce
 # every remaining direction and the residual variance runs to zero
 # (probabilistic PCA), so those fits are refused.
 #
-# Any other `X` (shared columns, slopes, mixed) keeps the former rule: refuse
-# `n_sites < p`, and make no boundedness claim. Estimated coefficients can lower
+# Any other `X` (shared columns, slopes, intercepts for only some traits, a
+# fixed intercept) keeps the former rule: refuse `n_sites < p`, and make no
+# boundedness claim and no rank or linear-dependence check, strict variants
+# included. Estimated coefficients can lower
 # the rank below that of the least-squares residual.
 #
 # `strict = true` (per-trait diagonal terms, phylogenetic blocks, `X_lv`): the
@@ -141,15 +144,20 @@ function _check_gaussian_rank(y::AbstractMatrix, K_total::Integer, X, β_fixed;
         all(isfinite, X) || throw(ArgumentError(
             "fit_gaussian_gllvm: X contains Infs or NaNs."))
         rows = _per_trait_intercept_rows(X, β_fixed)
-        if rows === nothing
+        # Branch (a): no free coefficient at all, or exactly one free
+        # per-trait intercept for every trait and nothing else.
+        in_a = rows !== nothing && (isempty(rows) || sort(rows) == collect(1:p))
+        if !in_a
             n ≥ p || throw(ArgumentError(
-                "fit_gaussian_gllvm needs n_sites ≥ p when X has columns other " *
-                "than per-trait intercepts (got n_sites = $n, p = $p). The " *
-                "coefficients are estimated jointly with the loadings, and the " *
-                "Gaussian likelihood can then be unbounded; the rank rule that " *
-                "admits n_sites < p applies only when X is absent or holds " *
-                "per-trait intercepts. The Laplace-fitted families (Poisson, " *
-                "Binomial, NegativeBinomial and the rest) accept n_sites < p."))
+                "fit_gaussian_gllvm needs n_sites ≥ p unless X is absent or " *
+                "holds exactly one free intercept per trait and nothing else " *
+                "(got n_sites = $n, p = $p). Other designs (slopes, shared " *
+                "columns, intercepts for only some traits, or a fixed " *
+                "intercept) estimate coefficients jointly with the loadings, " *
+                "and the Gaussian likelihood can then be unbounded. For these " *
+                "designs no rank or linear-dependence check is made when " *
+                "n_sites ≥ p. The Laplace-fitted families (Poisson, Binomial, " *
+                "NegativeBinomial and the rest) accept n_sites < p."))
             return nothing
         end
         centre = rows
@@ -160,8 +168,7 @@ function _check_gaussian_rank(y::AbstractMatrix, K_total::Integer, X, β_fixed;
             "fit_gaussian_gllvm: this fit has per-trait variance terms " *
             "(has_diag, a phylogenetic block, or X_lv), and these require the " *
             "data the fitter sees to have full rank (rank = $r, p = $p, " *
-            "n_sites = $n; centred by the per-trait intercepts when X is " *
-            "supplied). A subset of traits is linearly dependent, so a " *
+            "n_sites = $n$(isempty(centre) ? "" : "; centred by the per-trait intercepts")). A subset of traits is linearly dependent, so a " *
             "per-trait variance can collapse and the likelihood is unbounded. " *
             "Use more sites, drop the dependent trait, or drop the per-trait " *
             "terms. The Laplace-fitted families have no such condition on n_sites."))
@@ -169,8 +176,7 @@ function _check_gaussian_rank(y::AbstractMatrix, K_total::Integer, X, β_fixed;
         throw(ArgumentError(
             "fit_gaussian_gllvm: the number of latent axes K = $K_total must be " *
             "below the rank of the data the fitter sees (rank = $r, p = $p, " *
-            "n_sites = $n; centred by the per-trait intercepts when X is " *
-            "supplied). Otherwise the Gaussian likelihood is unbounded. Use a " *
+            "n_sites = $n$(isempty(centre) ? "" : "; centred by the per-trait intercepts")). Otherwise the Gaussian likelihood is unbounded. Use a " *
             "smaller K, or more sites, or drop the trait that is a linear " *
             "combination of the others. The Laplace-fitted families (Poisson, " *
             "Binomial, NegativeBinomial and the rest) have no such condition " *
