@@ -65,5 +65,37 @@
   "glvmodels_commit": "61c5eda4822da20591b6fa91869f93c3faf5d369",
   "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
-  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "behaviour_not_bound": [
+    {
+      "source_id": "inference/CI-ROUTE-040",
+      "reason": "no_valid_method_control",
+      "text": "R raised its validated cli_abort ('Method \"wald_asym\" not implemented for `proportion`.') and Julia raised MethodError, but the Julia error is structural, not the same refusal. The *_wald_ci function takes no method keyword, so the call raises MethodError for every method value, including a valid one, while R's error fires only for a method outside its supported set. The harness has no valid-method control, and inference-batch-contract-p1.json known_findings.derived_quantity_reject_spec_defect_reason records that no Julia call this comparand can run against exists for these quantities. A MethodError counting as the same error class is not signed under itchyshin/GLLVModels.jl#684 item 2.",
+      "evidence": {
+        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/r-oracle.json#proportion_reject.wald_asym",
+        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/julia-results.json#CORE070-INFERENCE-PROPORTION-CI-UNSUPPORTED-METHOD-REJECT.methods.wald_asym",
+        "contract": "docs/dev-log/core070/true-parity-latest/inference-batch-contract-p1.json"
+      }
+    },
+    {
+      "source_id": "inference/CI-ROUTE-041",
+      "reason": "no_valid_method_control",
+      "text": "R raised its validated cli_abort ('Method \"fisher-z\" not implemented for `proportion`.') and Julia raised MethodError, but the Julia error is structural, not the same refusal. The *_wald_ci function takes no method keyword, so the call raises MethodError for every method value, including a valid one, while R's error fires only for a method outside its supported set. The harness has no valid-method control, and inference-batch-contract-p1.json known_findings.derived_quantity_reject_spec_defect_reason records that no Julia call this comparand can run against exists for these quantities. A MethodError counting as the same error class is not signed under itchyshin/GLLVModels.jl#684 item 2.",
+      "evidence": {
+        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/r-oracle.json#proportion_reject.fisher-z",
+        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/julia-results.json#CORE070-INFERENCE-PROPORTION-CI-UNSUPPORTED-METHOD-REJECT.methods.fisher-z",
+        "contract": "docs/dev-log/core070/true-parity-latest/inference-batch-contract-p1.json"
+      }
+    },
+    {
+      "source_id": "inference/CI-ROUTE-042",
+      "reason": "no_valid_method_control",
+      "text": "R raised its validated cli_abort ('Method \"bogus\" not implemented for `proportion`.') and Julia raised MethodError, but the Julia error is structural, not the same refusal. The *_wald_ci function takes no method keyword, so the call raises MethodError for every method value, including a valid one, while R's error fires only for a method outside its supported set. The harness has no valid-method control, and inference-batch-contract-p1.json known_findings.derived_quantity_reject_spec_defect_reason records that no Julia call this comparand can run against exists for these quantities. A MethodError counting as the same error class is not signed under itchyshin/GLLVModels.jl#684 item 2.",
+      "evidence": {
+        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/r-oracle.json#proportion_reject.bogus",
+        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/julia-results.json#CORE070-INFERENCE-PROPORTION-CI-UNSUPPORTED-METHOD-REJECT.methods.bogus",
+        "contract": "docs/dev-log/core070/true-parity-latest/inference-batch-contract-p1.json"
+      }
+    }
+  ]
 }

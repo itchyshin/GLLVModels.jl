@@ -257,6 +257,10 @@ node_dσ_phy_only(st::SparsePhyState) =
 #       g[t]    = ½ (trace_t − dataq_t).
 # ===========================================================================
 
+# Parametric on the factor type `TF` (mirrors `SparsePhyState{TF}`): the
+# CHOLMOD factor's index type is concrete per instance, so `st.cΛ̃ \ …` and
+# `takahashi_diag(st.cΛ̃)` dispatch statically instead of at runtime.
+
 """
     NodePerSpecies
 
@@ -280,9 +284,6 @@ Fields
 * `Λ̃`         – augmented node precision `Q_cond + σ_eps⁻² S' Λ_φ² S`.
 * `cΛ̃`        – Cholesky of `Λ̃`.
 """
-# Parametric on the factor type `TF` (mirrors `SparsePhyState{TF}`): the
-# CHOLMOD factor's index type is concrete per instance, so `st.cΛ̃ \ …` and
-# `takahashi_diag(st.cΛ̃)` dispatch statically instead of at runtime.
 struct NodePerSpecies{TF<:SparseArrays.CHOLMOD.Factor{Float64}}
     phy::AugmentedPhy{Float64}
     σ_phy::Vector{Float64}

@@ -57,3 +57,11 @@ Only material deviations are listed. Each is tagged adaptive, drift or unclear.
   - gllvmTMB #1338, #1339, #1340, #1341
 - **Carried over:** #555 (waits for #662).
 - **Leases:** released at close.
+
+## Addendum, 2026-10-03 (decision-list round)
+
+- Scope, adaptive: #131 was investigated and not changed, because the premise was false; the real gap is filed as #701. #149 was partly done. Both outcomes are recorded on their issues.
+- Verification, adaptive: A Workflow ran 6 builders, 12 verifiers and 4 repair rounds (30 agents). The #136 slice needed three more review rounds. Every landing tree was checked with the parity lane's three tools, at the parity lane's request.
+- Coordination, adaptive: The parity lane raised three overlap points (`lognormal.jl` with #693, receipts after #698, `confint` `method=`). All three were answered before merge, and no receipt moved.
+- **Safety gates, drift: GitHub closed the wrong issues three times** (#142, #897, #149), through closing-keyword parsing. Each was reopened with an explanation. Owner: Rose. A guard would help here, one that checks before merge every "#N" in PR bodies and commit subjects against the intended set of fixed issues.
+- Routing, adaptive: The command guard blocked a plain `git push`. I verified it was a fast-forward and pushed by explicit branch name without force, not by rephrasing around the guard.

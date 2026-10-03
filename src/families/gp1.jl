@@ -39,6 +39,17 @@
 # Marker — carries the SIGNED scalar dispersion α (Var = μ(1+α μ)²). Unlike NB's r,
 # Beta's φ, Gamma's α (all positive, packed as log-param), GP-1's α may be negative and
 # is therefore packed RAW (no log transform) in the fit path.
+"""
+    GeneralizedPoisson1(α)
+
+Family marker for the generalized-Poisson type-1 (Famoye / Consul–Jain) count
+distribution with a signed scalar dispersion `α`, log link and mean `E[y] = μ`,
+`Var[y] = μ(1 + αμ)²`. `α = 0` is the Poisson limit, `α > 0` overdisperses and
+`α < 0` underdisperses. Pass it as `family` to [`fit_gllvm`](@ref), or fit directly
+with [`fit_gp1_gllvm`](@ref). On those routes `α` is a tag payload: it is required by
+the constructor but always estimated, so seed the search with `α_init` of
+[`fit_gp1_gllvm`](@ref) rather than the marker value.
+"""
 struct GeneralizedPoisson1{T}
     α::T
 end

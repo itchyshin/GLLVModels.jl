@@ -77,5 +77,59 @@
   "glvmodels_commit": "61c5eda4822da20591b6fa91869f93c3faf5d369",
   "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
-  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "behaviour": {
+    "pin": "P1",
+    "ruling": "itchyshin/GLLVModels.jl#684 item 2",
+    "read_from": {
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json": "3c0c44d62296c7f2730e2b4a6d7abb7d963afdfdd09731d7ab2dfb94d22350af",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv": "aa78ce4ae49ad3f05891517710bb4e54fbaa1f5b612821bd1a99eba6e5a0df1c",
+      "test/parity/fixtures/core070_inference_routes.tsv": "5f75af28288781a5cc516bb94d38e5fdc5107b1712be54fbaabe9d0e79035db0"
+    },
+    "cases": [
+      {
+        "case_id": "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE",
+        "source_id": "inference/CI-ROUTE-017",
+        "kind": "route",
+        "r_observed": ".confint_phylo_signal:wald",
+        "julia_observed": "phylo_signal:wald_derived",
+        "requested_method": "wald",
+        "julia_call": "phylo_signal_wald_ci(fitS,1;y=YS,\u03a3_phy=\u03a3_phy)",
+        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-017",
+        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-017"
+      }
+    ]
+  },
+  "behaviour_not_bound": [
+    {
+      "source_id": "inference/CI-ROUTE-015",
+      "reason": "default",
+      "text": "The row asks for the DEFAULT method. R's default for this parm is profile (probe route '.confint_phylo_signal:profile'), but the Julia harness called an explicit profile function (GLLVM.profile_ci_derived(fitS, phylo_signal_closure_1; y=YS,\u03a3_phy=\u03a3_phy) [default]), so Julia's default was not exercised. Julia has no default-method dispatcher for derived quantities: profile_ci_derived and bootstrap_ci_derived are not exported, and the exported entry for this quantity is phylo_signal_wald_ci, a Wald function (src/GLLVModels.jl export list, src/confint_derived_wald.jl:412). Not the same default route.",
+      "evidence": {
+        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-015",
+        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-015",
+        "fixture": "test/parity/fixtures/core070_inference_routes.tsv#CI-ROUTE-015"
+      }
+    },
+    {
+      "source_id": "inference/CI-ROUTE-016",
+      "reason": "not_exported",
+      "text": "R's confint(parm, method = 'profile') serves a derived quantity (route '.confint_phylo_signal:profile'). Julia's side of this row is GLLVM.profile_ci_derived(fitS, phylo_signal_closure_1; y=YS,\u03a3_phy=\u03a3_phy), an internal function that GLLVModels does not export (src/GLLVModels.jl export list), so a Julia user cannot make this request through the public API; the harness chose the function. The same shape as the DEFAULT rows CI-ROUTE-022, 029 and 036, which are also left unbound. No entry.",
+      "evidence": {
+        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-016",
+        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-016",
+        "contract": "docs/dev-log/core070/true-parity-latest/inference-batch-contract-p1.json"
+      }
+    },
+    {
+      "source_id": "inference/CI-ROUTE-018",
+      "reason": "not_exported",
+      "text": "R's confint(parm, method = 'bootstrap') serves a derived quantity (route '.confint_phylo_signal:bootstrap'). Julia's side of this row is GLLVM.bootstrap_ci_derived(fitS, f->phylo_signal(f)[1]; y=YS,\u03a3_phy=\u03a3_phy), an internal function that GLLVModels does not export (src/GLLVModels.jl export list), so a Julia user cannot make this request through the public API; the harness chose the function. The same shape as the DEFAULT rows CI-ROUTE-022, 029 and 036, which are also left unbound. No entry.",
+      "evidence": {
+        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-018",
+        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-018",
+        "contract": "docs/dev-log/core070/true-parity-latest/inference-batch-contract-p1.json"
+      }
+    }
+  ]
 }

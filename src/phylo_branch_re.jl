@@ -163,6 +163,13 @@ struct BranchRECache
     E::Int
 end
 
+"""
+    branch_re_cache(phy::EdgePhy) -> BranchRECache
+
+Build the per-tree [`BranchRECache`](@ref) (incidence `Z`, Gram matrix `ZᵀZ`, branch
+lengths and their log-sum) for the tree `phy` from [`edge_phy`](@ref). It is the first
+argument of [`branch_re_profile_negll`](@ref) and [`branch_blups`](@ref).
+"""
 function branch_re_cache(phy::EdgePhy)
     Z = path_membership(phy)
     ZtZ = Z' * Z

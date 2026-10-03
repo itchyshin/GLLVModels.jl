@@ -77,6 +77,7 @@ import tomllib
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import core070_source_pin_check  # noqa: E402
+import core070_behaviour_receipts as behaviour  # noqa: E402  (itchyshin/GLLVModels.jl#684 item 2)
 
 OUT_REL = "docs/dev-log/core070/true-parity-latest"
 REC_REL = f"{OUT_REL}/receipts/aghq"
@@ -481,6 +482,7 @@ def build_rows(in_scope, carry_status, receipts):
                    measured_result={**result, "row_verdict": verdict} if verdict else result)
         counts[tier] += 1
         twin_overlay(sid, row, counts)
+        behaviour.overlay_row(row, counts)  # notes a control row whose behaviour block is outside the frozen scope
         out_rows.append(row)
     return out_rows, counts
 
@@ -489,7 +491,8 @@ def build_rows(in_scope, carry_status, receipts):
 # --check
 # ---------------------------------------------------------------------------
 PROVENANCE_KEYS = {"pin", "reference_commit", "p0_reference_commit", "glvmodels_commit", "glvmodels_worktree_dirty",
-                   "glvmodels_src_tree", "host", "schema", "case_id", "verdict", "evidence_kind"}
+                   "glvmodels_src_tree", "host", "schema", "case_id", "verdict", "evidence_kind",
+                   "behaviour", "behaviour_not_bound"}  # the last two come from core070_behaviour_receipts.py
 
 
 def check():
@@ -536,6 +539,7 @@ def check():
             problems.append(f"{cid}: receipt body differs from the re-derivation")
         if rec.get("reference_commit") != P1_SHA or rec.get("pin") != "P1":
             problems.append(f"{cid}: receipt not pinned at P1")
+    problems += behaviour.check_problems()
     cm = load(ROOT / CASEMAP_REL)
     receipts = {cid: receipt_info(path, rec) for cid, (path, rec) in tracked.items()}
     rows = []
@@ -594,7 +598,10 @@ NOTE = ("Separate from case-map.json so none of its rows are touched; read by to
         "binomial and Gaussian fits, which expose aghq= in Julia) additionally carry a numeric Julia twin receipt "
         "(receipts/julia-twins/aghq/, test/test_aghq_p1_twin.jl) under evidence.receipt with evidence_tier numeric. The "
         "policy fixtures of the batch are toys (p of 5 to 20 traits, n of 30 to 40 sites, d = 1); the twins use simulated "
-        "data with a real latent factor.")
+        "data with a real latent factor. The 7 control rows also carry a behaviour block (tools/core070_behaviour_receipts.py) as "
+        "non-binding evidence: both engines normalise the same scalar request to the same label, but these rows are not "
+        "in the frozen scope of itchyshin/GLLVModels.jl#684 item 2, so they stay at paired_control_categorical_pass until "
+        "the maintainer confirms that ruling 2 covers them.")
 
 
 def copy_batch(batch, run_dir):
@@ -661,6 +668,7 @@ def main():
         path = ROOT / REC_REL / "cases" / f"{cid}.json"
         write_json(path, rec)
         receipts[cid] = receipt_info(str(path.relative_to(ROOT)), rec)
+    behaviour.write()  # behaviour blocks and behaviour-equivalence.json, derived from the raw files copied above
     rows, counts = build_rows(in_scope, carry_status, receipts)
     by_status = {s: sum(carry_status[r] == s for r in in_scope) for s in IN_SCOPE_STATUS}
     by_class = {c: sum(p0[r]["classification"] == c for r in in_scope) for c in ("required_core",

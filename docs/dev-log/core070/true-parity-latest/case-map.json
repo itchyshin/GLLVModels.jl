@@ -261,10 +261,18 @@
    "classification": "required_core",
    "reason": "Fallback S3 method (warns on an unrecognized class); twins the default-dispatch behaviour of extract_latent_scores.",
    "arc": "A2 (small)",
-   "executable_case_ids": [],
-   "evidence": {},
-   "measured_against": null,
-   "disposition": null
+   "executable_case_ids": [
+    "CORE070-C1-EXTRACT-LATENT-SCORES-DEFAULT-REFUSAL"
+   ],
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/latent-scores/extract_latent_scores.default.json"
+    ],
+    "tier": "behavioural (itchyshin/GLLVModels.jl#684 item 2, refusal): extract_latent_scores() at P1 and GLLVModels.extract_latent_scores() were each called on four objects with no method (R: character, integer, list, NULL; Julia: String, Vector{Int}, Dict, nothing). Both signal an error and return nothing, the message names the offending class, and it states the accepted inputs; the labels are derived from the raw records in test/fixtures/c1_behaviour_p1/ and from the fresh Julia run by tools/true_parity_julia_receipts.jl (test/test_c1_behaviour_p1.jl). The exception class names differ (R rlang_error, Julia ArgumentError) and are recorded, not equated"
+   },
+   "measured_against": "P1",
+   "disposition": null,
+   "evidence_tier": "behavioural"
   },
   {
    "source_id": "latent-scores/extract_latent_scores.gllvmTMB_multi",
@@ -580,10 +588,19 @@
    "classification": "required_core",
    "reason": "Printer for anova.gllvmTMB_multi's comparison table; twins its display once anova.gllvmTMB_multi lands.",
    "arc": "A2 (small)",
-   "executable_case_ids": [],
-   "evidence": {},
-   "measured_against": null,
-   "disposition": null
+   "executable_case_ids": [
+    "CORE070-C1-PRINT-ANOVA-FIELDS",
+    "CORE070-C1-PRINT-ANOVA-SECTIONS"
+   ],
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/model-comparison/print.anova.json"
+    ],
+    "tier": "behavioural (itchyshin/GLLVModels.jl#684 item 2, printed fields): print.anova.gllvmTMB_multi at P1 and the Julia show method for the gllvm_anova table were each run on nested Gaussian fits of the same data (d = 1, 2, 3). The printed column labels (model, d, npar, logLik, deviance, df, LRT, test, p.value) and the section heading (Notes:) are identical, read from R's raw printed text (test/fixtures/c1_behaviour_p1/r_anova_print.txt) and from the fresh Julia output by tools/true_parity_julia_receipts.jl (test/test_c1_behaviour_p1.jl). Title text, note wording and numbers are not compared; the numbers belong to the numeric anova twin"
+   },
+   "measured_against": "P1",
+   "disposition": null,
+   "evidence_tier": "behavioural"
   },
   {
    "source_id": "model-comparison/update.gllvmTMB_multi",
@@ -593,10 +610,21 @@
    "classification": "required_core",
    "reason": "Refit wrapper for a temporal-latent model; depends on the temporal_* twins (A6) landing first.",
    "arc": "A2 (small); depends on A6",
-   "executable_case_ids": [],
-   "evidence": {},
-   "measured_against": null,
-   "disposition": null
+   "executable_case_ids": [
+    "CORE070-C1-UPDATE-REPLAY",
+    "CORE070-C1-UPDATE-DATA-OVERRIDE",
+    "CORE070-C1-UPDATE-UNNAMED-REFUSED",
+    "CORE070-C1-UPDATE-NO-CALL-REFUSED"
+   ],
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/model-comparison/update.json"
+    ],
+    "tier": "behavioural (itchyshin/GLLVModels.jl#684 item 2, route and refusal): update() at P1 and GLLVModels.update() on a temporal fit were each run on the same 60-row temporal_indep panel. Replaying the saved call returns a refit with the original response and log-likelihood on both engines; update with data = changed refits on the supplied column on both; an unnamed override and an update on an ordinary fit that keeps no call each signal an error and return no model on both. The labels are derived from the raw records in test/fixtures/c1_behaviour_p1/ and from the fresh Julia run by tools/true_parity_julia_receipts.jl (test/test_c1_behaviour_p1.jl). The condition types differ (R rlang_error / simpleError, Julia MethodError) and are recorded, not equated. R's evaluate = FALSE, formula override and the no-saved-call refusal for a temporal fit are not compared"
+   },
+   "measured_against": "P1",
+   "disposition": null,
+   "evidence_tier": "behavioural"
   },
   {
    "source_id": "column-coef/column_coef",

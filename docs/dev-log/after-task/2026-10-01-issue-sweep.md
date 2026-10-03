@@ -178,3 +178,50 @@ The R and Julia twins were compared only where an issue needed it:
 
 This arc does NOT cover a twin-wide check of the other robustness fixes (#134 to #162) against
 gllvmTMB's behaviour, the bridge `engine = "julia"` gate, or the gllvmTMB C++ engine.
+
+## Addendum, 2026-10-03: decision-list round
+
+The maintainer asked for "do all, merge when green". That covered the held #671 and #680, #555, and the decision list. Three landing PRs carried the work:
+
+| Landing | Contents |
+|---|---|
+| #1343 (gllvmTMB, `8010cfd4c`) | #1338 to #1342 |
+| #683 (`fa692c476`) | #667 to #670, #672, #677 |
+| #704 (`17c4e6a80`) | #696 to #700, #703, #671, #680 |
+
+#679 merged on its own (`896a0a228`) after a Linux fix.
+
+Every landing tree passed the parity lane's three checks. On the #704 tree, 64 receipts reproduce within 0.001 × tolerance, 297 assembled rows are current, and all negative controls pass.
+
+### Decision-list outcomes
+
+- #140 and #156 (#696): Non-converged bootstrap refits are dropped and counted. SD rows are reported on the raw scale.
+- #142 (#697): `profile_ci_derived` gets an optional `bounds` keyword, and `lower <= estimate <= upper` always holds.
+- #135 (#698): The W-tier covariance now matches C++. The identification caveat is filed as #702.
+- #555 (#700): NB grouped postfit methods are added.
+- #136 (#703): Docs only. The note took four review rounds, and each round measured and corrected an overclaim. Final wording: with `K_phy = 0`, the sign of each group of rows that `Σ_phy` links can flip on its own. For a tree-derived `Σ_phy` these groups always include the root's two daughter clades, because `sigma_phy_dense` drops the root edge.
+- #131, not changed: On a matched fit, Julia's `communality()` already equals R to 5 decimal places. The real mismatch is `extract_communality(level = :unit)` on `has_diag` fits, filed as #701.
+- #149, partial: n < p is pinned on the Laplace path, and the Gaussian guard is now an `ArgumentError`. The rank-condition guard and the Lognormal routing stay open.
+- #157: Park note posted.
+- gllvmTMB #1020, #1331 and #872: Held, as recommended.
+
+### More GitHub keyword accidents
+
+The fixes come first; the lessons follow under Team learning.
+
+- "Does not fix #N" closed #N: This hit #142 and gllvmTMB #897; both are reopened.
+- "Fixes #134, #139, ..." closed only the first issue: Fifteen issues were closed by hand with citing comments.
+- The commit subject `fix(n<p): ... (refs #149)` closed #149: It is reopened.
+
+### CI failures on #704, all fixed on the landing branch
+
+- Documenter: `tools/check_reader_surface.py` rejects "issue #N" in rendered docstrings, and seven #135 docstrings said "(issue #135)". They now say "(#135)".
+- Julia 1 (1.13) shard 3: A #142 test assumed the raw profile overshoots 1, which happens on macOS but not on Linux. The clamp is now asserted only when the raw bound overshoots; it stays pinned deterministically by unit tests.
+- Julia 1 (1.13) shard 4: `using Logging` was not declared in `test/Project.toml`, and Julia 1.13 refuses undeclared standard libraries. The test now uses `Base.CoreLogging.Warn`, which is the same constant.
+
+### Team learning (additions)
+
+- Closing keywords: Write `Fixes #N` once per line, for fixed issues only. Never put "fix" next to an issue number that should stay open: not in prose, and not in a commit subject such as `fix(scope): ... #N`.
+- Platform-dependent test numbers: Assert a property under the condition that produces it (`raw > 1 ⇒ clamped to 1`), never a number one optimiser path happens to give. CI caught this twice in the sweep, in #679 and in #142.
+- Undeclared standard libraries: Julia 1.10 locally loads standard libraries a test project does not declare, but Julia 1.13 on CI does not. Scan new test files' `using` lines against `test/Project.toml` before pushing.
+- Docs written from inference: These need measurement as well as review. Each #136 round that "fixed" the wording from inference introduced a new overclaim; the rounds that measured the claim (block flips, `sigma_phy_dense` on a tree with a root edge) converged.
