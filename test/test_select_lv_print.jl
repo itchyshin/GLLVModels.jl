@@ -172,6 +172,19 @@ _selpr_show(sel) = sprint(show, MIME("text/plain"), sel)
         @test sel.converged isa Vector{Bool}
     end
 
+    @testset "pdHess is NA (never a spurious FALSE) on a fit made with an offset" begin
+        # confint rebuilds the marginal without the offset, so its Hessian would belong to a
+        # different objective; review of #695 measured a spurious FALSE on a regular fit.
+        Random.seed!(12)
+        p, n = 5, 80
+        O = 0.5 .* randn(p, n)
+        Y = [rand(Poisson(exp(0.8 + O[j, i]))) for j in 1:p, i in 1:n]
+        sel = select_lv(Y; family = Poisson(), Kmax = 2, criterion = :bic, offset = O, pd_hessian = true)
+        @test all(ismissing, sel.pd_hessian)
+        out = split(sprint(show, MIME("text/plain"), sel), '\n')
+        @test any(l -> occursin("carries an offset", l), out)
+    end
+
     @testset "show: R's labels and layout, NA/FALSE/large-magnitude values" begin
         # Direct construction of the printed object with the cases R's printer
         # handles: a column of large magnitudes (R drops to 2 decimals), an NA

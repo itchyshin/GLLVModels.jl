@@ -118,7 +118,11 @@ _lv_aicc(aic, k, n) = n - k - 1 > 0 ? aic + 2 * k * (k + 1) / (n - k - 1) : NaN
 # the optimum finite, factorisable, positive variances). `missing` (R's NA, "not determined")
 # when the fit type has no Wald route or the Hessian cannot be evaluated; never `false` for
 # that. One finite-difference/AD Hessian per call.
+# `confint` rebuilds the marginal from (fit, Y, X, mask, N, Σ_phy) only. A fit made with an
+# `offset` would get the Hessian of a different, offset-free objective (a spurious FALSE on a
+# regular fit), so pdHess is `missing` there until `confint` honours the offset.
 function _lv_pd_hessian(fit, Y, kw)
+    get(kw, :offset, nothing) === nothing || return missing
     try
         common = (X = get(kw, :X, nothing), mask = get(kw, :mask, nothing))
         ci = fit isa GllvmFit ?
@@ -127,6 +131,7 @@ function _lv_pd_hessian(fit, Y, kw)
         return Bool(ci.pd_hessian)
     catch e
         e isa InterruptException && rethrow()
+        @debug "select_lv: pdHess not determined" exception = (e, catch_backtrace())
         return missing
     end
 end
@@ -440,7 +445,7 @@ function Base.show(io::IO, ::MIME"text/plain", sel::LVSelection)
         println(io, "  K = ", a.K, " not used: ", a.status, isempty(a.message) ? "" : " — " * a.message)
     end
     any(ismissing, sel.pd_hessian) &&
-        println(io, "  pdHess = NA: not determined. It needs select_lv(...; pd_hessian = true) (one Hessian per K) and a fit type with a Wald route.")
+        println(io, "  pdHess = NA: not determined. Pass select_lv(...; pd_hessian = true) to compute it (one Hessian per K); it stays NA when the fit has no Wald route, uses a loading ridge, or carries an offset.")
 end
 
 Base.show(io::IO, sel::LVSelection) =
