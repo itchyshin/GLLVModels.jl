@@ -49,6 +49,22 @@
 // `receipt_status_exception`, in which case it counts in bound_signed=, not bound_numeric=.
 // And a recorded abs_diff/max_abs_diff that disagrees with the difference the tool recomputes
 // from r_value/julia_value fails the row as NUMERIC_RECORDED_DIFF_MISMATCH.
+//
+// Maintainer rulings of 2026-10-02 (itchyshin/GLLVModels.jl#684, signed by Shinichi Nakagawa), the
+// only signature recorded here. Prose and schemas: GATES.md, "Rulings of 2026-10-02".
+//   Ruling 1 (integer equality): a numeric comparison case may carry `"kind": "integer_equality"`.
+//     Then r_value and julia_value must both be integers (or equal-length integer arrays) and
+//     tolerance must be exactly 0.5, i.e. exact equality. The row keeps evidence_tier "numeric".
+//   Ruling 2 (behavioural tier): a row with `evidence_tier: "behavioural"` (a refusal, a printed
+//     summary, a routing decision or an error class) binds when its receipts carry a `behaviour`
+//     block (schema in behaviouralReceiptStatus below) in which both engines gave the same
+//     canonicalised label for every executable case id, via behaviour-equivalence.json. It counts
+//     in C1 `bound_behavioural=`, never in bound= or bound_numeric=. A behavioural label without a
+//     valid matching block is BEHAVIOURAL_LABEL_WITHOUT_BEHAVIOURAL_RECEIPT. The scoreboard status
+//     EVIDENCED-BEHAVIOURAL counts as done (printed as done_behavioural=).
+//   Ruling 3 (C6): EXCLUDED_INTERNAL_HELPER joins the decision vocabulary. A decided reverse-gap
+//     item also needs a non-empty basis and a `ruling` {ref, signed_by, signed_on} that passes the
+//     signature rule, else it is listed under unsigned_decision=.
 import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -89,7 +105,7 @@ const WORKFLOWS_DIR = '.github/workflows';
 // match it anyway, but a filename exclusion is cheap insurance against that check drifting.
 const SMOKE_WORKFLOW_FILE = 'true-parity-check.yml';
 
-const DONE = new Set(['EVIDENCED', 'DISPOSITION-SIGNED']);
+const DONE = new Set(['EVIDENCED', 'EVIDENCED-BEHAVIOURAL', 'DISPOSITION-SIGNED']);
 // C6's decision vocabulary is enumerated, not free text: a reverse-gap item's "decision" must
 // be exactly one of these, or it does not count as decided (a placeholder like "TBD" must not
 // pass just because the field is non-empty).
@@ -98,7 +114,10 @@ const C6_DECISION_VOCAB = new Set([
   'PORT_TO_MATCH_R',
   'DEPRECATE_AND_REMOVE',
   'RENAME_TO_AVOID_COLLISION',
+  'EXCLUDED_INTERNAL_HELPER',
 ]);
+const BEHAVIOUR_EQUIVALENCE = 'docs/dev-log/core070/true-parity-latest/behaviour-equivalence.json';
+const BEHAVIOUR_KINDS = new Set(['route', 'refusal', 'error_class', 'printed_fields']);
 
 const git = (...a) => execFileSync('git', a, { encoding: 'utf8', maxBuffer: 64 << 20, stdio: ['ignore', 'pipe', 'pipe'] });
 const die = (m) => { console.log(`MEASUREMENT_FAILED ${m}`); process.exit(2); };
@@ -186,6 +205,7 @@ function rowReceiptPaths(row) {
 // comparison) or "registration" (export/existence registration only, e.g. the namespace Tier 0
 // batch). Anything but "numeric" -- including a missing field -- is treated as registration-only.
 function isNumericTier(row) { return row.evidence_tier === 'numeric'; }
+function isBehaviouralTier(row) { return row.evidence_tier === 'behavioural'; }
 
 // The label can only lower a row, never raise it: "numeric" must be backed by receipt content.
 // A numeric receipt is a JSON file with a top-level `comparison` block:
@@ -248,8 +268,9 @@ function comparisonCaseDiff(c) {
 const RECEIPT_STATUS_FIELDS = ['status', 'verdict', 'batch_status', 'harness_pass'];
 const isPassValue = (v) => v === 'PASS' || v === 'pass' || v === true;
 
-function receiptNotPassed(j, p) {
-  const where = [[j, ''], [j.comparison && typeof j.comparison === 'object' ? j.comparison : null, 'comparison.']];
+function receiptNotPassed(j, p, blockKey = 'comparison') {
+  const blk = j[blockKey];
+  const where = [[j, ''], [blk && typeof blk === 'object' ? blk : null, `${blockKey}.`]];
   for (const [obj, prefix] of where) {
     if (!obj) continue;
     for (const f of RECEIPT_STATUS_FIELDS) {
@@ -258,6 +279,25 @@ function receiptNotPassed(j, p) {
       }
     }
   }
+  return null;
+}
+
+// Ruling 1 (itchyshin/GLLVModels.jl#684 item 1): exact-integer rows (a degrees of freedom, an
+// observation count) may record tolerance 0.5 instead of a small float. The case must say so with
+// `"kind": "integer_equality"`; r_value and julia_value must then both be integers (finite numbers
+// with Number.isInteger, or equal-length non-empty arrays of them) and tolerance exactly 0.5, so
+// "within tolerance" can only mean "equal". A case with no `kind` is judged as before; any other
+// kind fails the row (it is never read as numeric by default). Returns null, or why not.
+function integerEqualityProblem(c) {
+  if (c.kind === undefined) return null;
+  if (c.kind !== 'integer_equality') return `unknown comparison kind ${JSON.stringify(c.kind)}`;
+  const isInt = (x) => typeof x === 'number' && Number.isInteger(x);
+  const ints = (x) => isInt(x) || (Array.isArray(x) && x.length > 0 && x.every(isInt));
+  if (!ints(c.r_value) || !ints(c.julia_value)) return 'integer_equality needs integer r_value and julia_value';
+  if (Array.isArray(c.r_value) !== Array.isArray(c.julia_value) || (Array.isArray(c.r_value) && c.r_value.length !== c.julia_value.length)) {
+    return 'integer_equality needs r_value and julia_value of the same shape and length';
+  }
+  if (c.tolerance !== 0.5) return 'integer_equality needs tolerance exactly 0.5';
   return null;
 }
 
@@ -283,11 +323,13 @@ function numericReceiptStatus(row) {
       if (!c || typeof c.case_id !== 'string' || c.case_id.length === 0) return { ok: false, reason: `comparison case without case_id in ${p}` };
       const tol = c.tolerance;
       if (typeof tol !== 'number' || !Number.isFinite(tol) || tol <= 0) return { ok: false, reason: `case ${c.case_id}: tolerance not a finite number > 0` };
+      const intProblem = integerEqualityProblem(c);
+      if (intProblem) return { ok: false, reason: `case ${c.case_id}: ${intProblem}` };
       const cd = comparisonCaseDiff(c);
       if (cd.mismatch) return { ok: false, kind: 'diff_mismatch', reason: `${cd.mismatch} in ${p}` };
       const d = cd.d;
       if (d === null) return { ok: false, reason: `case ${c.case_id}: no finite abs_diff or r_value/julia_value` };
-      if (d > tol) return { ok: false, reason: `case ${c.case_id}: abs_diff ${d} > tolerance ${tol}` };
+      if (d > tol) return { ok: false, reason: `case ${c.case_id}: abs_diff ${d} > tolerance ${tol}${c.kind === 'integer_equality' ? ' (integer_equality: the integers differ)' : ''}` };
       covered.add(c.case_id);
     }
     blocks++;
@@ -312,6 +354,133 @@ function receiptStatusExceptionProblem(row) {
   if (e === undefined || e === null) return 'no receipt_status_exception';
   if (typeof e !== 'object' || typeof e.reason !== 'string' || e.reason.trim().length === 0) return 'receipt_status_exception without a reason';
   return signatureProblem(e.signed_by, e.signed_on);
+}
+
+// --- Ruling 2: the behavioural tier (itchyshin/GLLVModels.jl#684 item 2) ------------------
+//
+// A row whose R behaviour is a refusal, a printed summary, a routing decision or an error class has
+// no number to compare. It binds when a cited receipt shows both engines giving the same refusal,
+// route, error class or printed fields. The receipt carries a top-level `behaviour` block:
+//
+//   "behaviour": {
+//     "pin": "P1",                              // or the full P1 sha
+//     "cases": [
+//       { "case_id": "CORE070-...",             // non-empty string
+//         "source_id": "inference/CI-ROUTE-001",// OPTIONAL: when present, applies only to that row
+//         "kind": "route" | "refusal" | "error_class" | "printed_fields",
+//         "r_observed": "<label>" | ["<label>", ...],       // non-empty strings
+//         "julia_observed": same shape and length }
+//     ]
+//   }
+//
+// Each label is what that engine actually produced, read from a raw artefact of the run. The two
+// sides are compared after canonicalisation through behaviour-equivalence.json: a class of one kind
+// lists the labels each engine uses for the same behaviour, with a one-sentence basis naming the R
+// and Julia functions. A label in no class stands for itself. A label listed in two classes of the
+// same kind and side makes the table ambiguous: MEASUREMENT_FAILED. The row binds when every
+// executable case id has at least one applicable entry (same case_id, and either no source_id or
+// the row's own), every applicable entry matches, the carry is fresh at P1, and no cited receipt
+// has a failed status field (status, verdict, batch_status, harness_pass at the top level or in the
+// behaviour block). A malformed block in any cited receipt fails the row.
+let equivalenceCache = null;
+function loadEquivalence() {
+  if (equivalenceCache) return equivalenceCache;
+  const txt = show(BEHAVIOUR_EQUIVALENCE);
+  const index = {}; // index[kind][side][label] = { canonical, cls }
+  if (txt !== null) {
+    let t;
+    try { t = JSON.parse(txt); } catch (e) { die(`${BEHAVIOUR_EQUIVALENCE} is not valid JSON: ${e.message}`); }
+    if (!t || typeof t !== 'object' || t.schema !== 1) die(`${BEHAVIOUR_EQUIVALENCE}: schema must be 1`);
+    if (t.pin !== 'P1' && t.pin !== P1_SHA) die(`${BEHAVIOUR_EQUIVALENCE}: pin must be P1`);
+    if (!Array.isArray(t.classes)) die(`${BEHAVIOUR_EQUIVALENCE}: classes must be an array`);
+    const nonEmpty = (x) => typeof x === 'string' && x.trim().length > 0;
+    t.classes.forEach((cls, i) => {
+      if (!cls || typeof cls !== 'object' || !BEHAVIOUR_KINDS.has(cls.kind)) die(`${BEHAVIOUR_EQUIVALENCE}: class ${i} has no valid kind`);
+      if (!nonEmpty(cls.canonical)) die(`${BEHAVIOUR_EQUIVALENCE}: class ${i} has no canonical label`);
+      if (!nonEmpty(cls.basis)) die(`${BEHAVIOUR_EQUIVALENCE}: class ${i} (${cls.canonical}) has an empty basis`);
+      for (const side of ['r', 'julia']) {
+        if (!Array.isArray(cls[side]) || !cls[side].every(nonEmpty)) die(`${BEHAVIOUR_EQUIVALENCE}: class ${i} (${cls.canonical}) ${side} must be an array of non-empty labels`);
+        const bucket = ((index[cls.kind] ||= {})[side] ||= new Map());
+        for (const label of cls[side]) {
+          const prior = bucket.get(label);
+          if (prior && prior.cls !== i) die(`${BEHAVIOUR_EQUIVALENCE}: ambiguous table, ${cls.kind} ${side} label ${JSON.stringify(label)} is in classes ${prior.canonical} and ${cls.canonical}`);
+          bucket.set(label, { canonical: cls.canonical, cls: i });
+        }
+      }
+    });
+  }
+  equivalenceCache = index;
+  return index;
+}
+
+function canonicalLabel(kind, side, label) {
+  const hit = ((loadEquivalence()[kind] || {})[side] || new Map()).get(label);
+  return hit ? hit.canonical : label;
+}
+
+// Returns null when the observed labels are well formed, else why not.
+function observedShapeProblem(c) {
+  const nonEmpty = (x) => typeof x === 'string' && x.trim().length > 0;
+  for (const k of ['r_observed', 'julia_observed']) {
+    const v = c[k];
+    if (!(nonEmpty(v) || (Array.isArray(v) && v.length > 0 && v.every(nonEmpty)))) return `${k} must be a non-empty string or an array of non-empty strings`;
+  }
+  if (Array.isArray(c.r_observed) !== Array.isArray(c.julia_observed)) return 'r_observed and julia_observed must have the same shape';
+  if (Array.isArray(c.r_observed) && c.r_observed.length !== c.julia_observed.length) return `r_observed has ${c.r_observed.length} labels, julia_observed ${c.julia_observed.length}`;
+  return null;
+}
+
+function behaviouralReceiptStatus(row) {
+  const paths = rowReceiptPaths(row);
+  if (paths.length === 0) return { ok: false, reason: 'no receipt' };
+  loadEquivalence(); // a malformed or ambiguous table is a measurement failure, whatever the row says
+  const cs = carryStatus(row);
+  if (cs.stale) return { ok: false, reason: cs.reason };
+  const ids = Array.isArray(row.executable_case_ids) ? row.executable_case_ids : (row.executable_case_ids ? [row.executable_case_ids] : []);
+  if (ids.length === 0) return { ok: false, reason: 'no executable_case_ids' };
+  const entries = [];
+  let blocks = 0;
+  let notPassed = null;
+  for (const p of paths) {
+    const txt = show(p);
+    if (txt === null) return { ok: false, reason: `unreadable ${p}` };
+    let j;
+    try { j = JSON.parse(txt); } catch { continue; }
+    if (!j || typeof j !== 'object') continue;
+    if (notPassed === null) notPassed = receiptNotPassed(j, p, 'behaviour');
+    if (j.behaviour === undefined) continue;
+    const b = j.behaviour;
+    if (!b || typeof b !== 'object' || Array.isArray(b)) return { ok: false, reason: `malformed behaviour block in ${p}` };
+    if (b.pin !== 'P1' && b.pin !== P1_SHA) return { ok: false, reason: `behaviour not pinned to P1 in ${p}` };
+    if (!Array.isArray(b.cases) || b.cases.length === 0) return { ok: false, reason: `behaviour has no cases in ${p}` };
+    for (const c of b.cases) {
+      if (!c || typeof c.case_id !== 'string' || c.case_id.length === 0) return { ok: false, reason: `behaviour case without case_id in ${p}` };
+      if (c.source_id !== undefined && (typeof c.source_id !== 'string' || c.source_id.length === 0)) return { ok: false, reason: `case ${c.case_id}: source_id must be a non-empty string` };
+      if (!BEHAVIOUR_KINDS.has(c.kind)) return { ok: false, reason: `case ${c.case_id}: kind ${JSON.stringify(c.kind)} is not one of ${[...BEHAVIOUR_KINDS].join('|')}` };
+      const shape = observedShapeProblem(c);
+      if (shape) return { ok: false, reason: `case ${c.case_id}: ${shape}` };
+      entries.push(c);
+    }
+    blocks++;
+  }
+  if (blocks === 0) return { ok: false, reason: 'no behaviour block in any receipt' };
+  const uncovered = [];
+  for (const id of ids) {
+    const app = entries.filter((e) => e.case_id === id && (e.source_id === undefined || e.source_id === row.source_id));
+    if (app.length === 0) { uncovered.push(id); continue; }
+    for (const e of app) {
+      const rs = Array.isArray(e.r_observed) ? e.r_observed : [e.r_observed];
+      const js = Array.isArray(e.julia_observed) ? e.julia_observed : [e.julia_observed];
+      for (let i = 0; i < rs.length; i++) {
+        const rc = canonicalLabel(e.kind, 'r', rs[i]);
+        const jc = canonicalLabel(e.kind, 'julia', js[i]);
+        if (rc !== jc) return { ok: false, reason: `case ${id} (${e.kind}): R ${JSON.stringify(rs[i])} vs Julia ${JSON.stringify(js[i])} differ after canonicalisation (${JSON.stringify(rc)} vs ${JSON.stringify(jc)})` };
+      }
+    }
+  }
+  if (uncovered.length) return { ok: false, reason: `case ids without an applicable behaviour entry: ${uncovered.join(',')}` };
+  if (notPassed !== null) return { ok: false, reason: `receipt did not pass: ${notPassed}` };
+  return { ok: true };
 }
 
 function isValidSha256(s) { return typeof s === 'string' && SHA256_RE.test(s); }
@@ -405,12 +574,14 @@ function report(tag, rows, pick) {
   const sel = pick ? rows.filter(pick) : rows;
   if (sel.length === 0) { console.log(`${tag} rows=0 EMPTY_SELECTION (vacuous; not a pass)`); return false; }
   const notDone = [];
+  let doneBehavioural = 0;
   for (const r of sel) {
     const ev = evaluateScoreboardRow(r);
     if (ev.fatal) die(`row ${r.id}: ${ev.reason}`);
     if (!ev.ok) notDone.push(`${r.id}:${ev.reason}`);
+    else if (r.status === 'EVIDENCED-BEHAVIOURAL') doneBehavioural++;
   }
-  console.log(`${tag} rows=${sel.length} done=${sel.length - notDone.length} not_done=${notDone.join(',') || 'none'}`);
+  console.log(`${tag} rows=${sel.length} done=${sel.length - notDone.length} not_done=${notDone.join(',') || 'none'} done_behavioural=${doneBehavioural}`);
   return notDone.length === 0;
 }
 
@@ -460,12 +631,13 @@ function checkC0() {
 function checkC1() {
   const rows = loadCasemap();
   const req = rows.filter((r) => ['required_core', 'compatibility_adapter'].includes(r.classification));
-  let bound = 0, free = 0, boundNumeric = 0, boundSigned = 0;
+  let bound = 0, free = 0, boundNumeric = 0, boundSigned = 0, boundBehavioural = 0;
   const unsigned = {};
   const registrationOnly = [];
   const numericLabelOnly = [];
   const notPassed = [];
   const diffMismatch = [];
+  const behaviouralLabelOnly = [];
   const dangling = [];
   const stale = [];
   for (const r of req) {
@@ -495,6 +667,12 @@ function checkC1() {
     // match ("registration") is a name match, and a missing tier is fail-closed as the same.
     // The label must also be backed by a numeric comparison block in the receipt (review of #561).
     if (caseIdsPresent && paths.length > 0) {
+      // Ruling 2 (itchyshin/GLLVModels.jl#684 item 2): a behavioural row binds on a matching `behaviour` block, counted apart from numeric.
+      if (isBehaviouralTier(r)) {
+        const bs = behaviouralReceiptStatus(r);
+        if (bs.ok) boundBehavioural++; else behaviouralLabelOnly.push(`${r.source_id}(${bs.reason})`);
+        continue;
+      }
       if (!isNumericTier(r)) { registrationOnly.push(r.source_id); continue; }
       const ns = numericReceiptStatus(r);
       if (ns.ok) { bound++; boundNumeric++; } else if (ns.kind === 'not_passed') {
@@ -507,8 +685,8 @@ function checkC1() {
     }
   }
   const nUnsigned = Object.values(unsigned).reduce((a, b) => a + b, 0);
-  console.log(`C1 required=${req.length} bound=${bound} bound_numeric=${boundNumeric} bound_registration_only=${registrationOnly.length} bound_signed=${boundSigned} free=${free} unsigned_or_blocked=${nUnsigned} ${JSON.stringify(unsigned)} dangling_receipts=${dangling.join(';') || 'none'} stale_carries=${stale.join(';') || 'none'} registration_only=${registrationOnly.join(';') || 'none'} numeric_label_without_numeric_receipt=${numericLabelOnly.join(';') || 'none'} numeric_receipt_not_passed=${notPassed.join(';') || 'none'} numeric_recorded_diff_mismatch=${diffMismatch.join(';') || 'none'}`);
-  return req.length > 0 && nUnsigned === 0 && free === 0 && dangling.length === 0 && stale.length === 0 && registrationOnly.length === 0 && numericLabelOnly.length === 0 && notPassed.length === 0 && diffMismatch.length === 0;
+  console.log(`C1 required=${req.length} bound=${bound} bound_numeric=${boundNumeric} bound_registration_only=${registrationOnly.length} bound_signed=${boundSigned} free=${free} unsigned_or_blocked=${nUnsigned} ${JSON.stringify(unsigned)} dangling_receipts=${dangling.join(';') || 'none'} stale_carries=${stale.join(';') || 'none'} registration_only=${registrationOnly.join(';') || 'none'} numeric_label_without_numeric_receipt=${numericLabelOnly.join(';') || 'none'} numeric_receipt_not_passed=${notPassed.join(';') || 'none'} numeric_recorded_diff_mismatch=${diffMismatch.join(';') || 'none'} bound_behavioural=${boundBehavioural} behavioural_label_without_behavioural_receipt=${behaviouralLabelOnly.join(';') || 'none'}`);
+  return req.length > 0 && nUnsigned === 0 && free === 0 && dangling.length === 0 && stale.length === 0 && registrationOnly.length === 0 && numericLabelOnly.length === 0 && notPassed.length === 0 && diffMismatch.length === 0 && behaviouralLabelOnly.length === 0;
 }
 
 // --- C2..C5: scoreboard tiers, plus C2's boundary-capability cross-check --
@@ -546,8 +724,27 @@ function checkC6() {
   try { items = JSON.parse(j); } catch (e) { die(`${PATHS.reverseGap} is not valid JSON: ${e.message}`); }
   if (!Array.isArray(items) || items.length === 0) { console.log('C6 items=0 EMPTY_SELECTION (vacuous; not a pass)'); return false; }
   const invalid = items.filter((it) => !C6_DECISION_VOCAB.has(it.decision)).map((it) => `${it.source_id || it.name || '?'}:${JSON.stringify(it.decision)}`);
-  console.log(`C6 items=${items.length} invalid_decision=${invalid.join(',') || 'none'} (vocabulary: ${[...C6_DECISION_VOCAB].join('|')})`);
-  return invalid.length === 0;
+  // Ruling 3 (itchyshin/GLLVModels.jl#684 item 3): a decided item needs a written basis and a
+  // ruling {ref, signed_by, signed_on} whose signer and date pass the signature rule. The tool
+  // cannot check that the named person signed (PR review does), but it refuses an item with no
+  // basis, no ruling reference, or a signer outside the allow-list.
+  const unsignedDecision = [];
+  const counts = Object.fromEntries([...C6_DECISION_VOCAB].map((d) => [d, 0]));
+  for (const it of items) {
+    if (!C6_DECISION_VOCAB.has(it.decision)) continue;
+    counts[it.decision]++;
+    const id = it.source_id || it.name || '?';
+    const rl = it.ruling;
+    const nonEmpty = (x) => typeof x === 'string' && x.trim().length > 0;
+    let why = null;
+    if (!nonEmpty(it.basis)) why = 'no basis';
+    else if (!rl || typeof rl !== 'object' || Array.isArray(rl)) why = 'no ruling';
+    else if (!nonEmpty(rl.ref)) why = 'ruling without a ref';
+    else why = signatureProblem(rl.signed_by, rl.signed_on);
+    if (why !== null) unsignedDecision.push(`${id}(${why})`);
+  }
+  console.log(`C6 items=${items.length} invalid_decision=${invalid.join(',') || 'none'} (vocabulary: ${[...C6_DECISION_VOCAB].join('|')}) unsigned_decision=${unsignedDecision.join(',') || 'none'} decision_counts=${Object.entries(counts).map(([d, n]) => `${d}:${n}`).join(',')}`);
+  return invalid.length === 0 && unsignedDecision.length === 0;
 }
 
 // --- C7: parity page states the exact "what parity does not mean" heading, pin-independent --
@@ -595,6 +792,13 @@ function checkC8() {
     const caseIdsPresent = Array.isArray(r.executable_case_ids) ? r.executable_case_ids.length > 0 : !!r.executable_case_ids;
     const twinned = caseIdsPresent && paths.length > 0;
     if (!twinned) { failing.push(`${r.source_id}:NOT_TWINNED_NOT_SIGNED`); continue; }
+    // Ruling 2: a behavioural row is twinned (behaviourally) when its receipts show the same
+    // refusal, route, error class or printed fields from both engines.
+    if (isBehaviouralTier(r)) {
+      const bs = behaviouralReceiptStatus(r);
+      if (!bs.ok) failing.push(`${r.source_id}:BEHAVIOURAL_LABEL_WITHOUT_BEHAVIOURAL_RECEIPT(${bs.reason})`);
+      continue;
+    }
     // A registration-only receipt is a name match, which never counts as a twin (D-295 row 5).
     if (!isNumericTier(r)) { failing.push(`${r.source_id}:REGISTRATION_ONLY_NOT_TWINNED`); continue; }
     // A "numeric" label without a numeric comparison block in the receipt is still a name match.

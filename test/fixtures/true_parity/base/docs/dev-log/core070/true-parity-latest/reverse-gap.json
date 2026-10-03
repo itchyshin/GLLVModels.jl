@@ -1,10 +1,22 @@
 [
  {
   "source_id": "SourceCovariance",
-  "decision": "KEPT_AS_JULIA_EXTRA"
+  "decision": "KEPT_AS_JULIA_EXTRA",
+  "basis": "fixture: documented Julia extra",
+  "ruling": {
+   "ref": "fixture ruling",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-02"
+  }
  },
  {
   "source_id": "TwoPartZI",
-  "decision": "KEPT_AS_JULIA_EXTRA"
+  "decision": "KEPT_AS_JULIA_EXTRA",
+  "basis": "fixture: documented Julia extra",
+  "ruling": {
+   "ref": "fixture ruling",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-02"
+  }
  }
 ]
