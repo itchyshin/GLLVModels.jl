@@ -24,7 +24,8 @@
   "data_sha256": "48fb0c500f961ee1dd8808d64d72cd5d4fd5f5354ca13b416be24b6818c0dc10",
   "data_file": "isdm.csv",
   "p": null,
-  "n": null
+  "n": null,
+  "data_committed_copy": "tools/true_parity/campaign/data/isdm.csv.gz"
  },
  "data_meta": {
   "cell": "isdm",
@@ -122,11 +123,12 @@
    "identical_deparse": true
   }
  ],
+ "cond_H_statement": "R cond(H) 719.015. Julia cond(H) NOT recorded for this row: the runner did not compute it.",
  "not_covered": [
   "One dataset and one seed per row: a spot check at this size, not a scaling study or a coverage study.",
   "Direct engines only (R TMB fit against a direct Julia fit); R's engine = 'julia' bridge route is not exercised.",
   "Julia starts from its own default start, never from R's coordinates; wall times include first-call Julia compilation.",
-  "cond(H) of the two engines is recorded but not compared (different parameter bases)."
+  "cond(H) of the two engines is recorded where computed but never compared (different parameter bases); see cond_H_statement for this receipt."
  ],
  "engines": {
   "R": {
@@ -312,7 +314,7 @@
     "max_abs_diff": 1.1181552182104593e-05,
     "tolerance": 0.0001,
     "tolerance_rule": "1e-4 absolute per b_fix, matched by name",
-    "tolerance_status": "PROPOSED in the campaign plan, approved by ruling 4",
+    "tolerance_status": "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer",
     "n_values": 60,
     "within_tolerance": true
    },
@@ -323,7 +325,7 @@
     "max_abs_diff": 7.691881574919956e-05,
     "tolerance": 1e-06,
     "tolerance_rule": "1e-6 absolute, fitted cells, link scale",
-    "tolerance_status": "PROPOSED in the campaign plan, approved by ruling 4",
+    "tolerance_status": "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer",
     "n_values": 20000,
     "within_tolerance": false
    },
@@ -334,7 +336,7 @@
     "max_abs_diff": 0.0001490010101150574,
     "tolerance": 1e-06,
     "tolerance_rule": "1e-6 absolute, fitted cells, response scale",
-    "tolerance_status": "PROPOSED in the campaign plan, approved by ruling 4",
+    "tolerance_status": "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer",
     "n_values": 20000,
     "within_tolerance": false
    },
@@ -345,7 +347,7 @@
     "max_abs_diff": 7.691881574919956e-05,
     "tolerance": 1e-06,
     "tolerance_rule": "1e-6 absolute, newdata with offset 0, link scale",
-    "tolerance_status": "PROPOSED in the campaign plan, approved by ruling 4",
+    "tolerance_status": "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer",
     "n_values": 20000,
     "within_tolerance": false
    },
@@ -356,7 +358,7 @@
     "max_abs_diff": 9.933400675521398e-05,
     "tolerance": 1e-06,
     "tolerance_rule": "1e-6 absolute, newdata with offset 0, response scale",
-    "tolerance_status": "PROPOSED in the campaign plan, approved by ruling 4",
+    "tolerance_status": "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer",
     "n_values": 20000,
     "within_tolerance": false
    }

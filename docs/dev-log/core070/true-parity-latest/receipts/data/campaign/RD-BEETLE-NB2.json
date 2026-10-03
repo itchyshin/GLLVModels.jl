@@ -6,7 +6,7 @@
  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
  "ruling": "itchyshin/GLLVModels.jl#684 item 4",
  "verdict": "FAIL",
- "row_status": "does not bind: R_pdHess_true; logLik: abs difference 9.08069e-06 > tolerance 1e-06; beta: abs difference 0.000287141 > tolerance 0.0001; LLt: abs difference 0.00463293 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000869455 > tolerance 1e-06",
+ "row_status": "does not bind: R_pdHess_true; engine_julia_bridge_route_and_eight_acceptance_classes_run; logLik: abs difference 9.08069e-06 > tolerance 1e-06; beta: abs difference 0.000287141 > tolerance 0.0001; LLt: abs difference 0.00463293 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000869455 > tolerance 1e-06",
  "pass_rule": {
   "rule": "both engines converged (R convergence 0 with a positive-definite Hessian; Julia converged true) and every listed quantity within tolerance",
   "legs": {
@@ -16,7 +16,8 @@
    "same_data_sha256": true,
    "gllvmTMB_deparse_identical_to_P1": true,
    "R_version_0_7_1_from_P1_library": true,
-   "every_quantity_within_tolerance": false
+   "every_quantity_within_tolerance": false,
+   "engine_julia_bridge_route_and_eight_acceptance_classes_run": false
   }
  },
  "cell": {
@@ -24,7 +25,8 @@
   "data_sha256": "1d7603ddceac61ea7179ed9519cb87bc5b7557ec1dd30f9267bd6224cd952c9b",
   "data_file": "beetle_wide.csv",
   "p": 68,
-  "n": 87
+  "n": 87,
+  "data_committed_copy": null
  },
  "data_meta": {
   "cell": "beetle",
@@ -118,11 +120,12 @@
    "identical_deparse": true
   }
  ],
+ "cond_H_statement": "R cond(H) 3.39302e+08. Julia cond(H) NOT recorded for this row: C4 quantities need no standard errors; the finite-difference Hessian at this size is the expensive step.",
  "not_covered": [
   "One dataset and one seed per row: a spot check at this size, not a scaling study or a coverage study.",
   "Direct engines only (R TMB fit against a direct Julia fit); R's engine = 'julia' bridge route is not exercised.",
   "Julia starts from its own default start, never from R's coordinates; wall times include first-call Julia compilation.",
-  "cond(H) of the two engines is recorded but not compared (different parameter bases)."
+  "cond(H) of the two engines is recorded where computed but never compared (different parameter bases); see cond_H_statement for this receipt."
  ],
  "engines": {
   "R": {
@@ -399,7 +402,7 @@
     "max_abs_diff": 0.00028714120128903176,
     "tolerance": 0.0001,
     "tolerance_rule": "1e-4 absolute per fixed-effect estimate",
-    "tolerance_status": "PROPOSED in the campaign plan, approved by ruling 4",
+    "tolerance_status": "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer",
     "n_values": 71,
     "within_tolerance": false
    },
@@ -410,7 +413,7 @@
     "max_abs_diff": 0.004632934295180746,
     "tolerance": 0.0001,
     "tolerance_rule": "1e-4 absolute per element of Lambda Lambda' (rotation and sign invariant)",
-    "tolerance_status": "PROPOSED in the campaign plan, approved by ruling 4",
+    "tolerance_status": "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer",
     "n_values": 4624,
     "within_tolerance": false
    },
@@ -421,7 +424,7 @@
     "max_abs_diff": 0.0008694545642065066,
     "tolerance": 1e-06,
     "tolerance_rule": "1e-6 absolute, link scale on the training data",
-    "tolerance_status": "PROPOSED in the campaign plan, approved by ruling 4",
+    "tolerance_status": "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer",
     "n_values": 5916,
     "within_tolerance": false
    }

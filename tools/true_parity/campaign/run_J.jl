@@ -128,6 +128,24 @@ elseif cell == "temporal"
     put!("wall_fit_sec", w); put!("converged", fit.converged); put!("logLik", fit.loglik); put!("iterations", fit.iterations)
     put!("stopping_reason", string(fit.stopping_reason)); put!("gradient_norm", fit.gradient_norm)
     put!("hessian_positive_definite", fit.hessian_positive_definite); put!("hessian_min_eigenvalue", fit.hessian_min_eigenvalue)
+    # The temporal fit stores only the Hessian's smallest eigenvalue. cond(H) is taken here from the SAME objective the fit
+    # minimises (internal functions, rebuilt from the same data) at the fit's own optimiser vector `fit.parameters`: the
+    # ForwardDiff Hessian of the negative log-likelihood in the optimiser's coordinates. Its smallest eigenvalue is
+    # recorded beside the fit's own, as a check that this is the same Hessian.
+    if DO_COND
+        try
+            yv = fl(cols["value"]); _, Xd, _ = GM._temporal_design(@formula(value ~ 0 + trait), tbl)
+            rowsT = GM._temporal_series_rows(fit.spec)
+            obj(t) = GM.temporal_marginal_nll(t, yv, Xd, fit.spec; series_rows = rowsT)
+            Hm, tH = timeit(() -> GM.ForwardDiff.hessian(obj, collect(Float64, fit.parameters)))
+            ev = eigvals(Symmetric((Hm .+ Hm') ./ 2))
+            put!("wall_hessian_sec", tH); put!("cond_H", all(isfinite, ev) && minimum(ev) > 0 ? maximum(ev) / minimum(ev) : NaN)
+            put!("cond_H_min_eigenvalue", minimum(ev)); put!("cond_H_max_eigenvalue", maximum(ev))
+            put!("cond_H_basis", "ForwardDiff Hessian of the negative log-likelihood at fit.parameters, optimiser coordinates")
+        catch e
+            put!("cond_H_error", first(sprint(showerror, e), 300))
+        end
+    end
     et = extract_temporal(fit)
     put!("temporal_phi", et.time.value); put!("temporal_phi_parameter", et.time.parameter)
     put!("temporal_loadings", collect(Float64, et.loadings[:, 1])); put!("temporal_loadings_traits", collect(String, fit.spec.traits))

@@ -6,7 +6,7 @@
  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
  "ruling": "itchyshin/GLLVModels.jl#684 item 4",
  "verdict": "FAIL",
- "row_status": "does not bind: beta: abs difference 0.000123933 > tolerance 0.0001; LLt: abs difference 0.000474438 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000328279 > tolerance 1e-06",
+ "row_status": "does not bind: engine_julia_bridge_route_and_eight_acceptance_classes_run; beta: abs difference 0.000123933 > tolerance 0.0001; LLt: abs difference 0.000474438 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000328279 > tolerance 1e-06",
  "pass_rule": {
   "rule": "both engines converged (R convergence 0 with a positive-definite Hessian; Julia converged true) and every listed quantity within tolerance",
   "legs": {
@@ -16,7 +16,8 @@
    "same_data_sha256": true,
    "gllvmTMB_deparse_identical_to_P1": true,
    "R_version_0_7_1_from_P1_library": true,
-   "every_quantity_within_tolerance": false
+   "every_quantity_within_tolerance": false,
+   "engine_julia_bridge_route_and_eight_acceptance_classes_run": false
   }
  },
  "cell": {
@@ -24,7 +25,8 @@
   "data_sha256": "498b84b93d2759785272cf33e7620f556033cb28c8a017596e146d6b5318b1bb",
   "data_file": "fungi_wide.csv",
   "p": 59,
-  "n": 300
+  "n": 300,
+  "data_committed_copy": null
  },
  "data_meta": {
   "cell": "fungi",
@@ -120,11 +122,12 @@
    "identical_deparse": true
   }
  ],
+ "cond_H_statement": "R cond(H) 27395.3. Julia cond(H) NOT recorded for this row: C4 quantities need no standard errors; the finite-difference Hessian at this size is the expensive step.",
  "not_covered": [
   "One dataset and one seed per row: a spot check at this size, not a scaling study or a coverage study.",
   "Direct engines only (R TMB fit against a direct Julia fit); R's engine = 'julia' bridge route is not exercised.",
   "Julia starts from its own default start, never from R's coordinates; wall times include first-call Julia compilation.",
-  "cond(H) of the two engines is recorded but not compared (different parameter bases)."
+  "cond(H) of the two engines is recorded where computed but never compared (different parameter bases); see cond_H_statement for this receipt."
  ],
  "engines": {
   "R": {
@@ -313,7 +316,7 @@
     "max_abs_diff": 0.000123932525228021,
     "tolerance": 0.0001,
     "tolerance_rule": "1e-4 absolute per fixed-effect estimate",
-    "tolerance_status": "PROPOSED in the campaign plan, approved by ruling 4",
+    "tolerance_status": "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer",
     "n_values": 62,
     "within_tolerance": false
    },
@@ -324,7 +327,7 @@
     "max_abs_diff": 0.00047443752671583184,
     "tolerance": 0.0001,
     "tolerance_rule": "1e-4 absolute per element of Lambda Lambda' (rotation and sign invariant)",
-    "tolerance_status": "PROPOSED in the campaign plan, approved by ruling 4",
+    "tolerance_status": "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer",
     "n_values": 3481,
     "within_tolerance": false
    },
@@ -335,7 +338,7 @@
     "max_abs_diff": 0.00032827901245191526,
     "tolerance": 1e-06,
     "tolerance_rule": "1e-6 absolute, link scale on the training data",
-    "tolerance_status": "PROPOSED in the campaign plan, approved by ruling 4",
+    "tolerance_status": "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer",
     "n_values": 17700,
     "within_tolerance": false
    }

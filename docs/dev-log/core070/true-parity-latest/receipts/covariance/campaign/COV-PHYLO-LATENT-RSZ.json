@@ -24,6 +24,7 @@
   "data_file_sha256": "f3bace851f60f337a8274859644135a84792b9e9ab35c07f757a7ade336706d4"
  },
  "what_this_is": "R values are the tracked P1 R receipt of PR #547 (fitted once at P1 and kept). The Julia fit is NEW: fit_phylo_latent_gllvm on the same literal fixture at the commit above. The #547 Julia receipt recorded converged = false (gradient stall); current main converges, and this receipt uses the current fit.",
+ "julia_script": "tools/phylo_latent/compare_phylo_latent_p1.jl, command: julia --project=. tools/phylo_latent/compare_phylo_latent_p1.jl fit cov_phylo_latent_rsz docs/dev-log/core070/phylo-latent-p1/a15-fixture.json <out>/phylo_J.json (output committed as raw/phylo_J.json.gz)",
  "not_covered": [
   "One dataset and one seed per row: a spot check at this size, not a scaling study or a coverage study.",
   "R was not re-run: its values are the PR #547 receipt's.",
@@ -883,7 +884,7 @@
     "max_abs_diff": 4.352562274601013e-06,
     "tolerance": 0.0001,
     "tolerance_rule": "1e-4 absolute per element of Sigma_phy (A15 receipt: relative 1e-4)",
-    "tolerance_status": "PROPOSED in the campaign plan, approved by ruling 4",
+    "tolerance_status": "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer",
     "n_values": 400,
     "within_tolerance": true
    }

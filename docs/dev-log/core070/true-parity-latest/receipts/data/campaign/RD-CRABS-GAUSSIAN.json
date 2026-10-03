@@ -5,8 +5,8 @@
  "pin": "P1",
  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
  "ruling": "itchyshin/GLLVModels.jl#684 item 4",
- "verdict": "PASS",
- "row_status": "binds: the plan's pass rule holds on both engines",
+ "verdict": "NUMERIC_PASS_NOT_BINDING",
+ "row_status": "does not bind: engine_julia_bridge_route_and_eight_acceptance_classes_run",
  "pass_rule": {
   "rule": "both engines converged (R convergence 0 with a positive-definite Hessian; Julia converged true) and every listed quantity within tolerance",
   "legs": {
@@ -16,7 +16,8 @@
    "same_data_sha256": true,
    "gllvmTMB_deparse_identical_to_P1": true,
    "R_version_0_7_1_from_P1_library": true,
-   "every_quantity_within_tolerance": true
+   "every_quantity_within_tolerance": true,
+   "engine_julia_bridge_route_and_eight_acceptance_classes_run": false
   }
  },
  "cell": {
@@ -24,7 +25,8 @@
   "data_sha256": "fe1fd47c7f864cc5496c9d72e4d1cd095ef99d9e44c1101e2fbdeace4254dea3",
   "data_file": "crabs.csv",
   "p": 5,
-  "n": 200
+  "n": 200,
+  "data_committed_copy": null
  },
  "data_meta": {
   "cell": "crabs",
@@ -118,11 +120,12 @@
    "identical_deparse": true
   }
  ],
+ "cond_H_statement": "R cond(H) 5898.2. Julia cond(H) 1737.27.",
  "not_covered": [
   "One dataset and one seed per row: a spot check at this size, not a scaling study or a coverage study.",
   "Direct engines only (R TMB fit against a direct Julia fit); R's engine = 'julia' bridge route is not exercised.",
   "Julia starts from its own default start, never from R's coordinates; wall times include first-call Julia compilation.",
-  "cond(H) of the two engines is recorded but not compared (different parameter bases)."
+  "cond(H) of the two engines is recorded where computed but never compared (different parameter bases); see cond_H_statement for this receipt."
  ],
  "engines": {
   "R": {
@@ -227,7 +230,7 @@
     "max_abs_diff": 5.734798325107704e-08,
     "tolerance": 0.0001,
     "tolerance_rule": "1e-4 absolute per fixed-effect estimate",
-    "tolerance_status": "PROPOSED in the campaign plan, approved by ruling 4",
+    "tolerance_status": "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer",
     "n_values": 20,
     "within_tolerance": true
    },
@@ -292,7 +295,7 @@
     "max_abs_diff": 1.4340849061461602e-06,
     "tolerance": 0.0001,
     "tolerance_rule": "1e-4 absolute per element of Lambda Lambda' (rotation and sign invariant)",
-    "tolerance_status": "PROPOSED in the campaign plan, approved by ruling 4",
+    "tolerance_status": "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer",
     "n_values": 25,
     "within_tolerance": true
    },
@@ -303,7 +306,7 @@
     "max_abs_diff": 1.6242267664168253e-07,
     "tolerance": 1e-06,
     "tolerance_rule": "1e-6 absolute, link scale on the training data",
-    "tolerance_status": "PROPOSED in the campaign plan, approved by ruling 4",
+    "tolerance_status": "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer",
     "n_values": 1000,
     "within_tolerance": true
    }

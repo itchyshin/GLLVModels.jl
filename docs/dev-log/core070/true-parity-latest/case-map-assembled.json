@@ -11,22 +11,22 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-covariance.json",
-   "sha256": "bf75172352f9ffe290621ae47072f4875ef7573daab6efe6cec641ec702b4c47",
+   "sha256": "cd0b57eefac4c043541c75012c109196b746e9a81f8d1c0d923c19da12ca22dc",
    "rows": 19
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-data.json",
-   "sha256": "1a2f6452a97d3542763c9cb387bb9c99216d81349e930657b4a8906906255a20",
+   "sha256": "3915ed00cacd53bbaccdaf515e4eee5d4b40d752db4d46de48c6c605cc2bf6d4",
    "rows": 36
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-family.json",
-   "sha256": "bde97330350c87931773bfc95e45d76f83a0c07d8853e963bca8e87ae8a4a740",
+   "sha256": "537991192134fd7aef08d7e065c61d5b3063efde3d63513b88493dd6a82db6fc",
    "rows": 26
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-fit-input.json",
-   "sha256": "3847038ebc28b48db31f9c1b04818c59f0b41649bb01c5994c6fb3873efe91a8",
+   "sha256": "568c054ed5f3786b96c9acb796e28d98e4523c4edc5fe5ad9f69ab150cee3639",
    "rows": 10
   },
   {
@@ -1539,7 +1539,7 @@
     "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/campaign/COV-PHYLO-LATENT-RSZ.json"
     ],
-    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule of the C3 to C5 campaign plan, approved by itchyshin/GLLVModels.jl#684 item 4)"
+    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
    },
    "measured_result": {
     "verdict": "PASS",
@@ -1571,7 +1571,7 @@
     "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/campaign/COV-TEMPORAL-RSZ.json"
     ],
-    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule of the C3 to C5 campaign plan, approved by itchyshin/GLLVModels.jl#684 item 4)"
+    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
    },
    "measured_result": {
     "verdict": "PASS",
@@ -2680,7 +2680,7 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-URBANISATION-BINOMIAL.json"
     ],
-    "tier": "measured, does not bind: beta: abs difference 0.000231344 > tolerance 0.0001; LLt: abs difference 0.00164848 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000821878 > tolerance 1e-06"
+    "tier": "measured, does not bind: engine_julia_bridge_route_and_eight_acceptance_classes_run; beta: abs difference 0.000231344 > tolerance 0.0001; LLt: abs difference 0.00164848 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000821878 > tolerance 1e-06"
    },
    "measured_result": {
     "verdict": "FAIL",
@@ -2711,16 +2711,16 @@
     "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-ETA"
    ],
    "disposition": null,
-   "evidence_tier": "numeric",
+   "evidence_tier": "numeric_fail",
    "measured_against": "P1",
    "evidence": {
-    "receipt": [
+    "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-CRABS-GAUSSIAN.json"
     ],
-    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule of the C3 to C5 campaign plan, approved by itchyshin/GLLVModels.jl#684 item 4)"
+    "tier": "measured, does not bind: engine_julia_bridge_route_and_eight_acceptance_classes_run"
    },
    "measured_result": {
-    "verdict": "PASS",
+    "verdict": "NUMERIC_PASS_NOT_BINDING",
     "max_abs_diff_by_case": {
      "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LOGLIK": 5.8479827202972956e-08,
      "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-BETA": 5.734798325107704e-08,
@@ -2754,7 +2754,7 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-SPIDER-NB2.json"
     ],
-    "tier": "measured, does not bind: logLik: abs difference 1.45732e-06 > tolerance 1e-06; LLt: abs difference 0.000161728 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 6.73994e-05 > tolerance 1e-06"
+    "tier": "measured, does not bind: engine_julia_bridge_route_and_eight_acceptance_classes_run; logLik: abs difference 1.45732e-06 > tolerance 1e-06; LLt: abs difference 0.000161728 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 6.73994e-05 > tolerance 1e-06"
    },
    "measured_result": {
     "verdict": "FAIL",
@@ -2791,7 +2791,7 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-BEETLE-NB2.json"
     ],
-    "tier": "measured, does not bind: R_pdHess_true; logLik: abs difference 9.08069e-06 > tolerance 1e-06; beta: abs difference 0.000287141 > tolerance 0.0001; LLt: abs difference 0.00463293 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000869455 > tolerance 1e-06"
+    "tier": "measured, does not bind: R_pdHess_true; engine_julia_bridge_route_and_eight_acceptance_classes_run; logLik: abs difference 9.08069e-06 > tolerance 1e-06; beta: abs difference 0.000287141 > tolerance 0.0001; LLt: abs difference 0.00463293 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000869455 > tolerance 1e-06"
    },
    "measured_result": {
     "verdict": "FAIL",
@@ -2828,7 +2828,7 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-FUNGI-BINOMIAL.json"
     ],
-    "tier": "measured, does not bind: beta: abs difference 0.000123933 > tolerance 0.0001; LLt: abs difference 0.000474438 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000328279 > tolerance 1e-06"
+    "tier": "measured, does not bind: engine_julia_bridge_route_and_eight_acceptance_classes_run; beta: abs difference 0.000123933 > tolerance 0.0001; LLt: abs difference 0.000474438 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000328279 > tolerance 1e-06"
    },
    "measured_result": {
     "verdict": "FAIL",
@@ -2849,7 +2849,7 @@
   },
   {
    "source_id": "data/RD-PHYLO-DISPOSITION",
-   "classification": "outside_boundary",
+   "classification": "required_core",
    "arc": "campaign-C4",
    "clause": "C4",
    "executable_case_ids": [],
@@ -2862,14 +2862,13 @@
    "proposed_disposition": {
     "capability": "phylo-structured real data",
     "text": "gllvm::fungi ships a phylogeny (fungi$tree), so a real phylo workflow exists. Blocked at the bridge gate GJL-GATE-STRUCTURED-TERMS until gllvmTMB #1236 (A4a) lands; revisit at P2.",
-    "status": "PROPOSED, UNSIGNED: the campaign plan says each of these three rows needs the maintainer's own signature, and itchyshin/GLLVModels.jl#684 does not quote them",
-    "draft_signature": "Proposed disposition outside_boundary until P2: real-data phylo needs the structured-term bridge route (gllvmTMB #1236). signed_by: Shinichi Nakagawa; signed_on: <date you sign>."
+    "status": "PROPOSED, UNSIGNED: the campaign plan says each of these three rows needs the maintainer's own signature, and itchyshin/GLLVModels.jl#684 does not quote them"
    },
    "ruling": "itchyshin/GLLVModels.jl#684 item 4 (row added); disposition itself unsigned"
   },
   {
    "source_id": "data/RD-TEMPORAL-DISPOSITION",
-   "classification": "outside_boundary",
+   "classification": "required_core",
    "arc": "campaign-C4",
    "clause": "C4",
    "executable_case_ids": [],
@@ -2882,14 +2881,13 @@
    "proposed_disposition": {
     "capability": "temporal real data",
     "text": "None of gllvm, vegan, MASS, ape ships a multivariate ecological time series the plan would call a real workflow; no bridge route for temporal at P1 (D-296).",
-    "status": "PROPOSED, UNSIGNED: the campaign plan says each of these three rows needs the maintainer's own signature, and itchyshin/GLLVModels.jl#684 does not quote them",
-    "draft_signature": "Proposed disposition outside_boundary at P1: no real temporal dataset in the checked packages and no bridge route (D-296). signed_by: Shinichi Nakagawa; signed_on: <date you sign>."
+    "status": "PROPOSED, UNSIGNED: the campaign plan says each of these three rows needs the maintainer's own signature, and itchyshin/GLLVModels.jl#684 does not quote them"
    },
    "ruling": "itchyshin/GLLVModels.jl#684 item 4 (row added); disposition itself unsigned"
   },
   {
    "source_id": "data/RD-ISDM-DISPOSITION",
-   "classification": "outside_boundary",
+   "classification": "required_core",
    "arc": "campaign-C4",
    "clause": "C4",
    "executable_case_ids": [],
@@ -2902,8 +2900,7 @@
    "proposed_disposition": {
     "capability": "integrated SDM real data",
     "text": "No real multi-source dataset in the packages checked; no bridge route for iSDM at P1 (D-296, D-300 row 1c-5).",
-    "status": "PROPOSED, UNSIGNED: the campaign plan says each of these three rows needs the maintainer's own signature, and itchyshin/GLLVModels.jl#684 does not quote them",
-    "draft_signature": "Proposed disposition outside_boundary at P1: no real multi-source dataset available and no bridge route (D-296, D-300 row 1c-5). signed_by: Shinichi Nakagawa; signed_on: <date you sign>."
+    "status": "PROPOSED, UNSIGNED: the campaign plan says each of these three rows needs the maintainer's own signature, and itchyshin/GLLVModels.jl#684 does not quote them"
    },
    "ruling": "itchyshin/GLLVModels.jl#684 item 4 (row added); disposition itself unsigned"
   },
@@ -3786,7 +3783,7 @@
     "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/family/campaign/GAUSSIAN-IDENTITY-RSZ.json"
     ],
-    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule of the C3 to C5 campaign plan, approved by itchyshin/GLLVModels.jl#684 item 4)"
+    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
    },
    "measured_result": {
     "verdict": "PASS",
@@ -3823,7 +3820,7 @@
     "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/family/campaign/POISSON-LOG-RSZ.json"
     ],
-    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule of the C3 to C5 campaign plan, approved by itchyshin/GLLVModels.jl#684 item 4)"
+    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
    },
    "measured_result": {
     "verdict": "PASS",
@@ -3861,7 +3858,7 @@
     "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/family/campaign/NB2-LOG-RSZ.json"
     ],
-    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule of the C3 to C5 campaign plan, approved by itchyshin/GLLVModels.jl#684 item 4)"
+    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
    },
    "measured_result": {
     "verdict": "PASS",
@@ -3900,7 +3897,7 @@
     "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/family/campaign/BINOMIAL-LOGIT-RSZ.json"
     ],
-    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule of the C3 to C5 campaign plan, approved by itchyshin/GLLVModels.jl#684 item 4)"
+    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
    },
    "measured_result": {
     "verdict": "PASS",
@@ -4209,7 +4206,7 @@
     "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/fit-input/campaign/GRP-UNIT.json"
     ],
-    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule of the C3 to C5 campaign plan, approved by itchyshin/GLLVModels.jl#684 item 4)"
+    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
    },
    "measured_result": {
     "verdict": "PASS",
@@ -4237,7 +4234,7 @@
     "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/fit-input/campaign/GRP-UNIT-OBS.json"
     ],
-    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule of the C3 to C5 campaign plan, approved by itchyshin/GLLVModels.jl#684 item 4)"
+    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
    },
    "measured_result": {
     "verdict": "PASS",
@@ -4265,7 +4262,7 @@
     "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/fit-input/campaign/GRP-CLUSTER.json"
     ],
-    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule of the C3 to C5 campaign plan, approved by itchyshin/GLLVModels.jl#684 item 4)"
+    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
    },
    "measured_result": {
     "verdict": "PASS",
@@ -4293,7 +4290,7 @@
     "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/fit-input/campaign/GRP-CLUSTER2.json"
     ],
-    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule of the C3 to C5 campaign plan, approved by itchyshin/GLLVModels.jl#684 item 4)"
+    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
    },
    "measured_result": {
     "verdict": "PASS",

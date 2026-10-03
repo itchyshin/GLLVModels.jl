@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Write the true-parity campaign receipts (C3, C4, C5) from RAW engine outputs, and the case-map rows.
 
-Signed itchyshin/GLLVModels.jl#684 item 4 (never cite it as a bare number). This script is the only
+Ruling itchyshin/GLLVModels.jl#684 item 4 (never cite it as a bare number) adds the rows proposed in PR #650 and
+runs the campaign. It does not quote that plan's tolerances, pass rule, row placement or licence handling: they are
+carried here AS PROPOSED in PR #650 and still wait for the maintainer's confirmation. This script is the only
 thing that writes the campaign receipts and the 20 campaign case-map rows: nothing is typed by hand,
 and no value is invented. It reads
 
@@ -15,24 +17,26 @@ Julia fit on the same literal fixture), and the merged PR #593 grouping receipts
   receipts/<family>/campaign/raw/*.gz       the raw outputs the receipt was built from (gzip)
   case-map-<family>.json                    the row, appended or (by source_id) replaced; nothing else touched
 
-Pass rule (campaign plan section 1.1, approved by ruling 4): BOTH engines converged (R convergence 0
+Pass rule (campaign plan section 1.1, as PROPOSED in PR #650): BOTH engines converged (R convergence 0
 with a positive-definite Hessian; Julia `converged` true; iSDM also every cell converged) AND every
 listed quantity is within its tolerance AND both engines read the same data bytes AND every gllvmTMB
-function used deparses identically to its P1 source. A row that meets it binds (evidence_tier "numeric",
-evidence.receipt). Otherwise the receipt is cited as non-binding with the reason and the row is left
+function used deparses identically to its P1 source. A C4 row also needs the engine = "julia" bridge route and
+the plan's eight acceptance classes to have been run (plan section 1.3); neither was, so no C4 row binds yet.
+A row that meets the whole rule binds (evidence_tier "numeric", evidence.receipt). Otherwise the receipt is cited as non-binding with the reason and the row is left
 unbound; no tolerance is widened and nothing is re-run to get a pass.
 
 A relative tolerance is recorded as a discrepancy statistic against zero (r_value = 0, julia_value =
 |J - R| / |R| per element), because the checker compares absolute differences; the raw R and Julia
 vectors are stored beside it. Vectors of 1000+ values (linear predictors) carry max_abs_diff only, with
-the raw files committed (gzip) so this script's --check re-derives them.
+the raw files committed (gzip). `--check` rebuilds every receipt's comparison block, pass-rule legs, verdict and
+engine blocks, and every campaign case-map row, from those committed raw files and fails on any difference.
 
 Usage:
   python3 write_receipts.py --raw DIR [--apply]       # default: print what would be written
-  python3 write_receipts.py --check                   # re-derive every campaign receipt from the committed raw files
+  python3 write_receipts.py --check                   # rebuild every campaign receipt and row from the committed raw files; fail on drift
 """
 from __future__ import annotations
-import argparse, gzip, hashlib, json, math, os, subprocess, sys, tomllib
+import argparse, gzip, hashlib, json, math, os, subprocess, sys, tempfile, tomllib
 from collections import OrderedDict
 from pathlib import Path
 
@@ -111,7 +115,7 @@ def orient(v):
 
 # ---- row specifications -------------------------------------------------------------------------
 TW = "twin: 1e-6 absolute on logLik, as the P0 worst case (2.3e-7) and every P1 twin"
-PR = "PROPOSED in the campaign plan, approved by ruling 4"
+PR = "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer"
 LL = ("logLik", 1e-6, "1e-6 absolute on the marginal log-likelihood", TW)
 BETA = ("beta", 1e-4, "1e-4 absolute per fixed-effect estimate", PR)
 SE = ("beta_se", 1e-3, "1e-3 relative per standard error of a fixed effect (R sdreport vs Julia Wald)", PR)
@@ -144,23 +148,18 @@ DISPOSITIONS = {
     "data/RD-PHYLO-DISPOSITION": dict(
         capability="phylo-structured real data",
         text="gllvm::fungi ships a phylogeny (fungi$tree), so a real phylo workflow exists. Blocked at the bridge gate "
-             "GJL-GATE-STRUCTURED-TERMS until gllvmTMB #1236 (A4a) lands; revisit at P2.",
-        draft="Proposed disposition outside_boundary until P2: real-data phylo needs the structured-term bridge route (gllvmTMB #1236). "
-              "signed_by: Shinichi Nakagawa; signed_on: <date you sign>."),
+             "GJL-GATE-STRUCTURED-TERMS until gllvmTMB #1236 (A4a) lands; revisit at P2."),
     "data/RD-TEMPORAL-DISPOSITION": dict(
         capability="temporal real data",
         text="None of gllvm, vegan, MASS, ape ships a multivariate ecological time series the plan would call a real workflow; "
-             "no bridge route for temporal at P1 (D-296).",
-        draft="Proposed disposition outside_boundary at P1: no real temporal dataset in the checked packages and no bridge route (D-296). "
-              "signed_by: Shinichi Nakagawa; signed_on: <date you sign>."),
+             "no bridge route for temporal at P1 (D-296)."),
     "data/RD-ISDM-DISPOSITION": dict(
         capability="integrated SDM real data",
-        text="No real multi-source dataset in the packages checked; no bridge route for iSDM at P1 (D-296, D-300 row 1c-5).",
-        draft="Proposed disposition outside_boundary at P1: no real multi-source dataset available and no bridge route (D-296, D-300 row 1c-5). "
-              "signed_by: Shinichi Nakagawa; signed_on: <date you sign>."),
+        text="No real multi-source dataset in the packages checked; no bridge route for iSDM at P1 (D-296, D-300 row 1c-5)."),
 }
 C5 = [("fit-input/GRP-UNIT", "unit"), ("fit-input/GRP-UNIT-OBS", "unit_obs"), ("fit-input/GRP-CLUSTER", "cluster"), ("fit-input/GRP-CLUSTER2", "cluster2")]
 CAMPAIGN_DIR = "campaign"
+SYNTH = ("gaussian", "poisson", "nb2", "binomial", "ordinal", "temporal", "isdm")   # synthetic cells: data committed under campaign/data/
 COVS = {"spider": ["ConWate", "BareSand", "CovMoss"], "beetle": ["pH", "Moist", "Org"], "fungi": ["TEMPR", "PRECIP", "logAREA"]}
 
 
@@ -250,6 +249,16 @@ def pass_rule(R, J, cases):
     return legs
 
 
+BRIDGE_LEG = "engine_julia_bridge_route_and_eight_acceptance_classes_run"
+
+
+def add_c4_leg(legs, clause):
+    """C4 (GATES.md; plan section 1.3): a real-data workflow runs through engine = "julia" and passes the eight acceptance
+    classes. This campaign compared direct engines only, so no C4 row can satisfy the leg yet."""
+    if clause == "C4": legs[BRIDGE_LEG] = False
+    return legs
+
+
 def reasons(legs, cases):
     out = [k for k, v in legs.items() if not v and k != "every_quantity_within_tolerance"]
     for c in cases:
@@ -317,7 +326,9 @@ def build_receipt(sid, cell, clause, cases, legs, eng_r, eng_j, extra, raw_refs,
     rcpt["schema"] = SCHEMA
     rcpt["source_id"] = sid; rcpt["clause"] = clause
     rcpt["pin"] = "P1"; rcpt["reference_commit"] = P1; rcpt["ruling"] = RULING
-    rcpt["verdict"] = "PASS" if binds else "FAIL"
+    # a row whose numbers all pass but whose C4 bridge leg is open is recorded as measured, not as FAIL and not as PASS
+    only_bridge = not binds and all(v for k, v in legs.items() if k != BRIDGE_LEG)
+    rcpt["verdict"] = "PASS" if binds else ("NUMERIC_PASS_NOT_BINDING" if only_bridge else "FAIL")
     why = extra.pop("reasons", [])
     rcpt["row_status"] = "binds: the plan's pass rule holds on both engines" if binds else "does not bind: " + "; ".join(why)
     rcpt["pass_rule"] = OrderedDict(rule="both engines converged (R convergence 0 with a positive-definite Hessian; Julia converged true) and every listed quantity within tolerance",
@@ -333,8 +344,20 @@ NOT_COVERED_COMMON = [
     "One dataset and one seed per row: a spot check at this size, not a scaling study or a coverage study.",
     "Direct engines only (R TMB fit against a direct Julia fit); R's engine = 'julia' bridge route is not exercised.",
     "Julia starts from its own default start, never from R's coordinates; wall times include first-call Julia compilation.",
-    "cond(H) of the two engines is recorded but not compared (different parameter bases).",
+    "cond(H) of the two engines is recorded where computed but never compared (different parameter bases); see cond_H_statement for this receipt.",
 ]
+
+
+def cond_statement(R, J):
+    """Say plainly, per receipt, where each engine's cond(H) is and is not recorded."""
+    rc = R.get("cond_H"); jc = J.get("cond_H")
+    out = [f"R cond(H) {rc:.6g}." if isinstance(rc, (int, float)) and math.isfinite(rc) else "R cond(H) not recorded."]
+    if isinstance(jc, (int, float)) and math.isfinite(jc): out.append(f"Julia cond(H) {jc:.6g}.")
+    else:
+        why = J.get("cond_H_error") or J.get("ci_skipped") or J.get("confint_error")
+        if isinstance(jc, float): why = why or "the Hessian is not positive definite or not finite, so cond(H) is NaN"
+        out.append("Julia cond(H) NOT recorded for this row: " + (why or "the runner did not compute it") + ".")
+    return " ".join(out)
 
 
 
@@ -365,6 +388,8 @@ def run_context(raw, cell):
     if st: ctx["driver_start"] = st.strip().splitlines()
     if en: ctx["driver_end"] = en.strip().splitlines()
     ctx["jobs"] = [l for l in jl.splitlines() if l.split()[1:2] == [cell]]
+    rr = read_text(base / "run" / f"rerun_{cell}.txt")
+    if rr: ctx["rerun"] = rr.strip().splitlines()
     ctx["caps"] = "at most 8 concurrent jobs, OPENBLAS_NUM_THREADS=1, JULIA_NUM_THREADS=2, R single-threaded; each job under timeout at twice its written estimate"
     return ctx
 
@@ -404,6 +429,7 @@ def process(raw, out_root, apply):
                                  data_file_sha256=rr["data_file_sha256"]),
                 what_this_is="R values are the tracked P1 R receipt of PR #547 (fitted once at P1 and kept). The Julia fit is NEW: fit_phylo_latent_gllvm on the same literal fixture at the commit above. "
                              "The #547 Julia receipt recorded converged = false (gradient stall); current main converges, and this receipt uses the current fit.",
+                julia_script="tools/phylo_latent/compare_phylo_latent_p1.jl, command: julia --project=. tools/phylo_latent/compare_phylo_latent_p1.jl fit cov_phylo_latent_rsz docs/dev-log/core070/phylo-latent-p1/a15-fixture.json <out>/phylo_J.json (output committed as raw/phylo_J.json.gz)",
                 reasons=reasons(ph["legs"], ph["cases"]),
                 not_covered=NOT_COVERED_COMMON[:1] + ["R was not re-run: its values are the PR #547 receipt's.", "cond(H) (R 83030, Julia 82761 here) is recorded, not compared."])
             rc = build_receipt(sid, cell, clause, ph["cases"], ph["legs"], eng_r, eng_j, extra, dict(note=str(jgz.relative_to(out_root)), hashes=hashes), binds)
@@ -415,7 +441,7 @@ def process(raw, out_root, apply):
         R, J = load_r(rp), load_j(jp)
         if not J.get("DONE"): print(f"skip {sid}: Julia run not finished"); continue
         cases = cases_for(sid, cell, clause, quants, R, J)
-        legs = pass_rule(R, J, cases); binds = all(legs.values())
+        legs = add_c4_leg(pass_rule(R, J, cases), clause); binds = all(legs.values())
         eng_r, eng_j = engine_blocks(cell, R, J)
         rdir = camp / fam / CAMPAIGN_DIR
         hashes = OrderedDict()
@@ -425,10 +451,12 @@ def process(raw, out_root, apply):
             hashes[str(dst.relative_to(out_root)) + " (uncompressed sha256)"] = sha_file(src)
         extra = OrderedDict(
             cell=OrderedDict((k, R.get(k)) for k in ("formula",)) | OrderedDict(data_sha256=R["data_sha256"], data_file=J.get("data_file"),
-                              p=J.get("p"), n=J.get("n")),
+                              p=J.get("p"), n=J.get("n"),
+                              data_committed_copy=(f"tools/true_parity/campaign/data/{cell}.csv.gz" if cell in SYNTH else None)),
             data_meta=data_meta(raw, cell), run=run_context(raw, cell),
             engine_messages=OrderedDict(R=trim_log(read_text(Path(raw) / "logs" / f"R_{cell}.log")), julia=trim_log(read_text(Path(raw) / "logs" / f"J_{cell}.log"))),
             p1_source_sha256=R["p1_source_sha256"], gllvmTMB_deparse_check=R["deparse_check"],
+            cond_H_statement=cond_statement(R, J),
             reasons=reasons(legs, cases), not_covered=NOT_COVERED_COMMON)
         rc = build_receipt(sid, cell, clause, cases, legs, eng_r, eng_j, extra, dict(note=f"receipts/{fam}/{CAMPAIGN_DIR}/raw/{cell}_*.gz", hashes=hashes), binds)
         results.append((sid, fam, clause, rc, binds, rdir / f"{slug(sid)}.json"))
@@ -486,7 +514,7 @@ def row_for(sid, clause, rc, binds, rel_receipt):
     ev = OrderedDict()
     if binds:
         ev["receipt"] = [rel_receipt]
-        ev["tier"] = "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule of the C3 to C5 campaign plan, approved by itchyshin/GLLVModels.jl#684 item 4)"
+        ev["tier"] = "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
     else:
         ev["non_binding_receipts"] = [rel_receipt]
         ev["tier"] = "measured, does not bind: " + rc["row_status"].replace("does not bind: ", "")
@@ -501,7 +529,7 @@ def row_for(sid, clause, rc, binds, rel_receipt):
 def disposition_row(sid, d):
     row = OrderedDict()
     row["source_id"] = sid
-    row["classification"] = "outside_boundary"
+    row["classification"] = "required_core"   # the classification is the maintainer's to change; unsigned, the row stays required
     row["arc"] = "campaign-C4"; row["clause"] = "C4"
     row["executable_case_ids"] = []
     row["disposition"] = None
@@ -509,8 +537,7 @@ def disposition_row(sid, d):
     row["measured_against"] = "P1"
     row["evidence"] = OrderedDict(tier="no measurement: this row awaits the maintainer's own signed disposition; nothing is signed here")
     row["proposed_disposition"] = OrderedDict(capability=d["capability"], text=d["text"],
-        status="PROPOSED, UNSIGNED: the campaign plan says each of these three rows needs the maintainer's own signature, and itchyshin/GLLVModels.jl#684 does not quote them",
-        draft_signature=d["draft"])
+        status="PROPOSED, UNSIGNED: the campaign plan says each of these three rows needs the maintainer's own signature, and itchyshin/GLLVModels.jl#684 does not quote them")
     row["ruling"] = RULING + " (row added); disposition itself unsigned"
     return row
 
@@ -549,10 +576,23 @@ def main():
     return 0
 
 
+def norm(x):
+    """What a value looks like after a trip through the receipt/case-map JSON files."""
+    return json.loads(json.dumps(clean(x), allow_nan=False))
+
+
 def check(out_root):
-    """Re-derive every campaign receipt's comparison block from the committed raw files; fail on any drift."""
+    """Rebuild every campaign receipt and case-map row from the committed raw files and fail on any difference.
+
+    1. every raw file's sha256 still equals the one the receipt recorded;
+    2. the raw files are decompressed into a scratch directory and process() is run on them exactly as for a real run;
+    3. for each result, the committed receipt's verdict, row status, pass-rule legs, comparison block (values,
+       tolerances, differences, flags), engine blocks and source ids must equal the rebuilt ones, and the committed
+       case-map row must equal the rebuilt row. A hand edit to a value, a tolerance or a flag therefore fails.
+    The receipt text fields that come from the engines' logs and run directories (not committed as raw) are not rebuilt."""
     bad = 0
-    for p in sorted((out_root / LEDGER / "receipts").glob("*/campaign/*.json")):
+    recdir = out_root / LEDGER / "receipts"
+    for p in sorted(recdir.glob("*/campaign/*.json")):
         rc = json.loads(p.read_text())
         for k, h in rc.get("read_from", {}).items():
             path = k.replace(" (uncompressed sha256)", "")
@@ -560,12 +600,34 @@ def check(out_root):
             if not f.exists(): print(f"MISSING {path} for {p.name}"); bad += 1; continue
             got = sha_bytes(gz_read(f)) if path.endswith(".gz") else sha_file(f)
             if got != h: print(f"HASH DRIFT {path} in {p.name}"); bad += 1
-        for c in rc["comparison"]["cases"]:
-            if "r_value" in c and "julia_value" in c:
-                r, j = flat(c["r_value"]), flat(c["julia_value"])
-                d = maxabs(r, j)
-                if abs(d - c["max_abs_diff"]) > 1e-12 * max(abs(d), abs(c["max_abs_diff"]), 1e-300): print(f"DIFF DRIFT {c['case_id']} in {p.name}"); bad += 1
-            if c["within_tolerance"] != (c["max_abs_diff"] <= c["tolerance"]): print(f"TOLERANCE FLAG DRIFT {c['case_id']}"); bad += 1
+    with tempfile.TemporaryDirectory() as tmp:
+        for gz in sorted(recdir.glob("*/campaign/raw/*.gz")):
+            (Path(tmp) / gz.name[:-3]).write_bytes(gz_read(gz))
+        man = json.loads((out_root / "tools/true_parity/campaign/data/data_sha256.json").read_text())["sha256"]
+        for cell, h in man.items():   # the committed synthetic data are the bytes both engines read
+            f = out_root / f"tools/true_parity/campaign/data/{cell}.csv.gz"
+            if not f.exists() or sha_bytes(gz_read(f)) != h: print(f"SYNTHETIC DATA DRIFT {cell}"); bad += 1
+            rf = Path(tmp) / f"{cell}_R.json"
+            if rf.exists() and json.loads(rf.read_text()).get("data_sha256") != h: print(f"DATA PIN DRIFT {cell}: the receipt's data sha256 is not the committed file's"); bad += 1
+        res = process(tmp, out_root, False)
+        want = {str(path.relative_to(out_root)) for _, _, _, _, _, path in res}
+        have = {str(p.relative_to(out_root)) for p in recdir.glob("*/campaign/*.json")}
+        if want != have: print(f"RECEIPT SET DRIFT rebuilt-only {sorted(want - have)} committed-only {sorted(have - want)}"); bad += 1
+        maps = {}
+        def row_of(fam, sid):
+            if fam not in maps: maps[fam] = json.loads((out_root / LEDGER / f"case-map-{fam}.json").read_text())
+            return next((r for r in maps[fam]["rows"] if r["source_id"] == sid), None)
+        for sid, fam, clause, rc_new, binds, path in res:
+            rel = str(path.relative_to(out_root))
+            if not path.exists(): continue
+            rc_old = json.loads(path.read_text())
+            for k in ("schema", "source_id", "clause", "pin", "reference_commit", "ruling", "verdict", "row_status", "pass_rule", "comparison", "engines"):
+                if rc_old.get(k) != norm(rc_new.get(k)):
+                    print(f"DERIVATION DRIFT {k} in {path.name}"); bad += 1
+            row_old = row_of(fam, sid); row_new = norm(row_for(sid, clause, rc_new, binds, rel))
+            if row_old != row_new: print(f"CASE-MAP ROW DRIFT {sid}"); bad += 1
+        for sid, d in DISPOSITIONS.items():
+            if row_of("data", sid) != norm(disposition_row(sid, d)): print(f"CASE-MAP ROW DRIFT {sid}"); bad += 1
     print("CAMPAIGN_RECEIPTS_OK" if not bad else f"CAMPAIGN_RECEIPTS_BAD {bad}")
     return 1 if bad else 0
 

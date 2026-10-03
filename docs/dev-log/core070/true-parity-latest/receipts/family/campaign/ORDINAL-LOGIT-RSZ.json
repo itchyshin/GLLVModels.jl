@@ -24,7 +24,8 @@
   "data_sha256": "df6a45d4f51cabe50a394aad203fae7368fd2abb88729d067e7683d2d193c0c1",
   "data_file": "ordinal.csv",
   "p": 20,
-  "n": 500
+  "n": 500,
+  "data_committed_copy": "tools/true_parity/campaign/data/ordinal.csv.gz"
  },
  "data_meta": {
   "cell": "ordinal",
@@ -122,11 +123,12 @@
    "identical_deparse": true
   }
  ],
+ "cond_H_statement": "R cond(H) 1250.14. Julia cond(H) 763.786.",
  "not_covered": [
   "One dataset and one seed per row: a spot check at this size, not a scaling study or a coverage study.",
   "Direct engines only (R TMB fit against a direct Julia fit); R's engine = 'julia' bridge route is not exercised.",
   "Julia starts from its own default start, never from R's coordinates; wall times include first-call Julia compilation.",
-  "cond(H) of the two engines is recorded but not compared (different parameter bases)."
+  "cond(H) of the two engines is recorded where computed but never compared (different parameter bases); see cond_H_statement for this receipt."
  ],
  "engines": {
   "R": {
@@ -991,7 +993,7 @@
     "max_abs_diff": 0.00012989127759771568,
     "tolerance": 0.0001,
     "tolerance_rule": "1e-4 absolute per element of Lambda Lambda' (rotation and sign invariant)",
-    "tolerance_status": "PROPOSED in the campaign plan, approved by ruling 4",
+    "tolerance_status": "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer",
     "n_values": 400,
     "within_tolerance": false
    },
@@ -1086,7 +1088,7 @@
     "max_abs_diff": 5.585089662085707e-06,
     "tolerance": 0.0001,
     "tolerance_rule": "1e-4 absolute per cutpoint (per-trait cutpoints 2..C-1; the first is fixed at 0 on both engines)",
-    "tolerance_status": "PROPOSED in the campaign plan, approved by ruling 4",
+    "tolerance_status": "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer",
     "n_values": 40,
     "within_tolerance": true
    }

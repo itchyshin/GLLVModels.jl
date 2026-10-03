@@ -268,6 +268,34 @@ def main():
                         capture_output=True, text=True)
     expect("real_tree_campaign_receipts_rederive", wr.returncode == 0 and "CAMPAIGN_RECEIPTS_OK" in wr.stdout, wr.stdout + wr.stderr)
 
+    # ... and a hand edit that keeps the receipt self-consistent must still fail: a changed value (with a matching
+    # max_abs_diff and flag), a widened tolerance, and a changed large-vector difference.
+    def tamper(label, edit):
+        with tempfile.TemporaryDirectory() as td:
+            led = Path(td) / A.LEDGER
+            shutil.copytree(A.ROOT / A.LEDGER, led, ignore=shutil.ignore_patterns("*.md"))
+            shutil.copytree(A.ROOT / "tools/true_parity/campaign/data", Path(td) / "tools/true_parity/campaign/data")
+            shutil.copytree(A.ROOT / "docs/dev-log/core070/phylo-latent-p1", Path(td) / "docs/dev-log/core070/phylo-latent-p1")
+            edit(led / "receipts")
+            r = subprocess.run([sys.executable, str(HERE / "true_parity" / "campaign" / "write_receipts.py"), "--check", "--root", td],
+                               capture_output=True, text=True)
+            expect(label, r.returncode == 1 and "CAMPAIGN_RECEIPTS_BAD" in r.stdout and "DERIVATION DRIFT" in r.stdout, r.stdout + r.stderr)
+
+    def edit_case(rel, quantity, fn):
+        def go(rec):
+            f = rec / rel; d = json.loads(f.read_text())
+            hit = [c for c in d["comparison"]["cases"] if c["quantity"] == quantity]
+            assert hit, f"tamper target {quantity!r} not found in {rel}"   # a vacuous edit would pass for the wrong reason
+            for c in hit: fn(c)
+            f.write_text(json.dumps(d, indent=1) + "\n")
+        return go
+    def nudge(c):
+        c["julia_value"] = [x + 1e-9 for x in c["r_value"]] if isinstance(c["r_value"], list) else c["r_value"] + 1e-9
+        c["max_abs_diff"] = 1e-9
+    tamper("campaign_check_catches_consistent_value_edit", edit_case("family/campaign/POISSON-LOG-RSZ.json", "LLt", nudge))
+    tamper("campaign_check_catches_widened_tolerance", edit_case("family/campaign/POISSON-LOG-RSZ.json", "beta", lambda c: c.update(tolerance=1.0)))
+    tamper("campaign_check_catches_large_vector_diff_edit", edit_case("data/campaign/RD-CRABS-GAUSSIAN.json", "linear predictor on the training data (link scale)", lambda c: c.update(max_abs_diff=1e-12)))
+
     # Real tree: outputs current, and EVIDENCED count equals the checker's own C1 bound=.
     c, o = run(A.ROOT, "--check")
     expect("real_tree_outputs_current", c == 0, o)

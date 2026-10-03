@@ -24,7 +24,8 @@
   "data_sha256": "f0ac0008345314a095dadd0f892b1709c772962ca9979ed15848cf568dcf2681",
   "data_file": "temporal.csv",
   "p": null,
-  "n": null
+  "n": null,
+  "data_committed_copy": "tools/true_parity/campaign/data/temporal.csv.gz"
  },
  "data_meta": {
   "cell": "temporal",
@@ -54,6 +55,13 @@
   "jobs": [
    "J temporal rc=0 wall=32s cap=180s 2026-10-03T00:46:48Z",
    "R temporal rc=0 wall=3s cap=600s 2026-10-03T00:47:36Z"
+  ],
+  "rerun": [
+   "Julia cell re-run on 2026-10-03T01:50:27Z (UTC) on totoro.biology.ualberta.ca, load average 10.47 at the start, one job, JULIA_NUM_THREADS=2, OPENBLAS_NUM_THREADS=1, same data file (sha256 f0ac0008...), same GLLVModels source tree (commit 896a0a228).",
+   "Why: the first run of this cell did not record a Julia condition number (the temporal fit stores only the smallest Hessian eigenvalue), and the C3 clause asks for a condition number.",
+   "What changed: run_J.jl now also builds the fit's own objective and records cond(H) from its ForwardDiff Hessian. Nothing about the fit, its start, its tolerances or any comparison tolerance changed.",
+   "Reproduction of the first run: logLik -9721.018462862192 in both runs (identical), iterations 34 in both, hessian_min_eigenvalue 16.49245545483805 in both; wall_fit_sec 25.23 in the first run and 24.90 in this one.",
+   "The raw file committed for this row (temporal_J.toml.gz) is the re-run's output."
   ],
   "caps": "at most 8 concurrent jobs, OPENBLAS_NUM_THREADS=1, JULIA_NUM_THREADS=2, R single-threaded; each job under timeout at twice its written estimate"
  },
@@ -123,11 +131,12 @@
    "identical_deparse": true
   }
  ],
+ "cond_H_statement": "R cond(H) 2257.09. Julia cond(H) 1153.13.",
  "not_covered": [
   "One dataset and one seed per row: a spot check at this size, not a scaling study or a coverage study.",
   "Direct engines only (R TMB fit against a direct Julia fit); R's engine = 'julia' bridge route is not exercised.",
   "Julia starts from its own default start, never from R's coordinates; wall times include first-call Julia compilation.",
-  "cond(H) of the two engines is recorded but not compared (different parameter bases)."
+  "cond(H) of the two engines is recorded where computed but never compared (different parameter bases); see cond_H_statement for this receipt."
  ],
  "engines": {
   "R": {
@@ -157,8 +166,8 @@
    "converged": true,
    "iterations": 34,
    "pd_hessian": true,
-   "cond_H": null,
-   "wall_fit_sec": 25.232894897460938,
+   "cond_H": 1153.1321323462207,
+   "wall_fit_sec": 24.895818948745728,
    "wall_confint_sec": null,
    "wall_vcov_sec": null,
    "JULIA_NUM_THREADS": 2,
@@ -191,7 +200,7 @@
     "max_abs_diff": 1.733333988762631e-05,
     "tolerance": 0.0001,
     "tolerance_rule": "1e-4 absolute on the AR(1) persistence phi",
-    "tolerance_status": "PROPOSED in the campaign plan, approved by ruling 4",
+    "tolerance_status": "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer",
     "n_values": 1,
     "within_tolerance": true
    },
@@ -246,7 +255,7 @@
     "max_abs_diff": 3.406300207675628e-05,
     "tolerance": 0.0001,
     "tolerance_rule": "1e-4 absolute per loading (public sign orientation, R/temporal.R:466-483)",
-    "tolerance_status": "PROPOSED in the campaign plan, approved by ruling 4",
+    "tolerance_status": "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer",
     "n_values": 20,
     "within_tolerance": true
    }
@@ -254,6 +263,6 @@
  },
  "read_from": {
   "docs/dev-log/core070/true-parity-latest/receipts/covariance/campaign/raw/temporal_R.json.gz (uncompressed sha256)": "a819b06ef9d13073f69f6b065183eb6f73bcc4ed8f5a6b2c0aca001b8fa22cc5",
-  "docs/dev-log/core070/true-parity-latest/receipts/covariance/campaign/raw/temporal_J.toml.gz (uncompressed sha256)": "703bcc63bee1def316bab2cae5fcf20e892e402aa76ee7600b89a0d731ee1a77"
+  "docs/dev-log/core070/true-parity-latest/receipts/covariance/campaign/raw/temporal_J.toml.gz (uncompressed sha256)": "9c9be5e9c14fdc8bceed3187f660eeee8626c8f12bfb71d426ee24460ae9cd66"
  }
 }

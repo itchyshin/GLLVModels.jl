@@ -24,7 +24,8 @@
   "data_sha256": "02960d57b29fa37afa45a1eef4272f97fff4e65ed66b0b3da2d42b45389a15d1",
   "data_file": "binomial.csv",
   "p": 20,
-  "n": 500
+  "n": 500,
+  "data_committed_copy": "tools/true_parity/campaign/data/binomial.csv.gz"
  },
  "data_meta": {
   "cell": "binomial",
@@ -122,11 +123,12 @@
    "identical_deparse": true
   }
  ],
+ "cond_H_statement": "R cond(H) 1319.44. Julia cond(H) 241.325.",
  "not_covered": [
   "One dataset and one seed per row: a spot check at this size, not a scaling study or a coverage study.",
   "Direct engines only (R TMB fit against a direct Julia fit); R's engine = 'julia' bridge route is not exercised.",
   "Julia starts from its own default start, never from R's coordinates; wall times include first-call Julia compilation.",
-  "cond(H) of the two engines is recorded but not compared (different parameter bases)."
+  "cond(H) of the two engines is recorded where computed but never compared (different parameter bases); see cond_H_statement for this receipt."
  ],
  "engines": {
   "R": {
@@ -231,7 +233,7 @@
     "max_abs_diff": 8.58274268750181e-06,
     "tolerance": 0.0001,
     "tolerance_rule": "1e-4 absolute per fixed-effect estimate",
-    "tolerance_status": "PROPOSED in the campaign plan, approved by ruling 4",
+    "tolerance_status": "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer",
     "n_values": 20,
     "within_tolerance": true
    },
@@ -331,7 +333,7 @@
     "diff_source": "recomputed by the checker from r_value and julia_value (the relative statistic)",
     "tolerance": 0.001,
     "tolerance_rule": "1e-3 relative per standard error of a fixed effect (R sdreport vs Julia Wald)",
-    "tolerance_status": "PROPOSED in the campaign plan, approved by ruling 4",
+    "tolerance_status": "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer",
     "n_values": 20,
     "within_tolerance": true
    },
@@ -1146,7 +1148,7 @@
     "max_abs_diff": 3.226403159428681e-05,
     "tolerance": 0.0001,
     "tolerance_rule": "1e-4 absolute per element of Lambda Lambda' (rotation and sign invariant)",
-    "tolerance_status": "PROPOSED in the campaign plan, approved by ruling 4",
+    "tolerance_status": "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer",
     "n_values": 400,
     "within_tolerance": true
    }
