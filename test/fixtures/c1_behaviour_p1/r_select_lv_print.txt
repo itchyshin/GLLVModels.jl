@@ -1,0 +1,5 @@
+gllvmTMB latent-rank selection (criterion = bic, selected d = 2)
+   d npar    logLik      AIC      BIC     AICc conv pdHess
+   1   13 -1183.645 2393.289 2455.720 2393.700 TRUE   TRUE
+ * 2   18 -1032.949 2101.898 2188.341 2102.674 TRUE   TRUE
+   3   22 -1030.958 2105.915 2211.568 2107.069 TRUE   TRUE
