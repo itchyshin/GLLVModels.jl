@@ -130,17 +130,23 @@ with fixed entries set to zero, `alpha_lv` is a `q_lv × K` matrix or `nothing`,
 and `Λ_W`, `σ²_B`, `σ²_W`, `Λ_phy`, `σ_phy` are `nothing` when the
 corresponding flag is off.
 
-Scale of the phylo-unique SD `σ_phy` (#136): Julia estimates it on a signed
-identity scale, not on a positive log scale as gllvmTMB's C++ does
-(`log_sd_phy_diag`). The sign is not identified: flipping the sign of every
-entry together leaves the likelihood unchanged, so the fitter anchors it
-(the largest-magnitude entry is reported positive). Report and compare
-`abs.(σ_phy)`, not the raw signed values. Where both engines fit the same
-model, the point estimates should agree in absolute value, while Wald
-intervals differ in shape near zero: Julia's is the plain `σ̂ ± z * SE` and
-can cross zero, gllvmTMB's is `exp(log σ̂ ± z * SE_log)` and stays positive
-and asymmetric. This is a deliberate choice, kept as is (see the
-"Further differences from R" section of the gllvmTMB parity page).
+Phylo-unique SD `σ_phy` (#136): with `has_phy_unique = true`, `σ_phy[t]`
+scales one field shared over the rows of `y`, `u[t] = σ_phy[t] * φ[t]` with
+`φ ~ MVN(0, Σ_phy)`, so `B[t, t'] = σ_phy[t] * σ_phy[t'] * Σ_phy[t, t']`.
+It is estimated on a signed identity scale, by design. Only flipping every
+entry together leaves the likelihood unchanged, so `abs.(σ_phy)` gives the
+per-row magnitudes, and the relative signs matter because they enter
+`B[t, t']`. Without `X_lv`, the fitter tries single sign flips and then reports the
+largest-magnitude entry as positive. With `X_lv`, neither step runs: the
+largest entry can come out negative, and the fit can stop in a sign pattern
+that is not the best one, so refit from a `σ_phy_init` of the other sign to
+check. This is not gllvmTMB's `phylo_unique` term, which gives each trait its
+own independent phylogenetic field over species, with a positive log-link SD
+(`log_sd_phy_diag`) and no cross-trait covariance. The two models differ, so
+their estimates are not expected to agree, even in absolute value. The Julia
+route with gllvmTMB's structure is
+`fit_precision_multivariate(...; mode = :explicitunique)`. See the
+"Further differences from R" section of the gllvmTMB parity page.
 """
 function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
                             K::Integer,

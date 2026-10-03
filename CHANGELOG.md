@@ -2,17 +2,25 @@
 
 ## Development
 
-- **Documented: the phylo-unique SD `σ_phy` is signed in Julia and positive in gllvmTMB (#136).**
-  Maintainer decision: keep the Julia behaviour and document it. Julia estimates the
-  per-trait phylo-unique SD on a signed identity scale (the sign is not identified, so the
-  fit anchors it and you should report `abs(σ_phy)`), while gllvmTMB's C++ uses a positive
-  log link. Point estimates should agree in absolute value, and Wald intervals differ in
-  shape near zero (Julia's is symmetric and can cross zero, gllvmTMB's is positive and
-  asymmetric). The note is added to the docstrings of `fit_gaussian_gllvm`,
-  `gaussian_marginal_loglik`, `confint` (Wald) and `profile_phylo_signal`, and to the
-  "Further differences from R" list on the gllvmTMB parity page. A comment in
-  `src/confint_profile.jl` that wrongly said the profile bounds for `σ_phy` are
-  exponentiated was corrected. Docs and comments only: no returned number changes.
+- **Documented: `σ_phy` from `fit_gaussian_gllvm` is signed by design, and it is not
+  gllvmTMB's `phylo_unique` SD (#136).** Maintainer decision: keep the Julia behaviour and
+  document it. With `has_phy_unique = true`, `σ_phy[t]` scales one field shared over the
+  rows of `y`, so `B[t, t'] = σ_phy[t] * σ_phy[t'] * Σ_phy[t, t']`, and it is estimated on
+  a signed identity scale: only flipping every entry together is unidentified, so
+  `abs.(σ_phy)` gives the magnitudes, and the relative signs matter because they enter
+  `B[t, t']`. gllvmTMB's `phylo_unique(species)` is a different model: each trait gets its own
+  independent phylogenetic field over species, with a positive log-link SD and no
+  cross-trait covariance. So the two sets of estimates are not expected to agree, even in
+  absolute value. The Julia route with gllvmTMB's structure and positive log scale is
+  `fit_precision_multivariate(...; mode = :explicitunique)`. The notes also say that the
+  sign-flip search and the "largest-magnitude entry positive" convention apply only to
+  fits without `X_lv`; with `X_lv` the largest entry can come out negative and the fit can
+  stop in a worse sign pattern (a code gap, documented here and not changed). Added to the
+  docstrings of `fit_gaussian_gllvm`, `gaussian_marginal_loglik`, `confint` (Wald),
+  `profile_ci` and `profile_phylo_signal`, and to the "Further differences from R" list
+  on the gllvmTMB parity page. A comment in `src/confint_profile.jl` that wrongly said the
+  profile bounds for `σ_phy` are exponentiated was corrected. Docs and comments only: no
+  returned number changes.
 
 - **`fit_phylo_gaussian` no longer reports `converged = true` after a zero-length step
   (part of #505, the remaining #485 class).** Optim also counts a zero-length line-search

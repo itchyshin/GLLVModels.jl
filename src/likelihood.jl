@@ -64,11 +64,14 @@ the J1 behaviour exactly (D = σ²_eps I).
 Phylogenetic extension (`Σ_phy::AbstractMatrix`, p × p, supplied by
 caller — typically a species-trait covariance derived from a tree):
   - `Λ_phy::AbstractMatrix` (p × K_phy): phylo-latent loadings.
-  - `σ_phy::AbstractVector` (length p): per-trait phylo-unique SDs, on a
-    signed identity scale (entries may be negative; the overall sign, that is
-    flipping every entry together, is not identified). gllvmTMB's C++ uses a positive log link for the same
-    quantity, so compare `abs.(σ_phy)`; see #136 and the gllvmTMB parity
-    page.
+  - `σ_phy::AbstractVector` (length p): per-row phylo-unique SDs, on a
+    signed identity scale. Entries may be negative; only flipping every
+    entry together leaves the likelihood unchanged, and the relative
+    signs matter because they enter
+    `B[t, t'] = σ_phy[t] σ_phy[t'] Σ_phy[t, t']`. This is not the same
+    parameter as gllvmTMB's `log_sd_phy_diag`: there each
+    trait has its own independent phylogenetic field, a different model
+    (#136; see the gllvmTMB parity page).
 With Λ_phy_aug = hcat(Λ_phy, σ_phy) the marginal covariance of vec(y)
 is `I_n ⊗ A + J_n ⊗ B` where `B = (Λ_phy_aug Λ_phy_aug') .* Σ_phy`.
 The rotation trick (J_n has rank 1) reduces this to two p×p Cholesky

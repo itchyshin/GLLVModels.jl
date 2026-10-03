@@ -40,16 +40,22 @@ records the normalised pin matrix, which [`loading_profile`](@ref) reads to
 determine which entries are free. No cross-package numeric comparison
 against R's own `lambda_constraint` fits has been published yet.
 
-**Scale of the phylo-unique SD `pars.σ_phy` (#136):** with `has_phy_unique = true`
-Julia estimates the per-trait SD on a signed identity scale, whereas gllvmTMB's
-C++ uses a positive log link. The sign is not identified (flipping every entry
-together leaves the likelihood unchanged, so the fit anchors it: the
-largest-magnitude entry is reported positive), so report and compare
-`abs.(pars.σ_phy)`. Where both engines fit the same model, point estimates should
-agree in absolute value, but Wald intervals differ in shape near zero: Julia's
-`σ̂ ± z * SE` is symmetric and can cross zero, while gllvmTMB's is positive and
-asymmetric. This is a deliberate choice, kept as is; see the "Further differences
-from R" section of the gllvmTMB parity page.
+**Phylo-unique SD `pars.σ_phy` (#136):** with `has_phy_unique = true` and
+`Σ_phy` (a covariance among the rows of `Y`), `σ_phy[t]` scales one shared
+field row by row, so `B[t, t'] = σ_phy[t] * σ_phy[t'] * Σ_phy[t, t']`. It is
+estimated on a signed identity scale, by design. Only flipping every entry
+together leaves the likelihood unchanged: `abs.(pars.σ_phy)` gives the per-row
+magnitudes, and the relative signs matter because they enter `B[t, t']`.
+Without `X_lv` the fit tries single sign flips and reports the largest-magnitude
+entry as positive. With `X_lv` it does neither, so that entry can be negative
+and the fit can stop in a worse sign pattern; refit from a `σ_phy_init` of the
+other sign to check. Julia's Wald interval `σ̂ ± z * SE` is
+symmetric and can cross zero. This is not gllvmTMB's `phylo_unique` term,
+which gives each trait its own independent phylogenetic field over species
+(positive log-link SD, no cross-trait covariance), so the estimates are not
+expected to agree. The Julia route with that structure is
+`fit_precision_multivariate(...; mode = :explicitunique)`. See the "Further
+differences from R" section of the gllvmTMB parity page.
 """
 function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control=(;),
         mask=nothing,offset=nothing,hessian=:observed,lambda_constraint=nothing,kwargs...)
