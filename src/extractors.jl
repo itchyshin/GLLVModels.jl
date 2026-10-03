@@ -108,8 +108,8 @@ Implied trait covariance at one tier of a fitted Gaussian GLLVM, mirroring
                   `Σ_W = Λ_W Λ_Wᵀ + diag(σ²_W) + σ²_eps·I`.
   - `:site`     — the full per-site covariance `sigma_y_site(fit)` (a GLLVModels.jl
                   extension not present in the R tier vocabulary; combines
-                  both tiers' diagonal contributions with the Gaussian
-                  residual, excluding the phylogenetic block).
+                  both tiers, including the full `Λ_W Λ_Wᵀ` block, with the
+                  Gaussian residual, excluding the phylogenetic block).
 
 Legacy aliases `:B`/`:W` are accepted for `:unit`/`:unit_obs`.
 

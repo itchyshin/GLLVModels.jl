@@ -2,6 +2,31 @@
 
 ## Development
 
+- **The W-tier reduced-rank term now carries the full cross-trait covariance, as in
+  gllvmTMB (#135).** The W-tier scores are now one vector per unit, shared by all traits,
+  so `Λ_W` adds the whole `Λ_W Λ_Wᵀ` block to the per-unit covariance:
+  `Σ = Λ_B Λ_Bᵀ + Λ_W Λ_Wᵀ + diag(σ²_B + σ²_W + σ²_eps)`. Before, only the diagonal of
+  `Λ_W Λ_Wᵀ` was used, so the W tier acted as extra per-trait variance and the
+  off-diagonal pattern of `Λ_W` was never estimated. The C++ engine adds
+  `sum_k Lambda_W(t, k) * z_W(k, ss)` with `z_W` shared within a unit; at a fixed
+  parameter point the Julia log-likelihood now equals the gllvmTMB objective to 1e-8
+  (fixture provenance: `test/fixtures/gen_wtier_crosscov_twin.R`). Changed numbers, for
+  models with `K_W > 0` (or `Λ_W` passed) only: `gaussian_marginal_loglik`,
+  `gaussian_nll_packed`, `gaussian_profile_nll` / `profile_recover`,
+  `gaussian_marginal_loglik_sparse_phy`, `gaussian_marginal_loglik_edge_phy` and
+  `gaussian_reml_loglik` return different values; `fit_gaussian_gllvm(...; K_W > 0)`
+  returns different estimates and log-likelihoods; `sigma_y_site`, `correlation`,
+  `extract_Sigma(fit; level = :site)` and `getLV` now include the off-diagonal
+  `Λ_W Λ_Wᵀ` terms (diagonals are unchanged at fixed parameters); parametric-bootstrap
+  and derived-CI replicates are drawn from the full covariance. Models without a W tier
+  give the same log-likelihoods as before (pinned in the new test). Parameter packing and
+  the public API are unchanged. Note: with one unit per column of `y`, only
+  `Λ Λᵀ + Λ_W Λ_Wᵀ` is identified, not the split between the two tiers; in our checks a
+  `K = 1, K_W = 1` fit reaches the same log-likelihood as a single-tier `K = 2` fit. The
+  `test/test_W_and_diag.jl` dense reference and recovery fixture now use the shared-score
+  model (recovery moved to p = 8 traits, n = 1000, because the rank-2 model at p = 5 hits
+  a zero unique variance on that seed). Test: `test/test_wtier_crosscov.jl`.
+
 - **`fit_phylo_gaussian` no longer reports `converged = true` after a zero-length step
   (part of #505, the remaining #485 class).** Optim also counts a zero-length line-search
   step as convergence, so a start the finite-difference gradient cannot leave could be

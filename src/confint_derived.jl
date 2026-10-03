@@ -145,9 +145,10 @@ function _derived_unpack(θ::AbstractVector, spec::NamedTuple)
 end
 
 # ---------------------------------------------------------------------------
-# Σ_y_site = Λ_B Λ_B' + diag(d_total) — the per-site (within-species)
-# trait covariance. The phylogenetic block (rank-1 across species) is not
-# part of the per-site covariance; it contributes only to the species-level
+# Σ_y_site = Λ_B Λ_B' + Λ_W Λ_W' + diag(d_total) — the per-site (within-species)
+# trait covariance. The W tier carries its full cross-trait block (issue #135).
+# The phylogenetic block (rank-1 across species) is not part of the per-site
+# covariance; it contributes only to the species-level
 # shared variance. Following the bootstrap-sigma R convention.
 # ---------------------------------------------------------------------------
 function _sigma_y_site_from_unpacked(u::NamedTuple, spec::NamedTuple)
@@ -157,13 +158,11 @@ function _sigma_y_site_from_unpacked(u::NamedTuple, spec::NamedTuple)
     σ² = u.σ_eps^2
     Λ_B = u.Λ_B
     A = Λ_B * Λ_B'
+    if K_W > 0 && u.Λ_W !== nothing
+        A = A + u.Λ_W * u.Λ_W'
+    end
     @inbounds for t in 1:p
         v = σ²
-        if K_W > 0 && u.Λ_W !== nothing
-            for k in 1:size(u.Λ_W, 2)
-                v += u.Λ_W[t, k]^2
-            end
-        end
         if has_diag && u.σ²_B !== nothing
             v += u.σ²_B[t]
         end
@@ -179,8 +178,9 @@ end
     sigma_y_site(fit::GllvmFit) -> Matrix
 
 The per-site (within-species) trait covariance
-`Σ_y_site = Λ_B Λ_B' + diag(d_total)` where
-`d_total[t] = (Λ_W Λ_W')[t,t] + σ²_B[t] + σ²_W[t] + σ²_eps`. For J1,
+`Σ_y_site = Λ_B Λ_B' + Λ_W Λ_W' + diag(d_total)` where
+`d_total[t] = σ²_B[t] + σ²_W[t] + σ²_eps`. The W tier contributes its full
+cross-trait block `Λ_W Λ_W'`, as in gllvmTMB (issue #135). For J1,
 `Λ_W = nothing`, `σ²_B = σ²_W = 0`, so the diagonal collapses to `σ²_eps`.
 
 The phylogenetic block is *not* included — for J3, the phylo
@@ -414,13 +414,11 @@ function _derived_site_cov(fit::GllvmFit)
     σ² = fit.pars.σ_eps^2
     Λ_B = fit.pars.Λ
     A = Λ_B * Λ_B'
+    if K_W > 0 && fit.pars.Λ_W !== nothing
+        A = A + fit.pars.Λ_W * fit.pars.Λ_W'      # full W-tier block (issue #135)
+    end
     @inbounds for t in 1:p
         v = σ²
-        if K_W > 0 && fit.pars.Λ_W !== nothing
-            for k in 1:size(fit.pars.Λ_W, 2)
-                v += fit.pars.Λ_W[t, k]^2
-            end
-        end
         if has_diag && fit.pars.σ²_B !== nothing
             v += fit.pars.σ²_B[t]
         end

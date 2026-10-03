@@ -480,7 +480,7 @@ _sigma_eps_or_zero(fit) = (hasfield(typeof(fit), :pars) && haskey(fit.pars, :σ_
 
 # For a GllvmFit, use the full-tier sigma_y_site (Λ_B, Λ_W, σ²_B, σ²_W,
 # σ_eps — every non-phylo tier the fit carries), not just Λ (== Λ_B) and
-# σ_eps: the naive ΛΛᵀ + diag(σ_eps²) silently drops the W-tier's diagonal
+# σ_eps: the naive ΛΛᵀ + diag(σ_eps²) silently drops the W-tier's
 # contribution, which can report a spuriously inflated implied correlation
 # on a genuinely well-separated multi-tier fit. Other fit types (single-Λ,
 # single-σ_eps by construction) keep the exact ΛΛᵀ + diag(σ_eps²) formula.
