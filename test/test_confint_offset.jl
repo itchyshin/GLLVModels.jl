@@ -560,5 +560,11 @@ end
     w0 = confint_lv_effects(f0, Y, X)
     @test isapprox(w.se, w0.se; rtol = 0.05)
     @test_throws ArgumentError confint_lv_effects(fo, Y, X; offset = Oc, method = :bootstrap, n_boot = 4)
+    # the bootstrap route used to return before the objective check: a fit made with an offset,
+    # bootstrapped without it, silently simulated from and refitted an offset-free model
+    @test_throws ArgumentError confint_lv_effects(fo, Y, X; method = :bootstrap, n_boot = 4)
+    # an offset-free X_lv fit bootstraps as before
+    b0 = confint_lv_effects(f0, Y, X; method = :bootstrap, n_boot = 4, seed = 1)
+    @test length(b0.term) == p
 end
 end  # outer testset

@@ -3926,16 +3926,14 @@ function confint_lv_effects(fit::Union{PoissonFit, BinomialFit, NBFit, GammaFit,
     profile_indices === nothing || method === :profile ||
         throw(ArgumentError("profile_indices is only supported with method=:profile"))
     O = _ci_offset(offset, Y, nothing)
-    if method === :bootstrap
-        O === nothing || throw(ArgumentError(
-            "confint_lv_effects: method = :bootstrap has no offset route (the simulator draws from " *
-            "the offset-free model); use method = :wald or :profile with the offset"))
-        return _lv_bootstrap(fit, Y, X_lv, N, q_lv, level, n_boot, seed;
-                             bootstrap_iterations = bootstrap_iterations)
-    end
+    method === :bootstrap && O !== nothing && throw(ArgumentError(
+        "confint_lv_effects: method = :bootstrap has no offset route (the simulator draws from " *
+        "the offset-free model); use method = :wald or :profile with the offset"))
     nll = _lv_packed_nll(fit, Y, X_lv, q_lv, N, O)
-    # Same rule as `confint(fit, Y)`: the rebuilt objective must reproduce the fit's own
-    # log-likelihood, or the fit used an offset (or N) that was not given here.
+    # Same rule as `confint(fit, Y)`, and it runs for every method: the rebuilt objective must
+    # reproduce the fit's own log-likelihood, or the fit used an offset (or N) that was not
+    # given here. The bootstrap simulates from and refits the offset-free model, so an offset
+    # fit has to be refused there too, not only on the Wald and profile routes.
     let rebuilt = -nll(fit.theta_packed)
         abs(rebuilt - fit.loglik) <= _CI_OBJECTIVE_RTOL * max(1.0, abs(fit.loglik)) ||
             throw(ArgumentError(
@@ -3945,6 +3943,9 @@ function confint_lv_effects(fit::Union{PoissonFit, BinomialFit, NBFit, GammaFit,
                 "reports $(round(fit.loglik; digits = 4)). If the fit was made with an `offset`, pass the " *
                 "same one: confint_lv_effects(fit, Y, X_lv; offset = O); `N` must also be the one used in the fit."))
     end
+    method === :bootstrap &&
+        return _lv_bootstrap(fit, Y, X_lv, N, q_lv, level, n_boot, seed;
+                             bootstrap_iterations = bootstrap_iterations)
     if method === :profile
         wse = _lv_effect_wald(nll, fit.theta_packed, p, K, q_lv, level).se
         return _lv_effect_profile(nll, fit.theta_packed, p, K, q_lv, level,
