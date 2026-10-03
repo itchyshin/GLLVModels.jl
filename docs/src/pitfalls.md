@@ -35,22 +35,28 @@ iterations. Standardising responses to a common scale helps the Gaussian path.
 The closed-form Gaussian fitter `fit_gaussian_gllvm` no longer requires
 `n_sites ≥ p` for every fit. What it checks depends on the variant.
 
-- **Plain isotropic fit with complete data** (a single residual variance, `K`
-  and optionally `K_W`, no `has_diag`, no phylogenetic block, no `X_lv`). The
-  likelihood is bounded when the number of latent axes `K + K_W` is below the
-  rank of the data the fitter sees, unless that rank is already `p`; otherwise
-  the fit throws an `ArgumentError` that names the rank and `K`. When `X` is
-  supplied the data are first residualised on `X`, so per-trait intercepts
-  centre them. The rank is computed after scaling each trait to unit norm, so a
+- **Plain isotropic fit with complete data and no `X`, or with only per-trait
+  intercepts in `X`** (a single residual variance, `K` and optionally `K_W`, no
+  `has_diag`, no phylogenetic block, no `X_lv`). The likelihood is bounded when
+  the number of latent axes `K + K_W` is below the rank of the data after
+  centring each trait that has an estimated intercept, unless that rank is
+  already `p`; otherwise the fit throws an `ArgumentError` that names the rank
+  and `K`. The rank is computed after scaling each trait to unit norm, so a
   trait on a tiny scale is not treated as degenerate. With `n_sites < p` the
-  rank is at most `n_sites`, so a small `K` fits and `K ≥ n_sites` is refused.
-  Rank-deficient data with `n_sites ≥ p` (for example a trait that is a sum of
-  two others) are refused for `K` at or above the rank.
+  rank is at most `n_sites` (minus one when every trait has an intercept), so a
+  small `K` fits and a `K` at or above the rank is refused. Rank-deficient data
+  with `n_sites ≥ p` (for example a trait that is a sum of two others) are
+  refused for `K` at or above the rank.
+- **Any other `X`** (slopes, shared columns, mixed designs). The coefficients
+  are estimated jointly with the loadings and can lower the rank of the data
+  below that of the least-squares residual, so the rank rule gives no
+  guarantee. These fits keep the former requirement `n_sites ≥ p` and throw an
+  `ArgumentError` otherwise.
 - **Variants with per-trait variance terms** (`has_diag`, `K_phy > 0`,
   `has_phy_unique`, `X_lv`). The rank rule is not enough here: a duplicated,
   collinear or zero trait makes the likelihood unbounded even with `K` below the
   rank, because a per-trait variance can collapse. These fits throw an
-  `ArgumentError` whenever the effective data are rank deficient, which includes
+  `ArgumentError` whenever the (centred) data are rank deficient, which includes
   every fit with `n_sites < p`.
 - **Masked fits** (`mask`). The masked route reaches the check on a
   mean-imputed copy of the data, so the rank rule says nothing about
@@ -60,7 +66,9 @@ Every route built on the fitter inherits this behaviour:
 `fit_gllvm(Y; family = Normal(), K)` (also through `@formula` and `select_lv`),
 `family = Lognormal()` (a Gaussian fit to the centred `log(Y)`), and the R
 bridge's `"gaussian"` and `"lognormal"` families. Infinite or missing values in
-`Y` or `X` are rejected with an `ArgumentError` before the rank is computed. The Laplace-fitted families
+`Y` or `X` are rejected with an `ArgumentError` before the rank is computed.
+
+The Laplace-fitted families
 (Poisson, binomial, negative binomial and the others) have no such condition
 and fit with `n_sites < p`. Treat such fits as weakly identified: check
 `converged`, expect binomial fits to reach the Laplace saturation region sooner
