@@ -1,6 +1,9 @@
 name: True-parity check negative controls
 # Fixture-only smoke test for tools/true_parity_check.mjs (docs/dev-log/core070/true-parity-latest/GATES.md):
-# runs against test/fixtures/true_parity/ via PARITY_REF=FS, no gllvmTMB clone, no network.
+# runs against test/fixtures/true_parity/ via PARITY_REF=FS, no gllvmTMB clone, no network. It also runs the
+# assembler's own controls and `true_parity_assemble.py --check`, so a PR that edits a case map, the
+# behaviour-equivalence table or the C6 decisions without regenerating scoreboard.md, case-map-assembled.json
+# and reverse-gap.json fails here instead of merging a stale ledger.
 # PR-only + workflow_dispatch, ubuntu-only: routine checks default to local-equivalent, cheap
 # CI per AGENTS.md / the maintainer's GitHub Actions cost discipline.
 on:
@@ -8,7 +11,10 @@ on:
     paths:
       - 'tools/true_parity_check.mjs'
       - 'tools/test_true_parity_check.mjs'
+      - 'tools/true_parity_assemble.py'
+      - 'tools/test_true_parity_assemble.py'
       - 'test/fixtures/true_parity/**'
+      - 'docs/dev-log/core070/true-parity-latest/**'
       - '.github/workflows/true-parity-check.yml'
   workflow_dispatch:
 jobs:
@@ -19,4 +25,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - run: node tools/test_true_parity_check.mjs
+      - run: python3 tools/test_true_parity_assemble.py
+      - run: python3 tools/true_parity_assemble.py --check

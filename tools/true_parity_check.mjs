@@ -57,20 +57,26 @@
 //     tolerance must be exactly 0.5, i.e. exact equality. The row keeps evidence_tier "numeric".
 //   Ruling 2 (behavioural tier): a row with `evidence_tier: "behavioural"` (a refusal, a printed
 //     summary, a routing decision or an error class) binds when its receipts carry a `behaviour`
-//     block (schema in behaviouralReceiptStatus below) in which both engines gave the same
-//     canonicalised label for every executable case id, via behaviour-equivalence.json. It counts
+//     block (schema in behaviouralReceiptStatus below) in which both engines gave the same label
+//     (same raw string, or both listed in one class of behaviour-equivalence.json: class identity,
+//     not canonical strings) for every executable case id. It counts
 //     in C1 `bound_behavioural=`, never in bound= or bound_numeric=. A behavioural label without a
 //     valid matching block is BEHAVIOURAL_LABEL_WITHOUT_BEHAVIOURAL_RECEIPT. The scoreboard status
 //     EVIDENCED-BEHAVIOURAL counts as done (printed as done_behavioural=), but only on a row the
 //     ruling covers and never on a C3, C4 or C5 row.
-//     Scope (review of PR #687): the tier binds only for source_id inference/* and the four named C1
-//     rows (behaviouralEligibleSourceId); a comparison block in a cited receipt must itself hold; the
-//     equivalence table is validated by C1 and C8 even with no behavioural row.
+//     Scope (review of PR #687): the tier binds only for a frozen explicit list of source_ids, the 59
+//     inference rows tiered routing_control_flow or reject_error_class on origin/main plus the four
+//     named C1 rows (behaviouralEligibleSourceId); a comparison block in a cited receipt must itself
+//     hold; the equivalence table is validated by C1 and C8 even with no behavioural row; an entry
+//     without source_id covers none of several rows citing one case id; labels, class text and C6
+//     basis and ref must be visible text (isVisible); a behavioural receipt also fails on `result`,
+//     batch_verifier.status, a comparison block's status fields and a case's status or match.
 //   Ruling 3 (C6): EXCLUDED_INTERNAL_HELPER joins the decision vocabulary. A decided reverse-gap
-//     item also needs a non-empty basis and a `ruling` {ref, signed_by, signed_on}: the ref must be
+//     item also needs a visible basis and a `ruling` {ref, signed_by, signed_on}: the ref must be
 //     a ruling in C6_RULINGS (only itchyshin/GLLVModels.jl#684 item 3, dated 2026-10-02, which
 //     covers KEPT_AS_JULIA_EXTRA and EXCLUDED_INTERNAL_HELPER), the date must be that ruling's, and
-//     the signer must pass the signature rule, else it is listed under unsigned_decision=.
+//     the signer must pass the signature rule, else it is listed under unsigned_decision=. A
+//     KEPT_AS_JULIA_EXTRA basis must also cite a docs/src/... file that resolves at the ref.
 import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
