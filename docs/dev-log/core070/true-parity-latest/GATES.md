@@ -766,3 +766,80 @@ EVIDENCE: pending
 - [ ] M1: a maintainer-signed joint note exists before `Project.toml` leaves 0.3.0 (manual;
   Shinichi signs; not mechanically checkable)
   EVIDENCE: pending
+
+## C3 to C5 campaign rows (itchyshin/GLLVModels.jl#684 item 4)
+
+The maintainer's ruling (itchyshin/GLLVModels.jl#684 item 4, 2026-10-02) is to add the rows proposed in PR #650
+(beetle included) and run the campaign on Totoro. Twenty rows were added, 8 for C3 (`-RSZ`), 8 for C4
+(`data/RD-*`) and 4 for C5 (`fit-input/GRP-*`). The ruling does not quote the plan's tolerances, pass rule, row
+placement or licence handling. They are carried here AS PROPOSED in PR #650 and still wait for the maintainer's
+confirmation; every receipt says so in `tolerance_status`.
+
+- **`clause` marker.** A case-map row may carry `"clause": "C3" | "C4" | "C5"`. The assembler then requires
+  that the row's scoreboard id is selected by exactly that clause's checker rule, so a deliberate campaign id
+  (for example `family-NB2-LOG-RSZ`) is accepted, while an unmarked row whose id would silently move into
+  C3/C4/C5 still fails.
+- **Receipts** live under `receipts/<family>/campaign/`, one per row, with the raw R and Julia outputs beside
+  them (`raw/*.gz`). They are written only by `tools/true_parity/campaign/write_receipts.py`, from those raw
+  outputs. `write_receipts.py --check` rebuilds each receipt's comparison block, pass-rule legs, verdict and engine
+  blocks, and each campaign case-map row, from the committed raw files, and fails on any difference (a hand-edited
+  value, tolerance or flag fails). The seven synthetic data files are committed (gzip) under
+  `tools/true_parity/campaign/data/` with their sha256, and `--check` verifies the receipts' data pin against them.
+  One row is the exception: the urbanisation matrix is unpublished, so `data/RD-URBANISATION-BINOMIAL` has no committed
+  raw outputs (see **Urbanisation** below), and `--check` says so on every run instead of re-deriving it.
+- **Pass rule.** Both engines converged (R convergence 0 with a positive-definite Hessian; Julia `converged`
+  true) and every listed quantity inside its tolerance, on the same data bytes, with the ten named gllvmTMB entry
+  points that `run_R.R` calls (`gllvmTMB`, `gllvmTMBcontrol`, `nbinom2`, `ordinal_logit`, `isdm_sources`, `extract_Sigma`,
+  `extract_cutpoints`, `predict.gllvmTMB_multi`, `extract_temporal`, `temporal_latent`) deparsing identically to their
+  P1 source. That is all the guard checks by deparse. Internal gllvmTMB functions (for example the fitting code in
+  `fit-multi.R`) and the compiled library are not deparse-checked: they are trusted by the recorded version 0.7.1, the
+  library path and the sha256 of the P1 source files listed in `p1_source_sha256.json`. A drift in an internal function or
+  in the compiled code of a lane library would therefore not be caught by the guard. A C4 row also needs the
+  `engine = "julia"` bridge route and the plan's eight acceptance classes (plan section 1.3); neither has been run, so
+  no C4 row binds yet. A row that meets the whole rule binds (`evidence_tier` numeric).
+  A row that does not is cited under `non_binding_receipts` with every reason, and stays open. Its tier says which kind of
+  failure it is. If every number is inside tolerance and the only failing leg is a required step that was not run or not
+  signed (the C4 bridge leg, the phylo qualification below), the tier is `partial_case_not_executed` (scoreboard PARTIAL)
+  and the `evidence.tier` sentence names the missing leg. If a number or a convergence flag also fails, the tier is
+  `numeric_fail` (FAIL) and the sentence lists every failing leg and number. No tolerance is widened and nothing is
+  re-run to get a pass.
+- **C5 rule.** The four grouping rows follow their own rule, taken from the merged PR #593 receipts: name parity PASS
+  with the misspelt-keyword negative control rejected by both engines, the #593 receipt's own verdict PASS, R convergence 0
+  and Julia `converged` true in the paired fit, the paired logLik within 1e-6, and a replay on current main that verifies
+  the fixture hashes, passes name parity again and reproduces the receipt's logLik within 1e-6. There is no R
+  positive-definite-Hessian leg for C5: the #593 receipts do not record one.
+- **Phylo row (`covariance/COV-PHYLO-LATENT-RSZ`) does not bind.** Its R side is the tracked PR #547 receipt
+  (`phylo-latent-p1/cov_phylo_latent_rsz/r-receipt.json`), which records `qualified = false`; the README there says every
+  receipt stays unqualified until the maintainer signs the dated promotion block (D-300 answer 9). The measurement is kept
+  as a non-binding receipt (both numbers are inside tolerance), the pass rule has a leg
+  `R_side_receipt_qualified_by_maintainer` that is false, and the row reads PARTIAL. No agent may sign the block.
+- **Relative tolerances** (standard errors, NB2 dispersion) are carried as a discrepancy against zero (`r_value` 0,
+  `julia_value` the relative difference), because the checker compares absolute differences. The `r_value` is therefore
+  not an R measurement: the case's quantity name says "relative difference", a `convention` field says so, and
+  `raw_values_location` names where the raw R and Julia values are (`r_raw` and `julia_raw` in the same case block, and
+  the committed raw files). Whether to keep this encoding is a question for the maintainer.
+- **cond(H).** R's is `kappa(solve(sdr$cov.fixed), exact = FALSE)`, a 1-norm condition-number estimate of the inverse of
+  TMB's sdreport covariance, in gllvmTMB's own parameter coordinates. Julia's is the exact 2-norm condition number
+  (eigenvalue ratio) of `vcov(fit, Y)`, the inverse observed information of the Julia fit, in the Julia fit's own
+  coordinates. For the temporal row Julia's is the exact eigenvalue ratio of the ForwardDiff Hessian of the temporal
+  negative log-likelihood at `fit.parameters` (optimiser coordinates), rebuilt in `run_J.jl`. For the phylo row R's is
+  `kappa(sd$cov.fixed, exact = TRUE)` from the #547 script and Julia's is the fit's own finite-difference Hessian
+  diagnostic. They are different estimators in different parameter bases: recorded, never compared. Each receipt says so
+  in `cond_H_statement` and in `engines.*.cond_H_method`.
+- **Disposition rows.** `data/RD-PHYLO-DISPOSITION`, `data/RD-TEMPORAL-DISPOSITION` and
+  `data/RD-ISDM-DISPOSITION` carry `disposition: null` and a `proposed_disposition` object. Item 4 of the
+  ruling does not quote them, and the plan says each needs the maintainer's own signature, so nothing is
+  signed on them. Their classification stays `required_core` (the plan proposes `outside_boundary`, but a classification
+  change is the maintainer's to sign), so on the assembled fold C1 still requires them.
+- **Licence.** GPL datasets (MASS, gllvm) are loaded by name at run time by `gen_data.R`; the repository tracks
+  that loader, each dataset's sha256 (in the receipt) and the receipts, never the tables. The GPL datasets' raw R and
+  Julia outputs are committed, as they are for the other public data.
+- **Urbanisation.** The urbanisation matrix is the maintainer's own unpublished data, and its redistribution status is
+  unconfirmed. It is not tracked, and neither are the per-observation raw outputs of its row (linear predictors,
+  loadings). `receipts/data/campaign/RD-URBANISATION-BINOMIAL.json` keeps only summary values (logLik, the fixed effects,
+  the maximum differences, wall times, the data file's sha256 and the sha256 of the two uncommitted raw files).
+  `write_receipts.py --check` prints "raw outputs kept off the public repo; re-derive locally with URBMAP_ROOT set" for
+  this row and checks only the receipt's internal consistency and its case-map row; with the retained raw files,
+  `--check --local-raw DIR` rebuilds it in full. `gen_data.R urban` requires the `URBMAP_ROOT` environment variable and
+  stops with a message when it is unset: it has no default path. The row's raw outputs were first pushed in an earlier
+  commit of this branch; they are removed from the branch tip but remain in the branch history on GitHub.

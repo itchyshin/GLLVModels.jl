@@ -658,6 +658,26 @@ def provenance_problems(tracked):
     return problems
 
 
+# Rows another writer owns: the C3/C4/C5 campaign rows (tools/true_parity/campaign/write_receipts.py,
+# itchyshin/GLLVModels.jl#684 item 4) live in case-map-data.json and case-map-fit-input.json but are not
+# P0 rows, so this tool cannot re-derive them. They are carried verbatim and left out of `counts`. Any
+# other row missing from the P0 map is still refused.
+FOREIGN_CLAUSES = {"C3", "C4", "C5"}
+
+
+def is_foreign_row(row, p0_ids):
+    return row["source_id"] not in p0_ids and row.get("clause") in FOREIGN_CLAUSES and bool(row.get("ruling"))
+
+
+def rebuild_with_foreign(cm_rows, receipts):
+    """Re-derive this tool's rows in place; carry campaign-owned rows verbatim. Returns (rows, counts)."""
+    p0_ids = {r["source_id"] for r in load(P0_CASEMAP)["rows"]}
+    owned = [r["source_id"] for r in cm_rows if not is_foreign_row(r, p0_ids)]
+    rows, counts = build_rows(owned, receipts)
+    it = iter(rows)
+    return [r if is_foreign_row(r, p0_ids) else next(it) for r in cm_rows], counts
+
+
 def check():
     problems = []
     tracked = {}
@@ -700,7 +720,7 @@ def check():
     for fam in FAMILIES:
         cm = load(ROOT / casemap_rel(fam))
         try:
-            rows, counts = build_rows([r["source_id"] for r in cm["rows"]], receipts)
+            rows, counts = rebuild_with_foreign(cm["rows"], receipts)
         except (SystemExit, KeyError) as e:
             problems.append(f"{fam}: case-map re-derivation refused: {e}")
             continue
@@ -825,7 +845,7 @@ def apply_twins():
         tracked[p.stem] = (str(p.relative_to(ROOT)), load(p))
     receipts = {cid: receipt_info(path, rec) for cid, (path, rec) in tracked.items()}
     cm = load(ROOT / casemap_rel("data"))
-    rows, counts = build_rows([r["source_id"] for r in cm["rows"]], receipts)
+    rows, counts = rebuild_with_foreign(cm["rows"], receipts)
     cm["rows"], cm["counts"], cm["note"] = rows, counts, NOTE["data"]
     write_json(ROOT / casemap_rel("data"), cm)
     print(json.dumps(counts))

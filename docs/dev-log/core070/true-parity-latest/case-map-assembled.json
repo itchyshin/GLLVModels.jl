@@ -11,23 +11,23 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-covariance.json",
-   "sha256": "1eaf07951ac7570023a85ac766ee8eb2195bbf1c296df72165c20f9be0fb60ec",
-   "rows": 17
+   "sha256": "d23ab57e75e98ba56767f4179f49c5f2787aeeac9e56294974ed38a18f710363",
+   "rows": 19
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-data.json",
-   "sha256": "2fa32fe808ccf2ff323e1684a89d845f8e7411e1681474f29a0a348e84d35c81",
-   "rows": 28
+   "sha256": "e8172caf2282d945790557e4426b90d6fe0d0177bf204fad31c571a7a7d12973",
+   "rows": 36
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-family.json",
-   "sha256": "f8204dfc5aba484ccf99af8b5508c75f4dce898aaa33fb550b0e8219020e975b",
-   "rows": 21
+   "sha256": "537991192134fd7aef08d7e065c61d5b3063efde3d63513b88493dd6a82db6fc",
+   "rows": 26
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-fit-input.json",
-   "sha256": "1f8648158d3b9eaeb97a77385ab8164174f37b14b964206487f388222ec7b1be",
-   "rows": 6
+   "sha256": "568c054ed5f3786b96c9acb796e28d98e4523c4edc5fe5ad9f69ab150cee3639",
+   "rows": 10
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-inference.json",
@@ -36,8 +36,8 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-isdm.json",
-   "sha256": "ede6b50934984e606cc844e0ff9ec951825827a23fcf44cb5724ce5c8b9a2ddf",
-   "rows": 20
+   "sha256": "abcd0731b63d4290870525114ca3882d9a08fb9ac1966e35e702271a3917e6ca",
+   "rows": 21
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-namespace.json",
@@ -1524,6 +1524,71 @@
    }
   },
   {
+   "source_id": "covariance/COV-PHYLO-LATENT-RSZ",
+   "classification": "required_core",
+   "arc": "campaign-C3",
+   "clause": "C3",
+   "executable_case_ids": [
+    "CAMPAIGN-C3-COV-PHYLO-LATENT-RSZ-LOGLIK",
+    "CAMPAIGN-C3-COV-PHYLO-LATENT-RSZ-SIGMA-PHY"
+   ],
+   "disposition": null,
+   "evidence_tier": "partial_case_not_executed",
+   "measured_against": "P1",
+   "evidence": {
+    "non_binding_receipts": [
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/campaign/COV-PHYLO-LATENT-RSZ.json"
+    ],
+    "tier": "measured, does not bind. Every number is inside its tolerance, but a required leg is not signed: the R side is the tracked PR #547 receipt, which records qualified = false until the maintainer signs the dated promotion block (D-300 answer 9). No agent may sign it, so the receipt stays unqualified until then"
+   },
+   "measured_result": {
+    "verdict": "NUMERIC_PASS_NOT_BINDING",
+    "max_abs_diff_by_case": {
+     "CAMPAIGN-C3-COV-PHYLO-LATENT-RSZ-LOGLIK": 2.2646418074145913e-09,
+     "CAMPAIGN-C3-COV-PHYLO-LATENT-RSZ-SIGMA-PHY": 4.352562274601013e-06
+    },
+    "within_tolerance_by_case": {
+     "CAMPAIGN-C3-COV-PHYLO-LATENT-RSZ-LOGLIK": true,
+     "CAMPAIGN-C3-COV-PHYLO-LATENT-RSZ-SIGMA-PHY": true
+    }
+   },
+   "ruling": "itchyshin/GLLVModels.jl#684 item 4"
+  },
+  {
+   "source_id": "covariance/COV-TEMPORAL-RSZ",
+   "classification": "required_core",
+   "arc": "campaign-C3",
+   "clause": "C3",
+   "executable_case_ids": [
+    "CAMPAIGN-C3-COV-TEMPORAL-RSZ-LOGLIK",
+    "CAMPAIGN-C3-COV-TEMPORAL-RSZ-TEMPORAL-PHI",
+    "CAMPAIGN-C3-COV-TEMPORAL-RSZ-TEMPORAL-LOADINGS"
+   ],
+   "disposition": null,
+   "evidence_tier": "numeric",
+   "measured_against": "P1",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/campaign/COV-TEMPORAL-RSZ.json"
+    ],
+    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
+   },
+   "measured_result": {
+    "verdict": "PASS",
+    "max_abs_diff_by_case": {
+     "CAMPAIGN-C3-COV-TEMPORAL-RSZ-LOGLIK": 2.4316796043422073e-07,
+     "CAMPAIGN-C3-COV-TEMPORAL-RSZ-TEMPORAL-PHI": 1.733333988762631e-05,
+     "CAMPAIGN-C3-COV-TEMPORAL-RSZ-TEMPORAL-LOADINGS": 3.406300207675628e-05
+    },
+    "within_tolerance_by_case": {
+     "CAMPAIGN-C3-COV-TEMPORAL-RSZ-LOGLIK": true,
+     "CAMPAIGN-C3-COV-TEMPORAL-RSZ-TEMPORAL-PHI": true,
+     "CAMPAIGN-C3-COV-TEMPORAL-RSZ-TEMPORAL-LOADINGS": true
+    }
+   },
+   "ruling": "itchyshin/GLLVModels.jl#684 item 4"
+  },
+  {
    "source_id": "data/DATA-MISS-BOTH",
    "classification": "required_core",
    "arc": "A3",
@@ -2701,6 +2766,248 @@
    }
   },
   {
+   "source_id": "data/RD-URBANISATION-BINOMIAL",
+   "classification": "required_core",
+   "arc": "campaign-C4",
+   "clause": "C4",
+   "executable_case_ids": [
+    "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-LOGLIK",
+    "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-BETA",
+    "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-LLT",
+    "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-ETA"
+   ],
+   "disposition": null,
+   "evidence_tier": "numeric_fail",
+   "measured_against": "P1",
+   "evidence": {
+    "non_binding_receipts": [
+     "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-URBANISATION-BINOMIAL.json"
+    ],
+    "tier": "measured, does not bind: a required leg was not run: the engine = \"julia\" bridge route and the plan's eight acceptance classes (the C4 clause needs them, see GATES.md and plan section 1.3). The direct-engine comparison does not say the bridge workflow passes; beta: abs difference 0.000231344 > tolerance 0.0001; LLt: abs difference 0.00164848 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000821878 > tolerance 1e-06"
+   },
+   "measured_result": {
+    "verdict": "FAIL",
+    "max_abs_diff_by_case": {
+     "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-LOGLIK": 1.1885913409059867e-07,
+     "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-BETA": 0.0002313439396757211,
+     "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-LLT": 0.0016484796389644174,
+     "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-ETA": 0.0008218778164135188
+    },
+    "within_tolerance_by_case": {
+     "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-LOGLIK": true,
+     "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-BETA": false,
+     "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-LLT": false,
+     "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-ETA": false
+    }
+   },
+   "ruling": "itchyshin/GLLVModels.jl#684 item 4"
+  },
+  {
+   "source_id": "data/RD-CRABS-GAUSSIAN",
+   "classification": "required_core",
+   "arc": "campaign-C4",
+   "clause": "C4",
+   "executable_case_ids": [
+    "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LOGLIK",
+    "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-BETA",
+    "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LLT",
+    "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-ETA"
+   ],
+   "disposition": null,
+   "evidence_tier": "partial_case_not_executed",
+   "measured_against": "P1",
+   "evidence": {
+    "non_binding_receipts": [
+     "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-CRABS-GAUSSIAN.json"
+    ],
+    "tier": "measured, does not bind. Every number is inside its tolerance, but a required leg was not run: the engine = \"julia\" bridge route and the plan's eight acceptance classes (the C4 clause needs them, see GATES.md and plan section 1.3). The direct-engine comparison does not say the bridge workflow passes"
+   },
+   "measured_result": {
+    "verdict": "NUMERIC_PASS_NOT_BINDING",
+    "max_abs_diff_by_case": {
+     "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LOGLIK": 5.8479827202972956e-08,
+     "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-BETA": 5.734798325107704e-08,
+     "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LLT": 1.4340849061461602e-06,
+     "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-ETA": 1.6242267664168253e-07
+    },
+    "within_tolerance_by_case": {
+     "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LOGLIK": true,
+     "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-BETA": true,
+     "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LLT": true,
+     "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-ETA": true
+    }
+   },
+   "ruling": "itchyshin/GLLVModels.jl#684 item 4"
+  },
+  {
+   "source_id": "data/RD-SPIDER-NB2",
+   "classification": "required_core",
+   "arc": "campaign-C4",
+   "clause": "C4",
+   "executable_case_ids": [
+    "CAMPAIGN-C4-RD-SPIDER-NB2-LOGLIK",
+    "CAMPAIGN-C4-RD-SPIDER-NB2-BETA",
+    "CAMPAIGN-C4-RD-SPIDER-NB2-LLT",
+    "CAMPAIGN-C4-RD-SPIDER-NB2-ETA"
+   ],
+   "disposition": null,
+   "evidence_tier": "numeric_fail",
+   "measured_against": "P1",
+   "evidence": {
+    "non_binding_receipts": [
+     "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-SPIDER-NB2.json"
+    ],
+    "tier": "measured, does not bind: a required leg was not run: the engine = \"julia\" bridge route and the plan's eight acceptance classes (the C4 clause needs them, see GATES.md and plan section 1.3). The direct-engine comparison does not say the bridge workflow passes; logLik: abs difference 1.45732e-06 > tolerance 1e-06; LLt: abs difference 0.000161728 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 6.73994e-05 > tolerance 1e-06"
+   },
+   "measured_result": {
+    "verdict": "FAIL",
+    "max_abs_diff_by_case": {
+     "CAMPAIGN-C4-RD-SPIDER-NB2-LOGLIK": 1.4573231510439655e-06,
+     "CAMPAIGN-C4-RD-SPIDER-NB2-BETA": 4.9511286195569326e-05,
+     "CAMPAIGN-C4-RD-SPIDER-NB2-LLT": 0.00016172778977541213,
+     "CAMPAIGN-C4-RD-SPIDER-NB2-ETA": 6.739944245026663e-05
+    },
+    "within_tolerance_by_case": {
+     "CAMPAIGN-C4-RD-SPIDER-NB2-LOGLIK": false,
+     "CAMPAIGN-C4-RD-SPIDER-NB2-BETA": true,
+     "CAMPAIGN-C4-RD-SPIDER-NB2-LLT": false,
+     "CAMPAIGN-C4-RD-SPIDER-NB2-ETA": false
+    }
+   },
+   "ruling": "itchyshin/GLLVModels.jl#684 item 4"
+  },
+  {
+   "source_id": "data/RD-BEETLE-NB2",
+   "classification": "required_core",
+   "arc": "campaign-C4",
+   "clause": "C4",
+   "executable_case_ids": [
+    "CAMPAIGN-C4-RD-BEETLE-NB2-LOGLIK",
+    "CAMPAIGN-C4-RD-BEETLE-NB2-BETA",
+    "CAMPAIGN-C4-RD-BEETLE-NB2-LLT",
+    "CAMPAIGN-C4-RD-BEETLE-NB2-ETA"
+   ],
+   "disposition": null,
+   "evidence_tier": "numeric_fail",
+   "measured_against": "P1",
+   "evidence": {
+    "non_binding_receipts": [
+     "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-BEETLE-NB2.json"
+    ],
+    "tier": "measured, does not bind: R's Hessian is not positive definite (pdHess is false); a required leg was not run: the engine = \"julia\" bridge route and the plan's eight acceptance classes (the C4 clause needs them, see GATES.md and plan section 1.3). The direct-engine comparison does not say the bridge workflow passes; logLik: abs difference 9.08069e-06 > tolerance 1e-06; beta: abs difference 0.000287141 > tolerance 0.0001; LLt: abs difference 0.00463293 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000869455 > tolerance 1e-06"
+   },
+   "measured_result": {
+    "verdict": "FAIL",
+    "max_abs_diff_by_case": {
+     "CAMPAIGN-C4-RD-BEETLE-NB2-LOGLIK": 9.080691597773694e-06,
+     "CAMPAIGN-C4-RD-BEETLE-NB2-BETA": 0.00028714120128903176,
+     "CAMPAIGN-C4-RD-BEETLE-NB2-LLT": 0.004632934295180746,
+     "CAMPAIGN-C4-RD-BEETLE-NB2-ETA": 0.0008694545642065066
+    },
+    "within_tolerance_by_case": {
+     "CAMPAIGN-C4-RD-BEETLE-NB2-LOGLIK": false,
+     "CAMPAIGN-C4-RD-BEETLE-NB2-BETA": false,
+     "CAMPAIGN-C4-RD-BEETLE-NB2-LLT": false,
+     "CAMPAIGN-C4-RD-BEETLE-NB2-ETA": false
+    }
+   },
+   "ruling": "itchyshin/GLLVModels.jl#684 item 4"
+  },
+  {
+   "source_id": "data/RD-FUNGI-BINOMIAL",
+   "classification": "required_core",
+   "arc": "campaign-C4",
+   "clause": "C4",
+   "executable_case_ids": [
+    "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-LOGLIK",
+    "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-BETA",
+    "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-LLT",
+    "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-ETA"
+   ],
+   "disposition": null,
+   "evidence_tier": "numeric_fail",
+   "measured_against": "P1",
+   "evidence": {
+    "non_binding_receipts": [
+     "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-FUNGI-BINOMIAL.json"
+    ],
+    "tier": "measured, does not bind: a required leg was not run: the engine = \"julia\" bridge route and the plan's eight acceptance classes (the C4 clause needs them, see GATES.md and plan section 1.3). The direct-engine comparison does not say the bridge workflow passes; beta: abs difference 0.000123933 > tolerance 0.0001; LLt: abs difference 0.000474438 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000328279 > tolerance 1e-06"
+   },
+   "measured_result": {
+    "verdict": "FAIL",
+    "max_abs_diff_by_case": {
+     "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-LOGLIK": 6.151276465971023e-08,
+     "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-BETA": 0.000123932525228021,
+     "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-LLT": 0.00047443752671583184,
+     "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-ETA": 0.00032827901245191526
+    },
+    "within_tolerance_by_case": {
+     "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-LOGLIK": true,
+     "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-BETA": false,
+     "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-LLT": false,
+     "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-ETA": false
+    }
+   },
+   "ruling": "itchyshin/GLLVModels.jl#684 item 4"
+  },
+  {
+   "source_id": "data/RD-PHYLO-DISPOSITION",
+   "classification": "required_core",
+   "arc": "campaign-C4",
+   "clause": "C4",
+   "executable_case_ids": [],
+   "disposition": null,
+   "evidence_tier": "not_measured",
+   "measured_against": "P1",
+   "evidence": {
+    "tier": "no measurement: this row awaits the maintainer's own signed disposition; nothing is signed here"
+   },
+   "proposed_disposition": {
+    "capability": "phylo-structured real data",
+    "text": "gllvm::fungi ships a phylogeny (fungi$tree), so a real phylo workflow exists. Blocked at the bridge gate GJL-GATE-STRUCTURED-TERMS until gllvmTMB #1236 (A4a) lands; revisit at P2.",
+    "status": "PROPOSED, UNSIGNED: the campaign plan says each of these three rows needs the maintainer's own signature, and itchyshin/GLLVModels.jl#684 does not quote them"
+   },
+   "ruling": "itchyshin/GLLVModels.jl#684 item 4 (row added); disposition itself unsigned"
+  },
+  {
+   "source_id": "data/RD-TEMPORAL-DISPOSITION",
+   "classification": "required_core",
+   "arc": "campaign-C4",
+   "clause": "C4",
+   "executable_case_ids": [],
+   "disposition": null,
+   "evidence_tier": "not_measured",
+   "measured_against": "P1",
+   "evidence": {
+    "tier": "no measurement: this row awaits the maintainer's own signed disposition; nothing is signed here"
+   },
+   "proposed_disposition": {
+    "capability": "temporal real data",
+    "text": "None of gllvm, vegan, MASS, ape ships a multivariate ecological time series the plan would call a real workflow; no bridge route for temporal at P1 (D-296).",
+    "status": "PROPOSED, UNSIGNED: the campaign plan says each of these three rows needs the maintainer's own signature, and itchyshin/GLLVModels.jl#684 does not quote them"
+   },
+   "ruling": "itchyshin/GLLVModels.jl#684 item 4 (row added); disposition itself unsigned"
+  },
+  {
+   "source_id": "data/RD-ISDM-DISPOSITION",
+   "classification": "required_core",
+   "arc": "campaign-C4",
+   "clause": "C4",
+   "executable_case_ids": [],
+   "disposition": null,
+   "evidence_tier": "not_measured",
+   "measured_against": "P1",
+   "evidence": {
+    "tier": "no measurement: this row awaits the maintainer's own signed disposition; nothing is signed here"
+   },
+   "proposed_disposition": {
+    "capability": "integrated SDM real data",
+    "text": "No real multi-source dataset in the packages checked; no bridge route for iSDM at P1 (D-296, D-300 row 1c-5).",
+    "status": "PROPOSED, UNSIGNED: the campaign plan says each of these three rows needs the maintainer's own signature, and itchyshin/GLLVModels.jl#684 does not quote them"
+   },
+   "ruling": "itchyshin/GLLVModels.jl#684 item 4 (row added); disposition itself unsigned"
+  },
+  {
    "source_id": "family/FAMILY-00-IDENTITY",
    "classification": "required_core",
    "arc": "A3",
@@ -3562,6 +3869,191 @@
    }
   },
   {
+   "source_id": "family/GAUSSIAN-IDENTITY-RSZ",
+   "classification": "required_core",
+   "arc": "campaign-C3",
+   "clause": "C3",
+   "executable_case_ids": [
+    "CAMPAIGN-C3-GAUSSIAN-IDENTITY-RSZ-LOGLIK",
+    "CAMPAIGN-C3-GAUSSIAN-IDENTITY-RSZ-BETA",
+    "CAMPAIGN-C3-GAUSSIAN-IDENTITY-RSZ-BETA-SE",
+    "CAMPAIGN-C3-GAUSSIAN-IDENTITY-RSZ-LLT"
+   ],
+   "disposition": null,
+   "evidence_tier": "numeric",
+   "measured_against": "P1",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/family/campaign/GAUSSIAN-IDENTITY-RSZ.json"
+    ],
+    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
+   },
+   "measured_result": {
+    "verdict": "PASS",
+    "max_abs_diff_by_case": {
+     "CAMPAIGN-C3-GAUSSIAN-IDENTITY-RSZ-LOGLIK": 1.9502476789057255e-07,
+     "CAMPAIGN-C3-GAUSSIAN-IDENTITY-RSZ-BETA": 3.140509312604678e-07,
+     "CAMPAIGN-C3-GAUSSIAN-IDENTITY-RSZ-BETA-SE": 8.580122276529607e-06,
+     "CAMPAIGN-C3-GAUSSIAN-IDENTITY-RSZ-LLT": 5.94349776099623e-05
+    },
+    "within_tolerance_by_case": {
+     "CAMPAIGN-C3-GAUSSIAN-IDENTITY-RSZ-LOGLIK": true,
+     "CAMPAIGN-C3-GAUSSIAN-IDENTITY-RSZ-BETA": true,
+     "CAMPAIGN-C3-GAUSSIAN-IDENTITY-RSZ-BETA-SE": true,
+     "CAMPAIGN-C3-GAUSSIAN-IDENTITY-RSZ-LLT": true
+    }
+   },
+   "ruling": "itchyshin/GLLVModels.jl#684 item 4"
+  },
+  {
+   "source_id": "family/POISSON-LOG-RSZ",
+   "classification": "required_core",
+   "arc": "campaign-C3",
+   "clause": "C3",
+   "executable_case_ids": [
+    "CAMPAIGN-C3-POISSON-LOG-RSZ-LOGLIK",
+    "CAMPAIGN-C3-POISSON-LOG-RSZ-BETA",
+    "CAMPAIGN-C3-POISSON-LOG-RSZ-BETA-SE",
+    "CAMPAIGN-C3-POISSON-LOG-RSZ-LLT"
+   ],
+   "disposition": null,
+   "evidence_tier": "numeric",
+   "measured_against": "P1",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/family/campaign/POISSON-LOG-RSZ.json"
+    ],
+    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
+   },
+   "measured_result": {
+    "verdict": "PASS",
+    "max_abs_diff_by_case": {
+     "CAMPAIGN-C3-POISSON-LOG-RSZ-LOGLIK": 2.24594259634614e-07,
+     "CAMPAIGN-C3-POISSON-LOG-RSZ-BETA": 1.9382845540816263e-06,
+     "CAMPAIGN-C3-POISSON-LOG-RSZ-BETA-SE": 6.253075547462608e-06,
+     "CAMPAIGN-C3-POISSON-LOG-RSZ-LLT": 9.808426876499465e-06
+    },
+    "within_tolerance_by_case": {
+     "CAMPAIGN-C3-POISSON-LOG-RSZ-LOGLIK": true,
+     "CAMPAIGN-C3-POISSON-LOG-RSZ-BETA": true,
+     "CAMPAIGN-C3-POISSON-LOG-RSZ-BETA-SE": true,
+     "CAMPAIGN-C3-POISSON-LOG-RSZ-LLT": true
+    }
+   },
+   "ruling": "itchyshin/GLLVModels.jl#684 item 4"
+  },
+  {
+   "source_id": "family/NB2-LOG-RSZ",
+   "classification": "required_core",
+   "arc": "campaign-C3",
+   "clause": "C3",
+   "executable_case_ids": [
+    "CAMPAIGN-C3-NB2-LOG-RSZ-LOGLIK",
+    "CAMPAIGN-C3-NB2-LOG-RSZ-BETA",
+    "CAMPAIGN-C3-NB2-LOG-RSZ-BETA-SE",
+    "CAMPAIGN-C3-NB2-LOG-RSZ-LLT",
+    "CAMPAIGN-C3-NB2-LOG-RSZ-DISPERSION"
+   ],
+   "disposition": null,
+   "evidence_tier": "numeric",
+   "measured_against": "P1",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/family/campaign/NB2-LOG-RSZ.json"
+    ],
+    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
+   },
+   "measured_result": {
+    "verdict": "PASS",
+    "max_abs_diff_by_case": {
+     "CAMPAIGN-C3-NB2-LOG-RSZ-LOGLIK": 4.390458343550563e-07,
+     "CAMPAIGN-C3-NB2-LOG-RSZ-BETA": 4.20628961583791e-06,
+     "CAMPAIGN-C3-NB2-LOG-RSZ-BETA-SE": 1.075743256830727e-05,
+     "CAMPAIGN-C3-NB2-LOG-RSZ-LLT": 2.3661739316878892e-05,
+     "CAMPAIGN-C3-NB2-LOG-RSZ-DISPERSION": 3.506941475706392e-05
+    },
+    "within_tolerance_by_case": {
+     "CAMPAIGN-C3-NB2-LOG-RSZ-LOGLIK": true,
+     "CAMPAIGN-C3-NB2-LOG-RSZ-BETA": true,
+     "CAMPAIGN-C3-NB2-LOG-RSZ-BETA-SE": true,
+     "CAMPAIGN-C3-NB2-LOG-RSZ-LLT": true,
+     "CAMPAIGN-C3-NB2-LOG-RSZ-DISPERSION": true
+    }
+   },
+   "ruling": "itchyshin/GLLVModels.jl#684 item 4"
+  },
+  {
+   "source_id": "family/BINOMIAL-LOGIT-RSZ",
+   "classification": "required_core",
+   "arc": "campaign-C3",
+   "clause": "C3",
+   "executable_case_ids": [
+    "CAMPAIGN-C3-BINOMIAL-LOGIT-RSZ-LOGLIK",
+    "CAMPAIGN-C3-BINOMIAL-LOGIT-RSZ-BETA",
+    "CAMPAIGN-C3-BINOMIAL-LOGIT-RSZ-BETA-SE",
+    "CAMPAIGN-C3-BINOMIAL-LOGIT-RSZ-LLT"
+   ],
+   "disposition": null,
+   "evidence_tier": "numeric",
+   "measured_against": "P1",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/family/campaign/BINOMIAL-LOGIT-RSZ.json"
+    ],
+    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
+   },
+   "measured_result": {
+    "verdict": "PASS",
+    "max_abs_diff_by_case": {
+     "CAMPAIGN-C3-BINOMIAL-LOGIT-RSZ-LOGLIK": 1.0296298569301143e-07,
+     "CAMPAIGN-C3-BINOMIAL-LOGIT-RSZ-BETA": 8.58274268750181e-06,
+     "CAMPAIGN-C3-BINOMIAL-LOGIT-RSZ-BETA-SE": 1.4344324489113304e-05,
+     "CAMPAIGN-C3-BINOMIAL-LOGIT-RSZ-LLT": 3.226403159428681e-05
+    },
+    "within_tolerance_by_case": {
+     "CAMPAIGN-C3-BINOMIAL-LOGIT-RSZ-LOGLIK": true,
+     "CAMPAIGN-C3-BINOMIAL-LOGIT-RSZ-BETA": true,
+     "CAMPAIGN-C3-BINOMIAL-LOGIT-RSZ-BETA-SE": true,
+     "CAMPAIGN-C3-BINOMIAL-LOGIT-RSZ-LLT": true
+    }
+   },
+   "ruling": "itchyshin/GLLVModels.jl#684 item 4"
+  },
+  {
+   "source_id": "family/ORDINAL-LOGIT-RSZ",
+   "classification": "required_core",
+   "arc": "campaign-C3",
+   "clause": "C3",
+   "executable_case_ids": [
+    "CAMPAIGN-C3-ORDINAL-LOGIT-RSZ-LOGLIK",
+    "CAMPAIGN-C3-ORDINAL-LOGIT-RSZ-LLT",
+    "CAMPAIGN-C3-ORDINAL-LOGIT-RSZ-THRESHOLDS"
+   ],
+   "disposition": null,
+   "evidence_tier": "numeric_fail",
+   "measured_against": "P1",
+   "evidence": {
+    "non_binding_receipts": [
+     "docs/dev-log/core070/true-parity-latest/receipts/family/campaign/ORDINAL-LOGIT-RSZ.json"
+    ],
+    "tier": "measured, does not bind: LLt: abs difference 0.000129891 > tolerance 0.0001"
+   },
+   "measured_result": {
+    "verdict": "FAIL",
+    "max_abs_diff_by_case": {
+     "CAMPAIGN-C3-ORDINAL-LOGIT-RSZ-LOGLIK": 2.1035339159425348e-07,
+     "CAMPAIGN-C3-ORDINAL-LOGIT-RSZ-LLT": 0.00012989127759771568,
+     "CAMPAIGN-C3-ORDINAL-LOGIT-RSZ-THRESHOLDS": 5.585089662085707e-06
+    },
+    "within_tolerance_by_case": {
+     "CAMPAIGN-C3-ORDINAL-LOGIT-RSZ-LOGLIK": true,
+     "CAMPAIGN-C3-ORDINAL-LOGIT-RSZ-LLT": false,
+     "CAMPAIGN-C3-ORDINAL-LOGIT-RSZ-THRESHOLDS": true
+    }
+   },
+   "ruling": "itchyshin/GLLVModels.jl#684 item 4"
+  },
+  {
    "source_id": "fit-input/INPUT-ANIMAL-LATENT",
    "classification": "required_core",
    "arc": "A3",
@@ -3801,6 +4293,118 @@
     "row_verdict": "PASS"
    },
    "note": "One measurement counted twice: KERNEL-TWO-AUTO reuses KERNEL-TWO's data, gllvmTMB drops unique = TRUE in the two-kernel combination (the contract's critical_finding_kernel_two_auto, re-checked by the R runner at P1), and the contract maps the Julia side to the same two-source model. The R logLik/coefficients and the Julia logLik/coefficients of this case equal those of CORE070-FIT-INPUT-KERNEL-TWO-NATIVE-MODEL. Distinct surface rows, one comparison; whether it counts once or twice is for the maintainer. One measurement counted twice: KERNEL-TWO-AUTO reuses KERNEL-TWO's data, gllvmTMB drops unique = TRUE in the two-kernel combination (the contract's critical_finding_kernel_two_auto, re-checked by the R runner at P1), and the contract maps the Julia side to the same two-source model. The R logLik/coefficients and the Julia logLik/coefficients of this case equal those of CORE070-FIT-INPUT-KERNEL-TWO-FORMULA-INTERFACE. Distinct surface rows, one comparison; whether it counts once or twice is for the maintainer."
+  },
+  {
+   "source_id": "fit-input/GRP-UNIT",
+   "classification": "required_core",
+   "arc": "campaign-C5",
+   "clause": "C5",
+   "executable_case_ids": [
+    "grouping-p1/unit/logLik"
+   ],
+   "disposition": null,
+   "evidence_tier": "numeric",
+   "measured_against": "P1",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/fit-input/campaign/GRP-UNIT.json"
+    ],
+    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
+   },
+   "measured_result": {
+    "verdict": "PASS",
+    "max_abs_diff_by_case": {
+     "grouping-p1/unit/logLik": 1.9188917121937266e-10
+    },
+    "within_tolerance_by_case": {
+     "grouping-p1/unit/logLik": true
+    }
+   },
+   "ruling": "itchyshin/GLLVModels.jl#684 item 4"
+  },
+  {
+   "source_id": "fit-input/GRP-UNIT-OBS",
+   "classification": "required_core",
+   "arc": "campaign-C5",
+   "clause": "C5",
+   "executable_case_ids": [
+    "grouping-p1/unit_obs/logLik"
+   ],
+   "disposition": null,
+   "evidence_tier": "numeric",
+   "measured_against": "P1",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/fit-input/campaign/GRP-UNIT-OBS.json"
+    ],
+    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
+   },
+   "measured_result": {
+    "verdict": "PASS",
+    "max_abs_diff_by_case": {
+     "grouping-p1/unit_obs/logLik": 1.3358203432289883e-12
+    },
+    "within_tolerance_by_case": {
+     "grouping-p1/unit_obs/logLik": true
+    }
+   },
+   "ruling": "itchyshin/GLLVModels.jl#684 item 4"
+  },
+  {
+   "source_id": "fit-input/GRP-CLUSTER",
+   "classification": "required_core",
+   "arc": "campaign-C5",
+   "clause": "C5",
+   "executable_case_ids": [
+    "grouping-p1/cluster/logLik"
+   ],
+   "disposition": null,
+   "evidence_tier": "numeric",
+   "measured_against": "P1",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/fit-input/campaign/GRP-CLUSTER.json"
+    ],
+    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
+   },
+   "measured_result": {
+    "verdict": "PASS",
+    "max_abs_diff_by_case": {
+     "grouping-p1/cluster/logLik": 2.4300561562995426e-12
+    },
+    "within_tolerance_by_case": {
+     "grouping-p1/cluster/logLik": true
+    }
+   },
+   "ruling": "itchyshin/GLLVModels.jl#684 item 4"
+  },
+  {
+   "source_id": "fit-input/GRP-CLUSTER2",
+   "classification": "required_core",
+   "arc": "campaign-C5",
+   "clause": "C5",
+   "executable_case_ids": [
+    "grouping-p1/cluster2/logLik"
+   ],
+   "disposition": null,
+   "evidence_tier": "numeric",
+   "measured_against": "P1",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/fit-input/campaign/GRP-CLUSTER2.json"
+    ],
+    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
+   },
+   "measured_result": {
+    "verdict": "PASS",
+    "max_abs_diff_by_case": {
+     "grouping-p1/cluster2/logLik": 5.137223979545524e-12
+    },
+    "within_tolerance_by_case": {
+     "grouping-p1/cluster2/logLik": true
+    }
+   },
+   "ruling": "itchyshin/GLLVModels.jl#684 item 4"
   },
   {
    "source_id": "inference/CI-ROUTE-001",
@@ -6584,6 +7188,49 @@
    "r_predicate_case_ids": [
     "CORE070-ISDM-ZERO-ORDINARY-PAIRED-CONTROL"
    ]
+  },
+  {
+   "source_id": "isdm/ISDM-HEADLINE-RSZ",
+   "classification": "required_core",
+   "arc": "campaign-C3",
+   "clause": "C3",
+   "executable_case_ids": [
+    "CAMPAIGN-C3-ISDM-HEADLINE-RSZ-LOGLIK",
+    "CAMPAIGN-C3-ISDM-HEADLINE-RSZ-BETA",
+    "CAMPAIGN-C3-ISDM-HEADLINE-RSZ-PREDICT-LINK",
+    "CAMPAIGN-C3-ISDM-HEADLINE-RSZ-PREDICT-RESPONSE",
+    "CAMPAIGN-C3-ISDM-HEADLINE-RSZ-PREDICT-NEWDATA-OFFSET0-LINK",
+    "CAMPAIGN-C3-ISDM-HEADLINE-RSZ-PREDICT-NEWDATA-OFFSET0-RESPONSE"
+   ],
+   "disposition": null,
+   "evidence_tier": "numeric_fail",
+   "measured_against": "P1",
+   "evidence": {
+    "non_binding_receipts": [
+     "docs/dev-log/core070/true-parity-latest/receipts/isdm/campaign/ISDM-HEADLINE-RSZ.json"
+    ],
+    "tier": "measured, does not bind: predict_link: abs difference 7.69188e-05 > tolerance 1e-06; predict_response: abs difference 0.000149001 > tolerance 1e-06; predict_newdata_offset0_link: abs difference 7.69188e-05 > tolerance 1e-06; predict_newdata_offset0_response: abs difference 9.9334e-05 > tolerance 1e-06"
+   },
+   "measured_result": {
+    "verdict": "FAIL",
+    "max_abs_diff_by_case": {
+     "CAMPAIGN-C3-ISDM-HEADLINE-RSZ-LOGLIK": 4.090543370693922e-07,
+     "CAMPAIGN-C3-ISDM-HEADLINE-RSZ-BETA": 1.1181552182104593e-05,
+     "CAMPAIGN-C3-ISDM-HEADLINE-RSZ-PREDICT-LINK": 7.691881574919956e-05,
+     "CAMPAIGN-C3-ISDM-HEADLINE-RSZ-PREDICT-RESPONSE": 0.0001490010101150574,
+     "CAMPAIGN-C3-ISDM-HEADLINE-RSZ-PREDICT-NEWDATA-OFFSET0-LINK": 7.691881574919956e-05,
+     "CAMPAIGN-C3-ISDM-HEADLINE-RSZ-PREDICT-NEWDATA-OFFSET0-RESPONSE": 9.933400675521398e-05
+    },
+    "within_tolerance_by_case": {
+     "CAMPAIGN-C3-ISDM-HEADLINE-RSZ-LOGLIK": true,
+     "CAMPAIGN-C3-ISDM-HEADLINE-RSZ-BETA": true,
+     "CAMPAIGN-C3-ISDM-HEADLINE-RSZ-PREDICT-LINK": false,
+     "CAMPAIGN-C3-ISDM-HEADLINE-RSZ-PREDICT-RESPONSE": false,
+     "CAMPAIGN-C3-ISDM-HEADLINE-RSZ-PREDICT-NEWDATA-OFFSET0-LINK": false,
+     "CAMPAIGN-C3-ISDM-HEADLINE-RSZ-PREDICT-NEWDATA-OFFSET0-RESPONSE": false
+    }
+   },
+   "ruling": "itchyshin/GLLVModels.jl#684 item 4"
   },
   {
    "source_id": "namespace/S3method/coef,gllvmTMB_julia",

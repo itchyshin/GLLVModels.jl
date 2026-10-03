@@ -1,0 +1,321 @@
+{
+ "schema": "true-parity-campaign-receipt/v1",
+ "source_id": "data/RD-CRABS-GAUSSIAN",
+ "clause": "C4",
+ "pin": "P1",
+ "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+ "ruling": "itchyshin/GLLVModels.jl#684 item 4",
+ "verdict": "NUMERIC_PASS_NOT_BINDING",
+ "row_status": "does not bind: a required leg was not run: the engine = \"julia\" bridge route and the plan's eight acceptance classes (the C4 clause needs them, see GATES.md and plan section 1.3). The direct-engine comparison does not say the bridge workflow passes",
+ "pass_rule": {
+  "rule": "both engines converged (R convergence 0 with a positive-definite Hessian; Julia converged true), both read the same data bytes, the ten named gllvmTMB entry points that run_R.R calls (gllvmTMB, gllvmTMBcontrol, nbinom2, ordinal_logit, isdm_sources, extract_Sigma, extract_cutpoints, predict.gllvmTMB_multi, extract_temporal, temporal_latent) deparse identically to their P1 source; internal gllvmTMB functions and the compiled library are not deparse-checked, they are trusted by the recorded version 0.7.1, the library path and the sha256 of the P1 source files, and every listed quantity is within its tolerance; and the engine = \"julia\" bridge route and the plan's eight acceptance classes were run (plan section 1.3), which this campaign did not do",
+  "legs": {
+   "R_convergence_0": true,
+   "R_pdHess_true": true,
+   "Julia_converged_true": true,
+   "same_data_sha256": true,
+   "gllvmTMB_deparse_identical_to_P1": true,
+   "R_version_0_7_1_from_P1_library": true,
+   "every_quantity_within_tolerance": true,
+   "engine_julia_bridge_route_and_eight_acceptance_classes_run": false
+  }
+ },
+ "cell": {
+  "formula": "value ~ 0 + trait:grp + latent(0 + trait | specimen, d = 1, unique = FALSE)",
+  "data_sha256": "fe1fd47c7f864cc5496c9d72e4d1cd095ef99d9e44c1101e2fbdeace4254dea3",
+  "data_file": "crabs.csv",
+  "p": 5,
+  "n": 200,
+  "data_committed_copy": null
+ },
+ "data_meta": {
+  "cell": "crabs",
+  "small": false,
+  "source": "MASS::crabs (MASS 7.3.66), GPL-2 or GPL-3; loaded by name, not tracked",
+  "file": "crabs.csv",
+  "rows": 200,
+  "cols": 9,
+  "csv_sha256": "fe1fd47c7f864cc5496c9d72e4d1cd095ef99d9e44c1101e2fbdeace4254dea3",
+  "R_version": "R version 4.6.1 (2026-06-24)"
+ },
+ "run": {
+  "host": "totoro.biology.ualberta.ca (384 cores, shared); lane directory ~/hsq_work/true-parity-campaign-20261002",
+  "driver_start": [
+   "2026-10-03T00:45:43Z",
+   " 18:45:43 up 3 days,  6:22,  8 users,  load average: 24.47, 25.77, 27.77"
+  ],
+  "driver_end": [
+   "2026-10-03T00:58:39Z",
+   " 18:58:39 up 3 days,  6:35,  8 users,  load average: 15.78, 17.11, 21.96"
+  ],
+  "jobs": [
+   "J crabs rc=0 wall=28s cap=180s 2026-10-03T00:47:00Z",
+   "R crabs rc=0 wall=1s cap=600s 2026-10-03T00:47:34Z"
+  ],
+  "caps": "at most 8 concurrent jobs, OPENBLAS_NUM_THREADS=1, JULIA_NUM_THREADS=2, R single-threaded; each Julia job under the timeout shown as cap= in its job line (twice its written estimate, except fungi, whose cap was 300 s against a 2 min estimate); R jobs under 600 s"
+ },
+ "engine_messages": {
+  "R": null,
+  "julia": null
+ },
+ "p1_source_sha256": {
+  "R/gllvmTMB.R": "a1ad39041f88d08b017500132bac45b5282f246025c488bc1829dc57aeae3faf",
+  "R/families.R": "beed3caa91b0ed77b402f40192a493db693eafdd0bb214aa0ef73c33e4538791",
+  "R/isdm-sources.R": "e06bbe7bc3c88697080173f0e1b68f3e5a1947729124e72d34587730cd1b6f73",
+  "R/extract-sigma.R": "dbd337827707a7ca04c31ee57d6caf143b08e633d30a495f809f5b8728f90a14",
+  "R/extract-cutpoints.R": "38c195646d91db683cbb31da1e3ba60fb1d857d5c0637f0877514176b11bc151",
+  "R/methods-gllvmTMB.R": "6c32924b415646697ab4e471fda8b83108e416d662ba6e607bbeba335dd21616",
+  "R/temporal.R": "93ec5bfe19b2f64afa04c50d9a7a8c85d2b0d9b9a6410eeceb5504895b280902",
+  "DESCRIPTION": "ce3ba8fd8787a096e0c1142a2145cef167869325c937c8436c8916a526552283"
+ },
+ "gllvmTMB_deparse_check": [
+  {
+   "name": "gllvmTMB",
+   "file": "R/gllvmTMB.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "gllvmTMBcontrol",
+   "file": "R/gllvmTMB.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "nbinom2",
+   "file": "R/families.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "ordinal_logit",
+   "file": "R/families.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "isdm_sources",
+   "file": "R/isdm-sources.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "extract_Sigma",
+   "file": "R/extract-sigma.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "extract_cutpoints",
+   "file": "R/extract-cutpoints.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "predict.gllvmTMB_multi",
+   "file": "R/methods-gllvmTMB.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "extract_temporal",
+   "file": "R/temporal.R",
+   "identical_deparse": true
+  },
+  {
+   "name": "temporal_latent",
+   "file": "R/temporal.R",
+   "identical_deparse": true
+  }
+ ],
+ "cond_H_statement": "R cond(H) 5898.2, computed as kappa(solve(sdr$cov.fixed), exact = FALSE): a 1-norm condition-number ESTIMATE (LAPACK) of the inverse of TMB's sdreport covariance of all fixed parameters, in gllvmTMB's own parameter coordinates. Julia cond(H) 1737.27, computed as cond(Symmetric(vcov(fit, Y))): the exact 2-norm condition number (ratio of the extreme eigenvalues) of the full inverse observed information (Wald covariance) of the Julia fit, in the Julia fit's own parameter coordinates. The two are different estimators in different parameter bases: recorded, never compared like for like.",
+ "not_covered": [
+  "One dataset and one seed per row: a spot check at this size, not a scaling study or a coverage study.",
+  "Direct engines only (R TMB fit against a direct Julia fit); R's engine = 'julia' bridge route is not exercised.",
+  "Julia starts from its own default start, never from R's coordinates; wall times include first-call Julia compilation.",
+  "cond(H) of the two engines is recorded where computed but never compared (different parameter bases); see cond_H_statement for this receipt."
+ ],
+ "engines": {
+  "R": {
+   "engine": "R gllvmTMB",
+   "gllvmTMB_version": "0.7.1",
+   "loaded_from_library": "Rlib/gllvmTMB",
+   "TMB_version": "1.9.25",
+   "R_version": "R version 4.6.1 (2026-06-24)",
+   "host": "totoro",
+   "formula": "value ~ 0 + trait:grp + latent(0 + trait | specimen, d = 1, unique = FALSE)",
+   "convergence": 0,
+   "optimizer_message": "relative convergence (4)",
+   "pdHess": true,
+   "max_abs_gradient": 0.0192433263059218,
+   "n_par": 26,
+   "cond_H": 5898.20000928773,
+   "cond_H_method": "kappa(solve(sdr$cov.fixed), exact = FALSE): a 1-norm condition-number ESTIMATE (LAPACK) of the inverse of TMB's sdreport covariance of all fixed parameters, in gllvmTMB's own parameter coordinates",
+   "wall_fit_sec": 0.722391128540039,
+   "wall_sdreport_sec": 0.0423803329467773,
+   "finished_utc": "2026-10-03T00:47:34Z"
+  },
+  "julia": {
+   "engine": "GLLVModels.jl",
+   "julia_version": "1.12.6",
+   "gllvmodels_commit": "896a0a2286c224fe9979d3cf7e7e2c6be27f9357",
+   "host": "totoro",
+   "call": "fit_gaussian_gllvm(Y; K = 1, X = <per-trait x group design>)",
+   "converged": true,
+   "iterations": 0,
+   "pd_hessian": true,
+   "cond_H": 1737.2739938351713,
+   "cond_H_method": "cond(Symmetric(vcov(fit, Y))): the exact 2-norm condition number (ratio of the extreme eigenvalues) of the full inverse observed information (Wald covariance) of the Julia fit, in the Julia fit's own parameter coordinates",
+   "wall_fit_sec": 12.101539134979248,
+   "wall_confint_sec": 4.6726250648498535,
+   "wall_vcov_sec": 0.024049997329711914,
+   "JULIA_NUM_THREADS": 2,
+   "OPENBLAS_NUM_THREADS": "1"
+  }
+ },
+ "comparison": {
+  "pin": "P1",
+  "cases": [
+   {
+    "case_id": "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LOGLIK",
+    "quantity": "logLik",
+    "r_value": 1750.9367612617,
+    "julia_value": 1750.9367613201798,
+    "diff_source": "recomputed by the checker from r_value and julia_value",
+    "max_abs_diff": 5.8479827202972956e-08,
+    "tolerance": 1e-06,
+    "tolerance_rule": "1e-6 absolute on the marginal log-likelihood",
+    "tolerance_status": "twin: 1e-6 absolute on logLik, as the P0 worst case (2.3e-7) and every P1 twin",
+    "n_values": 1,
+    "within_tolerance": true
+   },
+   {
+    "case_id": "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-BETA",
+    "quantity": "beta",
+    "r_value": [
+     2.56498520090452,
+     2.47517430925403,
+     3.31268458365057,
+     3.4623267551061,
+     2.44135072029776,
+     2.85245539223193,
+     2.68383150571703,
+     3.52937047704642,
+     3.64955468279357,
+     2.73327258970628,
+     2.67272429386676,
+     2.44377395529536,
+     3.43796841614074,
+     3.57807668013342,
+     2.56080615842315,
+     2.78788515599758,
+     2.48992123053513,
+     3.49043103156069,
+     3.58942580593415,
+     2.70157962497054
+    ],
+    "julia_value": [
+     2.564985221914639,
+     2.475174332572537,
+     3.312684604854756,
+     3.462326792375671,
+     2.4413507492953097,
+     2.852455392665044,
+     2.683831496831429,
+     3.5293704752946784,
+     3.649554691974315,
+     2.733272583179757,
+     2.672724261986464,
+     2.443773932805463,
+     3.4379683587927565,
+     3.5780766395755403,
+     2.56080612019209,
+     2.787885144063536,
+     2.4899212291068467,
+     3.4904310234238447,
+     3.589425795114389,
+     2.7015796161488366
+    ],
+    "diff_source": "recomputed by the checker from r_value and julia_value",
+    "max_abs_diff": 5.734798325107704e-08,
+    "tolerance": 0.0001,
+    "tolerance_rule": "1e-4 absolute per fixed-effect estimate",
+    "tolerance_status": "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer",
+    "n_values": 20,
+    "within_tolerance": true
+   },
+   {
+    "case_id": "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LLT",
+    "quantity": "LLt",
+    "r_value": [
+     0.0429845135600603,
+     0.0385641538104072,
+     0.0456725321637695,
+     0.0453732152260395,
+     0.0477295317891537,
+     0.0385641538104072,
+     0.0345983666195211,
+     0.0409757470632618,
+     0.0407072107121745,
+     0.0428212128687647,
+     0.0456725321637695,
+     0.0409757470632618,
+     0.0485286448882554,
+     0.0482106102908292,
+     0.0507142781261412,
+     0.0453732152260395,
+     0.0407072107121745,
+     0.0482106102908292,
+     0.0478946599470514,
+     0.0503819198856681,
+     0.0477295317891537,
+     0.0428212128687647,
+     0.0507142781261412,
+     0.0503819198856681,
+     0.0529983479196232
+    ],
+    "julia_value": [
+     0.042983335337794554,
+     0.03856311151298211,
+     0.04567128876941913,
+     0.04537198063139409,
+     0.04772823188874533,
+     0.03856311151298211,
+     0.034597444750991635,
+     0.04097464721887459,
+     0.04070611865977848,
+     0.042820063035564154,
+     0.04567128876941913,
+     0.04097464721887459,
+     0.04852733277832912,
+     0.04820930747165267,
+     0.05071290638369831,
+     0.04537198063139409,
+     0.04070611865977848,
+     0.04820930747165267,
+     0.04789336635320368,
+     0.05038055785593558,
+     0.04772823188874533,
+     0.042820063035564154,
+     0.05071290638369831,
+     0.05038055785593558,
+     0.05299691383471705
+    ],
+    "diff_source": "recomputed by the checker from r_value and julia_value",
+    "max_abs_diff": 1.4340849061461602e-06,
+    "tolerance": 0.0001,
+    "tolerance_rule": "1e-4 absolute per element of Lambda Lambda' (rotation and sign invariant)",
+    "tolerance_status": "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer",
+    "n_values": 25,
+    "within_tolerance": true
+   },
+   {
+    "case_id": "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-ETA",
+    "quantity": "linear predictor on the training data (link scale)",
+    "diff_source": "max over 1000 values, from the committed raw files (receipts/data/campaign/raw/crabs_*.gz); re-derived by write_receipts.py --check",
+    "max_abs_diff": 1.6242267664168253e-07,
+    "tolerance": 1e-06,
+    "tolerance_rule": "1e-6 absolute, link scale on the training data",
+    "tolerance_status": "PROPOSED in the campaign plan (PR #650), carried as proposed; not yet confirmed by the maintainer",
+    "n_values": 1000,
+    "within_tolerance": true
+   }
+  ]
+ },
+ "read_from": {
+  "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/raw/crabs_R.json.gz (uncompressed sha256)": "a744d6da4727396c2f966ed7fcbade9e1ef7085a73373225edd4ddcfd21b24ee",
+  "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/raw/crabs_J.toml.gz (uncompressed sha256)": "16ba1d95d6a0564fb004abb6701f1128b72bf23ffe9f43e471b17bae46cc6214"
+ }
+}
