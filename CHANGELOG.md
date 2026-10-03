@@ -2,6 +2,25 @@
 
 ## Development
 
+- **`NBGroupedFit` and `NBGroupedCovFit` gain `predict`, `fitted`, `residuals` and
+  `getResidualCor` (#555).** The default per-species NB2 routes (`fit_nb_gllvm_grouped`
+  and `fit_nb_gllvm_grouped_cov`) had `getLV` and `confint` but threw a `MethodError` on
+  these four post-fit calls. `predict(fit, Y; type = :link / :response)` (and
+  `predict(fit, Y, X; ...)` for the covariate fit) returns `η = β + Xγ + Λẑ` or
+  `exp(η)` at each site's Laplace latent mode, the same mode `getLV` returns.
+  `fitted(fit, Y, X)` is the response-scale form. `residuals(...; type = :dunnsmyth)` gives
+  randomized quantile residuals under the NB2 CDF with each species' own size
+  `r_group[group[t]]`; `type = :pearson` gives `(Y - μ) / sqrt(μ + μ²/r)`. A group whose
+  fitted `r` sits at the Poisson limit (`r >= 1e6 * max(μ, 1)`) uses the Poisson CDF,
+  because the `NegativeBinomial(r, r/(r+μ))` CDF loses accuracy from about `r = 1e12` and is
+  constant at 1 once `r/(r+μ)` rounds to 1, and fitted groups reach `r` of 1e20 and more.
+  `getResidualCor(fit)` is `cov2cor(ΛΛ')`, the same matrix as gllvmTMB's `getResidualCor()`
+  (link residual `"none"`, no unique variance in these fits). These are new methods: no
+  existing function returns different numbers. Not covered here:
+  `getResidualCov` and the `extract_residual_*` spellings for these fits, the other grouped
+  families (`NB1GroupedFit`, `BetaGroupedFit`, `GammaGroupedFit`, `TweedieGroupedFit`), and
+  `NBGroupedAGHQFit`. Test: `test/test_nb_grouped_postfit.jl`.
+
 - **`fit_phylo_gaussian` no longer reports `converged = true` after a zero-length step
   (part of #505, the remaining #485 class).** Optim also counts a zero-length line-search
   step as convergence, so a start the finite-difference gradient cannot leave could be
