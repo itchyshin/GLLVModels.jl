@@ -203,8 +203,8 @@ and [`profile_ci_phylo_signal`](@ref) now use (see
 [Derived confidence intervals](derived-confidence-intervals.md)): clamps a
 bound that overshoots the quantity's natural feasible range, reports a
 deviance plateau at the range edge as `boundary = true` rather than a bare
-`NaN`/`:partial`, and bisects between the estimate and the edge when a `NaN`
-bound's edge lies outside the confidence region.
+`NaN`/`:partial`, and leaves a `NaN` bound `NaN` when the deviance at the edge
+is above the cutoff.
 
 ### `_principal_angles`
 
