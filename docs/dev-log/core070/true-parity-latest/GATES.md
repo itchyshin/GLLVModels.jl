@@ -589,8 +589,9 @@ date). That ruling covers `KEPT_AS_JULIA_EXTRA` and `EXCLUDED_INTERNAL_HELPER` o
 `unsigned_decision=` (no signed ruling covers it) and C6 fails. A new ruling is a new entry in
 `C6_RULINGS`, added in review. The assembler refuses to copy a ruling it does not recognise (unknown
 `ref`, wrong date, signer outside the allow-list), a decision word the ruling does not cover, and a
-file with an empty `criterion`, a `generator` that is not a file inside the tree (an absolute path, a
-`..` path and a directory are refused), a `basis` with no visible character, or a
+file with an empty `criterion`, a `generator` that is not a file inside the tree (an absolute path, a path
+with a `..` segment anywhere, such as `tools/../tools/gen.py`, and a directory are refused; only the
+assembler reads the generator, the checker does not), a `basis` with no visible character, or a
 `KEPT_AS_JULIA_EXTRA` basis that fails the documented-extra rule below. C6 also prints
 `decision_counts=` per vocabulary word.
 
@@ -619,7 +620,7 @@ with no path, `.`, a path outside `docs/src`, a `..` path, a dot-leading segment
 present and one missing file, and a directory; a `KEPT_AS_JULIA_EXTRA` basis citing an existing file
 binds, also in git mode; an `EXCLUDED_INTERNAL_HELPER` basis, a `KEPT_AS_JULIA_EXTRA` basis and a ruling
 `ref` made only of U+FEFF, U+200B, U+0085 or blanks. Assembler: a generator that does not exist, is a
-directory, is outside the tree or is an absolute path; the same basis controls; reverse-gap names that
+directory, is outside the tree, is an absolute path or has a `..` segment that resolves back into the tree; the same basis controls; reverse-gap names that
 match after `norm()`; `decisions_*`,
 `decision_for_non_item_is_stale_and_fails`, `decisions_file_*_fails`, and `c6_*_matches_checker`
 (the two tools' copies of the vocabulary, ruling table and named rows must not drift).
@@ -661,6 +662,12 @@ inherits (`constructor`, `__proto__`, `toString`) and then crash with exit 1 and
 reported as `ruling ref "<ref>" is not a recognised signed ruling` with `C6_NOT_MET` and exit 0, in the checker
 (group "C6 scope") and in the assembler (`c6_ruling_ref_*_is_not_a_recognised_ruling`). The control was checked by
 replacing the lookup with `in`: it fails, and the 29 other C6 controls that existed before it all still passed.
+
+**The generator path refuses `..` segments.** `reverse-gap-decisions.json` names the committed script that wrote
+it in `generator`. The assembler refuses the path when any segment, split at a slash or a backslash, is `..`, even when the path
+resolves to a file inside the tree (`tools/../tools/gen.py`). It still refuses an absolute path, a path that resolves
+outside the tree, a directory and a missing file. Controls: `c6_generator_with_a_dotdot_segment_is_refused_*`, and
+`c6_generator_with_a_plain_in_tree_path_still_ok` for the positive case.
 
 Controls. Assembler: `disposition_status_word_*`, `disposition_pipe_forged_*`, `disposition_with_*line_break*`,
 `every_reserved_status_word_*`, `non_string_or_blank_disposition_*`, `plain_dispositions_*`,

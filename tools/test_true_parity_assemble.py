@@ -918,6 +918,11 @@ def main():
     decision_fail("c6_generator_that_is_a_directory_fails", "is not a file in the tree", generator="tools")
     decision_fail("c6_generator_outside_the_tree_fails", "is not a file in the tree", generator="../outside.py")
     decision_fail("c6_generator_absolute_path_fails", "is not a file in the tree", generator=str(Path(__file__).resolve()))
+    # Review of #687 follow-up 3: GATES.md says a `..` path is refused; a `..` that resolves back into the tree was not.
+    for label, gen in (("tools_dotdot_tools", "tools/../tools/gen.py"), ("docs_dotdot_tools", "docs/../tools/gen.py"),
+                       ("trailing_dotdot", "tools/gen.py/.."), ("backslash_dotdot", "tools\\..\\tools\\gen.py"),
+                       ("many_dotdot", "tools/a/../../tools/gen.py")):
+        decision_fail(f"c6_generator_with_a_dotdot_segment_is_refused_{label}", "a path with a '..' segment is refused", generator=gen)
     for label, basis, why in (("no_path", "documented in the README", "must cite a docs/src/... file"), ("bare_dot", ".", "must cite a docs/src/... file"),
                               ("outside_docs_src", "see tools/gen.py", "must cite a docs/src/... file"), ("dot_dot", "docs/src/../x.md", "must cite a docs/src/... file"),
                               ("missing_file", "docs/src/missing.md", "docs/src/missing.md, which does not exist in the tree"),
@@ -941,6 +946,7 @@ def main():
         check(name, f)
     decisions_ok("c6_kept_basis_citing_an_existing_docs_src_file_ok", kept("see docs/src/page.md, section extras."))
     decisions_ok("c6_helper_basis_with_a_visible_character_ok", helper("."))
+    decisions_ok("c6_generator_with_a_plain_in_tree_path_still_ok", helper("."), generator="tools/gen.py")
 
     # Item 10: a Julia export has a gllvmTMB counterpart when the names match after tools/parity_ledger.py norm().
     def reverse_gap_norm():

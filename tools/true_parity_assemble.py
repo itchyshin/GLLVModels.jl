@@ -72,7 +72,8 @@ ruling, onto the matching item, whose status becomes "decided". A decision namin
 item fails the run (stale). Nothing here is a signature: the file carries the ruling. The tool refuses
 to copy a ruling it does not recognise (C6_RULINGS: only #684 item 3, dated 2026-10-02, covering
 KEPT_AS_JULIA_EXTRA and EXCLUDED_INTERNAL_HELPER), a signer outside the allow-list, a decision word
-the ruling does not cover, an empty criterion, a generator that is not a file in the tree, a basis with
+the ruling does not cover, an empty criterion, a generator that is not a file in the tree (an absolute path,
+a path with a ".." segment anywhere, a directory), a basis with
 no visible character, or a KEPT_AS_JULIA_EXTRA basis that cites no docs/src/... file that exists; the
 checker's C6 judges the same.
 
@@ -997,7 +998,10 @@ def load_reverse_gap_decisions(root: Path, ledger: Path):
     gen = d.get("generator")
     if not isinstance(gen, str) or not gen.strip():
         raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: generator must be a non-empty string")
-    # The generator is the committed script that produced the file: it must be a file inside the tree.
+    # The generator is the committed script that produced the file: it must be a file inside the tree, named
+    # without a ".." segment anywhere (a "tools/../tools/gen.py" that resolves back into the tree is refused too).
+    if ".." in re.split(r"[\\/]", gen):
+        raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: generator {json.dumps(gen)} is not a file in the tree (a path with a '..' segment is refused)")
     gpath = (root / gen)
     try:
         inside = not Path(gen).is_absolute() and gpath.resolve().is_relative_to(root.resolve())
