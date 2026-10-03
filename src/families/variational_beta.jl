@@ -280,12 +280,14 @@ exact via the envelope theorem (∂ELBO/∂(m,v)=0 at the inner optimum), so eac
 L-BFGS step costs ONE inner-solve pass rather than a finite-difference sweep. The
 returned `BetaFit`'s `loglik` field holds the maximised ELBO (a lower bound on the
 true log-marginal), so it sits slightly below the Laplace `loglik` for the same data.
+The ELBO is derived for the logit link only: any other `link` throws `ArgumentError`.
 """
 function fit_beta_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
         link::Link = LogitLink(),
         β_init = nothing, Λ_init = nothing, φ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         maxiter::Integer = 100, tol::Real = 1e-9)
+    _va_require_canonical_link("fit_beta_gllvm_va", link, LogitLink())
     p, n = size(Y)
     rr = rr_theta_len(p, K)
 

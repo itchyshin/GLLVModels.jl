@@ -106,11 +106,13 @@ estimating the shape `α` — the VA counterpart of [`fit_gamma_gllvm`](@ref) (w
 maximises the Laplace marginal). Same warm start (log row-mean intercepts + SVD
 loadings + `α₀=2`) and finite-difference gradient. The returned `GammaFit`'s
 `loglik` field holds the maximised ELBO (a lower bound on the true log-marginal).
+The ELBO is derived for the log link only: any other `link` throws `ArgumentError`.
 """
 function fit_gamma_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
         link::Link = LogLink(),
         g_tol::Real = 1e-5, iterations::Integer = 500,
         maxiter::Integer = 100, tol::Real = 1e-9)
+    _va_require_canonical_link("fit_gamma_gllvm_va", link, LogLink())
     p, n = size(Y)
     rr = rr_theta_len(p, K)
 

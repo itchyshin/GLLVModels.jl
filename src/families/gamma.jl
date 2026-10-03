@@ -148,7 +148,7 @@ function gamma_lv_nll_packed(params::AbstractVector, Y::AbstractMatrix,
 
     lv_offset = _lv_mean_eta(Λ, X_lv, alpha_lv)
     off = offset === nothing ? lv_offset : offset .+ lv_offset
-    return -gamma_marginal_loglik_laplace(Y, Λ, β, α; mask = mask, offset = off,
+    return -gamma_marginal_loglik_laplace(Y, Λ, β, α; link = link, mask = mask, offset = off,
                                           maxiter = maxiter, tol = tol)
 end
 
@@ -158,9 +158,11 @@ end
 Fit a Gamma GLLVM by L-BFGS over `[β; vec(Λ); log α]` on the Laplace marginal
 (`gamma_marginal_loglik_laplace`), jointly estimating the shape `α`
 (`Var = μ²/α`). `Y` is a p×n matrix of positive reals; `K` the latent
-dimension. Analytic gradient on the no-mask/no-offset path with finite-difference
-fallback; warm start = log row-means as intercepts + SVD of row-centred log-Y as
-loadings + `logα₀ = log(2.0)`.
+dimension. Analytic gradient on the no-mask/no-offset path with the log link, with a
+finite-difference fallback (masked or offset fits, and any other `link`, use finite
+differences of the objective for that link); warm start = link-scale row-means as
+intercepts (log row-means for the default log link) + SVD of the row-centred
+link-scale Y as loadings + `logα₀ = log(2.0)`.
 
 `hessian` selects the Laplace log-det curvature only (`:fisher` expected /
 `:observed` joint — TMB's choice); the inner mode search is always
@@ -212,7 +214,8 @@ function fit_gamma_gllvm(Y::AbstractMatrix; K::Integer,
     msk = _resolve_obs_mask(mask, Y)                  # NA handling
     Yc  = _sanitize_missing(Y, 1.0)                   # positive placeholder
 
-    Zemp = log.(max.(Yc, 1e-6))
+    # link-scale warm start (η = g(y)); for the default log link this is exactly `log.(max.(Yc, 1e-6))`
+    Zemp = [linkfun(link, max(Yc[t, i], 1e-6)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)           # offset (η = β + offset + Λz)
     _mask_warmstart!(Zemp, msk)
     β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
@@ -251,8 +254,8 @@ function fit_gamma_gllvm(Y::AbstractMatrix; K::Integer,
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         α = exp(θ[p + rr + 1])
         v = try
-            -gamma_marginal_loglik_laplace(Yc, Λ, β, α; mask = msk, offset = offset,
-                                           hessian = hessian,
+            -gamma_marginal_loglik_laplace(Yc, Λ, β, α; link = link, mask = msk,
+                                           offset = offset, hessian = hessian,
                                            maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
@@ -275,8 +278,10 @@ function fit_gamma_gllvm(Y::AbstractMatrix; K::Integer,
             return isfinite(v) ? v : 1e12
         end
         Optim.optimize(negll_lv, θ0_lv, ls, opts; autodiff = :finite)
-    elseif gradient === :analytic && offset === nothing &&
+    elseif gradient === :analytic && offset === nothing && link isa LogLink &&
            hessian === _default_hessian(Gamma(1.0, 1.0), link)
+        # `gamma_laplace_grad` is derived for the log link only; any other link takes the
+        # :finite path below, which differentiates the actual objective.
         ag = θ -> begin
             β = θ[1:p]; Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K); av = exp(θ[p + rr + 1])
             try -gamma_laplace_grad(Yc, Λ, β, av; mask = msk) catch; nothing end
