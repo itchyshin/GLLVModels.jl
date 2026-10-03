@@ -47,35 +47,59 @@ NB1() = NB1(1.0)
 # No closed form ⇒ summed over the NB pmf via the stable recursion
 #   P₀ = p^r,  P_y = P_{y−1}·(1−p)·(y−1+r)/y,   until the tail mass is negligible.
 # Returns max(I_μ, 1e-12) so the working weight is strictly positive (SPD).
+# ψ(y + r) − ψ(r) and ψ'(y + r) − ψ'(r) for an integer count y ≥ 0, summed over
+# k = 0..y−1 (Σ 1/(r+k) and −Σ 1/(r+k)²). With r = μ/φ these must stay accurate
+# toward the Poisson limit φ → 0, where r is huge and differencing digamma or trigamma
+# cancels the result away: at φ = 1e-6 the old d logpdf / d log φ was 40 times too
+# large, and by φ = 1e-10 it had the wrong size entirely (#615 NB1 follow-up). Very
+# large y falls back to the closed forms, where the difference is no longer tiny.
+function _nb1_rise_diffs(r, y::Integer)
+    if y > 10_000
+        return (digamma(y + r) - digamma(r), trigamma(y + r) - trigamma(r))
+    end
+    d1 = zero(float(r)); d2 = zero(float(r))
+    @inbounds for k in 0:(y - 1)
+        w = inv(r + k)
+        d1 += w
+        d2 -= w * w
+    end
+    return (d1, d2)
+end
+
 function _nb1_fisher_mu(μ::Real, φ::Real)
-    # For tiny φ, NB1 is in the Poisson-limit regime. The exact expression
-    # below subtracts nearly equal trigamma terms and divides by φ^2, which is
-    # numerically unstable even though the limit is well behaved.
+    # For tiny φ, NB1 is in the Poisson-limit regime, I_μ → 1/μ.
     if φ <= 1e-6
         return max(inv(μ * (1 + φ)), 1e-12)
     end
+    # I_μ = (1/φ²) E[ψ'(r) − ψ'(y+r)] = (1/φ²) E[Σ_{k<y} 1/(r+k)²]: accumulate the sum
+    # directly so no nearly equal trigamma terms are subtracted.
     r = μ / φ
     q = φ / (1 + φ)                      # 1 − p, the NB "failure" probability
-    tr_r = trigamma(r)
-    P = (1 - q)^r                        # P(y = 0) = p^r
+    P = exp(-r * log1p(φ))               # P(y = 0) = p^r, without rounding p = 1/(1+φ)
     cum = P
-    Eψ = P * tr_r                        # y = 0 term: ψ'(0 + r)
+    S = zero(float(r))                   # Σ_{k<y} 1/(r+k)², zero at y = 0
+    E = zero(float(r))
     y = 0
     @inbounds while cum < 1 - 1e-12 && y < 10_000
         y += 1
+        S += inv(r + y - 1)^2
         P *= q * (y - 1 + r) / y
-        Eψ += P * trigamma(y + r)
+        E += P * S
         cum += P
     end
-    return max((tr_r - Eψ) / φ^2, 1e-12)
+    # Mass beyond the y cap (large μ): count it as the old formula did, ψ'(r) − 0 per
+    # unit of mass, so that case is unchanged; without it the weight collapses there.
+    y >= 10_000 && (E += (1 - cum) * trigamma(r))
+    return max(E / φ^2, 1e-12)
 end
 
 _clamp_mu(::NB1, μ) = max(μ, 1e-12)
 # Score wrt η: me·∂logf/∂μ,  ∂logf/∂μ = (1/φ)[ψ(y+r) − ψ(r) − log(1+φ)],  r = μ/φ.
-_glm_score(f::NB1, μ, n, me, y) = me * (digamma(y + μ / f.φ) - digamma(μ / f.φ) - log1p(f.φ)) / f.φ
+_glm_score(f::NB1, μ, n, me, y) = me * (first(_nb1_rise_diffs(μ / f.φ, Int(y))) - log1p(f.φ)) / f.φ
 # Expected-information working weight wrt η:  me²·I_μ.
 _glm_weight(f::NB1, μ, n, me)   = me^2 * _nb1_fisher_mu(μ, f.φ)
-_glm_logpdf(f::NB1, μ, n, y)    = logpdf(NegativeBinomial(μ / f.φ, 1 / (1 + f.φ)), Int(y))
+# NB1(μ, φ) is NB2 with size r = μ/φ; `_nb2_logpdf_mean` stays accurate as r grows (φ → 0).
+_glm_logpdf(f::NB1, μ, n, y)    = _nb2_logpdf_mean(μ, μ / f.φ, Int(y))
 
 """
     nb1_marginal_loglik_laplace(Y, Λ, β, φ; link=LogLink(), kwargs...) -> Float64

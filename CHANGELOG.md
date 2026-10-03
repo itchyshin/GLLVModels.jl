@@ -2,6 +2,31 @@
 
 ## Development
 
+- **NB1 near its Poisson limit (φ → 0): accurate density, and per-species fits converge.**
+  Two defects, found while checking the NB1 grouped fitters after #615.
+  - Precision: the NB1 density, score and observed and Fisher curvatures differenced
+    loggamma, digamma or trigamma of r = μ/φ, which loses the result as r grows. At
+    φ = 1e-6 the derivative in log φ was 40 times too large, so the gradient was noise
+    near the limit. The density now uses the NB2 routine (`_nb2_logpdf_mean` with
+    r = μ/φ), and the digamma and trigamma differences are summed directly
+    (`_nb1_rise_diffs`). Against a BigFloat reference over φ from 5 to 1e-12, the
+    largest relative error is now 4e-15 for the density and 4e-14 for the curvature.
+    This applies to every NB1 fit.
+  - Ridge: like NB2 in #615, per-species fits crawled toward φ = 0 until the iteration
+    cap. `fit_nb1_gllvm_grouped` and `fit_nb1_gllvm_grouped_cov` now use the NB2
+    Poisson-limit polish, mirrored: groups with φ < 1e-3 are fixed at φ = 1e-10, the
+    rest is refit with BFGS, and a refit is kept only if it is no worse. The fitter
+    already warns at φ < 1e-6.
+  - Evidence: on main, 6 of 6 per-species fits in the hardest cells (p = 24) failed to
+    converge, while shared φ converged on all 6. On the 72-cell NB1 grid (p = 6, 12, 24;
+    n = 60, 120, 300; K = 1, 2; φ = 0.1, 1, 5 or varied on [0.05, 5]; 20 reps) with
+    these fixes, 1,432 of 1,440 per-species fits converge, and so do all shared-φ fits.
+    The 8 that do not are spread over cells. Shared φ recovers φ better in all 54
+    common-φ cells. Per-species φ recovers φ better in 17 of 18 varied-φ cells and gives
+    better loadings in 16 of 18, at 7 to 15 times the fitting time.
+  - Test: `test/test_nb1_poisson_ridge.jl` (literal fixture
+    `test/fixtures/nb1_grouped_poisson_ridge.toml`; it fails on main on macOS and
+    Linux).
 - **Beta and Gamma fits now optimise the link they are asked for (bug fix).**
   `fit_beta_gllvm` and `fit_gamma_gllvm` accepted `link = ...`, used it for the warm start and
   stored it on the fit, but built their objective without it. Any Beta fit with a non-logit link
