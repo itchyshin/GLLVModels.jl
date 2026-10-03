@@ -83,6 +83,38 @@ def numeric_root(receipt_extra=None, **row_kw):
     return root, tmp
 
 
+BR = str(A.LEDGER / "receipts/b.json")
+EQ_PATH = A.LEDGER / A.IN_BEHAVIOUR_EQUIVALENCE
+WALD = {"kind": "route", "canonical": "wald", "r": ["r_wald"], "julia": ["jl_wald"], "basis": "R and Julia Wald routes."}
+
+
+def beh_case(**kw):
+    d = {"case_id": "C", "kind": "route", "r_observed": "wald", "julia_observed": "wald"}
+    d.update(kw)
+    return d
+
+
+def behavioural_root(cases=None, receipt_extra=None, equiv=None, block_extra=None, **row_kw):
+    """A root with one behavioural row family/N citing BR, whose receipt holds a behaviour block."""
+    kw = dict(tier="behavioural", executable_case_ids=["C"], evidence={"receipt": [BR]})
+    kw.update(row_kw)
+    root, tmp = with_root({"case-map-family.json": [row("family/N", **kw)]})
+    blk = {"pin": "P1", "cases": cases if cases is not None else [beh_case()]}
+    blk.update(block_extra or {})
+    (root / BR).write_text(json.dumps({"behaviour": blk, **(receipt_extra or {})}))
+    if equiv is not None:
+        (root / EQ_PATH).write_text(json.dumps(equiv))
+    return root, tmp
+
+
+def checker_c1(root):
+    """The checker's own C1 line over this root's assembled case map (keeps the two in step)."""
+    if not shutil.which("node"):
+        return None
+    env = dict(os.environ, PARITY_REF="FS", PARITY_FS_ROOT=str(root), PARITY_CASEMAP=str(A.LEDGER / A.OUT_CASEMAP))
+    return subprocess.run(["node", str(HERE / "true_parity_check.mjs"), "C1"], env=env, capture_output=True, text=True).stdout
+
+
 def status_of(root, rid="family-N"):
     m = re.search(rf"^\| {re.escape(rid)} `[^`]*` \| [^|]* \| ([^|]+?) \|", (root / A.LEDGER / A.OUT_SCOREBOARD).read_text(), re.M)
     return m.group(1) if m else None
@@ -241,6 +273,175 @@ def main():
     c, o = run(root, "--check", "--extra-map", str(extra), "--out-dir", str(tmp / "out"))
     expect("check_extra_map_with_out_dir_ok", c == 0 and "ASSEMBLE_OK" in o, o)
     shutil.rmtree(tmp)
+
+    # Ruling 2 (itchyshin/GLLVModels.jl#684 item 2): the behavioural tier.
+    def behaves(name, status, root, tmp, want_bound=None, contains=None):
+        c, o = run(root)
+        txt = (root / A.LEDGER / A.OUT_SCOREBOARD).read_text()
+        ok = c == 0 and status_of(root) == status and (contains is None or contains in txt)
+        if ok and want_bound is not None:
+            out = checker_c1(root)
+            m = re.search(r"\bbound_behavioural=(\d+)", out or "")
+            ok = out is None or (m is not None and int(m.group(1)) == want_bound)
+        expect(name, ok, f"{status_of(root)} {o}")
+        shutil.rmtree(tmp)
+
+    root, tmp = behavioural_root()
+    behaves("behavioural_matching_labels_evidenced_behavioural", "EVIDENCED-BEHAVIOURAL", root, tmp, want_bound=1)
+    root, tmp = behavioural_root()
+    run(root)
+    txt = (root / A.LEDGER / A.OUT_SCOREBOARD).read_text()
+    expect("behavioural_row_cites_receipt_and_is_in_totals",
+           f"| EVIDENCED-BEHAVIOURAL | {BR} |" in txt and "EVIDENCED-BEHAVIOURAL" in txt.split("## P1 twin fixtures")[0], txt[:600])
+    c, o = run(root, "--check")
+    expect("behavioural_scoreboard_check_current", c == 0 and "ASSEMBLE_OK" in o, o)
+    shutil.rmtree(tmp)
+    mism = [beh_case(r_observed="r_wald", julia_observed="jl_wald")]
+    root, tmp = behavioural_root(cases=mism)
+    behaves("behavioural_mismatch_no_class_unverified", "BEHAVIOURAL-UNVERIFIED", root, tmp, want_bound=0, contains="differ after canonicalisation")
+    root, tmp = behavioural_root(cases=mism, equiv={"schema": 1, "pin": "P1", "classes": [WALD]})
+    behaves("behavioural_mismatch_rescued_by_class", "EVIDENCED-BEHAVIOURAL", root, tmp, want_bound=1)
+    root, tmp = behavioural_root(cases=[beh_case(kind="refusal", r_observed="r_wald", julia_observed="jl_wald")],
+                                 equiv={"schema": 1, "pin": "P1", "classes": [WALD]})
+    behaves("behavioural_class_of_other_kind_does_not_rescue", "BEHAVIOURAL-UNVERIFIED", root, tmp, want_bound=0)
+    root, tmp = behavioural_root(cases=[beh_case(source_id="family/OTHER")])
+    behaves("behavioural_entry_scoped_to_other_row_does_not_cover", "BEHAVIOURAL-UNVERIFIED", root, tmp, want_bound=0,
+            contains="without an applicable behaviour entry")
+    root, tmp = behavioural_root(cases=[beh_case(source_id="family/N")])
+    behaves("behavioural_entry_scoped_to_this_row_covers", "EVIDENCED-BEHAVIOURAL", root, tmp, want_bound=1)
+    root, tmp = behavioural_root(executable_case_ids=["C", "C2"])
+    behaves("behavioural_uncovered_case_id_unverified", "BEHAVIOURAL-UNVERIFIED", root, tmp, want_bound=0, contains="C2")
+    root, tmp = behavioural_root(receipt_extra={"verdict": "FAIL"})
+    behaves("behavioural_receipt_verdict_fail_unverified", "BEHAVIOURAL-UNVERIFIED", root, tmp, want_bound=0, contains="receipt did not pass")
+    root, tmp = behavioural_root(block_extra={"harness_pass": False})
+    behaves("behavioural_block_status_fail_unverified", "BEHAVIOURAL-UNVERIFIED", root, tmp, want_bound=0)
+    root, tmp = behavioural_root(block_extra={"pin": "P0"})
+    behaves("behavioural_wrong_pin_unverified", "BEHAVIOURAL-UNVERIFIED", root, tmp, want_bound=0, contains="not pinned to P1")
+    for label, over in (("empty_label", {"r_observed": ""}), ("blank_label", {"julia_observed": "  "}),
+                        ("array_length_mismatch", {"r_observed": ["a", "b"], "julia_observed": ["a"]}),
+                        ("shape_mismatch", {"r_observed": ["a"], "julia_observed": "a"})):
+        root, tmp = behavioural_root(cases=[beh_case(**over)])
+        behaves(f"behavioural_{label}_unverified", "BEHAVIOURAL-UNVERIFIED", root, tmp, want_bound=0)
+    root, tmp = behavioural_root(cases=[beh_case(kind="printed_fields", r_observed=["a", "b"], julia_observed=["a", "b"])])
+    behaves("behavioural_array_labels_elementwise_ok", "EVIDENCED-BEHAVIOURAL", root, tmp, want_bound=1)
+    root, tmp = behavioural_root(measured_against="P0")
+    behaves("behavioural_stale_carry_unverified", "BEHAVIOURAL-UNVERIFIED", root, tmp, want_bound=0, contains="PARTIAL_STALE_AT_P1")
+    root, tmp = behavioural_root(evidence={"receipt": ["docs/does-not-exist.json"]})
+    behaves("behavioural_dangling_receipt_unverified", "BEHAVIOURAL-UNVERIFIED", root, tmp, contains="dangling")
+    root, tmp = behavioural_root(executable_case_ids=[])
+    behaves("behavioural_no_case_ids_unverified", "BEHAVIOURAL-UNVERIFIED", root, tmp, contains="no executable_case_ids")
+    root, tmp = behavioural_root()
+    (root / BR).write_text(json.dumps({"comparison": GOOD_CMP}))
+    behaves("behavioural_label_with_only_numeric_block_unverified", "BEHAVIOURAL-UNVERIFIED", root, tmp, want_bound=0,
+            contains="no behaviour block")
+    dup = dict(WALD, canonical="wald_other")
+    root, tmp = behavioural_root(equiv={"schema": 1, "pin": "P1", "classes": [WALD, dup]})
+    c, o = run(root, "--check")
+    expect("behavioural_ambiguous_table_fails_run", c == 1 and "ASSEMBLE_FAIL" in o and "ambiguous table" in o, o)
+    shutil.rmtree(tmp)
+    root, tmp = behavioural_root(equiv={"schema": 1, "pin": "P1", "classes": [dict(WALD, basis="")]})
+    c, o = run(root, "--check")
+    expect("behavioural_empty_basis_fails_run", c == 1 and "empty basis" in o, o)
+    shutil.rmtree(tmp)
+    # A numeric row is not read as behavioural, and a behavioural row never reads EVIDENCED.
+    root, tmp = numeric_root()
+    run(root)
+    expect("numeric_row_still_evidenced_with_equivalence_absent", status_of(root) == "EVIDENCED", status_of(root))
+    shutil.rmtree(tmp)
+
+    # Ruling 1 (itchyshin/GLLVModels.jl#684 item 1): integer equality.
+    def int_cmp(**kw):
+        c = {"case_id": "C", "kind": "integer_equality", "r_value": 15, "julia_value": 15, "tolerance": 0.5}
+        c.update(kw)
+        return {"comparison": {"pin": "P1", "cases": [c]}}
+
+    def int_root(name, status, want_bound, **kw):
+        root, tmp = with_root({"case-map-family.json": [row("family/N", tier="numeric", executable_case_ids=["C"], evidence={"receipt": [RP]})]})
+        (root / RP).write_text(json.dumps(int_cmp(**kw)))
+        c, o = run(root)
+        ok = c == 0 and status_of(root) == status
+        if ok and shutil.which("node"):
+            env = dict(os.environ, PARITY_REF="FS", PARITY_FS_ROOT=str(root), PARITY_CASEMAP=str(A.LEDGER / A.OUT_CASEMAP))
+            out = subprocess.run(["node", str(HERE / "true_parity_check.mjs"), "C1"], env=env, capture_output=True, text=True).stdout
+            m = re.search(r"\bbound_numeric=(\d+)", out)
+            ok = m is not None and int(m.group(1)) == want_bound
+        expect(name, ok, status_of(root))
+        shutil.rmtree(tmp)
+
+    int_root("integer_equality_15_vs_15_evidenced", "EVIDENCED", 1)
+    int_root("integer_equality_float_15_0_is_integer", "EVIDENCED", 1, r_value=15.0, julia_value=15.0)
+    int_root("integer_equality_vectors_evidenced", "EVIDENCED", 1, r_value=[15, 3], julia_value=[15, 3])
+    int_root("integer_equality_off_by_one_unverified", "NUMERIC-UNVERIFIED", 0, julia_value=16)
+    int_root("integer_equality_non_integer_unverified", "NUMERIC-UNVERIFIED", 0, r_value=15.2, julia_value=15.2)
+    int_root("integer_equality_tolerance_1_unverified", "NUMERIC-UNVERIFIED", 0, tolerance=1)
+    int_root("integer_equality_length_mismatch_unverified", "NUMERIC-UNVERIFIED", 0, r_value=[1, 2], julia_value=[1])
+    int_root("integer_equality_bool_is_not_integer", "NUMERIC-UNVERIFIED", 0, r_value=True, julia_value=True)
+    int_root("unknown_comparison_kind_unverified", "NUMERIC-UNVERIFIED", 0, kind="close_enough")
+    root, tmp = with_root({"case-map-family.json": [row("family/N", tier="numeric", executable_case_ids=["C"], evidence={"receipt": [RP]})]})
+    c15 = int_cmp(r_value=15.2, julia_value=15.2)
+    del c15["comparison"]["cases"][0]["kind"]
+    (root / RP).write_text(json.dumps(c15))
+    run(root)
+    expect("no_kind_case_keeps_todays_rule", status_of(root) == "EVIDENCED", status_of(root))
+    shutil.rmtree(tmp)
+
+    # Ruling 3 (itchyshin/GLLVModels.jl#684 item 3): reverse-gap-decisions.json.
+    RULING = {"ref": "itchyshin/GLLVModels.jl#684 item 3", "signed_by": "Shinichi Nakagawa", "signed_on": "2026-10-02"}
+
+    def decisions(**over):
+        d = {"schema": 1, "ruling": RULING, "criterion": "test", "generator": "tools/none.py",
+             "decisions": {"julia_only": {"decision": "EXCLUDED_INTERNAL_HELPER", "basis": "no docstring"}}}
+        d.update(over)
+        return d
+
+    DEC = A.LEDGER / A.IN_REVERSE_GAP_DECISIONS
+    root, tmp = with_root()
+    (root / DEC).write_text(json.dumps(decisions()))
+    c, o = run(root)
+    rg = json.loads((root / A.LEDGER / A.OUT_REVERSE_GAP).read_text())
+    it = rg[0]
+    expect("decisions_copied_onto_matching_item",
+           c == 0 and it["name"] == "julia_only" and it["status"] == "decided" and it["decision"] == "EXCLUDED_INTERNAL_HELPER"
+           and it["basis"] == "no docstring" and it["ruling"] == RULING and list(it["ruling"]) == ["ref", "signed_by", "signed_on"], it)
+    c, o = run(root, "--check")
+    expect("decisions_output_checks_current", c == 0 and "ASSEMBLE_OK" in o, o)
+    if shutil.which("node"):
+        env = dict(os.environ, PARITY_REF="FS", PARITY_FS_ROOT=str(root))
+        out = subprocess.run(["node", str(HERE / "true_parity_check.mjs"), "C6"], env=env, capture_output=True, text=True).stdout
+        expect("checker_c6_accepts_assembled_decision", "C6_MET" in out and "EXCLUDED_INTERNAL_HELPER:1" in out and "unsigned_decision=none" in out, out)
+    shutil.rmtree(tmp)
+    root, tmp = with_root()
+    run(root)
+    base_rg = (root / A.LEDGER / A.OUT_REVERSE_GAP).read_text()
+    (root / DEC).write_text(json.dumps(decisions(decisions={})))
+    run(root)
+    expect("empty_decisions_leave_reverse_gap_unchanged", (root / A.LEDGER / A.OUT_REVERSE_GAP).read_text() == base_rg)
+    shutil.rmtree(tmp)
+    root, tmp = with_root()
+    (root / DEC).write_text(json.dumps(decisions(decisions={"no_such_export": {"decision": "KEPT_AS_JULIA_EXTRA", "basis": "x"}})))
+    c, o = run(root, "--check")
+    expect("decision_for_non_item_is_stale_and_fails", c == 1 and "ASSEMBLE_FAIL" in o and "no_such_export" in o and "stale" in o, o)
+    shutil.rmtree(tmp)
+    root, tmp = with_root()
+    (root / DEC).write_text(json.dumps(decisions(decisions={"shared_name": {"decision": "KEPT_AS_JULIA_EXTRA", "basis": "x"}})))
+    c, o = run(root, "--check")
+    expect("decision_for_name_with_r_counterpart_is_stale", c == 1 and "shared_name" in o and "stale" in o, o)
+    shutil.rmtree(tmp)
+    for label, bad in (("unknown_word", {"julia_only": {"decision": "EXCLUDED_HELPER", "basis": "x"}}),
+                       ("empty_basis", {"julia_only": {"decision": "KEPT_AS_JULIA_EXTRA", "basis": " "}}),
+                       ("null_decision", {"julia_only": {"decision": None, "basis": "x"}})):
+        root, tmp = with_root()
+        (root / DEC).write_text(json.dumps(decisions(decisions=bad)))
+        c, o = run(root, "--check")
+        expect(f"decisions_file_{label}_fails", c == 1 and "ASSEMBLE_FAIL" in o and "julia_only" in o, o)
+        shutil.rmtree(tmp)
+    for label, over in (("no_ruling", {"ruling": None}), ("ruling_missing_signed_on", {"ruling": {"ref": "r", "signed_by": "x"}}),
+                        ("bad_schema", {"schema": 2})):
+        root, tmp = with_root()
+        (root / DEC).write_text(json.dumps(decisions(**over)))
+        c, o = run(root, "--check")
+        expect(f"decisions_file_{label}_fails", c == 1 and "ASSEMBLE_FAIL" in o, o)
+        shutil.rmtree(tmp)
 
     # Real tree: outputs current, and EVIDENCED count equals the checker's own C1 bound=.
     c, o = run(A.ROOT, "--check")
