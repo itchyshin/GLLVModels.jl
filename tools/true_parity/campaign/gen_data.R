@@ -8,6 +8,9 @@
 # and are never copied into the repository (GPL data in an MIT repo, plan section 1.3): the repository
 # tracks this loader, the dataset sha256 recorded in each receipt, and the receipts only.
 #
+# The seven SYNTHETIC files this generator wrote for the campaign run are committed (gzip) in
+# tools/true_parity/campaign/data/ with their sha256 in data_sha256.json: another host's R random
+# streams give different bytes (a regeneration on the Mac differed), so verify the pin against those files.
 # Usage: Rscript gen_data.R <cell> [outdir]
 #   cell in gaussian poisson nb2 binomial ordinal temporal isdm   (C3, synthetic, n = 500)
 #           crabs spider beetle fungi urban                       (C4, real data)
