@@ -54,6 +54,10 @@ are zero. A source with zero total variance has an undefined fraction.
 Check the individual accessor's definition when comparing outputs:
 `extract_Sigma(fit; level = :unit_obs)` includes observation noise, unlike
 the source-only `extract_communality` denominator at that level.
+`extract_Sigma` and `extract_ICC_site` still report the fitted split of the
+diagonal between `:unit` and `:unit_obs` on a `has_diag = true`, `K_W == 0`
+fit, where that split is not identified; the `:unit` extractors above use the
+identified sum instead.
 `extract_Sigma(fit; level = :site)` returns `sigma_y_site(fit)`.
 
 ```@docs

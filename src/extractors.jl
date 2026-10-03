@@ -275,7 +275,9 @@ extract_rotated_loadings(fit) = (Λ = getLoadings(fit; rotate = true), R = rotat
 # and the diagonal W tier is already folded into it (#701).
 _r_unit_folds_diag(fit::GllvmFit) = fit.model.has_diag && fit.model.K_W == 0
 
-# Tier total with NO σ_eps² folded in, mirroring R's B/W tier Sigma
+# Tier total with NO σ_eps² folded in, mirroring R's B/W tier Sigma, except
+# the `:unit` tier of a has_diag fit with K_W == 0, which is the identified
+# total `sigma_y_site(fit)` and so includes σ²_W and σ_eps² (#701).
 # (`extract_Sigma(fit, level, part="total", link_residual="none")` on a
 # Gaussian fit — Gaussian's link_residual contributes 0 regardless).
 function _r_tier_total(fit::GllvmFit, lvl::Symbol)
@@ -654,7 +656,11 @@ genuinely carries — the phylogenetic block (`Λ_phy_aug Λ_phy_augᵀ` when
 `K_phy > 0 || has_phy_unique`), the `:unit` tier (when `K > 0` or a diagonal
 `σ²_B` is present), and the `:unit_obs` tier (when `K_W > 0` or a diagonal
 `σ²_W` is present) — using each present tier's R-tier-scoped total (no
-`σ_eps²`, see [`extract_communality`](@ref)). Mirrors
+`σ_eps²`, see [`extract_communality`](@ref)). On a Gaussian fit with
+`has_diag = true` and `K_W == 0` the data identify only the sum
+`σ²_B + σ²_W + σ_eps²`, so the `:unit` tier is the identified total
+`sigma_y_site(fit)` (which includes `σ_eps²`) and the diagonal `:unit_obs`
+tier is folded into it rather than added again (#701). Mirrors
 `gllvmTMB::extract_Omega()` with `tiers = NULL` (auto-detected) and
 `link_residual = "none"` (Gaussian `GllvmFit` has no implicit link residual
 to add). This tier-presence-gated composition is now the DEFAULT
