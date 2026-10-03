@@ -1629,7 +1629,7 @@ end
 _dt_counts(M) = any(ismissing, M) ? Matrix{Union{Missing,Int}}(M) : Int.(M)
 
 function receipts_data_twins()
-    ORIGIN = "itchyshin/GLLVModels.jl#685"
+    ORIGIN = "itchyshin/GLLVModels.jl#689"
     fxp = "test/fixtures/data_twins_p1.toml"
     tp = "test/test_data_twins_p1.jl"
     fx = TOML.parsefile(joinpath(ROOT, fxp))

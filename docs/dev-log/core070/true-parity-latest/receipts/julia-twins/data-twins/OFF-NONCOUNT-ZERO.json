@@ -7,7 +7,7 @@
   "evidence_kind": "julia_recomputed_vs_recorded_r",
   "pin": "P1",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
-  "origin_pr": "itchyshin/GLLVModels.jl#685",
+  "origin_pr": "itchyshin/GLLVModels.jl#689",
   "generator": "tools/true_parity_julia_receipts.jl",
   "julia_version": "1.10.0",
   "gllvmodels_commit": "896a0a2286c224fe9979d3cf7e7e2c6be27f9357",
