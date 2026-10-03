@@ -307,6 +307,9 @@ end
 # The guiding rule is usability: no offset may give a silent, wrong or -Inf fit. It either
 # means what the user meant, or it raises an ArgumentError that says what to do.
 _off_ll(f) = hasproperty(f, :loglik) ? f.loglik : f.logLik
+# The intercept that the offset enters through: the count / positive-part intercept on the
+# two-part and zero-inflated fits (the occurrence intercept `βz` has no offset), `β` elsewhere.
+_off_beta(f) = hasproperty(f, :β) ? f.β : hasproperty(f, :βc) ? f.βc : f.pars.β
 
 # One small data set per family. p ≠ n, so a transposed shape is detectable.
 function _off_data(; p = 5, n = 36, seed = 693)
@@ -400,6 +403,12 @@ end
         @test fc.converged == f0.converged
         @test isfinite(_off_ll(fc))
         @test isapprox(_off_ll(fc), _off_ll(f0); atol = tol_of(label), rtol = 0)
+        # The logLik alone cannot tell a dropped, sign-flipped or scaled offset from the right
+        # one (the intercepts absorb a constant either way). The intercepts can: with the
+        # offset applied once and with the right sign they move by exactly -c. A dropped
+        # offset leaves them where they were, a flipped one moves them by +c, a half-applied
+        # one by -c/2; all are 0.35 or more from the target, far above this tolerance.
+        @test isapprox(_off_beta(fc), _off_beta(f0) .- c; atol = label == "NegBin2 aghq" ? 2e-2 : 1e-3, rtol = 0)
         if haskey(kw, :aghq)                            # the scalar is the expanded matrix, exactly
             ff = fit_gllvm(Y; family = fam, K = 1, kw..., offset = fill(c, p, n))
             @test _off_ll(fc) == _off_ll(ff)
@@ -418,6 +427,10 @@ end
         ("BetaHurdle",           d[:twob], G.BetaHurdle(),                 (;)),
         ("COMPoisson",           d[:pois], G.COMPoisson(),                 (;)),
         ("OrderedBeta",          d[:ob],   G.OrderedBeta(),                (;)),
+        # the gllvmTMB-twin zero-inflated families (zi_poisson() etc.) have no offset keyword
+        ("ZiPoisson",            d[:zip],  G.zi_poisson(),                 (;)),
+        ("ZiNbinom2",            d[:zinb], G.zi_nbinom2(),                 (;)),
+        ("ZiBinomial",           d[:zib],  G.zi_binomial(),                (; trials = 8)),
     ]
     @testset "refused: $label" for (label, Y, fam, kw) in refused
         for off in (c, fill(c, p, n), fill(c, n))
@@ -629,4 +642,199 @@ end
         err = try gllvm(@formula(y ~ 1), d[:norm], site; family = G.StudentTFamily(5.0), K = 1, offset = c); nothing catch e e end
         @test err isa ArgumentError && occursin("offset is not supported for family StudentTFamily", err.msg)
     end
+end
+
+# ---- Round-2 review fixes (#693): direct named-fitter calls ---------------------------
+# `fit_gllvm` normalises an offset before it reaches a fitter, but the named fitters are
+# public too. Each now runs the same normaliser first thing, so a direct call takes the same
+# shapes and raises the same ArgumentError. Before, a length-p vector handed straight to a
+# two-part fitter was read out of bounds by the warm start (a throw, a -Inf, or a wrong
+# converged fit, depending on what was in memory).
+@testset "offset: named two-part fitters take the shapes fit_gllvm takes" begin
+    G = GLLVModels
+    d = _off_data()
+    p, n = size(d[:pois]); c = log(2)
+    v = [0.7, -0.4, 1.1, 0.2, -0.9]                     # one offset per trait
+    u = collect(range(0.0, 1.0; length = n))             # one offset per unit
+    named = [
+        ("fit_zip_gllvm",              (; kw...) -> G.fit_zip_gllvm(d[:zip]; K = 1, kw...)),
+        ("fit_zinb_gllvm",             (; kw...) -> G.fit_zinb_gllvm(d[:zinb]; K = 1, kw...)),
+        ("fit_zib_gllvm",              (; kw...) -> G.fit_zib_gllvm(d[:zib]; K = 1, N = 8, kw...)),
+        ("fit_hurdle_poisson_gllvm",   (; kw...) -> G.fit_hurdle_poisson_gllvm(d[:twoc]; K = 1, kw...)),
+        ("fit_hurdle_nb_gllvm",        (; kw...) -> G.fit_hurdle_nb_gllvm(d[:twonb]; K = 1, kw...)),
+        ("fit_delta_lognormal_gllvm",  (; kw...) -> G.fit_delta_lognormal_gllvm(d[:two]; K = 1, kw...)),
+        ("fit_delta_gamma_gllvm",      (; kw...) -> G.fit_delta_gamma_gllvm(d[:two]; K = 1, kw...)),
+    ]
+    @testset "$label" for (label, call) in named
+        f0 = call()
+        # a length-p vector is one offset per trait: identical to the explicit p×n matrix,
+        # and (per-trait constants being absorbed by the intercepts) the same maximum with
+        # the count-part intercepts shifted by -v
+        fv = call(; offset = v)
+        fm = call(; offset = repeat(v, 1, n))
+        @test fv.converged && isfinite(fv.loglik)
+        @test fv.loglik == fm.loglik
+        @test fv.βc == fm.βc
+        @test isapprox(fv.loglik, f0.loglik; atol = 1e-3, rtol = 0)
+        @test isapprox(fv.βc, f0.βc .- v; atol = 1e-3, rtol = 0)
+        # the other shapes fit_gllvm accepts
+        @test call(; offset = reshape(v, p, 1)).loglik == fm.loglik                   # p×1
+        fu = call(; offset = reshape(u, 1, n))                                         # 1×n
+        @test fu.loglik == call(; offset = repeat(u', p, 1)).loglik
+        @test abs(fu.loglik - f0.loglik) > 0.1                                         # applied, not absorbed
+        # a scalar is the explicit matrix (it used to read out of bounds or return -Inf)
+        fs = call(; offset = c)
+        @test fs.loglik == call(; offset = fill(c, p, n)).loglik
+        @test isapprox(fs.βc, f0.βc .- c; atol = 1e-3, rtol = 0)
+        # the same call with no offset is untouched by any of this
+        @test call(; offset = nothing).loglik == f0.loglik
+    end
+    # the helper itself refuses a shape it cannot index, instead of reading past the array
+    @testset "the warm-start helper checks the shape it is given" begin
+        Y = d[:zip]
+        βc0 = zeros(p); Zc = zeros(p, n)
+        @test_throws ArgumentError G._tp_offset_warmstart!(βc0, Zc, Y, v)
+        @test_throws ArgumentError G._tp_offset_warmstart!(βc0, Zc, Y, c)
+        @test_throws ArgumentError G._tp_offset_warmstart!(βc0, Zc, Y, zeros(p, n + 1))
+        @test_throws ArgumentError G._zi_warmstart(Y, 1; offset = v)
+        @test_throws ArgumentError G._zib_warmstart(Y, 8, 1; offset = v)
+        @test G._tp_offset_warmstart!(βc0, Zc, Y, nothing) === βc0
+    end
+end
+
+@testset "offset: every named fitter refuses a shape it cannot broadcast, with an ArgumentError" begin
+    G = GLLVModels
+    d = _off_data()
+    p, n = size(d[:pois])
+    named = [
+        ("fit_gaussian_gllvm",                (; kw...) -> G.fit_gaussian_gllvm(d[:norm]; K = 1, kw...)),
+        ("fit_gaussian_gllvm",                (; kw...) -> G.fit_gaussian_gllvm(d[:norm]; K = 1, aghq = 3, kw...)),
+        ("fit_poisson_gllvm",                 (; kw...) -> G.fit_poisson_gllvm(d[:pois]; K = 1, kw...)),
+        ("fit_poisson_gllvm",                 (; kw...) -> G.fit_poisson_gllvm(d[:pois]; K = 1, aghq = 3, kw...)),
+        ("fit_binomial_gllvm",                (; kw...) -> G.fit_binomial_gllvm(d[:bin]; K = 1, N = d[:N], kw...)),
+        ("fit_binomial_gllvm",                (; kw...) -> G.fit_binomial_gllvm(d[:bin]; K = 1, N = d[:N], aghq = 3, kw...)),
+        ("fit_nb_gllvm",                      (; kw...) -> G.fit_nb_gllvm(d[:nb]; K = 1, kw...)),
+        ("fit_nb1_gllvm",                     (; kw...) -> G.fit_nb1_gllvm(d[:nb]; K = 1, kw...)),
+        ("fit_beta_gllvm",                    (; kw...) -> G.fit_beta_gllvm(d[:beta]; K = 1, kw...)),
+        ("fit_gamma_gllvm",                   (; kw...) -> G.fit_gamma_gllvm(d[:gam]; K = 1, kw...)),
+        ("fit_exponential_gllvm",             (; kw...) -> G.fit_exponential_gllvm(d[:expo]; K = 1, kw...)),
+        ("fit_gp1_gllvm",                     (; kw...) -> G.fit_gp1_gllvm(d[:pois]; K = 1, kw...)),
+        ("fit_censored_poisson_gllvm",        (; kw...) -> G.fit_censored_poisson_gllvm(d[:pois]; K = 1, kw...)),
+        ("fit_truncated_poisson_gllvm",       (; kw...) -> G.fit_truncated_poisson_gllvm(d[:tpois]; K = 1, kw...)),
+        ("fit_truncated_nbinom2_gllvm",       (; kw...) -> G.fit_truncated_nbinom2_gllvm(d[:tpois]; K = 1, kw...)),
+        ("fit_truncated_nbinom2_gllvm_pertrait", (; kw...) -> G.fit_truncated_nbinom2_gllvm_pertrait(d[:tpois]; K = 1, kw...)),
+        ("fit_nb_gllvm_grouped",              (; kw...) -> G.fit_nb_gllvm_grouped(d[:nb]; K = 1, group = collect(1:p), kw...)),
+        ("fit_nb_gllvm_grouped_aghq",         (; kw...) -> G.fit_nb_gllvm_grouped_aghq(d[:nb]; K = 1, group = collect(1:p), aghq = 3, kw...)),
+        ("fit_beta_gllvm_grouped",            (; kw...) -> G.fit_beta_gllvm_grouped(d[:beta]; K = 1, kw...)),
+        ("fit_gamma_gllvm_grouped",           (; kw...) -> G.fit_gamma_gllvm_grouped(d[:gam]; K = 1, kw...)),
+        ("fit_nb1_gllvm_grouped",             (; kw...) -> G.fit_nb1_gllvm_grouped(d[:nb]; K = 1, kw...)),
+        ("fit_tweedie_gllvm_grouped",         (; kw...) -> G.fit_tweedie_gllvm_grouped(d[:tw]; K = 1, power = 1.5, kw...)),
+        ("fit_tweedie_gllvm_grouped_aghq",    (; kw...) -> G.fit_tweedie_gllvm_grouped_aghq(d[:tw]; K = 1, power = 1.5, aghq = 3, kw...)),
+        ("fit_lognormal_gllvm",               (; kw...) -> G.fit_lognormal_gllvm(d[:logn]; K = 1, kw...)),
+        ("fit_delta_gamma_gllvm_aghq",        (; kw...) -> G.fit_delta_gamma_gllvm_aghq(d[:two]; K = 1, aghq = 3, kw...)),
+        ("fit_zip_gllvm",                     (; kw...) -> G.fit_zip_gllvm(d[:zip]; K = 1, kw...)),
+        ("fit_zinb_gllvm",                    (; kw...) -> G.fit_zinb_gllvm(d[:zinb]; K = 1, kw...)),
+        ("fit_zib_gllvm",                     (; kw...) -> G.fit_zib_gllvm(d[:zib]; K = 1, N = 8, kw...)),
+        ("fit_hurdle_poisson_gllvm",          (; kw...) -> G.fit_hurdle_poisson_gllvm(d[:twoc]; K = 1, kw...)),
+        ("fit_hurdle_nb_gllvm",               (; kw...) -> G.fit_hurdle_nb_gllvm(d[:twonb]; K = 1, kw...)),
+        ("fit_delta_lognormal_gllvm",         (; kw...) -> G.fit_delta_lognormal_gllvm(d[:two]; K = 1, kw...)),
+        ("fit_delta_gamma_gllvm",             (; kw...) -> G.fit_delta_gamma_gllvm(d[:two]; K = 1, kw...)),
+    ]
+    bad = [
+        "length-n vector"     => zeros(n),
+        "wrong-length vector" => zeros(p - 1),
+        "p×(n-1) matrix"      => zeros(p, n - 1),
+        "(p+1)×n matrix"      => zeros(p + 1, n),
+        "NaN matrix"          => fill(NaN, p, n),
+        "string"              => "log(2)",
+    ]
+    @testset "$label" for (label, call) in named
+        for (blabel, off) in bad
+            err = try call(; offset = off); nothing catch e e end
+            @test err isa ArgumentError
+            err isa ArgumentError && @test occursin(label, err.msg)    # names the fitter that was called
+        end
+    end
+end
+
+@testset "offset: `missing` at an unobserved cell is read as NaN, on every route that takes a mask" begin
+    G = GLLVModels
+    d = _off_data(p = 5, n = 30, seed = 2026100205)
+    p, n = size(d[:pois])
+    mask = trues(p, n); mask[2, 3] = false
+    O = fill(0.2, p, n)
+    On = copy(O); On[2, 3] = NaN
+    Om = Matrix{Union{Missing,Float64}}(O); Om[2, 3] = missing
+    # every route below honours `mask`; the offset at the masked cell is never read, so a
+    # finite value, NaN and `missing` all give the very same fit (Poisson and Gamma used to
+    # throw a MethodError on `missing`)
+    cases = [
+        ("Normal",           d[:norm],  Normal(),                      (;)),
+        ("Normal aghq",      d[:norm],  Normal(),                      (; aghq = 3)),
+        ("Poisson",          d[:pois],  Poisson(),                     (;)),
+        ("Poisson aghq",     d[:pois],  Poisson(),                     (; aghq = 3)),
+        ("Binomial",         d[:bin],   Binomial(),                    (; N = d[:N])),
+        ("TruncatedPoisson", d[:tpois], G.TruncatedPoisson(),          (;)),
+        ("CensoredPoisson",  d[:pois],  G.CensoredPoisson(),           (;)),
+        ("TruncatedNegBin2", d[:tpois], G.TruncatedNegBin2(),          (;)),
+        ("NegBin2",          d[:nb],    NegativeBinomial(),            (;)),
+        ("NegBin2 species",  d[:nb],    NegativeBinomial(),            (; disp_group = :species)),
+        ("NegBin2 aghq",     d[:nb],    NegativeBinomial(),            (; disp_group = :species, aghq = 3)),
+        ("Beta",             d[:beta],  Beta(),                        (;)),
+        ("NB1",              d[:nb],    G.NB1(),                       (;)),
+        ("Gamma",            d[:gam],   Gamma(),                       (;)),
+        ("Exponential",      d[:expo],  G.Exponential(),               (;)),
+        ("GeneralizedPoisson1", d[:pois], G.GeneralizedPoisson1(0.1),  (;)),
+    ]
+    @testset "$label" for (label, Y, fam, kw) in cases
+        ff = fit_gllvm(Y; family = fam, K = 1, mask = mask, kw..., offset = O)
+        fn = fit_gllvm(Y; family = fam, K = 1, mask = mask, kw..., offset = On)
+        fm = fit_gllvm(Y; family = fam, K = 1, mask = mask, kw..., offset = Om)
+        @test isfinite(_off_ll(fm))
+        @test _off_ll(fm) == _off_ll(fn)
+        @test isapprox(_off_ll(fm), _off_ll(ff); atol = 1e-8, rtol = 0)
+    end
+    # a named fitter called directly takes it too, and `missing` in Y marks the cell as well
+    @test G.fit_poisson_gllvm(d[:pois]; K = 1, mask = mask, offset = Om).loglik ==
+          G.fit_poisson_gllvm(d[:pois]; K = 1, mask = mask, offset = On).loglik
+    @test isfinite(G.fit_gamma_gllvm(d[:gam]; K = 1, mask = mask, offset = Om).loglik)
+    Ym = Matrix{Union{Missing,Float64}}(d[:pois]); Ym[2, 3] = missing
+    @test fit_gllvm(Ym; family = Poisson(), K = 1, offset = Om).converged
+    # `missing` at an observed cell is still refused, on a named fitter too
+    Om2 = copy(Om); Om2[1, 1] = missing
+    @test_throws ArgumentError fit_gllvm(d[:pois]; family = Poisson(), K = 1, mask = mask, offset = Om2)
+    @test_throws ArgumentError G.fit_poisson_gllvm(d[:pois]; K = 1, mask = mask, offset = Om2)
+    @test_throws ArgumentError G.fit_gamma_gllvm(d[:gam]; K = 1, mask = mask, offset = Om2)
+    # routes with no mask cannot have an unobserved cell, so `missing` / NaN anywhere is refused
+    for (fam, Y) in ((G.ZIPoisson(), d[:zip]), (G.DeltaLogNormal(), d[:two]), (G.Lognormal(), d[:logn]))
+        @test_throws ArgumentError fit_gllvm(Y; family = fam, K = 1, offset = Om)
+        @test_throws ArgumentError fit_gllvm(Y; family = fam, K = 1, offset = On)
+    end
+    # Lognormal has no mask: a NaN offset names the cell and says so (even when a mask marks
+    # that cell unobserved), and a mask is refused outright (before this, a mask was accepted
+    # and gave wrong intercepts and logLik)
+    for call in (() -> fit_gllvm(d[:logn]; family = G.Lognormal(), K = 1, offset = On),
+                 () -> fit_gllvm(d[:logn]; family = G.Lognormal(), K = 1, mask = mask, offset = On),
+                 () -> fit_lognormal_gllvm(d[:logn]; K = 1, offset = On))
+        err = try call(); nothing catch e e end
+        @test err isa ArgumentError
+        err isa ArgumentError && @test occursin("trait 2, unit 3", err.msg)
+        err isa ArgumentError && @test occursin("does not support mask", err.msg)
+        err isa ArgumentError && @test !occursin("mark it unobserved", err.msg)
+    end
+    err = try fit_lognormal_gllvm(d[:logn]; K = 1, offset = On); nothing catch e e end
+    @test occursin("fit_lognormal_gllvm", err.msg)
+    err = try fit_gllvm(d[:logn]; family = G.Lognormal(), K = 1, mask = mask); nothing catch e e end
+    @test err isa ArgumentError && occursin("mask is not supported", err.msg)
+    err = try fit_lognormal_gllvm(d[:logn]; K = 1, mask = mask, offset = O); nothing catch e e end
+    @test err isa ArgumentError && occursin("mask is not supported", err.msg)
+    # the two-part and zero-inflated routes have no mask either: same wording
+    for (fam, Y) in ((G.ZIPoisson(), d[:zip]), (G.DeltaGamma(), d[:two]), (G.HurdlePoisson(), d[:twoc]))
+        err = try fit_gllvm(Y; family = fam, K = 1, offset = On); nothing catch e e end
+        @test err isa ArgumentError && occursin("does not support mask", err.msg)
+    end
+    # a route that does take a mask keeps the hint to mark the cell unobserved
+    err = try fit_gllvm(d[:pois]; family = Poisson(), K = 1, offset = On); nothing catch e e end
+    @test err isa ArgumentError && occursin("mark it unobserved", err.msg)
+    @test isfinite(fit_gllvm(d[:logn]; family = G.Lognormal(), K = 1, offset = O).loglik)
 end
