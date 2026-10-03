@@ -18,6 +18,14 @@
 # explicit one-hot X (with X = nothing the masked Gaussian route fits a zero-mean model).
 # Both fits converge to the same optimum (log-likelihoods compared). The R fit converged with a
 # positive-definite Hessian (asserted).
+#
+# Limits, disclosed: the mask pattern was chosen because many masks make
+# fit_gaussian_gllvm(...; mask) throw PosDefException (Cholesky in _gaussian_data_nll,
+# src/families/aghq_gaussian_fit.jl ~205-212), a robustness bug outside this comparison. The mask
+# that works is benign (light missingness, at most three masked cells per unit), so this twin does
+# not cover heavy or irregular missingness. Under the Gaussian identity link the response-scale
+# values equal the link-scale values, so the :response check exercises that path but adds no
+# independent numeric evidence.
 using Test
 using GLLVModels
 using TOML
@@ -75,10 +83,10 @@ const _PM_DIR = joinpath(@__DIR__, "fixtures")
         # the R values are not degenerate: not one constant, not zero, and they vary across traits
         @test length(unique(round.(r_link; digits = 3))) > length(r_link) ÷ 2
         @test maximum(abs, r_link) > 0.5
-        @test isapprox(out.est, r_link; atol = 1e-4, rtol = 0)   # predict_missing, link scale
+        @test isapprox(out.est, r_link; atol = 1e-5, rtol = 0)   # predict_missing, link scale
         # identity link: R's response-scale values are the link-scale values
         outr = predict_missing(fit, Ym; mask = mask, type = :response)
-        @test isapprox(outr.est, Float64.(m["est_response"]); atol = 1e-4, rtol = 0)   # predict_missing, response scale
+        @test isapprox(outr.est, Float64.(m["est_response"]); atol = 1e-5, rtol = 0)   # predict_missing, response scale
         # a masked cell's prediction does not read its own value
         Y2 = copy(Y)
         Y2[.!mask] .= 123.0

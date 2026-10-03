@@ -10,7 +10,7 @@
   "origin_pr": "itchyshin/GLLVModels.jl#684",
   "generator": "tools/true_parity_predict_missing_receipt.jl",
   "julia_version": "1.10.0",
-  "gllvmodels_commit": "634a1a9db5ed4b49e48519e8cc534ffcbfdbb79b",
+  "gllvmodels_commit": "0d6e53b502e56fb23cba2e5e5992cc2e8c69657b",
   "source_fixtures": [
     {
       "path": "test/fixtures/predict_missing_p1.toml",
@@ -24,7 +24,7 @@
   "source_tests": [
     {
       "path": "test/test_predict_missing_p1.jl",
-      "sha256": "34952916ff5cdfc0282467372ae07c253163745fbfe0940f763a760be488396b"
+      "sha256": "3f203084fc39b163c425e12bb9110ba3c23fdc2a7d6093875bf068591f626d59"
     }
   ],
   "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_predict_missing_receipt.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
@@ -35,7 +35,7 @@
         "case_id": "P1-JULIA-POSTFIT-PREDICT-MISSING-LINK",
         "quantity": "predict_missing(fit)$est at the masked cells, link scale (69 values)",
         "r_source": "test/fixtures/predict_missing_p1.toml [main.est_link]",
-        "julia_source": "GLLVModels.predict_missing(fit, Ym; mask = mask, type = :link).est, as called at test/test_predict_missing_p1.jl:70; fit as at test/test_predict_missing_p1.jl:66",
+        "julia_source": "GLLVModels.predict_missing(fit, Ym; mask = mask, type = :link).est, as called at test/test_predict_missing_p1.jl:78; fit as at test/test_predict_missing_p1.jl:74",
         "r_value": [
           0.2932030405553162,
           -0.45359884311153537,
@@ -179,16 +179,16 @@
           1.1880872911536335
         ],
         "abs_diff": 1.4849498042313058e-06,
-        "tolerance": 0.0001,
-        "tolerance_source": "test/test_predict_missing_p1.jl:78",
-        "tolerance_source_line": "@test isapprox(out.est, r_link; atol = 1e-4, rtol = 0)   # predict_missing, link scale",
-        "note": "Rank-2 Gaussian fit on the fixture data (sha256 checked) with 69 masked cells (traits 2 and 5 in units u with u % 10 == 3, trait 1 in units with u % 7 == 4; the mask is recorded in the fixture); R: value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE) with miss_control(response = \"include\"), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Cells and their order are asserted equal to R's predict_missing() rows. Julia takes the trait means through a one-hot X design and the caller re-supplies the mask (R reads it from the fit; see the predict_missing docstring). It replaces the postfit batch case CORE070-WAVE8-PREDICT-MISSING-ZERO-ROWS, which checked only that a complete-data fit returns zero rows. The R values are not one constant and not near zero."
+        "tolerance": 1e-05,
+        "tolerance_source": "test/test_predict_missing_p1.jl:86",
+        "tolerance_source_line": "@test isapprox(out.est, r_link; atol = 1e-5, rtol = 0)   # predict_missing, link scale",
+        "note": "Rank-2 Gaussian fit on the fixture data (sha256 checked) with 69 masked cells (traits 2 and 5 in units u with u % 10 == 3, trait 1 in units with u % 7 == 4; the mask is recorded in the fixture); R: value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE) with miss_control(response = \"include\"), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Cells and their order are asserted equal to R's predict_missing() rows. Julia takes the trait means through a one-hot X design and the caller re-supplies the mask (R reads it from the fit; see the predict_missing docstring). It replaces the postfit batch case CORE070-WAVE8-PREDICT-MISSING-ZERO-ROWS, which checked only that a complete-data fit returns zero rows. The R values are not one constant and not near zero. Limits: the mask pattern was chosen because many masks make fit_gaussian_gllvm(...; mask) throw PosDefException (Cholesky in src/families/aghq_gaussian_fit.jl ~205-212), a robustness bug outside this comparison; the mask that works is benign (light missingness), so heavy or irregular missingness is not covered."
       },
       {
         "case_id": "P1-JULIA-POSTFIT-PREDICT-MISSING-RESPONSE",
         "quantity": "predict_missing(fit, type = \"response\")$est at the masked cells, response scale (69 values)",
         "r_source": "test/fixtures/predict_missing_p1.toml [main.est_response]",
-        "julia_source": "GLLVModels.predict_missing(fit, Ym; mask = mask, type = :response).est, as called at test/test_predict_missing_p1.jl:80; fit as at test/test_predict_missing_p1.jl:66",
+        "julia_source": "GLLVModels.predict_missing(fit, Ym; mask = mask, type = :response).est, as called at test/test_predict_missing_p1.jl:88; fit as at test/test_predict_missing_p1.jl:74",
         "r_value": [
           0.2932030405553162,
           -0.45359884311153537,
@@ -332,10 +332,10 @@
           1.1880872911536335
         ],
         "abs_diff": 1.4849498042313058e-06,
-        "tolerance": 0.0001,
-        "tolerance_source": "test/test_predict_missing_p1.jl:81",
-        "tolerance_source_line": "@test isapprox(outr.est, Float64.(m[\"est_response\"]); atol = 1e-4, rtol = 0)   # predict_missing, response scale",
-        "note": "Rank-2 Gaussian fit on the fixture data (sha256 checked) with 69 masked cells (traits 2 and 5 in units u with u % 10 == 3, trait 1 in units with u % 7 == 4; the mask is recorded in the fixture); R: value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE) with miss_control(response = \"include\"), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Cells and their order are asserted equal to R's predict_missing() rows. Julia takes the trait means through a one-hot X design and the caller re-supplies the mask (R reads it from the fit; see the predict_missing docstring). It replaces the postfit batch case CORE070-WAVE8-PREDICT-MISSING-ZERO-ROWS, which checked only that a complete-data fit returns zero rows. The R values are not one constant and not near zero. Identity link, so the response scale equals the link scale in both engines."
+        "tolerance": 1e-05,
+        "tolerance_source": "test/test_predict_missing_p1.jl:89",
+        "tolerance_source_line": "@test isapprox(outr.est, Float64.(m[\"est_response\"]); atol = 1e-5, rtol = 0)   # predict_missing, response scale",
+        "note": "Rank-2 Gaussian fit on the fixture data (sha256 checked) with 69 masked cells (traits 2 and 5 in units u with u % 10 == 3, trait 1 in units with u % 7 == 4; the mask is recorded in the fixture); R: value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE) with miss_control(response = \"include\"), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Cells and their order are asserted equal to R's predict_missing() rows. Julia takes the trait means through a one-hot X design and the caller re-supplies the mask (R reads it from the fit; see the predict_missing docstring). It replaces the postfit batch case CORE070-WAVE8-PREDICT-MISSING-ZERO-ROWS, which checked only that a complete-data fit returns zero rows. The R values are not one constant and not near zero. Limits: the mask pattern was chosen because many masks make fit_gaussian_gllvm(...; mask) throw PosDefException (Cholesky in src/families/aghq_gaussian_fit.jl ~205-212), a robustness bug outside this comparison; the mask that works is benign (light missingness), so heavy or irregular missingness is not covered. Identity link, so the response scale equals the link scale in both engines: this case equals the link case bitwise, so it exercises the type = :response path but adds no independent numeric evidence."
       }
     ]
   }
