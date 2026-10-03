@@ -44,7 +44,13 @@ Status of a scoreboard row (first rule that applies):
   BEHAVIOURAL-UNVERIFIED
                       evidence_tier "behavioural" but the rule above does not hold (reason given).
   DISPOSITION-UNVERIFIED / NEEDS-SURFACE / <disposition>
-                      a non-null disposition that is not a valid signature.
+                      a non-null disposition that is not a valid signature. It never becomes a status
+                      word the assembler itself writes (RESERVED_STATUS_WORDS): after trimming and
+                      upper-casing, a disposition equal to `EVIDENCED`, `EVIDENCED-BEHAVIOURAL`,
+                      `DISPOSITION-SIGNED` without a signature, or any other such word is
+                      DISPOSITION-UNVERIFIED, and so is one that is not a string, is blank, or carries a
+                      `|` or a line break (disposition_status). Text containing NEEDS_JULIA_SURFACE reads
+                      NEEDS-SURFACE; any other plain string is copied and is not done.
   NOT-MEASURED        no receipt and no non-binding receipt cited at all.
   otherwise           the row's evidence_tier, collated into a bucket by TIER_BUCKET below
                       (the tier string itself is copied verbatim into the notes column).
@@ -200,6 +206,11 @@ STATUS_ORDER = [
     "PARTIAL", "NEEDS-SURFACE", "NON-NUMERIC", "NON-DISCRIMINATING", "FAIL", "NOT-MEASURED",
     "NO-TIER", "DISPOSITION-UNVERIFIED",
 ]
+# Every word this tool itself writes into the Status column: the statuses derive_status emits (STATUS_ORDER
+# lists them all) and the buckets TIER_BUCKET maps a tier to. A row's `disposition` is free text from the case
+# map; it is copied into the Status column only when it is none of these (disposition_status), because the
+# checker reads three of them (DONE in tools/true_parity_check.mjs) as done and X2 counts them.
+RESERVED_STATUS_WORDS = frozenset(STATUS_ORDER) | frozenset(TIER_BUCKET.values())
 
 # --- checker rules, ported from tools/true_parity_check.mjs (keep in step) -------------------
 
@@ -698,6 +709,28 @@ def scoreboard_id(sid: str, clause=None) -> str:
     return s
 
 
+def disposition_status(disp):
+    """(status, reason) for a row whose disposition is not null and not DISPOSITION-SIGNED.
+
+    The disposition is free text from the case map and becomes the Status column, so it must never read as
+    a status this tool or the checker trusts. After trimming (JS trim() and Python strip(), the union of the
+    two sets) and upper-casing, a disposition equal to any RESERVED_STATUS_WORDS entry is DISPOSITION-UNVERIFIED:
+    `EVIDENCED`, `EVIDENCED-BEHAVIOURAL`, `DISPOSITION-SIGNED` without a signature, and the rest. So is a
+    disposition that is not a string, is blank, or carries a table delimiter or line break (a `|` would shift
+    the columns the checker splits the row into). Text containing NEEDS_JULIA_SURFACE reads NEEDS-SURFACE; any
+    other plain string is copied as it is, and the checker does not count it done."""
+    if not isinstance(disp, str):
+        return "DISPOSITION-UNVERIFIED", f"disposition is not a string ({type(disp).__name__})"
+    key = js_trim(cell(disp)).upper()
+    if not key:
+        return "DISPOSITION-UNVERIFIED", "disposition is blank"
+    if key in RESERVED_STATUS_WORDS:
+        return "DISPOSITION-UNVERIFIED", f"disposition {cell(disp)} is a reserved status word, not a signature"
+    if "|" in disp or "\n" in disp or "\r" in disp:
+        return "DISPOSITION-UNVERIFIED", "disposition contains a table delimiter or line break"
+    return ("NEEDS-SURFACE" if "NEEDS_JULIA_SURFACE" in disp else cell(disp)), f"disposition {disp}"
+
+
 def derive_status(row, root, equiv=None, cites=None):
     """Returns (status, reason). Never writes to row.
 
@@ -741,7 +774,7 @@ def derive_status(row, root, equiv=None, cites=None):
         prob = behavioural_receipt_problem(row, root, equiv if equiv is not None else behaviour_equivalence(root), cites)
         return ("EVIDENCED-BEHAVIOURAL", "") if prob is None else ("BEHAVIOURAL-UNVERIFIED", prob)
     if disp is not None:
-        return ("NEEDS-SURFACE" if "NEEDS_JULIA_SURFACE" in str(disp) else str(disp)), f"disposition {disp}"
+        return disposition_status(disp)
     if not paths and not nonbinding_paths(row):
         return "NOT-MEASURED", "no receipt cited"
     if tier not in TIER_BUCKET:

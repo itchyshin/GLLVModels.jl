@@ -1047,6 +1047,40 @@ test('scoreboard: BEHAVIOURAL-UNVERIFIED is not done; plain EVIDENCED reports do
   assert.match(bad.stdout, /done_behavioural=0$/m);
   assert.match(runBoard('EVIDENCED', 'X2').stdout, /done=6 not_done=none done_behavioural=0$/m);
 });
+// Follow-up to the review of #687: the assembler writes "not bound; cited: ..." in the receipt cell of every row it
+// did not bind, and a disposition once became a Status word on such a row ("EVIDENCED" with a receipt that exists).
+// The checker reads the Status word alone, so it also refuses a done word on a row the assembler wrote as not bound.
+function runBoardCell(status, receiptCell, mode, id = 'inference-CI-ROUTE-001') {
+  return runTree(({ dir }) => {
+    const sb = join(dir, L, 'scoreboard.md');
+    writeFileSync(sb, `${readFileSync(sb, 'utf8')}| ${id} | routing | ${status} | ${receiptCell} | fixture |\n`);
+  }, mode);
+}
+for (const status of ['EVIDENCED', 'EVIDENCED-BEHAVIOURAL', 'DISPOSITION-SIGNED']) {
+  test(`scoreboard: ${status} on a row whose receipt cell says "not bound" is not done (X2 and C2), though the cited path exists`, () => {
+    const cell = `not bound; cited: ${RECEIPT_CELL}`;
+    const x2 = runBoardCell(status, cell, 'X2');
+    assert.match(x2.stdout, /X2_NOT_MET$/m, x2.stdout);
+    assert.match(x2.stdout, /inference-CI-ROUTE-001:STATUS_NOT_BOUND/);
+    assert.match(x2.stdout, /done=5 not_done=inference-CI-ROUTE-001:STATUS_NOT_BOUND done_behavioural=0$/m);
+    const c2 = runBoardCell(status, cell, 'C2');
+    assert.match(c2.stdout, /C2_NOT_MET$/m, c2.stdout);
+    assert.match(c2.stdout, /inference-CI-ROUTE-001:STATUS_NOT_BOUND/);
+  });
+}
+test('scoreboard: the same done word with a bound receipt cell is still done, so only "not bound" rows are refused', () => {
+  for (const status of ['EVIDENCED', 'EVIDENCED-BEHAVIOURAL']) {
+    const r = runBoardCell(status, RECEIPT_CELL, 'X2');
+    assert.match(r.stdout, /X2_MET$/m, r.stdout);
+  }
+  const signed = runBoardCell('DISPOSITION-SIGNED', 'Disposition: outside_boundary; signed_by: Shinichi Nakagawa; signed_on: 2026-09-27', 'X2', 'inference-CI-ROUTE-001');
+  assert.match(signed.stdout, /X2_MET$/m, signed.stdout);
+});
+test('scoreboard: a status that is not a done word stays not done whatever its receipt cell says', () => {
+  const r = runBoardCell('NOT-MEASURED', `not bound; cited: ${RECEIPT_CELL}`, 'X2');
+  assert.match(r.stdout, /X2_NOT_MET$/m);
+  assert.match(r.stdout, /inference-CI-ROUTE-001:NOT_DONE/);
+});
 test('scoreboard: an EVIDENCED-BEHAVIOURAL row with no receipt path is not done', () => {
   const r = runTree(({ dir }) => {
     const sb = join(dir, L, 'scoreboard.md');

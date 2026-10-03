@@ -988,6 +988,110 @@ def main():
         check(f"signature_with_U{name}_padding_reads_the_same_in_both_tools", signature_agrees("Shinichi Nakagawa" + ch, "2026-09-27" + ch))
         check(f"signature_with_leading_U{name}_reads_the_same_in_both_tools", signature_agrees(ch + "Shinichi Nakagawa", ch + "2026-09-27"))
 
+    # Review of #687 follow-up 1: a case-map `disposition` is free text copied into the scoreboard's Status column,
+    # so it must never read there as a status the assembler (or the checker's DONE set) trusts. Each control fails
+    # on the head before this change (a disposition of "EVIDENCED" became the status verbatim).
+    def x2_counts(root):
+        """(rows, done) from the checker's X2 over this root's assembled scoreboard; None without node."""
+        if not shutil.which("node"):
+            return None
+        env = dict(os.environ, PARITY_REF="FS", PARITY_FS_ROOT=str(root))
+        out = subprocess.run(["node", str(HERE / "true_parity_check.mjs"), "X2"], env=env, capture_output=True, text=True).stdout
+        m = re.search(r"\brows=(\d+) done=(\d+)", out)
+        return (int(m.group(1)), int(m.group(2))) if m else None
+
+    def unbound_numeric_root(**row_kw):
+        """A numeric row whose receipt exists but says FAIL: honestly NUMERIC-UNVERIFIED, so X2 must not count it."""
+        return numeric_root({"verdict": "FAIL"}, **row_kw)
+
+    def forged_disposition(disp, want_status="DISPOSITION-UNVERIFIED", why=None):
+        def f():
+            root, tmp = unbound_numeric_root(disposition=disp)
+            try:
+                c, o = run(root)
+                st = status_of(root)
+                x2 = x2_counts(root)
+                ok = c == 0 and st == want_status and (x2 is None or x2[1] == 0) and (why is None or why in text_of(root))
+                return ok, f"exit={c} status={st!r} x2={x2} {o}"
+            finally:
+                shutil.rmtree(tmp)
+        return f
+
+    def honest_baseline():
+        root, tmp = unbound_numeric_root()
+        try:
+            c, o = run(root)
+            x2 = x2_counts(root)
+            return c == 0 and status_of(root) == "NUMERIC-UNVERIFIED" and (x2 is None or x2[1] == 0), f"{status_of(root)} {x2} {o}"
+        finally:
+            shutil.rmtree(tmp)
+    check("disposition_status_baseline_failed_receipt_row_is_not_done", honest_baseline)
+
+    DONE_WORDS = ("EVIDENCED", "EVIDENCED-BEHAVIOURAL", "DISPOSITION-SIGNED")
+    check("disposition_status_word_is_unverified_and_not_counted_by_x2_EVIDENCED", forged_disposition("EVIDENCED", why="reserved status word"))
+    check("disposition_status_word_is_unverified_and_not_counted_by_x2_EVIDENCED_BEHAVIOURAL", forged_disposition("EVIDENCED-BEHAVIOURAL", why="reserved status word"))
+    check("disposition_status_word_is_unverified_and_not_counted_by_x2_DISPOSITION_SIGNED_no_signature", forged_disposition("DISPOSITION-SIGNED"))
+    check("disposition_status_word_with_spaces_is_unverified_and_not_counted_by_x2", forged_disposition("  EVIDENCED  "))
+    check("disposition_status_word_with_a_trailing_U_FEFF_is_unverified_and_not_counted_by_x2", forged_disposition("EVIDENCED\ufeff"))
+    check("disposition_status_word_with_a_leading_U_00A0_is_unverified_and_not_counted_by_x2", forged_disposition("\u00a0EVIDENCED-BEHAVIOURAL"))
+    check("disposition_status_word_lower_case_is_unverified", forged_disposition("evidenced"))
+    check("disposition_pipe_forged_status_column_is_unverified_and_not_counted_by_x2", forged_disposition(f"EVIDENCED | {RP} | forged |", why="table delimiter"))
+    check("disposition_with_a_line_break_is_unverified_not_a_failed_run", forged_disposition("EVIDENCED\n| family-FAKE | r | EVIDENCED | " + RP + " | n |", why="table delimiter or line break"))
+    check("disposition_with_an_inner_line_break_is_unverified_not_a_failed_run", forged_disposition("see\nnotes", why="table delimiter or line break"))
+
+    def reserved_variants():
+        def pads(w):
+            return [w, w.lower(), w.title(), f" {w} ", f"{w}\r", f"{w}\n", f"\t{w}", f"{w}\ufeff", f"\u00a0{w}", f"\u2028{w}\u2029", f"\u3000{w}\u3000"]
+        bad = []
+        for w in sorted(A.RESERVED_STATUS_WORDS):
+            for d in pads(w):
+                st, _why = A.derive_status(row("family/N", disposition=d), A.ROOT, {})
+                if st != "DISPOSITION-UNVERIFIED":
+                    bad.append((d, st))
+        return not bad and len(A.RESERVED_STATUS_WORDS) >= 15, f"{bad[:5]} words={len(A.RESERVED_STATUS_WORDS)}"
+    check("every_reserved_status_word_in_every_padding_and_case_is_unverified_as_a_disposition", reserved_variants)
+
+    def odd_dispositions():
+        bad = []
+        for d in (5, 0, True, False, 1.5, ["EVIDENCED"], {"a": 1}, "", "   ", "\ufeff", "\u0085"):
+            st, _why = A.derive_status(row("family/N", disposition=d), A.ROOT, {})
+            if st != "DISPOSITION-UNVERIFIED":
+                bad.append((d, st))
+        return not bad, str(bad)
+    check("non_string_or_blank_disposition_is_unverified", odd_dispositions)
+
+    def plain_dispositions_still_pass_through():
+        want = {"BLOCKED_NEEDS_JULIA_SURFACE": "NEEDS-SURFACE", "outside_boundary": "outside_boundary",
+                "see EVIDENCED notes": "see EVIDENCED notes", "EVIDENCED-BEHAVIOURALX": "EVIDENCED-BEHAVIOURALX",
+                "NEEDS_JULIA_SURFACE": "NEEDS-SURFACE", "PARTIAL_X": "PARTIAL_X"}
+        got = {d: A.derive_status(row("family/N", disposition=d), A.ROOT, {})[0] for d in want}
+        return got == want, f"{got}"
+    check("plain_dispositions_keep_their_old_status", plain_dispositions_still_pass_through)
+
+    def disposition_signed_still_signs():
+        root, tmp = with_root({"case-map-data.json": [row("data/S", **sig)]})
+        try:
+            c, o = run(root)
+            x2 = x2_counts(root)
+            return c == 0 and status_of(root, "data-S") == "DISPOSITION-SIGNED" and (x2 is None or x2[1] >= 1), f"{status_of(root, 'data-S')} {x2} {o}"
+        finally:
+            shutil.rmtree(tmp)
+    check("a_valid_signature_still_reads_disposition_signed_after_the_reserved_word_guard", disposition_signed_still_signs)
+
+    def reserved_words_cover_emitted_statuses():
+        import inspect
+        src = inspect.getsource(A.derive_status) + inspect.getsource(A.disposition_status)
+        emitted = set(re.findall(r'"([A-Z]+(?:-[A-Z]+)*)"', src))
+        missing = sorted(emitted - A.RESERVED_STATUS_WORDS)
+        return bool(emitted) and not missing and set(A.TIER_BUCKET.values()) <= A.RESERVED_STATUS_WORDS and set(A.STATUS_ORDER) <= A.RESERVED_STATUS_WORDS, f"missing={missing} emitted={sorted(emitted)}"
+    check("reserved_status_words_cover_every_status_derive_status_emits", reserved_words_cover_emitted_statuses)
+
+    def checker_done_set_is_reserved():
+        mjs_text = (HERE / "true_parity_check.mjs").read_text()
+        done = re.findall(r"'([A-Z-]+)'", re.search(r"const DONE = new Set\(\[(.*?)\]\);", mjs_text).group(1))
+        return done == list(DONE_WORDS) and set(done) <= A.RESERVED_STATUS_WORDS, str(done)
+    check("checker_done_set_is_a_subset_of_the_reserved_status_words", checker_done_set_is_reserved)
+
     # The two tools carry copies of the C6 vocabulary, the C6 ruling table and the behavioural scope; they must not drift.
     mjs = (HERE / "true_parity_check.mjs").read_text()
     vocab = re.search(r"const C6_DECISION_VOCAB = new Set\(\[(.*?)\]\);", mjs, re.S).group(1)

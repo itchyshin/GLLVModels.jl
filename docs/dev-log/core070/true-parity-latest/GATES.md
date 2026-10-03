@@ -630,6 +630,37 @@ Add the C3 to C5 rows proposed in PR #650 (the beetle row included now that #662
 the campaign on Totoro. This is data, not a rule: those PRs add rows and receipts, and the checker
 selects them by the existing `-RSZ`, `RD-` and `GRP-` id conventions below.
 
+### Hardening after the independent review of #687
+
+The review of the merged PR #687 left the follow-ups below. Each has controls that fail on the code before the
+change. None is a new ruling or a new signature.
+
+**A disposition is never a status word.** The Status column of `scoreboard.md` is written by
+`tools/true_parity_assemble.py`; a case-map row's `disposition` is free text. Before this change a non-null
+`disposition` that was not a valid signature was copied into the Status column as it stood, so a row with
+`"disposition": "EVIDENCED"` and a receipt that exists read as done, and X2 counted it. Now
+(`disposition_status`) a disposition that equals a reserved status word reads `DISPOSITION-UNVERIFIED`, with the
+reason `reserved status word`. The reserved words (`RESERVED_STATUS_WORDS`) are every status the assembler writes:
+the entries of `STATUS_ORDER` and the buckets of `TIER_BUCKET`. The comparison is made after trimming (with the
+characters of both JS `trim()` and Python `strip()`) and upper-casing, so `" evidenced "`, `"EVIDENCED"` followed by
+U+FEFF and `"EVIDENCED-BEHAVIOURAL"` all match. A disposition also reads `DISPOSITION-UNVERIFIED` when it is not a
+string, is blank, or contains `|`, a line feed or a carriage return (a `|` shifts the columns the checker splits a
+row into). Text that contains `NEEDS_JULIA_SURFACE` still reads `NEEDS-SURFACE`, and any other plain string is still
+copied into the column as it is; the checker counts none of those as done. The statuses `DISPOSITION-SIGNED`,
+`EVIDENCED` and `EVIDENCED-BEHAVIOURAL` come only from the signature path and the binding rules.
+
+**The checker agrees.** C2 to C5 and X2 read the Status word of a scoreboard row, and `--check` is what ties the word
+to the case maps. The checker now also refuses a done word (`EVIDENCED`, `EVIDENCED-BEHAVIOURAL`,
+`DISPOSITION-SIGNED`) on a row whose receipt cell begins with `not bound`, which is how the assembler writes every row
+it did not bind; the row reads `STATUS_NOT_BOUND`. A scoreboard written by hand with another receipt cell is not
+affected. The tracked scoreboard has no done row with such a cell, so no count changes.
+
+Controls. Assembler: `disposition_status_word_*`, `disposition_pipe_forged_*`, `disposition_with_*line_break*`,
+`every_reserved_status_word_*`, `non_string_or_blank_disposition_*`, `plain_dispositions_*`,
+`reserved_status_words_cover_*`, `checker_done_set_is_a_subset_*`. Checker (group "scoreboard"): a done word on a
+`not bound` row is not done for each of the three words (X2 and C2), the same words with a bound cell are done, and
+a non-done word stays not done.
+
 ## Clauses
 
 Every clause starts unmet except C7, whose evidence (`docs/src/gllvmtmb-parity.md`) already

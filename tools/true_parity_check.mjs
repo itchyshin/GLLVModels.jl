@@ -77,6 +77,10 @@
 //     covers KEPT_AS_JULIA_EXTRA and EXCLUDED_INTERNAL_HELPER), the date must be that ruling's, and
 //     the signer must pass the signature rule, else it is listed under unsigned_decision=. A
 //     KEPT_AS_JULIA_EXTRA basis must also cite a docs/src/... file that resolves at the ref.
+//   Review of #687, follow-up: C2 to C5 and X2 read a scoreboard row's Status word, so a done word on a row
+//     whose receipt cell begins "not bound" (how true_parity_assemble.py writes a row it did not bind) is
+//     STATUS_NOT_BOUND, not done. The assembler no longer turns a case-map disposition into a done word
+//     (disposition_status); this guard keeps the two tools in agreement.
 import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -710,6 +714,10 @@ function evaluateScoreboardRow(r) {
   if (r.status === 'EVIDENCED-BEHAVIOURAL' && (isRSZ(r) || isRD(r) || isGRP(r) || !behaviouralEligibleBoardId(r.id))) {
     return { ok: false, reason: 'BEHAVIOURAL_NOT_ALLOWED_FOR_THIS_ROW' };
   }
+  // The assembler writes "not bound; cited: ..." in the receipt cell of every row it did not bind, whatever the
+  // case map said. A done word beside that cell did not come from a binding rule (an old assembler copied a
+  // disposition such as "EVIDENCED" into the Status column, and the cited path then resolved), so it is not done.
+  if (/^not bound\b/i.test(r.receiptText)) return { ok: false, reason: 'STATUS_NOT_BOUND' };
   const extracted = extractPaths(r.receiptText);
   if (extracted.length === 0) {
     if (r.status === 'DISPOSITION-SIGNED' && hasSignedTokens(r.receiptText)) return { ok: true };
