@@ -46,7 +46,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-postfit.json",
-   "sha256": "66d1a30daf1177e1e6a1203ea07a15a482ef8146326ff4d22975cc81fe4e61dd",
+   "sha256": "d2add19ad01149d198338b43bf525a812504172d102f5333da4949f28e7cf3f6",
    "rows": 52
   }
  ],
@@ -10066,16 +10066,23 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-WAVE8-PREDICT-MISSING-ZERO-ROWS"
+    "P1-JULIA-POSTFIT-PREDICT-MISSING-LINK",
+    "P1-JULIA-POSTFIT-PREDICT-MISSING-RESPONSE"
    ],
    "disposition": null,
-   "evidence_tier": "partial_non_numeric_case",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/predict_missing.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE8-PREDICT-MISSING-ZERO-ROWS.json"
     ],
-    "tier": "measured at P1 and the harness passes, but at least one case is a verdict, own-consistency, exact-integer, empty-length or default-policy check with no R-vs-Julia number and tolerance, so the row does not bind"
+    "batch_case_ids": [
+     "CORE070-WAVE8-PREDICT-MISSING-ZERO-ROWS"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_predict_missing_receipt.jl with the same calls and settings as the cited twin test, against R-at-P1 values copied from a tracked fixture (an R fit with masked cells that converged with a positive-definite Hessian, on a non-degenerate fixture: the R values are not one constant and not ~0), each case within the tolerance asserted in that test. The batch case this row carried is superseded; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -10086,8 +10093,17 @@
     },
     "case_kinds": {
      "CORE070-WAVE8-PREDICT-MISSING-ZERO-ROWS": "paired_verdict"
+    },
+    "twin_case_ids": [
+     "P1-JULIA-POSTFIT-PREDICT-MISSING-LINK",
+     "P1-JULIA-POSTFIT-PREDICT-MISSING-RESPONSE"
+    ],
+    "twin_verdict": "PASS",
+    "discriminating": {
+     "CORE070-WAVE8-PREDICT-MISSING-ZERO-ROWS": false
     }
-   }
+   },
+   "note": "The batch case only checked that a complete-data fit returns zero rows (a verdict, no R-vs-Julia number). The twin fits a Gaussian rank-2 model with 69 masked cells in both engines and compares predict_missing()'s estimate at every masked cell, link and response scale."
   },
   {
    "source_id": "postfit/POSTFIT-SURFACE-residuals.gllvmTMB_multi",
