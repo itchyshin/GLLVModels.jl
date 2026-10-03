@@ -1047,6 +1047,44 @@ test('scoreboard: BEHAVIOURAL-UNVERIFIED is not done; plain EVIDENCED reports do
   assert.match(bad.stdout, /done_behavioural=0$/m);
   assert.match(runBoard('EVIDENCED', 'X2').stdout, /done=6 not_done=none done_behavioural=0$/m);
 });
+// Follow-up to the review of #687: the assembler writes "not bound; cited: ..." in the receipt cell of every row it
+// did not bind, and a disposition once became a Status word on such a row ("EVIDENCED" with a receipt that exists).
+// The checker reads the Status word alone, so it also refuses a done word on a row the assembler wrote as not bound.
+function runBoardCell(status, receiptCell, mode, id = 'inference-CI-ROUTE-001') {
+  return runTree(({ dir }) => {
+    const sb = join(dir, L, 'scoreboard.md');
+    writeFileSync(sb, `${readFileSync(sb, 'utf8')}| ${id} | routing | ${status} | ${receiptCell} | fixture |\n`);
+  }, mode);
+}
+for (const status of ['EVIDENCED', 'EVIDENCED-BEHAVIOURAL', 'DISPOSITION-SIGNED']) {
+  test(`scoreboard: ${status} on a row whose receipt cell says "not bound" is not done (X2 and C2), though the cited path exists`, () => {
+    const cell = `not bound; cited: ${RECEIPT_CELL}`;
+    const x2 = runBoardCell(status, cell, 'X2');
+    assert.match(x2.stdout, /X2_NOT_MET$/m, x2.stdout);
+    assert.match(x2.stdout, /inference-CI-ROUTE-001:STATUS_NOT_BOUND/);
+    assert.match(x2.stdout, /done=5 not_done=inference-CI-ROUTE-001:STATUS_NOT_BOUND done_behavioural=0$/m);
+    const c2 = runBoardCell(status, cell, 'C2');
+    assert.match(c2.stdout, /C2_NOT_MET$/m, c2.stdout);
+    assert.match(c2.stdout, /inference-CI-ROUTE-001:STATUS_NOT_BOUND/);
+  });
+}
+test('scoreboard: the same done word with a bound receipt cell is still done, so only "not bound" rows are refused', () => {
+  for (const status of ['EVIDENCED', 'EVIDENCED-BEHAVIOURAL']) {
+    const r = runBoardCell(status, RECEIPT_CELL, 'X2');
+    assert.match(r.stdout, /X2_MET$/m, r.stdout);
+  }
+  const signed = runBoardCell('DISPOSITION-SIGNED', 'Disposition: outside_boundary; signed_by: Shinichi Nakagawa; signed_on: 2026-09-27', 'X2', 'inference-CI-ROUTE-001');
+  assert.match(signed.stdout, /X2_MET$/m, signed.stdout);
+});
+test('scoreboard: the not-bound refusal is anchored, so "not bound" later in a bound receipt cell leaves the row done', () => {
+  const r = runBoardCell('EVIDENCED', `${RECEIPT_CELL} (an older copy was not bound)`, 'X2');
+  assert.match(r.stdout, /X2_MET$/m, r.stdout);
+});
+test('scoreboard: a status that is not a done word stays not done whatever its receipt cell says', () => {
+  const r = runBoardCell('NOT-MEASURED', `not bound; cited: ${RECEIPT_CELL}`, 'X2');
+  assert.match(r.stdout, /X2_NOT_MET$/m);
+  assert.match(r.stdout, /inference-CI-ROUTE-001:NOT_DONE/);
+});
 test('scoreboard: an EVIDENCED-BEHAVIOURAL row with no receipt path is not done', () => {
   const r = runTree(({ dir }) => {
     const sb = join(dir, L, 'scoreboard.md');
@@ -1110,6 +1148,18 @@ for (const [name, item, why] of [
 test('C6 scope: both covered words stay valid with the pinned ref and date', () => {
   const r = runTree(c6Items([helper(), kept({ source_id: 'julia-export/x' })]), 'C6');
   assert.match(r.stdout, /C6_MET$/m, r.stdout);
+});
+// A ruling ref is looked up by own property: C6_RULINGS is an object literal, so `ref in C6_RULINGS` would accept the
+// names every object inherits and then crash on `.words.has` (exit 1, no verdict). Each of these must be reported as an
+// unrecognised ruling with the verdict C6_NOT_MET and exit 0.
+test('C6 scope: a ruling ref that is an inherited Object.prototype name is not a recognised ruling (own-property lookup)', () => {
+  for (const ref of ['constructor', '__proto__', 'toString', 'hasOwnProperty', 'valueOf', 'isPrototypeOf']) {
+    const r = runTree(c6Items([helper({ ruling: { ...RULING, ref } })]), 'C6');
+    assert.equal(r.code, 0, `${ref}: exit ${r.code}, stdout ${r.stdout}`);
+    assert.match(r.stdout, /C6_NOT_MET$/m, ref);
+    assert.match(r.stdout, /invalid_decision=none /, ref);
+    assert.match(r.stdout, new RegExp(`\\(ruling ref "${ref}" is not a recognised signed ruling\\)`), ref);
+  }
 });
 test('C6: an unknown decision word still fails (EXCLUDED_HELPER, and a case variant)', () => {
   for (const word of ['EXCLUDED_HELPER', 'excluded_internal_helper', 'EXCLUDED_INTERNAL_HELPER ']) {
@@ -1366,6 +1416,87 @@ test('C6: a KEPT_AS_JULIA_EXTRA basis citing existing docs/src files binds; so d
     assert.match(runTree(c6Items([kept({ basis })]), 'C6').stdout, /C6_MET$/m, basis);
   }
   assert.match(runTree(c6Items([helper({ basis: 'internal; no docstring' })]), 'C6').stdout, /C6_MET$/m);
+});
+// Review of #687 follow-up 3: the cited page is matched exactly. It is an existing .md file written as
+// docs/src/<path>.md: nothing before docs/src (a "./", a "../", a directory, a URL), nothing after ".md" (".bak", "x", "~",
+// "/"), no ".." or "." segment, and no file type other than .md (an existing .json, .txt, .jl or .toml is not a page).
+// Every token of the basis that contains "docs/src" must be such a path, so a bogus citation beside a good one fails too.
+const EXACT_TREE = ({ dir }) => {
+  for (const [rel, body] of [['docs/src/assets/x.json', '{}'], ['docs/src/notes.txt', 'n'], ['docs/src/code.jl', 'x = 1'], ['docs/src/cfg.toml', 'a = 1'],
+    ['docs/src/real.md.bak', 'old'], ['docs/src/sub/deep.md', '# deep']]) {
+    mkdirSync(dirname(join(dir, rel)), { recursive: true });
+    writeFileSync(join(dir, rel), body);
+  }
+};
+const NOT_EXACT = (x) => new RegExp(`not an exact docs/src/<path>\\.md page: ${x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`);
+for (const [name, basis, why] of [
+  ['a .bak suffix on an existing page (the .bak file does not exist)', 'see docs/src/gllvmtmb-parity.md.bak', NOT_EXACT('docs/src/gllvmtmb-parity.md.bak')],
+  ['a .bak file that exists', 'docs/src/real.md.bak', NOT_EXACT('docs/src/real.md.bak')],
+  ['an .mdx suffix', 'docs/src/gllvmtmb-parity.mdx', NOT_EXACT('docs/src/gllvmtmb-parity.mdx')],
+  ['a tilde suffix', 'docs/src/gllvmtmb-parity.md~', NOT_EXACT('docs/src/gllvmtmb-parity.md~')],
+  ['a trailing slash', 'docs/src/gllvmtmb-parity.md/', NOT_EXACT('docs/src/gllvmtmb-parity.md/')],
+  ['an existing .json file under docs/src', 'docs/src/assets/x.json', NOT_EXACT('docs/src/assets/x.json')],
+  ['an existing .txt file under docs/src', 'see docs/src/notes.txt', NOT_EXACT('docs/src/notes.txt')],
+  ['an existing .jl file under docs/src', 'see docs/src/code.jl', NOT_EXACT('docs/src/code.jl')],
+  ['an existing .toml file under docs/src', 'see docs/src/cfg.toml', NOT_EXACT('docs/src/cfg.toml')],
+  ['a "./" prefix', './docs/src/gllvmtmb-parity.md', NOT_EXACT('./docs/src/gllvmtmb-parity.md')],
+  ['a "../" prefix', '../docs/src/gllvmtmb-parity.md', NOT_EXACT('../docs/src/gllvmtmb-parity.md')],
+  ['a directory prefix', 'other/docs/src/gllvmtmb-parity.md', NOT_EXACT('other/docs/src/gllvmtmb-parity.md')],
+  ['an absolute prefix', '/abs/docs/src/gllvmtmb-parity.md', NOT_EXACT('/abs/docs/src/gllvmtmb-parity.md')],
+  ['a letter before docs', 'xdocs/src/gllvmtmb-parity.md', NOT_EXACT('xdocs/src/gllvmtmb-parity.md')],
+  ['a URL', 'https://example.org/docs/src/gllvmtmb-parity.md', NOT_EXACT('//example.org/docs/src/gllvmtmb-parity.md')],
+  ['a ".." segment that resolves back to an existing page', 'docs/src/../src/gllvmtmb-parity.md', NOT_EXACT('docs/src/../src/gllvmtmb-parity.md')],
+  ['a ".." segment after a directory', 'docs/src/sub/../gllvmtmb-parity.md', NOT_EXACT('docs/src/sub/../gllvmtmb-parity.md')],
+  ['a "." segment', 'docs/src/./gllvmtmb-parity.md', NOT_EXACT('docs/src/./gllvmtmb-parity.md')],
+  ['a doubled slash', 'docs/src//gllvmtmb-parity.md', NOT_EXACT('docs/src//gllvmtmb-parity.md')],
+  ['the directory only', 'see docs/src/', NOT_EXACT('docs/src/')],
+  ['a no-break space after the page', 'docs/src/gllvmtmb-parity.md' + String.fromCharCode(0xa0), /must cite a docs\/src\/\.\.\. file; not an exact/],
+]) {
+  test(`C6 exact page: a KEPT_AS_JULIA_EXTRA basis with ${name} is unsigned_decision and fails`, () => {
+    const r = runTree(({ dir, ...rest }) => { EXACT_TREE({ dir }); c6Items([kept({ basis })])({ dir, ...rest }); }, 'C6');
+    assert.equal(r.code, 0, r.stdout);
+    assert.match(r.stdout, /C6_NOT_MET$/m, basis);
+    assert.match(r.stdout, /invalid_decision=none /);
+    assert.match(r.stdout, /unsigned_decision=julia-export\/doc\(KEPT_AS_JULIA_EXTRA basis (?:must cite a docs\/src\/\.\.\. file|cites )/, r.stdout);
+    assert.match(r.stdout, why, r.stdout);
+  });
+}
+test('C6 exact page: a good citation beside a malformed one still fails, naming the malformed one', () => {
+  for (const basis of ['docs/src/gllvmtmb-parity.md and docs/src/gone.md.bak', 'docs/src/gllvmtmb-parity.md and ./docs/src/gllvmtmb-parity.md', 'docs/src/ and docs/src/gllvmtmb-parity.md']) {
+    const r = runTree(({ dir, ...rest }) => { EXACT_TREE({ dir }); c6Items([kept({ basis })])({ dir, ...rest }); }, 'C6');
+    assert.match(r.stdout, /C6_NOT_MET$/m, basis);
+    assert.match(r.stdout, /KEPT_AS_JULIA_EXTRA basis cites [^()]*, which is not an exact docs\/src\/<path>\.md page\)/, `${basis}: ${r.stdout}`);
+  }
+});
+test('C6 exact page: pages are still accepted when the path stands alone, in punctuation or markdown, or with a fragment or line number', () => {
+  for (const basis of [
+    'docs/src/gllvmtmb-parity.md', '(docs/src/gllvmtmb-parity.md)', '`docs/src/gllvmtmb-parity.md`', 'docs/src/gllvmtmb-parity.md:12',
+    'see docs/src/gllvmtmb-parity.md.', '[extras](docs/src/gllvmtmb-parity.md#x)', 'docs/src/gllvmtmb-parity.md;docs/src/sub/deep.md',
+    'docs/src/sub/deep.md', 'documented in\ndocs/src/gllvmtmb-parity.md\nand elsewhere', 'a "docs/src/gllvmtmb-parity.md" b', "'docs/src/gllvmtmb-parity.md'",
+  ]) {
+    const r = runTree(({ dir, ...rest }) => { EXACT_TREE({ dir }); c6Items([kept({ basis })])({ dir, ...rest }); }, 'C6');
+    assert.match(r.stdout, /C6_MET$/m, `${JSON.stringify(basis)}: ${r.stdout}`);
+  }
+});
+test('C6 exact page: the exact-path rule holds in git mode too (git cat-file at the ref)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'true-parity-c6exact-'));
+  try {
+    cpSync(join(FIXTURES, 'base'), dir, { recursive: true });
+    EXACT_TREE({ dir });
+    writeFileSync(join(dir, L, 'reverse-gap.json'), JSON.stringify([
+      kept(), kept({ source_id: 'julia-export/bak', basis: 'docs/src/gllvmtmb-parity.md.bak' }),
+      kept({ source_id: 'julia-export/json', basis: 'docs/src/assets/x.json' }), kept({ source_id: 'julia-export/dotslash', basis: './docs/src/gllvmtmb-parity.md' }),
+    ]));
+    execFileSync('git', ['init', '-q'], { cwd: dir });
+    execFileSync('git', ['-c', 'user.email=t@t.invalid', '-c', 'user.name=t', 'add', '-A'], { cwd: dir });
+    execFileSync('git', ['-c', 'user.email=t@t.invalid', '-c', 'user.name=t', 'commit', '-q', '-m', 'fixture'], { cwd: dir });
+    const r = runGit(dir, 'C6');
+    assert.match(r.stdout, /C6_NOT_MET$/m);
+    for (const id of ['bak', 'json', 'dotslash']) assert.match(r.stdout, new RegExp(`julia-export/${id}\\(KEPT_AS_JULIA_EXTRA basis must cite a docs/src/\\.\\.\\. file; not an exact`), id);
+    assert.doesNotMatch(r.stdout, /julia-export\/doc\(/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 test('C6: the docs/src check applies to KEPT_AS_JULIA_EXTRA only, in git mode too (resolved with git cat-file at the ref)', () => {
   const dir = mkdtempSync(join(tmpdir(), 'true-parity-c6git-'));

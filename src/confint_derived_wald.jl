@@ -142,6 +142,62 @@ function _make_phylo_signal_closure(spec::NamedTuple, t::Integer;
     return θ -> _phylo_signal_packed(θ, spec, t; diag_Σphy = diag_Σphy)
 end
 
+# ICC[t] from the packed θ: `extract_ICC_site(fit)[t]`, the unit-level
+# intraclass correlation `v_B,t / (v_B,t + v_W,t)` with
+# `v_B,t = (Λ_B Λ_B')[t,t] + σ²_B[t]` and
+# `v_W,t = (Λ_W Λ_W')[t,t] + σ²_W[t] + σ²_eps`. `v_B,t + v_W,t` is the diagonal of
+# `Σ_y_site`, so the packed form divides by it. This is the quantity that
+# `confint(fit, y; parm = "icc[t]")` reports. AD-friendly.
+function _icc_packed(θ::AbstractVector, spec::NamedTuple, t::Integer)
+    u = _derived_unpack(θ, spec)
+    vB = zero(eltype(u.Λ_B))
+    @inbounds for k in 1:size(u.Λ_B, 2)
+        vB += u.Λ_B[t, k]^2
+    end
+    if spec.has_diag && u.σ²_B !== nothing
+        vB += u.σ²_B[t]
+    end
+    Σ = _sigma_y_site_from_unpacked(u, spec)
+    return vB / Σ[t, t]
+end
+
+function _make_icc_closure(spec::NamedTuple, t::Integer)
+    return θ -> _icc_packed(θ, spec, t)
+end
+
+# `proportions(fit; component)[t]` from the packed θ. The `:shared` share is the
+# communality, so it reuses `_communality_packed` (identical value, bit for bit).
+# AD-friendly. Callers check that the component is defined for the fit (a block
+# the fit does not have makes the share identically zero).
+function _proportion_packed(θ::AbstractVector, spec::NamedTuple, t::Integer,
+                            component::Symbol)
+    component === :shared && return _communality_packed(θ, spec, t)
+    u = _derived_unpack(θ, spec)
+    Σ = _sigma_y_site_from_unpacked(u, spec)
+    num = if component === :unique_W
+        s = zero(eltype(u.Λ_W))
+        @inbounds for k in 1:size(u.Λ_W, 2)
+            s += u.Λ_W[t, k]^2
+        end
+        s
+    elseif component === :unique_B
+        u.σ²_B[t]
+    elseif component === :unique_Wd
+        u.σ²_W[t]
+    elseif component === :residual
+        u.σ_eps^2
+    else
+        throw(ArgumentError(
+            "component must be one of :shared, :unique_W, :unique_B, " *
+            ":unique_Wd, :residual; got $(component)"))
+    end
+    return num / Σ[t, t]
+end
+
+function _make_proportion_closure(spec::NamedTuple, t::Integer, component::Symbol)
+    return θ -> _proportion_packed(θ, spec, t, component)
+end
+
 # ---------------------------------------------------------------------------
 # Observed-information Σ = inv(H), reusing confint.jl's NLL reconstruction
 # and Hessian convention. Returns (Σ, pd::Bool); Σ is `nothing` when the
@@ -365,6 +421,10 @@ end
 Fisher-z transformed-Wald CI for the cross-trait correlation `ρ[i, j]`.
 Bounds are guaranteed to lie in `[−1, 1]`. See
 [`transformed_wald_ci_derived`](@ref).
+
+Also reached as `confint(fit, y; parm = "rho[i,j]", method = :wald)`, which also
+offers `method = :profile` and `method = :bootstrap` for the same quantity; see
+[`confint`](@ref).
 """
 function correlation_wald_ci(fit::GllvmFit, i::Integer, j::Integer;
                              level::Real = 0.95,
@@ -382,6 +442,10 @@ end
 
 Logit transformed-Wald CI for the per-trait communality `c²[t]`. Bounds
 are guaranteed to lie in `[0, 1]`. See [`transformed_wald_ci_derived`](@ref).
+
+Also reached as `confint(fit, y; parm = "communality[t]", method = :wald)`, which
+also offers `method = :profile` and `method = :bootstrap` for the same quantity;
+see [`confint`](@ref).
 """
 function communality_wald_ci(fit::GllvmFit, t::Integer;
                              level::Real = 0.95,
@@ -402,6 +466,11 @@ in `[0, 1]` supplied as a packed-θ closure (e.g. one of the
 `proportions(...)` components written in packed form). Identical to
 calling [`transformed_wald_ci_derived`](@ref) with `transform = :logit`;
 provided for naming symmetry.
+
+`confint(fit, y; parm = "icc[t]")` and `parm = "proportion:<component>[t]"` call
+this function on the packed form of [`extract_ICC_site`](@ref) and of
+`proportions(fit; component)`, and also offer `method = :profile` and
+`method = :bootstrap`; see [`confint`](@ref).
 """
 function icc_wald_ci(fit::GllvmFit, derived_fn_packed::Function;
                      level::Real = 0.95,
@@ -419,6 +488,10 @@ Logit transformed-Wald CI for the per-trait phylogenetic signal `H²[t]`.
 Bounds are guaranteed to lie in `[0, 1]`. `Σ_phy` enters only through its
 diagonal (standardised convention → unit diagonal when omitted). See
 [`transformed_wald_ci_derived`](@ref).
+
+Also reached as `confint(fit, y; parm = "phylo_signal[t]", method = :wald)`, which
+also offers `method = :profile` (through `profile_ci_phylo_signal`) and
+`method = :bootstrap`; see [`confint`](@ref).
 """
 function phylo_signal_wald_ci(fit::GllvmFit, t::Integer;
                               level::Real = 0.95,
