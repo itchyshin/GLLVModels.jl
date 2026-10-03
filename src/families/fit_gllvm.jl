@@ -102,10 +102,13 @@ end
 # MethodError says only "unsupported keyword argument", so `fit_gllvm` (and `gllvm`, which
 # shares these rules) refuse an offset here first, naming the family. If a fitter below
 # gains offset support, remove it from this list: test/test_offset.jl fits every route
-# that is not listed and refuses every route that is.
+# that is not listed and refuses every route that is. The gllvmTMB-twin zero-inflated
+# markers (`ZiPoisson`, `ZiNbinom2`, `ZiBinomial`) are defined in zi_twin.jl, which is
+# included after this file, so they join the list through a method there.
 const _OFFSET_UNSUPPORTED_FAMILIES = Union{Multinomial, StudentTFamily, COMPoisson,
                                            BetaBinom, BetaHurdle, OrderedBeta,
                                            Ordinal, OrdinalLogit}
+_offset_unsupported(family) = family isa _OFFSET_UNSUPPORTED_FAMILIES
 
 # Families whose fitter takes neither `mask` nor `missing` responses, so every cell is
 # observed and a non-finite offset anywhere is an error (no "unobserved cell" exemption).
@@ -116,7 +119,7 @@ _offset_maskless(family) = family isa _OFFSET_MASKLESS_FAMILIES
 _refuse_offset(caller::AbstractString, what::AbstractString) = throw(ArgumentError(
     "$caller: offset is not supported for $what; remove the offset keyword. " *
     "Offsets are accepted by the Normal, count, positive-continuous, two-part and " *
-    "zero-inflated routes listed in ?fit_gllvm."))
+    "zero-inflated (ZIPoisson, ZINegBin, ZIB) routes listed in ?fit_gllvm."))
 
 # Drop `offset = nothing` (no offset; some routes would otherwise reject the keyword), and
 # normalise any other offset once. Shared by `fit_gllvm` and the `gllvm` formula front end,
@@ -248,7 +251,8 @@ call gets the same rules, and the same `ArgumentError`, as a call through `fit_g
 Routes that take no offset throw an `ArgumentError` ("offset is not supported for ...") for
 any offset other than `nothing`: the families `StudentTFamily`, `Ordinal` / `OrdinalLogit`
 (also with `aghq`), `COMPoisson`, `BetaBinom`, `BetaHurdle`, `OrderedBeta`, `Multinomial`
-and the `pervar`, `row_eff`, `grouping` and `phylo` routes. Every other family listed above takes
+and the gllvmTMB-twin zero-inflated markers `ZiPoisson` / `ZiNbinom2` / `ZiBinomial`, and
+the `pervar`, `row_eff`, `grouping` and `phylo` routes. Every other family listed above takes
 an offset. `gllvm(@formula(...))` applies the same rules; with covariates in the formula
 only `Normal()` takes one.
 
@@ -405,7 +409,7 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
     if haskey(kwargs, :offset)
         pervar && _refuse_offset("fit_gllvm", "pervar = true")
         row_eff in (:fixed, :random) && _refuse_offset("fit_gllvm", "row_eff = :$row_eff")
-        family isa _OFFSET_UNSUPPORTED_FAMILIES && _refuse_offset("fit_gllvm",
+        _offset_unsupported(family) && _refuse_offset("fit_gllvm",
             "family $(nameof(typeof(family)))")
         kwargs = _normalize_offset_kwargs(kwargs, Y; maskable = !_offset_maskless(family))
     end
