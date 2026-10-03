@@ -1,7 +1,7 @@
 {
  "schema": "true-parity-reverse-gap-inputs/v1",
  "note": "Inputs for reverse-gap.json. julia_exports is names(GLLVModels) at glvmodels_commit (module name dropped); r_names are the export() names and S3 generic names in gllvmTMB's NAMESPACE at P1, read with git show and checked against the namespace contract's sha256.",
- "glvmodels_commit": "cba170c28047639c4b2543f0a8cde1dbd47a8bb7",
+ "glvmodels_commit": "896a0a2286c224fe9979d3cf7e7e2c6be27f9357",
  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
  "r_namespace_sha256": "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c",
  "r_names": [
@@ -378,6 +378,10 @@
    "kind": "Type"
   },
   {
+   "name": "GllvmAnovaTable",
+   "kind": "Type"
+  },
+  {
    "name": "GllvmCoefTable",
    "kind": "Type"
   },
@@ -431,6 +435,22 @@
   },
   {
    "name": "IdentityLink",
+   "kind": "Type"
+  },
+  {
+   "name": "IsdmFit",
+   "kind": "Type"
+  },
+  {
+   "name": "IsdmSource",
+   "kind": "Type"
+  },
+  {
+   "name": "IsdmSources",
+   "kind": "Type"
+  },
+  {
+   "name": "IsdmTable",
    "kind": "Type"
   },
   {
@@ -614,6 +634,18 @@
    "kind": "Type"
   },
   {
+   "name": "TemporalContractError",
+   "kind": "Type"
+  },
+  {
+   "name": "TemporalGaussianFit",
+   "kind": "Type"
+  },
+  {
+   "name": "TemporalTerm",
+   "kind": "Type"
+  },
+  {
    "name": "TruncatedNegBin2",
    "kind": "Type"
   },
@@ -690,6 +722,26 @@
    "kind": "Type"
   },
   {
+   "name": "ZI_LAPLACE_EIGMIN_FLOOR",
+   "kind": "Other"
+  },
+  {
+   "name": "ZiBinomial",
+   "kind": "Type"
+  },
+  {
+   "name": "ZiFit",
+   "kind": "Type"
+  },
+  {
+   "name": "ZiNbinom2",
+   "kind": "Type"
+  },
+  {
+   "name": "ZiPoisson",
+   "kind": "Type"
+  },
+  {
    "name": "admit_phylo_precision_payload",
    "kind": "Function"
   },
@@ -747,6 +799,10 @@
   },
   {
    "name": "bootstrap_ci",
+   "kind": "Function"
+  },
+  {
+   "name": "bootstrap_temporal",
    "kind": "Function"
   },
   {
@@ -859,6 +915,10 @@
   },
   {
    "name": "compare_loadings",
+   "kind": "Function"
+  },
+  {
+   "name": "compare_temporal",
    "kind": "Function"
   },
   {
@@ -1042,6 +1102,10 @@
    "kind": "Function"
   },
   {
+   "name": "extract_latent_scores",
+   "kind": "Function"
+  },
+  {
    "name": "extract_loadings",
    "kind": "Function"
   },
@@ -1079,6 +1143,10 @@
   },
   {
    "name": "extract_rotated_loadings_table",
+   "kind": "Function"
+  },
+  {
+   "name": "extract_temporal",
    "kind": "Function"
   },
   {
@@ -1294,6 +1362,10 @@
    "kind": "Function"
   },
   {
+   "name": "fit_isdm_gllvm",
+   "kind": "Function"
+  },
+  {
    "name": "fit_kernel_dep_gllvm",
    "kind": "Function"
   },
@@ -1374,6 +1446,10 @@
    "kind": "Function"
   },
   {
+   "name": "fit_phylo_latent_gllvm",
+   "kind": "Function"
+  },
+  {
    "name": "fit_phylo_squarem",
    "kind": "Function"
   },
@@ -1426,6 +1502,10 @@
    "kind": "Function"
   },
   {
+   "name": "fit_temporal_gllvm",
+   "kind": "Function"
+  },
+  {
    "name": "fit_truncated_nbinom2_gllvm",
    "kind": "Function"
   },
@@ -1447,6 +1527,10 @@
   },
   {
    "name": "fit_twolevel_gaussian",
+   "kind": "Function"
+  },
+  {
+   "name": "fit_zi_gllvm",
    "kind": "Function"
   },
   {
@@ -1475,6 +1559,10 @@
   },
   {
    "name": "fitted",
+   "kind": "Function"
+  },
+  {
+   "name": "forecast_temporal",
    "kind": "Function"
   },
   {
@@ -1546,6 +1634,10 @@
    "kind": "Function"
   },
   {
+   "name": "gllvm_anova",
+   "kind": "Function"
+  },
+  {
    "name": "gp1_marginal_loglik_laplace",
    "kind": "Function"
   },
@@ -1579,6 +1671,22 @@
   },
   {
    "name": "imputed",
+   "kind": "Function"
+  },
+  {
+   "name": "isdm_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "isdm_source",
+   "kind": "Function"
+  },
+  {
+   "name": "isdm_sources",
+   "kind": "Function"
+  },
+  {
+   "name": "isdm_table",
    "kind": "Function"
   },
   {
@@ -1798,6 +1906,10 @@
    "kind": "Function"
   },
   {
+   "name": "profile_temporal",
+   "kind": "Function"
+  },
+  {
    "name": "qq_max_dev",
    "kind": "Function"
   },
@@ -1974,6 +2086,18 @@
    "kind": "Function"
   },
   {
+   "name": "temporal_dep",
+   "kind": "Function"
+  },
+  {
+   "name": "temporal_indep",
+   "kind": "Function"
+  },
+  {
+   "name": "temporal_latent",
+   "kind": "Function"
+  },
+  {
    "name": "tidy",
    "kind": "Function"
   },
@@ -2018,6 +2142,10 @@
    "kind": "Function"
   },
   {
+   "name": "update",
+   "kind": "Function"
+  },
+  {
    "name": "variance_lrt",
    "kind": "Function"
   },
@@ -2027,6 +2155,22 @@
   },
   {
    "name": "welch_t",
+   "kind": "Function"
+  },
+  {
+   "name": "zi_binomial",
+   "kind": "Function"
+  },
+  {
+   "name": "zi_marginal_loglik_laplace",
+   "kind": "Function"
+  },
+  {
+   "name": "zi_nbinom2",
+   "kind": "Function"
+  },
+  {
+   "name": "zi_poisson",
    "kind": "Function"
   },
   {

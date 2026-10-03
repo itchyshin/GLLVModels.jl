@@ -104,13 +104,15 @@ counterpart of [`fit_exponential_gllvm`](@ref) (which maximises the Laplace
 marginal). Same warm start (log row-mean intercepts + SVD loadings) and
 finite-difference gradient. The returned `ExponentialFit`'s `loglik` field holds the
 maximised ELBO (a lower bound on the true log-marginal), so it sits slightly below
-the Laplace `loglik` for the same data. (No dispersion — `Var = μ²` is fixed.)
+the Laplace `loglik` for the same data. (No dispersion — `Var = μ²` is fixed.) The
+ELBO is derived for the log link only: any other `link` throws `ArgumentError`.
 """
 function fit_exponential_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
         link::Link = LogLink(),
         β_init = nothing, Λ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         maxiter::Integer = 100, tol::Real = 1e-9)
+    _va_require_canonical_link("fit_exponential_gllvm_va", link, LogLink())
     p, n = size(Y)
     rr = rr_theta_len(p, K)
 

@@ -221,7 +221,22 @@ include("bridge_precision_multivariate.jl") # explicit multivariate precision br
 # Ordination naming: the implemented z_s ~ N(B'x_s, I) model (covariate-informed LV
 # mean PLUS residual) is gllvm's *concurrent* ordination (num.lv.c). Expose the
 # accurate name as an alias of the as-built `*_constrained` API.
+"""
+    fit_concurrent_gllvm(Y; family, X, K, kwargs...) -> ConstrainedOrdinationFit
+
+Alias of [`fit_constrained_gllvm`](@ref) under gllvm's name for the model it fits: the
+latent mean `z_s ~ N(B'x_s, I)` (a covariate-driven mean plus a residual) is gllvm's
+concurrent ordination (`num.lv.c`). Same arguments and the same
+[`ConstrainedOrdinationFit`](@ref) result.
+"""
 const fit_concurrent_gllvm = fit_constrained_gllvm
+
+"""
+    ConcurrentOrdinationFit
+
+Alias of [`ConstrainedOrdinationFit`](@ref), the result type of
+[`fit_concurrent_gllvm`](@ref) and [`fit_constrained_gllvm`](@ref).
+"""
 const ConcurrentOrdinationFit = ConstrainedOrdinationFit
 
 # Public API

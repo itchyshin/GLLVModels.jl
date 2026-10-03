@@ -295,9 +295,12 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
             return isfinite(v) ? v : 1e12
         end
         Optim.optimize(negll_lv, θ0_lv, ls, opts; autodiff = :finite)
-    elseif gradient === :analytic && offset === nothing &&
+    elseif gradient === :analytic && offset === nothing && link isa LogLink &&
            (hessian === _default_hessian(Poisson(), link) ||
             _glm_weight_matches_observed(Poisson(), link))
+        # `link isa LogLink` is load-bearing: `poisson_laplace_grad` is derived for the log
+        # link only, so any other link takes the :finite path below, which differentiates
+        # the actual objective (the same guard `fit_binomial_gllvm` has for logit).
         # R4 (only_fg!, core070): a single combined closure so an accepted iterate
         # that needs BOTH the value and the gradient pays for value+gradient in one
         # `Optim.optimize` bookkeeping pass rather than two separate closures the

@@ -282,13 +282,15 @@ driver (empirical link-scale intercepts + SVD loadings); the outer optimiser is
 driven by an exact envelope-theorem analytic gradient (one inner-solve pass per
 evaluation). The returned `BinomialFit`'s `loglik` field holds the maximised ELBO (a
 lower bound on the true log-marginal), so it is directly comparable across VA fits
-but sits slightly below the Laplace `loglik` for the same data.
+but sits slightly below the Laplace `loglik` for the same data. The ELBO is derived
+for the logit link only: any other `link` throws `ArgumentError`.
 """
 function fit_binomial_gllvm_va(Y::AbstractMatrix{<:Integer};
         N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing, K::Integer,
         link::Link = LogitLink(),
         g_tol::Real = 1e-5, iterations::Integer = 500,
         maxiter::Integer = 100, tol::Real = 1e-9)
+    _va_require_canonical_link("fit_binomial_gllvm_va", link, LogitLink())
     p, n = size(Y)
     Nm = N === nothing ? fill(1, p, n) : N
     size(Nm) == (p, n) || throw(DimensionMismatch("N must be $(p)×$(n)"))

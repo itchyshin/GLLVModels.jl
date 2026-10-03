@@ -49,5 +49,27 @@
   "glvmodels_commit": "fd92b6551f7ecc99d82eee6f23a4ef42536a778c",
   "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
-  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "behaviour": {
+    "pin": "P1",
+    "ruling": "itchyshin/GLLVModels.jl#684 item 2",
+    "read_from": {
+      "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-control-p1/r-oracle.json": "7f51af43d60280488da6941ed0aed73b0cc7e9c877ee7dc6161be7070e4e432a",
+      "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-control-p1/julia-results.json": "4df6928f606b6ad0d9183512a78b1a7f96ca00c266a43b7c9edcd3c630c7a89a"
+    },
+    "cases": [
+      {
+        "case_id": "CORE070-AGHQ-CTRL-TRUE-PAIRED-CONTROL",
+        "source_id": "aghq/AGHQ-CTRL-TRUE",
+        "kind": "route",
+        "r_observed": "\"auto\"",
+        "julia_observed": "auto",
+        "r_call": ".gllvmTMB_normalize_aghq(TRUE)",
+        "julia_call": "GLLVM._aghq_request(true)",
+        "dialect_note": "The two engines are given the same scalar request in their own spelling. Julia's _aghq_request rejects R's own literals 'auto' (a string) and 9 as a whole-number float with ArgumentError (tools/core070_aghq_controls_run.jl:23, the dialect check), so the accepted-input sets differ even where the labels agree.",
+        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-control-p1/r-oracle.json#cases.CORE070-AGHQ-CTRL-TRUE-PAIRED-CONTROL",
+        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-control-p1/julia-results.json#cases.CORE070-AGHQ-CTRL-TRUE-PAIRED-CONTROL"
+      }
+    ]
+  }
 }

@@ -77,5 +77,58 @@
   "glvmodels_commit": "61c5eda4822da20591b6fa91869f93c3faf5d369",
   "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
-  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "behaviour": {
+    "pin": "P1",
+    "ruling": "itchyshin/GLLVModels.jl#684 item 2",
+    "read_from": {
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json": "3c0c44d62296c7f2730e2b4a6d7abb7d963afdfdd09731d7ab2dfb94d22350af",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv": "aa78ce4ae49ad3f05891517710bb4e54fbaa1f5b612821bd1a99eba6e5a0df1c",
+      "test/parity/fixtures/core070_inference_routes.tsv": "5f75af28288781a5cc516bb94d38e5fdc5107b1712be54fbaabe9d0e79035db0"
+    },
+    "cases": [
+      {
+        "case_id": "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE",
+        "source_id": "inference/CI-ROUTE-034",
+        "kind": "route",
+        "r_observed": ".confint_rho:fisher-z",
+        "julia_observed": "rho:wald_derived",
+        "requested_method": "fisher-z",
+        "julia_call": "correlation_wald_ci(fitS,1,2;y=YS,\u03a3_phy=\u03a3_phy) [explicit fisher-z]",
+        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-034",
+        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-034"
+      }
+    ]
+  },
+  "behaviour_not_bound": [
+    {
+      "source_id": "inference/CI-ROUTE-029",
+      "reason": "default",
+      "text": "The row asks for the DEFAULT method, but the Julia harness called an explicit function (correlation_wald_ci(fitS,1,2;y=YS,\u03a3_phy=\u03a3_phy) [default]). Julia has no default-method dispatcher for derived quantities (the exported entries are the per-method *_wald_ci functions), so Julia's default was not exercised, the same shape as the other DEFAULT rows left unbound. Whether the exported Wald function counts as Julia's default is not signed under itchyshin/GLLVModels.jl#684 item 2.",
+      "evidence": {
+        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-029",
+        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-029",
+        "fixture": "test/parity/fixtures/core070_inference_routes.tsv#CI-ROUTE-029"
+      }
+    },
+    {
+      "source_id": "inference/CI-ROUTE-030",
+      "reason": "withdrawn",
+      "text": "R's dispatcher forwards method profile to .confint_rho, but that function raises gllvmTMB_nonlinear_profile_withdrawn at P1; the same probe observed that error on guard row CI-ROUTE-087 (parm rho:unit:1,2, method profile). Julia returned a profile interval (GLLVM.profile_ci_derived(fitS, correlation_closure_12; y=YS,\u03a3_phy=\u03a3_phy)). R refuses, Julia computes: not the same behaviour.",
+      "evidence": {
+        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-030,CI-ROUTE-087",
+        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-030"
+      }
+    },
+    {
+      "source_id": "inference/CI-ROUTE-032",
+      "reason": "not_exported",
+      "text": "R's confint(parm, method = 'bootstrap') serves a derived quantity (route '.confint_rho:bootstrap'). Julia's side of this row is GLLVM.bootstrap_ci_derived(fitS, f->correlation(f)[1,2]; y=YS,\u03a3_phy=\u03a3_phy), an internal function that GLLVModels does not export (src/GLLVModels.jl export list), so a Julia user cannot make this request through the public API; the harness chose the function. The same shape as the DEFAULT rows CI-ROUTE-022, 029 and 036, which are also left unbound. No entry.",
+      "evidence": {
+        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-032",
+        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-032",
+        "contract": "docs/dev-log/core070/true-parity-latest/inference-batch-contract-p1.json"
+      }
+    }
+  ]
 }

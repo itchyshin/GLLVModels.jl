@@ -370,6 +370,13 @@ function extract_lv_effects(fit::GllvmFit; type::Symbol = :trait_effect)
     return fit.pars.Λ * fit.pars.alpha_lv'
 end
 
+"""
+    lv_effects(fit; type = :trait_effect)
+
+Short name for [`extract_lv_effects`](@ref), with the same keyword arguments and the same
+return value. Methods exist for the fit types that carry a latent-variable predictor
+(`GllvmFit`, `BinomialFit`, `PoissonFit`, `NBFit`, `GammaFit`, `BetaFit`, `OrdinalFit`).
+"""
 lv_effects(fit::GllvmFit; kwargs...) = extract_lv_effects(fit; kwargs...)
 
 function extract_lv_effects(fit::BinomialFit; type::Symbol = :trait_effect)
