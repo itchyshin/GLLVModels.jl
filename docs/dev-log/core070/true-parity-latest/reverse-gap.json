@@ -11,15 +11,9 @@
   "source_id": "julia-export/AnBSparseSolver",
   "name": "AnBSparseSolver",
   "kind": "Type",
-  "status": "decided",
-  "decision": "KEPT_AS_JULIA_EXTRA",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "not classed internal by tools/parity_ledger.py --ref 9539352f6; has a docstring, rendered in an @docs block on docs/src/api.md",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/AugmentedPhy",
@@ -593,15 +587,9 @@
   "source_id": "julia-export/GllvmModel",
   "name": "GllvmModel",
   "kind": "Type",
-  "status": "decided",
-  "decision": "EXCLUDED_INTERNAL_HELPER",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "tools/parity_ledger.py --ref 9539352f6 classes it as internal: \"[PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] internal-but-exported helper: immutable dimension-bookkeeping spec (p, K, K_W, has_diag, K_phy, has_phy_unique) for a Gaussian GLLVM (fit.jl); internal dispatch/construction type, no R analogue -- candidate to unexport\"",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/GllvmSpeciesCovFit",
@@ -663,15 +651,9 @@
   "source_id": "julia-export/GroupingTerm",
   "name": "GroupingTerm",
   "kind": "Type",
-  "status": "decided",
-  "decision": "EXCLUDED_INTERNAL_HELPER",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "tools/parity_ledger.py --ref 9539352f6 classes it as internal: \"[PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] internal-but-exported helper: formula-grammar term type for the unit/unit_obs/cluster/cluster2 grouping grammar (grouped_fit.jl); gllvmTMB expresses the identical grammar (its own 6x3 keyword grid) as formula tokens, not an exported class -- candidate to unexport if callers always go through fit_gllvm(..., grouping=...)\"",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/HurdleNB",
@@ -789,15 +771,9 @@
   "source_id": "julia-export/LVSelection",
   "name": "LVSelection",
   "kind": "Type",
-  "status": "decided",
-  "decision": "KEPT_AS_JULIA_EXTRA",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "not classed internal by tools/parity_ledger.py --ref 9539352f6; has a docstring, rendered in an @docs block on docs/src/api.md",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/LogLink",
@@ -1149,15 +1125,9 @@
   "source_id": "julia-export/Q_times_x",
   "name": "Q_times_x",
   "kind": "Function",
-  "status": "decided",
-  "decision": "KEPT_AS_JULIA_EXTRA",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "not classed internal by tools/parity_ledger.py --ref 9539352f6; has a docstring, rendered in an @docs block on docs/src/api.md",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/QuadraticFit",
@@ -1291,15 +1261,9 @@
   "source_id": "julia-export/StudentTFamily",
   "name": "StudentTFamily",
   "kind": "Type",
-  "status": "decided",
-  "decision": "KEPT_AS_JULIA_EXTRA",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "not classed internal by tools/parity_ledger.py --ref 9539352f6; has a docstring, rendered in an @docs block on docs/src/api.md",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/StudentTFit",
@@ -1447,29 +1411,17 @@
   "source_id": "julia-export/TwoLevelRepeatabilityProfileWithdrawn",
   "name": "TwoLevelRepeatabilityProfileWithdrawn",
   "kind": "Type",
-  "status": "decided",
-  "decision": "KEPT_AS_JULIA_EXTRA",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "not classed internal by tools/parity_ledger.py --ref 9539352f6; has a docstring, rendered in an @docs block on docs/src/derived-confidence-intervals.md",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/ZIB",
   "name": "ZIB",
   "kind": "Type",
-  "status": "decided",
-  "decision": "KEPT_AS_JULIA_EXTRA",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "not classed internal by tools/parity_ledger.py --ref 9539352f6; has a docstring, rendered in an @docs block on docs/src/api.md",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/ZIBCovFit",
@@ -1531,15 +1483,9 @@
   "source_id": "julia-export/ZINegBin",
   "name": "ZINegBin",
   "kind": "Type",
-  "status": "decided",
-  "decision": "KEPT_AS_JULIA_EXTRA",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "not classed internal by tools/parity_ledger.py --ref 9539352f6; has a docstring, rendered in an @docs block on docs/src/api.md",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/ZIPCovFit",
@@ -1573,15 +1519,9 @@
   "source_id": "julia-export/ZI_LAPLACE_EIGMIN_FLOOR",
   "name": "ZI_LAPLACE_EIGMIN_FLOOR",
   "kind": "Other",
-  "status": "decided",
-  "decision": "KEPT_AS_JULIA_EXTRA",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "not classed internal by tools/parity_ledger.py --ref 9539352f6; has a docstring, rendered in an @docs block on docs/src/api.md",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/ZiFit",
@@ -1797,15 +1737,9 @@
   "source_id": "julia-export/bridge_capabilities",
   "name": "bridge_capabilities",
   "kind": "Function",
-  "status": "decided",
-  "decision": "EXCLUDED_INTERNAL_HELPER",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "tools/parity_ledger.py --ref 9539352f6 classes it as internal: \"[PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] internal-but-exported helper: introspection function reporting the RCall/JuliaCall bridge's OWN capability surface as a NamedTuple (bridge.jl); a bridge self-description/testing tool, not a modelling capability\"",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/bridge_fit",
@@ -1819,15 +1753,9 @@
   "source_id": "julia-export/build_AnB_sparse",
   "name": "build_AnB_sparse",
   "kind": "Function",
-  "status": "decided",
-  "decision": "KEPT_AS_JULIA_EXTRA",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "not classed internal by tools/parity_ledger.py --ref 9539352f6; has a docstring, rendered in an @docs block on docs/src/api.md",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/build_node_perspecies",
@@ -1953,43 +1881,25 @@
   "source_id": "julia-export/compare_fits_Sigma_table",
   "name": "compare_fits_Sigma_table",
   "kind": "Function",
-  "status": "decided",
-  "decision": "KEPT_AS_JULIA_EXTRA",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "not classed internal by tools/parity_ledger.py --ref 9539352f6; has a docstring, rendered in an @docs block on docs/src/diagnostics.md",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/compare_fits_dep_vs_two_psi",
   "name": "compare_fits_dep_vs_two_psi",
   "kind": "Function",
-  "status": "decided",
-  "decision": "KEPT_AS_JULIA_EXTRA",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "not classed internal by tools/parity_ledger.py --ref 9539352f6; has a docstring, rendered in an @docs block on docs/src/diagnostics.md",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/compare_fits_indep_vs_two_psi",
   "name": "compare_fits_indep_vs_two_psi",
   "kind": "Function",
-  "status": "decided",
-  "decision": "KEPT_AS_JULIA_EXTRA",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "not classed internal by tools/parity_ledger.py --ref 9539352f6; has a docstring, rendered in an @docs block on docs/src/diagnostics.md",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/compoisson_logpdf",
@@ -2297,71 +2207,41 @@
   "source_id": "julia-export/em_fit_phylo",
   "name": "em_fit_phylo",
   "kind": "Function",
-  "status": "decided",
-  "decision": "EXCLUDED_INTERNAL_HELPER",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "tools/parity_ledger.py --ref 9539352f6 classes it as internal: \"EM/SQUAREM alternative-solver internals; gllvmTMB's TMB path never uses this solver family\"",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/em_fit_phylo_squarem",
   "name": "em_fit_phylo_squarem",
   "kind": "Function",
-  "status": "decided",
-  "decision": "EXCLUDED_INTERNAL_HELPER",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "tools/parity_ledger.py --ref 9539352f6 classes it as internal: \"EM/SQUAREM alternative-solver internals; gllvmTMB's TMB path never uses this solver family\"",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/em_observed_information",
   "name": "em_observed_information",
   "kind": "Function",
-  "status": "decided",
-  "decision": "EXCLUDED_INTERNAL_HELPER",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "tools/parity_ledger.py --ref 9539352f6 classes it as internal: \"EM/SQUAREM alternative-solver internals; gllvmTMB's TMB path never uses this solver family\"",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/estep_edge_moments",
   "name": "estep_edge_moments",
   "kind": "Function",
-  "status": "decided",
-  "decision": "KEPT_AS_JULIA_EXTRA",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "not classed internal by tools/parity_ledger.py --ref 9539352f6; has a docstring, rendered in an @docs block on docs/src/api.md",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/excess_kurtosis",
   "name": "excess_kurtosis",
   "kind": "Function",
-  "status": "decided",
-  "decision": "EXCLUDED_INTERNAL_HELPER",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "tools/parity_ledger.py --ref 9539352f6 classes it as internal: \"[PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] internal-but-exported helper: generic descriptive-statistics helper (phylo_branch_re.jl) used to validate simulated phylogenetic branch-rate distributions; not a GLLVM capability itself -- candidate to unexport\"",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/exponential_marginal_loglik_laplace",
@@ -2783,15 +2663,9 @@
   "source_id": "julia-export/fit_em_phylo",
   "name": "fit_em_phylo",
   "kind": "Function",
-  "status": "decided",
-  "decision": "KEPT_AS_JULIA_EXTRA",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "not classed internal by tools/parity_ledger.py --ref 9539352f6; has a docstring, rendered in an @docs block on docs/src/api.md",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_exponential_gllvm",
@@ -3389,15 +3263,9 @@
   "source_id": "julia-export/fit_phylo_squarem",
   "name": "fit_phylo_squarem",
   "kind": "Function",
-  "status": "decided",
-  "decision": "KEPT_AS_JULIA_EXTRA",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "not classed internal by tools/parity_ledger.py --ref 9539352f6; has a docstring, rendered in an @docs block on docs/src/api.md",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/fit_poisson_gllvm",
@@ -3851,15 +3719,9 @@
   "source_id": "julia-export/gaussian_marginal_loglik_sparse_phy",
   "name": "gaussian_marginal_loglik_sparse_phy",
   "kind": "Function",
-  "status": "decided",
-  "decision": "EXCLUDED_INTERNAL_HELPER",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "tools/parity_ledger.py --ref 9539352f6 classes it as internal: \"internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name\"",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/gaussian_pervar_marginal_loglik",
@@ -3880,9 +3742,9 @@
   "name": "gaussian_reml_loglik",
   "kind": "Function",
   "status": "decided",
-  "decision": "EXCLUDED_INTERNAL_HELPER",
+  "decision": "KEPT_AS_JULIA_EXTRA",
   "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "tools/parity_ledger.py --ref 9539352f6 classes it as internal: \"[PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] julia-only diagnostic or extractor: REML log-likelihood kernel (reml.jl); gllvmTMB's own non-Gaussian REML route (allow_nongaussian_reml) is an internal control knob, not an exported accessor of this shape\"",
+  "basis": "not classed internal by tools/parity_ledger.py --ref 9539352f6; has a docstring, rendered in an @docs block on docs/src/api.md",
   "ruling": {
    "ref": "itchyshin/GLLVModels.jl#684 item 3",
    "signed_by": "Shinichi Nakagawa",
@@ -4055,29 +3917,17 @@
   "source_id": "julia-export/latent_score_sd",
   "name": "latent_score_sd",
   "kind": "Function",
-  "status": "decided",
-  "decision": "KEPT_AS_JULIA_EXTRA",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "not classed internal by tools/parity_ledger.py --ref 9539352f6; has a docstring, rendered in an @docs block on docs/src/se-profile-machinery.md",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/link_residual",
   "name": "link_residual",
   "kind": "Function",
-  "status": "decided",
-  "decision": "KEPT_AS_JULIA_EXTRA",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "not classed internal by tools/parity_ledger.py --ref 9539352f6; has a docstring, rendered in an @docs block on docs/src/api.md",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/loading_profile_exploratory",
@@ -4111,15 +3961,9 @@
   "source_id": "julia-export/lognormal_marginal_loglik",
   "name": "lognormal_marginal_loglik",
   "kind": "Function",
-  "status": "decided",
-  "decision": "EXCLUDED_INTERNAL_HELPER",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "tools/parity_ledger.py --ref 9539352f6 classes it as internal: \"internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name\"",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/lognormal_response_mean",
@@ -4307,15 +4151,9 @@
   "source_id": "julia-export/observed_mask",
   "name": "observed_mask",
   "kind": "Function",
-  "status": "decided",
-  "decision": "EXCLUDED_INTERNAL_HELPER",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "tools/parity_ledger.py --ref 9539352f6 classes it as internal: \"[PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] internal-but-exported helper: one-line utility building a not-missing mask from Y (`observed_mask(Y) = .!ismissing.(Y)`, laplace.jl); trivial internal helper reused across masked-likelihood routes -- candidate to unexport\"",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/ordered_beta_marginal_loglik_laplace",
@@ -4419,29 +4257,17 @@
   "source_id": "julia-export/ppca_init",
   "name": "ppca_init",
   "kind": "Function",
-  "status": "decided",
-  "decision": "EXCLUDED_INTERNAL_HELPER",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "tools/parity_ledger.py --ref 9539352f6 classes it as internal: \"[PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] internal-but-exported helper: probabilistic-PCA warm-start initializer for latent scores/loadings (ppca_init.jl); an internal optimizer warm-start utility, not a user-facing capability -- candidate to unexport\"",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/precision_logdet_check",
   "name": "precision_logdet_check",
   "kind": "Function",
-  "status": "decided",
-  "decision": "KEPT_AS_JULIA_EXTRA",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "not classed internal by tools/parity_ledger.py --ref 9539352f6; has a docstring, rendered in an @docs block on docs/src/api.md",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/precision_multivariate_intervals",
@@ -4503,29 +4329,17 @@
   "source_id": "julia-export/profile_curve_targets",
   "name": "profile_curve_targets",
   "kind": "Function",
-  "status": "decided",
-  "decision": "KEPT_AS_JULIA_EXTRA",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "not classed internal by tools/parity_ledger.py --ref 9539352f6; has a docstring, rendered in an @docs block on docs/src/se-profile-machinery.md",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/qq_max_dev",
   "name": "qq_max_dev",
   "kind": "Function",
-  "status": "decided",
-  "decision": "EXCLUDED_INTERNAL_HELPER",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "tools/parity_ledger.py --ref 9539352f6 classes it as internal: \"[PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] internal-but-exported helper: generic QQ-plot max-deviation statistic (phylo_branch_re.jl), same validation-utility role as excess_kurtosis -- candidate to unexport\"",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/quadratic_marginal_loglik_laplace",
@@ -4545,15 +4359,9 @@
   "source_id": "julia-export/random_balanced_tree",
   "name": "random_balanced_tree",
   "kind": "Function",
-  "status": "decided",
-  "decision": "KEPT_AS_JULIA_EXTRA",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "not classed internal by tools/parity_ledger.py --ref 9539352f6; has a docstring, rendered in an @docs block on docs/src/api.md",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/random_slope_marginal_loglik_laplace",
@@ -4573,15 +4381,9 @@
   "source_id": "julia-export/rank_sum_z",
   "name": "rank_sum_z",
   "kind": "Function",
-  "status": "decided",
-  "decision": "EXCLUDED_INTERNAL_HELPER",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "tools/parity_ledger.py --ref 9539352f6 classes it as internal: \"[PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] internal-but-exported helper: generic rank-sum-test statistic (phylo_branch_re.jl), same validation-utility role as excess_kurtosis -- candidate to unexport\"",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/raw_loading_wald_ci",
@@ -4713,15 +4515,9 @@
   "source_id": "julia-export/shrinkage_factor",
   "name": "shrinkage_factor",
   "kind": "Function",
-  "status": "decided",
-  "decision": "KEPT_AS_JULIA_EXTRA",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "not classed internal by tools/parity_ledger.py --ref 9539352f6; has a docstring, rendered in an @docs block on docs/src/api.md",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/sigma_phy_dense",
@@ -4783,15 +4579,9 @@
   "source_id": "julia-export/solve_AnB",
   "name": "solve_AnB",
   "kind": "Function",
-  "status": "decided",
-  "decision": "KEPT_AS_JULIA_EXTRA",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "not classed internal by tools/parity_ledger.py --ref 9539352f6; has a docstring, rendered in an @docs block on docs/src/api.md",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/solve_Q",
@@ -4923,15 +4713,9 @@
   "source_id": "julia-export/spearman",
   "name": "spearman",
   "kind": "Function",
-  "status": "decided",
-  "decision": "EXCLUDED_INTERNAL_HELPER",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "tools/parity_ledger.py --ref 9539352f6 classes it as internal: \"[PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] internal-but-exported helper: generic Spearman-correlation utility (phylo_branch_re.jl / relaxed_clock.jl), same validation-utility role as excess_kurtosis -- candidate to unexport\"",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/standardized_loading_wald_ci",
@@ -4987,29 +4771,17 @@
   "source_id": "julia-export/truncated_nbinom2_marginal_loglik_laplace",
   "name": "truncated_nbinom2_marginal_loglik_laplace",
   "kind": "Function",
-  "status": "decided",
-  "decision": "EXCLUDED_INTERNAL_HELPER",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "tools/parity_ledger.py --ref 9539352f6 classes it as internal: \"internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name\"",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/truncated_nbinom2_pertrait_marginal_loglik_laplace",
   "name": "truncated_nbinom2_pertrait_marginal_loglik_laplace",
   "kind": "Function",
-  "status": "decided",
-  "decision": "EXCLUDED_INTERNAL_HELPER",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "tools/parity_ledger.py --ref 9539352f6 classes it as internal: \"internal marginal-likelihood kernel; reached only from within the fit driver, never an R-facing name\"",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/truncated_poisson_marginal_loglik_laplace",
@@ -5099,15 +4871,9 @@
   "source_id": "julia-export/welch_t",
   "name": "welch_t",
   "kind": "Function",
-  "status": "decided",
-  "decision": "EXCLUDED_INTERNAL_HELPER",
-  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
-  "basis": "tools/parity_ledger.py --ref 9539352f6 classes it as internal: \"[PROPOSED 2026-09-25, unsigned -- docs/dev-log/core070/reverse-gap-classes-2026-09-25.md] internal-but-exported helper: generic Welch two-sample t-test utility (phylo_branch_re.jl), same validation-utility role as excess_kurtosis -- candidate to unexport\"",
-  "ruling": {
-   "ref": "itchyshin/GLLVModels.jl#684 item 3",
-   "signed_by": "Shinichi Nakagawa",
-   "signed_on": "2026-10-02"
-  }
+  "status": "unsigned",
+  "decision": null,
+  "derived_from": "names(GLLVModels) at 896a0a2286c2; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
  },
  {
   "source_id": "julia-export/zi_marginal_loglik_laplace",
