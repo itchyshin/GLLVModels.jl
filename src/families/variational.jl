@@ -98,6 +98,19 @@ function poisson_marginal_loglik_va(Y::AbstractMatrix, Λ::AbstractMatrix,
     return acc
 end
 
+# The VA (ELBO) objectives are closed-form / Gauss-Hermite expressions written for ONE
+# link each (logit for Beta and Binomial, log for the rest) and carry no `link` argument.
+# The fitters keep a `link` keyword for signature parity with the Laplace fitters, but any
+# other link used to be accepted and silently ignored: the fit optimised the canonical-link
+# ELBO, then stored the requested link on the result. Refuse it instead.
+function _va_require_canonical_link(fname::AbstractString, link::Link, canonical::Link)
+    typeof(link) === typeof(canonical) || throw(ArgumentError(
+        "$fname: the variational (ELBO) objective is derived for the " *
+        "$(nameof(typeof(canonical))) only; got link = $(nameof(typeof(link))). " *
+        "Use the Laplace fitter for other links, or omit `link`."))
+    return nothing
+end
+
 """
     fit_poisson_gllvm_va(Y; K, β_init=nothing, Λ_init=nothing, …) -> PoissonFit
 

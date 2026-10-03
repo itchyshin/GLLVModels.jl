@@ -276,12 +276,14 @@ latent dimension. Same warm start as the Laplace driver (empirical log-mean
 intercepts + SVD loadings + a moderate `r₀`) and finite-difference gradient. The
 returned `NBFit`'s `loglik` field holds the maximised ELBO (a lower bound on the
 true log-marginal), so it is directly comparable across VA fits but sits slightly
-below the Laplace `loglik` for the same data.
+below the Laplace `loglik` for the same data. The ELBO is derived for the log link
+only: any other `link` throws `ArgumentError`.
 """
 function fit_nb_gllvm_va(Y::AbstractMatrix{<:Integer}; K::Integer,
         link::Link = LogLink(),
         g_tol::Real = 1e-5, iterations::Integer = 500,
         maxiter::Integer = 100, tol::Real = 1e-9)
+    _va_require_canonical_link("fit_nb_gllvm_va", link, LogLink())
     p, n = size(Y)
     rr = rr_theta_len(p, K)
 
