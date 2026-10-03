@@ -31,7 +31,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-inference.json",
-   "sha256": "f96d1366ae78274d3762d749dd16bca0065a6ecc1b75974d61e4e28e93b6355d",
+   "sha256": "ab0cb02039e34ecb5d1666c469321eba590dfead2452ac2f0de30d9da9a2bda9",
    "rows": 63
   },
   {
@@ -4908,7 +4908,8 @@
     "case_kinds": {
      "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   }
+   },
+   "note": "route only; estimands not compared (R aligned extract_* vs Julia communality(fit) etc.; n_boot small)"
   },
   {
    "source_id": "inference/CI-ROUTE-019",
@@ -5118,7 +5119,8 @@
     "case_kinds": {
      "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   }
+   },
+   "note": "route only; estimands not compared (R aligned extract_* vs Julia communality(fit) etc.; n_boot small)"
   },
   {
    "source_id": "inference/CI-ROUTE-026",
@@ -5299,7 +5301,8 @@
     "case_kinds": {
      "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   }
+   },
+   "note": "route only; estimands not compared (R aligned extract_* vs Julia communality(fit) etc.; n_boot small)"
   },
   {
    "source_id": "inference/CI-ROUTE-033",
@@ -5341,13 +5344,13 @@
    ],
    "disposition": null,
    "p0_batch": "inference-batch wave2",
-   "evidence_tier": "behavioural",
+   "evidence_tier": "routing_control_flow",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "receipt": [
+    "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-RHO-CI-METHOD-ROUTE.json"
     ],
-    "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
+    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
    },
    "measured_result": {
     "case_verdicts": {
@@ -5359,7 +5362,8 @@
     "case_kinds": {
      "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   }
+   },
+   "note": "Not bound behaviourally: Julia's public confint does not take the route R takes for this request (receipt behaviour_not_bound)."
   },
   {
    "source_id": "inference/CI-ROUTE-035",
@@ -5509,7 +5513,8 @@
     "case_kinds": {
      "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   }
+   },
+   "note": "route only; estimands not compared (R aligned extract_* vs Julia communality(fit) etc.; n_boot small)"
   },
   {
    "source_id": "inference/CI-ROUTE-040",
@@ -5689,7 +5694,8 @@
     "case_kinds": {
      "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   }
+   },
+   "note": "route only; estimands not compared (R aligned extract_* vs Julia communality(fit) etc.; n_boot small)"
   },
   {
    "source_id": "inference/CI-ROUTE-046",
@@ -5779,7 +5785,8 @@
     "case_kinds": {
      "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   }
+   },
+   "note": "route only; estimands not compared (R aligned extract_* vs Julia communality(fit) etc.; n_boot small)"
   },
   {
    "source_id": "inference/CI-ROUTE-055",
@@ -5869,7 +5876,8 @@
     "case_kinds": {
      "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   }
+   },
+   "note": "route only; estimands not compared (R aligned extract_* vs Julia communality(fit) etc.; n_boot small)"
   },
   {
    "source_id": "inference/CI-ROUTE-058",
@@ -5959,7 +5967,8 @@
     "case_kinds": {
      "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   }
+   },
+   "note": "route only; estimands not compared (R aligned extract_* vs Julia communality(fit) etc.; n_boot small)"
   },
   {
    "source_id": "inference/CI-ROUTE-061",
@@ -6049,7 +6058,8 @@
     "case_kinds": {
      "CORE070-INFERENCE-SIGMA-PHY-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   }
+   },
+   "note": "route only; estimands not compared (R aligned extract_* vs Julia communality(fit) etc.; n_boot small)"
   },
   {
    "source_id": "inference/CI-ROUTE-065",

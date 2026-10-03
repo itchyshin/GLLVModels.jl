@@ -85,9 +85,9 @@
       "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json": "3c0c44d62296c7f2730e2b4a6d7abb7d963afdfdd09731d7ab2dfb94d22350af",
       "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv": "aa78ce4ae49ad3f05891517710bb4e54fbaa1f5b612821bd1a99eba6e5a0df1c",
       "test/parity/fixtures/core070_inference_routes.tsv": "5f75af28288781a5cc516bb94d38e5fdc5107b1712be54fbaabe9d0e79035db0",
-      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json": "5fab5a5ac9abc8004eb767bbbad4fc8af82ec6ed835261ee0403073e7cf3ea49",
-      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/receipt.json": "9153f019c33858ffbe57b2ab7da6b139cb3d43bbb756da45be3ed07ffe586aea",
-      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/run-commit.json": "4888106ac46c81310457c7699fba43caaca2eeaf4440f2f77e53f09abaeff27c",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json": "b0c89cbfb5186f39c1800cbe9bda524d4d7d822d7048d2181b19c86fb7eaa925",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/receipt.json": "1a44df6689de09c56ac07238eabf4a2e655d1ed36aed9924163090451f0dd675",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/run-commit.json": "c209d8cb34692cf8bf2387eb057c396dee061720d7b10aab462e84c7d0be26d3",
       "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/verify.txt": "303ad3fd98e8194e031cfcf376b39fb5c751fa348fe7f3af603705e0837c373d",
       "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/r-lambda-reject/r-oracle.json": "c37a34dc900c165a8d4ccbffae0fea66a3ad6444a12acb3c29c22ae0223d0a98",
       "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/r-lambda-reject/receipt.json": "911e062f903a88ef5b4029f8084f5900085a65eedb1442219a9171c55bea1a65"
@@ -104,17 +104,6 @@
         "julia_result_method": "bootstrap",
         "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-032",
         "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json#CI-ROUTE-032"
-      },
-      {
-        "case_id": "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE",
-        "source_id": "inference/CI-ROUTE-034",
-        "kind": "route",
-        "r_observed": ".confint_rho:fisher-z",
-        "julia_observed": "rho:wald_derived",
-        "requested_method": "fisher-z",
-        "julia_call": "correlation_wald_ci(fitS,1,2;y=YS,\u03a3_phy=\u03a3_phy) [explicit fisher-z]",
-        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-034",
-        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-034"
       }
     ]
   },
@@ -122,7 +111,7 @@
     {
       "source_id": "inference/CI-ROUTE-029",
       "reason": "default_class_unconfirmed",
-      "text": "The row asks for the DEFAULT method for rho. R's default is Fisher-z (probe route '.confint_rho:fisher-z', R/z-confint-gllvmTMB.R:1693), a transformed Wald interval; Julia's default is method = :wald, which for rho is also a Fisher-z transformed Wald interval (src/confint.jl:800 at e28d57f19), so the labels '.confint_rho:fisher-z' and 'rho:wald_derived' already sit in one class for the explicit Fisher-z row CI-ROUTE-034. Whether Julia's DEFAULT (named wald) is the same default route as R's DEFAULT (named fisher-z) is an equivalence the maintainer has not confirmed, and R's own method = 'wald' for rho is a different route ('.confint_rho:wald', probe row CI-ROUTE-031). No entry.",
+      "text": "The row asks for the DEFAULT method for rho. R's default is Fisher-z (probe route '.confint_rho:fisher-z', R/z-confint-gllvmTMB.R:1693), a transformed Wald interval; Julia's default is method = :wald, which for rho is also a Fisher-z transformed Wald interval (src/confint.jl:800 at f58de0eb1), and no class pairs the labels '.confint_rho:fisher-z' and 'rho:wald_derived' (the explicit Fisher-z row CI-ROUTE-034 does not bind: Julia's public route refuses fisher-z). Whether Julia's DEFAULT (named wald) is the same default route as R's DEFAULT (named fisher-z) is an equivalence the maintainer has not confirmed, and R's own method = 'wald' for rho is a different route ('.confint_rho:wald', probe row CI-ROUTE-031). No entry.",
       "evidence": {
         "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-029",
         "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json#CI-ROUTE-029"
@@ -135,6 +124,15 @@
       "evidence": {
         "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-030,CI-ROUTE-087",
         "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json#CI-ROUTE-030"
+      }
+    },
+    {
+      "source_id": "inference/CI-ROUTE-034",
+      "reason": "public_route_differs",
+      "text": "R accepts method fisher-z for rho (probe route '.confint_rho:fisher-z', and it is R's default for rho). Julia's public confint refuses it: confint(fitS, YS; parm=\"rho[1,2]\", method=Symbol(\"fisher-z\"), \u03a3_phy) throws ArgumentError (ArgumentError: confint: method = :fisher-z is not available for Gaussian GllvmFit / parm rho[1,2]; available: :wald, :profile, :bootstrap). #690 bound this row from the internal correlation_wald_ci called with an explicit Fisher-z transform, which a Julia user cannot request through confint. Not the same behaviour for the same request.",
+      "evidence": {
+        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-034",
+        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json#CI-ROUTE-034"
       }
     }
   ]

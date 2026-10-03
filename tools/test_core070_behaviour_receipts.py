@@ -179,7 +179,8 @@ def fallback_withdrawn_default_and_unconfirmed_route_rows_get_no_entry():
             "CORE070-INFERENCE-SIGMA-EPS-BOOTSTRAP-FALLBACK-DIVERGENCE": {"inference/CI-ROUTE-070": "fallback"},
             "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE": {"inference/CI-ROUTE-023": "withdrawn"},
             "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE": {"inference/CI-ROUTE-030": "withdrawn",
-                                                      "inference/CI-ROUTE-029": "default_class_unconfirmed"},
+                                                      "inference/CI-ROUTE-029": "default_class_unconfirmed",
+                                                      "inference/CI-ROUTE-034": "public_route_differs"},
             "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE": {"inference/CI-ROUTE-037": "withdrawn"},
             "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE": {"inference/CI-ROUTE-015": "default"},
             "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE": {"inference/CI-ROUTE-043": "default",
@@ -209,8 +210,11 @@ def post709_sigma_and_derived_route_rows_bind_through_the_public_confint():
         es = [e for e in rec["behaviour"]["cases"] if e["source_id"] == r["source_id"]]
         assert len(es) == 1 and es[0]["julia_observed"] == label and es[0]["kind"] == "route", n
         assert "inference-post709-results.json" in es[0]["julia_source"], n
-    for n in ("015", "023", "029", "030", "037"):
+    for n in ("015", "023", "029", "030", "034", "037"):
         assert rows[f"inference/CI-ROUTE-{n}"]["evidence_tier"] == "routing_control_flow", n
+    assert rows["inference/CI-ROUTE-034"]["note"] == B.NOT_BOUND_ROW_NOTES["public_route_differs"]
+    for n in B.ROUTE_ONLY_ROWS:
+        assert B.ROUTE_ONLY_NOTE in rows[f"inference/CI-ROUTE-{n}"]["note"], n
     assert rows["inference/CI-ROUTE-029"]["note"] == B.NOT_BOUND_ROW_NOTES["default_class_unconfirmed"]
 
 
@@ -249,6 +253,56 @@ def swapped_refusal_labels_do_not_bind():
         root = make_root(Path(t), rec, cid)
         assert problem(root, "inference/CI-ROUTE-012", cid), "swapped refusal label still binds"
         assert problem(root, "inference/CI-ROUTE-013", cid) is None
+
+
+@test
+def writer_refuses_weak_refusal_evidence():
+    """Surviving mutants of the review: R text that does not name the method, a Julia message for the wrong parm, a
+    non-Wald Julia control, an empty R label."""
+    import json as _json
+    fx = {r["id"]: r for r in B.read_tsv(ROOT / B.FIXTURE)}
+    rp = {r["id"]: r for r in B.read_tsv(ROOT / f"{B.INF}/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv")}
+    orig, orig_r = B.post709(), B.r_refusal
+    cid, sid = "CORE070-INFERENCE-ICC-CI-UNSUPPORTED-METHOD-REJECT", "inference/CI-ROUTE-012"
+
+    def refused(mutate_case=None, r_label=None):
+        base = _json.loads(_json.dumps({"cases": orig["cases"], "r_lambda": orig["r_lambda"]}))
+        if mutate_case:
+            mutate_case(base["cases"][sid])
+        B._P709 = base
+        if r_label is not None:
+            B.r_refusal = lambda t, m: (r_label, "x")
+        try:
+            B.post709_entry(cid, sid, rp, fx)
+        except SystemExit:
+            return True
+        finally:
+            B._P709, B.r_refusal = orig, orig_r
+        return False
+
+    assert not refused(), "the unmutated row must bind"
+    assert refused(r_label="Method not supported for `icc`."), "M15: R text without the method"
+    assert refused(r_label=""), "M19: empty R label"
+    assert refused(lambda c: c.update(error_message=c["error_message"].replace("icc[1]", "rho[1,2]"))), "M18: wrong parm"
+    assert refused(lambda c: c.update(control_route_tag="bootstrap")), "M16: control not Wald"
+    lam = "CORE070-INFERENCE-LAMBDA-CI-UNSUPPORTED-METHOD-REJECT"
+    B.r_refusal = lambda t, m: ("some other error", "x")
+    try:
+        B.post709_entry(lam, "inference/CI-ROUTE-006", rp, fx)
+    except SystemExit:
+        pass
+    else:
+        raise AssertionError("M15: Lambda refusal that is not the match.arg error")
+    finally:
+        B.r_refusal = orig_r
+
+
+@test
+def public_fisher_z_refusal_unbinds_034():
+    cid = "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE"
+    entries, nb, _ = B.wave2(cid, case_receipt(cid))
+    assert "inference/CI-ROUTE-034" not in {e["source_id"] for e in entries}
+    assert {n["source_id"]: n["reason"] for n in nb}["inference/CI-ROUTE-034"] == "public_route_differs"
 
 
 @test
@@ -301,7 +355,7 @@ def every_entry_is_scoped_and_both_labels_are_listed_in_one_class():
                 rc, jc = A._label_class(index, e["kind"], "r", a), A._label_class(index, e["kind"], "julia", b)
                 assert rc is not None and jc is not None, f"{e['source_id']}: {a!r} / {b!r} not both listed in a class"
                 assert rc[1] == jc[1], f"{e['source_id']}: {a!r} and {b!r} are in different classes"
-    assert seen == 53, seen  # 45 bound inference rows + CI-ROUTE-009 + 7 aghq control rows
+    assert seen == 52, seen  # 44 bound inference rows + CI-ROUTE-009 + 7 aghq control rows
 
 
 @test

@@ -1,10 +1,10 @@
 {
   "area": "inference-post709",
-  "case_count": 33,
+  "case_count": 34,
   "cases": [
     {
       "case_id": "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE",
-      "elapsed_seconds": 9.92,
+      "elapsed_seconds": 9.28,
       "julia_call": "confint(fitS, YS; parm=\"phylo_signal[1]\", Σ_phy)",
       "kind": "route",
       "n_terms": 1,
@@ -18,7 +18,7 @@
     },
     {
       "case_id": "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE",
-      "elapsed_seconds": 3.73,
+      "elapsed_seconds": 3.63,
       "julia_call": "confint(fitS, YS; parm=\"phylo_signal[1]\", method=:profile, Σ_phy)",
       "kind": "route",
       "n_terms": 1,
@@ -32,7 +32,7 @@
     },
     {
       "case_id": "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE",
-      "elapsed_seconds": 0.78,
+      "elapsed_seconds": 0.89,
       "julia_call": "confint(fitS, YS; parm=\"phylo_signal[1]\", method=:bootstrap, Σ_phy, n_boot=6, seed=11)",
       "kind": "route",
       "n_terms": 1,
@@ -60,7 +60,7 @@
     },
     {
       "case_id": "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE",
-      "elapsed_seconds": 3.15,
+      "elapsed_seconds": 2.85,
       "julia_call": "confint(fitS, YS; parm=\"communality[1]\", method=:profile, Σ_phy)",
       "kind": "route",
       "n_terms": 1,
@@ -88,7 +88,7 @@
     },
     {
       "case_id": "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE",
-      "elapsed_seconds": 0.87,
+      "elapsed_seconds": 0.85,
       "julia_call": "confint(fitS, YS; parm=\"rho[1,2]\", Σ_phy)",
       "kind": "route",
       "n_terms": 1,
@@ -102,7 +102,7 @@
     },
     {
       "case_id": "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE",
-      "elapsed_seconds": 2.68,
+      "elapsed_seconds": 2.71,
       "julia_call": "confint(fitS, YS; parm=\"rho[1,2]\", method=:profile, Σ_phy)",
       "kind": "route",
       "n_terms": 1,
@@ -116,7 +116,7 @@
     },
     {
       "case_id": "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE",
-      "elapsed_seconds": 0.18,
+      "elapsed_seconds": 0.19,
       "julia_call": "confint(fitS, YS; parm=\"rho[1,2]\", method=:bootstrap, Σ_phy, n_boot=6, seed=10)",
       "kind": "route",
       "n_terms": 1,
@@ -130,7 +130,7 @@
     },
     {
       "case_id": "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE",
-      "elapsed_seconds": 0.92,
+      "elapsed_seconds": 0.96,
       "julia_call": "confint(fitS, YS; parm=\"proportion:shared[1]\", Σ_phy)",
       "kind": "route",
       "n_terms": 1,
@@ -144,7 +144,7 @@
     },
     {
       "case_id": "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE",
-      "elapsed_seconds": 2.86,
+      "elapsed_seconds": 2.73,
       "julia_call": "confint(fitS, YS; parm=\"proportion:shared[1]\", method=:profile, Σ_phy)",
       "kind": "route",
       "n_terms": 1,
@@ -158,7 +158,7 @@
     },
     {
       "case_id": "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE",
-      "elapsed_seconds": 0.18,
+      "elapsed_seconds": 0.19,
       "julia_call": "confint(fitS, YS; parm=\"proportion:shared[1]\", method=:bootstrap, Σ_phy, n_boot=6, seed=12)",
       "kind": "route",
       "n_terms": 1,
@@ -172,7 +172,7 @@
     },
     {
       "case_id": "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE",
-      "elapsed_seconds": 0.42,
+      "elapsed_seconds": 0.47,
       "julia_call": "confint(fitS, YS; parm=\"sigma_B[1]\", method=:bootstrap, Σ_phy, n_boot=6, seed=4)",
       "kind": "route",
       "n_terms": 1,
@@ -186,7 +186,7 @@
     },
     {
       "case_id": "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE",
-      "elapsed_seconds": 0.06,
+      "elapsed_seconds": 0.04,
       "julia_call": "confint(fitS, YS; parm=\"sigma_B[1]\", method=:bootstrap, Σ_phy, n_boot=6, seed=5)",
       "kind": "route",
       "n_terms": 1,
@@ -200,7 +200,7 @@
     },
     {
       "case_id": "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE",
-      "elapsed_seconds": 0.14,
+      "elapsed_seconds": 0.02,
       "julia_call": "confint(fitS, YS; parm=\"sigma_W[1]\", method=:bootstrap, Σ_phy, n_boot=6, seed=6)",
       "kind": "route",
       "n_terms": 1,
@@ -228,7 +228,7 @@
     },
     {
       "case_id": "CORE070-INFERENCE-SIGMA-PHY-CI-METHOD-ROUTE",
-      "elapsed_seconds": 0.03,
+      "elapsed_seconds": 0.04,
       "julia_call": "confint(fitS, YS; parm=\"sigma_phy[1]\", method=:bootstrap, Σ_phy, n_boot=6, seed=8)",
       "kind": "route",
       "n_terms": 1,
@@ -247,7 +247,7 @@
       "control_outcome": "result",
       "control_result_method": "wald",
       "control_route_tag": "wald_derived",
-      "elapsed_seconds": 0.87,
+      "elapsed_seconds": 0.9,
       "error_message": "ArgumentError: confint: method = :wald_asym is not available for Gaussian GllvmFit / parm icc[1]; available: :wald, :profile, :bootstrap",
       "error_type": "ArgumentError",
       "julia_call": "confint(fitS, YS; parm=\"icc[1]\", method=Symbol(\"wald_asym\"), Σ_phy)",
@@ -493,13 +493,31 @@
       "target": "proportion"
     },
     {
+      "case_id": "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE",
+      "control_call": "confint(fitS, YS; parm=\"rho[1,2]\", method=:wald, Σ_phy)",
+      "control_finite": true,
+      "control_outcome": "result",
+      "control_result_method": "wald",
+      "control_route_tag": "wald_derived",
+      "elapsed_seconds": 0.01,
+      "error_message": "ArgumentError: confint: method = :fisher-z is not available for Gaussian GllvmFit / parm rho[1,2]; available: :wald, :profile, :bootstrap",
+      "error_type": "ArgumentError",
+      "julia_call": "confint(fitS, YS; parm=\"rho[1,2]\", method=Symbol(\"fisher-z\"), Σ_phy)",
+      "kind": "refusal",
+      "outcome": "error",
+      "reported": false,
+      "requested_method": "fisher-z",
+      "source_id": "inference/CI-ROUTE-034",
+      "target": "rho"
+    },
+    {
       "case_id": "CORE070-INFERENCE-LAMBDA-CI-UNSUPPORTED-METHOD-REJECT",
       "control_call": "confint(fitA, YA; parm=\"Lambda_B[1,1]\", method=:wald)",
       "control_finite": true,
       "control_outcome": "result",
       "control_result_method": "wald",
       "control_route_tag": "wald_packed",
-      "elapsed_seconds": 2.96,
+      "elapsed_seconds": 3.15,
       "error_message": "ArgumentError: confint: method = :fisher-z is not available for Gaussian GllvmFit (retained data record) / parm Lambda_B[1,1]; available: :wald, :profile, :bootstrap",
       "error_type": "ArgumentError",
       "julia_call": "confint(fitA, YA; parm=\"Lambda_B[1,1]\", method=Symbol(\"fisher-z\"))",
@@ -542,7 +560,7 @@
       "behaved": true
     }
   },
-  "runtime_seconds": 30.9,
+  "runtime_seconds": 30.0,
   "scope": "CORE070_INFERENCE_POST709_BATCH",
   "source_pins": {
     "src/confint.jl": "c962bbeb77e42b7c13a204d3e31d758e1cac0104559ca2f041e750467236ecec",
@@ -552,7 +570,7 @@
     "src/confint_profile.jl": "100e7d8c779f3466bc334b56dd9fefc225cda8174e1009cf4e5ce88fb3ef4511",
     "src/families/aghq_gaussian_fit.jl": "2cd359199c4a1304a937b26ece08ca58f3ba04152326845f95d67d5af3a5b0a4",
     "src/fit.jl": "e92f55fe8a05b027abd4419c86f466a59245a646c898537eb75bbb5b129f93d6",
-    "tools/core070_inference_post709_batch.jl": "5ae48c20bbbf67bb3a459b26b1fd9cce5f5cf9c2340c548a6cae88331d428223"
+    "tools/core070_inference_post709_batch.jl": "9f3bb77575fa55e2f4d31d9983a76ab66035c7e46f2e805bacda7c1e5c1ccefd"
   },
   "status": "PASS"
 }

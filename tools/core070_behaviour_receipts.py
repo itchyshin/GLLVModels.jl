@@ -111,7 +111,7 @@ P1_SHA = "9539352f66f2db2cc26b1c393e67212a359b60c9"
 RUN_JULIA = "61c5eda48"      # glvmodels_commit of the wave2 and wave4 inference receipts
 RUN_SURF = "681c4c3ca"       # run commit of the wave5 surface-conversion receipts (PR #569)
 RUN_AGHQ = "fd92b6551"       # glvmodels_commit of the aghq control receipts
-RUN_POST709 = "e28d57f19"    # glvmodels_commit of the post-#709 inference run (inference-post709-p1)
+RUN_POST709 = "f58de0eb1"    # glvmodels_commit of the post-#709 inference run (inference-post709-p1)
 POST709 = f"{INF}/inference-post709-p1"
 RULING = "itchyshin/GLLVModels.jl#684 item 2"
 
@@ -169,10 +169,6 @@ CLASSES = [
     cls("route", "phylo_signal:wald", [".confint_phylo_signal:wald"], ["phylo_signal:wald_derived"],
         f"R: .confint_phylo_signal wald branch ({RZ}:894, :916); Julia: phylo_signal_wald_ci "
         f"(src/confint_derived_wald.jl:412 at {RUN_JULIA}), a logit-scale Wald interval."),
-    cls("route", "rho:fisher-z", [".confint_rho:fisher-z"], ["rho:wald_derived"],
-        f"R: .confint_rho with method fisher-z calls extract_correlations(method = \"fisher-z\") ({RZ}:1034, :1061); "
-        f"Julia: correlation_wald_ci (src/confint_derived_wald.jl:358 at {RUN_JULIA}), a Fisher-z transformed Wald "
-        f"interval. The Julia call is an explicit function chosen by name."),
     # --- profile ---
     cls("route", "lambda:profile", [".confint_lambda:profile"], ["lambda:profile"],
         f"R: .confint_lambda profile branch calls loading_profile ({RZ}:372-393); Julia: profile_ci(fit, "
@@ -324,9 +320,9 @@ R_CONTROL_ENDPOINT = {"icc": ".confint_icc", "phylo_signal": ".confint_phylo_sig
 UNCONFIRMED_CLASS = {"CI-ROUTE-029": (
     "The row asks for the DEFAULT method for rho. R's default is Fisher-z (probe route '.confint_rho:fisher-z', "
     "R/z-confint-gllvmTMB.R:1693), a transformed Wald interval; Julia's default is method = :wald, which for "
-    "rho is also a Fisher-z transformed Wald interval (src/confint.jl:800 at " + RUN_POST709 + "), so the labels "
-    "'.confint_rho:fisher-z' and 'rho:wald_derived' already sit in one class for the explicit Fisher-z row "
-    "CI-ROUTE-034. Whether Julia's DEFAULT (named wald) is the same default route as R's DEFAULT (named fisher-z) is "
+    "rho is also a Fisher-z transformed Wald interval (src/confint.jl:800 at " + RUN_POST709 + "), and no class pairs the "
+    "labels '.confint_rho:fisher-z' and 'rho:wald_derived' (the explicit Fisher-z row CI-ROUTE-034 does not bind: "
+    "Julia's public route refuses fisher-z). Whether Julia's DEFAULT (named wald) is the same default route as R's DEFAULT (named fisher-z) is "
     "an equivalence the maintainer has not confirmed, and R's own method = 'wald' for rho is a different route "
     "('.confint_rho:wald', probe row CI-ROUTE-031). No entry.")}
 
@@ -372,7 +368,7 @@ def refusal_classes():
     match.arg message does not name the method (so its two refusals carry one R label)."""
     out = []
     cases = post709()["cases"]
-    derived = [(sid, c) for sid, c in sorted(cases.items()) if c["kind"] == "refusal" and c["target"] != "lambda"]
+    derived = [(sid, c) for sid, c in sorted(cases.items()) if c["kind"] == "refusal" and c["target"] != "lambda" and c.get("reported", True)]
     basis_t = {
         "icc": (f"{RZ}:880", "icc", "wald, bootstrap"),
         "phylo_signal": (f"{RZ}:929", "phylo_signal", "profile, wald, bootstrap"),
@@ -384,6 +380,9 @@ def refusal_classes():
         line, name, avail = basis_t[t]
         rlab, _ = r_refusal(t, m)
         parm_txt = re.search(r'parm="([^"]+)"', c["julia_call"]).group(1)
+        live = ("; a live R valid-method call errors on this fixture for fit-structure reasons (a single-tier fit "
+                "has no two-level or phylogenetic block), which is why the control is a route-probe stub"
+                if t in ("icc", "phylo_signal", "communality") else "")
         out.append(cls(
             "refusal", f"{t}:refuse:{m}", [rlab], [c["error_message"]],
             f"R: .confint_{t} aborts for method {m!r}, which is outside its supported set "
@@ -394,7 +393,9 @@ def refusal_classes():
             f"refuse the same request; each is paired with a valid-method control (R: the route probe sends wald to the "
             f"same endpoint; Julia: the same call with :wald returns an interval). The supported sets differ outside "
             f"this request (R withdrew profile for icc, communality, rho and proportion and accepts fisher-z for rho; "
-            f"Julia computes a profile and refuses fisher-z), and the class does not cover those."))
+            f"Julia computes a profile and refuses fisher-z), and the class does not cover those. Fit differs: R refuses on a "
+            f"single-tier non-phylo fit, Julia on a phylo fit; both refusals are fit-independent by dispatch order "
+            f"({RZ}:1643-1712; Julia checks the method before any estimator runs){live}"))
     lam = [(sid, c) for sid, c in sorted(cases.items()) if c["kind"] == "refusal" and c["target"] == "lambda"]
     rlabs = {r_refusal("lambda", c["requested_method"])[0] for _, c in lam}
     if len(rlabs) != 1:
@@ -434,6 +435,17 @@ def post709_entry(case_id, sid, rprobe, fixture):
     ib = f"{INF}/inference-batch-p1"
     src_j = f"{POST709}/inference-post709-results.json#{n}"
     src_r = f"{ib}/r-crosscheck/p1-route-probe-results.tsv#{n}"
+    if n == "CI-ROUTE-034":
+        if c["outcome"] != "error" or c["error_type"] != "ArgumentError":
+            raise SystemExit(f"{sid}: expected Julia's public route to refuse fisher-z")
+        return "not_bound", {
+            "source_id": sid, "reason": "public_route_differs",
+            "text": ("R accepts method fisher-z for rho (probe route '.confint_rho:fisher-z', and it is R's default for "
+                     "rho). Julia's public confint refuses it: " + c["julia_call"] + " throws " + c["error_type"] +
+                     " (" + c["error_message"] + "). #690 bound this row from the internal correlation_wald_ci called "
+                     "with an explicit Fisher-z transform, which a Julia user cannot request through confint. Not the "
+                     "same behaviour for the same request."),
+            "evidence": {"r": src_r, "julia": src_j}}
     if c["kind"] == "route":
         r = rprobe[n]
         if r["pass"] != "TRUE" or c["outcome"] != "result":
@@ -477,6 +489,18 @@ def post709_entry(case_id, sid, rprobe, fixture):
     if c.get("control_outcome") != "result" or c.get("control_finite") is not True:
         raise SystemExit(f"{sid}: no valid-method control on the Julia side")
     r_label, r_src = r_refusal(target, method)
+    parm_txt = re.search(r'parm="([^"]+)"', c["julia_call"]).group(1)
+    if not r_label.strip():
+        raise SystemExit(f"{sid}: empty R refusal label")
+    if target == "lambda":
+        if not r_label.startswith("'arg' should be one of"):
+            raise SystemExit(f"{sid}: R's Lambda refusal is not the match.arg error: {r_label!r}")
+    elif f'"{method}"' not in r_label:
+        raise SystemExit(f"{sid}: R's refusal text does not name the method {method!r}: {r_label!r}")
+    if f"parm {parm_txt};" not in c["error_message"]:
+        raise SystemExit(f"{sid}: Julia's refusal does not name the parm {parm_txt!r}")
+    if c.get("control_route_tag") not in ("wald_derived", "wald_packed") or c.get("control_result_method") not in ("wald", ""):
+        raise SystemExit(f"{sid}: Julia's control is not a Wald result")
     if target == "lambda":
         w = post709()["r_lambda"]["wald"]
         if w["raised"] or not w["finite"]:
@@ -783,9 +807,8 @@ OUT_OF_SCOPE_NOTE = (f"Not bound: behaviour block kept as non-binding evidence o
                      f"but this row is not in the frozen scope of {RULING}; binding it needs the maintainer to confirm "
                      f"ruling 2 covers it.")
 NOT_BOUND_ROW_NOTES = {
-    "public_route_differs": ("Not bound behaviourally: Julia's public confint(fit, Y; parm, method = :bootstrap) on this "
-                             "structured fit returns a Wald interval, so the request does not take the same route as "
-                             "R's; the harness called bootstrap_ci directly (receipt behaviour_not_bound)."),
+    "public_route_differs": ("Not bound behaviourally: Julia's public confint does not take the route R takes for this "
+                             "request (receipt behaviour_not_bound)."),
     "default_class_unconfirmed": ("Not bound behaviourally: Julia's public default (:wald, a Fisher-z interval for rho) "
                                   "and R's default (fisher-z) look alike, but treating them as one default route is an "
                                   "equivalence the maintainer has not confirmed (receipt behaviour_not_bound)."),
@@ -819,6 +842,11 @@ def _annotate(row, paths):
                 _add_note(row, OUT_OF_SCOPE_NOTE)
 
 
+ROUTE_ONLY_ROWS = {"018", "025", "032", "039", "045", "048", "057", "060", "063"}
+ROUTE_ONLY_NOTE = ("route only; estimands not compared (R aligned extract_* vs Julia communality(fit) etc.; n_boot "
+                   "small)")
+
+
 def overlay_row(row, counts):
     """Flip `row` to evidence_tier behavioural when its cited receipts' behaviour blocks bind it under the
     assembler's port of the checker's rule (frozen scope, class identity, entries scoped by source_id where a
@@ -835,6 +863,8 @@ def overlay_row(row, counts):
     if asm.behavioural_receipt_problem(cand, ROOT, asm.behaviour_equivalence(ROOT), citers()) is not None:
         _annotate(row, paths)
         return False
+    if str(row.get("source_id", "")).split("-")[-1] in ROUTE_ONLY_ROWS:
+        _add_note(row, ROUTE_ONLY_NOTE)
     counts[row["evidence_tier"]] -= 1
     counts["behavioural"] = counts.get("behavioural", 0) + 1
     row["evidence_tier"] = "behavioural"
@@ -885,7 +915,7 @@ def write():
     for cid, (path, new) in derive_all().items():
         path.write_text(dump(new))
         n += 1
-    print("equivalence classes", len(CLASSES), "receipts written", n)
+    print("equivalence classes", len(all_classes()), "receipts written", n)
 
 
 def main():
