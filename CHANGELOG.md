@@ -2,6 +2,24 @@
 
 ## Development
 
+- **`fit_gllvm(...; offset = c)` with a scalar `c` now works, and an offset shape it cannot
+  broadcast is refused with an `ArgumentError`.** A scalar offset (the analogue of R's
+  `offset(log(2))`) was accepted by the count and continuous routes but returned
+  `loglik = -Inf`, `converged = false` (the Gaussian route threw a `DimensionMismatch`). Cause: the
+  Laplace marginal slices the offset per unit (`view(offset, :, i)`), which throws on a
+  scalar, and every fitter runs its objective inside `try ... catch` that turns any exception
+  into a sentinel value, so the optimiser saw a flat objective and stopped at the warm start
+  (0 iterations). The dispatcher now applies Julia's own broadcast rule once, before any fitting:
+  a real scalar becomes `fill(c, p, n)`; a `p×n` matrix is passed through untouched; a `1×n`
+  matrix (one offset per unit), a `p×1` matrix or a length-`p` vector (one offset per trait) is
+  stretched to `p×n`. Anything else (a length-`n` vector, an `n×p` matrix, a non-finite scalar)
+  throws an `ArgumentError` naming the accepted shapes. The length-`p` vector and the `1×n`
+  matrix already worked on the count and continuous Laplace routes and give identical fits;
+  they and the `p×1` matrix (which returned a `-Inf` or wrong fit) now also work on the
+  Gaussian and AGHQ routes. Direct calls to the named fitters
+  (`fit_poisson_gllvm(Y; K, offset = c)` and the rest) are not covered: they still take a `p×n`
+  matrix. Test: `test/test_offset.jl`.
+
 - **`fit_phylo_gaussian` no longer reports `converged = true` after a zero-length step
   (part of #505, the remaining #485 class).** Optim also counts a zero-length line-search
   step as convergence, so a start the finite-difference gradient cannot leave could be

@@ -1,5 +1,44 @@
 # Unified GLLVM fit entry point — dispatches on the response family.
 
+# Offset normaliser: the one place `fit_gllvm` decides what shape an `offset` may have.
+# The rule is Julia's own broadcast rule, so nothing here is ambiguous: a real scalar becomes
+# the p×n matrix `fill(c, p, n)` (R's gllvmTMB broadcasts `offset(log(2))` to every row); a
+# matrix whose sides are each the full size or 1 (p×n, 1×n = one offset per unit, p×1 = one
+# per trait) is stretched to p×n; a length-p vector is a column (one offset per trait);
+# `nothing` and a p×n matrix pass through untouched (same object). Anything else is refused
+# with an ArgumentError. The fitters below do not check the shape themselves, and their
+# objectives run inside `try ... catch` that turns any exception into a sentinel value, so a
+# scalar offset used to come back as a loglik = -Inf, unconverged fit (the Gaussian route
+# threw a DimensionMismatch), and a p×1 offset as -Inf or, on some routes, a finite fit of
+# the wrong model. A length-p vector and a 1×n matrix already worked on the count and
+# continuous Laplace routes (the family code adds the offset by broadcast), and the
+# expansion below gives bit-identical fits there; it also makes the Gaussian and AGHQ
+# routes accept them.
+function _normalize_offset(offset, p::Integer, n::Integer)
+    offset === nothing && return nothing
+    if offset isa Real
+        isfinite(offset) || throw(ArgumentError(
+            "fit_gllvm: a scalar offset must be finite; got $offset"))
+        return fill(float(offset), p, n)
+    end
+    if offset isa AbstractMatrix
+        r, c = size(offset)
+        if (r == p || r == 1) && (c == n || c == 1)
+            return (r == p && c == n) ? offset : repeat(offset, r == p ? 1 : p, c == n ? 1 : n)
+        end
+    elseif offset isa AbstractVector && length(offset) == p
+        return repeat(offset, 1, n)
+    end
+    got = offset isa AbstractArray ?
+        "a $(join(size(offset), '×')) $(nameof(typeof(offset)))" :
+        "a value of type $(typeof(offset))"
+    throw(ArgumentError(
+        "fit_gllvm: offset must be a real scalar (the same offset for every cell), " *
+        "a $(p)×$(n) matrix (traits × units, the layout of Y; a $(p)×1 or 1×$(n) matrix is " *
+        "stretched along its length-1 side), or a length-$(p) vector (one offset per trait); " *
+        "got $got. For one offset per unit, pass reshape(o, 1, $(n))."))
+end
+
 """
     fit_gllvm(Y; family = Normal(), K, num_lv = nothing,
               row_eff = :none, disp_group = nothing, pervar = false, kwargs...)
@@ -70,6 +109,16 @@ distribution used as a marker (the GLM.jl convention):
 `K` is the latent dimension; the gllvm-style alias `num_lv` is accepted as a synonym
 for `K` (gllvm uses `num.lv`). Family-specific keyword arguments (`link`, `N`,
 `Σ_phy`, …) pass through to the underlying fitter.
+
+`offset` is the known additive term in `η = β + offset + Λz` (for example log-exposure).
+It may be a real scalar, which is broadcast to every cell as R's `offset(log(2))` is; a
+`p×n` matrix (traits × units, the layout of `Y`); a `1×n` matrix (one offset per unit) or
+`p×1` matrix (one per trait); or a length-`p` vector (one per trait). That is Julia's own
+broadcast rule. Any other shape (a length-`n` vector, an `n×p` matrix, a non-finite scalar)
+throws an `ArgumentError` that names the accepted shapes, instead of returning a `-Inf`,
+unconverged fit. The check happens once here, so every family route below sees a `p×n`
+matrix. Routes that take no offset (`pervar`, `row_eff`, `grouping`, `phylo`) still refuse
+the keyword as before.
 
 # Structural / dispersion variants (gllvm-style keyword routing)
 
@@ -209,6 +258,13 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
     end
     all(isnothing, (unit, unit_obs, cluster, cluster2)) || throw(ArgumentError(
         "group identifiers do not add random effects; supply explicit grouping=[GroupingTerm(...)]"))
+    # Offset: broadcast a scalar, expand a length-p vector, refuse an unusable shape — once,
+    # for every route below (see `_normalize_offset`). The grouped and precision-phylo routes
+    # returned above take no offset keyword and are untouched.
+    if haskey(kwargs, :offset)
+        kwargs = merge(NamedTuple(kwargs),
+                       (offset = _normalize_offset(kwargs[:offset], size(Y, 1), size(Y, 2)),))
+    end
     # gllvm's `num.lv` alias for K. If both given they must agree.
     if num_lv !== nothing
         if K !== nothing && K != num_lv
