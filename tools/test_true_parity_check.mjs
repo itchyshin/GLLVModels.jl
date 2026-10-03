@@ -734,14 +734,16 @@ test('integer equality: a case with no kind keeps today rule (tolerance 0.5 on n
 // Ruling 2: the behavioural tier. bTree() adds one required_core row, inference/CI-ROUTE-001, of
 // tier "behavioural", citing receipts/b1.json, to the base map.
 const B_ROW = 'inference/CI-ROUTE-001';
-function bTree({ row = {}, receipt, equivalence, extraReceipts = {} } = {}) {
+function bTree({ row = {}, receipt, equivalence, extraReceipts = {}, extraRows = [] } = {}) {
   return ({ readJ, writeJ }) => {
     const cm = readJ('case-map.json');
-    cm.rows.push({
+    const base = {
       source_id: B_ROW, classification: 'required_core', capability: 'CAP-ISDM-1FO-PREDICT',
       executable_case_ids: ['CASE-B'], evidence: { receipt: `${L}/receipts/b1.json` },
-      measured_against: P1_FULL, disposition: null, evidence_tier: 'behavioural', ...row,
-    });
+      measured_against: P1_FULL, disposition: null, evidence_tier: 'behavioural',
+    };
+    cm.rows.push({ ...base, ...row });
+    for (const extra of extraRows) cm.rows.push({ ...base, ...extra }); // more rows citing the same case id
     writeJ('case-map.json', cm);
     writeJ('receipts/b1.json', receipt ?? bReceipt());
     for (const [rel, v] of Object.entries(extraReceipts)) writeJ(rel, v);
@@ -781,7 +783,11 @@ test('behavioural: the same mismatch is rescued by an equivalence class', () => 
 });
 test('behavioural: a class of another kind does not rescue (kinds are separate)', () => {
   const m = bTree({ receipt: bReceipt({}, {}, [bCase({ kind: 'refusal', r_observed: '.confint_lambda:wald', julia_observed: 'wald_packed' })]), equivalence: eq(waldClass) });
-  assert.match(runTree(m, 'C1').stdout, /C1_NOT_MET$/m);
+  const c1 = runTree(m, 'C1').stdout;
+  assert.match(c1, /C1_NOT_MET$/m);
+  assert.match(c1, /bound_behavioural=0 /);
+  // the reason is the missing class (a refusal lookup finds no route class), not any other failure of the fixture
+  assert.match(c1, /case CASE-B \(refusal\): R ".confint_lambda:wald" vs Julia "wald_packed" differ after canonicalisation \(R: no class; Julia: no class\)/);
 });
 test('behavioural: an ambiguous equivalence table is MEASUREMENT_FAILED (exit 2) on C1 and C8', () => {
   const dup = { ...waldClass, canonical: 'wald_other' };
@@ -815,7 +821,10 @@ test('behavioural: an entry scoped to another source_id does not cover this row;
 });
 test('behavioural: a scoped mismatching entry for this row fails even if an unscoped entry matches', () => {
   const m = bTree({ receipt: bReceipt({}, {}, [bCase(), bCase({ source_id: B_ROW, julia_observed: 'profile' })]) });
-  assert.match(runTree(m, 'C1').stdout, /C1_NOT_MET$/m);
+  const c1 = runTree(m, 'C1').stdout;
+  assert.match(c1, /C1_NOT_MET$/m);
+  assert.match(c1, /bound_behavioural=0 /);
+  assert.match(c1, /case CASE-B \(route\): R "wald" vs Julia "profile" differ after canonicalisation/);
 });
 test('behavioural: a receipt verdict of FAIL does not bind (top level and inside the block)', () => {
   for (const m of [bTree({ receipt: bReceipt({ verdict: 'FAIL' }) }), bTree({ receipt: bReceipt({}, { batch_status: 'FAIL' }) })]) {
@@ -905,8 +914,12 @@ test('behavioural: a behavioural label cannot ride on another row numeric receip
 
 // Scope of the behavioural tier (review of the first cut: any row could relabel itself behavioural).
 // Only inference/* rows and the four named C1 rows are covered by itchyshin/GLLVModels.jl#684 item 2.
-test('behavioural scope: a row outside inference/* and the four named rows does not bind, even with a valid block', () => {
-  for (const sid of ['isdm/CAP-ISDM-1FO-PREDICT-EXPORT-2', 'postfit/POSTFIT-SURFACE-extract_proportions', 'data/RD-01', 'inference2/CI-ROUTE-001', 'x/inference/CI-ROUTE-001']) {
+test('behavioural scope: a row outside the frozen list (59 inference rows, four named rows) does not bind, even with a valid block', () => {
+  for (const sid of ['isdm/CAP-ISDM-1FO-PREDICT-EXPORT-2', 'postfit/POSTFIT-SURFACE-extract_proportions', 'data/RD-01', 'inference2/CI-ROUTE-001', 'x/inference/CI-ROUTE-001',
+    // the four inference rows #684 item 2 does not name (two numeric, two partial): a prefix rule admitted them
+    'inference/CI-ROUTE-008', 'inference/CI-ROUTE-009', 'inference/CI-ROUTE-010', 'inference/CI-ROUTE-011',
+    // a bare prefix, a path trick, a new unlisted inference id, a gap in the numbering, whitespace and case variants of a listed id
+    'inference/', 'inference/../isdm/X', 'inference/CI-ROUTE-999', 'inference/CI-ROUTE-005', 'inference/CI-ROUTE-001 ', ' inference/CI-ROUTE-001', 'Inference/CI-ROUTE-001']) {
     const m = ({ readJ, writeJ }) => { bTree({ row: { source_id: sid } })({ readJ, writeJ }); };
     const c1 = runTree(m, 'C1');
     assert.match(c1.stdout, /C1_NOT_MET$/m, sid);
@@ -918,7 +931,7 @@ test('behavioural scope: a row outside inference/* and the four named rows does 
   }
 });
 test('behavioural scope: each of the four named C1 rows binds like an inference row', () => {
-  for (const sid of ['latent-scores/extract_latent_scores.default', 'select-lv/print.gllvmTMB_select_lv', 'model-comparison/print.anova.gllvmTMB_multi', 'model-comparison/update.gllvmTMB_multi', 'inference/CI-ROUTE-099']) {
+  for (const sid of ['latent-scores/extract_latent_scores.default', 'select-lv/print.gllvmTMB_select_lv', 'model-comparison/print.anova.gllvmTMB_multi', 'model-comparison/update.gllvmTMB_multi', 'inference/CI-ROUTE-001', 'inference/CI-ROUTE-084']) {
     const m = bTree({ row: { source_id: sid } });
     const c1 = runTree(m, 'C1');
     assert.match(c1.stdout, /C1_MET$/m, `${sid}\n${c1.stdout}`);
@@ -1049,8 +1062,10 @@ function c6Items(items) {
   return ({ dir }) => writeFileSync(join(dir, L, 'reverse-gap.json'), JSON.stringify(items));
 }
 const helper = (over = {}) => ({ source_id: 'julia-export/internal_thing', decision: 'EXCLUDED_INTERNAL_HELPER', basis: 'no docstring in docs/src/low-level-reference.md', ruling: RULING, ...over });
+// A documented extra cites a docs/src file that exists (the base fixture has docs/src/gllvmtmb-parity.md).
+const kept = (over = {}) => helper({ source_id: 'julia-export/doc', decision: 'KEPT_AS_JULIA_EXTRA', basis: 'documented in docs/src/gllvmtmb-parity.md', ...over });
 test('C6: EXCLUDED_INTERNAL_HELPER with a basis and the maintainer ruling is a valid decision, with counts', () => {
-  const r = runTree(c6Items([helper(), helper({ source_id: 'julia-export/x2' }), helper({ source_id: 'julia-export/doc', decision: 'KEPT_AS_JULIA_EXTRA' })]), 'C6');
+  const r = runTree(c6Items([helper(), helper({ source_id: 'julia-export/x2' }), kept()]), 'C6');
   assert.match(r.stdout, /C6_MET$/m, r.stdout);
   assert.match(r.stdout, /invalid_decision=none /);
   assert.match(r.stdout, /unsigned_decision=none decision_counts=KEPT_AS_JULIA_EXTRA:1,PORT_TO_MATCH_R:0,DEPRECATE_AND_REMOVE:0,RENAME_TO_AVOID_COLLISION:0,EXCLUDED_INTERNAL_HELPER:2$/m);
@@ -1093,7 +1108,7 @@ for (const [name, item, why] of [
   });
 }
 test('C6 scope: both covered words stay valid with the pinned ref and date', () => {
-  const r = runTree(c6Items([helper(), helper({ source_id: 'julia-export/x', decision: 'KEPT_AS_JULIA_EXTRA' })]), 'C6');
+  const r = runTree(c6Items([helper(), kept({ source_id: 'julia-export/x' })]), 'C6');
   assert.match(r.stdout, /C6_MET$/m, r.stdout);
 });
 test('C6: an unknown decision word still fails (EXCLUDED_HELPER, and a case variant)', () => {
@@ -1107,6 +1122,266 @@ test('C6: an undecided item (decision null) still fails, as before', () => {
   const r = runTree(c6Items([helper(), { source_id: 'julia-export/undecided', decision: null, status: 'unsigned' }]), 'C6');
   assert.match(r.stdout, /C6_NOT_MET$/m);
   assert.match(r.stdout, /invalid_decision=julia-export\/undecided:null /);
+});
+
+// --- Fix round on PR #687 (three adversarial reviews). Each control below fails on the head before the
+// round (6f546fb00) for the reason it names, and passes after. ---
+
+// Scope: the behavioural tier is a frozen list, not a prefix. Scoreboard side: the same list, by scoreboard id.
+test('behavioural scope (scoreboard): EVIDENCED-BEHAVIOURAL on CI-ROUTE-008..011, a new inference id or a bare prefix is not done', () => {
+  for (const id of ['inference-CI-ROUTE-008', 'inference-CI-ROUTE-009', 'inference-CI-ROUTE-010', 'inference-CI-ROUTE-011', 'inference-CI-ROUTE-999', 'inference']) {
+    const r = runBoard('EVIDENCED-BEHAVIOURAL', 'X2', id);
+    assert.match(r.stdout, /X2_NOT_MET$/m, id);
+    assert.match(r.stdout, new RegExp(`${id}:BEHAVIOURAL_NOT_ALLOWED_FOR_THIS_ROW`), id);
+    assert.match(r.stdout, /done_behavioural=0$/m, id);
+  }
+  assert.match(runBoard('EVIDENCED-BEHAVIOURAL', 'X2', 'inference-CI-ROUTE-084').stdout, /X2_MET$/m);
+});
+
+// Label collision: compare class identity, not canonical strings (external review F8a, F8b, F8e, F8f).
+const waldCollide = { kind: 'route', canonical: 'wald', r: ['r_wald'], julia: ['jl_wald'], basis: 'R .confint_lambda and Julia confint_lambda route the Wald interval.' };
+const stopClass = { kind: 'refusal', canonical: 'stop', r: ['stop_dup'], julia: ['throw_X'], basis: 'R stop() and Julia throw both refuse the call.' };
+function labelRun(klass, kind, r, j, mode = 'C1') {
+  return runTree(bTree({ receipt: bReceipt({}, {}, [bCase({ kind, r_observed: r, julia_observed: j })]), equivalence: eq(klass) }), mode);
+}
+test('label identity: Julia raw "wald" (unlisted) does not match R "r_wald" listed in a class named wald (F8a)', () => {
+  const c1 = labelRun(waldCollide, 'route', 'r_wald', 'wald').stdout;
+  assert.match(c1, /C1_NOT_MET$/m);
+  assert.match(c1, /bound_behavioural=0 /);
+  assert.match(c1, /R "r_wald" vs Julia "wald" differ after canonicalisation \(R: class "wald"; Julia: no class\)/);
+  assert.match(labelRun(waldCollide, 'route', 'r_wald', 'wald', 'C8').stdout, /C8_NOT_MET$/m);
+});
+test('label identity: R raw "wald" (unlisted) does not match Julia "jl_wald" listed in a class named wald (F8b)', () => {
+  const c1 = labelRun(waldCollide, 'route', 'wald', 'jl_wald').stdout;
+  assert.match(c1, /C1_NOT_MET$/m);
+  assert.match(c1, /R "wald" vs Julia "jl_wald" differ after canonicalisation \(R: no class; Julia: class "wald"\)/);
+});
+test('label identity: refusal class "stop": R raw "stop" does not match Julia "throw_X" (F8f)', () => {
+  const c1 = labelRun(stopClass, 'refusal', 'stop', 'throw_X').stdout;
+  assert.match(c1, /C1_NOT_MET$/m);
+  assert.match(c1, /R "stop" vs Julia "throw_X" differ after canonicalisation \(R: no class; Julia: class "stop"\)/);
+});
+test('label identity: both engines emitting the same literal string always match, even when it is listed on one side only (F8e)', () => {
+  for (const [r, j] of [['r_wald', 'r_wald'], ['jl_wald', 'jl_wald'], ['wald', 'wald']]) {
+    const c1 = labelRun(waldCollide, 'route', r, j).stdout;
+    assert.match(c1, /C1_MET$/m, `${r} ${j}\n${c1}`);
+    assert.match(c1, /bound_behavioural=1 /);
+    assert.match(labelRun(waldCollide, 'route', r, j, 'C8').stdout, /C8_MET$/m);
+  }
+});
+test('label identity: the two listed members of one class match; listed members of two classes do not', () => {
+  assert.match(labelRun(waldCollide, 'route', 'r_wald', 'jl_wald').stdout, /C1_MET$/m);
+  const two = { ...waldCollide, canonical: 'profile', r: ['r_prof'], julia: ['jl_prof'] };
+  const c1 = runTree(bTree({ receipt: bReceipt({}, {}, [bCase({ r_observed: 'r_wald', julia_observed: 'jl_prof' })]), equivalence: eq(waldCollide, two) }), 'C1').stdout;
+  assert.match(c1, /C1_NOT_MET$/m);
+  assert.match(c1, /R "r_wald" vs Julia "jl_prof" differ after canonicalisation \(R: class "wald"; Julia: class "profile"\)/);
+});
+test('label identity: arrays are compared element by element with the same rule', () => {
+  const bad = runTree(bTree({ receipt: bReceipt({}, {}, [bCase({ kind: 'route', r_observed: ['r_wald', 'wald'], julia_observed: ['jl_wald', 'jl_wald'] })]), equivalence: eq(waldCollide) }), 'C1').stdout;
+  assert.match(bad, /C1_NOT_MET$/m);
+  assert.match(bad, /R "wald" vs Julia "jl_wald" differ after canonicalisation \(R: no class; Julia: class "wald"\)/);
+  const ok = runTree(bTree({ receipt: bReceipt({}, {}, [bCase({ kind: 'route', r_observed: ['r_wald', 'x'], julia_observed: ['jl_wald', 'x'] })]), equivalence: eq(waldCollide) }), 'C1').stdout;
+  assert.match(ok, /C1_MET$/m);
+});
+
+// Visible text: one definition for both ports (at least one character in Unicode L, N, P or S).
+const INVISIBLE = [['U+FEFF', '﻿'], ['U+200B', '​'], ['U+0085', '\u0085'], ['U+00A0', ' '], ['U+2060', '⁠'], ['spaces, tab, newline', ' \t\n']];
+test('visible text: an observed label with no visible character fails, whatever the invisible character (U+FEFF, U+200B, U+0085, ...)', () => {
+  for (const [name, ch] of INVISIBLE) {
+    for (const over of [{ r_observed: ch, julia_observed: ch }, { r_observed: [ch], julia_observed: [ch] }, { r_observed: ['wald', ch], julia_observed: ['wald', ch] }]) {
+      const c1 = runTree(bTree({ receipt: bReceipt({}, {}, [bCase(over)]) }), 'C1').stdout;
+      assert.match(c1, /C1_NOT_MET$/m, `${name} ${JSON.stringify(over)}`);
+      assert.match(c1, /bound_behavioural=0 /, name);
+      assert.match(c1, /must be a non-empty string or an array of non-empty strings/, name);
+    }
+  }
+  const padded = runTree(bTree({ receipt: bReceipt({}, {}, [bCase({ r_observed: '​wald﻿', julia_observed: '​wald﻿' })]) }), 'C1').stdout;
+  assert.match(padded, /C1_MET$/m, 'a label with a visible character is visible');
+});
+test('visible text: an equivalence class with an invisible canonical, basis or label is MEASUREMENT_FAILED on C1 and C8', () => {
+  for (const [name, ch] of INVISIBLE) {
+    for (const [what, klass, why] of [
+      ['canonical', { ...waldClass, canonical: ch }, /has no canonical label/],
+      ['basis', { ...waldClass, basis: ch }, /empty basis/],
+      ['r label', { ...waldClass, r: [ch] }, /r must be an array of non-empty labels/],
+      ['julia label', { ...waldClass, julia: ['wald_packed', ch] }, /julia must be an array of non-empty labels/],
+    ]) {
+      for (const mode of ['C1', 'C8']) {
+        const r = runTree(({ writeJ }) => writeJ('behaviour-equivalence.json', eq(klass)), mode);
+        assert.equal(r.code, 2, `${name} ${what} ${mode}\n${r.stdout}`);
+        assert.match(r.stdout, why, `${name} ${what}`);
+      }
+    }
+  }
+});
+test('visible text: a C6 basis or ruling ref with no visible character is not a decision', () => {
+  for (const [name, ch] of INVISIBLE) {
+    const b = runTree(c6Items([helper({ basis: ch })]), 'C6');
+    assert.match(b.stdout, /C6_NOT_MET$/m, name);
+    assert.match(b.stdout, /unsigned_decision=julia-export\/internal_thing\(no basis\)/, name);
+    const kb = runTree(c6Items([kept({ basis: ch })]), 'C6');
+    assert.match(kb.stdout, /unsigned_decision=julia-export\/doc\(no basis\)/, name);
+    const rf = runTree(c6Items([helper({ ruling: { ...RULING, ref: ch } })]), 'C6');
+    assert.match(rf.stdout, /C6_NOT_MET$/m, name);
+    assert.match(rf.stdout, /\(ruling without a ref\)/, name);
+  }
+  // A one-character visible basis is visible (the rule is visibility, not substance; review decides substance).
+  assert.match(runTree(c6Items([helper({ basis: '.' })]), 'C6').stdout, /C6_MET$/m);
+});
+
+// Strict JSON types: the table's schema is the number 1.
+test('behaviour-equivalence.json: schema must be the number 1 (true, "1", [1], null, 0, 2 are refused on C1 and C8)', () => {
+  for (const schema of [true, '1', [1], null, 0, 2]) {
+    for (const mode of ['C1', 'C8']) {
+      const r = runTree(({ writeJ }) => writeJ('behaviour-equivalence.json', { schema, pin: 'P1', classes: [] }), mode);
+      assert.equal(r.code, 2, `${JSON.stringify(schema)} ${mode}\n${r.stdout}`);
+      assert.match(r.stdout, /schema must be 1/, JSON.stringify(schema));
+    }
+  }
+  assert.equal(runTree(({ writeJ }) => writeJ('behaviour-equivalence.json', { schema: 1, pin: 'P1', classes: [] }), 'C1').code, 0);
+});
+
+// Behavioural receipt failure detection (the numeric tier's list is unchanged by this PR).
+test('behavioural receipt: a top-level result that is not a pass value does not bind', () => {
+  for (const result of ['FAIL', 'error', null, false, 0, { family: 'gaussian' }, ['PASS']]) {
+    const m = bTree({ receipt: bReceipt({ result }) });
+    const c1 = runTree(m, 'C1').stdout;
+    assert.match(c1, /C1_NOT_MET$/m, JSON.stringify(result));
+    assert.match(c1, /bound_behavioural=0 /, JSON.stringify(result));
+    assert.match(c1, /receipt did not pass: result=.* in docs\/dev-log\/core070\/true-parity-latest\/receipts\/b1\.json/, JSON.stringify(result));
+    const c8 = runTree(m, 'C8').stdout;
+    assert.match(c8, /C8_NOT_MET$/m, JSON.stringify(result));
+    assert.match(c8, /BEHAVIOURAL_LABEL_WITHOUT_BEHAVIOURAL_RECEIPT\(receipt did not pass: result=/, JSON.stringify(result));
+  }
+  for (const result of ['PASS', 'pass', true]) assert.match(runTree(bTree({ receipt: bReceipt({ result }) }), 'C1').stdout, /C1_MET$/m, JSON.stringify(result));
+});
+test('behavioural receipt: a failing result inside the behaviour block does not bind', () => {
+  const c1 = runTree(bTree({ receipt: bReceipt({}, { result: 'FAIL' }) }), 'C1').stdout;
+  assert.match(c1, /C1_NOT_MET$/m);
+  assert.match(c1, /receipt did not pass: behaviour\.result="FAIL" in /);
+});
+test('behavioural receipt: a nested batch_verifier.status that is not PASS does not bind', () => {
+  for (const bv of [{ status: 'FAIL', exit_code: 1 }, { status: null }, { status: 'PASSED' }, { status: {} }]) {
+    const c1 = runTree(bTree({ receipt: bReceipt({ verdict: 'PASS', batch_verifier: bv }) }), 'C1').stdout;
+    assert.match(c1, /C1_NOT_MET$/m, JSON.stringify(bv));
+    assert.match(c1, /receipt did not pass: batch_verifier\.status=.* in /, JSON.stringify(bv));
+  }
+  const notObj = runTree(bTree({ receipt: bReceipt({ batch_verifier: 'FAIL' }) }), 'C1').stdout;
+  assert.match(notObj, /C1_NOT_MET$/m);
+  assert.match(notObj, /batch_verifier="FAIL" is not an object/);
+  for (const bv of [{ status: 'PASS', exit_code: 0 }, { exit_code: 0 }]) assert.match(runTree(bTree({ receipt: bReceipt({ batch_verifier: bv }) }), 'C1').stdout, /C1_MET$/m, JSON.stringify(bv));
+});
+test('behavioural receipt: a comparison block whose status or verdict is not PASS does not bind', () => {
+  const cmp = (over) => ({ pin: 'P1', cases: [{ case_id: 'CASE-B', quantity: 'q', r_value: 1, julia_value: 1, tolerance: 1e-6 }], ...over });
+  for (const over of [{ status: 'FAIL' }, { verdict: 'FAIL' }, { batch_status: 'FAIL' }, { harness_pass: false }, { result: 'FAIL' }]) {
+    const c1 = runTree(bTree({ receipt: { ...bReceipt(), comparison: cmp(over) } }), 'C1').stdout;
+    assert.match(c1, /C1_NOT_MET$/m, JSON.stringify(over));
+    assert.match(c1, /receipt did not pass: comparison\.(status|verdict|batch_status|harness_pass|result)=/, JSON.stringify(over));
+  }
+  assert.match(runTree(bTree({ receipt: { ...bReceipt(), comparison: cmp({ status: 'PASS', verdict: 'PASS' }) } }), 'C1').stdout, /C1_MET$/m);
+});
+test('behavioural receipt: a behaviour case with status not PASS, or match not true, does not bind', () => {
+  for (const over of [{ status: 'FAIL' }, { status: 'error' }, { result: 'FAIL' }, { match: false }, { match: null }, { match: 'yes' }, { match: 0 }]) {
+    const c1 = runTree(bTree({ receipt: bReceipt({}, {}, [bCase(over)]) }), 'C1').stdout;
+    assert.match(c1, /C1_NOT_MET$/m, JSON.stringify(over));
+    assert.match(c1, /receipt did not pass: behaviour\.cases\[CASE-B\]\.(status|result|match)=/, JSON.stringify(over));
+  }
+  for (const over of [{ status: 'PASS' }, { match: true }, { status: 'PASS', match: true }]) assert.match(runTree(bTree({ receipt: bReceipt({}, {}, [bCase(over)]) }), 'C1').stdout, /C1_MET$/m, JSON.stringify(over));
+});
+test('numeric receipt: this PR leaves the numeric status list as it was (a top-level result of FAIL is not read)', () => {
+  const m = ({ readJ, writeJ }) => { const r1 = readJ('receipts/r1.json'); r1.result = 'FAIL'; writeJ('receipts/r1.json', r1); };
+  const c1 = runTree(m, 'C1');
+  assert.match(c1.stdout, /C1_MET$/m, c1.stdout);
+  assert.match(c1.stdout, /bound_numeric=2 /);
+});
+
+// Unscoped entries: an entry without source_id covers none of several rows citing the same case id.
+const SECOND_ROW = { source_id: 'inference/CI-ROUTE-002' };
+test('unscoped entry: one entry without source_id covers none of two rows that cite the same case id', () => {
+  const m = bTree({ extraRows: [SECOND_ROW] });
+  const c1 = runTree(m, 'C1').stdout;
+  assert.match(c1, /C1_NOT_MET$/m);
+  assert.match(c1, /bound_behavioural=0 /);
+  assert.match(c1, /inference\/CI-ROUTE-001\(case ids without an applicable behaviour entry: CASE-B \(cited by 2 rows, so an entry without source_id covers none of them; scope each entry with source_id\)\)/);
+  assert.match(c1, /inference\/CI-ROUTE-002\(case ids without an applicable behaviour entry: CASE-B \(cited by 2 rows/);
+  const c8 = runTree(m, 'C8').stdout;
+  assert.match(c8, /C8_NOT_MET$/m);
+  assert.match(c8, /inference\/CI-ROUTE-001:BEHAVIOURAL_LABEL_WITHOUT_BEHAVIOURAL_RECEIPT\(case ids without an applicable behaviour entry: CASE-B \(cited by 2 rows/);
+});
+test('unscoped entry: each row needs its own source_id-scoped entry; one scoped row binds, the other does not', () => {
+  const both = bTree({ extraRows: [SECOND_ROW], receipt: bReceipt({}, {}, [bCase({ source_id: B_ROW }), bCase({ source_id: 'inference/CI-ROUTE-002' })]) });
+  const ok = runTree(both, 'C1').stdout;
+  assert.match(ok, /C1_MET$/m, ok);
+  assert.match(ok, /bound_behavioural=2 /);
+  assert.match(runTree(both, 'C8').stdout, /C8_MET$/m);
+  const one = bTree({ extraRows: [SECOND_ROW], receipt: bReceipt({}, {}, [bCase({ source_id: B_ROW })]) });
+  const c1 = runTree(one, 'C1').stdout;
+  assert.match(c1, /C1_NOT_MET$/m);
+  assert.match(c1, /bound_behavioural=1 /);
+  assert.match(c1, /inference\/CI-ROUTE-002\(case ids without an applicable behaviour entry: CASE-B\)/);
+});
+test('unscoped entry: an unscoped entry still covers a case id that only one row cites; a row of another tier citing it counts', () => {
+  assert.match(runTree(bTree(), 'C1').stdout, /C1_MET$/m);
+  // the numeric base row CASE-1 shares its id with a second row: an unscoped entry for CASE-1 would be ambiguous too
+  const m = bTree({ row: { executable_case_ids: ['CASE-1'] }, receipt: bReceipt({}, {}, [bCase({ case_id: 'CASE-1' })]) });
+  const c1 = runTree(m, 'C1').stdout;
+  assert.match(c1, /C1_NOT_MET$/m);
+  assert.match(c1, /CASE-1 \(cited by 2 rows, so an entry without source_id covers none of them/);
+});
+
+// Integer equality: tolerance is exactly 0.5 (mutation: a `> 0.5` test would accept 0.4).
+for (const tolerance of [0.4, 0.49, 0.5000001, 0.51]) {
+  test(`integer equality: tolerance ${tolerance} is refused (only exactly 0.5 means equality)`, () => {
+    const m = intCase({ kind: 'integer_equality', r_value: 15, julia_value: 15, tolerance });
+    const c1 = runTree(m, 'C1').stdout;
+    assert.match(c1, /C1_NOT_MET$/m);
+    assert.match(c1, /case CASE-1: integer_equality needs tolerance exactly 0\.5/);
+    const c8 = runTree(m, 'C8').stdout;
+    assert.match(c8, /C8_NOT_MET$/m);
+    assert.match(c8, /NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT/);
+  });
+}
+
+// C6: a documented extra cites a docs/src file that resolves; a helper's basis is visible text.
+for (const [name, basis, why] of [
+  ['no path at all', 'documented in the README', /\(KEPT_AS_JULIA_EXTRA basis must cite a docs\/src\/\.\.\. file\)/],
+  ['a bare dot', '.', /\(KEPT_AS_JULIA_EXTRA basis must cite a docs\/src\/\.\.\. file\)/],
+  ['a path outside docs/src', 'see tools/true_parity_check.mjs', /must cite a docs\/src/],
+  ['a dot-dot path', 'see docs/src/../README.md', /must cite a docs\/src/],
+  ['a dot-leading segment', 'see docs/src/.hidden.md', /must cite a docs\/src/],
+  ['a docs/src path that does not exist', 'see docs/src/no-such-page.md', /\(KEPT_AS_JULIA_EXTRA basis cites docs\/src\/no-such-page\.md, which does not resolve at the ref\)/],
+  ['one existing and one missing path', 'docs/src/gllvmtmb-parity.md and docs/src/gone.md', /cites docs\/src\/gone\.md, which does not resolve/],
+  ['a directory, not a file', 'see docs/src/sub.md', /which does not resolve/],
+]) {
+  test(`C6: a KEPT_AS_JULIA_EXTRA basis with ${name} is unsigned_decision and fails`, () => {
+    const r = runTree(({ dir, ...rest }) => { mkdirSync(join(dir, 'docs/src/sub.md'), { recursive: true }); c6Items([kept({ basis })])({ dir, ...rest }); }, 'C6');
+    assert.equal(r.code, 0);
+    assert.match(r.stdout, /C6_NOT_MET$/m);
+    assert.match(r.stdout, /invalid_decision=none /);
+    assert.match(r.stdout, why);
+  });
+}
+test('C6: a KEPT_AS_JULIA_EXTRA basis citing existing docs/src files binds; so does an EXCLUDED_INTERNAL_HELPER basis that cites no file', () => {
+  for (const basis of ['docs/src/gllvmtmb-parity.md', 'see docs/src/gllvmtmb-parity.md, section extras.', 'x docs/src/gllvmtmb-parity.md#extras']) {
+    assert.match(runTree(c6Items([kept({ basis })]), 'C6').stdout, /C6_MET$/m, basis);
+  }
+  assert.match(runTree(c6Items([helper({ basis: 'internal; no docstring' })]), 'C6').stdout, /C6_MET$/m);
+});
+test('C6: the docs/src check applies to KEPT_AS_JULIA_EXTRA only, in git mode too (resolved with git cat-file at the ref)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'true-parity-c6git-'));
+  try {
+    cpSync(join(FIXTURES, 'base'), dir, { recursive: true });
+    writeFileSync(join(dir, L, 'reverse-gap.json'), JSON.stringify([kept(), kept({ source_id: 'julia-export/gone', basis: 'docs/src/gone.md' })]));
+    execFileSync('git', ['init', '-q'], { cwd: dir });
+    execFileSync('git', ['-c', 'user.email=t@t.invalid', '-c', 'user.name=t', 'add', '-A'], { cwd: dir });
+    execFileSync('git', ['-c', 'user.email=t@t.invalid', '-c', 'user.name=t', 'commit', '-q', '-m', 'fixture'], { cwd: dir });
+    const r = runGit(dir, 'C6');
+    assert.match(r.stdout, /C6_NOT_MET$/m);
+    assert.match(r.stdout, /unsigned_decision=julia-export\/gone\(KEPT_AS_JULIA_EXTRA basis cites docs\/src\/gone\.md, which does not resolve at the ref\)/);
+    assert.doesNotMatch(r.stdout, /julia-export\/doc\(/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 // --- the generated scoreboard is tied back to the case maps (review of #589, finding 5) ---

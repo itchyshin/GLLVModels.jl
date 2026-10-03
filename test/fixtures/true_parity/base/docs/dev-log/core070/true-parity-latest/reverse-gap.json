@@ -2,7 +2,7 @@
  {
   "source_id": "SourceCovariance",
   "decision": "KEPT_AS_JULIA_EXTRA",
-  "basis": "fixture: documented Julia extra",
+  "basis": "fixture: documented Julia extra, see docs/src/gllvmtmb-parity.md",
   "ruling": {
    "ref": "itchyshin/GLLVModels.jl#684 item 3",
    "signed_by": "Shinichi Nakagawa",
@@ -12,7 +12,7 @@
  {
   "source_id": "TwoPartZI",
   "decision": "KEPT_AS_JULIA_EXTRA",
-  "basis": "fixture: documented Julia extra",
+  "basis": "fixture: documented Julia extra, see docs/src/gllvmtmb-parity.md",
   "ruling": {
    "ref": "itchyshin/GLLVModels.jl#684 item 3",
    "signed_by": "Shinichi Nakagawa",
