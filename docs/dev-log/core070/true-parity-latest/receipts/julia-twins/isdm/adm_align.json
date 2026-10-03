@@ -10,7 +10,7 @@
   "origin_pr": "itchyshin/GLLVModels.jl#661",
   "generator": "tools/true_parity_julia_receipts.jl",
   "julia_version": "1.10.0",
-  "gllvmodels_commit": "3fcf206986f934686204a3f70b7fe50edc27771d",
+  "gllvmodels_commit": "896a0a2286c224fe9979d3cf7e7e2c6be27f9357",
   "source_fixtures": [
     {
       "path": "test/fixtures/isdm/r_values_admission_p1.toml",
@@ -28,7 +28,7 @@
   "source_tests": [
     {
       "path": "test/parity/isdm_admission_twins.jl",
-      "sha256": "d0dc13a27c63be78f07b1326ae47b343d01594c45ba1c37b1abc8a345b59dcda"
+      "sha256": "0fe992cc13fdb747ea5cdb251b12b299a90bafdedbec7fa6a1d5a1f6f2667181"
     },
     {
       "path": "test/fixtures/isdm/isdm_fixture_io.jl",
