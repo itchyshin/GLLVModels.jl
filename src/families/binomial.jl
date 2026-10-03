@@ -119,18 +119,6 @@ binomial_marginal_loglik_laplace(Y::AbstractMatrix, N::AbstractMatrix,
 # Fit driver (Binomial slice 4).
 # ---------------------------------------------------------------------------
 
-"""
-    BinomialFit
-
-Result of [`fit_binomial_gllvm`](@ref): intercepts `β` (length p), loadings `Λ`
-(p×K), the `link`, the maximised Laplace `loglik`, the optimiser `converged`
-flag, and `iterations`. Fits using `X_lv` additionally retain `alpha_lv`, the
-raw latent-axis coefficients for the predictor-informed score mean; use
-[`extract_lv_effects`](@ref) for the rotation-stable trait-scale product
-`Λ * alpha_lv'`. `loading_ridge` records the `loading_ridge` fit kwarg (`Inf`
-when the loading ridge was off); `loglik` is always the UNPENALISED Laplace
-marginal, evaluated at the (possibly ridge-penalised) optimum.
-"""
 # Post-fit Laplace saturation health (2026-08-28, the diagnosed cloglog
 # pathology). A SATURATED cell is one whose per-site conditional mode drives
 # the linear predictor to (or past) the link's μ-saturation thresholds
@@ -151,6 +139,18 @@ struct LaplaceSaturationHealth
     hessian_used::Symbol
 end
 
+"""
+    BinomialFit
+
+Result of [`fit_binomial_gllvm`](@ref): intercepts `β` (length p), loadings `Λ`
+(p×K), the `link`, the maximised Laplace `loglik`, the optimiser `converged`
+flag, and `iterations`. Fits using `X_lv` additionally retain `alpha_lv`, the
+raw latent-axis coefficients for the predictor-informed score mean; use
+[`extract_lv_effects`](@ref) for the rotation-stable trait-scale product
+`Λ * alpha_lv'`. `loading_ridge` records the `loading_ridge` fit kwarg (`Inf`
+when the loading ridge was off); `loglik` is always the UNPENALISED Laplace
+marginal, evaluated at the (possibly ridge-penalised) optimum.
+"""
 struct BinomialFit
     β::Vector{Float64}
     Λ::Matrix{Float64}

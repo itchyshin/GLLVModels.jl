@@ -364,4 +364,11 @@ function em_fit_phylo_squarem(y::AbstractMatrix, K_B::Integer,
                       blup_phy, blup_phi, fallback_used)
 end
 
+"""
+    fit_phylo_squarem(y, K_B, Σ_phy; kwargs...) -> EMPhyloFit
+
+Alias of [`em_fit_phylo_squarem`](@ref), spelled with the `fit_` prefix of the other
+fitters. Same arguments and the same [`EMPhyloFit`](@ref) result; see
+[`em_fit_phylo_squarem`](@ref) for the keyword arguments.
+"""
 const fit_phylo_squarem = em_fit_phylo_squarem
