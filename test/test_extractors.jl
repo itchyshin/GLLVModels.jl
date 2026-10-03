@@ -272,6 +272,23 @@ using GLLVModels, Test, Random, LinearAlgebra, Statistics
 
         sub = extract_cross_correlations(fit; level = :unit, traits_i = [1], traits_j = [2, 3])
         @test sub ≈ correlation_B(fit)[[1], [2, 3]] atol = 1e-12
+
+        # extract_proportions / extract_residual_split: structure and identities (the R-vs-Julia
+        # numbers are in test_variance_decomp_p1.jl)
+        pr = extract_proportions(fit)
+        @test unique(pr.component) == [:shared_unit, :unique_unit, :shared_unit_obs, :unique_unit_obs]
+        @test pr.trait == repeat(1:p, 4)
+        @test pr.variance[pr.component .== :shared_unit] ≈ diag(fit.Λ_B * fit.Λ_B') atol = 1e-12
+        @test pr.variance[pr.component .== :unique_unit_obs] ≈ fit.σ²_W atol = 1e-12
+        @test sum(reshape(pr.proportion, p, 4); dims = 2) ≈ ones(p, 1) atol = 1e-12
+        @test extract_proportions(fit; format = :wide).shared_unit ≈ pr.proportion[pr.component .== :shared_unit]
+        @test_throws ArgumentError extract_proportions(fit; format = :tall)
+        rs = extract_residual_split(fit)
+        @test rs.sigma2_d == zeros(p)
+        @test rs.sigma2_e ≈ fit.σ²_W atol = 1e-12
+        @test rs.sigma2_total ≈ rs.sigma2_e atol = 1e-12
+        @test occursin("extract_residual_split", string(Base.Docs.doc(Base.Docs.Binding(GLLVModels, :extract_residual_split))))
+        @test occursin("TwoLevelFit", string(Base.Docs.doc(Base.Docs.Binding(GLLVModels, :extract_residual_split))))
     end
 
     @testset "non-Gaussian extract_communality / extract_correlations forward" begin
