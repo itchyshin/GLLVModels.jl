@@ -132,11 +132,13 @@ method-of-moments `α₀`) and finite-difference gradient, with the same `log α
 to `[log(1e-3), log(1e3)]` used by [`fit_gamma_gllvm_va`](@ref) to avoid the
 catastrophic-cancellation runaway in `α log α − logΓ(α)`. The returned `DeltaGammaFit`'s
 `loglik` field holds the maximised ELBO (a lower bound on the true log-marginal).
+The ELBO is derived for the log link only: any other `link` throws `ArgumentError`.
 """
 function fit_delta_gamma_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
         link::Link = LogLink(),
         g_tol::Real = 1e-5, iterations::Integer = 500,
         maxiter::Integer = 100, tol::Real = 1e-9)
+    _va_require_canonical_link("fit_delta_gamma_gllvm_va", link, LogLink())
     p, n = size(Y)
     _check_twopart_support("fit_delta_gamma_gllvm_va", Y, _tp_positive_ok, "0 or a finite positive real")
     rr = rr_theta_len(p, K)

@@ -1,0 +1,180 @@
+{
+  "schema": "true-parity-julia-behaviour-receipt/v1",
+  "source_ids": [
+    "select-lv/print.gllvmTMB_select_lv"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "behaviour_observed_on_both_engines",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#684 item 2",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "78b9a1eec6aa684ba5e2652c8098a91096004361",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/c1_behaviour_p1/r_c1_behaviour.toml",
+      "sha256": "31b7e4d57e4e3cb128c959afcf072d65a6857c95f1ac90eddaaa31a55a1d5a0e"
+    },
+    {
+      "path": "test/fixtures/c1_behaviour_p1/r_select_lv_print.txt",
+      "sha256": "ea020902fce362d01b06b856ba5b00855fdefa29482a897993aa1dc738d9d7da"
+    },
+    {
+      "path": "test/fixtures/c1_behaviour_p1/helpers.jl",
+      "sha256": "f9ca518e4d9f25b338c25b4037d7716f4a9429367d38227c651bfb66d935612d"
+    },
+    {
+      "path": "test/fixtures/select_lv_p1.toml",
+      "sha256": "faeece8a902796677d987fffa23f0b5238d3ea298da70e78064c3eadcf529a93"
+    },
+    {
+      "path": "test/fixtures/select_lv_p1_data.csv",
+      "sha256": "cdba824f343e4c60282d071d4340440bafdc51e739062233d7a61a1090686027"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_c1_behaviour_p1.jl",
+      "sha256": "9f41ef192b07abe81c3262c4db651d5200b5cd9fe466fcfc46be41baa7177b66"
+    }
+  ],
+  "what_this_is_not": "This compares the eight printed column labels (d, npar, logLik, AIC, BIC, AICc, conv, pdHess, in order) and the marker convention only. It does not claim identical title text (R: 'gllvmTMB latent-rank selection (criterion = bic, selected d = 2)'; Julia: 'GLLVModels latent-dimension selection (criterion = bic, best K = 2)'), identical numbers, or the same notes after the table. The numbers are recorded for reference; the numeric select_lv twin owns them. Known differences recorded, not compared: R excludes a rank that did not converge, or whose Hessian is confirmed non-positive-definite, from the selection and still prints its row (R/select-lv.R:297-299, :324), while Julia keeps such a rank selectable (it drops a rank only when the fit failed, ran away, or fell below a smaller rank's log-likelihood) and marks the argmin of the criterion over the ranks it kept (src/model_selection.jl, select_lv, ibest = argmin(crit)), so the printed marker would differ on a sweep that contains such a rank; this sweep has none. Julia fills pdHess from confint's Wald flag, and only when select_lv is called with pd_hessian = true (src/model_selection.jl, _lv_pd_hessian); R reads fit$sd_report$pdHess from TMB's sdreport() (R/select-lv.R:259), which is NA when sdreport() was skipped. R's 'Failed fits:' section and Julia's 'not used' and pdHess-hint lines are not compared.",
+  "behaviour": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-C1-PRINT-SELECT-LV-FIELDS",
+        "source_id": "select-lv/print.gllvmTMB_select_lv",
+        "kind": "printed_fields",
+        "r_observed": [
+          "d",
+          "npar",
+          "logLik",
+          "AIC",
+          "BIC",
+          "AICc",
+          "conv",
+          "pdHess"
+        ],
+        "julia_observed": [
+          "d",
+          "npar",
+          "logLik",
+          "AIC",
+          "BIC",
+          "AICc",
+          "conv",
+          "pdHess"
+        ],
+        "r_source": "test/fixtures/c1_behaviour_p1/r_select_lv_print.txt, column header line (print.gllvmTMB_select_lv at P1, R/select-lv.R:349-369, on select_lv(value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE), data, unit = \"unit\", trait = \"trait\", d_max = 3, criterion = \"bic\"), on the data of test/fixtures/select_lv_p1_data.csv)",
+        "julia_source": "show(io, MIME\"text/plain\"(), select_lv(Y; Kmax = 3, criterion = :bic, pd_hessian = true)) on the same data (the show method is src/model_selection.jl, Base.show(::IO, ::MIME\"text/plain\", ::LVSelection)), as produced by c1b_julia_select_lv_print in test/fixtures/c1_behaviour_p1/helpers.jl, column header line",
+        "r_title_line": "gllvmTMB latent-rank selection (criterion = bic, selected d = 2)",
+        "julia_title_line": "GLLVModels latent-dimension selection (criterion = bic, best K = 2)",
+        "r_header_line": "   d npar    logLik      AIC      BIC     AICc conv pdHess",
+        "julia_header_line": "   d npar    logLik      AIC      BIC     AICc conv pdHess",
+        "cell_columns": [
+          "d",
+          "npar",
+          "logLik",
+          "AIC",
+          "BIC",
+          "AICc",
+          "conv",
+          "pdHess"
+        ],
+        "r_cells": [
+          [
+            "1",
+            "13",
+            "-1183.645",
+            "2393.289",
+            "2455.720",
+            "2393.700",
+            "TRUE",
+            "TRUE"
+          ],
+          [
+            "2",
+            "18",
+            "-1032.949",
+            "2101.898",
+            "2188.341",
+            "2102.674",
+            "TRUE",
+            "TRUE"
+          ],
+          [
+            "3",
+            "22",
+            "-1030.958",
+            "2105.915",
+            "2211.568",
+            "2107.069",
+            "TRUE",
+            "TRUE"
+          ]
+        ],
+        "julia_cells": [
+          [
+            "1",
+            "13",
+            "-1183.645",
+            "2393.289",
+            "2455.720",
+            "2393.700",
+            "TRUE",
+            "TRUE"
+          ],
+          [
+            "2",
+            "18",
+            "-1032.949",
+            "2101.898",
+            "2188.341",
+            "2102.674",
+            "TRUE",
+            "TRUE"
+          ],
+          [
+            "3",
+            "22",
+            "-1030.958",
+            "2105.915",
+            "2211.568",
+            "2107.069",
+            "TRUE",
+            "TRUE"
+          ]
+        ],
+        "note": "The labels are the whitespace-separated tokens of the printed column header line, in order; the first column (the marker) has an empty label and is the next case. The title lines are recorded here and are not compared: both name the criterion, and the rest of the wording differs by engine. The cells beneath the labels are the printed text of each rank, recorded for reference and not compared; the numeric select_lv twin (select-lv/select_lv) owns log-likelihood, AIC and BIC."
+      },
+      {
+        "case_id": "CORE070-C1-PRINT-SELECT-LV-MARKER",
+        "source_id": "select-lv/print.gllvmTMB_select_lv",
+        "kind": "printed_fields",
+        "r_observed": [
+          "marks exactly one row, with *",
+          "the marked row has the smallest value of the criterion column"
+        ],
+        "julia_observed": [
+          "marks exactly one row, with *",
+          "the marked row has the smallest value of the criterion column"
+        ],
+        "r_source": "test/fixtures/c1_behaviour_p1/r_select_lv_print.txt, the marker column (position 2 of each row) of print.gllvmTMB_select_lv at P1 (R/select-lv.R:349-369) on select_lv(value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE), data, unit = \"unit\", trait = \"trait\", d_max = 3, criterion = \"bic\"), on the data of test/fixtures/select_lv_p1_data.csv",
+        "julia_source": "show(io, MIME\"text/plain\"(), select_lv(Y; Kmax = 3, criterion = :bic, pd_hessian = true)) on the same data (the show method is src/model_selection.jl, Base.show(::IO, ::MIME\"text/plain\", ::LVSelection)), as produced by c1b_julia_select_lv_print in test/fixtures/c1_behaviour_p1/helpers.jl, the marker column",
+        "r_marker_cells": [
+          " ",
+          "*",
+          " "
+        ],
+        "julia_marker_cells": [
+          " ",
+          "*",
+          " "
+        ],
+        "note": "Two statements derived by c1b_select_lv_marker_labels from the printed table alone: how many rows carry a marker and with what character, and whether the marked row has the smallest value in the column of the criterion the title names. On this sweep every rank converged with a positive-definite Hessian, so the two engines' selection rules cannot differ; see what_this_is_not."
+      }
+    ]
+  }
+}

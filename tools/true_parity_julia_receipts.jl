@@ -1198,7 +1198,7 @@ end
 # 7. select-lv/select_lv   test/test_select_lv_p1_twin.jl
 #    Gaussian rank sweep K = 1:3 vs R's select_lv() at P1 (criterion = bic, d_max = 3). The test also
 #    asserts npar and the selected rank EXACTLY (integers, no tolerance literal), so those have no
-#    numeric case here. print.gllvmTMB_select_lv has nothing numeric to compare and is not bound.
+#    numeric case here. print.gllvmTMB_select_lv has nothing numeric to compare; section 13 binds it behaviourally.
 # =============================================================================================
 function _load_select_lv_csv(path::AbstractString, trait_names::Vector{String}, n_unit::Integer)
     Y = zeros(Float64, length(trait_names), n_unit)
@@ -1772,9 +1772,10 @@ function receipts_data_twins()
 end
 
 # =============================================================================================
-# 13. c1-behaviour: behavioural receipts for three C1 rows (itchyshin/GLLVModels.jl#684 item 2)
+# 13. c1-behaviour: behavioural receipts for the four C1 rows (itchyshin/GLLVModels.jl#684 item 2)
 #     test/test_c1_behaviour_p1.jl; raw R side under test/fixtures/c1_behaviour_p1/
 #       model-comparison/print.anova.gllvmTMB_multi   printed fields
+#       select-lv/print.gllvmTMB_select_lv            printed fields (column labels, marker)
 #       latent-scores/extract_latent_scores.default   refusal on an object with no method
 #       model-comparison/update.gllvmTMB_multi        replay, data override, two refusals
 # =============================================================================================
@@ -1883,10 +1884,47 @@ function receipts_c1_behaviour()
     ]
     update_not = "This compares four behaviours of update() on one temporal panel and one ordinary fit. It does not claim identical condition types or messages. R's evaluate = FALSE (returns the rebuilt call), R's formula override through the saved call, R's 'does not retain a public call' refusal for a temporal fit with no call, and R's variational (gllvmTMB_va) replay have no Julia counterpart here and are not compared. Julia's update also takes keyword overrides (temporal, trait, structure, unit, unit_obs, g_tol, iterations) that R reaches through the call; only data is compared. The temporal numeric fits themselves are the temporal twins' claim."
 
+    # print.gllvmTMB_select_lv: the column labels and the marker, read from the raw printed text.
+    sl = rec["select_lv"]
+    sl_fixtures = ["$C1B_FIXTURE_DIR/r_c1_behaviour.toml", "$C1B_FIXTURE_DIR/r_select_lv_print.txt",
+                   "$C1B_FIXTURE_DIR/helpers.jl", "test/fixtures/select_lv_p1.toml", "test/fixtures/select_lv_p1_data.csv"]
+    sl_fx = TOML.parsefile(joinpath(ROOT, "test/fixtures/select_lv_p1.toml"))
+    sl_fx["data_sha256"] == sl["data_sha256"] || fail("select_lv print fixture was recorded on different data from test/fixtures/select_lv_p1.toml")
+    r_sl_txt = c1b_r_select_lv_print(rec)
+    j_sl_txt, _ = c1b_julia_select_lv_print()
+    r_st, j_st = c1b_select_lv_table(r_sl_txt), c1b_select_lv_table(j_sl_txt)
+    sel_sid = "select-lv/print.gllvmTMB_select_lv"
+    findline("src/model_selection.jl", "function Base.show(io::IO, ::MIME\"text/plain\", sel::LVSelection)")   # the cited method exists
+    j_show = "src/model_selection.jl, Base.show(::IO, ::MIME\"text/plain\", ::LVSelection)"
+    r_sel_source = "select_lv(value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE), data, unit = \"unit\", trait = \"trait\", d_max = 3, criterion = \"bic\"), on the data of test/fixtures/select_lv_p1_data.csv"
+    j_sel_source = "show(io, MIME\"text/plain\"(), select_lv(Y; Kmax = 3, criterion = :bic, pd_hessian = true)) on the same data (the show method is $j_show), as produced by c1b_julia_select_lv_print in $C1B_FIXTURE_DIR/helpers.jl"
+    select_cases = [
+        Pair{String,Any}["case_id" => "CORE070-C1-PRINT-SELECT-LV-FIELDS", "source_id" => sel_sid, "kind" => "printed_fields",
+            "r_observed" => r_st.labels, "julia_observed" => j_st.labels,
+            "r_source" => "$C1B_FIXTURE_DIR/r_select_lv_print.txt, column header line (print.gllvmTMB_select_lv at P1, R/select-lv.R:349-369, on $r_sel_source)",
+            "julia_source" => "$j_sel_source, column header line",
+            "r_title_line" => r_st.title, "julia_title_line" => j_st.title,
+            "r_header_line" => r_st.header, "julia_header_line" => j_st.header,
+            "cell_columns" => r_st.labels, "r_cells" => r_st.rows, "julia_cells" => j_st.rows,
+            "note" => "The labels are the whitespace-separated tokens of the printed column header line, in order; the first column (the marker) has an empty label and is the next case. The title lines are recorded here and are not compared: both name the criterion, and the rest of the wording differs by engine. The cells beneath the labels are the printed text of each rank, recorded for reference and not compared; the numeric select_lv twin (select-lv/select_lv) owns log-likelihood, AIC and BIC."],
+        Pair{String,Any}["case_id" => "CORE070-C1-PRINT-SELECT-LV-MARKER", "source_id" => sel_sid, "kind" => "printed_fields",
+            "r_observed" => c1b_select_lv_marker_labels(r_st), "julia_observed" => c1b_select_lv_marker_labels(j_st),
+            "r_source" => "$C1B_FIXTURE_DIR/r_select_lv_print.txt, the marker column (position 2 of each row) of print.gllvmTMB_select_lv at P1 (R/select-lv.R:349-369) on $r_sel_source",
+            "julia_source" => "$j_sel_source, the marker column",
+            "r_marker_cells" => [string(c) for c in r_st.markers], "julia_marker_cells" => [string(c) for c in j_st.markers],
+            "note" => "Two statements derived by c1b_select_lv_marker_labels from the printed table alone: how many rows carry a marker and with what character, and whether the marked row has the smallest value in the column of the criterion the title names. On this sweep every rank converged with a positive-definite Hessian, so the two engines' selection rules cannot differ; see what_this_is_not."],
+    ]
+    findline("src/model_selection.jl", "function _lv_pd_hessian(fit, Y, kw)")   # the cited functions exist
+    findline("src/model_selection.jl", "ibest = argmin(crit)")
+    j_pd = "src/model_selection.jl, _lv_pd_hessian"
+    j_best = "src/model_selection.jl, select_lv, ibest = argmin(crit)"
+    select_not = "This compares the eight printed column labels (d, npar, logLik, AIC, BIC, AICc, conv, pdHess, in order) and the marker convention only. It does not claim identical title text (R: 'gllvmTMB latent-rank selection (criterion = bic, selected d = 2)'; Julia: 'GLLVModels latent-dimension selection (criterion = bic, best K = 2)'), identical numbers, or the same notes after the table. The numbers are recorded for reference; the numeric select_lv twin owns them. Known differences recorded, not compared: R excludes a rank that did not converge, or whose Hessian is confirmed non-positive-definite, from the selection and still prints its row (R/select-lv.R:297-299, :324), while Julia keeps such a rank selectable (it drops a rank only when the fit failed, ran away, or fell below a smaller rank's log-likelihood) and marks the argmin of the criterion over the ranks it kept ($j_best), so the printed marker would differ on a sweep that contains such a rank; this sweep has none. Julia fills pdHess from confint's Wald flag, and only when select_lv is called with pd_hessian = true ($j_pd); R reads fit\$sd_report\$pdHess from TMB's sdreport() (R/select-lv.R:259), which is NA when sdreport() was skipped. R's 'Failed fits:' section and Julia's 'not used' and pdHess-hint lines are not compared."
+
     return [
         "model-comparison/update.json" => BehaviourReceipt([update_sid], C1B_ORIGIN, fixtures, [tp], update_not, update_cases),
         "model-comparison/print.anova.json" => BehaviourReceipt([anova_sid], C1B_ORIGIN, fixtures, [tp], anova_not, anova_cases),
         "latent-scores/extract_latent_scores.default.json" => BehaviourReceipt([refusal_sid], C1B_ORIGIN, fixtures, [tp], refusal_not, [refusal_case]),
+        "select-lv/print.select_lv.json" => BehaviourReceipt([sel_sid], C1B_ORIGIN, sl_fixtures, [tp], select_not, select_cases),
     ]
 end
 

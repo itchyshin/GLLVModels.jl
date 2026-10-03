@@ -395,10 +395,19 @@
    "classification": "required_core",
    "reason": "Printer for select_lv's rank-selection output. Same auto-d-lane ownership and Shinichi-signs fence as select_lv (D-295 Packet 1 row 6).",
    "arc": "auto-d lane (#518)",
-   "executable_case_ids": [],
-   "evidence": {},
-   "measured_against": null,
-   "disposition": null
+   "executable_case_ids": [
+    "CORE070-C1-PRINT-SELECT-LV-FIELDS",
+    "CORE070-C1-PRINT-SELECT-LV-MARKER"
+   ],
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/select-lv/print.select_lv.json"
+    ],
+    "tier": "behavioural (itchyshin/GLLVModels.jl#684 item 2, printed fields): print.gllvmTMB_select_lv at P1 and the Julia show method for the select_lv result were each run on the P1 select_lv fixture data (Gaussian rank sweep d = K = 1:3, criterion bic; Julia with pd_hessian = true so pdHess is filled). The eight printed column labels (d, npar, logLik, AIC, BIC, AICc, conv, pdHess, in order) and the marker convention (one row marked with *, the row with the smallest value of the criterion column) are identical, read from R's raw printed text (test/fixtures/c1_behaviour_p1/r_select_lv_print.txt) and from the fresh Julia output by tools/true_parity_julia_receipts.jl (test/test_c1_behaviour_p1.jl). The title line (R: gllvmTMB latent-rank selection, selected d; Julia: GLLVModels latent-dimension selection, best K) and the numbers are recorded, not compared; the numbers belong to the numeric select_lv twin. Recorded, not compared: R drops a rank that did not converge or has a confirmed non-positive-definite Hessian from the selection and Julia keeps it selectable (this sweep has no such rank), and Julia computes pdHess from confint's Wald flag, not TMB's sdreport()"
+   },
+   "measured_against": "P1",
+   "disposition": null,
+   "evidence_tier": "behavioural"
   },
   {
    "source_id": "zi/zi_poisson",
