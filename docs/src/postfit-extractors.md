@@ -87,7 +87,7 @@ extract_phylo_signal
 `extract_residual_split` exists only for the Gaussian two-level fit
 (`TwoLevelFit`), where σ²_d is zero; the non-Gaussian σ²_d values and the
 `GllvmFit` method are not implemented. `extract_coevolution_modules`'s
-companion accessor is not implemented either —
+companion accessor is not implemented either;
 see [Post-fit tables and prediction](postfit-tables.md) for
 `extract_coevolution_modules` itself, and
 [Diagnostics and model comparison](diagnostics.md) for `getREsd`'s replacement

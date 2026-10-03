@@ -781,7 +781,7 @@ end
 # ---------------------------------------------------------------------------
 # Still blocked (no stub — see docs/dev-log/core070/extractors-slice-notes.md
 # for the full accounting):
-#   * extract_residual_split for a GllvmFit and for the non-Gaussian families —
+#   * extract_residual_split for a GllvmFit and for the non-Gaussian families:
 #     needs the per-family link-residual bank wired to an explicit OLRE fit tag;
 #     only the Gaussian TwoLevelFit method exists (see its docstring).
 #   * extract_coevolution_modules — needs a module/eigen-decomposition of Γ

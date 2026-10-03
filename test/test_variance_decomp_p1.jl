@@ -20,8 +20,9 @@
 #          four components: variance and proportion, in R's row order) and extract_residual_split()
 #          (sigma2_d, sigma2_e, sigma2_total) against the TwoLevelFit methods.
 #
-# Disclosed: the R fits are made on the in-memory data (as for the namespace twins), which are
-# byte-identical to the tracked CSVs (the generator checks the sha256). R's two-level fit on the
+# Disclosed: the R fits are made on the in-memory data (as for the namespace twins). Written
+# with write.csv they are byte-identical to the tracked CSVs (the generator checks the sha256),
+# so the doubles Julia reads from the CSV agree with R's to about 5e-15. R's two-level fit on the
 # CSV-read data instead stops with nlminb code 1 ("false convergence (8)", gradient ~2e-3) at the
 # same log-likelihood; the recorded fit is the in-memory one, which converged with code 0.
 #

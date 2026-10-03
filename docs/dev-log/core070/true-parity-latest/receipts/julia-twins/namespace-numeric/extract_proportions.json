@@ -28,7 +28,7 @@
   "source_tests": [
     {
       "path": "test/test_variance_decomp_p1.jl",
-      "sha256": "5c1ba7bd8d7e23042ccd20b12446ebb14ccf7f20406391a9919afba3835acaa6"
+      "sha256": "52e5b1e11f9a422bb56159b6f98c2f74400dbd4c6d375a75b38794e5ac6eca1f"
     }
   ],
   "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_variance_decomp_receipt.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
@@ -39,7 +39,7 @@
         "case_id": "P1-JULIA-PROPORTIONS-ONE-TIER-SHARED-UNIT",
         "quantity": "extract_proportions(fit), shared_unit proportion of a latent + unique fit at one tier (6 values)",
         "r_source": "test/fixtures/variance_decomp_p1.toml [unique.shared_unit_proportion]",
-        "julia_source": "GLLVModels.extract_proportions(fit), as called at test/test_variance_decomp_p1.jl:84; fit as at test/test_variance_decomp_p1.jl:78",
+        "julia_source": "GLLVModels.extract_proportions(fit), as called at test/test_variance_decomp_p1.jl:85; fit as at test/test_variance_decomp_p1.jl:79",
         "r_value": [
           0.8156385988158508,
           0.7213129149667079,
@@ -58,7 +58,7 @@
         ],
         "abs_diff": 2.5452036712669823e-06,
         "tolerance": 2e-05,
-        "tolerance_source": "test/test_variance_decomp_p1.jl:84",
+        "tolerance_source": "test/test_variance_decomp_p1.jl:85",
         "tolerance_source_line": "@test isapprox(extract_proportions(fit), r_sh; atol = 2e-5, rtol = 0)   # shared_unit proportion (observed 2.5e-6)",
         "note": "One-tier Gaussian rank-2 fit with a unit-level diagonal, p = 6, 200 units, one observation per cell (sha256 checked); R: latent(d = 2) + unique at unit, converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). R's shared_unit proportion is diag(L L') / (diag(L L') + Psi); the Julia :unit denominator on a has_diag fit with K_W == 0 is the identified total sigma_y_site(fit) (#701), which is the same number because R's Psi absorbs the whole residual. The six R values lie strictly inside (0, 1), between 0.66 and 0.82: not one constant. Replaces the postfit batch case CORE070-ESTIMAND-REBIND-EXTRACT-PROPORTIONS, whose unique = FALSE fixture returned 1 for every trait."
       },
@@ -66,7 +66,7 @@
         "case_id": "P1-JULIA-PROPORTIONS-TWO-LEVEL-PROPORTION",
         "quantity": "extract_proportions(fit)$proportion, all four components of a two-level fit (long format, 20 values)",
         "r_source": "test/fixtures/variance_decomp_p1.toml [two.proportion]",
-        "julia_source": "GLLVModels.extract_proportions(fit).proportion, as called at test/test_variance_decomp_p1.jl:105; fit as at test/test_variance_decomp_p1.jl:93",
+        "julia_source": "GLLVModels.extract_proportions(fit).proportion, as called at test/test_variance_decomp_p1.jl:106; fit as at test/test_variance_decomp_p1.jl:94",
         "r_value": [
           0.2910783582479631,
           0.20362710329801875,
@@ -113,7 +113,7 @@
         ],
         "abs_diff": 2.4360289892166875e-05,
         "tolerance": 0.0002,
-        "tolerance_source": "test/test_variance_decomp_p1.jl:105",
+        "tolerance_source": "test/test_variance_decomp_p1.jl:106",
         "tolerance_source_line": "@test isapprox(pr.proportion, r_prop; atol = 2e-4, rtol = 0)   # proportion, all four components (observed 2.4e-5)",
         "note": "Two-level Gaussian fit, p = 5, 120 units x 4 observations (sha256 checked); R: latent(d = 1) + unique at unit and at unit_obs, converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). R's extract_proportions() long frame has four components (shared_unit, unique_unit, shared_unit_obs, unique_unit_obs) x 5 traits = 20 rows; the Julia TwoLevelFit method returns the same rows in the same order (asserted in the test and again in the receipt generator). The R proportions are 20 distinct non-constant values between 0.02 and 0.45. Limits: Gaussian only, so R's link_residual component (zero for a Gaussian fit) is absent in both."
       },
@@ -121,7 +121,7 @@
         "case_id": "P1-JULIA-PROPORTIONS-TWO-LEVEL-VARIANCE",
         "quantity": "extract_proportions(fit)$variance, all four components of a two-level fit (long format, 20 values)",
         "r_source": "test/fixtures/variance_decomp_p1.toml [two.variance]",
-        "julia_source": "GLLVModels.extract_proportions(fit).variance, as called at test/test_variance_decomp_p1.jl:106; fit as at test/test_variance_decomp_p1.jl:93",
+        "julia_source": "GLLVModels.extract_proportions(fit).variance, as called at test/test_variance_decomp_p1.jl:107; fit as at test/test_variance_decomp_p1.jl:94",
         "r_value": [
           0.5730923451262472,
           0.2762269063571686,
@@ -168,7 +168,7 @@
         ],
         "abs_diff": 4.815831686627581e-05,
         "tolerance": 0.0003,
-        "tolerance_source": "test/test_variance_decomp_p1.jl:106",
+        "tolerance_source": "test/test_variance_decomp_p1.jl:107",
         "tolerance_source_line": "@test isapprox(pr.variance, r_var; atol = 3e-4, rtol = 0)      # variance, all four components (observed 4.8e-5)",
         "note": "Two-level Gaussian fit, p = 5, 120 units x 4 observations (sha256 checked); R: latent(d = 1) + unique at unit and at unit_obs, converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). R's extract_proportions() long frame has four components (shared_unit, unique_unit, shared_unit_obs, unique_unit_obs) x 5 traits = 20 rows; the Julia TwoLevelFit method returns the same rows in the same order (asserted in the test and again in the receipt generator). The R proportions are 20 distinct non-constant values between 0.02 and 0.45. Limits: Gaussian only, so R's link_residual component (zero for a Gaussian fit) is absent in both."
       }
