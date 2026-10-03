@@ -32,14 +32,21 @@ iterations. Standardising responses to a common scale helps the Gaussian path.
 
 ## Fewer sites than species (`n < p`)
 
-The closed-form Gaussian fitter `fit_gaussian_gllvm` requires `n_sites ≥ p` and
-throws an `ArgumentError` below that. Every route built on it inherits the
-requirement: `fit_gllvm(Y; family = Normal(), K)` (also through `@formula` and
-when `K` is left for `select_lv` to choose), the masked / offset / `aghq` Gaussian
-route, `family = Lognormal()` (a Gaussian fit to `log(Y)`), and the R bridge's
-`"gaussian"` and `"lognormal"` families. The Laplace-fitted families (Poisson,
-binomial, negative binomial and the others) have no such condition and fit with
-`n_sites < p`. Treat such fits as weakly identified: check
+The closed-form Gaussian fitter `fit_gaussian_gllvm` does not require
+`n_sites ≥ p`. It requires the number of latent axes `K` (plus `K_W`) to be
+below the rank of the data it sees, unless that rank is already `p`; otherwise
+the Gaussian likelihood is unbounded and the fit throws an `ArgumentError` that
+names the rank and `K`. When `X` is supplied the data are first residualised on
+`X`, so per-trait intercepts centre them. With `n_sites < p` the rank is at
+most `n_sites`, so a small `K` fits and `K ≥ n_sites` is refused; rank-deficient
+data with `n_sites ≥ p` (for example a trait that is a sum of two others) are
+refused for `K` at or above the rank. Every route built on the fitter applies
+the same rule: `fit_gllvm(Y; family = Normal(), K)` (also through `@formula`
+and `select_lv`), the masked / offset / `aghq` Gaussian route,
+`family = Lognormal()` (a Gaussian fit to the centred `log(Y)`), and the R
+bridge's `"gaussian"` and `"lognormal"` families. The Laplace-fitted families
+(Poisson, binomial, negative binomial and the others) have no such condition
+and fit with `n_sites < p`. Treat such fits as weakly identified: check
 `converged`, expect binomial fits to reach the Laplace saturation region sooner
 (the fit then warns and reports it through `saturation`), and prefer a small `K`.
 
