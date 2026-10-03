@@ -64,6 +64,7 @@ stale silently.
 Usage:
   python3 tools/core070_inference_p1_receipts.py --runs DIR --runtimes JSON [--allow-dirty]
   python3 tools/core070_inference_p1_receipts.py --check
+  python3 tools/core070_inference_p1_receipts.py --apply-behaviour   # after tools/core070_behaviour_receipts.py --write
 where DIR holds inference-p1/{julia,r-crosscheck,run-commit.json},
 inference-remainder-p1/ (with run-commit.json), routes-p0.tsv,
 routes-p1-unadapted.tsv, routes-p1-adapted.tsv and carry-scan-p1.json.
@@ -82,6 +83,7 @@ import tomllib
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 from core070_postfit_p1_receipts import mark_degenerate  # noqa: E402  (PR #569's degenerate-comparison rule)
+import core070_behaviour_receipts as behaviour  # noqa: E402  (itchyshin/GLLVModels.jl#684 item 2)
 
 OUT = ROOT / "docs/dev-log/core070/true-parity-latest"
 REC = OUT / "receipts/inference"
@@ -134,6 +136,21 @@ ANOMALY_NOTE = (
     "the bootstraps agree. Root cause found and fixed in draft PR #576: a Woodbury quadratic form went negative "
     "at extreme variance ratios, so bootstrap refits reported converged with an impossible log-likelihood. This "
     "receipt predates that fix (PR #569's run); re-measure after #576 lands.")
+
+
+NOTE = ("Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with "
+        "PARITY_CASEMAP pointing at this file. Classification and disposition are carried from "
+        "docs/dev-log/core070/required-source-case-map.json unchanged (all 63 are compatibility_adapter); "
+        "nothing is signed by an agent. Only rows whose every executable case id carries a numeric R-vs-Julia "
+        "comparison block within tolerance, from a batch whose verifier passed, with no degenerate "
+        "comparison, cite evidence.receipt as numeric rows. Routing (wave2) and error-class (wave4) rows carry no "
+        "number. A routing or error-class row binds as evidence_tier behavioural (itchyshin/GLLVModels.jl#684 item 2) "
+        "when its receipt's behaviour block shows both engines giving the same route, refusal or error class through "
+        "behaviour-equivalence.json (tools/core070_behaviour_receipts.py); it then cites evidence.receipt. A row whose "
+        "raw record shows R and Julia doing different things has no behaviour entry and stays under "
+        "evidence.non_binding_receipts, with the reason in the receipt's behaviour_not_bound. CI-ROUTE-008 and "
+        "CI-ROUTE-010 are one R-vs-Julia comparison counted on two surface rows (see their notes); the count is left "
+        "to the maintainer.")
 
 
 def sha(path):
@@ -292,7 +309,7 @@ def wave5_cases():
 # ---------------------------------------------------------------------------
 COUNT_KEYS = ("numeric_pass", "numeric_fail", "numeric_held_batch_verifier_failed", "numeric_non_discriminating",
               "partial_non_numeric_case", "routing_control_flow", "reject_error_class",
-              "needs_surface_not_executed", "retired_at_p1_not_measured", "not_measured")
+              "needs_surface_not_executed", "retired_at_p1_not_measured", "not_measured", "behavioural")
 
 
 def receipt_info(path, rec):
@@ -366,6 +383,7 @@ def build_rows(in_scope, receipts):
             counts[tier] += 1
         if notes:
             row["note"] = " ".join(dict.fromkeys(notes))
+        behaviour.overlay_row(row, counts)  # a row whose receipt carries a matching behaviour block
         out_rows.append(row)
     return out_rows, counts
 
@@ -375,7 +393,7 @@ def build_rows(in_scope, receipts):
 # ---------------------------------------------------------------------------
 PROVENANCE_KEYS = {"pin", "reference_commit", "p0_reference_commit", "oracle_build_receipt", "oracle_source_receipt",
                    "glvmodels_commit", "glvmodels_worktree_dirty", "glvmodels_src_tree", "host", "schema", "case_id",
-                   "verdict", "evidence_kind", "comparison"}
+                   "verdict", "evidence_kind", "comparison", "behaviour", "behaviour_not_bound"}
 
 
 def check():
@@ -407,6 +425,7 @@ def check():
             problems.append(f"{cid}: receipt body differs from the re-derivation")
         if (rec.get("comparison") or {}).get("cases") != comparison:
             problems.append(f"{cid}: comparison block differs from the re-derivation")
+    problems += behaviour.check_problems()
     cm = load(CASEMAP)
     try:
         receipts = {cid: receipt_info(path, rec) for cid, (path, rec) in tracked.items()}
@@ -425,6 +444,18 @@ def check():
     print("CORE070_INFERENCE_P1_RECEIPTS_CURRENT", len(tracked), "case receipts,", len(rows), "rows")
 
 
+def apply_behaviour():
+    """Re-derive rows, counts and note of case-map-inference.json from the tracked receipts, so rows whose receipts
+    carry a matching behaviour block read as evidence_tier behavioural. Nothing else in the file changes."""
+    tracked = {p.stem: (str(p.relative_to(ROOT)), load(p)) for p in sorted((REC / "cases").glob("*.json"))}
+    receipts = {cid: receipt_info(path, rec) for cid, (path, rec) in tracked.items()}
+    cm = load(CASEMAP)
+    rows, counts = build_rows([r["source_id"] for r in cm["rows"]], receipts)
+    cm["rows"], cm["counts"], cm["note"] = rows, counts, NOTE
+    write_json(CASEMAP, cm)
+    print(json.dumps(counts))
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--runs", type=Path)
@@ -433,9 +464,14 @@ def main():
                     help="write receipts from a checkout with modified tracked files (recorded, not hidden)")
     ap.add_argument("--check", action="store_true",
                     help="verify the tracked receipts against the files they read; write nothing")
+    ap.add_argument("--apply-behaviour", action="store_true",
+                    help="re-derive the case-map rows from the tracked receipts and their behaviour blocks")
     args = ap.parse_args()
     if args.check:
         check()
+        return
+    if args.apply_behaviour:
+        apply_behaviour()
         return
     if args.runs is None or args.runtimes is None:
         ap.error("--runs and --runtimes are required unless --check")
@@ -572,6 +608,8 @@ def main():
                  "message is identical to the P0 probe on P0 source."),
     })
 
+    behaviour.write()  # behaviour blocks and behaviour-equivalence.json, derived from the raw files copied above
+
     # ---- case-map rows ----
     carry = load(runs / "carry-scan-p1.json")
     in_scope = [r["source_id"] for r in carry["rows"]
@@ -583,14 +621,7 @@ def main():
                   "inference-batch, 14 wave4 inference-remainder, 4 wave5 surface-conversion). The one "
                   "NOT_BOUND_AT_P0 row (CI-ROUTE-005, BLOCKED_NEEDS_JULIA_SURFACE) and the 34 out-of-scope "
                   "rejected/excluded rows are not included."),
-        "note": ("Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with "
-                 "PARITY_CASEMAP pointing at this file. Classification and disposition are carried from "
-                 "docs/dev-log/core070/required-source-case-map.json unchanged (all 63 are compatibility_adapter); "
-                 "nothing is signed by an agent. Only rows whose every executable case id carries a numeric R-vs-Julia "
-                 "comparison block within tolerance, from a batch whose verifier passed, with no degenerate "
-                 "comparison, cite evidence.receipt. Routing (wave2) and error-class (wave4) rows carry no number and "
-                 "cite evidence.non_binding_receipts. CI-ROUTE-008 and CI-ROUTE-010 are one R-vs-Julia comparison "
-                 "counted on two surface rows (see their notes); the count is left to the maintainer."),
+        "note": NOTE,
         "generator": "tools/core070_inference_p1_receipts.py",
         "glvmodels_commit": head,
         "batch_verifiers": verifiers,
