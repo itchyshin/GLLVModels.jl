@@ -2,25 +2,24 @@
 
 ## Development
 
-- **Documented: `σ_phy` from `fit_gaussian_gllvm` is signed by design, and it is not
-  gllvmTMB's `phylo_unique` SD (#136).** Maintainer decision: keep the Julia behaviour and
-  document it. With `has_phy_unique = true`, `σ_phy[t]` scales one field shared over the
-  rows of `y`, so `B[t, t'] = σ_phy[t] * σ_phy[t'] * Σ_phy[t, t']`, and it is estimated on
-  a signed identity scale: only flipping every entry together is unidentified, so
-  `abs.(σ_phy)` gives the magnitudes, and the relative signs matter because they enter
-  `B[t, t']`. gllvmTMB's `phylo_unique(species)` is a different model: each trait gets its own
-  independent phylogenetic field over species, with a positive log-link SD and no
-  cross-trait covariance. So the two sets of estimates are not expected to agree, even in
-  absolute value. The Julia route with gllvmTMB's structure and positive log scale is
-  `fit_precision_multivariate(...; mode = :explicitunique)`. The notes also say that the
-  sign-flip search and the "largest-magnitude entry positive" convention apply only to
-  fits without `X_lv`; with `X_lv` the largest entry can come out negative and the fit can
-  stop in a worse sign pattern (a code gap, documented here and not changed). Added to the
-  docstrings of `fit_gaussian_gllvm`, `gaussian_marginal_loglik`, `confint` (Wald),
-  `profile_ci` and `profile_phylo_signal`, and to the "Further differences from R" list
-  on the gllvmTMB parity page. A comment in `src/confint_profile.jl` that wrongly said the
-  profile bounds for `σ_phy` are exponentiated was corrected. Docs and comments only: no
-  returned number changes.
+- **Documented: `σ_phy` from `fit_gaussian_gllvm` and the phylo EM fitters is not
+  gllvmTMB's `phylo_unique` SD (#136).** Docs and comments only, no engine change,
+  as recommended in row 25 of `docs/dev-log/owed/2026-09-25-true-parity-decision-packet.md`.
+  Julia's `σ_phy` is a signed parameter of the row model that enters the likelihood
+  only as the last column of the augmented phylogenetic loading
+  `Λ_phy_aug = hcat(Λ_phy, σ_phy)`, so its sign is not identified, and with
+  `K_phy ≥ 1` it is not identified separately from `Λ_phy` either. gllvmTMB's
+  `phylo_unique` is a different model term, an independent phylogenetic field for
+  each trait with its own scale, so compare fitted models (log-likelihood, implied
+  covariance), not these parameters. The note is in the docstrings of
+  `fit_gaussian_gllvm`, `gaussian_marginal_loglik`, `confint` (Wald),
+  `profile_phylo_signal`, `em_fit_phylo` (alias `fit_em_phylo`) and
+  `em_fit_phylo_squarem` (alias `fit_phylo_squarem`), and in the "Further
+  differences from R" list on the gllvmTMB parity page; the `profile_ci`
+  docstring now says its `sigma_phy[t]` bounds are signed. A comment in
+  `src/confint_profile.jl` that said the profile bounds for `σ_phy` are
+  exponentiated was corrected: they stay on the signed scale. No returned number
+  changes.
 
 - **`fit_phylo_gaussian` no longer reports `converged = true` after a zero-length step
   (part of #505, the remaining #485 class).** Optim also counts a zero-length line-search

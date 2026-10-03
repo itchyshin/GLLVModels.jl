@@ -32,8 +32,7 @@
 # the raw scale via exp(.) to match the convention of src/confint.jl: bounds
 # are reported on the natural (positive) scale. σ_phy is the exception: it is
 # packed on an identity (signed) scale, so its bounds stay on that raw scale
-# and can be negative. This is deliberate (#136); gllvmTMB's positive log-link
-# phylo_unique SD belongs to a different model, not to this σ_phy.
+# and can be negative (#136).
 #
 # Constrained-refit mechanics: Optim.jl has no first-class
 # "hold parameter k fixed" interface, so we instead define a closure
@@ -396,8 +395,8 @@ be supplied so this function can reconstruct the NLL closure. `X` and
 Returns a NamedTuple with fields:
   - `lower::Float64` — lower CI bound on the raw scale for SD-style
     parameters (σ_eps, σ_B, σ_W, σ_phy), native scale for β / Λ. For
-    `sigma_phy[t]` the raw scale is signed (identity link, by design; #136),
-    so the bound can be negative.
+    `sigma_phy[t]` the raw scale is signed (identity link; #136), so the
+    bound can be negative.
   - `upper::Float64` — upper CI bound, same scale convention.
   - `method::Symbol` — `:profile` if both bounds were bracketed,
     `:partial` if only one side was found (the other is NaN), or
@@ -754,12 +753,15 @@ Bare profile-CURVE variant scoped to the per-trait phylogenetic-unique scale
 `sigma_phy[t]` (a raw packed parameter on an identity, signed link — no `exp`
 back-transform; present iff the fit used `has_phy_unique = true`).
 
-Scale note (#136): the profile curve is on the signed identity scale, by
-design, and can extend below zero. Only flipping every `sigma_phy` entry
-together leaves the likelihood unchanged. gllvmTMB's positive log-link
-`phylo_unique` SD belongs to a different model (one independent phylogenetic
-field per trait), so do not compare the two curves directly; see the gllvmTMB
-parity page.
+Note on `sigma_phy[t]` (#136; see `fit_gaussian_gllvm` and the gllvmTMB parity
+page): `σ_phy` is a signed parameter, so this curve can extend below zero. It
+enters the likelihood only as the last column of
+`Λ_phy_aug = hcat(Λ_phy, σ_phy)`, so its sign is not identified; with
+`K_phy ≥ 1`, it is not identified separately from `Λ_phy` either.
+gllvmTMB's `phylo_unique` is a different model term (an independent
+phylogenetic field per trait, scaled by `exp(log_sd_phy_diag[t])` when fitted
+with `phylo_latent`), so compare fitted models, not these parameters, and do
+not expect them to agree, even in absolute value.
 
 Honest scope note: this is NOT the composite phylogenetic-SIGNAL summary
 `phylo_signal(fit)[t]` (an H²-like ratio of variance components) that

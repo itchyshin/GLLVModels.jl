@@ -795,6 +795,17 @@ cost differs. Set `force_dense_estep = true` to use the dense E-step even when
 the only option when `phy` is omitted, since an `AugmentedPhy` cannot be
 recovered from the dense `Σ_phy` alone). When `phy === nothing` the dense path
 is always used regardless of `force_dense_estep`.
+
+Note on `σ_phy` (#136; see the gllvmTMB parity page): `σ_phy` is the signed
+row-model parameter of `fit_gaussian_gllvm` with no `Λ_phy` columns, so the
+augmented phylogenetic loading is `σ_phy` itself and it enters the likelihood
+only through `B = (σ_phy * σ_phy') .* Σ_phy`. Its sign is not identified, so
+read `abs.(σ_phy)`, the per-row scale. gllvmTMB's `phylo_unique` is a
+different model term, an independent phylogenetic field for each trait with
+its own scale (`exp(log_sd_phy_diag[t])` in the phylo_unique block of
+gllvmTMB's `src/gllvmTMB.cpp`, used when it is fitted with `phylo_latent`).
+Compare the fitted models (log-likelihood, implied covariance), not these
+parameters, and do not expect them to agree, even in absolute value.
 """
 function em_fit_phylo(y::AbstractMatrix, K_B::Integer, Σ_phy::AbstractMatrix;
                       λ_init = nothing, σ_eps_init = nothing,

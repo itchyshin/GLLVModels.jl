@@ -368,43 +368,23 @@ Check these restrictions when translating an R analysis:
   are supported; grouped Tweedie and per-trait ordinal-cutpoint CI endpoints
   remain unavailable.
 - **`σ_phy` from `fit_gaussian_gllvm` is not gllvmTMB's `phylo_unique` SD
-  (#136).** They are different models, not one parameter on two scales.
-  `fit_gaussian_gllvm(y; has_phy_unique = true, Σ_phy)` fits the row model on
-  the [structured dependence page](structured-dependence.md): `Σ_phy` is a
-  covariance among the rows of `y`, and one shared field
-  `φ ~ MVN(0, Σ_phy)` is scaled row by row, `u[t] = σ_phy[t] * φ[t]`, so
-  `B[t, t'] = σ_phy[t] * σ_phy[t'] * Σ_phy[t, t']`. gllvmTMB's
-  `phylo_unique(species)` gives each trait its own independent phylogenetic
-  field over species, `u_t ~ N(0, sd_t^2 * A)`: it adds a diagonal trait
-  covariance `diag(sd^2)`, combined with the species tree covariance `A`, and no
-  cross-trait covariance at all. Their estimates are therefore not expected to
-  agree, not even in absolute value.
-
-  The scales differ as well, by design. Julia estimates `σ_phy` on a signed
-  identity scale. Only flipping every entry together leaves the likelihood
-  unchanged, so `abs.(σ_phy)` gives the per-row magnitudes, and the relative
-  signs matter because they enter `B[t, t']`. Without `X_lv` the fit tries
-  single sign flips and then reports the largest-magnitude entry as positive.
-  With `X_lv`
-  neither step runs: the largest entry can come out negative, and the fit can
-  stop in a sign pattern that is not the best one, so refit from a
-  `σ_phy_init` of the other sign to check. Julia's Wald interval
-  `σ̂ ± z * SE` and its `profile_ci` / `profile_phylo_signal` bounds are on the
-  signed scale and can cross zero. gllvmTMB estimates `log_sd_phy_diag`, so its
-  SDs are positive and its Wald interval `exp(log σ̂ ± z * SE_log)` is positive
-  and asymmetric.
-
-  The Julia route with the same structure as gllvmTMB's `phylo_latent` plus
-  `phylo_unique` pair is
-  `GLLVModels.fit_precision_multivariate(Y, phy; mode = :explicitunique)`,
-  also reached through `bridge_fit` with
-  `"phylo_model" => "multivariate"` and `"mode" => "explicitunique"` (see the
-  [multivariate phylogenetic precision bridge](precision-bridge-development.md)).
-  Its phylogenetic trait covariance is `L * L' + Diagonal(U)`, combined with the
-  tree over species, and it estimates each unique SD on a positive log scale
-  (`log_sd_phylo_unique[j]`), as gllvmTMB does. It always includes at least one
-  loading column. Its numerical agreement with gllvmTMB is not established on
-  this page.
+  (#136).** In the row model of the
+  [structured dependence page](structured-dependence.md), `σ_phy` is a signed
+  parameter that enters the likelihood only as the last column of the
+  augmented phylogenetic loading `Λ_phy_aug = hcat(Λ_phy, σ_phy)`, through
+  `B = (Λ_phy_aug * Λ_phy_aug') .* Σ_phy` (the same holds for `em_fit_phylo`
+  and `em_fit_phylo_squarem`, which have no `Λ_phy` columns). Its sign is not
+  identified, so read `abs.(σ_phy)` (the per-row scale when `K_phy = 0`); when
+  `K_phy ≥ 1`, `σ_phy` is not identified separately from `Λ_phy` either, so
+  read the implied `B`. gllvmTMB's `phylo_unique` is a different model term:
+  an independent phylogenetic field for each trait, with its own scale. When
+  it is fitted with `phylo_latent`, the phylo_unique block of gllvmTMB's
+  `src/gllvmTMB.cpp` scales trait `t`'s field by `exp(log_sd_phy_diag[t])`;
+  fitted alone, those scales are the diagonal entries of a `Lambda_phy`
+  constrained to be diagonal (gllvmTMB `R/fit-multi.R`). The two are therefore
+  not one parameter on two links. Compare the fitted models (log-likelihood,
+  implied covariance), not these parameters, and do not expect them to agree,
+  even in absolute value.
 
 ## Why likelihood approximations can differ
 

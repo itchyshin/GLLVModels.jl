@@ -152,6 +152,17 @@ the extrapolation would lower the log-lik or leave the domain, α is repeatedly
 moved halfway toward −1, and α = −1 makes θ' = θ2 (two EM steps) exactly. That
 per-cycle monotonicity does NOT rule out the global path-dependence above, which
 is what the safety check guards.
+
+Note on `σ_phy` (#136; see the gllvmTMB parity page): `σ_phy` is the signed
+row-model parameter of `fit_gaussian_gllvm` with no `Λ_phy` columns, so the
+augmented phylogenetic loading is `σ_phy` itself and it enters the likelihood
+only through `B = (σ_phy * σ_phy') .* Σ_phy`. Its sign is not identified, so
+read `abs.(σ_phy)`, the per-row scale. gllvmTMB's `phylo_unique` is a
+different model term, an independent phylogenetic field for each trait with
+its own scale (`exp(log_sd_phy_diag[t])` in the phylo_unique block of
+gllvmTMB's `src/gllvmTMB.cpp`, used when it is fitted with `phylo_latent`).
+Compare the fitted models (log-likelihood, implied covariance), not these
+parameters, and do not expect them to agree, even in absolute value.
 """
 function em_fit_phylo_squarem(y::AbstractMatrix, K_B::Integer,
                               Σ_phy::AbstractMatrix;

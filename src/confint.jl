@@ -307,13 +307,15 @@ scale internally. The CI bounds returned for those entries are on the
 identity (signed) link — its Wald CI is the plain `θ̂ ± z * SE`. β and
 Λ entries are reported on their native (linear) scale.
 
-Note on `sigma_phy[t]` (#136): this signed interval is symmetric and can cross
-zero, by design. Only flipping every `σ_phy` entry together leaves the
-likelihood unchanged, so `abs` of the estimate gives the magnitude. gllvmTMB
-reports `exp(log σ̂ ± z * SE_log)` for its `phylo_unique` SD, which is positive
-and asymmetric, but that SD belongs to a different model (one independent
-phylogenetic field per trait), so the two intervals are not for the same
-parameter. See `fit_gaussian_gllvm` and the gllvmTMB parity page.
+Note on `sigma_phy[t]` (#136; see `fit_gaussian_gllvm` and the gllvmTMB parity
+page): `σ_phy` is a signed parameter, so this interval can cross zero. It
+enters the likelihood only as the last column of
+`Λ_phy_aug = hcat(Λ_phy, σ_phy)`, so its sign is not identified; with
+`K_phy ≥ 1`, it is not identified separately from `Λ_phy` either.
+gllvmTMB's `phylo_unique` is a different model term (an independent
+phylogenetic field per trait, scaled by `exp(log_sd_phy_diag[t])` when fitted
+with `phylo_latent`), so its SD interval is not an interval for this
+parameter, and the two should not be expected to agree, even in absolute value.
 
 The Hessian is computed via ForwardDiff at the fitted parameter vector
 stored on `fit.pars.θ_packed`. The function needs the original data

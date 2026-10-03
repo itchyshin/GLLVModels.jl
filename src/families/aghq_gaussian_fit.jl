@@ -40,22 +40,18 @@ records the normalised pin matrix, which [`loading_profile`](@ref) reads to
 determine which entries are free. No cross-package numeric comparison
 against R's own `lambda_constraint` fits has been published yet.
 
-**Phylo-unique SD `pars.σ_phy` (#136):** with `has_phy_unique = true` and
-`Σ_phy` (a covariance among the rows of `Y`), `σ_phy[t]` scales one shared
-field row by row, so `B[t, t'] = σ_phy[t] * σ_phy[t'] * Σ_phy[t, t']`. It is
-estimated on a signed identity scale, by design. Only flipping every entry
-together leaves the likelihood unchanged: `abs.(pars.σ_phy)` gives the per-row
-magnitudes, and the relative signs matter because they enter `B[t, t']`.
-Without `X_lv` the fit tries single sign flips and reports the largest-magnitude
-entry as positive. With `X_lv` it does neither, so that entry can be negative
-and the fit can stop in a worse sign pattern; refit from a `σ_phy_init` of the
-other sign to check. Julia's Wald interval `σ̂ ± z * SE` is
-symmetric and can cross zero. This is not gllvmTMB's `phylo_unique` term,
-which gives each trait its own independent phylogenetic field over species
-(positive log-link SD, no cross-trait covariance), so the estimates are not
-expected to agree. The Julia route with that structure is
-`fit_precision_multivariate(...; mode = :explicitunique)`. See the "Further
-differences from R" section of the gllvmTMB parity page.
+**Note on `σ_phy` (#136; see the gllvmTMB parity page):** `σ_phy` is a signed
+parameter of the row model that enters the likelihood only as the last column
+of the augmented phylogenetic loading `Λ_phy_aug = hcat(Λ_phy, σ_phy)`, through
+`B = (Λ_phy_aug * Λ_phy_aug') .* Σ_phy`. Its sign is not identified, so read
+`abs.(σ_phy)` (the per-row scale when `K_phy = 0`); when `K_phy ≥ 1`, `σ_phy`
+is not identified separately from `Λ_phy` either, so read the implied `B`.
+gllvmTMB's `phylo_unique` is a different model term, an independent
+phylogenetic field for each trait with its own scale
+(`exp(log_sd_phy_diag[t])` in the phylo_unique block of gllvmTMB's
+`src/gllvmTMB.cpp`, used when it is fitted with `phylo_latent`). Compare the
+fitted models (log-likelihood, implied covariance), not these parameters, and
+do not expect them to agree, even in absolute value.
 """
 function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control=(;),
         mask=nothing,offset=nothing,hessian=:observed,lambda_constraint=nothing,kwargs...)
