@@ -61,6 +61,35 @@ silently fitting the wrong model. The returned fit's `pars.lambda_constraint`
 records the normalised pin matrix, which [`loading_profile`](@ref) reads to
 determine which entries are free. No cross-package numeric comparison
 against R's own `lambda_constraint` fits has been published yet.
+
+**Note on `σ_phy` (#136; see the gllvmTMB parity page):** `σ_phy` is a signed
+parameter of the row model. It enters the likelihood only as the last column
+of the augmented phylogenetic loading `Λ_phy_aug = hcat(Λ_phy, σ_phy)`,
+through `B = (Λ_phy_aug * Λ_phy_aug') .* Σ_phy`. When `K_phy = 0`, signs are
+identified only within each group of rows that `Σ_phy` links by nonzero
+entries: inside a group the relative signs set the sign of each cross-trait
+entry `B[t, t′]`, but each group's sign can flip on its own without changing
+the likelihood. For a tree-derived `Σ_phy` the root's daughter clades are
+always separate groups, because `sigma_phy_dense` drops the root edge, so the
+global sign anchor pins only the clade that holds the largest `abs(σ_phy)`;
+the global flip `σ_phy → -σ_phy` is the sole symmetry only for a supplied
+`Σ_phy` that links all rows. The magnitudes `abs.(σ_phy)`
+are the per-row scales. When `K_phy ≥ 1`, `σ_phy` is not identified
+separately from `Λ_phy`, because rotating it together with a column of
+`Λ_phy` leaves the likelihood unchanged; read the implied `B`, and do not
+interpret per-entry intervals for `sigma_phy[t]`. With `X_lv`, the fitter
+skips both its sign-pattern search and its sign anchor, so it can stop at a
+sign pattern that is not the best one. gllvmTMB's `phylo_unique` term (now
+spelled `phylo_indep()` on its own, or `phylo_latent(..., unique = TRUE)`
+when paired with a latent term) is a different model term: an independent
+phylogenetic field for each trait with its own scale
+(`exp(log_sd_phy_diag[t])` in the phylo_diag block of gllvmTMB's
+`src/gllvmTMB.cpp`, for the paired form). Compare the fitted models
+(log-likelihood, implied covariance), not these parameters, and do not expect
+them to agree, even in absolute value. The Julia counterparts of those
+gllvmTMB terms are `fit_kernel_indep_gllvm` for a standalone `phylo_indep()`
+and `fit_phylo_latent_gllvm(...; unique = true)` for the paired form (the
+latter a documented extra, not yet a verified twin).
 """
 function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control=(;),
         mask=nothing,offset=nothing,hessian=:observed,lambda_constraint=nothing,kwargs...)

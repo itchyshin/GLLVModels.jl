@@ -22,8 +22,9 @@
 #
 # Phylogenetic block (J3) — same trick: Σ_y_full = σ²_eps · (I_n ⊗ Ã + J_n ⊗ B̃)
 # with B̃ = (L_phy_aug L_phy_aug') .* Σ_phy, L_phy_aug = hcat(L_phy, ρ_phy).
-# Joint sign flip (ρ_phy → -ρ_phy, φ → -φ) is the lone non-identifiable
-# symmetry; fit.jl applies a global sign anchor post-hoc.
+# The joint sign flip (ρ_phy → -ρ_phy, φ → -φ) leaves the likelihood unchanged;
+# when K_phy = 0 and Σ_phy has zero blocks (always so for a tree-derived Σ_phy,
+# whose root edge is dropped), a flip of one block does too. fit.jl applies a global sign anchor post-hoc.
 #
 # Profile σ²_eps: -2ℓ has the form
 #   -2ℓ = n·p·log(2π) + n·p·log(σ²_eps) + (logdet pieces in Ã)
@@ -415,8 +416,8 @@ function profile_recover(params::AbstractVector, y::AbstractMatrix;
         L_W = unpack_lambda(θ_rr_W, p, K_W)
     end
     if has_phy_unique
-        # Identity link: ρ_phy is signed (joint flip with φ is the lone
-        # non-identifiable symmetry).
+        # Identity link: ρ_phy is signed (a joint flip with φ, and with zero
+        # blocks in Σ_phy a per-block flip, leaves the likelihood unchanged).
         ρ_phy = collect(params[(cursor + 1):(cursor + p)])
         cursor += p
     end

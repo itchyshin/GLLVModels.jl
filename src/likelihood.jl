@@ -71,7 +71,12 @@ the J1 behaviour exactly (D = σ²_eps I).
 Phylogenetic extension (`Σ_phy::AbstractMatrix`, p × p, supplied by
 caller — typically a species-trait covariance derived from a tree):
   - `Λ_phy::AbstractMatrix` (p × K_phy): phylo-latent loadings.
-  - `σ_phy::AbstractVector` (length p): per-trait phylo-unique SDs.
+  - `σ_phy::AbstractVector` (length p): per-row phylo-unique scales.
+    `σ_phy` is a signed parameter (#136), so its entries can be negative.
+    When `K_phy = 0`, the sign of each group of rows that `Σ_phy` links can
+    flip on its own; when `K_phy ≥ 1`, it is not identified
+    separately from `Λ_phy`. It is not gllvmTMB's
+    `phylo_unique` scale; see the gllvmTMB parity page.
 With Λ_phy_aug = hcat(Λ_phy, σ_phy) the marginal covariance of vec(y)
 is `I_n ⊗ A + J_n ⊗ B` where `B = (Λ_phy_aug Λ_phy_aug') .* Σ_phy`.
 The rotation trick (J_n has rank 1) reduces this to two p×p Cholesky
@@ -388,8 +393,10 @@ function gaussian_nll_packed(params::AbstractVector, y::AbstractMatrix;
 
     if has_phy_unique
         # Identity link: σ_phy is a signed loading-like vector (entries may
-        # be negative). Joint sign flip (σ_phy → -σ_phy, φ → -φ) is the lone
-        # non-identifiable symmetry; fit.jl applies a global sign anchor.
+        # be negative). When K_phy = 0, flipping σ_phy (with φ) on any group
+        # of rows that Σ_phy links leaves the likelihood unchanged; the global
+        # flip is the only such symmetry when Σ_phy links all rows. fit.jl
+        # applies a global sign anchor.
         σ_phy = @view params[(cursor + 1):(cursor + p)]
         cursor += p
     else
