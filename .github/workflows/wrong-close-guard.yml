@@ -1,6 +1,6 @@
 name: Wrong-close guard
 # Fails a PR whose body or commit messages could make GitHub close an issue that the author did
-# not declare. Declare intended closures with a line `<!-- intended-closes: 12, 13 -->` in the PR
+# not declare. Declare intended closures with an intended-closes HTML comment (see tools/wrong_close_guard.py) in the PR
 # body. PR-only + workflow_dispatch, ubuntu-only, no checkout of dependencies: a few seconds.
 on:
   pull_request:
