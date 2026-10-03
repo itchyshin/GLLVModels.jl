@@ -200,6 +200,27 @@ def main():
     expect("rsz_suffix_id_fails", c == 1 and "C3/C4/C5" in o, o)
     shutil.rmtree(tmp)
 
+    # Campaign rows (itchyshin/GLLVModels.jl#684 item 4): a row that declares its clause may carry a C3/C4/C5 id,
+    # but only the id its declared clause selects.
+    root, tmp = with_root({"case-map-family.json": [row("family/GAUSSIAN-RSZ", tier="not_measured", clause="C3")]})
+    c, o = run(root, "--check")
+    expect("declared_clause_rsz_id_allowed", c == 1 and "ASSEMBLE_STALE" in o and "C3/C4/C5" not in o, o)
+    c, o = run(root)
+    expect("declared_clause_rsz_id_written", c == 0 and "| family-GAUSSIAN-RSZ" in (root / A.LEDGER / A.OUT_SCOREBOARD).read_text(), o)
+    shutil.rmtree(tmp)
+    root, tmp = with_root({"case-map-family.json": [row("family/GAUSSIAN-RSZ", tier="not_measured", clause="C4")]})
+    c, o = run(root, "--check")
+    expect("declared_clause_mismatch_fails", c == 1 and "declares clause C4" in o, o)
+    shutil.rmtree(tmp)
+    root, tmp = with_root({"case-map-data.json": [row("data/RD-X", tier="not_measured", clause="C4")]})
+    c, o = run(root)
+    expect("declared_clause_rd_id_selected_by_c4", c == 0 and "| data-RD-X" in (root / A.LEDGER / A.OUT_SCOREBOARD).read_text(), o)
+    shutil.rmtree(tmp)
+    root, tmp = with_root({"case-map-data.json": [row("data/PLAIN", tier="not_measured", clause="C9")]})
+    c, o = run(root, "--check")
+    expect("declared_clause_unknown_fails", c == 1 and "not one of C3, C4, C5" in o, o)
+    shutil.rmtree(tmp)
+
     # Review of #589, finding 1: numeric 1 is not a pass value (the checker's isPassValue is
     # strict: "PASS", "pass" or the boolean true only; in Python 1 == True).
     for val in (1, 1.0):
@@ -281,6 +302,74 @@ def main():
     expect("check_extra_map_with_out_dir_ok", c == 0 and "ASSEMBLE_OK" in o, o)
     shutil.rmtree(tmp)
 
+    # Campaign receipts (itchyshin/GLLVModels.jl#684 item 4): every comparison block re-derives from the committed raw files.
+    wr = subprocess.run([sys.executable, str(HERE / "true_parity" / "campaign" / "write_receipts.py"), "--check"],
+                        capture_output=True, text=True)
+    expect("real_tree_campaign_receipts_rederive", wr.returncode == 0 and "CAMPAIGN_RECEIPTS_OK" in wr.stdout, wr.stdout + wr.stderr)
+    # The urbanisation row has no committed raw outputs (unpublished data): --check must say so, never pass silently.
+    expect("campaign_check_says_urbanisation_not_rederived",
+           "raw outputs kept off the public repo; re-derive locally with URBMAP_ROOT set" in wr.stdout and "internal consistency only" in wr.stdout, wr.stdout)
+    expect("urbanisation_raw_outputs_not_committed",
+           not list((A.ROOT / A.LEDGER / "receipts/data/campaign/raw").glob("urban_*")), "urban raw outputs are in the tree")
+    # Receipt wording: relative cases are named as such and say where the raw values are; cond(H) says how each engine computes it;
+    # the C5 rule claims no R Hessian leg (the #593 receipts record none).
+    nb2 = json.loads((A.ROOT / A.LEDGER / "receipts/family/campaign/NB2-LOG-RSZ.json").read_text())
+    rel = [c for c in nb2["comparison"]["cases"] if "convention" in c]
+    expect("relative_cases_named_and_located", len(rel) == 2 and all(c["quantity"].endswith("relative difference") and "r_raw" in c and "julia_raw" in c
+           and "raw_values_location" in c for c in rel), json.dumps([c["quantity"] for c in rel]))
+    expect("cond_H_method_stated", "exact = FALSE" in nb2["cond_H_statement"] and "exact 2-norm" in nb2["cond_H_statement"]
+           and "kappa" in nb2["engines"]["R"]["cond_H_method"] and "2-norm" in nb2["engines"]["julia"]["cond_H_method"], nb2["cond_H_statement"])
+    tmpl = json.loads((A.ROOT / A.LEDGER / "receipts/covariance/campaign/COV-TEMPORAL-RSZ.json").read_text())
+    expect("temporal_cond_H_method_names_its_hessian", "ForwardDiff" in tmpl["engines"]["julia"]["cond_H_method"], tmpl["engines"]["julia"]["cond_H_method"])
+    grp = json.loads((A.ROOT / A.LEDGER / "receipts/fit-input/campaign/GRP-UNIT.json").read_text())
+    expect("c5_rule_claims_no_hessian_leg", "R_pdHess_true" not in grp["pass_rule"]["legs"] and "no R Hessian leg" in grp["pass_rule"]["rule"], grp["pass_rule"]["rule"])
+    # Row tiers: a measured row that fails no number but lacks a required step reads PARTIAL, never FAIL; a row that also
+    # misses a tolerance keeps numeric_fail; the phylo row does not bind (its R receipt is unqualified until the maintainer signs).
+    def camp_row(mapname, sid):
+        return next(r for r in json.loads((A.ROOT / A.LEDGER / mapname).read_text())["rows"] if r["source_id"] == sid)
+    crabs = camp_row("case-map-data.json", "data/RD-CRABS-GAUSSIAN"); spider = camp_row("case-map-data.json", "data/RD-SPIDER-NB2")
+    phylo = camp_row("case-map-covariance.json", "covariance/COV-PHYLO-LATENT-RSZ")
+    expect("crabs_is_partial_not_fail", crabs["evidence_tier"] == "partial_case_not_executed" and "bridge route" in crabs["evidence"]["tier"], crabs["evidence"]["tier"])
+    expect("row_with_failed_tolerance_stays_numeric_fail", spider["evidence_tier"] == "numeric_fail" and "bridge route" in spider["evidence"]["tier"] and "logLik" in spider["evidence"]["tier"], spider["evidence"]["tier"])
+    expect("phylo_row_does_not_bind", phylo["evidence_tier"] == "partial_case_not_executed" and "receipt" not in phylo["evidence"] and "qualified = false" in phylo["evidence"]["tier"], json.dumps(phylo["evidence"]))
+
+    # ... and a hand edit that keeps the receipt self-consistent must still fail: a changed value (with a matching
+    # max_abs_diff and flag), a widened tolerance, and a changed large-vector difference.
+    def tamper(label, edit, needle="DERIVATION DRIFT"):
+        with tempfile.TemporaryDirectory() as td:
+            led = Path(td) / A.LEDGER
+            shutil.copytree(A.ROOT / A.LEDGER, led, ignore=shutil.ignore_patterns("*.md"))
+            shutil.copytree(A.ROOT / "tools/true_parity/campaign/data", Path(td) / "tools/true_parity/campaign/data")
+            shutil.copytree(A.ROOT / "docs/dev-log/core070/phylo-latent-p1", Path(td) / "docs/dev-log/core070/phylo-latent-p1")
+            edit(led / "receipts")
+            r = subprocess.run([sys.executable, str(HERE / "true_parity" / "campaign" / "write_receipts.py"), "--check", "--root", td],
+                               capture_output=True, text=True)
+            expect(label, r.returncode == 1 and "CAMPAIGN_RECEIPTS_BAD" in r.stdout and needle in r.stdout, r.stdout + r.stderr)
+
+    def edit_case(rel, quantity, fn):
+        def go(rec):
+            f = rec / rel; d = json.loads(f.read_text())
+            hit = [c for c in d["comparison"]["cases"] if c["quantity"] == quantity]
+            assert hit, f"tamper target {quantity!r} not found in {rel}"   # a vacuous edit would pass for the wrong reason
+            for c in hit: fn(c)
+            f.write_text(json.dumps(d, indent=1) + "\n")
+        return go
+    def nudge(c):
+        c["julia_value"] = [x + 1e-9 for x in c["r_value"]] if isinstance(c["r_value"], list) else c["r_value"] + 1e-9
+        c["max_abs_diff"] = 1e-9
+    tamper("campaign_check_catches_consistent_value_edit", edit_case("family/campaign/POISSON-LOG-RSZ.json", "LLt", nudge))
+    tamper("campaign_check_catches_widened_tolerance", edit_case("family/campaign/POISSON-LOG-RSZ.json", "beta", lambda c: c.update(tolerance=1.0)))
+    def edit_leg(rel, leg, value):
+        def go(rec):
+            f = rec / rel; d = json.loads(f.read_text()); d["pass_rule"]["legs"][leg] = value
+            f.write_text(json.dumps(d, indent=1) + "\n")
+        return go
+    tamper("campaign_check_catches_phylo_qualification_forged", edit_leg("covariance/campaign/COV-PHYLO-LATENT-RSZ.json", "R_side_receipt_qualified_by_maintainer", True))
+    # the urbanisation summary receipt is not re-derivable, but a self-contradicting edit must still fail
+    def urban_flag(c): c["within_tolerance"] = not c["within_tolerance"]
+    tamper("campaign_check_catches_urbanisation_summary_inconsistency",
+           edit_case("data/campaign/RD-URBANISATION-BINOMIAL.json", "logLik", urban_flag), needle="SUMMARY INCONSISTENT")
+    tamper("campaign_check_catches_large_vector_diff_edit", edit_case("data/campaign/RD-CRABS-GAUSSIAN.json", "linear predictor on the training data (link scale)", lambda c: c.update(max_abs_diff=1e-12)))
     # Ruling 2 (itchyshin/GLLVModels.jl#684 item 2): the behavioural tier.
     def behaves(name, status, root, tmp, want_bound=None, contains=None):
         c, o = run(root)
