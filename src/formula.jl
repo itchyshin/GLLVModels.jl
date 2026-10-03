@@ -195,6 +195,12 @@ phylogenetic rank, not `K`; ordinary joint terms currently require independent,
 non-common trait variances. This does not open public R bridge admission.
 `ZIB` through `@formula` is **no-X only** for now (bridge still OWED; ZIB+X formula
 is fenced).
+
+`offset` follows the rules of [`fit_gllvm`](@ref) (a scalar broadcasts; a `p×n` matrix, a
+`1×n` or `p×1` matrix or a length-`p` vector is accepted; an unusable shape or a non-finite
+value at an observed cell throws an `ArgumentError`). With covariates in the formula only
+`family = Normal()` takes an offset; the other covariate routes, explicit `sources` and the
+families `fit_gllvm` lists as taking none refuse it with an `ArgumentError`.
 """
 function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
                family = Normal(), K::Union{Integer, _FormulaKUnset} = _FORMULA_K_UNSET,
@@ -227,6 +233,7 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
             coefficient_names=coefficient_names, resolved...)
     end
     if sources !== nothing
+        kwargs = _no_offset_kwargs(kwargs, "gllvm", "explicit Gaussian sources")
         family isa Normal || throw(ArgumentError("formula source models require family=Normal()"))
         K === _FORMULA_K_UNSET || throw(ArgumentError("do not supply K with explicit sources; each source owns its rank"))
         pervar && throw(ArgumentError("pervar=true is incompatible with explicit sources"))
@@ -248,6 +255,12 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
     q = size(mm, 2)
 
     if q == 0
+        # The Gaussian and zero-inflated fitters below are called directly, not through
+        # `fit_gllvm`, so they get the same offset rules here (a scalar broadcasts, a shape
+        # that cannot be broadcast or a non-finite value is refused). Every other family goes
+        # through `fit_gllvm`, which applies them itself.
+        family isa Union{Normal, ZIPoisson, ZINegBin} &&
+            (kwargs = _normalize_offset_kwargs(kwargs, Y))
         # `y ~ 1` estimates trait intercepts; `y ~ 0` is the documented zero mean.
         gaussian_fit = StatsModels.omitsintercept(formula.rhs) ?
             fit_gaussian_gllvm : _fit_gaussian_trait_intercepts
@@ -267,6 +280,16 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
     X = Array{Float64, 3}(undef, p, n, q)
     @inbounds for k in 1:q, s in 1:n, t in 1:p
         X[t, s, k] = mm[s, k]
+    end
+
+    # With covariates the Gaussian fitter takes an offset (same rules as `fit_gllvm`); the
+    # covariate fitters of the other families have no offset keyword, so an offset is
+    # refused here rather than reaching them as a MethodError.
+    if family isa Normal
+        kwargs = _normalize_offset_kwargs(kwargs, Y)
+    else
+        kwargs = _no_offset_kwargs(kwargs, "gllvm",
+            "family $(nameof(typeof(family))) with covariates in the formula")
     end
 
     if family isa Normal

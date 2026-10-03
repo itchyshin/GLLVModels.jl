@@ -96,22 +96,39 @@ Fit a one-part lognormal GLLVM (`log(y) ~ Normal(η, σ²)`, log link only) by
 reusing the closed-form Gaussian fitter on centred log-responses. `Y` is a
 `p×n` matrix of strictly positive responses; `K` the latent dimension.
 
-Per-trait intercepts `β_t = mean_s log(Y[t,s])` are removed before
+Per-trait intercepts `β_t = mean_s (log(Y[t,s]) − offset[t,s])` are removed before
 [`fit_gaussian_gllvm`](@ref) estimates `(Λ, σ)` on the centred log scale
 (profile-admissible Identity path). Reported `loglik` is the y-scale marginal
 at fitted `(β, Λ, σ)` including `−Σ log y`. Remaining keywords pass through to
 `fit_gaussian_gllvm`.
+
+`offset` is the known additive term on the log scale, `log(y) = β + offset + Λz + ε`
+(for example log-exposure), as for the other families: a `p×n` matrix, or `nothing`.
+It is subtracted from `log(Y)` before the trait means are taken, so a constant offset is
+absorbed by the intercepts (same `loglik`, `β` shifted by `−offset`), and `β` is the
+offset-free intercept. [`fit_gllvm`](@ref) also accepts a scalar and the shorter shapes
+and expands them to `p×n`; this named fitter takes the `p×n` matrix only.
 """
 function fit_lognormal_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
-        link::Link = LogLink(), kwargs...)
+        link::Link = LogLink(), offset = nothing, kwargs...)
     link isa LogLink || throw(ArgumentError(
         "fit_lognormal_gllvm: only LogLink is supported (twin lognormal)"))
     p, n = size(Y)
     all(>(0), Y) || throw(ArgumentError(
         "lognormal requires y > 0; found non-positive response"))
+    if offset !== nothing
+        (offset isa AbstractMatrix && size(offset) == (p, n)) || throw(ArgumentError(
+            "fit_lognormal_gllvm: offset must be a $(p)×$(n) matrix (traits × units); " *
+            "fit_gllvm also accepts a scalar and the shorter shapes"))
+        all(isfinite, offset) || throw(ArgumentError(
+            "fit_lognormal_gllvm: offset must be finite"))
+    end
     Z = log.(Y)
-    β̂ = vec(sum(Z; dims = 2)) ./ n
-    R = Z .- β̂
+    # η = β + offset + Λz is the mean of log(y), so it is log(y) − offset that is centred
+    # and fitted; the intercepts then absorb a constant offset exactly.
+    Zo = offset === nothing ? Z : Z .- offset
+    β̂ = vec(sum(Zo; dims = 2)) ./ n
+    R = Zo .- β̂
     gfit = fit_gaussian_gllvm(R; K = K, kwargs...)
     Λ̂ = Matrix{Float64}(gfit.pars.Λ)
     σ̂ = Float64(gfit.pars.σ_eps)

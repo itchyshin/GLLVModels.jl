@@ -1,4 +1,4 @@
-using GLLVModels, Test, Random, Distributions
+using GLLVModels, Test, Random, Distributions, LinearAlgebra, SparseArrays, StatsModels
 
 @testset "Offsets in the linear predictor" begin
     Random.seed!(4242)
@@ -300,5 +300,333 @@ end
         # the refusal comes before any fitting, so no fit object can carry a -Inf
         @test_throws ArgumentError fit_gllvm(Yc; family = NegativeBinomial(), K = 1,
                                              disp_group = :species, offset = fill(c, n))
+    end
+end
+
+# ---- Review fixes for the scalar-offset work (#693) ------------------------------
+# The guiding rule is usability: no offset may give a silent, wrong or -Inf fit. It either
+# means what the user meant, or it raises an ArgumentError that says what to do.
+_off_ll(f) = hasproperty(f, :loglik) ? f.loglik : f.logLik
+
+# One small data set per family. p ≠ n, so a transposed shape is detectable.
+function _off_data(; p = 5, n = 36, seed = 693)
+    Random.seed!(seed)
+    z = randn(n); lam = [0.8, -0.6, 0.5, 0.3, -0.4]
+    η = 0.6 .+ 0.3 .* randn(p) .+ lam * z'
+    sig(x) = 1 / (1 + exp(-x))
+    d = Dict{Symbol,Any}()
+    d[:pois]  = Float64.([rand(Poisson(exp(η[t, s]))) for t in 1:p, s in 1:n])
+    d[:nb]    = Float64.([rand(NegativeBinomial(1.5, 1.5 / (1.5 + exp(η[t, s])))) for t in 1:p, s in 1:n])   # overdispersed, so r is identified
+    d[:norm]  = η .+ 0.5 .* randn(p, n)
+    d[:N]     = fill(8, p, n)
+    d[:bin]   = Float64.([rand(Binomial(8, sig(η[t, s]))) for t in 1:p, s in 1:n])
+    d[:tpois] = Float64.([(y = rand(Poisson(exp(η[t, s] + 0.5))); y == 0 ? 1.0 : Float64(y)) for t in 1:p, s in 1:n])
+    d[:logn]  = exp.(η .+ 0.4 .* randn(p, n))
+    d[:gam]   = Float64.([rand(Gamma(3.0, exp(η[t, s]) / 3.0)) for t in 1:p, s in 1:n])
+    d[:expo]  = Float64.([rand(Exponential(exp(η[t, s]))) for t in 1:p, s in 1:n])
+    d[:beta]  = Float64.([clamp(rand(Beta(4 * sig(η[t, s]), 4 * (1 - sig(η[t, s])))), 0.01, 0.99) for t in 1:p, s in 1:n])
+    ord = [clamp(round(Int, η[t, s] + 2 + 0.7 * randn()), 1, 4) for t in 1:p, s in 1:n]
+    ord[:, 1] .= 1; ord[:, 2] .= 4; ord[:, 3] .= 2; ord[:, 4] .= 3   # every trait shows every category
+    d[:ord]   = ord
+    d[:two]   = Float64.([rand() < 0.7 ? d[:gam][t, s] : 0.0 for t in 1:p, s in 1:n])
+    d[:twoc]  = Float64.([rand() < 0.7 ? Float64(max(1, d[:pois][t, s])) : 0.0 for t in 1:p, s in 1:n])
+    d[:twonb] = Float64.([rand() < 0.7 ? Float64(max(1, d[:nb][t, s])) : 0.0 for t in 1:p, s in 1:n])
+    d[:twob]  = Float64.([rand() < 0.7 ? d[:beta][t, s] : 0.0 for t in 1:p, s in 1:n])
+    d[:zip]   = Float64.([rand() < 0.3 ? 0.0 : d[:pois][t, s] for t in 1:p, s in 1:n])
+    d[:zinb]  = Float64.([rand() < 0.3 ? 0.0 : d[:nb][t, s] for t in 1:p, s in 1:n])
+    d[:zib]   = Float64.([rand() < 0.3 ? 0.0 : d[:bin][t, s] for t in 1:p, s in 1:n])
+    d[:ob]    = Float64.([(u = rand(); u < 0.15 ? 0.0 : u > 0.85 ? 1.0 : d[:beta][t, s]) for t in 1:p, s in 1:n])
+    d[:tw]    = Float64.([rand() < 0.3 ? 0.0 : d[:gam][t, s] for t in 1:p, s in 1:n])
+    d[:mn]    = reshape(rand(1:3, n), 1, n)
+    return d
+end
+
+@testset "offset: every route that takes one absorbs a constant; every route that does not refuses" begin
+    G = GLLVModels
+    d = _off_data()
+    p, n = size(d[:pois]); c = log(2)
+
+    # Routes that take an offset: a constant offset c is absorbed by the intercepts, so the
+    # maximised logLik equals the no-offset logLik and the fit converges (on the AGHQ routes:
+    # reaches the same convergence verdict as the fit without an offset). A fit that returns
+    # -Inf, does not converge, or lands on another logLik has not applied the offset to the
+    # mean it fits.
+    accepted = [
+        ("Normal",               d[:norm], Normal(),                       (;)),
+        ("Normal aghq",          d[:norm], Normal(),                       (; aghq = 3)),
+        ("Poisson",              d[:pois], Poisson(),                      (;)),
+        ("Poisson aghq",         d[:pois], Poisson(),                      (; aghq = 3)),
+        ("Binomial",             d[:bin],  Binomial(),                     (; N = d[:N])),
+        ("Binomial aghq",        d[:bin],  Binomial(),                     (; N = d[:N], aghq = 3)),
+        ("TruncatedPoisson",     d[:tpois], G.TruncatedPoisson(),          (;)),
+        ("CensoredPoisson",      d[:pois], G.CensoredPoisson(),            (;)),
+        ("Lognormal",            d[:logn], G.Lognormal(),                  (;)),
+        ("TruncatedNegBin2",     d[:tpois], G.TruncatedNegBin2(),          (;)),
+        ("NegBin2 shared",       d[:nb],   NegativeBinomial(),             (;)),
+        ("NegBin2 per-species",  d[:nb],   NegativeBinomial(),             (; disp_group = :species)),
+        ("NegBin2 aghq",         d[:nb],   NegativeBinomial(),             (; disp_group = :species, aghq = 3)),
+        ("Beta",                 d[:beta], Beta(),                         (;)),
+        ("NB1",                  d[:nb],   G.NB1(),                        (;)),
+        ("Gamma",                d[:gam],  Gamma(),                        (;)),
+        ("Gamma per-species",    d[:gam],  Gamma(),                        (; disp_group = :species)),
+        ("Exponential",          d[:expo], G.Exponential(),                (;)),
+        ("DeltaLogNormal",       d[:two],  G.DeltaLogNormal(),             (;)),
+        ("DeltaGamma",           d[:two],  G.DeltaGamma(),                 (;)),
+        ("DeltaGamma aghq",      d[:two],  G.DeltaGamma(),                 (; aghq = 3)),
+        ("HurdlePoisson",        d[:twoc], G.HurdlePoisson(),              (;)),
+        ("HurdleNB",             d[:twonb], G.HurdleNB(),                  (;)),
+        ("GeneralizedPoisson1",  d[:pois], G.GeneralizedPoisson1(0.1),     (;)),
+        ("ZIPoisson",            d[:zip],  G.ZIPoisson(),                  (;)),
+        ("ZINegBin",             d[:zinb], G.ZINegBin(),                   (;)),
+        ("ZIB",                  d[:zib],  G.ZIB(8),                       (;)),
+        ("Tweedie per-species",  d[:tw],   G.TweedieED(1.0, 1.5),          (; disp_group = :species)),
+        # (Tweedie with aghq is left out: about 70 s for the pair of fits.)
+    ]
+    # The identity is exact for the objective; the fits are optimiser runs (finite-difference
+    # gradients, g_tol = 1e-5), so two fits that differ only by rounding can stop a little
+    # apart. Measured spread of logLik(offset) - logLik(none) over this data and others: 1e-14
+    # to 1e-10 on most routes, up to about 3e-6 on NB1 and DeltaGamma. Most AGHQ routes
+    # report converged = false on data this small, with or without an offset, and NB2 with
+    # AGHQ can end 2e-3 apart. A mis-applied offset moves
+    # the logLik by 0.1 or more (Lognormal before the fix: 80 to 110), so these tolerances
+    # still tell the two apart.
+    tol_of(label) = label in ("NB1", "DeltaGamma", "DeltaGamma aghq", "Binomial aghq", "Poisson aghq") ? 1e-5 :
+                    label == "NegBin2 aghq" ? 1e-2 : 1e-6
+    @testset "absorption: $label" for (label, Y, fam, kw) in accepted
+        f0 = fit_gllvm(Y; family = fam, K = 1, kw...)
+        fc = fit_gllvm(Y; family = fam, K = 1, kw..., offset = c)
+        aghq = haskey(kw, :aghq) && label != "Normal aghq"
+        aghq || @test f0.converged                      # the AGHQ engines report their own, stricter verdict
+        @test fc.converged == f0.converged
+        @test isfinite(_off_ll(fc))
+        @test isapprox(_off_ll(fc), _off_ll(f0); atol = tol_of(label), rtol = 0)
+        if haskey(kw, :aghq)                            # the scalar is the expanded matrix, exactly
+            ff = fit_gllvm(Y; family = fam, K = 1, kw..., offset = fill(c, p, n))
+            @test _off_ll(fc) == _off_ll(ff)
+        end
+    end
+
+    # Routes whose fitter has no offset keyword: a clear ArgumentError naming the family, for
+    # any offset (a valid scalar, a p×n matrix, or a shape that would otherwise fail the shape
+    # check), not a MethodError and not a misleading shape error.
+    refused = [
+        ("StudentT",             d[:norm], G.StudentTFamily(5.0),          (;)),
+        ("StudentT per-species", d[:norm], G.StudentTFamily(5.0),          (; disp_group = :species)),
+        ("Ordinal",              d[:ord],  G.Ordinal(),                    (;)),
+        ("Ordinal aghq",         d[:ord],  G.Ordinal(),                    (; aghq = 3)),
+        ("BetaBinom",            d[:bin],  G.BetaBinom(),                  (; N = d[:N])),
+        ("BetaHurdle",           d[:twob], G.BetaHurdle(),                 (;)),
+        ("COMPoisson",           d[:pois], G.COMPoisson(),                 (;)),
+        ("OrderedBeta",          d[:ob],   G.OrderedBeta(),                (;)),
+    ]
+    @testset "refused: $label" for (label, Y, fam, kw) in refused
+        for off in (c, fill(c, p, n), fill(c, n))
+            err = try
+                fit_gllvm(Y; family = fam, K = 1, kw..., offset = off); nothing
+            catch e
+                e
+            end
+            @test err isa ArgumentError
+            err isa ArgumentError && @test occursin("offset is not supported for family $(nameof(typeof(fam)))", err.msg)
+        end
+        # `offset = nothing` is "no offset", on a route that takes none too
+        @test isfinite(_off_ll(fit_gllvm(Y; family = fam, K = 1, kw..., offset = nothing)))
+    end
+    @testset "refused: Multinomial" begin
+        err = try fit_gllvm(d[:mn]; family = G.Multinomial(), offset = c); nothing catch e e end
+        @test err isa ArgumentError
+        err isa ArgumentError && @test occursin("offset is not supported for family Multinomial", err.msg)
+    end
+    @testset "refused: the K-omitted route says so before sweeping K" begin
+        err = try fit_gllvm(d[:ord]; family = G.Ordinal(), offset = c); nothing catch e e end
+        @test err isa ArgumentError
+        err isa ArgumentError && @test occursin("offset is not supported for family Ordinal", err.msg)
+    end
+
+    # Structural routes that take no offset: pervar, row_eff, explicit grouping, explicit phylo.
+    @testset "refused: pervar, row_eff, grouping, phylo" begin
+        Yn = d[:norm]
+        e1 = try fit_gllvm(Yn; family = Normal(), K = 1, pervar = true, offset = c); nothing catch e e end
+        @test e1 isa ArgumentError && occursin("offset is not supported for pervar", e1.msg)
+        for re in (:fixed, :random)
+            e2 = try fit_gllvm(d[:pois]; family = Poisson(), K = 1, row_eff = re, offset = c); nothing catch e e end
+            @test e2 isa ArgumentError && occursin("offset is not supported for row_eff = :$re", e2.msg)
+        end
+        cluster = repeat(1:6, inner = 6)
+        e3 = try
+            fit_gllvm(Yn; family = Normal(), grouping = [GroupingTerm(:cluster; mode = :indep)],
+                      cluster = cluster, offset = c); nothing
+        catch e
+            e
+        end
+        @test e3 isa ArgumentError && occursin("offset is not supported for explicit grouping", e3.msg)
+        Q = sparse([4.0 -1.0 -1.0 0.0; -1.0 3.0 0.0 -1.0; -1.0 0.0 3.0 0.0; 0.0 -1.0 0.0 3.0])
+        i, j, x = findnz(Q)
+        phy = PrecisionPhy(i, j, x, 4, 2, ["a1", "a2", "s1", "s2"],
+                           logdet(cholesky(Symmetric(Matrix(Q)))), 1.7, [3, 4])
+        e4 = try
+            fit_gllvm(randn(3, 4); family = Normal(), phylo = phy, species_id = [1, 2, 1, 2], offset = c); nothing
+        catch e
+            e
+        end
+        @test e4 isa ArgumentError && occursin("offset is not supported for explicit precision", e4.msg)
+    end
+end
+
+@testset "offset: Lognormal centres log(Y) - offset, so the offset is part of the mean" begin
+    Random.seed!(2026100201)
+    p, n = 6, 40; c = log(2)
+    Yl = exp.(0.5 .+ 0.3 .* randn(p, n))
+    f0 = fit_gllvm(Yl; family = GLLVModels.Lognormal(), K = 1)
+    # scalar c: absorbed by the intercepts (logLik unchanged, β shifted by exactly -c), as for Poisson
+    fs = fit_gllvm(Yl; family = GLLVModels.Lognormal(), K = 1, offset = c)
+    @test fs.converged
+    @test isapprox(fs.loglik, f0.loglik; atol = 1e-8, rtol = 0)
+    @test isapprox(fs.β, f0.β .- c; atol = 1e-10, rtol = 0)
+    @test isapprox(fs.σ, f0.σ; rtol = 1e-8)
+    # a non-constant p×n offset is the same model as the Normal fit of log(Y) with that offset
+    O = 0.4 .* randn(p, n)
+    fl = fit_gllvm(Yl; family = GLLVModels.Lognormal(), K = 1, offset = O)
+    fn = fit_gllvm(log.(Yl); family = Normal(), K = 1, offset = O)
+    @test fl.converged
+    @test isapprox(fl.loglik, fn.logLik - sum(log.(Yl)); atol = 1e-4, rtol = 0)
+    @test isapprox(fl.σ, fn.pars.σ_eps; rtol = 1e-3)
+    @test isapprox(fl.β, fn.pars.β; atol = 1e-3, rtol = 0)
+    @test abs(fl.loglik - f0.loglik) > 1            # a non-constant offset is not absorbed
+    # the shorter shapes stretch to the same p×n offset
+    u = collect(range(0.0, 1.0; length = n))
+    fu = fit_gllvm(Yl; family = GLLVModels.Lognormal(), K = 1, offset = reshape(u, 1, n))
+    fu2 = fit_gllvm(Yl; family = GLLVModels.Lognormal(), K = 1, offset = repeat(u', p, 1))
+    @test isapprox(fu.loglik, fu2.loglik; atol = 1e-10, rtol = 0)
+    # the named fitter is correct too, and checks the shape it receives
+    @test isapprox(fit_lognormal_gllvm(Yl; K = 1, offset = O).loglik, fl.loglik; atol = 1e-10, rtol = 0)
+    @test_throws ArgumentError fit_lognormal_gllvm(Yl; K = 1, offset = fill(c, n))
+    @test_throws ArgumentError fit_lognormal_gllvm(Yl; K = 1, offset = fill(NaN, p, n))
+end
+
+@testset "offset: a bare vector is ambiguous when p == n" begin
+    Random.seed!(2026100202)
+    p = n = 6
+    Y = Float64.(rand(Poisson(3.0), p, n)); Yn = randn(p, n) .+ 1
+    o = collect(range(0.5, 3.0; length = n))        # a per-unit effort vector, the natural use
+    for (Yx, fam) in ((Y, Poisson()), (Yn, Normal()))
+        err = try fit_gllvm(Yx; family = fam, K = 1, offset = o); nothing catch e e end
+        @test err isa ArgumentError
+        err isa ArgumentError && @test occursin("reshape(o, 1, $n)", err.msg)
+        err isa ArgumentError && @test occursin("reshape(o, $p, 1)", err.msg)
+    end
+    # the two explicit forms say which was meant: per-trait is absorbed, per-unit is not
+    f0 = fit_gllvm(Y; family = Poisson(), K = 1)
+    fu = fit_gllvm(Y; family = Poisson(), K = 1, offset = reshape(o, 1, n))
+    ft = fit_gllvm(Y; family = Poisson(), K = 1, offset = reshape(o, p, 1))
+    @test abs(fu.loglik - f0.loglik) > 0.1
+    @test isapprox(ft.loglik, f0.loglik; atol = 1e-3, rtol = 0)
+    # a square matrix is read as traits × units (the documented p×n layout), untouched
+    M = randn(p, n)
+    @test GLLVModels._normalize_offset(M, p, n) === M
+    # with p ≠ n a length-p vector is still one offset per trait, and a length-n vector is refused
+    @test GLLVModels._normalize_offset(zeros(4), 4, 7) == zeros(4, 7)
+    @test_throws ArgumentError GLLVModels._normalize_offset(zeros(7), 4, 7)
+    # the refusal text names the size properly
+    err = try GLLVModels._normalize_offset(zeros(7), 4, 7); nothing catch e e end
+    @test occursin("a length-7 vector", err.msg)
+    @test !occursin("7 Array", err.msg)
+    err = try GLLVModels._normalize_offset(zeros(7, 4), 4, 7); nothing catch e e end
+    @test occursin("a 7×4 matrix", err.msg)
+end
+
+@testset "offset: non-finite values are refused at observed cells, allowed where unobserved" begin
+    Random.seed!(2026100203)
+    d = _off_data(p = 5, n = 30, seed = 2026100203)
+    p, n = size(d[:pois]); G = GLLVModels
+    O = fill(0.2, p, n)
+    cases = [("Poisson", Poisson(), d[:pois]), ("Gamma", Gamma(), d[:gam]),
+             ("ZIPoisson", G.ZIPoisson(), d[:zip]), ("ZINegBin", G.ZINegBin(), d[:zip]),
+             ("DeltaLogNormal", G.DeltaLogNormal(), d[:two]),
+             ("HurdlePoisson", G.HurdlePoisson(), d[:twoc]), ("Normal", Normal(), d[:norm])]
+    @testset "$label" for (label, fam, Y) in cases
+        for bad in (NaN, Inf, -Inf)
+            Ob = copy(O); Ob[2, 3] = bad
+            @test_throws ArgumentError fit_gllvm(Y; family = fam, K = 1, offset = Ob)
+        end
+        v = fill(0.2, p); v[2] = NaN                      # a length-p vector with a NaN
+        @test_throws ArgumentError fit_gllvm(Y; family = fam, K = 1, offset = v)
+        u = fill(0.2, 1, n); u[1, 4] = NaN                # a 1×n matrix with a NaN
+        @test_throws ArgumentError fit_gllvm(Y; family = fam, K = 1, offset = u)
+    end
+    err = try fit_gllvm(d[:zip]; family = G.ZIPoisson(), K = 1, offset = let o = copy(O); o[2, 3] = NaN; o end); nothing catch e e end
+    @test occursin("trait 2, unit 3", err.msg)
+    # `missing` inside an offset is refused too, not just NaN
+    Om = Matrix{Union{Missing,Float64}}(O); Om[1, 1] = missing
+    @test_throws ArgumentError fit_gllvm(d[:zip]; family = G.ZIPoisson(), K = 1, offset = Om)
+
+    # An unobserved cell is never read, so its offset may be NaN: with a mask, or with `missing` in Y.
+    mask = trues(p, n); mask[2, 3] = false
+    On = copy(O); On[2, 3] = NaN
+    fa = fit_gllvm(d[:pois]; family = Poisson(), K = 1, mask = mask, offset = On)
+    fb = fit_gllvm(d[:pois]; family = Poisson(), K = 1, mask = mask, offset = O)
+    @test fa.converged && isfinite(fa.loglik)
+    @test isapprox(fa.loglik, fb.loglik; atol = 1e-8, rtol = 0)
+    Ym = Matrix{Union{Missing,Float64}}(d[:pois]); Ym[2, 3] = missing
+    fm = fit_gllvm(Ym; family = Poisson(), K = 1, offset = On)
+    @test fm.converged && isapprox(fm.loglik, fa.loglik; atol = 1e-8, rtol = 0)
+    fg = fit_gllvm(d[:norm]; family = Normal(), K = 1, mask = mask, offset = On)
+    @test fg.converged && isfinite(fg.logLik)
+    # ... but a NaN at any other, observed cell is still refused
+    On2 = copy(On); On2[1, 1] = NaN
+    @test_throws ArgumentError fit_gllvm(d[:pois]; family = Poisson(), K = 1, mask = mask, offset = On2)
+    # a whole trait masked out may carry a NaN offset (length-p vector, stretched along units)
+    mask2 = trues(p, n); mask2[2, :] .= false
+    vN = fill(0.2, p); vN[2] = NaN
+    @test GLLVModels._normalize_offset(vN, p, n; mask = mask2) isa Matrix
+    @test_throws ArgumentError GLLVModels._normalize_offset(vN, p, n; mask = mask)
+end
+
+@testset "offset: the @formula front end applies the same rules" begin
+    G = GLLVModels
+    d = _off_data(p = 5, n = 30, seed = 2026100204)
+    p, n = size(d[:pois]); c = log(2)
+    site = (x = randn(n),)
+    @testset "intercept-only ZIPoisson / ZINegBin: a scalar broadcasts (was -Inf, unconverged)" for fam in (G.ZIPoisson(), G.ZINegBin())
+        f0 = gllvm(@formula(y ~ 1), d[:zip], site; family = fam, K = 1)
+        fs = gllvm(@formula(y ~ 1), d[:zip], site; family = fam, K = 1, offset = c)
+        fm = gllvm(@formula(y ~ 1), d[:zip], site; family = fam, K = 1, offset = fill(c, p, n))
+        @test fs.converged && isfinite(fs.loglik)
+        @test isapprox(fs.loglik, fm.loglik; atol = 1e-8, rtol = 0)
+        @test isapprox(fs.loglik, f0.loglik; atol = 1e-6, rtol = 0)
+        @test_throws ArgumentError gllvm(@formula(y ~ 1), d[:zip], site; family = fam, K = 1, offset = fill(c, n))
+        @test_throws ArgumentError gllvm(@formula(y ~ 1), d[:zip], site; family = fam, K = 1,
+                                         offset = let o = fill(c, p, n); o[1, 1] = NaN; o end)
+    end
+    @testset "intercept-only Normal: scalar and 1×n stretch (was a DimensionMismatch)" begin
+        f0 = gllvm(@formula(y ~ 1), d[:norm], site; family = Normal(), K = 1)
+        fs = gllvm(@formula(y ~ 1), d[:norm], site; family = Normal(), K = 1, offset = c)
+        @test isapprox(fs.logLik, f0.logLik; atol = 1e-6, rtol = 0)
+        u = collect(range(0.0, 1.0; length = n))
+        f1 = gllvm(@formula(y ~ 1), d[:norm], site; family = Normal(), K = 1, offset = reshape(u, 1, n))
+        f2 = gllvm(@formula(y ~ 1), d[:norm], site; family = Normal(), K = 1, offset = repeat(u', p, 1))
+        @test isapprox(f1.logLik, f2.logLik; atol = 1e-8, rtol = 0)
+        # y ~ 0 (zero mean) goes through the plain Gaussian fitter and takes the same shapes
+        @test isfinite(gllvm(@formula(y ~ 0), d[:norm], site; family = Normal(), K = 1, offset = c).logLik)
+    end
+    @testset "Normal with a covariate takes the offset; covariate routes without one refuse" begin
+        f0 = gllvm(@formula(y ~ 1 + x), d[:norm], site; family = Normal(), K = 1)
+        fs = gllvm(@formula(y ~ 1 + x), d[:norm], site; family = Normal(), K = 1, offset = c)
+        @test isapprox(fs.logLik, f0.logLik; atol = 1e-6, rtol = 0)
+        for (fam, Y) in ((Poisson(), d[:pois]), (NegativeBinomial(), d[:nb]), (G.ZIPoisson(), d[:zip]))
+            err = try gllvm(@formula(y ~ 1 + x), Y, site; family = fam, K = 1, offset = c); nothing catch e e end
+            @test err isa ArgumentError
+            err isa ArgumentError && @test occursin("offset is not supported", err.msg)
+        end
+    end
+    @testset "other formula routes: refuse an offset they cannot use, clearly" begin
+        # pervar and the explicit-grouping route go through fit_gllvm
+        @test_throws ArgumentError gllvm(@formula(y ~ 1), d[:norm], site; family = Normal(), K = 1, pervar = true, offset = c)
+        err = try gllvm(@formula(y ~ 1), d[:norm], site; family = Normal(),
+                        sources = [], offset = c); nothing catch e e end
+        @test err isa ArgumentError
+        # a family fit_gllvm refuses is refused at the formula too
+        err = try gllvm(@formula(y ~ 1), d[:norm], site; family = G.StudentTFamily(5.0), K = 1, offset = c); nothing catch e e end
+        @test err isa ArgumentError && occursin("offset is not supported for family StudentTFamily", err.msg)
     end
 end
