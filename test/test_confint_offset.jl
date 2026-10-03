@@ -1,4 +1,4 @@
-using GLLVModels, Test, Random, Distributions, LinearAlgebra, Logging
+using GLLVModels, Test, Random, Distributions, LinearAlgebra
 const GM = GLLVModels
 
 # confint on a fit made with an `offset` (known additive term in η = β + offset + Λz).
@@ -382,7 +382,7 @@ end
 
     O4 = 0.4 .* randn(MersenneTwister(9), 4, 50)
     # fits on small simulated data may warn (a dispersion at its Poisson limit); not the point here
-    adapter_rows = with_logger(NullLogger()) do
+    adapter_rows = Base.CoreLogging.with_logger(Base.CoreLogging.NullLogger()) do
         _adapter_table(4, 50, 1, O4)
     end
     @testset "every offset-capable adapter: $(r.name)" for r in adapter_rows
