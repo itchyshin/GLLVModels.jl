@@ -292,6 +292,8 @@ println(_SHARD === nothing ?
     _shard_include("test_model_selection.jl")
     # P1 numeric twin of select_lv() vs gllvmTMB R/select-lv.R (Gaussian rank sweep).
     _shard_include("test_select_lv_p1_twin.jl")
+    # select_lv result: the nine fields R prints (AICc, conv, pdHess added).
+    _shard_include("test_select_lv_print.jl")
     _shard_include("test_binomial_ridge.jl")
     _shard_include("test_model_comparison.jl")
     _shard_include("test_structured_cov.jl")

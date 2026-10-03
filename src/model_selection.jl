@@ -16,6 +16,8 @@
 # Measured on origin/main 2847b5dbf (NB2, n = 300, p = 20, true K = 3): K = 3 and
 # K = 4 converged below K = 2, which made every criterion choose K = 2.
 
+import Printf   # `show` formats the table columns
+
 """
     LVSelection
 
@@ -33,6 +35,19 @@ Fields:
   `log(p·n)` (observed cells, R's convention).
 - `bic_sites::Vector{Float64}` — BIC with penalty `log(n)`, `n` the number of
   sites (columns of `Y` with at least one observed cell).
+- `aicc::Vector{Float64}` — corrected AIC, `aic + 2k(k+1)/(n − k − 1)` with
+  `k = nparams[i]` and `n` the same observed-cell count the BIC penalty uses
+  (`nobs(fit, Y; mask)`, R's `p·n`); `NaN` (R's `NA`) when `n − k − 1 ≤ 0`. Reported
+  only: it is not a selection criterion here.
+- `converged::Vector{Bool}` — whether the optimiser reported convergence for each
+  accepted fit (R's `conv`). A fit that did not converge is still accepted, and
+  can still be chosen, unless the sweep ran with `require_converged = true`.
+- `pd_hessian::Vector{Union{Missing,Bool}}` — R's `pdHess`: `true` when the Wald
+  observed information at the optimum is usable (finite, factorisable, positive
+  variances; the flag [`confint`](@ref) reports as `pd_hessian`), `false` when it
+  is not, `missing` (R's `NA`, "not determined") when it was not computed or the
+  fit type has no Wald route. Computed only with `select_lv(...; pd_hessian = true)`.
+  A rank with `false` is still accepted and can still be chosen.
 - `best_k::Int` — the accepted `K` minimising the chosen criterion.
 - `best::Any` — the chosen fitted model (the one at `best_k`).
 - `attempts::Vector` — one named tuple `(K, status, loglik, message)` per
@@ -41,6 +56,17 @@ Fields:
   `K`; under a loading ridge the penalised objective ℓ − ½Σλ²/τ² is compared,
   while `loglik` stays the unpenalised value), `:unconverged`, `:runaway` (inflated or separated loadings; `message`
   gives the statistic), or `:failed` (the fit threw; `message` says why).
+- `criterion::Symbol` — the criterion the sweep minimised (`:bic_sites`, `:bic` or `:aic`).
+
+Printing a result shows the table gllvmTMB's `print.gllvmTMB_select_lv` shows, with
+the same labels in the same order: a marker (`*` on the chosen row), `d` (= `K`),
+`npar` (= `nparams`), `logLik`, `AIC`, `BIC`, `AICc`, `conv`, `pdHess`. Numbers are
+rounded to three decimals and flags print as `TRUE`/`FALSE`/`NA`, as R does. `BIC` is
+the `log(p·n)` BIC (`bic`), R's BIC, whatever criterion chose the row.
+
+Where Julia differs from R: R leaves a rank that did not converge, or whose Hessian is
+confirmed not positive definite, out of the selection (the row stays in the table);
+`select_lv` keeps such a rank selectable and only reports `conv` and `pdHess`.
 """
 struct LVSelection
     K::Vector{Int}
@@ -49,9 +75,13 @@ struct LVSelection
     aic::Vector{Float64}
     bic::Vector{Float64}
     bic_sites::Vector{Float64}
+    aicc::Vector{Float64}
+    converged::Vector{Bool}
+    pd_hessian::Vector{Union{Missing,Bool}}
     best_k::Int
     best::Any
     attempts::Vector{NamedTuple{(:K, :status, :loglik, :message),Tuple{Int,Symbol,Float64,String}}}
+    criterion::Symbol
 end
 
 # Warm start needs top-level `β`/`Λ` fields: Gaussian `GllvmFit` keeps them in
@@ -74,6 +104,32 @@ function _lv_warm_start(prev, K::Integer)
 end
 
 _lv_converged(fit) = hasproperty(fit, :converged) ? Bool(fit.converged) : true
+
+# n behind AICc: the same observed-cell count the BIC penalty uses, `nobs(fit, Y; mask)`
+# (R's p·n). Stand-in fits that are not `AnyGllvmFit` get the same count from (Y, mask).
+_lv_nobs(fit::AnyGllvmFit, Y, mask) = StatsAPI.nobs(fit, Y; mask = mask)
+_lv_nobs(fit, Y, mask) = mask !== nothing ? count(mask) :
+                         Missing <: eltype(Y) ? count(!ismissing, Y) : length(Y)
+
+# AICc = AIC + 2k(k+1)/(n − k − 1), R's `.select_lv_aicc`; NaN (R's NA) when n − k − 1 ≤ 0.
+_lv_aicc(aic, k, n) = n - k - 1 > 0 ? aic + 2 * k * (k + 1) / (n - k - 1) : NaN
+
+# pdHess: the Wald flag `confint(fit, Y; method = :wald).pd_hessian` (observed information at
+# the optimum finite, factorisable, positive variances). `missing` (R's NA, "not determined")
+# when the fit type has no Wald route or the Hessian cannot be evaluated; never `false` for
+# that. One finite-difference/AD Hessian per call.
+function _lv_pd_hessian(fit, Y, kw)
+    try
+        common = (X = get(kw, :X, nothing), mask = get(kw, :mask, nothing))
+        ci = fit isa GllvmFit ?
+             confint(fit, Y; common..., Σ_phy = get(kw, :Σ_phy, nothing)) :
+             confint(fit, Y; method = :wald, common..., N = get(kw, :N, nothing))
+        return Bool(ci.pd_hessian)
+    catch e
+        e isa InterruptException && rethrow()
+        return missing
+    end
+end
 
 # Value the non-monotone check compares. A K model nests every smaller one, so its
 # maximised objective cannot be lower. Under a loading ridge that objective is the
@@ -121,7 +177,8 @@ end
 """
     select_lv(Y; family = Normal(), Kmax = 3, criterion = :bic_sites,
               warm_start = true, tol = 1e-3, max_latent_sd = 10.0,
-              ratio_max = 25.0, binary_ridge = 2.0, kwargs...) -> LVSelection
+              ratio_max = 25.0, binary_ridge = 2.0, pd_hessian = false,
+              kwargs...) -> LVSelection
 
 Latent-dimension selection: fit `fit_gllvm(Y; family, K = k, kwargs...)` for
 `k in 1:Kmax` and pick the `K` minimising `criterion` among the fits that pass a
@@ -186,6 +243,25 @@ The information criteria are read straight off the fits via [`aic`](@ref) and
 [`bic`](@ref) (BIC uses `nobs(fit, Y)`, R's p·n observed-cell count), so the
 parameter counting matches the single-fit accessors exactly.
 
+Each accepted `K` also gets the extra columns gllvmTMB's `select_lv` prints: `aicc`
+(`aic + 2k(k+1)/(n − k − 1)`, `n` the same `p·n` as `bic`, `NaN` when `n − k − 1 ≤ 0`),
+`converged` (the optimiser's flag) and `pd_hessian`. `pd_hessian` is `missing`
+(printed `NA`, "not determined") unless you pass `pd_hessian = true`, which evaluates
+the Wald observed information once per accepted `K` through
+`confint(fit, Y; method = :wald)` and records whether it is usable. A fit type without a
+Wald route gets `missing`, never `false`.
+
+The Hessian is not free, and its cost grows roughly with the square of the parameter
+count, which is why it is off by default. Measured on one Mac, sweeping `K = 1:3`:
+Gaussian data add 0.01 s at `p = 6`, `n = 150`, 0.9 s at `p = 20`, `n = 150` and 17 s at
+`p = 30`, `n = 200` (the Gaussian fits themselves take under 0.15 s); Poisson data add
+about 9 to 10 times the fitting time (+3.5 s at `p = 10`, `n = 100`; +36 s at `p = 20`,
+`n = 150`).
+
+None of the three columns changes which `K` is chosen, and `criterion` has no `:aicc`.
+Unlike R, `select_lv` keeps a rank that did not converge, or whose Hessian is not
+positive definite, eligible; read `converged` and `pd_hessian` before trusting the choice.
+
 The chosen `K` is itself an estimate: intervals and tests computed on
 `sel.best` are conditional on it and do not include uncertainty about `K`.
 
@@ -197,13 +273,15 @@ sel = select_lv(Y; family = Poisson(), Kmax = 3)   # pick K by BIC with log(n si
 sel.best_k          # selected latent dimension
 sel.best            # the fitted model at that K
 sel.attempts        # every K tried, with status
+sel                 # table: d npar logLik AIC BIC AICc conv pdHess, chosen row marked *
+select_lv(Y; family = Poisson(), Kmax = 3, pd_hessian = true)   # also fill pdHess (slower)
 ```
 """
 function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
                    criterion::Symbol = :bic_sites, warm_start::Bool = true,
                    tol::Real = 1e-3, max_latent_sd::Real = 10.0,
                    ratio_max::Real = 25.0, require_converged::Bool = false,
-                   binary_ridge::Real = 2.0,
+                   binary_ridge::Real = 2.0, pd_hessian::Bool = false,
                    _fitter = fit_gllvm, kwargs...)
     criterion in (:aic, :bic, :bic_sites) ||
         throw(ArgumentError("criterion must be :aic, :bic or :bic_sites; got :$criterion"))
@@ -219,6 +297,9 @@ function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
     aics     = Float64[]
     bics     = Float64[]
     bicns    = Float64[]
+    aiccs    = Float64[]
+    convs    = Bool[]
+    pds      = Union{Missing,Bool}[]
     fits     = Any[]
     attempts = NamedTuple{(:K, :status, :loglik, :message),Tuple{Int,Symbol,Float64,String}}[]
 
@@ -297,6 +378,9 @@ function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
         push!(aics, aic(fit))
         push!(bics, bic(fit, Y; mask = mask))
         push!(bicns, bic(fit, nsites))
+        push!(aiccs, _lv_aicc(aics[end], nps[end], _lv_nobs(fit, Y, mask)))
+        push!(convs, _lv_converged(fit))
+        push!(pds, pd_hessian ? _lv_pd_hessian(fit, Y, kwargs) : missing)
         push!(fits, fit)
     end
 
@@ -306,26 +390,57 @@ function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
     crit = criterion === :aic ? aics : criterion === :bic ? bics : bicns
     ibest = argmin(crit)
 
-    return LVSelection(Ks, nps, lls, aics, bics, bicns, Ks[ibest], fits[ibest], attempts)
+    return LVSelection(Ks, nps, lls, aics, bics, bicns, aiccs, convs, pds, Ks[ibest], fits[ibest],
+                       attempts, criterion)
 end
 
-# Tidy table display, best row marked with '*'.
+# R prints a numeric column with `print.data.frame`: `round(x, 3)`, then one common number of
+# decimals per column, the most any element needs to show up to 7 significant digits
+# (`format(digits = 7)`), so a column of large values loses decimals and trailing zeros are
+# kept. NaN prints as NA. Matches `print.gllvmTMB_select_lv` (R/select-lv.R at gllvmTMB P1).
+function _lv_format_column(xs::AbstractVector{<:Real})
+    vals = [isfinite(x) ? round(x; digits = 3) + 0.0 : x for x in xs]
+    rgt = 0
+    for x in vals
+        (isfinite(x) && !iszero(x)) || continue
+        mantissa, expo = split(Printf.format(Printf.Format("%.6e"), abs(x)), 'e')
+        nsig = max(length(rstrip(replace(mantissa, "." => ""), '0')), 1)
+        rgt = max(rgt, nsig - 1 - parse(Int, expo))
+    end
+    fmt = Printf.Format("%." * string(rgt) * "f")
+    return [isfinite(x) ? Printf.format(fmt, x) : "NA" for x in vals]
+end
+
+_lv_format_flag(x) = ismissing(x) ? "NA" : x ? "TRUE" : "FALSE"
+
+# Same table as gllvmTMB's `print.gllvmTMB_select_lv`: marker, d, npar, logLik, AIC, BIC,
+# AICc, conv, pdHess; the selected row marked with '*'. Columns right-aligned, one space apart
+# (R's `print(df, row.names = FALSE)` layout).
 function Base.show(io::IO, ::MIME"text/plain", sel::LVSelection)
-    println(io, "GLLVModels latent-dimension selection (best K = ", sel.best_k, ")")
-    println(io, "      K   nparams        logLik           AIC           BIC")
+    println(io, "GLLVModels latent-dimension selection (criterion = ", sel.criterion,
+            ", best K = ", sel.best_k, ")")
+    cols = [
+        ("",       [k == sel.best_k ? "*" : " " for k in sel.K]),
+        ("d",      string.(sel.K)),
+        ("npar",   string.(sel.nparams)),
+        ("logLik", _lv_format_column(sel.loglik)),
+        ("AIC",    _lv_format_column(sel.aic)),
+        ("BIC",    _lv_format_column(sel.bic)),
+        ("AICc",   _lv_format_column(sel.aicc)),
+        ("conv",   _lv_format_flag.(sel.converged)),
+        ("pdHess", _lv_format_flag.(sel.pd_hessian)),
+    ]
+    widths = [max(length(h), maximum(length, cells; init = 0)) for (h, cells) in cols]
+    println(io, join((" " * lpad(h, w) for ((h, _), w) in zip(cols, widths))))
     for i in eachindex(sel.K)
-        mark = sel.K[i] == sel.best_k ? "*" : " "
-        println(io, mark, " ",
-                lpad(string(sel.K[i]), 5), "   ",
-                lpad(string(sel.nparams[i]), 7), "   ",
-                lpad(string(round(sel.loglik[i]; sigdigits = 7)), 11), "   ",
-                lpad(string(round(sel.aic[i]; sigdigits = 7)), 11), "   ",
-                lpad(string(round(sel.bic[i]; sigdigits = 7)), 11))
+        println(io, join((" " * lpad(cells[i], w) for ((_, cells), w) in zip(cols, widths))))
     end
     for a in sel.attempts
         a.status in (:ok, :warm_start) && continue
         println(io, "  K = ", a.K, " not used: ", a.status, isempty(a.message) ? "" : " — " * a.message)
     end
+    any(ismissing, sel.pd_hessian) &&
+        println(io, "  pdHess = NA: not determined. It needs select_lv(...; pd_hessian = true) (one Hessian per K) and a fit type with a Wald route.")
 end
 
 Base.show(io::IO, sel::LVSelection) =
