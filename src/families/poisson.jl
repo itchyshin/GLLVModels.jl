@@ -162,6 +162,8 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
+                               caller = "_fit_poisson_gllvm_laplace")
     rr = rr_theta_len(p, K)
     hessian in (:fisher, :observed) || throw(ArgumentError(
         "fit_poisson_gllvm: hessian must be :fisher or :observed; got :$hessian"))

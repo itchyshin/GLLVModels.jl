@@ -567,6 +567,8 @@ function fit_delta_lognormal_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
+                               caller = "fit_delta_lognormal_gllvm", maskable = false)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_delta_lognormal_gllvm: hessian must be :observed or :fisher; got :$hessian"))
     predictor in (:separate, :shared) || throw(ArgumentError(
@@ -750,6 +752,8 @@ function fit_hurdle_poisson_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
+                               caller = "fit_hurdle_poisson_gllvm", maskable = false)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_hurdle_poisson_gllvm: hessian must be :observed or :fisher; got :$hessian"))
     _check_twopart_support("fit_hurdle_poisson_gllvm", Y, _tp_count_ok, "non-negative integer counts")
@@ -905,6 +909,8 @@ function fit_hurdle_nb_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
+                               caller = "fit_hurdle_nb_gllvm", maskable = false)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_hurdle_nb_gllvm: hessian must be :observed or :fisher; got :$hessian"))
     _check_twopart_support("fit_hurdle_nb_gllvm", Y, _tp_count_ok, "non-negative integer counts")
@@ -1154,6 +1160,8 @@ function fit_delta_gamma_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     disp_group in (:shared, :species) || throw(ArgumentError(
         "fit_delta_gamma_gllvm: disp_group must be :shared or :species; got :$disp_group"))
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
+                               caller = "fit_delta_gamma_gllvm", maskable = false)
     _check_twopart_support("fit_delta_gamma_gllvm", Y, _tp_positive_ok, "0 or a finite positive real")
     rr = rr_theta_len(p, K)
 
@@ -1363,7 +1371,14 @@ end
 function _tp_offset_warmstart!(βc0::AbstractVector, Zc::AbstractMatrix, Y::AbstractMatrix, offset)
     offset === nothing && return βc0
     p, n = size(Y)
-    @inbounds for t in 1:p
+    # The named fitters normalise `offset` to p×n before they get here; this guards the
+    # helper itself, because an unchecked `offset[t, j]` read of the wrong shape reaches
+    # memory the vector does not own (a NaN start, a throw, or a wrong converged fit).
+    size(offset) == (p, n) || throw(ArgumentError(
+        "offset must be a $(p)×$(n) matrix (traits × units) here; got " *
+        "$(_describe_offset(offset)). Pass a $(p)×$(n) matrix, or use fit_gllvm, which also " *
+        "accepts a scalar, a length-$(p) vector and the 1×$(n) / $(p)×1 matrices."))
+    for t in 1:p
         s = 0.0; c = 0
         for j in 1:n
             Y[t, j] > 0 && (s += offset[t, j]; c += 1)
@@ -1427,6 +1442,8 @@ function fit_zip_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
+                               caller = "fit_zip_gllvm", maskable = false)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_zip_gllvm: hessian must be :observed or :fisher; got :$hessian"))
     _check_twopart_support("fit_zip_gllvm", Y, _tp_count_ok, "non-negative integer counts")
@@ -1642,6 +1659,8 @@ function fit_zinb_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
+                               caller = "fit_zinb_gllvm", maskable = false)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_zinb_gllvm: hessian must be :observed or :fisher; got :$hessian"))
     _check_twopart_support("fit_zinb_gllvm", Y, _tp_count_ok, "non-negative integer counts")
@@ -1952,6 +1971,8 @@ function fit_zib_gllvm(Y::AbstractMatrix{<:Real}; K::Integer, N::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
+                               caller = "fit_zib_gllvm", maskable = false)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_zib_gllvm: hessian must be :observed or :fisher; got :$hessian"))
     _check_twopart_support("fit_zib_gllvm", Y, _tp_count_ok, "integer counts 0..N")

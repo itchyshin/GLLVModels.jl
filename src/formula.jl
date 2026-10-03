@@ -260,7 +260,7 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
         # that cannot be broadcast or a non-finite value is refused). Every other family goes
         # through `fit_gllvm`, which applies them itself.
         family isa Union{Normal, ZIPoisson, ZINegBin} &&
-            (kwargs = _normalize_offset_kwargs(kwargs, Y))
+            (kwargs = _normalize_offset_kwargs(kwargs, Y; caller = "gllvm", maskable = family isa Normal))
         # `y ~ 1` estimates trait intercepts; `y ~ 0` is the documented zero mean.
         gaussian_fit = StatsModels.omitsintercept(formula.rhs) ?
             fit_gaussian_gllvm : _fit_gaussian_trait_intercepts
@@ -286,7 +286,7 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
     # covariate fitters of the other families have no offset keyword, so an offset is
     # refused here rather than reaching them as a MethodError.
     if family isa Normal
-        kwargs = _normalize_offset_kwargs(kwargs, Y)
+        kwargs = _normalize_offset_kwargs(kwargs, Y; caller = "gllvm")
     else
         kwargs = _no_offset_kwargs(kwargs, "gllvm",
             "family $(nameof(typeof(family))) with covariates in the formula")

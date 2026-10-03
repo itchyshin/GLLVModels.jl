@@ -1,13 +1,16 @@
 # Unified GLLVM fit entry point — dispatches on the response family.
 
-# Offset normaliser: the one place `fit_gllvm` decides what shape an `offset` may have.
+# Offset normaliser: the one place that decides what shape an `offset` may have, for
+# `fit_gllvm`, the `gllvm` formula front end AND every named fitter that takes an `offset`
+# keyword (each calls it first thing, so a direct `fit_zip_gllvm(Y; offset = ...)` gets the
+# same rules as `fit_gllvm(Y; family = ZIPoisson(), offset = ...)`).
 # The rule is Julia's own broadcast rule, so nothing here is ambiguous: a real scalar becomes
 # the p×n matrix `fill(c, p, n)` (R's gllvmTMB broadcasts `offset(log(2))` to every row); a
 # matrix whose sides are each the full size or 1 (p×n, 1×n = one offset per unit, p×1 = one
 # per trait) is stretched to p×n; a length-p vector is a column (one offset per trait);
-# `nothing` and a p×n matrix pass through untouched (same object). Anything else is refused
-# with an ArgumentError. A p×n matrix is always read as traits × units, so when p == n an
-# n×p (units × traits) matrix is read transposed; that orientation is the documented one.
+# `nothing` and a clean p×n matrix pass through untouched (same object). Anything else is
+# refused with an ArgumentError. A p×n matrix is always read as traits × units, so when p == n
+# an n×p (units × traits) matrix is read transposed; that orientation is the documented one.
 #
 # Two inputs are ambiguous rather than merely wrong, and are refused too. (1) A bare vector
 # when p == n: it could be one offset per trait or one per unit, and reading it per trait
@@ -22,15 +25,21 @@
 # `try ... catch` that turns any exception into a sentinel value, so a scalar offset used to
 # come back as a loglik = -Inf, unconverged fit (the Gaussian route threw a
 # DimensionMismatch), and a p×1 offset as -Inf or, on some routes, a finite fit of the wrong
-# model. A 1×n matrix already worked on the count and continuous Laplace routes (the family
-# code adds the offset by broadcast), and a length-p vector on most of them; the expansion
-# below gives bit-identical fits there and also makes the Gaussian and AGHQ routes accept
-# them. See the CHANGELOG for the routes where the old length-p and p×1 results were wrong.
-function _normalize_offset(offset, p::Integer, n::Integer; Y = nothing, mask = nothing)
+# model. The two-part warm start read `offset[t, j]` unchecked, so a wrong shape reached
+# memory it did not own. A 1×n matrix already worked on the count and continuous Laplace
+# routes (the family code adds the offset by broadcast), and a length-p vector on most of
+# them; the expansion below gives bit-identical fits there and also makes the Gaussian and
+# AGHQ routes accept them. See the CHANGELOG for the routes where the old length-p and p×1
+# results were wrong. `caller` names the function in the error message; `maskable = false`
+# marks the routes that take neither `mask` nor `missing` responses (Lognormal, the two-part
+# and the zero-inflated families), where every cell is observed, so the message does not
+# suggest marking a cell unobserved.
+function _normalize_offset(offset, p::Integer, n::Integer; Y = nothing, mask = nothing,
+                           caller::AbstractString = "fit_gllvm", maskable::Bool = true)
     offset === nothing && return nothing
     if offset isa Real
         isfinite(offset) || throw(ArgumentError(
-            "fit_gllvm: a scalar offset must be finite; got $offset"))
+            "$caller: a scalar offset must be finite; got $offset"))
         return fill(float(offset), p, n)
     end
     O = nothing
@@ -42,7 +51,7 @@ function _normalize_offset(offset, p::Integer, n::Integer; Y = nothing, mask = n
     elseif offset isa AbstractVector
         if p == n && length(offset) == p
             throw(ArgumentError(
-                "fit_gllvm: a bare length-$(p) offset vector is ambiguous when the number " *
+                "$caller: a bare length-$(p) offset vector is ambiguous when the number " *
                 "of traits equals the number of units (p = n = $(p)): it could be one " *
                 "offset per trait or one per unit. Pass reshape(o, 1, $(n)) for one offset " *
                 "per unit, or reshape(o, $(p), 1) for one offset per trait."))
@@ -51,11 +60,11 @@ function _normalize_offset(offset, p::Integer, n::Integer; Y = nothing, mask = n
         end
     end
     O === nothing && throw(ArgumentError(
-        "fit_gllvm: offset must be a real scalar (the same offset for every cell), " *
+        "$caller: offset must be a real scalar (the same offset for every cell), " *
         "a $(p)×$(n) matrix (traits × units, the layout of Y; a $(p)×1 or 1×$(n) matrix is " *
         "stretched along its length-1 side), or a length-$(p) vector (one offset per trait); " *
         "got $(_describe_offset(offset)). For one offset per unit, pass reshape(o, 1, $(n))."))
-    _check_offset_observed(O, Y, mask)
+    _check_offset_observed(O, Y, mask, caller, maskable)
     return O
 end
 
@@ -69,18 +78,22 @@ end
 
 # Refuse a non-finite offset at an observed cell. A cell is not observed when `mask` (a p×n
 # Bool matrix) is false there or `Y` holds `missing` there.
-function _check_offset_observed(O::AbstractMatrix, Y, mask)
-    use_mask = mask isa AbstractMatrix && size(mask) == size(O)
-    use_Y = Y isa AbstractMatrix && size(Y) == size(O)
+function _check_offset_observed(O::AbstractMatrix, Y, mask, caller::AbstractString = "fit_gllvm",
+                                maskable::Bool = true)
+    use_mask = maskable && mask isa AbstractMatrix && size(mask) == size(O)
+    use_Y = maskable && Y isa AbstractMatrix && size(Y) == size(O)
     @inbounds for s in axes(O, 2), t in axes(O, 1)
         o = O[t, s]
         (o isa Real && isfinite(o)) && continue
         use_mask && !mask[t, s] && continue
         use_Y && ismissing(Y[t, s]) && continue
-        throw(ArgumentError(
-            "fit_gllvm: offset must be finite at every observed cell; got $(repr(o)) at " *
+        throw(ArgumentError(maskable ?
+            "$caller: offset must be finite at every observed cell; got $(repr(o)) at " *
             "trait $t, unit $s. Give that cell a finite offset, or mark it unobserved " *
-            "(mask = false, or missing in Y)."))
+            "(mask = false, or missing in Y)." :
+            "$caller: offset must be finite at every cell; got $(repr(o)) at trait $t, " *
+            "unit $s. This route does not support mask and takes no missing responses, so " *
+            "every cell is used: give that cell a finite offset."))
     end
     return nothing
 end
@@ -94,6 +107,12 @@ const _OFFSET_UNSUPPORTED_FAMILIES = Union{Multinomial, StudentTFamily, COMPoiss
                                            BetaBinom, BetaHurdle, OrderedBeta,
                                            Ordinal, OrdinalLogit}
 
+# Families whose fitter takes neither `mask` nor `missing` responses, so every cell is
+# observed and a non-finite offset anywhere is an error (no "unobserved cell" exemption).
+const _OFFSET_MASKLESS_FAMILIES = Union{Lognormal, DeltaLogNormal, DeltaGamma, HurdlePoisson,
+                                        HurdleNB, ZIPoisson, ZINegBin, ZIB}
+_offset_maskless(family) = family isa _OFFSET_MASKLESS_FAMILIES
+
 _refuse_offset(caller::AbstractString, what::AbstractString) = throw(ArgumentError(
     "$caller: offset is not supported for $what; remove the offset keyword. " *
     "Offsets are accepted by the Normal, count, positive-continuous, two-part and " *
@@ -102,12 +121,24 @@ _refuse_offset(caller::AbstractString, what::AbstractString) = throw(ArgumentErr
 # Drop `offset = nothing` (no offset; some routes would otherwise reject the keyword), and
 # normalise any other offset once. Shared by `fit_gllvm` and the `gllvm` formula front end,
 # which calls some fitters directly.
-function _normalize_offset_kwargs(kwargs, Y::AbstractMatrix)
+function _normalize_offset_kwargs(kwargs, Y::AbstractMatrix; caller::AbstractString = "fit_gllvm",
+                                  maskable::Bool = true)
     haskey(kwargs, :offset) || return kwargs
     nt = NamedTuple(kwargs)
     nt.offset === nothing && return Base.structdiff(nt, NamedTuple{(:offset,)})
     return merge(nt, (offset = _normalize_offset(nt.offset, size(Y, 1), size(Y, 2);
-                                                 Y = Y, mask = get(nt, :mask, nothing)),))
+                                                 Y = Y, mask = get(nt, :mask, nothing),
+                                                 caller = caller, maskable = maskable),))
+end
+
+# Entry check for the named fitters that take their options as `kwargs...` (the AGHQ-aware
+# `fit_poisson_gllvm`, `fit_binomial_gllvm` and the grouped / Delta-Gamma AGHQ routes). No
+# offset, or `offset = nothing`: the very same `kwargs` come back untouched, so those fits
+# are bit-identical. Any other offset is normalised exactly as in `fit_gllvm`.
+function _entry_offset_kwargs(kwargs, Y::AbstractMatrix, caller::AbstractString;
+                              maskable::Bool = true)
+    (haskey(kwargs, :offset) && kwargs[:offset] !== nothing) || return kwargs
+    return _normalize_offset_kwargs(kwargs, Y; caller = caller, maskable = maskable)
 end
 
 # For a route that takes no offset: drop `offset = nothing`, refuse any other offset.
@@ -207,14 +238,19 @@ That is Julia's own broadcast rule. Any other shape (a length-`n` vector when `p
 accepted shapes, instead of returning a `-Inf`, unconverged fit. A non-finite entry (`NaN`,
 `Inf`, `missing`) in a matrix or vector offset throws too when it sits at an observed cell;
 at a cell that is not observed (`mask` is `false` there, or `Y` is `missing` there) it is
-ignored. The check happens once here, so every family route below sees a `p×n` matrix.
+ignored. Only the families that take a `mask` can have
+such a cell: `Lognormal` and the two-part and zero-inflated families have no `mask`, so every
+cell is observed and a non-finite offset anywhere is refused. The check happens once here,
+so every family route below sees a `p×n` matrix; the named fitters (`fit_poisson_gllvm`,
+`fit_zip_gllvm`, `fit_delta_lognormal_gllvm`, ...) run the same check on entry, so a direct
+call gets the same rules, and the same `ArgumentError`, as a call through `fit_gllvm`.
 
 Routes that take no offset throw an `ArgumentError` ("offset is not supported for ...") for
 any offset other than `nothing`: the families `StudentTFamily`, `Ordinal` / `OrdinalLogit`
-(also with `aghq`), `COMPoisson`, `BetaBinom`, `BetaHurdle`, `OrderedBeta` and
-`Multinomial`, and the `pervar`, `row_eff`, `grouping` and `phylo` routes. Every other family
-listed above takes an offset. `gllvm(@formula(...))` applies the same rules; with covariates
-in the formula only `Normal()` takes one.
+(also with `aghq`), `COMPoisson`, `BetaBinom`, `BetaHurdle`, `OrderedBeta`, `Multinomial`
+and the `pervar`, `row_eff`, `grouping` and `phylo` routes. Every other family listed above takes
+an offset. `gllvm(@formula(...))` applies the same rules; with covariates in the formula
+only `Normal()` takes one.
 
 # Structural / dispersion variants (gllvm-style keyword routing)
 
@@ -371,7 +407,7 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
         row_eff in (:fixed, :random) && _refuse_offset("fit_gllvm", "row_eff = :$row_eff")
         family isa _OFFSET_UNSUPPORTED_FAMILIES && _refuse_offset("fit_gllvm",
             "family $(nameof(typeof(family)))")
-        kwargs = _normalize_offset_kwargs(kwargs, Y)
+        kwargs = _normalize_offset_kwargs(kwargs, Y; maskable = !_offset_maskless(family))
     end
     # gllvm's `num.lv` alias for K. If both given they must agree.
     if num_lv !== nothing

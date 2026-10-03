@@ -103,26 +103,24 @@ at fitted `(β, Λ, σ)` including `−Σ log y`. Remaining keywords pass throug
 `fit_gaussian_gllvm`.
 
 `offset` is the known additive term on the log scale, `log(y) = β + offset + Λz + ε`
-(for example log-exposure), as for the other families: a `p×n` matrix, or `nothing`.
-It is subtracted from `log(Y)` before the trait means are taken, so a constant offset is
-absorbed by the intercepts (same `loglik`, `β` shifted by `−offset`), and `β` is the
-offset-free intercept. [`fit_gllvm`](@ref) also accepts a scalar and the shorter shapes
-and expands them to `p×n`; this named fitter takes the `p×n` matrix only.
+(for example log-exposure), as for the other families. It is subtracted from `log(Y)` before
+the trait means are taken, so a constant offset is absorbed by the intercepts (same `loglik`,
+`β` shifted by `−offset`), and `β` is the offset-free intercept. It takes the shapes
+[`fit_gllvm`](@ref) documents (a scalar, a `p×n`, `1×n` or `p×1` matrix, a length-`p` vector;
+anything else throws an `ArgumentError`), and a non-finite offset at any cell is refused.
+This fitter has no `mask`, so every cell is observed.
 """
 function fit_lognormal_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         link::Link = LogLink(), offset = nothing, kwargs...)
     link isa LogLink || throw(ArgumentError(
         "fit_lognormal_gllvm: only LogLink is supported (twin lognormal)"))
     p, n = size(Y)
+    # `offset` is made a p×n matrix here (see `_normalize_offset`); with no mask every cell is
+    # observed, so a non-finite offset anywhere is refused.
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
+                               caller = "fit_lognormal_gllvm", maskable = false)
     all(>(0), Y) || throw(ArgumentError(
         "lognormal requires y > 0; found non-positive response"))
-    if offset !== nothing
-        (offset isa AbstractMatrix && size(offset) == (p, n)) || throw(ArgumentError(
-            "fit_lognormal_gllvm: offset must be a $(p)×$(n) matrix (traits × units); " *
-            "fit_gllvm also accepts a scalar and the shorter shapes"))
-        all(isfinite, offset) || throw(ArgumentError(
-            "fit_lognormal_gllvm: offset must be finite"))
-    end
     Z = log.(Y)
     # η = β + offset + Λz is the mean of log(y), so it is log(y) − offset that is centred
     # and fitted; the intercepts then absorb a constant offset exactly.
