@@ -2,7 +2,7 @@
   "schema": "core070-postfit-p1-case-receipt/v2",
   "case_id": "CORE070-POSTFIT-LOGLIK-NOBS-NATIVE",
   "verdict": "PASS",
-  "evidence_kind": "paired_policy_check",
+  "evidence_kind": "numeric_r_vs_julia",
   "source_ids": [
     "postfit-policy/POST-LOGLIK-NOBS"
   ],
@@ -29,7 +29,7 @@
     "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-policy-p1/julia-results.json",
     "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-policy-p1/r-oracle.json"
   ],
-  "why_not_numeric": "Exact integer equality (contract tolerances.integer_exact = 0). R and Julia values are recorded; the numeric-tier rule needs a tolerance > 0, and none is invented here.",
+  "why_not_numeric": "Exact integer equality (contract tolerances.integer_exact = 0). The row now binds as numeric under itchyshin/GLLVModels.jl#684 item 1: the comparison block records R and Julia integers with tolerance 0.5, which for integers means equal.",
   "pin": "P1",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
@@ -39,5 +39,22 @@
   "glvmodels_commit": "681c4c3ca666e630470bba01a057bc88158b85f3",
   "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
-  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-POSTFIT-LOGLIK-NOBS-NATIVE",
+        "quantity": "attr(logLik(object), 'nobs')",
+        "kind": "integer_equality",
+        "r_value": 400,
+        "julia_value": 400,
+        "max_abs_diff": 0,
+        "tolerance": 0.5,
+        "tolerance_rule": "integer_equality, tolerance 0.5 (itchyshin/GLLVModels.jl#684 item 1): both values are integers, so within 0.5 means equal; the contract's integer_exact = 0 is the same condition",
+        "n_values": 1,
+        "diff_source": "recomputed from r-oracle.json['loglik_nobs_attr'] and julia-results.json cases['CORE070-POSTFIT-LOGLIK-NOBS-NATIVE']['julia']"
+      }
+    ]
+  }
 }

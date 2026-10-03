@@ -58,9 +58,18 @@ disposition and every other field are untouched; a row's `note` or `reason` stil
 superseded batch case. `--apply-twins` re-applies the overlay to the tracked case-map-postfit.json
 (idempotent) and `--check-twins` verifies that file is exactly that re-derivation.
 
+Integer equality (itchyshin/GLLVModels.jl#684 item 1). The four exact-integer postfit-policy cases
+(POST-LOGLIK-DF, POST-LOGLIK-NOBS, POST-NOBS-COUNT, POST-NOBS-FALLBACK) carry a comparison block of
+kind "integer_equality" with tolerance 0.5, so "within tolerance" can only mean "equal". r_value is read
+from the R oracle (r-oracle.json), julia_value from the Julia results (julia-results.json); the R number
+the harness itself recorded must agree with the oracle or the tool stops. Those rows are then
+evidence_tier numeric. `--apply-integer-equality` re-derives this from the tracked raw files under
+receipts/postfit/postfit-policy-p1/ (no run directories needed; idempotent); the full run does the same.
+
 Usage (inputs are the raw run directories under local-scratch):
   python3 tools/core070_postfit_p1_receipts.py --runs DIR --runtimes JSON [--allow-dirty]
   python3 tools/core070_postfit_p1_receipts.py --apply-twins
+  python3 tools/core070_postfit_p1_receipts.py --apply-integer-equality
   python3 tools/core070_postfit_p1_receipts.py --check-twins
 where DIR holds surface-conversion-p1/, wave6-conversion-p1/, wave7-conversion-p1/,
 wave8-conversion-p1/, estimand-rebind-p1/, postfit-policy-p1/, postfit-1-r-p1/,
@@ -312,6 +321,79 @@ TWIN_FILES = {  # source_id -> twin receipt stem
 }
 
 
+# Exact-integer postfit-policy cases (ruling 1): case id -> (r-oracle.json key, quantity).
+INTEGER_EQUALITY = {
+    "CORE070-POSTFIT-LOGLIK-DF-NATIVE": ("df", "attr(logLik(object), 'df')"),
+    "CORE070-POSTFIT-LOGLIK-NOBS-NATIVE": ("loglik_nobs_attr", "attr(logLik(object), 'nobs')"),
+    "CORE070-POSTFIT-NOBS-COUNT-NATIVE": ("nobs", "nobs(object), likelihood_rows-preferring branch"),
+    "CORE070-POSTFIT-NOBS-FALLBACK-NATIVE": ("nobs", "nobs(object), no-missing-data fallback branch"),
+}
+INTEGER_RULING = "itchyshin/GLLVModels.jl#684 item 1"
+INTEGER_RULE = (f"integer_equality, tolerance 0.5 ({INTEGER_RULING}): both values are integers, so within 0.5 means equal; "
+                "the contract's integer_exact = 0 is the same condition")
+INTEGER_WHY = (f"Exact integer equality (contract tolerances.integer_exact = 0). The row now binds as numeric under "
+               f"{INTEGER_RULING}: the comparison block records R and Julia integers with tolerance 0.5, which for "
+               "integers means equal.")
+INTEGER_TIER = (f"numeric: every executable case receipt carries an integer_equality comparison block pinned to P1 "
+                f"(tolerance 0.5, so the integers must be equal), under {INTEGER_RULING}")
+
+
+def integer_entry(cid, jc, po):
+    """The integer_equality comparison entry for `cid`, from the raw Julia result `jc` and R oracle `po`."""
+    key, quantity = INTEGER_EQUALITY[cid]
+    r, j = po[key], jc["julia"]
+    for name, v in (("R oracle", r), ("Julia result", j)):
+        if isinstance(v, bool) or not isinstance(v, (int, float)) or v != int(v):
+            raise SystemExit(f"{cid}: {name} value {v!r} is not an integer")
+    r, j = int(r), int(j)
+    if jc["r"] != r:
+        raise SystemExit(f"{cid}: harness-recorded R value {jc['r']!r} != r-oracle.json[{key!r}] = {r}")
+    if bool(jc["pass"]) != (r == j):
+        raise SystemExit(f"{cid}: harness pass flag {jc['pass']!r} disagrees with R {r} vs Julia {j}")
+    return {"case_id": cid, "quantity": quantity, "kind": "integer_equality", "r_value": r, "julia_value": j,
+            "max_abs_diff": abs(r - j), "tolerance": 0.5, "tolerance_rule": INTEGER_RULE, "n_values": 1,
+            "diff_source": f"recomputed from r-oracle.json[{key!r}] and julia-results.json cases[{cid!r}]['julia']"}
+
+
+def bind_numeric(row, paths, verdicts, batch_ok, tier):
+    """Set the evidence fields of a row that binds as numeric (shared by the full run and the integer overlay)."""
+    row.update(evidence_tier="numeric", measured_against=P1_SHA,
+               evidence={"receipt": paths, "tier": tier},
+               measured_result={"case_verdicts": verdicts, "batch_verifier": batch_ok, "row_verdict": "PASS"})
+    return row
+
+
+def apply_integer_equality():
+    raw = REC / "postfit-policy-p1"
+    pj, po = load(raw / "julia-results.json"), load(raw / "r-oracle.json")
+    recs = {}
+    for cid in INTEGER_EQUALITY:
+        path = REC / "cases" / f"{cid}.json"
+        rec = load(path)
+        if rec["harness_fields"] != pj["cases"][cid]:
+            raise SystemExit(f"{cid}: receipt harness_fields {rec['harness_fields']} != raw julia-results.json "
+                             f"{pj['cases'][cid]}; stop and report")
+        rec["comparison"] = {"pin": "P1", "cases": [integer_entry(cid, pj["cases"][cid], po)]}
+        rec["why_not_numeric"] = INTEGER_WHY
+        rec["evidence_kind"] = "numeric_r_vs_julia"
+        write_json(path, rec)
+        recs[cid] = (str(path.relative_to(ROOT)), rec)
+    cm = load(OUT / "case-map-postfit.json")
+    for row in cm["rows"]:
+        ids = row["executable_case_ids"]
+        if len(ids) == 1 and ids[0] in INTEGER_EQUALITY:
+            path, rec = recs[ids[0]]
+            if rec["verdict"] != "PASS" or rec["batch_verifier"]["status"] != "PASS":
+                raise SystemExit(f"{ids[0]}: receipt verdict or batch verifier is not PASS")
+            bind_numeric(row, [path], {ids[0]: rec["verdict"]}, {ids[0]: rec["batch_verifier"]["status"]}, INTEGER_TIER)
+    counts = {k: 0 for k in cm["counts"]}
+    for r in cm["rows"]:
+        counts[tier_count_key(r["evidence_tier"])] += 1
+    cm["counts"] = counts
+    write_json(OUT / "case-map-postfit.json", cm)
+    print(json.dumps(counts))
+
+
 def tier_count_key(tier):
     return "numeric_pass" if tier == "numeric" else tier
 
@@ -380,6 +462,8 @@ def main():
                     help="re-apply the Julia twin overlay to the tracked case-map-postfit.json")
     ap.add_argument("--check-twins", action="store_true",
                     help="verify case-map-postfit.json equals its twin-overlay re-derivation; write nothing")
+    ap.add_argument("--apply-integer-equality", action="store_true",
+                    help="write the integer_equality comparison blocks and bind the four integer rows (idempotent)")
     ap.add_argument("--allow-dirty", action="store_true",
                     help="write receipts from a checkout with modified tracked files (recorded, not hidden)")
     args = ap.parse_args()
@@ -388,6 +472,9 @@ def main():
         return
     if args.apply_twins:
         apply_twins()
+        return
+    if args.apply_integer_equality:
+        apply_integer_equality()
         return
     if args.runs is None or args.runtimes is None:
         ap.error("--runs and --runtimes are required unless --apply-twins or --check-twins")
@@ -538,9 +625,10 @@ def main():
                 why = ("The link-scale value leg is numeric (delta recorded), but the fact this case pays is a documented "
                        "default divergence (R predict type default 'link', Julia :response). A default that differs is not "
                        "numeric parity, so the case carries no comparison block.")
-            elif "integer" in (c.get("comparand") or ""):
-                why = ("Exact integer equality (contract tolerances.integer_exact = 0). R and Julia values are recorded; the "
-                       "numeric-tier rule needs a tolerance > 0, and none is invented here.")
+            elif cid in INTEGER_EQUALITY:
+                body["why_not_numeric"] = INTEGER_WHY
+                emit(cid, "numeric_r_vs_julia", "PASS" if passed else "FAIL", body, [integer_entry(cid, jc, po)])
+                continue
             elif "length" in (c.get("comparand") or ""):
                 why = "Both sides return an empty coefficient vector; there is no number to compare."
             else:
@@ -617,12 +705,10 @@ def main():
                                             "discriminating": disc})
                 counts["numeric_non_discriminating"] += 1
             elif kinds == {"numeric_r_vs_julia"} and all_pass:
-                row.update(evidence_tier="numeric", measured_against=P1_SHA,
-                           evidence={"receipt": paths,
-                                     "tier": "numeric: every executable case receipt carries an R-vs-Julia comparison "
-                                             "block pinned to P1, within the harness tolerance"},
-                           measured_result={"case_verdicts": verdicts, "batch_verifier": batch_ok,
-                                            "row_verdict": "PASS"})
+                bind_numeric(row, paths, verdicts, batch_ok,
+                             INTEGER_TIER if all(i in INTEGER_EQUALITY for i in ids) else
+                             "numeric: every executable case receipt carries an R-vs-Julia comparison "
+                             "block pinned to P1, within the harness tolerance")
                 counts["numeric_pass"] += 1
             elif not all_pass:
                 row.update(evidence_tier="numeric_fail", measured_against=P1_SHA,
