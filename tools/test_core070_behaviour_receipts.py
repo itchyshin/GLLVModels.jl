@@ -173,84 +173,91 @@ def derivation_refuses_when_per_row_disagrees_with_raw():
 
 
 @test
-def fallback_withdrawn_default_and_unbound_route_rows_get_no_entry():
+def fallback_withdrawn_default_and_unconfirmed_route_rows_get_no_entry():
+    """Rows that stay unbound after the post-#709 re-measurement, each with its reason."""
     want = {"CORE070-INFERENCE-BETA-BOOTSTRAP-FALLBACK-DIVERGENCE": {"inference/CI-ROUTE-067": "fallback"},
             "CORE070-INFERENCE-SIGMA-EPS-BOOTSTRAP-FALLBACK-DIVERGENCE": {"inference/CI-ROUTE-070": "fallback"},
-            "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE": {"inference/CI-ROUTE-023": "withdrawn",
-                                                              "inference/CI-ROUTE-022": "default",
-                                                              "inference/CI-ROUTE-025": "not_exported"},
+            "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE": {"inference/CI-ROUTE-023": "withdrawn"},
             "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE": {"inference/CI-ROUTE-030": "withdrawn",
-                                                      "inference/CI-ROUTE-029": "default",
-                                                      "inference/CI-ROUTE-032": "not_exported"},
-            "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE": {"inference/CI-ROUTE-037": "withdrawn",
-                                                             "inference/CI-ROUTE-036": "default",
-                                                             "inference/CI-ROUTE-039": "not_exported"},
-            "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE": {"inference/CI-ROUTE-015": "default",
-                                                               "inference/CI-ROUTE-016": "not_exported",
-                                                               "inference/CI-ROUTE-018": "not_exported"},
+                                                      "inference/CI-ROUTE-029": "default_class_unconfirmed"},
+            "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE": {"inference/CI-ROUTE-037": "withdrawn"},
+            "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE": {"inference/CI-ROUTE-015": "default"},
             "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE": {"inference/CI-ROUTE-043": "default",
-                                                          "inference/CI-ROUTE-055": "default",
-                                                          "inference/CI-ROUTE-045": "public_route_differs",
-                                                          "inference/CI-ROUTE-057": "public_route_differs"},
+                                                          "inference/CI-ROUTE-055": "default"},
             "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE": {"inference/CI-ROUTE-046": "default",
-                                                          "inference/CI-ROUTE-058": "default",
-                                                          "inference/CI-ROUTE-048": "public_route_differs",
-                                                          "inference/CI-ROUTE-060": "public_route_differs"},
-            "CORE070-INFERENCE-SIGMA-PHY-CI-METHOD-ROUTE": {"inference/CI-ROUTE-061": "default",
-                                                            "inference/CI-ROUTE-063": "public_route_differs"}}
+                                                          "inference/CI-ROUTE-058": "default"},
+            "CORE070-INFERENCE-SIGMA-PHY-CI-METHOD-ROUTE": {"inference/CI-ROUTE-061": "default"}}
     for cid, expect in want.items():
         _, nb, _ = B.wave2(cid, case_receipt(cid))
         assert {n["source_id"]: n["reason"] for n in nb} == expect, cid
 
 
 @test
-def sigma_bootstrap_and_derived_rows_stay_unbound_with_a_row_note():
-    """Julia's public confint(method = :bootstrap) returns Wald on a structured fit, and the derived profile and
-    bootstrap functions are not exported: ten rows return to routing_control_flow (review of PR 690)."""
-    sigma = ("045", "048", "057", "060", "063")
-    derived = ("016", "018", "025", "032", "039")
+def post709_sigma_and_derived_route_rows_bind_through_the_public_confint():
+    """Since #709 the Sigma bootstrap rows and the derived profile, bootstrap and default rows are measured through
+    Julia's public confint(fit, y; parm, method); the entry's Julia label names the solver the call reported."""
+    want = {"045": "sigma_B:bootstrap", "057": "sigma_B:bootstrap", "048": "sigma_W:bootstrap",
+            "060": "sigma_W:bootstrap", "063": "sigma_phy:bootstrap", "016": "phylo_signal:profile",
+            "018": "phylo_signal:bootstrap", "022": "communality:wald_derived", "025": "communality:bootstrap",
+            "032": "rho:bootstrap", "036": "proportion:wald_derived", "039": "proportion:bootstrap"}
     cm = B.load(ROOT / B.LEDGER / "case-map-inference.json")
     rows = {r["source_id"]: r for r in cm["rows"]}
-    for n, why in [(n, "public_route_differs") for n in sigma] + [(n, "not_exported") for n in derived]:
+    for n, label in want.items():
         r = rows[f"inference/CI-ROUTE-{n}"]
-        assert r["evidence_tier"] == "routing_control_flow" and "non_binding_receipts" in r["evidence"], n
-        assert "receipt" not in r["evidence"], n
-        assert r["note"] == B.NOT_BOUND_ROW_NOTES[why], n
+        assert r["evidence_tier"] == "behavioural" and "receipt" in r["evidence"], n
         rec = case_receipt(r["executable_case_ids"][0])
-        assert any(x["source_id"] == r["source_id"] and x["reason"] == why for x in rec["behaviour_not_bound"]), n
-        assert not any(e.get("source_id") == r["source_id"] for e in rec["behaviour"]["cases"]), n
+        es = [e for e in rec["behaviour"]["cases"] if e["source_id"] == r["source_id"]]
+        assert len(es) == 1 and es[0]["julia_observed"] == label and es[0]["kind"] == "route", n
+        assert "inference-post709-results.json" in es[0]["julia_source"], n
+    for n in ("015", "023", "029", "030", "037"):
+        assert rows[f"inference/CI-ROUTE-{n}"]["evidence_tier"] == "routing_control_flow", n
+    assert rows["inference/CI-ROUTE-029"]["note"] == B.NOT_BOUND_ROW_NOTES["default_class_unconfirmed"]
 
 
 @test
-def derived_quantity_error_rows_get_no_entry():
-    """A keyword MethodError is not the same refusal as R's validated error (review of PR 690)."""
+def refusal_rows_bind_only_with_a_valid_method_control_on_each_side():
+    """All 16 bad-method rows (14 derived, 2 Lambda) carry an R refusal, a Julia ArgumentError that names the method,
+    and a valid-method control for both engines."""
     cases = [f"CORE070-INFERENCE-{t}-CI-UNSUPPORTED-METHOD-REJECT"
-             for t in ("ICC", "PHYLO-SIGNAL", "COMMUNALITY", "RHO", "PROPORTION")]
+             for t in ("ICC", "PHYLO-SIGNAL", "COMMUNALITY", "RHO", "PROPORTION", "LAMBDA")]
     total = 0
     for cid in cases:
         rec = case_receipt(cid)
-        entries, nb, _ = B.wave4(cid, rec)
-        assert entries == [] and len(nb) == len(rec["source_ids"]), cid
-        assert {n["reason"] for n in nb} == {"no_valid_method_control"}, cid
-        assert "behaviour" not in rec, cid
-        total += len(nb)
-    assert total == 14, total
+        fn = B.wave2 if "LAMBDA" in cid else B.wave4
+        entries, nb, _ = fn(cid, rec)
+        assert nb == [], cid
+        for e in entries:
+            assert e["kind"] == "refusal" and e["julia_error_type"] == "ArgumentError", e["source_id"]
+            assert f":{e['requested_method']}" in e["julia_observed"], e["source_id"]
+            assert e["r_control"]["result"] and e["julia_control"]["result"].endswith("interval"), e["source_id"]
+        assert [e["source_id"] for e in entries] == [e["source_id"] for e in rec["behaviour"]["cases"]], cid
+        total += len(entries)
+    assert total == 16, total
+    lam = case_receipt("CORE070-INFERENCE-LAMBDA-CI-UNSUPPORTED-METHOD-REJECT")["behaviour"]["cases"]
+    assert {e["r_control"]["kind"] for e in lam} == {"live_call"}
 
 
 @test
-def lambda_reject_rows_get_no_entry():
-    """R's probe stubs .confint_lambda, so no R refusal is recorded for these rows."""
-    cid = "CORE070-INFERENCE-LAMBDA-CI-UNSUPPORTED-METHOD-REJECT"
-    entries, nb, _ = B.wave2(cid, case_receipt(cid))
-    assert entries == [] and {n["reason"] for n in nb} == {"refusal_not_observed"}, nb
+def swapped_refusal_labels_do_not_bind():
+    """The refusal classes are one (target, method) pair each: R's wald_asym refusal does not match Julia's bogus one."""
+    cid = "CORE070-INFERENCE-ICC-CI-UNSUPPORTED-METHOD-REJECT"
+    rec = copy.deepcopy(case_receipt(cid))
+    es = {e["source_id"]: e for e in rec["behaviour"]["cases"]}
+    a, b = es["inference/CI-ROUTE-012"], es["inference/CI-ROUTE-014"]
+    a["julia_observed"], b["julia_observed"] = b["julia_observed"], a["julia_observed"]
+    with tempfile.TemporaryDirectory() as t:
+        root = make_root(Path(t), rec, cid)
+        assert problem(root, "inference/CI-ROUTE-012", cid), "swapped refusal label still binds"
+        assert problem(root, "inference/CI-ROUTE-013", cid) is None
 
 
 @test
 def unbound_rows_are_not_flipped_by_overlay():
     counts = {"reject_error_class": 3, "routing_control_flow": 3, "behavioural": 0}
-    for sid, cid, tier in (("inference/CI-ROUTE-012", "CORE070-INFERENCE-ICC-CI-UNSUPPORTED-METHOD-REJECT", "reject_error_class"),
-                           ("inference/CI-ROUTE-006", "CORE070-INFERENCE-LAMBDA-CI-UNSUPPORTED-METHOD-REJECT", "routing_control_flow"),
-                           ("inference/CI-ROUTE-022", "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE", "routing_control_flow")):
+    for sid, cid, tier in (("inference/CI-ROUTE-015", "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE", "routing_control_flow"),
+                           ("inference/CI-ROUTE-029", "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE", "routing_control_flow"),
+                           ("inference/CI-ROUTE-023", "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE", "routing_control_flow"),
+                           ("inference/CI-ROUTE-067", "CORE070-INFERENCE-BETA-BOOTSTRAP-FALLBACK-DIVERGENCE", "routing_control_flow")):
         r = row_for(sid, cid, tier=tier)
         assert B.overlay_row(r, counts) is False and r["evidence_tier"] == tier, sid
     assert counts["behavioural"] == 0
@@ -294,7 +301,7 @@ def every_entry_is_scoped_and_both_labels_are_listed_in_one_class():
                 rc, jc = A._label_class(index, e["kind"], "r", a), A._label_class(index, e["kind"], "julia", b)
                 assert rc is not None and jc is not None, f"{e['source_id']}: {a!r} / {b!r} not both listed in a class"
                 assert rc[1] == jc[1], f"{e['source_id']}: {a!r} and {b!r} are in different classes"
-    assert seen == 25, seen  # 17 bound inference rows + CI-ROUTE-009 + 7 aghq control rows
+    assert seen == 53, seen  # 45 bound inference rows + CI-ROUTE-009 + 7 aghq control rows
 
 
 @test
@@ -306,7 +313,7 @@ def every_class_is_used_by_an_entry():
         for e in (rec.get("behaviour") or {}).get("cases", []):
             for a in A.as_list(e["r_observed"]):
                 used.add((e["kind"], A._label_class(index, e["kind"], "r", a)[0]))
-    assert used == {(c["kind"], c["canonical"]) for c in B.CLASSES}, sorted({(c["kind"], c["canonical"]) for c in B.CLASSES} ^ used)
+    assert used == {(c["kind"], c["canonical"]) for c in B.all_classes()}, sorted({(c["kind"], c["canonical"]) for c in B.all_classes()} ^ used)
 
 
 @test
