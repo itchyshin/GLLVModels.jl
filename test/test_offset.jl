@@ -388,12 +388,14 @@ end
     # The identity is exact for the objective; the fits are optimiser runs (finite-difference
     # gradients, g_tol = 1e-5), so two fits that differ only by rounding can stop a little
     # apart. Measured spread of logLik(offset) - logLik(none) over this data and others: 1e-14
-    # to 1e-10 on most routes, up to about 3e-6 on NB1 and DeltaGamma. Most AGHQ routes
+    # to 1e-10 on most routes, up to about 3e-6 on NB1, and up to 1.1e-5 on DeltaGamma
+    # (Laplace and AGHQ, Linux CI on Julia 1.10, 2026-10-03). Most AGHQ routes
     # report converged = false on data this small, with or without an offset, and NB2 with
     # AGHQ can end 2e-3 apart. A mis-applied offset moves
     # the logLik by 0.1 or more (Lognormal before the fix: 80 to 110), so these tolerances
     # still tell the two apart.
-    tol_of(label) = label in ("NB1", "DeltaGamma", "DeltaGamma aghq", "Binomial aghq", "Poisson aghq") ? 1e-5 :
+    tol_of(label) = label in ("DeltaGamma", "DeltaGamma aghq") ? 1e-4 :
+                    label in ("NB1", "Binomial aghq", "Poisson aghq") ? 1e-5 :
                     label == "NegBin2 aghq" ? 1e-2 : 1e-6
     @testset "absorption: $label" for (label, Y, fam, kw) in accepted
         f0 = fit_gllvm(Y; family = fam, K = 1, kw...)
