@@ -554,18 +554,26 @@
       "arc": "A3",
       "carry_scan_status": "DANGLING",
       "executable_case_ids": [
-        "CORE070-ESTIMAND-REBIND-EXTRACT-PROPORTIONS"
+        "P1-JULIA-POSTFIT-PROPORTIONS-ONE-TIER-SHARED-UNIT",
+        "P1-JULIA-POSTFIT-PROPORTIONS-TWO-LEVEL-PROPORTION",
+        "P1-JULIA-POSTFIT-PROPORTIONS-TWO-LEVEL-VARIANCE"
       ],
       "disposition": null,
-      "evidence_tier": "numeric_non_discriminating",
+      "evidence_tier": "numeric",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/extract_proportions.json"
+        ],
         "non_binding_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-ESTIMAND-REBIND-EXTRACT-PROPORTIONS.json"
         ],
-        "tier": "numeric comparison blocks pass, but at least one is degenerate (the R values are one constant or all ~0), so a constant or zero implementation would pass too; the row does not bind"
+        "batch_case_ids": [
+          "CORE070-ESTIMAND-REBIND-EXTRACT-PROPORTIONS"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_variance_decomp_receipt.jl with the same calls and settings as the cited twin test, against R-at-P1 values copied from a tracked fixture (a one-tier R fit and a two-level R fit, each converged with a positive-definite Hessian, on non-degenerate fixtures: the R values are not one constant and not ~0), each case within the tolerance asserted in that test. The batch case this row carried is superseded; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
       },
-      "note": "Same unique = FALSE fixture as extract_communality: the compared proportion vectors are all 1, so a constant implementation would pass (same structure as the reviewer's communality mutation). A non-degenerate fixture is a contract change for the maintainer.",
+      "note": "The batch case used the unique = FALSE Gaussian fixture, where every compared proportion is 1 (a constant implementation passed). The twin compares R's extract_proportions() with the Julia accessors on (a) a one-tier latent + unique fit (shared_unit proportion, six values between 0.66 and 0.82; the Julia :unit denominator is the identified total, #701) and (b) a two-level fit, where the new Julia TwoLevelFit method returns all four components (shared_unit, unique_unit, shared_unit_obs, unique_unit_obs) with R's names, order and denominator: variance and proportion, 20 values each. Gaussian only, so R's link_residual component (0 for a Gaussian fit) is absent in both.",
       "measured_result": {
         "case_verdicts": {
           "CORE070-ESTIMAND-REBIND-EXTRACT-PROPORTIONS": "PASS"
@@ -575,7 +583,13 @@
         },
         "discriminating": {
           "CORE070-ESTIMAND-REBIND-EXTRACT-PROPORTIONS": false
-        }
+        },
+        "twin_case_ids": [
+          "P1-JULIA-POSTFIT-PROPORTIONS-ONE-TIER-SHARED-UNIT",
+          "P1-JULIA-POSTFIT-PROPORTIONS-TWO-LEVEL-PROPORTION",
+          "P1-JULIA-POSTFIT-PROPORTIONS-TWO-LEVEL-VARIANCE"
+        ],
+        "twin_verdict": "PASS"
       }
     },
     {
