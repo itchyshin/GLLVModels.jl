@@ -1,4 +1,5 @@
 using GLLVModels, Test, LinearAlgebra, Random, Statistics, ForwardDiff
+using StableRNGs: StableRNG
 
 # Missing-predictor FIML (the mi() axis), Gaussian Phase-2a slice: a site-level
 # continuous predictor x (one value per site, may be `missing`) modelled as
@@ -203,4 +204,32 @@ end
     # a trait with no observed response is refused
     yb = copy(ym); yb[2, :] .= missing
     @test_throws ArgumentError fit_gaussian_mi_fiml(yb, xm; K = K, Z = Zm)
+
+    # Regression: with many masked responses the default line search's first step reached an
+    # extreme point (log σ_eps near -100) where the Woodbury Cholesky threw PosDefException
+    # (25% of cells masked: most draws failed at K = 2). Every draw must now fit, at a stationary
+    # point of the independent reference. Structural assertions only (no drawn magnitudes).
+    @testset "25% masked responses, K = $Kr, draw $seed" for Kr in (1, 2), seed in 1:6
+        srng = StableRNG(1000 * Kr + seed)
+        pr, nr = 5, 80
+        zr = randn(srng, nr)
+        xr = 0.2 .+ 0.8 .* zr .+ 0.5 .* randn(srng, nr)
+        yr = randn(srng, pr) .+ 0.7 .* xr' .+ randn(srng, pr, Kr) * randn(srng, Kr, nr) .+ 0.4 .* randn(srng, pr, nr)
+        yrm = Matrix{Union{Missing,Float64}}(yr)
+        for s in 1:nr, t in 1:pr
+            rand(srng) < 0.25 && (yrm[t, s] = missing)
+        end
+        for t in 1:pr                       # keep every trait observed somewhere
+            all(ismissing, yrm[t, :]) && (yrm[t, 1] = yr[t, 1])
+        end
+        xrm = Vector{Union{Missing,Float64}}(xr)
+        xrm[randperm(srng, nr)[1:15]] .= missing
+        Zr = reshape(zr, nr, 1)
+        fr = fit_gaussian_mi_fiml(yrm, xrm; K = Kr, Z = Zr)
+        @test fr.converged
+        @test isfinite(fr.logLik)
+        θr = packed(fr)
+        @test isapprox(fr.logLik, dense_ll(θr, yrm, xrm, Zr, pr, nr, Kr); rtol = 1e-10)
+        @test maximum(abs, ForwardDiff.gradient(t -> dense_ll(t, yrm, xrm, Zr, pr, nr, Kr), θr)) < 1e-3
+    end
 end

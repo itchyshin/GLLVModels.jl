@@ -9,7 +9,7 @@
   density when `x` is observed there, and nothing otherwise; every trait needs at least one observed
   response (`ArgumentError` otherwise). The conditional modes `eblup_x`, and so `imputed(fit, x)`,
   use only the observed responses of each site. The result has a new field `n_missing_y` (the
-  number of missing response cells). A complete `y` gives the same fit as before. Binds the
+  number of missing response cells). With missing responses the fit uses a backtracking line search, and a trial point whose Woodbury factor is not positive definite scores `+Inf` instead of throwing `PosDefException`. A complete `y` gives the same fit as before (bit for bit, element type kept). Binds the
   true-parity rows `data/DATA-MISS-MODEL`, `data/DATA-MISS-BOTH` and the namespace row
   `S3method/imputed,gllvmTMB` with twins against gllvmTMB P1 (`test/test_data_twins_2_p1.jl`:
   logLik within 6e-9, conditional modes within 4e-6). Not covered: R's `imputed()` standard errors

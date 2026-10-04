@@ -36,7 +36,10 @@ using LinearAlgebra
 function _mi_lowrank_halfnll(r::AbstractVector, L::AbstractMatrix, s2::Real)
     p, m = size(L)
     M = (L' * L) ./ s2 + I            # m×m
-    cholM = cholesky(Symmetric(M))
+    cholM = cholesky(Symmetric(M); check = false)
+    # an extreme line-search trial point can make M numerically indefinite: report +Inf so the
+    # line search backs off, instead of throwing PosDefException out of the fit
+    issuccess(cholM) || return convert(promote_type(eltype(r), eltype(L), typeof(s2)), Inf)
     logdetΣ = p * log(s2) + logdet(cholM)
     Ltr = L' * r
     w = cholM \ (Ltr ./ s2)           # M⁻¹ (Lᵀ r / s2)
@@ -137,7 +140,8 @@ function fit_gaussian_mi_fiml(y::AbstractMatrix, x::AbstractVector; K::Integer,
         throw(ArgumentError("every trait (row of y) needs at least one observed response."))
     n_missing_y = count(!, yobs)
     oidx = n_missing_y == 0 ? nothing : [findall(view(yobs, :, s)) for s in 1:n]
-    y = [yobs[t, s] ? Float64(y[t, s]) : 0.0 for t in 1:p, s in 1:n]
+    # a complete y is used as given (its element type kept); masked cells are stored as 0
+    n_missing_y == 0 || (y = [yobs[t, s] ? Float64(y[t, s]) : 0.0 for t in 1:p, s in 1:n])
     length(x) == n ||
         throw(ArgumentError("length(x) = $(length(x)) must equal n_sites = $n."))
     K ≥ 1 || throw(ArgumentError("K must be ≥ 1."))
@@ -155,7 +159,8 @@ function fit_gaussian_mi_fiml(y::AbstractMatrix, x::AbstractVector; K::Integer,
     n_missing = count(!, isobs)
 
     # warm start
-    a0 = vec(sum(y, dims = 2)) ./ vec(sum(yobs, dims = 2))   # observed means (masked cells are 0)
+    a0 = n_missing_y == 0 ? vec(Statistics.mean(y, dims = 2)) :
+         vec(sum(y, dims = 2)) ./ vec(sum(yobs, dims = 2))   # observed means (masked cells are 0)
     obs = findall(isobs)
     xo = xobs[obs]
     if q_z > 0
@@ -169,8 +174,13 @@ function fit_gaussian_mi_fiml(y::AbstractMatrix, x::AbstractVector; K::Integer,
         γ0 = Float64[]
         σ_x0 = max(Statistics.std(xo), 1e-3)
     end
-    Yc = (y .- a0) .* yobs                                      # masked cells at the trait mean
-    ybar = vec(sum(Yc, dims = 1)) ./ max.(vec(sum(yobs, dims = 1)), 1)
+    if n_missing_y == 0
+        ybar = vec(Statistics.mean(y .- a0, dims = 1))
+        Yc = y .- a0
+    else
+        Yc = (y .- a0) .* yobs                                  # masked cells at the trait mean
+        ybar = vec(sum(Yc, dims = 1)) ./ max.(vec(sum(yobs, dims = 1)), 1)
+    end
     b_x0 = let xc = xo .- Statistics.mean(xo)
         sum(xc .* ybar[obs]) / max(sum(abs2, xc), 1e-8)
     end
@@ -184,7 +194,12 @@ function fit_gaussian_mi_fiml(y::AbstractMatrix, x::AbstractVector; K::Integer,
     nll(θ) = _mi_fiml_nll(θ, y, xobs, isobs, Zf, p, n, K, q_z, oidx)
 
     opts = Optim.Options(g_tol = g_tol, iterations = iterations)
-    res = Optim.optimize(nll, params0, Optim.LBFGS(), opts; autodiff = :forward)
+    # With missing responses the default HagerZhang first step can land at an extreme point
+    # (log σ_eps near -100); a backtracking line search starts from the full step and only
+    # shrinks it. The complete-y path keeps the default line search.
+    method = n_missing_y == 0 ? Optim.LBFGS() :
+             Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking())
+    res = Optim.optimize(nll, params0, method, opts; autodiff = :forward)
     θ = Optim.minimizer(res)
 
     a = θ[1:p]
