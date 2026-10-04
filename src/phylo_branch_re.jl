@@ -388,6 +388,9 @@ struct BranchREFit
     converged::Bool
 end
 
+# Post-fit: `_nparams` unlocks generic `dof`/`aic`/`bic` in src/postfit.jl.
+_nparams(::BranchREFit) = 3
+
 """
     fit_branch_re(phy, y; σ²_init, σ²_eps_init, max_iter, tol, fix_σ²_eps)
         -> BranchREFit
