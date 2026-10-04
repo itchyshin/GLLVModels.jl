@@ -51,7 +51,7 @@ decision for the PR that measures it, not something this tool does.
 - `test/fixtures/animal_scalar_p1.toml`
 - `test/fixtures/animal_scalar_p1_A.csv`
 - `test/fixtures/animal_scalar_p1_data.csv`
-- `test/fixtures/bridge_readback_p1.json`
+- `test/fixtures/bridge_readback_p1.toml`
 - `test/fixtures/data_twins_nb1_p1_data.csv`
 - `test/fixtures/data_twins_nb2_p1_data.csv`
 - `test/fixtures/data_twins_p1.toml`
