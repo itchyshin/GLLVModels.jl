@@ -150,6 +150,7 @@ println(_SHARD === nothing ?
     _shard_include("test_binomial_fit.jl")
     _shard_include("test_poisson_fit.jl")
     _shard_include("test_laplace_curvature_contract.jl")
+    _shard_include("test_issue_783_curvature_docs.jl")
     _shard_include("test_laplace_curvature_oracle.jl")
     _shard_include("test_laplace_dual_safety.jl")
     _shard_include("test_gamma_curvature_cross_kernel.jl")
