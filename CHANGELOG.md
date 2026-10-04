@@ -2,6 +2,19 @@
 
 ## Development
 
+- **New: `flag_unreliable_loadings(fit, y; null_region = (-0.1, 0.1), conf_level = 0.95)`,
+  the counterpart of gllvmTMB's `flag_unreliable_loadings()`.** On a confirmatory Gaussian fit
+  (`fit_gaussian_gllvm(y; K, lambda_constraint = M)`) it returns one row per loading with the raw
+  Wald interval and `unreliable = true` when the interval overlaps `null_region` (`missing` for a
+  pinned entry). The intervals come from the observed information of the free parameters, with the
+  pinned loadings removed, which is the covariance R uses. A fit without pins is refused, as in R. A
+  second method adds the flags to rows that already carry `estimate`, `lower`, `upper` and
+  `pinned`. Binds the true-parity namespace row `export/flag_unreliable_loadings` with a twin
+  against gllvmTMB P1, together with the rows `export/gllvmTMB_wide` and
+  `S3method/ordiplot,gllvmTMB_multi` on the same Gaussian data
+  (`test/test_namespace_gaussian_w1_p1.jl`). Not covered: R's `"wald_asym"` and `"profile"` routes
+  and the standardized scale.
+
 - **`predict`, `getLV` and `residuals` on a Laplace fit made with an `offset` now use it.** The
   Laplace Poisson, NB2 (shared `r`), binomial and hurdle-Poisson fits did not keep the offset they
   were fitted with, so `getLV(fit, Y)` searched the latent mode of an offset-free model and
