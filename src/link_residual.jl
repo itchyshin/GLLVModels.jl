@@ -156,6 +156,8 @@ function _trait_mean_fitted(fit::PoissonFit, Y::AbstractMatrix; mask = nothing)
     end
     Z = getLV(fit, Y; rotate = false, mask = mask)
     η = fit.β .+ fit.Λ * Z'
+    O = _laplace_prediction_offset(fit.offset, Y, nothing, mask, "link_residual")
+    O === nothing || (η .+= O)        # the fitted means at the data include its offset
     μ = linkinv.(Ref(fit.link), η)
     return _masked_trait_mean(μ, mask)
 end
@@ -167,6 +169,8 @@ function _trait_mean_fitted(fit::NBFit, Y::AbstractMatrix; mask = nothing)
     end
     Z = getLV(fit, Y; rotate = false, mask = mask)
     η = fit.β .+ fit.Λ * Z'
+    O = _laplace_prediction_offset(fit.offset, Y, nothing, mask, "link_residual")
+    O === nothing || (η .+= O)        # the fitted means at the data include its offset
     μ = linkinv.(Ref(fit.link), η)
     return _masked_trait_mean(μ, mask)
 end
@@ -196,6 +200,8 @@ function _trait_mean_fitted(fit::BinomialFit, Y::AbstractMatrix; N = nothing, ma
     Nm = N === nothing ? fill(1, size(Y)...) : N
     Z = getLV(fit, Y; N = Nm, rotate = false, mask = mask)
     η = fit.β .+ fit.Λ * Z'
+    O = _laplace_prediction_offset(fit.offset, Y, nothing, mask, "link_residual")
+    O === nothing || (η .+= O)        # the fitted means at the data include its offset
     μ = linkinv.(Ref(fit.link), η)
     return _masked_trait_mean(μ, mask)
 end

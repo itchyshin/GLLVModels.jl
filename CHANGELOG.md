@@ -2,6 +2,7 @@
 
 ## Development
 
+<<<<<<< HEAD
 - **`sanity_multi` reports gllvmTMB's flags; `compare_loadings` gains R's matrix form.**
   `sanity_multi(fit; y)` now returns R's flags under R's names and in R's order
   (`converged`, `max_gradient`, `sdreport_ok`, `pd_hessian`, `max_se`, `rr_B_min_loading`,
@@ -21,6 +22,27 @@
   compared (it is each optimiser's stopping gradient). `compare_loadings` is twinned as a function
   on identical inputs (R's fitted `Lambda_B` and the simulating loadings, plus a random pair with
   a reflection, fed to both engines), not as a fit-then-compare twin.
+=======
+- **`predict`, `getLV` and `residuals` on a Laplace fit made with an `offset` now use it.** The
+  Laplace Poisson, NB2 (shared `r`), binomial and hurdle-Poisson fits did not keep the offset they
+  were fitted with, so `getLV(fit, Y)` searched the latent mode of an offset-free model and
+  `predict(fit, Y)` returned `β + Λẑ` without the offset (on the data of the P1 exposure twin, the
+  training-row link predictor missed gllvmTMB's `predict` by up to 1.886; after the fix, 2.2e-5).
+  These Laplace fits now store the training offset as a `p×n` matrix in `fit.offset` (`nothing`
+  without one, and on an AGHQ fit, which keeps its offset in `integration.data.offset`), and the
+  post-fit calls follow gllvmTMB's `predict`: a `Y`
+  of the training size uses the stored offset; new units need their own, passed as
+  `offset = O` (a matrix, a scalar or a length-`p` vector, as at fit time), and new units from an
+  offset fit without one are refused with an `ArgumentError` rather than predicted at a zero
+  offset (R aborts when `newdata` lacks the offset variable). The AGHQ Poisson and binomial routes
+  are unchanged and stricter: they decide "training data" by a digest of the observed data, so a
+  different `Y` of the training size from an offset fit also needs an explicit offset there. `link_residual` on these fits includes the offset
+  in its fitted trait means as well. Binds the true-parity row `data/DATA-OFF-TRAIN-STORED` with a
+  twin against gllvmTMB P1 (stored offset and training-row link predictor,
+  `test/test_predict_offset_twin_p1.jl`). Not covered: `simulate` on these Laplace fits still
+  draws at a zero offset, and the other fit types that accept an offset (Gamma, Beta, NB1, the
+  grouped-dispersion, truncated, Delta and zero-inflated fits) still keep none.
+>>>>>>> origin/main
 
 - **`fit_gllvm(...; offset = c)` with a scalar `c` now works, and an offset it cannot read
   unambiguously is refused with an `ArgumentError`.** A scalar offset (the analogue of R's

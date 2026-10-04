@@ -59,7 +59,9 @@ the estimated dispersion `r` (Var = μ + μ²/r), the `link`, the maximised Lapl
 `loglik`, the optimiser `converged` flag, and `iterations`. Fits using `X_lv`
 additionally retain `alpha_lv`, the raw latent-axis coefficients for the
 predictor-informed score mean; use [`extract_lv_effects`](@ref) for the
-rotation-stable trait-scale product `Λ * alpha_lv'`.
+rotation-stable trait-scale product `Λ * alpha_lv'`. `offset` is the p×n training
+offset the fit was made with (`nothing` when the fit had none); [`predict`](@ref)
+and [`getLV`](@ref) use it by default.
 """
 struct NBFit
     β::Vector{Float64}
@@ -72,7 +74,12 @@ struct NBFit
     alpha_lv::Union{Nothing, Matrix{Float64}}
     theta_packed::Vector{Float64}
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
 end
+
+# Pre-offset compat tier (10 positional args): no stored training offset.
+NBFit(β, Λ, r, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian) =
+    NBFit(β, Λ, r, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, nothing)
 
 # Positional compatibility constructor (2026-08-28): every pre-existing
 # construction site builds a default-curvature fit; the `hessian` field
@@ -323,12 +330,13 @@ function fit_nb_gllvm(Y::AbstractMatrix; K::Integer,
         cursor += rr
         r̂ = exp(θ̂[cursor + 1])
         return NBFit(β̂, Λ̂, r̂, link, _nb_shared_r_verdict(res, r̂)...,
-                     alpha_hat, collect(Float64, θ̂), hessian)
+                     alpha_hat, collect(Float64, θ̂), hessian, _stored_offset(offset))
     else
         β̂ = θ̂[1:p]
         Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
         r̂ = exp(θ̂[p + rr + 1])
-        return NBFit(β̂, Λ̂, r̂, link, _nb_shared_r_verdict(res, r̂)..., nothing, Float64[], hessian)
+        return NBFit(β̂, Λ̂, r̂, link, _nb_shared_r_verdict(res, r̂)..., nothing, Float64[], hessian,
+                     _stored_offset(offset))
     end
 end
 

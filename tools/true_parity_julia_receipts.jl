@@ -1661,8 +1661,9 @@ end
 #     `data` rows (offset and missing-response handling) whose batch cases were R helper
 #     replays with no fit number, bound to fit-level twins: R-at-P1 fits recorded in
 #     test/fixtures/data_twins_p1.toml against Julia fits of the same data. Weights rows are not
-#     here (Julia refuses weights= on every fitter); the stored/predict-offset, mixed-family and
-#     modelled-predictor rows have no Julia surface to fit.
+#     here (Julia refuses weights= on every fitter); the legacy-fit and newdata predict-offset,
+#     mixed-family and modelled-predictor rows have no Julia surface to fit (the stored-offset row
+#     has its own twin, section 12b).
 # =============================================================================================
 function _dt_load(path, col, p, n)
     hdr = split(readline(path), ",")
@@ -1769,6 +1770,46 @@ function receipts_data_twins()
             "$fxp [gauss_zero.beta]", "coef(fg), fit as at " * cite(tp, "fg = fit_gllvm(Y; family = Normal(), K = 2, offset = zeros(p, ng))"),
             Float64.(g["beta"]), coef(fg), test_tolerance(tp, "@test isapprox(coef(fg), Float64.(g[\"beta\"])"), noteG)]))
     return out
+end
+
+# =============================================================================================
+# 12b. predict-offset twin   test/test_predict_offset_twin_p1.jl
+#     data/DATA-OFF-TRAIN-STORED: a fit keeps its training offset and the training-row prediction
+#     uses it. R-at-P1 values (the stored .gllvmTMB_offset_vec and predict(fit, type = "link")$est
+#     of the Poisson exposure fit) recorded in test/fixtures/predict_offset_twin_p1.toml, against
+#     the Julia fit's stored `fit.offset` and `predict(fit, Y; type = :link)`.
+# =============================================================================================
+function receipts_predict_offset_twin()
+    ORIGIN = "itchyshin/GLLVModels.jl branch claude/w2-predict-offset (W2-4b)"
+    fxp = "test/fixtures/predict_offset_twin_p1.toml"
+    tp = "test/test_predict_offset_twin_p1.jl"
+    fx = TOML.parsefile(joinpath(ROOT, fxp))
+    fx["gllvmtmb_commit"] == P1_SHA || fail("predict-offset twin fixture is not pinned at P1")
+    p, n = Int(fx["p"]), Int(fx["n_unit"])
+    sec = "pois_exposure_stored"
+    d = fx[sec]
+    datap = "test/fixtures/" * d["data_file"]
+    bytes2hex(sha256(read(joinpath(ROOT, datap)))) == d["data_sha256"] || fail("$sec data csv drifted")
+    (d["converged"] === true && d["pd_hessian"] === true) || fail("$sec R fit not converged with a PD Hessian; not a valid twin")
+    csv = joinpath(ROOT, datap)
+    Y = Int.(Float64.(_dt_load(csv, "value", p, n)))
+    E = Float64.(_dt_load(csv, "e", p, n))
+    fe = fit_gllvm(Y; family = Poisson(), K = 1, offset = log.(E))
+    fe.converged || fail("$sec Julia fit did not converge")
+    src = cite(tp, "fe = fit_gllvm(Y; family = Poisson(), K = 1, offset = log.(E))")
+    wide(v) = reshape(Float64.(v), p, n)
+    note = "Poisson, K = 1, p = 6, n = 150 (sha256 checked; the data of the DATA-OFF-EXPOSURE twin); R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family = Poisson(), K = 1, offset = log.(E)); same optimum (logLik within 1e-6). The R batch case read back a vector written into a mock fit object (tmb_data\$offset_vec <- c(1, 2, 3)); here the stored offset is the one a real fit kept, and the training-row link predictor shows it is used. Scope: training rows only; R's newdata prediction re-evaluates the offset expression against newdata and keeps the training units' latent modes, which has no Julia counterpart (Julia re-solves the modes from a new Y and takes its offset as a value), so it is not compared. Before Julia fits kept their offset, the training-row link predictor missed R's by 1.89 (the offset-free mode search and predictor)."
+    cs = Case[
+        mkcase("P1-JULIA-DATA-POIS_EXPOSURE_STORED-LOGLIK", "maximised logLik of the Poisson exposure fit",
+            "$fxp [$sec.loglik]", "fe.loglik, fit as at $src",
+            Float64(d["loglik"]), fe.loglik, test_tolerance(tp, "@test isapprox(fe.loglik, Float64(d[\"loglik\"])"), note),
+        mkcase("P1-JULIA-DATA-POIS_EXPOSURE_STORED-OFFSET", "stored training offset (900 values, long order): R .gllvmTMB_offset_vec(fit), Julia fit.offset",
+            "$fxp [$sec.offset_vec]", "fe.offset, fit as at $src",
+            wide(d["offset_vec"]), fe.offset, test_tolerance(tp, "@test isapprox(fe.offset, R_off"), note),
+        mkcase("P1-JULIA-DATA-POIS_EXPOSURE_STORED-PREDICT-LINK", "training-row link predictor at the latent modes, offset included (900 values): R predict(fit, type = \"link\")\$est, Julia predict(fit, Y; type = :link)",
+            "$fxp [$sec.eta_link]", "predict(fe, Y; type = :link), fit as at $src",
+            wide(d["eta_link"]), predict(fe, Y; type = :link), test_tolerance(tp, "@test isapprox(predict(fe, Y; type = :link), R_eta"), note)]
+    return ["data-twins/OFF-TRAIN-STORED.json" => Receipt(["data/DATA-OFF-TRAIN-STORED"], ORIGIN, [fxp, datap], [tp], NOT_A_FIXTURE_PAIR, cs)]
 end
 
 # =============================================================================================
@@ -1961,6 +2002,7 @@ function build(only::Vector{String} = String[])
             ("postfit-twins", receipts_postfit_twins),
             ("namespace-numeric-b", receipts_namespace_numeric_b),
             ("data-twins", receipts_data_twins),
+            ("predict-offset-twin", receipts_predict_offset_twin),
             ("c1-behaviour", receipts_c1_behaviour))
         isempty(only) || name in only || continue
         t0 = time()

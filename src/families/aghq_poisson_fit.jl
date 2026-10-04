@@ -81,7 +81,7 @@ function fit_poisson_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control=
         selected.converged,selected.passes,nothing,copy(t),:observed,info)
 end
 _poisson_with_integration(f::PoissonFit,i)=PoissonFit(f.β,f.Λ,f.link,f.loglik,f.converged,
-    f.iterations,f.alpha_lv,f.theta_packed,f.hessian,i)
+    f.iterations,f.alpha_lv,f.theta_packed,f.hessian,i,f.offset)
 _is_poisson_aghq(f)=f isa PoissonFit && f.integration!==nothing && f.integration.actual===:aghq
 
 function _poisson_aghq_problem(fit::PoissonFit,Y;mask=nothing,offset=nothing,require_identity=false)
