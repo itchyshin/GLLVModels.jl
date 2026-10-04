@@ -2,6 +2,25 @@
 
 ## Development
 
+- **`sanity_multi` reports gllvmTMB's flags; `compare_loadings` gains R's matrix form.**
+  `sanity_multi(fit; y)` now returns R's flags under R's names and in R's order
+  (`converged`, `max_gradient`, `sdreport_ok`, `pd_hessian`, `max_se`, `rr_B_min_loading`,
+  `rr_W_min_loading`), ahead of the existing `pass`, `loadings_finite`, `gradient_norm`,
+  `gradient_ok` and `messages`, which are unchanged (so `pass` is unchanged). As in R, some fields
+  are conditional: `sdreport_error` follows `sdreport_ok` only when `sdreport_ok` is `false`,
+  `rr_B_min_loading` only when the fit has a latent term, and `rr_W_min_loading` only on a
+  `GllvmFit` with within-unit loadings. New keywords `gradient_thresh = 1e-2` and
+  `se_thresh = 100` are R's thresholds, and `io = stdout` writes R's report lines in R's layout;
+  nothing is printed by default. The new method
+  `compare_loadings(Lambda_a::AbstractMatrix, Lambda_b::AbstractMatrix)` is R's
+  `compare_loadings()`: orthogonal Procrustes alignment, returning `R`, `Lambda_a_rot`, `frobenius`
+  and `cor_per_factor`. The two-fit method `compare_loadings(fit1, fit2)` is unchanged.
+  Twinned numerically against gllvmTMB 0.7.1 (P1) in `test/test_diagnostics_p1.jl`: from
+  `sanity_multi`, `max_se` and `rr_B_min_loading` on Gaussian rank-1 and rank-2 fits (each engine
+  fitting the same data); `rr_W_min_loading` is unit-tested only, and `max_gradient` is not
+  compared (it is each optimiser's stopping gradient). `compare_loadings` is twinned as a function
+  on identical inputs (R's fitted `Lambda_B` and the simulating loadings, plus a random pair with
+  a reflection, fed to both engines), not as a fit-then-compare twin.
 - **`predict`, `getLV` and `residuals` on a Laplace fit made with an `offset` now use it.** The
   Laplace Poisson, NB2 (shared `r`), binomial and hurdle-Poisson fits did not keep the offset they
   were fitted with, so `getLV(fit, Y)` searched the latent mode of an offset-free model and

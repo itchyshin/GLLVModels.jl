@@ -35,6 +35,57 @@ using GLLVModels, Test, Random, LinearAlgebra, Statistics
         @test !s.loadings_finite
     end
 
+    @testset "sanity_multi: R's flags, names, order and report lines" begin
+        Random.seed!(13)
+        p, K, n = 5, 2, 300
+        Λ_true = [0.8 0.0; 0.5 0.6; -0.4 0.5; 0.3 -0.6; 0.6 0.2]
+        y = Λ_true * randn(K, n) .+ [0.5, -0.2, 0.1, 0.3, -0.4] .+ 0.5 * randn(p, n)
+        fit = fit_gllvm(y; family = GLLVModels.Distributions.Normal(), K = K)
+        io = IOBuffer()
+        s = GLLVModels.sanity_multi(fit; y = y, io = io)
+        # R's flags first, in R's order (methods-gllvmTMB.R:2362-2487), then the Julia verdict
+        @test collect(keys(s)) == [:converged, :max_gradient, :sdreport_ok, :pd_hessian, :max_se,
+                                   :rr_B_min_loading, :pass, :loadings_finite, :gradient_norm,
+                                   :gradient_ok, :messages]
+        @test s.sdreport_ok === true && s.pd_hessian === true
+        Λ = fit.pars.Λ
+        @test s.rr_B_min_loading == minimum(abs, diag(Λ[1:K, 1:K]))
+        @test s.max_gradient <= s.gradient_norm
+        ci = confint(fit, y; method = :wald, parm = "beta")
+        @test length(ci.se) == p
+        @test s.max_se == maximum(ci.se)
+        lines = split(String(take!(io)), '\n'; keepempty = false)
+        @test length(lines) == 5
+        @test lines[1] == rpad("Optimiser convergence (== 0):", 44) * " PASS"
+        @test startswith(lines[2], rpad("Max |gradient| < 1.0e-02:", 44) * " PASS (max |gr| = ")
+        @test lines[3] == rpad("Hessian positive-definite:", 44) * " PASS"
+        @test lines[4] == rpad("Max fixed-effect SE < 100:", 44) * " PASS (max SE = " *
+                          GLLVModels.Printf.@sprintf("%.3g", s.max_se) * ")"
+        @test startswith(lines[5], rpad("latent(unit, d=B) diag loadings non-zero:", 44) * " PASS")
+        # R's thresholds move only the report's PASS/WARN, not the Julia verdict
+        io2 = IOBuffer()
+        s2 = GLLVModels.sanity_multi(fit; y = y, se_thresh = 1e-6, io = io2)
+        @test occursin(rpad("Max fixed-effect SE < 1e-06:", 44) * " WARN", String(take!(io2)))
+        @test s2.pass == s.pass
+        # without y the objective-based checks are not computed
+        io3 = IOBuffer()
+        s3 = GLLVModels.sanity_multi(fit; io = io3)
+        @test s3.max_gradient === missing && s3.sdreport_ok === missing && s3.max_se === missing
+        @test count("NOT CHECKED", String(take!(io3))) == 3
+        # nothing is printed unless an io is given; the flags are the same
+        @test GLLVModels.sanity_multi(fit; y = y) == s
+    end
+
+    @testset "sanity_multi: within-unit loadings add rr_W_min_loading" begin
+        Random.seed!(14)
+        p, K, n = 5, 1, 300
+        y = reshape([0.7, 0.5, 0.4, -0.3, 0.2], p, 1) * randn(1, n) + 0.5 * randn(p, n)
+        fit = fit_gaussian_gllvm(y; K = K, K_W = 1)
+        s = GLLVModels.sanity_multi(fit)
+        @test collect(keys(s))[6:7] == [:rr_B_min_loading, :rr_W_min_loading]
+        @test s.rr_W_min_loading == abs(fit.pars.Λ_W[1, 1])
+    end
+
     @testset "check_auto_residual — coherent for logit ordinal, flags probit" begin
         Random.seed!(12)
         p, K, n = 4, 1, 300
@@ -224,6 +275,29 @@ using GLLVModels, Test, Random, LinearAlgebra, Statistics
         @test cl.frobenius_norm_LLt > 0.1
 
         @test_throws ArgumentError GLLVModels.compare_fits_Sigma_table(fit1, fit_gaussian_gllvm(y1[1:3, :]; K = K))
+    end
+
+    @testset "compare_loadings(Lambda_a, Lambda_b): R's Procrustes surface (rotate-loadings.R:428-449)" begin
+        rng = MersenneTwister(21)
+        B = randn(rng, 7, 3)
+        Q = Matrix(qr(randn(rng, 3, 3)).Q)
+        det(Q) > 0 && (Q[:, 1] .*= -1)            # a reflection: R's transform allows it
+        A = B * Q'
+        r = GLLVModels.compare_loadings(A, B)
+        @test collect(keys(r)) == [:R, :Lambda_a_rot, :frobenius, :cor_per_factor]
+        @test r.R ≈ Q atol = 1e-12                 # exact recovery of the transform
+        @test r.R' * r.R ≈ Matrix(I, 3, 3) atol = 1e-12
+        @test r.Lambda_a_rot ≈ A * r.R
+        @test r.frobenius < 1e-12
+        @test all(c -> isapprox(c, 1.0; atol = 1e-12), r.cor_per_factor)
+        # with noise: the residual is the Frobenius distance after alignment, columns stay correlated
+        An = A .+ 0.05 .* randn(rng, 7, 3)
+        rn = GLLVModels.compare_loadings(An, B)
+        @test rn.frobenius ≈ sqrt(sum(abs2, An * rn.R .- B))
+        @test rn.frobenius < GLLVModels.compare_loadings(B * Q', B .+ 1).frobenius
+        @test rn.cor_per_factor ≈ [cor((An * rn.R)[:, k], B[:, k]) for k in 1:3]
+        @test_throws ArgumentError GLLVModels.compare_loadings(A, B[:, 1:2])
+        @test_throws ArgumentError GLLVModels.compare_loadings(A, B[1:6, :])
     end
 
     @testset "compare_fits_dep_vs_two_psi / compare_fits_indep_vs_two_psi — bridge shape and self-comparison" begin

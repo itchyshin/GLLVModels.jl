@@ -180,32 +180,63 @@ end
 # ---------------------------------------------------------------------
 
 """
-    sanity_multi(fit; y=nothing, X=nothing, Σ_phy=nothing, grad_tol=1e-3) -> NamedTuple
+    sanity_multi(fit; y=nothing, X=nothing, Σ_phy=nothing, grad_tol=1e-3,
+                 gradient_thresh=1e-2, se_thresh=100, io=nothing) -> NamedTuple
 
-Structural / convergence sanity checks over a fitted GLLVM, in the
-spirit of R's `sanity()` adapted to the multi-response fit. Checks that
-compose from what GLLVModels.jl already computes on the fit object:
+Port of R's `sanity_multi()` (`methods-gllvmTMB.R:2362-2487`, gllvmTMB 0.7.1):
+the fast first screen after fitting. The result carries R's flags under R's
+names and in R's order, followed by the Julia composite verdict:
 
-  - `converged` — `fit.converged` when present.
-  - `loadings_finite` — every entry of the loadings (`_loadings(fit)`)
-    is finite.
-  - `pd_hessian` — for `GllvmFit` with `y` supplied, whether the
-    observed-information Hessian at the MLE is positive definite
-    (reuses the same Hessian path as [`confint`](@ref)); `missing`
-    otherwise (no generic Hessian path for the non-Gaussian families).
-  - `gradient_norm` — for `GllvmFit` with `y` supplied, the Euclidean
-    norm of the packed-NLL gradient at `θ̂`; `missing` otherwise.
+  - `converged`: `fit.converged` when present (R: `opt\$convergence == 0`),
+    `missing` on a fit type that does not record it.
+  - `max_gradient`: `max |g|` of the packed-NLL gradient at `θ̂` (R: max
+    absolute gradient component of the TMB objective at the optimum).
+  - `sdreport_ok`: whether the observed-information Hessian at `θ̂` could be
+    computed and is finite (R: `sdreport()` succeeded). When it is `false`,
+    `sdreport_error` follows with the reason, as in R.
+  - `pd_hessian`: whether that Hessian is positive definite (R: `pdHess`).
+  - `max_se`: the largest Wald standard error of the fixed-effect
+    coefficients (`confint(fit, y; parm = "beta")`; R: largest `b_fix` SE
+    from `sdreport()`), non-finite SEs dropped as R's `na.rm = TRUE` does;
+    `missing` (R: `NA`) when no SE is available.
+  - `rr_B_min_loading`: `min |diag(Λ[1:K, 1:K])|` of the unit-tier
+    loadings, present only when the fit has a latent term (`K ≥ 1`; R:
+    only when `use\$rr_B`).
+  - `rr_W_min_loading`: the same for the within-unit loadings `Λ_W`,
+    present only on a `GllvmFit` with `K_W ≥ 1` (R: only when `use\$rr_W`).
+
+The quantities that need the objective (`max_gradient`, `sdreport_ok`,
+`pd_hessian`, `max_se`) are computed for a `GllvmFit` with `y` supplied
+(and `X` / `Σ_phy` when the fit used them) and are `missing` otherwise: the
+fit object does not store its data, unlike R's fit, which carries its TMB
+object.
+
+The Julia composite verdict follows R's flags:
+
+  - `pass`: `loadings_finite`, convergence not `false`, `pd_hessian` not
+    `false` and `gradient_ok` not `false`.
+  - `loadings_finite`: every loading entry (`_loadings(fit)`) is finite.
+  - `gradient_norm`: Euclidean norm of the packed-NLL gradient at `θ̂`.
   - `gradient_ok` — `gradient_norm < grad_tol` (or `missing`).
+  - `messages`: one line per failed check.
 
-**Gap vs R**: R's `sanity()` also inspects TMB-specific boundary
-conditions (random-effect variance component reports, `sdreport`
-convergence codes) that have no GLLVModels.jl equivalent; those are not
-checked here.
+`gradient_thresh` and `se_thresh` are R's thresholds and drive only R's
+PASS/WARN report lines; `grad_tol` drives `gradient_ok` and `pass`.
 
-Returns `(pass::Bool, converged, loadings_finite::Bool, pd_hessian,
-gradient_norm, gradient_ok, messages::Vector{String})`.
+R always prints its report and returns the flags invisibly. Here the report
+is written only when `io` is an `IO`, in R's layout (`"%-44s %s"`, `%.3g`
+for the numbers, same labels and PASS/WARN rules). A check whose quantity is
+`missing` reads `NOT CHECKED`, a state R's report does not have. The labels
+of the loading lines use R's fallback unit names (`unit`, `site_species`),
+since a Julia fit does not record the data's column names.
+
+**Gap vs R**: R withholds the Hessian and SE checks on an MSPL fit and
+judges a ridged fit by its penalised gradient; GLLVModels.jl has neither
+estimator, so those branches do not exist here.
 """
-function sanity_multi(fit; y = nothing, X = nothing, Σ_phy = nothing, grad_tol::Real = 1e-3)
+function sanity_multi(fit; y = nothing, X = nothing, Σ_phy = nothing, grad_tol::Real = 1e-3,
+                      gradient_thresh::Real = 1e-2, se_thresh::Real = 100,
+                      io::Union{Nothing,IO} = nothing)
     messages = String[]
     converged = hasfield(typeof(fit), :converged) ? fit.converged : missing
     if converged === false
@@ -219,30 +250,87 @@ function sanity_multi(fit; y = nothing, X = nothing, Σ_phy = nothing, grad_tol:
     pd_hessian = missing
     gradient_norm = missing
     gradient_ok = missing
+    max_gradient = missing
+    sdreport_ok = missing
+    max_se = missing
     if fit isa GllvmFit && y !== nothing
         θ̂ = fit.pars.θ_packed
         nll = _confint_reconstruct_nll(fit, y, X, Σ_phy)
         g = ForwardDiff.gradient(nll, θ̂)
+        max_gradient = maximum(abs, g)
         gradient_norm = LinearAlgebra.norm(g)
         gradient_ok = gradient_norm < grad_tol
         gradient_ok || push!(messages, "gradient norm $(round(gradient_norm, digits = 6)) exceeds grad_tol")
-        try
-            H = ForwardDiff.hessian(nll, θ̂)
-            Hsym = (H .+ H') ./ 2
-            pd_hessian = isposdef(Hsym)
+        H = try
+            ForwardDiff.hessian(nll, θ̂)
         catch
-            pd_hessian = false
+            nothing
         end
+        sdreport_ok = H !== nothing && all(isfinite, H)
+        pd_hessian = sdreport_ok ? isposdef((H .+ H') ./ 2) : false
         pd_hessian === false && push!(messages, "observed-information Hessian is not positive definite")
+        if sdreport_ok
+            ci_kw = Σ_phy === nothing ? (; X = X) : (; X = X, Σ_phy = Σ_phy)
+            se = try
+                confint(fit, y; method = :wald, parm = "beta", ci_kw...).se
+            catch e
+                # R: tryCatch(.gllvmTMB_b_fix_se(object), error = function(e) NA_real_)
+                @debug "sanity_multi: fixed-effect standard errors unavailable; max_se is missing" exception = e
+                Float64[]
+            end
+            se = filter(isfinite, se)
+            max_se = isempty(se) ? missing : maximum(se)
+        end
+    end
+
+    flags = Pair{Symbol,Any}[:converged => converged, :max_gradient => max_gradient,
+                             :sdreport_ok => sdreport_ok]
+    sdreport_ok === false && push!(flags, :sdreport_error => "observed-information Hessian unavailable or non-finite")
+    push!(flags, :pd_hessian => pd_hessian, :max_se => max_se)
+    K = size(Λ, 2)
+    if K >= 1
+        push!(flags, :rr_B_min_loading => minimum(abs, diag(Λ[1:K, 1:K])))
+    end
+    if fit isa GllvmFit && fit.model.K_W >= 1
+        ΛW = fit.pars.Λ_W
+        push!(flags, :rr_W_min_loading => minimum(abs, diag(ΛW[1:fit.model.K_W, 1:fit.model.K_W])))
     end
 
     pass = loadings_finite && (converged !== false) &&
            (pd_hessian === missing || pd_hessian) &&
            (gradient_ok === missing || gradient_ok)
+    push!(flags, :pass => pass, :loadings_finite => loadings_finite,
+          :gradient_norm => gradient_norm, :gradient_ok => gradient_ok, :messages => messages)
+    res = NamedTuple(flags)
+    io === nothing || _print_sanity_multi(io, res, gradient_thresh, se_thresh)
+    return res
+end
 
-    return (pass = pass, converged = converged, loadings_finite = loadings_finite,
-            pd_hessian = pd_hessian, gradient_norm = gradient_norm,
-            gradient_ok = gradient_ok, messages = messages)
+_sanity_g3(x) = x === missing ? "NA" : Printf.@sprintf("%.3g", x)
+_sanity_line(io, label, status) = println(io, rpad(label, 44), " ", status)
+
+# R's report lines (methods-gllvmTMB.R:2369-2483), in R's order and layout.
+function _print_sanity_multi(io::IO, r::NamedTuple, gradient_thresh::Real, se_thresh::Real)
+    _sanity_line(io, "Optimiser convergence (== 0):",
+                 r.converged === missing ? "NOT CHECKED" : r.converged ? "PASS" : "FAIL")
+    glabel = Printf.@sprintf("Max |gradient| < %.1e:", gradient_thresh)
+    _sanity_line(io, glabel, r.max_gradient === missing ? "NOT CHECKED" :
+                 (r.max_gradient < gradient_thresh ? "PASS" : "WARN") * " (max |gr| = $(_sanity_g3(r.max_gradient)))")
+    _sanity_line(io, "Hessian positive-definite:",
+                 r.pd_hessian === missing ? "NOT CHECKED" : r.pd_hessian ? "PASS" : "WARN")
+    r.sdreport_ok === false && _sanity_line(io, "sdreport available:", "WARN ($(r.sdreport_error))")
+    selabel = "Max fixed-effect SE < $(Printf.@sprintf("%g", se_thresh)):"
+    _sanity_line(io, selabel, r.sdreport_ok === missing ? "NOT CHECKED" :
+                 (r.max_se !== missing && r.max_se < se_thresh ? "PASS" : "WARN") * " (max SE = $(_sanity_g3(r.max_se)))")
+    if haskey(r, :rr_B_min_loading)
+        _sanity_line(io, "latent(unit, d=B) diag loadings non-zero:",
+                     (r.rr_B_min_loading > 1e-3 ? "PASS" : "WARN") * " (min |Lambda_B diag| = $(_sanity_g3(r.rr_B_min_loading)))")
+    end
+    if haskey(r, :rr_W_min_loading)
+        _sanity_line(io, "latent(site_species, d=W) diag loadings non-zero:",
+                     (r.rr_W_min_loading > 1e-3 ? "PASS" : "WARN") * " (min |Lambda_W diag| = $(_sanity_g3(r.rr_W_min_loading)))")
+    end
+    return nothing
 end
 
 # ---------------------------------------------------------------------
@@ -558,6 +646,41 @@ function compare_loadings(fit1, fit2)
         angles = _principal_angles(Λ1, Λ2)
     end
     return (frobenius_norm_LLt = fro, principal_angles = angles)
+end
+
+"""
+    compare_loadings(Lambda_a::AbstractMatrix, Lambda_b::AbstractMatrix) -> NamedTuple
+
+Port of R's `compare_loadings(Lambda_a, Lambda_b)` (`rotate-loadings.R:428-449`,
+gllvmTMB 0.7.1): orthogonal Procrustes alignment of `Lambda_a` onto
+`Lambda_b` (two `n_traits × d` loading matrices, e.g. a fitted Λ and a
+known or reference Λ). With `M = Lambda_bᵀ Lambda_a = U S Vᵀ`, the rotation
+is `R = V Uᵀ` (an orthogonal matrix, so a reflection is allowed, as in R).
+
+Returns, with R's names and in R's order:
+
+  - `R`: the `d × d` orthogonal transform;
+  - `Lambda_a_rot`: `Lambda_a * R`;
+  - `frobenius`: `‖Lambda_a_rot − Lambda_b‖_F`, the disagreement after
+    alignment;
+  - `cor_per_factor`: the Pearson correlation of column `k` of
+    `Lambda_a_rot` with column `k` of `Lambda_b`, for each factor.
+
+This matrix method is R's surface. The two-fit method
+`compare_loadings(fit1, fit2)` is a different, rotation-free
+comparison (`ΛΛᵀ` distance and principal angles) of two fitted models.
+"""
+function compare_loadings(Lambda_a::AbstractMatrix, Lambda_b::AbstractMatrix)
+    size(Lambda_a) == size(Lambda_b) || throw(ArgumentError(
+        "Lambda_a and Lambda_b must have the same dimensions."))
+    A = Matrix{Float64}(Lambda_a)
+    B = Matrix{Float64}(Lambda_b)
+    F = svd(B' * A)
+    R = F.V * F.U'
+    A_rot = A * R
+    return (R = R, Lambda_a_rot = A_rot,
+            frobenius = sqrt(sum(abs2, A_rot .- B)),
+            cor_per_factor = [Statistics.cor(A_rot[:, k], B[:, k]) for k in 1:size(A, 2)])
 end
 
 """

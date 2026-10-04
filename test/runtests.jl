@@ -526,6 +526,8 @@ println(_SHARD === nothing ?
     _shard_include("test_confint_inspect_p1.jl")
     # P1 numeric twin of the gllvmTMB postfit row predict_missing (masked-cell predictions of a masked Gaussian fit).
     _shard_include("test_predict_missing_p1.jl")
+    # P1 numeric twins of gllvmTMB sanity_multi (max fixed-effect SE, min |diag Lambda_B|) and compare_loadings (Procrustes output).
+    _shard_include("test_diagnostics_p1.jl")
     # P1 fit-level twins of core070 data rows (six bind; see tools/core070_data_p1_receipts.py) (offset and missing-response handling).
     _shard_include("test_data_twins_p1.jl")
     _shard_include("test_predict_offset_twin_p1.jl")

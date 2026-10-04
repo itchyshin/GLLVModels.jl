@@ -206,16 +206,29 @@
       "arc": "A3",
       "carry_scan_status": "DANGLING",
       "executable_case_ids": [
-        "CORE070-WAVE7-COMPARE-LOADINGS-SELF-CONSISTENCY"
+        "P1-JULIA-POSTFIT-COMPARE-LOADINGS-FIT-VS-TRUTH-R",
+        "P1-JULIA-POSTFIT-COMPARE-LOADINGS-FIT-VS-TRUTH-LAMBDA-A-ROT",
+        "P1-JULIA-POSTFIT-COMPARE-LOADINGS-FIT-VS-TRUTH-FROBENIUS",
+        "P1-JULIA-POSTFIT-COMPARE-LOADINGS-FIT-VS-TRUTH-COR-PER-FACTOR",
+        "P1-JULIA-POSTFIT-COMPARE-LOADINGS-REFLECTED-R",
+        "P1-JULIA-POSTFIT-COMPARE-LOADINGS-REFLECTED-LAMBDA-A-ROT",
+        "P1-JULIA-POSTFIT-COMPARE-LOADINGS-REFLECTED-FROBENIUS",
+        "P1-JULIA-POSTFIT-COMPARE-LOADINGS-REFLECTED-COR-PER-FACTOR"
       ],
       "disposition": null,
-      "evidence_tier": "partial_non_numeric_case",
+      "evidence_tier": "numeric",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/compare_loadings.json"
+        ],
         "non_binding_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE7-COMPARE-LOADINGS-SELF-CONSISTENCY.json"
         ],
-        "tier": "measured at P1 and the harness passes, but at least one case is a verdict, own-consistency, exact-integer, empty-length or default-policy check with no R-vs-Julia number and tolerance, so the row does not bind"
+        "batch_case_ids": [
+          "CORE070-WAVE7-COMPARE-LOADINGS-SELF-CONSISTENCY"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_diagnostics_receipt.jl with the same calls and settings as the cited twin test, against R-at-P1 values copied from a tracked fixture (R compare_loadings() on two recorded loading pairs whose inputs are stored at 17 significant digits; non-degenerate: the transforms are not the identity and the residual distances are not ~0), each case within the tolerance asserted in that test. The batch case this row carried is superseded; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
       },
       "measured_result": {
         "case_verdicts": {
@@ -226,8 +239,23 @@
         },
         "case_kinds": {
           "CORE070-WAVE7-COMPARE-LOADINGS-SELF-CONSISTENCY": "paired_own_consistency"
+        },
+        "twin_case_ids": [
+          "P1-JULIA-POSTFIT-COMPARE-LOADINGS-FIT-VS-TRUTH-R",
+          "P1-JULIA-POSTFIT-COMPARE-LOADINGS-FIT-VS-TRUTH-LAMBDA-A-ROT",
+          "P1-JULIA-POSTFIT-COMPARE-LOADINGS-FIT-VS-TRUTH-FROBENIUS",
+          "P1-JULIA-POSTFIT-COMPARE-LOADINGS-FIT-VS-TRUTH-COR-PER-FACTOR",
+          "P1-JULIA-POSTFIT-COMPARE-LOADINGS-REFLECTED-R",
+          "P1-JULIA-POSTFIT-COMPARE-LOADINGS-REFLECTED-LAMBDA-A-ROT",
+          "P1-JULIA-POSTFIT-COMPARE-LOADINGS-REFLECTED-FROBENIUS",
+          "P1-JULIA-POSTFIT-COMPARE-LOADINGS-REFLECTED-COR-PER-FACTOR"
+        ],
+        "twin_verdict": "PASS",
+        "discriminating": {
+          "CORE070-WAVE7-COMPARE-LOADINGS-SELF-CONSISTENCY": false
         }
-      }
+      },
+      "note": "The batch case was an own-consistency check (each engine compared a fit with itself; no R-vs-Julia number), and the Julia function then took two fits and returned a different, rotation-free comparison. The new matrix method compare_loadings(Lambda_a, Lambda_b) is R's surface (Procrustes alignment, returning R, Lambda_a_rot, frobenius and cor_per_factor with R's names and order); the twin compares all four outputs on (a) a 6 x 2 fitted Lambda_B against the simulating loadings and (b) an 8 x 3 pair whose optimal transform is a reflection. The inputs are the same doubles in both engines, so this checks the Procrustes computation itself."
     },
     {
       "source_id": "postfit/POSTFIT-SURFACE-confint.gllvmTMB_multi",
@@ -1042,17 +1070,24 @@
       "arc": "A3",
       "carry_scan_status": "DANGLING",
       "executable_case_ids": [
-        "CORE070-WAVE7-SANITY-MULTI"
+        "P1-JULIA-POSTFIT-SANITY-MULTI-MAX-SE",
+        "P1-JULIA-POSTFIT-SANITY-MULTI-RR-B-MIN-LOADING"
       ],
       "disposition": null,
       "uncertain": true,
-      "evidence_tier": "partial_non_numeric_case",
+      "evidence_tier": "numeric",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/sanity_multi.json"
+        ],
         "non_binding_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE7-SANITY-MULTI.json"
         ],
-        "tier": "measured at P1 and the harness passes, but at least one case is a verdict, own-consistency, exact-integer, empty-length or default-policy check with no R-vs-Julia number and tolerance, so the row does not bind"
+        "batch_case_ids": [
+          "CORE070-WAVE7-SANITY-MULTI"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_diagnostics_receipt.jl with the same calls and settings as the cited twin test, against R-at-P1 values copied from a tracked fixture (two R fits, latent d = 1 and d = 2, each converged with a positive-definite Hessian, on a non-degenerate fixture: the R values are not one constant and not ~0), each case within the tolerance asserted in that test. The batch case this row carried is superseded; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
       },
       "measured_result": {
         "case_verdicts": {
@@ -1063,8 +1098,17 @@
         },
         "case_kinds": {
           "CORE070-WAVE7-SANITY-MULTI": "paired_verdict"
+        },
+        "twin_case_ids": [
+          "P1-JULIA-POSTFIT-SANITY-MULTI-MAX-SE",
+          "P1-JULIA-POSTFIT-SANITY-MULTI-RR-B-MIN-LOADING"
+        ],
+        "twin_verdict": "PASS",
+        "discriminating": {
+          "CORE070-WAVE7-SANITY-MULTI": false
         }
-      }
+      },
+      "note": "The batch case compared only the converged and pd_hessian verdicts (no R-vs-Julia number). The twin compares the numeric flags of R's sanity_multi() with the Julia sanity_multi(fit; y), which now returns R's flags under R's names and in R's order, on Gaussian fits value ~ 0 + trait + latent(0 + trait | unit, d = D, unique = FALSE), D = 1 and 2: max_se (largest fixed-effect SE) and rr_B_min_loading (min |diag Lambda_B|). The boolean flags converged, sdreport_ok and pd_hessian agree (TRUE on both fits) and R's report lines are reproduced except the gradient value (asserted in the test, not receipt cases). max_gradient is not compared: it is each optimiser's stopping gradient (R about 1e-3, Julia about 1e-12), both below R's 1e-2 threshold. Limits: one-tier Gaussian fits, so rr_W_min_loading is not twinned; R's MSPL and ridge branches have no Julia estimator."
     },
     {
       "source_id": "postfit/POSTFIT-SURFACE-simulate_unit_trait",
