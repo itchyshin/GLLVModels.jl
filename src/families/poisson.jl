@@ -40,6 +40,10 @@ raw latent-axis coefficients for the predictor-informed score mean; use
 counts, controls, final caches and retained start diagnostics. It is `nothing`
 for default Laplace and legacy constructors. AGHQ convergence is with respect
 to the frozen-node surrogate, not derivatives through changing adaptation.
+`offset` is the p×n training offset a Laplace fit was made with (`nothing` when the
+fit had none); [`predict`](@ref) and [`getLV`](@ref) use it by default. An AGHQ fit
+leaves `offset === nothing`: its offset is kept in `integration.data.offset`, which
+the AGHQ post-fit route uses.
 """
 struct PoissonFit
     β::Vector{Float64}
@@ -52,7 +56,12 @@ struct PoissonFit
     theta_packed::Vector{Float64}
     hessian::Symbol   # Laplace log-det curvature; AGHQ is recorded separately
     integration::Union{Nothing,AGHQFitInfo}
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
 end
+
+# Pre-offset compat tier (10 positional args): no stored training offset.
+PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, integration) =
+    PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, integration, nothing)
 
 PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian) =
     PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, nothing)
@@ -388,10 +397,11 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         cursor += q_lv * K
         Λ̂ = unpack_lambda(@view(θ̂[(cursor + 1):(cursor + rr)]), p, K)
         return PoissonFit(β̂, Λ̂, link, _fit_verdict(res)...,
-                          alpha_hat, collect(Float64, θ̂), hessian)
+                          alpha_hat, collect(Float64, θ̂), hessian, nothing, _stored_offset(offset))
     else
         β̂ = θ̂[1:p]
         Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
-        return PoissonFit(β̂, Λ̂, link, _fit_verdict(res)..., nothing, Float64[], hessian)
+        return PoissonFit(β̂, Λ̂, link, _fit_verdict(res)..., nothing, Float64[], hessian,
+                          nothing, _stored_offset(offset))
     end
 end

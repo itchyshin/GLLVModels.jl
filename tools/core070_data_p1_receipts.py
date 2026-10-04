@@ -69,8 +69,10 @@ receipts stay under evidence.non_binding_receipts), evidence_tier numeric. Class
 disposition and every other field are untouched; a row's `note` still describes the superseded
 helper-replay case. `--apply-twins` re-derives rows and counts of the tracked case-map-data.json
 from the tracked receipts and twin receipts (no run directory needed); `--check` verifies the
-result. Rows with no twin (weights rows: Julia refuses weights= everywhere; stored / predict-time
-offset, mixed-family and modelled-predictor rows: no Julia surface to fit) keep their batch tier.
+result. Rows with no twin (weights rows: Julia refuses weights= everywhere; legacy-fit and
+newdata predict-time offset, mixed-family and modelled-predictor rows: no Julia surface to fit) keep
+their batch tier. DATA-OFF-TRAIN-STORED is bound by its own twin (test/test_predict_offset_twin_p1.jl,
+fixture test/fixtures/predict_offset_twin_p1.toml).
 
 Usage:
   python3 tools/core070_data_p1_receipts.py --runs DIR --runtimes JSON [--allow-dirty]
@@ -455,11 +457,23 @@ def p0_evidence(base):
 
 
 TWIN_REL = f"{OUT_REL}/receipts/julia-twins/data-twins"
-TWIN_TIER = ("numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as "
-             "test/test_data_twins_p1.jl, against R-at-P1 values copied from test/fixtures/data_twins_p1.toml (an R fit "
-             "that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. "
-             "The helper-replay batch case this row carried has no fit number; its receipt is kept under "
-             "non_binding_receipts and its ids under batch_case_ids")
+# Twin test and fixture per row; rows not listed use the shared data-twin pair.
+TWIN_SOURCES_DEFAULT = ("test/test_data_twins_p1.jl", "test/fixtures/data_twins_p1.toml")
+TWIN_SOURCES = {
+    "data/DATA-OFF-TRAIN-STORED": ("test/test_predict_offset_twin_p1.jl", "test/fixtures/predict_offset_twin_p1.toml"),
+}
+
+
+def twin_tier(sid):
+    """The tier text of a twin-bound row, naming that row's own twin test and fixture."""
+    test, fixture = TWIN_SOURCES.get(sid, TWIN_SOURCES_DEFAULT)
+    return ("numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as "
+            f"{test}, against R-at-P1 values copied from {fixture} (an R fit "
+            "that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. "
+            "The helper-replay batch case this row carried has no fit number; its receipt is kept under "
+            "non_binding_receipts and its ids under batch_case_ids")
+
+
 TWIN_FILES = {  # source_id -> twin receipt stem
     "data/DATA-OFF-NONE": "OFF-NONE",
     "data/DATA-OFF-SCALAR": "OFF-SCALAR",
@@ -468,6 +482,7 @@ TWIN_FILES = {  # source_id -> twin receipt stem
     "data/DATA-OFF-NONCOUNT-ZERO": "OFF-NONCOUNT-ZERO",
     "data/DATA-MISS-DEFAULT": "MISS-DEFAULT",
     "data/DATA-MISS-INCLUDE": "MISS-INCLUDE",
+    "data/DATA-OFF-TRAIN-STORED": "OFF-TRAIN-STORED",
 }
 
 
@@ -495,6 +510,12 @@ SCOPE_NOTES = {
         "Gaussian fit match plus acceptance of offset = zeros(p, n). Known differences, recorded not bound: "
         "Julia applies a nonzero Gaussian offset where R refuses it. (The scalar form offset = 0.0 is "
         "now broadcast like any scalar offset; see DATA-OFF-SCALAR.)",
+    "data/DATA-OFF-TRAIN-STORED": "The R batch case reads back a vector written into a mock fit object; the twin "
+        "compares the training offset a real Poisson exposure fit kept (R .gllvmTMB_offset_vec, Julia fit.offset) "
+        "and the training-row link predictor that uses it (R predict(fit, type = 'link'), Julia predict(fit, Y; "
+        "type = :link)). Training rows only: R's newdata prediction (offset re-evaluated against newdata, training "
+        "units' latent modes kept) has no Julia counterpart and is not compared. Julia stores the training offset "
+        "on the Laplace Poisson, NB2 (shared r), binomial and hurdle-Poisson fits; other fit types keep none.",
 }
 
 
@@ -538,7 +559,7 @@ def twin_overlay(sid, row, counts):
     row["evidence_tier"] = "numeric"
     row["measured_against"] = P1_SHA
     row["evidence"] = {"receipt": [rel], "non_binding_receipts": ev.get("non_binding_receipts", []),
-                       "batch_case_ids": prior_ids, "tier": TWIN_TIER}
+                       "batch_case_ids": prior_ids, "tier": twin_tier(sid)}
     row["measured_result"] = {**(row.get("measured_result") or {}), "twin_case_ids": case_ids,
                               "twin_verdict": rec["verdict"]}
     if sid in SCOPE_NOTES:
