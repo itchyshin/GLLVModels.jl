@@ -641,16 +641,17 @@ function _bridge_zib_trials(N, p::Integer, n::Integer)
         "intercepts are not separately identified. Pass N as a scalar, or as a " *
         "$(p)×$(n) array whose entries are all equal."))
     if N isa Number
-        Ni = round(Int, N)
-        Ni >= 1 || throw(ArgumentError(
-            "bridge_fit: family=\"zib\" needs trials N >= 1; got $(Ni)"))
+        _bridge_exact_integer(N, 1) || throw(ArgumentError(
+            "bridge_fit: family=\"zib\" trials N must be a finite integer " *
+            "≥ 1 exactly representable as Int; values are not rounded (got $(N))"))
+        Ni = Int(N)
         return Ni
     end
     A = Matrix(N)
     size(A) == (p, n) || throw(ArgumentError(
         "bridge_fit: family=\"zib\" trials N must be a scalar or a $(p)×$(n) array; " *
         "got $(size(A))"))
-    Ai = round.(Int, A)
+    Ai = _bridge_require_integer_trials(N, p, n, "zib")
     Ni = first(Ai)
     all(==(Ni), Ai) || throw(ArgumentError(
         "bridge_fit: family=\"zib\" requires ONE shared scalar trials count N, but " *
@@ -660,6 +661,53 @@ function _bridge_zib_trials(N, p::Integer, n::Integer)
     Ni >= 1 || throw(ArgumentError(
         "bridge_fit: family=\"zib\" needs trials N >= 1; got $(Ni)"))
     return Ni
+end
+
+# Count / trial inputs must be exact integers (truncated_poisson already rejects
+# rounding). Other families must match that contract so fractional R-side data
+# cannot silently change the fitted dataset.
+function _bridge_exact_integer(v::Real, lo::Real)
+    isfinite(v) && v >= lo && isinteger(v) && v <= Float64(typemax(Int))
+end
+
+function _bridge_require_integer_counts(Yf::AbstractMatrix, family::AbstractString; lo::Real = 0)
+    for i in eachindex(Yf)
+        v = Yf[i]
+        _bridge_exact_integer(v, lo) && continue
+        r, c = Tuple(CartesianIndices(Yf)[i])
+        throw(ArgumentError(
+            "bridge_fit: family=\"$(family)\" requires finite integer counts " *
+            "exactly representable as Int (minimum $(lo)); values are not rounded " *
+            "(bad cell row=$(r), col=$(c), value=$(v))"))
+    end
+    return Int.(Yf)
+end
+
+function _bridge_require_integer_trials(N, p::Integer, n::Integer, family::AbstractString)
+    if N === nothing
+        return fill(1, p, n)
+    end
+    if N isa Number
+        _bridge_exact_integer(N, 1) || throw(ArgumentError(
+            "bridge_fit: family=\"$(family)\" trials N must be a finite integer " *
+            "≥ 1 exactly representable as Int; values are not rounded (got $(N))"))
+        Ni = Int(N)
+        return fill(Ni, p, n)
+    end
+    A = Matrix(N)
+    size(A) == (p, n) || throw(ArgumentError(
+        "bridge_fit: family=\"$(family)\" trials N must be a scalar or a " *
+        "$(p)×$(n) array; got $(size(A))"))
+    for i in eachindex(A)
+        v = A[i]
+        _bridge_exact_integer(v, 1) && continue
+        r, c = Tuple(CartesianIndices(A)[i])
+        throw(ArgumentError(
+            "bridge_fit: family=\"$(family)\" requires finite integer trial counts " *
+            "exactly representable as Int (≥ 1); values are not rounded " *
+            "(bad cell row=$(r), col=$(c), value=$(v))"))
+    end
+    return Int.(A)
 end
 
 function _bridge_ci_guard_pertrait_ordinal(key::AbstractString, ci_method::AbstractString)
@@ -1047,7 +1095,7 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
     # uses Float64.(Y)) matches to machine precision; nb1 routes too (its FamilyFit
     # is in _CIFit even though its latent-scale extractor is not yet present).
     if key == "poisson"
-        Yi = round.(Int, Yf)
+        Yi = _bridge_require_integer_counts(Yf, key)
         if X_lv !== nothing
             Xlv = Matrix{Float64}(X_lv)
             size(Xlv, 1) == n || throw(ArgumentError(
@@ -1169,9 +1217,8 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
             # packed objective to rebuild on this engine yet).
             gradient_max = NaN)
     elseif key in _BRIDGE_BINOMIAL_FAMILIES
-        Yi = round.(Int, Yf)
-        Ni = N === nothing ? fill(1, p, n) :
-             (N isa Number ? fill(round(Int, N), p, n) : round.(Int, Matrix(N)))
+        Yi = _bridge_require_integer_counts(Yf, key)
+        Ni = _bridge_require_integer_trials(N, p, n, key)
         link = _bridge_binomial_link(key)
         if X_lv !== nothing
             Xlv = Matrix{Float64}(X_lv)
@@ -1218,7 +1265,7 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
             alpha = fit.β, dispersion = fill(NaN, p), df = p + _bridge_rr_df(p, K),
             scores = scores, ci = ci, mask = M)
     elseif key == "negbinomial"
-        Yi = round.(Int, Yf)
+        Yi = _bridge_require_integer_counts(Yf, key)
         if X_lv !== nothing
             Xlv = Matrix{Float64}(X_lv)
             size(Xlv, 1) == n || throw(ArgumentError(
@@ -1267,7 +1314,7 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
             scores = scores, ci = ci, mask = M)
         return merge(base, disp)
     elseif key == "nb1"
-        Yi = round.(Int, Yf)
+        Yi = _bridge_require_integer_counts(Yf, key)
         fit = fit_nb1_gllvm_grouped(Yi; K = K, group = collect(1:p), mask = M)
         disp = _bridge_dispersion_payload(fit.φ, fit.group, "phi",
             "Var = mu * (1 + phi)",
@@ -1380,9 +1427,8 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
             scores = scores, ci = ci, mask = M)
         return merge(base, disp)
     elseif key == "betabinomial"
-        Yi = round.(Int, Yf)
-        Ni = N === nothing ? fill(1, p, n) :
-             (N isa Number ? fill(round(Int, N), p, n) : round.(Int, Matrix(N)))
+        Yi = _bridge_require_integer_counts(Yf, key)
+        Ni = _bridge_require_integer_trials(N, p, n, key)
         fit = fit_beta_binomial_gllvm_grouped(Yi; K = K, N = Ni, group = collect(1:p), mask = M)
         disp = _bridge_dispersion_payload(fit.φ, fit.group, "phi",
             "Var = N * mu * (1 - mu) * (1 + (N - 1) * phi / (phi + 1))",
@@ -1395,7 +1441,7 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
             scores = scores, ci = ci, mask = M)
         return merge(base, disp)
     elseif key in ("ordinal", "ordinal_probit")
-        Yi = round.(Int, Yf)
+        Yi = _bridge_require_integer_counts(Yf, key)
         link = key == "ordinal_probit" ? ProbitLink() : LogitLink()
         _bridge_ci_guard_pertrait_ordinal(key, ci_method)
         fit = fit_ordinal_gllvm_pertrait(Yi; K = K, link = link, mask = M)
@@ -1415,7 +1461,7 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
                             cutpoint_mode = "per_trait",
                             cutpoint_link = _bridge_link_name(fit.link)))
     elseif key == "zip"
-        Yi = round.(Int, Yf)
+        Yi = _bridge_require_integer_counts(Yf, key)
         M === nothing || throw(ArgumentError(
             "bridge_fit: missing-response masks are not wired for family=\"zip\" yet"))
         fit = fit_zip_gllvm(Yi; K = K)
@@ -1446,7 +1492,7 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
             ci = ci, gradient_max = _bridge_gradient_max_family(fit, Float64.(Yi)))
         return merge(base, (beta_zero = collect(Float64, fit.βz),))
     elseif key == "zinb"
-        Yi = round.(Int, Yf)
+        Yi = _bridge_require_integer_counts(Yf, key)
         M === nothing || throw(ArgumentError(
             "bridge_fit: missing-response masks are not wired for family=\"zinb\" yet"))
         fit = fit_zinb_gllvm(Yi; K = K)
@@ -1472,7 +1518,7 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
             ci = ci, gradient_max = _bridge_gradient_max_family(fit, Float64.(Yi)))
         return merge(base, (beta_zero = collect(Float64, fit.βz),))
     elseif key == "zib"
-        Yi = round.(Int, Yf)
+        Yi = _bridge_require_integer_counts(Yf, key)
         M === nothing || throw(ArgumentError(
             "bridge_fit: missing-response masks are not wired for family=\"zib\" yet"))
         Ni = _bridge_zib_trials(N, p, n)
@@ -1543,29 +1589,30 @@ function _bridge_fit_onepart_cov(Yf::AbstractMatrix{Float64}, key::AbstractStrin
     coef_fixed = _bridge_coef_fixed(options, q, "coef_fixed")
 
     # Per-family response coercion + Binomial trial counts (mirror the no-X path):
-    # the count families round to integer-valued Float64; continuous pass through.
-    # Ordinal rounds to integer categories (same as no-X bridge path).
+    # count / ordinal families require exact integer inputs; continuous pass through.
     is_count = key in ("poisson", "binomial", "negbinomial", "betabinomial")
     is_ordinal = key in ("ordinal", "ordinal_probit")
-    Ydata = (is_count || is_ordinal) ? Float64.(round.(Int, Yf)) : Yf
+    Ydata = if is_count || is_ordinal
+        Float64.(_bridge_require_integer_counts(Yf, key))
+    else
+        Yf
+    end
     Nm = key in ("binomial", "betabinomial") ?
-         (N === nothing ? fill(1, p, n) :
-          (N isa Number ? fill(round(Int, N), p, n) : round.(Int, Matrix(N)))) :
-         nothing
+         _bridge_require_integer_trials(N, p, n, key) : nothing
 
     # Twin API B under X: NB2/NB1/Beta/Gamma default to per-trait φ/α + shared site-X;
     # ordinal/ordinal_probit default to per-trait cutpoints (τ₁=0 / K−2) + shared γ.
     # Shared-dispersion + X remains available via direct `fit_gllvm_cov` where that
     # path exists; shared-cutpoint ordinal stays an explicit Julia comparator.
     if key == "negbinomial"
-        Yi = round.(Int, Ydata)
+        Yi = Int.(Ydata)
         fit = fit_nb_gllvm_grouped_cov(Yi; X = Xarr, K = K, group = collect(1:p),
                                        γ_fixed = coef_fixed)
         return _bridge_assemble_grouped_cov(fit, key, traits, units, Yi, Xarr,
                                             coef_fixed, ci_method, ci_level,
                                             ci_nboot, ci_seed; N = nothing)
     elseif key == "nb1"
-        Yi = round.(Int, Ydata)
+        Yi = Int.(Ydata)
         fit = fit_nb1_gllvm_grouped_cov(Yi; X = Xarr, K = K, group = collect(1:p),
                                         γ_fixed = coef_fixed)
         return _bridge_assemble_grouped_cov(fit, key, traits, units, Yi, Xarr,
@@ -1584,14 +1631,14 @@ function _bridge_fit_onepart_cov(Yf::AbstractMatrix{Float64}, key::AbstractStrin
                                             coef_fixed, ci_method, ci_level,
                                             ci_nboot, ci_seed; N = nothing)
     elseif key == "betabinomial"
-        Yi = round.(Int, Ydata)
+        Yi = Int.(Ydata)
         fit = fit_beta_binomial_gllvm_grouped_cov(Yi; X = Xarr, K = K, N = Nm,
                                                   group = collect(1:p), γ_fixed = coef_fixed)
         return _bridge_assemble_grouped_cov(fit, key, traits, units, Yi, Xarr,
                                             coef_fixed, ci_method, ci_level,
                                             ci_nboot, ci_seed; N = Nm)
     elseif key in ("ordinal", "ordinal_probit")
-        Yi = round.(Int, Ydata)
+        Yi = Int.(Ydata)
         link = key == "ordinal_probit" ? ProbitLink() : LogitLink()
         _bridge_ci_guard_pertrait_ordinal(key, ci_method)
         fit = fit_ordinal_gllvm_pertrait_cov(Yi; X = Xarr, K = K, link = link,
@@ -1599,12 +1646,12 @@ function _bridge_fit_onepart_cov(Yf::AbstractMatrix{Float64}, key::AbstractStrin
         return _bridge_assemble_ordinal_cov(fit, key, traits, units, Yi, Xarr,
                                             coef_fixed)
     elseif key == "zip"
-        Yi = round.(Int, Ydata)
+        Yi = Int.(Ydata)
         fit = fit_zip_gllvm_cov(Yi; X = Xarr, K = K, γ_fixed = coef_fixed)
         return _bridge_assemble_zip_cov(fit, traits, units, Yi, Xarr, coef_fixed,
                                         ci_method, ci_level, ci_nboot, ci_seed)
     elseif key == "zinb"
-        Yi = round.(Int, Ydata)
+        Yi = Int.(Ydata)
         fit = fit_zinb_gllvm_cov(Yi; X = Xarr, K = K, γ_fixed = coef_fixed)
         return _bridge_assemble_zinb_cov(fit, traits, units, Yi, Xarr, coef_fixed,
                                          ci_method, ci_level, ci_nboot, ci_seed)
@@ -1868,21 +1915,24 @@ function _bridge_fit_mixed(y, family_strs::AbstractVector, K::Integer, N,
     families = [_bridge_mixed_family_marker(f) for f in family_strs]
     links = Link[default_link(fam) for fam in families]
 
-    # Per-trait response matrix: round count rows to integers (in Float64), leave
-    # continuous rows untouched. The mixed marginal reads each row by its family.
+    # Per-trait response matrix: count rows must be exact integers (in Float64);
+    # continuous rows pass through unchanged.
     Ymix = copy(Yf)
     is_count = (k -> k in ("poisson", "binomial", "negbinomial"))
     @inbounds for t in 1:p
-        if is_count(keys_norm[t])
-            for s in 1:n
-                Ymix[t, s] = float(round(Int, Yf[t, s]))
-            end
+        is_count(keys_norm[t]) || continue
+        for s in 1:n
+            v = Yf[t, s]
+            _bridge_exact_integer(v, 0) || throw(ArgumentError(
+                "bridge_fit (mixed): trait $(t) (family=\"$(keys_norm[t])\") requires " *
+                "finite integer counts exactly representable as Int; values are not " *
+                "rounded (bad cell row=$(t), col=$(s), value=$(v))"))
+            Ymix[t, s] = float(Int(v))
         end
     end
 
     # Binomial trial counts (p×n; defaults to 1). Only the Binomial rows read N.
-    Nm = N === nothing ? fill(1, p, n) :
-         (N isa Number ? fill(round(Int, N), p, n) : round.(Int, Matrix(N)))
+    Nm = _bridge_require_integer_trials(N, p, n, "mixed")
 
     fit = fit_mixed_gllvm(Ymix; families = families, links = links, K = K, N = Nm)
 
