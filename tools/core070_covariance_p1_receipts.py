@@ -12,9 +12,11 @@ docs/dev-log/core070/true-parity-latest/:
 Numbers in each `comparison` block are recomputed here from the raw R and
 Julia values in the batch output, with the tolerance each harness itself
 declares (never a wider one). A harness check written as
-`isapprox(a, b; atol, rtol)` is reported as abs_diff = norm(a - b) against
+`isapprox(a, b; atol, rtol)` is judged as harness_norm_diff = norm(a - b) against
 tolerance = max(atol, rtol * max(norm(a), norm(b))), which is exactly the
-bound isapprox applies. A scalar `abs(a - b) <= tol` check is reported as-is.
+bound isapprox applies; its abs_diff records the max absolute entrywise
+difference, the value tools/true_parity_check.mjs recomputes from r_value and
+julia_value. A scalar `abs(a - b) <= tol` check is reported as-is.
 
 A row is marked evidence_tier "numeric" only when every one of its
 executable_case_ids has a comparison block within tolerance AND every batch
@@ -112,13 +114,23 @@ def scalar_entry(case_id, quantity, r, j, tol, rule):
             "abs_diff": abs(r - j), "tolerance": tol, "tolerance_rule": rule}
 
 
+def flat(v):
+    return [x for row in v for x in row] if v and isinstance(v[0], list) else list(v)
+
+
 def isapprox_entry(case_id, quantity, r, j, atol, rtol, rule):
-    diff = norm(sub(j, r))
+    # abs_diff is the max absolute entrywise difference, the quantity tools/true_parity_check.mjs
+    # recomputes from r_value/julia_value (as tools/core070_family_p1_receipts.py records it).
+    # The harness's own test is unchanged: norm(julia - r) <= max(atol, rtol*max(norm)), kept
+    # as harness_norm_diff and judged against the same tolerance. max-abs <= norm, so a case that
+    # passes the harness test also passes the checker's max-abs test.
     tol = max(atol, rtol * max(norm(j), norm(r)))
     return {"case_id": case_id, "quantity": quantity, "r_value": r, "julia_value": j,
-            "abs_diff": diff, "tolerance": tol,
+            "abs_diff": max(abs(a - b) for a, b in zip(flat(j), flat(r))),
+            "harness_norm_diff": norm(sub(j, r)), "tolerance": tol,
             "tolerance_rule": f"{rule}: isapprox(julia, r; atol={atol:g}, rtol={rtol:g}); "
-                              "abs_diff = norm(julia - r), tolerance = max(atol, rtol*max(norm))"}
+                              "harness test norm(julia - r) <= tolerance = max(atol, rtol*max(norm)) "
+                              "(harness_norm_diff); abs_diff = max |julia - r| entrywise"}
 
 
 # ---- comparisons per harness ---------------------------------------------------------------
@@ -328,7 +340,7 @@ def main():
     for r, entries, raw, group_ok in rows:
         cid = r["id"]
         cell = tomllib.loads((args.runparity / f"cell-{cid}.toml").read_text())
-        within = all(e["abs_diff"] <= e["tolerance"] for e in entries)
+        within = all(e.get("harness_norm_diff", e["abs_diff"]) <= e["tolerance"] for e in entries)
         checks = r["checks"]
         receipt = {
             "schema": "core070-covariance-p1-case-receipt/v1", "case_id": cid,
