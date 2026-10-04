@@ -20,9 +20,12 @@
 #
 # Non-PD Hessian handling:
 #   - If ForwardDiff.hessian errors, return NaN bounds with pd_hessian=false.
-#   - If the Hessian is finite but inversion fails or any diagonal is
-#     non-positive, mark pd_hessian=false and return NaN bounds for those
-#     entries.
+#   - Positive definiteness is a Cholesky test, the same one the family Wald
+#     path uses. The sign of diag(inv(H)) is not that test: an indefinite
+#     Hessian can invert with an all-positive diagonal (#727).
+#   - If the Cholesky fails, mark pd_hessian=false and return NaN bounds.
+#   - If the Cholesky succeeds but a variance is non-finite or non-positive,
+#     mark pd_hessian=false and return NaN bounds for those entries.
 
 using Distributions: Normal, quantile
 
@@ -203,20 +206,61 @@ function _confint_reconstruct_nll(fit::GllvmFit, y::AbstractMatrix,
     return θ -> gaussian_nll_packed(θ, y; spec = spec, X = X_free, Σ_phy = Σ_phy)
 end
 
+# Observed-information covariance for one finite Hessian. Positive definiteness
+# is `cholesky` success, matching `_family_wald`: an indefinite but invertible
+# H is not PD, even when every `diag(inv(H))` entry is positive (#727).
+# Returns `(V, se_all, pd)`. No regularisation. If H is missing, non-finite,
+# or not positive definite, every SE is NaN and V is all-NaN. If the Cholesky
+# succeeds but a diagonal of the inverse is non-finite or non-positive, that
+# SE is NaN and pd = false. Rows and columns of those entries are NaN,
+# off-diagonals are symmetrised (`inv` is symmetric only up to rounding), and
+# the diagonal is `se_all.^2` so `diag(vcov)` matches the squared Wald SEs.
+function _gaussian_wald_covariance_from_hessian(H, n_par::Integer)
+    se_all = fill(NaN, n_par)
+    V = fill(NaN, n_par, n_par)
+    H isa AbstractMatrix && size(H) == (n_par, n_par) && all(isfinite, H) ||
+        return V, se_all, false
+    Hsym = Symmetric((H .+ H') ./ 2)
+    factor = try
+        cholesky(Hsym; check = true)
+    catch e
+        e isa InterruptException && rethrow()
+        nothing
+    end
+    factor === nothing && return V, se_all, false
+    Σ = inv(Hsym)
+    diagΣ = diag(Σ)
+    pd = true
+    for i in 1:n_par
+        v = diagΣ[i]
+        if isfinite(v) && v > 0
+            se_all[i] = sqrt(v)
+        else
+            pd = false
+        end
+    end
+    ok = findall(isfinite, se_all)
+    V[ok, ok] .= (Σ[ok, ok] .+ Σ[ok, ok]') ./ 2
+    for i in ok
+        V[i, i] = se_all[i]^2
+    end
+    return V, se_all, pd
+end
+
 # Observed-information covariance for the legacy (no retained integration
 # record) Gaussian GllvmFit path, shared by `confint(fit::GllvmFit; ...)` and
 # `vcov(fit::GllvmFit, Y)`. Returns (θ̂, terms, kinds, Σ, se_all, pd) over the
-# full θ_packed layout. Σ = inv((H + Hᵀ)/2) with H the ForwardDiff Hessian of
-# the marginal NLL at θ̂ — no regularisation. On a fit with `lambda_constraint`
-# pins the inverse is taken over the free parameters only, and the pinned
-# loadings get SE 0 and zero rows and columns in Σ (R's `cov.fixed`, #794).
-# Non-PD convention (unchanged from the SE code): if the Hessian errors, is non-finite, or cannot be inverted,
-# every SE is NaN and Σ is all-NaN; if it inverts but a diagonal entry is
-# non-finite or non-positive, that SE is NaN and pd = false. For Σ, the rows
-# and columns of such entries are set to NaN (a covariance with an invalid
-# variance is not reported), off-diagonals are symmetrised (inv() is
-# symmetric only up to rounding), and the diagonal is set to se_all.^2 so that
-# diag(vcov) is bit-identical to the squared Wald SEs that `confint` reports.
+# full θ_packed layout. H is the ForwardDiff Hessian of the marginal NLL at θ̂ —
+# no regularisation. Positive definiteness is `cholesky` success (#727). On a
+# fit with `lambda_constraint` pins the Cholesky and inverse are taken over the
+# free parameters only, and the pinned loadings get SE 0 and zero rows and
+# columns in Σ (R's `cov.fixed`, #794). If the Hessian errors, is non-finite,
+# or fails the Cholesky, every SE is NaN and Σ is all-NaN. If the Cholesky
+# succeeds but a diagonal entry is non-finite or non-positive, that SE is NaN
+# and pd = false. For Σ, the rows and columns of such entries are set to NaN,
+# off-diagonals are symmetrised (`inv` is symmetric only up to rounding), and
+# the diagonal is set to se_all.^2 so that diag(vcov) is bit-identical to the
+# squared Wald SEs that `confint` reports.
 function _confint_gaussian_wald_covariance(fit::GllvmFit, y,
                                            X::Union{Nothing, AbstractArray{<:Real, 3}},
                                            Σ_phy::Union{Nothing, AbstractMatrix})
@@ -237,53 +281,38 @@ function _confint_gaussian_wald_covariance(fit::GllvmFit, y,
     nll = _confint_reconstruct_nll(fit, y, X, Σ_phy)
 
     H = nothing
-    pd = true
     try
         H = ForwardDiff.hessian(nll, θ̂)
-    catch
+    catch e
+        e isa InterruptException && rethrow()
         H = nothing
-        pd = false
     end
 
-    # Loadings pinned by `lambda_constraint` are not parameters (#794): invert the
-    # information of the free parameters only, as R's `sd_report$cov.fixed`, and
-    # report each pinned entry with variance and covariances 0.
+    # Loadings pinned by `lambda_constraint` are not parameters (#794): invert
+    # the information of the free parameters only, as R's `sd_report$cov.fixed`,
+    # and report each pinned entry with variance and covariances 0. Positive
+    # definiteness is Cholesky success on that free block (#727).
     pins = _lambda_constraint_pinned_theta_indices(fit)
-
-    se_all = fill(NaN, n_par)
-    V = fill(NaN, n_par, n_par)
-    if H !== nothing && all(isfinite, H)
-        Σ = nothing
-        try
-            Hsym = (H .+ H') ./ 2
-            Σ = isempty(pins) ? inv(Hsym) : _inv_free_block(Hsym, pins)
-        catch
-            Σ = nothing
-            pd = false
-        end
-
-        if Σ !== nothing
-            diagΣ = diag(Σ)
-            for i in 1:n_par
-                if !isempty(pins) && insorted(i, pins)
-                    se_all[i] = 0.0
-                    continue
-                end
-                v = diagΣ[i]
-                if isfinite(v) && v > 0
-                    se_all[i] = sqrt(v)
-                else
-                    pd = false
-                end
-            end
-            ok = findall(isfinite, se_all)
-            V[ok, ok] .= (Σ[ok, ok] .+ Σ[ok, ok]') ./ 2   # inv() is symmetric only to rounding
-            for i in ok
-                V[i, i] = se_all[i]^2
-            end
-        end
+    if isempty(pins)
+        V, se_all, pd = _gaussian_wald_covariance_from_hessian(H, n_par)
     else
-        pd = false
+        se_all = fill(NaN, n_par)
+        V = fill(NaN, n_par, n_par)
+        if !(H isa AbstractMatrix && size(H) == (n_par, n_par) && all(isfinite, H))
+            pd = false
+        else
+            free = setdiff(1:n_par, pins)
+            Vf, sef, pd = _gaussian_wald_covariance_from_hessian(H[free, free], length(free))
+            # Cholesky failure: every Wald SE stays NaN, including pinned entries.
+            if pd || any(isfinite, sef)
+                se_all[free] .= sef
+                se_all[pins] .= 0.0
+                ok = findall(isfinite, se_all)
+                V[free, free] .= Vf
+                V[pins, ok] .= 0.0
+                V[ok, pins] .= 0.0
+            end
+        end
     end
     return θ̂, terms, kinds, V, se_all, pd
 end

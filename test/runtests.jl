@@ -289,6 +289,7 @@ println(_SHARD === nothing ?
     _shard_include("test_postfit.jl")
     _shard_include("test_statsapi.jl")
     _shard_include("test_vcov_full_covariance.jl")
+    _shard_include("test_gaussian_wald_pd_hessian.jl")
     _shard_include("test_postfit_zib_tweedie.jl")
     _shard_include("test_ordination.jl")
     _shard_include("test_extract_latent_scores.jl")
