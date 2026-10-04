@@ -28,7 +28,7 @@
   "source_tests": [
     {
       "path": "test/test_animal_scalar_p1.jl",
-      "sha256": "0721c82691c737384763cf861c9bca59b4519482f59d357037dbca578f458240"
+      "sha256": "e92821515886f88c0557144eed1602a754e30ef7771429ad5d270fa64927f002"
     }
   ],
   "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_animal_scalar_receipt.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
@@ -45,7 +45,7 @@
         "abs_diff": 2.8421709430404007e-13,
         "tolerance": 2e-11,
         "tolerance_source": "test/test_animal_scalar_p1.jl:97",
-        "tolerance_source_line": "@test isapprox(fit.loglik, Float64(s[\"loglik\"]); atol = 2e-11, rtol = 0)   # logLik (observed 2.8e-13; floor ~100 eps |logLik|)",
+        "tolerance_source_line": "@test isapprox(fit.loglik, Float64(s[\"loglik\"]); atol = 2e-11, rtol = 0)   # logLik (observed 2.8e-13; floor ~190 eps |logLik|)",
         "note": "Gaussian fit of value ~ 0 + trait + animal_scalar(id, A = A) (R, unit = site, cluster = id) on a simulated 60-individual pedigree (A = pedigree_to_A(ped), 12 founders, two offspring generations), 2 sites per individual, p = 3 traits, 360 cells (data and A CSVs sha256 checked; R fitted the data read back from those CSVs). R converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12, max |gradient| 2.1e-6) with a positive-definite Hessian. R routes animal_scalar to phylo(id, vcv = A) and fits A + 1e-8 I (jitter measured from tmb_data$Cphy_inv) with one log variance (loglambda_phy) and one residual log SD; Julia fits the same covariance, sigma2_a (P A_eff P') kron I_p + sigma_eps^2 I, as fit_gaussian_sources with SourceCovariance(A_eff; mode = :indep, common = true) (source at test/test_animal_scalar_p1.jl:85), g_tol 1e-8. R's pedigree = route reaches the same log-likelihood up to the jitter (2.1e-7, generator check only). There are no loadings in this model. Limits: Gaussian only; the dense A = route; the Julia side is the native source fitter, not formula sugar for animal_scalar()."
       },
       {
@@ -105,7 +105,7 @@
         "abs_diff": 3.979039320256561e-13,
         "tolerance": 2e-11,
         "tolerance_source": "test/test_animal_scalar_p1.jl:104",
-        "tolerance_source_line": "@test isapprox(-nll_at_r, Float64(s[\"loglik\"]); atol = 2e-11, rtol = 0)    # objective at R's point (observed 4.0e-13; floor ~100 eps |logLik|)",
+        "tolerance_source_line": "@test isapprox(-nll_at_r, Float64(s[\"loglik\"]); atol = 2e-11, rtol = 0)    # objective at R's point (observed 4.0e-13; floor ~190 eps |logLik|)",
         "note": "Gaussian fit of value ~ 0 + trait + animal_scalar(id, A = A) (R, unit = site, cluster = id) on a simulated 60-individual pedigree (A = pedigree_to_A(ped), 12 founders, two offspring generations), 2 sites per individual, p = 3 traits, 360 cells (data and A CSVs sha256 checked; R fitted the data read back from those CSVs). R converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12, max |gradient| 2.1e-6) with a positive-definite Hessian. R routes animal_scalar to phylo(id, vcv = A) and fits A + 1e-8 I (jitter measured from tmb_data$Cphy_inv) with one log variance (loglambda_phy) and one residual log SD; Julia fits the same covariance, sigma2_a (P A_eff P') kron I_p + sigma_eps^2 I, as fit_gaussian_sources with SourceCovariance(A_eff; mode = :indep, common = true) (source at test/test_animal_scalar_p1.jl:85), g_tol 1e-8. R's pedigree = route reaches the same log-likelihood up to the jitter (2.1e-7, generator check only). There are no loadings in this model. Limits: Gaussian only; the dense A = route; the Julia side is the native source fitter, not formula sugar for animal_scalar()."
       }
     ]

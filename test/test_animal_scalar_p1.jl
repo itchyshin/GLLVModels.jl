@@ -19,7 +19,7 @@
 #
 # Tolerances: about 7-8x the observed difference for the intercepts, sigma2_a and sigma_eps (R stops
 # at max |gradient| 2.1e-6, Julia at g_tol 1e-8); the two log-likelihood checks use a roundoff floor
-# of about 100 eps |logLik| (2e-11), since 10x the observed 3e-13 would sit at a few ulps.
+# of about 190 eps |logLik| (2e-11), since 10x the observed 3e-13 would sit at a few ulps.
 #
 # Limits, disclosed: Gaussian only; the dense A = route only (R's pedigree = route is checked in the
 # generator to reach the same log-likelihood up to the jitter, 2e-7, and is not compared here);
@@ -94,13 +94,13 @@ end
         U = only(fit.trait_covariances)
         @test U == Diagonal(fill(U[1, 1], p))                                  # sigma2_a I_p: one shared variance
 
-        @test isapprox(fit.loglik, Float64(s["loglik"]); atol = 2e-11, rtol = 0)   # logLik (observed 2.8e-13; floor ~100 eps |logLik|)
+        @test isapprox(fit.loglik, Float64(s["loglik"]); atol = 2e-11, rtol = 0)   # logLik (observed 2.8e-13; floor ~190 eps |logLik|)
         @test isapprox(fit.beta, r_beta; atol = 2e-7, rtol = 0)                    # trait intercepts (observed 2.9e-8)
         @test isapprox(U[1, 1], r_s2a; atol = 1e-8, rtol = 0)                      # sigma2_a (observed 1.2e-9)
         @test isapprox(fit.sigma_eps, r_se; atol = 3e-8, rtol = 0)                 # sigma_eps (observed 3.6e-9)
         # Julia's objective at R's estimates (R loglambda_phy is a log variance; Julia uses a log SD)
         r_point = vcat(r_beta, log(sqrt(r_s2a)), log(r_se))
         nll_at_r = GLLVModels._gaussian_sources_nll(Y, [source], r_point)
-        @test isapprox(-nll_at_r, Float64(s["loglik"]); atol = 2e-11, rtol = 0)    # objective at R's point (observed 4.0e-13; floor ~100 eps |logLik|)
+        @test isapprox(-nll_at_r, Float64(s["loglik"]); atol = 2e-11, rtol = 0)    # objective at R's point (observed 4.0e-13; floor ~190 eps |logLik|)
     end
 end
