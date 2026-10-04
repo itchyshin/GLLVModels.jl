@@ -2,6 +2,18 @@
 
 ## Development
 
+- **`sanity_multi` reports gllvmTMB's flags; `compare_loadings` gains R's matrix form.**
+  `sanity_multi(fit; y)` now returns R's flags under R's names and in R's order
+  (`converged`, `max_gradient`, `sdreport_ok`, `pd_hessian`, `max_se`, `rr_B_min_loading`,
+  `rr_W_min_loading`), ahead of the existing `pass`, `loadings_finite`, `gradient_norm`,
+  `gradient_ok` and `messages`, which are unchanged (so `pass` is unchanged). New keywords
+  `gradient_thresh = 1e-2` and `se_thresh = 100` are R's thresholds, and `io = stdout` writes R's
+  report lines in R's layout; nothing is printed by default. The new method
+  `compare_loadings(Lambda_a::AbstractMatrix, Lambda_b::AbstractMatrix)` is R's
+  `compare_loadings()`: orthogonal Procrustes alignment, returning `R`, `Lambda_a_rot`, `frobenius`
+  and `cor_per_factor`. The two-fit method `compare_loadings(fit1, fit2)` is unchanged. Both are
+  twinned numerically against gllvmTMB 0.7.1 (P1) in `test/test_diagnostics_p1.jl`.
+
 - **`fit_gllvm(...; offset = c)` with a scalar `c` now works, and an offset it cannot read
   unambiguously is refused with an `ArgumentError`.** A scalar offset (the analogue of R's
   `offset(log(2))`) was accepted by the count, continuous and two-part routes but returned
