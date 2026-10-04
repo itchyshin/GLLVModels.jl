@@ -88,21 +88,30 @@ end
 # coefficient per trait. The shared-variance route with covariates uses it too.
 # `common_intercept=true` keeps one intercept shared by all traits instead (for
 # phylogenetic fits, where per-trait intercepts would absorb the phylo effect).
+function _default_route_no_intercept_error(formula::FormulaTerm, family)
+    StatsModels.omitsintercept(formula.rhs) && !(family isa Normal) && throw(ArgumentError(
+        "cannot fit `$formula` on the default gllvm route: a no-intercept formula (`0` or `-1`) " *
+        "removes species intercepts, but $(typeof(family)) always fits per-species intercepts " *
+        "here; use `pervar=true` with `family=Normal()` or include `1` in the formula"))
+    return nothing
+end
+
 function _pervar_formula_design(rhs, cols, p, n; contrasts, names::Bool=false,
                                 common_intercept::Bool=false)
     intercept = !StatsModels.omitsintercept(rhs)
     site_names = String[]
     terms = rhs isa Tuple ? rhs : (rhs,)
-    if all(t -> t isa ConstantTerm, terms)
+    non_const = [t for t in terms if !(t isa ConstantTerm)]
+    if isempty(non_const)
         site = zeros(n, 0)
     else
-        f = FormulaTerm(ConstantTerm(0), rhs)
+        rhs_term = length(non_const) == 1 ? only(non_const) : Tuple(non_const)
+        f = FormulaTerm(ConstantTerm(0), rhs_term)
         sch = StatsModels.schema(f, cols, contrasts)
         applied = StatsModels.apply_schema(f, sch, StatsModels.StatisticalModel)
         mm = Matrix{Float64}(StatsModels.modelmatrix(applied.rhs, cols))
         model_names = StatsModels.coefnames(applied.rhs)
         model_names = model_names isa AbstractVector ? string.(model_names) : [string(model_names)]
-        intercept = StatsModels.hasintercept(applied.rhs)
         site_idx = findall(!=("(Intercept)"), model_names)
         site = mm[:, site_idx]
         site_names = model_names[site_idx]
@@ -253,6 +262,8 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
     end
     mm, cnames = _build_site_modelmatrix(formula.rhs, cols; contrasts = contrasts)
     q = size(mm, 2)
+
+    _default_route_no_intercept_error(formula, family)
 
     if q == 0
         # The Gaussian and zero-inflated fitters below are called directly, not through
