@@ -41,7 +41,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-namespace.json",
-   "sha256": "7da67de17a74eda5b680d39093de26e38005c0b35df97fd4b3dfbd82e9a9f7aa",
+   "sha256": "cac6c35273c0cec2aa8a38850179fcedc6ffd2bd422c9d75e763c8a8e57bff21",
    "rows": 69
   },
   {
@@ -9193,17 +9193,28 @@
    "r_kind": "export",
    "classification": "required_core",
    "arc": "A3",
-   "r_file_line": null,
-   "executable_case_ids": [],
+   "r_file_line": "R/julia-bridge.R:2618",
+   "executable_case_ids": [
+    "P1-BRIDGE-READBACK-GJF-FORMULA-ROUTE-LOGLIK",
+    "P1-BRIDGE-READBACK-GJF-LOGLIK-TMB",
+    "P1-BRIDGE-READBACK-GJF-DF-TMB",
+    "P1-BRIDGE-READBACK-GJF-INTERCEPTS-TMB",
+    "P1-BRIDGE-READBACK-GJF-LATENT-SIGMA-TMB",
+    "P1-BRIDGE-READBACK-GJF-SIGMA-EPS-TMB"
+   ],
    "p0_case_ids": [
     "CORE070-NAMESPACE2-GLLVM-JULIA-FIT-BRIDGE-ADMISSION"
    ],
-   "evidence": {},
-   "measured_against": null,
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/bridge_readback.json"
+    ],
+    "tier": "numeric: live bridge run at P1. One live R session (test/fixtures/gen_bridge_readback_p1.R): gllvmTMB at P1 with engine = \"julia\" drove JuliaCall into this package on the namespace twin data test/fixtures/ns_gauss_p1_data.csv, Gaussian value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE), p = 6, n = 200. gllvm_julia_fit(Y, family = \"gaussian\", num.lv = 2) called directly returned a converged gllvmTMB_julia object with no marshalling error; compared with the formula route (log-likelihood, within 1e-12, observed 0) and with the equivalent native R fit gllvmTMB(..., engine = \"tmb\") (nlminb code 0, positive-definite Hessian), each side at its own optimum: log-likelihood (tolerance 1e-6, observed 9.7e-9), df (integer equality), trait intercepts (3e-12, observed 3.0e-13), the rotation-invariant latent covariance Lambda Lambda' (5e-5, observed 9.2e-6) and sigma_eps (1e-6, observed 3.0e-7); tolerances in test/test_bridge_readback_p1.jl. One Gaussian no-X complete-response fixture."
+   },
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "disposition": null,
-   "reason": "Not re-measured at P1 in this PR.",
-   "not_measured_reason": "namespace-2 batch needs an installed frozen gllvmTMB library and live R fits (tools/core070_namespace_2_batch.R <frozen-library> <destination>); stopped per brief, no P1 oracle build here.",
-   "evidence_tier": "registration"
+   "reason": "Bridge admission at P1, measured: gllvm_julia_fit round-trips through JuliaCall into GLLVModels and its log-likelihood and point estimates match the native R gllvmTMB() fit on the same data (the case plan's comparands).",
+   "evidence_tier": "numeric"
   },
   {
    "source_id": "namespace/export/gllvm_julia_setup",

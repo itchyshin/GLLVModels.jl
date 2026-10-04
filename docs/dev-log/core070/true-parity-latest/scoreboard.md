@@ -21,7 +21,7 @@ Inputs:
 - `docs/dev-log/core070/true-parity-latest/case-map-fit-input.json` (10 rows, sha256 `568c054ed5f3786b96c9acb796e28d98e4523c4edc5fe5ad9f69ab150cee3639`)
 - `docs/dev-log/core070/true-parity-latest/case-map-inference.json` (63 rows, sha256 `ab0cb02039e34ecb5d1666c469321eba590dfead2452ac2f0de30d9da9a2bda9`)
 - `docs/dev-log/core070/true-parity-latest/case-map-isdm.json` (21 rows, sha256 `abcd0731b63d4290870525114ca3882d9a08fb9ac1966e35e702271a3917e6ca`)
-- `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `7da67de17a74eda5b680d39093de26e38005c0b35df97fd4b3dfbd82e9a9f7aa`)
+- `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `cac6c35273c0cec2aa8a38850179fcedc6ffd2bd422c9d75e763c8a8e57bff21`)
 - `docs/dev-log/core070/true-parity-latest/case-map-postfit.json` (52 rows, sha256 `5fe433df7fb04ea08abce0350820d8dbfbf2434ebacd93498a9a58bb978e6c4c`)
 
 ## Totals by family
@@ -35,9 +35,9 @@ Inputs:
 | `fit-input` | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
 | `inference` | 2 | 44 | 0 | 0 | 2 | 0 | 15 | 0 | 0 | 63 |
 | `isdm` | 11 | 0 | 0 | 0 | 0 | 9 | 0 | 1 | 0 | 21 |
-| `namespace` | 34 | 0 | 21 | 0 | 0 | 2 | 0 | 0 | 12 | 69 |
+| `namespace` | 35 | 0 | 21 | 0 | 0 | 2 | 0 | 0 | 11 | 69 |
 | `postfit` | 41 | 0 | 0 | 2 | 6 | 2 | 0 | 1 | 0 | 52 |
-| `all` | 140 | 44 | 21 | 4 | 22 | 33 | 30 | 7 | 16 | 317 |
+| `all` | 141 | 44 | 21 | 4 | 22 | 33 | 30 | 7 | 15 | 317 |
 
 ## P1 twin fixtures present at this head, not bound to any row
 
@@ -51,6 +51,7 @@ decision for the PR that measures it, not something this tool does.
 - `test/fixtures/animal_scalar_p1.toml`
 - `test/fixtures/animal_scalar_p1_A.csv`
 - `test/fixtures/animal_scalar_p1_data.csv`
+- `test/fixtures/bridge_readback_p1.toml`
 - `test/fixtures/confint_inspect_p1.toml`
 - `test/fixtures/data_twins_nb1_p1_data.csv`
 - `test/fixtures/data_twins_nb2_p1_data.csv`
@@ -58,6 +59,7 @@ decision for the PR that measures it, not something this tool does.
 - `test/fixtures/data_twins_pois_p1_data.csv`
 - `test/fixtures/diagnostics_p1.toml`
 - `test/fixtures/gen_animal_scalar_p1.R`
+- `test/fixtures/gen_bridge_readback_p1.R`
 - `test/fixtures/gen_confint_inspect_p1.R`
 - `test/fixtures/gen_data_twins_p1.R`
 - `test/fixtures/gen_diagnostics_p1.R`
@@ -364,7 +366,7 @@ decision for the PR that measures it, not something this tool does.
 | namespace-export-getResidualCov `namespace/export/getResidualCov` | required_core; cases: CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETRESIDUALCOV | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETRESIDUALCOV.json | family namespace; evidence_tier numeric; measured_against P1 |
 | namespace-export-gllvmTMB `namespace/export/gllvmTMB` | required_core; cases: none | NOT-MEASURED | not bound; cited: none | family namespace; evidence_tier registration; measured_against None; no receipt cited |
 | namespace-export-gllvmTMB_wide `namespace/export/gllvmTMB_wide` | required_core; cases: none | NOT-MEASURED | not bound; cited: none | family namespace; evidence_tier registration; measured_against None; no receipt cited |
-| namespace-export-gllvm_julia_fit `namespace/export/gllvm_julia_fit` | required_core; cases: none | NOT-MEASURED | not bound; cited: none | family namespace; evidence_tier registration; measured_against None; no receipt cited |
+| namespace-export-gllvm_julia_fit `namespace/export/gllvm_julia_fit` | required_core; cases: P1-BRIDGE-READBACK-GJF-FORMULA-ROUTE-LOGLIK, P1-BRIDGE-READBACK-GJF-LOGLIK-TMB, P1-BRIDGE-READBACK-GJF-DF-TMB, P1-BRIDGE-READBACK-GJF-INTERCEPTS-TMB, P1-BRIDGE-READBACK-GJF-LATENT-SIGMA-TMB, P1-BRIDGE-READBACK-GJF-SIGMA-EPS-TMB | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/bridge_readback.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-gllvm_julia_setup `namespace/export/gllvm_julia_setup` | required_core; cases: none | NOT-MEASURED | not bound; cited: none | family namespace; evidence_tier registration; measured_against None; no receipt cited |
 | namespace-export-kernel_dep `namespace/export/kernel_dep` | required_core; cases: none | NOT-MEASURED | not bound; cited: none | family namespace; evidence_tier registration; measured_against None; no receipt cited |
 | namespace-export-kernel_indep `namespace/export/kernel_indep` | required_core; cases: none | NOT-MEASURED | not bound; cited: none | family namespace; evidence_tier registration; measured_against None; no receipt cited |
