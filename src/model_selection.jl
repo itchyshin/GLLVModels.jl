@@ -393,7 +393,11 @@ function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
                          join(("K=$(a.K) $(a.status) $(a.message)" for a in attempts), "; "))
 
     crit = criterion === :aic ? aics : criterion === :bic ? bics : bicns
-    ibest = argmin(crit)
+    eligible = findall(i -> convs[i] && isfinite(crit[i]), eachindex(crit))
+    isempty(eligible) && error("select_lv: no accepted K in 1:$Kmax has a finite $criterion " *
+                               "among converged fits; attempts: " *
+                               join(("K=$(a.K) $(a.status) $(a.message)" for a in attempts), "; "))
+    ibest = eligible[argmin(crit[eligible])]
 
     return LVSelection(Ks, nps, lls, aics, bics, bicns, aiccs, convs, pds, Ks[ibest], fits[ibest],
                        attempts, criterion)
