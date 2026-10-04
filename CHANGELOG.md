@@ -21,6 +21,19 @@
   compared (it is each optimiser's stopping gradient). `compare_loadings` is twinned as a function
   on identical inputs (R's fitted `Lambda_B` and the simulating loadings, plus a random pair with
   a reflection, fed to both engines), not as a fit-then-compare twin.
+- **`fit_gaussian_mi_fiml` accepts missing responses.** `y` may now contain `missing` or `NaN`
+  cells: they contribute nothing, and the rest of each site enters the observed-data likelihood,
+  as gllvmTMB's `miss_control(response = "include", predictor = "model")` (before, any missing cell
+  in `y` raised a `MethodError`). A site with no observed response contributes only its covariate
+  density when `x` is observed there, and nothing otherwise; every trait needs at least one observed
+  response (`ArgumentError` otherwise). The conditional modes `eblup_x`, and so `imputed(fit, x)`,
+  use only the observed responses of each site. The result has a new field `n_missing_y` (the
+  number of missing response cells). With missing responses the fit uses a backtracking line search, and a trial point whose Woodbury factor is not positive definite scores `+Inf` instead of throwing `PosDefException`. A complete `y` gives the same fit as before (bit for bit, element type kept). Binds the
+  true-parity rows `data/DATA-MISS-MODEL`, `data/DATA-MISS-BOTH` and the namespace row
+  `S3method/imputed,gllvmTMB` with twins against gllvmTMB P1 (`test/test_data_twins_2_p1.jl`:
+  logLik within 2e-9, conditional modes within 2e-6; the masked twin includes units with no response). Not covered: R's `imputed()` standard errors
+  (Julia reports none), and non-Gaussian responses.
+
 - **`predict`, `getLV` and `residuals` on a Laplace fit made with an `offset` now use it.** The
   Laplace Poisson, NB2 (shared `r`), binomial and hurdle-Poisson fits did not keep the offset they
   were fitted with, so `getLV(fit, Y)` searched the latent mode of an offset-free model and

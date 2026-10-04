@@ -782,9 +782,11 @@ a [`fit_gaussian_mi_fiml`](@ref) result, mirroring `gllvmTMB::imputed`
 `eblup_x` field — a `GllvmFit` or any other fit type throws `ArgumentError`).
 `x` is the SAME predictor vector passed to `fit_gaussian_mi_fiml` (the fit
 does not store it): `estimate` is `fitmi.eblup_x` (the observed value where
-`x` is observed, the Gaussian conditional mode `E[x_s | y_s]` where it is
-`missing`/`NaN` — free from the fit, `fit_gaussian_mi_fiml` already computes
-it), and `observed` flags exactly the non-missing entries of `x`.
+`x` is observed, the Gaussian conditional mode `E[x_s | y_s]` given the site's
+observed responses where it is `missing`/`NaN`, or the covariate-model mean
+`μ_x + Z_s·γ` at a site with no observed response — free from the fit,
+`fit_gaussian_mi_fiml` already computes it), and `observed` flags exactly the
+non-missing entries of `x`.
 
 Current scope: conditional standard
 errors (`gll_imputed_missing_predictor_se`, `:2731-2755`, an extra

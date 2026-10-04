@@ -16,7 +16,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-data.json",
-   "sha256": "2e66fcd5a5d62c036b80155e0d87bd8aa661d2bbfaeeb3dbe80c4c021cf5f9c0",
+   "sha256": "5370684c894a7972cf1fdd245dfe191992ce579602640d9d6788eed2aafee6c3",
    "rows": 36
   },
   {
@@ -41,7 +41,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-namespace.json",
-   "sha256": "cac6c35273c0cec2aa8a38850179fcedc6ffd2bd422c9d75e763c8a8e57bff21",
+   "sha256": "71e4a8fc405f838bfd019ec8f3cfb86995543ec4064077a73070bfb36b59e246",
    "rows": 69
   },
   {
@@ -1601,7 +1601,12 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-DATA-MISS-BOTH-CONTROL"
+    "P1-JULIA-DATA-MISS_BOTH-LOGLIK",
+    "P1-JULIA-DATA-MISS_BOTH-INTERCEPTS",
+    "P1-JULIA-DATA-MISS_BOTH-B-X",
+    "P1-JULIA-DATA-MISS_BOTH-COVARIATE-MODEL",
+    "P1-JULIA-DATA-MISS_BOTH-SDS",
+    "P1-JULIA-DATA-MISS_BOTH-LAMBDA-LAMBDAT"
    ],
    "disposition": null,
    "p0_batch": "data-batch attempt-data-r3 (wave1)",
@@ -1613,13 +1618,19 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/MISS-BOTH.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-MISS-BOTH-CONTROL.json"
     ],
-    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+    "batch_case_ids": [
+     "CORE070-DATA-MISS-BOTH-CONTROL"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_data_twins_2_p1.jl, against R-at-P1 values copied from test/fixtures/data_twins_2_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -1630,8 +1641,18 @@
     },
     "case_kinds": {
      "CORE070-DATA-MISS-BOTH-CONTROL": "r_replay_julia_surface_absent"
-    }
-   }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-DATA-MISS_BOTH-LOGLIK",
+     "P1-JULIA-DATA-MISS_BOTH-INTERCEPTS",
+     "P1-JULIA-DATA-MISS_BOTH-B-X",
+     "P1-JULIA-DATA-MISS_BOTH-COVARIATE-MODEL",
+     "P1-JULIA-DATA-MISS_BOTH-SDS",
+     "P1-JULIA-DATA-MISS_BOTH-LAMBDA-LAMBDAT"
+    ],
+    "twin_verdict": "PASS"
+   },
+   "scope_note": "The R batch case replays miss_control('include', 'model') to a list; the twin is the DATA-MISS-MODEL fit with 44 response cells also NA (35 drawn at random, one cell of a unit whose x is missing, and every response of unit 5, x observed, and unit 17, x missing): R keeps them under response = 'include', Julia takes them as missing cells of Y in fit_gaussian_mi_fiml (the response mask this slice added). R's response = 'drop' removes units with no response altogether, so it differs from 'include' here; it is checked only as an assertion in the twin test (the Julia fit without units 5 and 17 reaches R's drop logLik), not as a receipt case. Same scope limits as DATA-MISS-MODEL."
   },
   {
    "source_id": "data/DATA-MISS-DEFAULT",
@@ -1744,7 +1765,12 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-DATA-MISS-MODEL-CONTROL"
+    "P1-JULIA-DATA-MISS_MODEL-LOGLIK",
+    "P1-JULIA-DATA-MISS_MODEL-INTERCEPTS",
+    "P1-JULIA-DATA-MISS_MODEL-B-X",
+    "P1-JULIA-DATA-MISS_MODEL-COVARIATE-MODEL",
+    "P1-JULIA-DATA-MISS_MODEL-SDS",
+    "P1-JULIA-DATA-MISS_MODEL-LAMBDA-LAMBDAT"
    ],
    "disposition": null,
    "p0_batch": "data-batch attempt-data-r3 (wave1)",
@@ -1756,13 +1782,19 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/MISS-MODEL.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-MISS-MODEL-CONTROL.json"
     ],
-    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+    "batch_case_ids": [
+     "CORE070-DATA-MISS-MODEL-CONTROL"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_data_twins_2_p1.jl, against R-at-P1 values copied from test/fixtures/data_twins_2_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -1773,8 +1805,18 @@
     },
     "case_kinds": {
      "CORE070-DATA-MISS-MODEL-CONTROL": "r_replay_julia_surface_absent"
-    }
-   }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-DATA-MISS_MODEL-LOGLIK",
+     "P1-JULIA-DATA-MISS_MODEL-INTERCEPTS",
+     "P1-JULIA-DATA-MISS_MODEL-B-X",
+     "P1-JULIA-DATA-MISS_MODEL-COVARIATE-MODEL",
+     "P1-JULIA-DATA-MISS_MODEL-SDS",
+     "P1-JULIA-DATA-MISS_MODEL-LAMBDA-LAMBDAT"
+    ],
+    "twin_verdict": "PASS"
+   },
+   "scope_note": "The R batch case replays miss_control(predictor = 'model') to a list; the twin is one Gaussian fit that uses it: mi(x) with covariate model x ~ z, x missing at 18 of 120 units, one latent factor (R gllvmTMB(..., missing = miss_control(predictor = 'model')), Julia fit_gaussian_mi_fiml). It covers one continuous unit-level predictor with a fixed-effect covariate model and a Gaussian response; R's other predictor = 'model' routes (grouped, phylogenetic, binary, ordered, categorical predictors, non-Gaussian responses) are not exercised. Julia has no miss_control constructor: the policy is chosen by the fitter."
   },
   {
    "source_id": "data/DATA-OFF-ALL-COUNT",
@@ -7495,20 +7537,27 @@
    "r_file_line": "R/missing-predictor.R:2610",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/imputed.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-IMPUTED-MISSING-PREDICTOR.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-IMPUTED-MISSING-PREDICTOR"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl (section data-twins-2) with the same calls and settings as test/test_data_twins_2_p1.jl, against R-at-P1 values copied from test/fixtures/data_twins_2_p1.toml (R imputed(fit)$estimate, rows = 'missing', on two Gaussian mi(x) fits, value ~ 0 + trait + mi(x) + latent(0 + trait | unit, d = 1, unique = FALSE), impute x ~ z, x missing at 18 of 120 units: miss_control(predictor = 'model'), and miss_control('include', 'model') with 44 response cells NA, including every response of one x-observed and one x-missing unit; Julia imputed(fit_gaussian_mi_fiml(Y, x; K = 1, Z = z), x).estimate at the same units), each case within the tolerance asserted in that test. Both R fits converged with a positive-definite Hessian. Not compared: R's std_error (Julia's imputed() reports none) and the other predictor routes (grouped, phylogenetic, discrete). The Tier 0 registration receipts are kept un-cited under registration_receipts; the superseded case ids are in registration_case_ids."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-IMPUTED-MISSING-PREDICTOR"
+    "P1-JULIA-IMPUTED-MISS_MODEL-ESTIMATE",
+    "P1-JULIA-IMPUTED-MISS_BOTH-ESTIMATE"
    ],
-   "reason": "R S3method(imputed,gllvmTMB) registered and defined at P1; Julia `fit_gaussian_mi_fiml` is an exported Function (measured). Name match only.",
+   "reason": "Numeric twin at P1: R imputed(fit) and Julia imputed(fit_gaussian_mi_fiml(...), x) give the same conditional modes of the missing x values on the same two Gaussian mi(x) fits (all responses observed; 44 responses masked). Supersedes the Tier 0 registration measurement, which matched the name to Julia `fit_gaussian_mi_fiml` only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",

@@ -1662,8 +1662,8 @@ end
 #     replays with no fit number, bound to fit-level twins: R-at-P1 fits recorded in
 #     test/fixtures/data_twins_p1.toml against Julia fits of the same data. Weights rows are not
 #     here (Julia refuses weights= on every fitter); the legacy-fit and newdata predict-offset,
-#     mixed-family and modelled-predictor rows have no Julia surface to fit (the stored-offset row
-#     has its own twin, section 12b).
+#     mixed-family rows have no Julia surface to fit (the stored-offset row has its own twin,
+#     section 12b; the modelled-predictor rows theirs, section 12c).
 # =============================================================================================
 function _dt_load(path, col, p, n)
     hdr = split(readline(path), ",")
@@ -1810,6 +1810,79 @@ function receipts_predict_offset_twin()
             "$fxp [$sec.eta_link]", "predict(fe, Y; type = :link), fit as at $src",
             wide(d["eta_link"]), predict(fe, Y; type = :link), test_tolerance(tp, "@test isapprox(predict(fe, Y; type = :link), R_eta"), note)]
     return ["data-twins/OFF-TRAIN-STORED.json" => Receipt(["data/DATA-OFF-TRAIN-STORED"], ORIGIN, [fxp, datap], [tp], NOT_A_FIXTURE_PAIR, cs)]
+end
+
+# =============================================================================================
+# 12c. data twins 2   test/test_data_twins_2_p1.jl
+#     data/DATA-MISS-MODEL, data/DATA-MISS-BOTH and namespace S3method/imputed,gllvmTMB: a modelled
+#     missing predictor (mi(x), miss_control(predictor = "model")), alone and with a response mask
+#     (miss_control("include", "model")). R-at-P1 Gaussian fits recorded in
+#     test/fixtures/data_twins_2_p1.toml, against fit_gaussian_mi_fiml and imputed(fit, x).
+# =============================================================================================
+function receipts_data_twins_2()
+    ORIGIN = "itchyshin/GLLVModels.jl branch claude/w2-miss-twins (W2-4a)"
+    fxp = "test/fixtures/data_twins_2_p1.toml"
+    tp = "test/test_data_twins_2_p1.jl"
+    fx = TOML.parsefile(joinpath(ROOT, fxp))
+    fx["gllvmtmb_commit"] == P1_SHA || fail("data twins 2 fixture is not pinned at P1")
+    p, n = Int(fx["p"]), Int(fx["n_unit"])
+    datap = "test/fixtures/" * fx["data_file"]
+    bytes2hex(sha256(read(joinpath(ROOT, datap)))) == fx["data_sha256"] || fail("data twins 2 data csv drifted")
+    csv = joinpath(ROOT, datap)
+    x = _dt_load(csv, "x", p, n)[1, :]
+    z = reshape(Float64.(_dt_load(csv, "z", p, n)[1, :]), n, 1)
+    miss_units = Int.(fx["missing_x_units"])
+    findall(ismissing, x) == miss_units || fail("data twins 2: missing x units differ from the fixture")
+    base = "Gaussian, p = 4, n = 120 units (sha256 checked), x NA at 18 units; R: value ~ 0 + trait + mi(x) + latent(0 + trait | unit, d = 1, unique = FALSE), impute = list(x = x ~ z), family = gaussian(), converged with a positive-definite Hessian; Julia: fit_gaussian_mi_fiml(Y, x; K = 1, Z = z), the same model (shared slope on x, covariate model x ~ N(mu_x + gamma z, sigma_x^2), one latent factor, common residual SD) with the missing x integrated out in closed form where R uses the Laplace approximation (exact for this Gaussian model). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+    out = Pair{String,Receipt}[]
+    imputed_cases = Case[]
+    for (sec, col, sid, rel, v, extra) in (
+            ("miss_model", "value", "data/DATA-MISS-MODEL", "MISS-MODEL", "fm",
+             " Every response observed; R: missing = miss_control(predictor = \"model\") (response = \"drop\", engine = \"laplace\" by default)."),
+            ("miss_both", "value_na", "data/DATA-MISS-BOTH", "MISS-BOTH", "fb",
+             " 44 response cells NA (column value_na: 35 drawn at random, one cell of a unit whose x is missing, and every response of unit 5, x observed, and unit 17, x missing). R: missing = miss_control(response = \"include\", predictor = \"model\"); Julia: the same cells as `missing` entries of Y (observed-data likelihood: unit 5 contributes only its covariate density, unit 17 nothing, and its conditional mode is the covariate-model mean). R's response = \"drop\" removes units 5 and 17 altogether and is not compared here (the twin test asserts that the Julia fit without them reaches it)."))
+        d = fx[sec]
+        (d["converged"] === true && d["pd_hessian"] === true) || fail("$sec R fit not converged with a PD Hessian; not a valid twin")
+        Yraw = _dt_load(csv, col, p, n)
+        Y = any(ismissing, Yraw) ? Yraw : Float64.(Yraw)
+        f = fit_gaussian_mi_fiml(Y, x; K = 1, Z = z)
+        f.converged || fail("$sec Julia fit did not converge")
+        src = cite(tp, "$v = fit_gaussian_mi_fiml(")
+        note = base * extra
+        S = uppercase(sec)
+        cs = Case[
+            mkcase("P1-JULIA-DATA-$S-LOGLIK", "maximised logLik of the $sec fit",
+                "$fxp [$sec.loglik]", "$v.logLik, fit as at $src",
+                Float64(d["loglik"]), f.logLik, test_tolerance(tp, "@test isapprox($v.logLik, Float64(d"), note),
+            mkcase("P1-JULIA-DATA-$S-INTERCEPTS", "trait intercepts (4 values) of the $sec fit",
+                "$fxp [$sec.intercepts]", "$v.a, fit as at $src",
+                Float64.(d["intercepts"]), f.a, test_tolerance(tp, "@test isapprox($v.a, "), note),
+            mkcase("P1-JULIA-DATA-$S-B-X", "slope on the modelled predictor x of the $sec fit",
+                "$fxp [$sec.b_x]", "$v.b_x, fit as at $src",
+                Float64(d["b_x"]), f.b_x, test_tolerance(tp, "@test isapprox($v.b_x, "), note),
+            mkcase("P1-JULIA-DATA-$S-COVARIATE-MODEL", "covariate-model coefficients (mu_x, gamma on z) of the $sec fit",
+                "$fxp [$sec.mu_x, $sec.gamma_z]", "vcat($v.μ_x, $v.γ), fit as at $src",
+                [Float64(d["mu_x"]), Float64(d["gamma_z"])], vcat(f.μ_x, f.γ), test_tolerance(tp, "@test isapprox(vcat($v.μ_x, $v.γ)"), note),
+            mkcase("P1-JULIA-DATA-$S-SDS", "covariate-model SD sigma_x and residual SD sigma_eps of the $sec fit",
+                "$fxp [$sec.sigma_x, $sec.sigma_eps]", "[$v.σ_x, $v.σ_eps], fit as at $src",
+                [Float64(d["sigma_x"]), Float64(d["sigma_eps"])], [f.σ_x, f.σ_eps], test_tolerance(tp, "@test isapprox([$v.σ_x, $v.σ_eps]"), note),
+            mkcase("P1-JULIA-DATA-$S-LAMBDA-LAMBDAT", "Lambda Lambda' (4 x 4) of the $sec fit",
+                "$fxp [$sec.LLt]", "$v.Λ * $v.Λ', fit as at $src",
+                reshape(Float64.(d["LLt"]), p, p), f.Λ * f.Λ', test_tolerance(tp, "@test isapprox($v.Λ * $v.Λ'"), note)]
+        push!(out, "data-twins/$rel.json" => Receipt([sid], ORIGIN, [fxp, datap], [tp], NOT_A_FIXTURE_PAIR, cs))
+        im = imputed(f, x)
+        iv = v == "fm" ? "im" : "ib"
+        im.level[.!im.observed] == Int.(d["imputed_level_id"]) || fail("$sec imputed(): missing units differ from R's level_id")
+        push!(imputed_cases, mkcase("P1-JULIA-IMPUTED-$S-ESTIMATE",
+            "imputed() conditional modes of the 18 missing x values, $sec fit, in unit order (R level_id = Julia level, equal, asserted in the test)",
+            "$fxp [$sec.imputed_estimate] (R imputed(fit)\$estimate, rows = \"missing\")",
+            "imputed($v, x).estimate at the missing units, fit as at $src",
+            Float64.(d["imputed_estimate"]), im.estimate[.!im.observed],
+            test_tolerance(tp, "@test isapprox($iv.estimate[.!$iv.observed]"),
+            note * " R's estimate is the conditional mode of x_mis at the joint optimum; Julia's is E[x_s | observed y_s] at its optimum, the same quantity for this Gaussian model. R's std_error (sdreport) is recorded in the fixture and not compared: Julia's imputed() reports none."))
+    end
+    push!(out, "namespace-numeric/imputed.json" => Receipt(["namespace/S3method/imputed,gllvmTMB"], ORIGIN, [fxp, datap], [tp], NOT_A_FIXTURE_PAIR, imputed_cases))
+    return out
 end
 
 # =============================================================================================
@@ -2003,6 +2076,7 @@ function build(only::Vector{String} = String[])
             ("namespace-numeric-b", receipts_namespace_numeric_b),
             ("data-twins", receipts_data_twins),
             ("predict-offset-twin", receipts_predict_offset_twin),
+            ("data-twins-2", receipts_data_twins_2),
             ("c1-behaviour", receipts_c1_behaviour))
         isempty(only) || name in only || continue
         t0 = time()
