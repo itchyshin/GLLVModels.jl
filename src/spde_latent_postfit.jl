@@ -38,7 +38,13 @@ function _spde_latent_rebuild(fit::SPDELatentFit,
                                maxiter::Integer = 50,
                                tol::Real = 1e-9)
     p, M = size(Y)
-    Ntr  = ones(Float64, p, M)                  # trial-count matrix (ones for no-trial families)
+    Ntr = if size(fit.N) == (p, M)
+        fit.N
+    elseif isempty(fit.N)
+        ones(Float64, p, M)
+    else
+        throw(ArgumentError("stored trial counts size $(size(fit.N)) does not match Y $(size(Y))"))
+    end
     Cdiag, G = spde_fem(fit.nodes, fit.tris)
     Q        = spde_precision(Cdiag, G, fit.κ, fit.τ; α = α)
     Qs       = sparse(Q)

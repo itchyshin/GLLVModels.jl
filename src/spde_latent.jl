@@ -201,8 +201,9 @@ Result of [`fit_spde_latent_gllvm`](@ref): intercepts `β` (length p), loadings 
 (p×K), the Matérn inverse-range `κ` and precision-scale `τ`, the estimated
 `dispersion` (σ² for Gaussian, `r` for negative binomial; `NaN` for the
 no-dispersion families), the `link` and `family`, the maximised joint-Laplace
-`loglik`, the optimiser `converged` flag and `iterations`, and the mesh (`nodes`,
-`tris`) the model was fit on.
+`loglik`, the optimiser `converged` flag and `iterations`, the mesh (`nodes`,
+`tris`) the model was fit on, and the trial-count matrix `N` used at fit time
+(ones for families without trials).
 """
 struct SPDELatentFit
     β::Vector{Float64}
@@ -217,7 +218,15 @@ struct SPDELatentFit
     iterations::Int
     nodes::Any
     tris::Any
+    N::Matrix{Float64}
 end
+
+# Pre-N positional construction (nobs dummy fits): empty trials, rebuild
+# falls back to all-ones. The fitter always stores the matrix it used.
+SPDELatentFit(β, Λ, κ, τ, dispersion, link, family, loglik, converged,
+              iterations, nodes, tris) =
+    SPDELatentFit(β, Λ, κ, τ, dispersion, link, family, loglik, converged,
+                  iterations, nodes, tris, ones(Float64, size(Λ, 1), 0))
 
 function Base.show(io::IO, f::SPDELatentFit)
     p, K = size(f.Λ)
@@ -307,7 +316,8 @@ function fit_spde_latent_gllvm(Y::AbstractMatrix, nodes::AbstractMatrix,
     τ̂ = exp(θ̂[p + rr + 2])
     disp = _spde_disp_value(family, θ̂[(dbase + 1):(dbase + nd)])
 
-    return SPDELatentFit(β̂, Λ̂, κ̂, τ̂, disp, link, family, _fit_verdict(res)..., nodes, tris)
+    return SPDELatentFit(β̂, Λ̂, κ̂, τ̂, disp, link, family, _fit_verdict(res)...,
+                         nodes, tris, Matrix{Float64}(Ntr))
 end
 
 # Domain-safe empirical mean for the link-scale warm start.
