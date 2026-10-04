@@ -106,6 +106,7 @@ println(_SHARD === nothing ?
     _shard_include("test_profile_derived_fix.jl")
     _shard_include("test_takahashi_selinv.jl")
     _shard_include("test_em_louis.jl")
+    _shard_include("test_em_observed_information_pd.jl")
     _shard_include("test_em_sparse_estep_default.jl")
     _shard_include("test_node_gradient.jl")
     _shard_include("test_fit_phylo.jl")
