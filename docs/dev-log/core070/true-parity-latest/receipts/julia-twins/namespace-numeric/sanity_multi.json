@@ -10,7 +10,7 @@
   "origin_pr": "itchyshin/GLLVModels.jl#684",
   "generator": "tools/true_parity_diagnostics_receipt.jl",
   "julia_version": "1.10.0",
-  "gllvmodels_commit": "5b118e674c3bc9ab9915acb890511a704cc30afe",
+  "gllvmodels_commit": "956a25a49a8d872ad406d5edd1f022a40c766029",
   "source_fixtures": [
     {
       "path": "test/fixtures/diagnostics_p1.toml",
@@ -24,7 +24,7 @@
   "source_tests": [
     {
       "path": "test/test_diagnostics_p1.jl",
-      "sha256": "41b3970fd0ffca29952e15a7debd798e5bb82b831c70ef91f703942f7efac515"
+      "sha256": "55e06cae186e64f808cfa991293a88011203d2d1c13bf1f65734462e74aa8bc6"
     }
   ],
   "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_diagnostics_receipt.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",

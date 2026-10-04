@@ -10,7 +10,7 @@
   "origin_pr": "itchyshin/GLLVModels.jl#684",
   "generator": "tools/true_parity_diagnostics_receipt.jl",
   "julia_version": "1.10.0",
-  "gllvmodels_commit": "5b118e674c3bc9ab9915acb890511a704cc30afe",
+  "gllvmodels_commit": "956a25a49a8d872ad406d5edd1f022a40c766029",
   "source_fixtures": [
     {
       "path": "test/fixtures/diagnostics_p1.toml",
@@ -20,7 +20,7 @@
   "source_tests": [
     {
       "path": "test/test_diagnostics_p1.jl",
-      "sha256": "41b3970fd0ffca29952e15a7debd798e5bb82b831c70ef91f703942f7efac515"
+      "sha256": "55e06cae186e64f808cfa991293a88011203d2d1c13bf1f65734462e74aa8bc6"
     }
   ],
   "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_diagnostics_receipt.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
@@ -45,9 +45,9 @@
           0.9999632510469816
         ],
         "abs_diff": 1.1102230246251565e-16,
-        "tolerance": 5e-15,
-        "tolerance_source": "test/test_diagnostics_p1.jl:111",
-        "tolerance_source_line": "@test maximum(abs, r.R .- rR) <= 5e-15                                   # R (observed 4.4e-16)",
+        "tolerance": 1e-12,
+        "tolerance_source": "test/test_diagnostics_p1.jl:112",
+        "tolerance_source_line": "@test maximum(abs, r.R .- rR) <= 1e-12   # R (observed 4.4e-16)",
         "note": "Inputs: a 6 x 2 pair: the d = 2 fit's Lambda_B (Lambda_a) against the loadings the data were simulated from (Lambda_b), the use R's documentation gives; optimal transform a small rotation (about 0.5 degrees), residual Frobenius distance 0.120. Both engines receive the same doubles: the inputs are recorded in the fixture at 17 significant digits and read back by Julia, so the comparison is of the Procrustes computation alone (R: svd(crossprod(Lambda_b, Lambda_a)), R = v u'; Julia: svd(Lambda_b' Lambda_a), R = V U'). Matrices are compared entrywise (column-major order)."
       },
       {
@@ -84,9 +84,9 @@
           -0.33793347002208896
         ],
         "abs_diff": 1.1102230246251565e-16,
-        "tolerance": 1e-14,
-        "tolerance_source": "test/test_diagnostics_p1.jl:112",
-        "tolerance_source_line": "@test maximum(abs, r.Lambda_a_rot .- _dg_mat(c[\"Lambda_a_rot\"])) <= 1e-14   # Lambda_a_rot (observed 8.9e-16)",
+        "tolerance": 1e-12,
+        "tolerance_source": "test/test_diagnostics_p1.jl:113",
+        "tolerance_source_line": "@test maximum(abs, r.Lambda_a_rot .- _dg_mat(c[\"Lambda_a_rot\"])) <= 1e-12   # Lambda_a_rot (observed 8.9e-16)",
         "note": "Inputs: a 6 x 2 pair: the d = 2 fit's Lambda_B (Lambda_a) against the loadings the data were simulated from (Lambda_b), the use R's documentation gives; optimal transform a small rotation (about 0.5 degrees), residual Frobenius distance 0.120. Both engines receive the same doubles: the inputs are recorded in the fixture at 17 significant digits and read back by Julia, so the comparison is of the Procrustes computation alone (R: svd(crossprod(Lambda_b, Lambda_a)), R = v u'; Julia: svd(Lambda_b' Lambda_a), R = V U'). Matrices are compared entrywise (column-major order)."
       },
       {
@@ -97,9 +97,9 @@
         "r_value": 0.12000829279062014,
         "julia_value": 0.12000829279062027,
         "abs_diff": 1.249000902703301e-16,
-        "tolerance": 3e-15,
-        "tolerance_source": "test/test_diagnostics_p1.jl:113",
-        "tolerance_source_line": "@test abs(r.frobenius - Float64(c[\"frobenius\"])) <= 3e-15                # frobenius (observed 2.8e-16)",
+        "tolerance": 1e-12,
+        "tolerance_source": "test/test_diagnostics_p1.jl:114",
+        "tolerance_source_line": "@test abs(r.frobenius - Float64(c[\"frobenius\"])) <= 1e-12   # frobenius (observed 2.8e-16)",
         "note": "Inputs: a 6 x 2 pair: the d = 2 fit's Lambda_B (Lambda_a) against the loadings the data were simulated from (Lambda_b), the use R's documentation gives; optimal transform a small rotation (about 0.5 degrees), residual Frobenius distance 0.120. Both engines receive the same doubles: the inputs are recorded in the fixture at 17 significant digits and read back by Julia, so the comparison is of the Procrustes computation alone (R: svd(crossprod(Lambda_b, Lambda_a)), R = v u'; Julia: svd(Lambda_b' Lambda_a), R = V U'). Matrices are compared entrywise (column-major order)."
       },
       {
@@ -116,9 +116,9 @@
           0.9994746024796131
         ],
         "abs_diff": 3.3306690738754696e-16,
-        "tolerance": 3e-15,
-        "tolerance_source": "test/test_diagnostics_p1.jl:114",
-        "tolerance_source_line": "@test maximum(abs, r.cor_per_factor .- Float64.(c[\"cor_per_factor\"])) <= 3e-15   # cor_per_factor (observed 3.3e-16)",
+        "tolerance": 1e-12,
+        "tolerance_source": "test/test_diagnostics_p1.jl:115",
+        "tolerance_source_line": "@test maximum(abs, r.cor_per_factor .- Float64.(c[\"cor_per_factor\"])) <= 1e-12   # cor_per_factor (observed 3.3e-16)",
         "note": "Inputs: a 6 x 2 pair: the d = 2 fit's Lambda_B (Lambda_a) against the loadings the data were simulated from (Lambda_b), the use R's documentation gives; optimal transform a small rotation (about 0.5 degrees), residual Frobenius distance 0.120. Both engines receive the same doubles: the inputs are recorded in the fixture at 17 significant digits and read back by Julia, so the comparison is of the Procrustes computation alone (R: svd(crossprod(Lambda_b, Lambda_a)), R = v u'; Julia: svd(Lambda_b' Lambda_a), R = V U'). Matrices are compared entrywise (column-major order)."
       },
       {
@@ -149,9 +149,9 @@
           0.41685511178316265
         ],
         "abs_diff": 4.440892098500626e-16,
-        "tolerance": 5e-15,
-        "tolerance_source": "test/test_diagnostics_p1.jl:111",
-        "tolerance_source_line": "@test maximum(abs, r.R .- rR) <= 5e-15                                   # R (observed 4.4e-16)",
+        "tolerance": 1e-12,
+        "tolerance_source": "test/test_diagnostics_p1.jl:112",
+        "tolerance_source_line": "@test maximum(abs, r.R .- rR) <= 1e-12   # R (observed 4.4e-16)",
         "note": "Inputs: an 8 x 3 pair: Lambda_b random, Lambda_a = Lambda_b Q' + noise (sd 0.05) with Q a random orthogonal matrix with det(Q) = -1 (seed 20261004), so the optimal transform is a reflection (det(R) < 0, asserted by the R generator); residual Frobenius distance 0.176. Both engines receive the same doubles: the inputs are recorded in the fixture at 17 significant digits and read back by Julia, so the comparison is of the Procrustes computation alone (R: svd(crossprod(Lambda_b, Lambda_a)), R = v u'; Julia: svd(Lambda_b' Lambda_a), R = V U'). Matrices are compared entrywise (column-major order)."
       },
       {
@@ -212,9 +212,9 @@
           1.2684122269345124
         ],
         "abs_diff": 8.881784197001252e-16,
-        "tolerance": 1e-14,
-        "tolerance_source": "test/test_diagnostics_p1.jl:112",
-        "tolerance_source_line": "@test maximum(abs, r.Lambda_a_rot .- _dg_mat(c[\"Lambda_a_rot\"])) <= 1e-14   # Lambda_a_rot (observed 8.9e-16)",
+        "tolerance": 1e-12,
+        "tolerance_source": "test/test_diagnostics_p1.jl:113",
+        "tolerance_source_line": "@test maximum(abs, r.Lambda_a_rot .- _dg_mat(c[\"Lambda_a_rot\"])) <= 1e-12   # Lambda_a_rot (observed 8.9e-16)",
         "note": "Inputs: an 8 x 3 pair: Lambda_b random, Lambda_a = Lambda_b Q' + noise (sd 0.05) with Q a random orthogonal matrix with det(Q) = -1 (seed 20261004), so the optimal transform is a reflection (det(R) < 0, asserted by the R generator); residual Frobenius distance 0.176. Both engines receive the same doubles: the inputs are recorded in the fixture at 17 significant digits and read back by Julia, so the comparison is of the Procrustes computation alone (R: svd(crossprod(Lambda_b, Lambda_a)), R = v u'; Julia: svd(Lambda_b' Lambda_a), R = V U'). Matrices are compared entrywise (column-major order)."
       },
       {
@@ -225,9 +225,9 @@
         "r_value": 0.17560431224612508,
         "julia_value": 0.1756043122461248,
         "abs_diff": 2.7755575615628914e-16,
-        "tolerance": 3e-15,
-        "tolerance_source": "test/test_diagnostics_p1.jl:113",
-        "tolerance_source_line": "@test abs(r.frobenius - Float64(c[\"frobenius\"])) <= 3e-15                # frobenius (observed 2.8e-16)",
+        "tolerance": 1e-12,
+        "tolerance_source": "test/test_diagnostics_p1.jl:114",
+        "tolerance_source_line": "@test abs(r.frobenius - Float64(c[\"frobenius\"])) <= 1e-12   # frobenius (observed 2.8e-16)",
         "note": "Inputs: an 8 x 3 pair: Lambda_b random, Lambda_a = Lambda_b Q' + noise (sd 0.05) with Q a random orthogonal matrix with det(Q) = -1 (seed 20261004), so the optimal transform is a reflection (det(R) < 0, asserted by the R generator); residual Frobenius distance 0.176. Both engines receive the same doubles: the inputs are recorded in the fixture at 17 significant digits and read back by Julia, so the comparison is of the Procrustes computation alone (R: svd(crossprod(Lambda_b, Lambda_a)), R = v u'; Julia: svd(Lambda_b' Lambda_a), R = V U'). Matrices are compared entrywise (column-major order)."
       },
       {
@@ -246,9 +246,9 @@
           0.9987279514533799
         ],
         "abs_diff": 1.1102230246251565e-16,
-        "tolerance": 3e-15,
-        "tolerance_source": "test/test_diagnostics_p1.jl:114",
-        "tolerance_source_line": "@test maximum(abs, r.cor_per_factor .- Float64.(c[\"cor_per_factor\"])) <= 3e-15   # cor_per_factor (observed 3.3e-16)",
+        "tolerance": 1e-12,
+        "tolerance_source": "test/test_diagnostics_p1.jl:115",
+        "tolerance_source_line": "@test maximum(abs, r.cor_per_factor .- Float64.(c[\"cor_per_factor\"])) <= 1e-12   # cor_per_factor (observed 3.3e-16)",
         "note": "Inputs: an 8 x 3 pair: Lambda_b random, Lambda_a = Lambda_b Q' + noise (sd 0.05) with Q a random orthogonal matrix with det(Q) = -1 (seed 20261004), so the optimal transform is a reflection (det(R) < 0, asserted by the R generator); residual Frobenius distance 0.176. Both engines receive the same doubles: the inputs are recorded in the fixture at 17 significant digits and read back by Julia, so the comparison is of the Procrustes computation alone (R: svd(crossprod(Lambda_b, Lambda_a)), R = v u'; Julia: svd(Lambda_b' Lambda_a), R = V U'). Matrices are compared entrywise (column-major order)."
       }
     ]
