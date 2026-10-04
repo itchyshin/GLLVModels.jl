@@ -764,27 +764,17 @@
    "classification": "required_core",
    "arc": "A3",
    "r_file_line": null,
-   "executable_case_ids": [
-    "FIT-MODE-ANIMAL-DEP",
-    "FIT-MODE-ANIMAL-DEP-FORMULA-INTERFACE"
-   ],
+   "executable_case_ids": [],
    "p0_case_ids": [
     "SLOPE-ANIMAL-DEP-BAR",
     "SLOPE-ANIMAL-DEP-DBAR"
    ],
-   "evidence": {
-    "receipt": [
-     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-DEP.json",
-     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-DEP-FORMULA-INTERFACE.json"
-    ],
-    "cross_cited_from": "covariance/COV-ANIMAL-DEP",
-    "tier": "numeric: re-cited, not recomputed. The cited P1 receipts belong to the covariance row covariance/COV-ANIMAL-DEP (regenerated at 59ecd020a): the native and formula-interface cases fit the R model gllvmTMB(value~0+trait+animal_dep(0+trait|species,A=C), ...) in the live P1 R oracle against the matching Julia source-covariance fit, with loglik, beta, source covariance and residual variance each within the harness tolerance recorded in the receipt. The covariance row itself does not bind because it also lists a PUBLIC-R-BRIDGE case (gllvmTMB engine='julia' refuses the structured term, an R-side bridge boundary, not this export's estimand); that case is not cited here. The case ids replace the P0 case ids (kept under p0_case_ids)."
-   },
-   "measured_against": "P1",
+   "evidence": {},
+   "measured_against": null,
    "disposition": null,
-   "reason": "R export(animal_dep) re-cited to the P1 covariance native and formula-interface receipts, whose R call uses this keyword directly.",
+   "reason": "Not re-measured at P1 in this PR.",
    "not_measured_reason": "P0 evidence came from a non-namespace batch (bulk triage acceptance (maintainer decision round2-3 #9, 2026-09-01)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here.",
-   "evidence_tier": "numeric"
+   "evidence_tier": "registration"
   },
   {
    "source_id": "namespace/export/animal_indep",
@@ -793,31 +783,17 @@
    "classification": "required_core",
    "arc": "A3",
    "r_file_line": null,
-   "executable_case_ids": [
-    "FIT-MODE-ANIMAL-INDEP",
-    "FIT-MODE-ANIMAL-INDEP-FORMULA-INTERFACE",
-    "FIT-MODE-ANIMAL-COMMON",
-    "FIT-MODE-ANIMAL-COMMON-FORMULA-INTERFACE"
-   ],
+   "executable_case_ids": [],
    "p0_case_ids": [
     "SLOPE-ANIMAL-INDEP-BAR",
     "SLOPE-ANIMAL-INDEP-DBAR"
    ],
-   "evidence": {
-    "receipt": [
-     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-INDEP.json",
-     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-INDEP-FORMULA-INTERFACE.json",
-     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-COMMON.json",
-     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-COMMON-FORMULA-INTERFACE.json"
-    ],
-    "cross_cited_from": "covariance/COV-ANIMAL-INDEP",
-    "tier": "numeric: re-cited, not recomputed. The cited P1 receipts belong to the covariance row covariance/COV-ANIMAL-INDEP (regenerated at 59ecd020a): the native and formula-interface cases fit the R model gllvmTMB(value~0+trait+animal_indep(0+trait|species,A=C) and animal_indep(..., common=TRUE), ...) in the live P1 R oracle against the matching Julia source-covariance fit, with loglik, beta, source covariance and residual variance each within the harness tolerance recorded in the receipt. The covariance row itself does not bind because it also lists a PUBLIC-R-BRIDGE case (gllvmTMB engine='julia' refuses the structured term, an R-side bridge boundary, not this export's estimand); that case is not cited here. The case ids replace the P0 case ids (kept under p0_case_ids)."
-   },
-   "measured_against": "P1",
+   "evidence": {},
+   "measured_against": null,
    "disposition": null,
-   "reason": "R export(animal_indep) re-cited to the P1 covariance native and formula-interface receipts, whose R call uses this keyword directly.",
+   "reason": "Not re-measured at P1 in this PR.",
    "not_measured_reason": "P0 evidence came from a non-namespace batch (bulk triage acceptance (maintainer decision round2-3 #9, 2026-09-01)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here.",
-   "evidence_tier": "numeric"
+   "evidence_tier": "registration"
   },
   {
    "source_id": "namespace/export/animal_latent",
@@ -1980,26 +1956,16 @@
    "classification": "required_core",
    "arc": "A3",
    "r_file_line": null,
-   "executable_case_ids": [
-    "FIT-MODE-KERNEL-DEP",
-    "FIT-MODE-KERNEL-DEP-FORMULA-INTERFACE"
-   ],
+   "executable_case_ids": [],
    "p0_case_ids": [
     "CORE070-WAVE6-KERNEL-DEP-FIT"
    ],
-   "evidence": {
-    "receipt": [
-     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-DEP.json",
-     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-DEP-FORMULA-INTERFACE.json"
-    ],
-    "cross_cited_from": "covariance/COV-KERNEL-DEP",
-    "tier": "numeric: re-cited, not recomputed. The cited P1 receipts belong to the covariance row covariance/COV-KERNEL-DEP (regenerated at 59ecd020a): the native and formula-interface cases fit the R model gllvmTMB(value~0+trait+kernel_dep(species,K=C,name=\"known\"), ...) in the live P1 R oracle against the matching Julia source-covariance fit, with loglik, beta, source covariance and residual variance each within the harness tolerance recorded in the receipt. The covariance row itself does not bind because it also lists a PUBLIC-R-BRIDGE case (gllvmTMB engine='julia' refuses the structured term, an R-side bridge boundary, not this export's estimand); that case is not cited here. The case ids replace the P0 case ids (kept under p0_case_ids)."
-   },
-   "measured_against": "P1",
+   "evidence": {},
+   "measured_against": null,
    "disposition": null,
-   "reason": "R export(kernel_dep) re-cited to the P1 covariance native and formula-interface receipts, whose R call uses this keyword directly.",
+   "reason": "Not re-measured at P1 in this PR.",
    "not_measured_reason": "P0 evidence came from a non-namespace batch (wave6-conversion (attempt7)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here.",
-   "evidence_tier": "numeric"
+   "evidence_tier": "registration"
   },
   {
    "source_id": "namespace/export/kernel_indep",
@@ -2008,30 +1974,16 @@
    "classification": "required_core",
    "arc": "A3",
    "r_file_line": null,
-   "executable_case_ids": [
-    "FIT-MODE-KERNEL-INDEP",
-    "FIT-MODE-KERNEL-INDEP-FORMULA-INTERFACE",
-    "FIT-MODE-KERNEL-COMMON",
-    "FIT-MODE-KERNEL-COMMON-FORMULA-INTERFACE"
-   ],
+   "executable_case_ids": [],
    "p0_case_ids": [
     "CORE070-WAVE6-KERNEL-INDEP-FIT"
    ],
-   "evidence": {
-    "receipt": [
-     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-INDEP.json",
-     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-INDEP-FORMULA-INTERFACE.json",
-     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-COMMON.json",
-     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-COMMON-FORMULA-INTERFACE.json"
-    ],
-    "cross_cited_from": "covariance/COV-KERNEL-INDEP",
-    "tier": "numeric: re-cited, not recomputed. The cited P1 receipts belong to the covariance row covariance/COV-KERNEL-INDEP (regenerated at 59ecd020a): the native and formula-interface cases fit the R model gllvmTMB(value~0+trait+kernel_indep(species,K=C,name=\"known\") and kernel_indep(..., common=TRUE), ...) in the live P1 R oracle against the matching Julia source-covariance fit, with loglik, beta, source covariance and residual variance each within the harness tolerance recorded in the receipt. The covariance row itself does not bind because it also lists a PUBLIC-R-BRIDGE case (gllvmTMB engine='julia' refuses the structured term, an R-side bridge boundary, not this export's estimand); that case is not cited here. The case ids replace the P0 case ids (kept under p0_case_ids)."
-   },
-   "measured_against": "P1",
+   "evidence": {},
+   "measured_against": null,
    "disposition": null,
-   "reason": "R export(kernel_indep) re-cited to the P1 covariance native and formula-interface receipts, whose R call uses this keyword directly.",
+   "reason": "Not re-measured at P1 in this PR.",
    "not_measured_reason": "P0 evidence came from a non-namespace batch (wave6-conversion (attempt7)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here.",
-   "evidence_tier": "numeric"
+   "evidence_tier": "registration"
   },
   {
    "source_id": "namespace/export/kernel_latent",
