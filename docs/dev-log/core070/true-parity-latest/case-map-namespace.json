@@ -2081,17 +2081,24 @@
    "r_kind": "export",
    "classification": "required_core",
    "arc": "A3",
-   "r_file_line": null,
-   "executable_case_ids": [],
+   "r_file_line": "R/methods-gllvmTMB.R:2362",
+   "executable_case_ids": [
+    "P1-JULIA-SANITY-MULTI-MAX-SE",
+    "P1-JULIA-SANITY-MULTI-RR-B-MIN-LOADING"
+   ],
    "p0_case_ids": [
     "CORE070-WAVE7-SANITY-MULTI"
    ],
-   "evidence": {},
-   "measured_against": null,
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/sanity_multi.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_diagnostics_receipt.jl with the same calls and settings as test/test_diagnostics_p1.jl, against R-at-P1 values copied from test/fixtures/diagnostics_p1.toml (R sanity_multi(fit) on Gaussian fits value ~ 0 + trait + latent(0 + trait | unit, d = D, unique = FALSE), D = 1 and 2: max_se and rr_B_min_loading; Julia sanity_multi(fit; y) on fit_gllvm(Y; family = Normal(), K = D)), each case within the tolerance asserted in that test. R converged with a positive-definite Hessian on both fits. The P0 case id stays under p0_case_ids."
+   },
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "disposition": null,
-   "reason": "Not re-measured at P1 in this PR.",
-   "not_measured_reason": "P0 evidence came from a non-namespace batch (wave7-conversion (attempt1)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here.",
-   "evidence_tier": "registration"
+   "reason": "Re-measured at P1 by a numeric twin (W1-2b): R's sanity_multi() flags max_se and rr_B_min_loading against the Julia sanity_multi, which returns R's flags under R's names. The P0 batch (wave7-conversion) compared only the converged and pd_hessian verdicts.",
+   "evidence_tier": "numeric"
   }
  ]
 }

@@ -21,8 +21,8 @@ Inputs:
 - `docs/dev-log/core070/true-parity-latest/case-map-fit-input.json` (10 rows, sha256 `568c054ed5f3786b96c9acb796e28d98e4523c4edc5fe5ad9f69ab150cee3639`)
 - `docs/dev-log/core070/true-parity-latest/case-map-inference.json` (63 rows, sha256 `ab0cb02039e34ecb5d1666c469321eba590dfead2452ac2f0de30d9da9a2bda9`)
 - `docs/dev-log/core070/true-parity-latest/case-map-isdm.json` (21 rows, sha256 `abcd0731b63d4290870525114ca3882d9a08fb9ac1966e35e702271a3917e6ca`)
-- `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `7af4f9fd18412758bd73222817b15fe81da73f35167e13a99c40c61abc774824`)
-- `docs/dev-log/core070/true-parity-latest/case-map-postfit.json` (52 rows, sha256 `db4944f55b4d78e996bc52b09b71b0fe98ca27b96e3365da583f14900b86c4de`)
+- `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `e2770c5b6498db126d9241c1517527583a4c3644d8df735ee5b3ddcf13106a7f`)
+- `docs/dev-log/core070/true-parity-latest/case-map-postfit.json` (52 rows, sha256 `5fe433df7fb04ea08abce0350820d8dbfbf2434ebacd93498a9a58bb978e6c4c`)
 
 ## Totals by family
 
@@ -35,9 +35,9 @@ Inputs:
 | `fit-input` | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
 | `inference` | 2 | 44 | 0 | 0 | 2 | 0 | 15 | 0 | 0 | 63 |
 | `isdm` | 11 | 0 | 0 | 0 | 0 | 9 | 0 | 1 | 0 | 21 |
-| `namespace` | 32 | 0 | 22 | 0 | 0 | 2 | 0 | 0 | 13 | 69 |
-| `postfit` | 39 | 0 | 0 | 2 | 8 | 2 | 0 | 1 | 0 | 52 |
-| `all` | 135 | 44 | 22 | 4 | 24 | 34 | 30 | 7 | 17 | 317 |
+| `namespace` | 33 | 0 | 22 | 0 | 0 | 2 | 0 | 0 | 12 | 69 |
+| `postfit` | 41 | 0 | 0 | 2 | 6 | 2 | 0 | 1 | 0 | 52 |
+| `all` | 138 | 44 | 22 | 4 | 22 | 34 | 30 | 7 | 16 | 317 |
 
 ## P1 twin fixtures present at this head, not bound to any row
 
@@ -55,8 +55,10 @@ decision for the PR that measures it, not something this tool does.
 - `test/fixtures/data_twins_nb2_p1_data.csv`
 - `test/fixtures/data_twins_p1.toml`
 - `test/fixtures/data_twins_pois_p1_data.csv`
+- `test/fixtures/diagnostics_p1.toml`
 - `test/fixtures/gen_animal_scalar_p1.R`
 - `test/fixtures/gen_data_twins_p1.R`
+- `test/fixtures/gen_diagnostics_p1.R`
 - `test/fixtures/gen_namespace_numeric_p1.R`
 - `test/fixtures/gen_namespace_numeric_p1_b.R`
 - `test/fixtures/gen_ordinal_logit_p1.R`
@@ -366,10 +368,10 @@ decision for the PR that measures it, not something this tool does.
 | namespace-export-kernel_scalar `namespace/export/kernel_scalar` | required_core; cases: none | NOT-MEASURED | not bound; cited: none | family namespace; evidence_tier registration; measured_against None; no receipt cited |
 | namespace-export-kernel_unique `namespace/export/kernel_unique` | required_core; cases: none | NOT-MEASURED | not bound; cited: none | family namespace; evidence_tier registration; measured_against None; no receipt cited |
 | namespace-export-nbinom2 `namespace/export/nbinom2` | required_core; cases: P1-JULIA-NB2-INTERCEPTS, P1-JULIA-NB2-LAMBDA-LAMBDAT, P1-JULIA-NB2-DISPERSION | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/nbinom2.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| namespace-export-sanity_multi `namespace/export/sanity_multi` | required_core; cases: none | NOT-MEASURED | not bound; cited: none | family namespace; evidence_tier registration; measured_against None; no receipt cited |
+| namespace-export-sanity_multi `namespace/export/sanity_multi` | required_core; cases: P1-JULIA-SANITY-MULTI-MAX-SE, P1-JULIA-SANITY-MULTI-RR-B-MIN-LOADING | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/sanity_multi.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-POSTFIT-SURFACE-check_auto_residual `postfit/POSTFIT-SURFACE-check_auto_residual` | required_core; cases: CORE070-WAVE7-CHECK-AUTO-RESIDUAL | PARTIAL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE7-CHECK-AUTO-RESIDUAL.json | family postfit; evidence_tier partial_non_numeric_case; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-POSTFIT-SURFACE-coef-gllvmTMB_multi `postfit/POSTFIT-SURFACE-coef.gllvmTMB_multi` | required_core; cases: CORE070-POSTFIT-COEF-MULTI-READBACK | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-COEF-MULTI-READBACK.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| postfit-POSTFIT-SURFACE-compare_loadings `postfit/POSTFIT-SURFACE-compare_loadings` | required_core; cases: CORE070-WAVE7-COMPARE-LOADINGS-SELF-CONSISTENCY | PARTIAL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE7-COMPARE-LOADINGS-SELF-CONSISTENCY.json | family postfit; evidence_tier partial_non_numeric_case; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| postfit-POSTFIT-SURFACE-compare_loadings `postfit/POSTFIT-SURFACE-compare_loadings` | required_core; cases: P1-JULIA-POSTFIT-COMPARE-LOADINGS-FIT-VS-TRUTH-R, P1-JULIA-POSTFIT-COMPARE-LOADINGS-FIT-VS-TRUTH-LAMBDA-A-ROT, P1-JULIA-POSTFIT-COMPARE-LOADINGS-FIT-VS-TRUTH-FROBENIUS, P1-JULIA-POSTFIT-COMPARE-LOADINGS-FIT-VS-TRUTH-COR-PER-FACTOR, P1-JULIA-POSTFIT-COMPARE-LOADINGS-REFLECTED-R, P1-JULIA-POSTFIT-COMPARE-LOADINGS-REFLECTED-LAMBDA-A-ROT, P1-JULIA-POSTFIT-COMPARE-LOADINGS-REFLECTED-FROBENIUS, P1-JULIA-POSTFIT-COMPARE-LOADINGS-REFLECTED-COR-PER-FACTOR | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/compare_loadings.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-POSTFIT-SURFACE-confint-gllvmTMB_multi `postfit/POSTFIT-SURFACE-confint.gllvmTMB_multi` | required_core; cases: CORE070-WAVE6-POSTFIT-CONFINT-MULTI | HELD | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE6-POSTFIT-CONFINT-MULTI.json | family postfit; evidence_tier numeric_held_batch_verifier_failed; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-POSTFIT-SURFACE-deviance-gllvmTMB_multi `postfit/POSTFIT-SURFACE-deviance.gllvmTMB_multi` | required_core; cases: CORE070-WAVE8-DEVIANCE-MULTI | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE8-DEVIANCE-MULTI.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-POSTFIT-SURFACE-extract_ICC_site `postfit/POSTFIT-SURFACE-extract_ICC_site` | required_core; cases: CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-ICC-SITE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-ICC-SITE.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
@@ -397,7 +399,7 @@ decision for the PR that measures it, not something this tool does.
 | postfit-POSTFIT-SURFACE-predict_missing `postfit/POSTFIT-SURFACE-predict_missing` | required_core; cases: P1-JULIA-POSTFIT-PREDICT-MISSING-LINK, P1-JULIA-POSTFIT-PREDICT-MISSING-RESPONSE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/predict_missing.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-POSTFIT-SURFACE-residuals-gllvmTMB_multi `postfit/POSTFIT-SURFACE-residuals.gllvmTMB_multi` | required_core; cases: CORE070-WAVE7-RESIDUALS-MULTI | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE7-RESIDUALS-MULTI.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-POSTFIT-SURFACE-rotate_loadings `postfit/POSTFIT-SURFACE-rotate_loadings` | required_core; cases: CORE070-WAVE8-ROTATE-LOADINGS-LLT-INVARIANT | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE8-ROTATE-LOADINGS-LLT-INVARIANT.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| postfit-POSTFIT-SURFACE-sanity_multi `postfit/POSTFIT-SURFACE-sanity_multi` | required_core; cases: CORE070-WAVE7-SANITY-MULTI | PARTIAL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE7-SANITY-MULTI.json | family postfit; evidence_tier partial_non_numeric_case; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| postfit-POSTFIT-SURFACE-sanity_multi `postfit/POSTFIT-SURFACE-sanity_multi` | required_core; cases: P1-JULIA-POSTFIT-SANITY-MULTI-MAX-SE, P1-JULIA-POSTFIT-SANITY-MULTI-RR-B-MIN-LOADING | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/sanity_multi.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-POSTFIT-SURFACE-simulate_unit_trait `postfit/POSTFIT-SURFACE-simulate_unit_trait` | required_core; cases: CORE070-WAVE8-SIMULATE-UNIT-TRAIT-STRUCTURAL | PARTIAL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE8-SIMULATE-UNIT-TRAIT-STRUCTURAL.json | family postfit; evidence_tier partial_non_numeric_case; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-POSTFIT-SURFACE-summary-gllvmTMB_multi `postfit/POSTFIT-SURFACE-summary.gllvmTMB_multi` | required_core; cases: CORE070-WAVE8-SUMMARY-FIXEF-AND-LOGLIK | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE8-SUMMARY-FIXEF-AND-LOGLIK.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-POSTFIT-SURFACE-tidy-gllvmTMB_multi `postfit/POSTFIT-SURFACE-tidy.gllvmTMB_multi` | required_core; cases: P1-JULIA-POSTFIT-TIDY-FIXED | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/tidy.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
