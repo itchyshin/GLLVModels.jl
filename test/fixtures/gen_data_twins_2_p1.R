@@ -15,12 +15,15 @@
 ##   impute = list(x = x ~ z), family = gaussian().
 ## x is set to NA at 18 units (all trait rows of a unit).
 ##   miss_model : every response observed; missing = miss_control(predictor = "model").
-##   miss_both  : additionally 36 response cells set to NA (column value_na), including one trait of
-##                a unit whose x is missing; missing = miss_control(response = "include",
-##                predictor = "model"). No unit loses all its responses (asserted).
+##   miss_both  : additionally response cells set to NA (column value_na): 35 drawn at random, one
+##                trait of a unit whose x is missing, and every response of units 5 (x observed) and
+##                17 (x missing); missing = miss_control(response = "include", predictor = "model").
+##                A unit with no response contributes only its covariate density (unit 5) or
+##                nothing (unit 17), and imputed() at unit 17 is the covariate-model mean.
 ## Both fits must converge with a positive-definite Hessian (asserted). For miss_both, the
-## response = "drop" fit of the same data must reach the same log-likelihood (asserted), so the
-## recorded value is the observed-data likelihood.
+## response = "drop" fit removes the two units with no response altogether (asserted equal to the
+## include fit of the data without them), so it differs from "include"; it is recorded as
+## loglik_drop for reference.
 ## imputed(fit) (rows = "missing") is recorded for both fits: the missing units and their
 ## conditional modes; the standard errors are recorded for reference only.
 rlib <- Sys.getenv("GLLVM_P1_RLIB", "")
@@ -41,7 +44,9 @@ Yna <- Y
 na_cells <- sort(sample(p * n, 35L))
 Yna[na_cells] <- NA
 Yna[1L, miss_x[1L]] <- NA                                           # a unit missing x and one response
-stopifnot(all(colSums(!is.na(Yna)) >= 1L), all(rowSums(!is.na(Yna)) >= 1L))
+Yna[, c(5L, 17L)] <- NA                                             # units with no response at all
+stopifnot(!(5L %in% miss_x), 17L %in% miss_x, all(rowSums(!is.na(Yna)) >= 1L),
+          sum(colSums(!is.na(Yna)) == 0L) == 2L)
 xna <- x; xna[miss_x] <- NA
 d <- data.frame(unit = rep(seq_len(n), each = p), trait = rep(tr, n),
                 value = as.vector(Y), value_na = as.vector(Yna),
@@ -63,7 +68,16 @@ fit <- function(resp, missing) {
 f_model <- fit("value", miss_control(predictor = "model"))
 f_both <- fit("value_na", miss_control(response = "include", predictor = "model"))
 f_drop <- fit("value_na", miss_control(response = "drop", predictor = "model"))
-stopifnot(abs(as.numeric(logLik(f_both)) - as.numeric(logLik(f_drop))) < 1e-6)
+## response = "drop" removes the rows of a unit with no response, so unit 5's covariate density
+## leaves the drop likelihood while "include" keeps it: the two differ here (recorded, loglik_drop).
+## The drop fit equals the include fit of the data without units 5 and 17 (asserted).
+d_no <- droplevels(d[!(d$unit %in% c(5L, 17L)), ])
+f_inc_no <- suppressMessages(suppressWarnings(gllvmTMB(
+  value_na ~ 0 + trait + mi(x) + latent(0 + trait | unit, d = 1, unique = FALSE),
+  data = d_no, unit = "unit", trait = "trait", family = gaussian(),
+  impute = list(x = x ~ z), missing = miss_control(response = "include", predictor = "model"))))
+stopifnot(abs(as.numeric(logLik(f_inc_no)) - as.numeric(logLik(f_drop))) < 1e-6,
+          abs(as.numeric(logLik(f_both)) - as.numeric(logLik(f_drop))) > 1e-3)
 
 fmt <- function(x) sprintf("%.17g", x)
 vec <- function(x) paste0("[", paste(vapply(as.numeric(x), fmt, ""), collapse = ", "), "]")
@@ -103,8 +117,13 @@ sec <- function(name, comment, f) {
   w("imputed_std_error = %s", vec(im$std_error))
 }
 sec("miss_model", "value ~ 0 + trait + mi(x) + latent(d = 1, unique = FALSE), impute x ~ z, miss_control(predictor = 'model'); every response observed", f_model)
-sec("miss_both", "value_na ~ 0 + trait + mi(x) + latent(d = 1, unique = FALSE), impute x ~ z, miss_control(response = 'include', predictor = 'model'); response = 'drop' reaches the same logLik (asserted)", f_both)
+sec("miss_both", "value_na ~ 0 + trait + mi(x) + latent(d = 1, unique = FALSE), impute x ~ z, miss_control(response = 'include', predictor = 'model'); units 5 and 17 have no response", f_both)
 w("nobs = %d", as.integer(stats::nobs(f_both)))
+w("# the units with no observed response (1-based)")
+w("no_response_units = [5, 17]")
+w("# response = 'drop' on the same data: rows of units 5 and 17 removed, so unit 5's covariate density is not in it;")
+w("# equal to the include fit without those units (asserted). Recorded for reference")
+w("loglik_drop = %s", fmt(as.numeric(logLik(f_drop))))
 close(con)
 print(c(model = as.numeric(logLik(f_model)), both = as.numeric(logLik(f_both)),
         drop = as.numeric(logLik(f_drop))))

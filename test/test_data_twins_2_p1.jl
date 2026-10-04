@@ -12,8 +12,12 @@
 # impute = list(x = x ~ z); x is NA at 18 of 120 units. Julia: fit_gaussian_mi_fiml(Y, x; K = 1,
 # Z = z), the same model (shared slope on x, covariate model x ~ N(mu_x + gamma z, sigma_x^2), one
 # latent factor, common residual SD), with the missing x integrated out in closed form where R uses
-# the Laplace approximation (exact here, the model being Gaussian). For miss_both, 36 response cells
-# are NA: R keeps them under response = "include", Julia takes them as `missing` cells of Y.
+# the Laplace approximation (exact here, the model being Gaussian). For miss_both, 44 response cells
+# are NA (35 drawn at random, one of a unit whose x is missing, and all four of units 5 and 17): R
+# keeps them under response = "include", Julia takes them as `missing` cells of Y. Unit 5 (x
+# observed) then contributes only its covariate density and unit 17 (x missing) nothing; its
+# conditional mode is the covariate-model mean. R's response = "drop" removes such units
+# altogether, which equals the fit of the data without them (asserted in the generator and below).
 # imputed(): R's imputed(fit)$estimate (the conditional mode of each missing x) against Julia's
 # imputed(fit, x).estimate at the same units. R's standard errors are recorded, not compared (Julia
 # reports none).
@@ -98,6 +102,16 @@ _dt2_mat(v, p) = reshape(Float64.(v), p, p)
         ib = imputed(fb, x)
         @test ib.level[.!ib.observed] == Int.(db["imputed_level_id"])
         @test isapprox(ib.estimate[.!ib.observed], Float64.(db["imputed_estimate"]); atol = 1e-4, rtol = 0)
+        # units with no response: present in the fit, and the mode at the x-missing one is the
+        # covariate-model mean
+        nr = Int.(db["no_response_units"])
+        @test all(all(ismissing, Yb[:, u]) for u in nr)
+        @test ismissing(x[nr[2]]) && !ismissing(x[nr[1]])
+        @test ib.estimate[nr[2]] ≈ fb.μ_x + fb.γ[1] * z[nr[2], 1]
+        # R's response = "drop" removes those units: the Julia fit without them reaches it
+        keep = setdiff(1:n, nr)
+        fd = fit_gaussian_mi_fiml(Yb[:, keep], x[keep]; K = 1, Z = z[keep, :])
+        @test isapprox(fd.logLik, Float64(db["loglik_drop"]); atol = 1e-6, rtol = 0)
 
         # The comparison discriminates: unit miss_units[1] lost one response as well as its x, and
         # its conditional mode under the response mask differs from the all-responses one by far

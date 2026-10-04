@@ -12,7 +12,7 @@
   number of missing response cells). With missing responses the fit uses a backtracking line search, and a trial point whose Woodbury factor is not positive definite scores `+Inf` instead of throwing `PosDefException`. A complete `y` gives the same fit as before (bit for bit, element type kept). Binds the
   true-parity rows `data/DATA-MISS-MODEL`, `data/DATA-MISS-BOTH` and the namespace row
   `S3method/imputed,gllvmTMB` with twins against gllvmTMB P1 (`test/test_data_twins_2_p1.jl`:
-  logLik within 6e-9, conditional modes within 4e-6). Not covered: R's `imputed()` standard errors
+  logLik within 2e-9, conditional modes within 2e-6; the masked twin includes units with no response). Not covered: R's `imputed()` standard errors
   (Julia reports none), and non-Gaussian responses.
 
 - **`predict`, `getLV` and `residuals` on a Laplace fit made with an `offset` now use it.** The
