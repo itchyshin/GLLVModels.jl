@@ -363,6 +363,7 @@ println(_SHARD === nothing ?
     _shard_include("test_spde.jl")
     _shard_include("test_spde_mesh.jl")
     _shard_include("test_spde_delaunay.jl")
+    _shard_include("test_spde_delaunay_scale.jl")
     _shard_include("test_spde_fit.jl")
     _shard_include("test_spde_latent.jl")
     _shard_include("test_spde_latent_postfit.jl")
