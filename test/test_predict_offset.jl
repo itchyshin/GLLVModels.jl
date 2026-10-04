@@ -7,7 +7,8 @@ const GM = GLLVModels
 # The bug this file pins: the Laplace Poisson, NB2, binomial and hurdle-Poisson fits did
 # not keep the offset they were fitted with, so `getLV(fit, Y)` searched the latent mode of
 # an offset-free model and `predict(fit, Y)` returned β + Λẑ without the offset (a Poisson
-# fit, p = 6, n = 60, offset 0.8 * randn: max |Δη| = 3.17 on the link scale). gllvmTMB's
+# fit's training-row link predictor missed gllvmTMB's by up to 1.886 on the P1 exposure-twin
+# data, test/test_predict_offset_twin_p1.jl; 2.2e-5 after the fix). gllvmTMB's
 # `predict` uses the stored training offset (`.gllvmTMB_offset_vec`) on training rows and
 # re-evaluates the offset on new rows, refusing new rows that lack it
 # (`.gllvmTMB_offset_newdata`).

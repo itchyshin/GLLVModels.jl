@@ -1971,11 +1971,14 @@ function predict(fit::HurdlePoissonFit, Y::AbstractMatrix{<:Real}; type::Symbol 
 end
 
 """
-    residuals(fit::HurdlePoissonFit, Y; rng=Random.default_rng()) -> p×n matrix
+    residuals(fit::HurdlePoissonFit, Y; rng=Random.default_rng(), offset=nothing) -> p×n matrix
 
 Dunn–Smyth randomized quantile residuals for the discrete two-part fit: `Φ⁻¹(u)`
 with `u` uniform on `[F(y−1), F(y)]` under the hurdle CDF
 `F(k) = (1−π) + π·F_trunc(k)` (`F_trunc` the zero-truncated Poisson CDF).
+On a fit made with an `offset` the count mean includes it, by the same rule as
+[`predict`](@ref): the stored training offset for a `Y` of the training size,
+otherwise the `offset` you pass.
 """
 function residuals(fit::HurdlePoissonFit, Y::AbstractMatrix{<:Real};
                    rng::AbstractRNG = Random.default_rng(), offset = nothing)

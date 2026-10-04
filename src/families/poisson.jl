@@ -40,8 +40,10 @@ raw latent-axis coefficients for the predictor-informed score mean; use
 counts, controls, final caches and retained start diagnostics. It is `nothing`
 for default Laplace and legacy constructors. AGHQ convergence is with respect
 to the frozen-node surrogate, not derivatives through changing adaptation.
-`offset` is the p×n training offset the fit was made with (`nothing` when the
-fit had none); [`predict`](@ref) and [`getLV`](@ref) use it by default.
+`offset` is the p×n training offset a Laplace fit was made with (`nothing` when the
+fit had none); [`predict`](@ref) and [`getLV`](@ref) use it by default. An AGHQ fit
+leaves `offset === nothing`: its offset is kept in `integration.data.offset`, which
+the AGHQ post-fit route uses.
 """
 struct PoissonFit
     β::Vector{Float64}

@@ -150,8 +150,10 @@ raw latent-axis coefficients for the predictor-informed score mean; use
 `Λ * alpha_lv'`. `loading_ridge` records the `loading_ridge` fit kwarg (`Inf`
 when the loading ridge was off); `loglik` is always the UNPENALISED Laplace
 marginal, evaluated at the (possibly ridge-penalised) optimum. `offset` is the p×n
-training offset the fit was made with (`nothing` when the fit had none);
-[`predict`](@ref) and [`getLV`](@ref) use it by default.
+training offset a Laplace fit was made with (`nothing` when the fit had none);
+[`predict`](@ref) and [`getLV`](@ref) use it by default. An AGHQ fit leaves
+`offset === nothing`: its offset is kept in `integration.data.offset`, which the AGHQ
+post-fit route uses.
 """
 struct BinomialFit
     β::Vector{Float64}
