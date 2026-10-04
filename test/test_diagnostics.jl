@@ -35,7 +35,7 @@ using GLLVModels, Test, Random, LinearAlgebra, Statistics
         @test !s.loadings_finite
     end
 
-    @testset "sanity_multi — R's flags, names, order and report lines" begin
+    @testset "sanity_multi: R's flags, names, order and report lines" begin
         Random.seed!(13)
         p, K, n = 5, 2, 300
         Λ_true = [0.8 0.0; 0.5 0.6; -0.4 0.5; 0.3 -0.6; 0.6 0.2]
@@ -76,7 +76,7 @@ using GLLVModels, Test, Random, LinearAlgebra, Statistics
         @test GLLVModels.sanity_multi(fit; y = y) == s
     end
 
-    @testset "sanity_multi — within-unit loadings add rr_W_min_loading" begin
+    @testset "sanity_multi: within-unit loadings add rr_W_min_loading" begin
         Random.seed!(14)
         p, K, n = 5, 1, 300
         y = reshape([0.7, 0.5, 0.4, -0.3, 0.2], p, 1) * randn(1, n) + 0.5 * randn(p, n)
@@ -277,7 +277,7 @@ using GLLVModels, Test, Random, LinearAlgebra, Statistics
         @test_throws ArgumentError GLLVModels.compare_fits_Sigma_table(fit1, fit_gaussian_gllvm(y1[1:3, :]; K = K))
     end
 
-    @testset "compare_loadings(Lambda_a, Lambda_b) — R's Procrustes surface (rotate-loadings.R:428-449)" begin
+    @testset "compare_loadings(Lambda_a, Lambda_b): R's Procrustes surface (rotate-loadings.R:428-449)" begin
         rng = MersenneTwister(21)
         B = randn(rng, 7, 3)
         Q = Matrix(qr(randn(rng, 3, 3)).Q)

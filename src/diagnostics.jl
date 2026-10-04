@@ -187,22 +187,22 @@ Port of R's `sanity_multi()` (`methods-gllvmTMB.R:2362-2487`, gllvmTMB 0.7.1):
 the fast first screen after fitting. The result carries R's flags under R's
 names and in R's order, followed by the Julia composite verdict:
 
-  - `converged` — `fit.converged` when present (R: `opt\$convergence == 0`),
+  - `converged`: `fit.converged` when present (R: `opt\$convergence == 0`),
     `missing` on a fit type that does not record it.
-  - `max_gradient` — `max |g|` of the packed-NLL gradient at `θ̂` (R: max
+  - `max_gradient`: `max |g|` of the packed-NLL gradient at `θ̂` (R: max
     absolute gradient component of the TMB objective at the optimum).
-  - `sdreport_ok` — whether the observed-information Hessian at `θ̂` could be
+  - `sdreport_ok`: whether the observed-information Hessian at `θ̂` could be
     computed and is finite (R: `sdreport()` succeeded). When it is `false`,
     `sdreport_error` follows with the reason, as in R.
-  - `pd_hessian` — whether that Hessian is positive definite (R: `pdHess`).
-  - `max_se` — the largest Wald standard error of the fixed-effect
+  - `pd_hessian`: whether that Hessian is positive definite (R: `pdHess`).
+  - `max_se`: the largest Wald standard error of the fixed-effect
     coefficients (`confint(fit, y; parm = "beta")`; R: largest `b_fix` SE
     from `sdreport()`), non-finite SEs dropped as R's `na.rm = TRUE` does;
     `missing` (R: `NA`) when no SE is available.
-  - `rr_B_min_loading` — `min |diag(Λ[1:K, 1:K])|` of the unit-tier
+  - `rr_B_min_loading`: `min |diag(Λ[1:K, 1:K])|` of the unit-tier
     loadings, present only when the fit has a latent term (`K ≥ 1`; R:
     only when `use\$rr_B`).
-  - `rr_W_min_loading` — the same for the within-unit loadings `Λ_W`,
+  - `rr_W_min_loading`: the same for the within-unit loadings `Λ_W`,
     present only on a `GllvmFit` with `K_W ≥ 1` (R: only when `use\$rr_W`).
 
 The quantities that need the objective (`max_gradient`, `sdreport_ok`,
@@ -213,12 +213,12 @@ object.
 
 The Julia composite verdict follows R's flags:
 
-  - `pass` — `loadings_finite`, convergence not `false`, `pd_hessian` not
+  - `pass`: `loadings_finite`, convergence not `false`, `pd_hessian` not
     `false` and `gradient_ok` not `false`.
-  - `loadings_finite` — every loading entry (`_loadings(fit)`) is finite.
-  - `gradient_norm` — Euclidean norm of the packed-NLL gradient at `θ̂`.
+  - `loadings_finite`: every loading entry (`_loadings(fit)`) is finite.
+  - `gradient_norm`: Euclidean norm of the packed-NLL gradient at `θ̂`.
   - `gradient_ok` — `gradient_norm < grad_tol` (or `missing`).
-  - `messages` — one line per failed check.
+  - `messages`: one line per failed check.
 
 `gradient_thresh` and `se_thresh` are R's thresholds and drive only R's
 PASS/WARN report lines; `grad_tol` drives `gradient_ok` and `pass`.
@@ -273,7 +273,9 @@ function sanity_multi(fit; y = nothing, X = nothing, Σ_phy = nothing, grad_tol:
             ci_kw = Σ_phy === nothing ? (; X = X) : (; X = X, Σ_phy = Σ_phy)
             se = try
                 confint(fit, y; method = :wald, parm = "beta", ci_kw...).se
-            catch
+            catch e
+                # R: tryCatch(.gllvmTMB_b_fix_se(object), error = function(e) NA_real_)
+                @debug "sanity_multi: fixed-effect standard errors unavailable; max_se is missing" exception = e
                 Float64[]
             end
             se = filter(isfinite, se)
@@ -657,11 +659,11 @@ is `R = V Uᵀ` (an orthogonal matrix, so a reflection is allowed, as in R).
 
 Returns, with R's names and in R's order:
 
-  - `R` — the `d × d` orthogonal transform;
-  - `Lambda_a_rot` — `Lambda_a * R`;
-  - `frobenius` — `‖Lambda_a_rot − Lambda_b‖_F`, the disagreement after
+  - `R`: the `d × d` orthogonal transform;
+  - `Lambda_a_rot`: `Lambda_a * R`;
+  - `frobenius`: `‖Lambda_a_rot − Lambda_b‖_F`, the disagreement after
     alignment;
-  - `cor_per_factor` — the Pearson correlation of column `k` of
+  - `cor_per_factor`: the Pearson correlation of column `k` of
     `Lambda_a_rot` with column `k` of `Lambda_b`, for each factor.
 
 This matrix method is R's surface. The two-fit method
