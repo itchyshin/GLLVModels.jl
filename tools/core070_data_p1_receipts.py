@@ -528,11 +528,12 @@ SCOPE_NOTES = {
         "predictor = 'model' routes (grouped, phylogenetic, binary, ordered, categorical predictors, non-Gaussian "
         "responses) are not exercised. Julia has no miss_control constructor: the policy is chosen by the fitter.",
     "data/DATA-MISS-BOTH": "The R batch case replays miss_control('include', 'model') to a list; the twin is the "
-        "DATA-MISS-MODEL fit with 36 response cells also NA (drawn at random plus one cell of a unit whose x is "
-        "missing): R keeps them under response = 'include', Julia takes them as missing cells of Y in "
-        "fit_gaussian_mi_fiml (the response mask this slice added). No unit loses all its responses in the twin; that "
-        "case is covered only by the Julia unit test against an independent reference. Same scope limits as "
-        "DATA-MISS-MODEL.",
+        "DATA-MISS-MODEL fit with 44 response cells also NA (35 drawn at random, one cell of a unit whose x is "
+        "missing, and every response of unit 5, x observed, and unit 17, x missing): R keeps them under response = "
+        "'include', Julia takes them as missing cells of Y in fit_gaussian_mi_fiml (the response mask this slice "
+        "added). R's response = 'drop' removes units with no response altogether, so it differs from 'include' here; "
+        "it is checked only as an assertion in the twin test (the Julia fit without units 5 and 17 reaches R's drop "
+        "logLik), not as a receipt case. Same scope limits as DATA-MISS-MODEL.",
 }
 
 

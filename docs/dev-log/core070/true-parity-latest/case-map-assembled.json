@@ -16,7 +16,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-data.json",
-   "sha256": "34a761d1e4a62548a6840b79fe77cf1183c796d7750687ebc533696013380951",
+   "sha256": "5370684c894a7972cf1fdd245dfe191992ce579602640d9d6788eed2aafee6c3",
    "rows": 36
   },
   {
@@ -41,7 +41,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-namespace.json",
-   "sha256": "e43aed44d7e84fb8ad86811f7df0655547db54a7a57a228e064e05635536d35e",
+   "sha256": "334d59ea038b3900ebae6af7f5f08dc75c84e6e32dce83944a0a3e5b76748112",
    "rows": 69
   },
   {
@@ -1652,7 +1652,7 @@
     ],
     "twin_verdict": "PASS"
    },
-   "scope_note": "The R batch case replays miss_control('include', 'model') to a list; the twin is the DATA-MISS-MODEL fit with 36 response cells also NA (drawn at random plus one cell of a unit whose x is missing): R keeps them under response = 'include', Julia takes them as missing cells of Y in fit_gaussian_mi_fiml (the response mask this slice added). No unit loses all its responses in the twin; that case is covered only by the Julia unit test against an independent reference. Same scope limits as DATA-MISS-MODEL."
+   "scope_note": "The R batch case replays miss_control('include', 'model') to a list; the twin is the DATA-MISS-MODEL fit with 44 response cells also NA (35 drawn at random, one cell of a unit whose x is missing, and every response of unit 5, x observed, and unit 17, x missing): R keeps them under response = 'include', Julia takes them as missing cells of Y in fit_gaussian_mi_fiml (the response mask this slice added). R's response = 'drop' removes units with no response altogether, so it differs from 'include' here; it is checked only as an assertion in the twin test (the Julia fit without units 5 and 17 reaches R's drop logLik), not as a receipt case. Same scope limits as DATA-MISS-MODEL."
   },
   {
    "source_id": "data/DATA-MISS-DEFAULT",
@@ -7549,13 +7549,13 @@
     "registration_case_ids": [
      "CORE070-NAMESPACE-IMPUTED-MISSING-PREDICTOR"
     ],
-    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl (section data-twins-2) with the same calls and settings as test/test_data_twins_2_p1.jl, against R-at-P1 values copied from test/fixtures/data_twins_2_p1.toml (R imputed(fit)$estimate, rows = 'missing', on two Gaussian mi(x) fits, value ~ 0 + trait + mi(x) + latent(0 + trait | unit, d = 1, unique = FALSE), impute x ~ z, x missing at 18 of 120 units: miss_control(predictor = 'model'), and miss_control('include', 'model') with 36 response cells NA; Julia imputed(fit_gaussian_mi_fiml(Y, x; K = 1, Z = z), x).estimate at the same units), each case within the tolerance asserted in that test. Both R fits converged with a positive-definite Hessian. Not compared: R's std_error (Julia's imputed() reports none) and the other predictor routes (grouped, phylogenetic, discrete). The Tier 0 registration receipts are kept un-cited under registration_receipts; the superseded case ids are in registration_case_ids."
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl (section data-twins-2) with the same calls and settings as test/test_data_twins_2_p1.jl, against R-at-P1 values copied from test/fixtures/data_twins_2_p1.toml (R imputed(fit)$estimate, rows = 'missing', on two Gaussian mi(x) fits, value ~ 0 + trait + mi(x) + latent(0 + trait | unit, d = 1, unique = FALSE), impute x ~ z, x missing at 18 of 120 units: miss_control(predictor = 'model'), and miss_control('include', 'model') with 44 response cells NA, including every response of one x-observed and one x-missing unit; Julia imputed(fit_gaussian_mi_fiml(Y, x; K = 1, Z = z), x).estimate at the same units), each case within the tolerance asserted in that test. Both R fits converged with a positive-definite Hessian. Not compared: R's std_error (Julia's imputed() reports none) and the other predictor routes (grouped, phylogenetic, discrete). The Tier 0 registration receipts are kept un-cited under registration_receipts; the superseded case ids are in registration_case_ids."
    },
    "executable_case_ids": [
     "P1-JULIA-IMPUTED-MISS_MODEL-ESTIMATE",
     "P1-JULIA-IMPUTED-MISS_BOTH-ESTIMATE"
    ],
-   "reason": "Numeric twin at P1: R imputed(fit) and Julia imputed(fit_gaussian_mi_fiml(...), x) give the same conditional modes of the missing x values on the same two Gaussian mi(x) fits (all responses observed; 36 responses masked). Supersedes the Tier 0 registration measurement, which matched the name to Julia `fit_gaussian_mi_fiml` only.",
+   "reason": "Numeric twin at P1: R imputed(fit) and Julia imputed(fit_gaussian_mi_fiml(...), x) give the same conditional modes of the missing x values on the same two Gaussian mi(x) fits (all responses observed; 44 responses masked). Supersedes the Tier 0 registration measurement, which matched the name to Julia `fit_gaussian_mi_fiml` only.",
    "disposition": null,
    "evidence_tier": "numeric",
    "measured_result": {

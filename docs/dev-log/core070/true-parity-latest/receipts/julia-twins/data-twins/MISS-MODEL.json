@@ -10,21 +10,21 @@
   "origin_pr": "itchyshin/GLLVModels.jl branch claude/w2-miss-twins (W2-4a)",
   "generator": "tools/true_parity_julia_receipts.jl",
   "julia_version": "1.10.0",
-  "gllvmodels_commit": "ce0818a31fe59bd8fa9152ca7b8f2327a7a847ab",
+  "gllvmodels_commit": "9fcb1377bcfffccc7604faaee10eaf5c62b6f45f",
   "source_fixtures": [
     {
       "path": "test/fixtures/data_twins_2_p1.toml",
-      "sha256": "5bfba188e5ee03f50b1c296e78a41d0accc4ba710ffebbf357189de7efd19064"
+      "sha256": "164b4f19055240e4c79c4e4f45c9749adaa11377d6838b44e5e920e0ac550285"
     },
     {
       "path": "test/fixtures/data_twins_2_mi_p1_data.csv",
-      "sha256": "a2753609d381812c4d5c74353e3dd2a034ffeaee7cf879e17894b3b97cd98b4d"
+      "sha256": "1abed82c2d7baf9a6902b88d32989db3019d6e064052610d0057a5c13c422269"
     }
   ],
   "source_tests": [
     {
       "path": "test/test_data_twins_2_p1.jl",
-      "sha256": "888acdf2b6691856afc579d24f6f50d78805be76b5b5ceeed215438083b5e257"
+      "sha256": "1e4b1250a9af8c4a7ff7e0f2228ff1bcf3aabfc37b47566258e5e05fd1184b8b"
     }
   ],
   "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
@@ -35,12 +35,12 @@
         "case_id": "P1-JULIA-DATA-MISS_MODEL-LOGLIK",
         "quantity": "maximised logLik of the miss_model fit",
         "r_source": "test/fixtures/data_twins_2_p1.toml [miss_model.loglik]",
-        "julia_source": "fm.logLik, fit as at test/test_data_twins_2_p1.jl:73",
+        "julia_source": "fm.logLik, fit as at test/test_data_twins_2_p1.jl:77",
         "r_value": -568.9137742397176,
         "julia_value": -568.9137742387362,
         "abs_diff": 9.813447832129896e-10,
         "tolerance": 1e-06,
-        "tolerance_source": "test/test_data_twins_2_p1.jl:75",
+        "tolerance_source": "test/test_data_twins_2_p1.jl:79",
         "tolerance_source_line": "@test isapprox(fm.logLik, Float64(dm[\"loglik\"]); atol = 1e-6, rtol = 0)",
         "note": "Gaussian, p = 4, n = 120 units (sha256 checked), x NA at 18 units; R: value ~ 0 + trait + mi(x) + latent(0 + trait | unit, d = 1, unique = FALSE), impute = list(x = x ~ z), family = gaussian(), converged with a positive-definite Hessian; Julia: fit_gaussian_mi_fiml(Y, x; K = 1, Z = z), the same model (shared slope on x, covariate model x ~ N(mu_x + gamma z, sigma_x^2), one latent factor, common residual SD) with the missing x integrated out in closed form where R uses the Laplace approximation (exact for this Gaussian model). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'. Every response observed; R: missing = miss_control(predictor = \"model\") (response = \"drop\", engine = \"laplace\" by default)."
       },
@@ -48,7 +48,7 @@
         "case_id": "P1-JULIA-DATA-MISS_MODEL-INTERCEPTS",
         "quantity": "trait intercepts (4 values) of the miss_model fit",
         "r_source": "test/fixtures/data_twins_2_p1.toml [miss_model.intercepts]",
-        "julia_source": "fm.a, fit as at test/test_data_twins_2_p1.jl:73",
+        "julia_source": "fm.a, fit as at test/test_data_twins_2_p1.jl:77",
         "r_value": [
           0.497499883074416,
           -0.28815407690577377,
@@ -63,7 +63,7 @@
         ],
         "abs_diff": 1.329729418172998e-06,
         "tolerance": 0.0001,
-        "tolerance_source": "test/test_data_twins_2_p1.jl:76",
+        "tolerance_source": "test/test_data_twins_2_p1.jl:80",
         "tolerance_source_line": "@test isapprox(fm.a, Float64.(dm[\"intercepts\"]); atol = 1e-4, rtol = 0)",
         "note": "Gaussian, p = 4, n = 120 units (sha256 checked), x NA at 18 units; R: value ~ 0 + trait + mi(x) + latent(0 + trait | unit, d = 1, unique = FALSE), impute = list(x = x ~ z), family = gaussian(), converged with a positive-definite Hessian; Julia: fit_gaussian_mi_fiml(Y, x; K = 1, Z = z), the same model (shared slope on x, covariate model x ~ N(mu_x + gamma z, sigma_x^2), one latent factor, common residual SD) with the missing x integrated out in closed form where R uses the Laplace approximation (exact for this Gaussian model). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'. Every response observed; R: missing = miss_control(predictor = \"model\") (response = \"drop\", engine = \"laplace\" by default)."
       },
@@ -71,12 +71,12 @@
         "case_id": "P1-JULIA-DATA-MISS_MODEL-B-X",
         "quantity": "slope on the modelled predictor x of the miss_model fit",
         "r_source": "test/fixtures/data_twins_2_p1.toml [miss_model.b_x]",
-        "julia_source": "fm.b_x, fit as at test/test_data_twins_2_p1.jl:73",
+        "julia_source": "fm.b_x, fit as at test/test_data_twins_2_p1.jl:77",
         "r_value": 0.7783529597549236,
         "julia_value": 0.7783527127359281,
         "abs_diff": 2.470189954806301e-07,
         "tolerance": 0.0001,
-        "tolerance_source": "test/test_data_twins_2_p1.jl:77",
+        "tolerance_source": "test/test_data_twins_2_p1.jl:81",
         "tolerance_source_line": "@test isapprox(fm.b_x, Float64(dm[\"b_x\"]); atol = 1e-4, rtol = 0)",
         "note": "Gaussian, p = 4, n = 120 units (sha256 checked), x NA at 18 units; R: value ~ 0 + trait + mi(x) + latent(0 + trait | unit, d = 1, unique = FALSE), impute = list(x = x ~ z), family = gaussian(), converged with a positive-definite Hessian; Julia: fit_gaussian_mi_fiml(Y, x; K = 1, Z = z), the same model (shared slope on x, covariate model x ~ N(mu_x + gamma z, sigma_x^2), one latent factor, common residual SD) with the missing x integrated out in closed form where R uses the Laplace approximation (exact for this Gaussian model). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'. Every response observed; R: missing = miss_control(predictor = \"model\") (response = \"drop\", engine = \"laplace\" by default)."
       },
@@ -84,7 +84,7 @@
         "case_id": "P1-JULIA-DATA-MISS_MODEL-COVARIATE-MODEL",
         "quantity": "covariate-model coefficients (mu_x, gamma on z) of the miss_model fit",
         "r_source": "test/fixtures/data_twins_2_p1.toml [miss_model.mu_x, miss_model.gamma_z]",
-        "julia_source": "vcat(fm.μ_x, fm.γ), fit as at test/test_data_twins_2_p1.jl:73",
+        "julia_source": "vcat(fm.μ_x, fm.γ), fit as at test/test_data_twins_2_p1.jl:77",
         "r_value": [
           0.31590227088317646,
           0.6312059387184064
@@ -95,7 +95,7 @@
         ],
         "abs_diff": 1.2164048714402576e-06,
         "tolerance": 0.0001,
-        "tolerance_source": "test/test_data_twins_2_p1.jl:78",
+        "tolerance_source": "test/test_data_twins_2_p1.jl:82",
         "tolerance_source_line": "@test isapprox(vcat(fm.μ_x, fm.γ), [Float64(dm[\"mu_x\"]), Float64(dm[\"gamma_z\"])]; atol = 1e-4, rtol = 0)",
         "note": "Gaussian, p = 4, n = 120 units (sha256 checked), x NA at 18 units; R: value ~ 0 + trait + mi(x) + latent(0 + trait | unit, d = 1, unique = FALSE), impute = list(x = x ~ z), family = gaussian(), converged with a positive-definite Hessian; Julia: fit_gaussian_mi_fiml(Y, x; K = 1, Z = z), the same model (shared slope on x, covariate model x ~ N(mu_x + gamma z, sigma_x^2), one latent factor, common residual SD) with the missing x integrated out in closed form where R uses the Laplace approximation (exact for this Gaussian model). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'. Every response observed; R: missing = miss_control(predictor = \"model\") (response = \"drop\", engine = \"laplace\" by default)."
       },
@@ -103,7 +103,7 @@
         "case_id": "P1-JULIA-DATA-MISS_MODEL-SDS",
         "quantity": "covariate-model SD sigma_x and residual SD sigma_eps of the miss_model fit",
         "r_source": "test/fixtures/data_twins_2_p1.toml [miss_model.sigma_x, miss_model.sigma_eps]",
-        "julia_source": "[fm.σ_x, fm.σ_eps], fit as at test/test_data_twins_2_p1.jl:73",
+        "julia_source": "[fm.σ_x, fm.σ_eps], fit as at test/test_data_twins_2_p1.jl:77",
         "r_value": [
           0.6169159717747882,
           0.4885679962515563
@@ -114,7 +114,7 @@
         ],
         "abs_diff": 1.8928015599328774e-08,
         "tolerance": 0.001,
-        "tolerance_source": "test/test_data_twins_2_p1.jl:79",
+        "tolerance_source": "test/test_data_twins_2_p1.jl:83",
         "tolerance_source_line": "@test isapprox([fm.σ_x, fm.σ_eps], [Float64(dm[\"sigma_x\"]), Float64(dm[\"sigma_eps\"])]; atol = 1e-3, rtol = 0)",
         "note": "Gaussian, p = 4, n = 120 units (sha256 checked), x NA at 18 units; R: value ~ 0 + trait + mi(x) + latent(0 + trait | unit, d = 1, unique = FALSE), impute = list(x = x ~ z), family = gaussian(), converged with a positive-definite Hessian; Julia: fit_gaussian_mi_fiml(Y, x; K = 1, Z = z), the same model (shared slope on x, covariate model x ~ N(mu_x + gamma z, sigma_x^2), one latent factor, common residual SD) with the missing x integrated out in closed form where R uses the Laplace approximation (exact for this Gaussian model). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'. Every response observed; R: missing = miss_control(predictor = \"model\") (response = \"drop\", engine = \"laplace\" by default)."
       },
@@ -122,7 +122,7 @@
         "case_id": "P1-JULIA-DATA-MISS_MODEL-LAMBDA-LAMBDAT",
         "quantity": "Lambda Lambda' (4 x 4) of the miss_model fit",
         "r_source": "test/fixtures/data_twins_2_p1.toml [miss_model.LLt]",
-        "julia_source": "fm.Λ * fm.Λ', fit as at test/test_data_twins_2_p1.jl:73",
+        "julia_source": "fm.Λ * fm.Λ', fit as at test/test_data_twins_2_p1.jl:77",
         "r_value": [
           0.8553571318836787,
           0.5762953397870269,
@@ -161,7 +161,7 @@
         ],
         "abs_diff": 2.449740764798314e-06,
         "tolerance": 0.001,
-        "tolerance_source": "test/test_data_twins_2_p1.jl:80",
+        "tolerance_source": "test/test_data_twins_2_p1.jl:84",
         "tolerance_source_line": "@test isapprox(fm.Λ * fm.Λ', _dt2_mat(dm[\"LLt\"], p); atol = 1e-3, rtol = 0)",
         "note": "Gaussian, p = 4, n = 120 units (sha256 checked), x NA at 18 units; R: value ~ 0 + trait + mi(x) + latent(0 + trait | unit, d = 1, unique = FALSE), impute = list(x = x ~ z), family = gaussian(), converged with a positive-definite Hessian; Julia: fit_gaussian_mi_fiml(Y, x; K = 1, Z = z), the same model (shared slope on x, covariate model x ~ N(mu_x + gamma z, sigma_x^2), one latent factor, common residual SD) with the missing x integrated out in closed form where R uses the Laplace approximation (exact for this Gaussian model). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'. Every response observed; R: missing = miss_control(predictor = \"model\") (response = \"drop\", engine = \"laplace\" by default)."
       }

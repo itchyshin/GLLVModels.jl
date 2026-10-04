@@ -1840,7 +1840,7 @@ function receipts_data_twins_2()
             ("miss_model", "value", "data/DATA-MISS-MODEL", "MISS-MODEL", "fm",
              " Every response observed; R: missing = miss_control(predictor = \"model\") (response = \"drop\", engine = \"laplace\" by default)."),
             ("miss_both", "value_na", "data/DATA-MISS-BOTH", "MISS-BOTH", "fb",
-             " 36 response cells NA (column value_na, drawn at random plus one cell of a unit whose x is missing; no unit loses all its responses). R: missing = miss_control(response = \"include\", predictor = \"model\"); the response = \"drop\" fit reaches the same logLik (asserted in the generator). Julia: the same cells as `missing` entries of Y (observed-data likelihood)."))
+             " 44 response cells NA (column value_na: 35 drawn at random, one cell of a unit whose x is missing, and every response of unit 5, x observed, and unit 17, x missing). R: missing = miss_control(response = \"include\", predictor = \"model\"); Julia: the same cells as `missing` entries of Y (observed-data likelihood: unit 5 contributes only its covariate density, unit 17 nothing, and its conditional mode is the covariate-model mean). R's response = \"drop\" removes units 5 and 17 altogether and is not compared here (the twin test asserts that the Julia fit without them reaches it)."))
         d = fx[sec]
         (d["converged"] === true && d["pd_hessian"] === true) || fail("$sec R fit not converged with a PD Hessian; not a valid twin")
         Yraw = _dt_load(csv, col, p, n)
