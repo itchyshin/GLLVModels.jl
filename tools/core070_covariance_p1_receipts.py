@@ -126,7 +126,7 @@ def isapprox_entry(case_id, quantity, r, j, atol, rtol, rule):
     # passes the harness test also passes the checker's max-abs test.
     tol = max(atol, rtol * max(norm(j), norm(r)))
     return {"case_id": case_id, "quantity": quantity, "r_value": r, "julia_value": j,
-            "abs_diff": max(abs(a - b) for a, b in zip(flat(j), flat(r))),
+            "abs_diff": max(abs(a - b) for a, b in zip(flat(j), flat(r), strict=True)),
             "harness_norm_diff": norm(sub(j, r)), "tolerance": tol,
             "tolerance_rule": f"{rule}: isapprox(julia, r; atol={atol:g}, rtol={rtol:g}); "
                               "harness test norm(julia - r) <= tolerance = max(atol, rtol*max(norm)) "
@@ -190,7 +190,7 @@ def formula_entries(row):
 def wave6_entry(case_id, julia, oracle, contract_case):
     rv = oracle["oracle_values"][case_id]
     jv = julia["cases"][case_id]["julia_values"]
-    diff = max(abs(a - b) for a, b in zip(rv, jv))
+    diff = max(abs(a - b) for a, b in zip(rv, jv, strict=True))
     return {"case_id": case_id, "quantity": contract_case["quantity"], "r_value": rv, "julia_value": jv,
             "max_abs_diff": diff, "tolerance": contract_case["tolerance"],
             "tolerance_rule": "wave6-conversion-batch-contract-p1.json per-case tolerance (carried verbatim from P0); "
@@ -477,6 +477,12 @@ def main():
                            measured_result={"case_verdicts": verdicts, "batch_verifier": batch_ok,
                                             "row_verdict": "PASS" if ok else "FAIL"})
                 if sid in exceptions:
+                    # A signed exception waives only the batch verifier, never a
+                    # failed comparison: the checker judges max-abs, which is weaker
+                    # than the harness's norm test that the case verdict carries.
+                    if not ok:
+                        raise SystemExit(f"{sid}: refusing a receipt_status_exception on a row whose case "
+                                         f"verdicts are not all PASS: {verdicts}")
                     row["receipt_status_exception"] = exceptions[sid]
                 counts["numeric_pass" if ok else "numeric_fail"] += 1
             else:
