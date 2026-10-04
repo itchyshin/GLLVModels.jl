@@ -249,20 +249,27 @@
    "r_file_line": "R/missing-predictor.R:2610",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/imputed.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-IMPUTED-MISSING-PREDICTOR.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-IMPUTED-MISSING-PREDICTOR"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl (section data-twins-2) with the same calls and settings as test/test_data_twins_2_p1.jl, against R-at-P1 values copied from test/fixtures/data_twins_2_p1.toml (R imputed(fit)$estimate, rows = 'missing', on two Gaussian mi(x) fits, value ~ 0 + trait + mi(x) + latent(0 + trait | unit, d = 1, unique = FALSE), impute x ~ z, x missing at 18 of 120 units: miss_control(predictor = 'model'), and miss_control('include', 'model') with 36 response cells NA; Julia imputed(fit_gaussian_mi_fiml(Y, x; K = 1, Z = z), x).estimate at the same units), each case within the tolerance asserted in that test. Both R fits converged with a positive-definite Hessian. Not compared: R's std_error (Julia's imputed() reports none) and the other predictor routes (grouped, phylogenetic, discrete). The Tier 0 registration receipts are kept un-cited under registration_receipts; the superseded case ids are in registration_case_ids."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-IMPUTED-MISSING-PREDICTOR"
+    "P1-JULIA-IMPUTED-MISS_MODEL-ESTIMATE",
+    "P1-JULIA-IMPUTED-MISS_BOTH-ESTIMATE"
    ],
-   "reason": "R S3method(imputed,gllvmTMB) registered and defined at P1; Julia `fit_gaussian_mi_fiml` is an exported Function (measured). Name match only.",
+   "reason": "Numeric twin at P1: R imputed(fit) and Julia imputed(fit_gaussian_mi_fiml(...), x) give the same conditional modes of the missing x values on the same two Gaussian mi(x) fits (all responses observed; 36 responses masked). Supersedes the Tier 0 registration measurement, which matched the name to Julia `fit_gaussian_mi_fiml` only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
