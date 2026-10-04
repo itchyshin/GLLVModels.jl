@@ -217,10 +217,11 @@
   above that rank is refused and a smaller K fits. Any other design (slopes, shared columns,
   intercepts for only some traits, a fixed intercept) keeps the `n_sites >= p` refusal and gets no
   rank check, because the estimated coefficients can lower the rank below that of any residual.
-  Fits with `has_diag`, `K_phy`, `has_phy_unique` or `X_lv` refuse rank-deficient data in the
-  first two cases only; the duplicated or collinear trait check does not run for other designs.
-  Masked fits are not covered. Documented in the `fit_gaussian_gllvm` and `fit_lognormal_gllvm` docstrings
-  and `docs/src/pitfalls.md`. Fits with n >= p are numerically unchanged (pinned from the
+  Fits with `has_diag`, `K_phy`, `has_phy_unique` or `X_lv` refuse `n_sites < p` and data below the generic
+  rank (`min(p, n_sites)` without X, `min(p, n_sites - 1)` with intercepts) in the first two cases only;
+  the duplicated or collinear trait check does not run for other designs.
+  Masked fits are not covered. Documented in `docs/src/pitfalls.md`; the `fit_gaussian_gllvm` and
+  `fit_lognormal_gllvm` docstrings still say `n_sites >= p` and are updated in a follow-up. Fits with n >= p are numerically unchanged (pinned from the
   tree before the change). Test: `test/test_n_lt_p.jl`.
 
 - **The W-tier reduced-rank term now carries the full cross-trait covariance, as in

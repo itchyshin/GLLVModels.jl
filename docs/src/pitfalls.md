@@ -51,8 +51,12 @@ The closed-form Gaussian fitter `fit_gaussian_gllvm` no longer requires
   `X_lv`), in the same two `X` cases. The rank rule is not enough here: a
   duplicated, collinear or zero trait makes the likelihood unbounded even with
   `K` below the rank, because a per-trait variance can collapse. These fits
-  throw an `ArgumentError` whenever the data are rank deficient, which includes
-  every fit with `n_sites < p`.
+  throw an `ArgumentError` when `n_sites < p`, and when the rank is below the
+  generic rank of the design: `min(p, n_sites)` with no `X`, and
+  `min(p, n_sites - 1)` with per-trait intercepts. Generic data at
+  `n_sites == p` with intercepts are therefore accepted. A duplicated trait
+  there is not visible to the rank and is not refused; from `n_sites > p` on
+  it is.
 - **Any other `X`** (slopes, shared columns, intercepts for only some traits, a
   fixed intercept, mixed designs), for every variant including the per-trait
   variance terms above. The coefficients are estimated jointly with the

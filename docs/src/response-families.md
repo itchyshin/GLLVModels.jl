@@ -123,10 +123,11 @@ The Gaussian GLLVM admits a **closed-form marginal** (no Laplace approximation).
 The latent integral is conjugate, so the optimiser works directly on the exact
 log-likelihood. This is the fastest and most accurate path. The response matrix
 `Y` is `p × n` (responses × sites). The closed-form fitter has no blanket `n_sites ≥ p`
-requirement: a plain isotropic fit needs `K` below the rank of the data, the
-variants with per-trait variance terms need full-rank data, and masked fits
-should keep `n_sites ≥ p`; an `ArgumentError` is thrown when the rule is
-violated. The Laplace-fitted families below have no such condition (see
+requirement: with no `X`, or one free intercept per trait, a plain isotropic
+fit needs `K` below the rank of the data and the variants with per-trait
+variance terms need data of the generic rank. Any other `X` design (slopes,
+shared columns, partial or fixed intercepts) and masked fits keep
+`n_sites ≥ p`. An `ArgumentError` is thrown when the rule is violated. The Laplace-fitted families below have no such condition (see
 [Common pitfalls](pitfalls.md)).
 
 ### Binomial — `Binomial()`
