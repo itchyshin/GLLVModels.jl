@@ -102,6 +102,8 @@ function fit_truncated_poisson_gllvm(Y::AbstractMatrix; K::Integer,
     link isa LogLink || throw(ArgumentError(
         "fit_truncated_poisson_gllvm: only LogLink is supported (twin truncated_poisson)"))
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
+                               caller = "fit_truncated_poisson_gllvm")
     rr = rr_theta_len(p, K)
     msk = mask === nothing ? (any(ismissing, Y) ? observed_mask(Y) : nothing) : mask
     Yc = Integer.(_sanitize_missing(Y, 1))   # placeholder 1 for masked (never enters ℓ)

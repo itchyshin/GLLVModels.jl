@@ -84,9 +84,27 @@
     "read_from": {
       "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json": "3c0c44d62296c7f2730e2b4a6d7abb7d963afdfdd09731d7ab2dfb94d22350af",
       "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv": "aa78ce4ae49ad3f05891517710bb4e54fbaa1f5b612821bd1a99eba6e5a0df1c",
-      "test/parity/fixtures/core070_inference_routes.tsv": "5f75af28288781a5cc516bb94d38e5fdc5107b1712be54fbaabe9d0e79035db0"
+      "test/parity/fixtures/core070_inference_routes.tsv": "5f75af28288781a5cc516bb94d38e5fdc5107b1712be54fbaabe9d0e79035db0",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json": "b0c89cbfb5186f39c1800cbe9bda524d4d7d822d7048d2181b19c86fb7eaa925",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/receipt.json": "1a44df6689de09c56ac07238eabf4a2e655d1ed36aed9924163090451f0dd675",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/run-commit.json": "c209d8cb34692cf8bf2387eb057c396dee061720d7b10aab462e84c7d0be26d3",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/verify.txt": "303ad3fd98e8194e031cfcf376b39fb5c751fa348fe7f3af603705e0837c373d",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/r-lambda-reject/r-oracle.json": "c37a34dc900c165a8d4ccbffae0fea66a3ad6444a12acb3c29c22ae0223d0a98",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/r-lambda-reject/receipt.json": "911e062f903a88ef5b4029f8084f5900085a65eedb1442219a9171c55bea1a65"
     },
     "cases": [
+      {
+        "case_id": "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE",
+        "source_id": "inference/CI-ROUTE-036",
+        "kind": "route",
+        "r_observed": ".confint_proportion:wald",
+        "julia_observed": "proportion:wald_derived",
+        "requested_method": "DEFAULT",
+        "julia_call": "confint(fitS, YS; parm=\"proportion:shared[1]\", \u03a3_phy)",
+        "julia_result_method": "wald",
+        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-036",
+        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json#CI-ROUTE-036"
+      },
       {
         "case_id": "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE",
         "source_id": "inference/CI-ROUTE-038",
@@ -97,37 +115,29 @@
         "julia_call": "icc_wald_ci(fitS, communality_packed_1; y=YS,\u03a3_phy=\u03a3_phy)",
         "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-038",
         "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-038"
+      },
+      {
+        "case_id": "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE",
+        "source_id": "inference/CI-ROUTE-039",
+        "kind": "route",
+        "r_observed": ".confint_proportion:bootstrap",
+        "julia_observed": "proportion:bootstrap",
+        "requested_method": "bootstrap",
+        "julia_call": "confint(fitS, YS; parm=\"proportion:shared[1]\", method=:bootstrap, \u03a3_phy, n_boot=6, seed=12)",
+        "julia_result_method": "bootstrap",
+        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-039",
+        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json#CI-ROUTE-039"
       }
     ]
   },
   "behaviour_not_bound": [
     {
-      "source_id": "inference/CI-ROUTE-036",
-      "reason": "default",
-      "text": "The row asks for the DEFAULT method, but the Julia harness called an explicit function (icc_wald_ci(fitS, communality_packed_1; y=YS,\u03a3_phy=\u03a3_phy) [default, :shared component]). Julia has no default-method dispatcher for derived quantities (the exported entries are the per-method *_wald_ci functions), so Julia's default was not exercised, the same shape as the other DEFAULT rows left unbound. Whether the exported Wald function counts as Julia's default is not signed under itchyshin/GLLVModels.jl#684 item 2.",
-      "evidence": {
-        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-036",
-        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-036",
-        "fixture": "test/parity/fixtures/core070_inference_routes.tsv#CI-ROUTE-036"
-      }
-    },
-    {
       "source_id": "inference/CI-ROUTE-037",
       "reason": "withdrawn",
-      "text": "R's dispatcher forwards method profile to .confint_proportion, but that function raises gllvmTMB_nonlinear_profile_withdrawn at P1; the same probe observed that error on guard row CI-ROUTE-088 (parm proportion:shared_unit, method profile). Julia returned a profile interval (GLLVM.profile_ci_derived(fitS, communality_packed_1; y=YS,\u03a3_phy=\u03a3_phy)). R refuses, Julia computes: not the same behaviour.",
+      "text": "R's dispatcher forwards method profile to .confint_proportion, but that function raises gllvmTMB_nonlinear_profile_withdrawn at P1; the same probe observed that error on guard row CI-ROUTE-088 (parm proportion:shared_unit, method profile). Julia's public confint returned a profile interval (confint(fitS, YS; parm=\"proportion:shared[1]\", method=:profile, \u03a3_phy); src/confint.jl:826, the penalty-based route #709 documents as exploratory). R refuses, Julia computes: not the same behaviour.",
       "evidence": {
         "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-037,CI-ROUTE-088",
-        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-037"
-      }
-    },
-    {
-      "source_id": "inference/CI-ROUTE-039",
-      "reason": "not_exported",
-      "text": "R's confint(parm, method = 'bootstrap') serves a derived quantity (route '.confint_proportion:bootstrap'). Julia's side of this row is GLLVM.bootstrap_ci_derived(fitS, f->GLLVM.proportions(f;component=:shared)[1]; y=YS,\u03a3_phy=\u03a3_phy), an internal function that GLLVModels does not export (src/GLLVModels.jl export list), so a Julia user cannot make this request through the public API; the harness chose the function. The same shape as the DEFAULT rows CI-ROUTE-022, 029 and 036, which are also left unbound. No entry.",
-      "evidence": {
-        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-039",
-        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/inference-batch-results.json#CI-ROUTE-039",
-        "contract": "docs/dev-log/core070/true-parity-latest/inference-batch-contract-p1.json"
+        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json#CI-ROUTE-037"
       }
     }
   ]

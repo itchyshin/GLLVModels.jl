@@ -10,7 +10,7 @@
   "origin_pr": "itchyshin/GLLVModels.jl#689",
   "generator": "tools/true_parity_julia_receipts.jl",
   "julia_version": "1.10.0",
-  "gllvmodels_commit": "896a0a2286c224fe9979d3cf7e7e2c6be27f9357",
+  "gllvmodels_commit": "8446a0d922484f07e98f5b959d953337d9e764d3",
   "source_fixtures": [
     {
       "path": "test/fixtures/data_twins_p1.toml",
@@ -24,7 +24,7 @@
   "source_tests": [
     {
       "path": "test/test_data_twins_p1.jl",
-      "sha256": "07842797d28c18e5ce75609e90d47124bfda5d2253f9ac99be903010c6be9b15"
+      "sha256": "2ed773dacf0c252911ef600b607e8cad9aae117cffed35a26727ef313796c214"
     }
   ],
   "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
@@ -35,12 +35,12 @@
         "case_id": "P1-JULIA-DATA-NB2_EXPOSURE-LOGLIK",
         "quantity": "maximised logLik of the nb2_exposure fit",
         "r_source": "test/fixtures/data_twins_p1.toml [nb2_exposure.loglik]",
-        "julia_source": "fit.loglik, fit as at test/test_data_twins_p1.jl:119",
+        "julia_source": "fit.loglik, fit as at test/test_data_twins_p1.jl:121",
         "r_value": -1821.0558822729906,
         "julia_value": -1821.0558822372825,
         "abs_diff": 3.570812623365782e-08,
         "tolerance": 1e-06,
-        "tolerance_source": "test/test_data_twins_p1.jl:76",
+        "tolerance_source": "test/test_data_twins_p1.jl:77",
         "tolerance_source_line": "@test isapprox(fit.loglik, Float64(d[\"loglik\"]); atol = 1e-6, rtol = 0)",
         "note": "nbinom2 one-axis latent fit, p = 6, n = 150 (sha256 checked), R: + offset(log(e)), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Dispersion is per trait on both sides. Scope: every trait is one count family (the batch case mixed three count families on three rows, which Julia has no fit for), so this exercises a non-Poisson count family accepting a nonzero offset, not a family mix."
       },
@@ -48,7 +48,7 @@
         "case_id": "P1-JULIA-DATA-NB2_EXPOSURE-INTERCEPTS",
         "quantity": "trait intercepts (6 values) of the nb2_exposure fit; the offset is not absorbed into them",
         "r_source": "test/fixtures/data_twins_p1.toml [nb2_exposure.beta]",
-        "julia_source": "fit.β, fit as at test/test_data_twins_p1.jl:119",
+        "julia_source": "fit.β, fit as at test/test_data_twins_p1.jl:121",
         "r_value": [
           0.9080034243998985,
           0.1495088170896572,
@@ -67,7 +67,7 @@
         ],
         "abs_diff": 4.859898311004862e-06,
         "tolerance": 0.0001,
-        "tolerance_source": "test/test_data_twins_p1.jl:77",
+        "tolerance_source": "test/test_data_twins_p1.jl:78",
         "tolerance_source_line": "@test isapprox(fit.β, Float64.(d[\"beta\"]); atol = 1e-4, rtol = 0)",
         "note": "nbinom2 one-axis latent fit, p = 6, n = 150 (sha256 checked), R: + offset(log(e)), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Dispersion is per trait on both sides. Scope: every trait is one count family (the batch case mixed three count families on three rows, which Julia has no fit for), so this exercises a non-Poisson count family accepting a nonzero offset, not a family mix."
       },
@@ -75,7 +75,7 @@
         "case_id": "P1-JULIA-DATA-NB2_EXPOSURE-LAMBDA-LAMBDAT",
         "quantity": "Lambda Lambda' (6 x 6) of the nb2_exposure fit",
         "r_source": "test/fixtures/data_twins_p1.toml [nb2_exposure.lambda_lambdat]",
-        "julia_source": "fit.Λ * fit.Λ', fit as at test/test_data_twins_p1.jl:119",
+        "julia_source": "fit.Λ * fit.Λ', fit as at test/test_data_twins_p1.jl:121",
         "r_value": [
           0.6546412809871972,
           -0.4687617203296438,
@@ -154,7 +154,7 @@
         ],
         "abs_diff": 8.294612883485986e-06,
         "tolerance": 0.001,
-        "tolerance_source": "test/test_data_twins_p1.jl:78",
+        "tolerance_source": "test/test_data_twins_p1.jl:79",
         "tolerance_source_line": "@test isapprox(fit.Λ * fit.Λ', _dt_mat(d[\"lambda_lambdat\"], p, p); atol = 1e-3, rtol = 0)",
         "note": "nbinom2 one-axis latent fit, p = 6, n = 150 (sha256 checked), R: + offset(log(e)), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Dispersion is per trait on both sides. Scope: every trait is one count family (the batch case mixed three count families on three rows, which Julia has no fit for), so this exercises a non-Poisson count family accepting a nonzero offset, not a family mix."
       },
@@ -162,7 +162,7 @@
         "case_id": "P1-JULIA-DATA-NB2_EXPOSURE-DISPERSION",
         "quantity": "per-trait dispersion (6 values) of the nb2_exposure fit",
         "r_source": "test/fixtures/data_twins_p1.toml [nb2_exposure.phi]",
-        "julia_source": "fit.r_group, fit as at test/test_data_twins_p1.jl:119",
+        "julia_source": "fit.r_group, fit as at test/test_data_twins_p1.jl:121",
         "r_value": [
           2.9902400619128984,
           4.8043052811996105,
@@ -181,7 +181,7 @@
         ],
         "abs_diff": 0.00030478604830541656,
         "tolerance": 0.001,
-        "tolerance_source": "test/test_data_twins_p1.jl:122",
+        "tolerance_source": "test/test_data_twins_p1.jl:124",
         "tolerance_source_line": "compare(\"nb2_exposure\", f2; extra = d -> @test isapprox(f2.r_group, Float64.(d[\"phi\"]); atol = 1e-3, rtol = 0))",
         "note": "nbinom2 one-axis latent fit, p = 6, n = 150 (sha256 checked), R: + offset(log(e)), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Dispersion is per trait on both sides. Scope: every trait is one count family (the batch case mixed three count families on three rows, which Julia has no fit for), so this exercises a non-Poisson count family accepting a nonzero offset, not a family mix."
       }

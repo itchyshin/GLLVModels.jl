@@ -147,9 +147,12 @@ NOTE = ("Separate from case-map.json so none of its rows are touched; read by to
         "number. A routing or error-class row in the frozen scope of itchyshin/GLLVModels.jl#684 item 2 binds as "
         "evidence_tier behavioural when its receipt's behaviour block shows both engines giving the same route, refusal "
         "or error class through behaviour-equivalence.json (tools/core070_behaviour_receipts.py); it then cites "
-        "evidence.receipt. A row whose raw record shows R and Julia doing different things, or whose Julia side is not "
-        "something a Julia user can call through the public API (the Sigma bootstrap rows and the derived-quantity "
-        "profile and bootstrap rows), has no behaviour entry and stays under evidence.non_binding_receipts, with the "
+        "evidence.receipt. Since #709 the Sigma bootstrap rows, the derived-quantity profile, bootstrap and default rows and "
+        "the bad-method refusal rows are measured through Julia's public confint(fit, y; parm, method) "
+        "(receipts/inference/inference-post709-p1), and a refusal binds only with a valid-method control on each side. A "
+        "row whose raw record shows R and Julia doing different things (R's withdrawn nonlinear profiles, a DEFAULT "
+        "whose R route is profile, the fixed-effect bootstrap fallback) or whose default-route equivalence is not "
+        "confirmed (CI-ROUTE-029) has no behaviour entry and stays under evidence.non_binding_receipts, with the "
         "reason in the receipt's behaviour_not_bound. CI-ROUTE-009 carries a behaviour block as non-binding evidence "
         "only: it is not in the frozen scope, so it stays partial_non_numeric_case until the maintainer confirms that "
         "ruling 2 covers it. CI-ROUTE-008 and CI-ROUTE-010 are one R-vs-Julia comparison counted on two surface rows "
@@ -455,6 +458,15 @@ def apply_behaviour():
     cm = load(CASEMAP)
     rows, counts = build_rows([r["source_id"] for r in cm["rows"]], receipts)
     cm["rows"], cm["counts"], cm["note"] = rows, counts, NOTE
+    post = f"{REC_REL}/inference-post709-p1"
+    cm["batch_verifiers"]["inference-post709-p1"] = {
+        "tool": "tools/core070_verify_inference_post709_batch.py",
+        "argv": "tools/core070_verify_inference_post709_batch.py --julia-state <batch dir> --r-state <batch dir>/r-lambda-reject --self-test",
+        "status": "PASS" if "CORE070_INFERENCE_POST709_BATCH_VERIFIED" in (REC / "inference-post709-p1/verify.txt").read_text() else "FAIL",
+        "exit_code": 0, "accept_marker": "CORE070_INFERENCE_POST709_BATCH_VERIFIED", "log": f"{post}/verify.txt"}
+    cm["batch_artifacts"]["inference-post709-p1"] = [
+        f"{post}/inference-post709-results.json", f"{post}/receipt.json", f"{post}/run-commit.json",
+        f"{post}/verify.txt", f"{post}/r-lambda-reject/r-oracle.json", f"{post}/r-lambda-reject/receipt.json"]
     write_json(CASEMAP, cm)
     print(json.dumps(counts))
 

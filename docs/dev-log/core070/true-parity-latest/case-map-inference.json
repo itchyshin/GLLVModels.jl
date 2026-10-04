@@ -2,7 +2,7 @@
   "schema": 1,
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "scope": "inference family: the 63 required rows the P1 carry scan lists as DANGLING (45 wave2 inference-batch, 14 wave4 inference-remainder, 4 wave5 surface-conversion). The one NOT_BOUND_AT_P0 row (CI-ROUTE-005, BLOCKED_NEEDS_JULIA_SURFACE) and the 34 out-of-scope rejected/excluded rows are not included.",
-  "note": "Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with PARITY_CASEMAP pointing at this file. Classification and disposition are carried from docs/dev-log/core070/required-source-case-map.json unchanged (all 63 are compatibility_adapter); nothing is signed by an agent. Only rows whose every executable case id carries a numeric R-vs-Julia comparison block within tolerance, from a batch whose verifier passed, with no degenerate comparison, cite evidence.receipt as numeric rows. Routing (wave2) and error-class (wave4) rows carry no number. A routing or error-class row in the frozen scope of itchyshin/GLLVModels.jl#684 item 2 binds as evidence_tier behavioural when its receipt's behaviour block shows both engines giving the same route, refusal or error class through behaviour-equivalence.json (tools/core070_behaviour_receipts.py); it then cites evidence.receipt. A row whose raw record shows R and Julia doing different things, or whose Julia side is not something a Julia user can call through the public API (the Sigma bootstrap rows and the derived-quantity profile and bootstrap rows), has no behaviour entry and stays under evidence.non_binding_receipts, with the reason in the receipt's behaviour_not_bound. CI-ROUTE-009 carries a behaviour block as non-binding evidence only: it is not in the frozen scope, so it stays partial_non_numeric_case until the maintainer confirms that ruling 2 covers it. CI-ROUTE-008 and CI-ROUTE-010 are one R-vs-Julia comparison counted on two surface rows (see their notes); the count is left to the maintainer.",
+  "note": "Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with PARITY_CASEMAP pointing at this file. Classification and disposition are carried from docs/dev-log/core070/required-source-case-map.json unchanged (all 63 are compatibility_adapter); nothing is signed by an agent. Only rows whose every executable case id carries a numeric R-vs-Julia comparison block within tolerance, from a batch whose verifier passed, with no degenerate comparison, cite evidence.receipt as numeric rows. Routing (wave2) and error-class (wave4) rows carry no number. A routing or error-class row in the frozen scope of itchyshin/GLLVModels.jl#684 item 2 binds as evidence_tier behavioural when its receipt's behaviour block shows both engines giving the same route, refusal or error class through behaviour-equivalence.json (tools/core070_behaviour_receipts.py); it then cites evidence.receipt. Since #709 the Sigma bootstrap rows, the derived-quantity profile, bootstrap and default rows and the bad-method refusal rows are measured through Julia's public confint(fit, y; parm, method) (receipts/inference/inference-post709-p1), and a refusal binds only with a valid-method control on each side. A row whose raw record shows R and Julia doing different things (R's withdrawn nonlinear profiles, a DEFAULT whose R route is profile, the fixed-effect bootstrap fallback) or whose default-route equivalence is not confirmed (CI-ROUTE-029) has no behaviour entry and stays under evidence.non_binding_receipts, with the reason in the receipt's behaviour_not_bound. CI-ROUTE-009 carries a behaviour block as non-binding evidence only: it is not in the frozen scope, so it stays partial_non_numeric_case until the maintainer confirms that ruling 2 covers it. CI-ROUTE-008 and CI-ROUTE-010 are one R-vs-Julia comparison counted on two surface rows (see their notes); the count is left to the maintainer.",
   "generator": "tools/core070_inference_p1_receipts.py",
   "glvmodels_commit": "61c5eda4822da20591b6fa91869f93c3faf5d369",
   "batch_verifiers": {
@@ -21,6 +21,14 @@
       "exit_code": 0,
       "accept_marker": "CORE070_INFERENCE_REMAINDER_BATCH_VERIFIED",
       "log": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/verify.txt"
+    },
+    "inference-post709-p1": {
+      "tool": "tools/core070_verify_inference_post709_batch.py",
+      "argv": "tools/core070_verify_inference_post709_batch.py --julia-state <batch dir> --r-state <batch dir>/r-lambda-reject --self-test",
+      "status": "PASS",
+      "exit_code": 0,
+      "accept_marker": "CORE070_INFERENCE_POST709_BATCH_VERIFIED",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/verify.txt"
     }
   },
   "counts": {
@@ -29,12 +37,12 @@
     "numeric_held_batch_verifier_failed": 0,
     "numeric_non_discriminating": 0,
     "partial_non_numeric_case": 2,
-    "routing_control_flow": 28,
-    "reject_error_class": 14,
+    "routing_control_flow": 15,
+    "reject_error_class": 0,
     "needs_surface_not_executed": 0,
     "retired_at_p1_not_measured": 0,
     "not_measured": 0,
-    "behavioural": 17
+    "behavioural": 44
   },
   "runtimes_seconds": {
     "route_probes_3x_wall": 3,
@@ -70,6 +78,14 @@
       "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/r-oracle.json",
       "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/verify.txt",
       "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/run-commit.json"
+    ],
+    "inference-post709-p1": [
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/receipt.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/verify.txt",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/r-lambda-reject/r-oracle.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/r-lambda-reject/receipt.json"
     ]
   },
   "rows": [
@@ -203,13 +219,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-batch wave2",
-      "evidence_tier": "routing_control_flow",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-LAMBDA-CI-UNSUPPORTED-METHOD-REJECT.json"
         ],
-        "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -233,13 +249,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-batch wave2",
-      "evidence_tier": "routing_control_flow",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-LAMBDA-CI-UNSUPPORTED-METHOD-REJECT.json"
         ],
-        "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -383,13 +399,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-remainder wave4",
-      "evidence_tier": "reject_error_class",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-ICC-CI-UNSUPPORTED-METHOD-REJECT.json"
         ],
-        "tier": "error-class only: R (installed P1 oracle) must raise a named 'not supported / not implemented' error and Julia must raise MethodError. No number, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -413,13 +429,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-remainder wave4",
-      "evidence_tier": "reject_error_class",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-ICC-CI-UNSUPPORTED-METHOD-REJECT.json"
         ],
-        "tier": "error-class only: R (installed P1 oracle) must raise a named 'not supported / not implemented' error and Julia must raise MethodError. No number, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -443,13 +459,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-remainder wave4",
-      "evidence_tier": "reject_error_class",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-ICC-CI-UNSUPPORTED-METHOD-REJECT.json"
         ],
-        "tier": "error-class only: R (installed P1 oracle) must raise a named 'not supported / not implemented' error and Julia must raise MethodError. No number, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -503,13 +519,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-batch wave2",
-      "evidence_tier": "routing_control_flow",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE.json"
         ],
-        "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -521,8 +537,7 @@
         "case_kinds": {
           "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE": "routing_control_flow"
         }
-      },
-      "note": "Not bound behaviourally: Julia's side is the unexported GLLVM.profile_ci_derived / GLLVM.bootstrap_ci_derived, so a Julia user cannot make this request; the harness called an internal function (receipt behaviour_not_bound)."
+      }
     },
     {
       "source_id": "inference/CI-ROUTE-017",
@@ -564,13 +579,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-batch wave2",
-      "evidence_tier": "routing_control_flow",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE.json"
         ],
-        "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -583,7 +598,7 @@
           "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE": "routing_control_flow"
         }
       },
-      "note": "Not bound behaviourally: Julia's side is the unexported GLLVM.profile_ci_derived / GLLVM.bootstrap_ci_derived, so a Julia user cannot make this request; the harness called an internal function (receipt behaviour_not_bound)."
+      "note": "route only; estimands not compared (R aligned extract_* vs Julia communality(fit) etc.; n_boot small)"
     },
     {
       "source_id": "inference/CI-ROUTE-019",
@@ -595,13 +610,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-remainder wave4",
-      "evidence_tier": "reject_error_class",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-PHYLO-SIGNAL-CI-UNSUPPORTED-METHOD-REJECT.json"
         ],
-        "tier": "error-class only: R (installed P1 oracle) must raise a named 'not supported / not implemented' error and Julia must raise MethodError. No number, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -625,13 +640,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-remainder wave4",
-      "evidence_tier": "reject_error_class",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-PHYLO-SIGNAL-CI-UNSUPPORTED-METHOD-REJECT.json"
         ],
-        "tier": "error-class only: R (installed P1 oracle) must raise a named 'not supported / not implemented' error and Julia must raise MethodError. No number, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -655,13 +670,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-remainder wave4",
-      "evidence_tier": "reject_error_class",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-PHYLO-SIGNAL-CI-UNSUPPORTED-METHOD-REJECT.json"
         ],
-        "tier": "error-class only: R (installed P1 oracle) must raise a named 'not supported / not implemented' error and Julia must raise MethodError. No number, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -685,13 +700,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-batch wave2",
-      "evidence_tier": "routing_control_flow",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE.json"
         ],
-        "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -775,13 +790,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-batch wave2",
-      "evidence_tier": "routing_control_flow",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE.json"
         ],
-        "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -794,7 +809,7 @@
           "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE": "routing_control_flow"
         }
       },
-      "note": "Not bound behaviourally: Julia's side is the unexported GLLVM.profile_ci_derived / GLLVM.bootstrap_ci_derived, so a Julia user cannot make this request; the harness called an internal function (receipt behaviour_not_bound)."
+      "note": "route only; estimands not compared (R aligned extract_* vs Julia communality(fit) etc.; n_boot small)"
     },
     {
       "source_id": "inference/CI-ROUTE-026",
@@ -806,13 +821,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-remainder wave4",
-      "evidence_tier": "reject_error_class",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-COMMUNALITY-CI-UNSUPPORTED-METHOD-REJECT.json"
         ],
-        "tier": "error-class only: R (installed P1 oracle) must raise a named 'not supported / not implemented' error and Julia must raise MethodError. No number, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -836,13 +851,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-remainder wave4",
-      "evidence_tier": "reject_error_class",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-COMMUNALITY-CI-UNSUPPORTED-METHOD-REJECT.json"
         ],
-        "tier": "error-class only: R (installed P1 oracle) must raise a named 'not supported / not implemented' error and Julia must raise MethodError. No number, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -866,13 +881,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-remainder wave4",
-      "evidence_tier": "reject_error_class",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-COMMUNALITY-CI-UNSUPPORTED-METHOD-REJECT.json"
         ],
-        "tier": "error-class only: R (installed P1 oracle) must raise a named 'not supported / not implemented' error and Julia must raise MethodError. No number, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -914,7 +929,8 @@
         "case_kinds": {
           "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE": "routing_control_flow"
         }
-      }
+      },
+      "note": "Not bound behaviourally: Julia's public default (:wald, a Fisher-z interval for rho) and R's default (fisher-z) look alike, but treating them as one default route is an equivalence the maintainer has not confirmed (receipt behaviour_not_bound)."
     },
     {
       "source_id": "inference/CI-ROUTE-030",
@@ -956,13 +972,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-batch wave2",
-      "evidence_tier": "routing_control_flow",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-RHO-CI-METHOD-ROUTE.json"
         ],
-        "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -975,7 +991,7 @@
           "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE": "routing_control_flow"
         }
       },
-      "note": "Not bound behaviourally: Julia's side is the unexported GLLVM.profile_ci_derived / GLLVM.bootstrap_ci_derived, so a Julia user cannot make this request; the harness called an internal function (receipt behaviour_not_bound)."
+      "note": "route only; estimands not compared (R aligned extract_* vs Julia communality(fit) etc.; n_boot small)"
     },
     {
       "source_id": "inference/CI-ROUTE-033",
@@ -987,13 +1003,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-remainder wave4",
-      "evidence_tier": "reject_error_class",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-RHO-CI-UNSUPPORTED-METHOD-REJECT.json"
         ],
-        "tier": "error-class only: R (installed P1 oracle) must raise a named 'not supported / not implemented' error and Julia must raise MethodError. No number, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -1017,13 +1033,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-batch wave2",
-      "evidence_tier": "behavioural",
+      "evidence_tier": "routing_control_flow",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "receipt": [
+        "non_binding_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-RHO-CI-METHOD-ROUTE.json"
         ],
-        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
+        "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
       },
       "measured_result": {
         "case_verdicts": {
@@ -1035,7 +1051,8 @@
         "case_kinds": {
           "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE": "routing_control_flow"
         }
-      }
+      },
+      "note": "Not bound behaviourally: Julia's public confint does not take the route R takes for this request (receipt behaviour_not_bound)."
     },
     {
       "source_id": "inference/CI-ROUTE-035",
@@ -1047,13 +1064,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-remainder wave4",
-      "evidence_tier": "reject_error_class",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-RHO-CI-UNSUPPORTED-METHOD-REJECT.json"
         ],
-        "tier": "error-class only: R (installed P1 oracle) must raise a named 'not supported / not implemented' error and Julia must raise MethodError. No number, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -1077,13 +1094,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-batch wave2",
-      "evidence_tier": "routing_control_flow",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE.json"
         ],
-        "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -1167,13 +1184,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-batch wave2",
-      "evidence_tier": "routing_control_flow",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE.json"
         ],
-        "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -1186,7 +1203,7 @@
           "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE": "routing_control_flow"
         }
       },
-      "note": "Not bound behaviourally: Julia's side is the unexported GLLVM.profile_ci_derived / GLLVM.bootstrap_ci_derived, so a Julia user cannot make this request; the harness called an internal function (receipt behaviour_not_bound)."
+      "note": "route only; estimands not compared (R aligned extract_* vs Julia communality(fit) etc.; n_boot small)"
     },
     {
       "source_id": "inference/CI-ROUTE-040",
@@ -1198,13 +1215,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-remainder wave4",
-      "evidence_tier": "reject_error_class",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-PROPORTION-CI-UNSUPPORTED-METHOD-REJECT.json"
         ],
-        "tier": "error-class only: R (installed P1 oracle) must raise a named 'not supported / not implemented' error and Julia must raise MethodError. No number, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -1228,13 +1245,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-remainder wave4",
-      "evidence_tier": "reject_error_class",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-PROPORTION-CI-UNSUPPORTED-METHOD-REJECT.json"
         ],
-        "tier": "error-class only: R (installed P1 oracle) must raise a named 'not supported / not implemented' error and Julia must raise MethodError. No number, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -1258,13 +1275,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-remainder wave4",
-      "evidence_tier": "reject_error_class",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-PROPORTION-CI-UNSUPPORTED-METHOD-REJECT.json"
         ],
-        "tier": "error-class only: R (installed P1 oracle) must raise a named 'not supported / not implemented' error and Julia must raise MethodError. No number, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -1348,13 +1365,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-batch wave2",
-      "evidence_tier": "routing_control_flow",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE.json"
         ],
-        "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -1367,7 +1384,7 @@
           "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE": "routing_control_flow"
         }
       },
-      "note": "Not bound behaviourally: Julia's public confint(fit, Y; parm, method = :bootstrap) on this structured fit returns a Wald interval, so the request does not take the same route as R's; the harness called bootstrap_ci directly (receipt behaviour_not_bound)."
+      "note": "route only; estimands not compared (R aligned extract_* vs Julia communality(fit) etc.; n_boot small)"
     },
     {
       "source_id": "inference/CI-ROUTE-046",
@@ -1439,13 +1456,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-batch wave2",
-      "evidence_tier": "routing_control_flow",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE.json"
         ],
-        "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -1458,7 +1475,7 @@
           "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE": "routing_control_flow"
         }
       },
-      "note": "Not bound behaviourally: Julia's public confint(fit, Y; parm, method = :bootstrap) on this structured fit returns a Wald interval, so the request does not take the same route as R's; the harness called bootstrap_ci directly (receipt behaviour_not_bound)."
+      "note": "route only; estimands not compared (R aligned extract_* vs Julia communality(fit) etc.; n_boot small)"
     },
     {
       "source_id": "inference/CI-ROUTE-055",
@@ -1530,13 +1547,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-batch wave2",
-      "evidence_tier": "routing_control_flow",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE.json"
         ],
-        "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -1549,7 +1566,7 @@
           "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE": "routing_control_flow"
         }
       },
-      "note": "Not bound behaviourally: Julia's public confint(fit, Y; parm, method = :bootstrap) on this structured fit returns a Wald interval, so the request does not take the same route as R's; the harness called bootstrap_ci directly (receipt behaviour_not_bound)."
+      "note": "route only; estimands not compared (R aligned extract_* vs Julia communality(fit) etc.; n_boot small)"
     },
     {
       "source_id": "inference/CI-ROUTE-058",
@@ -1621,13 +1638,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-batch wave2",
-      "evidence_tier": "routing_control_flow",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE.json"
         ],
-        "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -1640,7 +1657,7 @@
           "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE": "routing_control_flow"
         }
       },
-      "note": "Not bound behaviourally: Julia's public confint(fit, Y; parm, method = :bootstrap) on this structured fit returns a Wald interval, so the request does not take the same route as R's; the harness called bootstrap_ci directly (receipt behaviour_not_bound)."
+      "note": "route only; estimands not compared (R aligned extract_* vs Julia communality(fit) etc.; n_boot small)"
     },
     {
       "source_id": "inference/CI-ROUTE-061",
@@ -1712,13 +1729,13 @@
       ],
       "disposition": null,
       "p0_batch": "inference-batch wave2",
-      "evidence_tier": "routing_control_flow",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-SIGMA-PHY-CI-METHOD-ROUTE.json"
         ],
-        "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -1731,7 +1748,7 @@
           "CORE070-INFERENCE-SIGMA-PHY-CI-METHOD-ROUTE": "routing_control_flow"
         }
       },
-      "note": "Not bound behaviourally: Julia's public confint(fit, Y; parm, method = :bootstrap) on this structured fit returns a Wald interval, so the request does not take the same route as R's; the harness called bootstrap_ci directly (receipt behaviour_not_bound)."
+      "note": "route only; estimands not compared (R aligned extract_* vs Julia communality(fit) etc.; n_boot small)"
     },
     {
       "source_id": "inference/CI-ROUTE-065",
