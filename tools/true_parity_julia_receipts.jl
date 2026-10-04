@@ -1729,9 +1729,9 @@ function receipts_data_twins()
     f0 = fit_gllvm(Yc; family = Poisson(), K = 1)
     twin("OFF-NONE", "data/DATA-OFF-NONE", "pois_none", f0, cite(tp, "f0 = fit_gllvm(Yc; family = Poisson(), K = 1)"),
         base * " No offset on either side: replaces the helper replay that a NULL offset gives rep(0, n); here the whole fit agrees.")
-    fs = fit_gllvm(Yc; family = Poisson(), K = 1, offset = fill(log(2), p, n))
-    twin("OFF-SCALAR", "data/DATA-OFF-SCALAR", "pois_scalar", fs, cite(tp, "fs = fit_gllvm(Yc; family = Poisson(), K = 1, offset = fill(log(2), p, n))"),
-        base * " R: + offset(log(2)); Julia: offset = fill(log(2), 6, 150). A constant offset is absorbed by the intercepts, so the logLik equals the no-offset fit and the intercepts are shifted by -log(2) in both engines (the intercept case carries the discriminating number).")
+    fs = fit_gllvm(Yc; family = Poisson(), K = 1, offset = log(2))
+    twin("OFF-SCALAR", "data/DATA-OFF-SCALAR", "pois_scalar", fs, cite(tp, "fs = fit_gllvm(Yc; family = Poisson(), K = 1, offset = log(2))"),
+        base * " R: + offset(log(2)), a constant broadcast to every row; Julia: the scalar offset = log(2), which fit_gllvm broadcasts to the 6 x 150 matrix fill(log(2), 6, 150) (a scalar offset returned logLik -Inf before that was fixed). A constant offset is absorbed by the intercepts, so the logLik equals the no-offset fit and the intercepts are shifted by -log(2) in both engines (the intercept case carries the discriminating number).")
     fe = fit_gllvm(Yc; family = Poisson(), K = 1, offset = log.(E))
     twin("OFF-EXPOSURE", "data/DATA-OFF-EXPOSURE", "pois_exposure", fe, cite(tp, "fe = fit_gllvm(Yc; family = Poisson(), K = 1, offset = log.(E))"),
         base * " R: + offset(log(e)) with e = the data column e (varies by cell, 0.5 to 3); Julia: offset = log.(E). The exposure offset moves the logLik by more than 150 against the no-offset fit.")

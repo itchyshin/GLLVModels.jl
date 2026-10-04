@@ -19,6 +19,7 @@ The original seed43 five-node R/Julia comparison remains a known failed gate;
 this API is not a full parity or calibrated-inference claim.
 """
 function fit_binomial_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control=(;),kwargs...)
+    kwargs=_entry_offset_kwargs(kwargs,Y,"fit_binomial_gllvm")
     request=_aghq_request(aghq);c=_aghq_controls(aghq_control)
     if request!==:off && isfinite(get(kwargs,:loading_ridge,Inf))
         throw(ArgumentError("fit_binomial_gllvm: loading_ridge is not supported together with aghq (aghq != false)"))

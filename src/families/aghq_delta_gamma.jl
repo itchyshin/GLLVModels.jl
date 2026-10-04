@@ -178,6 +178,7 @@ not re-adapted stationarity. `aghq_control` is as for Poisson. `hessian` must be
 """
 function fit_delta_gamma_gllvm_aghq(Y::AbstractMatrix{<:Real};K::Integer,predictor::Symbol=:separate,
         disp_group::Symbol=:species,aghq=:auto,aghq_control=(;),kwargs...)
+    kwargs=_entry_offset_kwargs(kwargs,Y,"fit_delta_gamma_gllvm_aghq";maskable=false)
     request=_aghq_request(aghq);request===:off && throw(ArgumentError("fit_delta_gamma_gllvm_aghq needs aghq != false; call fit_delta_gamma_gllvm"))
     predictor in (:separate,:shared) || throw(ArgumentError(
         "fit_delta_gamma_gllvm_aghq: predictor must be :separate or :shared; got :$predictor"))

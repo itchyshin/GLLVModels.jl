@@ -171,6 +171,8 @@ function fit_beta_gllvm(Y::AbstractMatrix; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
+                               caller = "fit_beta_gllvm")
     rr = rr_theta_len(p, K)
     # `hessian` selects the log-det curvature ONLY (the mode search is always
     # Fisher-scored — see families/laplace.jl). Default = the family's registered

@@ -10,7 +10,7 @@
   "origin_pr": "itchyshin/GLLVModels.jl#689",
   "generator": "tools/true_parity_julia_receipts.jl",
   "julia_version": "1.10.0",
-  "gllvmodels_commit": "896a0a2286c224fe9979d3cf7e7e2c6be27f9357",
+  "gllvmodels_commit": "8446a0d922484f07e98f5b959d953337d9e764d3",
   "source_fixtures": [
     {
       "path": "test/fixtures/data_twins_p1.toml",
@@ -24,7 +24,7 @@
   "source_tests": [
     {
       "path": "test/test_data_twins_p1.jl",
-      "sha256": "07842797d28c18e5ce75609e90d47124bfda5d2253f9ac99be903010c6be9b15"
+      "sha256": "2ed773dacf0c252911ef600b607e8cad9aae117cffed35a26727ef313796c214"
     }
   ],
   "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
@@ -35,20 +35,20 @@
         "case_id": "P1-JULIA-DATA-POIS_SCALAR-LOGLIK",
         "quantity": "maximised logLik of the pois_scalar fit",
         "r_source": "test/fixtures/data_twins_p1.toml [pois_scalar.loglik]",
-        "julia_source": "fit.loglik, fit as at test/test_data_twins_p1.jl:87",
+        "julia_source": "fit.loglik, fit as at test/test_data_twins_p1.jl:89",
         "r_value": -1855.7748108187802,
         "julia_value": -1855.7748108083024,
         "abs_diff": 1.047783371177502e-08,
         "tolerance": 1e-06,
-        "tolerance_source": "test/test_data_twins_p1.jl:76",
+        "tolerance_source": "test/test_data_twins_p1.jl:77",
         "tolerance_source_line": "@test isapprox(fit.loglik, Float64(d[\"loglik\"]); atol = 1e-6, rtol = 0)",
-        "note": "Poisson, K = 1, p = 6, n = 150 (sha256 checked); R: value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE), family = poisson(), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'. R: + offset(log(2)); Julia: offset = fill(log(2), 6, 150). A constant offset is absorbed by the intercepts, so the logLik equals the no-offset fit and the intercepts are shifted by -log(2) in both engines (the intercept case carries the discriminating number)."
+        "note": "Poisson, K = 1, p = 6, n = 150 (sha256 checked); R: value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE), family = poisson(), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'. R: + offset(log(2)), a constant broadcast to every row; Julia: the scalar offset = log(2), which fit_gllvm broadcasts to the 6 x 150 matrix fill(log(2), 6, 150) (a scalar offset returned logLik -Inf before that was fixed). A constant offset is absorbed by the intercepts, so the logLik equals the no-offset fit and the intercepts are shifted by -log(2) in both engines (the intercept case carries the discriminating number)."
       },
       {
         "case_id": "P1-JULIA-DATA-POIS_SCALAR-INTERCEPTS",
         "quantity": "trait intercepts (6 values) of the pois_scalar fit; the offset is not absorbed into them",
         "r_source": "test/fixtures/data_twins_p1.toml [pois_scalar.beta]",
-        "julia_source": "fit.β, fit as at test/test_data_twins_p1.jl:87",
+        "julia_source": "fit.β, fit as at test/test_data_twins_p1.jl:89",
         "r_value": [
           0.4792009108317066,
           0.05101219402080482,
@@ -67,15 +67,15 @@
         ],
         "abs_diff": 1.1117384170145073e-05,
         "tolerance": 0.0001,
-        "tolerance_source": "test/test_data_twins_p1.jl:77",
+        "tolerance_source": "test/test_data_twins_p1.jl:78",
         "tolerance_source_line": "@test isapprox(fit.β, Float64.(d[\"beta\"]); atol = 1e-4, rtol = 0)",
-        "note": "Poisson, K = 1, p = 6, n = 150 (sha256 checked); R: value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE), family = poisson(), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'. R: + offset(log(2)); Julia: offset = fill(log(2), 6, 150). A constant offset is absorbed by the intercepts, so the logLik equals the no-offset fit and the intercepts are shifted by -log(2) in both engines (the intercept case carries the discriminating number)."
+        "note": "Poisson, K = 1, p = 6, n = 150 (sha256 checked); R: value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE), family = poisson(), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'. R: + offset(log(2)), a constant broadcast to every row; Julia: the scalar offset = log(2), which fit_gllvm broadcasts to the 6 x 150 matrix fill(log(2), 6, 150) (a scalar offset returned logLik -Inf before that was fixed). A constant offset is absorbed by the intercepts, so the logLik equals the no-offset fit and the intercepts are shifted by -log(2) in both engines (the intercept case carries the discriminating number)."
       },
       {
         "case_id": "P1-JULIA-DATA-POIS_SCALAR-LAMBDA-LAMBDAT",
         "quantity": "Lambda Lambda' (6 x 6) of the pois_scalar fit",
         "r_source": "test/fixtures/data_twins_p1.toml [pois_scalar.lambda_lambdat]",
-        "julia_source": "fit.Λ * fit.Λ', fit as at test/test_data_twins_p1.jl:87",
+        "julia_source": "fit.Λ * fit.Λ', fit as at test/test_data_twins_p1.jl:89",
         "r_value": [
           1.1722868464400746,
           -0.663399780797671,
@@ -154,9 +154,9 @@
         ],
         "abs_diff": 7.184096289192254e-06,
         "tolerance": 0.001,
-        "tolerance_source": "test/test_data_twins_p1.jl:78",
+        "tolerance_source": "test/test_data_twins_p1.jl:79",
         "tolerance_source_line": "@test isapprox(fit.Λ * fit.Λ', _dt_mat(d[\"lambda_lambdat\"], p, p); atol = 1e-3, rtol = 0)",
-        "note": "Poisson, K = 1, p = 6, n = 150 (sha256 checked); R: value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE), family = poisson(), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'. R: + offset(log(2)); Julia: offset = fill(log(2), 6, 150). A constant offset is absorbed by the intercepts, so the logLik equals the no-offset fit and the intercepts are shifted by -log(2) in both engines (the intercept case carries the discriminating number)."
+        "note": "Poisson, K = 1, p = 6, n = 150 (sha256 checked); R: value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE), family = poisson(), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'. R: + offset(log(2)), a constant broadcast to every row; Julia: the scalar offset = log(2), which fit_gllvm broadcasts to the 6 x 150 matrix fill(log(2), 6, 150) (a scalar offset returned logLik -Inf before that was fixed). A constant offset is absorbed by the intercepts, so the logLik equals the no-offset fit and the intercepts are shifted by -log(2) in both engines (the intercept case carries the discriminating number)."
       }
     ]
   }

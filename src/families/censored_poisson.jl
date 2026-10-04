@@ -203,6 +203,8 @@ function fit_censored_poisson_gllvm(Y::AbstractMatrix; K::Integer,
     link isa LogLink || throw(ArgumentError(
         "fit_censored_poisson_gllvm: only LogLink is supported (Identity lock)"))
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
+                               caller = "fit_censored_poisson_gllvm")
     rr = rr_theta_len(p, K)
 
     Yc, Nc = if lower !== nothing || upper !== nothing
