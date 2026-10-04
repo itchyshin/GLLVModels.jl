@@ -527,6 +527,8 @@ println(_SHARD === nothing ?
     # P1 fit-level twins of core070 data rows (six bind; see tools/core070_data_p1_receipts.py) (offset and missing-response handling).
     _shard_include("test_data_twins_p1.jl")
     _shard_include("test_predict_offset_twin_p1.jl")
+    # P1 fit-level twins of data/DATA-MISS-MODEL, data/DATA-MISS-BOTH and namespace imputed (modelled missing predictor, response mask).
+    _shard_include("test_data_twins_2_p1.jl")
     _shard_include("test_destination_b_s4_public_phylo_dep_probe_harness.jl")
     _shard_include("test_totoro_323_track_a_harness.jl")
     _shard_include("test_temporal_api.jl")
