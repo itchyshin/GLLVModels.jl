@@ -158,7 +158,7 @@ function _no_offset_kwargs(kwargs, caller::AbstractString, what::AbstractString)
 end
 
 """
-    fit_gllvm(Y; family = Normal(), K, num_lv = nothing,
+    fit_gllvm(Y; family = Normal(), K = nothing, num_lv = nothing, Kmax = nothing,
               row_eff = :none, disp_group = nothing, pervar = false, kwargs...)
 
 Fit a GLLVM, dispatching on the response `family` — a Distributions.jl
@@ -225,8 +225,13 @@ distribution used as a marker (the GLM.jl convention):
   instance rather than as a keyword argument.
 
 `K` is the latent dimension; the gllvm-style alias `num_lv` is accepted as a synonym
-for `K` (gllvm uses `num.lv`). Family-specific keyword arguments (`link`, `N`,
-`Σ_phy`, …) pass through to the underlying fitter.
+for `K` (gllvm uses `num.lv`). On the default family route you may omit `K`: the
+dispatcher then sweeps `K = 1:Kmax` through [`select_lv`](@ref) (failed, unconverged,
+and runaway fits are skipped) and returns the chosen fit. `Kmax` defaults to
+`min(5, p - 1)` when omitted; it cannot be combined with an explicit `K`. Estimating
+`K` is unavailable with `row_eff` or `pervar` (pass `K` or call `select_lv` directly).
+Family-specific keyword arguments (`link`, `N`, `Σ_phy`, …) pass through to the
+underlying fitter.
 
 `offset` is the known additive term in `η = β + offset + Λz` (for example log-exposure);
 `β` is the offset-free intercept, so a constant offset is absorbed by the intercepts (same
