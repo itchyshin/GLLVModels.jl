@@ -4,10 +4,9 @@ using StatsModels: @formula
 # #149: the Julia closed-form Gaussian fit refuses n_sites < p, while R's Laplace
 # engine has no such gate. Approved scope: the Laplace routes must accept n < p
 # (they already did; nothing in src/ had to change for them). The closed-form
-# Gaussian fitter keeps its guard for now, as a proper ArgumentError, and so does
-# every route built on it, Lognormal() included. Whether to replace the guard by
-# a rank rule is an open maintainer decision, so #149 stays open. This file pins
-# both halves. It also records that the Gaussian LIKELIHOOD itself has no
+# Gaussian fitter replaces the n >= p guard by a rank rule (K below the rank of
+# the data the fitter sees), as an ArgumentError, and so does every route built
+# on it, Lognormal() included. This file pins both halves. It also records that the Gaussian LIKELIHOOD itself has no
 # n >= p dependence: the guard belongs to the fitter (see the last testset).
 #
 # Every expected value below is computed outside the package: a hand-written
@@ -194,51 +193,74 @@ end
     @test fn.loglik ≈ -228.77530606765785 rtol = 1e-6
 end
 
-@testset "#149 closed-form Gaussian routes keep the n >= p guard, as an ArgumentError" begin
-    # The approved scope covers the Laplace routes only, so the closed-form
-    # Gaussian fitter keeps its guard, and so does every route built on it: the
-    # public Normal() route, the masked / offset / aghq route (its warm start is
-    # the closed-form fit), the K-selection sweep and the R bridge. The guard is a
-    # validation error (ArgumentError), not an @assert. Replacing n >= p by a rank
-    # rule is an open maintainer decision; if it lands, replace these checks with
-    # the new rule.
-    Yg = randn(StableRNG(149), 5, 3)           # p = 5 > n = 3
-    @test_throws ArgumentError fit_gllvm(Yg; family = Normal(), K = 1)
-    @test_throws ArgumentError GLLVModels.fit_gaussian_gllvm(Yg; K = 1)
-    mask = trues(5, 3); mask[2, 3] = false
-    @test_throws ArgumentError GLLVModels.fit_gaussian_gllvm(Yg; K = 1, mask = mask)
-    @test_throws ArgumentError GLLVModels.fit_gaussian_gllvm(Yg; K = 1, offset = zeros(5, 3))
-    @test_throws ArgumentError _nltp_quiet(() -> GLLVModels.fit_gaussian_gllvm(Yg; K = 1, aghq = 3))
-    @test_throws ArgumentError bridge_fit(; y = Yg, family = "gaussian", d = 1)
-    # With K omitted the sweep surfaces the misconfiguration at K = 1 instead of
-    # reporting that every K failed.
-    @test_throws ArgumentError select_lv(Yg; family = Normal(), Kmax = 2)
-    @test_throws ArgumentError _nltp_quiet(() -> fit_gllvm(Yg; family = Normal()))
-    err = try GLLVModels.fit_gaussian_gllvm(Yg; K = 1); nothing catch e; e end
-    @test err isa ArgumentError
-    @test occursin("n_sites = 3", sprint(showerror, err))
-    @test occursin("p = 5", sprint(showerror, err))
+@testset "#149 the Gaussian guard is a rank rule: K below the rank of the data" begin
+    G = GLLVModels.fit_gaussian_gllvm
+    dense(f, Y) = begin
+        Σ = Symmetric(Matrix(f.pars.Λ) * Matrix(f.pars.Λ)' + f.pars.σ_eps^2 * I)
+        sum(logpdf(MvNormal(zeros(size(Y, 1)), Σ), Y[:, i]) for i in 1:size(Y, 2))
+    end
 
-    # The boundary is n_sites = p (allowed), and the value returned there is the
-    # closed-form marginal at the returned parameters (dense MvNormal reference).
+    # n < p with K below the rank (rank 3 here): the fit runs, on every route.
+    Yg = randn(StableRNG(149), 5, 3)           # p = 5 > n = 3
+    f = G(Yg; K = 1)
+    @test isfinite(f.logLik)
+    @test f.logLik ≈ dense(f, Yg) atol = 1e-8
+    @test (fit_gllvm(Yg; family = Normal(), K = 1); true)
+    @test isfinite(G(Yg; K = 2).logLik)
+    bf = bridge_fit(; y = Yg, family = "gaussian", d = 1)
+    @test bf isa NamedTuple && isfinite(bf.loglik)
+
+    # K at the rank (3) with rank < p: refused, and the message names both.
+    err = try G(Yg; K = 3); nothing catch e; e end
+    @test err isa ArgumentError
+    msg = sprint(showerror, err)
+    @test occursin("rank = 3", msg)
+    @test occursin("K = 3", msg)
+    @test_throws ArgumentError G(Yg; K = 4)
+    @test_throws ArgumentError fit_gllvm(Yg; family = Normal(), K = 3)
+    @test_throws ArgumentError bridge_fit(; y = Yg, family = "gaussian", d = 3)
+    mask = trues(5, 3); mask[2, 3] = false
+    @test_throws ArgumentError G(Yg; K = 3, mask = mask)
+    @test_throws ArgumentError G(Yg; K = 3, offset = zeros(5, 3))
+    # The K-selection sweep over K = 1:2 stays below the rank and runs.
+    @test (select_lv(Yg; family = Normal(), Kmax = 2); true)
+
+    # n >= p but rank-deficient (trait 5 = trait 1 + trait 2): rank 4 < p = 5.
+    Yr = randn(StableRNG(153), 5, 8)
+    Yr[5, :] .= Yr[1, :] .+ Yr[2, :]
+    @test_throws ArgumentError G(Yr; K = 4)
+    msg = sprint(showerror, try G(Yr; K = 4); nothing catch e; e end)
+    @test occursin("rank = 4", msg) && occursin("K = 4", msg)
+    fr = G(Yr; K = 1)
+    @test isfinite(fr.logLik)
+
+    # Full rank at n = p: K = 1 fits (the old boundary), value is the dense marginal.
     Ye = randn(StableRNG(150), 5, 5)
-    fe = GLLVModels.fit_gaussian_gllvm(Ye; K = 1)
-    Λe, σe = Matrix(fe.pars.Λ), fe.pars.σ_eps
-    Σe = Symmetric(Λe * Λe' + σe^2 * I)
-    @test fe.logLik ≈ sum(logpdf(MvNormal(zeros(5), Σe), Ye[:, i]) for i in 1:5) atol = 1e-8
+    fe = G(Ye; K = 1)
+    @test fe.logLik ≈ dense(fe, Ye) atol = 1e-8
+
+    # Estimated intercepts centre the data first: n = p = 4 with one intercept
+    # per trait leaves rank 3, so K = 3 is refused and K = 2 fits.
+    Yc = randn(StableRNG(154), 4, 4)
+    Xi = zeros(4, 4, 4); for t in 1:4; Xi[t, :, t] .= 1; end
+    @test_throws ArgumentError G(Yc; K = 3, X = Xi)
+    @test isfinite(G(Yc; K = 2, X = Xi).logLik)
+    @test isfinite(G(Yc; K = 3).logLik)       # no intercepts: raw rank is 4 = p
 end
 
-@testset "#149 Lognormal reuses the Gaussian fitter: n < p refused, n >= p fits" begin
-    # family = Lognormal() fits a Gaussian GLLVM to log(Y) with the closed-form
-    # fitter, so it is not a Laplace route and inherits the guard, with an error
-    # that names it.
-    Yl = exp.(randn(StableRNG(151), 5, 3))     # p = 5 > n = 3
-    @test_throws ArgumentError fit_gllvm(Yl; family = Lognormal(), K = 1)
-    @test_throws ArgumentError bridge_fit(; y = Yl, family = "lognormal", d = 1)
-    err = try GLLVModels.fit_lognormal_gllvm(Yl; K = 1); nothing catch e; e end
+@testset "#149 Lognormal reaches the same guard through the Gaussian fitter" begin
+    # family = Lognormal() fits a Gaussian GLLVM to the centred log(Y), so the
+    # rank rule applies to it as well: n < p now fits with K below the centred
+    # rank, and K at that rank is refused. (Routing Lognormal onto the Laplace
+    # path, as gllvmTMB does, is a separate change in src/families/lognormal.jl.)
+    Yl = exp.(randn(StableRNG(151), 5, 3))     # p = 5 > n = 3, centred rank 2
+    fl1 = fit_gllvm(Yl; family = Lognormal(), K = 1)
+    @test isfinite(fl1.loglik)
+    @test_throws ArgumentError fit_gllvm(Yl; family = Lognormal(), K = 2)
+    @test_throws ArgumentError bridge_fit(; y = Yl, family = "lognormal", d = 2)
+    err = try GLLVModels.fit_lognormal_gllvm(Yl; K = 2); nothing catch e; e end
     @test err isa ArgumentError
-    @test occursin("Lognormal", sprint(showerror, err))
-    @test occursin("n_sites = 3", sprint(showerror, err))
+    @test occursin("rank = 2", sprint(showerror, err))
 
     # n >= p (p = 6, n = 8): the fit runs and its loglik is the y-scale lognormal
     # marginal at the returned parameters (dense MvNormal on log y, minus sum log y).
@@ -248,6 +270,85 @@ end
     Σl = Symmetric(fl.Λ * fl.Λ' + fl.σ^2 * I)
     dense = sum(logpdf(MvNormal(fl.β, Σl), log.(Y6[:, i])) for i in 1:8) - sum(log, Y6)
     @test fl.loglik ≈ dense atol = 1e-8
+end
+
+Xi_(p, n) = (X = zeros(p, n, p); for t in 1:p; X[t, :, t] .= 1; end; X)
+
+@testset "#149 rank rule: scale-aware rank, strict variants, non-finite input" begin
+    G = GLLVModels.fit_gaussian_gllvm
+    rankerr(f) = try f(); nothing catch e; e end
+    isrank(e) = e isa ArgumentError && occursin("rank", sprint(showerror, e))
+
+    # A trait on a tiny scale is not rank deficient (n = p = 5, K = 4 < p).
+    Ys = randn(StableRNG(160), 5, 5); Ys[1, :] .*= 1e-20
+    @test !isrank(rankerr(() -> G(Ys; K = 4)))
+
+    # Strict variants refuse any rank-deficient data (scale-aware rank < p).
+    Random.seed!(2)
+    Yd = randn(5, 12); Yd[2, :] .= Yd[1, :]            # duplicated trait
+    @test_throws ArgumentError G(Yd; K = 1, has_diag = true)
+    @test isrank(rankerr(() -> G(Yd; K = 1, has_diag = true)))
+    Yz = randn(StableRNG(161), 5, 12); Yz[3, :] .= 0   # zero trait
+    @test_throws ArgumentError G(Yz; K = 1, has_diag = true)
+    Σ6 = let A = randn(StableRNG(163), 6, 6); Symmetric(A * A' + I) end
+    @test_throws ArgumentError G(randn(StableRNG(2), 6, 4); K = 3, K_phy = 1, Σ_phy = Σ6)
+    @test_throws ArgumentError G(randn(StableRNG(2), 6, 4); K = 1, has_phy_unique = true, Σ_phy = Σ6)
+    @test_throws ArgumentError G(randn(StableRNG(2), 6, 4); K = 1, has_diag = true)
+    # Full-rank data still fit under the strict variants.
+    @test isfinite(G(randn(StableRNG(164), 4, 12); K = 1, has_diag = true).logLik)
+
+    # Non-finite input gives a clear error, not a LAPACK argument error.
+    Yn = randn(StableRNG(165), 3, 8); Yn[1, 1] = NaN
+    e = rankerr(() -> G(Yn; K = 1))
+    @test e isa ArgumentError && occursin("NaN", sprint(showerror, e))
+    Yi = randn(StableRNG(166), 3, 8); Yi[2, 2] = Inf
+    @test_throws ArgumentError G(Yi; K = 1)
+
+    # Slope designs are not covered by the rank rule: n < p is refused, as on
+    # main (the estimated slopes can lower the rank below the OLS residual's).
+    function slopes(p, n, seed)
+        Y = randn(StableRNG(seed), p, n)
+        X = zeros(p, n, p); r = StableRNG(seed + 1)
+        for t in 1:p; X[t, :, t] .= randn(r, n); end
+        return Y, X
+    end
+    Y5, X5 = slopes(5, 2, 5)
+    @test_throws ArgumentError G(Y5; K = 1, X = X5)
+    Y6, X6 = slopes(6, 3, 5)
+    @test_throws ArgumentError G(Y6; K = 2, X = X6)
+    Xm = cat(Xi_(6, 3), X6; dims = 3)                   # intercepts + slopes
+    @test_throws ArgumentError G(Y6; K = 2, X = Xm)
+    Xs = reshape(repeat(randn(StableRNG(9), 1, 3), 6, 1), 6, 3, 1)  # shared column
+    @test_throws ArgumentError G(Y6; K = 1, X = Xs)
+    # With n >= p a slope design is accepted, as on main.
+    Ya, Xa = slopes(3, 8, 7)
+    @test isfinite(G(Ya; K = 1, X = Xa).logLik)
+
+    # Per-trait intercepts only: n < p fits with K below the centred rank, and a
+    # fixed intercept is not centred.
+    Yc2 = randn(StableRNG(170), 5, 3)
+    Xc2 = Xi_(5, 3)
+    @test isfinite(G(Yc2; K = 1, X = Xc2).logLik)
+    @test_throws ArgumentError G(Yc2; K = 2, X = Xc2)  # centred rank is 2
+
+    # Intercepts for only some traits, or a fixed intercept, give no rank claim:
+    # n < p is refused (mu = (2, -1) makes the data rank 1 = K here).
+    Yp3 = [3.0 4; 0 1; 1 2]
+    Xpart = Xi_(3, 2)[:, :, 1:2]
+    @test_throws ArgumentError G(Yp3; K = 1, X = Xpart)
+    @test_throws ArgumentError G(Yp3; K = 1, X = Xi_(3, 2), β_fixed = [false, false, true])
+    # Strict variants with a non-intercept X: n < p refused, as on main.
+    Ysp, Xsp = slopes(4, 3, 11)
+    @test_throws ArgumentError G(Ysp; K = 1, has_diag = true, X = Xsp)
+    # The strict message mentions centring only when centring happened.
+    es = rankerr(() -> G(Yd; K = 1, has_diag = true))
+    @test !occursin("centred", sprint(showerror, es))
+    es2 = rankerr(() -> G(randn(StableRNG(172), 5, 3); K = 1, has_diag = true, X = Xi_(5, 3)))
+    @test occursin("centred", sprint(showerror, es2))
+
+    # A trait with a large offset and tiny noise is not zero after centring.
+    Yo = randn(StableRNG(171), 3, 10); Yo[1, :] .= 1e5 .+ 1e-6 .* Yo[1, :]
+    @test !isrank(rankerr(() -> G(Yo; K = 2, X = Xi_(3, 10))))
 end
 
 @testset "#149 the Gaussian likelihood itself is exact at n < p" begin

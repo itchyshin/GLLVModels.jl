@@ -122,9 +122,12 @@ fit = fit_gllvm(Y; family = Normal(), K = 2)
 The Gaussian GLLVM admits a **closed-form marginal** (no Laplace approximation).
 The latent integral is conjugate, so the optimiser works directly on the exact
 log-likelihood. This is the fastest and most accurate path. The response matrix
-`Y` is `p × n` (responses × sites). The closed-form fitter needs at least as many
-sites as responses (`n_sites ≥ p`) and throws an `ArgumentError` otherwise; the
-Laplace-fitted families below do not (see [Common pitfalls](pitfalls.md)).
+`Y` is `p × n` (responses × sites). The closed-form fitter has no blanket `n_sites ≥ p`
+requirement: a plain isotropic fit needs `K` below the rank of the data, the
+variants with per-trait variance terms need full-rank data, and masked fits
+should keep `n_sites ≥ p`; an `ArgumentError` is thrown when the rule is
+violated. The Laplace-fitted families below have no such condition (see
+[Common pitfalls](pitfalls.md)).
 
 ### Binomial — `Binomial()`
 
@@ -652,8 +655,10 @@ Jacobian `−Σ log y`.
 `ArgumentError("lognormal requires y > 0; found non-positive response")`.
 Only `LogLink()` is supported — any other link throws
 `ArgumentError("fit_lognormal_gllvm: only LogLink is supported (twin lognormal)")`.
-Because it reuses the Gaussian fitter, `Lognormal()` also needs `n_sites ≥ p`
-and throws an `ArgumentError` with fewer sites than responses.
+Because it reuses the Gaussian fitter, `Lognormal()` follows the same rank rule
+as a plain isotropic Gaussian fit on the centred `log(Y)` and throws an
+`ArgumentError` when `K` is not below that rank (see
+[Common pitfalls](pitfalls.md)).
 
 `Lognormal` is distinct from `Distributions.LogNormal` and from the two-part
 `DeltaLogNormal()` hurdle (occurrence × positive lognormal, fid 12) — this is
