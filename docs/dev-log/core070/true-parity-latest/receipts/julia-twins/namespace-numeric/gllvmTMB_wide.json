@@ -1,0 +1,203 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "namespace/export/gllvmTMB_wide"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#684",
+  "generator": "tools/true_parity_namespace_gaussian_w1_receipt.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "0f1d3f3032bbc3754e208bd20852a6d6d412bb37",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/ns_gauss_w1_p1.toml",
+      "sha256": "575cdb8a6f38e0f03a996a697a5500bd9a0b8d57e9884773a191ce0bf2155926"
+    },
+    {
+      "path": "test/fixtures/ns_gauss_p1_data.csv",
+      "sha256": "e714fa10411f6a66150c534506dec87cf1c748fed4c55ae13942828f1fca0326"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_namespace_gaussian_w1_p1.jl",
+      "sha256": "19c2cebdfdcb7dee8854acb88693efcf4a3d46576786f404d9006df66fad9f7b"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_namespace_gaussian_w1_receipt.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-GLLVMTMB-WIDE-LOGLIK",
+        "quantity": "log-likelihood at the optimum",
+        "r_source": "test/fixtures/ns_gauss_w1_p1.toml [wide.loglik]",
+        "julia_source": "fit.loglik, as compared at test/test_namespace_gaussian_w1_p1.jl:96; fit as at test/test_namespace_gaussian_w1_p1.jl:93",
+        "r_value": -1365.6520384848975,
+        "julia_value": -1365.6520384848463,
+        "abs_diff": 5.1159076974727213e-11,
+        "tolerance": 5e-10,
+        "tolerance_source": "test/test_namespace_gaussian_w1_p1.jl:96",
+        "tolerance_source_line": "@test isapprox(fit.loglik, Float64(w[\"loglik\"]); atol = 5e-10, rtol = 0)        # logLik (observed 5.1e-11)",
+        "note": "Shared Gaussian data ns_gauss_p1_data.csv (written by gen_namespace_numeric_p1.R; p = 6 traits, n = 200 units, one observation per trait and unit, sha256 checked), simulated from two latent axes plus residual noise. R values from gen_namespace_gaussian_w1_p1.R at the P1 pin; every R fit converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12) with a positive-definite Hessian. gllvmTMB_wide(Y, d = 2) on the wide 200 x 6 matrix builds value ~ 0 + trait + latent(0 + trait | site, d = 2) with latent()'s default unique = TRUE, so R fits Sigma = Lambda Lambda' + diag(sd_B^2) + sigma_eps^2 I with sigma_eps mapped off and fixed by R's Q7 rule (1e-3 x sd(y) over all responses, 0.0011251127397265046). Julia recomputes c with the same rule (checked against the recorded R value) and fits the same covariance with that fixed residual as fit_gaussian_pervar_gllvm(Y; K = 2, fixed_residual_sd = c) (at test/test_namespace_gaussian_w1_p1.jl:93); trait intercepts are the profiled row means. Loadings are compared as Lambda Lambda', which does not depend on the rotation. Limits: Gaussian only; the default call (no X, weights, phylo_vcv or formula_extra); the Julia side is the native fitter, not a wide-matrix wrapper."
+      },
+      {
+        "case_id": "P1-JULIA-GLLVMTMB-WIDE-BETA",
+        "quantity": "trait intercepts b_fix (6 values)",
+        "r_source": "test/fixtures/ns_gauss_w1_p1.toml [wide.beta]",
+        "julia_source": "fit.β, as compared at test/test_namespace_gaussian_w1_p1.jl:97; fit as at test/test_namespace_gaussian_w1_p1.jl:93",
+        "r_value": [
+          0.5582059846655082,
+          -0.19181652792679488,
+          0.09283425654101374,
+          0.8417865422398555,
+          -0.5158543280199147,
+          0.058444474587703986
+        ],
+        "julia_value": [
+          0.5582060338057427,
+          -0.19181654412777674,
+          0.0928342017363344,
+          0.8417865231651739,
+          -0.5158543500539483,
+          0.05844446332495955
+        ],
+        "abs_diff": 5.480467933638433e-08,
+        "tolerance": 5e-07,
+        "tolerance_source": "test/test_namespace_gaussian_w1_p1.jl:97",
+        "tolerance_source_line": "@test isapprox(fit.β, r_beta; atol = 5e-7, rtol = 0)                            # trait intercepts (observed 5.5e-8)",
+        "note": "Shared Gaussian data ns_gauss_p1_data.csv (written by gen_namespace_numeric_p1.R; p = 6 traits, n = 200 units, one observation per trait and unit, sha256 checked), simulated from two latent axes plus residual noise. R values from gen_namespace_gaussian_w1_p1.R at the P1 pin; every R fit converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12) with a positive-definite Hessian. gllvmTMB_wide(Y, d = 2) on the wide 200 x 6 matrix builds value ~ 0 + trait + latent(0 + trait | site, d = 2) with latent()'s default unique = TRUE, so R fits Sigma = Lambda Lambda' + diag(sd_B^2) + sigma_eps^2 I with sigma_eps mapped off and fixed by R's Q7 rule (1e-3 x sd(y) over all responses, 0.0011251127397265046). Julia recomputes c with the same rule (checked against the recorded R value) and fits the same covariance with that fixed residual as fit_gaussian_pervar_gllvm(Y; K = 2, fixed_residual_sd = c) (at test/test_namespace_gaussian_w1_p1.jl:93); trait intercepts are the profiled row means. Loadings are compared as Lambda Lambda', which does not depend on the rotation. Limits: Gaussian only; the default call (no X, weights, phylo_vcv or formula_extra); the Julia side is the native fitter, not a wide-matrix wrapper."
+      },
+      {
+        "case_id": "P1-JULIA-GLLVMTMB-WIDE-LAMBDA-LAMBDAT",
+        "quantity": "Lambda Lambda' from report$Lambda_B (36 values, column-major)",
+        "r_source": "test/fixtures/ns_gauss_w1_p1.toml [wide.Lambda]",
+        "julia_source": "fit.Λ * fit.Λ', as compared at test/test_namespace_gaussian_w1_p1.jl:98; fit as at test/test_namespace_gaussian_w1_p1.jl:93",
+        "r_value": [
+          0.9374186629430746,
+          0.01094641965911051,
+          0.573508229216025,
+          0.7741036442366104,
+          -0.4243742239008828,
+          0.6746869160863033,
+          0.01094641965911051,
+          0.7491035391790603,
+          -0.581297864712271,
+          0.4258184408566999,
+          0.6594331130258821,
+          -0.2817256488442084,
+          0.573508229216025,
+          -0.581297864712271,
+          0.8124839045937314,
+          0.14639409837021583,
+          -0.7812185431444738,
+          0.6401283338000537,
+          0.7741036442366104,
+          0.4258184408566999,
+          0.14639409837021583,
+          0.8711641540454352,
+          0.01926860574952156,
+          0.39598977970386856,
+          -0.4243742239008828,
+          0.6594331130258821,
+          -0.7812185431444738,
+          0.01926860574952156,
+          0.78147090987544,
+          -0.5623312865168422,
+          0.6746869160863033,
+          -0.2817256488442084,
+          0.6401283338000537,
+          0.39598977970386856,
+          -0.5623312865168422,
+          0.5975717051021833
+        ],
+        "julia_value": [
+          0.9374187418675104,
+          0.0109469330615889,
+          0.5735077832937826,
+          0.7741037537283304,
+          -0.42437375198369937,
+          0.6746866415007393,
+          0.0109469330615889,
+          0.7491034971916112,
+          -0.5812975915452907,
+          0.42581860337053534,
+          0.6594329148066134,
+          -0.28172537779046536,
+          0.5735077832937826,
+          -0.5812975915452907,
+          0.8124834178925429,
+          0.14639391976528446,
+          -0.7812181216644941,
+          0.6401279143484501,
+          0.7741037537283304,
+          0.42581860337053534,
+          0.14639391976528446,
+          0.8711640062234778,
+          0.01926878538251288,
+          0.3959896218984088,
+          -0.42437375198369937,
+          0.6594329148066134,
+          -0.7812181216644941,
+          0.01926878538251288,
+          0.7814705590468363,
+          -0.5623309101900406,
+          0.6746866415007393,
+          -0.28172537779046536,
+          0.6401279143484501,
+          0.3959896218984088,
+          -0.5623309101900406,
+          0.5975713501804732
+        ],
+        "abs_diff": 5.134024783897545e-07,
+        "tolerance": 5e-06,
+        "tolerance_source": "test/test_namespace_gaussian_w1_p1.jl:98",
+        "tolerance_source_line": "@test isapprox(fit.Λ * fit.Λ', r_L * r_L'; atol = 5e-6, rtol = 0)              # Lambda Lambda' (observed 5.1e-7)",
+        "note": "Shared Gaussian data ns_gauss_p1_data.csv (written by gen_namespace_numeric_p1.R; p = 6 traits, n = 200 units, one observation per trait and unit, sha256 checked), simulated from two latent axes plus residual noise. R values from gen_namespace_gaussian_w1_p1.R at the P1 pin; every R fit converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12) with a positive-definite Hessian. gllvmTMB_wide(Y, d = 2) on the wide 200 x 6 matrix builds value ~ 0 + trait + latent(0 + trait | site, d = 2) with latent()'s default unique = TRUE, so R fits Sigma = Lambda Lambda' + diag(sd_B^2) + sigma_eps^2 I with sigma_eps mapped off and fixed by R's Q7 rule (1e-3 x sd(y) over all responses, 0.0011251127397265046). Julia recomputes c with the same rule (checked against the recorded R value) and fits the same covariance with that fixed residual as fit_gaussian_pervar_gllvm(Y; K = 2, fixed_residual_sd = c) (at test/test_namespace_gaussian_w1_p1.jl:93); trait intercepts are the profiled row means. Loadings are compared as Lambda Lambda', which does not depend on the rotation. Limits: Gaussian only; the default call (no X, weights, phylo_vcv or formula_extra); the Julia side is the native fitter, not a wide-matrix wrapper."
+      },
+      {
+        "case_id": "P1-JULIA-GLLVMTMB-WIDE-SD-B",
+        "quantity": "per-trait unique SDs report$sd_B (6 values)",
+        "r_source": "test/fixtures/ns_gauss_w1_p1.toml [wide.sd_B]",
+        "julia_source": "sqrt.(fit.ψ²), as compared at test/test_namespace_gaussian_w1_p1.jl:99; fit as at test/test_namespace_gaussian_w1_p1.jl:93",
+        "r_value": [
+          0.46031046369773654,
+          0.5379812613340904,
+          0.4963805416888889,
+          0.570955674106656,
+          0.49220256814864344,
+          0.5542966559425766
+        ],
+        "julia_value": [
+          0.4603101524155607,
+          0.5379812072170015,
+          0.49638057216580583,
+          0.5709559514580644,
+          0.4922025380802185,
+          0.5542966990944576
+        ],
+        "abs_diff": 3.112821758133322e-07,
+        "tolerance": 3e-06,
+        "tolerance_source": "test/test_namespace_gaussian_w1_p1.jl:99",
+        "tolerance_source_line": "@test isapprox(sqrt.(fit.ψ²), r_sdB; atol = 3e-6, rtol = 0)                     # unique SDs sd_B (observed 3.1e-7)",
+        "note": "Shared Gaussian data ns_gauss_p1_data.csv (written by gen_namespace_numeric_p1.R; p = 6 traits, n = 200 units, one observation per trait and unit, sha256 checked), simulated from two latent axes plus residual noise. R values from gen_namespace_gaussian_w1_p1.R at the P1 pin; every R fit converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12) with a positive-definite Hessian. gllvmTMB_wide(Y, d = 2) on the wide 200 x 6 matrix builds value ~ 0 + trait + latent(0 + trait | site, d = 2) with latent()'s default unique = TRUE, so R fits Sigma = Lambda Lambda' + diag(sd_B^2) + sigma_eps^2 I with sigma_eps mapped off and fixed by R's Q7 rule (1e-3 x sd(y) over all responses, 0.0011251127397265046). Julia recomputes c with the same rule (checked against the recorded R value) and fits the same covariance with that fixed residual as fit_gaussian_pervar_gllvm(Y; K = 2, fixed_residual_sd = c) (at test/test_namespace_gaussian_w1_p1.jl:93); trait intercepts are the profiled row means. Loadings are compared as Lambda Lambda', which does not depend on the rotation. Limits: Gaussian only; the default call (no X, weights, phylo_vcv or formula_extra); the Julia side is the native fitter, not a wide-matrix wrapper."
+      },
+      {
+        "case_id": "P1-JULIA-GLLVMTMB-WIDE-OBJECTIVE-AT-R",
+        "quantity": "Julia log-likelihood evaluated at R's estimates (b_fix, Lambda_B, sd_B^2 + sigma_eps^2) against R's log-likelihood",
+        "r_source": "test/fixtures/ns_gauss_w1_p1.toml [wide.loglik]",
+        "julia_source": "gaussian_pervar_marginal_loglik(Y, r_L, r_sdB .^ 2 .+ c^2; X, β = r_beta), as compared at test/test_namespace_gaussian_w1_p1.jl:105",
+        "r_value": -1365.6520384848975,
+        "julia_value": -1365.6520384848945,
+        "abs_diff": 2.9558577807620168e-12,
+        "tolerance": 6e-11,
+        "tolerance_source": "test/test_namespace_gaussian_w1_p1.jl:105",
+        "tolerance_source_line": "@test isapprox(ll_at_r, Float64(w[\"loglik\"]); atol = 6e-11, rtol = 0)          # objective at R's point (observed 3.0e-12; floor ~190 eps |logLik|)",
+        "note": "Shared Gaussian data ns_gauss_p1_data.csv (written by gen_namespace_numeric_p1.R; p = 6 traits, n = 200 units, one observation per trait and unit, sha256 checked), simulated from two latent axes plus residual noise. R values from gen_namespace_gaussian_w1_p1.R at the P1 pin; every R fit converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12) with a positive-definite Hessian. gllvmTMB_wide(Y, d = 2) on the wide 200 x 6 matrix builds value ~ 0 + trait + latent(0 + trait | site, d = 2) with latent()'s default unique = TRUE, so R fits Sigma = Lambda Lambda' + diag(sd_B^2) + sigma_eps^2 I with sigma_eps mapped off and fixed by R's Q7 rule (1e-3 x sd(y) over all responses, 0.0011251127397265046). Julia recomputes c with the same rule (checked against the recorded R value) and fits the same covariance with that fixed residual as fit_gaussian_pervar_gllvm(Y; K = 2, fixed_residual_sd = c) (at test/test_namespace_gaussian_w1_p1.jl:93); trait intercepts are the profiled row means. Loadings are compared as Lambda Lambda', which does not depend on the rotation. Limits: Gaussian only; the default call (no X, weights, phylo_vcv or formula_extra); the Julia side is the native fitter, not a wide-matrix wrapper."
+      }
+    ]
+  }
+}

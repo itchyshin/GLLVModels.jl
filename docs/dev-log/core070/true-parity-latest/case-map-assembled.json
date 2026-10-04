@@ -16,7 +16,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-data.json",
-   "sha256": "2e66fcd5a5d62c036b80155e0d87bd8aa661d2bbfaeeb3dbe80c4c021cf5f9c0",
+   "sha256": "5370684c894a7972cf1fdd245dfe191992ce579602640d9d6788eed2aafee6c3",
    "rows": 36
   },
   {
@@ -41,7 +41,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-namespace.json",
-   "sha256": "7da67de17a74eda5b680d39093de26e38005c0b35df97fd4b3dfbd82e9a9f7aa",
+   "sha256": "82e7c2cf6c3fecddf03b4e1e88f3c5c6e2340a50c46b0309d43c2dc509b32d7a",
    "rows": 69
   },
   {
@@ -1601,7 +1601,12 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-DATA-MISS-BOTH-CONTROL"
+    "P1-JULIA-DATA-MISS_BOTH-LOGLIK",
+    "P1-JULIA-DATA-MISS_BOTH-INTERCEPTS",
+    "P1-JULIA-DATA-MISS_BOTH-B-X",
+    "P1-JULIA-DATA-MISS_BOTH-COVARIATE-MODEL",
+    "P1-JULIA-DATA-MISS_BOTH-SDS",
+    "P1-JULIA-DATA-MISS_BOTH-LAMBDA-LAMBDAT"
    ],
    "disposition": null,
    "p0_batch": "data-batch attempt-data-r3 (wave1)",
@@ -1613,13 +1618,19 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/MISS-BOTH.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-MISS-BOTH-CONTROL.json"
     ],
-    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+    "batch_case_ids": [
+     "CORE070-DATA-MISS-BOTH-CONTROL"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_data_twins_2_p1.jl, against R-at-P1 values copied from test/fixtures/data_twins_2_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -1630,8 +1641,18 @@
     },
     "case_kinds": {
      "CORE070-DATA-MISS-BOTH-CONTROL": "r_replay_julia_surface_absent"
-    }
-   }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-DATA-MISS_BOTH-LOGLIK",
+     "P1-JULIA-DATA-MISS_BOTH-INTERCEPTS",
+     "P1-JULIA-DATA-MISS_BOTH-B-X",
+     "P1-JULIA-DATA-MISS_BOTH-COVARIATE-MODEL",
+     "P1-JULIA-DATA-MISS_BOTH-SDS",
+     "P1-JULIA-DATA-MISS_BOTH-LAMBDA-LAMBDAT"
+    ],
+    "twin_verdict": "PASS"
+   },
+   "scope_note": "The R batch case replays miss_control('include', 'model') to a list; the twin is the DATA-MISS-MODEL fit with 44 response cells also NA (35 drawn at random, one cell of a unit whose x is missing, and every response of unit 5, x observed, and unit 17, x missing): R keeps them under response = 'include', Julia takes them as missing cells of Y in fit_gaussian_mi_fiml (the response mask this slice added). R's response = 'drop' removes units with no response altogether, so it differs from 'include' here; it is checked only as an assertion in the twin test (the Julia fit without units 5 and 17 reaches R's drop logLik), not as a receipt case. Same scope limits as DATA-MISS-MODEL."
   },
   {
    "source_id": "data/DATA-MISS-DEFAULT",
@@ -1744,7 +1765,12 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-DATA-MISS-MODEL-CONTROL"
+    "P1-JULIA-DATA-MISS_MODEL-LOGLIK",
+    "P1-JULIA-DATA-MISS_MODEL-INTERCEPTS",
+    "P1-JULIA-DATA-MISS_MODEL-B-X",
+    "P1-JULIA-DATA-MISS_MODEL-COVARIATE-MODEL",
+    "P1-JULIA-DATA-MISS_MODEL-SDS",
+    "P1-JULIA-DATA-MISS_MODEL-LAMBDA-LAMBDAT"
    ],
    "disposition": null,
    "p0_batch": "data-batch attempt-data-r3 (wave1)",
@@ -1756,13 +1782,19 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/MISS-MODEL.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-MISS-MODEL-CONTROL.json"
     ],
-    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+    "batch_case_ids": [
+     "CORE070-DATA-MISS-MODEL-CONTROL"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_data_twins_2_p1.jl, against R-at-P1 values copied from test/fixtures/data_twins_2_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -1773,8 +1805,18 @@
     },
     "case_kinds": {
      "CORE070-DATA-MISS-MODEL-CONTROL": "r_replay_julia_surface_absent"
-    }
-   }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-DATA-MISS_MODEL-LOGLIK",
+     "P1-JULIA-DATA-MISS_MODEL-INTERCEPTS",
+     "P1-JULIA-DATA-MISS_MODEL-B-X",
+     "P1-JULIA-DATA-MISS_MODEL-COVARIATE-MODEL",
+     "P1-JULIA-DATA-MISS_MODEL-SDS",
+     "P1-JULIA-DATA-MISS_MODEL-LAMBDA-LAMBDAT"
+    ],
+    "twin_verdict": "PASS"
+   },
+   "scope_note": "The R batch case replays miss_control(predictor = 'model') to a list; the twin is one Gaussian fit that uses it: mi(x) with covariate model x ~ z, x missing at 18 of 120 units, one latent factor (R gllvmTMB(..., missing = miss_control(predictor = 'model')), Julia fit_gaussian_mi_fiml). It covers one continuous unit-level predictor with a fixed-effect covariate model and a Gaussian response; R's other predictor = 'model' routes (grouped, phylogenetic, binary, ordered, categorical predictors, non-Gaussian responses) are not exercised. Julia has no miss_control constructor: the policy is chosen by the fitter."
   },
   {
    "source_id": "data/DATA-OFF-ALL-COUNT",
@@ -7495,20 +7537,27 @@
    "r_file_line": "R/missing-predictor.R:2610",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/imputed.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-IMPUTED-MISSING-PREDICTOR.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-IMPUTED-MISSING-PREDICTOR"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl (section data-twins-2) with the same calls and settings as test/test_data_twins_2_p1.jl, against R-at-P1 values copied from test/fixtures/data_twins_2_p1.toml (R imputed(fit)$estimate, rows = 'missing', on two Gaussian mi(x) fits, value ~ 0 + trait + mi(x) + latent(0 + trait | unit, d = 1, unique = FALSE), impute x ~ z, x missing at 18 of 120 units: miss_control(predictor = 'model'), and miss_control('include', 'model') with 44 response cells NA, including every response of one x-observed and one x-missing unit; Julia imputed(fit_gaussian_mi_fiml(Y, x; K = 1, Z = z), x).estimate at the same units), each case within the tolerance asserted in that test. Both R fits converged with a positive-definite Hessian. Not compared: R's std_error (Julia's imputed() reports none) and the other predictor routes (grouped, phylogenetic, discrete). The Tier 0 registration receipts are kept un-cited under registration_receipts; the superseded case ids are in registration_case_ids."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-IMPUTED-MISSING-PREDICTOR"
+    "P1-JULIA-IMPUTED-MISS_MODEL-ESTIMATE",
+    "P1-JULIA-IMPUTED-MISS_BOTH-ESTIMATE"
    ],
-   "reason": "R S3method(imputed,gllvmTMB) registered and defined at P1; Julia `fit_gaussian_mi_fiml` is an exported Function (measured). Name match only.",
+   "reason": "Numeric twin at P1: R imputed(fit) and Julia imputed(fit_gaussian_mi_fiml(...), x) give the same conditional modes of the missing x values on the same two Gaussian mi(x) fits (all responses observed; 44 responses masked). Supersedes the Tier 0 registration measurement, which matched the name to Julia `fit_gaussian_mi_fiml` only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -7589,20 +7638,30 @@
    "r_file_line": "R/output-methods.R:406",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/ordiplot.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-ORDIPLOT-MULTI-SCORES.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-ORDIPLOT-MULTI-SCORES"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_namespace_gaussian_w1_receipt.jl with the same calls and settings as the twin test, against R-at-P1 values copied from test/fixtures/ns_gauss_w1_p1.toml (generated by test/fixtures/gen_namespace_gaussian_w1_p1.R on the shared Gaussian data test/fixtures/ns_gauss_p1_data.csv, p = 6 traits, n = 200 units), each case within the tolerance asserted in test/test_namespace_gaussian_w1_p1.jl. R converged with a positive-definite Hessian. R ordiplot(fit) on latent(d = 2, unique = FALSE), its returned list(scores, loadings), against Julia ordiplot(fit_gllvm(Y; family = Normal(), K = 2), Y), compared through the rotation-invariant products scores * loadings' and loadings * loadings', directly as raw scores and loadings (Julia rotate = false against R's default rotate = \"none\"), plus the fit log-likelihood. The drawing itself is not compared. The Tier 0 registration receipts are kept un-cited under registration_receipts (the registration batch receipt carries a batch-level FAIL status, which would block the numeric binding if cited); the superseded case ids are in registration_case_ids."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-ORDIPLOT-MULTI-SCORES"
+    "P1-JULIA-ORDIPLOT-SCORES-LOADINGS",
+    "P1-JULIA-ORDIPLOT-LOADINGS-GRAM",
+    "P1-JULIA-ORDIPLOT-RAW-SCORES",
+    "P1-JULIA-ORDIPLOT-RAW-LOADINGS",
+    "P1-JULIA-ORDIPLOT-LOGLIK"
    ],
-   "reason": "R S3method(ordiplot,gllvmTMB_multi) registered and defined at P1; Julia `ordiplot` is an exported Function (measured). Name match only.",
+   "reason": "Numeric twin at P1: the data R's ordiplot(fit) returns (scores and loadings) and the data Julia's ordiplot(fit, Y) returns agree through rotation-invariant products on the same Gaussian fit. Supersedes the Tier 0 registration measurement (a name match only).",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -9017,20 +9076,32 @@
    "r_file_line": "R/loading-ci.R:378",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/flag_unreliable_loadings.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-FLAG-UNRELIABLE-LOADINGS-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-FLAG-UNRELIABLE-LOADINGS-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_namespace_gaussian_w1_receipt.jl with the same calls and settings as the twin test, against R-at-P1 values copied from test/fixtures/ns_gauss_w1_p1.toml (generated by test/fixtures/gen_namespace_gaussian_w1_p1.R on the shared Gaussian data test/fixtures/ns_gauss_p1_data.csv, p = 6 traits, n = 200 units), each case within the tolerance asserted in test/test_namespace_gaussian_w1_p1.jl. R converged with a positive-definite Hessian. R flag_unreliable_loadings() on a confirmatory fit (lambda_constraint pins Lambda[1,2] = 0 and Lambda[2,1] = 0) at null regions (-0.1, 0.1) and (-0.5, 0.5), against Julia flag_unreliable_loadings(fit_gaussian_gllvm(Yc; K = 2, lambda_constraint = M), Yc) on the trait-centred data: loading estimates, raw Wald SEs and bounds, the flags as exact integer codes, and the fit log-likelihood. Raw Wald route only (R's default). The Tier 0 registration receipts are kept un-cited under registration_receipts (the registration batch receipt carries a batch-level FAIL status, which would block the numeric binding if cited); the superseded case ids are in registration_case_ids."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-FLAG-UNRELIABLE-LOADINGS-NATIVE"
+    "P1-JULIA-FLAG-UNRELIABLE-LOADINGS-ESTIMATE",
+    "P1-JULIA-FLAG-UNRELIABLE-LOADINGS-SE",
+    "P1-JULIA-FLAG-UNRELIABLE-LOADINGS-LOWER",
+    "P1-JULIA-FLAG-UNRELIABLE-LOADINGS-UPPER",
+    "P1-JULIA-FLAG-UNRELIABLE-LOADINGS-FLAGS-DEFAULT",
+    "P1-JULIA-FLAG-UNRELIABLE-LOADINGS-FLAGS-WIDE",
+    "P1-JULIA-FLAG-UNRELIABLE-LOADINGS-LOGLIK"
    ],
-   "reason": "R export(flag_unreliable_loadings) registered and defined at P1; Julia `confint` is an exported Function (measured). Name match only.",
+   "reason": "Numeric twin at P1: R and Julia flag_unreliable_loadings on the same confirmatory Gaussian fit give the same intervals (within tolerance) and identical flags at two null regions. Supersedes the Tier 0 registration measurement, which matched the name to Julia `confint` only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -9175,17 +9246,27 @@
    "r_kind": "export",
    "classification": "required_core",
    "arc": "A3",
-   "r_file_line": null,
-   "executable_case_ids": [],
+   "r_file_line": "R/gllvmTMB-wide.R:109",
+   "executable_case_ids": [
+    "P1-JULIA-GLLVMTMB-WIDE-LOGLIK",
+    "P1-JULIA-GLLVMTMB-WIDE-BETA",
+    "P1-JULIA-GLLVMTMB-WIDE-LAMBDA-LAMBDAT",
+    "P1-JULIA-GLLVMTMB-WIDE-SD-B",
+    "P1-JULIA-GLLVMTMB-WIDE-OBJECTIVE-AT-R"
+   ],
    "p0_case_ids": [
     "CORE070-NAMESPACE2-GLLVMTMB-WIDE-NATIVE-FIT"
    ],
-   "evidence": {},
-   "measured_against": null,
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/gllvmTMB_wide.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_namespace_gaussian_w1_receipt.jl with the same calls and settings as the twin test, against R-at-P1 values copied from test/fixtures/ns_gauss_w1_p1.toml (generated by test/fixtures/gen_namespace_gaussian_w1_p1.R on the shared Gaussian data test/fixtures/ns_gauss_p1_data.csv, p = 6 traits, n = 200 units), each case within the tolerance asserted in test/test_namespace_gaussian_w1_p1.jl. R converged with a positive-definite Hessian. R gllvmTMB_wide(Y, d = 2) (latent() keeps unique = TRUE; sigma_eps mapped off and fixed by R's Q7 rule, 1e-3 x sd(y)) against Julia fit_gaussian_pervar_gllvm(Y; K = 2, fixed_residual_sd = c), with c recomputed in Julia by the same rule and checked against the recorded R value, the same covariance: log-likelihood, trait intercepts, Lambda Lambda', the unique SDs sd_B, and the Julia log-likelihood at R's estimates. The P0 namespace-2 case id stays under p0_case_ids."
+   },
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "disposition": null,
-   "reason": "Not re-measured at P1 in this PR.",
-   "not_measured_reason": "namespace-2 batch needs an installed frozen gllvmTMB library and live R fits (tools/core070_namespace_2_batch.R <frozen-library> <destination>); stopped per brief, no P1 oracle build here.",
-   "evidence_tier": "registration"
+   "reason": "Numeric twin at P1: R gllvmTMB_wide(Y, d = 2) and Julia fit_gaussian_pervar_gllvm with the residual SD fixed by R's Q7 rule fit the same Gaussian model (Lambda Lambda' + diag(sd_B^2) + sigma_eps^2 I) to the same wide matrix. Replaces the not-measured state (the namespace-2 batch was not re-run at P1).",
+   "evidence_tier": "numeric"
   },
   {
    "source_id": "namespace/export/gllvm_julia_fit",
@@ -9193,17 +9274,28 @@
    "r_kind": "export",
    "classification": "required_core",
    "arc": "A3",
-   "r_file_line": null,
-   "executable_case_ids": [],
+   "r_file_line": "R/julia-bridge.R:2618",
+   "executable_case_ids": [
+    "P1-BRIDGE-READBACK-GJF-FORMULA-ROUTE-LOGLIK",
+    "P1-BRIDGE-READBACK-GJF-LOGLIK-TMB",
+    "P1-BRIDGE-READBACK-GJF-DF-TMB",
+    "P1-BRIDGE-READBACK-GJF-INTERCEPTS-TMB",
+    "P1-BRIDGE-READBACK-GJF-LATENT-SIGMA-TMB",
+    "P1-BRIDGE-READBACK-GJF-SIGMA-EPS-TMB"
+   ],
    "p0_case_ids": [
     "CORE070-NAMESPACE2-GLLVM-JULIA-FIT-BRIDGE-ADMISSION"
    ],
-   "evidence": {},
-   "measured_against": null,
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/bridge_readback.json"
+    ],
+    "tier": "numeric: live bridge run at P1. One live R session (test/fixtures/gen_bridge_readback_p1.R): gllvmTMB at P1 with engine = \"julia\" drove JuliaCall into this package on the namespace twin data test/fixtures/ns_gauss_p1_data.csv, Gaussian value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE), p = 6, n = 200. gllvm_julia_fit(Y, family = \"gaussian\", num.lv = 2) called directly returned a converged gllvmTMB_julia object with no marshalling error; compared with the formula route (log-likelihood, within 1e-12, observed 0) and with the equivalent native R fit gllvmTMB(..., engine = \"tmb\") (nlminb code 0, positive-definite Hessian), each side at its own optimum: log-likelihood (tolerance 1e-6, observed 9.7e-9), df (integer equality), trait intercepts (3e-12, observed 3.0e-13), the rotation-invariant latent covariance Lambda Lambda' (5e-5, observed 9.2e-6) and sigma_eps (1e-6, observed 3.0e-7); tolerances in test/test_bridge_readback_p1.jl. One Gaussian no-X complete-response fixture."
+   },
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "disposition": null,
-   "reason": "Not re-measured at P1 in this PR.",
-   "not_measured_reason": "namespace-2 batch needs an installed frozen gllvmTMB library and live R fits (tools/core070_namespace_2_batch.R <frozen-library> <destination>); stopped per brief, no P1 oracle build here.",
-   "evidence_tier": "registration"
+   "reason": "Bridge admission at P1, measured: gllvm_julia_fit round-trips through JuliaCall into GLLVModels and its log-likelihood and point estimates match the native R gllvmTMB() fit on the same data (the case plan's comparands).",
+   "evidence_tier": "numeric"
   },
   {
    "source_id": "namespace/export/gllvm_julia_setup",

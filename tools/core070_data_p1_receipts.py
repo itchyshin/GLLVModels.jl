@@ -70,9 +70,10 @@ disposition and every other field are untouched; a row's `note` still describes 
 helper-replay case. `--apply-twins` re-derives rows and counts of the tracked case-map-data.json
 from the tracked receipts and twin receipts (no run directory needed); `--check` verifies the
 result. Rows with no twin (weights rows: Julia refuses weights= everywhere; legacy-fit and
-newdata predict-time offset, mixed-family and modelled-predictor rows: no Julia surface to fit) keep
+newdata predict-time offset and mixed-family rows: no Julia surface to fit) keep
 their batch tier. DATA-OFF-TRAIN-STORED is bound by its own twin (test/test_predict_offset_twin_p1.jl,
-fixture test/fixtures/predict_offset_twin_p1.toml).
+fixture test/fixtures/predict_offset_twin_p1.toml); DATA-MISS-MODEL and DATA-MISS-BOTH by the
+modelled-predictor twins (test/test_data_twins_2_p1.jl, fixture test/fixtures/data_twins_2_p1.toml).
 
 Usage:
   python3 tools/core070_data_p1_receipts.py --runs DIR --runtimes JSON [--allow-dirty]
@@ -461,6 +462,8 @@ TWIN_REL = f"{OUT_REL}/receipts/julia-twins/data-twins"
 TWIN_SOURCES_DEFAULT = ("test/test_data_twins_p1.jl", "test/fixtures/data_twins_p1.toml")
 TWIN_SOURCES = {
     "data/DATA-OFF-TRAIN-STORED": ("test/test_predict_offset_twin_p1.jl", "test/fixtures/predict_offset_twin_p1.toml"),
+    "data/DATA-MISS-MODEL": ("test/test_data_twins_2_p1.jl", "test/fixtures/data_twins_2_p1.toml"),
+    "data/DATA-MISS-BOTH": ("test/test_data_twins_2_p1.jl", "test/fixtures/data_twins_2_p1.toml"),
 }
 
 
@@ -483,6 +486,8 @@ TWIN_FILES = {  # source_id -> twin receipt stem
     "data/DATA-MISS-DEFAULT": "MISS-DEFAULT",
     "data/DATA-MISS-INCLUDE": "MISS-INCLUDE",
     "data/DATA-OFF-TRAIN-STORED": "OFF-TRAIN-STORED",
+    "data/DATA-MISS-MODEL": "MISS-MODEL",
+    "data/DATA-MISS-BOTH": "MISS-BOTH",
 }
 
 
@@ -516,6 +521,19 @@ SCOPE_NOTES = {
         "type = :link)). Training rows only: R's newdata prediction (offset re-evaluated against newdata, training "
         "units' latent modes kept) has no Julia counterpart and is not compared. Julia stores the training offset "
         "on the Laplace Poisson, NB2 (shared r), binomial and hurdle-Poisson fits; other fit types keep none.",
+    "data/DATA-MISS-MODEL": "The R batch case replays miss_control(predictor = 'model') to a list; the twin is one "
+        "Gaussian fit that uses it: mi(x) with covariate model x ~ z, x missing at 18 of 120 units, one latent factor "
+        "(R gllvmTMB(..., missing = miss_control(predictor = 'model')), Julia fit_gaussian_mi_fiml). It covers one "
+        "continuous unit-level predictor with a fixed-effect covariate model and a Gaussian response; R's other "
+        "predictor = 'model' routes (grouped, phylogenetic, binary, ordered, categorical predictors, non-Gaussian "
+        "responses) are not exercised. Julia has no miss_control constructor: the policy is chosen by the fitter.",
+    "data/DATA-MISS-BOTH": "The R batch case replays miss_control('include', 'model') to a list; the twin is the "
+        "DATA-MISS-MODEL fit with 44 response cells also NA (35 drawn at random, one cell of a unit whose x is "
+        "missing, and every response of unit 5, x observed, and unit 17, x missing): R keeps them under response = "
+        "'include', Julia takes them as missing cells of Y in fit_gaussian_mi_fiml (the response mask this slice "
+        "added). R's response = 'drop' removes units with no response altogether, so it differs from 'include' here; "
+        "it is checked only as an assertion in the twin test (the Julia fit without units 5 and 17 reaches R's drop "
+        "logLik), not as a receipt case. Same scope limits as DATA-MISS-MODEL.",
 }
 
 

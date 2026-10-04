@@ -16,12 +16,12 @@ Inputs:
 
 - `docs/dev-log/core070/true-parity-latest/case-map-aghq.json` (21 rows, sha256 `72e1d55c0553897c62e92f534ab128a8a592282958e1e56c44ca95e1c5902114`)
 - `docs/dev-log/core070/true-parity-latest/case-map-covariance.json` (19 rows, sha256 `81e650ad39a39aeb08c6b3a8468d06458369799b6d2882b853fd78d86710c294`)
-- `docs/dev-log/core070/true-parity-latest/case-map-data.json` (36 rows, sha256 `2e66fcd5a5d62c036b80155e0d87bd8aa661d2bbfaeeb3dbe80c4c021cf5f9c0`)
+- `docs/dev-log/core070/true-parity-latest/case-map-data.json` (36 rows, sha256 `5370684c894a7972cf1fdd245dfe191992ce579602640d9d6788eed2aafee6c3`)
 - `docs/dev-log/core070/true-parity-latest/case-map-family.json` (26 rows, sha256 `537991192134fd7aef08d7e065c61d5b3063efde3d63513b88493dd6a82db6fc`)
 - `docs/dev-log/core070/true-parity-latest/case-map-fit-input.json` (10 rows, sha256 `568c054ed5f3786b96c9acb796e28d98e4523c4edc5fe5ad9f69ab150cee3639`)
 - `docs/dev-log/core070/true-parity-latest/case-map-inference.json` (63 rows, sha256 `ab0cb02039e34ecb5d1666c469321eba590dfead2452ac2f0de30d9da9a2bda9`)
 - `docs/dev-log/core070/true-parity-latest/case-map-isdm.json` (21 rows, sha256 `abcd0731b63d4290870525114ca3882d9a08fb9ac1966e35e702271a3917e6ca`)
-- `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `7da67de17a74eda5b680d39093de26e38005c0b35df97fd4b3dfbd82e9a9f7aa`)
+- `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `82e7c2cf6c3fecddf03b4e1e88f3c5c6e2340a50c46b0309d43c2dc509b32d7a`)
 - `docs/dev-log/core070/true-parity-latest/case-map-postfit.json` (52 rows, sha256 `5fe433df7fb04ea08abce0350820d8dbfbf2434ebacd93498a9a58bb978e6c4c`)
 
 ## Totals by family
@@ -30,14 +30,14 @@ Inputs:
 |---|---|---|---|---|---|---|---|---|---|---|
 | `aghq` | 14 | 0 | 0 | 0 | 0 | 0 | 7 | 0 | 0 | 21 |
 | `covariance` | 1 | 0 | 0 | 2 | 8 | 0 | 8 | 0 | 0 | 19 |
-| `data` | 8 | 0 | 0 | 0 | 1 | 20 | 0 | 4 | 3 | 36 |
+| `data` | 10 | 0 | 0 | 0 | 1 | 18 | 0 | 4 | 3 | 36 |
 | `family` | 19 | 0 | 0 | 0 | 5 | 0 | 0 | 1 | 1 | 26 |
 | `fit-input` | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
 | `inference` | 2 | 44 | 0 | 0 | 2 | 0 | 15 | 0 | 0 | 63 |
 | `isdm` | 11 | 0 | 0 | 0 | 0 | 9 | 0 | 1 | 0 | 21 |
-| `namespace` | 34 | 0 | 21 | 0 | 0 | 2 | 0 | 0 | 12 | 69 |
+| `namespace` | 39 | 0 | 18 | 0 | 0 | 2 | 0 | 0 | 10 | 69 |
 | `postfit` | 41 | 0 | 0 | 2 | 6 | 2 | 0 | 1 | 0 | 52 |
-| `all` | 140 | 44 | 21 | 4 | 22 | 33 | 30 | 7 | 16 | 317 |
+| `all` | 147 | 44 | 18 | 4 | 22 | 31 | 30 | 7 | 14 | 317 |
 
 ## P1 twin fixtures present at this head, not bound to any row
 
@@ -51,16 +51,22 @@ decision for the PR that measures it, not something this tool does.
 - `test/fixtures/animal_scalar_p1.toml`
 - `test/fixtures/animal_scalar_p1_A.csv`
 - `test/fixtures/animal_scalar_p1_data.csv`
+- `test/fixtures/bridge_readback_p1.toml`
 - `test/fixtures/confint_inspect_p1.toml`
+- `test/fixtures/data_twins_2_mi_p1_data.csv`
+- `test/fixtures/data_twins_2_p1.toml`
 - `test/fixtures/data_twins_nb1_p1_data.csv`
 - `test/fixtures/data_twins_nb2_p1_data.csv`
 - `test/fixtures/data_twins_p1.toml`
 - `test/fixtures/data_twins_pois_p1_data.csv`
 - `test/fixtures/diagnostics_p1.toml`
 - `test/fixtures/gen_animal_scalar_p1.R`
+- `test/fixtures/gen_bridge_readback_p1.R`
 - `test/fixtures/gen_confint_inspect_p1.R`
+- `test/fixtures/gen_data_twins_2_p1.R`
 - `test/fixtures/gen_data_twins_p1.R`
 - `test/fixtures/gen_diagnostics_p1.R`
+- `test/fixtures/gen_namespace_gaussian_w1_p1.R`
 - `test/fixtures/gen_namespace_numeric_p1.R`
 - `test/fixtures/gen_namespace_numeric_p1_b.R`
 - `test/fixtures/gen_ordinal_logit_p1.R`
@@ -83,6 +89,7 @@ decision for the PR that measures it, not something this tool does.
 - `test/fixtures/isdm/r_values_psi_p1.toml`
 - `test/fixtures/ns_beta_p1_data.csv`
 - `test/fixtures/ns_gauss_p1_data.csv`
+- `test/fixtures/ns_gauss_w1_p1.toml`
 - `test/fixtures/ns_lv_p1_data.csv`
 - `test/fixtures/ns_nb2_p1_data.csv`
 - `test/fixtures/ns_numeric_p1.toml`
@@ -148,10 +155,10 @@ decision for the PR that measures it, not something this tool does.
 | covariance-COV-PHYLO-FOLDED-UNIQUE `covariance/COV-PHYLO-FOLDED-UNIQUE` | required_core; cases: CORE070-COV-PHYLO-FOLDED-UNIQUE-FORMULA | NON-NUMERIC | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-COV-PHYLO-FOLDED-UNIQUE-FORMULA.json | family covariance; evidence_tier r_only; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | covariance-COV-PHYLO-LATENT-RSZ `covariance/COV-PHYLO-LATENT-RSZ` | required_core; cases: CAMPAIGN-C3-COV-PHYLO-LATENT-RSZ-LOGLIK, CAMPAIGN-C3-COV-PHYLO-LATENT-RSZ-SIGMA-PHY | PARTIAL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/covariance/campaign/COV-PHYLO-LATENT-RSZ.json | family covariance; evidence_tier partial_case_not_executed; measured_against P1 |
 | covariance-COV-TEMPORAL-RSZ `covariance/COV-TEMPORAL-RSZ` | required_core; cases: CAMPAIGN-C3-COV-TEMPORAL-RSZ-LOGLIK, CAMPAIGN-C3-COV-TEMPORAL-RSZ-TEMPORAL-PHI, CAMPAIGN-C3-COV-TEMPORAL-RSZ-TEMPORAL-LOADINGS | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/covariance/campaign/COV-TEMPORAL-RSZ.json | family covariance; evidence_tier numeric; measured_against P1 |
-| data-DATA-MISS-BOTH `data/DATA-MISS-BOTH` | required_core; cases: CORE070-DATA-MISS-BOTH-CONTROL | NEEDS-SURFACE | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-MISS-BOTH-CONTROL.json | family data; evidence_tier needs_surface_r_side_measured; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| data-DATA-MISS-BOTH `data/DATA-MISS-BOTH` | required_core; cases: P1-JULIA-DATA-MISS_BOTH-LOGLIK, P1-JULIA-DATA-MISS_BOTH-INTERCEPTS, P1-JULIA-DATA-MISS_BOTH-B-X, P1-JULIA-DATA-MISS_BOTH-COVARIATE-MODEL, P1-JULIA-DATA-MISS_BOTH-SDS, P1-JULIA-DATA-MISS_BOTH-LAMBDA-LAMBDAT | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/MISS-BOTH.json | family data; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | data-DATA-MISS-DEFAULT `data/DATA-MISS-DEFAULT` | required_core; cases: P1-JULIA-DATA-POIS_NA_DROP-LOGLIK, P1-JULIA-DATA-POIS_NA_DROP-INTERCEPTS, P1-JULIA-DATA-POIS_NA_DROP-LAMBDA-LAMBDAT | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/MISS-DEFAULT.json | family data; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | data-DATA-MISS-INCLUDE `data/DATA-MISS-INCLUDE` | required_core; cases: P1-JULIA-DATA-POIS_NA_INCLUDE-LOGLIK, P1-JULIA-DATA-POIS_NA_INCLUDE-INTERCEPTS, P1-JULIA-DATA-POIS_NA_INCLUDE-LAMBDA-LAMBDAT | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/MISS-INCLUDE.json | family data; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| data-DATA-MISS-MODEL `data/DATA-MISS-MODEL` | required_core; cases: CORE070-DATA-MISS-MODEL-CONTROL | NEEDS-SURFACE | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-MISS-MODEL-CONTROL.json | family data; evidence_tier needs_surface_r_side_measured; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| data-DATA-MISS-MODEL `data/DATA-MISS-MODEL` | required_core; cases: P1-JULIA-DATA-MISS_MODEL-LOGLIK, P1-JULIA-DATA-MISS_MODEL-INTERCEPTS, P1-JULIA-DATA-MISS_MODEL-B-X, P1-JULIA-DATA-MISS_MODEL-COVARIATE-MODEL, P1-JULIA-DATA-MISS_MODEL-SDS, P1-JULIA-DATA-MISS_MODEL-LAMBDA-LAMBDAT | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/MISS-MODEL.json | family data; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | data-DATA-OFF-ALL-COUNT `data/DATA-OFF-ALL-COUNT` | required_core; cases: CORE070-DATA-OFF-ALL-COUNT-NATIVE | NEEDS-SURFACE | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-ALL-COUNT-NATIVE.json, non-binding docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-ALL-COUNT.json | family data; evidence_tier needs_surface_r_side_measured; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | data-DATA-OFF-EXPOSURE `data/DATA-OFF-EXPOSURE` | required_core; cases: P1-JULIA-DATA-POIS_EXPOSURE-LOGLIK, P1-JULIA-DATA-POIS_EXPOSURE-INTERCEPTS, P1-JULIA-DATA-POIS_EXPOSURE-LAMBDA-LAMBDAT | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-EXPOSURE.json | family data; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | data-DATA-OFF-MIXED `data/DATA-OFF-MIXED` | required_core; cases: CORE070-DATA-OFF-MIXED-NATIVE | NEEDS-SURFACE | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-MIXED-NATIVE.json | family data; evidence_tier needs_surface_r_side_measured; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
@@ -311,10 +318,10 @@ decision for the PR that measures it, not something this tool does.
 | namespace-S3method-deviance-gllvmTMB_multi `namespace/S3method/deviance,gllvmTMB_multi` | required_core; cases: CORE070-WAVE8-DEVIANCE-MULTI | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE8-DEVIANCE-MULTI.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-S3method-fitted-gllvmTMB_julia `namespace/S3method/fitted,gllvmTMB_julia` | compatibility_adapter; cases: CORE070-NAMESPACE-FITTED-JULIA-BRIDGE-COMPARE | REGISTRATION-ONLY | not bound; cited: docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-FITTED-JULIA-BRIDGE-COMPARE.json, docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-S3method-fitted-gllvmTMB_multi `namespace/S3method/fitted,gllvmTMB_multi` | required_core; cases: CORE070-WAVE7-FITTED-MULTI | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE7-FITTED-MULTI.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| namespace-S3method-imputed-gllvmTMB `namespace/S3method/imputed,gllvmTMB` | required_core; cases: CORE070-NAMESPACE-IMPUTED-MISSING-PREDICTOR | REGISTRATION-ONLY | not bound; cited: docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-IMPUTED-MISSING-PREDICTOR.json, docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| namespace-S3method-imputed-gllvmTMB `namespace/S3method/imputed,gllvmTMB` | required_core; cases: P1-JULIA-IMPUTED-MISS_MODEL-ESTIMATE, P1-JULIA-IMPUTED-MISS_BOTH-ESTIMATE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/imputed.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-S3method-logLik-gllvmTMB_julia `namespace/S3method/logLik,gllvmTMB_julia` | compatibility_adapter; cases: CORE070-NAMESPACE-LOGLIK-JULIA-BRIDGE-COMPARE | REGISTRATION-ONLY | not bound; cited: docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-LOGLIK-JULIA-BRIDGE-COMPARE.json, docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-S3method-logLik-gllvmTMB_multi `namespace/S3method/logLik,gllvmTMB_multi` | required_core; cases: P1-JULIA-MODEL-COMPARISON-LOGLIK-E2E | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/model-comparison/logLik.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| namespace-S3method-ordiplot-gllvmTMB_multi `namespace/S3method/ordiplot,gllvmTMB_multi` | required_core; cases: CORE070-NAMESPACE-ORDIPLOT-MULTI-SCORES | REGISTRATION-ONLY | not bound; cited: docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-ORDIPLOT-MULTI-SCORES.json, docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| namespace-S3method-ordiplot-gllvmTMB_multi `namespace/S3method/ordiplot,gllvmTMB_multi` | required_core; cases: P1-JULIA-ORDIPLOT-SCORES-LOADINGS, P1-JULIA-ORDIPLOT-LOADINGS-GRAM, P1-JULIA-ORDIPLOT-RAW-SCORES, P1-JULIA-ORDIPLOT-RAW-LOADINGS, P1-JULIA-ORDIPLOT-LOGLIK | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/ordiplot.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-S3method-predict-gllvmTMB_julia `namespace/S3method/predict,gllvmTMB_julia` | compatibility_adapter; cases: CORE070-NAMESPACE-PREDICT-JULIA-BRIDGE-COMPARE | REGISTRATION-ONLY | not bound; cited: docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-PREDICT-JULIA-BRIDGE-COMPARE.json, docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-S3method-predict-gllvmTMB_multi `namespace/S3method/predict,gllvmTMB_multi` | required_core; cases: CORE070-WAVE7-PREDICT-MULTI | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE7-PREDICT-MULTI.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-S3method-residuals-gllvmTMB_julia `namespace/S3method/residuals,gllvmTMB_julia` | compatibility_adapter; cases: CORE070-NAMESPACE-RESIDUALS-JULIA-BRIDGE-COMPARE | REGISTRATION-ONLY | not bound; cited: docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-RESIDUALS-JULIA-BRIDGE-COMPARE.json, docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
@@ -357,14 +364,14 @@ decision for the PR that measures it, not something this tool does.
 | namespace-export-extract_residual_cov `namespace/export/extract_residual_cov` | required_core; cases: CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-RESIDUAL-COV | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-RESIDUAL-COV.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-extract_residual_split `namespace/export/extract_residual_split` | required_core; cases: P1-JULIA-RESIDUAL-SPLIT-SIGMA2-E, P1-JULIA-RESIDUAL-SPLIT-SIGMA2-TOTAL | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/extract_residual_split.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-extract_rotated_loadings_table `namespace/export/extract_rotated_loadings_table` | required_core; cases: P1-JULIA-ROTATED-LOADINGS-TABLE-RAW, P1-JULIA-ROTATED-LOADINGS-TABLE-AXIS-VARIANCE, P1-JULIA-ROTATED-LOADINGS-TABLE-AXIS-SHARE, P1-JULIA-ROTATED-LOADINGS-TABLE-STANDARDIZED | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/extract_rotated_loadings_table.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| namespace-export-flag_unreliable_loadings `namespace/export/flag_unreliable_loadings` | required_core; cases: CORE070-NAMESPACE-FLAG-UNRELIABLE-LOADINGS-NATIVE | REGISTRATION-ONLY | not bound; cited: docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-FLAG-UNRELIABLE-LOADINGS-NATIVE.json, docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| namespace-export-flag_unreliable_loadings `namespace/export/flag_unreliable_loadings` | required_core; cases: P1-JULIA-FLAG-UNRELIABLE-LOADINGS-ESTIMATE, P1-JULIA-FLAG-UNRELIABLE-LOADINGS-SE, P1-JULIA-FLAG-UNRELIABLE-LOADINGS-LOWER, P1-JULIA-FLAG-UNRELIABLE-LOADINGS-UPPER, P1-JULIA-FLAG-UNRELIABLE-LOADINGS-FLAGS-DEFAULT, P1-JULIA-FLAG-UNRELIABLE-LOADINGS-FLAGS-WIDE, P1-JULIA-FLAG-UNRELIABLE-LOADINGS-LOGLIK | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/flag_unreliable_loadings.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-getLV `namespace/export/getLV` | required_core; cases: CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETLV | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETLV.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-getLoadings `namespace/export/getLoadings` | required_core; cases: CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETLOADINGS | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETLOADINGS.json | family namespace; evidence_tier numeric; measured_against P1 |
 | namespace-export-getResidualCor `namespace/export/getResidualCor` | required_core; cases: CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETRESIDUALCOR | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETRESIDUALCOR.json | family namespace; evidence_tier numeric; measured_against P1 |
 | namespace-export-getResidualCov `namespace/export/getResidualCov` | required_core; cases: CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETRESIDUALCOV | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETRESIDUALCOV.json | family namespace; evidence_tier numeric; measured_against P1 |
 | namespace-export-gllvmTMB `namespace/export/gllvmTMB` | required_core; cases: none | NOT-MEASURED | not bound; cited: none | family namespace; evidence_tier registration; measured_against None; no receipt cited |
-| namespace-export-gllvmTMB_wide `namespace/export/gllvmTMB_wide` | required_core; cases: none | NOT-MEASURED | not bound; cited: none | family namespace; evidence_tier registration; measured_against None; no receipt cited |
-| namespace-export-gllvm_julia_fit `namespace/export/gllvm_julia_fit` | required_core; cases: none | NOT-MEASURED | not bound; cited: none | family namespace; evidence_tier registration; measured_against None; no receipt cited |
+| namespace-export-gllvmTMB_wide `namespace/export/gllvmTMB_wide` | required_core; cases: P1-JULIA-GLLVMTMB-WIDE-LOGLIK, P1-JULIA-GLLVMTMB-WIDE-BETA, P1-JULIA-GLLVMTMB-WIDE-LAMBDA-LAMBDAT, P1-JULIA-GLLVMTMB-WIDE-SD-B, P1-JULIA-GLLVMTMB-WIDE-OBJECTIVE-AT-R | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/gllvmTMB_wide.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| namespace-export-gllvm_julia_fit `namespace/export/gllvm_julia_fit` | required_core; cases: P1-BRIDGE-READBACK-GJF-FORMULA-ROUTE-LOGLIK, P1-BRIDGE-READBACK-GJF-LOGLIK-TMB, P1-BRIDGE-READBACK-GJF-DF-TMB, P1-BRIDGE-READBACK-GJF-INTERCEPTS-TMB, P1-BRIDGE-READBACK-GJF-LATENT-SIGMA-TMB, P1-BRIDGE-READBACK-GJF-SIGMA-EPS-TMB | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/bridge_readback.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-gllvm_julia_setup `namespace/export/gllvm_julia_setup` | required_core; cases: none | NOT-MEASURED | not bound; cited: none | family namespace; evidence_tier registration; measured_against None; no receipt cited |
 | namespace-export-kernel_dep `namespace/export/kernel_dep` | required_core; cases: none | NOT-MEASURED | not bound; cited: none | family namespace; evidence_tier registration; measured_against None; no receipt cited |
 | namespace-export-kernel_indep `namespace/export/kernel_indep` | required_core; cases: none | NOT-MEASURED | not bound; cited: none | family namespace; evidence_tier registration; measured_against None; no receipt cited |

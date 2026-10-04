@@ -32,6 +32,14 @@ run on any fit, where R's `loading_ci()`/`loading_profile()` refuse an
 unpinned exploratory fit. The deprecated name `loading_profile` forwards here
 but is reserved for a future confirmatory mirror of R's surface.
 
+`flag_unreliable_loadings` is the counterpart of R's `flag_unreliable_loadings()`.
+It takes a confirmatory fit, `fit_gaussian_gllvm(y; K, lambda_constraint = M)`,
+computes raw Wald intervals on the free loadings from the observed information
+with the pinned loadings removed (as R does), and flags each entry whose
+interval overlaps a band of negligible values (`null_region`, default
+`(-0.1, 0.1)`). Like R, it refuses a fit without pins. It also accepts rows that
+already carry `estimate`, `lower`, `upper` and `pinned`.
+
 ## Two-level repeatability and ICC
 
 `repeatability_wald_ci` and `repeatability_bootstrap_ci` give Wald
@@ -64,6 +72,7 @@ multi-slope generalisation of R's single-slope `slope_sd_ci()`.
 standardized_loading_wald_ci
 raw_loading_wald_ci
 loading_ci
+flag_unreliable_loadings
 loading_profile_exploratory
 repeatability_wald_ci
 repeatability_bootstrap_ci

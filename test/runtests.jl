@@ -522,6 +522,10 @@ println(_SHARD === nothing ?
     _shard_include("test_variance_decomp_p1.jl")
     # P1 numeric twin of the gllvmTMB namespace row animal_scalar (one shared animal variance on a pedigree A, Gaussian).
     _shard_include("test_animal_scalar_p1.jl")
+    # P1 bridge readback: gllvmTMB_julia coef/fitted/logLik/predict/residuals/summary and gllvm_julia_fit, recorded live through JuliaCall.
+    _shard_include("test_bridge_readback_p1.jl")
+    # P1 numeric twins of the gllvmTMB namespace rows gllvmTMB_wide, ordiplot.gllvmTMB_multi and flag_unreliable_loadings (one shared Gaussian fixture).
+    _shard_include("test_namespace_gaussian_w1_p1.jl")
     # P1 numeric twin of the gllvmTMB namespace row confint_inspect (estimate, Wald and profile bounds on four direct targets, Gaussian rank 2).
     _shard_include("test_confint_inspect_p1.jl")
     # P1 numeric twin of the gllvmTMB postfit row predict_missing (masked-cell predictions of a masked Gaussian fit).
@@ -531,6 +535,8 @@ println(_SHARD === nothing ?
     # P1 fit-level twins of core070 data rows (six bind; see tools/core070_data_p1_receipts.py) (offset and missing-response handling).
     _shard_include("test_data_twins_p1.jl")
     _shard_include("test_predict_offset_twin_p1.jl")
+    # P1 fit-level twins of data/DATA-MISS-MODEL, data/DATA-MISS-BOTH and namespace imputed (modelled missing predictor, response mask).
+    _shard_include("test_data_twins_2_p1.jl")
     _shard_include("test_destination_b_s4_public_phylo_dep_probe_harness.jl")
     _shard_include("test_totoro_323_track_a_harness.jl")
     _shard_include("test_temporal_api.jl")
