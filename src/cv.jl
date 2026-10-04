@@ -142,11 +142,23 @@ function _cv_site_mode(fit, family, Y::AbstractMatrix, s::Int, mask_s, N_mat, tr
     obs_in_train = [i for (i, t) in enumerate(train_species) if mask_s === nothing || mask_s[t]]
     isempty(obs_in_train) && return zeros(Float64, K)
 
+    n_train = length(train_species)
     y_sub = Y[train_species, s]
-    n_sub = N_mat === nothing ? fill(1, p_fit) : N_mat[train_species, s]
+    n_sub = N_mat === nothing ? fill(1, n_train) : N_mat[train_species, s]
     mask_sub = [mask_s === nothing ? true : mask_s[t] for t in train_species]
+    # Non-Normal :species folds fit all p rows with held-out species masked, so
+    # Λ and β stay length p while y_sub drops those rows. Score the site mode
+    # with the matching training-species loading layout (#768).
+    if p_fit == n_train
+        Λ_sub, β_sub = Λ, β
+    elseif p_fit >= maximum(train_species)
+        Λ_sub = Λ[train_species, :]
+        β_sub = length(β) == p_fit ? β[train_species] : β
+    else
+        throw(DimensionMismatch("cv site mode: loadings have $p_fit rows; cannot score $(n_train) training species"))
+    end
 
-    return _laplace_mode(family, y_sub, n_sub, Λ, β, link; mask = mask_sub)
+    return _laplace_mode(family, y_sub, n_sub, Λ_sub, β_sub, link; mask = mask_sub)
 end
 
 # -----------------------------------------------------------------------------
