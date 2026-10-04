@@ -307,6 +307,7 @@ println(_SHARD === nothing ?
     _shard_include("test_extract_gamma.jl")
     _shard_include("test_cross_kernel_fit.jl")
     _shard_include("test_source_covariance.jl")
+    _shard_include("test_symmetric_admission.jl")
     _shard_include("test_gaussian_sources.jl")
     _shard_include("test_grouped_gaussian.jl")
     _shard_include("test_grouped_fit.jl")
