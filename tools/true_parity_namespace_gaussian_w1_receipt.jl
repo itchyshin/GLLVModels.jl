@@ -27,6 +27,7 @@
 
 using GLLVModels, TOML, SHA, Statistics, LinearAlgebra
 using Distributions: Normal
+using Statistics: std
 const GMJ = GLLVModels
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
@@ -352,7 +353,9 @@ function receipts_namespace_gaussian_w1()
     w = fx["wide"]
     (w["converged"] === true && w["pd_hessian"] === true) || fail("wide: R fit did not converge with a PD Hessian")
     r_L = rowmajor(w["Lambda"], p, 2)
-    r_beta, r_sdB, c = Float64.(w["beta"]), Float64.(w["sd_B"]), Float64(w["sigma_eps_fixed"])
+    r_beta, r_sdB = Float64.(w["beta"]), Float64.(w["sd_B"])
+    c = max(1e-3 * std(vec(Y)), 1e-6)   # R's Q7 rule (R/fit-multi.R), as in the test
+    abs(c - Float64(w["sigma_eps_fixed"])) <= 1e-15 || fail("wide: Q7 residual SD differs from the recorded R value")
     fw = GMJ.fit_gaussian_pervar_gllvm(Y; K = 2, fixed_residual_sd = c)
     fw.converged || fail("wide: Julia fit did not converge")
     X = zeros(p, n, p)
@@ -361,7 +364,7 @@ function receipts_namespace_gaussian_w1()
     end
     ll_at_r = GMJ.gaussian_pervar_marginal_loglik(Y, r_L, r_sdB .^ 2 .+ c^2; X = X, β = r_beta)
     wfit = cite(tp, "fit = fit_gaussian_pervar_gllvm(Y; K = 2, fixed_residual_sd = c)")
-    wnote = "$data_note gllvmTMB_wide(Y, d = 2) on the wide 200 x 6 matrix builds value ~ 0 + trait + latent(0 + trait | site, d = 2) with latent()'s default unique = TRUE, so R fits Sigma = Lambda Lambda' + diag(sd_B^2) + sigma_eps^2 I with sigma_eps mapped off at its data-derived start ($(c), recorded). Julia fits the same covariance with the same fixed residual as fit_gaussian_pervar_gllvm(Y; K = 2, fixed_residual_sd = sigma_eps) (at $wfit); trait intercepts are the profiled row means. Loadings are compared as Lambda Lambda', which does not depend on the rotation. Limits: Gaussian only; the default call (no X, weights, phylo_vcv or formula_extra); the Julia side is the native fitter, not a wide-matrix wrapper."
+    wnote = "$data_note gllvmTMB_wide(Y, d = 2) on the wide 200 x 6 matrix builds value ~ 0 + trait + latent(0 + trait | site, d = 2) with latent()'s default unique = TRUE, so R fits Sigma = Lambda Lambda' + diag(sd_B^2) + sigma_eps^2 I with sigma_eps mapped off and fixed by R's Q7 rule (1e-3 x sd(y) over all responses, $(c)). Julia recomputes c with the same rule (checked against the recorded R value) and fits the same covariance with that fixed residual as fit_gaussian_pervar_gllvm(Y; K = 2, fixed_residual_sd = c) (at $wfit); trait intercepts are the profiled row means. Loadings are compared as Lambda Lambda', which does not depend on the rotation. Limits: Gaussian only; the default call (no X, weights, phylo_vcv or formula_extra); the Julia side is the native fitter, not a wide-matrix wrapper."
     cw = [
         mkcase("P1-JULIA-GLLVMTMB-WIDE-LOGLIK", "log-likelihood at the optimum",
             "$fxp [wide.loglik]", "fit.loglik, as compared at " * cite(tp, "@test isapprox(fit.loglik, Float64(w[\"loglik\"]);") * "; fit as at $wfit",
@@ -387,9 +390,10 @@ function receipts_namespace_gaussian_w1()
     fo = GMJ.fit_gllvm(Y; family = Normal(), K = 2)
     fo.converged || fail("ordiplot: Julia fit did not converge")
     od = GMJ.ordiplot(fo, Y)
+    raw = GMJ.ordiplot(fo, Y; rotate = false)
     ofit = cite(tp, "fit = fit_gllvm(Y; family = Normal(), K = 2)")
     ocall = cite(tp, "od = ordiplot(fit, Y)")
-    onote = "$data_note R: ordiplot(fit) on value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE) (plot sent to a null device); its invisible return list(scores, loadings) is recorded, unrotated (rotate = \"none\", the default). Julia: ordiplot(fit_gllvm(Y; family = Normal(), K = 2), Y) (fit at $ofit, call at $ocall), the same model, which returns the principal-rotated sites and species by default. The two are compared through rotation-invariant products: scores * loadings' (the latent part of the linear predictor) and loadings * loadings'. Limits: Gaussian only; the returned data, not the drawing; the axes, biplot and ellipse arguments are not exercised."
+    onote = "$data_note R: ordiplot(fit) on value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE) (plot sent to a null device); its invisible return list(scores, loadings) is recorded, unrotated (rotate = \"none\", the default). Julia: ordiplot(fit_gllvm(Y; family = Normal(), K = 2), Y) (fit at $ofit, call at $ocall), the same model, which returns the principal-rotated sites and species by default. The two are compared through rotation-invariant products: scores * loadings' (the latent part of the linear predictor) and loadings * loadings', and ordiplot(fit, Y; rotate = false) (at $(cite(tp, "raw = ordiplot(fit, Y; rotate = false)"))) is compared with R's raw scores and loadings directly (both use the lower-triangular loading convention). Limits: Gaussian only; the returned data, not the drawing; the axes, biplot and ellipse arguments are not exercised."
     co = [
         mkcase("P1-JULIA-ORDIPLOT-SCORES-LOADINGS", "ordiplot scores * loadings' ($(n*p) values, column-major)",
             "$fxp [ordiplot.scores, ordiplot.loadings]", "od.sites * od.species', as compared at " * cite(tp, "@test isapprox(od.sites * od.species', r_S * r_L';"),
@@ -397,6 +401,12 @@ function receipts_namespace_gaussian_w1()
         mkcase("P1-JULIA-ORDIPLOT-LOADINGS-GRAM", "ordiplot loadings * loadings' ($(p*p) values, column-major)",
             "$fxp [ordiplot.loadings]", "od.species * od.species', as compared at " * cite(tp, "@test isapprox(od.species * od.species', r_L * r_L';"),
             r_Lo * r_Lo', od.species * od.species', test_tolerance(tp, "@test isapprox(od.species * od.species', r_L * r_L';"), onote),
+        mkcase("P1-JULIA-ORDIPLOT-RAW-SCORES", "ordiplot raw scores, rotate = false in Julia and R's default rotate = \"none\" ($(2n) values, column-major)",
+            "$fxp [ordiplot.scores]", "raw.sites, as compared at " * cite(tp, "@test isapprox(raw.sites, r_S;"),
+            r_S, raw.sites, test_tolerance(tp, "@test isapprox(raw.sites, r_S;"), onote),
+        mkcase("P1-JULIA-ORDIPLOT-RAW-LOADINGS", "ordiplot raw loadings, rotate = false in Julia and R's default rotate = \"none\" ($(2p) values, column-major)",
+            "$fxp [ordiplot.loadings]", "raw.species, as compared at " * cite(tp, "@test isapprox(raw.species, r_L;"),
+            r_Lo, raw.species, test_tolerance(tp, "@test isapprox(raw.species, r_L;"), onote),
         mkcase("P1-JULIA-ORDIPLOT-LOGLIK", "log-likelihood of the fit ordiplot is drawn from",
             "$fxp [ordiplot.loglik]", "fit.logLik, as compared at " * cite(tp, "@test isapprox(fit.logLik, Float64(o[\"loglik\"]);") * "; fit as at $ofit",
             Float64(o["loglik"]), fo.logLik, test_tolerance(tp, "@test isapprox(fit.logLik, Float64(o[\"loglik\"]);"), onote),
