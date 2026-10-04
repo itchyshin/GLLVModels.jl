@@ -477,6 +477,7 @@ println(_SHARD === nothing ?
     _shard_include("test_bridge_truncated_input.jl")
     _shard_include("test_bridge_lv_predictor.jl")
     _shard_include("test_lv_ci.jl")
+    _shard_include("test_lv_profile_pd_hessian.jl")
     _shard_include("test_phylo_eta_realized.jl")
     _shard_include("test_bridge_missing_mask.jl")
     _shard_include("test_hessian_kwarg.jl")
