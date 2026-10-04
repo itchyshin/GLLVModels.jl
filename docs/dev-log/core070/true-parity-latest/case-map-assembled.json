@@ -16,7 +16,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-data.json",
-   "sha256": "90191727ed23f9edd3bf48cc7d1f6463cd3897146c11d3703aef2238e451f42a",
+   "sha256": "2e66fcd5a5d62c036b80155e0d87bd8aa661d2bbfaeeb3dbe80c4c021cf5f9c0",
    "rows": 36
   },
   {
@@ -2262,7 +2262,7 @@
     "batch_case_ids": [
      "CORE070-DATA-OFF-TRAIN-STORED-POSTFIT-READBACK"
     ],
-    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_data_twins_p1.jl, against R-at-P1 values copied from test/fixtures/data_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_predict_offset_twin_p1.jl, against R-at-P1 values copied from test/fixtures/predict_offset_twin_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {

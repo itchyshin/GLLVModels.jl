@@ -457,11 +457,23 @@ def p0_evidence(base):
 
 
 TWIN_REL = f"{OUT_REL}/receipts/julia-twins/data-twins"
-TWIN_TIER = ("numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as "
-             "test/test_data_twins_p1.jl, against R-at-P1 values copied from test/fixtures/data_twins_p1.toml (an R fit "
-             "that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. "
-             "The helper-replay batch case this row carried has no fit number; its receipt is kept under "
-             "non_binding_receipts and its ids under batch_case_ids")
+# Twin test and fixture per row; rows not listed use the shared data-twin pair.
+TWIN_SOURCES_DEFAULT = ("test/test_data_twins_p1.jl", "test/fixtures/data_twins_p1.toml")
+TWIN_SOURCES = {
+    "data/DATA-OFF-TRAIN-STORED": ("test/test_predict_offset_twin_p1.jl", "test/fixtures/predict_offset_twin_p1.toml"),
+}
+
+
+def twin_tier(sid):
+    """The tier text of a twin-bound row, naming that row's own twin test and fixture."""
+    test, fixture = TWIN_SOURCES.get(sid, TWIN_SOURCES_DEFAULT)
+    return ("numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as "
+            f"{test}, against R-at-P1 values copied from {fixture} (an R fit "
+            "that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. "
+            "The helper-replay batch case this row carried has no fit number; its receipt is kept under "
+            "non_binding_receipts and its ids under batch_case_ids")
+
+
 TWIN_FILES = {  # source_id -> twin receipt stem
     "data/DATA-OFF-NONE": "OFF-NONE",
     "data/DATA-OFF-SCALAR": "OFF-SCALAR",
@@ -547,7 +559,7 @@ def twin_overlay(sid, row, counts):
     row["evidence_tier"] = "numeric"
     row["measured_against"] = P1_SHA
     row["evidence"] = {"receipt": [rel], "non_binding_receipts": ev.get("non_binding_receipts", []),
-                       "batch_case_ids": prior_ids, "tier": TWIN_TIER}
+                       "batch_case_ids": prior_ids, "tier": twin_tier(sid)}
     row["measured_result"] = {**(row.get("measured_result") or {}), "twin_case_ids": case_ids,
                               "twin_verdict": rec["verdict"]}
     if sid in SCOPE_NOTES:
