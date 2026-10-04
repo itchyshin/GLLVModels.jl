@@ -287,6 +287,7 @@ println(_SHARD === nothing ?
     _shard_include("test_formula_pervar.jl")
     _shard_include("test_aicbic_newfits.jl")
     _shard_include("test_postfit.jl")
+    _shard_include("test_issue_737_omega_doc.jl")
     _shard_include("test_statsapi.jl")
     _shard_include("test_vcov_full_covariance.jl")
     _shard_include("test_postfit_zib_tweedie.jl")
