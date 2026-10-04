@@ -2,8 +2,8 @@
   "schema": 1,
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "scope": "covariance family: the 17 rows the P1 carry scan lists as PARTIAL_STALE_AT_P1 (7) or DANGLING (10); the 22 NOT_BOUND_AT_P0 covariance rows had no P0 evidence and are out of scope here",
-  "glvmodels_commit": "ead8f4180957dd47111f662efcda6e0734c9de94",
-  "note": "Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with PARITY_CASEMAP pointing at this file. Classifications are carried from docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. Only rows whose every executable case id carries a numeric R-vs-Julia comparison block cite evidence.receipt; rows with an R-only or R-boundary case cite evidence.non_binding_receipts instead, so they read as not bound under both the current checker and the numeric-tier rule proposed in PR #561. A row whose numeric cases pass but whose batch verifier rejected the run is held back the same way (evidence_tier numeric_held_batch_verifier_failed) unless a maintainer-signed numeric_exception is recorded on it.",
+  "glvmodels_commit": "59ecd020a7f9d19873f1ad3fbf05e2cc44f08360",
+  "note": "Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with PARITY_CASEMAP pointing at this file. Classifications are carried from docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. Only rows whose every executable case id carries a numeric R-vs-Julia comparison block cite evidence.receipt; rows with an R-only or R-boundary case cite evidence.non_binding_receipts instead, so they read as not bound under both the current checker and the numeric-tier rule proposed in PR #561. A row whose numeric cases pass but whose batch verifier rejected the run is held back the same way (evidence_tier numeric_held_batch_verifier_failed) unless a maintainer-signed receipt_status_exception is recorded on it.",
   "generator": "tools/core070_covariance_p1_receipts.py",
   "counts": {
     "numeric_pass": 0,
@@ -14,9 +14,9 @@
     "not_measured": 0
   },
   "runtimes_seconds": {
-    "mode_fits_default_control_baseline_wall": 42,
-    "runparity_18_covariance_cases_wall": 51,
-    "wave6_conversion_batch_wall": 47,
+    "mode_fits_default_control_baseline_wall": 33,
+    "runparity_18_covariance_cases_wall": 53,
+    "wave6_conversion_batch_wall": 43,
     "covariance_r_only_grammar_batch_wall": 1,
     "public_r_bridge_boundary_wall": 0,
     "p1_oracle_build_R_CMD_INSTALL": 243.7
