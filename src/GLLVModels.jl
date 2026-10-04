@@ -169,6 +169,7 @@ include("loading_profile_confirmatory_internal.jl")  # D3 confirmatory pins (not
 include("confint_bootstrap.jl")          # parametric bootstrap
 include("confint_derived.jl")            # derived quantities (Σ_y, communality, ...)
 include("loading_profile_confirmatory.jl") # D3 Stage 1 confirmatory loading_profile export
+include("flag_unreliable_loadings.jl")    # flag_unreliable_loadings: gllvmTMB twin on confirmatory fits
 include("confint_derived_wald.jl")       # transformed-Wald CIs for bounded derived quantities
 # Cross-family latent-scale link-implicit residual table + non-Gaussian
 # sigma_y_site/communality/correlation extractors. After postfit.jl (needs the
@@ -271,7 +272,7 @@ export make_cross_kernel, extract_Gamma, fit_coevolution_gaussian, fit_coevoluti
        confint, profile_ci, bootstrap_ci,
        transformed_wald_ci_derived, correlation_wald_ci, communality_wald_ci,
        icc_wald_ci, phylo_signal_wald_ci,
-       standardized_loading_wald_ci, raw_loading_wald_ci, loading_ci,
+       standardized_loading_wald_ci, raw_loading_wald_ci, loading_ci, flag_unreliable_loadings,
        loading_profile_exploratory, loading_profile,
        profile_ci_total_variance, profile_ci_phylo_signal,
        slope_sd_ci, standard_errors,

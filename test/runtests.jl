@@ -524,6 +524,8 @@ println(_SHARD === nothing ?
     _shard_include("test_animal_scalar_p1.jl")
     # P1 bridge readback: gllvmTMB_julia coef/fitted/logLik/predict/residuals/summary and gllvm_julia_fit, recorded live through JuliaCall.
     _shard_include("test_bridge_readback_p1.jl")
+    # P1 numeric twins of the gllvmTMB namespace rows gllvmTMB_wide, ordiplot.gllvmTMB_multi and flag_unreliable_loadings (one shared Gaussian fixture).
+    _shard_include("test_namespace_gaussian_w1_p1.jl")
     # P1 numeric twin of the gllvmTMB namespace row confint_inspect (estimate, Wald and profile bounds on four direct targets, Gaussian rank 2).
     _shard_include("test_confint_inspect_p1.jl")
     # P1 numeric twin of the gllvmTMB postfit row predict_missing (masked-cell predictions of a masked Gaussian fit).
