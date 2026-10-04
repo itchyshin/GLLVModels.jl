@@ -86,12 +86,16 @@ function _per_trait_intercept_rows(X::AbstractArray{<:Real,3}, β_fixed)
 end
 
 # Rank of the data after centring the traits in `centre` (those with a free
-# intercept) and scaling every trait by its uncentred norm, so a trait on a
-# tiny scale is not judged rank deficient. A trait is zero when its centred norm is at most
-# `64 eps` times the norm of its uncentred row (a zero trait, or a constant
-# trait that its intercept absorbs completely).
+# intercept) and scaling every trait by its uncentred norm, so centring roundoff
+# is at most about eps in every entry however large the trait mean is. A trait
+# is zero when its centred norm is at most `64 eps` times its uncentred norm.
+# The absolute tolerance follows the precision of the input (Float32 data are
+# not read as more precise than they are). The guard only uses this rank when
+# `n_sites < p`, where a rank read too low gives a refusal, which is the former
+# behaviour; a rank read too high is what the scaling and tolerance prevent.
 function _scale_aware_rank(y::AbstractMatrix, centre)
     p, n = size(y)
+    T = eltype(y) <: AbstractFloat ? eltype(y) : Float64
     M = Matrix{Float64}(y)
     for t in 1:p
         n0 = norm(@view M[t, :])
@@ -100,100 +104,68 @@ function _scale_aware_rank(y::AbstractMatrix, centre)
         if n0 == 0 || nr <= 64 * eps() * n0
             M[t, :] .= 0.0
         else
-            # Scale by the UNCENTRED norm: centring roundoff is then at most
-            # about eps in every entry, however large the trait mean is.
             M[t, :] ./= n0
         end
     end
-    # Absolute tolerance: entries are at most 1, so roundoff singular values
-    # are about 1e-15, a thousand times below 1e-12. A real direction survives
-    # unless its noise is below 1e-12 of the trait's own size.
-    return rank(M; atol = 1e-12)
+    return rank(M; atol = max(1e-12, 64 * eps(T)))
 end
 
-# Identifiability guard for the closed-form Gaussian fitter (#149). It replaces
-# the former `n_sites ≥ p` rule, but only where a sound replacement exists.
+# Identifiability guard for the closed-form Gaussian fitter (#149).
 #
-# The rank rule applies when `X` is absent (zero-mean model, uncentred rank) or
-# holds exactly one free per-trait intercept for every trait and no other free
-# column. The fitter estimates the intercepts jointly with the loadings, so the
-# smallest rank the data can have after removing the means is the rank of the
-# per-trait centred data (`(Y - μ1')(I - 11'/n)` equals the
-# centred `Y`). With `rank < p` and `K_total ≥ rank`, `ΛΛᵀ` can reproduce
-# every remaining direction and the residual variance runs to zero
-# (probabilistic PCA), so those fits are refused.
+# `n_sites ≥ p`: no check, exactly as before this guard existed.
 #
-# Any other `X` (shared columns, slopes, intercepts for only some traits, a
-# fixed intercept) keeps the former rule: refuse `n_sites < p`, and make no
-# boundedness claim and no rank or linear-dependence check, strict variants
-# included. Estimated coefficients can lower
-# the rank below that of the least-squares residual.
-#
-# `strict = true` (per-trait diagonal terms, phylogenetic blocks, `X_lv`): the
-# rank rule is not sufficient, because a duplicated, collinear or zero trait
-# gives an unbounded likelihood even with `K` below the rank, as a per-trait
-# variance can collapse. These fits are refused when `n_sites < p` (as on
-# main) and when the rank is below the generic rank of the design,
-# `min(p, n_sites - 1)` with intercepts and `min(p, n_sites)` without X.
-# Generic data at `n_sites == p` with intercepts have rank `p - 1` and are
-# accepted; a duplicated, collinear or zero trait lowers the rank and is refused.
-#
-# Masked fits are not covered: the masked route reaches this check on a
-# mean-imputed matrix, so the rank rule says nothing about them.
+# `n_sites < p` was always refused. It is now allowed in one case only: a fit
+# with an isotropic residual (no `has_diag`, no phylogenetic block, no `X_lv`)
+# and either no `X` (zero-mean model, uncentred rank) or exactly one free
+# per-trait intercept for every trait and no other free column (per-trait
+# centred rank; `(Y - μ1')(I - 11'/n)` equals the centred `Y`, so centring
+# gives the smallest rank any intercepts can reach). Such a fit is accepted when
+# `K + K_W` is below that rank and refused otherwise: with `K_total ≥ rank`,
+# `ΛΛᵀ` reproduces every remaining direction and the residual variance runs to
+# zero (probabilistic PCA). Every other fit with `n_sites < p` is refused as
+# before. Masked fits reach this check on a mean-imputed matrix; they keep the
+# `n_sites ≥ p` requirement only through this same path and are not covered by
+# the rank rule.
 function _check_gaussian_rank(y::AbstractMatrix, K_total::Integer, X, β_fixed;
                               strict::Bool = false)
     p, n = size(y)
+    n ≥ p && return nothing
     all(isfinite, y) || throw(ArgumentError(
         "fit_gaussian_gllvm: y contains Infs or NaNs; the Gaussian fitter " *
         "needs complete finite responses."))
+    strict && throw(ArgumentError(
+        "fit_gaussian_gllvm needs n_sites ≥ p for a fit with per-trait " *
+        "variance terms (has_diag, a phylogenetic block, or X_lv) (got " *
+        "n_sites = $n, p = $p): a per-trait variance can collapse and the " *
+        "likelihood is then unbounded. The Laplace-fitted families (Poisson, " *
+        "Binomial, NegativeBinomial and the rest) accept n_sites < p."))
     centre = Int[]
     if X !== nothing
         size(X, 1) == p && size(X, 2) == n || return nothing  # reported later
         all(isfinite, X) || throw(ArgumentError(
             "fit_gaussian_gllvm: X contains Infs or NaNs."))
         rows = _per_trait_intercept_rows(X, β_fixed)
-        # Branch (a): no free coefficient at all, or exactly one free
-        # per-trait intercept for every trait and nothing else.
-        in_a = rows !== nothing && (isempty(rows) || sort(rows) == collect(1:p))
-        if !in_a
-            n ≥ p || throw(ArgumentError(
-                "fit_gaussian_gllvm needs n_sites ≥ p unless X is absent or " *
-                "holds exactly one free intercept per trait and nothing else " *
-                "(got n_sites = $n, p = $p). Other designs (slopes, shared " *
-                "columns, intercepts for only some traits, or a fixed " *
-                "intercept) estimate coefficients jointly with the loadings, " *
-                "and the Gaussian likelihood can then be unbounded. For these " *
-                "designs no rank or linear-dependence check is made when " *
-                "n_sites ≥ p. The Laplace-fitted families (Poisson, Binomial, " *
-                "NegativeBinomial and the rest) accept n_sites < p."))
-            return nothing
-        end
+        ok = rows !== nothing && (isempty(rows) || sort(rows) == collect(1:p))
+        ok || throw(ArgumentError(
+            "fit_gaussian_gllvm needs n_sites ≥ p unless X is absent or " *
+            "holds exactly one free intercept per trait and nothing else " *
+            "(got n_sites = $n, p = $p). Other designs (slopes, shared " *
+            "columns, intercepts for only some traits, or a fixed intercept) " *
+            "estimate coefficients jointly with the loadings, and the Gaussian " *
+            "likelihood can then be unbounded. The Laplace-fitted families " *
+            "(Poisson, Binomial, NegativeBinomial and the rest) accept " *
+            "n_sites < p."))
         centre = rows
     end
     r = _scale_aware_rank(y, centre)
-    if strict
-        generic = isempty(centre) ? min(p, n) : min(p, n - 1)
-        (n < p || r < generic) && throw(ArgumentError(
-            "fit_gaussian_gllvm: this fit has per-trait variance terms " *
-            "(has_diag, a phylogenetic block, or X_lv). They need n_sites ≥ p " *
-            "and data of the generic rank for the design (rank = $r, " *
-            "expected $generic, p = $p, n_sites = $n" *
-            (isempty(centre) ? "" : "; centred by the per-trait intercepts") *
-            "). A subset of traits is linearly dependent, or there are too " *
-            "few sites, so a per-trait variance can collapse and the " *
-            "likelihood is unbounded. Use more sites, drop the dependent " *
-            "trait, or drop the per-trait terms. The Laplace-fitted families " *
-            "have no such condition on n_sites."))
-    elseif r < p && K_total ≥ r
-        throw(ArgumentError(
-            "fit_gaussian_gllvm: the number of latent axes K = $K_total must be " *
-            "below the rank of the data the fitter sees (rank = $r, p = $p, " *
-            "n_sites = $n$(isempty(centre) ? "" : "; centred by the per-trait intercepts")). Otherwise the Gaussian likelihood is unbounded. Use a " *
-            "smaller K, or more sites, or drop the trait that is a linear " *
-            "combination of the others. The Laplace-fitted families (Poisson, " *
-            "Binomial, NegativeBinomial and the rest) have no such condition " *
-            "on n_sites."))
-    end
+    K_total ≥ r && throw(ArgumentError(
+        "fit_gaussian_gllvm: with n_sites < p the number of latent axes " *
+        "K = $K_total must be below the rank of the data the fitter sees " *
+        "(rank = $r, p = $p, n_sites = $n" *
+        (isempty(centre) ? "" : "; centred by the per-trait intercepts") *
+        "). Otherwise the Gaussian likelihood is unbounded. Use a smaller K or " *
+        "more sites. The Laplace-fitted families (Poisson, Binomial, " *
+        "NegativeBinomial and the rest) have no such condition on n_sites."))
     return nothing
 end
 

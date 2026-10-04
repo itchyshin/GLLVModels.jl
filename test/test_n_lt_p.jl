@@ -228,9 +228,9 @@ end
     # n >= p but rank-deficient (trait 5 = trait 1 + trait 2): rank 4 < p = 5.
     Yr = randn(StableRNG(153), 5, 8)
     Yr[5, :] .= Yr[1, :] .+ Yr[2, :]
-    @test_throws ArgumentError G(Yr; K = 4)
-    msg = sprint(showerror, try G(Yr; K = 4); nothing catch e; e end)
-    @test occursin("rank = 4", msg) && occursin("K = 4", msg)
+    # At n_sites >= p the guard makes no check, as before #149 (no regression
+    # for any fit that was accepted before).
+    @test GLLVModels._check_gaussian_rank(Yr, 4, nothing, nothing) === nothing
     fr = G(Yr; K = 1)
     @test isfinite(fr.logLik)
 
@@ -243,7 +243,7 @@ end
     # per trait leaves rank 3, so K = 3 is refused and K = 2 fits.
     Yc = randn(StableRNG(154), 4, 4)
     Xi = zeros(4, 4, 4); for t in 1:4; Xi[t, :, t] .= 1; end
-    @test_throws ArgumentError G(Yc; K = 3, X = Xi)
+    @test GLLVModels._check_gaussian_rank(Yc, 3, Xi, nothing) === nothing  # n_sites == p: no check
     @test isfinite(G(Yc; K = 2, X = Xi).logLik)
     @test isfinite(G(Yc; K = 3).logLik)       # no intercepts: raw rank is 4 = p
 end
@@ -286,10 +286,11 @@ Xi_(p, n) = (X = zeros(p, n, p); for t in 1:p; X[t, :, t] .= 1; end; X)
     # Strict variants refuse any rank-deficient data (scale-aware rank < p).
     Random.seed!(2)
     Yd = randn(5, 12); Yd[2, :] .= Yd[1, :]            # duplicated trait
-    @test_throws ArgumentError G(Yd; K = 1, has_diag = true)
-    @test isrank(rankerr(() -> G(Yd; K = 1, has_diag = true)))
+    # n_sites >= p: no check, as before #149 (the duplicated-trait collapse
+    # with per-trait variances is a known limit, documented in pitfalls.md).
+    @test GLLVModels._check_gaussian_rank(Yd, 1, nothing, nothing; strict = true) === nothing
     Yz = randn(StableRNG(161), 5, 12); Yz[3, :] .= 0   # zero trait
-    @test_throws ArgumentError G(Yz; K = 1, has_diag = true)
+    @test GLLVModels._check_gaussian_rank(Yz, 1, nothing, nothing; strict = true) === nothing
     Σ6 = let A = randn(StableRNG(163), 6, 6); Symmetric(A * A' + I) end
     @test_throws ArgumentError G(randn(StableRNG(2), 6, 4); K = 3, K_phy = 1, Σ_phy = Σ6)
     @test_throws ArgumentError G(randn(StableRNG(2), 6, 4); K = 1, has_phy_unique = true, Σ_phy = Σ6)
@@ -341,10 +342,14 @@ Xi_(p, n) = (X = zeros(p, n, p); for t in 1:p; X[t, :, t] .= 1; end; X)
     Ysp, Xsp = slopes(4, 3, 11)
     @test_throws ArgumentError G(Ysp; K = 1, has_diag = true, X = Xsp)
     # The strict message mentions centring only when centring happened.
-    es = rankerr(() -> G(Yd; K = 1, has_diag = true))
-    @test !occursin("centred", sprint(showerror, es))
-    es2 = rankerr(() -> G(randn(StableRNG(172), 5, 3); K = 1, has_diag = true, X = Xi_(5, 3)))
-    @test occursin("centred", sprint(showerror, es2))
+    # n_sites < p: per-trait variance terms are refused outright, and the
+    # plain rank message says "centred" only when the data were centred.
+    es = rankerr(() -> G(randn(StableRNG(172), 5, 3); K = 1, has_diag = true, X = Xi_(5, 3)))
+    @test occursin("per-trait", sprint(showerror, es)) && occursin("n_sites ≥ p", sprint(showerror, es))
+    e_nox = rankerr(() -> G(randn(StableRNG(173), 5, 3); K = 3))
+    @test occursin("rank", sprint(showerror, e_nox)) && !occursin("centred", sprint(showerror, e_nox))
+    e_cx = rankerr(() -> G(randn(StableRNG(174), 5, 3); K = 2, X = Xi_(5, 3)))
+    @test occursin("centred", sprint(showerror, e_cx))
 
     # Large per-trait means: the centred rank decides, not centring roundoff.
     # n_sites = 4 < p = 6 with intercepts gives centred rank 3.
@@ -364,9 +369,9 @@ Xi_(p, n) = (X = zeros(p, n, p); for t in 1:p; X[t, :, t] .= 1; end; X)
     # rank at its generic value p - 1, so the rank cannot see it; it is caught
     # at n_sites > p, and at n_sites == p without X.)
     Yd4 = copy(Yg4); Yd4[2, :] .= Yd4[1, :]
-    @test_throws ArgumentError G(Yd4; K = 1, has_diag = true)
+    @test GLLVModels._check_gaussian_rank(Yd4, 1, Xi_(4, 4), nothing; strict = true) === nothing
     Yd5 = randn(StableRNG(182), 4, 5); Yd5[2, :] .= Yd5[1, :]
-    @test_throws ArgumentError G(Yd5; K = 1, has_diag = true, X = Xi_(4, 5))
+    @test GLLVModels._check_gaussian_rank(Yd5, 1, Xi_(4, 5), nothing; strict = true) === nothing
     @test isfinite(G(randn(StableRNG(183), 4, 5); K = 1, has_diag = true, X = Xi_(4, 5)).logLik)
     @test_throws ArgumentError G(randn(StableRNG(181), 5, 4); K = 1, has_diag = true,
                                  X = Xi_(5, 4))                       # n < p

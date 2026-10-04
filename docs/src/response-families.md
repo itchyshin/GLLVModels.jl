@@ -122,12 +122,11 @@ fit = fit_gllvm(Y; family = Normal(), K = 2)
 The Gaussian GLLVM admits a **closed-form marginal** (no Laplace approximation).
 The latent integral is conjugate, so the optimiser works directly on the exact
 log-likelihood. This is the fastest and most accurate path. The response matrix
-`Y` is `p × n` (responses × sites). The closed-form fitter has no blanket `n_sites ≥ p`
-requirement: with no `X`, or one free intercept per trait, a plain isotropic
-fit needs `K` below the rank of the data and the variants with per-trait
-variance terms need data of the generic rank. Any other `X` design (slopes,
-shared columns, partial or fixed intercepts) and masked fits keep
-`n_sites ≥ p`. An `ArgumentError` is thrown when the rule is violated. The Laplace-fitted families below have no such condition (see
+`Y` is `p × n` (responses × sites). With `n_sites < p` the closed-form fitter
+accepts only a plain isotropic fit with no `X` or one free intercept per trait,
+and only when `K` is below the rank of the data; every other fit with
+`n_sites < p` throws an `ArgumentError`. Fits with `n_sites ≥ p` are unchanged.
+The Laplace-fitted families below have no such condition (see
 [Common pitfalls](pitfalls.md)).
 
 ### Binomial — `Binomial()`
@@ -656,9 +655,9 @@ Jacobian `−Σ log y`.
 `ArgumentError("lognormal requires y > 0; found non-positive response")`.
 Only `LogLink()` is supported — any other link throws
 `ArgumentError("fit_lognormal_gllvm: only LogLink is supported (twin lognormal)")`.
-Because it reuses the Gaussian fitter, `Lognormal()` follows the same rank rule
-as a plain isotropic Gaussian fit on the centred `log(Y)` and throws an
-`ArgumentError` when `K` is not below that rank (see
+Because it reuses the Gaussian fitter, `Lognormal()` follows the same rule as a
+plain isotropic Gaussian fit on the centred `log(Y)`: with `n_sites < p` it
+needs `K` below that rank and throws an `ArgumentError` otherwise (see
 [Common pitfalls](pitfalls.md)).
 
 `Lognormal` is distinct from `Distributions.LogNormal` and from the two-part

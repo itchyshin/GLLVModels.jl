@@ -32,42 +32,36 @@ iterations. Standardising responses to a common scale helps the Gaussian path.
 
 ## Fewer sites than species (`n < p`)
 
-The closed-form Gaussian fitter `fit_gaussian_gllvm` no longer requires
-`n_sites ≥ p` for every fit. What it checks depends on the variant.
+The closed-form Gaussian fitter `fit_gaussian_gllvm` used to refuse every fit
+with `n_sites < p`. It now allows one case, and leaves every fit with
+`n_sites ≥ p` exactly as before (no check is made there).
 
-- **Plain isotropic fit with complete data, and either no `X` or exactly one
-  free intercept per trait and nothing else in `X`** (a single residual
-  variance, `K` and optionally `K_W`, no `has_diag`, no phylogenetic block, no
-  `X_lv`). The likelihood is bounded when the number of latent axes `K + K_W` is
-  below the rank of the data (centred per trait when every trait has an
-  estimated intercept), unless that rank is already `p`; otherwise the fit
-  throws an `ArgumentError` that names the rank and `K`. The rank is computed
-  after scaling each trait to unit norm, so a trait on a tiny scale is not
-  treated as degenerate. With `n_sites < p` the rank is at most `n_sites` (minus
-  one with intercepts), so a small `K` fits and a `K` at or above the rank is
-  refused. Rank-deficient data with `n_sites ≥ p` (for example a trait that is a
-  sum of two others) are refused for `K` at or above the rank.
-- **Per-trait variance terms** (`has_diag`, `K_phy > 0`, `has_phy_unique`,
-  `X_lv`), in the same two `X` cases. The rank rule is not enough here: a
-  duplicated, collinear or zero trait makes the likelihood unbounded even with
-  `K` below the rank, because a per-trait variance can collapse. These fits
-  throw an `ArgumentError` when `n_sites < p`, and when the rank is below the
-  generic rank of the design: `min(p, n_sites)` with no `X`, and
-  `min(p, n_sites - 1)` with per-trait intercepts. Generic data at
-  `n_sites == p` with intercepts are therefore accepted. A duplicated trait
-  there is not visible to the rank and is not refused; from `n_sites > p` on
-  it is.
-- **Any other `X`** (slopes, shared columns, intercepts for only some traits, a
-  fixed intercept, mixed designs), for every variant including the per-trait
-  variance terms above. The coefficients are estimated jointly with the
-  loadings and can lower the rank of the data below that of any residual, so no
-  rank rule is available. These fits keep the former requirement
-  `n_sites ≥ p` and throw an `ArgumentError` otherwise. With `n_sites ≥ p`
-  nothing is checked: the check for a duplicated or collinear trait runs only
-  for no `X` or one free intercept per trait.
-- **Masked fits** (`mask`). The masked route reaches the check on a
-  mean-imputed copy of the data, so the rank rule says nothing about
-  boundedness for it. Keep `n_sites ≥ p` for masked fits.
+- **Allowed with `n_sites < p`:** a plain isotropic fit with complete data (a
+  single residual variance, `K` and optionally `K_W`; no `has_diag`, no
+  phylogenetic block, no `X_lv`), with either no `X` or exactly one free
+  intercept per trait and nothing else in `X`. The likelihood is bounded when
+  the number of latent axes `K + K_W` is below the rank of the data (centred per
+  trait when the intercepts are estimated); otherwise the fit throws an
+  `ArgumentError` that names the rank and `K`. With `n_sites < p` that rank is
+  at most `n_sites`, or `n_sites - 1` with intercepts, so a small `K` fits. The
+  rank is computed so that rounding cannot raise it: each centred trait is
+  scaled by its uncentred norm and a fixed tolerance, matched to the precision
+  of the data, is used. A trait whose variation is below about `1e-12` of its
+  size (or `64 eps` of the input type) counts as constant, which can only lead
+  to a refusal.
+- **Still refused with `n_sites < p`:** fits with per-trait variance terms
+  (`has_diag`, `K_phy > 0`, `has_phy_unique`, `X_lv`), where a per-trait
+  variance can collapse; and fits with any other `X` (slopes, shared columns,
+  intercepts for only some traits, a fixed intercept), where coefficients
+  estimated with the loadings can lower the rank.
+- **Not checked with `n_sites ≥ p`, as before:** data that are rank deficient
+  (for example a duplicated, collinear or constant trait) can still give an
+  unbounded likelihood, especially with per-trait variance terms, where a
+  per-trait variance collapses to zero. Check `converged`, look for residual or
+  per-trait variances near zero, and remove dependent traits before fitting.
+- **Masked fits** (`mask`) reach the check on a mean-imputed copy of the data,
+  so the rank rule says nothing about boundedness for them. Keep
+  `n_sites ≥ p` for masked fits.
 
 Every route built on the fitter inherits this behaviour:
 `fit_gllvm(Y; family = Normal(), K)` (also through `@formula` and `select_lv`),

@@ -306,17 +306,15 @@
   objective itself has no n-dependence: at fixed parameters the n = 16 log-likelihood
   equals the sum of its two n = 8 halves, and each equals a hand-written per-site
   Newton/Laplace reference to 1e-9.
-  The Gaussian `n_sites >= p` check is replaced by a rank rule where one is sound. It is not a
-  property of the likelihood, which is exact at n < p: a bounded maximum needs K below the rank
-  of the centred data. With no `X`, or exactly one free intercept per trait and nothing else (centred per trait), K at or
-  above that rank is refused and a smaller K fits. Any other design (slopes, shared columns,
-  intercepts for only some traits, a fixed intercept) keeps the `n_sites >= p` refusal and gets no
-  rank check, because the estimated coefficients can lower the rank below that of any residual.
-  Fits with `has_diag`, `K_phy`, `has_phy_unique` or `X_lv` refuse `n_sites < p` and data below the generic
-  rank (`min(p, n_sites)` without X, `min(p, n_sites - 1)` with intercepts) in the first two cases only;
-  the duplicated or collinear trait check does not run for other designs.
-  Masked fits are not covered. Documented in `docs/src/pitfalls.md`; the `fit_gaussian_gllvm` and
-  `fit_lognormal_gllvm` docstrings still say `n_sites >= p` and are updated in a follow-up. Fits with n >= p are numerically unchanged (pinned from the
+  With `n_sites < p` the Gaussian fitter now accepts one case it used to refuse: a plain
+  isotropic fit (no `has_diag`, no phylogenetic block, no `X_lv`) with no `X`, or exactly one
+  free intercept per trait and nothing else. The likelihood is exact at n < p; a bounded maximum
+  needs K below the rank of the (per-trait centred) data, so K at or above that rank is refused
+  and a smaller K fits. Every other fit with `n_sites < p` (per-trait variance terms, slopes,
+  shared columns, intercepts for only some traits, a fixed intercept) is refused as before, and
+  fits with `n_sites >= p` get no check, as before. Masked fits are not covered. Documented in
+  `docs/src/pitfalls.md`; the `fit_gaussian_gllvm` and `fit_lognormal_gllvm` docstrings still say
+  `n_sites >= p` and are updated in a follow-up. Fits with n >= p are numerically unchanged (pinned from the
   tree before the change). Test: `test/test_n_lt_p.jl`.
 
 - **The W-tier reduced-rank term now carries the full cross-trait covariance, as in
