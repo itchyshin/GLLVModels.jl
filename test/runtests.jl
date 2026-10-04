@@ -281,6 +281,7 @@ println(_SHARD === nothing ?
     _shard_include("test_com_poisson.jl")
     _shard_include("test_com_poisson_mode_search.jl")
     _shard_include("test_gaussian_pervar.jl")
+    _shard_include("test_ledermann_pervar_k.jl")
     _shard_include("test_gaussian_pervar_design.jl")
     _shard_include("test_gaussian_fixed_residual.jl")
     _shard_include("test_gaussian_pervar_fallback.jl")

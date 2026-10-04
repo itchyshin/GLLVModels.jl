@@ -139,6 +139,12 @@ lower-triangular packing (matching the R-side `gllvmTMB::rr_theta_len(p,
 K)`) as the identifying constraint at the optimum. The latent scores
 `η_B[s]` are not estimated; they are integrated out.
 
+**Per-species residual variances (`fit_gaussian_pervar_gllvm`).** When each
+response carries its own diagonal residual ψ (Quick-start `pervar = true`),
+separating Λ from ψ additionally requires **(p − K)² ≥ p + K** (Ledermann
+bound). The shared-σ Gaussian fitter uses one scalar `σ_eps` and does not
+apply this bound; its `K < p` requirement is only for the PPCA warm start.
+
 **The two tiers are not separated by this fitter.** In `fit_gaussian_gllvm`
 each column of `Y` is one site observed once, so `η_s` and `η_W[s]` vary at
 the same level. The likelihood depends on the two loading blocks only

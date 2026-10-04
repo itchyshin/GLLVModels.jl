@@ -174,6 +174,11 @@ end
 _loadings(fit::GaussianPerVarFit) = fit.Λ
 _loglik(fit::GaussianPerVarFit)   = fit.loglik
 
+# Ledermann (1940) bound for Σ = ΛΛ' + diag(ψ) with one ψ per response.
+function _ledermann_pervar_k_admissible(p::Integer, K::Integer)
+    (p - K)^2 >= p + K
+end
+
 # Free params: requested fixed effects + reduced loadings + residual variances.
 function _nparams(fit::GaussianPerVarFit)
     p, K = size(fit.Λ)
@@ -186,6 +191,13 @@ end
         -> GaussianPerVarFit
 
 Fit a heteroscedastic (per-species variance) Gaussian GLLVM by EM or L-BFGS.
+
+For this per-species residual model (`Σ = Λ Λ' + diag(ψ)` with one ψ per trait),
+`K` must satisfy the Ledermann identifiability bound `(p - K)² ≥ p + K` (e.g.
+`p = 4` → `K ≤ 1`, `p = 5` → `K ≤ 2`, `p = 10` → `K ≤ 6`). The shared-residual
+fitter `fit_gaussian_gllvm` uses one scalar `σ_eps` and a weaker
+computational limit (`K < p` for the PPCA warm start only). Inadmissible `K`
+here raises `ArgumentError` before optimisation.
 
 `Y` is `p × n_sites`. Optimises `θ = [vec(packed Λ); log φ²_1 … log φ²_p]` with
 fixed effects profiled out analytically. With `X=nothing`, the `p` trait intercepts
@@ -236,6 +248,10 @@ function fit_gaussian_pervar_gllvm(Y::AbstractMatrix;
                                    iterations::Integer = 1000)
     p, n = size(Y)
     @assert K ≥ 1
+    _ledermann_pervar_k_admissible(p, K) || throw(ArgumentError(
+        "fit_gaussian_pervar_gllvm: per-species residual variances require the " *
+        "Ledermann bound (p - K)^2 >= p + K for identifiable Λ and ψ; got p=$p, " *
+        "K=$K. The shared-σ fitter fit_gaussian_gllvm uses a different condition."))
     @assert n ≥ 2 "Need n_sites ≥ 2 for per-species variances"
     method in (:em, :lbfgs) || throw(ArgumentError("method must be :em or :lbfgs"))
     c = Float64(fixed_residual_sd)
