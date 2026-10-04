@@ -615,17 +615,44 @@ compare_fits_indep_vs_two_psi(fit_indep, fit_alt, n::Integer) = compare_fits_dep
 # predictive_check — predictive-diagnostics.R:78-229
 # ---------------------------------------------------------------------
 
+# Forward only the extras `simulate` actually uses. `mask` is applied to the
+# per-trait statistics below; the family simulators do not take a mask.
+function _predictive_simulate(fit, n; rng, N = nothing, X_lv = nothing, offset = nothing)
+    extras = Pair{Symbol, Any}[]
+    N !== nothing && push!(extras, :N => N)
+    X_lv !== nothing && push!(extras, :X_lv => X_lv)
+    offset !== nothing && push!(extras, :offset => offset)
+    isempty(extras) && return simulate(fit, n; rng = rng)
+    return simulate(fit, n; rng = rng, extras...)
+end
+
+function _predictive_row_stat(f, row, maskrow)
+    if maskrow === nothing
+        return float(f(row))
+    end
+    kept = [row[j] for j in eachindex(row) if maskrow[j]]
+    isempty(kept) && return NaN
+    return float(f(kept))
+end
+
 """
     predictive_check(fit, y::AbstractMatrix; nsim=100, rng=Random.default_rng(),
-                      stats=(mean=Statistics.mean, sd=Statistics.std)) -> NamedTuple
+                      stats=(mean=Statistics.mean, sd=Statistics.std),
+                      N=nothing, mask=nothing, X_lv=nothing, offset=nothing) -> NamedTuple
 
 Port of R's `predictive_check()` (`predictive-diagnostics.R:78-229`):
 simulate-and-summarise posterior/parametric predictive check. Draws
 `nsim` replicate response matrices from the fitted model via the
-existing per-family `simulate(fit, n; rng)` (`src/simulate_fit.jl`)
-and compares each observed per-trait summary statistic in `stats`
-against its simulated reference distribution with a two-sided
-Bayesian/parametric p-value `2·min(mean(sim ≤ obs), mean(sim ≥ obs))`.
+existing per-family `simulate` (`src/simulate_fit.jl`) and compares
+each observed per-trait summary statistic in `stats` against its
+simulated reference distribution with a two-sided Bayesian/parametric
+p-value `2·min(mean(sim ≤ obs), mean(sim ≥ obs))`.
+
+`N`, `X_lv`, and `offset` are forwarded to `simulate` when supplied
+(Binomial trial counts must be passed as `N`; the default there is
+all-ones / Bernoulli). `mask` is applied to both the observed and
+simulated row before each statistic. A non-finite observed statistic
+returns `p_value = NaN` rather than `0`.
 
 **Gap vs R**: works on any fit type with a `simulate(fit, n)` method
 (the non-Gaussian families in `src/simulate_fit.jl`, plus the
@@ -640,19 +667,24 @@ p_value::Vector{Float64}, sim_mean::Vector{Float64}, sim_sd::Vector{Float64})`.
 """
 function predictive_check(fit, y::AbstractMatrix; nsim::Integer = 100,
                            rng::AbstractRNG = default_rng(),
-                           stats::NamedTuple = (mean = Statistics.mean, sd = Statistics.std))
+                           stats::NamedTuple = (mean = Statistics.mean, sd = Statistics.std),
+                           N = nothing, mask = nothing, X_lv = nothing, offset = nothing)
     nsim >= 2 || throw(ArgumentError("nsim must be >= 2; got $nsim"))
     hasmethod(simulate, Tuple{typeof(fit), Int}) || throw(ArgumentError(
         "predictive_check has no simulate(fit, n) method for $(typeof(fit)); " *
         "see the docstring gap note"))
 
     p, n = size(y)
+    if mask !== nothing
+        size(mask) == (p, n) || throw(DimensionMismatch("mask must be $(p)×$(n)"))
+    end
     draws = Array{Float64}(undef, nsim, p, length(stats))
     for s in 1:nsim
-        ysim = simulate(fit, n; rng = rng)
+        ysim = _predictive_simulate(fit, n; rng = rng, N = N, X_lv = X_lv, offset = offset)
         for (k, f) in enumerate(stats)
             for t in 1:p
-                draws[s, t, k] = f(view(ysim, t, :))
+                mrow = mask === nothing ? nothing : view(mask, t, :)
+                draws[s, t, k] = _predictive_row_stat(f, view(ysim, t, :), mrow)
             end
         end
     end
@@ -667,15 +699,20 @@ function predictive_check(fit, y::AbstractMatrix; nsim::Integer = 100,
     for (k, nm) in enumerate(stat_names)
         f = stats[nm]
         for t in 1:p
-            obs = f(view(y, t, :))
+            mrow = mask === nothing ? nothing : view(mask, t, :)
+            obs = _predictive_row_stat(f, view(y, t, :), mrow)
             sim_col = view(draws, :, t, k)
-            lo_p = Statistics.mean(sim_col .<= obs)
-            hi_p = Statistics.mean(sim_col .>= obs)
-            pv = 2 * min(lo_p, hi_p)
+            if !isfinite(obs)
+                pv = NaN
+            else
+                lo_p = Statistics.mean(sim_col .<= obs)
+                hi_p = Statistics.mean(sim_col .>= obs)
+                pv = min(2 * min(lo_p, hi_p), 1.0)
+            end
             push!(stat_out, String(nm))
             push!(trait_out, t)
             push!(observed_out, obs)
-            push!(p_out, min(pv, 1.0))
+            push!(p_out, pv)
             push!(sim_mean_out, Statistics.mean(sim_col))
             push!(sim_sd_out, Statistics.std(sim_col))
         end
