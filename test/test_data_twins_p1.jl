@@ -15,7 +15,8 @@
 # Lambda Lambda' (rotation- and sign-stable).
 #
 #   pois_none / pois_scalar / pois_exposure : Poisson, K = 1, offset absent / log(2) / log(e)
-#       (R: offset(), Julia: offset = p x n matrix; Julia's beta is the offset-free intercept, as in R).
+#       (R: offset(), Julia: the scalar offset = log(2) for pois_scalar, as R's offset(log(2)) is a constant
+#       broadcast to every row, and a p x n matrix for the exposure; Julia's beta is the offset-free intercept, as in R).
 #   pois_na_drop / pois_na_include : 12 NA response cells, R default miss_control() and
 #       miss_control(response = "include") against Julia `missing` cells in Y and mask = .
 #   nb2_exposure / nb1_exposure : count families other than Poisson with an exposure offset.
@@ -84,7 +85,8 @@ end
             _dt_check(fx, "pois_none"); _dt_check(fx, "pois_scalar"); _dt_check(fx, "pois_exposure")
             f0 = fit_gllvm(Yc; family = Poisson(), K = 1)
             compare("pois_none", f0)
-            fs = fit_gllvm(Yc; family = Poisson(), K = 1, offset = fill(log(2), p, n))
+            # the scalar goes in as a scalar (R: offset(log(2))); fit_gllvm broadcasts it to p x n
+            fs = fit_gllvm(Yc; family = Poisson(), K = 1, offset = log(2))
             compare("pois_scalar", fs)
             # a constant offset is absorbed by the intercepts: same logLik, beta shifted by log(2) (both engines)
             @test isapprox(fs.loglik, f0.loglik; atol = 1e-6, rtol = 0)

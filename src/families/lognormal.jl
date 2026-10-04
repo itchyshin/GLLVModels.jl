@@ -96,24 +96,46 @@ Fit a one-part lognormal GLLVM (`log(y) ~ Normal(η, σ²)`, log link only) by
 reusing the closed-form Gaussian fitter on centred log-responses. `Y` is a
 `p×n` matrix of strictly positive responses; `K` the latent dimension.
 
-Per-trait intercepts `β_t = mean_s log(Y[t,s])` are removed before
+Per-trait intercepts `β_t = mean_s (log(Y[t,s]) − offset[t,s])` are removed before
 [`fit_gaussian_gllvm`](@ref) estimates `(Λ, σ)` on the centred log scale
 (profile-admissible Identity path). Reported `loglik` is the y-scale marginal
 at fitted `(β, Λ, σ)` including `−Σ log y`. Remaining keywords pass through to
 `fit_gaussian_gllvm`. Because it reuses that fitter, it also inherits its
 `n_sites ≥ p` requirement and throws an `ArgumentError` with fewer sites than
 traits; the Laplace-fitted families do not have this requirement (#149).
+
+`offset` is the known additive term on the log scale, `log(y) = β + offset + Λz + ε`
+(for example log-exposure), as for the other families. It is subtracted from `log(Y)` before
+the trait means are taken, so a constant offset is absorbed by the intercepts (same `loglik`,
+`β` shifted by `−offset`), and `β` is the offset-free intercept. It takes the shapes
+[`fit_gllvm`](@ref) documents (a scalar, a `p×n`, `1×n` or `p×1` matrix, a length-`p` vector;
+anything else throws an `ArgumentError`), and a non-finite offset at any cell is refused.
+This fitter does not support `mask` (passing one throws an `ArgumentError`): the trait means
+and the y-scale `loglik` run over every cell.
 """
 function fit_lognormal_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
-        link::Link = LogLink(), kwargs...)
+        link::Link = LogLink(), offset = nothing, kwargs...)
     link isa LogLink || throw(ArgumentError(
         "fit_lognormal_gllvm: only LogLink is supported (twin lognormal)"))
+    # `mask` would reach the Gaussian fit of the centred log-responses but not the trait means
+    # or the `-Σ log y` term, which run over every cell, so a masked fit came back with the
+    # wrong intercepts and logLik. Refuse it rather than return that.
+    get(kwargs, :mask, nothing) === nothing || throw(ArgumentError(
+        "fit_lognormal_gllvm: mask is not supported (the trait means and the y-scale " *
+        "logLik run over every cell, so a masked fit would be silently wrong); drop the mask"))
     p, n = size(Y)
+    # `offset` is made a p×n matrix here (see `_normalize_offset`); with no mask every cell is
+    # observed, so a non-finite offset anywhere is refused.
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
+                               caller = "fit_lognormal_gllvm", maskable = false)
     all(>(0), Y) || throw(ArgumentError(
         "lognormal requires y > 0; found non-positive response"))
     Z = log.(Y)
-    β̂ = vec(sum(Z; dims = 2)) ./ n
-    R = Z .- β̂
+    # η = β + offset + Λz is the mean of log(y), so it is log(y) − offset that is centred
+    # and fitted; the intercepts then absorb a constant offset exactly.
+    Zo = offset === nothing ? Z : Z .- offset
+    β̂ = vec(sum(Zo; dims = 2)) ./ n
+    R = Zo .- β̂
     gfit = fit_gaussian_gllvm(R; K = K, kwargs...)
     Λ̂ = Matrix{Float64}(gfit.pars.Λ)
     σ̂ = Float64(gfit.pars.σ_eps)
