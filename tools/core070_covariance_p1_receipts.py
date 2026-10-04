@@ -12,9 +12,11 @@ docs/dev-log/core070/true-parity-latest/:
 Numbers in each `comparison` block are recomputed here from the raw R and
 Julia values in the batch output, with the tolerance each harness itself
 declares (never a wider one). A harness check written as
-`isapprox(a, b; atol, rtol)` is reported as abs_diff = norm(a - b) against
+`isapprox(a, b; atol, rtol)` is judged as harness_norm_diff = norm(a - b) against
 tolerance = max(atol, rtol * max(norm(a), norm(b))), which is exactly the
-bound isapprox applies. A scalar `abs(a - b) <= tol` check is reported as-is.
+bound isapprox applies; its abs_diff records the max absolute entrywise
+difference, the value tools/true_parity_check.mjs recomputes from r_value and
+julia_value. A scalar `abs(a - b) <= tol` check is reported as-is.
 
 A row is marked evidence_tier "numeric" only when every one of its
 executable_case_ids has a comparison block within tolerance AND every batch
@@ -112,13 +114,23 @@ def scalar_entry(case_id, quantity, r, j, tol, rule):
             "abs_diff": abs(r - j), "tolerance": tol, "tolerance_rule": rule}
 
 
+def flat(v):
+    return [x for row in v for x in row] if v and isinstance(v[0], list) else list(v)
+
+
 def isapprox_entry(case_id, quantity, r, j, atol, rtol, rule):
-    diff = norm(sub(j, r))
+    # abs_diff is the max absolute entrywise difference, the quantity tools/true_parity_check.mjs
+    # recomputes from r_value/julia_value (as tools/core070_family_p1_receipts.py records it).
+    # The harness's own test is unchanged: norm(julia - r) <= max(atol, rtol*max(norm)), kept
+    # as harness_norm_diff and judged against the same tolerance. max-abs <= norm, so a case that
+    # passes the harness test also passes the checker's max-abs test.
     tol = max(atol, rtol * max(norm(j), norm(r)))
     return {"case_id": case_id, "quantity": quantity, "r_value": r, "julia_value": j,
-            "abs_diff": diff, "tolerance": tol,
+            "abs_diff": max(abs(a - b) for a, b in zip(flat(j), flat(r), strict=True)),
+            "harness_norm_diff": norm(sub(j, r)), "tolerance": tol,
             "tolerance_rule": f"{rule}: isapprox(julia, r; atol={atol:g}, rtol={rtol:g}); "
-                              "abs_diff = norm(julia - r), tolerance = max(atol, rtol*max(norm))"}
+                              "harness test norm(julia - r) <= tolerance = max(atol, rtol*max(norm)) "
+                              "(harness_norm_diff); abs_diff = max |julia - r| entrywise"}
 
 
 # ---- comparisons per harness ---------------------------------------------------------------
@@ -178,7 +190,7 @@ def formula_entries(row):
 def wave6_entry(case_id, julia, oracle, contract_case):
     rv = oracle["oracle_values"][case_id]
     jv = julia["cases"][case_id]["julia_values"]
-    diff = max(abs(a - b) for a, b in zip(rv, jv))
+    diff = max(abs(a - b) for a, b in zip(rv, jv, strict=True))
     return {"case_id": case_id, "quantity": contract_case["quantity"], "r_value": rv, "julia_value": jv,
             "max_abs_diff": diff, "tolerance": contract_case["tolerance"],
             "tolerance_rule": "wave6-conversion-batch-contract-p1.json per-case tolerance (carried verbatim from P0); "
@@ -328,7 +340,7 @@ def main():
     for r, entries, raw, group_ok in rows:
         cid = r["id"]
         cell = tomllib.loads((args.runparity / f"cell-{cid}.toml").read_text())
-        within = all(e["abs_diff"] <= e["tolerance"] for e in entries)
+        within = all(e.get("harness_norm_diff", e["abs_diff"]) <= e["tolerance"] for e in entries)
         checks = r["checks"]
         receipt = {
             "schema": "core070-covariance-p1-case-receipt/v1", "case_id": cid,
@@ -465,7 +477,13 @@ def main():
                            measured_result={"case_verdicts": verdicts, "batch_verifier": batch_ok,
                                             "row_verdict": "PASS" if ok else "FAIL"})
                 if sid in exceptions:
-                    row["numeric_exception"] = exceptions[sid]
+                    # A signed exception waives only the batch verifier, never a
+                    # failed comparison: the checker judges max-abs, which is weaker
+                    # than the harness's norm test that the case verdict carries.
+                    if not ok:
+                        raise SystemExit(f"{sid}: refusing a receipt_status_exception on a row whose case "
+                                         f"verdicts are not all PASS: {verdicts}")
+                    row["receipt_status_exception"] = exceptions[sid]
                 counts["numeric_pass" if ok else "numeric_fail"] += 1
             else:
                 tier = "partial_numeric_bridge_boundary" if "numeric" in kinds else "r_only"
@@ -481,6 +499,13 @@ def main():
                 counts["partial_numeric_bridge_boundary" if tier != "r_only" else "r_only_needs_julia_surface"] += 1
         out_rows.append(row)
 
+    # Rows this tool does not generate (e.g. the C3 campaign rows added under #684 item 4) are
+    # carried over unchanged, so regenerating the 17 rows never drops another writer's rows.
+    generated = {r["source_id"] for r in out_rows}
+    prior = OUT / "case-map-covariance.json"
+    if prior.is_file():
+        out_rows += [r for r in json.loads(prior.read_text())["rows"] if r["source_id"] not in generated]
+
     casemap = {
         "schema": 1, "reference_commit": P1_SHA,
         "scope": "covariance family: the 17 rows the P1 carry scan lists as PARTIAL_STALE_AT_P1 (7) or DANGLING (10); "
@@ -493,7 +518,7 @@ def main():
                  "rows with an R-only or R-boundary case cite evidence.non_binding_receipts instead, so they read as "
                  "not bound under both the current checker and the numeric-tier rule proposed in PR #561. "
                  "A row whose numeric cases pass but whose batch verifier rejected the run is held back the same way "
-                 "(evidence_tier numeric_held_batch_verifier_failed) unless a maintainer-signed numeric_exception is "
+                 "(evidence_tier numeric_held_batch_verifier_failed) unless a maintainer-signed receipt_status_exception is "
                  "recorded on it."),
         "generator": "tools/core070_covariance_p1_receipts.py",
         "counts": counts, "runtimes_seconds": runtimes,

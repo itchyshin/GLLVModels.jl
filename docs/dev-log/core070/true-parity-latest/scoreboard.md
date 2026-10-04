@@ -15,7 +15,7 @@ Pin: gllvmTMB P1 `9539352f66f2db2cc26b1c393e67212a359b60c9`.
 Inputs:
 
 - `docs/dev-log/core070/true-parity-latest/case-map-aghq.json` (21 rows, sha256 `72e1d55c0553897c62e92f534ab128a8a592282958e1e56c44ca95e1c5902114`)
-- `docs/dev-log/core070/true-parity-latest/case-map-covariance.json` (19 rows, sha256 `d23ab57e75e98ba56767f4179f49c5f2787aeeac9e56294974ed38a18f710363`)
+- `docs/dev-log/core070/true-parity-latest/case-map-covariance.json` (19 rows, sha256 `81e650ad39a39aeb08c6b3a8468d06458369799b6d2882b853fd78d86710c294`)
 - `docs/dev-log/core070/true-parity-latest/case-map-data.json` (36 rows, sha256 `e8172caf2282d945790557e4426b90d6fe0d0177bf204fad31c571a7a7d12973`)
 - `docs/dev-log/core070/true-parity-latest/case-map-family.json` (26 rows, sha256 `537991192134fd7aef08d7e065c61d5b3063efde3d63513b88493dd6a82db6fc`)
 - `docs/dev-log/core070/true-parity-latest/case-map-fit-input.json` (10 rows, sha256 `568c054ed5f3786b96c9acb796e28d98e4523c4edc5fe5ad9f69ab150cee3639`)

@@ -3,12 +3,12 @@ data_sha256 = "01a540f2ef2f7a21632a7813fc87ff7740d5163c5c43f56a33795a7bb15d807d"
 
 [source]
 source_marker_sha256 = "5b667a7d5f1718364a2794642cec52eac1ead345ec39fff5051c2c1ca7a62218"
-julia_package_root = "/Users/z3437171/local-scratch/GLLVM.jl-a3-covariance"
+julia_package_root = "/Users/z3437171/local-scratch/GLLVM.jl-w2-covariance-writer"
 tmb_version = "1.9.21"
 oracle_build_receipt_sha256 = "0a648dc0ee299416b3796fefaa23419c1736f9c7b257aa77a5d8d108e3ba01af"
 matrix_version = "1.7.5"
 julia_machine = "arm64-apple-darwin22.4.0"
-julia_source_tree_sha256 = "d9fc9fd3eaf0cfa594b2d29f7651ffb0691732abbc9b779a44b7e7f6d2fea908"
+julia_source_tree_sha256 = "40fcc5772da6e2ab6904c5d42af966f26f7a5711c8c2e9c99c78cff44b906b9c"
 source_tree_sha256 = "86fa00f05ee2ccb8ffef65a82cd59c47b1b2a256a5bad86957a92461a6dbe1db"
 julia_version = "1.10.0"
 oracle_source_receipt_sha256 = "3ec6631ba855624d5b0e9e66772d2e3b3049270c17047835333e7663d6eb2ad8"
@@ -17,15 +17,15 @@ blas_threads = 1
 archive_sha256 = "73b665b22c1497d43dc0674eecd5657f2659a726fcad13004de899833e2d5423"
 namespace_sha256 = "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c"
 installed_tree_sha256 = "5d4877193c3727965412546ca49c77588ba3083eab87629080e610cb889516d4"
-julia_project_path = "/Users/z3437171/local-scratch/GLLVM.jl-a3-covariance/test/parity/Project.toml"
+julia_project_path = "/Users/z3437171/local-scratch/GLLVM.jl-w2-covariance-writer/test/parity/Project.toml"
 reference_commit = "9539352f66f2db2cc26b1c393e67212a359b60c9"
 rcall_version = "0.14.14"
 r_library_path = "/Users/z3437171/local-scratch/a3cov-oracle/build/library/gllvmTMB"
 julia_threads = 4
-julia_package_path = "/Users/z3437171/local-scratch/GLLVM.jl-a3-covariance/src/GLLVModels.jl"
+julia_package_path = "/Users/z3437171/local-scratch/GLLVM.jl-w2-covariance-writer/src/GLLVModels.jl"
 r_version = "R version 4.6.0 (2026-04-24)"
 r_home = "/Library/Frameworks/R.framework/Resources"
-julia_manifest_sha256 = "0d57455d85e9a3b6bcc74c0396fef8afa52cf4728eaa2deda0c32c18bff8e8b0"
+julia_manifest_sha256 = "0b55904e3812198eb97cf2adb4a32d278026e78e31705a785a71de8094c6d12a"
 
 [[cases]]
 sigma_eps_fixed = 0.0007475049429920294
