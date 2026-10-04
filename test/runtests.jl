@@ -521,6 +521,8 @@ println(_SHARD === nothing ?
     _shard_include("test_variance_decomp_p1.jl")
     # P1 numeric twin of the gllvmTMB namespace row animal_scalar (one shared animal variance on a pedigree A, Gaussian).
     _shard_include("test_animal_scalar_p1.jl")
+    # P1 numeric twin of the gllvmTMB namespace row confint_inspect (estimate, Wald and profile bounds on four direct targets, Gaussian rank 2).
+    _shard_include("test_confint_inspect_p1.jl")
     # P1 numeric twin of the gllvmTMB postfit row predict_missing (masked-cell predictions of a masked Gaussian fit).
     _shard_include("test_predict_missing_p1.jl")
     # P1 fit-level twins of core070 data rows (six bind; see tools/core070_data_p1_receipts.py) (offset and missing-response handling).
