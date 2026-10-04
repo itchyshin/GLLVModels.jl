@@ -108,10 +108,11 @@ end
                 @test size(r.R) == size(rR)
                 # the R values are not degenerate: a non-trivial transform and a non-zero residual
                 @test maximum(abs, rR - I) > 1e-3 && Float64(c["frobenius"]) > 0.05
-                @test maximum(abs, r.R .- rR) <= 5e-15                                   # R (observed 4.4e-16)
-                @test maximum(abs, r.Lambda_a_rot .- _dg_mat(c["Lambda_a_rot"])) <= 1e-14   # Lambda_a_rot (observed 8.9e-16)
-                @test abs(r.frobenius - Float64(c["frobenius"])) <= 3e-15                # frobenius (observed 2.8e-16)
-                @test maximum(abs, r.cor_per_factor .- Float64.(c["cor_per_factor"])) <= 3e-15   # cor_per_factor (observed 3.3e-16)
+                # 1e-12: identical inputs, so only BLAS/LAPACK summation order differs (x86 vs ARM); a real port error is 1e-2 to 1
+                @test maximum(abs, r.R .- rR) <= 1e-12   # R (observed 4.4e-16)
+                @test maximum(abs, r.Lambda_a_rot .- _dg_mat(c["Lambda_a_rot"])) <= 1e-12   # Lambda_a_rot (observed 8.9e-16)
+                @test abs(r.frobenius - Float64(c["frobenius"])) <= 1e-12   # frobenius (observed 2.8e-16)
+                @test maximum(abs, r.cor_per_factor .- Float64.(c["cor_per_factor"])) <= 1e-12   # cor_per_factor (observed 3.3e-16)
             end
         end
     end
