@@ -2,6 +2,24 @@
 
 ## Development
 
+- **`predict`, `getLV` and `residuals` on a Laplace fit made with an `offset` now use it.** The
+  Laplace Poisson, NB2 (shared `r`), binomial and hurdle-Poisson fits did not keep the offset they
+  were fitted with, so `getLV(fit, Y)` searched the latent mode of an offset-free model and
+  `predict(fit, Y)` returned `β + Λẑ` without the offset (a Poisson fit, p = 6, n = 60, offset
+  `0.8 * randn`: link-scale error up to 3.2; on the data of the P1 exposure twin, 1.89 against
+  gllvmTMB's `predict`). These fits now store the training offset as a `p×n` matrix in
+  `fit.offset` (`nothing` without one), and the post-fit calls follow gllvmTMB's `predict`: a `Y`
+  of the training size uses the stored offset; new units need their own, passed as
+  `offset = O` (a matrix, a scalar or a length-`p` vector, as at fit time), and new units from an
+  offset fit without one are refused with an `ArgumentError` rather than predicted at a zero
+  offset (R aborts when `newdata` lacks the offset variable). The AGHQ Poisson and binomial routes
+  already followed this rule and are unchanged. `link_residual` on these fits includes the offset
+  in its fitted trait means as well. Binds the true-parity row `data/DATA-OFF-TRAIN-STORED` with a
+  twin against gllvmTMB P1 (stored offset and training-row link predictor,
+  `test/test_predict_offset_twin_p1.jl`). Not covered: `simulate` on these Laplace fits still
+  draws at a zero offset, and the other fit types that accept an offset (Gamma, Beta, NB1, the
+  grouped-dispersion, truncated, Delta and zero-inflated fits) still keep none.
+
 - **`fit_gllvm(...; offset = c)` with a scalar `c` now works, and an offset it cannot read
   unambiguously is refused with an `ArgumentError`.** A scalar offset (the analogue of R's
   `offset(log(2))`) was accepted by the count, continuous and two-part routes but returned
