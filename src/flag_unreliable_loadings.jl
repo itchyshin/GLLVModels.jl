@@ -44,7 +44,7 @@ gives the same rows on both sides.
 
 The second method takes rows that already carry `estimate`, `lower`, `upper` and
 `pinned` fields (for example the rows of [`loading_ci`](@ref)) and adds the flag
-columns to each, which is R's data-frame input.
+columns to each, which is R's data-frame input. A `missing` or `NaN` bound gives `unreliable = missing`.
 
 Each returned row has `trait`, `axis`, `estimate`, `se`, `lower`, `upper`,
 `conf_level`, `pinned`, `pd_hessian`, `unreliable`, `null_region_lo` and
@@ -141,6 +141,8 @@ function _flag_null_region(null_region)
     return a, b
 end
 
-# R: overlaps <- upper >= a & lower <= b; NA for pinned entries and for NA bounds.
+# R: overlaps <- upper >= a & lower <= b; NA for pinned entries and for NA bounds
+# (a `missing` or `NaN` bound gives a `missing` flag).
+_flag_bound_unknown(x) = x === missing || isnan(x)
 _flag_overlap(lo, hi, pinned::Bool, a, b) =
-    pinned || isnan(lo) || isnan(hi) ? missing : (hi >= a && lo <= b)
+    pinned || _flag_bound_unknown(lo) || _flag_bound_unknown(hi) ? missing : (hi >= a && lo <= b)
