@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Write the P1 bridge-readback receipt from test/fixtures/bridge_readback_p1.json.
+"""Write the P1 bridge-readback receipt from test/fixtures/bridge_readback_p1.toml.
 
 Both sides of every case were recorded live, in one R session, by
 test/fixtures/gen_bridge_readback_p1.R (gllvmTMB at P1 -> JuliaCall -> GLLVModels). This tool
@@ -12,11 +12,12 @@ Usage: python3 tools/true_parity_bridge_readback_receipt.py [--check]
 """
 import hashlib
 import json
+import tomllib
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-FIXTURE = "test/fixtures/bridge_readback_p1.json"
+FIXTURE = "test/fixtures/bridge_readback_p1.toml"
 GENERATOR = "test/fixtures/gen_bridge_readback_p1.R"
 TEST = "test/test_bridge_readback_p1.jl"
 DATA = "test/fixtures/ns_gauss_p1_data.csv"
@@ -93,7 +94,7 @@ def tol_fields(marker, tol):
 
 
 def build():
-    fx = json.loads((ROOT / FIXTURE).read_text())
+    fx = tomllib.loads((ROOT / FIXTURE).read_text())
     assert fx["gllvmtmb_commit"] == P1
     assert fx["data_sha256"] == sha(DATA)
     b, j, g, t = fx["bridge"], fx["julia_direct"], fx["gllvm_julia_fit"], fx["tmb"]
