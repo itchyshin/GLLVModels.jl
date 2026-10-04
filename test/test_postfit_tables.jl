@@ -213,6 +213,17 @@ using Distributions: Normal, quantile
         best_idx = argmin(abs.(rho_grid .- 0.2))
         @test out.table.is_best[best_idx]
         @test out.best_rho == rho_grid[best_idx]
+
+        # #732: a higher logLik at an unconverged grid point must not win best_rho.
+        trick_refit(K, rho) = (
+            logLik = rho ≈ 0.8 ? 0.0 : -(rho - 0.2)^2,
+            converged = !(rho ≈ 0.8),
+            pd_hessian = true,
+        )
+        out_trick = profile_cross_rho(A_H, A_P, W, trick_refit;
+                                      rho_grid = [-0.2, 0.2, 0.8])
+        @test out_trick.best_rho ≈ 0.2
+        @test !out_trick.table.is_best[3]
         @test out.table.relative_logLik ≈ out.table.logLik .- maximum(out.table.logLik)
         @test out.table.delta_deviance ≈ 2 .* (maximum(out.table.logLik) .- out.table.logLik)
         @test all(out.table.status .== :ok)
