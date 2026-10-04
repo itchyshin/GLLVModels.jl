@@ -44,7 +44,6 @@ using Distributions: Normal
 using LinearAlgebra
 using TOML
 using SHA
-using StableRNGs
 
 const _W1_DIR = joinpath(@__DIR__, "fixtures")
 
@@ -156,8 +155,8 @@ _w1_rcode(s) = s == "NA" ? -1 : s == "TRUE" ? 1 : s == "FALSE" ? 0 : error("bad 
 end
 
 @testset "flag_unreliable_loadings: refusals" begin
-    rng = StableRNG(20261004)
-    y = 0.8 .* randn(rng, 4, 1) * randn(rng, 1, 60) .+ 0.5 .* randn(rng, 4, 60)
+    # Deterministic one-factor data (no RNG): loadings times a score, plus a non-collinear term.
+    y = [0.9, 0.6, -0.5, 0.7] * [sin(1.3s) for s in 1:60]' .+ 0.5 .* [cos(0.7t * s + t) for t in 1:4, s in 1:60]
     y = y .- sum(y; dims = 2) ./ 60
     exploratory = fit_gaussian_gllvm(y; K = 1)
     @test_throws ArgumentError flag_unreliable_loadings(exploratory, y)        # no pins: rotation only

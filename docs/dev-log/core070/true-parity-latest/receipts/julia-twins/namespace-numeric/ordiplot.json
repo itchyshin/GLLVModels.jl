@@ -24,7 +24,7 @@
   "source_tests": [
     {
       "path": "test/test_namespace_gaussian_w1_p1.jl",
-      "sha256": "7f933b26c7ae05b6508b89b79c89c9b5b56bd8a78119823ddbe2411f9810eeff"
+      "sha256": "49adff4fa4ab6f97b8f19fea71c3691a30ebe20480a745199bef7a467f5639bd"
     }
   ],
   "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_namespace_gaussian_w1_receipt.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
@@ -35,7 +35,7 @@
         "case_id": "P1-JULIA-ORDIPLOT-SCORES-LOADINGS",
         "quantity": "ordiplot scores * loadings' (1200 values, column-major)",
         "r_source": "test/fixtures/ns_gauss_w1_p1.toml [ordiplot.scores, ordiplot.loadings]",
-        "julia_source": "od.sites * od.species', as compared at test/test_namespace_gaussian_w1_p1.jl:115",
+        "julia_source": "od.sites * od.species', as compared at test/test_namespace_gaussian_w1_p1.jl:114",
         "r_value": [
           -1.1929382048391453,
           1.1363150500578996,
@@ -2442,15 +2442,15 @@
         ],
         "abs_diff": 9.923356931729188e-07,
         "tolerance": 1e-05,
-        "tolerance_source": "test/test_namespace_gaussian_w1_p1.jl:115",
+        "tolerance_source": "test/test_namespace_gaussian_w1_p1.jl:114",
         "tolerance_source_line": "@test isapprox(od.sites * od.species', r_S * r_L'; atol = 1e-5, rtol = 0)              # scores * loadings' (observed 9.9e-7)",
-        "note": "Shared Gaussian data ns_gauss_p1_data.csv (written by gen_namespace_numeric_p1.R; p = 6 traits, n = 200 units, one observation per trait and unit, sha256 checked), simulated from two latent axes plus residual noise. R values from gen_namespace_gaussian_w1_p1.R at the P1 pin; every R fit converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12) with a positive-definite Hessian. R: ordiplot(fit) on value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE) (plot sent to a null device); its invisible return list(scores, loadings) is recorded, unrotated (rotate = \"none\", the default). Julia: ordiplot(fit_gllvm(Y; family = Normal(), K = 2), Y) (fit at test/test_namespace_gaussian_w1_p1.jl:110, call at test/test_namespace_gaussian_w1_p1.jl:112), the same model, which returns the principal-rotated sites and species by default. The two are compared through rotation-invariant products: scores * loadings' (the latent part of the linear predictor) and loadings * loadings'. Limits: Gaussian only; the returned data, not the drawing; the axes, biplot and ellipse arguments are not exercised."
+        "note": "Shared Gaussian data ns_gauss_p1_data.csv (written by gen_namespace_numeric_p1.R; p = 6 traits, n = 200 units, one observation per trait and unit, sha256 checked), simulated from two latent axes plus residual noise. R values from gen_namespace_gaussian_w1_p1.R at the P1 pin; every R fit converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12) with a positive-definite Hessian. R: ordiplot(fit) on value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE) (plot sent to a null device); its invisible return list(scores, loadings) is recorded, unrotated (rotate = \"none\", the default). Julia: ordiplot(fit_gllvm(Y; family = Normal(), K = 2), Y) (fit at test/test_namespace_gaussian_w1_p1.jl:109, call at test/test_namespace_gaussian_w1_p1.jl:111), the same model, which returns the principal-rotated sites and species by default. The two are compared through rotation-invariant products: scores * loadings' (the latent part of the linear predictor) and loadings * loadings'. Limits: Gaussian only; the returned data, not the drawing; the axes, biplot and ellipse arguments are not exercised."
       },
       {
         "case_id": "P1-JULIA-ORDIPLOT-LOADINGS-GRAM",
         "quantity": "ordiplot loadings * loadings' (36 values, column-major)",
         "r_source": "test/fixtures/ns_gauss_w1_p1.toml [ordiplot.loadings]",
-        "julia_source": "od.species * od.species', as compared at test/test_namespace_gaussian_w1_p1.jl:116",
+        "julia_source": "od.species * od.species', as compared at test/test_namespace_gaussian_w1_p1.jl:115",
         "r_value": [
           0.8929584057950837,
           0.0017711760772899654,
@@ -2529,22 +2529,22 @@
         ],
         "abs_diff": 1.2440119291357021e-06,
         "tolerance": 1e-05,
-        "tolerance_source": "test/test_namespace_gaussian_w1_p1.jl:116",
+        "tolerance_source": "test/test_namespace_gaussian_w1_p1.jl:115",
         "tolerance_source_line": "@test isapprox(od.species * od.species', r_L * r_L'; atol = 1e-5, rtol = 0)            # loadings * loadings' (observed 1.2e-6)",
-        "note": "Shared Gaussian data ns_gauss_p1_data.csv (written by gen_namespace_numeric_p1.R; p = 6 traits, n = 200 units, one observation per trait and unit, sha256 checked), simulated from two latent axes plus residual noise. R values from gen_namespace_gaussian_w1_p1.R at the P1 pin; every R fit converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12) with a positive-definite Hessian. R: ordiplot(fit) on value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE) (plot sent to a null device); its invisible return list(scores, loadings) is recorded, unrotated (rotate = \"none\", the default). Julia: ordiplot(fit_gllvm(Y; family = Normal(), K = 2), Y) (fit at test/test_namespace_gaussian_w1_p1.jl:110, call at test/test_namespace_gaussian_w1_p1.jl:112), the same model, which returns the principal-rotated sites and species by default. The two are compared through rotation-invariant products: scores * loadings' (the latent part of the linear predictor) and loadings * loadings'. Limits: Gaussian only; the returned data, not the drawing; the axes, biplot and ellipse arguments are not exercised."
+        "note": "Shared Gaussian data ns_gauss_p1_data.csv (written by gen_namespace_numeric_p1.R; p = 6 traits, n = 200 units, one observation per trait and unit, sha256 checked), simulated from two latent axes plus residual noise. R values from gen_namespace_gaussian_w1_p1.R at the P1 pin; every R fit converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12) with a positive-definite Hessian. R: ordiplot(fit) on value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE) (plot sent to a null device); its invisible return list(scores, loadings) is recorded, unrotated (rotate = \"none\", the default). Julia: ordiplot(fit_gllvm(Y; family = Normal(), K = 2), Y) (fit at test/test_namespace_gaussian_w1_p1.jl:109, call at test/test_namespace_gaussian_w1_p1.jl:111), the same model, which returns the principal-rotated sites and species by default. The two are compared through rotation-invariant products: scores * loadings' (the latent part of the linear predictor) and loadings * loadings'. Limits: Gaussian only; the returned data, not the drawing; the axes, biplot and ellipse arguments are not exercised."
       },
       {
         "case_id": "P1-JULIA-ORDIPLOT-LOGLIK",
         "quantity": "log-likelihood of the fit ordiplot is drawn from",
         "r_source": "test/fixtures/ns_gauss_w1_p1.toml [ordiplot.loglik]",
-        "julia_source": "fit.logLik, as compared at test/test_namespace_gaussian_w1_p1.jl:114; fit as at test/test_namespace_gaussian_w1_p1.jl:110",
+        "julia_source": "fit.logLik, as compared at test/test_namespace_gaussian_w1_p1.jl:113; fit as at test/test_namespace_gaussian_w1_p1.jl:109",
         "r_value": -1367.5955985208775,
         "julia_value": -1367.5955985207152,
         "abs_diff": 1.623448042664677e-10,
         "tolerance": 1.5e-09,
-        "tolerance_source": "test/test_namespace_gaussian_w1_p1.jl:114",
+        "tolerance_source": "test/test_namespace_gaussian_w1_p1.jl:113",
         "tolerance_source_line": "@test isapprox(fit.logLik, Float64(o[\"loglik\"]); atol = 1.5e-9, rtol = 0)                # logLik (observed 1.6e-10)",
-        "note": "Shared Gaussian data ns_gauss_p1_data.csv (written by gen_namespace_numeric_p1.R; p = 6 traits, n = 200 units, one observation per trait and unit, sha256 checked), simulated from two latent axes plus residual noise. R values from gen_namespace_gaussian_w1_p1.R at the P1 pin; every R fit converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12) with a positive-definite Hessian. R: ordiplot(fit) on value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE) (plot sent to a null device); its invisible return list(scores, loadings) is recorded, unrotated (rotate = \"none\", the default). Julia: ordiplot(fit_gllvm(Y; family = Normal(), K = 2), Y) (fit at test/test_namespace_gaussian_w1_p1.jl:110, call at test/test_namespace_gaussian_w1_p1.jl:112), the same model, which returns the principal-rotated sites and species by default. The two are compared through rotation-invariant products: scores * loadings' (the latent part of the linear predictor) and loadings * loadings'. Limits: Gaussian only; the returned data, not the drawing; the axes, biplot and ellipse arguments are not exercised."
+        "note": "Shared Gaussian data ns_gauss_p1_data.csv (written by gen_namespace_numeric_p1.R; p = 6 traits, n = 200 units, one observation per trait and unit, sha256 checked), simulated from two latent axes plus residual noise. R values from gen_namespace_gaussian_w1_p1.R at the P1 pin; every R fit converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12) with a positive-definite Hessian. R: ordiplot(fit) on value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE) (plot sent to a null device); its invisible return list(scores, loadings) is recorded, unrotated (rotate = \"none\", the default). Julia: ordiplot(fit_gllvm(Y; family = Normal(), K = 2), Y) (fit at test/test_namespace_gaussian_w1_p1.jl:109, call at test/test_namespace_gaussian_w1_p1.jl:111), the same model, which returns the principal-rotated sites and species by default. The two are compared through rotation-invariant products: scores * loadings' (the latent part of the linear predictor) and loadings * loadings'. Limits: Gaussian only; the returned data, not the drawing; the axes, biplot and ellipse arguments are not exercised."
       }
     ]
   }

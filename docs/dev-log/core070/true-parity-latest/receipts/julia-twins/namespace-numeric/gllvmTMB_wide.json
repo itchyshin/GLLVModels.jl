@@ -24,7 +24,7 @@
   "source_tests": [
     {
       "path": "test/test_namespace_gaussian_w1_p1.jl",
-      "sha256": "7f933b26c7ae05b6508b89b79c89c9b5b56bd8a78119823ddbe2411f9810eeff"
+      "sha256": "49adff4fa4ab6f97b8f19fea71c3691a30ebe20480a745199bef7a467f5639bd"
     }
   ],
   "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_namespace_gaussian_w1_receipt.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
@@ -35,20 +35,20 @@
         "case_id": "P1-JULIA-GLLVMTMB-WIDE-LOGLIK",
         "quantity": "log-likelihood at the optimum",
         "r_source": "test/fixtures/ns_gauss_w1_p1.toml [wide.loglik]",
-        "julia_source": "fit.loglik, as compared at test/test_namespace_gaussian_w1_p1.jl:93; fit as at test/test_namespace_gaussian_w1_p1.jl:90",
+        "julia_source": "fit.loglik, as compared at test/test_namespace_gaussian_w1_p1.jl:92; fit as at test/test_namespace_gaussian_w1_p1.jl:89",
         "r_value": -1365.6520384848975,
         "julia_value": -1365.6520384848463,
         "abs_diff": 5.1159076974727213e-11,
         "tolerance": 5e-10,
-        "tolerance_source": "test/test_namespace_gaussian_w1_p1.jl:93",
+        "tolerance_source": "test/test_namespace_gaussian_w1_p1.jl:92",
         "tolerance_source_line": "@test isapprox(fit.loglik, Float64(w[\"loglik\"]); atol = 5e-10, rtol = 0)        # logLik (observed 5.1e-11)",
-        "note": "Shared Gaussian data ns_gauss_p1_data.csv (written by gen_namespace_numeric_p1.R; p = 6 traits, n = 200 units, one observation per trait and unit, sha256 checked), simulated from two latent axes plus residual noise. R values from gen_namespace_gaussian_w1_p1.R at the P1 pin; every R fit converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12) with a positive-definite Hessian. gllvmTMB_wide(Y, d = 2) on the wide 200 x 6 matrix builds value ~ 0 + trait + latent(0 + trait | site, d = 2) with latent()'s default unique = TRUE, so R fits Sigma = Lambda Lambda' + diag(sd_B^2) + sigma_eps^2 I with sigma_eps mapped off at its data-derived start (0.0011251127397265053, recorded). Julia fits the same covariance with the same fixed residual as fit_gaussian_pervar_gllvm(Y; K = 2, fixed_residual_sd = sigma_eps) (at test/test_namespace_gaussian_w1_p1.jl:90); trait intercepts are the profiled row means. Loadings are compared as Lambda Lambda', which does not depend on the rotation. Limits: Gaussian only; the default call (no X, weights, phylo_vcv or formula_extra); the Julia side is the native fitter, not a wide-matrix wrapper."
+        "note": "Shared Gaussian data ns_gauss_p1_data.csv (written by gen_namespace_numeric_p1.R; p = 6 traits, n = 200 units, one observation per trait and unit, sha256 checked), simulated from two latent axes plus residual noise. R values from gen_namespace_gaussian_w1_p1.R at the P1 pin; every R fit converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12) with a positive-definite Hessian. gllvmTMB_wide(Y, d = 2) on the wide 200 x 6 matrix builds value ~ 0 + trait + latent(0 + trait | site, d = 2) with latent()'s default unique = TRUE, so R fits Sigma = Lambda Lambda' + diag(sd_B^2) + sigma_eps^2 I with sigma_eps mapped off at its data-derived start (0.0011251127397265053, recorded). Julia fits the same covariance with the same fixed residual as fit_gaussian_pervar_gllvm(Y; K = 2, fixed_residual_sd = sigma_eps) (at test/test_namespace_gaussian_w1_p1.jl:89); trait intercepts are the profiled row means. Loadings are compared as Lambda Lambda', which does not depend on the rotation. Limits: Gaussian only; the default call (no X, weights, phylo_vcv or formula_extra); the Julia side is the native fitter, not a wide-matrix wrapper."
       },
       {
         "case_id": "P1-JULIA-GLLVMTMB-WIDE-BETA",
         "quantity": "trait intercepts b_fix (6 values)",
         "r_source": "test/fixtures/ns_gauss_w1_p1.toml [wide.beta]",
-        "julia_source": "fit.β, as compared at test/test_namespace_gaussian_w1_p1.jl:94; fit as at test/test_namespace_gaussian_w1_p1.jl:90",
+        "julia_source": "fit.β, as compared at test/test_namespace_gaussian_w1_p1.jl:93; fit as at test/test_namespace_gaussian_w1_p1.jl:89",
         "r_value": [
           0.5582059846655082,
           -0.19181652792679488,
@@ -67,15 +67,15 @@
         ],
         "abs_diff": 5.480467933638433e-08,
         "tolerance": 5e-07,
-        "tolerance_source": "test/test_namespace_gaussian_w1_p1.jl:94",
+        "tolerance_source": "test/test_namespace_gaussian_w1_p1.jl:93",
         "tolerance_source_line": "@test isapprox(fit.β, r_beta; atol = 5e-7, rtol = 0)                            # trait intercepts (observed 5.5e-8)",
-        "note": "Shared Gaussian data ns_gauss_p1_data.csv (written by gen_namespace_numeric_p1.R; p = 6 traits, n = 200 units, one observation per trait and unit, sha256 checked), simulated from two latent axes plus residual noise. R values from gen_namespace_gaussian_w1_p1.R at the P1 pin; every R fit converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12) with a positive-definite Hessian. gllvmTMB_wide(Y, d = 2) on the wide 200 x 6 matrix builds value ~ 0 + trait + latent(0 + trait | site, d = 2) with latent()'s default unique = TRUE, so R fits Sigma = Lambda Lambda' + diag(sd_B^2) + sigma_eps^2 I with sigma_eps mapped off at its data-derived start (0.0011251127397265053, recorded). Julia fits the same covariance with the same fixed residual as fit_gaussian_pervar_gllvm(Y; K = 2, fixed_residual_sd = sigma_eps) (at test/test_namespace_gaussian_w1_p1.jl:90); trait intercepts are the profiled row means. Loadings are compared as Lambda Lambda', which does not depend on the rotation. Limits: Gaussian only; the default call (no X, weights, phylo_vcv or formula_extra); the Julia side is the native fitter, not a wide-matrix wrapper."
+        "note": "Shared Gaussian data ns_gauss_p1_data.csv (written by gen_namespace_numeric_p1.R; p = 6 traits, n = 200 units, one observation per trait and unit, sha256 checked), simulated from two latent axes plus residual noise. R values from gen_namespace_gaussian_w1_p1.R at the P1 pin; every R fit converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12) with a positive-definite Hessian. gllvmTMB_wide(Y, d = 2) on the wide 200 x 6 matrix builds value ~ 0 + trait + latent(0 + trait | site, d = 2) with latent()'s default unique = TRUE, so R fits Sigma = Lambda Lambda' + diag(sd_B^2) + sigma_eps^2 I with sigma_eps mapped off at its data-derived start (0.0011251127397265053, recorded). Julia fits the same covariance with the same fixed residual as fit_gaussian_pervar_gllvm(Y; K = 2, fixed_residual_sd = sigma_eps) (at test/test_namespace_gaussian_w1_p1.jl:89); trait intercepts are the profiled row means. Loadings are compared as Lambda Lambda', which does not depend on the rotation. Limits: Gaussian only; the default call (no X, weights, phylo_vcv or formula_extra); the Julia side is the native fitter, not a wide-matrix wrapper."
       },
       {
         "case_id": "P1-JULIA-GLLVMTMB-WIDE-LAMBDA-LAMBDAT",
         "quantity": "Lambda Lambda' from report$Lambda_B (36 values, column-major)",
         "r_source": "test/fixtures/ns_gauss_w1_p1.toml [wide.Lambda]",
-        "julia_source": "fit.Λ * fit.Λ', as compared at test/test_namespace_gaussian_w1_p1.jl:95; fit as at test/test_namespace_gaussian_w1_p1.jl:90",
+        "julia_source": "fit.Λ * fit.Λ', as compared at test/test_namespace_gaussian_w1_p1.jl:94; fit as at test/test_namespace_gaussian_w1_p1.jl:89",
         "r_value": [
           0.9374186629430746,
           0.01094641965911051,
@@ -154,15 +154,15 @@
         ],
         "abs_diff": 5.134024783897545e-07,
         "tolerance": 5e-06,
-        "tolerance_source": "test/test_namespace_gaussian_w1_p1.jl:95",
+        "tolerance_source": "test/test_namespace_gaussian_w1_p1.jl:94",
         "tolerance_source_line": "@test isapprox(fit.Λ * fit.Λ', r_L * r_L'; atol = 5e-6, rtol = 0)              # Lambda Lambda' (observed 5.1e-7)",
-        "note": "Shared Gaussian data ns_gauss_p1_data.csv (written by gen_namespace_numeric_p1.R; p = 6 traits, n = 200 units, one observation per trait and unit, sha256 checked), simulated from two latent axes plus residual noise. R values from gen_namespace_gaussian_w1_p1.R at the P1 pin; every R fit converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12) with a positive-definite Hessian. gllvmTMB_wide(Y, d = 2) on the wide 200 x 6 matrix builds value ~ 0 + trait + latent(0 + trait | site, d = 2) with latent()'s default unique = TRUE, so R fits Sigma = Lambda Lambda' + diag(sd_B^2) + sigma_eps^2 I with sigma_eps mapped off at its data-derived start (0.0011251127397265053, recorded). Julia fits the same covariance with the same fixed residual as fit_gaussian_pervar_gllvm(Y; K = 2, fixed_residual_sd = sigma_eps) (at test/test_namespace_gaussian_w1_p1.jl:90); trait intercepts are the profiled row means. Loadings are compared as Lambda Lambda', which does not depend on the rotation. Limits: Gaussian only; the default call (no X, weights, phylo_vcv or formula_extra); the Julia side is the native fitter, not a wide-matrix wrapper."
+        "note": "Shared Gaussian data ns_gauss_p1_data.csv (written by gen_namespace_numeric_p1.R; p = 6 traits, n = 200 units, one observation per trait and unit, sha256 checked), simulated from two latent axes plus residual noise. R values from gen_namespace_gaussian_w1_p1.R at the P1 pin; every R fit converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12) with a positive-definite Hessian. gllvmTMB_wide(Y, d = 2) on the wide 200 x 6 matrix builds value ~ 0 + trait + latent(0 + trait | site, d = 2) with latent()'s default unique = TRUE, so R fits Sigma = Lambda Lambda' + diag(sd_B^2) + sigma_eps^2 I with sigma_eps mapped off at its data-derived start (0.0011251127397265053, recorded). Julia fits the same covariance with the same fixed residual as fit_gaussian_pervar_gllvm(Y; K = 2, fixed_residual_sd = sigma_eps) (at test/test_namespace_gaussian_w1_p1.jl:89); trait intercepts are the profiled row means. Loadings are compared as Lambda Lambda', which does not depend on the rotation. Limits: Gaussian only; the default call (no X, weights, phylo_vcv or formula_extra); the Julia side is the native fitter, not a wide-matrix wrapper."
       },
       {
         "case_id": "P1-JULIA-GLLVMTMB-WIDE-SD-B",
         "quantity": "per-trait unique SDs report$sd_B (6 values)",
         "r_source": "test/fixtures/ns_gauss_w1_p1.toml [wide.sd_B]",
-        "julia_source": "sqrt.(fit.ψ²), as compared at test/test_namespace_gaussian_w1_p1.jl:96; fit as at test/test_namespace_gaussian_w1_p1.jl:90",
+        "julia_source": "sqrt.(fit.ψ²), as compared at test/test_namespace_gaussian_w1_p1.jl:95; fit as at test/test_namespace_gaussian_w1_p1.jl:89",
         "r_value": [
           0.46031046369773654,
           0.5379812613340904,
@@ -181,22 +181,22 @@
         ],
         "abs_diff": 3.112821758133322e-07,
         "tolerance": 3e-06,
-        "tolerance_source": "test/test_namespace_gaussian_w1_p1.jl:96",
+        "tolerance_source": "test/test_namespace_gaussian_w1_p1.jl:95",
         "tolerance_source_line": "@test isapprox(sqrt.(fit.ψ²), r_sdB; atol = 3e-6, rtol = 0)                     # unique SDs sd_B (observed 3.1e-7)",
-        "note": "Shared Gaussian data ns_gauss_p1_data.csv (written by gen_namespace_numeric_p1.R; p = 6 traits, n = 200 units, one observation per trait and unit, sha256 checked), simulated from two latent axes plus residual noise. R values from gen_namespace_gaussian_w1_p1.R at the P1 pin; every R fit converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12) with a positive-definite Hessian. gllvmTMB_wide(Y, d = 2) on the wide 200 x 6 matrix builds value ~ 0 + trait + latent(0 + trait | site, d = 2) with latent()'s default unique = TRUE, so R fits Sigma = Lambda Lambda' + diag(sd_B^2) + sigma_eps^2 I with sigma_eps mapped off at its data-derived start (0.0011251127397265053, recorded). Julia fits the same covariance with the same fixed residual as fit_gaussian_pervar_gllvm(Y; K = 2, fixed_residual_sd = sigma_eps) (at test/test_namespace_gaussian_w1_p1.jl:90); trait intercepts are the profiled row means. Loadings are compared as Lambda Lambda', which does not depend on the rotation. Limits: Gaussian only; the default call (no X, weights, phylo_vcv or formula_extra); the Julia side is the native fitter, not a wide-matrix wrapper."
+        "note": "Shared Gaussian data ns_gauss_p1_data.csv (written by gen_namespace_numeric_p1.R; p = 6 traits, n = 200 units, one observation per trait and unit, sha256 checked), simulated from two latent axes plus residual noise. R values from gen_namespace_gaussian_w1_p1.R at the P1 pin; every R fit converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12) with a positive-definite Hessian. gllvmTMB_wide(Y, d = 2) on the wide 200 x 6 matrix builds value ~ 0 + trait + latent(0 + trait | site, d = 2) with latent()'s default unique = TRUE, so R fits Sigma = Lambda Lambda' + diag(sd_B^2) + sigma_eps^2 I with sigma_eps mapped off at its data-derived start (0.0011251127397265053, recorded). Julia fits the same covariance with the same fixed residual as fit_gaussian_pervar_gllvm(Y; K = 2, fixed_residual_sd = sigma_eps) (at test/test_namespace_gaussian_w1_p1.jl:89); trait intercepts are the profiled row means. Loadings are compared as Lambda Lambda', which does not depend on the rotation. Limits: Gaussian only; the default call (no X, weights, phylo_vcv or formula_extra); the Julia side is the native fitter, not a wide-matrix wrapper."
       },
       {
         "case_id": "P1-JULIA-GLLVMTMB-WIDE-OBJECTIVE-AT-R",
         "quantity": "Julia log-likelihood evaluated at R's estimates (b_fix, Lambda_B, sd_B^2 + sigma_eps^2) against R's log-likelihood",
         "r_source": "test/fixtures/ns_gauss_w1_p1.toml [wide.loglik]",
-        "julia_source": "gaussian_pervar_marginal_loglik(Y, r_L, r_sdB .^ 2 .+ c^2; X, β = r_beta), as compared at test/test_namespace_gaussian_w1_p1.jl:102",
+        "julia_source": "gaussian_pervar_marginal_loglik(Y, r_L, r_sdB .^ 2 .+ c^2; X, β = r_beta), as compared at test/test_namespace_gaussian_w1_p1.jl:101",
         "r_value": -1365.6520384848975,
         "julia_value": -1365.6520384848945,
         "abs_diff": 2.9558577807620168e-12,
         "tolerance": 6e-11,
-        "tolerance_source": "test/test_namespace_gaussian_w1_p1.jl:102",
+        "tolerance_source": "test/test_namespace_gaussian_w1_p1.jl:101",
         "tolerance_source_line": "@test isapprox(ll_at_r, Float64(w[\"loglik\"]); atol = 6e-11, rtol = 0)          # objective at R's point (observed 3.0e-12; floor ~190 eps |logLik|)",
-        "note": "Shared Gaussian data ns_gauss_p1_data.csv (written by gen_namespace_numeric_p1.R; p = 6 traits, n = 200 units, one observation per trait and unit, sha256 checked), simulated from two latent axes plus residual noise. R values from gen_namespace_gaussian_w1_p1.R at the P1 pin; every R fit converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12) with a positive-definite Hessian. gllvmTMB_wide(Y, d = 2) on the wide 200 x 6 matrix builds value ~ 0 + trait + latent(0 + trait | site, d = 2) with latent()'s default unique = TRUE, so R fits Sigma = Lambda Lambda' + diag(sd_B^2) + sigma_eps^2 I with sigma_eps mapped off at its data-derived start (0.0011251127397265053, recorded). Julia fits the same covariance with the same fixed residual as fit_gaussian_pervar_gllvm(Y; K = 2, fixed_residual_sd = sigma_eps) (at test/test_namespace_gaussian_w1_p1.jl:90); trait intercepts are the profiled row means. Loadings are compared as Lambda Lambda', which does not depend on the rotation. Limits: Gaussian only; the default call (no X, weights, phylo_vcv or formula_extra); the Julia side is the native fitter, not a wide-matrix wrapper."
+        "note": "Shared Gaussian data ns_gauss_p1_data.csv (written by gen_namespace_numeric_p1.R; p = 6 traits, n = 200 units, one observation per trait and unit, sha256 checked), simulated from two latent axes plus residual noise. R values from gen_namespace_gaussian_w1_p1.R at the P1 pin; every R fit converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12) with a positive-definite Hessian. gllvmTMB_wide(Y, d = 2) on the wide 200 x 6 matrix builds value ~ 0 + trait + latent(0 + trait | site, d = 2) with latent()'s default unique = TRUE, so R fits Sigma = Lambda Lambda' + diag(sd_B^2) + sigma_eps^2 I with sigma_eps mapped off at its data-derived start (0.0011251127397265053, recorded). Julia fits the same covariance with the same fixed residual as fit_gaussian_pervar_gllvm(Y; K = 2, fixed_residual_sd = sigma_eps) (at test/test_namespace_gaussian_w1_p1.jl:89); trait intercepts are the profiled row means. Loadings are compared as Lambda Lambda', which does not depend on the rotation. Limits: Gaussian only; the default call (no X, weights, phylo_vcv or formula_extra); the Julia side is the native fitter, not a wide-matrix wrapper."
       }
     ]
   }
