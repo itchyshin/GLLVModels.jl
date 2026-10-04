@@ -11,7 +11,7 @@
 ##             wrapper builds value ~ 0 + trait + latent(0 + trait | site, d = 2), and latent()
 ##             carries a per-trait unique variance by default (unique = TRUE), so the model is
 ##             Sigma = Lambda Lambda' + diag(sd_B^2) + sigma_eps^2 I with sigma_eps mapped off
-##             (held at its data-derived start value, recorded below).
+##             (fixed by R's Q7 rule, max(1e-3 * sd(y), 1e-6) over all responses, recorded below).
 ##   ordiplot: S3method(ordiplot, gllvmTMB_multi). ordiplot(fit) on the main fit of
 ##             gen_namespace_numeric_p1.R (latent(d = 2, unique = FALSE)); the invisible return
 ##             value list(scores, loadings) is recorded (plot sent to a null device).
@@ -58,7 +58,8 @@ gw <- check_fit(fw)
 stopifnot(identical(unique(names(fw$opt$par)), c("b_fix", "theta_rr_B", "theta_diag_B")))
 plw <- fw$tmb_obj$env$parList(fw$opt$par)
 w_sigma_eps <- exp(as.numeric(plw$log_sigma_eps))          # mapped off: not in opt$par
-stopifnot(abs(w_sigma_eps - as.numeric(fw$report$sigma_eps)) < 1e-15)
+stopifnot(abs(w_sigma_eps - as.numeric(fw$report$sigma_eps)) < 1e-15,
+          abs(w_sigma_eps - max(1e-3 * stats::sd(df$value), 1e-6)) < 1e-15)   # R/fit-multi.R Q7
 w_beta <- as.numeric(plw$b_fix)
 w_L <- as.matrix(fw$report$Lambda_B)
 w_sdB <- as.numeric(fw$report$sd_B)
@@ -127,7 +128,7 @@ w("# report$Lambda_B, 6 x 2, row-major")
 w("Lambda = %s", rowmajor(w_L))
 w("# report$sd_B: per-trait unique SD (the latent() default unique = TRUE)")
 w("sd_B = %s", vec(w_sdB))
-w("# exp(log_sigma_eps): mapped off by gllvmTMB (held at its data-derived start), not estimated")
+w("# exp(log_sigma_eps): mapped off by gllvmTMB's Q7 rule, max(1e-3 * sd(y), 1e-6) over all responses; not estimated")
 w("sigma_eps_fixed = %s", fmt(w_sigma_eps))
 w("")
 w("[ordiplot]")

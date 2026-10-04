@@ -10,14 +10,15 @@
 #
 #   wide    : gllvmTMB_wide(Y, d = 2). The wrapper's latent() keeps its default unique = TRUE, so R
 #             fits Sigma = Lambda Lambda' + diag(sd_B^2) + sigma_eps^2 I with sigma_eps mapped off at
-#             its data-derived start (recorded). <-> fit_gaussian_pervar_gllvm(Y; K = 2,
-#             fixed_residual_sd = R's sigma_eps), the same covariance with the same fixed residual.
+#             R's Q7 rule (1e-3 x sd(y)), recomputed here and checked against the recorded value. <-> fit_gaussian_pervar_gllvm(Y; K = 2,
+#             fixed_residual_sd = c), the same covariance with the same fixed residual c.
 #             Compared: log-likelihood, trait intercepts, Lambda Lambda' (rotation-invariant), sd_B,
 #             and the Julia log-likelihood at R's estimates.
 #   ordiplot: ordiplot(fit) on latent(d = 2, unique = FALSE) <-> ordiplot(fit_gllvm(Y; family =
 #             Normal(), K = 2), Y). R returns list(scores, loadings) unrotated; Julia returns
 #             principal-rotated sites/species by default. Both are compared through the
-#             rotation-invariant products scores * loadings' (n x p) and loadings * loadings'.
+#             rotation-invariant products scores * loadings' (n x p) and loadings * loadings',
+#             and ordiplot(fit, Y; rotate = false) is compared with R's raw scores and loadings.
 #   flag    : flag_unreliable_loadings(fit) on a confirmatory fit (lambda_constraint pins
 #             Lambda[1,2] = 0 and Lambda[2,1] = 0) <-> flag_unreliable_loadings(fit_gaussian_gllvm(Yc;
 #             K = 2, lambda_constraint = M), Yc). Julia's confirmatory fit is zero-mean, so it is
@@ -44,6 +45,7 @@ using Distributions: Normal
 using LinearAlgebra
 using TOML
 using SHA
+using Statistics: std
 
 const _W1_DIR = joinpath(@__DIR__, "fixtures")
 
@@ -85,7 +87,9 @@ _w1_rcode(s) = s == "NA" ? -1 : s == "TRUE" ? 1 : s == "FALSE" ? 0 : error("bad 
             w = fx["wide"]
             @test w["converged"] && w["pd_hessian"]
             r_L = _w1_mat(w["Lambda"], p, 2)
-            r_beta, r_sdB, c = Float64.(w["beta"]), Float64.(w["sd_B"]), Float64(w["sigma_eps_fixed"])
+            r_beta, r_sdB = Float64.(w["beta"]), Float64.(w["sd_B"])
+            c = max(1e-3 * std(vec(Y)), 1e-6)   # R's Q7 rule (R/fit-multi.R): 1e-3 x sd(y) over all responses
+            @test isapprox(c, Float64(w["sigma_eps_fixed"]); atol = 1e-15, rtol = 0)
             fit = fit_gaussian_pervar_gllvm(Y; K = 2, fixed_residual_sd = c)
             @test fit.converged
             @test fit.fixed_residual_sd == c
@@ -113,6 +117,9 @@ _w1_rcode(s) = s == "NA" ? -1 : s == "TRUE" ? 1 : s == "FALSE" ? 0 : error("bad 
             @test isapprox(fit.logLik, Float64(o["loglik"]); atol = 1.5e-9, rtol = 0)                # logLik (observed 1.6e-10)
             @test isapprox(od.sites * od.species', r_S * r_L'; atol = 1e-5, rtol = 0)              # scores * loadings' (observed 9.9e-7)
             @test isapprox(od.species * od.species', r_L * r_L'; atol = 1e-5, rtol = 0)            # loadings * loadings' (observed 1.2e-6)
+            raw = ordiplot(fit, Y; rotate = false)                                                    # R's default rotate = "none"
+            @test isapprox(raw.sites, r_S; atol = 3e-5, rtol = 0)                                     # raw scores (observed 3.6e-6)
+            @test isapprox(raw.species, r_L; atol = 1e-5, rtol = 0)                                   # raw loadings (observed 1.3e-6)
         end
 
         @testset "flag_unreliable_loadings" begin
@@ -166,6 +173,12 @@ end
     @test_throws ArgumentError flag_unreliable_loadings(fit, y; null_region = (0.0,))
     @test_throws ArgumentError flag_unreliable_loadings(fit, y; level = :unit_obs)
     @test_throws ArgumentError flag_unreliable_loadings([(estimate = 0.2, lower = 0.1)])
+    # A missing or NaN bound gives a missing flag (R: NA), as a pinned row does.
+    mrows = flag_unreliable_loadings([(estimate = 0.2, lower = missing, upper = missing, pinned = false),
+                                      (estimate = 0.2, lower = NaN, upper = 0.4, pinned = false),
+                                      (estimate = 0.5, lower = 0.3, upper = 0.7, pinned = false)])
+    @test mrows[1].unreliable === missing && mrows[2].unreliable === missing
+    @test mrows[3].unreliable === false
     rows = flag_unreliable_loadings(fit, y)
     @test rows[2].pinned && rows[2].se == 0 && rows[2].unreliable === missing
     @test all(r -> r.null_region_lo == -0.1 && r.null_region_hi == 0.1, rows)
