@@ -15,13 +15,13 @@ Pin: gllvmTMB P1 `9539352f66f2db2cc26b1c393e67212a359b60c9`.
 Inputs:
 
 - `docs/dev-log/core070/true-parity-latest/case-map-aghq.json` (21 rows, sha256 `72e1d55c0553897c62e92f534ab128a8a592282958e1e56c44ca95e1c5902114`)
-- `docs/dev-log/core070/true-parity-latest/case-map-covariance.json` (19 rows, sha256 `d23ab57e75e98ba56767f4179f49c5f2787aeeac9e56294974ed38a18f710363`)
+- `docs/dev-log/core070/true-parity-latest/case-map-covariance.json` (19 rows, sha256 `81e650ad39a39aeb08c6b3a8468d06458369799b6d2882b853fd78d86710c294`)
 - `docs/dev-log/core070/true-parity-latest/case-map-data.json` (36 rows, sha256 `90191727ed23f9edd3bf48cc7d1f6463cd3897146c11d3703aef2238e451f42a`)
 - `docs/dev-log/core070/true-parity-latest/case-map-family.json` (26 rows, sha256 `537991192134fd7aef08d7e065c61d5b3063efde3d63513b88493dd6a82db6fc`)
 - `docs/dev-log/core070/true-parity-latest/case-map-fit-input.json` (10 rows, sha256 `568c054ed5f3786b96c9acb796e28d98e4523c4edc5fe5ad9f69ab150cee3639`)
 - `docs/dev-log/core070/true-parity-latest/case-map-inference.json` (63 rows, sha256 `ab0cb02039e34ecb5d1666c469321eba590dfead2452ac2f0de30d9da9a2bda9`)
 - `docs/dev-log/core070/true-parity-latest/case-map-isdm.json` (21 rows, sha256 `abcd0731b63d4290870525114ca3882d9a08fb9ac1966e35e702271a3917e6ca`)
-- `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `c82397d374443190e23d70dea17ae96df4e93b5c820e391117661c5a7f7f9b49`)
+- `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `7af4f9fd18412758bd73222817b15fe81da73f35167e13a99c40c61abc774824`)
 - `docs/dev-log/core070/true-parity-latest/case-map-postfit.json` (52 rows, sha256 `db4944f55b4d78e996bc52b09b71b0fe98ca27b96e3365da583f14900b86c4de`)
 
 ## Totals by family
@@ -35,9 +35,9 @@ Inputs:
 | `fit-input` | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
 | `inference` | 2 | 44 | 0 | 0 | 2 | 0 | 15 | 0 | 0 | 63 |
 | `isdm` | 11 | 0 | 0 | 0 | 0 | 9 | 0 | 1 | 0 | 21 |
-| `namespace` | 31 | 0 | 23 | 0 | 0 | 2 | 0 | 0 | 13 | 69 |
+| `namespace` | 32 | 0 | 22 | 0 | 0 | 2 | 0 | 0 | 13 | 69 |
 | `postfit` | 39 | 0 | 0 | 2 | 8 | 2 | 0 | 1 | 0 | 52 |
-| `all` | 135 | 44 | 23 | 4 | 24 | 33 | 30 | 7 | 17 | 317 |
+| `all` | 136 | 44 | 22 | 4 | 24 | 33 | 30 | 7 | 17 | 317 |
 
 ## P1 twin fixtures present at this head, not bound to any row
 
@@ -48,10 +48,14 @@ decision for the PR that measures it, not something this tool does.
 - `test/fixtures/aghq_p1/aghq_p1.toml`
 - `test/fixtures/aghq_p1/aghq_p1_helpers.jl`
 - `test/fixtures/aghq_p1/gen_aghq_p1.R`
+- `test/fixtures/animal_scalar_p1.toml`
+- `test/fixtures/animal_scalar_p1_A.csv`
+- `test/fixtures/animal_scalar_p1_data.csv`
 - `test/fixtures/data_twins_nb1_p1_data.csv`
 - `test/fixtures/data_twins_nb2_p1_data.csv`
 - `test/fixtures/data_twins_p1.toml`
 - `test/fixtures/data_twins_pois_p1_data.csv`
+- `test/fixtures/gen_animal_scalar_p1.R`
 - `test/fixtures/gen_data_twins_p1.R`
 - `test/fixtures/gen_namespace_numeric_p1.R`
 - `test/fixtures/gen_namespace_numeric_p1_b.R`
@@ -322,7 +326,7 @@ decision for the PR that measures it, not something this tool does.
 | namespace-export-animal_dep `namespace/export/animal_dep` | required_core; cases: none | NOT-MEASURED | not bound; cited: none | family namespace; evidence_tier registration; measured_against None; no receipt cited |
 | namespace-export-animal_indep `namespace/export/animal_indep` | required_core; cases: none | NOT-MEASURED | not bound; cited: none | family namespace; evidence_tier registration; measured_against None; no receipt cited |
 | namespace-export-animal_latent `namespace/export/animal_latent` | required_core; cases: none | NOT-MEASURED | not bound; cited: none | family namespace; evidence_tier registration; measured_against None; no receipt cited |
-| namespace-export-animal_scalar `namespace/export/animal_scalar` | required_core; cases: CORE070-NAMESPACE-ANIMAL-SCALAR-FIT | REGISTRATION-ONLY | not bound; cited: docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-ANIMAL-SCALAR-FIT.json, docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| namespace-export-animal_scalar `namespace/export/animal_scalar` | required_core; cases: P1-JULIA-ANIMAL-SCALAR-LOGLIK, P1-JULIA-ANIMAL-SCALAR-BETA, P1-JULIA-ANIMAL-SCALAR-SIGMA2-A, P1-JULIA-ANIMAL-SCALAR-SIGMA-EPS, P1-JULIA-ANIMAL-SCALAR-OBJECTIVE-AT-R | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/animal_scalar.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-animal_slope `namespace/export/animal_slope` | required_core; cases: none | NEEDS-SURFACE | not bound; cited: docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-ANIMAL-SLOPE-FIT.json, docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9; disposition BLOCKED_NEEDS_JULIA_SURFACE |
 | namespace-export-bootstrap_Sigma `namespace/export/bootstrap_Sigma` | required_core; cases: CORE070-NAMESPACE-BOOTSTRAP-SIGMA-NATIVE | REGISTRATION-ONLY | not bound; cited: docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-BOOTSTRAP-SIGMA-NATIVE.json, docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-check_gllvmTMB `namespace/export/check_gllvmTMB` | required_core; cases: CORE070-NAMESPACE-CHECK-GLLVMTMB-DIAGNOSTIC | REGISTRATION-ONLY | not bound; cited: docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-CHECK-GLLVMTMB-DIAGNOSTIC.json, docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
