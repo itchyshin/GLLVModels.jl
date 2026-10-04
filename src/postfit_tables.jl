@@ -417,7 +417,8 @@ function profile_cross_rho(A_H, A_P, W, refit;
     maxll = maximum(view(logLik, finite_ll))
     relative_logLik = logLik .- maxll
     delta_deviance = 2 .* (maxll .- logLik)
-    eligible = findall(i -> status[i] == :ok && convergence[i] && pd_hessian[i], finite_ll)
+    eligible = findall(i -> status[i] == :ok && convergence[i] && pd_hessian[i], 1:n)
+    eligible = intersect(eligible, finite_ll)
     isempty(eligible) && throw(ArgumentError(
         "no refit with finite logLik, converged=true, and pd_hessian=true; " *
         "see the table columns convergence, pd_hessian, and error"))
