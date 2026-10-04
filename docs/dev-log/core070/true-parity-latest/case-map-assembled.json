@@ -41,7 +41,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-namespace.json",
-   "sha256": "c82397d374443190e23d70dea17ae96df4e93b5c820e391117661c5a7f7f9b49",
+   "sha256": "7af4f9fd18412758bd73222817b15fe81da73f35167e13a99c40c61abc774824",
    "rows": 69
   },
   {
@@ -8055,20 +8055,30 @@
    "r_file_line": "R/animal-keyword.R:85",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/animal_scalar.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-ANIMAL-SCALAR-FIT.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-ANIMAL-SCALAR-FIT"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_animal_scalar_receipt.jl with the same calls and settings as test/test_animal_scalar_p1.jl, against R-at-P1 values copied from test/fixtures/animal_scalar_p1.toml (R value ~ 0 + trait + animal_scalar(id, A = A), Gaussian, on a 60-individual pedigree A with 2 sites per individual and p = 3: log-likelihood, trait intercepts, the one shared animal variance and the residual SD, plus the Julia objective at R's estimates; Julia fit_gaussian_sources with SourceCovariance(A + 1e-8 I; mode = :indep, common = true), the same covariance), each case within the tolerance asserted in that test. R converged with a positive-definite Hessian. The Tier 0 registration receipts are kept un-cited under registration_receipts (the registration batch receipt carries a batch-level FAIL status, which would block the numeric binding if cited); the superseded case ids are in registration_case_ids."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-ANIMAL-SCALAR-FIT"
+    "P1-JULIA-ANIMAL-SCALAR-LOGLIK",
+    "P1-JULIA-ANIMAL-SCALAR-BETA",
+    "P1-JULIA-ANIMAL-SCALAR-SIGMA2-A",
+    "P1-JULIA-ANIMAL-SCALAR-SIGMA-EPS",
+    "P1-JULIA-ANIMAL-SCALAR-OBJECTIVE-AT-R"
    ],
-   "reason": "R export(animal_scalar) registered and defined at P1; Julia `relatedness_cov` is an exported Function (measured). Name match only.",
+   "reason": "Numeric twin at P1: R animal_scalar(id, A = A) and Julia fit_gaussian_sources with one common-variance independent SourceCovariance on A + 1e-8 I fit the same Gaussian model to the same data. Supersedes the Tier 0 registration measurement, which matched the name to Julia `relatedness_cov` only.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
