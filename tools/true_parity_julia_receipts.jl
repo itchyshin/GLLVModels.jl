@@ -1662,8 +1662,8 @@ end
 #     replays with no fit number, bound to fit-level twins: R-at-P1 fits recorded in
 #     test/fixtures/data_twins_p1.toml against Julia fits of the same data. Weights rows are not
 #     here (Julia refuses weights= on every fitter); the legacy-fit and newdata predict-offset,
-#     mixed-family and modelled-predictor rows have no Julia surface to fit (the stored-offset row
-#     has its own twin, section 12b).
+#     mixed-family rows have no Julia surface to fit (the stored-offset row has its own twin,
+#     section 12b; the modelled-predictor rows theirs, section 12c).
 # =============================================================================================
 function _dt_load(path, col, p, n)
     hdr = split(readline(path), ",")

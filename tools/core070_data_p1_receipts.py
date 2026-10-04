@@ -70,7 +70,7 @@ disposition and every other field are untouched; a row's `note` still describes 
 helper-replay case. `--apply-twins` re-derives rows and counts of the tracked case-map-data.json
 from the tracked receipts and twin receipts (no run directory needed); `--check` verifies the
 result. Rows with no twin (weights rows: Julia refuses weights= everywhere; legacy-fit and
-newdata predict-time offset, mixed-family and modelled-predictor rows: no Julia surface to fit) keep
+newdata predict-time offset and mixed-family rows: no Julia surface to fit) keep
 their batch tier. DATA-OFF-TRAIN-STORED is bound by its own twin (test/test_predict_offset_twin_p1.jl,
 fixture test/fixtures/predict_offset_twin_p1.toml); DATA-MISS-MODEL and DATA-MISS-BOTH by the
 modelled-predictor twins (test/test_data_twins_2_p1.jl, fixture test/fixtures/data_twins_2_p1.toml).
