@@ -69,8 +69,10 @@ receipts stay under evidence.non_binding_receipts), evidence_tier numeric. Class
 disposition and every other field are untouched; a row's `note` still describes the superseded
 helper-replay case. `--apply-twins` re-derives rows and counts of the tracked case-map-data.json
 from the tracked receipts and twin receipts (no run directory needed); `--check` verifies the
-result. Rows with no twin (weights rows: Julia refuses weights= everywhere; stored / predict-time
-offset, mixed-family and modelled-predictor rows: no Julia surface to fit) keep their batch tier.
+result. Rows with no twin (weights rows: Julia refuses weights= everywhere; legacy-fit and
+newdata predict-time offset, mixed-family and modelled-predictor rows: no Julia surface to fit) keep
+their batch tier. DATA-OFF-TRAIN-STORED is bound by its own twin (test/test_predict_offset_twin_p1.jl,
+fixture test/fixtures/predict_offset_twin_p1.toml).
 
 Usage:
   python3 tools/core070_data_p1_receipts.py --runs DIR --runtimes JSON [--allow-dirty]
@@ -468,6 +470,7 @@ TWIN_FILES = {  # source_id -> twin receipt stem
     "data/DATA-OFF-NONCOUNT-ZERO": "OFF-NONCOUNT-ZERO",
     "data/DATA-MISS-DEFAULT": "MISS-DEFAULT",
     "data/DATA-MISS-INCLUDE": "MISS-INCLUDE",
+    "data/DATA-OFF-TRAIN-STORED": "OFF-TRAIN-STORED",
 }
 
 
@@ -495,6 +498,12 @@ SCOPE_NOTES = {
         "Gaussian fit match plus acceptance of offset = zeros(p, n). Known differences, recorded not bound: "
         "Julia applies a nonzero Gaussian offset where R refuses it. (The scalar form offset = 0.0 is "
         "now broadcast like any scalar offset; see DATA-OFF-SCALAR.)",
+    "data/DATA-OFF-TRAIN-STORED": "The R batch case reads back a vector written into a mock fit object; the twin "
+        "compares the training offset a real Poisson exposure fit kept (R .gllvmTMB_offset_vec, Julia fit.offset) "
+        "and the training-row link predictor that uses it (R predict(fit, type = 'link'), Julia predict(fit, Y; "
+        "type = :link)). Training rows only: R's newdata prediction (offset re-evaluated against newdata, training "
+        "units' latent modes kept) has no Julia counterpart and is not compared. Julia stores the training offset "
+        "on the Laplace Poisson, NB2 (shared r), binomial and hurdle-Poisson fits; other fit types keep none.",
 }
 
 
