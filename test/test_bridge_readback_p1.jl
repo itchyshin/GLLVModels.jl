@@ -2,11 +2,11 @@
 #
 # Bridge readback at P1 (gllvmTMB 9539352f66f2db2cc26b1c393e67212a359b60c9): namespace rows
 # S3method(coef|fitted|logLik|predict|residuals|summary, gllvmTMB_julia) and export(gllvm_julia_fit).
-# No R and no JuliaCall at test time. test/fixtures/bridge_readback_p1.json was recorded once by
+# No R and no JuliaCall at test time. test/fixtures/bridge_readback_p1.toml was recorded once by
 # test/fixtures/gen_bridge_readback_p1.R in a live run: R (gllvmTMB at the pin) -> JuliaCall ->
 # this package, on the namespace twin data ns_gauss_p1_data.csv (sha256 checked), model
 #     value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE),  Gaussian, p = 6, n = 200.
-# The JSON holds, from that one R session:
+# The TOML holds, from that one R session:
 #   bridge        the outputs of the R methods on the object gllvmTMB(..., engine = "julia") returned;
 #   julia_direct  the same quantities from the native GLLVModels accessors, computed in the same
 #                 JuliaCall session on a fit made with the call bridge_fit makes for this row
@@ -32,19 +32,19 @@ using Test
 using GLLVModels
 using LinearAlgebra
 using Statistics
-using JSON3
+using TOML
 using SHA
 
 const _BR_DIR = joinpath(@__DIR__, "fixtures")
-const _BR_JSON = joinpath(_BR_DIR, "bridge_readback_p1.json")
+const _BR_TOML = joinpath(_BR_DIR, "bridge_readback_p1.toml")
 
-_br_vec(x) = x isa JSON3.Object ? Float64.(collect(x["colmajor"])) :
+_br_vec(x) = x isa AbstractDict ? Float64.(collect(x["colmajor"])) :
              x isa AbstractVector ? Float64.(collect(x)) : [Float64(x)]
 _br_mat(x) = reshape(_br_vec(x), Int(x["nrow"]), Int(x["ncol"]))
 _br_maxdiff(a, b) = (va = _br_vec(a); vb = _br_vec(b); @assert length(va) == length(vb); maximum(abs.(va .- vb)))
 
 @testset "bridge readback P1 (gllvmTMB_julia methods, gllvm_julia_fit)" begin
-    fx = JSON3.read(read(_BR_JSON, String))
+    fx = TOML.parsefile(_BR_TOML)
     @test fx["gllvmtmb_commit"] == "9539352f66f2db2cc26b1c393e67212a359b60c9"
     @test bytes2hex(sha256(read(joinpath(_BR_DIR, fx["data_file"])))) == fx["data_sha256"]
     b, j, g, t = fx["bridge"], fx["julia_direct"], fx["gllvm_julia_fit"], fx["tmb"]

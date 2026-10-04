@@ -1,6 +1,6 @@
-## Records bridge_readback_p1.json: a live run of the gllvmTMB P1 Julia bridge (R ->
+## Records bridge_readback_p1.toml: a live run of the gllvmTMB P1 Julia bridge (R ->
 ## JuliaCall -> this checkout's GLLVModels) on the namespace twin data ns_gauss_p1_data.csv.
-## NOT run by CI or by any Julia test -- provenance for the tracked JSON. Needs:
+## NOT run by CI or by any Julia test -- provenance for the tracked TOML. Needs:
 ##   * gllvmTMB installed at commit 9539352f66f2db2cc26b1c393e67212a359b60c9 (0.7.1, "P1") in a
 ##     lane-local library, path in GLLVM_P1_RLIB (with the oracle build.json next to it, see
 ##     GLLVM_P1_BUILD_JSON);
@@ -145,5 +145,37 @@ out <- list(
     logLik = num(logLik(fit_t)), df = num(attr(logLik(fit_t), "df")),
     beta = tmb_beta, Sigma_latent = mat(tmb_Sigma),
     sigma_eps = num(exp(fit_t$opt$par[["log_sigma_eps"]]))))
-jsonlite::write_json(out, "bridge_readback_p1.json", auto_unbox = TRUE, pretty = TRUE, digits = I(17))
+## TOML (the P1 twin CI job runs each test in the package root environment, which has the TOML
+## stdlib but no JSON reader). Doubles are written with 17 significant digits (exact round trip);
+## a matrix is a sub-table {nrow, ncol, colmajor}.
+toml_value <- function(x) {
+  one <- function(v) {
+    if (is.logical(v)) return(if (isTRUE(v)) "true" else "false")
+    if (is.character(v)) return(paste0("\"", gsub("\"", "\\\\\"", gsub("\\\\", "\\\\\\\\", v)), "\""))
+    if (is.integer(v)) return(as.character(v))
+    stopifnot(is.double(v), is.finite(v))
+    s <- sprintf("%.17g", v)
+    if (!grepl("[.eE]", s)) s <- paste0(s, ".0")
+    s
+  }
+  if (length(x) == 1L && is.null(names(x)) && !is.list(x)) return(one(x))
+  paste0("[", paste(vapply(x, one, ""), collapse = ", "), "]")
+}
+is_mat <- function(x) is.list(x) && identical(names(x), c("nrow", "ncol", "colmajor"))
+toml_table <- function(tab, prefix) {
+  scal <- names(tab)[!vapply(tab, is.list, TRUE)]
+  subs <- names(tab)[vapply(tab, is.list, TRUE)]
+  lines <- character()
+  if (nzchar(prefix)) lines <- c(lines, "", paste0("[", prefix, "]"))
+  for (k in scal) lines <- c(lines, paste0(k, " = ", toml_value(tab[[k]])))
+  for (k in subs) {
+    key <- if (nzchar(prefix)) paste0(prefix, ".", k) else k
+    sub <- tab[[k]]
+    if (is_mat(sub)) sub <- list(nrow = as.integer(sub$nrow), ncol = as.integer(sub$ncol), colmajor = sub$colmajor)
+    lines <- c(lines, toml_table(sub, key))
+  }
+  lines
+}
+writeLines(c("# Live P1 bridge readback, recorded by gen_bridge_readback_p1.R. Do not hand-edit; regenerate.",
+             toml_table(out, "")), "bridge_readback_p1.toml")
 cat("BRIDGE_READBACK_P1_RECORDED\n")
