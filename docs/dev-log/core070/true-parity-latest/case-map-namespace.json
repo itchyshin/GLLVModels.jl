@@ -29,27 +29,20 @@
    "r_file_line": "R/julia-bridge.R:3161",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
-     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/bridge_readback.json"
-    ],
-    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-COEF-JULIA-BRIDGE-COMPARE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "registration_case_ids": [
-     "CORE070-NAMESPACE-COEF-JULIA-BRIDGE-COMPARE"
-    ],
-    "tier": "numeric: live bridge readback, R method output against the direct Julia accessor. One live R session (test/fixtures/gen_bridge_readback_p1.R): gllvmTMB at P1 with engine = \"julia\" drove JuliaCall into this package on the namespace twin data test/fixtures/ns_gauss_p1_data.csv, Gaussian value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE), p = 6, n = 200. Compared: coef(fit)$alpha and $loadings against the intercepts (row means of Y) and getLoadings(f; rotate = true) that GLLVModels computes in the same session (StatsAPI.coef of the bridge's centred fit is empty, so it is not the comparand). The Julia side is a refit with the call bridge_fit makes for this row (alpha = row means of Y; fit_gaussian_gllvm(Y .- alpha; K = 2)), because the bridge returns a payload, not the fit object; each case within 1e-12 (observed at most 1.4e-15), test/test_bridge_readback_p1.jl. This shows the R adapter returns what Julia computes; it is not a comparison with engine = \"tmb\". The Tier 0 registration receipts are kept un-cited under registration_receipts; the superseded case ids are in registration_case_ids."
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
+    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
    },
    "executable_case_ids": [
-    "P1-BRIDGE-READBACK-COEF-ALPHA",
-    "P1-BRIDGE-READBACK-COEF-LOADINGS"
+    "CORE070-NAMESPACE-COEF-JULIA-BRIDGE-COMPARE"
    ],
-   "reason": "Bridge readback at P1: the R method coef.gllvmTMB_julia, run on the object gllvmTMB(..., engine = \"julia\") returned in a live JuliaCall session, returns the same numbers as the GLLVModels accessors in that session (the case plan's comparands: R bridge method output vs direct Julia call on the same fit). Supersedes the Tier 0 registration measurement, which matched names only and called a twin circular; the readback is the adapter check, not a cross-engine twin.",
+   "reason": "R S3method(coef,gllvmTMB_julia) registered and defined at P1; Julia `coef` exported Function. Classified compatibility_adapter: the gllvmTMB_julia bridge method's R answer comes from Julia itself, so a twin comparison is circular.",
    "disposition": null,
-   "evidence_tier": "numeric",
+   "evidence_tier": "registration",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -190,27 +183,20 @@
    "r_file_line": "R/julia-bridge.R:3213",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
-     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/bridge_readback.json"
-    ],
-    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-FITTED-JULIA-BRIDGE-COMPARE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "registration_case_ids": [
-     "CORE070-NAMESPACE-FITTED-JULIA-BRIDGE-COMPARE"
-    ],
-    "tier": "numeric: live bridge readback, R method output against the direct Julia accessor. One live R session (test/fixtures/gen_bridge_readback_p1.R): gllvmTMB at P1 with engine = \"julia\" drove JuliaCall into this package on the namespace twin data test/fixtures/ns_gauss_p1_data.csv, Gaussian value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE), p = 6, n = 200. Compared: fitted(fit) on the response and link scales against alpha .+ predict(f, Yc) from GLLVModels in the same session. The Julia side is a refit with the call bridge_fit makes for this row (alpha = row means of Y; fit_gaussian_gllvm(Y .- alpha; K = 2)), because the bridge returns a payload, not the fit object; each case within 1e-12 (observed at most 1.4e-15), test/test_bridge_readback_p1.jl. This shows the R adapter returns what Julia computes; it is not a comparison with engine = \"tmb\". The Tier 0 registration receipts are kept un-cited under registration_receipts; the superseded case ids are in registration_case_ids."
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
+    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
    },
    "executable_case_ids": [
-    "P1-BRIDGE-READBACK-FITTED-RESPONSE",
-    "P1-BRIDGE-READBACK-FITTED-LINK"
+    "CORE070-NAMESPACE-FITTED-JULIA-BRIDGE-COMPARE"
    ],
-   "reason": "Bridge readback at P1: the R method fitted.gllvmTMB_julia, run on the object gllvmTMB(..., engine = \"julia\") returned in a live JuliaCall session, returns the same numbers as the GLLVModels accessors in that session (the case plan's comparands: R bridge method output vs direct Julia call on the same fit). Supersedes the Tier 0 registration measurement, which matched names only and called a twin circular; the readback is the adapter check, not a cross-engine twin.",
+   "reason": "R S3method(fitted,gllvmTMB_julia) registered and defined at P1; Julia `fitted` exported Function. Classified compatibility_adapter: the gllvmTMB_julia bridge method's R answer comes from Julia itself, so a twin comparison is circular.",
    "disposition": null,
-   "evidence_tier": "numeric",
+   "evidence_tier": "registration",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -292,28 +278,20 @@
    "r_file_line": "R/julia-bridge.R:3130",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
-     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/bridge_readback.json"
-    ],
-    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-LOGLIK-JULIA-BRIDGE-COMPARE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "registration_case_ids": [
-     "CORE070-NAMESPACE-LOGLIK-JULIA-BRIDGE-COMPARE"
-    ],
-    "tier": "numeric: live bridge readback, R method output against the direct Julia accessor. One live R session (test/fixtures/gen_bridge_readback_p1.R): gllvmTMB at P1 with engine = \"julia\" drove JuliaCall into this package on the namespace twin data test/fixtures/ns_gauss_p1_data.csv, Gaussian value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE), p = 6, n = 200. Compared: logLik(fit) value, df and nobs against loglikelihood(f), p + dof(f) and p n from GLLVModels in the same session. The Julia side is a refit with the call bridge_fit makes for this row (alpha = row means of Y; fit_gaussian_gllvm(Y .- alpha; K = 2)), because the bridge returns a payload, not the fit object; each case within 1e-12 (observed at most 1.4e-15), test/test_bridge_readback_p1.jl. This shows the R adapter returns what Julia computes; it is not a comparison with engine = \"tmb\". The Tier 0 registration receipts are kept un-cited under registration_receipts; the superseded case ids are in registration_case_ids."
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
+    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
    },
    "executable_case_ids": [
-    "P1-BRIDGE-READBACK-LOGLIK-VALUE",
-    "P1-BRIDGE-READBACK-LOGLIK-DF",
-    "P1-BRIDGE-READBACK-LOGLIK-NOBS"
+    "CORE070-NAMESPACE-LOGLIK-JULIA-BRIDGE-COMPARE"
    ],
-   "reason": "Bridge readback at P1: the R method logLik.gllvmTMB_julia, run on the object gllvmTMB(..., engine = \"julia\") returned in a live JuliaCall session, returns the same numbers as the GLLVModels accessors in that session (the case plan's comparands: R bridge method output vs direct Julia call on the same fit). Supersedes the Tier 0 registration measurement, which matched names only and called a twin circular; the readback is the adapter check, not a cross-engine twin.",
+   "reason": "R S3method(logLik,gllvmTMB_julia) registered and defined at P1; Julia `loglikelihood` exported Function. Classified compatibility_adapter: the gllvmTMB_julia bridge method's R answer comes from Julia itself, so a twin comparison is circular.",
    "disposition": null,
-   "evidence_tier": "numeric",
+   "evidence_tier": "registration",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -394,27 +372,20 @@
    "r_file_line": "R/julia-bridge.R:3167",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
-     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/bridge_readback.json"
-    ],
-    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-PREDICT-JULIA-BRIDGE-COMPARE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "registration_case_ids": [
-     "CORE070-NAMESPACE-PREDICT-JULIA-BRIDGE-COMPARE"
-    ],
-    "tier": "numeric: live bridge readback, R method output against the direct Julia accessor. One live R session (test/fixtures/gen_bridge_readback_p1.R): gllvmTMB at P1 with engine = \"julia\" drove JuliaCall into this package on the namespace twin data test/fixtures/ns_gauss_p1_data.csv, Gaussian value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE), p = 6, n = 200. Compared: predict(fit) (in-sample long frame; newdata is gated on the bridge) on the link and response scales against vec(alpha .+ predict(f, Yc)) from GLLVModels in the same session. The Julia side is a refit with the call bridge_fit makes for this row (alpha = row means of Y; fit_gaussian_gllvm(Y .- alpha; K = 2)), because the bridge returns a payload, not the fit object; each case within 1e-12 (observed at most 1.4e-15), test/test_bridge_readback_p1.jl. This shows the R adapter returns what Julia computes; it is not a comparison with engine = \"tmb\". The Tier 0 registration receipts are kept un-cited under registration_receipts; the superseded case ids are in registration_case_ids."
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
+    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
    },
    "executable_case_ids": [
-    "P1-BRIDGE-READBACK-PREDICT-LINK",
-    "P1-BRIDGE-READBACK-PREDICT-RESPONSE"
+    "CORE070-NAMESPACE-PREDICT-JULIA-BRIDGE-COMPARE"
    ],
-   "reason": "Bridge readback at P1: the R method predict.gllvmTMB_julia, run on the object gllvmTMB(..., engine = \"julia\") returned in a live JuliaCall session, returns the same numbers as the GLLVModels accessors in that session (the case plan's comparands: R bridge method output vs direct Julia call on the same fit). Supersedes the Tier 0 registration measurement, which matched names only and called a twin circular; the readback is the adapter check, not a cross-engine twin.",
+   "reason": "R S3method(predict,gllvmTMB_julia) registered and defined at P1; Julia `predict` exported Function. Classified compatibility_adapter: the gllvmTMB_julia bridge method's R answer comes from Julia itself, so a twin comparison is circular.",
    "disposition": null,
-   "evidence_tier": "numeric",
+   "evidence_tier": "registration",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -467,27 +438,20 @@
    "r_file_line": "R/julia-bridge.R:3246",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
-     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/bridge_readback.json"
-    ],
-    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-RESIDUALS-JULIA-BRIDGE-COMPARE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "registration_case_ids": [
-     "CORE070-NAMESPACE-RESIDUALS-JULIA-BRIDGE-COMPARE"
-    ],
-    "tier": "numeric: live bridge readback, R method output against the direct Julia accessor. One live R session (test/fixtures/gen_bridge_readback_p1.R): gllvmTMB at P1 with engine = \"julia\" drove JuliaCall into this package on the namespace twin data test/fixtures/ns_gauss_p1_data.csv, Gaussian value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE), p = 6, n = 200. Compared: residuals(fit) of type response and pearson against Y .- fitted and residuals(f, Yc; type = :pearson) from GLLVModels in the same session. The Julia side is a refit with the call bridge_fit makes for this row (alpha = row means of Y; fit_gaussian_gllvm(Y .- alpha; K = 2)), because the bridge returns a payload, not the fit object; each case within 1e-12 (observed at most 1.4e-15), test/test_bridge_readback_p1.jl. This shows the R adapter returns what Julia computes; it is not a comparison with engine = \"tmb\". The Tier 0 registration receipts are kept un-cited under registration_receipts; the superseded case ids are in registration_case_ids."
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
+    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
    },
    "executable_case_ids": [
-    "P1-BRIDGE-READBACK-RESIDUALS-RESPONSE",
-    "P1-BRIDGE-READBACK-RESIDUALS-PEARSON"
+    "CORE070-NAMESPACE-RESIDUALS-JULIA-BRIDGE-COMPARE"
    ],
-   "reason": "Bridge readback at P1: the R method residuals.gllvmTMB_julia, run on the object gllvmTMB(..., engine = \"julia\") returned in a live JuliaCall session, returns the same numbers as the GLLVModels accessors in that session (the case plan's comparands: R bridge method output vs direct Julia call on the same fit). Supersedes the Tier 0 registration measurement, which matched names only and called a twin circular; the readback is the adapter check, not a cross-engine twin.",
+   "reason": "R S3method(residuals,gllvmTMB_julia) registered and defined at P1; Julia `residuals` exported Function. Classified compatibility_adapter: the gllvmTMB_julia bridge method's R answer comes from Julia itself, so a twin comparison is circular.",
    "disposition": null,
-   "evidence_tier": "numeric",
+   "evidence_tier": "registration",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -628,35 +592,20 @@
    "r_file_line": "R/julia-bridge.R:3489",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
-     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/bridge_readback.json"
-    ],
-    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-SUMMARY-JULIA-BRIDGE-COMPARE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "registration_case_ids": [
-     "CORE070-NAMESPACE-SUMMARY-JULIA-BRIDGE-COMPARE"
-    ],
-    "tier": "numeric: live bridge readback, R method output against the direct Julia accessor. One live R session (test/fixtures/gen_bridge_readback_p1.R): gllvmTMB at P1 with engine = \"julia\" drove JuliaCall into this package on the namespace twin data test/fixtures/ns_gauss_p1_data.csv, Gaussian value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE), p = 6, n = 200. Compared: summary(fit) header (logLik, AIC, BIC, df, nobs), coefficients (alpha, loadings) and covariance (Sigma, correlation, communality) against the GLLVModels accessors they are built from (loglikelihood, aic/bic with k = p + dof(f), getLoadings, sigma_y_site, correlation, communality) in the same session. The Julia side is a refit with the call bridge_fit makes for this row (alpha = row means of Y; fit_gaussian_gllvm(Y .- alpha; K = 2)), because the bridge returns a payload, not the fit object; each case within 1e-12 (observed at most 1.4e-15), test/test_bridge_readback_p1.jl. This shows the R adapter returns what Julia computes; it is not a comparison with engine = \"tmb\". The Tier 0 registration receipts are kept un-cited under registration_receipts; the superseded case ids are in registration_case_ids."
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
+    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
    },
    "executable_case_ids": [
-    "P1-BRIDGE-READBACK-SUMMARY-LOGLIK",
-    "P1-BRIDGE-READBACK-SUMMARY-AIC",
-    "P1-BRIDGE-READBACK-SUMMARY-BIC",
-    "P1-BRIDGE-READBACK-SUMMARY-DF",
-    "P1-BRIDGE-READBACK-SUMMARY-NOBS",
-    "P1-BRIDGE-READBACK-SUMMARY-COEF-ALPHA",
-    "P1-BRIDGE-READBACK-SUMMARY-COEF-LOADINGS",
-    "P1-BRIDGE-READBACK-SUMMARY-SIGMA",
-    "P1-BRIDGE-READBACK-SUMMARY-CORRELATION",
-    "P1-BRIDGE-READBACK-SUMMARY-COMMUNALITY"
+    "CORE070-NAMESPACE-SUMMARY-JULIA-BRIDGE-COMPARE"
    ],
-   "reason": "Bridge readback at P1: the R method summary.gllvmTMB_julia, run on the object gllvmTMB(..., engine = \"julia\") returned in a live JuliaCall session, returns the same numbers as the GLLVModels accessors in that session (the case plan's comparands: R bridge method output vs direct Julia call on the same fit). Supersedes the Tier 0 registration measurement, which matched names only and called a twin circular; the readback is the adapter check, not a cross-engine twin.",
+   "reason": "R S3method(summary,gllvmTMB_julia) registered and defined at P1; Julia `coef_table` exported Function. Classified compatibility_adapter: the gllvmTMB_julia bridge method's R answer comes from Julia itself, so a twin comparison is circular.",
    "disposition": null,
-   "evidence_tier": "numeric",
+   "evidence_tier": "registration",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
