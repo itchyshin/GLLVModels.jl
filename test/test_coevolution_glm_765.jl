@@ -13,6 +13,18 @@ function coevolution_marginal_input_error(; N, β)
     end
 end
 
+function coevolution_fit_input_error(; N)
+    T, n = 3, 12
+    K = Matrix(Symmetric(I(n)))
+    Y = Float64.(rand(0:5, T, n))
+    try
+        fit_coevolution_glm(Y, K; family = Poisson(), N = N)
+        return nothing
+    catch e
+        return e
+    end
+end
+
 @testset "coevolution_glm: N and β must match Y (#765)" begin
     errN = coevolution_marginal_input_error(N = fill(8.0, 3, 4), β = zeros(3))
     @test errN isa ArgumentError
@@ -21,4 +33,8 @@ end
     errβ = coevolution_marginal_input_error(N = fill(8.0, 3, 12), β = zeros(2))
     @test errβ isa ArgumentError
     @test occursin("β", sprint(showerror, errβ))
+
+    errFitN = coevolution_fit_input_error(N = fill(8.0, 3, 4))
+    @test errFitN isa ArgumentError
+    @test occursin("N", sprint(showerror, errFitN))
 end
