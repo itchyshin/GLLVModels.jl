@@ -714,7 +714,9 @@ end
     HurdlePoissonFit
 
 Result of [`fit_hurdle_poisson_gllvm`](@ref): occurrence logits `βz`, count log-mean
-intercepts `βc`, count loadings `Λc`, `loglik`, `converged`, `iterations`.
+intercepts `βc`, count loadings `Λc`, `loglik`, `converged`, `iterations`, and
+`offset`, the p×n training offset on the count predictor (`nothing` when the fit had
+none), which [`predict`](@ref) and [`getLV`](@ref) use by default.
 """
 struct HurdlePoissonFit
     βz::Vector{Float64}
@@ -723,7 +725,11 @@ struct HurdlePoissonFit
     loglik::Float64
     converged::Bool
     iterations::Int
+    offset::Union{Nothing,Matrix{Float64}}   # training count offset (p×n); `nothing` = none
 end
+# Pre-offset compat tier: no stored training offset.
+HurdlePoissonFit(βz, βc, Λc, loglik, converged, iterations) =
+    HurdlePoissonFit(βz, βc, Λc, loglik, converged, iterations, nothing)
 
 function Base.show(io::IO, f::HurdlePoissonFit)
     p, K = size(f.Λc)
@@ -797,7 +803,7 @@ function fit_hurdle_poisson_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     θ̂ = Optim.minimizer(res)
     βz = θ̂[1:p]; βc = θ̂[(p + 1):(2p)]
     Λc = unpack_lambda(θ̂[(2p + 1):(2p + rr)], p, K)
-    return HurdlePoissonFit(βz, βc, Λc, _fit_verdict(res)...)
+    return HurdlePoissonFit(βz, βc, Λc, _fit_verdict(res)..., _stored_offset(offset))
 end
 
 # ---------------------------------------------------------------------------

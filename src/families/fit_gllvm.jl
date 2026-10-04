@@ -74,6 +74,11 @@ function _normalize_offset(offset, p::Integer, n::Integer; Y = nothing, mask = n
     return O
 end
 
+# The training offset a Laplace fit keeps (a p×n Float64 copy), so `predict` and `getLV`
+# can add it by default; `nothing` when the fit had no offset.
+_stored_offset(::Nothing) = nothing
+_stored_offset(O::AbstractMatrix) = Matrix{Float64}(O)
+
 # What an offset looked like, for the error message ("a length-40 vector", "a 40×4 matrix").
 function _describe_offset(offset)
     offset isa AbstractVector && return "a length-$(length(offset)) vector"

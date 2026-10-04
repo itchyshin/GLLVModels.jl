@@ -93,7 +93,7 @@ function fit_binomial_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control
         selected.converged,selected.passes,nothing,copy(t),:observed,nothing,info)
 end
 _binomial_with_integration(f::BinomialFit,i)=BinomialFit(f.β,f.Λ,f.link,f.loglik,f.converged,
-    f.iterations,f.alpha_lv,f.theta_packed,f.hessian,f.saturation,i,f.loading_ridge)
+    f.iterations,f.alpha_lv,f.theta_packed,f.hessian,f.saturation,i,f.loading_ridge,f.offset)
 _is_binomial_aghq(f)=f isa BinomialFit && f.integration!==nothing && f.integration.actual===:aghq
 
 
