@@ -493,6 +493,13 @@ def main():
                 counts["partial_numeric_bridge_boundary" if tier != "r_only" else "r_only_needs_julia_surface"] += 1
         out_rows.append(row)
 
+    # Rows this tool does not generate (e.g. the C3 campaign rows added under #684 item 4) are
+    # carried over unchanged, so regenerating the 17 rows never drops another writer's rows.
+    generated = {r["source_id"] for r in out_rows}
+    prior = OUT / "case-map-covariance.json"
+    if prior.is_file():
+        out_rows += [r for r in json.loads(prior.read_text())["rows"] if r["source_id"] not in generated]
+
     casemap = {
         "schema": 1, "reference_commit": P1_SHA,
         "scope": "covariance family: the 17 rows the P1 carry scan lists as PARTIAL_STALE_AT_P1 (7) or DANGLING (10); "
