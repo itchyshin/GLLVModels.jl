@@ -1834,8 +1834,10 @@ All notable changes to GLLVModels.jl are documented here.
     hardcoded to `LogitLink()` in its mode solve, so a probit fit was already
     routed to finite differences regardless of `hessian`, before and after
     this change.
-  - Binomial/**cloglog** is explicitly excluded (the diagnosed Laplace
-    saturation pathology) and stays `:fisher`.
+  - Binomial/**cloglog** now defaults to **observed** as well (2026-09-01),
+    matching TMB / `gllvmTMB`; `:fisher` had been a Julia-side defect.
+    Extreme-η Laplace saturation remains a separate post-fit health
+    diagnostic, not a reason to keep Fisher as the default.
   - **Recorded, not fixed:** the Tweedie **grouped** route
     (`fit_tweedie_gllvm_grouped`) has no `hessian` selector at all
     (unconditional Fisher) — with `G = 1` it no longer matches the shared
