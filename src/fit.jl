@@ -86,8 +86,8 @@ function _per_trait_intercept_rows(X::AbstractArray{<:Real,3}, β_fixed)
 end
 
 # Rank of the data after centring the traits in `centre` (those with a free
-# intercept) and giving every trait unit norm, so a trait on a tiny scale is
-# not judged rank deficient. A trait is zero when its centred norm is at most
+# intercept) and scaling every trait by its uncentred norm, so a trait on a
+# tiny scale is not judged rank deficient. A trait is zero when its centred norm is at most
 # `64 eps` times the norm of its uncentred row (a zero trait, or a constant
 # trait that its intercept absorbs completely).
 function _scale_aware_rank(y::AbstractMatrix, centre)
@@ -100,10 +100,15 @@ function _scale_aware_rank(y::AbstractMatrix, centre)
         if n0 == 0 || nr <= 64 * eps() * n0
             M[t, :] .= 0.0
         else
-            M[t, :] ./= nr
+            # Scale by the UNCENTRED norm: centring roundoff is then at most
+            # about eps in every entry, however large the trait mean is.
+            M[t, :] ./= n0
         end
     end
-    return rank(M)
+    # Absolute tolerance: entries are at most 1, so roundoff singular values
+    # are about 1e-15, a thousand times below 1e-12. A real direction survives
+    # unless its noise is below 1e-12 of the trait's own size.
+    return rank(M; atol = 1e-12)
 end
 
 # Identifiability guard for the closed-form Gaussian fitter (#149). It replaces
@@ -127,8 +132,11 @@ end
 # `strict = true` (per-trait diagonal terms, phylogenetic blocks, `X_lv`): the
 # rank rule is not sufficient, because a duplicated, collinear or zero trait
 # gives an unbounded likelihood even with `K` below the rank, as a per-trait
-# variance can collapse. These fits are refused whenever the (centred) data
-# are rank deficient, which includes every `n_sites < p` fit.
+# variance can collapse. These fits are refused when `n_sites < p` (as on
+# main) and when the rank is below the generic rank of the design,
+# `min(p, n_sites - 1)` with intercepts and `min(p, n_sites)` without X.
+# Generic data at `n_sites == p` with intercepts have rank `p - 1` and are
+# accepted; a duplicated, collinear or zero trait lowers the rank and is refused.
 #
 # Masked fits are not covered: the masked route reaches this check on a
 # mean-imputed matrix, so the rank rule says nothing about them.
@@ -164,14 +172,18 @@ function _check_gaussian_rank(y::AbstractMatrix, K_total::Integer, X, β_fixed;
     end
     r = _scale_aware_rank(y, centre)
     if strict
-        r < p && throw(ArgumentError(
+        generic = isempty(centre) ? min(p, n) : min(p, n - 1)
+        (n < p || r < generic) && throw(ArgumentError(
             "fit_gaussian_gllvm: this fit has per-trait variance terms " *
-            "(has_diag, a phylogenetic block, or X_lv), and these require the " *
-            "data the fitter sees to have full rank (rank = $r, p = $p, " *
-            "n_sites = $n$(isempty(centre) ? "" : "; centred by the per-trait intercepts")). A subset of traits is linearly dependent, so a " *
-            "per-trait variance can collapse and the likelihood is unbounded. " *
-            "Use more sites, drop the dependent trait, or drop the per-trait " *
-            "terms. The Laplace-fitted families have no such condition on n_sites."))
+            "(has_diag, a phylogenetic block, or X_lv). They need n_sites ≥ p " *
+            "and data of the generic rank for the design (rank = $r, " *
+            "expected $generic, p = $p, n_sites = $n" *
+            (isempty(centre) ? "" : "; centred by the per-trait intercepts") *
+            "). A subset of traits is linearly dependent, or there are too " *
+            "few sites, so a per-trait variance can collapse and the " *
+            "likelihood is unbounded. Use more sites, drop the dependent " *
+            "trait, or drop the per-trait terms. The Laplace-fitted families " *
+            "have no such condition on n_sites."))
     elseif r < p && K_total ≥ r
         throw(ArgumentError(
             "fit_gaussian_gllvm: the number of latent axes K = $K_total must be " *

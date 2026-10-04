@@ -346,6 +346,31 @@ Xi_(p, n) = (X = zeros(p, n, p); for t in 1:p; X[t, :, t] .= 1; end; X)
     es2 = rankerr(() -> G(randn(StableRNG(172), 5, 3); K = 1, has_diag = true, X = Xi_(5, 3)))
     @test occursin("centred", sprint(showerror, es2))
 
+    # Large per-trait means: the centred rank decides, not centring roundoff.
+    # n_sites = 4 < p = 6 with intercepts gives centred rank 3.
+    for (seed, offs) in ((1, fill(100.0, 6)), (2, [10.0, 100, 1000, 10, 100, 1000]),
+                         (3, [1000.0, 10, 100, 1000, 10, 100]))
+        r = StableRNG(seed)
+        Yb = randn(r, 6, 4) .* [0.1, 1, 0.1, 1, 1, 0.1] .+ offs
+        @test_throws ArgumentError G(Yb; K = 3, X = Xi_(6, 4))
+        @test isfinite(G(Yb; K = 2, X = Xi_(6, 4)).logLik)
+    end
+
+    # Strict variants at n_sites == p with intercepts: generic data fit, a
+    # duplicated trait is refused.
+    Yg4 = randn(StableRNG(180), 4, 4)
+    @test isfinite(G(Yg4; K = 1, has_diag = true, X = Xi_(4, 4)).logLik)
+    # (With intercepts at n_sites == p, a duplicated trait leaves the centred
+    # rank at its generic value p - 1, so the rank cannot see it; it is caught
+    # at n_sites > p, and at n_sites == p without X.)
+    Yd4 = copy(Yg4); Yd4[2, :] .= Yd4[1, :]
+    @test_throws ArgumentError G(Yd4; K = 1, has_diag = true)
+    Yd5 = randn(StableRNG(182), 4, 5); Yd5[2, :] .= Yd5[1, :]
+    @test_throws ArgumentError G(Yd5; K = 1, has_diag = true, X = Xi_(4, 5))
+    @test isfinite(G(randn(StableRNG(183), 4, 5); K = 1, has_diag = true, X = Xi_(4, 5)).logLik)
+    @test_throws ArgumentError G(randn(StableRNG(181), 5, 4); K = 1, has_diag = true,
+                                 X = Xi_(5, 4))                       # n < p
+
     # A trait with a large offset and tiny noise is not zero after centring.
     Yo = randn(StableRNG(171), 3, 10); Yo[1, :] .= 1e5 .+ 1e-6 .* Yo[1, :]
     @test !isrank(rankerr(() -> G(Yo; K = 2, X = Xi_(3, 10))))
