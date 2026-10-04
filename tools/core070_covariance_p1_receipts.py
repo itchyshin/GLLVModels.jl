@@ -477,7 +477,7 @@ def main():
                            measured_result={"case_verdicts": verdicts, "batch_verifier": batch_ok,
                                             "row_verdict": "PASS" if ok else "FAIL"})
                 if sid in exceptions:
-                    row["numeric_exception"] = exceptions[sid]
+                    row["receipt_status_exception"] = exceptions[sid]
                 counts["numeric_pass" if ok else "numeric_fail"] += 1
             else:
                 tier = "partial_numeric_bridge_boundary" if "numeric" in kinds else "r_only"
@@ -505,7 +505,7 @@ def main():
                  "rows with an R-only or R-boundary case cite evidence.non_binding_receipts instead, so they read as "
                  "not bound under both the current checker and the numeric-tier rule proposed in PR #561. "
                  "A row whose numeric cases pass but whose batch verifier rejected the run is held back the same way "
-                 "(evidence_tier numeric_held_batch_verifier_failed) unless a maintainer-signed numeric_exception is "
+                 "(evidence_tier numeric_held_batch_verifier_failed) unless a maintainer-signed receipt_status_exception is "
                  "recorded on it."),
         "generator": "tools/core070_covariance_p1_receipts.py",
         "counts": counts, "runtimes_seconds": runtimes,
