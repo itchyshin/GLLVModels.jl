@@ -1,0 +1,72 @@
+# Twin fixture for namespace row export/confint_inspect (gllvmTMB P1). Generated once by
+# gen_confint_inspect_p1.R from ns_gauss_p1_data.csv (sha256 recorded). Do not hand-edit;
+# regenerate from the script.
+gllvmtmb_commit = "9539352f66f2db2cc26b1c393e67212a359b60c9"
+gllvmtmb_version = "0.7.1"
+r_version = "R version 4.6.0 (2026-04-24)"
+
+[main]
+formula = "value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE)"
+data_file = "ns_gauss_p1_data.csv"
+data_sha256 = "e714fa10411f6a66150c534506dec87cf1c748fed4c55ae13942828f1fca0326"
+p = 6
+n_unit = 200
+trait_names = ["t1", "t2", "t3", "t4", "t5", "t6"]
+converged = true
+pd_hessian = true
+loglik = -1367.5955985303726
+level = 0.95
+ystep = 0.02
+targets = ["sigma_eps", "b_fix[1]", "Lambda_B_packed[2]", "Lambda_B_packed[3]"]
+
+[inspect.sigma_eps]
+# confint_inspect(fit, parm = "sigma_eps", level = 0.95, ystep = 0.02)$bounds, natural scale
+parm = "sigma_eps"
+transformation = "exp"
+estimate = 0.51916604117029952
+profile = [0.4947302390450527, 0.54568232636805891]
+wald = [0.49434057407599663, 0.54523822732585348]
+wald_profile_disagree = [false, false]
+diagnostics = ["no_heuristic_warning"]
+n_curve = 403
+# NOT compared (disclosure): profile bounds at the default ystep = 0.5
+profile_default_ystep = [0.49473193690615652, 0.54568350145682687]
+
+[inspect.b_fix_1]
+# confint_inspect(fit, parm = "b_fix[1]", level = 0.95, ystep = 0.02)$bounds, natural scale
+parm = "b_fix[1]"
+transformation = "linear_predictor"
+estimate = 0.55820603380569955
+profile = [0.40807215931439267, 0.70833990829750015]
+wald = [0.40877931064309847, 0.70763275696830064]
+wald_profile_disagree = [false, false]
+diagnostics = ["no_heuristic_warning"]
+n_curve = 444
+# NOT compared (disclosure): profile bounds at the default ystep = 0.5
+profile_default_ystep = [0.40806923963692743, 0.70834282794455827]
+
+[inspect.lambda_packed_2]
+# confint_inspect(fit, parm = "Lambda_B_packed[2]", level = 0.95, ystep = 0.02)$bounds, natural scale
+parm = "Lambda_B_packed[2]"
+transformation = "lambda_packed"
+estimate = 0.87175535143692495
+profile = [0.76412628942441807, 0.99427399922867099]
+wald = [0.75731861030529202, 0.98619209256855789]
+wald_profile_disagree = [false, false]
+diagnostics = ["no_heuristic_warning"]
+n_curve = 426
+# NOT compared (disclosure): profile bounds at the default ystep = 0.5
+profile_default_ystep = [0.7641482403401294, 0.99429606073772547]
+
+[inspect.lambda_packed_3]
+# confint_inspect(fit, parm = "Lambda_B_packed[3]", level = 0.95, ystep = 0.02)$bounds, natural scale
+parm = "Lambda_B_packed[3]"
+transformation = "lambda_packed"
+estimate = 0.0018658198671687792
+profile = [-0.15775065982466308, 0.16158148964163813]
+wald = [-0.1566136947683944, 0.16034533450273195]
+wald_profile_disagree = [false, false]
+diagnostics = ["no_heuristic_warning"]
+n_curve = 435
+# NOT compared (disclosure): profile bounds at the default ystep = 0.5
+profile_default_ystep = [-0.15775617790939367, 0.16158713705845423]
