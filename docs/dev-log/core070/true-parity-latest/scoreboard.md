@@ -21,7 +21,7 @@ Inputs:
 - `docs/dev-log/core070/true-parity-latest/case-map-fit-input.json` (10 rows, sha256 `568c054ed5f3786b96c9acb796e28d98e4523c4edc5fe5ad9f69ab150cee3639`)
 - `docs/dev-log/core070/true-parity-latest/case-map-inference.json` (63 rows, sha256 `ab0cb02039e34ecb5d1666c469321eba590dfead2452ac2f0de30d9da9a2bda9`)
 - `docs/dev-log/core070/true-parity-latest/case-map-isdm.json` (21 rows, sha256 `abcd0731b63d4290870525114ca3882d9a08fb9ac1966e35e702271a3917e6ca`)
-- `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `9a64a18a87739da35541462d33764fcfabc6e545d43c91461e3e0dc70085e8c5`)
+- `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `5b56e66b9b476a4d0aa05bafd0a5ea0c6cc251294f043427c2abdc6244ceab78`)
 - `docs/dev-log/core070/true-parity-latest/case-map-postfit.json` (52 rows, sha256 `db4944f55b4d78e996bc52b09b71b0fe98ca27b96e3365da583f14900b86c4de`)
 
 ## Totals by family
@@ -35,9 +35,9 @@ Inputs:
 | `fit-input` | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
 | `inference` | 2 | 44 | 0 | 0 | 2 | 0 | 15 | 0 | 0 | 63 |
 | `isdm` | 11 | 0 | 0 | 0 | 0 | 9 | 0 | 1 | 0 | 21 |
-| `namespace` | 33 | 0 | 22 | 0 | 0 | 2 | 0 | 0 | 12 | 69 |
+| `namespace` | 34 | 0 | 21 | 0 | 0 | 2 | 0 | 0 | 12 | 69 |
 | `postfit` | 39 | 0 | 0 | 2 | 8 | 2 | 0 | 1 | 0 | 52 |
-| `all` | 137 | 44 | 22 | 4 | 24 | 33 | 30 | 7 | 16 | 317 |
+| `all` | 138 | 44 | 21 | 4 | 24 | 33 | 30 | 7 | 16 | 317 |
 
 ## P1 twin fixtures present at this head, not bound to any row
 
@@ -52,12 +52,14 @@ decision for the PR that measures it, not something this tool does.
 - `test/fixtures/animal_scalar_p1_A.csv`
 - `test/fixtures/animal_scalar_p1_data.csv`
 - `test/fixtures/bridge_readback_p1.toml`
+- `test/fixtures/confint_inspect_p1.toml`
 - `test/fixtures/data_twins_nb1_p1_data.csv`
 - `test/fixtures/data_twins_nb2_p1_data.csv`
 - `test/fixtures/data_twins_p1.toml`
 - `test/fixtures/data_twins_pois_p1_data.csv`
 - `test/fixtures/gen_animal_scalar_p1.R`
 - `test/fixtures/gen_bridge_readback_p1.R`
+- `test/fixtures/gen_confint_inspect_p1.R`
 - `test/fixtures/gen_data_twins_p1.R`
 - `test/fixtures/gen_namespace_numeric_p1.R`
 - `test/fixtures/gen_namespace_numeric_p1_b.R`
@@ -332,7 +334,7 @@ decision for the PR that measures it, not something this tool does.
 | namespace-export-animal_slope `namespace/export/animal_slope` | required_core; cases: none | NEEDS-SURFACE | not bound; cited: docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-ANIMAL-SLOPE-FIT.json, docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9; disposition BLOCKED_NEEDS_JULIA_SURFACE |
 | namespace-export-bootstrap_Sigma `namespace/export/bootstrap_Sigma` | required_core; cases: CORE070-NAMESPACE-BOOTSTRAP-SIGMA-NATIVE | REGISTRATION-ONLY | not bound; cited: docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-BOOTSTRAP-SIGMA-NATIVE.json, docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-check_gllvmTMB `namespace/export/check_gllvmTMB` | required_core; cases: CORE070-NAMESPACE-CHECK-GLLVMTMB-DIAGNOSTIC | REGISTRATION-ONLY | not bound; cited: docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-CHECK-GLLVMTMB-DIAGNOSTIC.json, docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| namespace-export-confint_inspect `namespace/export/confint_inspect` | required_core; cases: CORE070-NAMESPACE-CONFINT-INSPECT-NATIVE | REGISTRATION-ONLY | not bound; cited: docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-CONFINT-INSPECT-NATIVE.json, docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| namespace-export-confint_inspect `namespace/export/confint_inspect` | required_core; cases: P1-JULIA-CONFINT-INSPECT-SIGMA-EPS-ESTIMATE, P1-JULIA-CONFINT-INSPECT-SIGMA-EPS-WALD, P1-JULIA-CONFINT-INSPECT-SIGMA-EPS-PROFILE, P1-JULIA-CONFINT-INSPECT-B-FIX-1-ESTIMATE, P1-JULIA-CONFINT-INSPECT-B-FIX-1-WALD, P1-JULIA-CONFINT-INSPECT-B-FIX-1-PROFILE, P1-JULIA-CONFINT-INSPECT-LAMBDA-PACKED-2-ESTIMATE, P1-JULIA-CONFINT-INSPECT-LAMBDA-PACKED-2-WALD, P1-JULIA-CONFINT-INSPECT-LAMBDA-PACKED-2-PROFILE, P1-JULIA-CONFINT-INSPECT-LAMBDA-PACKED-3-ESTIMATE, P1-JULIA-CONFINT-INSPECT-LAMBDA-PACKED-3-WALD, P1-JULIA-CONFINT-INSPECT-LAMBDA-PACKED-3-PROFILE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/confint_inspect.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-dep `namespace/export/dep` | required_core; cases: none | NEEDS-SURFACE | not bound; cited: docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-DEP-FORMULA-KEYWORD.json, docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9; disposition BLOCKED_NEEDS_JULIA_SURFACE |
 | namespace-export-extract_Gamma `namespace/export/extract_Gamma` | required_core; cases: CORE070-NAMESPACE-EXTRACT-GAMMA-BLOCK | REGISTRATION-ONLY | not bound; cited: docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-GAMMA-BLOCK.json, docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-extract_ICC_site `namespace/export/extract_ICC_site` | required_core; cases: CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-ICC-SITE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-ICC-SITE.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |

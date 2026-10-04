@@ -951,25 +951,43 @@
    "r_file_line": "R/confint-inspect.R:128",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/confint_inspect.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-CONFINT-INSPECT-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-CONFINT-INSPECT-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_confint_inspect_receipt.jl with the same calls and settings as test/test_confint_inspect_p1.jl, against R-at-P1 values copied from test/fixtures/confint_inspect_p1.toml (R confint_inspect(fit, parm, level = 0.95, ystep = 0.02)$bounds on the Gaussian rank-2 fit value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE), p = 6, n = 200, the [main] data of the namespace numeric twins; four direct targets sigma_eps, b_fix[1], Lambda_B_packed[2] and Lambda_B_packed[3]; per target the estimate, the Wald bounds and the profile bounds on the natural scale; Julia confint_inspect(fit, Y; parm) and confint(fit, Y; parm).estimate on fit_gllvm(Y; family = Normal(), K = 2), with R b_fix[1] <-> Julia beta[1] and R Lambda_B_packed[k] <-> Julia's k-th Lambda_B term, the same packing, asserted on both sides), each case within the tolerance asserted in that test. R converged with a positive-definite Hessian. Not compared: $curve, $plot, $diagnostics and the disagreement flags. The Tier 0 registration receipts are kept un-cited under registration_receipts, as for the sibling bound rows; the superseded case id is in registration_case_ids."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-CONFINT-INSPECT-NATIVE"
+    "P1-JULIA-CONFINT-INSPECT-SIGMA-EPS-ESTIMATE",
+    "P1-JULIA-CONFINT-INSPECT-SIGMA-EPS-WALD",
+    "P1-JULIA-CONFINT-INSPECT-SIGMA-EPS-PROFILE",
+    "P1-JULIA-CONFINT-INSPECT-B-FIX-1-ESTIMATE",
+    "P1-JULIA-CONFINT-INSPECT-B-FIX-1-WALD",
+    "P1-JULIA-CONFINT-INSPECT-B-FIX-1-PROFILE",
+    "P1-JULIA-CONFINT-INSPECT-LAMBDA-PACKED-2-ESTIMATE",
+    "P1-JULIA-CONFINT-INSPECT-LAMBDA-PACKED-2-WALD",
+    "P1-JULIA-CONFINT-INSPECT-LAMBDA-PACKED-2-PROFILE",
+    "P1-JULIA-CONFINT-INSPECT-LAMBDA-PACKED-3-ESTIMATE",
+    "P1-JULIA-CONFINT-INSPECT-LAMBDA-PACKED-3-WALD",
+    "P1-JULIA-CONFINT-INSPECT-LAMBDA-PACKED-3-PROFILE"
    ],
-   "reason": "R export(confint_inspect) registered and defined at P1; Julia `confint_inspect` is an exported Function (measured). Name match only.",
+   "reason": "Numeric twin at P1: R confint_inspect() and Julia confint_inspect() give the same estimate, Wald bounds and profile-likelihood bounds for four direct targets (residual SD, a trait mean, a diagonal and an off-diagonal loading) of the same Gaussian rank-2 model fitted to the same data. Supersedes the Tier 0 registration measurement (name match only).",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
     "reason": "R registered and defined; Julia symbol present, exported, a Function"
-   }
+   },
+   "tolerance_source": "test/test_confint_inspect_p1.jl, the atol of each assertion (read by the receipt writer)"
   },
   {
    "source_id": "namespace/export/dep",
