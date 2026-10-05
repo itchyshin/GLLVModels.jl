@@ -2,6 +2,19 @@
 
 ## Development
 
+- **The direct profile and bootstrap entry points refuse a `lambda_constraint` fit (refs #794).**
+  `profile_ci`, `tmbprofile_wrapper`, `bootstrap_ci`, `bootstrap_ci_derived` and
+  `profile_ci_derived` refit without the loading pins, so on a pinned fit they answered for a
+  different model: the review of #802 found that on a p = 5, n = 200, K = 1 fit with
+  `M[2,1] = 0.3`, `profile_ci` on the pinned `Lambda_B[2,1]` returned (0.687, 0.919), an interval
+  that excludes the pinned value.
+  `confint(...; method = :profile | :bootstrap)` already refused such fits; the direct entry
+  points now raise the same kind of `ArgumentError`, naming `loading_profile(fit; y)` (which
+  profiles the free loadings with the pins held) and Wald `confint`. The wrappers built on them
+  (`profile_curve_targets`, `profile_phylo_signal`, `profile_ci_total_variance`,
+  `profile_ci_phylo_signal`, `loading_profile_exploratory`, `bootstrap_Sigma`, and
+  `confint_inspect`) refuse a pinned fit too. Unpinned fits are unchanged. Tests:
+  `test/test_confint_method_routes.jl`.
 - **The grouped-dispersion fits keep their training offset (#788, first part).** The formula
   front end sends `family = NegativeBinomial()` to `fit_nb_gllvm_grouped` (`disp_group = :species`,
   gllvmTMB's per-trait `r`), which accepted `offset` but returned an `NBGroupedFit` that did not
