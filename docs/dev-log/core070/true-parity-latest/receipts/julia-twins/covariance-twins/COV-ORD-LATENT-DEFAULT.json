@@ -1,0 +1,145 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "covariance/COV-ORD-LATENT-DEFAULT"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "W3-4(d), branch claude/cov-ord-latent-twins",
+  "generator": "tools/true_parity_cov_ord_latent_receipt.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "b7f2c3d47a9f00e936a72a474c52894abc9f2148",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/cov_ord_latent_p1.toml",
+      "sha256": "3b273708733bb1dd3788e457eb194d25721c713e42f432facf84d32fd5b96464"
+    },
+    {
+      "path": "test/fixtures/cov_ord_latent_p1_data.csv",
+      "sha256": "ff20978b7b881405f1669f69a83902c21f59e01fba6a3f99f9f2e759bc9b7daa"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_cov_ord_latent_p1.jl",
+      "sha256": "e360cb77952747996b90915a15c00208d4fb19162b2c1013d73df830383ee6e1"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_cov_ord_latent_receipt.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-COV-ORD-LATENT-DEFAULT-LOGLIK",
+        "quantity": "log-likelihood at the optimum",
+        "r_source": "test/fixtures/cov_ord_latent_p1.toml [default.loglik]",
+        "julia_source": "fit.loglik, as compared at test/test_cov_ord_latent_p1.jl:102; fit as at test/test_cov_ord_latent_p1.jl:94",
+        "r_value": -280.8609311448527,
+        "julia_value": -280.86093114484345,
+        "abs_diff": 9.265477274311706e-12,
+        "tolerance": 3e-10,
+        "tolerance_source": "test/test_cov_ord_latent_p1.jl:102",
+        "tolerance_source_line": "@test isapprox(fit.loglik, Float64(s[\"loglik\"]); atol = 3e-10, rtol = 0)       # logLik (observed <= 2.6e-11)",
+        "note": "Gaussian fit of value ~ 0 + trait + latent(0 + trait | site): Sigma_B = L L' + diag(psi_1..psi_p) (R's auto per-trait unique diagonal), residual SD fixed by R at max(0.001 sd(y), 1e-6), unit = site, on one simulated data set (n = 60 sites, p = 4 traits, one observation per trait and site; data CSV sha256 checked; R fitted the data read back from that CSV). R converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12, max |gradient| 3.0e-5) with a positive-definite Hessian; R's logLik df = 12 = Julia's free-parameter count. Julia fits the same covariance, I_n kron Sigma_B + sigma_eps^2 I, as fit_gaussian_sources with SourceCovariance(I_n; mode = :latent, rank = 1, unique = true, common = false) (source at test/test_cov_ord_latent_p1.jl:93), g_tol 1e-8, sigma_eps_fixed = R's fixed value. Model identity is checked directly: the Julia objective at R's optimum and at R's perturbed probe point (opt$par + 0.05 sin(1:k), R's -obj$fn there) reproduces R's value. Limits: Gaussian only; rank 1; one observation per site and trait; the Julia side is the native source fitter, not formula sugar for latent()."
+      },
+      {
+        "case_id": "P1-JULIA-COV-ORD-LATENT-DEFAULT-BETA",
+        "quantity": "trait intercepts b_fix (4 values)",
+        "r_source": "test/fixtures/cov_ord_latent_p1.toml [default.beta]",
+        "julia_source": "fit.beta, as compared at test/test_cov_ord_latent_p1.jl:103; fit as at test/test_cov_ord_latent_p1.jl:94",
+        "r_value": [
+          0.24954826240867878,
+          -0.2636547777279576,
+          0.43645856423034163,
+          0.13001189671030497
+        ],
+        "julia_value": [
+          0.24954826238209812,
+          -0.2636547777662556,
+          0.436458564228989,
+          0.13001189670886454
+        ],
+        "abs_diff": 3.8298031412864475e-11,
+        "tolerance": 3e-10,
+        "tolerance_source": "test/test_cov_ord_latent_p1.jl:103",
+        "tolerance_source_line": "@test isapprox(fit.beta, r_beta; atol = 3e-10, rtol = 0)                       # trait intercepts (observed <= 3.8e-11)",
+        "note": "Gaussian fit of value ~ 0 + trait + latent(0 + trait | site): Sigma_B = L L' + diag(psi_1..psi_p) (R's auto per-trait unique diagonal), residual SD fixed by R at max(0.001 sd(y), 1e-6), unit = site, on one simulated data set (n = 60 sites, p = 4 traits, one observation per trait and site; data CSV sha256 checked; R fitted the data read back from that CSV). R converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12, max |gradient| 3.0e-5) with a positive-definite Hessian; R's logLik df = 12 = Julia's free-parameter count. Julia fits the same covariance, I_n kron Sigma_B + sigma_eps^2 I, as fit_gaussian_sources with SourceCovariance(I_n; mode = :latent, rank = 1, unique = true, common = false) (source at test/test_cov_ord_latent_p1.jl:93), g_tol 1e-8, sigma_eps_fixed = R's fixed value. Model identity is checked directly: the Julia objective at R's optimum and at R's perturbed probe point (opt$par + 0.05 sin(1:k), R's -obj$fn there) reproduces R's value. Limits: Gaussian only; rank 1; one observation per site and trait; the Julia side is the native source fitter, not formula sugar for latent()."
+      },
+      {
+        "case_id": "P1-JULIA-COV-ORD-LATENT-DEFAULT-TRAIT-COVARIANCE",
+        "quantity": "site-level trait covariance Sigma_B = Lambda Lambda' + diag(exp(2 theta_diag_B)) (4x4, row-major)",
+        "r_source": "test/fixtures/cov_ord_latent_p1.toml [default.trait_covariance]",
+        "julia_source": "only(fit.trait_covariances), as compared at test/test_cov_ord_latent_p1.jl:104; fit as at test/test_cov_ord_latent_p1.jl:94",
+        "r_value": [
+          0.9248816543959055,
+          -0.4716416449139099,
+          0.44085013106280135,
+          0.27472815155281294,
+          -0.4716416449139099,
+          0.6299176664734898,
+          -0.33758034076618443,
+          -0.21037267879603025,
+          0.44085013106280135,
+          -0.33758034076618443,
+          0.9672604981866421,
+          0.19663832492186128,
+          0.27472815155281294,
+          -0.21037267879603025,
+          0.19663832492186128,
+          0.6212935109761016
+        ],
+        "julia_value": [
+          0.9248817814170943,
+          -0.47164161193814347,
+          0.44085008184956875,
+          0.27472808151954237,
+          -0.47164161193814347,
+          0.6299173378554466,
+          -0.337580216834056,
+          -0.21037257142081678,
+          0.44085008184956875,
+          -0.337580216834056,
+          0.9672604627103185,
+          0.19663821635385023,
+          0.27472808151954237,
+          -0.21037257142081678,
+          0.19663821635385023,
+          0.6212934650692448
+        ],
+        "abs_diff": 3.286180432215957e-07,
+        "tolerance": 5e-06,
+        "tolerance_source": "test/test_cov_ord_latent_p1.jl:104",
+        "tolerance_source_line": "@test isapprox(U, r_Sigma; atol = 5e-6, rtol = 0)                              # Sigma_B (observed <= 6.4e-7)",
+        "note": "Gaussian fit of value ~ 0 + trait + latent(0 + trait | site): Sigma_B = L L' + diag(psi_1..psi_p) (R's auto per-trait unique diagonal), residual SD fixed by R at max(0.001 sd(y), 1e-6), unit = site, on one simulated data set (n = 60 sites, p = 4 traits, one observation per trait and site; data CSV sha256 checked; R fitted the data read back from that CSV). R converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12, max |gradient| 3.0e-5) with a positive-definite Hessian; R's logLik df = 12 = Julia's free-parameter count. Julia fits the same covariance, I_n kron Sigma_B + sigma_eps^2 I, as fit_gaussian_sources with SourceCovariance(I_n; mode = :latent, rank = 1, unique = true, common = false) (source at test/test_cov_ord_latent_p1.jl:93), g_tol 1e-8, sigma_eps_fixed = R's fixed value. Model identity is checked directly: the Julia objective at R's optimum and at R's perturbed probe point (opt$par + 0.05 sin(1:k), R's -obj$fn there) reproduces R's value. Limits: Gaussian only; rank 1; one observation per site and trait; the Julia side is the native source fitter, not formula sugar for latent()."
+      },
+      {
+        "case_id": "P1-JULIA-COV-ORD-LATENT-DEFAULT-OBJECTIVE-AT-R",
+        "quantity": "Julia log-likelihood evaluated at R's optimum against R's log-likelihood",
+        "r_source": "test/fixtures/cov_ord_latent_p1.toml [default.loglik]",
+        "julia_source": "-GLLVModels._gaussian_sources_nll(Y, [source], r_point; sigma_eps_fixed), as compared at test/test_cov_ord_latent_p1.jl:111",
+        "r_value": -280.8609311448527,
+        "julia_value": -280.8609311448527,
+        "abs_diff": 0.0,
+        "tolerance": 2e-11,
+        "tolerance_source": "test/test_cov_ord_latent_p1.jl:111",
+        "tolerance_source_line": "@test isapprox(-nll_at_r, Float64(s[\"loglik\"]); atol = 2e-11, rtol = 0)        # objective at R's optimum (observed <= 5.2e-13)",
+        "note": "Gaussian fit of value ~ 0 + trait + latent(0 + trait | site): Sigma_B = L L' + diag(psi_1..psi_p) (R's auto per-trait unique diagonal), residual SD fixed by R at max(0.001 sd(y), 1e-6), unit = site, on one simulated data set (n = 60 sites, p = 4 traits, one observation per trait and site; data CSV sha256 checked; R fitted the data read back from that CSV). R converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12, max |gradient| 3.0e-5) with a positive-definite Hessian; R's logLik df = 12 = Julia's free-parameter count. Julia fits the same covariance, I_n kron Sigma_B + sigma_eps^2 I, as fit_gaussian_sources with SourceCovariance(I_n; mode = :latent, rank = 1, unique = true, common = false) (source at test/test_cov_ord_latent_p1.jl:93), g_tol 1e-8, sigma_eps_fixed = R's fixed value. Model identity is checked directly: the Julia objective at R's optimum and at R's perturbed probe point (opt$par + 0.05 sin(1:k), R's -obj$fn there) reproduces R's value. Limits: Gaussian only; rank 1; one observation per site and trait; the Julia side is the native source fitter, not formula sugar for latent()."
+      },
+      {
+        "case_id": "P1-JULIA-COV-ORD-LATENT-DEFAULT-OBJECTIVE-AT-PROBE",
+        "quantity": "Julia log-likelihood at R's off-optimum probe point against R's -obj$fn there",
+        "r_source": "test/fixtures/cov_ord_latent_p1.toml [default.probe_loglik]",
+        "julia_source": "-GLLVModels._gaussian_sources_nll(Y, [source], probe; sigma_eps_fixed), as compared at test/test_cov_ord_latent_p1.jl:114",
+        "r_value": -281.7651078967544,
+        "julia_value": -281.76510789675416,
+        "abs_diff": 2.2737367544323206e-13,
+        "tolerance": 2e-11,
+        "tolerance_source": "test/test_cov_ord_latent_p1.jl:114",
+        "tolerance_source_line": "@test isapprox(-nll_at_probe, Float64(s[\"probe_loglik\"]); atol = 2e-11, rtol = 0)  # objective at R's probe point",
+        "note": "Gaussian fit of value ~ 0 + trait + latent(0 + trait | site): Sigma_B = L L' + diag(psi_1..psi_p) (R's auto per-trait unique diagonal), residual SD fixed by R at max(0.001 sd(y), 1e-6), unit = site, on one simulated data set (n = 60 sites, p = 4 traits, one observation per trait and site; data CSV sha256 checked; R fitted the data read back from that CSV). R converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12, max |gradient| 3.0e-5) with a positive-definite Hessian; R's logLik df = 12 = Julia's free-parameter count. Julia fits the same covariance, I_n kron Sigma_B + sigma_eps^2 I, as fit_gaussian_sources with SourceCovariance(I_n; mode = :latent, rank = 1, unique = true, common = false) (source at test/test_cov_ord_latent_p1.jl:93), g_tol 1e-8, sigma_eps_fixed = R's fixed value. Model identity is checked directly: the Julia objective at R's optimum and at R's perturbed probe point (opt$par + 0.05 sin(1:k), R's -obj$fn there) reproduces R's value. Limits: Gaussian only; rank 1; one observation per site and trait; the Julia side is the native source fitter, not formula sugar for latent()."
+      }
+    ]
+  }
+}
