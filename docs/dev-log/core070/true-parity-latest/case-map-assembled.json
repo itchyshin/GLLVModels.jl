@@ -11,7 +11,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-covariance.json",
-   "sha256": "81e650ad39a39aeb08c6b3a8468d06458369799b6d2882b853fd78d86710c294",
+   "sha256": "db1423e6d756bc476074fbc8e4a9876f6eeca55968f244d1c02fb4c9c0e0b972",
    "rows": 19
   },
   {
@@ -1398,22 +1398,44 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-COV-ORD-LATENT-BARE-FORMULA"
+    "P1-JULIA-COV-ORD-LATENT-BARE-LOGLIK",
+    "P1-JULIA-COV-ORD-LATENT-BARE-BETA",
+    "P1-JULIA-COV-ORD-LATENT-BARE-TRAIT-COVARIANCE",
+    "P1-JULIA-COV-ORD-LATENT-BARE-SIGMA-EPS",
+    "P1-JULIA-COV-ORD-LATENT-BARE-OBJECTIVE-AT-R",
+    "P1-JULIA-COV-ORD-LATENT-BARE-OBJECTIVE-AT-PROBE"
    ],
    "disposition": null,
-   "evidence_tier": "r_only",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/covariance-twins/COV-ORD-LATENT-BARE.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-COV-ORD-LATENT-BARE-FORMULA.json"
     ],
-    "tier": "R-only formula-grammar structure check re-run at P1; no Julia comparand exists in this harness, so the row needs a Julia surface before it can bind"
+    "batch_case_ids": [
+     "CORE070-COV-ORD-LATENT-BARE-FORMULA"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_cov_ord_latent_receipt.jl with the same calls and settings as test/test_cov_ord_latent_p1.jl, against R-at-P1 values copied from test/fixtures/cov_ord_latent_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The formula-grammar batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
      "CORE070-COV-ORD-LATENT-BARE-FORMULA": "R_ONLY_PASS"
-    }
-   }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-COV-ORD-LATENT-BARE-LOGLIK",
+     "P1-JULIA-COV-ORD-LATENT-BARE-BETA",
+     "P1-JULIA-COV-ORD-LATENT-BARE-TRAIT-COVARIANCE",
+     "P1-JULIA-COV-ORD-LATENT-BARE-SIGMA-EPS",
+     "P1-JULIA-COV-ORD-LATENT-BARE-OBJECTIVE-AT-R",
+     "P1-JULIA-COV-ORD-LATENT-BARE-OBJECTIVE-AT-PROBE"
+    ],
+    "twin_verdict": "PASS",
+    "row_verdict": "PASS"
+   },
+   "scope_note": "The R batch case only parses latent(0 + trait | site, unique = FALSE) to one rr covstruct; the twin fits it: Sigma_B = Lambda Lambda' with the residual SD estimated (unique = false on the Julia side). One data set: n = 60 sites, p = 4 traits, one Gaussian observation per trait and site, unit = site, rank 1; R gllvmTMB(value ~ 0 + trait + <term>, unit = 'site') against Julia fit_gaussian_sources(Y; sources = [SourceCovariance(I_n; groups = 1:n, mode = :latent, rank = 1, unique, common)]). The Julia objective at R's optimum and at an off-optimum probe point (R's -obj$fn there) reproduces R's value, so the two sides fit the same likelihood. Not covered: non-Gaussian families, rank > 1, replicated observations, and the formula route (the Julia side is the native source fitter, not formula sugar for latent())."
   },
   {
    "source_id": "covariance/COV-ORD-LATENT-COMMON",
@@ -1421,22 +1443,42 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-COV-ORD-LATENT-COMMON-FORMULA"
+    "P1-JULIA-COV-ORD-LATENT-COMMON-LOGLIK",
+    "P1-JULIA-COV-ORD-LATENT-COMMON-BETA",
+    "P1-JULIA-COV-ORD-LATENT-COMMON-TRAIT-COVARIANCE",
+    "P1-JULIA-COV-ORD-LATENT-COMMON-OBJECTIVE-AT-R",
+    "P1-JULIA-COV-ORD-LATENT-COMMON-OBJECTIVE-AT-PROBE"
    ],
    "disposition": null,
-   "evidence_tier": "r_only",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/covariance-twins/COV-ORD-LATENT-COMMON.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-COV-ORD-LATENT-COMMON-FORMULA.json"
     ],
-    "tier": "R-only formula-grammar structure check re-run at P1; no Julia comparand exists in this harness, so the row needs a Julia surface before it can bind"
+    "batch_case_ids": [
+     "CORE070-COV-ORD-LATENT-COMMON-FORMULA"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_cov_ord_latent_receipt.jl with the same calls and settings as test/test_cov_ord_latent_p1.jl, against R-at-P1 values copied from test/fixtures/cov_ord_latent_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The formula-grammar batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
      "CORE070-COV-ORD-LATENT-COMMON-FORMULA": "R_ONLY_PASS"
-    }
-   }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-COV-ORD-LATENT-COMMON-LOGLIK",
+     "P1-JULIA-COV-ORD-LATENT-COMMON-BETA",
+     "P1-JULIA-COV-ORD-LATENT-COMMON-TRAIT-COVARIANCE",
+     "P1-JULIA-COV-ORD-LATENT-COMMON-OBJECTIVE-AT-R",
+     "P1-JULIA-COV-ORD-LATENT-COMMON-OBJECTIVE-AT-PROBE"
+    ],
+    "twin_verdict": "PASS",
+    "row_verdict": "PASS"
+   },
+   "scope_note": "The R batch case only parses latent(0 + trait | site, common = TRUE) to rr plus a common auto-unique diag; the twin fits it: Sigma_B = Lambda Lambda' + psi I_p (one theta_diag_B), residual SD fixed as for DEFAULT (unique = true, common = true on the Julia side, which ties the unique diagonal to one log SD). The logLik of this fit equals the bare fit's to 1.8e-11 on the R side, as expected: one shared diagonal variance either way. One data set: n = 60 sites, p = 4 traits, one Gaussian observation per trait and site, unit = site, rank 1; R gllvmTMB(value ~ 0 + trait + <term>, unit = 'site') against Julia fit_gaussian_sources(Y; sources = [SourceCovariance(I_n; groups = 1:n, mode = :latent, rank = 1, unique, common)]). The Julia objective at R's optimum and at an off-optimum probe point (R's -obj$fn there) reproduces R's value, so the two sides fit the same likelihood. Not covered: non-Gaussian families, rank > 1, replicated observations, and the formula route (the Julia side is the native source fitter, not formula sugar for latent())."
   },
   {
    "source_id": "covariance/COV-ORD-LATENT-DEFAULT",
@@ -1444,22 +1486,42 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-COV-ORD-LATENT-DEFAULT-FORMULA"
+    "P1-JULIA-COV-ORD-LATENT-DEFAULT-LOGLIK",
+    "P1-JULIA-COV-ORD-LATENT-DEFAULT-BETA",
+    "P1-JULIA-COV-ORD-LATENT-DEFAULT-TRAIT-COVARIANCE",
+    "P1-JULIA-COV-ORD-LATENT-DEFAULT-OBJECTIVE-AT-R",
+    "P1-JULIA-COV-ORD-LATENT-DEFAULT-OBJECTIVE-AT-PROBE"
    ],
    "disposition": null,
-   "evidence_tier": "r_only",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/covariance-twins/COV-ORD-LATENT-DEFAULT.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-COV-ORD-LATENT-DEFAULT-FORMULA.json"
     ],
-    "tier": "R-only formula-grammar structure check re-run at P1; no Julia comparand exists in this harness, so the row needs a Julia surface before it can bind"
+    "batch_case_ids": [
+     "CORE070-COV-ORD-LATENT-DEFAULT-FORMULA"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_cov_ord_latent_receipt.jl with the same calls and settings as test/test_cov_ord_latent_p1.jl, against R-at-P1 values copied from test/fixtures/cov_ord_latent_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The formula-grammar batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
      "CORE070-COV-ORD-LATENT-DEFAULT-FORMULA": "R_ONLY_PASS"
-    }
-   }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-COV-ORD-LATENT-DEFAULT-LOGLIK",
+     "P1-JULIA-COV-ORD-LATENT-DEFAULT-BETA",
+     "P1-JULIA-COV-ORD-LATENT-DEFAULT-TRAIT-COVARIANCE",
+     "P1-JULIA-COV-ORD-LATENT-DEFAULT-OBJECTIVE-AT-R",
+     "P1-JULIA-COV-ORD-LATENT-DEFAULT-OBJECTIVE-AT-PROBE"
+    ],
+    "twin_verdict": "PASS",
+    "row_verdict": "PASS"
+   },
+   "scope_note": "The R batch case only parses latent(0 + trait | site) to rr plus the auto-unique diag; the twin fits it: Sigma_B = Lambda Lambda' + diag(psi), with the residual SD fixed at max(0.001 sd(y), 1e-6), as gllvmTMB fixes it when a site-level diagonal is present (unique = true, the same fixed residual SD on the Julia side). One data set: n = 60 sites, p = 4 traits, one Gaussian observation per trait and site, unit = site, rank 1; R gllvmTMB(value ~ 0 + trait + <term>, unit = 'site') against Julia fit_gaussian_sources(Y; sources = [SourceCovariance(I_n; groups = 1:n, mode = :latent, rank = 1, unique, common)]). The Julia objective at R's optimum and at an off-optimum probe point (R's -obj$fn there) reproduces R's value, so the two sides fit the same likelihood. Not covered: non-Gaussian families, rank > 1, replicated observations, and the formula route (the Julia side is the native source fitter, not formula sugar for latent())."
   },
   {
    "source_id": "covariance/COV-PHYLO-A-ALIAS",
