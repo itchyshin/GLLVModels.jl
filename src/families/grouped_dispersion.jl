@@ -325,6 +325,19 @@ function _grouped_getLV(Y::AbstractMatrix, Λ::AbstractMatrix, β::AbstractVecto
     return rotate ? Zt * _svd_rotation(Λ) : Zt
 end
 
+# The offset `getLV` / `predict` add for a grouped fit that keeps its training offset in
+# `fit.offset` (NBGroupedFit, NB1GroupedFit, BetaGroupedFit, GammaGroupedFit; #788). An
+# explicit matrix whose size is not that of Y is a DimensionMismatch, as before the fit kept
+# its offset; otherwise the rule of `_laplace_prediction_offset` (src/postfit.jl): a Y of
+# the training size uses the stored offset, new units need their own offset (a p×n matrix,
+# a scalar or a length-p vector), and an offset fit refuses new units without one.
+function _grouped_prediction_offset(fit, Y::AbstractMatrix, offset, mask,
+                                    caller::AbstractString)
+    offset isa AbstractMatrix && size(offset) != size(Y) &&
+        throw(DimensionMismatch("offset must have size $(size(Y)); got $(size(offset))"))
+    return _laplace_prediction_offset(fit.offset, Y, offset, mask, caller)
+end
+
 """
     nb_grouped_marginal_loglik_laplace(Y, Λ, β, rvec; link=LogLink(), mask=nothing,
                                        offset=nothing, hessian=:observed, kwargs...) -> Float64
@@ -505,6 +518,8 @@ end, extreme unidentified overdispersion at the lower end. Only the lower end
 (`r_group[g] < 1e-6`) forces `converged` to `false`; an `r_group[g] > 1e6` (the
 Poisson limit, which is a normal outcome) only emits a warning and leaves `converged`
 at the optimizer verdict (maintainer decision 2026-09-29).
+`offset` is the p×n training offset the fit was made with (`nothing` when the fit had
+none); [`getLV`](@ref), [`predict`](@ref) and [`residuals`](@ref) use it by default.
 """
 struct NBGroupedFit
     β::Vector{Float64}
@@ -517,6 +532,7 @@ struct NBGroupedFit
     iterations::Int
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
     dispersion_boundary::Vector{Bool}   # per-group Poisson-limit / degenerate flag (T14 F1)
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none (#788)
 end
 
 # Positional compatibility constructors (2026-08-28 hessian; T14 F1 dispersion_boundary,
@@ -530,6 +546,9 @@ NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations) =
 NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations, hessian::Symbol) =
     NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations, hessian,
                 _dispersion_group_boundary(r_group))
+# Pre-offset compat tier (10 positional args, #788): no stored training offset.
+NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations, hessian, dispersion_boundary) =
+    NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations, hessian, dispersion_boundary, nothing)
 
 function Base.show(io::IO, f::NBGroupedFit)
     p, K = size(f.Λ)
@@ -557,15 +576,17 @@ Conditional latent-variable scores for a grouped-dispersion NB2 fit, using the
 per-trait dispersion `r_group[group[t]]` in the same Laplace mode equations as
 the grouped likelihood.
 
-Pass the same `offset` (p×n) given to the fitter; the scores are the Laplace
-modes of that fit's objective only when the linear predictor matches.
+On a fit made with an `offset` the mode search uses it (η = β + offset + Λz): the
+stored training offset (`fit.offset`) when `Y` has the training size, otherwise the
+`offset` you pass (a p×n matrix, a scalar or a length-p vector). New units from an
+offset fit without an `offset` are refused, as gllvmTMB refuses `newdata` that lacks
+the offset variable.
 """
 function getLV(fit::NBGroupedFit, Y::AbstractMatrix{<:Integer};
                N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing,
                rotate::Bool = true, mask = nothing, offset = nothing)
     p = size(Y, 1)
-    offset === nothing || size(offset) == size(Y) ||
-        throw(DimensionMismatch("offset must have size $(size(Y)); got $(size(offset))"))
+    offset = _grouped_prediction_offset(fit, Y, offset, mask, "getLV")
     rvec = [fit.r_group[fit.group[t]] for t in 1:p]
     fams = [NegativeBinomial(float(rvec[t]), 0.5) for t in 1:p]
     return _grouped_getLV(Y, fit.Λ, fit.β, fit.link, fams;
@@ -674,7 +695,7 @@ function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVect
     any(>(1e6), r̂g) && @warn "NB2 grouped-dispersion fit has r_group above 1e6 for group(s) $(findall(>(1e6), r̂g)); the group's dispersion is at the Poisson limit (no overdispersion left to estimate). The fit's other estimates are unaffected, and converged is not affected by this." maxlog=1
     loglik, conv, iters = _fit_verdict(nll, conv0, iters0)
     return NBGroupedFit(β̂, Λ̂, r̂g, gidx, link, loglik, conv && !any(lowb), iters, hessian,
-                        boundary)
+                        boundary, _stored_offset(offset))
 end
 
 """
@@ -1120,6 +1141,8 @@ maximal-variance limit. A large `φ` (the near-deterministic end) is identified 
 the data and is not flagged (2026-09-29); `converged` is forced `false` whenever
 any group is flagged, and is
 `true` only when the optimizer's gradient criterion was met (#480).
+`offset` is the p×n training offset the fit was made with (`nothing` when the fit had
+none); [`getLV`](@ref) uses it by default.
 """
 struct BetaGroupedFit
     β::Vector{Float64}
@@ -1132,6 +1155,7 @@ struct BetaGroupedFit
     iterations::Int
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
     dispersion_boundary::Vector{Bool}   # per-group near-Bernoulli (lower-end) flag (T14 F1)
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none (#788)
 end
 
 # Positional compatibility constructors (2026-08-28 hessian; T14 F1 dispersion_boundary,
@@ -1141,6 +1165,9 @@ BetaGroupedFit(β, Λ, φ, group, link, loglik, converged, iterations) =
 BetaGroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian::Symbol) =
     BetaGroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian,
                    _dispersion_group_lower_boundary(φ))
+# Pre-offset compat tier (10 positional args, #788): no stored training offset.
+BetaGroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian, dispersion_boundary) =
+    BetaGroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian, dispersion_boundary, nothing)
 
 function Base.show(io::IO, f::BetaGroupedFit)
     p, K = size(f.Λ)
@@ -1169,14 +1196,16 @@ Conditional latent-variable scores for a grouped-precision Beta fit, using the
 per-trait precision `φ[group[t]]` in the same Laplace mode equations as the
 grouped likelihood.
 
-Pass the same `offset` (p×n) given to the fitter; the scores are the Laplace
-modes of that fit's objective only when the linear predictor matches.
+On a fit made with an `offset` the mode search uses it (η = β + offset + Λz): the
+stored training offset (`fit.offset`) when `Y` has the training size, otherwise the
+`offset` you pass (a p×n matrix, a scalar or a length-p vector). New units from an
+offset fit without an `offset` are refused, as gllvmTMB refuses `newdata` that lacks
+the offset variable.
 """
 function getLV(fit::BetaGroupedFit, Y::AbstractMatrix{<:Real};
                rotate::Bool = true, mask = nothing, offset = nothing)
     p = size(Y, 1)
-    offset === nothing || size(offset) == size(Y) ||
-        throw(DimensionMismatch("offset must have size $(size(Y)); got $(size(offset))"))
+    offset = _grouped_prediction_offset(fit, Y, offset, mask, "getLV")
     φvec = [fit.φ[fit.group[t]] for t in 1:p]
     fams = [Beta(float(φvec[t]), 1.0) for t in 1:p]
     return _grouped_getLV(Y, fit.Λ, fit.β, fit.link, fams;
@@ -1360,7 +1389,7 @@ function fit_beta_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     boundary = _dispersion_group_lower_boundary(φ̂g)
     any(boundary) && @warn "Beta grouped-dispersion fit reached the per-group lower boundary (φ below 1e-6) for group(s) $(findall(boundary)); those groups' precision is at the near-Bernoulli limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
     return BetaGroupedFit(β̂, Λ̂, φ̂g, gidx, link, loglik, conv && !any(boundary), iters, hessian,
-                          boundary)
+                          boundary, _stored_offset(offset))
 end
 
 """
@@ -1697,6 +1726,8 @@ Result of [`fit_gamma_gllvm_grouped`](@ref): intercepts `β` (length p), loading
 limit. A large `α` (the near-deterministic end) is identified by the data and is
 not flagged (2026-09-29); `converged` is forced `false` whenever any group is
 flagged.
+`offset` is the p×n training offset the fit was made with (`nothing` when the fit had
+none); [`getLV`](@ref) uses it by default.
 """
 struct GammaGroupedFit
     β::Vector{Float64}
@@ -1709,6 +1740,7 @@ struct GammaGroupedFit
     iterations::Int
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
     dispersion_boundary::Vector{Bool}   # per-group extreme-overdispersion (lower-end) flag (T14 F1)
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none (#788)
 end
 
 # Positional compatibility constructors (2026-08-28 hessian; T14 F1 dispersion_boundary,
@@ -1718,6 +1750,9 @@ GammaGroupedFit(β, Λ, α, group, link, loglik, converged, iterations) =
 GammaGroupedFit(β, Λ, α, group, link, loglik, converged, iterations, hessian::Symbol) =
     GammaGroupedFit(β, Λ, α, group, link, loglik, converged, iterations, hessian,
                     _dispersion_group_lower_boundary(α))
+# Pre-offset compat tier (10 positional args, #788): no stored training offset.
+GammaGroupedFit(β, Λ, α, group, link, loglik, converged, iterations, hessian, dispersion_boundary) =
+    GammaGroupedFit(β, Λ, α, group, link, loglik, converged, iterations, hessian, dispersion_boundary, nothing)
 
 function Base.show(io::IO, f::GammaGroupedFit)
     p, K = size(f.Λ)
@@ -1746,14 +1781,16 @@ Conditional latent-variable scores for a grouped-shape Gamma fit, using the
 per-trait shape `α[group[t]]` in the same Laplace mode equations as the grouped
 likelihood.
 
-Pass the same `offset` (p×n) given to the fitter; the scores are the Laplace
-modes of that fit's objective only when the linear predictor matches.
+On a fit made with an `offset` the mode search uses it (η = β + offset + Λz): the
+stored training offset (`fit.offset`) when `Y` has the training size, otherwise the
+`offset` you pass (a p×n matrix, a scalar or a length-p vector). New units from an
+offset fit without an `offset` are refused, as gllvmTMB refuses `newdata` that lacks
+the offset variable.
 """
 function getLV(fit::GammaGroupedFit, Y::AbstractMatrix{<:Real};
                rotate::Bool = true, mask = nothing, offset = nothing)
     p = size(Y, 1)
-    offset === nothing || size(offset) == size(Y) ||
-        throw(DimensionMismatch("offset must have size $(size(Y)); got $(size(offset))"))
+    offset = _grouped_prediction_offset(fit, Y, offset, mask, "getLV")
     αvec = [fit.α[fit.group[t]] for t in 1:p]
     fams = [Gamma(float(αvec[t]), 1.0) for t in 1:p]
     return _grouped_getLV(Y, fit.Λ, fit.β, fit.link, fams;
@@ -1829,7 +1866,7 @@ function fit_gamma_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     any(boundary) && @warn "Gamma grouped-dispersion fit reached the per-group lower boundary (α below 1e-6) for group(s) $(findall(boundary)); those groups' shape is at the extreme-overdispersion limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
     loglik, conv, iters = _fit_verdict(res)
     return GammaGroupedFit(β̂, Λ̂, α̂g, gidx, link, loglik, conv && !any(boundary), iters, hessian,
-                           boundary)
+                           boundary, _stored_offset(offset))
 end
 
 """
@@ -2179,6 +2216,8 @@ Result of [`fit_nb1_gllvm_grouped`](@ref): intercepts `β` (length p), loadings 
 flat overdispersion at the upper end. Only the upper end (`φ[g] > 1e6`) forces
 `converged` to `false`; `φ[g] < 1e-6`, the NB1 Poisson limit, only warns (maintainer
 decision 2026-09-29: the Poisson limit warns only).
+`offset` is the p×n training offset the fit was made with (`nothing` when the fit had
+none); [`getLV`](@ref) uses it by default.
 """
 struct NB1GroupedFit
     β::Vector{Float64}
@@ -2191,6 +2230,7 @@ struct NB1GroupedFit
     iterations::Int
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
     dispersion_boundary::Vector{Bool}   # per-group Poisson-limit / flat-overdispersion flag (T14 F1)
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none (#788)
 end
 
 # Positional compatibility constructors (2026-08-28 hessian; T14 F1 dispersion_boundary,
@@ -2200,6 +2240,9 @@ NB1GroupedFit(β, Λ, φ, group, link, loglik, converged, iterations) =
 NB1GroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian::Symbol) =
     NB1GroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian,
                  _dispersion_group_boundary(φ))
+# Pre-offset compat tier (10 positional args, #788): no stored training offset.
+NB1GroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian, dispersion_boundary) =
+    NB1GroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian, dispersion_boundary, nothing)
 
 function Base.show(io::IO, f::NB1GroupedFit)
     p, K = size(f.Λ)
@@ -2228,15 +2271,17 @@ Conditional latent-variable scores for a grouped-dispersion NB1 fit, using the
 per-trait linear-variance dispersion `φ[group[t]]` in the same Laplace mode
 equations as the grouped likelihood.
 
-Pass the same `offset` (p×n) given to the fitter; the scores are the Laplace
-modes of that fit's objective only when the linear predictor matches.
+On a fit made with an `offset` the mode search uses it (η = β + offset + Λz): the
+stored training offset (`fit.offset`) when `Y` has the training size, otherwise the
+`offset` you pass (a p×n matrix, a scalar or a length-p vector). New units from an
+offset fit without an `offset` are refused, as gllvmTMB refuses `newdata` that lacks
+the offset variable.
 """
 function getLV(fit::NB1GroupedFit, Y::AbstractMatrix{<:Integer};
                N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing,
                rotate::Bool = true, mask = nothing, offset = nothing)
     p = size(Y, 1)
-    offset === nothing || size(offset) == size(Y) ||
-        throw(DimensionMismatch("offset must have size $(size(Y)); got $(size(offset))"))
+    offset = _grouped_prediction_offset(fit, Y, offset, mask, "getLV")
     φvec = [fit.φ[fit.group[t]] for t in 1:p]
     fams = [NB1(float(φvec[t])) for t in 1:p]
     return _grouped_getLV(Y, fit.Λ, fit.β, fit.link, fams;
@@ -2341,7 +2386,7 @@ function fit_nb1_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     any(<(1e-6), φ̂g) && @warn "NB1 grouped-dispersion fit has φ below 1e-6 for group(s) $(findall(<(1e-6), φ̂g)); the group's dispersion is at the Poisson limit (no overdispersion left to estimate). The fit's other estimates are unaffected, and converged is not affected by this." maxlog=1
     loglik, conv, iters = _fit_verdict(nll, conv0, iters0)   # conv0 includes the #485 gradient test
     return NB1GroupedFit(β̂, Λ̂, φ̂g, gidx, link, loglik, conv && !any(lowb), iters, hessian,
-                         boundary)
+                         boundary, _stored_offset(offset))
 end
 
 """

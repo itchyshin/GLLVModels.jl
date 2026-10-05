@@ -2,6 +2,23 @@
 
 ## Development
 
+- **The grouped-dispersion fits keep their training offset (#788, first part).** The formula
+  front end sends `family = NegativeBinomial()` to `fit_nb_gllvm_grouped` (`disp_group = :species`,
+  gllvmTMB's per-trait `r`), which accepted `offset` but returned an `NBGroupedFit` that did not
+  keep it, so `getLV`, `predict` and `residuals` on the default NB route silently used a zero
+  offset. `NBGroupedFit`, `NB1GroupedFit`, `BetaGroupedFit` and `GammaGroupedFit` now store the
+  p×n training offset in `fit.offset` (`nothing` without one), and their post-fit methods follow
+  the rule #787 introduced for the Poisson, NB2, binomial and hurdle-Poisson fits: a `Y` of the
+  training size uses the stored offset; new units take `offset = O` (a p×n matrix, a scalar or a
+  length-p vector); new units from an offset fit without one raise an `ArgumentError`. An
+  explicit matrix offset whose size differs from `Y` is still a `DimensionMismatch`. On a p = 5,
+  n = 50 NB2 fit through `gllvm(@formula(y ~ 1), Y, data; family = NegativeBinomial(), offset = O)`
+  the training-row link predictor missed `β + O + Λẑ_O` by up to 1.83 before and by 4.4e-16
+  after. Offset-free fits are unchanged bit for bit, and the old positional constructors still
+  work (they store no offset). The covariate fits (`NBGroupedCovFit` and siblings) take no data
+  offset and are unchanged. Tests: `test/test_predict_offset_grouped.jl` (mode = zero of the
+  finite-difference score of the offset-aware log posterior; the stored offset reproduces
+  `fit.loglik`; formula route; new-unit rule).
 - **`extract_Gamma` and `extract_coevolution_modules` gain methods on a fitted kernel tier.**
   New methods `extract_Gamma(fit::GaussianSourcesFit; level, row_traits, col_traits,
   trait_names = nothing, scale = :shape)` and `extract_coevolution_modules(fit::GaussianSourcesFit;

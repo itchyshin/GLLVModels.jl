@@ -67,17 +67,23 @@ end
 In-sample fitted values of a grouped-dispersion NB2 fit at the Laplace mode `ẑ`
 (see [`getLV`](@ref)): `type=:link` returns `η = β + offset + Λẑ`; `type=:response`
 (= `:mean`) returns the inverse-link fitted means `μ = linkinv(link, η)`, `exp(η)` for
-the default log link. Pass the same `mask` and `offset` given to
-[`fit_nb_gllvm_grouped`](@ref): the latent mode, and so the prediction, depends on them.
+the default log link. Pass the same `mask` given to [`fit_nb_gllvm_grouped`](@ref): the
+latent mode, and so the prediction, depends on it.
+
+On a fit made with an `offset`, `η` and the latent mode include it: the stored training
+offset (`fit.offset`) when `Y` has the training size, otherwise the `offset` you pass (a
+p×n matrix, a scalar or a length-p vector). New units from an offset fit without an
+`offset` are refused, as gllvmTMB refuses `newdata` that lacks the offset variable.
 """
 function predict(fit::NBGroupedFit, Y::AbstractMatrix{<:Integer};
                  type::Symbol = :response,
                  N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing,
                  mask = nothing, offset = nothing)
     _nb_grouped_check_type(type)
-    Z = getLV(fit, Y; N = N, rotate = false, mask = mask, offset = offset)
+    O = _grouped_prediction_offset(fit, Y, offset, mask, "predict")
+    Z = getLV(fit, Y; N = N, rotate = false, mask = mask, offset = O)
     η = fit.β .+ fit.Λ * Z'
-    offset === nothing || (η = η .+ offset)
+    O === nothing || (η = η .+ O)
     type === :link && return η
     return linkinv.(Ref(fit.link), _clamp_eta.(η))
 end
@@ -91,7 +97,8 @@ Conditional residuals for a grouped-dispersion NB2 fit, with the per-species siz
 `Φ⁻¹(u)` with `u` uniform on `[F(y−1), F(y)]` under `NegativeBinomial(r, r/(r+μ))`;
 they are approximately N(0,1) under a correct model (pass a fixed `rng` to reproduce).
 A group whose fitted `r` is at the Poisson limit uses the Poisson CDF. `:pearson`
-returns `(Y − μ) / √(μ + μ²/r)`. Cells with `mask[t, s] == false` are `NaN`.
+returns `(Y − μ) / √(μ + μ²/r)`. Cells with `mask[t, s] == false` are `NaN`. The fitted
+means `μ` include the fit's offset by the rule of [`predict`](@ref).
 """
 function residuals(fit::NBGroupedFit, Y::AbstractMatrix{<:Integer};
                    type::Symbol = :dunnsmyth,
