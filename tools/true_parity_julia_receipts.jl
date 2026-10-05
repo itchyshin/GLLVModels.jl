@@ -1944,7 +1944,7 @@ end
 #     fit_mixed_gllvm(Y; families, K = 1, offset = log.(E)) on the same data.
 # =============================================================================================
 function receipts_off_mixed()
-    ORIGIN = "itchyshin/GLLVModels.jl branch claude/off-mixed-twin (PR not yet opened)"
+    ORIGIN = "itchyshin/GLLVModels.jl#808"
     fxp = "test/fixtures/off_mixed_twin_p1.toml"
     tp = "test/test_off_mixed_twin_p1.jl"
     fx = TOML.parsefile(joinpath(ROOT, fxp))
