@@ -2,15 +2,15 @@ case_id = "NATIVE-12-TRUNCATED-NB2"
 
 [[values]]
 label = "objective at the R optimum"
-julia = 1375.3913741355857
+julia = 1375.3913742291136
 test = "@test abs(d[\"samepoint_delta\"])<=1e-6"
 rtol = 0.0
-r = 1375.3913741103972
+r = 1375.3913742176867
 atol = 1.0e-6
 [[values]]
 label = "logLik"
-julia = -1375.391373482518
+julia = -1375.3913734823204
 test = "@test jl_logL ≈ r.logLik rtol = 1e-6"
 rtol = 1.0e-6
-r = -1375.3913741103972
+r = -1375.3913742176867
 atol = 0.0

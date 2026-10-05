@@ -5,12 +5,12 @@ label = "logLik"
 julia = -634.171284410425
 test = "checks[\"likelihood\"]=isapprox(native.loglik,r.logLik;rtol=1e-6,atol=0)"
 rtol = 1.0e-6
-r = -634.171284410439
+r = -634.1712844104384
 atol = 0.0
 [[values]]
 label = "objective at the R optimum"
-julia = 634.171284410439
+julia = 634.1712844104386
 test = "checks[\"samepoint\"]=abs(report[\"samepoint_delta\"])<=1e-6"
 rtol = 0.0
-r = 634.171284410439
+r = 634.1712844104384
 atol = 1.0e-6
