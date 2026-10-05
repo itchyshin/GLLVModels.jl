@@ -2006,6 +2006,110 @@ function receipts_off_mixed()
 end
 
 # =============================================================================================
+# 12f. covariance phylo twins   test/test_cov_phylo_twins_p1.jl
+#     covariance/COV-PHYLO-DEP, COV-PHYLO-A-ALIAS, COV-PHYLO-FOLDED-UNIQUE: one shared Gaussian fixture
+#     (120-tip coalescent tree, 4 traits, 2 observations per species) fitted at P1 with
+#     phylo_dep(0 + trait | species), phylo_latent(species, A = A) and phylo_latent(species, unique = TRUE)
+#     (test/fixtures/cov_phylo_twins_p1.toml), against fit_phylo_latent_gllvm with d = n_traits, A = A
+#     and unique = true. One receipt per row.
+# =============================================================================================
+_cpr_mat(v, p) = permutedims(reshape(Float64.(v), p, p))
+_cpr_objective(fit) = θ -> GMJ._precision_multivariate_nll(fit.response, fit.phy, θ;
+    rank = fit.rank, mode = fit.mode, residual_mode = fit.residual_mode,
+    species_id = fit.species_id, mean_design = fit.mean_design)
+function _cpr_r_theta(blk)
+    names = String.(blk["par_names"]); par = Float64.(blk["par"])
+    pick(n) = par[names .== n]
+    return vcat(pick("b_fix"), pick("theta_rr_phy"), pick("log_sd_phy_diag"), pick("log_sigma_eps"))
+end
+_cpr_sigma_phy(fit) = fit.phylo_unique_variance === nothing ? fit.loading * fit.loading' :
+    fit.loading * fit.loading' + Diagonal(fit.phylo_unique_variance)
+function _cpr_newton_decrement(fit)
+    f = _cpr_objective(fit); θ = fit.parameters
+    g = similar(θ); GMJ._pmv_fd_gradient!(g, f, θ)
+    return dot(g, Symmetric(GMJ._fd_hessian(f, θ)) \ g) / 2
+end
+
+function receipts_cov_phylo_twins()
+    ORIGIN = "wave-plan W3-4(e), branch claude/cov-phylo-twins"
+    fxp = "test/fixtures/cov_phylo_twins_p1.toml"
+    tp = "test/test_cov_phylo_twins_p1.jl"
+    fx = TOML.parsefile(joinpath(ROOT, fxp))
+    fx["gllvmtmb_commit"] == P1_SHA || fail("cov-phylo twin fixture is not pinned at P1")
+    (fx["converged"] === true && fx["pd_hessian"] === true) || fail("cov-phylo R fits not converged with a PD Hessian; not a valid twin")
+    T = Int(fx["n_traits"])
+    tips = String.(fx["tip_labels"]); sp = String.(fx["observation_species"]); newick = fx["newick"]
+    Y = permutedims(reshape(Float64.(fx["Y"]), length(sp), T))
+    phy = augmented_phy(newick; correlation = true)
+    C = GMJ.sigma_phy_dense(phy)
+    o = [findfirst(==(t), phy.leaf_names) for t in tips]
+    A = Matrix{Float64}(C[o, o])
+    (isapprox(sum(A), Float64(fx["A_sum"]); rtol = 1e-10) && isapprox(norm(A), Float64(fx["A_frobenius"]); rtol = 1e-10) &&
+        maximum(abs.(A[1, :] .- Float64.(fx["A_first_row"]))) <= 1e-12) || fail("cov-phylo: A rebuilt from the tree is not the matrix R fitted")
+    fits = Dict(
+        "dep" => fit_phylo_latent_gllvm(Y, sp; species_levels = tips, d = T, tree = newick),
+        "alias" => fit_phylo_latent_gllvm(Y, sp; species_levels = tips, d = 1, A = A, tip_labels = tips),
+        "unique" => fit_phylo_latent_gllvm(Y, sp; species_levels = tips, d = 1, unique = true, tree = newick))
+    fitv = fit_phylo_latent_gllvm(Y, sp; species_levels = tips, d = 1, vcv = A, tip_labels = tips)
+    (fitv.parameters == fits["alias"].parameters && fitv.loglik == fits["alias"].loglik) ||
+        fail("cov-phylo: Julia's A = and vcv = spellings give different fits")
+    Float64(fx["alias"]["objective_vcv_spelling"]) == Float64(fx["alias"]["objective"]) ||
+        fail("cov-phylo: R's A = and vcv = spellings give different objectives in the fixture")
+    fd = fits["dep"]
+    (fd.hessian_positive_definite && fd.gradient_norm <= 1e-4 && _cpr_newton_decrement(fd) <= 1e-9) ||
+        fail("cov-phylo DEP: Julia stop is not stationary within the twin test's bounds")
+    for k in ("alias", "unique")
+        (fits[k].converged && fits[k].hessian_positive_definite) || fail("cov-phylo $k: Julia fit did not converge with a PD Hessian")
+    end
+    bare = fit_phylo_latent_gllvm(Y, sp; species_levels = tips, d = 1, tree = newick)
+    fits["unique"].loglik - bare.loglik > 1 || fail("cov-phylo FOLDED-UNIQUE: unique companion is inert")
+    common = "Shared fixture: 120-tip coalescent tree (ape::rcoal, seed 20261005), 4 traits, 2 observations per species, Gaussian, drawn from (Lambda Lambda' + diag(s^2)) (x) A + 0.4^2 I with A the unit-height tip correlation; Y and the Newick string stored to 17 digits, A rebuilt in Julia from the tree and checked against the stored sum, norm and first row of R's A. R: gllvmTMB(..., trait = 'trait', unit = 'species', cluster = 'species', family = gaussian(), REML = FALSE), nlminb rel.tol 1e-10, every fit converged with a positive-definite Hessian. The fixed-parameter case evaluates Julia's objective (GLLVModels._precision_multivariate_nll, the fitter's own objective) at R's optimum opt\$par, mapped by name onto Julia's [beta; theta_rr; log_sd_unique; log_sd_eps] (both engines pack the loadings with the gllvmTMB.cpp layout), and compares it with R's objective there; it does not depend on either optimiser. Loadings are compared through Sigma_phy because a loading column's sign is not identified."
+    rows = (
+        ("dep", "COV-PHYLO-DEP", "PHYLO-DEP", 1,
+         "R: value ~ 0 + trait + phylo_dep(0 + trait | species, tree = tree), which gllvmTMB rewrites to phylo_rr(d = n_traits, .dep = TRUE), the phylo_latent(d = T) engine path (full unstructured Sigma_phy (x) A, T(T+1)/2 = 10 loading parameters). Julia: fit_phylo_latent_gllvm(Y, species; d = 4, tree). Julia's LBFGS stops at max |FD gradient| 4.0e-5 above g_tol 1e-5, so fit.converged is false; the gradient is on the log residual-SD coordinate (curvature about 1.6e3) and the Newton decrement there is 2.8e-12, below the objective's rounding floor; the twin test asserts the decrement bound (<= 1e-9) and a positive-definite Hessian instead of the flag. R's own optimum has max |AD gradient| 6.1e-4. ",
+         "Sigma_rr", "Lambda_phy Lambda_phy' (4 x 4), the full unstructured phylogenetic trait covariance"),
+        ("alias", "COV-PHYLO-A-ALIAS", "PHYLO-A-ALIAS", 2,
+         "R: value ~ 0 + trait + phylo_latent(species, A = A), which gllvmTMB rewrites to phylo_rr(vcv = A) (the dense route with R's 1e-8 ridge); the vcv = A spelling gives the identical nlminb objective (asserted in the generator, recorded as objective_vcv_spelling). Julia: fit_phylo_latent_gllvm(Y, species; d = 1, A = A, tip_labels); Julia's vcv = A spelling gives the bitwise identical fit (asserted in the twin test and here), and A together with vcv is refused on both sides. ",
+         "Sigma_rr", "Lambda_phy Lambda_phy' (4 x 4) of the rank-1 fit"),
+        ("unique", "COV-PHYLO-FOLDED-UNIQUE", "PHYLO-FOLDED-UNIQUE", 3,
+         "R: value ~ 0 + trait + phylo_latent(species, unique = TRUE, tree = tree), which gllvmTMB parses to phylo_rr(d = 1) plus the folded phylo_rr(.phylo_unique, .auto_unique) companion; at P1 that companion is the phylo_diag block of src/gllvmTMB.cpp (g_phy_diag[, t] ~ N(0, A) with the same Ainv_phy_rr / log_det_A_phy_rr as phylo_rr, scaled by exp(log_sd_phy_diag[t])), so the model is (Lambda Lambda' + diag(sd^2)) (x) A + sigma_eps^2 I. Julia: fit_phylo_latent_gllvm(Y, species; d = 1, unique = true, tree), mode :explicitunique, the same covariance with unique variance exp(2 * log_sd), so the model is the same and R's log_sd_phy_diag maps one to one onto Julia's coordinate (the fixed-parameter case is the direct evidence that the two likelihoods agree). The twin test also asserts the unique companion is not inert: the fit beats phylo_latent(d = 1) alone by more than 1 in logLik. ",
+         "Sigma_total", "Lambda Lambda' + diag(sd_phy_diag^2) (4 x 4), the total phylogenetic trait covariance of the folded fit"),
+    )
+    out = Pair{String,Any}[]
+    for (key, short, stem, nth, what, smat, sdesc) in rows
+        r = fx[key]; fit = fits[key]
+        src = cite(tp, "_cpt_fit_$(key)(d) = fit_phylo_latent_gllvm")
+        note = what * common
+        id = "P1-JULIA-$(short)"
+        cs = Case[]
+        push!(cs, mkcase("$id-LOGLIK", "maximised logLik", "$fxp [$key] loglik", "fit.loglik, fit as at $src",
+            Float64(r["loglik"]), fit.loglik,
+            test_tolerance(tp, "@test abs(fit.loglik - Float64(r[\"loglik\"]))"; nth = nth), note))
+        push!(cs, mkcase("$id-OBJECTIVE-AT-R-OPTIMUM", "negative log-likelihood at R's optimum: R's objective (tmb_obj\$fn(opt\$par)) vs Julia's objective at the same parameters",
+            "$fxp [$key] objective, par, par_names", "Julia objective at R's opt\$par mapped by name, fit as at $src",
+            Float64(r["objective"]), _cpr_objective(fit)(_cpr_r_theta(r)),
+            test_tolerance(tp, "@test abs(_cpt_cross(fit, r))"; nth = nth), note))
+        push!(cs, mkcase("$id-INTERCEPTS", "trait intercepts (4 values)", "$fxp [$key] beta", "fit.beta, fit as at $src",
+            Float64.(r["beta"]), fit.beta,
+            test_tolerance(tp, "@test maximum(abs.(fit.beta .- Float64.(r[\"beta\"])))"; nth = nth), note))
+        push!(cs, mkcase("$id-SIGMA-EPS", "shared residual sd (R exp(log_sigma_eps))", "$fxp [$key] sigma_eps", "sqrt(fit.residual_variance), fit as at $src",
+            Float64(r["sigma_eps"]), sqrt(only(unique(fit.residual_variance))),
+            test_tolerance(tp, "@test abs(sqrt(only(unique(fit.residual_variance))) - Float64(r[\"sigma_eps\"]))"; nth = nth), note))
+        if key == "unique"
+            push!(cs, mkcase("$id-SD-PHY-DIAG", "per-trait phylogenetic unique sd (R sd_phy_diag = exp(log_sd_phy_diag); Julia sqrt(phylo_unique_variance))",
+                "$fxp [$key] sd_phy_diag", "sqrt.(fit.phylo_unique_variance), fit as at $src",
+                Float64.(r["sd_phy_diag"]), sqrt.(fit.phylo_unique_variance),
+                test_tolerance(tp, "@test maximum(abs.(sqrt.(fit.phylo_unique_variance)"), note))
+        end
+        push!(cs, mkcase("$id-SIGMA-PHY", sdesc, "$fxp [$key] $smat", "phylogenetic trait covariance of the fit as at $src",
+            _cpr_mat(r[smat], T), _cpr_sigma_phy(fit),
+            test_tolerance(tp, "@test maximum(abs.(_cpt_sigma_phy(fit)"; nth = nth), note))
+        push!(out, "covariance-twins/$(stem).json" => Receipt(["covariance/$(short)"], ORIGIN, [fxp], [tp], NOT_A_FIXTURE_PAIR, cs))
+    end
+    return out
+end
+
+# =============================================================================================
 # 13. c1-behaviour: behavioural receipts for the four C1 rows (itchyshin/GLLVModels.jl#684 item 2)
 #     test/test_c1_behaviour_p1.jl; raw R side under test/fixtures/c1_behaviour_p1/
 #       model-comparison/print.anova.gllvmTMB_multi   printed fields
@@ -2199,6 +2303,7 @@ function build(only::Vector{String} = String[])
             ("data-twins-2", receipts_data_twins_2),
             ("off-all-count", receipts_off_all_count),
             ("off-mixed", receipts_off_mixed),
+            ("cov-phylo-twins", receipts_cov_phylo_twins),
             ("c1-behaviour", receipts_c1_behaviour))
         isempty(only) || name in only || continue
         t0 = time()
