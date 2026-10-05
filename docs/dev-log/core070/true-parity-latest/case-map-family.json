@@ -1330,5 +1330,9 @@
       },
       "ruling": "itchyshin/GLLVModels.jl#684 item 4"
     }
-  ]
+  ],
+  "rederived": {
+    "tool_commit": "e9946dc9a2dd4796ae36d3c038b577eb130e329e",
+    "note": "case receipts and rows re-derived from the tracked batch artifacts (--rederive); no batch was re-run, so glvmodels_commit stays the run commit"
+  }
 }
