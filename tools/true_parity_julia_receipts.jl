@@ -1663,7 +1663,8 @@ end
 #     test/fixtures/data_twins_p1.toml against Julia fits of the same data. Weights rows are not
 #     here (Julia refuses weights= on every fitter); the legacy-fit and newdata predict-offset,
 #     mixed-family rows have no Julia surface to fit (the stored-offset row has its own twin,
-#     section 12b; the modelled-predictor rows theirs, section 12c).
+#     section 12b; the modelled-predictor rows theirs, section 12c; the all-count-families offset
+#     row its own, section 12d).
 # =============================================================================================
 function _dt_load(path, col, p, n)
     hdr = split(readline(path), ",")
@@ -1744,13 +1745,9 @@ function receipts_data_twins()
     twin("MISS-INCLUDE", "data/DATA-MISS-INCLUDE", "pois_na_include", fi, cite(tp, "fi = fit_gllvm(Yc; family = Poisson(), K = 1, mask = .!ismissing.(Ona))"),
         base * " 12 response cells are NA (column value_na). R: missing = miss_control(response = \"include\") (cells kept and masked out of the likelihood); Julia: mask = the observed-cell matrix. R documents that include reaches the drop optimum (asserted in the generator and the test); the Julia mask fit equals the Julia missing-cell fit to 1e-8 (asserted in the test).")
 
-    nb2 = joinpath(ROOT, dir, "data_twins_nb2_p1_data.csv"); nb1 = joinpath(ROOT, dir, "data_twins_nb1_p1_data.csv")
-    f2 = fit_gllvm(_dt_counts(_dt_load(nb2, "value", p, n)); family = NegativeBinomial(1.0, 0.5), disp_group = :species, K = 1,
-        offset = log.(Float64.(_dt_load(nb2, "e", p, n))))
-    f2.group == collect(1:p) || fail("nb2 dispersion is not per trait")
-    twin("OFF-ALL-COUNT", "data/DATA-OFF-ALL-COUNT", "nb2_exposure", f2, cite(tp, "f2 = fit_gllvm(_dt_counts(_dt_load(nb2"),
-        "nbinom2 one-axis latent fit, p = 6, n = 150 (sha256 checked), R: + offset(log(e)), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Dispersion is per trait on both sides. Scope: every trait is one count family (the batch case mixed three count families on three rows, which Julia has no fit for), so this exercises a non-Poisson count family accepting a nonzero offset, not a family mix.";
-        phi = (:r_group, "@test isapprox(f2.r_group, Float64.(d[\"phi\"])"))
+    # The nbinom2 exposure fit of this fixture (test/test_data_twins_p1.jl, nb2_exposure) is no longer a
+    # receipt: data/DATA-OFF-ALL-COUNT is bound by its three-family twin (section 12d).
+    nb1 = joinpath(ROOT, dir, "data_twins_nb1_p1_data.csv")
     f1 = fit_gllvm(_dt_counts(_dt_load(nb1, "value", p, n)); family = NB1(), K = 1, offset = log.(Float64.(_dt_load(nb1, "e", p, n))))
     twin("OFF-NB1", "data/DATA-OFF-NB1", "nb1_exposure", f1, cite(tp, "f1 = fit_gllvm(_dt_counts(_dt_load(nb1"),
         "nbinom1 one-axis latent fit, p = 6, n = 150 (sha256 checked), R: family = nbinom1() + offset(log(e)), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Dispersion is per trait on both sides (R phi_nbinom1, Julia NB1 phi, variance mu (1 + phi)).";
@@ -1883,6 +1880,60 @@ function receipts_data_twins_2()
     end
     push!(out, "namespace-numeric/imputed.json" => Receipt(["namespace/S3method/imputed,gllvmTMB"], ORIGIN, [fxp, datap], [tp], NOT_A_FIXTURE_PAIR, imputed_cases))
     return out
+end
+
+# =============================================================================================
+# 12d. off-all-count twin   test/test_off_all_count_twin_p1.jl
+#     data/DATA-OFF-ALL-COUNT: an exposure offset on each of the three count families of the R batch
+#     case (family ids 5, 10, 11: nbinom2, truncated Poisson, truncated nbinom2), one single-family
+#     fit each. R-at-P1 fits recorded in test/fixtures/off_all_count_twin_p1.toml, against
+#     fit_gllvm(Y; family, K = 1, offset = log.(E)) on the same data.
+# =============================================================================================
+function receipts_off_all_count()
+    ORIGIN = "itchyshin/GLLVModels.jl branch claude/w2-off-all-count (W2-4c)"
+    fxp = "test/fixtures/off_all_count_twin_p1.toml"
+    tp = "test/test_off_all_count_twin_p1.jl"
+    fx = TOML.parsefile(joinpath(ROOT, fxp))
+    fx["gllvmtmb_commit"] == P1_SHA || fail("off-all-count twin fixture is not pinned at P1")
+    p, n = Int(fx["p"]), Int(fx["n_unit"])
+    datap = "test/fixtures/" * fx["data_file"]
+    bytes2hex(sha256(read(joinpath(ROOT, datap)))) == fx["data_sha256"] || fail("off-all-count data csv drifted")
+    csv = joinpath(ROOT, datap)
+    src = cite(tp, "f = fit_gllvm(Y; family = fam, K = 1, offset = log.(E), kw...)")
+    base = "p = 6, n = 150 (sha256 checked), one data set per family; R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family, K = 1, offset = log.(E)). The R batch case prepared one offset for three count families (ids 5, 10, 11) in one model; Julia has no fit that mixes families with an offset, so each family is its own single-family fit. The twin test also asserts that at the fitted values the marginal without the offset is lower by more than 1 (the offset is applied). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+    cs = Case[]
+    for (sec, fid, fam, kw, dfld, label) in (
+            ("nb2", 5, NegativeBinomial(1.0, 0.5), (; disp_group = :species), :r_group,
+             "nbinom2 (family id 5), per-trait dispersion on both sides (R exp(log_phi_nbinom2), Julia r_group with disp_group = :species)."),
+            ("tpois", 10, TruncatedPoisson(), (;), nothing,
+             "truncated Poisson (family id 10), y >= 1, log link on the untruncated mean on both sides."),
+            ("tnb2", 11, TruncatedNegBin2(), (; disp_group = :species), :r,
+             "truncated nbinom2 (family id 11), y >= 1, per-trait dispersion on both sides (R exp(log_phi_truncnb2), Julia r of fit_truncated_nbinom2_gllvm_pertrait via disp_group = :species); drawn with size 2, every R dispersion inside (1e-3, 1e3), so no trait is at the Poisson limit."))
+        d = fx[sec]
+        d["family_id"] == fid || fail("$sec: family id is not $fid")
+        (d["converged"] === true && d["pd_hessian"] === true) || fail("$sec R fit not converged with a PD Hessian; not a valid twin")
+        Y = Int.(Float64.(_dt_load(csv, d["response_column"], p, n)))
+        E = Float64.(_dt_load(csv, d["exposure_column"], p, n))
+        f = fit_gllvm(Y; family = fam, K = 1, offset = log.(E), kw...)
+        f.converged || fail("$sec Julia fit did not converge")
+        note = label * " " * base
+        S = uppercase(sec)
+        push!(cs, mkcase("P1-JULIA-DATA-OFF-ALL-COUNT-$S-LOGLIK", "maximised logLik of the $sec exposure-offset fit",
+            "$fxp [$sec.loglik]", "f.loglik, fit as at $src",
+            Float64(d["loglik"]), f.loglik, test_tolerance(tp, "@test isapprox(f.loglik, Float64(d[\"loglik\"])"), note))
+        push!(cs, mkcase("P1-JULIA-DATA-OFF-ALL-COUNT-$S-INTERCEPTS", "trait intercepts (6 values) of the $sec fit; the offset is not absorbed into them",
+            "$fxp [$sec.beta]", "f.β, fit as at $src",
+            Float64.(d["beta"]), f.β, test_tolerance(tp, "@test isapprox(f.β, Float64.(d[\"beta\"])"), note))
+        push!(cs, mkcase("P1-JULIA-DATA-OFF-ALL-COUNT-$S-LAMBDA-LAMBDAT", "Lambda Lambda' (6 x 6) of the $sec fit",
+            "$fxp [$sec.lambda_lambdat]", "f.Λ * f.Λ', fit as at $src",
+            _ns_mat(d["lambda_lambdat"], p, p), f.Λ * f.Λ', test_tolerance(tp, "@test isapprox(f.Λ * f.Λ'"), note))
+        if dfld !== nothing
+            push!(cs, mkcase("P1-JULIA-DATA-OFF-ALL-COUNT-$S-DISPERSION", "per-trait dispersion (6 values) of the $sec fit",
+                "$fxp [$sec.phi]", "f.$(dfld), fit as at $src",
+                Float64.(d["phi"]), getproperty(f, dfld), test_tolerance(tp, "@test isapprox(getproperty(f, dfld), Float64.(d[\"phi\"])"), note))
+        end
+    end
+    return ["data-twins/OFF-ALL-COUNT.json" => Receipt(["data/DATA-OFF-ALL-COUNT"], ORIGIN, [fxp, datap], [tp], NOT_A_FIXTURE_PAIR, cs)]
 end
 
 # =============================================================================================
@@ -2077,6 +2128,7 @@ function build(only::Vector{String} = String[])
             ("data-twins", receipts_data_twins),
             ("predict-offset-twin", receipts_predict_offset_twin),
             ("data-twins-2", receipts_data_twins_2),
+            ("off-all-count", receipts_off_all_count),
             ("c1-behaviour", receipts_c1_behaviour))
         isempty(only) || name in only || continue
         t0 = time()

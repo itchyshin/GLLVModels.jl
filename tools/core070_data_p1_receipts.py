@@ -73,7 +73,9 @@ result. Rows with no twin (weights rows: Julia refuses weights= everywhere; lega
 newdata predict-time offset and mixed-family rows: no Julia surface to fit) keep
 their batch tier. DATA-OFF-TRAIN-STORED is bound by its own twin (test/test_predict_offset_twin_p1.jl,
 fixture test/fixtures/predict_offset_twin_p1.toml); DATA-MISS-MODEL and DATA-MISS-BOTH by the
-modelled-predictor twins (test/test_data_twins_2_p1.jl, fixture test/fixtures/data_twins_2_p1.toml).
+modelled-predictor twins (test/test_data_twins_2_p1.jl, fixture test/fixtures/data_twins_2_p1.toml);
+DATA-OFF-ALL-COUNT by the three-family exposure-offset twin (test/test_off_all_count_twin_p1.jl, fixture
+test/fixtures/off_all_count_twin_p1.toml).
 
 Usage:
   python3 tools/core070_data_p1_receipts.py --runs DIR --runtimes JSON [--allow-dirty]
@@ -464,6 +466,7 @@ TWIN_SOURCES = {
     "data/DATA-OFF-TRAIN-STORED": ("test/test_predict_offset_twin_p1.jl", "test/fixtures/predict_offset_twin_p1.toml"),
     "data/DATA-MISS-MODEL": ("test/test_data_twins_2_p1.jl", "test/fixtures/data_twins_2_p1.toml"),
     "data/DATA-MISS-BOTH": ("test/test_data_twins_2_p1.jl", "test/fixtures/data_twins_2_p1.toml"),
+    "data/DATA-OFF-ALL-COUNT": ("test/test_off_all_count_twin_p1.jl", "test/fixtures/off_all_count_twin_p1.toml"),
 }
 
 
@@ -488,18 +491,13 @@ TWIN_FILES = {  # source_id -> twin receipt stem
     "data/DATA-OFF-TRAIN-STORED": "OFF-TRAIN-STORED",
     "data/DATA-MISS-MODEL": "MISS-MODEL",
     "data/DATA-MISS-BOTH": "MISS-BOTH",
+    "data/DATA-OFF-ALL-COUNT": "OFF-ALL-COUNT",
 }
 
 
 # A twin receipt that records a true measurement but does not twin its row: cited as non-binding,
 # with the reason on the row (`twin_not_bound`).
-NONBINDING_TWINS = {
-    "data/DATA-OFF-ALL-COUNT": ("OFF-ALL-COUNT",
-        "The NB2 exposure-offset fit twin (receipt cited as non-binding) covers one count family. The R case "
-        "prepares offsets for three count families in one model (family ids 5, 10, 11: nbinom2, truncated "
-        "Poisson, truncated nbinom2). Julia has no per-trait family mix (as for DATA-OFF-MIXED) and the twin "
-        "does not cover the truncated families, so the row does not bind on it."),
-}
+NONBINDING_TWINS = {}
 # Rows that bind, with a stated limit of what the twin covers.
 SCOPE_NOTES = {
     "data/DATA-OFF-SCALAR": "The twin is one Poisson fit with a constant offset: R takes offset(log(2)) in the "
@@ -534,6 +532,16 @@ SCOPE_NOTES = {
         "added). R's response = 'drop' removes units with no response altogether, so it differs from 'include' here; "
         "it is checked only as an assertion in the twin test (the Julia fit without units 5 and 17 reaches R's drop "
         "logLik), not as a receipt case. Same scope limits as DATA-MISS-MODEL.",
+    "data/DATA-OFF-ALL-COUNT": "The R batch case prepares one exposure offset for three count families in one "
+        "model (family ids 5, 10, 11: nbinom2, truncated Poisson, truncated nbinom2) and replays to a vector; the "
+        "twin fits each of the three families with an exposure offset(log(e)), one data set each (p = 6, n = 150, "
+        "one latent factor, per-trait dispersion for the two NB2 families), R gllvmTMB(..., family = nbinom2() / "
+        "truncated_poisson() / truncated_nbinom2()) against Julia fit_gllvm(Y; family, K = 1, offset = log.(E)). "
+        "It is three single-family fits, not R's one mixed-family model: Julia's mixed-family fitter "
+        "(fit_mixed_gllvm) takes neither an offset nor the truncated families. The truncated nbinom2 data were "
+        "drawn with size 2 and every R dispersion is inside (1e-3, 1e3) (asserted in the generator), so no trait "
+        "is at the Poisson limit, the ridge behind the FAMILY-11 health-check failure; that row is not changed "
+        "by this twin.",
 }
 
 
