@@ -41,7 +41,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-namespace.json",
-   "sha256": "13dba5ac349b68c00f303a4014d677e70a92fae0710b458426d84455bed7ca65",
+   "sha256": "2b1a7735820e081b9d3b9f90fe315433cd9112b7099fc5368fd5d8f349eefdb1",
    "rows": 69
   },
   {
@@ -9301,16 +9301,24 @@
    "classification": "required_core",
    "arc": "A3",
    "r_file_line": null,
-   "executable_case_ids": [],
+   "executable_case_ids": [
+    "CORE070-NAMESPACE2-GLLVMTMB-NATIVE-FIT"
+   ],
    "p0_case_ids": [
     "CORE070-NAMESPACE2-GLLVMTMB-NATIVE-FIT"
    ],
-   "evidence": {},
-   "measured_against": null,
+   "evidence": {
+    "batch": "namespace-2 at P1",
+    "verifier": "python3 tools/core070_verify_namespace_2_batch.py --pin P1 --self-test --state docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-2-batch-p1 (CORE070_NAMESPACE_2_BATCH_VERIFIED 9 negative_controls 4)",
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE2-GLLVMTMB-NATIVE-FIT.json"
+    ],
+    "tier": "numeric: re-measured at P1, not re-cited. GLLVM_PARITY_PIN=P1 GLLVMTMB_DIR=<clone> Rscript --vanilla tools/core070_namespace_2_batch.R <P1 library> <dest> against gllvmTMB 0.7.1 (installed NAMESPACE sha256 equal to tools/core070_oracle_pins.toml [P1]), the P1 contract carrying the P0 cases verbatim; R gllvmTMB(value ~ 0 + trait + latent(0 + trait | site, d = 2, unique = FALSE), family = gaussian()) on the batch's Gaussian fixture (p = 5, n = 80) against Julia fit_gaussian_gllvm(Y; K = 2, X) on the same Y: logLik |R - Julia| = 1.13e-9 and trait intercepts max |R - Julia| = 1.36e-14, both within the harness tolerance 1e-4. The intercept comparison is recorded discriminating: false (the fixture's Y is row-centred, so the intercepts are ~1e-14); the log-likelihood is the discriminating check. The P0 case id is the same and stays under p0_case_ids."
+   },
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "disposition": null,
-   "reason": "Not re-measured at P1 in this PR.",
-   "not_measured_reason": "namespace-2 batch needs an installed frozen gllvmTMB library and live R fits (tools/core070_namespace_2_batch.R <frozen-library> <destination>); stopped per brief, no P1 oracle build here.",
-   "evidence_tier": "registration"
+   "reason": "Numeric R-vs-Julia native fit at P1: the namespace-2 batch's own case for this export (CORE070-NAMESPACE2-GLLVMTMB-NATIVE-FIT) re-run against the frozen P1 library; 9/9 cases and 4/4 negative controls pass. Replaces the not-measured state.",
+   "evidence_tier": "numeric"
   },
   {
    "source_id": "namespace/export/gllvmTMB_wide",
