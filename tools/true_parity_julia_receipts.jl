@@ -1972,7 +1972,17 @@ function receipts_off_mixed()
     f0.converged || fail("off-mixed Julia no-offset fit did not converge")
     src = cite(tp, "f = fit_mixed_gllvm(Y; families = fams, K = 1, offset = O)")
     src0 = cite(tp, "f0 = fit_mixed_gllvm(Y; families = fams, K = 1)")
-    note = "p = 6, n = 150 (sha256 checked), one mixed-family data set with traits poisson, gaussian, nbinom2, poisson, nbinom2, poisson (family ids 2, 0, 5); R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE) with family = list(...) by trait, converged with a positive-definite Hessian; Julia: fit_mixed_gllvm(Y; families, K = 1, offset = log.(E)). The exposure e is exactly 1 on the gaussian trait (offset zero) and varies by cell on the count traits (offset nonzero), the admission the R batch case gll_prepare_offset(quote(c(1,0,4)), c(2L,0L,5L), ...) asserts row-wise. One gaussian trait only: gllvmTMB shares one sigma across the gaussian traits of a mixed fit and Julia gives each Normal trait its own, which coincide with one. The offset varies by cell, so intercept parity within 1e-4 is the evidence it is applied on both sides; the twin test also asserts that the Julia marginal without the offset at the fitted parameters is lower by more than 1, and that the offset-free refit scores lower by more than 1. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+    note = "p = 6, n = 150 (sha256 checked), one mixed-family data set with traits poisson, gaussian, nbinom2, poisson, nbinom2, poisson (family ids 2, 0, 5); R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE) with family = list(...) by trait, converged with a positive-definite Hessian; Julia: fit_mixed_gllvm(Y; families, K = 1, offset = log.(E)). The exposure e is exactly 1 on the gaussian trait (offset zero) and varies by cell on the count traits (offset nonzero), the admission the R batch case gll_prepare_offset(quote(c(1,0,4)), c(2L,0L,5L), ...) asserts row-wise. One gaussian trait only: gllvmTMB shares one sigma across the gaussian traits of a mixed fit and Julia gives each Normal trait its own, which coincide with one. The offset varies by cell, so intercept parity within 1e-4 is the evidence it is applied on both sides; the twin test also asserts that the Julia marginal without the offset at the fitted parameters is lower by more than 1, and that the offset-free refit scores lower by more than 1. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'. The refusal half of the row-wise rule is asserted in the twin test, not as a case here (no number to compare, and the row is outside the behavioural tier's frozen list): R refuses the same fit with a nonzero offset on the gaussian trait (first line of its message in the fixture, [nonzero_gaussian_offset_refusal]) and fit_mixed_gllvm raises an ArgumentError naming the trait and family; a zero offset on that trait is accepted on both sides."
+    startswith(get(fx, "nonzero_gaussian_offset_refusal", ""), "offsets are supported for count families") ||
+        fail("off-mixed fixture does not record R's refusal of a nonzero gaussian offset")
+    Obad = copy(O); Obad[only(gauss), :] .= 0.5
+    refused = try
+        fit_mixed_gllvm(Y; families = fams, K = 1, offset = Obad); false
+    catch e
+        e isa ArgumentError || rethrow()
+        true
+    end
+    refused || fail("off-mixed: fit_mixed_gllvm accepted a nonzero offset on the gaussian trait")
     cs = Case[]
     push!(cs, mkcase("P1-JULIA-DATA-OFF-MIXED-LOGLIK", "maximised logLik of the mixed-family exposure-offset fit",
         "$fxp [loglik]", "f.loglik, fit as at $src",

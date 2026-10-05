@@ -556,9 +556,10 @@ SCOPE_NOTES = {
         "fit_mixed_gllvm(Y; families, K = 1, offset = log.(E)); e is exactly 1 on the gaussian trait and varies "
         "by cell on the count traits. It covers one gaussian trait only: gllvmTMB shares one sigma across the "
         "gaussian traits of a mixed fit while fit_mixed_gllvm gives each Normal trait its own, so a fit with "
-        "two or more gaussian traits is a different model on the two sides and is not compared. Julia has no "
-        "offset gate: fit_mixed_gllvm applies a nonzero offset on a Normal trait where R refuses it (as in "
-        "DATA-OFF-NONCOUNT-ZERO). The same model without the offset is also matched (logLik within 1e-6) and "
+        "two or more gaussian traits is a different model on the two sides and is not compared. Both sides apply "
+        "the row-wise admission rule: a nonzero offset on the gaussian trait is refused by R (message recorded in "
+        "the fixture) and by fit_mixed_gllvm (ArgumentError naming the trait and family), asserted in the twin "
+        "test; the refusal is behaviour, not a compared number. The same model without the offset is also matched (logLik within 1e-6) and "
         "scores lower by more than 1 on both sides.",
 }
 
