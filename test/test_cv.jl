@@ -87,6 +87,22 @@ using StableRNGs
         @test isfinite(cv_pois_site.mse)
     end
 
+    # Held-out species drop rows from the mode search, so Λ and β must be
+    # subset to the same training species. Without that, every non-Normal
+    # :species fold throws DimensionMismatch inside _laplace_mode (#768).
+    @testset "species-split Poisson (#768)" begin
+        rng = MersenneTwister(768)
+        p, n = 4, 16
+        Y = rand(rng, 0:6, p, n)
+        cv_spec = cv_gllvm(Y; k_folds = 2, split = :species, family = Poisson(), K = 1,
+                           rng = MersenneTwister(768))
+        @test cv_spec isa CVResult
+        @test cv_spec.split === :species
+        @test cv_spec.loglik isa Real
+        @test isfinite(cv_spec.loglik)
+        @test isfinite(cv_spec.mse)
+    end
+
     @testset "Binomial Binary Family CV" begin
         Random.seed!(303)
         p, n = 4, 40
