@@ -1661,10 +1661,10 @@ end
 #     `data` rows (offset and missing-response handling) whose batch cases were R helper
 #     replays with no fit number, bound to fit-level twins: R-at-P1 fits recorded in
 #     test/fixtures/data_twins_p1.toml against Julia fits of the same data. Weights rows are not
-#     here (Julia refuses weights= on every fitter); the legacy-fit and newdata predict-offset,
-#     mixed-family rows have no Julia surface to fit (the stored-offset row has its own twin,
-#     section 12b; the modelled-predictor rows theirs, section 12c; the all-count-families offset
-#     row its own, section 12d).
+#     here (Julia refuses weights= on every fitter); the legacy-fit and newdata predict-offset
+#     rows have no Julia surface to fit (the stored-offset row has its own twin, section 12b; the
+#     modelled-predictor rows theirs, section 12c; the all-count-families offset row its own,
+#     section 12d; the mixed-family offset row its own, section 12e).
 # =============================================================================================
 function _dt_load(path, col, p, n)
     hdr = split(readline(path), ",")
@@ -1937,6 +1937,75 @@ function receipts_off_all_count()
 end
 
 # =============================================================================================
+# 12e. off-mixed twin   test/test_off_mixed_twin_p1.jl
+#     data/DATA-OFF-MIXED: one mixed-family fit (poisson / gaussian / nbinom2 traits, family ids 2, 0,
+#     5) with an exposure offset that is zero on the gaussian trait and nonzero on the count traits.
+#     R-at-P1 fit recorded in test/fixtures/off_mixed_twin_p1.toml, against
+#     fit_mixed_gllvm(Y; families, K = 1, offset = log.(E)) on the same data.
+# =============================================================================================
+function receipts_off_mixed()
+    ORIGIN = "itchyshin/GLLVModels.jl#808"
+    fxp = "test/fixtures/off_mixed_twin_p1.toml"
+    tp = "test/test_off_mixed_twin_p1.jl"
+    fx = TOML.parsefile(joinpath(ROOT, fxp))
+    fx["gllvmtmb_commit"] == P1_SHA || fail("off-mixed twin fixture is not pinned at P1")
+    (fx["converged"] === true && fx["pd_hessian"] === true) || fail("off-mixed R fit not converged with a PD Hessian; not a valid twin")
+    p, n = Int(fx["p"]), Int(fx["n_unit"])
+    datap = "test/fixtures/" * fx["data_file"]
+    bytes2hex(sha256(read(joinpath(ROOT, datap)))) == fx["data_sha256"] || fail("off-mixed data csv drifted")
+    csv = joinpath(ROOT, datap)
+    famnames = String.(fx["families"])
+    ids = Dict("poisson" => 2, "gaussian" => 0, "nbinom2" => 5)
+    [ids[k] for k in famnames] == Int.(fx["family_ids"]) || fail("off-mixed family ids do not match the family names")
+    Set(fx["family_ids"]) == Set([2, 0, 5]) || fail("off-mixed fixture does not carry family ids 2, 0, 5")
+    mk = Dict("poisson" => () -> Poisson(), "gaussian" => () -> Normal(), "nbinom2" => () -> NegativeBinomial(1.0, 0.5))
+    fams = [mk[k]() for k in famnames]
+    Y = Float64.(_dt_load(csv, fx["response_column"], p, n))
+    O = log.(Float64.(_dt_load(csv, fx["exposure_column"], p, n)))
+    gauss = findall(==("gaussian"), famnames)
+    nb = findall(==("nbinom2"), famnames)
+    (length(gauss) == 1 && all(iszero, O[gauss, :]) && all(!iszero, O[setdiff(1:p, gauss), :])) ||
+        fail("off-mixed offset is not zero on the one gaussian trait and nonzero on the count traits")
+    f = fit_mixed_gllvm(Y; families = fams, K = 1, offset = O)
+    f.converged || fail("off-mixed Julia fit did not converge")
+    f0 = fit_mixed_gllvm(Y; families = fams, K = 1)
+    f0.converged || fail("off-mixed Julia no-offset fit did not converge")
+    src = cite(tp, "f = fit_mixed_gllvm(Y; families = fams, K = 1, offset = O)")
+    src0 = cite(tp, "f0 = fit_mixed_gllvm(Y; families = fams, K = 1)")
+    note = "p = 6, n = 150 (sha256 checked), one mixed-family data set with traits poisson, gaussian, nbinom2, poisson, nbinom2, poisson (family ids 2, 0, 5); R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE) with family = list(...) by trait, converged with a positive-definite Hessian; Julia: fit_mixed_gllvm(Y; families, K = 1, offset = log.(E)). The exposure e is exactly 1 on the gaussian trait (offset zero) and varies by cell on the count traits (offset nonzero), the admission the R batch case gll_prepare_offset(quote(c(1,0,4)), c(2L,0L,5L), ...) asserts row-wise. One gaussian trait only: gllvmTMB shares one sigma across the gaussian traits of a mixed fit and Julia gives each Normal trait its own, which coincide with one. The offset varies by cell, so intercept parity within 1e-4 is the evidence it is applied on both sides; the twin test also asserts that the Julia marginal without the offset at the fitted parameters is lower by more than 1, and that the offset-free refit scores lower by more than 1. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'. The refusal half of the row-wise rule is asserted in the twin test, not as a case here (no number to compare, and the row is outside the behavioural tier's frozen list): R refuses the same fit with a nonzero offset on the gaussian trait (first line of its message in the fixture, [nonzero_gaussian_offset_refusal]) and fit_mixed_gllvm raises an ArgumentError naming the trait and family; a zero offset on that trait is accepted on both sides."
+    startswith(get(fx, "nonzero_gaussian_offset_refusal", ""), "offsets are supported for count families") ||
+        fail("off-mixed fixture does not record R's refusal of a nonzero gaussian offset")
+    Obad = copy(O); Obad[only(gauss), :] .= 0.5
+    refused = try
+        fit_mixed_gllvm(Y; families = fams, K = 1, offset = Obad); false
+    catch e
+        e isa ArgumentError || rethrow()
+        true
+    end
+    refused || fail("off-mixed: fit_mixed_gllvm accepted a nonzero offset on the gaussian trait")
+    cs = Case[]
+    push!(cs, mkcase("P1-JULIA-DATA-OFF-MIXED-LOGLIK", "maximised logLik of the mixed-family exposure-offset fit",
+        "$fxp [loglik]", "f.loglik, fit as at $src",
+        Float64(fx["loglik"]), f.loglik, test_tolerance(tp, "@test isapprox(f.loglik, Float64(fx[\"loglik\"])"), note))
+    push!(cs, mkcase("P1-JULIA-DATA-OFF-MIXED-INTERCEPTS", "trait intercepts (6 values, each on its trait's link scale); the offset is not absorbed into them",
+        "$fxp [beta]", "f.β, fit as at $src",
+        Float64.(fx["beta"]), f.β, test_tolerance(tp, "@test isapprox(f.β, Float64.(fx[\"beta\"])"), note))
+    push!(cs, mkcase("P1-JULIA-DATA-OFF-MIXED-LAMBDA-LAMBDAT", "Lambda Lambda' (6 x 6) of the mixed-family fit",
+        "$fxp [lambda_lambdat]", "f.Λ * f.Λ', fit as at $src",
+        _ns_mat(fx["lambda_lambdat"], p, p), f.Λ * f.Λ', test_tolerance(tp, "@test isapprox(f.Λ * f.Λ'"), note))
+    push!(cs, mkcase("P1-JULIA-DATA-OFF-MIXED-NB2-DISPERSION", "per-trait nbinom2 dispersion (traits t3 and t5; R exp(log_phi_nbinom2), Julia NegativeBinomial r)",
+        "$fxp [phi]", "f.dispersion[nb], fit as at $src",
+        Float64.(fx["phi"]), f.dispersion[nb], test_tolerance(tp, "@test isapprox(f.dispersion[nb]"), note))
+    push!(cs, mkcase("P1-JULIA-DATA-OFF-MIXED-GAUSSIAN-SIGMA", "residual sd of the gaussian trait t2 (R exp(log_sigma_eps), Julia Normal sigma)",
+        "$fxp [sigma]", "f.dispersion[only(gauss)], fit as at $src",
+        Float64(fx["sigma"]), f.dispersion[only(gauss)], test_tolerance(tp, "@test isapprox(f.dispersion[only(gauss)]"), note))
+    push!(cs, mkcase("P1-JULIA-DATA-OFF-MIXED-NO-OFFSET-LOGLIK", "maximised logLik of the same mixed-family model without the offset (lower than the offset fit by more than 1 on both sides)",
+        "$fxp [loglik_no_offset]", "f0.loglik, fit as at $src0",
+        Float64(fx["loglik_no_offset"]), f0.loglik, test_tolerance(tp, "@test isapprox(f0.loglik, Float64(fx[\"loglik_no_offset\"])"), note))
+    return ["data-twins/OFF-MIXED.json" => Receipt(["data/DATA-OFF-MIXED"], ORIGIN, [fxp, datap], [tp], NOT_A_FIXTURE_PAIR, cs)]
+end
+
+# =============================================================================================
 # 13. c1-behaviour: behavioural receipts for the four C1 rows (itchyshin/GLLVModels.jl#684 item 2)
 #     test/test_c1_behaviour_p1.jl; raw R side under test/fixtures/c1_behaviour_p1/
 #       model-comparison/print.anova.gllvmTMB_multi   printed fields
@@ -2129,6 +2198,7 @@ function build(only::Vector{String} = String[])
             ("predict-offset-twin", receipts_predict_offset_twin),
             ("data-twins-2", receipts_data_twins_2),
             ("off-all-count", receipts_off_all_count),
+            ("off-mixed", receipts_off_mixed),
             ("c1-behaviour", receipts_c1_behaviour))
         isempty(only) || name in only || continue
         t0 = time()

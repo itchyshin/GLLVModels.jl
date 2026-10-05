@@ -70,12 +70,12 @@ disposition and every other field are untouched; a row's `note` still describes 
 helper-replay case. `--apply-twins` re-derives rows and counts of the tracked case-map-data.json
 from the tracked receipts and twin receipts (no run directory needed); `--check` verifies the
 result. Rows with no twin (weights rows: Julia refuses weights= everywhere; legacy-fit and
-newdata predict-time offset and mixed-family rows: no Julia surface to fit) keep
-their batch tier. DATA-OFF-TRAIN-STORED is bound by its own twin (test/test_predict_offset_twin_p1.jl,
+newdata predict-time offset rows: no Julia surface to fit) keep their batch tier. DATA-OFF-TRAIN-STORED is bound by its own twin (test/test_predict_offset_twin_p1.jl,
 fixture test/fixtures/predict_offset_twin_p1.toml); DATA-MISS-MODEL and DATA-MISS-BOTH by the
 modelled-predictor twins (test/test_data_twins_2_p1.jl, fixture test/fixtures/data_twins_2_p1.toml);
 DATA-OFF-ALL-COUNT by the three-family exposure-offset twin (test/test_off_all_count_twin_p1.jl, fixture
-test/fixtures/off_all_count_twin_p1.toml).
+test/fixtures/off_all_count_twin_p1.toml); DATA-OFF-MIXED by the mixed-family offset twin
+(test/test_off_mixed_twin_p1.jl, fixture test/fixtures/off_mixed_twin_p1.toml).
 
 Usage:
   python3 tools/core070_data_p1_receipts.py --runs DIR --runtimes JSON [--allow-dirty]
@@ -467,6 +467,7 @@ TWIN_SOURCES = {
     "data/DATA-MISS-MODEL": ("test/test_data_twins_2_p1.jl", "test/fixtures/data_twins_2_p1.toml"),
     "data/DATA-MISS-BOTH": ("test/test_data_twins_2_p1.jl", "test/fixtures/data_twins_2_p1.toml"),
     "data/DATA-OFF-ALL-COUNT": ("test/test_off_all_count_twin_p1.jl", "test/fixtures/off_all_count_twin_p1.toml"),
+    "data/DATA-OFF-MIXED": ("test/test_off_mixed_twin_p1.jl", "test/fixtures/off_mixed_twin_p1.toml"),
 }
 
 
@@ -492,6 +493,7 @@ TWIN_FILES = {  # source_id -> twin receipt stem
     "data/DATA-MISS-MODEL": "MISS-MODEL",
     "data/DATA-MISS-BOTH": "MISS-BOTH",
     "data/DATA-OFF-ALL-COUNT": "OFF-ALL-COUNT",
+    "data/DATA-OFF-MIXED": "OFF-MIXED",
 }
 
 
@@ -546,6 +548,19 @@ SCOPE_NOTES = {
         "data were drawn with size 2 and every R dispersion is inside (1e-3, 1e3) (asserted in the generator), "
         "so no trait is at the Poisson limit, the ridge behind the FAMILY-11 health-check failure; that row is "
         "not changed by this twin.",
+    "data/DATA-OFF-MIXED": "The R batch case gll_prepare_offset(quote(c(1,0,4)), c(2L,0L,5L), ...) replays the "
+        "row-wise offset admission of one mixed-family fit (family ids 2, 0, 5: poisson, gaussian, nbinom2): a "
+        "zero offset on the non-count row next to nonzero offsets on the count rows. The twin is one real fit "
+        "of that kind: p = 6 traits (poisson, gaussian, nbinom2, poisson, nbinom2, poisson), n = 150, one latent "
+        "factor, R gllvmTMB(..., family = list(...) by trait) with offset(log(e)) against Julia "
+        "fit_mixed_gllvm(Y; families, K = 1, offset = log.(E)); e is exactly 1 on the gaussian trait and varies "
+        "by cell on the count traits. It covers one gaussian trait only: gllvmTMB shares one sigma across the "
+        "gaussian traits of a mixed fit while fit_mixed_gllvm gives each Normal trait its own, so a fit with "
+        "two or more gaussian traits is a different model on the two sides and is not compared. Both sides apply "
+        "the row-wise admission rule: a nonzero offset on the gaussian trait is refused by R (message recorded in "
+        "the fixture) and by fit_mixed_gllvm (ArgumentError naming the trait and family), asserted in the twin "
+        "test; the refusal is behaviour, not a compared number. The same model without the offset is also matched (logLik within 1e-6) and "
+        "scores lower by more than 1 on both sides.",
 }
 
 

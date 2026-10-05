@@ -2,6 +2,31 @@
 
 ## Development
 
+- **Mixed-family fits take an offset (DATA-OFF-MIXED).** `fit_mixed_gllvm(Y; families, K,
+  offset)` adds a known offset to each trait's linear predictor, η = β + offset + Λz. `offset`
+  is a p×n matrix, a scalar or a length-p vector, normalised as in `fit_gllvm`; the usual use is
+  an exposure `log(e)` on the count traits with a zero offset on a Normal (or other non-count)
+  trait, which is what gllvmTMB's offset gate admits in one mixed-family fit. Admission is
+  row-wise per trait, as in gllvmTMB's `gll_prepare_offset` at P1: a nonzero offset is accepted
+  only on a count trait (`Poisson()`, gllvmTMB `poisson`; `NegativeBinomial()`, gllvmTMB
+  `nbinom2`), and a nonzero finite offset on a `Normal()`, `Binomial()`, `Gamma()` or `Beta()`
+  trait raises an `ArgumentError` naming the trait and family. A zero offset is accepted on every
+  trait. The fit keeps the training offset in `fit.offset` (`nothing` without one), and `getLV`
+  and `predict` on a mixed fit follow #787's rule, extended in #807: a `Y` of the training size
+  uses the stored offset, new units take `offset = O`, and new units from an offset fit without
+  one raise an `ArgumentError`. `link_residual`, `sigma_y_site`, `correlation` and `communality`
+  on an offset fit now use the offset-aware fitted means for a `Y` of the training size only;
+  they take no `offset` argument, so on new units from an offset fit they raise the same
+  `ArgumentError` as `predict`. Offset-free fits, and their `getLV`, `predict` and `correlation`,
+  are unchanged bit for bit (checked with `isequal` against the previous code on a
+  Poisson/Normal/NB2 and a Binomial/Gamma/Beta fit), and the old 11-argument `MixedFamilyFit`
+  constructor still works (it stores no offset). Mixed fits have no `residuals` method, so there
+  is nothing to change there. P1 twin: `test/test_off_mixed_twin_p1.jl` (one p = 6, n = 150
+  poisson/gaussian/nbinom2 fit with `offset(log(e))`, zero on the gaussian trait) matches
+  gllvmTMB at P1 in logLik (2.6e-8), intercepts (8.5e-6), ΛΛᵀ (2.3e-6) and dispersions, and the
+  offset-free refit matches R's offset-free logLik (3.7e-8) and scores lower by 179.5. The same
+  fit with a nonzero offset on the gaussian trait is refused by both (R's message is recorded in
+  the fixture). This binds the scoreboard row data/DATA-OFF-MIXED.
 - **The shared-dispersion fits keep their training offset (#788, second part).** `GammaFit`,
   `BetaFit`, `NB1Fit`, `GP1Fit`, `ExponentialFit`, `HurdleNBFit`, `ZIPFit`, `ZINBFit`, `ZIBFit`,
   `DeltaLogNormalFit` and `DeltaGammaFit` accepted `offset` at fit time but did not keep it, so
