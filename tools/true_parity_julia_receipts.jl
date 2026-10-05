@@ -1884,13 +1884,13 @@ end
 
 # =============================================================================================
 # 12d. off-all-count twin   test/test_off_all_count_twin_p1.jl
-#     data/DATA-OFF-ALL-COUNT: an exposure offset on each of the three count families of the R batch
-#     case (family ids 5, 10, 11: nbinom2, truncated Poisson, truncated nbinom2), one single-family
-#     fit each. R-at-P1 fits recorded in test/fixtures/off_all_count_twin_p1.toml, against
+#     data/DATA-OFF-ALL-COUNT (a family-id admission-set case): an exposure offset on each count
+#     family the R batch case admits (family ids 5, 10, 11: nbinom2, truncated Poisson, truncated
+#     nbinom2), one fit each. R-at-P1 fits recorded in test/fixtures/off_all_count_twin_p1.toml, against
 #     fit_gllvm(Y; family, K = 1, offset = log.(E)) on the same data.
 # =============================================================================================
 function receipts_off_all_count()
-    ORIGIN = "itchyshin/GLLVModels.jl branch claude/w2-off-all-count (W2-4c)"
+    ORIGIN = "itchyshin/GLLVModels.jl#798"
     fxp = "test/fixtures/off_all_count_twin_p1.toml"
     tp = "test/test_off_all_count_twin_p1.jl"
     fx = TOML.parsefile(joinpath(ROOT, fxp))
@@ -1900,7 +1900,7 @@ function receipts_off_all_count()
     bytes2hex(sha256(read(joinpath(ROOT, datap)))) == fx["data_sha256"] || fail("off-all-count data csv drifted")
     csv = joinpath(ROOT, datap)
     src = cite(tp, "f = fit_gllvm(Y; family = fam, K = 1, offset = log.(E), kw...)")
-    base = "p = 6, n = 150 (sha256 checked), one data set per family; R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family, K = 1, offset = log.(E)). The R batch case prepared one offset for three count families (ids 5, 10, 11) in one model; Julia has no fit that mixes families with an offset, so each family is its own single-family fit. The twin test also asserts that at the fitted values the marginal without the offset is lower by more than 1 (the offset is applied). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+    base = "p = 6, n = 150 (sha256 checked), one data set per family; R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family, K = 1, offset = log.(E)). The row is a family-id admission-set case: the R batch case gll_prepare_offset(quote(e), c(5L, 10L, 11L), ...) admits a nonzero offset for count family ids 5, 10, 11, and the case plan's comparand is the set of families admitted (docs/dev-log/core070/data-required-case-plan.json); each admitted family is twinned here with an exposure offset. Fitting several families with an offset in one model is DATA-OFF-MIXED's obligation. The offset varies by cell, so intercept parity within 1e-4 is the evidence it is applied on both sides; the twin test also evaluates the Julia marginal without the offset at the fitted parameters (no refit) and asserts it is lower by more than 1. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
     cs = Case[]
     for (sec, fid, fam, kw, dfld, label) in (
             ("nb2", 5, NegativeBinomial(1.0, 0.5), (; disp_group = :species), :r_group,

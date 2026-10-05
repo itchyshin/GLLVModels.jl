@@ -7,7 +7,7 @@
   "evidence_kind": "julia_recomputed_vs_recorded_r",
   "pin": "P1",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
-  "origin_pr": "itchyshin/GLLVModels.jl branch claude/w2-off-all-count (W2-4c)",
+  "origin_pr": "itchyshin/GLLVModels.jl#798",
   "generator": "tools/true_parity_julia_receipts.jl",
   "julia_version": "1.10.0",
   "gllvmodels_commit": "d8213cc85e30d18c562dab333882c4304fa535e5",
@@ -24,7 +24,7 @@
   "source_tests": [
     {
       "path": "test/test_off_all_count_twin_p1.jl",
-      "sha256": "7f054933a1fe4f881299c7d7442f90f327777c0a3a3139fc599e2b1e0dfeebed"
+      "sha256": "1c71c573c3f9f1b8b7035c3d27870c816c03e14a11e97f656de1ddd070e311a9"
     }
   ],
   "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
@@ -35,20 +35,20 @@
         "case_id": "P1-JULIA-DATA-OFF-ALL-COUNT-NB2-LOGLIK",
         "quantity": "maximised logLik of the nb2 exposure-offset fit",
         "r_source": "test/fixtures/off_all_count_twin_p1.toml [nb2.loglik]",
-        "julia_source": "f.loglik, fit as at test/test_off_all_count_twin_p1.jl:78",
+        "julia_source": "f.loglik, fit as at test/test_off_all_count_twin_p1.jl:82",
         "r_value": -2044.3374114609373,
         "julia_value": -2044.3374114311698,
         "abs_diff": 2.9767534215352498e-08,
         "tolerance": 1e-06,
-        "tolerance_source": "test/test_off_all_count_twin_p1.jl:80",
+        "tolerance_source": "test/test_off_all_count_twin_p1.jl:84",
         "tolerance_source_line": "@test isapprox(f.loglik, Float64(d[\"loglik\"]); atol = 1e-6, rtol = 0)",
-        "note": "nbinom2 (family id 5), per-trait dispersion on both sides (R exp(log_phi_nbinom2), Julia r_group with disp_group = :species). p = 6, n = 150 (sha256 checked), one data set per family; R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family, K = 1, offset = log.(E)). The R batch case prepared one offset for three count families (ids 5, 10, 11) in one model; Julia has no fit that mixes families with an offset, so each family is its own single-family fit. The twin test also asserts that at the fitted values the marginal without the offset is lower by more than 1 (the offset is applied). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+        "note": "nbinom2 (family id 5), per-trait dispersion on both sides (R exp(log_phi_nbinom2), Julia r_group with disp_group = :species). p = 6, n = 150 (sha256 checked), one data set per family; R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family, K = 1, offset = log.(E)). The row is a family-id admission-set case: the R batch case gll_prepare_offset(quote(e), c(5L, 10L, 11L), ...) admits a nonzero offset for count family ids 5, 10, 11, and the case plan's comparand is the set of families admitted (docs/dev-log/core070/data-required-case-plan.json); each admitted family is twinned here with an exposure offset. Fitting several families with an offset in one model is DATA-OFF-MIXED's obligation. The offset varies by cell, so intercept parity within 1e-4 is the evidence it is applied on both sides; the twin test also evaluates the Julia marginal without the offset at the fitted parameters (no refit) and asserts it is lower by more than 1. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
       },
       {
         "case_id": "P1-JULIA-DATA-OFF-ALL-COUNT-NB2-INTERCEPTS",
         "quantity": "trait intercepts (6 values) of the nb2 fit; the offset is not absorbed into them",
         "r_source": "test/fixtures/off_all_count_twin_p1.toml [nb2.beta]",
-        "julia_source": "f.β, fit as at test/test_off_all_count_twin_p1.jl:78",
+        "julia_source": "f.β, fit as at test/test_off_all_count_twin_p1.jl:82",
         "r_value": [
           0.9445094679909748,
           0.37180485969117266,
@@ -67,15 +67,15 @@
         ],
         "abs_diff": 8.253708239869262e-06,
         "tolerance": 0.0001,
-        "tolerance_source": "test/test_off_all_count_twin_p1.jl:81",
+        "tolerance_source": "test/test_off_all_count_twin_p1.jl:85",
         "tolerance_source_line": "@test isapprox(f.β, Float64.(d[\"beta\"]); atol = 1e-4, rtol = 0)",
-        "note": "nbinom2 (family id 5), per-trait dispersion on both sides (R exp(log_phi_nbinom2), Julia r_group with disp_group = :species). p = 6, n = 150 (sha256 checked), one data set per family; R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family, K = 1, offset = log.(E)). The R batch case prepared one offset for three count families (ids 5, 10, 11) in one model; Julia has no fit that mixes families with an offset, so each family is its own single-family fit. The twin test also asserts that at the fitted values the marginal without the offset is lower by more than 1 (the offset is applied). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+        "note": "nbinom2 (family id 5), per-trait dispersion on both sides (R exp(log_phi_nbinom2), Julia r_group with disp_group = :species). p = 6, n = 150 (sha256 checked), one data set per family; R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family, K = 1, offset = log.(E)). The row is a family-id admission-set case: the R batch case gll_prepare_offset(quote(e), c(5L, 10L, 11L), ...) admits a nonzero offset for count family ids 5, 10, 11, and the case plan's comparand is the set of families admitted (docs/dev-log/core070/data-required-case-plan.json); each admitted family is twinned here with an exposure offset. Fitting several families with an offset in one model is DATA-OFF-MIXED's obligation. The offset varies by cell, so intercept parity within 1e-4 is the evidence it is applied on both sides; the twin test also evaluates the Julia marginal without the offset at the fitted parameters (no refit) and asserts it is lower by more than 1. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
       },
       {
         "case_id": "P1-JULIA-DATA-OFF-ALL-COUNT-NB2-LAMBDA-LAMBDAT",
         "quantity": "Lambda Lambda' (6 x 6) of the nb2 fit",
         "r_source": "test/fixtures/off_all_count_twin_p1.toml [nb2.lambda_lambdat]",
-        "julia_source": "f.Λ * f.Λ', fit as at test/test_off_all_count_twin_p1.jl:78",
+        "julia_source": "f.Λ * f.Λ', fit as at test/test_off_all_count_twin_p1.jl:82",
         "r_value": [
           0.17514761709059506,
           -0.0031337992032856353,
@@ -154,15 +154,15 @@
         ],
         "abs_diff": 4.8616296220993505e-06,
         "tolerance": 0.001,
-        "tolerance_source": "test/test_off_all_count_twin_p1.jl:82",
+        "tolerance_source": "test/test_off_all_count_twin_p1.jl:86",
         "tolerance_source_line": "@test isapprox(f.Λ * f.Λ', _oac_mat(d[\"lambda_lambdat\"], p); atol = 1e-3, rtol = 0)",
-        "note": "nbinom2 (family id 5), per-trait dispersion on both sides (R exp(log_phi_nbinom2), Julia r_group with disp_group = :species). p = 6, n = 150 (sha256 checked), one data set per family; R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family, K = 1, offset = log.(E)). The R batch case prepared one offset for three count families (ids 5, 10, 11) in one model; Julia has no fit that mixes families with an offset, so each family is its own single-family fit. The twin test also asserts that at the fitted values the marginal without the offset is lower by more than 1 (the offset is applied). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+        "note": "nbinom2 (family id 5), per-trait dispersion on both sides (R exp(log_phi_nbinom2), Julia r_group with disp_group = :species). p = 6, n = 150 (sha256 checked), one data set per family; R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family, K = 1, offset = log.(E)). The row is a family-id admission-set case: the R batch case gll_prepare_offset(quote(e), c(5L, 10L, 11L), ...) admits a nonzero offset for count family ids 5, 10, 11, and the case plan's comparand is the set of families admitted (docs/dev-log/core070/data-required-case-plan.json); each admitted family is twinned here with an exposure offset. Fitting several families with an offset in one model is DATA-OFF-MIXED's obligation. The offset varies by cell, so intercept parity within 1e-4 is the evidence it is applied on both sides; the twin test also evaluates the Julia marginal without the offset at the fitted parameters (no refit) and asserts it is lower by more than 1. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
       },
       {
         "case_id": "P1-JULIA-DATA-OFF-ALL-COUNT-NB2-DISPERSION",
         "quantity": "per-trait dispersion (6 values) of the nb2 fit",
         "r_source": "test/fixtures/off_all_count_twin_p1.toml [nb2.phi]",
-        "julia_source": "f.r_group, fit as at test/test_off_all_count_twin_p1.jl:78",
+        "julia_source": "f.r_group, fit as at test/test_off_all_count_twin_p1.jl:82",
         "r_value": [
           2.4206321781549667,
           2.8317982497158756,
@@ -181,28 +181,28 @@
         ],
         "abs_diff": 0.0003181683913036082,
         "tolerance": 0.001,
-        "tolerance_source": "test/test_off_all_count_twin_p1.jl:85",
+        "tolerance_source": "test/test_off_all_count_twin_p1.jl:89",
         "tolerance_source_line": "@test isapprox(getproperty(f, dfld), Float64.(d[\"phi\"]); atol = 1e-3, rtol = 0)",
-        "note": "nbinom2 (family id 5), per-trait dispersion on both sides (R exp(log_phi_nbinom2), Julia r_group with disp_group = :species). p = 6, n = 150 (sha256 checked), one data set per family; R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family, K = 1, offset = log.(E)). The R batch case prepared one offset for three count families (ids 5, 10, 11) in one model; Julia has no fit that mixes families with an offset, so each family is its own single-family fit. The twin test also asserts that at the fitted values the marginal without the offset is lower by more than 1 (the offset is applied). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+        "note": "nbinom2 (family id 5), per-trait dispersion on both sides (R exp(log_phi_nbinom2), Julia r_group with disp_group = :species). p = 6, n = 150 (sha256 checked), one data set per family; R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family, K = 1, offset = log.(E)). The row is a family-id admission-set case: the R batch case gll_prepare_offset(quote(e), c(5L, 10L, 11L), ...) admits a nonzero offset for count family ids 5, 10, 11, and the case plan's comparand is the set of families admitted (docs/dev-log/core070/data-required-case-plan.json); each admitted family is twinned here with an exposure offset. Fitting several families with an offset in one model is DATA-OFF-MIXED's obligation. The offset varies by cell, so intercept parity within 1e-4 is the evidence it is applied on both sides; the twin test also evaluates the Julia marginal without the offset at the fitted parameters (no refit) and asserts it is lower by more than 1. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
       },
       {
         "case_id": "P1-JULIA-DATA-OFF-ALL-COUNT-TPOIS-LOGLIK",
         "quantity": "maximised logLik of the tpois exposure-offset fit",
         "r_source": "test/fixtures/off_all_count_twin_p1.toml [tpois.loglik]",
-        "julia_source": "f.loglik, fit as at test/test_off_all_count_twin_p1.jl:78",
+        "julia_source": "f.loglik, fit as at test/test_off_all_count_twin_p1.jl:82",
         "r_value": -1768.644820225575,
         "julia_value": -1768.6448202245406,
         "abs_diff": 1.0343228495912626e-09,
         "tolerance": 1e-06,
-        "tolerance_source": "test/test_off_all_count_twin_p1.jl:80",
+        "tolerance_source": "test/test_off_all_count_twin_p1.jl:84",
         "tolerance_source_line": "@test isapprox(f.loglik, Float64(d[\"loglik\"]); atol = 1e-6, rtol = 0)",
-        "note": "truncated Poisson (family id 10), y >= 1, log link on the untruncated mean on both sides. p = 6, n = 150 (sha256 checked), one data set per family; R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family, K = 1, offset = log.(E)). The R batch case prepared one offset for three count families (ids 5, 10, 11) in one model; Julia has no fit that mixes families with an offset, so each family is its own single-family fit. The twin test also asserts that at the fitted values the marginal without the offset is lower by more than 1 (the offset is applied). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+        "note": "truncated Poisson (family id 10), y >= 1, log link on the untruncated mean on both sides. p = 6, n = 150 (sha256 checked), one data set per family; R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family, K = 1, offset = log.(E)). The row is a family-id admission-set case: the R batch case gll_prepare_offset(quote(e), c(5L, 10L, 11L), ...) admits a nonzero offset for count family ids 5, 10, 11, and the case plan's comparand is the set of families admitted (docs/dev-log/core070/data-required-case-plan.json); each admitted family is twinned here with an exposure offset. Fitting several families with an offset in one model is DATA-OFF-MIXED's obligation. The offset varies by cell, so intercept parity within 1e-4 is the evidence it is applied on both sides; the twin test also evaluates the Julia marginal without the offset at the fitted parameters (no refit) and asserts it is lower by more than 1. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
       },
       {
         "case_id": "P1-JULIA-DATA-OFF-ALL-COUNT-TPOIS-INTERCEPTS",
         "quantity": "trait intercepts (6 values) of the tpois fit; the offset is not absorbed into them",
         "r_source": "test/fixtures/off_all_count_twin_p1.toml [tpois.beta]",
-        "julia_source": "f.β, fit as at test/test_off_all_count_twin_p1.jl:78",
+        "julia_source": "f.β, fit as at test/test_off_all_count_twin_p1.jl:82",
         "r_value": [
           0.8481356946846207,
           0.45437469958788573,
@@ -221,15 +221,15 @@
         ],
         "abs_diff": 1.574083706046281e-06,
         "tolerance": 0.0001,
-        "tolerance_source": "test/test_off_all_count_twin_p1.jl:81",
+        "tolerance_source": "test/test_off_all_count_twin_p1.jl:85",
         "tolerance_source_line": "@test isapprox(f.β, Float64.(d[\"beta\"]); atol = 1e-4, rtol = 0)",
-        "note": "truncated Poisson (family id 10), y >= 1, log link on the untruncated mean on both sides. p = 6, n = 150 (sha256 checked), one data set per family; R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family, K = 1, offset = log.(E)). The R batch case prepared one offset for three count families (ids 5, 10, 11) in one model; Julia has no fit that mixes families with an offset, so each family is its own single-family fit. The twin test also asserts that at the fitted values the marginal without the offset is lower by more than 1 (the offset is applied). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+        "note": "truncated Poisson (family id 10), y >= 1, log link on the untruncated mean on both sides. p = 6, n = 150 (sha256 checked), one data set per family; R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family, K = 1, offset = log.(E)). The row is a family-id admission-set case: the R batch case gll_prepare_offset(quote(e), c(5L, 10L, 11L), ...) admits a nonzero offset for count family ids 5, 10, 11, and the case plan's comparand is the set of families admitted (docs/dev-log/core070/data-required-case-plan.json); each admitted family is twinned here with an exposure offset. Fitting several families with an offset in one model is DATA-OFF-MIXED's obligation. The offset varies by cell, so intercept parity within 1e-4 is the evidence it is applied on both sides; the twin test also evaluates the Julia marginal without the offset at the fitted parameters (no refit) and asserts it is lower by more than 1. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
       },
       {
         "case_id": "P1-JULIA-DATA-OFF-ALL-COUNT-TPOIS-LAMBDA-LAMBDAT",
         "quantity": "Lambda Lambda' (6 x 6) of the tpois fit",
         "r_source": "test/fixtures/off_all_count_twin_p1.toml [tpois.lambda_lambdat]",
-        "julia_source": "f.Λ * f.Λ', fit as at test/test_off_all_count_twin_p1.jl:78",
+        "julia_source": "f.Λ * f.Λ', fit as at test/test_off_all_count_twin_p1.jl:82",
         "r_value": [
           0.41314118834975305,
           -0.2817789858944195,
@@ -308,28 +308,28 @@
         ],
         "abs_diff": 1.0257628872412106e-06,
         "tolerance": 0.001,
-        "tolerance_source": "test/test_off_all_count_twin_p1.jl:82",
+        "tolerance_source": "test/test_off_all_count_twin_p1.jl:86",
         "tolerance_source_line": "@test isapprox(f.Λ * f.Λ', _oac_mat(d[\"lambda_lambdat\"], p); atol = 1e-3, rtol = 0)",
-        "note": "truncated Poisson (family id 10), y >= 1, log link on the untruncated mean on both sides. p = 6, n = 150 (sha256 checked), one data set per family; R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family, K = 1, offset = log.(E)). The R batch case prepared one offset for three count families (ids 5, 10, 11) in one model; Julia has no fit that mixes families with an offset, so each family is its own single-family fit. The twin test also asserts that at the fitted values the marginal without the offset is lower by more than 1 (the offset is applied). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+        "note": "truncated Poisson (family id 10), y >= 1, log link on the untruncated mean on both sides. p = 6, n = 150 (sha256 checked), one data set per family; R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family, K = 1, offset = log.(E)). The row is a family-id admission-set case: the R batch case gll_prepare_offset(quote(e), c(5L, 10L, 11L), ...) admits a nonzero offset for count family ids 5, 10, 11, and the case plan's comparand is the set of families admitted (docs/dev-log/core070/data-required-case-plan.json); each admitted family is twinned here with an exposure offset. Fitting several families with an offset in one model is DATA-OFF-MIXED's obligation. The offset varies by cell, so intercept parity within 1e-4 is the evidence it is applied on both sides; the twin test also evaluates the Julia marginal without the offset at the fitted parameters (no refit) and asserts it is lower by more than 1. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
       },
       {
         "case_id": "P1-JULIA-DATA-OFF-ALL-COUNT-TNB2-LOGLIK",
         "quantity": "maximised logLik of the tnb2 exposure-offset fit",
         "r_source": "test/fixtures/off_all_count_twin_p1.toml [tnb2.loglik]",
-        "julia_source": "f.loglik, fit as at test/test_off_all_count_twin_p1.jl:78",
+        "julia_source": "f.loglik, fit as at test/test_off_all_count_twin_p1.jl:82",
         "r_value": -2016.2790672654837,
         "julia_value": -2016.27906722544,
         "abs_diff": 4.004368747700937e-08,
         "tolerance": 1e-06,
-        "tolerance_source": "test/test_off_all_count_twin_p1.jl:80",
+        "tolerance_source": "test/test_off_all_count_twin_p1.jl:84",
         "tolerance_source_line": "@test isapprox(f.loglik, Float64(d[\"loglik\"]); atol = 1e-6, rtol = 0)",
-        "note": "truncated nbinom2 (family id 11), y >= 1, per-trait dispersion on both sides (R exp(log_phi_truncnb2), Julia r of fit_truncated_nbinom2_gllvm_pertrait via disp_group = :species); drawn with size 2, every R dispersion inside (1e-3, 1e3), so no trait is at the Poisson limit. p = 6, n = 150 (sha256 checked), one data set per family; R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family, K = 1, offset = log.(E)). The R batch case prepared one offset for three count families (ids 5, 10, 11) in one model; Julia has no fit that mixes families with an offset, so each family is its own single-family fit. The twin test also asserts that at the fitted values the marginal without the offset is lower by more than 1 (the offset is applied). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+        "note": "truncated nbinom2 (family id 11), y >= 1, per-trait dispersion on both sides (R exp(log_phi_truncnb2), Julia r of fit_truncated_nbinom2_gllvm_pertrait via disp_group = :species); drawn with size 2, every R dispersion inside (1e-3, 1e3), so no trait is at the Poisson limit. p = 6, n = 150 (sha256 checked), one data set per family; R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family, K = 1, offset = log.(E)). The row is a family-id admission-set case: the R batch case gll_prepare_offset(quote(e), c(5L, 10L, 11L), ...) admits a nonzero offset for count family ids 5, 10, 11, and the case plan's comparand is the set of families admitted (docs/dev-log/core070/data-required-case-plan.json); each admitted family is twinned here with an exposure offset. Fitting several families with an offset in one model is DATA-OFF-MIXED's obligation. The offset varies by cell, so intercept parity within 1e-4 is the evidence it is applied on both sides; the twin test also evaluates the Julia marginal without the offset at the fitted parameters (no refit) and asserts it is lower by more than 1. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
       },
       {
         "case_id": "P1-JULIA-DATA-OFF-ALL-COUNT-TNB2-INTERCEPTS",
         "quantity": "trait intercepts (6 values) of the tnb2 fit; the offset is not absorbed into them",
         "r_source": "test/fixtures/off_all_count_twin_p1.toml [tnb2.beta]",
-        "julia_source": "f.β, fit as at test/test_off_all_count_twin_p1.jl:78",
+        "julia_source": "f.β, fit as at test/test_off_all_count_twin_p1.jl:82",
         "r_value": [
           0.7824772325691034,
           0.2631224807484016,
@@ -348,15 +348,15 @@
         ],
         "abs_diff": 1.0965250684114025e-05,
         "tolerance": 0.0001,
-        "tolerance_source": "test/test_off_all_count_twin_p1.jl:81",
+        "tolerance_source": "test/test_off_all_count_twin_p1.jl:85",
         "tolerance_source_line": "@test isapprox(f.β, Float64.(d[\"beta\"]); atol = 1e-4, rtol = 0)",
-        "note": "truncated nbinom2 (family id 11), y >= 1, per-trait dispersion on both sides (R exp(log_phi_truncnb2), Julia r of fit_truncated_nbinom2_gllvm_pertrait via disp_group = :species); drawn with size 2, every R dispersion inside (1e-3, 1e3), so no trait is at the Poisson limit. p = 6, n = 150 (sha256 checked), one data set per family; R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family, K = 1, offset = log.(E)). The R batch case prepared one offset for three count families (ids 5, 10, 11) in one model; Julia has no fit that mixes families with an offset, so each family is its own single-family fit. The twin test also asserts that at the fitted values the marginal without the offset is lower by more than 1 (the offset is applied). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+        "note": "truncated nbinom2 (family id 11), y >= 1, per-trait dispersion on both sides (R exp(log_phi_truncnb2), Julia r of fit_truncated_nbinom2_gllvm_pertrait via disp_group = :species); drawn with size 2, every R dispersion inside (1e-3, 1e3), so no trait is at the Poisson limit. p = 6, n = 150 (sha256 checked), one data set per family; R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family, K = 1, offset = log.(E)). The row is a family-id admission-set case: the R batch case gll_prepare_offset(quote(e), c(5L, 10L, 11L), ...) admits a nonzero offset for count family ids 5, 10, 11, and the case plan's comparand is the set of families admitted (docs/dev-log/core070/data-required-case-plan.json); each admitted family is twinned here with an exposure offset. Fitting several families with an offset in one model is DATA-OFF-MIXED's obligation. The offset varies by cell, so intercept parity within 1e-4 is the evidence it is applied on both sides; the twin test also evaluates the Julia marginal without the offset at the fitted parameters (no refit) and asserts it is lower by more than 1. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
       },
       {
         "case_id": "P1-JULIA-DATA-OFF-ALL-COUNT-TNB2-LAMBDA-LAMBDAT",
         "quantity": "Lambda Lambda' (6 x 6) of the tnb2 fit",
         "r_source": "test/fixtures/off_all_count_twin_p1.toml [tnb2.lambda_lambdat]",
-        "julia_source": "f.Λ * f.Λ', fit as at test/test_off_all_count_twin_p1.jl:78",
+        "julia_source": "f.Λ * f.Λ', fit as at test/test_off_all_count_twin_p1.jl:82",
         "r_value": [
           0.5836987835137125,
           -0.43441033888793373,
@@ -435,15 +435,15 @@
         ],
         "abs_diff": 1.300151496941293e-05,
         "tolerance": 0.001,
-        "tolerance_source": "test/test_off_all_count_twin_p1.jl:82",
+        "tolerance_source": "test/test_off_all_count_twin_p1.jl:86",
         "tolerance_source_line": "@test isapprox(f.Λ * f.Λ', _oac_mat(d[\"lambda_lambdat\"], p); atol = 1e-3, rtol = 0)",
-        "note": "truncated nbinom2 (family id 11), y >= 1, per-trait dispersion on both sides (R exp(log_phi_truncnb2), Julia r of fit_truncated_nbinom2_gllvm_pertrait via disp_group = :species); drawn with size 2, every R dispersion inside (1e-3, 1e3), so no trait is at the Poisson limit. p = 6, n = 150 (sha256 checked), one data set per family; R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family, K = 1, offset = log.(E)). The R batch case prepared one offset for three count families (ids 5, 10, 11) in one model; Julia has no fit that mixes families with an offset, so each family is its own single-family fit. The twin test also asserts that at the fitted values the marginal without the offset is lower by more than 1 (the offset is applied). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+        "note": "truncated nbinom2 (family id 11), y >= 1, per-trait dispersion on both sides (R exp(log_phi_truncnb2), Julia r of fit_truncated_nbinom2_gllvm_pertrait via disp_group = :species); drawn with size 2, every R dispersion inside (1e-3, 1e3), so no trait is at the Poisson limit. p = 6, n = 150 (sha256 checked), one data set per family; R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family, K = 1, offset = log.(E)). The row is a family-id admission-set case: the R batch case gll_prepare_offset(quote(e), c(5L, 10L, 11L), ...) admits a nonzero offset for count family ids 5, 10, 11, and the case plan's comparand is the set of families admitted (docs/dev-log/core070/data-required-case-plan.json); each admitted family is twinned here with an exposure offset. Fitting several families with an offset in one model is DATA-OFF-MIXED's obligation. The offset varies by cell, so intercept parity within 1e-4 is the evidence it is applied on both sides; the twin test also evaluates the Julia marginal without the offset at the fitted parameters (no refit) and asserts it is lower by more than 1. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
       },
       {
         "case_id": "P1-JULIA-DATA-OFF-ALL-COUNT-TNB2-DISPERSION",
         "quantity": "per-trait dispersion (6 values) of the tnb2 fit",
         "r_source": "test/fixtures/off_all_count_twin_p1.toml [tnb2.phi]",
-        "julia_source": "f.r, fit as at test/test_off_all_count_twin_p1.jl:78",
+        "julia_source": "f.r, fit as at test/test_off_all_count_twin_p1.jl:82",
         "r_value": [
           4.309589069610214,
           1.662130844376449,
@@ -462,9 +462,9 @@
         ],
         "abs_diff": 0.00046791344547081337,
         "tolerance": 0.001,
-        "tolerance_source": "test/test_off_all_count_twin_p1.jl:85",
+        "tolerance_source": "test/test_off_all_count_twin_p1.jl:89",
         "tolerance_source_line": "@test isapprox(getproperty(f, dfld), Float64.(d[\"phi\"]); atol = 1e-3, rtol = 0)",
-        "note": "truncated nbinom2 (family id 11), y >= 1, per-trait dispersion on both sides (R exp(log_phi_truncnb2), Julia r of fit_truncated_nbinom2_gllvm_pertrait via disp_group = :species); drawn with size 2, every R dispersion inside (1e-3, 1e3), so no trait is at the Poisson limit. p = 6, n = 150 (sha256 checked), one data set per family; R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family, K = 1, offset = log.(E)). The R batch case prepared one offset for three count families (ids 5, 10, 11) in one model; Julia has no fit that mixes families with an offset, so each family is its own single-family fit. The twin test also asserts that at the fitted values the marginal without the offset is lower by more than 1 (the offset is applied). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+        "note": "truncated nbinom2 (family id 11), y >= 1, per-trait dispersion on both sides (R exp(log_phi_truncnb2), Julia r of fit_truncated_nbinom2_gllvm_pertrait via disp_group = :species); drawn with size 2, every R dispersion inside (1e-3, 1e3), so no trait is at the Poisson limit. p = 6, n = 150 (sha256 checked), one data set per family; R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family, K = 1, offset = log.(E)). The row is a family-id admission-set case: the R batch case gll_prepare_offset(quote(e), c(5L, 10L, 11L), ...) admits a nonzero offset for count family ids 5, 10, 11, and the case plan's comparand is the set of families admitted (docs/dev-log/core070/data-required-case-plan.json); each admitted family is twinned here with an exposure offset. Fitting several families with an offset in one model is DATA-OFF-MIXED's obligation. The offset varies by cell, so intercept parity within 1e-4 is the evidence it is applied on both sides; the twin test also evaluates the Julia marginal without the offset at the fitted parameters (no refit) and asserts it is lower by more than 1. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
       }
     ]
   }
