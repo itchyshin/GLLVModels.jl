@@ -21,6 +21,53 @@ using GLLVModels, Test, Random, LinearAlgebra, Statistics
         @test s.gradient_norm < 1e-3
     end
 
+    @testset "sanity_multi — lambda_constraint pins are not parameters (refs #794)" begin
+        # R's sanity_multi reads the gradient at opt$par and pdHess from
+        # sdreport, both over the mapped-free parameter vector; a pinned
+        # loading is mapped off. The pinned entry's own gradient component is
+        # far from 0 at the constrained optimum and must not raise an alarm.
+        rng = MersenneTwister(7)
+        p, n = 5, 200
+        Λ_true = reshape([0.8, 0.3, 0.6, -0.4, 0.5], p, 1)
+        y = Λ_true * randn(rng, 1, n) + 0.5 * randn(rng, p, n)
+        M = fill(NaN, p, 1)
+        M[2, 1] = 0.3
+        fit = fit_gaussian_gllvm(y; K = 1, lambda_constraint = M)
+        pins = GLLVModels._lambda_constraint_pinned_theta_indices(fit)
+        @test length(pins) == 1
+        θ̂ = fit.pars.θ_packed
+        nll = GLLVModels._confint_reconstruct_nll(fit, y, nothing, nothing)
+        g_full = GLLVModels.ForwardDiff.gradient(nll, θ̂)
+        free = setdiff(eachindex(θ̂), pins)
+        @test abs(g_full[only(pins)]) > 1     # the pin is not at a stationary point
+        s = GLLVModels.sanity_multi(fit; y = y)
+        @test s.max_gradient == maximum(abs, g_full[free])
+        @test s.max_gradient < 1e-5
+        @test s.gradient_norm == norm(g_full[free])
+        @test s.gradient_ok
+        @test s.pd_hessian === true
+        @test s.pass
+        @test isempty(s.messages)
+
+        # lambda_constraint fits carry no fixed effects (X = nothing only), so
+        # there is no fixed-effect SE for a pinned loading to leak into.
+        @test s.max_se === missing
+    end
+
+    @testset "sanity_multi — unpinned fit uses the full gradient" begin
+        Random.seed!(10)
+        p, K, n = 5, 1, 400
+        Λ_true = reshape([0.7, 0.5, 0.4, -0.3, 0.2], p, K)
+        y = Λ_true * randn(K, n) + 0.5 * randn(p, n)
+        fit = fit_gaussian_gllvm(y; K = K)
+        @test isempty(GLLVModels._lambda_constraint_pinned_theta_indices(fit))
+        nll = GLLVModels._confint_reconstruct_nll(fit, y, nothing, nothing)
+        g = GLLVModels.ForwardDiff.gradient(nll, fit.pars.θ_packed)
+        s = GLLVModels.sanity_multi(fit; y = y)
+        @test s.max_gradient == maximum(abs, g)
+        @test s.gradient_norm == norm(g)
+    end
+
     @testset "sanity_multi — non-finite loadings fail" begin
         Random.seed!(11)
         p, K, n = 4, 1, 100

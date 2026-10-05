@@ -190,7 +190,10 @@ names and in R's order, followed by the Julia composite verdict:
   - `converged`: `fit.converged` when present (R: `opt\$convergence == 0`),
     `missing` on a fit type that does not record it.
   - `max_gradient`: `max |g|` of the packed-NLL gradient at `θ̂` (R: max
-    absolute gradient component of the TMB objective at the optimum).
+    absolute gradient component of the TMB objective at the optimum). On a
+    fit made with `lambda_constraint`, the pinned loadings are not
+    parameters and are left out, as R's `map` leaves them out of `opt\$par`;
+    the same holds for the Hessian behind `sdreport_ok` and `pd_hessian`.
   - `sdreport_ok`: whether the observed-information Hessian at `θ̂` could be
     computed and is finite (R: `sdreport()` succeeded). When it is `false`,
     `sdreport_error` follows with the reason, as in R.
@@ -216,7 +219,8 @@ The Julia composite verdict follows R's flags:
   - `pass`: `loadings_finite`, convergence not `false`, `pd_hessian` not
     `false` and `gradient_ok` not `false`.
   - `loadings_finite`: every loading entry (`_loadings(fit)`) is finite.
-  - `gradient_norm`: Euclidean norm of the packed-NLL gradient at `θ̂`.
+  - `gradient_norm`: Euclidean norm of the packed-NLL gradient at `θ̂`
+    (free parameters only, as for `max_gradient`).
   - `gradient_ok` — `gradient_norm < grad_tol` (or `missing`).
   - `messages`: one line per failed check.
 
@@ -256,7 +260,13 @@ function sanity_multi(fit; y = nothing, X = nothing, Σ_phy = nothing, grad_tol:
     if fit isa GllvmFit && y !== nothing
         θ̂ = fit.pars.θ_packed
         nll = _confint_reconstruct_nll(fit, y, X, Σ_phy)
+        # Loadings pinned by `lambda_constraint` are not parameters (gllvmTMB
+        # maps them off, so R's gradient and `pdHess` cover the free vector
+        # only): drop them from the gradient and the Hessian (refs #794).
+        pins = _lambda_constraint_pinned_theta_indices(fit)
+        free = setdiff(eachindex(θ̂), pins)
         g = ForwardDiff.gradient(nll, θ̂)
+        isempty(pins) || (g = g[free])
         max_gradient = maximum(abs, g)
         gradient_norm = LinearAlgebra.norm(g)
         gradient_ok = gradient_norm < grad_tol
@@ -266,6 +276,7 @@ function sanity_multi(fit; y = nothing, X = nothing, Σ_phy = nothing, grad_tol:
         catch
             nothing
         end
+        H === nothing || isempty(pins) || (H = H[free, free])
         sdreport_ok = H !== nothing && all(isfinite, H)
         pd_hessian = sdreport_ok ? isposdef((H .+ H') ./ 2) : false
         pd_hessian === false && push!(messages, "observed-information Hessian is not positive definite")
