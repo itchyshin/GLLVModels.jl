@@ -48,6 +48,8 @@ Usage:
   python3 tools/core070_isdm_p1_receipts.py --runs DIR --runtimes JSON [--allow-dirty]
   python3 tools/core070_isdm_p1_receipts.py --check
 where DIR holds isdm-p1/ (the R run plus run-commit.json) and carry-scan-p1.json.
+Rows another writer owns in case-map-isdm.json (the C3 campaign rows, which carry a
+`clause`) are left untouched: kept after this tool's rows and excluded from its counts.
 """
 import argparse
 import hashlib
@@ -277,8 +279,21 @@ def wired_overlay(row, committed):
     row["executable_case_ids"] = committed["executable_case_ids"]
     row["evidence_tier"] = "numeric"
     row["measured_against"] = committed.get("measured_against")
-    row["evidence"] = {**row["evidence"], "receipt": paths, "tier": ev.get("tier")}
+    new_ev = {**row["evidence"], "receipt": paths, "tier": ev.get("tier")}
+    # Keep the committed key order so a write leaves the case map byte-identical.
+    order = [k for k in ev if k in new_ev] + [k for k in new_ev if k not in ev]
+    row["evidence"] = {k: new_ev[k] for k in order}
     return True
+
+
+def own_rows(cm):
+    """This tool's rows. Rows carrying a `clause` (the C3 campaign rows) belong to
+    tools/true_parity/campaign/write_receipts.py and are never read or rewritten here."""
+    return [r for r in cm["rows"] if "clause" not in r]
+
+
+def foreign_rows(cm):
+    return [r for r in cm["rows"] if "clause" in r]
 
 
 def build_rows(in_scope, receipts, committed_rows=None):
@@ -389,12 +404,15 @@ def check():
     problems += provenance_problems(tracked, rc.get("glvmodels_commit"))
     receipts = {cid: receipt_info(path, rec) for cid, (path, rec) in tracked.items()}
     cm = load(ROOT / CASEMAP_REL)
+    mine = own_rows(cm)
     n_rows = 0
     try:
-        rows, counts = build_rows([r["source_id"] for r in cm["rows"]], receipts, cm["rows"])
+        rows, counts = build_rows([r["source_id"] for r in mine], receipts, mine)
         n_rows = len(rows)
-        if rows != cm["rows"]:
-            bad = [a["source_id"] for a, b in zip(rows, cm["rows"]) if a != b] or ["row count"]
+        if cm["rows"][:len(mine)] != mine:
+            problems.append("case-map: this tool's rows must precede the campaign rows")
+        if rows != mine:
+            bad = [a["source_id"] for a, b in zip(rows, mine) if a != b] or ["row count"]
             problems.append(f"case-map rows differ from the re-derivation: {', '.join(bad)}")
         if counts != cm["counts"]:
             problems.append(f"case-map counts {cm['counts']} != re-derived {counts}")
@@ -466,7 +484,8 @@ def main():
     in_scope = [r["source_id"] for r in carry["rows"]
                 if r["source_id"].startswith(FAMILY + "/") and r["status"] == "DANGLING"]
     old_map = ROOT / CASEMAP_REL
-    rows, counts = build_rows(in_scope, receipts, load(old_map)["rows"] if old_map.is_file() else None)
+    previous = load(old_map) if old_map.is_file() else {"rows": []}
+    rows, counts = build_rows(in_scope, receipts, own_rows(previous))
     write_json(ROOT / CASEMAP_REL, {
         "schema": 1, "reference_commit": P1_SHA, "scope": SCOPE, "note": NOTE,
         "generator": "tools/core070_isdm_p1_receipts.py", "glvmodels_commit": head,
@@ -475,7 +494,7 @@ def main():
             "rows_with_p0_evidence_record": sum(r["p0_evidence"]["recorded"] for r in rows),
             "rows_without_p0_evidence_record": sum(not r["p0_evidence"]["recorded"] for r in rows),
             "p0_raw_receipts_available_here": False},
-        "runtimes_seconds": runtimes.get(BATCH), "batch_artifacts": {BATCH: artifacts}, "rows": rows})
+        "runtimes_seconds": runtimes.get(BATCH), "batch_artifacts": {BATCH: artifacts}, "rows": rows + foreign_rows(previous)})
     print(FAMILY, json.dumps(counts))
     print("case receipts", len(receipts))
 
