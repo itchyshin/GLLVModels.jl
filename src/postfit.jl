@@ -1957,7 +1957,8 @@ Conditional latent scores for a Delta-lognormal fit: the per-site two-part Lapla
 mode `ẑₛ` (occurrence intercept-only, so only the positive part loads on `z`).
 
 On a fit made with an `offset` the mode search adds it to the count / positive-part
-predictor `η^c`, as at fit time: the stored training offset (`fit.offset`) when `Y` has
+predictor `η^c`, as a `predictor = :separate` fit did at fit time (a `:shared` fit also put
+it on the occurrence part, and its post-fit mode is not yet exact; see #788): the stored training offset (`fit.offset`) when `Y` has
 the training size, otherwise the `offset` you pass (a p×n matrix, a scalar or a length-p
 vector). New units from an offset fit without an `offset` are refused.
 """
@@ -2283,7 +2284,8 @@ Conditional latent scores for a Delta-Gamma fit: the per-site two-part Laplace m
 `ẑₛ` (occurrence intercept-only, so only the positive part loads on `z`).
 
 On a fit made with an `offset` the mode search adds it to the count / positive-part
-predictor `η^c`, as at fit time: the stored training offset (`fit.offset`) when `Y` has
+predictor `η^c`, as a `predictor = :separate` fit did at fit time (a `:shared` fit also put
+it on the occurrence part, and its post-fit mode is not yet exact; see #788): the stored training offset (`fit.offset`) when `Y` has
 the training size, otherwise the `offset` you pass (a p×n matrix, a scalar or a length-p
 vector). New units from an offset fit without an `offset` are refused.
 """

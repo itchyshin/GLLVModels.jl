@@ -9,7 +9,9 @@
   offset in `fit.offset` (`nothing` without one) and follow #787's rule: a `Y` of the training
   size uses the stored offset; new units take `offset = O` (a p×n matrix, a scalar or a length-p
   vector); new units from an offset fit without one raise an `ArgumentError`. On the two-part
-  fits the offset is on the count / positive-part predictor `η^c`, as at fit time. On p = 5,
+  fits the offset is on the count / positive-part predictor `η^c`, as at fit time for `predictor = :separate`. Delta fits with
+  `predictor = :shared` are not covered: their post-fit mode already ignores the occurrence
+  loadings, a separate older bug. On p = 5,
   n = 50, K = 1 fits with a `0.8 * randn` offset, the training-row link predictor missed
   `β + O + Λẑ_O` by 2.0 to 3.2 (by family) before and by at most 4.4e-16 after.
   `link_residual` on Gamma and Beta fits now includes the offset in the fitted trait means, as
