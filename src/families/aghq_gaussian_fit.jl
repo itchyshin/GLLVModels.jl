@@ -32,6 +32,9 @@ outer optimizer used by the Poisson and binomial candidates.
 Masks/missing responses and offsets are admitted for the ordinary Gaussian block.
 The masked exact marginal is used for baseline fitting; omitted entries are never
 included in the target likelihood. Structured masked/offset routes remain separate.
+A masked fit with `X = nothing` is still a zero-mean model; pass a one-hot trait design
+(`X[t, :, t] .= 1`) for per-trait intercepts. [`predict_missing`](@ref) needs the same
+`mask` passed again (`predict_missing(fit, Y; mask = mask)`).
 The fit's `integration` records requested/actual method, node count, starting
 vectors, controls, convergence, observed caches and input identity. AGHQ convergence
 and inference refer to the **frozen-node surrogate**, not its moving-node derivative.
