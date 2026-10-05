@@ -1,0 +1,87 @@
+{
+  "schema": "core070-namespace-2-p1-case-receipt/v1",
+  "case_id": "CORE070-NAMESPACE2-GLLVMTMB-NATIVE-FIT",
+  "verdict": "PASS",
+  "evidence_kind": "numeric_r_vs_julia",
+  "source_ids": [
+    "namespace/export/gllvmTMB"
+  ],
+  "batch": "tools/core070_namespace_2_batch.R + .jl, GLLVM_PARITY_PIN=P1",
+  "harness_pass": true,
+  "batch_status": "PASS",
+  "batch_verifier": {
+    "tool": "tools/core070_verify_namespace_2_batch.py",
+    "argv": "tools/core070_verify_namespace_2_batch.py --pin P1 --self-test --state {state}",
+    "status": "PASS",
+    "exit_code": 0,
+    "accept_marker": "CORE070_NAMESPACE_2_BATCH_VERIFIED",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-2-batch-p1/verify.txt"
+  },
+  "r_call": "gllvmTMB(value ~ 0 + trait + latent(0 + trait | site, d = 2, unique = FALSE), data = df_long_g, unit = \"site\", trait = \"trait\", family = gaussian(), control = gllvmTMBcontrol(n_init = 1L, se = FALSE)); coef(fit), logLik(fit)",
+  "julia_call": "fit_gaussian_gllvm(Y; K = 2, X = trait-indicator X); coef(fit), fit.logLik",
+  "fixture": "gaussian_fixture: set.seed(42), p = 5 traits, n = 80 sites, K = 2, Y row-centred",
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-2-batch-p1/julia-results.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-2-batch-p1/r-oracle.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-2-batch-p1/receipt.json"
+  ],
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "contract": "docs/dev-log/core070/true-parity-latest/namespace-2-batch-contract-p1.json",
+  "contract_sha256": "66bdd697d2ebdda4020629bbcc1791e20982aa3b1743735f27994e0376dd9e51",
+  "gllvmtmb_version": "0.7.1",
+  "library_namespace_sha256": "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c",
+  "library_pin_note": "the frozen library carries no CORE070_SOURCE_PIN.toml marker; the runner checked its installed NAMESPACE sha256 and version against tools/core070_oracle_pins.toml [P1]",
+  "r_version": "R version 4.6.0 (2026-04-24)",
+  "glvmodels_commit": "a522e288c678bdd1f8eb8818f1d8a928ebeb9214",
+  "glvmodels_worktree_dirty": [],
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=1",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-NAMESPACE2-GLLVMTMB-NATIVE-FIT",
+        "quantity": "logLik",
+        "max_abs_diff": 1.134594640461728e-09,
+        "tolerance": 0.0001,
+        "tolerance_rule": "harness tolerance tol[\"loglik_delta\"] = tol[\"coef_delta\"] = 1e-4 in tools/core070_namespace_2_batch.jl (the contract's prose says \"<=1e-6\"; the harness asserts 1e-4); max |R - Julia| elementwise",
+        "n_values": 1,
+        "diff_source": "recomputed from raw R and Julia values",
+        "r_value": [
+          -495.85539186606763
+        ],
+        "julia_value": [
+          -495.85539186493304
+        ],
+        "discriminating": true
+      },
+      {
+        "case_id": "CORE070-NAMESPACE2-GLLVMTMB-NATIVE-FIT",
+        "quantity": "coef (trait intercepts)",
+        "max_abs_diff": 1.3591331204422618e-14,
+        "tolerance": 0.0001,
+        "tolerance_rule": "harness tolerance tol[\"loglik_delta\"] = tol[\"coef_delta\"] = 1e-4 in tools/core070_namespace_2_batch.jl (the contract's prose says \"<=1e-6\"; the harness asserts 1e-4); max |R - Julia| elementwise",
+        "n_values": 5,
+        "diff_source": "recomputed from raw R and Julia values",
+        "r_value": [
+          -1.3605902881620823e-14,
+          1.2924446509686475e-14,
+          1.2953993463519705e-14,
+          -4.9899341548117425e-15,
+          1.7505060921958366e-15
+        ],
+        "julia_value": [
+          -1.457167719820518e-17,
+          -2.4980018054066023e-17,
+          -3.8857805861880476e-17,
+          4.718447854656915e-17,
+          -4.302114220422482e-17
+        ],
+        "discriminating_note": "Y is row-centred in the fixture, so every R intercept is ~1e-14 (below 1e-10): this comparison cannot tell a right implementation from a zero one. The logLik comparison above is the discriminating check.",
+        "discriminating": false,
+        "degenerate_reason": "every |R value| < 1e-10 (max 1.36e-14)"
+      }
+    ]
+  }
+}
