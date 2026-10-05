@@ -279,7 +279,10 @@ def wired_overlay(row, committed):
     row["executable_case_ids"] = committed["executable_case_ids"]
     row["evidence_tier"] = "numeric"
     row["measured_against"] = committed.get("measured_against")
-    row["evidence"] = {**row["evidence"], "receipt": paths, "tier": ev.get("tier")}
+    new_ev = {**row["evidence"], "receipt": paths, "tier": ev.get("tier")}
+    # Keep the committed key order so a write leaves the case map byte-identical.
+    order = [k for k in ev if k in new_ev] + [k for k in new_ev if k not in ev]
+    row["evidence"] = {k: new_ev[k] for k in order}
     return True
 
 
