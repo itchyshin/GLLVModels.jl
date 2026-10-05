@@ -4,12 +4,12 @@
 ## exact commit in a lane-local library; set GLLVM_P1_RLIB to it.
 ## Run from test/fixtures/:  Rscript gen_off_all_count_twin_p1.R
 ##
-## Fit-level twin for the core070 row data/DATA-OFF-ALL-COUNT. The R batch case prepares one exposure
-## offset for three count families (family ids 5, 10, 11: nbinom2(), truncated_poisson(),
-## truncated_nbinom2()) and replays to c(1, 2, 4) with no fit number. Here each of the three families
-## is fitted with an exposure offset(log(e)); the Julia side is test_off_all_count_twin_p1.jl.
-## Julia has no fit that mixes families with an offset, so the three families are three single-family
-## fits, not one mixed-family model.
+## Fit-level twin for the core070 row data/DATA-OFF-ALL-COUNT, a family-id admission-set case: the R
+## batch case gll_prepare_offset(quote(e), c(5L, 10L, 11L), ...) admits a nonzero offset for count
+## family ids 5, 10, 11 (nbinom2(), truncated_poisson(), truncated_nbinom2()) and replays to c(1, 2, 4)
+## with no fit number. Here each admitted family is fitted with an exposure offset(log(e)); the Julia
+## side is test_off_all_count_twin_p1.jl. Fitting several families with an offset in one model is
+## DATA-OFF-MIXED's obligation, not this row's.
 ##
 ## One design per family, p = 6 traits, n = 150 units, seed 20261005, one latent factor:
 ##   value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE)
@@ -18,8 +18,11 @@
 ##   tnb2  : truncated_nbinom2(), size 2, per-trait phi, y >= 1.
 ## The exposure e varies by cell (runif 0.5 to 3) and is drawn separately for each family.
 ## Every fit must converge with a positive-definite Hessian, and every phi must sit well inside
-## (1e-3, 1e3) so no trait is at the Poisson limit (asserted). That the offset is not absorbed (the
-## fit without it differs) is checked on the Julia side, in the twin test. (R's own no-offset
+## (1e-3, 1e3) so no trait is at the Poisson limit (asserted). The real evidence that the offset is
+## applied is R-vs-Julia intercept parity: the offset varies by cell, so ignoring it on either side
+## would move beta far beyond the 1e-4 tolerance. The twin test also evaluates the Julia marginal
+## without the offset at the fitted parameters (no refit) and asserts it is lower by more than 1.
+## (R's own no-offset
 ## truncated_nbinom2 fit of these data stops at "false convergence (8)", so no R value is recorded
 ## for it.)
 rlib <- Sys.getenv("GLLVM_P1_RLIB", "")

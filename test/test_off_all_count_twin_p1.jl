@@ -1,10 +1,12 @@
 # gllvm-parity-tag: P1
 #
 # Fit-level twin for the core070 row data/DATA-OFF-ALL-COUNT against gllvmTMB at P1
-# (9539352f66f2db2cc26b1c393e67212a359b60c9). The R batch case prepares one exposure offset for three
-# count families (family ids 5, 10, 11: nbinom2, truncated Poisson, truncated nbinom2) and replays to
-# a vector with no fit number. Here each of the three families is fitted with an exposure offset, in R
-# and in Julia, and the maximised logLik and the parameters are compared. No R at test time: R's
+# (9539352f66f2db2cc26b1c393e67212a359b60c9). The row is a family-id admission-set case: the R batch
+# case gll_prepare_offset(quote(e), c(5L, 10L, 11L), ...) admits a nonzero offset for count family ids
+# 5, 10 and 11 (nbinom2, truncated Poisson, truncated nbinom2) and replays to a vector with no fit
+# number; the case plan's comparand is the set of families admitted
+# (docs/dev-log/core070/data-required-case-plan.json). Here each admitted family is twinned with an
+# exposure offset, in R and in Julia, and the maximised logLik and the parameters are compared. No R at test time: R's
 # values are read from test/fixtures/off_all_count_twin_p1.toml (generated once by
 # test/fixtures/gen_off_all_count_twin_p1.R against a lane-local gllvmTMB install at the pin; the file
 # records R version, commit and the data sha256). Each R fit converged with a positive-definite
@@ -13,8 +15,10 @@
 # R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), p = 6,
 # n = 150, with family = nbinom2(), truncated_poisson() or truncated_nbinom2(), one data set each.
 # Julia: fit_gllvm(Y; family, K = 1, offset = log.(E)), with disp_group = :species for the two NB2
-# families (per-trait dispersion, as in R). Julia has no fit that mixes families with an offset, so
-# the three families are three single-family fits, not R's one mixed-family model.
+# families (per-trait dispersion, as in R). Fitting several families with an offset in one model is
+# DATA-OFF-MIXED's obligation, not this row's. The earlier non-binding reason (commit 4ae7e109d: a
+# mixed-family offset vector) no longer holds: the R case's last argument is a trait label, not a
+# family, and the truncated families 10 and 11 are now covered.
 #
 # Tolerances are those of the sibling data twins (test_data_twins_p1.jl), not loosened to pass:
 # logLik 1e-6 (absolute), intercepts 1e-4, Lambda Lambda' 1e-3, dispersion 1e-3. The sign of a K = 1
