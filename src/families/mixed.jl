@@ -200,15 +200,20 @@ end
 # / `_grouped_laplace_mode_logpost`; see #507/#509/#500). The step-halving line
 # search inside `_mixed_laplace_mode` below accepts a trial z only when it raises
 # this value. Missing cells are dropped, matching `_mixed_laplace_mode` itself.
+# Linear predictor of trait `t` before clamping: β_t + offset_t + (Λz)_t. With no offset
+# the expression is exactly the pre-offset `β[t] + η[t]`, so offset-free fits are unchanged.
+@inline _mixed_eta(β, η, ::Nothing, t) = β[t] + η[t]
+@inline _mixed_eta(β, η, offset, t) = β[t] + offset[t] + η[t]
+
 function _mixed_logpost(families::AbstractVector, links::AbstractVector,
         y::AbstractVector, n::AbstractVector, Λ::AbstractMatrix, β::AbstractVector,
-        z::AbstractVector)
+        z::AbstractVector; offset = nothing)
     p = size(Λ, 1)
     η = Λ * z
     q = -0.5 * dot(z, z)
     @inbounds for t in 1:p
         ismissing(y[t]) && continue
-        ηt = _clamp_eta(β[t] + η[t])
+        ηt = _clamp_eta(_mixed_eta(β, η, offset, t))
         μt = _clamp_mu(families[t], linkinv(links[t], ηt))
         q += _glm_logpdf(families[t], μt, n[t], y[t])
     end
@@ -258,7 +263,8 @@ end
 # noise.
 function _mixed_laplace_mode(families::AbstractVector, links::AbstractVector,
         y::AbstractVector, n::AbstractVector, Λ::AbstractMatrix, β::AbstractVector;
-        maxiter::Integer = 100, tol::Real = 1e-9, grad_tol::Real = 1e-6, nd_tol::Real = 1e-12, z_init = nothing)
+        maxiter::Integer = 100, tol::Real = 1e-9, grad_tol::Real = 1e-6, nd_tol::Real = 1e-12, z_init = nothing,
+        offset = nothing)
     p, K = size(Λ)
     T = promote_type(eltype(Λ), eltype(β))
     z = z_init === nothing ? zeros(T, K) : collect(T, z_init)
@@ -272,7 +278,7 @@ function _mixed_laplace_mode(families::AbstractVector, links::AbstractVector,
             if ismissing(y[t])                  # NA-aware FIML: drop the missing cell
                 s[t] = zero(T); W[t] = zero(T)  # 0 score/weight ⇒ leaves A SPD, off the mode
             else
-                ηt = _clamp_eta(β[t] + η[t])
+                ηt = _clamp_eta(_mixed_eta(β, η, offset, t))
                 μt = _clamp_mu(families[t], linkinv(links[t], ηt))
                 met = mu_eta(links[t], ηt)
                 s[t] = _glm_score(families[t], μt, n[t], met, y[t])
@@ -305,14 +311,14 @@ function _mixed_laplace_mode(families::AbstractVector, links::AbstractVector,
         if (!linesearch_only || at_floor) && norm(Δ) <= 1e-3 * (1 + norm(z))
             z = z .+ Δ
         else
-            q0 = _mixed_logpost(families, links, y, n, Λ, β, z)
+            q0 = _mixed_logpost(families, links, y, n, Λ, β, z; offset = offset)
             if isfinite(q0)
                 zprev = z
                 accepted = false
                 step = 1.0
                 for _half in 1:30
                     ztrial = z .+ step .* Δ
-                    q1 = _mixed_logpost(families, links, y, n, Λ, β, ztrial)
+                    q1 = _mixed_logpost(families, links, y, n, Λ, β, ztrial; offset = offset)
                     if isfinite(q1) && q1 >= q0
                         z = ztrial
                         accepted = true
@@ -340,10 +346,10 @@ end
 # Laplace log-marginal for one mixed site: Σ_t ℓ_t(ẑ) − ½ẑ'ẑ − ½logdet(Λ'WΛ + I).
 function _mixed_loglik_site(families::AbstractVector, links::AbstractVector,
         y::AbstractVector, n::AbstractVector, Λ::AbstractMatrix, β::AbstractVector;
-        maxiter::Integer = 100, tol::Real = 1e-9, z_init = nothing)
+        maxiter::Integer = 100, tol::Real = 1e-9, z_init = nothing, offset = nothing)
     p = size(Λ, 1)
     z, ok = _mixed_laplace_mode(families, links, y, n, Λ, β;
-                                maxiter = maxiter, tol = tol, z_init = z_init)
+                                maxiter = maxiter, tol = tol, z_init = z_init, offset = offset)
     # Larger-budget retry (#507/#509 review pattern): a genuinely converging site
     # can still need more than the default `maxiter` Fisher-scored steps under
     # ill-conditioned cross-family curvature. Retry from the SAME `z_init` (zero
@@ -351,7 +357,8 @@ function _mixed_loglik_site(families::AbstractVector, links::AbstractVector,
     # failure; runs only where the default budget failed, so every site that
     # converged within `maxiter` keeps its original path and iteration count.
     ok || ((z, ok) = _mixed_laplace_mode(families, links, y, n, Λ, β;
-                                         maxiter = 20 * maxiter, tol = tol, z_init = z_init))
+                                         maxiter = 20 * maxiter, tol = tol, z_init = z_init,
+                                         offset = offset))
     # A search that did not certify a stationary point must not produce a
     # finite value: -Inf makes the fitter's own 1e12 failure sentinel fire
     # instead of a silently wrong log-likelihood (#503, the #479/#507/#509/#500
@@ -367,7 +374,7 @@ function _mixed_loglik_site(families::AbstractVector, links::AbstractVector,
         if ismissing(y[t])                      # NA-aware FIML: drop the missing cell
             W[t] = zero(T)                      # 0 weight (off A); skipped in the ℓ sum
         else
-            ηt = _clamp_eta(β[t] + η[t])
+            ηt = _clamp_eta(_mixed_eta(β, η, offset, t))
             μt = _clamp_mu(families[t], linkinv(links[t], ηt))
             met = mu_eta(links[t], ηt)
             # Per-trait log-det curvature. Each trait takes ITS OWN family's
@@ -400,15 +407,17 @@ Total Laplace log-marginal over the `n` sites (columns) of a MIXED-family GLLVM.
 `families`/`links` are length-`p` per-trait recipes (dispersion baked into the
 family markers); `Y`, `N` are p×n response and trial-count matrices; `Λ` p×K;
 `β` length-p. Reuses the family-generic per-observation dispatch of
-families/laplace.jl on a per-trait basis.
+families/laplace.jl on a per-trait basis. `offset` (`nothing` or a p×n matrix) is added
+to the linear predictor, η = β + offset + Λz.
 """
 function mixed_marginal_loglik_laplace(families::AbstractVector, links::AbstractVector,
         Y::AbstractMatrix, N::AbstractMatrix, Λ::AbstractMatrix, β::AbstractVector;
-        kwargs...)
+        offset = nothing, kwargs...)
     acc = zero(promote_type(eltype(Λ), eltype(β)))
     @inbounds for i in axes(Y, 2)
+        oi = offset === nothing ? nothing : view(offset, :, i)
         acc += _mixed_loglik_site(families, links, view(Y, :, i), view(N, :, i),
-                                  Λ, β; kwargs...)
+                                  Λ, β; offset = oi, kwargs...)
     end
     return acc
 end
@@ -446,6 +455,8 @@ Fields:
 - `n_disp::Int` — number of dispersion-carrying traits.
 - `link::Link` — convenience (`links[1]`); not load-bearing.
 - `loglik::Float64`, `converged::Bool`, `iterations::Int` — universal fit fields.
+- `offset` — the p×n training offset the fit was made with (`nothing` when it had
+  none); [`predict`](@ref) and [`getLV`](@ref) use it by default.
 """
 struct MixedFamilyFit
     β::Vector{Float64}
@@ -459,7 +470,14 @@ struct MixedFamilyFit
     loglik::Float64
     converged::Bool
     iterations::Int
+    offset::Union{Nothing, Matrix{Float64}}   # training offset (p×n); `nothing` = none
 end
+
+# Pre-offset compat tier (11 positional args): no stored training offset.
+MixedFamilyFit(β, Λ, families, links, dispersion, disp_index, n_disp, link,
+               loglik, converged, iterations) =
+    MixedFamilyFit(β, Λ, families, links, dispersion, disp_index, n_disp, link,
+                   loglik, converged, iterations, nothing)
 
 function Base.show(io::IO, f::MixedFamilyFit)
     p, K = size(f.Λ)
@@ -535,6 +553,11 @@ Arguments:
 - `links` — length-`p` links; defaults to each family's canonical link.
 - `K::Integer` — latent dimension.
 - `N` — Binomial trial counts (`p×n`); defaults to all-ones.
+- `offset` — a known addition to the linear predictor, η = β + offset + Λz: a `p×n`
+  matrix (the layout of `Y`), a scalar, or a length-`p` vector (one per trait),
+  normalised as in [`fit_gllvm`](@ref). A zero offset on a non-count trait next to
+  nonzero offsets on the count traits is the usual mixed-family use (an exposure
+  `log(e)` on the counts only). The fit keeps it in `fit.offset`.
 
 The L-BFGS gradient is a DIRECT ForwardDiff gradient of the pure-value mixed
 marginal (correctness-first v1; analytic per-trait kernels are future performance
@@ -546,8 +569,9 @@ function fit_mixed_gllvm(Y::AbstractMatrix; families::AbstractVector, K::Integer
         N::Union{Nothing, AbstractMatrix} = nothing,
         β_init = nothing, Λ_init = nothing, dispersion_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
-        newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+        newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, offset = nothing)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, caller = "fit_mixed_gllvm")
     length(families) == p || throw(DimensionMismatch(
         "families has length $(length(families)); expected p = $p (one per trait/row)"))
     links_v = links === nothing ? Link[default_link(fam) for fam in families] :
@@ -567,6 +591,9 @@ function fit_mixed_gllvm(Y::AbstractMatrix; families::AbstractVector, K::Integer
         Zemp[t, :] = _mixed_pseudo_link_row(families[t], links_v[t],
                                             view(Y, t, :), view(Nm, t, :))
     end
+    # Offset (η = β + offset + Λz): take it out of the link-scale pseudodata. A missing
+    # cell may carry a non-finite offset; its pseudodata is a fill value, left as is.
+    offset === nothing || (Zemp .-= ifelse.(isfinite.(offset), offset, 0.0))
     β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
     Λ0 = if Λ_init === nothing
         Zc = Zemp .- β0
@@ -600,7 +627,7 @@ function fit_mixed_gllvm(Y::AbstractMatrix; families::AbstractVector, K::Integer
     # marginal (authorized v1 path; FD-verified ≤ 1e-6).
     value_only(θ) = _mixed_marginal_loglik_packed(
         θ, Y, Nm, p, K, families_bare, links_v, disp_index;
-        maxiter = newton_maxiter, tol = newton_tol)
+        maxiter = newton_maxiter, tol = newton_tol, offset = offset)
     value_grad(θ) = (value_only(θ), ForwardDiff.gradient(value_only, θ))
     negll_fg!(F, G, θ) = _penalized_negloglik_fg!(F, G, value_grad, θ)
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
@@ -615,7 +642,7 @@ function fit_mixed_gllvm(Y::AbstractMatrix; families::AbstractVector, K::Integer
         disp_index[t] > 0 && (dispersion[t] = _positive_from_log(θ̂[p + rr + disp_index[t]]))
     end
     return MixedFamilyFit(β̂, Λ̂, families_bare, links_v, dispersion, disp_index,
-                          n_disp, links_v[1], _fit_verdict(res)...)
+                          n_disp, links_v[1], _fit_verdict(res)..., _stored_offset(offset))
 end
 
 # ===========================================================================
@@ -629,10 +656,18 @@ end
 
 Conditional latent-variable scores (per-site Laplace mode `ẑₛ`) for a mixed fit.
 `rotate=true` applies the canonical SVD rotation of `Λ`.
+
+On a fit made with an `offset` the mode search uses it (η = β + offset + Λz): the
+stored training offset (`fit.offset`) when `Y` has the training size, otherwise the
+`offset` you pass (a p×n matrix, a scalar or a length-p vector). New units from an
+offset fit without an `offset` are refused, as gllvmTMB refuses `newdata` that lacks
+the offset variable.
 """
 function getLV(fit::MixedFamilyFit, Y::AbstractMatrix;
-               N::Union{Nothing, AbstractMatrix} = nothing, rotate::Bool = true)
+               N::Union{Nothing, AbstractMatrix} = nothing, rotate::Bool = true,
+               offset = nothing)
     p, n = size(Y)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "getLV")
     Nm = N === nothing ? ones(Int, p, n) : N
     K = size(fit.Λ, 2)
     # dispersion[t] is NaN for non-dispersion traits; a unit sentinel keeps the
@@ -645,7 +680,8 @@ function getLV(fit::MixedFamilyFit, Y::AbstractMatrix;
         # returns, converged or not, same as the pre-#503 code, which had no
         # convergence flag to discard in the first place.
         z, _ = _mixed_laplace_mode(fams_t, fit.links, view(Y, :, s), view(Nm, :, s),
-                                   fit.Λ, fit.β)
+                                   fit.Λ, fit.β;
+                                   offset = O === nothing ? nothing : view(O, :, s))
         Z[:, s] = z
     end
     Zt = permutedims(Z)
@@ -658,14 +694,21 @@ end
 In-sample fitted values at the Laplace mode. `type=:link` returns
 `η[t,s] = β_t + (Λ ẑ_s)_t`; `type=:response` the per-trait inverse-link
 `linkinv(link_t, η[t,s])`.
+
+On a fit made with an `offset`, `η` includes it: the stored training offset
+(`fit.offset`) when `Y` has the training size, otherwise the `offset` you pass.
+New units from an offset fit without an `offset` are refused (see [`getLV`](@ref)).
 """
 function predict(fit::MixedFamilyFit, Y::AbstractMatrix;
-                 type::Symbol = :response, N::Union{Nothing, AbstractMatrix} = nothing)
+                 type::Symbol = :response, N::Union{Nothing, AbstractMatrix} = nothing,
+                 offset = nothing)
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
     p, n = size(Y)
-    Z = getLV(fit, Y; N = N, rotate = false)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict")
+    Z = getLV(fit, Y; N = N, rotate = false, offset = O)
     η = fit.β .+ fit.Λ * Z'
+    O === nothing || (η .+= O)
     type === :link && return η
     out = similar(η, Float64)
     @inbounds for s in 1:n, t in 1:p
