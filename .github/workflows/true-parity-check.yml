@@ -3,7 +3,8 @@ name: True-parity check negative controls
 # runs against test/fixtures/true_parity/ via PARITY_REF=FS, no gllvmTMB clone, no network. It also runs the
 # assembler's own controls and `true_parity_assemble.py --check`, so a PR that edits a case map, the
 # behaviour-equivalence table or the C6 decisions without regenerating scoreboard.md, case-map-assembled.json
-# and reverse-gap.json fails here instead of merging a stale ledger.
+# and reverse-gap.json fails here instead of merging a stale ledger. It also runs every cheap receipt-tool
+# --check (pure Python + git), so a case map whose rows or counts drift from its receipts fails here too.
 # PR-only + workflow_dispatch, ubuntu-only: routine checks default to local-equivalent, cheap
 # CI per AGENTS.md / the maintainer's GitHub Actions cost discipline.
 on:
@@ -22,6 +23,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          # The receipt checks compare each receipt with git history (run commits must be ancestors of
+          # HEAD; glvmodels_src_tree is read as <run commit>:src), so a shallow clone cannot run them.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -31,3 +36,27 @@ jobs:
       - run: node tools/test_true_parity_check.mjs
       - run: python3 tools/test_true_parity_assemble.py
       - run: python3 tools/true_parity_assemble.py --check
+      # Receipt-tool --check modes: pure Python + git, no R, no Julia, no gllvmTMB clone (GLLVMTMB_DIR unset).
+      # core070_postfit_p1_receipts.py has only --check-twins; argparse resolves --check to it.
+      # Not here: core070_covariance_p1_receipts.py (no --check mode) and core070_grouping_p1_receipts.py
+      # (its --check needs run commit db5b9ed2e, which is not an ancestor of main after #593's squash merge).
+      - name: Receipt tools --check
+        run: |
+          fail=0
+          for tool in \
+            tools/core070_aghq_p1_receipts.py \
+            tools/core070_data_p1_receipts.py \
+            tools/core070_family_p1_receipts.py \
+            tools/core070_inference_p1_receipts.py \
+            tools/core070_isdm_p1_receipts.py \
+            tools/core070_namespace_2_p1_receipts.py \
+            tools/core070_postfit_p1_receipts.py \
+            tools/core070_behaviour_receipts.py \
+            tools/true_parity_fixture_receipts.py \
+            tools/true_parity_bridge_readback_receipt.py \
+            tools/true_parity/campaign/write_receipts.py; do
+            echo "::group::$tool --check"
+            python3 "$tool" --check || { echo "::error::$tool --check failed"; fail=1; }
+            echo "::endgroup::"
+          done
+          exit $fail
