@@ -78,8 +78,9 @@
           4.718447854656915e-17,
           -4.302114220422482e-17
         ],
+        "discriminating_note": "Y is row-centred in the fixture, so every R intercept is ~1e-14 (below 1e-10): this comparison cannot tell a right implementation from a zero one. The logLik comparison above is the discriminating check.",
         "discriminating": false,
-        "discriminating_note": "Y is row-centred in the fixture, so every R intercept is ~1e-14 (below 1e-10): this comparison cannot tell a right implementation from a zero one. The logLik comparison above is the discriminating check."
+        "degenerate_reason": "every |R value| < 1e-10 (max 1.36e-14)"
       }
     ]
   }
