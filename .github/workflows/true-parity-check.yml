@@ -15,6 +15,9 @@ on:
       - 'tools/true_parity_assemble.py'
       - 'tools/test_true_parity_assemble.py'
       - 'test/fixtures/true_parity/**'
+      - 'tools/core070_*_receipts.py'
+      - 'tools/true_parity_*_receipt*.py'
+      - 'tools/true_parity/campaign/**'
       - 'docs/dev-log/core070/true-parity-latest/**'
       - '.github/workflows/true-parity-check.yml'
   workflow_dispatch:
