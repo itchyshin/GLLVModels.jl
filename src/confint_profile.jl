@@ -446,6 +446,7 @@ function profile_ci(fit::GllvmFit, param_index::Integer;
         throw(ArgumentError("profile_max_expand/max_expand must be positive; got $max_expand_eff"))
     max_bisect_eff > 0 ||
         throw(ArgumentError("profile_max_bisect/max_bisect must be positive; got $max_bisect_eff"))
+    _check_unpinned_refit(fit, "profile_ci")
     _has_lv_predictor(fit) && throw(ArgumentError(
         "profile_ci for fit_gaussian_gllvm(...; X_lv=...) is not admitted in the C1 predictor-informed latent-score path; use extract_lv_effects for point estimates"))
     y === nothing && throw(ArgumentError(
@@ -700,6 +701,7 @@ function tmbprofile_wrapper(fit::GllvmFit, param_index::Integer;
                             y::Union{Nothing, AbstractMatrix} = nothing,
                             X::Union{Nothing, AbstractArray{<:Real, 3}} = nothing,
                             Σ_phy::Union{Nothing, AbstractMatrix} = nothing)
+    _check_unpinned_refit(fit, "tmbprofile_wrapper")
     _has_lv_predictor(fit) && throw(ArgumentError(
         "tmbprofile_wrapper for fit_gaussian_gllvm(...; X_lv=...) is not admitted in the C1 predictor-informed latent-score path"))
     y === nothing && throw(ArgumentError(
