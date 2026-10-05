@@ -137,6 +137,35 @@ _mixed_default_logdisp(::NegativeBinomial) = log(10.0)
 _mixed_default_logdisp(::Gamma)            = log(2.0)
 _mixed_default_logdisp(::Beta)             = log(10.0)
 
+# Offset admission, row-wise per trait, mirroring gllvmTMB's gll_prepare_offset at P1
+# (R/offset.R, `.gll_offset_count_family_ids <- c(2L, 5L, 10L, 11L, 15L)`): a nonzero
+# offset is admitted only on a count family. Of the families fit_mixed_gllvm supports, R
+# id 2 is Poisson and R id 5 (nbinom2) is NegativeBinomial; R's truncated_poisson,
+# truncated_nbinom2 and nbinom1 have no mixed-family marker here. Normal (R 0), Binomial
+# (R 1), Gamma (R 4) and Beta (R 7) are refused. R's one exception, a Bernoulli-cloglog
+# offset under its integrated two-source contract, is not admitted here (conservative).
+# A zero offset is always allowed, as in R; a non-finite offset can only sit on a missing
+# cell (checked by _normalize_offset) and is not gated.
+_mixed_offset_admitted(::Poisson)          = true
+_mixed_offset_admitted(::NegativeBinomial) = true
+_mixed_offset_admitted(fam)                = false
+
+function _check_mixed_offset_admission(offset, families)
+    offset === nothing && return nothing
+    bad = String[]
+    for t in eachindex(families)
+        _mixed_offset_admitted(families[t]) && continue
+        any(o -> isfinite(o) && o != 0, view(offset, t, :)) &&
+            push!(bad, "trait $t uses $(nameof(typeof(families[t])))")
+    end
+    isempty(bad) || throw(ArgumentError(
+        "fit_mixed_gllvm: offsets are supported for count families (Poisson, " *
+        "NegativeBinomial) only; " * join(bad, ", ") * ". An offset is a multiplicative " *
+        "rate adjustment on the log link; set the offset to 0 on the cells of a non-count " *
+        "trait (an offset of zero leaves that trait unchanged)."))
+    return nothing
+end
+
 """
     _mixed_family_layout(families) -> (disp_index, n_disp)
 
@@ -557,7 +586,13 @@ Arguments:
   matrix (the layout of `Y`), a scalar, or a length-`p` vector (one per trait),
   normalised as in [`fit_gllvm`](@ref). A zero offset on a non-count trait next to
   nonzero offsets on the count traits is the usual mixed-family use (an exposure
-  `log(e)` on the counts only). The fit keeps it in `fit.offset`.
+  `log(e)` on the counts only). The fit keeps it in `fit.offset`. Admission is row-wise
+  per trait, as in gllvmTMB's offset gate: a nonzero offset is accepted only on a count
+  trait, `Poisson()` (gllvmTMB `poisson`, family id 2) or `NegativeBinomial()` (gllvmTMB
+  `nbinom2`, id 5). A nonzero finite offset on a `Normal()`, `Binomial()`, `Gamma()` or
+  `Beta()` trait raises an `ArgumentError` naming the trait and family; a zero offset is
+  accepted on every trait. gllvmTMB's Bernoulli-cloglog exception (its integrated
+  two-source contract) is not admitted here.
 
 The L-BFGS gradient is a DIRECT ForwardDiff gradient of the pure-value mixed
 marginal (correctness-first v1; analytic per-trait kernels are future performance
@@ -584,6 +619,7 @@ function fit_mixed_gllvm(Y::AbstractMatrix; families::AbstractVector, K::Integer
 
     # Layout (single source of truth) — also validates the families.
     disp_index, n_disp = _mixed_family_layout(families)
+    _check_mixed_offset_admission(offset, families)
 
     # Family-aware PPCA warm start: per-trait link-scale pseudodata, one SVD.
     Zemp = Matrix{Float64}(undef, p, n)
