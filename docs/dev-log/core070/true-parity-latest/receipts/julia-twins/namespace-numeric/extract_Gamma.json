@@ -1,0 +1,103 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "namespace/export/extract_Gamma"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#684",
+  "generator": "tools/true_parity_cross_lineage_receipt.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "d8c33ec8e7d89ff70fbe96ea3e15ba88fc25ae40",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/cross_lineage_p1.toml",
+      "sha256": "c81a6b16bf4f5423d61912d09170f815bdb80123ec0aaf4775974705f9be88ec"
+    },
+    {
+      "path": "test/fixtures/cross_lineage_p1_data.csv",
+      "sha256": "27769dbdd617dda5cead7548ffb48de68f454bb31d2ac42656f8f38676282431"
+    },
+    {
+      "path": "test/fixtures/cross_lineage_p1_K.csv",
+      "sha256": "3bae382ccc6aeb709d716dd61330ff1ce33d0c78cb5da175dffa9d35f3e5ae54"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_cross_lineage_p1.jl",
+      "sha256": "34ac03a2339e9c044554b482651ec960195260fcf52374fc1722878027cff4df"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_cross_lineage_receipt.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-GAMMA-LOGLIK",
+        "quantity": "log-likelihood at the optimum (same-optimum check for the fit both estimands are read from)",
+        "r_source": "test/fixtures/cross_lineage_p1.toml [fit.loglik]",
+        "julia_source": "fit.loglik, as compared at test/test_cross_lineage_p1.jl:105; fit as at test/test_cross_lineage_p1.jl:102",
+        "r_value": -198.9140965393022,
+        "julia_value": -198.91409653928923,
+        "abs_diff": 1.2960299500264227e-11,
+        "tolerance": 2e-10,
+        "tolerance_source": "test/test_cross_lineage_p1.jl:105",
+        "tolerance_source_line": "@test isapprox(fit.loglik, Float64(f[\"loglik\"]); atol = 2e-10, rtol = 0)   # same optimum (observed 1.3e-11)",
+        "note": "Gaussian fit of value ~ 0 + trait + kernel_latent(species, K = K, d = 3, name = \"cross\", unique = FALSE) (R, unit = site) with K = make_cross_kernel(A_H, A_P, W, rho = 0.6) over 8 host and 8 partner species, 4 sites per species, 4 traits (h_size, h_defence, p_size, p_attack), 256 cells, complete data (data and K CSVs sha256 checked; R fitted the data and K read back from those CSVs). R converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12, max |gradient| 4.4e-5) with a positive-definite Hessian, and fits K + 1e-8 I (jitter measured from tmb_data$Ainv_phy_rr); Julia fits the same model, (P K_eff P') kron Lambda Lambda' + sigma_eps^2 I with Lambda 4 x 3, as fit_kernel_latent_gllvm(Y, K_eff, groups, 3; name = :cross) at test/test_cross_lineage_p1.jl:102, g_tol 1e-8; same optimum (log-likelihoods within 1.3e-11). Estimand orientation as R: both functions slice the 4 x 4 TRAIT covariance Lambda Lambda' of the named tier (R's extract_Sigma(fit, \"cross\", part = \"shared\")) by trait name, rows = row_traits and columns = col_traits in the order given; the Julia methods are on GaussianSourcesFit (src/cross_lineage_extract.jl). The older positional extract_Gamma(::GllvmFit), whose rows are the stacked species of the Hadamard fit, is a different estimand and is not used. Limits: Gaussian only; scale = \"effect\" not twinned (a GaussianSourcesFit does not record rho; the Julia method refuses :effect); complete data, not R's block-NA layout (fit_gaussian_sources does not accept missing responses); the Julia side is the native source fitter, not formula sugar for kernel_latent()."
+      },
+      {
+        "case_id": "P1-JULIA-GAMMA-HOST-PARTNER",
+        "quantity": "extract_Gamma(fit, level = \"cross\", row_traits = c(\"h_size\", \"h_defence\"), col_traits = c(\"p_size\", \"p_attack\")), 2 x 2, column-major",
+        "r_source": "test/fixtures/cross_lineage_p1.toml [gamma.Gamma]",
+        "julia_source": "GLLVModels.extract_Gamma(fit; level = :cross, row_traits, col_traits, trait_names), as compared at test/test_cross_lineage_p1.jl:120; fit as at test/test_cross_lineage_p1.jl:102",
+        "r_value": [
+          0.4970979163217377,
+          -0.2331515812779219,
+          -0.19524064760283885,
+          0.33854063528816286
+        ],
+        "julia_value": [
+          0.49709786457658683,
+          -0.23315136026563144,
+          -0.19524062894022667,
+          0.3385405557991244
+        ],
+        "abs_diff": 2.210122904688916e-07,
+        "tolerance": 2e-06,
+        "tolerance_source": "test/test_cross_lineage_p1.jl:120",
+        "tolerance_source_line": "@test isapprox(Gam, r_gam; atol = 2e-6, rtol = 0)   # host x partner Gamma (observed 2.2e-7)",
+        "note": "Gaussian fit of value ~ 0 + trait + kernel_latent(species, K = K, d = 3, name = \"cross\", unique = FALSE) (R, unit = site) with K = make_cross_kernel(A_H, A_P, W, rho = 0.6) over 8 host and 8 partner species, 4 sites per species, 4 traits (h_size, h_defence, p_size, p_attack), 256 cells, complete data (data and K CSVs sha256 checked; R fitted the data and K read back from those CSVs). R converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12, max |gradient| 4.4e-5) with a positive-definite Hessian, and fits K + 1e-8 I (jitter measured from tmb_data$Ainv_phy_rr); Julia fits the same model, (P K_eff P') kron Lambda Lambda' + sigma_eps^2 I with Lambda 4 x 3, as fit_kernel_latent_gllvm(Y, K_eff, groups, 3; name = :cross) at test/test_cross_lineage_p1.jl:102, g_tol 1e-8; same optimum (log-likelihoods within 1.3e-11). Estimand orientation as R: both functions slice the 4 x 4 TRAIT covariance Lambda Lambda' of the named tier (R's extract_Sigma(fit, \"cross\", part = \"shared\")) by trait name, rows = row_traits and columns = col_traits in the order given; the Julia methods are on GaussianSourcesFit (src/cross_lineage_extract.jl). The older positional extract_Gamma(::GllvmFit), whose rows are the stacked species of the Hadamard fit, is a different estimand and is not used. Limits: Gaussian only; scale = \"effect\" not twinned (a GaussianSourcesFit does not record rho; the Julia method refuses :effect); complete data, not R's block-NA layout (fit_gaussian_sources does not accept missing responses); the Julia side is the native source fitter, not formula sugar for kernel_latent(). Gamma entries are four distinct values (0.50, -0.23, -0.20, 0.34); the reordered call (rows h_defence, h_size; columns p_attack, h_size, p_size) mixes the lineages and pins name-based order and orientation."
+      },
+      {
+        "case_id": "P1-JULIA-GAMMA-REORDERED",
+        "quantity": "extract_Gamma(fit, level = \"cross\", row_traits = c(\"h_defence\", \"h_size\"), col_traits = c(\"p_attack\", \"h_size\", \"p_size\")), 2 x 3, column-major",
+        "r_source": "test/fixtures/cross_lineage_p1.toml [gamma.Gamma_perm]",
+        "julia_source": "GLLVModels.extract_Gamma(fit; level = :cross, row_traits = row_perm, col_traits = col_perm, trait_names), as compared at test/test_cross_lineage_p1.jl:132; fit as at test/test_cross_lineage_p1.jl:102",
+        "r_value": [
+          0.33854063528816286,
+          -0.19524064760283885,
+          0.2697228851557208,
+          0.6999004165505481,
+          -0.2331515812779219,
+          0.4970979163217377
+        ],
+        "julia_value": [
+          0.3385405557991244,
+          -0.19524062894022667,
+          0.2697231217973246,
+          0.6999005269039359,
+          -0.23315136026563144,
+          0.49709786457658683
+        ],
+        "abs_diff": 2.3664160381242638e-07,
+        "tolerance": 2e-06,
+        "tolerance_source": "test/test_cross_lineage_p1.jl:132",
+        "tolerance_source_line": "@test isapprox(Gp, r_perm; atol = 2e-6, rtol = 0)   # reordered, lineage-mixing Gamma (observed 2.4e-7)",
+        "note": "Gaussian fit of value ~ 0 + trait + kernel_latent(species, K = K, d = 3, name = \"cross\", unique = FALSE) (R, unit = site) with K = make_cross_kernel(A_H, A_P, W, rho = 0.6) over 8 host and 8 partner species, 4 sites per species, 4 traits (h_size, h_defence, p_size, p_attack), 256 cells, complete data (data and K CSVs sha256 checked; R fitted the data and K read back from those CSVs). R converged (nlminb code 0, rel.tol / sing.tol / x.tol 1e-12, max |gradient| 4.4e-5) with a positive-definite Hessian, and fits K + 1e-8 I (jitter measured from tmb_data$Ainv_phy_rr); Julia fits the same model, (P K_eff P') kron Lambda Lambda' + sigma_eps^2 I with Lambda 4 x 3, as fit_kernel_latent_gllvm(Y, K_eff, groups, 3; name = :cross) at test/test_cross_lineage_p1.jl:102, g_tol 1e-8; same optimum (log-likelihoods within 1.3e-11). Estimand orientation as R: both functions slice the 4 x 4 TRAIT covariance Lambda Lambda' of the named tier (R's extract_Sigma(fit, \"cross\", part = \"shared\")) by trait name, rows = row_traits and columns = col_traits in the order given; the Julia methods are on GaussianSourcesFit (src/cross_lineage_extract.jl). The older positional extract_Gamma(::GllvmFit), whose rows are the stacked species of the Hadamard fit, is a different estimand and is not used. Limits: Gaussian only; scale = \"effect\" not twinned (a GaussianSourcesFit does not record rho; the Julia method refuses :effect); complete data, not R's block-NA layout (fit_gaussian_sources does not accept missing responses); the Julia side is the native source fitter, not formula sugar for kernel_latent(). Gamma entries are four distinct values (0.50, -0.23, -0.20, 0.34); the reordered call (rows h_defence, h_size; columns p_attack, h_size, p_size) mixes the lineages and pins name-based order and orientation."
+      }
+    ]
+  }
+}

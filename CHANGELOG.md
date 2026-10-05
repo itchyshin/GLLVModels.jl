@@ -2,6 +2,24 @@
 
 ## Development
 
+- **`extract_Gamma` and `extract_coevolution_modules` gain methods on a fitted kernel tier.**
+  New methods `extract_Gamma(fit::GaussianSourcesFit; level, row_traits, col_traits,
+  trait_names = nothing, scale = :shape)` and `extract_coevolution_modules(fit::GaussianSourcesFit;
+  level, row_traits, col_traits, trait_names = nothing, scale = :shape, n_modules = nothing,
+  tol = sqrt(eps()))` are gllvmTMB's `extract_Gamma()` and `extract_coevolution_modules()` for a
+  `fit_kernel_latent_gllvm` / `fit_gaussian_sources` fit. They use R's orientation: the shared
+  trait covariance `Lambda Lambda'` of the source named `level` is sliced by trait (rows
+  `row_traits`, columns `col_traits`, in the order given; names need `trait_names`, or pass
+  positional indices). `extract_coevolution_modules` returns R's layout (`R`, `modules` with
+  `module_1`, ..., `row_axes` and `col_axes` long tables) and R's relative eigenvalue tolerance.
+  `scale = :effect` raises an `ArgumentError`, because a `GaussianSourcesFit` does not record the
+  cross-kernel `rho`. The existing `extract_Gamma(::GllvmFit)` method (positional over the stacked
+  species of the Hadamard fit) and the matrix method of `extract_coevolution_modules` are
+  unchanged. Twinned numerically against gllvmTMB 0.7.1 (P1) in `test/test_cross_lineage_p1.jl`
+  on a Gaussian cross-lineage `kernel_latent(d = 3)` fit (8 host and 8 partner species,
+  complete data): the Gamma block and a reordered call within 2e-6, the module matrix,
+  singular values, squared shares and both axis tables within 1e-6 (axes up to one joint sign per
+  module), log-likelihoods within 2e-10.
 - **`sanity_multi` reports gllvmTMB's flags; `compare_loadings` gains R's matrix form.**
   `sanity_multi(fit; y)` now returns R's flags under R's names and in R's order
   (`converged`, `max_gradient`, `sdreport_ok`, `pd_hessian`, `max_se`, `rr_B_min_loading`,

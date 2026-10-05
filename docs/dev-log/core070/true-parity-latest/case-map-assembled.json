@@ -41,7 +41,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-namespace.json",
-   "sha256": "82e7c2cf6c3fecddf03b4e1e88f3c5c6e2340a50c46b0309d43c2dc509b32d7a",
+   "sha256": "13dba5ac349b68c00f303a4014d677e70a92fae0710b458426d84455bed7ca65",
    "rows": 69
   },
   {
@@ -8333,20 +8333,28 @@
    "r_file_line": "R/extract-sigma.R:1984",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/extract_Gamma.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-GAMMA-BLOCK.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-EXTRACT-GAMMA-BLOCK"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_cross_lineage_receipt.jl with the same calls and settings as test/test_cross_lineage_p1.jl, against R-at-P1 values copied from test/fixtures/cross_lineage_p1.toml (R value ~ 0 + trait + kernel_latent(species, K = K, d = 3, name = \"cross\", unique = FALSE), Gaussian, K = make_cross_kernel(A_H, A_P, W, rho = 0.6) over 8 host and 8 partner species, 4 sites per species, 4 traits, complete data; Julia fit_kernel_latent_gllvm(Y, K + 1e-8 I, groups, 3; name = :cross), the same model at the same optimum (logLik within 1.3e-11); R extract_Gamma(fit, level = \"cross\", row_traits, col_traits) for the host x partner block and for a reordered, lineage-mixing call (2 x 3), Julia extract_Gamma(fit::GaussianSourcesFit; level = :cross, row_traits, col_traits, trait_names), plus the log-likelihood), each case within the tolerance asserted in that test. R converged with a positive-definite Hessian. The Tier 0 registration receipts are kept un-cited under registration_receipts (the registration batch receipt carries a batch-level FAIL status, which would block the numeric binding if cited); the superseded case ids are in registration_case_ids."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-EXTRACT-GAMMA-BLOCK"
+    "P1-JULIA-GAMMA-LOGLIK",
+    "P1-JULIA-GAMMA-HOST-PARTNER",
+    "P1-JULIA-GAMMA-REORDERED"
    ],
-   "reason": "R export(extract_Gamma) registered and defined at P1; Julia `extract_Gamma` is an exported Function (measured). Name match only.",
+   "reason": "Numeric twin at P1 in R's orientation: both engines slice the named kernel tier's shared TRAIT covariance Lambda Lambda' by trait name (rows = row_traits, columns = col_traits, in the order given), on fits of the same Gaussian kernel_latent model to the same data. The orientation mismatch noted in the audit (the older Julia extract_Gamma(::GllvmFit) is positional over the stacked species of the Hadamard fit) is resolved by a new GaussianSourcesFit method with R's estimand; the old method is not used. Limits: scale = \"effect\" is not twinned (the Julia fit does not record rho and the method refuses :effect); complete data, not R's block-NA layout. Supersedes the Tier 0 registration measurement (name match only).",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
@@ -8546,20 +8554,34 @@
    "r_file_line": "R/extract-sigma.R:2468",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "batch": "namespace-1 Tier 0 at P1",
+    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/extract_coevolution_modules.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-COEVOLUTION-MODULES-SVD.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-EXTRACT-COEVOLUTION-MODULES-SVD"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_cross_lineage_receipt.jl with the same calls and settings as test/test_cross_lineage_p1.jl, against R-at-P1 values copied from test/fixtures/cross_lineage_p1.toml (R value ~ 0 + trait + kernel_latent(species, K = K, d = 3, name = \"cross\", unique = FALSE), Gaussian, K = make_cross_kernel(A_H, A_P, W, rho = 0.6) over 8 host and 8 partner species, 4 sites per species, 4 traits, complete data; Julia fit_kernel_latent_gllvm(Y, K + 1e-8 I, groups, 3; name = :cross), the same model at the same optimum (logLik within 1.3e-11); R extract_coevolution_modules(fit, level = \"cross\", host traits, partner traits): the standardised R matrix, singular values, squared shares and both axis tables, and the n_modules = 1 call; Julia extract_coevolution_modules(fit::GaussianSourcesFit; ...), axes compared up to one joint sign per module, which neither engine identifies; plus the log-likelihood), each case within the tolerance asserted in that test. With d = 3 and two traits per lineage the first singular value is 1 by construction and the second (0.297) is informative. R converged with a positive-definite Hessian. The Tier 0 registration receipts are kept un-cited under registration_receipts (the registration batch receipt carries a batch-level FAIL status, which would block the numeric binding if cited); the superseded case ids are in registration_case_ids."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-EXTRACT-COEVOLUTION-MODULES-SVD"
+    "P1-JULIA-COEVOLUTION-LOGLIK",
+    "P1-JULIA-COEVOLUTION-R",
+    "P1-JULIA-COEVOLUTION-SINGULAR-VALUE",
+    "P1-JULIA-COEVOLUTION-SQUARED-SHARE",
+    "P1-JULIA-COEVOLUTION-ROW-AXES",
+    "P1-JULIA-COEVOLUTION-COL-AXES",
+    "P1-JULIA-COEVOLUTION-N1-SQUARED-SHARE",
+    "P1-JULIA-COEVOLUTION-N1-ROW-AXES",
+    "P1-JULIA-COEVOLUTION-N1-COL-AXES"
    ],
-   "reason": "R export(extract_coevolution_modules) registered and defined at P1; Julia `extract_Gamma` is an exported Function (measured). Name match only.",
+   "reason": "Numeric twin at P1: R extract_coevolution_modules and the new Julia GaussianSourcesFit method compute Sigma_row^(-1/2) Gamma Sigma_col^(-1/2) from the named kernel tier's shared trait covariance (R's relative eigenvalue tolerance) and its SVD, in R's layout (module_k names, long axis tables), on fits of the same Gaussian kernel_latent model to the same data. Answers the audit's LEFT reason (no executed case; test_coevolution_kronecker.jl was Julia-only). Limits: scale = \"effect\" not twinned; complete data. Supersedes the Tier 0 registration measurement (name match only).",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",

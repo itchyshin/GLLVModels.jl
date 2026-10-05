@@ -211,6 +211,7 @@ include("diagnostics.jl")                # check_gllvmTMB / gllvmTMB_diagnose / 
 include("summary_table.jl")              # coef_table: tidy Wald inference table
 include("postfit_tables.jl")             # final missing-surface cluster (core070 §1): deviance, cross-rho profiles,
                                           # predict_cross_covariance, predict_missing, rotate_loadings, tidy, summary, imputed
+include("cross_lineage_extract.jl")      # extract_Gamma / extract_coevolution_modules on a GaussianSourcesFit kernel tier (gllvmTMB P1 orientation)
 include("temporal.jl")                   # temporal source: constructors, pre-pass, unit/unit_obs composition, TemporalContractError (gllvmTMB P1 port)
 include("temporal_likelihood.jl")        # exact Gaussian marginal NLL, K_blockdiag ⊗ Sigma_T (+ unit/unit_obs blocks) + sigma_eps² I
 include("temporal_fit.jl")               # fit_temporal_gllvm / TemporalGaussianFit (separate door; no formula.jl hook)

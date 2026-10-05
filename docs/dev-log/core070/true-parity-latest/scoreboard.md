@@ -21,7 +21,7 @@ Inputs:
 - `docs/dev-log/core070/true-parity-latest/case-map-fit-input.json` (10 rows, sha256 `568c054ed5f3786b96c9acb796e28d98e4523c4edc5fe5ad9f69ab150cee3639`)
 - `docs/dev-log/core070/true-parity-latest/case-map-inference.json` (63 rows, sha256 `ab0cb02039e34ecb5d1666c469321eba590dfead2452ac2f0de30d9da9a2bda9`)
 - `docs/dev-log/core070/true-parity-latest/case-map-isdm.json` (21 rows, sha256 `abcd0731b63d4290870525114ca3882d9a08fb9ac1966e35e702271a3917e6ca`)
-- `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `82e7c2cf6c3fecddf03b4e1e88f3c5c6e2340a50c46b0309d43c2dc509b32d7a`)
+- `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `13dba5ac349b68c00f303a4014d677e70a92fae0710b458426d84455bed7ca65`)
 - `docs/dev-log/core070/true-parity-latest/case-map-postfit.json` (52 rows, sha256 `5fe433df7fb04ea08abce0350820d8dbfbf2434ebacd93498a9a58bb978e6c4c`)
 
 ## Totals by family
@@ -35,9 +35,9 @@ Inputs:
 | `fit-input` | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
 | `inference` | 2 | 44 | 0 | 0 | 2 | 0 | 15 | 0 | 0 | 63 |
 | `isdm` | 11 | 0 | 0 | 0 | 0 | 9 | 0 | 1 | 0 | 21 |
-| `namespace` | 39 | 0 | 18 | 0 | 0 | 2 | 0 | 0 | 10 | 69 |
+| `namespace` | 41 | 0 | 16 | 0 | 0 | 2 | 0 | 0 | 10 | 69 |
 | `postfit` | 41 | 0 | 0 | 2 | 6 | 2 | 0 | 1 | 0 | 52 |
-| `all` | 147 | 44 | 18 | 4 | 22 | 31 | 30 | 7 | 14 | 317 |
+| `all` | 149 | 44 | 16 | 4 | 22 | 31 | 30 | 7 | 14 | 317 |
 
 ## P1 twin fixtures present at this head, not bound to any row
 
@@ -53,6 +53,9 @@ decision for the PR that measures it, not something this tool does.
 - `test/fixtures/animal_scalar_p1_data.csv`
 - `test/fixtures/bridge_readback_p1.toml`
 - `test/fixtures/confint_inspect_p1.toml`
+- `test/fixtures/cross_lineage_p1.toml`
+- `test/fixtures/cross_lineage_p1_K.csv`
+- `test/fixtures/cross_lineage_p1_data.csv`
 - `test/fixtures/data_twins_2_mi_p1_data.csv`
 - `test/fixtures/data_twins_2_p1.toml`
 - `test/fixtures/data_twins_nb1_p1_data.csv`
@@ -63,6 +66,7 @@ decision for the PR that measures it, not something this tool does.
 - `test/fixtures/gen_animal_scalar_p1.R`
 - `test/fixtures/gen_bridge_readback_p1.R`
 - `test/fixtures/gen_confint_inspect_p1.R`
+- `test/fixtures/gen_cross_lineage_p1.R`
 - `test/fixtures/gen_data_twins_2_p1.R`
 - `test/fixtures/gen_data_twins_p1.R`
 - `test/fixtures/gen_diagnostics_p1.R`
@@ -343,13 +347,13 @@ decision for the PR that measures it, not something this tool does.
 | namespace-export-check_gllvmTMB `namespace/export/check_gllvmTMB` | required_core; cases: CORE070-NAMESPACE-CHECK-GLLVMTMB-DIAGNOSTIC | REGISTRATION-ONLY | not bound; cited: docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-CHECK-GLLVMTMB-DIAGNOSTIC.json, docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-confint_inspect `namespace/export/confint_inspect` | required_core; cases: P1-JULIA-CONFINT-INSPECT-SIGMA-EPS-ESTIMATE, P1-JULIA-CONFINT-INSPECT-SIGMA-EPS-WALD, P1-JULIA-CONFINT-INSPECT-SIGMA-EPS-PROFILE, P1-JULIA-CONFINT-INSPECT-B-FIX-1-ESTIMATE, P1-JULIA-CONFINT-INSPECT-B-FIX-1-WALD, P1-JULIA-CONFINT-INSPECT-B-FIX-1-PROFILE, P1-JULIA-CONFINT-INSPECT-LAMBDA-PACKED-2-ESTIMATE, P1-JULIA-CONFINT-INSPECT-LAMBDA-PACKED-2-WALD, P1-JULIA-CONFINT-INSPECT-LAMBDA-PACKED-2-PROFILE, P1-JULIA-CONFINT-INSPECT-LAMBDA-PACKED-3-ESTIMATE, P1-JULIA-CONFINT-INSPECT-LAMBDA-PACKED-3-WALD, P1-JULIA-CONFINT-INSPECT-LAMBDA-PACKED-3-PROFILE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/confint_inspect.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-dep `namespace/export/dep` | required_core; cases: none | NEEDS-SURFACE | not bound; cited: docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-DEP-FORMULA-KEYWORD.json, docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9; disposition BLOCKED_NEEDS_JULIA_SURFACE |
-| namespace-export-extract_Gamma `namespace/export/extract_Gamma` | required_core; cases: CORE070-NAMESPACE-EXTRACT-GAMMA-BLOCK | REGISTRATION-ONLY | not bound; cited: docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-GAMMA-BLOCK.json, docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| namespace-export-extract_Gamma `namespace/export/extract_Gamma` | required_core; cases: P1-JULIA-GAMMA-LOGLIK, P1-JULIA-GAMMA-HOST-PARTNER, P1-JULIA-GAMMA-REORDERED | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/extract_Gamma.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-extract_ICC_site `namespace/export/extract_ICC_site` | required_core; cases: CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-ICC-SITE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-ICC-SITE.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-extract_Omega `namespace/export/extract_Omega` | required_core; cases: CORE070-ESTIMAND-REBIND-EXTRACT-OMEGA | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-ESTIMAND-REBIND-EXTRACT-OMEGA.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-extract_Sigma `namespace/export/extract_Sigma` | required_core; cases: CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-SIGMA | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-SIGMA.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-extract_Sigma_B `namespace/export/extract_Sigma_B` | required_core; cases: P1-JULIA-SIGMA-B-TWOLEVEL | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/extract_Sigma_B.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-extract_Sigma_W `namespace/export/extract_Sigma_W` | required_core; cases: P1-JULIA-SIGMA-W-TWOLEVEL | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/extract_Sigma_W.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| namespace-export-extract_coevolution_modules `namespace/export/extract_coevolution_modules` | required_core; cases: CORE070-NAMESPACE-EXTRACT-COEVOLUTION-MODULES-SVD | REGISTRATION-ONLY | not bound; cited: docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-COEVOLUTION-MODULES-SVD.json, docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| namespace-export-extract_coevolution_modules `namespace/export/extract_coevolution_modules` | required_core; cases: P1-JULIA-COEVOLUTION-LOGLIK, P1-JULIA-COEVOLUTION-R, P1-JULIA-COEVOLUTION-SINGULAR-VALUE, P1-JULIA-COEVOLUTION-SQUARED-SHARE, P1-JULIA-COEVOLUTION-ROW-AXES, P1-JULIA-COEVOLUTION-COL-AXES, P1-JULIA-COEVOLUTION-N1-SQUARED-SHARE, P1-JULIA-COEVOLUTION-N1-ROW-AXES, P1-JULIA-COEVOLUTION-N1-COL-AXES | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/extract_coevolution_modules.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-extract_communality `namespace/export/extract_communality` | required_core; cases: P1-JULIA-COMMUNALITY-UNIT, P1-JULIA-COMMUNALITY-UNIT-OBS | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/extract_communality.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-extract_correlations `namespace/export/extract_correlations` | required_core; cases: CORE070-ESTIMAND-REBIND-EXTRACT-CORRELATIONS | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-ESTIMAND-REBIND-EXTRACT-CORRELATIONS.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-extract_cross_correlations `namespace/export/extract_cross_correlations` | required_core; cases: CORE070-NAMESPACE-EXTRACT-CROSS-CORRELATIONS-NATIVE | REGISTRATION-ONLY | not bound; cited: docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-CROSS-CORRELATIONS-NATIVE.json, docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
