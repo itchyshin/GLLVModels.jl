@@ -308,6 +308,7 @@ function bootstrap_ci(fit::GllvmFit;
 
     0 < level < 1 || throw(ArgumentError("level must be in (0, 1); got $level"))
     n_boot ≥ 1   || throw(ArgumentError("n_boot must be ≥ 1; got $n_boot"))
+    _check_unpinned_refit(fit, "bootstrap_ci")
     _has_lv_predictor(fit) && throw(ArgumentError(
         "bootstrap_ci for fit_gaussian_gllvm(...; X_lv=...) is not admitted in the C1 predictor-informed latent-score path; use extract_lv_effects for point estimates"))
 
