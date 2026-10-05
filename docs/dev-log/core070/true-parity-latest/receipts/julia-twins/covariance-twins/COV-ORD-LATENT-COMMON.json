@@ -7,7 +7,7 @@
   "evidence_kind": "julia_recomputed_vs_recorded_r",
   "pin": "P1",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
-  "origin_pr": "W3-4(d), branch claude/cov-ord-latent-twins",
+  "origin_pr": "itchyshin/GLLVModels.jl#810",
   "generator": "tools/true_parity_cov_ord_latent_receipt.jl",
   "julia_version": "1.10.0",
   "gllvmodels_commit": "b7f2c3d47a9f00e936a72a474c52894abc9f2148",

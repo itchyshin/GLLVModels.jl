@@ -384,7 +384,7 @@ function receipts_cov_ord_latent()
         push!(cs, mkcase(id("OBJECTIVE-AT-PROBE"), "Julia log-likelihood at R's off-optimum probe point against R's -obj\$fn there",
                 "$fxp [$key.probe_loglik]", "-GLLVModels._gaussian_sources_nll(Y, [source], probe; sigma_eps_fixed), as compared at " * cite(tp, "@test isapprox(-nll_at_probe, Float64(s[\"probe_loglik\"]);"),
                 Float64(s["probe_loglik"]), -nll_at_probe, test_tolerance(tp, "@test isapprox(-nll_at_probe, Float64(s[\"probe_loglik\"]);"), note))
-        push!(out, "covariance-twins/$short.json" => Receipt(["covariance/$short"], "W3-4(d), branch claude/cov-ord-latent-twins", [fxp, dp], [tp], NOT_A_FIXTURE_PAIR, cs))
+        push!(out, "covariance-twins/$short.json" => Receipt(["covariance/$short"], "itchyshin/GLLVModels.jl#810", [fxp, dp], [tp], NOT_A_FIXTURE_PAIR, cs))
     end
     return out
 end
