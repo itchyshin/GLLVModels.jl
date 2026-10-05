@@ -1963,16 +1963,35 @@
    "classification": "required_core",
    "arc": "A3",
    "r_file_line": null,
-   "executable_case_ids": [],
+   "executable_case_ids": [
+    "CORE070-NAMESPACE2-GLLVMTMB-NATIVE-FIT"
+   ],
    "p0_case_ids": [
     "CORE070-NAMESPACE2-GLLVMTMB-NATIVE-FIT"
    ],
-   "evidence": {},
-   "measured_against": null,
+   "evidence": {
+    "batch": "namespace-2 at P1",
+    "verifier": "python3 tools/core070_verify_namespace_2_batch.py --pin P1 --self-test --state docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-2-batch-p1 (CORE070_NAMESPACE_2_BATCH_VERIFIED 9 negative_controls 4)",
+    "non_binding_receipts": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE2-GLLVMTMB-NATIVE-FIT.json"
+    ],
+    "tier": "numeric comparison blocks pass, but at least one is degenerate (the R values are one constant or all ~0), so the row does not bind. Degenerate under the shared rule (DEGENERATE_ABS = 1e-10): coef (trait intercepts)."
+   },
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "disposition": null,
-   "reason": "Not re-measured at P1 in this PR.",
-   "not_measured_reason": "namespace-2 batch needs an installed frozen gllvmTMB library and live R fits (tools/core070_namespace_2_batch.R <frozen-library> <destination>); stopped per brief, no P1 oracle build here.",
-   "evidence_tier": "registration"
+   "reason": "Measured at P1, not bound: the case receipt carries a degenerate comparison, so under the siblings' shared rule the row is numeric_non_discriminating. R gllvmTMB(value ~ 0 + trait + latent(0 + trait | site, d = 2, unique = FALSE), family = gaussian()) on the batch's Gaussian fixture (p = 5, n = 80) against Julia fit_gaussian_gllvm(Y; K = 2, X) on the same Y, at the P1 pin (gllvmTMB 0.7.1): logLik |R - Julia| = 1.13e-09 and trait intercepts max |R - Julia| = 1.36e-14, both within the harness tolerance 0.0001.",
+   "evidence_tier": "numeric_non_discriminating",
+   "measured_result": {
+    "case_verdicts": {
+     "CORE070-NAMESPACE2-GLLVMTMB-NATIVE-FIT": "PASS"
+    },
+    "batch_verifier": {
+     "CORE070-NAMESPACE2-GLLVMTMB-NATIVE-FIT": "PASS"
+    },
+    "discriminating": {
+     "CORE070-NAMESPACE2-GLLVMTMB-NATIVE-FIT": false
+    }
+   }
   },
   {
    "source_id": "namespace/export/gllvmTMB_wide",
