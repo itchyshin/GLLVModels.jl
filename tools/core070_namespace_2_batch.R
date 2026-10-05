@@ -23,6 +23,15 @@
 # smoke, which never reaches this file):
 #   Rscript --vanilla tools/core070_namespace_2_batch.R <frozen-library> <destination>
 #
+# Pin switch (D-294/D-295): GLLVM_PARITY_PIN unset or "P0" keeps the frozen P0
+# contract and the P0 readback tree, unchanged. "P1" reads
+# docs/dev-log/core070/true-parity-latest/namespace-2-batch-contract-p1.json
+# (tools/core070_namespace_2_p1_contract.py: cases verbatim, source pins at P1),
+# reads the pinned R sources with `git -C $GLLVMTMB_DIR show <P1>:<path>`, and
+# requires the installed library's NAMESPACE hash and version to match
+# tools/core070_oracle_pins.toml [P1]:
+#   GLLVM_PARITY_PIN=P1 GLLVMTMB_DIR=<clone> Rscript --vanilla tools/core070_namespace_2_batch.R <lib> <dest>
+#
 # <frozen-library> is an R library directory containing an installed
 # gllvmTMB built from the pinned reference commit (b4d5fee...) -- the FROZEN,
 # INSTALLED library, matching masks_known.R's arg 1, not a source tree.
@@ -52,18 +61,67 @@ stopifnot(normalizePath(find.package("gllvmTMB")) ==
           normalizePath(file.path(frozen_library, "gllvmTMB")))
 
 root <- normalizePath(".")
-contract_path <- file.path(root, "docs/dev-log/core070/namespace-2-batch-contract.json")
+parity_pin <- toupper(trimws(Sys.getenv("GLLVM_PARITY_PIN", "P0")))
+if (!parity_pin %in% c("P0", "P1")) stop("GLLVM_PARITY_PIN must be P0 or P1, got '", parity_pin, "'")
+expected_reference <- if (identical(parity_pin, "P1"))
+  "9539352f66f2db2cc26b1c393e67212a359b60c9" else "b4d5fee64def88bc768dda1f1f77c29b295edd86"
+contract_path <- file.path(root, if (identical(parity_pin, "P1"))
+  "docs/dev-log/core070/true-parity-latest/namespace-2-batch-contract-p1.json" else
+  "docs/dev-log/core070/namespace-2-batch-contract.json")
 contract <- jsonlite::read_json(contract_path, simplifyVector = FALSE)
 contract_sha256 <- sha256_file(contract_path)
 
-stopifnot(identical(contract$reference_commit, "b4d5fee64def88bc768dda1f1f77c29b295edd86"),
+stopifnot(identical(contract$reference_commit, expected_reference),
           identical(contract$status, "FROZEN_NAMESPACE_2_BATCH_CONTRACT"),
           length(contract$cases) == contract$expected_case_count,
           contract$expected_case_count == 9L,
           length(contract$negative_controls) >= 2L)
 
+# --- installed library at the pin (P1) ------------------------------------
+# The library's NAMESPACE hash and version must match tools/core070_oracle_pins.toml.
+# A CORE070_SOURCE_PIN.toml marker, when present, is checked too (tools/core070_source_pin.R).
+library_pin <- NULL
+if (identical(parity_pin, "P1")) {
+  source(file.path(root, "tools/core070_source_pin.R"))
+  oracle_pin <- core070_read_flat_toml(file.path(root, "tools/core070_oracle_pins.toml"), "P1")
+  stopifnot(identical(oracle_pin$reference_commit, expected_reference))
+  lib_ns <- file.path(frozen_library, "gllvmTMB", "NAMESPACE")
+  library_pin <- list(
+    namespace_sha256 = sha256_file(lib_ns),
+    version = as.character(utils::packageVersion("gllvmTMB")),
+    marker = file.exists(file.path(frozen_library, "gllvmTMB", "CORE070_SOURCE_PIN.toml"))
+  )
+  stopifnot(identical(library_pin$namespace_sha256, oracle_pin$namespace_sha256),
+            identical(library_pin$version, oracle_pin$version))
+  if (isTRUE(library_pin$marker)) {
+    library_pin$source_pin <- core070_source_pin(root, frozen_library, parity_pin, expected_reference)
+  }
+}
+
 # --- validate pinned R source ------------------------------------------
-source_root <- file.path(root, ".unlazy/core070-aghq/oracle-source/readback")
+# P0: the pre-extracted readback tree under .unlazy/. source_access = "git-show"
+# (P1): every byte comes from `git -C $GLLVMTMB_DIR show <commit>:<path>` into a
+# fresh temp dir; the gllvmTMB clone is never checked out or edited.
+gllvmtmb_resolved <- NA_character_
+if (identical(contract$source_access, "git-show")) {
+  gdir <- Sys.getenv("GLLVMTMB_DIR", unset = "")
+  if (!nzchar(gdir)) stop("FATAL: GLLVMTMB_DIR must name a local gllvmTMB clone for pin ", parity_pin)
+  gllvmtmb_resolved <- system2("git", c("-C", shQuote(gdir), "rev-parse",
+                                        shQuote(paste0(expected_reference, "^{commit}"))),
+                               stdout = TRUE)
+  stopifnot(identical(gllvmtmb_resolved, expected_reference))
+  source_root <- tempfile("core070-namespace-2-src-")
+  dir.create(source_root)
+  for (rel in names(contract$source_pins)) {
+    dest <- file.path(source_root, rel)
+    dir.create(dirname(dest), recursive = TRUE, showWarnings = FALSE)
+    status <- system2("git", c("-C", shQuote(gdir), "show",
+                               shQuote(paste0(expected_reference, ":", rel))), stdout = dest)
+    stopifnot(identical(status, 0L))
+  }
+} else {
+  source_root <- file.path(root, ".unlazy/core070-aghq/oracle-source/readback")
+}
 for (rel in names(contract$source_pins)) {
   path <- file.path(source_root, rel)
   stopifnot(file.exists(path))
@@ -352,7 +410,11 @@ receipt <- list(
   diagnostics_sha256 = sha256_file(diag_path),
   r_version = R.version.string,
   gllvmTMB_version = as.character(utils::packageVersion("gllvmTMB")),
-  frozen_library = frozen_library
+  frozen_library = frozen_library,
+  pin = parity_pin,
+  source_access = contract$source_access %||% "readback",
+  gllvmtmb_resolved_commit = gllvmtmb_resolved,
+  library_pin = library_pin
 )
 receipt_path <- file.path(output_dir, "receipt.json")
 jsonlite::write_json(receipt, receipt_path, auto_unbox = TRUE, pretty = TRUE, null = "null")

@@ -195,6 +195,9 @@ loglik_delta_g = abs(j_loglik_g - r_loglik_g)
 cases["CORE070-NAMESPACE2-GLLVMTMB-NATIVE-FIT"] = Dict(
     "pass" => coef_delta <= tol["coef_delta"] && loglik_delta_g <= tol["loglik_delta"],
     "coef_delta" => coef_delta, "loglik_delta" => loglik_delta_g,
+    # Raw values (additive, P1 re-measure): lets a receipt writer recompute both diffs.
+    "julia_coef" => collect(Float64, j_coef_g), "julia_loglik" => Float64(j_loglik_g),
+    "r_coef" => r_coef_g, "r_loglik" => r_loglik_g,
 )
 
 # ---------------------------------------------------------------------------
