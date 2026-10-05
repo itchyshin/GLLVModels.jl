@@ -36,6 +36,12 @@ against the reconciliation record.
                         same-run P1 R fit of the native cell (logLik, rtol 1e-6). The
                         FAMILY-05 case uses the stored NB2 smoke draw (decision
                         2026-09-28), a recorded deviation from the frozen contract's data.
+                        Only the R-vs-Julia entries (route logLik vs the same-run R fit;
+                        alias R fit vs native Julia) sit in a receipt's `comparison`
+                        block. Route-vs-native entries (Julia vs Julia) go to
+                        `route_consistency` and alias-vs-Beta entries (R vs R) to
+                        `alias_identity_r`: they gate the case verdict under the frozen
+                        rule but are never read as R-vs-Julia evidence or for the tier.
 
 Not executed at P1 (receipt with evidence_kind not_executed): the 00 and 11
 *-PUBLIC-R-BRIDGE cases, which are outside the frozen three-case bridge
@@ -63,6 +69,7 @@ Shared gates (PR #567 / #569 / #571 / #579):
 
 Usage:
   python3 tools/core070_family_p1_receipts.py --runs DIR --runtimes JSON [--allow-dirty]
+  python3 tools/core070_family_p1_receipts.py --rederive
   python3 tools/core070_family_p1_receipts.py --check
 where DIR holds runparity-<name>/, family-links-p1/, a6-p1/ and bridge-p1/ (each with
 run-commit.json) and carry-scan-p1.json. Rows another writer owns in case-map-family.json
@@ -96,11 +103,12 @@ P0_SHA = PINS["P0"]["reference_commit"]
 ORACLE_BUILD = f"{OUT_REL}/receipts/covariance/oracle/build.json"
 # The P1 oracle may be the default (Mac) build or the registered Totoro build of the same
 # source archive (test/parity/core070_pin.jl _CORE070_ORACLE_BUILD_HOSTS); the run records
-# which build receipt it used, and the receipts name it.
+# which build receipt it used, and the receipts name it. The Mac string is fixed text; the
+# Totoro string is filled from the versions the runs record (see host_string).
+ORACLE_BUILD_TOTORO = f"{OUT_REL}/receipts/covariance/oracle/build-totoro.json"
 ORACLE_BUILDS = {ORACLE_BUILD: "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
-                 f"{OUT_REL}/receipts/covariance/oracle/build-totoro.json":
-                     "Totoro (Linux x86_64, R 4.6.1, TMB 1.9.21, Matrix 1.7.5, Julia 1.10.12), OPENBLAS/OMP "
-                     "threads 1, JULIA_NUM_THREADS=4"}
+                 ORACLE_BUILD_TOTORO: "Totoro (Linux x86_64, R {r}, TMB {tmb}, Matrix {matrix}, Julia {julia}), "
+                                      "OPENBLAS/OMP threads {blas}, JULIA_NUM_THREADS={jthreads}"}
 ORACLE_SOURCE = f"{OUT_REL}/receipts/covariance/oracle/source.json"
 MANIFEST = f"{OUT_REL}/frozen-r070-contract-p1.toml"
 FL_CONTRACT = f"{OUT_REL}/family-links-batch-contract-p1.json"
@@ -286,6 +294,27 @@ def check_run_commit(run_dir, head):
 
 def run_commit(batch):
     return load(ROOT / batch_rel(batch) / "run-commit.json")["glvmodels_commit"]
+
+
+def host_string(build):
+    """The receipts' host text for oracle build receipt `build`. For the Totoro build the
+    versions and thread counts are read from what the runs record (every runparity run.toml
+    [source] and bridge-p1/results.json) and must agree across them."""
+    if build != ORACLE_BUILD_TOTORO:
+        return ORACLE_BUILDS[build]
+    seen = set()
+    for b in RUNPARITY_RUNS:
+        src = load_toml(ROOT / batch_rel(b) / "run.toml").get("source", {})
+        seen.add((src.get("r_version"), src.get("tmb_version"), src.get("matrix_version"), src.get("julia_version"),
+                  src.get("blas_threads"), src.get("julia_threads")))
+    res = bridge_results()
+    seen.add((res.get("r_version"), res.get("tmb_version"), res.get("matrix_version"), res.get("julia_version"),
+              res.get("blas_threads"), res.get("julia_threads")))
+    if len(seen) != 1 or None in next(iter(seen)):
+        raise SystemExit(f"runs do not record one set of host versions: {sorted(map(str, seen))}")
+    r, tmb, matrix, julia, blas, jthreads = next(iter(seen))
+    return ORACLE_BUILDS[build].format(r=r.removeprefix("R version ").split()[0], tmb=tmb, matrix=matrix,
+                                       julia=julia, blas=blas, jthreads=jthreads)
 
 
 def read_from(*rels):
@@ -605,17 +634,39 @@ R_RULE = ("the frozen rule's R leg (R logLik rtol <= 1e-6), at P1 against the sa
           "(the P0 batch's retained P0 R logLik is not on any host); tolerance = 1e-6 * |R logLik|")
 
 
+def consistency(cid, label, a, b, tol, rule, keys):
+    """A same-engine consistency record (Julia vs Julia, or R vs R). It is kept out of the
+    `comparison` block, which holds only R-computed r_value against Julia-computed julia_value,
+    so neither the checker nor the tier logic reads it as R-vs-Julia evidence."""
+    av = a if isinstance(a, list) else [a]
+    bv = b if isinstance(b, list) else [b]
+    if len(av) != len(bv):
+        raise SystemExit(f"{cid} {label}: {keys[0]} length {len(av)} != {keys[1]} length {len(bv)}")
+    diff = max(abs(x - y) for x, y in zip(av, bv))
+    return {"case_id": cid, "quantity": label, "max_abs_diff": diff, "tolerance": tol, "tolerance_rule": rule,
+            "n_values": len(av), keys[0]: a, keys[1]: b, "within_tolerance": diff <= tol,
+            "diff_source": "recomputed from the saved values"}
+
+
+ROUTE_KEYS = ("route_value", "native_value")
+ROUTE_CONSISTENCY_NOTE = ("Julia vs Julia: each public route (computed by GLLVModels through JuliaCall) against a fresh "
+                          "native GLLVModels fit. Evidence that the public route reproduces the native fit; not "
+                          "R-vs-Julia evidence, so not in the comparison block. Counted in the case verdict (the "
+                          "frozen bridge acceptance rule), never in the evidence tier.")
+
+
 def route_entries(cid, route, rec, native):
     x = rec[route]
-    out = [entry(cid, f"logLik, public route {route} vs fresh native GLLVModels", x["loglik"], native["loglik"],
-                 1e-8, BRIDGE_RULE),
-           entry(cid, f"trait intercepts, public route {route} vs fresh native", x["alpha"], native["alpha"],
-                 1e-8, BRIDGE_RULE),
-           entry(cid, f"loading covariance LL', public route {route} vs fresh native", x["shared_covariance"],
-                 native["shared_covariance"], 1e-8, BRIDGE_RULE)]
+    out = [consistency(cid, f"logLik, public route {route} vs fresh native GLLVModels", x["loglik"],
+                       native["loglik"], 1e-8, BRIDGE_RULE, ROUTE_KEYS),
+           consistency(cid, f"trait intercepts, public route {route} vs fresh native", x["alpha"], native["alpha"],
+                       1e-8, BRIDGE_RULE, ROUTE_KEYS),
+           consistency(cid, f"loading covariance LL', public route {route} vs fresh native", x["shared_covariance"],
+                       native["shared_covariance"], 1e-8, BRIDGE_RULE, ROUTE_KEYS)]
     if native["dispersion"]:
-        out.append(entry(cid, f"per-trait dispersion, public route {route} vs fresh native", x["dispersion"],
-                         native["dispersion"], 1e-8 * min(abs(v) for v in native["dispersion"]), BRIDGE_RULE))
+        out.append(consistency(cid, f"per-trait dispersion, public route {route} vs fresh native", x["dispersion"],
+                               native["dispersion"], 1e-8 * min(abs(v) for v in native["dispersion"]), BRIDGE_RULE,
+                               ROUTE_KEYS))
     return out
 
 
@@ -640,7 +691,7 @@ def bridge_case(cid):
         return alias_case(cid, rec, native)
     fam, batch, health = BRIDGE_CASES[cid]
     rfit = rec["same_run_r_fit"]
-    entries = []
+    entries, routes = [], []
     gates = {"native health (converged, |gradient| and FD stability <= 1e-4, objective reconstruction <= 1e-8)":
              native_ok(native),
              "same-run R fit healthy (convergence code 0) on the same data bytes":
@@ -651,10 +702,10 @@ def bridge_case(cid):
         gates[f"public route {route}: gllvmTMB_julia object, converged, shape and df match the native fit"] = ok
         if "error" in rec[route]:
             continue
-        entries += route_entries(cid, route, rec, native)
+        routes += route_entries(cid, route, rec, native)
         entries.append(entry(cid, f"logLik, public route {route} vs same-run P1 R fit (R vs Julia)",
                              rfit["r_loglik"], rec[route]["loglik"], 1e-6 * abs(rfit["r_loglik"]), R_RULE))
-    within = all(e["max_abs_diff"] <= e["tolerance"] for e in entries)
+    within = all(e["max_abs_diff"] <= e["tolerance"] for e in entries + routes)
     verdict = "PASS" if all(gates.values()) and within and len(entries) else "FAIL"
     body = {"batch": f"{BRIDGE_TOOL}, GLLVM_PARITY_PIN=P1, run {BRIDGE_BATCH}",
             "measures": (f"{fam}, p={rec['p']}, n={rec['n']}, K={rec['K']}: the frozen public-bridge case re-run live "
@@ -664,6 +715,7 @@ def bridge_case(cid):
             "same_run_r_fit": {k: rfit[k] for k in ("file", "sha256", "r_loglik", "r_code", "r_converged",
                                                      "r_gradient_max", "policy")},
             "julia_version": res.get("julia_version"), "gllvmtmb_version": res.get("gllvmtmb_version"),
+            "route_consistency": {"note": ROUTE_CONSISTENCY_NOTE, "cases": routes},
             "batch_verifier": verifier_block(BRIDGE_BATCH),
             "read_from": read_from(f"{d}/results.json", f"{d}/run-commit.json", f"{d}/verify.txt",
                                    f"{batch_rel(batch)}/{health}", BRIDGE_CONTRACT, BRIDGE_TOOL),
@@ -672,7 +724,7 @@ def bridge_case(cid):
         body["deviation"] = rec["deviation"]
     if verdict == "FAIL":
         body["why_fail"] = [k for k, v in gates.items() if not v] + \
-            [e["quantity"] for e in entries if e["max_abs_diff"] > e["tolerance"]]
+            [e["quantity"] for e in entries + routes if e["max_abs_diff"] > e["tolerance"]]
     return verdict, body, entries
 
 
@@ -687,12 +739,12 @@ def alias_case(cid, rec, native):
              "both R fits (alias, canonical) converged (code 0) with a positive-definite Hessian":
              "error" not in ra and "error" not in rc and ra.get("convergence") == 0 and rc.get("convergence") == 0
              and ra.get("pd_hessian") is True and rc.get("pd_hessian") is True}
-    entries = []
+    entries, alias_r, routes = [], [], []
     if "error" not in ra and "error" not in rc:
-        entries.append(entry(cid, "logLik, R alias descriptor vs R gllvmTMB::Beta() (both native TMB)",
-                             rc["loglik"], ra["loglik"], 1e-8, rule_r))
-        entries.append(entry(cid, "R fixed-effect and loading parameters (opt$par), alias vs gllvmTMB::Beta()",
-                             rc["par"], ra["par"], 1e-8, rule_r))
+        alias_r.append(consistency(cid, "logLik, R alias descriptor vs R gllvmTMB::Beta() (both native TMB)",
+                                   ra["loglik"], rc["loglik"], 1e-8, rule_r, ("r_alias", "r_beta")))
+        alias_r.append(consistency(cid, "R fixed-effect and loading parameters (opt$par), alias vs gllvmTMB::Beta()",
+                                   ra["par"], rc["par"], 1e-8, rule_r, ("r_alias", "r_beta")))
         entries.append(entry(cid, "logLik, R alias fit (TMB) vs fresh native GLLVModels Beta fit (R vs Julia)",
                              ra["loglik"], native["loglik"], 1e-6 * abs(ra["loglik"]),
                              "R vs Julia at the frozen bridge rule's R leg: rtol <= 1e-6 (tolerance = 1e-6 * |R logLik|)"))
@@ -700,8 +752,8 @@ def alias_case(cid, rec, native):
         gates[f"public route {route} with the alias: gllvmTMB_julia object, converged, shape and df match"] = \
             route_ok(rec, route, native)
         if "error" not in rec[route]:
-            entries += route_entries(cid, route, rec, native)
-    within = all(e["max_abs_diff"] <= e["tolerance"] for e in entries)
+            routes += route_entries(cid, route, rec, native)
+    within = all(e["max_abs_diff"] <= e["tolerance"] for e in entries + alias_r + routes)
     verdict = "PASS" if all(gates.values()) and within and entries else "FAIL"
     body = {"batch": f"{BRIDGE_TOOL}, GLLVM_PARITY_PIN=P1, run {BRIDGE_BATCH}",
             "measures": ("the R alias descriptor " + rec["descriptor"] + " on the NATIVE-08-BETA data (p=5, n=60, "
@@ -713,12 +765,17 @@ def alias_case(cid, rec, native):
             "r_calls": rec["r_calls"], "data_sha256": rec["data_sha256"], "gates": gates,
             "r_alias_family": ra.get("family"), "r_alias_message": ra.get("message"),
             "julia_version": res.get("julia_version"), "gllvmtmb_version": res.get("gllvmtmb_version"),
+            "alias_identity_r": {"note": ("R vs R: the alias descriptor and gllvmTMB::Beta() through the same native "
+                                          "R call. Adapter-equivalence evidence; not R-vs-Julia evidence, so not in "
+                                          "the comparison block. Counted in the case verdict, never in the evidence "
+                                          "tier."), "cases": alias_r},
+            "route_consistency": {"note": ROUTE_CONSISTENCY_NOTE, "cases": routes},
             "batch_verifier": verifier_block(BRIDGE_BATCH),
             "read_from": read_from(f"{d}/results.json", f"{d}/run-commit.json", f"{d}/verify.txt", BRIDGE_TOOL),
             "raw": [f"{d}/results.json"]}
     if verdict == "FAIL":
         body["why_fail"] = [k for k, v in gates.items() if not v] + \
-            [e["quantity"] for e in entries if e["max_abs_diff"] > e["tolerance"]]
+            [e["quantity"] for e in entries + alias_r + routes if e["max_abs_diff"] > e["tolerance"]]
     return verdict, body, entries
 
 
@@ -922,6 +979,8 @@ def check():
             problems.append(f"{cid}: comparison block differs from the re-derivation")
         if rec.get("reference_commit") != P1_SHA or rec.get("pin") != "P1":
             problems.append(f"{cid}: receipt not pinned at P1")
+        if rec.get("oracle_build_receipt") not in ORACLE_BUILDS or rec.get("host") != host_string(rec["oracle_build_receipt"]):
+            problems.append(f"{cid}: host {rec.get('host')!r} is not the host text derived from the runs")
     cm = load(ROOT / CASEMAP_REL)
     mine = own_rows(cm)
     receipts = {cid: receipt_info(path, rec) for cid, (path, rec) in tracked.items()}
@@ -963,6 +1022,53 @@ NOTE = ("Separate from case-map.json so none of its rows are touched; read by to
         "measure likelihood-level agreement on one small data set each, not full family parity.")
 
 
+COMMON_KEYS = ("pin", "reference_commit", "p0_reference_commit", "oracle_build_receipt", "oracle_source_receipt",
+               "glvmodels_commit", "glvmodels_worktree_dirty", "glvmodels_src_tree", "host")
+
+
+def case_receipt(cid, kind, verdict, body, comparison, common):
+    rec = {"schema": "core070-family-p1-case-receipt/v1", "case_id": cid, "verdict": verdict,
+           "evidence_kind": kind, **body, **common}
+    if comparison is not None:
+        rec["comparison"] = {"pin": "P1", "cases": comparison}
+    return rec
+
+
+def rederive():
+    """Re-derive the case receipts and this tool's case-map rows from the tracked batch
+    artifacts, for a change to the derivation only (no new run). Measurement provenance
+    (glvmodels_commit = the run commit, oracle build, src tree) is carried from the tracked
+    receipts; batch files and verify.txt are not touched, and no verifier is re-run."""
+    head, dirty = git_state()
+    if dirty:
+        raise SystemExit("tracked files are modified outside this tool's outputs; commit the tool change first: "
+                         + ", ".join(dirty))
+    tracked = {p.stem: load(p) for p in sorted((ROOT / REC_REL / "cases").glob("*.json"))}
+    ids = in_scope_case_ids()
+    if sorted(tracked) != ids:
+        raise SystemExit("tracked case receipts do not match the in-scope case ids; a full write (--runs) is needed")
+    receipts = {}
+    for cid, (kind, verdict, body, comparison) in derive_all(ids).items():
+        old = tracked[cid]
+        common = {k: old[k] for k in COMMON_KEYS}
+        common["host"] = host_string(old["oracle_build_receipt"])
+        rec = case_receipt(cid, kind, verdict, body, comparison, common)
+        path = ROOT / REC_REL / "cases" / f"{cid}.json"
+        write_json(path, rec)
+        receipts[cid] = receipt_info(str(path.relative_to(ROOT)), rec)
+    cm = load(ROOT / CASEMAP_REL)
+    mine = own_rows(cm)
+    rows, counts = build_rows([r["source_id"] for r in mine], {r["source_id"]: r["carry_scan_status"] for r in mine},
+                              receipts)
+    cm["counts"], cm["rows"] = counts, rows + foreign_rows(cm)
+    cm["rederived"] = {"tool_commit": head,
+                       "note": "case receipts and rows re-derived from the tracked batch artifacts (--rederive); "
+                               "no batch was re-run, so glvmodels_commit stays the run commit"}
+    write_json(ROOT / CASEMAP_REL, cm)
+    print(json.dumps(counts))
+    print("case receipts re-derived", len(receipts))
+
+
 def copy_batch(batch, run_dir):
     dest = ROOT / batch_rel(batch)
     dest.mkdir(parents=True, exist_ok=True)
@@ -991,9 +1097,14 @@ def main():
                     help="write receipts from a checkout with modified tracked files (recorded, not hidden)")
     ap.add_argument("--check", action="store_true",
                     help="verify the tracked receipts against the files they read; write nothing")
+    ap.add_argument("--rederive", action="store_true",
+                    help="re-derive case receipts and rows from the tracked batch artifacts (derivation change only)")
     args = ap.parse_args()
     if args.check:
         check()
+        return
+    if args.rederive:
+        rederive()
         return
     if args.runs is None or args.runtimes is None:
         ap.error("--runs and --runtimes are required unless --check")
@@ -1030,13 +1141,10 @@ def main():
               "oracle_build_receipt": oracle_build[0], "oracle_source_receipt": ORACLE_SOURCE,
               "glvmodels_commit": head, "glvmodels_worktree_dirty": dirty,
               "glvmodels_src_tree": git("rev-parse", f"{head}:src").stdout.strip(),
-              "host": ORACLE_BUILDS[oracle_build[0]]}
+              "host": host_string(oracle_build[0])}
     receipts = {}
     for cid, (kind, verdict, body, comparison) in derive_all(ids).items():
-        rec = {"schema": "core070-family-p1-case-receipt/v1", "case_id": cid, "verdict": verdict,
-               "evidence_kind": kind, **body, **common}
-        if comparison is not None:
-            rec["comparison"] = {"pin": "P1", "cases": comparison}
+        rec = case_receipt(cid, kind, verdict, body, comparison, common)
         path = ROOT / REC_REL / "cases" / f"{cid}.json"
         write_json(path, rec)
         receipts[cid] = receipt_info(str(path.relative_to(ROOT)), rec)
