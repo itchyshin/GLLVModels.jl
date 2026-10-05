@@ -37,6 +37,16 @@
   complete data): the Gamma block and a reordered call within 2e-6, the module matrix,
   singular values, squared shares and both axis tables within 1e-6 (axes up to one joint sign per
   module), log-likelihoods within 2e-10.
+- **`sanity_multi` and the `loading_profile` grid leave `lambda_constraint` pins out (refs #794).**
+  On a fit made with `lambda_constraint`, `sanity_multi` took the gradient and Hessian over every
+  packed parameter, pinned loadings included, so a fit at its constrained optimum failed the
+  gradient check (toy fit with one pin at 0.3: `max_gradient` 27.0, `pass = false`; now 5.3e-7,
+  `pass = true`). gllvmTMB maps pinned loadings off, so R's gradient and `pdHess` cover the free
+  parameters only; `max_gradient`, `gradient_norm`, `gradient_ok`, `sdreport_ok` and `pd_hessian`
+  now do the same. `max_se` was not affected (a `lambda_constraint` fit has no fixed effects).
+  `loading_profile` sets its grid width from a Wald SE that now uses the free-block covariance, as
+  `confint(...; method = :wald)` does; the profile objective is unchanged, only the grid spacing moves. The starting bracket step of direct `profile_ci` and `tmbprofile_wrapper` calls on a pinned fit also changes, by bisection-tolerance amounts. Unpinned fits
+  give byte-identical `sanity_multi` output.
 - **Wald intervals on a `lambda_constraint` fit use the free-parameter covariance (#794).**
   On a fit made with `fit_gaussian_gllvm(y; K, lambda_constraint = M)`, `confint`, `vcov`,
   `loading_ci`, `raw_loading_wald_ci` and the derived-quantity Wald intervals inverted the observed
