@@ -505,6 +505,18 @@ function _confint_check_unpinned(fit::GllvmFit, method::Symbol, label::AbstractS
         "(profile and bootstrap refits would drop the pins and fit a different model)"))
 end
 
+# The same refusal for the direct entry points (`profile_ci`, `tmbprofile_wrapper`,
+# `bootstrap_ci`, `bootstrap_ci_derived`, `profile_ci_derived`), which are public and
+# would otherwise refit a pinned fit without its pins (refs #794).
+function _check_unpinned_refit(fit::GllvmFit, fname::AbstractString)
+    isempty(_lambda_constraint_pinned_theta_indices(fit)) && return nothing
+    throw(ArgumentError(
+        "$fname is not available for a fit with lambda_constraint pins: its refits " *
+        "would drop the pins and fit a different model. Use loading_profile(fit; y) " *
+        "to profile the free loadings of a pinned fit, or confint(fit, y) for Wald " *
+        "intervals"))
+end
+
 function _confint_gaussian(fit::GllvmFit, y, level::Real, parm, X, Σ_phy,
                            method, kwargs)
     method isa Symbol || throw(ArgumentError(

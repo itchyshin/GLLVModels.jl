@@ -391,6 +391,7 @@ println(_SHARD === nothing ?
     _shard_include("test_missing_data.jl")
     _shard_include("test_missing_response.jl")
     _shard_include("test_missing_response_extra.jl")
+    _shard_include("test_masked_gaussian_posdef.jl")   # #716
     _shard_include("test_missing_predictor_fiml.jl")
     _shard_include("test_missing_predictor_phylo.jl")
     _shard_include("test_missing_predictor_z.jl")

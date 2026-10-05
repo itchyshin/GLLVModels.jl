@@ -19,10 +19,9 @@
 # Both fits converge to the same optimum (log-likelihoods compared). The R fit converged with a
 # positive-definite Hessian (asserted).
 #
-# Limits, disclosed: the mask pattern was chosen because many masks make
-# fit_gaussian_gllvm(...; mask) throw PosDefException (Cholesky in _gaussian_data_nll,
-# src/families/aghq_gaussian_fit.jl ~205-212), a robustness bug outside this comparison. The mask
-# that works is benign (light missingness, at most three masked cells per unit), so this twin does
+# Limits, disclosed: the mask pattern was chosen when many masks made
+# fit_gaussian_gllvm(...; mask) throw PosDefException (Cholesky in _gaussian_data_nll); that
+# robustness bug is fixed (#716, test/test_masked_gaussian_posdef.jl). The mask here is benign (light missingness, at most three masked cells per unit), so this twin does
 # not cover heavy or irregular missingness. Under the Gaussian identity link the response-scale
 # values equal the link-scale values, so the :response check exercises that path but adds no
 # independent numeric evidence.
