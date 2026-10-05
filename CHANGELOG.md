@@ -15,6 +15,25 @@
   `profile_ci_phylo_signal`, `loading_profile_exploratory`, `bootstrap_Sigma`, and
   `confint_inspect`) refuse a pinned fit too. Unpinned fits are unchanged. Tests:
   `test/test_confint_method_routes.jl`.
+- **Masked Gaussian fits no longer throw `PosDefException` (#716).** `fit_gaussian_gllvm(Y; K,
+  X, mask)` optimises the masked observed-data likelihood with LBFGS. A line-search trial point
+  could drive `log σ` far below the optimum (about −100 in the issue's example); for a unit with
+  more observed traits than `K`, `Λ_oΛ_oᵀ + σ²I` was then not positive definite to working
+  precision and `cholesky` threw instead of the line search backing off. The objective now
+  factors with `check = false` and returns `+Inf` at such points. On a one-off sweep run
+  outside the test suite of seven mask
+  patterns from the issue (single cell, trait 1 in every 7th unit, traits 2 and 5 in every
+  10th unit, random 5% and 20% of cells, two block patterns) × 5 seeds × `K ∈ {1, 2}` × with
+  and without a one-hot trait-intercept `X` (p = 6, n = 200), 49 of 140 fits threw before and
+  0 of 140 after; all 140 converge, report a log-likelihood within 9.1e-13 of an independent
+  dense `MvNormal` observed-data log-likelihood at the returned parameters, and have a
+  largest oracle score of 4.4e-5. Unmasked fits (exact and `aghq = 3`) and masked fits that
+  fitted before, with their `confint`, are unchanged bit for bit (SHA-256 of the estimates
+  checked against main): the new branch is taken only where the old code threw. Not changed, now
+  documented in the `fit_gaussian_gllvm` docstring: a masked fit with `X = nothing` is a
+  zero-mean model (#577), and `predict_missing` still needs the mask passed again. Tests:
+  `test/test_masked_gaussian_posdef.jl` (six of the patterns, one seed, with `X`).
+
 - **The grouped-dispersion fits keep their training offset (#788, first part).** The formula
   front end sends `family = NegativeBinomial()` to `fit_nb_gllvm_grouped` (`disp_group = :species`,
   gllvmTMB's per-trait `r`), which accepted `offset` but returned an `NBGroupedFit` that did not
