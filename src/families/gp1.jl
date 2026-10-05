@@ -223,6 +223,8 @@ end
 Result of [`fit_gp1_gllvm`](@ref): intercepts `β` (length p), loadings `Λ` (p×K),
 the estimated SIGNED dispersion `α` (Var = μ(1+α μ)²), the `link`, the maximised
 Laplace `loglik`, the optimiser `converged` flag, and `iterations`.
+`offset` is the p×n training offset the fit was made with (`nothing` when it had none);
+[`predict`](@ref), [`getLV`](@ref) and `residuals` use it by default.
 """
 struct GP1Fit
     β::Vector{Float64}
@@ -233,7 +235,12 @@ struct GP1Fit
     converged::Bool
     iterations::Int
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
 end
+
+# Pre-offset compat tier (8 positional args): no stored training offset.
+GP1Fit(β, Λ, α, link, loglik, converged, iterations, hessian) =
+    GP1Fit(β, Λ, α, link, loglik, converged, iterations, hessian, nothing)
 
 # Positional compatibility constructor (2026-08-28): every pre-existing
 # construction site builds a default-curvature fit; the `hessian` field
@@ -385,5 +392,5 @@ function fit_gp1_gllvm(Y::AbstractMatrix; K::Integer,
     end
 
     return GP1Fit(fit_star.β, fit_star.Λ, fit_star.α, link, -fit_star.nll,
-                  fit_star.converged, fit_star.iters, hessian)
+                  fit_star.converged, fit_star.iters, hessian, _stored_offset(offset))
 end

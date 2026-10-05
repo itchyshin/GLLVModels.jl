@@ -2,6 +2,24 @@
 
 ## Development
 
+- **The shared-dispersion fits keep their training offset (#788, second part).** `GammaFit`,
+  `BetaFit`, `NB1Fit`, `GP1Fit`, `ExponentialFit`, `HurdleNBFit`, `ZIPFit`, `ZINBFit`, `ZIBFit`,
+  `DeltaLogNormalFit` and `DeltaGammaFit` accepted `offset` at fit time but did not keep it, so
+  `getLV`, `predict` and `residuals` silently used a zero offset. They now store the p×n training
+  offset in `fit.offset` (`nothing` without one) and follow #787's rule: a `Y` of the training
+  size uses the stored offset; new units take `offset = O` (a p×n matrix, a scalar or a length-p
+  vector); new units from an offset fit without one raise an `ArgumentError`. On the two-part
+  fits the offset is on the count / positive-part predictor `η^c`, as at fit time. On p = 5,
+  n = 50, K = 1 fits with a `0.8 * randn` offset, the training-row link predictor missed
+  `β + O + Λẑ_O` by 2.0 to 3.2 (by family) before and by at most 4.4e-16 after.
+  `link_residual` on Gamma and Beta fits now includes the offset in the fitted trait means, as
+  it already did on Poisson, NB2 and binomial fits. Offset-free fits and their `getLV`,
+  `predict` and `residuals` are unchanged bit for bit, and the old positional constructors still
+  work (they store no offset). The truncated fits have no `getLV`/`predict`/`residuals` and are
+  unchanged. Tests: `test/test_predict_offset_shared.jl` (mode = zero of the finite-difference
+  score of the offset-aware log posterior, written from the Distributions.jl densities; the
+  stored offset reproduces `fit.loglik`; residuals at the offset-aware mean; new-unit rule;
+  compat constructors).
 - **The grouped-dispersion fits keep their training offset (#788, first part).** The formula
   front end sends `family = NegativeBinomial()` to `fit_nb_gllvm_grouped` (`disp_group = :species`,
   gllvmTMB's per-trait `r`), which accepted `offset` but returned an `NBGroupedFit` that did not

@@ -125,6 +125,8 @@ nb1_marginal_loglik_laplace(Y::AbstractMatrix, Λ::AbstractMatrix, β::AbstractV
 Result of [`fit_nb1_gllvm`](@ref): intercepts `β` (length p), loadings `Λ` (p×K),
 the estimated dispersion `φ` (linear variance `Var = μ(1+φ)`), the `link`, the
 maximised Laplace `loglik`, the optimiser `converged` flag, and `iterations`.
+`offset` is the p×n training offset the fit was made with (`nothing` when it had none);
+[`predict`](@ref), [`getLV`](@ref) and `residuals` use it by default.
 """
 struct NB1Fit
     β::Vector{Float64}
@@ -135,7 +137,12 @@ struct NB1Fit
     converged::Bool
     iterations::Int
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
 end
+
+# Pre-offset compat tier (8 positional args): no stored training offset.
+NB1Fit(β, Λ, φ, link, loglik, converged, iterations, hessian) =
+    NB1Fit(β, Λ, φ, link, loglik, converged, iterations, hessian, nothing)
 
 # Positional compatibility constructor (2026-08-28): every pre-existing
 # construction site builds a default-curvature fit; the `hessian` field
@@ -247,5 +254,5 @@ function fit_nb1_gllvm(Y::AbstractMatrix; K::Integer,
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     φ̂ = exp(θ̂[p + rr + 1])
-    return NB1Fit(β̂, Λ̂, φ̂, link, _fit_verdict(res)..., hessian)
+    return NB1Fit(β̂, Λ̂, φ̂, link, _fit_verdict(res)..., hessian, _stored_offset(offset))
 end

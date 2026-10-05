@@ -182,6 +182,8 @@ function _trait_mean_fitted(fit::GammaFit, Y::AbstractMatrix; mask = nothing)
     end
     Z = getLV(fit, Y; rotate = false, mask = mask)
     η = fit.β .+ fit.Λ * Z'
+    O = _laplace_prediction_offset(fit.offset, Y, nothing, mask, "link_residual")
+    O === nothing || (η .+= O)        # the fitted means at the data include its offset
     μ = linkinv.(Ref(fit.link), η)
     return _masked_trait_mean(μ, mask)
 end
@@ -193,6 +195,8 @@ function _trait_mean_fitted(fit::BetaFit, Y::AbstractMatrix; mask = nothing)
     end
     Z = getLV(fit, Y; rotate = false, mask = mask)
     η = fit.β .+ fit.Λ * Z'
+    O = _laplace_prediction_offset(fit.offset, Y, nothing, mask, "link_residual")
+    O === nothing || (η .+= O)        # the fitted means at the data include its offset
     μ = linkinv.(Ref(fit.link), η)
     return _masked_trait_mean(μ, mask)
 end
