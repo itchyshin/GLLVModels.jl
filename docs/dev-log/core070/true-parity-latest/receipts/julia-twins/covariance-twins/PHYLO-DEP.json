@@ -20,7 +20,7 @@
   "source_tests": [
     {
       "path": "test/test_cov_phylo_twins_p1.jl",
-      "sha256": "12687f9d445e2374e7078515dd67f9ce8ee8d8123520e962d1229682184f9839"
+      "sha256": "085af9e5c0e99d3fff93d30c922014c78d5a8206151f1675536d02da22ac0c66"
     }
   ],
   "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
@@ -31,33 +31,33 @@
         "case_id": "P1-JULIA-COV-PHYLO-DEP-LOGLIK",
         "quantity": "maximised logLik",
         "r_source": "test/fixtures/cov_phylo_twins_p1.toml [dep] loglik",
-        "julia_source": "fit.loglik, fit as at test/test_cov_phylo_twins_p1.jl:76",
+        "julia_source": "fit.loglik, fit as at test/test_cov_phylo_twins_p1.jl:80",
         "r_value": -609.1634525703754,
-        "julia_value": -609.1634525697552,
-        "abs_diff": 6.201616997714154e-10,
+        "julia_value": -609.1634525697524,
+        "abs_diff": 6.230038707144558e-10,
         "tolerance": 1e-06,
-        "tolerance_source": "test/test_cov_phylo_twins_p1.jl:125",
+        "tolerance_source": "test/test_cov_phylo_twins_p1.jl:142",
         "tolerance_source_line": "@test abs(fit.loglik - Float64(r[\"loglik\"])) <= 1e-6",
-        "note": "R: value ~ 0 + trait + phylo_dep(0 + trait | species, tree = tree), which gllvmTMB rewrites to phylo_rr(d = n_traits, .dep = TRUE), the phylo_latent(d = T) engine path (full unstructured Sigma_phy (x) A, T(T+1)/2 = 10 loading parameters). Julia: fit_phylo_latent_gllvm(Y, species; d = 4, tree), then one warm restart from that fit's parameters shifted by -0.01. From the default start Julia's LBFGS stops at max |FD gradient| 4.0e-5 above g_tol 1e-5 (converged = false); the ForwardDiff gradient of the same likelihood (a dense AD-capable copy matching the sparse objective to 8e-12) agrees at 4.0e-5 on the log residual-SD coordinate, so that was not finite-difference noise but a stop at the objective's rounding floor (curvature about 1.6e3, Newton decrement 2.6e-12). The restart reports converged = true with a positive-definite Hessian at max |FD gradient| 8.6e-7 (max |AD gradient| 8.9e-7), objective within 3e-12 of the default stop; the twin test asserts converged = true. R's own optimum has max |AD gradient| 6.1e-4. Shared fixture: 120-tip coalescent tree (ape::rcoal, seed 20261005), 4 traits, 2 observations per species, Gaussian, drawn from (Lambda Lambda' + diag(s^2)) (x) A + 0.4^2 I with A the unit-height tip correlation; Y and the Newick string stored to 17 digits, A rebuilt in Julia from the tree and checked against the stored sum, norm and first row of R's A. R: gllvmTMB(..., trait = 'trait', unit = 'species', cluster = 'species', family = gaussian(), REML = FALSE), nlminb rel.tol 1e-10, every fit converged with a positive-definite Hessian. The fixed-parameter case evaluates Julia's objective (GLLVModels._precision_multivariate_nll, the fitter's own objective) at R's optimum opt$par, mapped by name onto Julia's [beta; theta_rr; log_sd_unique; log_sd_eps] (both engines pack the loadings with the gllvmTMB.cpp layout), and compares it with R's objective there; it does not depend on either optimiser. Loadings are compared through Sigma_phy because a loading column's sign is not identified."
+        "note": "R: value ~ 0 + trait + phylo_dep(0 + trait | species, tree = tree), which gllvmTMB rewrites to phylo_rr(d = n_traits, .dep = TRUE), the phylo_latent(d = T) engine path (full unstructured Sigma_phy (x) A, T(T+1)/2 = 10 loading parameters). Julia: fit_phylo_latent_gllvm(Y, species; d = 4, tree) from its default start. Julia's LBFGS stops at the objective's rounding floor with max |FD gradient| about 4.0e-5 on the log residual-SD coordinate (the ForwardDiff gradient of a dense AD-capable copy of the likelihood, matching the sparse objective to 8e-12, agrees, so that is not finite-difference noise), curvature about 1.6e3 and Newton decrement about 3e-12, so no descent step is resolvable. Julia's optimiser flag can report not converged at the rounding floor on some platforms (this fit reads converged = false against g_tol 1e-5 on macOS and Linux); the twin asserts stationarity instead: a positive-definite Hessian, Newton decrement g' H^-1 g / 2 <= 1e-9 and max |gradient| <= 1e-4 at the returned parameters. R's own optimum has max |AD gradient| 6.1e-4. Shared fixture: 120-tip coalescent tree (ape::rcoal, seed 20261005), 4 traits, 2 observations per species, Gaussian, drawn from (Lambda Lambda' + diag(s^2)) (x) A + 0.4^2 I with A the unit-height tip correlation; Y and the Newick string stored to 17 digits, A rebuilt in Julia from the tree and checked against the stored sum, norm and first row of R's A. R: gllvmTMB(..., trait = 'trait', unit = 'species', cluster = 'species', family = gaussian(), REML = FALSE), nlminb rel.tol 1e-10, every fit converged with a positive-definite Hessian. The fixed-parameter case evaluates Julia's objective (GLLVModels._precision_multivariate_nll, the fitter's own objective) at R's optimum opt$par, mapped by name onto Julia's [beta; theta_rr; log_sd_unique; log_sd_eps] (both engines pack the loadings with the gllvmTMB.cpp layout), and compares it with R's objective there; it does not depend on either optimiser. Loadings are compared through Sigma_phy because a loading column's sign is not identified."
       },
       {
         "case_id": "P1-JULIA-COV-PHYLO-DEP-OBJECTIVE-AT-R-OPTIMUM",
         "quantity": "negative log-likelihood at R's optimum: R's objective (tmb_obj$fn(opt$par)) vs Julia's objective at the same parameters",
         "r_source": "test/fixtures/cov_phylo_twins_p1.toml [dep] objective, par, par_names",
-        "julia_source": "Julia objective at R's opt$par mapped by name, fit as at test/test_cov_phylo_twins_p1.jl:76",
+        "julia_source": "Julia objective at R's opt$par mapped by name, fit as at test/test_cov_phylo_twins_p1.jl:80",
         "r_value": 609.1634525703754,
         "julia_value": 609.1634525703737,
         "abs_diff": 1.7053025658242404e-12,
         "tolerance": 1e-08,
-        "tolerance_source": "test/test_cov_phylo_twins_p1.jl:126",
+        "tolerance_source": "test/test_cov_phylo_twins_p1.jl:143",
         "tolerance_source_line": "@test abs(_cpt_cross(fit, r)) <= 1e-8",
-        "note": "R: value ~ 0 + trait + phylo_dep(0 + trait | species, tree = tree), which gllvmTMB rewrites to phylo_rr(d = n_traits, .dep = TRUE), the phylo_latent(d = T) engine path (full unstructured Sigma_phy (x) A, T(T+1)/2 = 10 loading parameters). Julia: fit_phylo_latent_gllvm(Y, species; d = 4, tree), then one warm restart from that fit's parameters shifted by -0.01. From the default start Julia's LBFGS stops at max |FD gradient| 4.0e-5 above g_tol 1e-5 (converged = false); the ForwardDiff gradient of the same likelihood (a dense AD-capable copy matching the sparse objective to 8e-12) agrees at 4.0e-5 on the log residual-SD coordinate, so that was not finite-difference noise but a stop at the objective's rounding floor (curvature about 1.6e3, Newton decrement 2.6e-12). The restart reports converged = true with a positive-definite Hessian at max |FD gradient| 8.6e-7 (max |AD gradient| 8.9e-7), objective within 3e-12 of the default stop; the twin test asserts converged = true. R's own optimum has max |AD gradient| 6.1e-4. Shared fixture: 120-tip coalescent tree (ape::rcoal, seed 20261005), 4 traits, 2 observations per species, Gaussian, drawn from (Lambda Lambda' + diag(s^2)) (x) A + 0.4^2 I with A the unit-height tip correlation; Y and the Newick string stored to 17 digits, A rebuilt in Julia from the tree and checked against the stored sum, norm and first row of R's A. R: gllvmTMB(..., trait = 'trait', unit = 'species', cluster = 'species', family = gaussian(), REML = FALSE), nlminb rel.tol 1e-10, every fit converged with a positive-definite Hessian. The fixed-parameter case evaluates Julia's objective (GLLVModels._precision_multivariate_nll, the fitter's own objective) at R's optimum opt$par, mapped by name onto Julia's [beta; theta_rr; log_sd_unique; log_sd_eps] (both engines pack the loadings with the gllvmTMB.cpp layout), and compares it with R's objective there; it does not depend on either optimiser. Loadings are compared through Sigma_phy because a loading column's sign is not identified."
+        "note": "R: value ~ 0 + trait + phylo_dep(0 + trait | species, tree = tree), which gllvmTMB rewrites to phylo_rr(d = n_traits, .dep = TRUE), the phylo_latent(d = T) engine path (full unstructured Sigma_phy (x) A, T(T+1)/2 = 10 loading parameters). Julia: fit_phylo_latent_gllvm(Y, species; d = 4, tree) from its default start. Julia's LBFGS stops at the objective's rounding floor with max |FD gradient| about 4.0e-5 on the log residual-SD coordinate (the ForwardDiff gradient of a dense AD-capable copy of the likelihood, matching the sparse objective to 8e-12, agrees, so that is not finite-difference noise), curvature about 1.6e3 and Newton decrement about 3e-12, so no descent step is resolvable. Julia's optimiser flag can report not converged at the rounding floor on some platforms (this fit reads converged = false against g_tol 1e-5 on macOS and Linux); the twin asserts stationarity instead: a positive-definite Hessian, Newton decrement g' H^-1 g / 2 <= 1e-9 and max |gradient| <= 1e-4 at the returned parameters. R's own optimum has max |AD gradient| 6.1e-4. Shared fixture: 120-tip coalescent tree (ape::rcoal, seed 20261005), 4 traits, 2 observations per species, Gaussian, drawn from (Lambda Lambda' + diag(s^2)) (x) A + 0.4^2 I with A the unit-height tip correlation; Y and the Newick string stored to 17 digits, A rebuilt in Julia from the tree and checked against the stored sum, norm and first row of R's A. R: gllvmTMB(..., trait = 'trait', unit = 'species', cluster = 'species', family = gaussian(), REML = FALSE), nlminb rel.tol 1e-10, every fit converged with a positive-definite Hessian. The fixed-parameter case evaluates Julia's objective (GLLVModels._precision_multivariate_nll, the fitter's own objective) at R's optimum opt$par, mapped by name onto Julia's [beta; theta_rr; log_sd_unique; log_sd_eps] (both engines pack the loadings with the gllvmTMB.cpp layout), and compares it with R's objective there; it does not depend on either optimiser. Loadings are compared through Sigma_phy because a loading column's sign is not identified."
       },
       {
         "case_id": "P1-JULIA-COV-PHYLO-DEP-INTERCEPTS",
         "quantity": "trait intercepts (4 values)",
         "r_source": "test/fixtures/cov_phylo_twins_p1.toml [dep] beta",
-        "julia_source": "fit.beta, fit as at test/test_cov_phylo_twins_p1.jl:76",
+        "julia_source": "fit.beta, fit as at test/test_cov_phylo_twins_p1.jl:80",
         "r_value": [
           -0.7813874995081578,
           -0.9000467224058077,
@@ -65,35 +65,35 @@
           -0.4325275924570291
         ],
         "julia_value": [
-          -0.7813872529558187,
-          -0.9000452944711291,
-          0.4536074919360654,
-          -0.4325274989597817
+          -0.7813875165908376,
+          -0.9000456754711256,
+          0.4536082088402704,
+          -0.43252779713039724
         ],
-        "abs_diff": 1.4279346786105762e-06,
+        "abs_diff": 1.8764701574247589e-06,
         "tolerance": 0.0001,
-        "tolerance_source": "test/test_cov_phylo_twins_p1.jl:127",
+        "tolerance_source": "test/test_cov_phylo_twins_p1.jl:144",
         "tolerance_source_line": "@test maximum(abs.(fit.beta .- Float64.(r[\"beta\"]))) <= 1e-4",
-        "note": "R: value ~ 0 + trait + phylo_dep(0 + trait | species, tree = tree), which gllvmTMB rewrites to phylo_rr(d = n_traits, .dep = TRUE), the phylo_latent(d = T) engine path (full unstructured Sigma_phy (x) A, T(T+1)/2 = 10 loading parameters). Julia: fit_phylo_latent_gllvm(Y, species; d = 4, tree), then one warm restart from that fit's parameters shifted by -0.01. From the default start Julia's LBFGS stops at max |FD gradient| 4.0e-5 above g_tol 1e-5 (converged = false); the ForwardDiff gradient of the same likelihood (a dense AD-capable copy matching the sparse objective to 8e-12) agrees at 4.0e-5 on the log residual-SD coordinate, so that was not finite-difference noise but a stop at the objective's rounding floor (curvature about 1.6e3, Newton decrement 2.6e-12). The restart reports converged = true with a positive-definite Hessian at max |FD gradient| 8.6e-7 (max |AD gradient| 8.9e-7), objective within 3e-12 of the default stop; the twin test asserts converged = true. R's own optimum has max |AD gradient| 6.1e-4. Shared fixture: 120-tip coalescent tree (ape::rcoal, seed 20261005), 4 traits, 2 observations per species, Gaussian, drawn from (Lambda Lambda' + diag(s^2)) (x) A + 0.4^2 I with A the unit-height tip correlation; Y and the Newick string stored to 17 digits, A rebuilt in Julia from the tree and checked against the stored sum, norm and first row of R's A. R: gllvmTMB(..., trait = 'trait', unit = 'species', cluster = 'species', family = gaussian(), REML = FALSE), nlminb rel.tol 1e-10, every fit converged with a positive-definite Hessian. The fixed-parameter case evaluates Julia's objective (GLLVModels._precision_multivariate_nll, the fitter's own objective) at R's optimum opt$par, mapped by name onto Julia's [beta; theta_rr; log_sd_unique; log_sd_eps] (both engines pack the loadings with the gllvmTMB.cpp layout), and compares it with R's objective there; it does not depend on either optimiser. Loadings are compared through Sigma_phy because a loading column's sign is not identified."
+        "note": "R: value ~ 0 + trait + phylo_dep(0 + trait | species, tree = tree), which gllvmTMB rewrites to phylo_rr(d = n_traits, .dep = TRUE), the phylo_latent(d = T) engine path (full unstructured Sigma_phy (x) A, T(T+1)/2 = 10 loading parameters). Julia: fit_phylo_latent_gllvm(Y, species; d = 4, tree) from its default start. Julia's LBFGS stops at the objective's rounding floor with max |FD gradient| about 4.0e-5 on the log residual-SD coordinate (the ForwardDiff gradient of a dense AD-capable copy of the likelihood, matching the sparse objective to 8e-12, agrees, so that is not finite-difference noise), curvature about 1.6e3 and Newton decrement about 3e-12, so no descent step is resolvable. Julia's optimiser flag can report not converged at the rounding floor on some platforms (this fit reads converged = false against g_tol 1e-5 on macOS and Linux); the twin asserts stationarity instead: a positive-definite Hessian, Newton decrement g' H^-1 g / 2 <= 1e-9 and max |gradient| <= 1e-4 at the returned parameters. R's own optimum has max |AD gradient| 6.1e-4. Shared fixture: 120-tip coalescent tree (ape::rcoal, seed 20261005), 4 traits, 2 observations per species, Gaussian, drawn from (Lambda Lambda' + diag(s^2)) (x) A + 0.4^2 I with A the unit-height tip correlation; Y and the Newick string stored to 17 digits, A rebuilt in Julia from the tree and checked against the stored sum, norm and first row of R's A. R: gllvmTMB(..., trait = 'trait', unit = 'species', cluster = 'species', family = gaussian(), REML = FALSE), nlminb rel.tol 1e-10, every fit converged with a positive-definite Hessian. The fixed-parameter case evaluates Julia's objective (GLLVModels._precision_multivariate_nll, the fitter's own objective) at R's optimum opt$par, mapped by name onto Julia's [beta; theta_rr; log_sd_unique; log_sd_eps] (both engines pack the loadings with the gllvmTMB.cpp layout), and compares it with R's objective there; it does not depend on either optimiser. Loadings are compared through Sigma_phy because a loading column's sign is not identified."
       },
       {
         "case_id": "P1-JULIA-COV-PHYLO-DEP-SIGMA-EPS",
         "quantity": "shared residual sd (R exp(log_sigma_eps))",
         "r_source": "test/fixtures/cov_phylo_twins_p1.toml [dep] sigma_eps",
-        "julia_source": "sqrt(fit.residual_variance), fit as at test/test_cov_phylo_twins_p1.jl:76",
+        "julia_source": "sqrt(fit.residual_variance), fit as at test/test_cov_phylo_twins_p1.jl:80",
         "r_value": 0.39466197725795454,
-        "julia_value": 0.394662106761054,
-        "abs_diff": 1.2950309946635485e-07,
+        "julia_value": 0.3946620956849152,
+        "abs_diff": 1.1842696068242731e-07,
         "tolerance": 0.0001,
-        "tolerance_source": "test/test_cov_phylo_twins_p1.jl:128",
+        "tolerance_source": "test/test_cov_phylo_twins_p1.jl:145",
         "tolerance_source_line": "@test abs(sqrt(only(unique(fit.residual_variance))) - Float64(r[\"sigma_eps\"])) <= 1e-4",
-        "note": "R: value ~ 0 + trait + phylo_dep(0 + trait | species, tree = tree), which gllvmTMB rewrites to phylo_rr(d = n_traits, .dep = TRUE), the phylo_latent(d = T) engine path (full unstructured Sigma_phy (x) A, T(T+1)/2 = 10 loading parameters). Julia: fit_phylo_latent_gllvm(Y, species; d = 4, tree), then one warm restart from that fit's parameters shifted by -0.01. From the default start Julia's LBFGS stops at max |FD gradient| 4.0e-5 above g_tol 1e-5 (converged = false); the ForwardDiff gradient of the same likelihood (a dense AD-capable copy matching the sparse objective to 8e-12) agrees at 4.0e-5 on the log residual-SD coordinate, so that was not finite-difference noise but a stop at the objective's rounding floor (curvature about 1.6e3, Newton decrement 2.6e-12). The restart reports converged = true with a positive-definite Hessian at max |FD gradient| 8.6e-7 (max |AD gradient| 8.9e-7), objective within 3e-12 of the default stop; the twin test asserts converged = true. R's own optimum has max |AD gradient| 6.1e-4. Shared fixture: 120-tip coalescent tree (ape::rcoal, seed 20261005), 4 traits, 2 observations per species, Gaussian, drawn from (Lambda Lambda' + diag(s^2)) (x) A + 0.4^2 I with A the unit-height tip correlation; Y and the Newick string stored to 17 digits, A rebuilt in Julia from the tree and checked against the stored sum, norm and first row of R's A. R: gllvmTMB(..., trait = 'trait', unit = 'species', cluster = 'species', family = gaussian(), REML = FALSE), nlminb rel.tol 1e-10, every fit converged with a positive-definite Hessian. The fixed-parameter case evaluates Julia's objective (GLLVModels._precision_multivariate_nll, the fitter's own objective) at R's optimum opt$par, mapped by name onto Julia's [beta; theta_rr; log_sd_unique; log_sd_eps] (both engines pack the loadings with the gllvmTMB.cpp layout), and compares it with R's objective there; it does not depend on either optimiser. Loadings are compared through Sigma_phy because a loading column's sign is not identified."
+        "note": "R: value ~ 0 + trait + phylo_dep(0 + trait | species, tree = tree), which gllvmTMB rewrites to phylo_rr(d = n_traits, .dep = TRUE), the phylo_latent(d = T) engine path (full unstructured Sigma_phy (x) A, T(T+1)/2 = 10 loading parameters). Julia: fit_phylo_latent_gllvm(Y, species; d = 4, tree) from its default start. Julia's LBFGS stops at the objective's rounding floor with max |FD gradient| about 4.0e-5 on the log residual-SD coordinate (the ForwardDiff gradient of a dense AD-capable copy of the likelihood, matching the sparse objective to 8e-12, agrees, so that is not finite-difference noise), curvature about 1.6e3 and Newton decrement about 3e-12, so no descent step is resolvable. Julia's optimiser flag can report not converged at the rounding floor on some platforms (this fit reads converged = false against g_tol 1e-5 on macOS and Linux); the twin asserts stationarity instead: a positive-definite Hessian, Newton decrement g' H^-1 g / 2 <= 1e-9 and max |gradient| <= 1e-4 at the returned parameters. R's own optimum has max |AD gradient| 6.1e-4. Shared fixture: 120-tip coalescent tree (ape::rcoal, seed 20261005), 4 traits, 2 observations per species, Gaussian, drawn from (Lambda Lambda' + diag(s^2)) (x) A + 0.4^2 I with A the unit-height tip correlation; Y and the Newick string stored to 17 digits, A rebuilt in Julia from the tree and checked against the stored sum, norm and first row of R's A. R: gllvmTMB(..., trait = 'trait', unit = 'species', cluster = 'species', family = gaussian(), REML = FALSE), nlminb rel.tol 1e-10, every fit converged with a positive-definite Hessian. The fixed-parameter case evaluates Julia's objective (GLLVModels._precision_multivariate_nll, the fitter's own objective) at R's optimum opt$par, mapped by name onto Julia's [beta; theta_rr; log_sd_unique; log_sd_eps] (both engines pack the loadings with the gllvmTMB.cpp layout), and compares it with R's objective there; it does not depend on either optimiser. Loadings are compared through Sigma_phy because a loading column's sign is not identified."
       },
       {
         "case_id": "P1-JULIA-COV-PHYLO-DEP-SIGMA-PHY",
         "quantity": "Lambda_phy Lambda_phy' (4 x 4), the full unstructured phylogenetic trait covariance",
         "r_source": "test/fixtures/cov_phylo_twins_p1.toml [dep] Sigma_rr",
-        "julia_source": "phylogenetic trait covariance of the fit as at test/test_cov_phylo_twins_p1.jl:76",
+        "julia_source": "phylogenetic trait covariance of the fit as at test/test_cov_phylo_twins_p1.jl:80",
         "r_value": [
           1.1504341518789436,
           0.40816048482504835,
@@ -113,28 +113,28 @@
           0.5720355628998348
         ],
         "julia_value": [
-          1.150434574315498,
-          0.4081611728272179,
-          -0.8391858672264031,
-          0.4727379884513175,
-          0.4081611728272179,
-          0.48466476465495134,
-          -0.5349404802122517,
-          0.21356428773277086,
-          -0.8391858672264031,
-          -0.5349404802122517,
-          1.2630312399919494,
-          -0.6119053558959524,
-          0.4727379884513175,
-          0.21356428773277086,
-          -0.6119053558959524,
-          0.572033430947767
+          1.1504346716033762,
+          0.40816117995694867,
+          -0.839185910548123,
+          0.4727380906389198,
+          0.40816117995694867,
+          0.48466482860019566,
+          -0.5349404730269862,
+          0.21356424428526247,
+          -0.839185910548123,
+          -0.5349404730269862,
+          1.263031283833553,
+          -0.6119053943798884,
+          0.4727380906389198,
+          0.21356424428526247,
+          -0.6119053943798884,
+          0.5720334855566965
         ],
-        "abs_diff": 2.3457770924051324e-06,
+        "abs_diff": 2.243589490080744e-06,
         "tolerance": 0.001,
-        "tolerance_source": "test/test_cov_phylo_twins_p1.jl:129",
+        "tolerance_source": "test/test_cov_phylo_twins_p1.jl:146",
         "tolerance_source_line": "@test maximum(abs.(_cpt_sigma_phy(fit) .- _cpt_mat(r[\"Sigma_rr\"], T))) <= 1e-3",
-        "note": "R: value ~ 0 + trait + phylo_dep(0 + trait | species, tree = tree), which gllvmTMB rewrites to phylo_rr(d = n_traits, .dep = TRUE), the phylo_latent(d = T) engine path (full unstructured Sigma_phy (x) A, T(T+1)/2 = 10 loading parameters). Julia: fit_phylo_latent_gllvm(Y, species; d = 4, tree), then one warm restart from that fit's parameters shifted by -0.01. From the default start Julia's LBFGS stops at max |FD gradient| 4.0e-5 above g_tol 1e-5 (converged = false); the ForwardDiff gradient of the same likelihood (a dense AD-capable copy matching the sparse objective to 8e-12) agrees at 4.0e-5 on the log residual-SD coordinate, so that was not finite-difference noise but a stop at the objective's rounding floor (curvature about 1.6e3, Newton decrement 2.6e-12). The restart reports converged = true with a positive-definite Hessian at max |FD gradient| 8.6e-7 (max |AD gradient| 8.9e-7), objective within 3e-12 of the default stop; the twin test asserts converged = true. R's own optimum has max |AD gradient| 6.1e-4. Shared fixture: 120-tip coalescent tree (ape::rcoal, seed 20261005), 4 traits, 2 observations per species, Gaussian, drawn from (Lambda Lambda' + diag(s^2)) (x) A + 0.4^2 I with A the unit-height tip correlation; Y and the Newick string stored to 17 digits, A rebuilt in Julia from the tree and checked against the stored sum, norm and first row of R's A. R: gllvmTMB(..., trait = 'trait', unit = 'species', cluster = 'species', family = gaussian(), REML = FALSE), nlminb rel.tol 1e-10, every fit converged with a positive-definite Hessian. The fixed-parameter case evaluates Julia's objective (GLLVModels._precision_multivariate_nll, the fitter's own objective) at R's optimum opt$par, mapped by name onto Julia's [beta; theta_rr; log_sd_unique; log_sd_eps] (both engines pack the loadings with the gllvmTMB.cpp layout), and compares it with R's objective there; it does not depend on either optimiser. Loadings are compared through Sigma_phy because a loading column's sign is not identified."
+        "note": "R: value ~ 0 + trait + phylo_dep(0 + trait | species, tree = tree), which gllvmTMB rewrites to phylo_rr(d = n_traits, .dep = TRUE), the phylo_latent(d = T) engine path (full unstructured Sigma_phy (x) A, T(T+1)/2 = 10 loading parameters). Julia: fit_phylo_latent_gllvm(Y, species; d = 4, tree) from its default start. Julia's LBFGS stops at the objective's rounding floor with max |FD gradient| about 4.0e-5 on the log residual-SD coordinate (the ForwardDiff gradient of a dense AD-capable copy of the likelihood, matching the sparse objective to 8e-12, agrees, so that is not finite-difference noise), curvature about 1.6e3 and Newton decrement about 3e-12, so no descent step is resolvable. Julia's optimiser flag can report not converged at the rounding floor on some platforms (this fit reads converged = false against g_tol 1e-5 on macOS and Linux); the twin asserts stationarity instead: a positive-definite Hessian, Newton decrement g' H^-1 g / 2 <= 1e-9 and max |gradient| <= 1e-4 at the returned parameters. R's own optimum has max |AD gradient| 6.1e-4. Shared fixture: 120-tip coalescent tree (ape::rcoal, seed 20261005), 4 traits, 2 observations per species, Gaussian, drawn from (Lambda Lambda' + diag(s^2)) (x) A + 0.4^2 I with A the unit-height tip correlation; Y and the Newick string stored to 17 digits, A rebuilt in Julia from the tree and checked against the stored sum, norm and first row of R's A. R: gllvmTMB(..., trait = 'trait', unit = 'species', cluster = 'species', family = gaussian(), REML = FALSE), nlminb rel.tol 1e-10, every fit converged with a positive-definite Hessian. The fixed-parameter case evaluates Julia's objective (GLLVModels._precision_multivariate_nll, the fitter's own objective) at R's optimum opt$par, mapped by name onto Julia's [beta; theta_rr; log_sd_unique; log_sd_eps] (both engines pack the loadings with the gllvmTMB.cpp layout), and compares it with R's objective there; it does not depend on either optimiser. Loadings are compared through Sigma_phy because a loading column's sign is not identified."
       }
     ]
   }

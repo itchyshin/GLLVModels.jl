@@ -11,7 +11,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-covariance.json",
-   "sha256": "da310bdb53022103daec0d123c4dbc8ffeafc9a6944022c0fb933f8ec5c6750e",
+   "sha256": "05ecaa59be8b718136a449fa52c7b8e9419ff637e20e43efd5298af944c7f86e",
    "rows": 19
   },
   {
@@ -1607,7 +1607,7 @@
     "twin_verdict": "PASS",
     "row_verdict": "PASS"
    },
-   "scope_note": "The batch case checks that phylo_dep(0 + trait | species) parses to phylo_rr(d = n_traits, .dep = TRUE); the twin is one Gaussian fit of that term (tree route, 120 tips, 4 traits) against fit_phylo_latent_gllvm(d = 4), the engine path gllvmTMB documents phylo_dep as. Julia has no phylo_dep keyword of its own on this route (fit_phylo_dep_gllvm in src/phylo_dep.jl is a different, row-phylogeny Gaussian model and is not the twin). From its default start Julia's fit stops at max |FD gradient| 4.0e-5 against g_tol 1e-5 (converged = false); the ForwardDiff gradient of the same likelihood agrees (4.0e-5 on the log residual-SD coordinate), so that stop is the objective's rounding floor, not finite-difference noise. The twin is that fit plus one warm restart from its parameters shifted by -0.01, which reports converged = true with a positive-definite Hessian (max |FD gradient| 8.6e-7, max |AD gradient| 8.9e-7, objective within 3e-12 of the default stop); the twin test asserts the flag. Gaussian only; the .dep guards (phylo_dep with phylo_latent or phylo_indep refused) are not twinned."
+   "scope_note": "The batch case checks that phylo_dep(0 + trait | species) parses to phylo_rr(d = n_traits, .dep = TRUE); the twin is one Gaussian fit of that term (tree route, 120 tips, 4 traits) against fit_phylo_latent_gllvm(d = 4), the engine path gllvmTMB documents phylo_dep as. Julia has no phylo_dep keyword of its own on this route (fit_phylo_dep_gllvm in src/phylo_dep.jl is a different, row-phylogeny Gaussian model and is not the twin). Julia's fit, from its default start, stops at the objective's rounding floor: max |FD gradient| about 4.0e-5 on the log residual-SD coordinate (the ForwardDiff gradient of the same likelihood agrees, so it is not finite-difference noise), Newton decrement about 3e-12. Julia's optimiser flag can report not converged at the rounding floor on some platforms (here converged = false against g_tol 1e-5); the twin asserts stationarity instead: a positive-definite Hessian, Newton decrement <= 1e-9 and max |gradient| <= 1e-4 at the returned parameters. Gaussian only; the .dep guards (phylo_dep with phylo_latent or phylo_indep refused) are not twinned."
   },
   {
    "source_id": "covariance/COV-PHYLO-FOLDED-UNIQUE",
@@ -1652,7 +1652,7 @@
     "twin_verdict": "PASS",
     "row_verdict": "PASS"
    },
-   "scope_note": "The batch case checks that phylo_latent(species, unique = TRUE) parses to phylo_rr(d = 1) plus the folded .phylo_unique/.auto_unique companion; the twin is one Gaussian fit of that term (tree route) against fit_phylo_latent_gllvm(d = 1, unique = true). R's companion is the phylo_diag block (per-trait field on the same A, sd exp(log_sd_phy_diag)) and Julia's :explicitunique has the same covariance; Julia's objective at R's optimum equals R's objective within 1.3e-11, which is the evidence that the two likelihoods are the same model. Gaussian, d = 1, rho = 1 only; the duplicate-companion and off-family guards are not twinned."
+   "scope_note": "The batch case checks that phylo_latent(species, unique = TRUE) parses to phylo_rr(d = 1) plus the folded .phylo_unique/.auto_unique companion; the twin is one Gaussian fit of that term (tree route) against fit_phylo_latent_gllvm(d = 1, unique = true). R's companion is the phylo_diag block (per-trait field on the same A, sd exp(log_sd_phy_diag)) and Julia's :explicitunique has the same covariance; Julia's objective at R's optimum equals R's objective within 1.3e-11, which is the evidence that the two likelihoods are the same model. Julia's optimiser flag can report not converged at the rounding floor on some platforms (converged = true on macOS, false on Linux CI for this fit); the twin asserts stationarity instead: a positive-definite Hessian, Newton decrement <= 1e-9 and max |gradient| <= 1e-4 at the returned parameters. Gaussian, d = 1, rho = 1 only; the duplicate-companion and off-family guards are not twinned."
   },
   {
    "source_id": "covariance/COV-PHYLO-LATENT-RSZ",
