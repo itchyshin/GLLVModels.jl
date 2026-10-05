@@ -209,17 +209,17 @@ end
         r_pinned = Bool.(f["pinned"])
         r_L = reshape(r_est, p, 2)
 
-        fit = fit_gaussian_gllvm(Yc; K = 2, lambda_constraint = M)
-        θ = copy(fit.pars.θ_packed)
-        θ[GLLVModels._profile_parm_index(fit, "sigma_eps")] = log(Float64(f["sigma_eps"]))
+        fitJ = fit_gaussian_gllvm(Yc; K = 2, lambda_constraint = M)   # Julia's own confirmatory fit
+        θ = copy(fitJ.pars.θ_packed)
+        θ[GLLVModels._profile_parm_index(fitJ, "sigma_eps")] = log(Float64(f["sigma_eps"]))
         for i in 1:p, k in 1:2
             k > i && continue
-            θ[GLLVModels._lambda_b_theta_index(fit, i, k)] = r_L[i, k]
+            θ[GLLVModels._lambda_b_theta_index(fitJ, i, k)] = r_L[i, k]
         end
-        fitR = GLLVModels.GllvmFit(fit.model,
-                                   merge(fit.pars, (θ_packed = θ, Λ = r_L, σ_eps = Float64(f["sigma_eps"]))),
-                                   fit.logLik, fit.n_iter, fit.converged, fit.optim_result,
-                                   fit.cputime, fit.integration)
+        fitR = GLLVModels.GllvmFit(fitJ.model,
+                                   merge(fitJ.pars, (θ_packed = θ, Λ = r_L, σ_eps = Float64(f["sigma_eps"]))),
+                                   fitJ.logLik, fitJ.n_iter, fitJ.converged, fitJ.optim_result,
+                                   fitJ.cputime, fitJ.integration)
 
         @testset "confint and vcov at R's estimates" begin
             ci = confint(fitR, Yc; parm = "Lambda")
@@ -265,15 +265,14 @@ end
         @testset "confirmatory refit honours g_tol and reports convergence honestly" begin
             # The refit now runs to the base fitter's tolerance, so the fitted point is R's to
             # optimiser precision (it stopped at gradient 0.019 under the old hard-coded g_tol 1e-4).
-            fit = fit_gaussian_gllvm(Yc; K = 2, lambda_constraint = M)
-            @test fit.converged
-            nll = GLLVModels._confint_reconstruct_nll(fit, Yc, nothing, nothing)
-            g = GLLVModels.ForwardDiff.gradient(nll, fit.pars.θ_packed)
-            jp = GLLVModels._lambda_b_theta_index(fit, 2, 1)
+            @test fitJ.converged
+            nll = GLLVModels._confint_reconstruct_nll(fitJ, Yc, nothing, nothing)
+            g = GLLVModels.ForwardDiff.gradient(nll, fitJ.pars.θ_packed)
+            jp = GLLVModels._lambda_b_theta_index(fitJ, 2, 1)
             @test maximum(abs(g[j]) for j in eachindex(g) if j != jp) < 1e-5
-            @test isapprox(fit.logLik, Float64(f["loglik"]); atol = 2e-10, rtol = 0)   # observed 1.2e-11 (was 1.5e-6)
-            @test isapprox(vec(fit.pars.Λ), r_est; atol = 1e-6, rtol = 0)             # observed 1.0e-7 (was 7.0e-5)
-            @test isapprox([r.se for r in loading_ci(fit, Yc)], r_se; atol = 5e-7, rtol = 0)  # observed 5.1e-8
+            @test isapprox(fitJ.logLik, Float64(f["loglik"]); atol = 2e-10, rtol = 0)  # observed 1.2e-11 (was 1.5e-6)
+            @test isapprox(vec(fitJ.pars.Λ), r_est; atol = 1e-6, rtol = 0)            # observed 1.0e-7 (was 7.0e-5)
+            @test isapprox([r.se for r in loading_ci(fitJ, Yc)], r_se; atol = 5e-7, rtol = 0)  # observed 5.1e-8
             # A user g_tol reaches the refit: a looser one stops earlier than a tighter one.
             loose = fit_gaussian_gllvm(Yc; K = 2, lambda_constraint = M, g_tol = 1e-2)
             gl = GLLVModels.ForwardDiff.gradient(nll, loose.pars.θ_packed)
