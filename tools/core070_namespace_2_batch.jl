@@ -201,12 +201,12 @@ cases["CORE070-NAMESPACE2-GLLVMTMB-NATIVE-FIT"] = Dict(
 )
 
 # ---------------------------------------------------------------------------
-# Case 2: CORE070-NAMESPACE2-GLLVModels-JULIA-SETUP-BRIDGE-ADMISSION
+# Case 2: CORE070-NAMESPACE2-GLLVM-JULIA-SETUP-BRIDGE-ADMISSION
 # ---------------------------------------------------------------------------
 pkgdir_matches_pwd = realpath(Base.pkgdir(GLLVModels)) == realpath(pwd())
 julia_version_string = string(VERSION)
 setup_precondition_r = oracle["setup_precondition_r"] === true
-cases["CORE070-NAMESPACE2-GLLVModels-JULIA-SETUP-BRIDGE-ADMISSION"] = Dict(
+cases["CORE070-NAMESPACE2-GLLVM-JULIA-SETUP-BRIDGE-ADMISSION"] = Dict(
     "pass" => pkgdir_matches_pwd && setup_precondition_r && !isempty(julia_version_string),
     "pkgdir_matches_pwd" => pkgdir_matches_pwd,
     "setup_precondition_r" => setup_precondition_r,
@@ -214,7 +214,7 @@ cases["CORE070-NAMESPACE2-GLLVModels-JULIA-SETUP-BRIDGE-ADMISSION"] = Dict(
 )
 
 # ---------------------------------------------------------------------------
-# Case 3: CORE070-NAMESPACE2-GLLVModels-JULIA-FIT-BRIDGE-ADMISSION
+# Case 3: CORE070-NAMESPACE2-GLLVM-JULIA-FIT-BRIDGE-ADMISSION
 # ---------------------------------------------------------------------------
 gate = oracle["gate"]
 gate_gaussian_ok = gate["gaussian"]["ok"] === true && gate["gaussian"]["key"] == "gaussian"
@@ -222,7 +222,7 @@ bridge_key_gaussian = GLLVModels._bridge_family_key("gaussian") == "gaussian"
 
 br_g = GLLVModels.bridge_fit(; y = Y_g, family = "gaussian", d = K_g, X = X_g)
 bridge_loglik_delta = abs(br_g.loglik - r_loglik_g)
-cases["CORE070-NAMESPACE2-GLLVModels-JULIA-FIT-BRIDGE-ADMISSION"] = Dict(
+cases["CORE070-NAMESPACE2-GLLVM-JULIA-FIT-BRIDGE-ADMISSION"] = Dict(
     "pass" => gate_gaussian_ok && bridge_key_gaussian && bridge_loglik_delta <= tol["loglik_delta"],
     "gate_gaussian_ok" => gate_gaussian_ok, "bridge_key_gaussian" => bridge_key_gaussian,
     "bridge_loglik_delta" => bridge_loglik_delta,
