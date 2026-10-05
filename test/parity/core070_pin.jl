@@ -78,11 +78,30 @@ const _CORE070_ORACLE_RECEIPTS_REL = Dict(
              source = "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json"),
 )
 
+# A second build of the same pin on another host. The archive and source receipt
+# are the pin's own (byte-identical source tree); only the compiled install differs
+# by platform, so only the build receipt is host-specific. Selected by
+# GLLVM_PARITY_ORACLE_BUILD=<host>; unset means the pin's default build above. A
+# host not registered here is an error, never a silent fallback. The receipt is
+# still checked against the pin (reference_commit, source_tree_sha256,
+# archive_sha256), and _core070_source_pin!() still requires its
+# installed_tree_sha256 to equal the loaded library's.
+const _CORE070_ORACLE_BUILD_ENV_VAR = "GLLVM_PARITY_ORACLE_BUILD"
+const _CORE070_ORACLE_BUILD_HOSTS = Dict(
+    "P1" => Dict("totoro" => "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro.json"),
+)
+
 function _core070_oracle_receipts_rel()
     name = _core070_selected_pin_name()
     haskey(_CORE070_ORACLE_RECEIPTS_REL, name) ||
         error("no oracle build/source receipt paths are registered for pin $(repr(name))")
-    return _CORE070_ORACLE_RECEIPTS_REL[name]
+    base = _CORE070_ORACLE_RECEIPTS_REL[name]
+    host = strip(get(ENV, _CORE070_ORACLE_BUILD_ENV_VAR, ""))
+    isempty(host) && return base
+    hosts = get(_CORE070_ORACLE_BUILD_HOSTS, name, Dict{String, String}())
+    haskey(hosts, host) || error("$_CORE070_ORACLE_BUILD_ENV_VAR=$(repr(host)) is not a registered oracle " *
+                                 "build for pin $(repr(name)); registered: $(sort(collect(keys(hosts))))")
+    return (build = hosts[host], source = base.source)
 end
 
 # Top-level string field of a receipt JSON written by tools/core070_build_oracle.py
