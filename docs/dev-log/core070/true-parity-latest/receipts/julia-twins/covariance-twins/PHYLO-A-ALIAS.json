@@ -1,0 +1,141 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "covariance/COV-PHYLO-A-ALIAS"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "wave-plan W3-4(e), branch claude/cov-phylo-twins",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "b7f2c3d47a9f00e936a72a474c52894abc9f2148",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/cov_phylo_twins_p1.toml",
+      "sha256": "e50755f2fe5b7cc519cb4d43fc6d13b9f0dc1a48ebcc4b1bce850e085c1e0088"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_cov_phylo_twins_p1.jl",
+      "sha256": "487e9b35e1fa751fe193c975d815d45fbbee131e5df2380520d85a755c4e97be"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-COV-PHYLO-A-ALIAS-LOGLIK",
+        "quantity": "maximised logLik",
+        "r_source": "test/fixtures/cov_phylo_twins_p1.toml [alias] loglik",
+        "julia_source": "fit.loglik, fit as at test/test_cov_phylo_twins_p1.jl:72",
+        "r_value": -859.4396980451241,
+        "julia_value": -859.4396980447434,
+        "abs_diff": 3.807372195296921e-10,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_cov_phylo_twins_p1.jl:146",
+        "tolerance_source_line": "@test abs(fit.loglik - Float64(r[\"loglik\"])) <= 1e-6",
+        "note": "R: value ~ 0 + trait + phylo_latent(species, A = A), which gllvmTMB rewrites to phylo_rr(vcv = A) (the dense route with R's 1e-8 ridge); the vcv = A spelling gives the identical nlminb objective (asserted in the generator, recorded as objective_vcv_spelling). Julia: fit_phylo_latent_gllvm(Y, species; d = 1, A = A, tip_labels); Julia's vcv = A spelling gives the bitwise identical fit (asserted in the twin test and here), and A together with vcv is refused on both sides. Shared fixture: 120-tip coalescent tree (ape::rcoal, seed 20261005), 4 traits, 2 observations per species, Gaussian, drawn from (Lambda Lambda' + diag(s^2)) (x) A + 0.4^2 I with A the unit-height tip correlation; Y and the Newick string stored to 17 digits, A rebuilt in Julia from the tree and checked against the stored sum, norm and first row of R's A. R: gllvmTMB(..., trait = 'trait', unit = 'species', cluster = 'species', family = gaussian(), REML = FALSE), nlminb rel.tol 1e-10, every fit converged with a positive-definite Hessian. The fixed-parameter case evaluates Julia's objective (GLLVModels._precision_multivariate_nll, the fitter's own objective) at R's optimum opt$par, mapped by name onto Julia's [beta; theta_rr; log_sd_unique; log_sd_eps] (both engines pack the loadings with the gllvmTMB.cpp layout), and compares it with R's objective there; it does not depend on either optimiser. Loadings are compared through Sigma_phy because a loading column's sign is not identified."
+      },
+      {
+        "case_id": "P1-JULIA-COV-PHYLO-A-ALIAS-OBJECTIVE-AT-R-OPTIMUM",
+        "quantity": "negative log-likelihood at R's optimum: R's objective (tmb_obj$fn(opt$par)) vs Julia's objective at the same parameters",
+        "r_source": "test/fixtures/cov_phylo_twins_p1.toml [alias] objective, par, par_names",
+        "julia_source": "Julia objective at R's opt$par mapped by name, fit as at test/test_cov_phylo_twins_p1.jl:72",
+        "r_value": 859.4396980451241,
+        "julia_value": 859.439698045122,
+        "abs_diff": 2.1600499167107046e-12,
+        "tolerance": 1e-08,
+        "tolerance_source": "test/test_cov_phylo_twins_p1.jl:147",
+        "tolerance_source_line": "@test abs(_cpt_cross(fit, r)) <= 1e-8",
+        "note": "R: value ~ 0 + trait + phylo_latent(species, A = A), which gllvmTMB rewrites to phylo_rr(vcv = A) (the dense route with R's 1e-8 ridge); the vcv = A spelling gives the identical nlminb objective (asserted in the generator, recorded as objective_vcv_spelling). Julia: fit_phylo_latent_gllvm(Y, species; d = 1, A = A, tip_labels); Julia's vcv = A spelling gives the bitwise identical fit (asserted in the twin test and here), and A together with vcv is refused on both sides. Shared fixture: 120-tip coalescent tree (ape::rcoal, seed 20261005), 4 traits, 2 observations per species, Gaussian, drawn from (Lambda Lambda' + diag(s^2)) (x) A + 0.4^2 I with A the unit-height tip correlation; Y and the Newick string stored to 17 digits, A rebuilt in Julia from the tree and checked against the stored sum, norm and first row of R's A. R: gllvmTMB(..., trait = 'trait', unit = 'species', cluster = 'species', family = gaussian(), REML = FALSE), nlminb rel.tol 1e-10, every fit converged with a positive-definite Hessian. The fixed-parameter case evaluates Julia's objective (GLLVModels._precision_multivariate_nll, the fitter's own objective) at R's optimum opt$par, mapped by name onto Julia's [beta; theta_rr; log_sd_unique; log_sd_eps] (both engines pack the loadings with the gllvmTMB.cpp layout), and compares it with R's objective there; it does not depend on either optimiser. Loadings are compared through Sigma_phy because a loading column's sign is not identified."
+      },
+      {
+        "case_id": "P1-JULIA-COV-PHYLO-A-ALIAS-INTERCEPTS",
+        "quantity": "trait intercepts (4 values)",
+        "r_source": "test/fixtures/cov_phylo_twins_p1.toml [alias] beta",
+        "julia_source": "fit.beta, fit as at test/test_cov_phylo_twins_p1.jl:72",
+        "r_value": [
+          -0.7490885409696442,
+          -0.9099351179043923,
+          0.5670176735134557,
+          -0.33663356072984185
+        ],
+        "julia_value": [
+          -0.7490940625247358,
+          -0.9099368422822337,
+          0.5670218167077935,
+          -0.3366372800387345
+        ],
+        "abs_diff": 5.521555091592134e-06,
+        "tolerance": 0.0001,
+        "tolerance_source": "test/test_cov_phylo_twins_p1.jl:148",
+        "tolerance_source_line": "@test maximum(abs.(fit.beta .- Float64.(r[\"beta\"]))) <= 1e-4",
+        "note": "R: value ~ 0 + trait + phylo_latent(species, A = A), which gllvmTMB rewrites to phylo_rr(vcv = A) (the dense route with R's 1e-8 ridge); the vcv = A spelling gives the identical nlminb objective (asserted in the generator, recorded as objective_vcv_spelling). Julia: fit_phylo_latent_gllvm(Y, species; d = 1, A = A, tip_labels); Julia's vcv = A spelling gives the bitwise identical fit (asserted in the twin test and here), and A together with vcv is refused on both sides. Shared fixture: 120-tip coalescent tree (ape::rcoal, seed 20261005), 4 traits, 2 observations per species, Gaussian, drawn from (Lambda Lambda' + diag(s^2)) (x) A + 0.4^2 I with A the unit-height tip correlation; Y and the Newick string stored to 17 digits, A rebuilt in Julia from the tree and checked against the stored sum, norm and first row of R's A. R: gllvmTMB(..., trait = 'trait', unit = 'species', cluster = 'species', family = gaussian(), REML = FALSE), nlminb rel.tol 1e-10, every fit converged with a positive-definite Hessian. The fixed-parameter case evaluates Julia's objective (GLLVModels._precision_multivariate_nll, the fitter's own objective) at R's optimum opt$par, mapped by name onto Julia's [beta; theta_rr; log_sd_unique; log_sd_eps] (both engines pack the loadings with the gllvmTMB.cpp layout), and compares it with R's objective there; it does not depend on either optimiser. Loadings are compared through Sigma_phy because a loading column's sign is not identified."
+      },
+      {
+        "case_id": "P1-JULIA-COV-PHYLO-A-ALIAS-SIGMA-EPS",
+        "quantity": "shared residual sd (R exp(log_sigma_eps))",
+        "r_source": "test/fixtures/cov_phylo_twins_p1.toml [alias] sigma_eps",
+        "julia_source": "sqrt(fit.residual_variance), fit as at test/test_cov_phylo_twins_p1.jl:72",
+        "r_value": 0.5660901655547546,
+        "julia_value": 0.5660899771944536,
+        "abs_diff": 1.883603009122936e-07,
+        "tolerance": 0.0001,
+        "tolerance_source": "test/test_cov_phylo_twins_p1.jl:149",
+        "tolerance_source_line": "@test abs(sqrt(only(unique(fit.residual_variance))) - Float64(r[\"sigma_eps\"])) <= 1e-4",
+        "note": "R: value ~ 0 + trait + phylo_latent(species, A = A), which gllvmTMB rewrites to phylo_rr(vcv = A) (the dense route with R's 1e-8 ridge); the vcv = A spelling gives the identical nlminb objective (asserted in the generator, recorded as objective_vcv_spelling). Julia: fit_phylo_latent_gllvm(Y, species; d = 1, A = A, tip_labels); Julia's vcv = A spelling gives the bitwise identical fit (asserted in the twin test and here), and A together with vcv is refused on both sides. Shared fixture: 120-tip coalescent tree (ape::rcoal, seed 20261005), 4 traits, 2 observations per species, Gaussian, drawn from (Lambda Lambda' + diag(s^2)) (x) A + 0.4^2 I with A the unit-height tip correlation; Y and the Newick string stored to 17 digits, A rebuilt in Julia from the tree and checked against the stored sum, norm and first row of R's A. R: gllvmTMB(..., trait = 'trait', unit = 'species', cluster = 'species', family = gaussian(), REML = FALSE), nlminb rel.tol 1e-10, every fit converged with a positive-definite Hessian. The fixed-parameter case evaluates Julia's objective (GLLVModels._precision_multivariate_nll, the fitter's own objective) at R's optimum opt$par, mapped by name onto Julia's [beta; theta_rr; log_sd_unique; log_sd_eps] (both engines pack the loadings with the gllvmTMB.cpp layout), and compares it with R's objective there; it does not depend on either optimiser. Loadings are compared through Sigma_phy because a loading column's sign is not identified."
+      },
+      {
+        "case_id": "P1-JULIA-COV-PHYLO-A-ALIAS-SIGMA-PHY",
+        "quantity": "Lambda_phy Lambda_phy' (4 x 4) of the rank-1 fit",
+        "r_source": "test/fixtures/cov_phylo_twins_p1.toml [alias] Sigma_rr",
+        "julia_source": "phylogenetic trait covariance of the fit as at test/test_cov_phylo_twins_p1.jl:72",
+        "r_value": [
+          0.8427054758446064,
+          0.28902291835828764,
+          -0.7145446998821492,
+          0.5941929380418008,
+          0.28902291835828764,
+          0.09912626621135778,
+          -0.24506758336938522,
+          0.20379050800471385,
+          -0.7145446998821492,
+          -0.24506758336938522,
+          0.6058749382374011,
+          -0.5038265761351982,
+          0.5941929380418008,
+          0.20379050800471385,
+          -0.5038265761351982,
+          0.4189663621977603
+        ],
+        "julia_value": [
+          0.8427075302465233,
+          0.289023264061992,
+          -0.7145457728254888,
+          0.5941942154568739,
+          0.289023264061992,
+          0.09912626168726772,
+          -0.2450676470439353,
+          0.20379069306270595,
+          -0.7145457728254888,
+          -0.2450676470439353,
+          0.605875280731635,
+          -0.5038271875508954,
+          0.5941942154568739,
+          0.20379069306270595,
+          -0.5038271875508954,
+          0.41896714222919623
+        ],
+        "abs_diff": 2.0544019169177474e-06,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_cov_phylo_twins_p1.jl:150",
+        "tolerance_source_line": "@test maximum(abs.(_cpt_sigma_phy(fit) .- _cpt_mat(r[\"Sigma_rr\"], T))) <= 1e-3",
+        "note": "R: value ~ 0 + trait + phylo_latent(species, A = A), which gllvmTMB rewrites to phylo_rr(vcv = A) (the dense route with R's 1e-8 ridge); the vcv = A spelling gives the identical nlminb objective (asserted in the generator, recorded as objective_vcv_spelling). Julia: fit_phylo_latent_gllvm(Y, species; d = 1, A = A, tip_labels); Julia's vcv = A spelling gives the bitwise identical fit (asserted in the twin test and here), and A together with vcv is refused on both sides. Shared fixture: 120-tip coalescent tree (ape::rcoal, seed 20261005), 4 traits, 2 observations per species, Gaussian, drawn from (Lambda Lambda' + diag(s^2)) (x) A + 0.4^2 I with A the unit-height tip correlation; Y and the Newick string stored to 17 digits, A rebuilt in Julia from the tree and checked against the stored sum, norm and first row of R's A. R: gllvmTMB(..., trait = 'trait', unit = 'species', cluster = 'species', family = gaussian(), REML = FALSE), nlminb rel.tol 1e-10, every fit converged with a positive-definite Hessian. The fixed-parameter case evaluates Julia's objective (GLLVModels._precision_multivariate_nll, the fitter's own objective) at R's optimum opt$par, mapped by name onto Julia's [beta; theta_rr; log_sd_unique; log_sd_eps] (both engines pack the loadings with the gllvmTMB.cpp layout), and compares it with R's objective there; it does not depend on either optimiser. Loadings are compared through Sigma_phy because a loading column's sign is not identified."
+      }
+    ]
+  }
+}
