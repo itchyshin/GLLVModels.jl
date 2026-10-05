@@ -23,3 +23,5 @@ phi = [2.6879905830607358, 4.0915617381056206]
 sigma = 0.62154695771049695
 # the same model without the offset (converged, positive-definite Hessian)
 loglik_no_offset = -1883.2066256164233
+# R refuses the same fit with a nonzero offset on the gaussian trait t2 (first line of the message)
+nonzero_gaussian_offset_refusal = "offsets are supported for count families (poisson, nbinom) only; trait t2 uses gaussian."

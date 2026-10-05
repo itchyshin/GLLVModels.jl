@@ -7,7 +7,9 @@
 # offsets on the count rows, and replays to c(1, 0, 4) with no fit number
 # (docs/dev-log/core070/data-required-case-plan.json). Here that is one real mixed-family fit with an
 # exposure offset that is zero on the gaussian trait, in R and in Julia, and the maximised logLik
-# and the parameters are compared. No R at test time: R's values are read from
+# and the parameters are compared. The refusal half is checked too: R refuses the same fit with a
+# nonzero offset on the gaussian trait (message recorded in the fixture) and Julia raises an
+# ArgumentError naming the trait and family. No R at test time: R's values are read from
 # test/fixtures/off_mixed_twin_p1.toml (generated once by test/fixtures/gen_off_mixed_twin_p1.R
 # against a lane-local gllvmTMB install at the pin; the file records R version, commit and the data
 # sha256). The R fit converged with a positive-definite Hessian (asserted there).
@@ -106,11 +108,29 @@ const _OMX_FAMILY = Dict("poisson" => (2, () -> Poisson()), "gaussian" => (0, ()
         @test isapprox(f0.loglik, Float64(fx["loglik_no_offset"]); atol = 1e-6, rtol = 0)
         @test f.loglik - f0.loglik > 1
 
-        # The training offset is used by the post-fit calls on the training data (#807 rule).
+        # The training offset is used by the post-fit calls on the training data (#787's rule, extended in #807).
         @test predict(f, Y; type = :link) == predict(f, Y; type = :link, offset = O)
         @test getLV(f, Y) == getLV(f, Y; offset = O)
         @test maximum(abs, predict(f, Y; type = :link) .- predict(f, Y; type = :link, offset = 0.0)) > 0.1
         @test_throws ArgumentError predict(f, Y[:, 1:10])     # new units need their own offset
         @test size(predict(f, Y[:, 1:10]; offset = O[:, 1:10])) == (p, 10)
+
+        # The refusal half of the row-wise admission (gll_prepare_offset, R/offset.R at P1): R
+        # refuses this fit with a nonzero offset on the gaussian trait (recorded by the generator),
+        # and so does Julia, naming the trait and family. Zero on that trait is accepted (above).
+        @test startswith(fx["nonzero_gaussian_offset_refusal"], "offsets are supported for count families")
+        @test occursin("trait t2 uses gaussian", fx["nonzero_gaussian_offset_refusal"])
+        Obad = copy(O); Obad[only(gauss), :] .= 0.5
+        @test_throws ArgumentError fit_mixed_gllvm(Y; families = fams, K = 1, offset = Obad)
+        msg = try
+            fit_mixed_gllvm(Y; families = fams, K = 1, offset = Obad); ""
+        catch e
+            sprint(showerror, e)
+        end
+        @test occursin("offsets are supported for count families", msg)
+        @test occursin("trait $(only(gauss)) uses Normal", msg)
+        Obad1 = copy(O); Obad1[only(gauss), 7] = -0.25             # one nonzero cell is enough
+        @test_throws ArgumentError fit_mixed_gllvm(Y; families = fams, K = 1, offset = Obad1)
+        @test_throws ArgumentError fit_mixed_gllvm(Y; families = fams, K = 1, offset = 0.5)
     end
 end

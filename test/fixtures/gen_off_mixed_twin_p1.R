@@ -23,6 +23,8 @@
 ## positive-definite Hessian (asserted), and every phi must sit inside (1e-3, 1e3) (asserted).
 ## The same model without the offset is also fitted and recorded (loglik_no_offset); it must
 ## converge, with a positive-definite Hessian, at a logLik lower by more than 1 (asserted).
+## Negative control: the same fit with a nonzero offset (0.5) on the gaussian trait must be refused by
+## R's row-wise offset gate (asserted); the first line of R's message is recorded in the fixture.
 rlib <- Sys.getenv("GLLVM_P1_RLIB", "")
 if (nzchar(rlib)) .libPaths(c(rlib, .libPaths()))
 suppressPackageStartupMessages(library(gllvmTMB))
@@ -64,6 +66,18 @@ fitm <- function(fml) {
 }
 f <- fitm(value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE))
 f0 <- fitm(value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE))
+## Negative control: the same fit with a NONZERO offset on the gaussian trait (log(e2) = 0.5 there)
+## must be refused by gll_prepare_offset (R/offset.R at P1), the refusal half of the row-wise rule.
+d$e2 <- ifelse(d$trait == "t2", exp(0.5), d$e)
+options(cli.width = 1000)                                            # keep the cli header on one line
+nonzero_refusal <- tryCatch({
+  suppressMessages(suppressWarnings(gllvmTMB(
+    value ~ 0 + trait + offset(log(e2)) + latent(0 + trait | unit, d = 1, unique = FALSE),
+    data = d, unit = "unit", trait = "trait", family = fams)))
+  "NOT REFUSED"
+}, error = function(e) conditionMessage(e))
+stopifnot(grepl("offsets are supported for count families", nonzero_refusal),
+          grepl("t2", nonzero_refusal), grepl("gaussian", nonzero_refusal))
 ll <- as.numeric(logLik(f)); ll0 <- as.numeric(logLik(f0))
 stopifnot(ll - ll0 > 1)
 stopifnot(sum(names(f$opt$par) == "log_sigma_eps") == 1L)
@@ -100,5 +114,7 @@ w("# gaussian residual sd = exp(log_sigma_eps), trait t2")
 w("sigma = %s", fmt(sigma))
 w("# the same model without the offset (converged, positive-definite Hessian)")
 w("loglik_no_offset = %s", fmt(ll0))
+w("# R refuses the same fit with a nonzero offset on the gaussian trait t2 (first line of the message)")
+w("nonzero_gaussian_offset_refusal = \"%s\"", gsub("\"", "'", gsub("`", "", gsub("\\s+", " ", sub("\n.*", "", nonzero_refusal)))))
 close(con)
 cat("loglik", ll, "no offset", ll0, "phi", phi, "sigma", sigma, "\n")
