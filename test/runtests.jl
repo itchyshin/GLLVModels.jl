@@ -522,6 +522,8 @@ println(_SHARD === nothing ?
     _shard_include("test_variance_decomp_p1.jl")
     # P1 numeric twin of the gllvmTMB namespace row animal_scalar (one shared animal variance on a pedigree A, Gaussian).
     _shard_include("test_animal_scalar_p1.jl")
+    # P1 numeric twins of the gllvmTMB namespace rows extract_Gamma and extract_coevolution_modules (cross-lineage kernel tier, Gaussian).
+    _shard_include("test_cross_lineage_p1.jl")
     # P1 bridge readback: gllvmTMB_julia coef/fitted/logLik/predict/residuals/summary and gllvm_julia_fit, recorded live through JuliaCall.
     _shard_include("test_bridge_readback_p1.jl")
     # P1 numeric twins of the gllvmTMB namespace rows gllvmTMB_wide, ordiplot.gllvmTMB_multi and flag_unreliable_loadings (one shared Gaussian fixture).
