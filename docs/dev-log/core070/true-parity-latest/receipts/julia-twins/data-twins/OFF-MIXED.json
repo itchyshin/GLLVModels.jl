@@ -1,0 +1,208 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "data/DATA-OFF-MIXED"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl branch claude/off-mixed-twin (PR not yet opened)",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "048415dc97e3452d59f358ea0b31b3bae200c4b2",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/off_mixed_twin_p1.toml",
+      "sha256": "7a7762b1f20fc18b96b16665e1dd0a4ef75c6d97a5134adf547aa36ddd65ee2a"
+    },
+    {
+      "path": "test/fixtures/off_mixed_twin_p1_data.csv",
+      "sha256": "c21f713cd07481d6130680b32a42cc4f6645748d9e1996e879b161adc15642f7"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_off_mixed_twin_p1.jl",
+      "sha256": "d9e89a321f3b81ec35b4d8271d97dc60db19e21afd9fc39db176e1f189ff2165"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-DATA-OFF-MIXED-LOGLIK",
+        "quantity": "maximised logLik of the mixed-family exposure-offset fit",
+        "r_source": "test/fixtures/off_mixed_twin_p1.toml [loglik]",
+        "julia_source": "f.loglik, fit as at test/test_off_mixed_twin_p1.jl:80",
+        "r_value": -1703.6908272053593,
+        "julia_value": -1703.6908271791287,
+        "abs_diff": 2.623050932015758e-08,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_off_mixed_twin_p1.jl:83",
+        "tolerance_source_line": "@test isapprox(f.loglik, Float64(fx[\"loglik\"]); atol = 1e-6, rtol = 0)",
+        "note": "p = 6, n = 150 (sha256 checked), one mixed-family data set with traits poisson, gaussian, nbinom2, poisson, nbinom2, poisson (family ids 2, 0, 5); R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE) with family = list(...) by trait, converged with a positive-definite Hessian; Julia: fit_mixed_gllvm(Y; families, K = 1, offset = log.(E)). The exposure e is exactly 1 on the gaussian trait (offset zero) and varies by cell on the count traits (offset nonzero), the admission the R batch case gll_prepare_offset(quote(c(1,0,4)), c(2L,0L,5L), ...) asserts row-wise. One gaussian trait only: gllvmTMB shares one sigma across the gaussian traits of a mixed fit and Julia gives each Normal trait its own, which coincide with one. The offset varies by cell, so intercept parity within 1e-4 is the evidence it is applied on both sides; the twin test also asserts that the Julia marginal without the offset at the fitted parameters is lower by more than 1, and that the offset-free refit scores lower by more than 1. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+      },
+      {
+        "case_id": "P1-JULIA-DATA-OFF-MIXED-INTERCEPTS",
+        "quantity": "trait intercepts (6 values, each on its trait's link scale); the offset is not absorbed into them",
+        "r_source": "test/fixtures/off_mixed_twin_p1.toml [beta]",
+        "julia_source": "f.β, fit as at test/test_off_mixed_twin_p1.jl:80",
+        "r_value": [
+          0.7946718915805229,
+          0.9671968619110275,
+          0.5975524888766893,
+          1.1099018160227307,
+          -0.44301679146634826,
+          0.5916015434749228
+        ],
+        "julia_value": [
+          0.7946712538512858,
+          0.967197246484208,
+          0.5975609869021666,
+          1.1099034286262066,
+          -0.44302017704016966,
+          0.5916004768242519
+        ],
+        "abs_diff": 8.498025477310378e-06,
+        "tolerance": 0.0001,
+        "tolerance_source": "test/test_off_mixed_twin_p1.jl:84",
+        "tolerance_source_line": "@test isapprox(f.β, Float64.(fx[\"beta\"]); atol = 1e-4, rtol = 0)",
+        "note": "p = 6, n = 150 (sha256 checked), one mixed-family data set with traits poisson, gaussian, nbinom2, poisson, nbinom2, poisson (family ids 2, 0, 5); R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE) with family = list(...) by trait, converged with a positive-definite Hessian; Julia: fit_mixed_gllvm(Y; families, K = 1, offset = log.(E)). The exposure e is exactly 1 on the gaussian trait (offset zero) and varies by cell on the count traits (offset nonzero), the admission the R batch case gll_prepare_offset(quote(c(1,0,4)), c(2L,0L,5L), ...) asserts row-wise. One gaussian trait only: gllvmTMB shares one sigma across the gaussian traits of a mixed fit and Julia gives each Normal trait its own, which coincide with one. The offset varies by cell, so intercept parity within 1e-4 is the evidence it is applied on both sides; the twin test also asserts that the Julia marginal without the offset at the fitted parameters is lower by more than 1, and that the offset-free refit scores lower by more than 1. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+      },
+      {
+        "case_id": "P1-JULIA-DATA-OFF-MIXED-LAMBDA-LAMBDAT",
+        "quantity": "Lambda Lambda' (6 x 6) of the mixed-family fit",
+        "r_source": "test/fixtures/off_mixed_twin_p1.toml [lambda_lambdat]",
+        "julia_source": "f.Λ * f.Λ', fit as at test/test_off_mixed_twin_p1.jl:80",
+        "r_value": [
+          0.4869221287943843,
+          -0.2722295961399479,
+          0.29682537814195503,
+          0.26773611175832157,
+          0.4599495896577424,
+          -0.32712643782147655,
+          -0.2722295961399479,
+          0.1521987780633679,
+          -0.1659498470848788,
+          -0.1496865499962228,
+          -0.25714972401703273,
+          0.18289063648706247,
+          0.29682537814195503,
+          -0.1659498470848788,
+          0.18094331700894908,
+          0.16321064070694397,
+          0.28038304854706575,
+          -0.1994146966518199,
+          0.26773611175832157,
+          -0.1496865499962228,
+          0.16321064070694397,
+          0.14721578934387342,
+          0.2529051514760808,
+          -0.17987180153945512,
+          0.4599495896577424,
+          -0.25714972401703273,
+          0.28038304854706575,
+          0.2529051514760808,
+          0.43447116595446356,
+          -0.3090056128989848,
+          -0.32712643782147655,
+          0.18289063648706247,
+          -0.1994146966518199,
+          -0.17987180153945512,
+          -0.3090056128989848,
+          0.21977170474204694
+        ],
+        "julia_value": [
+          0.4869234954140984,
+          -0.2722283527387354,
+          0.2968276753865038,
+          0.2677363951991281,
+          0.4599508322417,
+          -0.32712618612450084,
+          -0.2722283527387354,
+          0.15219696057554344,
+          -0.1659499076934384,
+          -0.14968560465804007,
+          -0.25714852247062675,
+          0.18288914711466886,
+          0.2968276753865038,
+          -0.1659499076934384,
+          0.18094560994725956,
+          0.16321161856388514,
+          0.2803851890742806,
+          -0.19941552687411543,
+          0.2677363951991281,
+          -0.14968560465804007,
+          0.16321161856388514,
+          0.1472156878633715,
+          0.25290539263976974,
+          -0.17987134872949284,
+          0.4599508322417,
+          -0.25714852247062675,
+          0.2803851890742806,
+          0.25290539263976974,
+          0.43447229405087173,
+          -0.30900534267310065,
+          -0.32712618612450084,
+          0.18288914711466886,
+          -0.19941552687411543,
+          -0.17987134872949284,
+          -0.30900534267310065,
+          0.21977074973010874
+        ],
+        "abs_diff": 2.2972445487545734e-06,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_off_mixed_twin_p1.jl:85",
+        "tolerance_source_line": "@test isapprox(f.Λ * f.Λ', _omx_mat(fx[\"lambda_lambdat\"], p); atol = 1e-3, rtol = 0)",
+        "note": "p = 6, n = 150 (sha256 checked), one mixed-family data set with traits poisson, gaussian, nbinom2, poisson, nbinom2, poisson (family ids 2, 0, 5); R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE) with family = list(...) by trait, converged with a positive-definite Hessian; Julia: fit_mixed_gllvm(Y; families, K = 1, offset = log.(E)). The exposure e is exactly 1 on the gaussian trait (offset zero) and varies by cell on the count traits (offset nonzero), the admission the R batch case gll_prepare_offset(quote(c(1,0,4)), c(2L,0L,5L), ...) asserts row-wise. One gaussian trait only: gllvmTMB shares one sigma across the gaussian traits of a mixed fit and Julia gives each Normal trait its own, which coincide with one. The offset varies by cell, so intercept parity within 1e-4 is the evidence it is applied on both sides; the twin test also asserts that the Julia marginal without the offset at the fitted parameters is lower by more than 1, and that the offset-free refit scores lower by more than 1. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+      },
+      {
+        "case_id": "P1-JULIA-DATA-OFF-MIXED-NB2-DISPERSION",
+        "quantity": "per-trait nbinom2 dispersion (traits t3 and t5; R exp(log_phi_nbinom2), Julia NegativeBinomial r)",
+        "r_source": "test/fixtures/off_mixed_twin_p1.toml [phi]",
+        "julia_source": "f.dispersion[nb], fit as at test/test_off_mixed_twin_p1.jl:80",
+        "r_value": [
+          2.687990583060736,
+          4.091561738105621
+        ],
+        "julia_value": [
+          2.68795932707949,
+          4.091884896641658
+        ],
+        "abs_diff": 0.00032315853603748224,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_off_mixed_twin_p1.jl:87",
+        "tolerance_source_line": "@test isapprox(f.dispersion[nb], Float64.(fx[\"phi\"]); atol = 1e-3, rtol = 0)",
+        "note": "p = 6, n = 150 (sha256 checked), one mixed-family data set with traits poisson, gaussian, nbinom2, poisson, nbinom2, poisson (family ids 2, 0, 5); R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE) with family = list(...) by trait, converged with a positive-definite Hessian; Julia: fit_mixed_gllvm(Y; families, K = 1, offset = log.(E)). The exposure e is exactly 1 on the gaussian trait (offset zero) and varies by cell on the count traits (offset nonzero), the admission the R batch case gll_prepare_offset(quote(c(1,0,4)), c(2L,0L,5L), ...) asserts row-wise. One gaussian trait only: gllvmTMB shares one sigma across the gaussian traits of a mixed fit and Julia gives each Normal trait its own, which coincide with one. The offset varies by cell, so intercept parity within 1e-4 is the evidence it is applied on both sides; the twin test also asserts that the Julia marginal without the offset at the fitted parameters is lower by more than 1, and that the offset-free refit scores lower by more than 1. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+      },
+      {
+        "case_id": "P1-JULIA-DATA-OFF-MIXED-GAUSSIAN-SIGMA",
+        "quantity": "residual sd of the gaussian trait t2 (R exp(log_sigma_eps), Julia Normal sigma)",
+        "r_source": "test/fixtures/off_mixed_twin_p1.toml [sigma]",
+        "julia_source": "f.dispersion[only(gauss)], fit as at test/test_off_mixed_twin_p1.jl:80",
+        "r_value": 0.621546957710497,
+        "julia_value": 0.621545551013081,
+        "abs_diff": 1.406697415995417e-06,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_off_mixed_twin_p1.jl:88",
+        "tolerance_source_line": "@test isapprox(f.dispersion[only(gauss)], Float64(fx[\"sigma\"]); atol = 1e-3, rtol = 0)",
+        "note": "p = 6, n = 150 (sha256 checked), one mixed-family data set with traits poisson, gaussian, nbinom2, poisson, nbinom2, poisson (family ids 2, 0, 5); R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE) with family = list(...) by trait, converged with a positive-definite Hessian; Julia: fit_mixed_gllvm(Y; families, K = 1, offset = log.(E)). The exposure e is exactly 1 on the gaussian trait (offset zero) and varies by cell on the count traits (offset nonzero), the admission the R batch case gll_prepare_offset(quote(c(1,0,4)), c(2L,0L,5L), ...) asserts row-wise. One gaussian trait only: gllvmTMB shares one sigma across the gaussian traits of a mixed fit and Julia gives each Normal trait its own, which coincide with one. The offset varies by cell, so intercept parity within 1e-4 is the evidence it is applied on both sides; the twin test also asserts that the Julia marginal without the offset at the fitted parameters is lower by more than 1, and that the offset-free refit scores lower by more than 1. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+      },
+      {
+        "case_id": "P1-JULIA-DATA-OFF-MIXED-NO-OFFSET-LOGLIK",
+        "quantity": "maximised logLik of the same mixed-family model without the offset (lower than the offset fit by more than 1 on both sides)",
+        "r_source": "test/fixtures/off_mixed_twin_p1.toml [loglik_no_offset]",
+        "julia_source": "f0.loglik, fit as at test/test_off_mixed_twin_p1.jl:101",
+        "r_value": -1883.2066256164233,
+        "julia_value": -1883.2066255798604,
+        "abs_diff": 3.656282387964893e-08,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_off_mixed_twin_p1.jl:106",
+        "tolerance_source_line": "@test isapprox(f0.loglik, Float64(fx[\"loglik_no_offset\"]); atol = 1e-6, rtol = 0)",
+        "note": "p = 6, n = 150 (sha256 checked), one mixed-family data set with traits poisson, gaussian, nbinom2, poisson, nbinom2, poisson (family ids 2, 0, 5); R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE) with family = list(...) by trait, converged with a positive-definite Hessian; Julia: fit_mixed_gllvm(Y; families, K = 1, offset = log.(E)). The exposure e is exactly 1 on the gaussian trait (offset zero) and varies by cell on the count traits (offset nonzero), the admission the R batch case gll_prepare_offset(quote(c(1,0,4)), c(2L,0L,5L), ...) asserts row-wise. One gaussian trait only: gllvmTMB shares one sigma across the gaussian traits of a mixed fit and Julia gives each Normal trait its own, which coincide with one. The offset varies by cell, so intercept parity within 1e-4 is the evidence it is applied on both sides; the twin test also asserts that the Julia marginal without the offset at the fitted parameters is lower by more than 1, and that the offset-free refit scores lower by more than 1. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+      }
+    ]
+  }
+}

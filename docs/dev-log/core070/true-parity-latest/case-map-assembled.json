@@ -16,7 +16,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-data.json",
-   "sha256": "fc8bf8b832ce893b19cb2fdc903025a22931b118594439332b66509a7074a675",
+   "sha256": "1b369130a02bde78c3be384c4e5f7a93a70ef1a7cce66ad48d2b71c759f7be1f",
    "rows": 36
   },
   {
@@ -1945,7 +1945,12 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-DATA-OFF-MIXED-NATIVE"
+    "P1-JULIA-DATA-OFF-MIXED-LOGLIK",
+    "P1-JULIA-DATA-OFF-MIXED-INTERCEPTS",
+    "P1-JULIA-DATA-OFF-MIXED-LAMBDA-LAMBDAT",
+    "P1-JULIA-DATA-OFF-MIXED-NB2-DISPERSION",
+    "P1-JULIA-DATA-OFF-MIXED-GAUSSIAN-SIGMA",
+    "P1-JULIA-DATA-OFF-MIXED-NO-OFFSET-LOGLIK"
    ],
    "disposition": null,
    "p0_batch": "data-batch attempt-data-r3 (wave1)",
@@ -1957,13 +1962,19 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-MIXED.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-MIXED-NATIVE.json"
     ],
-    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+    "batch_case_ids": [
+     "CORE070-DATA-OFF-MIXED-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_off_mixed_twin_p1.jl, against R-at-P1 values copied from test/fixtures/off_mixed_twin_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -1974,8 +1985,18 @@
     },
     "case_kinds": {
      "CORE070-DATA-OFF-MIXED-NATIVE": "r_replay_julia_surface_absent"
-    }
-   }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-DATA-OFF-MIXED-LOGLIK",
+     "P1-JULIA-DATA-OFF-MIXED-INTERCEPTS",
+     "P1-JULIA-DATA-OFF-MIXED-LAMBDA-LAMBDAT",
+     "P1-JULIA-DATA-OFF-MIXED-NB2-DISPERSION",
+     "P1-JULIA-DATA-OFF-MIXED-GAUSSIAN-SIGMA",
+     "P1-JULIA-DATA-OFF-MIXED-NO-OFFSET-LOGLIK"
+    ],
+    "twin_verdict": "PASS"
+   },
+   "scope_note": "The R batch case gll_prepare_offset(quote(c(1,0,4)), c(2L,0L,5L), ...) replays the row-wise offset admission of one mixed-family fit (family ids 2, 0, 5: poisson, gaussian, nbinom2): a zero offset on the non-count row next to nonzero offsets on the count rows. The twin is one real fit of that kind: p = 6 traits (poisson, gaussian, nbinom2, poisson, nbinom2, poisson), n = 150, one latent factor, R gllvmTMB(..., family = list(...) by trait) with offset(log(e)) against Julia fit_mixed_gllvm(Y; families, K = 1, offset = log.(E)); e is exactly 1 on the gaussian trait and varies by cell on the count traits. It covers one gaussian trait only: gllvmTMB shares one sigma across the gaussian traits of a mixed fit while fit_mixed_gllvm gives each Normal trait its own, so a fit with two or more gaussian traits is a different model on the two sides and is not compared. Julia has no offset gate: fit_mixed_gllvm applies a nonzero offset on a Normal trait where R refuses it (as in DATA-OFF-NONCOUNT-ZERO). The same model without the offset is also matched (logLik within 1e-6) and scores lower by more than 1 on both sides."
   },
   {
    "source_id": "data/DATA-OFF-NB1",

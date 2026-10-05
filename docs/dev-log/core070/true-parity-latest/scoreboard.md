@@ -16,7 +16,7 @@ Inputs:
 
 - `docs/dev-log/core070/true-parity-latest/case-map-aghq.json` (21 rows, sha256 `72e1d55c0553897c62e92f534ab128a8a592282958e1e56c44ca95e1c5902114`)
 - `docs/dev-log/core070/true-parity-latest/case-map-covariance.json` (19 rows, sha256 `81e650ad39a39aeb08c6b3a8468d06458369799b6d2882b853fd78d86710c294`)
-- `docs/dev-log/core070/true-parity-latest/case-map-data.json` (36 rows, sha256 `fc8bf8b832ce893b19cb2fdc903025a22931b118594439332b66509a7074a675`)
+- `docs/dev-log/core070/true-parity-latest/case-map-data.json` (36 rows, sha256 `1b369130a02bde78c3be384c4e5f7a93a70ef1a7cce66ad48d2b71c759f7be1f`)
 - `docs/dev-log/core070/true-parity-latest/case-map-family.json` (26 rows, sha256 `537991192134fd7aef08d7e065c61d5b3063efde3d63513b88493dd6a82db6fc`)
 - `docs/dev-log/core070/true-parity-latest/case-map-fit-input.json` (10 rows, sha256 `568c054ed5f3786b96c9acb796e28d98e4523c4edc5fe5ad9f69ab150cee3639`)
 - `docs/dev-log/core070/true-parity-latest/case-map-inference.json` (63 rows, sha256 `ab0cb02039e34ecb5d1666c469321eba590dfead2452ac2f0de30d9da9a2bda9`)
@@ -30,14 +30,14 @@ Inputs:
 |---|---|---|---|---|---|---|---|---|---|---|
 | `aghq` | 14 | 0 | 0 | 0 | 0 | 0 | 7 | 0 | 0 | 21 |
 | `covariance` | 1 | 0 | 0 | 2 | 8 | 0 | 8 | 0 | 0 | 19 |
-| `data` | 11 | 0 | 0 | 0 | 1 | 17 | 0 | 4 | 3 | 36 |
+| `data` | 12 | 0 | 0 | 0 | 1 | 16 | 0 | 4 | 3 | 36 |
 | `family` | 19 | 0 | 0 | 0 | 5 | 0 | 0 | 1 | 1 | 26 |
 | `fit-input` | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
 | `inference` | 2 | 44 | 0 | 0 | 2 | 0 | 15 | 0 | 0 | 63 |
 | `isdm` | 11 | 0 | 0 | 0 | 0 | 9 | 0 | 1 | 0 | 21 |
 | `namespace` | 41 | 0 | 16 | 0 | 0 | 2 | 0 | 0 | 10 | 69 |
 | `postfit` | 41 | 0 | 0 | 2 | 6 | 2 | 0 | 1 | 0 | 52 |
-| `all` | 150 | 44 | 16 | 4 | 22 | 30 | 30 | 7 | 14 | 317 |
+| `all` | 151 | 44 | 16 | 4 | 22 | 29 | 30 | 7 | 14 | 317 |
 
 ## P1 twin fixtures present at this head, not bound to any row
 
@@ -74,6 +74,7 @@ decision for the PR that measures it, not something this tool does.
 - `test/fixtures/gen_namespace_numeric_p1.R`
 - `test/fixtures/gen_namespace_numeric_p1_b.R`
 - `test/fixtures/gen_off_all_count_twin_p1.R`
+- `test/fixtures/gen_off_mixed_twin_p1.R`
 - `test/fixtures/gen_ordinal_logit_p1.R`
 - `test/fixtures/gen_postfit_twins_p1.R`
 - `test/fixtures/gen_predict_missing_p1.R`
@@ -102,6 +103,8 @@ decision for the PR that measures it, not something this tool does.
 - `test/fixtures/ns_twolevel_p1_data.csv`
 - `test/fixtures/off_all_count_twin_p1.toml`
 - `test/fixtures/off_all_count_twin_p1_data.csv`
+- `test/fixtures/off_mixed_twin_p1.toml`
+- `test/fixtures/off_mixed_twin_p1_data.csv`
 - `test/fixtures/ordinal_logit_p1.toml`
 - `test/fixtures/ordinal_logit_p1_data.csv`
 - `test/fixtures/postfit_twins_p1.toml`
@@ -168,7 +171,7 @@ decision for the PR that measures it, not something this tool does.
 | data-DATA-MISS-MODEL `data/DATA-MISS-MODEL` | required_core; cases: P1-JULIA-DATA-MISS_MODEL-LOGLIK, P1-JULIA-DATA-MISS_MODEL-INTERCEPTS, P1-JULIA-DATA-MISS_MODEL-B-X, P1-JULIA-DATA-MISS_MODEL-COVARIATE-MODEL, P1-JULIA-DATA-MISS_MODEL-SDS, P1-JULIA-DATA-MISS_MODEL-LAMBDA-LAMBDAT | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/MISS-MODEL.json | family data; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | data-DATA-OFF-ALL-COUNT `data/DATA-OFF-ALL-COUNT` | required_core; cases: P1-JULIA-DATA-OFF-ALL-COUNT-NB2-LOGLIK, P1-JULIA-DATA-OFF-ALL-COUNT-NB2-INTERCEPTS, P1-JULIA-DATA-OFF-ALL-COUNT-NB2-LAMBDA-LAMBDAT, P1-JULIA-DATA-OFF-ALL-COUNT-NB2-DISPERSION, P1-JULIA-DATA-OFF-ALL-COUNT-TPOIS-LOGLIK, P1-JULIA-DATA-OFF-ALL-COUNT-TPOIS-INTERCEPTS, P1-JULIA-DATA-OFF-ALL-COUNT-TPOIS-LAMBDA-LAMBDAT, P1-JULIA-DATA-OFF-ALL-COUNT-TNB2-LOGLIK, P1-JULIA-DATA-OFF-ALL-COUNT-TNB2-INTERCEPTS, P1-JULIA-DATA-OFF-ALL-COUNT-TNB2-LAMBDA-LAMBDAT, P1-JULIA-DATA-OFF-ALL-COUNT-TNB2-DISPERSION | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-ALL-COUNT.json | family data; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | data-DATA-OFF-EXPOSURE `data/DATA-OFF-EXPOSURE` | required_core; cases: P1-JULIA-DATA-POIS_EXPOSURE-LOGLIK, P1-JULIA-DATA-POIS_EXPOSURE-INTERCEPTS, P1-JULIA-DATA-POIS_EXPOSURE-LAMBDA-LAMBDAT | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-EXPOSURE.json | family data; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| data-DATA-OFF-MIXED `data/DATA-OFF-MIXED` | required_core; cases: CORE070-DATA-OFF-MIXED-NATIVE | NEEDS-SURFACE | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-MIXED-NATIVE.json | family data; evidence_tier needs_surface_r_side_measured; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| data-DATA-OFF-MIXED `data/DATA-OFF-MIXED` | required_core; cases: P1-JULIA-DATA-OFF-MIXED-LOGLIK, P1-JULIA-DATA-OFF-MIXED-INTERCEPTS, P1-JULIA-DATA-OFF-MIXED-LAMBDA-LAMBDAT, P1-JULIA-DATA-OFF-MIXED-NB2-DISPERSION, P1-JULIA-DATA-OFF-MIXED-GAUSSIAN-SIGMA, P1-JULIA-DATA-OFF-MIXED-NO-OFFSET-LOGLIK | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-MIXED.json | family data; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | data-DATA-OFF-NB1 `data/DATA-OFF-NB1` | required_core; cases: P1-JULIA-DATA-NB1_EXPOSURE-LOGLIK, P1-JULIA-DATA-NB1_EXPOSURE-INTERCEPTS, P1-JULIA-DATA-NB1_EXPOSURE-LAMBDA-LAMBDAT, P1-JULIA-DATA-NB1_EXPOSURE-DISPERSION | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-NB1.json | family data; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | data-DATA-OFF-NONCOUNT-ZERO `data/DATA-OFF-NONCOUNT-ZERO` | required_core; cases: P1-JULIA-DATA-GAUSS_ZERO-LOGLIK, P1-JULIA-DATA-GAUSS_ZERO-INTERCEPTS | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-NONCOUNT-ZERO.json | family data; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | data-DATA-OFF-NONE `data/DATA-OFF-NONE` | required_core; cases: P1-JULIA-DATA-POIS_NONE-LOGLIK, P1-JULIA-DATA-POIS_NONE-INTERCEPTS, P1-JULIA-DATA-POIS_NONE-LAMBDA-LAMBDAT | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-NONE.json | family data; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
