@@ -207,8 +207,10 @@ end
 # record) Gaussian GllvmFit path, shared by `confint(fit::GllvmFit; ...)` and
 # `vcov(fit::GllvmFit, Y)`. Returns (θ̂, terms, kinds, Σ, se_all, pd) over the
 # full θ_packed layout. Σ = inv((H + Hᵀ)/2) with H the ForwardDiff Hessian of
-# the marginal NLL at θ̂ — no regularisation. Non-PD convention (unchanged from
-# the SE code): if the Hessian errors, is non-finite, or cannot be inverted,
+# the marginal NLL at θ̂ — no regularisation. On a fit with `lambda_constraint`
+# pins the inverse is taken over the free parameters only, and the pinned
+# loadings get SE 0 and zero rows and columns in Σ (R's `cov.fixed`, #794).
+# Non-PD convention (unchanged from the SE code): if the Hessian errors, is non-finite, or cannot be inverted,
 # every SE is NaN and Σ is all-NaN; if it inverts but a diagonal entry is
 # non-finite or non-positive, that SE is NaN and pd = false. For Σ, the rows
 # and columns of such entries are set to NaN (a covariance with an invalid
@@ -243,13 +245,18 @@ function _confint_gaussian_wald_covariance(fit::GllvmFit, y,
         pd = false
     end
 
+    # Loadings pinned by `lambda_constraint` are not parameters (#794): invert the
+    # information of the free parameters only, as R's `sd_report$cov.fixed`, and
+    # report each pinned entry with variance and covariances 0.
+    pins = _lambda_constraint_pinned_theta_indices(fit)
+
     se_all = fill(NaN, n_par)
     V = fill(NaN, n_par, n_par)
     if H !== nothing && all(isfinite, H)
         Σ = nothing
         try
             Hsym = (H .+ H') ./ 2
-            Σ = inv(Hsym)
+            Σ = isempty(pins) ? inv(Hsym) : _inv_free_block(Hsym, pins)
         catch
             Σ = nothing
             pd = false
@@ -258,6 +265,10 @@ function _confint_gaussian_wald_covariance(fit::GllvmFit, y,
         if Σ !== nothing
             diagΣ = diag(Σ)
             for i in 1:n_par
+                if !isempty(pins) && insorted(i, pins)
+                    se_all[i] = 0.0
+                    continue
+                end
                 v = diagΣ[i]
                 if isfinite(v) && v > 0
                     se_all[i] = sqrt(v)
@@ -322,6 +333,13 @@ matrix `y` (and optionally `X`, `Σ_phy`) to reconstruct the NLL closure.
 If the Hessian is not positive definite, this function returns NaN
 bounds for the affected entries with `pd_hessian = false` (matching the
 R glmmTMB / gllvmTMB convention).
+
+On a fit made with `fit_gaussian_gllvm(y; K, lambda_constraint = M)`, the
+pinned loadings are not parameters: their rows and columns are removed from
+the observed information before it is inverted (R's `sd_report\$cov.fixed`),
+each pinned `Lambda_B[i,k]` is reported with `se = 0` and `lower = upper =
+estimate`, and `pd_hessian` refers to the free parameters. `vcov` gives the
+pinned entries zero rows and columns.
 
 When PERF lands with reverse-mode AD, the integration agent can swap the
 ForwardDiff.hessian call for the faster path; the public API stays
@@ -476,11 +494,11 @@ function _confint_check_kwargs(kw::NamedTuple, accepted::Tuple, inert::Tuple,
 end
 
 # `bootstrap_ci` and `profile_ci` refit without the loading pins, so on a fit made
-# with `lambda_constraint` they would answer for a different model.
+# with `lambda_constraint` they would answer for a different model. A constraint
+# whose only numeric entries are structural zeros pins nothing in `θ_packed` and
+# leaves the ordinary model, so it is not refused.
 function _confint_check_unpinned(fit::GllvmFit, method::Symbol, label::AbstractString, parm)
-    hasproperty(fit.pars, :lambda_constraint) || return nothing
-    M = fit.pars.lambda_constraint
-    (M === nothing || all(isnan, M)) && return nothing
+    isempty(_lambda_constraint_pinned_theta_indices(fit)) && return nothing
     throw(ArgumentError(
         "confint: method = :$method is not available for $label with lambda_constraint " *
         "pins / parm $(_confint_parm_label(parm)); available: :wald " *

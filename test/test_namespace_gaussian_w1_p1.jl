@@ -30,10 +30,10 @@
 #             (-0.5, 0.5) as exact integer codes (1 TRUE, 0 FALSE, -1 NA for pinned), and the
 #             log-likelihood.
 #
-# Tolerances: about 10x the observed differences. The flag row is looser because Julia's
-# confirmatory refit stops at g_tol 1e-4 (loadings within ~7e-5 of R); the closest non-pinned
-# interval bound sits 0.012 from a null-region edge, 25x the bound tolerance, so the flags are
-# not near a tie.
+# Tolerances: about 10x the observed differences. The confirmatory refit runs to the base
+# fitter's g_tol 1e-6 (#794; it stopped at a free gradient of 0.019 under the old hard-coded
+# 1e-4, loadings within 7e-5 of R), so the flag row now agrees with R to ~1e-7; the closest
+# non-pinned interval bound sits 0.012 from a null-region edge, so the flags are not near a tie.
 #
 # Limits, disclosed: Gaussian only; the wide wrapper is twinned on its default call (no X, weights,
 # phylo_vcv or formula_extra); ordiplot is compared on its returned data, not its drawing;
@@ -139,11 +139,11 @@ _w1_rcode(s) = s == "NA" ? -1 : s == "TRUE" ? 1 : s == "FALSE" ? 0 : error("bad 
             @test [r.pinned for r in rows] == Bool.(f["pinned"])
             est, se = [r.estimate for r in rows], [r.se for r in rows]
             lo, hi = [r.lower for r in rows], [r.upper for r in rows]
-            @test isapprox(fit.logLik, Float64(f["loglik"]); atol = 1e-5, rtol = 0)               # logLik (observed 1.5e-6)
-            @test isapprox(est, Float64.(f["estimate"]); atol = 5e-4, rtol = 0)                   # loading estimates (observed 7.0e-5)
-            @test isapprox(se, Float64.(f["se"]); atol = 5e-5, rtol = 0)                          # raw Wald SEs (observed 7.6e-6)
-            @test isapprox(lo, Float64.(f["lower"]); atol = 5e-4, rtol = 0)                       # lower bounds (observed 5.7e-5)
-            @test isapprox(hi, Float64.(f["upper"]); atol = 5e-4, rtol = 0)                       # upper bounds (observed 8.5e-5)
+            @test isapprox(fit.logLik, Float64(f["loglik"]); atol = 2e-10, rtol = 0)              # logLik (observed 1.2e-11)
+            @test isapprox(est, Float64.(f["estimate"]); atol = 1e-6, rtol = 0)                   # loading estimates (observed 1.0e-7)
+            @test isapprox(se, Float64.(f["se"]); atol = 5e-7, rtol = 0)                          # raw Wald SEs (observed 5.1e-8)
+            @test isapprox(lo, Float64.(f["lower"]); atol = 2e-6, rtol = 0)                       # lower bounds (observed 2.0e-7)
+            @test isapprox(hi, Float64.(f["upper"]); atol = 2e-6, rtol = 0)                       # upper bounds (observed 1.0e-7)
             code_d = _w1_code.([r.unreliable for r in rows])
             code_w = _w1_code.([r.unreliable for r in rows_w])
             r_code_d = _w1_rcode.(f["unreliable_default"])
@@ -182,4 +182,121 @@ end
     rows = flag_unreliable_loadings(fit, y)
     @test rows[2].pinned && rows[2].se == 0 && rows[2].unreliable === missing
     @test all(r -> r.null_region_lo == -0.1 && r.null_region_hi == 0.1, rows)
+end
+
+# Issue #794: on a fit with lambda_constraint pins, the Wald routes (confint, vcov,
+# loading_ci / raw_loading_wald_ci) use the covariance of the FREE parameters, as R's
+# sd_report$cov.fixed does (pinned loadings are mapped off in R, not parameters). Checked at
+# gllvmTMB's own estimates placed into Julia's parameter vector, so the comparison measures the
+# covariance alone and not the optimiser's stopping point.
+@testset "lambda_constraint pins: free-parameter Wald covariance (#794)" begin
+    fxp = joinpath(_W1_DIR, "ns_gauss_w1_p1.toml")
+    if !isfile(fxp)
+        @warn "namespace Gaussian W1 P1 fixture absent; #794 gate NOT RUN" fxp
+        @test_skip false
+    else
+        fx = TOML.parsefile(fxp)
+        f = fx["flag"]
+        p, n = Int(fx["p"]), Int(fx["n"])
+        Y = _w1_load(joinpath(_W1_DIR, fx["data_file"]), String.(fx["trait_names"]), n)
+        Yc = Y .- sum(Y; dims = 2) ./ n
+        M = fill(NaN, p, 2)
+        for pin in f["pins"]
+            M[pin[1], pin[2]] = 0.0
+        end
+        r_est, r_se = Float64.(f["estimate"]), Float64.(f["se"])
+        r_lo, r_hi = Float64.(f["lower"]), Float64.(f["upper"])
+        r_pinned = Bool.(f["pinned"])
+        r_L = reshape(r_est, p, 2)
+
+        fit = fit_gaussian_gllvm(Yc; K = 2, lambda_constraint = M)
+        θ = copy(fit.pars.θ_packed)
+        θ[GLLVModels._profile_parm_index(fit, "sigma_eps")] = log(Float64(f["sigma_eps"]))
+        for i in 1:p, k in 1:2
+            k > i && continue
+            θ[GLLVModels._lambda_b_theta_index(fit, i, k)] = r_L[i, k]
+        end
+        fitR = GLLVModels.GllvmFit(fit.model,
+                                   merge(fit.pars, (θ_packed = θ, Λ = r_L, σ_eps = Float64(f["sigma_eps"]))),
+                                   fit.logLik, fit.n_iter, fit.converged, fit.optim_result,
+                                   fit.cputime, fit.integration)
+
+        @testset "confint and vcov at R's estimates" begin
+            ci = confint(fitR, Yc; parm = "Lambda")
+            @test ci.pd_hessian
+            idx = [findfirst(==("Lambda_B[$i,$k]"), ci.term) for k in 1:2 for i in 1:p]
+            se = [j === nothing ? 0.0 : ci.se[j] for j in idx]
+            @test isapprox(se, r_se; atol = 5e-7, rtol = 0)                  # raw Wald SEs (observed 6e-8)
+            j21 = findfirst(==("Lambda_B[2,1]"), ci.term)                     # the user pin in θ_packed
+            @test ci.se[j21] == 0.0
+            @test ci.lower[j21] == ci.estimate[j21] == ci.upper[j21] == 0.0
+            j31 = findfirst(==("Lambda_B[3,1]"), ci.term)
+            @test isapprox(ci.lower[j31], r_lo[3]; atol = 1e-6, rtol = 0)
+            @test isapprox(ci.upper[j31], r_hi[3]; atol = 1e-6, rtol = 0)
+            V = vcov(fitR, Yc)
+            jp = GLLVModels._lambda_b_theta_index(fitR, 2, 1)
+            @test all(iszero, V[jp, :]) && all(iszero, V[:, jp])
+            @test all(isfinite, V)
+        end
+
+        @testset "loading_ci at R's estimates" begin
+            lc = loading_ci(fitR, Yc)
+            @test [(r.trait, r.axis) for r in lc] == [(t, k) for k in 1:2 for t in 1:p]
+            @test [r.pinned for r in lc] == r_pinned
+            @test isapprox([r.se for r in lc], r_se; atol = 5e-7, rtol = 0)     # observed 6e-8
+            @test isapprox([r.lower for r in lc], r_lo; atol = 1e-6, rtol = 0)
+            @test isapprox([r.upper for r in lc], r_hi; atol = 1e-6, rtol = 0)
+            for r in lc
+                r.pinned || continue
+                @test r.se == 0.0 && r.lower == r.estimate == r.upper
+            end
+            # The per-entry route agrees with the table.
+            w = raw_loading_wald_ci(fitR, 3, 1; y = Yc)
+            @test isapprox(w.se_transformed, r_se[3]; atol = 5e-7, rtol = 0)
+            w21 = raw_loading_wald_ci(fitR, 2, 1; y = Yc)
+            @test w21.se_transformed == 0.0 && w21.lower == w21.upper == w21.estimate == 0.0
+            # flag_unreliable_loadings already used the free-parameter covariance (#795): same SEs.
+            fl = flag_unreliable_loadings(fitR, Yc)
+            @test isapprox([r.se for r in lc], [r.se for r in fl]; atol = 1e-10, rtol = 0)
+            # The exploratory profile refits without the pins, so it is refused on a pinned fit.
+            @test_throws ArgumentError loading_ci(fitR, Yc; method = :profile)
+        end
+
+        @testset "confirmatory refit honours g_tol and reports convergence honestly" begin
+            # The refit now runs to the base fitter's tolerance, so the fitted point is R's to
+            # optimiser precision (it stopped at gradient 0.019 under the old hard-coded g_tol 1e-4).
+            fit = fit_gaussian_gllvm(Yc; K = 2, lambda_constraint = M)
+            @test fit.converged
+            nll = GLLVModels._confint_reconstruct_nll(fit, Yc, nothing, nothing)
+            g = GLLVModels.ForwardDiff.gradient(nll, fit.pars.θ_packed)
+            jp = GLLVModels._lambda_b_theta_index(fit, 2, 1)
+            @test maximum(abs(g[j]) for j in eachindex(g) if j != jp) < 1e-5
+            @test isapprox(fit.logLik, Float64(f["loglik"]); atol = 2e-10, rtol = 0)   # observed 1.2e-11 (was 1.5e-6)
+            @test isapprox(vec(fit.pars.Λ), r_est; atol = 1e-6, rtol = 0)             # observed 1.0e-7 (was 7.0e-5)
+            @test isapprox([r.se for r in loading_ci(fit, Yc)], r_se; atol = 5e-7, rtol = 0)  # observed 5.1e-8
+            # A user g_tol reaches the refit: a looser one stops earlier than a tighter one.
+            loose = fit_gaussian_gllvm(Yc; K = 2, lambda_constraint = M, g_tol = 1e-2)
+            gl = GLLVModels.ForwardDiff.gradient(nll, loose.pars.θ_packed)
+            @test maximum(abs(gl[j]) for j in eachindex(gl) if j != jp) >
+                  maximum(abs(g[j]) for j in eachindex(g) if j != jp)
+            # An iteration cap the refit cannot meet is reported, not hidden.
+            capped = fit_gaussian_gllvm(Yc; K = 2, lambda_constraint = M, iterations = 1)
+            @test !capped.converged
+        end
+
+        @testset "a structural-zero-only pin is accepted, as in R" begin
+            M0 = fill(NaN, p, 2); M0[1, 2] = 0.0         # only the engine's own structural zero
+            f0 = fit_gaussian_gllvm(Yc; K = 2, lambda_constraint = M0)
+            base = fit_gaussian_gllvm(Yc; K = 2)
+            @test f0.pars.θ_packed == base.pars.θ_packed  # the same model as the ordinary fit
+            rows = flag_unreliable_loadings(f0, Yc)
+            @test length(rows) == 2p
+            @test rows[p + 1].pinned && rows[p + 1].se == 0.0
+            @test [r.pinned for r in loading_ci(f0, Yc)] == [k > t for k in 1:2 for t in 1:p]
+            @test confint(f0, Yc).se == confint(base, Yc).se  # no θ entry is pinned
+            # An all-free constraint is still refused: Λ is then identified only up to rotation.
+            fnan = fit_gaussian_gllvm(Yc; K = 2, lambda_constraint = fill(NaN, p, 2))
+            @test_throws ArgumentError flag_unreliable_loadings(fnan, Yc)
+        end
+    end
 end
