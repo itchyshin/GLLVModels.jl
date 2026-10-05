@@ -3,10 +3,10 @@
 # tools/true_parity_check.mjs, clauses C1/C8).
 #
 # A standalone sibling of tools/true_parity_julia_receipts.jl and
-# tools/true_parity_cross_lineage_receipt.jl, kept in its own file so that they do not collide.
+# tools/true_parity_animal_scalar_receipt.jl, kept in its own file so that they do not collide.
 # It follows the same rules, and the helpers below (Fail, findline, test_tolerance, cite, mkcase,
 # the JSON writer and reader, Receipt, receipt_object, compare_receipt) are copied from
-# tools/true_parity_cross_lineage_receipt.jl unchanged:
+# tools/true_parity_animal_scalar_receipt.jl unchanged:
 #   * R values are copied from the tracked fixture test/fixtures/cross_lineage_p1.toml; nothing
 #     on the R side is recomputed here.
 #   * The Julia side repeats the computation of test/test_cross_lineage_p1.jl with the same
