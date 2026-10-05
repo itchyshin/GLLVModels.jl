@@ -21,7 +21,7 @@ using GLLVModels, Test, Random, LinearAlgebra, Statistics
         @test s.gradient_norm < 1e-3
     end
 
-    @testset "sanity_multi — lambda_constraint pins are not parameters (refs #794)" begin
+    @testset "sanity_multi: lambda_constraint pins are not parameters (refs #794)" begin
         # R's sanity_multi reads the gradient at opt$par and pdHess from
         # sdreport, both over the mapped-free parameter vector; a pinned
         # loading is mapped off. The pinned entry's own gradient component is
@@ -54,7 +54,7 @@ using GLLVModels, Test, Random, LinearAlgebra, Statistics
         @test s.max_se === missing
     end
 
-    @testset "sanity_multi — unpinned fit uses the full gradient" begin
+    @testset "sanity_multi: unpinned fit uses the full gradient" begin
         Random.seed!(10)
         p, K, n = 5, 1, 400
         Λ_true = reshape([0.7, 0.5, 0.4, -0.3, 0.2], p, K)

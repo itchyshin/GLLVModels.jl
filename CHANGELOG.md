@@ -28,7 +28,7 @@
   parameters only; `max_gradient`, `gradient_norm`, `gradient_ok`, `sdreport_ok` and `pd_hessian`
   now do the same. `max_se` was not affected (a `lambda_constraint` fit has no fixed effects).
   `loading_profile` sets its grid width from a Wald SE that now uses the free-block covariance, as
-  `confint(...; method = :wald)` does; the profile values themselves are unchanged. Unpinned fits
+  `confint(...; method = :wald)` does; the profile objective is unchanged, only the grid spacing moves. The starting bracket step of direct `profile_ci` and `tmbprofile_wrapper` calls on a pinned fit also changes, by bisection-tolerance amounts. Unpinned fits
   give byte-identical `sanity_multi` output.
 - **Wald intervals on a `lambda_constraint` fit use the free-parameter covariance (#794).**
   On a fit made with `fit_gaussian_gllvm(y; K, lambda_constraint = M)`, `confint`, `vcov`,
