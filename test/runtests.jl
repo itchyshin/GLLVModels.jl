@@ -546,6 +546,8 @@ println(_SHARD === nothing ?
     _shard_include("test_off_all_count_twin_p1.jl")
     # P1 fit-level twin of data/DATA-OFF-MIXED (one poisson/gaussian/nbinom2 fit, offset zero on the gaussian trait).
     _shard_include("test_off_mixed_twin_p1.jl")
+    # P1 fit-level twins of covariance/COV-ORD-LATENT-BARE, -DEFAULT and -COMMON (ordinary latent(), Gaussian rank 1).
+    _shard_include("test_cov_ord_latent_p1.jl")
     _shard_include("test_destination_b_s4_public_phylo_dep_probe_harness.jl")
     _shard_include("test_totoro_323_track_a_harness.jl")
     _shard_include("test_temporal_api.jl")

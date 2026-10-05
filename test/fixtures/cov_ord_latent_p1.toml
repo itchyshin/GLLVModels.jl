@@ -1,0 +1,93 @@
+# Twin fixture for covariance rows COV-ORD-LATENT-BARE / -DEFAULT / -COMMON (gllvmTMB P1).
+# Generated once by gen_cov_ord_latent_p1.R, which also writes the CSV (sha256 recorded).
+# Do not hand-edit; regenerate from the script.
+gllvmtmb_commit = "9539352f66f2db2cc26b1c393e67212a359b60c9"
+gllvmtmb_version = "0.7.1"
+r_version = "R version 4.6.0 (2026-04-24)"
+data_file = "cov_ord_latent_p1_data.csv"
+data_sha256 = "ff20978b7b881405f1669f69a83902c21f59e01fba6a3f99f9f2e759bc9b7daa"
+p = 4
+n_site = 60
+trait_names = ["t1", "t2", "t3", "t4"]
+# max(0.001 * sd(value), 1e-6): the residual SD gllvmTMB fixes when a site-level diag is present
+sigma_eps_rule = 0.00092473232595918699
+# logLik(common) - logLik(bare): recorded only
+common_minus_bare_loglik = 1.7678303265711293e-11
+
+[bare]
+case = "COV-ORD-LATENT-BARE"
+formula = "value ~ 0 + trait + latent(0 + trait | site, unique = FALSE)"
+converged = true
+pd_hessian = true
+r_gradient_max = 5.0267687073545009e-05
+r_df = 9
+par_names = ["b_fix", "b_fix", "b_fix", "b_fix", "log_sigma_eps", "theta_rr_B", "theta_rr_B", "theta_rr_B", "theta_rr_B"]
+sigma_eps_fixed = false
+loglik = -284.69143201708067
+# b_fix: trait intercepts, in trait order
+beta = [0.2495482623859043, -0.26365477778028618, 0.43645856422443902, 0.13001189671072069]
+# theta_rr_B: the rank-1 loading column (Lambda_B)
+lambda = [0.72454502251485187, -0.53516442979097645, 0.66555305080526517, 0.35870164142100552]
+# free theta_diag_B entries (log SD of the unique diagonal); empty for bare
+diag_logsd = []
+# exp(log_sigma_eps): the residual SD (estimated for bare, fixed for default and common)
+sigma_eps = 0.66339320981179439
+# Lambda Lambda' + diag(exp(2 theta_diag_B)): the site-level trait covariance, row by row
+trait_covariance = [[0.52496548965104717, -0.38775072383205089, 0.48222315018052919, 0.25989548885949676], [-0.38775072383205089, 0.28640096691350098, -0.35618031892984453, -0.19196435939615972], [0.48222315018052919, -0.35618031892984453, 0.4429608634361959, 0.23873497177660649], [0.25989548885949676, -0.19196435939615972, 0.23873497177660649, 0.12866686755812362]]
+# opt$par + 0.05 sin(1:k), in par_names order, and -obj$fn at that point
+probe_par = [0.29162181162629913, -0.2181899064390021, 0.44351456462743238, 0.092171771945324277, -0.45833360169066895, 0.71057424760490562, -0.50231509985503697, 0.71502096313643426, 0.37930756568309337]
+probe_loglik = -285.74265356484301
+# max |extract_Sigma(fit, level = 'unit')$Sigma - trait_covariance|
+extract_sigma_diff = 0
+
+[default]
+case = "COV-ORD-LATENT-DEFAULT"
+formula = "value ~ 0 + trait + latent(0 + trait | site)"
+converged = true
+pd_hessian = true
+r_gradient_max = 3.0030709154657064e-05
+r_df = 12
+par_names = ["b_fix", "b_fix", "b_fix", "b_fix", "theta_rr_B", "theta_rr_B", "theta_rr_B", "theta_rr_B", "theta_diag_B", "theta_diag_B", "theta_diag_B", "theta_diag_B"]
+sigma_eps_fixed = true
+loglik = -280.86093114485271
+# b_fix: trait intercepts, in trait order
+beta = [0.24954826240867878, -0.26365477772795759, 0.43645856423034163, 0.13001189671030497]
+# theta_rr_B: the rank-1 loading column (Lambda_B)
+lambda = [0.78480721350645155, -0.60096497177524066, 0.56173047784961183, 0.35005813762255195]
+# free theta_diag_B entries (log SD of the unique diagonal); empty for bare
+diag_logsd = [-0.58727287589259403, -0.65697053529643845, -0.21407061310601908, -0.3478223370908774]
+# exp(log_sigma_eps): the residual SD (estimated for bare, fixed for default and common)
+sigma_eps = 0.00092473232595918667
+# Lambda Lambda' + diag(exp(2 theta_diag_B)): the site-level trait covariance, row by row
+trait_covariance = [[0.92488165439590553, -0.47164164491390992, 0.44085013106280135, 0.27472815155281294], [-0.47164164491390992, 0.62991766647348979, -0.33758034076618443, -0.21037267879603025], [0.44085013106280135, -0.33758034076618443, 0.96726049818664206, 0.19663832492186128], [0.27472815155281294, -0.21037267879603025, 0.19663832492186128, 0.62129351097610164]]
+# opt$par + 0.05 sin(1:k), in par_names order, and -obj$fn at that point
+probe_par = [0.29162181164907364, -0.21818990638667352, 0.443514564633335, 0.092171771944908554, 0.73686099977329467, -0.61493574668518691, 0.59457980778555131, 0.39952604995372104, -0.56666695163050618, -0.68417159084090695, -0.26407012343355424, -0.37465098299089916]
+probe_loglik = -281.76510789675439
+# max |extract_Sigma(fit, level = 'unit')$Sigma - trait_covariance|
+extract_sigma_diff = 1.1102230246251565e-16
+
+[common]
+case = "COV-ORD-LATENT-COMMON"
+formula = "value ~ 0 + trait + latent(0 + trait | site, common = TRUE)"
+converged = true
+pd_hessian = true
+r_gradient_max = 3.7653113245553065e-05
+r_df = 9
+par_names = ["b_fix", "b_fix", "b_fix", "b_fix", "theta_rr_B", "theta_rr_B", "theta_rr_B", "theta_rr_B", "theta_diag_B"]
+sigma_eps_fixed = true
+loglik = -284.69143201706299
+# b_fix: trait intercepts, in trait order
+beta = [0.24954826238029562, -0.2636547777409462, 0.43645856424853363, 0.13001189671433649]
+# theta_rr_B: the rank-1 loading column (Lambda_B)
+lambda = [0.72454487604926643, -0.53516436295991932, 0.66555269852561694, 0.35870237538870092]
+# free theta_diag_B entries (log SD of the unique diagonal); empty for bare
+diag_logsd = [-0.41038836561691527]
+# exp(log_sigma_eps): the residual SD (estimated for bare, fixed for default and common)
+sigma_eps = 0.00092473232595918667
+# Lambda Lambda' + diag(exp(2 theta_diag_B)): the site-level trait covariance, row by row
+trait_covariance = [[0.96505496771715293, -0.38775059702677939, 0.48222279745749791, 0.25989596811458376], [-0.38775059702677939, 0.72649058569020242, -0.35618008592271699, -0.19196472821710397], [0.48222279745749791, -0.35618008592271699, 0.8830500848226368, 0.23873533390749874], [0.25989596811458376, -0.19196472821710397, 0.23873533390749874, 0.56875708441740258]]
+# opt$par + 0.05 sin(1:k), in par_names order, and -obj$fn at that point
+probe_par = [0.29162181162069045, -0.21818990639966213, 0.443514564651527, 0.092171771948940079, 0.67659866231610954, -0.54913513786986556, 0.69840202846155641, 0.40817028771987002, -0.38978244135482742]
+probe_loglik = -285.41183939406022
+# max |extract_Sigma(fit, level = 'unit')$Sigma - trait_covariance|
+extract_sigma_diff = 1.1102230246251565e-16
