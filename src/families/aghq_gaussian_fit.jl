@@ -57,10 +57,18 @@ phylogenetic or diagonal random-effect terms, and no fixed-effect covariates
 (`X`) or predictor-informed latent scores (`X_lv`). Combining
 `lambda_constraint` with `aghq`, `mask`, or `offset` is not yet supported;
 each of these combinations raises a clear `ArgumentError` rather than
-silently fitting the wrong model. The returned fit's `pars.lambda_constraint`
-records the normalised pin matrix, which [`loading_profile`](@ref) reads to
-determine which entries are free. No cross-package numeric comparison
-against R's own `lambda_constraint` fits has been published yet.
+silently fitting the wrong model. The re-optimisation uses the same optimiser
+controls as the base fit (`g_tol`, `x_tol`, `f_tol` and `iterations`, with the
+same defaults), and `converged` reports whether it met them. As in R, entries
+above the diagonal of the first `K` rows are not estimated and stay at zero; a
+number given there is ignored for fitting but recorded as a pin at zero, so a
+constraint whose only pin is such a structural zero fits the ordinary model
+and is still treated as confirmatory. The returned fit's `pars.lambda_constraint`
+records the normalised pin matrix, which [`loading_profile`](@ref) and the Wald
+routes read to determine which entries are free: on this fit `confint`, `vcov`
+and [`loading_ci`](@ref) use the covariance of the free parameters, as R's
+`sd_report\$cov.fixed`. The fitted model and the loading Wald intervals are
+compared numerically with gllvmTMB's in `test/test_namespace_gaussian_w1_p1.jl`.
 
 **Note on `σ_phy` (#136; see the gllvmTMB parity page):** `σ_phy` is a signed
 parameter of the row model. It enters the likelihood only as the last column
@@ -106,7 +114,9 @@ function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control
             "lambda_constraint does not yet support X_lv (predictor-informed latent " *
             "scores) in Stage 1"))
         base=fit_gaussian_gllvm(Y;K=K,hessian=hessian,kwargs...)
-        return _fit_confirmatory_lambda_constraint(base,Y,lambda_constraint)
+        # The refit takes the same optimiser controls as the base fit (#794).
+        controls=(;(k=>v for (k,v) in pairs(kwargs) if k in (:x_tol,:f_tol,:g_tol,:iterations))...)
+        return _fit_confirmatory_lambda_constraint(base,Y,lambda_constraint;controls...)
     end
     request=_aghq_request(aghq);c=_aghq_controls(aghq_control)
     if request===:off && mask===nothing && offset===nothing

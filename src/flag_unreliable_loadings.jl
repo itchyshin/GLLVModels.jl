@@ -2,12 +2,10 @@
 # (R/loading-ci.R at P1). Given per-entry raw Wald intervals on a confirmatory Λ,
 # flag the entries whose interval does not exclude a "negligible" band around zero.
 #
-# The fit method computes the intervals itself rather than through `loading_ci` or
-# `confint`: on a fit with `lambda_constraint` pins those two invert the Hessian of
-# every packed parameter, pinned loadings included, whereas R's `loading_ci()` uses
-# `sd_report$cov.fixed`, in which the pinned entries are mapped off (not parameters).
-# Here the pinned rows and columns are dropped from the observed information before it
-# is inverted, which is R's covariance.
+# The pinned rows and columns are dropped from the observed information before it is
+# inverted, which is R's `sd_report$cov.fixed` (the pinned entries are mapped off in R,
+# not parameters). `loading_ci` and `confint` use the same free-parameter covariance
+# (#794), so their raw Wald SEs agree with the ones computed here.
 
 """
     flag_unreliable_loadings(fit::GllvmFit, y; null_region = (-0.1, 0.1),
@@ -29,7 +27,7 @@ of an unpinned `Λ` is identified only up to rotation. The intervals are symmetr
 Wald intervals on the raw loading scale (R's default `method = "wald"`,
 `loading_scale = "raw"`) at `conf_level`, from the observed information of the free
 parameters: pinned loadings are not parameters, so their rows and columns are
-removed before the information is inverted, as in R's `sd_report$cov.fixed`. A
+removed before the information is inverted, as in R's `sd_report\$cov.fixed`. A
 pinned entry has `se = 0` and `lower = upper = estimate`. If the reduced
 information is not positive definite, `se`, `lower` and `upper` are `NaN`,
 `pd_hessian = false`, and every `unreliable` is `missing` (R returns `NA`). Only
@@ -78,8 +76,7 @@ function flag_unreliable_loadings(fit::GllvmFit, y::AbstractMatrix;
 
     # Observed information of the free parameters: drop the pinned loadings.
     θ̂ = fit.pars.θ_packed
-    pin_idx = Int[_lambda_b_theta_index(fit, i, k)
-                  for i in 1:p, k in 1:K if pinned[i, k] && !(i <= min(p, K) && k > i)]
+    pin_idx = _lambda_constraint_pinned_theta_indices(fit)
     free = setdiff(1:length(θ̂), pin_idx)
     nll = _confint_reconstruct_nll(fit, y, nothing, nothing)
     V = nothing

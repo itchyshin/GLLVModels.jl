@@ -196,7 +196,9 @@ runs one set of refits per requested quantity, as gllvmTMB does, so ask for the
 traits you need. gllvmTMB withdrew its profile interval for icc, communality,
 rho and proportion; the profile route here is the existing penalty-based
 `profile_ci_derived` and is exploratory. A fit made with `lambda_constraint`
-pins takes `method = :wald` only. See [`confint`](@ref) for the keywords.
+pins takes `method = :wald` only, and its Wald intervals use the covariance of
+the free parameters, as gllvmTMB's `cov.fixed` does: a pinned loading has
+`se = 0` and `lower = upper = estimate`. See [`confint`](@ref) for the keywords.
 
 ### Confirmatory fits and `loading_profile` (D3 Stage 1)
 

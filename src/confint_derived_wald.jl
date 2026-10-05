@@ -217,7 +217,16 @@ function _tw_sigma_from_hessian(fit::GllvmFit, y::AbstractMatrix,
     catch
         return (nothing, false)
     end
-    return _tw_sigma_from_hessian_matrix(H)
+    # `lambda_constraint` pins are not parameters (#794): invert the free block and
+    # give the pinned loadings zero rows and columns, R's `sd_report$cov.fixed`.
+    pins = _lambda_constraint_pinned_theta_indices(fit)
+    isempty(pins) && return _tw_sigma_from_hessian_matrix(H)
+    free = setdiff(1:length(θ̂), pins)
+    Σ_free, pd = _tw_sigma_from_hessian_matrix(H[free, free])
+    Σ_free === nothing && return (nothing, pd)
+    Σ = zeros(Float64, length(θ̂), length(θ̂))
+    Σ[free, free] = Σ_free
+    return (Σ, pd)
 end
 
 # Σ = inv(H) only when the (symmetrised) observed information is positive
@@ -583,7 +592,11 @@ machinery as [`standardized_loading_wald_ci`](@ref). This is the `method =
 For `k > t` on the lower-triangular reduced-rank packing convention
 (`src/packing.jl`), the entry is structurally pinned at `0` — `estimate ==
 0`, `se == 0`, `lower == upper == 0`, mirroring `pinned = TRUE` rows in R's
-output.
+output. On a fit made with `lambda_constraint`, an entry the constraint pins
+is returned the same way at its pinned value (`method = :pinned`), and the
+standard error of a free entry comes from the covariance of the free
+parameters only, with the pinned loadings removed from the observed
+information before it is inverted, as R's `sd_report\$cov.fixed`.
 """
 function raw_loading_wald_ci(fit::GllvmFit, t::Integer, k::Integer;
                              level::Real = 0.95,
@@ -593,6 +606,12 @@ function raw_loading_wald_ci(fit::GllvmFit, t::Integer, k::Integer;
                              component::Symbol = :B)
     if k > t
         return (; estimate = 0.0, lower = 0.0, upper = 0.0,
+                se_transformed = 0.0, transform = :identity,
+                pd_hessian = true, method = :pinned)
+    end
+    if component === :B && _lambda_constraint_entry_pinned(fit, t, k)
+        v = Float64(fit.pars.Λ[t, k])
+        return (; estimate = v, lower = v, upper = v,
                 se_transformed = 0.0, transform = :identity,
                 pd_hessian = true, method = :pinned)
     end
@@ -624,16 +643,24 @@ per `(trait, axis)` — the Julia analogue of R's `loading_ci()`.
     `:wald_asym` — Fisher-z asymmetric Wald, only defined for
     `loading_scale = :standardized`; `:profile` — profile-likelihood via
     [`loading_profile_exploratory`](@ref), only defined for `loading_scale = :raw`
-    (mirrors R's refusals for the same scale/method combinations).
+    (mirrors R's refusals for the same scale/method combinations) and refused
+    on a fit with `lambda_constraint` pins, whose refits it would not hold.
   - `loading_scale`: `nothing` (default) resolves to `:standardized` for
     `:wald_asym` and `:raw` otherwise, matching R.
 
 Every row carries `trait`, `axis`, `estimate`, `se`, `lower`, `upper`,
-`method`, `loading_scale`, and `pinned` (`true` for the structurally-zero
-upper-triangular entries of the lower-triangular reduced-rank packing
-convention — GLLVModels.jl's built-in identifiability device; there is no
-separate `lambda_constraint`/confirmatory-fit concept to gate on here, so
-unlike R this function does not refuse exploratory fits).
+`method`, `loading_scale`, and `pinned`. `pinned` is `true` for the
+structurally-zero upper-triangular entries of the lower-triangular
+reduced-rank packing convention (GLLVModels.jl's built-in identifiability
+device) and, on a fit made with `fit_gaussian_gllvm(y; K, lambda_constraint =
+M)`, for the entries `M` pins at `level = :unit`. Unlike R, this function does
+not refuse an exploratory fit without pins.
+
+On a `lambda_constraint` fit the Wald intervals use the covariance of the free
+parameters: the pinned loadings are not parameters, so their rows and columns
+are removed from the observed information before it is inverted, as in R's
+`sd_report\$cov.fixed`. A pinned raw entry has `se = 0` and `lower = upper =
+estimate`, as in R.
 
 **Interval calibration**: as in R, treat these as exploratory intervals —
 their empirical coverage on this repo's dense reduced-rank path is not
@@ -664,6 +691,11 @@ function loading_ci(fit::GllvmFit, y::AbstractMatrix;
         "loading_scale = :raw with method = :profile, or a standardised " *
         "Wald method"))
 
+    method === :profile && !isempty(_lambda_constraint_pinned_theta_indices(fit)) &&
+        throw(ArgumentError(
+            "loading_ci: method = :profile refits without the lambda_constraint pins " *
+            "and would profile a different model; use method = :wald, or " *
+            "loading_profile(fit; y) for the confirmatory profile"))
     component = level === :unit ? :B : :W
     Λ = component === :B ? fit.pars.Λ : fit.pars.Λ_W
     Λ === nothing && throw(ArgumentError(
@@ -691,7 +723,8 @@ function loading_ci(fit::GllvmFit, y::AbstractMatrix;
                     se = get(r, :se_transformed, NaN),
                     lower = r.lower, upper = r.upper,
                     method = method, loading_scale = scale,
-                    pinned = (k > t))
+                    pinned = (k > t) || (component === :B &&
+                                         _lambda_constraint_entry_pinned(fit, t, k)))
     end
     return out
 end
