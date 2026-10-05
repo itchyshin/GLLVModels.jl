@@ -2,6 +2,30 @@
 
 ## Development
 
+- **Six covariance rows bound to P1 fit twins (COV-ORD-LATENT-BARE, -DEFAULT, -COMMON;
+  COV-PHYLO-DEP, -A-ALIAS, -FOLDED-UNIQUE).** These scoreboard rows carried only R-side
+  formula-grammar checks with no fit number. Each is now bound by a fit-level twin: R fits at
+  gllvmTMB P1 recorded in a tracked fixture against Julia fits of the same data. The ordinary
+  `latent()` rows (`test/test_cov_ord_latent_p1.jl`, receipts by
+  `tools/true_parity_cov_ord_latent_receipt.jl`) fit one Gaussian rank-1 data set (60 sites,
+  4 traits) with `fit_gaussian_sources` for `unique = FALSE`, the default auto-unique diagonal
+  and `common = TRUE`, and match R in logLik, intercepts, the trait covariance, and Julia's
+  objective at R's optimum and at an off-optimum probe point. The phylo rows
+  (`test/test_cov_phylo_twins_p1.jl`, receipts by section 12f of
+  `tools/true_parity_julia_receipts.jl`) fit one 120-tip, 4-trait Gaussian data set with
+  `fit_phylo_latent_gllvm` for `phylo_dep` (as `d = 4`), `phylo_latent(A = A)` (identical to the
+  `vcv = A` spelling on both sides) and `phylo_latent(unique = TRUE)`, and match R in logLik,
+  intercepts, residual SD, the phylogenetic trait covariance and Julia's objective at R's
+  optimum. From its default start the `d = 4` fit stops at max |gradient| 4.0e-5, above
+  `g_tol = 1e-5`, so it reports `converged = false`; a ForwardDiff gradient of the same likelihood
+  agrees, so this is the objective's rounding floor rather than finite-difference noise. The
+  twin test therefore adds one warm restart from that fit's parameters shifted by -0.01, which
+  reports `converged = true` (max |gradient| 8.6e-7) at an objective within 3e-12 of the default
+  stop; no source code changed. `tools/core070_covariance_p1_receipts.py` gains one overlay
+  registry (`COV_TWINS`) for all six rows, with `--apply-twins` to re-derive the twin rows of
+  `case-map-covariance.json` and `--check` to verify them. Not covered: non-Gaussian families,
+  rank > 1 for `latent()`, `rho != 1` for the phylo terms, and the `.dep` and duplicate-companion
+  guards.
 - **Mixed-family fits take an offset (DATA-OFF-MIXED).** `fit_mixed_gllvm(Y; families, K,
   offset)` adds a known offset to each trait's linear predictor, η = β + offset + Λz. `offset`
   is a p×n matrix, a scalar or a length-p vector, normalised as in `fit_gllvm`; the usual use is

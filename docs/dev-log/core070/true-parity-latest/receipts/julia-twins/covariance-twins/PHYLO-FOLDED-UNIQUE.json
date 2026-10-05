@@ -1,0 +1,164 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "covariance/COV-PHYLO-FOLDED-UNIQUE"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#810",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "b7f2c3d47a9f00e936a72a474c52894abc9f2148",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/cov_phylo_twins_p1.toml",
+      "sha256": "e50755f2fe5b7cc519cb4d43fc6d13b9f0dc1a48ebcc4b1bce850e085c1e0088"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_cov_phylo_twins_p1.jl",
+      "sha256": "085af9e5c0e99d3fff93d30c922014c78d5a8206151f1675536d02da22ac0c66"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-COV-PHYLO-FOLDED-UNIQUE-LOGLIK",
+        "quantity": "maximised logLik",
+        "r_source": "test/fixtures/cov_phylo_twins_p1.toml [unique] loglik",
+        "julia_source": "fit.loglik, fit as at test/test_cov_phylo_twins_p1.jl:83",
+        "r_value": -609.5910836453561,
+        "julia_value": -609.591083645316,
+        "abs_diff": 4.013145371573046e-11,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_cov_phylo_twins_p1.jl:177",
+        "tolerance_source_line": "@test abs(fit.loglik - Float64(r[\"loglik\"])) <= 1e-6",
+        "note": "R: value ~ 0 + trait + phylo_latent(species, unique = TRUE, tree = tree), which gllvmTMB parses to phylo_rr(d = 1) plus the folded phylo_rr(.phylo_unique, .auto_unique) companion; at P1 that companion is the phylo_diag block of src/gllvmTMB.cpp (g_phy_diag[, t] ~ N(0, A) with the same Ainv_phy_rr / log_det_A_phy_rr as phylo_rr, scaled by exp(log_sd_phy_diag[t])), so the model is (Lambda Lambda' + diag(sd^2)) (x) A + sigma_eps^2 I. Julia: fit_phylo_latent_gllvm(Y, species; d = 1, unique = true, tree), mode :explicitunique, the same covariance with unique variance exp(2 * log_sd), so the model is the same and R's log_sd_phy_diag maps one to one onto Julia's coordinate (the fixed-parameter case is the direct evidence that the two likelihoods agree). Julia's optimiser flag can report not converged at the rounding floor on some platforms (this fit reads converged = true on macOS and converged = false on Linux CI); the twin asserts stationarity instead: a positive-definite Hessian, Newton decrement <= 1e-9 and max |gradient| <= 1e-4 at the returned parameters. The twin test also asserts the unique companion is not inert: the fit beats phylo_latent(d = 1) alone by more than 1 in logLik. Shared fixture: 120-tip coalescent tree (ape::rcoal, seed 20261005), 4 traits, 2 observations per species, Gaussian, drawn from (Lambda Lambda' + diag(s^2)) (x) A + 0.4^2 I with A the unit-height tip correlation; Y and the Newick string stored to 17 digits, A rebuilt in Julia from the tree and checked against the stored sum, norm and first row of R's A. R: gllvmTMB(..., trait = 'trait', unit = 'species', cluster = 'species', family = gaussian(), REML = FALSE), nlminb rel.tol 1e-10, every fit converged with a positive-definite Hessian. The fixed-parameter case evaluates Julia's objective (GLLVModels._precision_multivariate_nll, the fitter's own objective) at R's optimum opt$par, mapped by name onto Julia's [beta; theta_rr; log_sd_unique; log_sd_eps] (both engines pack the loadings with the gllvmTMB.cpp layout), and compares it with R's objective there; it does not depend on either optimiser. Loadings are compared through Sigma_phy because a loading column's sign is not identified."
+      },
+      {
+        "case_id": "P1-JULIA-COV-PHYLO-FOLDED-UNIQUE-OBJECTIVE-AT-R-OPTIMUM",
+        "quantity": "negative log-likelihood at R's optimum: R's objective (tmb_obj$fn(opt$par)) vs Julia's objective at the same parameters",
+        "r_source": "test/fixtures/cov_phylo_twins_p1.toml [unique] objective, par, par_names",
+        "julia_source": "Julia objective at R's opt$par mapped by name, fit as at test/test_cov_phylo_twins_p1.jl:83",
+        "r_value": 609.5910836453561,
+        "julia_value": 609.5910836453432,
+        "abs_diff": 1.2846612662542611e-11,
+        "tolerance": 1e-08,
+        "tolerance_source": "test/test_cov_phylo_twins_p1.jl:178",
+        "tolerance_source_line": "@test abs(_cpt_cross(fit, r)) <= 1e-8",
+        "note": "R: value ~ 0 + trait + phylo_latent(species, unique = TRUE, tree = tree), which gllvmTMB parses to phylo_rr(d = 1) plus the folded phylo_rr(.phylo_unique, .auto_unique) companion; at P1 that companion is the phylo_diag block of src/gllvmTMB.cpp (g_phy_diag[, t] ~ N(0, A) with the same Ainv_phy_rr / log_det_A_phy_rr as phylo_rr, scaled by exp(log_sd_phy_diag[t])), so the model is (Lambda Lambda' + diag(sd^2)) (x) A + sigma_eps^2 I. Julia: fit_phylo_latent_gllvm(Y, species; d = 1, unique = true, tree), mode :explicitunique, the same covariance with unique variance exp(2 * log_sd), so the model is the same and R's log_sd_phy_diag maps one to one onto Julia's coordinate (the fixed-parameter case is the direct evidence that the two likelihoods agree). Julia's optimiser flag can report not converged at the rounding floor on some platforms (this fit reads converged = true on macOS and converged = false on Linux CI); the twin asserts stationarity instead: a positive-definite Hessian, Newton decrement <= 1e-9 and max |gradient| <= 1e-4 at the returned parameters. The twin test also asserts the unique companion is not inert: the fit beats phylo_latent(d = 1) alone by more than 1 in logLik. Shared fixture: 120-tip coalescent tree (ape::rcoal, seed 20261005), 4 traits, 2 observations per species, Gaussian, drawn from (Lambda Lambda' + diag(s^2)) (x) A + 0.4^2 I with A the unit-height tip correlation; Y and the Newick string stored to 17 digits, A rebuilt in Julia from the tree and checked against the stored sum, norm and first row of R's A. R: gllvmTMB(..., trait = 'trait', unit = 'species', cluster = 'species', family = gaussian(), REML = FALSE), nlminb rel.tol 1e-10, every fit converged with a positive-definite Hessian. The fixed-parameter case evaluates Julia's objective (GLLVModels._precision_multivariate_nll, the fitter's own objective) at R's optimum opt$par, mapped by name onto Julia's [beta; theta_rr; log_sd_unique; log_sd_eps] (both engines pack the loadings with the gllvmTMB.cpp layout), and compares it with R's objective there; it does not depend on either optimiser. Loadings are compared through Sigma_phy because a loading column's sign is not identified."
+      },
+      {
+        "case_id": "P1-JULIA-COV-PHYLO-FOLDED-UNIQUE-INTERCEPTS",
+        "quantity": "trait intercepts (4 values)",
+        "r_source": "test/fixtures/cov_phylo_twins_p1.toml [unique] beta",
+        "julia_source": "fit.beta, fit as at test/test_cov_phylo_twins_p1.jl:83",
+        "r_value": [
+          -0.7793803453758896,
+          -0.9030215762205877,
+          0.4521235420803864,
+          -0.4355246724493981
+        ],
+        "julia_value": [
+          -0.7793788135102523,
+          -0.9030210453320404,
+          0.4521218908113875,
+          -0.4355242306524604
+        ],
+        "abs_diff": 1.651268998925648e-06,
+        "tolerance": 0.0001,
+        "tolerance_source": "test/test_cov_phylo_twins_p1.jl:179",
+        "tolerance_source_line": "@test maximum(abs.(fit.beta .- Float64.(r[\"beta\"]))) <= 1e-4",
+        "note": "R: value ~ 0 + trait + phylo_latent(species, unique = TRUE, tree = tree), which gllvmTMB parses to phylo_rr(d = 1) plus the folded phylo_rr(.phylo_unique, .auto_unique) companion; at P1 that companion is the phylo_diag block of src/gllvmTMB.cpp (g_phy_diag[, t] ~ N(0, A) with the same Ainv_phy_rr / log_det_A_phy_rr as phylo_rr, scaled by exp(log_sd_phy_diag[t])), so the model is (Lambda Lambda' + diag(sd^2)) (x) A + sigma_eps^2 I. Julia: fit_phylo_latent_gllvm(Y, species; d = 1, unique = true, tree), mode :explicitunique, the same covariance with unique variance exp(2 * log_sd), so the model is the same and R's log_sd_phy_diag maps one to one onto Julia's coordinate (the fixed-parameter case is the direct evidence that the two likelihoods agree). Julia's optimiser flag can report not converged at the rounding floor on some platforms (this fit reads converged = true on macOS and converged = false on Linux CI); the twin asserts stationarity instead: a positive-definite Hessian, Newton decrement <= 1e-9 and max |gradient| <= 1e-4 at the returned parameters. The twin test also asserts the unique companion is not inert: the fit beats phylo_latent(d = 1) alone by more than 1 in logLik. Shared fixture: 120-tip coalescent tree (ape::rcoal, seed 20261005), 4 traits, 2 observations per species, Gaussian, drawn from (Lambda Lambda' + diag(s^2)) (x) A + 0.4^2 I with A the unit-height tip correlation; Y and the Newick string stored to 17 digits, A rebuilt in Julia from the tree and checked against the stored sum, norm and first row of R's A. R: gllvmTMB(..., trait = 'trait', unit = 'species', cluster = 'species', family = gaussian(), REML = FALSE), nlminb rel.tol 1e-10, every fit converged with a positive-definite Hessian. The fixed-parameter case evaluates Julia's objective (GLLVModels._precision_multivariate_nll, the fitter's own objective) at R's optimum opt$par, mapped by name onto Julia's [beta; theta_rr; log_sd_unique; log_sd_eps] (both engines pack the loadings with the gllvmTMB.cpp layout), and compares it with R's objective there; it does not depend on either optimiser. Loadings are compared through Sigma_phy because a loading column's sign is not identified."
+      },
+      {
+        "case_id": "P1-JULIA-COV-PHYLO-FOLDED-UNIQUE-SIGMA-EPS",
+        "quantity": "shared residual sd (R exp(log_sigma_eps))",
+        "r_source": "test/fixtures/cov_phylo_twins_p1.toml [unique] sigma_eps",
+        "julia_source": "sqrt(fit.residual_variance), fit as at test/test_cov_phylo_twins_p1.jl:83",
+        "r_value": 0.3939826034475669,
+        "julia_value": 0.39398261399798196,
+        "abs_diff": 1.055041504161025e-08,
+        "tolerance": 0.0001,
+        "tolerance_source": "test/test_cov_phylo_twins_p1.jl:180",
+        "tolerance_source_line": "@test abs(sqrt(only(unique(fit.residual_variance))) - Float64(r[\"sigma_eps\"])) <= 1e-4",
+        "note": "R: value ~ 0 + trait + phylo_latent(species, unique = TRUE, tree = tree), which gllvmTMB parses to phylo_rr(d = 1) plus the folded phylo_rr(.phylo_unique, .auto_unique) companion; at P1 that companion is the phylo_diag block of src/gllvmTMB.cpp (g_phy_diag[, t] ~ N(0, A) with the same Ainv_phy_rr / log_det_A_phy_rr as phylo_rr, scaled by exp(log_sd_phy_diag[t])), so the model is (Lambda Lambda' + diag(sd^2)) (x) A + sigma_eps^2 I. Julia: fit_phylo_latent_gllvm(Y, species; d = 1, unique = true, tree), mode :explicitunique, the same covariance with unique variance exp(2 * log_sd), so the model is the same and R's log_sd_phy_diag maps one to one onto Julia's coordinate (the fixed-parameter case is the direct evidence that the two likelihoods agree). Julia's optimiser flag can report not converged at the rounding floor on some platforms (this fit reads converged = true on macOS and converged = false on Linux CI); the twin asserts stationarity instead: a positive-definite Hessian, Newton decrement <= 1e-9 and max |gradient| <= 1e-4 at the returned parameters. The twin test also asserts the unique companion is not inert: the fit beats phylo_latent(d = 1) alone by more than 1 in logLik. Shared fixture: 120-tip coalescent tree (ape::rcoal, seed 20261005), 4 traits, 2 observations per species, Gaussian, drawn from (Lambda Lambda' + diag(s^2)) (x) A + 0.4^2 I with A the unit-height tip correlation; Y and the Newick string stored to 17 digits, A rebuilt in Julia from the tree and checked against the stored sum, norm and first row of R's A. R: gllvmTMB(..., trait = 'trait', unit = 'species', cluster = 'species', family = gaussian(), REML = FALSE), nlminb rel.tol 1e-10, every fit converged with a positive-definite Hessian. The fixed-parameter case evaluates Julia's objective (GLLVModels._precision_multivariate_nll, the fitter's own objective) at R's optimum opt$par, mapped by name onto Julia's [beta; theta_rr; log_sd_unique; log_sd_eps] (both engines pack the loadings with the gllvmTMB.cpp layout), and compares it with R's objective there; it does not depend on either optimiser. Loadings are compared through Sigma_phy because a loading column's sign is not identified."
+      },
+      {
+        "case_id": "P1-JULIA-COV-PHYLO-FOLDED-UNIQUE-SD-PHY-DIAG",
+        "quantity": "per-trait phylogenetic unique sd (R sd_phy_diag = exp(log_sd_phy_diag); Julia sqrt(phylo_unique_variance))",
+        "r_source": "test/fixtures/cov_phylo_twins_p1.toml [unique] sd_phy_diag",
+        "julia_source": "sqrt.(fit.phylo_unique_variance), fit as at test/test_cov_phylo_twins_p1.jl:83",
+        "r_value": [
+          0.7353126918476558,
+          0.5144321736912666,
+          0.29614303710741735,
+          0.5188304733410469
+        ],
+        "julia_value": [
+          0.7353124797922782,
+          0.5144322679487352,
+          0.29614250234577605,
+          0.518830502537767
+        ],
+        "abs_diff": 5.347616413020617e-07,
+        "tolerance": 0.0001,
+        "tolerance_source": "test/test_cov_phylo_twins_p1.jl:181",
+        "tolerance_source_line": "@test maximum(abs.(sqrt.(fit.phylo_unique_variance) .- Float64.(r[\"sd_phy_diag\"]))) <= 1e-4",
+        "note": "R: value ~ 0 + trait + phylo_latent(species, unique = TRUE, tree = tree), which gllvmTMB parses to phylo_rr(d = 1) plus the folded phylo_rr(.phylo_unique, .auto_unique) companion; at P1 that companion is the phylo_diag block of src/gllvmTMB.cpp (g_phy_diag[, t] ~ N(0, A) with the same Ainv_phy_rr / log_det_A_phy_rr as phylo_rr, scaled by exp(log_sd_phy_diag[t])), so the model is (Lambda Lambda' + diag(sd^2)) (x) A + sigma_eps^2 I. Julia: fit_phylo_latent_gllvm(Y, species; d = 1, unique = true, tree), mode :explicitunique, the same covariance with unique variance exp(2 * log_sd), so the model is the same and R's log_sd_phy_diag maps one to one onto Julia's coordinate (the fixed-parameter case is the direct evidence that the two likelihoods agree). Julia's optimiser flag can report not converged at the rounding floor on some platforms (this fit reads converged = true on macOS and converged = false on Linux CI); the twin asserts stationarity instead: a positive-definite Hessian, Newton decrement <= 1e-9 and max |gradient| <= 1e-4 at the returned parameters. The twin test also asserts the unique companion is not inert: the fit beats phylo_latent(d = 1) alone by more than 1 in logLik. Shared fixture: 120-tip coalescent tree (ape::rcoal, seed 20261005), 4 traits, 2 observations per species, Gaussian, drawn from (Lambda Lambda' + diag(s^2)) (x) A + 0.4^2 I with A the unit-height tip correlation; Y and the Newick string stored to 17 digits, A rebuilt in Julia from the tree and checked against the stored sum, norm and first row of R's A. R: gllvmTMB(..., trait = 'trait', unit = 'species', cluster = 'species', family = gaussian(), REML = FALSE), nlminb rel.tol 1e-10, every fit converged with a positive-definite Hessian. The fixed-parameter case evaluates Julia's objective (GLLVModels._precision_multivariate_nll, the fitter's own objective) at R's optimum opt$par, mapped by name onto Julia's [beta; theta_rr; log_sd_unique; log_sd_eps] (both engines pack the loadings with the gllvmTMB.cpp layout), and compares it with R's objective there; it does not depend on either optimiser. Loadings are compared through Sigma_phy because a loading column's sign is not identified."
+      },
+      {
+        "case_id": "P1-JULIA-COV-PHYLO-FOLDED-UNIQUE-SIGMA-PHY",
+        "quantity": "Lambda Lambda' + diag(sd_phy_diag^2) (4 x 4), the total phylogenetic trait covariance of the folded fit",
+        "r_source": "test/fixtures/cov_phylo_twins_p1.toml [unique] Sigma_total",
+        "julia_source": "phylogenetic trait covariance of the fit as at test/test_cov_phylo_twins_p1.jl:83",
+        "r_value": [
+          1.1668381832455894,
+          0.3792471770461808,
+          -0.8596870345349723,
+          0.43890548069840807,
+          0.3792471770461808,
+          0.49434202449474385,
+          -0.5206932776778437,
+          0.26583526813248315,
+          -0.8596870345349723,
+          -0.5206932776778437,
+          1.2680213095801056,
+          -0.6026020684335774,
+          0.43890548069840807,
+          0.26583526813248315,
+          -0.6026020684335774,
+          0.5768381243696563
+        ],
+        "julia_value": [
+          1.1668380650602717,
+          0.3792473110252564,
+          -0.8596865051197972,
+          0.4389055384415815,
+          0.3792473110252564,
+          0.494342212722708,
+          -0.5206929799215595,
+          0.2658353147969646,
+          -0.8596865051197972,
+          -0.5206929799215595,
+          1.2680191740399822,
+          -0.602601590232512,
+          0.4389055384415815,
+          0.2658353147969646,
+          -0.602601590232512,
+          0.576838140459915
+        ],
+        "abs_diff": 2.1355401234046667e-06,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_cov_phylo_twins_p1.jl:182",
+        "tolerance_source_line": "@test maximum(abs.(_cpt_sigma_phy(fit) .- _cpt_mat(r[\"Sigma_total\"], T))) <= 1e-3",
+        "note": "R: value ~ 0 + trait + phylo_latent(species, unique = TRUE, tree = tree), which gllvmTMB parses to phylo_rr(d = 1) plus the folded phylo_rr(.phylo_unique, .auto_unique) companion; at P1 that companion is the phylo_diag block of src/gllvmTMB.cpp (g_phy_diag[, t] ~ N(0, A) with the same Ainv_phy_rr / log_det_A_phy_rr as phylo_rr, scaled by exp(log_sd_phy_diag[t])), so the model is (Lambda Lambda' + diag(sd^2)) (x) A + sigma_eps^2 I. Julia: fit_phylo_latent_gllvm(Y, species; d = 1, unique = true, tree), mode :explicitunique, the same covariance with unique variance exp(2 * log_sd), so the model is the same and R's log_sd_phy_diag maps one to one onto Julia's coordinate (the fixed-parameter case is the direct evidence that the two likelihoods agree). Julia's optimiser flag can report not converged at the rounding floor on some platforms (this fit reads converged = true on macOS and converged = false on Linux CI); the twin asserts stationarity instead: a positive-definite Hessian, Newton decrement <= 1e-9 and max |gradient| <= 1e-4 at the returned parameters. The twin test also asserts the unique companion is not inert: the fit beats phylo_latent(d = 1) alone by more than 1 in logLik. Shared fixture: 120-tip coalescent tree (ape::rcoal, seed 20261005), 4 traits, 2 observations per species, Gaussian, drawn from (Lambda Lambda' + diag(s^2)) (x) A + 0.4^2 I with A the unit-height tip correlation; Y and the Newick string stored to 17 digits, A rebuilt in Julia from the tree and checked against the stored sum, norm and first row of R's A. R: gllvmTMB(..., trait = 'trait', unit = 'species', cluster = 'species', family = gaussian(), REML = FALSE), nlminb rel.tol 1e-10, every fit converged with a positive-definite Hessian. The fixed-parameter case evaluates Julia's objective (GLLVModels._precision_multivariate_nll, the fitter's own objective) at R's optimum opt$par, mapped by name onto Julia's [beta; theta_rr; log_sd_unique; log_sd_eps] (both engines pack the loadings with the gllvmTMB.cpp layout), and compares it with R's objective there; it does not depend on either optimiser. Loadings are compared through Sigma_phy because a loading column's sign is not identified."
+      }
+    ]
+  }
+}
