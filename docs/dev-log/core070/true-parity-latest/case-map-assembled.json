@@ -16,7 +16,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-data.json",
-   "sha256": "5370684c894a7972cf1fdd245dfe191992ce579602640d9d6788eed2aafee6c3",
+   "sha256": "fc8bf8b832ce893b19cb2fdc903025a22931b118594439332b66509a7074a675",
    "rows": 36
   },
   {
@@ -1824,7 +1824,17 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-DATA-OFF-ALL-COUNT-NATIVE"
+    "P1-JULIA-DATA-OFF-ALL-COUNT-NB2-LOGLIK",
+    "P1-JULIA-DATA-OFF-ALL-COUNT-NB2-INTERCEPTS",
+    "P1-JULIA-DATA-OFF-ALL-COUNT-NB2-LAMBDA-LAMBDAT",
+    "P1-JULIA-DATA-OFF-ALL-COUNT-NB2-DISPERSION",
+    "P1-JULIA-DATA-OFF-ALL-COUNT-TPOIS-LOGLIK",
+    "P1-JULIA-DATA-OFF-ALL-COUNT-TPOIS-INTERCEPTS",
+    "P1-JULIA-DATA-OFF-ALL-COUNT-TPOIS-LAMBDA-LAMBDAT",
+    "P1-JULIA-DATA-OFF-ALL-COUNT-TNB2-LOGLIK",
+    "P1-JULIA-DATA-OFF-ALL-COUNT-TNB2-INTERCEPTS",
+    "P1-JULIA-DATA-OFF-ALL-COUNT-TNB2-LAMBDA-LAMBDAT",
+    "P1-JULIA-DATA-OFF-ALL-COUNT-TNB2-DISPERSION"
    ],
    "disposition": null,
    "p0_batch": "data-batch attempt-data-r3 (wave1)",
@@ -1836,14 +1846,19 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
-     "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-ALL-COUNT-NATIVE.json",
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-ALL-COUNT.json"
     ],
-    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+    "non_binding_receipts": [
+     "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-ALL-COUNT-NATIVE.json"
+    ],
+    "batch_case_ids": [
+     "CORE070-DATA-OFF-ALL-COUNT-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_off_all_count_twin_p1.jl, against R-at-P1 values copied from test/fixtures/off_all_count_twin_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -1854,9 +1869,23 @@
     },
     "case_kinds": {
      "CORE070-DATA-OFF-ALL-COUNT-NATIVE": "r_replay_julia_surface_absent"
-    }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-DATA-OFF-ALL-COUNT-NB2-LOGLIK",
+     "P1-JULIA-DATA-OFF-ALL-COUNT-NB2-INTERCEPTS",
+     "P1-JULIA-DATA-OFF-ALL-COUNT-NB2-LAMBDA-LAMBDAT",
+     "P1-JULIA-DATA-OFF-ALL-COUNT-NB2-DISPERSION",
+     "P1-JULIA-DATA-OFF-ALL-COUNT-TPOIS-LOGLIK",
+     "P1-JULIA-DATA-OFF-ALL-COUNT-TPOIS-INTERCEPTS",
+     "P1-JULIA-DATA-OFF-ALL-COUNT-TPOIS-LAMBDA-LAMBDAT",
+     "P1-JULIA-DATA-OFF-ALL-COUNT-TNB2-LOGLIK",
+     "P1-JULIA-DATA-OFF-ALL-COUNT-TNB2-INTERCEPTS",
+     "P1-JULIA-DATA-OFF-ALL-COUNT-TNB2-LAMBDA-LAMBDAT",
+     "P1-JULIA-DATA-OFF-ALL-COUNT-TNB2-DISPERSION"
+    ],
+    "twin_verdict": "PASS"
    },
-   "twin_not_bound": "The NB2 exposure-offset fit twin (receipt cited as non-binding) covers one count family. The R case prepares offsets for three count families in one model (family ids 5, 10, 11: nbinom2, truncated Poisson, truncated nbinom2). Julia has no per-trait family mix (as for DATA-OFF-MIXED) and the twin does not cover the truncated families, so the row does not bind on it."
+   "scope_note": "The row is a family-id admission-set case: the R batch case gll_prepare_offset(quote(e), c(5L, 10L, 11L), ...) admits a nonzero offset for count family ids 5, 10 and 11 (nbinom2, truncated Poisson, truncated nbinom2), and the case plan's comparand is the set of families admitted (docs/dev-log/core070/data-required-case-plan.json, comparands 'R count-family id admission set {5,10,11}' and 'Julia count-family offset admission set'). Each admitted family is twinned with an exposure offset(log(e)), one data set each (p = 6, n = 150, one latent factor, per-trait dispersion for the two NB2 families), R gllvmTMB(..., family = nbinom2() / truncated_poisson() / truncated_nbinom2()) against Julia fit_gllvm(Y; family, K = 1, offset = log.(E)). Fitting several families with an offset in one model is DATA-OFF-MIXED's obligation, not this row's. The earlier non-binding reason (commit 4ae7e109d: a mixed-family offset vector) no longer holds: the R case's last argument (d$kind) is a trait label, not a family, and the truncated families 10 and 11 are now covered. The truncated nbinom2 data were drawn with size 2 and every R dispersion is inside (1e-3, 1e3) (asserted in the generator), so no trait is at the Poisson limit, the ridge behind the FAMILY-11 health-check failure; that row is not changed by this twin."
   },
   {
    "source_id": "data/DATA-OFF-EXPOSURE",
