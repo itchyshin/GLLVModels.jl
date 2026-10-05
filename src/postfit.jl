@@ -1175,30 +1175,57 @@ function _nparams(fit::NB1Fit)
     return p + (p * K - div(K * (K - 1), 2)) + 1       # β + Λ + dispersion φ
 end
 
+"""
+    getLV(fit::NB1Fit, Y; N=nothing, rotate=true, mask=nothing, offset=nothing) -> n×K matrix
+
+Conditional latent-variable scores for an NB1 fit: the per-site Laplace mode `ẑₛ`
+(computed at the fitted dispersion `φ`). `rotate=true` applies the canonical
+[`rotation`](@ref).
+
+On a fit made with an `offset` the mode search uses it (η = β + offset + Λz): the
+stored training offset (`fit.offset`) when `Y` has the training size, otherwise the
+`offset` you pass (as at fit time: a p×n matrix, a scalar or a length-p vector).
+New units from an offset fit without an `offset` are refused, as gllvmTMB refuses
+`newdata` that lacks the offset variable.
+"""
 function getLV(fit::NB1Fit, Y::AbstractMatrix{<:Integer};
                N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing,
-               rotate::Bool = true, mask = nothing)
+               rotate::Bool = true, mask = nothing, offset = nothing)
     p, n = size(Y)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "getLV")
     Nm = N === nothing ? fill(1, p, n) : N
     K = size(fit.Λ, 2)
     fam = NB1(fit.φ)
     Z = Matrix{Float64}(undef, K, n)
     @inbounds for s in 1:n
         mi = mask === nothing ? nothing : view(mask, :, s)
+        oi = O === nothing ? nothing : view(O, :, s)
         Z[:, s] = _laplace_mode(fam, view(Y, :, s), view(Nm, :, s), fit.Λ,
-                                fit.β, fit.link; mask = mi)
+                                fit.β, fit.link; mask = mi, offset = oi)
     end
     Zt = permutedims(Z)
     return rotate ? Zt * _svd_rotation(fit.Λ) : Zt
 end
 
+"""
+    predict(fit::NB1Fit, Y; type=:response, N=nothing, offset=nothing) -> p×n matrix
+
+In-sample fitted values at the Laplace mode: `type=:link` returns `η = β + Λ ẑ`;
+`type=:response` the inverse-link fitted means `linkinv(link, η)`.
+
+On a fit made with an `offset`, `η` includes it: the stored training offset
+(`fit.offset`) when `Y` has the training size, otherwise the `offset` you pass.
+New units from an offset fit without an `offset` are refused (see [`getLV`](@ref)).
+"""
 function predict(fit::NB1Fit, Y::AbstractMatrix{<:Integer};
                  type::Symbol = :response,
-                 N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing)
+                 N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing, offset = nothing)
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
-    Z = getLV(fit, Y; N = N, rotate = false)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict")
+    Z = getLV(fit, Y; N = N, rotate = false, offset = O)
     η = fit.β .+ fit.Λ * Z'
+    O === nothing || (η .+= O)
     type === :link && return η
     return linkinv.(Ref(fit.link), η)
 end
@@ -1208,16 +1235,17 @@ end
 
 Conditional residuals for an NB1 fit. `:dunnsmyth` returns Dunn–Smyth randomized
 quantile residuals under `NegativeBinomial(μ/φ, 1/(1+φ))`; `:pearson` returns
-`(Y − μ) / √(μ(1+φ))`.
+`(Y − μ) / √(μ(1+φ))`. On a fit made with an `offset` the fitted mean includes it, by the same rule as
+[`predict`](@ref).
 """
 function residuals(fit::NB1Fit, Y::AbstractMatrix{<:Integer};
                    type::Symbol = :dunnsmyth,
-                   rng::AbstractRNG = Random.default_rng())
+                   rng::AbstractRNG = Random.default_rng(), offset = nothing)
     type in (:dunnsmyth, :pearson) ||
         throw(ArgumentError("type must be :dunnsmyth or :pearson; got :$type"))
     p, n = size(Y)
     φ = fit.φ
-    μ = predict(fit, Y; type = :response)
+    μ = predict(fit, Y; type = :response, offset = offset)
     if type === :pearson
         return (Y .- μ) ./ sqrt.(μ .* (1 + φ))
     end
@@ -1255,30 +1283,57 @@ function _nparams(fit::GP1Fit)
     return p + (p * K - div(K * (K - 1), 2)) + 1       # β + Λ + dispersion α
 end
 
+"""
+    getLV(fit::GP1Fit, Y; N=nothing, rotate=true, mask=nothing, offset=nothing) -> n×K matrix
+
+Conditional latent-variable scores for a GP-1 fit: the per-site Laplace mode `ẑₛ`
+(computed at the fitted dispersion `α`). `rotate=true` applies the canonical
+[`rotation`](@ref).
+
+On a fit made with an `offset` the mode search uses it (η = β + offset + Λz): the
+stored training offset (`fit.offset`) when `Y` has the training size, otherwise the
+`offset` you pass (as at fit time: a p×n matrix, a scalar or a length-p vector).
+New units from an offset fit without an `offset` are refused, as gllvmTMB refuses
+`newdata` that lacks the offset variable.
+"""
 function getLV(fit::GP1Fit, Y::AbstractMatrix{<:Integer};
                N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing,
-               rotate::Bool = true, mask = nothing)
+               rotate::Bool = true, mask = nothing, offset = nothing)
     p, n = size(Y)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "getLV")
     Nm = N === nothing ? fill(1, p, n) : N
     K = size(fit.Λ, 2)
     fam = GeneralizedPoisson1(fit.α)
     Z = Matrix{Float64}(undef, K, n)
     @inbounds for s in 1:n
         mi = mask === nothing ? nothing : view(mask, :, s)
+        oi = O === nothing ? nothing : view(O, :, s)
         Z[:, s] = _laplace_mode(fam, view(Y, :, s), view(Nm, :, s), fit.Λ,
-                                fit.β, fit.link; mask = mi)
+                                fit.β, fit.link; mask = mi, offset = oi)
     end
     Zt = permutedims(Z)
     return rotate ? Zt * _svd_rotation(fit.Λ) : Zt
 end
 
+"""
+    predict(fit::GP1Fit, Y; type=:response, N=nothing, offset=nothing) -> p×n matrix
+
+In-sample fitted values at the Laplace mode: `type=:link` returns `η = β + Λ ẑ`;
+`type=:response` the inverse-link fitted means `linkinv(link, η)`.
+
+On a fit made with an `offset`, `η` includes it: the stored training offset
+(`fit.offset`) when `Y` has the training size, otherwise the `offset` you pass.
+New units from an offset fit without an `offset` are refused (see [`getLV`](@ref)).
+"""
 function predict(fit::GP1Fit, Y::AbstractMatrix{<:Integer};
                  type::Symbol = :response,
-                 N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing)
+                 N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing, offset = nothing)
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
-    Z = getLV(fit, Y; N = N, rotate = false)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict")
+    Z = getLV(fit, Y; N = N, rotate = false, offset = O)
     η = fit.β .+ fit.Λ * Z'
+    O === nothing || (η .+= O)
     type === :link && return η
     return linkinv.(Ref(fit.link), η)
 end
@@ -1288,16 +1343,17 @@ end
 
 Conditional residuals for a GP-1 fit. `:dunnsmyth` returns Dunn–Smyth randomized
 quantile residuals under the fitted GP-1 pmf (CDF summed from the family log-pmf);
-`:pearson` returns `(Y − μ) / √(μ(1+α μ)²)`.
+`:pearson` returns `(Y − μ) / √(μ(1+α μ)²)`. On a fit made with an `offset` the fitted mean includes it, by the same rule as
+[`predict`](@ref).
 """
 function residuals(fit::GP1Fit, Y::AbstractMatrix{<:Integer};
                    type::Symbol = :dunnsmyth,
-                   rng::AbstractRNG = Random.default_rng())
+                   rng::AbstractRNG = Random.default_rng(), offset = nothing)
     type in (:dunnsmyth, :pearson) ||
         throw(ArgumentError("type must be :dunnsmyth or :pearson; got :$type"))
     p, n = size(Y)
     fam = GeneralizedPoisson1(fit.α)
-    μ = predict(fit, Y; type = :response)
+    μ = predict(fit, Y; type = :response, offset = offset)
     if type === :pearson
         return (Y .- μ) ./ sqrt.(μ .* (1 .+ fit.α .* μ) .^ 2)
     end
@@ -1343,14 +1399,21 @@ end
 Conditional latent-variable scores for a Beta fit: the per-site Laplace mode `ẑₛ`
 (computed at the fitted precision `φ`). `Y` is the p×n matrix of proportions in
 (0,1); `rotate=true` applies the canonical [`rotation`](@ref).
+
+On a fit made with an `offset` the mode search uses it (η = β + offset + Λz): the
+stored training offset (`fit.offset`) when `Y` has the training size, otherwise the
+`offset` you pass (as at fit time: a p×n matrix, a scalar or a length-p vector).
+New units from an offset fit without an `offset` are refused, as gllvmTMB refuses
+`newdata` that lacks the offset variable.
 """
 function getLV(fit::BetaFit, Y::AbstractMatrix{<:Real};
                X_lv::Union{Nothing, AbstractMatrix} = nothing,
                component::Symbol = :total,
-               rotate::Bool = true, mask = nothing)
+               rotate::Bool = true, mask = nothing, offset = nothing)
     component in (:total, :innovation, :mean) ||
         throw(ArgumentError("component must be :total, :innovation, or :mean; got :$component"))
     p, n = size(Y)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "getLV")
     K = size(fit.Λ, 2)
     fam = Beta(fit.φ, 1.0)
     ones_p = ones(Int, p)
@@ -1362,7 +1425,7 @@ function getLV(fit::BetaFit, Y::AbstractMatrix{<:Real};
     Z = Matrix{Float64}(undef, K, n)
     @inbounds for s in 1:n
         mi = mask === nothing ? nothing : view(mask, :, s)
-        oi = lv_offset === nothing ? nothing : view(lv_offset, :, s)
+        oi = _site_offset(O, lv_offset, s)
         Z[:, s] = _laplace_mode(fam, view(Y, :, s), ones_p, fit.Λ, fit.β, fit.link;
                                 mask = mi, offset = oi)
     end
@@ -1377,13 +1440,19 @@ end
 In-sample fitted values at the Laplace mode: `type=:link` returns `η = β + Λ ẑ`;
 `type=:response` the inverse-link fitted means `linkinv(link, η) = logistic(η)`
 (proportions in (0,1)).
+
+On a fit made with an `offset`, `η` includes it: the stored training offset
+(`fit.offset`) when `Y` has the training size, otherwise the `offset` you pass.
+New units from an offset fit without an `offset` are refused (see [`getLV`](@ref)).
 """
 function predict(fit::BetaFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response,
-                 X_lv::Union{Nothing, AbstractMatrix} = nothing)
+                 X_lv::Union{Nothing, AbstractMatrix} = nothing, offset = nothing)
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
-    Z = getLV(fit, Y; X_lv = X_lv, component = :total, rotate = false)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict")
+    Z = getLV(fit, Y; X_lv = X_lv, component = :total, rotate = false, offset = O)
     η = fit.β .+ fit.Λ * Z'
+    O === nothing || (η .+= O)
     type === :link && return η
     return linkinv.(Ref(fit.link), η)
 end
@@ -1395,14 +1464,16 @@ Conditional residuals for a Beta fit. The Beta CDF is continuous, so the
 `:dunnsmyth` randomized quantile residual reduces to the deterministic PIT
 `Φ⁻¹(F(y))` under `Beta(μφ, (1−μ)φ)` — ≈ N(0,1) under a correct model — exactly as
 in the Gaussian case. `:pearson` returns `(Y − μ) / √(μ(1−μ)/(1+φ))`.
+On a fit made with an `offset` the fitted mean includes it, by the same rule as
+[`predict`](@ref).
 """
 function residuals(fit::BetaFit, Y::AbstractMatrix{<:Real}; type::Symbol = :dunnsmyth,
-                   X_lv::Union{Nothing, AbstractMatrix} = nothing)
+                   X_lv::Union{Nothing, AbstractMatrix} = nothing, offset = nothing)
     type in (:dunnsmyth, :pearson) ||
         throw(ArgumentError("type must be :dunnsmyth or :pearson; got :$type"))
     p, n = size(Y)
     φ = fit.φ
-    μ = predict(fit, Y; type = :response, X_lv = X_lv)
+    μ = predict(fit, Y; type = :response, X_lv = X_lv, offset = offset)
     if type === :pearson
         return (Y .- μ) ./ sqrt.(μ .* (1 .- μ) ./ (1 + φ))
     end
@@ -1673,14 +1744,21 @@ end
 Conditional latent-variable scores for a Gamma fit: the per-site Laplace mode `ẑₛ`
 (computed at the fitted shape `α`). `Y` is the p×n matrix of positive reals;
 `rotate=true` applies the canonical [`rotation`](@ref).
+
+On a fit made with an `offset` the mode search uses it (η = β + offset + Λz): the
+stored training offset (`fit.offset`) when `Y` has the training size, otherwise the
+`offset` you pass (as at fit time: a p×n matrix, a scalar or a length-p vector).
+New units from an offset fit without an `offset` are refused, as gllvmTMB refuses
+`newdata` that lacks the offset variable.
 """
 function getLV(fit::GammaFit, Y::AbstractMatrix{<:Real};
                X_lv::Union{Nothing, AbstractMatrix} = nothing,
                component::Symbol = :total,
-               rotate::Bool = true, mask = nothing)
+               rotate::Bool = true, mask = nothing, offset = nothing)
     component in (:total, :innovation, :mean) ||
         throw(ArgumentError("component must be :total, :innovation, or :mean; got :$component"))
     p, n = size(Y)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "getLV")
     K = size(fit.Λ, 2)
     fam = Gamma(fit.α, 1.0)
     ones_p = ones(Int, p)
@@ -1692,7 +1770,7 @@ function getLV(fit::GammaFit, Y::AbstractMatrix{<:Real};
     Z = Matrix{Float64}(undef, K, n)
     @inbounds for s in 1:n
         mi = mask === nothing ? nothing : view(mask, :, s)
-        oi = lv_offset === nothing ? nothing : view(lv_offset, :, s)
+        oi = _site_offset(O, lv_offset, s)
         Z[:, s] = _laplace_mode(fam, view(Y, :, s), ones_p, fit.Λ, fit.β, fit.link;
                                 mask = mi, offset = oi)
     end
@@ -1706,13 +1784,19 @@ end
 
 In-sample fitted values at the Laplace mode: `type=:link` returns `η = β + Λ ẑ`;
 `type=:response` the inverse-link fitted means `linkinv(link, η) = exp(η)` (positive reals).
+
+On a fit made with an `offset`, `η` includes it: the stored training offset
+(`fit.offset`) when `Y` has the training size, otherwise the `offset` you pass.
+New units from an offset fit without an `offset` are refused (see [`getLV`](@ref)).
 """
 function predict(fit::GammaFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response,
-                 X_lv::Union{Nothing, AbstractMatrix} = nothing)
+                 X_lv::Union{Nothing, AbstractMatrix} = nothing, offset = nothing)
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
-    Z = getLV(fit, Y; X_lv = X_lv, component = :total, rotate = false)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict")
+    Z = getLV(fit, Y; X_lv = X_lv, component = :total, rotate = false, offset = O)
     η = fit.β .+ fit.Λ * Z'
+    O === nothing || (η .+= O)
     type === :link && return η
     return linkinv.(Ref(fit.link), η)
 end
@@ -1724,14 +1808,16 @@ Conditional residuals for a Gamma fit. The Gamma CDF is continuous, so the
 `:dunnsmyth` randomized quantile residual reduces to the deterministic PIT
 `Φ⁻¹(F(y))` under `Gamma(α, μ/α)` — ≈ N(0,1) under a correct model — exactly as
 in the Gaussian and Beta cases. `:pearson` returns `(Y − μ) / √(μ²/α)`.
+On a fit made with an `offset` the fitted mean includes it, by the same rule as
+[`predict`](@ref).
 """
 function residuals(fit::GammaFit, Y::AbstractMatrix{<:Real}; type::Symbol = :dunnsmyth,
-                   X_lv::Union{Nothing, AbstractMatrix} = nothing)
+                   X_lv::Union{Nothing, AbstractMatrix} = nothing, offset = nothing)
     type in (:dunnsmyth, :pearson) ||
         throw(ArgumentError("type must be :dunnsmyth or :pearson; got :$type"))
     p, n = size(Y)
     α = fit.α
-    μ = predict(fit, Y; type = :response, X_lv = X_lv)
+    μ = predict(fit, Y; type = :response, X_lv = X_lv, offset = offset)
     if type === :pearson
         return (Y .- μ) ./ sqrt.(μ .^ 2 ./ α)
     end
@@ -1749,22 +1835,50 @@ _loadings(fit::ExponentialFit) = fit.Λ
 _loglik(fit::ExponentialFit)   = fit.loglik
 _nparams(fit::ExponentialFit)  = (p = size(fit.Λ, 1); K = size(fit.Λ, 2); p + (p * K - div(K * (K - 1), 2)))
 
-function getLV(fit::ExponentialFit, Y::AbstractMatrix{<:Real}; rotate::Bool = true)
+"""
+    getLV(fit::ExponentialFit, Y; rotate=true, offset=nothing) -> n×K matrix
+
+Conditional latent-variable scores for an Exponential fit: the per-site Laplace mode
+`ẑₛ`. `rotate=true` applies the canonical [`rotation`](@ref).
+
+On a fit made with an `offset` the mode search uses it (η = β + offset + Λz): the
+stored training offset (`fit.offset`) when `Y` has the training size, otherwise the
+`offset` you pass (as at fit time: a p×n matrix, a scalar or a length-p vector).
+New units from an offset fit without an `offset` are refused, as gllvmTMB refuses
+`newdata` that lacks the offset variable.
+"""
+function getLV(fit::ExponentialFit, Y::AbstractMatrix{<:Real}; rotate::Bool = true,
+               offset = nothing)
     p, n = size(Y); K = size(fit.Λ, 2)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "getLV")
     fam = Exponential(1.0); ones_p = ones(Int, p)
     Z = Matrix{Float64}(undef, K, n)
     @inbounds for s in 1:n
-        Z[:, s] = _laplace_mode(fam, view(Y, :, s), ones_p, fit.Λ, fit.β, fit.link)
+        oi = O === nothing ? nothing : view(O, :, s)
+        Z[:, s] = _laplace_mode(fam, view(Y, :, s), ones_p, fit.Λ, fit.β, fit.link; offset = oi)
     end
     Zt = permutedims(Z)
     return rotate ? Zt * _svd_rotation(fit.Λ) : Zt
 end
 
-function predict(fit::ExponentialFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response)
+"""
+    predict(fit::ExponentialFit, Y; type=:response, offset=nothing) -> p×n matrix
+
+In-sample fitted values at the Laplace mode: `type=:link` returns `η = β + Λ ẑ`;
+`type=:response` the inverse-link fitted means `linkinv(link, η)`.
+
+On a fit made with an `offset`, `η` includes it: the stored training offset
+(`fit.offset`) when `Y` has the training size, otherwise the `offset` you pass.
+New units from an offset fit without an `offset` are refused (see [`getLV`](@ref)).
+"""
+function predict(fit::ExponentialFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response,
+                 offset = nothing)
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
-    Z = getLV(fit, Y; rotate = false)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict")
+    Z = getLV(fit, Y; rotate = false, offset = O)
     η = fit.β .+ fit.Λ * Z'
+    O === nothing || (η .+= O)
     type === :link && return η
     # clamp η before the (exp) inverse link, matching the inner mode solver
     # (_clamp_eta) and the other predict methods: an extreme conditional mode
@@ -1777,12 +1891,15 @@ end
 
 `:dunnsmyth` randomized-quantile (here deterministic PIT, the Exponential CDF being
 continuous) `Φ⁻¹(F(y))` under `Exponential(μ)`; `:pearson` returns `(Y − μ)/μ`.
+On a fit made with an `offset` the fitted mean includes it, by the same rule as
+[`predict`](@ref).
 """
-function residuals(fit::ExponentialFit, Y::AbstractMatrix{<:Real}; type::Symbol = :dunnsmyth)
+function residuals(fit::ExponentialFit, Y::AbstractMatrix{<:Real}; type::Symbol = :dunnsmyth,
+                   offset = nothing)
     type in (:dunnsmyth, :pearson) ||
         throw(ArgumentError("type must be :dunnsmyth or :pearson; got :$type"))
     p, n = size(Y)
-    μ = predict(fit, Y; type = :response)
+    μ = predict(fit, Y; type = :response, offset = offset)
     type === :pearson && return (Y .- μ) ./ μ
     R = Matrix{Float64}(undef, p, n)
     @inbounds for s in 1:n, t in 1:p
@@ -1838,15 +1955,24 @@ end
 
 Conditional latent scores for a Delta-lognormal fit: the per-site two-part Laplace
 mode `ẑₛ` (occurrence intercept-only, so only the positive part loads on `z`).
+
+On a fit made with an `offset` the mode search adds it to the count / positive-part
+predictor `η^c`, as a `predictor = :separate` fit did at fit time (a `:shared` fit also put
+it on the occurrence part, and its post-fit mode is not yet exact; see #788): the stored training offset (`fit.offset`) when `Y` has
+the training size, otherwise the `offset` you pass (a p×n matrix, a scalar or a length-p
+vector). New units from an offset fit without an `offset` are refused.
 """
-function getLV(fit::DeltaLogNormalFit, Y::AbstractMatrix{<:Real}; rotate::Bool = true)
+function getLV(fit::DeltaLogNormalFit, Y::AbstractMatrix{<:Real}; rotate::Bool = true,
+               offset = nothing)
     p, n = size(Y)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "getLV"; maskable = false)
     K = size(fit.Λc, 2)
     fam = _delta_lognormal_twopart_fam(fit.σ)
     Λz = zeros(p, K)
     Z = Matrix{Float64}(undef, K, n)
     @inbounds for s in 1:n
-        Z[:, s] = _twopart_mode(fam, view(Y, :, s), Λz, fit.Λc, fit.βz, fit.βc)
+        Z[:, s] = _twopart_mode(fam, view(Y, :, s), Λz, fit.Λc, fit.βz, fit.βc;
+                                offsetc = O === nothing ? nothing : view(O, :, s))
     end
     Zt = permutedims(Z)
     return rotate ? Zt * _svd_rotation(fit.Λc) : Zt
@@ -1859,13 +1985,20 @@ In-sample predictions at the Laplace mode. `type=:link` is the positive-part lin
 predictor `η^c = β^c + Λ_c ẑ`; `:occurrence` the presence probability `π = logistic(β^z)`;
 `:positive` the conditional positive mean `exp(η^c + σ²/2)`; `:response` the
 unconditional mean `π · exp(η^c + σ²/2)`.
+
+On a fit made with an `offset`, `η^c` includes it: the stored training offset
+(`fit.offset`) when `Y` has the training size, otherwise the `offset` you pass.
+New units from an offset fit without an `offset` are refused (see [`getLV`](@ref)).
 """
-function predict(fit::DeltaLogNormalFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response)
+function predict(fit::DeltaLogNormalFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response,
+                 offset = nothing)
     type in (:response, :occurrence, :positive, :link) ||
         throw(ArgumentError("type must be :response, :occurrence, :positive, or :link; got :$type"))
     p, n = size(Y)
-    Z = getLV(fit, Y; rotate = false)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict"; maskable = false)
+    Z = getLV(fit, Y; rotate = false, offset = O)
     ηc = fit.βc .+ fit.Λc * Z'                       # p×n
+    O === nothing || (ηc .+= O)
     type === :link && return ηc
     π = inv.(1 .+ exp.(-fit.βz))                     # length p
     type === :occurrence && return repeat(π, 1, n)
@@ -1880,12 +2013,17 @@ end
 Dunn–Smyth randomized quantile residuals for the two-part fit: `Φ⁻¹(u)` with
 `u = (1−π) + π·G(y)` for `y>0` (`G` the lognormal CDF) and `u` uniform on `[0, 1−π]`
 for `y=0` — ≈ N(0,1) under a correct model (pass a fixed `rng` to reproduce).
+
+On a fit made with an `offset` the count / positive-part mean includes it, by the same
+rule as [`predict`](@ref).
 """
 function residuals(fit::DeltaLogNormalFit, Y::AbstractMatrix{<:Real};
-                   rng::AbstractRNG = Random.default_rng())
+                   rng::AbstractRNG = Random.default_rng(), offset = nothing)
     p, n = size(Y)
-    Z = getLV(fit, Y; rotate = false)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "residuals"; maskable = false)
+    Z = getLV(fit, Y; rotate = false, offset = O)
     ηc = fit.βc .+ fit.Λc * Z'
+    O === nothing || (ηc .+= O)
     π = inv.(1 .+ exp.(-fit.βz))
     R = Matrix{Float64}(undef, p, n)
     σ = fit.σ
@@ -2027,12 +2165,26 @@ function _nparams(fit::HurdleNBFit)
     return 2p + (p * K - div(K * (K - 1), 2)) + 1   # βz + βc + Λc + r
 end
 
-function getLV(fit::HurdleNBFit, Y::AbstractMatrix{<:Real}; rotate::Bool = true)
+"""
+    getLV(fit::HurdleNBFit, Y; rotate=true, offset=nothing) -> n×K matrix
+
+Conditional latent scores for a hurdle-NB fit: the per-site two-part Laplace mode `ẑₛ`
+(structural-zero / occurrence part intercept-only, so only the count part loads on `z`).
+
+On a fit made with an `offset` the mode search adds it to the count / positive-part
+predictor `η^c`, as at fit time: the stored training offset (`fit.offset`) when `Y` has
+the training size, otherwise the `offset` you pass (a p×n matrix, a scalar or a length-p
+vector). New units from an offset fit without an `offset` are refused.
+"""
+function getLV(fit::HurdleNBFit, Y::AbstractMatrix{<:Real}; rotate::Bool = true,
+               offset = nothing)
     p, n = size(Y); K = size(fit.Λc, 2)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "getLV"; maskable = false)
     Λz = zeros(p, K)
     Z = Matrix{Float64}(undef, K, n)
     @inbounds for s in 1:n
-        Z[:, s] = _twopart_mode(HurdleNB(fit.r), view(Y, :, s), Λz, fit.Λc, fit.βz, fit.βc)
+        Z[:, s] = _twopart_mode(HurdleNB(fit.r), view(Y, :, s), Λz, fit.Λc, fit.βz, fit.βc;
+                                offsetc = O === nothing ? nothing : view(O, :, s))
     end
     Zt = permutedims(Z)
     return rotate ? Zt * _svd_rotation(fit.Λc) : Zt
@@ -2043,13 +2195,20 @@ end
 
 `:link` = `η^c`; `:occurrence` = `π`; `:positive` = zero-truncated NB mean
 `μ/(1−p₀)` (`p₀=(r/(r+μ))^r`); `:response` = `π · μ/(1−p₀)`.
+
+On a fit made with an `offset`, `η^c` includes it: the stored training offset
+(`fit.offset`) when `Y` has the training size, otherwise the `offset` you pass.
+New units from an offset fit without an `offset` are refused (see [`getLV`](@ref)).
 """
-function predict(fit::HurdleNBFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response)
+function predict(fit::HurdleNBFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response,
+                 offset = nothing)
     type in (:response, :occurrence, :positive, :link) ||
         throw(ArgumentError("type must be :response, :occurrence, :positive, or :link; got :$type"))
     p, n = size(Y)
-    Z = getLV(fit, Y; rotate = false)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict"; maskable = false)
+    Z = getLV(fit, Y; rotate = false, offset = O)
     ηc = fit.βc .+ fit.Λc * Z'
+    O === nothing || (ηc .+= O)
     type === :link && return ηc
     π = inv.(1 .+ exp.(-fit.βz))
     type === :occurrence && return repeat(π, 1, n)
@@ -2064,12 +2223,17 @@ end
 
 Dunn–Smyth randomized quantile residuals for the discrete two-part fit, using the
 hurdle CDF `F(k) = (1−π) + π·F_trunc(k)` (`F_trunc` the zero-truncated NB2 CDF).
+
+On a fit made with an `offset` the count / positive-part mean includes it, by the same
+rule as [`predict`](@ref).
 """
 function residuals(fit::HurdleNBFit, Y::AbstractMatrix{<:Real};
-                   rng::AbstractRNG = Random.default_rng())
+                   rng::AbstractRNG = Random.default_rng(), offset = nothing)
     p, n = size(Y); r = fit.r
-    Z = getLV(fit, Y; rotate = false)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "residuals"; maskable = false)
+    Z = getLV(fit, Y; rotate = false, offset = O)
     ηc = fit.βc .+ fit.Λc * Z'
+    O === nothing || (ηc .+= O)
     π = inv.(1 .+ exp.(-fit.βz))
     R = Matrix{Float64}(undef, p, n)
     @inbounds for s in 1:n, t in 1:p
@@ -2118,14 +2282,23 @@ end
 
 Conditional latent scores for a Delta-Gamma fit: the per-site two-part Laplace mode
 `ẑₛ` (occurrence intercept-only, so only the positive part loads on `z`).
+
+On a fit made with an `offset` the mode search adds it to the count / positive-part
+predictor `η^c`, as a `predictor = :separate` fit did at fit time (a `:shared` fit also put
+it on the occurrence part, and its post-fit mode is not yet exact; see #788): the stored training offset (`fit.offset`) when `Y` has
+the training size, otherwise the `offset` you pass (a p×n matrix, a scalar or a length-p
+vector). New units from an offset fit without an `offset` are refused.
 """
-function getLV(fit::DeltaGammaFit, Y::AbstractMatrix{<:Real}; rotate::Bool = true)
+function getLV(fit::DeltaGammaFit, Y::AbstractMatrix{<:Real}; rotate::Bool = true,
+               offset = nothing)
     p, n = size(Y); K = size(fit.Λc, 2)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "getLV"; maskable = false)
     fam = _delta_gamma_twopart_fam(fit.α)
     Λz = zeros(p, K)
     Z = Matrix{Float64}(undef, K, n)
     @inbounds for s in 1:n
-        Z[:, s] = _twopart_mode(fam, view(Y, :, s), Λz, fit.Λc, fit.βz, fit.βc)
+        Z[:, s] = _twopart_mode(fam, view(Y, :, s), Λz, fit.Λc, fit.βz, fit.βc;
+                                offsetc = O === nothing ? nothing : view(O, :, s))
     end
     Zt = permutedims(Z)
     return rotate ? Zt * _svd_rotation(fit.Λc) : Zt
@@ -2137,13 +2310,20 @@ end
 `:link` = positive-part log-mean predictor `η^c`; `:occurrence` = presence
 probability `π = logistic(β^z)`; `:positive` = conditional positive mean `μ = exp(η^c)`
 (the Gamma mean); `:response` = unconditional mean `π · μ`.
+
+On a fit made with an `offset`, `η^c` includes it: the stored training offset
+(`fit.offset`) when `Y` has the training size, otherwise the `offset` you pass.
+New units from an offset fit without an `offset` are refused (see [`getLV`](@ref)).
 """
-function predict(fit::DeltaGammaFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response)
+function predict(fit::DeltaGammaFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response,
+                 offset = nothing)
     type in (:response, :occurrence, :positive, :link) ||
         throw(ArgumentError("type must be :response, :occurrence, :positive, or :link; got :$type"))
     p, n = size(Y)
-    Z = getLV(fit, Y; rotate = false)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict"; maskable = false)
+    Z = getLV(fit, Y; rotate = false, offset = O)
     ηc = fit.βc .+ fit.Λc * Z'                       # p×n
+    O === nothing || (ηc .+= O)
     type === :link && return ηc
     π = inv.(1 .+ exp.(-fit.βz))                     # length p
     type === :occurrence && return repeat(π, 1, n)
@@ -2158,12 +2338,17 @@ end
 Dunn–Smyth randomized quantile residuals for the two-part fit: `Φ⁻¹(u)` with
 `u = (1−π) + π·G(y)` for `y>0` (`G` the Gamma CDF) and `u` uniform on `[0, 1−π]`
 for `y=0` — ≈ N(0,1) under a correct model (pass a fixed `rng` to reproduce).
+
+On a fit made with an `offset` the count / positive-part mean includes it, by the same
+rule as [`predict`](@ref).
 """
 function residuals(fit::DeltaGammaFit, Y::AbstractMatrix{<:Real};
-                   rng::AbstractRNG = Random.default_rng())
+                   rng::AbstractRNG = Random.default_rng(), offset = nothing)
     p, n = size(Y); α = fit.α
-    Z = getLV(fit, Y; rotate = false)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "residuals"; maskable = false)
+    Z = getLV(fit, Y; rotate = false, offset = O)
     ηc = fit.βc .+ fit.Λc * Z'
+    O === nothing || (ηc .+= O)
     π = inv.(1 .+ exp.(-fit.βz))
     R = Matrix{Float64}(undef, p, n)
     @inbounds for s in 1:n, t in 1:p
@@ -2225,12 +2410,26 @@ function _nparams(fit::ZINBCovFit)
     return 2p + 2q_free + (p * K - div(K * (K - 1), 2)) + 1  # + shared log r
 end
 
-function getLV(fit::ZIPFit, Y::AbstractMatrix{<:Real}; rotate::Bool = true)
+"""
+    getLV(fit::ZIPFit, Y; rotate=true, offset=nothing) -> n×K matrix
+
+Conditional latent scores for a ZIP fit: the per-site two-part Laplace mode `ẑₛ`
+(structural-zero / occurrence part intercept-only, so only the count part loads on `z`).
+
+On a fit made with an `offset` the mode search adds it to the count / positive-part
+predictor `η^c`, as at fit time: the stored training offset (`fit.offset`) when `Y` has
+the training size, otherwise the `offset` you pass (a p×n matrix, a scalar or a length-p
+vector). New units from an offset fit without an `offset` are refused.
+"""
+function getLV(fit::ZIPFit, Y::AbstractMatrix{<:Real}; rotate::Bool = true,
+               offset = nothing)
     p, n = size(Y); K = size(fit.Λc, 2)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "getLV"; maskable = false)
     Λz = zeros(p, K)
     Z = Matrix{Float64}(undef, K, n)
     @inbounds for s in 1:n
-        Z[:, s] = _twopart_mode(ZIPoisson(), view(Y, :, s), Λz, fit.Λc, fit.βz, fit.βc)
+        Z[:, s] = _twopart_mode(ZIPoisson(), view(Y, :, s), Λz, fit.Λc, fit.βz, fit.βc;
+                                offsetc = O === nothing ? nothing : view(O, :, s))
     end
     Zt = permutedims(Z)
     return rotate ? Zt * _svd_rotation(fit.Λc) : Zt
@@ -2258,12 +2457,26 @@ function getLV(fit::ZIPCovFit, Y::AbstractMatrix{<:Real}, X::AbstractArray{<:Rea
     return rotate ? Zt * _svd_rotation(fit.Λc) : Zt
 end
 
-function getLV(fit::ZINBFit, Y::AbstractMatrix{<:Real}; rotate::Bool = true)
+"""
+    getLV(fit::ZINBFit, Y; rotate=true, offset=nothing) -> n×K matrix
+
+Conditional latent scores for a ZINB fit: the per-site two-part Laplace mode `ẑₛ`
+(structural-zero / occurrence part intercept-only, so only the count part loads on `z`).
+
+On a fit made with an `offset` the mode search adds it to the count / positive-part
+predictor `η^c`, as at fit time: the stored training offset (`fit.offset`) when `Y` has
+the training size, otherwise the `offset` you pass (a p×n matrix, a scalar or a length-p
+vector). New units from an offset fit without an `offset` are refused.
+"""
+function getLV(fit::ZINBFit, Y::AbstractMatrix{<:Real}; rotate::Bool = true,
+               offset = nothing)
     p, n = size(Y); K = size(fit.Λc, 2)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "getLV"; maskable = false)
     Λz = zeros(p, K)
     Z = Matrix{Float64}(undef, K, n)
     @inbounds for s in 1:n
-        Z[:, s] = _twopart_mode(ZINB(fit.r), view(Y, :, s), Λz, fit.Λc, fit.βz, fit.βc)
+        Z[:, s] = _twopart_mode(ZINB(fit.r), view(Y, :, s), Λz, fit.Λc, fit.βz, fit.βc;
+                                offsetc = O === nothing ? nothing : view(O, :, s))
     end
     Zt = permutedims(Z)
     return rotate ? Zt * _svd_rotation(fit.Λc) : Zt
@@ -2298,13 +2511,20 @@ end
 `:link` = count log-mean predictor `η^c`; `:zeroinfl` = structural-zero
 probability `π = logistic(β^z)`; `:mean` = the count mean `μ = exp(η^c)`;
 `:response` = unconditional mean `(1−π)·μ`.
+
+On a fit made with an `offset`, `η^c` includes it: the stored training offset
+(`fit.offset`) when `Y` has the training size, otherwise the `offset` you pass.
+New units from an offset fit without an `offset` are refused (see [`getLV`](@ref)).
 """
-function predict(fit::ZIPFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response)
+function predict(fit::ZIPFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response,
+                 offset = nothing)
     type in (:response, :zeroinfl, :mean, :link) ||
         throw(ArgumentError("type must be :response, :zeroinfl, :mean, or :link; got :$type"))
     p, n = size(Y)
-    Z = getLV(fit, Y; rotate = false)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict"; maskable = false)
+    Z = getLV(fit, Y; rotate = false, offset = O)
     ηc = fit.βc .+ fit.Λc * Z'
+    O === nothing || (ηc .+= O)
     type === :link && return ηc
     π = inv.(1 .+ exp.(-fit.βz))
     type === :zeroinfl && return repeat(π, 1, n)
@@ -2318,13 +2538,20 @@ end
 
 As [`predict(::ZIPFit, …)`](@ref); `:mean` is the NB2 count mean `μ`, `:response`
 the unconditional mean `(1−π)·μ`.
+
+On a fit made with an `offset`, `η^c` includes it: the stored training offset
+(`fit.offset`) when `Y` has the training size, otherwise the `offset` you pass.
+New units from an offset fit without an `offset` are refused (see [`getLV`](@ref)).
 """
-function predict(fit::ZINBFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response)
+function predict(fit::ZINBFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response,
+                 offset = nothing)
     type in (:response, :zeroinfl, :mean, :link) ||
         throw(ArgumentError("type must be :response, :zeroinfl, :mean, or :link; got :$type"))
     p, n = size(Y)
-    Z = getLV(fit, Y; rotate = false)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict"; maskable = false)
+    Z = getLV(fit, Y; rotate = false, offset = O)
     ηc = fit.βc .+ fit.Λc * Z'
+    O === nothing || (ηc .+= O)
     type === :link && return ηc
     π = inv.(1 .+ exp.(-fit.βz))
     type === :zeroinfl && return repeat(π, 1, n)
@@ -2359,11 +2586,16 @@ end
 
 Dunn–Smyth randomized quantile residuals under the zero-inflated CDF
 `F(k) = π + (1−π)·F_Poisson(k)`.
+
+On a fit made with an `offset` the count / positive-part mean includes it, by the same
+rule as [`predict`](@ref).
 """
 function residuals(fit::ZIPFit, Y::AbstractMatrix{<:Real};
-                   rng::AbstractRNG = Random.default_rng())
-    Z = getLV(fit, Y; rotate = false)
+                   rng::AbstractRNG = Random.default_rng(), offset = nothing)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "residuals"; maskable = false)
+    Z = getLV(fit, Y; rotate = false, offset = O)
     ηc = fit.βc .+ fit.Λc * Z'
+    O === nothing || (ηc .+= O)
     π = inv.(1 .+ exp.(-fit.βz))
     return _zi_residuals(π, ηc, Y, μ -> Poisson(μ), rng)
 end
@@ -2372,11 +2604,16 @@ end
     residuals(fit::ZINBFit, Y; rng=Random.default_rng()) -> p×n matrix
 
 Dunn–Smyth randomized quantile residuals under `F(k) = π + (1−π)·F_NB2(k)`.
+
+On a fit made with an `offset` the count / positive-part mean includes it, by the same
+rule as [`predict`](@ref).
 """
 function residuals(fit::ZINBFit, Y::AbstractMatrix{<:Real};
-                   rng::AbstractRNG = Random.default_rng())
-    Z = getLV(fit, Y; rotate = false)
+                   rng::AbstractRNG = Random.default_rng(), offset = nothing)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "residuals"; maskable = false)
+    Z = getLV(fit, Y; rotate = false, offset = O)
     ηc = fit.βc .+ fit.Λc * Z'
+    O === nothing || (ηc .+= O)
     π = inv.(1 .+ exp.(-fit.βz)); r = fit.r
     return _zi_residuals(π, ηc, Y, μ -> NegativeBinomial(r, r / (r + μ)), rng)
 end
@@ -2421,12 +2658,26 @@ function _nparams(fit::ZIBCovFit)
     return 2p + 2q_free + (p * K - div(K * (K - 1), 2))  # βz + γz + βc + γc + Λc (N fixed)
 end
 
-function getLV(fit::ZIBFit, Y::AbstractMatrix{<:Real}; rotate::Bool = true)
+"""
+    getLV(fit::ZIBFit, Y; rotate=true, offset=nothing) -> n×K matrix
+
+Conditional latent scores for a ZIB fit: the per-site two-part Laplace mode `ẑₛ`
+(structural-zero / occurrence part intercept-only, so only the count part loads on `z`).
+
+On a fit made with an `offset` the mode search adds it to the count / positive-part
+predictor `η^c`, as at fit time: the stored training offset (`fit.offset`) when `Y` has
+the training size, otherwise the `offset` you pass (a p×n matrix, a scalar or a length-p
+vector). New units from an offset fit without an `offset` are refused.
+"""
+function getLV(fit::ZIBFit, Y::AbstractMatrix{<:Real}; rotate::Bool = true,
+               offset = nothing)
     p, n = size(Y); K = size(fit.Λc, 2)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "getLV"; maskable = false)
     Λz = zeros(p, K)
     Z = Matrix{Float64}(undef, K, n)
     @inbounds for s in 1:n
-        Z[:, s] = _twopart_mode(ZIB(fit.N), view(Y, :, s), Λz, fit.Λc, fit.βz, fit.βc)
+        Z[:, s] = _twopart_mode(ZIB(fit.N), view(Y, :, s), Λz, fit.Λc, fit.βz, fit.βc;
+                                offsetc = O === nothing ? nothing : view(O, :, s))
     end
     Zt = permutedims(Z)
     return rotate ? Zt * _svd_rotation(fit.Λc) : Zt
@@ -2461,13 +2712,20 @@ end
 `:link` = count success-logit predictor `η^c`; `:zeroinfl` = structural-zero
 probability `π = logistic(β^z)`; `:mean` = the binomial mean `N·μ`
 (`μ = logistic(η^c)`); `:response` = unconditional mean `(1−π)·N·μ`.
+
+On a fit made with an `offset`, `η^c` includes it: the stored training offset
+(`fit.offset`) when `Y` has the training size, otherwise the `offset` you pass.
+New units from an offset fit without an `offset` are refused (see [`getLV`](@ref)).
 """
-function predict(fit::ZIBFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response)
+function predict(fit::ZIBFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response,
+                 offset = nothing)
     type in (:response, :zeroinfl, :mean, :link) ||
         throw(ArgumentError("type must be :response, :zeroinfl, :mean, or :link; got :$type"))
     p, n = size(Y)
-    Z = getLV(fit, Y; rotate = false)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict"; maskable = false)
+    Z = getLV(fit, Y; rotate = false, offset = O)
     ηc = fit.βc .+ fit.Λc * Z'
+    O === nothing || (ηc .+= O)
     type === :link && return ηc
     π = inv.(1 .+ exp.(-fit.βz))
     type === :zeroinfl && return repeat(π, 1, n)
@@ -2481,12 +2739,17 @@ end
 
 Dunn–Smyth randomized quantile residuals under the zero-inflated CDF
 `F(k) = π + (1−π)·F_Binomial(N,μ)(k)`.
+
+On a fit made with an `offset` the count / positive-part mean includes it, by the same
+rule as [`predict`](@ref).
 """
 function residuals(fit::ZIBFit, Y::AbstractMatrix{<:Real};
-                   rng::AbstractRNG = Random.default_rng())
+                   rng::AbstractRNG = Random.default_rng(), offset = nothing)
     p, n = size(Y)
-    Z = getLV(fit, Y; rotate = false)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "residuals"; maskable = false)
+    Z = getLV(fit, Y; rotate = false, offset = O)
     ηc = fit.βc .+ fit.Λc * Z'
+    O === nothing || (ηc .+= O)
     π = inv.(1 .+ exp.(-fit.βz))
     R = Matrix{Float64}(undef, p, n)
     @inbounds for s in 1:n, t in 1:p

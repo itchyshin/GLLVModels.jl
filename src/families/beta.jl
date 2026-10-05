@@ -54,6 +54,8 @@ beta_marginal_loglik_laplace(Y::AbstractMatrix, Λ::AbstractMatrix, β::Abstract
 Result of [`fit_beta_gllvm`](@ref): intercepts `β` (length p), loadings `Λ` (p×K),
 the estimated precision `φ` (Var = μ(1−μ)/(1+φ)), the `link`, the maximised Laplace
 `loglik`, the optimiser `converged` flag, and `iterations`.
+`offset` is the p×n training offset the fit was made with (`nothing` when it had none);
+[`predict`](@ref), [`getLV`](@ref) and `residuals` use it by default.
 """
 struct BetaFit
     β::Vector{Float64}
@@ -66,7 +68,12 @@ struct BetaFit
     alpha_lv::Union{Nothing, Matrix{Float64}}
     theta_packed::Vector{Float64}
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
 end
+
+# Pre-offset compat tier (10 positional args): no stored training offset.
+BetaFit(β, Λ, φ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian) =
+    BetaFit(β, Λ, φ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, nothing)
 
 # Positional compatibility constructor (2026-08-28): every pre-existing
 # construction site builds a default-curvature fit; the `hessian` field
@@ -302,11 +309,12 @@ function fit_beta_gllvm(Y::AbstractMatrix; K::Integer,
         cursor += rr
         φ̂ = exp(θ̂[cursor + 1])
         return BetaFit(β̂, Λ̂, φ̂, link, _fit_verdict(res)...,
-                       alpha_hat, collect(Float64, θ̂), hessian)
+                       alpha_hat, collect(Float64, θ̂), hessian, _stored_offset(offset))
     else
         β̂ = θ̂[1:p]
         Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
         φ̂ = exp(θ̂[p + rr + 1])
-        return BetaFit(β̂, Λ̂, φ̂, link, _fit_verdict(res)..., nothing, Float64[], hessian)
+        return BetaFit(β̂, Λ̂, φ̂, link, _fit_verdict(res)..., nothing, Float64[], hessian,
+                       _stored_offset(offset))
     end
 end

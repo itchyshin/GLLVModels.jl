@@ -73,6 +73,8 @@ gamma_marginal_loglik_laplace(Y::AbstractMatrix, Λ::AbstractMatrix, β::Abstrac
 Result of [`fit_gamma_gllvm`](@ref): intercepts `β` (length p), loadings `Λ` (p×K),
 the estimated shape `α` (Var = μ²/α), the `link`, the maximised Laplace
 `loglik`, the optimiser `converged` flag, and `iterations`.
+`offset` is the p×n training offset the fit was made with (`nothing` when it had none);
+[`predict`](@ref), [`getLV`](@ref) and `residuals` use it by default.
 """
 struct GammaFit
     β::Vector{Float64}
@@ -85,7 +87,12 @@ struct GammaFit
     alpha_lv::Union{Nothing, Matrix{Float64}}
     theta_packed::Vector{Float64}
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
 end
+
+# Pre-offset compat tier (10 positional args): no stored training offset.
+GammaFit(β, Λ, α, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian) =
+    GammaFit(β, Λ, α, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, nothing)
 
 # Positional compatibility constructor (2026-08-28): every pre-existing
 # construction site builds a default-curvature fit; the `hessian` field
@@ -303,11 +310,12 @@ function fit_gamma_gllvm(Y::AbstractMatrix; K::Integer,
         cursor += rr
         α̂ = exp(θ̂[cursor + 1])
         return GammaFit(β̂, Λ̂, α̂, link, _fit_verdict(res)...,
-                       alpha_hat, collect(Float64, θ̂), hessian)
+                       alpha_hat, collect(Float64, θ̂), hessian, _stored_offset(offset))
     else
         β̂ = θ̂[1:p]
         Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
         α̂ = exp(θ̂[p + rr + 1])
-        return GammaFit(β̂, Λ̂, α̂, link, _fit_verdict(res)..., nothing, Float64[], hessian)
+        return GammaFit(β̂, Λ̂, α̂, link, _fit_verdict(res)..., nothing, Float64[], hessian,
+                        _stored_offset(offset))
     end
 end
