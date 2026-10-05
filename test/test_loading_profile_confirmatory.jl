@@ -219,6 +219,22 @@ end
         @test mle_row.delta_deviance < 1e-4
     end
 
+    @testset "grid spacing uses the free-block Wald SE on a pinned fit (refs #794)" begin
+        pins = loading_profile_fixture_mask_b_pins()
+        fit = fit_gaussian_gllvm(Y; K = _K, lambda_constraint = pins)
+        pinned = GLLVModels._lambda_constraint_pinned_theta_indices(fit)
+        @test !isempty(pinned)
+        θ_idx = GLLVModels._lambda_b_theta_index(fit, 2, 1)
+        nll = GLLVModels._confint_reconstruct_nll(fit, Y, nothing, nothing)
+        H = GLLVModels.ForwardDiff.hessian(nll, fit.pars.θ_packed)
+        Σ_free = GLLVModels._inv_free_block((H .+ H') ./ 2, pinned)
+        se = GLLVModels._profile_wald_se(fit, θ_idx, Y, nothing, nothing)
+        @test se ≈ sqrt(Σ_free[θ_idx, θ_idx]) rtol = 1e-10
+        result = loading_profile(fit; y = Y, n_grid = 3, entries = [2 1], grid_extent = 2.0)
+        vals = [row.profile_value for row in result.table]
+        @test (maximum(vals) - minimum(vals)) / 2 ≈ 2.0 * se rtol = 1e-10
+    end
+
     @testset "frozen R oracle match: packing convention (masks-known-contract MASK-B-PINS-P1)" begin
         # Direct comparison against the frozen R oracle named by the runbook:
         # docs/dev-log/core070/masks-known-contract.json case

@@ -177,7 +177,10 @@ function _profile_free_X(fit::GllvmFit, X::Union{Nothing, AbstractArray{<:Real, 
 end
 
 # Wald SE at θ̂_i via the observed information matrix. Returns NaN if
-# the Hessian is non-finite or the i-th diagonal of inv(H) is ≤ 0.
+# the Hessian is non-finite or the i-th diagonal of inv(H) is ≤ 0. On a
+# `lambda_constraint` fit the pinned loadings are not parameters: only the
+# free block is inverted (as `confint(...; method = :wald)`), and a pinned
+# index gets 0 (refs #794).
 function _profile_wald_se(fit::GllvmFit, i::Integer,
                           y::AbstractMatrix,
                           X::Union{Nothing, AbstractArray{<:Real, 3}},
@@ -194,11 +197,14 @@ function _profile_wald_se(fit::GllvmFit, i::Integer,
     if !all(isfinite, H)
         return NaN
     end
+    pins = _lambda_constraint_pinned_theta_indices(fit)
     Σ_inv = try
-        inv((H .+ H') ./ 2)
+        Hsym = (H .+ H') ./ 2
+        isempty(pins) ? inv(Hsym) : _inv_free_block(Hsym, pins)
     catch
         return NaN
     end
+    insorted(i, pins) && return 0.0
     v = diag(Σ_inv)[i]
     return (isfinite(v) && v > 0) ? sqrt(v) : NaN
 end
