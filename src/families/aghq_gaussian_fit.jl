@@ -217,7 +217,10 @@ function _gaussian_data_nll(data,K,fixed)
         L=unpack_lambda(t[q+2:end],p,K);variance=exp(2t[q+1]);value=zero(eltype(t))
         for s in 1:n
             obs=rows[s];isempty(obs) && continue
-            F=cholesky(Symmetric(L[obs,:]*L[obs,:]'+variance*I))
+            # A line-search trial point can drive log σ so low that Λ_oΛ_oᵀ + σ²I is not
+            # numerically positive definite; return +Inf so the line search backs off (#716).
+            F=cholesky(Symmetric(L[obs,:]*L[obs,:]'+variance*I);check=false)
+            issuccess(F) || return oftype(value,Inf)
             e=data.responses[obs,s]-X[obs,s,:]*t[1:q]-data.offset[obs,s]
             value+=(length(obs)*log(2pi)+logdet(F)+dot(e,F\e))/2
         end
