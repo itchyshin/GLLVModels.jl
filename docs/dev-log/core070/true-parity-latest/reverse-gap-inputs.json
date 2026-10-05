@@ -1,7 +1,7 @@
 {
  "schema": "true-parity-reverse-gap-inputs/v1",
  "note": "Inputs for reverse-gap.json. julia_exports is names(GLLVModels) at glvmodels_commit (module name dropped); r_names are the export() names and S3 generic names in gllvmTMB's NAMESPACE at P1, read with git show and checked against the namespace contract's sha256.",
- "glvmodels_commit": "896a0a2286c224fe9979d3cf7e7e2c6be27f9357",
+ "glvmodels_commit": "36776bfb112319bfbc1040c3e8e44b99d2231718",
  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
  "r_namespace_sha256": "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c",
  "r_names": [
@@ -1138,6 +1138,10 @@
    "kind": "Function"
   },
   {
+   "name": "extract_residual_split",
+   "kind": "Function"
+  },
+  {
    "name": "extract_rotated_loadings",
    "kind": "Function"
   },
@@ -1559,6 +1563,10 @@
   },
   {
    "name": "fitted",
+   "kind": "Function"
+  },
+  {
+   "name": "flag_unreliable_loadings",
    "kind": "Function"
   },
   {
