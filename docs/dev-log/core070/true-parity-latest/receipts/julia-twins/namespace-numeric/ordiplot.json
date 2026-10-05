@@ -10,7 +10,7 @@
   "origin_pr": "itchyshin/GLLVModels.jl#684",
   "generator": "tools/true_parity_namespace_gaussian_w1_receipt.jl",
   "julia_version": "1.10.0",
-  "gllvmodels_commit": "0f1d3f3032bbc3754e208bd20852a6d6d412bb37",
+  "gllvmodels_commit": "8f6da97c92ce86a7cecf5dfbe27380db7d7eeb32",
   "source_fixtures": [
     {
       "path": "test/fixtures/ns_gauss_w1_p1.toml",
@@ -24,7 +24,7 @@
   "source_tests": [
     {
       "path": "test/test_namespace_gaussian_w1_p1.jl",
-      "sha256": "19c2cebdfdcb7dee8854acb88693efcf4a3d46576786f404d9006df66fad9f7b"
+      "sha256": "a9b27e58e01081751537a8674e49e887a0a7e63444e7dcb7a7985a22305ed4ec"
     }
   ],
   "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_namespace_gaussian_w1_receipt.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
