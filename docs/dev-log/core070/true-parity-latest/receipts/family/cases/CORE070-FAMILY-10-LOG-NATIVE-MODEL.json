@@ -25,11 +25,11 @@
     "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-poisson/verify.txt"
   },
   "read_from": {
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-poisson/run.toml": "60a0816e5ee521d4ccb660f16d408c63aeae4472d2112c98cee6b8ab5a22bfe0",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-poisson/values-NATIVE-11-TRUNCATED-POISSON.toml": "baf2b7604160d34eadc156da61977da69d7c85af931fbf488e48fa90842b2188",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-poisson/run-commit.json": "2e16587a479233a6fe0bf80655a1c208a68a479877cb18647134d745a22f4edd",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-poisson/verify.txt": "243a7815adeb9aee38a331538ac933db572a0f0e70e32cb3feedc17f559c3507",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-poisson/cell-NATIVE-11-TRUNCATED-POISSON.toml": "3e323ab839a0ac024bba748ed55004c8906293c622c8d70f33e7a654482220ed"
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-poisson/run.toml": "e40419bd780f7a7694011913ea2fa03fb2815b70493a080bcc521380ebca34e6",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-poisson/values-NATIVE-11-TRUNCATED-POISSON.toml": "45f8c67de7fcbc660914140a25891ed760927251ba08223805b1cef747619f21",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-poisson/run-commit.json": "08ed3d72513dc9465ad0518c303887d24f27d370873c8661d089703746d3f805",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-poisson/verify.txt": "6099a760ce18dce84123444cfe5024a8f94082b0325548de1689814b205a8019",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-poisson/cell-NATIVE-11-TRUNCATED-POISSON.toml": "ab36a687bfa33b0875611c383207838a35274b66960b0a0c1cb9dedbf454cd55"
   },
   "raw": [
     "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-poisson/values-NATIVE-11-TRUNCATED-POISSON.toml",
@@ -39,24 +39,24 @@
   "pin": "P1",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
-  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit": "7506185ccbb6ebbd484219a860b35d989301a8cf",
+  "glvmodels_commit": "4b78fa01245381f6c0ab8a8b9ea0bc581ade825a",
   "glvmodels_worktree_dirty": [],
-  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
-  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "glvmodels_src_tree": "ee4140b88eb634453f24bcd70bdfe9a6914281d6",
+  "host": "Totoro (Linux x86_64, R 4.6.1, TMB 1.9.21, Matrix 1.7.5, Julia 1.10.12), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
   "comparison": {
     "pin": "P1",
     "cases": [
       {
         "case_id": "CORE070-FAMILY-10-LOG-NATIVE-MODEL",
         "quantity": "logLik",
-        "max_abs_diff": 2.712454261200037e-09,
-        "tolerance": 0.000618077677658145,
+        "max_abs_diff": 2.713591129577253e-09,
+        "tolerance": 0.000618077677658146,
         "tolerance_rule": "the cell's own test, @test jl_logL \u2248 r.logLik rtol = 1e-6 (rtol=1e-06, atol=0; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
         "n_values": 1,
-        "r_value": -618.077677658145,
-        "julia_value": -618.0776776554326,
+        "r_value": -618.0776776581461,
+        "julia_value": -618.0776776554325,
         "diff_source": "recomputed from the saved R and Julia values",
         "discriminating": true
       }
