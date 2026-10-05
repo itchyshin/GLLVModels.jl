@@ -26,6 +26,14 @@
   `case-map-covariance.json` and `--check` to verify them. Not covered: non-Gaussian families,
   rank > 1 for `latent()`, `rho != 1` for the phylo terms, and the `.dep` and duplicate-companion
   guards.
+- **Docstring corrections for two phylogenetic fitters.** `fit_phylo_dep_gllvm` claimed the
+  same estimand class as gllvmTMB's `phylo_dep(0 + trait | species)`. It is a row-phylogeny
+  model: the rows of `Y` are the tree's tips and the phylogenetic block is
+  `(Λ_phy Λ_phy') .* Σ_phy`, whereas R's `phylo_dep` is `Σ_trait ⊗ A`. The docstring now says
+  what is fitted and names `fit_phylo_latent_gllvm(...; d = n_traits)` as the twin of R's
+  `phylo_dep`. The `fit_phylo_latent_gllvm` docstring no longer calls `unique = true` an extra
+  outside the twin; it corresponds to the folded diagonal of gllvmTMB's
+  `phylo_latent(..., unique = TRUE)`. No code changed.
 - **Mixed-family fits take an offset (DATA-OFF-MIXED).** `fit_mixed_gllvm(Y; families, K,
   offset)` adds a known offset to each trait's linear predictor, η = β + offset + Λz. `offset`
   is a p×n matrix, a scalar or a length-p vector, normalised as in `fit_gllvm`; the usual use is

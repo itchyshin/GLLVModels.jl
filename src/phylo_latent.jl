@@ -291,7 +291,8 @@ such: `rho != 1` (`GJL-GATE-PHYLO-LATENT-RHO`; R accepts `rho`, the twin does
 not yet).
 
 `unique = true` adds a per-trait phylogenetic unique variance (positive log
-link); it is a documented extra, not part of the twin.
+link); it corresponds to the folded diagonal of gllvmTMB's
+`phylo_latent(species, d = K, unique = TRUE)`.
 
 Optimisation uses finite-difference gradients because the sparse Cholesky
 does not accept automatic-differentiation numbers. `g_tol` is an absolute

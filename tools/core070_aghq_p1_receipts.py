@@ -447,6 +447,18 @@ def twin_overlay(sid, row, counts):
     row["measured_result"] = {**row["measured_result"], "twin_case_ids": case_ids, "twin_verdict": rec["verdict"]}
 
 
+def missing_twin_receipts(rows):
+    """Problems for case-map rows that cite a Julia twin receipt under TWIN_REL that is no longer on disk.
+    twin_overlay skips a row whose receipt file is absent, so without this the only symptom is a row diff."""
+    out = []
+    for r in rows:
+        for rel in (r.get("evidence") or {}).get("receipt") or []:
+            if rel.startswith(TWIN_REL + "/") and not (ROOT / rel).is_file():
+                out.append(f"{r['source_id']}: case map cites Julia twin receipt {rel}, which is missing; "
+                           "the twin overlay would skip it and drop the row to its batch tier")
+    return out
+
+
 def build_rows(in_scope, carry_status, receipts):
     p0 = {r["source_id"]: r for r in load(P0_CASEMAP)["rows"]}
     counts = {k: 0 for k in COUNT_KEYS}
@@ -541,6 +553,7 @@ def check():
             problems.append(f"{cid}: receipt not pinned at P1")
     problems += behaviour.check_problems()
     cm = load(ROOT / CASEMAP_REL)
+    problems += missing_twin_receipts(cm["rows"])
     receipts = {cid: receipt_info(path, rec) for cid, (path, rec) in tracked.items()}
     rows = []
     try:
