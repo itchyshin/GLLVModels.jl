@@ -366,9 +366,13 @@ COV_SCOPE_NOTES.update({
         "the twin is one Gaussian fit of that term (tree route, 120 tips, 4 traits) against "
         "fit_phylo_latent_gllvm(d = 4), the engine path gllvmTMB documents phylo_dep as. Julia has no phylo_dep "
         "keyword of its own on this route (fit_phylo_dep_gllvm in src/phylo_dep.jl is a different, row-phylogeny "
-        "Gaussian model and is not the twin). Julia's stop reports converged = false (max |FD gradient| 4.0e-5 "
-        "against g_tol 1e-5) at a Newton decrement of 2.8e-12; the twin test asserts that bound and a "
-        "positive-definite Hessian instead of the flag. Gaussian only; the .dep guards (phylo_dep with "
+        "Gaussian model and is not the twin). From its default start Julia's fit stops at max |FD gradient| "
+        "4.0e-5 against g_tol 1e-5 (converged = false); the ForwardDiff gradient of the same likelihood agrees "
+        "(4.0e-5 on the log residual-SD coordinate), so that stop is the objective's rounding floor, not "
+        "finite-difference noise. The twin is that fit plus one warm restart from its parameters shifted by "
+        "-0.01, which reports converged = true with a positive-definite Hessian (max |FD gradient| 8.6e-7, max "
+        "|AD gradient| 8.9e-7, objective within 3e-12 of the default stop); the twin test asserts the flag. "
+        "Gaussian only; the .dep guards (phylo_dep with "
         "phylo_latent or phylo_indep refused) are not twinned."),
     "covariance/COV-PHYLO-A-ALIAS": (
         "The batch case checks that phylo_latent(species, A = A) parses to phylo_rr(vcv = A); the twin is one "

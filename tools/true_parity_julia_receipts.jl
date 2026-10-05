@@ -2024,14 +2024,9 @@ function _cpr_r_theta(blk)
 end
 _cpr_sigma_phy(fit) = fit.phylo_unique_variance === nothing ? fit.loading * fit.loading' :
     fit.loading * fit.loading' + Diagonal(fit.phylo_unique_variance)
-function _cpr_newton_decrement(fit)
-    f = _cpr_objective(fit); θ = fit.parameters
-    g = similar(θ); GMJ._pmv_fd_gradient!(g, f, θ)
-    return dot(g, Symmetric(GMJ._fd_hessian(f, θ)) \ g) / 2
-end
 
 function receipts_cov_phylo_twins()
-    ORIGIN = "wave-plan W3-4(e), branch claude/cov-phylo-twins"
+    ORIGIN = "itchyshin/GLLVModels.jl#810"
     fxp = "test/fixtures/cov_phylo_twins_p1.toml"
     tp = "test/test_cov_phylo_twins_p1.jl"
     fx = TOML.parsefile(joinpath(ROOT, fxp))
@@ -2047,7 +2042,9 @@ function receipts_cov_phylo_twins()
     (isapprox(sum(A), Float64(fx["A_sum"]); rtol = 1e-10) && isapprox(norm(A), Float64(fx["A_frobenius"]); rtol = 1e-10) &&
         maximum(abs.(A[1, :] .- Float64.(fx["A_first_row"]))) <= 1e-12) || fail("cov-phylo: A rebuilt from the tree is not the matrix R fitted")
     fits = Dict(
-        "dep" => fit_phylo_latent_gllvm(Y, sp; species_levels = tips, d = T, tree = newick),
+        # DEP: default fit, then one warm restart from its parameters shifted by -0.01, as in the twin test.
+        "dep" => fit_phylo_latent_gllvm(Y, sp; species_levels = tips, d = T, tree = newick,
+            start = fit_phylo_latent_gllvm(Y, sp; species_levels = tips, d = T, tree = newick).parameters .- 0.01),
         "alias" => fit_phylo_latent_gllvm(Y, sp; species_levels = tips, d = 1, A = A, tip_labels = tips),
         "unique" => fit_phylo_latent_gllvm(Y, sp; species_levels = tips, d = 1, unique = true, tree = newick))
     fitv = fit_phylo_latent_gllvm(Y, sp; species_levels = tips, d = 1, vcv = A, tip_labels = tips)
@@ -2055,10 +2052,7 @@ function receipts_cov_phylo_twins()
         fail("cov-phylo: Julia's A = and vcv = spellings give different fits")
     Float64(fx["alias"]["objective_vcv_spelling"]) == Float64(fx["alias"]["objective"]) ||
         fail("cov-phylo: R's A = and vcv = spellings give different objectives in the fixture")
-    fd = fits["dep"]
-    (fd.hessian_positive_definite && fd.gradient_norm <= 1e-4 && _cpr_newton_decrement(fd) <= 1e-9) ||
-        fail("cov-phylo DEP: Julia stop is not stationary within the twin test's bounds")
-    for k in ("alias", "unique")
+    for k in ("dep", "alias", "unique")
         (fits[k].converged && fits[k].hessian_positive_definite) || fail("cov-phylo $k: Julia fit did not converge with a PD Hessian")
     end
     bare = fit_phylo_latent_gllvm(Y, sp; species_levels = tips, d = 1, tree = newick)
@@ -2066,7 +2060,7 @@ function receipts_cov_phylo_twins()
     common = "Shared fixture: 120-tip coalescent tree (ape::rcoal, seed 20261005), 4 traits, 2 observations per species, Gaussian, drawn from (Lambda Lambda' + diag(s^2)) (x) A + 0.4^2 I with A the unit-height tip correlation; Y and the Newick string stored to 17 digits, A rebuilt in Julia from the tree and checked against the stored sum, norm and first row of R's A. R: gllvmTMB(..., trait = 'trait', unit = 'species', cluster = 'species', family = gaussian(), REML = FALSE), nlminb rel.tol 1e-10, every fit converged with a positive-definite Hessian. The fixed-parameter case evaluates Julia's objective (GLLVModels._precision_multivariate_nll, the fitter's own objective) at R's optimum opt\$par, mapped by name onto Julia's [beta; theta_rr; log_sd_unique; log_sd_eps] (both engines pack the loadings with the gllvmTMB.cpp layout), and compares it with R's objective there; it does not depend on either optimiser. Loadings are compared through Sigma_phy because a loading column's sign is not identified."
     rows = (
         ("dep", "COV-PHYLO-DEP", "PHYLO-DEP", 1,
-         "R: value ~ 0 + trait + phylo_dep(0 + trait | species, tree = tree), which gllvmTMB rewrites to phylo_rr(d = n_traits, .dep = TRUE), the phylo_latent(d = T) engine path (full unstructured Sigma_phy (x) A, T(T+1)/2 = 10 loading parameters). Julia: fit_phylo_latent_gllvm(Y, species; d = 4, tree). Julia's LBFGS stops at max |FD gradient| 4.0e-5 above g_tol 1e-5, so fit.converged is false; the gradient is on the log residual-SD coordinate (curvature about 1.6e3) and the Newton decrement there is 2.8e-12, below the objective's rounding floor; the twin test asserts the decrement bound (<= 1e-9) and a positive-definite Hessian instead of the flag. R's own optimum has max |AD gradient| 6.1e-4. ",
+         "R: value ~ 0 + trait + phylo_dep(0 + trait | species, tree = tree), which gllvmTMB rewrites to phylo_rr(d = n_traits, .dep = TRUE), the phylo_latent(d = T) engine path (full unstructured Sigma_phy (x) A, T(T+1)/2 = 10 loading parameters). Julia: fit_phylo_latent_gllvm(Y, species; d = 4, tree), then one warm restart from that fit's parameters shifted by -0.01. From the default start Julia's LBFGS stops at max |FD gradient| 4.0e-5 above g_tol 1e-5 (converged = false); the ForwardDiff gradient of the same likelihood (a dense AD-capable copy matching the sparse objective to 8e-12) agrees at 4.0e-5 on the log residual-SD coordinate, so that was not finite-difference noise but a stop at the objective's rounding floor (curvature about 1.6e3, Newton decrement 2.6e-12). The restart reports converged = true with a positive-definite Hessian at max |FD gradient| 8.6e-7 (max |AD gradient| 8.9e-7), objective within 3e-12 of the default stop; the twin test asserts converged = true. R's own optimum has max |AD gradient| 6.1e-4. ",
          "Sigma_rr", "Lambda_phy Lambda_phy' (4 x 4), the full unstructured phylogenetic trait covariance"),
         ("alias", "COV-PHYLO-A-ALIAS", "PHYLO-A-ALIAS", 2,
          "R: value ~ 0 + trait + phylo_latent(species, A = A), which gllvmTMB rewrites to phylo_rr(vcv = A) (the dense route with R's 1e-8 ridge); the vcv = A spelling gives the identical nlminb objective (asserted in the generator, recorded as objective_vcv_spelling). Julia: fit_phylo_latent_gllvm(Y, species; d = 1, A = A, tip_labels); Julia's vcv = A spelling gives the bitwise identical fit (asserted in the twin test and here), and A together with vcv is refused on both sides. ",

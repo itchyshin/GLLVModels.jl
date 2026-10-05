@@ -38,13 +38,17 @@
 # element (sibling twins' Lambda Lambda' bar). The sign of a loading column is not identified, so
 # loadings are compared through Sigma_phy.
 #
-# Stationarity of the DEP fit (recorded, not hidden): Julia's LBFGS stops at max |FD gradient| about
-# 4e-5, above its absolute default g_tol = 1e-5, so fit.converged is false; the remaining gradient is
-# on the log residual-SD coordinate, whose curvature is about 1.6e3, and the Newton decrement
-# g' H^-1 g / 2 at the stop is about 3e-12, below the objective's rounding floor (a full Newton step
-# raises the objective by 2e-12), so the Newton polish takes no step. R's own nlminb optimum has
-# max |AD gradient| 6e-4. The test asserts the Newton decrement bound and a positive-definite
-# Hessian instead of the flag; the A-ALIAS and FOLDED-UNIQUE fits report converged = true.
+# Stationarity of the DEP fit (recorded, not hidden): from its default start Julia's LBFGS stops at
+# max |FD gradient| 4.0e-5, above its absolute default g_tol = 1e-5, so that fit reports
+# converged = false. The ForwardDiff gradient of the same likelihood (a dense AD-capable copy that
+# matches the sparse objective to 8e-12) agrees, 4.0e-5 on the log residual-SD coordinate, so the
+# flag is not finite-difference noise; the stop is at the objective's rounding floor (curvature
+# about 1.6e3 there, Newton decrement 2.6e-12, so no descent step is resolvable). The DEP twin is
+# therefore the default fit followed by one warm restart from its parameters shifted by -0.01
+# (Julia-only information, no change to the fitter): the restart reports converged = true at
+# max |FD gradient| 8.6e-7 (max |AD gradient| 8.9e-7) with an objective within 3e-12 of the
+# default stop. R's own nlminb optimum has max |AD gradient| 6.1e-4. The A-ALIAS and
+# FOLDED-UNIQUE fits report converged = true from their default starts.
 using Test
 using GLLVModels
 using LinearAlgebra
@@ -68,7 +72,9 @@ function _cpt_data(fx)
 end
 
 # The three Julia twins, one call each.
-_cpt_fit_dep(d) = fit_phylo_latent_gllvm(d.Y, d.sp; species_levels = d.tips, d = d.T, tree = d.newick)
+# DEP: default fit, then one warm restart from its parameters shifted by -0.01 (see the header).
+_cpt_fit_dep(d) = fit_phylo_latent_gllvm(d.Y, d.sp; species_levels = d.tips, d = d.T, tree = d.newick,
+    start = fit_phylo_latent_gllvm(d.Y, d.sp; species_levels = d.tips, d = d.T, tree = d.newick).parameters .- 0.01)
 _cpt_fit_alias(d) = fit_phylo_latent_gllvm(d.Y, d.sp; species_levels = d.tips, d = 1, A = d.A, tip_labels = d.tips)
 _cpt_fit_vcv(d) = fit_phylo_latent_gllvm(d.Y, d.sp; species_levels = d.tips, d = 1, vcv = d.A, tip_labels = d.tips)
 _cpt_fit_unique(d) = fit_phylo_latent_gllvm(d.Y, d.sp; species_levels = d.tips, d = 1, unique = true, tree = d.newick)
@@ -93,17 +99,6 @@ _cpt_cross(fit, blk) = _cpt_objective(fit)(_cpt_r_theta(blk)) - Float64(blk["obj
 _cpt_sigma_phy(fit) = fit.phylo_unique_variance === nothing ? fit.loading * fit.loading' :
     fit.loading * fit.loading' + Diagonal(fit.phylo_unique_variance)
 
-# Newton decrement g' H^-1 g / 2 of Julia's objective at the fit's parameters (FD gradient and
-# Hessian, the fitter's own stencils).
-function _cpt_newton_decrement(fit)
-    f = _cpt_objective(fit)
-    θ = fit.parameters
-    g = similar(θ)
-    GLLVModels._pmv_fd_gradient!(g, f, θ)
-    H = GLLVModels._fd_hessian(f, θ)
-    return dot(g, Symmetric(H) \ g) / 2
-end
-
 @testset "phylo_dep / phylo_latent(A =) / phylo_latent(unique = TRUE) fits: gllvmTMB P1 (9539352f6)" begin
     if !isfile(_CPT_TOML)
         @warn "cov-phylo P1 fixture absent; twin gate NOT RUN" _CPT_TOML
@@ -125,9 +120,8 @@ end
             r = fx["dep"]
             fit = _cpt_fit_dep(d)
             @test fit.rank == T && fit.mode === :barelowrank
-            @test fit.hessian_positive_definite
-            @test fit.gradient_norm <= 1e-4                  # measured 4.0e-5; see the header
-            @test _cpt_newton_decrement(fit) <= 1e-9          # measured 2.8e-12
+            @test fit.converged && fit.hessian_positive_definite   # after the warm restart; see the header
+            @test fit.gradient_norm <= 1e-5                         # measured 8.6e-7
             @test abs(fit.loglik - Float64(r["loglik"])) <= 1e-6
             @test abs(_cpt_cross(fit, r)) <= 1e-8
             @test maximum(abs.(fit.beta .- Float64.(r["beta"]))) <= 1e-4
