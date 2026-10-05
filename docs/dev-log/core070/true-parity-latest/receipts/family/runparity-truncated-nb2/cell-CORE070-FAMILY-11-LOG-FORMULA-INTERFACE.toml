@@ -1,14 +1,14 @@
 contract_sha256 = "bc282aed156488eee12c519fb0e8a68b53a508197a89a34d6620f07adaee0765"
 fixture = "test/parity/test_truncnb2_formula_parity.jl"
-status = "failed"
-run_id = "0e8c00f6358b21dd587fd469a57153d851f50e2ddba716853bdbe03880db6e96"
+status = "success"
+run_id = "d983c15faf35c7a183604e1d3780bf000d05000530558f728e890efbdd363bde"
 fixture_sha256 = "c3218c748779592726bb42921a2ccb2296cc17a744675ab3d2ea6eaab457910c"
 id = "CORE070-FAMILY-11-LOG-FORMULA-INTERFACE"
-execution_manifest_sha256 = "41ece253eaa56d8392b82175df1559ee2372caa26baafabfc515e2f684b84482"
+execution_manifest_sha256 = "2a7dc017c66103af92186756f78a342321e4f332d86d8f722463fca706ac03e9"
 execution_case_ids = ["CORE070-FAMILY-11-LOG-FORMULA-INTERFACE"]
 
 [assertions]
-passed = 21
+passed = 22
 broken = 0
-failed = 1
+failed = 0
 errored = 0

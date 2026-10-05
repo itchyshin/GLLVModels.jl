@@ -2,8 +2,8 @@ case_id = "NATIVE-09-BETABINOMIAL"
 
 [[values]]
 label = "logLik"
-julia = -1222.772713082217
+julia = -1222.772713082218
 test = "@test jl_logL ≈ r.logLik rtol = 1e-6"
 rtol = 1.0e-6
-r = -1222.772713088368
+r = -1222.7727130883695
 atol = 0.0

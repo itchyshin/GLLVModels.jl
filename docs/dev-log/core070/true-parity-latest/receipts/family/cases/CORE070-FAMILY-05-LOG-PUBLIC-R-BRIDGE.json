@@ -1,19 +1,338 @@
 {
   "schema": "core070-family-p1-case-receipt/v1",
   "case_id": "CORE070-FAMILY-05-LOG-PUBLIC-R-BRIDGE",
-  "verdict": "NOT_EXECUTED",
-  "evidence_kind": "not_executed",
-  "why_not_executed": "Public R bridge case: gllvmTMB(engine = 'julia') and gllvm_julia_fit() calling GLLVModels through JuliaCall. The P0 batch (tools/core070_bridge_models.R) replays bridge-fixtures.json and retained prior R fits kept only under .unlazy/, which are not on this host, and compares the bridge fit with a native GLLVModels fit (Julia against Julia) and with the retained P0 R logLik. Not run at P1 here.",
-  "read_from": {
-    "docs/dev-log/core070/family-reconciliation-2026-09-01.json": "4623b055d75e3eb9e74fdcf4f4105d6559a5664fdd9663b5953cb8e5856e7f10"
+  "verdict": "PASS",
+  "evidence_kind": "numeric_r_vs_julia",
+  "batch": "tools/core070_family_bridge_p1.R, GLLVM_PARITY_PIN=P1, run bridge-p1",
+  "measures": "nb2, p=5, n=80, K=2: the frozen public-bridge case re-run live at P1 through JuliaCall on the data the same-run native cell fits; toy fixture, likelihood-level agreement only",
+  "r_calls": [
+    "gllvm_julia_fit(Y, family = gllvmTMB::nbinom2(), num.lv = 2, ci_method = \"none\")",
+    "gllvmTMB(value ~ 0 + trait + latent(0 + trait | site, d = 2, unique = FALSE), data = reversed long, unit = \"site\", trait = \"trait\", family = gllvmTMB::nbinom2(), engine = \"julia\", ci_method = \"none\")"
+  ],
+  "data_sha256": "2bf2d819802a66e9836600caefec6e50802cac047db5d1a14611b4152ff1837c",
+  "gates": {
+    "native health (converged, |gradient| and FD stability <= 1e-4, objective reconstruction <= 1e-8)": true,
+    "same-run R fit healthy (convergence code 0) on the same data bytes": true,
+    "public route matrix: gllvmTMB_julia object, converged, shape and df match the native fit": true,
+    "public route formula: gllvmTMB_julia object, converged, shape and df match the native fit": true
   },
+  "same_run_r_fit": {
+    "file": "nb2-health.toml",
+    "sha256": "51b9d16de28a98fdb2940af4c9365304237cfabe7f3e3f24f4b013ed3c260eb3",
+    "r_loglik": -1159.1978313989,
+    "r_code": 0,
+    "r_converged": "absent",
+    "r_gradient_max": 0.000143337269434052,
+    "policy": "nb2_smoke_default_v1"
+  },
+  "julia_version": "1.10.12",
+  "gllvmtmb_version": "0.7.1",
+  "route_consistency": {
+    "note": "Julia vs Julia: each public route (computed by GLLVModels through JuliaCall) against a fresh native GLLVModels fit. Evidence that the public route reproduces the native fit; not R-vs-Julia evidence, so not in the comparison block. Counted in the case verdict (the frozen bridge acceptance rule), never in the evidence tier.",
+    "cases": [
+      {
+        "case_id": "CORE070-FAMILY-05-LOG-PUBLIC-R-BRIDGE",
+        "quantity": "logLik, public route matrix vs fresh native GLLVModels",
+        "max_abs_diff": 0.0,
+        "tolerance": 1e-08,
+        "tolerance_rule": "docs/dev-log/core070/public-bridge-required-cases.json acceptance rule, carried verbatim: public route against a fresh default native fit, absolute difference <= 1e-8 (logLik, intercepts, loading covariance), dispersion relative difference <= 1e-8 (tolerance = 1e-8 * min |native dispersion|)",
+        "n_values": 1,
+        "route_value": -1159.19783139746,
+        "native_value": -1159.19783139746,
+        "within_tolerance": true,
+        "diff_source": "recomputed from the saved values"
+      },
+      {
+        "case_id": "CORE070-FAMILY-05-LOG-PUBLIC-R-BRIDGE",
+        "quantity": "trait intercepts, public route matrix vs fresh native",
+        "max_abs_diff": 0.0,
+        "tolerance": 1e-08,
+        "tolerance_rule": "docs/dev-log/core070/public-bridge-required-cases.json acceptance rule, carried verbatim: public route against a fresh default native fit, absolute difference <= 1e-8 (logLik, intercepts, loading covariance), dispersion relative difference <= 1e-8 (tolerance = 1e-8 * min |native dispersion|)",
+        "n_values": 5,
+        "route_value": [
+          1.92077546324793,
+          2.01933734479432,
+          1.60140542500663,
+          1.75659877341841,
+          1.65732713179983
+        ],
+        "native_value": [
+          1.92077546324793,
+          2.01933734479432,
+          1.60140542500663,
+          1.75659877341841,
+          1.65732713179983
+        ],
+        "within_tolerance": true,
+        "diff_source": "recomputed from the saved values"
+      },
+      {
+        "case_id": "CORE070-FAMILY-05-LOG-PUBLIC-R-BRIDGE",
+        "quantity": "loading covariance LL', public route matrix vs fresh native",
+        "max_abs_diff": 0.0,
+        "tolerance": 1e-08,
+        "tolerance_rule": "docs/dev-log/core070/public-bridge-required-cases.json acceptance rule, carried verbatim: public route against a fresh default native fit, absolute difference <= 1e-8 (logLik, intercepts, loading covariance), dispersion relative difference <= 1e-8 (tolerance = 1e-8 * min |native dispersion|)",
+        "n_values": 25,
+        "route_value": [
+          0.0760006233227687,
+          0.059882111982385,
+          0.0956217610166077,
+          -0.0226415924459594,
+          -0.0901177691933877,
+          0.059882111982385,
+          0.0638955990301357,
+          0.034418188580477,
+          0.034167864237383,
+          -0.083167244373461,
+          0.0956217610166077,
+          0.034418188580477,
+          0.220511919547675,
+          -0.155829553232051,
+          -0.0836043759569386,
+          -0.0226415924459594,
+          0.034167864237383,
+          -0.155829553232051,
+          0.168577322166809,
+          -0.0109972927470714,
+          -0.0901177691933877,
+          -0.083167244373461,
+          -0.0836043759569386,
+          -0.0109972927470714,
+          0.115707164816079
+        ],
+        "native_value": [
+          0.0760006233227687,
+          0.059882111982385,
+          0.0956217610166077,
+          -0.0226415924459594,
+          -0.0901177691933877,
+          0.059882111982385,
+          0.0638955990301357,
+          0.034418188580477,
+          0.034167864237383,
+          -0.083167244373461,
+          0.0956217610166077,
+          0.034418188580477,
+          0.220511919547675,
+          -0.155829553232051,
+          -0.0836043759569386,
+          -0.0226415924459594,
+          0.034167864237383,
+          -0.155829553232051,
+          0.168577322166809,
+          -0.0109972927470714,
+          -0.0901177691933877,
+          -0.083167244373461,
+          -0.0836043759569386,
+          -0.0109972927470714,
+          0.115707164816079
+        ],
+        "within_tolerance": true,
+        "diff_source": "recomputed from the saved values"
+      },
+      {
+        "case_id": "CORE070-FAMILY-05-LOG-PUBLIC-R-BRIDGE",
+        "quantity": "per-trait dispersion, public route matrix vs fresh native",
+        "max_abs_diff": 0.0,
+        "tolerance": 7.864685404556741e-09,
+        "tolerance_rule": "docs/dev-log/core070/public-bridge-required-cases.json acceptance rule, carried verbatim: public route against a fresh default native fit, absolute difference <= 1e-8 (logLik, intercepts, loading covariance), dispersion relative difference <= 1e-8 (tolerance = 1e-8 * min |native dispersion|)",
+        "n_values": 5,
+        "route_value": [
+          0.786468540455674,
+          1.4367977782004,
+          1.51439861506162,
+          2.1866327027114,
+          2.46266693309699
+        ],
+        "native_value": [
+          0.786468540455674,
+          1.4367977782004,
+          1.51439861506162,
+          2.1866327027114,
+          2.46266693309699
+        ],
+        "within_tolerance": true,
+        "diff_source": "recomputed from the saved values"
+      },
+      {
+        "case_id": "CORE070-FAMILY-05-LOG-PUBLIC-R-BRIDGE",
+        "quantity": "logLik, public route formula vs fresh native GLLVModels",
+        "max_abs_diff": 0.0,
+        "tolerance": 1e-08,
+        "tolerance_rule": "docs/dev-log/core070/public-bridge-required-cases.json acceptance rule, carried verbatim: public route against a fresh default native fit, absolute difference <= 1e-8 (logLik, intercepts, loading covariance), dispersion relative difference <= 1e-8 (tolerance = 1e-8 * min |native dispersion|)",
+        "n_values": 1,
+        "route_value": -1159.19783139746,
+        "native_value": -1159.19783139746,
+        "within_tolerance": true,
+        "diff_source": "recomputed from the saved values"
+      },
+      {
+        "case_id": "CORE070-FAMILY-05-LOG-PUBLIC-R-BRIDGE",
+        "quantity": "trait intercepts, public route formula vs fresh native",
+        "max_abs_diff": 0.0,
+        "tolerance": 1e-08,
+        "tolerance_rule": "docs/dev-log/core070/public-bridge-required-cases.json acceptance rule, carried verbatim: public route against a fresh default native fit, absolute difference <= 1e-8 (logLik, intercepts, loading covariance), dispersion relative difference <= 1e-8 (tolerance = 1e-8 * min |native dispersion|)",
+        "n_values": 5,
+        "route_value": [
+          1.92077546324793,
+          2.01933734479432,
+          1.60140542500663,
+          1.75659877341841,
+          1.65732713179983
+        ],
+        "native_value": [
+          1.92077546324793,
+          2.01933734479432,
+          1.60140542500663,
+          1.75659877341841,
+          1.65732713179983
+        ],
+        "within_tolerance": true,
+        "diff_source": "recomputed from the saved values"
+      },
+      {
+        "case_id": "CORE070-FAMILY-05-LOG-PUBLIC-R-BRIDGE",
+        "quantity": "loading covariance LL', public route formula vs fresh native",
+        "max_abs_diff": 0.0,
+        "tolerance": 1e-08,
+        "tolerance_rule": "docs/dev-log/core070/public-bridge-required-cases.json acceptance rule, carried verbatim: public route against a fresh default native fit, absolute difference <= 1e-8 (logLik, intercepts, loading covariance), dispersion relative difference <= 1e-8 (tolerance = 1e-8 * min |native dispersion|)",
+        "n_values": 25,
+        "route_value": [
+          0.0760006233227687,
+          0.059882111982385,
+          0.0956217610166077,
+          -0.0226415924459594,
+          -0.0901177691933877,
+          0.059882111982385,
+          0.0638955990301357,
+          0.034418188580477,
+          0.034167864237383,
+          -0.083167244373461,
+          0.0956217610166077,
+          0.034418188580477,
+          0.220511919547675,
+          -0.155829553232051,
+          -0.0836043759569386,
+          -0.0226415924459594,
+          0.034167864237383,
+          -0.155829553232051,
+          0.168577322166809,
+          -0.0109972927470714,
+          -0.0901177691933877,
+          -0.083167244373461,
+          -0.0836043759569386,
+          -0.0109972927470714,
+          0.115707164816079
+        ],
+        "native_value": [
+          0.0760006233227687,
+          0.059882111982385,
+          0.0956217610166077,
+          -0.0226415924459594,
+          -0.0901177691933877,
+          0.059882111982385,
+          0.0638955990301357,
+          0.034418188580477,
+          0.034167864237383,
+          -0.083167244373461,
+          0.0956217610166077,
+          0.034418188580477,
+          0.220511919547675,
+          -0.155829553232051,
+          -0.0836043759569386,
+          -0.0226415924459594,
+          0.034167864237383,
+          -0.155829553232051,
+          0.168577322166809,
+          -0.0109972927470714,
+          -0.0901177691933877,
+          -0.083167244373461,
+          -0.0836043759569386,
+          -0.0109972927470714,
+          0.115707164816079
+        ],
+        "within_tolerance": true,
+        "diff_source": "recomputed from the saved values"
+      },
+      {
+        "case_id": "CORE070-FAMILY-05-LOG-PUBLIC-R-BRIDGE",
+        "quantity": "per-trait dispersion, public route formula vs fresh native",
+        "max_abs_diff": 0.0,
+        "tolerance": 7.864685404556741e-09,
+        "tolerance_rule": "docs/dev-log/core070/public-bridge-required-cases.json acceptance rule, carried verbatim: public route against a fresh default native fit, absolute difference <= 1e-8 (logLik, intercepts, loading covariance), dispersion relative difference <= 1e-8 (tolerance = 1e-8 * min |native dispersion|)",
+        "n_values": 5,
+        "route_value": [
+          0.786468540455674,
+          1.4367977782004,
+          1.51439861506162,
+          2.1866327027114,
+          2.46266693309699
+        ],
+        "native_value": [
+          0.786468540455674,
+          1.4367977782004,
+          1.51439861506162,
+          2.1866327027114,
+          2.46266693309699
+        ],
+        "within_tolerance": true,
+        "diff_source": "recomputed from the saved values"
+      }
+    ]
+  },
+  "batch_verifier": {
+    "tool": "tools/core070_family_p1_receipts.py (tools/core070_family_bridge_p1.R results)",
+    "status": "PASS",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/family/bridge-p1/verify.txt"
+  },
+  "read_from": {
+    "docs/dev-log/core070/true-parity-latest/receipts/family/bridge-p1/results.json": "7158d282b20d2743e1596dea634964dd4d3437eccd7784461007ad871779eec5",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/bridge-p1/run-commit.json": "08ed3d72513dc9465ad0518c303887d24f27d370873c8661d089703746d3f805",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/bridge-p1/verify.txt": "9b0fd01a18849b610fc866dc91ab159840af37f6d67fb929f7a238c94da709cc",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/nb2-health.toml": "51b9d16de28a98fdb2940af4c9365304237cfabe7f3e3f24f4b013ed3c260eb3",
+    "docs/dev-log/core070/public-bridge-required-cases.json": "72597c8905af7f680984089f89fbb89a6972be02c8bef207986a035f27377e4b",
+    "tools/core070_family_bridge_p1.R": "4413eef2e719a5eafb37de836b06c069c3a431728d1c8728a14b642cf528e82c"
+  },
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/family/bridge-p1/results.json"
+  ],
+  "deviation": "data: the stored NB2 smoke draw (test/parity/fixtures/nb2_smoke_data.toml, sha256 2bf2d819...), the data the NATIVE-06-NB2 cell fits since decision 2026-09-28; the frozen bridge contract names the original draw (7abde2731134afe61afee5a7f0c29b58892ad72e550fa41cf8230e9c701a2bf9)",
   "pin": "P1",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
-  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit": "7506185ccbb6ebbd484219a860b35d989301a8cf",
+  "glvmodels_commit": "4b78fa01245381f6c0ab8a8b9ea0bc581ade825a",
   "glvmodels_worktree_dirty": [],
-  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
-  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+  "glvmodels_src_tree": "ee4140b88eb634453f24bcd70bdfe9a6914281d6",
+  "host": "Totoro (Linux x86_64, R 4.6.1, TMB 1.9.21, Matrix 1.7.5, Julia 1.10.12), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-FAMILY-05-LOG-PUBLIC-R-BRIDGE",
+        "quantity": "logLik, public route matrix vs same-run P1 R fit (R vs Julia)",
+        "max_abs_diff": 1.4399574865819886e-09,
+        "tolerance": 0.0011591978313988999,
+        "tolerance_rule": "the frozen rule's R leg (R logLik rtol <= 1e-6), at P1 against the same-run P1 R fit of the native cell (the P0 batch's retained P0 R logLik is not on any host); tolerance = 1e-6 * |R logLik|",
+        "n_values": 1,
+        "r_value": -1159.1978313989,
+        "julia_value": -1159.19783139746,
+        "diff_source": "recomputed from the saved R and Julia values",
+        "discriminating": true
+      },
+      {
+        "case_id": "CORE070-FAMILY-05-LOG-PUBLIC-R-BRIDGE",
+        "quantity": "logLik, public route formula vs same-run P1 R fit (R vs Julia)",
+        "max_abs_diff": 1.4399574865819886e-09,
+        "tolerance": 0.0011591978313988999,
+        "tolerance_rule": "the frozen rule's R leg (R logLik rtol <= 1e-6), at P1 against the same-run P1 R fit of the native cell (the P0 batch's retained P0 R logLik is not on any host); tolerance = 1e-6 * |R logLik|",
+        "n_values": 1,
+        "r_value": -1159.1978313989,
+        "julia_value": -1159.19783139746,
+        "diff_source": "recomputed from the saved R and Julia values",
+        "discriminating": true
+      }
+    ]
+  }
 }

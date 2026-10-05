@@ -21,7 +21,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-family.json",
-   "sha256": "537991192134fd7aef08d7e065c61d5b3063efde3d63513b88493dd6a82db6fc",
+   "sha256": "8eb485c51218daeba486c85676d57cc7fdc7c2a5625bb748fd1463df25ebb845",
    "rows": 26
   },
   {
@@ -3307,33 +3307,33 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
    },
-   "evidence_tier": "partial_case_not_executed",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/family/cases/NATIVE-03-POISSON.json",
      "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-02-LOG-FORMULA-INTERFACE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-02-LOG-PUBLIC-R-BRIDGE.json"
     ],
-    "tier": "some case ids were measured at P1 and at least one was not executed, so the row does not bind"
+    "tier": "numeric: every executable case receipt carries R-vs-Julia comparison blocks pinned to P1, within the harness tolerance, from a batch whose verifier passed"
    },
    "measured_result": {
     "case_verdicts": {
      "NATIVE-03-POISSON": "PASS",
      "CORE070-FAMILY-02-LOG-FORMULA-INTERFACE": "PASS",
-     "CORE070-FAMILY-02-LOG-PUBLIC-R-BRIDGE": "NOT_EXECUTED"
+     "CORE070-FAMILY-02-LOG-PUBLIC-R-BRIDGE": "PASS"
     },
     "batch_verifier": {
      "NATIVE-03-POISSON": "PASS",
      "CORE070-FAMILY-02-LOG-FORMULA-INTERFACE": "PASS",
-     "CORE070-FAMILY-02-LOG-PUBLIC-R-BRIDGE": "n/a"
+     "CORE070-FAMILY-02-LOG-PUBLIC-R-BRIDGE": "PASS"
     },
     "discriminating": {
      "NATIVE-03-POISSON": true,
      "CORE070-FAMILY-02-LOG-FORMULA-INTERFACE": true,
      "CORE070-FAMILY-02-LOG-PUBLIC-R-BRIDGE": true
     },
-    "executed_cases_verdict": "PASS"
+    "row_verdict": "PASS"
    }
   },
   {
@@ -3434,33 +3434,33 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
    },
-   "evidence_tier": "partial_case_not_executed",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/family/cases/NATIVE-06-NB2.json",
      "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-05-LOG-FORMULA-INTERFACE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-05-LOG-PUBLIC-R-BRIDGE.json"
     ],
-    "tier": "some case ids were measured at P1 and at least one was not executed, so the row does not bind"
+    "tier": "numeric: every executable case receipt carries R-vs-Julia comparison blocks pinned to P1, within the harness tolerance, from a batch whose verifier passed"
    },
    "measured_result": {
     "case_verdicts": {
-     "NATIVE-06-NB2": "FAIL",
-     "CORE070-FAMILY-05-LOG-FORMULA-INTERFACE": "FAIL",
-     "CORE070-FAMILY-05-LOG-PUBLIC-R-BRIDGE": "NOT_EXECUTED"
+     "NATIVE-06-NB2": "PASS",
+     "CORE070-FAMILY-05-LOG-FORMULA-INTERFACE": "PASS",
+     "CORE070-FAMILY-05-LOG-PUBLIC-R-BRIDGE": "PASS"
     },
     "batch_verifier": {
-     "NATIVE-06-NB2": "FAIL",
-     "CORE070-FAMILY-05-LOG-FORMULA-INTERFACE": "FAIL",
-     "CORE070-FAMILY-05-LOG-PUBLIC-R-BRIDGE": "n/a"
+     "NATIVE-06-NB2": "PASS",
+     "CORE070-FAMILY-05-LOG-FORMULA-INTERFACE": "PASS",
+     "CORE070-FAMILY-05-LOG-PUBLIC-R-BRIDGE": "PASS"
     },
     "discriminating": {
      "NATIVE-06-NB2": true,
      "CORE070-FAMILY-05-LOG-FORMULA-INTERFACE": true,
      "CORE070-FAMILY-05-LOG-PUBLIC-R-BRIDGE": true
     },
-    "executed_cases_verdict": "FAIL"
+    "row_verdict": "PASS"
    }
   },
   {
@@ -3563,33 +3563,33 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
    },
-   "evidence_tier": "partial_case_not_executed",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/family/cases/NATIVE-08-BETA.json",
      "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-07-LOGIT-FORMULA-INTERFACE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-07-LOGIT-PUBLIC-R-BRIDGE.json"
     ],
-    "tier": "some case ids were measured at P1 and at least one was not executed, so the row does not bind"
+    "tier": "numeric: every executable case receipt carries R-vs-Julia comparison blocks pinned to P1, within the harness tolerance, from a batch whose verifier passed"
    },
    "measured_result": {
     "case_verdicts": {
      "NATIVE-08-BETA": "PASS",
      "CORE070-FAMILY-07-LOGIT-FORMULA-INTERFACE": "PASS",
-     "CORE070-FAMILY-07-LOGIT-PUBLIC-R-BRIDGE": "NOT_EXECUTED"
+     "CORE070-FAMILY-07-LOGIT-PUBLIC-R-BRIDGE": "PASS"
     },
     "batch_verifier": {
      "NATIVE-08-BETA": "PASS",
      "CORE070-FAMILY-07-LOGIT-FORMULA-INTERFACE": "PASS",
-     "CORE070-FAMILY-07-LOGIT-PUBLIC-R-BRIDGE": "n/a"
+     "CORE070-FAMILY-07-LOGIT-PUBLIC-R-BRIDGE": "PASS"
     },
     "discriminating": {
      "NATIVE-08-BETA": true,
      "CORE070-FAMILY-07-LOGIT-FORMULA-INTERFACE": true,
      "CORE070-FAMILY-07-LOGIT-PUBLIC-R-BRIDGE": true
     },
-    "executed_cases_verdict": "PASS"
+    "row_verdict": "PASS"
    }
   },
   {
@@ -3782,13 +3782,13 @@
    },
    "measured_result": {
     "case_verdicts": {
-     "NATIVE-12-TRUNCATED-NB2": "FAIL",
-     "CORE070-FAMILY-11-LOG-FORMULA-INTERFACE": "FAIL",
+     "NATIVE-12-TRUNCATED-NB2": "PASS",
+     "CORE070-FAMILY-11-LOG-FORMULA-INTERFACE": "PASS",
      "CORE070-FAMILY-11-LOG-PUBLIC-R-BRIDGE": "NOT_EXECUTED"
     },
     "batch_verifier": {
-     "NATIVE-12-TRUNCATED-NB2": "FAIL",
-     "CORE070-FAMILY-11-LOG-FORMULA-INTERFACE": "FAIL",
+     "NATIVE-12-TRUNCATED-NB2": "PASS",
+     "CORE070-FAMILY-11-LOG-FORMULA-INTERFACE": "PASS",
      "CORE070-FAMILY-11-LOG-PUBLIC-R-BRIDGE": "n/a"
     },
     "discriminating": {
@@ -3796,7 +3796,7 @@
      "CORE070-FAMILY-11-LOG-FORMULA-INTERFACE": true,
      "CORE070-FAMILY-11-LOG-PUBLIC-R-BRIDGE": true
     },
-    "executed_cases_verdict": "FAIL"
+    "executed_cases_verdict": "PASS"
    }
   },
   {
@@ -3973,13 +3973,25 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
    },
-   "evidence_tier": "not_measured",
-   "measured_against": null,
+   "evidence_tier": "numeric",
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-BETA-ALIAS-COMPATIBILITY-ADAPTER.json"
     ],
-    "tier": "no case of this row was executed at P1 (see each receipt's why_not_executed)"
+    "tier": "numeric: every executable case receipt carries R-vs-Julia comparison blocks pinned to P1, within the harness tolerance, from a batch whose verifier passed"
+   },
+   "measured_result": {
+    "case_verdicts": {
+     "CORE070-FAMILY-BETA-ALIAS-COMPATIBILITY-ADAPTER": "PASS"
+    },
+    "batch_verifier": {
+     "CORE070-FAMILY-BETA-ALIAS-COMPATIBILITY-ADAPTER": "PASS"
+    },
+    "discriminating": {
+     "CORE070-FAMILY-BETA-ALIAS-COMPATIBILITY-ADAPTER": true
+    },
+    "row_verdict": "PASS"
    }
   },
   {

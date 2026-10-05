@@ -17,10 +17,13 @@ const CONTRACT_FILE = joinpath(ROOT, "docs/dev-log/core070/frozen-r070-contract.
 const P0_COMMIT = "b4d5fee64def88bc768dda1f1f77c29b295edd86"
 const P1_COMMIT = "9539352f66f2db2cc26b1c393e67212a359b60c9"
 
-function run_pin_script(script::AbstractString; pin::Union{Nothing,AbstractString} = nothing)
+function run_pin_script(script::AbstractString; pin::Union{Nothing,AbstractString} = nothing,
+                        oracle_build::Union{Nothing,AbstractString} = nothing)
     env = copy(ENV)
     delete!(env, "GLLVM_PARITY_PIN")
+    delete!(env, "GLLVM_PARITY_ORACLE_BUILD")
     pin === nothing || (env["GLLVM_PARITY_PIN"] = pin)
+    oracle_build === nothing || (env["GLLVM_PARITY_ORACLE_BUILD"] = oracle_build)
     out = IOBuffer()
     err = IOBuffer()
     cmd = setenv(`$(Base.julia_cmd()) --startup-file=no -e $script`, env)
@@ -110,6 +113,28 @@ end
         r0 = run_pin_script("""include(raw"$PIN_FILE"); println(_core070_oracle_receipts_rel().build)"""; pin = "P0")
         @test r0.success
         @test strip(r0.stdout) == ".unlazy/core070-aghq/oracle-receipts/build.json"
+    end
+
+    @testset "a registered host build swaps only the build receipt; an unknown host fails loud" begin
+        script = """
+            include(raw"$PIN_FILE")
+            rel = _core070_oracle_receipts_rel()
+            for kind in (:build, :source)
+                path = joinpath(raw"$ROOT", getfield(rel, kind))
+                _core070_check_oracle_receipt(read(path, String), getfield(rel, kind), kind)
+            end
+            println(rel.build); println(rel.source)
+            """
+        t = run_pin_script(script; pin = "P1", oracle_build = "totoro")
+        @test t.success
+        @test split(strip(t.stdout), "\n") ==
+              ["docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro.json",
+               "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json"]
+        bad = run_pin_script(script; pin = "P1", oracle_build = "elsewhere")
+        @test !bad.success
+        @test occursin("GLLVM_PARITY_ORACLE_BUILD", bad.stderr)
+        p0 = run_pin_script(script; pin = "P0", oracle_build = "totoro")
+        @test !p0.success
     end
 
     @testset "a P1 oracle receipt used under P0 fails loud" begin

@@ -8,6 +8,10 @@ source=read("test/parity/test_negbin_parity.jl",String)
 helpers=source[findfirst("function _rand_poisson",source).start:findfirst("@testset \"NB2 GLLVModels",source).start-1]
 dgp=source[findfirst("    Random.seed!(45)",source).start:findfirst("    jl_fit =",source).start-1]
 include_string(@__MODULE__,helpers*dgp,"original_nb2_fixture")
+# The seeded draw above records how the original data were made (Julia 1.12+); Julia 1.10
+# draws other numbers from that seed, so fit the stored draw (decision 2026-09-24, item 2):
+# the same bytes as the frozen data, hash-checked by parity_nb2_original_Y.
+Y=parity_nb2_original_Y()
 native=fit_gllvm(Y;family=GLLVModels.NegativeBinomial(),K=K,disp_group=:species,g_tol=1e-7,iterations=800)
 r=parity_nb2_health(Y,K,native; artifact_prefix="formula-nb2", receipt_tag="FORMULA",
     case_id="CORE070-FAMILY-05-LOG-FORMULA-INTERFACE")

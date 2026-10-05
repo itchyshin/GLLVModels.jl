@@ -1,10 +1,10 @@
 contract_sha256 = "bc282aed156488eee12c519fb0e8a68b53a508197a89a34d6620f07adaee0765"
 fixture = "test/parity/test_beta_required.jl"
 status = "success"
-run_id = "2fb6c263c8f333b34beef5cc56a5410b2f3f6b87ba9f4837cabf340f4b978375"
+run_id = "bcbec4e538709df9b9fba5b728e1cc98dcfd4b73ff3b6860f6659725441de800"
 fixture_sha256 = "011849881ebf54b3d5be584135a92d2b259ce8910bc2c403865e2975fd86b1f4"
 id = "NATIVE-08-BETA"
-execution_manifest_sha256 = "dd5e0c68e7c40fc25112d6d55f6b42c78691addbd2adff5f5852a82896cd384c"
+execution_manifest_sha256 = "2ce8b819fb149da384aecac71b85d14fc58aaac186b58ed1b285cbc6d334982f"
 execution_case_ids = ["NATIVE-08-BETA"]
 
 [assertions]
