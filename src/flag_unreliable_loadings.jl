@@ -27,7 +27,7 @@ of an unpinned `Λ` is identified only up to rotation. The intervals are symmetr
 Wald intervals on the raw loading scale (R's default `method = "wald"`,
 `loading_scale = "raw"`) at `conf_level`, from the observed information of the free
 parameters: pinned loadings are not parameters, so their rows and columns are
-removed before the information is inverted, as in R's `sd_report$cov.fixed`. A
+removed before the information is inverted, as in R's `sd_report\$cov.fixed`. A
 pinned entry has `se = 0` and `lower = upper = estimate`. If the reduced
 information is not positive definite, `se`, `lower` and `upper` are `NaN`,
 `pd_hessian = false`, and every `unreliable` is `missing` (R returns `NA`). Only
