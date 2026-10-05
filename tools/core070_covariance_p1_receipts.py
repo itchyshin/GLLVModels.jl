@@ -45,6 +45,10 @@ Usage (inputs are the raw run directories, e.g. under local-scratch):
       --runparity DIR --default-modes DIR --wave6 DIR --cov-batch DIR \
       --bridge-tsv FILE --oracle-dir DIR --runtimes JSON \
       [--numeric-exceptions JSON] [--allow-dirty]
+
+Julia fit-level twins (no run directory needed; see the overlay block above main()):
+  python3 tools/core070_covariance_p1_receipts.py --apply-twins   # re-derive twin rows and counts
+  python3 tools/core070_covariance_p1_receipts.py --check         # tracked case map == derivation
 """
 import argparse
 import hashlib
@@ -267,6 +271,134 @@ def load_exceptions(path):
         if not str(exc.get("reason", "")).strip():
             raise SystemExit(f"numeric exception for {sid} has no reason")
     return table
+
+
+# ---- Julia fit-level twins (overlay) -----------------------------------------------------------
+# A row whose batch case is an R-only formula-grammar check is bound instead by a fit-level twin
+# when one exists: R-at-P1 fits recorded in a tracked fixture against Julia fits of the same data,
+# receipts written by tools/true_parity_julia_receipts.jl under receipts/julia-twins/<dir>/. The
+# overlay (the pattern of tools/core070_data_p1_receipts.py) sets executable_case_ids to the twin's
+# case ids, cites the twin receipt under evidence.receipt, and keeps the formula-grammar receipt
+# under evidence.non_binding_receipts with its ids under evidence.batch_case_ids. Classification
+# and disposition are never touched. `--apply-twins` re-derives the twin rows and the counts of
+# the tracked case-map-covariance.json from the tracked receipts (no run directory needed);
+# `--check` verifies that the tracked file equals that derivation. Each block below is one twin
+# family; add a new family as its own block.
+TWIN_ROOT_REL = "docs/dev-log/core070/true-parity-latest/receipts/julia-twins"
+COV_TWINS = {}      # source_id -> (receipt path under TWIN_ROOT_REL, twin test, fixture)
+COV_SCOPE_NOTES = {}  # source_id -> what the twin covers and does not
+
+# COV-PHYLO twins (wave-plan W3-4(e)): test/test_cov_phylo_twins_p1.jl,
+# fixture test/fixtures/cov_phylo_twins_p1.toml (gen_cov_phylo_twins_p1.R).
+_PHYLO_TWIN = ("test/test_cov_phylo_twins_p1.jl", "test/fixtures/cov_phylo_twins_p1.toml")
+COV_TWINS.update({
+    "covariance/COV-PHYLO-DEP": ("covariance-twins/PHYLO-DEP.json", *_PHYLO_TWIN),
+    "covariance/COV-PHYLO-A-ALIAS": ("covariance-twins/PHYLO-A-ALIAS.json", *_PHYLO_TWIN),
+    "covariance/COV-PHYLO-FOLDED-UNIQUE": ("covariance-twins/PHYLO-FOLDED-UNIQUE.json", *_PHYLO_TWIN),
+})
+COV_SCOPE_NOTES.update({
+    "covariance/COV-PHYLO-DEP": (
+        "The batch case checks that phylo_dep(0 + trait | species) parses to phylo_rr(d = n_traits, .dep = TRUE); "
+        "the twin is one Gaussian fit of that term (tree route, 120 tips, 4 traits) against "
+        "fit_phylo_latent_gllvm(d = 4), the engine path gllvmTMB documents phylo_dep as. Julia has no phylo_dep "
+        "keyword of its own on this route (fit_phylo_dep_gllvm in src/phylo_dep.jl is a different, row-phylogeny "
+        "Gaussian model and is not the twin). Julia's stop reports converged = false (max |FD gradient| 4.0e-5 "
+        "against g_tol 1e-5) at a Newton decrement of 2.8e-12; the twin test asserts that bound and a "
+        "positive-definite Hessian instead of the flag. Gaussian only; the .dep guards (phylo_dep with "
+        "phylo_latent or phylo_indep refused) are not twinned."),
+    "covariance/COV-PHYLO-A-ALIAS": (
+        "The batch case checks that phylo_latent(species, A = A) parses to phylo_rr(vcv = A); the twin is one "
+        "Gaussian rank-1 fit with A = A (dense route) in R and Julia, and both engines give the identical result "
+        "for the vcv = A spelling. Gaussian, d = 1, rho = 1 only."),
+    "covariance/COV-PHYLO-FOLDED-UNIQUE": (
+        "The batch case checks that phylo_latent(species, unique = TRUE) parses to phylo_rr(d = 1) plus the folded "
+        ".phylo_unique/.auto_unique companion; the twin is one Gaussian fit of that term (tree route) against "
+        "fit_phylo_latent_gllvm(d = 1, unique = true). R's companion is the phylo_diag block (per-trait field on "
+        "the same A, sd exp(log_sd_phy_diag)) and Julia's :explicitunique has the same covariance; Julia's "
+        "objective at R's optimum equals R's objective within 1.3e-11, which is the evidence that the two "
+        "likelihoods are the same model. Gaussian, d = 1, rho = 1 only; the duplicate-companion and "
+        "off-family guards are not twinned."),
+})
+
+
+def twin_tier(sid):
+    _, test, fixture = COV_TWINS[sid]
+    return ("numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings "
+            f"as {test}, against R-at-P1 values copied from {fixture} (R fits that converged with a positive-definite "
+            "Hessian), each case within the tolerance asserted in that test. The formula-grammar batch case this row "
+            "carried has no fit number; its receipt is kept under non_binding_receipts and its id under batch_case_ids")
+
+
+def twin_overlay(row):
+    """Bind `row` to its Julia twin receipt (idempotent: an already overlaid row is re-derived)."""
+    sid = row["source_id"]
+    rel = f"{TWIN_ROOT_REL}/{COV_TWINS[sid][0]}"
+    path = ROOT / rel
+    if not path.is_file():
+        return
+    rec = json.loads(path.read_text())
+    ok = (rec.get("schema") == "true-parity-julia-twin-receipt/v1" and rec.get("source_ids") == [sid]
+          and rec.get("verdict") == "PASS" and rec.get("pin") == "P1" and rec.get("reference_commit") == P1_SHA
+          and rec.get("evidence_kind") == "julia_recomputed_vs_recorded_r"
+          and all(c["abs_diff"] <= c["tolerance"] for c in rec["comparison"]["cases"]))
+    if not ok:
+        raise SystemExit(f"{rel}: not a passing P1 Julia twin receipt for {sid}")
+    ev = row.get("evidence") or {}
+    mr = row.get("measured_result") or {}
+    prior_ids = ev.get("batch_case_ids", row["executable_case_ids"])
+    if row["evidence_tier"] not in ("r_only", "numeric") or (row["evidence_tier"] == "numeric" and "batch_case_ids" not in ev):
+        raise SystemExit(f"{sid}: twin overlay expects an r_only row (or one it already overlaid); got {row['evidence_tier']}")
+    case_ids = [c["case_id"] for c in rec["comparison"]["cases"]]
+    row["executable_case_ids"] = case_ids
+    row["evidence_tier"] = "numeric"
+    row["measured_against"] = P1_SHA
+    row["evidence"] = {"receipt": [rel], "non_binding_receipts": ev.get("non_binding_receipts", []),
+                       "batch_case_ids": prior_ids, "tier": twin_tier(sid)}
+    row["measured_result"] = {"case_verdicts": mr.get("case_verdicts", {}), "twin_case_ids": case_ids,
+                              "twin_verdict": rec["verdict"]}
+    if sid in COV_SCOPE_NOTES:
+        row["scope_note"] = COV_SCOPE_NOTES[sid]
+
+
+def recount(rows):
+    """counts over this tool's own rows (PARTIAL_STALE + DANGLING), from their tiers."""
+    own = {f"covariance/{s}" for s in PARTIAL_STALE + DANGLING}
+    counts = {"numeric_pass": 0, "numeric_fail": 0, "numeric_held_batch_verifier_failed": 0,
+              "partial_numeric_bridge_boundary": 0, "r_only_needs_julia_surface": 0, "not_measured": 0}
+    key = {"numeric_held_batch_verifier_failed": "numeric_held_batch_verifier_failed",
+           "partial_numeric_bridge_boundary": "partial_numeric_bridge_boundary",
+           "r_only": "r_only_needs_julia_surface", "not_measured": "not_measured"}
+    for r in rows:
+        if r["source_id"] not in own:
+            continue
+        if r["evidence_tier"] == "numeric":
+            verdict = r["measured_result"].get("row_verdict", r["measured_result"].get("twin_verdict"))
+            counts["numeric_pass" if verdict == "PASS" else "numeric_fail"] += 1
+        else:
+            counts[key[r["evidence_tier"]]] += 1
+    return counts
+
+
+def derive_twins(casemap):
+    out = json.loads(json.dumps(casemap))
+    for row in out["rows"]:
+        if row["source_id"] in COV_TWINS:
+            twin_overlay(row)
+    out["counts"] = recount(out["rows"])
+    return out
+
+
+def apply_twins(check_only):
+    path = OUT / "case-map-covariance.json"
+    tracked = json.loads(path.read_text())
+    derived = derive_twins(tracked)
+    if check_only:
+        if derived != tracked:
+            raise SystemExit("case-map-covariance.json differs from the twin derivation; run --apply-twins")
+        print("CORE070_COVARIANCE_TWINS_OK", json.dumps(derived["counts"]))
+        return
+    write_json(path, derived)
+    print(json.dumps(derived["counts"]))
 
 
 def main():
@@ -499,6 +631,11 @@ def main():
                 counts["partial_numeric_bridge_boundary" if tier != "r_only" else "r_only_needs_julia_surface"] += 1
         out_rows.append(row)
 
+    for row in out_rows:  # Julia fit-level twins (see the overlay block above)
+        if row["source_id"] in COV_TWINS:
+            twin_overlay(row)
+    counts = recount(out_rows)
+
     # Rows this tool does not generate (e.g. the C3 campaign rows added under #684 item 4) are
     # carried over unchanged, so regenerating the 17 rows never drops another writer's rows.
     generated = {r["source_id"] for r in out_rows}
@@ -530,4 +667,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    if "--apply-twins" in sys.argv[1:] or "--check" in sys.argv[1:]:
+        apply_twins(check_only="--check" in sys.argv[1:])
+    else:
+        main()
