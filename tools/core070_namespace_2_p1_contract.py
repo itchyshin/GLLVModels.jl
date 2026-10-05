@@ -4,12 +4,13 @@ Reads the frozen P0 contract (docs/dev-log/core070/namespace-2-batch-contract.js
 left untouched as history) and writes the P1 contract
 (docs/dev-log/core070/true-parity-latest/namespace-2-batch-contract-p1.json).
 
-Only three things change, all recorded in the output's `regeneration_log`:
+Exactly four top-level fields differ from the P0 contract:
   * reference_commit becomes the P1 commit from tools/core070_oracle_pins.toml;
   * source_pins are re-hashed at P1, reading every byte with
     `git -C $GLLVMTMB_DIR show <P1>:<path>` (the clone is never checked out or edited);
-  * source_access = "git-show", so tools/core070_namespace_2_batch.R reads the R
-    sources the same way instead of from the P0 readback tree under .unlazy/.
+  * source_access = "git-show" (new field), so tools/core070_namespace_2_batch.R reads
+    the R sources the same way instead of from the P0 readback tree under .unlazy/;
+  * regeneration_log (new field) records the three changes above.
 
 Cases, tolerances, buckets and negative controls are carried verbatim; no case is
 reclassified and no admission set changes.

@@ -33,8 +33,9 @@
 #   GLLVM_PARITY_PIN=P1 GLLVMTMB_DIR=<clone> Rscript --vanilla tools/core070_namespace_2_batch.R <lib> <dest>
 #
 # <frozen-library> is an R library directory containing an installed
-# gllvmTMB built from the pinned reference commit (b4d5fee...) -- the FROZEN,
-# INSTALLED library, matching masks_known.R's arg 1, not a source tree.
+# gllvmTMB built from the contract's pinned reference_commit (P0 b4d5fee... or
+# P1 9539352f..., per GLLVM_PARITY_PIN) -- the FROZEN, INSTALLED library,
+# matching masks_known.R's arg 1, not a source tree.
 # <destination> must not already exist; it is created and holds
 # r-oracle.json, julia-results.json, julia-stdout.log, julia-stderr.log,
 # results.tsv, diagnostics.log, and receipt.json.
