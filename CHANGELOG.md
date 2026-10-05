@@ -2,6 +2,27 @@
 
 ## Development
 
+- **Wald intervals on a `lambda_constraint` fit use the free-parameter covariance (#794).**
+  On a fit made with `fit_gaussian_gllvm(y; K, lambda_constraint = M)`, `confint`, `vcov`,
+  `loading_ci`, `raw_loading_wald_ci` and the derived-quantity Wald intervals inverted the observed
+  information of every packed parameter, pinned loadings included; gllvmTMB's `cov.fixed` covers
+  the free parameters only. They now drop the pinned rows and columns before inverting, as
+  `flag_unreliable_loadings` already did: a pinned loading has `se = 0`, `lower = upper =
+  estimate` and zero rows and columns in `vcov`, and `loading_ci` marks it `pinned = true`. On the
+  `ns_gauss_p1_data.csv` twin (K = 2, `Λ[1,2] = Λ[2,1] = 0`) the SE of `Λ[3,1]` was 0.0730 against
+  R's 0.0552 and the pinned `Λ[2,1]` had SE 0.081; at gllvmTMB's estimates the loading SEs now
+  agree with R to 6e-8. The confirmatory refit also now runs under the base fitter's optimiser
+  controls (`g_tol = 1e-6`, `x_tol = 1e-8`, `f_tol = 0`, `iterations = 500`) and takes a
+  user's `g_tol`, `x_tol`, `f_tol` and `iterations`; it had a hard-coded `g_tol = 1e-4`, ignored the
+  user's, and stopped at a free gradient of 0.019 while reporting `converged = true`. Its
+  `converged` is now the refit's own Optim verdict. On the twin, logLik moves from 1.5e-6 to
+  1.2e-11 of gllvmTMB's and the loadings from 7.0e-5 to 1.0e-7. A constraint whose only numeric
+  entry is a structural zero (for example `M[1,2] = 0` alone with K = 2) now marks the fit as
+  confirmatory, as gllvmTMB's gate `sum(!is.na(M)) > 0` does, so `flag_unreliable_loadings`
+  accepts it instead of refusing it with "Without pins"; the fit is the ordinary one, and
+  `confint`'s profile and bootstrap routes stay available on it. `loading_ci(...; method =
+  :profile)` is now refused on a fit with pins, whose refits it did not hold. Fits without pins
+  are unchanged, bit for bit.
 - **`sanity_multi` reports gllvmTMB's flags; `compare_loadings` gains R's matrix form.**
   `sanity_multi(fit; y)` now returns R's flags under R's names and in R's order
   (`converged`, `max_gradient`, `sdreport_ok`, `pd_hessian`, `max_se`, `rr_B_min_loading`,

@@ -24,13 +24,23 @@ exact structural zero rather than delta-methoding a fixed value.
 `loading_profile_exploratory` for the profile-likelihood route on an
 exploratory (unpinned) fit.
 
-**Difference from R.** Unlike R, GLLVModels.jl has no separate
-confirmatory fit mode with `lambda_constraint` pins — the lower-triangular
-packing convention (`src/packing.jl`) is this package's built-in
-identifiability device. `loading_ci`/`loading_profile_exploratory` therefore
-run on any fit, where R's `loading_ci()`/`loading_profile()` refuse an
-unpinned exploratory fit. The deprecated name `loading_profile` forwards here
-but is reserved for a future confirmatory mirror of R's surface.
+**Confirmatory fits and the difference from R.** GLLVModels.jl has a
+confirmatory fit mode, `fit_gaussian_gllvm(y; K, lambda_constraint = M)`, that
+holds the numeric entries of `M` fixed, as R's `lambda_constraint` does. On such
+a fit the Wald routes (`loading_ci`, `raw_loading_wald_ci`, `confint`, `vcov`
+and the derived-quantity Wald intervals) use the covariance of the free
+parameters only: the pinned loadings are not parameters, so their rows and
+columns are removed from the observed information before it is inverted, which
+is R's `sd_report$cov.fixed`. A pinned entry has `pinned = true`, `se = 0` and
+`lower = upper = estimate`, as in R's raw-scale `loading_ci()`.
+`loading_ci(...; method = :profile)` is refused on a pinned fit, because its
+refits do not hold the pins; `loading_profile(fit; y)` profiles the
+confirmatory model. Unlike R, `loading_ci` and `loading_profile_exploratory`
+also run on an exploratory fit without pins, where the lower-triangular packing
+convention (`src/packing.jl`) is the identifiability device; R's
+`loading_ci()` refuses such a fit. As in R, a constraint whose only numeric
+entry is a structural zero above the diagonal is accepted and fits the ordinary
+model.
 
 `flag_unreliable_loadings` is the counterpart of R's `flag_unreliable_loadings()`.
 It takes a confirmatory fit, `fit_gaussian_gllvm(y; K, lambda_constraint = M)`,
