@@ -359,3 +359,51 @@ end
     @test_throws ArgumentError confint(pinned, Y; parm = "sigma_eps", method = :bootstrap, n_boot = 3)
     @test_throws ArgumentError confint(pinned, Y; parm = "communality[1]", method = :bootstrap, n_boot = 3)
 end
+
+@testset "direct profile and bootstrap entry points refuse a pinned-loadings fit (refs #794)" begin
+    rng = MersenneTwister(7)
+    p, n = 5, 200
+    Λ = reshape([0.8, 0.3, 0.5, -0.4, 0.6], p, 1)
+    Y = Λ * randn(rng, 1, n) + 0.5 * randn(rng, p, n)
+    M = fill(NaN, p, 1)
+    M[2, 1] = 0.3
+    pinned = fit_gaussian_gllvm(Y; K = 1, lambda_constraint = M)
+    i_pin = only(GLLVModels._lambda_constraint_pinned_theta_indices(pinned))
+    @test GLLVModels._profile_all_term_names(pinned)[1][i_pin] == "Lambda_B[2,1]"
+    # Each of these refits without the pins, so it would answer for another model.
+    # The error names `loading_profile`, which profiles a pinned fit correctly.
+    calls = (
+        () -> GLLVModels.profile_ci(pinned, i_pin; y = Y),
+        () -> GLLVModels.profile_ci(pinned, "sigma_eps"; y = Y),
+        () -> GLLVModels.tmbprofile_wrapper(pinned, i_pin; y = Y),
+        () -> GLLVModels.tmbprofile_wrapper(pinned, "sigma_eps"; y = Y),
+        () -> GLLVModels.profile_curve_targets(pinned, [1]; y = Y),
+        () -> GLLVModels.bootstrap_ci(pinned; y = Y, n_boot = 2),
+        () -> GLLVModels.bootstrap_ci_derived(pinned, fb -> GLLVModels.communality(fb)[1]; y = Y, n_boot = 2),
+        () -> GLLVModels.profile_ci_derived(pinned, θ -> θ[1]; y = Y),
+        () -> GLLVModels.loading_profile_exploratory(pinned, 3, 1; y = Y),
+    )
+    for f in calls
+        err = try
+            f()
+            nothing
+        catch e
+            e
+        end
+        @test err isa ArgumentError
+        @test err isa ArgumentError && occursin("loading_profile", err.msg)
+        @test err isa ArgumentError && occursin("lambda_constraint", err.msg)
+    end
+    # The pinned-fit profile itself still runs.
+    lp = loading_profile(pinned; y = Y, n_grid = 3)
+    @test !isempty(lp.table)
+
+    # Unpinned fits are unaffected.
+    plain = fit_gaussian_gllvm(Y; K = 1)
+    r = GLLVModels.profile_ci(plain, 2; y = Y)
+    @test isfinite(r.lower) && isfinite(r.upper) && r.lower < plain.pars.θ_packed[2] < r.upper
+    tw = GLLVModels.tmbprofile_wrapper(plain, 2; y = Y)
+    @test (tw.lower, tw.upper) == (r.lower, r.upper)
+    b = GLLVModels.bootstrap_ci(plain; y = Y, n_boot = 2, parms = "sigma_eps")
+    @test length(b.term) == 1
+end

@@ -541,6 +541,7 @@ function bootstrap_ci_derived(fit::GllvmFit, derived_fn::Function;
 
     0 < level < 1 || throw(ArgumentError("level must be in (0, 1); got $level"))
     n_boot ≥ 1   || throw(ArgumentError("n_boot must be ≥ 1; got $n_boot"))
+    _check_unpinned_refit(fit, "bootstrap_ci_derived")
 
     if _has_gaussian_record(fit)
         data=y===nothing ? fit.integration.data.responses : y
@@ -1057,6 +1058,7 @@ function profile_ci_derived(fit::GllvmFit, derived_fn::Function;
                             max_bisect::Integer = 30,
                             bounds::Union{Nothing, Tuple{Real, Real}} = nothing)
     0 < level < 1 || throw(ArgumentError("level must be in (0, 1); got $level"))
+    _check_unpinned_refit(fit, "profile_ci_derived")
     y === nothing && throw(ArgumentError(
         "profile_ci_derived requires the data matrix `y`"))
     X = _mean_X(fit, X, size(y, 2))
