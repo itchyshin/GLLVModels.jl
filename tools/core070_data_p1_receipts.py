@@ -149,10 +149,11 @@ TIER_TEXT = {
     "needs_surface_r_side_measured": (
         "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper "
         "replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. "
-        "GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / "
-        "missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no "
-        "weights surface (see each receipt's "
-        "julia_fit_time_surface_probe)"),
+        "GLLVModels has no helper-equivalent surface for these cases. Its fit-time surfaces are offset= and mask= / "
+        "missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), recorded in "
+        "each receipt's julia_fit_time_surface_probe, and observation weights= on the Poisson Laplace route only "
+        "(other families refuse weights with an ArgumentError). Weights were added after the P1 surface probe ran, "
+        "so a probe that records weights as absent predates them"),
 }
 
 # Planned-surface group -> which fit-time surface(s) the surface probe exercised for it.

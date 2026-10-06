@@ -683,7 +683,7 @@
         "non_binding_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK.json"
         ],
-        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases. Its fit-time surfaces are offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), recorded in each receipt's julia_fit_time_surface_probe, and observation weights= on the Poisson Laplace route only (other families refuse weights with an ArgumentError). Weights were added after the P1 surface probe ran, so a probe that records weights as absent predates them"
       },
       "measured_result": {
         "case_verdicts": {
@@ -774,7 +774,7 @@
         "non_binding_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-TRAIN-LEGACY-POSTFIT-READBACK.json"
         ],
-        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases. Its fit-time surfaces are offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), recorded in each receipt's julia_fit_time_surface_probe, and observation weights= on the Poisson Laplace route only (other families refuse weights with an ArgumentError). Weights were added after the P1 surface probe ran, so a probe that records weights as absent predates them"
       },
       "measured_result": {
         "case_verdicts": {
@@ -866,7 +866,7 @@
           "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-DF-MASK-DROP-NATIVE.json",
           "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-DF-MASK-DROP.json"
         ],
-        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases. Its fit-time surfaces are offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), recorded in each receipt's julia_fit_time_surface_probe, and observation weights= on the Poisson Laplace route only (other families refuse weights with an ArgumentError). Weights were added after the P1 surface probe ran, so a probe that records weights as absent predates them"
       },
       "measured_result": {
         "case_verdicts": {
@@ -906,7 +906,7 @@
           "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-DF-MASK-INCLUDE-NATIVE.json",
           "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-DF-MASK-INCLUDE.json"
         ],
-        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases. Its fit-time surfaces are offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), recorded in each receipt's julia_fit_time_surface_probe, and observation weights= on the Poisson Laplace route only (other families refuse weights with an ArgumentError). Weights were added after the P1 surface probe ran, so a probe that records weights as absent predates them"
       },
       "measured_result": {
         "case_verdicts": {
@@ -1163,7 +1163,7 @@
           "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-MATRIX-MASK-DROP-NATIVE.json",
           "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-MATRIX-MASK-DROP.json"
         ],
-        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases. Its fit-time surfaces are offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), recorded in each receipt's julia_fit_time_surface_probe, and observation weights= on the Poisson Laplace route only (other families refuse weights with an ArgumentError). Weights were added after the P1 surface probe ran, so a probe that records weights as absent predates them"
       },
       "measured_result": {
         "case_verdicts": {
@@ -1203,7 +1203,7 @@
           "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-MATRIX-MASK-INCLUDE-NATIVE.json",
           "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-MATRIX-MASK-INCLUDE.json"
         ],
-        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases. Its fit-time surfaces are offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), recorded in each receipt's julia_fit_time_surface_probe, and observation weights= on the Poisson Laplace route only (other families refuse weights with an ArgumentError). Weights were added after the P1 surface probe ran, so a probe that records weights as absent predates them"
       },
       "measured_result": {
         "case_verdicts": {
@@ -1243,7 +1243,7 @@
           "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-MATRIX-MASK-SCALAR-NATIVE.json",
           "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-MATRIX-MASK-SCALAR.json"
         ],
-        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases. Its fit-time surfaces are offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), recorded in each receipt's julia_fit_time_surface_probe, and observation weights= on the Poisson Laplace route only (other families refuse weights with an ArgumentError). Weights were added after the P1 surface probe ran, so a probe that records weights as absent predates them"
       },
       "measured_result": {
         "case_verdicts": {
@@ -1447,7 +1447,7 @@
           "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-ZERO-NATIVE.json",
           "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-ZERO.json"
         ],
-        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases. Its fit-time surfaces are offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), recorded in each receipt's julia_fit_time_surface_probe, and observation weights= on the Poisson Laplace route only (other families refuse weights with an ArgumentError). Weights were added after the P1 surface probe ran, so a probe that records weights as absent predates them"
       },
       "measured_result": {
         "case_verdicts": {
