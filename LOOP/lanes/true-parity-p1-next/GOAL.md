@@ -1,25 +1,9 @@
-# GOAL — <one sentence: what "done" looks like>
+# GOAL: true parity at P1
 
-**IMMUTABLE for this run.** Re-read this file at the top of EVERY arc, before anything else.
-
-## Definition of done
-- [ ] <the observable end state, not the activity>
-
-## Invariants (never violate, even to finish faster)
-- Never push, merge, or publish — those are HUMAN GATES. Land work on this branch only.
-- Verification means reading the LOG and inspecting the ARTEFACT, never the exit code.
-- A narrow or negative search is not proof. "No X exists" usually means the query missed X.
-- Destructive or irreversible ⇒ STOP and surface, even if it feels urgent.
-- Query the second brain first (`search_notes` with `project: "shinichi-brain"` first; add `search_all_projects: true` for other repos' docs; name no other project). In a code repo also run `python3 ~/shinichi-brain/tools/route.py <repo>` and read the LOAD-FIRST block. This worktree is one branch, not the memory.
-
-## Pre-authorisation (copied from approved ultra-plan)
-- Routine scoped edits, local commands, tests, builds, checkpoints, local commits, and listed checks: CONTINUE.
-- Optional remote authority: <none | push named branch | create named draft PR; never merge or release>.
-- Must stop: merge/release/public message or claim; credentials/security changes; destructive work outside this worktree; new compute/cost beyond the estimate; scope-changing evidence.
-
-## Git and GitHub transport
-- Use this repository's existing `origin` SSH remote for all Git operations (`git fetch`, `pull`, and an explicitly authorised `push`). Do not change remotes or keys.
-- Do not open a browser or run `gh auth login`, device login, or token setup. GitHub API work (Actions dispatch, PR creation/merge, issue/comment writes) is separate from SSH and needs explicit task authority plus an already-working API credential. If it is not already available, report the limitation; do not request or start a login as a workaround.
-
-## Out of scope (the fence — do NOT drift here)
-- <...>
+Read this at every arc. Full destination and authority are in ultra-plan.md.
+Current milestone: seven exact receipt gaps plus the remaining-decision packet.
+Do not count a reviewed PR as landed evidence or a diagnosis as a passing twin.
+Source pin: P1 9539352f66f2db2cc26b1c393e67212a359b60c9.
+Baseline: f220379d0937d0afffc6a030023c63c0f715e168.
+Push scoped named branches and create draft PRs as authorised; every merge requires Shinichi.
+No agents sign dispositions. No version, release, shared Laplace or R-engine edits.
