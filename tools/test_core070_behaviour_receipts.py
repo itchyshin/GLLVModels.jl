@@ -546,6 +546,11 @@ def first_seven_fixture_derivation_keeps_positive_and_mismatch_rows_separate():
     for rows in (rrows, jrows):
         rows[wrapper].update({"outcome": "ERROR", "class": "ArgumentError", "actual": "refused",
                               "message": "REFUSED: isdm_sources refuses logit law"})
+    for rows in (rrows, jrows):
+        for row in rows.values(): row["public_positive_control"] = "mixed-source-accepted"
+        rows["CORE070-FIRST7-ISDM-COUNT"].update(actual="all-count-nonmixed")
+        rows["CORE070-FIRST7-ISDM-MISSING-IN-TRAIT"].update(outcome="ERROR", message="Response family/link cannot currently vary across rows within a trait.")
+        rows["CORE070-FIRST7-ISDM-MISSING-SOURCE"].update(outcome="ERROR", message="length(family) must match the number of distinct levels")
     source = json.loads((ROOT / F7.R_SOURCE).read_text())
     build = json.loads((ROOT / F7.R_BUILD).read_text())
     for row in rrows.values():
@@ -585,6 +590,7 @@ def first_seven_fixture_derivation_keeps_positive_and_mismatch_rows_separate():
     assert not any(c["canonical"] == "guard:unknown-source" for c in eq["classes"])
     assert receipts["isdm/ISDM-WRAPPER-LAW"]["verdict"] == "PASS"
     assert receipts["isdm/ISDM-WRAPPER-LAW"]["case_id"] == "CORE070-ISDM-WRAPPER-LAW-PAIRED-CONTROL"
+    assert all(rec["verdict"] == "PASS" for sid,rec in receipts.items() if sid != "isdm/ISDM-EXTRA-SOURCE")
 
 
 def main():

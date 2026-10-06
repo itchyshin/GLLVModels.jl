@@ -38,8 +38,8 @@ SIGNED_SCOPE = set(CASES.values())
 EXPECTED = {
     "CORE070-FIRST7-CHECK-AUTO-RESIDUAL": "residual-check:coherent",
     "CORE070-FIRST7-ISDM-COUNT": "all-count:nonmixed-admitted",
-    "CORE070-FIRST7-ISDM-MISSING-IN-TRAIT": "guard:trait-coverage",
-    "CORE070-FIRST7-ISDM-MISSING-SOURCE": "guard:source-coverage",
+    "CORE070-FIRST7-ISDM-MISSING-IN-TRAIT": "guard:family-scale-per-trait",
+    "CORE070-FIRST7-ISDM-MISSING-SOURCE": "guard:family-length",
     "CORE070-FIRST7-ISDM-WRAPPER-LAW": "guard:wrapper-law-refusal",
 }
 CALL_FRAGMENTS = {
@@ -97,6 +97,8 @@ def label(case_id, row, engine):
     first = message.splitlines()[0]
     # This guard order is intentionally engine-neutral and grounded in the raw
     # message. In particular, R's P1 length(family) guard stays distinguishable.
+    if "Response family/link cannot currently vary across rows within a trait." in first:
+        return "guard:family-scale-per-trait"
     if "length(family)" in first or "number of distinct levels" in first:
         return "guard:family-length"
     if "unknown" in first.lower() or "undeclared" in first.lower():
