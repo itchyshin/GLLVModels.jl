@@ -1342,6 +1342,35 @@ for (const [name, cp, why] of [
   });
 }
 
+// --- Maintainer ruling 2026-10-05 (D-319), C4: the clause accepts direct-engine runs (no bridge leg). An EVIDENCED
+// real-data row must cite a receipt that records both engines. ---
+test('C4 direct engine: an EVIDENCED RD row whose receipt records both engines is done (base fixture)', () => {
+  assert.match(runTree(() => {}, 'C4').stdout, /C4 real-data workflows rows=1 done=1 not_done=none/);
+});
+for (const [name, rd1] of [
+  ['no engines block', { case_id: 'RD1', result: 'PASS' }],
+  ['only the R engine', { case_id: 'RD1', result: 'PASS', engines: { R: { engine: 'R gllvmTMB' } } }],
+  ['engines as an array', { case_id: 'RD1', result: 'PASS', engines: [{ R: {} }, { julia: {} }] }],
+]) {
+  test(`C4 direct engine: an EVIDENCED RD row whose receipt has ${name} is not done (C4 and X2)`, () => {
+    const m = ({ writeJ }) => writeJ('receipts/rd1.json', rd1);
+    const c4 = runTree(m, 'C4');
+    assert.match(c4.stdout, /C4_NOT_MET$/m, name);
+    assert.match(c4.stdout, /RD-1:C4_NOT_A_DIRECT_ENGINE_RUN/, name);
+    assert.match(runTree(m, 'X2').stdout, /RD-1:C4_NOT_A_DIRECT_ENGINE_RUN/, name);
+  });
+}
+test('C4 direct engine: a properly signed RD disposition row is done without a run', () => {
+  const m = ({ dir }) => {
+    const sb = join(dir, L, 'scoreboard.md');
+    writeFileSync(sb, readFileSync(sb, 'utf8').replace(/\| RD-1 \|([^|]*)\| EVIDENCED \|[^|]*\|/, '| RD-1 |$1| DISPOSITION-SIGNED | Disposition: outside_boundary; signed_by: Shinichi Nakagawa; signed_on: 2026-10-05 |'));
+  };
+  assert.match(runTree(m, 'C4').stdout, /C4_MET$/m);
+});
+test('C4 direct engine: the rule does not touch rows outside C4 (a C3 row with a plain receipt stays done)', () => {
+  assert.match(runTree(() => {}, 'C3').stdout, /C3_MET$/m);
+});
+
 // --- Fix round on PR #687 (three adversarial reviews). Each control below fails on the head before the
 // round (6f546fb00) for the reason it names, and passes after. ---
 

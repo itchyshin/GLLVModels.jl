@@ -847,7 +847,20 @@ function evaluateScoreboardRow(r) {
   }
   const dangling = extracted.filter((p) => !existsAsBlob(p));
   if (dangling.length) return { ok: false, reason: `DANGLING:${dangling.join(',')}` };
+  // C4 (maintainer ruling 2026-10-05 (D-319), C4: the clause text now accepts direct-engine runs, with no
+  // engine = "julia" bridge leg). An EVIDENCED real-data row is done only if a receipt it cites is a run of both
+  // engines on the data: a JSON receipt with an `engines` block holding an `R` and a `julia` object. A signed
+  // disposition row is not a run and is judged as before.
+  if (isRD(r) && r.status === 'EVIDENCED' && !extracted.some(directEngineReceipt)) return { ok: false, reason: 'C4_NOT_A_DIRECT_ENGINE_RUN' };
   return { ok: true };
+}
+
+function directEngineReceipt(p) {
+  const t = show(p);
+  if (t === null) return false;
+  let j;
+  try { j = JSON.parse(t); } catch { return false; }
+  return isPlainObject(j) && isPlainObject(j.engines) && isPlainObject(j.engines.R) && isPlainObject(j.engines.julia);
 }
 
 function report(tag, rows, pick) {

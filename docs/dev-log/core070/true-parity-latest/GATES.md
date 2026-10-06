@@ -849,6 +849,30 @@ Negative controls (checker, group "N9 convergence parity"): the ordinal pre-run 
 `returned` point; R's unpolished 4.3e-4, Julia above the bound, a declared bound of 1e-4, a missing Julia gradient, an
 unknown compared point, a negative gradient and a non-object block each fail. Assembler: `convergence_parity_*`.
 
+### C4: the clause accepts direct-engine runs
+
+Signed: "C4: change the text." C4 no longer requires the `engine = "julia"` bridge leg; a real-data workflow run end to
+end on both engines directly (gllvmTMB at P1 and GLLVModels.jl on the same data bytes) satisfies it. The ruling page's
+reason: the bridge leg tests R's adapter rather than the model, and the adapter is covered by ruling 1. The clause text
+under "Clauses" is changed accordingly.
+
+Checker change: an `EVIDENCED` real-data (`RD-`) scoreboard row is done only if a receipt it cites records both
+engines (a JSON receipt with an `engines` block holding an `R` and a `julia` object), else `C4_NOT_A_DIRECT_ENGINE_RUN`
+on C4 and X2. That makes "end to end on both engines" a checked condition instead of a word in a cell. A
+`DISPOSITION-SIGNED` real-data row is not a run and is judged as before. Every tracked campaign receipt already has
+the block.
+
+What still keeps the real-data rows open is the receipt, not the checker: `write_receipts.py` writes a pass-rule leg
+`engine_julia_bridge_route_and_eight_acceptance_classes_run` that is false on every C4 receipt. Dropping that leg is
+the campaign slice's edit; then `data/RD-CRABS-GAUSSIAN` (every number inside tolerance today) binds. Spider, beetle,
+fungi and urbanisation still fail on numbers or convergence, and the three disposition rows wait on their signed
+dispositions (item F, owned by the covariance and namespace slice).
+
+Negative controls (checker, group "C4 direct engine"): the base fixture's RD row (receipt with both engines) is done; a
+receipt with no engines block, only the R engine, or an array in place of the block is not done on C4 and X2; a signed
+RD disposition row is done; a C3 row with a plain receipt is unaffected. Every fixture copy of the RD receipt gained
+the engines block.
+
 ### Item A, N6 and N10: the behavioural scope is extended by 14 listed rows
 
 Ruling 2 of 2026-10-02 froze the behavioural tier to 63 rows. Three signed items extend that list, and only by
@@ -951,8 +975,10 @@ modes on `origin/main`, which is the honest state, not a false pass.
   EXPECT: C3_MET
   EVIDENCE: pending
 
-- [ ] C4: one real-data workflow per qualified family or structure runs end to end through
-      `engine = "julia"` and passes the acceptance classes
+- [ ] C4: one real-data workflow per qualified family or structure runs end to end on both engines
+      (gllvmTMB at P1 and GLLVModels.jl, directly, on the same data bytes; the `engine = "julia"` bridge leg is not
+      required, maintainer ruling 2026-10-05 (D-319), C4) and passes the campaign pass rule; an `EVIDENCED` row
+      must cite a receipt that records both engines
   CHECK: node tools/true_parity_check.mjs C4
   EXPECT: C4_MET
   EVIDENCE: pending
@@ -1059,7 +1085,8 @@ confirmation; every receipt says so in `tolerance_status`.
   library path and the sha256 of the P1 source files listed in `p1_source_sha256.json`. A drift in an internal function or
   in the compiled code of a lane library would therefore not be caught by the guard. A C4 row also needs the
   `engine = "julia"` bridge route and the plan's eight acceptance classes (plan section 1.3); neither has been run, so
-  no C4 row binds yet. A row that meets the whole rule binds (`evidence_tier` numeric).
+  no C4 row binds yet. (Superseded for C4 by maintainer ruling 2026-10-05 (D-319), C4: a direct-engine run satisfies C4 and
+  the bridge leg is no longer required; see "Rulings of 2026-10-05".) A row that meets the whole rule binds (`evidence_tier` numeric).
   A row that does not is cited under `non_binding_receipts` with every reason, and stays open. Its tier says which kind of
   failure it is. If every number is inside tolerance and the only failing leg is a required step that was not run or not
   signed (the C4 bridge leg, the phylo qualification below), the tier is `partial_case_not_executed` (scoreboard PARTIAL)

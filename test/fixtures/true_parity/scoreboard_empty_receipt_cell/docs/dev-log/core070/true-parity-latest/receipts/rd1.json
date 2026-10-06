@@ -1,4 +1,12 @@
 {
  "case_id": "RD1",
- "result": "PASS"
+ "result": "PASS",
+ "engines": {
+  "R": {
+   "engine": "R gllvmTMB"
+  },
+  "julia": {
+   "engine": "GLLVModels.jl"
+  }
+ }
 }
