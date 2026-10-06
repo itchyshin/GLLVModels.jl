@@ -48,7 +48,9 @@ core070_record_values!("objective at the Julia optimum";julia=-fit.loglik,r=rcop
 core070_record_values!("logLik";julia=fit.loglik,r=-rvalue,atol=1e-3,case=NATIVE_ID,
     test="@test record[\"delta_loglik\"]<=1e-3")
 @testset "Original Gaussian default unique native pair" begin
- @test record["r_random"]==["z_B","s_B"]
+ # Maintainer ruling 2026-10-05 (vault D-319): at P1 gllvmTMB reports only z_B as random
+ # (gllvmTMB commit 853daf5f0); the earlier ["z_B","s_B"] expectation was stale.
+ @test record["r_random"]==["z_B"]
  @test record["r_fixed_columns"]==0 && record["r_sigma_mapped"]
  @test record["native_dof"]==length(rtheta)
  @test point_value_delta<=1e-6
