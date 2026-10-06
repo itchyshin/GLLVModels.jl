@@ -667,7 +667,7 @@
       "executable_case_ids": [
         "CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK"
       ],
-      "disposition": null,
+      "disposition": "DISPOSITION-SIGNED",
       "p0_batch": "data-batch attempt-data-r3 (wave1)",
       "p0_evidence": {
         "recorded": true,
@@ -681,7 +681,8 @@
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
         "non_binding_receipts": [
-          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK.json"
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/data/n7-offset-nonfinite-probe.json"
         ],
         "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
       },
@@ -695,7 +696,11 @@
         "case_kinds": {
           "CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK": "r_replay_julia_surface_absent"
         }
-      }
+      },
+      "reason": "R-internal helper that differs by design, disposition signed by maintainer ruling 2026-10-05 (D-319), item N7. R's .gllvmTMB_offset_newdata evaluates the stored offset expression on newdata with no finiteness guard, so e = 0 gives log(0) = -Inf (P1 helper replay: c(-Inf, 0, log(2))). GLLVModels takes the offset as a value and refuses a non-finite offset at an observed cell with an ArgumentError, at fit time and at predict time (probe receipt n7-offset-nonfinite-probe.json, tools/true_parity_offset_nonfinite_probe.jl). No R-vs-Julia number exists to compare; the difference is recorded, not hidden.",
+      "signed_by": "Shinichi Nakagawa",
+      "signed_on": "2026-10-05",
+      "signature_ref": "maintainer ruling 2026-10-05 (D-319), LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item N7"
     },
     {
       "source_id": "data/DATA-OFF-SCALAR",
@@ -758,7 +763,7 @@
       "executable_case_ids": [
         "CORE070-DATA-OFF-TRAIN-LEGACY-POSTFIT-READBACK"
       ],
-      "disposition": null,
+      "disposition": "DISPOSITION-SIGNED",
       "p0_batch": "data-batch attempt-data-r3 (wave1)",
       "p0_evidence": {
         "recorded": true,
@@ -786,7 +791,11 @@
         "case_kinds": {
           "CORE070-DATA-OFF-TRAIN-LEGACY-POSTFIT-READBACK": "r_replay_julia_surface_absent"
         }
-      }
+      },
+      "reason": "R-internal legacy fallback, disposition signed by maintainer ruling 2026-10-05 (D-319), item N7. R's .gllvmTMB_offset_vec returns rep(0, n) for a fit object that carries an offset expression but no cached offset vector, that is, an object saved before gllvmTMB cached training offsets (the P1 helper replay confirms it). GLLVModels has no such object generation: a Laplace fit made with an offset stores it in fit.offset at fit time (_stored_offset, src/families/fit_gllvm.jl), so there is no pre-cache object to fall back from, and the helper is not reachable from either package's public door. The stored-offset behaviour users meet is bound numerically by DATA-OFF-TRAIN-STORED.",
+      "signed_by": "Shinichi Nakagawa",
+      "signed_on": "2026-10-05",
+      "signature_ref": "maintainer ruling 2026-10-05 (D-319), LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item N7"
     },
     {
       "source_id": "data/DATA-OFF-TRAIN-STORED",
@@ -1363,7 +1372,7 @@
         "non_binding_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-URBANISATION-BINOMIAL.json"
         ],
-        "tier": "measured, does not bind: a required leg was not run: the engine = \"julia\" bridge route and the plan's eight acceptance classes (the C4 clause needs them, see GATES.md and plan section 1.3). The direct-engine comparison does not say the bridge workflow passes; beta: abs difference 0.000231344 > tolerance 0.0001; LLt: abs difference 0.00164848 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000821878 > tolerance 1e-06"
+        "tier": "measured, does not bind: beta: abs difference 0.000231344 > tolerance 0.0001; LLt: abs difference 0.00164848 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000821878 > tolerance 1e-06"
       },
       "measured_result": {
         "verdict": "FAIL",
@@ -1394,16 +1403,16 @@
         "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-ETA"
       ],
       "disposition": null,
-      "evidence_tier": "partial_case_not_executed",
+      "evidence_tier": "numeric",
       "measured_against": "P1",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-CRABS-GAUSSIAN.json"
         ],
-        "tier": "measured, does not bind. Every number is inside its tolerance, but a required leg was not run: the engine = \"julia\" bridge route and the plan's eight acceptance classes (the C4 clause needs them, see GATES.md and plan section 1.3). The direct-engine comparison does not say the bridge workflow passes"
+        "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
       },
       "measured_result": {
-        "verdict": "NUMERIC_PASS_NOT_BINDING",
+        "verdict": "PASS",
         "max_abs_diff_by_case": {
           "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LOGLIK": 5.8479827202972956e-08,
           "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-BETA": 5.734798325107704e-08,
@@ -1437,7 +1446,7 @@
         "non_binding_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-SPIDER-NB2.json"
         ],
-        "tier": "measured, does not bind: a required leg was not run: the engine = \"julia\" bridge route and the plan's eight acceptance classes (the C4 clause needs them, see GATES.md and plan section 1.3). The direct-engine comparison does not say the bridge workflow passes; logLik: abs difference 1.45732e-06 > tolerance 1e-06; LLt: abs difference 0.000161728 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 6.73994e-05 > tolerance 1e-06"
+        "tier": "measured, does not bind: logLik: abs difference 1.45732e-06 > tolerance 1e-06; LLt: abs difference 0.000161728 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 6.73994e-05 > tolerance 1e-06"
       },
       "measured_result": {
         "verdict": "FAIL",
@@ -1474,7 +1483,7 @@
         "non_binding_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-BEETLE-NB2.json"
         ],
-        "tier": "measured, does not bind: R's Hessian is not positive definite (pdHess is false); a required leg was not run: the engine = \"julia\" bridge route and the plan's eight acceptance classes (the C4 clause needs them, see GATES.md and plan section 1.3). The direct-engine comparison does not say the bridge workflow passes; logLik: abs difference 9.08069e-06 > tolerance 1e-06; beta: abs difference 0.000287141 > tolerance 0.0001; LLt: abs difference 0.00463293 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000869455 > tolerance 1e-06"
+        "tier": "measured, does not bind: R's Hessian is not positive definite (pdHess is false); logLik: abs difference 9.08069e-06 > tolerance 1e-06; beta: abs difference 0.000287141 > tolerance 0.0001; LLt: abs difference 0.00463293 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000869455 > tolerance 1e-06"
       },
       "measured_result": {
         "verdict": "FAIL",
@@ -1511,7 +1520,7 @@
         "non_binding_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-FUNGI-BINOMIAL.json"
         ],
-        "tier": "measured, does not bind: a required leg was not run: the engine = \"julia\" bridge route and the plan's eight acceptance classes (the C4 clause needs them, see GATES.md and plan section 1.3). The direct-engine comparison does not say the bridge workflow passes; beta: abs difference 0.000123933 > tolerance 0.0001; LLt: abs difference 0.000474438 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000328279 > tolerance 1e-06"
+        "tier": "measured, does not bind: beta: abs difference 0.000123933 > tolerance 0.0001; LLt: abs difference 0.000474438 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000328279 > tolerance 1e-06"
       },
       "measured_result": {
         "verdict": "FAIL",
@@ -1536,18 +1545,21 @@
       "arc": "campaign-C4",
       "clause": "C4",
       "executable_case_ids": [],
-      "disposition": null,
+      "disposition": "DISPOSITION-SIGNED",
       "evidence_tier": "not_measured",
       "measured_against": "P1",
       "evidence": {
-        "tier": "no measurement: this row awaits the maintainer's own signed disposition; nothing is signed here"
+        "tier": "no measurement: the row closes by the maintainer's signed disposition below"
       },
-      "proposed_disposition": {
+      "signed_by": "Shinichi Nakagawa",
+      "signed_on": "2026-10-05",
+      "signature_ref": "D-319",
+      "signed_disposition": {
         "capability": "phylo-structured real data",
-        "text": "gllvm::fungi ships a phylogeny (fungi$tree), so a real phylo workflow exists. Blocked at the bridge gate GJL-GATE-STRUCTURED-TERMS until gllvmTMB #1236 (A4a) lands; revisit at P2.",
-        "status": "PROPOSED, UNSIGNED: the campaign plan says each of these three rows needs the maintainer's own signature, and itchyshin/GLLVModels.jl#684 does not quote them"
+        "text": "gllvm::fungi ships a phylogeny (fungi$tree), so a real phylo workflow exists, but the campaign has no phylo-structured real-data run at P1. C4 accepts a direct-engine run (R gllvmTMB and Julia GLLVModels fitted to the same data), so one on fungi with fungi$tree would replace this disposition; revisit at P2.",
+        "status": "DISPOSITION-SIGNED: item F of the rulings page (three C4 dispositions), signed by the maintainer on 2026-10-05 (vault D-319; LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the lane kit). Recorded by an agent, signed by the maintainer."
       },
-      "ruling": "itchyshin/GLLVModels.jl#684 item 4 (row added); disposition itself unsigned"
+      "ruling": "itchyshin/GLLVModels.jl#684 item 4 (row added); disposition signed under vault D-319, item F"
     },
     {
       "source_id": "data/RD-TEMPORAL-DISPOSITION",
@@ -1555,18 +1567,21 @@
       "arc": "campaign-C4",
       "clause": "C4",
       "executable_case_ids": [],
-      "disposition": null,
+      "disposition": "DISPOSITION-SIGNED",
       "evidence_tier": "not_measured",
       "measured_against": "P1",
       "evidence": {
-        "tier": "no measurement: this row awaits the maintainer's own signed disposition; nothing is signed here"
+        "tier": "no measurement: the row closes by the maintainer's signed disposition below"
       },
-      "proposed_disposition": {
+      "signed_by": "Shinichi Nakagawa",
+      "signed_on": "2026-10-05",
+      "signature_ref": "D-319",
+      "signed_disposition": {
         "capability": "temporal real data",
         "text": "None of gllvm, vegan, MASS, ape ships a multivariate ecological time series the plan would call a real workflow; no bridge route for temporal at P1 (D-296).",
-        "status": "PROPOSED, UNSIGNED: the campaign plan says each of these three rows needs the maintainer's own signature, and itchyshin/GLLVModels.jl#684 does not quote them"
+        "status": "DISPOSITION-SIGNED: item F of the rulings page (three C4 dispositions), signed by the maintainer on 2026-10-05 (vault D-319; LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the lane kit). Recorded by an agent, signed by the maintainer."
       },
-      "ruling": "itchyshin/GLLVModels.jl#684 item 4 (row added); disposition itself unsigned"
+      "ruling": "itchyshin/GLLVModels.jl#684 item 4 (row added); disposition signed under vault D-319, item F"
     },
     {
       "source_id": "data/RD-ISDM-DISPOSITION",
@@ -1574,18 +1589,21 @@
       "arc": "campaign-C4",
       "clause": "C4",
       "executable_case_ids": [],
-      "disposition": null,
+      "disposition": "DISPOSITION-SIGNED",
       "evidence_tier": "not_measured",
       "measured_against": "P1",
       "evidence": {
-        "tier": "no measurement: this row awaits the maintainer's own signed disposition; nothing is signed here"
+        "tier": "no measurement: the row closes by the maintainer's signed disposition below"
       },
-      "proposed_disposition": {
+      "signed_by": "Shinichi Nakagawa",
+      "signed_on": "2026-10-05",
+      "signature_ref": "D-319",
+      "signed_disposition": {
         "capability": "integrated SDM real data",
         "text": "No real multi-source dataset in the packages checked; no bridge route for iSDM at P1 (D-296, D-300 row 1c-5).",
-        "status": "PROPOSED, UNSIGNED: the campaign plan says each of these three rows needs the maintainer's own signature, and itchyshin/GLLVModels.jl#684 does not quote them"
+        "status": "DISPOSITION-SIGNED: item F of the rulings page (three C4 dispositions), signed by the maintainer on 2026-10-05 (vault D-319; LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the lane kit). Recorded by an agent, signed by the maintainer."
       },
-      "ruling": "itchyshin/GLLVModels.jl#684 item 4 (row added); disposition itself unsigned"
+      "ruling": "itchyshin/GLLVModels.jl#684 item 4 (row added); disposition signed under vault D-319, item F"
     }
   ]
 }

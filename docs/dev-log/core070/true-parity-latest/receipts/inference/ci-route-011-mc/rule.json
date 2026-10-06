@@ -1,0 +1,26 @@
+{
+  "schema": "core070-mc-tolerance-rule/v1",
+  "source_id": "inference/CI-ROUTE-011",
+  "case_id": "CORE070-SURFCONV-INFERENCE-CI-ROUTE-011",
+  "ruling": "N4 (Monte-Carlo tolerance rule), signed 2026-10-05, vault D-319: 'yes, with the rule stated before any run'",
+  "stated_before_any_run": true,
+  "stated_on": "2026-10-05",
+  "estimand": "the 95% percentile parametric-bootstrap interval for two-level repeatability (ICC) of each of the 4 traits of the twolevel_small fixture, as each engine's public bootstrap route computes it with nsim = 200",
+  "calls": {
+    "r": "set.seed(s); confint(fit_tl, parm = 'icc', method = 'bootstrap', level = 0.95, nsim = 200)",
+    "julia": "GLLVModels.repeatability_ci(fit_tl, Y_tl, individual; method = :bootstrap, nsim = 200, seed = s)"
+  },
+  "fixture": "twolevel_small, built exactly as tools/core070_surface_conversion_batch.R builds it (set.seed(1), p = 4, 30 individuals x 4 replicates); Julia fits the same Y natively (fit_twolevel_gaussian(Y_tl, individual; K_B = 1, K_W = 1))",
+  "seeds": [1, 2, 3, 4, 5],
+  "replicates_per_engine": 5,
+  "quantities": "8 per engine and seed: lower and upper endpoint for each of the 4 traits",
+  "per_seed_structural_check": "for every seed and engine: all endpoints finite, lower <= upper, and lower <= point <= upper with that engine's own point estimate (the existing CI-ROUTE-011 structural check)",
+  "test": {
+    "statistic": "for each of the 8 quantities q: d_q = mean_R(q) - mean_J(q) over the 5 seeds; se_q = sqrt(var_R(q)/5 + var_J(q)/5) with sample variances (denominator 4)",
+    "pass_rule": "|d_q| <= 4.5 * se_q + 0.005 for all 8 quantities",
+    "why_4_5": "two-sided Welch t critical value for an overall family-wise level of about 0.01 over 8 comparisons (0.00125 each) at about 8 degrees of freedom is about 4.5; 0.005 on the [0,1] ICC scale is a floor so that two near-deterministic sides do not fail on rounding",
+    "fail_rule": "any quantity outside the bound, any structural check failing, or any engine error on any seed is a FAIL; the row then stays unbound and the result is reported as measured",
+    "no_retuning": "the constants 4.5 and 0.005, the seeds and nsim are fixed here before any run and are not changed after seeing a result; a re-run with other constants needs a new rule file and a new signature"
+  },
+  "compute": "single-threaded (OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=1); one R seed is timed first and the total estimated; if the estimate exceeds 1.5 hours the run stops and is reported instead"
+}

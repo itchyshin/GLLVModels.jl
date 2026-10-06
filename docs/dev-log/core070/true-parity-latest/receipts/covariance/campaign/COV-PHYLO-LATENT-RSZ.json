@@ -5,17 +5,17 @@
  "pin": "P1",
  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
  "ruling": "itchyshin/GLLVModels.jl#684 item 4",
- "verdict": "NUMERIC_PASS_NOT_BINDING",
- "row_status": "does not bind: a required leg is not signed: the R side is the tracked PR #547 receipt, which records qualified = false until the maintainer signs the dated promotion block (D-300 answer 9). No agent may sign it, so the receipt stays unqualified until then",
+ "verdict": "PASS",
+ "row_status": "binds: the plan's pass rule holds on both engines",
  "pass_rule": {
-  "rule": "R side taken from the tracked PR #547 receipt (R was not re-run, so there is no deparse check): R convergence 0 with a positive-definite Hessian, Julia converged true on a fresh fit, the same data bytes, R recorded as gllvmTMB 0.7.1 at the P1 pin, every listed quantity within its tolerance, and the #547 R receipt promoted (qualified true) by the maintainer's own dated signature (D-300 answer 9), which is not signed",
+  "rule": "R side taken from the tracked PR #547 receipt (R was not re-run, so there is no deparse check): R convergence 0 with a positive-definite Hessian, Julia converged true on a fresh fit, the same data bytes, R recorded as gllvmTMB 0.7.1 at the P1 pin, every listed quantity within its tolerance, and the #547 R receipt promoted (qualified true) by the maintainer's own dated signature (D-300 answer 9)",
   "legs": {
    "R_convergence_0": true,
    "R_pdHess_true": true,
    "Julia_converged_true": true,
    "same_data_sha256": true,
    "R_version_0_7_1_from_P1_library": true,
-   "R_side_receipt_qualified_by_maintainer": false,
+   "R_side_receipt_qualified_by_maintainer": true,
    "every_quantity_within_tolerance": true
   }
  },
@@ -25,12 +25,12 @@
   "data_file_sha256": "f3bace851f60f337a8274859644135a84792b9e9ab35c07f757a7ade336706d4"
  },
  "what_this_is": "R values are the tracked P1 R receipt of PR #547 (fitted once at P1 and kept). The Julia fit is NEW: fit_phylo_latent_gllvm on the same literal fixture at the commit above. The #547 Julia receipt recorded converged = false (gradient stall); current main converges, and this receipt uses the current fit.",
- "r_side_qualification": "NOT BINDING, on purpose. The R receipt (docs/dev-log/core070/phylo-latent-p1/cov_phylo_latent_rsz/r-receipt.json) records qualified = false, and docs/dev-log/core070/phylo-latent-p1/README.md says every receipt stays unqualified until the maintainer signs the dated promotion block (D-300 answer 9). The measurement is kept as a non-binding receipt: both numbers are inside tolerance, but the row binds only after the maintainer signs that block. No agent may sign it.",
+ "r_side_qualification": "QUALIFIED. The R receipt (docs/dev-log/core070/phylo-latent-p1/cov_phylo_latent_rsz/r-receipt.json) records qualified = true under the maintainer's dated promotion block (D-300 answer 9), signed by Shinichi Nakagawa on 2026-10-05 (vault D-319) and kept in docs/dev-log/core070/phylo-latent-p1/README.md. The promotion is despite the A15 stationarity gap that README records; an agent recorded the signature, no agent signed it.",
  "julia_script": "tools/phylo_latent/compare_phylo_latent_p1.jl, command: julia --project=. tools/phylo_latent/compare_phylo_latent_p1.jl fit cov_phylo_latent_rsz docs/dev-log/core070/phylo-latent-p1/a15-fixture.json <out>/phylo_J.json (output committed as raw/phylo_J.json.gz)",
  "cond_H_statement": "R cond(H) 83029.9, computed as kappa(sd$cov.fixed, exact = TRUE) in tools/phylo_latent/r_reference_p1.R (PR #547): the exact 2-norm condition number of TMB's sdreport covariance of all fixed parameters, in gllvmTMB's own coordinates. Julia cond(H) 82761.3, computed as cond(H) of the finite-difference Hessian of the marginal negative log-likelihood at the fit's optimum (the fit's own Hessian diagnostic, exact 2-norm), in the Julia optimiser's coordinates. The two are different estimators in different parameter bases: recorded, never compared like for like.",
  "not_covered": [
   "One dataset and one seed per row: a spot check at this size, not a scaling study or a coverage study.",
-  "R was not re-run: its values are the PR #547 receipt's, which is unqualified until the maintainer signs the D-300 answer 9 promotion block.",
+  "R was not re-run: its values are the PR #547 receipt's, promoted by the maintainer's D-300 answer 9 block (2026-10-05).",
   "cond(H) (R 83030, Julia 82761 here) is recorded, not compared."
  ],
  "engines": {
@@ -47,7 +47,7 @@
    "cond_H_method": "kappa(sd$cov.fixed, exact = TRUE) in tools/phylo_latent/r_reference_p1.R (PR #547): the exact 2-norm condition number of TMB's sdreport covariance of all fixed parameters, in gllvmTMB's own coordinates",
    "wall_fit_sec": 3.375,
    "dll_sha256": "cba0f54d5492f0c6d0c5474c19281e3b58d5e2b0709e536684619558aaf55b8d",
-   "qualified": false
+   "qualified": true
   },
   "julia": {
    "engine": "GLLVModels.fit_phylo_latent_gllvm, fresh fit on current main",
@@ -898,7 +898,7 @@
  },
  "read_from": {
   "docs/dev-log/core070/phylo-latent-p1/a15-fixture.json": "f3bace851f60f337a8274859644135a84792b9e9ab35c07f757a7ade336706d4",
-  "docs/dev-log/core070/phylo-latent-p1/cov_phylo_latent_rsz/r-receipt.json": "5121fbfeb20421149e9c535ea9220458d531f8ec0cfaa71c5b010a8597a7e40e",
+  "docs/dev-log/core070/phylo-latent-p1/cov_phylo_latent_rsz/r-receipt.json": "b84eb446dd51bc08983e2bebdced361344824ae2c895266460b89074fa0cf2fb",
   "docs/dev-log/core070/true-parity-latest/receipts/covariance/campaign/raw/phylo_J.json.gz (uncompressed sha256)": "805c12c42e42771b2baf33c91a018f8e179c6c3cc91711386d4d604d0d7baf77"
  }
 }

@@ -300,6 +300,25 @@ def build_batch(repo):
     return json.dumps(contract, indent=2) + "\n"
 
 
+WAVE6_NOBS_CASE = {
+    "case_id": "CORE070-WAVE6-POSTFIT-NOBS-MULTI",
+    "source_id": "postfit/POSTFIT-SURFACE-nobs.gllvmTMB_multi",
+    "kind": "integer_equality",
+    "fixture": "gaussian_small",
+    "quantity": "nobs",
+    "tolerance": 0.5,
+    "r_call": "as.numeric(nobs(fit_g))",
+    "julia_call": "GLLVModels.nobs(fit_g, Y_g)  # StatsAPI.nobs(fit::AnyGllvmFit, Y; mask), src/postfit.jl",
+    "expected": "R and Julia return the same integer: both count observed response cells (p * n = 400 on "
+                "gaussian_small, which has no missing cells)",
+    "ruling": "maintainer ruling 2026-10-05 (D-319), item N2; comparison kind integer_equality under "
+              "itchyshin/GLLVModels.jl#684 item 1 (tolerance 0.5 on integers means equal)",
+    "notes": "Rewritten at P1 from the P0 own_receipt_defect case, which asserted each engine against its own "
+             "formula (R == p*n, Julia == n). Julia now returns p*n, as R does, so that expectation is stale, not a "
+             "parity gap. The case now asserts R nobs == Julia nobs exactly.",
+}
+
+
 def build_wave6():
     p0, p1 = pin_entry()
     contract = json.loads(P0_WAVE6.read_text())
@@ -308,11 +327,23 @@ def build_wave6():
     contract["reference_commit"] = p1["reference_commit"]
     contract["p0_contract"] = "docs/dev-log/core070/wave6-conversion-batch-contract.json"
     contract["p0_contract_sha256"] = hashlib.sha256(P0_WAVE6.read_bytes()).hexdigest()
+    changes = [{"field": "reference_commit", "p0": p0["reference_commit"], "p1": p1["reference_commit"]}]
+    # Maintainer ruling 2026-10-05 (D-319), item N2: the nobs case's P0 expectation (Julia == n) is stale at
+    # P1, so the case is rewritten as an R-vs-Julia integer equality (itchyshin/GLLVModels.jl#684 item 1).
+    idx = next(i for i, c in enumerate(contract["cases"]) if c["case_id"] == WAVE6_NOBS_CASE["case_id"])
+    old = contract["cases"][idx]
+    if old["kind"] != "own_receipt_defect" or old["source_id"] != WAVE6_NOBS_CASE["source_id"]:
+        raise SystemExit("P0 wave6 nobs case is not the own_receipt_defect case N2 rewrites")
+    contract["cases"][idx] = WAVE6_NOBS_CASE
+    changes.append({"field": f"cases[{WAVE6_NOBS_CASE['case_id']}]", "p0": "kind own_receipt_defect (R == p*n, Julia == n)",
+                    "p1": "kind integer_equality (R nobs == Julia nobs, tolerance 0.5)",
+                    "ruling": "maintainer ruling 2026-10-05 (D-319), item N2"})
     contract["regeneration_log"] = {
         "generator": "tools/core070_covariance_p1_contract.py",
-        "changes": [{"field": "reference_commit", "p0": p0["reference_commit"], "p1": p1["reference_commit"]}],
-        "carried_verbatim": "status, cases (r_call, term_expr, quantity, tolerance), deferred, rejection_cases, "
-                            "negative_controls, fixtures, runner. No tolerance or expectation was edited.",
+        "changes": changes,
+        "carried_verbatim": "status, the other nine cases (r_call, term_expr, quantity, tolerance), deferred, "
+                            "rejection_cases, negative_controls, fixtures, runner. No tolerance was edited; the one "
+                            "expectation changed is the nobs case, by the signed ruling named in changes.",
     }
     return json.dumps(contract, indent=2) + "\n"
 

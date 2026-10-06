@@ -376,13 +376,13 @@ bootstrap refits would drop the pins.
 (`n_boot`, `seed`, `profile_max_expand`, `profile_max_bisect` and
 `penalty_weight` are the controls):
 
-| `parm`                        | quantity                                      | `:wald` (transform)                    | `:profile`, `:bootstrap` |
-|-------------------------------|-----------------------------------------------|----------------------------------------|--------------------------|
-| `"communality[t]"`            | `communality(fit)[t]`                         | [`communality_wald_ci`](@ref) (logit)  | `profile_ci_derived`, `bootstrap_ci_derived` |
-| `"icc[t]"` or `"repeatability[t]"` | [`extract_ICC_site`](@ref)`(fit)[t]`  | [`icc_wald_ci`](@ref) (logit)          | same |
-| `"rho[i,j]"` or `"correlation[i,j]"` | `correlation(fit)[i,j]`                | [`correlation_wald_ci`](@ref) (Fisher-z) | same |
-| `"proportion:<component>[t]"` | `proportions(fit; component)[t]`              | [`icc_wald_ci`](@ref) (logit)          | same |
-| `"phylo_signal[t]"`           | `phylo_signal(fit)[t]`                        | [`phylo_signal_wald_ci`](@ref) (logit) | `profile_ci_phylo_signal`, `bootstrap_ci_derived` |
+| `parm`                        | quantity                                      | `:wald` (transform)                    | `:profile`               | `:bootstrap` |
+|-------------------------------|-----------------------------------------------|----------------------------------------|--------------------------|--------------|
+| `"communality[t]"`            | `communality(fit)[t]`                         | [`communality_wald_ci`](@ref) (logit)  | withdrawn (refused)      | `bootstrap_ci_derived` |
+| `"icc[t]"` or `"repeatability[t]"` | [`extract_ICC_site`](@ref)`(fit)[t]`  | [`icc_wald_ci`](@ref) (logit)          | `profile_ci_derived`     | same |
+| `"rho[i,j]"` or `"correlation[i,j]"` | `correlation(fit)[i,j]`                | [`correlation_wald_ci`](@ref) (Fisher-z; `:fisher_z` is the same interval) | withdrawn (refused) | same |
+| `"proportion:<component>[t]"` | `proportions(fit; component)[t]`              | [`icc_wald_ci`](@ref) (logit)          | withdrawn (refused)      | same |
+| `"phylo_signal[t]"`           | `phylo_signal(fit)[t]`                        | [`phylo_signal_wald_ci`](@ref) (logit) | `profile_ci_phylo_signal` | same |
 
 Leave out `[t]` for every trait (`[i,j]` for every pair); separate several traits
 or pairs with `;`, as in `"rho[1,2;1,3]"`; or pass a vector of these names. The
@@ -398,9 +398,15 @@ quantity on its boundary has no interval and returns `NaN` bounds with
 `:failed`); `:profile` adds `status` and `boundary` (the profile is clamped to
 the quantity's natural range); `:bootstrap` adds `n_converged`, `n_valid` and
 `replicates` (one column per quantity, one bootstrap per quantity). The default
-method is `:wald`. Note that gllvmTMB withdrew its profile interval for icc,
-communality, rho and proportion; the penalty-based `profile_ci_derived` route
-here is exploratory.
+method is `:wald`. For `rho`, `method = :fisher_z` (gllvmTMB's `"fisher-z"`) is
+an alias of `:wald`: it returns the same Fisher-z interval, field for field.
+
+`method = :profile` is refused for communality, rho and proportion, as in
+gllvmTMB 9539352f6, which withdrew those profile intervals (condition class
+`gllvmTMB_nonlinear_profile_withdrawn`) pending an exact constraint solver: the
+ArgumentError says the profile is withdrawn and points to `:wald` or `:bootstrap`.
+The penalty-based `profile_ci_derived` route that served them stays available as
+an exploratory internal function, and it still serves `icc` here.
 
 ```julia
 fit = fit_gaussian_gllvm(y; K = 2)
@@ -656,14 +662,33 @@ const _CONFINT_DERIVED_KINDS = Dict(
     "proportion" => :proportion, "proportions" => :proportion,
     "phylo_signal" => :phylo_signal)
 
-# Methods each derived quantity can use. To refuse one of them, remove it here
-# (gllvmTMB 9539352f6 withdrew the profile interval for icc, communality, rho and
-# proportion; GLLVModels.jl still has the penalty-based profile for them).
-const _CONFINT_DERIVED_METHODS = (communality = (:wald, :profile, :bootstrap),
+# Methods each derived quantity can use. To refuse one of them, remove it here.
+# gllvmTMB 9539352f6 withdrew the profile interval for communality, rho and
+# proportion (condition class gllvmTMB_nonlinear_profile_withdrawn), so those
+# kinds refuse :profile with the withdrawn message below. `:fisher_z` is accepted
+# for rho only, as an alias of :wald (both are the Fisher-z interval).
+const _CONFINT_DERIVED_METHODS = (communality = (:wald, :bootstrap),
                                   icc = (:wald, :profile, :bootstrap),
-                                  rho = (:wald, :profile, :bootstrap),
-                                  proportion = (:wald, :profile, :bootstrap),
+                                  rho = (:wald, :fisher_z, :bootstrap),
+                                  proportion = (:wald, :bootstrap),
                                   phylo_signal = (:wald, :profile, :bootstrap))
+
+# The quantity name R's withdrawn-profile message uses, for each kind whose profile
+# is withdrawn (R/z-confint-gllvmTMB.R:964-968, :1055-1060, :1202-1206 at 9539352f6).
+const _CONFINT_PROFILE_WITHDRAWN = (communality = "communality", rho = "correlations",
+                                    proportion = "variance proportions")
+
+function _confint_profile_withdrawn(kind::Symbol, parm)
+    what = getproperty(_CONFINT_PROFILE_WITHDRAWN, kind)
+    alt = kind === :rho ? "method = :wald (the Fisher-z interval; :fisher_z is the same)" :
+                          "method = :wald"
+    throw(ArgumentError(
+        "confint: nonlinear profile intervals for $what are withdrawn (parm " *
+        "$(_confint_parm_label(parm))). gllvmTMB withdrew its penalty-based " *
+        "constrained-refit profile pending an exact constraint solver and diagnostic " *
+        "contract, and this route follows it. Request $alt or method = :bootstrap, and " *
+        "report the method's limitations."))
+end
 
 # `proportions(fit; component)` names. gllvmTMB's `shared_unit` / `unique_unit` are not
 # accepted: its proportions are the aligned `extract_proportions` estimands, which differ
@@ -808,8 +833,11 @@ function _confint_derived(fit::GllvmFit, targets::Vector, y, level::Real, X, Σ_
                           method::Symbol, kw::NamedTuple, parm)
     label = _confint_fit_label(fit)
     for kind in unique(tg.kind for tg in targets)
+        method === :profile && haskey(_CONFINT_PROFILE_WITHDRAWN, kind) &&
+            _confint_profile_withdrawn(kind, parm)
         _confint_check_method(method, label, parm; available = getproperty(_CONFINT_DERIVED_METHODS, kind))
     end
+    method === :fisher_z && (method = :wald)  # rho only (checked above): the same Fisher-z interval
     _confint_check_kwargs(kw, _CONFINT_DERIVED_KWARGS, _CONFINT_INERT_KWARGS, label, method)
     0 < level < 1 || throw(ArgumentError("level must be in (0, 1); got $level"))
     _has_lv_predictor(fit) && throw(ArgumentError(
