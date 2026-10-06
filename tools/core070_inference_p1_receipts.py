@@ -74,6 +74,13 @@ disposition on the row. Each row's `reason` is derived here from tracked files o
 and the rulings run receipts/inference/inference-rulings-p1), so --check re-derives it; the row keeps its
 case receipts under evidence.non_binding_receipts and cites the rulings run under evidence.ruling_evidence.
 Rulings C and 3 and the fisher_z alias bind rows behaviourally (tools/core070_behaviour_receipts.py).
+
+Ruling N4 (Monte-Carlo tolerance rule) for CI-ROUTE-011: the rule receipts/inference/ci-route-011-mc/rule.json
+was committed before any run; the run (tools/core070_ci_route_011_mc.R + .jl, 5 seeds per engine) is ingested
+with --ingest-mc-011 RUN (RUN/ci-route-011-mc with run-commit.json at HEAD). Once it is tracked, the
+CI-ROUTE-011 receipt is re-derived with one comparison entry per endpoint: r_value and julia_value are the
+seed means, tolerance is the rule's 4.5 combined Monte-Carlo standard errors plus 0.005, and the per-seed
+structural check must hold on every seed. --check re-derives all of it from the tracked raw files.
 where DIR holds inference-p1/{julia,r-crosscheck,run-commit.json},
 inference-remainder-p1/ (with run-commit.json), routes-p0.tsv,
 routes-p1-unadapted.tsv, routes-p1-adapted.tsv and carry-scan-p1.json.
@@ -234,6 +241,64 @@ def apply_ruling_b(row):
     row.update(d)
 
 
+MC_REL = f"{REC_REL}/ci-route-011-mc"
+MC_CASE = "CORE070-SURFCONV-INFERENCE-CI-ROUTE-011"
+
+
+def mc_011():
+    """(body, comparison entries, verdict, read_from) for CI-ROUTE-011 under the N4 rule, or None when no run is
+    tracked. Derived only from the tracked rule and raw files."""
+    d = ROOT / MC_REL
+    if not (d / "r-mc.json").is_file():
+        return None
+    rule, r, j = load(d / "rule.json"), load(d / "r-mc.json"), load(d / "julia-mc.json")
+    rc = load(d / "run-commit.json")
+    if rc.get("dirty") != [] or git("merge-base", "--is-ancestor", rc.get("glvmodels_commit", ""), "HEAD",
+                                    check=False).returncode != 0:
+        raise SystemExit(f"{MC_REL}/run-commit.json {rc} is not a clean ancestor of HEAD")
+    # the rule must have been committed before the run commit
+    first = git("log", "--diff-filter=A", "--format=%H", "--", f"{MC_REL}/rule.json").stdout.split()
+    if not first or git("merge-base", "--is-ancestor", first[-1], rc["glvmodels_commit"], check=False).returncode != 0:
+        raise SystemExit("the N4 rule file was not committed before the Monte-Carlo run commit")
+    if r["reference_commit"] != P1_SHA or j["r_input_sha256"] != sha(d / "r-mc.json"):
+        raise SystemExit("the Monte-Carlo run is not pinned at P1, or Julia did not read this R file")
+    seeds = rule["seeds"]
+    if r["seeds"] != seeds or j["seeds"] != seeds:
+        raise SystemExit("the Monte-Carlo run used other seeds than the rule states")
+    reps = {"r": r["replicates"], "julia": j["replicates"]}
+    structural = all(x["ok"] and x["finite"] and x["ordered"] and x["brackets_point"]
+                     for side in reps.values() for x in side)
+    k, mult, floor = len(seeds), 4.5, 0.005  # rule.json test.pass_rule; checked against the rule text below
+    if "4.5 * se_q + 0.005" not in rule["test"]["pass_rule"]:
+        raise SystemExit("rule.json pass_rule is not the one this tool implements")
+    entries = []
+    for side in ("lower", "upper"):
+        for t in range(len(r["point"])):
+            rv = [x[side][t] for x in reps["r"]]
+            jv = [x[side][t] for x in reps["julia"]]
+            mr, mj = sum(rv) / k, sum(jv) / k
+            var = lambda v, m: sum((a - m) ** 2 for a in v) / (k - 1)
+            se = (var(rv, mr) / k + var(jv, mj) / k) ** 0.5
+            entries.append(mark_degenerate(
+                {"case_id": MC_CASE, "quantity": f"icc[{t + 1}] bootstrap {side} endpoint, mean over {k} seeds",
+                 "max_abs_diff": abs(mr - mj), "tolerance": mult * se + floor,
+                 "tolerance_rule": (f"N4 Monte-Carlo rule stated before any run ({MC_REL}/rule.json): "
+                                    f"|mean_R - mean_J| <= 4.5 * sqrt(var_R/{k} + var_J/{k}) + 0.005"),
+                 "mc_standard_error": se, "n_values": 1, "diff_source": "recomputed from the per-seed raw values",
+                 "r_value": mr, "julia_value": mj, "r_seed_values": rv, "julia_seed_values": jv}, [mr]))
+    ok = structural and all(e["max_abs_diff"] <= e["tolerance"] for e in entries)
+    body = {"rule": f"{MC_REL}/rule.json", "run_commit": rc["glvmodels_commit"], "seeds": seeds,
+            "nsim": 200, "per_seed_structural_check": structural,
+            "r_point": r["point"], "julia_point": j["point"],
+            "r_seconds_per_seed": [x["elapsed_seconds"] for x in reps["r"]],
+            "julia_seconds_per_seed": [x["elapsed_seconds"] for x in reps["julia"]],
+            "raw": [f"{MC_REL}/r-mc.json", f"{MC_REL}/julia-mc.json"],
+            "verdict": "PASS" if ok else "FAIL"}
+    reads = read_from(f"{MC_REL}/rule.json", f"{MC_REL}/r-mc.json", f"{MC_REL}/julia-mc.json",
+                      f"{MC_REL}/run-commit.json")
+    return body, entries, ("PASS" if ok else "FAIL"), reads
+
+
 def sha(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
@@ -381,6 +446,27 @@ def wave5_cases():
                                        "rule": f"Julia lower bound < {COLLAPSE_RATIO:g} x R lower bound",
                                        "fix": "draft PR #576", "action": "re-measure after #576 lands",
                                        "note": ANOMALY_NOTE.format(n=len(collapsed), pairs=pairs)}
+            mc = mc_011() if cid == MC_CASE else None
+            if mc is not None:
+                mbody, entries, verdict, mreads = mc
+                body["read_from"] = {**reads, **mreads}
+                body["monte_carlo"] = mbody
+                body["why_numeric"] = (
+                    "Signed ruling N4 (vault D-319): the two engines' bootstrap endpoints are compared as Monte-Carlo "
+                    "means over 5 seeds each, against the tolerance rule stated before any run. The structural check "
+                    "of PR #569's single run is kept under `measured`.")
+                if "anomaly" in body:
+                    clean = all(jl >= COLLAPSE_RATIO * rl for e in entries if "lower" in e["quantity"]
+                                for jl, rl in zip(e["julia_seed_values"], e["r_seed_values"]))
+                    sup = (f"Superseded for binding by the N4 Monte-Carlo run ({MC_REL}, at "
+                           f"{mbody['run_commit'][:9]}, after #576 landed): " +
+                           ("no Julia lower bound collapsed on any of the 5 seeds, and the row binds on the "
+                            "pre-stated Monte-Carlo comparison." if clean else
+                            "a Julia lower bound still collapses in that run."))
+                    body["anomaly"]["superseded_by"] = sup
+                    body["anomaly"]["note"] = body["anomaly"]["note"] + " " + sup
+                out[cid] = ("numeric_r_vs_julia", verdict if jc["pass"] else "FAIL", body, entries)
+                continue
             out[cid] = (f"paired_{cc['kind']}", "PASS" if jc["pass"] else "FAIL", body, None)
     return out
 
@@ -555,6 +641,24 @@ def apply_behaviour():
     print(json.dumps(counts))
 
 
+def ingest_mc_011(run):
+    """Copy a CI-ROUTE-011 Monte-Carlo run (RUN/ci-route-011-mc, run at clean HEAD) next to the committed rule and
+    re-derive the CI-ROUTE-011 receipt from it (provenance fields of the tracked receipt are kept)."""
+    src = run / "ci-route-011-mc"
+    head, _dirty = git_state()
+    check_run_commit(src, head)
+    copy(src, "ci-route-011-mc", ["r-mc.json", "julia-mc.json", "run-commit.json"])
+    kind, verdict, body, comparison = wave5_cases()[MC_CASE]
+    path = REC / "cases" / f"{MC_CASE}.json"
+    old = load(path)
+    rec = {"schema": old["schema"], "case_id": MC_CASE, "verdict": verdict, "evidence_kind": kind, **body,
+           **{k: old[k] for k in PROVENANCE_KEYS if k in old and k not in
+              ("schema", "case_id", "verdict", "evidence_kind", "comparison", "behaviour", "behaviour_not_bound")},
+           "comparison": {"pin": "P1", "cases": comparison}}
+    write_json(path, rec)
+    print("ingested", src, "CI-ROUTE-011 verdict", verdict)
+
+
 def ingest_rulings(run):
     """Copy a rulings run (RUN/inference-rulings-p1, run at clean HEAD) into the tracked receipts and run its verifier."""
     src = run / "inference-rulings-p1"
@@ -581,7 +685,12 @@ def main():
                     help="re-derive the case-map rows from the tracked receipts and their behaviour blocks")
     ap.add_argument("--ingest-rulings", type=Path, metavar="RUN",
                     help="copy RUN/inference-rulings-p1 into the tracked receipts and run its verifier")
+    ap.add_argument("--ingest-mc-011", type=Path, metavar="RUN",
+                    help="copy RUN/ci-route-011-mc into the tracked receipts and re-derive the CI-ROUTE-011 receipt")
     args = ap.parse_args()
+    if args.ingest_mc_011:
+        ingest_mc_011(args.ingest_mc_011)
+        return
     if args.ingest_rulings:
         ingest_rulings(args.ingest_rulings)
         return

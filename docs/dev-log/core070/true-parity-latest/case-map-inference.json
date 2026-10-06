@@ -40,11 +40,11 @@
     }
   },
   "counts": {
-    "numeric_pass": 2,
+    "numeric_pass": 3,
     "numeric_fail": 0,
     "numeric_held_batch_verifier_failed": 0,
     "numeric_non_discriminating": 0,
-    "partial_non_numeric_case": 2,
+    "partial_non_numeric_case": 1,
     "routing_control_flow": 10,
     "reject_error_class": 0,
     "needs_surface_not_executed": 0,
@@ -382,13 +382,13 @@
       ],
       "disposition": null,
       "p0_batch": "surface-conversion wave5 (attempt7)",
-      "evidence_tier": "partial_non_numeric_case",
+      "evidence_tier": "numeric",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-SURFCONV-INFERENCE-CI-ROUTE-011.json"
         ],
-        "tier": "measured at P1 and the harness passes, but the case is a refusal pair or a structural bootstrap check with no R-vs-Julia number and tolerance, so the row does not bind"
+        "tier": "numeric: every executable case receipt carries an R-vs-Julia comparison block pinned to P1, within the harness tolerance"
       },
       "measured_result": {
         "case_verdicts": {
@@ -397,11 +397,9 @@
         "batch_verifier": {
           "CORE070-SURFCONV-INFERENCE-CI-ROUTE-011": "PASS"
         },
-        "case_kinds": {
-          "CORE070-SURFCONV-INFERENCE-CI-ROUTE-011": "paired_bootstrap_structural"
-        }
+        "row_verdict": "PASS"
       },
-      "note": "Anomaly: the Julia bootstrap lower bounds for 2 ICC entries collapsed (entry 2: Julia 1.06e-07 vs R 0.126; entry 4: Julia 4.53e-40 vs R 0.414). The structural check passes (finite, ordered, brackets the point) and endpoints are not compared, so this PASS does not mean the bootstraps agree. Root cause found and fixed in draft PR #576: a Woodbury quadratic form went negative at extreme variance ratios, so bootstrap refits reported converged with an impossible log-likelihood. This receipt predates that fix (PR #569's run); re-measure after #576 lands."
+      "note": "Anomaly: the Julia bootstrap lower bounds for 2 ICC entries collapsed (entry 2: Julia 1.06e-07 vs R 0.126; entry 4: Julia 4.53e-40 vs R 0.414). The structural check passes (finite, ordered, brackets the point) and endpoints are not compared, so this PASS does not mean the bootstraps agree. Root cause found and fixed in draft PR #576: a Woodbury quadratic form went negative at extreme variance ratios, so bootstrap refits reported converged with an impossible log-likelihood. This receipt predates that fix (PR #569's run); re-measure after #576 lands. Superseded for binding by the N4 Monte-Carlo run (docs/dev-log/core070/true-parity-latest/receipts/inference/ci-route-011-mc, at 9130afe6e, after #576 landed): no Julia lower bound collapsed on any of the 5 seeds, and the row binds on the pre-stated Monte-Carlo comparison."
     },
     {
       "source_id": "inference/CI-ROUTE-012",
