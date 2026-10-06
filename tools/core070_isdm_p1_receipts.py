@@ -336,7 +336,8 @@ FIRST_SEVEN_ISDM = frozenset("isdm/" + name for name in (
 def rederive_map():
     """Regenerate rows from retained receipts without overwriting measured evidence."""
     cm = load(ROOT / CASEMAP_REL)
-    tracked = tracked_receipts()
+    tracked = {p.stem: (str(p.relative_to(ROOT)), load(p))
+               for p in sorted((ROOT / REC_REL / "cases").glob("*.json"))}
     receipts = {cid: receipt_info(path, rec) for cid, (path, rec) in tracked.items()}
     mine = own_rows(cm)
     rows, counts = build_rows([r["source_id"] for r in mine], receipts, mine)
