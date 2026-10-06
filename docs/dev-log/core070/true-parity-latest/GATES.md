@@ -804,6 +804,51 @@ receipt of another kind, a wrong verdict, a bridge kind on a non-bridge case, a 
 block, every case set aside, a context id outside `executable_case_ids`, a missing context receipt and a missing
 `boundary_context_receipts` each fail. Assembler: `boundary_context_*`.
 
+### N9: convergence parity for C3 campaign rows
+
+Signed yes, as drafted in PR #715 (`docs/dev-log/w1-11-convergence-parity-rule-DRAFT.md` on that branch): a C3
+comparison counts only when both engines reach gradient max-abs 1e-5 at the point whose outputs are compared. The
+draft's reason: on the ordinal cell R's `nlminb` stops at gradient max-abs 4.3e-4 and Julia at 7.8e-6 on the same
+objective, so the row measured how early each optimiser stopped; after one Newton step each (R 4.7e-7, Julia 2.4e-6)
+the loadings product agrees to 1.85e-7 against the unchanged tolerance 1e-4. No tolerance changes.
+
+Rule (checker `convergenceParityProblem`, assembler `convergence_parity_problem`). A receipt records the condition in a
+top-level block:
+
+```json
+"convergence_parity": {
+  "gradient_bound": 1e-5,
+  "compared_point": "returned" | "newton_polished",
+  "engines": { "R": { "max_abs_gradient": 4.7e-7 }, "julia": { "max_abs_gradient": 2.4e-6 } }
+}
+```
+
+When a cited receipt carries the block, the bound must be exactly 1e-5, `compared_point` one of the two words, and
+both gradients finite, at least 0 and at most 1e-5; otherwise the row does not bind (reason "convergence parity
+(maintainer ruling 2026-10-05 (D-319), N9)"). Each gradient is on that engine's own objective in its own coordinates,
+as the draft says.
+
+Two readings, stated rather than chosen silently:
+
+- **Applied (this change): the rule governs receipts that record it.** A C3 receipt without the block is judged as
+  before. Reason: the ruling page says N9 "binds ORDINAL-LOGIT-RSZ and, after a re-run, ISDM-HEADLINE-RSZ", that is, it
+  was signed to let the stopped-early rows be compared at a converged point, not to reopen the rows that bind.
+- **Not applied: the rule as a precondition for every C3 row.** Measured on the tracked receipts, all five C3 rows that
+  bind today have an R gradient above 1e-5 (Gaussian 1.97e-2, Poisson 3.80e-3, NB2 3.76e-3, binomial 9.86e-4,
+  temporal 4.35e-2) and four record no Julia gradient at all. Reading the rule strictly would unbind all five (C3 from
+  5/8 to 0/8) until the campaign is re-run with the polish. That is the maintainer's call; the change to the checker
+  is one line (require the block on every `-RSZ` row).
+- The draft's step-3 alternative (a Newton step size `max |H^-1 g|` at most 1e-5 when an engine's gradient noise
+  floor sits above the bound) is not part of the signed text and is not accepted by the checker.
+
+The campaign receipts do not carry the block yet. `tools/true_parity/campaign/write_receipts.py` (and `run_J.jl`,
+which must record Julia's gradient) belong to the campaign slice: ORDINAL-LOGIT-RSZ binds once its receipt records the
+polished comparison with the block (the PR #715 pre-run numbers pass), and ISDM-HEADLINE-RSZ after a re-run.
+
+Negative controls (checker, group "N9 convergence parity"): the ordinal pre-run numbers bind, as do exactly 1e-5 and a
+`returned` point; R's unpolished 4.3e-4, Julia above the bound, a declared bound of 1e-4, a missing Julia gradient, an
+unknown compared point, a negative gradient and a non-object block each fail. Assembler: `convergence_parity_*`.
+
 ### Item A, N6 and N10: the behavioural scope is extended by 14 listed rows
 
 Ruling 2 of 2026-10-02 froze the behavioural tier to 63 rows. Three signed items extend that list, and only by

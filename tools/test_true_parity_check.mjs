@@ -1310,6 +1310,38 @@ for (const [name, opts, why] of [
   });
 }
 
+// --- Maintainer ruling 2026-10-05 (D-319), N9: a receipt's convergence_parity block must show both engines at
+// gradient max-abs <= 1e-5. cpTree() adds the block to the base numeric receipt r1.json. ---
+function cpTree(cp) {
+  return ({ readJ, writeJ }) => { const r1 = readJ('receipts/r1.json'); r1.convergence_parity = cp; writeJ('receipts/r1.json', r1); };
+}
+const cpBlock = (rg, jg, over = {}) => ({ gradient_bound: 1e-5, compared_point: 'newton_polished',
+  engines: { R: { max_abs_gradient: rg }, julia: { max_abs_gradient: jg } }, ...over });
+test('N9 convergence parity: both engines at or below 1e-5 bind (the ordinal pre-run numbers, and exactly 1e-5)', () => {
+  for (const cp of [cpBlock(4.709e-7, 2.365e-6), cpBlock(1e-5, 1e-5), cpBlock(0, 0, { compared_point: 'returned' })]) {
+    const c1 = runTree(cpTree(cp), 'C1');
+    assert.match(c1.stdout, /C1_MET$/m, `${JSON.stringify(cp)}\n${c1.stdout}`);
+    assert.match(c1.stdout, /bound=2 bound_numeric=2\b/);
+  }
+});
+for (const [name, cp, why] of [
+  ["R stopped early (the ordinal row's unpolished 4.3e-4)", cpBlock(4.314e-4, 7.822e-6), /R max_abs_gradient 0\.0004314 > 1e-5/],
+  ['Julia above the bound', cpBlock(4.7e-7, 2e-5), /julia max_abs_gradient 0\.00002 > 1e-5/],
+  ['a looser declared bound (1e-4)', cpBlock(4.7e-7, 2.4e-6, { gradient_bound: 1e-4 }), /gradient_bound 0\.0001 is not 1e-5/],
+  ['a missing Julia gradient', { gradient_bound: 1e-5, compared_point: 'returned', engines: { R: { max_abs_gradient: 1e-7 } } }, /julia max_abs_gradient undefined is not a finite number >= 0/],
+  ['an unknown compared point', cpBlock(1e-7, 1e-7, { compared_point: 'best_of_both' }), /compared_point "best_of_both" is not returned or newton_polished/],
+  ['a negative gradient', cpBlock(-1e-7, 1e-7), /R max_abs_gradient -1e-7 is not a finite number >= 0/],
+  ['a block that is not an object', 'converged', /convergence_parity is not an object/],
+]) {
+  test(`N9 convergence parity: ${name} does not bind`, () => {
+    const c1 = runTree(cpTree(cp), 'C1');
+    assert.match(c1.stdout, /C1_NOT_MET$/m, name);
+    assert.match(c1.stdout, /numeric_label_without_numeric_receipt=isdm\/CAP-ISDM-1FO-PREDICT-EXPORT\(convergence parity \(maintainer ruling 2026-10-05 \(D-319\), N9\): /, name);
+    assert.match(c1.stdout, why, name);
+    assert.match(runTree(cpTree(cp), 'C8').stdout, /C8_NOT_MET$/m, name);
+  });
+}
+
 // --- Fix round on PR #687 (three adversarial reviews). Each control below fails on the head before the
 // round (6f546fb00) for the reason it names, and passes after. ---
 

@@ -1281,6 +1281,36 @@ def main():
           ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED"}, "NUMERIC-UNVERIFIED",
                    "every executable case is boundary context", ids=("C-PUBLIC-R-BRIDGE",)))
 
+    # Maintainer ruling 2026-10-05 (D-319), N9: convergence parity; the checker gives the same verdict.
+    def cp_case(cp, want_status, contains=None):
+        def f():
+            root, tmp = numeric_root({"convergence_parity": cp})
+            try:
+                c, o = run(root)
+                st = status_of(root)
+                txt = (root / A.LEDGER / A.OUT_SCOREBOARD).read_text()
+                out = checker_c1(root)
+                m = re.search(r"\bbound=(\d+)", out or "")
+                want_bound = 1 if want_status == "EVIDENCED" else 0
+                ok = c == 0 and st == want_status and (contains is None or contains in txt) and (out is None or (m and int(m.group(1)) == want_bound))
+                return ok, f"code={c} status={st} checker={out and out[:300]} {o}"
+            finally:
+                shutil.rmtree(tmp)
+        return f
+    def cpb(rg, jg, **over):
+        d = {"gradient_bound": 1e-5, "compared_point": "newton_polished",
+             "engines": {"R": {"max_abs_gradient": rg}, "julia": {"max_abs_gradient": jg}}}
+        d.update(over)
+        return d
+    check("convergence_parity_both_below_bound_evidenced", cp_case(cpb(4.709e-7, 2.365e-6), "EVIDENCED"))
+    check("convergence_parity_exactly_bound_evidenced", cp_case(cpb(1e-5, 1e-5), "EVIDENCED"))
+    check("convergence_parity_r_early_stop_unverified", cp_case(cpb(4.314e-4, 7.822e-6), "NUMERIC-UNVERIFIED", "R max_abs_gradient 0.0004314 > 1e-5"))
+    check("convergence_parity_looser_bound_unverified", cp_case(cpb(1e-7, 1e-7, gradient_bound=1e-4), "NUMERIC-UNVERIFIED", "is not 1e-5"))
+    check("convergence_parity_bool_bound_unverified", cp_case(cpb(1e-7, 1e-7, gradient_bound=True), "NUMERIC-UNVERIFIED", "is not 1e-5"))
+    check("convergence_parity_missing_julia_unverified",
+          cp_case({"gradient_bound": 1e-5, "compared_point": "returned", "engines": {"R": {"max_abs_gradient": 1e-7}}}, "NUMERIC-UNVERIFIED", "julia max_abs_gradient"))
+    check("convergence_parity_unknown_point_unverified", cp_case(cpb(1e-7, 1e-7, compared_point="best"), "NUMERIC-UNVERIFIED", "is not returned or newton_polished"))
+
     # Real tree: outputs current, and EVIDENCED count equals the checker's own C1 bound=.
     c, o = run(A.ROOT, "--check")
     expect("real_tree_outputs_current", c == 0, o)

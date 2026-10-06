@@ -688,6 +688,35 @@ def boundary_context(row, root):
     return set(ctx), None
 
 
+# Maintainer ruling 2026-10-05 (D-319), N9: the checker's convergenceParityProblem (keep in step).
+CONVERGENCE_GRADIENT_BOUND = 1e-5
+CONVERGENCE_POINTS = ("returned", "newton_polished")
+
+
+def convergence_parity_problem(cp, p):
+    """None when a receipt's convergence_parity block holds (both engines at gradient max-abs <= 1e-5), else why not."""
+    def why(m):
+        return f"convergence parity (maintainer ruling 2026-10-05 (D-319), N9): {m} in {p}"
+    if not isinstance(cp, dict):
+        return why("convergence_parity is not an object")
+    gb = cp.get("gradient_bound")
+    if isinstance(gb, bool) or not isinstance(gb, (int, float)) or gb != CONVERGENCE_GRADIENT_BOUND:
+        return why(f"gradient_bound {json.dumps(gb)} is not 1e-5")
+    if cp.get("compared_point") not in CONVERGENCE_POINTS:
+        return why(f"compared_point {json.dumps(cp.get('compared_point'))} is not returned or newton_polished")
+    eng = cp.get("engines")
+    if not isinstance(eng, dict):
+        return why("no engines block")
+    for side in ("R", "julia"):
+        e = eng.get(side)
+        g = e.get("max_abs_gradient") if isinstance(e, dict) else None
+        if not _fin(g) or g < 0:
+            return why(f"{side} max_abs_gradient {json.dumps(g)} is not a finite number >= 0")
+        if g > CONVERGENCE_GRADIENT_BOUND:
+            return why(f"{side} max_abs_gradient {g} > 1e-5")
+    return None
+
+
 def numeric_receipt_problem(row, root, waive_status=False):
     """None when the row binds numerically, else why not. waive_status=True skips only the
     receipt status fields (what a valid receipt_status_exception waives in the checker)."""
@@ -706,6 +735,10 @@ def numeric_receipt_problem(row, root, waive_status=False):
             bp = bridge_readback_problem(row, p)
             if bp:
                 return bp
+        if "convergence_parity" in j:
+            cp = convergence_parity_problem(j["convergence_parity"], p)
+            if cp:
+                return cp
         if not_passed is None:
             for obj, pre in ((j, ""), (j.get("comparison") if isinstance(j.get("comparison"), dict) else None, "comparison.")):
                 if obj is None:
