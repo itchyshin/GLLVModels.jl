@@ -67,23 +67,29 @@
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-COEF-MULTI-READBACK.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-COEF-MULTI-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-COEF-MULTI-NATIVE"
+    ],
+    "ruling": "W1-1 re-cite, made possible by the maintainer's signed OK (D-319, 2026-10-05) to repoint the real-row mutation control in tools/test_true_parity_check.mjs, which pinned this row as registration-only.",
+    "tier": "numeric: re-cites the bound receipt of postfit/POSTFIT-SURFACE-coef.gllvmTMB_multi (postfit-1 batch at P1, verifier PASS): R coef() on a gllvmTMB_multi fit against the Julia coefficients of the same fit, 4 values, max |R - Julia| 7.2e-7 within 1e-3, discriminating. The Tier 0 registration receipts are kept un-cited under registration_receipts."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-COEF-MULTI-NATIVE"
+    "CORE070-POSTFIT-COEF-MULTI-READBACK"
    ],
-   "reason": "R S3method(coef,gllvmTMB_multi) registered and defined at P1; Julia `coef` is an exported Function (measured). Name match only.",
+   "reason": "R S3method(coef,gllvmTMB_multi) is measured numerically by the postfit-1 readback case at P1; this row re-cites that receipt (W1-1).",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
-    "case_verdict": "PASS",
-    "category": "registration_twin",
-    "reason": "R registered and defined; Julia symbol present, exported, a Function"
+    "case_verdicts": {
+     "CORE070-POSTFIT-COEF-MULTI-READBACK": "PASS"
+    },
+    "row_verdict": "PASS"
    }
   },
   {

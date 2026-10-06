@@ -21,7 +21,7 @@ Inputs:
 - `docs/dev-log/core070/true-parity-latest/case-map-fit-input.json` (10 rows, sha256 `568c054ed5f3786b96c9acb796e28d98e4523c4edc5fe5ad9f69ab150cee3639`)
 - `docs/dev-log/core070/true-parity-latest/case-map-inference.json` (63 rows, sha256 `ab0cb02039e34ecb5d1666c469321eba590dfead2452ac2f0de30d9da9a2bda9`)
 - `docs/dev-log/core070/true-parity-latest/case-map-isdm.json` (21 rows, sha256 `abcd0731b63d4290870525114ca3882d9a08fb9ac1966e35e702271a3917e6ca`)
-- `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `8b3e68d361b1731ae07d035ad13a2eb73b9ff68b28b5b5f7c58748f41ff03a49`)
+- `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `e039c8a024d71d13a489e31928065a619e7d2e93f882d39c54955f98c211a114`)
 - `docs/dev-log/core070/true-parity-latest/case-map-postfit.json` (52 rows, sha256 `1a5970c940b4be21a3605a9d84d0e08a46de1673146db0278efafb45727b3e4d`)
 
 ## Totals by family
@@ -35,9 +35,9 @@ Inputs:
 | `fit-input` | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
 | `inference` | 2 | 44 | 0 | 0 | 0 | 2 | 0 | 15 | 0 | 0 | 63 |
 | `isdm` | 11 | 0 | 0 | 0 | 0 | 0 | 9 | 0 | 1 | 0 | 21 |
-| `namespace` | 50 | 0 | 10 | 6 | 0 | 0 | 0 | 0 | 0 | 3 | 69 |
+| `namespace` | 51 | 0 | 10 | 5 | 0 | 0 | 0 | 0 | 0 | 3 | 69 |
 | `postfit` | 41 | 0 | 0 | 0 | 2 | 6 | 2 | 0 | 1 | 0 | 52 |
-| `all` | 171 | 44 | 12 | 6 | 4 | 18 | 27 | 22 | 7 | 6 | 317 |
+| `all` | 172 | 44 | 12 | 5 | 4 | 18 | 27 | 22 | 7 | 6 | 317 |
 
 ## P1 twin fixtures present at this head, not bound to any row
 
@@ -327,7 +327,7 @@ decision for the PR that measures it, not something this tool does.
 | isdm-ISDM-ZERO-ORDINARY `isdm/ISDM-ZERO-ORDINARY` | required_core; cases: P1-JULIA-ISDM-ADM-ZEROORD-LOGLIK-AT-R-OPTIMUM, P1-JULIA-ISDM-ADM-ZEROORD-CROSS-OBJECTIVE-AT-JULIA-OPTIMUM, P1-JULIA-ISDM-ADM-ZEROORD-B-FIX, P1-JULIA-ISDM-ADM-ZEROORD-ETA | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/isdm/adm_zeroord.json | family isdm; evidence_tier numeric; measured_against P1 |
 | isdm-ISDM-HEADLINE-RSZ `isdm/ISDM-HEADLINE-RSZ` | required_core; cases: CAMPAIGN-C3-ISDM-HEADLINE-RSZ-LOGLIK, CAMPAIGN-C3-ISDM-HEADLINE-RSZ-BETA, CAMPAIGN-C3-ISDM-HEADLINE-RSZ-PREDICT-LINK, CAMPAIGN-C3-ISDM-HEADLINE-RSZ-PREDICT-RESPONSE, CAMPAIGN-C3-ISDM-HEADLINE-RSZ-PREDICT-NEWDATA-OFFSET0-LINK, CAMPAIGN-C3-ISDM-HEADLINE-RSZ-PREDICT-NEWDATA-OFFSET0-RESPONSE | FAIL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/isdm/campaign/ISDM-HEADLINE-RSZ.json | family isdm; evidence_tier numeric_fail; measured_against P1 |
 | namespace-S3method-coef-gllvmTMB_julia `namespace/S3method/coef,gllvmTMB_julia` | compatibility_adapter; cases: CORE070-NAMESPACE-COEF-JULIA-BRIDGE-COMPARE | DISPOSITION-SIGNED | Disposition: DISPOSITION-SIGNED; signed_by: Shinichi Nakagawa; signed_on: 2026-10-05 | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| namespace-S3method-coef-gllvmTMB_multi `namespace/S3method/coef,gllvmTMB_multi` | required_core; cases: CORE070-NAMESPACE-COEF-MULTI-NATIVE | REGISTRATION-ONLY | not bound; cited: docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-COEF-MULTI-NATIVE.json, docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| namespace-S3method-coef-gllvmTMB_multi `namespace/S3method/coef,gllvmTMB_multi` | required_core; cases: CORE070-POSTFIT-COEF-MULTI-READBACK | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-COEF-MULTI-READBACK.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-S3method-confint-gllvmTMB_julia `namespace/S3method/confint,gllvmTMB_julia` | compatibility_adapter; cases: CORE070-NAMESPACE-CONFINT-JULIA-BRIDGE-COMPARE | DISPOSITION-SIGNED | Disposition: DISPOSITION-SIGNED; signed_by: Shinichi Nakagawa; signed_on: 2026-10-05 | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-S3method-confint-gllvmTMB_multi `namespace/S3method/confint,gllvmTMB_multi` | required_core; cases: CORE070-NAMESPACE-CONFINT-MULTI-NATIVE | REGISTRATION-ONLY | not bound; cited: docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-CONFINT-MULTI-NATIVE.json, docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-S3method-deviance-gllvmTMB_multi `namespace/S3method/deviance,gllvmTMB_multi` | required_core; cases: CORE070-WAVE8-DEVIANCE-MULTI | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE8-DEVIANCE-MULTI.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
