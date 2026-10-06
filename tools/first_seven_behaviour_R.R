@@ -47,27 +47,27 @@ records[[1]] <- capture("CORE070-FIRST7-CHECK-AUTO-RESIDUAL", {
                     KEEP.OUT.ATTRS=FALSE)
   gd$value <- sin(seq_len(nrow(gd)) / 3)
   gf <- gllvmTMB(value ~ 0 + trait + latent(0 + trait | cell_id, d=1, unique=FALSE),
-                 data=gd, family=gaussian(), silent=TRUE)
+                 data=gd, unit="cell_id", trait="trait", family=gaussian(), silent=TRUE)
   check_auto_residual(gf)
 })
 records[[2]] <- capture("CORE070-FIRST7-ISDM-COUNT", {
   # Existing public declaration with no detection-law arm; fit must reject it.
-  gllvmTMB(f, data=d, family=isdm_sources(count=poisson(), detect=poisson()))
+  gllvmTMB(f, data=d, unit="cell_id", trait="trait", family=isdm_sources(count=poisson(), detect=poisson()))
 })
 records[[3]] <- capture("CORE070-FIRST7-ISDM-EXTRA-SOURCE", {
   data_with_unknown_source <- d; data_with_unknown_source$isdm_source[1] <- "unknown"
   stopifnot(nrow(data_with_unknown_source) == nrow(d), sum(data_with_unknown_source$isdm_source == "unknown") == 1L)
-  gllvmTMB(f, data=data_with_unknown_source, family=fam())
+  gllvmTMB(f, data=data_with_unknown_source, unit="cell_id", trait="trait", family=fam())
 })
 records[[4]] <- capture("CORE070-FIRST7-ISDM-MISSING-IN-TRAIT", {
   data_missing_source_in_trait <- subset(d, !(trait == "a" & isdm_source == "detect"))
   stopifnot(nrow(d) - nrow(data_missing_source_in_trait) == 2L, !any(data_missing_source_in_trait$trait == "a" & data_missing_source_in_trait$isdm_source == "detect"))
-  gllvmTMB(f, data=data_missing_source_in_trait, family=fam())
+  gllvmTMB(f, data=data_missing_source_in_trait, unit="cell_id", trait="trait", family=fam())
 })
 records[[5]] <- capture("CORE070-FIRST7-ISDM-MISSING-SOURCE", {
   data_missing_declared_source <- subset(d, isdm_source == "count")
   stopifnot(nrow(d) - nrow(data_missing_declared_source) == 4L, identical(unique(as.character(data_missing_declared_source$isdm_source)), "count"))
-  gllvmTMB(f, data=data_missing_declared_source, family=fam())
+  gllvmTMB(f, data=data_missing_declared_source, unit="cell_id", trait="trait", family=fam())
 })
 logit_source <- isdm_source(binomial("logit"), observation=~x)
 stopifnot(inherits(logit_source, "gllvmTMB_isdm_source"))
@@ -87,7 +87,7 @@ records[[6]] <- data.frame(case_id="CORE070-FIRST7-ISDM-WRAPPER-LAW", outcome="E
 od <- expand.grid(cell_id=factor(paste0("u", 1:12)), trait=factor(c("a", "b")), KEEP.OUT.ATTRS=FALSE)
 od$value <- 1L + (seq_len(nrow(od)) %% 3L)
 of <- gllvmTMB(value ~ 0 + trait + latent(0 + trait | cell_id, d=1, unique=FALSE),
-               data=od, family=ordinal_probit(), silent=TRUE)
+               data=od, unit="cell_id", trait="trait", family=ordinal_probit(), silent=TRUE)
 oc <- suppressWarnings(check_auto_residual(of))
 stopifnot(identical(oc$status, "warn"))
 records[[1]]$message <- paste0("ordinal-probit control status=", oc$status)
