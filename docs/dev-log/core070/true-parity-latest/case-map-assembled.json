@@ -16,12 +16,12 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-data.json",
-   "sha256": "ab3c961085b22ddfaca1ba3a3537c3a82ef41f5445cf74f57dbf4f8fe9b8ec95",
+   "sha256": "26e7fb9121c21780bc173d05614e5b9d25c491c480ff9b4dd416ae5154fd28d1",
    "rows": 36
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-family.json",
-   "sha256": "f3021e307bec24fef11d123902432519d47f8c1434c74174e6a4daff11516757",
+   "sha256": "5bb1cd73e6422bb504d743d11da2529f6f947fa0356d61dc983404db9afa5093",
    "rows": 26
   },
   {
@@ -3310,7 +3310,7 @@
    "signature_ref": "D-319",
    "signed_disposition": {
     "capability": "phylo-structured real data",
-    "text": "gllvm::fungi ships a phylogeny (fungi$tree), so a real phylo workflow exists. Blocked at the bridge gate GJL-GATE-STRUCTURED-TERMS until gllvmTMB #1236 (A4a) lands; revisit at P2.",
+    "text": "gllvm::fungi ships a phylogeny (fungi$tree), so a real phylo workflow exists, but the campaign has no phylo-structured real-data run at P1. C4 accepts a direct-engine run (R gllvmTMB and Julia GLLVModels fitted to the same data), so one on fungi with fungi$tree would replace this disposition; revisit at P2.",
     "status": "DISPOSITION-SIGNED: item F of the rulings page (three C4 dispositions), signed by the maintainer on 2026-10-05 (vault D-319; LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the lane kit). Recorded by an agent, signed by the maintainer."
    },
    "ruling": "itchyshin/GLLVModels.jl#684 item 4 (row added); disposition signed under vault D-319, item F"
@@ -4008,20 +4008,15 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
    },
-   "boundary_context_case_ids": [
-    "CORE070-FAMILY-11-LOG-PUBLIC-R-BRIDGE"
-   ],
-   "evidence_tier": "numeric",
+   "evidence_tier": "partial_case_not_executed",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "receipt": [
+    "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/family/cases/NATIVE-12-TRUNCATED-NB2.json",
-     "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-11-LOG-FORMULA-INTERFACE.json"
-    ],
-    "boundary_context_receipts": [
+     "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-11-LOG-FORMULA-INTERFACE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-11-LOG-PUBLIC-R-BRIDGE.json"
     ],
-    "tier": "numeric: the native and formula-interface case receipts carry R-vs-Julia comparison blocks pinned to P1, within the harness tolerance, from a batch whose verifier passed; the PUBLIC-R-BRIDGE case was not executed and is non-binding boundary context under maintainer ruling 2026-10-05 (D-319), N1"
+    "tier": "some case ids were measured at P1 and at least one was not executed, so the row does not bind"
    },
    "measured_result": {
     "case_verdicts": {
@@ -4039,8 +4034,9 @@
      "CORE070-FAMILY-11-LOG-FORMULA-INTERFACE": true,
      "CORE070-FAMILY-11-LOG-PUBLIC-R-BRIDGE": true
     },
-    "row_verdict": "PASS"
-   }
+    "executed_cases_verdict": "PASS"
+   },
+   "note": "Held under maintainer ruling 2026-10-05 (D-319), N1: the PUBLIC-R-BRIDGE case was not executed, which N1 does not cover. The row binds once a P1 R probe records the bridge refusal (GJL-GATE-FAMILY) as R_BOUNDARY_UNCHANGED (tracked follow-up)."
   },
   {
    "source_id": "family/FAMILY-12-LOGIT-LOG",
