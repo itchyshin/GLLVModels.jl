@@ -21,10 +21,10 @@
   `loglikelihood` / `aic` / `bic` / `confint` / `latent_score_sd` refuse a weighted fit, as
   gllvmTMB's `logLik()` aborts for non-unit weights. Fit-level twins against gllvmTMB P1
   (`test/test_weights_twins_p1.jl`, one Poisson data set, p = 6, n = 120) cover all 13 weights
-  rows; seven bind (W-NULL, W-LONG, W-FRACTIONAL, W-MATRIX-SCALAR, W-MATRIX-UNIT,
-  W-MATRIX-CELLS, W-DF-UNIT) and the five mask rows and W-ZERO cite their twin as non-binding
-  pending the maintainer's decision on fit-level twins for helper-internal shapes. Not covered:
-  weights on any family other than Poisson.
+  rows and all 13 bind. For the five mask rows and W-ZERO, whose R batch case is a
+  helper-internal vector shape with no Julia counterpart, the twin compares the fit-level
+  consequence, accepted by the maintainer ruling of 2026-10-06. Not covered: weights on any
+  family other than Poisson.
 
 - **Six covariance rows bound to P1 fit twins (COV-ORD-LATENT-BARE, -DEFAULT, -COMMON;
   COV-PHYLO-DEP, -A-ALIAS, -FOLDED-UNIQUE).** These scoreboard rows carried only R-side

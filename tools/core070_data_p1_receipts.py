@@ -71,10 +71,10 @@ helper-replay case. `--apply-twins` re-derives rows and counts of the tracked ca
 from the tracked receipts and twin receipts (no run directory needed); `--check` verifies the
 result. Rows with no twin (legacy-fit and newdata predict-time offset rows: no Julia surface to
 fit) keep their batch tier. The 13 weights rows (DATA-W-*) have fit-level twins (Poisson fits with
-observation weights, test/test_weights_twins_p1.jl, fixture test/fixtures/weights_twins_p1.toml); seven
-bind, and the six whose batch case is a helper-internal vector shape (the five mask rows and W-ZERO)
-cite their twin as non-binding until the maintainer accepts a fit-level twin for them (wave plan
-W4-1b, decision N11) or signs a disposition citing it. DATA-OFF-TRAIN-STORED is bound by its own twin (test/test_predict_offset_twin_p1.jl,
+observation weights, test/test_weights_twins_p1.jl, fixture test/fixtures/weights_twins_p1.toml); all
+13 bind. The six whose batch case is a helper-internal vector shape (the five mask rows and W-ZERO) bind
+on their fit-level twins under the maintainer ruling of 2026-10-06 (D-319 follow-up); the shape itself
+has no Julia counterpart. DATA-OFF-TRAIN-STORED is bound by its own twin (test/test_predict_offset_twin_p1.jl,
 fixture test/fixtures/predict_offset_twin_p1.toml); DATA-MISS-MODEL and DATA-MISS-BOTH by the
 modelled-predictor twins (test/test_data_twins_2_p1.jl, fixture test/fixtures/data_twins_2_p1.toml);
 DATA-OFF-ALL-COUNT by the three-family exposure-offset twin (test/test_off_all_count_twin_p1.jl, fixture
@@ -515,30 +515,20 @@ TWIN_FILES = {  # source_id -> twin receipt stem
     "data/DATA-W-MATRIX-UNIT": "W-MATRIX-UNIT",
     "data/DATA-W-MATRIX-CELLS": "W-MATRIX-CELLS",
     "data/DATA-W-DF-UNIT": "W-DF-UNIT",
+    # the six helper-internal-shape rows of wave plan W4-1b, bound on their fit-level twins under the
+    # maintainer ruling of 2026-10-06 (D-319 follow-up)
+    "data/DATA-W-ZERO": "W-ZERO",
+    "data/DATA-W-MATRIX-MASK-DROP": "W-MATRIX-MASK-DROP",
+    "data/DATA-W-MATRIX-MASK-INCLUDE": "W-MATRIX-MASK-INCLUDE",
+    "data/DATA-W-MATRIX-MASK-SCALAR": "W-MATRIX-MASK-SCALAR",
+    "data/DATA-W-DF-MASK-DROP": "W-DF-MASK-DROP",
+    "data/DATA-W-DF-MASK-INCLUDE": "W-DF-MASK-INCLUDE",
 }
 
 
 # A twin receipt that records a true measurement but does not twin its row: cited as non-binding,
 # with the reason on the row (`twin_not_bound`).
-_W_N11 = ("The R batch case is a helper-internal vector shape of normalise_weights() ({shape}). The twin is a real "
-          "Poisson fit with that weight shape, R gllvmTMB at P1 against Julia fit_gllvm(Y; family = Poisson(), K = 1, "
-          "weights), and it agrees within the twin tolerances; but the wave plan (W4-1b, decision N11) closes this row "
-          "only if the maintainer accepts a fit-level twin for a helper-internal shape, otherwise by a signed "
-          "disposition citing the twin. Neither is recorded yet, so the twin is cited here and does not bind.")
-NONBINDING_TWINS = {
-    "data/DATA-W-ZERO": ("W-ZERO", _W_N11.format(shape="an all-zero length-6 vector returned unchanged; the twin "
-        "fit uses weight 0 on 15 of 720 cells, since an all-zero fit is a flat objective with nothing to compare")),
-    "data/DATA-W-MATRIX-MASK-DROP": ("W-MATRIX-MASK-DROP", _W_N11.format(shape="wide-matrix weights shrunk to the "
-        "retained observations when NA cells are dropped")),
-    "data/DATA-W-MATRIX-MASK-INCLUDE": ("W-MATRIX-MASK-INCLUDE", _W_N11.format(shape="wide-matrix weights zeroed in "
-        "place at NA cells under response = 'include'")),
-    "data/DATA-W-MATRIX-MASK-SCALAR": ("W-MATRIX-MASK-SCALAR", _W_N11.format(shape="a scalar weight broadcast to the "
-        "retained-observation count when NA cells are dropped")),
-    "data/DATA-W-DF-MASK-DROP": ("W-DF-MASK-DROP", _W_N11.format(shape="traits()-route per-unit weights replicated "
-        "and shrunk to the retained observations when NA cells are dropped")),
-    "data/DATA-W-DF-MASK-INCLUDE": ("W-DF-MASK-INCLUDE", _W_N11.format(shape="traits()-route per-unit weights kept "
-        "at full length under response = 'include'")),
-}
+NONBINDING_TWINS = {}  # source_id -> (twin receipt stem, reason); empty since the 2026-10-06 ruling
 # Rows that bind, with a stated limit of what the twin covers.
 _W_SCOPE_COMMON = ("A weight multiplies its cell's conditional log-density on both sides. gllvmTMB's logLik() aborts for "
     "non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia "
@@ -548,6 +538,9 @@ _W_SCOPE_COMMON = ("A weight multiplies its cell's conditional log-density on bo
 _W_SCOPE_WIDE = ("gllvmTMB_wide() hardcodes latent()'s default unique = TRUE (a per-trait unique variance the Julia "
     "Poisson route does not carry), so the R fit runs its normalise_weights(..., 'wide_matrix', ...) and pivot "
     "verbatim and calls gllvmTMB() with unique = FALSE; that substitution is the only difference.")
+_W_SHAPE = ("Bound on its fit-level twin under the maintainer ruling of 2026-10-06 (D-319 follow-up). The R batch "
+    "case is a helper-internal vector shape of normalise_weights() ({shape}); that shape itself has no Julia "
+    "counterpart, so the twin compares its fit-level consequence: {twin}.")
 SCOPE_NOTES = {
     "data/DATA-W-NULL": "The R batch case replays normalise_weights(NULL) to NULL; the twin is the unweighted Poisson fit "
         "(p = 6, n = 120, one latent factor), R weights = NULL against Julia fit_gllvm(Y; family = Poisson(), K = 1) "
@@ -574,6 +567,32 @@ SCOPE_NOTES = {
         "the twin is a Poisson fit through the public traits() route, gllvmTMB(traits(t1, ..., t6) ~ 1 + latent(1 | "
         "unit, d = 1, unique = FALSE), weights = <one per unit>), against Julia weights = a length-n vector. "
         + _W_SCOPE_COMMON,
+    "data/DATA-W-ZERO": _W_SHAPE.format(shape="an all-zero length-6 vector returned unchanged", twin="a Poisson "
+        "fit through the long API with weight 0 on 15 of 720 rows and 1 elsewhere, against Julia with the same "
+        "p x n matrix (an all-zero fit is a flat objective with nothing to compare); the twin test also asserts "
+        "that the zero-weight fit equals the fit with those cells masked") + " " + _W_SCOPE_COMMON,
+    "data/DATA-W-MATRIX-MASK-DROP": _W_SHAPE.format(shape="wide-matrix weights shrunk to the retained observations "
+        "when NA cells are dropped", twin="a Poisson fit with a per-cell weight matrix that is NA where Y is NA (14 "
+        "cells), NA cells dropped, R through gllvmTMB_wide()'s own normaliser and pivot, against Julia with those "
+        "cells missing in Y and weights = the transposed matrix with NaN there") + " " + _W_SCOPE_COMMON + " "
+        + _W_SCOPE_WIDE,
+    "data/DATA-W-MATRIX-MASK-INCLUDE": _W_SHAPE.format(shape="wide-matrix weights zeroed in place at NA cells under "
+        "response = 'include'", twin="the DATA-W-MATRIX-MASK-DROP fit under response = 'include', against Julia "
+        "with a placeholder 0 at the 14 cells, mask = the observed cells and the same NaN-bearing weights; R's "
+        "drop and include objectives agree within 1e-6 (asserted in the twin test)") + " " + _W_SCOPE_COMMON + " "
+        + _W_SCOPE_WIDE,
+    "data/DATA-W-MATRIX-MASK-SCALAR": _W_SHAPE.format(shape="a scalar weight broadcast to the retained-observation "
+        "count when NA cells are dropped", twin="a Poisson fit with weight 2 on every cell and the 14 NA cells "
+        "dropped, R through gllvmTMB_wide(), against Julia with those cells missing in Y and weights = 2.0")
+        + " " + _W_SCOPE_COMMON + " " + _W_SCOPE_WIDE,
+    "data/DATA-W-DF-MASK-DROP": _W_SHAPE.format(shape="traits()-route per-unit weights replicated and shrunk to the "
+        "retained observations when NA cells are dropped", twin="a Poisson fit through the public traits() route "
+        "with one weight per unit and the 14 NA cells dropped, against Julia with those cells missing in Y and "
+        "weights = a length-n vector") + " " + _W_SCOPE_COMMON,
+    "data/DATA-W-DF-MASK-INCLUDE": _W_SHAPE.format(shape="traits()-route per-unit weights kept at full length under "
+        "response = 'include'", twin="the DATA-W-DF-MASK-DROP fit under response = 'include', against Julia with a "
+        "placeholder 0 at the 14 cells, mask = the observed cells and weights = a length-n vector; R's drop and "
+        "include objectives agree within 1e-6 (asserted in the twin test)") + " " + _W_SCOPE_COMMON,
     "data/DATA-OFF-SCALAR": "The twin is one Poisson fit with a constant offset: R takes offset(log(2)) in the "
         "formula, Julia takes the scalar keyword offset = log(2) and broadcasts it to every cell "
         "(fit_gllvm; scalar input returned logLik -Inf before that was fixed). It does not exercise other "
