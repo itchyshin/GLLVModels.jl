@@ -873,6 +873,15 @@ receipt with no engines block, only the R engine, or an array in place of the bl
 RD disposition row is done; a C3 row with a plain receipt is unaffected. Every fixture copy of the RD receipt gained
 the engines block.
 
+### D: phylo-latent promotion (D-300 answer 9) is signed
+
+Signed: "D: [yes]". The dated promotion block of D-300 answer 9, which the PR #547 receipts wait on
+(`phylo-latent-p1/cov_phylo_latent_rsz/r-receipt.json` records `qualified = false` until it is signed), is signed on
+2026-10-05 under maintainer ruling 2026-10-05 (D-319), item D. This file records the signature only. Flipping the
+receipts' qualification and the pass-rule leg `R_side_receipt_qualified_by_maintainer` (so that
+`covariance/COV-PHYLO-LATENT-RSZ` and the phylo twins can bind) belongs to the covariance and namespace slice; the
+"Phylo row does not bind" paragraph under "C3 to C5 campaign rows" describes the state before that flip.
+
 ### Item A, N6 and N10: the behavioural scope is extended by 14 listed rows
 
 Ruling 2 of 2026-10-02 froze the behavioural tier to 63 rows. Three signed items extend that list, and only by
@@ -1102,7 +1111,8 @@ confirmation; every receipt says so in `tolerance_status`.
   (`phylo-latent-p1/cov_phylo_latent_rsz/r-receipt.json`), which records `qualified = false`; the README there says every
   receipt stays unqualified until the maintainer signs the dated promotion block (D-300 answer 9). The measurement is kept
   as a non-binding receipt (both numbers are inside tolerance), the pass rule has a leg
-  `R_side_receipt_qualified_by_maintainer` that is false, and the row reads PARTIAL. No agent may sign the block.
+  `R_side_receipt_qualified_by_maintainer` that is false, and the row reads PARTIAL. No agent may sign the block. (The block was signed on 2026-10-05, maintainer ruling 2026-10-05 (D-319), item D; the receipt flip
+  follows in the covariance slice. See "Rulings of 2026-10-05".)
 - **Relative tolerances** (standard errors, NB2 dispersion) are carried as a discrepancy against zero (`r_value` 0,
   `julia_value` the relative difference), because the checker compares absolute differences. The `r_value` is therefore
   not an R measurement: the case's quantity name says "relative difference", a `convention` field says so, and
