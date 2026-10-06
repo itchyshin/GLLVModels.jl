@@ -11,3 +11,12 @@
 - REVIEW: fresh Pat, Rose, and Emmy scoped reviews pass; Melissa's current reconciliation records suite source d879a9e21 separately from checkpoint candidate2451c176d. Exact seven-row result is local candidate evidence only.
 - HOSTED: #844 Julia1.10 twin check passed in38m7s. #844 Julia1 and both #843 Julia-only checks were pending at21:08UTC; all other reported hosted checks pass.
 - NEXT: await the remaining hosted Julia checks, reverify current candidate/main refs, finish report accounting, then present the concrete merge consent packet for #842. Preserve root/R/older lanes and all historical ledgers.
+
+
+## Current state, 2026-10-06 22:58 UTC
+
+- First-seven candidate `54f0c2e00e13b5daa7bebb7e3419cf6561206ad9` reverified: seven exact rows, X2 304/317, C2 290/297. C3 6/8, C4 4/8, C6 37 undecided.
+- Owning receipts and local negative controls pass. Hosted #844 P1 twin run 37533654264 passed on Julia 1 and 1.10; negative-controls run 37533678454 passed. Full and repaired core suites passed at `d879a9e21`.
+- Acceptance: 19 met / 1 unmet / 0 abandoned. G8 report/panel/reconciliation is complete. G7 awaits explicit merge consent and fresh main verification. Main remains `f220379d0937d0afffc6a030023c63c0f715e168`.
+- Local Documenter passes, including doctests and VitePress rendering. The full report structure passes; the repository-wide validator still stops at the unrelated malformed historical Totoro gate ledger.
+- #842/#843/#844 remain drafts; no merge occurred. Full P1 remains open with 13 scoreboard rows and 37 C6 names pending signed decisions.

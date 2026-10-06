@@ -1,0 +1,36 @@
+{
+  "assessment_performed": true,
+  "draft_sha256": "ee1cb4aeab1b7f07d26e75f7f1bf707bf4342679083995e833bef12f5751130d",
+  "draft_version": "v1",
+  "requested_mode": "independent",
+  "assessor_type": "self",
+  "reviewer": "Ada, Codex parent",
+  "method": "Post-draft self-review under writing-naturalness.md, comparing the final exact-head checkpoint, receipt, hosted workflow, suite, Documenter and validator claims against current tool outputs and retained logs.",
+  "genre": "technical software after-task report",
+  "coverage": "Whole report read for consistency; focused reassessment of the 22:17 UTC and 22:58 UTC verification deltas. Earlier dated records were retained as historical evidence and not re-audited in this pass.",
+  "score": 3,
+  "style_status": "known",
+  "score_reason": "The final update gives exact hashes, counts, workflow IDs and a bounded gate result. The report remains dense, but the dated deltas separate new evidence from historical run records.",
+  "confidence": "medium",
+  "confidence_reason": "The new candidate and current CI claims were checked directly. Historical records remain limited to their dated source checks.",
+  "examples": [
+    {
+      "location": "Final verification delta, 22:58 UTC, first paragraph",
+      "cue": "The exact current PR #844 candidate",
+      "impact": "Names the precise reviewed tree before stating what the checks establish.",
+      "repair": "no change needed",
+      "line": 164,
+      "quote": "The exact current candidate `54f0c2e00e13b5daa7bebb7e3419cf6561206ad9` passed a fresh lane-root unlazy `--reverify`: 19/20 gates met, 0 abandoned, and only G7 remains open."
+    }
+  ],
+  "evidence_none_reason": null,
+  "science_gate": "pass",
+  "science_gate_reason": "The assessed update makes no new likelihood, parameterization, convergence, or coverage claim; it explicitly limits the result to the receipt checkpoint.",
+  "facts_gate": "pass",
+  "facts_gate_reason": "The final exact-head gate outputs and local Documenter result were checked directly. Historical suite and hosted workflow claims remain tied to their retained dated records.",
+  "references_gate": "not_applicable",
+  "references_gate_reason": "The assessed update contains no literature or external factual citation requiring reference verification.",
+  "date": "2026-10-06",
+  "calibration_status": "Seen the protocol's provisional 2026-10-03 calibration note; it is not independent human validation.",
+  "interpretation": "perceived_style_not_authorship"
+}

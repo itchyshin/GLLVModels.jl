@@ -21769,3 +21769,16 @@ After-task: `docs/dev-log/after-task/2026-09-13-destination-b-close-as-limit.md`
 - Candidate `2451c176d7c098d91f4f29a5b1aba1b1117dc9a7`: exact checkpoint verifier passed for the seven named P1 rows; X2 304/317 and C2 290/297. Assembly and checkpoint/assembler negative controls passed. The remaining 13 scoreboard rows and 37 C6 names remain open.
 - Four `Pkg.test()` shards passed at source `d879a9e21fe2203ae52d5ceb3a4d2ed5c3e3e886`: 30,915 passes, 88 Broken assertions, zero failures/errors. Four repaired core shards also exited zero at the same source: 30,897 passes, 90 Broken assertions, zero failures/errors; README checks passed 8/8 per shard. Raw core summaries: `docs/dev-log/audits/2026-10-06-p1-repaired-core-shards.log`.
 - The d879-to-candidate changes do not touch `src/`, Julia tests, dependency files, or numerical tolerances. Main remains `f220379d0`; no merge or full-P1 completion is claimed. Hosted Julia-only twin checks on #843/#844 were still running at 21:00 UTC.
+
+
+## 2026-10-06 - P1 first-seven current-head verification
+
+- Exact PR #844 candidate `54f0c2e00e13b5daa7bebb7e3419cf6561206ad9`: seven rows bind; X2 304/317, C2 290/297. Four owning receipt derivations and 317-row assembly pass; checker, assembler and checkpoint negative controls pass.
+- Hosted P1 twin run 37533654264 passed on Julia 1 and 1.10; negative-controls run 37533678454 passed. Full and repaired core suites passed at source `d879a9e21fe2203ae52d5ceb3a4d2ed5c3e3e886`; all four shards in each suite exited zero.
+- Main remains `f220379d0`. The first checkpoint's merge/main gate is open pending explicit maintainer consent. Full P1 is not complete.
+
+## 2026-10-06 P1 first-seven final verification
+
+- Exact candidate `54f0c2e00e13b5daa7bebb7e3419cf6561206ad9`: unlazy reverify 19/20 gates, 12 runnable checks passed, G7 intentionally open pending consent and main landing.
+- Local `julia --project=docs docs/make.jl`: passed, including doctests and VitePress rendering.
+- Full repository after-task validation remains limited by the unrelated malformed historical Totoro gate ledger; task report structure passes.

@@ -157,3 +157,37 @@ Status remains18met/2unmet/0abandoned. No merge consent or C6/model/Monte Carlo 
 Fresh Pat, Rose and Emmy reviews pass the scoped first-seven checkpoint at candidate `2451c176d7c098d91f4f29a5b1aba1b1117dc9a7`. Pat found no P0-P2 issue in the seven public-door rows. Rose found no scientific or numerical blocker within scope and explicitly leaves full P1 and main unmet. Emmy verified exact rows, tooling, provenance and regression evidence; the source and test trees are unchanged from tested suite source `d879a9e21`. Melissa's dated reconciliation records the same distinction and open gates.
 
 Hosted negative-controls, guard, Documenter and deploy checks pass on #843 and #844. At21:08UTC, #844's Julia1.10 twin job passed in38m7s; #844 Julia1 and both #843 Julia jobs were still in progress. No main merge or maintainer signature occurred. G7/G8 remain unmet, and full P1 remains open.
+
+
+## Verification delta, 22:17 UTC
+
+The exact current PR #844 candidate `54f0c2e00e13b5daa7bebb7e3419cf6561206ad9` reverified with the pinned baseline. It binds exactly the seven named rows and reports X2 304/317 and C2 290/297; C3 remains 6/8, C4 4/8, and C6 has 37 undecided names. The four owning derivation checks pass: family 30 receipts/21 rows, behaviour 32 receipts/24 classes, postfit 7 twin rows/52 rows, and iSDM 20 receipts/20 rows. Assembly reports 317 rows current. The canonical checker, assembler and checkpoint negative controls pass. The same exact candidate's hosted P1 twin workflow run 37533654264 passed on Julia 1 and 1.10; hosted negative-controls run 37533678454 passed. The staged #842 and #843 P1 twin runs also pass on both versions.
+
+Full `Pkg.test()` at `d879a9e21fe2203ae52d5ceb3a4d2ed5c3e3e886` passed all four shards: 30,915 passes, 88 existing Broken assertions, zero failures or errors. Repaired core verification at that source passed all four shards: 30,897 passes, 90 existing Broken assertions, zero failures or errors; README checks passed 8/8 per shard. The retained aggregate SHA256 is `8831a86d71a365458aa32d69cdd0e2027b3392fc54b6362e676d987bcd239eba`. Local Documenter and rendered reader-surface checks passed on the candidate; no numerical engine, test, dependency, tolerance, version, admission or classification changes were made.
+
+The independent completion panel (Emmy, Luna/medium; Pat, Luna/medium; Rose, Sol/high) passed within the seven-row scope. Melissa's plan/actual reconciliation is retained in `docs/dev-log/plan-actual/2026-10-06-p1-next.md`. The task-scoped ledger now has 19 met, 1 unmet and 0 abandoned: G8 is met with the completed panel, this updated report and Melissa reconciliation; G7 remains open for explicit merge consent and verification on main. PRs #842, #843 and #844 remain drafts. Main is still `f220379d0937d0afffc6a030023c63c0f715e168`; no merge consent has been given. Full P1 remains open: 13 scoreboard rows and 37 C6 names require the reviewed, unsigned decision packet and maintainer contracts. P2 and release work remain deferred.
+
+### Required audit fields
+
+- Mathematical contract: no likelihood, parameterization or numerical estimator changed; this checkpoint records public-door receipts and exact behavioural twins.
+- Tests of tests: retained and extended negative controls reject wrong-row substitutions, malformed or stale evidence, invalid bridge context, and behaviour mismatches.
+- Benchmarks: N/A; no hot path changed.
+- R parity: N/A as a numerical parity verdict; this checkpoint makes no numerical agreement claim.
+- JET: the package-quality gate passed within the full `Pkg.test()` run; no separate report was run.
+- Allocs: N/A; no hot path changed.
+- Aqua: passed within the full `Pkg.test()` run.
+- Documentation consistency: local Documenter and 34-page rendered reader-surface checks passed; no user API changed.
+- GitHub issue maintenance: no issue action needed; this is the existing P1 checkpoint tracked by drafts #842-#844.
+- Remaining risks: G7 and full P1 remain open as described above.
+- Next command after approval: merge #842 to main, then remeasure the main checkpoint before requesting the next merge.
+
+Prose assessment: exact-draft self-review is recorded in `docs/dev-log/audits/2026-10-06-p1-after-task-assessment.json` after final text validation.
+
+Rose verdict: PASS WITH NOTES; the seven-row receipt checkpoint is verified, while main landing and full P1 remain open.
+
+
+## Final verification delta, 22:58 UTC
+
+The exact current candidate `54f0c2e00e13b5daa7bebb7e3419cf6561206ad9` passed a fresh lane-root unlazy `--reverify`: 19/20 gates met, 0 abandoned, and only G7 remains open. All 12 runnable checks passed, including the exact seven-row checkpoint, receipt derivations, negative controls, and C0/C1 measurements. The G7 main-ref check returned the expected `P1_CHECKPOINT_NOT_MET` at FAMILY-11 because no merge consent was given and main remains at the pinned baseline.
+
+A fresh local Documenter build completed successfully, including doctests and VitePress rendering. The full repository after-task validator still stops on the unrelated historical Totoro ledger syntax error; the report structure itself passes. The task-scoped ledger has no other unmet gate. PRs #842, #843 and #844 remain drafts and unmerged. This verifies the first candidate checkpoint only; full P1 remains open for 13 scoreboard rows and 37 C6 names.
