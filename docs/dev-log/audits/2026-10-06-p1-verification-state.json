@@ -1,0 +1,66 @@
+{
+  "date": "2026-10-06",
+  "candidate": "d879a9e21fe2203ae52d5ceb3a4d2ed5c3e3e886",
+  "baseline": "f220379d0937d0afffc6a030023c63c0f715e168",
+  "exact_rows": 7,
+  "X2": "304/317",
+  "C2": "290/297",
+  "C3": "6/8",
+  "C4": "4/8",
+  "C6_undecided": 37,
+  "main_landed": false,
+  "unlazy": {
+    "met": 18,
+    "unmet": 2,
+    "abandoned": 0
+  },
+  "reviews": {
+    "receipt_candidate": "OK",
+    "merge_readiness": "conditional",
+    "full_P1": "UNMET",
+    "completion_rounds": 2
+  },
+  "documenter": {
+    "exit": 0,
+    "source": "d879a9e21fe2203ae52d5ceb3a4d2ed5c3e3e886",
+    "elapsed_seconds": 98.617
+  },
+  "old_unsharded": {
+    "source": "ed11661f0",
+    "exit": 124,
+    "core": "NOT_EXECUTED",
+    "owned_processes_remaining": 0,
+    "full_log_sha256": "5fab714ce241606b40223a7f303f7682a1eefdfd4f7163ad66f1c990bea8fc59"
+  },
+  "archive_candidate_attempt": {
+    "exit": 143,
+    "elapsed_seconds": 1153.457,
+    "reason": "missing Git metadata and default R jsonlite library",
+    "owned_process_group_remaining": 0
+  },
+  "environment_smoke": {
+    "exit": 0,
+    "elapsed_seconds": 17.319,
+    "R_jsonlite": "2.0.0",
+    "real_git_source": "d879a9e21fe2203ae52d5ceb3a4d2ed5c3e3e886"
+  },
+  "corrected_suite": {
+    "state": "RUNNING",
+    "source": "d879a9e21fe2203ae52d5ceb3a4d2ed5c3e3e886",
+    "started_utc": "2026-10-06 19:29:03",
+    "cap_utc": "2026-10-06 21:29:03",
+    "driver_pid": 377666,
+    "tool_session": 49521,
+    "shards": 4,
+    "max_cores": 16,
+    "R_LIBS_USER": "/home/snakagaw/R/lib",
+    "remote_root": "/home/snakagaw/hsq_work/true-parity-p1-next-01a111fc"
+  },
+  "full_after_task_validator": {
+    "exit": 1,
+    "reason": "inherited unrelated malformed .unlazy/totoro-t4-p6-grid/GATES.md",
+    "structural_check": "PASS",
+    "task_acceptance": "OPEN",
+    "next": "complete task-only ledger re-verification in isolated PR worktree"
+  }
+}

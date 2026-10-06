@@ -3,6 +3,11 @@
 - PR843's hosted negative controls failed32/33 because its crossed R/Julia fixture could not find `Rscript`. PR844 exposed the same missing runner setup. The control also used a Juliaup-only path unavailable to hosted setup-julia.
 - Apply R4.5.3 and Julia1.10 setup before the controls, and resolve Julia from `PATH` with the existing local fallback. The fixture builds scratch data, loads no package, and performs no fit. Local Python controls pass33/33 on the residual-stage branch; CI will verify the hosted setup.
 
+## 2026-10-06: independent first-seven review and test-environment repair
+
+- Final fresh Emmy/Pat/Rose panel independently returned receipt-candidate OK at d879a9e21, conditional on package tests and consent. Exactly seven rows bind; X2 304/317, C2 290/297;13 remaining rows and37 C6 names unchanged and unsigned. Documentation at that candidate passed in98.617seconds.
+- Earlier unsharded run hit its two-hour cap, exit124; core not executed, owned processes stopped. Initial archive candidate run stopped at1153seconds, exit143, after existing tests revealed missing Git provenance/default R jsonlite. Both prerequisite tests passed in17.319seconds after deploying real exact-source Git clones and using the already-installed R library; no source/tolerance/package-install change.
+- Corrected four-shard full/core verification launched19:29:03UTC, cap21:29:03UTC, max16cores. Results pending. Main remains f220379d0; every merge requires Shinichi. Measured ledger18met/2unmet/0abandoned. This is a continuation checkpoint, not full P1 or validated completion.
 ## 2026-10-06: seven P1 receipt gaps, candidate checkpoint
 
 - Exact7rows bind locally: X2 304/317,C2 290/297; all other baseline statuses and admission/case contracts unchanged. C3 6/8,C4 4/8,C6 37undecided remain open.
