@@ -344,13 +344,13 @@ for (const [fixture, why] of [
     assert.match(stdout, /isdm\/CAP-ISDM-1FO-PREDICT-EXPORT:NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT/);
   });
 }
-// The reviewer's mutation, on the real row and its real receipts: namespace/S3method/coef,
-// gllvmTMB_multi relabelled "numeric" in an otherwise faithful copy. Before this fix it printed
-// C1_MET and C8_MET; it must now be NOT_MET on both.
-test('numeric tier: the real coef,gllvmTMB_multi row relabelled "numeric" is NOT_MET on C1 and C8', () => {
+// The reviewer's mutation, on a real registration row and its real receipts: namespace/export/
+// extract_phylo_signal relabelled "numeric" in an otherwise faithful copy. It must be NOT_MET on C1 and C8.
+// (Repointed from S3method/coef,gllvmTMB_multi, which now binds on a numeric receipt; maintainer OK, D-319, W1-1.)
+test('numeric tier: the real extract_phylo_signal row relabelled "numeric" is NOT_MET on C1 and C8', () => {
   const cmPath = 'docs/dev-log/core070/true-parity-latest/case-map-namespace.json';
   const cm = JSON.parse(readFileSync(join(REPO_ROOT, cmPath), 'utf8'));
-  const row = cm.rows.find((r) => r.source_id === 'namespace/S3method/coef,gllvmTMB_multi');
+  const row = cm.rows.find((r) => r.source_id === 'namespace/export/extract_phylo_signal');
   assert.ok(row, 'real row not found in case-map-namespace.json');
   const dir = mkdtempSync(join(tmpdir(), 'true-parity-mut-'));
   try {
