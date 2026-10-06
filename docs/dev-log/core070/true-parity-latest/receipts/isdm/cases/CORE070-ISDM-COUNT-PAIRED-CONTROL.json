@@ -50,5 +50,30 @@
   "glvmodels_commit": "361516c7d03bea1d49b7b5639c04b153c0e77f94",
   "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
-  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "behaviour": {
+    "pin": "P1",
+    "ruling": "itchyshin/GLLVModels.jl#684 item 2",
+    "read_from": {
+      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/ISDM-COUNT.json": "ad9afafa386675a8b790f72f4218e846dad1a2884c58eda22d6ddf8c725aeed9",
+      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-06-v4/run.json": "ce49e0b19b2bb6a948e3ce5f1348b0b06829b6093af9b0f32be11b219e21f702",
+      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-06-v4/r-public.tsv": "e1ef2a3226b69d9d3d6530fc27cfddf8dac8b1ebcdc246ae48a924c028abb17e",
+      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-06-v4/julia-public.tsv": "9601723de40fc0daa16495aec4574a5a0360c985980b9d5e8da31bde1c244547",
+      "tools/first_seven_behaviour_derive.py": "2f5c1fc94f600f4ec207836a467798bae2f9dce59ebb7131b45cdee9b134da50"
+    },
+    "cases": [
+      {
+        "case_id": "CORE070-ISDM-COUNT-PAIRED-CONTROL",
+        "source_id": "isdm/ISDM-COUNT",
+        "kind": "route",
+        "r_observed": "all-count:nonmixed-admitted",
+        "julia_observed": "all-count:nonmixed-admitted",
+        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/ISDM-COUNT.json#raw_observations.R",
+        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/ISDM-COUNT.json#raw_observations.Julia",
+        "r_call": "{     gllvmTMB(f, data = d, unit = \"cell_id\", trait = \"trait\", family = isdm_sources(count = poisson(), detect = poisson())) }",
+        "julia_call": "fit_isdm_gllvm(formula, data; family=isdm_sources(count=Poisson(), detect=Poisson()))",
+        "ruling": "D-319 N6/N10"
+      }
+    ]
+  }
 }

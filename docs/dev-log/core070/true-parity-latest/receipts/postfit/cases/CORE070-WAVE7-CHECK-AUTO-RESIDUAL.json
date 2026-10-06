@@ -43,5 +43,30 @@
   "glvmodels_commit": "681c4c3ca666e630470bba01a057bc88158b85f3",
   "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
-  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "behaviour": {
+    "pin": "P1",
+    "ruling": "itchyshin/GLLVModels.jl#684 item 2",
+    "read_from": {
+      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/POSTFIT-SURFACE-check_auto_residual.json": "c9f4a16fae0b162218727ee7646a84ab8eaf4740f89e12891a9653064e1921ad",
+      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-06-v4/run.json": "ce49e0b19b2bb6a948e3ce5f1348b0b06829b6093af9b0f32be11b219e21f702",
+      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-06-v4/r-public.tsv": "e1ef2a3226b69d9d3d6530fc27cfddf8dac8b1ebcdc246ae48a924c028abb17e",
+      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-06-v4/julia-public.tsv": "9601723de40fc0daa16495aec4574a5a0360c985980b9d5e8da31bde1c244547",
+      "tools/first_seven_behaviour_derive.py": "2f5c1fc94f600f4ec207836a467798bae2f9dce59ebb7131b45cdee9b134da50"
+    },
+    "cases": [
+      {
+        "case_id": "CORE070-WAVE7-CHECK-AUTO-RESIDUAL",
+        "source_id": "postfit/POSTFIT-SURFACE-check_auto_residual",
+        "kind": "route",
+        "r_observed": "residual-check:coherent",
+        "julia_observed": "residual-check:coherent",
+        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/POSTFIT-SURFACE-check_auto_residual.json#raw_observations.R",
+        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/POSTFIT-SURFACE-check_auto_residual.json#raw_observations.Julia",
+        "r_call": "{     gd <- expand.grid(cell_id = factor(paste0(\"u\", 1:12)), trait = factor(c(\"a\", \"b\")), KEEP.OUT.ATTRS = FALSE)     gd$value <- sin(seq_len(nrow(gd))/3)     gf <- gllvmTMB(value ~ 0 + trait + latent(0 + trait | cell_id, d = 1, unique = FALSE), data = gd, unit = \"cell_id\", trait = \"trait\", family = gaussian(), silent = TRUE)     check_auto_residual(gf) }",
+        "julia_call": "fit_gaussian_gllvm(Y; K=1); check_auto_residual(fit)",
+        "ruling": "D-319 N6/N10"
+      }
+    ]
+  }
 }
