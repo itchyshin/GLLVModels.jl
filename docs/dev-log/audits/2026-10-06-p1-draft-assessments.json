@@ -1,0 +1,339 @@
+[
+  {
+    "draft": "docs/dev-log/after-task/2026-10-06-p1-first-seven-candidate.md",
+    "assessment": {
+      "assessment_performed": true,
+      "draft_sha256": "f52b4ee57a0236b9c0595f80d26696191d5a9ceef55b1d5e94d67c935ab6acac",
+      "draft_version": "v2",
+      "requested_mode": "independent",
+      "assessor_type": "self",
+      "reviewer": "Ada",
+      "method": "Separate post-draft whole-file self-review of the saved checkpoint prose, followed by exact hash and located-quote validation.",
+      "genre": "internal technical checkpoint report",
+      "coverage": "whole saved draft",
+      "score": 4,
+      "style_status": "known",
+      "score_reason": "Specific results and failures are explicit; repeated twelve-section scaffolding and dense identifiers make this formal technical prose.",
+      "confidence": "moderate",
+      "confidence_reason": "This is an editorial self-review of operational prose; no human judgment or held-out benchmark was performed.",
+      "examples": [
+        {
+          "location": "docs/dev-log/after-task/2026-10-06-p1-first-seven-candidate.md",
+          "cue": "Canonical exact checkpoint",
+          "impact": "Keeps evidence limits and pending work visible.",
+          "repair": "no change needed",
+          "line": 103,
+          "quote": "Canonical exact checkpoint passed at ce3432b95, independently at aee0daf9b, at the pushed integration head e9cb474ad and at the reviewed candidate d879a9e21: X2 304/317,C2 290/297, exact sevenchanged; C3 6/8,C4 4/8,C6 37 undecided unchanged. Five owning --check commands pass. Behaviour Python 33/33 and enabled Julia wrappers2/2 pass. Family boundary has1positive/6rejected mutations. Checker, assembler and checkpoint controls pass. Unlazy root5 runnable gates reverified with a fixed Python/Node PATH; main gate fails as expected. G0 lock verification passes. Documenter at the exact d879a9e21 candidate passed in 98.617 seconds; the earlier aee0daf9b build passed in 109.2 seconds. Independent Emmy, Pat and Rose reviewers each returned receipt-candidate OK at d879a9e21, conditional on package verification and merge consent. The older ed11661f0 unsharded run stopped at its two-hour cap, exit 124; its core run was NOT_EXECUTED and all four owned process IDs were verified stopped. An initial four-shard archive run at d879a9e21 was stopped after missing Git metadata and the default R library's absent jsonlite were identified; exit 143 after 1153 seconds, no suite pass claimed. Both existing tests that exposed those prerequisites passed in 17.319 seconds in real Git clones with existing R jsonlite 2.0.0. Corrected exact-candidate full/core verification is running on Totoro using the existing four-shard partition, launched 19:29:03 UTC, estimate 100-120 minutes, cap 21:29:03 UTC. Julia four threads per worker, BLAS/OMP one, maximum sixteen cores. No source tests or tolerances changed to repair the environment. Fresh main remained f220379d0. Full after-task acceptance validation remains open while landing and closure gates are unmet."
+        },
+        {
+          "location": "docs/dev-log/after-task/2026-10-06-p1-first-seven-candidate.md",
+          "cue": "Full P1 is NOT complete.",
+          "impact": "Keeps evidence limits and pending work visible.",
+          "repair": "no change needed",
+          "line": 123,
+          "quote": "Full P1 is NOT complete. Main remains baseline until explicit merge consent. C2 has 7 open capabilities; C3 has 2 open realistic-size rows; C4 has 4 open data rows; C6 has 37 undecided names. Method recommendations are unsigned; private urbanisation raw has no authorised verified location; reported 7/40 seed audit raw was not located. Current full/core and after-task closure are pending. Corrected owned Totoro driver is active until 21:29:03 UTC; this lane owns cleanup and will record final exits or overrun. Earlier owned runs are stopped, with failure records retained. No process may be orphaned. The full after-task validator exits 1 because an inherited unrelated .unlazy/totoro-t4-p6-grid/GATES.md lacks explicit gate IDs. That historical ledger is protected and unchanged. Reverify this task\u2019s complete twenty-gate set in the isolated PR worktree; do not skip required task gates or call the global validator a pass. Every later checkpoint requires its own contracts and acceptance ledger."
+        }
+      ],
+      "evidence_none_reason": null,
+      "science_gate": "unknown",
+      "science_gate_reason": "Claims are bounded to measured receipts and unsigned recommendations. Remaining model and Monte Carlo contracts, full suites and main landing are open.",
+      "facts_gate": "unknown",
+      "facts_gate_reason": "Exact candidate counts, review manifests, runtime exits and source identities were measured; preserved earlier agent observations have not all been independently re-executed.",
+      "references_gate": "unknown",
+      "references_gate_reason": "Repository source and runtime paths are retained and the reviewed candidate is exact; not every historical reference has been independently rechecked.",
+      "date": "2026-10-06",
+      "calibration_status": "protocol calibration examples were read; no held-out naturalness benchmark was run.",
+      "interpretation": "perceived_style_not_authorship"
+    }
+  },
+  {
+    "draft": "docs/dev-log/plan-actual/2026-10-06-p1-next.md",
+    "assessment": {
+      "assessment_performed": true,
+      "draft_sha256": "94f660b0301dcf07bedd7c495485123894ee803827d29ca89f75f8e711d43265",
+      "draft_version": "v2",
+      "requested_mode": "independent",
+      "assessor_type": "self",
+      "reviewer": "Ada",
+      "method": "Separate post-draft whole-file self-review of the saved checkpoint prose, followed by exact hash and located-quote validation.",
+      "genre": "internal technical checkpoint report",
+      "coverage": "whole saved draft",
+      "score": 4,
+      "style_status": "known",
+      "score_reason": "The preserved dated audit and later delta make the chronology clear, with some repeated recovery wording.",
+      "confidence": "moderate",
+      "confidence_reason": "This is an editorial self-review of operational prose; no human judgment or held-out benchmark was performed.",
+      "examples": [
+        {
+          "location": "docs/dev-log/plan-actual/2026-10-06-p1-next.md",
+          "cue": "The corrected capture covers",
+          "impact": "Keeps evidence limits and pending work visible.",
+          "repair": "no change needed",
+          "line": 23,
+          "quote": "The seven-row result is supported by receipts and the candidate verifier, not by counts alone. Behavioural raw capture v4 is the binding capture. The first three captures were retained but failed and do not bind rows. The corrected capture covers the actual `2 trait \u00d7 2 source \u00d7 2 unit` panel. Extra-source and missing-source cases reach the public family-length guard. The wrapper case records standalone logit construction, the collector refusal, and a valid cloglog control. The ordinary COUNT case is all-Poisson, with a separate mixed-source positive control."
+        },
+        {
+          "location": "docs/dev-log/plan-actual/2026-10-06-p1-next.md",
+          "cue": "The older unsharded suite hit",
+          "impact": "Keeps evidence limits and pending work visible.",
+          "repair": "no change needed",
+          "line": 83,
+          "quote": "The older unsharded suite hit its two-hour cap, exit 124, with core not executed and all owned process IDs gone. The first candidate archive suite was stopped after nineteen minutes, exit 143, when two existing tests revealed missing Git metadata and an absent default-library R jsonlite dependency. Parent reproduced the failing paths, confirmed their test files unchanged from baseline, deployed exact-source real Git clones and used existing /home/snakagaw/R/lib/jsonlite 2.0.0. Both prerequisite tests then passed in 17.319 seconds. Corrected four-shard full/core verification launched at 19:29:03 UTC with a 100-120 minute estimate and two-hour cap, maximum sixteen cores. No test tolerance, engine or dependency installation was changed. This run remains owned and pending."
+        }
+      ],
+      "evidence_none_reason": null,
+      "science_gate": "unknown",
+      "science_gate_reason": "Claims are bounded to measured receipts and unsigned recommendations. Remaining model and Monte Carlo contracts, full suites and main landing are open.",
+      "facts_gate": "unknown",
+      "facts_gate_reason": "Exact candidate counts, review manifests, runtime exits and source identities were measured; preserved earlier agent observations have not all been independently re-executed.",
+      "references_gate": "unknown",
+      "references_gate_reason": "Repository source and runtime paths are retained and the reviewed candidate is exact; not every historical reference has been independently rechecked.",
+      "date": "2026-10-06",
+      "calibration_status": "protocol calibration examples were read; no held-out naturalness benchmark was run.",
+      "interpretation": "perceived_style_not_authorship"
+    }
+  },
+  {
+    "draft": "docs/dev-log/audits/2026-10-06-p1-final-panel.md",
+    "assessment": {
+      "assessment_performed": true,
+      "draft_sha256": "a8fc6d268cb1d6229fcd46d140302ac2c8e1bcc5bfd1821d346fc933bcfa7279",
+      "draft_version": "v2",
+      "requested_mode": "independent",
+      "assessor_type": "self",
+      "reviewer": "Ada",
+      "method": "Separate post-draft whole-file self-review of the saved checkpoint prose, followed by exact hash and located-quote validation.",
+      "genre": "internal technical checkpoint report",
+      "coverage": "whole saved draft",
+      "score": 3,
+      "style_status": "known",
+      "score_reason": "Reviewer roles, actual limits and the small remaining comment issue are concrete.",
+      "confidence": "moderate",
+      "confidence_reason": "This is an editorial self-review of operational prose; no human judgment or held-out benchmark was performed.",
+      "examples": [
+        {
+          "location": "docs/dev-log/audits/2026-10-06-p1-final-panel.md",
+          "cue": "This repair round adds",
+          "impact": "Keeps evidence limits and pending work visible.",
+          "repair": "no change needed",
+          "line": 11,
+          "quote": "All three used fresh ephemeral tiered CLI contexts with retained successful model/effort manifests. This repair round adds three review invocations to the three initial completion reviews. The production total remains eleven successful invocations for six distinct roles, plus one failed old-CLI launch before work. No Astra or ultra effort was used. Original reviewer results remain in the ignored lane runtime; initial failed verdicts remain in the prior audit. This is two completion rounds, rather than the planned single round."
+        },
+        {
+          "location": "docs/dev-log/audits/2026-10-06-p1-final-panel.md",
+          "cue": "Rose found a non-blocking",
+          "impact": "Keeps evidence limits and pending work visible.",
+          "repair": "no change needed",
+          "line": 17,
+          "quote": "Rose found a non-blocking historical COUNT comment saying it must reject; executed code/raw correctly show all-count admission. The comment is retained with the executed runner bytes, avoiding an unrecorded runner-digest change. Correct it at a future newly captured runner revision. Graft automatically added local status hooks and rewrote hook paths in this review worktree; parent checked the two exact diffs, retained before-restore bytes and restored their original committed bytes after all reviewers returned. No settings changes are shipped."
+        }
+      ],
+      "evidence_none_reason": null,
+      "science_gate": "unknown",
+      "science_gate_reason": "Claims are bounded to measured receipts and unsigned recommendations. Remaining model and Monte Carlo contracts, full suites and main landing are open.",
+      "facts_gate": "unknown",
+      "facts_gate_reason": "Exact candidate counts, review manifests, runtime exits and source identities were measured; preserved earlier agent observations have not all been independently re-executed.",
+      "references_gate": "unknown",
+      "references_gate_reason": "Repository source and runtime paths are retained and the reviewed candidate is exact; not every historical reference has been independently rechecked.",
+      "date": "2026-10-06",
+      "calibration_status": "protocol calibration examples were read; no held-out naturalness benchmark was run.",
+      "interpretation": "perceived_style_not_authorship"
+    }
+  },
+  {
+    "draft": "docs/dev-log/handover/2026-10-06-p1-next-continuation.md",
+    "assessment": {
+      "assessment_performed": true,
+      "draft_sha256": "45e8ffc7b74a6162067bde160c661a72f9c8e1c30bd539a093819696b9270ba7",
+      "draft_version": "v2",
+      "requested_mode": "independent",
+      "assessor_type": "self",
+      "reviewer": "Ada",
+      "method": "Separate post-draft whole-file self-review of the saved checkpoint prose, followed by exact hash and located-quote validation.",
+      "genre": "internal technical checkpoint report",
+      "coverage": "whole saved draft",
+      "score": 3,
+      "style_status": "known",
+      "score_reason": "Explicit carried-over states and exact run controls make resumption practical; dense identifiers fit the genre.",
+      "confidence": "moderate",
+      "confidence_reason": "This is an editorial self-review of operational prose; no human judgment or held-out benchmark was performed.",
+      "examples": [
+        {
+          "location": "docs/dev-log/handover/2026-10-06-p1-next-continuation.md",
+          "cue": "The goal remains ACTIVE.",
+          "impact": "Keeps evidence limits and pending work visible.",
+          "repair": "no change needed",
+          "line": 3,
+          "quote": "The goal remains ACTIVE. This is a continuation record while owned verification runs, not the final handover on main. Seven receipts are implemented and independently reviewed locally; main and full P1 remain open."
+        },
+        {
+          "location": "docs/dev-log/handover/2026-10-06-p1-next-continuation.md",
+          "cue": "The mandatory handoff gate",
+          "impact": "Keeps evidence limits and pending work visible.",
+          "repair": "no change needed",
+          "line": 15,
+          "quote": "The mandatory handoff gate was run before this record. It reported four then-uncommitted review files,460unpushed commits on other historical branches and nine unmet leaf ledgers. Six are historical grouped-analytic/s9c ledgers outside this task; preserve them and every other branch. Three current runnable leaves were not re-executed by the handoff wrapper because its default binding differs from the separately inspected/approved900second checks. Their explicit task re-verifications and retained status remain the evidence; do not replace the handoff failure with a success claim. The full after-task CLI also failed, exit1, on the inherited unrelated .unlazy/totoro-t4-p6-grid/GATES.md lacking explicit gate IDs. Preserve that ledger. Use the existing isolated PR worktree, copy only this task\u2019s full twenty-gate ledger set there, inspect and approve its exact checks for that CWD, reverify all of them and run the full report validator there. This isolates other tasks; it never removes or waives a required task gate. The task root's separate fresh re-verification passed five local commands and correctly failed main. Scoped current status:18met/2unmet/0abandoned. No other lane's gate is abandoned or altered."
+        }
+      ],
+      "evidence_none_reason": null,
+      "science_gate": "unknown",
+      "science_gate_reason": "Claims are bounded to measured receipts and unsigned recommendations. Remaining model and Monte Carlo contracts, full suites and main landing are open.",
+      "facts_gate": "unknown",
+      "facts_gate_reason": "Exact candidate counts, review manifests, runtime exits and source identities were measured; preserved earlier agent observations have not all been independently re-executed.",
+      "references_gate": "unknown",
+      "references_gate_reason": "Repository source and runtime paths are retained and the reviewed candidate is exact; not every historical reference has been independently rechecked.",
+      "date": "2026-10-06",
+      "calibration_status": "protocol calibration examples were read; no held-out naturalness benchmark was run.",
+      "interpretation": "perceived_style_not_authorship"
+    }
+  },
+  {
+    "draft": "docs/dev-log/plans/2026-10-06-p1-c6-evidence.md",
+    "assessment": {
+      "assessment_performed": true,
+      "draft_sha256": "163d252518d6c906c4955cfa8f7cb70cf6c3b5e853fe7c2aebd2072ff412d09b",
+      "draft_version": "v2",
+      "requested_mode": "independent",
+      "assessor_type": "self",
+      "reviewer": "Ada",
+      "method": "Separate post-draft self-reading of the saved entire packet; located examples and exact hash validated after drafting.",
+      "genre": "internal technical decision packet",
+      "coverage": "whole saved draft",
+      "score": 3,
+      "style_status": "known",
+      "score_reason": "Scoped source references make the table useful; repeated disposition wording is formal but proportionate.",
+      "confidence": "moderate",
+      "confidence_reason": "This is an editorial self-review; no human judgment or held-out test was performed.",
+      "examples": [
+        {
+          "location": "docs/dev-log/plans/2026-10-06-p1-c6-evidence.md",
+          "cue": "`PROVEN_SCOPED_COUNTERPART` means",
+          "impact": "States the measured scope and remaining approval without implying full completion.",
+          "repair": "no change needed",
+          "line": 16,
+          "quote": "`PROVEN_SCOPED_COUNTERPART` means the sources and an executable receipt support the *stated domain*. It does not establish parity outside that domain. For all recommendations to remove proven twins from C6, a maintainer ruling and a classifier disposition are still needed."
+        },
+        {
+          "location": "docs/dev-log/plans/2026-10-06-p1-c6-evidence.md",
+          "cue": "The clearest reasons",
+          "impact": "States the measured scope and remaining approval without implying full completion.",
+          "repair": "no change needed",
+          "line": 67,
+          "quote": "The clearest reasons **not** to remove an alias are the mismatched model scopes for `fit_animal_latent_gllvm` and `fit_kernel_latent_gllvm`, the incorrect `Ordinal` \u2194 `cumulative_logit` pairing, and the result-type versus family-constructor pairings for `NBFit` and `TweedieFit`. The three CHECK names are now contract-informed: `ZIB` and `ZINegBin` mismatch P1 scope; `link_residual` remains unverified because its vector is only part of the R covariance output contract. Documented helpers and infrastructure need maintainer policy choices, not internal-helper assumptions."
+        }
+      ],
+      "evidence_none_reason": null,
+      "science_gate": "unknown",
+      "science_gate_reason": "Scope limits and unsigned contracts are explicit; proposed discriminating experiments and maintainer adjudications are pending.",
+      "facts_gate": "unknown",
+      "facts_gate_reason": "Counts and immutable baseline/source references were measured; some stored numerical findings and source interpretations still await independent candidate review.",
+      "references_gate": "unknown",
+      "references_gate_reason": "Exact pinned repository spans and receipts are supplied; parent has not independently checked every cited span.",
+      "date": "2026-10-06",
+      "calibration_status": "protocol calibration examples were read; no held-out naturalness benchmark was run.",
+      "interpretation": "perceived_style_not_authorship"
+    }
+  },
+  {
+    "draft": "docs/dev-log/plans/2026-10-06-p1-decision-map.md",
+    "assessment": {
+      "assessment_performed": true,
+      "draft_sha256": "9c6a97b85cc474aaebb27e35a88a1edc3d18767cc741d014f1d9f68b1a3dcfc3",
+      "draft_version": "v1",
+      "requested_mode": "independent",
+      "assessor_type": "self",
+      "reviewer": "Ada",
+      "method": "Separate post-draft self-reading of the saved entire packet; located examples and exact hash validated after drafting.",
+      "genre": "internal technical decision packet",
+      "coverage": "whole saved draft",
+      "score": 3,
+      "style_status": "known",
+      "score_reason": "Concrete blockers and unsigned choices are clear; the repeated output column remains structured technical prose.",
+      "confidence": "moderate",
+      "confidence_reason": "This is an editorial self-review; no human judgment or held-out test was performed.",
+      "examples": [
+        {
+          "location": "docs/dev-log/plans/2026-10-06-p1-decision-map.md",
+          "cue": "Gaussian native/formula reruns",
+          "impact": "States the measured scope and remaining approval without implying full completion.",
+          "repair": "no change needed",
+          "line": 33,
+          "quote": "The detailed sources and limits are in [the method evidence packet](2026-10-06-p1-method-evidence.md). It distinguishes available #715 harness code from absent iSDM/fungi adapters; unstable beetle/spider curvature must be diagnosed before polishing. Gaussian native/formula reruns do not solve the mismatched public bridge identity. The Monte Carlo seed finding is a reported 7/40 audit with raw evidence not located here. It requires diagnosis and prospective contracts, not a tolerance increase."
+        },
+        {
+          "location": "docs/dev-log/plans/2026-10-06-p1-decision-map.md",
+          "cue": "These unresolved choices",
+          "impact": "States the measured scope and remaining approval without implying full completion.",
+          "repair": "no change needed",
+          "line": 37,
+          "quote": "Maintainer decisions must specify the exact contract for animal random slopes (two positive cases and rank-4 refusal), joint phylo/grouped signal and its denominator, simulate/bootstrap_Sigma Monte Carlo scope, the empty-coefficient behavioural rule or disposition, and C6 counterpart/helper policy. Urbanisation also requires an authorised retained private raw location. These unresolved choices prevent a whole-program duration estimate."
+        }
+      ],
+      "evidence_none_reason": null,
+      "science_gate": "unknown",
+      "science_gate_reason": "Scope limits and unsigned contracts are explicit; proposed discriminating experiments and maintainer adjudications are pending.",
+      "facts_gate": "unknown",
+      "facts_gate_reason": "Counts and immutable baseline/source references were measured; some stored numerical findings and source interpretations still await independent candidate review.",
+      "references_gate": "unknown",
+      "references_gate_reason": "Exact pinned repository spans and receipts are supplied; parent has not independently checked every cited span.",
+      "date": "2026-10-06",
+      "calibration_status": "protocol calibration examples were read; no held-out naturalness benchmark was run.",
+      "interpretation": "perceived_style_not_authorship"
+    }
+  },
+  {
+    "draft": "docs/dev-log/plans/2026-10-06-p1-method-evidence.md",
+    "assessment": {
+      "assessment_performed": true,
+      "draft_sha256": "8b674078f2b733ca331a7ac71821f8873659236719be5e57fcdaf212d632700a",
+      "draft_version": "v1",
+      "requested_mode": "independent",
+      "assessor_type": "self",
+      "reviewer": "Ada",
+      "method": "Separate post-draft reading of Gauss packet and provenance; exact-draft schema validation follows.",
+      "genre": "internal technical decision packet",
+      "coverage": "whole saved draft",
+      "score": 3,
+      "style_status": "known",
+      "score_reason": "Specific model and verifier details support the recommendations; some uniform table scaffolding remains.",
+      "confidence": "moderate",
+      "confidence_reason": "Technical reference prose suits this format, but no human style assessment occurred.",
+      "examples": [
+        {
+          "location": "method packet",
+          "cue": "Copying the branch",
+          "impact": "Prevents a stale writer from undoing signed rules.",
+          "repair": "no change needed",
+          "line": 55,
+          "quote": "Forward-port those three changes selectively. Copying the branch\u2019s old receipt writer would remove signed N9 support, restore the obsolete C4 bridge requirement, undo phylo qualification and reverse signed C4 dispositions."
+        },
+        {
+          "location": "method packet",
+          "cue": "Missing files in DIR",
+          "impact": "Makes a verifier limitation explicit.",
+          "repair": "no change needed",
+          "line": 76,
+          "quote": "Missing files in DIR fall back to summary-only mode. Assert both retained files exist and inspect the reconstruction log. Keep raw private; publish only approved sanitized summaries/hashes. The retained directory and authority to transfer data to Totoro remain unresolved."
+        },
+        {
+          "location": "method packet",
+          "cue": "Increasing B may expose",
+          "impact": "Separates simulation precision from a persistent model difference.",
+          "repair": "no change needed",
+          "line": 86,
+          "quote": "Repeating Julia against a fixed R batch yields conditional seed sensitivity, not 40 independent two-sample tests. Diagnose heavy-tail effects and the normal-quantile familywise approximation with independent batches. Increasing B may expose persistent model/estimator differences."
+        }
+      ],
+      "evidence_none_reason": null,
+      "science_gate": "unknown",
+      "science_gate_reason": "Recommendations distinguish fresh from stored evidence and unsigned scope. Independent Rose review and the proposed discriminating runs remain pending.",
+      "facts_gate": "unknown",
+      "facts_gate_reason": "Gauss verified cited source predicates; parent verified exact13-row coverage and source revisions. Parent has not independently regenerated every stored numerical claim.",
+      "references_gate": "unknown",
+      "references_gate_reason": "Pinned repository references are supplied and Gauss inspected exact spans; fresh completion reviewer must verify load-bearing claim support.",
+      "date": "2026-10-06",
+      "calibration_status": "protocol calibration examples were read; no held-out naturalness benchmark was run.",
+      "interpretation": "perceived_style_not_authorship"
+    }
+  }
+]
