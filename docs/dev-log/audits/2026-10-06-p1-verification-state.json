@@ -1,6 +1,7 @@
 {
   "date": "2026-10-06",
-  "candidate": "d879a9e21fe2203ae52d5ceb3a4d2ed5c3e3e886",
+  "candidate": "2451c176d7c098d91f4f29a5b1aba1b1117dc9a7",
+  "suite_source": "d879a9e21fe2203ae52d5ceb3a4d2ed5c3e3e886",
   "baseline": "f220379d0937d0afffc6a030023c63c0f715e168",
   "exact_rows": 7,
   "X2": "304/317",
@@ -69,7 +70,7 @@
     "reason": "inherited unrelated malformed .unlazy/totoro-t4-p6-grid/GATES.md",
     "structural_check": "PASS",
     "task_acceptance": "OPEN",
-    "next": "finish core and CI; obtain every merge consent; reverify all twenty gates on main",
+    "next": "await hosted Julia checks and explicit consent for each merge; then reverify on main",
     "task_only": {
       "source": "ff46e14c9c8c706515a6b7c305026c50b59a1c28",
       "ledger_files": 7,
@@ -113,13 +114,20 @@
     "elapsed_seconds": 2765.447
   },
   "repaired_core": {
-    "state": "RUNNING",
+    "state": "FINISHED_EXIT_0",
     "source": "d879a9e21fe2203ae52d5ceb3a4d2ed5c3e3e886",
     "started_utc": "2026-10-06 20:20:01",
     "cap_utc": "2026-10-06 21:20:01",
     "tool_session": 31075,
     "driver_pid": 399888,
     "verified_pgid": 399887,
+    "shard_exits": [0, 0, 0, 0],
+    "passes": [7607, 10017, 6717, 6556],
+    "broken": [11, 4, 5, 70],
+    "README_passes_per_shard": 8,
+    "elapsed_seconds": 2331.498,
+    "aggregate_sha256": "8831a86d71a365458aa32d69cdd0e2027b3392fc54b6362e676d987bcd239eba",
+    "process_group_cleanup": "verified absent after driver_exit=0",
     "max_cores": 16,
     "smoke_seconds": 4.215,
     "dependencies": "offline cached scratch test environment; source dependency files unchanged"
@@ -128,8 +136,18 @@
     "PR844_source": "f5b90fa19dd37651ab0ea00c68ecd18fe33f58bb",
     "local_controls": "33/33",
     "Emmy_followup": "OK gpt-6-luna medium",
-    "hosted": "QUEUED"
+    "hosted": {
+      "as_of_utc": "2026-10-06 21:08",
+      "PR843": "negative-controls, guard, Documenter and deploy pass; Julia 1 and 1.10 twin checks in progress",
+      "PR844": "negative-controls, guard, Documenter and deploy pass; Julia 1.10 twin check pass in 38m7s; Julia 1 twin check in progress"
+    }
+  },
+  "fresh_completion_panel": {
+    "Pat_gpt_6_luna_medium": "PASS scoped seven-row public-door review; no P0-P2 findings",
+    "Rose_gpt_6_1_sol_high": "PASS scoped scientific checkpoint; main/full P1 unmet",
+    "Emmy_gpt_6_luna_medium": "PASS exact rows, tooling, provenance, regression evidence; source/test unchanged d879-to-candidate",
+    "Melissa_gpt_6_luna_medium": "PASS bounded reconciliation; main consent and remaining hosted checks open"
   },
   "parent_compactions": 5,
-  "review_calls": 7
+  "review_calls": 11
 }

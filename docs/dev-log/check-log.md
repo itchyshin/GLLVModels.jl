@@ -21763,3 +21763,9 @@ After-task: `docs/dev-log/after-task/2026-09-13-destination-b-close-as-limit.md`
 - Fix: exact test-only compat pin in `test/Project.toml`: `Aqua = "=0.8.16"`. No `Project.toml` version bump, no runtime deps, no likelihood code, no gllvmTMB edits, no Aqua subcheck skip.
 - Local validation: temp Julia env with `Aqua v0.8.16`, `SpecialFunctions v2.9.0`, and `LogExpFunctions v0.3.29`; `Aqua.test_all(GLLVM; ambiguities=false)` passed, including `Persistent tasks | 1/1`.
 - Also ran: `git diff --check` passed. Full `Pkg.test()` was not run locally; an accidental all-suite probe was stopped after it started because the focused Aqua reproducer covered the CI failure mode.
+
+## 2026-10-06 - P1 first-seven checkpoint verification
+
+- Candidate `2451c176d7c098d91f4f29a5b1aba1b1117dc9a7`: exact checkpoint verifier passed for the seven named P1 rows; X2 304/317 and C2 290/297. Assembly and checkpoint/assembler negative controls passed. The remaining 13 scoreboard rows and 37 C6 names remain open.
+- Four `Pkg.test()` shards passed at source `d879a9e21fe2203ae52d5ceb3a4d2ed5c3e3e886`: 30,915 passes, 88 Broken assertions, zero failures/errors. Four repaired core shards also exited zero at the same source: 30,897 passes, 90 Broken assertions, zero failures/errors; README checks passed 8/8 per shard. Raw core summaries: `docs/dev-log/audits/2026-10-06-p1-repaired-core-shards.log`.
+- The d879-to-candidate changes do not touch `src/`, Julia tests, dependency files, or numerical tolerances. Main remains `f220379d0`; no merge or full-P1 completion is claimed. Hosted Julia-only twin checks on #843/#844 were still running at 21:00 UTC.

@@ -112,7 +112,7 @@ Retained all 26 existing behavioural controls and added seven. Table coverage is
 
 ## 7a. Issue Ledger
 
-Fixed local receipt-tool and integration defects described below. First checkpoint exact seven rows are candidate-bound. Remaining 13 scoreboard rows and 37 C6 names remain open. Draft PRs #842, #843 and #844 are open and attached. Final immutable receipt review is OK; exact candidate package suites, consent for every merge, and main verification remain pending. P2/releases/version changes are deferred.
+Fixed local receipt-tool and integration defects described below. First checkpoint exact seven rows are candidate-bound. Remaining 13 scoreboard rows and 37 C6 names remain open. Draft PRs #842, #843 and #844 are open and attached. Full and repaired core suites pass at `d879a9e21`; fresh Pat, Rose and Emmy reviews pass the bounded candidate scope. Hosted Julia-only jobs, consent for every merge, and main verification remain pending. P2/releases/version changes are deferred.
 
 ## 8. Consistency Audit
 
@@ -124,7 +124,7 @@ Old CLI rejected Luna before work; switched to the app CLI. Initial SSH/process-
 
 ## 10. Known Residuals
 
-Full P1 is NOT complete. Main remains baseline until explicit merge consent. C2 has 7 open capabilities; C3 has 2 open realistic-size rows; C4 has 4 open data rows; C6 has 37 undecided names. Method recommendations are unsigned; private urbanisation raw has no authorised verified location; reported 7/40 seed audit raw was not located. The full suite passed all four shards at d879a9e21. Core and after-task closure remain pending. Corrected core session31075 is active until21:20:01UTC; this lane owns cleanup and will record final exits or overrun. Earlier owned runs are stopped, with failure records retained. No process may be orphaned. The full after-task validator exits 1 because an inherited unrelated .unlazy/totoro-t4-p6-grid/GATES.md lacks explicit gate IDs. That historical ledger is protected and unchanged. The isolated PR worktree also contains tracked historical ledgers. A complete twenty-gate task-only validation container reached only current G7/G8: structure passed, acceptance exit1. No required task gate was omitted or abandoned; no closure pass is claimed. Every later checkpoint requires its own contracts and acceptance ledger.
+Full P1 is NOT complete. Main remains baseline until explicit merge consent. C2 has 7 open capabilities; C3 has 2 open realistic-size rows; C4 has 4 open data rows; C6 has 37 undecided names. Method recommendations are unsigned; private urbanisation raw has no authorised verified location; reported 7/40 seed audit raw was not located. The full suite passed all four shards at d879a9e21, and the repaired core suite also passed all four shards (see the 21:00 UTC verification delta). The full after-task validator exits 1 because an inherited unrelated .unlazy/totoro-t4-p6-grid/GATES.md lacks explicit gate IDs. That historical ledger is protected and unchanged. The isolated PR worktree also contains tracked historical ledgers. A complete twenty-gate task-only validation container reached only current G7/G8: structure passed, acceptance exit1. No required task gate was omitted or abandoned; no closure pass is claimed. Every later checkpoint requires its own contracts and acceptance ledger.
 
 ## 11. Team Learning
 
@@ -133,6 +133,12 @@ Memory receipt: queried shinichi-brain vault first; repository signed D-319 rule
 ## 12. Cross-Product Coverage
 
 Covers: the exact seven P1 rows and their public refusal/behaviour receipts, two language runners, raw metadata, canonical derivation/assembly, controls and the 13/37 decision packet. Does NOT cover: full-family numerical parity, realistic-size/data convergence, calibrated Monte Carlo/coverage, animal random slopes, joint phylo/grouped signal, C6 signed dispositions, R engine changes, P2, release or main landing. No numerical convergence or coverage claim follows from a matching behaviour label.
+
+## Verification delta, 21:00 UTC
+
+Repaired core session31075 finished successfully: driver_exit0/core_exit0 and all four shards exited0. Shard summaries were 7607 pass/11 Broken/7618 total, 10017/4/10021, 6717/5/6722 and 6556/70/6626. README checks passed8/8 per shard. Elapsed time was2331.498seconds. The local retained aggregate is `repaired-core-shards.log`, SHA256 `8831a86d71a365458aa32d69cdd0e2027b3392fc54b6362e676d987bcd239eba`; Totoro's retained status reads `driver_exit=0`, and the owned process group399887 is absent. The full suite at d879a9e21 remains four successful Pkg.test shards. The core scratch environment contains test-only dependencies only; no package dependency, source test, or tolerance changed.
+
+Hosted repaired negative-controls, guard, Documenter and deploy checks passed on #843 and #844. The two Julia-only twin jobs remain in progress on each PR as of21:00UTC. The three fresh completion reviewers are examining the candidate; no final panel verdict is claimed yet. Candidate exact-checkpoint evidence remains X2 304/317 and C2 290/297, with C3 6/8, C4 4/8, C6 37 undecided unchanged. Main remains f220379d0 pending explicit merge consent. The after-task structure check is not the acceptance closure: task G7 and G8 remain unmet, total18met/2unmet/0abandoned.
 
 ## Verification delta, 20:22 UTC
 
@@ -144,4 +150,10 @@ FAMILY-11 source8a74f62c5 CI37515650751 completed successfully with all eight Ju
 
 The isolated PR worktree still has twenty tracked historical .unlazy files, so copying this task's ledgers there did not isolate unrelated malformed ledgers. Instead, /private/tmp/p1-current-task-validation used unchanged candidate ff46e14c9 source aliases and copied every one of this task's seven ledger files, all twenty gates, omitting zero required gates. All six leaves reverified with exit0; root exit1 only for open G7/G8. The canonical full report validator passed structure and then exited1 for this task's UNMET gates, without a historical-ledger parse failure. It is a validated open contract, not a completion pass. Historical ledgers were neither modified nor abandoned. The900second adapter changes only timeout from the canonical120second default.
 
-Status remains18met/2unmet/0abandoned. No merge consent or C6/model/Monte Carlo signature has arrived. Main remains f220379d0; full P1 is open. The parent has crossed a fifth compaction boundary. Production remains eleven successful invocations for six roles; completion is two three-agent panels plus this bounded Emmy follow-up, seven review calls total. A whole-file slop check hit historical check-log prose; the exact new entry separately passed with zero hits, and historical prose was preserved. No new P1 arc was started.
+Status remains18met/2unmet/0abandoned. No merge consent or C6/model/Monte Carlo signature has arrived. Main remains f220379d0; full P1 is open. The parent has crossed a fifth compaction boundary. Production remains eleven successful invocations for six roles; the fresh completion panel is in progress. A whole-file slop check hit historical check-log prose; the exact new entry separately passed with zero hits, and historical prose was preserved. No new P1 arc was started.
+
+## Verification delta, 21:08 UTC
+
+Fresh Pat, Rose and Emmy reviews pass the scoped first-seven checkpoint at candidate `2451c176d7c098d91f4f29a5b1aba1b1117dc9a7`. Pat found no P0-P2 issue in the seven public-door rows. Rose found no scientific or numerical blocker within scope and explicitly leaves full P1 and main unmet. Emmy verified exact rows, tooling, provenance and regression evidence; the source and test trees are unchanged from tested suite source `d879a9e21`. Melissa's dated reconciliation records the same distinction and open gates.
+
+Hosted negative-controls, guard, Documenter and deploy checks pass on #843 and #844. At21:08UTC, #844's Julia1.10 twin job passed in38m7s; #844 Julia1 and both #843 Julia jobs were still in progress. No main merge or maintainer signature occurred. G7/G8 remain unmet, and full P1 remains open.
