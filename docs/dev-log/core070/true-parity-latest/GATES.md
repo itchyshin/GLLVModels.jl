@@ -702,6 +702,23 @@ recommendation. Cite this section as "maintainer ruling 2026-10-05 (D-319)", wit
 that by reading the diff. Each rule that changes a check is ported to `tools/true_parity_assemble.py`, so the
 scoreboard status and the checker agree. The C6 items are recorded with the C6 decisions, not here.
 
+### Ruling 3: CI-ROUTE-029, Julia's default rho interval is R's `fisher-z` default
+
+Signed yes: for rho, Julia's default `confint` route (`method = :wald`, which for a correlation computes a Fisher-z
+transformed Wald interval, label `rho:wald_derived`) is the same default route as R's (`.confint_rho:fisher-z`).
+"Same interval, different name." It is recorded as one equivalence class in `behaviour-equivalence.json` (route
+`rho:fisher-z`, R `[".confint_rho:fisher-z"]`, Julia `["rho:wald_derived"]`), written by
+`tools/core070_behaviour_receipts.py` (`CLASSES`), whose `default_class_unconfirmed` hold on CI-ROUTE-029 is removed.
+R's own `method = "wald"` for rho (`.confint_rho:wald`, probe row CI-ROUTE-031) is a different interval and is not in
+the class, so R's plain Wald still does not match Julia's Fisher-z. `inference/CI-ROUTE-034` (an explicit `fisher-z`
+request, which Julia's public `confint` refuses at the run commit) joins the same class once the inference slice adds
+a `fisher_z` method alias (ruling page item "CI-ROUTE-034", recommend the alias, signed): its Julia label is then added
+to this class, never a new class. CI-ROUTE-029 binds once `case-map-inference.json` is regenerated.
+
+Negative control (checker, "ruling 3 (tracked table)"): with the tracked `behaviour-equivalence.json`, R
+`.confint_rho:fisher-z` against Julia `rho:wald_derived` binds on CI-ROUTE-029, and R `.confint_rho:wald` against the
+same Julia label does not ("R: no class; Julia: class rho:fisher-z").
+
 ### Item A, N6 and N10: the behavioural scope is extended by 14 listed rows
 
 Ruling 2 of 2026-10-02 froze the behavioural tier to 63 rows. Three signed items extend that list, and only by

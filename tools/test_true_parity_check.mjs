@@ -963,6 +963,19 @@ test('behavioural scope (2026-10-05 extension): each of the 14 extended rows bin
     assert.match(bad.stdout, /differ after canonicalisation/, sid);
   }
 });
+// Maintainer ruling 2026-10-05 (D-319), ruling 3: the tracked table pairs R's default fisher-z route for rho with Julia's
+// default (rho:wald_derived). R's own plain "wald" for rho is a different interval and must not match.
+test('ruling 3 (tracked table): R fisher-z matches Julia rho:wald_derived for rho; R wald does not', () => {
+  const real = JSON.parse(readFileSync(join(REPO_ROOT, L, 'behaviour-equivalence.json'), 'utf8'));
+  const run29 = (r) => runTree(bTree({ row: { source_id: 'inference/CI-ROUTE-029' }, equivalence: real,
+    receipt: bReceipt({}, {}, [bCase({ r_observed: r, julia_observed: 'rho:wald_derived' })]) }), 'C1');
+  const ok = run29('.confint_rho:fisher-z');
+  assert.match(ok.stdout, /C1_MET$/m, ok.stdout);
+  assert.match(ok.stdout, /bound_behavioural=1 /);
+  const bad = run29('.confint_rho:wald');
+  assert.match(bad.stdout, /C1_NOT_MET$/m);
+  assert.match(bad.stdout, /R ".confint_rho:wald" vs Julia "rho:wald_derived" differ after canonicalisation \(R: no class; Julia: class "rho:fisher-z"\)/);
+});
 test('behavioural scope: a cited receipt whose own comparison is out of tolerance does not bind a relabelled row', () => {
   const bad = { pin: 'P1', cases: [{ case_id: 'CASE-B', quantity: 'q', r_value: 1, julia_value: 99, tolerance: 1e-6 }] };
   const m = bTree({ receipt: { ...bReceipt(), comparison: bad } });
