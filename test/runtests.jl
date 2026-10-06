@@ -406,6 +406,7 @@ println(_SHARD === nothing ?
     _shard_include("test_predict_offset.jl")
     _shard_include("test_predict_offset_grouped.jl")
     _shard_include("test_predict_offset_shared.jl")
+    _shard_include("test_predict_modes_training.jl")
     _shard_include("test_family_profile_open_lower.jl")
     _shard_include("test_confint_bootstrap_verdict_poisson.jl")
     _shard_include("test_confint_bootstrap_verdict_binomial.jl")

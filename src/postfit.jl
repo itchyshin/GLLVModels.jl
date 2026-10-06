@@ -68,6 +68,23 @@ function _laplace_prediction_offset(stored, Y::AbstractMatrix, offset, mask,
         "matrix (or a scalar, or a length-$(p) vector)."))
 end
 
+# Offset for the latent-mode search of a Laplace `predict` (DATA-OFF-PREDICT, maintainer ruling
+# 2026-10-05, vault D-319, option (b)). `modes = :refit` (the default) re-solves the modes at the
+# prediction offset `O`, as before. `modes = :training` keeps the training units' modes, searched at
+# the stored training offset, while η still uses `O`: η = β + O_new + Λ ẑ_train. This is gllvmTMB's
+# `predict(fit, newdata)` on the training units, which re-evaluates the stored offset expression on
+# `newdata` and keeps the fitted modes. `Y` must then be the training response (only its size is
+# checked against the stored offset).
+function _prediction_mode_offset(stored, Y::AbstractMatrix, O, modes::Symbol)
+    modes === :refit && return O
+    modes === :training || throw(ArgumentError("predict: modes must be :refit or :training; got :$modes"))
+    stored === nothing && return nothing
+    size(stored) == size(Y) || throw(ArgumentError(
+        "predict: modes = :training keeps the training units' latent modes, so Y must be the " *
+        "training data ($(size(stored, 1))×$(size(stored, 2))); got $(size(Y, 1))×$(size(Y, 2))."))
+    return stored
+end
+
 # Offset column for site `s`: the data offset plus the X_lv latent-mean term, either may be absent.
 function _site_offset(O, lv_offset, s::Integer)
     O === nothing && return lv_offset === nothing ? nothing : view(lv_offset, :, s)
@@ -333,22 +350,29 @@ fitted probabilities `linkinv(link, η)`.
 On a fit made with an `offset`, `η` includes it: the stored training offset
 (`fit.offset`) when `Y` has the training size, otherwise the `offset` you pass.
 New units from an offset fit without an `offset` are refused (see [`getLV`](@ref)).
+`modes = :training` keeps the training units' latent modes and swaps in the new `offset`
+(`η = β + O_new + Λ ẑ_train`, gllvmTMB's `predict(newdata)` on the training units); `Y` must
+be the training response. The default `modes = :refit` re-solves the modes (see the
+`PoissonFit` method).
 """
 function predict(fit::BinomialFit, Y::AbstractMatrix;
                  type::Symbol = :response,
                  N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing,
-                 X_lv::Union{Nothing, AbstractMatrix} = nothing,mask=nothing,offset=nothing)
+                 X_lv::Union{Nothing, AbstractMatrix} = nothing,mask=nothing,offset=nothing,
+                 modes::Symbol = :refit)
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
     if _is_binomial_aghq(fit)
         X_lv===nothing || throw(ArgumentError("AGHQ loadings-only prediction does not use X_lv"))
+        modes === :refit || throw(ArgumentError("predict: modes = :training is available on the Laplace path only, not for AGHQ fits"))
         z=_binomial_aghq_scores(fit,Y;N=N,rotate=false,mask=mask,offset=offset)
         eta=fit.β .+ fit.Λ*z' .+ _aghq_prediction_offset(fit,Y,offset)
         return type===:link ? eta : _binomial_aghq_probability.(eta,Ref(fit.link))
     end
     O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "predict")
+    Omode = _prediction_mode_offset(fit.offset, Y, O, modes)
     Z = getLV(fit, Y; N = N, X_lv = X_lv, component = :total,
-              rotate = false,mask=mask,offset=O)              # n×K
+              rotate = false,mask=mask,offset=Omode)          # n×K
     η = fit.β .+ fit.Λ * Z'                           # p×n
     O === nothing || (η .+= O)
     type === :link && return η
@@ -956,22 +980,31 @@ fits that used `X_lv`, pass the same predictor matrix.
 On a fit made with an `offset`, `η` includes it: the stored training offset
 (`fit.offset`) when `Y` has the training size, otherwise the `offset` you pass.
 New units from an offset fit without an `offset` are refused (see [`getLV`](@ref)).
+`modes = :training` keeps the training units' latent modes and swaps in a new offset:
+`η = β + O_new + Λ ẑ_train`, where `ẑ_train` is the mode at the stored training offset and
+`O_new` the `offset` you pass. This is gllvmTMB's `predict(fit, newdata)` on the training
+units, which re-evaluates the stored offset expression on `newdata` and keeps the fitted modes.
+`Y` must be the training response. The default `modes = :refit` re-solves the modes at the
+prediction offset (unchanged behaviour); without a new `offset` the two agree.
 """
 function predict(fit::PoissonFit, Y::AbstractMatrix;
                  type::Symbol = :response,
                  N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing,
-                 X_lv::Union{Nothing, AbstractMatrix} = nothing, mask=nothing,offset=nothing)
+                 X_lv::Union{Nothing, AbstractMatrix} = nothing, mask=nothing,offset=nothing,
+                 modes::Symbol = :refit)
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
     if _is_poisson_aghq(fit)
         X_lv===nothing || throw(ArgumentError("AGHQ loadings-only prediction does not use X_lv"))
+        modes === :refit || throw(ArgumentError("predict: modes = :training is available on the Laplace path only, not for AGHQ fits"))
         q,_=_poisson_aghq_problem(fit,Y;mask=mask,offset=offset)
         z=_poisson_aghq_scores(fit,Y;rotate=false,mask=mask,offset=offset)
         eta=fit.β .+ fit.Λ*z' .+ _aghq_prediction_offset(fit,Y,offset)
         return type===:link ? eta : exp.(eta)
     end
     O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "predict")
-    Z = getLV(fit, Y; N = N, X_lv = X_lv, component = :total, rotate = false,mask=mask,offset=O)
+    Omode = _prediction_mode_offset(fit.offset, Y, O, modes)
+    Z = getLV(fit, Y; N = N, X_lv = X_lv, component = :total, rotate = false,mask=mask,offset=Omode)
     η = fit.β .+ fit.Λ * Z'
     O === nothing || (η .+= O)
     type === :link && return η
@@ -1106,15 +1139,21 @@ In-sample fitted values at the Laplace mode: `type=:link` returns `η = β + Λ 
 On a fit made with an `offset`, `η` includes it: the stored training offset
 (`fit.offset`) when `Y` has the training size, otherwise the `offset` you pass.
 New units from an offset fit without an `offset` are refused (see [`getLV`](@ref)).
+`modes = :training` keeps the training units' latent modes and swaps in the new `offset`
+(`η = β + O_new + Λ ẑ_train`, gllvmTMB's `predict(newdata)` on the training units); `Y` must
+be the training response. The default `modes = :refit` re-solves the modes (see the
+`PoissonFit` method).
 """
 function predict(fit::NBFit, Y::AbstractMatrix{<:Integer};
                  type::Symbol = :response,
                  N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing,
-                 X_lv::Union{Nothing, AbstractMatrix} = nothing, offset = nothing)
+                 X_lv::Union{Nothing, AbstractMatrix} = nothing, offset = nothing,
+                 modes::Symbol = :refit)
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
     O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict")
-    Z = getLV(fit, Y; N = N, X_lv = X_lv, component = :total, rotate = false, offset = O)
+    Omode = _prediction_mode_offset(fit.offset, Y, O, modes)
+    Z = getLV(fit, Y; N = N, X_lv = X_lv, component = :total, rotate = false, offset = Omode)
     η = fit.β .+ fit.Λ * Z'
     O === nothing || (η .+= O)
     type === :link && return η
@@ -1216,14 +1255,20 @@ In-sample fitted values at the Laplace mode: `type=:link` returns `η = β + Λ 
 On a fit made with an `offset`, `η` includes it: the stored training offset
 (`fit.offset`) when `Y` has the training size, otherwise the `offset` you pass.
 New units from an offset fit without an `offset` are refused (see [`getLV`](@ref)).
+`modes = :training` keeps the training units' latent modes and swaps in the new `offset`
+(`η = β + O_new + Λ ẑ_train`, gllvmTMB's `predict(newdata)` on the training units); `Y` must
+be the training response. The default `modes = :refit` re-solves the modes (see the
+`PoissonFit` method).
 """
 function predict(fit::NB1Fit, Y::AbstractMatrix{<:Integer};
                  type::Symbol = :response,
-                 N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing, offset = nothing)
+                 N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing, offset = nothing,
+                 modes::Symbol = :refit)
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
     O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict")
-    Z = getLV(fit, Y; N = N, rotate = false, offset = O)
+    Omode = _prediction_mode_offset(fit.offset, Y, O, modes)
+    Z = getLV(fit, Y; N = N, rotate = false, offset = Omode)
     η = fit.β .+ fit.Λ * Z'
     O === nothing || (η .+= O)
     type === :link && return η
@@ -1324,14 +1369,20 @@ In-sample fitted values at the Laplace mode: `type=:link` returns `η = β + Λ 
 On a fit made with an `offset`, `η` includes it: the stored training offset
 (`fit.offset`) when `Y` has the training size, otherwise the `offset` you pass.
 New units from an offset fit without an `offset` are refused (see [`getLV`](@ref)).
+`modes = :training` keeps the training units' latent modes and swaps in the new `offset`
+(`η = β + O_new + Λ ẑ_train`, gllvmTMB's `predict(newdata)` on the training units); `Y` must
+be the training response. The default `modes = :refit` re-solves the modes (see the
+`PoissonFit` method).
 """
 function predict(fit::GP1Fit, Y::AbstractMatrix{<:Integer};
                  type::Symbol = :response,
-                 N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing, offset = nothing)
+                 N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing, offset = nothing,
+                 modes::Symbol = :refit)
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
     O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict")
-    Z = getLV(fit, Y; N = N, rotate = false, offset = O)
+    Omode = _prediction_mode_offset(fit.offset, Y, O, modes)
+    Z = getLV(fit, Y; N = N, rotate = false, offset = Omode)
     η = fit.β .+ fit.Λ * Z'
     O === nothing || (η .+= O)
     type === :link && return η
@@ -1444,13 +1495,19 @@ In-sample fitted values at the Laplace mode: `type=:link` returns `η = β + Λ 
 On a fit made with an `offset`, `η` includes it: the stored training offset
 (`fit.offset`) when `Y` has the training size, otherwise the `offset` you pass.
 New units from an offset fit without an `offset` are refused (see [`getLV`](@ref)).
+`modes = :training` keeps the training units' latent modes and swaps in the new `offset`
+(`η = β + O_new + Λ ẑ_train`, gllvmTMB's `predict(newdata)` on the training units); `Y` must
+be the training response. The default `modes = :refit` re-solves the modes (see the
+`PoissonFit` method).
 """
 function predict(fit::BetaFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response,
-                 X_lv::Union{Nothing, AbstractMatrix} = nothing, offset = nothing)
+                 X_lv::Union{Nothing, AbstractMatrix} = nothing, offset = nothing,
+                 modes::Symbol = :refit)
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
     O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict")
-    Z = getLV(fit, Y; X_lv = X_lv, component = :total, rotate = false, offset = O)
+    Omode = _prediction_mode_offset(fit.offset, Y, O, modes)
+    Z = getLV(fit, Y; X_lv = X_lv, component = :total, rotate = false, offset = Omode)
     η = fit.β .+ fit.Λ * Z'
     O === nothing || (η .+= O)
     type === :link && return η
@@ -1788,13 +1845,19 @@ In-sample fitted values at the Laplace mode: `type=:link` returns `η = β + Λ 
 On a fit made with an `offset`, `η` includes it: the stored training offset
 (`fit.offset`) when `Y` has the training size, otherwise the `offset` you pass.
 New units from an offset fit without an `offset` are refused (see [`getLV`](@ref)).
+`modes = :training` keeps the training units' latent modes and swaps in the new `offset`
+(`η = β + O_new + Λ ẑ_train`, gllvmTMB's `predict(newdata)` on the training units); `Y` must
+be the training response. The default `modes = :refit` re-solves the modes (see the
+`PoissonFit` method).
 """
 function predict(fit::GammaFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response,
-                 X_lv::Union{Nothing, AbstractMatrix} = nothing, offset = nothing)
+                 X_lv::Union{Nothing, AbstractMatrix} = nothing, offset = nothing,
+                 modes::Symbol = :refit)
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
     O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict")
-    Z = getLV(fit, Y; X_lv = X_lv, component = :total, rotate = false, offset = O)
+    Omode = _prediction_mode_offset(fit.offset, Y, O, modes)
+    Z = getLV(fit, Y; X_lv = X_lv, component = :total, rotate = false, offset = Omode)
     η = fit.β .+ fit.Λ * Z'
     O === nothing || (η .+= O)
     type === :link && return η
@@ -1870,13 +1933,18 @@ In-sample fitted values at the Laplace mode: `type=:link` returns `η = β + Λ 
 On a fit made with an `offset`, `η` includes it: the stored training offset
 (`fit.offset`) when `Y` has the training size, otherwise the `offset` you pass.
 New units from an offset fit without an `offset` are refused (see [`getLV`](@ref)).
+`modes = :training` keeps the training units' latent modes and swaps in the new `offset`
+(`η = β + O_new + Λ ẑ_train`, gllvmTMB's `predict(newdata)` on the training units); `Y` must
+be the training response. The default `modes = :refit` re-solves the modes (see the
+`PoissonFit` method).
 """
 function predict(fit::ExponentialFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response,
-                 offset = nothing)
+                 offset = nothing, modes::Symbol = :refit)
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
     O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict")
-    Z = getLV(fit, Y; rotate = false, offset = O)
+    Omode = _prediction_mode_offset(fit.offset, Y, O, modes)
+    Z = getLV(fit, Y; rotate = false, offset = Omode)
     η = fit.β .+ fit.Λ * Z'
     O === nothing || (η .+= O)
     type === :link && return η
