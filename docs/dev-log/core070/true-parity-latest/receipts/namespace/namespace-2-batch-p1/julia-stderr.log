@@ -1,4 +1,4 @@
 ┌ Warning: NB1 grouped-cov fit has φ below 1e-6 for group(s) [3]; the group's dispersion is at the Poisson limit (no overdispersion left to estimate). The fit's other estimates are unaffected, and converged is not affected by this.
-└ @ GLLVModels ~/local-scratch/GLLVM.jl-ns-p1-remeasure/src/families/grouped_dispersion.jl:2543
+└ @ GLLVModels ~/local-scratch/GLLVM.jl-rulings-cov-ns/src/families/grouped_dispersion.jl:2543
 ┌ Warning: NB2 grouped-cov fit has r_group above 1e6 for group(s) [2, 4]; the group's dispersion is at the Poisson limit (no overdispersion left to estimate). The fit's other estimates are unaffected, and converged is not affected by this.
-└ @ GLLVModels ~/local-scratch/GLLVM.jl-ns-p1-remeasure/src/families/grouped_dispersion.jl:954
+└ @ GLLVModels ~/local-scratch/GLLVM.jl-rulings-cov-ns/src/families/grouped_dispersion.jl:954
