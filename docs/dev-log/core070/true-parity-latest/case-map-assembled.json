@@ -21,7 +21,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-family.json",
-   "sha256": "8eb485c51218daeba486c85676d57cc7fdc7c2a5625bb748fd1463df25ebb845",
+   "sha256": "f3021e307bec24fef11d123902432519d47f8c1434c74174e6a4daff11516757",
    "rows": 26
   },
   {
@@ -3999,15 +3999,20 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
    },
-   "evidence_tier": "partial_case_not_executed",
+   "boundary_context_case_ids": [
+    "CORE070-FAMILY-11-LOG-PUBLIC-R-BRIDGE"
+   ],
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/family/cases/NATIVE-12-TRUNCATED-NB2.json",
-     "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-11-LOG-FORMULA-INTERFACE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-11-LOG-FORMULA-INTERFACE.json"
+    ],
+    "boundary_context_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-11-LOG-PUBLIC-R-BRIDGE.json"
     ],
-    "tier": "some case ids were measured at P1 and at least one was not executed, so the row does not bind"
+    "tier": "numeric: the native and formula-interface case receipts carry R-vs-Julia comparison blocks pinned to P1, within the harness tolerance, from a batch whose verifier passed; the PUBLIC-R-BRIDGE case was not executed and is non-binding boundary context under maintainer ruling 2026-10-05 (D-319), N1"
    },
    "measured_result": {
     "case_verdicts": {
@@ -4025,7 +4030,7 @@
      "CORE070-FAMILY-11-LOG-FORMULA-INTERFACE": true,
      "CORE070-FAMILY-11-LOG-PUBLIC-R-BRIDGE": true
     },
-    "executed_cases_verdict": "PASS"
+    "row_verdict": "PASS"
    }
   },
   {
