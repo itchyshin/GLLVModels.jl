@@ -39,7 +39,8 @@ Status of a scoreboard row (first rule that applies):
                       status field (behavioural_receipt_problem lists them), and the row's source_id
                       is one the ruling covers (the 59 listed inference rows,
                       BEHAVIOURAL_INFERENCE_SOURCE_IDS, or one of four named C1 rows,
-                      BEHAVIOURAL_NAMED_SOURCE_IDS) and any comparison block in a cited receipt holds.
+                      BEHAVIOURAL_NAMED_SOURCE_IDS, or one of the 14 rows of the 2026-10-05 extension,
+                      BEHAVIOURAL_EXTENDED_SOURCE_IDS) and any comparison block in a cited receipt holds.
                       Never emitted for a data, grouping or realistic-size row.
   BEHAVIOURAL-UNVERIFIED
                       evidence_tier "behavioural" but the rule above does not hold (reason given).
@@ -57,6 +58,11 @@ Status of a scoreboard row (first rule that applies):
 
 An evidence_tier missing from TIER_BUCKET fails the run: a new tier needs a human to decide
 which bucket it reads as, rather than this tool guessing.
+
+Rulings of 2026-10-05 (maintainer ruling 2026-10-05, D-319; GATES.md): ported from the checker are the 14-row
+extension of the behavioural list (BEHAVIOURAL_EXTENDED_SOURCE_IDS), the bridge readback split
+(BRIDGE_READBACK_ROW_PREFIX), boundary-context cases (boundary_context) and convergence parity
+(convergence_parity_problem). The checker's C4 direct-engine test reads the scoreboard only and has no port here.
 
 Integer equality (itchyshin/GLLVModels.jl#684 item 1): a numeric comparison case with
 "kind": "integer_equality" needs safe-integer r_value and julia_value (magnitude below 2^53) and
@@ -180,6 +186,17 @@ BEHAVIOURAL_NAMED_SOURCE_IDS = (
     "select-lv/print.gllvmTMB_select_lv",
     "model-comparison/print.anova.gllvmTMB_multi",
     "model-comparison/update.gllvmTMB_multi",
+)
+# Extension signed 2026-10-05 (maintainer ruling 2026-10-05 (D-319), GATES.md "Rulings of 2026-10-05"): item A (7 aghq
+# control rows, inference/CI-ROUTE-009), N6 (the 5 iSDM rows reachable through R's public door) and N10
+# (check_auto_residual). The checker's BEHAVIOURAL_EXTENDED_SOURCE_IDS (keep in step, a test fails on drift).
+BEHAVIOURAL_EXTENDED_SOURCE_IDS = (
+    "aghq/AGHQ-CTRL-AUTO", "aghq/AGHQ-CTRL-FALSE", "aghq/AGHQ-CTRL-NINE", "aghq/AGHQ-CTRL-NULL",
+    "aghq/AGHQ-CTRL-ONE", "aghq/AGHQ-CTRL-TRUE", "aghq/AGHQ-CTRL-TWO",
+    "inference/CI-ROUTE-009",
+    "isdm/ISDM-COUNT", "isdm/ISDM-EXTRA-SOURCE", "isdm/ISDM-MISSING-IN-TRAIT", "isdm/ISDM-MISSING-SOURCE",
+    "isdm/ISDM-WRAPPER-LAW",
+    "postfit/POSTFIT-SURFACE-check_auto_residual",
 )
 
 # evidence_tier (verbatim from the maps) -> scoreboard status bucket. Collation only: each
@@ -350,7 +367,8 @@ MAX_SAFE_INTEGER = 2 ** 53 - 1
 
 
 def behavioural_eligible_source_id(sid):
-    return isinstance(sid, str) and (sid in BEHAVIOURAL_INFERENCE_SOURCE_IDS or sid in BEHAVIOURAL_NAMED_SOURCE_IDS)
+    return isinstance(sid, str) and (sid in BEHAVIOURAL_INFERENCE_SOURCE_IDS or sid in BEHAVIOURAL_NAMED_SOURCE_IDS
+                                     or sid in BEHAVIOURAL_EXTENDED_SOURCE_IDS)
 
 
 def _is_int(x):
@@ -486,7 +504,8 @@ def behavioural_receipt_problem(row, root, index, cites=None):
     if not paths:
         return "no receipt"
     if not behavioural_eligible_source_id(row.get("source_id")):
-        return "source_id not covered by itchyshin/GLLVModels.jl#684 item 2 (the 59 listed inference rows and four named C1 rows only)"
+        return ("source_id not covered by itchyshin/GLLVModels.jl#684 item 2 (the 59 listed inference rows and four named C1 rows) "
+                "or by its extension in maintainer ruling 2026-10-05 (D-319) (14 listed rows)")
     ids = as_list(row.get("executable_case_ids"))
     if not ids:
         return "no executable_case_ids"
@@ -595,6 +614,114 @@ def comparison_block_problem(cmp_, p, covered):
     return None
 
 
+# Maintainer ruling 2026-10-05 (D-319), ruling 1: the checker's BRIDGE_READBACK_ROW_PREFIX (keep in step, a test fails on
+# drift). A live_bridge_readback receipt binds a numeric row only for these rows, and only on the row's own cases.
+BRIDGE_READBACK_ROW_PREFIX = {
+    "namespace/S3method/fitted,gllvmTMB_julia": "P1-BRIDGE-READBACK-FITTED-",
+    "namespace/S3method/predict,gllvmTMB_julia": "P1-BRIDGE-READBACK-PREDICT-",
+    "namespace/S3method/residuals,gllvmTMB_julia": "P1-BRIDGE-READBACK-RESIDUALS-",
+    "namespace/export/gllvm_julia_fit": "P1-BRIDGE-READBACK-GJF-",
+}
+
+
+def bridge_readback_problem(row, p):
+    """The checker's bridgeReadbackProblem: None, or why a live_bridge_readback receipt cannot bind this row."""
+    sid = row.get("source_id")
+    if sid not in BRIDGE_READBACK_ROW_PREFIX:
+        return (f"bridge readback {p} binds only fitted, predict and residuals for gllvmTMB_julia (and gllvm_julia_fit); "
+                "the other methods copy Julia's value and close by signed disposition (maintainer ruling 2026-10-05 (D-319), ruling 1)")
+    prefix = BRIDGE_READBACK_ROW_PREFIX[sid]
+    off = [i for i in as_list(row.get("executable_case_ids")) if not (isinstance(i, str) and i.startswith(prefix))]
+    if off:
+        return (f"bridge readback binds {sid} only on its own cases ({prefix}*), not {','.join(map(str, off))} "
+                "(maintainer ruling 2026-10-05 (D-319), ruling 1)")
+    return None
+
+
+# Maintainer ruling 2026-10-05 (D-319), N1: the checker's BOUNDARY_CONTEXT_KINDS and boundaryContext (keep in step).
+# evidence_kind -> (verdict, required case-id suffix or None).
+BOUNDARY_CONTEXT_KINDS = {
+    "r_public_bridge_boundary": ("R_BOUNDARY_UNCHANGED", "-PUBLIC-R-BRIDGE"),
+    "not_executed": ("NOT_EXECUTED", "-PUBLIC-R-BRIDGE"),
+    "r_only_formula_grammar": ("R_ONLY_PASS", None),
+}
+
+
+def boundary_context(row, root):
+    """(ids, problem): the validated boundary-context case ids of a numeric row (N1), or why they are refused."""
+    ctx = row.get("boundary_context_case_ids")
+    if ctx is None:
+        return set(), None
+    exe = as_list(row.get("executable_case_ids"))
+    if not isinstance(ctx, list) or not ctx or not all(isinstance(x, str) and x for x in ctx):
+        return set(), "boundary_context_case_ids must be a non-empty array of case ids"
+    if len(set(ctx)) != len(ctx):
+        return set(), "boundary_context_case_ids lists a case id twice"
+    not_exec = [i for i in ctx if i not in exe]
+    if not_exec:
+        return set(), "boundary context case ids not in executable_case_ids: " + ",".join(not_exec)
+    if len(ctx) >= len(exe):
+        return set(), "every executable case is boundary context; at least one case must bind numerically"
+    rps = (row.get("evidence") or {}).get("boundary_context_receipts") or []
+    if not isinstance(rps, list) or not rps:
+        return set(), "no evidence.boundary_context_receipts"
+    by_case = {}
+    for p in rps:
+        if not isinstance(p, str) or not (root / p).is_file():
+            return set(), f"boundary context receipt {p} does not resolve to a file"
+        try:
+            j = json.loads((root / p).read_text())
+        except ValueError:
+            return set(), f"boundary context receipt {p} is not JSON"
+        if not isinstance(j, dict) or not isinstance(j.get("case_id"), str):
+            return set(), f"boundary context receipt {p} has no case_id"
+        by_case[j["case_id"]] = (p, j)
+    for cid in ctx:
+        if cid not in by_case:
+            return set(), f"boundary context case {cid} has no receipt under evidence.boundary_context_receipts"
+        p, j = by_case[cid]
+        kind = j.get("evidence_kind")
+        if not isinstance(kind, str) or kind not in BOUNDARY_CONTEXT_KINDS:
+            return set(), f"boundary context case {cid}: evidence_kind {json.dumps(kind)} is not an admission-only or PUBLIC-R-BRIDGE boundary kind ({p})"
+        verdict, suffix = BOUNDARY_CONTEXT_KINDS[kind]
+        if j.get("verdict") != verdict:
+            return set(), f"boundary context case {cid}: verdict {json.dumps(j.get('verdict'))} is not {verdict} for {kind} ({p})"
+        if suffix and not cid.endswith(suffix):
+            return set(), f"boundary context case {cid}: a {kind} case must be a {suffix} case"
+        if "comparison" in j:
+            return set(), f"boundary context case {cid}: its receipt carries a comparison block, so it is compared, not context ({p})"
+    return set(ctx), None
+
+
+# Maintainer ruling 2026-10-05 (D-319), N9: the checker's convergenceParityProblem (keep in step).
+CONVERGENCE_GRADIENT_BOUND = 1e-5
+CONVERGENCE_POINTS = ("returned", "newton_polished")
+
+
+def convergence_parity_problem(cp, p):
+    """None when a receipt's convergence_parity block holds (both engines at gradient max-abs <= 1e-5), else why not."""
+    def why(m):
+        return f"convergence parity (maintainer ruling 2026-10-05 (D-319), N9): {m} in {p}"
+    if not isinstance(cp, dict):
+        return why("convergence_parity is not an object")
+    gb = cp.get("gradient_bound")
+    if isinstance(gb, bool) or not isinstance(gb, (int, float)) or gb != CONVERGENCE_GRADIENT_BOUND:
+        return why(f"gradient_bound {json.dumps(gb)} is not 1e-5")
+    if cp.get("compared_point") not in CONVERGENCE_POINTS:
+        return why(f"compared_point {json.dumps(cp.get('compared_point'))} is not returned or newton_polished")
+    eng = cp.get("engines")
+    if not isinstance(eng, dict):
+        return why("no engines block")
+    for side in ("R", "julia"):
+        e = eng.get(side)
+        g = e.get("max_abs_gradient") if isinstance(e, dict) else None
+        if not _fin(g) or g < 0:
+            return why(f"{side} max_abs_gradient {json.dumps(g)} is not a finite number >= 0")
+        if g > CONVERGENCE_GRADIENT_BOUND:
+            return why(f"{side} max_abs_gradient {g} > 1e-5")
+    return None
+
+
 def numeric_receipt_problem(row, root, waive_status=False):
     """None when the row binds numerically, else why not. waive_status=True skips only the
     receipt status fields (what a valid receipt_status_exception waives in the checker)."""
@@ -609,6 +736,14 @@ def numeric_receipt_problem(row, root, waive_status=False):
             continue
         if not isinstance(j, dict):
             continue
+        if j.get("evidence_kind") == "live_bridge_readback":
+            bp = bridge_readback_problem(row, p)
+            if bp:
+                return bp
+        if "convergence_parity" in j:
+            cp = convergence_parity_problem(j["convergence_parity"], p)
+            if cp:
+                return cp
         if not_passed is None:
             for obj, pre in ((j, ""), (j.get("comparison") if isinstance(j.get("comparison"), dict) else None, "comparison.")):
                 if obj is None:
@@ -627,7 +762,10 @@ def numeric_receipt_problem(row, root, waive_status=False):
         blocks += 1
     if blocks == 0:
         return "no comparison block in any receipt"
-    missing = [i for i in as_list(row.get("executable_case_ids")) if i not in covered]
+    ctx, ctx_problem = boundary_context(row, root)
+    if ctx_problem:
+        return f"boundary context (maintainer ruling 2026-10-05 (D-319), N1): {ctx_problem}"
+    missing = [i for i in as_list(row.get("executable_case_ids")) if i not in covered and i not in ctx]
     if missing:
         return "case ids not compared: " + ",".join(missing)
     return None if waive_status else not_passed
@@ -842,7 +980,8 @@ def render_scoreboard(table, counts, inputs, dups, fixtures) -> str:
         "maps, and nothing here is a signature. A row reads `EVIDENCED` only when it binds under the",
         "checker's own C1 numeric rule; `EVIDENCED-BEHAVIOURAL` only when it binds under the checker's",
         "behavioural rule (itchyshin/GLLVModels.jl#684 item 2: a refusal, route, error class or printed",
-        "summary, for the listed inference rows and four named C1 rows only; it is not numeric evidence);",
+        "summary, for the listed inference rows, four named C1 rows and the 14 rows of maintainer ruling",
+        "2026-10-05 (D-319) only; it is not numeric evidence);",
         "and `DISPOSITION-SIGNED` only when the map row carries a valid maintainer signature. PR #533's",
         "`case-map.json` rows are not in this table (not tracked here).",
         "",

@@ -690,6 +690,251 @@ Controls. Assembler: `disposition_status_word_*`, `disposition_pipe_forged_*`, `
 `not bound` row is not done for each of the three words (X2 and C2), the same words with a bound cell are done, and
 a non-done word stays not done.
 
+## Rulings of 2026-10-05 (maintainer ruling 2026-10-05, D-319)
+
+On 2026-10-05 the maintainer, Shinichi Nakagawa, approved every recommendation on the rulings page of the
+true-parity lane (vault decision D-319). Verbatim: "Approve all recommendations on the rulings page and the C6
+high-confidence group. D: [yes]. animal_latent: leave unbound. C4: change the text. Review C6 medium and low rows
+with me later." The signature source is `signed-rulings-2026-10-05.md` in the lane kit
+(`~/local-scratch/lanes/GLLVM.jl-true-parity-latest/LOOP/lanes/true-parity-latest/`), which quotes each
+recommendation. Cite this section as "maintainer ruling 2026-10-05 (D-319)", with the item name. As for the rulings of
+2026-10-02, nothing here is a new signature: the tool cannot check that the named person signed, and PR review does
+that by reading the diff. Each rule that changes a check is ported to `tools/true_parity_assemble.py`, so the
+scoreboard status and the checker agree. The C6 items are recorded with the C6 decisions, not here.
+
+### Ruling 1: bridge readback (the 8 `*-JULIA-BRIDGE-COMPARE` rows)
+
+Question signed: may "R's `gllvmTMB_julia` method returns exactly what Julia computed" bind the eight
+`namespace/S3method/<method>,gllvmTMB_julia` rows (`coef`, `fitted`, `logLik`, `predict`, `residuals`, `summary`,
+`confint`, `simulate`)? The live readback receipt is
+`receipts/julia-twins/namespace-numeric/bridge_readback.json` (evidence kind `live_bridge_readback`, PR #790). The
+signed answer differs by method, because the strength of the comparison differs:
+
+- `fitted`, `predict` and `residuals`: yes, as numeric evidence. Each R method does its own arithmetic on what Julia
+  returned (intercepts plus the linear predictor, the response scale, the residual types), so comparing it with
+  GLLVModels on the same inputs is a real test of R's adapter. The row binds on the readback cases of its own method
+  only: `P1-BRIDGE-READBACK-FITTED-*`, `-PREDICT-*`, `-RESIDUALS-*`.
+- `coef`, `logLik`, `summary`, `confint` and `simulate`: no numeric binding. These R methods copy what Julia
+  returned, so the comparison is circular (the 2026-09-30 audit and #561). Each closes by a signed disposition that
+  says the R value comes from Julia (`disposition` `DISPOSITION-SIGNED`, `signed_by` the maintainer, `signed_on`
+  2026-10-05, and the reason in `disposition_basis`). `simulate` has no readback case and closes the same way.
+
+The checker and the assembler enforce the split. A numeric row that cites a receipt whose `evidence_kind` is
+`live_bridge_readback` binds only if its `source_id` is one of `namespace/S3method/fitted,gllvmTMB_julia`,
+`predict,gllvmTMB_julia`, `residuals,gllvmTMB_julia` (and `namespace/export/gllvm_julia_fit`, which already binds on
+the same receipt through cases that compare against the TMB engine), and only if every executable case id starts
+with that row's prefix (`P1-BRIDGE-READBACK-FITTED-`, `-PREDICT-`, `-RESIDUALS-`, `-GJF-`). Otherwise the row reads
+`NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT` with the reason "bridge readback binds only ...". So relabelling the `coef` row
+numeric on the readback receipt does not bind it, and a `fitted` row cannot borrow the `COEF` cases.
+(`BRIDGE_READBACK_ROW_PREFIX` in both tools.)
+
+Row-level edits are in `case-map-namespace.json` and belong to the covariance and namespace slice: three rows to
+`evidence_tier` numeric citing the readback receipt with their own cases, five rows to a signed disposition.
+
+Negative controls (checker, group "bridge readback"): `fitted` on its own cases binds; `coef` relabelled numeric on the
+readback receipt does not; `fitted` citing a `COEF` case does not; a row outside the four does not; a receipt of
+another evidence kind is not affected. Assembler: `bridge_readback_*`.
+
+### Ruling 2: namespace keyword rows may bind without the bridge leg
+
+Signed yes: a namespace export row for a covariance keyword may bind on its native-model and formula-interface fits
+while its covariance row stays unbound at the public-R-bridge boundary. Rows named in the ruling: `animal_dep`,
+`animal_indep`, `kernel_dep`, `kernel_indep` (receipts from #786), and probably `Beta` and `dep`. Reason, from the
+ruling page: these exports are formula markers, so the fit is the estimand, and the bridge refusal is an R-side
+route. This reverses the rule of the 2026-09-30 audit (`audit-unwired-evidence-2026-09-30.md`, row
+`namespace-export-Beta`): "an export-constructor row should not borrow a case its own family row cannot yet bind". No
+tool enforced that rule, so no code changes; it was applied by hand when rows were mapped, and this ruling withdraws
+it. The binding itself still needs the numeric rule: a receipt with a comparison block, pinned to P1, every case
+within tolerance. The row edits belong to the covariance and namespace slice.
+
+### Ruling 3: CI-ROUTE-029, Julia's default rho interval is R's `fisher-z` default
+
+Signed yes: for rho, Julia's default `confint` route (`method = :wald`, which for a correlation computes a Fisher-z
+transformed Wald interval, label `rho:wald_derived`) is the same default route as R's (`.confint_rho:fisher-z`).
+"Same interval, different name." It is recorded as one equivalence class in `behaviour-equivalence.json` (route
+`rho:fisher-z`, R `[".confint_rho:fisher-z"]`, Julia `["rho:wald_derived"]`), written by
+`tools/core070_behaviour_receipts.py` (`CLASSES`), whose `default_class_unconfirmed` hold on CI-ROUTE-029 is removed.
+R's own `method = "wald"` for rho (`.confint_rho:wald`, probe row CI-ROUTE-031) is a different interval and is not in
+the class, so R's plain Wald still does not match Julia's Fisher-z. `inference/CI-ROUTE-034` (an explicit `fisher-z`
+request, which Julia's public `confint` refuses at the run commit) joins the same class once the inference slice adds
+a `fisher_z` method alias (ruling page item "CI-ROUTE-034", recommend the alias, signed): its Julia label is then added
+to this class, never a new class. CI-ROUTE-029 binds once `case-map-inference.json` is regenerated.
+
+Negative control (checker, "ruling 3 (tracked table)"): with the tracked `behaviour-equivalence.json`, R
+`.confint_rho:fisher-z` against Julia `rho:wald_derived` binds on CI-ROUTE-029, and R `.confint_rho:wald` against the
+same Julia label does not ("R: no class; Julia: class rho:fisher-z").
+
+### N1: admission-only and PUBLIC-R-BRIDGE boundary cases are non-binding context
+
+Signed yes ("about 13 rows"). Some rows carry a case that can never produce an R-versus-Julia number: R refuses at
+its public Julia bridge before any Julia call (the capability guard and kernel guard of `R/julia-bridge.R`, the
+truncated-NB2 gate; receipts with evidence kind `r_public_bridge_boundary`, verdict `R_BOUNDARY_UNCHANGED`), the
+bridge case was not executed for that reason (`not_executed`, `NOT_EXECUTED`), or the R case only admits a formula
+grammar (`r_only_formula_grammar`, `R_ONLY_PASS`). Under the numeric rule every executable case id must be compared,
+so such a case blocked its row even when every fit case agreed. The rows it affects: the 7 covariance rows
+`COV-ANIMAL-DEP`, `COV-ANIMAL-INDEP`, `COV-KERNEL-DEP`, `COV-KERNEL-INDEP`, `COV-ORD-DEP`, `COV-ORD-INDEP`,
+`COV-ORD-INDEP-COMMON` (9 bridge cases), `family/FAMILY-00-IDENTITY` and `family/FAMILY-11-LOG`, plus rows whose
+formula-grammar case was already moved to `non_binding_receipts` by hand (six covariance rows in #810).
+
+Rule (checker `boundaryContext`, assembler `boundary_context`). A numeric row may list such case ids under
+`boundary_context_case_ids` and cite their receipts under `evidence.boundary_context_receipts`. A listed case is
+exempt from the coverage requirement only if:
+
+- it is also in `executable_case_ids` (it stays visible on the row), listed once;
+- its own receipt resolves to a file, is JSON, has that `case_id`, and its `evidence_kind` and `verdict` are one of
+  `r_public_bridge_boundary` + `R_BOUNDARY_UNCHANGED`, `not_executed` + `NOT_EXECUTED`, `r_only_formula_grammar` +
+  `R_ONLY_PASS`; the two bridge kinds only on a case id ending `-PUBLIC-R-BRIDGE`;
+- its receipt carries no `comparison` block (a case that has a number is compared, not set aside);
+- at least one other executable case binds numerically under the unchanged rule.
+
+Otherwise the row reads `NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT` with a reason that starts "boundary context
+(maintainer ruling 2026-10-05 (D-319), N1)". A row without the field is judged exactly as before. The context receipts
+are not read by the receipt-status check, because their verdicts are not pass values by design. The row still counts
+in `bound=` and `bound_numeric=`: what binds it is the compared cases, and the context case is recorded, not
+compared. Note on FAMILY-00: its R bridge silently fits a different model (df 5 against 8); the rule sets the case
+aside but does not make it a twin, and the row also needs its formula-interface case to pass.
+
+Row-level edits belong to the slices that own `case-map-covariance.json` and `case-map-family.json`: add the field and
+move each boundary receipt from `non_binding_receipts` or `receipt` to `boundary_context_receipts`, and cite the
+fit-case receipts under `evidence.receipt` with `evidence_tier` numeric.
+
+Negative controls (checker, group "N1 boundary context"): a bridge refusal, a not-executed bridge case and an
+admission-only case each bind as context; without the field the uncompared case still blocks the row; a context
+receipt of another kind, a wrong verdict, a bridge kind on a non-bridge case, a context receipt with a comparison
+block, every case set aside, a context id outside `executable_case_ids`, a missing context receipt and a missing
+`boundary_context_receipts` each fail. Assembler: `boundary_context_*`.
+
+### N9: convergence parity for C3 campaign rows
+
+Signed yes, as drafted in PR #715 (`docs/dev-log/w1-11-convergence-parity-rule-DRAFT.md` on that branch): a C3
+comparison counts only when both engines reach gradient max-abs 1e-5 at the point whose outputs are compared. The
+draft's reason: on the ordinal cell R's `nlminb` stops at gradient max-abs 4.3e-4 and Julia at 7.8e-6 on the same
+objective, so the row measured how early each optimiser stopped; after one Newton step each (R 4.7e-7, Julia 2.4e-6)
+the loadings product agrees to 1.85e-7 against the unchanged tolerance 1e-4. No tolerance changes.
+
+Rule (checker `convergenceParityProblem`, assembler `convergence_parity_problem`). A receipt records the condition in a
+top-level block:
+
+```json
+"convergence_parity": {
+  "gradient_bound": 1e-5,
+  "compared_point": "returned" | "newton_polished",
+  "engines": { "R": { "max_abs_gradient": 4.7e-7 }, "julia": { "max_abs_gradient": 2.4e-6 } }
+}
+```
+
+When a cited receipt carries the block, the bound must be exactly 1e-5, `compared_point` one of the two words, and
+both gradients finite, at least 0 and at most 1e-5; otherwise the row does not bind (reason "convergence parity
+(maintainer ruling 2026-10-05 (D-319), N9)"). Each gradient is on that engine's own objective in its own coordinates,
+as the draft says.
+
+Two readings, stated rather than chosen silently:
+
+- **Applied (this change): the rule governs receipts that record it.** A C3 receipt without the block is judged as
+  before. Reason: the ruling page says N9 "binds ORDINAL-LOGIT-RSZ and, after a re-run, ISDM-HEADLINE-RSZ", that is, it
+  was signed to let the stopped-early rows be compared at a converged point, not to reopen the rows that bind.
+- **Not applied: the rule as a precondition for every C3 row.** Measured on the tracked receipts, all five C3 rows that
+  bind today have an R gradient above 1e-5 (Gaussian 1.97e-2, Poisson 3.80e-3, NB2 3.76e-3, binomial 9.86e-4,
+  temporal 4.35e-2) and four record no Julia gradient at all. Reading the rule strictly would unbind all five (C3 from
+  5/8 to 0/8) until the campaign is re-run with the polish. That is the maintainer's call; the change to the checker
+  is one line (require the block on every `-RSZ` row).
+- The draft's step-3 alternative (a Newton step size `max |H^-1 g|` at most 1e-5 when an engine's gradient noise
+  floor sits above the bound) is not part of the signed text and is not accepted by the checker.
+
+The campaign receipts do not carry the block yet. `tools/true_parity/campaign/write_receipts.py` (and `run_J.jl`,
+which must record Julia's gradient) belong to the campaign slice: ORDINAL-LOGIT-RSZ binds once its receipt records the
+polished comparison with the block (the PR #715 pre-run numbers pass), and ISDM-HEADLINE-RSZ after a re-run.
+
+Negative controls (checker, group "N9 convergence parity"): the ordinal pre-run numbers bind, as do exactly 1e-5 and a
+`returned` point; R's unpolished 4.3e-4, Julia above the bound, a declared bound of 1e-4, a missing Julia gradient, an
+unknown compared point, a negative gradient and a non-object block each fail. Assembler: `convergence_parity_*`.
+
+### C4: the clause accepts direct-engine runs
+
+Signed: "C4: change the text." C4 no longer requires the `engine = "julia"` bridge leg; a real-data workflow run end to
+end on both engines directly (gllvmTMB at P1 and GLLVModels.jl on the same data bytes) satisfies it. The ruling page's
+reason: the bridge leg tests R's adapter rather than the model, and the adapter is covered by ruling 1. The clause text
+under "Clauses" is changed accordingly.
+
+Checker change: an `EVIDENCED` real-data (`RD-`) scoreboard row is done only if a receipt it cites records both
+engines (a JSON receipt with an `engines` block holding an `R` and a `julia` object), else `C4_NOT_A_DIRECT_ENGINE_RUN`
+on C4 and X2. That makes "end to end on both engines" a checked condition instead of a word in a cell. A
+`DISPOSITION-SIGNED` real-data row is not a run and is judged as before. Every tracked campaign receipt already has
+the block.
+
+What still keeps the real-data rows open is the receipt, not the checker: `write_receipts.py` writes a pass-rule leg
+`engine_julia_bridge_route_and_eight_acceptance_classes_run` that is false on every C4 receipt. Dropping that leg is
+the campaign slice's edit; then `data/RD-CRABS-GAUSSIAN` (every number inside tolerance today) binds. Spider, beetle,
+fungi and urbanisation still fail on numbers or convergence, and the three disposition rows wait on their signed
+dispositions (item F, owned by the covariance and namespace slice).
+
+Negative controls (checker, group "C4 direct engine"): the base fixture's RD row (receipt with both engines) is done; a
+receipt with no engines block, only the R engine, or an array in place of the block is not done on C4 and X2; a signed
+RD disposition row is done; a C3 row with a plain receipt is unaffected. Every fixture copy of the RD receipt gained
+the engines block.
+
+### D: phylo-latent promotion (D-300 answer 9) is signed
+
+Signed: "D: [yes]". The dated promotion block of D-300 answer 9, which the PR #547 receipts wait on
+(`phylo-latent-p1/cov_phylo_latent_rsz/r-receipt.json` records `qualified = false` until it is signed), is signed on
+2026-10-05 under maintainer ruling 2026-10-05 (D-319), item D. This file records the signature only. Flipping the
+receipts' qualification and the pass-rule leg `R_side_receipt_qualified_by_maintainer` (so that
+`covariance/COV-PHYLO-LATENT-RSZ` and the phylo twins can bind) belongs to the covariance and namespace slice; the
+"Phylo row does not bind" paragraph under "C3 to C5 campaign rows" describes the state before that flip.
+
+### N3: known-V meta rows are a documented gap, revisited at P2
+
+Signed: "documented gap, revisit at P2". `covariance/COV-META-EXACT` and `covariance/COV-META-LEGACY` (R's known
+sampling-covariance `meta` term and its deprecated spelling) have no Julia surface at P1 (grep check recorded in the wave plan of 2026-10-03). They are a
+documented gap of P1, revisited when the pin moves to P2; no Julia alias for the deprecated spelling is added, and the
+build (estimated 18 to 24 hours, an API change) is not scheduled. The rows close by a signed disposition that says so,
+written by the slice that owns `case-map-covariance.json`; until then they read `NON-NUMERIC` (tier `r_only`). Their
+R cases are admission-only, so N1 does not bind them: a row needs at least one compared case.
+
+### Item A, N6 and N10: the behavioural scope is extended by 14 listed rows
+
+Ruling 2 of 2026-10-02 froze the behavioural tier to 63 rows. Three signed items extend that list, and only by
+explicit ids, never by prefix:
+
+- **Item A** (signed yes): the 7 aghq control rows `aghq/AGHQ-CTRL-AUTO`, `-FALSE`, `-NINE`, `-NULL`, `-ONE`, `-TRUE`,
+  `-TWO` and `inference/CI-ROUTE-009`. Each already had a behaviour block, kept as non-binding evidence because the
+  row was outside the frozen list.
+- **N6** (signed yes: "iSDM behavioural ruling, 3 internal predicates, D-296 written onto ISDM-LEGACY"). The 9 iSDM
+  rows whose R side is an admission or refusal predicate split three ways, read from each R case's `r_expression`:
+  - behavioural scope, 5 rows whose R case is reachable through `gllvmTMB(..., family = isdm_sources(...))`:
+    `isdm/ISDM-COUNT`, `-EXTRA-SOURCE`, `-MISSING-IN-TRAIT`, `-MISSING-SOURCE`, `-WRAPPER-LAW`. Each binds only when a
+    receipt shows Julia's public door giving the same refusal or admission (slice W3-2); none does yet.
+  - signed disposition, 3 internal predicates: `isdm/ISDM-NO-TRAITS` (calls the predicate with `traits = NULL`),
+    `-WRONG-ID` and `-WRONG-LINK` (tamper the family-id or link-id column of the internal row-id matrix). No public
+    call on either engine can set those arguments. The ruling names the count, not the ids; the three ids are the
+    lane's reading of the receipts (AGENT-INFERRED) and are for the reviewer of this change to confirm.
+  - signed disposition, `isdm/ISDM-LEGACY`: the R-only backward-compatibility disposition already signed in Packet 1b
+    item 2 (2026-09-27, D-296) is now written onto the row (`signed_on` 2026-09-27, the date of that signature).
+  The four dispositions are written by `tools/core070_isdm_p1_receipts.py` (`SIGNED_DISPOSITIONS`), so its
+  `--check` keeps re-deriving the rows; each row carries the reason in `disposition_basis`.
+- **N10** (signed yes): `postfit/POSTFIT-SURFACE-check_auto_residual`. It binds when a behaviour block shows the same
+  verdict from both engines (slice W3-9); its receipt has none yet.
+
+The 14 ids live in `BEHAVIOURAL_EXTENDED_SOURCE_IDS` in the checker and in the assembler, a separate set so the
+59-row inference list stays tied to `case-map-inference.json`. Every other rule of ruling 2 is unchanged: a row in
+scope still needs a matching, well-formed, passing behaviour block, and being listed binds nothing by itself.
+`inference/CI-ROUTE-008`, `-010` and `-011` stay outside. Tests fail if the two copies drift, if the set does not
+have 14 unique ids, if it overlaps the other two lists or names one of the four signed-disposition iSDM rows.
+
+Rows that bind on this change: the 7 aghq control rows (`core070_aghq_p1_receipts.py --apply-twins` relabels them,
+because their blocks already match). `inference/CI-ROUTE-009` binds once `case-map-inference.json` is regenerated
+(`core070_inference_p1_receipts.py --write`), which belongs to the inference slice. Until then that tool's `--check`
+reports CI-ROUTE-009 as differing from its re-derivation.
+
+Negative controls (checker, group "behavioural scope"): each of the 14 rows binds with a matching block and fails on a
+mismatched label; near misses do not bind (`aghq/AGHQ-CTRL-THREE`, `aghq/AGHQ-AUTO-K-BINOMIAL`, the four
+signed-disposition iSDM rows, `postfit/POSTFIT-SURFACE-check_auto`, a trailing space); on the scoreboard,
+`EVIDENCED-BEHAVIOURAL` counts on `inference-CI-ROUTE-009`, `aghq-AGHQ-CTRL-AUTO`, `isdm-ISDM-WRAPPER-LAW` and
+`postfit-POSTFIT-SURFACE-check_auto_residual` and not on `aghq-AGHQ-CTRL-THREE`, `isdm-ISDM-WRONG-ID` or
+`isdm-ISDM-LEGACY`. Assembler: `behavioural_scope_named_row_*` (now over the extended ids too),
+`scope_extended_list_has_14_unique_ids_disjoint_from_the_other_lists`, `behavioural_extended_ids_match_checker`,
+`scope_list_ties_to_case_map_inference_json` (CI-ROUTE-009 may be partial or behavioural).
+
 ## Clauses
 
 Every clause starts unmet except C7, whose evidence (`docs/src/gllvmtmb-parity.md`) already
@@ -748,8 +993,10 @@ modes on `origin/main`, which is the honest state, not a false pass.
   EXPECT: C3_MET
   EVIDENCE: pending
 
-- [ ] C4: one real-data workflow per qualified family or structure runs end to end through
-      `engine = "julia"` and passes the acceptance classes
+- [ ] C4: one real-data workflow per qualified family or structure runs end to end on both engines
+      (gllvmTMB at P1 and GLLVModels.jl, directly, on the same data bytes; the `engine = "julia"` bridge leg is not
+      required, maintainer ruling 2026-10-05 (D-319), C4) and passes the campaign pass rule; an `EVIDENCED` row
+      must cite a receipt that records both engines
   CHECK: node tools/true_parity_check.mjs C4
   EXPECT: C4_MET
   EVIDENCE: pending
@@ -856,7 +1103,8 @@ confirmation; every receipt says so in `tolerance_status`.
   library path and the sha256 of the P1 source files listed in `p1_source_sha256.json`. A drift in an internal function or
   in the compiled code of a lane library would therefore not be caught by the guard. A C4 row also needs the
   `engine = "julia"` bridge route and the plan's eight acceptance classes (plan section 1.3); neither has been run, so
-  no C4 row binds yet. A row that meets the whole rule binds (`evidence_tier` numeric).
+  no C4 row binds yet. (Superseded for C4 by maintainer ruling 2026-10-05 (D-319), C4: a direct-engine run satisfies C4 and
+  the bridge leg is no longer required; see "Rulings of 2026-10-05".) A row that meets the whole rule binds (`evidence_tier` numeric).
   A row that does not is cited under `non_binding_receipts` with every reason, and stays open. Its tier says which kind of
   failure it is. If every number is inside tolerance and the only failing leg is a required step that was not run or not
   signed (the C4 bridge leg, the phylo qualification below), the tier is `partial_case_not_executed` (scoreboard PARTIAL)
@@ -872,7 +1120,8 @@ confirmation; every receipt says so in `tolerance_status`.
   (`phylo-latent-p1/cov_phylo_latent_rsz/r-receipt.json`), which records `qualified = false`; the README there says every
   receipt stays unqualified until the maintainer signs the dated promotion block (D-300 answer 9). The measurement is kept
   as a non-binding receipt (both numbers are inside tolerance), the pass rule has a leg
-  `R_side_receipt_qualified_by_maintainer` that is false, and the row reads PARTIAL. No agent may sign the block.
+  `R_side_receipt_qualified_by_maintainer` that is false, and the row reads PARTIAL. No agent may sign the block. (The block was signed on 2026-10-05, maintainer ruling 2026-10-05 (D-319), item D; the receipt flip
+  follows in the covariance slice. See "Rulings of 2026-10-05".)
 - **Relative tolerances** (standard errors, NB2 dispersion) are carried as a discrepancy against zero (`r_value` 0,
   `julia_value` the relative difference), because the checker compares absolute differences. The `r_value` is therefore
   not an R measurement: the case's quantity name says "relative difference", a `convention` field says so, and

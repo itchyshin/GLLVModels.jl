@@ -444,8 +444,8 @@ def main():
     expect("behavioural_empty_basis_fails_run", c == 1 and "empty basis" in o, o)
     shutil.rmtree(tmp)
     # Scope of the behavioural tier: inference/* rows and four named C1 rows only.
-    for sid in ("isdm/X", "postfit/POSTFIT-SURFACE-nobs", "inference2/N", "data/RD-01", "inference/CI-ROUTE-008", "inference/CI-ROUTE-009",
-                "inference/CI-ROUTE-010", "inference/CI-ROUTE-011", "inference/", "inference/../isdm/X", "inference/CI-ROUTE-999",
+    for sid in ("isdm/X", "postfit/POSTFIT-SURFACE-nobs", "inference2/N", "data/RD-01", "inference/CI-ROUTE-008", "isdm/ISDM-WRONG-ID",
+                "isdm/ISDM-LEGACY", "aghq/AGHQ-CTRL-THREE", "inference/CI-ROUTE-010", "inference/CI-ROUTE-011", "inference/", "inference/../isdm/X", "inference/CI-ROUTE-999",
                 "Inference/CI-ROUTE-001"):
         root, tmp = behavioural_root(sid=sid)
         rid = A.scoreboard_id(sid)
@@ -456,7 +456,7 @@ def main():
                c == 0 and status_of(root, rid) == "BEHAVIOURAL-UNVERIFIED" and "not covered by itchyshin/GLLVModels.jl#684 item 2" in (root / A.LEDGER / A.OUT_SCOREBOARD).read_text()
                and (out is None or (m is not None and int(m.group(1)) == 0)), f"{status_of(root, rid)} {o}")
         shutil.rmtree(tmp)
-    for sid in A.BEHAVIOURAL_NAMED_SOURCE_IDS:
+    for sid in A.BEHAVIOURAL_NAMED_SOURCE_IDS + A.BEHAVIOURAL_EXTENDED_SOURCE_IDS:
         root, tmp = behavioural_root(sid=sid)
         rid = A.scoreboard_id(sid)
         c, o = run(root)
@@ -649,13 +649,14 @@ def main():
             finally:
                 shutil.rmtree(tmp)
         return f
-    for sid in ("inference/CI-ROUTE-008", "inference/CI-ROUTE-009", "inference/CI-ROUTE-010", "inference/CI-ROUTE-011", "inference/",
+    for sid in ("inference/CI-ROUTE-008", "inference/CI-ROUTE-010", "inference/CI-ROUTE-011", "inference/",
                 "inference/../isdm/X", "inference/CI-ROUTE-999", "inference/CI-ROUTE-005", "Inference/CI-ROUTE-001", "inference/CI-ROUTE-001 "):
         check(f"scope_frozen_list_rejects_{sid!r}", scope_list_case(sid))
 
     def all_63():
-        # All 59 listed rows plus the four excluded inference rows, every one tier behavioural with a scoped, matching entry.
-        excluded = [f"inference/CI-ROUTE-{n:03d}" for n in (8, 9, 10, 11)]
+        # All 59 listed rows plus the three inference rows still excluded (CI-ROUTE-009 joined in the 2026-10-05
+        # extension), every one tier behavioural with a scoped, matching entry.
+        excluded = [f"inference/CI-ROUTE-{n:03d}" for n in (8, 10, 11)]
         sids = list(A.BEHAVIOURAL_INFERENCE_SOURCE_IDS) + excluded
         rows = [row(sid, tier="behavioural", executable_case_ids=[f"CASE-{i}"], evidence={"receipt": [BR]}) for i, sid in enumerate(sids)]
         root, tmp = with_root({"case-map-family.json": rows})
@@ -667,10 +668,16 @@ def main():
             n_ok = sum(v == "EVIDENCED-BEHAVIOURAL" for sid, v in statuses.items() if sid in A.BEHAVIOURAL_INFERENCE_SOURCE_IDS)
             n_bad = sum(statuses[sid] == "BEHAVIOURAL-UNVERIFIED" for sid in excluded)
             b = bound_beh(root)
-            return c == 0 and n_ok == 59 and n_bad == 4 and (b is None or b == 59), f"code={c} evidenced={n_ok} unverified_excluded={n_bad} checker_bound={b} {o}"
+            return c == 0 and n_ok == 59 and n_bad == 3 and (b is None or b == 59), f"code={c} evidenced={n_ok} unverified_excluded={n_bad} checker_bound={b} {o}"
         finally:
             shutil.rmtree(tmp)
-    check("scope_all_59_listed_rows_bind_and_the_four_others_do_not", all_63)
+    check("scope_all_59_listed_rows_bind_and_the_three_others_do_not", all_63)
+    check("scope_extended_list_has_14_unique_ids_disjoint_from_the_other_lists", lambda: (
+        len(A.BEHAVIOURAL_EXTENDED_SOURCE_IDS) == 14 and len(set(A.BEHAVIOURAL_EXTENDED_SOURCE_IDS)) == 14
+        and not set(A.BEHAVIOURAL_EXTENDED_SOURCE_IDS) & (set(A.BEHAVIOURAL_INFERENCE_SOURCE_IDS) | set(A.BEHAVIOURAL_NAMED_SOURCE_IDS))
+        and not {"inference/CI-ROUTE-008", "inference/CI-ROUTE-010", "inference/CI-ROUTE-011", "isdm/ISDM-LEGACY",
+                 "isdm/ISDM-NO-TRAITS", "isdm/ISDM-WRONG-ID", "isdm/ISDM-WRONG-LINK"} & set(A.BEHAVIOURAL_EXTENDED_SOURCE_IDS),
+        A.BEHAVIOURAL_EXTENDED_SOURCE_IDS))
     check("scope_list_has_59_unique_ids_none_of_008_to_011", lambda: (
         len(A.BEHAVIOURAL_INFERENCE_SOURCE_IDS) == 59 and len(set(A.BEHAVIOURAL_INFERENCE_SOURCE_IDS)) == 59
         and not {f"inference/CI-ROUTE-{n:03d}" for n in (8, 9, 10, 11)} & set(A.BEHAVIOURAL_INFERENCE_SOURCE_IDS), len(A.BEHAVIOURAL_INFERENCE_SOURCE_IDS)))
@@ -679,21 +686,25 @@ def main():
         led = A.ROOT / A.LEDGER
         inf = {r["source_id"]: r.get("evidence_tier") for r in json.loads((led / "case-map-inference.json").read_text())["rows"]}
         listed = set(A.BEHAVIOURAL_INFERENCE_SOURCE_IDS)
+        extended = set(A.BEHAVIOURAL_EXTENDED_SOURCE_IDS)  # CI-ROUTE-009 (2026-10-05): partial until its slice relabels it
         routing = {sid for sid, t in inf.items() if t in ("routing_control_flow", "reject_error_class")}
         missing = sorted(listed - set(inf))
         unlisted_routing = sorted(routing - listed)
         # A listed row is a routing or error-class row, or has already been relabelled behavioural by its slice;
         # no row outside the list may be behavioural; the four rows the ruling does not name are numeric or partial.
         bad_listed = sorted(sid for sid in listed if inf.get(sid) not in ("routing_control_flow", "reject_error_class", "behavioural"))
-        stray = sorted(sid for sid, t in inf.items() if t == "behavioural" and sid not in listed)
-        others = sorted(set(inf) - listed)
-        ok_others = all(inf[sid] in ("numeric", "partial_non_numeric_case") for sid in others)
+        stray = sorted(sid for sid, t in inf.items() if t == "behavioural" and sid not in listed | extended)
+        bad_extended = sorted(sid for sid in extended & set(inf) if inf[sid] not in ("partial_non_numeric_case", "behavioural"))
+        others = sorted(set(inf) - listed - extended)
+        ok_others = all(inf[sid] in ("numeric", "partial_non_numeric_case") for sid in others) and not bad_extended
         named = set()
         for f in sorted(led.glob("case-map*.json")):
             named |= {r["source_id"] for r in json.loads(f.read_text())["rows"]}
         named_missing = sorted(set(A.BEHAVIOURAL_NAMED_SOURCE_IDS) - named)
-        ok = not (missing or unlisted_routing or bad_listed or stray or named_missing) and ok_others and len(others) == 4
-        return ok, f"missing={missing} unlisted_routing={unlisted_routing} bad_listed={bad_listed} stray={stray} others={others} named_missing={named_missing}"
+        extended_missing = sorted(extended - named)
+        ok = not (missing or unlisted_routing or bad_listed or stray or named_missing or extended_missing) and ok_others and len(others) == 3
+        return ok, (f"missing={missing} unlisted_routing={unlisted_routing} bad_listed={bad_listed} stray={stray} others={others} "
+                    f"named_missing={named_missing} extended_missing={extended_missing} bad_extended={bad_extended}")
     check("scope_list_ties_to_case_map_inference_json", scope_ties_to_ledger)
 
     # Item 2: labels match by class identity, not by canonical string (external review F8a, F8b, F8e, F8f).
@@ -1148,6 +1159,8 @@ def main():
            and re.findall(r"'([A-Z_]+)'", ref.group(3)) == list(A.C6_RULINGS[ref.group(1)]["words"]), rtable)
     named = re.search(r"const BEHAVIOURAL_NAMED_SOURCE_IDS = new Set\(\[(.*?)\]\);", mjs, re.S).group(1)
     expect("behavioural_named_ids_match_checker", re.findall(r"'([^']+)'", named) == list(A.BEHAVIOURAL_NAMED_SOURCE_IDS), named)
+    ext = re.search(r"const BEHAVIOURAL_EXTENDED_SOURCE_IDS = new Set\(\[(.*?)\]\);", mjs, re.S).group(1)
+    expect("behavioural_extended_ids_match_checker", re.findall(r"'([^']+)'", ext) == list(A.BEHAVIOURAL_EXTENDED_SOURCE_IDS), ext)
     infer = re.search(r"const BEHAVIOURAL_INFERENCE_SOURCE_IDS = new Set\(\[(.*?)\]\);", mjs, re.S).group(1)
     expect("behavioural_inference_ids_match_checker", re.findall(r"'([^']+)'", infer) == list(A.BEHAVIOURAL_INFERENCE_SOURCE_IDS), infer)
     expect("receipt_status_fields_match_checker",
@@ -1188,6 +1201,115 @@ def main():
         finally:
             shutil.rmtree(tmp)
     check("kept_basis_accept_and_refuse_agree_between_checker_and_assembler", basis_agreement)
+
+    # Maintainer ruling 2026-10-05 (D-319), ruling 1: a live_bridge_readback receipt binds fitted, predict and residuals
+    # (and gllvm_julia_fit) only, each on its own cases; the checker gives the same verdict.
+    def bridge_case(sid, cid, kind, want_status, contains=None):
+        def f():
+            root, tmp = with_root({"case-map-namespace.json": [row(sid, cls="compatibility_adapter", tier="numeric",
+                                                                    executable_case_ids=[cid], evidence={"receipt": [RP]})]})
+            try:
+                (root / RP).write_text(json.dumps({"evidence_kind": kind, "verdict": "PASS", "comparison": {
+                    "pin": "P1", "cases": [{"case_id": cid, "r_value": 1.0, "julia_value": 1.0, "tolerance": 1e-12}]}}))
+                c, o = run(root)
+                rid = A.scoreboard_id(sid)
+                st = status_of(root, rid)
+                txt = (root / A.LEDGER / A.OUT_SCOREBOARD).read_text()
+                out = checker_c1(root)
+                m = re.search(r"\bbound=(\d+)", out or "")
+                want_bound = 1 if want_status == "EVIDENCED" else 0
+                ok = c == 0 and st == want_status and (contains is None or contains in txt) and (out is None or (m and int(m.group(1)) == want_bound))
+                return ok, f"code={c} status={st} checker={out and out[:300]} {o}"
+            finally:
+                shutil.rmtree(tmp)
+        return f
+    check("bridge_readback_fitted_own_case_evidenced",
+          bridge_case("namespace/S3method/fitted,gllvmTMB_julia", "P1-BRIDGE-READBACK-FITTED-RESPONSE", "live_bridge_readback", "EVIDENCED"))
+    check("bridge_readback_residuals_own_case_evidenced",
+          bridge_case("namespace/S3method/residuals,gllvmTMB_julia", "P1-BRIDGE-READBACK-RESIDUALS-PEARSON", "live_bridge_readback", "EVIDENCED"))
+    check("bridge_readback_coef_relabelled_numeric_does_not_bind",
+          bridge_case("namespace/S3method/coef,gllvmTMB_julia", "P1-BRIDGE-READBACK-COEF-ALPHA", "live_bridge_readback",
+                      "NUMERIC-UNVERIFIED", "binds only fitted, predict and residuals"))
+    check("bridge_readback_fitted_borrowing_coef_case_does_not_bind",
+          bridge_case("namespace/S3method/fitted,gllvmTMB_julia", "P1-BRIDGE-READBACK-COEF-ALPHA", "live_bridge_readback",
+                      "NUMERIC-UNVERIFIED", "only on its own cases"))
+    check("bridge_readback_other_kind_not_affected",
+          bridge_case("namespace/S3method/coef,gllvmTMB_julia", "P1-COEF-TWIN", "numeric_r_vs_julia", "EVIDENCED"))
+    def bridge_prefix_drift():
+        mjs = (HERE / "true_parity_check.mjs").read_text()
+        body = re.search(r"const BRIDGE_READBACK_ROW_PREFIX = \{(.*?)\n\};", mjs, re.S).group(1)
+        pairs = dict(re.findall(r"'([^']+)': '([^']+)'", body))
+        return pairs == A.BRIDGE_READBACK_ROW_PREFIX, str(pairs)
+    check("bridge_readback_prefix_table_matches_checker", bridge_prefix_drift)
+
+    # Maintainer ruling 2026-10-05 (D-319), N1: boundary context cases; the checker gives the same verdict.
+    CTX = str(A.LEDGER / "receipts/ctx.json")
+    def ctx_case(ctx_receipt, want_status, contains=None, ids=("C", "C-PUBLIC-R-BRIDGE"), ctx_ids=("C-PUBLIC-R-BRIDGE",)):
+        def f():
+            root, tmp = with_root({"case-map-covariance.json": [row(
+                "covariance/N", tier="numeric", executable_case_ids=list(ids), boundary_context_case_ids=list(ctx_ids),
+                evidence={"receipt": [RP], "boundary_context_receipts": [CTX]})]})
+            try:
+                (root / RP).write_text(json.dumps({"comparison": GOOD_CMP}))
+                (root / CTX).write_text(json.dumps({"case_id": ctx_ids[0], **ctx_receipt}))
+                c, o = run(root)
+                st = status_of(root, "covariance-N")
+                txt = (root / A.LEDGER / A.OUT_SCOREBOARD).read_text()
+                out = checker_c1(root)
+                m = re.search(r"\bbound=(\d+)", out or "")
+                want_bound = 1 if want_status == "EVIDENCED" else 0
+                ok = c == 0 and st == want_status and (contains is None or contains in txt) and (out is None or (m and int(m.group(1)) == want_bound))
+                return ok, f"code={c} status={st} checker={out and out[:300]} {o}"
+            finally:
+                shutil.rmtree(tmp)
+        return f
+    check("boundary_context_public_r_bridge_refusal_evidenced",
+          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED"}, "EVIDENCED"))
+    check("boundary_context_admission_only_evidenced",
+          ctx_case({"evidence_kind": "r_only_formula_grammar", "verdict": "R_ONLY_PASS"}, "EVIDENCED",
+                   ids=("C", "C-FORMULA"), ctx_ids=("C-FORMULA",)))
+    check("boundary_context_other_kind_refused",
+          ctx_case({"evidence_kind": "numeric_r_vs_julia", "verdict": "PASS"}, "NUMERIC-UNVERIFIED", "not an admission-only or PUBLIC-R-BRIDGE boundary kind"))
+    check("boundary_context_wrong_verdict_refused",
+          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "PASS"}, "NUMERIC-UNVERIFIED", "is not R_BOUNDARY_UNCHANGED"))
+    check("boundary_context_with_comparison_refused",
+          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED", "comparison": {}}, "NUMERIC-UNVERIFIED", "so it is compared, not context"))
+    check("boundary_context_bridge_kind_on_native_case_refused",
+          ctx_case({"evidence_kind": "not_executed", "verdict": "NOT_EXECUTED"}, "NUMERIC-UNVERIFIED", "must be a -PUBLIC-R-BRIDGE case",
+                   ids=("C", "C-NATIVE"), ctx_ids=("C-NATIVE",)))
+    check("boundary_context_all_cases_refused",
+          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED"}, "NUMERIC-UNVERIFIED",
+                   "every executable case is boundary context", ids=("C-PUBLIC-R-BRIDGE",)))
+
+    # Maintainer ruling 2026-10-05 (D-319), N9: convergence parity; the checker gives the same verdict.
+    def cp_case(cp, want_status, contains=None):
+        def f():
+            root, tmp = numeric_root({"convergence_parity": cp})
+            try:
+                c, o = run(root)
+                st = status_of(root)
+                txt = (root / A.LEDGER / A.OUT_SCOREBOARD).read_text()
+                out = checker_c1(root)
+                m = re.search(r"\bbound=(\d+)", out or "")
+                want_bound = 1 if want_status == "EVIDENCED" else 0
+                ok = c == 0 and st == want_status and (contains is None or contains in txt) and (out is None or (m and int(m.group(1)) == want_bound))
+                return ok, f"code={c} status={st} checker={out and out[:300]} {o}"
+            finally:
+                shutil.rmtree(tmp)
+        return f
+    def cpb(rg, jg, **over):
+        d = {"gradient_bound": 1e-5, "compared_point": "newton_polished",
+             "engines": {"R": {"max_abs_gradient": rg}, "julia": {"max_abs_gradient": jg}}}
+        d.update(over)
+        return d
+    check("convergence_parity_both_below_bound_evidenced", cp_case(cpb(4.709e-7, 2.365e-6), "EVIDENCED"))
+    check("convergence_parity_exactly_bound_evidenced", cp_case(cpb(1e-5, 1e-5), "EVIDENCED"))
+    check("convergence_parity_r_early_stop_unverified", cp_case(cpb(4.314e-4, 7.822e-6), "NUMERIC-UNVERIFIED", "R max_abs_gradient 0.0004314 > 1e-5"))
+    check("convergence_parity_looser_bound_unverified", cp_case(cpb(1e-7, 1e-7, gradient_bound=1e-4), "NUMERIC-UNVERIFIED", "is not 1e-5"))
+    check("convergence_parity_bool_bound_unverified", cp_case(cpb(1e-7, 1e-7, gradient_bound=True), "NUMERIC-UNVERIFIED", "is not 1e-5"))
+    check("convergence_parity_missing_julia_unverified",
+          cp_case({"gradient_bound": 1e-5, "compared_point": "returned", "engines": {"R": {"max_abs_gradient": 1e-7}}}, "NUMERIC-UNVERIFIED", "julia max_abs_gradient"))
+    check("convergence_parity_unknown_point_unverified", cp_case(cpb(1e-7, 1e-7, compared_point="best"), "NUMERIC-UNVERIFIED", "is not returned or newton_polished"))
 
     # Real tree: outputs current, and EVIDENCED count equals the checker's own C1 bound=.
     c, o = run(A.ROOT, "--check")

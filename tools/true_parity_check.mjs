@@ -50,8 +50,13 @@
 // And a recorded abs_diff/max_abs_diff that disagrees with the difference the tool recomputes
 // from r_value/julia_value fails the row as NUMERIC_RECORDED_DIFF_MISMATCH.
 //
-// Maintainer rulings of 2026-10-02 (itchyshin/GLLVModels.jl#684, signed by Shinichi Nakagawa), the
-// only signature recorded here. Prose and schemas: GATES.md, "Rulings of 2026-10-02".
+// Maintainer rulings of 2026-10-02 (itchyshin/GLLVModels.jl#684, signed by Shinichi Nakagawa) and of 2026-10-05
+// (maintainer ruling 2026-10-05, vault decision D-319), the only signatures recorded here. Prose and schemas: GATES.md,
+// "Rulings of 2026-10-02" and "Rulings of 2026-10-05". The 2026-10-05 rules: the behavioural list gains 14 explicit
+// ids (BEHAVIOURAL_EXTENDED_SOURCE_IDS); a live bridge readback receipt binds only fitted, predict and residuals
+// (BRIDGE_READBACK_ROW_PREFIX); admission-only and PUBLIC-R-BRIDGE cases may be non-binding context
+// (boundaryContext); a convergence_parity block must show both engines at gradient max-abs <= 1e-5
+// (convergenceParityProblem); an EVIDENCED real-data row must cite a direct-engine receipt (C4).
 //   Ruling 1 (integer equality): a numeric comparison case may carry `"kind": "integer_equality"`.
 //     Then r_value and julia_value must both be integers (or equal-length integer arrays) and
 //     tolerance must be exactly 0.5, i.e. exact equality. The row keeps evidence_tier "numeric".
@@ -176,10 +181,24 @@ const BEHAVIOURAL_NAMED_SOURCE_IDS = new Set([
   'model-comparison/print.anova.gllvmTMB_multi',
   'model-comparison/update.gllvmTMB_multi',
 ]);
-const behaviouralEligibleSourceId = (sid) => typeof sid === 'string' && (BEHAVIOURAL_INFERENCE_SOURCE_IDS.has(sid) || BEHAVIOURAL_NAMED_SOURCE_IDS.has(sid));
+// Extension signed 2026-10-05 (maintainer ruling 2026-10-05 (D-319); GATES.md "Rulings of 2026-10-05"): item A adds
+// the 7 aghq control rows and inference/CI-ROUTE-009; N6 adds the 5 iSDM refusal or admission rows reachable through
+// R's public door (the 3 internal-predicate rows ISDM-NO-TRAITS, -WRONG-ID and -WRONG-LINK and ISDM-LEGACY close by
+// signed disposition instead); N10 adds check_auto_residual. Same rule as the 63 rows above: listed, explicit, frozen.
+// Kept as its own set so the 59-row inference list stays tied to case-map-inference.json. Copied in
+// tools/true_parity_assemble.py (BEHAVIOURAL_EXTENDED_SOURCE_IDS; a test fails if they drift).
+const BEHAVIOURAL_EXTENDED_SOURCE_IDS = new Set([
+  'aghq/AGHQ-CTRL-AUTO', 'aghq/AGHQ-CTRL-FALSE', 'aghq/AGHQ-CTRL-NINE', 'aghq/AGHQ-CTRL-NULL',
+  'aghq/AGHQ-CTRL-ONE', 'aghq/AGHQ-CTRL-TRUE', 'aghq/AGHQ-CTRL-TWO',
+  'inference/CI-ROUTE-009',
+  'isdm/ISDM-COUNT', 'isdm/ISDM-EXTRA-SOURCE', 'isdm/ISDM-MISSING-IN-TRAIT', 'isdm/ISDM-MISSING-SOURCE',
+  'isdm/ISDM-WRAPPER-LAW',
+  'postfit/POSTFIT-SURFACE-check_auto_residual',
+]);
+const behaviouralEligibleSourceId = (sid) => typeof sid === 'string' && (BEHAVIOURAL_INFERENCE_SOURCE_IDS.has(sid) || BEHAVIOURAL_NAMED_SOURCE_IDS.has(sid) || BEHAVIOURAL_EXTENDED_SOURCE_IDS.has(sid));
 // The assembler writes a scoreboard id as the source_id with every run of other characters turned into '-'.
 const scoreboardSlug = (sid) => sid.replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
-const BEHAVIOURAL_ELIGIBLE_BOARD_IDS = new Set([...BEHAVIOURAL_INFERENCE_SOURCE_IDS, ...BEHAVIOURAL_NAMED_SOURCE_IDS].map(scoreboardSlug));
+const BEHAVIOURAL_ELIGIBLE_BOARD_IDS = new Set([...BEHAVIOURAL_INFERENCE_SOURCE_IDS, ...BEHAVIOURAL_NAMED_SOURCE_IDS, ...BEHAVIOURAL_EXTENDED_SOURCE_IDS].map(scoreboardSlug));
 const behaviouralEligibleBoardId = (id) => BEHAVIOURAL_ELIGIBLE_BOARD_IDS.has(id);
 
 // One definition of a visible text, shared with tools/true_parity_assemble.py (is_visible): the string
@@ -395,6 +414,101 @@ function checkComparisonBlock(cmp, p, covered) {
   return null;
 }
 
+// Maintainer ruling 2026-10-05 (D-319), ruling 1 (GATES.md "Rulings of 2026-10-05"): the live bridge readback receipt
+// (evidence_kind live_bridge_readback) shows that R's gllvmTMB_julia method returns what Julia computed. That is a real
+// adapter test for fitted, predict and residuals, which do their own arithmetic in R, and circular for coef, logLik,
+// summary, confint and simulate, which copy Julia's value (those close by signed disposition). So such a receipt binds
+// a numeric row only for the rows below, and only on that row's own cases (gllvm_julia_fit already bound on it through
+// cases that compare against the TMB engine). Copied in tools/true_parity_assemble.py (a test fails on drift).
+const BRIDGE_READBACK_ROW_PREFIX = {
+  'namespace/S3method/fitted,gllvmTMB_julia': 'P1-BRIDGE-READBACK-FITTED-',
+  'namespace/S3method/predict,gllvmTMB_julia': 'P1-BRIDGE-READBACK-PREDICT-',
+  'namespace/S3method/residuals,gllvmTMB_julia': 'P1-BRIDGE-READBACK-RESIDUALS-',
+  'namespace/export/gllvm_julia_fit': 'P1-BRIDGE-READBACK-GJF-',
+};
+function bridgeReadbackProblem(row, p) {
+  if (!Object.prototype.hasOwnProperty.call(BRIDGE_READBACK_ROW_PREFIX, row.source_id)) {
+    return `bridge readback ${p} binds only fitted, predict and residuals for gllvmTMB_julia (and gllvm_julia_fit); the other methods copy Julia's value and close by signed disposition (maintainer ruling 2026-10-05 (D-319), ruling 1)`;
+  }
+  const prefix = BRIDGE_READBACK_ROW_PREFIX[row.source_id];
+  const ids = Array.isArray(row.executable_case_ids) ? row.executable_case_ids : [row.executable_case_ids];
+  const off = ids.filter((id) => typeof id !== 'string' || !id.startsWith(prefix));
+  if (off.length) return `bridge readback binds ${row.source_id} only on its own cases (${prefix}*), not ${off.join(',')} (maintainer ruling 2026-10-05 (D-319), ruling 1)`;
+  return null;
+}
+
+// Maintainer ruling 2026-10-05 (D-319), N1 (GATES.md "Rulings of 2026-10-05"): an admission-only case or a
+// PUBLIC-R-BRIDGE boundary case is non-binding context. A numeric row may list such case ids under
+// `boundary_context_case_ids` (each also in executable_case_ids, so it stays visible) and cite their receipts under
+// `evidence.boundary_context_receipts`. A listed case then does not need a comparison, but only if its own receipt
+// shows it is one of these kinds: R refused at the public bridge before any Julia call (r_public_bridge_boundary,
+// verdict R_BOUNDARY_UNCHANGED, a -PUBLIC-R-BRIDGE case), the bridge case was not executed (not_executed,
+// NOT_EXECUTED, a -PUBLIC-R-BRIDGE case), or R only admits the formula grammar (r_only_formula_grammar,
+// R_ONLY_PASS). A context receipt that carries a comparison block is refused (a case with a number is compared, not
+// set aside), and at least one other case must still bind numerically. Copied in tools/true_parity_assemble.py.
+const BOUNDARY_CONTEXT_KINDS = {
+  r_public_bridge_boundary: { verdict: 'R_BOUNDARY_UNCHANGED', suffix: '-PUBLIC-R-BRIDGE' },
+  not_executed: { verdict: 'NOT_EXECUTED', suffix: '-PUBLIC-R-BRIDGE' },
+  r_only_formula_grammar: { verdict: 'R_ONLY_PASS', suffix: null },
+};
+// Returns { ids: Set } (the validated context case ids, possibly empty) or { problem }.
+function boundaryContext(row) {
+  const ctx = row.boundary_context_case_ids;
+  if (ctx === undefined || ctx === null) return { ids: new Set() };
+  const exec = Array.isArray(row.executable_case_ids) ? row.executable_case_ids : [row.executable_case_ids];
+  if (!Array.isArray(ctx) || ctx.length === 0 || !ctx.every((x) => typeof x === 'string' && x.length > 0)) return { problem: 'boundary_context_case_ids must be a non-empty array of case ids' };
+  if (new Set(ctx).size !== ctx.length) return { problem: 'boundary_context_case_ids lists a case id twice' };
+  const notExec = ctx.filter((id) => !exec.includes(id));
+  if (notExec.length) return { problem: `boundary context case ids not in executable_case_ids: ${notExec.join(',')}` };
+  if (ctx.length >= exec.length) return { problem: 'every executable case is boundary context; at least one case must bind numerically' };
+  const rps = (row.evidence && row.evidence.boundary_context_receipts) || [];
+  if (!Array.isArray(rps) || rps.length === 0) return { problem: 'no evidence.boundary_context_receipts' };
+  const byCase = new Map();
+  for (const p of rps) {
+    const txt = typeof p === 'string' ? show(p) : null;
+    if (txt === null || !existsAsBlob(p)) return { problem: `boundary context receipt ${p} does not resolve to a file` };
+    let j;
+    try { j = JSON.parse(txt); } catch { return { problem: `boundary context receipt ${p} is not JSON` }; }
+    if (!isPlainObject(j) || typeof j.case_id !== 'string') return { problem: `boundary context receipt ${p} has no case_id` };
+    byCase.set(j.case_id, [p, j]);
+  }
+  for (const id of ctx) {
+    if (!byCase.has(id)) return { problem: `boundary context case ${id} has no receipt under evidence.boundary_context_receipts` };
+    const [p, j] = byCase.get(id);
+    const rule = Object.prototype.hasOwnProperty.call(BOUNDARY_CONTEXT_KINDS, j.evidence_kind) ? BOUNDARY_CONTEXT_KINDS[j.evidence_kind] : null;
+    if (rule === null) return { problem: `boundary context case ${id}: evidence_kind ${JSON.stringify(j.evidence_kind)} is not an admission-only or PUBLIC-R-BRIDGE boundary kind (${p})` };
+    if (j.verdict !== rule.verdict) return { problem: `boundary context case ${id}: verdict ${JSON.stringify(j.verdict)} is not ${rule.verdict} for ${j.evidence_kind} (${p})` };
+    if (rule.suffix && !id.endsWith(rule.suffix)) return { problem: `boundary context case ${id}: a ${j.evidence_kind} case must be a ${rule.suffix} case` };
+    if (j.comparison !== undefined) return { problem: `boundary context case ${id}: its receipt carries a comparison block, so it is compared, not context (${p})` };
+  }
+  return { ids: new Set(ctx) };
+}
+
+// Maintainer ruling 2026-10-05 (D-319), N9 (GATES.md "Rulings of 2026-10-05"; draft in PR #715): a C3 campaign
+// comparison counts only when both engines reach gradient max-abs 1e-5 at the point whose outputs are compared. A
+// receipt records this in a top-level `convergence_parity` block:
+//   { "gradient_bound": 1e-5, "compared_point": "returned" | "newton_polished",
+//     "engines": { "R": { "max_abs_gradient": g }, "julia": { "max_abs_gradient": g } } }
+// When the block is present, the bound must be exactly 1e-5 and both gradients finite, >= 0 and <= 1e-5, or the row
+// does not bind. A receipt without the block is judged as before (see GATES.md for why the rule is not applied to
+// the rows that already bind). Copied in tools/true_parity_assemble.py (convergence_parity_problem).
+const CONVERGENCE_GRADIENT_BOUND = 1e-5;
+const CONVERGENCE_POINTS = new Set(['returned', 'newton_polished']);
+function convergenceParityProblem(cp, p) {
+  const why = (m) => `convergence parity (maintainer ruling 2026-10-05 (D-319), N9): ${m} in ${p}`;
+  if (!isPlainObject(cp)) return why('convergence_parity is not an object');
+  if (cp.gradient_bound !== CONVERGENCE_GRADIENT_BOUND) return why(`gradient_bound ${JSON.stringify(cp.gradient_bound)} is not 1e-5`);
+  if (!CONVERGENCE_POINTS.has(cp.compared_point)) return why(`compared_point ${JSON.stringify(cp.compared_point)} is not returned or newton_polished`);
+  if (!isPlainObject(cp.engines)) return why('no engines block');
+  for (const side of ['R', 'julia']) {
+    const e = cp.engines[side];
+    const g = isPlainObject(e) ? e.max_abs_gradient : undefined;
+    if (typeof g !== 'number' || !Number.isFinite(g) || g < 0) return why(`${side} max_abs_gradient ${JSON.stringify(g)} is not a finite number >= 0`);
+    if (g > CONVERGENCE_GRADIENT_BOUND) return why(`${side} max_abs_gradient ${g} > 1e-5`);
+  }
+  return null;
+}
+
 function numericReceiptStatus(row) {
   const paths = rowReceiptPaths(row);
   if (paths.length === 0) return { ok: false, reason: 'no receipt' };
@@ -407,6 +521,14 @@ function numericReceiptStatus(row) {
     let j;
     try { j = JSON.parse(txt); } catch { continue; } // a non-JSON receipt carries no comparison
     if (!j || typeof j !== 'object') continue;
+    if (j.evidence_kind === 'live_bridge_readback') {
+      const bp = bridgeReadbackProblem(row, p);
+      if (bp) return { ok: false, reason: bp };
+    }
+    if (j.convergence_parity !== undefined) {
+      const cp = convergenceParityProblem(j.convergence_parity, p);
+      if (cp) return { ok: false, reason: cp };
+    }
     if (notPassed === null) notPassed = receiptNotPassed(j, p);
     if (j.comparison === undefined) continue;
     const bad = checkComparisonBlock(j.comparison, p, covered);
@@ -415,7 +537,9 @@ function numericReceiptStatus(row) {
   }
   if (blocks === 0) return { ok: false, reason: 'no comparison block in any receipt' };
   const ids = Array.isArray(row.executable_case_ids) ? row.executable_case_ids : [row.executable_case_ids];
-  const missing = ids.filter((id) => !covered.has(id));
+  const ctx = boundaryContext(row);
+  if (ctx.problem) return { ok: false, reason: `boundary context (maintainer ruling 2026-10-05 (D-319), N1): ${ctx.problem}` };
+  const missing = ids.filter((id) => !covered.has(id) && !ctx.ids.has(id));
   if (missing.length) return { ok: false, reason: `case ids not compared: ${missing.join(',')}` };
   // The comparison itself holds; the row still does not bind if a cited receipt says it failed.
   if (notPassed !== null) return { ok: false, kind: 'not_passed', reason: notPassed };
@@ -576,7 +700,7 @@ function behaviouralReceiptStatus(row, cites = new Map()) {
   // Scope: the ruling covers the 59 inference routing and error-class rows and four named C1 rows only
   // (the frozen lists above). Any other row labelled behavioural (a numeric row, a campaign row, one of
   // the other four inference rows) does not bind on typed labels.
-  if (!behaviouralEligibleSourceId(row.source_id)) return { ok: false, reason: 'source_id not covered by itchyshin/GLLVModels.jl#684 item 2 (the 59 listed inference rows and four named C1 rows only)' };
+  if (!behaviouralEligibleSourceId(row.source_id)) return { ok: false, reason: 'source_id not covered by itchyshin/GLLVModels.jl#684 item 2 (the 59 listed inference rows and four named C1 rows) or by its extension in maintainer ruling 2026-10-05 (D-319) (14 listed rows)' };
   loadEquivalence(); // a malformed or ambiguous table is a measurement failure, whatever the row says
   const cs = carryStatus(row);
   if (cs.stale) return { ok: false, reason: cs.reason };
@@ -728,7 +852,20 @@ function evaluateScoreboardRow(r) {
   }
   const dangling = extracted.filter((p) => !existsAsBlob(p));
   if (dangling.length) return { ok: false, reason: `DANGLING:${dangling.join(',')}` };
+  // C4 (maintainer ruling 2026-10-05 (D-319), C4: the clause text now accepts direct-engine runs, with no
+  // engine = "julia" bridge leg). An EVIDENCED real-data row is done only if a receipt it cites is a run of both
+  // engines on the data: a JSON receipt with an `engines` block holding an `R` and a `julia` object. A signed
+  // disposition row is not a run and is judged as before.
+  if (isRD(r) && r.status === 'EVIDENCED' && !extracted.some(directEngineReceipt)) return { ok: false, reason: 'C4_NOT_A_DIRECT_ENGINE_RUN' };
   return { ok: true };
+}
+
+function directEngineReceipt(p) {
+  const t = show(p);
+  if (t === null) return false;
+  let j;
+  try { j = JSON.parse(t); } catch { return false; }
+  return isPlainObject(j) && isPlainObject(j.engines) && isPlainObject(j.engines.R) && isPlainObject(j.engines.julia);
 }
 
 function report(tag, rows, pick) {

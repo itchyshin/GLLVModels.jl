@@ -172,6 +172,17 @@
     },
     {
       "kind": "route",
+      "canonical": "rho:fisher-z",
+      "r": [
+        ".confint_rho:fisher-z"
+      ],
+      "julia": [
+        "rho:wald_derived"
+      ],
+      "basis": "Maintainer ruling 2026-10-05 (D-319), ruling 3: same interval, different name. R: .confint_rho with method fisher-z, R's default for rho (R/z-confint-gllvmTMB.R:1693), a Wald interval on atanh(rho) back-transformed with tanh; Julia: confint(fit, y; parm=\"rho[i,j]\") with the default method = :wald, which for a correlation computes the Fisher-z transformed Wald interval (src/confint.jl:800 at f58de0eb1)."
+    },
+    {
+      "kind": "route",
       "canonical": "proportion:bootstrap",
       "r": [
         ".confint_proportion:bootstrap"

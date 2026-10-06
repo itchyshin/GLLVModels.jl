@@ -25,13 +25,13 @@ RUN_POST709, tools/core070_inference_post709_batch.jl; verifier tools/core070_ve
 the Lambda refusal has one live R observation (tools/core070_inference_lambda_reject_p1.R). Those rows now bind (the
 reasons `not_exported`, `public_route_differs`, `no_valid_method_control` and `refusal_not_observed` no longer occur),
 except CI-ROUTE-015 (R's default is profile, Julia's is Wald), 023, 030 and 037 (R withdrew the profile, Julia
-computes one) and 029 (`default_class_unconfirmed`: waits for the maintainer). A refusal row binds only with a
+computes one). CI-ROUTE-029 binds through the class rho:fisher-z (maintainer ruling 2026-10-05, D-319, ruling 3).
+A refusal row binds only with a
 valid-method control on each side, and its class is one (target, method) pair with the labels read from the raw files.
 
-The 7 aghq/AGHQ-CTRL-* rows and inference/CI-ROUTE-009 are not in the frozen list. Their receipts
-keep a behaviour block as non-binding evidence, their rows stay at paired_control_categorical_pass
-and partial_non_numeric_case, and each carries a one-line note that binding them needs the
-maintainer to confirm that ruling 2 covers them.
+The 7 aghq/AGHQ-CTRL-* rows and inference/CI-ROUTE-009 joined the frozen list by maintainer ruling 2026-10-05
+(D-319), item A (BEHAVIOURAL_EXTENDED_SOURCE_IDS in tools/true_parity_assemble.py), so their behaviour blocks now bind
+their rows when the case-map generators re-derive them. OUT_OF_SCOPE_NOTE is kept for any row still outside the list.
 
 Raw artefacts read (all tracked under docs/dev-log/core070/true-parity-latest/receipts/):
 
@@ -203,6 +203,14 @@ CLASSES = [
         f"Julia: confint(fit, y; parm=\"rho[i,j]\", method=:bootstrap) calls bootstrap_ci_derived "
         f"(src/confint.jl:841 at {RUN_POST709}); both refit simulated data. The estimand is gllvmTMB's aligned "
         f"extract_correlations on one side and correlation(fit) on the other; the class is about the route."),
+    # Maintainer ruling 2026-10-05 (D-319), ruling 3 (GATES.md "Rulings of 2026-10-05"): for rho, Julia's default
+    # route (:wald, a Fisher-z transformed interval) is R's default fisher-z route. R's own method "wald" for rho
+    # (.confint_rho:wald) is a plain Wald interval and is deliberately not in this class.
+    cls("route", "rho:fisher-z", [".confint_rho:fisher-z"], ["rho:wald_derived"],
+        f"Maintainer ruling 2026-10-05 (D-319), ruling 3: same interval, different name. R: .confint_rho with method "
+        f"fisher-z, R's default for rho ({RZ}:1693), a Wald interval on atanh(rho) back-transformed with tanh; Julia: "
+        f"confint(fit, y; parm=\"rho[i,j]\") with the default method = :wald, which for a correlation computes the "
+        f"Fisher-z transformed Wald interval (src/confint.jl:800 at {RUN_POST709})."),
     cls("route", "proportion:bootstrap", [".confint_proportion:bootstrap"], ["proportion:bootstrap"],
         f"R: .confint_proportion bootstrap branch calls .proportions_bootstrap_ci ({RZ}:1213); Julia: confint(fit, y; "
         f"parm=\"proportion:<component>[t]\", method=:bootstrap) calls bootstrap_ci_derived "
@@ -214,7 +222,7 @@ CLASSES = [
         f"parm=\"sigma_*[t]\", method=:bootstrap, Σ_phy) calls bootstrap_ci on the structured fit "
         f"(src/confint.jl:598 at {RUN_POST709}) since #709, where before it returned the Wald interval; both refit "
         f"simulated data."),
-    # --- CI-ROUTE-009: profile interval for two-level repeatability is withdrawn in both (non-binding: outside the frozen scope) ---
+    # --- CI-ROUTE-009: profile interval for two-level repeatability is withdrawn in both (in scope since 2026-10-05, item A) ---
     cls("refusal", "icc:profile-withdrawn",
         ["A profile interval for canonical full-covariance repeatability is not currently available."],
         ["A profile interval for canonical full-covariance two-level repeatability is not currently available."],
@@ -222,7 +230,7 @@ CLASSES = [
         f"Julia: repeatability_ci throws TwoLevelRepeatabilityProfileWithdrawn for method=:profile "
         f"(src/twolevel.jl:605-612 at {RUN_SURF}). Both refuse the same request, name the same reason (the old "
         f"profile estimated only a diagonal-companion ratio) and point to wald or bootstrap."),
-    # --- aghq request normalisation (non-binding: outside the frozen scope) ---
+    # --- aghq request normalisation (in scope since 2026-10-05, item A) ---
     cls("route", "aghq:off", ["FALSE"], ["off"],
         f"R: .gllvmTMB_normalize_aghq maps NULL and FALSE to FALSE, the Laplace approximation (R/gllvmTMB.R:2492); "
         f"Julia: _aghq_request maps false and nothing to :off (src/families/aghq_fit_info.jl:38 at {RUN_AGHQ})."),
@@ -316,15 +324,9 @@ R_CONTROL_ROW = {"icc": "CI-ROUTE-010", "phylo_signal": "CI-ROUTE-017", "communa
                  "rho": "CI-ROUTE-031", "proportion": "CI-ROUTE-038"}
 R_CONTROL_ENDPOINT = {"icc": ".confint_icc", "phylo_signal": ".confint_phylo_signal",
                       "communality": ".confint_communality", "rho": ".confint_rho", "proportion": ".confint_proportion"}
-# Rows measured in the post-#709 run that still do not bind, and why. 029 is the one the maintainer has to rule on.
-UNCONFIRMED_CLASS = {"CI-ROUTE-029": (
-    "The row asks for the DEFAULT method for rho. R's default is Fisher-z (probe route '.confint_rho:fisher-z', "
-    "R/z-confint-gllvmTMB.R:1693), a transformed Wald interval; Julia's default is method = :wald, which for "
-    "rho is also a Fisher-z transformed Wald interval (src/confint.jl:800 at " + RUN_POST709 + "), and no class pairs the "
-    "labels '.confint_rho:fisher-z' and 'rho:wald_derived' (the explicit Fisher-z row CI-ROUTE-034 does not bind: "
-    "Julia's public route refuses fisher-z). Whether Julia's DEFAULT (named wald) is the same default route as R's DEFAULT (named fisher-z) is "
-    "an equivalence the maintainer has not confirmed, and R's own method = 'wald' for rho is a different route "
-    "('.confint_rho:wald', probe row CI-ROUTE-031). No entry.")}
+# Rows measured in the post-#709 run that still do not bind, and why.
+# Emptied by maintainer ruling 2026-10-05 (D-319), ruling 3: CI-ROUTE-029's default route is the class rho:fisher-z.
+UNCONFIRMED_CLASS = {}
 
 
 def post709():
