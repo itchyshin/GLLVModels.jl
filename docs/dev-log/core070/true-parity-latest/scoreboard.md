@@ -22,7 +22,7 @@ Inputs:
 - `docs/dev-log/core070/true-parity-latest/case-map-inference.json` (63 rows, sha256 `ab0cb02039e34ecb5d1666c469321eba590dfead2452ac2f0de30d9da9a2bda9`)
 - `docs/dev-log/core070/true-parity-latest/case-map-isdm.json` (21 rows, sha256 `abcd0731b63d4290870525114ca3882d9a08fb9ac1966e35e702271a3917e6ca`)
 - `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `65a34ccc680b3d6db8d0022d4c484f471f977ef9d4a1aae9a98f400f4207cad8`)
-- `docs/dev-log/core070/true-parity-latest/case-map-postfit.json` (52 rows, sha256 `e23769da4108d6ad297f23138b3630e5e22b5d2bfd87e8ecb01ea754c2a72c0f`)
+- `docs/dev-log/core070/true-parity-latest/case-map-postfit.json` (52 rows, sha256 `69f6390a5456874f1403bd5baf9ee208435a59a7df3f8a0c994c33366cb9506f`)
 
 ## Totals by family
 
@@ -36,8 +36,8 @@ Inputs:
 | `inference` | 2 | 44 | 0 | 0 | 0 | 2 | 0 | 15 | 0 | 0 | 0 | 63 |
 | `isdm` | 11 | 0 | 0 | 0 | 0 | 0 | 9 | 0 | 0 | 1 | 0 | 21 |
 | `namespace` | 41 | 0 | 0 | 16 | 0 | 0 | 2 | 0 | 1 | 0 | 9 | 69 |
-| `postfit` | 45 | 0 | 4 | 0 | 0 | 3 | 0 | 0 | 0 | 0 | 0 | 52 |
-| `all` | 165 | 44 | 6 | 16 | 2 | 16 | 25 | 24 | 1 | 6 | 12 | 317 |
+| `postfit` | 47 | 0 | 4 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 52 |
+| `all` | 167 | 44 | 6 | 16 | 2 | 14 | 25 | 24 | 1 | 6 | 12 | 317 |
 
 ## P1 twin fixtures present at this head, not bound to any row
 
@@ -75,6 +75,7 @@ decision for the PR that measures it, not something this tool does.
 - `test/fixtures/gen_data_twins_2_p1.R`
 - `test/fixtures/gen_data_twins_p1.R`
 - `test/fixtures/gen_diagnostics_p1.R`
+- `test/fixtures/gen_mc_simulate_p1.R`
 - `test/fixtures/gen_namespace_gaussian_w1_p1.R`
 - `test/fixtures/gen_namespace_numeric_p1.R`
 - `test/fixtures/gen_namespace_numeric_p1_b.R`
@@ -98,6 +99,7 @@ decision for the PR that measures it, not something this tool does.
 - `test/fixtures/isdm/r_values_admission_p1.toml`
 - `test/fixtures/isdm/r_values_p1.toml`
 - `test/fixtures/isdm/r_values_psi_p1.toml`
+- `test/fixtures/mc_simulate_p1.toml`
 - `test/fixtures/ns_beta_p1_data.csv`
 - `test/fixtures/ns_gauss_p1_data.csv`
 - `test/fixtures/ns_gauss_w1_p1.toml`
@@ -426,7 +428,7 @@ decision for the PR that measures it, not something this tool does.
 | postfit-POSTFIT-SURFACE-residuals-gllvmTMB_multi `postfit/POSTFIT-SURFACE-residuals.gllvmTMB_multi` | required_core; cases: CORE070-WAVE7-RESIDUALS-MULTI | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE7-RESIDUALS-MULTI.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-POSTFIT-SURFACE-rotate_loadings `postfit/POSTFIT-SURFACE-rotate_loadings` | required_core; cases: CORE070-WAVE8-ROTATE-LOADINGS-LLT-INVARIANT | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE8-ROTATE-LOADINGS-LLT-INVARIANT.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-POSTFIT-SURFACE-sanity_multi `postfit/POSTFIT-SURFACE-sanity_multi` | required_core; cases: P1-JULIA-POSTFIT-SANITY-MULTI-MAX-SE, P1-JULIA-POSTFIT-SANITY-MULTI-RR-B-MIN-LOADING | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/sanity_multi.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| postfit-POSTFIT-SURFACE-simulate_unit_trait `postfit/POSTFIT-SURFACE-simulate_unit_trait` | required_core; cases: CORE070-WAVE8-SIMULATE-UNIT-TRAIT-STRUCTURAL | PARTIAL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE8-SIMULATE-UNIT-TRAIT-STRUCTURAL.json | family postfit; evidence_tier partial_non_numeric_case; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| postfit-POSTFIT-SURFACE-simulate_unit_trait `postfit/POSTFIT-SURFACE-simulate_unit_trait` | required_core; cases: P1-JULIA-MC-UNIT-TRAIT-MEAN-T1, P1-JULIA-MC-UNIT-TRAIT-MEAN-T2, P1-JULIA-MC-UNIT-TRAIT-MEAN-T3, P1-JULIA-MC-UNIT-TRAIT-MEAN-T4, P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-1-1, P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-1-2, P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-2-2, P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-1-3, P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-2-3, P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-3-3, P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-1-4, P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-2-4, P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-3-4, P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-4-4, P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-1-1, P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-1-2, P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-2-2, P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-1-3, P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-2-3, P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-3-3, P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-1-4, P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-2-4, P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-3-4, P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-4-4 | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/simulate_unit_trait.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-POSTFIT-SURFACE-summary-gllvmTMB_multi `postfit/POSTFIT-SURFACE-summary.gllvmTMB_multi` | required_core; cases: CORE070-WAVE8-SUMMARY-FIXEF-AND-LOGLIK | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE8-SUMMARY-FIXEF-AND-LOGLIK.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-POSTFIT-SURFACE-tidy-gllvmTMB_multi `postfit/POSTFIT-SURFACE-tidy.gllvmTMB_multi` | required_core; cases: P1-JULIA-POSTFIT-TIDY-FIXED | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/tidy.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-POSTFIT-SURFACE--proportions_bootstrap_ci `postfit/POSTFIT-SURFACE-.proportions_bootstrap_ci` | retired; cases: none | DISPOSITION-SIGNED | Disposition: DISPOSITION-SIGNED; signed_by: Shinichi Nakagawa; signed_on: 2026-10-05 | family postfit; evidence_tier not_measured; measured_against None |
@@ -446,4 +448,4 @@ decision for the PR that measures it, not something this tool does.
 | postfit-policy-POST-RESIDUAL-CONDITIONAL `postfit-policy/POST-RESIDUAL-CONDITIONAL` | required_core; cases: CORE070-POSTFIT-RESIDUAL-CONDITIONAL-NATIVE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-RESIDUAL-CONDITIONAL-NATIVE.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-policy-POST-RESIDUAL-SCALES `postfit-policy/POST-RESIDUAL-SCALES` | required_core; cases: CORE070-POSTFIT-RESIDUAL-SCALES-NATIVE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-RESIDUAL-SCALES-NATIVE.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-policy-POST-RESIDUAL-TYPES `postfit-policy/POST-RESIDUAL-TYPES` | required_core; cases: CORE070-POSTFIT-RESIDUAL-TYPES-NATIVE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-RESIDUAL-TYPES-NATIVE.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| postfit-policy-POST-SIMULATE-DEFAULT `postfit-policy/POST-SIMULATE-DEFAULT` | required_core; cases: CORE070-POSTFIT-SIMULATE-DEFAULT-NATIVE | PARTIAL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-SIMULATE-DEFAULT-NATIVE.json | family postfit; evidence_tier partial_non_numeric_case; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| postfit-policy-POST-SIMULATE-DEFAULT `postfit-policy/POST-SIMULATE-DEFAULT` | required_core; cases: P1-JULIA-MC-SIMULATE-DEFAULT-MEAN-T1, P1-JULIA-MC-SIMULATE-DEFAULT-MEAN-T2, P1-JULIA-MC-SIMULATE-DEFAULT-MEAN-T3, P1-JULIA-MC-SIMULATE-DEFAULT-MEAN-T4, P1-JULIA-MC-SIMULATE-DEFAULT-MEAN-T5, P1-JULIA-MC-SIMULATE-DEFAULT-COV-1-1, P1-JULIA-MC-SIMULATE-DEFAULT-COV-1-2, P1-JULIA-MC-SIMULATE-DEFAULT-COV-2-2, P1-JULIA-MC-SIMULATE-DEFAULT-COV-1-3, P1-JULIA-MC-SIMULATE-DEFAULT-COV-2-3, P1-JULIA-MC-SIMULATE-DEFAULT-COV-3-3, P1-JULIA-MC-SIMULATE-DEFAULT-COV-1-4, P1-JULIA-MC-SIMULATE-DEFAULT-COV-2-4, P1-JULIA-MC-SIMULATE-DEFAULT-COV-3-4, P1-JULIA-MC-SIMULATE-DEFAULT-COV-4-4, P1-JULIA-MC-SIMULATE-DEFAULT-COV-1-5, P1-JULIA-MC-SIMULATE-DEFAULT-COV-2-5, P1-JULIA-MC-SIMULATE-DEFAULT-COV-3-5, P1-JULIA-MC-SIMULATE-DEFAULT-COV-4-5, P1-JULIA-MC-SIMULATE-DEFAULT-COV-5-5, P1-JULIA-MC-SIMULATE-DEFAULT-CELLVAR-T1, P1-JULIA-MC-SIMULATE-DEFAULT-CELLVAR-T2, P1-JULIA-MC-SIMULATE-DEFAULT-CELLVAR-T3, P1-JULIA-MC-SIMULATE-DEFAULT-CELLVAR-T4, P1-JULIA-MC-SIMULATE-DEFAULT-CELLVAR-T5 | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/simulate_default.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
