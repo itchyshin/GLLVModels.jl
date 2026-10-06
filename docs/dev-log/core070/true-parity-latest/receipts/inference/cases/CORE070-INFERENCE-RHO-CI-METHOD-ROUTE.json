@@ -90,7 +90,11 @@
       "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/run-commit.json": "c209d8cb34692cf8bf2387eb057c396dee061720d7b10aab462e84c7d0be26d3",
       "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/verify.txt": "303ad3fd98e8194e031cfcf376b39fb5c751fa348fe7f3af603705e0837c373d",
       "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/r-lambda-reject/r-oracle.json": "c37a34dc900c165a8d4ccbffae0fea66a3ad6444a12acb3c29c22ae0223d0a98",
-      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/r-lambda-reject/receipt.json": "911e062f903a88ef5b4029f8084f5900085a65eedb1442219a9171c55bea1a65"
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/r-lambda-reject/receipt.json": "911e062f903a88ef5b4029f8084f5900085a65eedb1442219a9171c55bea1a65",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json": "e8efdd718c1dbf33b50d85dd1fa462388f071a3a17361b2320f8c5e94718ff87",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/receipt.json": "2feb30f367e745ec7274c5111f5c3ffe7bd9b478d2d70b467479200e1a5355f7",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/run-commit.json": "847a17528c7c565a2da7d2c5a788677ac04a304c1dc38b2f4c4889d4e5a30d1e",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/verify.txt": "9a145dc4cde02f65c17b332d983206f2d6e39ea85146baec3db19131b36a3494"
     },
     "cases": [
       {
@@ -102,8 +106,42 @@
         "requested_method": "DEFAULT",
         "julia_call": "confint(fitS, YS; parm=\"rho[1,2]\", \u03a3_phy)",
         "julia_result_method": "wald",
+        "julia_transform": [
+          "fisher_z"
+        ],
+        "julia_identical_to_wald": true,
+        "ruling": "signed rulings of 2026-10-05 (vault D-319), ruling 3 (the rho default)",
         "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-029",
-        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json#CI-ROUTE-029"
+        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json#CI-ROUTE-029"
+      },
+      {
+        "case_id": "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE",
+        "source_id": "inference/CI-ROUTE-030",
+        "kind": "refusal",
+        "r_observed": "Nonlinear profile intervals for correlations are not currently available.",
+        "julia_observed": "ArgumentError: confint: nonlinear profile intervals for correlations are withdrawn (parm rho[1,2]). gllvmTMB withdrew its penalty-based constrained-refit profile pending an exact constraint solver and diagnostic contract, and this route follows it. Request method = :wald (the Fisher-z interval; :fisher_z is the same) or method = :bootstrap, and report the method's limitations.",
+        "requested_method": "profile",
+        "julia_call": "confint(fitS, YS; parm=\"rho[1,2]\", method=:profile, \u03a3_phy)",
+        "julia_error_type": "ArgumentError",
+        "r_dispatch": {
+          "route": ".confint_rho:profile",
+          "source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-030",
+          "note": "the dispatcher sends method profile to .confint_rho; guard row CI-ROUTE-087 (same parm, method profile) observes that function's gllvmTMB_nonlinear_profile_withdrawn error, so R refuses this request"
+        },
+        "r_control": {
+          "kind": "route_probe_stub",
+          "call": "probe row CI-ROUTE-031",
+          "result": "routes to .confint_rho:wald",
+          "source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-031"
+        },
+        "julia_control": {
+          "call": "confint(fitS, YS; parm=\"rho[1,2]\", method=:wald, \u03a3_phy)",
+          "result": "wald_derived interval",
+          "source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json#CI-ROUTE-030"
+        },
+        "ruling": "signed rulings of 2026-10-05 (vault D-319), ruling C",
+        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-087",
+        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json#CI-ROUTE-030"
       },
       {
         "case_id": "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE",
@@ -116,27 +154,24 @@
         "julia_result_method": "bootstrap",
         "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-032",
         "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json#CI-ROUTE-032"
+      },
+      {
+        "case_id": "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE",
+        "source_id": "inference/CI-ROUTE-034",
+        "kind": "route",
+        "r_observed": ".confint_rho:fisher-z",
+        "julia_observed": "rho:wald_derived",
+        "requested_method": "fisher-z",
+        "julia_call": "confint(fitS, YS; parm=\"rho[1,2]\", method=:fisher_z, \u03a3_phy)",
+        "julia_result_method": "wald",
+        "julia_transform": [
+          "fisher_z"
+        ],
+        "julia_identical_to_wald": true,
+        "ruling": "signed rulings of 2026-10-05 (vault D-319), the fisher_z method alias",
+        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-034",
+        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json#CI-ROUTE-034"
       }
     ]
-  },
-  "behaviour_not_bound": [
-    {
-      "source_id": "inference/CI-ROUTE-030",
-      "reason": "withdrawn",
-      "text": "R's dispatcher forwards method profile to .confint_rho, but that function raises gllvmTMB_nonlinear_profile_withdrawn at P1; the same probe observed that error on guard row CI-ROUTE-087 (parm rho:unit:1,2, method profile). Julia's public confint returned a profile interval (confint(fitS, YS; parm=\"rho[1,2]\", method=:profile, \u03a3_phy); src/confint.jl:826, the penalty-based route #709 documents as exploratory). R refuses, Julia computes: not the same behaviour.",
-      "evidence": {
-        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-030,CI-ROUTE-087",
-        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json#CI-ROUTE-030"
-      }
-    },
-    {
-      "source_id": "inference/CI-ROUTE-034",
-      "reason": "public_route_differs",
-      "text": "R accepts method fisher-z for rho (probe route '.confint_rho:fisher-z', and it is R's default for rho). Julia's public confint refuses it: confint(fitS, YS; parm=\"rho[1,2]\", method=Symbol(\"fisher-z\"), \u03a3_phy) throws ArgumentError (ArgumentError: confint: method = :fisher-z is not available for Gaussian GllvmFit / parm rho[1,2]; available: :wald, :profile, :bootstrap). #690 bound this row from the internal correlation_wald_ci called with an explicit Fisher-z transform, which a Julia user cannot request through confint. Not the same behaviour for the same request.",
-      "evidence": {
-        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-034",
-        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json#CI-ROUTE-034"
-      }
-    }
-  ]
+  }
 }

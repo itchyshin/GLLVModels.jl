@@ -1,0 +1,34 @@
+{
+  "case_count": 15,
+  "expected_case_source_ids": [
+    "inference/CI-ROUTE-023",
+    "inference/CI-ROUTE-030",
+    "inference/CI-ROUTE-037",
+    "inference/CI-ROUTE-015",
+    "inference/CI-ROUTE-043",
+    "inference/CI-ROUTE-046",
+    "inference/CI-ROUTE-055",
+    "inference/CI-ROUTE-058",
+    "inference/CI-ROUTE-061",
+    "inference/CI-ROUTE-065",
+    "inference/CI-ROUTE-068",
+    "inference/CI-ROUTE-067",
+    "inference/CI-ROUTE-070",
+    "inference/CI-ROUTE-029",
+    "inference/CI-ROUTE-034"
+  ],
+  "julia_runtime": "1.10.0",
+  "results_sha256": "e8efdd718c1dbf33b50d85dd1fa462388f071a3a17361b2320f8c5e94718ff87",
+  "scope": "CORE070_INFERENCE_RULINGS_BATCH",
+  "source_pins": {
+    "src/confint.jl": "77f43942c4cf41d0c3e0d61c2f6b192beefab0c0251c3eaa1e9c6ba5d9fba216",
+    "src/confint_bootstrap.jl": "b4c784033ce8a563c4db8078275e41062fd50b6138c40ca1b1e02a5862e8c40e",
+    "src/confint_derived.jl": "488754eb4f2772f48b1fc0c4ba4d06717fdbacef933f430504f46d90aabe5997",
+    "src/confint_derived_wald.jl": "4c54fc94ad8dc26b48dda178a85961b0549028975f1df9593d658128189d5410",
+    "src/confint_profile.jl": "a3e64b0974485b9263e7f0b978d644cfefe3a800bdc0cd31e6f98604270f07be",
+    "src/families/aghq_gaussian_fit.jl": "86718c4c24857b49b55c95bd7ddb3624b5168fce44022c91a785ff4a6675796b",
+    "src/fit.jl": "e92f55fe8a05b027abd4419c86f466a59245a646c898537eb75bbb5b129f93d6",
+    "tools/core070_inference_rulings_batch.jl": "de613d1cfb4a0a84f52c8094087501c3541ee9f320b8d4cf97ba1c820519c351"
+  },
+  "status": "PASS"
+}
