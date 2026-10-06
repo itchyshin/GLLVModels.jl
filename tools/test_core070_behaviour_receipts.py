@@ -395,15 +395,19 @@ def every_entry_is_scoped_and_both_labels_are_listed_in_one_class():
     label equal to a canonical, and every entry carries source_id (case ids are shared across rows)."""
     index = A.behaviour_equivalence(ROOT)
     seen = 0
+    first_seven_seen = set()
     for cid, (path, rec) in B.tracked_receipts().items():
         for e in (rec.get("behaviour") or {}).get("cases", []):
             seen += 1
+            if e.get("source_id") in B.FIRST7_SOURCE_IDS:
+                first_seven_seen.add(e["source_id"])
             assert e.get("source_id"), f"{path.name}: entry without source_id"
             for a, b in zip(A.as_list(e["r_observed"]), A.as_list(e["julia_observed"])):
                 rc, jc = A._label_class(index, e["kind"], "r", a), A._label_class(index, e["kind"], "julia", b)
                 assert rc is not None and jc is not None, f"{e['source_id']}: {a!r} / {b!r} not both listed in a class"
                 assert rc[1] == jc[1], f"{e['source_id']}: {a!r} and {b!r} are in different classes"
-    assert seen == 57, seen  # 49 bound inference rows + CI-ROUTE-009 + 7 aghq control rows
+    assert first_seven_seen == B.FIRST7_SOURCE_IDS, first_seven_seen
+    assert seen == 63, seen  # Existing 57 entries plus the six exact approved public-door rows
 
 
 @test
