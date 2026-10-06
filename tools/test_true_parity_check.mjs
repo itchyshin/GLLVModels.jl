@@ -1354,6 +1354,7 @@ for (const [name, rd1] of [
   ['no engines block', { case_id: 'RD1', result: 'PASS' }],
   ['only the R engine', { case_id: 'RD1', result: 'PASS', engines: { R: { engine: 'R gllvmTMB' } } }],
   ['engines as an array', { case_id: 'RD1', result: 'PASS', engines: [{ R: {} }, { julia: {} }] }],
+  ['empty engine blocks', { case_id: 'RD1', result: 'PASS', engines: { R: {}, julia: {} } }],
 ]) {
   test(`C4 direct engine: an EVIDENCED RD row whose receipt has ${name} is not done (C4 and X2)`, () => {
     const m = ({ writeJ }) => writeJ('receipts/rd1.json', rd1);

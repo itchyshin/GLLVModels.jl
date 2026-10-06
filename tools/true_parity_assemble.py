@@ -878,6 +878,28 @@ def disposition_status(disp):
     return ("NEEDS-SURFACE" if "NEEDS_JULIA_SURFACE" in disp else cell(disp)), f"disposition {disp}"
 
 
+def is_c4_row(row):
+    """True when the row's scoreboard id is selected by the checker's C4 rule (isRD)."""
+    sid = row.get("source_id")
+    if not isinstance(sid, str):
+        return False
+    return bool(CLAUSE_ID["C4"].search(re.sub(r"[^A-Za-z0-9_-]+", "-", sid).strip("-")))
+
+
+def direct_engine_receipt(p: Path) -> bool:
+    """The checker's directEngineReceipt (keep in step). Maintainer ruling 2026-10-05 (D-319), C4: an EVIDENCED
+    real-data row must cite a run of both engines on the data, a JSON receipt whose `engines` block holds a
+    non-empty `R` and a non-empty `julia` object. Without this an EVIDENCED C4 row could reach the scoreboard while
+    the checker counts it not done."""
+    try:
+        j = json.loads(p.read_text())
+    except (OSError, ValueError):
+        return False
+    eng = j.get("engines") if isinstance(j, dict) else None
+    return (isinstance(eng, dict) and isinstance(eng.get("R"), dict) and len(eng["R"]) > 0
+            and isinstance(eng.get("julia"), dict) and len(eng["julia"]) > 0)
+
+
 def derive_status(row, root, equiv=None, cites=None):
     """Returns (status, reason). Never writes to row.
 
@@ -904,6 +926,8 @@ def derive_status(row, root, equiv=None, cites=None):
         if not as_list(row.get("executable_case_ids")):
             return "NUMERIC-UNVERIFIED", "no executable_case_ids"
         prob = numeric_receipt_problem(row, root)
+        if prob is None and is_c4_row(row) and not any(direct_engine_receipt(root / p) for p in paths):
+            prob = "C4_NOT_A_DIRECT_ENGINE_RUN"
         if prob is None:
             return "EVIDENCED", ""
         # A maintainer-signed receipt_status_exception waives a failed status field only (the

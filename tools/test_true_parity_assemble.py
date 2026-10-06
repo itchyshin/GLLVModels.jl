@@ -1287,6 +1287,34 @@ def main():
           ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED"}, "NUMERIC-UNVERIFIED",
                    "executable_case_ids lists a case id twice", ids=("C-PUBLIC-R-BRIDGE", "C-PUBLIC-R-BRIDGE")))
 
+    # Maintainer ruling 2026-10-05 (D-319), C4: an EVIDENCED real-data row must cite a direct-engine run (a receipt
+    # with non-empty engines.R and engines.julia objects). The scoreboard never shows EVIDENCED on an RD row the
+    # checker's C4 counts not done.
+    def c4_case(extra, want_status):
+        def f():
+            root, tmp = with_root({"case-map-data.json": [row(
+                "data/RD-X", tier="numeric", executable_case_ids=["C"], evidence={"receipt": [RP]})]})
+            try:
+                (root / RP).write_text(json.dumps({"comparison": GOOD_CMP, **extra}))
+                c, o = run(root)
+                st = status_of(root, "data-RD-X")
+                out = None
+                if shutil.which("node"):
+                    env = dict(os.environ, PARITY_REF="FS", PARITY_FS_ROOT=str(root), PARITY_CASEMAP=str(A.LEDGER / A.OUT_CASEMAP))
+                    out = subprocess.run(["node", str(HERE / "true_parity_check.mjs"), "C4"], env=env, capture_output=True, text=True).stdout
+                want_done = want_status == "EVIDENCED"
+                agree = out is None or (re.search(r"C4 real-data workflows rows=1 done=1\b", out) is not None) == want_done
+                ok = c == 0 and st == want_status and agree
+                return ok, f"code={c} status={st} checker={out and out[:300]} {o}"
+            finally:
+                shutil.rmtree(tmp)
+        return f
+    check("c4_direct_engine_receipt_evidenced",
+          c4_case({"engines": {"R": {"engine": "R gllvmTMB"}, "julia": {"engine": "GLLVModels.jl"}}}, "EVIDENCED"))
+    check("c4_no_engines_block_not_evidenced", c4_case({}, "NUMERIC-UNVERIFIED"))
+    check("c4_only_r_engine_not_evidenced", c4_case({"engines": {"R": {"engine": "R gllvmTMB"}}}, "NUMERIC-UNVERIFIED"))
+    check("c4_empty_engine_blocks_not_evidenced", c4_case({"engines": {"R": {}, "julia": {}}}, "NUMERIC-UNVERIFIED"))
+
     # Maintainer ruling 2026-10-05 (D-319), N9: convergence parity; the checker gives the same verdict.
     def cp_case(cp, want_status, contains=None):
         def f():
