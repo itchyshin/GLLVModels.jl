@@ -124,7 +124,10 @@ CASEMAP_NOTE = ("Separate from case-map.json so none of its rows are touched; re
                 "(evidence_tier numeric_held_batch_verifier_failed) unless a maintainer-signed receipt_status_exception is "
                 "recorded on it. An R-only row with a fit-level Julia twin (receipts/julia-twins/covariance-twins/) is "
                 "bound by that twin instead (evidence_tier numeric, the formula-grammar case ids kept under "
-                "evidence.batch_case_ids); see --apply-twins.")
+                "evidence.batch_case_ids); see --apply-twins. Maintainer ruling 2026-10-05 (D-319), N1: on the seven "
+                "rows of COV_N1_CONTEXT the PUBLIC-R-BRIDGE case is non-binding context (boundary_context_case_ids, "
+                "its receipt under evidence.boundary_context_receipts) and the row binds on its native and "
+                "formula-interface cases.")
 
 
 def sha(path):
@@ -466,6 +469,59 @@ COV_SIGNED = {
 }
 
 
+# ---- N1 boundary context (overlay) -----------------------------------------------------------------
+# Maintainer ruling 2026-10-05 (D-319), N1 (GATES.md "Rulings of 2026-10-05"): a PUBLIC-R-BRIDGE case at which
+# gllvmTMB(engine = 'julia') refuses the structured term before any Julia call is non-binding context. On these rows
+# the native and formula-interface cases carry passing numeric comparison blocks from an accepted batch; the bridge
+# case moves to boundary_context_case_ids (still listed in executable_case_ids) with its receipt under
+# evidence.boundary_context_receipts, and the row binds on the rest. The checker (boundaryContext) re-validates it.
+COV_N1_CONTEXT = {f"covariance/{s}" for s in ("COV-ANIMAL-DEP", "COV-ANIMAL-INDEP", "COV-KERNEL-DEP", "COV-KERNEL-INDEP",
+                                              "COV-ORD-DEP", "COV-ORD-INDEP", "COV-ORD-INDEP-COMMON")}
+N1_TIER = ("numeric: the native and formula-interface case receipts carry R-vs-Julia comparison blocks pinned to P1 "
+           "from a batch whose verifier accepted the run; the PUBLIC-R-BRIDGE case (gllvmTMB engine='julia' refuses "
+           "the structured term before any Julia call) is non-binding boundary context under maintainer ruling "
+           "2026-10-05 (D-319), N1")
+
+
+def n1_overlay(row):
+    """Re-tier a bridge-boundary row under N1 (idempotent). Leaves the row as it is unless every non-bridge case
+    receipt is a passing numeric comparison from an accepted batch and every bridge case is an R boundary."""
+    ev = row.get("evidence") or {}
+    if row["evidence_tier"] == "partial_numeric_bridge_boundary":
+        paths = list(ev.get("non_binding_receipts") or [])
+    elif row["evidence_tier"] == "numeric" and row.get("boundary_context_case_ids"):
+        paths = list(ev.get("receipt") or []) + list(ev.get("boundary_context_receipts") or [])
+    else:
+        return
+    recs = {}
+    for p in paths:
+        j = json.loads((ROOT / p).read_text())
+        recs[j["case_id"]] = (p, j)
+    ids = row["executable_case_ids"]
+    if sorted(recs) != sorted(ids):
+        raise SystemExit(f"{row['source_id']}: N1 overlay needs one receipt per executable case")
+    ctx = [i for i in ids if i.endswith("-PUBLIC-R-BRIDGE")]
+    rest = [i for i in ids if i not in ctx]
+    if not ctx or not rest:
+        return
+    for i in ctx:
+        j = recs[i][1]
+        if j.get("evidence_kind") != "r_public_bridge_boundary" or j.get("verdict") != "R_BOUNDARY_UNCHANGED" or "comparison" in j:
+            return
+    for i in rest:
+        j = recs[i][1]
+        if (j.get("evidence_kind") != "numeric_r_vs_julia" or j.get("verdict") != "PASS"
+                or (j.get("batch_verifier") or {}).get("status") != "PASS" or "comparison" not in j):
+            return
+    row["boundary_context_case_ids"] = ctx
+    row["evidence_tier"] = "numeric"
+    row["evidence"] = {"receipt": [recs[i][0] for i in rest], "boundary_context_receipts": [recs[i][0] for i in ctx],
+                       "tier": N1_TIER}
+    row["measured_result"] = {"case_verdicts": {i: recs[i][1]["verdict"] for i in ids},
+                              "batch_verifier": {i: recs[i][1]["batch_verifier"]["status"] for i in rest},
+                              "row_verdict": "PASS"}
+
+
 def signed_overlay(row):
     """Copy the maintainer's signed disposition onto `row` (idempotent). Evidence is not touched."""
     s = COV_SIGNED[row["source_id"]]
@@ -538,6 +594,8 @@ def derive_twins(casemap):
     for row in out["rows"]:
         if row["source_id"] in COV_TWINS:
             twin_overlay(row)
+        if row["source_id"] in COV_N1_CONTEXT:
+            n1_overlay(row)
         if row["source_id"] in COV_SIGNED:
             signed_overlay(row)
     out["counts"] = recount(out["rows"])
@@ -837,6 +895,8 @@ def main():
     for row in out_rows:  # Julia fit-level twins (see the overlay block above)
         if row["source_id"] in COV_TWINS:
             twin_overlay(row)
+        if row["source_id"] in COV_N1_CONTEXT:
+            n1_overlay(row)
         if row["source_id"] in COV_SIGNED:
             signed_overlay(row)
     counts = recount(out_rows)
