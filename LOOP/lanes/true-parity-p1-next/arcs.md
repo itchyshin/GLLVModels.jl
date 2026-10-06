@@ -9,6 +9,6 @@
 | C6 and diagnostic decision packet | independently accounted; unsigned | maintainer contracts |
 | canonical assembly and mechanical verification | reverified locally | exact seven artifacts |
 | independent panel and Melissa reconciliation | final receipt review OK; scoped deltas retained | candidate d879a9e21 |
-| package verification and report closure | corrected full/core running, cap21:29:03UTC | valid real-Git/R-library smoke |
+| package verification and report closure | full passed; repaired core running, cap21:20:01UTC | valid real-Git/R-library smoke |
 | main landing | awaiting explicit consent, not met | each maintainer merge decision and checks |
 | remaining P1 programme | open, new arcs not started here | reviewed decision packet and signatures |
