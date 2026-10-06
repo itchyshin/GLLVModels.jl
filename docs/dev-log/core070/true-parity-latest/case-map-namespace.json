@@ -139,23 +139,29 @@
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE6-POSTFIT-CONFINT-MULTI.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-CONFINT-MULTI-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-CONFINT-MULTI-NATIVE"
+    ],
+    "ruling": "Re-cite of the wave6 receipt rebound under maintainer ruling 2026-10-05 (D-319), item N2 (the batch's stale nobs expectation rewritten as integer equality), at the integration commit 6f050fea3.",
+    "tier": "numeric: re-cites the bound receipt of postfit/POSTFIT-SURFACE-confint.gllvmTMB_multi (wave6 conversion batch at P1, verifier PASS): R confint() on the gaussian_small gllvmTMB_multi fit against the Julia interval for the residual SD of the same fit, max |R - Julia| 2.06e-3 within 5e-3, discriminating. The Tier 0 registration receipts are kept un-cited under registration_receipts."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-CONFINT-MULTI-NATIVE"
+    "CORE070-WAVE6-POSTFIT-CONFINT-MULTI"
    ],
-   "reason": "R S3method(confint,gllvmTMB_multi) registered and defined at P1; Julia `confint` is an exported Function (measured). Name match only.",
+   "reason": "R S3method(confint,gllvmTMB_multi) is measured numerically by the wave6 case CORE070-WAVE6-POSTFIT-CONFINT-MULTI at P1; this row re-cites that receipt.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
-    "case_verdict": "PASS",
-    "category": "registration_twin",
-    "reason": "R registered and defined; Julia symbol present, exported, a Function"
+    "case_verdicts": {
+     "CORE070-WAVE6-POSTFIT-CONFINT-MULTI": "PASS"
+    },
+    "row_verdict": "PASS"
    }
   },
   {
@@ -639,23 +645,29 @@
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE6-POSTFIT-NOBS-MULTI.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-NOBS-MULTI-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-NOBS-MULTI-NATIVE"
+    ],
+    "ruling": "Re-cite of the wave6 receipt rebound under maintainer ruling 2026-10-05 (D-319), item N2 (the batch's stale nobs expectation rewritten as integer equality), at the integration commit 6f050fea3.",
+    "tier": "numeric: re-cites the bound receipt of postfit/POSTFIT-SURFACE-nobs.gllvmTMB_multi (wave6 conversion batch at P1, verifier PASS): R nobs() on the gaussian_small gllvmTMB_multi fit against Julia nobs(fit, Y) on the same data, integer_equality 400 = 400 (tolerance 0.5) under maintainer ruling 2026-10-05 (D-319), item N2. The Tier 0 registration receipts are kept un-cited under registration_receipts."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-NOBS-MULTI-NATIVE"
+    "CORE070-WAVE6-POSTFIT-NOBS-MULTI"
    ],
-   "reason": "R S3method(stats::nobs,gllvmTMB_multi) registered and defined at P1; Julia `nobs` is an exported Function (measured). Name match only.",
+   "reason": "R S3method(stats::nobs,gllvmTMB_multi) is measured numerically by the wave6 case CORE070-WAVE6-POSTFIT-NOBS-MULTI at P1; this row re-cites that receipt.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
-    "case_verdict": "PASS",
-    "category": "registration_twin",
-    "reason": "R registered and defined; Julia symbol present, exported, a Function"
+    "case_verdicts": {
+     "CORE070-WAVE6-POSTFIT-NOBS-MULTI": "PASS"
+    },
+    "row_verdict": "PASS"
    }
   },
   {
