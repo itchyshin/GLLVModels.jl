@@ -1,0 +1,72 @@
+# P1 checkpoint reconciliation
+
+**Review state:** Read-only reconciliation of the first-seven checkpoint. Current repository HEAD is `c4b1a6fdd313127c47c2fe6e92363538a97aba2c`, parent `ce3432b95d32b41625b4f3222d1b340ecaf39df9`, subject `Allow an explicit compatible Python interpreter for opt-in receipt controls`. `origin/main` remains at baseline `f220379d0937d0afffc6a030023c63c0f715e168`. No merge or push has occurred. The checkpoint candidate described in the retained results is `ce3432b95`; the exact current HEAD is one commit later, so the candidate result must not be reported as a fresh measurement of current HEAD.
+
+## 1. Planned scope versus actual scope
+
+The approved checkpoint is limited to seven exact rows, using frozen P1 source `9539352f66f2db2cc26b1c393e67212a359b60c9` and baseline `f220379d0937d0afffc6a030023c63c0f715e168`:
+
+- `family/FAMILY-11-LOG`
+- `postfit/POSTFIT-SURFACE-check_auto_residual`
+- `isdm/ISDM-COUNT`
+- `isdm/ISDM-EXTRA-SOURCE`
+- `isdm/ISDM-MISSING-IN-TRAIT`
+- `isdm/ISDM-MISSING-SOURCE`
+- `isdm/ISDM-WRAPPER-LAW`
+
+The decision packet covers the remaining 13 scoreboard rows and all 37 C6 names. These decisions are not signed. Candidate measurements report X2 304/317, C2 290/297, C3 6/8, C4 4/8, and C6 37 undecided, with unrelated statuses and admission unchanged. The candidate checkpoint verifier passed its exact seven-row check. These are checkpoint results only. They do not close the full P1 programme or establish that current HEAD has been freshly reverified.
+
+**Recovery:** Re-run the exact checkpoint verifier against current HEAD, with the pinned baseline, and retain its output and exit status before describing the current candidate state.
+
+## 2. Evidence
+
+The seven-row result is supported by receipts and the candidate verifier, not by counts alone. Behavioural raw capture v4 is the binding capture. The first three captures were retained but failed and do not bind rows. The corrected capture covers the actual `2 trait × 2 source × 2 unit` panel. Extra-source and missing-source cases reach the public family-length guard. The wrapper case records standalone logit construction, the collector refusal, and a valid cloglog control. The ordinary COUNT case is all-Poisson, with a separate mixed-source positive control.
+
+The Julia behaviour launch is recorded at `b5babfc97ebfe61adc1d06540bb765473af3bbd0`; the source tree is recorded as `a7816a37b769b8fe451cf0eaeb136e9a624da806`. Retained evidence says the engine remained unchanged from baseline. The receipt-control table grew from 57 to 63 entries, and its recorded 33/33 controls pass. The nested-hash verifier change permits `behaviour.read_from` while retaining batch metadata; negative controls include nested-hash failures. The candidate verifier also checks exact IDs and preserves unrelated baseline and admission state.
+
+The full and core Julia suites were still pending in the retained checkpoint state. They were launched sequentially on Totoro from `ed11661f0`, which has the baseline engine and tests plus the checkpoint verifier. This does not establish coverage of the latest receipt-tool test additions. Focused current wrapper tests were recorded as pending or running. Do not claim either suite passed until the owned run has a final status, exit code, and retained output.
+
+**Recovery:** Retrieve the owned Totoro driver's final status and logs. Then run and retain the focused wrapper controls against current HEAD. Report precisely which checkout and test files each result covers.
+
+## 3. Routing, model, and effort
+
+The approved plan budgeted six production children. Retained manifests show nine successful fresh ephemeral CLI production invocations before this Melissa dispatch: Shannon-app, Hopper, Pat, Ebbinghaus, Gauss, Hopper-continue, Pat-continue, Ebbinghaus-continue, and Pat-repair. The global-CLI Shannon model launch failed before work and is not a successful production invocation. Thus this is the sixth distinct production role, but the tenth successful production invocation including this review. It is not six actual calls.
+
+Successful production routing was eight Luna and one Sol. Shannon used low effort; the other eight used medium except Gauss at high. The completed review panel is Emmy Luna-medium, fresh Pat Luna-medium, and Rose Sol 6.1-high. No Astra or ultra-effort work was used. The full native pre-plan agents are historical planning context, not enforced execution receipts.
+
+The parent ran Sol 6.1-high and reached a third compaction. The retained instruction was to freeze the checkpoint and continue only with bounded fresh CLI jobs, rather than starting another parent arc. That is a lifecycle deviation, not evidence of checkpoint completion.
+
+**Recovery:** Record the final current-HEAD verification and suite results in the handoff. Keep any remaining work in bounded, separately routed jobs.
+
+## 4. Safety and approval gates
+
+The plan prohibited signatures and required maintainer approval for every merge, unsigned classification or admission change, shared Laplace-mode edit, DRAC job, release, version change, public parity claim, or material scope change. No signatures were made; the 13 remaining rows and 37 C6 names remain undecided. No push, merge, release, version change, tolerance change, Laplace change, or R engine change is reported. The R engine remained a read-only reference.
+
+Compute used the existing Totoro ControlMaster socket, four Julia launch threads, BLAS and OMP thread caps of one, and no Duo or DRAC. The family probe was estimated at 1–3 minutes and recorded at about 5.5 seconds. Behaviour v4 was estimated at 15–30 minutes with a 30-minute cap and recorded at about 25 seconds. The full/core suite was estimated at 1–2 hours with a two-hour cap. Its final status remains unverified here. Remote process ownership must stay with the parent; no process should be abandoned silently.
+
+The failed first Hopper SSH and Pat process-list attempts were sandbox blocks, not evidence of authentication or network failure. The old CLI rejected Luna before work; dispatch moved to the app CLI. Pat’s initial repair removed 455 existing test lines; the parent rejected that result and restored the existing tests. The retained record says 26 existing controls were preserved in the repair.
+
+**Recovery:** Keep the suite driver and process ownership explicit in the handoff. Stop only the owned run at its cap, and record the final state and logs.
+
+## 5. Claims and review verdict
+
+The candidate result supports a bounded first-seven checkpoint, conditional on fresh verification of current HEAD and completion of the pending tests. It does not establish main closure, full P1 parity, numerical parity, convergence, coverage, or completion of the remaining decisions. C3 remains 6/8, C4 remains 4/8, and C6 remains held at 37 undecided. All 13 decision-packet rows and 37 names still require review and, where applicable, maintainer decisions.
+
+The completion panel’s independent reviews are retained. Emmy initially found two Julia control files unregistered in `test/runtests.jl`; the checkpoint candidate subsequently registered them. The current commit subject concerns explicit Python interpreter support for opt-in receipt controls, so verify its precise diff and rerun those controls before treating the concern as resolved on current HEAD. Rose’s available result is a prior review of candidate `aef7464`, which found the checkpoint verifier rejected nested behaviour hashes. It is historical evidence of a blocker that was addressed by the verifier change at `ce3432b95`, not a Rose verdict on current HEAD. Do not present it as current signoff.
+
+**Recovery:** Obtain a fresh reviewer disposition for current HEAD after the focused controls and suite evidence are complete. Keep the verdict explicitly scoped to the first-seven checkpoint.
+
+## 6. Handoff and state
+
+The retained plan and checkpoint describe work still in progress. Three focused draft PRs remain pending, each merge requires explicit maintainer approval, and the approval packet is not signed. The after-task report, final reconciliation, and fresh completion-panel review are not yet complete. `origin/main` remains baseline; do not describe main as closed.
+
+The checkpoint also has tooling and workspace caveats. The required repo route manifest was absent, and the lane preflight script was not found at the repo-relative path used in this review. These checks therefore supplied no clean-lane attestation. Recorded automatic Graft settings changes were restored from their original bytes. Unrelated dirty settings in child worktrees and foreign R/root-repository work were to remain untouched. Preserve those boundaries during continuation.
+
+**Next action:** Re-run the checkpoint verifier against current HEAD, then update the handoff with its retained result and the final owned suite status before any merge decision.
+
+## Parent delta after reconciliation
+
+Melissa reviewed c4b1a6fdd while implementation was advancing. The enabled current receipt wrappers subsequently passed2/2 with Python3.14. Rose independently verified the seven bindings and13/37 packet coverage, but blocked completion on unregistered tests, a stale FAMILY-11 sentence in C6, and the absent consolidated decision map. The registrations, stale sentence and decision map are now repaired. Pat's earlier immutable-candidate hash failure remains a historical failed gate; the corrected checkpoint passed atce3432b95. Final-HEAD re-verification and a final reviewer disposition remain required.
+
+The parent loaded the hub route and preflight at lane creation; Melissa's failed repo-relative script lookup is a review-environment limitation, not evidence that the retained parent preflight did not occur. No clean attestation is inferred from the failed lookup. Current canonical check-log and after-task report carry the measured state and run-source limits. Neither this delta nor the original audit declares full P1 or main closure.
+
