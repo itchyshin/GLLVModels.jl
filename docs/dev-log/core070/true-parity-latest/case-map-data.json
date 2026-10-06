@@ -1556,7 +1556,7 @@
       "signature_ref": "D-319",
       "signed_disposition": {
         "capability": "phylo-structured real data",
-        "text": "gllvm::fungi ships a phylogeny (fungi$tree), so a real phylo workflow exists. Blocked at the bridge gate GJL-GATE-STRUCTURED-TERMS until gllvmTMB #1236 (A4a) lands; revisit at P2.",
+        "text": "gllvm::fungi ships a phylogeny (fungi$tree), so a real phylo workflow exists, but the campaign has no phylo-structured real-data run at P1. C4 accepts a direct-engine run (R gllvmTMB and Julia GLLVModels fitted to the same data), so one on fungi with fungi$tree would replace this disposition; revisit at P2.",
         "status": "DISPOSITION-SIGNED: item F of the rulings page (three C4 dispositions), signed by the maintainer on 2026-10-05 (vault D-319; LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the lane kit). Recorded by an agent, signed by the maintainer."
       },
       "ruling": "itchyshin/GLLVModels.jl#684 item 4 (row added); disposition signed under vault D-319, item F"

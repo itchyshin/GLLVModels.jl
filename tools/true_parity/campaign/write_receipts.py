@@ -180,8 +180,9 @@ ROWS = [
 DISPOSITIONS = {
     "data/RD-PHYLO-DISPOSITION": dict(
         capability="phylo-structured real data",
-        text="gllvm::fungi ships a phylogeny (fungi$tree), so a real phylo workflow exists. Blocked at the bridge gate "
-             "GJL-GATE-STRUCTURED-TERMS until gllvmTMB #1236 (A4a) lands; revisit at P2."),
+        text="gllvm::fungi ships a phylogeny (fungi$tree), so a real phylo workflow exists, but the campaign has no "
+             "phylo-structured real-data run at P1. C4 accepts a direct-engine run (R gllvmTMB and Julia GLLVModels "
+             "fitted to the same data), so one on fungi with fungi$tree would replace this disposition; revisit at P2."),
     "data/RD-TEMPORAL-DISPOSITION": dict(
         capability="temporal real data",
         text="None of gllvm, vegan, MASS, ape ships a multivariate ecological time series the plan would call a real workflow; "
