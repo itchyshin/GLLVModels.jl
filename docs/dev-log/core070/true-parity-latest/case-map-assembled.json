@@ -31,7 +31,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-inference.json",
-   "sha256": "ab0cb02039e34ecb5d1666c469321eba590dfead2452ac2f0de30d9da9a2bda9",
+   "sha256": "5e56aba1b88616b3049f88012837aa9c9c9df5f2638372c6aa1296cbab875703",
    "rows": 63
   },
   {
@@ -5054,7 +5054,7 @@
    "executable_case_ids": [
     "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "inference-batch wave2",
    "evidence_tier": "routing_control_flow",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
@@ -5062,7 +5062,11 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind",
+    "ruling_evidence": [
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv",
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json"
+    ]
    },
    "measured_result": {
     "case_verdicts": {
@@ -5074,7 +5078,11 @@
     "case_kinds": {
      "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "vault D-319 (shinichi-brain memory/DECISIONS.md), 2026-10-05: signed rulings page LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item B 'Julia defaults and fallbacks against R', recommendation 'yes, row by row'",
+   "reason": "Documented default difference, signed under ruling B (Julia defaults against R, row by row). R: confint() with no method for parm phylo_signal routes to '.confint_phylo_signal:profile', a profile interval (P1 route probe). Julia: confint(fitS, YS; parm=\"phylo_signal[1]\", \u03a3_phy) with no method returns a wald_derived result, the Wald interval, because Julia's confint defaults to method = :wald for every parm. R's default route is reachable in Julia by asking for it: confint(fitS, YS; parm=\"phylo_signal[1]\", method=:profile, \u03a3_phy) returned a profile result (finite bounds). Same quantity, different default method; not a defect in either engine. Evidence: docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-015; docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json#CI-ROUTE-015."
   },
   {
    "source_id": "inference/CI-ROUTE-016",
@@ -5297,13 +5305,13 @@
    ],
    "disposition": null,
    "p0_batch": "inference-batch wave2",
-   "evidence_tier": "routing_control_flow",
+   "evidence_tier": "behavioural",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
    },
    "measured_result": {
     "case_verdicts": {
@@ -5478,13 +5486,13 @@
    ],
    "disposition": null,
    "p0_batch": "inference-batch wave2",
-   "evidence_tier": "routing_control_flow",
+   "evidence_tier": "behavioural",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-RHO-CI-METHOD-ROUTE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
    },
    "measured_result": {
     "case_verdicts": {
@@ -5496,8 +5504,7 @@
     "case_kinds": {
      "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   },
-   "note": "Not bound behaviourally: Julia's public default (:wald, a Fisher-z interval for rho) and R's default (fisher-z) look alike, but treating them as one default route is an equivalence the maintainer has not confirmed (receipt behaviour_not_bound)."
+   }
   },
   {
    "source_id": "inference/CI-ROUTE-030",
@@ -5509,13 +5516,13 @@
    ],
    "disposition": null,
    "p0_batch": "inference-batch wave2",
-   "evidence_tier": "routing_control_flow",
+   "evidence_tier": "behavioural",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-RHO-CI-METHOD-ROUTE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
    },
    "measured_result": {
     "case_verdicts": {
@@ -5600,13 +5607,13 @@
    ],
    "disposition": null,
    "p0_batch": "inference-batch wave2",
-   "evidence_tier": "routing_control_flow",
+   "evidence_tier": "behavioural",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-RHO-CI-METHOD-ROUTE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
    },
    "measured_result": {
     "case_verdicts": {
@@ -5618,8 +5625,7 @@
     "case_kinds": {
      "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   },
-   "note": "Not bound behaviourally: Julia's public confint does not take the route R takes for this request (receipt behaviour_not_bound)."
+   }
   },
   {
    "source_id": "inference/CI-ROUTE-035",
@@ -5691,13 +5697,13 @@
    ],
    "disposition": null,
    "p0_batch": "inference-batch wave2",
-   "evidence_tier": "routing_control_flow",
+   "evidence_tier": "behavioural",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
    },
    "measured_result": {
     "case_verdicts": {
@@ -5870,7 +5876,7 @@
    "executable_case_ids": [
     "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "inference-batch wave2",
    "evidence_tier": "routing_control_flow",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
@@ -5878,7 +5884,11 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind",
+    "ruling_evidence": [
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv",
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json"
+    ]
    },
    "measured_result": {
     "case_verdicts": {
@@ -5890,7 +5900,11 @@
     "case_kinds": {
      "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "vault D-319 (shinichi-brain memory/DECISIONS.md), 2026-10-05: signed rulings page LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item B 'Julia defaults and fallbacks against R', recommendation 'yes, row by row'",
+   "reason": "Documented default difference, signed under ruling B (Julia defaults against R, row by row). R: confint() with no method for parm sigma_B routes to '.confint_sigma:profile', a profile interval (P1 route probe). Julia: confint(fitS, YS; parm=\"sigma_B[1]\", \u03a3_phy) with no method returns a wald_packed result, the Wald interval, because Julia's confint defaults to method = :wald for every parm. R's default route is reachable in Julia by asking for it: confint(fitS, YS; parm=\"sigma_B[1]\", method=:profile, \u03a3_phy) returned a profile result (non-finite bounds on this fixture). Same quantity, different default method; not a defect in either engine. Evidence: docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-043; docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json#CI-ROUTE-043."
   },
   {
    "source_id": "inference/CI-ROUTE-044",
@@ -5961,7 +5975,7 @@
    "executable_case_ids": [
     "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "inference-batch wave2",
    "evidence_tier": "routing_control_flow",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
@@ -5969,7 +5983,11 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind",
+    "ruling_evidence": [
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv",
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json"
+    ]
    },
    "measured_result": {
     "case_verdicts": {
@@ -5981,7 +5999,11 @@
     "case_kinds": {
      "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "vault D-319 (shinichi-brain memory/DECISIONS.md), 2026-10-05: signed rulings page LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item B 'Julia defaults and fallbacks against R', recommendation 'yes, row by row'",
+   "reason": "Documented default difference, signed under ruling B (Julia defaults against R, row by row). R: confint() with no method for parm sigma_W routes to '.confint_sigma:profile', a profile interval (P1 route probe). Julia: confint(fitS, YS; parm=\"sigma_W[1]\", \u03a3_phy) with no method returns a wald_packed result, the Wald interval, because Julia's confint defaults to method = :wald for every parm. R's default route is reachable in Julia by asking for it: confint(fitS, YS; parm=\"sigma_W[1]\", method=:profile, \u03a3_phy) returned a profile result (non-finite bounds on this fixture). Same quantity, different default method; not a defect in either engine. Evidence: docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-046; docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json#CI-ROUTE-046."
   },
   {
    "source_id": "inference/CI-ROUTE-047",
@@ -6052,7 +6074,7 @@
    "executable_case_ids": [
     "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "inference-batch wave2",
    "evidence_tier": "routing_control_flow",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
@@ -6060,7 +6082,11 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind",
+    "ruling_evidence": [
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv",
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json"
+    ]
    },
    "measured_result": {
     "case_verdicts": {
@@ -6072,7 +6098,11 @@
     "case_kinds": {
      "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "vault D-319 (shinichi-brain memory/DECISIONS.md), 2026-10-05: signed rulings page LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item B 'Julia defaults and fallbacks against R', recommendation 'yes, row by row'",
+   "reason": "Documented default difference, signed under ruling B (Julia defaults against R, row by row). R: confint() with no method for parm sigma_B routes to '.confint_sigma:profile', a profile interval (P1 route probe). Julia: confint(fitS, YS; parm=\"sigma_B[1]\", \u03a3_phy) with no method returns a wald_packed result, the Wald interval, because Julia's confint defaults to method = :wald for every parm. R's default route is reachable in Julia by asking for it: confint(fitS, YS; parm=\"sigma_B[1]\", method=:profile, \u03a3_phy) returned a profile result (non-finite bounds on this fixture). Same quantity, different default method; not a defect in either engine. Evidence: docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-055; docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json#CI-ROUTE-055."
   },
   {
    "source_id": "inference/CI-ROUTE-056",
@@ -6143,7 +6173,7 @@
    "executable_case_ids": [
     "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "inference-batch wave2",
    "evidence_tier": "routing_control_flow",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
@@ -6151,7 +6181,11 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind",
+    "ruling_evidence": [
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv",
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json"
+    ]
    },
    "measured_result": {
     "case_verdicts": {
@@ -6163,7 +6197,11 @@
     "case_kinds": {
      "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "vault D-319 (shinichi-brain memory/DECISIONS.md), 2026-10-05: signed rulings page LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item B 'Julia defaults and fallbacks against R', recommendation 'yes, row by row'",
+   "reason": "Documented default difference, signed under ruling B (Julia defaults against R, row by row). R: confint() with no method for parm sigma_W routes to '.confint_sigma:profile', a profile interval (P1 route probe). Julia: confint(fitS, YS; parm=\"sigma_W[1]\", \u03a3_phy) with no method returns a wald_packed result, the Wald interval, because Julia's confint defaults to method = :wald for every parm. R's default route is reachable in Julia by asking for it: confint(fitS, YS; parm=\"sigma_W[1]\", method=:profile, \u03a3_phy) returned a profile result (non-finite bounds on this fixture). Same quantity, different default method; not a defect in either engine. Evidence: docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-058; docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json#CI-ROUTE-058."
   },
   {
    "source_id": "inference/CI-ROUTE-059",
@@ -6234,7 +6272,7 @@
    "executable_case_ids": [
     "CORE070-INFERENCE-SIGMA-PHY-CI-METHOD-ROUTE"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "inference-batch wave2",
    "evidence_tier": "routing_control_flow",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
@@ -6242,7 +6280,11 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-SIGMA-PHY-CI-METHOD-ROUTE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind",
+    "ruling_evidence": [
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv",
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json"
+    ]
    },
    "measured_result": {
     "case_verdicts": {
@@ -6254,7 +6296,11 @@
     "case_kinds": {
      "CORE070-INFERENCE-SIGMA-PHY-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "vault D-319 (shinichi-brain memory/DECISIONS.md), 2026-10-05: signed rulings page LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item B 'Julia defaults and fallbacks against R', recommendation 'yes, row by row'",
+   "reason": "Documented default difference, signed under ruling B (Julia defaults against R, row by row). R: confint() with no method for parm sigma_phy routes to '.confint_sigma:profile', a profile interval (P1 route probe). Julia: confint(fitS, YS; parm=\"sigma_phy[1]\", \u03a3_phy) with no method returns a wald_packed result, the Wald interval, because Julia's confint defaults to method = :wald for every parm. R's default route is reachable in Julia by asking for it: confint(fitS, YS; parm=\"sigma_phy[1]\", method=:profile, \u03a3_phy) returned a profile result (finite bounds). Same quantity, different default method; not a defect in either engine. Evidence: docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-061; docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json#CI-ROUTE-061."
   },
   {
    "source_id": "inference/CI-ROUTE-062",
@@ -6325,7 +6371,7 @@
    "executable_case_ids": [
     "CORE070-INFERENCE-BETA-CI-METHOD-ROUTE"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "inference-batch wave2",
    "evidence_tier": "routing_control_flow",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
@@ -6333,7 +6379,11 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-BETA-CI-METHOD-ROUTE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind",
+    "ruling_evidence": [
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv",
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json"
+    ]
    },
    "measured_result": {
     "case_verdicts": {
@@ -6345,7 +6395,11 @@
     "case_kinds": {
      "CORE070-INFERENCE-BETA-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "vault D-319 (shinichi-brain memory/DECISIONS.md), 2026-10-05: signed rulings page LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item B 'Julia defaults and fallbacks against R', recommendation 'yes, row by row'",
+   "reason": "Documented default difference, signed under ruling B (Julia defaults against R, row by row). R: confint() with no method for parm beta routes to '.confint_fixef_profile:profile', a profile interval (P1 route probe). Julia: confint(fitA, YA; parm=\"beta[1]\", X=XA) with no method returns a wald_packed result, the Wald interval, because Julia's confint defaults to method = :wald for every parm. R's default route is reachable in Julia by asking for it: confint(fitA, YA; parm=\"beta[1]\", method=:profile, X=XA) returned a profile result (finite bounds). Same quantity, different default method; not a defect in either engine. Evidence: docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-065; docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json#CI-ROUTE-065."
   },
   {
    "source_id": "inference/CI-ROUTE-066",
@@ -6385,7 +6439,7 @@
    "executable_case_ids": [
     "CORE070-INFERENCE-BETA-BOOTSTRAP-FALLBACK-DIVERGENCE"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "inference-batch wave2",
    "evidence_tier": "routing_control_flow",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
@@ -6393,7 +6447,11 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-BETA-BOOTSTRAP-FALLBACK-DIVERGENCE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind",
+    "ruling_evidence": [
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv",
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json"
+    ]
    },
    "measured_result": {
     "case_verdicts": {
@@ -6405,7 +6463,11 @@
     "case_kinds": {
      "CORE070-INFERENCE-BETA-BOOTSTRAP-FALLBACK-DIVERGENCE": "routing_control_flow"
     }
-   }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "vault D-319 (shinichi-brain memory/DECISIONS.md), 2026-10-05: signed rulings page LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item B 'Julia defaults and fallbacks against R', recommendation 'yes, row by row'",
+   "reason": "Documented fallback difference, signed under ruling B (Julia fallbacks against R, row by row). R: confint(method = \"bootstrap\") for parm beta does not bootstrap; it routes to 'tidy:wald' with the message 'Bootstrap on fixed effects is not implemented; falling back to `method = \"wald\"`.' (P1 route probe). Julia: confint(fitA, YA; parm=\"beta[1]\", method=:bootstrap, X=XA, n_boot=6, seed=21) runs the bootstrap it is asked for (a bootstrap result reporting method 'bootstrap'). Julia does what the request names where R substitutes Wald; not a defect in either engine. Evidence: docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-067; docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json#CI-ROUTE-067."
   },
   {
    "source_id": "inference/CI-ROUTE-068",
@@ -6415,7 +6477,7 @@
    "executable_case_ids": [
     "CORE070-INFERENCE-SIGMA-EPS-CI-METHOD-ROUTE"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "inference-batch wave2",
    "evidence_tier": "routing_control_flow",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
@@ -6423,7 +6485,11 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-SIGMA-EPS-CI-METHOD-ROUTE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind",
+    "ruling_evidence": [
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv",
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json"
+    ]
    },
    "measured_result": {
     "case_verdicts": {
@@ -6435,7 +6501,11 @@
     "case_kinds": {
      "CORE070-INFERENCE-SIGMA-EPS-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "vault D-319 (shinichi-brain memory/DECISIONS.md), 2026-10-05: signed rulings page LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item B 'Julia defaults and fallbacks against R', recommendation 'yes, row by row'",
+   "reason": "Documented default difference, signed under ruling B (Julia defaults against R, row by row). R: confint() with no method for parm sigma_eps routes to '.confint_profile_targets:profile', a profile interval (P1 route probe). Julia: confint(fitA, YA; parm=\"sigma_eps\", X=XA) with no method returns a wald_packed result, the Wald interval, because Julia's confint defaults to method = :wald for every parm. R's default route is reachable in Julia by asking for it: confint(fitA, YA; parm=\"sigma_eps\", method=:profile, X=XA) returned a profile result (finite bounds). Same quantity, different default method; not a defect in either engine. Evidence: docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-068; docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json#CI-ROUTE-068."
   },
   {
    "source_id": "inference/CI-ROUTE-069",
@@ -6475,7 +6545,7 @@
    "executable_case_ids": [
     "CORE070-INFERENCE-SIGMA-EPS-BOOTSTRAP-FALLBACK-DIVERGENCE"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "inference-batch wave2",
    "evidence_tier": "routing_control_flow",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
@@ -6483,7 +6553,11 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-SIGMA-EPS-BOOTSTRAP-FALLBACK-DIVERGENCE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind",
+    "ruling_evidence": [
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv",
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json"
+    ]
    },
    "measured_result": {
     "case_verdicts": {
@@ -6495,7 +6569,11 @@
     "case_kinds": {
      "CORE070-INFERENCE-SIGMA-EPS-BOOTSTRAP-FALLBACK-DIVERGENCE": "routing_control_flow"
     }
-   }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "vault D-319 (shinichi-brain memory/DECISIONS.md), 2026-10-05: signed rulings page LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item B 'Julia defaults and fallbacks against R', recommendation 'yes, row by row'",
+   "reason": "Documented fallback difference, signed under ruling B (Julia fallbacks against R, row by row). R: confint(method = \"bootstrap\") for parm sigma_eps does not bootstrap; it routes to 'tidy:wald' with the message 'Bootstrap on fixed effects is not implemented; falling back to `method = \"wald\"`.' (P1 route probe). Julia: confint(fitA, YA; parm=\"sigma_eps\", method=:bootstrap, X=XA, n_boot=6, seed=22) runs the bootstrap it is asked for (a bootstrap result reporting method 'bootstrap'). Julia does what the request names where R substitutes Wald; not a defect in either engine. Evidence: docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-070; docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json#CI-ROUTE-070."
   },
   {
    "source_id": "inference/CI-ROUTE-081",

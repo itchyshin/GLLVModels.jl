@@ -65,6 +65,15 @@ Usage:
   python3 tools/core070_inference_p1_receipts.py --runs DIR --runtimes JSON [--allow-dirty]
   python3 tools/core070_inference_p1_receipts.py --check
   python3 tools/core070_inference_p1_receipts.py --apply-behaviour   # after tools/core070_behaviour_receipts.py --write
+  python3 tools/core070_inference_p1_receipts.py --ingest-rulings RUN  # RUN/inference-rulings-p1 from
+                                       # tools/core070_inference_rulings_batch.jl, with run-commit.json at HEAD
+
+Signed rulings of 2026-10-05 (vault D-319; the lane kit's signed-rulings-2026-10-05.md). Ruling B (Julia
+defaults and fallbacks against R, row by row) closes the ten rows in RULING_B_ROWS by a signed
+disposition on the row. Each row's `reason` is derived here from tracked files only (the P1 route probe
+and the rulings run receipts/inference/inference-rulings-p1), so --check re-derives it; the row keeps its
+case receipts under evidence.non_binding_receipts and cites the rulings run under evidence.ruling_evidence.
+Rulings C and 3 and the fisher_z alias bind rows behaviourally (tools/core070_behaviour_receipts.py).
 where DIR holds inference-p1/{julia,r-crosscheck,run-commit.json},
 inference-remainder-p1/ (with run-commit.json), routes-p0.tsv,
 routes-p1-unadapted.tsv, routes-p1-adapted.tsv and carry-scan-p1.json.
@@ -150,13 +159,79 @@ NOTE = ("Separate from case-map.json so none of its rows are touched; read by to
         "evidence.receipt. Since #709 the Sigma bootstrap rows, the derived-quantity profile, bootstrap and default rows and "
         "the bad-method refusal rows are measured through Julia's public confint(fit, y; parm, method) "
         "(receipts/inference/inference-post709-p1), and a refusal binds only with a valid-method control on each side. A "
-        "row whose raw record shows R and Julia doing different things (R's withdrawn nonlinear profiles, a DEFAULT "
-        "whose R route is profile, the fixed-effect bootstrap fallback) or whose default-route equivalence is not "
-        "confirmed (CI-ROUTE-029) has no behaviour entry and stays under evidence.non_binding_receipts, with the "
-        "reason in the receipt's behaviour_not_bound. CI-ROUTE-009 carries a behaviour block as non-binding evidence "
-        "only: it is not in the frozen scope, so it stays partial_non_numeric_case until the maintainer confirms that "
-        "ruling 2 covers it. CI-ROUTE-008 and CI-ROUTE-010 are one R-vs-Julia comparison counted on two surface rows "
+        "row whose raw record shows R and Julia doing different things (a DEFAULT whose R route is profile, the "
+        "fixed-effect bootstrap fallback) has no behaviour entry and stays under evidence.non_binding_receipts, with "
+        "the reason in the receipt's behaviour_not_bound. Under the signed rulings of 2026-10-05 (vault D-319): those "
+        "ten default and fallback rows carry a signed ruling-B disposition whose reason is derived from the P1 route "
+        "probe and receipts/inference/inference-rulings-p1; the withdrawn-profile rows (023, 030, 037) bind "
+        "behaviourally now that Julia withdraws the same profiles (ruling C); CI-ROUTE-029 (ruling 3) and CI-ROUTE-034 "
+        "(the fisher_z alias) bind behaviourally through the class rho:fisher-z. CI-ROUTE-009 carries a behaviour "
+        "block as non-binding evidence only: signed ruling A extends the behavioural scope to it, and it flips to "
+        "behavioural once the scope lists in tools/true_parity_assemble.py and tools/true_parity_check.mjs name it. "
+        "CI-ROUTE-008 and CI-ROUTE-010 are one R-vs-Julia comparison counted on two surface rows "
         "(see their notes); the count is left to the maintainer.")
+
+
+# ---------------------------------------------------------------------------
+# Ruling B (vault D-319): signed dispositions, one per row, each derived from the P1 route probe and the rulings run.
+# ---------------------------------------------------------------------------
+RULINGS_REL = f"{REC_REL}/inference-rulings-p1"
+RULINGS_VERIFY = (["tools/core070_verify_inference_rulings_batch.py", "--state", "{state}", "--self-test"],
+                  "CORE070_INFERENCE_RULINGS_BATCH_VERIFIED")
+SIGNATURE = {"signed_by": "Shinichi Nakagawa", "signed_on": "2026-10-05",
+             "signature_ref": ("vault D-319 (shinichi-brain memory/DECISIONS.md), 2026-10-05: signed rulings page "
+                               "LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item B 'Julia defaults and "
+                               "fallbacks against R', recommendation 'yes, row by row'")}
+RULING_B_ROWS = ("inference/CI-ROUTE-015", "inference/CI-ROUTE-043", "inference/CI-ROUTE-046", "inference/CI-ROUTE-055",
+                 "inference/CI-ROUTE-058", "inference/CI-ROUTE-061", "inference/CI-ROUTE-065", "inference/CI-ROUTE-067",
+                 "inference/CI-ROUTE-068", "inference/CI-ROUTE-070")
+PROBE_REL = f"{REC_REL}/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv"
+
+
+def ruling_b_disposition(sid):
+    """The signed-disposition fields for one ruling-B row, derived from tracked files; raises if the raw record does
+    not show the difference the ruling signs (R and Julia must still differ the way the reason says)."""
+    n = sid.split("/")[-1]
+    with open(ROOT / PROBE_REL) as fh:
+        r = {x["id"]: x for x in csv.DictReader(fh, delimiter="\t", escapechar="\\", doublequote=False)}[n]
+    c = {x["source_id"]: x for x in load(ROOT / RULINGS_REL / "inference-rulings-results.json")["cases"]}[sid]
+    if r["pass"] != "TRUE" or c["outcome"] != "result":
+        raise SystemExit(f"{sid}: the probe or the Julia call failed; no disposition")
+    src = f"{PROBE_REL}#{n}; {RULINGS_REL}/inference-rulings-results.json#{n}"
+    if c["group"] == "default":
+        ep = c["explicit_profile"]
+        if not r["actual"].endswith(":profile") or c["route_tag"] not in ("wald_derived", "wald_packed") or \
+                ep["outcome"] != "result" or ep["route_tag"] != "profile":
+            raise SystemExit(f"{sid}: the raw record does not show R default profile against Julia default Wald")
+        fin = "finite bounds" if ep["finite"] else "non-finite bounds on this fixture"
+        reason = (f"Documented default difference, signed under ruling B (Julia defaults against R, row by row). "
+                  f"R: confint() with no method for parm {c['target']} routes to {r['actual']!r}, a profile interval "
+                  f"(P1 route probe). Julia: {c['julia_call']} with no method returns a {c['route_tag']} result, the "
+                  f"Wald interval, because Julia's confint defaults to method = :wald for every parm. R's default route "
+                  f"is reachable in Julia by asking for it: {ep['call']} returned a profile result ({fin}). Same "
+                  f"quantity, different default method; not a defect in either engine. Evidence: {src}.")
+    elif c["group"] == "fallback":
+        if r["actual"] != "tidy:wald" or "falling back" not in r["messages"] or c["route_tag"] != "bootstrap":
+            raise SystemExit(f"{sid}: the raw record does not show R falling back to Wald against a Julia bootstrap")
+        reason = (f"Documented fallback difference, signed under ruling B (Julia fallbacks against R, row by row). R: "
+                  f"confint(method = \"bootstrap\") for parm {c['target']} does not bootstrap; it routes to "
+                  f"{r['actual']!r} with the message {r['messages']!r} (P1 route probe). Julia: {c['julia_call']} runs "
+                  f"the bootstrap it is asked for (a {c['route_tag']} result reporting method "
+                  f"{c['result_method']!r}). Julia does what the request names where R substitutes Wald; not a defect in "
+                  f"either engine. Evidence: {src}.")
+    else:
+        raise SystemExit(f"{sid}: group {c['group']} is not a ruling-B row")
+    return {"disposition": "DISPOSITION-SIGNED", **SIGNATURE, "reason": reason,
+            "ruling_evidence": [PROBE_REL, f"{RULINGS_REL}/inference-rulings-results.json"]}
+
+
+def apply_ruling_b(row):
+    """Put the signed ruling-B disposition on `row` (in place). The tier and receipts stay as measured."""
+    if row["source_id"] not in RULING_B_ROWS:
+        return
+    d = ruling_b_disposition(row["source_id"])
+    row["evidence"] = dict(row.get("evidence") or {}, ruling_evidence=d.pop("ruling_evidence"))
+    row.update(d)
 
 
 def sha(path):
@@ -390,6 +465,7 @@ def build_rows(in_scope, receipts):
         if notes:
             row["note"] = " ".join(dict.fromkeys(notes))
         behaviour.overlay_row(row, counts)  # a row whose receipt carries a matching behaviour block
+        apply_ruling_b(row)
         out_rows.append(row)
     return out_rows, counts
 
@@ -467,8 +543,30 @@ def apply_behaviour():
     cm["batch_artifacts"]["inference-post709-p1"] = [
         f"{post}/inference-post709-results.json", f"{post}/receipt.json", f"{post}/run-commit.json",
         f"{post}/verify.txt", f"{post}/r-lambda-reject/r-oracle.json", f"{post}/r-lambda-reject/receipt.json"]
+    if (REC / "inference-rulings-p1/verify.txt").is_file():
+        cm["batch_verifiers"]["inference-rulings-p1"] = {
+            "tool": RULINGS_VERIFY[0][0], "argv": " ".join(RULINGS_VERIFY[0]),
+            "status": "PASS" if RULINGS_VERIFY[1] in (REC / "inference-rulings-p1/verify.txt").read_text() else "FAIL",
+            "exit_code": 0, "accept_marker": RULINGS_VERIFY[1], "log": f"{RULINGS_REL}/verify.txt"}
+        cm["batch_artifacts"]["inference-rulings-p1"] = [
+            f"{RULINGS_REL}/inference-rulings-results.json", f"{RULINGS_REL}/receipt.json",
+            f"{RULINGS_REL}/run-commit.json", f"{RULINGS_REL}/verify.txt"]
     write_json(CASEMAP, cm)
     print(json.dumps(counts))
+
+
+def ingest_rulings(run):
+    """Copy a rulings run (RUN/inference-rulings-p1, run at clean HEAD) into the tracked receipts and run its verifier."""
+    src = run / "inference-rulings-p1"
+    head, _dirty = git_state()
+    check_run_commit(src, head)
+    copy(src, "inference-rulings-p1", ["inference-rulings-results.json", "receipt.json", "run-commit.json"])
+    argv = ["python3"] + [a.format(state=str(REC / "inference-rulings-p1")) for a in RULINGS_VERIFY[0]]
+    proc = subprocess.run(argv, cwd=ROOT, capture_output=True, text=True)
+    (REC / "inference-rulings-p1/verify.txt").write_text(proc.stdout + proc.stderr)
+    if proc.returncode != 0 or RULINGS_VERIFY[1] not in proc.stdout:
+        raise SystemExit("the rulings verifier rejected the run:\n" + proc.stdout + proc.stderr)
+    print("ingested", src, "verifier PASS")
 
 
 def main():
@@ -481,7 +579,12 @@ def main():
                     help="verify the tracked receipts against the files they read; write nothing")
     ap.add_argument("--apply-behaviour", action="store_true",
                     help="re-derive the case-map rows from the tracked receipts and their behaviour blocks")
+    ap.add_argument("--ingest-rulings", type=Path, metavar="RUN",
+                    help="copy RUN/inference-rulings-p1 into the tracked receipts and run its verifier")
     args = ap.parse_args()
+    if args.ingest_rulings:
+        ingest_rulings(args.ingest_rulings)
+        return
     if args.check:
         check()
         return

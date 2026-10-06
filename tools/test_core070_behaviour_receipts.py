@@ -143,7 +143,7 @@ def overlay_flips_matching_rows_only():
     assert ok["evidence_tier"] == "behavioural" and "receipt" in ok["evidence"] and "non_binding_receipts" not in ok["evidence"]
     assert counts == {"routing_control_flow": 4, "behavioural": 1}
     for sid, case in (("inference/CI-ROUTE-043", SIGMA_B), ("inference/CI-ROUTE-067", "CORE070-INFERENCE-BETA-BOOTSTRAP-FALLBACK-DIVERGENCE"),
-                      ("inference/CI-ROUTE-023", "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE"),
+                      ("inference/CI-ROUTE-015", "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE"),
                       ("inference/CI-ROUTE-065", "CORE070-INFERENCE-BETA-CI-METHOD-ROUTE")):
         r = row_for(sid, case)
         assert B.overlay_row(r, counts) is False and r["evidence_tier"] == "routing_control_flow", sid
@@ -173,15 +173,14 @@ def derivation_refuses_when_per_row_disagrees_with_raw():
 
 
 @test
-def fallback_withdrawn_default_and_unconfirmed_route_rows_get_no_entry():
-    """Rows that stay unbound after the post-#709 re-measurement, each with its reason."""
+def fallback_and_default_rows_get_no_entry():
+    """Rows whose engines still do different things (the ruling-B default and fallback rows) get no behaviour entry,
+    each with its reason; since the 2026-10-05 rulings the withdrawn, rho-default and fisher-z rows have none."""
     want = {"CORE070-INFERENCE-BETA-BOOTSTRAP-FALLBACK-DIVERGENCE": {"inference/CI-ROUTE-067": "fallback"},
             "CORE070-INFERENCE-SIGMA-EPS-BOOTSTRAP-FALLBACK-DIVERGENCE": {"inference/CI-ROUTE-070": "fallback"},
-            "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE": {"inference/CI-ROUTE-023": "withdrawn"},
-            "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE": {"inference/CI-ROUTE-030": "withdrawn",
-                                                      "inference/CI-ROUTE-029": "default_class_unconfirmed",
-                                                      "inference/CI-ROUTE-034": "public_route_differs"},
-            "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE": {"inference/CI-ROUTE-037": "withdrawn"},
+            "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE": {},
+            "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE": {},
+            "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE": {},
             "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE": {"inference/CI-ROUTE-015": "default"},
             "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE": {"inference/CI-ROUTE-043": "default",
                                                           "inference/CI-ROUTE-055": "default"},
@@ -210,12 +209,9 @@ def post709_sigma_and_derived_route_rows_bind_through_the_public_confint():
         es = [e for e in rec["behaviour"]["cases"] if e["source_id"] == r["source_id"]]
         assert len(es) == 1 and es[0]["julia_observed"] == label and es[0]["kind"] == "route", n
         assert "inference-post709-results.json" in es[0]["julia_source"], n
-    for n in ("015", "023", "029", "030", "034", "037"):
-        assert rows[f"inference/CI-ROUTE-{n}"]["evidence_tier"] == "routing_control_flow", n
-    assert rows["inference/CI-ROUTE-034"]["note"] == B.NOT_BOUND_ROW_NOTES["public_route_differs"]
+    assert rows["inference/CI-ROUTE-015"]["evidence_tier"] == "routing_control_flow"
     for n in B.ROUTE_ONLY_ROWS:
         assert B.ROUTE_ONLY_NOTE in rows[f"inference/CI-ROUTE-{n}"]["note"], n
-    assert rows["inference/CI-ROUTE-029"]["note"] == B.NOT_BOUND_ROW_NOTES["default_class_unconfirmed"]
 
 
 @test
@@ -298,19 +294,47 @@ def writer_refuses_weak_refusal_evidence():
 
 
 @test
-def public_fisher_z_refusal_unbinds_034():
-    cid = "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE"
-    entries, nb, _ = B.wave2(cid, case_receipt(cid))
-    assert "inference/CI-ROUTE-034" not in {e["source_id"] for e in entries}
-    assert {n["source_id"]: n["reason"] for n in nb}["inference/CI-ROUTE-034"] == "public_route_differs"
+def signed_rulings_bind_withdrawn_rho_default_and_fisher_z_rows():
+    """Vault D-319: ruling C (023, 030, 037) binds as a refusal in a profile-withdrawn class of its own; ruling 3 (029)
+    and the fisher_z alias (034) bind through the class rho:fisher-z. Julia's side is the rulings run."""
+    cm = B.load(ROOT / B.LEDGER / "case-map-inference.json")
+    rows = {r["source_id"]: r for r in cm["rows"]}
+    index = A.behaviour_equivalence(ROOT)
+    want = {"023": ("refusal", "communality:profile-withdrawn"), "030": ("refusal", "rho:profile-withdrawn"),
+            "037": ("refusal", "proportion:profile-withdrawn"), "029": ("route", "rho:fisher-z"),
+            "034": ("route", "rho:fisher-z")}
+    for n, (kind, canonical) in want.items():
+        r = rows[f"inference/CI-ROUTE-{n}"]
+        assert r["evidence_tier"] == "behavioural" and "receipt" in r["evidence"], n
+        rec = case_receipt(r["executable_case_ids"][0])
+        es = [e for e in rec["behaviour"]["cases"] if e["source_id"] == r["source_id"]]
+        assert len(es) == 1 and es[0]["kind"] == kind and "inference-rulings-results.json" in es[0]["julia_source"], n
+        assert A._label_class(index, kind, "julia", es[0]["julia_observed"])[0] == canonical, n
+        assert A._label_class(index, kind, "r", es[0]["r_observed"])[0] == canonical, n
+    # the withdrawn class (G7) is never a bad-method class (G1): no canonical and no Julia label is shared
+    g7, g1 = B.withdrawn_classes(), B.refusal_classes()
+    assert g7 and not ({c["canonical"] for c in g7} & {c["canonical"] for c in g1})
+    assert not ({l for c in g7 for l in c["julia"]} & {l for c in g1 for l in c["julia"]})
+
+
+@test
+def ruling_b_rows_carry_a_signed_disposition_and_no_behaviour_entry():
+    cm = B.load(ROOT / B.LEDGER / "case-map-inference.json")
+    rows = {r["source_id"]: r for r in cm["rows"]}
+    for n in ("015", "043", "046", "055", "058", "061", "065", "067", "068", "070"):
+        r = rows[f"inference/CI-ROUTE-{n}"]
+        assert r["disposition"] == "DISPOSITION-SIGNED" and r["signed_by"] == "Shinichi Nakagawa", n
+        assert r["signed_on"] == "2026-10-05" and "D-319" in r["signature_ref"], n
+        assert r["evidence_tier"] == "routing_control_flow" and "receipt" not in r["evidence"], n
+        assert ("fallback" if n in ("067", "070") else "default") in r["reason"], n
 
 
 @test
 def unbound_rows_are_not_flipped_by_overlay():
     counts = {"reject_error_class": 3, "routing_control_flow": 3, "behavioural": 0}
     for sid, cid, tier in (("inference/CI-ROUTE-015", "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE", "routing_control_flow"),
-                           ("inference/CI-ROUTE-029", "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE", "routing_control_flow"),
-                           ("inference/CI-ROUTE-023", "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE", "routing_control_flow"),
+                           ("inference/CI-ROUTE-043", "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE", "routing_control_flow"),
+                           ("inference/CI-ROUTE-068", "CORE070-INFERENCE-SIGMA-EPS-CI-METHOD-ROUTE", "routing_control_flow"),
                            ("inference/CI-ROUTE-067", "CORE070-INFERENCE-BETA-BOOTSTRAP-FALLBACK-DIVERGENCE", "routing_control_flow")):
         r = row_for(sid, cid, tier=tier)
         assert B.overlay_row(r, counts) is False and r["evidence_tier"] == tier, sid
@@ -355,7 +379,7 @@ def every_entry_is_scoped_and_both_labels_are_listed_in_one_class():
                 rc, jc = A._label_class(index, e["kind"], "r", a), A._label_class(index, e["kind"], "julia", b)
                 assert rc is not None and jc is not None, f"{e['source_id']}: {a!r} / {b!r} not both listed in a class"
                 assert rc[1] == jc[1], f"{e['source_id']}: {a!r} and {b!r} are in different classes"
-    assert seen == 52, seen  # 44 bound inference rows + CI-ROUTE-009 + 7 aghq control rows
+    assert seen == 57, seen  # 49 bound inference rows + CI-ROUTE-009 + 7 aghq control rows
 
 
 @test

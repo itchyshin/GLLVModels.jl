@@ -90,7 +90,11 @@
       "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/run-commit.json": "c209d8cb34692cf8bf2387eb057c396dee061720d7b10aab462e84c7d0be26d3",
       "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/verify.txt": "303ad3fd98e8194e031cfcf376b39fb5c751fa348fe7f3af603705e0837c373d",
       "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/r-lambda-reject/r-oracle.json": "c37a34dc900c165a8d4ccbffae0fea66a3ad6444a12acb3c29c22ae0223d0a98",
-      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/r-lambda-reject/receipt.json": "911e062f903a88ef5b4029f8084f5900085a65eedb1442219a9171c55bea1a65"
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/r-lambda-reject/receipt.json": "911e062f903a88ef5b4029f8084f5900085a65eedb1442219a9171c55bea1a65",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json": "e8efdd718c1dbf33b50d85dd1fa462388f071a3a17361b2320f8c5e94718ff87",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/receipt.json": "2feb30f367e745ec7274c5111f5c3ffe7bd9b478d2d70b467479200e1a5355f7",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/run-commit.json": "847a17528c7c565a2da7d2c5a788677ac04a304c1dc38b2f4c4889d4e5a30d1e",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/verify.txt": "9a145dc4cde02f65c17b332d983206f2d6e39ea85146baec3db19131b36a3494"
     },
     "cases": [
       {
@@ -104,6 +108,35 @@
         "julia_result_method": "wald",
         "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-022",
         "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json#CI-ROUTE-022"
+      },
+      {
+        "case_id": "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE",
+        "source_id": "inference/CI-ROUTE-023",
+        "kind": "refusal",
+        "r_observed": "Nonlinear profile intervals for communality are not currently available.",
+        "julia_observed": "ArgumentError: confint: nonlinear profile intervals for communality are withdrawn (parm communality[1]). gllvmTMB withdrew its penalty-based constrained-refit profile pending an exact constraint solver and diagnostic contract, and this route follows it. Request method = :wald or method = :bootstrap, and report the method's limitations.",
+        "requested_method": "profile",
+        "julia_call": "confint(fitS, YS; parm=\"communality[1]\", method=:profile, \u03a3_phy)",
+        "julia_error_type": "ArgumentError",
+        "r_dispatch": {
+          "route": ".confint_communality:profile",
+          "source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-023",
+          "note": "the dispatcher sends method profile to .confint_communality; guard row CI-ROUTE-086 (same parm, method profile) observes that function's gllvmTMB_nonlinear_profile_withdrawn error, so R refuses this request"
+        },
+        "r_control": {
+          "kind": "route_probe_stub",
+          "call": "probe row CI-ROUTE-024",
+          "result": "routes to .confint_communality:wald",
+          "source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-024"
+        },
+        "julia_control": {
+          "call": "confint(fitS, YS; parm=\"communality[1]\", method=:wald, \u03a3_phy)",
+          "result": "wald_derived interval",
+          "source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json#CI-ROUTE-023"
+        },
+        "ruling": "signed rulings of 2026-10-05 (vault D-319), ruling C",
+        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-086",
+        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json#CI-ROUTE-023"
       },
       {
         "case_id": "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE",
@@ -129,16 +162,5 @@
         "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json#CI-ROUTE-025"
       }
     ]
-  },
-  "behaviour_not_bound": [
-    {
-      "source_id": "inference/CI-ROUTE-023",
-      "reason": "withdrawn",
-      "text": "R's dispatcher forwards method profile to .confint_communality, but that function raises gllvmTMB_nonlinear_profile_withdrawn at P1; the same probe observed that error on guard row CI-ROUTE-086 (parm communality:unit, method profile). Julia's public confint returned a profile interval (confint(fitS, YS; parm=\"communality[1]\", method=:profile, \u03a3_phy); src/confint.jl:826, the penalty-based route #709 documents as exploratory). R refuses, Julia computes: not the same behaviour.",
-      "evidence": {
-        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-023,CI-ROUTE-086",
-        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json#CI-ROUTE-023"
-      }
-    }
-  ]
+  }
 }
