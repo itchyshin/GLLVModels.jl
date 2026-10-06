@@ -41,14 +41,21 @@
     "CORE070-NAMESPACE-COEF-JULIA-BRIDGE-COMPARE"
    ],
    "reason": "R S3method(coef,gllvmTMB_julia) registered and defined at P1; Julia `coef` exported Function. Classified compatibility_adapter: the gllvmTMB_julia bridge method's R answer comes from Julia itself, so a twin comparison is circular.",
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "evidence_tier": "registration",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
     "reason": "R registered and defined; Julia symbol present, exported, a Function"
    },
-   "original_classification": "required_core"
+   "original_classification": "required_core",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signed_disposition": {
+    "ruling": "Ruling 1 (rulings page 2026-10-04), no leg",
+    "text": "The R value of coef.gllvmTMB_julia comes from Julia: the R method copies or reformats what GLLVModels returned through the bridge, so an R-vs-Julia comparison of it is circular and is not a twin. The row is resolved by this signed disposition, not by a numeric binding. The PR #790 live readback (docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/bridge_readback.json, cases P1-BRIDGE-READBACK-COEF-ALPHA, P1-BRIDGE-READBACK-COEF-LOADINGS) records that the R value equals Julia's; it is context, not the binding.",
+    "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer"
+   }
   },
   {
    "source_id": "namespace/S3method/coef,gllvmTMB_multi",
@@ -100,14 +107,21 @@
     "CORE070-NAMESPACE-CONFINT-JULIA-BRIDGE-COMPARE"
    ],
    "reason": "R S3method(confint,gllvmTMB_julia) registered and defined at P1; Julia `confint` exported Function. Classified compatibility_adapter: the gllvmTMB_julia bridge method's R answer comes from Julia itself, so a twin comparison is circular.",
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "evidence_tier": "registration",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
     "reason": "R registered and defined; Julia symbol present, exported, a Function"
    },
-   "original_classification": "required_core"
+   "original_classification": "required_core",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signed_disposition": {
+    "ruling": "Ruling 1 (rulings page 2026-10-04), no leg",
+    "text": "The R value of confint.gllvmTMB_julia comes from Julia: the R method copies or reformats what GLLVModels returned through the bridge, so an R-vs-Julia comparison of it is circular and is not a twin. The row is resolved by this signed disposition, not by a numeric binding.",
+    "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer"
+   }
   },
   {
    "source_id": "namespace/S3method/confint,gllvmTMB_multi",
@@ -184,23 +198,31 @@
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/bridge_readback.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-FITTED-JULIA-BRIDGE-COMPARE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-FITTED-JULIA-BRIDGE-COMPARE"
+    ],
+    "ruling": "Ruling 1 (rulings page 2026-10-04), signed under D-319 on 2026-10-05: the bridge readback binds fitted, because R's fitted.gllvmTMB_julia does its own arithmetic on the Julia payload, so the comparison is a real adapter test. Signature source: vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer.",
+    "tier": "numeric (adapter test): live P1 bridge run of PR #790 (test/fixtures/gen_bridge_readback_p1.R). R's fitted.gllvmTMB_julia output on the object from gllvmTMB(..., engine = \"julia\") against the native GLLVModels accessor in the same session, Gaussian, p = 6, n = 200, tolerance 1e-12 from test/test_bridge_readback_p1.jl. It shows the R adapter returns what Julia computes; it is not a comparison with engine = \"tmb\". The Tier 0 registration receipts are kept un-cited under registration_receipts (the registration batch receipt carries a batch-level FAIL status)."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-FITTED-JULIA-BRIDGE-COMPARE"
+    "P1-BRIDGE-READBACK-FITTED-RESPONSE",
+    "P1-BRIDGE-READBACK-FITTED-LINK"
    ],
-   "reason": "R S3method(fitted,gllvmTMB_julia) registered and defined at P1; Julia `fitted` exported Function. Classified compatibility_adapter: the gllvmTMB_julia bridge method's R answer comes from Julia itself, so a twin comparison is circular.",
+   "reason": "R S3method(fitted,gllvmTMB_julia) computes its answer in R from the Julia payload; bound by the PR #790 live bridge readback under ruling 1 (D-319).",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
-    "case_verdict": "PASS",
-    "category": "registration_twin",
-    "reason": "R registered and defined; Julia symbol present, exported, a Function"
+    "case_verdicts": {
+     "P1-BRIDGE-READBACK-FITTED-RESPONSE": "PASS",
+     "P1-BRIDGE-READBACK-FITTED-LINK": "PASS"
+    },
+    "row_verdict": "PASS"
    },
    "original_classification": "required_core"
   },
@@ -297,14 +319,21 @@
     "CORE070-NAMESPACE-LOGLIK-JULIA-BRIDGE-COMPARE"
    ],
    "reason": "R S3method(logLik,gllvmTMB_julia) registered and defined at P1; Julia `loglikelihood` exported Function. Classified compatibility_adapter: the gllvmTMB_julia bridge method's R answer comes from Julia itself, so a twin comparison is circular.",
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "evidence_tier": "registration",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
     "reason": "R registered and defined; Julia symbol present, exported, a Function"
    },
-   "original_classification": "required_core"
+   "original_classification": "required_core",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signed_disposition": {
+    "ruling": "Ruling 1 (rulings page 2026-10-04), no leg",
+    "text": "The R value of logLik.gllvmTMB_julia comes from Julia: the R method copies or reformats what GLLVModels returned through the bridge, so an R-vs-Julia comparison of it is circular and is not a twin. The row is resolved by this signed disposition, not by a numeric binding. The PR #790 live readback (docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/bridge_readback.json, cases P1-BRIDGE-READBACK-LOGLIK-VALUE, P1-BRIDGE-READBACK-LOGLIK-DF, P1-BRIDGE-READBACK-LOGLIK-NOBS) records that the R value equals Julia's; it is context, not the binding.",
+    "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer"
+   }
   },
   {
    "source_id": "namespace/S3method/logLik,gllvmTMB_multi",
@@ -390,23 +419,31 @@
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/bridge_readback.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-PREDICT-JULIA-BRIDGE-COMPARE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-PREDICT-JULIA-BRIDGE-COMPARE"
+    ],
+    "ruling": "Ruling 1 (rulings page 2026-10-04), signed under D-319 on 2026-10-05: the bridge readback binds predict, because R's predict.gllvmTMB_julia does its own arithmetic on the Julia payload, so the comparison is a real adapter test. Signature source: vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer.",
+    "tier": "numeric (adapter test): live P1 bridge run of PR #790 (test/fixtures/gen_bridge_readback_p1.R). R's predict.gllvmTMB_julia output on the object from gllvmTMB(..., engine = \"julia\") against the native GLLVModels accessor in the same session, Gaussian, p = 6, n = 200, tolerance 1e-12 from test/test_bridge_readback_p1.jl. It shows the R adapter returns what Julia computes; it is not a comparison with engine = \"tmb\". The Tier 0 registration receipts are kept un-cited under registration_receipts (the registration batch receipt carries a batch-level FAIL status)."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-PREDICT-JULIA-BRIDGE-COMPARE"
+    "P1-BRIDGE-READBACK-PREDICT-LINK",
+    "P1-BRIDGE-READBACK-PREDICT-RESPONSE"
    ],
-   "reason": "R S3method(predict,gllvmTMB_julia) registered and defined at P1; Julia `predict` exported Function. Classified compatibility_adapter: the gllvmTMB_julia bridge method's R answer comes from Julia itself, so a twin comparison is circular.",
+   "reason": "R S3method(predict,gllvmTMB_julia) computes its answer in R from the Julia payload; bound by the PR #790 live bridge readback under ruling 1 (D-319).",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
-    "case_verdict": "PASS",
-    "category": "registration_twin",
-    "reason": "R registered and defined; Julia symbol present, exported, a Function"
+    "case_verdicts": {
+     "P1-BRIDGE-READBACK-PREDICT-LINK": "PASS",
+     "P1-BRIDGE-READBACK-PREDICT-RESPONSE": "PASS"
+    },
+    "row_verdict": "PASS"
    },
    "original_classification": "required_core"
   },
@@ -456,23 +493,31 @@
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/bridge_readback.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-RESIDUALS-JULIA-BRIDGE-COMPARE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-RESIDUALS-JULIA-BRIDGE-COMPARE"
+    ],
+    "ruling": "Ruling 1 (rulings page 2026-10-04), signed under D-319 on 2026-10-05: the bridge readback binds residuals, because R's residuals.gllvmTMB_julia does its own arithmetic on the Julia payload, so the comparison is a real adapter test. Signature source: vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer.",
+    "tier": "numeric (adapter test): live P1 bridge run of PR #790 (test/fixtures/gen_bridge_readback_p1.R). R's residuals.gllvmTMB_julia output on the object from gllvmTMB(..., engine = \"julia\") against the native GLLVModels accessor in the same session, Gaussian, p = 6, n = 200, tolerance 1e-12 from test/test_bridge_readback_p1.jl. It shows the R adapter returns what Julia computes; it is not a comparison with engine = \"tmb\". The Tier 0 registration receipts are kept un-cited under registration_receipts (the registration batch receipt carries a batch-level FAIL status)."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-RESIDUALS-JULIA-BRIDGE-COMPARE"
+    "P1-BRIDGE-READBACK-RESIDUALS-RESPONSE",
+    "P1-BRIDGE-READBACK-RESIDUALS-PEARSON"
    ],
-   "reason": "R S3method(residuals,gllvmTMB_julia) registered and defined at P1; Julia `residuals` exported Function. Classified compatibility_adapter: the gllvmTMB_julia bridge method's R answer comes from Julia itself, so a twin comparison is circular.",
+   "reason": "R S3method(residuals,gllvmTMB_julia) computes its answer in R from the Julia payload; bound by the PR #790 live bridge readback under ruling 1 (D-319).",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
-    "case_verdict": "PASS",
-    "category": "registration_twin",
-    "reason": "R registered and defined; Julia symbol present, exported, a Function"
+    "case_verdicts": {
+     "P1-BRIDGE-READBACK-RESIDUALS-RESPONSE": "PASS",
+     "P1-BRIDGE-READBACK-RESIDUALS-PEARSON": "PASS"
+    },
+    "row_verdict": "PASS"
    },
    "original_classification": "required_core"
   },
@@ -533,14 +578,21 @@
     "CORE070-NAMESPACE-SIMULATE-JULIA-BRIDGE-COMPARE"
    ],
    "reason": "R S3method(simulate,gllvmTMB_julia) registered and defined at P1; Julia `simulate` exported Function. Classified compatibility_adapter: the gllvmTMB_julia bridge method's R answer comes from Julia itself, so a twin comparison is circular.",
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "evidence_tier": "registration",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
     "reason": "R registered and defined; Julia symbol present, exported, a Function"
    },
-   "original_classification": "required_core"
+   "original_classification": "required_core",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signed_disposition": {
+    "ruling": "Ruling 1 (rulings page 2026-10-04), no leg",
+    "text": "The R value of simulate.gllvmTMB_julia comes from Julia: the R method copies or reformats what GLLVModels returned through the bridge, so an R-vs-Julia comparison of it is circular and is not a twin. The row is resolved by this signed disposition, not by a numeric binding.",
+    "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer"
+   }
   },
   {
    "source_id": "namespace/S3method/simulate,gllvmTMB_multi",
@@ -621,14 +673,21 @@
     "CORE070-NAMESPACE-SUMMARY-JULIA-BRIDGE-COMPARE"
    ],
    "reason": "R S3method(summary,gllvmTMB_julia) registered and defined at P1; Julia `coef_table` exported Function. Classified compatibility_adapter: the gllvmTMB_julia bridge method's R answer comes from Julia itself, so a twin comparison is circular.",
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "evidence_tier": "registration",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
     "reason": "R registered and defined; Julia symbol present, exported, a Function"
    },
-   "original_classification": "required_core"
+   "original_classification": "required_core",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signed_disposition": {
+    "ruling": "Ruling 1 (rulings page 2026-10-04), no leg",
+    "text": "The R value of summary.gllvmTMB_julia comes from Julia: the R method copies or reformats what GLLVModels returned through the bridge, so an R-vs-Julia comparison of it is circular and is not a twin. The row is resolved by this signed disposition, not by a numeric binding. The PR #790 live readback (docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/bridge_readback.json, cases P1-BRIDGE-READBACK-SUMMARY-LOGLIK, P1-BRIDGE-READBACK-SUMMARY-AIC, P1-BRIDGE-READBACK-SUMMARY-BIC, P1-BRIDGE-READBACK-SUMMARY-DF, P1-BRIDGE-READBACK-SUMMARY-NOBS, P1-BRIDGE-READBACK-SUMMARY-COEF-ALPHA, P1-BRIDGE-READBACK-SUMMARY-COEF-LOADINGS, P1-BRIDGE-READBACK-SUMMARY-SIGMA, P1-BRIDGE-READBACK-SUMMARY-CORRELATION, P1-BRIDGE-READBACK-SUMMARY-COMMUNALITY) records that the R value equals Julia's; it is context, not the binding.",
+    "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer"
+   }
   },
   {
    "source_id": "namespace/S3method/summary,gllvmTMB_multi",
