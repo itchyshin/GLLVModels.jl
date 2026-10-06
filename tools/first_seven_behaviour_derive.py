@@ -37,7 +37,7 @@ FROZEN_CASES = {
 SIGNED_SCOPE = set(CASES.values())
 EXPECTED = {
     "CORE070-FIRST7-CHECK-AUTO-RESIDUAL": "residual-check:coherent",
-    "CORE070-FIRST7-ISDM-COUNT": "guard:integrated-family-contract",
+    "CORE070-FIRST7-ISDM-COUNT": "all-count:nonmixed-admitted",
     "CORE070-FIRST7-ISDM-MISSING-IN-TRAIT": "guard:trait-coverage",
     "CORE070-FIRST7-ISDM-MISSING-SOURCE": "guard:source-coverage",
     "CORE070-FIRST7-ISDM-WRAPPER-LAW": "guard:wrapper-law-refusal",
@@ -86,6 +86,8 @@ def label(case_id, row, engine):
         if "ordinal-probit" not in message.lower() or not any(x in message.lower() for x in ("warn", "flagged")):
             raise ValueError("check_auto_residual ordinal-probit negative control is absent or non-discriminating")
         return "residual-check:coherent" if actual.lower() in {"true", "ok", "pass", "coherent"} else "residual-check:not-coherent"
+    if case_id.endswith("ISDM-COUNT"):
+        return "all-count:nonmixed-admitted" if outcome == "RETURN" and actual == "all-count-nonmixed" else "all-count:wrong-outcome"
     if case_id.endswith("WRAPPER-LAW"):
         if outcome != "ERROR" or "REFUSED:" not in message or "isdm_sources" not in message:
             return "wrapper-law:wrong-outcome"
@@ -169,6 +171,8 @@ def derive(rrows, jrows, meta):
         raise ValueError("Julia did not load GLLVModels from the recorded checkout")
     if not matching_fixture_hashes(rrows, jrows):
         raise ValueError("R and Julia raw outputs do not identify the same actual fixture rows")
+    if any(r.get("public_positive_control") != "mixed-source-accepted" for r in list(rrows.values()) + list(jrows.values())):
+        raise ValueError("the valid mixed-source public positive control did not pass on both engines")
     receipts, classes = {}, {}
     for cid, sid in CASES.items():
         rr, jr = rrows[cid], jrows[cid]

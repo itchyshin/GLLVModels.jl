@@ -33,6 +33,8 @@ function record(f, id)
         v = f()
         if v isa NamedTuple && haskey(v, :coherent)
             return (id, "RETURN", "check_auto_residual", string(v.coherent), join(v.messages, " | "))
+        elseif v isa NamedTuple && haskey(v, :count_admitted)
+            return (id, "RETURN", "IsdmFit", v.count_admitted ? "wrong-count-route" : "all-count-nonmixed", "")
         elseif hasproperty(v, :converged)
             return (id, "RETURN", string(typeof(v)), string(v.converged), "public fit returned")
         end
@@ -63,7 +65,10 @@ formula = :(value ~ 0 + trait + offset(log_support) + latent(0 + trait | unit, d
 function fam()
     isdm_sources(count=Poisson(), detect=(Binomial(), CLogLogLink()))
 end
-fit(data=panel(), family=fam()) = fit_isdm_gllvm(formula, data; family=family)
+fit(data=panel(), family=fam()) = fit_isdm_gllvm(formula, data; family=family, unit=:unit)
+
+base_fit = fit()
+base_fit.table.admitted || error("valid mixed-source public positive control was not admitted")
 
 Y = [sin(t / 3) + j / 10 for t in 1:3, j in 1:12]
 rows = [record(IDS[1]) do
@@ -80,7 +85,8 @@ control[2] == "RETURN" && control[4] == "false" || error(
 rows[1] = (rows[1][1], rows[1][2], rows[1][3], rows[1][4],
     "ordinal-probit control flagged; " * rows[1][5])
 push!(rows, record(IDS[2]) do
-    fit(panel(), isdm_sources(count=Poisson(), detect=Poisson()))
+    ft = fit(panel(), isdm_sources(count=Poisson(), detect=Poisson()))
+    (; count_admitted=ft.table.admitted)
 end)
 push!(rows, record(IDS[3]) do
     d = panel(); src = copy(d.isdm_source); src[1] = "unknown"
@@ -113,13 +119,13 @@ end)
 
 fixture_hash = let io=IOBuffer(); d=panel(); for i in eachindex(d.value); println(io, join((d.trait[i], d.isdm_source[i], d.unit[i], @sprintf("%.8f", d.value[i]), @sprintf("%.8f", d.log_support[i])), '\t')); end; bytes2hex(sha256(take!(io))) end
 open(out, "w") do io
-    println(io, "case_id\toutcome\tclass\tactual\tmessage\tcall\tengine\tpin\tjulia_version\thost\tglvmodels_commit\tjulia_threads\topenblas_threads\tomp_threads\trunner_sha256\tfixture_sha256\tpackage_source\tsrc_diff_sha256")
+    println(io, "case_id\toutcome\tclass\tactual\tmessage\tcall\tengine\tpin\tjulia_version\thost\tglvmodels_commit\tjulia_threads\topenblas_threads\tomp_threads\trunner_sha256\tfixture_sha256\tpackage_source\tsrc_diff_sha256\tpublic_positive_control")
     for r in rows
         fields = replace.(string.(r), '\t' => ' ', '\n' => ' ')
         println(io, join((fields..., CALLS[r[1]], "Julia", "P1", string(VERSION), gethostname(),
             glvmodels_commit, get(ENV, "JULIA_NUM_THREADS", ""), string(LinearAlgebra.BLAS.get_num_threads()),
             get(ENV, "OMP_NUM_THREADS", ""), runner_sha256, fixture_hash,
-            relpath(package_source, realpath(joinpath(@__DIR__, ".."))), src_diff_sha256), '\t'))
+            relpath(package_source, realpath(joinpath(@__DIR__, ".."))), src_diff_sha256, "mixed-source-accepted"), '\t'))
     end
 end
 println("CORE070_FIRST7_JULIA_RAW_WRITTEN")

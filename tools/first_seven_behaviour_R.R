@@ -26,6 +26,9 @@ capture <- function(id, expr, call=paste(deparse(substitute(expr), width.cutoff=
   if (is.null(value)) return(data.frame(case_id=id, outcome="ERROR", class=errclass, actual="", message=msg, call=call))
   actual <- if (id == "CORE070-FIRST7-CHECK-AUTO-RESIDUAL") {
     if (identical(value$status, "ok")) "coherent" else "not-coherent"
+  } else if (id == "CORE070-FIRST7-ISDM-COUNT") {
+    laws <- vapply(value$family_input, function(f) paste(f$family, f$link, sep=":"), character(1))
+    if (length(laws) == 2L && all(laws == "poisson:log")) "all-count-nonmixed" else "wrong-count-route"
   } else "returned"
   data.frame(case_id=id, outcome="RETURN", class=paste(class(value), collapse="/"),
              actual=actual, message=if (id == "CORE070-FIRST7-CHECK-AUTO-RESIDUAL") value$status else "", call=call)
@@ -33,7 +36,7 @@ capture <- function(id, expr, call=paste(deparse(substitute(expr), width.cutoff=
 
 # Full trait x source x unit panel, shared conceptually with the Julia runner.
 d <- expand.grid(cell_id=factor(c("u1", "u2")), isdm_source=c("count", "detect"),
-                trait=factor(c("a", "b")), KEEP.OUT.ATTRS=FALSE)
+                trait=factor(c("a", "b")), KEEP.OUT.ATTRS=FALSE, stringsAsFactors=FALSE)
 d$value <- ifelse(d$isdm_source == "count", 1 + seq_len(nrow(d)) %% 4,
                   seq_len(nrow(d)) %% 2)
 d$log_support <- rep(seq(0.05, 0.4, length.out=nrow(d)), 1)
@@ -41,6 +44,10 @@ stopifnot(nrow(d) == 8L, all(table(interaction(d$trait, d$isdm_source), d$cell_i
 f <- value ~ 0 + trait + offset(log_support) + latent(0 + trait | cell_id, d=1, unique=FALSE)
 fam <- function() isdm_sources(count=poisson(), detect=binomial(link="cloglog"))
 
+# Public positive control: both source laws must be admitted together.
+base_fit <- gllvmTMB(f, data=d, unit="cell_id", trait="trait", family=fam(), silent=TRUE)
+base_laws <- vapply(base_fit$family_input, function(law) paste(law$family, law$link, sep=":"), character(1))
+stopifnot(setequal(base_laws, c("poisson:log", "binomial:cloglog")))
 records <- list()
 records[[1]] <- capture("CORE070-FIRST7-CHECK-AUTO-RESIDUAL", {
   gd <- expand.grid(cell_id=factor(paste0("u", 1:12)), trait=factor(c("a", "b")),
@@ -100,6 +107,7 @@ res$host <- as.character(Sys.info()[["nodename"]])
 res$openblas_threads <- Sys.getenv("OPENBLAS_NUM_THREADS")
 res$omp_threads <- Sys.getenv("OMP_NUM_THREADS")
 res$oracle_build <- Sys.getenv("GLLVM_PARITY_ORACLE_BUILD")
+res$public_positive_control <- "mixed-source-accepted"
 res$source_marker_sha256 <- sp$marker_sha256
 res$source_tree_sha256 <- sp$source_tree_sha256
 res$installed_tree_sha256 <- sp$installed_tree_sha256
@@ -111,5 +119,5 @@ fixture_rows <- paste(d$trait, d$isdm_source, as.character(d$cell_id), sprintf("
 writeLines(fixture_rows, fixture_path, useBytes=TRUE)
 res$fixture_sha256 <- core070_sha256_file(fixture_path); unlink(fixture_path)
 res$runner_sha256 <- core070_sha256_file("tools/first_seven_behaviour_R.R")
-utils::write.table(res, out, sep="\t", row.names=FALSE, quote=TRUE, na="")
+utils::write.table(res, out, sep="\t", row.names=FALSE, quote=TRUE, qmethod="double", na="")
 cat("CORE070_FIRST7_R_RAW_WRITTEN\n")
