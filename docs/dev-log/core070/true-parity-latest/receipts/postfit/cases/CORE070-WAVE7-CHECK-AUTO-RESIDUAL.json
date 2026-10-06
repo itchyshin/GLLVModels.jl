@@ -48,11 +48,11 @@
     "pin": "P1",
     "ruling": "itchyshin/GLLVModels.jl#684 item 2",
     "read_from": {
-      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/POSTFIT-SURFACE-check_auto_residual.json": "c9f4a16fae0b162218727ee7646a84ab8eaf4740f89e12891a9653064e1921ad",
-      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-06-v4/run.json": "ce49e0b19b2bb6a948e3ce5f1348b0b06829b6093af9b0f32be11b219e21f702",
+      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/POSTFIT-SURFACE-check_auto_residual.json": "12efd42fa2ef5eaf939446da250ea9316e82fff03db03a8efa1e8ec67ca21eb7",
+      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-06-v4/run.json": "80666bfaabfcd1bf8f24aaf9536bda1323f85c463074ea6379420f80d41b642d",
       "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-06-v4/r-public.tsv": "e1ef2a3226b69d9d3d6530fc27cfddf8dac8b1ebcdc246ae48a924c028abb17e",
       "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-06-v4/julia-public.tsv": "9601723de40fc0daa16495aec4574a5a0360c985980b9d5e8da31bde1c244547",
-      "tools/first_seven_behaviour_derive.py": "2f5c1fc94f600f4ec207836a467798bae2f9dce59ebb7131b45cdee9b134da50"
+      "tools/first_seven_behaviour_derive.py": "eb3d8139c57f3584c7ed85c95358b95010d900847a329cd7dbf1db8fcc5f1134"
     },
     "cases": [
       {

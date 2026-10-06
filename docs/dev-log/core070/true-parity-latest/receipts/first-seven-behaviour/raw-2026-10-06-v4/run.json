@@ -1,6 +1,6 @@
 {
   "raw_directory": "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-06-v4",
-  "derivation_commit": "dcb80001d5e87fe2302598b41ccd94822f5d8779",
+  "derivation_commit": "9299be875ad534aac7f673a36c23e89522589380",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "r_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
   "r_source_receipt_sha256": "3ec6631ba855624d5b0e9e66772d2e3b3049270c17047835333e7663d6eb2ad8",
@@ -19,7 +19,7 @@
   "runner_sha256": {
     "R": "c0cd4fb83df7bc9f3c4f91fdee48e8792bed4feb1847618a8dfb193a9e7417bd",
     "Julia": "68a389457a48a1b9f336580a4f03cbb4353cbd0c302b084cbccf7157e245d7c0",
-    "derive": "2f5c1fc94f600f4ec207836a467798bae2f9dce59ebb7131b45cdee9b134da50"
+    "derive": "eb3d8139c57f3584c7ed85c95358b95010d900847a329cd7dbf1db8fcc5f1134"
   },
   "fixture_sha256": {
     "R": "9a33a6aea9253c4e056971c464c21e0d745c22443829fb68f481abade644371e",
