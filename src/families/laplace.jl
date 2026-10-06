@@ -476,7 +476,8 @@ offset-absorption identity), which serves as the exact verification anchor.
 `weights` (p×n non-negative reals, or `nothing`) are observation weights: each
 observed cell's conditional log-density is multiplied by its weight (gllvmTMB's
 `weights`); a zero weight drops the cell like `mask`. Weights at masked cells are
-never read. `nothing` is the unweighted marginal, bit for bit.
+set to zero before use, so any value there (including `NaN`) leaves the marginal
+unchanged. `nothing` is the unweighted marginal, bit for bit.
 
 `zs` (optional `Vector` of length-K per-site modes, R8 shared mode solve): when
 given, threads `zs[i]` into site `i` as `laplace_loglik_site`'s `z_precomputed`,
@@ -485,6 +486,11 @@ skipping that site's own Newton mode solve — see `laplace_loglik_site`.
 function marginal_loglik_laplace(family, Y::AbstractMatrix, N::AbstractMatrix,
         Λ::AbstractMatrix, β::AbstractVector, link::Link;
         mask = nothing, offset = nothing, weights = nothing, zs = nothing, kwargs...)
+    # A masked cell contributes nothing, but `0 * NaN` is NaN in the weighted curvature,
+    # so the weight is zeroed there first (the unweighted path is untouched).
+    if weights !== nothing && mask !== nothing
+        weights = ifelse.(mask, weights, zero(eltype(weights)))
+    end
     acc = 0.0
     @inbounds for i in axes(Y, 2)
         mi = mask    === nothing ? nothing : view(mask, :, i)

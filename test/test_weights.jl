@@ -21,6 +21,10 @@ using Random
         W0 = ones(p, n); W0[2, 5] = 0; W0[3, 11] = 0
         M = trues(p, n); M[2, 5] = false; M[3, 11] = false
         @test marg(Y, Λ, β; weights = W0) ≈ marg(Y, Λ, β; mask = M) atol = 1e-10
+        # a weight at a masked cell is never used: NaN or any value there leaves the value unchanged
+        Wn = ones(p, n); Wn[2, 5] = NaN; Wn[3, 11] = 7.0
+        @test marg(Y, Λ, β; weights = Wn, mask = M) == marg(Y, Λ, β; weights = ones(p, n), mask = M)
+        @test marg(Y, Λ, β; weights = Wn, mask = M) ≈ marg(Y, Λ, β; mask = M) atol = 1e-10
         # weight 2 on trait 2 = trait 2 entered twice (conditionally independent copies with the
         # same intercept and loading): an exact identity of the Laplace marginal.
         W2 = ones(p, n); W2[2, :] .= 2
