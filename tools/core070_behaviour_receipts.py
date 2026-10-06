@@ -1057,7 +1057,10 @@ def overlay_row(row, counts):
     case id has several citers). Moves evidence.non_binding_receipts to evidence.receipt, sets the tier text,
     and nothing else. Updates `counts` (tier count down, `behavioural` up). Returns True if flipped.
     A row that is not flipped gets a one-line note when this tool records why (see _annotate)."""
-    if row.get("evidence_tier") not in OVERLAY_TIERS or row.get("measured_against") != P1_SHA:
+    eligible = row.get("evidence_tier") in OVERLAY_TIERS or (
+        row.get("source_id") in FIRST7_SOURCE_IDS and
+        row.get("evidence_tier") == "needs_surface_r_side_measured")
+    if not eligible or row.get("measured_against") != P1_SHA:
         return False
     paths = list((row.get("evidence") or {}).get("non_binding_receipts") or [])
     if not paths or not all((ROOT / p).is_file() for p in paths):
