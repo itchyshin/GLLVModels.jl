@@ -332,6 +332,23 @@ end
         @test _route_tag(confint(fitS, YS; parm = "proportion:shared[1]", method = :wald, kw...)) == :wald_derived
     end
 
+    @testset "rho: method = :fisher_z is the :wald Fisher-z interval" begin
+        w = confint(fitS, YS; parm = "rho[1,2]", method = :wald, kw...)
+        z = confint(fitS, YS; parm = "rho[1,2]", method = :fisher_z, kw...)
+        @test isequal(z, w)                      # every field, bit for bit
+        @test z.transform == [:fisher_z] && z.method === :wald
+        @test isequal(z, confint(fitS, YS; parm = "rho[1,2]", kw...))  # = the default
+        @test isequal(confint(fitP, YP; parm = "rho", method = :fisher_z),
+                      confint(fitP, YP; parm = "rho", method = :wald))
+        # accepted for rho only: refused for the other derived quantities and packed terms
+        for parm in ("communality[1]", "icc[1]", "proportion:shared[1]", "phylo_signal[1]", "sigma_eps")
+            msg = _argument_error_message(() -> confint(fitS, YS; parm = parm, method = :fisher_z, kw...))
+            @test msg !== nothing && occursin("method = :fisher_z is not available", msg)
+        end
+        @test _argument_error_message(
+            () -> confint(fitS, YS; parm = ["communality[1]", "rho[1,2]"], method = :fisher_z, kw...)) !== nothing
+    end
+
     @testset "bootstrap routes to bootstrap_ci_derived" begin
         r = confint(fitS, YS; parm = "communality[1]", method = :bootstrap, n_boot = 10, seed = 9, kw...)
         d = GLLVModels.bootstrap_ci_derived(fitS, f -> communality(f)[1]; y = YS, Σ_phy = Σ_phy,
@@ -355,7 +372,7 @@ end
     @testset "validation: named errors that list what is available" begin
         @test occursin("available: :wald, :bootstrap", _argument_error_message(
             () -> confint(fitS, YS; parm = "communality[1]", method = :bogus, kw...)))
-        @test occursin("available: :wald, :bootstrap", _argument_error_message(
+        @test occursin("available: :wald, :fisher_z, :bootstrap", _argument_error_message(
             () -> confint(fitS, YS; parm = "rho[1,2]", method = :bogus, kw...)))
         @test _refuses_listing_methods(() -> confint(fitS, YS; parm = "icc[1]", method = :bogus, kw...))
         @test _refuses_listing_methods(() -> confint(fitS, YS; parm = "phylo_signal", method = :fisher_z, kw...))
