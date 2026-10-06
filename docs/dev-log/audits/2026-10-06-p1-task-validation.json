@@ -1,0 +1,38 @@
+{
+  "scope": "complete approved twenty-gate P1 checkpoint contract",
+  "candidate": "ff46e14c9c8c706515a6b7c305026c50b59a1c28",
+  "source_root": "/Users/z3437171/local-scratch/lanes/GLLVM.jl-p1-pr-isdm",
+  "source_entries": "symlinked unchanged",
+  "ledger_files": [
+    "GATES.md",
+    "gates/leaf-shannon.md",
+    "gates/leaf-hopper.md",
+    "gates/leaf-pat.md",
+    "gates/leaf-ebbinghaus.md",
+    "gates/leaf-gauss.md",
+    "gates/leaf-melissa.md"
+  ],
+  "historical_ledgers": "outside this task; untouched and excluded from this declared task scope",
+  "required_task_gates_omitted": 0,
+  "structure": "PASS",
+  "report_exit": 1,
+  "unmet": [
+    "G7",
+    "G8"
+  ],
+  "gate_counts": {
+    "met": 18,
+    "unmet": 2,
+    "abandoned": 0
+  },
+  "logs": {
+    ".unlazy/true-parity-p1-next/dispatch/GATES-reverify.log": "7498d069a7099bfae21d07d19052412237b55a977b018da05476ca2a279fd4bf",
+    ".unlazy/true-parity-p1-next/dispatch/full-report-validator.log": "9ae0d7f343556607d6b7741316e82de6910f63a0ce0163f136fb0686de3f2184",
+    ".unlazy/true-parity-p1-next/dispatch/leaf-ebbinghaus-reverify.log": "10db1db90d130260305deca0d0ef9b997b58a233c9bbd6a1c9fb12a45b7f9ee8",
+    ".unlazy/true-parity-p1-next/dispatch/leaf-gauss-reverify.log": "41630bcd677102e4f2c76bfbcb0d126b982e4383fc6dd417adee16eb7441cc2e",
+    ".unlazy/true-parity-p1-next/dispatch/leaf-hopper-reverify.log": "77051c5b5db4bca462fd5cd8c0d76599bcd7cb9488dd7fc3c100f92dbf532b68",
+    ".unlazy/true-parity-p1-next/dispatch/leaf-melissa-reverify.log": "9b7f9d260829dad28f45fd9469917b37136f3ac1252f61a45e3d92bedc5d4ab1",
+    ".unlazy/true-parity-p1-next/dispatch/leaf-pat-reverify.log": "b671e9fe4f4d0682d4195cf329cb30a8609a0f459ce3a22b73522bdc3d40f84c",
+    ".unlazy/true-parity-p1-next/dispatch/leaf-shannon-reverify.log": "e0f2359eeb9d71e46808ca50784b99a3cc1a2ab89417b52de1d374f4dc6aa776"
+  }
+}

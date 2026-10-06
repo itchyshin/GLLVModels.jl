@@ -45,7 +45,7 @@
     "real_git_source": "d879a9e21fe2203ae52d5ceb3a4d2ed5c3e3e886"
   },
   "corrected_suite": {
-    "state": "RUNNING",
+    "state": "FINISHED",
     "source": "d879a9e21fe2203ae52d5ceb3a4d2ed5c3e3e886",
     "started_utc": "2026-10-06 19:29:03",
     "cap_utc": "2026-10-06 21:29:03",
@@ -54,13 +54,82 @@
     "shards": 4,
     "max_cores": 16,
     "R_LIBS_USER": "/home/snakagaw/R/lib",
-    "remote_root": "/home/snakagaw/hsq_work/true-parity-p1-next-01a111fc"
+    "remote_root": "/home/snakagaw/hsq_work/true-parity-p1-next-01a111fc",
+    "driver_exit": 1,
+    "core_exits": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "core_reason": "missing test-only StableRNGs/JSON3 in bare project"
   },
   "full_after_task_validator": {
     "exit": 1,
     "reason": "inherited unrelated malformed .unlazy/totoro-t4-p6-grid/GATES.md",
     "structural_check": "PASS",
     "task_acceptance": "OPEN",
-    "next": "complete task-only ledger re-verification in isolated PR worktree"
-  }
+    "next": "finish core and CI; obtain every merge consent; reverify all twenty gates on main",
+    "task_only": {
+      "source": "ff46e14c9c8c706515a6b7c305026c50b59a1c28",
+      "ledger_files": 7,
+      "required_gates": 20,
+      "omitted": 0,
+      "leaf_exits": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "root_exit": 1,
+      "report_exit": 1,
+      "reason": "only current G7/G8 unmet",
+      "directory": "/private/tmp/p1-current-task-validation"
+    }
+  },
+  "full_suite": {
+    "source": "d879a9e21fe2203ae52d5ceb3a4d2ed5c3e3e886",
+    "shard_exits": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "passes": [
+      7619,
+      10021,
+      6719,
+      6556
+    ],
+    "broken": [
+      9,
+      4,
+      5,
+      70
+    ],
+    "README_passes_per_shard": 8,
+    "elapsed_seconds": 2765.447
+  },
+  "repaired_core": {
+    "state": "RUNNING",
+    "source": "d879a9e21fe2203ae52d5ceb3a4d2ed5c3e3e886",
+    "started_utc": "2026-10-06 20:20:01",
+    "cap_utc": "2026-10-06 21:20:01",
+    "tool_session": 31075,
+    "driver_pid": 399888,
+    "verified_pgid": 399887,
+    "max_cores": 16,
+    "smoke_seconds": 4.215,
+    "dependencies": "offline cached scratch test environment; source dependency files unchanged"
+  },
+  "CI_repair": {
+    "PR844_source": "f5b90fa19dd37651ab0ea00c68ecd18fe33f58bb",
+    "local_controls": "33/33",
+    "Emmy_followup": "OK gpt-6-luna medium",
+    "hosted": "QUEUED"
+  },
+  "parent_compactions": 5,
+  "review_calls": 7
 }
