@@ -16,7 +16,7 @@ Inputs:
 
 - `docs/dev-log/core070/true-parity-latest/case-map-aghq.json` (21 rows, sha256 `72e1d55c0553897c62e92f534ab128a8a592282958e1e56c44ca95e1c5902114`)
 - `docs/dev-log/core070/true-parity-latest/case-map-covariance.json` (19 rows, sha256 `05ecaa59be8b718136a449fa52c7b8e9419ff637e20e43efd5298af944c7f86e`)
-- `docs/dev-log/core070/true-parity-latest/case-map-data.json` (36 rows, sha256 `f46cbcae8b1073a98c4848287f4b2a76c6bd08a26b124bd4c0035d635bebb387`)
+- `docs/dev-log/core070/true-parity-latest/case-map-data.json` (36 rows, sha256 `8d6f8dbc96c562f21df54cd2a579dfa2b7b4ee83a82e6c07e77eb699674c3296`)
 - `docs/dev-log/core070/true-parity-latest/case-map-family.json` (26 rows, sha256 `8eb485c51218daeba486c85676d57cc7fdc7c2a5625bb748fd1463df25ebb845`)
 - `docs/dev-log/core070/true-parity-latest/case-map-fit-input.json` (10 rows, sha256 `568c054ed5f3786b96c9acb796e28d98e4523c4edc5fe5ad9f69ab150cee3639`)
 - `docs/dev-log/core070/true-parity-latest/case-map-inference.json` (63 rows, sha256 `ab0cb02039e34ecb5d1666c469321eba590dfead2452ac2f0de30d9da9a2bda9`)
@@ -30,14 +30,14 @@ Inputs:
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | `aghq` | 14 | 0 | 0 | 0 | 0 | 0 | 7 | 0 | 0 | 0 | 21 |
 | `covariance` | 7 | 0 | 0 | 2 | 8 | 0 | 2 | 0 | 0 | 0 | 19 |
-| `data` | 12 | 0 | 0 | 0 | 1 | 16 | 0 | 0 | 4 | 3 | 36 |
+| `data` | 13 | 0 | 0 | 0 | 1 | 15 | 0 | 0 | 4 | 3 | 36 |
 | `family` | 23 | 0 | 0 | 0 | 2 | 0 | 0 | 0 | 1 | 0 | 26 |
 | `fit-input` | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
 | `inference` | 2 | 44 | 0 | 0 | 2 | 0 | 15 | 0 | 0 | 0 | 63 |
 | `isdm` | 11 | 0 | 0 | 0 | 0 | 9 | 0 | 0 | 1 | 0 | 21 |
 | `namespace` | 41 | 0 | 16 | 0 | 0 | 2 | 0 | 1 | 0 | 9 | 69 |
 | `postfit` | 41 | 0 | 0 | 2 | 6 | 2 | 0 | 0 | 1 | 0 | 52 |
-| `all` | 161 | 44 | 16 | 4 | 19 | 29 | 24 | 1 | 7 | 12 | 317 |
+| `all` | 162 | 44 | 16 | 4 | 19 | 28 | 24 | 1 | 7 | 12 | 317 |
 
 ## P1 twin fixtures present at this head, not bound to any row
 
@@ -80,6 +80,7 @@ decision for the PR that measures it, not something this tool does.
 - `test/fixtures/gen_namespace_numeric_p1_b.R`
 - `test/fixtures/gen_off_all_count_twin_p1.R`
 - `test/fixtures/gen_off_mixed_twin_p1.R`
+- `test/fixtures/gen_off_predict_twin_p1.R`
 - `test/fixtures/gen_ordinal_logit_p1.R`
 - `test/fixtures/gen_postfit_twins_p1.R`
 - `test/fixtures/gen_predict_missing_p1.R`
@@ -110,6 +111,8 @@ decision for the PR that measures it, not something this tool does.
 - `test/fixtures/off_all_count_twin_p1_data.csv`
 - `test/fixtures/off_mixed_twin_p1.toml`
 - `test/fixtures/off_mixed_twin_p1_data.csv`
+- `test/fixtures/off_predict_twin_p1.toml`
+- `test/fixtures/off_predict_twin_p1_data.csv`
 - `test/fixtures/ordinal_logit_p1.toml`
 - `test/fixtures/ordinal_logit_p1_data.csv`
 - `test/fixtures/postfit_twins_p1.toml`
@@ -180,7 +183,7 @@ decision for the PR that measures it, not something this tool does.
 | data-DATA-OFF-NB1 `data/DATA-OFF-NB1` | required_core; cases: P1-JULIA-DATA-NB1_EXPOSURE-LOGLIK, P1-JULIA-DATA-NB1_EXPOSURE-INTERCEPTS, P1-JULIA-DATA-NB1_EXPOSURE-LAMBDA-LAMBDAT, P1-JULIA-DATA-NB1_EXPOSURE-DISPERSION | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-NB1.json | family data; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | data-DATA-OFF-NONCOUNT-ZERO `data/DATA-OFF-NONCOUNT-ZERO` | required_core; cases: P1-JULIA-DATA-GAUSS_ZERO-LOGLIK, P1-JULIA-DATA-GAUSS_ZERO-INTERCEPTS | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-NONCOUNT-ZERO.json | family data; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | data-DATA-OFF-NONE `data/DATA-OFF-NONE` | required_core; cases: P1-JULIA-DATA-POIS_NONE-LOGLIK, P1-JULIA-DATA-POIS_NONE-INTERCEPTS, P1-JULIA-DATA-POIS_NONE-LAMBDA-LAMBDAT | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-NONE.json | family data; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| data-DATA-OFF-PREDICT `data/DATA-OFF-PREDICT` | required_core; cases: CORE070-DATA-OFF-PREDICT-POSTFIT-READBACK | NEEDS-SURFACE | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-PREDICT-POSTFIT-READBACK.json | family data; evidence_tier needs_surface_r_side_measured; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| data-DATA-OFF-PREDICT `data/DATA-OFF-PREDICT` | required_core; cases: P1-JULIA-DATA-OFF-PREDICT-LOGLIK, P1-JULIA-DATA-OFF-PREDICT-NEW-OFFSET-LINK | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-PREDICT.json | family data; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | data-DATA-OFF-PREDICT-NONFINITE-HELPER `data/DATA-OFF-PREDICT-NONFINITE-HELPER` | required_core; cases: CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK | NEEDS-SURFACE | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK.json | family data; evidence_tier needs_surface_r_side_measured; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | data-DATA-OFF-SCALAR `data/DATA-OFF-SCALAR` | required_core; cases: P1-JULIA-DATA-POIS_SCALAR-LOGLIK, P1-JULIA-DATA-POIS_SCALAR-INTERCEPTS, P1-JULIA-DATA-POIS_SCALAR-LAMBDA-LAMBDAT | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-SCALAR.json | family data; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | data-DATA-OFF-TRAIN-LEGACY `data/DATA-OFF-TRAIN-LEGACY` | required_core; cases: CORE070-DATA-OFF-TRAIN-LEGACY-POSTFIT-READBACK | NEEDS-SURFACE | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-TRAIN-LEGACY-POSTFIT-READBACK.json | family data; evidence_tier needs_surface_r_side_measured; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |

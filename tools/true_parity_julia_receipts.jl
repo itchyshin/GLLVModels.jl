@@ -1810,6 +1810,48 @@ function receipts_predict_offset_twin()
 end
 
 # =============================================================================================
+# 12b2. off-predict twin   test/test_off_predict_twin_p1.jl
+#     data/DATA-OFF-PREDICT (maintainer ruling 2026-10-05, vault D-319, option (b)): a prediction on
+#     the training units with a new offset, keeping the training units' latent modes. R-at-P1 values
+#     (predict(fit, newdata = training rows with e = e_new, type = "link")$est of the Poisson exposure
+#     fit) recorded in test/fixtures/off_predict_twin_p1.toml, against the Julia fit's
+#     predict(fit, Y; type = :link, offset = log.(E_new), modes = :training).
+# =============================================================================================
+function receipts_off_predict_twin()
+    ORIGIN = "itchyshin/GLLVModels.jl branch claude/rulings-c6-predict (maintainer ruling 2026-10-05, D-319)"
+    fxp = "test/fixtures/off_predict_twin_p1.toml"
+    tp = "test/test_off_predict_twin_p1.jl"
+    fx = TOML.parsefile(joinpath(ROOT, fxp))
+    fx["gllvmtmb_commit"] == P1_SHA || fail("off-predict twin fixture is not pinned at P1")
+    p, n = Int(fx["p"]), Int(fx["n_unit"])
+    sec = "pois_exposure_new_offset"
+    d = fx[sec]
+    datap = "test/fixtures/" * d["data_file"]
+    newp = "test/fixtures/" * d["new_offset_file"]
+    bytes2hex(sha256(read(joinpath(ROOT, datap)))) == d["data_sha256"] || fail("$sec data csv drifted")
+    bytes2hex(sha256(read(joinpath(ROOT, newp)))) == d["new_offset_sha256"] || fail("$sec new-offset csv drifted")
+    (d["converged"] === true && d["pd_hessian"] === true) || fail("$sec R fit not converged with a PD Hessian; not a valid twin")
+    csv = joinpath(ROOT, datap)
+    Y = Int.(Float64.(_dt_load(csv, "value", p, n)))
+    E = Float64.(_dt_load(csv, "e", p, n))
+    Enew = Float64.(_dt_load(joinpath(ROOT, newp), d["new_offset_column"], p, n))
+    fe = fit_gllvm(Y; family = Poisson(), K = 1, offset = log.(E))
+    fe.converged || fail("$sec Julia fit did not converge")
+    src = cite(tp, "fe = fit_gllvm(Y; family = Poisson(), K = 1, offset = log.(E))")
+    wide(v) = reshape(Float64.(v), p, n)
+    note = "Poisson, K = 1, p = 6, n = 150 (sha256 checked; the data of the DATA-OFF-EXPOSURE and DATA-OFF-TRAIN-STORED twins); R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian, then predict(fit, newdata = nd, type = \"link\")\$est with nd the training rows and e replaced by e_new (runif 0.5 to 3, seed 20261006; off_predict_twin_p1_data.csv, sha256 checked). R re-evaluates the stored offset expression on newdata and keeps the training units' latent modes (asserted in the generator: the new prediction minus log(e_new) equals the training prediction minus log(e) to 1e-12). Julia: fit_gllvm(Y; family = Poisson(), K = 1, offset = log.(E)), then predict(fit, Y; type = :link, offset = log.(E_new), modes = :training), the path added under maintainer ruling 2026-10-05 (D-319) option (b): eta = beta + O_new + Lambda z_train. Same optimum (logLik within 1e-6). The default modes = :refit (modes re-solved at the new offset) is a different quantity and misses R by more than 0.1 (asserted in the test). Scope: the training units only; new units with no training mode are not compared."
+    cs = Case[
+        mkcase("P1-JULIA-DATA-OFF-PREDICT-LOGLIK", "maximised logLik of the Poisson exposure fit",
+            "$fxp [$sec.loglik]", "fe.loglik, fit as at $src",
+            Float64(d["loglik"]), fe.loglik, test_tolerance(tp, "@test isapprox(fe.loglik, Float64(d[\"loglik\"])"), note),
+        mkcase("P1-JULIA-DATA-OFF-PREDICT-NEW-OFFSET-LINK", "link predictor on the training units with a new offset, training modes kept (900 values): R predict(fit, newdata = nd, type = \"link\")\$est, Julia predict(fit, Y; type = :link, offset = log.(E_new), modes = :training)",
+            "$fxp [$sec.eta_link_new_offset]", "predict(fe, Y; type = :link, offset = log.(Enew), modes = :training), fit as at $src",
+            wide(d["eta_link_new_offset"]), predict(fe, Y; type = :link, offset = log.(Enew), modes = :training),
+            test_tolerance(tp, "@test isapprox(eta_new, R_new"), note)]
+    return ["data-twins/OFF-PREDICT.json" => Receipt(["data/DATA-OFF-PREDICT"], ORIGIN, [fxp, datap, newp], [tp], NOT_A_FIXTURE_PAIR, cs)]
+end
+
+# =============================================================================================
 # 12c. data twins 2   test/test_data_twins_2_p1.jl
 #     data/DATA-MISS-MODEL, data/DATA-MISS-BOTH and namespace S3method/imputed,gllvmTMB: a modelled
 #     missing predictor (mi(x), miss_control(predictor = "model")), alone and with a response mask
@@ -2307,6 +2349,7 @@ function build(only::Vector{String} = String[])
             ("namespace-numeric-b", receipts_namespace_numeric_b),
             ("data-twins", receipts_data_twins),
             ("predict-offset-twin", receipts_predict_offset_twin),
+            ("off-predict-twin", receipts_off_predict_twin),
             ("data-twins-2", receipts_data_twins_2),
             ("off-all-count", receipts_off_all_count),
             ("off-mixed", receipts_off_mixed),

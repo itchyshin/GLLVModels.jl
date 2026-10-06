@@ -16,7 +16,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-data.json",
-   "sha256": "f46cbcae8b1073a98c4848287f4b2a76c6bd08a26b124bd4c0035d635bebb387",
+   "sha256": "8d6f8dbc96c562f21df54cd2a579dfa2b7b4ee83a82e6c07e77eb699674c3296",
    "rows": 36
   },
   {
@@ -2285,7 +2285,8 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-DATA-OFF-PREDICT-POSTFIT-READBACK"
+    "P1-JULIA-DATA-OFF-PREDICT-LOGLIK",
+    "P1-JULIA-DATA-OFF-PREDICT-NEW-OFFSET-LINK"
    ],
    "disposition": null,
    "p0_batch": "data-batch attempt-data-r3 (wave1)",
@@ -2297,13 +2298,19 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-PREDICT.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-PREDICT-POSTFIT-READBACK.json"
     ],
-    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+    "batch_case_ids": [
+     "CORE070-DATA-OFF-PREDICT-POSTFIT-READBACK"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_off_predict_twin_p1.jl, against R-at-P1 values copied from test/fixtures/off_predict_twin_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -2314,8 +2321,14 @@
     },
     "case_kinds": {
      "CORE070-DATA-OFF-PREDICT-POSTFIT-READBACK": "r_replay_julia_surface_absent"
-    }
-   }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-DATA-OFF-PREDICT-LOGLIK",
+     "P1-JULIA-DATA-OFF-PREDICT-NEW-OFFSET-LINK"
+    ],
+    "twin_verdict": "PASS"
+   },
+   "scope_note": "Bound under the maintainer ruling of 2026-10-05 (vault D-319, option (b)). The R batch case is a helper replay of the newdata offset path; the twin is one real prediction of that kind: the Poisson exposure fit of the DATA-OFF-TRAIN-STORED twin (p = 6, n = 150, one latent factor), predicted on the training units with a new exposure e_new. R predict(fit, newdata = nd, type = 'link') re-evaluates the stored offset expression on newdata and keeps the training units' latent modes (asserted in the generator); Julia predict(fit, Y; type = :link, offset = log.(E_new), modes = :training) computes eta = beta + O_new + Lambda z_train, the path added for this ruling. The default modes = :refit (modes re-solved at the new offset) is a different quantity and is not what R returns. Scope: training units only (new units have no training mode), one Poisson fit; through the matrix API the new offset reaches Julia as a value, not as an expression evaluated against newdata as in R's formula."
   },
   {
    "source_id": "data/DATA-OFF-PREDICT-NONFINITE-HELPER",
