@@ -414,7 +414,9 @@ def wave6_integer_entry(cid, jc, oracle):
     if bool(jc["pass"]) != (r == j):
         raise SystemExit(f"{cid}: harness pass flag {jc['pass']!r} disagrees with R {r} vs Julia {j}")
     return {"case_id": cid, "quantity": "nobs(object) on gaussian_small", "kind": "integer_equality",
-            "r_value": r, "julia_value": j, "max_abs_diff": abs(r - j), "tolerance": 0.5, "tolerance_rule": INTEGER_RULE,
+            "r_value": r, "julia_value": j, "max_abs_diff": abs(r - j), "tolerance": 0.5,
+            "tolerance_rule": (f"integer_equality, tolerance 0.5 ({INTEGER_RULING}): both values are integers, so within "
+                               "0.5 means equal; wave6-conversion-batch-contract-p1.json gives this case tolerance 0.5"),
             "n_values": 1,
             "diff_source": f"recomputed from r-oracle.json oracle_values[{cid!r}] and julia-results.json cases[{cid!r}]['julia_value']"}
 
