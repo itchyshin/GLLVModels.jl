@@ -46,12 +46,15 @@ function _wbi_cases()
 end
 
 # Every Float64 / Int / Bool scalar or Float64 array field of a fit, as Float64 bit patterns (hex).
+# Wall-clock fields (the Gaussian fit's `cputime`) are not results and are skipped.
+const _WBI_CLOCK_FIELDS = ("cputime", "elapsed", "time", "walltime")
 _wbi_bits(x::Float64) = [string(reinterpret(UInt64, x); base = 16)]
 _wbi_bits(x::AbstractArray{Float64}) = [string(reinterpret(UInt64, v); base = 16) for v in vec(x)]
 function _wbi_record(f)
     f isa Float64 && return Dict("value" => _wbi_bits(f))
     out = Dict{String, Any}()
     for nm in fieldnames(typeof(f))
+        string(nm) in _WBI_CLOCK_FIELDS && continue
         v = getfield(f, nm)
         if v isa Float64 || v isa AbstractArray{Float64}
             out[string(nm)] = _wbi_bits(v)

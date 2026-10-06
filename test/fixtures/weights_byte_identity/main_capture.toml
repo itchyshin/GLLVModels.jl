@@ -23,7 +23,6 @@ loglik = ["c06ff84bbf3677a5"]
 
 [gaussian]
 converged = ["true"]
-cputime = ["4009d70260000000"]
 logLik = ["c0680874ff91dbf4"]
 n_iter = ["0"]
 

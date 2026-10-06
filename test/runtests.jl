@@ -400,6 +400,9 @@ println(_SHARD === nothing ?
     _shard_include("test_missing_predictor_multi.jl")
     _shard_include("test_mi_fitter.jl")
     _shard_include("test_offset.jl")
+    # Observation weights (Poisson Laplace) and the guard that weights = nothing is byte-identical to main.
+    _shard_include("test_weights.jl")
+    _shard_include("test_weights_byte_identity.jl")
     _shard_include("test_fd_hessian.jl")
     _shard_include("test_confint_family.jl")
     _shard_include("test_confint_offset.jl")

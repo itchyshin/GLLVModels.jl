@@ -958,6 +958,12 @@ function getLV(fit::PoissonFit, Y::AbstractMatrix;
     end
     eltype(Y)<:Integer || throw(ArgumentError("Laplace Poisson getLV currently requires integer responses"))
     p, n = size(Y)
+    # A weighted fit's modes are those of the weighted joint (as gllvmTMB's), which are
+    # defined for the training cells only.
+    Wt = fit.weights
+    Wt === nothing || size(Y) == size(Wt) || throw(ArgumentError(
+        "getLV: this Poisson fit was weighted; its latent modes are defined on the training " *
+        "data ($(size(Wt, 1))×$(size(Wt, 2))) only, got Y of size $(size(Y, 1))×$(size(Y, 2))"))
     O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "getLV")
     Nm = N === nothing ? fill(1, p, n) : N
     K = size(fit.Λ, 2)
@@ -970,8 +976,11 @@ function getLV(fit::PoissonFit, Y::AbstractMatrix;
     @inbounds for s in 1:n
         mi = mask === nothing ? nothing : view(mask, :, s)
         oi = _site_offset(O, lv_offset, s)
-        Z[:, s] = _laplace_mode(Poisson(), view(Y, :, s), view(Nm, :, s), fit.Λ,
-                                fit.β, fit.link; mask = mi, offset = oi)
+        Z[:, s] = Wt === nothing ?
+            _laplace_mode(Poisson(), view(Y, :, s), view(Nm, :, s), fit.Λ,
+                          fit.β, fit.link; mask = mi, offset = oi) :
+            _laplace_mode(Poisson(), view(Y, :, s), view(Nm, :, s), fit.Λ,
+                          fit.β, fit.link; mask = mi, offset = oi, weights = view(Wt, :, s))
     end
     Zt = permutedims(Z)
     Zout = component === :innovation ? Zt : Zmean .+ Zt

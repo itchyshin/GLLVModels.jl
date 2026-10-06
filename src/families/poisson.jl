@@ -44,6 +44,11 @@ to the frozen-node surrogate, not derivatives through changing adaptation.
 fit had none); [`predict`](@ref) and [`getLV`](@ref) use it by default. An AGHQ fit
 leaves `offset === nothing`: its offset is kept in `integration.data.offset`, which
 the AGHQ post-fit route uses.
+`weights` is the p×n observation-weight matrix a weighted Laplace fit was made with
+(`nothing` for an unweighted fit; unobserved cells hold 0). `loglik` is then the
+weighted objective, as gllvmTMB's `logLik` is; [`getLV`](@ref) and [`predict`](@ref)
+use the weighted modes on the training data, and likelihood-based intervals are
+refused (a weighted objective is not an ordinary likelihood).
 """
 struct PoissonFit
     β::Vector{Float64}
@@ -57,7 +62,12 @@ struct PoissonFit
     hessian::Symbol   # Laplace log-det curvature; AGHQ is recorded separately
     integration::Union{Nothing,AGHQFitInfo}
     offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
+    weights::Union{Nothing,Matrix{Float64}}  # observation weights (p×n); `nothing` = unweighted
 end
+
+# Pre-weights compat tier (11 positional args): an unweighted fit.
+PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, integration, offset) =
+    PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, integration, offset, nothing)
 
 # Pre-offset compat tier (10 positional args): no stored training offset.
 PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, integration) =
@@ -156,13 +166,20 @@ Offset: pass a p×n `offset` (known additive term in `η = β + offset + Λz`, e
 log-exposure/effort/area). It is subtracted from the link-scale warm start so `β`
 estimates the offset-free intercept.
 
+Weights: pass `weights` (observation weights, gllvmTMB's `weights`): each observed cell's
+conditional log-density is multiplied by its weight, so the fit maximises a weighted
+objective (`loglik` reports it). Shapes follow [`fit_gllvm`](@ref): a scalar, a length-`n`
+vector (one weight per unit), or a `p×n` matrix (`1×n` / `p×1` stretch). Values must be
+finite and non-negative at observed cells; unobserved cells are ignored. Weighted fits
+use the finite-difference gradient and are refused together with `X_lv` or AGHQ.
+
 `hessian` selects the Laplace log-det curvature only (`:fisher` expected /
 `:observed` joint — TMB's choice); the inner mode search is always
 Fisher-scored. Default: canonical log link — the two coincide. Omitting it is exactly the pre-kwarg
 behaviour.
 """
 function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
-        link::Link = LogLink(), mask = nothing, offset = nothing,
+        link::Link = LogLink(), mask = nothing, offset = nothing, weights = nothing,
         gradient::Symbol = :analytic,
         hessian::Symbol = _default_hessian(Poisson(), link),
         β_init = nothing, Λ_init = nothing,
@@ -209,6 +226,14 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
     # and a sanitized count matrix with a safe placeholder in the masked cells.
     msk = mask === nothing ? (any(ismissing, Y) ? observed_mask(Y) : nothing) : mask
     Yc = Integer.(_sanitize_missing(Y, 0))
+    # Observation weights (p×n, 0 at unobserved cells) multiply each cell's conditional
+    # log-density, as gllvmTMB's `weights` do. Not threaded through the X_lv objective.
+    if weights !== nothing
+        X_lv === nothing || throw(ArgumentError(
+            "fit_poisson_gllvm: weights are not supported together with X_lv; remove one of them"))
+        weights = _normalize_weights(weights, p, n; Y = Y, mask = msk,
+                                     caller = "fit_poisson_gllvm")
+    end
 
     # warm start: empirical log-scale intercepts + SVD (PPCA-like) loadings.
     # With an offset (η = β + offset + Λz), subtract it from the link-scale data so
@@ -274,7 +299,7 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         v = try
             -marginal_loglik_laplace(Poisson(), Yc, N1, Λ, β, link; mask = msk, offset = offset,
-                                     hessian = hessian, zs = zs,
+                                     weights = weights, hessian = hessian, zs = zs,
                                      maxiter = newton_maxiter, tol = newton_tol, ws = ws_negll)
         catch
             return 1e12
@@ -286,8 +311,8 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
     # Exact gradient (issue #65): the implicit-step ForwardDiff gradient. Valid
     # for the plain Poisson marginal and the masked marginal — the mask is passed
     # through (masked-cell score/weight are zeroed, matching the masked objective;
-    # FD-verified in test/test_missing_response.jl). The offset path still uses the
-    # finite-difference gradient (the analytic gradient does not carry an offset).
+    # FD-verified in test/test_missing_response.jl). The offset and weights paths still use
+    # the finite-difference gradient (the analytic gradient carries neither).
     # A finite-difference fallback also covers any θ where the analytic gradient is
     # non-finite (e.g. a pathological line-search probe).
     res = if X_lv_fit !== nothing
@@ -306,7 +331,7 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
             return isfinite(v) ? v : 1e12
         end
         Optim.optimize(negll_lv, θ0_lv, ls, opts; autodiff = :finite)
-    elseif gradient === :analytic && offset === nothing && link isa LogLink &&
+    elseif gradient === :analytic && offset === nothing && weights === nothing && link isa LogLink &&
            (hessian === _default_hessian(Poisson(), link) ||
             _glm_weight_matches_observed(Poisson(), link))
         # `link isa LogLink` is load-bearing: `poisson_laplace_grad` is derived for the log
@@ -402,6 +427,6 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         β̂ = θ̂[1:p]
         Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
         return PoissonFit(β̂, Λ̂, link, _fit_verdict(res)..., nothing, Float64[], hessian,
-                          nothing, _stored_offset(offset))
+                          nothing, _stored_offset(offset), weights)
     end
 end

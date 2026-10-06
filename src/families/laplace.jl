@@ -74,15 +74,25 @@ _laplace_mode_step_weight(family, μ, n, me, y, link, η) = _glm_weight(family, 
 
 function _laplace_mode_logpost(family, y::AbstractVector, n::AbstractVector,
         Λ::AbstractMatrix, β::AbstractVector, link::Link, z::AbstractVector;
-        mask = nothing, offset = nothing)
+        mask = nothing, offset = nothing, weights = nothing)
     p = size(Λ, 1)
     off = offset === nothing ? false : offset
     η = _clamp_eta.(β .+ off .+ Λ * z)
     μ = _clamp_mu.(Ref(family), linkinv.(Ref(link), η))
     q = -0.5 * dot(z, z)
-    @inbounds for t in 1:p
-        (mask === nothing || mask[t]) || continue
-        q += _laplace_mode_merit_term(family, μ[t], n[t], y[t])
+    if weights === nothing
+        @inbounds for t in 1:p
+            (mask === nothing || mask[t]) || continue
+            q += _laplace_mode_merit_term(family, μ[t], n[t], y[t])
+        end
+    else
+        # Observation weights (see `_laplace_mode`): each cell's term scaled by its weight; a
+        # zero-weight cell contributes nothing, like a masked one.
+        @inbounds for t in 1:p
+            (mask === nothing || mask[t]) || continue
+            iszero(weights[t]) && continue
+            q += weights[t] * _laplace_mode_merit_term(family, μ[t], n[t], y[t])
+        end
     end
     return q
 end
@@ -134,9 +144,17 @@ LaplaceModeWorkspace(::Type{T}, p::Integer, K::Integer) where {T} =
 # `ws` (optional `LaplaceModeWorkspace`, R3 core070): reuse pre-allocated buffers
 # instead of allocating fresh ones; ignored (fresh allocation) on any type/size
 # mismatch, so it is always safe to pass.
+# `weights` (length-p non-negative reals, or `nothing`): observation weights, the
+# continuous form of `mask`. A cell of weight w contributes w × its score, w × its
+# Fisher weight and w × its log-density, i.e. its conditional log-density is
+# multiplied by w, which is gllvmTMB's `weights_i` (row NLL × weight, src/gllvmTMB.cpp;
+# TMB's Laplace differentiates that weighted joint, so the curvature is weighted too).
+# A zero weight drops the cell exactly like `mask`. `nothing` takes the unweighted
+# statements unchanged (no multiplication by 1.0), so unweighted results are
+# bit-identical (test/test_weights_byte_identity.jl).
 function _laplace_mode(family, y::AbstractVector, n::AbstractVector,
         Λ::AbstractMatrix, β::AbstractVector, link::Link;
-        mask = nothing, offset = nothing, maxiter::Integer = 100, tol::Real = 1e-9,
+        mask = nothing, offset = nothing, weights = nothing, maxiter::Integer = 100, tol::Real = 1e-9,
         ws = nothing, z0 = nothing, alt_starts::Bool = true)
     p = size(Λ, 1)
     K = size(Λ, 2)
@@ -168,6 +186,10 @@ function _laplace_mode(family, y::AbstractVector, n::AbstractVector,
             s .= ifelse.(mask, s, zero(T))        # masked ⇒ no contribution (NaN safe)
             W .= ifelse.(mask, W, zero(T))
         end
+        if weights !== nothing                # weighted cell ⇒ w × score, w × weight
+            s .= ifelse.(iszero.(weights), zero(T), weights .* s)
+            W .= ifelse.(iszero.(weights), zero(T), weights .* W)
+        end
         WΛ .= W .* Λ                          # = W .* Λ (p×K)
         mul!(Amat, Λ', WΛ)                     # = Λ' * (W .* Λ)
         @inbounds for d in 1:K
@@ -195,7 +217,7 @@ function _laplace_mode(family, y::AbstractVector, n::AbstractVector,
             z = z .+ Δ
         else
             q0 = _laplace_mode_logpost(family, y, n, Λ, β, link, z;
-                                       mask = mask, offset = offset)
+                                       mask = mask, offset = offset, weights = weights)
             if isfinite(q0)
                 accepted = false
                 step = 1.0
@@ -207,7 +229,7 @@ function _laplace_mode(family, y::AbstractVector, n::AbstractVector,
                 @inbounds for _half in 1:30
                     ztrial = z .+ step .* Δ
                     q1 = _laplace_mode_logpost(family, y, n, Λ, β, link, ztrial;
-                                               mask = mask, offset = offset)
+                                               mask = mask, offset = offset, weights = weights)
                     if isfinite(q1) && q1 >= q0 - slack
                         z = ztrial
                         step_taken = step
@@ -222,7 +244,7 @@ function _laplace_mode(family, y::AbstractVector, n::AbstractVector,
                             @inbounds for _dbl in 1:10
                                 zx = z .+ step_taken .* Δ   # z + 2^k Δ from the start
                                 qx = _laplace_mode_logpost(family, y, n, Λ, β, link, zx;
-                                                           mask = mask, offset = offset)
+                                                           mask = mask, offset = offset, weights = weights)
                                 (isfinite(qx) && qx > q1 + 1e-10 * (1 + abs(q1))) || break
                                 z = zx; q1 = qx; step_taken *= 2
                             end
@@ -239,6 +261,12 @@ function _laplace_mode(family, y::AbstractVector, n::AbstractVector,
         step_taken * maximum(abs, Δ) < tol && break
     end
     alt_starts || return z
+    # The weighted call passes `weights` on, so a family whose alternative-start search
+    # does not take weights fails loudly instead of searching an unweighted objective.
+    weights === nothing ||
+        return _laplace_mode_alt_starts(family, z, y, n, Λ, β, link;
+                                        mask = mask, offset = offset, weights = weights,
+                                        maxiter = maxiter, tol = tol)
     return _laplace_mode_alt_starts(family, z, y, n, Λ, β, link;
                                     mask = mask, offset = offset, maxiter = maxiter, tol = tol)
 end
@@ -331,12 +359,15 @@ is a `Distributions` family marker (e.g. `Binomial()`, `Poisson()`); `y`, `n` ar
 the response and trial counts (length p; `n` is ignored by families without
 trials); `Λ` p×K; `β` length-p; `link` a `Link`. `mask` (length-p Bool, or
 `nothing`) marks observed responses — masked-out (missing) entries are dropped from
-the score, the Hessian weight, and the log-density sum. Returns
+the score, the Hessian weight, and the log-density sum. `weights` (length-p
+non-negative reals, or `nothing`) multiplies each observed cell's score, Hessian
+weight and log-density by its weight (observation weights; see `_laplace_mode`). Returns
 `ℓ(ẑ) − ½ẑ'ẑ − ½logdet(Λ'WΛ + I)`.
 """
 function laplace_loglik_site(family, y::AbstractVector, n::AbstractVector,
         Λ::AbstractMatrix, β::AbstractVector, link::Link;
-        mask = nothing, offset = nothing, hessian::Symbol = _default_hessian(family, link),
+        mask = nothing, offset = nothing, weights = nothing,
+        hessian::Symbol = _default_hessian(family, link),
         maxiter::Integer = 100, tol::Real = 1e-9, ws = nothing, z_precomputed = nothing)
     (hessian === :fisher || hessian === :observed) || throw(ArgumentError(
         "hessian must be :fisher or :observed; got :$hessian"))
@@ -353,7 +384,8 @@ function laplace_loglik_site(family, y::AbstractVector, n::AbstractVector,
         z_precomputed
     else
         _laplace_mode(family, y, n, Λ, β, link;
-                     mask = mask, offset = offset, maxiter = maxiter, tol = tol, ws = ws)
+                     mask = mask, offset = offset, weights = weights,
+                     maxiter = maxiter, tol = tol, ws = ws)
     end
     # Per-call buffers (written in place with the SAME broadcast / BLAS expressions
     # as before ⇒ bit-identical values and FP-operation order).
@@ -381,6 +413,9 @@ function laplace_loglik_site(family, y::AbstractVector, n::AbstractVector,
     if mask !== nothing
         W = ifelse.(mask, W, 0.0)
     end
+    if weights !== nothing                    # weighted curvature (see `_laplace_mode`)
+        W = ifelse.(iszero.(weights), 0.0, weights .* W)
+    end
     WΛ = W .* Λ                               # = W .* Λ (p×K)
     Amat = Λ' * WΛ                            # = Λ' * (W .* Λ) (K×K)
     @inbounds for d in 1:K
@@ -388,9 +423,17 @@ function laplace_loglik_site(family, y::AbstractVector, n::AbstractVector,
     end
     A  = Symmetric(Amat)
     ℓ = 0.0
-    @inbounds for t in 1:p
-        (mask === nothing || mask[t]) || continue
-        ℓ += _glm_logpdf(family, μ[t], n[t], y[t])
+    if weights === nothing
+        @inbounds for t in 1:p
+            (mask === nothing || mask[t]) || continue
+            ℓ += _glm_logpdf(family, μ[t], n[t], y[t])
+        end
+    else
+        @inbounds for t in 1:p
+            (mask === nothing || mask[t]) || continue
+            iszero(weights[t]) && continue
+            ℓ += weights[t] * _glm_logpdf(family, μ[t], n[t], y[t])
+        end
     end
     # PD guard, keyed on the WEIGHT'S SIGN — not on the selector and not on the
     # trait. `A = Λ'WΛ + I` is SPD by construction whenever every `W ≥ 0`, so
@@ -430,20 +473,26 @@ invariant to whatever placeholder sits in the masked cells of `Y`.
 per-species offset is equivalent to shifting that species' intercept (the
 offset-absorption identity), which serves as the exact verification anchor.
 
+`weights` (p×n non-negative reals, or `nothing`) are observation weights: each
+observed cell's conditional log-density is multiplied by its weight (gllvmTMB's
+`weights`); a zero weight drops the cell like `mask`. Weights at masked cells are
+never read. `nothing` is the unweighted marginal, bit for bit.
+
 `zs` (optional `Vector` of length-K per-site modes, R8 shared mode solve): when
 given, threads `zs[i]` into site `i` as `laplace_loglik_site`'s `z_precomputed`,
 skipping that site's own Newton mode solve — see `laplace_loglik_site`.
 """
 function marginal_loglik_laplace(family, Y::AbstractMatrix, N::AbstractMatrix,
         Λ::AbstractMatrix, β::AbstractVector, link::Link;
-        mask = nothing, offset = nothing, zs = nothing, kwargs...)
+        mask = nothing, offset = nothing, weights = nothing, zs = nothing, kwargs...)
     acc = 0.0
     @inbounds for i in axes(Y, 2)
-        mi = mask   === nothing ? nothing : view(mask, :, i)
-        oi = offset === nothing ? nothing : view(offset, :, i)
-        zi = zs     === nothing ? nothing : zs[i]
+        mi = mask    === nothing ? nothing : view(mask, :, i)
+        oi = offset  === nothing ? nothing : view(offset, :, i)
+        wi = weights === nothing ? nothing : view(weights, :, i)
+        zi = zs      === nothing ? nothing : zs[i]
         acc += laplace_loglik_site(family, view(Y, :, i), view(N, :, i), Λ, β, link;
-                                   mask = mi, offset = oi, z_precomputed = zi, kwargs...)
+                                   mask = mi, offset = oi, weights = wi, z_precomputed = zi, kwargs...)
     end
     return acc
 end

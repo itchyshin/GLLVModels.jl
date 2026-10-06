@@ -29,6 +29,7 @@ function fit_poisson_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control=
     kwargs=_entry_offset_kwargs(kwargs,Y,"fit_poisson_gllvm")
     request=_aghq_request(aghq);c=_aghq_controls(aghq_control)
     request===:off && return _fit_poisson_gllvm_laplace(Y;K=K,kwargs...)
+    get(kwargs,:weights,nothing)===nothing || _refuse_weights("fit_poisson_gllvm","AGHQ integration (aghq)")
     c=_aghq_controls(merge(c,(mode_maxiter=get(kwargs,:newton_maxiter,c.mode_maxiter),mode_tol=get(kwargs,:newton_tol,c.mode_tol))))
     base_controls=deepcopy((;kwargs...))
     p,n=size(Y);k=request===:auto ? 5 : request
@@ -81,7 +82,7 @@ function fit_poisson_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control=
         selected.converged,selected.passes,nothing,copy(t),:observed,info)
 end
 _poisson_with_integration(f::PoissonFit,i)=PoissonFit(f.β,f.Λ,f.link,f.loglik,f.converged,
-    f.iterations,f.alpha_lv,f.theta_packed,f.hessian,i,f.offset)
+    f.iterations,f.alpha_lv,f.theta_packed,f.hessian,i,f.offset,f.weights)
 _is_poisson_aghq(f)=f isa PoissonFit && f.integration!==nothing && f.integration.actual===:aghq
 
 function _poisson_aghq_problem(fit::PoissonFit,Y;mask=nothing,offset=nothing,require_identity=false)
