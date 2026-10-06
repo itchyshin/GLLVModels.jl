@@ -342,23 +342,44 @@ def unbound_rows_are_not_flipped_by_overlay():
 
 
 @test
-def out_of_scope_rows_keep_their_block_but_do_not_bind():
-    """The 7 aghq control rows and CI-ROUTE-009 are not in the frozen list of #684 item 2 (review of PR 690)."""
-    out = [("aghq/AGHQ-CTRL-" + n, f"{B.AGHQ}/cases/CORE070-AGHQ-CTRL-{n}-PAIRED-CONTROL.json", "paired_control_categorical_pass")
-           for n in ("AUTO", "FALSE", "NINE", "NULL", "ONE", "TRUE", "TWO")]
-    out.append(("inference/CI-ROUTE-009", f"{INF_CASES}/CORE070-SURFCONV-INFERENCE-CI-ROUTE-009.json", "partial_non_numeric_case"))
-    assert len(out) == 8
-    for sid, path, tier in out:
-        assert not A.behavioural_eligible_source_id(sid), sid
+def ruling_a_rows_are_eligible_and_bind():
+    """Positive control: ruling A (2026-10-05) put the 7 aghq control rows and CI-ROUTE-009 in the behavioural
+    scope, so each is eligible, keeps its scoped behaviour block, and the overlay binds it."""
+    rows = [("aghq/AGHQ-CTRL-" + n, f"{B.AGHQ}/cases/CORE070-AGHQ-CTRL-{n}-PAIRED-CONTROL.json", "paired_control_categorical_pass")
+            for n in ("AUTO", "FALSE", "NINE", "NULL", "ONE", "TRUE", "TWO")]
+    rows.append(("inference/CI-ROUTE-009", f"{INF_CASES}/CORE070-SURFCONV-INFERENCE-CI-ROUTE-009.json", "partial_non_numeric_case"))
+    assert len(rows) == 8
+    ledger = {r["source_id"]: r for f in ("case-map-aghq", "case-map-inference")
+              for r in B.load(ROOT / B.LEDGER / f"{f}.json")["rows"]}
+    for sid, path, tier in rows:
+        assert A.behavioural_eligible_source_id(sid), sid
         rec = B.load(ROOT / path)
         assert any(e["source_id"] == sid for e in rec["behaviour"]["cases"]), f"{sid}: block dropped"
-        cid = rec["case_id"]
-        row = {"source_id": sid, "classification": "required_core", "executable_case_ids": [cid], "disposition": None,
-               "evidence_tier": tier, "measured_against": B.P1_SHA, "evidence": {"non_binding_receipts": [path], "tier": "x"},
-               "measured_result": {}}
+        row = {"source_id": sid, "classification": "required_core", "executable_case_ids": [rec["case_id"]],
+               "disposition": None, "evidence_tier": tier, "measured_against": B.P1_SHA,
+               "evidence": {"non_binding_receipts": [path], "tier": "x"}, "measured_result": {}}
         counts = {tier: 1, "behavioural": 0}
-        assert B.overlay_row(row, counts) is False and row["evidence_tier"] == tier, sid
-        assert row["note"] == B.OUT_OF_SCOPE_NOTE and counts == {tier: 1, "behavioural": 0}, sid
+        assert B.overlay_row(row, counts) is True and row["evidence_tier"] == "behavioural", sid
+        assert B.OUT_OF_SCOPE_NOTE not in (row.get("note") or "") and counts == {tier: 0, "behavioural": 1}, sid
+        assert ledger[sid]["evidence_tier"] == "behavioural", f"{sid}: not behavioural in the ledger"
+
+
+@test
+def out_of_scope_rows_do_not_bind_even_with_a_matching_block():
+    """Negative control: a row still outside the frozen scope (CI-ROUTE-008, CI-ROUTE-010) does not bind from a
+    matching behaviour block scoped to it, and no ledger row outside the scope is behavioural."""
+    cid = "CORE070-SURFCONV-INFERENCE-CI-ROUTE-009"
+    base = case_receipt(cid)
+    assert problem(ROOT, "inference/CI-ROUTE-009", cid) is None
+    for sid in ("inference/CI-ROUTE-008", "inference/CI-ROUTE-010"):
+        assert not A.behavioural_eligible_source_id(sid), sid
+        rec = copy.deepcopy(base)
+        for e in rec["behaviour"]["cases"]:
+            if e["source_id"] == "inference/CI-ROUTE-009":
+                e["source_id"] = sid
+        with tempfile.TemporaryDirectory() as td:
+            root = make_root(Path(td), rec, cid)
+            assert problem(root, sid, cid) is not None, sid
     for f in ("case-map-aghq", "case-map-inference"):
         for r in B.load(ROOT / B.LEDGER / f"{f}.json")["rows"]:
             if r["evidence_tier"] == "behavioural":
