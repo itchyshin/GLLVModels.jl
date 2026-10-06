@@ -1,0 +1,35 @@
+{
+  "raw_directory": "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-06-v4",
+  "derivation_commit": "9299be875ad534aac7f673a36c23e89522589380",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "r_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "r_source_receipt_sha256": "3ec6631ba855624d5b0e9e66772d2e3b3049270c17047835333e7663d6eb2ad8",
+  "r_source_sha256": "86fa00f05ee2ccb8ffef65a82cd59c47b1b2a256a5bad86957a92461a6dbe1db",
+  "r_oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro.json",
+  "r_oracle_build_sha256": "6aaf50b2b2f89c257494300cd3c25c3345f0c50d45092d5899f1e8c9bd65ad4f",
+  "r_installed_tree_sha256": "71ef0fb3d6c0a31e908c09ea599b97966dc8335038e1d9d23ccda901344d9997",
+  "r_host": "totoro",
+  "r_version": "4.6.1",
+  "julia_commit": "b5babfc97ebfe61adc1d06540bb765473af3bbd0",
+  "julia_src_tree": "a7816a37b769b8fe451cf0eaeb136e9a624da806",
+  "julia_version": "1.10.12",
+  "julia_host": "totoro",
+  "r_output_sha256": "e1ef2a3226b69d9d3d6530fc27cfddf8dac8b1ebcdc246ae48a924c028abb17e",
+  "julia_output_sha256": "9601723de40fc0daa16495aec4574a5a0360c985980b9d5e8da31bde1c244547",
+  "runner_sha256": {
+    "R": "c0cd4fb83df7bc9f3c4f91fdee48e8792bed4feb1847618a8dfb193a9e7417bd",
+    "Julia": "68a389457a48a1b9f336580a4f03cbb4353cbd0c302b084cbccf7157e245d7c0",
+    "derive": "eb3d8139c57f3584c7ed85c95358b95010d900847a329cd7dbf1db8fcc5f1134"
+  },
+  "fixture_sha256": {
+    "R": "9a33a6aea9253c4e056971c464c21e0d745c22443829fb68f481abade644371e",
+    "Julia": "9a33a6aea9253c4e056971c464c21e0d745c22443829fb68f481abade644371e"
+  },
+  "thread_caps": {
+    "r_openblas": "1",
+    "r_omp": "1",
+    "julia_threads": "4",
+    "julia_openblas": "1",
+    "julia_omp": "1"
+  }
+}

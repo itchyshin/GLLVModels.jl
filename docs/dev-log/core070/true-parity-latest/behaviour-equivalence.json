@@ -469,6 +469,17 @@
         "ArgumentError: confint: nonlinear profile intervals for variance proportions are withdrawn (parm proportion:shared[1]). gllvmTMB withdrew its penalty-based constrained-refit profile pending an exact constraint solver and diagnostic contract, and this route follows it. Request method = :wald or method = :bootstrap, and report the method's limitations."
       ],
       "basis": "R: confint.gllvmTMB_multi forwards method profile to .confint_proportion, which aborts with class gllvmTMB_nonlinear_profile_withdrawn (R/z-confint-gllvmTMB.R:1202-1206): the penalty-based constrained-refit prototype is withdrawn pending an exact constraint solver. Julia: confint(fit, y; parm, method=:profile) throws ArgumentError from _confint_profile_withdrawn (src/confint.jl:681 at 1a80133a7), saying the same profile is withdrawn and pointing to wald or bootstrap. Withdrawn in Julia under signed rulings of 2026-10-05 (vault D-319), ruling C. A refusal class of its own (the G7 label), separate from the bad-method refusal class."
+    },
+    {
+      "kind": "route",
+      "canonical": "residual-check:coherent",
+      "r": [
+        "residual-check:coherent"
+      ],
+      "julia": [
+        "residual-check:coherent"
+      ],
+      "basis": "Measured identical public-door behaviour for postfit/POSTFIT-SURFACE-check_auto_residual; P1 raw R and Julia outputs are preserved in docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/POSTFIT-SURFACE-check_auto_residual.json. Included by signed D-319 N6/N10."
     }
   ]
 }
