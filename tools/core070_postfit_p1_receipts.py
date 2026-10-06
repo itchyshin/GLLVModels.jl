@@ -326,7 +326,10 @@ INTEGER_EQUALITY = {
     "CORE070-POSTFIT-LOGLIK-DF-NATIVE": ("df", "attr(logLik(object), 'df')"),
     "CORE070-POSTFIT-LOGLIK-NOBS-NATIVE": ("loglik_nobs_attr", "attr(logLik(object), 'nobs')"),
     "CORE070-POSTFIT-NOBS-COUNT-NATIVE": ("nobs", "nobs(object), likelihood_rows-preferring branch"),
+    # Maintainer ruling 2026-10-05 (D-319), item N2: integer_equality also covers POST-COEF-EMPTY (lengths 0 = 0).
+    "CORE070-POSTFIT-COEF-EMPTY-NATIVE": ("empty_coef", "length(coef(object)) on a fit with no fixed-effect columns"),
 }
+COEF_EMPTY_CID = "CORE070-POSTFIT-COEF-EMPTY-NATIVE"
 # Receipt text for the four cases, with line numbers read from git show 9539352f6:R/methods-gllvmTMB.R (P1), not P0.
 INTEGER_TEXT = {
     "CORE070-POSTFIT-LOGLIK-DF-NATIVE": {
@@ -338,6 +341,15 @@ INTEGER_TEXT = {
     "CORE070-POSTFIT-NOBS-COUNT-NATIVE": {
         "r_call": "nobs.gllvmTMB_multi, likelihood_rows-preferring branch (R/methods-gllvmTMB.R:1216-1224 at P1 9539352f6)",
         "julia_surface": "StatsAPI.nobs(fit::AnyGllvmFit, Y; mask) (src/postfit.jl:622 at the measured commit 681c4c3ca)"},
+    "CORE070-POSTFIT-COEF-EMPTY-NATIVE": {
+        "r_call": "coef.gllvmTMB_multi's empty-X_fix_names branch (R/vcov-coef.R:59-65 at P1 9539352f6), evaluated by "
+                  "the batch on a synthetic object list(X_fix_names = character(0)), not on a fitted model",
+        "julia_surface": "StatsAPI.coef(fit::GllvmFit) on a real fit with no X (src/postfit.jl:633 at the measured "
+                         "commit 681c4c3ca)",
+        "numeric_note": ("Integer equality on the coefficient-vector length: R 0, Julia 0. Maintainer ruling 2026-10-05 "
+                         "(D-319), item N2, extends integer_equality (itchyshin/GLLVModels.jl#684 item 1) to this row. "
+                         "Scope: the R length comes from coef.gllvmTMB_multi applied to a synthetic object with no "
+                         "fixed-effect names; the Julia length from a real fit with no X.")},
 }
 # POST-NOBS-FALLBACK stays unbound (review of #688): on the fixture fit R's nobs() returns on the likelihood_rows
 # branch, so the no-missing-data fallback branch this row names is never executed. Its receipt keeps no comparison.
@@ -366,18 +378,127 @@ INTEGER_TIER = (f"numeric: every executable case receipt carries an integer_equa
 def integer_entry(cid, jc, po):
     """The integer_equality comparison entry for `cid`, from the raw Julia result `jc` and R oracle `po`."""
     key, quantity = INTEGER_EQUALITY[cid]
-    r, j = po[key], jc["julia"]
+    if cid == COEF_EMPTY_CID:  # a length: R's empty coef vector against Julia's
+        r, j, harness_r = len(po[key]), jc["julia_length"], jc["r_length"]
+    else:
+        r, j, harness_r = po[key], jc["julia"], jc["r"]
     for name, v in (("R oracle", r), ("Julia result", j)):
         if isinstance(v, bool) or not isinstance(v, (int, float)) or v != int(v):
             raise SystemExit(f"{cid}: {name} value {v!r} is not an integer")
     r, j = int(r), int(j)
-    if jc["r"] != r:
-        raise SystemExit(f"{cid}: harness-recorded R value {jc['r']!r} != r-oracle.json[{key!r}] = {r}")
+    if harness_r != r:
+        raise SystemExit(f"{cid}: harness-recorded R value {harness_r!r} != r-oracle.json[{key!r}] = {r}")
     if bool(jc["pass"]) != (r == j):
         raise SystemExit(f"{cid}: harness pass flag {jc['pass']!r} disagrees with R {r} vs Julia {j}")
     return {"case_id": cid, "quantity": quantity, "kind": "integer_equality", "r_value": r, "julia_value": j,
             "max_abs_diff": abs(r - j), "tolerance": 0.5, "tolerance_rule": INTEGER_RULE, "n_values": 1,
-            "diff_source": f"recomputed from r-oracle.json[{key!r}] and julia-results.json cases[{cid!r}]['julia']"}
+            "diff_source": (f"recomputed from len(r-oracle.json[{key!r}]) and julia-results.json cases[{cid!r}]['julia_length']"
+                            if cid == COEF_EMPTY_CID else
+                            f"recomputed from r-oracle.json[{key!r}] and julia-results.json cases[{cid!r}]['julia']")}
+
+
+WAVE6_INTEGER_WHY = ("Exact integer equality, R nobs against Julia nobs on the gaussian_small fixture. Maintainer ruling "
+                     "2026-10-05 (D-319), item N2, rewrote this wave6 case from the stale P0 own_receipt_defect expectation "
+                     f"(Julia == n = 80) to integer_equality under {INTEGER_RULING}: tolerance 0.5, so the integers must be equal.")
+
+
+def wave6_integer_entry(cid, jc, oracle):
+    """integer_equality comparison entry for the wave6 nobs case, from the R oracle and the Julia results."""
+    r, j = oracle["oracle_values"][cid], jc["julia_value"]
+    for name, v in (("R oracle", r), ("Julia result", j)):
+        if isinstance(v, bool) or not isinstance(v, (int, float)) or v != int(v):
+            raise SystemExit(f"{cid}: {name} value {v!r} is not an integer")
+    r, j = int(r), int(j)
+    if jc["r_value"] != r:
+        raise SystemExit(f"{cid}: harness-recorded R value {jc['r_value']!r} != r-oracle.json oracle_values = {r}")
+    if bool(jc["pass"]) != (r == j):
+        raise SystemExit(f"{cid}: harness pass flag {jc['pass']!r} disagrees with R {r} vs Julia {j}")
+    return {"case_id": cid, "quantity": "nobs(object) on gaussian_small", "kind": "integer_equality",
+            "r_value": r, "julia_value": j, "max_abs_diff": abs(r - j), "tolerance": 0.5, "tolerance_rule": INTEGER_RULE,
+            "n_values": 1,
+            "diff_source": f"recomputed from r-oracle.json oracle_values[{cid!r}] and julia-results.json cases[{cid!r}]['julia_value']"}
+
+
+# ---- signed dispositions (maintainer ruling 2026-10-05, vault D-319) ----
+# Signature source: LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit, where the
+# maintainer signed every "Recommend" on the rulings page (D-319). The row keeps its measured evidence (non-binding
+# receipts) and gains disposition DISPOSITION-SIGNED with signer, date, the ruling reference and the reason.
+RULING_SIGNED_BY = "Shinichi Nakagawa"
+RULING_SIGNED_ON = "2026-10-05"
+RULING_SOURCE = "maintainer ruling 2026-10-05 (D-319), LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md"
+PROPORTIONS_RETIRED = (
+    "Retired at P1 by maintainer ruling 2026-10-05 (D-319), item N5. export({name}) is absent from the P1 NAMESPACE (the "
+    "definition is still present, unexported, at R/proportions-ci.R:{line}), so there is no public R surface left to "
+    "twin. This is the same removal the headline ledger records as retired/{name} (PR #533, signed 2026-09-30); the "
+    "namespace map lists it under retired_at_p1. Classification moves from compatibility_adapter (kept in "
+    "original_classification) to retired, as on the headline row.")
+RULINGS = {
+    "postfit/POSTFIT-SURFACE-.proportions_bootstrap_ci": {
+        "item": "N5", "classification": "retired",
+        "reason": PROPORTIONS_RETIRED.format(name=".proportions_bootstrap_ci", line=423)},
+    "postfit/POSTFIT-SURFACE-.proportions_wald_ci": {
+        "item": "N5", "classification": "retired",
+        "reason": PROPORTIONS_RETIRED.format(name=".proportions_wald_ci", line=247)},
+    "postfit-policy/POST-NOBS-FALLBACK": {
+        "item": "POST-NOBS-FALLBACK option (a)",
+        "reason": (
+            "Not reachable through the public door at P1, by maintainer ruling 2026-10-05 (D-319), POST-NOBS-FALLBACK "
+            "option (a). nobs.gllvmTMB_multi (R/methods-gllvmTMB.R:1216-1231 at P1 9539352f6) returns "
+            "object$missing_data$counts$likelihood_rows at line 1221 whenever it is non-NULL; the is_y_observed / "
+            "length(y) fallback (lines 1225-1230) runs only when that field is NULL. The only constructor of a "
+            "gllvmTMB_multi object always builds missing_data with .gllvmTMB_build_missing_data, which always sets "
+            "counts$likelihood_rows = as.integer(sum(is_y_observed == 1L)) (R/fit-multi.R:9784 and :9822), never NULL. "
+            "Twelve probe fit types through gllvmTMB() at P1 (Gaussian and Poisson latent, missing responses dropped "
+            "and masked, an all-missing trait both ways, weights, mixed family, wide traits(), no covstruct, an mi() "
+            "predictor, estimator = 'mspl', and a saveRDS/readRDS round trip) all returned on the likelihood_rows "
+            "branch; only a fit with fit$missing_data deleted by hand reached the fallback, and there the two branches "
+            "give the same number by construction. The field and the method were added in the same commit (#334), so "
+            "the fallback is defensive code for hand-built or pre-#334 objects, not a separate user-facing behaviour. "
+            "The likelihood_rows branch itself is bound by POST-NOBS-COUNT. Evidence: post-nobs-fallback-evidence.md in "
+            "the true-parity lane kit (probe scripts nobs_probe.R, nobs_probe2.R).")},
+    "postfit-policy/POST-PREDICT-DEFAULT": {
+        "item": "B (Julia default versus R default)",
+        "reason": (
+            "Documented default divergence accepted by maintainer ruling 2026-10-05 (D-319), item B (Julia defaults "
+            "against R, row by row). R: predict.gllvmTMB_multi(object, newdata = NULL, type = c('link', 'response'), "
+            "...) defaults to type = 'link' (R/methods-gllvmTMB.R:2786-2794 at P1 9539352f6). Julia: "
+            "predict(fit::GllvmFit, y; type::Symbol = :response, ...) defaults to type = :response (src/postfit.jl). "
+            "The batch reflects both defaults live (R 'link', Julia :response) and, called with the same explicit "
+            "type = link, the two engines agree on the linear predictor (max |R - Julia| = 5.72e-06 against the "
+            "contract's link_response_residual_delta 1e-4, receipt CORE070-POSTFIT-PREDICT-DEFAULT-NATIVE). A user "
+            "porting a bare predict(fit) call from R gets the response scale in Julia, not the link scale; pass "
+            "type = :link to match R.")},
+}
+
+
+def ruling_overlay(row):
+    """Write the signed disposition onto a row the 2026-10-05 rulings cover (idempotent)."""
+    r = RULINGS.get(row["source_id"])
+    if r is None:
+        return row
+    if "classification" in r and row["classification"] != r["classification"]:
+        row.setdefault("original_classification", row["classification"])
+        row["classification"] = r["classification"]
+    row["reason"] = r["reason"]
+    row["disposition"] = "DISPOSITION-SIGNED"
+    row["signed_by"] = RULING_SIGNED_BY
+    row["signed_on"] = RULING_SIGNED_ON
+    row["signature_ref"] = f"{RULING_SOURCE}, item {r['item']}"
+    return row
+
+
+def count_key(row):
+    """The counts bucket of a row: RETIRED rows count as retired_at_p1_not_measured, others by evidence tier."""
+    if row.get("carry_scan_status") == "RETIRED" and row["evidence_tier"] == "not_measured":
+        return "retired_at_p1_not_measured"
+    return tier_count_key(row["evidence_tier"])
+
+
+def recount(cm):
+    counts = {k: 0 for k in cm["counts"]}
+    for r in cm["rows"]:
+        counts[count_key(r)] += 1
+    return counts
 
 
 def bind_numeric(row, paths, verdicts, batch_ok, tier):
@@ -431,10 +552,8 @@ def apply_integer_equality():
             if rec["verdict"] != "PASS" or rec["batch_verifier"]["status"] != "PASS":
                 raise SystemExit(f"{ids[0]}: receipt verdict or batch verifier is not PASS")
             bind_numeric(row, [path], {ids[0]: rec["verdict"]}, {ids[0]: rec["batch_verifier"]["status"]}, INTEGER_TIER)
-    counts = {k: 0 for k in cm["counts"]}
-    for r in cm["rows"]:
-        counts[tier_count_key(r["evidence_tier"])] += 1
-    cm["counts"] = counts
+    cm["rows"] = [ruling_overlay(r) for r in cm["rows"]]
+    cm["counts"] = counts = recount(cm)
     write_json(OUT / "case-map-postfit.json", cm)
     print(json.dumps(counts))
 
@@ -473,11 +592,8 @@ def twin_overlay(row):
 
 def apply_twins():
     cm = load(OUT / "case-map-postfit.json")
-    cm["rows"] = [twin_overlay(r) for r in cm["rows"]]
-    counts = {k: 0 for k in cm["counts"]}
-    for r in cm["rows"]:
-        counts[tier_count_key(r["evidence_tier"])] += 1
-    cm["counts"] = counts
+    cm["rows"] = [ruling_overlay(twin_overlay(r)) for r in cm["rows"]]
+    cm["counts"] = counts = recount(cm)
     write_json(OUT / "case-map-postfit.json", cm)
     print(json.dumps(counts))
 
@@ -486,14 +602,21 @@ def check_twins():
     cur = load(OUT / "case-map-postfit.json")
     import copy
     exp = copy.deepcopy(cur)
-    exp["rows"] = [twin_overlay(r) for r in exp["rows"]]
-    counts = {k: 0 for k in exp["counts"]}
-    for r in exp["rows"]:
-        counts[tier_count_key(r["evidence_tier"])] += 1
-    exp["counts"] = counts
+    exp["rows"] = [ruling_overlay(twin_overlay(r)) for r in exp["rows"]]
+    exp["counts"] = counts = recount(exp)
     bad = [a["source_id"] for a, b in zip(cur["rows"], exp["rows"]) if a != b]
     if bad or cur["counts"] != counts:
-        print("STALE\n  rows differ from the twin overlay: " + ", ".join(bad) + f"\n  counts {cur['counts']} vs {counts}")
+        print("STALE\n  rows differ from the twin and ruling overlays: " + ", ".join(bad) +
+              f"\n  counts {cur['counts']} vs {counts}")
+        raise SystemExit(1)
+    # Rows paid by the rerun wave6 batch must equal a fresh derivation from their tracked case receipts.
+    p0 = {r["source_id"]: r for r in load(P0_CASEMAP)["rows"]}
+    receipts = tracked_receipts()
+    w6 = [r["source_id"] for r in cur["rows"] if set(r["executable_case_ids"]) & WAVE6_POSTFIT_CIDS]
+    stale_w6 = [sid for sid in w6 for row in [next(r for r in cur["rows"] if r["source_id"] == sid)]
+                if derive_row(sid, row["carry_scan_status"], p0, receipts)[0] != row]
+    if stale_w6:
+        print("STALE\n  wave6 rows differ from their case receipts: " + ", ".join(stale_w6))
         raise SystemExit(1)
     raw = REC / "postfit-policy-p1"
     pj, po = load(raw / "julia-results.json"), load(raw / "r-oracle.json")
@@ -515,6 +638,237 @@ def check_twins():
     print("CORE070_POSTFIT_TWINS_CURRENT", n, "twin rows,", len(cur["rows"]), "rows")
 
 
+POINT_BATCHES = [
+    ("surface-conversion-p1", "tools/core070_surface_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1",
+     OUT / "surface-conversion-batch-contract-p1.json"),
+    ("estimand-rebind-p1", "tools/core070_estimand_rebind_batch.R + .jl, GLLVM_PARITY_PIN=P1 (no contract file)", None),
+    ("wave6-conversion-p1", "tools/core070_wave6_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1 (contract from PR #567; "
+                            "nobs case rewritten as integer_equality under maintainer ruling 2026-10-05, D-319, item N2)",
+     OUT / "wave6-conversion-batch-contract-p1.json"),
+    ("wave7-conversion-p1", "tools/core070_wave7_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1",
+     OUT / "wave7-conversion-batch-contract-p1.json"),
+    ("wave8-conversion-p1", "tools/core070_wave8_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1",
+     OUT / "wave8-conversion-batch-contract-p1.json"),
+]
+WAVE6_POSTFIT_CIDS = {"CORE070-WAVE6-POSTFIT-LOGLIK-MULTI", "CORE070-WAVE6-POSTFIT-CONFINT-MULTI",
+                      "CORE070-WAVE6-POSTFIT-NOBS-MULTI"}
+
+
+def common_block(head, dirty, host):
+    return {"pin": "P1", "reference_commit": P1_SHA, "p0_reference_commit": P0_SHA,
+            "gllvmtmb_version": PINS["P1"]["version"],
+            "oracle_build_receipt": ORACLE_BUILD, "oracle_source_receipt": ORACLE_SOURCE,
+            "glvmodels_commit": head, "glvmodels_worktree_dirty": dirty,
+            "glvmodels_src_tree": git("rev-parse", f"{head}:src").strip(),
+            "host": host}
+
+
+def receipt_tuple(path, rec):
+    """The (path, kind, verdict, batch verifier status, discriminating) tuple derive_row reads."""
+    comparison = (rec.get("comparison") or {}).get("cases")
+    disc = all(e.get("discriminating", True) for e in comparison) if comparison else True
+    return (str(path.relative_to(ROOT)), rec["evidence_kind"], rec["verdict"], rec["batch_verifier"]["status"], disc)
+
+
+def make_emit(common, receipts):
+    def emit(cid, kind, verdict, body, comparison=None):
+        rec = {"schema": "core070-postfit-p1-case-receipt/v2", "case_id": cid, "verdict": verdict,
+               "evidence_kind": kind, **body, **common}
+        if comparison is not None:
+            rec["comparison"] = {"pin": "P1", "cases": comparison}
+        path = REC / "cases" / f"{cid}.json"
+        write_json(path, rec)
+        receipts[cid] = receipt_tuple(path, rec)
+    return emit
+
+
+def tracked_receipts():
+    return {p.stem: receipt_tuple(p, load(p)) for p in sorted((REC / "cases").glob("*.json"))}
+
+
+def apply_wave6(rd, runtimes, allow_dirty):
+    """Re-ingest one rerun of the wave6 batch (maintainer ruling 2026-10-05, D-319, item N2) without the other seven
+    run directories: copy its artifacts, run its verifier, rewrite its postfit case receipts, re-derive the rows they
+    pay. The other rows, receipts and batches are untouched."""
+    head, dirty = git_state()
+    if dirty and not allow_dirty:
+        raise SystemExit("tracked files are modified outside this tool's outputs; commit first or pass "
+                         "--allow-dirty: " + ", ".join(dirty))
+    check_run_commit(rd, head)
+    d, batch, contract_path = next(b for b in POINT_BATCHES if b[0] == "wave6-conversion-p1")
+    artifacts = copy_batch(rd, d, ["receipt.json", "results.tsv", "julia-results.json", "r-oracle.json", "run-commit.json"])
+    verifier = run_verifier(d, state=rd)
+    artifacts.append(verifier["log"])
+    receipts = {}
+    emit = make_emit(common_block(head, dirty, "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=1"),
+                     receipts)
+    ccases = {c["case_id"]: c for c in load(contract_path)["cases"]}
+    point_batch_cases(d, load(rd / "julia-results.json"), load(rd / "r-oracle.json"), load(rd / "receipt.json"),
+                      ccases, batch, contract_path, verifier=verifier, emit=emit)
+    if set(receipts) != WAVE6_POSTFIT_CIDS:
+        raise SystemExit(f"wave6 rerun wrote receipts for {sorted(receipts)}, expected {sorted(WAVE6_POSTFIT_CIDS)}")
+    cm = load(OUT / "case-map-postfit.json")
+    cm["batch_verifiers"][d] = verifier
+    cm["batch_artifacts"][d] = artifacts
+    cm["runtimes_seconds"]["wave6_conversion_rerun_2026_10_05"] = {**runtimes, "glvmodels_commit": head}
+    p0 = {r["source_id"]: r for r in load(P0_CASEMAP)["rows"]}
+    for i, row in enumerate(cm["rows"]):
+        if set(row["executable_case_ids"]) & WAVE6_POSTFIT_CIDS:
+            cm["rows"][i] = derive_row(row["source_id"], row["carry_scan_status"], p0, receipts)[0]
+    cm["counts"] = recount(cm)
+    write_json(OUT / "case-map-postfit.json", cm)
+    print(json.dumps(cm["counts"]))
+    print("wave6 verifier", verifier["status"], {c: receipts[c][2] for c in sorted(receipts)})
+
+
+def point_batch_cases(d, julia, oracle, breceipt, ccases, batch, contract_path, verifier, emit):
+    """Emit one receipt per postfit case of a point-style batch (shared by the full run and --apply-wave6)."""
+    for cid, jc in julia["cases"].items():
+        cc = ccases.get(cid, {})
+        srcs = cc.get("source_ids") or ([cc["source_id"]] if cc.get("source_id") else [])
+        if d == "estimand-rebind-p1":
+            srcs = [ESTIMAND_SOURCE[cid]]
+        if not any(s.startswith("postfit") for s in srcs):
+            continue  # namespace / inference / covariance cases in the same batch are out of scope
+        kind_h = jc.get("kind") or cc.get("kind") or "point"
+        passed = bool(jc.get("pass"))
+        body = {"source_ids": srcs, "batch": batch, "harness_kind": kind_h, "harness_pass": passed,
+                "batch_status": breceipt["status"], "batch_verifier": verifier,
+                "batch_status_note": (WAVE6_NOTE if d == "wave6-conversion-p1" and breceipt["status"] != "PASS" else ""),
+                "r_call": cc.get("r_call"), "julia_call": cc.get("julia_call"),
+                "raw": [f"{REC_REL}/{d}/julia-results.json", f"{REC_REL}/{d}/r-oracle.json"]}
+        if d == "estimand-rebind-p1":
+            body["p0_to_p1_accessor_record"] = ESTIMAND_ACCESSOR_RECORD
+        if kind_h in ("point", "ci") and "max_abs_diff" in jc:
+            tol = jc["tolerance"]
+            rule = (f"{contract_path.name if contract_path else 'tools/core070_verify_estimand_rebind_batch.py TOLERANCE'}"
+                    f" per-case tolerance (carried verbatim from P0); max |R - Julia| elementwise")
+            rv = oracle["oracle_values"].get(cid)
+            jv = jc.get("julia_values")
+            entry = (vec_entry(cid, jc.get("quantity") or cc.get("quantity"), rv, jv, tol, jc["max_abs_diff"], rule)
+                     if isinstance(rv, (list, float, int)) and jv is not None
+                     else harness_entry(cid, jc.get("quantity") or cc.get("quantity"), jc["max_abs_diff"], tol, rule,
+                                        rv if isinstance(rv, list) else ([rv] if isinstance(rv, (float, int)) else None)))
+            ok = passed and entry["max_abs_diff"] <= tol
+            emit(cid, "numeric_r_vs_julia", "PASS" if ok else "FAIL", body, [entry])
+        elif kind_h == "integer_equality":
+            entry = wave6_integer_entry(cid, jc, oracle)
+            body.update(numeric_note=WAVE6_INTEGER_WHY, ruling=cc.get("ruling"), expected=cc.get("expected"))
+            emit(cid, "numeric_r_vs_julia", "PASS" if passed and entry["max_abs_diff"] == 0 else "FAIL", body, [entry])
+        elif kind_h == "own_receipt_defect":
+            body.update(measured={k: jc.get(k) for k in ("r_nobs", "julia_nobs", "r_expected_p_times_n", "julia_expected_n")},
+                        frozen_expectation={"r": cc.get("expected_r_value_formula"), "julia": cc.get("expected_julia_value_formula")},
+                        why_failing=("The frozen contract case asserts each engine against its own formula: R == p*n and "
+                                     "Julia == n (a known defect pending decision). At P1 R returns p*n = 400 as at P0, but "
+                                     "Julia now also returns 400, so the Julia-side expectation (n = 80) no longer holds and "
+                                     "the harness reports FAIL. R and Julia agree; the expectation, not the parity, is what "
+                                     "failed. Not edited here; recorded as failing."))
+            emit(cid, "own_receipt_defect_expectation", "FAIL" if not passed else "PASS", body)
+        else:
+            verdict_fields = {k: jc.get(k) for k in ("r_verdict", "julia_verdict", "r_frobenius", "julia_frobenius", "tolerance") if k in jc}
+            body.update(measured=verdict_fields,
+                        why_not_numeric={"verdict": "Both engines report a boolean verdict and the harness checks they agree; "
+                                                    "there is no R-vs-Julia number with a tolerance.",
+                                         "own_consistency": "Each engine is checked against itself (Frobenius self-consistency); "
+                                                            "the two are not compared with each other."}.get(kind_h, f"harness kind {kind_h}"))
+            emit(cid, f"paired_{kind_h}", "PASS" if passed else "FAIL", body)
+
+
+
+CARRIED_KEYS = ("uncertain", "reclassify_proposed", "original_classification")
+
+
+def derive_row(sid, carry, p0, receipts):
+    """One case-map row from the P0 row and the case receipts: (row, count key before overlays, count key after).
+
+    receipts maps case_id -> (path, kind, verdict, batch verifier status, discriminating). Shared by the full run
+    and the --apply-wave6 overlay, so both derive a row the same way."""
+    base = p0[sid]
+    ids = base["executable_case_ids"]
+    row = {"source_id": sid, "classification": base["classification"], "arc": "A3", "carry_scan_status": carry,
+           "executable_case_ids": ids, "disposition": base.get("disposition")}
+    for k in CARRIED_KEYS:
+        if k in base:
+            row[k] = base[k]
+    have = [receipts.get(i) for i in ids]
+    if carry == "RETIRED":
+        row.update(evidence_tier="not_measured", measured_against=None, evidence={},
+                   reason=("The R export was removed between P0 and P1 (NAMESPACE at P1 no longer exports it); the row has "
+                           "no executable case ids and keeps its P0 classification and disposition. Retiring or "
+                           "re-scoping the row is a maintainer decision."))
+        key = "retired_at_p1_not_measured"
+    elif not ids or any(h is None for h in have):
+        missing = [i for i, h in zip(ids, have) if h is None]
+        if sid == "postfit-policy/POST-DEVIANCE":
+            row.update(evidence_tier="needs_surface_not_executed", measured_against=None, evidence={},
+                       reason=("Its executable case CORE070-POSTFIT-DEVIANCE-NATIVE was never authored into the "
+                               "postfit-policy batch (the P0 contract lists POST-DEVIANCE under needs_new_julia_surface), "
+                               "so nothing ran at P1. deviance.gllvmTMB_multi is measured numerically at P1 under a "
+                               "different case id (CORE070-WAVE8-DEVIANCE-MULTI, row postfit/POSTFIT-SURFACE-"
+                               "deviance.gllvmTMB_multi); rebinding is a maintainer decision."))
+            key = "needs_surface_not_executed"
+        else:
+            row.update(evidence_tier="not_measured", measured_against=None, evidence={},
+                       reason=f"Not re-measured at P1 in this PR (missing: {', '.join(missing)}).")
+            key = "not_measured"
+    else:
+        kinds = {h[1] for h in have}
+        verdicts = {i: h[2] for i, h in zip(ids, have)}
+        paths = [h[0] for h in have]
+        all_pass = all(v == "PASS" for v in verdicts.values())
+        batch_ok = {i: h[3] for i, h in zip(ids, have)}
+        disc = {i: h[4] for i, h in zip(ids, have)}
+        if kinds == {"numeric_r_vs_julia"} and all_pass and not all(v == "PASS" for v in batch_ok.values()):
+            # PR #567's gate: a batch whose own verifier rejected the run cannot bind a row
+            row.update(evidence_tier="numeric_held_batch_verifier_failed", measured_against=P1_SHA,
+                       evidence={"non_binding_receipts": paths,
+                                 "tier": "numeric comparison blocks pass, but the batch verifier rejected the "
+                                         "run, so the row does not bind"},
+                       note=HELD_NOTE,
+                       measured_result={"case_verdicts": verdicts, "batch_verifier": batch_ok,
+                                        "discriminating": disc})
+            key = "numeric_held_batch_verifier_failed"
+        elif kinds == {"numeric_r_vs_julia"} and all_pass and not all(disc.values()):
+            # review finding 1: a comparison that cannot discriminate does not bind
+            row.update(evidence_tier="numeric_non_discriminating", measured_against=P1_SHA,
+                       evidence={"non_binding_receipts": paths,
+                                 "tier": "numeric comparison blocks pass, but at least one is degenerate (the R "
+                                         "values are one constant or all ~0), so a constant or zero "
+                                         "implementation would pass too; the row does not bind"},
+                       note=NON_DISCRIMINATING_NOTES.get(sid, "flagged by the degenerate-comparison gate; see the "
+                                                              "comparison blocks' degenerate_reason"),
+                       measured_result={"case_verdicts": verdicts, "batch_verifier": batch_ok,
+                                        "discriminating": disc})
+            key = "numeric_non_discriminating"
+        elif kinds == {"numeric_r_vs_julia"} and all_pass:
+            bind_numeric(row, paths, verdicts, batch_ok,
+                         INTEGER_TIER if all(i in INTEGER_EQUALITY for i in ids) else
+                         "numeric: every executable case receipt carries an R-vs-Julia comparison "
+                         "block pinned to P1, within the harness tolerance")
+            key = "numeric_pass"
+        elif not all_pass:
+            row.update(evidence_tier="numeric_fail", measured_against=P1_SHA,
+                       evidence={"non_binding_receipts": paths,
+                                 "tier": "measured at P1; the harness verdict is FAIL, so the row does not bind"},
+                       measured_result={"case_verdicts": verdicts, "batch_verifier": batch_ok, "row_verdict": "FAIL"})
+            key = "numeric_fail"
+        else:
+            row.update(evidence_tier="partial_non_numeric_case", measured_against=P1_SHA,
+                       evidence={"non_binding_receipts": paths,
+                                 "tier": "measured at P1 and the harness passes, but at least one case is a verdict, "
+                                         "own-consistency, exact-integer, empty-length or default-policy check with "
+                                         "no R-vs-Julia number and tolerance, so the row does not bind"},
+                       measured_result={"case_verdicts": verdicts, "batch_verifier": batch_ok,
+                                        "case_kinds": {i: h[1] for i, h in zip(ids, have)}})
+            key = "partial_non_numeric_case"
+    before = row["evidence_tier"]
+    twin_overlay(row)
+    after = key if row["evidence_tier"] == before else tier_count_key(row["evidence_tier"])
+    ruling_overlay(row)
+    return row, key, after
+
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--runs", type=Path)
@@ -525,6 +879,10 @@ def main():
                     help="verify case-map-postfit.json equals its twin-overlay re-derivation; write nothing")
     ap.add_argument("--apply-integer-equality", action="store_true",
                     help="write the integer_equality comparison blocks and bind the four integer rows (idempotent)")
+    ap.add_argument("--apply-wave6", type=Path, metavar="RUN_DIR",
+                    help="re-ingest one rerun of the wave6 batch (needs --runtimes; D-319 item N2)")
+    ap.add_argument("--apply-rulings", action="store_true",
+                    help="write the 2026-10-05 signed dispositions (D-319) onto the tracked case map (idempotent)")
     ap.add_argument("--allow-dirty", action="store_true",
                     help="write receipts from a checkout with modified tracked files (recorded, not hidden)")
     args = ap.parse_args()
@@ -536,6 +894,14 @@ def main():
         return
     if args.apply_integer_equality:
         apply_integer_equality()
+        return
+    if args.apply_wave6 is not None:
+        if args.runtimes is None:
+            ap.error("--apply-wave6 needs --runtimes")
+        apply_wave6(args.apply_wave6, load(args.runtimes), args.allow_dirty)
+        return
+    if args.apply_rulings:
+        apply_twins()
         return
     if args.runs is None or args.runtimes is None:
         ap.error("--runs and --runtimes are required unless --apply-twins or --check-twins")
@@ -550,39 +916,14 @@ def main():
     for d in run_dirs:
         check_run_commit(runs / d, head)
 
-    common = {"pin": "P1", "reference_commit": P1_SHA, "p0_reference_commit": P0_SHA,
-              "gllvmtmb_version": PINS["P1"]["version"],
-              "oracle_build_receipt": ORACLE_BUILD, "oracle_source_receipt": ORACLE_SOURCE,
-              "glvmodels_commit": head, "glvmodels_worktree_dirty": dirty,
-              "glvmodels_src_tree": git("rev-parse", f"{head}:src").strip(),
-              "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"}
+    common = common_block(head, dirty, "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4")
     receipts = {}  # case_id -> (path, kind, verdict, batch verifier status, discriminating)
     artifacts = {}
     verifiers = {}
-
-    def emit(cid, kind, verdict, body, comparison=None):
-        rec = {"schema": "core070-postfit-p1-case-receipt/v2", "case_id": cid, "verdict": verdict,
-               "evidence_kind": kind, **body, **common}
-        if comparison is not None:
-            rec["comparison"] = {"pin": "P1", "cases": comparison}
-        path = REC / "cases" / f"{cid}.json"
-        write_json(path, rec)
-        disc = all(e.get("discriminating", True) for e in comparison) if comparison else True
-        receipts[cid] = (str(path.relative_to(ROOT)), kind, verdict, body["batch_verifier"]["status"], disc)
+    emit = make_emit(common, receipts)
 
     # ---- point-style batches: surface-conversion, estimand-rebind, wave6, wave7, wave8 ----
-    point_batches = [
-        ("surface-conversion-p1", "tools/core070_surface_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1",
-         OUT / "surface-conversion-batch-contract-p1.json"),
-        ("estimand-rebind-p1", "tools/core070_estimand_rebind_batch.R + .jl, GLLVM_PARITY_PIN=P1 (no contract file)", None),
-        ("wave6-conversion-p1", "tools/core070_wave6_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1 (contract from PR #567)",
-         OUT / "wave6-conversion-batch-contract-p1.json"),
-        ("wave7-conversion-p1", "tools/core070_wave7_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1",
-         OUT / "wave7-conversion-batch-contract-p1.json"),
-        ("wave8-conversion-p1", "tools/core070_wave8_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1",
-         OUT / "wave8-conversion-batch-contract-p1.json"),
-    ]
-    for d, batch, contract_path in point_batches:
+    for d, batch, contract_path in POINT_BATCHES:
         rd = runs / d
         artifacts[d] = copy_batch(rd, d, ["receipt.json", "results.tsv", "julia-results.json", "r-oracle.json",
                                           "run-commit.json"])
@@ -590,51 +931,7 @@ def main():
         ccases = {c["case_id"]: c for c in load(contract_path)["cases"]} if contract_path else {}
         verifiers[d] = run_verifier(d, state=rd)
         artifacts[d].append(verifiers[d]["log"])
-        for cid, jc in julia["cases"].items():
-            cc = ccases.get(cid, {})
-            srcs = cc.get("source_ids") or ([cc["source_id"]] if cc.get("source_id") else [])
-            if d == "estimand-rebind-p1":
-                srcs = [ESTIMAND_SOURCE[cid]]
-            if not any(s.startswith("postfit") for s in srcs):
-                continue  # namespace / inference / covariance cases in the same batch are out of scope
-            kind_h = jc.get("kind") or cc.get("kind") or "point"
-            passed = bool(jc.get("pass"))
-            body = {"source_ids": srcs, "batch": batch, "harness_kind": kind_h, "harness_pass": passed,
-                    "batch_status": breceipt["status"], "batch_verifier": verifiers[d],
-                    "batch_status_note": (WAVE6_NOTE if d == "wave6-conversion-p1" and breceipt["status"] != "PASS" else ""),
-                    "r_call": cc.get("r_call"), "julia_call": cc.get("julia_call"),
-                    "raw": [f"{REC_REL}/{d}/julia-results.json", f"{REC_REL}/{d}/r-oracle.json"]}
-            if d == "estimand-rebind-p1":
-                body["p0_to_p1_accessor_record"] = ESTIMAND_ACCESSOR_RECORD
-            if kind_h in ("point", "ci") and "max_abs_diff" in jc:
-                tol = jc["tolerance"]
-                rule = (f"{contract_path.name if contract_path else 'tools/core070_verify_estimand_rebind_batch.py TOLERANCE'}"
-                        f" per-case tolerance (carried verbatim from P0); max |R - Julia| elementwise")
-                rv = oracle["oracle_values"].get(cid)
-                jv = jc.get("julia_values")
-                entry = (vec_entry(cid, jc.get("quantity") or cc.get("quantity"), rv, jv, tol, jc["max_abs_diff"], rule)
-                         if isinstance(rv, (list, float, int)) and jv is not None
-                         else harness_entry(cid, jc.get("quantity") or cc.get("quantity"), jc["max_abs_diff"], tol, rule,
-                                            rv if isinstance(rv, list) else ([rv] if isinstance(rv, (float, int)) else None)))
-                ok = passed and entry["max_abs_diff"] <= tol
-                emit(cid, "numeric_r_vs_julia", "PASS" if ok else "FAIL", body, [entry])
-            elif kind_h == "own_receipt_defect":
-                body.update(measured={k: jc.get(k) for k in ("r_nobs", "julia_nobs", "r_expected_p_times_n", "julia_expected_n")},
-                            frozen_expectation={"r": cc.get("expected_r_value_formula"), "julia": cc.get("expected_julia_value_formula")},
-                            why_failing=("The frozen contract case asserts each engine against its own formula: R == p*n and "
-                                         "Julia == n (a known defect pending decision). At P1 R returns p*n = 400 as at P0, but "
-                                         "Julia now also returns 400, so the Julia-side expectation (n = 80) no longer holds and "
-                                         "the harness reports FAIL. R and Julia agree; the expectation, not the parity, is what "
-                                         "failed. Not edited here; recorded as failing."))
-                emit(cid, "own_receipt_defect_expectation", "FAIL" if not passed else "PASS", body)
-            else:
-                verdict_fields = {k: jc.get(k) for k in ("r_verdict", "julia_verdict", "r_frobenius", "julia_frobenius", "tolerance") if k in jc}
-                body.update(measured=verdict_fields,
-                            why_not_numeric={"verdict": "Both engines report a boolean verdict and the harness checks they agree; "
-                                                        "there is no R-vs-Julia number with a tolerance.",
-                                             "own_consistency": "Each engine is checked against itself (Frobenius self-consistency); "
-                                                                "the two are not compared with each other."}.get(kind_h, f"harness kind {kind_h}"))
-                emit(cid, f"paired_{kind_h}", "PASS" if passed else "FAIL", body)
+        point_batch_cases(d, julia, oracle, breceipt, ccases, batch, contract_path, verifier=verifiers[d], emit=emit)
 
     # ---- postfit-1 (coef readback) ----
     r1, j1 = runs / "postfit-1-r-p1", runs / "postfit-1-julia-p1"
@@ -703,7 +1000,6 @@ def main():
 
     # ---- case-map rows ----
     p0 = {r["source_id"]: r for r in load(P0_CASEMAP)["rows"]}
-    carried_keys = ("uncertain", "reclassify_proposed", "original_classification")
     out_rows = []
     counts = {"numeric_pass": 0, "numeric_fail": 0, "numeric_held_batch_verifier_failed": 0,
               "numeric_non_discriminating": 0, "partial_non_numeric_case": 0,
@@ -712,90 +1008,8 @@ def main():
                [(f"postfit/POSTFIT-SURFACE-{s}", "RETIRED") for s in POSTFIT_RETIRED] + \
                [(f"postfit-policy/{s}", "DANGLING") for s in POLICY_DANGLING]
     for sid, carry in in_scope:
-        base = p0[sid]
-        ids = base["executable_case_ids"]
-        row = {"source_id": sid, "classification": base["classification"], "arc": "A3", "carry_scan_status": carry,
-               "executable_case_ids": ids, "disposition": base.get("disposition")}
-        for k in carried_keys:
-            if k in base:
-                row[k] = base[k]
-        have = [receipts.get(i) for i in ids]
-        if carry == "RETIRED":
-            row.update(evidence_tier="not_measured", measured_against=None, evidence={},
-                       reason=("The R export was removed between P0 and P1 (NAMESPACE at P1 no longer exports it); the row has "
-                               "no executable case ids and keeps its P0 classification and disposition. Retiring or "
-                               "re-scoping the row is a maintainer decision."))
-            counts["retired_at_p1_not_measured"] += 1
-        elif not ids or any(h is None for h in have):
-            missing = [i for i, h in zip(ids, have) if h is None]
-            if sid == "postfit-policy/POST-DEVIANCE":
-                row.update(evidence_tier="needs_surface_not_executed", measured_against=None, evidence={},
-                           reason=("Its executable case CORE070-POSTFIT-DEVIANCE-NATIVE was never authored into the "
-                                   "postfit-policy batch (the P0 contract lists POST-DEVIANCE under needs_new_julia_surface), "
-                                   "so nothing ran at P1. deviance.gllvmTMB_multi is measured numerically at P1 under a "
-                                   "different case id (CORE070-WAVE8-DEVIANCE-MULTI, row postfit/POSTFIT-SURFACE-"
-                                   "deviance.gllvmTMB_multi); rebinding is a maintainer decision."))
-                counts["needs_surface_not_executed"] += 1
-            else:
-                row.update(evidence_tier="not_measured", measured_against=None, evidence={},
-                           reason=f"Not re-measured at P1 in this PR (missing: {', '.join(missing)}).")
-                counts["not_measured"] += 1
-        else:
-            kinds = {h[1] for h in have}
-            verdicts = {i: h[2] for i, h in zip(ids, have)}
-            paths = [h[0] for h in have]
-            all_pass = all(v == "PASS" for v in verdicts.values())
-            batch_ok = {i: h[3] for i, h in zip(ids, have)}
-            disc = {i: h[4] for i, h in zip(ids, have)}
-            if kinds == {"numeric_r_vs_julia"} and all_pass and not all(v == "PASS" for v in batch_ok.values()):
-                # PR #567's gate: a batch whose own verifier rejected the run cannot bind a row
-                row.update(evidence_tier="numeric_held_batch_verifier_failed", measured_against=P1_SHA,
-                           evidence={"non_binding_receipts": paths,
-                                     "tier": "numeric comparison blocks pass, but the batch verifier rejected the "
-                                             "run, so the row does not bind"},
-                           note=HELD_NOTE,
-                           measured_result={"case_verdicts": verdicts, "batch_verifier": batch_ok,
-                                            "discriminating": disc})
-                counts["numeric_held_batch_verifier_failed"] += 1
-            elif kinds == {"numeric_r_vs_julia"} and all_pass and not all(disc.values()):
-                # review finding 1: a comparison that cannot discriminate does not bind
-                row.update(evidence_tier="numeric_non_discriminating", measured_against=P1_SHA,
-                           evidence={"non_binding_receipts": paths,
-                                     "tier": "numeric comparison blocks pass, but at least one is degenerate (the R "
-                                             "values are one constant or all ~0), so a constant or zero "
-                                             "implementation would pass too; the row does not bind"},
-                           note=NON_DISCRIMINATING_NOTES.get(sid, "flagged by the degenerate-comparison gate; see the "
-                                                                  "comparison blocks' degenerate_reason"),
-                           measured_result={"case_verdicts": verdicts, "batch_verifier": batch_ok,
-                                            "discriminating": disc})
-                counts["numeric_non_discriminating"] += 1
-            elif kinds == {"numeric_r_vs_julia"} and all_pass:
-                bind_numeric(row, paths, verdicts, batch_ok,
-                             INTEGER_TIER if all(i in INTEGER_EQUALITY for i in ids) else
-                             "numeric: every executable case receipt carries an R-vs-Julia comparison "
-                             "block pinned to P1, within the harness tolerance")
-                counts["numeric_pass"] += 1
-            elif not all_pass:
-                row.update(evidence_tier="numeric_fail", measured_against=P1_SHA,
-                           evidence={"non_binding_receipts": paths,
-                                     "tier": "measured at P1; the harness verdict is FAIL, so the row does not bind"},
-                           measured_result={"case_verdicts": verdicts, "batch_verifier": batch_ok, "row_verdict": "FAIL"})
-                counts["numeric_fail"] += 1
-            else:
-                row.update(evidence_tier="partial_non_numeric_case", measured_against=P1_SHA,
-                           evidence={"non_binding_receipts": paths,
-                                     "tier": "measured at P1 and the harness passes, but at least one case is a verdict, "
-                                             "own-consistency, exact-integer, empty-length or default-policy check with "
-                                             "no R-vs-Julia number and tolerance, so the row does not bind"},
-                           measured_result={"case_verdicts": verdicts, "batch_verifier": batch_ok,
-                                            "case_kinds": {i: h[1] for i, h in zip(ids, have)}})
-                counts["partial_non_numeric_case"] += 1
-        before = row["evidence_tier"]
-        twin_overlay(row)
-        if row["evidence_tier"] != before:
-            counts[tier_count_key(before)] -= 1
-            counts[tier_count_key(row["evidence_tier"])] += 1
-        out_rows.append(row)
+        out_rows.append(derive_row(sid, carry, p0, receipts)[0])
+    counts = recount({"counts": counts, "rows": out_rows})
 
     casemap = {
         "schema": 1, "reference_commit": P1_SHA,
