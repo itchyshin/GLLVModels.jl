@@ -917,7 +917,11 @@ test('behavioural: a behavioural label cannot ride on another row numeric receip
 test('behavioural scope: a row outside the frozen list (59 inference rows, four named rows) does not bind, even with a valid block', () => {
   for (const sid of ['isdm/CAP-ISDM-1FO-PREDICT-EXPORT-2', 'postfit/POSTFIT-SURFACE-extract_proportions', 'data/RD-01', 'inference2/CI-ROUTE-001', 'x/inference/CI-ROUTE-001',
     // the four inference rows #684 item 2 does not name (two numeric, two partial): a prefix rule admitted them
-    'inference/CI-ROUTE-008', 'inference/CI-ROUTE-009', 'inference/CI-ROUTE-010', 'inference/CI-ROUTE-011',
+    // (CI-ROUTE-009 joined the scope in the 2026-10-05 extension; the other three stay out)
+    'inference/CI-ROUTE-008', 'inference/CI-ROUTE-010', 'inference/CI-ROUTE-011',
+    // near misses of the 2026-10-05 extension: an unlisted aghq id, the iSDM rows that close by signed disposition, a truncated name
+    'aghq/AGHQ-CTRL-THREE', 'aghq/AGHQ-AUTO-K-BINOMIAL', 'isdm/ISDM-WRONG-ID', 'isdm/ISDM-WRONG-LINK', 'isdm/ISDM-NO-TRAITS', 'isdm/ISDM-LEGACY',
+    'postfit/POSTFIT-SURFACE-check_auto', 'postfit/POSTFIT-SURFACE-check_auto_residual ',
     // a bare prefix, a path trick, a new unlisted inference id, a gap in the numbering, whitespace and case variants of a listed id
     'inference/', 'inference/../isdm/X', 'inference/CI-ROUTE-999', 'inference/CI-ROUTE-005', 'inference/CI-ROUTE-001 ', ' inference/CI-ROUTE-001', 'Inference/CI-ROUTE-001']) {
     const m = ({ readJ, writeJ }) => { bTree({ row: { source_id: sid } })({ readJ, writeJ }); };
@@ -937,6 +941,26 @@ test('behavioural scope: each of the four named C1 rows binds like an inference 
     assert.match(c1.stdout, /C1_MET$/m, `${sid}\n${c1.stdout}`);
     assert.match(c1.stdout, /bound_behavioural=1 /, sid);
     assert.match(runTree(m, 'C8').stdout, /C8_MET$/m, sid);
+  }
+});
+// Maintainer ruling 2026-10-05 (D-319): items A (7 aghq control rows, CI-ROUTE-009), N6 (5 iSDM rows) and N10
+// (check_auto_residual) extend the frozen list by 14 explicit ids.
+const EXTENDED_2026_10_05 = ['aghq/AGHQ-CTRL-AUTO', 'aghq/AGHQ-CTRL-FALSE', 'aghq/AGHQ-CTRL-NINE', 'aghq/AGHQ-CTRL-NULL',
+  'aghq/AGHQ-CTRL-ONE', 'aghq/AGHQ-CTRL-TRUE', 'aghq/AGHQ-CTRL-TWO', 'inference/CI-ROUTE-009',
+  'isdm/ISDM-COUNT', 'isdm/ISDM-EXTRA-SOURCE', 'isdm/ISDM-MISSING-IN-TRAIT', 'isdm/ISDM-MISSING-SOURCE', 'isdm/ISDM-WRAPPER-LAW',
+  'postfit/POSTFIT-SURFACE-check_auto_residual'];
+test('behavioural scope (2026-10-05 extension): each of the 14 extended rows binds with a matching block, and fails on a mismatch', () => {
+  assert.equal(EXTENDED_2026_10_05.length, 14);
+  for (const sid of EXTENDED_2026_10_05) {
+    const m = bTree({ row: { source_id: sid } });
+    const c1 = runTree(m, 'C1');
+    assert.match(c1.stdout, /C1_MET$/m, `${sid}\n${c1.stdout}`);
+    assert.match(c1.stdout, /bound_behavioural=1 /, sid);
+    assert.match(runTree(m, 'C8').stdout, /C8_MET$/m, sid);
+    // In scope is not bound: a mismatched label still fails.
+    const bad = runTree(bTree({ row: { source_id: sid }, receipt: bReceipt({}, {}, [bCase({ r_observed: 'refused', julia_observed: 'accepted' })]) }), 'C1');
+    assert.match(bad.stdout, /C1_NOT_MET$/m, sid);
+    assert.match(bad.stdout, /differ after canonicalisation/, sid);
   }
 });
 test('behavioural scope: a cited receipt whose own comparison is out of tolerance does not bind a relabelled row', () => {
@@ -1179,13 +1203,18 @@ test('C6: an undecided item (decision null) still fails, as before', () => {
 
 // Scope: the behavioural tier is a frozen list, not a prefix. Scoreboard side: the same list, by scoreboard id.
 test('behavioural scope (scoreboard): EVIDENCED-BEHAVIOURAL on CI-ROUTE-008..011, a new inference id or a bare prefix is not done', () => {
-  for (const id of ['inference-CI-ROUTE-008', 'inference-CI-ROUTE-009', 'inference-CI-ROUTE-010', 'inference-CI-ROUTE-011', 'inference-CI-ROUTE-999', 'inference']) {
+  for (const id of ['inference-CI-ROUTE-008', 'inference-CI-ROUTE-010', 'inference-CI-ROUTE-011', 'inference-CI-ROUTE-999', 'inference',
+    'aghq-AGHQ-CTRL-THREE', 'isdm-ISDM-WRONG-ID', 'isdm-ISDM-LEGACY']) {
     const r = runBoard('EVIDENCED-BEHAVIOURAL', 'X2', id);
     assert.match(r.stdout, /X2_NOT_MET$/m, id);
     assert.match(r.stdout, new RegExp(`${id}:BEHAVIOURAL_NOT_ALLOWED_FOR_THIS_ROW`), id);
     assert.match(r.stdout, /done_behavioural=0$/m, id);
   }
   assert.match(runBoard('EVIDENCED-BEHAVIOURAL', 'X2', 'inference-CI-ROUTE-084').stdout, /X2_MET$/m);
+  // The 2026-10-05 extension, by scoreboard id.
+  for (const id of ['inference-CI-ROUTE-009', 'aghq-AGHQ-CTRL-AUTO', 'isdm-ISDM-WRAPPER-LAW', 'postfit-POSTFIT-SURFACE-check_auto_residual']) {
+    assert.match(runBoard('EVIDENCED-BEHAVIOURAL', 'X2', id).stdout, /X2_MET$/m, id);
+  }
 });
 
 // Label collision: compare class identity, not canonical strings (external review F8a, F8b, F8e, F8f).

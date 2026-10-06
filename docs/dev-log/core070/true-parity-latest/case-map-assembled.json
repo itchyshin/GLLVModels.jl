@@ -6,7 +6,7 @@
  "inputs": [
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-aghq.json",
-   "sha256": "72e1d55c0553897c62e92f534ab128a8a592282958e1e56c44ca95e1c5902114",
+   "sha256": "ab5ecf9bbd472e75b1acfc1087d2672c4bc9b20ab7442fedf077d8da3301be50",
    "rows": 21
   },
   {
@@ -36,7 +36,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-isdm.json",
-   "sha256": "abcd0731b63d4290870525114ca3882d9a08fb9ac1966e35e702271a3917e6ca",
+   "sha256": "1ffc4904a25c5e6a8bb550333da004b82b731dfa489b17b55375944378149484",
    "rows": 21
   },
   {
@@ -453,13 +453,13 @@
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
    },
    "p0_case_map_reading_561": "NOT_TWINNED_NOT_SIGNED: the P0 row cites no evidence.receipt (its receipts sit under .unlazy/)",
-   "evidence_tier": "paired_control_categorical_pass",
+   "evidence_tier": "behavioural",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-CTRL-AUTO-PAIRED-CONTROL.json"
     ],
-    "tier": "paired control on categorical labels, measured at P1; non-numeric, so it does not bind under the numeric rule"
+    "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
    },
    "measured_result": {
     "case_verdicts": {
@@ -469,8 +469,7 @@
      "CORE070-AGHQ-CTRL-AUTO-PAIRED-CONTROL": "PASS"
     },
     "row_verdict": "PASS"
-   },
-   "note": "Not bound: behaviour block kept as non-binding evidence only (R and Julia give the same label), but this row is not in the frozen scope of itchyshin/GLLVModels.jl#684 item 2; binding it needs the maintainer to confirm ruling 2 covers it."
+   }
   },
   {
    "source_id": "aghq/AGHQ-CTRL-FALSE",
@@ -491,13 +490,13 @@
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
    },
    "p0_case_map_reading_561": "NOT_TWINNED_NOT_SIGNED: the P0 row cites no evidence.receipt (its receipts sit under .unlazy/)",
-   "evidence_tier": "paired_control_categorical_pass",
+   "evidence_tier": "behavioural",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-CTRL-FALSE-PAIRED-CONTROL.json"
     ],
-    "tier": "paired control on categorical labels, measured at P1; non-numeric, so it does not bind under the numeric rule"
+    "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
    },
    "measured_result": {
     "case_verdicts": {
@@ -507,8 +506,7 @@
      "CORE070-AGHQ-CTRL-FALSE-PAIRED-CONTROL": "PASS"
     },
     "row_verdict": "PASS"
-   },
-   "note": "Not bound: behaviour block kept as non-binding evidence only (R and Julia give the same label), but this row is not in the frozen scope of itchyshin/GLLVModels.jl#684 item 2; binding it needs the maintainer to confirm ruling 2 covers it."
+   }
   },
   {
    "source_id": "aghq/AGHQ-CTRL-NINE",
@@ -529,13 +527,13 @@
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
    },
    "p0_case_map_reading_561": "NOT_TWINNED_NOT_SIGNED: the P0 row cites no evidence.receipt (its receipts sit under .unlazy/)",
-   "evidence_tier": "paired_control_categorical_pass",
+   "evidence_tier": "behavioural",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-CTRL-NINE-PAIRED-CONTROL.json"
     ],
-    "tier": "paired control on categorical labels, measured at P1; non-numeric, so it does not bind under the numeric rule"
+    "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
    },
    "measured_result": {
     "case_verdicts": {
@@ -545,8 +543,7 @@
      "CORE070-AGHQ-CTRL-NINE-PAIRED-CONTROL": "PASS"
     },
     "row_verdict": "PASS"
-   },
-   "note": "Not bound: behaviour block kept as non-binding evidence only (R and Julia give the same label), but this row is not in the frozen scope of itchyshin/GLLVModels.jl#684 item 2; binding it needs the maintainer to confirm ruling 2 covers it."
+   }
   },
   {
    "source_id": "aghq/AGHQ-CTRL-NULL",
@@ -567,13 +564,13 @@
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
    },
    "p0_case_map_reading_561": "NOT_TWINNED_NOT_SIGNED: the P0 row cites no evidence.receipt (its receipts sit under .unlazy/)",
-   "evidence_tier": "paired_control_categorical_pass",
+   "evidence_tier": "behavioural",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-CTRL-NULL-PAIRED-CONTROL.json"
     ],
-    "tier": "paired control on categorical labels, measured at P1; non-numeric, so it does not bind under the numeric rule"
+    "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
    },
    "measured_result": {
     "case_verdicts": {
@@ -583,8 +580,7 @@
      "CORE070-AGHQ-CTRL-NULL-PAIRED-CONTROL": "PASS"
     },
     "row_verdict": "PASS"
-   },
-   "note": "Not bound: behaviour block kept as non-binding evidence only (R and Julia give the same label), but this row is not in the frozen scope of itchyshin/GLLVModels.jl#684 item 2; binding it needs the maintainer to confirm ruling 2 covers it."
+   }
   },
   {
    "source_id": "aghq/AGHQ-CTRL-ONE",
@@ -605,13 +601,13 @@
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
    },
    "p0_case_map_reading_561": "NOT_TWINNED_NOT_SIGNED: the P0 row cites no evidence.receipt (its receipts sit under .unlazy/)",
-   "evidence_tier": "paired_control_categorical_pass",
+   "evidence_tier": "behavioural",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-CTRL-ONE-PAIRED-CONTROL.json"
     ],
-    "tier": "paired control on categorical labels, measured at P1; non-numeric, so it does not bind under the numeric rule"
+    "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
    },
    "measured_result": {
     "case_verdicts": {
@@ -621,8 +617,7 @@
      "CORE070-AGHQ-CTRL-ONE-PAIRED-CONTROL": "PASS"
     },
     "row_verdict": "PASS"
-   },
-   "note": "Not bound: behaviour block kept as non-binding evidence only (R and Julia give the same label), but this row is not in the frozen scope of itchyshin/GLLVModels.jl#684 item 2; binding it needs the maintainer to confirm ruling 2 covers it."
+   }
   },
   {
    "source_id": "aghq/AGHQ-CTRL-TRUE",
@@ -643,13 +638,13 @@
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
    },
    "p0_case_map_reading_561": "NOT_TWINNED_NOT_SIGNED: the P0 row cites no evidence.receipt (its receipts sit under .unlazy/)",
-   "evidence_tier": "paired_control_categorical_pass",
+   "evidence_tier": "behavioural",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-CTRL-TRUE-PAIRED-CONTROL.json"
     ],
-    "tier": "paired control on categorical labels, measured at P1; non-numeric, so it does not bind under the numeric rule"
+    "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
    },
    "measured_result": {
     "case_verdicts": {
@@ -659,8 +654,7 @@
      "CORE070-AGHQ-CTRL-TRUE-PAIRED-CONTROL": "PASS"
     },
     "row_verdict": "PASS"
-   },
-   "note": "Not bound: behaviour block kept as non-binding evidence only (R and Julia give the same label), but this row is not in the frozen scope of itchyshin/GLLVModels.jl#684 item 2; binding it needs the maintainer to confirm ruling 2 covers it."
+   }
   },
   {
    "source_id": "aghq/AGHQ-CTRL-TWO",
@@ -681,13 +675,13 @@
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
    },
    "p0_case_map_reading_561": "NOT_TWINNED_NOT_SIGNED: the P0 row cites no evidence.receipt (its receipts sit under .unlazy/)",
-   "evidence_tier": "paired_control_categorical_pass",
+   "evidence_tier": "behavioural",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-CTRL-TWO-PAIRED-CONTROL.json"
     ],
-    "tier": "paired control on categorical labels, measured at P1; non-numeric, so it does not bind under the numeric rule"
+    "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
    },
    "measured_result": {
     "case_verdicts": {
@@ -697,8 +691,7 @@
      "CORE070-AGHQ-CTRL-TWO-PAIRED-CONTROL": "PASS"
     },
     "row_verdict": "PASS"
-   },
-   "note": "Not bound: behaviour block kept as non-binding evidence only (R and Julia give the same label), but this row is not in the frozen scope of itchyshin/GLLVModels.jl#684 item 2; binding it needs the maintainer to confirm ruling 2 covers it."
+   }
   },
   {
    "source_id": "aghq/AGHQ-DEFAULT-OFF",
@@ -6735,7 +6728,7 @@
    "executable_case_ids": [
     "CORE070-ISDM-LEGACY-PAIRED-CONTROL"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "isdm-batch-01 (wave1)",
    "p0_evidence": {
     "recorded": true,
@@ -6764,7 +6757,9 @@
      "CORE070-ISDM-LEGACY-PAIRED-CONTROL": "r_replay_julia_surface_absent"
     }
    },
-   "note": "ISDM-LEGACY replays R's legacy two-source route (family_var = \"isdm_family\", fixed names gbif / survey_pa). Packet 1b item 2 (signed 2026-09-27, vault decision D-296) records it as an R-only backward-compatibility disposition that GLLVModels will not twin. That disposition is not written into this row (dispositions are the maintainer's to record in the case map); the row stays required and free."
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-27",
+   "disposition_basis": "R-only backward-compatibility route (family_var = \"isdm_family\", fixed names gbif / survey_pa) that GLLVModels will not twin: Packet 1b item 2, signed 2026-09-27 (vault decision D-296). Written onto this row under maintainer ruling 2026-10-05 (D-319), item N6; the R replay stays cited under non_binding_receipts."
   },
   {
    "source_id": "isdm/ISDM-MASKED-ARM",
@@ -7047,7 +7042,7 @@
    "executable_case_ids": [
     "CORE070-ISDM-NO-TRAITS-PAIRED-CONTROL"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "isdm-batch-01 (wave1)",
    "p0_evidence": {
     "recorded": true,
@@ -7075,7 +7070,10 @@
     "case_kinds": {
      "CORE070-ISDM-NO-TRAITS-PAIRED-CONTROL": "r_replay_julia_surface_absent"
     }
-   }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "disposition_basis": "R-internal admission predicate: the R case calls the predicate with traits = NULL, an argument no call to gllvmTMB(..., family = isdm_sources(...)) can set, and Julia's public fit_isdm_gllvm has no such argument either, so no paired twin through either public door exists. Signed disposition under maintainer ruling 2026-10-05 (D-319), item N6; the R replay stays cited under non_binding_receipts."
   },
   {
    "source_id": "isdm/ISDM-SUPPORT",
@@ -7336,7 +7334,7 @@
    "executable_case_ids": [
     "CORE070-ISDM-WRONG-ID-PAIRED-CONTROL"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "isdm-batch-01 (wave1)",
    "p0_evidence": {
     "recorded": true,
@@ -7364,7 +7362,10 @@
     "case_kinds": {
      "CORE070-ISDM-WRONG-ID-PAIRED-CONTROL": "r_replay_julia_surface_absent"
     }
-   }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "disposition_basis": "R-internal admission predicate: the R case calls the predicate with a tampered family-id column of the internal row-id matrix, an argument no call to gllvmTMB(..., family = isdm_sources(...)) can set, and Julia's public fit_isdm_gllvm has no such argument either, so no paired twin through either public door exists. Signed disposition under maintainer ruling 2026-10-05 (D-319), item N6; the R replay stays cited under non_binding_receipts."
   },
   {
    "source_id": "isdm/ISDM-WRONG-LINK",
@@ -7374,7 +7375,7 @@
    "executable_case_ids": [
     "CORE070-ISDM-WRONG-LINK-PAIRED-CONTROL"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "isdm-batch-01 (wave1)",
    "p0_evidence": {
     "recorded": true,
@@ -7402,7 +7403,10 @@
     "case_kinds": {
      "CORE070-ISDM-WRONG-LINK-PAIRED-CONTROL": "r_replay_julia_surface_absent"
     }
-   }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "disposition_basis": "R-internal admission predicate: the R case calls the predicate with a tampered link-id column of the internal row-id matrix, an argument no call to gllvmTMB(..., family = isdm_sources(...)) can set, and Julia's public fit_isdm_gllvm has no such argument either, so no paired twin through either public door exists. Signed disposition under maintainer ruling 2026-10-05 (D-319), item N6; the R replay stays cited under non_binding_receipts."
   },
   {
    "source_id": "isdm/ISDM-ZERO-ORDINARY",

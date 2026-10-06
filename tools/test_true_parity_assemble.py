@@ -444,8 +444,8 @@ def main():
     expect("behavioural_empty_basis_fails_run", c == 1 and "empty basis" in o, o)
     shutil.rmtree(tmp)
     # Scope of the behavioural tier: inference/* rows and four named C1 rows only.
-    for sid in ("isdm/X", "postfit/POSTFIT-SURFACE-nobs", "inference2/N", "data/RD-01", "inference/CI-ROUTE-008", "inference/CI-ROUTE-009",
-                "inference/CI-ROUTE-010", "inference/CI-ROUTE-011", "inference/", "inference/../isdm/X", "inference/CI-ROUTE-999",
+    for sid in ("isdm/X", "postfit/POSTFIT-SURFACE-nobs", "inference2/N", "data/RD-01", "inference/CI-ROUTE-008", "isdm/ISDM-WRONG-ID",
+                "isdm/ISDM-LEGACY", "aghq/AGHQ-CTRL-THREE", "inference/CI-ROUTE-010", "inference/CI-ROUTE-011", "inference/", "inference/../isdm/X", "inference/CI-ROUTE-999",
                 "Inference/CI-ROUTE-001"):
         root, tmp = behavioural_root(sid=sid)
         rid = A.scoreboard_id(sid)
@@ -456,7 +456,7 @@ def main():
                c == 0 and status_of(root, rid) == "BEHAVIOURAL-UNVERIFIED" and "not covered by itchyshin/GLLVModels.jl#684 item 2" in (root / A.LEDGER / A.OUT_SCOREBOARD).read_text()
                and (out is None or (m is not None and int(m.group(1)) == 0)), f"{status_of(root, rid)} {o}")
         shutil.rmtree(tmp)
-    for sid in A.BEHAVIOURAL_NAMED_SOURCE_IDS:
+    for sid in A.BEHAVIOURAL_NAMED_SOURCE_IDS + A.BEHAVIOURAL_EXTENDED_SOURCE_IDS:
         root, tmp = behavioural_root(sid=sid)
         rid = A.scoreboard_id(sid)
         c, o = run(root)
@@ -649,13 +649,14 @@ def main():
             finally:
                 shutil.rmtree(tmp)
         return f
-    for sid in ("inference/CI-ROUTE-008", "inference/CI-ROUTE-009", "inference/CI-ROUTE-010", "inference/CI-ROUTE-011", "inference/",
+    for sid in ("inference/CI-ROUTE-008", "inference/CI-ROUTE-010", "inference/CI-ROUTE-011", "inference/",
                 "inference/../isdm/X", "inference/CI-ROUTE-999", "inference/CI-ROUTE-005", "Inference/CI-ROUTE-001", "inference/CI-ROUTE-001 "):
         check(f"scope_frozen_list_rejects_{sid!r}", scope_list_case(sid))
 
     def all_63():
-        # All 59 listed rows plus the four excluded inference rows, every one tier behavioural with a scoped, matching entry.
-        excluded = [f"inference/CI-ROUTE-{n:03d}" for n in (8, 9, 10, 11)]
+        # All 59 listed rows plus the three inference rows still excluded (CI-ROUTE-009 joined in the 2026-10-05
+        # extension), every one tier behavioural with a scoped, matching entry.
+        excluded = [f"inference/CI-ROUTE-{n:03d}" for n in (8, 10, 11)]
         sids = list(A.BEHAVIOURAL_INFERENCE_SOURCE_IDS) + excluded
         rows = [row(sid, tier="behavioural", executable_case_ids=[f"CASE-{i}"], evidence={"receipt": [BR]}) for i, sid in enumerate(sids)]
         root, tmp = with_root({"case-map-family.json": rows})
@@ -667,10 +668,16 @@ def main():
             n_ok = sum(v == "EVIDENCED-BEHAVIOURAL" for sid, v in statuses.items() if sid in A.BEHAVIOURAL_INFERENCE_SOURCE_IDS)
             n_bad = sum(statuses[sid] == "BEHAVIOURAL-UNVERIFIED" for sid in excluded)
             b = bound_beh(root)
-            return c == 0 and n_ok == 59 and n_bad == 4 and (b is None or b == 59), f"code={c} evidenced={n_ok} unverified_excluded={n_bad} checker_bound={b} {o}"
+            return c == 0 and n_ok == 59 and n_bad == 3 and (b is None or b == 59), f"code={c} evidenced={n_ok} unverified_excluded={n_bad} checker_bound={b} {o}"
         finally:
             shutil.rmtree(tmp)
-    check("scope_all_59_listed_rows_bind_and_the_four_others_do_not", all_63)
+    check("scope_all_59_listed_rows_bind_and_the_three_others_do_not", all_63)
+    check("scope_extended_list_has_14_unique_ids_disjoint_from_the_other_lists", lambda: (
+        len(A.BEHAVIOURAL_EXTENDED_SOURCE_IDS) == 14 and len(set(A.BEHAVIOURAL_EXTENDED_SOURCE_IDS)) == 14
+        and not set(A.BEHAVIOURAL_EXTENDED_SOURCE_IDS) & (set(A.BEHAVIOURAL_INFERENCE_SOURCE_IDS) | set(A.BEHAVIOURAL_NAMED_SOURCE_IDS))
+        and not {"inference/CI-ROUTE-008", "inference/CI-ROUTE-010", "inference/CI-ROUTE-011", "isdm/ISDM-LEGACY",
+                 "isdm/ISDM-NO-TRAITS", "isdm/ISDM-WRONG-ID", "isdm/ISDM-WRONG-LINK"} & set(A.BEHAVIOURAL_EXTENDED_SOURCE_IDS),
+        A.BEHAVIOURAL_EXTENDED_SOURCE_IDS))
     check("scope_list_has_59_unique_ids_none_of_008_to_011", lambda: (
         len(A.BEHAVIOURAL_INFERENCE_SOURCE_IDS) == 59 and len(set(A.BEHAVIOURAL_INFERENCE_SOURCE_IDS)) == 59
         and not {f"inference/CI-ROUTE-{n:03d}" for n in (8, 9, 10, 11)} & set(A.BEHAVIOURAL_INFERENCE_SOURCE_IDS), len(A.BEHAVIOURAL_INFERENCE_SOURCE_IDS)))
@@ -679,21 +686,25 @@ def main():
         led = A.ROOT / A.LEDGER
         inf = {r["source_id"]: r.get("evidence_tier") for r in json.loads((led / "case-map-inference.json").read_text())["rows"]}
         listed = set(A.BEHAVIOURAL_INFERENCE_SOURCE_IDS)
+        extended = set(A.BEHAVIOURAL_EXTENDED_SOURCE_IDS)  # CI-ROUTE-009 (2026-10-05): partial until its slice relabels it
         routing = {sid for sid, t in inf.items() if t in ("routing_control_flow", "reject_error_class")}
         missing = sorted(listed - set(inf))
         unlisted_routing = sorted(routing - listed)
         # A listed row is a routing or error-class row, or has already been relabelled behavioural by its slice;
         # no row outside the list may be behavioural; the four rows the ruling does not name are numeric or partial.
         bad_listed = sorted(sid for sid in listed if inf.get(sid) not in ("routing_control_flow", "reject_error_class", "behavioural"))
-        stray = sorted(sid for sid, t in inf.items() if t == "behavioural" and sid not in listed)
-        others = sorted(set(inf) - listed)
-        ok_others = all(inf[sid] in ("numeric", "partial_non_numeric_case") for sid in others)
+        stray = sorted(sid for sid, t in inf.items() if t == "behavioural" and sid not in listed | extended)
+        bad_extended = sorted(sid for sid in extended & set(inf) if inf[sid] not in ("partial_non_numeric_case", "behavioural"))
+        others = sorted(set(inf) - listed - extended)
+        ok_others = all(inf[sid] in ("numeric", "partial_non_numeric_case") for sid in others) and not bad_extended
         named = set()
         for f in sorted(led.glob("case-map*.json")):
             named |= {r["source_id"] for r in json.loads(f.read_text())["rows"]}
         named_missing = sorted(set(A.BEHAVIOURAL_NAMED_SOURCE_IDS) - named)
-        ok = not (missing or unlisted_routing or bad_listed or stray or named_missing) and ok_others and len(others) == 4
-        return ok, f"missing={missing} unlisted_routing={unlisted_routing} bad_listed={bad_listed} stray={stray} others={others} named_missing={named_missing}"
+        extended_missing = sorted(extended - named)
+        ok = not (missing or unlisted_routing or bad_listed or stray or named_missing or extended_missing) and ok_others and len(others) == 3
+        return ok, (f"missing={missing} unlisted_routing={unlisted_routing} bad_listed={bad_listed} stray={stray} others={others} "
+                    f"named_missing={named_missing} extended_missing={extended_missing} bad_extended={bad_extended}")
     check("scope_list_ties_to_case_map_inference_json", scope_ties_to_ledger)
 
     # Item 2: labels match by class identity, not by canonical string (external review F8a, F8b, F8e, F8f).
@@ -1148,6 +1159,8 @@ def main():
            and re.findall(r"'([A-Z_]+)'", ref.group(3)) == list(A.C6_RULINGS[ref.group(1)]["words"]), rtable)
     named = re.search(r"const BEHAVIOURAL_NAMED_SOURCE_IDS = new Set\(\[(.*?)\]\);", mjs, re.S).group(1)
     expect("behavioural_named_ids_match_checker", re.findall(r"'([^']+)'", named) == list(A.BEHAVIOURAL_NAMED_SOURCE_IDS), named)
+    ext = re.search(r"const BEHAVIOURAL_EXTENDED_SOURCE_IDS = new Set\(\[(.*?)\]\);", mjs, re.S).group(1)
+    expect("behavioural_extended_ids_match_checker", re.findall(r"'([^']+)'", ext) == list(A.BEHAVIOURAL_EXTENDED_SOURCE_IDS), ext)
     infer = re.search(r"const BEHAVIOURAL_INFERENCE_SOURCE_IDS = new Set\(\[(.*?)\]\);", mjs, re.S).group(1)
     expect("behavioural_inference_ids_match_checker", re.findall(r"'([^']+)'", infer) == list(A.BEHAVIOURAL_INFERENCE_SOURCE_IDS), infer)
     expect("receipt_status_fields_match_checker",

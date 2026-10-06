@@ -690,6 +690,62 @@ Controls. Assembler: `disposition_status_word_*`, `disposition_pipe_forged_*`, `
 `not bound` row is not done for each of the three words (X2 and C2), the same words with a bound cell are done, and
 a non-done word stays not done.
 
+## Rulings of 2026-10-05 (maintainer ruling 2026-10-05, D-319)
+
+On 2026-10-05 the maintainer, Shinichi Nakagawa, approved every recommendation on the rulings page of the
+true-parity lane (vault decision D-319). Verbatim: "Approve all recommendations on the rulings page and the C6
+high-confidence group. D: [yes]. animal_latent: leave unbound. C4: change the text. Review C6 medium and low rows
+with me later." The signature source is `signed-rulings-2026-10-05.md` in the lane kit
+(`~/local-scratch/lanes/GLLVM.jl-true-parity-latest/LOOP/lanes/true-parity-latest/`), which quotes each
+recommendation. Cite this section as "maintainer ruling 2026-10-05 (D-319)", with the item name. As for the rulings of
+2026-10-02, nothing here is a new signature: the tool cannot check that the named person signed, and PR review does
+that by reading the diff. Each rule that changes a check is ported to `tools/true_parity_assemble.py`, so the
+scoreboard status and the checker agree. The C6 items are recorded with the C6 decisions, not here.
+
+### Item A, N6 and N10: the behavioural scope is extended by 14 listed rows
+
+Ruling 2 of 2026-10-02 froze the behavioural tier to 63 rows. Three signed items extend that list, and only by
+explicit ids, never by prefix:
+
+- **Item A** (signed yes): the 7 aghq control rows `aghq/AGHQ-CTRL-AUTO`, `-FALSE`, `-NINE`, `-NULL`, `-ONE`, `-TRUE`,
+  `-TWO` and `inference/CI-ROUTE-009`. Each already had a behaviour block, kept as non-binding evidence because the
+  row was outside the frozen list.
+- **N6** (signed yes: "iSDM behavioural ruling, 3 internal predicates, D-296 written onto ISDM-LEGACY"). The 9 iSDM
+  rows whose R side is an admission or refusal predicate split three ways, read from each R case's `r_expression`:
+  - behavioural scope, 5 rows whose R case is reachable through `gllvmTMB(..., family = isdm_sources(...))`:
+    `isdm/ISDM-COUNT`, `-EXTRA-SOURCE`, `-MISSING-IN-TRAIT`, `-MISSING-SOURCE`, `-WRAPPER-LAW`. Each binds only when a
+    receipt shows Julia's public door giving the same refusal or admission (slice W3-2); none does yet.
+  - signed disposition, 3 internal predicates: `isdm/ISDM-NO-TRAITS` (calls the predicate with `traits = NULL`),
+    `-WRONG-ID` and `-WRONG-LINK` (tamper the family-id or link-id column of the internal row-id matrix). No public
+    call on either engine can set those arguments. The ruling names the count, not the ids; the three ids are the
+    lane's reading of the receipts (AGENT-INFERRED) and are for the reviewer of this change to confirm.
+  - signed disposition, `isdm/ISDM-LEGACY`: the R-only backward-compatibility disposition already signed in Packet 1b
+    item 2 (2026-09-27, D-296) is now written onto the row (`signed_on` 2026-09-27, the date of that signature).
+  The four dispositions are written by `tools/core070_isdm_p1_receipts.py` (`SIGNED_DISPOSITIONS`), so its
+  `--check` keeps re-deriving the rows; each row carries the reason in `disposition_basis`.
+- **N10** (signed yes): `postfit/POSTFIT-SURFACE-check_auto_residual`. It binds when a behaviour block shows the same
+  verdict from both engines (slice W3-9); its receipt has none yet.
+
+The 14 ids live in `BEHAVIOURAL_EXTENDED_SOURCE_IDS` in the checker and in the assembler, a separate set so the
+59-row inference list stays tied to `case-map-inference.json`. Every other rule of ruling 2 is unchanged: a row in
+scope still needs a matching, well-formed, passing behaviour block, and being listed binds nothing by itself.
+`inference/CI-ROUTE-008`, `-010` and `-011` stay outside. Tests fail if the two copies drift, if the set does not
+have 14 unique ids, if it overlaps the other two lists or names one of the four signed-disposition iSDM rows.
+
+Rows that bind on this change: the 7 aghq control rows (`core070_aghq_p1_receipts.py --apply-twins` relabels them,
+because their blocks already match). `inference/CI-ROUTE-009` binds once `case-map-inference.json` is regenerated
+(`core070_inference_p1_receipts.py --write`), which belongs to the inference slice. Until then that tool's `--check`
+reports CI-ROUTE-009 as differing from its re-derivation.
+
+Negative controls (checker, group "behavioural scope"): each of the 14 rows binds with a matching block and fails on a
+mismatched label; near misses do not bind (`aghq/AGHQ-CTRL-THREE`, `aghq/AGHQ-AUTO-K-BINOMIAL`, the four
+signed-disposition iSDM rows, `postfit/POSTFIT-SURFACE-check_auto`, a trailing space); on the scoreboard,
+`EVIDENCED-BEHAVIOURAL` counts on `inference-CI-ROUTE-009`, `aghq-AGHQ-CTRL-AUTO`, `isdm-ISDM-WRAPPER-LAW` and
+`postfit-POSTFIT-SURFACE-check_auto_residual` and not on `aghq-AGHQ-CTRL-THREE`, `isdm-ISDM-WRONG-ID` or
+`isdm-ISDM-LEGACY`. Assembler: `behavioural_scope_named_row_*` (now over the extended ids too),
+`scope_extended_list_has_14_unique_ids_disjoint_from_the_other_lists`, `behavioural_extended_ids_match_checker`,
+`scope_list_ties_to_case_map_inference_json` (CI-ROUTE-009 may be partial or behavioural).
+
 ## Clauses
 
 Every clause starts unmet except C7, whose evidence (`docs/src/gllvmtmb-parity.md`) already

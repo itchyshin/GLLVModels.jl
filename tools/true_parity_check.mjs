@@ -176,10 +176,24 @@ const BEHAVIOURAL_NAMED_SOURCE_IDS = new Set([
   'model-comparison/print.anova.gllvmTMB_multi',
   'model-comparison/update.gllvmTMB_multi',
 ]);
-const behaviouralEligibleSourceId = (sid) => typeof sid === 'string' && (BEHAVIOURAL_INFERENCE_SOURCE_IDS.has(sid) || BEHAVIOURAL_NAMED_SOURCE_IDS.has(sid));
+// Extension signed 2026-10-05 (maintainer ruling 2026-10-05 (D-319); GATES.md "Rulings of 2026-10-05"): item A adds
+// the 7 aghq control rows and inference/CI-ROUTE-009; N6 adds the 5 iSDM refusal or admission rows reachable through
+// R's public door (the 3 internal-predicate rows ISDM-NO-TRAITS, -WRONG-ID and -WRONG-LINK and ISDM-LEGACY close by
+// signed disposition instead); N10 adds check_auto_residual. Same rule as the 63 rows above: listed, explicit, frozen.
+// Kept as its own set so the 59-row inference list stays tied to case-map-inference.json. Copied in
+// tools/true_parity_assemble.py (BEHAVIOURAL_EXTENDED_SOURCE_IDS; a test fails if they drift).
+const BEHAVIOURAL_EXTENDED_SOURCE_IDS = new Set([
+  'aghq/AGHQ-CTRL-AUTO', 'aghq/AGHQ-CTRL-FALSE', 'aghq/AGHQ-CTRL-NINE', 'aghq/AGHQ-CTRL-NULL',
+  'aghq/AGHQ-CTRL-ONE', 'aghq/AGHQ-CTRL-TRUE', 'aghq/AGHQ-CTRL-TWO',
+  'inference/CI-ROUTE-009',
+  'isdm/ISDM-COUNT', 'isdm/ISDM-EXTRA-SOURCE', 'isdm/ISDM-MISSING-IN-TRAIT', 'isdm/ISDM-MISSING-SOURCE',
+  'isdm/ISDM-WRAPPER-LAW',
+  'postfit/POSTFIT-SURFACE-check_auto_residual',
+]);
+const behaviouralEligibleSourceId = (sid) => typeof sid === 'string' && (BEHAVIOURAL_INFERENCE_SOURCE_IDS.has(sid) || BEHAVIOURAL_NAMED_SOURCE_IDS.has(sid) || BEHAVIOURAL_EXTENDED_SOURCE_IDS.has(sid));
 // The assembler writes a scoreboard id as the source_id with every run of other characters turned into '-'.
 const scoreboardSlug = (sid) => sid.replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
-const BEHAVIOURAL_ELIGIBLE_BOARD_IDS = new Set([...BEHAVIOURAL_INFERENCE_SOURCE_IDS, ...BEHAVIOURAL_NAMED_SOURCE_IDS].map(scoreboardSlug));
+const BEHAVIOURAL_ELIGIBLE_BOARD_IDS = new Set([...BEHAVIOURAL_INFERENCE_SOURCE_IDS, ...BEHAVIOURAL_NAMED_SOURCE_IDS, ...BEHAVIOURAL_EXTENDED_SOURCE_IDS].map(scoreboardSlug));
 const behaviouralEligibleBoardId = (id) => BEHAVIOURAL_ELIGIBLE_BOARD_IDS.has(id);
 
 // One definition of a visible text, shared with tools/true_parity_assemble.py (is_visible): the string
@@ -576,7 +590,7 @@ function behaviouralReceiptStatus(row, cites = new Map()) {
   // Scope: the ruling covers the 59 inference routing and error-class rows and four named C1 rows only
   // (the frozen lists above). Any other row labelled behavioural (a numeric row, a campaign row, one of
   // the other four inference rows) does not bind on typed labels.
-  if (!behaviouralEligibleSourceId(row.source_id)) return { ok: false, reason: 'source_id not covered by itchyshin/GLLVModels.jl#684 item 2 (the 59 listed inference rows and four named C1 rows only)' };
+  if (!behaviouralEligibleSourceId(row.source_id)) return { ok: false, reason: 'source_id not covered by itchyshin/GLLVModels.jl#684 item 2 (the 59 listed inference rows and four named C1 rows) or by its extension in maintainer ruling 2026-10-05 (D-319) (14 listed rows)' };
   loadEquivalence(); // a malformed or ambiguous table is a measurement failure, whatever the row says
   const cs = carryStatus(row);
   if (cs.stale) return { ok: false, reason: cs.reason };

@@ -2,7 +2,7 @@
   "schema": 1,
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "scope": "isdm family: the 20 required rows the P1 carry scan lists as DANGLING, all paid by the wave1 isdm admission batch (R admission-predicate replay against the pinned P1 source; no fit, no Julia side). The 17 rejected isdm rows and the two NOT_BOUND_AT_P0 namespace exports (isdm_source, isdm_sources) are out of scope.",
-  "note": "Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with PARITY_CASEMAP pointing at this file. Classification and disposition are carried from docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. The R side of every isdm row is a boolean predicate replay with no fit number and there is no Julia side at the run commit, so every row cites evidence.non_binding_receipts and is free. Draft PR #546's P1 iSDM twins are not used here; mapping them onto these rows is a proposal for the maintainer (PR body).",
+  "note": "Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with PARITY_CASEMAP pointing at this file. Classification and disposition are carried from docs/dev-log/core070/required-source-case-map.json unchanged, except the four signed dispositions of SIGNED_DISPOSITIONS (maintainer ruling 2026-10-05, D-319, item N6; no agent signs). The R side of every isdm row is a boolean predicate replay with no fit number and there is no Julia side at the run commit, so every row cites evidence.non_binding_receipts and is free. Draft PR #546's P1 iSDM twins are not used here; mapping them onto these rows is a proposal for the maintainer (PR body).",
   "generator": "tools/core070_isdm_p1_receipts.py",
   "glvmodels_commit": "361516c7d03bea1d49b7b5639c04b153c0e77f94",
   "batch_verifiers": {
@@ -223,7 +223,7 @@
       "executable_case_ids": [
         "CORE070-ISDM-LEGACY-PAIRED-CONTROL"
       ],
-      "disposition": null,
+      "disposition": "DISPOSITION-SIGNED",
       "p0_batch": "isdm-batch-01 (wave1)",
       "p0_evidence": {
         "recorded": true,
@@ -252,7 +252,9 @@
           "CORE070-ISDM-LEGACY-PAIRED-CONTROL": "r_replay_julia_surface_absent"
         }
       },
-      "note": "ISDM-LEGACY replays R's legacy two-source route (family_var = \"isdm_family\", fixed names gbif / survey_pa). Packet 1b item 2 (signed 2026-09-27, vault decision D-296) records it as an R-only backward-compatibility disposition that GLLVModels will not twin. That disposition is not written into this row (dispositions are the maintainer's to record in the case map); the row stays required and free."
+      "signed_by": "Shinichi Nakagawa",
+      "signed_on": "2026-09-27",
+      "disposition_basis": "R-only backward-compatibility route (family_var = \"isdm_family\", fixed names gbif / survey_pa) that GLLVModels will not twin: Packet 1b item 2, signed 2026-09-27 (vault decision D-296). Written onto this row under maintainer ruling 2026-10-05 (D-319), item N6; the R replay stays cited under non_binding_receipts."
     },
     {
       "source_id": "isdm/ISDM-MASKED-ARM",
@@ -535,7 +537,7 @@
       "executable_case_ids": [
         "CORE070-ISDM-NO-TRAITS-PAIRED-CONTROL"
       ],
-      "disposition": null,
+      "disposition": "DISPOSITION-SIGNED",
       "p0_batch": "isdm-batch-01 (wave1)",
       "p0_evidence": {
         "recorded": true,
@@ -563,7 +565,10 @@
         "case_kinds": {
           "CORE070-ISDM-NO-TRAITS-PAIRED-CONTROL": "r_replay_julia_surface_absent"
         }
-      }
+      },
+      "signed_by": "Shinichi Nakagawa",
+      "signed_on": "2026-10-05",
+      "disposition_basis": "R-internal admission predicate: the R case calls the predicate with traits = NULL, an argument no call to gllvmTMB(..., family = isdm_sources(...)) can set, and Julia's public fit_isdm_gllvm has no such argument either, so no paired twin through either public door exists. Signed disposition under maintainer ruling 2026-10-05 (D-319), item N6; the R replay stays cited under non_binding_receipts."
     },
     {
       "source_id": "isdm/ISDM-SUPPORT",
@@ -824,7 +829,7 @@
       "executable_case_ids": [
         "CORE070-ISDM-WRONG-ID-PAIRED-CONTROL"
       ],
-      "disposition": null,
+      "disposition": "DISPOSITION-SIGNED",
       "p0_batch": "isdm-batch-01 (wave1)",
       "p0_evidence": {
         "recorded": true,
@@ -852,7 +857,10 @@
         "case_kinds": {
           "CORE070-ISDM-WRONG-ID-PAIRED-CONTROL": "r_replay_julia_surface_absent"
         }
-      }
+      },
+      "signed_by": "Shinichi Nakagawa",
+      "signed_on": "2026-10-05",
+      "disposition_basis": "R-internal admission predicate: the R case calls the predicate with a tampered family-id column of the internal row-id matrix, an argument no call to gllvmTMB(..., family = isdm_sources(...)) can set, and Julia's public fit_isdm_gllvm has no such argument either, so no paired twin through either public door exists. Signed disposition under maintainer ruling 2026-10-05 (D-319), item N6; the R replay stays cited under non_binding_receipts."
     },
     {
       "source_id": "isdm/ISDM-WRONG-LINK",
@@ -862,7 +870,7 @@
       "executable_case_ids": [
         "CORE070-ISDM-WRONG-LINK-PAIRED-CONTROL"
       ],
-      "disposition": null,
+      "disposition": "DISPOSITION-SIGNED",
       "p0_batch": "isdm-batch-01 (wave1)",
       "p0_evidence": {
         "recorded": true,
@@ -890,7 +898,10 @@
         "case_kinds": {
           "CORE070-ISDM-WRONG-LINK-PAIRED-CONTROL": "r_replay_julia_surface_absent"
         }
-      }
+      },
+      "signed_by": "Shinichi Nakagawa",
+      "signed_on": "2026-10-05",
+      "disposition_basis": "R-internal admission predicate: the R case calls the predicate with a tampered link-id column of the internal row-id matrix, an argument no call to gllvmTMB(..., family = isdm_sources(...)) can set, and Julia's public fit_isdm_gllvm has no such argument either, so no paired twin through either public door exists. Signed disposition under maintainer ruling 2026-10-05 (D-319), item N6; the R replay stays cited under non_binding_receipts."
     },
     {
       "source_id": "isdm/ISDM-ZERO-ORDINARY",

@@ -39,7 +39,8 @@ Status of a scoreboard row (first rule that applies):
                       status field (behavioural_receipt_problem lists them), and the row's source_id
                       is one the ruling covers (the 59 listed inference rows,
                       BEHAVIOURAL_INFERENCE_SOURCE_IDS, or one of four named C1 rows,
-                      BEHAVIOURAL_NAMED_SOURCE_IDS) and any comparison block in a cited receipt holds.
+                      BEHAVIOURAL_NAMED_SOURCE_IDS, or one of the 14 rows of the 2026-10-05 extension,
+                      BEHAVIOURAL_EXTENDED_SOURCE_IDS) and any comparison block in a cited receipt holds.
                       Never emitted for a data, grouping or realistic-size row.
   BEHAVIOURAL-UNVERIFIED
                       evidence_tier "behavioural" but the rule above does not hold (reason given).
@@ -180,6 +181,17 @@ BEHAVIOURAL_NAMED_SOURCE_IDS = (
     "select-lv/print.gllvmTMB_select_lv",
     "model-comparison/print.anova.gllvmTMB_multi",
     "model-comparison/update.gllvmTMB_multi",
+)
+# Extension signed 2026-10-05 (maintainer ruling 2026-10-05 (D-319), GATES.md "Rulings of 2026-10-05"): item A (7 aghq
+# control rows, inference/CI-ROUTE-009), N6 (the 5 iSDM rows reachable through R's public door) and N10
+# (check_auto_residual). The checker's BEHAVIOURAL_EXTENDED_SOURCE_IDS (keep in step, a test fails on drift).
+BEHAVIOURAL_EXTENDED_SOURCE_IDS = (
+    "aghq/AGHQ-CTRL-AUTO", "aghq/AGHQ-CTRL-FALSE", "aghq/AGHQ-CTRL-NINE", "aghq/AGHQ-CTRL-NULL",
+    "aghq/AGHQ-CTRL-ONE", "aghq/AGHQ-CTRL-TRUE", "aghq/AGHQ-CTRL-TWO",
+    "inference/CI-ROUTE-009",
+    "isdm/ISDM-COUNT", "isdm/ISDM-EXTRA-SOURCE", "isdm/ISDM-MISSING-IN-TRAIT", "isdm/ISDM-MISSING-SOURCE",
+    "isdm/ISDM-WRAPPER-LAW",
+    "postfit/POSTFIT-SURFACE-check_auto_residual",
 )
 
 # evidence_tier (verbatim from the maps) -> scoreboard status bucket. Collation only: each
@@ -350,7 +362,8 @@ MAX_SAFE_INTEGER = 2 ** 53 - 1
 
 
 def behavioural_eligible_source_id(sid):
-    return isinstance(sid, str) and (sid in BEHAVIOURAL_INFERENCE_SOURCE_IDS or sid in BEHAVIOURAL_NAMED_SOURCE_IDS)
+    return isinstance(sid, str) and (sid in BEHAVIOURAL_INFERENCE_SOURCE_IDS or sid in BEHAVIOURAL_NAMED_SOURCE_IDS
+                                     or sid in BEHAVIOURAL_EXTENDED_SOURCE_IDS)
 
 
 def _is_int(x):
@@ -486,7 +499,8 @@ def behavioural_receipt_problem(row, root, index, cites=None):
     if not paths:
         return "no receipt"
     if not behavioural_eligible_source_id(row.get("source_id")):
-        return "source_id not covered by itchyshin/GLLVModels.jl#684 item 2 (the 59 listed inference rows and four named C1 rows only)"
+        return ("source_id not covered by itchyshin/GLLVModels.jl#684 item 2 (the 59 listed inference rows and four named C1 rows) "
+                "or by its extension in maintainer ruling 2026-10-05 (D-319) (14 listed rows)")
     ids = as_list(row.get("executable_case_ids"))
     if not ids:
         return "no executable_case_ids"
