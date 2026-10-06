@@ -68,10 +68,11 @@
     "numeric_fail": 0,
     "numeric_held_batch_verifier_failed": 0,
     "numeric_non_discriminating": 1,
-    "partial_non_numeric_case": 4,
+    "partial_non_numeric_case": 3,
     "needs_surface_not_executed": 0,
     "retired_at_p1_not_measured": 2,
-    "not_measured": 0
+    "not_measured": 0,
+    "behavioural": 1
   },
   "runtimes_seconds": {
     "surface_conversion_batch_wall": 121,
@@ -158,13 +159,13 @@
         "CORE070-WAVE7-CHECK-AUTO-RESIDUAL"
       ],
       "disposition": null,
-      "evidence_tier": "partial_non_numeric_case",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE7-CHECK-AUTO-RESIDUAL.json"
         ],
-        "tier": "measured at P1 and the harness passes, but at least one case is a verdict, own-consistency, exact-integer, empty-length or default-policy check with no R-vs-Julia number and tolerance, so the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
