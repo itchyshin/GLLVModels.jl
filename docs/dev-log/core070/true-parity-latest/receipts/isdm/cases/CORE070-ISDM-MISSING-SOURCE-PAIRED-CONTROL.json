@@ -50,5 +50,30 @@
   "glvmodels_commit": "361516c7d03bea1d49b7b5639c04b153c0e77f94",
   "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
-  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "behaviour": {
+    "pin": "P1",
+    "ruling": "itchyshin/GLLVModels.jl#684 item 2",
+    "read_from": {
+      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/ISDM-MISSING-SOURCE.json": "16d09c3fc350a06953cfaae94be0e5d3285cab7db0b8b836886c2607ef590ab0",
+      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-06-v4/run.json": "80666bfaabfcd1bf8f24aaf9536bda1323f85c463074ea6379420f80d41b642d",
+      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-06-v4/r-public.tsv": "e1ef2a3226b69d9d3d6530fc27cfddf8dac8b1ebcdc246ae48a924c028abb17e",
+      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-06-v4/julia-public.tsv": "9601723de40fc0daa16495aec4574a5a0360c985980b9d5e8da31bde1c244547",
+      "tools/first_seven_behaviour_derive.py": "eb3d8139c57f3584c7ed85c95358b95010d900847a329cd7dbf1db8fcc5f1134"
+    },
+    "cases": [
+      {
+        "case_id": "CORE070-ISDM-MISSING-SOURCE-PAIRED-CONTROL",
+        "source_id": "isdm/ISDM-MISSING-SOURCE",
+        "kind": "error_class",
+        "r_observed": "guard:family-length",
+        "julia_observed": "guard:family-length",
+        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/ISDM-MISSING-SOURCE.json#raw_observations.R",
+        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/ISDM-MISSING-SOURCE.json#raw_observations.Julia",
+        "r_call": "{     data_missing_declared_source <- subset(d, isdm_source == \"count\")     stopifnot(nrow(d) - nrow(data_missing_declared_source) == 4L, identical(unique(as.character(data_missing_declared_source$isdm_source)), \"count\"))     gllvmTMB(f, data = data_missing_declared_source, unit = \"cell_id\", trait = \"trait\", family = fam()) }",
+        "julia_call": "fit_isdm_gllvm(formula, data_missing_declared_source; family=fam())",
+        "ruling": "D-319 N6/N10"
+      }
+    ]
+  }
 }

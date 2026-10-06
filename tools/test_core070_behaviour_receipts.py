@@ -406,8 +406,8 @@ def every_entry_is_scoped_and_both_labels_are_listed_in_one_class():
                 rc, jc = A._label_class(index, e["kind"], "r", a), A._label_class(index, e["kind"], "julia", b)
                 assert rc is not None and jc is not None, f"{e['source_id']}: {a!r} / {b!r} not both listed in a class"
                 assert rc[1] == jc[1], f"{e['source_id']}: {a!r} and {b!r} are in different classes"
-    assert first_seven_seen == {"postfit/POSTFIT-SURFACE-check_auto_residual"}, first_seven_seen
-    assert seen == 58, seen  # Existing 57 entries plus the staged residual public-door row
+    assert first_seven_seen == B.FIRST7_SOURCE_IDS, first_seven_seen
+    assert seen == 63, seen  # Existing 57 entries plus the six exact approved public-door rows
 
 
 @test
