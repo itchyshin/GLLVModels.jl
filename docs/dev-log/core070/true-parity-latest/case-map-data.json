@@ -654,7 +654,7 @@
       "executable_case_ids": [
         "CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK"
       ],
-      "disposition": null,
+      "disposition": "DISPOSITION-SIGNED",
       "p0_batch": "data-batch attempt-data-r3 (wave1)",
       "p0_evidence": {
         "recorded": true,
@@ -668,7 +668,8 @@
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
         "non_binding_receipts": [
-          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK.json"
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/data/n7-offset-nonfinite-probe.json"
         ],
         "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
       },
@@ -682,7 +683,11 @@
         "case_kinds": {
           "CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK": "r_replay_julia_surface_absent"
         }
-      }
+      },
+      "reason": "R-internal helper that differs by design, disposition signed by maintainer ruling 2026-10-05 (D-319), item N7. R's .gllvmTMB_offset_newdata evaluates the stored offset expression on newdata with no finiteness guard, so e = 0 gives log(0) = -Inf (P1 helper replay: c(-Inf, 0, log(2))). GLLVModels takes the offset as a value and refuses a non-finite offset at an observed cell with an ArgumentError, at fit time and at predict time (probe receipt n7-offset-nonfinite-probe.json, tools/true_parity_offset_nonfinite_probe.jl). No R-vs-Julia number exists to compare; the difference is recorded, not hidden.",
+      "signed_by": "Shinichi Nakagawa",
+      "signed_on": "2026-10-05",
+      "signature_ref": "maintainer ruling 2026-10-05 (D-319), LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item N7"
     },
     {
       "source_id": "data/DATA-OFF-SCALAR",
@@ -745,7 +750,7 @@
       "executable_case_ids": [
         "CORE070-DATA-OFF-TRAIN-LEGACY-POSTFIT-READBACK"
       ],
-      "disposition": null,
+      "disposition": "DISPOSITION-SIGNED",
       "p0_batch": "data-batch attempt-data-r3 (wave1)",
       "p0_evidence": {
         "recorded": true,
@@ -773,7 +778,11 @@
         "case_kinds": {
           "CORE070-DATA-OFF-TRAIN-LEGACY-POSTFIT-READBACK": "r_replay_julia_surface_absent"
         }
-      }
+      },
+      "reason": "R-internal legacy fallback, disposition signed by maintainer ruling 2026-10-05 (D-319), item N7. R's .gllvmTMB_offset_vec returns rep(0, n) for a fit object that carries an offset expression but no cached offset vector, that is, an object saved before gllvmTMB cached training offsets (the P1 helper replay confirms it). GLLVModels has no such object generation: a Laplace fit made with an offset stores it in fit.offset at fit time (_stored_offset, src/families/fit_gllvm.jl), so there is no pre-cache object to fall back from, and the helper is not reachable from either package's public door. The stored-offset behaviour users meet is bound numerically by DATA-OFF-TRAIN-STORED.",
+      "signed_by": "Shinichi Nakagawa",
+      "signed_on": "2026-10-05",
+      "signature_ref": "maintainer ruling 2026-10-05 (D-319), LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item N7"
     },
     {
       "source_id": "data/DATA-OFF-TRAIN-STORED",
