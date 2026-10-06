@@ -2074,7 +2074,7 @@ function _wtr_load(path, col, p, n)
 end
 
 function receipts_weights_twins()
-    ORIGIN = "itchyshin/GLLVModels.jl@claude/weights-laplace"
+    ORIGIN = "itchyshin/GLLVModels.jl#839"
     fxp = "test/fixtures/weights_twins_p1.toml"
     tp = "test/test_weights_twins_p1.jl"
     fx = TOML.parsefile(joinpath(ROOT, fxp))

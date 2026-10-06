@@ -7,10 +7,10 @@
   "evidence_kind": "julia_recomputed_vs_recorded_r",
   "pin": "P1",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
-  "origin_pr": "itchyshin/GLLVModels.jl@claude/weights-laplace",
+  "origin_pr": "itchyshin/GLLVModels.jl#839",
   "generator": "tools/true_parity_julia_receipts.jl",
   "julia_version": "1.10.0",
-  "gllvmodels_commit": "d57c3d627b78da98a6de55a850d3177b3247aa8c",
+  "gllvmodels_commit": "89f7c3f1c762e12dba0397b2c80939e93067c837",
   "source_fixtures": [
     {
       "path": "test/fixtures/weights_twins_p1.toml",
