@@ -633,6 +633,61 @@ def bridge_readback_problem(row, p):
     return None
 
 
+# Maintainer ruling 2026-10-05 (D-319), N1: the checker's BOUNDARY_CONTEXT_KINDS and boundaryContext (keep in step).
+# evidence_kind -> (verdict, required case-id suffix or None).
+BOUNDARY_CONTEXT_KINDS = {
+    "r_public_bridge_boundary": ("R_BOUNDARY_UNCHANGED", "-PUBLIC-R-BRIDGE"),
+    "not_executed": ("NOT_EXECUTED", "-PUBLIC-R-BRIDGE"),
+    "r_only_formula_grammar": ("R_ONLY_PASS", None),
+}
+
+
+def boundary_context(row, root):
+    """(ids, problem): the validated boundary-context case ids of a numeric row (N1), or why they are refused."""
+    ctx = row.get("boundary_context_case_ids")
+    if ctx is None:
+        return set(), None
+    exe = as_list(row.get("executable_case_ids"))
+    if not isinstance(ctx, list) or not ctx or not all(isinstance(x, str) and x for x in ctx):
+        return set(), "boundary_context_case_ids must be a non-empty array of case ids"
+    if len(set(ctx)) != len(ctx):
+        return set(), "boundary_context_case_ids lists a case id twice"
+    not_exec = [i for i in ctx if i not in exe]
+    if not_exec:
+        return set(), "boundary context case ids not in executable_case_ids: " + ",".join(not_exec)
+    if len(ctx) >= len(exe):
+        return set(), "every executable case is boundary context; at least one case must bind numerically"
+    rps = (row.get("evidence") or {}).get("boundary_context_receipts") or []
+    if not isinstance(rps, list) or not rps:
+        return set(), "no evidence.boundary_context_receipts"
+    by_case = {}
+    for p in rps:
+        if not isinstance(p, str) or not (root / p).is_file():
+            return set(), f"boundary context receipt {p} does not resolve to a file"
+        try:
+            j = json.loads((root / p).read_text())
+        except ValueError:
+            return set(), f"boundary context receipt {p} is not JSON"
+        if not isinstance(j, dict) or not isinstance(j.get("case_id"), str):
+            return set(), f"boundary context receipt {p} has no case_id"
+        by_case[j["case_id"]] = (p, j)
+    for cid in ctx:
+        if cid not in by_case:
+            return set(), f"boundary context case {cid} has no receipt under evidence.boundary_context_receipts"
+        p, j = by_case[cid]
+        kind = j.get("evidence_kind")
+        if not isinstance(kind, str) or kind not in BOUNDARY_CONTEXT_KINDS:
+            return set(), f"boundary context case {cid}: evidence_kind {json.dumps(kind)} is not an admission-only or PUBLIC-R-BRIDGE boundary kind ({p})"
+        verdict, suffix = BOUNDARY_CONTEXT_KINDS[kind]
+        if j.get("verdict") != verdict:
+            return set(), f"boundary context case {cid}: verdict {json.dumps(j.get('verdict'))} is not {verdict} for {kind} ({p})"
+        if suffix and not cid.endswith(suffix):
+            return set(), f"boundary context case {cid}: a {kind} case must be a {suffix} case"
+        if "comparison" in j:
+            return set(), f"boundary context case {cid}: its receipt carries a comparison block, so it is compared, not context ({p})"
+    return set(ctx), None
+
+
 def numeric_receipt_problem(row, root, waive_status=False):
     """None when the row binds numerically, else why not. waive_status=True skips only the
     receipt status fields (what a valid receipt_status_exception waives in the checker)."""
@@ -669,7 +724,10 @@ def numeric_receipt_problem(row, root, waive_status=False):
         blocks += 1
     if blocks == 0:
         return "no comparison block in any receipt"
-    missing = [i for i in as_list(row.get("executable_case_ids")) if i not in covered]
+    ctx, ctx_problem = boundary_context(row, root)
+    if ctx_problem:
+        return f"boundary context (maintainer ruling 2026-10-05 (D-319), N1): {ctx_problem}"
+    missing = [i for i in as_list(row.get("executable_case_ids")) if i not in covered and i not in ctx]
     if missing:
         return "case ids not compared: " + ",".join(missing)
     return None if waive_status else not_passed

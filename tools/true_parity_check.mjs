@@ -432,6 +432,53 @@ function bridgeReadbackProblem(row, p) {
   return null;
 }
 
+// Maintainer ruling 2026-10-05 (D-319), N1 (GATES.md "Rulings of 2026-10-05"): an admission-only case or a
+// PUBLIC-R-BRIDGE boundary case is non-binding context. A numeric row may list such case ids under
+// `boundary_context_case_ids` (each also in executable_case_ids, so it stays visible) and cite their receipts under
+// `evidence.boundary_context_receipts`. A listed case then does not need a comparison, but only if its own receipt
+// shows it is one of these kinds: R refused at the public bridge before any Julia call (r_public_bridge_boundary,
+// verdict R_BOUNDARY_UNCHANGED, a -PUBLIC-R-BRIDGE case), the bridge case was not executed (not_executed,
+// NOT_EXECUTED, a -PUBLIC-R-BRIDGE case), or R only admits the formula grammar (r_only_formula_grammar,
+// R_ONLY_PASS). A context receipt that carries a comparison block is refused (a case with a number is compared, not
+// set aside), and at least one other case must still bind numerically. Copied in tools/true_parity_assemble.py.
+const BOUNDARY_CONTEXT_KINDS = {
+  r_public_bridge_boundary: { verdict: 'R_BOUNDARY_UNCHANGED', suffix: '-PUBLIC-R-BRIDGE' },
+  not_executed: { verdict: 'NOT_EXECUTED', suffix: '-PUBLIC-R-BRIDGE' },
+  r_only_formula_grammar: { verdict: 'R_ONLY_PASS', suffix: null },
+};
+// Returns { ids: Set } (the validated context case ids, possibly empty) or { problem }.
+function boundaryContext(row) {
+  const ctx = row.boundary_context_case_ids;
+  if (ctx === undefined || ctx === null) return { ids: new Set() };
+  const exec = Array.isArray(row.executable_case_ids) ? row.executable_case_ids : [row.executable_case_ids];
+  if (!Array.isArray(ctx) || ctx.length === 0 || !ctx.every((x) => typeof x === 'string' && x.length > 0)) return { problem: 'boundary_context_case_ids must be a non-empty array of case ids' };
+  if (new Set(ctx).size !== ctx.length) return { problem: 'boundary_context_case_ids lists a case id twice' };
+  const notExec = ctx.filter((id) => !exec.includes(id));
+  if (notExec.length) return { problem: `boundary context case ids not in executable_case_ids: ${notExec.join(',')}` };
+  if (ctx.length >= exec.length) return { problem: 'every executable case is boundary context; at least one case must bind numerically' };
+  const rps = (row.evidence && row.evidence.boundary_context_receipts) || [];
+  if (!Array.isArray(rps) || rps.length === 0) return { problem: 'no evidence.boundary_context_receipts' };
+  const byCase = new Map();
+  for (const p of rps) {
+    const txt = typeof p === 'string' ? show(p) : null;
+    if (txt === null || !existsAsBlob(p)) return { problem: `boundary context receipt ${p} does not resolve to a file` };
+    let j;
+    try { j = JSON.parse(txt); } catch { return { problem: `boundary context receipt ${p} is not JSON` }; }
+    if (!isPlainObject(j) || typeof j.case_id !== 'string') return { problem: `boundary context receipt ${p} has no case_id` };
+    byCase.set(j.case_id, [p, j]);
+  }
+  for (const id of ctx) {
+    if (!byCase.has(id)) return { problem: `boundary context case ${id} has no receipt under evidence.boundary_context_receipts` };
+    const [p, j] = byCase.get(id);
+    const rule = Object.prototype.hasOwnProperty.call(BOUNDARY_CONTEXT_KINDS, j.evidence_kind) ? BOUNDARY_CONTEXT_KINDS[j.evidence_kind] : null;
+    if (rule === null) return { problem: `boundary context case ${id}: evidence_kind ${JSON.stringify(j.evidence_kind)} is not an admission-only or PUBLIC-R-BRIDGE boundary kind (${p})` };
+    if (j.verdict !== rule.verdict) return { problem: `boundary context case ${id}: verdict ${JSON.stringify(j.verdict)} is not ${rule.verdict} for ${j.evidence_kind} (${p})` };
+    if (rule.suffix && !id.endsWith(rule.suffix)) return { problem: `boundary context case ${id}: a ${j.evidence_kind} case must be a ${rule.suffix} case` };
+    if (j.comparison !== undefined) return { problem: `boundary context case ${id}: its receipt carries a comparison block, so it is compared, not context (${p})` };
+  }
+  return { ids: new Set(ctx) };
+}
+
 function numericReceiptStatus(row) {
   const paths = rowReceiptPaths(row);
   if (paths.length === 0) return { ok: false, reason: 'no receipt' };
@@ -456,7 +503,9 @@ function numericReceiptStatus(row) {
   }
   if (blocks === 0) return { ok: false, reason: 'no comparison block in any receipt' };
   const ids = Array.isArray(row.executable_case_ids) ? row.executable_case_ids : [row.executable_case_ids];
-  const missing = ids.filter((id) => !covered.has(id));
+  const ctx = boundaryContext(row);
+  if (ctx.problem) return { ok: false, reason: `boundary context (maintainer ruling 2026-10-05 (D-319), N1): ${ctx.problem}` };
+  const missing = ids.filter((id) => !covered.has(id) && !ctx.ids.has(id));
   if (missing.length) return { ok: false, reason: `case ids not compared: ${missing.join(',')}` };
   // The comparison itself holds; the row still does not bind if a cited receipt says it failed.
   if (notPassed !== null) return { ok: false, kind: 'not_passed', reason: notPassed };

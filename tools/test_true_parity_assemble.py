@@ -1242,6 +1242,45 @@ def main():
         return pairs == A.BRIDGE_READBACK_ROW_PREFIX, str(pairs)
     check("bridge_readback_prefix_table_matches_checker", bridge_prefix_drift)
 
+    # Maintainer ruling 2026-10-05 (D-319), N1: boundary context cases; the checker gives the same verdict.
+    CTX = str(A.LEDGER / "receipts/ctx.json")
+    def ctx_case(ctx_receipt, want_status, contains=None, ids=("C", "C-PUBLIC-R-BRIDGE"), ctx_ids=("C-PUBLIC-R-BRIDGE",)):
+        def f():
+            root, tmp = with_root({"case-map-covariance.json": [row(
+                "covariance/N", tier="numeric", executable_case_ids=list(ids), boundary_context_case_ids=list(ctx_ids),
+                evidence={"receipt": [RP], "boundary_context_receipts": [CTX]})]})
+            try:
+                (root / RP).write_text(json.dumps({"comparison": GOOD_CMP}))
+                (root / CTX).write_text(json.dumps({"case_id": ctx_ids[0], **ctx_receipt}))
+                c, o = run(root)
+                st = status_of(root, "covariance-N")
+                txt = (root / A.LEDGER / A.OUT_SCOREBOARD).read_text()
+                out = checker_c1(root)
+                m = re.search(r"\bbound=(\d+)", out or "")
+                want_bound = 1 if want_status == "EVIDENCED" else 0
+                ok = c == 0 and st == want_status and (contains is None or contains in txt) and (out is None or (m and int(m.group(1)) == want_bound))
+                return ok, f"code={c} status={st} checker={out and out[:300]} {o}"
+            finally:
+                shutil.rmtree(tmp)
+        return f
+    check("boundary_context_public_r_bridge_refusal_evidenced",
+          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED"}, "EVIDENCED"))
+    check("boundary_context_admission_only_evidenced",
+          ctx_case({"evidence_kind": "r_only_formula_grammar", "verdict": "R_ONLY_PASS"}, "EVIDENCED",
+                   ids=("C", "C-FORMULA"), ctx_ids=("C-FORMULA",)))
+    check("boundary_context_other_kind_refused",
+          ctx_case({"evidence_kind": "numeric_r_vs_julia", "verdict": "PASS"}, "NUMERIC-UNVERIFIED", "not an admission-only or PUBLIC-R-BRIDGE boundary kind"))
+    check("boundary_context_wrong_verdict_refused",
+          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "PASS"}, "NUMERIC-UNVERIFIED", "is not R_BOUNDARY_UNCHANGED"))
+    check("boundary_context_with_comparison_refused",
+          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED", "comparison": {}}, "NUMERIC-UNVERIFIED", "so it is compared, not context"))
+    check("boundary_context_bridge_kind_on_native_case_refused",
+          ctx_case({"evidence_kind": "not_executed", "verdict": "NOT_EXECUTED"}, "NUMERIC-UNVERIFIED", "must be a -PUBLIC-R-BRIDGE case",
+                   ids=("C", "C-NATIVE"), ctx_ids=("C-NATIVE",)))
+    check("boundary_context_all_cases_refused",
+          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED"}, "NUMERIC-UNVERIFIED",
+                   "every executable case is boundary context", ids=("C-PUBLIC-R-BRIDGE",)))
+
     # Real tree: outputs current, and EVIDENCED count equals the checker's own C1 bound=.
     c, o = run(A.ROOT, "--check")
     expect("real_tree_outputs_current", c == 0, o)

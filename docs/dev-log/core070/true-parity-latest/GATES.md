@@ -764,6 +764,46 @@ Negative control (checker, "ruling 3 (tracked table)"): with the tracked `behavi
 `.confint_rho:fisher-z` against Julia `rho:wald_derived` binds on CI-ROUTE-029, and R `.confint_rho:wald` against the
 same Julia label does not ("R: no class; Julia: class rho:fisher-z").
 
+### N1: admission-only and PUBLIC-R-BRIDGE boundary cases are non-binding context
+
+Signed yes ("about 13 rows"). Some rows carry a case that can never produce an R-versus-Julia number: R refuses at
+its public Julia bridge before any Julia call (the capability guard and kernel guard of `R/julia-bridge.R`, the
+truncated-NB2 gate; receipts with evidence kind `r_public_bridge_boundary`, verdict `R_BOUNDARY_UNCHANGED`), the
+bridge case was not executed for that reason (`not_executed`, `NOT_EXECUTED`), or the R case only admits a formula
+grammar (`r_only_formula_grammar`, `R_ONLY_PASS`). Under the numeric rule every executable case id must be compared,
+so such a case blocked its row even when every fit case agreed. The rows it affects: the 7 covariance rows
+`COV-ANIMAL-DEP`, `COV-ANIMAL-INDEP`, `COV-KERNEL-DEP`, `COV-KERNEL-INDEP`, `COV-ORD-DEP`, `COV-ORD-INDEP`,
+`COV-ORD-INDEP-COMMON` (9 bridge cases), `family/FAMILY-00-IDENTITY` and `family/FAMILY-11-LOG`, plus rows whose
+formula-grammar case was already moved to `non_binding_receipts` by hand (six covariance rows in #810).
+
+Rule (checker `boundaryContext`, assembler `boundary_context`). A numeric row may list such case ids under
+`boundary_context_case_ids` and cite their receipts under `evidence.boundary_context_receipts`. A listed case is
+exempt from the coverage requirement only if:
+
+- it is also in `executable_case_ids` (it stays visible on the row), listed once;
+- its own receipt resolves to a file, is JSON, has that `case_id`, and its `evidence_kind` and `verdict` are one of
+  `r_public_bridge_boundary` + `R_BOUNDARY_UNCHANGED`, `not_executed` + `NOT_EXECUTED`, `r_only_formula_grammar` +
+  `R_ONLY_PASS`; the two bridge kinds only on a case id ending `-PUBLIC-R-BRIDGE`;
+- its receipt carries no `comparison` block (a case that has a number is compared, not set aside);
+- at least one other executable case binds numerically under the unchanged rule.
+
+Otherwise the row reads `NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT` with a reason that starts "boundary context
+(maintainer ruling 2026-10-05 (D-319), N1)". A row without the field is judged exactly as before. The context receipts
+are not read by the receipt-status check, because their verdicts are not pass values by design. The row still counts
+in `bound=` and `bound_numeric=`: what binds it is the compared cases, and the context case is recorded, not
+compared. Note on FAMILY-00: its R bridge silently fits a different model (df 5 against 8); the rule sets the case
+aside but does not make it a twin, and the row also needs its formula-interface case to pass.
+
+Row-level edits belong to the slices that own `case-map-covariance.json` and `case-map-family.json`: add the field and
+move each boundary receipt from `non_binding_receipts` or `receipt` to `boundary_context_receipts`, and cite the
+fit-case receipts under `evidence.receipt` with `evidence_tier` numeric.
+
+Negative controls (checker, group "N1 boundary context"): a bridge refusal, a not-executed bridge case and an
+admission-only case each bind as context; without the field the uncompared case still blocks the row; a context
+receipt of another kind, a wrong verdict, a bridge kind on a non-bridge case, a context receipt with a comparison
+block, every case set aside, a context id outside `executable_case_ids`, a missing context receipt and a missing
+`boundary_context_receipts` each fail. Assembler: `boundary_context_*`.
+
 ### Item A, N6 and N10: the behavioural scope is extended by 14 listed rows
 
 Ruling 2 of 2026-10-02 froze the behavioural tier to 63 rows. Three signed items extend that list, and only by

@@ -1259,6 +1259,57 @@ test('bridge readback: a receipt of another evidence kind is not affected by the
   assert.match(c1.stdout, /C1_MET$/m, c1.stdout);
 });
 
+// --- Maintainer ruling 2026-10-05 (D-319), N1: admission-only and PUBLIC-R-BRIDGE boundary cases are non-binding
+// context. bcTree() adds a numeric row with a compared case and one context case. ---
+function bcTree({ ctxId = 'CASE-N-PUBLIC-R-BRIDGE', ctxReceipt = { evidence_kind: 'r_public_bridge_boundary', verdict: 'R_BOUNDARY_UNCHANGED' },
+  rowOver = {}, writeCtx = true } = {}) {
+  return ({ readJ, writeJ }) => {
+    const cm = readJ('case-map.json');
+    cm.rows.push({ source_id: 'covariance/COV-N', classification: 'required_core', executable_case_ids: ['CASE-N', ctxId],
+      boundary_context_case_ids: [ctxId],
+      evidence: { receipt: `${L}/receipts/rn.json`, boundary_context_receipts: [`${L}/receipts/ctx.json`] },
+      measured_against: P1_FULL, disposition: null, evidence_tier: 'numeric', ...rowOver });
+    writeJ('case-map.json', cm);
+    writeJ('receipts/rn.json', { verdict: 'PASS', comparison: { pin: 'P1', cases: [{ case_id: 'CASE-N', quantity: 'loglik', r_value: 1, julia_value: 1, tolerance: 1e-6 }] } });
+    if (writeCtx) writeJ('receipts/ctx.json', { case_id: ctxId, ...ctxReceipt });
+  };
+}
+test('N1 boundary context: a PUBLIC-R-BRIDGE refusal, a not-executed bridge case and an admission-only case are context; the row binds on the rest', () => {
+  for (const [ctxId, rec] of [['CASE-N-PUBLIC-R-BRIDGE', { evidence_kind: 'r_public_bridge_boundary', verdict: 'R_BOUNDARY_UNCHANGED' }],
+    ['CASE-N-PUBLIC-R-BRIDGE', { evidence_kind: 'not_executed', verdict: 'NOT_EXECUTED' }],
+    ['CASE-N-FORMULA', { evidence_kind: 'r_only_formula_grammar', verdict: 'R_ONLY_PASS' }]]) {
+    const m = bcTree({ ctxId, ctxReceipt: rec });
+    const c1 = runTree(m, 'C1');
+    assert.match(c1.stdout, /C1_MET$/m, `${rec.evidence_kind}\n${c1.stdout}`);
+    assert.match(c1.stdout, /bound=3 bound_numeric=3\b/, rec.evidence_kind);
+    assert.match(runTree(m, 'C8').stdout, /C8_MET$/m, rec.evidence_kind);
+  }
+});
+test('N1 boundary context: without the field the uncompared case still blocks the row (unchanged rule)', () => {
+  const c1 = runTree(bcTree({ rowOver: { boundary_context_case_ids: undefined } }), 'C1');
+  assert.match(c1.stdout, /C1_NOT_MET$/m);
+  assert.match(c1.stdout, /case ids not compared: CASE-N-PUBLIC-R-BRIDGE/);
+});
+for (const [name, opts, why] of [
+  ['a context receipt of another kind (a numeric twin)', { ctxReceipt: { evidence_kind: 'numeric_r_vs_julia', verdict: 'PASS' } }, /evidence_kind "numeric_r_vs_julia" is not an admission-only or PUBLIC-R-BRIDGE boundary kind/],
+  ['a boundary kind with the wrong verdict', { ctxReceipt: { evidence_kind: 'r_public_bridge_boundary', verdict: 'PASS' } }, /verdict "PASS" is not R_BOUNDARY_UNCHANGED/],
+  ['a bridge kind on a case that is not a PUBLIC-R-BRIDGE case', { ctxId: 'CASE-N-NATIVE', ctxReceipt: { evidence_kind: 'not_executed', verdict: 'NOT_EXECUTED' } }, /a not_executed case must be a -PUBLIC-R-BRIDGE case/],
+  ['a context receipt that carries a comparison block', { ctxReceipt: { evidence_kind: 'r_public_bridge_boundary', verdict: 'R_BOUNDARY_UNCHANGED', comparison: { pin: 'P1', cases: [] } } }, /carries a comparison block, so it is compared, not context/],
+  ['every case set aside as context', { rowOver: { executable_case_ids: ['CASE-N-PUBLIC-R-BRIDGE'] } }, /every executable case is boundary context/],
+  ['a context id that is not an executable case', { rowOver: { boundary_context_case_ids: ['CASE-OTHER-PUBLIC-R-BRIDGE'] } }, /not in executable_case_ids: CASE-OTHER-PUBLIC-R-BRIDGE/],
+  ['a context receipt that does not exist', { writeCtx: false }, /boundary context receipt .*ctx\.json does not resolve to a file/],
+  ['no boundary_context_receipts', { rowOver: { evidence: { receipt: `${L}/receipts/rn.json` } } }, /no evidence\.boundary_context_receipts/],
+]) {
+  test(`N1 boundary context: ${name} does not bind`, () => {
+    const m = bcTree(opts);
+    const c1 = runTree(m, 'C1');
+    assert.match(c1.stdout, /C1_NOT_MET$/m, name);
+    assert.match(c1.stdout, /numeric_label_without_numeric_receipt=covariance\/COV-N\(boundary context \(maintainer ruling 2026-10-05 \(D-319\), N1\): /, name);
+    assert.match(c1.stdout, why, name);
+    assert.match(runTree(m, 'C8').stdout, /covariance\/COV-N:NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT/, name);
+  });
+}
+
 // --- Fix round on PR #687 (three adversarial reviews). Each control below fails on the head before the
 // round (6f546fb00) for the reason it names, and passes after. ---
 
