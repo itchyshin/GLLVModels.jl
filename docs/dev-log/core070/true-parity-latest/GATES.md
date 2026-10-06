@@ -390,6 +390,13 @@ vector length mismatch; abs_diff with no values; unknown kind; tolerance 0.4, 0.
 case with no `kind` keeps today's rule. Assembler: `integer_equality_*`, `unknown_comparison_kind_unverified`,
 `no_kind_case_keeps_todays_rule`.
 
+Rows added to this list by maintainer ruling 2026-10-05 (D-319), item N2: `POSTFIT-SURFACE-nobs.gllvmTMB_multi` (the
+wave6 nobs case rewritten from its stale P0 expectation to R nobs = Julia nobs, 400 = 400; binds) and `POST-COEF-EMPTY`
+(the empty coef length, 0 = 0; basis the drafted N2 text, wave-plan-2026-10-03.md line 17). `POST-COEF-EMPTY` does not
+bind: the shared degenerate-comparison rule of the receipt generators (every |R value| below 1e-10 means a constant-zero
+implementation passes too) applies to integer entries as well, so its comparison is `discriminating: false` and the row
+reads `numeric_non_discriminating`. `POST-NOBS-FALLBACK` closes by a signed disposition instead (N2 section below).
+
 ### Ruling 2: the behavioural tier (item 2)
 
 A row whose R behaviour is a refusal, a printed summary, a routing decision or an error class
@@ -745,7 +752,13 @@ route. This reverses the rule of the 2026-09-30 audit (`audit-unwired-evidence-2
 `namespace-export-Beta`): "an export-constructor row should not borrow a case its own family row cannot yet bind". No
 tool enforced that rule, so no code changes; it was applied by hand when rows were mapped, and this ruling withdraws
 it. The binding itself still needs the numeric rule: a receipt with a comparison block, pinned to P1, every case
-within tolerance. The row edits belong to the covariance and namespace slice.
+within tolerance.
+
+Rows bound under this ruling (`case-map-namespace.json`): `namespace/export/animal_dep`, `animal_indep`, `kernel_dep`
+and `kernel_indep` cite the PR #786 native and formula receipts of their COV rows (bridge case left out); `dep` cites
+the `FIT-MODE-ORD-DEP` native and formula receipts (R fits `dep(0 + trait | site)`; Julia reaches the same model
+through `SourceCovariance(mode = :dep)`, not a `dep()` keyword, and the comparison is of the total covariance, as the
+row's scope note says). `Beta` was already bound by its numeric twin. The covariance rows themselves now bind under N1.
 
 ### Ruling 3: CI-ROUTE-029, Julia's default rho interval is R's `fisher-z` default
 
@@ -756,9 +769,9 @@ transformed Wald interval, label `rho:wald_derived`) is the same default route a
 `tools/core070_behaviour_receipts.py` (`CLASSES`), whose `default_class_unconfirmed` hold on CI-ROUTE-029 is removed.
 R's own `method = "wald"` for rho (`.confint_rho:wald`, probe row CI-ROUTE-031) is a different interval and is not in
 the class, so R's plain Wald still does not match Julia's Fisher-z. `inference/CI-ROUTE-034` (an explicit `fisher-z`
-request, which Julia's public `confint` refuses at the run commit) joins the same class once the inference slice adds
-a `fisher_z` method alias (ruling page item "CI-ROUTE-034", recommend the alias, signed): its Julia label is then added
-to this class, never a new class. CI-ROUTE-029 binds once `case-map-inference.json` is regenerated.
+request) joins the same class through the signed `fisher_z` method alias (ruling page item "CI-ROUTE-034"): Julia's
+`confint(...; method = :fisher_z)` for rho returns exactly the `:wald` result, label `rho:wald_derived`, so the one class
+`rho:fisher-z` binds both rows; there is no second class. CI-ROUTE-029 and CI-ROUTE-034 bind behaviourally.
 
 Negative control (checker, "ruling 3 (tracked table)"): with the tracked `behaviour-equivalence.json`, R
 `.confint_rho:fisher-z` against Julia `rho:wald_derived` binds on CI-ROUTE-029, and R `.confint_rho:wald` against the
@@ -780,12 +793,14 @@ Rule (checker `boundaryContext`, assembler `boundary_context`). A numeric row ma
 `boundary_context_case_ids` and cite their receipts under `evidence.boundary_context_receipts`. A listed case is
 exempt from the coverage requirement only if:
 
-- it is also in `executable_case_ids` (it stays visible on the row), listed once;
+- it is also in `executable_case_ids` (it stays visible on the row), listed once, and `executable_case_ids` repeats no
+  id (review finding: a row listing its one context case twice passed the count test with nothing compared);
 - its own receipt resolves to a file, is JSON, has that `case_id`, and its `evidence_kind` and `verdict` are one of
   `r_public_bridge_boundary` + `R_BOUNDARY_UNCHANGED`, `not_executed` + `NOT_EXECUTED`, `r_only_formula_grammar` +
   `R_ONLY_PASS`; the two bridge kinds only on a case id ending `-PUBLIC-R-BRIDGE`;
 - its receipt carries no `comparison` block (a case that has a number is compared, not set aside);
-- at least one other executable case binds numerically under the unchanged rule.
+- at least one executable case outside the context list is covered by a comparison block and binds numerically under
+  the unchanged rule.
 
 Otherwise the row reads `NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT` with a reason that starts "boundary context
 (maintainer ruling 2026-10-05 (D-319), N1)". A row without the field is judged exactly as before. The context receipts
@@ -794,15 +809,18 @@ in `bound=` and `bound_numeric=`: what binds it is the compared cases, and the c
 compared. Note on FAMILY-00: its R bridge silently fits a different model (df 5 against 8); the rule sets the case
 aside but does not make it a twin, and the row also needs its formula-interface case to pass.
 
-Row-level edits belong to the slices that own `case-map-covariance.json` and `case-map-family.json`: add the field and
-move each boundary receipt from `non_binding_receipts` or `receipt` to `boundary_context_receipts`, and cite the
-fit-case receipts under `evidence.receipt` with `evidence_tier` numeric.
+Row edits, made by the owning tools (never by hand): `tools/core070_covariance_p1_receipts.py` (`COV_N1_CONTEXT`,
+`n1_overlay`) binds the 7 covariance rows above, each only when every non-bridge case is a passing numeric comparison
+from an accepted batch; `tools/core070_family_p1_receipts.py` (`FAMILY_N1_CONTEXT`, `n1_context`) binds
+`family/FAMILY-11-LOG` the same way. `family/FAMILY-00-IDENTITY` stays `partial_case_not_executed`: its native and
+formula-interface cases FAIL on the current receipts, so setting the bridge case aside leaves nothing that binds.
 
 Negative controls (checker, group "N1 boundary context"): a bridge refusal, a not-executed bridge case and an
 admission-only case each bind as context; without the field the uncompared case still blocks the row; a context
 receipt of another kind, a wrong verdict, a bridge kind on a non-bridge case, a context receipt with a comparison
 block, every case set aside, a context id outside `executable_case_ids`, a missing context receipt and a missing
-`boundary_context_receipts` each fail. Assembler: `boundary_context_*`.
+`boundary_context_receipts`, and a context id repeated in `executable_case_ids` each fail. Assembler:
+`boundary_context_*` (including `boundary_context_duplicate_executable_id_refused`).
 
 ### N9: convergence parity for C3 campaign rows
 
@@ -828,22 +846,17 @@ both gradients finite, at least 0 and at most 1e-5; otherwise the row does not b
 (maintainer ruling 2026-10-05 (D-319), N9)"). Each gradient is on that engine's own objective in its own coordinates,
 as the draft says.
 
-Two readings, stated rather than chosen silently:
+Reading chosen by the maintainer (follow-up answer of 2026-10-05): **N9 applies only to C3 rows whose receipts carry
+the `convergence_parity` block.** A C3 receipt without the block is judged as before, so the five C3 rows that bind
+today stay bound (their R gradients, 1e-3 to 4e-2, are above the bound, and four record no Julia gradient; the strict
+reading would have unbound all five until a polished re-run). The draft's step-3 alternative (a Newton step size
+`max |H^-1 g|` at most 1e-5) is not part of the signed text and is not accepted by the checker.
 
-- **Applied (this change): the rule governs receipts that record it.** A C3 receipt without the block is judged as
-  before. Reason: the ruling page says N9 "binds ORDINAL-LOGIT-RSZ and, after a re-run, ISDM-HEADLINE-RSZ", that is, it
-  was signed to let the stopped-early rows be compared at a converged point, not to reopen the rows that bind.
-- **Not applied: the rule as a precondition for every C3 row.** Measured on the tracked receipts, all five C3 rows that
-  bind today have an R gradient above 1e-5 (Gaussian 1.97e-2, Poisson 3.80e-3, NB2 3.76e-3, binomial 9.86e-4,
-  temporal 4.35e-2) and four record no Julia gradient at all. Reading the rule strictly would unbind all five (C3 from
-  5/8 to 0/8) until the campaign is re-run with the polish. That is the maintainer's call; the change to the checker
-  is one line (require the block on every `-RSZ` row).
-- The draft's step-3 alternative (a Newton step size `max |H^-1 g|` at most 1e-5 when an engine's gradient noise
-  floor sits above the bound) is not part of the signed text and is not accepted by the checker.
-
-The campaign receipts do not carry the block yet. `tools/true_parity/campaign/write_receipts.py` (and `run_J.jl`,
-which must record Julia's gradient) belong to the campaign slice: ORDINAL-LOGIT-RSZ binds once its receipt records the
-polished comparison with the block (the PR #715 pre-run numbers pass), and ISDM-HEADLINE-RSZ after a re-run.
+`tools/true_parity/campaign/write_receipts.py` writes the block (`compared_point` "returned") and Julia's gradient in
+its engine block whenever both raw outputs record `max_abs_gradient`, and adds the leg
+`convergence_parity_both_gradients_within_1e-5`. No committed raw Julia output records that field yet, so no receipt
+carries the block. ORDINAL-LOGIT-RSZ binds once a polished campaign run (the harness of PR #715, not merged) is
+committed with the block; the PR #715 pre-run numbers would pass. ISDM-HEADLINE-RSZ needs a re-run as well.
 
 Negative controls (checker, group "N9 convergence parity"): the ordinal pre-run numbers bind, as do exactly 1e-5 and a
 `returned` point; R's unpolished 4.3e-4, Julia above the bound, a declared bound of 1e-4, a missing Julia gradient, an
@@ -857,30 +870,36 @@ reason: the bridge leg tests R's adapter rather than the model, and the adapter 
 under "Clauses" is changed accordingly.
 
 Checker change: an `EVIDENCED` real-data (`RD-`) scoreboard row is done only if a receipt it cites records both
-engines (a JSON receipt with an `engines` block holding an `R` and a `julia` object), else `C4_NOT_A_DIRECT_ENGINE_RUN`
-on C4 and X2. That makes "end to end on both engines" a checked condition instead of a word in a cell. A
+engines (a JSON receipt with an `engines` block holding a non-empty `R` and a non-empty `julia` object; `engines: {R:
+{}, julia: {}}` records no run), else `C4_NOT_A_DIRECT_ENGINE_RUN` on C4 and X2. The assembler applies the same rule
+(`direct_engine_receipt`), so the scoreboard never shows `EVIDENCED` on a real-data row the checker counts not done. That makes "end to end on both engines" a checked condition instead of a word in a cell. A
 `DISPOSITION-SIGNED` real-data row is not a run and is judged as before. Every tracked campaign receipt already has
 the block.
 
-What still keeps the real-data rows open is the receipt, not the checker: `write_receipts.py` writes a pass-rule leg
-`engine_julia_bridge_route_and_eight_acceptance_classes_run` that is false on every C4 receipt. Dropping that leg is
-the campaign slice's edit; then `data/RD-CRABS-GAUSSIAN` (every number inside tolerance today) binds. Spider, beetle,
-fungi and urbanisation still fail on numbers or convergence, and the three disposition rows wait on their signed
-dispositions (item F, owned by the covariance and namespace slice).
+`write_receipts.py` no longer writes the always-false pass-rule leg
+`engine_julia_bridge_route_and_eight_acceptance_classes_run` (`BRIDGE_LEG`, `add_c4_leg` removed; `RULE_C4` is the C3
+rule plus a note that C4 accepts the direct-engine run), so `data/RD-CRABS-GAUSSIAN` binds. Spider, beetle, fungi and
+urbanisation still miss tolerances and stay `numeric_fail`. Item F: `data/RD-PHYLO-DISPOSITION`,
+`RD-TEMPORAL-DISPOSITION` and `RD-ISDM-DISPOSITION` are written by the same tool as `DISPOSITION-SIGNED` (`signed_by`
+Shinichi Nakagawa, `signed_on` 2026-10-05, `signature_ref` D-319).
 
 Negative controls (checker, group "C4 direct engine"): the base fixture's RD row (receipt with both engines) is done; a
 receipt with no engines block, only the R engine, or an array in place of the block is not done on C4 and X2; a signed
-RD disposition row is done; a C3 row with a plain receipt is unaffected. Every fixture copy of the RD receipt gained
+RD disposition row is done; a C3 row with a plain receipt is unaffected; empty engine blocks are not done. Assembler:
+`c4_*`. Every fixture copy of the RD receipt gained
 the engines block.
 
 ### D: phylo-latent promotion (D-300 answer 9) is signed
 
 Signed: "D: [yes]". The dated promotion block of D-300 answer 9, which the PR #547 receipts wait on
 (`phylo-latent-p1/cov_phylo_latent_rsz/r-receipt.json` records `qualified = false` until it is signed), is signed on
-2026-10-05 under maintainer ruling 2026-10-05 (D-319), item D. This file records the signature only. Flipping the
-receipts' qualification and the pass-rule leg `R_side_receipt_qualified_by_maintainer` (so that
-`covariance/COV-PHYLO-LATENT-RSZ` and the phylo twins can bind) belongs to the covariance and namespace slice; the
-"Phylo row does not bind" paragraph under "C3 to C5 campaign rows" describes the state before that flip.
+2026-10-05 under maintainer ruling 2026-10-05 (D-319), item D. The block is recorded in
+`docs/dev-log/core070/phylo-latent-p1/README.md`. `tools/phylo_latent/promote_p1.py` turns each receipt's
+`"qualified": false` into a `maintainer_promotion` object plus `"qualified": true` by a text edit that keeps every
+recorded number (the A15 stationarity gap stays as recorded), and `test/test_phylo_latent_paired_p1.jl` pins the new
+hashes. The campaign writer then derives the pass-rule leg `R_side_receipt_qualified_by_maintainer` as true, and
+`covariance/COV-PHYLO-LATENT-RSZ` binds (C3). The "Phylo row does not bind" paragraph under "C3 to C5 campaign rows"
+describes the state before the promotion.
 
 ### N3: known-V meta rows are a documented gap, revisited at P2
 
@@ -888,8 +907,62 @@ Signed: "documented gap, revisit at P2". `covariance/COV-META-EXACT` and `covari
 sampling-covariance `meta` term and its deprecated spelling) have no Julia surface at P1 (grep check recorded in the wave plan of 2026-10-03). They are a
 documented gap of P1, revisited when the pin moves to P2; no Julia alias for the deprecated spelling is added, and the
 build (estimated 18 to 24 hours, an API change) is not scheduled. The rows close by a signed disposition that says so,
-written by the slice that owns `case-map-covariance.json`; until then they read `NON-NUMERIC` (tier `r_only`). Their
-R cases are admission-only, so N1 does not bind them: a row needs at least one compared case.
+written by `tools/core070_covariance_p1_receipts.py` (`COV_SIGNED`, which copies signer, date, ruling and signature
+source onto the row and leaves the R-only receipt cited as non-binding context). Their R cases are admission-only, so
+N1 does not bind them: a row needs at least one compared case.
+
+### Item B: Julia defaults and fallbacks against R, signed row by row
+
+Signed yes ("row by row"). Eleven rows where R and Julia deliberately do different things by default close by a signed
+disposition that states the difference and its source, never by a number: the 10 inference rows `CI-ROUTE-015`,
+`-043`, `-046`, `-055`, `-058`, `-061`, `-065`, `-067`, `-068`, `-070` (written by
+`tools/core070_inference_p1_receipts.py` from the P1 route probe and the rulings run, `receipts/inference/inference-rulings-p1`)
+and `postfit-policy/POST-PREDICT-DEFAULT` (R `predict` defaults to type "link", Julia to `:response`; with an
+explicit link scale the two agree to 5.72e-6), all signed by the maintainer under D-319.
+
+### N2, N5, N7 and POST-NOBS-FALLBACK (postfit and data rows)
+
+- **N2**: the wave6 nobs case is integer equality (Ruling 1 above). One re-run of the wave6 batch at a clean commit
+  (single-threaded, about 45 s) passes its verifier, so `POSTFIT-SURFACE-logLik`, `-confint` and
+  `-nobs.gllvmTMB_multi`, `COV-KERNEL-FOLDED-UNIQUE`, `COV-KERNEL-LATENT` and namespace `kernel_latent` and
+  `kernel_scalar` bind on it (`core070_postfit_p1_receipts.py --apply-wave6`, `core070_covariance_p1_receipts.py
+  --rebind-wave6`), and namespace `S3method/stats::nobs,gllvmTMB_multi` and `confint,gllvmTMB_multi` re-cite the same
+  receipts.
+- **N5**: the two `.proportions_*` rows are retired (the export is removed at P1).
+- **N7**: `DATA-OFF-TRAIN-LEGACY` and `DATA-OFF-PREDICT-NONFINITE-HELPER` close by signed dispositions (R-internal
+  helpers that no public call on either engine reaches; `tools/core070_data_p1_receipts.py`).
+- **POST-NOBS-FALLBACK**, option (a): a signed disposition, unreachable through the public door (the only constructor
+  always sets `likelihood_rows`, R/fit-multi.R:9784 and :9822, so `nobs` returns at R/methods-gllvmTMB.R:1221).
+
+### N4: a pre-stated Monte-Carlo rule may set a numeric tolerance
+
+Signed yes ("with the rule stated before any run"). For a stochastic row (simulate, bootstrap) the tolerance of a
+numeric comparison may come from a Monte-Carlo rule file committed before the run whose results it judges; the rule
+fixes the replicate counts, seeds or streams, the per-quantity bound and the familywise level, and is not retuned after
+a result. The generator checks that the rule predates the run commit. First instances:
+`receipts/inference/ci-route-011-mc/rule.json` (CI-ROUTE-011, two-level ICC bootstrap: 5 seeds per engine, each
+endpoint's seed means within 4.5 combined Monte-Carlo standard errors plus 0.005; binds) and the simulate twins
+(`test/test_mc_simulate_p1.jl`, `test/fixtures/mc_simulate_p1.toml`: per moment `|m_R - m_J| <= z sqrt(s_R^2/B + s_J^2/B)`,
+Bonferroni z at familywise alpha 0.01, B = 400, with a discrimination control that must fail). `simulate_unit_trait`
+binds. `POST-SIMULATE-DEFAULT` does not: review re-ran its Julia side on 40 alternative seeds and 7 failed the rule,
+far above the nominal 1%, so its pass at the recorded seed is seed-sensitive; the receipt is kept as non-binding
+evidence and the rule is unchanged.
+
+### N8: five namespace rows close by signed dispositions
+
+Signed yes. `namespace/export/kernel_unique` (deprecated alias, retired; `kernel_indep` and
+`kernel_latent(unique = TRUE)` carry the evidence), `animal_slope` (column-slope grammar, no Julia column-slope route),
+`check_gllvmTMB` (documented partial port of a diagnostic verdict), `gllvm_julia_setup` (bootstrap helper, exercised by
+the PR #790 run) and `extract_cross_correlations` (needs a multinomial trait in a latent model; Julia's multinomial is
+fixed-effects only). Each row carries signer, date, ruling and a text citing the P1 R source and the Julia source.
+
+### namespace export/gllvmTMB: option (a), loadings added to the comparison
+
+Signed option (a). The namespace-2 case for `export/gllvmTMB` now measures Lambda Lambda' (a comparand the contract
+names and the case never measured) beside logLik, and the degenerate intercept entry (about 1e-14 on row-centred data)
+moves to `context`. Re-run at P1: logLik |R - Julia| 1.13e-9, Lambda Lambda' max |R - Julia| 2.42e-6 within 1e-4.
+Every comparison in the block discriminates under the unchanged shared rule, so the row binds
+(`tools/core070_namespace_2_p1_receipts.py`). `namespace/export/animal_latent` stays unbound and disclosed, as signed.
 
 ### Item A, N6 and N10: the behavioural scope is extended by 14 listed rows
 
@@ -906,8 +979,8 @@ explicit ids, never by prefix:
     receipt shows Julia's public door giving the same refusal or admission (slice W3-2); none does yet.
   - signed disposition, 3 internal predicates: `isdm/ISDM-NO-TRAITS` (calls the predicate with `traits = NULL`),
     `-WRONG-ID` and `-WRONG-LINK` (tamper the family-id or link-id column of the internal row-id matrix). No public
-    call on either engine can set those arguments. The ruling names the count, not the ids; the three ids are the
-    lane's reading of the receipts (AGENT-INFERRED) and are for the reviewer of this change to confirm.
+    call on either engine can set those arguments. The ruling names the count; the three ids were confirmed by the
+    maintainer in his follow-up answers of 2026-10-05.
   - signed disposition, `isdm/ISDM-LEGACY`: the R-only backward-compatibility disposition already signed in Packet 1b
     item 2 (2026-09-27, D-296) is now written onto the row (`signed_on` 2026-09-27, the date of that signature).
   The four dispositions are written by `tools/core070_isdm_p1_receipts.py` (`SIGNED_DISPOSITIONS`), so its
@@ -1104,7 +1177,7 @@ confirmation; every receipt says so in `tolerance_status`.
   in the compiled code of a lane library would therefore not be caught by the guard. A C4 row also needs the
   `engine = "julia"` bridge route and the plan's eight acceptance classes (plan section 1.3); neither has been run, so
   no C4 row binds yet. (Superseded for C4 by maintainer ruling 2026-10-05 (D-319), C4: a direct-engine run satisfies C4 and
-  the bridge leg is no longer required; see "Rulings of 2026-10-05".) A row that meets the whole rule binds (`evidence_tier` numeric).
+  the bridge leg is no longer required, and `write_receipts.py` no longer writes it; see "Rulings of 2026-10-05".) A row that meets the whole rule binds (`evidence_tier` numeric).
   A row that does not is cited under `non_binding_receipts` with every reason, and stays open. Its tier says which kind of
   failure it is. If every number is inside tolerance and the only failing leg is a required step that was not run or not
   signed (the C4 bridge leg, the phylo qualification below), the tier is `partial_case_not_executed` (scoreboard PARTIAL)
@@ -1120,8 +1193,8 @@ confirmation; every receipt says so in `tolerance_status`.
   (`phylo-latent-p1/cov_phylo_latent_rsz/r-receipt.json`), which records `qualified = false`; the README there says every
   receipt stays unqualified until the maintainer signs the dated promotion block (D-300 answer 9). The measurement is kept
   as a non-binding receipt (both numbers are inside tolerance), the pass rule has a leg
-  `R_side_receipt_qualified_by_maintainer` that is false, and the row reads PARTIAL. No agent may sign the block. (The block was signed on 2026-10-05, maintainer ruling 2026-10-05 (D-319), item D; the receipt flip
-  follows in the covariance slice. See "Rulings of 2026-10-05".)
+  `R_side_receipt_qualified_by_maintainer` that is false, and the row reads PARTIAL. No agent may sign the block. (The block was signed on 2026-10-05, maintainer ruling 2026-10-05 (D-319), item D;
+  `tools/phylo_latent/promote_p1.py` flipped the receipt and the row now binds. See "Rulings of 2026-10-05".)
 - **Relative tolerances** (standard errors, NB2 dispersion) are carried as a discrepancy against zero (`r_value` 0,
   `julia_value` the relative difference), because the checker compares absolute differences. The `r_value` is therefore
   not an R measurement: the case's quantity name says "relative difference", a `convention` field says so, and
