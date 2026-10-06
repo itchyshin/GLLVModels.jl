@@ -855,14 +855,23 @@ def p0_evidence(base):
                     "remains."}
 
 
-# Maintainer ruling 2026-10-05 (D-319), N1: a PUBLIC-R-BRIDGE case that was not executed is non-binding context.
-# FAMILY-00-IDENTITY and FAMILY-11-LOG are the family rows it names; a row binds this way only when every other case
-# is a passing, discriminating numeric comparison from an accepted batch (FAMILY-00's native and formula cases FAIL
-# on the current receipts, so it stays partial). The checker (boundaryContext) re-validates the context case.
+# Maintainer ruling 2026-10-05 (D-319), N1: a PUBLIC-R-BRIDGE case at which R refuses before any Julia call, shown
+# by a receipt (evidence_kind r_public_bridge_boundary, verdict R_BOUNDARY_UNCHANGED), is non-binding context; the
+# covariance overlay applies the same test. FAMILY-00-IDENTITY and FAMILY-11-LOG are the family rows it names, but
+# their bridge cases are NOT_EXECUTED (outside the frozen bridge sub-contract), not an R refusal, so neither binds
+# this way at P1 and both stay partial_case_not_executed. A row binds under N1 only when its bridge case has an
+# R_BOUNDARY_UNCHANGED receipt and every other case is a passing, discriminating numeric comparison from an accepted
+# batch (FAMILY-00's native and formula cases also FAIL on the current receipts). The checker (boundaryContext)
+# re-validates the context case.
 FAMILY_N1_CONTEXT = {"family/FAMILY-00-IDENTITY", "family/FAMILY-11-LOG"}
+N1_CONTEXT_KIND = ("r_public_bridge_boundary", "R_BOUNDARY_UNCHANGED")
 N1_TIER = ("numeric: the native and formula-interface case receipts carry R-vs-Julia comparison blocks pinned to P1, "
-           "within the harness tolerance, from a batch whose verifier passed; the PUBLIC-R-BRIDGE case was not executed "
-           "and is non-binding boundary context under maintainer ruling 2026-10-05 (D-319), N1")
+           "within the harness tolerance, from a batch whose verifier passed; R refuses the PUBLIC-R-BRIDGE case at the "
+           "bridge (R_BOUNDARY_UNCHANGED), which is non-binding boundary context under maintainer ruling 2026-10-05 "
+           "(D-319), N1")
+N1_HELD_NOTE = ("Held under maintainer ruling 2026-10-05 (D-319), N1: the PUBLIC-R-BRIDGE case was not executed, which N1 "
+                "does not cover. The row binds once a P1 R probe records the bridge refusal (GJL-GATE-FAMILY) as "
+                "R_BOUNDARY_UNCHANGED (tracked follow-up).")
 
 
 def n1_context(sid, ids, kinds, verdicts, batch_ok, disc):
@@ -873,7 +882,7 @@ def n1_context(sid, ids, kinds, verdicts, batch_ok, disc):
     rest = [i for i in ids if i not in ctx]
     if not ctx or not rest:
         return None
-    if not all(i.endswith("-PUBLIC-R-BRIDGE") and kinds[i] == "not_executed" and verdicts[i] == "NOT_EXECUTED" for i in ctx):
+    if not all(i.endswith("-PUBLIC-R-BRIDGE") and (kinds[i], verdicts[i]) == N1_CONTEXT_KIND for i in ctx):
         return None
     if not all(verdicts[i] == "PASS" and batch_ok[i] == "PASS" and disc[i] for i in rest):
         return None
@@ -923,6 +932,8 @@ def build_rows(in_scope, carry_status, receipts):
                                          "the row does not bind"},
                        measured_result={**result, "executed_cases_verdict": "PASS" if ok else "FAIL"})
             counts["partial_case_not_executed"] += 1
+            if sid in FAMILY_N1_CONTEXT and ok:
+                row["note"] = N1_HELD_NOTE
         elif not all(verdicts[i] == "PASS" for i in ids):
             row.update(evidence_tier="numeric_fail", measured_against=P1_SHA,
                        evidence={"non_binding_receipts": paths,

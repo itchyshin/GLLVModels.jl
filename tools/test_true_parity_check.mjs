@@ -1274,9 +1274,8 @@ function bcTree({ ctxId = 'CASE-N-PUBLIC-R-BRIDGE', ctxReceipt = { evidence_kind
     if (writeCtx) writeJ('receipts/ctx.json', { case_id: ctxId, ...ctxReceipt });
   };
 }
-test('N1 boundary context: a PUBLIC-R-BRIDGE refusal, a not-executed bridge case and an admission-only case are context; the row binds on the rest', () => {
+test('N1 boundary context: a PUBLIC-R-BRIDGE refusal and an admission-only case are context; the row binds on the rest', () => {
   for (const [ctxId, rec] of [['CASE-N-PUBLIC-R-BRIDGE', { evidence_kind: 'r_public_bridge_boundary', verdict: 'R_BOUNDARY_UNCHANGED' }],
-    ['CASE-N-PUBLIC-R-BRIDGE', { evidence_kind: 'not_executed', verdict: 'NOT_EXECUTED' }],
     ['CASE-N-FORMULA', { evidence_kind: 'r_only_formula_grammar', verdict: 'R_ONLY_PASS' }]]) {
     const m = bcTree({ ctxId, ctxReceipt: rec });
     const c1 = runTree(m, 'C1');
@@ -1293,7 +1292,9 @@ test('N1 boundary context: without the field the uncompared case still blocks th
 for (const [name, opts, why] of [
   ['a context receipt of another kind (a numeric twin)', { ctxReceipt: { evidence_kind: 'numeric_r_vs_julia', verdict: 'PASS' } }, /evidence_kind "numeric_r_vs_julia" is not an admission-only or PUBLIC-R-BRIDGE boundary kind/],
   ['a boundary kind with the wrong verdict', { ctxReceipt: { evidence_kind: 'r_public_bridge_boundary', verdict: 'PASS' } }, /verdict "PASS" is not R_BOUNDARY_UNCHANGED/],
-  ['a bridge kind on a case that is not a PUBLIC-R-BRIDGE case', { ctxId: 'CASE-N-NATIVE', ctxReceipt: { evidence_kind: 'not_executed', verdict: 'NOT_EXECUTED' } }, /a not_executed case must be a -PUBLIC-R-BRIDGE case/],
+  // N1 covers an R refusal recorded by a receipt; a bridge case nobody ran is not context.
+  ['a not-executed PUBLIC-R-BRIDGE case', { ctxReceipt: { evidence_kind: 'not_executed', verdict: 'NOT_EXECUTED' } }, /evidence_kind "not_executed" is not an admission-only or PUBLIC-R-BRIDGE boundary kind/],
+  ['a bridge kind on a case that is not a PUBLIC-R-BRIDGE case', { ctxId: 'CASE-N-NATIVE', ctxReceipt: { evidence_kind: 'r_public_bridge_boundary', verdict: 'R_BOUNDARY_UNCHANGED' } }, /a r_public_bridge_boundary case must be a -PUBLIC-R-BRIDGE case/],
   ['a context receipt that carries a comparison block', { ctxReceipt: { evidence_kind: 'r_public_bridge_boundary', verdict: 'R_BOUNDARY_UNCHANGED', comparison: { pin: 'P1', cases: [] } } }, /carries a comparison block, so it is compared, not context/],
   ['every case set aside as context', { rowOver: { executable_case_ids: ['CASE-N-PUBLIC-R-BRIDGE'] } }, /every executable case is boundary context/],
   // The duplicate-id hole: the context id listed twice passes the count test while no case outside the context list

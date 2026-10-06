@@ -442,14 +442,13 @@ function bridgeReadbackProblem(row, p) {
 // `boundary_context_case_ids` (each also in executable_case_ids, so it stays visible) and cite their receipts under
 // `evidence.boundary_context_receipts`. A listed case then does not need a comparison, but only if its own receipt
 // shows it is one of these kinds: R refused at the public bridge before any Julia call (r_public_bridge_boundary,
-// verdict R_BOUNDARY_UNCHANGED, a -PUBLIC-R-BRIDGE case), the bridge case was not executed (not_executed,
-// NOT_EXECUTED, a -PUBLIC-R-BRIDGE case), or R only admits the formula grammar (r_only_formula_grammar,
-// R_ONLY_PASS). A context receipt that carries a comparison block is refused (a case with a number is compared, not
+// verdict R_BOUNDARY_UNCHANGED, a -PUBLIC-R-BRIDGE case) or R only admits the formula grammar (r_only_formula_grammar,
+// R_ONLY_PASS). A bridge case that was not executed (not_executed, NOT_EXECUTED) is not context: N1 covers an R
+// refusal recorded by a receipt, not a case nobody ran. A context receipt that carries a comparison block is refused (a case with a number is compared, not
 // set aside), executable_case_ids may not repeat an id, and at least one executable case outside the context list
 // must be covered by a comparison block. Copied in tools/true_parity_assemble.py.
 const BOUNDARY_CONTEXT_KINDS = {
   r_public_bridge_boundary: { verdict: 'R_BOUNDARY_UNCHANGED', suffix: '-PUBLIC-R-BRIDGE' },
-  not_executed: { verdict: 'NOT_EXECUTED', suffix: '-PUBLIC-R-BRIDGE' },
   r_only_formula_grammar: { verdict: 'R_ONLY_PASS', suffix: null },
 };
 // Returns { ids: Set } (the validated context case ids, possibly empty) or { problem }.

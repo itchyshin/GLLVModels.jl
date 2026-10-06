@@ -639,10 +639,9 @@ def bridge_readback_problem(row, p):
 
 
 # Maintainer ruling 2026-10-05 (D-319), N1: the checker's BOUNDARY_CONTEXT_KINDS and boundaryContext (keep in step).
-# evidence_kind -> (verdict, required case-id suffix or None).
+# evidence_kind -> (verdict, required case-id suffix or None). A not-executed bridge case is not context.
 BOUNDARY_CONTEXT_KINDS = {
     "r_public_bridge_boundary": ("R_BOUNDARY_UNCHANGED", "-PUBLIC-R-BRIDGE"),
-    "not_executed": ("NOT_EXECUTED", "-PUBLIC-R-BRIDGE"),
     "r_only_formula_grammar": ("R_ONLY_PASS", None),
 }
 

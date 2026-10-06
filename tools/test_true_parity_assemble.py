@@ -1283,8 +1283,12 @@ def main():
           ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "PASS"}, "NUMERIC-UNVERIFIED", "is not R_BOUNDARY_UNCHANGED"))
     check("boundary_context_with_comparison_refused",
           ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED", "comparison": {}}, "NUMERIC-UNVERIFIED", "so it is compared, not context"))
+    # N1 covers an R refusal recorded by a receipt; a bridge case nobody ran is not context.
+    check("boundary_context_not_executed_bridge_case_refused",
+          ctx_case({"evidence_kind": "not_executed", "verdict": "NOT_EXECUTED"}, "NUMERIC-UNVERIFIED",
+                   "not an admission-only or PUBLIC-R-BRIDGE boundary kind"))
     check("boundary_context_bridge_kind_on_native_case_refused",
-          ctx_case({"evidence_kind": "not_executed", "verdict": "NOT_EXECUTED"}, "NUMERIC-UNVERIFIED", "must be a -PUBLIC-R-BRIDGE case",
+          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED"}, "NUMERIC-UNVERIFIED", "must be a -PUBLIC-R-BRIDGE case",
                    ids=("C", "C-NATIVE"), ctx_ids=("C-NATIVE",)))
     check("boundary_context_all_cases_refused",
           ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED"}, "NUMERIC-UNVERIFIED",
