@@ -3,6 +3,11 @@
 - PR843's hosted negative controls failed32/33 because its crossed R/Julia fixture could not find `Rscript`. PR844 exposed the same missing runner setup. The control also used a Juliaup-only path unavailable to hosted setup-julia.
 - Apply R4.5.3 and Julia1.10 setup before the controls, and resolve Julia from `PATH` with the existing local fallback. The fixture builds scratch data, loads no package, and performs no fit. Local Python controls pass33/33 on the residual-stage branch; CI will verify the hosted setup.
 
+## 2026-10-06: negative-control CI interpreter provisioning
+
+- Exact PR844 run37520380284 failed32/33 controls because Rscript was absent. Its crossed-fixture control also used a local Juliaup path unavailable to setup-julia runners.
+- Provision base R4.5.3 and Julia1.10 before the controls, using action versions already in repository CI. Resolve Julia from PATH before the existing local fallback. No fits, gllvmTMB package, engine, receipts, signatures, versions or tolerances changed.
+- All33/33 controls pass locally using PATH interpreters. Fresh enforced Emmy gpt-6-luna/medium returned OK for the two-file repair; its review does not certify core-suite success. Hosted rerun remains required.
 ## 2026-10-06: independent first-seven review and test-environment repair
 
 - Final fresh Emmy/Pat/Rose panel independently returned receipt-candidate OK at d879a9e21, conditional on package tests and consent. Exactly seven rows bind; X2 304/317, C2 290/297;13 remaining rows and37 C6 names unchanged and unsigned. Documentation at that candidate passed in98.617seconds.
