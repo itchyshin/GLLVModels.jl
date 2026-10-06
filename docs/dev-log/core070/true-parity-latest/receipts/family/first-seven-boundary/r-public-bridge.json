@@ -42,6 +42,7 @@
     "r_version": "R version 4.6.1 (2026-06-24)",
     "julia_version": "1.10.12",
     "glvmodels_path": "/home/snakagaw/hsq_work/gllvm-w2-3/repo/src/GLLVModels.jl",
-    "glvmodels_commit": "4b78fa01245381f6c0ab8a8b9ea0bc581ade825a"
+    "glvmodels_commit": "4b78fa01245381f6c0ab8a8b9ea0bc581ade825a",
+    "glvmodels_src_tree": "ee4140b88eb634453f24bcd70bdfe9a6914281d6"
   }
 }

@@ -747,6 +747,10 @@ def validate_family11_boundary(raw):
     need(problem is None, f"FAMILY-11 boundary: {problem or ''}")
     expected_ns = PINS["P1"]["namespace_sha256"]
     need(raw.get("namespace_sha256") == expected_ns, "FAMILY-11 boundary: installed NAMESPACE hash is not P1")
+    build = load(ROOT / ORACLE_BUILD_TOTORO)
+    need(raw["source_pin"].get("installed_tree_sha256") == build["installed_tree_sha256"] and
+         raw["source_pin"].get("marker_sha256") == build["marker_sha256"],
+         "FAMILY-11 boundary: loaded installed build is not the registered Totoro build")
     fixture = raw.get("fixture") or {}
     need((fixture.get("p"), fixture.get("n"), fixture.get("K"), fixture.get("data_sha256")) ==
          (5, 120, 1, FAMILY11_DATA_SHA), "FAMILY-11 boundary: recreated fixture shape/hash mismatch")
@@ -758,6 +762,8 @@ def validate_family11_boundary(raw):
     need((ROOT / run_commit_path).is_file(), "FAMILY-11 boundary: existing bridge-p1 run-commit receipt is missing")
     need(engine_commit == load(ROOT / run_commit_path).get("glvmodels_commit"),
          "FAMILY-11 boundary: probe source commit differs from the pinned bridge batch commit")
+    need(capture.get("glvmodels_src_tree") == git("rev-parse", f"{engine_commit}:src").stdout.strip(),
+         "FAMILY-11 boundary: executed source tree differs from the registered commit")
     need(all(capture.get(k) for k in ("r_version", "julia_version", "glvmodels_path")),
          "FAMILY-11 boundary: R/Julia source runtime provenance is incomplete")
     routes = raw.get("routes") or {}
@@ -813,10 +819,10 @@ def family11_boundary_self_test():
     good = {"schema": "core070-family11-r-boundary/v1", "case_id": FAMILY11_BOUNDARY_CASE,
             "pin": "P1", "reference_commit": P1_SHA, "gllvmtmb_version": pin["version"],
             "source_pin": {k: pin[k] for k in ("reference_commit", "source_tree_sha256", "archive_sha256",
-                                                 "namespace_sha256")} | {"version": pin["version"]},
+                                                 "namespace_sha256")} | {"version": pin["version"], "installed_tree_sha256": load(ROOT / ORACLE_BUILD_TOTORO)["installed_tree_sha256"], "marker_sha256": load(ROOT / ORACLE_BUILD_TOTORO)["marker_sha256"]},
             "namespace_sha256": pin["namespace_sha256"],
             "fixture": {"p": 5, "n": 120, "K": 1, "data_sha256": FAMILY11_DATA_SHA},
-            "capture": {"glvmodels_commit": FAMILY11_GLVMODELS_COMMIT, "r_version": "R 4.x",
+            "capture": {"glvmodels_commit": FAMILY11_GLVMODELS_COMMIT, "glvmodels_src_tree": git("rev-parse", f"{FAMILY11_GLVMODELS_COMMIT}:src").stdout.strip(), "r_version": "R 4.x",
                         "julia_version": "1.10.12", "glvmodels_path": "/fixture/GLLVModels.jl"},
             "routes": {r: {"refused": True, "error_class": ["simpleError", "error", "condition"],
                            "message": "[GJL-GATE-FAMILY] unsupported family",
@@ -840,7 +846,15 @@ def family11_boundary_self_test():
     try: validate_family11_boundary(bad)
     except SystemExit: pass
     else: raise AssertionError("wrong-refusal negative control passed")
-    print("CORE070_FAMILY11_BOUNDARY_SELF_TEST_OK (1 positive, 4 rejected mutations)")
+    bad = json.loads(json.dumps(good)); bad["capture"]["glvmodels_src_tree"] = "0" * 40
+    try: validate_family11_boundary(bad)
+    except SystemExit: pass
+    else: raise AssertionError("wrong-source-tree negative control passed")
+    bad = json.loads(json.dumps(good)); bad["source_pin"]["installed_tree_sha256"] = "0" * 64
+    try: validate_family11_boundary(bad)
+    except SystemExit: pass
+    else: raise AssertionError("wrong-installed-build negative control passed")
+    print("CORE070_FAMILY11_BOUNDARY_SELF_TEST_OK (1 positive, 6 rejected mutations)")
 
 
 def family11_boundary_receipt_path():

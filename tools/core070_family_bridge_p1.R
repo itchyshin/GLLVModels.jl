@@ -79,6 +79,13 @@ if (length(args) == 2L && identical(args[[1]], "--family11-boundary")) {
     "for t in 1:p,s in 1:n; μ=exp(clamp(η[t,s],-3.0,3.5)); ",
     "while true; v=rand(Distributions.NegativeBinomial(4.0,4.0/(4.0+μ))); ",
     "if v>=1; Y[t,s]=v; break; end; end; end; Y; end"))
+  engine_path <- JuliaCall::julia_eval("pathof(GLLVModels)")
+  engine_root <- dirname(dirname(engine_path))
+  actual_commit <- trimws(system2("git", c("-C", shQuote(engine_root), "rev-parse", "HEAD"), stdout = TRUE))
+  stopifnot(identical(actual_commit, engine_commit))
+  if (system2("git", c("-C", shQuote(engine_root), "diff", "--quiet", "HEAD", "--", "src")) != 0L)
+    stop("executed Julia source differs from the registered commit")
+  actual_src_tree <- trimws(system2("git", c("-C", shQuote(engine_root), "rev-parse", "HEAD:src"), stdout = TRUE))
   Y <- JuliaCall::julia_eval("core070_family11_fixture()")
   Y <- matrix(as.integer(Y), nrow = 5L, ncol = 120L)
   sha256_values <- function(values) {
@@ -123,7 +130,7 @@ if (length(args) == 2L && identical(args[[1]], "--family11-boundary")) {
                    K = 1L, data_sha256 = data_sha256),
     routes = calls, capture = list(r_version = R.version.string, julia_version = JuliaCall::julia_eval("string(VERSION)"),
       glvmodels_path = JuliaCall::julia_eval("pathof(GLLVModels)"),
-      glvmodels_commit = engine_commit))
+      glvmodels_commit = actual_commit, glvmodels_src_tree = actual_src_tree))
   out <- file.path(output_dir, "r-public-bridge.json")
   jsonlite::write_json(result, out, auto_unbox = TRUE, pretty = TRUE, null = "null", na = "null")
   cat("CORE070_FAMILY11_BOUNDARY_WRITTEN", sha256_file(out), "\n")
