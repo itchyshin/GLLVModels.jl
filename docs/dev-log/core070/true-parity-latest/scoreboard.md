@@ -20,7 +20,7 @@ Inputs:
 - `docs/dev-log/core070/true-parity-latest/case-map-data.json` (36 rows, sha256 `e3d20b5a8242aeef8a5af020312a166bf7b8dce77c48919afd358a5232efe915`)
 - `docs/dev-log/core070/true-parity-latest/case-map-family.json` (26 rows, sha256 `8eb485c51218daeba486c85676d57cc7fdc7c2a5625bb748fd1463df25ebb845`)
 - `docs/dev-log/core070/true-parity-latest/case-map-fit-input.json` (10 rows, sha256 `568c054ed5f3786b96c9acb796e28d98e4523c4edc5fe5ad9f69ab150cee3639`)
-- `docs/dev-log/core070/true-parity-latest/case-map-inference.json` (63 rows, sha256 `7415866b19d061a133b41ca45f16e8a3ac5bdf0292580d1754e1ac32faadd98a`)
+- `docs/dev-log/core070/true-parity-latest/case-map-inference.json` (63 rows, sha256 `9c58f51d0a3c78c0af58fc963c92a6afb8d3bc460a43d969a4b2c2017c88d857`)
 - `docs/dev-log/core070/true-parity-latest/case-map-isdm.json` (21 rows, sha256 `1ffc4904a25c5e6a8bb550333da004b82b731dfa489b17b55375944378149484`)
 - `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `e039c8a024d71d13a489e31928065a619e7d2e93f882d39c54955f98c211a114`)
 - `docs/dev-log/core070/true-parity-latest/case-map-postfit.json` (52 rows, sha256 `cbeb77202d7657c04cd1f19d3bc1f82e385dd844f7fd475aa22593655bc0d9a9`)
@@ -34,11 +34,11 @@ Inputs:
 | `data` | 13 | 0 | 2 | 0 | 0 | 1 | 13 | 0 | 4 | 3 | 36 |
 | `family` | 23 | 0 | 0 | 0 | 0 | 2 | 0 | 0 | 1 | 0 | 26 |
 | `fit-input` | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
-| `inference` | 3 | 49 | 10 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 63 |
+| `inference` | 3 | 50 | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 63 |
 | `isdm` | 11 | 0 | 4 | 0 | 0 | 0 | 5 | 0 | 1 | 0 | 21 |
 | `namespace` | 51 | 0 | 10 | 5 | 0 | 0 | 0 | 0 | 0 | 3 | 69 |
 | `postfit` | 45 | 0 | 4 | 0 | 0 | 2 | 0 | 1 | 0 | 0 | 52 |
-| `all` | 178 | 56 | 32 | 5 | 2 | 13 | 18 | 1 | 6 | 6 | 317 |
+| `all` | 178 | 57 | 32 | 5 | 2 | 12 | 18 | 1 | 6 | 6 | 317 |
 
 ## P1 twin fixtures present at this head, not bound to any row
 
@@ -255,7 +255,7 @@ decision for the PR that measures it, not something this tool does.
 | inference-CI-ROUTE-006 `inference/CI-ROUTE-006` | compatibility_adapter; cases: CORE070-INFERENCE-LAMBDA-CI-UNSUPPORTED-METHOD-REJECT | EVIDENCED-BEHAVIOURAL | docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-LAMBDA-CI-UNSUPPORTED-METHOD-REJECT.json | family inference; evidence_tier behavioural; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | inference-CI-ROUTE-007 `inference/CI-ROUTE-007` | compatibility_adapter; cases: CORE070-INFERENCE-LAMBDA-CI-UNSUPPORTED-METHOD-REJECT | EVIDENCED-BEHAVIOURAL | docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-LAMBDA-CI-UNSUPPORTED-METHOD-REJECT.json | family inference; evidence_tier behavioural; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | inference-CI-ROUTE-008 `inference/CI-ROUTE-008` | compatibility_adapter; cases: CORE070-SURFCONV-INFERENCE-CI-ROUTE-008 | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-SURFCONV-INFERENCE-CI-ROUTE-008.json | family inference; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| inference-CI-ROUTE-009 `inference/CI-ROUTE-009` | compatibility_adapter; cases: CORE070-SURFCONV-INFERENCE-CI-ROUTE-009 | PARTIAL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-SURFCONV-INFERENCE-CI-ROUTE-009.json | family inference; evidence_tier partial_non_numeric_case; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| inference-CI-ROUTE-009 `inference/CI-ROUTE-009` | compatibility_adapter; cases: CORE070-SURFCONV-INFERENCE-CI-ROUTE-009 | EVIDENCED-BEHAVIOURAL | docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-SURFCONV-INFERENCE-CI-ROUTE-009.json | family inference; evidence_tier behavioural; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | inference-CI-ROUTE-010 `inference/CI-ROUTE-010` | compatibility_adapter; cases: CORE070-SURFCONV-INFERENCE-CI-ROUTE-010 | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-SURFCONV-INFERENCE-CI-ROUTE-010.json | family inference; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | inference-CI-ROUTE-011 `inference/CI-ROUTE-011` | compatibility_adapter; cases: CORE070-SURFCONV-INFERENCE-CI-ROUTE-011 | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-SURFCONV-INFERENCE-CI-ROUTE-011.json | family inference; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | inference-CI-ROUTE-012 `inference/CI-ROUTE-012` | compatibility_adapter; cases: CORE070-INFERENCE-ICC-CI-UNSUPPORTED-METHOD-REJECT | EVIDENCED-BEHAVIOURAL | docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-ICC-CI-UNSUPPORTED-METHOD-REJECT.json | family inference; evidence_tier behavioural; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |

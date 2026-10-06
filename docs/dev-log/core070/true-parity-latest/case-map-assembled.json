@@ -31,7 +31,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-inference.json",
-   "sha256": "7415866b19d061a133b41ca45f16e8a3ac5bdf0292580d1754e1ac32faadd98a",
+   "sha256": "9c58f51d0a3c78c0af58fc963c92a6afb8d3bc460a43d969a4b2c2017c88d857",
    "rows": 63
   },
   {
@@ -4904,13 +4904,13 @@
    ],
    "disposition": null,
    "p0_batch": "surface-conversion wave5 (attempt7)",
-   "evidence_tier": "partial_non_numeric_case",
+   "evidence_tier": "behavioural",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-SURFCONV-INFERENCE-CI-ROUTE-009.json"
     ],
-    "tier": "measured at P1 and the harness passes, but the case is a refusal pair or a structural bootstrap check with no R-vs-Julia number and tolerance, so the row does not bind"
+    "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
    },
    "measured_result": {
     "case_verdicts": {
@@ -4922,8 +4922,7 @@
     "case_kinds": {
      "CORE070-SURFCONV-INFERENCE-CI-ROUTE-009": "paired_refusal_pair"
     }
-   },
-   "note": "Not bound: behaviour block kept as non-binding evidence only (R and Julia give the same label), but this row is not in the frozen scope of itchyshin/GLLVModels.jl#684 item 2; binding it needs the maintainer to confirm ruling 2 covers it."
+   }
   },
   {
    "source_id": "inference/CI-ROUTE-010",
