@@ -1,0 +1,47 @@
+{
+  "schema": "core070-family11-r-boundary/v1",
+  "case_id": "CORE070-FAMILY-11-LOG-PUBLIC-R-BRIDGE",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "gllvmtmb_version": "0.7.1",
+  "source_pin": {
+    "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+    "source_tree_sha256": "86fa00f05ee2ccb8ffef65a82cd59c47b1b2a256a5bad86957a92461a6dbe1db",
+    "installed_tree_sha256": "71ef0fb3d6c0a31e908c09ea599b97966dc8335038e1d9d23ccda901344d9997",
+    "archive_sha256": "73b665b22c1497d43dc0674eecd5657f2659a726fcad13004de899833e2d5423",
+    "namespace_sha256": "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c",
+    "version": "0.7.1",
+    "marker_path": "/home/snakagaw/hsq_work/gllvm-w2-3/oracle-build/library/gllvmTMB/CORE070_SOURCE_PIN.toml",
+    "marker_sha256": "aa1fc44f481294678c2d1eb5505eaf182f976236f3b3f50373465c68330b2941"
+  },
+  "namespace_sha256": "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c",
+  "fixture": {
+    "recipe": "test/parity/test_truncated_nbinom2_parity.jl seed=58",
+    "p": 5,
+    "n": 120,
+    "K": 1,
+    "data_sha256": "ecbcf9f501c7e618131f2c3f1f0d213bb0e92364a72c0519095c52ef30930948"
+  },
+  "routes": {
+    "matrix": {
+      "call": "gllvm_julia_fit(Y, family = gllvmTMB::truncated_nbinom2(), num.lv = 1)",
+      "refused": true,
+      "error_class": ["simpleError", "error", "condition"],
+      "message": "[GJL-GATE-FAMILY] engine = 'julia': unsupported family 'truncated_nbinom2'. Supported: gaussian, poisson, binomial, binomial_probit, binomial_cloglog, nbinom2, nbinom1, beta, gamma, ordinal, ordinal_probit (or a narrow list for mixed gaussian/poisson/binomial responses).",
+      "warnings": []
+    },
+    "formula": {
+      "call": "gllvmTMB(value ~ 0 + trait + latent(0 + trait | site, d = 1, unique = FALSE), data = reversed long, family = truncated_nbinom2(), engine = 'julia')",
+      "refused": true,
+      "error_class": ["simpleError", "error", "condition"],
+      "message": "[GJL-GATE-FAMILY] engine = 'julia': unsupported family 'truncated_nbinom2'. Supported: gaussian, poisson, binomial, binomial_probit, binomial_cloglog, nbinom2, nbinom1, beta, gamma, ordinal, ordinal_probit (or a narrow list for mixed gaussian/poisson/binomial responses).",
+      "warnings": []
+    }
+  },
+  "capture": {
+    "r_version": "R version 4.6.1 (2026-06-24)",
+    "julia_version": "1.10.12",
+    "glvmodels_path": "/home/snakagaw/hsq_work/gllvm-w2-3/repo/src/GLLVModels.jl",
+    "glvmodels_commit": "4b78fa01245381f6c0ab8a8b9ea0bc581ade825a"
+  }
+}

@@ -2,6 +2,12 @@
 # the P0 batch), plus the FAMILY-BETA-ALIAS adapter case. Run at gllvmTMB pin P1.
 #
 #   Rscript --vanilla tools/core070_family_bridge_p1.R <runs-dir> <destination>
+#   Rscript --vanilla tools/core070_family_bridge_p1.R --family11-boundary <destination>
+#
+# The second form recreates the registered seed-58 truncated-NB2 response without fitting,
+# probes both public R bridge routes, and writes r-public-bridge.json. It requires the same
+# P1 library / JuliaCall environment plus GLLVM_PARITY_GLVMODELS_COMMIT identifying the
+# exact GLLVModels run commit. The destination must not exist.
 #
 # <runs-dir> holds the runparity output directories of the SAME clean commit
 # (runparity-poisson/, runparity-beta/, runparity-nb2/). <destination> must not exist.
@@ -34,6 +40,96 @@
 #   native Julia logLik.
 # Nothing here decides a verdict; tools/core070_family_p1_receipts.py does, from the
 # results JSON this script writes.
+args <- commandArgs(trailingOnly = TRUE)
+
+# Narrow, no-fit probe for FAMILY-11's public R bridge boundary. This is
+# intentionally separate from the frozen three-case numeric bridge batch.
+if (length(args) == 2L && identical(args[[1]], "--family11-boundary")) {
+  output_dir <- args[[2]]
+  if (file.exists(output_dir)) stop("destination must not exist: ", output_dir)
+  root <- normalizePath(".")
+  P1 <- "9539352f66f2db2cc26b1c393e67212a359b60c9"
+  parity_pin <- toupper(trimws(Sys.getenv("GLLVM_PARITY_PIN", "P1")))
+  if (!identical(parity_pin, "P1")) stop("this boundary probe runs at P1 only")
+  rlib <- Sys.getenv("GLLVM_P1_RLIB", "")
+  if (!nzchar(rlib)) stop("GLLVM_P1_RLIB is required")
+  rlib <- normalizePath(rlib, mustWork = TRUE)
+  .libPaths(c(rlib, .libPaths()))
+  suppressPackageStartupMessages(library(gllvmTMB, lib.loc = rlib))
+  stopifnot(normalizePath(find.package("gllvmTMB")) == normalizePath(file.path(rlib, "gllvmTMB")),
+            as.character(packageVersion("gllvmTMB")) == "0.7.1")
+  source(file.path(root, "tools/core070_source_pin.R"))
+  source_pin <- core070_source_pin(root, rlib, "P1", P1)
+  jlenv <- Sys.getenv("GLLVM_BRIDGE_JLENV")
+  stopifnot(nzchar(jlenv), identical(normalizePath(Sys.getenv("JULIA_PROJECT")), normalizePath(jlenv)))
+  julia_home <- Sys.getenv("JULIA_HOME")
+  stopifnot(nzchar(julia_home))
+  engine_commit <- Sys.getenv("GLLVM_PARITY_GLVMODELS_COMMIT", "")
+  if (!grepl("^4b78fa012", engine_commit)) stop("GLLVM_PARITY_GLVMODELS_COMMIT must identify 4b78fa012")
+
+  # Recreate the registered seed-58 response in Julia without invoking a
+  # likelihood or optimiser. These statements mirror the fixture recipe in
+  # test/parity/test_truncated_nbinom2_parity.jl.
+  gllvm_julia_setup(jl_path = jlenv, julia_home = julia_home)
+  JuliaCall::julia_command(paste0(
+    "using Random, Distributions; ",
+    "function core070_family11_fixture(); Random.seed!(58); p,K,n=5,1,120; ",
+    "β=log.([4.0,5.0,3.5,4.5,4.0]); Λ=0.2 .* [0.8 0.0; 0.5 0.6; 0.3 -0.4; -0.2 0.5; 0.1 0.3][:,1:K]; ",
+    "Z=randn(K,n); η=β .+ Λ*Z; Y=Matrix{Int}(undef,p,n); ",
+    "for t in 1:p,s in 1:n; μ=exp(clamp(η[t,s],-3.0,3.5)); ",
+    "while true; v=rand(Distributions.NegativeBinomial(4.0,4.0/(4.0+μ))); ",
+    "if v>=1; Y[t,s]=v; break; end; end; end; Y; end"))
+  Y <- JuliaCall::julia_eval("core070_family11_fixture()")
+  Y <- matrix(as.integer(Y), nrow = 5L, ncol = 120L)
+  sha256_values <- function(values) {
+    path <- tempfile(); on.exit(unlink(path), add = TRUE)
+    writeBin(as.double(values), path, size = 8L, endian = "little")
+    unname(tools::sha256sum(path))
+  }
+  sha256_file <- function(path) unname(tools::sha256sum(path))
+  data_sha256 <- sha256_values(as.vector(Y))
+  expected_sha <- "ecbcf9f501c7e618131f2c3f1f0d213bb0e92364a72c0519095c52ef30930948"
+  if (!identical(data_sha256, expected_sha)) stop("seed-58 fixture hash mismatch: ", data_sha256)
+  dimnames(Y) <- list(sprintf("trait%02d", seq_len(5L)), sprintf("site%03d", seq_len(120L)))
+  d <- expand.grid(trait = rownames(Y), site = colnames(Y))
+  d$value <- as.vector(Y)
+  d$trait <- factor(d$trait, levels = rownames(Y)); d$site <- factor(d$site, levels = colnames(Y))
+  fam <- gllvmTMB::truncated_nbinom2()
+  capture_boundary <- function(expr, call) {
+    warnings <- character()
+    value <- tryCatch(withCallingHandlers(expr, warning = function(w) {
+      warnings <<- c(warnings, conditionMessage(w)); invokeRestart("muffleWarning")
+    }), error = function(e) e)
+    list(call = call, refused = inherits(value, "error"),
+         error_class = if (inherits(value, "error")) class(value) else character(),
+         message = if (inherits(value, "error")) conditionMessage(value) else "",
+         warnings = warnings)
+  }
+  calls <- list(
+    capture_boundary(gllvmTMB::gllvm_julia_fit(Y, family = fam, num.lv = 1L),
+                     "gllvm_julia_fit(Y, family = gllvmTMB::truncated_nbinom2(), num.lv = 1)"),
+    capture_boundary(gllvmTMB::gllvmTMB(
+      value ~ 0 + trait + latent(0 + trait | site, d = 1L, unique = FALSE),
+      data = d[nrow(d):1L, ], unit = "site", trait = "trait", family = fam, engine = "julia"),
+      "gllvmTMB(value ~ 0 + trait + latent(0 + trait | site, d = 1, unique = FALSE), data = reversed long, family = truncated_nbinom2(), engine = 'julia')")
+  )
+  names(calls) <- c("matrix", "formula")
+  dir.create(output_dir, recursive = TRUE)
+  result <- list(schema = "core070-family11-r-boundary/v1",
+    case_id = "CORE070-FAMILY-11-LOG-PUBLIC-R-BRIDGE", pin = "P1", reference_commit = P1,
+    gllvmtmb_version = as.character(packageVersion("gllvmTMB")), source_pin = source_pin,
+    namespace_sha256 = unname(tools::sha256sum(file.path(rlib, "gllvmTMB", "NAMESPACE"))),
+    fixture = list(recipe = "test/parity/test_truncated_nbinom2_parity.jl seed=58", p = 5L, n = 120L,
+                   K = 1L, data_sha256 = data_sha256),
+    routes = calls, capture = list(r_version = R.version.string, julia_version = JuliaCall::julia_eval("string(VERSION)"),
+      glvmodels_path = JuliaCall::julia_eval("pathof(GLLVModels)"),
+      glvmodels_commit = engine_commit))
+  out <- file.path(output_dir, "r-public-bridge.json")
+  jsonlite::write_json(result, out, auto_unbox = TRUE, pretty = TRUE, null = "null", na = "null")
+  cat("CORE070_FAMILY11_BOUNDARY_WRITTEN", sha256_file(out), "\n")
+  quit(save = "no", status = 0L)
+}
+
 args <- commandArgs(trailingOnly = TRUE)
 stopifnot(length(args) == 2L)
 runs_dir <- normalizePath(args[[1]], mustWork = TRUE)
