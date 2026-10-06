@@ -1,3 +1,11 @@
+## 2026-10-06: P1 first-seven checkpoint verifier
+
+- Approved baseline: `f220379d0937d0afffc6a030023c63c0f715e168`; P1 R source: `9539352f66f2db2cc26b1c393e67212a359b60c9`.
+- Added an internal exact-row verifier and controls. The verifier fixes the approved baseline checker, checks all admission/case contracts, preserves unrelated scoreboard statuses, validates P1 receipt and raw-hash provenance, and rechecks every numeric or behavioural bound receipt.
+- Controls pass for exact-row substitution, dropped rows, contract edits, signed substitutions, missing P1 source/build provenance, bad raw hashes and invalid bridge context. Existing checker and assembler controls passed; assembly is current at 317 rows.
+- The unchanged baseline is correctly rejected at FAMILY-11. No receipt gap has been closed by this tooling commit, and no full P1 or release claim is made. Candidate and main checkpoint gates remain unmet.
+- Full/core Julia suites and Documenter are pending for the receipt checkpoint; this change adds Node tooling and tests only.
+
 ## 2026-10-01: postfit numeric twins at gllvmTMB P1 (5 rows, #660)
 
 - Branch `claude/true-parity-cov-postfit-family-twins` from `origin/main` (`3fcf20698`). New:
