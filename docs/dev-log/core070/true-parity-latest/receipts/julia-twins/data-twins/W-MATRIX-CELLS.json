@@ -1,0 +1,163 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "data/DATA-W-MATRIX-CELLS"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl@claude/weights-laplace",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "d57c3d627b78da98a6de55a850d3177b3247aa8c",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/weights_twins_p1.toml",
+      "sha256": "1701b41d9412ed2c7d7e121118b34cdebe6d89b768dba24f5df0d1ed531f45c0"
+    },
+    {
+      "path": "test/fixtures/weights_twins_p1_data.csv",
+      "sha256": "906d45b84f846451d2067929730a06b3b4159c96979133ebd73f623bdd624e8e"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_weights_twins_p1.jl",
+      "sha256": "3709b7a89a8e64d6f52a76ef68a4ee78b05eec278e44d7236e6a49ac86f1c052"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-DATA-W-MATRIX-CELLS-OBJECTIVE",
+        "quantity": "maximised weighted objective of the Poisson fit (the logLik for the unweighted fit)",
+        "r_source": "test/fixtures/weights_twins_p1.toml [matrix_cells.objective]",
+        "julia_source": "f.loglik, fit as at test/test_weights_twins_p1.jl:107",
+        "r_value": -1533.6168285878887,
+        "julia_value": -1533.6168285845765,
+        "abs_diff": 3.3121523301815614e-09,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_weights_twins_p1.jl:110",
+        "tolerance_source_line": "@test isapprox(f.loglik, Float64(d[\"objective\"]); atol = 1e-6, rtol = 0)",
+        "note": "R: wide_matrix route, wide matrix route, n x p per-cell weight matrix. R wide-matrix route: gllvmTMB_wide()'s own normalise_weights(weights, \"wide_matrix\", ...) and pivot, then gllvmTMB(value ~ 0 + trait + latent(0 + trait | site, d = 1, unique = FALSE), family = poisson(), weights = <normalised vector>); gllvmTMB_wide() itself hardcodes latent()'s default unique = TRUE, a per-trait unique variance the Julia Poisson route does not carry, and that substitution is the only difference from it. Julia: fit_gllvm(Y; family = Poisson(), K = 1, ...), weights = permutedims of R's n x p cell matrix w_cell. p = 6, n = 120 (sha256 checked), one Poisson data set, one latent factor; every R fit converged with a positive-definite Hessian. A weight multiplies its cell's conditional log-density on both sides (gllvmTMB weights_i in src/gllvmTMB.cpp; GLLVModels src/families/laplace.jl). gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik; logLik() for the unweighted fit). The twin test also asserts that every weighted R objective differs from the unweighted one by more than 1, so the weights are applied, not ignored. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+      },
+      {
+        "case_id": "P1-JULIA-DATA-W-MATRIX-CELLS-INTERCEPTS",
+        "quantity": "trait intercepts (6 values)",
+        "r_source": "test/fixtures/weights_twins_p1.toml [matrix_cells.beta]",
+        "julia_source": "f.β, fit as at test/test_weights_twins_p1.jl:107",
+        "r_value": [
+          0.8536692191821346,
+          0.31811832556876674,
+          0.5018414458005327,
+          0.9646113854759579,
+          0.4195377755868105,
+          0.6628751121725651
+        ],
+        "julia_value": [
+          0.8536672352853416,
+          0.318122506181752,
+          0.5018419479353421,
+          0.9646098350204804,
+          0.4195370772678693,
+          0.6628749805674606
+        ],
+        "abs_diff": 4.180612985238419e-06,
+        "tolerance": 0.0001,
+        "tolerance_source": "test/test_weights_twins_p1.jl:111",
+        "tolerance_source_line": "@test isapprox(f.β, Float64.(d[\"beta\"]); atol = 1e-4, rtol = 0)",
+        "note": "R: wide_matrix route, wide matrix route, n x p per-cell weight matrix. R wide-matrix route: gllvmTMB_wide()'s own normalise_weights(weights, \"wide_matrix\", ...) and pivot, then gllvmTMB(value ~ 0 + trait + latent(0 + trait | site, d = 1, unique = FALSE), family = poisson(), weights = <normalised vector>); gllvmTMB_wide() itself hardcodes latent()'s default unique = TRUE, a per-trait unique variance the Julia Poisson route does not carry, and that substitution is the only difference from it. Julia: fit_gllvm(Y; family = Poisson(), K = 1, ...), weights = permutedims of R's n x p cell matrix w_cell. p = 6, n = 120 (sha256 checked), one Poisson data set, one latent factor; every R fit converged with a positive-definite Hessian. A weight multiplies its cell's conditional log-density on both sides (gllvmTMB weights_i in src/gllvmTMB.cpp; GLLVModels src/families/laplace.jl). gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik; logLik() for the unweighted fit). The twin test also asserts that every weighted R objective differs from the unweighted one by more than 1, so the weights are applied, not ignored. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+      },
+      {
+        "case_id": "P1-JULIA-DATA-W-MATRIX-CELLS-LAMBDA-LAMBDAT",
+        "quantity": "Lambda Lambda' (6 x 6)",
+        "r_source": "test/fixtures/weights_twins_p1.toml [matrix_cells.lambda_lambdat]",
+        "julia_source": "f.Λ * f.Λ', fit as at test/test_weights_twins_p1.jl:107",
+        "r_value": [
+          0.37869993514638023,
+          -0.26613688518702466,
+          0.3286794142705488,
+          0.24909377090847423,
+          -0.3758964354313474,
+          0.1764937670131777,
+          -0.26613688518702466,
+          0.18703156532010975,
+          -0.23098423691371386,
+          -0.17505426897801593,
+          0.2641666850033538,
+          -0.12403356073894097,
+          0.3286794142705488,
+          -0.23098423691371386,
+          0.28526584596185306,
+          0.2161922596817803,
+          -0.3262462143707694,
+          0.15318161578736791,
+          0.24909377090847423,
+          -0.17505426897801593,
+          0.2161922596817803,
+          0.16384398555922627,
+          -0.24724974018402102,
+          0.1160905875258752,
+          -0.3758964354313474,
+          0.2641666850033538,
+          -0.3262462143707694,
+          -0.24724974018402102,
+          0.373113689906962,
+          -0.175187191068465,
+          0.1764937670131777,
+          -0.12403356073894097,
+          0.15318161578736791,
+          0.1160905875258752,
+          -0.175187191068465,
+          0.082255228753766
+        ],
+        "julia_value": [
+          0.37870244151672044,
+          -0.26613523215148277,
+          0.328679371474619,
+          0.24909417341648527,
+          -0.37589802580636694,
+          0.17649398878934908,
+          -0.26613523215148277,
+          0.18702800412021228,
+          -0.2309812434281311,
+          -0.17505230598533406,
+          0.26416441352371,
+          -0.12403212530574813,
+          0.328679371474619,
+          -0.2309812434281311,
+          0.28526388369793715,
+          0.21619115004545147,
+          -0.3262453929944675,
+          0.15318077452048975,
+          0.24909417341648527,
+          -0.17505230598533406,
+          0.21619115004545147,
+          0.16384343069333632,
+          -0.24724954941435598,
+          0.11609015266546742,
+          -0.37589802580636694,
+          0.26416441352371,
+          -0.3262453929944675,
+          -0.24724954941435598,
+          0.3731143777135788,
+          -0.1751869929512408,
+          0.17649398878934908,
+          -0.12403212530574813,
+          0.15318077452048975,
+          0.11609015266546742,
+          -0.1751869929512408,
+          0.08225489108022965
+        ],
+        "abs_diff": 3.561199897472722e-06,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_weights_twins_p1.jl:112",
+        "tolerance_source_line": "@test isapprox(f.Λ * f.Λ', _wt_mat(d[\"lambda_lambdat\"], p); atol = 1e-3, rtol = 0)",
+        "note": "R: wide_matrix route, wide matrix route, n x p per-cell weight matrix. R wide-matrix route: gllvmTMB_wide()'s own normalise_weights(weights, \"wide_matrix\", ...) and pivot, then gllvmTMB(value ~ 0 + trait + latent(0 + trait | site, d = 1, unique = FALSE), family = poisson(), weights = <normalised vector>); gllvmTMB_wide() itself hardcodes latent()'s default unique = TRUE, a per-trait unique variance the Julia Poisson route does not carry, and that substitution is the only difference from it. Julia: fit_gllvm(Y; family = Poisson(), K = 1, ...), weights = permutedims of R's n x p cell matrix w_cell. p = 6, n = 120 (sha256 checked), one Poisson data set, one latent factor; every R fit converged with a positive-definite Hessian. A weight multiplies its cell's conditional log-density on both sides (gllvmTMB weights_i in src/gllvmTMB.cpp; GLLVModels src/families/laplace.jl). gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik; logLik() for the unweighted fit). The twin test also asserts that every weighted R objective differs from the unweighted one by more than 1, so the weights are applied, not ignored. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+      }
+    ]
+  }
+}

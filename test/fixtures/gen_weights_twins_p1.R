@@ -154,7 +154,7 @@ w("data_file = \"%s\"", pf); w("data_sha256 = \"%s\"", shaw(pf))
 w("na_units = %s", vec(na_cells[, "unit"])); w("na_traits = %s", vec(na_cells[, "trait"]))
 for (nm in names(res)) {
   f <- res[[nm]]$f; d <- desc[[nm]]
-  w(""); w("[%s]", nm); w("# %s", d[5])
+  w(""); w("[%s]", nm); w("description = \"%s\"", d[5])
   w("source_id = \"%s\"", d[1]); w("route = \"%s\"", d[2])
   w("response_column = \"%s\"", d[3]); w("weights = \"%s\"", d[4])
   w("converged = true"); w("pd_hessian = true")

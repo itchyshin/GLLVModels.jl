@@ -2048,6 +2048,98 @@ function receipts_off_mixed()
 end
 
 # =============================================================================================
+# 12g. weights twins   test/test_weights_twins_p1.jl
+#     The 13 data/DATA-W-* rows (observation weights). Each R batch case replays the internal
+#     helper normalise_weights() with no fit number; each weight shape is twinned here by a real
+#     Poisson fit. R-at-P1 fits recorded in test/fixtures/weights_twins_p1.toml, against
+#     fit_gllvm(Y; family = Poisson(), K = 1, weights = ...) on the same data. One receipt per row.
+# =============================================================================================
+# Copy of test/test_weights_twins_p1.jl's `_wt_load` (R's write.csv long data -> p x n matrix,
+# "NA" as missing).
+function _wtr_load(path, col, p, n)
+    hdr = split(readline(path), ",")
+    ci = findfirst(==("\"" * col * "\""), hdr)
+    ci === nothing && fail("column $col not found in $path")
+    M = Matrix{Union{Missing, Float64}}(missing, p, n)
+    open(path) do io
+        readline(io)
+        for line in eachline(io)
+            isempty(line) && continue
+            a = split(line, ",")
+            M[parse(Int, strip(a[2], ['"', 't'])), parse(Int, strip(a[1], '"'))] =
+                a[ci] == "NA" ? missing : parse(Float64, a[ci])
+        end
+    end
+    return M
+end
+
+function receipts_weights_twins()
+    ORIGIN = "itchyshin/GLLVModels.jl@claude/weights-laplace"
+    fxp = "test/fixtures/weights_twins_p1.toml"
+    tp = "test/test_weights_twins_p1.jl"
+    fx = TOML.parsefile(joinpath(ROOT, fxp))
+    fx["gllvmtmb_commit"] == P1_SHA || fail("weights twin fixture is not pinned at P1")
+    p, n = Int(fx["p"]), Int(fx["n_unit"])
+    datap = "test/fixtures/" * fx["data_file"]
+    bytes2hex(sha256(read(joinpath(ROOT, datap)))) == fx["data_sha256"] || fail("weights data csv drifted")
+    csv = joinpath(ROOT, datap)
+    col = c -> _wtr_load(csv, c, p, n)
+    # The inputs of test/test_weights_twins_p1.jl's `_wt_julia_inputs`, copied.
+    Y   = Int.(col("y"))
+    Yna = map(v -> ismissing(v) ? missing : Int(v), col("y_na"))
+    obs = .!ismissing.(Yna)
+    Yfill = Int.(coalesce.(Yna, 0))
+    Wcell = Float64.(col("w_cell"))
+    Wcell_na = ifelse.(obs, Wcell, NaN)
+    wunit = Float64.(col("w_unit")[1, :])
+    inputs = Dict(
+        "null"                => (Y, nothing, (;), "weights omitted (= nothing)"),
+        "long"                => (Y, Float64.(col("w_int")), (;), "weights = the p x n matrix of the long column w_int (integers 1..3)"),
+        "fractional"          => (Y, Float64.(col("w_frac")), (;), "weights = the p x n matrix of the long column w_frac (0.25 to 2)"),
+        "zero"                => (Y, Float64.(col("w_zero")), (;), "weights = the p x n matrix of the long column w_zero (0 on 15 cells, 1 elsewhere)"),
+        "matrix_scalar"       => (Y, 2.0, (;), "weights = 2.0 (scalar, every cell)"),
+        "matrix_unit"         => (Y, wunit, (;), "weights = the length-120 vector w_unit (one per unit)"),
+        "matrix_cells"        => (Y, permutedims(permutedims(Wcell)), (;), "weights = permutedims of R's n x p cell matrix w_cell"),
+        "matrix_mask_drop"    => (Yna, Wcell_na, (;), "Y with 14 missing cells; weights = the cell matrix with NaN at those cells"),
+        "matrix_mask_include" => (Yfill, Wcell_na, (; mask = obs), "Y with a placeholder 0 at the 14 cells and mask = the observed cells; weights = the cell matrix with NaN at those cells"),
+        "matrix_mask_scalar"  => (Yna, 2.0, (;), "Y with 14 missing cells; weights = 2.0"),
+        "df_unit"             => (Y, wunit, (;), "weights = the length-120 vector w_unit (one per unit)"),
+        "df_mask_drop"        => (Yna, wunit, (;), "Y with 14 missing cells; weights = w_unit (one per unit)"),
+        "df_mask_include"     => (Yfill, wunit, (; mask = obs), "Y with a placeholder 0 at the 14 cells and mask = the observed cells; weights = w_unit"))
+    route_text = Dict(
+        "long" => "R long API: gllvmTMB(value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE), family = poisson(), weights = <length nrow(data) vector>).",
+        "wide_matrix" => "R wide-matrix route: gllvmTMB_wide()'s own normalise_weights(weights, \"wide_matrix\", ...) and pivot, then gllvmTMB(value ~ 0 + trait + latent(0 + trait | site, d = 1, unique = FALSE), family = poisson(), weights = <normalised vector>); gllvmTMB_wide() itself hardcodes latent()'s default unique = TRUE, a per-trait unique variance the Julia Poisson route does not carry, and that substitution is the only difference from it.",
+        "wide_df" => "R traits() route: gllvmTMB(traits(t1, ..., t6) ~ 1 + latent(1 | unit, d = 1, unique = FALSE), family = poisson(), weights = <length-n vector>), the public route.")
+    src = cite(tp, "f = fit_gllvm(Y; family = Poisson(), K = 1, weights = W, kw...)")
+    base = "p = 6, n = 120 (sha256 checked), one Poisson data set, one latent factor; every R fit converged with a positive-definite Hessian. A weight multiplies its cell's conditional log-density on both sides (gllvmTMB weights_i in src/gllvmTMB.cpp; GLLVModels src/families/laplace.jl). gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit\$opt\$objective, Julia fit.loglik; logLik() for the unweighted fit). The twin test also asserts that every weighted R objective differs from the unweighted one by more than 1, so the weights are applied, not ignored. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+    out = Pair{String,Any}[]
+    for sec in ("null", "long", "fractional", "zero", "matrix_scalar", "matrix_unit", "matrix_cells",
+                "matrix_mask_drop", "matrix_mask_include", "matrix_mask_scalar", "df_unit",
+                "df_mask_drop", "df_mask_include")
+        d = fx[sec]
+        (d["converged"] === true && d["pd_hessian"] === true) || fail("$sec R fit not converged with a PD Hessian; not a valid twin")
+        Yx, W, kw, jdesc = inputs[sec]
+        f = fit_gllvm(Yx; family = Poisson(), K = 1, weights = W, kw...)
+        f.converged || fail("$sec Julia fit did not converge")
+        sid = d["source_id"]
+        stem = replace(sid, "data/DATA-" => "")
+        note = "R: $(d["route"]) route, $(d["description"]). $(route_text[d["route"]]) Julia: fit_gllvm(Y; family = Poisson(), K = 1, ...), $jdesc. " * base
+        cs = Case[]
+        push!(cs, mkcase("P1-JULIA-DATA-$stem-OBJECTIVE", "maximised weighted objective of the Poisson fit (the logLik for the unweighted fit)",
+            "$fxp [$sec.objective]", "f.loglik, fit as at $src",
+            Float64(d["objective"]), f.loglik, test_tolerance(tp, "@test isapprox(f.loglik, Float64(d[\"objective\"])"), note))
+        push!(cs, mkcase("P1-JULIA-DATA-$stem-INTERCEPTS", "trait intercepts (6 values)",
+            "$fxp [$sec.beta]", "f.β, fit as at $src",
+            Float64.(d["beta"]), f.β, test_tolerance(tp, "@test isapprox(f.β, Float64.(d[\"beta\"])"), note))
+        push!(cs, mkcase("P1-JULIA-DATA-$stem-LAMBDA-LAMBDAT", "Lambda Lambda' (6 x 6)",
+            "$fxp [$sec.lambda_lambdat]", "f.Λ * f.Λ', fit as at $src",
+            _ns_mat(d["lambda_lambdat"], p, p), f.Λ * f.Λ', test_tolerance(tp, "@test isapprox(f.Λ * f.Λ'"), note))
+        push!(out, "data-twins/$stem.json" => Receipt([sid], ORIGIN, [fxp, datap], [tp], NOT_A_FIXTURE_PAIR, cs))
+    end
+    return out
+end
+
+# =============================================================================================
 # 12f. covariance phylo twins   test/test_cov_phylo_twins_p1.jl
 #     covariance/COV-PHYLO-DEP, COV-PHYLO-A-ALIAS, COV-PHYLO-FOLDED-UNIQUE: one shared Gaussian fixture
 #     (120-tip coalescent tree, 4 traits, 2 observations per species) fitted at P1 with
@@ -2353,6 +2445,7 @@ function build(only::Vector{String} = String[])
             ("data-twins-2", receipts_data_twins_2),
             ("off-all-count", receipts_off_all_count),
             ("off-mixed", receipts_off_mixed),
+            ("weights-twins", receipts_weights_twins),
             ("cov-phylo-twins", receipts_cov_phylo_twins),
             ("c1-behaviour", receipts_c1_behaviour))
         isempty(only) || name in only || continue
