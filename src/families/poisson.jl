@@ -45,10 +45,11 @@ fit had none); [`predict`](@ref) and [`getLV`](@ref) use it by default. An AGHQ 
 leaves `offset === nothing`: its offset is kept in `integration.data.offset`, which
 the AGHQ post-fit route uses.
 `weights` is the p×n observation-weight matrix a weighted Laplace fit was made with
-(`nothing` for an unweighted fit; unobserved cells hold 0). `loglik` is then the
-weighted objective, as gllvmTMB's `logLik` is; [`getLV`](@ref) and [`predict`](@ref)
-use the weighted modes on the training data, and likelihood-based intervals are
-refused (a weighted objective is not an ordinary likelihood).
+(`nothing` for an unweighted fit; unobserved cells hold 0). The `loglik` field then
+holds the maximised weighted objective (gllvmTMB's `-fit\$opt\$objective`); as gllvmTMB's
+`logLik()` does for non-unit weights, `loglikelihood`, `aic`, `bic`, `confint` and
+`latent_score_sd` refuse a weighted fit, since a weighted objective is not an ordinary
+likelihood. [`getLV`](@ref) and [`predict`](@ref) use the weighted modes on the training data.
 """
 struct PoissonFit
     β::Vector{Float64}

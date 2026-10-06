@@ -348,7 +348,9 @@ only `Normal()` takes one.
 
 `weights` multiplies each observed cell's conditional log-density by its weight, as
 gllvmTMB's `weights` argument does (a weight of 0 drops the cell; fractional weights are
-allowed). The fit then maximises a weighted objective and `loglik` reports it. Accepted:
+allowed). The fit then maximises a weighted objective; the fit's `loglik` field holds it,
+and `loglikelihood` / `aic` / `bic` / `confint` refuse a weighted fit, as gllvmTMB's
+`logLik()` does for non-unit weights. Accepted:
 
 - `nothing` (the default): unweighted, bit-identical to a call without the keyword;
 - a real scalar, applied to every cell;

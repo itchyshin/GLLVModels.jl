@@ -58,6 +58,9 @@ using Random
                                                     LogLink(); weights = Wc[:, s])[1] for s in 1:n]
         @test_throws ArgumentError getLV(fw, Y[:, 1:10])
         @test_throws ArgumentError confint(fw, Y)
+        @test_throws ArgumentError loglikelihood(fw)            # gllvmTMB's logLik() aborts too
+        @test_throws ArgumentError aic(fw)
+        @test loglikelihood(f0) == f0.loglik
         @test size(predict(fw, Y)) == (p, n)
         # formula front end, no covariates
         data = (x = randn(Xoshiro(5), n),)

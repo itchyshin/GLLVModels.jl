@@ -914,7 +914,16 @@ Base.show(io::IO, fit::GllvmFit) =
 # ---------------------------------------------------------------------------
 
 _loadings(fit::PoissonFit) = fit.Λ
-_loglik(fit::PoissonFit)   = fit.loglik
+# A weighted fit maximises a weighted objective, not a likelihood: as gllvmTMB's logLik()
+# (which aborts for non-unit weights), loglikelihood / aic / bic refuse it. The objective
+# itself stays in `fit.loglik`.
+function _loglik(fit::PoissonFit)
+    fit.weights === nothing || throw(ArgumentError(
+        "the log-likelihood is undefined for a fit with observation weights: it maximised a " *
+        "weighted objective, not an ordinary likelihood (fit.loglik holds that objective). " *
+        "Refit without weights for likelihood-based comparison (loglikelihood, aic, bic)."))
+    return fit.loglik
+end
 
 function _nparams(fit::PoissonFit)
     p, K = size(fit.Λ)
