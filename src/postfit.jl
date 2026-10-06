@@ -73,15 +73,22 @@ end
 # prediction offset `O`, as before. `modes = :training` keeps the training units' modes, searched at
 # the stored training offset, while η still uses `O`: η = β + O_new + Λ ẑ_train. This is gllvmTMB's
 # `predict(fit, newdata)` on the training units, which re-evaluates the stored offset expression on
-# `newdata` and keeps the fitted modes. `Y` must then be the training response (only its size is
-# checked against the stored offset).
-function _prediction_mode_offset(stored, Y::AbstractMatrix, O, modes::Symbol)
+# `newdata` and keeps the fitted modes. `Y` must then be the training response. Only its size can be
+# checked: against the stored offset (p×n) on an offset fit; a fit without an offset stores no
+# training unit count, so there only the response count p (rows of Λ) is checked.
+_check_prediction_modes(modes::Symbol) = modes in (:refit, :training) ||
+    throw(ArgumentError("predict: modes must be :refit or :training; got :$modes"))
+
+function _prediction_mode_offset(fit, Y::AbstractMatrix, O, modes::Symbol)
+    _check_prediction_modes(modes)
     modes === :refit && return O
-    modes === :training || throw(ArgumentError("predict: modes must be :refit or :training; got :$modes"))
-    stored === nothing && return nothing
-    size(stored) == size(Y) || throw(ArgumentError(
+    stored = fit.offset
+    ptrain = size(fit.Λ, 1)
+    trainsize = stored === nothing ? "$(ptrain)×n" : "$(size(stored, 1))×$(size(stored, 2))"
+    ok = stored === nothing ? size(Y, 1) == ptrain : size(stored) == size(Y)
+    ok || throw(ArgumentError(
         "predict: modes = :training keeps the training units' latent modes, so Y must be the " *
-        "training data ($(size(stored, 1))×$(size(stored, 2))); got $(size(Y, 1))×$(size(Y, 2))."))
+        "training data ($trainsize); got $(size(Y, 1))×$(size(Y, 2))."))
     return stored
 end
 
@@ -364,13 +371,14 @@ function predict(fit::BinomialFit, Y::AbstractMatrix;
         throw(ArgumentError("type must be :link or :response; got :$type"))
     if _is_binomial_aghq(fit)
         X_lv===nothing || throw(ArgumentError("AGHQ loadings-only prediction does not use X_lv"))
+        _check_prediction_modes(modes)
         modes === :refit || throw(ArgumentError("predict: modes = :training is available on the Laplace path only, not for AGHQ fits"))
         z=_binomial_aghq_scores(fit,Y;N=N,rotate=false,mask=mask,offset=offset)
         eta=fit.β .+ fit.Λ*z' .+ _aghq_prediction_offset(fit,Y,offset)
         return type===:link ? eta : _binomial_aghq_probability.(eta,Ref(fit.link))
     end
     O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "predict")
-    Omode = _prediction_mode_offset(fit.offset, Y, O, modes)
+    Omode = _prediction_mode_offset(fit, Y, O, modes)
     Z = getLV(fit, Y; N = N, X_lv = X_lv, component = :total,
               rotate = false,mask=mask,offset=Omode)          # n×K
     η = fit.β .+ fit.Λ * Z'                           # p×n
@@ -996,6 +1004,7 @@ function predict(fit::PoissonFit, Y::AbstractMatrix;
         throw(ArgumentError("type must be :link or :response; got :$type"))
     if _is_poisson_aghq(fit)
         X_lv===nothing || throw(ArgumentError("AGHQ loadings-only prediction does not use X_lv"))
+        _check_prediction_modes(modes)
         modes === :refit || throw(ArgumentError("predict: modes = :training is available on the Laplace path only, not for AGHQ fits"))
         q,_=_poisson_aghq_problem(fit,Y;mask=mask,offset=offset)
         z=_poisson_aghq_scores(fit,Y;rotate=false,mask=mask,offset=offset)
@@ -1003,7 +1012,7 @@ function predict(fit::PoissonFit, Y::AbstractMatrix;
         return type===:link ? eta : exp.(eta)
     end
     O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "predict")
-    Omode = _prediction_mode_offset(fit.offset, Y, O, modes)
+    Omode = _prediction_mode_offset(fit, Y, O, modes)
     Z = getLV(fit, Y; N = N, X_lv = X_lv, component = :total, rotate = false,mask=mask,offset=Omode)
     η = fit.β .+ fit.Λ * Z'
     O === nothing || (η .+= O)
@@ -1152,7 +1161,7 @@ function predict(fit::NBFit, Y::AbstractMatrix{<:Integer};
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
     O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict")
-    Omode = _prediction_mode_offset(fit.offset, Y, O, modes)
+    Omode = _prediction_mode_offset(fit, Y, O, modes)
     Z = getLV(fit, Y; N = N, X_lv = X_lv, component = :total, rotate = false, offset = Omode)
     η = fit.β .+ fit.Λ * Z'
     O === nothing || (η .+= O)
@@ -1267,7 +1276,7 @@ function predict(fit::NB1Fit, Y::AbstractMatrix{<:Integer};
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
     O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict")
-    Omode = _prediction_mode_offset(fit.offset, Y, O, modes)
+    Omode = _prediction_mode_offset(fit, Y, O, modes)
     Z = getLV(fit, Y; N = N, rotate = false, offset = Omode)
     η = fit.β .+ fit.Λ * Z'
     O === nothing || (η .+= O)
@@ -1381,7 +1390,7 @@ function predict(fit::GP1Fit, Y::AbstractMatrix{<:Integer};
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
     O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict")
-    Omode = _prediction_mode_offset(fit.offset, Y, O, modes)
+    Omode = _prediction_mode_offset(fit, Y, O, modes)
     Z = getLV(fit, Y; N = N, rotate = false, offset = Omode)
     η = fit.β .+ fit.Λ * Z'
     O === nothing || (η .+= O)
@@ -1506,7 +1515,7 @@ function predict(fit::BetaFit, Y::AbstractMatrix{<:Real}; type::Symbol = :respon
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
     O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict")
-    Omode = _prediction_mode_offset(fit.offset, Y, O, modes)
+    Omode = _prediction_mode_offset(fit, Y, O, modes)
     Z = getLV(fit, Y; X_lv = X_lv, component = :total, rotate = false, offset = Omode)
     η = fit.β .+ fit.Λ * Z'
     O === nothing || (η .+= O)
@@ -1856,7 +1865,7 @@ function predict(fit::GammaFit, Y::AbstractMatrix{<:Real}; type::Symbol = :respo
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
     O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict")
-    Omode = _prediction_mode_offset(fit.offset, Y, O, modes)
+    Omode = _prediction_mode_offset(fit, Y, O, modes)
     Z = getLV(fit, Y; X_lv = X_lv, component = :total, rotate = false, offset = Omode)
     η = fit.β .+ fit.Λ * Z'
     O === nothing || (η .+= O)
@@ -1943,7 +1952,7 @@ function predict(fit::ExponentialFit, Y::AbstractMatrix{<:Real}; type::Symbol = 
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
     O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict")
-    Omode = _prediction_mode_offset(fit.offset, Y, O, modes)
+    Omode = _prediction_mode_offset(fit, Y, O, modes)
     Z = getLV(fit, Y; rotate = false, offset = Omode)
     η = fit.β .+ fit.Λ * Z'
     O === nothing || (η .+= O)
