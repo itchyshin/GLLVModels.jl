@@ -50,8 +50,13 @@
 // And a recorded abs_diff/max_abs_diff that disagrees with the difference the tool recomputes
 // from r_value/julia_value fails the row as NUMERIC_RECORDED_DIFF_MISMATCH.
 //
-// Maintainer rulings of 2026-10-02 (itchyshin/GLLVModels.jl#684, signed by Shinichi Nakagawa), the
-// only signature recorded here. Prose and schemas: GATES.md, "Rulings of 2026-10-02".
+// Maintainer rulings of 2026-10-02 (itchyshin/GLLVModels.jl#684, signed by Shinichi Nakagawa) and of 2026-10-05
+// (maintainer ruling 2026-10-05, vault decision D-319), the only signatures recorded here. Prose and schemas: GATES.md,
+// "Rulings of 2026-10-02" and "Rulings of 2026-10-05". The 2026-10-05 rules: the behavioural list gains 14 explicit
+// ids (BEHAVIOURAL_EXTENDED_SOURCE_IDS); a live bridge readback receipt binds only fitted, predict and residuals
+// (BRIDGE_READBACK_ROW_PREFIX); admission-only and PUBLIC-R-BRIDGE cases may be non-binding context
+// (boundaryContext); a convergence_parity block must show both engines at gradient max-abs <= 1e-5
+// (convergenceParityProblem); an EVIDENCED real-data row must cite a direct-engine receipt (C4).
 //   Ruling 1 (integer equality): a numeric comparison case may carry `"kind": "integer_equality"`.
 //     Then r_value and julia_value must both be integers (or equal-length integer arrays) and
 //     tolerance must be exactly 0.5, i.e. exact equality. The row keeps evidence_tier "numeric".

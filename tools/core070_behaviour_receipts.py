@@ -29,10 +29,9 @@ computes one). CI-ROUTE-029 binds through the class rho:fisher-z (maintainer rul
 A refusal row binds only with a
 valid-method control on each side, and its class is one (target, method) pair with the labels read from the raw files.
 
-The 7 aghq/AGHQ-CTRL-* rows and inference/CI-ROUTE-009 are not in the frozen list. Their receipts
-keep a behaviour block as non-binding evidence, their rows stay at paired_control_categorical_pass
-and partial_non_numeric_case, and each carries a one-line note that binding them needs the
-maintainer to confirm that ruling 2 covers them.
+The 7 aghq/AGHQ-CTRL-* rows and inference/CI-ROUTE-009 joined the frozen list by maintainer ruling 2026-10-05
+(D-319), item A (BEHAVIOURAL_EXTENDED_SOURCE_IDS in tools/true_parity_assemble.py), so their behaviour blocks now bind
+their rows when the case-map generators re-derive them. OUT_OF_SCOPE_NOTE is kept for any row still outside the list.
 
 Raw artefacts read (all tracked under docs/dev-log/core070/true-parity-latest/receipts/):
 
@@ -223,7 +222,7 @@ CLASSES = [
         f"parm=\"sigma_*[t]\", method=:bootstrap, Σ_phy) calls bootstrap_ci on the structured fit "
         f"(src/confint.jl:598 at {RUN_POST709}) since #709, where before it returned the Wald interval; both refit "
         f"simulated data."),
-    # --- CI-ROUTE-009: profile interval for two-level repeatability is withdrawn in both (non-binding: outside the frozen scope) ---
+    # --- CI-ROUTE-009: profile interval for two-level repeatability is withdrawn in both (in scope since 2026-10-05, item A) ---
     cls("refusal", "icc:profile-withdrawn",
         ["A profile interval for canonical full-covariance repeatability is not currently available."],
         ["A profile interval for canonical full-covariance two-level repeatability is not currently available."],
@@ -231,7 +230,7 @@ CLASSES = [
         f"Julia: repeatability_ci throws TwoLevelRepeatabilityProfileWithdrawn for method=:profile "
         f"(src/twolevel.jl:605-612 at {RUN_SURF}). Both refuse the same request, name the same reason (the old "
         f"profile estimated only a diagonal-companion ratio) and point to wald or bootstrap."),
-    # --- aghq request normalisation (non-binding: outside the frozen scope) ---
+    # --- aghq request normalisation (in scope since 2026-10-05, item A) ---
     cls("route", "aghq:off", ["FALSE"], ["off"],
         f"R: .gllvmTMB_normalize_aghq maps NULL and FALSE to FALSE, the Laplace approximation (R/gllvmTMB.R:2492); "
         f"Julia: _aghq_request maps false and nothing to :off (src/families/aghq_fit_info.jl:38 at {RUN_AGHQ})."),

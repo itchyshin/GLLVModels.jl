@@ -59,6 +59,11 @@ Status of a scoreboard row (first rule that applies):
 An evidence_tier missing from TIER_BUCKET fails the run: a new tier needs a human to decide
 which bucket it reads as, rather than this tool guessing.
 
+Rulings of 2026-10-05 (maintainer ruling 2026-10-05, D-319; GATES.md): ported from the checker are the 14-row
+extension of the behavioural list (BEHAVIOURAL_EXTENDED_SOURCE_IDS), the bridge readback split
+(BRIDGE_READBACK_ROW_PREFIX), boundary-context cases (boundary_context) and convergence parity
+(convergence_parity_problem). The checker's C4 direct-engine test reads the scoreboard only and has no port here.
+
 Integer equality (itchyshin/GLLVModels.jl#684 item 1): a numeric comparison case with
 "kind": "integer_equality" needs safe-integer r_value and julia_value (magnitude below 2^53) and
 tolerance exactly 0.5.
@@ -975,7 +980,8 @@ def render_scoreboard(table, counts, inputs, dups, fixtures) -> str:
         "maps, and nothing here is a signature. A row reads `EVIDENCED` only when it binds under the",
         "checker's own C1 numeric rule; `EVIDENCED-BEHAVIOURAL` only when it binds under the checker's",
         "behavioural rule (itchyshin/GLLVModels.jl#684 item 2: a refusal, route, error class or printed",
-        "summary, for the listed inference rows and four named C1 rows only; it is not numeric evidence);",
+        "summary, for the listed inference rows, four named C1 rows and the 14 rows of maintainer ruling",
+        "2026-10-05 (D-319) only; it is not numeric evidence);",
         "and `DISPOSITION-SIGNED` only when the map row carries a valid maintainer signature. PR #533's",
         "`case-map.json` rows are not in this table (not tracked here).",
         "",
