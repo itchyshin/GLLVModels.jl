@@ -345,7 +345,7 @@
     "docs/dev-log/core070/true-parity-latest/receipts/family/bridge-p1/results.json": "7158d282b20d2743e1596dea634964dd4d3437eccd7784461007ad871779eec5",
     "docs/dev-log/core070/true-parity-latest/receipts/family/bridge-p1/run-commit.json": "08ed3d72513dc9465ad0518c303887d24f27d370873c8661d089703746d3f805",
     "docs/dev-log/core070/true-parity-latest/receipts/family/bridge-p1/verify.txt": "9b0fd01a18849b610fc866dc91ab159840af37f6d67fb929f7a238c94da709cc",
-    "tools/core070_family_bridge_p1.R": "4413eef2e719a5eafb37de836b06c069c3a431728d1c8728a14b642cf528e82c"
+    "tools/core070_family_bridge_p1.R": "9de80df088426f55dd4ca418220ef860713f69b3ba7dfdf2d2189ec666b35d2f"
   },
   "raw": [
     "docs/dev-log/core070/true-parity-latest/receipts/family/bridge-p1/results.json"
