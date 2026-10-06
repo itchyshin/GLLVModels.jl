@@ -133,6 +133,10 @@ WAVE6_NOTE = ("The wave6 batch receipt reads FAIL, and tools/core070_verify_wave
 
 # Reviewer's evidence for the rows the degenerate-comparison gate holds (PR #569 review finding 1).
 NON_DISCRIMINATING_NOTES = {
+    "postfit-policy/POST-COEF-EMPTY": (
+        "integer_equality on the empty coef length (R 0, Julia 0; maintainer ruling 2026-10-05, D-319, item N2). The "
+        "shared degenerate-comparison rule flags it: every |R value| < 1e-10, so a constant-zero implementation would "
+        "pass too. Binding it would need the shared rule to accept a 0 = 0 length, which it does not."),
     "postfit/POSTFIT-SURFACE-extract_communality": (
         "Measured on the unique = FALSE Gaussian fixture (tools/core070_estimand_rebind_batch.R), where communality "
         "is identically 1 for every trait: R and Julia both return [1, 1, 1, 1, 1]. Reviewer mutation: a Julia "
@@ -367,10 +371,18 @@ INTEGER_TEXT = {
                   "the batch on a synthetic object list(X_fix_names = character(0)), not on a fitted model",
         "julia_surface": "StatsAPI.coef(fit::GllvmFit) on a real fit with no X (src/postfit.jl:633 at the measured "
                          "commit 681c4c3ca)",
-        "numeric_note": ("Integer equality on the coefficient-vector length: R 0, Julia 0. Maintainer ruling 2026-10-05 "
-                         "(D-319), item N2, extends integer_equality (itchyshin/GLLVModels.jl#684 item 1) to this row. "
-                         "Scope: the R length comes from coef.gllvmTMB_multi applied to a synthetic object with no "
-                         "fixed-effect names; the Julia length from a real fit with no X.")},
+        "numeric_note": ("Integer equality on the coefficient-vector length: R 0, Julia 0. Basis of the extension: the "
+                         "drafted N2 text of wave-plan-2026-10-03.md line 17 (lane kit LOOP/lanes/true-parity-latest), "
+                         "which names POST-COEF-EMPTY alongside POSTFIT-SURFACE-nobs as rows integer_equality "
+                         "(itchyshin/GLLVModels.jl#684 item 1) covers; signed with item N2 by maintainer ruling "
+                         "2026-10-05 (D-319). Scope: the R length comes from coef.gllvmTMB_multi applied to a synthetic "
+                         "object with no fixed-effect names; the Julia length from a real fit with no X. The case plan "
+                         "(docs/dev-log/core070/postfit-policy-required-case-plan.json) also names a second comparand, "
+                         "R names(coef) == character(0) against Julia's unnamed empty vector, recorded there as an "
+                         "accepted representational gap (Julia has no coef-name carrier), not a value mismatch. Not "
+                         "bound: under the shared degenerate-comparison rule a 0 = 0 length cannot discriminate (a "
+                         "constant-zero implementation passes too), so the comparison is flagged discriminating: false "
+                         "and the row is numeric_non_discriminating.")},
 }
 # POST-NOBS-FALLBACK stays unbound (review of #688): on the fixture fit R's nobs() returns on the likelihood_rows
 # branch, so the no-missing-data fallback branch this row names is never executed. Its receipt keeps no comparison.
@@ -411,11 +423,15 @@ def integer_entry(cid, jc, po):
         raise SystemExit(f"{cid}: harness-recorded R value {harness_r!r} != r-oracle.json[{key!r}] = {r}")
     if bool(jc["pass"]) != (r == j):
         raise SystemExit(f"{cid}: harness pass flag {jc['pass']!r} disagrees with R {r} vs Julia {j}")
-    return {"case_id": cid, "quantity": quantity, "kind": "integer_equality", "r_value": r, "julia_value": j,
-            "max_abs_diff": abs(r - j), "tolerance": 0.5, "tolerance_rule": INTEGER_RULE, "n_values": 1,
-            "diff_source": (f"recomputed from len(r-oracle.json[{key!r}]) and julia-results.json cases[{cid!r}]['julia_length']"
-                            if cid == COEF_EMPTY_CID else
-                            f"recomputed from r-oracle.json[{key!r}] and julia-results.json cases[{cid!r}]['julia']")}
+    # The shared degenerate-comparison rule (mark_degenerate) applies to integers too: R's 0 for the empty coef
+    # length is "every |R value| < DEGENERATE_ABS", so that comparison cannot discriminate and does not bind.
+    return mark_degenerate(
+        {"case_id": cid, "quantity": quantity, "kind": "integer_equality", "r_value": r, "julia_value": j,
+         "max_abs_diff": abs(r - j), "tolerance": 0.5, "tolerance_rule": INTEGER_RULE, "n_values": 1,
+         "diff_source": (f"recomputed from len(r-oracle.json[{key!r}]) and julia-results.json cases[{cid!r}]['julia_length']"
+                         if cid == COEF_EMPTY_CID else
+                         f"recomputed from r-oracle.json[{key!r}] and julia-results.json cases[{cid!r}]['julia']")},
+        [r])
 
 
 WAVE6_INTEGER_WHY = ("Exact integer equality, R nobs against Julia nobs on the gaussian_small fixture. Maintainer ruling "
@@ -574,6 +590,19 @@ def apply_integer_equality():
             path, rec = recs[ids[0]]
             if rec["verdict"] != "PASS" or rec["batch_verifier"]["status"] != "PASS":
                 raise SystemExit(f"{ids[0]}: receipt verdict or batch verifier is not PASS")
+            if not all(e.get("discriminating", True) for e in rec["comparison"]["cases"]):
+                # same tier and fields derive_row gives a degenerate comparison
+                row.update(evidence_tier="numeric_non_discriminating", measured_against=P1_SHA,
+                           evidence={"non_binding_receipts": [path],
+                                     "tier": "numeric comparison blocks pass, but at least one is degenerate (the R "
+                                             "values are one constant or all ~0), so a constant or zero "
+                                             "implementation would pass too; the row does not bind"},
+                           note=NON_DISCRIMINATING_NOTES.get(row["source_id"], "flagged by the degenerate-comparison "
+                                                             "gate; see the comparison blocks' degenerate_reason"),
+                           measured_result={"case_verdicts": {ids[0]: rec["verdict"]},
+                                            "batch_verifier": {ids[0]: rec["batch_verifier"]["status"]},
+                                            "discriminating": {ids[0]: False}})
+                continue
             bind_numeric(row, [path], {ids[0]: rec["verdict"]}, {ids[0]: rec["batch_verifier"]["status"]}, INTEGER_TIER)
     cm["rows"] = [ruling_overlay(r) for r in cm["rows"]]
     cm["counts"] = counts = recount(cm)

@@ -23,22 +23,22 @@ Inputs:
 - `docs/dev-log/core070/true-parity-latest/case-map-inference.json` (63 rows, sha256 `7415866b19d061a133b41ca45f16e8a3ac5bdf0292580d1754e1ac32faadd98a`)
 - `docs/dev-log/core070/true-parity-latest/case-map-isdm.json` (21 rows, sha256 `1ffc4904a25c5e6a8bb550333da004b82b731dfa489b17b55375944378149484`)
 - `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `e039c8a024d71d13a489e31928065a619e7d2e93f882d39c54955f98c211a114`)
-- `docs/dev-log/core070/true-parity-latest/case-map-postfit.json` (52 rows, sha256 `bd699a1fceee77f4c93180e15389d0d7bb98736f4034dccccc887204868cb0da`)
+- `docs/dev-log/core070/true-parity-latest/case-map-postfit.json` (52 rows, sha256 `cbeb77202d7657c04cd1f19d3bc1f82e385dd844f7fd475aa22593655bc0d9a9`)
 
 ## Totals by family
 
-| `family` | EVIDENCED | EVIDENCED-BEHAVIOURAL | DISPOSITION-SIGNED | REGISTRATION-ONLY | HELD | PARTIAL | NEEDS-SURFACE | FAIL | NOT-MEASURED | total |
-|---|---|---|---|---|---|---|---|---|---|---|
-| `aghq` | 14 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 21 |
-| `covariance` | 8 | 0 | 2 | 0 | 2 | 7 | 0 | 0 | 0 | 19 |
-| `data` | 13 | 0 | 2 | 0 | 0 | 1 | 13 | 4 | 3 | 36 |
-| `family` | 23 | 0 | 0 | 0 | 0 | 2 | 0 | 1 | 0 | 26 |
-| `fit-input` | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
-| `inference` | 3 | 49 | 10 | 0 | 0 | 1 | 0 | 0 | 0 | 63 |
-| `isdm` | 11 | 0 | 4 | 0 | 0 | 0 | 5 | 1 | 0 | 21 |
-| `namespace` | 51 | 0 | 10 | 5 | 0 | 0 | 0 | 0 | 3 | 69 |
-| `postfit` | 46 | 0 | 4 | 0 | 0 | 2 | 0 | 0 | 0 | 52 |
-| `all` | 179 | 56 | 32 | 5 | 2 | 13 | 18 | 6 | 6 | 317 |
+| `family` | EVIDENCED | EVIDENCED-BEHAVIOURAL | DISPOSITION-SIGNED | REGISTRATION-ONLY | HELD | PARTIAL | NEEDS-SURFACE | NON-DISCRIMINATING | FAIL | NOT-MEASURED | total |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `aghq` | 14 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 21 |
+| `covariance` | 8 | 0 | 2 | 0 | 2 | 7 | 0 | 0 | 0 | 0 | 19 |
+| `data` | 13 | 0 | 2 | 0 | 0 | 1 | 13 | 0 | 4 | 3 | 36 |
+| `family` | 23 | 0 | 0 | 0 | 0 | 2 | 0 | 0 | 1 | 0 | 26 |
+| `fit-input` | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
+| `inference` | 3 | 49 | 10 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 63 |
+| `isdm` | 11 | 0 | 4 | 0 | 0 | 0 | 5 | 0 | 1 | 0 | 21 |
+| `namespace` | 51 | 0 | 10 | 5 | 0 | 0 | 0 | 0 | 0 | 3 | 69 |
+| `postfit` | 45 | 0 | 4 | 0 | 0 | 2 | 0 | 1 | 0 | 0 | 52 |
+| `all` | 178 | 56 | 32 | 5 | 2 | 13 | 18 | 1 | 6 | 6 | 317 |
 
 ## P1 twin fixtures present at this head, not bound to any row
 
@@ -437,7 +437,7 @@ decision for the PR that measures it, not something this tool does.
 | postfit-POSTFIT-SURFACE-tidy-gllvmTMB_multi `postfit/POSTFIT-SURFACE-tidy.gllvmTMB_multi` | required_core; cases: P1-JULIA-POSTFIT-TIDY-FIXED | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/tidy.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-POSTFIT-SURFACE--proportions_bootstrap_ci `postfit/POSTFIT-SURFACE-.proportions_bootstrap_ci` | retired; cases: none | DISPOSITION-SIGNED | Disposition: DISPOSITION-SIGNED; signed_by: Shinichi Nakagawa; signed_on: 2026-10-05 | family postfit; evidence_tier not_measured; measured_against None |
 | postfit-POSTFIT-SURFACE--proportions_wald_ci `postfit/POSTFIT-SURFACE-.proportions_wald_ci` | retired; cases: none | DISPOSITION-SIGNED | Disposition: DISPOSITION-SIGNED; signed_by: Shinichi Nakagawa; signed_on: 2026-10-05 | family postfit; evidence_tier not_measured; measured_against None |
-| postfit-policy-POST-COEF-EMPTY `postfit-policy/POST-COEF-EMPTY` | required_core; cases: CORE070-POSTFIT-COEF-EMPTY-NATIVE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-COEF-EMPTY-NATIVE.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| postfit-policy-POST-COEF-EMPTY `postfit-policy/POST-COEF-EMPTY` | required_core; cases: CORE070-POSTFIT-COEF-EMPTY-NATIVE | NON-DISCRIMINATING | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-COEF-EMPTY-NATIVE.json | family postfit; evidence_tier numeric_non_discriminating; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-policy-POST-COEF-NAMED `postfit-policy/POST-COEF-NAMED` | required_core; cases: P1-JULIA-POSTFIT-COEF-NAMED | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/coef.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-policy-POST-CONFINT-METHODS `postfit-policy/POST-CONFINT-METHODS` | required_core; cases: CORE070-POSTFIT-CONFINT-METHODS-WALD-NATIVE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-CONFINT-METHODS-WALD-NATIVE.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-policy-POST-DEVIANCE `postfit-policy/POST-DEVIANCE` | required_core; cases: P1-JULIA-POSTFIT-DEVIANCE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/deviance.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |

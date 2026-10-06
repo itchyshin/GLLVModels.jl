@@ -52,9 +52,11 @@
         "tolerance": 0.5,
         "tolerance_rule": "integer_equality, tolerance 0.5 (itchyshin/GLLVModels.jl#684 item 1): both values are integers, so within 0.5 means equal; the contract's integer_exact = 0 is the same condition",
         "n_values": 1,
-        "diff_source": "recomputed from len(r-oracle.json['empty_coef']) and julia-results.json cases['CORE070-POSTFIT-COEF-EMPTY-NATIVE']['julia_length']"
+        "diff_source": "recomputed from len(r-oracle.json['empty_coef']) and julia-results.json cases['CORE070-POSTFIT-COEF-EMPTY-NATIVE']['julia_length']",
+        "discriminating": false,
+        "degenerate_reason": "every |R value| < 1e-10 (max 0)"
       }
     ]
   },
-  "numeric_note": "Integer equality on the coefficient-vector length: R 0, Julia 0. Maintainer ruling 2026-10-05 (D-319), item N2, extends integer_equality (itchyshin/GLLVModels.jl#684 item 1) to this row. Scope: the R length comes from coef.gllvmTMB_multi applied to a synthetic object with no fixed-effect names; the Julia length from a real fit with no X."
+  "numeric_note": "Integer equality on the coefficient-vector length: R 0, Julia 0. Basis of the extension: the drafted N2 text of wave-plan-2026-10-03.md line 17 (lane kit LOOP/lanes/true-parity-latest), which names POST-COEF-EMPTY alongside POSTFIT-SURFACE-nobs as rows integer_equality (itchyshin/GLLVModels.jl#684 item 1) covers; signed with item N2 by maintainer ruling 2026-10-05 (D-319). Scope: the R length comes from coef.gllvmTMB_multi applied to a synthetic object with no fixed-effect names; the Julia length from a real fit with no X. The case plan (docs/dev-log/core070/postfit-policy-required-case-plan.json) also names a second comparand, R names(coef) == character(0) against Julia's unnamed empty vector, recorded there as an accepted representational gap (Julia has no coef-name carrier), not a value mismatch. Not bound: under the shared degenerate-comparison rule a 0 = 0 length cannot discriminate (a constant-zero implementation passes too), so the comparison is flagged discriminating: false and the row is numeric_non_discriminating."
 }

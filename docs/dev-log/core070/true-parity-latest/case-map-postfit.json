@@ -64,10 +64,10 @@
     }
   },
   "counts": {
-    "numeric_pass": 46,
+    "numeric_pass": 45,
     "numeric_fail": 0,
     "numeric_held_batch_verifier_failed": 0,
-    "numeric_non_discriminating": 0,
+    "numeric_non_discriminating": 1,
     "partial_non_numeric_case": 4,
     "needs_surface_not_executed": 0,
     "retired_at_p1_not_measured": 2,
@@ -1310,13 +1310,13 @@
         "CORE070-POSTFIT-COEF-EMPTY-NATIVE"
       ],
       "disposition": null,
-      "evidence_tier": "numeric",
+      "evidence_tier": "numeric_non_discriminating",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "receipt": [
+        "non_binding_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-COEF-EMPTY-NATIVE.json"
         ],
-        "tier": "numeric: every executable case receipt carries an integer_equality comparison block pinned to P1 (tolerance 0.5, so the integers must be equal), under itchyshin/GLLVModels.jl#684 item 1"
+        "tier": "numeric comparison blocks pass, but at least one is degenerate (the R values are one constant or all ~0), so a constant or zero implementation would pass too; the row does not bind"
       },
       "measured_result": {
         "case_verdicts": {
@@ -1325,8 +1325,11 @@
         "batch_verifier": {
           "CORE070-POSTFIT-COEF-EMPTY-NATIVE": "PASS"
         },
-        "row_verdict": "PASS"
-      }
+        "discriminating": {
+          "CORE070-POSTFIT-COEF-EMPTY-NATIVE": false
+        }
+      },
+      "note": "integer_equality on the empty coef length (R 0, Julia 0; maintainer ruling 2026-10-05, D-319, item N2). The shared degenerate-comparison rule flags it: every |R value| < 1e-10, so a constant-zero implementation would pass too. Binding it would need the shared rule to accept a 0 = 0 length, which it does not."
     },
     {
       "source_id": "postfit-policy/POST-COEF-NAMED",
