@@ -30,6 +30,22 @@ const RULE = "Monte-Carlo tolerance rule (maintainer ruling 2026-10-05, D-319, i
              "pass when |m_R - m_J| <= tolerance for every moment, and a discrimination control must fail the same rule."
 
 sha_file(rel) = bytes2hex(sha256(read(joinpath(ROOT, rel))))
+gitout(args...) = read(setenv(`git $args`; dir = ROOT), String)
+
+# N4: the rule must be committed before the run whose results it judges. The run commit is HEAD; each file that
+# states the rule must be unmodified there and first added in an ancestor of it (the check
+# tools/core070_inference_p1_receipts.py applies to CI-ROUTE-011's rule.json).
+function rule_predates_run(head)
+    for rel in (GEN, HELPERS, TEST)
+        isempty(strip(gitout("status", "--porcelain", "--", rel))) ||
+            error("$rel has uncommitted changes; the N4 rule must be committed before the run")
+        first = split(gitout("log", "--diff-filter=A", "--format=%H", "--", rel))
+        isempty(first) && error("$rel is not committed; the N4 rule must be committed before the run")
+        success(setenv(`git merge-base --is-ancestor $(first[end]) $head`; dir = ROOT)) ||
+            error("$rel was not committed before the run commit $head")
+    end
+end
+rule_predates_run(strip(gitout("rev-parse", "HEAD")))
 function findline(rel, frag)
     hits = [i for (i, l) in enumerate(readlines(joinpath(ROOT, rel))) if occursin(frag, l)]
     length(hits) == 1 || error("$rel: fragment $(repr(frag)) on $(length(hits)) lines")
