@@ -522,9 +522,13 @@ SCOPE_NOTES = {
     "data/DATA-OFF-TRAIN-STORED": "The R batch case reads back a vector written into a mock fit object; the twin "
         "compares the training offset a real Poisson exposure fit kept (R .gllvmTMB_offset_vec, Julia fit.offset) "
         "and the training-row link predictor that uses it (R predict(fit, type = 'link'), Julia predict(fit, Y; "
-        "type = :link)). Training rows only: R's newdata prediction (offset re-evaluated against newdata, training "
-        "units' latent modes kept) has no Julia counterpart and is not compared. Julia stores the training offset "
-        "on the Laplace Poisson, NB2 (shared r), binomial and hurdle-Poisson fits; other fit types keep none.",
+        "type = :link)). Training rows only, at the training offset. R's newdata prediction on the training units "
+        "(offset re-evaluated against newdata, training units' latent modes kept) is Julia's predict(fit, Y; offset "
+        "= O_new, modes = :training), compared in the DATA-OFF-PREDICT twin, not here. Julia stores the training "
+        "offset (fit.offset) on the Laplace Poisson, binomial, NB2, NB1, GP1, Beta, Gamma and Exponential fits, "
+        "their grouped-dispersion variants (NB2, NB1, Beta, Gamma), the two-part fits (hurdle-Poisson, hurdle-NB, "
+        "ZIP, ZINB, ZIB, delta-lognormal, delta-Gamma) and the mixed-family fit; this twin exercises the Poisson "
+        "fit only.",
     "data/DATA-MISS-MODEL": "The R batch case replays miss_control(predictor = 'model') to a list; the twin is one "
         "Gaussian fit that uses it: mi(x) with covariate model x ~ z, x missing at 18 of 120 units, one latent factor "
         "(R gllvmTMB(..., missing = miss_control(predictor = 'model')), Julia fit_gaussian_mi_fiml). It covers one "

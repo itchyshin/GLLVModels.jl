@@ -10,7 +10,7 @@
   "origin_pr": "itchyshin/GLLVModels.jl branch claude/w2-predict-offset (W2-4b)",
   "generator": "tools/true_parity_julia_receipts.jl",
   "julia_version": "1.10.0",
-  "gllvmodels_commit": "c467155c24b870ade0065a8de9e0beed202e0ef2",
+  "gllvmodels_commit": "3922b6263bd1b41bda2d2ccd01ea3b498a2fc71d",
   "source_fixtures": [
     {
       "path": "test/fixtures/predict_offset_twin_p1.toml",
@@ -42,7 +42,7 @@
         "tolerance": 1e-06,
         "tolerance_source": "test/test_predict_offset_twin_p1.jl:61",
         "tolerance_source_line": "@test isapprox(fe.loglik, Float64(d[\"loglik\"]); atol = 1e-6, rtol = 0)",
-        "note": "Poisson, K = 1, p = 6, n = 150 (sha256 checked; the data of the DATA-OFF-EXPOSURE twin); R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family = Poisson(), K = 1, offset = log.(E)); same optimum (logLik within 1e-6). The R batch case read back a vector written into a mock fit object (tmb_data$offset_vec <- c(1, 2, 3)); here the stored offset is the one a real fit kept, and the training-row link predictor shows it is used. Scope: training rows only; R's newdata prediction re-evaluates the offset expression against newdata and keeps the training units' latent modes, which has no Julia counterpart (Julia re-solves the modes from a new Y and takes its offset as a value), so it is not compared. Before Julia fits kept their offset, the training-row link predictor missed R's by 1.89 (the offset-free mode search and predictor)."
+        "note": "Poisson, K = 1, p = 6, n = 150 (sha256 checked; the data of the DATA-OFF-EXPOSURE twin); R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family = Poisson(), K = 1, offset = log.(E)); same optimum (logLik within 1e-6). The R batch case read back a vector written into a mock fit object (tmb_data$offset_vec <- c(1, 2, 3)); here the stored offset is the one a real fit kept, and the training-row link predictor shows it is used. Scope: training rows at the training offset only. R's newdata prediction on the training units (offset expression re-evaluated against newdata, training units' latent modes kept) is Julia's predict(fit, Y; offset = O_new, modes = :training), compared in the DATA-OFF-PREDICT twin, not here. Before Julia fits kept their offset, the training-row link predictor missed R's by 1.89 (the offset-free mode search and predictor)."
       },
       {
         "case_id": "P1-JULIA-DATA-POIS_EXPOSURE_STORED-OFFSET",
@@ -1857,7 +1857,7 @@
         "tolerance": 1e-14,
         "tolerance_source": "test/test_predict_offset_twin_p1.jl:64",
         "tolerance_source_line": "@test isapprox(fe.offset, R_off; atol = 1e-14, rtol = 0)",
-        "note": "Poisson, K = 1, p = 6, n = 150 (sha256 checked; the data of the DATA-OFF-EXPOSURE twin); R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family = Poisson(), K = 1, offset = log.(E)); same optimum (logLik within 1e-6). The R batch case read back a vector written into a mock fit object (tmb_data$offset_vec <- c(1, 2, 3)); here the stored offset is the one a real fit kept, and the training-row link predictor shows it is used. Scope: training rows only; R's newdata prediction re-evaluates the offset expression against newdata and keeps the training units' latent modes, which has no Julia counterpart (Julia re-solves the modes from a new Y and takes its offset as a value), so it is not compared. Before Julia fits kept their offset, the training-row link predictor missed R's by 1.89 (the offset-free mode search and predictor)."
+        "note": "Poisson, K = 1, p = 6, n = 150 (sha256 checked; the data of the DATA-OFF-EXPOSURE twin); R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family = Poisson(), K = 1, offset = log.(E)); same optimum (logLik within 1e-6). The R batch case read back a vector written into a mock fit object (tmb_data$offset_vec <- c(1, 2, 3)); here the stored offset is the one a real fit kept, and the training-row link predictor shows it is used. Scope: training rows at the training offset only. R's newdata prediction on the training units (offset expression re-evaluated against newdata, training units' latent modes kept) is Julia's predict(fit, Y; offset = O_new, modes = :training), compared in the DATA-OFF-PREDICT twin, not here. Before Julia fits kept their offset, the training-row link predictor missed R's by 1.89 (the offset-free mode search and predictor)."
       },
       {
         "case_id": "P1-JULIA-DATA-POIS_EXPOSURE_STORED-PREDICT-LINK",
@@ -3672,7 +3672,7 @@
         "tolerance": 0.001,
         "tolerance_source": "test/test_predict_offset_twin_p1.jl:67",
         "tolerance_source_line": "@test isapprox(predict(fe, Y; type = :link), R_eta; atol = 1e-3, rtol = 0)",
-        "note": "Poisson, K = 1, p = 6, n = 150 (sha256 checked; the data of the DATA-OFF-EXPOSURE twin); R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family = Poisson(), K = 1, offset = log.(E)); same optimum (logLik within 1e-6). The R batch case read back a vector written into a mock fit object (tmb_data$offset_vec <- c(1, 2, 3)); here the stored offset is the one a real fit kept, and the training-row link predictor shows it is used. Scope: training rows only; R's newdata prediction re-evaluates the offset expression against newdata and keeps the training units' latent modes, which has no Julia counterpart (Julia re-solves the modes from a new Y and takes its offset as a value), so it is not compared. Before Julia fits kept their offset, the training-row link predictor missed R's by 1.89 (the offset-free mode search and predictor)."
+        "note": "Poisson, K = 1, p = 6, n = 150 (sha256 checked; the data of the DATA-OFF-EXPOSURE twin); R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family = Poisson(), K = 1, offset = log.(E)); same optimum (logLik within 1e-6). The R batch case read back a vector written into a mock fit object (tmb_data$offset_vec <- c(1, 2, 3)); here the stored offset is the one a real fit kept, and the training-row link predictor shows it is used. Scope: training rows at the training offset only. R's newdata prediction on the training units (offset expression re-evaluated against newdata, training units' latent modes kept) is Julia's predict(fit, Y; offset = O_new, modes = :training), compared in the DATA-OFF-PREDICT twin, not here. Before Julia fits kept their offset, the training-row link predictor missed R's by 1.89 (the offset-free mode search and predictor)."
       }
     ]
   }

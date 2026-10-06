@@ -16,7 +16,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-data.json",
-   "sha256": "8d6f8dbc96c562f21df54cd2a579dfa2b7b4ee83a82e6c07e77eb699674c3296",
+   "sha256": "7233bcedc765f2320daf304859d2ffde73f82875f76fb892ea5fe5522d714042",
    "rows": 36
   },
   {
@@ -2510,7 +2510,7 @@
     ],
     "twin_verdict": "PASS"
    },
-   "scope_note": "The R batch case reads back a vector written into a mock fit object; the twin compares the training offset a real Poisson exposure fit kept (R .gllvmTMB_offset_vec, Julia fit.offset) and the training-row link predictor that uses it (R predict(fit, type = 'link'), Julia predict(fit, Y; type = :link)). Training rows only: R's newdata prediction (offset re-evaluated against newdata, training units' latent modes kept) has no Julia counterpart and is not compared. Julia stores the training offset on the Laplace Poisson, NB2 (shared r), binomial and hurdle-Poisson fits; other fit types keep none."
+   "scope_note": "The R batch case reads back a vector written into a mock fit object; the twin compares the training offset a real Poisson exposure fit kept (R .gllvmTMB_offset_vec, Julia fit.offset) and the training-row link predictor that uses it (R predict(fit, type = 'link'), Julia predict(fit, Y; type = :link)). Training rows only, at the training offset. R's newdata prediction on the training units (offset re-evaluated against newdata, training units' latent modes kept) is Julia's predict(fit, Y; offset = O_new, modes = :training), compared in the DATA-OFF-PREDICT twin, not here. Julia stores the training offset (fit.offset) on the Laplace Poisson, binomial, NB2, NB1, GP1, Beta, Gamma and Exponential fits, their grouped-dispersion variants (NB2, NB1, Beta, Gamma), the two-part fits (hurdle-Poisson, hurdle-NB, ZIP, ZINB, ZIB, delta-lognormal, delta-Gamma) and the mixed-family fit; this twin exercises the Poisson fit only."
   },
   {
    "source_id": "data/DATA-W-DF-MASK-DROP",
