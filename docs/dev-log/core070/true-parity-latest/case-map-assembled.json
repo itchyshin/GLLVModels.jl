@@ -11,7 +11,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-covariance.json",
-   "sha256": "be6582e3ed0239ff7fd0c816713b7d6cc3b6e9958d69aff8f6bd920e09cb019f",
+   "sha256": "dab8c29bdd6d6285d8fbe8a928609db6a4a405fbc8c5d07be507593fbb0c0b20",
    "rows": 19
   },
   {
@@ -41,12 +41,12 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-namespace.json",
-   "sha256": "e039c8a024d71d13a489e31928065a619e7d2e93f882d39c54955f98c211a114",
+   "sha256": "5850ff0277efb80c5e88f6a1b48d6f88164571da552ec9503aa086afd298c4ba",
    "rows": 69
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-postfit.json",
-   "sha256": "cbeb77202d7657c04cd1f19d3bc1f82e385dd844f7fd475aa22593655bc0d9a9",
+   "sha256": "dfe1b333311d5231d753908cc3072d2840a58624d28fbd07786d55e7084cc9db",
    "rows": 52
   }
  ],
@@ -1370,22 +1370,22 @@
     "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE"
    ],
    "disposition": null,
-   "evidence_tier": "numeric_held_batch_verifier_failed",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE.json"
     ],
-    "tier": "numeric comparison blocks pass, but the batch verifier rejected the run, so the row does not bind"
+    "tier": "numeric: per-case receipts carry an R-vs-Julia comparison block pinned to P1"
    },
-   "note": "held pending the maintainer's ruling on the wave6 nobs expectation; the covariance cases themselves pass (7.25e-8, 1.26e-6 vs tol 1e-4)",
    "measured_result": {
     "case_verdicts": {
      "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE": "PASS"
     },
     "batch_verifier": {
-     "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE": "FAIL"
-    }
+     "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE": "PASS"
+    },
+    "row_verdict": "PASS"
    }
   },
   {
@@ -1397,22 +1397,22 @@
     "CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE"
    ],
    "disposition": null,
-   "evidence_tier": "numeric_held_batch_verifier_failed",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE.json"
     ],
-    "tier": "numeric comparison blocks pass, but the batch verifier rejected the run, so the row does not bind"
+    "tier": "numeric: per-case receipts carry an R-vs-Julia comparison block pinned to P1"
    },
-   "note": "held pending the maintainer's ruling on the wave6 nobs expectation; the covariance cases themselves pass (7.25e-8, 1.26e-6 vs tol 1e-4)",
    "measured_result": {
     "case_verdicts": {
      "CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE": "PASS"
     },
     "batch_verifier": {
-     "CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE": "FAIL"
-    }
+     "CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE": "PASS"
+    },
+    "row_verdict": "PASS"
    }
   },
   {
@@ -9985,16 +9985,31 @@
    "classification": "required_core",
    "arc": "A3",
    "r_file_line": null,
-   "executable_case_ids": [],
+   "executable_case_ids": [
+    "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-NAMESPACE"
+   ],
    "p0_case_ids": [
     "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-NAMESPACE"
    ],
-   "evidence": {},
-   "measured_against": null,
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-NAMESPACE.json"
+    ],
+    "tier": "numeric: per-case receipts carry an R-vs-Julia comparison block pinned to P1"
+   },
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "disposition": null,
-   "reason": "Not re-measured at P1 in this PR.",
-   "not_measured_reason": "P0 evidence came from a non-namespace batch (wave6-conversion (attempt7)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here.",
-   "evidence_tier": "registration"
+   "reason": "Measured at P1 by the wave6 conversion batch (CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-NAMESPACE); ruling N2 (D-319) rewrote the batch's unrelated nobs expectation as integer equality.",
+   "evidence_tier": "numeric",
+   "measured_result": {
+    "case_verdicts": {
+     "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-NAMESPACE": "PASS"
+    },
+    "batch_verifier": {
+     "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-NAMESPACE": "PASS"
+    },
+    "row_verdict": "PASS"
+   }
   },
   {
    "source_id": "namespace/export/kernel_scalar",
@@ -10003,16 +10018,31 @@
    "classification": "required_core",
    "arc": "A3",
    "r_file_line": null,
-   "executable_case_ids": [],
+   "executable_case_ids": [
+    "CORE070-WAVE6-KERNEL-SCALAR-FIT"
+   ],
    "p0_case_ids": [
     "CORE070-WAVE6-KERNEL-SCALAR-FIT"
    ],
-   "evidence": {},
-   "measured_against": null,
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-WAVE6-KERNEL-SCALAR-FIT.json"
+    ],
+    "tier": "numeric: per-case receipts carry an R-vs-Julia comparison block pinned to P1"
+   },
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "disposition": null,
-   "reason": "Not re-measured at P1 in this PR.",
-   "not_measured_reason": "P0 evidence came from a non-namespace batch (wave6-conversion (attempt7)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here.",
-   "evidence_tier": "registration"
+   "reason": "Measured at P1 by the wave6 conversion batch (CORE070-WAVE6-KERNEL-SCALAR-FIT); ruling N2 (D-319) rewrote the batch's unrelated nobs expectation as integer equality.",
+   "evidence_tier": "numeric",
+   "measured_result": {
+    "case_verdicts": {
+     "CORE070-WAVE6-KERNEL-SCALAR-FIT": "PASS"
+    },
+    "batch_verifier": {
+     "CORE070-WAVE6-KERNEL-SCALAR-FIT": "PASS"
+    },
+    "row_verdict": "PASS"
+   }
   },
   {
    "source_id": "namespace/export/kernel_unique",

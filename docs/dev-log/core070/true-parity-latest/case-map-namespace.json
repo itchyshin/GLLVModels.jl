@@ -2306,16 +2306,31 @@
    "classification": "required_core",
    "arc": "A3",
    "r_file_line": null,
-   "executable_case_ids": [],
+   "executable_case_ids": [
+    "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-NAMESPACE"
+   ],
    "p0_case_ids": [
     "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-NAMESPACE"
    ],
-   "evidence": {},
-   "measured_against": null,
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-NAMESPACE.json"
+    ],
+    "tier": "numeric: per-case receipts carry an R-vs-Julia comparison block pinned to P1"
+   },
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "disposition": null,
-   "reason": "Not re-measured at P1 in this PR.",
-   "not_measured_reason": "P0 evidence came from a non-namespace batch (wave6-conversion (attempt7)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here.",
-   "evidence_tier": "registration"
+   "reason": "Measured at P1 by the wave6 conversion batch (CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-NAMESPACE); ruling N2 (D-319) rewrote the batch's unrelated nobs expectation as integer equality.",
+   "evidence_tier": "numeric",
+   "measured_result": {
+    "case_verdicts": {
+     "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-NAMESPACE": "PASS"
+    },
+    "batch_verifier": {
+     "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-NAMESPACE": "PASS"
+    },
+    "row_verdict": "PASS"
+   }
   },
   {
    "source_id": "namespace/export/kernel_scalar",
@@ -2324,16 +2339,31 @@
    "classification": "required_core",
    "arc": "A3",
    "r_file_line": null,
-   "executable_case_ids": [],
+   "executable_case_ids": [
+    "CORE070-WAVE6-KERNEL-SCALAR-FIT"
+   ],
    "p0_case_ids": [
     "CORE070-WAVE6-KERNEL-SCALAR-FIT"
    ],
-   "evidence": {},
-   "measured_against": null,
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-WAVE6-KERNEL-SCALAR-FIT.json"
+    ],
+    "tier": "numeric: per-case receipts carry an R-vs-Julia comparison block pinned to P1"
+   },
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "disposition": null,
-   "reason": "Not re-measured at P1 in this PR.",
-   "not_measured_reason": "P0 evidence came from a non-namespace batch (wave6-conversion (attempt7)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here.",
-   "evidence_tier": "registration"
+   "reason": "Measured at P1 by the wave6 conversion batch (CORE070-WAVE6-KERNEL-SCALAR-FIT); ruling N2 (D-319) rewrote the batch's unrelated nobs expectation as integer equality.",
+   "evidence_tier": "numeric",
+   "measured_result": {
+    "case_verdicts": {
+     "CORE070-WAVE6-KERNEL-SCALAR-FIT": "PASS"
+    },
+    "batch_verifier": {
+     "CORE070-WAVE6-KERNEL-SCALAR-FIT": "PASS"
+    },
+    "row_verdict": "PASS"
+   }
   },
   {
    "source_id": "namespace/export/kernel_unique",

@@ -85,9 +85,9 @@
     "total_batch_wall": 257,
     "glvmodels_commit": "681c4c3ca666e630470bba01a057bc88158b85f3",
     "wave6_conversion_rerun_2026_10_05": {
-      "wave6_conversion_batch_wall": 46,
+      "wave6_conversion_batch_wall": 45,
       "threads": "OPENBLAS/OMP 1, JULIA_NUM_THREADS=1",
-      "glvmodels_commit": "6cf3d6d9ab64113e33ef73335d9e9aab0979c6d2"
+      "glvmodels_commit": "6f050fea3e5afcee2b9d55b79acbaa42c2f28a24"
     }
   },
   "batch_artifacts": {

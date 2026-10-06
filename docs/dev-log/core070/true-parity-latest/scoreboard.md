@@ -16,29 +16,29 @@ Pin: gllvmTMB P1 `9539352f66f2db2cc26b1c393e67212a359b60c9`.
 Inputs:
 
 - `docs/dev-log/core070/true-parity-latest/case-map-aghq.json` (21 rows, sha256 `ab5ecf9bbd472e75b1acfc1087d2672c4bc9b20ab7442fedf077d8da3301be50`)
-- `docs/dev-log/core070/true-parity-latest/case-map-covariance.json` (19 rows, sha256 `be6582e3ed0239ff7fd0c816713b7d6cc3b6e9958d69aff8f6bd920e09cb019f`)
+- `docs/dev-log/core070/true-parity-latest/case-map-covariance.json` (19 rows, sha256 `dab8c29bdd6d6285d8fbe8a928609db6a4a405fbc8c5d07be507593fbb0c0b20`)
 - `docs/dev-log/core070/true-parity-latest/case-map-data.json` (36 rows, sha256 `ab3c961085b22ddfaca1ba3a3537c3a82ef41f5445cf74f57dbf4f8fe9b8ec95`)
 - `docs/dev-log/core070/true-parity-latest/case-map-family.json` (26 rows, sha256 `f3021e307bec24fef11d123902432519d47f8c1434c74174e6a4daff11516757`)
 - `docs/dev-log/core070/true-parity-latest/case-map-fit-input.json` (10 rows, sha256 `568c054ed5f3786b96c9acb796e28d98e4523c4edc5fe5ad9f69ab150cee3639`)
 - `docs/dev-log/core070/true-parity-latest/case-map-inference.json` (63 rows, sha256 `9c58f51d0a3c78c0af58fc963c92a6afb8d3bc460a43d969a4b2c2017c88d857`)
 - `docs/dev-log/core070/true-parity-latest/case-map-isdm.json` (21 rows, sha256 `1ffc4904a25c5e6a8bb550333da004b82b731dfa489b17b55375944378149484`)
-- `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `e039c8a024d71d13a489e31928065a619e7d2e93f882d39c54955f98c211a114`)
-- `docs/dev-log/core070/true-parity-latest/case-map-postfit.json` (52 rows, sha256 `cbeb77202d7657c04cd1f19d3bc1f82e385dd844f7fd475aa22593655bc0d9a9`)
+- `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `5850ff0277efb80c5e88f6a1b48d6f88164571da552ec9503aa086afd298c4ba`)
+- `docs/dev-log/core070/true-parity-latest/case-map-postfit.json` (52 rows, sha256 `dfe1b333311d5231d753908cc3072d2840a58624d28fbd07786d55e7084cc9db`)
 
 ## Totals by family
 
-| `family` | EVIDENCED | EVIDENCED-BEHAVIOURAL | DISPOSITION-SIGNED | REGISTRATION-ONLY | HELD | PARTIAL | NEEDS-SURFACE | NON-DISCRIMINATING | FAIL | NOT-MEASURED | total |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| `aghq` | 14 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 21 |
-| `covariance` | 15 | 0 | 2 | 0 | 2 | 0 | 0 | 0 | 0 | 0 | 19 |
-| `data` | 14 | 0 | 5 | 0 | 0 | 0 | 13 | 0 | 4 | 0 | 36 |
-| `family` | 24 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 1 | 0 | 26 |
-| `fit-input` | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
-| `inference` | 3 | 50 | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 63 |
-| `isdm` | 11 | 0 | 4 | 0 | 0 | 0 | 5 | 0 | 1 | 0 | 21 |
-| `namespace` | 51 | 0 | 10 | 5 | 0 | 0 | 0 | 0 | 0 | 3 | 69 |
-| `postfit` | 45 | 0 | 4 | 0 | 0 | 2 | 0 | 1 | 0 | 0 | 52 |
-| `all` | 187 | 57 | 35 | 5 | 2 | 3 | 18 | 1 | 6 | 3 | 317 |
+| `family` | EVIDENCED | EVIDENCED-BEHAVIOURAL | DISPOSITION-SIGNED | REGISTRATION-ONLY | PARTIAL | NEEDS-SURFACE | NON-DISCRIMINATING | FAIL | NOT-MEASURED | total |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `aghq` | 14 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 21 |
+| `covariance` | 17 | 0 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 19 |
+| `data` | 14 | 0 | 5 | 0 | 0 | 13 | 0 | 4 | 0 | 36 |
+| `family` | 24 | 0 | 0 | 0 | 1 | 0 | 0 | 1 | 0 | 26 |
+| `fit-input` | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
+| `inference` | 3 | 50 | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 63 |
+| `isdm` | 11 | 0 | 4 | 0 | 0 | 5 | 0 | 1 | 0 | 21 |
+| `namespace` | 53 | 0 | 10 | 5 | 0 | 0 | 0 | 0 | 1 | 69 |
+| `postfit` | 45 | 0 | 4 | 0 | 2 | 0 | 1 | 0 | 0 | 52 |
+| `all` | 191 | 57 | 35 | 5 | 3 | 18 | 1 | 6 | 1 | 317 |
 
 ## P1 twin fixtures present at this head, not bound to any row
 
@@ -164,8 +164,8 @@ decision for the PR that measures it, not something this tool does.
 | covariance-COV-ORD-DEP `covariance/COV-ORD-DEP` | required_core; cases: FIT-MODE-ORD-DEP, FIT-MODE-ORD-DEP-FORMULA-INTERFACE, FIT-MODE-ORD-DEP-PUBLIC-R-BRIDGE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ORD-DEP.json, docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ORD-DEP-FORMULA-INTERFACE.json | family covariance; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | covariance-COV-ORD-INDEP `covariance/COV-ORD-INDEP` | required_core; cases: MODE-ORD-INDEP, MODE-ORD-INDEP-FORMULA-INTERFACE, MODE-ORD-INDEP-PUBLIC-R-BRIDGE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-INDEP.json, docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-INDEP-FORMULA-INTERFACE.json | family covariance; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | covariance-COV-ORD-INDEP-COMMON `covariance/COV-ORD-INDEP-COMMON` | required_core; cases: MODE-ORD-COMMON, MODE-ORD-COMMON-FORMULA-INTERFACE, MODE-ORD-COMMON-PUBLIC-R-BRIDGE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-COMMON.json, docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-COMMON-FORMULA-INTERFACE.json | family covariance; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| covariance-COV-KERNEL-FOLDED-UNIQUE `covariance/COV-KERNEL-FOLDED-UNIQUE` | required_core; cases: CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE | HELD | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE.json | family covariance; evidence_tier numeric_held_batch_verifier_failed; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| covariance-COV-KERNEL-LATENT `covariance/COV-KERNEL-LATENT` | required_core; cases: CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE | HELD | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE.json | family covariance; evidence_tier numeric_held_batch_verifier_failed; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| covariance-COV-KERNEL-FOLDED-UNIQUE `covariance/COV-KERNEL-FOLDED-UNIQUE` | required_core; cases: CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE.json | family covariance; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| covariance-COV-KERNEL-LATENT `covariance/COV-KERNEL-LATENT` | required_core; cases: CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE.json | family covariance; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | covariance-COV-META-EXACT `covariance/COV-META-EXACT` | required_core; cases: CORE070-COV-META-EXACT-FORMULA | DISPOSITION-SIGNED | Disposition: DISPOSITION-SIGNED; signed_by: Shinichi Nakagawa; signed_on: 2026-10-05 | family covariance; evidence_tier r_only; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | covariance-COV-META-LEGACY `covariance/COV-META-LEGACY` | compatibility_adapter; cases: CORE070-COV-META-LEGACY-ADAPTER | DISPOSITION-SIGNED | Disposition: DISPOSITION-SIGNED; signed_by: Shinichi Nakagawa; signed_on: 2026-10-05 | family covariance; evidence_tier r_only; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | covariance-COV-ORD-LATENT-BARE `covariance/COV-ORD-LATENT-BARE` | required_core; cases: P1-JULIA-COV-ORD-LATENT-BARE-LOGLIK, P1-JULIA-COV-ORD-LATENT-BARE-BETA, P1-JULIA-COV-ORD-LATENT-BARE-TRAIT-COVARIANCE, P1-JULIA-COV-ORD-LATENT-BARE-SIGMA-EPS, P1-JULIA-COV-ORD-LATENT-BARE-OBJECTIVE-AT-R, P1-JULIA-COV-ORD-LATENT-BARE-OBJECTIVE-AT-PROBE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/covariance-twins/COV-ORD-LATENT-BARE.json | family covariance; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
@@ -396,8 +396,8 @@ decision for the PR that measures it, not something this tool does.
 | namespace-export-gllvm_julia_setup `namespace/export/gllvm_julia_setup` | required_core; cases: none | DISPOSITION-SIGNED | Disposition: DISPOSITION-SIGNED; signed_by: Shinichi Nakagawa; signed_on: 2026-10-05 | family namespace; evidence_tier registration; measured_against None |
 | namespace-export-kernel_dep `namespace/export/kernel_dep` | required_core; cases: FIT-MODE-KERNEL-DEP, FIT-MODE-KERNEL-DEP-FORMULA-INTERFACE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-DEP.json, docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-DEP-FORMULA-INTERFACE.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-kernel_indep `namespace/export/kernel_indep` | required_core; cases: FIT-MODE-KERNEL-INDEP, FIT-MODE-KERNEL-COMMON, FIT-MODE-KERNEL-INDEP-FORMULA-INTERFACE, FIT-MODE-KERNEL-COMMON-FORMULA-INTERFACE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-INDEP.json, docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-COMMON.json, docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-INDEP-FORMULA-INTERFACE.json, docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-COMMON-FORMULA-INTERFACE.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| namespace-export-kernel_latent `namespace/export/kernel_latent` | required_core; cases: none | NOT-MEASURED | not bound; cited: none | family namespace; evidence_tier registration; measured_against None; no receipt cited |
-| namespace-export-kernel_scalar `namespace/export/kernel_scalar` | required_core; cases: none | NOT-MEASURED | not bound; cited: none | family namespace; evidence_tier registration; measured_against None; no receipt cited |
+| namespace-export-kernel_latent `namespace/export/kernel_latent` | required_core; cases: CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-NAMESPACE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-NAMESPACE.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| namespace-export-kernel_scalar `namespace/export/kernel_scalar` | required_core; cases: CORE070-WAVE6-KERNEL-SCALAR-FIT | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-WAVE6-KERNEL-SCALAR-FIT.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-kernel_unique `namespace/export/kernel_unique` | required_core; cases: none | DISPOSITION-SIGNED | Disposition: DISPOSITION-SIGNED; signed_by: Shinichi Nakagawa; signed_on: 2026-10-05 | family namespace; evidence_tier registration; measured_against None |
 | namespace-export-nbinom2 `namespace/export/nbinom2` | required_core; cases: P1-JULIA-NB2-INTERCEPTS, P1-JULIA-NB2-LAMBDA-LAMBDAT, P1-JULIA-NB2-DISPERSION | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/nbinom2.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-sanity_multi `namespace/export/sanity_multi` | required_core; cases: P1-JULIA-SANITY-MULTI-MAX-SE, P1-JULIA-SANITY-MULTI-RR-B-MIN-LOADING | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/sanity_multi.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |

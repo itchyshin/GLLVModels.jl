@@ -1,17 +1,2 @@
 CORE070_WAVE6_CONVERSION_CONTRACT_OK cases=10 deferred=8 total_target_rows=18
-Traceback (most recent call last):
-  File "/Users/z3437171/local-scratch/GLLVM.jl-w2-covariance-writer/tools/core070_verify_wave6_conversion_batch.py", line 421, in <module>
-    main()
-    ~~~~^^
-  File "/Users/z3437171/local-scratch/GLLVM.jl-w2-covariance-writer/tools/core070_verify_wave6_conversion_batch.py", line 416, in main
-    verify_state(contract, Path(args.state))
-    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/z3437171/local-scratch/GLLVM.jl-w2-covariance-writer/tools/core070_verify_wave6_conversion_batch.py", line 251, in verify_state
-    check_state(contract, receipt, results_lines, julia_report)
-    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/z3437171/local-scratch/GLLVM.jl-w2-covariance-writer/tools/core070_verify_wave6_conversion_batch.py", line 178, in check_state
-    need(receipt["status"] == "PASS", "receipt status is not PASS")
-    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/z3437171/local-scratch/GLLVM.jl-w2-covariance-writer/tools/core070_verify_wave6_conversion_batch.py", line 79, in need
-    raise ValueError(message)
-ValueError: receipt status is not PASS
+CORE070_WAVE6_CONVERSION_STATE_OK /Users/z3437171/local-scratch/GLLVM.jl-rulings-integration/docs/dev-log/core070/true-parity-latest/receipts/covariance/wave6-conversion-p1

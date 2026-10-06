@@ -31,9 +31,9 @@
   "gllvmtmb_version": "0.7.1",
   "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit": "6cf3d6d9ab64113e33ef73335d9e9aab0979c6d2",
+  "glvmodels_commit": "6f050fea3e5afcee2b9d55b79acbaa42c2f28a24",
   "glvmodels_worktree_dirty": [],
-  "glvmodels_src_tree": "973683585a8985711f04aea561af0fef725a350d",
+  "glvmodels_src_tree": "4cf28aca3f0d75c7dafd649284515a78edd5225a",
   "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=1",
   "comparison": {
     "pin": "P1",

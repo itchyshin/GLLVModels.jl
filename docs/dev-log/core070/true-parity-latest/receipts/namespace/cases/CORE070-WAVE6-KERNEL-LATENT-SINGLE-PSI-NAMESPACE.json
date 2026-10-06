@@ -1,7 +1,7 @@
 {
   "schema": "core070-covariance-p1-case-receipt/v1",
-  "case_id": "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE",
-  "source_id": "covariance/COV-KERNEL-FOLDED-UNIQUE",
+  "case_id": "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-NAMESPACE",
+  "source_id": "namespace/export/kernel_latent",
   "verdict": "PASS",
   "evidence_kind": "numeric_r_vs_julia",
   "batch": "tools/core070_wave6_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1 (whole 10-case batch)",
@@ -31,7 +31,7 @@
     "pin": "P1",
     "cases": [
       {
-        "case_id": "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE",
+        "case_id": "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-NAMESPACE",
         "quantity": "logLik_B_tcrossprod",
         "r_value": [
           -15.909111891924782,

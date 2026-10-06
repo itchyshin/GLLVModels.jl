@@ -1,2 +1,2 @@
 CORE070_WAVE6_CONVERSION_CONTRACT_OK cases=10 deferred=8 total_target_rows=18
-CORE070_WAVE6_CONVERSION_STATE_OK /Users/z3437171/local-scratch/rulings-postfit-runs/wave6-conversion-p1
+CORE070_WAVE6_CONVERSION_STATE_OK /private/tmp/claude-503/-Users-z3437171-Dropbox-Github-Local-GLLVM-jl/5b26a91c-0091-4434-b99f-c6632beb6982/scratchpad/wave6-run2
