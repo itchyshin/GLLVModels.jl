@@ -400,6 +400,9 @@ println(_SHARD === nothing ?
     _shard_include("test_missing_predictor_multi.jl")
     _shard_include("test_mi_fitter.jl")
     _shard_include("test_offset.jl")
+    # Observation weights (Poisson Laplace) and the guard that weights = nothing is byte-identical to main.
+    _shard_include("test_weights.jl")
+    _shard_include("test_weights_byte_identity.jl")
     _shard_include("test_fd_hessian.jl")
     _shard_include("test_confint_family.jl")
     _shard_include("test_confint_offset.jl")
@@ -551,6 +554,8 @@ println(_SHARD === nothing ?
     _shard_include("test_off_all_count_twin_p1.jl")
     # P1 fit-level twin of data/DATA-OFF-MIXED (one poisson/gaussian/nbinom2 fit, offset zero on the gaussian trait).
     _shard_include("test_off_mixed_twin_p1.jl")
+    # P1 fit-level twins of the 13 data/DATA-W-* rows (observation weights on a Poisson fit: long, wide-matrix and traits() shapes, masks).
+    _shard_include("test_weights_twins_p1.jl")
     # P1 fit-level twins of covariance/COV-ORD-LATENT-BARE, -DEFAULT and -COMMON (ordinary latent(), Gaussian rank 1).
     _shard_include("test_cov_ord_latent_p1.jl")
     # P1 fit-level twins of covariance/COV-PHYLO-DEP, COV-PHYLO-A-ALIAS and COV-PHYLO-FOLDED-UNIQUE (Gaussian phylo_latent fits).

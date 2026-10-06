@@ -196,6 +196,10 @@ non-common trait variances. This does not open public R bridge admission.
 `ZIB` through `@formula` is **no-X only** for now (bridge still OWED; ZIB+X formula
 is fenced).
 
+`weights` (observation weights) follow [`fit_gllvm`](@ref) and are accepted on the
+no-covariate Poisson route only (`@formula(y ~ 1)`, `family = Poisson()`); every other formula
+route refuses them with an `ArgumentError`.
+
 `offset` follows the rules of [`fit_gllvm`](@ref) (a scalar broadcasts; a `p×n` matrix, a
 `1×n` or `p×1` matrix or a length-`p` vector is accepted; an unusable shape or a non-finite
 value at an observed cell throws an `ArgumentError`). With covariates in the formula only
@@ -206,8 +210,15 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
                family = Normal(), K::Union{Integer, _FormulaKUnset} = _FORMULA_K_UNSET,
                sources = nothing, grouping=nothing,
                pervar::Bool = false,
-               contrasts::AbstractDict = Dict{Symbol, Any}(), kwargs...)
+               contrasts::AbstractDict = Dict{Symbol, Any}(), weights = nothing, kwargs...)
     p, n = size(Y)
+    # Observation weights reach only the no-covariate Poisson route (through `fit_gllvm`,
+    # which owns the shape rules); every other formula route refuses them. `nothing` never
+    # reaches a fitter.
+    weights === nothing || grouping === nothing && get(kwargs, :phylo, nothing) === nothing ||
+        _refuse_weights("gllvm", "explicit grouping or phylo terms")
+    weights === nothing || sources === nothing || _refuse_weights("gllvm", "explicit Gaussian sources")
+    weights === nothing || !pervar || _refuse_weights("gllvm", "pervar = true")
     cols = Tables.columntable(data)
     for (name, column) in pairs(cols)
         length(column) == n || throw(DimensionMismatch(
@@ -255,6 +266,8 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
     q = size(mm, 2)
 
     if q == 0
+        weights === nothing || family isa Poisson ||
+            _refuse_weights("gllvm", "family $(nameof(typeof(family)))")
         # The Gaussian and zero-inflated fitters below are called directly, not through
         # `fit_gllvm`, so they get the same offset rules here (a scalar broadcasts, a shape
         # that cannot be broadcast or a non-finite value is refused). Every other family goes
@@ -268,6 +281,8 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
                family isa ZIPoisson ? fit_zip_gllvm(Y; K = K, kwargs...) :
                family isa ZINegBin ? fit_zinb_gllvm(Y; K = K, kwargs...) :
                family isa ZIB ? fit_gllvm(Y; family = family, K = K, kwargs...) :
+               family isa Poisson && weights !== nothing ?
+                                fit_gllvm(Y; family = family, K = K, weights = weights, kwargs...) :
                # NB keeps gllvmTMB's per-trait r here; bare fit_gllvm defaults to shared r (#615).
                family isa NegativeBinomial && !haskey(kwargs, :disp_group) ?
                                 fit_gllvm(Y; family = family, K = K, disp_group = :species, kwargs...) :
@@ -276,6 +291,7 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
 
     size(mm, 1) == n || throw(DimensionMismatch(
         "`data` has $(size(mm, 1)) rows but Y has $n sites (columns)"))
+    weights === nothing || _refuse_weights("gllvm", "covariates in the formula")
 
     X = Array{Float64, 3}(undef, p, n, q)
     @inbounds for k in 1:q, s in 1:n, t in 1:p

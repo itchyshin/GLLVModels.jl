@@ -235,6 +235,10 @@ function _family_ci(fit::PoissonFit, Y::AbstractMatrix;
                     mask = nothing,
                     objective::Symbol = :fit,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
+    fit.weights === nothing || throw(ArgumentError(
+        "confint: this Poisson fit was weighted; a weighted objective is not an ordinary " *
+        "likelihood, so likelihood-based intervals are not available (gllvmTMB likewise " *
+        "asks for unit weights before likelihood inference). Refit without weights."))
     if _is_poisson_aghq(fit)
         objective in (:fit,:aghq) || throw(ArgumentError("AGHQ inference must use objective=:fit; Laplace/VA would change the estimator"))
         q,_=_poisson_aghq_problem(fit,Y;mask=mask,offset=offset,require_identity=true)

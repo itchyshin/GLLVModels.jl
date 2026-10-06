@@ -162,6 +162,83 @@ function _no_offset_kwargs(kwargs, caller::AbstractString, what::AbstractString)
     return Base.structdiff(NamedTuple(kwargs), NamedTuple{(:offset,)})
 end
 
+# ---------------------------------------------------------------------------
+# Observation weights (gllvmTMB's `weights`; slice W4-1a). A weight multiplies the
+# conditional log-density of its cell (src/families/laplace.jl), so 0 drops the cell
+# and fractional values are allowed. Shapes mirror gllvmTMB's wide routes on Julia's
+# traits × units layout: `nothing` (unweighted), a real scalar (every cell), a length-n
+# vector (one weight per unit, every trait: R's `nrow(Y)` vector), or a p×n matrix (per
+# cell; a 1×n or p×1 matrix stretches along its length-1 side). A bare vector of any
+# other length is refused: one weight per trait is written `reshape(w, p, 1)`. Values
+# must be real, finite and >= 0 at observed cells; an unobserved cell (`mask` false or
+# `missing` in `Y`) contributes nothing whatever its weight, so any value there (NaN,
+# `missing`) is accepted and stored as 0. Returns a fresh p×n Float64 matrix, or
+# `nothing`.
+function _normalize_weights(w, p::Integer, n::Integer; Y = nothing, mask = nothing,
+                            caller::AbstractString = "fit_gllvm")
+    w === nothing && return nothing
+    shape = if w isa Real
+        :scalar
+    elseif w isa AbstractVector
+        length(w) == n || throw(ArgumentError(
+            "$caller: a weights vector must have one entry per unit (length $(n)); got " *
+            "length $(length(w)). For one weight per trait pass reshape(w, $(p), 1); for per-cell " *
+            "weights pass a $(p)×$(n) matrix (traits × units)."))
+        :unit
+    elseif w isa AbstractMatrix
+        r, c = size(w)
+        ((r == p || r == 1) && (c == n || c == 1)) || throw(ArgumentError(
+            "$caller: a weights matrix must be $(p)×$(n) (traits × units), 1×$(n) (one per unit) " *
+            "or $(p)×1 (one per trait); got a $(r)×$(c) matrix" *
+            ((r, c) == (n, p) ? ". A units × traits matrix (gllvmTMB_wide's orientation) is " *
+                                "passed as permutedims(w)." : ".")))
+        :matrix
+    else
+        throw(ArgumentError("$caller: weights must be nothing, a real scalar, a length-$(n) " *
+                            "vector or a $(p)×$(n) matrix; got a value of type $(typeof(w))"))
+    end
+    W = Matrix{Float64}(undef, p, n)
+    @inbounds for s in 1:n, t in 1:p
+        observed = (mask === nothing || mask[t, s]) && (Y === nothing || !ismissing(Y[t, s]))
+        v = shape === :scalar ? w : shape === :unit ? w[s] :
+            w[size(w, 1) == 1 ? 1 : t, size(w, 2) == 1 ? 1 : s]
+        if !observed
+            W[t, s] = 0.0
+            continue
+        end
+        (v isa Real && isfinite(v) && v >= 0) || throw(ArgumentError(
+            "$caller: weights must be finite and non-negative at every observed cell; got " *
+            "$(repr(v)) at trait $t, unit $s"))
+        W[t, s] = Float64(v)
+    end
+    return W
+end
+
+_refuse_weights(caller::AbstractString, what::AbstractString) = throw(ArgumentError(
+    "$caller: weights are not supported for $what; remove the weights keyword. " *
+    "Observation weights are available on the Poisson Laplace route " *
+    "(fit_gllvm(Y; family = Poisson(), K, weights)) only."))
+
+# The one route that takes weights is the default Poisson Laplace fit. Everything else is
+# refused here, naming what blocks it, so no route silently ignores weights and none hits a
+# raw MethodError. `nothing` = admitted.
+function _weights_blocked_route(family; phylo = nothing, grouping = nothing,
+        row_eff::Symbol = :none, disp_group = nothing, pervar::Bool = false,
+        K = nothing, num_lv = nothing, kwargs = (;))
+    phylo === nothing || return "explicit precision (phylo) fits"
+    grouping === nothing || return "explicit grouping terms"
+    family isa Binomial && return "family Binomial (gllvmTMB reads binomial weights as trial " *
+        "counts; pass the trials as N instead)"
+    family isa Poisson || return "family $(nameof(typeof(family)))"
+    pervar && return "pervar = true"
+    row_eff === :none || return "row_eff = :$row_eff"
+    disp_group === nothing || return "disp_group"
+    (K === nothing && num_lv === nothing) && return "an estimated K (K omitted); supply K"
+    get(kwargs, :X_lv, nothing) === nothing || return "X_lv (predictor-informed latent scores)"
+    _aghq_request(get(kwargs, :aghq, false)) === :off || return "AGHQ integration (aghq)"
+    return nothing
+end
+
 """
     fit_gllvm(Y; family = Normal(), K, num_lv = nothing,
               row_eff = :none, disp_group = nothing, pervar = false, kwargs...)
@@ -267,6 +344,28 @@ the `pervar`, `row_eff`, `grouping` and `phylo` routes. Every other family liste
 an offset. `gllvm(@formula(...))` applies the same rules; with covariates in the formula
 only `Normal()` takes one.
 
+# Observation weights
+
+`weights` multiplies each observed cell's conditional log-density by its weight, as
+gllvmTMB's `weights` argument does (a weight of 0 drops the cell; fractional weights are
+allowed). The fit then maximises a weighted objective; the fit's `loglik` field holds it,
+and `loglikelihood` / `aic` / `bic` / `confint` refuse a weighted fit, as gllvmTMB's
+`logLik()` does for non-unit weights. Accepted:
+
+- `nothing` (the default): unweighted, bit-identical to a call without the keyword;
+- a real scalar, applied to every cell;
+- a length-`n` vector: one weight per unit (site), applied to every trait, as gllvmTMB's
+  length-`nrow(Y)` vector;
+- a `p×n` matrix (traits × units) of per-cell weights, or a `1×n` / `p×1` matrix stretched
+  along its length-1 side. A units × traits matrix is passed as `permutedims(w)`.
+
+Weights must be finite and non-negative at observed cells. At unobserved cells (`mask` false
+or `missing` in `Y`) the weight is never read, so any value, including `NaN` or `missing`, is
+accepted there. Weights are supported on the Poisson Laplace route only
+(`family = Poisson()`, `K` given, no `row_eff`, `disp_group`, `pervar`, `grouping`, `phylo`,
+`X_lv` or `aghq`); every other route throws an `ArgumentError` naming what blocks it. For
+`Binomial()` gllvmTMB reads `weights` as trial counts; pass those as `N` instead.
+
 # Structural / dispersion variants (gllvm-style keyword routing)
 
 These keyword arguments route to the corresponding specialised fitter while keeping
@@ -363,12 +462,23 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
                    grouping=nothing, unit=nothing, unit_obs=nothing,
                    cluster=nothing, cluster2=nothing,
                    phylo=nothing, phylo_rank=nothing, phylo_mode=nothing,
-                   species_id=nothing, Kmax=nothing, kwargs...)
+                   species_id=nothing, Kmax=nothing, weights=nothing, kwargs...)
     # `offset = nothing` means no offset; drop it so a route without an offset keyword
     # does not reject it. Any other offset is checked below (or refused on the routes
     # that take none).
     if haskey(kwargs, :offset) && kwargs[:offset] === nothing
         kwargs = Base.structdiff(NamedTuple(kwargs), NamedTuple{(:offset,)})
+    end
+    # Observation weights: `nothing` never reaches a fitter (every route sees the kwargs it
+    # saw before weights existed). Any other value is admitted on the Poisson Laplace route
+    # only, normalised here once, and refused with an ArgumentError everywhere else.
+    if weights !== nothing
+        blocked = _weights_blocked_route(family; phylo = phylo, grouping = grouping,
+            row_eff = row_eff, disp_group = disp_group, pervar = pervar, K = K,
+            num_lv = num_lv, kwargs = kwargs)
+        blocked === nothing || _refuse_weights("fit_gllvm", blocked)
+        kwargs = merge(NamedTuple(kwargs), (weights = _normalize_weights(weights,
+            size(Y, 1), size(Y, 2); Y = Y, mask = get(kwargs, :mask, nothing)),))
     end
     if phylo !== nothing
         haskey(kwargs, :offset) && _refuse_offset("fit_gllvm",

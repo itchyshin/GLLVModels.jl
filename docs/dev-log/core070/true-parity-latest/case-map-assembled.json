@@ -16,7 +16,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-data.json",
-   "sha256": "26e7fb9121c21780bc173d05614e5b9d25c491c480ff9b4dd416ae5154fd28d1",
+   "sha256": "611906beb2d513aa8f055a00cf7658460f35fe45b4f31f29cc676b75b73a9c9f",
    "rows": 36
   },
   {
@@ -2438,7 +2438,7 @@
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK.json",
      "docs/dev-log/core070/true-parity-latest/receipts/data/n7-offset-nonfinite-probe.json"
     ],
-    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases. Its fit-time surfaces are offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), recorded in each receipt's julia_fit_time_surface_probe, and observation weights= on the Poisson Laplace route only (other families refuse weights with an ArgumentError). Weights were added after the P1 surface probe ran, so a probe that records weights as absent predates them"
    },
    "measured_result": {
     "case_verdicts": {
@@ -2533,7 +2533,7 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-TRAIN-LEGACY-POSTFIT-READBACK.json"
     ],
-    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases. Its fit-time surfaces are offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), recorded in each receipt's julia_fit_time_surface_probe, and observation weights= on the Poisson Laplace route only (other families refuse weights with an ArgumentError). Weights were added after the P1 surface probe ran, so a probe that records weights as absent predates them"
    },
    "measured_result": {
     "case_verdicts": {
@@ -2610,7 +2610,9 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-DATA-W-DF-MASK-DROP-NATIVE"
+    "P1-JULIA-DATA-W-DF-MASK-DROP-OBJECTIVE",
+    "P1-JULIA-DATA-W-DF-MASK-DROP-INTERCEPTS",
+    "P1-JULIA-DATA-W-DF-MASK-DROP-LAMBDA-LAMBDAT"
    ],
    "disposition": null,
    "p0_batch": "data-batch attempt-data-r3 (wave1)",
@@ -2622,13 +2624,19 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-DF-MASK-DROP.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-DF-MASK-DROP-NATIVE.json"
     ],
-    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+    "batch_case_ids": [
+     "CORE070-DATA-W-DF-MASK-DROP-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_weights_twins_p1.jl, against R-at-P1 values copied from test/fixtures/weights_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -2639,8 +2647,15 @@
     },
     "case_kinds": {
      "CORE070-DATA-W-DF-MASK-DROP-NATIVE": "r_replay_julia_surface_absent"
-    }
-   }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-DATA-W-DF-MASK-DROP-OBJECTIVE",
+     "P1-JULIA-DATA-W-DF-MASK-DROP-INTERCEPTS",
+     "P1-JULIA-DATA-W-DF-MASK-DROP-LAMBDA-LAMBDAT"
+    ],
+    "twin_verdict": "PASS"
+   },
+   "scope_note": "Bound on its fit-level twin under the maintainer ruling of 2026-10-06 (D-319 follow-up). The R batch case is a helper-internal vector shape of normalise_weights() (traits()-route per-unit weights replicated and shrunk to the retained observations when NA cells are dropped); that shape itself has no Julia counterpart, so the twin compares its fit-level consequence: a Poisson fit through the public traits() route with one weight per unit and the 14 NA cells dropped, against Julia with those cells missing in Y and weights = a length-n vector. A weight multiplies its cell's conditional log-density on both sides. gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik), with intercepts and Lambda Lambda'. One Poisson data set only: Julia takes weights on the Poisson Laplace route and refuses them elsewhere (ArgumentError); binomial weights, which gllvmTMB reads as trial counts, are not exercised."
   },
   {
    "source_id": "data/DATA-W-DF-MASK-INCLUDE",
@@ -2648,7 +2663,9 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-DATA-W-DF-MASK-INCLUDE-NATIVE"
+    "P1-JULIA-DATA-W-DF-MASK-INCLUDE-OBJECTIVE",
+    "P1-JULIA-DATA-W-DF-MASK-INCLUDE-INTERCEPTS",
+    "P1-JULIA-DATA-W-DF-MASK-INCLUDE-LAMBDA-LAMBDAT"
    ],
    "disposition": null,
    "p0_batch": "data-batch attempt-data-r3 (wave1)",
@@ -2660,13 +2677,19 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-DF-MASK-INCLUDE.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-DF-MASK-INCLUDE-NATIVE.json"
     ],
-    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+    "batch_case_ids": [
+     "CORE070-DATA-W-DF-MASK-INCLUDE-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_weights_twins_p1.jl, against R-at-P1 values copied from test/fixtures/weights_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -2677,8 +2700,15 @@
     },
     "case_kinds": {
      "CORE070-DATA-W-DF-MASK-INCLUDE-NATIVE": "r_replay_julia_surface_absent"
-    }
-   }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-DATA-W-DF-MASK-INCLUDE-OBJECTIVE",
+     "P1-JULIA-DATA-W-DF-MASK-INCLUDE-INTERCEPTS",
+     "P1-JULIA-DATA-W-DF-MASK-INCLUDE-LAMBDA-LAMBDAT"
+    ],
+    "twin_verdict": "PASS"
+   },
+   "scope_note": "Bound on its fit-level twin under the maintainer ruling of 2026-10-06 (D-319 follow-up). The R batch case is a helper-internal vector shape of normalise_weights() (traits()-route per-unit weights kept at full length under response = 'include'); that shape itself has no Julia counterpart, so the twin compares its fit-level consequence: the DATA-W-DF-MASK-DROP fit under response = 'include', against Julia with a placeholder 0 at the 14 cells, mask = the observed cells and weights = a length-n vector; R's drop and include objectives agree within 1e-6 (asserted in the twin test). A weight multiplies its cell's conditional log-density on both sides. gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik), with intercepts and Lambda Lambda'. One Poisson data set only: Julia takes weights on the Poisson Laplace route and refuses them elsewhere (ArgumentError); binomial weights, which gllvmTMB reads as trial counts, are not exercised."
   },
   {
    "source_id": "data/DATA-W-DF-UNIT",
@@ -2686,7 +2716,9 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-DATA-W-DF-UNIT-NATIVE"
+    "P1-JULIA-DATA-W-DF-UNIT-OBJECTIVE",
+    "P1-JULIA-DATA-W-DF-UNIT-INTERCEPTS",
+    "P1-JULIA-DATA-W-DF-UNIT-LAMBDA-LAMBDAT"
    ],
    "disposition": null,
    "p0_batch": "data-batch attempt-data-r3 (wave1)",
@@ -2698,13 +2730,19 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-DF-UNIT.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-DF-UNIT-NATIVE.json"
     ],
-    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+    "batch_case_ids": [
+     "CORE070-DATA-W-DF-UNIT-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_weights_twins_p1.jl, against R-at-P1 values copied from test/fixtures/weights_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -2715,8 +2753,15 @@
     },
     "case_kinds": {
      "CORE070-DATA-W-DF-UNIT-NATIVE": "r_replay_julia_surface_absent"
-    }
-   }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-DATA-W-DF-UNIT-OBJECTIVE",
+     "P1-JULIA-DATA-W-DF-UNIT-INTERCEPTS",
+     "P1-JULIA-DATA-W-DF-UNIT-LAMBDA-LAMBDAT"
+    ],
+    "twin_verdict": "PASS"
+   },
+   "scope_note": "The R batch case replays a traits()-route per-unit weight vector replicated to every trait; the twin is a Poisson fit through the public traits() route, gllvmTMB(traits(t1, ..., t6) ~ 1 + latent(1 | unit, d = 1, unique = FALSE), weights = <one per unit>), against Julia weights = a length-n vector. A weight multiplies its cell's conditional log-density on both sides. gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik), with intercepts and Lambda Lambda'. One Poisson data set only: Julia takes weights on the Poisson Laplace route and refuses them elsewhere (ArgumentError); binomial weights, which gllvmTMB reads as trial counts, are not exercised."
   },
   {
    "source_id": "data/DATA-W-FRACTIONAL",
@@ -2724,7 +2769,9 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-DATA-W-FRACTIONAL-NATIVE"
+    "P1-JULIA-DATA-W-FRACTIONAL-OBJECTIVE",
+    "P1-JULIA-DATA-W-FRACTIONAL-INTERCEPTS",
+    "P1-JULIA-DATA-W-FRACTIONAL-LAMBDA-LAMBDAT"
    ],
    "disposition": null,
    "p0_batch": "data-batch attempt-data-r3 (wave1)",
@@ -2736,13 +2783,19 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-FRACTIONAL.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-FRACTIONAL-NATIVE.json"
     ],
-    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+    "batch_case_ids": [
+     "CORE070-DATA-W-FRACTIONAL-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_weights_twins_p1.jl, against R-at-P1 values copied from test/fixtures/weights_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -2753,8 +2806,15 @@
     },
     "case_kinds": {
      "CORE070-DATA-W-FRACTIONAL-NATIVE": "r_replay_julia_surface_absent"
-    }
-   }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-DATA-W-FRACTIONAL-OBJECTIVE",
+     "P1-JULIA-DATA-W-FRACTIONAL-INTERCEPTS",
+     "P1-JULIA-DATA-W-FRACTIONAL-LAMBDA-LAMBDAT"
+    ],
+    "twin_verdict": "PASS"
+   },
+   "scope_note": "The R batch case replays fractional weights rep(0.5, 6) unchanged; the twin is a Poisson fit through the long API with fractional weights in (0.25, 2) on every row, against Julia with the same p x n matrix. A weight multiplies its cell's conditional log-density on both sides. gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik), with intercepts and Lambda Lambda'. One Poisson data set only: Julia takes weights on the Poisson Laplace route and refuses them elsewhere (ArgumentError); binomial weights, which gllvmTMB reads as trial counts, are not exercised."
   },
   {
    "source_id": "data/DATA-W-LONG",
@@ -2762,8 +2822,9 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-DATA-W-LONG-NATIVE",
-    "CORE070-DATA-W-LONG-NATIVE-NEGATIVE-CONTROL"
+    "P1-JULIA-DATA-W-LONG-OBJECTIVE",
+    "P1-JULIA-DATA-W-LONG-INTERCEPTS",
+    "P1-JULIA-DATA-W-LONG-LAMBDA-LAMBDAT"
    ],
    "disposition": null,
    "p0_batch": "data-batch attempt-data-r3 (wave1)",
@@ -2775,14 +2836,21 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-LONG.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-LONG-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-LONG-NATIVE-NEGATIVE-CONTROL.json"
     ],
-    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+    "batch_case_ids": [
+     "CORE070-DATA-W-LONG-NATIVE",
+     "CORE070-DATA-W-LONG-NATIVE-NEGATIVE-CONTROL"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_weights_twins_p1.jl, against R-at-P1 values copied from test/fixtures/weights_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -2796,8 +2864,15 @@
     "case_kinds": {
      "CORE070-DATA-W-LONG-NATIVE": "r_replay_julia_surface_absent",
      "CORE070-DATA-W-LONG-NATIVE-NEGATIVE-CONTROL": "r_replay_negative_control"
-    }
-   }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-DATA-W-LONG-OBJECTIVE",
+     "P1-JULIA-DATA-W-LONG-INTERCEPTS",
+     "P1-JULIA-DATA-W-LONG-LAMBDA-LAMBDAT"
+    ],
+    "twin_verdict": "PASS"
+   },
+   "scope_note": "The R batch case replays normalise_weights(1:6, 'long', ...) unchanged; the twin is a Poisson fit through the long API with an integer weight (1 to 3) on every row, against Julia with the same weights as a p x n matrix (Julia's Y is a matrix, so a long column has no direct Julia form). A weight multiplies its cell's conditional log-density on both sides. gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik), with intercepts and Lambda Lambda'. One Poisson data set only: Julia takes weights on the Poisson Laplace route and refuses them elsewhere (ArgumentError); binomial weights, which gllvmTMB reads as trial counts, are not exercised."
   },
   {
    "source_id": "data/DATA-W-MATRIX-CELLS",
@@ -2805,7 +2880,9 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-DATA-W-MATRIX-CELLS-NATIVE"
+    "P1-JULIA-DATA-W-MATRIX-CELLS-OBJECTIVE",
+    "P1-JULIA-DATA-W-MATRIX-CELLS-INTERCEPTS",
+    "P1-JULIA-DATA-W-MATRIX-CELLS-LAMBDA-LAMBDAT"
    ],
    "disposition": null,
    "p0_batch": "data-batch attempt-data-r3 (wave1)",
@@ -2817,13 +2894,19 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-MATRIX-CELLS.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-MATRIX-CELLS-NATIVE.json"
     ],
-    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+    "batch_case_ids": [
+     "CORE070-DATA-W-MATRIX-CELLS-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_weights_twins_p1.jl, against R-at-P1 values copied from test/fixtures/weights_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -2834,8 +2917,15 @@
     },
     "case_kinds": {
      "CORE070-DATA-W-MATRIX-CELLS-NATIVE": "r_replay_julia_surface_absent"
-    }
-   }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-DATA-W-MATRIX-CELLS-OBJECTIVE",
+     "P1-JULIA-DATA-W-MATRIX-CELLS-INTERCEPTS",
+     "P1-JULIA-DATA-W-MATRIX-CELLS-LAMBDA-LAMBDAT"
+    ],
+    "twin_verdict": "PASS"
+   },
+   "scope_note": "The R batch case replays a full n x p wide-matrix weight flattened to the long vector; the twin is a Poisson fit with a per-cell weight matrix, R through gllvmTMB_wide()'s own normaliser and pivot, Julia weights = its transpose (Julia's layout is traits x units). A weight multiplies its cell's conditional log-density on both sides. gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik), with intercepts and Lambda Lambda'. One Poisson data set only: Julia takes weights on the Poisson Laplace route and refuses them elsewhere (ArgumentError); binomial weights, which gllvmTMB reads as trial counts, are not exercised. gllvmTMB_wide() hardcodes latent()'s default unique = TRUE (a per-trait unique variance the Julia Poisson route does not carry), so the R fit runs its normalise_weights(..., 'wide_matrix', ...) and pivot verbatim and calls gllvmTMB() with unique = FALSE; that substitution is the only difference."
   },
   {
    "source_id": "data/DATA-W-MATRIX-MASK-DROP",
@@ -2843,7 +2933,9 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-DATA-W-MATRIX-MASK-DROP-NATIVE"
+    "P1-JULIA-DATA-W-MATRIX-MASK-DROP-OBJECTIVE",
+    "P1-JULIA-DATA-W-MATRIX-MASK-DROP-INTERCEPTS",
+    "P1-JULIA-DATA-W-MATRIX-MASK-DROP-LAMBDA-LAMBDAT"
    ],
    "disposition": null,
    "p0_batch": "data-batch attempt-data-r3 (wave1)",
@@ -2855,13 +2947,19 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-MATRIX-MASK-DROP.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-MATRIX-MASK-DROP-NATIVE.json"
     ],
-    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+    "batch_case_ids": [
+     "CORE070-DATA-W-MATRIX-MASK-DROP-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_weights_twins_p1.jl, against R-at-P1 values copied from test/fixtures/weights_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -2872,8 +2970,15 @@
     },
     "case_kinds": {
      "CORE070-DATA-W-MATRIX-MASK-DROP-NATIVE": "r_replay_julia_surface_absent"
-    }
-   }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-DATA-W-MATRIX-MASK-DROP-OBJECTIVE",
+     "P1-JULIA-DATA-W-MATRIX-MASK-DROP-INTERCEPTS",
+     "P1-JULIA-DATA-W-MATRIX-MASK-DROP-LAMBDA-LAMBDAT"
+    ],
+    "twin_verdict": "PASS"
+   },
+   "scope_note": "Bound on its fit-level twin under the maintainer ruling of 2026-10-06 (D-319 follow-up). The R batch case is a helper-internal vector shape of normalise_weights() (wide-matrix weights shrunk to the retained observations when NA cells are dropped); that shape itself has no Julia counterpart, so the twin compares its fit-level consequence: a Poisson fit with a per-cell weight matrix that is NA where Y is NA (14 cells), NA cells dropped, R through gllvmTMB_wide()'s own normaliser and pivot, against Julia with those cells missing in Y and weights = the transposed matrix with NaN there. A weight multiplies its cell's conditional log-density on both sides. gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik), with intercepts and Lambda Lambda'. One Poisson data set only: Julia takes weights on the Poisson Laplace route and refuses them elsewhere (ArgumentError); binomial weights, which gllvmTMB reads as trial counts, are not exercised. gllvmTMB_wide() hardcodes latent()'s default unique = TRUE (a per-trait unique variance the Julia Poisson route does not carry), so the R fit runs its normalise_weights(..., 'wide_matrix', ...) and pivot verbatim and calls gllvmTMB() with unique = FALSE; that substitution is the only difference."
   },
   {
    "source_id": "data/DATA-W-MATRIX-MASK-INCLUDE",
@@ -2881,7 +2986,9 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-DATA-W-MATRIX-MASK-INCLUDE-NATIVE"
+    "P1-JULIA-DATA-W-MATRIX-MASK-INCLUDE-OBJECTIVE",
+    "P1-JULIA-DATA-W-MATRIX-MASK-INCLUDE-INTERCEPTS",
+    "P1-JULIA-DATA-W-MATRIX-MASK-INCLUDE-LAMBDA-LAMBDAT"
    ],
    "disposition": null,
    "p0_batch": "data-batch attempt-data-r3 (wave1)",
@@ -2893,13 +3000,19 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-MATRIX-MASK-INCLUDE.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-MATRIX-MASK-INCLUDE-NATIVE.json"
     ],
-    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+    "batch_case_ids": [
+     "CORE070-DATA-W-MATRIX-MASK-INCLUDE-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_weights_twins_p1.jl, against R-at-P1 values copied from test/fixtures/weights_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -2910,8 +3023,15 @@
     },
     "case_kinds": {
      "CORE070-DATA-W-MATRIX-MASK-INCLUDE-NATIVE": "r_replay_julia_surface_absent"
-    }
-   }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-DATA-W-MATRIX-MASK-INCLUDE-OBJECTIVE",
+     "P1-JULIA-DATA-W-MATRIX-MASK-INCLUDE-INTERCEPTS",
+     "P1-JULIA-DATA-W-MATRIX-MASK-INCLUDE-LAMBDA-LAMBDAT"
+    ],
+    "twin_verdict": "PASS"
+   },
+   "scope_note": "Bound on its fit-level twin under the maintainer ruling of 2026-10-06 (D-319 follow-up). The R batch case is a helper-internal vector shape of normalise_weights() (wide-matrix weights zeroed in place at NA cells under response = 'include'); that shape itself has no Julia counterpart, so the twin compares its fit-level consequence: the DATA-W-MATRIX-MASK-DROP fit under response = 'include', against Julia with a placeholder 0 at the 14 cells, mask = the observed cells and the same NaN-bearing weights; R's drop and include objectives agree within 1e-6 (asserted in the twin test). A weight multiplies its cell's conditional log-density on both sides. gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik), with intercepts and Lambda Lambda'. One Poisson data set only: Julia takes weights on the Poisson Laplace route and refuses them elsewhere (ArgumentError); binomial weights, which gllvmTMB reads as trial counts, are not exercised. gllvmTMB_wide() hardcodes latent()'s default unique = TRUE (a per-trait unique variance the Julia Poisson route does not carry), so the R fit runs its normalise_weights(..., 'wide_matrix', ...) and pivot verbatim and calls gllvmTMB() with unique = FALSE; that substitution is the only difference."
   },
   {
    "source_id": "data/DATA-W-MATRIX-MASK-SCALAR",
@@ -2919,7 +3039,9 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-DATA-W-MATRIX-MASK-SCALAR-NATIVE"
+    "P1-JULIA-DATA-W-MATRIX-MASK-SCALAR-OBJECTIVE",
+    "P1-JULIA-DATA-W-MATRIX-MASK-SCALAR-INTERCEPTS",
+    "P1-JULIA-DATA-W-MATRIX-MASK-SCALAR-LAMBDA-LAMBDAT"
    ],
    "disposition": null,
    "p0_batch": "data-batch attempt-data-r3 (wave1)",
@@ -2931,13 +3053,19 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-MATRIX-MASK-SCALAR.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-MATRIX-MASK-SCALAR-NATIVE.json"
     ],
-    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+    "batch_case_ids": [
+     "CORE070-DATA-W-MATRIX-MASK-SCALAR-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_weights_twins_p1.jl, against R-at-P1 values copied from test/fixtures/weights_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -2948,8 +3076,15 @@
     },
     "case_kinds": {
      "CORE070-DATA-W-MATRIX-MASK-SCALAR-NATIVE": "r_replay_julia_surface_absent"
-    }
-   }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-DATA-W-MATRIX-MASK-SCALAR-OBJECTIVE",
+     "P1-JULIA-DATA-W-MATRIX-MASK-SCALAR-INTERCEPTS",
+     "P1-JULIA-DATA-W-MATRIX-MASK-SCALAR-LAMBDA-LAMBDAT"
+    ],
+    "twin_verdict": "PASS"
+   },
+   "scope_note": "Bound on its fit-level twin under the maintainer ruling of 2026-10-06 (D-319 follow-up). The R batch case is a helper-internal vector shape of normalise_weights() (a scalar weight broadcast to the retained-observation count when NA cells are dropped); that shape itself has no Julia counterpart, so the twin compares its fit-level consequence: a Poisson fit with weight 2 on every cell and the 14 NA cells dropped, R through gllvmTMB_wide(), against Julia with those cells missing in Y and weights = 2.0. A weight multiplies its cell's conditional log-density on both sides. gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik), with intercepts and Lambda Lambda'. One Poisson data set only: Julia takes weights on the Poisson Laplace route and refuses them elsewhere (ArgumentError); binomial weights, which gllvmTMB reads as trial counts, are not exercised. gllvmTMB_wide() hardcodes latent()'s default unique = TRUE (a per-trait unique variance the Julia Poisson route does not carry), so the R fit runs its normalise_weights(..., 'wide_matrix', ...) and pivot verbatim and calls gllvmTMB() with unique = FALSE; that substitution is the only difference."
   },
   {
    "source_id": "data/DATA-W-MATRIX-SCALAR",
@@ -2957,7 +3092,9 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-DATA-W-MATRIX-SCALAR-NATIVE"
+    "P1-JULIA-DATA-W-MATRIX-SCALAR-OBJECTIVE",
+    "P1-JULIA-DATA-W-MATRIX-SCALAR-INTERCEPTS",
+    "P1-JULIA-DATA-W-MATRIX-SCALAR-LAMBDA-LAMBDAT"
    ],
    "disposition": null,
    "p0_batch": "data-batch attempt-data-r3 (wave1)",
@@ -2969,13 +3106,19 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-MATRIX-SCALAR.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-MATRIX-SCALAR-NATIVE.json"
     ],
-    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+    "batch_case_ids": [
+     "CORE070-DATA-W-MATRIX-SCALAR-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_weights_twins_p1.jl, against R-at-P1 values copied from test/fixtures/weights_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -2986,8 +3129,15 @@
     },
     "case_kinds": {
      "CORE070-DATA-W-MATRIX-SCALAR-NATIVE": "r_replay_julia_surface_absent"
-    }
-   }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-DATA-W-MATRIX-SCALAR-OBJECTIVE",
+     "P1-JULIA-DATA-W-MATRIX-SCALAR-INTERCEPTS",
+     "P1-JULIA-DATA-W-MATRIX-SCALAR-LAMBDA-LAMBDAT"
+    ],
+    "twin_verdict": "PASS"
+   },
+   "scope_note": "The R batch case replays a scalar wide-matrix weight broadcast to every cell; the twin is a Poisson fit with weight 2 on every cell, R through gllvmTMB_wide()'s own normaliser and pivot, Julia weights = 2.0. A weight multiplies its cell's conditional log-density on both sides. gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik), with intercepts and Lambda Lambda'. One Poisson data set only: Julia takes weights on the Poisson Laplace route and refuses them elsewhere (ArgumentError); binomial weights, which gllvmTMB reads as trial counts, are not exercised. gllvmTMB_wide() hardcodes latent()'s default unique = TRUE (a per-trait unique variance the Julia Poisson route does not carry), so the R fit runs its normalise_weights(..., 'wide_matrix', ...) and pivot verbatim and calls gllvmTMB() with unique = FALSE; that substitution is the only difference."
   },
   {
    "source_id": "data/DATA-W-MATRIX-UNIT",
@@ -2995,8 +3145,9 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-DATA-W-MATRIX-UNIT-NATIVE",
-    "CORE070-DATA-W-MATRIX-UNIT-NATIVE-NEGATIVE-CONTROL"
+    "P1-JULIA-DATA-W-MATRIX-UNIT-OBJECTIVE",
+    "P1-JULIA-DATA-W-MATRIX-UNIT-INTERCEPTS",
+    "P1-JULIA-DATA-W-MATRIX-UNIT-LAMBDA-LAMBDAT"
    ],
    "disposition": null,
    "p0_batch": "data-batch attempt-data-r3 (wave1)",
@@ -3008,14 +3159,21 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-MATRIX-UNIT.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-MATRIX-UNIT-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-MATRIX-UNIT-NATIVE-NEGATIVE-CONTROL.json"
     ],
-    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+    "batch_case_ids": [
+     "CORE070-DATA-W-MATRIX-UNIT-NATIVE",
+     "CORE070-DATA-W-MATRIX-UNIT-NATIVE-NEGATIVE-CONTROL"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_weights_twins_p1.jl, against R-at-P1 values copied from test/fixtures/weights_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -3029,8 +3187,15 @@
     "case_kinds": {
      "CORE070-DATA-W-MATRIX-UNIT-NATIVE": "r_replay_julia_surface_absent",
      "CORE070-DATA-W-MATRIX-UNIT-NATIVE-NEGATIVE-CONTROL": "r_replay_negative_control"
-    }
-   }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-DATA-W-MATRIX-UNIT-OBJECTIVE",
+     "P1-JULIA-DATA-W-MATRIX-UNIT-INTERCEPTS",
+     "P1-JULIA-DATA-W-MATRIX-UNIT-LAMBDA-LAMBDAT"
+    ],
+    "twin_verdict": "PASS"
+   },
+   "scope_note": "The R batch case replays a per-unit wide-matrix weight vector flattened in R's units x traits order (its negative control pins that order); the twin is a Poisson fit with one weight per unit, R through gllvmTMB_wide()'s own normaliser and pivot, Julia weights = a length-n vector. The fit shows each cell gets its unit's weight, the observable consequence of the order; the order of R's internal long vector itself has no Julia counterpart. A weight multiplies its cell's conditional log-density on both sides. gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik), with intercepts and Lambda Lambda'. One Poisson data set only: Julia takes weights on the Poisson Laplace route and refuses them elsewhere (ArgumentError); binomial weights, which gllvmTMB reads as trial counts, are not exercised. gllvmTMB_wide() hardcodes latent()'s default unique = TRUE (a per-trait unique variance the Julia Poisson route does not carry), so the R fit runs its normalise_weights(..., 'wide_matrix', ...) and pivot verbatim and calls gllvmTMB() with unique = FALSE; that substitution is the only difference."
   },
   {
    "source_id": "data/DATA-W-NULL",
@@ -3038,7 +3203,9 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-DATA-W-NULL-NATIVE"
+    "P1-JULIA-DATA-W-NULL-OBJECTIVE",
+    "P1-JULIA-DATA-W-NULL-INTERCEPTS",
+    "P1-JULIA-DATA-W-NULL-LAMBDA-LAMBDAT"
    ],
    "disposition": null,
    "p0_batch": "data-batch attempt-data-r3 (wave1)",
@@ -3050,13 +3217,19 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-NULL.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-NULL-NATIVE.json"
     ],
-    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+    "batch_case_ids": [
+     "CORE070-DATA-W-NULL-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_weights_twins_p1.jl, against R-at-P1 values copied from test/fixtures/weights_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -3067,8 +3240,15 @@
     },
     "case_kinds": {
      "CORE070-DATA-W-NULL-NATIVE": "r_replay_julia_surface_absent"
-    }
-   }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-DATA-W-NULL-OBJECTIVE",
+     "P1-JULIA-DATA-W-NULL-INTERCEPTS",
+     "P1-JULIA-DATA-W-NULL-LAMBDA-LAMBDAT"
+    ],
+    "twin_verdict": "PASS"
+   },
+   "scope_note": "The R batch case replays normalise_weights(NULL) to NULL; the twin is the unweighted Poisson fit (p = 6, n = 120, one latent factor), R weights = NULL against Julia fit_gllvm(Y; family = Poisson(), K = 1) with weights omitted; the twin test also asserts that weights = nothing gives the identical fit. A weight multiplies its cell's conditional log-density on both sides. gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik), with intercepts and Lambda Lambda'. One Poisson data set only: Julia takes weights on the Poisson Laplace route and refuses them elsewhere (ArgumentError); binomial weights, which gllvmTMB reads as trial counts, are not exercised."
   },
   {
    "source_id": "data/DATA-W-ZERO",
@@ -3076,7 +3256,9 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-DATA-W-ZERO-NATIVE"
+    "P1-JULIA-DATA-W-ZERO-OBJECTIVE",
+    "P1-JULIA-DATA-W-ZERO-INTERCEPTS",
+    "P1-JULIA-DATA-W-ZERO-LAMBDA-LAMBDAT"
    ],
    "disposition": null,
    "p0_batch": "data-batch attempt-data-r3 (wave1)",
@@ -3088,13 +3270,19 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
    },
-   "evidence_tier": "needs_surface_r_side_measured",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-ZERO.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-ZERO-NATIVE.json"
     ],
-    "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no weights surface (see each receipt's julia_fit_time_surface_probe)"
+    "batch_case_ids": [
+     "CORE070-DATA-W-ZERO-NATIVE"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_weights_twins_p1.jl, against R-at-P1 values copied from test/fixtures/weights_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -3105,8 +3293,15 @@
     },
     "case_kinds": {
      "CORE070-DATA-W-ZERO-NATIVE": "r_replay_julia_surface_absent"
-    }
-   }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-DATA-W-ZERO-OBJECTIVE",
+     "P1-JULIA-DATA-W-ZERO-INTERCEPTS",
+     "P1-JULIA-DATA-W-ZERO-LAMBDA-LAMBDAT"
+    ],
+    "twin_verdict": "PASS"
+   },
+   "scope_note": "Bound on its fit-level twin under the maintainer ruling of 2026-10-06 (D-319 follow-up). The R batch case is a helper-internal vector shape of normalise_weights() (an all-zero length-6 vector returned unchanged); that shape itself has no Julia counterpart, so the twin compares its fit-level consequence: a Poisson fit through the long API with weight 0 on 15 of 720 rows and 1 elsewhere, against Julia with the same p x n matrix (an all-zero fit is a flat objective with nothing to compare); the twin test also asserts that the zero-weight fit equals the fit with those cells masked. A weight multiplies its cell's conditional log-density on both sides. gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik), with intercepts and Lambda Lambda'. One Poisson data set only: Julia takes weights on the Poisson Laplace route and refuses them elsewhere (ArgumentError); binomial weights, which gllvmTMB reads as trial counts, are not exercised."
   },
   {
    "source_id": "data/RD-URBANISATION-BINOMIAL",

@@ -914,7 +914,16 @@ Base.show(io::IO, fit::GllvmFit) =
 # ---------------------------------------------------------------------------
 
 _loadings(fit::PoissonFit) = fit.Λ
-_loglik(fit::PoissonFit)   = fit.loglik
+# A weighted fit maximises a weighted objective, not a likelihood: as gllvmTMB's logLik()
+# (which aborts for non-unit weights), loglikelihood / aic / bic refuse it. The objective
+# itself stays in `fit.loglik`.
+function _loglik(fit::PoissonFit)
+    fit.weights === nothing || throw(ArgumentError(
+        "the log-likelihood is undefined for a fit with observation weights: it maximised a " *
+        "weighted objective, not an ordinary likelihood (fit.loglik holds that objective). " *
+        "Refit without weights for likelihood-based comparison (loglikelihood, aic, bic)."))
+    return fit.loglik
+end
 
 function _nparams(fit::PoissonFit)
     p, K = size(fit.Λ)
@@ -958,6 +967,12 @@ function getLV(fit::PoissonFit, Y::AbstractMatrix;
     end
     eltype(Y)<:Integer || throw(ArgumentError("Laplace Poisson getLV currently requires integer responses"))
     p, n = size(Y)
+    # A weighted fit's modes are those of the weighted joint (as gllvmTMB's), which are
+    # defined for the training cells only.
+    Wt = fit.weights
+    Wt === nothing || size(Y) == size(Wt) || throw(ArgumentError(
+        "getLV: this Poisson fit was weighted; its latent modes are defined on the training " *
+        "data ($(size(Wt, 1))×$(size(Wt, 2))) only, got Y of size $(size(Y, 1))×$(size(Y, 2))"))
     O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "getLV")
     Nm = N === nothing ? fill(1, p, n) : N
     K = size(fit.Λ, 2)
@@ -970,8 +985,11 @@ function getLV(fit::PoissonFit, Y::AbstractMatrix;
     @inbounds for s in 1:n
         mi = mask === nothing ? nothing : view(mask, :, s)
         oi = _site_offset(O, lv_offset, s)
-        Z[:, s] = _laplace_mode(Poisson(), view(Y, :, s), view(Nm, :, s), fit.Λ,
-                                fit.β, fit.link; mask = mi, offset = oi)
+        Z[:, s] = Wt === nothing ?
+            _laplace_mode(Poisson(), view(Y, :, s), view(Nm, :, s), fit.Λ,
+                          fit.β, fit.link; mask = mi, offset = oi) :
+            _laplace_mode(Poisson(), view(Y, :, s), view(Nm, :, s), fit.Λ,
+                          fit.β, fit.link; mask = mi, offset = oi, weights = view(Wt, :, s))
     end
     Zt = permutedims(Z)
     Zout = component === :innovation ? Zt : Zmean .+ Zt
