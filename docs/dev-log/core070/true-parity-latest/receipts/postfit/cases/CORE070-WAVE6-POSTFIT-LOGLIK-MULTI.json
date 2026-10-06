@@ -6,19 +6,19 @@
   "source_ids": [
     "postfit/POSTFIT-SURFACE-logLik.gllvmTMB_multi"
   ],
-  "batch": "tools/core070_wave6_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1 (contract from PR #567)",
+  "batch": "tools/core070_wave6_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1 (contract from PR #567; nobs case rewritten as integer_equality under maintainer ruling 2026-10-05, D-319, item N2)",
   "harness_kind": "point",
   "harness_pass": true,
-  "batch_status": "FAIL",
+  "batch_status": "PASS",
   "batch_verifier": {
     "tool": "tools/core070_verify_wave6_conversion_batch.py",
     "argv": "tools/core070_verify_wave6_conversion_batch.py {state}",
-    "status": "FAIL",
-    "exit_code": 1,
+    "status": "PASS",
+    "exit_code": 0,
     "accept_marker": "CORE070_WAVE6_CONVERSION_STATE_OK",
     "log": "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave6-conversion-p1/verify.txt"
   },
-  "batch_status_note": "The wave6 batch receipt reads FAIL, and tools/core070_verify_wave6_conversion_batch.py rejects the state, because of one case, CORE070-WAVE6-POSTFIT-NOBS-MULTI (own_receipt_defect): its frozen expectation that Julia nobs returns n = 80 no longer holds (Julia now returns p*n = 400, as R does). The other nine cases pass; each case receipt carries its own verdict.",
+  "batch_status_note": "",
   "r_call": "as.numeric(logLik(fit_g))",
   "julia_call": "[GLLVM.loglikelihood(fit)]  # StatsAPI.loglikelihood(fit::AnyGllvmFit) = _loglik(fit), src/postfit.jl:580",
   "raw": [
@@ -31,10 +31,10 @@
   "gllvmtmb_version": "0.7.1",
   "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit": "681c4c3ca666e630470bba01a057bc88158b85f3",
+  "glvmodels_commit": "6cf3d6d9ab64113e33ef73335d9e9aab0979c6d2",
   "glvmodels_worktree_dirty": [],
-  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
-  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "glvmodels_src_tree": "973683585a8985711f04aea561af0fef725a350d",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=1",
   "comparison": {
     "pin": "P1",
     "cases": [
