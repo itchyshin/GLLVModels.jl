@@ -2,6 +2,30 @@
 
 ## Development
 
+- **Observation weights on the Poisson Laplace route (DATA-W-* rows).** `fit_gllvm(Y; family =
+  Poisson(), K, weights)`, `fit_poisson_gllvm(Y; K, weights)` and `gllvm(@formula(y ~ 1), Y,
+  data; family = Poisson(), weights)` take observation weights with gllvmTMB's meaning: a weight
+  multiplies its cell's conditional log-density (0 drops the cell, fractional weights are
+  allowed). The weights enter the shared Laplace mode code (`src/families/laplace.jl`): score,
+  Fisher weight, log-det weight and log-density of each cell are scaled by its weight, and
+  `weights = nothing` takes the old statements unchanged; `test/test_weights_byte_identity.jl`
+  compares twelve unweighted fits (Poisson, NB2 shared and grouped, binomial, Gaussian,
+  delta-Gamma, Poisson AGHQ, the Poisson marginal) bit for bit with origin/main's outputs captured
+  in a separate process. Shapes: a scalar, a length-`n` vector (one weight per unit), or a `p×n`
+  matrix (`1×n` / `p×1` stretch); values must be finite and non-negative at observed cells, and
+  unobserved cells are ignored. Every other route refuses weights with an `ArgumentError` naming
+  what blocks it (other families; binomial, whose gllvmTMB weights are trial counts; `row_eff`,
+  `disp_group`, `pervar`, grouping, phylo, `X_lv`, AGHQ, an estimated `K`, formula covariates).
+  A weighted `PoissonFit` stores its weights; `fit.loglik` holds the maximised weighted
+  objective, `getLV` / `predict` use the weighted modes on the training data, and
+  `loglikelihood` / `aic` / `bic` / `confint` / `latent_score_sd` refuse a weighted fit, as
+  gllvmTMB's `logLik()` aborts for non-unit weights. Fit-level twins against gllvmTMB P1
+  (`test/test_weights_twins_p1.jl`, one Poisson data set, p = 6, n = 120) cover all 13 weights
+  rows; seven bind (W-NULL, W-LONG, W-FRACTIONAL, W-MATRIX-SCALAR, W-MATRIX-UNIT,
+  W-MATRIX-CELLS, W-DF-UNIT) and the five mask rows and W-ZERO cite their twin as non-binding
+  pending the maintainer's decision on fit-level twins for helper-internal shapes. Not covered:
+  weights on any family other than Poisson.
+
 - **Six covariance rows bound to P1 fit twins (COV-ORD-LATENT-BARE, -DEFAULT, -COMMON;
   COV-PHYLO-DEP, -A-ALIAS, -FOLDED-UNIQUE).** These scoreboard rows carried only R-side
   formula-grammar checks with no fit number. Each is now bound by a fit-level twin: R fits at
