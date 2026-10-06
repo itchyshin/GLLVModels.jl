@@ -41,7 +41,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-namespace.json",
-   "sha256": "47052a67083ac3bfcfda1bbb19d014067b4ded4251e826b7555d40a69f78d2cd",
+   "sha256": "9ad836e94aad1f821799cdbd9730c544e355bc2bb40617e55af6f65654b50cc1",
    "rows": 69
   },
   {
@@ -8328,17 +8328,37 @@
    "classification": "required_core",
    "arc": "A3",
    "r_file_line": null,
-   "executable_case_ids": [],
+   "executable_case_ids": [
+    "FIT-MODE-ANIMAL-DEP",
+    "FIT-MODE-ANIMAL-DEP-FORMULA-INTERFACE"
+   ],
    "p0_case_ids": [
     "SLOPE-ANIMAL-DEP-BAR",
     "SLOPE-ANIMAL-DEP-DBAR"
    ],
-   "evidence": {},
-   "measured_against": null,
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-DEP.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-DEP-FORMULA-INTERFACE.json"
+    ],
+    "ruling": "Ruling 2 (rulings page 2026-10-04), signed under D-319 on 2026-10-05: a namespace keyword row binds on its native and formula-interface fits when its covariance row stays unbound at the public-R-bridge boundary; the export is a formula marker, so the fit is the estimand, and the bridge refusal is an R-side route. Signature source: vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer.",
+    "tier": "numeric: R gllvmTMB at P1 with animal_dep(0+trait|species,A=C) against Julia fit_gaussian_sources with SourceCovariance(C; mode = :dep) (native) and gllvm(formula; sources = [that SourceCovariance]) on the wide and long routes (formula interface), Gaussian, 36 sites, 3 traits; loglik, beta and the covariance within the harness tolerances (runparity covariance batch at P1, W2-2 receipts of PR #786; the same cases as covariance/COV-ANIMAL-DEP). The PUBLIC-R-BRIDGE case of covariance/COV-ANIMAL-DEP is not used: gllvmTMB(engine = \"julia\") refuses the term before any Julia call, and that covariance row stays unbound.",
+    "p0_case_ids_superseded": [
+     "SLOPE-ANIMAL-DEP-BAR",
+     "SLOPE-ANIMAL-DEP-DBAR"
+    ]
+   },
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "disposition": null,
-   "reason": "Not re-measured at P1 in this PR.",
-   "not_measured_reason": "P0 evidence came from a non-namespace batch (bulk triage acceptance (maintainer decision round2-3 #9, 2026-09-01)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here.",
-   "evidence_tier": "registration"
+   "reason": "R export(animal_dep) is a formula marker; bound on the native and formula-interface fits of covariance/COV-ANIMAL-DEP under ruling 2 (D-319).",
+   "evidence_tier": "numeric",
+   "measured_result": {
+    "case_verdicts": {
+     "FIT-MODE-ANIMAL-DEP": "PASS",
+     "FIT-MODE-ANIMAL-DEP-FORMULA-INTERFACE": "PASS"
+    },
+    "row_verdict": "PASS"
+   }
   },
   {
    "source_id": "namespace/export/animal_indep",
@@ -8347,17 +8367,43 @@
    "classification": "required_core",
    "arc": "A3",
    "r_file_line": null,
-   "executable_case_ids": [],
+   "executable_case_ids": [
+    "FIT-MODE-ANIMAL-INDEP",
+    "FIT-MODE-ANIMAL-COMMON",
+    "FIT-MODE-ANIMAL-INDEP-FORMULA-INTERFACE",
+    "FIT-MODE-ANIMAL-COMMON-FORMULA-INTERFACE"
+   ],
    "p0_case_ids": [
     "SLOPE-ANIMAL-INDEP-BAR",
     "SLOPE-ANIMAL-INDEP-DBAR"
    ],
-   "evidence": {},
-   "measured_against": null,
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-INDEP.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-COMMON.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-INDEP-FORMULA-INTERFACE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-COMMON-FORMULA-INTERFACE.json"
+    ],
+    "ruling": "Ruling 2 (rulings page 2026-10-04), signed under D-319 on 2026-10-05: a namespace keyword row binds on its native and formula-interface fits when its covariance row stays unbound at the public-R-bridge boundary; the export is a formula marker, so the fit is the estimand, and the bridge refusal is an R-side route. Signature source: vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer.",
+    "tier": "numeric: R gllvmTMB at P1 with animal_indep(0+trait|species,A=C) and animal_indep(..., common=TRUE) against Julia fit_gaussian_sources with SourceCovariance(C; mode = :indep, common = false / true) (native) and gllvm(formula; sources = [that SourceCovariance]) on the wide and long routes (formula interface), Gaussian, 36 sites, 3 traits; loglik, beta and the covariance within the harness tolerances (runparity covariance batch at P1, W2-2 receipts of PR #786; the same cases as covariance/COV-ANIMAL-INDEP). The PUBLIC-R-BRIDGE case of covariance/COV-ANIMAL-INDEP is not used: gllvmTMB(engine = \"julia\") refuses the term before any Julia call, and that covariance row stays unbound.",
+    "p0_case_ids_superseded": [
+     "SLOPE-ANIMAL-INDEP-BAR",
+     "SLOPE-ANIMAL-INDEP-DBAR"
+    ]
+   },
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "disposition": null,
-   "reason": "Not re-measured at P1 in this PR.",
-   "not_measured_reason": "P0 evidence came from a non-namespace batch (bulk triage acceptance (maintainer decision round2-3 #9, 2026-09-01)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here.",
-   "evidence_tier": "registration"
+   "reason": "R export(animal_indep) is a formula marker; bound on the native and formula-interface fits of covariance/COV-ANIMAL-INDEP under ruling 2 (D-319).",
+   "evidence_tier": "numeric",
+   "measured_result": {
+    "case_verdicts": {
+     "FIT-MODE-ANIMAL-INDEP": "PASS",
+     "FIT-MODE-ANIMAL-COMMON": "PASS",
+     "FIT-MODE-ANIMAL-INDEP-FORMULA-INTERFACE": "PASS",
+     "FIT-MODE-ANIMAL-COMMON-FORMULA-INTERFACE": "PASS"
+    },
+    "row_verdict": "PASS"
+   }
   },
   {
    "source_id": "namespace/export/animal_latent",
@@ -8563,25 +8609,34 @@
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ORD-DEP.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ORD-DEP-FORMULA-INTERFACE.json"
+    ],
+    "ruling": "Ruling 2 (rulings page 2026-10-04), signed under D-319 on 2026-10-05: a namespace keyword row binds on its native and formula-interface fits when its covariance row stays unbound at the public-R-bridge boundary; the export is a formula marker, so the fit is the estimand, and the bridge refusal is an R-side route. Signature source: vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer.",
+    "tier": "numeric: R gllvmTMB at P1 with dep(0+trait|site) against Julia fit_gaussian_sources with SourceCovariance(I; mode = :dep) (native) and gllvm(formula; sources = [that SourceCovariance]) on the wide and long routes (formula interface), Gaussian, 36 sites, 3 traits; loglik, beta and the covariance within the harness tolerances (runparity covariance batch at P1, W2-2 receipts of PR #786; the same cases as covariance/COV-ORD-DEP). The PUBLIC-R-BRIDGE case of covariance/COV-ORD-DEP is not used: gllvmTMB(engine = \"julia\") refuses the term before any Julia call, and that covariance row stays unbound.",
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-DEP-FORMULA-KEYWORD.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-DEP-FORMULA-KEYWORD"
+    ]
    },
-   "executable_case_ids": [],
-   "planned_case_ids": [
-    "CORE070-NAMESPACE-DEP-FORMULA-KEYWORD"
+   "executable_case_ids": [
+    "FIT-MODE-ORD-DEP",
+    "FIT-MODE-ORD-DEP-FORMULA-INTERFACE"
    ],
-   "reason": "R side registered and defined at P1; Julia surface still missing or partial at the branch head (see the case receipt's julia_check.note). Measured, not twinned.",
-   "disposition": "BLOCKED_NEEDS_JULIA_SURFACE",
-   "evidence_tier": "registration",
+   "reason": "R export(dep) is a formula marker; bound on the native and formula-interface fits of covariance/COV-ORD-DEP under ruling 2 (D-319).",
+   "disposition": null,
+   "evidence_tier": "numeric",
    "measured_result": {
-    "case_verdict": "PASS",
-    "category": "needs_surface_as_expected",
-    "reason": "Julia facts match the recorded needs-surface expectation; not parity"
-   }
+    "case_verdicts": {
+     "FIT-MODE-ORD-DEP": "PASS",
+     "FIT-MODE-ORD-DEP-FORMULA-INTERFACE": "PASS"
+    },
+    "row_verdict": "PASS"
+   },
+   "scope_note": "Julia has no dep() formula keyword: the same model is reached by SourceCovariance(mode = :dep) on the native and formula routes. For the ordinary dependent source R's U and sigma^2 are not separately identified, so the covariance comparand is the total U + sigma^2 I (as the harness compares it). The Tier 0 registration receipt (Julia symbol dep absent) is kept under registration_receipts."
   },
   {
    "source_id": "namespace/export/extract_Gamma",
@@ -9622,16 +9677,35 @@
    "classification": "required_core",
    "arc": "A3",
    "r_file_line": null,
-   "executable_case_ids": [],
+   "executable_case_ids": [
+    "FIT-MODE-KERNEL-DEP",
+    "FIT-MODE-KERNEL-DEP-FORMULA-INTERFACE"
+   ],
    "p0_case_ids": [
     "CORE070-WAVE6-KERNEL-DEP-FIT"
    ],
-   "evidence": {},
-   "measured_against": null,
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-DEP.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-DEP-FORMULA-INTERFACE.json"
+    ],
+    "ruling": "Ruling 2 (rulings page 2026-10-04), signed under D-319 on 2026-10-05: a namespace keyword row binds on its native and formula-interface fits when its covariance row stays unbound at the public-R-bridge boundary; the export is a formula marker, so the fit is the estimand, and the bridge refusal is an R-side route. Signature source: vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer.",
+    "tier": "numeric: R gllvmTMB at P1 with kernel_dep(species,K=C,name=\"known\") against Julia fit_gaussian_sources with SourceCovariance(C; mode = :dep) (native) and gllvm(formula; sources = [that SourceCovariance]) on the wide and long routes (formula interface), Gaussian, 36 sites, 3 traits; loglik, beta and the covariance within the harness tolerances (runparity covariance batch at P1, W2-2 receipts of PR #786; the same cases as covariance/COV-KERNEL-DEP). The PUBLIC-R-BRIDGE case of covariance/COV-KERNEL-DEP is not used: gllvmTMB(engine = \"julia\") refuses the term before any Julia call, and that covariance row stays unbound.",
+    "p0_case_ids_superseded": [
+     "CORE070-WAVE6-KERNEL-DEP-FIT"
+    ]
+   },
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "disposition": null,
-   "reason": "Not re-measured at P1 in this PR.",
-   "not_measured_reason": "P0 evidence came from a non-namespace batch (wave6-conversion (attempt7)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here.",
-   "evidence_tier": "registration"
+   "reason": "R export(kernel_dep) is a formula marker; bound on the native and formula-interface fits of covariance/COV-KERNEL-DEP under ruling 2 (D-319).",
+   "evidence_tier": "numeric",
+   "measured_result": {
+    "case_verdicts": {
+     "FIT-MODE-KERNEL-DEP": "PASS",
+     "FIT-MODE-KERNEL-DEP-FORMULA-INTERFACE": "PASS"
+    },
+    "row_verdict": "PASS"
+   }
   },
   {
    "source_id": "namespace/export/kernel_indep",
@@ -9640,16 +9714,41 @@
    "classification": "required_core",
    "arc": "A3",
    "r_file_line": null,
-   "executable_case_ids": [],
+   "executable_case_ids": [
+    "FIT-MODE-KERNEL-INDEP",
+    "FIT-MODE-KERNEL-COMMON",
+    "FIT-MODE-KERNEL-INDEP-FORMULA-INTERFACE",
+    "FIT-MODE-KERNEL-COMMON-FORMULA-INTERFACE"
+   ],
    "p0_case_ids": [
     "CORE070-WAVE6-KERNEL-INDEP-FIT"
    ],
-   "evidence": {},
-   "measured_against": null,
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-INDEP.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-COMMON.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-INDEP-FORMULA-INTERFACE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-COMMON-FORMULA-INTERFACE.json"
+    ],
+    "ruling": "Ruling 2 (rulings page 2026-10-04), signed under D-319 on 2026-10-05: a namespace keyword row binds on its native and formula-interface fits when its covariance row stays unbound at the public-R-bridge boundary; the export is a formula marker, so the fit is the estimand, and the bridge refusal is an R-side route. Signature source: vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer.",
+    "tier": "numeric: R gllvmTMB at P1 with kernel_indep(species,K=C,name=\"known\") and kernel_indep(..., common=TRUE) against Julia fit_gaussian_sources with SourceCovariance(C; mode = :indep, common = false / true) (native) and gllvm(formula; sources = [that SourceCovariance]) on the wide and long routes (formula interface), Gaussian, 36 sites, 3 traits; loglik, beta and the covariance within the harness tolerances (runparity covariance batch at P1, W2-2 receipts of PR #786; the same cases as covariance/COV-KERNEL-INDEP). The PUBLIC-R-BRIDGE case of covariance/COV-KERNEL-INDEP is not used: gllvmTMB(engine = \"julia\") refuses the term before any Julia call, and that covariance row stays unbound.",
+    "p0_case_ids_superseded": [
+     "CORE070-WAVE6-KERNEL-INDEP-FIT"
+    ]
+   },
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "disposition": null,
-   "reason": "Not re-measured at P1 in this PR.",
-   "not_measured_reason": "P0 evidence came from a non-namespace batch (wave6-conversion (attempt7)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here.",
-   "evidence_tier": "registration"
+   "reason": "R export(kernel_indep) is a formula marker; bound on the native and formula-interface fits of covariance/COV-KERNEL-INDEP under ruling 2 (D-319).",
+   "evidence_tier": "numeric",
+   "measured_result": {
+    "case_verdicts": {
+     "FIT-MODE-KERNEL-INDEP": "PASS",
+     "FIT-MODE-KERNEL-COMMON": "PASS",
+     "FIT-MODE-KERNEL-INDEP-FORMULA-INTERFACE": "PASS",
+     "FIT-MODE-KERNEL-COMMON-FORMULA-INTERFACE": "PASS"
+    },
+    "row_verdict": "PASS"
+   }
   },
   {
    "source_id": "namespace/export/kernel_latent",
