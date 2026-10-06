@@ -231,6 +231,8 @@ def main():
     ap.add_argument("--self-test", action="store_true")
     ap.add_argument("--raw-dir", type=Path)
     ap.add_argument("--write", action="store_true")
+    ap.add_argument("--source-id", action="append", choices=sorted(CASES.values()),
+                    help="write only these approved source rows for a staged checkpoint; all six raw cases are still validated")
     ap.add_argument("--finalize", action="store_true", help="validate raw outputs and write their provenance metadata")
     args = ap.parse_args()
     if args.self_test:
@@ -309,7 +311,10 @@ def main():
         return
     dest = BASE / "derived"
     dest.mkdir(parents=True, exist_ok=True)
+    selected = set(args.source_id or receipts)
     for sid, rec in receipts.items():
+        if sid not in selected:
+            continue
         name = sid.split("/", 1)[1]
         (dest / f"{name}.json").write_text(json.dumps(rec, indent=2) + "\n")
     (dest / "behaviour-equivalence.json").write_text(json.dumps(eq, indent=2) + "\n")
