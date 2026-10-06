@@ -64,11 +64,11 @@
     }
   },
   "counts": {
-    "numeric_pass": 47,
+    "numeric_pass": 46,
     "numeric_fail": 0,
     "numeric_held_batch_verifier_failed": 0,
     "numeric_non_discriminating": 0,
-    "partial_non_numeric_case": 3,
+    "partial_non_numeric_case": 4,
     "needs_surface_not_executed": 0,
     "retired_at_p1_not_measured": 2,
     "not_measured": 0
@@ -1742,47 +1742,18 @@
       "arc": "A3",
       "carry_scan_status": "DANGLING",
       "executable_case_ids": [
-        "P1-JULIA-MC-SIMULATE-DEFAULT-MEAN-T1",
-        "P1-JULIA-MC-SIMULATE-DEFAULT-MEAN-T2",
-        "P1-JULIA-MC-SIMULATE-DEFAULT-MEAN-T3",
-        "P1-JULIA-MC-SIMULATE-DEFAULT-MEAN-T4",
-        "P1-JULIA-MC-SIMULATE-DEFAULT-MEAN-T5",
-        "P1-JULIA-MC-SIMULATE-DEFAULT-COV-1-1",
-        "P1-JULIA-MC-SIMULATE-DEFAULT-COV-1-2",
-        "P1-JULIA-MC-SIMULATE-DEFAULT-COV-2-2",
-        "P1-JULIA-MC-SIMULATE-DEFAULT-COV-1-3",
-        "P1-JULIA-MC-SIMULATE-DEFAULT-COV-2-3",
-        "P1-JULIA-MC-SIMULATE-DEFAULT-COV-3-3",
-        "P1-JULIA-MC-SIMULATE-DEFAULT-COV-1-4",
-        "P1-JULIA-MC-SIMULATE-DEFAULT-COV-2-4",
-        "P1-JULIA-MC-SIMULATE-DEFAULT-COV-3-4",
-        "P1-JULIA-MC-SIMULATE-DEFAULT-COV-4-4",
-        "P1-JULIA-MC-SIMULATE-DEFAULT-COV-1-5",
-        "P1-JULIA-MC-SIMULATE-DEFAULT-COV-2-5",
-        "P1-JULIA-MC-SIMULATE-DEFAULT-COV-3-5",
-        "P1-JULIA-MC-SIMULATE-DEFAULT-COV-4-5",
-        "P1-JULIA-MC-SIMULATE-DEFAULT-COV-5-5",
-        "P1-JULIA-MC-SIMULATE-DEFAULT-CELLVAR-T1",
-        "P1-JULIA-MC-SIMULATE-DEFAULT-CELLVAR-T2",
-        "P1-JULIA-MC-SIMULATE-DEFAULT-CELLVAR-T3",
-        "P1-JULIA-MC-SIMULATE-DEFAULT-CELLVAR-T4",
-        "P1-JULIA-MC-SIMULATE-DEFAULT-CELLVAR-T5"
+        "CORE070-POSTFIT-SIMULATE-DEFAULT-NATIVE"
       ],
       "disposition": null,
       "uncertain": true,
-      "evidence_tier": "numeric",
+      "evidence_tier": "partial_non_numeric_case",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "receipt": [
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-SIMULATE-DEFAULT-NATIVE.json",
           "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/simulate_default.json"
         ],
-        "non_binding_receipts": [
-          "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-SIMULATE-DEFAULT-NATIVE.json"
-        ],
-        "batch_case_ids": [
-          "CORE070-POSTFIT-SIMULATE-DEFAULT-NATIVE"
-        ],
-        "tier": "numeric (Monte-Carlo moments): R replicate means and standard deviations of each moment copied from test/fixtures/mc_simulate_p1.toml, Julia replicate moments recomputed by tools/true_parity_mc_simulate_receipt.jl with the helpers of test/test_mc_simulate_p1.jl and independent random streams; each moment within the Monte-Carlo tolerance rule of maintainer ruling 2026-10-05 (D-319), item N4, stated before any run (z * sqrt(s_R^2/B_k + s_J^2/B_k), Bonferroni z at familywise alpha 0.01), and a discrimination control fails the same rule. The batch case this row carried is superseded; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+        "tier": "measured at P1 and the harness passes, but at least one case is a verdict, own-consistency, exact-integer, empty-length or default-policy check with no R-vs-Julia number and tolerance, so the row does not bind"
       },
       "measured_result": {
         "case_verdicts": {
@@ -1793,36 +1764,9 @@
         },
         "case_kinds": {
           "CORE070-POSTFIT-SIMULATE-DEFAULT-NATIVE": "paired_policy_check"
-        },
-        "twin_case_ids": [
-          "P1-JULIA-MC-SIMULATE-DEFAULT-MEAN-T1",
-          "P1-JULIA-MC-SIMULATE-DEFAULT-MEAN-T2",
-          "P1-JULIA-MC-SIMULATE-DEFAULT-MEAN-T3",
-          "P1-JULIA-MC-SIMULATE-DEFAULT-MEAN-T4",
-          "P1-JULIA-MC-SIMULATE-DEFAULT-MEAN-T5",
-          "P1-JULIA-MC-SIMULATE-DEFAULT-COV-1-1",
-          "P1-JULIA-MC-SIMULATE-DEFAULT-COV-1-2",
-          "P1-JULIA-MC-SIMULATE-DEFAULT-COV-2-2",
-          "P1-JULIA-MC-SIMULATE-DEFAULT-COV-1-3",
-          "P1-JULIA-MC-SIMULATE-DEFAULT-COV-2-3",
-          "P1-JULIA-MC-SIMULATE-DEFAULT-COV-3-3",
-          "P1-JULIA-MC-SIMULATE-DEFAULT-COV-1-4",
-          "P1-JULIA-MC-SIMULATE-DEFAULT-COV-2-4",
-          "P1-JULIA-MC-SIMULATE-DEFAULT-COV-3-4",
-          "P1-JULIA-MC-SIMULATE-DEFAULT-COV-4-4",
-          "P1-JULIA-MC-SIMULATE-DEFAULT-COV-1-5",
-          "P1-JULIA-MC-SIMULATE-DEFAULT-COV-2-5",
-          "P1-JULIA-MC-SIMULATE-DEFAULT-COV-3-5",
-          "P1-JULIA-MC-SIMULATE-DEFAULT-COV-4-5",
-          "P1-JULIA-MC-SIMULATE-DEFAULT-COV-5-5",
-          "P1-JULIA-MC-SIMULATE-DEFAULT-CELLVAR-T1",
-          "P1-JULIA-MC-SIMULATE-DEFAULT-CELLVAR-T2",
-          "P1-JULIA-MC-SIMULATE-DEFAULT-CELLVAR-T3",
-          "P1-JULIA-MC-SIMULATE-DEFAULT-CELLVAR-T4",
-          "P1-JULIA-MC-SIMULATE-DEFAULT-CELLVAR-T5"
-        ],
-        "twin_verdict": "PASS"
-      }
+        }
+      },
+      "note": "Not bound: the N4 Monte-Carlo twin passes at its recorded Julia seed but failed the pre-registered rule on 7 of 40 alternative Julia seeds (nominal familywise alpha 0.01), so the pass is seed-sensitive; the receipt is kept as non-binding evidence and the rule is unchanged."
     }
   ]
 }

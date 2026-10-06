@@ -23,7 +23,7 @@ Inputs:
 - `docs/dev-log/core070/true-parity-latest/case-map-inference.json` (63 rows, sha256 `7415866b19d061a133b41ca45f16e8a3ac5bdf0292580d1754e1ac32faadd98a`)
 - `docs/dev-log/core070/true-parity-latest/case-map-isdm.json` (21 rows, sha256 `1ffc4904a25c5e6a8bb550333da004b82b731dfa489b17b55375944378149484`)
 - `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `e039c8a024d71d13a489e31928065a619e7d2e93f882d39c54955f98c211a114`)
-- `docs/dev-log/core070/true-parity-latest/case-map-postfit.json` (52 rows, sha256 `69f6390a5456874f1403bd5baf9ee208435a59a7df3f8a0c994c33366cb9506f`)
+- `docs/dev-log/core070/true-parity-latest/case-map-postfit.json` (52 rows, sha256 `bd699a1fceee77f4c93180e15389d0d7bb98736f4034dccccc887204868cb0da`)
 
 ## Totals by family
 
@@ -37,8 +37,8 @@ Inputs:
 | `inference` | 3 | 49 | 10 | 0 | 0 | 1 | 0 | 0 | 0 | 63 |
 | `isdm` | 11 | 0 | 4 | 0 | 0 | 0 | 5 | 1 | 0 | 21 |
 | `namespace` | 51 | 0 | 10 | 5 | 0 | 0 | 0 | 0 | 3 | 69 |
-| `postfit` | 47 | 0 | 4 | 0 | 0 | 1 | 0 | 0 | 0 | 52 |
-| `all` | 180 | 56 | 32 | 5 | 2 | 12 | 18 | 6 | 6 | 317 |
+| `postfit` | 46 | 0 | 4 | 0 | 0 | 2 | 0 | 0 | 0 | 52 |
+| `all` | 179 | 56 | 32 | 5 | 2 | 13 | 18 | 6 | 6 | 317 |
 
 ## P1 twin fixtures present at this head, not bound to any row
 
@@ -452,4 +452,4 @@ decision for the PR that measures it, not something this tool does.
 | postfit-policy-POST-RESIDUAL-CONDITIONAL `postfit-policy/POST-RESIDUAL-CONDITIONAL` | required_core; cases: CORE070-POSTFIT-RESIDUAL-CONDITIONAL-NATIVE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-RESIDUAL-CONDITIONAL-NATIVE.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-policy-POST-RESIDUAL-SCALES `postfit-policy/POST-RESIDUAL-SCALES` | required_core; cases: CORE070-POSTFIT-RESIDUAL-SCALES-NATIVE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-RESIDUAL-SCALES-NATIVE.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | postfit-policy-POST-RESIDUAL-TYPES `postfit-policy/POST-RESIDUAL-TYPES` | required_core; cases: CORE070-POSTFIT-RESIDUAL-TYPES-NATIVE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-RESIDUAL-TYPES-NATIVE.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| postfit-policy-POST-SIMULATE-DEFAULT `postfit-policy/POST-SIMULATE-DEFAULT` | required_core; cases: P1-JULIA-MC-SIMULATE-DEFAULT-MEAN-T1, P1-JULIA-MC-SIMULATE-DEFAULT-MEAN-T2, P1-JULIA-MC-SIMULATE-DEFAULT-MEAN-T3, P1-JULIA-MC-SIMULATE-DEFAULT-MEAN-T4, P1-JULIA-MC-SIMULATE-DEFAULT-MEAN-T5, P1-JULIA-MC-SIMULATE-DEFAULT-COV-1-1, P1-JULIA-MC-SIMULATE-DEFAULT-COV-1-2, P1-JULIA-MC-SIMULATE-DEFAULT-COV-2-2, P1-JULIA-MC-SIMULATE-DEFAULT-COV-1-3, P1-JULIA-MC-SIMULATE-DEFAULT-COV-2-3, P1-JULIA-MC-SIMULATE-DEFAULT-COV-3-3, P1-JULIA-MC-SIMULATE-DEFAULT-COV-1-4, P1-JULIA-MC-SIMULATE-DEFAULT-COV-2-4, P1-JULIA-MC-SIMULATE-DEFAULT-COV-3-4, P1-JULIA-MC-SIMULATE-DEFAULT-COV-4-4, P1-JULIA-MC-SIMULATE-DEFAULT-COV-1-5, P1-JULIA-MC-SIMULATE-DEFAULT-COV-2-5, P1-JULIA-MC-SIMULATE-DEFAULT-COV-3-5, P1-JULIA-MC-SIMULATE-DEFAULT-COV-4-5, P1-JULIA-MC-SIMULATE-DEFAULT-COV-5-5, P1-JULIA-MC-SIMULATE-DEFAULT-CELLVAR-T1, P1-JULIA-MC-SIMULATE-DEFAULT-CELLVAR-T2, P1-JULIA-MC-SIMULATE-DEFAULT-CELLVAR-T3, P1-JULIA-MC-SIMULATE-DEFAULT-CELLVAR-T4, P1-JULIA-MC-SIMULATE-DEFAULT-CELLVAR-T5 | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/simulate_default.json | family postfit; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| postfit-policy-POST-SIMULATE-DEFAULT `postfit-policy/POST-SIMULATE-DEFAULT` | required_core; cases: CORE070-POSTFIT-SIMULATE-DEFAULT-NATIVE | PARTIAL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-SIMULATE-DEFAULT-NATIVE.json, non-binding docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/simulate_default.json | family postfit; evidence_tier partial_non_numeric_case; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |

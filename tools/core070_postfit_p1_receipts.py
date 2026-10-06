@@ -330,6 +330,16 @@ MC_TWIN_TIER = ("numeric (Monte-Carlo moments): R replicate means and standard d
                 "alpha 0.01), and a discrimination control fails the same rule. The batch case this row carried is "
                 "superseded; its receipt is kept under non_binding_receipts and its ids under batch_case_ids")
 MC_TWIN_ROWS = {"postfit/POSTFIT-SURFACE-simulate_unit_trait", "postfit-policy/POST-SIMULATE-DEFAULT"}
+# Monte-Carlo twins that pass at their recorded seeds but do NOT bind. Review of the N4 twins (2026-10-05) re-ran the
+# POST-SIMULATE-DEFAULT Julia side on 40 alternative seeds: 7 of 40 failed the pre-registered rule, against a nominal
+# familywise alpha of 1% (simulate_unit_trait failed 0 of 40 and stays bound). The rule itself is unchanged; the
+# receipt is kept under non_binding_receipts as evidence, with this note, and the row keeps its batch tier.
+HELD_MC_TWINS = {
+    "postfit-policy/POST-SIMULATE-DEFAULT": (
+        "Not bound: the N4 Monte-Carlo twin passes at its recorded Julia seed but failed the pre-registered rule on 7 of "
+        "40 alternative Julia seeds (nominal familywise alpha 0.01), so the pass is seed-sensitive; the receipt is kept "
+        "as non-binding evidence and the rule is unchanged."),
+}
 
 
 # Exact-integer postfit-policy cases (ruling 1): case id -> (r-oracle.json key, quantity).
@@ -585,6 +595,13 @@ def twin_overlay(row):
         return row
     rec = load(path)
     rel = str(path.relative_to(ROOT))
+    if sid in HELD_MC_TWINS:
+        ev = row.setdefault("evidence", {})
+        nb = ev.setdefault("non_binding_receipts", [])
+        if rel not in nb:
+            nb.append(rel)
+        row["note"] = HELD_MC_TWINS[sid]
+        return row
     ok = (rec.get("schema") == "true-parity-julia-twin-receipt/v1" and rec.get("source_ids") == [sid]
           and rec.get("verdict") == "PASS" and rec.get("pin") == "P1" and rec.get("reference_commit") == P1_SHA
           and rec.get("evidence_kind") == "julia_recomputed_vs_recorded_r")
