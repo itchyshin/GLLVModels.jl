@@ -1,3 +1,9 @@
+## 2026-10-06: negative-control CI interpreter provisioning
+
+- Exact PR844 run37520380284 failed32/33 controls because Rscript was absent. Its crossed-fixture control also used a local Juliaup path unavailable to setup-julia runners.
+- Provision base R4.5.3 and Julia1.10 before the controls, using action versions already in repository CI. Resolve Julia from PATH before the existing local fallback. No fits, gllvmTMB package, engine, receipts, signatures, versions or tolerances changed.
+- All33/33 controls pass locally using PATH interpreters. Fresh enforced Emmy gpt-6-luna/medium returned OK for the two-file repair; its review does not certify core-suite success. Hosted rerun remains required.
+
 ## 2026-10-06: independent first-seven review and test-environment repair
 
 - Final fresh Emmy/Pat/Rose panel independently returned receipt-candidate OK at d879a9e21, conditional on package tests and consent. Exactly seven rows bind; X2 304/317, C2 290/297;13 remaining rows and37 C6 names unchanged and unsigned. Documentation at that candidate passed in98.617seconds.

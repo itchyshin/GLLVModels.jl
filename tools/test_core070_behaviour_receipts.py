@@ -504,7 +504,8 @@ def first_seven_panel_crosses_every_trait_source_and_unit():
     jcode = 'using Printf\n' + jpanel + '\nd=panel(); for i in eachindex(d.value); println(join((d.trait[i], d.isdm_source[i], d.unit[i], @sprintf("%.8f", d.value[i]), @sprintf("%.8f", d.log_support[i])), Char(9))); end'
     env = os.environ.copy(); env.update(OPENBLAS_NUM_THREADS="1", OMP_NUM_THREADS="1", JULIA_NUM_THREADS="4")
     rrows = subprocess.check_output(["Rscript", "--vanilla", "-e", rcode], text=True, env=env).splitlines()
-    jrows = subprocess.check_output([str(Path.home() / ".juliaup/bin/julia"), "--startup-file=no", "-e", jcode], text=True, env=env).splitlines()
+    julia = shutil.which("julia") or str(Path.home() / ".juliaup/bin/julia")
+    jrows = subprocess.check_output([julia, "--startup-file=no", "-e", jcode], text=True, env=env).splitlines()
     cells = [(t, source, unit) for t in ("a", "b") for source in ("count", "detect") for unit in ("u1", "u2")]
     expected = ["\t".join((t, source, unit, f"{1+i%4 if source == 'count' else i%2:.8f}", f"{0.05+(i-1)*0.05:.8f}")) for i,(t,source,unit) in enumerate(cells, 1)]
     assert rrows == jrows == expected
