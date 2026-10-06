@@ -609,6 +609,30 @@ def comparison_block_problem(cmp_, p, covered):
     return None
 
 
+# Maintainer ruling 2026-10-05 (D-319), ruling 1: the checker's BRIDGE_READBACK_ROW_PREFIX (keep in step, a test fails on
+# drift). A live_bridge_readback receipt binds a numeric row only for these rows, and only on the row's own cases.
+BRIDGE_READBACK_ROW_PREFIX = {
+    "namespace/S3method/fitted,gllvmTMB_julia": "P1-BRIDGE-READBACK-FITTED-",
+    "namespace/S3method/predict,gllvmTMB_julia": "P1-BRIDGE-READBACK-PREDICT-",
+    "namespace/S3method/residuals,gllvmTMB_julia": "P1-BRIDGE-READBACK-RESIDUALS-",
+    "namespace/export/gllvm_julia_fit": "P1-BRIDGE-READBACK-GJF-",
+}
+
+
+def bridge_readback_problem(row, p):
+    """The checker's bridgeReadbackProblem: None, or why a live_bridge_readback receipt cannot bind this row."""
+    sid = row.get("source_id")
+    if sid not in BRIDGE_READBACK_ROW_PREFIX:
+        return (f"bridge readback {p} binds only fitted, predict and residuals for gllvmTMB_julia (and gllvm_julia_fit); "
+                "the other methods copy Julia's value and close by signed disposition (maintainer ruling 2026-10-05 (D-319), ruling 1)")
+    prefix = BRIDGE_READBACK_ROW_PREFIX[sid]
+    off = [i for i in as_list(row.get("executable_case_ids")) if not (isinstance(i, str) and i.startswith(prefix))]
+    if off:
+        return (f"bridge readback binds {sid} only on its own cases ({prefix}*), not {','.join(map(str, off))} "
+                "(maintainer ruling 2026-10-05 (D-319), ruling 1)")
+    return None
+
+
 def numeric_receipt_problem(row, root, waive_status=False):
     """None when the row binds numerically, else why not. waive_status=True skips only the
     receipt status fields (what a valid receipt_status_exception waives in the checker)."""
@@ -623,6 +647,10 @@ def numeric_receipt_problem(row, root, waive_status=False):
             continue
         if not isinstance(j, dict):
             continue
+        if j.get("evidence_kind") == "live_bridge_readback":
+            bp = bridge_readback_problem(row, p)
+            if bp:
+                return bp
         if not_passed is None:
             for obj, pre in ((j, ""), (j.get("comparison") if isinstance(j.get("comparison"), dict) else None, "comparison.")):
                 if obj is None:

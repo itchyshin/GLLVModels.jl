@@ -702,6 +702,51 @@ recommendation. Cite this section as "maintainer ruling 2026-10-05 (D-319)", wit
 that by reading the diff. Each rule that changes a check is ported to `tools/true_parity_assemble.py`, so the
 scoreboard status and the checker agree. The C6 items are recorded with the C6 decisions, not here.
 
+### Ruling 1: bridge readback (the 8 `*-JULIA-BRIDGE-COMPARE` rows)
+
+Question signed: may "R's `gllvmTMB_julia` method returns exactly what Julia computed" bind the eight
+`namespace/S3method/<method>,gllvmTMB_julia` rows (`coef`, `fitted`, `logLik`, `predict`, `residuals`, `summary`,
+`confint`, `simulate`)? The live readback receipt is
+`receipts/julia-twins/namespace-numeric/bridge_readback.json` (evidence kind `live_bridge_readback`, PR #790). The
+signed answer differs by method, because the strength of the comparison differs:
+
+- `fitted`, `predict` and `residuals`: yes, as numeric evidence. Each R method does its own arithmetic on what Julia
+  returned (intercepts plus the linear predictor, the response scale, the residual types), so comparing it with
+  GLLVModels on the same inputs is a real test of R's adapter. The row binds on the readback cases of its own method
+  only: `P1-BRIDGE-READBACK-FITTED-*`, `-PREDICT-*`, `-RESIDUALS-*`.
+- `coef`, `logLik`, `summary`, `confint` and `simulate`: no numeric binding. These R methods copy what Julia
+  returned, so the comparison is circular (the 2026-09-30 audit and #561). Each closes by a signed disposition that
+  says the R value comes from Julia (`disposition` `DISPOSITION-SIGNED`, `signed_by` the maintainer, `signed_on`
+  2026-10-05, and the reason in `disposition_basis`). `simulate` has no readback case and closes the same way.
+
+The checker and the assembler enforce the split. A numeric row that cites a receipt whose `evidence_kind` is
+`live_bridge_readback` binds only if its `source_id` is one of `namespace/S3method/fitted,gllvmTMB_julia`,
+`predict,gllvmTMB_julia`, `residuals,gllvmTMB_julia` (and `namespace/export/gllvm_julia_fit`, which already binds on
+the same receipt through cases that compare against the TMB engine), and only if every executable case id starts
+with that row's prefix (`P1-BRIDGE-READBACK-FITTED-`, `-PREDICT-`, `-RESIDUALS-`, `-GJF-`). Otherwise the row reads
+`NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT` with the reason "bridge readback binds only ...". So relabelling the `coef` row
+numeric on the readback receipt does not bind it, and a `fitted` row cannot borrow the `COEF` cases.
+(`BRIDGE_READBACK_ROW_PREFIX` in both tools.)
+
+Row-level edits are in `case-map-namespace.json` and belong to the covariance and namespace slice: three rows to
+`evidence_tier` numeric citing the readback receipt with their own cases, five rows to a signed disposition.
+
+Negative controls (checker, group "bridge readback"): `fitted` on its own cases binds; `coef` relabelled numeric on the
+readback receipt does not; `fitted` citing a `COEF` case does not; a row outside the four does not; a receipt of
+another evidence kind is not affected. Assembler: `bridge_readback_*`.
+
+### Ruling 2: namespace keyword rows may bind without the bridge leg
+
+Signed yes: a namespace export row for a covariance keyword may bind on its native-model and formula-interface fits
+while its covariance row stays unbound at the public-R-bridge boundary. Rows named in the ruling: `animal_dep`,
+`animal_indep`, `kernel_dep`, `kernel_indep` (receipts from #786), and probably `Beta` and `dep`. Reason, from the
+ruling page: these exports are formula markers, so the fit is the estimand, and the bridge refusal is an R-side
+route. This reverses the rule of the 2026-09-30 audit (`audit-unwired-evidence-2026-09-30.md`, row
+`namespace-export-Beta`): "an export-constructor row should not borrow a case its own family row cannot yet bind". No
+tool enforced that rule, so no code changes; it was applied by hand when rows were mapped, and this ruling withdraws
+it. The binding itself still needs the numeric rule: a receipt with a comparison block, pinned to P1, every case
+within tolerance. The row edits belong to the covariance and namespace slice.
+
 ### Ruling 3: CI-ROUTE-029, Julia's default rho interval is R's `fisher-z` default
 
 Signed yes: for rho, Julia's default `confint` route (`method = :wald`, which for a correlation computes a Fisher-z

@@ -1202,6 +1202,46 @@ def main():
             shutil.rmtree(tmp)
     check("kept_basis_accept_and_refuse_agree_between_checker_and_assembler", basis_agreement)
 
+    # Maintainer ruling 2026-10-05 (D-319), ruling 1: a live_bridge_readback receipt binds fitted, predict and residuals
+    # (and gllvm_julia_fit) only, each on its own cases; the checker gives the same verdict.
+    def bridge_case(sid, cid, kind, want_status, contains=None):
+        def f():
+            root, tmp = with_root({"case-map-namespace.json": [row(sid, cls="compatibility_adapter", tier="numeric",
+                                                                    executable_case_ids=[cid], evidence={"receipt": [RP]})]})
+            try:
+                (root / RP).write_text(json.dumps({"evidence_kind": kind, "verdict": "PASS", "comparison": {
+                    "pin": "P1", "cases": [{"case_id": cid, "r_value": 1.0, "julia_value": 1.0, "tolerance": 1e-12}]}}))
+                c, o = run(root)
+                rid = A.scoreboard_id(sid)
+                st = status_of(root, rid)
+                txt = (root / A.LEDGER / A.OUT_SCOREBOARD).read_text()
+                out = checker_c1(root)
+                m = re.search(r"\bbound=(\d+)", out or "")
+                want_bound = 1 if want_status == "EVIDENCED" else 0
+                ok = c == 0 and st == want_status and (contains is None or contains in txt) and (out is None or (m and int(m.group(1)) == want_bound))
+                return ok, f"code={c} status={st} checker={out and out[:300]} {o}"
+            finally:
+                shutil.rmtree(tmp)
+        return f
+    check("bridge_readback_fitted_own_case_evidenced",
+          bridge_case("namespace/S3method/fitted,gllvmTMB_julia", "P1-BRIDGE-READBACK-FITTED-RESPONSE", "live_bridge_readback", "EVIDENCED"))
+    check("bridge_readback_residuals_own_case_evidenced",
+          bridge_case("namespace/S3method/residuals,gllvmTMB_julia", "P1-BRIDGE-READBACK-RESIDUALS-PEARSON", "live_bridge_readback", "EVIDENCED"))
+    check("bridge_readback_coef_relabelled_numeric_does_not_bind",
+          bridge_case("namespace/S3method/coef,gllvmTMB_julia", "P1-BRIDGE-READBACK-COEF-ALPHA", "live_bridge_readback",
+                      "NUMERIC-UNVERIFIED", "binds only fitted, predict and residuals"))
+    check("bridge_readback_fitted_borrowing_coef_case_does_not_bind",
+          bridge_case("namespace/S3method/fitted,gllvmTMB_julia", "P1-BRIDGE-READBACK-COEF-ALPHA", "live_bridge_readback",
+                      "NUMERIC-UNVERIFIED", "only on its own cases"))
+    check("bridge_readback_other_kind_not_affected",
+          bridge_case("namespace/S3method/coef,gllvmTMB_julia", "P1-COEF-TWIN", "numeric_r_vs_julia", "EVIDENCED"))
+    def bridge_prefix_drift():
+        mjs = (HERE / "true_parity_check.mjs").read_text()
+        body = re.search(r"const BRIDGE_READBACK_ROW_PREFIX = \{(.*?)\n\};", mjs, re.S).group(1)
+        pairs = dict(re.findall(r"'([^']+)': '([^']+)'", body))
+        return pairs == A.BRIDGE_READBACK_ROW_PREFIX, str(pairs)
+    check("bridge_readback_prefix_table_matches_checker", bridge_prefix_drift)
+
     # Real tree: outputs current, and EVIDENCED count equals the checker's own C1 bound=.
     c, o = run(A.ROOT, "--check")
     expect("real_tree_outputs_current", c == 0, o)

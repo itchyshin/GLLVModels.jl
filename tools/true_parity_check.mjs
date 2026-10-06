@@ -409,6 +409,29 @@ function checkComparisonBlock(cmp, p, covered) {
   return null;
 }
 
+// Maintainer ruling 2026-10-05 (D-319), ruling 1 (GATES.md "Rulings of 2026-10-05"): the live bridge readback receipt
+// (evidence_kind live_bridge_readback) shows that R's gllvmTMB_julia method returns what Julia computed. That is a real
+// adapter test for fitted, predict and residuals, which do their own arithmetic in R, and circular for coef, logLik,
+// summary, confint and simulate, which copy Julia's value (those close by signed disposition). So such a receipt binds
+// a numeric row only for the rows below, and only on that row's own cases (gllvm_julia_fit already bound on it through
+// cases that compare against the TMB engine). Copied in tools/true_parity_assemble.py (a test fails on drift).
+const BRIDGE_READBACK_ROW_PREFIX = {
+  'namespace/S3method/fitted,gllvmTMB_julia': 'P1-BRIDGE-READBACK-FITTED-',
+  'namespace/S3method/predict,gllvmTMB_julia': 'P1-BRIDGE-READBACK-PREDICT-',
+  'namespace/S3method/residuals,gllvmTMB_julia': 'P1-BRIDGE-READBACK-RESIDUALS-',
+  'namespace/export/gllvm_julia_fit': 'P1-BRIDGE-READBACK-GJF-',
+};
+function bridgeReadbackProblem(row, p) {
+  if (!Object.prototype.hasOwnProperty.call(BRIDGE_READBACK_ROW_PREFIX, row.source_id)) {
+    return `bridge readback ${p} binds only fitted, predict and residuals for gllvmTMB_julia (and gllvm_julia_fit); the other methods copy Julia's value and close by signed disposition (maintainer ruling 2026-10-05 (D-319), ruling 1)`;
+  }
+  const prefix = BRIDGE_READBACK_ROW_PREFIX[row.source_id];
+  const ids = Array.isArray(row.executable_case_ids) ? row.executable_case_ids : [row.executable_case_ids];
+  const off = ids.filter((id) => typeof id !== 'string' || !id.startsWith(prefix));
+  if (off.length) return `bridge readback binds ${row.source_id} only on its own cases (${prefix}*), not ${off.join(',')} (maintainer ruling 2026-10-05 (D-319), ruling 1)`;
+  return null;
+}
+
 function numericReceiptStatus(row) {
   const paths = rowReceiptPaths(row);
   if (paths.length === 0) return { ok: false, reason: 'no receipt' };
@@ -421,6 +444,10 @@ function numericReceiptStatus(row) {
     let j;
     try { j = JSON.parse(txt); } catch { continue; } // a non-JSON receipt carries no comparison
     if (!j || typeof j !== 'object') continue;
+    if (j.evidence_kind === 'live_bridge_readback') {
+      const bp = bridgeReadbackProblem(row, p);
+      if (bp) return { ok: false, reason: bp };
+    }
     if (notPassed === null) notPassed = receiptNotPassed(j, p);
     if (j.comparison === undefined) continue;
     const bad = checkComparisonBlock(j.comparison, p, covered);

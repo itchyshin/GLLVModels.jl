@@ -1211,6 +1211,54 @@ test('C6: an undecided item (decision null) still fails, as before', () => {
   assert.match(r.stdout, /invalid_decision=julia-export\/undecided:null /);
 });
 
+// --- Maintainer ruling 2026-10-05 (D-319), ruling 1: bridge readback binds fitted, predict and residuals only, each on
+// its own cases. brTree() adds one numeric row citing receipts/br.json (evidence_kind live_bridge_readback). ---
+function brTree({ sid = 'namespace/S3method/fitted,gllvmTMB_julia', caseId = 'P1-BRIDGE-READBACK-FITTED-RESPONSE', kind = 'live_bridge_readback' } = {}) {
+  return ({ readJ, writeJ }) => {
+    const cm = readJ('case-map.json');
+    cm.rows.push({ source_id: sid, classification: 'compatibility_adapter', executable_case_ids: [caseId],
+      evidence: { receipt: `${L}/receipts/br.json` }, measured_against: P1_FULL, disposition: null, evidence_tier: 'numeric' });
+    writeJ('case-map.json', cm);
+    writeJ('receipts/br.json', { evidence_kind: kind, verdict: 'PASS',
+      comparison: { pin: 'P1', cases: [{ case_id: caseId, quantity: 'q', r_value: 1, julia_value: 1, tolerance: 1e-12 }] } });
+  };
+}
+test('bridge readback: fitted, predict and residuals bind on their own readback cases', () => {
+  for (const [sid, caseId] of [['namespace/S3method/fitted,gllvmTMB_julia', 'P1-BRIDGE-READBACK-FITTED-LINK'],
+    ['namespace/S3method/predict,gllvmTMB_julia', 'P1-BRIDGE-READBACK-PREDICT-LINK'],
+    ['namespace/S3method/residuals,gllvmTMB_julia', 'P1-BRIDGE-READBACK-RESIDUALS-PEARSON']]) {
+    const c1 = runTree(brTree({ sid, caseId }), 'C1');
+    assert.match(c1.stdout, /C1_MET$/m, `${sid}\n${c1.stdout}`);
+    assert.match(c1.stdout, /bound=3 bound_numeric=3\b/, sid);
+    assert.match(runTree(brTree({ sid, caseId }), 'C8').stdout, /C8_MET$/m, sid);
+  }
+});
+test('bridge readback: coef, logLik, summary, confint and simulate relabelled numeric on the readback receipt do not bind', () => {
+  for (const [sid, caseId] of [['namespace/S3method/coef,gllvmTMB_julia', 'P1-BRIDGE-READBACK-COEF-ALPHA'],
+    ['namespace/S3method/logLik,gllvmTMB_julia', 'P1-BRIDGE-READBACK-LOGLIK-VALUE'],
+    ['namespace/S3method/summary,gllvmTMB_julia', 'P1-BRIDGE-READBACK-SUMMARY-SIGMA'],
+    ['namespace/S3method/confint,gllvmTMB_julia', 'P1-BRIDGE-READBACK-CONFINT-X'],
+    ['namespace/S3method/simulate,gllvmTMB_julia', 'P1-BRIDGE-READBACK-SIMULATE-X'],
+    ['isdm/CAP-ISDM-1FO-PREDICT-EXPORT-2', 'P1-BRIDGE-READBACK-FITTED-LINK']]) {
+    const m = brTree({ sid, caseId });
+    const c1 = runTree(m, 'C1');
+    assert.match(c1.stdout, /C1_NOT_MET$/m, sid);
+    assert.match(c1.stdout, /binds only fitted, predict and residuals for gllvmTMB_julia/, sid);
+    const c8 = runTree(m, 'C8');
+    assert.match(c8.stdout, /C8_NOT_MET$/m, sid);
+    assert.match(c8.stdout, /NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT/, sid);
+  }
+});
+test('bridge readback: fitted cannot borrow another method readback case', () => {
+  const c1 = runTree(brTree({ caseId: 'P1-BRIDGE-READBACK-COEF-ALPHA' }), 'C1');
+  assert.match(c1.stdout, /C1_NOT_MET$/m);
+  assert.match(c1.stdout, /only on its own cases \(P1-BRIDGE-READBACK-FITTED-\*\), not P1-BRIDGE-READBACK-COEF-ALPHA/);
+});
+test('bridge readback: a receipt of another evidence kind is not affected by the rule', () => {
+  const c1 = runTree(brTree({ sid: 'namespace/S3method/coef,gllvmTMB_julia', caseId: 'P1-COEF-TWIN', kind: 'numeric_r_vs_julia' }), 'C1');
+  assert.match(c1.stdout, /C1_MET$/m, c1.stdout);
+});
+
 // --- Fix round on PR #687 (three adversarial reviews). Each control below fails on the head before the
 // round (6f546fb00) for the reason it names, and passes after. ---
 
