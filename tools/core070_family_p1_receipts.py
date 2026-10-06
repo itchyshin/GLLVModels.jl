@@ -855,6 +855,31 @@ def p0_evidence(base):
                     "remains."}
 
 
+# Maintainer ruling 2026-10-05 (D-319), N1: a PUBLIC-R-BRIDGE case that was not executed is non-binding context.
+# FAMILY-00-IDENTITY and FAMILY-11-LOG are the family rows it names; a row binds this way only when every other case
+# is a passing, discriminating numeric comparison from an accepted batch (FAMILY-00's native and formula cases FAIL
+# on the current receipts, so it stays partial). The checker (boundaryContext) re-validates the context case.
+FAMILY_N1_CONTEXT = {"family/FAMILY-00-IDENTITY", "family/FAMILY-11-LOG"}
+N1_TIER = ("numeric: the native and formula-interface case receipts carry R-vs-Julia comparison blocks pinned to P1, "
+           "within the harness tolerance, from a batch whose verifier passed; the PUBLIC-R-BRIDGE case was not executed "
+           "and is non-binding boundary context under maintainer ruling 2026-10-05 (D-319), N1")
+
+
+def n1_context(sid, ids, kinds, verdicts, batch_ok, disc):
+    """The boundary-context case ids when `sid` binds under N1, else None."""
+    if sid not in FAMILY_N1_CONTEXT:
+        return None
+    ctx = [i for i in ids if kinds[i] != "numeric_r_vs_julia"]
+    rest = [i for i in ids if i not in ctx]
+    if not ctx or not rest:
+        return None
+    if not all(i.endswith("-PUBLIC-R-BRIDGE") and kinds[i] == "not_executed" and verdicts[i] == "NOT_EXECUTED" for i in ctx):
+        return None
+    if not all(verdicts[i] == "PASS" and batch_ok[i] == "PASS" and disc[i] for i in rest):
+        return None
+    return ctx
+
+
 def build_rows(in_scope, carry_status, receipts):
     p0 = {r["source_id"]: r for r in load(P0_CASEMAP)["rows"]}
     counts = {k: 0 for k in COUNT_KEYS}
@@ -882,6 +907,14 @@ def build_rows(in_scope, carry_status, receipts):
                                  "tier": "no case of this row was executed at P1 (see each receipt's "
                                          "why_not_executed)"})
             counts["not_measured"] += 1
+        elif len(measured) < len(ids) and (ctx := n1_context(sid, ids, kinds, verdicts, batch_ok, disc)):
+            by_id = {i: h[0] for i, h in zip(ids, have)}
+            row["boundary_context_case_ids"] = ctx
+            row.update(evidence_tier="numeric", measured_against=P1_SHA,
+                       evidence={"receipt": list(dict.fromkeys(by_id[i] for i in ids if i not in ctx)),
+                                 "boundary_context_receipts": [by_id[i] for i in ctx], "tier": N1_TIER},
+                       measured_result={**result, "row_verdict": "PASS"})
+            counts["numeric_pass"] += 1
         elif len(measured) < len(ids):
             ok = all(verdicts[i] == "PASS" for i in measured)
             row.update(evidence_tier="partial_case_not_executed", measured_against=P1_SHA,
