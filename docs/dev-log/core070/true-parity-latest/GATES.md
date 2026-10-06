@@ -781,9 +781,10 @@ same Julia label does not ("R: no class; Julia: class rho:fisher-z").
 
 Signed yes ("about 13 rows"). Some rows carry a case that can never produce an R-versus-Julia number: R refuses at
 its public Julia bridge before any Julia call (the capability guard and kernel guard of `R/julia-bridge.R`, the
-truncated-NB2 gate; receipts with evidence kind `r_public_bridge_boundary`, verdict `R_BOUNDARY_UNCHANGED`), the
-bridge case was not executed for that reason (`not_executed`, `NOT_EXECUTED`), or the R case only admits a formula
-grammar (`r_only_formula_grammar`, `R_ONLY_PASS`). Under the numeric rule every executable case id must be compared,
+truncated-NB2 gate; receipts with evidence kind `r_public_bridge_boundary`, verdict `R_BOUNDARY_UNCHANGED`), or the
+R case only admits a formula grammar (`r_only_formula_grammar`, `R_ONLY_PASS`). A bridge case that was not executed
+(`not_executed`, `NOT_EXECUTED`) is not covered: the signed text is about an R refusal, so the refusal must be on a
+receipt (final review of PR #838). Under the numeric rule every executable case id must be compared,
 so such a case blocked its row even when every fit case agreed. The rows it affects: the 7 covariance rows
 `COV-ANIMAL-DEP`, `COV-ANIMAL-INDEP`, `COV-KERNEL-DEP`, `COV-KERNEL-INDEP`, `COV-ORD-DEP`, `COV-ORD-INDEP`,
 `COV-ORD-INDEP-COMMON` (9 bridge cases), `family/FAMILY-00-IDENTITY` and `family/FAMILY-11-LOG`, plus rows whose
@@ -796,8 +797,8 @@ exempt from the coverage requirement only if:
 - it is also in `executable_case_ids` (it stays visible on the row), listed once, and `executable_case_ids` repeats no
   id (review finding: a row listing its one context case twice passed the count test with nothing compared);
 - its own receipt resolves to a file, is JSON, has that `case_id`, and its `evidence_kind` and `verdict` are one of
-  `r_public_bridge_boundary` + `R_BOUNDARY_UNCHANGED`, `not_executed` + `NOT_EXECUTED`, `r_only_formula_grammar` +
-  `R_ONLY_PASS`; the two bridge kinds only on a case id ending `-PUBLIC-R-BRIDGE`;
+  `r_public_bridge_boundary` + `R_BOUNDARY_UNCHANGED` (only on a case id ending `-PUBLIC-R-BRIDGE`) or
+  `r_only_formula_grammar` + `R_ONLY_PASS`; a `not_executed` + `NOT_EXECUTED` case is refused;
 - its receipt carries no `comparison` block (a case that has a number is compared, not set aside);
 - at least one executable case outside the context list is covered by a comparison block and binds numerically under
   the unchanged rule.
@@ -811,16 +812,22 @@ aside but does not make it a twin, and the row also needs its formula-interface 
 
 Row edits, made by the owning tools (never by hand): `tools/core070_covariance_p1_receipts.py` (`COV_N1_CONTEXT`,
 `n1_overlay`) binds the 7 covariance rows above, each only when every non-bridge case is a passing numeric comparison
-from an accepted batch; `tools/core070_family_p1_receipts.py` (`FAMILY_N1_CONTEXT`, `n1_context`) binds
-`family/FAMILY-11-LOG` the same way. `family/FAMILY-00-IDENTITY` stays `partial_case_not_executed`: its native and
-formula-interface cases FAIL on the current receipts, so setting the bridge case aside leaves nothing that binds.
+from an accepted batch and each bridge case has an `R_BOUNDARY_UNCHANGED` receipt;
+`tools/core070_family_p1_receipts.py` (`FAMILY_N1_CONTEXT`, `n1_context`) applies the same test to the two family rows.
+Both stay `partial_case_not_executed` (HELD): their bridge cases `CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE` and
+`CORE070-FAMILY-11-LOG-PUBLIC-R-BRIDGE` are `NOT_EXECUTED` (outside the frozen three-case bridge sub-contract), not
+an R refusal on a receipt. `family/FAMILY-11-LOG` binds once a P1 R probe records the bridge refusal
+(`GJL-GATE-FAMILY`) as `R_BOUNDARY_UNCHANGED` (tracked follow-up; its row carries this note).
+`family/FAMILY-00-IDENTITY` would still not bind then: its native and formula-interface cases FAIL on the current
+receipts.
 
-Negative controls (checker, group "N1 boundary context"): a bridge refusal, a not-executed bridge case and an
-admission-only case each bind as context; without the field the uncompared case still blocks the row; a context
+Negative controls (checker, group "N1 boundary context"): a bridge refusal and an admission-only case each bind as
+context; without the field the uncompared case still blocks the row; a not-executed bridge case, a context
 receipt of another kind, a wrong verdict, a bridge kind on a non-bridge case, a context receipt with a comparison
 block, every case set aside, a context id outside `executable_case_ids`, a missing context receipt and a missing
 `boundary_context_receipts`, and a context id repeated in `executable_case_ids` each fail. Assembler:
-`boundary_context_*` (including `boundary_context_duplicate_executable_id_refused`).
+`boundary_context_*` (including `boundary_context_not_executed_bridge_case_refused` and
+`boundary_context_duplicate_executable_id_refused`).
 
 ### N9: convergence parity for C3 campaign rows
 
@@ -939,7 +946,10 @@ explicit link scale the two agree to 5.72e-6), all signed by the maintainer unde
 Signed yes ("with the rule stated before any run"). For a stochastic row (simulate, bootstrap) the tolerance of a
 numeric comparison may come from a Monte-Carlo rule file committed before the run whose results it judges; the rule
 fixes the replicate counts, seeds or streams, the per-quantity bound and the familywise level, and is not retuned after
-a result. The generator checks that the rule predates the run commit. First instances:
+a result. Each generator checks that the rule predates the run commit: `tools/core070_inference_p1_receipts.py` for
+CI-ROUTE-011 (`rule.json` first added in an ancestor of the run commit) and `tools/true_parity_mc_simulate_receipt.jl`
+for the simulate twins (each rule file unmodified at the run commit and first added in an ancestor of it). First
+instances:
 `receipts/inference/ci-route-011-mc/rule.json` (CI-ROUTE-011, two-level ICC bootstrap: 5 seeds per engine, each
 endpoint's seed means within 4.5 combined Monte-Carlo standard errors plus 0.005; binds) and the simulate twins
 (`test/test_mc_simulate_p1.jl`, `test/fixtures/mc_simulate_p1.toml`: per moment `|m_R - m_J| <= z sqrt(s_R^2/B + s_J^2/B)`,
@@ -995,9 +1005,10 @@ scope still needs a matching, well-formed, passing behaviour block, and being li
 have 14 unique ids, if it overlaps the other two lists or names one of the four signed-disposition iSDM rows.
 
 Rows that bind on this change: the 7 aghq control rows (`core070_aghq_p1_receipts.py --apply-twins` relabels them,
-because their blocks already match). `inference/CI-ROUTE-009` binds once `case-map-inference.json` is regenerated
-(`core070_inference_p1_receipts.py --write`), which belongs to the inference slice. Until then that tool's `--check`
-reports CI-ROUTE-009 as differing from its re-derivation.
+because their blocks already match) and `inference/CI-ROUTE-009` (`case-map-inference.json` regenerated on this
+branch). Controls: `tools/test_core070_behaviour_receipts.py` (`ruling_a_rows_are_eligible_and_bind`, and
+`out_of_scope_rows_do_not_bind_even_with_a_matching_block` for CI-ROUTE-008 and -010), run in
+`true-parity-check.yml`.
 
 Negative controls (checker, group "behavioural scope"): each of the 14 rows binds with a matching block and fails on a
 mismatched label; near misses do not bind (`aghq/AGHQ-CTRL-THREE`, `aghq/AGHQ-AUTO-K-BINOMIAL`, the four
