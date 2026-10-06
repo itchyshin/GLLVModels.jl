@@ -93,6 +93,7 @@ Full responsibility detail lives in §2 of the reference plan.
 
 ## Phase state snapshot
 
+- **True-parity rulings wired, lane handed to Codex (2026-10-06).** `origin/main` @ `9269f4622`: maintainer rulings of 2026-10-05 (#838) and observation weights on the Poisson route (#839) merged; X2 297 of 317; C0, C1, C5, C7, C8 MET; C2, C3 (6/8), C4 (4/8), C6 (37 held) open. Other lanes: see the coordination board's Active-Lane-Split. `Project.toml` stays **`0.3.0`**. **START HERE:** `docs/dev-log/handover/2026-10-06-codex-handover.md`.
 - **Beta grouped convergence gate (#480), 2026-09-24.** `converged` now requires a scale-aware gradient test, with a restart when Optim stops without it; inner-search follow-up is #482.
 - **Gamma grouped mode search fixed (#479), 2026-09-24.** A diverged per-site search now returns `-Inf` instead of a finite value, so the fit cannot report convergence far below the optimum.
 
