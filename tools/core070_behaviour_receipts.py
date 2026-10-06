@@ -554,7 +554,14 @@ def all_classes():
         out.append(cls(kind, label, [label], [label],
             f"Measured identical public-door behaviour for {sid}; P1 raw R and Julia outputs are preserved in "
             f"{FIRST7}/{p.name}. Included by signed D-319 N6/N10."))
-    return out
+    unique = {}
+    for c in out:
+        key = (c["kind"], c["canonical"])
+        if key not in unique:
+            unique[key] = c
+        elif unique[key]["r"] != c["r"] or unique[key]["julia"] != c["julia"]:
+            raise SystemExit(f"conflicting behaviour class {key}")
+    return list(unique.values())
 
 
 # ---------------------------------------------------------------------------
@@ -890,9 +897,23 @@ def first7(case_id, rec):
     raw = load(p)
     if raw.get("reference_commit") != P1_SHA or raw.get("source_id") != sid:
         raise SystemExit(f"{p}: source id or P1 pin mismatch")
+    import first_seven_behaviour_derive as F7
+    raw_dir = Path((raw.get("provenance") or {}).get("raw_directory", ""))
+    if not raw_dir.parts or raw_dir.is_absolute() or ".." in raw_dir.parts:
+        raise SystemExit(f"{p}: raw provenance must name a repo-relative directory")
+    d = ROOT / raw_dir
+    meta = load(d / "run.json")
+    if meta != raw.get("provenance"):
+        raise SystemExit(f"{p}: provenance differs from the retained run metadata")
+    checked_meta = dict(meta, r_output_path=str(d / "r-public.tsv"), julia_output_path=str(d / "julia-public.tsv"))
+    fresh, _ = F7.derive(F7.tsv(d / "r-public.tsv", "R"), F7.tsv(d / "julia-public.tsv", "Julia"), checked_meta)
+    checked_meta.pop("r_output_path", None); checked_meta.pop("julia_output_path", None)
+    if fresh[sid] != raw or raw.get("case_id") != case_id:
+        raise SystemExit(f"{p}: sidecar differs from raw re-derivation or frozen case id")
     rf, jf = raw.get("r_observed"), raw.get("julia_observed")
-    reads = {f"{FIRST7}/{p.name}": sha(p)}
-    if rf != jf:
+    inputs = [p, d / "run.json", d / "r-public.tsv", d / "julia-public.tsv", ROOT / "tools/first_seven_behaviour_derive.py"]
+    reads = {str(x.relative_to(ROOT)): sha(x) for x in inputs}
+    if raw.get("verdict") != "PASS" or rf != jf:
         return [], [{"source_id": sid, "reason": "public_route_differs",
                      "text": f"P1 public-door labels differ: R={rf!r}; Julia={jf!r}. "
                              "The exact calls and raw outputs are in the cited receipt.",
@@ -1087,7 +1108,8 @@ def check_problems():
         if tr[cid][1] != new:
             problems.append(f"{path.relative_to(ROOT)}: behaviour block differs from the re-derivation")
     for cid, (path, rec) in tr.items():
-        if "behaviour" in rec and rec.get("evidence_kind") not in DERIVE:
+        if "behaviour" in rec and rec.get("evidence_kind") not in DERIVE and not any(
+                sid in FIRST7_SOURCE_IDS for sid in (rec.get("source_ids") or [rec.get("source_id")])):
             problems.append(f"{path.relative_to(ROOT)}: behaviour block on a receipt this tool does not derive")
     return problems
 

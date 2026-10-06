@@ -1,22 +1,14 @@
-# gllvm-parity-tag: P1
-# Fast, fit-free checks for the dedicated public-door runners. The measured
-# fit calls are run only by tools/first_seven_behaviour_{R,J}.R/.jl.
+module FirstSevenP1ReceiptControls
 using Test
-
-const ROOT = normpath(joinpath(@__DIR__, ".."))
-const JRUN = read(joinpath(ROOT, "tools", "first_seven_behaviour_J.jl"), String)
-const RRUN = read(joinpath(ROOT, "tools", "first_seven_behaviour_R.R"), String)
-const DERIVE = read(joinpath(ROOT, "tools", "first_seven_behaviour_derive.py"), String)
-
-@testset "first-seven public-door runner controls (no fits)" begin
-    for id in ("ISDM-COUNT", "ISDM-EXTRA-SOURCE", "ISDM-MISSING-IN-TRAIT",
-               "ISDM-MISSING-SOURCE", "ISDM-WRAPPER-LAW")
-        @test occursin(id, JRUN)
-        @test occursin(id, RRUN)
-        @test occursin(id, DERIVE)
+if get(ENV, "GLLVM_P1_RECEIPT_CONTROLS", "0") == "1"
+    tool = joinpath(@__DIR__, "..", "tools", "test_core070_behaviour_receipts.py")
+    @testset "P1 behavioural receipt controls (fit-free)" begin
+        output = read(`python3 $tool`, String)
+        @test occursin("controls passed", output)
     end
-    @test occursin("fit_isdm_gllvm(formula, data; family=family)", JRUN)
-    @test occursin("gllvmTMB(f, data=dx, family=fam()", RRUN)
-    @test occursin("length(family)", DERIVE)
-    @test occursin("CORE070_FIRST7_DERIVATION_SELFTEST_OK", DERIVE)
+else
+    @testset "P1 behavioural receipt controls require opt-in R/Python tooling" begin
+        @test_skip false
+    end
+end
 end

@@ -263,8 +263,16 @@ def main():
         commit = next(iter(commits))
         current = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"],
                                  check=True, capture_output=True, text=True).stdout.strip()
-        if commit != current:
-            raise ValueError("Julia launch commit differs from the executed checkout")
+        launch_tree = subprocess.run(["git", "-C", str(ROOT), "rev-parse", f"{commit}:src"],
+                                     check=True, capture_output=True, text=True).stdout.strip()
+        current_tree = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD:src"],
+                                      check=True, capture_output=True, text=True).stdout.strip()
+        if launch_tree != current_tree:
+            raise ValueError("Julia launch source differs from the current executed-source tree")
+        launched_runner = subprocess.run(["git", "-C", str(ROOT), "show", f"{commit}:tools/first_seven_behaviour_J.jl"],
+                                         check=True, capture_output=True).stdout
+        if hashlib.sha256(launched_runner).hexdigest() != jvals[0]["runner_sha256"]:
+            raise ValueError("Julia launch runner is not the recorded commit's runner")
         src_diff = subprocess.run(["git", "-C", str(ROOT), "diff", "--binary", "HEAD", "--", "src"],
                                   check=True, capture_output=True).stdout
         if any(r.get("src_diff_sha256") != hashlib.sha256(src_diff).hexdigest()
@@ -272,7 +280,7 @@ def main():
             raise ValueError("Julia raw source identity does not match the executed checkout")
         tree = subprocess.run(["git", "-C", str(ROOT), "rev-parse", f"{commit}:src"],
                               check=True, capture_output=True, text=True).stdout.strip()
-        meta = {"reference_commit": PIN, "r_source_receipt": R_SOURCE, "r_source_receipt_sha256": digest(ROOT / R_SOURCE),
+        meta = {"raw_directory": str(d.relative_to(ROOT) if d.is_absolute() else d), "derivation_commit": current, "reference_commit": PIN, "r_source_receipt": R_SOURCE, "r_source_receipt_sha256": digest(ROOT / R_SOURCE),
             "r_source_sha256": source["source_tree_sha256"], "r_oracle_build_receipt": R_BUILD,
             "r_oracle_build_sha256": digest(ROOT / R_BUILD), "r_installed_tree_sha256": build["installed_tree_sha256"],
             "r_host": rvals[0]["host"], "r_version": rvals[0]["r_version"],
