@@ -657,6 +657,8 @@ def boundary_context(row, root):
         return set(), "boundary_context_case_ids must be a non-empty array of case ids"
     if len(set(ctx)) != len(ctx):
         return set(), "boundary_context_case_ids lists a case id twice"
+    if len(set(exe)) != len(exe):
+        return set(), "executable_case_ids lists a case id twice"
     not_exec = [i for i in ctx if i not in exe]
     if not_exec:
         return set(), "boundary context case ids not in executable_case_ids: " + ",".join(not_exec)
@@ -765,9 +767,14 @@ def numeric_receipt_problem(row, root, waive_status=False):
     ctx, ctx_problem = boundary_context(row, root)
     if ctx_problem:
         return f"boundary context (maintainer ruling 2026-10-05 (D-319), N1): {ctx_problem}"
-    missing = [i for i in as_list(row.get("executable_case_ids")) if i not in covered and i not in ctx]
+    exe = as_list(row.get("executable_case_ids"))
+    missing = [i for i in exe if i not in covered and i not in ctx]
     if missing:
         return "case ids not compared: " + ",".join(missing)
+    # N1: context never binds a row on its own (checker numericReceiptStatus, keep in step).
+    if ctx and not any(i not in ctx and i in covered for i in exe):
+        return ("boundary context (maintainer ruling 2026-10-05 (D-319), N1): no executable case outside "
+                "boundary_context_case_ids is covered by a comparison")
     return None if waive_status else not_passed
 
 

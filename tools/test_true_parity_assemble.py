@@ -1281,6 +1281,11 @@ def main():
     check("boundary_context_all_cases_refused",
           ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED"}, "NUMERIC-UNVERIFIED",
                    "every executable case is boundary context", ids=("C-PUBLIC-R-BRIDGE",)))
+    # The duplicate-id hole: a context id listed twice in executable_case_ids would pass the count test while no
+    # executable case outside the context list is compared (the receipt compares case C, which the row does not list).
+    check("boundary_context_duplicate_executable_id_refused",
+          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED"}, "NUMERIC-UNVERIFIED",
+                   "executable_case_ids lists a case id twice", ids=("C-PUBLIC-R-BRIDGE", "C-PUBLIC-R-BRIDGE")))
 
     # Maintainer ruling 2026-10-05 (D-319), N9: convergence parity; the checker gives the same verdict.
     def cp_case(cp, want_status, contains=None):

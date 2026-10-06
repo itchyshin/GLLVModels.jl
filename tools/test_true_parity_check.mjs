@@ -1296,6 +1296,9 @@ for (const [name, opts, why] of [
   ['a bridge kind on a case that is not a PUBLIC-R-BRIDGE case', { ctxId: 'CASE-N-NATIVE', ctxReceipt: { evidence_kind: 'not_executed', verdict: 'NOT_EXECUTED' } }, /a not_executed case must be a -PUBLIC-R-BRIDGE case/],
   ['a context receipt that carries a comparison block', { ctxReceipt: { evidence_kind: 'r_public_bridge_boundary', verdict: 'R_BOUNDARY_UNCHANGED', comparison: { pin: 'P1', cases: [] } } }, /carries a comparison block, so it is compared, not context/],
   ['every case set aside as context', { rowOver: { executable_case_ids: ['CASE-N-PUBLIC-R-BRIDGE'] } }, /every executable case is boundary context/],
+  // The duplicate-id hole: the context id listed twice passes the count test while no case outside the context list
+  // is compared (rn.json compares CASE-N, which this row no longer lists).
+  ['a context id repeated in executable_case_ids', { rowOver: { executable_case_ids: ['CASE-N-PUBLIC-R-BRIDGE', 'CASE-N-PUBLIC-R-BRIDGE'] } }, /executable_case_ids lists a case id twice/],
   ['a context id that is not an executable case', { rowOver: { boundary_context_case_ids: ['CASE-OTHER-PUBLIC-R-BRIDGE'] } }, /not in executable_case_ids: CASE-OTHER-PUBLIC-R-BRIDGE/],
   ['a context receipt that does not exist', { writeCtx: false }, /boundary context receipt .*ctx\.json does not resolve to a file/],
   ['no boundary_context_receipts', { rowOver: { evidence: { receipt: `${L}/receipts/rn.json` } } }, /no evidence\.boundary_context_receipts/],

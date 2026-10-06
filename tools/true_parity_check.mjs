@@ -445,7 +445,8 @@ function bridgeReadbackProblem(row, p) {
 // verdict R_BOUNDARY_UNCHANGED, a -PUBLIC-R-BRIDGE case), the bridge case was not executed (not_executed,
 // NOT_EXECUTED, a -PUBLIC-R-BRIDGE case), or R only admits the formula grammar (r_only_formula_grammar,
 // R_ONLY_PASS). A context receipt that carries a comparison block is refused (a case with a number is compared, not
-// set aside), and at least one other case must still bind numerically. Copied in tools/true_parity_assemble.py.
+// set aside), executable_case_ids may not repeat an id, and at least one executable case outside the context list
+// must be covered by a comparison block. Copied in tools/true_parity_assemble.py.
 const BOUNDARY_CONTEXT_KINDS = {
   r_public_bridge_boundary: { verdict: 'R_BOUNDARY_UNCHANGED', suffix: '-PUBLIC-R-BRIDGE' },
   not_executed: { verdict: 'NOT_EXECUTED', suffix: '-PUBLIC-R-BRIDGE' },
@@ -458,6 +459,7 @@ function boundaryContext(row) {
   const exec = Array.isArray(row.executable_case_ids) ? row.executable_case_ids : [row.executable_case_ids];
   if (!Array.isArray(ctx) || ctx.length === 0 || !ctx.every((x) => typeof x === 'string' && x.length > 0)) return { problem: 'boundary_context_case_ids must be a non-empty array of case ids' };
   if (new Set(ctx).size !== ctx.length) return { problem: 'boundary_context_case_ids lists a case id twice' };
+  if (new Set(exec).size !== exec.length) return { problem: 'executable_case_ids lists a case id twice' };
   const notExec = ctx.filter((id) => !exec.includes(id));
   if (notExec.length) return { problem: `boundary context case ids not in executable_case_ids: ${notExec.join(',')}` };
   if (ctx.length >= exec.length) return { problem: 'every executable case is boundary context; at least one case must bind numerically' };
@@ -541,6 +543,9 @@ function numericReceiptStatus(row) {
   if (ctx.problem) return { ok: false, reason: `boundary context (maintainer ruling 2026-10-05 (D-319), N1): ${ctx.problem}` };
   const missing = ids.filter((id) => !covered.has(id) && !ctx.ids.has(id));
   if (missing.length) return { ok: false, reason: `case ids not compared: ${missing.join(',')}` };
+  // N1: context never binds a row on its own; at least one executable case outside the context list must be
+  // covered by a comparison block.
+  if (ctx.ids.size > 0 && !ids.some((id) => !ctx.ids.has(id) && covered.has(id))) return { ok: false, reason: 'boundary context (maintainer ruling 2026-10-05 (D-319), N1): no executable case outside boundary_context_case_ids is covered by a comparison' };
   // The comparison itself holds; the row still does not bind if a cited receipt says it failed.
   if (notPassed !== null) return { ok: false, kind: 'not_passed', reason: notPassed };
   return { ok: true };
