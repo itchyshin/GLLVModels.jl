@@ -11,7 +11,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-covariance.json",
-   "sha256": "89e9be43dfa0f1b9653e7eb136ca4abf9590f53f555851767253781a83ff7595",
+   "sha256": "24b0e315d4bf123308ec00f64d559b8af6cd134cc0ca63ea5358e92d554bfde6",
    "rows": 19
   },
   {
@@ -1354,7 +1354,7 @@
    "executable_case_ids": [
     "CORE070-COV-META-EXACT-FORMULA"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "evidence_tier": "r_only",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
@@ -1367,6 +1367,13 @@
     "case_verdicts": {
      "CORE070-COV-META-EXACT-FORMULA": "R_ONLY_PASS"
     }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signed_disposition": {
+    "ruling": "N3",
+    "text": "Ruling N3 (wave plan 2026-10-03, signed under D-319): known-V (meta-analytic) covariance is a documented gap at P1, to be revisited at P2. Julia has no known-V surface (no fitter or formula term takes a known sampling covariance V; wave plan section 3), so no R-vs-Julia number can exist for this row. Building it is 18 to 24 h and an API change that needs the maintainer's approval; it is not done here. The R-only formula-grammar receipt stays cited as non-binding context.",
+    "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer"
    }
   },
   {
@@ -1377,7 +1384,7 @@
    "executable_case_ids": [
     "CORE070-COV-META-LEGACY-ADAPTER"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "evidence_tier": "r_only",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
@@ -1390,6 +1397,13 @@
     "case_verdicts": {
      "CORE070-COV-META-LEGACY-ADAPTER": "R_ONLY_PASS"
     }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signed_disposition": {
+    "ruling": "N3",
+    "text": "Ruling N3 (wave plan 2026-10-03, signed under D-319): known-V (meta-analytic) covariance is a documented gap at P1, to be revisited at P2. Julia has no known-V surface (no fitter or formula term takes a known sampling covariance V; wave plan section 3), so no R-vs-Julia number can exist for this row. Building it is 18 to 24 h and an API change that needs the maintainer's approval; it is not done here. No Julia alias is added for R's deprecated spelling. The R-only adapter receipt stays cited as non-binding context.",
+    "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer"
    }
   },
   {

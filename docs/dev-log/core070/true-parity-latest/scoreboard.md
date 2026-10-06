@@ -15,7 +15,7 @@ Pin: gllvmTMB P1 `9539352f66f2db2cc26b1c393e67212a359b60c9`.
 Inputs:
 
 - `docs/dev-log/core070/true-parity-latest/case-map-aghq.json` (21 rows, sha256 `72e1d55c0553897c62e92f534ab128a8a592282958e1e56c44ca95e1c5902114`)
-- `docs/dev-log/core070/true-parity-latest/case-map-covariance.json` (19 rows, sha256 `89e9be43dfa0f1b9653e7eb136ca4abf9590f53f555851767253781a83ff7595`)
+- `docs/dev-log/core070/true-parity-latest/case-map-covariance.json` (19 rows, sha256 `24b0e315d4bf123308ec00f64d559b8af6cd134cc0ca63ea5358e92d554bfde6`)
 - `docs/dev-log/core070/true-parity-latest/case-map-data.json` (36 rows, sha256 `f46cbcae8b1073a98c4848287f4b2a76c6bd08a26b124bd4c0035d635bebb387`)
 - `docs/dev-log/core070/true-parity-latest/case-map-family.json` (26 rows, sha256 `8eb485c51218daeba486c85676d57cc7fdc7c2a5625bb748fd1463df25ebb845`)
 - `docs/dev-log/core070/true-parity-latest/case-map-fit-input.json` (10 rows, sha256 `568c054ed5f3786b96c9acb796e28d98e4523c4edc5fe5ad9f69ab150cee3639`)
@@ -26,18 +26,18 @@ Inputs:
 
 ## Totals by family
 
-| `family` | EVIDENCED | EVIDENCED-BEHAVIOURAL | REGISTRATION-ONLY | HELD | PARTIAL | NEEDS-SURFACE | NON-NUMERIC | NON-DISCRIMINATING | FAIL | NOT-MEASURED | total |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| `aghq` | 14 | 0 | 0 | 0 | 0 | 0 | 7 | 0 | 0 | 0 | 21 |
-| `covariance` | 8 | 0 | 0 | 2 | 7 | 0 | 2 | 0 | 0 | 0 | 19 |
-| `data` | 12 | 0 | 0 | 0 | 1 | 16 | 0 | 0 | 4 | 3 | 36 |
-| `family` | 23 | 0 | 0 | 0 | 2 | 0 | 0 | 0 | 1 | 0 | 26 |
-| `fit-input` | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
-| `inference` | 2 | 44 | 0 | 0 | 2 | 0 | 15 | 0 | 0 | 0 | 63 |
-| `isdm` | 11 | 0 | 0 | 0 | 0 | 9 | 0 | 0 | 1 | 0 | 21 |
-| `namespace` | 41 | 0 | 16 | 0 | 0 | 2 | 0 | 1 | 0 | 9 | 69 |
-| `postfit` | 41 | 0 | 0 | 2 | 6 | 2 | 0 | 0 | 1 | 0 | 52 |
-| `all` | 162 | 44 | 16 | 4 | 18 | 29 | 24 | 1 | 7 | 12 | 317 |
+| `family` | EVIDENCED | EVIDENCED-BEHAVIOURAL | DISPOSITION-SIGNED | REGISTRATION-ONLY | HELD | PARTIAL | NEEDS-SURFACE | NON-NUMERIC | NON-DISCRIMINATING | FAIL | NOT-MEASURED | total |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `aghq` | 14 | 0 | 0 | 0 | 0 | 0 | 0 | 7 | 0 | 0 | 0 | 21 |
+| `covariance` | 8 | 0 | 2 | 0 | 2 | 7 | 0 | 0 | 0 | 0 | 0 | 19 |
+| `data` | 12 | 0 | 0 | 0 | 0 | 1 | 16 | 0 | 0 | 4 | 3 | 36 |
+| `family` | 23 | 0 | 0 | 0 | 0 | 2 | 0 | 0 | 0 | 1 | 0 | 26 |
+| `fit-input` | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
+| `inference` | 2 | 44 | 0 | 0 | 0 | 2 | 0 | 15 | 0 | 0 | 0 | 63 |
+| `isdm` | 11 | 0 | 0 | 0 | 0 | 0 | 9 | 0 | 0 | 1 | 0 | 21 |
+| `namespace` | 41 | 0 | 0 | 16 | 0 | 0 | 2 | 0 | 1 | 0 | 9 | 69 |
+| `postfit` | 41 | 0 | 0 | 0 | 2 | 6 | 2 | 0 | 0 | 1 | 0 | 52 |
+| `all` | 162 | 44 | 2 | 16 | 4 | 18 | 29 | 22 | 1 | 7 | 12 | 317 |
 
 ## P1 twin fixtures present at this head, not bound to any row
 
@@ -160,8 +160,8 @@ decision for the PR that measures it, not something this tool does.
 | covariance-COV-ORD-INDEP-COMMON `covariance/COV-ORD-INDEP-COMMON` | required_core; cases: MODE-ORD-COMMON, MODE-ORD-COMMON-FORMULA-INTERFACE, MODE-ORD-COMMON-PUBLIC-R-BRIDGE | PARTIAL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-COMMON.json, non-binding docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-COMMON-FORMULA-INTERFACE.json, non-binding docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-COMMON-PUBLIC-R-BRIDGE.json | family covariance; evidence_tier partial_numeric_bridge_boundary; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | covariance-COV-KERNEL-FOLDED-UNIQUE `covariance/COV-KERNEL-FOLDED-UNIQUE` | required_core; cases: CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE | HELD | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE.json | family covariance; evidence_tier numeric_held_batch_verifier_failed; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | covariance-COV-KERNEL-LATENT `covariance/COV-KERNEL-LATENT` | required_core; cases: CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE | HELD | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE.json | family covariance; evidence_tier numeric_held_batch_verifier_failed; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| covariance-COV-META-EXACT `covariance/COV-META-EXACT` | required_core; cases: CORE070-COV-META-EXACT-FORMULA | NON-NUMERIC | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-COV-META-EXACT-FORMULA.json | family covariance; evidence_tier r_only; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| covariance-COV-META-LEGACY `covariance/COV-META-LEGACY` | compatibility_adapter; cases: CORE070-COV-META-LEGACY-ADAPTER | NON-NUMERIC | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-COV-META-LEGACY-ADAPTER.json | family covariance; evidence_tier r_only; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| covariance-COV-META-EXACT `covariance/COV-META-EXACT` | required_core; cases: CORE070-COV-META-EXACT-FORMULA | DISPOSITION-SIGNED | Disposition: DISPOSITION-SIGNED; signed_by: Shinichi Nakagawa; signed_on: 2026-10-05 | family covariance; evidence_tier r_only; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| covariance-COV-META-LEGACY `covariance/COV-META-LEGACY` | compatibility_adapter; cases: CORE070-COV-META-LEGACY-ADAPTER | DISPOSITION-SIGNED | Disposition: DISPOSITION-SIGNED; signed_by: Shinichi Nakagawa; signed_on: 2026-10-05 | family covariance; evidence_tier r_only; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | covariance-COV-ORD-LATENT-BARE `covariance/COV-ORD-LATENT-BARE` | required_core; cases: P1-JULIA-COV-ORD-LATENT-BARE-LOGLIK, P1-JULIA-COV-ORD-LATENT-BARE-BETA, P1-JULIA-COV-ORD-LATENT-BARE-TRAIT-COVARIANCE, P1-JULIA-COV-ORD-LATENT-BARE-SIGMA-EPS, P1-JULIA-COV-ORD-LATENT-BARE-OBJECTIVE-AT-R, P1-JULIA-COV-ORD-LATENT-BARE-OBJECTIVE-AT-PROBE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/covariance-twins/COV-ORD-LATENT-BARE.json | family covariance; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | covariance-COV-ORD-LATENT-COMMON `covariance/COV-ORD-LATENT-COMMON` | required_core; cases: P1-JULIA-COV-ORD-LATENT-COMMON-LOGLIK, P1-JULIA-COV-ORD-LATENT-COMMON-BETA, P1-JULIA-COV-ORD-LATENT-COMMON-TRAIT-COVARIANCE, P1-JULIA-COV-ORD-LATENT-COMMON-OBJECTIVE-AT-R, P1-JULIA-COV-ORD-LATENT-COMMON-OBJECTIVE-AT-PROBE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/covariance-twins/COV-ORD-LATENT-COMMON.json | family covariance; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | covariance-COV-ORD-LATENT-DEFAULT `covariance/COV-ORD-LATENT-DEFAULT` | required_core; cases: P1-JULIA-COV-ORD-LATENT-DEFAULT-LOGLIK, P1-JULIA-COV-ORD-LATENT-DEFAULT-BETA, P1-JULIA-COV-ORD-LATENT-DEFAULT-TRAIT-COVARIANCE, P1-JULIA-COV-ORD-LATENT-DEFAULT-OBJECTIVE-AT-R, P1-JULIA-COV-ORD-LATENT-DEFAULT-OBJECTIVE-AT-PROBE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/covariance-twins/COV-ORD-LATENT-DEFAULT.json | family covariance; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |

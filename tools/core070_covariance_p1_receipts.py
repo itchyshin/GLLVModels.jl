@@ -54,7 +54,8 @@ move to evidence.batch_case_ids and their receipts stay under evidence.non_bindi
 evidence_tier numeric. Classification, disposition and every other field are untouched.
 `--apply-twins` re-derives the twin rows and the counts of the tracked case-map-covariance.json
 from the tracked receipts and twin receipts (no run directory needed); `--check` verifies the
-result without writing.
+result without writing. Both also apply COV_SIGNED, the maintainer-signed dispositions (signer,
+date, ruling and signature source copied onto the row; evidence untouched).
 
 Usage (inputs are the raw run directories, e.g. under local-scratch):
   python3 tools/core070_covariance_p1_receipts.py \
@@ -392,6 +393,35 @@ COV_SCOPE_NOTES.update({
 })
 
 
+# ---- Maintainer-signed dispositions (overlay) ----------------------------------------------------
+# A row the maintainer has resolved by a signed disposition instead of a twin. The signature is the
+# maintainer's own (signed_by / signed_on as he gave them); this tool only copies it onto the row, with
+# the ruling and its source. Evidence fields are kept as measured. Applied by main() and --apply-twins;
+# --check verifies it. Signature source for 2026-10-05: vault D-319 and
+# LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md (lane kit).
+D319 = {"signed_by": MAINTAINER, "signed_on": "2026-10-05",
+        "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the "
+                            "true-parity lane kit; recorded by an agent, signed by the maintainer"}
+_N3 = ("Ruling N3 (wave plan 2026-10-03, signed under D-319): known-V (meta-analytic) covariance is a documented gap at P1, "
+       "to be revisited at P2. Julia has no known-V surface (no fitter or formula term takes a known sampling covariance V; "
+       "wave plan section 3), so no R-vs-Julia number can exist for this row. Building it is 18 to 24 h and an API change "
+       "that needs the maintainer's approval; it is not done here. ")
+COV_SIGNED = {
+    "covariance/COV-META-EXACT": {**D319, "ruling": "N3", "text": _N3 + "The R-only formula-grammar receipt stays cited as "
+                                  "non-binding context."},
+    "covariance/COV-META-LEGACY": {**D319, "ruling": "N3", "text": _N3 + "No Julia alias is added for R's deprecated "
+                                   "spelling. The R-only adapter receipt stays cited as non-binding context."},
+}
+
+
+def signed_overlay(row):
+    """Copy the maintainer's signed disposition onto `row` (idempotent). Evidence is not touched."""
+    s = COV_SIGNED[row["source_id"]]
+    row["disposition"] = "DISPOSITION-SIGNED"
+    row["signed_by"], row["signed_on"] = s["signed_by"], s["signed_on"]
+    row["signed_disposition"] = {"ruling": s["ruling"], "text": s["text"], "signature_source": s["signature_source"]}
+
+
 def twin_tier(sid):
     """The tier text of a twin-bound row, naming that row's own receipt tool, twin test and fixture."""
     _, test, fixture, tool = COV_TWINS[sid]
@@ -456,6 +486,8 @@ def derive_twins(casemap):
     for row in out["rows"]:
         if row["source_id"] in COV_TWINS:
             twin_overlay(row)
+        if row["source_id"] in COV_SIGNED:
+            signed_overlay(row)
     out["counts"] = recount(out["rows"])
     out["note"] = CASEMAP_NOTE
     return out
@@ -719,6 +751,8 @@ def main():
     for row in out_rows:  # Julia fit-level twins (see the overlay block above)
         if row["source_id"] in COV_TWINS:
             twin_overlay(row)
+        if row["source_id"] in COV_SIGNED:
+            signed_overlay(row)
     counts = recount(out_rows)
 
     # Rows this tool does not generate (e.g. the C3 campaign rows added under #684 item 4) are
