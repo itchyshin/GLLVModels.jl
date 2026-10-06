@@ -3,13 +3,13 @@
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "scope": "covariance family: the 17 rows the P1 carry scan lists as PARTIAL_STALE_AT_P1 (7) or DANGLING (10); the 22 NOT_BOUND_AT_P0 covariance rows had no P0 evidence and are out of scope here",
   "glvmodels_commit": "59ecd020a7f9d19873f1ad3fbf05e2cc44f08360",
-  "note": "Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with PARITY_CASEMAP pointing at this file. Classifications are carried from docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. Only rows whose every executable case id carries a numeric R-vs-Julia comparison block cite evidence.receipt; rows with an R-only or R-boundary case cite evidence.non_binding_receipts instead, so they read as not bound under both the current checker and the numeric-tier rule proposed in PR #561. A row whose numeric cases pass but whose batch verifier rejected the run is held back the same way (evidence_tier numeric_held_batch_verifier_failed) unless a maintainer-signed receipt_status_exception is recorded on it. An R-only row with a fit-level Julia twin (receipts/julia-twins/covariance-twins/) is bound by that twin instead (evidence_tier numeric, the formula-grammar case ids kept under evidence.batch_case_ids); see --apply-twins.",
+  "note": "Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with PARITY_CASEMAP pointing at this file. Classifications are carried from docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. Only rows whose every executable case id carries a numeric R-vs-Julia comparison block cite evidence.receipt; rows with an R-only or R-boundary case cite evidence.non_binding_receipts instead, so they read as not bound under both the current checker and the numeric-tier rule proposed in PR #561. A row whose numeric cases pass but whose batch verifier rejected the run is held back the same way (evidence_tier numeric_held_batch_verifier_failed) unless a maintainer-signed receipt_status_exception is recorded on it. An R-only row with a fit-level Julia twin (receipts/julia-twins/covariance-twins/) is bound by that twin instead (evidence_tier numeric, the formula-grammar case ids kept under evidence.batch_case_ids); see --apply-twins. Maintainer ruling 2026-10-05 (D-319), N1: on the seven rows of COV_N1_CONTEXT the PUBLIC-R-BRIDGE case is non-binding context (boundary_context_case_ids, its receipt under evidence.boundary_context_receipts) and the row binds on its native and formula-interface cases.",
   "generator": "tools/core070_covariance_p1_receipts.py",
   "counts": {
-    "numeric_pass": 6,
+    "numeric_pass": 15,
     "numeric_fail": 0,
-    "numeric_held_batch_verifier_failed": 2,
-    "partial_numeric_bridge_boundary": 7,
+    "numeric_held_batch_verifier_failed": 0,
+    "partial_numeric_bridge_boundary": 0,
     "r_only_needs_julia_surface": 2,
     "not_measured": 0
   },
@@ -33,23 +33,33 @@
         "FIT-MODE-ANIMAL-DEP-PUBLIC-R-BRIDGE"
       ],
       "disposition": null,
-      "evidence_tier": "partial_numeric_bridge_boundary",
+      "evidence_tier": "numeric",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-DEP.json",
-          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-DEP-FORMULA-INTERFACE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-DEP-FORMULA-INTERFACE.json"
+        ],
+        "boundary_context_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-DEP-PUBLIC-R-BRIDGE.json"
         ],
-        "tier": "native and formula cases carry numeric R-vs-Julia comparison blocks; the PUBLIC-R-BRIDGE case is an R-side boundary (gllvmTMB engine='julia' refuses the structured term), so the row as a whole has no numeric twin and does not bind"
+        "tier": "numeric: the native and formula-interface case receipts carry R-vs-Julia comparison blocks pinned to P1 from a batch whose verifier accepted the run; the PUBLIC-R-BRIDGE case (gllvmTMB engine='julia' refuses the structured term before any Julia call) is non-binding boundary context under maintainer ruling 2026-10-05 (D-319), N1"
       },
       "measured_result": {
         "case_verdicts": {
           "FIT-MODE-ANIMAL-DEP": "PASS",
           "FIT-MODE-ANIMAL-DEP-FORMULA-INTERFACE": "PASS",
           "FIT-MODE-ANIMAL-DEP-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED"
-        }
-      }
+        },
+        "batch_verifier": {
+          "FIT-MODE-ANIMAL-DEP": "PASS",
+          "FIT-MODE-ANIMAL-DEP-FORMULA-INTERFACE": "PASS"
+        },
+        "row_verdict": "PASS"
+      },
+      "boundary_context_case_ids": [
+        "FIT-MODE-ANIMAL-DEP-PUBLIC-R-BRIDGE"
+      ]
     },
     {
       "source_id": "covariance/COV-ANIMAL-INDEP",
@@ -65,18 +75,20 @@
         "FIT-MODE-ANIMAL-COMMON-PUBLIC-R-BRIDGE"
       ],
       "disposition": null,
-      "evidence_tier": "partial_numeric_bridge_boundary",
+      "evidence_tier": "numeric",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-INDEP.json",
           "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-COMMON.json",
           "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-INDEP-FORMULA-INTERFACE.json",
-          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-COMMON-FORMULA-INTERFACE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-COMMON-FORMULA-INTERFACE.json"
+        ],
+        "boundary_context_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-INDEP-PUBLIC-R-BRIDGE.json",
           "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-COMMON-PUBLIC-R-BRIDGE.json"
         ],
-        "tier": "native and formula cases carry numeric R-vs-Julia comparison blocks; the PUBLIC-R-BRIDGE case is an R-side boundary (gllvmTMB engine='julia' refuses the structured term), so the row as a whole has no numeric twin and does not bind"
+        "tier": "numeric: the native and formula-interface case receipts carry R-vs-Julia comparison blocks pinned to P1 from a batch whose verifier accepted the run; the PUBLIC-R-BRIDGE case (gllvmTMB engine='julia' refuses the structured term before any Julia call) is non-binding boundary context under maintainer ruling 2026-10-05 (D-319), N1"
       },
       "measured_result": {
         "case_verdicts": {
@@ -86,8 +98,19 @@
           "FIT-MODE-ANIMAL-COMMON-FORMULA-INTERFACE": "PASS",
           "FIT-MODE-ANIMAL-INDEP-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED",
           "FIT-MODE-ANIMAL-COMMON-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED"
-        }
-      }
+        },
+        "batch_verifier": {
+          "FIT-MODE-ANIMAL-INDEP": "PASS",
+          "FIT-MODE-ANIMAL-COMMON": "PASS",
+          "FIT-MODE-ANIMAL-INDEP-FORMULA-INTERFACE": "PASS",
+          "FIT-MODE-ANIMAL-COMMON-FORMULA-INTERFACE": "PASS"
+        },
+        "row_verdict": "PASS"
+      },
+      "boundary_context_case_ids": [
+        "FIT-MODE-ANIMAL-INDEP-PUBLIC-R-BRIDGE",
+        "FIT-MODE-ANIMAL-COMMON-PUBLIC-R-BRIDGE"
+      ]
     },
     {
       "source_id": "covariance/COV-KERNEL-DEP",
@@ -100,23 +123,33 @@
         "FIT-MODE-KERNEL-DEP-PUBLIC-R-BRIDGE"
       ],
       "disposition": null,
-      "evidence_tier": "partial_numeric_bridge_boundary",
+      "evidence_tier": "numeric",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-DEP.json",
-          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-DEP-FORMULA-INTERFACE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-DEP-FORMULA-INTERFACE.json"
+        ],
+        "boundary_context_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-DEP-PUBLIC-R-BRIDGE.json"
         ],
-        "tier": "native and formula cases carry numeric R-vs-Julia comparison blocks; the PUBLIC-R-BRIDGE case is an R-side boundary (gllvmTMB engine='julia' refuses the structured term), so the row as a whole has no numeric twin and does not bind"
+        "tier": "numeric: the native and formula-interface case receipts carry R-vs-Julia comparison blocks pinned to P1 from a batch whose verifier accepted the run; the PUBLIC-R-BRIDGE case (gllvmTMB engine='julia' refuses the structured term before any Julia call) is non-binding boundary context under maintainer ruling 2026-10-05 (D-319), N1"
       },
       "measured_result": {
         "case_verdicts": {
           "FIT-MODE-KERNEL-DEP": "PASS",
           "FIT-MODE-KERNEL-DEP-FORMULA-INTERFACE": "PASS",
           "FIT-MODE-KERNEL-DEP-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED"
-        }
-      }
+        },
+        "batch_verifier": {
+          "FIT-MODE-KERNEL-DEP": "PASS",
+          "FIT-MODE-KERNEL-DEP-FORMULA-INTERFACE": "PASS"
+        },
+        "row_verdict": "PASS"
+      },
+      "boundary_context_case_ids": [
+        "FIT-MODE-KERNEL-DEP-PUBLIC-R-BRIDGE"
+      ]
     },
     {
       "source_id": "covariance/COV-KERNEL-INDEP",
@@ -132,18 +165,20 @@
         "FIT-MODE-KERNEL-COMMON-PUBLIC-R-BRIDGE"
       ],
       "disposition": null,
-      "evidence_tier": "partial_numeric_bridge_boundary",
+      "evidence_tier": "numeric",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-INDEP.json",
           "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-COMMON.json",
           "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-INDEP-FORMULA-INTERFACE.json",
-          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-COMMON-FORMULA-INTERFACE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-COMMON-FORMULA-INTERFACE.json"
+        ],
+        "boundary_context_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-INDEP-PUBLIC-R-BRIDGE.json",
           "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-COMMON-PUBLIC-R-BRIDGE.json"
         ],
-        "tier": "native and formula cases carry numeric R-vs-Julia comparison blocks; the PUBLIC-R-BRIDGE case is an R-side boundary (gllvmTMB engine='julia' refuses the structured term), so the row as a whole has no numeric twin and does not bind"
+        "tier": "numeric: the native and formula-interface case receipts carry R-vs-Julia comparison blocks pinned to P1 from a batch whose verifier accepted the run; the PUBLIC-R-BRIDGE case (gllvmTMB engine='julia' refuses the structured term before any Julia call) is non-binding boundary context under maintainer ruling 2026-10-05 (D-319), N1"
       },
       "measured_result": {
         "case_verdicts": {
@@ -153,8 +188,19 @@
           "FIT-MODE-KERNEL-COMMON-FORMULA-INTERFACE": "PASS",
           "FIT-MODE-KERNEL-INDEP-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED",
           "FIT-MODE-KERNEL-COMMON-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED"
-        }
-      }
+        },
+        "batch_verifier": {
+          "FIT-MODE-KERNEL-INDEP": "PASS",
+          "FIT-MODE-KERNEL-COMMON": "PASS",
+          "FIT-MODE-KERNEL-INDEP-FORMULA-INTERFACE": "PASS",
+          "FIT-MODE-KERNEL-COMMON-FORMULA-INTERFACE": "PASS"
+        },
+        "row_verdict": "PASS"
+      },
+      "boundary_context_case_ids": [
+        "FIT-MODE-KERNEL-INDEP-PUBLIC-R-BRIDGE",
+        "FIT-MODE-KERNEL-COMMON-PUBLIC-R-BRIDGE"
+      ]
     },
     {
       "source_id": "covariance/COV-ORD-DEP",
@@ -167,23 +213,33 @@
         "FIT-MODE-ORD-DEP-PUBLIC-R-BRIDGE"
       ],
       "disposition": null,
-      "evidence_tier": "partial_numeric_bridge_boundary",
+      "evidence_tier": "numeric",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ORD-DEP.json",
-          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ORD-DEP-FORMULA-INTERFACE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ORD-DEP-FORMULA-INTERFACE.json"
+        ],
+        "boundary_context_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ORD-DEP-PUBLIC-R-BRIDGE.json"
         ],
-        "tier": "native and formula cases carry numeric R-vs-Julia comparison blocks; the PUBLIC-R-BRIDGE case is an R-side boundary (gllvmTMB engine='julia' refuses the structured term), so the row as a whole has no numeric twin and does not bind"
+        "tier": "numeric: the native and formula-interface case receipts carry R-vs-Julia comparison blocks pinned to P1 from a batch whose verifier accepted the run; the PUBLIC-R-BRIDGE case (gllvmTMB engine='julia' refuses the structured term before any Julia call) is non-binding boundary context under maintainer ruling 2026-10-05 (D-319), N1"
       },
       "measured_result": {
         "case_verdicts": {
           "FIT-MODE-ORD-DEP": "PASS",
           "FIT-MODE-ORD-DEP-FORMULA-INTERFACE": "PASS",
           "FIT-MODE-ORD-DEP-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED"
-        }
-      }
+        },
+        "batch_verifier": {
+          "FIT-MODE-ORD-DEP": "PASS",
+          "FIT-MODE-ORD-DEP-FORMULA-INTERFACE": "PASS"
+        },
+        "row_verdict": "PASS"
+      },
+      "boundary_context_case_ids": [
+        "FIT-MODE-ORD-DEP-PUBLIC-R-BRIDGE"
+      ]
     },
     {
       "source_id": "covariance/COV-ORD-INDEP",
@@ -196,23 +252,33 @@
         "MODE-ORD-INDEP-PUBLIC-R-BRIDGE"
       ],
       "disposition": null,
-      "evidence_tier": "partial_numeric_bridge_boundary",
+      "evidence_tier": "numeric",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-INDEP.json",
-          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-INDEP-FORMULA-INTERFACE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-INDEP-FORMULA-INTERFACE.json"
+        ],
+        "boundary_context_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-INDEP-PUBLIC-R-BRIDGE.json"
         ],
-        "tier": "native and formula cases carry numeric R-vs-Julia comparison blocks; the PUBLIC-R-BRIDGE case is an R-side boundary (gllvmTMB engine='julia' refuses the structured term), so the row as a whole has no numeric twin and does not bind"
+        "tier": "numeric: the native and formula-interface case receipts carry R-vs-Julia comparison blocks pinned to P1 from a batch whose verifier accepted the run; the PUBLIC-R-BRIDGE case (gllvmTMB engine='julia' refuses the structured term before any Julia call) is non-binding boundary context under maintainer ruling 2026-10-05 (D-319), N1"
       },
       "measured_result": {
         "case_verdicts": {
           "MODE-ORD-INDEP": "PASS",
           "MODE-ORD-INDEP-FORMULA-INTERFACE": "PASS",
           "MODE-ORD-INDEP-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED"
-        }
-      }
+        },
+        "batch_verifier": {
+          "MODE-ORD-INDEP": "PASS",
+          "MODE-ORD-INDEP-FORMULA-INTERFACE": "PASS"
+        },
+        "row_verdict": "PASS"
+      },
+      "boundary_context_case_ids": [
+        "MODE-ORD-INDEP-PUBLIC-R-BRIDGE"
+      ]
     },
     {
       "source_id": "covariance/COV-ORD-INDEP-COMMON",
@@ -225,23 +291,33 @@
         "MODE-ORD-COMMON-PUBLIC-R-BRIDGE"
       ],
       "disposition": null,
-      "evidence_tier": "partial_numeric_bridge_boundary",
+      "evidence_tier": "numeric",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-COMMON.json",
-          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-COMMON-FORMULA-INTERFACE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-COMMON-FORMULA-INTERFACE.json"
+        ],
+        "boundary_context_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-COMMON-PUBLIC-R-BRIDGE.json"
         ],
-        "tier": "native and formula cases carry numeric R-vs-Julia comparison blocks; the PUBLIC-R-BRIDGE case is an R-side boundary (gllvmTMB engine='julia' refuses the structured term), so the row as a whole has no numeric twin and does not bind"
+        "tier": "numeric: the native and formula-interface case receipts carry R-vs-Julia comparison blocks pinned to P1 from a batch whose verifier accepted the run; the PUBLIC-R-BRIDGE case (gllvmTMB engine='julia' refuses the structured term before any Julia call) is non-binding boundary context under maintainer ruling 2026-10-05 (D-319), N1"
       },
       "measured_result": {
         "case_verdicts": {
           "MODE-ORD-COMMON": "PASS",
           "MODE-ORD-COMMON-FORMULA-INTERFACE": "PASS",
           "MODE-ORD-COMMON-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED"
-        }
-      }
+        },
+        "batch_verifier": {
+          "MODE-ORD-COMMON": "PASS",
+          "MODE-ORD-COMMON-FORMULA-INTERFACE": "PASS"
+        },
+        "row_verdict": "PASS"
+      },
+      "boundary_context_case_ids": [
+        "MODE-ORD-COMMON-PUBLIC-R-BRIDGE"
+      ]
     },
     {
       "source_id": "covariance/COV-KERNEL-FOLDED-UNIQUE",
@@ -252,22 +328,22 @@
         "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE"
       ],
       "disposition": null,
-      "evidence_tier": "numeric_held_batch_verifier_failed",
+      "evidence_tier": "numeric",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE.json"
         ],
-        "tier": "numeric comparison blocks pass, but the batch verifier rejected the run, so the row does not bind"
+        "tier": "numeric: per-case receipts carry an R-vs-Julia comparison block pinned to P1"
       },
-      "note": "held pending the maintainer's ruling on the wave6 nobs expectation; the covariance cases themselves pass (7.25e-8, 1.26e-6 vs tol 1e-4)",
       "measured_result": {
         "case_verdicts": {
           "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE": "PASS"
         },
         "batch_verifier": {
-          "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE": "FAIL"
-        }
+          "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE": "PASS"
+        },
+        "row_verdict": "PASS"
       }
     },
     {
@@ -279,22 +355,22 @@
         "CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE"
       ],
       "disposition": null,
-      "evidence_tier": "numeric_held_batch_verifier_failed",
+      "evidence_tier": "numeric",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE.json"
         ],
-        "tier": "numeric comparison blocks pass, but the batch verifier rejected the run, so the row does not bind"
+        "tier": "numeric: per-case receipts carry an R-vs-Julia comparison block pinned to P1"
       },
-      "note": "held pending the maintainer's ruling on the wave6 nobs expectation; the covariance cases themselves pass (7.25e-8, 1.26e-6 vs tol 1e-4)",
       "measured_result": {
         "case_verdicts": {
           "CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE": "PASS"
         },
         "batch_verifier": {
-          "CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE": "FAIL"
-        }
+          "CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE": "PASS"
+        },
+        "row_verdict": "PASS"
       }
     },
     {
@@ -305,7 +381,7 @@
       "executable_case_ids": [
         "CORE070-COV-META-EXACT-FORMULA"
       ],
-      "disposition": null,
+      "disposition": "DISPOSITION-SIGNED",
       "evidence_tier": "r_only",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
@@ -318,6 +394,13 @@
         "case_verdicts": {
           "CORE070-COV-META-EXACT-FORMULA": "R_ONLY_PASS"
         }
+      },
+      "signed_by": "Shinichi Nakagawa",
+      "signed_on": "2026-10-05",
+      "signed_disposition": {
+        "ruling": "N3",
+        "text": "Ruling N3 (wave plan 2026-10-03, signed under D-319): known-V (meta-analytic) covariance is a documented gap at P1, to be revisited at P2. Julia has no known-V surface (no fitter or formula term takes a known sampling covariance V; wave plan section 3), so no R-vs-Julia number can exist for this row. Building it is 18 to 24 h and an API change that needs the maintainer's approval; it is not done here. The R-only formula-grammar receipt stays cited as non-binding context.",
+        "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer"
       }
     },
     {
@@ -328,7 +411,7 @@
       "executable_case_ids": [
         "CORE070-COV-META-LEGACY-ADAPTER"
       ],
-      "disposition": null,
+      "disposition": "DISPOSITION-SIGNED",
       "evidence_tier": "r_only",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
@@ -341,6 +424,13 @@
         "case_verdicts": {
           "CORE070-COV-META-LEGACY-ADAPTER": "R_ONLY_PASS"
         }
+      },
+      "signed_by": "Shinichi Nakagawa",
+      "signed_on": "2026-10-05",
+      "signed_disposition": {
+        "ruling": "N3",
+        "text": "Ruling N3 (wave plan 2026-10-03, signed under D-319): known-V (meta-analytic) covariance is a documented gap at P1, to be revisited at P2. Julia has no known-V surface (no fitter or formula term takes a known sampling covariance V; wave plan section 3), so no R-vs-Julia number can exist for this row. Building it is 18 to 24 h and an API change that needs the maintainer's approval; it is not done here. No Julia alias is added for R's deprecated spelling. The R-only adapter receipt stays cited as non-binding context.",
+        "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer"
       }
     },
     {
@@ -615,16 +705,16 @@
         "CAMPAIGN-C3-COV-PHYLO-LATENT-RSZ-SIGMA-PHY"
       ],
       "disposition": null,
-      "evidence_tier": "partial_case_not_executed",
+      "evidence_tier": "numeric",
       "measured_against": "P1",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/covariance/campaign/COV-PHYLO-LATENT-RSZ.json"
         ],
-        "tier": "measured, does not bind. Every number is inside its tolerance, but a required leg is not signed: the R side is the tracked PR #547 receipt, which records qualified = false until the maintainer signs the dated promotion block (D-300 answer 9). No agent may sign it, so the receipt stays unqualified until then"
+        "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
       },
       "measured_result": {
-        "verdict": "NUMERIC_PASS_NOT_BINDING",
+        "verdict": "PASS",
         "max_abs_diff_by_case": {
           "CAMPAIGN-C3-COV-PHYLO-LATENT-RSZ-LOGLIK": 2.2646418074145913e-09,
           "CAMPAIGN-C3-COV-PHYLO-LATENT-RSZ-SIGMA-PHY": 4.352562274601013e-06

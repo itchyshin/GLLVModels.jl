@@ -344,13 +344,13 @@ for (const [fixture, why] of [
     assert.match(stdout, /isdm\/CAP-ISDM-1FO-PREDICT-EXPORT:NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT/);
   });
 }
-// The reviewer's mutation, on the real row and its real receipts: namespace/S3method/coef,
-// gllvmTMB_multi relabelled "numeric" in an otherwise faithful copy. Before this fix it printed
-// C1_MET and C8_MET; it must now be NOT_MET on both.
-test('numeric tier: the real coef,gllvmTMB_multi row relabelled "numeric" is NOT_MET on C1 and C8', () => {
+// The reviewer's mutation, on a real registration row and its real receipts: namespace/export/
+// extract_phylo_signal relabelled "numeric" in an otherwise faithful copy. It must be NOT_MET on C1 and C8.
+// (Repointed from S3method/coef,gllvmTMB_multi, which now binds on a numeric receipt; maintainer OK, D-319, W1-1.)
+test('numeric tier: the real extract_phylo_signal row relabelled "numeric" is NOT_MET on C1 and C8', () => {
   const cmPath = 'docs/dev-log/core070/true-parity-latest/case-map-namespace.json';
   const cm = JSON.parse(readFileSync(join(REPO_ROOT, cmPath), 'utf8'));
-  const row = cm.rows.find((r) => r.source_id === 'namespace/S3method/coef,gllvmTMB_multi');
+  const row = cm.rows.find((r) => r.source_id === 'namespace/export/extract_phylo_signal');
   assert.ok(row, 'real row not found in case-map-namespace.json');
   const dir = mkdtempSync(join(tmpdir(), 'true-parity-mut-'));
   try {
@@ -917,7 +917,11 @@ test('behavioural: a behavioural label cannot ride on another row numeric receip
 test('behavioural scope: a row outside the frozen list (59 inference rows, four named rows) does not bind, even with a valid block', () => {
   for (const sid of ['isdm/CAP-ISDM-1FO-PREDICT-EXPORT-2', 'postfit/POSTFIT-SURFACE-extract_proportions', 'data/RD-01', 'inference2/CI-ROUTE-001', 'x/inference/CI-ROUTE-001',
     // the four inference rows #684 item 2 does not name (two numeric, two partial): a prefix rule admitted them
-    'inference/CI-ROUTE-008', 'inference/CI-ROUTE-009', 'inference/CI-ROUTE-010', 'inference/CI-ROUTE-011',
+    // (CI-ROUTE-009 joined the scope in the 2026-10-05 extension; the other three stay out)
+    'inference/CI-ROUTE-008', 'inference/CI-ROUTE-010', 'inference/CI-ROUTE-011',
+    // near misses of the 2026-10-05 extension: an unlisted aghq id, the iSDM rows that close by signed disposition, a truncated name
+    'aghq/AGHQ-CTRL-THREE', 'aghq/AGHQ-AUTO-K-BINOMIAL', 'isdm/ISDM-WRONG-ID', 'isdm/ISDM-WRONG-LINK', 'isdm/ISDM-NO-TRAITS', 'isdm/ISDM-LEGACY',
+    'postfit/POSTFIT-SURFACE-check_auto', 'postfit/POSTFIT-SURFACE-check_auto_residual ',
     // a bare prefix, a path trick, a new unlisted inference id, a gap in the numbering, whitespace and case variants of a listed id
     'inference/', 'inference/../isdm/X', 'inference/CI-ROUTE-999', 'inference/CI-ROUTE-005', 'inference/CI-ROUTE-001 ', ' inference/CI-ROUTE-001', 'Inference/CI-ROUTE-001']) {
     const m = ({ readJ, writeJ }) => { bTree({ row: { source_id: sid } })({ readJ, writeJ }); };
@@ -938,6 +942,39 @@ test('behavioural scope: each of the four named C1 rows binds like an inference 
     assert.match(c1.stdout, /bound_behavioural=1 /, sid);
     assert.match(runTree(m, 'C8').stdout, /C8_MET$/m, sid);
   }
+});
+// Maintainer ruling 2026-10-05 (D-319): items A (7 aghq control rows, CI-ROUTE-009), N6 (5 iSDM rows) and N10
+// (check_auto_residual) extend the frozen list by 14 explicit ids.
+const EXTENDED_2026_10_05 = ['aghq/AGHQ-CTRL-AUTO', 'aghq/AGHQ-CTRL-FALSE', 'aghq/AGHQ-CTRL-NINE', 'aghq/AGHQ-CTRL-NULL',
+  'aghq/AGHQ-CTRL-ONE', 'aghq/AGHQ-CTRL-TRUE', 'aghq/AGHQ-CTRL-TWO', 'inference/CI-ROUTE-009',
+  'isdm/ISDM-COUNT', 'isdm/ISDM-EXTRA-SOURCE', 'isdm/ISDM-MISSING-IN-TRAIT', 'isdm/ISDM-MISSING-SOURCE', 'isdm/ISDM-WRAPPER-LAW',
+  'postfit/POSTFIT-SURFACE-check_auto_residual'];
+test('behavioural scope (2026-10-05 extension): each of the 14 extended rows binds with a matching block, and fails on a mismatch', () => {
+  assert.equal(EXTENDED_2026_10_05.length, 14);
+  for (const sid of EXTENDED_2026_10_05) {
+    const m = bTree({ row: { source_id: sid } });
+    const c1 = runTree(m, 'C1');
+    assert.match(c1.stdout, /C1_MET$/m, `${sid}\n${c1.stdout}`);
+    assert.match(c1.stdout, /bound_behavioural=1 /, sid);
+    assert.match(runTree(m, 'C8').stdout, /C8_MET$/m, sid);
+    // In scope is not bound: a mismatched label still fails.
+    const bad = runTree(bTree({ row: { source_id: sid }, receipt: bReceipt({}, {}, [bCase({ r_observed: 'refused', julia_observed: 'accepted' })]) }), 'C1');
+    assert.match(bad.stdout, /C1_NOT_MET$/m, sid);
+    assert.match(bad.stdout, /differ after canonicalisation/, sid);
+  }
+});
+// Maintainer ruling 2026-10-05 (D-319), ruling 3: the tracked table pairs R's default fisher-z route for rho with Julia's
+// default (rho:wald_derived). R's own plain "wald" for rho is a different interval and must not match.
+test('ruling 3 (tracked table): R fisher-z matches Julia rho:wald_derived for rho; R wald does not', () => {
+  const real = JSON.parse(readFileSync(join(REPO_ROOT, L, 'behaviour-equivalence.json'), 'utf8'));
+  const run29 = (r) => runTree(bTree({ row: { source_id: 'inference/CI-ROUTE-029' }, equivalence: real,
+    receipt: bReceipt({}, {}, [bCase({ r_observed: r, julia_observed: 'rho:wald_derived' })]) }), 'C1');
+  const ok = run29('.confint_rho:fisher-z');
+  assert.match(ok.stdout, /C1_MET$/m, ok.stdout);
+  assert.match(ok.stdout, /bound_behavioural=1 /);
+  const bad = run29('.confint_rho:wald');
+  assert.match(bad.stdout, /C1_NOT_MET$/m);
+  assert.match(bad.stdout, /R ".confint_rho:wald" vs Julia "rho:wald_derived" differ after canonicalisation \(R: no class; Julia: class "rho:fisher-z"\)/);
 });
 test('behavioural scope: a cited receipt whose own comparison is out of tolerance does not bind a relabelled row', () => {
   const bad = { pin: 'P1', cases: [{ case_id: 'CASE-B', quantity: 'q', r_value: 1, julia_value: 99, tolerance: 1e-6 }] };
@@ -1174,18 +1211,188 @@ test('C6: an undecided item (decision null) still fails, as before', () => {
   assert.match(r.stdout, /invalid_decision=julia-export\/undecided:null /);
 });
 
+// --- Maintainer ruling 2026-10-05 (D-319), ruling 1: bridge readback binds fitted, predict and residuals only, each on
+// its own cases. brTree() adds one numeric row citing receipts/br.json (evidence_kind live_bridge_readback). ---
+function brTree({ sid = 'namespace/S3method/fitted,gllvmTMB_julia', caseId = 'P1-BRIDGE-READBACK-FITTED-RESPONSE', kind = 'live_bridge_readback' } = {}) {
+  return ({ readJ, writeJ }) => {
+    const cm = readJ('case-map.json');
+    cm.rows.push({ source_id: sid, classification: 'compatibility_adapter', executable_case_ids: [caseId],
+      evidence: { receipt: `${L}/receipts/br.json` }, measured_against: P1_FULL, disposition: null, evidence_tier: 'numeric' });
+    writeJ('case-map.json', cm);
+    writeJ('receipts/br.json', { evidence_kind: kind, verdict: 'PASS',
+      comparison: { pin: 'P1', cases: [{ case_id: caseId, quantity: 'q', r_value: 1, julia_value: 1, tolerance: 1e-12 }] } });
+  };
+}
+test('bridge readback: fitted, predict and residuals bind on their own readback cases', () => {
+  for (const [sid, caseId] of [['namespace/S3method/fitted,gllvmTMB_julia', 'P1-BRIDGE-READBACK-FITTED-LINK'],
+    ['namespace/S3method/predict,gllvmTMB_julia', 'P1-BRIDGE-READBACK-PREDICT-LINK'],
+    ['namespace/S3method/residuals,gllvmTMB_julia', 'P1-BRIDGE-READBACK-RESIDUALS-PEARSON']]) {
+    const c1 = runTree(brTree({ sid, caseId }), 'C1');
+    assert.match(c1.stdout, /C1_MET$/m, `${sid}\n${c1.stdout}`);
+    assert.match(c1.stdout, /bound=3 bound_numeric=3\b/, sid);
+    assert.match(runTree(brTree({ sid, caseId }), 'C8').stdout, /C8_MET$/m, sid);
+  }
+});
+test('bridge readback: coef, logLik, summary, confint and simulate relabelled numeric on the readback receipt do not bind', () => {
+  for (const [sid, caseId] of [['namespace/S3method/coef,gllvmTMB_julia', 'P1-BRIDGE-READBACK-COEF-ALPHA'],
+    ['namespace/S3method/logLik,gllvmTMB_julia', 'P1-BRIDGE-READBACK-LOGLIK-VALUE'],
+    ['namespace/S3method/summary,gllvmTMB_julia', 'P1-BRIDGE-READBACK-SUMMARY-SIGMA'],
+    ['namespace/S3method/confint,gllvmTMB_julia', 'P1-BRIDGE-READBACK-CONFINT-X'],
+    ['namespace/S3method/simulate,gllvmTMB_julia', 'P1-BRIDGE-READBACK-SIMULATE-X'],
+    ['isdm/CAP-ISDM-1FO-PREDICT-EXPORT-2', 'P1-BRIDGE-READBACK-FITTED-LINK']]) {
+    const m = brTree({ sid, caseId });
+    const c1 = runTree(m, 'C1');
+    assert.match(c1.stdout, /C1_NOT_MET$/m, sid);
+    assert.match(c1.stdout, /binds only fitted, predict and residuals for gllvmTMB_julia/, sid);
+    const c8 = runTree(m, 'C8');
+    assert.match(c8.stdout, /C8_NOT_MET$/m, sid);
+    assert.match(c8.stdout, /NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT/, sid);
+  }
+});
+test('bridge readback: fitted cannot borrow another method readback case', () => {
+  const c1 = runTree(brTree({ caseId: 'P1-BRIDGE-READBACK-COEF-ALPHA' }), 'C1');
+  assert.match(c1.stdout, /C1_NOT_MET$/m);
+  assert.match(c1.stdout, /only on its own cases \(P1-BRIDGE-READBACK-FITTED-\*\), not P1-BRIDGE-READBACK-COEF-ALPHA/);
+});
+test('bridge readback: a receipt of another evidence kind is not affected by the rule', () => {
+  const c1 = runTree(brTree({ sid: 'namespace/S3method/coef,gllvmTMB_julia', caseId: 'P1-COEF-TWIN', kind: 'numeric_r_vs_julia' }), 'C1');
+  assert.match(c1.stdout, /C1_MET$/m, c1.stdout);
+});
+
+// --- Maintainer ruling 2026-10-05 (D-319), N1: admission-only and PUBLIC-R-BRIDGE boundary cases are non-binding
+// context. bcTree() adds a numeric row with a compared case and one context case. ---
+function bcTree({ ctxId = 'CASE-N-PUBLIC-R-BRIDGE', ctxReceipt = { evidence_kind: 'r_public_bridge_boundary', verdict: 'R_BOUNDARY_UNCHANGED' },
+  rowOver = {}, writeCtx = true } = {}) {
+  return ({ readJ, writeJ }) => {
+    const cm = readJ('case-map.json');
+    cm.rows.push({ source_id: 'covariance/COV-N', classification: 'required_core', executable_case_ids: ['CASE-N', ctxId],
+      boundary_context_case_ids: [ctxId],
+      evidence: { receipt: `${L}/receipts/rn.json`, boundary_context_receipts: [`${L}/receipts/ctx.json`] },
+      measured_against: P1_FULL, disposition: null, evidence_tier: 'numeric', ...rowOver });
+    writeJ('case-map.json', cm);
+    writeJ('receipts/rn.json', { verdict: 'PASS', comparison: { pin: 'P1', cases: [{ case_id: 'CASE-N', quantity: 'loglik', r_value: 1, julia_value: 1, tolerance: 1e-6 }] } });
+    if (writeCtx) writeJ('receipts/ctx.json', { case_id: ctxId, ...ctxReceipt });
+  };
+}
+test('N1 boundary context: a PUBLIC-R-BRIDGE refusal and an admission-only case are context; the row binds on the rest', () => {
+  for (const [ctxId, rec] of [['CASE-N-PUBLIC-R-BRIDGE', { evidence_kind: 'r_public_bridge_boundary', verdict: 'R_BOUNDARY_UNCHANGED' }],
+    ['CASE-N-FORMULA', { evidence_kind: 'r_only_formula_grammar', verdict: 'R_ONLY_PASS' }]]) {
+    const m = bcTree({ ctxId, ctxReceipt: rec });
+    const c1 = runTree(m, 'C1');
+    assert.match(c1.stdout, /C1_MET$/m, `${rec.evidence_kind}\n${c1.stdout}`);
+    assert.match(c1.stdout, /bound=3 bound_numeric=3\b/, rec.evidence_kind);
+    assert.match(runTree(m, 'C8').stdout, /C8_MET$/m, rec.evidence_kind);
+  }
+});
+test('N1 boundary context: without the field the uncompared case still blocks the row (unchanged rule)', () => {
+  const c1 = runTree(bcTree({ rowOver: { boundary_context_case_ids: undefined } }), 'C1');
+  assert.match(c1.stdout, /C1_NOT_MET$/m);
+  assert.match(c1.stdout, /case ids not compared: CASE-N-PUBLIC-R-BRIDGE/);
+});
+for (const [name, opts, why] of [
+  ['a context receipt of another kind (a numeric twin)', { ctxReceipt: { evidence_kind: 'numeric_r_vs_julia', verdict: 'PASS' } }, /evidence_kind "numeric_r_vs_julia" is not an admission-only or PUBLIC-R-BRIDGE boundary kind/],
+  ['a boundary kind with the wrong verdict', { ctxReceipt: { evidence_kind: 'r_public_bridge_boundary', verdict: 'PASS' } }, /verdict "PASS" is not R_BOUNDARY_UNCHANGED/],
+  // N1 covers an R refusal recorded by a receipt; a bridge case nobody ran is not context.
+  ['a not-executed PUBLIC-R-BRIDGE case', { ctxReceipt: { evidence_kind: 'not_executed', verdict: 'NOT_EXECUTED' } }, /evidence_kind "not_executed" is not an admission-only or PUBLIC-R-BRIDGE boundary kind/],
+  ['a bridge kind on a case that is not a PUBLIC-R-BRIDGE case', { ctxId: 'CASE-N-NATIVE', ctxReceipt: { evidence_kind: 'r_public_bridge_boundary', verdict: 'R_BOUNDARY_UNCHANGED' } }, /a r_public_bridge_boundary case must be a -PUBLIC-R-BRIDGE case/],
+  ['a context receipt that carries a comparison block', { ctxReceipt: { evidence_kind: 'r_public_bridge_boundary', verdict: 'R_BOUNDARY_UNCHANGED', comparison: { pin: 'P1', cases: [] } } }, /carries a comparison block, so it is compared, not context/],
+  ['every case set aside as context', { rowOver: { executable_case_ids: ['CASE-N-PUBLIC-R-BRIDGE'] } }, /every executable case is boundary context/],
+  // The duplicate-id hole: the context id listed twice passes the count test while no case outside the context list
+  // is compared (rn.json compares CASE-N, which this row no longer lists).
+  ['a context id repeated in executable_case_ids', { rowOver: { executable_case_ids: ['CASE-N-PUBLIC-R-BRIDGE', 'CASE-N-PUBLIC-R-BRIDGE'] } }, /executable_case_ids lists a case id twice/],
+  ['a context id that is not an executable case', { rowOver: { boundary_context_case_ids: ['CASE-OTHER-PUBLIC-R-BRIDGE'] } }, /not in executable_case_ids: CASE-OTHER-PUBLIC-R-BRIDGE/],
+  ['a context receipt that does not exist', { writeCtx: false }, /boundary context receipt .*ctx\.json does not resolve to a file/],
+  ['no boundary_context_receipts', { rowOver: { evidence: { receipt: `${L}/receipts/rn.json` } } }, /no evidence\.boundary_context_receipts/],
+]) {
+  test(`N1 boundary context: ${name} does not bind`, () => {
+    const m = bcTree(opts);
+    const c1 = runTree(m, 'C1');
+    assert.match(c1.stdout, /C1_NOT_MET$/m, name);
+    assert.match(c1.stdout, /numeric_label_without_numeric_receipt=covariance\/COV-N\(boundary context \(maintainer ruling 2026-10-05 \(D-319\), N1\): /, name);
+    assert.match(c1.stdout, why, name);
+    assert.match(runTree(m, 'C8').stdout, /covariance\/COV-N:NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT/, name);
+  });
+}
+
+// --- Maintainer ruling 2026-10-05 (D-319), N9: a receipt's convergence_parity block must show both engines at
+// gradient max-abs <= 1e-5. cpTree() adds the block to the base numeric receipt r1.json. ---
+function cpTree(cp) {
+  return ({ readJ, writeJ }) => { const r1 = readJ('receipts/r1.json'); r1.convergence_parity = cp; writeJ('receipts/r1.json', r1); };
+}
+const cpBlock = (rg, jg, over = {}) => ({ gradient_bound: 1e-5, compared_point: 'newton_polished',
+  engines: { R: { max_abs_gradient: rg }, julia: { max_abs_gradient: jg } }, ...over });
+test('N9 convergence parity: both engines at or below 1e-5 bind (the ordinal pre-run numbers, and exactly 1e-5)', () => {
+  for (const cp of [cpBlock(4.709e-7, 2.365e-6), cpBlock(1e-5, 1e-5), cpBlock(0, 0, { compared_point: 'returned' })]) {
+    const c1 = runTree(cpTree(cp), 'C1');
+    assert.match(c1.stdout, /C1_MET$/m, `${JSON.stringify(cp)}\n${c1.stdout}`);
+    assert.match(c1.stdout, /bound=2 bound_numeric=2\b/);
+  }
+});
+for (const [name, cp, why] of [
+  ["R stopped early (the ordinal row's unpolished 4.3e-4)", cpBlock(4.314e-4, 7.822e-6), /R max_abs_gradient 0\.0004314 > 1e-5/],
+  ['Julia above the bound', cpBlock(4.7e-7, 2e-5), /julia max_abs_gradient 0\.00002 > 1e-5/],
+  ['a looser declared bound (1e-4)', cpBlock(4.7e-7, 2.4e-6, { gradient_bound: 1e-4 }), /gradient_bound 0\.0001 is not 1e-5/],
+  ['a missing Julia gradient', { gradient_bound: 1e-5, compared_point: 'returned', engines: { R: { max_abs_gradient: 1e-7 } } }, /julia max_abs_gradient undefined is not a finite number >= 0/],
+  ['an unknown compared point', cpBlock(1e-7, 1e-7, { compared_point: 'best_of_both' }), /compared_point "best_of_both" is not returned or newton_polished/],
+  ['a negative gradient', cpBlock(-1e-7, 1e-7), /R max_abs_gradient -1e-7 is not a finite number >= 0/],
+  ['a block that is not an object', 'converged', /convergence_parity is not an object/],
+]) {
+  test(`N9 convergence parity: ${name} does not bind`, () => {
+    const c1 = runTree(cpTree(cp), 'C1');
+    assert.match(c1.stdout, /C1_NOT_MET$/m, name);
+    assert.match(c1.stdout, /numeric_label_without_numeric_receipt=isdm\/CAP-ISDM-1FO-PREDICT-EXPORT\(convergence parity \(maintainer ruling 2026-10-05 \(D-319\), N9\): /, name);
+    assert.match(c1.stdout, why, name);
+    assert.match(runTree(cpTree(cp), 'C8').stdout, /C8_NOT_MET$/m, name);
+  });
+}
+
+// --- Maintainer ruling 2026-10-05 (D-319), C4: the clause accepts direct-engine runs (no bridge leg). An EVIDENCED
+// real-data row must cite a receipt that records both engines. ---
+test('C4 direct engine: an EVIDENCED RD row whose receipt records both engines is done (base fixture)', () => {
+  assert.match(runTree(() => {}, 'C4').stdout, /C4 real-data workflows rows=1 done=1 not_done=none/);
+});
+for (const [name, rd1] of [
+  ['no engines block', { case_id: 'RD1', result: 'PASS' }],
+  ['only the R engine', { case_id: 'RD1', result: 'PASS', engines: { R: { engine: 'R gllvmTMB' } } }],
+  ['engines as an array', { case_id: 'RD1', result: 'PASS', engines: [{ R: {} }, { julia: {} }] }],
+  ['empty engine blocks', { case_id: 'RD1', result: 'PASS', engines: { R: {}, julia: {} } }],
+]) {
+  test(`C4 direct engine: an EVIDENCED RD row whose receipt has ${name} is not done (C4 and X2)`, () => {
+    const m = ({ writeJ }) => writeJ('receipts/rd1.json', rd1);
+    const c4 = runTree(m, 'C4');
+    assert.match(c4.stdout, /C4_NOT_MET$/m, name);
+    assert.match(c4.stdout, /RD-1:C4_NOT_A_DIRECT_ENGINE_RUN/, name);
+    assert.match(runTree(m, 'X2').stdout, /RD-1:C4_NOT_A_DIRECT_ENGINE_RUN/, name);
+  });
+}
+test('C4 direct engine: a properly signed RD disposition row is done without a run', () => {
+  const m = ({ dir }) => {
+    const sb = join(dir, L, 'scoreboard.md');
+    writeFileSync(sb, readFileSync(sb, 'utf8').replace(/\| RD-1 \|([^|]*)\| EVIDENCED \|[^|]*\|/, '| RD-1 |$1| DISPOSITION-SIGNED | Disposition: outside_boundary; signed_by: Shinichi Nakagawa; signed_on: 2026-10-05 |'));
+  };
+  assert.match(runTree(m, 'C4').stdout, /C4_MET$/m);
+});
+test('C4 direct engine: the rule does not touch rows outside C4 (a C3 row with a plain receipt stays done)', () => {
+  assert.match(runTree(() => {}, 'C3').stdout, /C3_MET$/m);
+});
+
 // --- Fix round on PR #687 (three adversarial reviews). Each control below fails on the head before the
 // round (6f546fb00) for the reason it names, and passes after. ---
 
 // Scope: the behavioural tier is a frozen list, not a prefix. Scoreboard side: the same list, by scoreboard id.
 test('behavioural scope (scoreboard): EVIDENCED-BEHAVIOURAL on CI-ROUTE-008..011, a new inference id or a bare prefix is not done', () => {
-  for (const id of ['inference-CI-ROUTE-008', 'inference-CI-ROUTE-009', 'inference-CI-ROUTE-010', 'inference-CI-ROUTE-011', 'inference-CI-ROUTE-999', 'inference']) {
+  for (const id of ['inference-CI-ROUTE-008', 'inference-CI-ROUTE-010', 'inference-CI-ROUTE-011', 'inference-CI-ROUTE-999', 'inference',
+    'aghq-AGHQ-CTRL-THREE', 'isdm-ISDM-WRONG-ID', 'isdm-ISDM-LEGACY']) {
     const r = runBoard('EVIDENCED-BEHAVIOURAL', 'X2', id);
     assert.match(r.stdout, /X2_NOT_MET$/m, id);
     assert.match(r.stdout, new RegExp(`${id}:BEHAVIOURAL_NOT_ALLOWED_FOR_THIS_ROW`), id);
     assert.match(r.stdout, /done_behavioural=0$/m, id);
   }
   assert.match(runBoard('EVIDENCED-BEHAVIOURAL', 'X2', 'inference-CI-ROUTE-084').stdout, /X2_MET$/m);
+  // The 2026-10-05 extension, by scoreboard id.
+  for (const id of ['inference-CI-ROUTE-009', 'aghq-AGHQ-CTRL-AUTO', 'isdm-ISDM-WRAPPER-LAW', 'postfit-POSTFIT-SURFACE-check_auto_residual']) {
+    assert.match(runBoard('EVIDENCED-BEHAVIOURAL', 'X2', id).stdout, /X2_MET$/m, id);
+  }
 });
 
 // Label collision: compare class identity, not canonical strings (external review F8a, F8b, F8e, F8f).

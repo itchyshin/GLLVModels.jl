@@ -14,6 +14,7 @@ on:
       - 'tools/test_true_parity_check.mjs'
       - 'tools/true_parity_assemble.py'
       - 'tools/test_true_parity_assemble.py'
+      - 'tools/test_core070_behaviour_receipts.py'
       - 'test/fixtures/true_parity/**'
       - 'tools/core070_*_receipts.py'
       - 'tools/true_parity_*_receipt*.py'
@@ -38,6 +39,7 @@ jobs:
           python-version: '3.12'
       - run: node tools/test_true_parity_check.mjs
       - run: python3 tools/test_true_parity_assemble.py
+      - run: python3 tools/test_core070_behaviour_receipts.py
       - run: python3 tools/true_parity_assemble.py --check
       # Receipt-tool --check modes: pure Python + git, no R, no Julia, no gllvmTMB clone (GLLVMTMB_DIR unset).
       # core070_postfit_p1_receipts.py has only --check-twins; argparse resolves --check to it.

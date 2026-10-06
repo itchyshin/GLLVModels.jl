@@ -25,8 +25,8 @@
     "wave6-conversion-p1": {
       "tool": "tools/core070_verify_wave6_conversion_batch.py",
       "argv": "tools/core070_verify_wave6_conversion_batch.py {state}",
-      "status": "FAIL",
-      "exit_code": 1,
+      "status": "PASS",
+      "exit_code": 0,
       "accept_marker": "CORE070_WAVE6_CONVERSION_STATE_OK",
       "log": "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave6-conversion-p1/verify.txt"
     },
@@ -64,14 +64,14 @@
     }
   },
   "counts": {
-    "numeric_pass": 41,
-    "numeric_fail": 1,
-    "numeric_held_batch_verifier_failed": 2,
-    "numeric_non_discriminating": 0,
-    "partial_non_numeric_case": 6,
+    "numeric_pass": 45,
+    "numeric_fail": 0,
+    "numeric_held_batch_verifier_failed": 0,
+    "numeric_non_discriminating": 1,
+    "partial_non_numeric_case": 4,
     "needs_surface_not_executed": 0,
-    "retired_at_p1_not_measured": 0,
-    "not_measured": 2
+    "retired_at_p1_not_measured": 2,
+    "not_measured": 0
   },
   "runtimes_seconds": {
     "surface_conversion_batch_wall": 121,
@@ -83,7 +83,12 @@
     "postfit_1_r_wall": 1,
     "postfit_1_julia_wall": 11,
     "total_batch_wall": 257,
-    "glvmodels_commit": "681c4c3ca666e630470bba01a057bc88158b85f3"
+    "glvmodels_commit": "681c4c3ca666e630470bba01a057bc88158b85f3",
+    "wave6_conversion_rerun_2026_10_05": {
+      "wave6_conversion_batch_wall": 45,
+      "threads": "OPENBLAS/OMP 1, JULIA_NUM_THREADS=1",
+      "glvmodels_commit": "6f050fea3e5afcee2b9d55b79acbaa42c2f28a24"
+    }
   },
   "batch_artifacts": {
     "surface-conversion-p1": [
@@ -266,25 +271,22 @@
         "CORE070-WAVE6-POSTFIT-CONFINT-MULTI"
       ],
       "disposition": null,
-      "evidence_tier": "numeric_held_batch_verifier_failed",
+      "evidence_tier": "numeric",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE6-POSTFIT-CONFINT-MULTI.json"
         ],
-        "tier": "numeric comparison blocks pass, but the batch verifier rejected the run, so the row does not bind"
+        "tier": "numeric: every executable case receipt carries an R-vs-Julia comparison block pinned to P1, within the harness tolerance"
       },
-      "note": "held pending the maintainer's ruling on the wave6 nobs expectation",
       "measured_result": {
         "case_verdicts": {
           "CORE070-WAVE6-POSTFIT-CONFINT-MULTI": "PASS"
         },
         "batch_verifier": {
-          "CORE070-WAVE6-POSTFIT-CONFINT-MULTI": "FAIL"
+          "CORE070-WAVE6-POSTFIT-CONFINT-MULTI": "PASS"
         },
-        "discriminating": {
-          "CORE070-WAVE6-POSTFIT-CONFINT-MULTI": true
-        }
+        "row_verdict": "PASS"
       }
     },
     {
@@ -890,25 +892,22 @@
         "CORE070-WAVE6-POSTFIT-LOGLIK-MULTI"
       ],
       "disposition": null,
-      "evidence_tier": "numeric_held_batch_verifier_failed",
+      "evidence_tier": "numeric",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE6-POSTFIT-LOGLIK-MULTI.json"
         ],
-        "tier": "numeric comparison blocks pass, but the batch verifier rejected the run, so the row does not bind"
+        "tier": "numeric: every executable case receipt carries an R-vs-Julia comparison block pinned to P1, within the harness tolerance"
       },
-      "note": "held pending the maintainer's ruling on the wave6 nobs expectation",
       "measured_result": {
         "case_verdicts": {
           "CORE070-WAVE6-POSTFIT-LOGLIK-MULTI": "PASS"
         },
         "batch_verifier": {
-          "CORE070-WAVE6-POSTFIT-LOGLIK-MULTI": "FAIL"
+          "CORE070-WAVE6-POSTFIT-LOGLIK-MULTI": "PASS"
         },
-        "discriminating": {
-          "CORE070-WAVE6-POSTFIT-LOGLIK-MULTI": true
-        }
+        "row_verdict": "PASS"
       }
     },
     {
@@ -920,22 +919,22 @@
         "CORE070-WAVE6-POSTFIT-NOBS-MULTI"
       ],
       "disposition": null,
-      "evidence_tier": "numeric_fail",
+      "evidence_tier": "numeric",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE6-POSTFIT-NOBS-MULTI.json"
         ],
-        "tier": "measured at P1; the harness verdict is FAIL, so the row does not bind"
+        "tier": "numeric: every executable case receipt carries an R-vs-Julia comparison block pinned to P1, within the harness tolerance"
       },
       "measured_result": {
         "case_verdicts": {
-          "CORE070-WAVE6-POSTFIT-NOBS-MULTI": "FAIL"
+          "CORE070-WAVE6-POSTFIT-NOBS-MULTI": "PASS"
         },
         "batch_verifier": {
-          "CORE070-WAVE6-POSTFIT-NOBS-MULTI": "FAIL"
+          "CORE070-WAVE6-POSTFIT-NOBS-MULTI": "PASS"
         },
-        "row_verdict": "FAIL"
+        "row_verdict": "PASS"
       }
     },
     {
@@ -1116,16 +1115,45 @@
       "arc": "A3",
       "carry_scan_status": "DANGLING",
       "executable_case_ids": [
-        "CORE070-WAVE8-SIMULATE-UNIT-TRAIT-STRUCTURAL"
+        "P1-JULIA-MC-UNIT-TRAIT-MEAN-T1",
+        "P1-JULIA-MC-UNIT-TRAIT-MEAN-T2",
+        "P1-JULIA-MC-UNIT-TRAIT-MEAN-T3",
+        "P1-JULIA-MC-UNIT-TRAIT-MEAN-T4",
+        "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-1-1",
+        "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-1-2",
+        "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-2-2",
+        "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-1-3",
+        "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-2-3",
+        "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-3-3",
+        "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-1-4",
+        "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-2-4",
+        "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-3-4",
+        "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-4-4",
+        "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-1-1",
+        "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-1-2",
+        "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-2-2",
+        "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-1-3",
+        "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-2-3",
+        "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-3-3",
+        "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-1-4",
+        "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-2-4",
+        "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-3-4",
+        "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-4-4"
       ],
       "disposition": null,
-      "evidence_tier": "partial_non_numeric_case",
+      "evidence_tier": "numeric",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/simulate_unit_trait.json"
+        ],
         "non_binding_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE8-SIMULATE-UNIT-TRAIT-STRUCTURAL.json"
         ],
-        "tier": "measured at P1 and the harness passes, but at least one case is a verdict, own-consistency, exact-integer, empty-length or default-policy check with no R-vs-Julia number and tolerance, so the row does not bind"
+        "batch_case_ids": [
+          "CORE070-WAVE8-SIMULATE-UNIT-TRAIT-STRUCTURAL"
+        ],
+        "tier": "numeric (Monte-Carlo moments): R replicate means and standard deviations of each moment copied from test/fixtures/mc_simulate_p1.toml, Julia replicate moments recomputed by tools/true_parity_mc_simulate_receipt.jl with the helpers of test/test_mc_simulate_p1.jl and independent random streams; each moment within the Monte-Carlo tolerance rule of maintainer ruling 2026-10-05 (D-319), item N4, stated before any run (z * sqrt(s_R^2/B_k + s_J^2/B_k), Bonferroni z at familywise alpha 0.01), and a discrimination control fails the same rule. The batch case this row carried is superseded; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
       },
       "measured_result": {
         "case_verdicts": {
@@ -1136,7 +1164,34 @@
         },
         "case_kinds": {
           "CORE070-WAVE8-SIMULATE-UNIT-TRAIT-STRUCTURAL": "paired_verdict"
-        }
+        },
+        "twin_case_ids": [
+          "P1-JULIA-MC-UNIT-TRAIT-MEAN-T1",
+          "P1-JULIA-MC-UNIT-TRAIT-MEAN-T2",
+          "P1-JULIA-MC-UNIT-TRAIT-MEAN-T3",
+          "P1-JULIA-MC-UNIT-TRAIT-MEAN-T4",
+          "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-1-1",
+          "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-1-2",
+          "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-2-2",
+          "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-1-3",
+          "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-2-3",
+          "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-3-3",
+          "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-1-4",
+          "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-2-4",
+          "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-3-4",
+          "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-4-4",
+          "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-1-1",
+          "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-1-2",
+          "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-2-2",
+          "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-1-3",
+          "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-2-3",
+          "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-3-3",
+          "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-1-4",
+          "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-2-4",
+          "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-3-4",
+          "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-4-4"
+        ],
+        "twin_verdict": "PASS"
       }
     },
     {
@@ -1208,11 +1263,11 @@
     },
     {
       "source_id": "postfit/POSTFIT-SURFACE-.proportions_bootstrap_ci",
-      "classification": "compatibility_adapter",
+      "classification": "retired",
       "arc": "A3",
       "carry_scan_status": "RETIRED",
       "executable_case_ids": [],
-      "disposition": "BLOCKED_NEEDS_JULIA_SURFACE",
+      "disposition": "DISPOSITION-SIGNED",
       "reclassify_proposed": {
         "to": "compatibility_adapter",
         "reason": "Unexported R-internal helper (leading dot, no @export) invoked only via confint.gllvmTMB_multi(parm=\"proportions\", method=\"bootstrap\"); no standalone public surface for GLLVM.jl to twin beyond what the confint.gllvmTMB_multi row already covers."
@@ -1221,15 +1276,18 @@
       "evidence_tier": "not_measured",
       "measured_against": null,
       "evidence": {},
-      "reason": "The R export was removed between P0 and P1 (NAMESPACE at P1 no longer exports it); the row has no executable case ids and keeps its P0 classification and disposition. Retiring or re-scoping the row is a maintainer decision."
+      "reason": "Retired at P1 by maintainer ruling 2026-10-05 (D-319), item N5. export(.proportions_bootstrap_ci) is absent from the P1 NAMESPACE (the definition is still present, unexported, at R/proportions-ci.R:423), so there is no public R surface left to twin. This is the same removal the headline ledger records as retired/.proportions_bootstrap_ci (PR #533, signed 2026-09-30); the namespace map lists it under retired_at_p1. Classification moves from compatibility_adapter (kept in original_classification) to retired, as on the headline row.",
+      "signed_by": "Shinichi Nakagawa",
+      "signed_on": "2026-10-05",
+      "signature_ref": "maintainer ruling 2026-10-05 (D-319), LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item N5"
     },
     {
       "source_id": "postfit/POSTFIT-SURFACE-.proportions_wald_ci",
-      "classification": "compatibility_adapter",
+      "classification": "retired",
       "arc": "A3",
       "carry_scan_status": "RETIRED",
       "executable_case_ids": [],
-      "disposition": "BLOCKED_NEEDS_JULIA_SURFACE",
+      "disposition": "DISPOSITION-SIGNED",
       "reclassify_proposed": {
         "to": "compatibility_adapter",
         "reason": "Unexported R-internal helper (leading dot, no @export) invoked only via confint.gllvmTMB_multi(parm=\"proportions\", method=\"wald\"); no standalone public surface beyond the confint.gllvmTMB_multi row."
@@ -1238,7 +1296,10 @@
       "evidence_tier": "not_measured",
       "measured_against": null,
       "evidence": {},
-      "reason": "The R export was removed between P0 and P1 (NAMESPACE at P1 no longer exports it); the row has no executable case ids and keeps its P0 classification and disposition. Retiring or re-scoping the row is a maintainer decision."
+      "reason": "Retired at P1 by maintainer ruling 2026-10-05 (D-319), item N5. export(.proportions_wald_ci) is absent from the P1 NAMESPACE (the definition is still present, unexported, at R/proportions-ci.R:247), so there is no public R surface left to twin. This is the same removal the headline ledger records as retired/.proportions_wald_ci (PR #533, signed 2026-09-30); the namespace map lists it under retired_at_p1. Classification moves from compatibility_adapter (kept in original_classification) to retired, as on the headline row.",
+      "signed_by": "Shinichi Nakagawa",
+      "signed_on": "2026-10-05",
+      "signature_ref": "maintainer ruling 2026-10-05 (D-319), LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item N5"
     },
     {
       "source_id": "postfit-policy/POST-COEF-EMPTY",
@@ -1249,13 +1310,13 @@
         "CORE070-POSTFIT-COEF-EMPTY-NATIVE"
       ],
       "disposition": null,
-      "evidence_tier": "partial_non_numeric_case",
+      "evidence_tier": "numeric_non_discriminating",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
         "non_binding_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-COEF-EMPTY-NATIVE.json"
         ],
-        "tier": "measured at P1 and the harness passes, but at least one case is a verdict, own-consistency, exact-integer, empty-length or default-policy check with no R-vs-Julia number and tolerance, so the row does not bind"
+        "tier": "numeric comparison blocks pass, but at least one is degenerate (the R values are one constant or all ~0), so a constant or zero implementation would pass too; the row does not bind"
       },
       "measured_result": {
         "case_verdicts": {
@@ -1264,10 +1325,11 @@
         "batch_verifier": {
           "CORE070-POSTFIT-COEF-EMPTY-NATIVE": "PASS"
         },
-        "case_kinds": {
-          "CORE070-POSTFIT-COEF-EMPTY-NATIVE": "paired_policy_check"
+        "discriminating": {
+          "CORE070-POSTFIT-COEF-EMPTY-NATIVE": false
         }
-      }
+      },
+      "note": "integer_equality on the empty coef length (R 0, Julia 0; maintainer ruling 2026-10-05, D-319, item N2). The shared degenerate-comparison rule flags it: every |R value| < 1e-10, so a constant-zero implementation would pass too. Binding it would need the shared rule to accept a 0 = 0 length, which it does not."
     },
     {
       "source_id": "postfit-policy/POST-COEF-NAMED",
@@ -1510,7 +1572,7 @@
       "executable_case_ids": [
         "CORE070-POSTFIT-NOBS-FALLBACK-NATIVE"
       ],
-      "disposition": null,
+      "disposition": "DISPOSITION-SIGNED",
       "evidence_tier": "partial_non_numeric_case",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
@@ -1529,7 +1591,11 @@
         "case_kinds": {
           "CORE070-POSTFIT-NOBS-FALLBACK-NATIVE": "paired_policy_check"
         }
-      }
+      },
+      "reason": "Not reachable through the public door at P1, by maintainer ruling 2026-10-05 (D-319), POST-NOBS-FALLBACK option (a). nobs.gllvmTMB_multi (R/methods-gllvmTMB.R:1216-1231 at P1 9539352f6) returns object$missing_data$counts$likelihood_rows at line 1221 whenever it is non-NULL; the is_y_observed / length(y) fallback (lines 1225-1230) runs only when that field is NULL. The only constructor of a gllvmTMB_multi object always builds missing_data with .gllvmTMB_build_missing_data, which always sets counts$likelihood_rows = as.integer(sum(is_y_observed == 1L)) (R/fit-multi.R:9784 and :9822), never NULL. Twelve probe fit types through gllvmTMB() at P1 (Gaussian and Poisson latent, missing responses dropped and masked, an all-missing trait both ways, weights, mixed family, wide traits(), no covstruct, an mi() predictor, estimator = 'mspl', and a saveRDS/readRDS round trip) all returned on the likelihood_rows branch; only a fit with fit$missing_data deleted by hand reached the fallback, and there the two branches give the same number by construction. The field and the method were added in the same commit (#334), so the fallback is defensive code for hand-built or pre-#334 objects, not a separate user-facing behaviour. The likelihood_rows branch itself is bound by POST-NOBS-COUNT. Evidence: post-nobs-fallback-evidence.md in the true-parity lane kit (probe scripts nobs_probe.R, nobs_probe2.R).",
+      "signed_by": "Shinichi Nakagawa",
+      "signed_on": "2026-10-05",
+      "signature_ref": "maintainer ruling 2026-10-05 (D-319), LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item POST-NOBS-FALLBACK option (a)"
     },
     {
       "source_id": "postfit-policy/POST-PREDICT-DEFAULT",
@@ -1539,7 +1605,7 @@
       "executable_case_ids": [
         "CORE070-POSTFIT-PREDICT-DEFAULT-NATIVE"
       ],
-      "disposition": null,
+      "disposition": "DISPOSITION-SIGNED",
       "evidence_tier": "partial_non_numeric_case",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
@@ -1558,7 +1624,11 @@
         "case_kinds": {
           "CORE070-POSTFIT-PREDICT-DEFAULT-NATIVE": "paired_policy_check"
         }
-      }
+      },
+      "reason": "Documented default divergence accepted by maintainer ruling 2026-10-05 (D-319), item B (Julia defaults against R, row by row). R: predict.gllvmTMB_multi(object, newdata = NULL, type = c('link', 'response'), ...) defaults to type = 'link' (R/methods-gllvmTMB.R:2786-2794 at P1 9539352f6). Julia: predict(fit::GllvmFit, y; type::Symbol = :response, ...) defaults to type = :response (src/postfit.jl). The batch reflects both defaults live (R 'link', Julia :response) and, called with the same explicit type = link, the two engines agree on the linear predictor (max |R - Julia| = 5.72e-06 against the contract's link_response_residual_delta 1e-4, receipt CORE070-POSTFIT-PREDICT-DEFAULT-NATIVE). A user porting a bare predict(fit) call from R gets the response scale in Julia, not the link scale; pass type = :link to match R.",
+      "signed_by": "Shinichi Nakagawa",
+      "signed_on": "2026-10-05",
+      "signature_ref": "maintainer ruling 2026-10-05 (D-319), LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item B (Julia default versus R default)"
     },
     {
       "source_id": "postfit-policy/POST-RE-FORM-FULL",
@@ -1683,7 +1753,8 @@
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
         "non_binding_receipts": [
-          "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-SIMULATE-DEFAULT-NATIVE.json"
+          "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-SIMULATE-DEFAULT-NATIVE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/simulate_default.json"
         ],
         "tier": "measured at P1 and the harness passes, but at least one case is a verdict, own-consistency, exact-integer, empty-length or default-policy check with no R-vs-Julia number and tolerance, so the row does not bind"
       },
@@ -1697,7 +1768,8 @@
         "case_kinds": {
           "CORE070-POSTFIT-SIMULATE-DEFAULT-NATIVE": "paired_policy_check"
         }
-      }
+      },
+      "note": "Not bound: the N4 Monte-Carlo twin passes at its recorded Julia seed but failed the pre-registered rule on 7 of 40 alternative Julia seeds (nominal familywise alpha 0.01), so the pass is seed-sensitive; the receipt is kept as non-binding evidence and the rule is unchanged."
     }
   ]
 }

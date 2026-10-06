@@ -6,22 +6,22 @@
  "inputs": [
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-aghq.json",
-   "sha256": "72e1d55c0553897c62e92f534ab128a8a592282958e1e56c44ca95e1c5902114",
+   "sha256": "ab5ecf9bbd472e75b1acfc1087d2672c4bc9b20ab7442fedf077d8da3301be50",
    "rows": 21
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-covariance.json",
-   "sha256": "05ecaa59be8b718136a449fa52c7b8e9419ff637e20e43efd5298af944c7f86e",
+   "sha256": "dab8c29bdd6d6285d8fbe8a928609db6a4a405fbc8c5d07be507593fbb0c0b20",
    "rows": 19
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-data.json",
-   "sha256": "ce7389201bbaadf7557c916ee2b84ab40579907138289e68938362d198299517",
+   "sha256": "611906beb2d513aa8f055a00cf7658460f35fe45b4f31f29cc676b75b73a9c9f",
    "rows": 36
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-family.json",
-   "sha256": "8eb485c51218daeba486c85676d57cc7fdc7c2a5625bb748fd1463df25ebb845",
+   "sha256": "5bb1cd73e6422bb504d743d11da2529f6f947fa0356d61dc983404db9afa5093",
    "rows": 26
   },
   {
@@ -31,22 +31,22 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-inference.json",
-   "sha256": "ab0cb02039e34ecb5d1666c469321eba590dfead2452ac2f0de30d9da9a2bda9",
+   "sha256": "9c58f51d0a3c78c0af58fc963c92a6afb8d3bc460a43d969a4b2c2017c88d857",
    "rows": 63
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-isdm.json",
-   "sha256": "abcd0731b63d4290870525114ca3882d9a08fb9ac1966e35e702271a3917e6ca",
+   "sha256": "1ffc4904a25c5e6a8bb550333da004b82b731dfa489b17b55375944378149484",
    "rows": 21
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-namespace.json",
-   "sha256": "65a34ccc680b3d6db8d0022d4c484f471f977ef9d4a1aae9a98f400f4207cad8",
+   "sha256": "641e8095db0ff16b479434e0780276dfc63cb341e7be36457cb7ba6749516dbb",
    "rows": 69
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-postfit.json",
-   "sha256": "1a5970c940b4be21a3605a9d84d0e08a46de1673146db0278efafb45727b3e4d",
+   "sha256": "dfe1b333311d5231d753908cc3072d2840a58624d28fbd07786d55e7084cc9db",
    "rows": 52
   }
  ],
@@ -453,13 +453,13 @@
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
    },
    "p0_case_map_reading_561": "NOT_TWINNED_NOT_SIGNED: the P0 row cites no evidence.receipt (its receipts sit under .unlazy/)",
-   "evidence_tier": "paired_control_categorical_pass",
+   "evidence_tier": "behavioural",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-CTRL-AUTO-PAIRED-CONTROL.json"
     ],
-    "tier": "paired control on categorical labels, measured at P1; non-numeric, so it does not bind under the numeric rule"
+    "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
    },
    "measured_result": {
     "case_verdicts": {
@@ -469,8 +469,7 @@
      "CORE070-AGHQ-CTRL-AUTO-PAIRED-CONTROL": "PASS"
     },
     "row_verdict": "PASS"
-   },
-   "note": "Not bound: behaviour block kept as non-binding evidence only (R and Julia give the same label), but this row is not in the frozen scope of itchyshin/GLLVModels.jl#684 item 2; binding it needs the maintainer to confirm ruling 2 covers it."
+   }
   },
   {
    "source_id": "aghq/AGHQ-CTRL-FALSE",
@@ -491,13 +490,13 @@
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
    },
    "p0_case_map_reading_561": "NOT_TWINNED_NOT_SIGNED: the P0 row cites no evidence.receipt (its receipts sit under .unlazy/)",
-   "evidence_tier": "paired_control_categorical_pass",
+   "evidence_tier": "behavioural",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-CTRL-FALSE-PAIRED-CONTROL.json"
     ],
-    "tier": "paired control on categorical labels, measured at P1; non-numeric, so it does not bind under the numeric rule"
+    "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
    },
    "measured_result": {
     "case_verdicts": {
@@ -507,8 +506,7 @@
      "CORE070-AGHQ-CTRL-FALSE-PAIRED-CONTROL": "PASS"
     },
     "row_verdict": "PASS"
-   },
-   "note": "Not bound: behaviour block kept as non-binding evidence only (R and Julia give the same label), but this row is not in the frozen scope of itchyshin/GLLVModels.jl#684 item 2; binding it needs the maintainer to confirm ruling 2 covers it."
+   }
   },
   {
    "source_id": "aghq/AGHQ-CTRL-NINE",
@@ -529,13 +527,13 @@
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
    },
    "p0_case_map_reading_561": "NOT_TWINNED_NOT_SIGNED: the P0 row cites no evidence.receipt (its receipts sit under .unlazy/)",
-   "evidence_tier": "paired_control_categorical_pass",
+   "evidence_tier": "behavioural",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-CTRL-NINE-PAIRED-CONTROL.json"
     ],
-    "tier": "paired control on categorical labels, measured at P1; non-numeric, so it does not bind under the numeric rule"
+    "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
    },
    "measured_result": {
     "case_verdicts": {
@@ -545,8 +543,7 @@
      "CORE070-AGHQ-CTRL-NINE-PAIRED-CONTROL": "PASS"
     },
     "row_verdict": "PASS"
-   },
-   "note": "Not bound: behaviour block kept as non-binding evidence only (R and Julia give the same label), but this row is not in the frozen scope of itchyshin/GLLVModels.jl#684 item 2; binding it needs the maintainer to confirm ruling 2 covers it."
+   }
   },
   {
    "source_id": "aghq/AGHQ-CTRL-NULL",
@@ -567,13 +564,13 @@
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
    },
    "p0_case_map_reading_561": "NOT_TWINNED_NOT_SIGNED: the P0 row cites no evidence.receipt (its receipts sit under .unlazy/)",
-   "evidence_tier": "paired_control_categorical_pass",
+   "evidence_tier": "behavioural",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-CTRL-NULL-PAIRED-CONTROL.json"
     ],
-    "tier": "paired control on categorical labels, measured at P1; non-numeric, so it does not bind under the numeric rule"
+    "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
    },
    "measured_result": {
     "case_verdicts": {
@@ -583,8 +580,7 @@
      "CORE070-AGHQ-CTRL-NULL-PAIRED-CONTROL": "PASS"
     },
     "row_verdict": "PASS"
-   },
-   "note": "Not bound: behaviour block kept as non-binding evidence only (R and Julia give the same label), but this row is not in the frozen scope of itchyshin/GLLVModels.jl#684 item 2; binding it needs the maintainer to confirm ruling 2 covers it."
+   }
   },
   {
    "source_id": "aghq/AGHQ-CTRL-ONE",
@@ -605,13 +601,13 @@
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
    },
    "p0_case_map_reading_561": "NOT_TWINNED_NOT_SIGNED: the P0 row cites no evidence.receipt (its receipts sit under .unlazy/)",
-   "evidence_tier": "paired_control_categorical_pass",
+   "evidence_tier": "behavioural",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-CTRL-ONE-PAIRED-CONTROL.json"
     ],
-    "tier": "paired control on categorical labels, measured at P1; non-numeric, so it does not bind under the numeric rule"
+    "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
    },
    "measured_result": {
     "case_verdicts": {
@@ -621,8 +617,7 @@
      "CORE070-AGHQ-CTRL-ONE-PAIRED-CONTROL": "PASS"
     },
     "row_verdict": "PASS"
-   },
-   "note": "Not bound: behaviour block kept as non-binding evidence only (R and Julia give the same label), but this row is not in the frozen scope of itchyshin/GLLVModels.jl#684 item 2; binding it needs the maintainer to confirm ruling 2 covers it."
+   }
   },
   {
    "source_id": "aghq/AGHQ-CTRL-TRUE",
@@ -643,13 +638,13 @@
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
    },
    "p0_case_map_reading_561": "NOT_TWINNED_NOT_SIGNED: the P0 row cites no evidence.receipt (its receipts sit under .unlazy/)",
-   "evidence_tier": "paired_control_categorical_pass",
+   "evidence_tier": "behavioural",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-CTRL-TRUE-PAIRED-CONTROL.json"
     ],
-    "tier": "paired control on categorical labels, measured at P1; non-numeric, so it does not bind under the numeric rule"
+    "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
    },
    "measured_result": {
     "case_verdicts": {
@@ -659,8 +654,7 @@
      "CORE070-AGHQ-CTRL-TRUE-PAIRED-CONTROL": "PASS"
     },
     "row_verdict": "PASS"
-   },
-   "note": "Not bound: behaviour block kept as non-binding evidence only (R and Julia give the same label), but this row is not in the frozen scope of itchyshin/GLLVModels.jl#684 item 2; binding it needs the maintainer to confirm ruling 2 covers it."
+   }
   },
   {
    "source_id": "aghq/AGHQ-CTRL-TWO",
@@ -681,13 +675,13 @@
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
    },
    "p0_case_map_reading_561": "NOT_TWINNED_NOT_SIGNED: the P0 row cites no evidence.receipt (its receipts sit under .unlazy/)",
-   "evidence_tier": "paired_control_categorical_pass",
+   "evidence_tier": "behavioural",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-CTRL-TWO-PAIRED-CONTROL.json"
     ],
-    "tier": "paired control on categorical labels, measured at P1; non-numeric, so it does not bind under the numeric rule"
+    "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
    },
    "measured_result": {
     "case_verdicts": {
@@ -697,8 +691,7 @@
      "CORE070-AGHQ-CTRL-TWO-PAIRED-CONTROL": "PASS"
     },
     "row_verdict": "PASS"
-   },
-   "note": "Not bound: behaviour block kept as non-binding evidence only (R and Julia give the same label), but this row is not in the frozen scope of itchyshin/GLLVModels.jl#684 item 2; binding it needs the maintainer to confirm ruling 2 covers it."
+   }
   },
   {
    "source_id": "aghq/AGHQ-DEFAULT-OFF",
@@ -1082,23 +1075,33 @@
     "FIT-MODE-ANIMAL-DEP-PUBLIC-R-BRIDGE"
    ],
    "disposition": null,
-   "evidence_tier": "partial_numeric_bridge_boundary",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-DEP.json",
-     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-DEP-FORMULA-INTERFACE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-DEP-FORMULA-INTERFACE.json"
+    ],
+    "boundary_context_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-DEP-PUBLIC-R-BRIDGE.json"
     ],
-    "tier": "native and formula cases carry numeric R-vs-Julia comparison blocks; the PUBLIC-R-BRIDGE case is an R-side boundary (gllvmTMB engine='julia' refuses the structured term), so the row as a whole has no numeric twin and does not bind"
+    "tier": "numeric: the native and formula-interface case receipts carry R-vs-Julia comparison blocks pinned to P1 from a batch whose verifier accepted the run; the PUBLIC-R-BRIDGE case (gllvmTMB engine='julia' refuses the structured term before any Julia call) is non-binding boundary context under maintainer ruling 2026-10-05 (D-319), N1"
    },
    "measured_result": {
     "case_verdicts": {
      "FIT-MODE-ANIMAL-DEP": "PASS",
      "FIT-MODE-ANIMAL-DEP-FORMULA-INTERFACE": "PASS",
      "FIT-MODE-ANIMAL-DEP-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED"
-    }
-   }
+    },
+    "batch_verifier": {
+     "FIT-MODE-ANIMAL-DEP": "PASS",
+     "FIT-MODE-ANIMAL-DEP-FORMULA-INTERFACE": "PASS"
+    },
+    "row_verdict": "PASS"
+   },
+   "boundary_context_case_ids": [
+    "FIT-MODE-ANIMAL-DEP-PUBLIC-R-BRIDGE"
+   ]
   },
   {
    "source_id": "covariance/COV-ANIMAL-INDEP",
@@ -1114,18 +1117,20 @@
     "FIT-MODE-ANIMAL-COMMON-PUBLIC-R-BRIDGE"
    ],
    "disposition": null,
-   "evidence_tier": "partial_numeric_bridge_boundary",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-INDEP.json",
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-COMMON.json",
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-INDEP-FORMULA-INTERFACE.json",
-     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-COMMON-FORMULA-INTERFACE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-COMMON-FORMULA-INTERFACE.json"
+    ],
+    "boundary_context_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-INDEP-PUBLIC-R-BRIDGE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-COMMON-PUBLIC-R-BRIDGE.json"
     ],
-    "tier": "native and formula cases carry numeric R-vs-Julia comparison blocks; the PUBLIC-R-BRIDGE case is an R-side boundary (gllvmTMB engine='julia' refuses the structured term), so the row as a whole has no numeric twin and does not bind"
+    "tier": "numeric: the native and formula-interface case receipts carry R-vs-Julia comparison blocks pinned to P1 from a batch whose verifier accepted the run; the PUBLIC-R-BRIDGE case (gllvmTMB engine='julia' refuses the structured term before any Julia call) is non-binding boundary context under maintainer ruling 2026-10-05 (D-319), N1"
    },
    "measured_result": {
     "case_verdicts": {
@@ -1135,8 +1140,19 @@
      "FIT-MODE-ANIMAL-COMMON-FORMULA-INTERFACE": "PASS",
      "FIT-MODE-ANIMAL-INDEP-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED",
      "FIT-MODE-ANIMAL-COMMON-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED"
-    }
-   }
+    },
+    "batch_verifier": {
+     "FIT-MODE-ANIMAL-INDEP": "PASS",
+     "FIT-MODE-ANIMAL-COMMON": "PASS",
+     "FIT-MODE-ANIMAL-INDEP-FORMULA-INTERFACE": "PASS",
+     "FIT-MODE-ANIMAL-COMMON-FORMULA-INTERFACE": "PASS"
+    },
+    "row_verdict": "PASS"
+   },
+   "boundary_context_case_ids": [
+    "FIT-MODE-ANIMAL-INDEP-PUBLIC-R-BRIDGE",
+    "FIT-MODE-ANIMAL-COMMON-PUBLIC-R-BRIDGE"
+   ]
   },
   {
    "source_id": "covariance/COV-KERNEL-DEP",
@@ -1149,23 +1165,33 @@
     "FIT-MODE-KERNEL-DEP-PUBLIC-R-BRIDGE"
    ],
    "disposition": null,
-   "evidence_tier": "partial_numeric_bridge_boundary",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-DEP.json",
-     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-DEP-FORMULA-INTERFACE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-DEP-FORMULA-INTERFACE.json"
+    ],
+    "boundary_context_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-DEP-PUBLIC-R-BRIDGE.json"
     ],
-    "tier": "native and formula cases carry numeric R-vs-Julia comparison blocks; the PUBLIC-R-BRIDGE case is an R-side boundary (gllvmTMB engine='julia' refuses the structured term), so the row as a whole has no numeric twin and does not bind"
+    "tier": "numeric: the native and formula-interface case receipts carry R-vs-Julia comparison blocks pinned to P1 from a batch whose verifier accepted the run; the PUBLIC-R-BRIDGE case (gllvmTMB engine='julia' refuses the structured term before any Julia call) is non-binding boundary context under maintainer ruling 2026-10-05 (D-319), N1"
    },
    "measured_result": {
     "case_verdicts": {
      "FIT-MODE-KERNEL-DEP": "PASS",
      "FIT-MODE-KERNEL-DEP-FORMULA-INTERFACE": "PASS",
      "FIT-MODE-KERNEL-DEP-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED"
-    }
-   }
+    },
+    "batch_verifier": {
+     "FIT-MODE-KERNEL-DEP": "PASS",
+     "FIT-MODE-KERNEL-DEP-FORMULA-INTERFACE": "PASS"
+    },
+    "row_verdict": "PASS"
+   },
+   "boundary_context_case_ids": [
+    "FIT-MODE-KERNEL-DEP-PUBLIC-R-BRIDGE"
+   ]
   },
   {
    "source_id": "covariance/COV-KERNEL-INDEP",
@@ -1181,18 +1207,20 @@
     "FIT-MODE-KERNEL-COMMON-PUBLIC-R-BRIDGE"
    ],
    "disposition": null,
-   "evidence_tier": "partial_numeric_bridge_boundary",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-INDEP.json",
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-COMMON.json",
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-INDEP-FORMULA-INTERFACE.json",
-     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-COMMON-FORMULA-INTERFACE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-COMMON-FORMULA-INTERFACE.json"
+    ],
+    "boundary_context_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-INDEP-PUBLIC-R-BRIDGE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-COMMON-PUBLIC-R-BRIDGE.json"
     ],
-    "tier": "native and formula cases carry numeric R-vs-Julia comparison blocks; the PUBLIC-R-BRIDGE case is an R-side boundary (gllvmTMB engine='julia' refuses the structured term), so the row as a whole has no numeric twin and does not bind"
+    "tier": "numeric: the native and formula-interface case receipts carry R-vs-Julia comparison blocks pinned to P1 from a batch whose verifier accepted the run; the PUBLIC-R-BRIDGE case (gllvmTMB engine='julia' refuses the structured term before any Julia call) is non-binding boundary context under maintainer ruling 2026-10-05 (D-319), N1"
    },
    "measured_result": {
     "case_verdicts": {
@@ -1202,8 +1230,19 @@
      "FIT-MODE-KERNEL-COMMON-FORMULA-INTERFACE": "PASS",
      "FIT-MODE-KERNEL-INDEP-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED",
      "FIT-MODE-KERNEL-COMMON-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED"
-    }
-   }
+    },
+    "batch_verifier": {
+     "FIT-MODE-KERNEL-INDEP": "PASS",
+     "FIT-MODE-KERNEL-COMMON": "PASS",
+     "FIT-MODE-KERNEL-INDEP-FORMULA-INTERFACE": "PASS",
+     "FIT-MODE-KERNEL-COMMON-FORMULA-INTERFACE": "PASS"
+    },
+    "row_verdict": "PASS"
+   },
+   "boundary_context_case_ids": [
+    "FIT-MODE-KERNEL-INDEP-PUBLIC-R-BRIDGE",
+    "FIT-MODE-KERNEL-COMMON-PUBLIC-R-BRIDGE"
+   ]
   },
   {
    "source_id": "covariance/COV-ORD-DEP",
@@ -1216,23 +1255,33 @@
     "FIT-MODE-ORD-DEP-PUBLIC-R-BRIDGE"
    ],
    "disposition": null,
-   "evidence_tier": "partial_numeric_bridge_boundary",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ORD-DEP.json",
-     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ORD-DEP-FORMULA-INTERFACE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ORD-DEP-FORMULA-INTERFACE.json"
+    ],
+    "boundary_context_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ORD-DEP-PUBLIC-R-BRIDGE.json"
     ],
-    "tier": "native and formula cases carry numeric R-vs-Julia comparison blocks; the PUBLIC-R-BRIDGE case is an R-side boundary (gllvmTMB engine='julia' refuses the structured term), so the row as a whole has no numeric twin and does not bind"
+    "tier": "numeric: the native and formula-interface case receipts carry R-vs-Julia comparison blocks pinned to P1 from a batch whose verifier accepted the run; the PUBLIC-R-BRIDGE case (gllvmTMB engine='julia' refuses the structured term before any Julia call) is non-binding boundary context under maintainer ruling 2026-10-05 (D-319), N1"
    },
    "measured_result": {
     "case_verdicts": {
      "FIT-MODE-ORD-DEP": "PASS",
      "FIT-MODE-ORD-DEP-FORMULA-INTERFACE": "PASS",
      "FIT-MODE-ORD-DEP-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED"
-    }
-   }
+    },
+    "batch_verifier": {
+     "FIT-MODE-ORD-DEP": "PASS",
+     "FIT-MODE-ORD-DEP-FORMULA-INTERFACE": "PASS"
+    },
+    "row_verdict": "PASS"
+   },
+   "boundary_context_case_ids": [
+    "FIT-MODE-ORD-DEP-PUBLIC-R-BRIDGE"
+   ]
   },
   {
    "source_id": "covariance/COV-ORD-INDEP",
@@ -1245,23 +1294,33 @@
     "MODE-ORD-INDEP-PUBLIC-R-BRIDGE"
    ],
    "disposition": null,
-   "evidence_tier": "partial_numeric_bridge_boundary",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-INDEP.json",
-     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-INDEP-FORMULA-INTERFACE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-INDEP-FORMULA-INTERFACE.json"
+    ],
+    "boundary_context_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-INDEP-PUBLIC-R-BRIDGE.json"
     ],
-    "tier": "native and formula cases carry numeric R-vs-Julia comparison blocks; the PUBLIC-R-BRIDGE case is an R-side boundary (gllvmTMB engine='julia' refuses the structured term), so the row as a whole has no numeric twin and does not bind"
+    "tier": "numeric: the native and formula-interface case receipts carry R-vs-Julia comparison blocks pinned to P1 from a batch whose verifier accepted the run; the PUBLIC-R-BRIDGE case (gllvmTMB engine='julia' refuses the structured term before any Julia call) is non-binding boundary context under maintainer ruling 2026-10-05 (D-319), N1"
    },
    "measured_result": {
     "case_verdicts": {
      "MODE-ORD-INDEP": "PASS",
      "MODE-ORD-INDEP-FORMULA-INTERFACE": "PASS",
      "MODE-ORD-INDEP-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED"
-    }
-   }
+    },
+    "batch_verifier": {
+     "MODE-ORD-INDEP": "PASS",
+     "MODE-ORD-INDEP-FORMULA-INTERFACE": "PASS"
+    },
+    "row_verdict": "PASS"
+   },
+   "boundary_context_case_ids": [
+    "MODE-ORD-INDEP-PUBLIC-R-BRIDGE"
+   ]
   },
   {
    "source_id": "covariance/COV-ORD-INDEP-COMMON",
@@ -1274,23 +1333,33 @@
     "MODE-ORD-COMMON-PUBLIC-R-BRIDGE"
    ],
    "disposition": null,
-   "evidence_tier": "partial_numeric_bridge_boundary",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-COMMON.json",
-     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-COMMON-FORMULA-INTERFACE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-COMMON-FORMULA-INTERFACE.json"
+    ],
+    "boundary_context_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/MODE-ORD-COMMON-PUBLIC-R-BRIDGE.json"
     ],
-    "tier": "native and formula cases carry numeric R-vs-Julia comparison blocks; the PUBLIC-R-BRIDGE case is an R-side boundary (gllvmTMB engine='julia' refuses the structured term), so the row as a whole has no numeric twin and does not bind"
+    "tier": "numeric: the native and formula-interface case receipts carry R-vs-Julia comparison blocks pinned to P1 from a batch whose verifier accepted the run; the PUBLIC-R-BRIDGE case (gllvmTMB engine='julia' refuses the structured term before any Julia call) is non-binding boundary context under maintainer ruling 2026-10-05 (D-319), N1"
    },
    "measured_result": {
     "case_verdicts": {
      "MODE-ORD-COMMON": "PASS",
      "MODE-ORD-COMMON-FORMULA-INTERFACE": "PASS",
      "MODE-ORD-COMMON-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED"
-    }
-   }
+    },
+    "batch_verifier": {
+     "MODE-ORD-COMMON": "PASS",
+     "MODE-ORD-COMMON-FORMULA-INTERFACE": "PASS"
+    },
+    "row_verdict": "PASS"
+   },
+   "boundary_context_case_ids": [
+    "MODE-ORD-COMMON-PUBLIC-R-BRIDGE"
+   ]
   },
   {
    "source_id": "covariance/COV-KERNEL-FOLDED-UNIQUE",
@@ -1301,22 +1370,22 @@
     "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE"
    ],
    "disposition": null,
-   "evidence_tier": "numeric_held_batch_verifier_failed",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE.json"
     ],
-    "tier": "numeric comparison blocks pass, but the batch verifier rejected the run, so the row does not bind"
+    "tier": "numeric: per-case receipts carry an R-vs-Julia comparison block pinned to P1"
    },
-   "note": "held pending the maintainer's ruling on the wave6 nobs expectation; the covariance cases themselves pass (7.25e-8, 1.26e-6 vs tol 1e-4)",
    "measured_result": {
     "case_verdicts": {
      "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE": "PASS"
     },
     "batch_verifier": {
-     "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE": "FAIL"
-    }
+     "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE": "PASS"
+    },
+    "row_verdict": "PASS"
    }
   },
   {
@@ -1328,22 +1397,22 @@
     "CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE"
    ],
    "disposition": null,
-   "evidence_tier": "numeric_held_batch_verifier_failed",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE.json"
     ],
-    "tier": "numeric comparison blocks pass, but the batch verifier rejected the run, so the row does not bind"
+    "tier": "numeric: per-case receipts carry an R-vs-Julia comparison block pinned to P1"
    },
-   "note": "held pending the maintainer's ruling on the wave6 nobs expectation; the covariance cases themselves pass (7.25e-8, 1.26e-6 vs tol 1e-4)",
    "measured_result": {
     "case_verdicts": {
      "CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE": "PASS"
     },
     "batch_verifier": {
-     "CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE": "FAIL"
-    }
+     "CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE": "PASS"
+    },
+    "row_verdict": "PASS"
    }
   },
   {
@@ -1354,7 +1423,7 @@
    "executable_case_ids": [
     "CORE070-COV-META-EXACT-FORMULA"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "evidence_tier": "r_only",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
@@ -1367,6 +1436,13 @@
     "case_verdicts": {
      "CORE070-COV-META-EXACT-FORMULA": "R_ONLY_PASS"
     }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signed_disposition": {
+    "ruling": "N3",
+    "text": "Ruling N3 (wave plan 2026-10-03, signed under D-319): known-V (meta-analytic) covariance is a documented gap at P1, to be revisited at P2. Julia has no known-V surface (no fitter or formula term takes a known sampling covariance V; wave plan section 3), so no R-vs-Julia number can exist for this row. Building it is 18 to 24 h and an API change that needs the maintainer's approval; it is not done here. The R-only formula-grammar receipt stays cited as non-binding context.",
+    "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer"
    }
   },
   {
@@ -1377,7 +1453,7 @@
    "executable_case_ids": [
     "CORE070-COV-META-LEGACY-ADAPTER"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "evidence_tier": "r_only",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
@@ -1390,6 +1466,13 @@
     "case_verdicts": {
      "CORE070-COV-META-LEGACY-ADAPTER": "R_ONLY_PASS"
     }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signed_disposition": {
+    "ruling": "N3",
+    "text": "Ruling N3 (wave plan 2026-10-03, signed under D-319): known-V (meta-analytic) covariance is a documented gap at P1, to be revisited at P2. Julia has no known-V surface (no fitter or formula term takes a known sampling covariance V; wave plan section 3), so no R-vs-Julia number can exist for this row. Building it is 18 to 24 h and an API change that needs the maintainer's approval; it is not done here. No Julia alias is added for R's deprecated spelling. The R-only adapter receipt stays cited as non-binding context.",
+    "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer"
    }
   },
   {
@@ -1664,16 +1747,16 @@
     "CAMPAIGN-C3-COV-PHYLO-LATENT-RSZ-SIGMA-PHY"
    ],
    "disposition": null,
-   "evidence_tier": "partial_case_not_executed",
+   "evidence_tier": "numeric",
    "measured_against": "P1",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/covariance/campaign/COV-PHYLO-LATENT-RSZ.json"
     ],
-    "tier": "measured, does not bind. Every number is inside its tolerance, but a required leg is not signed: the R side is the tracked PR #547 receipt, which records qualified = false until the maintainer signs the dated promotion block (D-300 answer 9). No agent may sign it, so the receipt stays unqualified until then"
+    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
    },
    "measured_result": {
-    "verdict": "NUMERIC_PASS_NOT_BINDING",
+    "verdict": "PASS",
     "max_abs_diff_by_case": {
      "CAMPAIGN-C3-COV-PHYLO-LATENT-RSZ-LOGLIK": 2.2646418074145913e-09,
      "CAMPAIGN-C3-COV-PHYLO-LATENT-RSZ-SIGMA-PHY": 4.352562274601013e-06
@@ -2338,7 +2421,7 @@
    "executable_case_ids": [
     "CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "data-batch attempt-data-r3 (wave1)",
    "p0_evidence": {
     "recorded": true,
@@ -2352,7 +2435,8 @@
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
     "non_binding_receipts": [
-     "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK.json"
+     "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/data/n7-offset-nonfinite-probe.json"
     ],
     "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases. Its fit-time surfaces are offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), recorded in each receipt's julia_fit_time_surface_probe, and observation weights= on the Poisson Laplace route only (other families refuse weights with an ArgumentError). Weights were added after the P1 surface probe ran, so a probe that records weights as absent predates them"
    },
@@ -2366,7 +2450,11 @@
     "case_kinds": {
      "CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK": "r_replay_julia_surface_absent"
     }
-   }
+   },
+   "reason": "R-internal helper that differs by design, disposition signed by maintainer ruling 2026-10-05 (D-319), item N7. R's .gllvmTMB_offset_newdata evaluates the stored offset expression on newdata with no finiteness guard, so e = 0 gives log(0) = -Inf (P1 helper replay: c(-Inf, 0, log(2))). GLLVModels takes the offset as a value and refuses a non-finite offset at an observed cell with an ArgumentError, at fit time and at predict time (probe receipt n7-offset-nonfinite-probe.json, tools/true_parity_offset_nonfinite_probe.jl). No R-vs-Julia number exists to compare; the difference is recorded, not hidden.",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "maintainer ruling 2026-10-05 (D-319), LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item N7"
   },
   {
    "source_id": "data/DATA-OFF-SCALAR",
@@ -2429,7 +2517,7 @@
    "executable_case_ids": [
     "CORE070-DATA-OFF-TRAIN-LEGACY-POSTFIT-READBACK"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "data-batch attempt-data-r3 (wave1)",
    "p0_evidence": {
     "recorded": true,
@@ -2457,7 +2545,11 @@
     "case_kinds": {
      "CORE070-DATA-OFF-TRAIN-LEGACY-POSTFIT-READBACK": "r_replay_julia_surface_absent"
     }
-   }
+   },
+   "reason": "R-internal legacy fallback, disposition signed by maintainer ruling 2026-10-05 (D-319), item N7. R's .gllvmTMB_offset_vec returns rep(0, n) for a fit object that carries an offset expression but no cached offset vector, that is, an object saved before gllvmTMB cached training offsets (the P1 helper replay confirms it). GLLVModels has no such object generation: a Laplace fit made with an offset stores it in fit.offset at fit time (_stored_offset, src/families/fit_gllvm.jl), so there is no pre-cache object to fall back from, and the helper is not reachable from either package's public door. The stored-offset behaviour users meet is bound numerically by DATA-OFF-TRAIN-STORED.",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "maintainer ruling 2026-10-05 (D-319), LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item N7"
   },
   {
    "source_id": "data/DATA-OFF-TRAIN-STORED",
@@ -3229,7 +3321,7 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-URBANISATION-BINOMIAL.json"
     ],
-    "tier": "measured, does not bind: a required leg was not run: the engine = \"julia\" bridge route and the plan's eight acceptance classes (the C4 clause needs them, see GATES.md and plan section 1.3). The direct-engine comparison does not say the bridge workflow passes; beta: abs difference 0.000231344 > tolerance 0.0001; LLt: abs difference 0.00164848 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000821878 > tolerance 1e-06"
+    "tier": "measured, does not bind: beta: abs difference 0.000231344 > tolerance 0.0001; LLt: abs difference 0.00164848 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000821878 > tolerance 1e-06"
    },
    "measured_result": {
     "verdict": "FAIL",
@@ -3260,16 +3352,16 @@
     "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-ETA"
    ],
    "disposition": null,
-   "evidence_tier": "partial_case_not_executed",
+   "evidence_tier": "numeric",
    "measured_against": "P1",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-CRABS-GAUSSIAN.json"
     ],
-    "tier": "measured, does not bind. Every number is inside its tolerance, but a required leg was not run: the engine = \"julia\" bridge route and the plan's eight acceptance classes (the C4 clause needs them, see GATES.md and plan section 1.3). The direct-engine comparison does not say the bridge workflow passes"
+    "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
    },
    "measured_result": {
-    "verdict": "NUMERIC_PASS_NOT_BINDING",
+    "verdict": "PASS",
     "max_abs_diff_by_case": {
      "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LOGLIK": 5.8479827202972956e-08,
      "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-BETA": 5.734798325107704e-08,
@@ -3303,7 +3395,7 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-SPIDER-NB2.json"
     ],
-    "tier": "measured, does not bind: a required leg was not run: the engine = \"julia\" bridge route and the plan's eight acceptance classes (the C4 clause needs them, see GATES.md and plan section 1.3). The direct-engine comparison does not say the bridge workflow passes; logLik: abs difference 1.45732e-06 > tolerance 1e-06; LLt: abs difference 0.000161728 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 6.73994e-05 > tolerance 1e-06"
+    "tier": "measured, does not bind: logLik: abs difference 1.45732e-06 > tolerance 1e-06; LLt: abs difference 0.000161728 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 6.73994e-05 > tolerance 1e-06"
    },
    "measured_result": {
     "verdict": "FAIL",
@@ -3340,7 +3432,7 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-BEETLE-NB2.json"
     ],
-    "tier": "measured, does not bind: R's Hessian is not positive definite (pdHess is false); a required leg was not run: the engine = \"julia\" bridge route and the plan's eight acceptance classes (the C4 clause needs them, see GATES.md and plan section 1.3). The direct-engine comparison does not say the bridge workflow passes; logLik: abs difference 9.08069e-06 > tolerance 1e-06; beta: abs difference 0.000287141 > tolerance 0.0001; LLt: abs difference 0.00463293 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000869455 > tolerance 1e-06"
+    "tier": "measured, does not bind: R's Hessian is not positive definite (pdHess is false); logLik: abs difference 9.08069e-06 > tolerance 1e-06; beta: abs difference 0.000287141 > tolerance 0.0001; LLt: abs difference 0.00463293 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000869455 > tolerance 1e-06"
    },
    "measured_result": {
     "verdict": "FAIL",
@@ -3377,7 +3469,7 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-FUNGI-BINOMIAL.json"
     ],
-    "tier": "measured, does not bind: a required leg was not run: the engine = \"julia\" bridge route and the plan's eight acceptance classes (the C4 clause needs them, see GATES.md and plan section 1.3). The direct-engine comparison does not say the bridge workflow passes; beta: abs difference 0.000123933 > tolerance 0.0001; LLt: abs difference 0.000474438 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000328279 > tolerance 1e-06"
+    "tier": "measured, does not bind: beta: abs difference 0.000123933 > tolerance 0.0001; LLt: abs difference 0.000474438 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000328279 > tolerance 1e-06"
    },
    "measured_result": {
     "verdict": "FAIL",
@@ -3402,18 +3494,21 @@
    "arc": "campaign-C4",
    "clause": "C4",
    "executable_case_ids": [],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "evidence_tier": "not_measured",
    "measured_against": "P1",
    "evidence": {
-    "tier": "no measurement: this row awaits the maintainer's own signed disposition; nothing is signed here"
+    "tier": "no measurement: the row closes by the maintainer's signed disposition below"
    },
-   "proposed_disposition": {
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "D-319",
+   "signed_disposition": {
     "capability": "phylo-structured real data",
-    "text": "gllvm::fungi ships a phylogeny (fungi$tree), so a real phylo workflow exists. Blocked at the bridge gate GJL-GATE-STRUCTURED-TERMS until gllvmTMB #1236 (A4a) lands; revisit at P2.",
-    "status": "PROPOSED, UNSIGNED: the campaign plan says each of these three rows needs the maintainer's own signature, and itchyshin/GLLVModels.jl#684 does not quote them"
+    "text": "gllvm::fungi ships a phylogeny (fungi$tree), so a real phylo workflow exists, but the campaign has no phylo-structured real-data run at P1. C4 accepts a direct-engine run (R gllvmTMB and Julia GLLVModels fitted to the same data), so one on fungi with fungi$tree would replace this disposition; revisit at P2.",
+    "status": "DISPOSITION-SIGNED: item F of the rulings page (three C4 dispositions), signed by the maintainer on 2026-10-05 (vault D-319; LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the lane kit). Recorded by an agent, signed by the maintainer."
    },
-   "ruling": "itchyshin/GLLVModels.jl#684 item 4 (row added); disposition itself unsigned"
+   "ruling": "itchyshin/GLLVModels.jl#684 item 4 (row added); disposition signed under vault D-319, item F"
   },
   {
    "source_id": "data/RD-TEMPORAL-DISPOSITION",
@@ -3421,18 +3516,21 @@
    "arc": "campaign-C4",
    "clause": "C4",
    "executable_case_ids": [],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "evidence_tier": "not_measured",
    "measured_against": "P1",
    "evidence": {
-    "tier": "no measurement: this row awaits the maintainer's own signed disposition; nothing is signed here"
+    "tier": "no measurement: the row closes by the maintainer's signed disposition below"
    },
-   "proposed_disposition": {
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "D-319",
+   "signed_disposition": {
     "capability": "temporal real data",
     "text": "None of gllvm, vegan, MASS, ape ships a multivariate ecological time series the plan would call a real workflow; no bridge route for temporal at P1 (D-296).",
-    "status": "PROPOSED, UNSIGNED: the campaign plan says each of these three rows needs the maintainer's own signature, and itchyshin/GLLVModels.jl#684 does not quote them"
+    "status": "DISPOSITION-SIGNED: item F of the rulings page (three C4 dispositions), signed by the maintainer on 2026-10-05 (vault D-319; LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the lane kit). Recorded by an agent, signed by the maintainer."
    },
-   "ruling": "itchyshin/GLLVModels.jl#684 item 4 (row added); disposition itself unsigned"
+   "ruling": "itchyshin/GLLVModels.jl#684 item 4 (row added); disposition signed under vault D-319, item F"
   },
   {
    "source_id": "data/RD-ISDM-DISPOSITION",
@@ -3440,18 +3538,21 @@
    "arc": "campaign-C4",
    "clause": "C4",
    "executable_case_ids": [],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "evidence_tier": "not_measured",
    "measured_against": "P1",
    "evidence": {
-    "tier": "no measurement: this row awaits the maintainer's own signed disposition; nothing is signed here"
+    "tier": "no measurement: the row closes by the maintainer's signed disposition below"
    },
-   "proposed_disposition": {
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "D-319",
+   "signed_disposition": {
     "capability": "integrated SDM real data",
     "text": "No real multi-source dataset in the packages checked; no bridge route for iSDM at P1 (D-296, D-300 row 1c-5).",
-    "status": "PROPOSED, UNSIGNED: the campaign plan says each of these three rows needs the maintainer's own signature, and itchyshin/GLLVModels.jl#684 does not quote them"
+    "status": "DISPOSITION-SIGNED: item F of the rulings page (three C4 dispositions), signed by the maintainer on 2026-10-05 (vault D-319; LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the lane kit). Recorded by an agent, signed by the maintainer."
    },
-   "ruling": "itchyshin/GLLVModels.jl#684 item 4 (row added); disposition itself unsigned"
+   "ruling": "itchyshin/GLLVModels.jl#684 item 4 (row added); disposition signed under vault D-319, item F"
   },
   {
    "source_id": "family/FAMILY-00-IDENTITY",
@@ -4129,7 +4230,8 @@
      "CORE070-FAMILY-11-LOG-PUBLIC-R-BRIDGE": true
     },
     "executed_cases_verdict": "PASS"
-   }
+   },
+   "note": "Held under maintainer ruling 2026-10-05 (D-319), N1: the PUBLIC-R-BRIDGE case was not executed, which N1 does not cover. The row binds once a P1 R probe records the bridge refusal (GJL-GATE-FAMILY) as R_BOUNDARY_UNCHANGED (tracked follow-up)."
   },
   {
    "source_id": "family/FAMILY-12-LOGIT-LOG",
@@ -5083,13 +5185,13 @@
    ],
    "disposition": null,
    "p0_batch": "surface-conversion wave5 (attempt7)",
-   "evidence_tier": "partial_non_numeric_case",
+   "evidence_tier": "behavioural",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-SURFCONV-INFERENCE-CI-ROUTE-009.json"
     ],
-    "tier": "measured at P1 and the harness passes, but the case is a refusal pair or a structural bootstrap check with no R-vs-Julia number and tolerance, so the row does not bind"
+    "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
    },
    "measured_result": {
     "case_verdicts": {
@@ -5101,8 +5203,7 @@
     "case_kinds": {
      "CORE070-SURFCONV-INFERENCE-CI-ROUTE-009": "paired_refusal_pair"
     }
-   },
-   "note": "Not bound: behaviour block kept as non-binding evidence only (R and Julia give the same label), but this row is not in the frozen scope of itchyshin/GLLVModels.jl#684 item 2; binding it needs the maintainer to confirm ruling 2 covers it."
+   }
   },
   {
    "source_id": "inference/CI-ROUTE-010",
@@ -5143,13 +5244,13 @@
    ],
    "disposition": null,
    "p0_batch": "surface-conversion wave5 (attempt7)",
-   "evidence_tier": "partial_non_numeric_case",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-SURFCONV-INFERENCE-CI-ROUTE-011.json"
     ],
-    "tier": "measured at P1 and the harness passes, but the case is a refusal pair or a structural bootstrap check with no R-vs-Julia number and tolerance, so the row does not bind"
+    "tier": "numeric: every executable case receipt carries an R-vs-Julia comparison block pinned to P1, within the harness tolerance"
    },
    "measured_result": {
     "case_verdicts": {
@@ -5158,11 +5259,9 @@
     "batch_verifier": {
      "CORE070-SURFCONV-INFERENCE-CI-ROUTE-011": "PASS"
     },
-    "case_kinds": {
-     "CORE070-SURFCONV-INFERENCE-CI-ROUTE-011": "paired_bootstrap_structural"
-    }
+    "row_verdict": "PASS"
    },
-   "note": "Anomaly: the Julia bootstrap lower bounds for 2 ICC entries collapsed (entry 2: Julia 1.06e-07 vs R 0.126; entry 4: Julia 4.53e-40 vs R 0.414). The structural check passes (finite, ordered, brackets the point) and endpoints are not compared, so this PASS does not mean the bootstraps agree. Root cause found and fixed in draft PR #576: a Woodbury quadratic form went negative at extreme variance ratios, so bootstrap refits reported converged with an impossible log-likelihood. This receipt predates that fix (PR #569's run); re-measure after #576 lands."
+   "note": "Anomaly: the Julia bootstrap lower bounds for 2 ICC entries collapsed (entry 2: Julia 1.06e-07 vs R 0.126; entry 4: Julia 4.53e-40 vs R 0.414). The structural check passes (finite, ordered, brackets the point) and endpoints are not compared, so this PASS does not mean the bootstraps agree. Root cause found and fixed in draft PR #576: a Woodbury quadratic form went negative at extreme variance ratios, so bootstrap refits reported converged with an impossible log-likelihood. This receipt predates that fix (PR #569's run); re-measure after #576 lands. Superseded for binding by the N4 Monte-Carlo run (docs/dev-log/core070/true-parity-latest/receipts/inference/ci-route-011-mc, at 9130afe6e, after #576 landed): no Julia lower bound collapsed on any of the 5 seeds, and the row binds on the pre-stated Monte-Carlo comparison."
   },
   {
    "source_id": "inference/CI-ROUTE-012",
@@ -5262,7 +5361,7 @@
    "executable_case_ids": [
     "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "inference-batch wave2",
    "evidence_tier": "routing_control_flow",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
@@ -5270,7 +5369,11 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind",
+    "ruling_evidence": [
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv",
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json"
+    ]
    },
    "measured_result": {
     "case_verdicts": {
@@ -5282,7 +5385,11 @@
     "case_kinds": {
      "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "vault D-319 (shinichi-brain memory/DECISIONS.md), 2026-10-05: signed rulings page LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item B 'Julia defaults and fallbacks against R', recommendation 'yes, row by row'",
+   "reason": "Documented default difference, signed under ruling B (Julia defaults against R, row by row). R: confint() with no method for parm phylo_signal routes to '.confint_phylo_signal:profile', a profile interval (P1 route probe). Julia: confint(fitS, YS; parm=\"phylo_signal[1]\", \u03a3_phy) with no method returns a wald_derived result, the Wald interval, because Julia's confint defaults to method = :wald for every parm. R's default route is reachable in Julia by asking for it: confint(fitS, YS; parm=\"phylo_signal[1]\", method=:profile, \u03a3_phy) returned a profile result (finite bounds). Same quantity, different default method; not a defect in either engine. Evidence: docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-015; docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json#CI-ROUTE-015."
   },
   {
    "source_id": "inference/CI-ROUTE-016",
@@ -5505,13 +5612,13 @@
    ],
    "disposition": null,
    "p0_batch": "inference-batch wave2",
-   "evidence_tier": "routing_control_flow",
+   "evidence_tier": "behavioural",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
    },
    "measured_result": {
     "case_verdicts": {
@@ -5686,13 +5793,13 @@
    ],
    "disposition": null,
    "p0_batch": "inference-batch wave2",
-   "evidence_tier": "routing_control_flow",
+   "evidence_tier": "behavioural",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-RHO-CI-METHOD-ROUTE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
    },
    "measured_result": {
     "case_verdicts": {
@@ -5704,8 +5811,7 @@
     "case_kinds": {
      "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   },
-   "note": "Not bound behaviourally: Julia's public default (:wald, a Fisher-z interval for rho) and R's default (fisher-z) look alike, but treating them as one default route is an equivalence the maintainer has not confirmed (receipt behaviour_not_bound)."
+   }
   },
   {
    "source_id": "inference/CI-ROUTE-030",
@@ -5717,13 +5823,13 @@
    ],
    "disposition": null,
    "p0_batch": "inference-batch wave2",
-   "evidence_tier": "routing_control_flow",
+   "evidence_tier": "behavioural",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-RHO-CI-METHOD-ROUTE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
    },
    "measured_result": {
     "case_verdicts": {
@@ -5808,13 +5914,13 @@
    ],
    "disposition": null,
    "p0_batch": "inference-batch wave2",
-   "evidence_tier": "routing_control_flow",
+   "evidence_tier": "behavioural",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-RHO-CI-METHOD-ROUTE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
    },
    "measured_result": {
     "case_verdicts": {
@@ -5826,8 +5932,7 @@
     "case_kinds": {
      "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   },
-   "note": "Not bound behaviourally: Julia's public confint does not take the route R takes for this request (receipt behaviour_not_bound)."
+   }
   },
   {
    "source_id": "inference/CI-ROUTE-035",
@@ -5899,13 +6004,13 @@
    ],
    "disposition": null,
    "p0_batch": "inference-batch wave2",
-   "evidence_tier": "routing_control_flow",
+   "evidence_tier": "behavioural",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
    },
    "measured_result": {
     "case_verdicts": {
@@ -6078,7 +6183,7 @@
    "executable_case_ids": [
     "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "inference-batch wave2",
    "evidence_tier": "routing_control_flow",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
@@ -6086,7 +6191,11 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind",
+    "ruling_evidence": [
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv",
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json"
+    ]
    },
    "measured_result": {
     "case_verdicts": {
@@ -6098,7 +6207,11 @@
     "case_kinds": {
      "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "vault D-319 (shinichi-brain memory/DECISIONS.md), 2026-10-05: signed rulings page LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item B 'Julia defaults and fallbacks against R', recommendation 'yes, row by row'",
+   "reason": "Documented default difference, signed under ruling B (Julia defaults against R, row by row). R: confint() with no method for parm sigma_B routes to '.confint_sigma:profile', a profile interval (P1 route probe). Julia: confint(fitS, YS; parm=\"sigma_B[1]\", \u03a3_phy) with no method returns a wald_packed result, the Wald interval, because Julia's confint defaults to method = :wald for every parm. R's default route is reachable in Julia by asking for it: confint(fitS, YS; parm=\"sigma_B[1]\", method=:profile, \u03a3_phy) returned a profile result (non-finite bounds on this fixture). Same quantity, different default method; not a defect in either engine. Evidence: docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-043; docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json#CI-ROUTE-043."
   },
   {
    "source_id": "inference/CI-ROUTE-044",
@@ -6169,7 +6282,7 @@
    "executable_case_ids": [
     "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "inference-batch wave2",
    "evidence_tier": "routing_control_flow",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
@@ -6177,7 +6290,11 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind",
+    "ruling_evidence": [
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv",
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json"
+    ]
    },
    "measured_result": {
     "case_verdicts": {
@@ -6189,7 +6306,11 @@
     "case_kinds": {
      "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "vault D-319 (shinichi-brain memory/DECISIONS.md), 2026-10-05: signed rulings page LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item B 'Julia defaults and fallbacks against R', recommendation 'yes, row by row'",
+   "reason": "Documented default difference, signed under ruling B (Julia defaults against R, row by row). R: confint() with no method for parm sigma_W routes to '.confint_sigma:profile', a profile interval (P1 route probe). Julia: confint(fitS, YS; parm=\"sigma_W[1]\", \u03a3_phy) with no method returns a wald_packed result, the Wald interval, because Julia's confint defaults to method = :wald for every parm. R's default route is reachable in Julia by asking for it: confint(fitS, YS; parm=\"sigma_W[1]\", method=:profile, \u03a3_phy) returned a profile result (non-finite bounds on this fixture). Same quantity, different default method; not a defect in either engine. Evidence: docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-046; docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json#CI-ROUTE-046."
   },
   {
    "source_id": "inference/CI-ROUTE-047",
@@ -6260,7 +6381,7 @@
    "executable_case_ids": [
     "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "inference-batch wave2",
    "evidence_tier": "routing_control_flow",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
@@ -6268,7 +6389,11 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind",
+    "ruling_evidence": [
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv",
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json"
+    ]
    },
    "measured_result": {
     "case_verdicts": {
@@ -6280,7 +6405,11 @@
     "case_kinds": {
      "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "vault D-319 (shinichi-brain memory/DECISIONS.md), 2026-10-05: signed rulings page LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item B 'Julia defaults and fallbacks against R', recommendation 'yes, row by row'",
+   "reason": "Documented default difference, signed under ruling B (Julia defaults against R, row by row). R: confint() with no method for parm sigma_B routes to '.confint_sigma:profile', a profile interval (P1 route probe). Julia: confint(fitS, YS; parm=\"sigma_B[1]\", \u03a3_phy) with no method returns a wald_packed result, the Wald interval, because Julia's confint defaults to method = :wald for every parm. R's default route is reachable in Julia by asking for it: confint(fitS, YS; parm=\"sigma_B[1]\", method=:profile, \u03a3_phy) returned a profile result (non-finite bounds on this fixture). Same quantity, different default method; not a defect in either engine. Evidence: docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-055; docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json#CI-ROUTE-055."
   },
   {
    "source_id": "inference/CI-ROUTE-056",
@@ -6351,7 +6480,7 @@
    "executable_case_ids": [
     "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "inference-batch wave2",
    "evidence_tier": "routing_control_flow",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
@@ -6359,7 +6488,11 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind",
+    "ruling_evidence": [
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv",
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json"
+    ]
    },
    "measured_result": {
     "case_verdicts": {
@@ -6371,7 +6504,11 @@
     "case_kinds": {
      "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "vault D-319 (shinichi-brain memory/DECISIONS.md), 2026-10-05: signed rulings page LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item B 'Julia defaults and fallbacks against R', recommendation 'yes, row by row'",
+   "reason": "Documented default difference, signed under ruling B (Julia defaults against R, row by row). R: confint() with no method for parm sigma_W routes to '.confint_sigma:profile', a profile interval (P1 route probe). Julia: confint(fitS, YS; parm=\"sigma_W[1]\", \u03a3_phy) with no method returns a wald_packed result, the Wald interval, because Julia's confint defaults to method = :wald for every parm. R's default route is reachable in Julia by asking for it: confint(fitS, YS; parm=\"sigma_W[1]\", method=:profile, \u03a3_phy) returned a profile result (non-finite bounds on this fixture). Same quantity, different default method; not a defect in either engine. Evidence: docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-058; docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json#CI-ROUTE-058."
   },
   {
    "source_id": "inference/CI-ROUTE-059",
@@ -6442,7 +6579,7 @@
    "executable_case_ids": [
     "CORE070-INFERENCE-SIGMA-PHY-CI-METHOD-ROUTE"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "inference-batch wave2",
    "evidence_tier": "routing_control_flow",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
@@ -6450,7 +6587,11 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-SIGMA-PHY-CI-METHOD-ROUTE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind",
+    "ruling_evidence": [
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv",
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json"
+    ]
    },
    "measured_result": {
     "case_verdicts": {
@@ -6462,7 +6603,11 @@
     "case_kinds": {
      "CORE070-INFERENCE-SIGMA-PHY-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "vault D-319 (shinichi-brain memory/DECISIONS.md), 2026-10-05: signed rulings page LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item B 'Julia defaults and fallbacks against R', recommendation 'yes, row by row'",
+   "reason": "Documented default difference, signed under ruling B (Julia defaults against R, row by row). R: confint() with no method for parm sigma_phy routes to '.confint_sigma:profile', a profile interval (P1 route probe). Julia: confint(fitS, YS; parm=\"sigma_phy[1]\", \u03a3_phy) with no method returns a wald_packed result, the Wald interval, because Julia's confint defaults to method = :wald for every parm. R's default route is reachable in Julia by asking for it: confint(fitS, YS; parm=\"sigma_phy[1]\", method=:profile, \u03a3_phy) returned a profile result (finite bounds). Same quantity, different default method; not a defect in either engine. Evidence: docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-061; docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json#CI-ROUTE-061."
   },
   {
    "source_id": "inference/CI-ROUTE-062",
@@ -6533,7 +6678,7 @@
    "executable_case_ids": [
     "CORE070-INFERENCE-BETA-CI-METHOD-ROUTE"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "inference-batch wave2",
    "evidence_tier": "routing_control_flow",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
@@ -6541,7 +6686,11 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-BETA-CI-METHOD-ROUTE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind",
+    "ruling_evidence": [
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv",
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json"
+    ]
    },
    "measured_result": {
     "case_verdicts": {
@@ -6553,7 +6702,11 @@
     "case_kinds": {
      "CORE070-INFERENCE-BETA-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "vault D-319 (shinichi-brain memory/DECISIONS.md), 2026-10-05: signed rulings page LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item B 'Julia defaults and fallbacks against R', recommendation 'yes, row by row'",
+   "reason": "Documented default difference, signed under ruling B (Julia defaults against R, row by row). R: confint() with no method for parm beta routes to '.confint_fixef_profile:profile', a profile interval (P1 route probe). Julia: confint(fitA, YA; parm=\"beta[1]\", X=XA) with no method returns a wald_packed result, the Wald interval, because Julia's confint defaults to method = :wald for every parm. R's default route is reachable in Julia by asking for it: confint(fitA, YA; parm=\"beta[1]\", method=:profile, X=XA) returned a profile result (finite bounds). Same quantity, different default method; not a defect in either engine. Evidence: docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-065; docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json#CI-ROUTE-065."
   },
   {
    "source_id": "inference/CI-ROUTE-066",
@@ -6593,7 +6746,7 @@
    "executable_case_ids": [
     "CORE070-INFERENCE-BETA-BOOTSTRAP-FALLBACK-DIVERGENCE"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "inference-batch wave2",
    "evidence_tier": "routing_control_flow",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
@@ -6601,7 +6754,11 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-BETA-BOOTSTRAP-FALLBACK-DIVERGENCE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind",
+    "ruling_evidence": [
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv",
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json"
+    ]
    },
    "measured_result": {
     "case_verdicts": {
@@ -6613,7 +6770,11 @@
     "case_kinds": {
      "CORE070-INFERENCE-BETA-BOOTSTRAP-FALLBACK-DIVERGENCE": "routing_control_flow"
     }
-   }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "vault D-319 (shinichi-brain memory/DECISIONS.md), 2026-10-05: signed rulings page LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item B 'Julia defaults and fallbacks against R', recommendation 'yes, row by row'",
+   "reason": "Documented fallback difference, signed under ruling B (Julia fallbacks against R, row by row). R: confint(method = \"bootstrap\") for parm beta does not bootstrap; it routes to 'tidy:wald' with the message 'Bootstrap on fixed effects is not implemented; falling back to `method = \"wald\"`.' (P1 route probe). Julia: confint(fitA, YA; parm=\"beta[1]\", method=:bootstrap, X=XA, n_boot=6, seed=21) runs the bootstrap it is asked for (a bootstrap result reporting method 'bootstrap'). Julia does what the request names where R substitutes Wald; not a defect in either engine. Evidence: docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-067; docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json#CI-ROUTE-067."
   },
   {
    "source_id": "inference/CI-ROUTE-068",
@@ -6623,7 +6784,7 @@
    "executable_case_ids": [
     "CORE070-INFERENCE-SIGMA-EPS-CI-METHOD-ROUTE"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "inference-batch wave2",
    "evidence_tier": "routing_control_flow",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
@@ -6631,7 +6792,11 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-SIGMA-EPS-CI-METHOD-ROUTE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind",
+    "ruling_evidence": [
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv",
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json"
+    ]
    },
    "measured_result": {
     "case_verdicts": {
@@ -6643,7 +6808,11 @@
     "case_kinds": {
      "CORE070-INFERENCE-SIGMA-EPS-CI-METHOD-ROUTE": "routing_control_flow"
     }
-   }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "vault D-319 (shinichi-brain memory/DECISIONS.md), 2026-10-05: signed rulings page LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item B 'Julia defaults and fallbacks against R', recommendation 'yes, row by row'",
+   "reason": "Documented default difference, signed under ruling B (Julia defaults against R, row by row). R: confint() with no method for parm sigma_eps routes to '.confint_profile_targets:profile', a profile interval (P1 route probe). Julia: confint(fitA, YA; parm=\"sigma_eps\", X=XA) with no method returns a wald_packed result, the Wald interval, because Julia's confint defaults to method = :wald for every parm. R's default route is reachable in Julia by asking for it: confint(fitA, YA; parm=\"sigma_eps\", method=:profile, X=XA) returned a profile result (finite bounds). Same quantity, different default method; not a defect in either engine. Evidence: docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-068; docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json#CI-ROUTE-068."
   },
   {
    "source_id": "inference/CI-ROUTE-069",
@@ -6683,7 +6852,7 @@
    "executable_case_ids": [
     "CORE070-INFERENCE-SIGMA-EPS-BOOTSTRAP-FALLBACK-DIVERGENCE"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "inference-batch wave2",
    "evidence_tier": "routing_control_flow",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
@@ -6691,7 +6860,11 @@
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/inference/cases/CORE070-INFERENCE-SIGMA-EPS-BOOTSTRAP-FALLBACK-DIVERGENCE.json"
     ],
-    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind"
+    "tier": "routing / control-flow only: R side is a frozen-source probe of which internal function+method confint.gllvmTMB_multi dispatches to (no fit, no interval); Julia side records which CI solver ran. No R-vs-Julia number, so the row does not bind",
+    "ruling_evidence": [
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv",
+     "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json"
+    ]
    },
    "measured_result": {
     "case_verdicts": {
@@ -6703,7 +6876,11 @@
     "case_kinds": {
      "CORE070-INFERENCE-SIGMA-EPS-BOOTSTRAP-FALLBACK-DIVERGENCE": "routing_control_flow"
     }
-   }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "vault D-319 (shinichi-brain memory/DECISIONS.md), 2026-10-05: signed rulings page LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item B 'Julia defaults and fallbacks against R', recommendation 'yes, row by row'",
+   "reason": "Documented fallback difference, signed under ruling B (Julia fallbacks against R, row by row). R: confint(method = \"bootstrap\") for parm sigma_eps does not bootstrap; it routes to 'tidy:wald' with the message 'Bootstrap on fixed effects is not implemented; falling back to `method = \"wald\"`.' (P1 route probe). Julia: confint(fitA, YA; parm=\"sigma_eps\", method=:bootstrap, X=XA, n_boot=6, seed=22) runs the bootstrap it is asked for (a bootstrap result reporting method 'bootstrap'). Julia does what the request names where R substitutes Wald; not a defect in either engine. Evidence: docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-070; docs/dev-log/core070/true-parity-latest/receipts/inference/inference-rulings-p1/inference-rulings-results.json#CI-ROUTE-070."
   },
   {
    "source_id": "inference/CI-ROUTE-081",
@@ -6943,7 +7120,7 @@
    "executable_case_ids": [
     "CORE070-ISDM-LEGACY-PAIRED-CONTROL"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "isdm-batch-01 (wave1)",
    "p0_evidence": {
     "recorded": true,
@@ -6972,7 +7149,9 @@
      "CORE070-ISDM-LEGACY-PAIRED-CONTROL": "r_replay_julia_surface_absent"
     }
    },
-   "note": "ISDM-LEGACY replays R's legacy two-source route (family_var = \"isdm_family\", fixed names gbif / survey_pa). Packet 1b item 2 (signed 2026-09-27, vault decision D-296) records it as an R-only backward-compatibility disposition that GLLVModels will not twin. That disposition is not written into this row (dispositions are the maintainer's to record in the case map); the row stays required and free."
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-27",
+   "disposition_basis": "R-only backward-compatibility route (family_var = \"isdm_family\", fixed names gbif / survey_pa) that GLLVModels will not twin: Packet 1b item 2, signed 2026-09-27 (vault decision D-296). Written onto this row under maintainer ruling 2026-10-05 (D-319), item N6; the R replay stays cited under non_binding_receipts."
   },
   {
    "source_id": "isdm/ISDM-MASKED-ARM",
@@ -7255,7 +7434,7 @@
    "executable_case_ids": [
     "CORE070-ISDM-NO-TRAITS-PAIRED-CONTROL"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "isdm-batch-01 (wave1)",
    "p0_evidence": {
     "recorded": true,
@@ -7283,7 +7462,10 @@
     "case_kinds": {
      "CORE070-ISDM-NO-TRAITS-PAIRED-CONTROL": "r_replay_julia_surface_absent"
     }
-   }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "disposition_basis": "R-internal admission predicate: the R case calls the predicate with traits = NULL, an argument no call to gllvmTMB(..., family = isdm_sources(...)) can set, and Julia's public fit_isdm_gllvm has no such argument either, so no paired twin through either public door exists. Signed disposition under maintainer ruling 2026-10-05 (D-319), item N6; the R replay stays cited under non_binding_receipts."
   },
   {
    "source_id": "isdm/ISDM-SUPPORT",
@@ -7544,7 +7726,7 @@
    "executable_case_ids": [
     "CORE070-ISDM-WRONG-ID-PAIRED-CONTROL"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "isdm-batch-01 (wave1)",
    "p0_evidence": {
     "recorded": true,
@@ -7572,7 +7754,10 @@
     "case_kinds": {
      "CORE070-ISDM-WRONG-ID-PAIRED-CONTROL": "r_replay_julia_surface_absent"
     }
-   }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "disposition_basis": "R-internal admission predicate: the R case calls the predicate with a tampered family-id column of the internal row-id matrix, an argument no call to gllvmTMB(..., family = isdm_sources(...)) can set, and Julia's public fit_isdm_gllvm has no such argument either, so no paired twin through either public door exists. Signed disposition under maintainer ruling 2026-10-05 (D-319), item N6; the R replay stays cited under non_binding_receipts."
   },
   {
    "source_id": "isdm/ISDM-WRONG-LINK",
@@ -7582,7 +7767,7 @@
    "executable_case_ids": [
     "CORE070-ISDM-WRONG-LINK-PAIRED-CONTROL"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "p0_batch": "isdm-batch-01 (wave1)",
    "p0_evidence": {
     "recorded": true,
@@ -7610,7 +7795,10 @@
     "case_kinds": {
      "CORE070-ISDM-WRONG-LINK-PAIRED-CONTROL": "r_replay_julia_surface_absent"
     }
-   }
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "disposition_basis": "R-internal admission predicate: the R case calls the predicate with a tampered link-id column of the internal row-id matrix, an argument no call to gllvmTMB(..., family = isdm_sources(...)) can set, and Julia's public fit_isdm_gllvm has no such argument either, so no paired twin through either public door exists. Signed disposition under maintainer ruling 2026-10-05 (D-319), item N6; the R replay stays cited under non_binding_receipts."
   },
   {
    "source_id": "isdm/ISDM-ZERO-ORDINARY",
@@ -7723,14 +7911,21 @@
     "CORE070-NAMESPACE-COEF-JULIA-BRIDGE-COMPARE"
    ],
    "reason": "R S3method(coef,gllvmTMB_julia) registered and defined at P1; Julia `coef` exported Function. Classified compatibility_adapter: the gllvmTMB_julia bridge method's R answer comes from Julia itself, so a twin comparison is circular.",
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "evidence_tier": "registration",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
     "reason": "R registered and defined; Julia symbol present, exported, a Function"
    },
-   "original_classification": "required_core"
+   "original_classification": "required_core",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signed_disposition": {
+    "ruling": "Ruling 1 (rulings page 2026-10-04), no leg",
+    "text": "The R value of coef.gllvmTMB_julia comes from Julia: the R method copies or reformats what GLLVModels returned through the bridge, so an R-vs-Julia comparison of it is circular and is not a twin. The row is resolved by this signed disposition, not by a numeric binding. The PR #790 live readback (docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/bridge_readback.json, cases P1-BRIDGE-READBACK-COEF-ALPHA, P1-BRIDGE-READBACK-COEF-LOADINGS) records that the R value equals Julia's; it is context, not the binding.",
+    "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer"
+   }
   },
   {
    "source_id": "namespace/S3method/coef,gllvmTMB_multi",
@@ -7742,23 +7937,29 @@
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-COEF-MULTI-READBACK.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-COEF-MULTI-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-COEF-MULTI-NATIVE"
+    ],
+    "ruling": "W1-1 re-cite, made possible by the maintainer's signed OK (D-319, 2026-10-05) to repoint the real-row mutation control in tools/test_true_parity_check.mjs, which pinned this row as registration-only.",
+    "tier": "numeric: re-cites the bound receipt of postfit/POSTFIT-SURFACE-coef.gllvmTMB_multi (postfit-1 batch at P1, verifier PASS): R coef() on a gllvmTMB_multi fit against the Julia coefficients of the same fit, 4 values, max |R - Julia| 7.2e-7 within 1e-3, discriminating. The Tier 0 registration receipts are kept un-cited under registration_receipts."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-COEF-MULTI-NATIVE"
+    "CORE070-POSTFIT-COEF-MULTI-READBACK"
    ],
-   "reason": "R S3method(coef,gllvmTMB_multi) registered and defined at P1; Julia `coef` is an exported Function (measured). Name match only.",
+   "reason": "R S3method(coef,gllvmTMB_multi) is measured numerically by the postfit-1 readback case at P1; this row re-cites that receipt (W1-1).",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
-    "case_verdict": "PASS",
-    "category": "registration_twin",
-    "reason": "R registered and defined; Julia symbol present, exported, a Function"
+    "case_verdicts": {
+     "CORE070-POSTFIT-COEF-MULTI-READBACK": "PASS"
+    },
+    "row_verdict": "PASS"
    }
   },
   {
@@ -7782,14 +7983,21 @@
     "CORE070-NAMESPACE-CONFINT-JULIA-BRIDGE-COMPARE"
    ],
    "reason": "R S3method(confint,gllvmTMB_julia) registered and defined at P1; Julia `confint` exported Function. Classified compatibility_adapter: the gllvmTMB_julia bridge method's R answer comes from Julia itself, so a twin comparison is circular.",
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "evidence_tier": "registration",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
     "reason": "R registered and defined; Julia symbol present, exported, a Function"
    },
-   "original_classification": "required_core"
+   "original_classification": "required_core",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signed_disposition": {
+    "ruling": "Ruling 1 (rulings page 2026-10-04), no leg",
+    "text": "The R value of confint.gllvmTMB_julia comes from Julia: the R method copies or reformats what GLLVModels returned through the bridge, so an R-vs-Julia comparison of it is circular and is not a twin. The row is resolved by this signed disposition, not by a numeric binding.",
+    "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer"
+   }
   },
   {
    "source_id": "namespace/S3method/confint,gllvmTMB_multi",
@@ -7801,23 +8009,29 @@
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE6-POSTFIT-CONFINT-MULTI.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-CONFINT-MULTI-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-CONFINT-MULTI-NATIVE"
+    ],
+    "ruling": "Re-cite of the wave6 receipt rebound under maintainer ruling 2026-10-05 (D-319), item N2 (the batch's stale nobs expectation rewritten as integer equality), at the integration commit 6f050fea3.",
+    "tier": "numeric: re-cites the bound receipt of postfit/POSTFIT-SURFACE-confint.gllvmTMB_multi (wave6 conversion batch at P1, verifier PASS): R confint() on the gaussian_small gllvmTMB_multi fit against the Julia interval for the residual SD of the same fit, max |R - Julia| 2.06e-3 within 5e-3, discriminating. The Tier 0 registration receipts are kept un-cited under registration_receipts."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-CONFINT-MULTI-NATIVE"
+    "CORE070-WAVE6-POSTFIT-CONFINT-MULTI"
    ],
-   "reason": "R S3method(confint,gllvmTMB_multi) registered and defined at P1; Julia `confint` is an exported Function (measured). Name match only.",
+   "reason": "R S3method(confint,gllvmTMB_multi) is measured numerically by the wave6 case CORE070-WAVE6-POSTFIT-CONFINT-MULTI at P1; this row re-cites that receipt.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
-    "case_verdict": "PASS",
-    "category": "registration_twin",
-    "reason": "R registered and defined; Julia symbol present, exported, a Function"
+    "case_verdicts": {
+     "CORE070-WAVE6-POSTFIT-CONFINT-MULTI": "PASS"
+    },
+    "row_verdict": "PASS"
    }
   },
   {
@@ -7866,23 +8080,31 @@
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/bridge_readback.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-FITTED-JULIA-BRIDGE-COMPARE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-FITTED-JULIA-BRIDGE-COMPARE"
+    ],
+    "ruling": "Ruling 1 (rulings page 2026-10-04), signed under D-319 on 2026-10-05: the bridge readback binds fitted, because R's fitted.gllvmTMB_julia does its own arithmetic on the Julia payload, so the comparison is a real adapter test. Signature source: vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer.",
+    "tier": "numeric (adapter test): live P1 bridge run of PR #790 (test/fixtures/gen_bridge_readback_p1.R). R's fitted.gllvmTMB_julia output on the object from gllvmTMB(..., engine = \"julia\") against the native GLLVModels accessor in the same session, Gaussian, p = 6, n = 200, tolerance 1e-12 from test/test_bridge_readback_p1.jl. It shows the R adapter returns what Julia computes; it is not a comparison with engine = \"tmb\". The Tier 0 registration receipts are kept un-cited under registration_receipts (the registration batch receipt carries a batch-level FAIL status)."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-FITTED-JULIA-BRIDGE-COMPARE"
+    "P1-BRIDGE-READBACK-FITTED-RESPONSE",
+    "P1-BRIDGE-READBACK-FITTED-LINK"
    ],
-   "reason": "R S3method(fitted,gllvmTMB_julia) registered and defined at P1; Julia `fitted` exported Function. Classified compatibility_adapter: the gllvmTMB_julia bridge method's R answer comes from Julia itself, so a twin comparison is circular.",
+   "reason": "R S3method(fitted,gllvmTMB_julia) computes its answer in R from the Julia payload; bound by the PR #790 live bridge readback under ruling 1 (D-319).",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
-    "case_verdict": "PASS",
-    "category": "registration_twin",
-    "reason": "R registered and defined; Julia symbol present, exported, a Function"
+    "case_verdicts": {
+     "P1-BRIDGE-READBACK-FITTED-RESPONSE": "PASS",
+     "P1-BRIDGE-READBACK-FITTED-LINK": "PASS"
+    },
+    "row_verdict": "PASS"
    },
    "original_classification": "required_core"
   },
@@ -7979,14 +8201,21 @@
     "CORE070-NAMESPACE-LOGLIK-JULIA-BRIDGE-COMPARE"
    ],
    "reason": "R S3method(logLik,gllvmTMB_julia) registered and defined at P1; Julia `loglikelihood` exported Function. Classified compatibility_adapter: the gllvmTMB_julia bridge method's R answer comes from Julia itself, so a twin comparison is circular.",
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "evidence_tier": "registration",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
     "reason": "R registered and defined; Julia symbol present, exported, a Function"
    },
-   "original_classification": "required_core"
+   "original_classification": "required_core",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signed_disposition": {
+    "ruling": "Ruling 1 (rulings page 2026-10-04), no leg",
+    "text": "The R value of logLik.gllvmTMB_julia comes from Julia: the R method copies or reformats what GLLVModels returned through the bridge, so an R-vs-Julia comparison of it is circular and is not a twin. The row is resolved by this signed disposition, not by a numeric binding. The PR #790 live readback (docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/bridge_readback.json, cases P1-BRIDGE-READBACK-LOGLIK-VALUE, P1-BRIDGE-READBACK-LOGLIK-DF, P1-BRIDGE-READBACK-LOGLIK-NOBS) records that the R value equals Julia's; it is context, not the binding.",
+    "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer"
+   }
   },
   {
    "source_id": "namespace/S3method/logLik,gllvmTMB_multi",
@@ -8072,23 +8301,31 @@
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/bridge_readback.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-PREDICT-JULIA-BRIDGE-COMPARE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-PREDICT-JULIA-BRIDGE-COMPARE"
+    ],
+    "ruling": "Ruling 1 (rulings page 2026-10-04), signed under D-319 on 2026-10-05: the bridge readback binds predict, because R's predict.gllvmTMB_julia does its own arithmetic on the Julia payload, so the comparison is a real adapter test. Signature source: vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer.",
+    "tier": "numeric (adapter test): live P1 bridge run of PR #790 (test/fixtures/gen_bridge_readback_p1.R). R's predict.gllvmTMB_julia output on the object from gllvmTMB(..., engine = \"julia\") against the native GLLVModels accessor in the same session, Gaussian, p = 6, n = 200, tolerance 1e-12 from test/test_bridge_readback_p1.jl. It shows the R adapter returns what Julia computes; it is not a comparison with engine = \"tmb\". The Tier 0 registration receipts are kept un-cited under registration_receipts (the registration batch receipt carries a batch-level FAIL status)."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-PREDICT-JULIA-BRIDGE-COMPARE"
+    "P1-BRIDGE-READBACK-PREDICT-LINK",
+    "P1-BRIDGE-READBACK-PREDICT-RESPONSE"
    ],
-   "reason": "R S3method(predict,gllvmTMB_julia) registered and defined at P1; Julia `predict` exported Function. Classified compatibility_adapter: the gllvmTMB_julia bridge method's R answer comes from Julia itself, so a twin comparison is circular.",
+   "reason": "R S3method(predict,gllvmTMB_julia) computes its answer in R from the Julia payload; bound by the PR #790 live bridge readback under ruling 1 (D-319).",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
-    "case_verdict": "PASS",
-    "category": "registration_twin",
-    "reason": "R registered and defined; Julia symbol present, exported, a Function"
+    "case_verdicts": {
+     "P1-BRIDGE-READBACK-PREDICT-LINK": "PASS",
+     "P1-BRIDGE-READBACK-PREDICT-RESPONSE": "PASS"
+    },
+    "row_verdict": "PASS"
    },
    "original_classification": "required_core"
   },
@@ -8138,23 +8375,31 @@
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/bridge_readback.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-RESIDUALS-JULIA-BRIDGE-COMPARE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-RESIDUALS-JULIA-BRIDGE-COMPARE"
+    ],
+    "ruling": "Ruling 1 (rulings page 2026-10-04), signed under D-319 on 2026-10-05: the bridge readback binds residuals, because R's residuals.gllvmTMB_julia does its own arithmetic on the Julia payload, so the comparison is a real adapter test. Signature source: vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer.",
+    "tier": "numeric (adapter test): live P1 bridge run of PR #790 (test/fixtures/gen_bridge_readback_p1.R). R's residuals.gllvmTMB_julia output on the object from gllvmTMB(..., engine = \"julia\") against the native GLLVModels accessor in the same session, Gaussian, p = 6, n = 200, tolerance 1e-12 from test/test_bridge_readback_p1.jl. It shows the R adapter returns what Julia computes; it is not a comparison with engine = \"tmb\". The Tier 0 registration receipts are kept un-cited under registration_receipts (the registration batch receipt carries a batch-level FAIL status)."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-RESIDUALS-JULIA-BRIDGE-COMPARE"
+    "P1-BRIDGE-READBACK-RESIDUALS-RESPONSE",
+    "P1-BRIDGE-READBACK-RESIDUALS-PEARSON"
    ],
-   "reason": "R S3method(residuals,gllvmTMB_julia) registered and defined at P1; Julia `residuals` exported Function. Classified compatibility_adapter: the gllvmTMB_julia bridge method's R answer comes from Julia itself, so a twin comparison is circular.",
+   "reason": "R S3method(residuals,gllvmTMB_julia) computes its answer in R from the Julia payload; bound by the PR #790 live bridge readback under ruling 1 (D-319).",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
-    "case_verdict": "PASS",
-    "category": "registration_twin",
-    "reason": "R registered and defined; Julia symbol present, exported, a Function"
+    "case_verdicts": {
+     "P1-BRIDGE-READBACK-RESIDUALS-RESPONSE": "PASS",
+     "P1-BRIDGE-READBACK-RESIDUALS-PEARSON": "PASS"
+    },
+    "row_verdict": "PASS"
    },
    "original_classification": "required_core"
   },
@@ -8215,14 +8460,21 @@
     "CORE070-NAMESPACE-SIMULATE-JULIA-BRIDGE-COMPARE"
    ],
    "reason": "R S3method(simulate,gllvmTMB_julia) registered and defined at P1; Julia `simulate` exported Function. Classified compatibility_adapter: the gllvmTMB_julia bridge method's R answer comes from Julia itself, so a twin comparison is circular.",
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "evidence_tier": "registration",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
     "reason": "R registered and defined; Julia symbol present, exported, a Function"
    },
-   "original_classification": "required_core"
+   "original_classification": "required_core",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signed_disposition": {
+    "ruling": "Ruling 1 (rulings page 2026-10-04), no leg",
+    "text": "The R value of simulate.gllvmTMB_julia comes from Julia: the R method copies or reformats what GLLVModels returned through the bridge, so an R-vs-Julia comparison of it is circular and is not a twin. The row is resolved by this signed disposition, not by a numeric binding.",
+    "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer"
+   }
   },
   {
    "source_id": "namespace/S3method/simulate,gllvmTMB_multi",
@@ -8263,23 +8515,29 @@
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE6-POSTFIT-NOBS-MULTI.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-NOBS-MULTI-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-NOBS-MULTI-NATIVE"
+    ],
+    "ruling": "Re-cite of the wave6 receipt rebound under maintainer ruling 2026-10-05 (D-319), item N2 (the batch's stale nobs expectation rewritten as integer equality), at the integration commit 6f050fea3.",
+    "tier": "numeric: re-cites the bound receipt of postfit/POSTFIT-SURFACE-nobs.gllvmTMB_multi (wave6 conversion batch at P1, verifier PASS): R nobs() on the gaussian_small gllvmTMB_multi fit against Julia nobs(fit, Y) on the same data, integer_equality 400 = 400 (tolerance 0.5) under maintainer ruling 2026-10-05 (D-319), item N2. The Tier 0 registration receipts are kept un-cited under registration_receipts."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-NOBS-MULTI-NATIVE"
+    "CORE070-WAVE6-POSTFIT-NOBS-MULTI"
    ],
-   "reason": "R S3method(stats::nobs,gllvmTMB_multi) registered and defined at P1; Julia `nobs` is an exported Function (measured). Name match only.",
+   "reason": "R S3method(stats::nobs,gllvmTMB_multi) is measured numerically by the wave6 case CORE070-WAVE6-POSTFIT-NOBS-MULTI at P1; this row re-cites that receipt.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
-    "case_verdict": "PASS",
-    "category": "registration_twin",
-    "reason": "R registered and defined; Julia symbol present, exported, a Function"
+    "case_verdicts": {
+     "CORE070-WAVE6-POSTFIT-NOBS-MULTI": "PASS"
+    },
+    "row_verdict": "PASS"
    }
   },
   {
@@ -8303,14 +8561,21 @@
     "CORE070-NAMESPACE-SUMMARY-JULIA-BRIDGE-COMPARE"
    ],
    "reason": "R S3method(summary,gllvmTMB_julia) registered and defined at P1; Julia `coef_table` exported Function. Classified compatibility_adapter: the gllvmTMB_julia bridge method's R answer comes from Julia itself, so a twin comparison is circular.",
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "evidence_tier": "registration",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
     "reason": "R registered and defined; Julia symbol present, exported, a Function"
    },
-   "original_classification": "required_core"
+   "original_classification": "required_core",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signed_disposition": {
+    "ruling": "Ruling 1 (rulings page 2026-10-04), no leg",
+    "text": "The R value of summary.gllvmTMB_julia comes from Julia: the R method copies or reformats what GLLVModels returned through the bridge, so an R-vs-Julia comparison of it is circular and is not a twin. The row is resolved by this signed disposition, not by a numeric binding. The PR #790 live readback (docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/bridge_readback.json, cases P1-BRIDGE-READBACK-SUMMARY-LOGLIK, P1-BRIDGE-READBACK-SUMMARY-AIC, P1-BRIDGE-READBACK-SUMMARY-BIC, P1-BRIDGE-READBACK-SUMMARY-DF, P1-BRIDGE-READBACK-SUMMARY-NOBS, P1-BRIDGE-READBACK-SUMMARY-COEF-ALPHA, P1-BRIDGE-READBACK-SUMMARY-COEF-LOADINGS, P1-BRIDGE-READBACK-SUMMARY-SIGMA, P1-BRIDGE-READBACK-SUMMARY-CORRELATION, P1-BRIDGE-READBACK-SUMMARY-COMMUNALITY) records that the R value equals Julia's; it is context, not the binding.",
+    "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer"
+   }
   },
   {
    "source_id": "namespace/S3method/summary,gllvmTMB_multi",
@@ -8463,17 +8728,37 @@
    "classification": "required_core",
    "arc": "A3",
    "r_file_line": null,
-   "executable_case_ids": [],
+   "executable_case_ids": [
+    "FIT-MODE-ANIMAL-DEP",
+    "FIT-MODE-ANIMAL-DEP-FORMULA-INTERFACE"
+   ],
    "p0_case_ids": [
     "SLOPE-ANIMAL-DEP-BAR",
     "SLOPE-ANIMAL-DEP-DBAR"
    ],
-   "evidence": {},
-   "measured_against": null,
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-DEP.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-DEP-FORMULA-INTERFACE.json"
+    ],
+    "ruling": "Ruling 2 (rulings page 2026-10-04), signed under D-319 on 2026-10-05: a namespace keyword row binds on its native and formula-interface fits when its covariance row stays unbound at the public-R-bridge boundary; the export is a formula marker, so the fit is the estimand, and the bridge refusal is an R-side route. Signature source: vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer.",
+    "tier": "numeric: R gllvmTMB at P1 with animal_dep(0+trait|species,A=C) against Julia fit_gaussian_sources with SourceCovariance(C; mode = :dep) (native) and gllvm(formula; sources = [that SourceCovariance]) on the wide and long routes (formula interface), Gaussian, 36 sites, 3 traits; loglik, beta and the covariance within the harness tolerances (runparity covariance batch at P1, W2-2 receipts of PR #786; the same cases as covariance/COV-ANIMAL-DEP). The PUBLIC-R-BRIDGE case of covariance/COV-ANIMAL-DEP is not used: gllvmTMB(engine = \"julia\") refuses the term before any Julia call, and that covariance row stays unbound.",
+    "p0_case_ids_superseded": [
+     "SLOPE-ANIMAL-DEP-BAR",
+     "SLOPE-ANIMAL-DEP-DBAR"
+    ]
+   },
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "disposition": null,
-   "reason": "Not re-measured at P1 in this PR.",
-   "not_measured_reason": "P0 evidence came from a non-namespace batch (bulk triage acceptance (maintainer decision round2-3 #9, 2026-09-01)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here.",
-   "evidence_tier": "registration"
+   "reason": "R export(animal_dep) is a formula marker; bound on the native and formula-interface fits of covariance/COV-ANIMAL-DEP under ruling 2 (D-319).",
+   "evidence_tier": "numeric",
+   "measured_result": {
+    "case_verdicts": {
+     "FIT-MODE-ANIMAL-DEP": "PASS",
+     "FIT-MODE-ANIMAL-DEP-FORMULA-INTERFACE": "PASS"
+    },
+    "row_verdict": "PASS"
+   }
   },
   {
    "source_id": "namespace/export/animal_indep",
@@ -8482,17 +8767,43 @@
    "classification": "required_core",
    "arc": "A3",
    "r_file_line": null,
-   "executable_case_ids": [],
+   "executable_case_ids": [
+    "FIT-MODE-ANIMAL-INDEP",
+    "FIT-MODE-ANIMAL-COMMON",
+    "FIT-MODE-ANIMAL-INDEP-FORMULA-INTERFACE",
+    "FIT-MODE-ANIMAL-COMMON-FORMULA-INTERFACE"
+   ],
    "p0_case_ids": [
     "SLOPE-ANIMAL-INDEP-BAR",
     "SLOPE-ANIMAL-INDEP-DBAR"
    ],
-   "evidence": {},
-   "measured_against": null,
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-INDEP.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-COMMON.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-INDEP-FORMULA-INTERFACE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-COMMON-FORMULA-INTERFACE.json"
+    ],
+    "ruling": "Ruling 2 (rulings page 2026-10-04), signed under D-319 on 2026-10-05: a namespace keyword row binds on its native and formula-interface fits when its covariance row stays unbound at the public-R-bridge boundary; the export is a formula marker, so the fit is the estimand, and the bridge refusal is an R-side route. Signature source: vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer.",
+    "tier": "numeric: R gllvmTMB at P1 with animal_indep(0+trait|species,A=C) and animal_indep(..., common=TRUE) against Julia fit_gaussian_sources with SourceCovariance(C; mode = :indep, common = false / true) (native) and gllvm(formula; sources = [that SourceCovariance]) on the wide and long routes (formula interface), Gaussian, 36 sites, 3 traits; loglik, beta and the covariance within the harness tolerances (runparity covariance batch at P1, W2-2 receipts of PR #786; the same cases as covariance/COV-ANIMAL-INDEP). The PUBLIC-R-BRIDGE case of covariance/COV-ANIMAL-INDEP is not used: gllvmTMB(engine = \"julia\") refuses the term before any Julia call, and that covariance row stays unbound.",
+    "p0_case_ids_superseded": [
+     "SLOPE-ANIMAL-INDEP-BAR",
+     "SLOPE-ANIMAL-INDEP-DBAR"
+    ]
+   },
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "disposition": null,
-   "reason": "Not re-measured at P1 in this PR.",
-   "not_measured_reason": "P0 evidence came from a non-namespace batch (bulk triage acceptance (maintainer decision round2-3 #9, 2026-09-01)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here.",
-   "evidence_tier": "registration"
+   "reason": "R export(animal_indep) is a formula marker; bound on the native and formula-interface fits of covariance/COV-ANIMAL-INDEP under ruling 2 (D-319).",
+   "evidence_tier": "numeric",
+   "measured_result": {
+    "case_verdicts": {
+     "FIT-MODE-ANIMAL-INDEP": "PASS",
+     "FIT-MODE-ANIMAL-COMMON": "PASS",
+     "FIT-MODE-ANIMAL-INDEP-FORMULA-INTERFACE": "PASS",
+     "FIT-MODE-ANIMAL-COMMON-FORMULA-INTERFACE": "PASS"
+    },
+    "row_verdict": "PASS"
+   }
   },
   {
    "source_id": "namespace/export/animal_latent",
@@ -8575,12 +8886,20 @@
     "CORE070-NAMESPACE-ANIMAL-SLOPE-FIT"
    ],
    "reason": "R side registered and defined at P1; Julia surface still missing or partial at the branch head (see the case receipt's julia_check.note). Measured, not twinned.",
-   "disposition": "BLOCKED_NEEDS_JULIA_SURFACE",
+   "disposition": "DISPOSITION-SIGNED",
    "evidence_tier": "registration",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "needs_surface_as_expected",
     "reason": "Julia facts match the recorded needs-surface expectation; not parity"
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signed_disposition": {
+    "ruling": "N8 (wave plan 2026-10-03, section 3), signed under D-319",
+    "kind": "outside_boundary",
+    "text": "Column-slope grammar, outside the P1 Julia surface. animal_slope(x1 + x2 | trait, A = A) is the pedigree column-slope covariance alias, admitted in R for Gaussian long-format data with bare numeric predictors (R/animal-keyword.R:340-373). GLLVModels has no column-slope covariance route (no column_slope term or extract_Sigma level in src/), so no R-vs-Julia number exists. Documented capability gap; it closes only with a Julia column-slope surface, which is not planned at P1.",
+    "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer"
    }
   },
   {
@@ -8633,12 +8952,20 @@
     "CORE070-NAMESPACE-CHECK-GLLVMTMB-DIAGNOSTIC"
    ],
    "reason": "R export(check_gllvmTMB) registered and defined at P1; Julia `check_gllvmTMB` is an exported Function (measured). Name match only.",
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "evidence_tier": "registration",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
     "reason": "R registered and defined; Julia symbol present, exported, a Function"
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signed_disposition": {
+    "ruling": "N8 (wave plan 2026-10-03, section 3), signed under D-319",
+    "kind": "re-scope",
+    "text": "Re-scoped as a documented partial port. R's check_gllvmTMB() (R/diagnose.R:1564) returns a table of component / status rows, a diagnostic verdict rather than a model estimand. Julia's check_gllvmTMB (src/diagnostics.jl:428-452; docs/src/diagnostics.md) aggregates sanity_multi, check_auto_residual and the boundary scan of gllvmTMB_diagnose into one pass/fail verdict, and states its gaps: no TMB sdreport estimability scan, no per-family boundary rows (multinomial collapse, ordinal loading runaway, nbinom2 dispersion ceiling), mixed_family always false. The component checks are tracked on their own rows.",
+    "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer"
    }
   },
   {
@@ -8698,25 +9025,34 @@
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ORD-DEP.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ORD-DEP-FORMULA-INTERFACE.json"
+    ],
+    "ruling": "Ruling 2 (rulings page 2026-10-04), signed under D-319 on 2026-10-05: a namespace keyword row binds on its native and formula-interface fits when its covariance row stays unbound at the public-R-bridge boundary; the export is a formula marker, so the fit is the estimand, and the bridge refusal is an R-side route. Signature source: vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer.",
+    "tier": "numeric: R gllvmTMB at P1 with dep(0+trait|site) against Julia fit_gaussian_sources with SourceCovariance(I; mode = :dep) (native) and gllvm(formula; sources = [that SourceCovariance]) on the wide and long routes (formula interface), Gaussian, 36 sites, 3 traits; loglik, beta and the covariance within the harness tolerances (runparity covariance batch at P1, W2-2 receipts of PR #786; the same cases as covariance/COV-ORD-DEP). The PUBLIC-R-BRIDGE case of covariance/COV-ORD-DEP is not used: gllvmTMB(engine = \"julia\") refuses the term before any Julia call, and that covariance row stays unbound.",
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-DEP-FORMULA-KEYWORD.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-DEP-FORMULA-KEYWORD"
+    ]
    },
-   "executable_case_ids": [],
-   "planned_case_ids": [
-    "CORE070-NAMESPACE-DEP-FORMULA-KEYWORD"
+   "executable_case_ids": [
+    "FIT-MODE-ORD-DEP",
+    "FIT-MODE-ORD-DEP-FORMULA-INTERFACE"
    ],
-   "reason": "R side registered and defined at P1; Julia surface still missing or partial at the branch head (see the case receipt's julia_check.note). Measured, not twinned.",
-   "disposition": "BLOCKED_NEEDS_JULIA_SURFACE",
-   "evidence_tier": "registration",
+   "reason": "R export(dep) is a formula marker; bound on the native and formula-interface fits of covariance/COV-ORD-DEP under ruling 2 (D-319).",
+   "disposition": null,
+   "evidence_tier": "numeric",
    "measured_result": {
-    "case_verdict": "PASS",
-    "category": "needs_surface_as_expected",
-    "reason": "Julia facts match the recorded needs-surface expectation; not parity"
-   }
+    "case_verdicts": {
+     "FIT-MODE-ORD-DEP": "PASS",
+     "FIT-MODE-ORD-DEP-FORMULA-INTERFACE": "PASS"
+    },
+    "row_verdict": "PASS"
+   },
+   "scope_note": "Julia has no dep() formula keyword: the same model is reached by SourceCovariance(mode = :dep) on the native and formula routes. For the ordinary dependent source R's U and sigma^2 are not separately identified, so the covariance comparand is the total U + sigma^2 I (as the harness compares it). The Tier 0 registration receipt (Julia symbol dep absent) is kept under registration_receipts."
   },
   {
    "source_id": "namespace/export/extract_Gamma",
@@ -9075,12 +9411,20 @@
     "CORE070-NAMESPACE-EXTRACT-CROSS-CORRELATIONS-NATIVE"
    ],
    "reason": "R export(extract_cross_correlations) registered and defined at P1; Julia `correlation` is an exported Function (measured). Name match only.",
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "evidence_tier": "registration",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
     "reason": "R registered and defined; Julia symbol present, exported, a Function"
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signed_disposition": {
+    "ruling": "N8 (wave plan 2026-10-03, section 3), signed under D-319",
+    "kind": "outside_boundary",
+    "text": "Capability difference. extract_cross_correlations() (R/extract-correlations.R:886) reports correlations between a multinomial (nominal) trait and its partners through a shared latent tier, so it needs a multinomial trait inside a latent model. GLLVModels' multinomial is fixed-effects only, and multinomial models are a listed capability difference (docs/src/gllvmtmb-parity.md, 'Capability differences'). No R-vs-Julia number can exist at P1.",
+    "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer"
    }
   },
   {
@@ -9654,15 +9998,16 @@
    "evidence": {
     "batch": "namespace-2 at P1",
     "verifier": "python3 tools/core070_verify_namespace_2_batch.py --pin P1 --self-test --state docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-2-batch-p1 (CORE070_NAMESPACE_2_BATCH_VERIFIED 9 negative_controls 4)",
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE2-GLLVMTMB-NATIVE-FIT.json"
     ],
-    "tier": "numeric comparison blocks pass, but at least one is degenerate (the R values are one constant or all ~0), so the row does not bind. Degenerate under the shared rule (DEGENERATE_ABS = 1e-10): coef (trait intercepts)."
+    "ruling": "namespace export/gllvmTMB option (a), rulings page 2026-10-04, signed by the maintainer under vault D-319 on 2026-10-05: the loadings comparand Lambda Lambda' is measured and the degenerate intercept entry is context. The shared discriminating rule is unchanged.",
+    "tier": "numeric: every executable case receipt carries an R-vs-Julia comparison block pinned to P1, within the harness tolerance"
    },
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "disposition": null,
-   "reason": "Measured at P1, not bound: the case receipt carries a degenerate comparison, so under the siblings' shared rule the row is numeric_non_discriminating. R gllvmTMB(value ~ 0 + trait + latent(0 + trait | site, d = 2, unique = FALSE), family = gaussian()) on the batch's Gaussian fixture (p = 5, n = 80) against Julia fit_gaussian_gllvm(Y; K = 2, X) on the same Y, at the P1 pin (gllvmTMB 0.7.1): logLik |R - Julia| = 1.13e-09 and trait intercepts max |R - Julia| = 1.36e-14, both within the harness tolerance 0.0001.",
-   "evidence_tier": "numeric_non_discriminating",
+   "reason": "Numeric R-vs-Julia native fit at P1. R gllvmTMB(value ~ 0 + trait + latent(0 + trait | site, d = 2, unique = FALSE), family = gaussian()) on the batch's Gaussian fixture (p = 5, n = 80) against Julia fit_gaussian_gllvm(Y; K = 2, X) on the same Y, at the P1 pin (gllvmTMB 0.7.1): logLik |R - Julia| = 1.13e-09 and Lambda Lambda' max |R - Julia| = 2.42e-06, both within the harness tolerance 0.0001. The trait intercepts (~1e-14 on the row-centred fixture, so not discriminating) are kept as context, outside the comparison block.",
+   "evidence_tier": "numeric",
    "measured_result": {
     "case_verdicts": {
      "CORE070-NAMESPACE2-GLLVMTMB-NATIVE-FIT": "PASS"
@@ -9670,9 +10015,7 @@
     "batch_verifier": {
      "CORE070-NAMESPACE2-GLLVMTMB-NATIVE-FIT": "PASS"
     },
-    "discriminating": {
-     "CORE070-NAMESPACE2-GLLVMTMB-NATIVE-FIT": false
-    }
+    "row_verdict": "PASS"
    }
   },
   {
@@ -9745,10 +10088,18 @@
    ],
    "evidence": {},
    "measured_against": null,
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "reason": "Not re-measured at P1 in this PR.",
    "not_measured_reason": "namespace-2 batch needs an installed frozen gllvmTMB library and live R fits (tools/core070_namespace_2_batch.R <frozen-library> <destination>); stopped per brief, no P1 oracle build here.",
-   "evidence_tier": "registration"
+   "evidence_tier": "registration",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signed_disposition": {
+    "ruling": "N8 (wave plan 2026-10-03, section 3), signed under D-319",
+    "kind": "outside_boundary",
+    "text": "Bootstrap helper, no estimand. gllvm_julia_setup() (R/julia-bridge.R:302) sets up JuliaCall and loads GLLVModels once per R session; Julia has nothing to twin. It was exercised, without error, by the PR #790 live P1 bridge run (test/fixtures/gen_bridge_readback_p1.R:45), whose readback binds gllvm_julia_fit.",
+    "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer"
+   }
   },
   {
    "source_id": "namespace/export/kernel_dep",
@@ -9757,16 +10108,35 @@
    "classification": "required_core",
    "arc": "A3",
    "r_file_line": null,
-   "executable_case_ids": [],
+   "executable_case_ids": [
+    "FIT-MODE-KERNEL-DEP",
+    "FIT-MODE-KERNEL-DEP-FORMULA-INTERFACE"
+   ],
    "p0_case_ids": [
     "CORE070-WAVE6-KERNEL-DEP-FIT"
    ],
-   "evidence": {},
-   "measured_against": null,
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-DEP.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-DEP-FORMULA-INTERFACE.json"
+    ],
+    "ruling": "Ruling 2 (rulings page 2026-10-04), signed under D-319 on 2026-10-05: a namespace keyword row binds on its native and formula-interface fits when its covariance row stays unbound at the public-R-bridge boundary; the export is a formula marker, so the fit is the estimand, and the bridge refusal is an R-side route. Signature source: vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer.",
+    "tier": "numeric: R gllvmTMB at P1 with kernel_dep(species,K=C,name=\"known\") against Julia fit_gaussian_sources with SourceCovariance(C; mode = :dep) (native) and gllvm(formula; sources = [that SourceCovariance]) on the wide and long routes (formula interface), Gaussian, 36 sites, 3 traits; loglik, beta and the covariance within the harness tolerances (runparity covariance batch at P1, W2-2 receipts of PR #786; the same cases as covariance/COV-KERNEL-DEP). The PUBLIC-R-BRIDGE case of covariance/COV-KERNEL-DEP is not used: gllvmTMB(engine = \"julia\") refuses the term before any Julia call, and that covariance row stays unbound.",
+    "p0_case_ids_superseded": [
+     "CORE070-WAVE6-KERNEL-DEP-FIT"
+    ]
+   },
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "disposition": null,
-   "reason": "Not re-measured at P1 in this PR.",
-   "not_measured_reason": "P0 evidence came from a non-namespace batch (wave6-conversion (attempt7)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here.",
-   "evidence_tier": "registration"
+   "reason": "R export(kernel_dep) is a formula marker; bound on the native and formula-interface fits of covariance/COV-KERNEL-DEP under ruling 2 (D-319).",
+   "evidence_tier": "numeric",
+   "measured_result": {
+    "case_verdicts": {
+     "FIT-MODE-KERNEL-DEP": "PASS",
+     "FIT-MODE-KERNEL-DEP-FORMULA-INTERFACE": "PASS"
+    },
+    "row_verdict": "PASS"
+   }
   },
   {
    "source_id": "namespace/export/kernel_indep",
@@ -9775,16 +10145,41 @@
    "classification": "required_core",
    "arc": "A3",
    "r_file_line": null,
-   "executable_case_ids": [],
+   "executable_case_ids": [
+    "FIT-MODE-KERNEL-INDEP",
+    "FIT-MODE-KERNEL-COMMON",
+    "FIT-MODE-KERNEL-INDEP-FORMULA-INTERFACE",
+    "FIT-MODE-KERNEL-COMMON-FORMULA-INTERFACE"
+   ],
    "p0_case_ids": [
     "CORE070-WAVE6-KERNEL-INDEP-FIT"
    ],
-   "evidence": {},
-   "measured_against": null,
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-INDEP.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-COMMON.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-INDEP-FORMULA-INTERFACE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-KERNEL-COMMON-FORMULA-INTERFACE.json"
+    ],
+    "ruling": "Ruling 2 (rulings page 2026-10-04), signed under D-319 on 2026-10-05: a namespace keyword row binds on its native and formula-interface fits when its covariance row stays unbound at the public-R-bridge boundary; the export is a formula marker, so the fit is the estimand, and the bridge refusal is an R-side route. Signature source: vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer.",
+    "tier": "numeric: R gllvmTMB at P1 with kernel_indep(species,K=C,name=\"known\") and kernel_indep(..., common=TRUE) against Julia fit_gaussian_sources with SourceCovariance(C; mode = :indep, common = false / true) (native) and gllvm(formula; sources = [that SourceCovariance]) on the wide and long routes (formula interface), Gaussian, 36 sites, 3 traits; loglik, beta and the covariance within the harness tolerances (runparity covariance batch at P1, W2-2 receipts of PR #786; the same cases as covariance/COV-KERNEL-INDEP). The PUBLIC-R-BRIDGE case of covariance/COV-KERNEL-INDEP is not used: gllvmTMB(engine = \"julia\") refuses the term before any Julia call, and that covariance row stays unbound.",
+    "p0_case_ids_superseded": [
+     "CORE070-WAVE6-KERNEL-INDEP-FIT"
+    ]
+   },
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "disposition": null,
-   "reason": "Not re-measured at P1 in this PR.",
-   "not_measured_reason": "P0 evidence came from a non-namespace batch (wave6-conversion (attempt7)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here.",
-   "evidence_tier": "registration"
+   "reason": "R export(kernel_indep) is a formula marker; bound on the native and formula-interface fits of covariance/COV-KERNEL-INDEP under ruling 2 (D-319).",
+   "evidence_tier": "numeric",
+   "measured_result": {
+    "case_verdicts": {
+     "FIT-MODE-KERNEL-INDEP": "PASS",
+     "FIT-MODE-KERNEL-COMMON": "PASS",
+     "FIT-MODE-KERNEL-INDEP-FORMULA-INTERFACE": "PASS",
+     "FIT-MODE-KERNEL-COMMON-FORMULA-INTERFACE": "PASS"
+    },
+    "row_verdict": "PASS"
+   }
   },
   {
    "source_id": "namespace/export/kernel_latent",
@@ -9793,16 +10188,31 @@
    "classification": "required_core",
    "arc": "A3",
    "r_file_line": null,
-   "executable_case_ids": [],
+   "executable_case_ids": [
+    "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-NAMESPACE"
+   ],
    "p0_case_ids": [
     "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-NAMESPACE"
    ],
-   "evidence": {},
-   "measured_against": null,
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-NAMESPACE.json"
+    ],
+    "tier": "numeric: per-case receipts carry an R-vs-Julia comparison block pinned to P1"
+   },
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "disposition": null,
-   "reason": "Not re-measured at P1 in this PR.",
-   "not_measured_reason": "P0 evidence came from a non-namespace batch (wave6-conversion (attempt7)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here.",
-   "evidence_tier": "registration"
+   "reason": "Measured at P1 by the wave6 conversion batch (CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-NAMESPACE); ruling N2 (D-319) rewrote the batch's unrelated nobs expectation as integer equality.",
+   "evidence_tier": "numeric",
+   "measured_result": {
+    "case_verdicts": {
+     "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-NAMESPACE": "PASS"
+    },
+    "batch_verifier": {
+     "CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-NAMESPACE": "PASS"
+    },
+    "row_verdict": "PASS"
+   }
   },
   {
    "source_id": "namespace/export/kernel_scalar",
@@ -9811,16 +10221,31 @@
    "classification": "required_core",
    "arc": "A3",
    "r_file_line": null,
-   "executable_case_ids": [],
+   "executable_case_ids": [
+    "CORE070-WAVE6-KERNEL-SCALAR-FIT"
+   ],
    "p0_case_ids": [
     "CORE070-WAVE6-KERNEL-SCALAR-FIT"
    ],
-   "evidence": {},
-   "measured_against": null,
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-WAVE6-KERNEL-SCALAR-FIT.json"
+    ],
+    "tier": "numeric: per-case receipts carry an R-vs-Julia comparison block pinned to P1"
+   },
+   "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "disposition": null,
-   "reason": "Not re-measured at P1 in this PR.",
-   "not_measured_reason": "P0 evidence came from a non-namespace batch (wave6-conversion (attempt7)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here.",
-   "evidence_tier": "registration"
+   "reason": "Measured at P1 by the wave6 conversion batch (CORE070-WAVE6-KERNEL-SCALAR-FIT); ruling N2 (D-319) rewrote the batch's unrelated nobs expectation as integer equality.",
+   "evidence_tier": "numeric",
+   "measured_result": {
+    "case_verdicts": {
+     "CORE070-WAVE6-KERNEL-SCALAR-FIT": "PASS"
+    },
+    "batch_verifier": {
+     "CORE070-WAVE6-KERNEL-SCALAR-FIT": "PASS"
+    },
+    "row_verdict": "PASS"
+   }
   },
   {
    "source_id": "namespace/export/kernel_unique",
@@ -9835,10 +10260,18 @@
    ],
    "evidence": {},
    "measured_against": null,
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "reason": "Not re-measured at P1 in this PR.",
    "not_measured_reason": "P0 evidence came from a non-namespace batch (wave6-conversion (attempt7)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here.",
-   "evidence_tier": "registration"
+   "evidence_tier": "registration",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signed_disposition": {
+    "ruling": "N8 (wave plan 2026-10-03, section 3), signed under D-319",
+    "kind": "retire",
+    "text": "Deprecated alias, retired from the parity surface. At P1 R marks kernel_unique() deprecated (lifecycle badge; deprecate_soft from 0.2.0 to kernel_indep(), R/kernel-keywords.R:68-100) and keeps it only for old formulas. No Julia alias is added. The current spellings carry the parity evidence: kernel_indep (namespace/export/kernel_indep, bound under ruling 2) and kernel_latent(..., unique = TRUE) (namespace/export/kernel_latent, waiting on the N2 wave6 nobs fix).",
+    "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer"
+   }
   },
   {
    "source_id": "namespace/export/nbinom2",
@@ -10013,25 +10446,22 @@
     "CORE070-WAVE6-POSTFIT-CONFINT-MULTI"
    ],
    "disposition": null,
-   "evidence_tier": "numeric_held_batch_verifier_failed",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE6-POSTFIT-CONFINT-MULTI.json"
     ],
-    "tier": "numeric comparison blocks pass, but the batch verifier rejected the run, so the row does not bind"
+    "tier": "numeric: every executable case receipt carries an R-vs-Julia comparison block pinned to P1, within the harness tolerance"
    },
-   "note": "held pending the maintainer's ruling on the wave6 nobs expectation",
    "measured_result": {
     "case_verdicts": {
      "CORE070-WAVE6-POSTFIT-CONFINT-MULTI": "PASS"
     },
     "batch_verifier": {
-     "CORE070-WAVE6-POSTFIT-CONFINT-MULTI": "FAIL"
+     "CORE070-WAVE6-POSTFIT-CONFINT-MULTI": "PASS"
     },
-    "discriminating": {
-     "CORE070-WAVE6-POSTFIT-CONFINT-MULTI": true
-    }
+    "row_verdict": "PASS"
    }
   },
   {
@@ -10637,25 +11067,22 @@
     "CORE070-WAVE6-POSTFIT-LOGLIK-MULTI"
    ],
    "disposition": null,
-   "evidence_tier": "numeric_held_batch_verifier_failed",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE6-POSTFIT-LOGLIK-MULTI.json"
     ],
-    "tier": "numeric comparison blocks pass, but the batch verifier rejected the run, so the row does not bind"
+    "tier": "numeric: every executable case receipt carries an R-vs-Julia comparison block pinned to P1, within the harness tolerance"
    },
-   "note": "held pending the maintainer's ruling on the wave6 nobs expectation",
    "measured_result": {
     "case_verdicts": {
      "CORE070-WAVE6-POSTFIT-LOGLIK-MULTI": "PASS"
     },
     "batch_verifier": {
-     "CORE070-WAVE6-POSTFIT-LOGLIK-MULTI": "FAIL"
+     "CORE070-WAVE6-POSTFIT-LOGLIK-MULTI": "PASS"
     },
-    "discriminating": {
-     "CORE070-WAVE6-POSTFIT-LOGLIK-MULTI": true
-    }
+    "row_verdict": "PASS"
    }
   },
   {
@@ -10667,22 +11094,22 @@
     "CORE070-WAVE6-POSTFIT-NOBS-MULTI"
    ],
    "disposition": null,
-   "evidence_tier": "numeric_fail",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE6-POSTFIT-NOBS-MULTI.json"
     ],
-    "tier": "measured at P1; the harness verdict is FAIL, so the row does not bind"
+    "tier": "numeric: every executable case receipt carries an R-vs-Julia comparison block pinned to P1, within the harness tolerance"
    },
    "measured_result": {
     "case_verdicts": {
-     "CORE070-WAVE6-POSTFIT-NOBS-MULTI": "FAIL"
+     "CORE070-WAVE6-POSTFIT-NOBS-MULTI": "PASS"
     },
     "batch_verifier": {
-     "CORE070-WAVE6-POSTFIT-NOBS-MULTI": "FAIL"
+     "CORE070-WAVE6-POSTFIT-NOBS-MULTI": "PASS"
     },
-    "row_verdict": "FAIL"
+    "row_verdict": "PASS"
    }
   },
   {
@@ -10863,16 +11290,45 @@
    "arc": "A3",
    "carry_scan_status": "DANGLING",
    "executable_case_ids": [
-    "CORE070-WAVE8-SIMULATE-UNIT-TRAIT-STRUCTURAL"
+    "P1-JULIA-MC-UNIT-TRAIT-MEAN-T1",
+    "P1-JULIA-MC-UNIT-TRAIT-MEAN-T2",
+    "P1-JULIA-MC-UNIT-TRAIT-MEAN-T3",
+    "P1-JULIA-MC-UNIT-TRAIT-MEAN-T4",
+    "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-1-1",
+    "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-1-2",
+    "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-2-2",
+    "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-1-3",
+    "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-2-3",
+    "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-3-3",
+    "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-1-4",
+    "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-2-4",
+    "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-3-4",
+    "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-4-4",
+    "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-1-1",
+    "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-1-2",
+    "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-2-2",
+    "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-1-3",
+    "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-2-3",
+    "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-3-3",
+    "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-1-4",
+    "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-2-4",
+    "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-3-4",
+    "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-4-4"
    ],
    "disposition": null,
-   "evidence_tier": "partial_non_numeric_case",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/simulate_unit_trait.json"
+    ],
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE8-SIMULATE-UNIT-TRAIT-STRUCTURAL.json"
     ],
-    "tier": "measured at P1 and the harness passes, but at least one case is a verdict, own-consistency, exact-integer, empty-length or default-policy check with no R-vs-Julia number and tolerance, so the row does not bind"
+    "batch_case_ids": [
+     "CORE070-WAVE8-SIMULATE-UNIT-TRAIT-STRUCTURAL"
+    ],
+    "tier": "numeric (Monte-Carlo moments): R replicate means and standard deviations of each moment copied from test/fixtures/mc_simulate_p1.toml, Julia replicate moments recomputed by tools/true_parity_mc_simulate_receipt.jl with the helpers of test/test_mc_simulate_p1.jl and independent random streams; each moment within the Monte-Carlo tolerance rule of maintainer ruling 2026-10-05 (D-319), item N4, stated before any run (z * sqrt(s_R^2/B_k + s_J^2/B_k), Bonferroni z at familywise alpha 0.01), and a discrimination control fails the same rule. The batch case this row carried is superseded; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
    },
    "measured_result": {
     "case_verdicts": {
@@ -10883,7 +11339,34 @@
     },
     "case_kinds": {
      "CORE070-WAVE8-SIMULATE-UNIT-TRAIT-STRUCTURAL": "paired_verdict"
-    }
+    },
+    "twin_case_ids": [
+     "P1-JULIA-MC-UNIT-TRAIT-MEAN-T1",
+     "P1-JULIA-MC-UNIT-TRAIT-MEAN-T2",
+     "P1-JULIA-MC-UNIT-TRAIT-MEAN-T3",
+     "P1-JULIA-MC-UNIT-TRAIT-MEAN-T4",
+     "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-1-1",
+     "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-1-2",
+     "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-2-2",
+     "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-1-3",
+     "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-2-3",
+     "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-3-3",
+     "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-1-4",
+     "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-2-4",
+     "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-3-4",
+     "P1-JULIA-MC-UNIT-TRAIT-WITHIN-COV-4-4",
+     "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-1-1",
+     "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-1-2",
+     "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-2-2",
+     "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-1-3",
+     "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-2-3",
+     "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-3-3",
+     "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-1-4",
+     "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-2-4",
+     "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-3-4",
+     "P1-JULIA-MC-UNIT-TRAIT-UNITMEAN-COV-4-4"
+    ],
+    "twin_verdict": "PASS"
    }
   },
   {
@@ -10955,11 +11438,11 @@
   },
   {
    "source_id": "postfit/POSTFIT-SURFACE-.proportions_bootstrap_ci",
-   "classification": "compatibility_adapter",
+   "classification": "retired",
    "arc": "A3",
    "carry_scan_status": "RETIRED",
    "executable_case_ids": [],
-   "disposition": "BLOCKED_NEEDS_JULIA_SURFACE",
+   "disposition": "DISPOSITION-SIGNED",
    "reclassify_proposed": {
     "to": "compatibility_adapter",
     "reason": "Unexported R-internal helper (leading dot, no @export) invoked only via confint.gllvmTMB_multi(parm=\"proportions\", method=\"bootstrap\"); no standalone public surface for GLLVM.jl to twin beyond what the confint.gllvmTMB_multi row already covers."
@@ -10968,15 +11451,18 @@
    "evidence_tier": "not_measured",
    "measured_against": null,
    "evidence": {},
-   "reason": "The R export was removed between P0 and P1 (NAMESPACE at P1 no longer exports it); the row has no executable case ids and keeps its P0 classification and disposition. Retiring or re-scoping the row is a maintainer decision."
+   "reason": "Retired at P1 by maintainer ruling 2026-10-05 (D-319), item N5. export(.proportions_bootstrap_ci) is absent from the P1 NAMESPACE (the definition is still present, unexported, at R/proportions-ci.R:423), so there is no public R surface left to twin. This is the same removal the headline ledger records as retired/.proportions_bootstrap_ci (PR #533, signed 2026-09-30); the namespace map lists it under retired_at_p1. Classification moves from compatibility_adapter (kept in original_classification) to retired, as on the headline row.",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "maintainer ruling 2026-10-05 (D-319), LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item N5"
   },
   {
    "source_id": "postfit/POSTFIT-SURFACE-.proportions_wald_ci",
-   "classification": "compatibility_adapter",
+   "classification": "retired",
    "arc": "A3",
    "carry_scan_status": "RETIRED",
    "executable_case_ids": [],
-   "disposition": "BLOCKED_NEEDS_JULIA_SURFACE",
+   "disposition": "DISPOSITION-SIGNED",
    "reclassify_proposed": {
     "to": "compatibility_adapter",
     "reason": "Unexported R-internal helper (leading dot, no @export) invoked only via confint.gllvmTMB_multi(parm=\"proportions\", method=\"wald\"); no standalone public surface beyond the confint.gllvmTMB_multi row."
@@ -10985,7 +11471,10 @@
    "evidence_tier": "not_measured",
    "measured_against": null,
    "evidence": {},
-   "reason": "The R export was removed between P0 and P1 (NAMESPACE at P1 no longer exports it); the row has no executable case ids and keeps its P0 classification and disposition. Retiring or re-scoping the row is a maintainer decision."
+   "reason": "Retired at P1 by maintainer ruling 2026-10-05 (D-319), item N5. export(.proportions_wald_ci) is absent from the P1 NAMESPACE (the definition is still present, unexported, at R/proportions-ci.R:247), so there is no public R surface left to twin. This is the same removal the headline ledger records as retired/.proportions_wald_ci (PR #533, signed 2026-09-30); the namespace map lists it under retired_at_p1. Classification moves from compatibility_adapter (kept in original_classification) to retired, as on the headline row.",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "maintainer ruling 2026-10-05 (D-319), LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item N5"
   },
   {
    "source_id": "postfit-policy/POST-COEF-EMPTY",
@@ -10996,13 +11485,13 @@
     "CORE070-POSTFIT-COEF-EMPTY-NATIVE"
    ],
    "disposition": null,
-   "evidence_tier": "partial_non_numeric_case",
+   "evidence_tier": "numeric_non_discriminating",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
     "non_binding_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-COEF-EMPTY-NATIVE.json"
     ],
-    "tier": "measured at P1 and the harness passes, but at least one case is a verdict, own-consistency, exact-integer, empty-length or default-policy check with no R-vs-Julia number and tolerance, so the row does not bind"
+    "tier": "numeric comparison blocks pass, but at least one is degenerate (the R values are one constant or all ~0), so a constant or zero implementation would pass too; the row does not bind"
    },
    "measured_result": {
     "case_verdicts": {
@@ -11011,10 +11500,11 @@
     "batch_verifier": {
      "CORE070-POSTFIT-COEF-EMPTY-NATIVE": "PASS"
     },
-    "case_kinds": {
-     "CORE070-POSTFIT-COEF-EMPTY-NATIVE": "paired_policy_check"
+    "discriminating": {
+     "CORE070-POSTFIT-COEF-EMPTY-NATIVE": false
     }
-   }
+   },
+   "note": "integer_equality on the empty coef length (R 0, Julia 0; maintainer ruling 2026-10-05, D-319, item N2). The shared degenerate-comparison rule flags it: every |R value| < 1e-10, so a constant-zero implementation would pass too. Binding it would need the shared rule to accept a 0 = 0 length, which it does not."
   },
   {
    "source_id": "postfit-policy/POST-COEF-NAMED",
@@ -11257,7 +11747,7 @@
    "executable_case_ids": [
     "CORE070-POSTFIT-NOBS-FALLBACK-NATIVE"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "evidence_tier": "partial_non_numeric_case",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
@@ -11276,7 +11766,11 @@
     "case_kinds": {
      "CORE070-POSTFIT-NOBS-FALLBACK-NATIVE": "paired_policy_check"
     }
-   }
+   },
+   "reason": "Not reachable through the public door at P1, by maintainer ruling 2026-10-05 (D-319), POST-NOBS-FALLBACK option (a). nobs.gllvmTMB_multi (R/methods-gllvmTMB.R:1216-1231 at P1 9539352f6) returns object$missing_data$counts$likelihood_rows at line 1221 whenever it is non-NULL; the is_y_observed / length(y) fallback (lines 1225-1230) runs only when that field is NULL. The only constructor of a gllvmTMB_multi object always builds missing_data with .gllvmTMB_build_missing_data, which always sets counts$likelihood_rows = as.integer(sum(is_y_observed == 1L)) (R/fit-multi.R:9784 and :9822), never NULL. Twelve probe fit types through gllvmTMB() at P1 (Gaussian and Poisson latent, missing responses dropped and masked, an all-missing trait both ways, weights, mixed family, wide traits(), no covstruct, an mi() predictor, estimator = 'mspl', and a saveRDS/readRDS round trip) all returned on the likelihood_rows branch; only a fit with fit$missing_data deleted by hand reached the fallback, and there the two branches give the same number by construction. The field and the method were added in the same commit (#334), so the fallback is defensive code for hand-built or pre-#334 objects, not a separate user-facing behaviour. The likelihood_rows branch itself is bound by POST-NOBS-COUNT. Evidence: post-nobs-fallback-evidence.md in the true-parity lane kit (probe scripts nobs_probe.R, nobs_probe2.R).",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "maintainer ruling 2026-10-05 (D-319), LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item POST-NOBS-FALLBACK option (a)"
   },
   {
    "source_id": "postfit-policy/POST-PREDICT-DEFAULT",
@@ -11286,7 +11780,7 @@
    "executable_case_ids": [
     "CORE070-POSTFIT-PREDICT-DEFAULT-NATIVE"
    ],
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "evidence_tier": "partial_non_numeric_case",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
@@ -11305,7 +11799,11 @@
     "case_kinds": {
      "CORE070-POSTFIT-PREDICT-DEFAULT-NATIVE": "paired_policy_check"
     }
-   }
+   },
+   "reason": "Documented default divergence accepted by maintainer ruling 2026-10-05 (D-319), item B (Julia defaults against R, row by row). R: predict.gllvmTMB_multi(object, newdata = NULL, type = c('link', 'response'), ...) defaults to type = 'link' (R/methods-gllvmTMB.R:2786-2794 at P1 9539352f6). Julia: predict(fit::GllvmFit, y; type::Symbol = :response, ...) defaults to type = :response (src/postfit.jl). The batch reflects both defaults live (R 'link', Julia :response) and, called with the same explicit type = link, the two engines agree on the linear predictor (max |R - Julia| = 5.72e-06 against the contract's link_response_residual_delta 1e-4, receipt CORE070-POSTFIT-PREDICT-DEFAULT-NATIVE). A user porting a bare predict(fit) call from R gets the response scale in Julia, not the link scale; pass type = :link to match R.",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signature_ref": "maintainer ruling 2026-10-05 (D-319), LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item B (Julia default versus R default)"
   },
   {
    "source_id": "postfit-policy/POST-RE-FORM-FULL",
@@ -11430,7 +11928,8 @@
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
     "non_binding_receipts": [
-     "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-SIMULATE-DEFAULT-NATIVE.json"
+     "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-SIMULATE-DEFAULT-NATIVE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/postfit-twins/simulate_default.json"
     ],
     "tier": "measured at P1 and the harness passes, but at least one case is a verdict, own-consistency, exact-integer, empty-length or default-policy check with no R-vs-Julia number and tolerance, so the row does not bind"
    },
@@ -11444,7 +11943,8 @@
     "case_kinds": {
      "CORE070-POSTFIT-SIMULATE-DEFAULT-NATIVE": "paired_policy_check"
     }
-   }
+   },
+   "note": "Not bound: the N4 Monte-Carlo twin passes at its recorded Julia seed but failed the pre-registered rule on 7 of 40 alternative Julia seeds (nominal familywise alpha 0.01), so the pass is seed-sensitive; the receipt is kept as non-binding evidence and the rule is unchanged."
   }
  ]
 }

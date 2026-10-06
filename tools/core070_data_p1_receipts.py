@@ -717,6 +717,53 @@ def twin_overlay(sid, row, counts):
     counts["numeric_pass"] += 1
 
 
+# ---- signed dispositions (maintainer ruling 2026-10-05, vault D-319, item N7) ----
+# Signature source: LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit (D-319).
+# The row keeps its R helper-replay receipt (non-binding) and gains disposition DISPOSITION-SIGNED.
+RULING_SOURCE = "maintainer ruling 2026-10-05 (D-319), LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item N7"
+NONFINITE_PROBE = "docs/dev-log/core070/true-parity-latest/receipts/data/n7-offset-nonfinite-probe.json"
+RULINGS = {
+    "data/DATA-OFF-TRAIN-LEGACY": {
+        "reason": (
+            "R-internal legacy fallback, disposition signed by maintainer ruling 2026-10-05 (D-319), item N7. R's "
+            ".gllvmTMB_offset_vec returns rep(0, n) for a fit object that carries an offset expression but no cached "
+            "offset vector, that is, an object saved before gllvmTMB cached training offsets (the P1 helper replay "
+            "confirms it). GLLVModels has no such object generation: a Laplace fit made with an offset stores it in "
+            "fit.offset at fit time (_stored_offset, src/families/fit_gllvm.jl), so there is no pre-cache object to "
+            "fall back from, and the helper is not reachable from either package's public door. The stored-offset "
+            "behaviour users meet is bound numerically by DATA-OFF-TRAIN-STORED.")},
+    "data/DATA-OFF-PREDICT-NONFINITE-HELPER": {
+        "reason": (
+            "R-internal helper that differs by design, disposition signed by maintainer ruling 2026-10-05 (D-319), "
+            "item N7. R's .gllvmTMB_offset_newdata evaluates the stored offset expression on newdata with no "
+            "finiteness guard, so e = 0 gives log(0) = -Inf (P1 helper replay: c(-Inf, 0, log(2))). GLLVModels takes "
+            "the offset as a value and refuses a non-finite offset at an observed cell with an ArgumentError, at fit "
+            "time and at predict time (probe receipt n7-offset-nonfinite-probe.json, "
+            "tools/true_parity_offset_nonfinite_probe.jl). No R-vs-Julia number exists to compare; the difference is "
+            "recorded, not hidden."),
+        "extra_non_binding": [NONFINITE_PROBE]},
+}
+
+
+def ruling_overlay(sid, row):
+    """Write the signed D-319 disposition onto a row it covers (idempotent)."""
+    r = RULINGS.get(sid)
+    if r is None:
+        return
+    ev = row.setdefault("evidence", {})
+    nb = ev.setdefault("non_binding_receipts", [])
+    for extra in r.get("extra_non_binding", []):
+        if not (ROOT / extra).is_file():
+            raise SystemExit(f"{sid}: ruling cites {extra}, which is missing")
+        if extra not in nb:
+            nb.append(extra)
+    row["reason"] = r["reason"]
+    row["disposition"] = "DISPOSITION-SIGNED"
+    row["signed_by"] = "Shinichi Nakagawa"
+    row["signed_on"] = "2026-10-05"
+    row["signature_ref"] = RULING_SOURCE
+
+
 def missing_twin_receipts(rows):
     """Problems for case-map rows that cite a Julia twin receipt under TWIN_REL that is no longer on disk.
     twin_overlay skips a row whose receipt file is absent, so without this the only symptom is a row diff."""
@@ -798,6 +845,7 @@ def build_rows(in_scope, receipts):
         if row["evidence_tier"] == "needs_surface_r_side_measured":
             twin_overlay(sid, row, counts)
             nonbinding_twin_note(sid, row)
+        ruling_overlay(sid, row)
         out_rows.append(row)
     return out_rows, counts
 

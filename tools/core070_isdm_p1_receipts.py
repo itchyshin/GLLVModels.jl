@@ -262,6 +262,38 @@ def p0_evidence(base):
                     "(batch name, preservation sha256) remains."}
 
 
+# Signed dispositions written onto rows (maintainer ruling 2026-10-05, vault decision D-319, item N6; signature source
+# ~/local-scratch/lanes/GLLVM.jl-true-parity-latest/LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md).
+# ISDM-LEGACY carries the disposition already signed in Packet 1b item 2 (D-296, 2026-09-27). The three internal-
+# predicate rows are the rows whose R case tampers an argument no public call can set (traits = NULL; the family-id
+# and link-id matrix); which three rows the ruling's "3 internal predicates" means is read from each receipt's
+# r_expression (AGENT-INFERRED, for review in the PR that adds this table).
+_INTERNAL = ("R-internal admission predicate: the R case calls the predicate with {what}, an argument no call to "
+             "gllvmTMB(..., family = isdm_sources(...)) can set, and Julia's public fit_isdm_gllvm has no such argument "
+             "either, so no paired twin through either public door exists. Signed disposition under maintainer ruling "
+             "2026-10-05 (D-319), item N6; the R replay stays cited under non_binding_receipts.")
+SIGNED_DISPOSITIONS = {
+    "isdm/ISDM-LEGACY": ("2026-09-27", (
+        "R-only backward-compatibility route (family_var = \"isdm_family\", fixed names gbif / survey_pa) that "
+        "GLLVModels will not twin: Packet 1b item 2, signed 2026-09-27 (vault decision D-296). Written onto this row "
+        "under maintainer ruling 2026-10-05 (D-319), item N6; the R replay stays cited under non_binding_receipts.")),
+    "isdm/ISDM-NO-TRAITS": ("2026-10-05", _INTERNAL.format(what="traits = NULL")),
+    "isdm/ISDM-WRONG-ID": ("2026-10-05", _INTERNAL.format(what="a tampered family-id column of the internal row-id matrix")),
+    "isdm/ISDM-WRONG-LINK": ("2026-10-05", _INTERNAL.format(what="a tampered link-id column of the internal row-id matrix")),
+}
+
+
+def apply_signed_disposition(row):
+    """Write the signed disposition of SIGNED_DISPOSITIONS onto `row` (no-op for other rows)."""
+    signed = SIGNED_DISPOSITIONS.get(row["source_id"])
+    if signed is None:
+        return
+    row["disposition"] = "DISPOSITION-SIGNED"
+    row["signed_by"] = "Shinichi Nakagawa"
+    row["signed_on"] = signed[0]
+    row["disposition_basis"] = signed[1]
+
+
 WIRED_PREFIXES = (f"{OUT_REL}/receipts/julia-twins/", f"{OUT_REL}/receipts/fixture-twins/")
 
 
@@ -336,8 +368,9 @@ def build_rows(in_scope, receipts, committed_rows=None):
             counts[tier] -= 1
             counts["numeric_pass"] += 1
         notes = [h[4] for h in have if h[4]]
-        if notes:
+        if notes and sid not in SIGNED_DISPOSITIONS:
             row["note"] = " ".join(dict.fromkeys(notes))
+        apply_signed_disposition(row)
         out_rows.append(row)
     return out_rows, counts
 
@@ -438,7 +471,8 @@ SCOPE = ("isdm family: the 20 required rows the P1 carry scan lists as DANGLING,
          "scope.")
 NOTE = ("Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with "
         "PARITY_CASEMAP pointing at this file. Classification and disposition are carried from "
-        "docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. The R side of "
+        "docs/dev-log/core070/required-source-case-map.json unchanged, except the four signed dispositions of "
+        "SIGNED_DISPOSITIONS (maintainer ruling 2026-10-05, D-319, item N6; no agent signs). The R side of "
         "every isdm row is a boolean predicate replay with no fit number and there is no Julia side at the run "
         "commit, so every row cites evidence.non_binding_receipts and is free. Draft PR #546's P1 iSDM twins are "
         "not used here; mapping them onto these rows is a proposal for the maintainer (PR body).")

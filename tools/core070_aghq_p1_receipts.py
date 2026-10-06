@@ -611,10 +611,10 @@ NOTE = ("Separate from case-map.json so none of its rows are touched; read by to
         "binomial and Gaussian fits, which expose aghq= in Julia) additionally carry a numeric Julia twin receipt "
         "(receipts/julia-twins/aghq/, test/test_aghq_p1_twin.jl) under evidence.receipt with evidence_tier numeric. The "
         "policy fixtures of the batch are toys (p of 5 to 20 traits, n of 30 to 40 sites, d = 1); the twins use simulated "
-        "data with a real latent factor. The 7 control rows also carry a behaviour block (tools/core070_behaviour_receipts.py) as "
-        "non-binding evidence: both engines normalise the same scalar request to the same label, but these rows are not "
-        "in the frozen scope of itchyshin/GLLVModels.jl#684 item 2, so they stay at paired_control_categorical_pass until "
-        "the maintainer confirms that ruling 2 covers them.")
+        "data with a real latent factor. The 7 control rows carry a behaviour block (tools/core070_behaviour_receipts.py): "
+        "both engines normalise the same scalar request to the same label. Maintainer ruling 2026-10-05 (D-319), item A, "
+        "extends the behavioural tier of itchyshin/GLLVModels.jl#684 item 2 to these 7 rows, so each binds behaviourally "
+        "when its block matches.")
 
 
 def copy_batch(batch, run_dir):

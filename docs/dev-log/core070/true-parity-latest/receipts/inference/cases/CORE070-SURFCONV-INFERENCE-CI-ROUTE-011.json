@@ -2,7 +2,7 @@
   "schema": "core070-inference-p1-case-receipt/v2",
   "case_id": "CORE070-SURFCONV-INFERENCE-CI-ROUTE-011",
   "verdict": "PASS",
-  "evidence_kind": "paired_bootstrap_structural",
+  "evidence_kind": "numeric_r_vs_julia",
   "source_ids": [
     "inference/CI-ROUTE-011"
   ],
@@ -27,7 +27,11 @@
     "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/receipt.json": "930a992fe78849b090bc2fd4a79760079825f96b041268db028fb87c31de62a1",
     "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/verify.txt": "2f10e6fdf2b3015c8be423eaed43e86f58646ee0d59c2f6d4a8ecef459d5eda5",
     "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/run-commit.json": "6d3b14ecef64f3e530cbdba2672e8637f2502c1c506e014cd61449798eabd3d1",
-    "docs/dev-log/core070/true-parity-latest/surface-conversion-batch-contract-p1.json": "6e8e74bb16c0f5f997705cb5dd7065a3be254dfdafba693dcb29ef341d3558f6"
+    "docs/dev-log/core070/true-parity-latest/surface-conversion-batch-contract-p1.json": "6e8e74bb16c0f5f997705cb5dd7065a3be254dfdafba693dcb29ef341d3558f6",
+    "docs/dev-log/core070/true-parity-latest/receipts/inference/ci-route-011-mc/rule.json": "1b48952856259eb5149e1c054b780cd1d61c56d9e2f06a0f273e145b81f29032",
+    "docs/dev-log/core070/true-parity-latest/receipts/inference/ci-route-011-mc/r-mc.json": "853cc55ed26beba7a3ac5d4baf9685e405b582a6df0a9a7ba0dde28191852d5d",
+    "docs/dev-log/core070/true-parity-latest/receipts/inference/ci-route-011-mc/julia-mc.json": "6a4ed444d0e8e26f5d8aae0e7dadb64ac77dd1a9832421f7003f20b0924cd8a8",
+    "docs/dev-log/core070/true-parity-latest/receipts/inference/ci-route-011-mc/run-commit.json": "f026eff8179da48296b8dd448d92ba3a99c4aa3ee038e541d28286b8e013d337"
   },
   "pr569_batch_receipt": {
     "receipt": "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/receipt.json",
@@ -106,15 +110,282 @@
     "rule": "Julia lower bound < 0.001 x R lower bound",
     "fix": "draft PR #576",
     "action": "re-measure after #576 lands",
-    "note": "Anomaly: the Julia bootstrap lower bounds for 2 ICC entries collapsed (entry 2: Julia 1.06e-07 vs R 0.126; entry 4: Julia 4.53e-40 vs R 0.414). The structural check passes (finite, ordered, brackets the point) and endpoints are not compared, so this PASS does not mean the bootstraps agree. Root cause found and fixed in draft PR #576: a Woodbury quadratic form went negative at extreme variance ratios, so bootstrap refits reported converged with an impossible log-likelihood. This receipt predates that fix (PR #569's run); re-measure after #576 lands."
+    "note": "Anomaly: the Julia bootstrap lower bounds for 2 ICC entries collapsed (entry 2: Julia 1.06e-07 vs R 0.126; entry 4: Julia 4.53e-40 vs R 0.414). The structural check passes (finite, ordered, brackets the point) and endpoints are not compared, so this PASS does not mean the bootstraps agree. Root cause found and fixed in draft PR #576: a Woodbury quadratic form went negative at extreme variance ratios, so bootstrap refits reported converged with an impossible log-likelihood. This receipt predates that fix (PR #569's run); re-measure after #576 lands. Superseded for binding by the N4 Monte-Carlo run (docs/dev-log/core070/true-parity-latest/receipts/inference/ci-route-011-mc, at 9130afe6e, after #576 landed): no Julia lower bound collapsed on any of the 5 seeds, and the row binds on the pre-stated Monte-Carlo comparison.",
+    "superseded_by": "Superseded for binding by the N4 Monte-Carlo run (docs/dev-log/core070/true-parity-latest/receipts/inference/ci-route-011-mc, at 9130afe6e, after #576 landed): no Julia lower bound collapsed on any of the 5 seeds, and the row binds on the pre-stated Monte-Carlo comparison."
   },
-  "pin": "P1",
-  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
-  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
-  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
-  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "monte_carlo": {
+    "rule": "docs/dev-log/core070/true-parity-latest/receipts/inference/ci-route-011-mc/rule.json",
+    "run_commit": "9130afe6ef26af77c7d7e12c7e2278e62759d10d",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "nsim": 200,
+    "per_seed_structural_check": true,
+    "r_point": [
+      0.73310432583621,
+      0.304183906054556,
+      0.290381311790918,
+      0.603043255307432
+    ],
+    "julia_point": [
+      0.7331038160203639,
+      0.30418355553133264,
+      0.2903808937611559,
+      0.6030426417264728
+    ],
+    "r_seconds_per_seed": [
+      55.817,
+      56.232,
+      56.368,
+      56.334,
+      56.154
+    ],
+    "julia_seconds_per_seed": [
+      16.97,
+      15.4,
+      15.62,
+      15.81,
+      14.81
+    ],
+    "raw": [
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/ci-route-011-mc/r-mc.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/ci-route-011-mc/julia-mc.json"
+    ],
+    "verdict": "PASS"
+  },
+  "why_numeric": "Signed ruling N4 (vault D-319): the two engines' bootstrap endpoints are compared as Monte-Carlo means over 5 seeds each, against the tolerance rule stated before any run. The structural check of PR #569's single run is kept under `measured`.",
   "glvmodels_commit": "61c5eda4822da20591b6fa91869f93c3faf5d369",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "pin": "P1",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
   "glvmodels_worktree_dirty": [],
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
-  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-SURFCONV-INFERENCE-CI-ROUTE-011",
+        "quantity": "icc[1] bootstrap lower endpoint, mean over 5 seeds",
+        "max_abs_diff": 0.00504595292718113,
+        "tolerance": 0.06223142711987562,
+        "tolerance_rule": "N4 Monte-Carlo rule stated before any run (docs/dev-log/core070/true-parity-latest/receipts/inference/ci-route-011-mc/rule.json): |mean_R - mean_J| <= 4.5 * sqrt(var_R/5 + var_J/5) + 0.005",
+        "mc_standard_error": 0.012718094915527917,
+        "n_values": 1,
+        "diff_source": "recomputed from the per-seed raw values",
+        "r_value": 0.5816527826902049,
+        "julia_value": 0.5866987356173861,
+        "r_seed_values": [
+          0.581243493060923,
+          0.585260574735109,
+          0.593512823255964,
+          0.563718022914268,
+          0.584528999484761
+        ],
+        "julia_seed_values": [
+          0.5909160194284981,
+          0.6139511072312599,
+          0.5848235441323297,
+          0.5440688199976125,
+          0.5997341872972297
+        ],
+        "discriminating": true
+      },
+      {
+        "case_id": "CORE070-SURFCONV-INFERENCE-CI-ROUTE-011",
+        "quantity": "icc[2] bootstrap lower endpoint, mean over 5 seeds",
+        "max_abs_diff": 0.0002294127848805616,
+        "tolerance": 0.0567689539578912,
+        "tolerance_rule": "N4 Monte-Carlo rule stated before any run (docs/dev-log/core070/true-parity-latest/receipts/inference/ci-route-011-mc/rule.json): |mean_R - mean_J| <= 4.5 * sqrt(var_R/5 + var_J/5) + 0.005",
+        "mc_standard_error": 0.01150421199064249,
+        "n_values": 1,
+        "diff_source": "recomputed from the per-seed raw values",
+        "r_value": 0.1368138007339948,
+        "julia_value": 0.13704321351887536,
+        "r_seed_values": [
+          0.139848481605065,
+          0.149316501165372,
+          0.133255802466309,
+          0.120753044754387,
+          0.140895173678841
+        ],
+        "julia_seed_values": [
+          0.11614363769260865,
+          0.1703203472800891,
+          0.11848854603426412,
+          0.15210324057752064,
+          0.12816029600989426
+        ],
+        "discriminating": true
+      },
+      {
+        "case_id": "CORE070-SURFCONV-INFERENCE-CI-ROUTE-011",
+        "quantity": "icc[3] bootstrap lower endpoint, mean over 5 seeds",
+        "max_abs_diff": 0.003465677920652027,
+        "tolerance": 0.050241329453123054,
+        "tolerance_rule": "N4 Monte-Carlo rule stated before any run (docs/dev-log/core070/true-parity-latest/receipts/inference/ci-route-011-mc/rule.json): |mean_R - mean_J| <= 4.5 * sqrt(var_R/5 + var_J/5) + 0.005",
+        "mc_standard_error": 0.010053628767360679,
+        "n_values": 1,
+        "diff_source": "recomputed from the per-seed raw values",
+        "r_value": 0.13484596213451,
+        "julia_value": 0.13831164005516203,
+        "r_seed_values": [
+          0.157954513172732,
+          0.133723395872218,
+          0.124254759136529,
+          0.131341928811933,
+          0.126955213679138
+        ],
+        "julia_seed_values": [
+          0.119456154410963,
+          0.1291130857483869,
+          0.1476229742159061,
+          0.16496072147353327,
+          0.1304052644270209
+        ],
+        "discriminating": true
+      },
+      {
+        "case_id": "CORE070-SURFCONV-INFERENCE-CI-ROUTE-011",
+        "quantity": "icc[4] bootstrap lower endpoint, mean over 5 seeds",
+        "max_abs_diff": 0.014531129263959996,
+        "tolerance": 0.04440134221833087,
+        "tolerance_rule": "N4 Monte-Carlo rule stated before any run (docs/dev-log/core070/true-parity-latest/receipts/inference/ci-route-011-mc/rule.json): |mean_R - mean_J| <= 4.5 * sqrt(var_R/5 + var_J/5) + 0.005",
+        "mc_standard_error": 0.00875585382629575,
+        "n_values": 1,
+        "diff_source": "recomputed from the per-seed raw values",
+        "r_value": 0.4262295973104048,
+        "julia_value": 0.4116984680464448,
+        "r_seed_values": [
+          0.43172141679884,
+          0.433773980075078,
+          0.415535823118566,
+          0.44740418778005,
+          0.40271257877949
+        ],
+        "julia_seed_values": [
+          0.3997109581411878,
+          0.41401861951032337,
+          0.40492405750318367,
+          0.4195259920651908,
+          0.42031271301233836
+        ],
+        "discriminating": true
+      },
+      {
+        "case_id": "CORE070-SURFCONV-INFERENCE-CI-ROUTE-011",
+        "quantity": "icc[1] bootstrap upper endpoint, mean over 5 seeds",
+        "max_abs_diff": 0.0020157092826746936,
+        "tolerance": 0.018279925224053837,
+        "tolerance_rule": "N4 Monte-Carlo rule stated before any run (docs/dev-log/core070/true-parity-latest/receipts/inference/ci-route-011-mc/rule.json): |mean_R - mean_J| <= 4.5 * sqrt(var_R/5 + var_J/5) + 0.005",
+        "mc_standard_error": 0.0029510944942341857,
+        "n_values": 1,
+        "diff_source": "recomputed from the per-seed raw values",
+        "r_value": 0.82630124781649,
+        "julia_value": 0.8283169570991646,
+        "r_seed_values": [
+          0.833717026802317,
+          0.819629118064781,
+          0.826593798097862,
+          0.825784074626385,
+          0.825782221491105
+        ],
+        "julia_seed_values": [
+          0.8265138831863948,
+          0.8283760922474122,
+          0.8354296512516106,
+          0.8239312738813496,
+          0.8273338849290554
+        ],
+        "discriminating": true
+      },
+      {
+        "case_id": "CORE070-SURFCONV-INFERENCE-CI-ROUTE-011",
+        "quantity": "icc[2] bootstrap upper endpoint, mean over 5 seeds",
+        "max_abs_diff": 0.00820393821141141,
+        "tolerance": 0.037247739752175775,
+        "tolerance_rule": "N4 Monte-Carlo rule stated before any run (docs/dev-log/core070/true-parity-latest/receipts/inference/ci-route-011-mc/rule.json): |mean_R - mean_J| <= 4.5 * sqrt(var_R/5 + var_J/5) + 0.005",
+        "mc_standard_error": 0.0071661643893723955,
+        "n_values": 1,
+        "diff_source": "recomputed from the per-seed raw values",
+        "r_value": 0.45291551478645664,
+        "julia_value": 0.44471157657504523,
+        "r_seed_values": [
+          0.458901098640139,
+          0.441326357522179,
+          0.451249715137699,
+          0.456821666472903,
+          0.456278736159363
+        ],
+        "julia_seed_values": [
+          0.446861994644574,
+          0.4656169325308146,
+          0.4252331714471954,
+          0.4431808044408949,
+          0.44266497981174735
+        ],
+        "discriminating": true
+      },
+      {
+        "case_id": "CORE070-SURFCONV-INFERENCE-CI-ROUTE-011",
+        "quantity": "icc[3] bootstrap upper endpoint, mean over 5 seeds",
+        "max_abs_diff": 0.007784686057064727,
+        "tolerance": 0.06509397009269557,
+        "tolerance_rule": "N4 Monte-Carlo rule stated before any run (docs/dev-log/core070/true-parity-latest/receipts/inference/ci-route-011-mc/rule.json): |mean_R - mean_J| <= 4.5 * sqrt(var_R/5 + var_J/5) + 0.005",
+        "mc_standard_error": 0.013354215576154571,
+        "n_values": 1,
+        "diff_source": "recomputed from the per-seed raw values",
+        "r_value": 0.4527728748576346,
+        "julia_value": 0.46055756091469935,
+        "r_seed_values": [
+          0.463608799720495,
+          0.456572190624744,
+          0.474889146623454,
+          0.435302458169868,
+          0.433491779149612
+        ],
+        "julia_seed_values": [
+          0.47579090794233186,
+          0.4839177946051881,
+          0.46100204307743436,
+          0.4601278680761501,
+          0.42194919087239235
+        ],
+        "discriminating": true
+      },
+      {
+        "case_id": "CORE070-SURFCONV-INFERENCE-CI-ROUTE-011",
+        "quantity": "icc[4] bootstrap upper endpoint, mean over 5 seeds",
+        "max_abs_diff": 0.01281277866354158,
+        "tolerance": 0.0278546225825019,
+        "tolerance_rule": "N4 Monte-Carlo rule stated before any run (docs/dev-log/core070/true-parity-latest/receipts/inference/ci-route-011-mc/rule.json): |mean_R - mean_J| <= 4.5 * sqrt(var_R/5 + var_J/5) + 0.005",
+        "mc_standard_error": 0.005078805018333755,
+        "n_values": 1,
+        "diff_source": "recomputed from the per-seed raw values",
+        "r_value": 0.7397094212769296,
+        "julia_value": 0.726896642613388,
+        "r_seed_values": [
+          0.737546709119088,
+          0.729622134124206,
+          0.742133828961005,
+          0.753282377226138,
+          0.735962056954211
+        ],
+        "julia_seed_values": [
+          0.7242781803968088,
+          0.7336654721648622,
+          0.7261211729441607,
+          0.7166552713203727,
+          0.7337631162407363
+        ],
+        "discriminating": true
+      }
+    ]
+  }
 }

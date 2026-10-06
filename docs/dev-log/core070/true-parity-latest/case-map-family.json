@@ -948,7 +948,8 @@
           "CORE070-FAMILY-11-LOG-PUBLIC-R-BRIDGE": true
         },
         "executed_cases_verdict": "PASS"
-      }
+      },
+      "note": "Held under maintainer ruling 2026-10-05 (D-319), N1: the PUBLIC-R-BRIDGE case was not executed, which N1 does not cover. The row binds once a P1 R probe records the bridge refusal (GJL-GATE-FAMILY) as R_BOUNDARY_UNCHANGED (tracked follow-up)."
     },
     {
       "source_id": "family/FAMILY-12-LOGIT-LOG",
@@ -1332,7 +1333,7 @@
     }
   ],
   "rederived": {
-    "tool_commit": "e9946dc9a2dd4796ae36d3c038b577eb130e329e",
+    "tool_commit": "87fff0bebbac554de5d6921efcf5d6d5373fb86b",
     "note": "case receipts and rows re-derived from the tracked batch artifacts (--rederive); no batch was re-run, so glvmodels_commit stays the run commit"
   }
 }

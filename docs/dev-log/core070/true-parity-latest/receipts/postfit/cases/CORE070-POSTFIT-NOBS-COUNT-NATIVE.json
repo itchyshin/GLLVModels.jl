@@ -52,7 +52,8 @@
         "tolerance": 0.5,
         "tolerance_rule": "integer_equality, tolerance 0.5 (itchyshin/GLLVModels.jl#684 item 1): both values are integers, so within 0.5 means equal; the contract's integer_exact = 0 is the same condition",
         "n_values": 1,
-        "diff_source": "recomputed from r-oracle.json['nobs'] and julia-results.json cases['CORE070-POSTFIT-NOBS-COUNT-NATIVE']['julia']"
+        "diff_source": "recomputed from r-oracle.json['nobs'] and julia-results.json cases['CORE070-POSTFIT-NOBS-COUNT-NATIVE']['julia']",
+        "discriminating": true
       }
     ]
   },

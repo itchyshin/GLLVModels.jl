@@ -13,13 +13,13 @@ include(joinpath(@__DIR__, "..", "tools", "phylo_latent", "compare_phylo_latent_
 const _PLP1_DIR = joinpath(@__DIR__, "..", "docs", "dev-log", "core070", "phylo-latent-p1")
 const _PLP1_SHA = Dict(
     "a14-fixture.json" => "9a4c2e1f87a3fbb519400fff8a99fdfb6d66b249d473b0e25833b93b78e7e13c",
-    "struct_phy_tree_rr/r-receipt.json" => "c550ddbab35b4ba952dbda470f7e879898fb43fd665f5a7c144b10ec2c2c91f4",
-    "struct_phy_tree_rr/julia-receipt.json" => "7da419e71edc2268395e84a9687ded92fa466902691374d68e3c53b0f430becd",
-    "struct_phy_dense_rr/r-receipt.json" => "b7d728eb30e27c207ba05d4867730052fc75ebe82db1cac15cc3e738d03fc3d5",
-    "struct_phy_dense_rr/julia-receipt.json" => "700f14677d5498d832d900ea7939d8ed023c90948f1603891029da18401cd288",
+    "struct_phy_tree_rr/r-receipt.json" => "1e98555bbf7ff610778d92e50741f32d6b60b25dc8bda2986315fe20ee5ae239",
+    "struct_phy_tree_rr/julia-receipt.json" => "3e59be3c26bb87774591593e6fac367f12b623a5cafaf4f37eac35a407de3b01",
+    "struct_phy_dense_rr/r-receipt.json" => "01cffdff7d6841634b8d0d66e1aa9f4af85e487c148c6ea27d5e8f7482bd7b7e",
+    "struct_phy_dense_rr/julia-receipt.json" => "a1effb82b3d6120890c76f2b561720175be8113b1095a712bdcc4055ed032d4d",
     "a15-fixture.json" => "f3bace851f60f337a8274859644135a84792b9e9ab35c07f757a7ade336706d4",
-    "cov_phylo_latent_rsz/r-receipt.json" => "5121fbfeb20421149e9c535ea9220458d531f8ec0cfaa71c5b010a8597a7e40e",
-    "cov_phylo_latent_rsz/julia-receipt.json" => "9840f0a17840e438f66c5df97b5325188f15d0e05789191a14b6188f04054bab",
+    "cov_phylo_latent_rsz/r-receipt.json" => "b84eb446dd51bc08983e2bebdced361344824ae2c895266460b89074fa0cf2fb",
+    "cov_phylo_latent_rsz/julia-receipt.json" => "84b6751a23f325af2c66177fbfd8e136b088a2366794be4447687517871a1c71",
 )
 const _PLP1_DLL_SHA = "cba0f54d5492f0c6d0c5474c19281e3b58d5e2b0709e536684619558aaf55b8d"
 

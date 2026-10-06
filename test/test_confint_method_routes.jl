@@ -31,6 +31,16 @@ function _refuses_listing_methods(thunk)
     return occursin(":wald", msg) && occursin(":profile", msg) && occursin(":bootstrap", msg)
 end
 
+# The message of the ArgumentError a call throws, or `nothing` when it does not throw one.
+function _argument_error_message(thunk)
+    try
+        thunk()
+    catch e
+        return e isa ArgumentError ? sprint(showerror, e) : nothing
+    end
+    return nothing
+end
+
 # ---- fixtures ---------------------------------------------------------------
 # Plain default Gaussian fit: integration === nothing.
 function _fixture_plain()
@@ -280,10 +290,10 @@ end
     end
 
     @testset "profile routes to the existing derived profile functions" begin
-        f_c = GLLVModels._make_communality_closure(spec, 1)
-        r = confint(fitS, YS; parm = "communality[1]", method = :profile, penalty_weight = 1e4, kw...)
-        @test _route_tag(r) == :profile && r.method === :profile && r.term == ["communality[1]"]
-        d = GLLVModels.profile_ci_derived(fitS, f_c; y = YS, Σ_phy = Σ_phy, penalty_weight = 1e4)
+        f_i = GLLVModels._make_icc_closure(spec, 1)
+        r = confint(fitS, YS; parm = "icc[1]", method = :profile, penalty_weight = 1e4, kw...)
+        @test _route_tag(r) == :profile && r.method === :profile && r.term == ["icc[1]"]
+        d = GLLVModels.profile_ci_derived(fitS, f_i; y = YS, Σ_phy = Σ_phy, penalty_weight = 1e4)
         @test r.estimate[1] == d.estimate
         # an interior profile interval is the direct function's, unchanged
         if all(isfinite, (d.lower, d.upper)) && 0 < d.lower && d.upper < 1
@@ -296,6 +306,47 @@ end
         @test isequal((ps.lower[1], ps.upper[1], ps.estimate[1], ps.boundary[1]),
                       (dps.lower, dps.upper, dps.estimate, dps.boundary))
         @test ps.status == [dps.method]
+    end
+
+    @testset "profile is withdrawn for communality, rho and proportion, as in gllvmTMB" begin
+        # gllvmTMB 9539352f6 raises gllvmTMB_nonlinear_profile_withdrawn for these three;
+        # the refusal names the withdrawal, so it is not the bad-method message.
+        for (parm, what) in (("communality[1]", "communality"), ("rho[1,2]", "correlations"),
+                             ("proportion:shared[1]", "variance proportions"),
+                             ("correlation[1,2]", "correlations"), ("communality", "communality"))
+            msg = _argument_error_message(() -> confint(fitS, YS; parm = parm, method = :profile, kw...))
+            @test msg !== nothing
+            @test occursin("nonlinear profile intervals for $what are withdrawn", msg)
+            @test occursin("parm $parm", msg) && occursin(":bootstrap", msg)
+            @test !occursin("is not available for", msg)  # not the bad-method refusal
+        end
+        # withdrawn on a record fit and on a plain fit too, before any refit
+        @test occursin("withdrawn", _argument_error_message(
+            () -> confint(fitA, YA; X = XA, parm = "communality[1]", method = :profile)))
+        @test occursin("withdrawn", _argument_error_message(
+            () -> confint(fitP, YP; parm = "rho[1,2]", method = :profile)))
+        # a vector that includes a withdrawn kind is refused as a whole
+        @test occursin("withdrawn", _argument_error_message(
+            () -> confint(fitS, YS; parm = ["phylo_signal[1]", "rho[1,2]"], method = :profile, kw...)))
+        # the other methods of the same quantities still run
+        @test _route_tag(confint(fitS, YS; parm = "proportion:shared[1]", method = :wald, kw...)) == :wald_derived
+    end
+
+    @testset "rho: method = :fisher_z is the :wald Fisher-z interval" begin
+        w = confint(fitS, YS; parm = "rho[1,2]", method = :wald, kw...)
+        z = confint(fitS, YS; parm = "rho[1,2]", method = :fisher_z, kw...)
+        @test isequal(z, w)                      # every field, bit for bit
+        @test z.transform == [:fisher_z] && z.method === :wald
+        @test isequal(z, confint(fitS, YS; parm = "rho[1,2]", kw...))  # = the default
+        @test isequal(confint(fitP, YP; parm = "rho", method = :fisher_z),
+                      confint(fitP, YP; parm = "rho", method = :wald))
+        # accepted for rho only: refused for the other derived quantities and packed terms
+        for parm in ("communality[1]", "icc[1]", "proportion:shared[1]", "phylo_signal[1]", "sigma_eps")
+            msg = _argument_error_message(() -> confint(fitS, YS; parm = parm, method = :fisher_z, kw...))
+            @test msg !== nothing && occursin("method = :fisher_z is not available", msg)
+        end
+        @test _argument_error_message(
+            () -> confint(fitS, YS; parm = ["communality[1]", "rho[1,2]"], method = :fisher_z, kw...)) !== nothing
     end
 
     @testset "bootstrap routes to bootstrap_ci_derived" begin
@@ -319,8 +370,11 @@ end
     end
 
     @testset "validation: named errors that list what is available" begin
-        @test _refuses_listing_methods(() -> confint(fitS, YS; parm = "communality[1]", method = :bogus, kw...))
-        @test _refuses_listing_methods(() -> confint(fitS, YS; parm = "rho[1,2]", method = :bogus, kw...))
+        @test occursin("available: :wald, :bootstrap", _argument_error_message(
+            () -> confint(fitS, YS; parm = "communality[1]", method = :bogus, kw...)))
+        @test occursin("available: :wald, :fisher_z, :bootstrap", _argument_error_message(
+            () -> confint(fitS, YS; parm = "rho[1,2]", method = :bogus, kw...)))
+        @test _refuses_listing_methods(() -> confint(fitS, YS; parm = "icc[1]", method = :bogus, kw...))
         @test _refuses_listing_methods(() -> confint(fitS, YS; parm = "phylo_signal", method = :fisher_z, kw...))
         # parse and range errors name the offending token
         @test_throws ArgumentError confint(fitS, YS; parm = "communality[9]", kw...)

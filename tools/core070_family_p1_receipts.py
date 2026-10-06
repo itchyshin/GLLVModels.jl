@@ -855,6 +855,40 @@ def p0_evidence(base):
                     "remains."}
 
 
+# Maintainer ruling 2026-10-05 (D-319), N1: a PUBLIC-R-BRIDGE case at which R refuses before any Julia call, shown
+# by a receipt (evidence_kind r_public_bridge_boundary, verdict R_BOUNDARY_UNCHANGED), is non-binding context; the
+# covariance overlay applies the same test. FAMILY-00-IDENTITY and FAMILY-11-LOG are the family rows it names, but
+# their bridge cases are NOT_EXECUTED (outside the frozen bridge sub-contract), not an R refusal, so neither binds
+# this way at P1 and both stay partial_case_not_executed. A row binds under N1 only when its bridge case has an
+# R_BOUNDARY_UNCHANGED receipt and every other case is a passing, discriminating numeric comparison from an accepted
+# batch (FAMILY-00's native and formula cases also FAIL on the current receipts). The checker (boundaryContext)
+# re-validates the context case.
+FAMILY_N1_CONTEXT = {"family/FAMILY-00-IDENTITY", "family/FAMILY-11-LOG"}
+N1_CONTEXT_KIND = ("r_public_bridge_boundary", "R_BOUNDARY_UNCHANGED")
+N1_TIER = ("numeric: the native and formula-interface case receipts carry R-vs-Julia comparison blocks pinned to P1, "
+           "within the harness tolerance, from a batch whose verifier passed; R refuses the PUBLIC-R-BRIDGE case at the "
+           "bridge (R_BOUNDARY_UNCHANGED), which is non-binding boundary context under maintainer ruling 2026-10-05 "
+           "(D-319), N1")
+N1_HELD_NOTE = ("Held under maintainer ruling 2026-10-05 (D-319), N1: the PUBLIC-R-BRIDGE case was not executed, which N1 "
+                "does not cover. The row binds once a P1 R probe records the bridge refusal (GJL-GATE-FAMILY) as "
+                "R_BOUNDARY_UNCHANGED (tracked follow-up).")
+
+
+def n1_context(sid, ids, kinds, verdicts, batch_ok, disc):
+    """The boundary-context case ids when `sid` binds under N1, else None."""
+    if sid not in FAMILY_N1_CONTEXT:
+        return None
+    ctx = [i for i in ids if kinds[i] != "numeric_r_vs_julia"]
+    rest = [i for i in ids if i not in ctx]
+    if not ctx or not rest:
+        return None
+    if not all(i.endswith("-PUBLIC-R-BRIDGE") and (kinds[i], verdicts[i]) == N1_CONTEXT_KIND for i in ctx):
+        return None
+    if not all(verdicts[i] == "PASS" and batch_ok[i] == "PASS" and disc[i] for i in rest):
+        return None
+    return ctx
+
+
 def build_rows(in_scope, carry_status, receipts):
     p0 = {r["source_id"]: r for r in load(P0_CASEMAP)["rows"]}
     counts = {k: 0 for k in COUNT_KEYS}
@@ -882,6 +916,14 @@ def build_rows(in_scope, carry_status, receipts):
                                  "tier": "no case of this row was executed at P1 (see each receipt's "
                                          "why_not_executed)"})
             counts["not_measured"] += 1
+        elif len(measured) < len(ids) and (ctx := n1_context(sid, ids, kinds, verdicts, batch_ok, disc)):
+            by_id = {i: h[0] for i, h in zip(ids, have)}
+            row["boundary_context_case_ids"] = ctx
+            row.update(evidence_tier="numeric", measured_against=P1_SHA,
+                       evidence={"receipt": list(dict.fromkeys(by_id[i] for i in ids if i not in ctx)),
+                                 "boundary_context_receipts": [by_id[i] for i in ctx], "tier": N1_TIER},
+                       measured_result={**result, "row_verdict": "PASS"})
+            counts["numeric_pass"] += 1
         elif len(measured) < len(ids):
             ok = all(verdicts[i] == "PASS" for i in measured)
             row.update(evidence_tier="partial_case_not_executed", measured_against=P1_SHA,
@@ -890,6 +932,8 @@ def build_rows(in_scope, carry_status, receipts):
                                          "the row does not bind"},
                        measured_result={**result, "executed_cases_verdict": "PASS" if ok else "FAIL"})
             counts["partial_case_not_executed"] += 1
+            if sid in FAMILY_N1_CONTEXT and ok:
+                row["note"] = N1_HELD_NOTE
         elif not all(verdicts[i] == "PASS" for i in ids):
             row.update(evidence_tier="numeric_fail", measured_against=P1_SHA,
                        evidence={"non_binding_receipts": paths,
