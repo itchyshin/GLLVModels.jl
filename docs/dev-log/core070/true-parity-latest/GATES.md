@@ -882,6 +882,15 @@ receipts' qualification and the pass-rule leg `R_side_receipt_qualified_by_maint
 `covariance/COV-PHYLO-LATENT-RSZ` and the phylo twins can bind) belongs to the covariance and namespace slice; the
 "Phylo row does not bind" paragraph under "C3 to C5 campaign rows" describes the state before that flip.
 
+### N3: known-V meta rows are a documented gap, revisited at P2
+
+Signed: "documented gap, revisit at P2". `covariance/COV-META-EXACT` and `covariance/COV-META-LEGACY` (R's known
+sampling-covariance `meta` term and its deprecated spelling) have no Julia surface at P1 (grep check recorded in the wave plan of 2026-10-03). They are a
+documented gap of P1, revisited when the pin moves to P2; no Julia alias for the deprecated spelling is added, and the
+build (estimated 18 to 24 hours, an API change) is not scheduled. The rows close by a signed disposition that says so,
+written by the slice that owns `case-map-covariance.json`; until then they read `NON-NUMERIC` (tier `r_only`). Their
+R cases are admission-only, so N1 does not bind them: a row needs at least one compared case.
+
 ### Item A, N6 and N10: the behavioural scope is extended by 14 listed rows
 
 Ruling 2 of 2026-10-02 froze the behavioural tier to 63 rows. Three signed items extend that list, and only by
