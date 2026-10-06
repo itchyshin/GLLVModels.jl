@@ -3,6 +3,21 @@
 - PR843's hosted negative controls failed32/33 because its crossed R/Julia fixture could not find `Rscript`. PR844 exposed the same missing runner setup. The control also used a Juliaup-only path unavailable to hosted setup-julia.
 - Apply R4.5.3 and Julia1.10 setup before the controls, and resolve Julia from `PATH` with the existing local fallback. The fixture builds scratch data, loads no package, and performs no fit. Local Python controls pass33/33 on the residual-stage branch; CI will verify the hosted setup.
 
+## 2026-10-06: seven P1 receipt gaps, candidate checkpoint
+
+- Exact7rows bind locally: X2 304/317,C2 290/297; all other baseline statuses and admission/case contracts unchanged. C3 6/8,C4 4/8,C6 37undecided remain open.
+- Actual P1 public R FAMILY11 refusals and six paired R/Julia behaviours retained with process/source/build/hash provenance and mixed-source positive controls. Canonical derivation rejects stale/fabricated/mismatched evidence.
+- Owning derivations, assembly, negative controls, Python33/33, enabled Julia2/2 and Documenter109.2seconds pass. Full/core ated11661f0 pending; current-candidate full/core not inferred.
+- Initial independent panel found repaired tooling/prose/map defects; final immutable-candidate review remains required. Three staged draft branches are prepared; every merge awaits Shinichi. Main/full P1/closure are not claimed.
+
+## 2026-10-06: P1 first-seven checkpoint verifier
+
+- Approved baseline: `f220379d0937d0afffc6a030023c63c0f715e168`; P1 R source: `9539352f66f2db2cc26b1c393e67212a359b60c9`.
+- Added an internal exact-row verifier and controls. The verifier fixes the approved baseline checker, checks all admission/case contracts, preserves unrelated scoreboard statuses, validates P1 receipt and raw-hash provenance, and rechecks every numeric or behavioural bound receipt.
+- Controls pass for exact-row substitution, dropped rows, contract edits, signed substitutions, missing P1 source/build provenance, bad raw hashes and invalid bridge context. Existing checker and assembler controls passed; assembly is current at 317 rows.
+- The unchanged baseline is correctly rejected at FAMILY-11. No receipt gap has been closed by this tooling commit, and no full P1 or release claim is made. Candidate and main checkpoint gates remain unmet.
+- Full/core Julia suites and Documenter are pending for the receipt checkpoint; this change adds Node tooling and tests only.
+
 ## 2026-10-06: check_auto_residual public behaviour, local phase
 
 - `postfit/POSTFIT-SURFACE-check_auto_residual` binds in this stage; X2 299/317,C2 285/297. Canonical owning checks and assembly pass.
