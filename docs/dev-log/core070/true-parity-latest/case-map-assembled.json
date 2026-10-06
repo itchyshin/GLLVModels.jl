@@ -41,7 +41,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-namespace.json",
-   "sha256": "9ad836e94aad1f821799cdbd9730c544e355bc2bb40617e55af6f65654b50cc1",
+   "sha256": "267514015a5d3f61f5854b6b509f45bb218bbf7228ab0c9902f034f271d107a5",
    "rows": 69
   },
   {
@@ -8486,12 +8486,20 @@
     "CORE070-NAMESPACE-ANIMAL-SLOPE-FIT"
    ],
    "reason": "R side registered and defined at P1; Julia surface still missing or partial at the branch head (see the case receipt's julia_check.note). Measured, not twinned.",
-   "disposition": "BLOCKED_NEEDS_JULIA_SURFACE",
+   "disposition": "DISPOSITION-SIGNED",
    "evidence_tier": "registration",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "needs_surface_as_expected",
     "reason": "Julia facts match the recorded needs-surface expectation; not parity"
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signed_disposition": {
+    "ruling": "N8 (wave plan 2026-10-03, section 3), signed under D-319",
+    "kind": "outside_boundary",
+    "text": "Column-slope grammar, outside the P1 Julia surface. animal_slope(x1 + x2 | trait, A = A) is the pedigree column-slope covariance alias, admitted in R for Gaussian long-format data with bare numeric predictors (R/animal-keyword.R:340-373). GLLVModels has no column-slope covariance route (no column_slope term or extract_Sigma level in src/), so no R-vs-Julia number exists. Documented capability gap; it closes only with a Julia column-slope surface, which is not planned at P1.",
+    "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer"
    }
   },
   {
@@ -8544,12 +8552,20 @@
     "CORE070-NAMESPACE-CHECK-GLLVMTMB-DIAGNOSTIC"
    ],
    "reason": "R export(check_gllvmTMB) registered and defined at P1; Julia `check_gllvmTMB` is an exported Function (measured). Name match only.",
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "evidence_tier": "registration",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
     "reason": "R registered and defined; Julia symbol present, exported, a Function"
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signed_disposition": {
+    "ruling": "N8 (wave plan 2026-10-03, section 3), signed under D-319",
+    "kind": "re-scope",
+    "text": "Re-scoped as a documented partial port. R's check_gllvmTMB() (R/diagnose.R:1564) returns a table of component / status rows, a diagnostic verdict rather than a model estimand. Julia's check_gllvmTMB (src/diagnostics.jl:428-452; docs/src/diagnostics.md) aggregates sanity_multi, check_auto_residual and the boundary scan of gllvmTMB_diagnose into one pass/fail verdict, and states its gaps: no TMB sdreport estimability scan, no per-family boundary rows (multinomial collapse, ordinal loading runaway, nbinom2 dispersion ceiling), mixed_family always false. The component checks are tracked on their own rows.",
+    "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer"
    }
   },
   {
@@ -8995,12 +9011,20 @@
     "CORE070-NAMESPACE-EXTRACT-CROSS-CORRELATIONS-NATIVE"
    ],
    "reason": "R export(extract_cross_correlations) registered and defined at P1; Julia `correlation` is an exported Function (measured). Name match only.",
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "evidence_tier": "registration",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
     "reason": "R registered and defined; Julia symbol present, exported, a Function"
+   },
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signed_disposition": {
+    "ruling": "N8 (wave plan 2026-10-03, section 3), signed under D-319",
+    "kind": "outside_boundary",
+    "text": "Capability difference. extract_cross_correlations() (R/extract-correlations.R:886) reports correlations between a multinomial (nominal) trait and its partners through a shared latent tier, so it needs a multinomial trait inside a latent model. GLLVModels' multinomial is fixed-effects only, and multinomial models are a listed capability difference (docs/src/gllvmtmb-parity.md, 'Capability differences'). No R-vs-Julia number can exist at P1.",
+    "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer"
    }
   },
   {
@@ -9665,10 +9689,18 @@
    ],
    "evidence": {},
    "measured_against": null,
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "reason": "Not re-measured at P1 in this PR.",
    "not_measured_reason": "namespace-2 batch needs an installed frozen gllvmTMB library and live R fits (tools/core070_namespace_2_batch.R <frozen-library> <destination>); stopped per brief, no P1 oracle build here.",
-   "evidence_tier": "registration"
+   "evidence_tier": "registration",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signed_disposition": {
+    "ruling": "N8 (wave plan 2026-10-03, section 3), signed under D-319",
+    "kind": "outside_boundary",
+    "text": "Bootstrap helper, no estimand. gllvm_julia_setup() (R/julia-bridge.R:302) sets up JuliaCall and loads GLLVModels once per R session; Julia has nothing to twin. It was exercised, without error, by the PR #790 live P1 bridge run (test/fixtures/gen_bridge_readback_p1.R:45), whose readback binds gllvm_julia_fit.",
+    "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer"
+   }
   },
   {
    "source_id": "namespace/export/kernel_dep",
@@ -9799,10 +9831,18 @@
    ],
    "evidence": {},
    "measured_against": null,
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "reason": "Not re-measured at P1 in this PR.",
    "not_measured_reason": "P0 evidence came from a non-namespace batch (wave6-conversion (attempt7)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here.",
-   "evidence_tier": "registration"
+   "evidence_tier": "registration",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-05",
+   "signed_disposition": {
+    "ruling": "N8 (wave plan 2026-10-03, section 3), signed under D-319",
+    "kind": "retire",
+    "text": "Deprecated alias, retired from the parity surface. At P1 R marks kernel_unique() deprecated (lifecycle badge; deprecate_soft from 0.2.0 to kernel_indep(), R/kernel-keywords.R:68-100) and keeps it only for old formulas. No Julia alias is added. The current spellings carry the parity evidence: kernel_indep (namespace/export/kernel_indep, bound under ruling 2) and kernel_latent(..., unique = TRUE) (namespace/export/kernel_latent, waiting on the N2 wave6 nobs fix).",
+    "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer"
+   }
   },
   {
    "source_id": "namespace/export/nbinom2",
