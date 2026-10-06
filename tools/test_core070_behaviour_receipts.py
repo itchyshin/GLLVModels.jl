@@ -10,14 +10,17 @@ from __future__ import annotations
 import copy
 import json
 import re
+import hashlib
 import shutil
 import sys
 import tempfile
+import subprocess
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import core070_behaviour_receipts as B  # noqa: E402
+import first_seven_behaviour_derive as F7  # noqa: E402
 
 A = B.assembler()
 ROOT = B.ROOT
@@ -443,6 +446,139 @@ def the_writers_citers_count_every_row_that_lists_a_case_id():
 def citation_note_claims_no_rerun():
     note = B.equivalence_doc()["citation_note"]
     assert "re-run" not in note and "rerun" not in note and "review" not in note, note
+
+
+@test
+def first_seven_positive_control_and_signed_extra_source_mismatch():
+    F7.self_test()
+
+
+@test
+def first_seven_raw_reader_rejects_incomplete_case_sets():
+    with tempfile.TemporaryDirectory() as t:
+        p = Path(t) / "raw.tsv"
+        p.write_text("case_id\toutcome\tclass\tactual\tmessage\tengine\tpin\n"
+                     "CORE070-FIRST7-ISDM-COUNT\tERROR\tArgumentError\t\tbad\tJulia\tP1\n")
+        try:
+            F7.tsv(p, "Julia")
+        except ValueError as e:
+            assert "exactly the six" in str(e)
+        else:
+            raise AssertionError("incomplete raw fixture was accepted")
+
+
+@test
+def first_seven_extra_source_keeps_the_early_r_guard_distinct():
+    cid = "CORE070-FIRST7-ISDM-EXTRA-SOURCE"
+    r = {"outcome": "ERROR", "class": "simpleError", "actual": "",
+         "message": "length(family) must match the number of distinct levels"}
+    j = {"outcome": "ERROR", "class": "ArgumentError", "actual": "",
+         "message": "Unknown source: unknown"}
+    assert F7.label(cid, r, "R") == "guard:family-length"
+    assert F7.label(cid, j, "Julia") == "guard:unknown-source"
+    assert F7.label(cid, r, "R") != F7.label(cid, j, "Julia")
+
+
+@test
+def first_seven_refuses_wrong_calls_and_wrapper_success():
+    row = {"outcome": "RETURN", "class": "IsdmSources", "actual": "returned",
+           "message": "", "call": "isdm_sources(count=Poisson(), detect=logit)"}
+    assert F7.label("CORE070-FIRST7-ISDM-WRAPPER-LAW", row, "Julia") == "wrapper-law:wrong-outcome"
+    assert "isdm_sources" in row["call"]
+    assert F7.CALL_FRAGMENTS["CORE070-FIRST7-ISDM-WRAPPER-LAW"] == "isdm_sources"
+
+
+@test
+def first_seven_panel_crosses_every_trait_source_and_unit():
+    j = (ROOT / "tools/first_seven_behaviour_J.jl").read_text()
+    r = (ROOT / "tools/first_seven_behaviour_R.R").read_text()
+    assert 'for t in ("a", "b"), s in ("count", "detect")' in j
+    assert 'cell_id=factor(c("u1", "u2")), isdm_source=c("count", "detect")' in r
+    assert 'trait=factor(c("a", "b"))' in r
+    assert 'isdm_sources(count=Poisson(), detect=Poisson())' in j
+    assert 'family=isdm_sources(count=poisson(), detect=poisson())' in r
+    assert 'count(.!keep) == 2' not in j and 'sum(.!keep) == 2' in j
+    assert 'sum(.!keep) == 4' in j
+    assert 'nrow(d) - nrow(dx) == 2L' in r and 'nrow(d) - nrow(dx) == 4L' in r
+
+
+@test
+def first_seven_provenance_gate_rejects_tampered_library_identity():
+    d = (ROOT / "tools/first_seven_behaviour_derive.py").read_text()
+    assert "loaded marker/NAMESPACE/installed tree differs" in d
+    assert "Julia raw runner digest differs" in d
+    assert "wrong public call" in d
+    assert not F7.matching_fixture_hashes(
+        {"r": {"fixture_sha256": "rows-a"}}, {"j": {"fixture_sha256": "rows-b"}})
+    assert F7.matching_fixture_hashes(
+        {"r": {"fixture_sha256": "rows-a"}}, {"j": {"fixture_sha256": "rows-a"}})
+
+
+@test
+def first_seven_fixture_derivation_keeps_positive_and_mismatch_rows_separate():
+    # Synthetic, runner-shaped observations only. These fixtures test the
+    # parser and derivation; they are never emitted as measured receipts.
+    rrows, jrows = {}, {}
+    for cid in F7.CASES:
+        rrows[cid] = {"case_id": cid, "outcome": "RETURN", "class": "fit", "actual": "returned",
+                      "message": "", "call": "public R call", "engine": "R", "pin": "P1",
+                      "package_version": "0.7.1", "oracle_build": "totoro", "openblas_threads": "1",
+                      "omp_threads": "1", "r_version": "4.4", "host": "fixture"}
+        jrows[cid] = {"case_id": cid, "outcome": "RETURN", "class": "IsdmFit", "actual": "true",
+                      "message": "", "call": "public Julia call", "engine": "Julia", "pin": "P1",
+                      "julia_threads": "4", "openblas_threads": "1", "omp_threads": "1",
+                      "glvmodels_commit": "fixture-commit", "julia_version": "fixture", "host": "fixture"}
+    auto = "CORE070-FIRST7-CHECK-AUTO-RESIDUAL"
+    rrows[auto].update(actual="coherent", message="ordinal-probit control status=warn")
+    jrows[auto].update(actual="true", message="ordinal-probit control flagged")
+    extra = "CORE070-FIRST7-ISDM-EXTRA-SOURCE"
+    rrows[extra].update({"outcome": "ERROR", "class": "simpleError", "actual": "",
+                         "message": "length(family) must match the number of distinct levels"})
+    jrows[extra].update({"outcome": "ERROR", "class": "ArgumentError", "actual": "",
+                         "message": "Unknown source: unknown"})
+    wrapper = "CORE070-FIRST7-ISDM-WRAPPER-LAW"
+    for rows in (rrows, jrows):
+        rows[wrapper].update({"outcome": "ERROR", "class": "ArgumentError", "actual": "refused",
+                              "message": "REFUSED: isdm_sources refuses logit law"})
+    source = json.loads((ROOT / F7.R_SOURCE).read_text())
+    build = json.loads((ROOT / F7.R_BUILD).read_text())
+    for row in rrows.values():
+        row.update(source_marker_sha256=build["marker_sha256"],
+                   source_tree_sha256=source["source_tree_sha256"],
+                   installed_tree_sha256=build["installed_tree_sha256"],
+                   namespace_sha256=source["namespace_sha256"], fixture_sha256="fixture-hash",
+                   runner_sha256=F7.digest(ROOT / "tools/first_seven_behaviour_R.R"))
+    for row in jrows.values():
+        row.update(runner_sha256=F7.digest(ROOT / "tools/first_seven_behaviour_J.jl"),
+                   fixture_sha256="fixture-hash", package_source="src/GLLVModels.jl",
+                   src_diff_sha256=hashlib.sha256(subprocess.run(
+                       ["git", "-C", str(ROOT), "diff", "--binary", "HEAD", "--", "src"],
+                       check=True, capture_output=True).stdout).hexdigest())
+    commit = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], check=True,
+                            capture_output=True, text=True).stdout.strip()
+    tree = subprocess.run(["git", "-C", str(ROOT), "rev-parse", f"{commit}:src"], check=True,
+                          capture_output=True, text=True).stdout.strip()
+    jrows = {cid: {**row, "glvmodels_commit": commit} for cid, row in jrows.items()}
+    with tempfile.TemporaryDirectory() as td:
+        rp, jp = Path(td) / "r.tsv", Path(td) / "j.tsv"
+        rp.write_text("fixture only\n"); jp.write_text("fixture only\n")
+        meta = {"reference_commit": F7.PIN, "r_output_path": str(rp), "julia_output_path": str(jp),
+            "r_output_sha256": F7.digest(rp), "julia_output_sha256": F7.digest(jp),
+            "r_source_sha256": source["source_tree_sha256"], "r_source_receipt_sha256": F7.digest(ROOT / F7.R_SOURCE),
+            "r_oracle_build_sha256": F7.digest(ROOT / F7.R_BUILD),
+            "r_installed_tree_sha256": build["installed_tree_sha256"], "julia_commit": commit,
+            "julia_src_tree": tree, "thread_caps": {"r_openblas": "1", "r_omp": "1", "julia_threads": "4",
+                "julia_openblas": "1", "julia_omp": "1"},
+            "runner_sha256": {"R": F7.digest(ROOT / "tools/first_seven_behaviour_R.R"),
+                "Julia": F7.digest(ROOT / "tools/first_seven_behaviour_J.jl"),
+                "derive": F7.digest(ROOT / "tools/first_seven_behaviour_derive.py")},
+            "r_version": "4.4", "r_host": "fixture", "julia_version": "fixture", "julia_host": "fixture"}
+        receipts, eq = F7.derive(rrows, jrows, meta)
+    self = receipts["isdm/ISDM-EXTRA-SOURCE"]
+    assert self["verdict"] == "MISMATCH"
+    assert not any(c["canonical"] == "guard:unknown-source" for c in eq["classes"])
+    assert receipts["isdm/ISDM-WRAPPER-LAW"]["verdict"] == "PASS"
+    assert receipts["isdm/ISDM-WRAPPER-LAW"]["case_id"] == "CORE070-ISDM-WRAPPER-LAW-PAIRED-CONTROL"
 
 
 def main():

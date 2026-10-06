@@ -936,6 +936,8 @@ def main():
                     help="re-apply the Julia twin overlay to the tracked case-map-postfit.json")
     ap.add_argument("--check-twins", action="store_true",
                     help="verify case-map-postfit.json equals its twin-overlay re-derivation; write nothing")
+    ap.add_argument("--check", action="store_true",
+                    help="alias for --check-twins, used by the first-seven leaf gate")
     ap.add_argument("--apply-integer-equality", action="store_true",
                     help="write the integer_equality comparison blocks and bind the four integer rows (idempotent)")
     ap.add_argument("--apply-wave6", type=Path, metavar="RUN_DIR",
@@ -945,7 +947,7 @@ def main():
     ap.add_argument("--allow-dirty", action="store_true",
                     help="write receipts from a checkout with modified tracked files (recorded, not hidden)")
     args = ap.parse_args()
-    if args.check_twins:
+    if args.check_twins or args.check:
         check_twins()
         return
     if args.apply_twins:

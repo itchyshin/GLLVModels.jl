@@ -430,7 +430,10 @@ def check():
         rec = tracked[cid][1]
         if (rec["evidence_kind"], rec["verdict"]) != (kind, verdict):
             problems.append(f"{cid}: kind/verdict {rec['evidence_kind']}/{rec['verdict']} != re-derived {kind}/{verdict}")
-        if {k: v for k, v in rec.items() if k not in PROVENANCE_KEYS} != body:
+        # Behaviour blocks are derived by core070_behaviour_receipts.py from
+        # the public-door sidecars (D-319 N6); this admission-batch verifier
+        # owns the remaining receipt body only.
+        if {k: v for k, v in rec.items() if k not in PROVENANCE_KEYS | {"behaviour", "behaviour_not_bound"}} != body:
             problems.append(f"{cid}: receipt body differs from the re-derivation")
         if rec.get("reference_commit") != P1_SHA or rec.get("pin") != "P1":
             problems.append(f"{cid}: receipt not pinned at P1")
