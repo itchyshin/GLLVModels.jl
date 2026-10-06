@@ -29,7 +29,7 @@ def bounded(value, limit):
 def check_semantics(native, formula, long):
     need(all(row['fixture_sha256'] == DATA_SHA for row in [native, formula, long]), 'stale data fixture')
     need(native['native_health'] is True and native['r_health'] is True, 'native/R health failed')
-    need(native['r_random'] == ['z_B', 's_B'] and native['r_fixed_columns'] == 0
+    need(native['r_random'] == ['z_B'] and native['r_fixed_columns'] == 0
          and native['r_sigma_mapped'] is True and native['native_dof'] == 8, 'different R model')
     need(native['r_parameter_names'].count('theta_rr_B') == 4
          and native['r_parameter_names'].count('theta_diag_B') == 4, 'different nuisance grouping')

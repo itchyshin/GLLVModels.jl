@@ -75,7 +75,9 @@ fixture test/fixtures/predict_offset_twin_p1.toml); DATA-MISS-MODEL and DATA-MIS
 modelled-predictor twins (test/test_data_twins_2_p1.jl, fixture test/fixtures/data_twins_2_p1.toml);
 DATA-OFF-ALL-COUNT by the three-family exposure-offset twin (test/test_off_all_count_twin_p1.jl, fixture
 test/fixtures/off_all_count_twin_p1.toml); DATA-OFF-MIXED by the mixed-family offset twin
-(test/test_off_mixed_twin_p1.jl, fixture test/fixtures/off_mixed_twin_p1.toml).
+(test/test_off_mixed_twin_p1.jl, fixture test/fixtures/off_mixed_twin_p1.toml); DATA-OFF-PREDICT by the
+new-offset prediction twin under the maintainer ruling of 2026-10-05, D-319 (test/test_off_predict_twin_p1.jl,
+fixture test/fixtures/off_predict_twin_p1.toml).
 
 Usage:
   python3 tools/core070_data_p1_receipts.py --runs DIR --runtimes JSON [--allow-dirty]
@@ -468,6 +470,7 @@ TWIN_SOURCES = {
     "data/DATA-MISS-BOTH": ("test/test_data_twins_2_p1.jl", "test/fixtures/data_twins_2_p1.toml"),
     "data/DATA-OFF-ALL-COUNT": ("test/test_off_all_count_twin_p1.jl", "test/fixtures/off_all_count_twin_p1.toml"),
     "data/DATA-OFF-MIXED": ("test/test_off_mixed_twin_p1.jl", "test/fixtures/off_mixed_twin_p1.toml"),
+    "data/DATA-OFF-PREDICT": ("test/test_off_predict_twin_p1.jl", "test/fixtures/off_predict_twin_p1.toml"),
 }
 
 
@@ -494,6 +497,7 @@ TWIN_FILES = {  # source_id -> twin receipt stem
     "data/DATA-MISS-BOTH": "MISS-BOTH",
     "data/DATA-OFF-ALL-COUNT": "OFF-ALL-COUNT",
     "data/DATA-OFF-MIXED": "OFF-MIXED",
+    "data/DATA-OFF-PREDICT": "OFF-PREDICT",
 }
 
 
@@ -518,9 +522,13 @@ SCOPE_NOTES = {
     "data/DATA-OFF-TRAIN-STORED": "The R batch case reads back a vector written into a mock fit object; the twin "
         "compares the training offset a real Poisson exposure fit kept (R .gllvmTMB_offset_vec, Julia fit.offset) "
         "and the training-row link predictor that uses it (R predict(fit, type = 'link'), Julia predict(fit, Y; "
-        "type = :link)). Training rows only: R's newdata prediction (offset re-evaluated against newdata, training "
-        "units' latent modes kept) has no Julia counterpart and is not compared. Julia stores the training offset "
-        "on the Laplace Poisson, NB2 (shared r), binomial and hurdle-Poisson fits; other fit types keep none.",
+        "type = :link)). Training rows only, at the training offset. R's newdata prediction on the training units "
+        "(offset re-evaluated against newdata, training units' latent modes kept) is Julia's predict(fit, Y; offset "
+        "= O_new, modes = :training), compared in the DATA-OFF-PREDICT twin, not here. Julia stores the training "
+        "offset (fit.offset) on the Laplace Poisson, binomial, NB2, NB1, GP1, Beta, Gamma and Exponential fits, "
+        "their grouped-dispersion variants (NB2, NB1, Beta, Gamma), the two-part fits (hurdle-Poisson, hurdle-NB, "
+        "ZIP, ZINB, ZIB, delta-lognormal, delta-Gamma) and the mixed-family fit; this twin exercises the Poisson "
+        "fit only.",
     "data/DATA-MISS-MODEL": "The R batch case replays miss_control(predictor = 'model') to a list; the twin is one "
         "Gaussian fit that uses it: mi(x) with covariate model x ~ z, x missing at 18 of 120 units, one latent factor "
         "(R gllvmTMB(..., missing = miss_control(predictor = 'model')), Julia fit_gaussian_mi_fiml). It covers one "
@@ -561,6 +569,16 @@ SCOPE_NOTES = {
         "the fixture) and by fit_mixed_gllvm (ArgumentError naming the trait and family), asserted in the twin "
         "test; the refusal is behaviour, not a compared number. The same model without the offset is also matched (logLik within 1e-6) and "
         "scores lower by more than 1 on both sides.",
+    "data/DATA-OFF-PREDICT": "Bound under the maintainer ruling of 2026-10-05 (vault D-319, option (b)). The R batch "
+        "case is a helper replay of the newdata offset path; the twin is one real prediction of that kind: the "
+        "Poisson exposure fit of the DATA-OFF-TRAIN-STORED twin (p = 6, n = 150, one latent factor), predicted on "
+        "the training units with a new exposure e_new. R predict(fit, newdata = nd, type = 'link') re-evaluates the "
+        "stored offset expression on newdata and keeps the training units' latent modes (asserted in the "
+        "generator); Julia predict(fit, Y; type = :link, offset = log.(E_new), modes = :training) computes "
+        "eta = beta + O_new + Lambda z_train, the path added for this ruling. The default modes = :refit "
+        "(modes re-solved at the new offset) is a different quantity and is not what R returns. Scope: training "
+        "units only (new units have no training mode), one Poisson fit; through the matrix API the new offset "
+        "reaches Julia as a value, not as an expression evaluated against newdata as in R's formula.",
 }
 
 

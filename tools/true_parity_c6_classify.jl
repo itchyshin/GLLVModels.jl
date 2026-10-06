@@ -5,6 +5,8 @@
 # This script applies the maintainer's signed ruling itchyshin/GLLVModels.jl#684 item 3
 # mechanically. It decides nothing by hand: an export is decided only when the criterion below
 # gives a clear answer, otherwise it stays out of the file (undecided) and is listed on stdout.
+# The one exception is SIGNED_OVERRIDES: names the maintainer decided one by one (maintainer ruling
+# 2026-10-05, vault D-319), each written with its signed decision and basis.
 #
 # CRITERION (written verbatim into the output file's "criterion" field; the test in
 # tools/test_true_parity_c6_classify.jl fails if this header and the constant drift apart):
@@ -32,12 +34,12 @@
 # EXCLUDED but its internal class is marked PROPOSED (unsigned), which would make that class the
 # only basis for the exclusion; (7) it would be KEPT but its own ledger class says R has it ("R has
 # it under another name", "R has it after 0.7.0"), so it is not Julia-only; (8) it is on the named
-# review list of this script (NAMED_HOLDS): em_fit_phylo, em_fit_phylo_squarem and
-# em_observed_information, whose ledger class (^em_, "solver internals") contradicts their
-# docstrings, which document user fitters that return the public EMPhyloFit, and nine low-level
-# names (ZI_LAPLACE_EIGMIN_FLOOR, random_balanced_tree, estep_edge_moments, AnBSparseSolver,
-# solve_AnB, build_AnB_sparse, Q_times_x, precision_logdet_check, shrinkage_factor) whose docstrings
-# address developers, not users.
+# review list of this script (NAMED_HOLDS): two low-level names (random_balanced_tree,
+# shrinkage_factor) whose docstrings address developers, not users. Signed overrides: the 23 names
+# in SIGNED_OVERRIDES (the high-confidence group of c6-proposed-decisions-2026-10-05.md, signed by
+# the maintainer ruling of 2026-10-05, vault D-319) take their signed decision before the rule and
+# every guard, and their basis begins "maintainer ruling 2026-10-05 (D-319)". The medium- and
+# low-confidence names of that proposal are not signed and stay under the rule and guards above.
 #
 # Inputs : docs/dev-log/core070/true-parity-latest/reverse-gap.json (the assembler's item list;
 #          only its "name" fields are read), reverse-gap-inputs.json (checked against
@@ -103,12 +105,13 @@ const CRITERION = "Applied mechanically to each reverse-gap item (a julia export
     "or in README.md; (6) it would be EXCLUDED but its internal class is marked PROPOSED (unsigned), " *
     "which would make that class the only basis for the exclusion; (7) it would be KEPT but its own " *
     "ledger class says R has it (\"R has it under another name\", \"R has it after 0.7.0\"), so it is not " *
-    "Julia-only; (8) it is on the named review list of this script (NAMED_HOLDS): em_fit_phylo, " *
-    "em_fit_phylo_squarem and em_observed_information, whose ledger class (^em_, \"solver internals\") " *
-    "contradicts their docstrings, which document user fitters that return the public EMPhyloFit, and " *
-    "nine low-level names (ZI_LAPLACE_EIGMIN_FLOOR, random_balanced_tree, estep_edge_moments, " *
-    "AnBSparseSolver, solve_AnB, build_AnB_sparse, Q_times_x, precision_logdet_check, " *
-    "shrinkage_factor) whose docstrings address developers, not users."
+    "Julia-only; (8) it is on the named review list of this script (NAMED_HOLDS): two low-level names " *
+    "(random_balanced_tree, shrinkage_factor) whose docstrings address developers, not users. Signed " *
+    "overrides: the 23 names in SIGNED_OVERRIDES (the high-confidence group of " *
+    "c6-proposed-decisions-2026-10-05.md, signed by the maintainer ruling of 2026-10-05, vault D-319) " *
+    "take their signed decision before the rule and every guard, and their basis begins \"maintainer " *
+    "ruling 2026-10-05 (D-319)\". The medium- and low-confidence names of that proposal are not signed " *
+    "and stay under the rule and guards above."
 
 const GENERATOR = "tools/true_parity_c6_classify.jl"
 const RULING_REF = "itchyshin/GLLVModels.jl#684 item 3"
@@ -151,34 +154,58 @@ prose_pages(f::Facts) = [p for p in f.mentions if !(p in REFERENCE_PAGES)]
 mention_note(f::Facts) = isempty(f.mentions) ? "" : "; named in " * join(f.mentions, ", ")
 
 # Names held by the final review of the PR, each with the group it is reported under and why. The
-# mechanical rule alone would decide these (the ^em_ ledger class excludes the three EM names, and the
-# nine low-level names are KEPT because they have a rendered docstring), but the docstring says
-# otherwise, so they stay undecided for the maintainer.
-const EM_REASON = "the ledger's ^em_ class calls it an EM/SQUAREM solver internal, but its docstring " *
-    "documents it as a user fitter or its post-fit standard errors, built on the public EMPhyloFit"
+# mechanical rule alone would KEEP these (they have a rendered docstring), but the docstring says
+# otherwise, so they stay undecided for the maintainer. The other ten names first held here (the three
+# em_ fitters and eight low-level names) were decided by the maintainer and moved to SIGNED_OVERRIDES.
 const LOW_REASON = "documented, but the docstring addresses developers (engine mechanics, a tuning " *
     "constant, a benchmark helper or a checksum), not a call a user is asked to make; the ledger gives " *
     "it no internal class, so the rule alone would KEEP it"
 const NAMED_HOLDS = Dict{String,Tuple{String,String}}(
-    "em_fit_phylo" => ("em_user_fitter", EM_REASON),
-    "em_fit_phylo_squarem" => ("em_user_fitter", EM_REASON),
-    "em_observed_information" => ("em_user_fitter", EM_REASON),
-    "ZI_LAPLACE_EIGMIN_FLOOR" => ("low_level", LOW_REASON),
     "random_balanced_tree" => ("low_level", LOW_REASON),
-    "estep_edge_moments" => ("low_level", LOW_REASON),
-    "AnBSparseSolver" => ("low_level", LOW_REASON),
-    "solve_AnB" => ("low_level", LOW_REASON),
-    "build_AnB_sparse" => ("low_level", LOW_REASON),
-    "Q_times_x" => ("low_level", LOW_REASON),
-    "precision_logdet_check" => ("low_level", LOW_REASON),
     "shrinkage_factor" => ("low_level", LOW_REASON),
+)
+
+# Names the maintainer decided one by one: the high-confidence group (23 names) of
+# LOOP/lanes/true-parity-latest/c6-proposed-decisions-2026-10-05.md, signed 2026-10-05 (vault D-319;
+# signature file signed-rulings-2026-10-05.md in the same kit: "Approve ... the C6 high-confidence
+# group"). Each entry is (decision, basis); the basis is the proposal's paste-ready text. The medium-
+# and low-confidence rows of that proposal were NOT signed and must not be added here without a new
+# ruling. A signed override takes precedence over the mechanical rule and every guard.
+const SIGNED_RULING = "maintainer ruling 2026-10-05 (D-319), C6 high-confidence group: "
+const SIGNED_OVERRIDES = Dict{String,Tuple{String,String}}(
+    "AnBSparseSolver" => ("EXCLUDED_INTERNAL_HELPER", "engine-internal: pre-factorised E-step solver type for the EM engine. Exported for tests and developers; the docstring addresses developers, not users"),
+    "build_AnB_sparse" => ("EXCLUDED_INTERNAL_HELPER", "engine-internal: factorises the E-step system; docstring refers to a private cache helper. Exported for tests and developers; the docstring addresses developers, not users"),
+    "estep_edge_moments" => ("EXCLUDED_INTERNAL_HELPER", "engine-internal: e-step on the edge-incidence substrate; called inside fit_relaxed_clock. Exported for tests and developers; the docstring addresses developers, not users"),
+    "precision_logdet_check" => ("EXCLUDED_INTERNAL_HELPER", "engine-internal: checksum for bridge-shipped bundles; a developer sanity check. Exported for tests and developers; the docstring addresses developers, not users"),
+    "Q_times_x" => ("EXCLUDED_INTERNAL_HELPER", "engine-internal: matrix-free precision product; engine mechanics. Exported for tests and developers; the docstring addresses developers, not users"),
+    "solve_AnB" => ("EXCLUDED_INTERNAL_HELPER", "engine-internal: applies the E-step solve; engine mechanics. Exported for tests and developers; the docstring addresses developers, not users"),
+    "ZI_LAPLACE_EIGMIN_FLOOR" => ("EXCLUDED_INTERNAL_HELPER", "engine-internal: a tuning constant (0.1) for the zi_* Laplace guard, not a user call. Exported for tests and developers; the docstring addresses developers, not users"),
+    "coeftable" => ("KEPT_AS_JULIA_EXTRA", "StatsAPI generic re-exported with GLLVModels methods as part of the post-fit interface; @docs on docs/src/api.md (line 191)"),
+    "compare_fits_dep_vs_two_psi" => ("KEPT_AS_JULIA_EXTRA", "generic two-fit comparison, distinct from the R-named compare_dep_vs_two_psi which is also exported; documented on docs/src/diagnostics.md"),
+    "compare_fits_indep_vs_two_psi" => ("KEPT_AS_JULIA_EXTRA", "generic two-fit comparison, distinct from the R-named compare_indep_vs_two_psi which is also exported; documented on docs/src/diagnostics.md"),
+    "compare_fits_Sigma_table" => ("KEPT_AS_JULIA_EXTRA", "two-fit Sigma_y comparison, distinct from the R-named compare_Sigma_table which is also exported; documented on docs/src/diagnostics.md"),
+    "dof" => ("KEPT_AS_JULIA_EXTRA", "StatsAPI generic re-exported with GLLVModels methods as part of the post-fit interface; @docs on docs/src/api.md (line 187)"),
+    "em_fit_phylo" => ("KEPT_AS_JULIA_EXTRA", "user-facing EM fitter returning the public EMPhyloFit; docstring rendered in an @docs block on docs/src/api.md (line 311)"),
+    "em_fit_phylo_squarem" => ("KEPT_AS_JULIA_EXTRA", "user-facing EM fitter returning the public EMPhyloFit; docstring rendered in an @docs block on docs/src/api.md (line 314)"),
+    "em_observed_information" => ("KEPT_AS_JULIA_EXTRA", "user-facing EM fitter returning the public EMPhyloFit; docstring rendered in an @docs block on docs/src/api.md (line 313)"),
+    "fit_em_phylo" => ("KEPT_AS_JULIA_EXTRA", "user-facing EM fitter returning the public EMPhyloFit; docstring rendered in an @docs block on docs/src/api.md (line 312)"),
+    "fit_phylo_squarem" => ("KEPT_AS_JULIA_EXTRA", "user-facing EM fitter returning the public EMPhyloFit; docstring rendered in an @docs block on docs/src/api.md (line 315)"),
+    "GroupingTerm" => ("KEPT_AS_JULIA_EXTRA", "user-facing grouping term passed to fit_gllvm(...; grouping=...); user examples on docs/src/grouped-models.md and @docs on docs/src/api.md"),
+    "latent_score_sd" => ("KEPT_AS_JULIA_EXTRA", "conditional SDs of latent scores, a different quantity from getREsd which is also exported; documented on docs/src/se-profile-machinery.md"),
+    "LVSelection" => ("KEPT_AS_JULIA_EXTRA", "result type returned by select_lv; R returns an unexported S3 class; docstring rendered in an @docs block on docs/src/api.md"),
+    "profile_curve_targets" => ("KEPT_AS_JULIA_EXTRA", "batch profile-curve wrapper, distinct from profile_targets which is also exported; documented on docs/src/se-profile-machinery.md"),
+    "stderror" => ("KEPT_AS_JULIA_EXTRA", "StatsAPI generic re-exported with GLLVModels methods as part of the post-fit interface; @docs on docs/src/api.md (line 189)"),
+    "TwoLevelRepeatabilityProfileWithdrawn" => ("KEPT_AS_JULIA_EXTRA", "exception type thrown by repeatability_ci for method = :profile, mirroring an R condition class that is not an export; documented on docs/src/derived-confidence-intervals.md"),
 )
 
 # decide returns (decision, text, kind): decision is "EXCLUDED_INTERNAL_HELPER", "KEPT_AS_JULIA_EXTRA" or
 # nothing (undecided); text is the basis (decided) or the reason (undecided); kind is "" when decided and
 # the reason group when undecided.
 function decide(f::Facts)
-    if haskey(NAMED_HOLDS, f.name)
+    if haskey(SIGNED_OVERRIDES, f.name)
+        d, basis = SIGNED_OVERRIDES[f.name]
+        return (d, SIGNED_RULING * basis, "")
+    elseif haskey(NAMED_HOLDS, f.name)
         kind, why = NAMED_HOLDS[f.name]
         return (nothing, why, kind)
     elseif is_internal_class(f.ledger_class)
@@ -443,6 +470,8 @@ function classify(names::Vector{String})
     gapnames = Set(names)
     all(in(Set(exported)), gapnames) || error("reverse-gap.json names a non-export: $(setdiff(gapnames, Set(exported)))")
     all(in(gapnames), keys(NAMED_HOLDS)) || error("NAMED_HOLDS names a non-item: $(setdiff(Set(keys(NAMED_HOLDS)), gapnames))")
+    all(in(gapnames), keys(SIGNED_OVERRIDES)) || error("SIGNED_OVERRIDES names a non-item: $(setdiff(Set(keys(SIGNED_OVERRIDES)), gapnames))")
+    isdisjoint(keys(SIGNED_OVERRIDES), keys(NAMED_HOLDS)) || error("a name is both signed and held")
 
     pages = Dict{String,Set{String}}()
     texts = Dict{String,String}()

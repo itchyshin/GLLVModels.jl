@@ -13,7 +13,7 @@ cases<-list()
 add<-function(id,call,check=NULL,error=NULL) {
  cases[[length(cases)+1L]]<<-list(id=id,call=call,expected=if(is.null(error))'PREPARED' else 'REJECTED_BEFORE_TAPE',check=check,error_class=if(is.null(error))NULL else 'error',error_contains=error)
 }
-add('INPUT-GAUSS-DEFAULT',quote(gllvmTMB(value~0+trait+latent(0+trait|site,d=1),df,control=control)),function(x,n)identical(x$random,c('z_B','s_B')) && x$data$use_diag_B==1L && n(x,'theta_diag_B')==3L && n(x,'log_sigma_eps')==0L)
+add('INPUT-GAUSS-DEFAULT',quote(gllvmTMB(value~0+trait+latent(0+trait|site,d=1),df,control=control)),function(x,n)identical(x$random,'z_B') && x$data$use_diag_B==1L && n(x,'theta_diag_B')==3L && n(x,'log_sigma_eps')==0L)
 add('INPUT-GAUSS-LOADINGS',quote(gllvmTMB(value~0+trait+latent(0+trait|site,d=1,unique=FALSE),df,control=control)),function(x,n)identical(x$random,'z_B') && x$data$use_diag_B==0L && n(x,'log_sigma_eps')==1L)
 add('INPUT-GAUSS-COMMON',quote(gllvmTMB(value~0+trait+latent(0+trait|site,d=1,common=TRUE),df,control=control)),function(x,n)n(x,'theta_diag_B')==1L && n(x,'log_sigma_eps')==0L)
 add('INPUT-POISSON-DEFAULT',quote(gllvmTMB(value~0+trait+latent(0+trait|site,d=1),dfp,family=poisson(),control=control)),function(x,n)x$data$use_diag_B==1L && n(x,'theta_diag_B')==3L && all(x$data$family_id_vec==2L))
