@@ -1,3 +1,8 @@
+## 2026-10-06: check_auto_residual public behaviour, local phase
+
+- `postfit/POSTFIT-SURFACE-check_auto_residual` binds in this stage; X2 299/317,C2 285/297. Canonical owning checks and assembly pass.
+- Full/core and final independent review/landing remain pending. No new scope, engine or tolerance change.
+
 ## 2026-10-06: FAMILY-11 public bridge boundary, local phase
 
 - `family/FAMILY-11-LOG` binds in this stage; X2 298/317,C2 284/297. Canonical owning checks and assembly pass.
