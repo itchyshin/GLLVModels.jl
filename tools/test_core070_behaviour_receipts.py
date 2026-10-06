@@ -490,16 +490,22 @@ def first_seven_refuses_wrong_calls_and_wrapper_success():
 
 @test
 def first_seven_panel_crosses_every_trait_source_and_unit():
-    j = (ROOT / "tools/first_seven_behaviour_J.jl").read_text()
+    # Execute only the data-construction spans. No package loading or fit.
+    import subprocess, os
     r = (ROOT / "tools/first_seven_behaviour_R.R").read_text()
-    assert 'for t in ("a", "b"), s in ("count", "detect")' in j
-    assert 'cell_id=factor(c("u1", "u2")), isdm_source=c("count", "detect")' in r
-    assert 'trait=factor(c("a", "b"))' in r
-    assert 'isdm_sources(count=Poisson(), detect=Poisson())' in j
-    assert 'family=isdm_sources(count=poisson(), detect=poisson())' in r
-    assert 'count(.!keep) == 2' not in j and 'sum(.!keep) == 2' in j
-    assert 'sum(.!keep) == 4' in j
-    assert 'nrow(d) - nrow(dx) == 2L' in r and 'nrow(d) - nrow(dx) == 4L' in r
+    j = (ROOT / "tools/first_seven_behaviour_J.jl").read_text()
+    rpanel = r[r.index("d <- expand.grid("):r.index("\nf <- value ~")]
+    jpanel = j[j.index("function panel()"):j.index("\nformula =")]
+    rcode = rpanel + '\ncat(paste(paste(d$trait, d$isdm_source, as.character(d$cell_id), sprintf("%.8f", d$value), sprintf("%.8f", d$log_support), sep="\\t"), collapse="\\n"), "\\n", sep="")'
+    jcode = 'using Printf\n' + jpanel + '\nd=panel(); for i in eachindex(d.value); println(join((d.trait[i], d.isdm_source[i], d.unit[i], @sprintf("%.8f", d.value[i]), @sprintf("%.8f", d.log_support[i])), Char(9))); end'
+    env = os.environ.copy(); env.update(OPENBLAS_NUM_THREADS="1", OMP_NUM_THREADS="1", JULIA_NUM_THREADS="4")
+    rrows = subprocess.check_output(["Rscript", "--vanilla", "-e", rcode], text=True, env=env).splitlines()
+    jrows = subprocess.check_output([str(Path.home() / ".juliaup/bin/julia"), "--startup-file=no", "-e", jcode], text=True, env=env).splitlines()
+    cells = [(t, source, unit) for t in ("a", "b") for source in ("count", "detect") for unit in ("u1", "u2")]
+    expected = ["\t".join((t, source, unit, f"{1+i%4 if source == 'count' else i%2:.8f}", f"{0.05+(i-1)*0.05:.8f}")) for i,(t,source,unit) in enumerate(cells, 1)]
+    assert rrows == jrows == expected
+    # These controls would reject the original trait/source-confounded panel.
+    assert len({tuple(row.split("\t")[:3]) for row in rrows}) == 8
 
 
 @test
