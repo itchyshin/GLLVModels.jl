@@ -90,7 +90,7 @@ TIER_TEXT = {
 }
 COUNT_KEYS = ("numeric_pass", "numeric_fail", "numeric_held_batch_verifier_failed", "numeric_non_discriminating",
               "needs_surface_r_side_measured", "measured_held_batch_verifier_failed", "measured_fail",
-              "not_measured")
+              "not_measured", "behavioural")
 LEGACY_NOTE = ("ISDM-LEGACY replays R's legacy two-source route (family_var = \"isdm_family\", fixed names gbif / "
                "survey_pa). Packet 1b item 2 (signed 2026-09-27, vault decision D-296) records it as an R-only "
                "backward-compatibility disposition that GLLVModels will not twin. That disposition is not written "
@@ -328,6 +328,23 @@ def foreign_rows(cm):
     return [r for r in cm["rows"] if "clause" in r]
 
 
+FIRST_SEVEN_ISDM = frozenset("isdm/" + name for name in (
+    "ISDM-COUNT", "ISDM-EXTRA-SOURCE", "ISDM-MISSING-IN-TRAIT",
+    "ISDM-MISSING-SOURCE", "ISDM-WRAPPER-LAW"))
+
+
+def rederive_map():
+    """Regenerate rows from retained receipts without overwriting measured evidence."""
+    cm = load(ROOT / CASEMAP_REL)
+    tracked = tracked_receipts()
+    receipts = {cid: receipt_info(path, rec) for cid, (path, rec) in tracked.items()}
+    mine = own_rows(cm)
+    rows, counts = build_rows([r["source_id"] for r in mine], receipts, mine)
+    cm.update(rows=rows + foreign_rows(cm), counts=counts, scope=SCOPE, note=NOTE)
+    write_json(ROOT / CASEMAP_REL, cm)
+    print("CORE070_ISDM_MAP_REDERIVED", json.dumps(counts))
+
+
 def build_rows(in_scope, receipts, committed_rows=None):
     committed_by_id = {r["source_id"]: r for r in (committed_rows or [])}
     p0 = {r["source_id"]: r for r in load(P0_CASEMAP)["rows"]}
@@ -371,6 +388,9 @@ def build_rows(in_scope, receipts, committed_rows=None):
         if notes and sid not in SIGNED_DISPOSITIONS:
             row["note"] = " ".join(dict.fromkeys(notes))
         apply_signed_disposition(row)
+        if sid in FIRST_SEVEN_ISDM:
+            import core070_behaviour_receipts as B
+            B.overlay_row(row, counts)
         out_rows.append(row)
     return out_rows, counts
 
@@ -468,17 +488,14 @@ def check():
 # ---------------------------------------------------------------------------
 # write
 # ---------------------------------------------------------------------------
-SCOPE = ("isdm family: the 20 required rows the P1 carry scan lists as DANGLING, all paid by the wave1 isdm "
+SCOPE = ("isdm family: the 20 required rows the P1 carry scan lists as DANGLING, initially measured by the wave1 isdm "
          "admission batch (R admission-predicate replay against the pinned P1 source; no fit, no Julia side). The 17 "
          "rejected isdm rows and the two NOT_BOUND_AT_P0 namespace exports (isdm_source, isdm_sources) are out of "
          "scope.")
-NOTE = ("Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with "
-        "PARITY_CASEMAP pointing at this file. Classification and disposition are carried from "
-        "docs/dev-log/core070/required-source-case-map.json unchanged, except the four signed dispositions of "
-        "SIGNED_DISPOSITIONS (maintainer ruling 2026-10-05, D-319, item N6; no agent signs). The R side of "
-        "every isdm row is a boolean predicate replay with no fit number and there is no Julia side at the run "
-        "commit, so every row cites evidence.non_binding_receipts and is free. Draft PR #546's P1 iSDM twins are "
-        "not used here; mapping them onto these rows is a proposal for the maintainer (PR body).")
+NOTE = ("Classification and admission remain unchanged except the existing maintainer-signed dispositions. "
+        "The wave1 admission replay remains non-binding by itself. Five approved first-seven rows also cite "
+        "raw-backed paired public-door behaviour receipts at P1; the canonical behavioural predicate determines "
+        "whether these bind. Other rows retain their existing evidence and dispositions.")
 
 
 def main():
@@ -489,7 +506,12 @@ def main():
                     help="write receipts from a checkout with modified tracked files (recorded, not hidden)")
     ap.add_argument("--check", action="store_true",
                     help="verify the tracked receipts against the files they read; write nothing")
+    ap.add_argument("--rederive-map", action="store_true",
+                    help="regenerate only the case map from retained receipts")
     args = ap.parse_args()
+    if args.rederive_map:
+        rederive_map()
+        return
     if args.check:
         check()
         return
