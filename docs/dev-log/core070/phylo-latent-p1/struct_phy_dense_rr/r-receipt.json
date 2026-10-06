@@ -9,7 +9,7 @@
   "dll_sha256": "cba0f54d5492f0c6d0c5474c19281e3b58d5e2b0709e536684619558aaf55b8d",
   "data_file_sha256": "9a4c2e1f87a3fbb519400fff8a99fdfb6d66b249d473b0e25833b93b78e7e13c",
   "data_sha256": "6e1d3d30ebd3a1c40d0513cd09b8a854ac7fe3afffaf6bb2c7f2b037284a5995",
-  "julia_receipt_sha256": "700f14677d5498d832d900ea7939d8ed023c90948f1603891029da18401cd288",
+  "julia_receipt_sha256": "a1effb82b3d6120890c76f2b561720175be8113b1095a712bdcc4055ed032d4d",
   "route": "vcv",
   "formula": "value ~ 0 + trait + phylo_latent(species, d = K, vcv = C)",
   "call_arguments": "trait = 'trait', unit = 'species', cluster = 'species', family = gaussian(), REML = FALSE, nlminb rel.tol = 1e-12",
@@ -56,5 +56,6 @@
   "elapsed_seconds": 0.53500000000000014,
   "warnings": [],
   "session_info": "R version 4.6.0 (2026-04-24)\nPlatform: aarch64-apple-darwin23\nRunning under: macOS Tahoe 26.7\n\nMatrix products: default\nBLAS:   /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libBLAS.dylib \nLAPACK: /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.1\n\nlocale:\n[1] en_AU/en_AU/en_AU/C/en_AU/en_AU\n\ntime zone: America/Edmonton\ntzcode source: internal\n\nattached base packages:\n[1] stats     graphics  grDevices utils     datasets  methods   base     \n\nother attached packages:\n[1] gllvmTMB_0.7.1\n\nloaded via a namespace (and not attached):\n [1] compiler_4.6.0   Matrix_1.7-5     assertthat_0.2.1 generics_0.1.4  \n [5] cli_3.6.6        tools_4.6.0      parallel_4.6.0   TMB_1.9.21      \n [9] Rcpp_1.1.1-1.1   nlme_3.1-169     ape_5.8-1        grid_4.6.0      \n[13] digest_0.6.39    jsonlite_2.0.0   rlang_1.2.0      lattice_0.22-9  ",
-  "qualified": false
+  "maintainer_promotion": {"signed_by": "Shinichi Nakagawa", "signed_on": "2026-10-05", "ruling": "D-300 answer 9 (dated maintainer block), signed yes under vault D-319 on 2026-10-05", "block": "docs/dev-log/core070/phylo-latent-p1/README.md, section 'Maintainer promotion (D-300 answer 9)'", "a15_stationarity_gap": "recorded and unchanged; the promotion is despite it (D-319)"},
+  "qualified": true
 }

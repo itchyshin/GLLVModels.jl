@@ -24,8 +24,9 @@ that run_R.R calls deparse identically to their P1 source (internal gllvmTMB fun
 deparse-checked: they are trusted by the recorded version 0.7.1, the library path and the sha256 of the P1 source
 files). A C4 row also needs the engine = "julia" bridge route and the plan's eight acceptance classes to have been run
 (plan section 1.3); neither was, so no C4 row binds yet. The phylo row (COV-PHYLO-LATENT-RSZ) takes its R side from the
-tracked PR #547 receipt, which records qualified = false until the maintainer signs the dated promotion block (D-300
-answer 9); the row therefore does not bind, and no agent may sign that block. C5 rows follow their own rule (see RULE_C5).
+tracked PR #547 receipt, which binds only once it records qualified = true under the maintainer's dated promotion block
+(D-300 answer 9). The maintainer signed that block on 2026-10-05 (vault D-319); it is recorded in
+docs/dev-log/core070/phylo-latent-p1/README.md by tools/phylo_latent/promote_p1.py. No agent signs it. C5 rows follow their own rule (see RULE_C5).
 A row that meets the whole rule binds (evidence_tier "numeric", evidence.receipt). Otherwise the receipt is cited as
 non-binding with the reason and the row is left unbound; no tolerance is widened and nothing is re-run to get a pass.
 A row whose numbers are all inside tolerance and whose only failing leg is a required step that was not run or not
@@ -344,8 +345,8 @@ def build_phylo(raw):
     legs["Julia_converged_true"] = jr.get("converged") is True
     legs["same_data_sha256"] = rr.get("data_file_sha256") == jr.get("data_file_sha256") and bool(rr.get("data_file_sha256"))
     legs["R_version_0_7_1_from_P1_library"] = rr.get("package_version") == "0.7.1" and rr.get("source_pin") == P1
-    # The R side is the PR #547 receipt, which records qualified = false until the maintainer signs the dated promotion
-    # block (D-300 answer 9; phylo-latent-p1/README.md). No agent signs it, so this leg is false and the row never binds on it.
+    # The R side is the PR #547 receipt. This leg reads its qualified flag, which is true only under the maintainer's dated
+    # promotion block (D-300 answer 9; signed 2026-10-05, D-319; phylo-latent-p1/README.md). No agent signs it.
     legs[QUAL_LEG] = rr.get("qualified") is True
     legs["every_quantity_within_tolerance"] = all(c.ok for c in cases)
     return dict(sid=sid, cell="phylo", clause="C3", cases=cases, legs=legs, R=rr, J=jr, raw_files=[("r-receipt (tracked, PR #547)", PHY / "cov_phylo_latent_rsz/r-receipt.json"), ("julia fit on current main", p)])
@@ -390,7 +391,7 @@ RULE_C3 = ("both engines converged (R convergence 0 with a positive-definite Hes
 RULE_C4 = RULE_C3 + ("; and the engine = \"julia\" bridge route and the plan's eight acceptance classes were run (plan section 1.3), which this campaign did not do")
 RULE_PHYLO = ("R side taken from the tracked PR #547 receipt (R was not re-run, so there is no deparse check): R convergence 0 with a positive-definite Hessian, "
               "Julia converged true on a fresh fit, the same data bytes, R recorded as gllvmTMB 0.7.1 at the P1 pin, every listed quantity within its tolerance, "
-              "and the #547 R receipt promoted (qualified true) by the maintainer's own dated signature (D-300 answer 9), which is not signed")
+              "and the #547 R receipt promoted (qualified true) by the maintainer's own dated signature (D-300 answer 9)")
 RULE_C5 = ("the rule applied to the four grouping rows, taken from the merged PR #593 receipts, which record no R Hessian leg, so none is claimed: "
            "name parity PASS with the misspelt-keyword negative control rejected by both engines; the #593 receipt's own verdict PASS; "
            "R convergence 0 and Julia converged true in the paired fit; the paired logLik within 1e-6; and a replay on current main that verifies "
@@ -511,15 +512,21 @@ def process(raw, out_root, apply, quiet=False):
                                  data_file_sha256=rr["data_file_sha256"]),
                 what_this_is="R values are the tracked P1 R receipt of PR #547 (fitted once at P1 and kept). The Julia fit is NEW: fit_phylo_latent_gllvm on the same literal fixture at the commit above. "
                              "The #547 Julia receipt recorded converged = false (gradient stall); current main converges, and this receipt uses the current fit.",
-                r_side_qualification=("NOT BINDING, on purpose. The R receipt (docs/dev-log/core070/phylo-latent-p1/cov_phylo_latent_rsz/r-receipt.json) records qualified = false, and "
-                                      "docs/dev-log/core070/phylo-latent-p1/README.md says every receipt stays unqualified until the maintainer signs the dated promotion block (D-300 answer 9). "
-                                      "The measurement is kept as a non-binding receipt: both numbers are inside tolerance, but the row binds only after the maintainer signs that block. No agent may sign it."),
+                r_side_qualification=(("QUALIFIED. The R receipt (docs/dev-log/core070/phylo-latent-p1/cov_phylo_latent_rsz/r-receipt.json) records qualified = true under the maintainer's "
+                                       f"dated promotion block (D-300 answer 9), signed by {rr['maintainer_promotion']['signed_by']} on {rr['maintainer_promotion']['signed_on']} (vault D-319) and kept in "
+                                       "docs/dev-log/core070/phylo-latent-p1/README.md. The promotion is despite the A15 stationarity gap that README records; an agent recorded the signature, no agent signed it.")
+                                      if rr.get("qualified") is True else
+                                      ("NOT BINDING, on purpose. The R receipt (docs/dev-log/core070/phylo-latent-p1/cov_phylo_latent_rsz/r-receipt.json) records qualified = false, and "
+                                       "docs/dev-log/core070/phylo-latent-p1/README.md says every receipt stays unqualified until the maintainer signs the dated promotion block (D-300 answer 9). "
+                                       "The measurement is kept as a non-binding receipt: both numbers are inside tolerance, but the row binds only after the maintainer signs that block. No agent may sign it.")),
                 julia_script="tools/phylo_latent/compare_phylo_latent_p1.jl, command: julia --project=. tools/phylo_latent/compare_phylo_latent_p1.jl fit cov_phylo_latent_rsz docs/dev-log/core070/phylo-latent-p1/a15-fixture.json <out>/phylo_J.json (output committed as raw/phylo_J.json.gz)",
                 cond_H_statement=(f"R cond(H) {rr['hessian']['condition_number']:.6g}, computed as {R_COND_METHOD_PHYLO}. "
                                   f"Julia cond(H) {jr['hessian_condition_number']:.6g}, computed as {J_COND_METHOD_PHYLO}. "
                                   "The two are different estimators in different parameter bases: recorded, never compared like for like."),
                 reasons=reasons(ph["legs"], ph["cases"]),
-                not_covered=NOT_COVERED_COMMON[:1] + ["R was not re-run: its values are the PR #547 receipt's, which is unqualified until the maintainer signs the D-300 answer 9 promotion block.", "cond(H) (R 83030, Julia 82761 here) is recorded, not compared."])
+                not_covered=NOT_COVERED_COMMON[:1] + [("R was not re-run: its values are the PR #547 receipt's, promoted by the maintainer's D-300 answer 9 block (2026-10-05)." if rr.get("qualified") is True
+                                                       else "R was not re-run: its values are the PR #547 receipt's, which is unqualified until the maintainer signs the D-300 answer 9 promotion block."),
+                                                      "cond(H) (R 83030, Julia 82761 here) is recorded, not compared."])
             rc = build_receipt(sid, cell, clause, ph["cases"], ph["legs"], eng_r, eng_j, extra, dict(note=str(jgz.relative_to(out_root)), hashes=hashes), binds)
             results.append((sid, fam, clause, rc, binds, rdir / f"{slug(sid)}.json"))
             continue

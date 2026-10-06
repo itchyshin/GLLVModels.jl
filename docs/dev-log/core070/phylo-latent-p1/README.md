@@ -6,8 +6,33 @@ worktree at P1 (R 4.6.0, TMB 1.9.21, ape 5.8.1, Matrix 1.7.5); DLL SHA-256
 `cba0f54d5492f0c6d0c5474c19281e3b58d5e2b0709e536684619558aaf55b8d`. The R
 package source was never edited. Julia side: `fit_phylo_latent_gllvm` on Julia
 1.10.12 (reference platform), from the working tree on `97e11be04` before the
-first commit of this branch. `qualified = false` in every receipt until the
-maintainer signs the dated promotion block (D-300 answer 9).
+first commit of this branch. Every receipt was written with `qualified = false`;
+the maintainer signed the dated promotion block (D-300 answer 9) on 2026-10-05,
+recorded in the next section, and all six receipts now read `qualified = true`.
+
+## Maintainer promotion (D-300 answer 9)
+
+- **Signed:** 2026-10-05, by Shinichi Nakagawa (the maintainer). Signature
+  source: vault decision D-319 and `LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md`
+  in the true-parity lane kit. The maintainer's words, verbatim: "D: [yes]."
+  D-319 records the meaning: the phylo-latent receipts of PR #547 promote
+  despite the recorded A15 stationarity gap.
+- **Promoted:** A14 (`STRUCT-PHY-TREE-RR`, `STRUCT-PHY-DENSE-RR`) and A15
+  (`COV-PHYLO-LATENT-RSZ`), all six R and Julia receipts below. A14's third
+  planned case, `STRUCT-PHY-TREE-PROPTO` (`phylo_scalar`), stays fenced and
+  UNPAID (D-300 answer 10).
+- **Not changed:** every recorded number, including the A15 stationarity gap
+  in the "A15 results" section below (Julia's stored receipt keeps
+  `converged = false`, `gradient_not_converged`). No tolerance was widened and
+  nothing was re-run.
+- **How it is recorded:** `tools/phylo_latent/promote_p1.py --apply` replaced
+  each receipt's `"qualified": false` line with a `maintainer_promotion` object
+  (signer, date, ruling, this section) and `"qualified": true`, and reset each
+  R receipt's `julia_receipt_sha256` to the promoted Julia receipt's hash;
+  `--check` verifies the result. An agent recorded the signature; no agent
+  signed it. D-300 answer 9 named the receipt PR body as the place for the
+  block; PR #547 had already merged, so the block is kept here, beside the
+  receipts.
 
 Generating scripts: `tools/phylo_latent/r_reference_p1.R` (SHA-256
 `b6acbf5e014a5eae39ba47d164def4c1c8461ccaf59ca8ec5ce8cfda3b34ff7f`) and
@@ -24,13 +49,13 @@ the Julia side.
 | File | SHA-256 |
 |---|---|
 | `a14-fixture.json` | `9a4c2e1f87a3fbb519400fff8a99fdfb6d66b249d473b0e25833b93b78e7e13c` |
-| `struct_phy_tree_rr/r-receipt.json` | `c550ddbab35b4ba952dbda470f7e879898fb43fd665f5a7c144b10ec2c2c91f4` |
-| `struct_phy_tree_rr/julia-receipt.json` | `7da419e71edc2268395e84a9687ded92fa466902691374d68e3c53b0f430becd` |
-| `struct_phy_dense_rr/r-receipt.json` | `b7d728eb30e27c207ba05d4867730052fc75ebe82db1cac15cc3e738d03fc3d5` |
-| `struct_phy_dense_rr/julia-receipt.json` | `700f14677d5498d832d900ea7939d8ed023c90948f1603891029da18401cd288` |
+| `struct_phy_tree_rr/r-receipt.json` | `1e98555bbf7ff610778d92e50741f32d6b60b25dc8bda2986315fe20ee5ae239` |
+| `struct_phy_tree_rr/julia-receipt.json` | `3e59be3c26bb87774591593e6fac367f12b623a5cafaf4f37eac35a407de3b01` |
+| `struct_phy_dense_rr/r-receipt.json` | `01cffdff7d6841634b8d0d66e1aa9f4af85e487c148c6ea27d5e8f7482bd7b7e` |
+| `struct_phy_dense_rr/julia-receipt.json` | `a1effb82b3d6120890c76f2b561720175be8113b1095a712bdcc4055ed032d4d` |
 | `a15-fixture.json` | `f3bace851f60f337a8274859644135a84792b9e9ab35c07f757a7ade336706d4` |
-| `cov_phylo_latent_rsz/r-receipt.json` | `5121fbfeb20421149e9c535ea9220458d531f8ec0cfaa71c5b010a8597a7e40e` |
-| `cov_phylo_latent_rsz/julia-receipt.json` | `9840f0a17840e438f66c5df97b5325188f15d0e05789191a14b6188f04054bab` |
+| `cov_phylo_latent_rsz/r-receipt.json` | `b84eb446dd51bc08983e2bebdced361344824ae2c895266460b89074fa0cf2fb` |
+| `cov_phylo_latent_rsz/julia-receipt.json` | `84b6751a23f325af2c66177fbfd8e136b088a2366794be4447687517871a1c71` |
 
 ## A14 fixture
 

@@ -168,7 +168,7 @@ oracle = json_read(oracle_path)
 # (lognormal/truncated_poisson) — same-point identity checks keep 1e-6..1e-8
 # elsewhere. 1e-6 here was a miscalibration of a not-yet-accepted contract,
 # observed failing at delta 4.52e-6 with all semantic checks true.
-tol = Dict("loglik_delta" => 1e-4, "coef_delta" => 1e-4)
+tol = Dict("loglik_delta" => 1e-4, "coef_delta" => 1e-4, "LLt_delta" => 1e-4)
 cases = Dict{String, Any}()
 
 # ---------------------------------------------------------------------------
@@ -190,14 +190,24 @@ j_loglik_g = fit_g.logLik
 r_coef_g = Float64.(g["coef"])
 r_loglik_g = Float64(g["loglik"])
 
+# Loadings comparand (namespace export/gllvmTMB option (a), D-319): Lambda Lambda', which is
+# rotation and sign invariant, against R's latent-only unit-level Sigma; p x p, column-major.
+# Same harness tolerance family as the point estimates (1e-4).
+L_g = Matrix{Float64}(GLLVModels.getLoadings(fit_g; rotate = true))
+j_LLt_g = vec(L_g * L_g')
+r_LLt_g = Float64.(g["LLt"])
+
 coef_delta = length(j_coef_g) == length(r_coef_g) ? maximum(abs.(j_coef_g .- r_coef_g)) : Inf
 loglik_delta_g = abs(j_loglik_g - r_loglik_g)
+LLt_delta_g = length(j_LLt_g) == length(r_LLt_g) ? maximum(abs.(j_LLt_g .- r_LLt_g)) : Inf
 cases["CORE070-NAMESPACE2-GLLVMTMB-NATIVE-FIT"] = Dict(
-    "pass" => coef_delta <= tol["coef_delta"] && loglik_delta_g <= tol["loglik_delta"],
-    "coef_delta" => coef_delta, "loglik_delta" => loglik_delta_g,
-    # Raw values (additive, P1 re-measure): lets a receipt writer recompute both diffs.
+    "pass" => coef_delta <= tol["coef_delta"] && loglik_delta_g <= tol["loglik_delta"] &&
+              LLt_delta_g <= tol["LLt_delta"],
+    "coef_delta" => coef_delta, "loglik_delta" => loglik_delta_g, "LLt_delta" => LLt_delta_g,
+    # Raw values (additive, P1 re-measure): lets a receipt writer recompute every diff.
     "julia_coef" => collect(Float64, j_coef_g), "julia_loglik" => Float64(j_loglik_g),
     "r_coef" => r_coef_g, "r_loglik" => r_loglik_g,
+    "julia_LLt" => j_LLt_g, "r_LLt" => r_LLt_g,
 )
 
 # ---------------------------------------------------------------------------

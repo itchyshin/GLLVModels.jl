@@ -305,7 +305,7 @@
       "executable_case_ids": [
         "CORE070-COV-META-EXACT-FORMULA"
       ],
-      "disposition": null,
+      "disposition": "DISPOSITION-SIGNED",
       "evidence_tier": "r_only",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
@@ -318,6 +318,13 @@
         "case_verdicts": {
           "CORE070-COV-META-EXACT-FORMULA": "R_ONLY_PASS"
         }
+      },
+      "signed_by": "Shinichi Nakagawa",
+      "signed_on": "2026-10-05",
+      "signed_disposition": {
+        "ruling": "N3",
+        "text": "Ruling N3 (wave plan 2026-10-03, signed under D-319): known-V (meta-analytic) covariance is a documented gap at P1, to be revisited at P2. Julia has no known-V surface (no fitter or formula term takes a known sampling covariance V; wave plan section 3), so no R-vs-Julia number can exist for this row. Building it is 18 to 24 h and an API change that needs the maintainer's approval; it is not done here. The R-only formula-grammar receipt stays cited as non-binding context.",
+        "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer"
       }
     },
     {
@@ -328,7 +335,7 @@
       "executable_case_ids": [
         "CORE070-COV-META-LEGACY-ADAPTER"
       ],
-      "disposition": null,
+      "disposition": "DISPOSITION-SIGNED",
       "evidence_tier": "r_only",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
@@ -341,6 +348,13 @@
         "case_verdicts": {
           "CORE070-COV-META-LEGACY-ADAPTER": "R_ONLY_PASS"
         }
+      },
+      "signed_by": "Shinichi Nakagawa",
+      "signed_on": "2026-10-05",
+      "signed_disposition": {
+        "ruling": "N3",
+        "text": "Ruling N3 (wave plan 2026-10-03, signed under D-319): known-V (meta-analytic) covariance is a documented gap at P1, to be revisited at P2. Julia has no known-V surface (no fitter or formula term takes a known sampling covariance V; wave plan section 3), so no R-vs-Julia number can exist for this row. Building it is 18 to 24 h and an API change that needs the maintainer's approval; it is not done here. No Julia alias is added for R's deprecated spelling. The R-only adapter receipt stays cited as non-binding context.",
+        "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit; recorded by an agent, signed by the maintainer"
       }
     },
     {
@@ -615,16 +629,16 @@
         "CAMPAIGN-C3-COV-PHYLO-LATENT-RSZ-SIGMA-PHY"
       ],
       "disposition": null,
-      "evidence_tier": "partial_case_not_executed",
+      "evidence_tier": "numeric",
       "measured_against": "P1",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/covariance/campaign/COV-PHYLO-LATENT-RSZ.json"
         ],
-        "tier": "measured, does not bind. Every number is inside its tolerance, but a required leg is not signed: the R side is the tracked PR #547 receipt, which records qualified = false until the maintainer signs the dated promotion block (D-300 answer 9). No agent may sign it, so the receipt stays unqualified until then"
+        "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
       },
       "measured_result": {
-        "verdict": "NUMERIC_PASS_NOT_BINDING",
+        "verdict": "PASS",
         "max_abs_diff_by_case": {
           "CAMPAIGN-C3-COV-PHYLO-LATENT-RSZ-LOGLIK": 2.2646418074145913e-09,
           "CAMPAIGN-C3-COV-PHYLO-LATENT-RSZ-SIGMA-PHY": 4.352562274601013e-06

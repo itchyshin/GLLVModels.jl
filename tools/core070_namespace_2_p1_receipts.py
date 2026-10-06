@@ -19,7 +19,11 @@ harness's own coef_delta / loglik_delta.
 Degenerate-comparison gate: each comparison's `discriminating` flag comes from the shared rule
 mark_degenerate / DEGENERATE_ABS = 1e-10 in tools/core070_postfit_p1_receipts.py (imported, as
 tools/core070_data_p1_receipts.py does), never set by hand. The fixture's Y is row-centred, so
-every R trait intercept is ~1e-14 and that comparison is discriminating: false. The row tier
+every R trait intercept is ~1e-14 and cannot discriminate. Under option (a) of the maintainer's
+ruling on this row (signed 2026-10-05, vault D-319) the comparison block holds logLik and the
+loadings comparand Lambda Lambda' that the contract names (R: latent-only unit-level
+extract_Sigma; Julia: L L' of the fit), and the intercept entry is kept under `context` with its
+own discriminating flag, outside the comparison block. The row tier
 follows the siblings' rule (tools/core070_data_p1_receipts.py build_rows): a row binds as
 "numeric" only when its case passes, its batch verifier passes, and
 all(e.get("discriminating", True) for e in comparison); with any degenerate entry it is
@@ -62,6 +66,7 @@ HARNESS_TOL = 1e-4
 FILES = ["receipt.json", "r-oracle.json", "julia-results.json", "results.tsv",
          "diagnostics.log", "julia-stdout.log", "julia-stderr.log", "run-commit.json"]
 VERIFY_MARKER = "CORE070_NAMESPACE_2_BATCH_VERIFIED"
+LLT_Q = "Lambda Lambda' (latent covariance, 5 x 5, column-major)"
 
 
 def rel(p):
@@ -98,13 +103,16 @@ def case_receipt(verify_exit):
         raise ValueError("run was launched from a dirty checkout")
     r_coef, j_coef = case["r_coef"], case["julia_coef"]
     r_ll, j_ll = case["r_loglik"], case["julia_loglik"]
+    r_llt, j_llt = case["r_LLt"], case["julia_LLt"]
     coef_d = max_abs(r_coef, j_coef)
     ll_d = abs(r_ll - j_ll)
+    llt_d = max_abs(r_llt, j_llt)
     if abs(coef_d - case["coef_delta"]) > 1e-12 * max(1.0, coef_d) or \
-       abs(ll_d - case["loglik_delta"]) > 1e-9 * max(1.0, ll_d):
+       abs(ll_d - case["loglik_delta"]) > 1e-9 * max(1.0, ll_d) or \
+       abs(llt_d - case["LLt_delta"]) > 1e-12 * max(1.0, llt_d):
         raise ValueError("recomputed differences disagree with the harness figures")
     contract_case = next(c for c in contract["cases"] if c["case_id"] == CASE_ID)
-    rule = ("harness tolerance tol[\"loglik_delta\"] = tol[\"coef_delta\"] = 1e-4 in "
+    rule = ("harness tolerance tol[\"loglik_delta\"] = tol[\"coef_delta\"] = tol[\"LLt_delta\"] = 1e-4 in "
             "tools/core070_namespace_2_batch.jl (the contract's prose says \"<=1e-6\"; the harness "
             "asserts 1e-4); max |R - Julia| elementwise")
     return {
@@ -127,7 +135,9 @@ def case_receipt(verify_exit):
         "r_call": ("gllvmTMB(value ~ 0 + trait + latent(0 + trait | site, d = 2, unique = FALSE), "
                    "data = df_long_g, unit = \"site\", trait = \"trait\", family = gaussian(), "
                    "control = gllvmTMBcontrol(n_init = 1L, se = FALSE)); coef(fit), logLik(fit)"),
+        "r_call_loadings": "extract_Sigma(fit, level = \"unit\")$Sigma (latent only for unique = FALSE)",
         "julia_call": "fit_gaussian_gllvm(Y; K = 2, X = trait-indicator X); coef(fit), fit.logLik",
+        "julia_call_loadings": "L = getLoadings(fit; rotate = true); L * L'",
         "fixture": "gaussian_fixture: set.seed(42), p = 5 traits, n = 80 sites, K = 2, Y row-centred",
         "raw": [rel(BATCH / "julia-results.json"), rel(BATCH / "r-oracle.json"),
                 rel(BATCH / "receipt.json")],
@@ -161,21 +171,35 @@ def case_receipt(verify_exit):
                 }, [r_ll]),
                 mark_degenerate({
                     "case_id": CASE_ID,
-                    "quantity": "coef (trait intercepts)",
-                    "max_abs_diff": coef_d,
+                    "quantity": "Lambda Lambda' (latent covariance, 5 x 5, column-major)",
+                    "max_abs_diff": llt_d,
                     "tolerance": HARNESS_TOL,
                     "tolerance_rule": rule,
-                    "n_values": len(r_coef),
+                    "n_values": len(r_llt),
                     "diff_source": "recomputed from raw R and Julia values",
-                    "r_value": r_coef,
-                    "julia_value": j_coef,
-                    "discriminating_note": ("Y is row-centred in the fixture, so every R intercept is "
-                                            "~1e-14 (below 1e-10): this comparison cannot tell a right "
-                                            "implementation from a zero one. The logLik comparison "
-                                            "above is the discriminating check."),
-                }, r_coef),
+                    "r_value": r_llt,
+                    "julia_value": j_llt,
+                }, r_llt),
             ],
         },
+        "context": [
+            mark_degenerate({
+                "case_id": CASE_ID,
+                "quantity": "coef (trait intercepts)",
+                "max_abs_diff": coef_d,
+                "tolerance": HARNESS_TOL,
+                "tolerance_rule": rule,
+                "n_values": len(r_coef),
+                "diff_source": "recomputed from raw R and Julia values",
+                "r_value": r_coef,
+                "julia_value": j_coef,
+                "discriminating_note": ("Y is row-centred in the fixture, so every R intercept is "
+                                        "~1e-14 (below 1e-10): this comparison cannot tell a right "
+                                        "implementation from a zero one. Kept as context, outside the "
+                                        "comparison block (option (a), D-319); logLik and Lambda Lambda' "
+                                        "are the discriminating checks."),
+            }, r_coef),
+        ],
     }
 
 
@@ -202,8 +226,9 @@ def casemap_row(base, rec):
                 "family = gaussian()) on the batch's Gaussian fixture (p = 5, n = 80) against Julia "
                 "fit_gaussian_gllvm(Y; K = 2, X) on the same Y, at the P1 pin (gllvmTMB "
                 f"{rec['gllvmtmb_version']}): logLik |R - Julia| = {by_q['logLik']['max_abs_diff']:.3g} and "
-                f"trait intercepts max |R - Julia| = {by_q['coef (trait intercepts)']['max_abs_diff']:.3g}, "
-                f"both within the harness tolerance {HARNESS_TOL:g}.")
+                f"Lambda Lambda' max |R - Julia| = {by_q[LLT_Q]['max_abs_diff']:.3g}, "
+                f"both within the harness tolerance {HARNESS_TOL:g}. The trait intercepts (~1e-14 on the "
+                "row-centred fixture, so not discriminating) are kept as context, outside the comparison block.")
     row = dict(base)
     row["executable_case_ids"] = [CASE_ID]
     row["measured_against"] = P1_SHA
@@ -234,6 +259,10 @@ def casemap_row(base, rec):
     else:
         row["evidence_tier"] = "numeric"
         row["evidence"] = {**common_ev, "receipt": [path],
+                           "ruling": ("namespace export/gllvmTMB option (a), rulings page 2026-10-04, signed by "
+                                      "the maintainer under vault D-319 on 2026-10-05: the loadings comparand "
+                                      "Lambda Lambda' is measured and the degenerate intercept entry is context. "
+                                      "The shared discriminating rule is unchanged."),
                            "tier": ("numeric: every executable case receipt carries an R-vs-Julia comparison "
                                     "block pinned to P1, within the harness tolerance")}
         row["measured_result"] = {"case_verdicts": verdicts, "batch_verifier": batch_ok, "row_verdict": "PASS"}

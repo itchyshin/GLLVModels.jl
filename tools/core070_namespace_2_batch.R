@@ -179,7 +179,11 @@ fit_g <- gllvmTMB(
 stopifnot("gllvmTMB_multi" %in% class(fit_g))
 oracle_g <- list(
   coef = as.numeric(coef(fit_g)),
-  loglik = as.numeric(logLik(fit_g))
+  loglik = as.numeric(logLik(fit_g)),
+  # Loadings comparand (namespace export/gllvmTMB option (a), signed 2026-10-05 under D-319): the
+  # contract names loadings as a comparand. Lambda Lambda' is rotation and sign invariant; with
+  # unique = FALSE the unit-level Sigma is the latent part only. p x p, column-major.
+  LLt = as.numeric(extract_Sigma(fit_g, level = "unit")$Sigma)
 )
 
 # --- gllvmTMB_wide consistency (pure R-internal, no Julia involved) --------
@@ -287,7 +291,7 @@ jsonlite::write_json(
   list(
     schema = "core070-namespace-2-r-oracle/v1",
     gaussian = list(p = p, n = n, K = K, y = as.numeric(Y_g),
-                     coef = oracle_g$coef, loglik = oracle_g$loglik),
+                     coef = oracle_g$coef, loglik = oracle_g$loglik, LLt = oracle_g$LLt),
     gllvmtmb_wide = list(loglik_wide = loglik_wide, loglik_long = oracle_g$loglik,
                           delta = wide_delta),
     nb = list(p = p_nb, n = n_nb, K = K_nb, y = as.numeric(Y_nb),
