@@ -318,7 +318,18 @@ TWIN_FILES = {  # source_id -> twin receipt stem
     "postfit/POSTFIT-SURFACE-tidy.gllvmTMB_multi": "tidy",
     "postfit-policy/POST-COEF-NAMED": "coef",
     "postfit-policy/POST-DEVIANCE": "deviance",
+    # Monte-Carlo moment twins (maintainer ruling 2026-10-05, D-319, item N4): tools/true_parity_mc_simulate_receipt.jl.
+    "postfit/POSTFIT-SURFACE-simulate_unit_trait": "simulate_unit_trait",
+    "postfit-policy/POST-SIMULATE-DEFAULT": "simulate_default",
 }
+MC_TWIN_TIER = ("numeric (Monte-Carlo moments): R replicate means and standard deviations of each moment copied from "
+                "test/fixtures/mc_simulate_p1.toml, Julia replicate moments recomputed by "
+                "tools/true_parity_mc_simulate_receipt.jl with the helpers of test/test_mc_simulate_p1.jl and independent "
+                "random streams; each moment within the Monte-Carlo tolerance rule of maintainer ruling 2026-10-05 "
+                "(D-319), item N4, stated before any run (z * sqrt(s_R^2/B_k + s_J^2/B_k), Bonferroni z at familywise "
+                "alpha 0.01), and a discrimination control fails the same rule. The batch case this row carried is "
+                "superseded; its receipt is kept under non_binding_receipts and its ids under batch_case_ids")
+MC_TWIN_ROWS = {"postfit/POSTFIT-SURFACE-simulate_unit_trait", "postfit-policy/POST-SIMULATE-DEFAULT"}
 
 
 # Exact-integer postfit-policy cases (ruling 1): case id -> (r-oracle.json key, quantity).
@@ -586,7 +597,7 @@ def twin_overlay(row):
     row["evidence_tier"] = "numeric"
     row["measured_against"] = P1_SHA
     row["evidence"] = {"receipt": [rel], "non_binding_receipts": ev.get("non_binding_receipts", []),
-                       "batch_case_ids": prior_ids, "tier": TWIN_TIER}
+                       "batch_case_ids": prior_ids, "tier": MC_TWIN_TIER if sid in MC_TWIN_ROWS else TWIN_TIER}
     row["measured_result"] = {**(row.get("measured_result") or {}), "twin_case_ids": case_ids,
                               "twin_verdict": rec["verdict"]}
     return row

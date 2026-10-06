@@ -521,6 +521,8 @@ println(_SHARD === nothing ?
     _shard_include("test_namespace_numeric_p1_twin_b.jl")
     # P1 numeric twins of three gllvmTMB postfit rows (tidy fixed effects, coef, deviance) on an uncentred fit.
     _shard_include("test_postfit_twins_p1.jl")
+    # P1 Monte-Carlo moment twins (D-319 item N4) of simulate_unit_trait and the simulate() default.
+    _shard_include("test_mc_simulate_p1.jl")
     # P1 numeric twins of gllvmTMB extract_proportions (one-tier and two-level) and extract_residual_split (two-level Gaussian).
     _shard_include("test_variance_decomp_p1.jl")
     # P1 numeric twin of the gllvmTMB namespace row animal_scalar (one shared animal variance on a pedigree A, Gaussian).
