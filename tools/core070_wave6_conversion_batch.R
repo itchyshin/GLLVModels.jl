@@ -294,6 +294,14 @@ for (cs in contract$cases) {
       stopifnot(!is.null(r_nobs), length(r_nobs) == 1L)
       list(ok = TRUE, value = list(nobs = r_nobs, expected = p * n, matches_own_formula = isTRUE(all.equal(r_nobs, p * n))), error = "")
     }, error = function(e) list(ok = FALSE, value = NULL, error = conditionMessage(e)))
+  } else if (identical(cs$kind, "integer_equality")) {
+    # P1 nobs case (maintainer ruling 2026-10-05, D-319, item N2): R's integer is recorded as is;
+    # the Julia child compares it for exact equality.
+    v <- tryCatch({
+      r_nobs <- as.numeric(nobs(fit_g))
+      stopifnot(length(r_nobs) == 1L, is.finite(r_nobs), r_nobs == round(r_nobs))
+      list(ok = TRUE, value = r_nobs, error = "")
+    }, error = function(e) list(ok = FALSE, value = NULL, error = conditionMessage(e)))
   } else {
     v <- tryCatch({
       val <- r_postfit_value(cs$quantity)
