@@ -38,4 +38,16 @@ assert.match(provenanceProblem({...valid,verdict:'NOT_EXECUTED'},read),/bridge b
 assert.match(provenanceProblem({...valid,comparison:{}},read),/bridge boundary/);
 assert.match(provenanceProblem({...valid,oracle_source_receipt:undefined},read),/oracle_source/);
 assert.match(provenanceProblem(valid,p=>p==='build' ? JSON.stringify({reference_commit:'P0'}) : read(p)),/oracle_build_receipt is not P1/);
+// Nested behavioural raw provenance is validated without overwriting historical batch metadata.
+{
+  const raw = 'measured public door';
+  const hash = createHash('sha256').update(raw).digest('hex');
+  const rec = {pin: 'P1', reference_commit: P1, behaviour: {read_from: {'raw.tsv': hash}},
+    oracle_build_receipt: 'build.json', oracle_source_receipt: 'source.json'};
+  const read = p => p === 'raw.tsv' ? raw : JSON.stringify({reference_commit: P1});
+  assert.equal(provenanceProblem(rec, read), null);
+  assert.match(provenanceProblem(rec, p => p === 'raw.tsv' ? 'changed' : read(p)), /raw hash mismatch/);
+  const missing = structuredClone(rec); delete missing.behaviour.read_from;
+  assert.match(provenanceProblem(missing, read), /missing raw hashes/);
+}
 console.log('P1_CHECKPOINT_CONTROLS_PASS: exact rows, unchanged contracts, P1 provenance, raw hashes and bridge context');

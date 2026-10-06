@@ -48,8 +48,12 @@ export function compareCheckpoint(base, candidate) {
 }
 export function provenanceProblem(rec, read) {
   if (rec.pin !== 'P1' || rec.reference_commit !== P1) return 'missing P1 receipt provenance';
-  if (!rec.read_from || typeof rec.read_from !== 'object' || !Object.keys(rec.read_from).length) return 'missing raw hashes';
-  for (const [path, sha] of Object.entries(rec.read_from)) {
+  // Legacy case receipts preserve the original run fields. New paired public-door
+  // evidence owns its independent byte hashes in behaviour.read_from. Validate
+  // every populated hash block without relabelling the historical batch.
+  const blocks = [rec.read_from, rec.behaviour?.read_from].filter(x => x && typeof x === 'object');
+  if (!blocks.some(x => Object.keys(x).length)) return 'missing raw hashes';
+  for (const [path, sha] of blocks.flatMap(x => Object.entries(x))) {
     if (!/^[0-9a-f]{64}$/.test(sha) || digest(read(path)) !== sha) return `raw hash mismatch: ${path}`;
   }
   for (const key of ['oracle_build_receipt', 'oracle_source_receipt']) {
