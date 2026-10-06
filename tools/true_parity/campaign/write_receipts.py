@@ -22,15 +22,27 @@ with a positive-definite Hessian; Julia `converged` true; iSDM also every cell c
 listed quantity is within its tolerance AND both engines read the same data bytes AND the ten named gllvmTMB entry points
 that run_R.R calls deparse identically to their P1 source (internal gllvmTMB functions and the compiled library are not
 deparse-checked: they are trusted by the recorded version 0.7.1, the library path and the sha256 of the P1 source
-files). A C4 row also needs the engine = "julia" bridge route and the plan's eight acceptance classes to have been run
-(plan section 1.3); neither was, so no C4 row binds yet. The phylo row (COV-PHYLO-LATENT-RSZ) takes its R side from the
+files). A C4 row follows the same rule: maintainer ruling 2026-10-05 (vault D-319) changed the C4 clause text to accept
+direct-engine runs, so the engine = "julia" bridge leg the plan (section 1.3) asked for is no longer part of the rule
+(that leg tested R's adapter, not the model). The phylo row (COV-PHYLO-LATENT-RSZ) takes its R side from the
 tracked PR #547 receipt, which binds only once it records qualified = true under the maintainer's dated promotion block
 (D-300 answer 9). The maintainer signed that block on 2026-10-05 (vault D-319); it is recorded in
 docs/dev-log/core070/phylo-latent-p1/README.md by tools/phylo_latent/promote_p1.py. No agent signs it. C5 rows follow their own rule (see RULE_C5).
 A row that meets the whole rule binds (evidence_tier "numeric", evidence.receipt). Otherwise the receipt is cited as
 non-binding with the reason and the row is left unbound; no tolerance is widened and nothing is re-run to get a pass.
-A row whose numbers are all inside tolerance and whose only failing leg is a required step that was not run or not
-signed (the C4 bridge leg, the phylo qualification) reads partial_case_not_executed, never numeric_fail.
+A row whose numbers are all inside tolerance and whose only failing leg is a required step that was not signed (the
+phylo qualification) reads partial_case_not_executed, never numeric_fail.
+
+Convergence parity (maintainer ruling 2026-10-05, D-319, N9; applied only to receipts that carry the block, as the
+maintainer chose). When both raw outputs record the gradient max-abs of their own objective at the returned point
+(R `max_abs_gradient`, Julia `max_abs_gradient`), the receipt gets a top-level `convergence_parity` block
+({gradient_bound 1e-5, compared_point "returned", engines.R / engines.julia max_abs_gradient}) and Julia's gradient in
+its engine block; the checker then binds the row only if both are <= 1e-5. No committed raw Julia output records that
+field yet, so no receipt carries the block (the polished harness of PR #715 is not merged).
+
+Signed C4 dispositions. RD-PHYLO-DISPOSITION, RD-TEMPORAL-DISPOSITION and RD-ISDM-DISPOSITION are written as
+DISPOSITION-SIGNED under item F of the rulings page, signed by the maintainer on 2026-10-05 (vault D-319); an agent
+records the signature, no agent signs it.
 
 A relative tolerance is recorded as a discrepancy statistic against zero (r_value = 0, julia_value =
 |J - R| / |R| per element), because the checker compares absolute differences; the r_value is therefore NOT an R
@@ -269,7 +281,22 @@ def engine_blocks(cell, R, J):
     if "cells_converged" in J: j["cells_converged"] = J["cells_converged"]
     if "dispersion_boundary" in J: j["dispersion_boundary"] = J["dispersion_boundary"]
     if "gradient_norm" in J: j["gradient_norm"] = J["gradient_norm"]
+    if fin(J.get("max_abs_gradient")): j["max_abs_gradient"] = J["max_abs_gradient"]
     return r, j
+
+
+CONVERGENCE_GRADIENT_BOUND = 1e-5
+
+
+def convergence_parity(R, J):
+    """The N9 block (maintainer ruling 2026-10-05, D-319), when both raw outputs record their own gradient max-abs at the
+    returned point; None otherwise (the receipt then carries no block and is judged as before)."""
+    rg, jg = R.get("max_abs_gradient"), J.get("max_abs_gradient")
+    if not (fin(rg) and fin(jg)):
+        return None
+    return OrderedDict(gradient_bound=CONVERGENCE_GRADIENT_BOUND, compared_point="returned",
+                       engines=OrderedDict(R=OrderedDict(max_abs_gradient=rg), julia=OrderedDict(max_abs_gradient=jg)),
+                       ruling="maintainer ruling 2026-10-05 (vault D-319), N9")
 
 
 def pass_rule(R, J, cases):
@@ -285,15 +312,13 @@ def pass_rule(R, J, cases):
     return legs
 
 
-BRIDGE_LEG = "engine_julia_bridge_route_and_eight_acceptance_classes_run"
 QUAL_LEG = "R_side_receipt_qualified_by_maintainer"
-# Legs that say "a required step was not run or not signed", as opposed to "a number or a convergence flag failed".
+# Legs that say "a required step was not signed", as opposed to "a number or a convergence flag failed".
 # A row whose only failing legs are these, with every number inside tolerance, is partial_case_not_executed (PARTIAL),
-# never numeric_fail (FAIL): nothing disagrees, a required step is missing.
-OPEN_LEGS = (BRIDGE_LEG, QUAL_LEG)
+# never numeric_fail (FAIL): nothing disagrees, a required step is missing. (The C4 bridge leg was removed when the
+# maintainer changed the C4 text to accept direct-engine runs, 2026-10-05, D-319.)
+OPEN_LEGS = (QUAL_LEG,)
 LEG_TEXT = {
-    BRIDGE_LEG: ('a required leg was not run: the engine = "julia" bridge route and the plan\'s eight acceptance classes '
-                 '(the C4 clause needs them, see GATES.md and plan section 1.3). The direct-engine comparison does not say the bridge workflow passes'),
     QUAL_LEG: ("a required leg is not signed: the R side is the tracked PR #547 receipt, which records qualified = false "
                "until the maintainer signs the dated promotion block (D-300 answer 9). No agent may sign it, so the receipt stays unqualified until then"),
     "R_convergence_0": "R did not converge (optimizer convergence code is not 0)",
@@ -303,13 +328,6 @@ LEG_TEXT = {
     "gllvmTMB_deparse_identical_to_P1": "a named gllvmTMB entry point does not deparse identically to its P1 source",
     "R_version_0_7_1_from_P1_library": "R side is not gllvmTMB 0.7.1 from the P1 library",
 }
-
-
-def add_c4_leg(legs, clause):
-    """C4 (GATES.md; plan section 1.3): a real-data workflow runs through engine = "julia" and passes the eight acceptance
-    classes. This campaign compared direct engines only, so no C4 row can satisfy the leg yet."""
-    if clause == "C4": legs[BRIDGE_LEG] = False
-    return legs
 
 
 def numbers_ok(legs):
@@ -388,7 +406,8 @@ RULE_SCOPE_P1 = ("the ten named gllvmTMB entry points that run_R.R calls (gllvmT
                  "functions and the compiled library are not deparse-checked, they are trusted by the recorded version 0.7.1, the library path and the sha256 of the P1 source files")
 RULE_C3 = ("both engines converged (R convergence 0 with a positive-definite Hessian; Julia converged true), both read the same data bytes, " + RULE_SCOPE_P1 +
            ", and every listed quantity is within its tolerance")
-RULE_C4 = RULE_C3 + ("; and the engine = \"julia\" bridge route and the plan's eight acceptance classes were run (plan section 1.3), which this campaign did not do")
+RULE_C4 = RULE_C3 + (" (C4 accepts this direct-engine run: maintainer ruling 2026-10-05, vault D-319, changed the clause text; "
+                     "no engine = \"julia\" bridge leg is required)")
 RULE_PHYLO = ("R side taken from the tracked PR #547 receipt (R was not re-run, so there is no deparse check): R convergence 0 with a positive-definite Hessian, "
               "Julia converged true on a fresh fit, the same data bytes, R recorded as gllvmTMB 0.7.1 at the P1 pin, every listed quantity within its tolerance, "
               "and the #547 R receipt promoted (qualified true) by the maintainer's own dated signature (D-300 answer 9)")
@@ -402,7 +421,7 @@ def rule_text(cell, clause):
     return RULE_C5 if clause == "C5" else RULE_PHYLO if cell == "phylo" else RULE_C4 if clause == "C4" else RULE_C3
 
 
-def build_receipt(sid, cell, clause, cases, legs, eng_r, eng_j, extra, raw_refs, binds):
+def build_receipt(sid, cell, clause, cases, legs, eng_r, eng_j, extra, raw_refs, binds, cp=None):
     rcpt = OrderedDict()
     rcpt["schema"] = SCHEMA
     rcpt["source_id"] = sid; rcpt["clause"] = clause
@@ -415,6 +434,8 @@ def build_receipt(sid, cell, clause, cases, legs, eng_r, eng_j, extra, raw_refs,
     rcpt["pass_rule"] = OrderedDict(rule=rule_text(cell, clause), legs=legs)
     rcpt.update(extra)
     rcpt["engines"] = OrderedDict(R=eng_r, julia=eng_j)
+    if cp is not None:
+        rcpt["convergence_parity"] = cp
     rcpt["comparison"] = OrderedDict(pin="P1", cases=[c.block(raw_refs["note"]) for c in cases])
     rcpt["read_from"] = raw_refs["hashes"]
     return rcpt
@@ -539,7 +560,13 @@ def process(raw, out_root, apply, quiet=False):
             if not quiet: print(f"skip {sid}: Julia run not finished")
             continue
         cases = cases_for(sid, cell, clause, quants, R, J)
-        legs = add_c4_leg(pass_rule(R, J, cases), clause); binds = all(legs.values())
+        legs = pass_rule(R, J, cases)
+        cp = convergence_parity(R, J)
+        # N9: a receipt with the block binds only when both engines are at gradient max-abs <= 1e-5
+        if cp is not None:
+            legs["convergence_parity_both_gradients_within_1e-5"] = all(
+                e["max_abs_gradient"] <= CONVERGENCE_GRADIENT_BOUND for e in cp["engines"].values())
+        binds = all(legs.values())
         eng_r, eng_j = engine_blocks(cell, R, J)
         rdir = camp / fam / CAMPAIGN_DIR
         hashes = OrderedDict()
@@ -566,7 +593,7 @@ def process(raw, out_root, apply, quiet=False):
                 "differences, wall times, the data file's sha256 and the sha256 of the two raw files (read_from). write_receipts.py --check cannot re-derive this row from the "
                 "repository; it prints that and checks the receipt's internal consistency. With the retained raw files, run write_receipts.py --check --local-raw DIR.")
         note = NOTE_OFF_REPO if off else f"receipts/{fam}/{CAMPAIGN_DIR}/raw/{cell}_*.gz"
-        rc = build_receipt(sid, cell, clause, cases, legs, eng_r, eng_j, extra, dict(note=note, hashes=hashes), binds)
+        rc = build_receipt(sid, cell, clause, cases, legs, eng_r, eng_j, extra, dict(note=note, hashes=hashes), binds, cp)
         results.append((sid, fam, clause, rc, binds, rdir / f"{slug(sid)}.json"))
     # --- C5
     for sid, level in C5:
@@ -637,19 +664,27 @@ def row_for(sid, clause, rc, binds, rel_receipt):
     return row
 
 
+DISPOSITION_SIGNATURE = OrderedDict(signed_by="Shinichi Nakagawa", signed_on="2026-10-05", signature_ref="D-319")
+
+
 def disposition_row(sid, d):
     row = OrderedDict()
     row["source_id"] = sid
-    row["classification"] = "required_core"   # the classification is the maintainer's to change; unsigned, the row stays required
+    row["classification"] = "required_core"
     row["arc"] = "campaign-C4"; row["clause"] = "C4"
     row["executable_case_ids"] = []
-    row["disposition"] = None
+    row["disposition"] = "DISPOSITION-SIGNED"
     row["evidence_tier"] = "not_measured"
     row["measured_against"] = "P1"
-    row["evidence"] = OrderedDict(tier="no measurement: this row awaits the maintainer's own signed disposition; nothing is signed here")
-    row["proposed_disposition"] = OrderedDict(capability=d["capability"], text=d["text"],
-        status="PROPOSED, UNSIGNED: the campaign plan says each of these three rows needs the maintainer's own signature, and itchyshin/GLLVModels.jl#684 does not quote them")
-    row["ruling"] = RULING + " (row added); disposition itself unsigned"
+    row["evidence"] = OrderedDict(tier="no measurement: the row closes by the maintainer's signed disposition below")
+    row["signed_by"] = DISPOSITION_SIGNATURE["signed_by"]
+    row["signed_on"] = DISPOSITION_SIGNATURE["signed_on"]
+    row["signature_ref"] = DISPOSITION_SIGNATURE["signature_ref"]
+    row["signed_disposition"] = OrderedDict(capability=d["capability"], text=d["text"],
+        status=("DISPOSITION-SIGNED: item F of the rulings page (three C4 dispositions), signed by the maintainer on 2026-10-05 "
+                "(vault D-319; LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the lane kit). Recorded by an agent, "
+                "signed by the maintainer."))
+    row["ruling"] = RULING + " (row added); disposition signed under vault D-319, item F"
     return row
 
 
@@ -777,7 +812,7 @@ def check(out_root, local_raw=None):
             rel = str(path.relative_to(out_root))
             if not path.exists(): continue
             rc_old = json.loads(path.read_text())
-            for k in ("schema", "source_id", "clause", "pin", "reference_commit", "ruling", "verdict", "row_status", "pass_rule", "comparison", "engines"):
+            for k in ("schema", "source_id", "clause", "pin", "reference_commit", "ruling", "verdict", "row_status", "pass_rule", "comparison", "engines", "convergence_parity"):
                 if rc_old.get(k) != norm(rc_new.get(k)):
                     print(f"DERIVATION DRIFT {k} in {path.name}"); bad += 1
             row_old = row_of(fam, sid); row_new = norm(row_for(sid, clause, rc_new, binds, rel))

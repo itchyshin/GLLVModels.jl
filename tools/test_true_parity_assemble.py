@@ -326,15 +326,23 @@ def main():
     expect("temporal_cond_H_method_names_its_hessian", "ForwardDiff" in tmpl["engines"]["julia"]["cond_H_method"], tmpl["engines"]["julia"]["cond_H_method"])
     grp = json.loads((A.ROOT / A.LEDGER / "receipts/fit-input/campaign/GRP-UNIT.json").read_text())
     expect("c5_rule_claims_no_hessian_leg", "R_pdHess_true" not in grp["pass_rule"]["legs"] and "no R Hessian leg" in grp["pass_rule"]["rule"], grp["pass_rule"]["rule"])
-    # Row tiers: a measured row that fails no number but lacks a required step reads PARTIAL, never FAIL; a row that also
-    # misses a tolerance keeps numeric_fail; the phylo row binds now that its R receipt carries the maintainer's D-300
-    # answer 9 promotion (signed 2026-10-05, D-319; tools/phylo_latent/promote_p1.py).
+    # Row tiers: C4 accepts direct-engine runs (maintainer ruling 2026-10-05, D-319, C4 text change), so crabs, which
+    # meets every leg, binds and no row carries the old bridge leg; a row that misses a tolerance keeps numeric_fail;
+    # the phylo row binds now that its R receipt carries the maintainer's D-300 answer 9 promotion (signed 2026-10-05,
+    # D-319; tools/phylo_latent/promote_p1.py); the three C4 dispositions are signed (item F, D-319).
     def camp_row(mapname, sid):
         return next(r for r in json.loads((A.ROOT / A.LEDGER / mapname).read_text())["rows"] if r["source_id"] == sid)
     crabs = camp_row("case-map-data.json", "data/RD-CRABS-GAUSSIAN"); spider = camp_row("case-map-data.json", "data/RD-SPIDER-NB2")
     phylo = camp_row("case-map-covariance.json", "covariance/COV-PHYLO-LATENT-RSZ")
-    expect("crabs_is_partial_not_fail", crabs["evidence_tier"] == "partial_case_not_executed" and "bridge route" in crabs["evidence"]["tier"], crabs["evidence"]["tier"])
-    expect("row_with_failed_tolerance_stays_numeric_fail", spider["evidence_tier"] == "numeric_fail" and "bridge route" in spider["evidence"]["tier"] and "logLik" in spider["evidence"]["tier"], spider["evidence"]["tier"])
+    crabs_rc = json.loads((A.ROOT / A.LEDGER / "receipts/data/campaign/RD-CRABS-GAUSSIAN.json").read_text())
+    expect("crabs_binds_as_direct_engine_run", crabs["evidence_tier"] == "numeric" and "receipt" in crabs["evidence"]
+           and crabs_rc["verdict"] == "PASS" and crabs_rc["engines"]["R"] and crabs_rc["engines"]["julia"]
+           and not any("bridge" in k for k in crabs_rc["pass_rule"]["legs"]), json.dumps(crabs["evidence"]))
+    expect("row_with_failed_tolerance_stays_numeric_fail", spider["evidence_tier"] == "numeric_fail" and "bridge route" not in spider["evidence"]["tier"] and "logLik" in spider["evidence"]["tier"], spider["evidence"]["tier"])
+    disp = [camp_row("case-map-data.json", f"data/RD-{k}-DISPOSITION") for k in ("PHYLO", "TEMPORAL", "ISDM")]
+    expect("c4_dispositions_signed_d319", all(r["disposition"] == "DISPOSITION-SIGNED" and r["signed_by"] == "Shinichi Nakagawa"
+           and r["signed_on"] == "2026-10-05" and r["signature_ref"] == "D-319" and "proposed_disposition" not in r for r in disp),
+           json.dumps(disp)[:400])
     expect("phylo_row_binds_on_promoted_receipt", phylo["evidence_tier"] == "numeric" and "receipt" in phylo["evidence"] and "non_binding_receipts" not in phylo["evidence"], json.dumps(phylo["evidence"]))
 
     # ... and a hand edit that keeps the receipt self-consistent must still fail: a changed value (with a matching
