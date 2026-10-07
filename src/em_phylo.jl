@@ -759,6 +759,12 @@ struct EMPhyloFit
     end
 end
 
+# Post-fit: `_nparams` unlocks generic `dof`/`aic`/`bic` in src/postfit.jl.
+function _nparams(fit::EMPhyloFit)
+    p, K_B = size(fit.Λ_B)
+    return 1 + (p * K_B - div(K_B * (K_B - 1), 2)) + length(fit.σ_phy)
+end
+
 # The EM's convergence tolerance, as ONE definition. test_sparse_phy_identities.jl's
 # G7.3 derives its identity bound from this, so the two cannot drift apart. It was
 # previously read out of this file by regex, which matched the DOCSTRING copy above
