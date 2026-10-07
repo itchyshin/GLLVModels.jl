@@ -194,7 +194,7 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
                             g_tol = 1e-6,
                             iterations = 500)
     p, n = size(y)
-    @assert K ≥ 1
+    1 <= K <= p || throw(ArgumentError("K must lie in 1:p (got K = $K, p = $p)"))
     @assert K_W ≥ 0
     @assert K_phy ≥ 0
     n ≥ p || throw(ArgumentError(
