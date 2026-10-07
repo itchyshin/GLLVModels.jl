@@ -935,6 +935,15 @@ function em_fit_phylo(y::AbstractMatrix, K_B::Integer, Σ_phy::AbstractMatrix;
                       loglik_trace, blup_phy, blup_phi)
 end
 
+# Internal PD check for SEM I_obs (comment only; a docstring would trip missing_docs).
+function _observed_information_is_pd(I_obs::AbstractMatrix{<:Real})
+    n = size(I_obs, 1)
+    size(I_obs) == (n, n) ||
+        throw(ArgumentError("I_obs must be square; got $(size(I_obs))"))
+    H = Symmetric((I_obs .+ I_obs') ./ 2)
+    return isposdef(H)
+end
+
 """
     em_observed_information(emf, y, Σ_phy) -> NamedTuple
 
@@ -970,7 +979,8 @@ Returns a NamedTuple with fields:
                              delta method (σ_ε via exp, others identity)
   * `term::Vector{String}` — parameter names matching `confint(fit).term`
                              when fit is a dense fit on the same model
-  * `pd::Bool`             — whether `I_obs` is positive-definite
+  * `pd::Bool`             — whether `I_obs` is positive-definite **and**
+                             `emf.converged` (SEM requires an EM fixed point)
 
 Refs: Louis (1982) JRSSB 44:226–233; Meng & Rubin (1991) JASA 86:899–909.
 """
@@ -1010,18 +1020,14 @@ function em_observed_information(emf::EMPhyloFit, y::AbstractMatrix,
     A1   = I_complete * (Matrix{Float64}(I, Ipar, Ipar) - DM)
     I_obs = (A1 + A1') ./ 2                        # symmetrise round-off
 
-    pd = true
-    cov_ = try
-        inv(Symmetric(I_obs))
-    catch
-        pd = false
+    Hobs = Symmetric(I_obs)
+    pd = emf.converged && _observed_information_is_pd(I_obs)
+    cov_ = if pd
+        inv(Hobs)
+    else
         fill(NaN, Ipar, Ipar)
     end
     diag_cov = diag(cov_)
-    if any(!isfinite(v) || v ≤ 0 for v in diag_cov)
-        pd = false
-    end
-
     se = [v > 0 ? sqrt(v) : NaN for v in diag_cov]
 
     # Raw-scale SEs (delta method): σ_ε = exp(log σ_ε) ⇒ SE_σ_ε = σ_ε · SE_log σ_ε.
