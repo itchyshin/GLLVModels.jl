@@ -23,6 +23,7 @@ include("fit_verdict.jl")            # _fit_verdict: never report a failure sent
 include("packing.jl")
 include("lowrank_cholesky.jl")          # used by likelihood
 include("likelihood.jl")
+include("symmetric_admission.jl")          # tolerance-based symmetry gates (#722)
 include("source_covariance.jl")          # internal Gaussian additive source reference evaluator
 include("source_fit.jl")                 # local candidate: fixed Gaussian source covariances
 include("grouped_gaussian.jl")           # internal shared/crossed sparse Gaussian factor kernel

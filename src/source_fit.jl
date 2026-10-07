@@ -30,7 +30,7 @@ function SourceCovariance(C::AbstractMatrix, P::AbstractMatrix;
         unique::Bool=false, common::Bool=false)
     size(C,1)==size(C,2) && size(C,1)>0 || throw(DimensionMismatch("source covariance must be nonempty and square"))
     size(P,2)==size(C,1) && size(P,1)>0 || throw(DimensionMismatch("projection must be nonempty units × source nodes"))
-    all(x->x isa Real && isfinite(x),C) && issymmetric(C) || throw(ArgumentError("source covariance must be finite, real and exactly symmetric"))
+    C = _symmetric_admit(C, "source covariance")
     all(x->x isa Real && isfinite(x),P) || throw(ArgumentError("projection must be finite and real"))
     mode in (:latent,:indep,:dep) || throw(ArgumentError("source mode must be :latent, :indep or :dep"))
     unique && mode!==:latent && throw(ArgumentError("unique is allowed only with mode=:latent"))
