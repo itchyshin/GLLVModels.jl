@@ -935,6 +935,15 @@ function em_fit_phylo(y::AbstractMatrix, K_B::Integer, Σ_phy::AbstractMatrix;
                       loglik_trace, blup_phy, blup_phi)
 end
 
+# Internal PD check for SEM I_obs (comment only; a docstring would trip missing_docs).
+function _observed_information_is_pd(I_obs::AbstractMatrix{<:Real})
+    n = size(I_obs, 1)
+    size(I_obs) == (n, n) ||
+        throw(ArgumentError("I_obs must be square; got $(size(I_obs))"))
+    H = Symmetric((I_obs .+ I_obs') ./ 2)
+    return isposdef(H)
+end
+
 """
     em_observed_information(emf, y, Σ_phy) -> NamedTuple
 
@@ -975,14 +984,6 @@ Returns a NamedTuple with fields:
 
 Refs: Louis (1982) JRSSB 44:226–233; Meng & Rubin (1991) JASA 86:899–909.
 """
-function _observed_information_is_pd(I_obs::AbstractMatrix{<:Real})
-    n = size(I_obs, 1)
-    size(I_obs) == (n, n) ||
-        throw(ArgumentError("I_obs must be square; got $(size(I_obs))"))
-    H = Symmetric((I_obs .+ I_obs') ./ 2)
-    return isposdef(H)
-end
-
 function em_observed_information(emf::EMPhyloFit, y::AbstractMatrix,
                                  Σ_phy::AbstractMatrix)
     p, n = size(y)
