@@ -792,9 +792,10 @@ Return the asymptotic variance-covariance matrix of the estimated parameters of
 `confint(fit, Y; method = :wald)` uses (log scale for SD/dispersion terms), in
 the same term order as `confint(...).term`. `parm` selects a sub-block. The
 diagonal equals the squared Wald standard errors. When the Hessian is not
-positive definite the SE convention is followed: entries whose SE is NaN have
-NaN rows and columns (all NaN if the Hessian cannot be inverted); nothing is
-regularised.
+positive definite (Cholesky fails, including an indefinite Hessian whose
+inverse still has a positive diagonal), `vcov` is all NaN. A positive
+definite Hessian with a non-finite or non-positive variance has NaN rows
+and columns for those entries. Nothing is regularised.
 """
 function StatsAPI.vcov(fit::GllvmFit; y = nothing, kwargs...)
     y_mat = y !== nothing ? y : (hasproperty(fit, :y) ? fit.y : nothing)
