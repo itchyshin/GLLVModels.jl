@@ -431,6 +431,8 @@ using GLLVModels, Test, Random, LinearAlgebra, Statistics
         @test_throws ArgumentError GLLVModels.predictive_check(fit, Y)
     end
 
+    include("test_predictive_check_binomial.jl")
+
     @testset "confint_inspect — Wald and profile roughly agree on a clean fixture" begin
         Random.seed!(21)
         p, K, n = 3, 1, 400
