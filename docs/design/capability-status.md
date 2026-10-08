@@ -542,8 +542,8 @@ precision even where the row reads `implemented`.
 | **Student-t** | **observed** | flipped 2026-08-28, decision A |
 | **Tweedie** | **observed** | flipped 2026-08-28, maintainer gate 1 |
 | **Binomial / probit** | **observed** | flipped 2026-08-28, maintainer gate 2 |
+| **Binomial / cloglog** | **observed** | flipped 2026-09-01, confirmed Julia-side defect (TMB parity) |
 | **GP-1** | Fisher | **retained BY DECISION** — evidence against, see below |
-| **Binomial / cloglog** | Fisher | intrinsic Laplace saturation pathology, see below |
 
 CORRECTED 2026-08-28: this table had drifted roughly four flips behind the
 engine (it still described Beta, NB2, NB1 and Student-t as "not yet decided"
@@ -552,16 +552,16 @@ after decision A had already flipped all four). The census structural guard
 table is prose and must be re-read against it whenever a default moves.
 
 `Binomial` is worth calling out: it is clean at **logit** (canonical, the two
-weights coincide), a flipped instance at **probit**, and a documented
-exception at **cloglog**. These are properties of the *(family, link)* pair,
+weights coincide), with **probit** and **cloglog** both flipped to observed
+(2026-08-28 and 2026-09-01). These are properties of the *(family, link)* pair,
 so any census organised by family alone will miss them.
 
 **Census state:** `KNOWN_OPEN` is EMPTY as of 2026-08-28 — every one-part
-family's curvature is adjudicated and declared. Two families are deliberate
-exceptions rather than open items: GP-1 sits in `DEFERRED_BY_DECISION` with
-its evidence recorded, and Binomial/cloglog's runaway is an intrinsic Laplace
-saturation pathology (link FD-verified correct; diagnostic guard shipped in
-PR #272), not a weight bug. **Still open: the TWO-PART families** — only
+family's curvature is adjudicated and declared. GP-1 is the deliberate Fisher
+exception (`DEFERRED_BY_DECISION`, evidence recorded). Binomial/cloglog
+extreme-η Laplace saturation is a separate post-fit health issue (measured
+under both curvature selectors; diagnostic guard shipped in PR #272), not a
+weight bug and not a reason to keep `:fisher` as the default. **Still open: the TWO-PART families** — only
 DeltaGamma has a specialised observed count-part weight, so the selector is
 currently inert for the other nine (`TWOPART_KNOWN_OPEN`).
 
