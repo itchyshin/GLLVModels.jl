@@ -487,6 +487,7 @@ println(_SHARD === nothing ?
     _shard_include("test_bridge_lognormal.jl")
     _shard_include("test_bridge_truncated_poisson.jl")
     _shard_include("test_bridge_truncated_input.jl")
+    _shard_include("test_bridge_integer_counts.jl")
     _shard_include("test_bridge_lv_predictor.jl")
     _shard_include("test_lv_ci.jl")
     _shard_include("test_phylo_eta_realized.jl")
