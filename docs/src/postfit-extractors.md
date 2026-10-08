@@ -40,8 +40,11 @@ Choose the denominator to match your biological question:
   structured phylogenetic block. The analogous `:total` option is available
   for `extract_correlations` and `extract_proportions`.
 - `extract_Omega` defaults to `level = :auto`, combining the sources present
-  in the fit without observation noise. Its `level = :total` option adds
-  observation noise; it is a different summary from `sigma_y_site`.
+  in the fit. That combination excludes observation noise `σ_eps²` only
+  when the fit has a genuine `:unit_obs` tier or no diagonal. For a
+  Gaussian fit with `has_diag = true` and `K_W == 0` the identified
+  total `sigma_y_site(fit)` (including `σ_eps²`) is used, so
+  `level = :total` coincides with `:auto`.
 
 For example, with one latent source and no source-specific diagonal
 variance, `extract_communality(fit)` is `1.0` wherever that source has
