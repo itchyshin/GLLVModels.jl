@@ -147,7 +147,8 @@ function spde_precision(Cdiag::AbstractVector, G::SparseMatrixCSC,
     end
 end
 
-"""Maximum edge length on a triangular mesh (for outside snap tolerance)."""
+# Maximum edge length on a triangular mesh (for outside snap tolerance).
+# Comment only; a docstring would trip missing_docs.
 function _spde_max_edge_length(nodes::AbstractMatrix, tris::AbstractMatrix{<:Integer})
     maxlen = 0.0
     @inbounds for k in 1:size(tris, 1)
