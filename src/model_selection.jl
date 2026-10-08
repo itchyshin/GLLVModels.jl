@@ -40,8 +40,8 @@ Fields:
   (`nobs(fit, Y; mask)`, R's `p·n`); `NaN` (R's `NA`) when `n − k − 1 ≤ 0`. Reported
   only: it is not a selection criterion here.
 - `converged::Vector{Bool}` — whether the optimiser reported convergence for each
-  accepted fit (R's `conv`). A fit that did not converge is still accepted, and
-  can still be chosen, unless the sweep ran with `require_converged = true`.
+  accepted fit (R's `conv`). A fit that did not converge is still accepted and
+  stays in the table, but cannot win `best_k` (#759).
 - `pd_hessian::Vector{Union{Missing,Bool}}` — R's `pdHess`: `true` when the Wald
   observed information at the optimum is usable (finite, factorisable, positive
   variances; the flag [`confint`](@ref) reports as `pd_hessian`), `false` when it
@@ -64,9 +64,11 @@ the same labels in the same order: a marker (`*` on the chosen row), `d` (= `K`)
 rounded to three decimals and flags print as `TRUE`/`FALSE`/`NA`, as R does. `BIC` is
 the `log(p·n)` BIC (`bic`), R's BIC, whatever criterion chose the row.
 
-Where Julia differs from R: R leaves a rank that did not converge, or whose Hessian is
-confirmed not positive definite, out of the selection (the row stays in the table);
-`select_lv` keeps such a rank selectable and only reports `conv` and `pdHess`.
+Where Julia differs from R: R also leaves a rank whose Hessian is confirmed not
+positive definite out of the selection (the row stays in the table); `select_lv`
+still keeps such a rank selectable and only reports `pdHess`. A rank that did
+not converge, or whose criterion is non-finite, stays in the table but cannot
+win `best_k`.
 """
 struct LVSelection
     K::Vector{Int}
@@ -263,9 +265,10 @@ Gaussian data add 0.01 s at `p = 6`, `n = 150`, 0.9 s at `p = 20`, `n = 150` and
 about 9 to 10 times the fitting time (+3.5 s at `p = 10`, `n = 100`; +36 s at `p = 20`,
 `n = 150`).
 
-None of the three columns changes which `K` is chosen, and `criterion` has no `:aicc`.
-Unlike R, `select_lv` keeps a rank that did not converge, or whose Hessian is not
-positive definite, eligible; read `converged` and `pd_hessian` before trusting the choice.
+`aicc` and `pd_hessian` do not change which `K` is chosen, and `criterion` has no `:aicc`.
+A rank that did not converge, or whose criterion is non-finite, stays in the table
+but cannot win `best_k`. Unlike R, a rank whose Hessian is not positive definite
+remains eligible; read `pd_hessian` before trusting the choice.
 
 The chosen `K` is itself an estimate: intervals and tests computed on
 `sel.best` are conditional on it and do not include uncertainty about `K`.
