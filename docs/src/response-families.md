@@ -599,13 +599,14 @@ fit = fit_gllvm(Yp; family = Gamma(), K = 2)   # Yp > 0; shared α (no-X)
     20–60× smaller error. The previous behaviour remains available:
 
     ```julia
-    ll = gamma_marginal_loglik_laplace(Y, Λ, β, α; hessian = :fisher)
+    ll = GLLVModels.gamma_marginal_loglik_laplace(Y, Λ, β, α; hessian = :fisher)
     ```
 
-    Other families are **unchanged** and keep the Fisher default. This was a
-    per-family decision made on per-family evidence, not a global switch — for
-    some families the observed curvature is *not* closer to the exact marginal,
-    so each is decided on its own measurements.
+    This was a per-family decision on per-family evidence, not a global switch.
+    `_default_hessian` still falls back to `:fisher` for families without a
+    family-specific override; several other routes override that default to
+    `:observed` (see the notes above and
+    `docs/design/capability-status.md` § *Laplace curvature*).
 
 !!! note "Laplace curvature: TweedieED and Binomial-probit use the observed Hessian (changed 2026-08-28)"
     A 2026-08-28 maintenance decision established that
@@ -625,8 +626,10 @@ fit = fit_gllvm(Yp; family = Gamma(), K = 2)   # Yp > 0; shared α (no-X)
       the probit binomial log-likelihood is globally concave in η (Pratt 1981,
       *JASA*), so unlike Beta/Student-t the positive-definiteness guard is not
       expected to fire for this family.
-    - Binomial/**cloglog** is explicitly excluded and stays `:fisher` — the
-      diagnosed Laplace saturation pathology above, not a pending flip.
+    - Binomial/**cloglog** now defaults to **observed**, matching TMB /
+      `gllvmTMB` (confirmed 2026-09-01); `:fisher` was a Julia-side defect.
+      Extreme-η Laplace saturation remains a separate post-fit health diagnostic,
+      not a reason to keep Fisher as the default.
     - The Tweedie **grouped** route accepts `hessian = :observed` (default)
       or `:fisher`. This selects the Laplace curvature; the mode-search policy
       stays separate. Comparisons must use the same curvature and power model.

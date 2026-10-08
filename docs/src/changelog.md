@@ -73,11 +73,12 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
   is deliberately excluded from the `disp_group = :species` auto-coercion that
   shields the other dispersion families.
 
-  **Per-family, not a global switch.** Other families keep the Fisher default:
-  measured evidence says observed is *not* closer for Beta (2/12) and is
-  measurably worse for GP-1's dispersion recovery. See
-  `docs/design/capability-status.md` § *Laplace curvature* for the family-by-family
-  table and which rows will not match `gllvmTMB` to machine precision.
+  **Per-family, not a global switch.** `_default_hessian` still falls back to
+  `:fisher` for families without a family-specific override; several routes
+  override that default to `:observed` (including Binomial/cloglog since
+  2026-09-01). See `docs/design/capability-status.md` § *Laplace curvature*
+  for the family-by-family table and which rows still differ from `gllvmTMB`
+  by decision (e.g. GP-1).
 
 ### Fixed
 - **FIX:** every non-Gaussian **Wald** standard error was wrong. The
