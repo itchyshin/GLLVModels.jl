@@ -3862,7 +3862,8 @@ function _lv_effect_profile(nll::Function, x̂::AbstractVector, p::Integer, K::I
                             profile_iterations::Union{Nothing, Integer} = nothing,
                             profile_g_tol::Real = 1e-8,
                             profile_max_expand::Union{Nothing, Integer} = nothing,
-                            profile_max_bisect::Integer = 40)
+                            profile_max_bisect::Integer = 40,
+                            hessian_pd::Bool = true)
     x  = collect(Float64, x̂)
     b̂  = extractor(x, p, K, q_lv)
     nb = length(b̂)
@@ -3951,9 +3952,11 @@ function _lv_effect_profile(nll::Function, x̂::AbstractVector, p::Integer, K::I
         lo[j] = crossing(idx, -1, s)
         hi[j] = crossing(idx, +1, s)
     end
+    endpoints_ok = all(isfinite, lo) && all(isfinite, hi)
     return (term = term_all[profile_idx], estimate = b̂[profile_idx],
             lower = lo, upper = hi, se = fill(NaN, length(profile_idx)),
-            level = level, method = :profile, pd_hessian = true)
+            level = level, method = :profile,
+            pd_hessian = endpoints_ok && hessian_pd)
 end
 
 """
@@ -4036,14 +4039,15 @@ function confint_lv_effects(fit::Union{PoissonFit, BinomialFit, NBFit, GammaFit,
         return _lv_bootstrap(fit, Y, X_lv, N, q_lv, level, n_boot, seed;
                              bootstrap_iterations = bootstrap_iterations)
     if method === :profile
-        wse = _lv_effect_wald(nll, fit.theta_packed, p, K, q_lv, level).se
+        wald = _lv_effect_wald(nll, fit.theta_packed, p, K, q_lv, level)
         return _lv_effect_profile(nll, fit.theta_packed, p, K, q_lv, level,
-                                  _lv_effects_from_packed, wse; ad = false,
+                                  _lv_effects_from_packed, wald.se; ad = false,
                                   profile_indices = profile_indices,
                                   profile_iterations = profile_iterations,
                                   profile_g_tol = profile_g_tol,
                                   profile_max_expand = profile_max_expand,
-                                  profile_max_bisect = profile_max_bisect)
+                                  profile_max_bisect = profile_max_bisect,
+                                  hessian_pd = wald.pd_hessian)
     end
     return _lv_effect_wald(nll, fit.theta_packed, p, K, q_lv, level)
 end
@@ -4083,15 +4087,16 @@ function confint_lv_effects(fit::OrdinalFit, Y::AbstractMatrix, X_lv::AbstractMa
     end
     H = _fd_hessian(safenll, x)
     if method === :profile
-        wse = _lv_wald_from_hessian(H, x, p, K, q_lv, level,
-                                    _lv_effects_from_packed_ordinal).se
+        wald = _lv_wald_from_hessian(H, x, p, K, q_lv, level,
+                                     _lv_effects_from_packed_ordinal)
         return _lv_effect_profile(nll, x, p, K, q_lv, level,
-                                  _lv_effects_from_packed_ordinal, wse; ad = false,
+                                  _lv_effects_from_packed_ordinal, wald.se; ad = false,
                                   profile_indices = profile_indices,
                                   profile_iterations = profile_iterations,
                                   profile_g_tol = profile_g_tol,
                                   profile_max_expand = profile_max_expand,
-                                  profile_max_bisect = profile_max_bisect)
+                                  profile_max_bisect = profile_max_bisect,
+                                  hessian_pd = wald.pd_hessian)
     end
     return _lv_wald_from_hessian(H, x, p, K, q_lv, level,
                                  _lv_effects_from_packed_ordinal)
@@ -4165,14 +4170,15 @@ function confint_lv_effects(fit::GllvmFit, Y::AbstractMatrix, X_lv::AbstractMatr
         _fd_hessian(safenll, x)
     end
     if method === :profile
-        wse = _lv_wald_from_hessian(H, x, p, K, q_lv, level, _lv_effects_from_packed_gaussian).se
+        wald = _lv_wald_from_hessian(H, x, p, K, q_lv, level, _lv_effects_from_packed_gaussian)
         return _lv_effect_profile(nll, x, p, K, q_lv, level,
-                                  _lv_effects_from_packed_gaussian, wse; ad = true,
+                                  _lv_effects_from_packed_gaussian, wald.se; ad = true,
                                   profile_indices = profile_indices,
                                   profile_iterations = profile_iterations,
                                   profile_g_tol = profile_g_tol,
                                   profile_max_expand = profile_max_expand,
-                                  profile_max_bisect = profile_max_bisect)
+                                  profile_max_bisect = profile_max_bisect,
+                                  hessian_pd = wald.pd_hessian)
     end
     df = method === :wald_t_unit ? _lv_wald_t_unit_df(size(X_lv, 1), K) : nothing
     return _lv_wald_from_hessian(H, x, p, K, q_lv, level, _lv_effects_from_packed_gaussian;
