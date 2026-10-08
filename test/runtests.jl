@@ -365,6 +365,7 @@ println(_SHARD === nothing ?
     _shard_include("test_coevolution_kronecker.jl")
     _shard_include("test_coevolution_blockna.jl")
     _shard_include("test_coevolution_glm.jl")
+    _shard_include("test_coevolution_glm_765.jl")
     _shard_include("test_spde.jl")
     _shard_include("test_spde_mesh.jl")
     _shard_include("test_spde_delaunay.jl")
