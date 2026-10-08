@@ -105,8 +105,10 @@ function _pervar_formula_design(rhs, cols, p, n; contrasts, names::Bool=false,
     if isempty(non_const)
         site = zeros(n, 0)
     else
-        rhs_term = length(non_const) == 1 ? only(non_const) : Tuple(non_const)
-        f = FormulaTerm(ConstantTerm(0), rhs_term)
+        # Keep the original RHS, including `0`/`-1`. Stripping those constants
+        # before schema makes DummyCoding drop the base level and re-add an
+        # intercept, so `0 + habitat` collapsed to one column.
+        f = FormulaTerm(ConstantTerm(0), rhs)
         sch = StatsModels.schema(f, cols, contrasts)
         applied = StatsModels.apply_schema(f, sch, StatsModels.StatisticalModel)
         mm = Matrix{Float64}(StatsModels.modelmatrix(applied.rhs, cols))
