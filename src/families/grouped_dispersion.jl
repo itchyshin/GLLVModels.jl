@@ -413,6 +413,23 @@ _dispersion_group_boundary(dvec::AbstractVector{<:Real}) =
 _dispersion_group_lower_boundary(dvec::AbstractVector{<:Real}) =
     Bool[d < 1e-6 for d in dvec]
 
+# `_clamp_eta` caps η at ±_ETA_CLAMP, so once β_t (plus offset) is above the cap the
+# objective is exactly flat in β_t: its gradient is zero and the optimiser's gradient test
+# fires on that plateau (#553). On mvabund::spider (K = 0, per-species r) L-BFGS stepped one
+# intercept to 35.3 (μ = 2e15 against a sample mean of 20.8) and reported converged = true
+# 27.5 log-likelihood units below the MLE, with the loglik evaluated at the clamped μ. An
+# NB2 mean of e^30 ≈ 1e13 is never an optimum, so the grouped NB2 objectives return the
+# failure sentinel when any site's β_t + offset is above the cap: the line search then
+# backtracks off that region instead of settling on it. Upper end only: an all-zero
+# species legitimately heads to the lower cap.
+function _nb_eta_above_clamp(β::AbstractVector, offset)
+    @inbounds for t in eachindex(β)
+        hi = offset === nothing ? β[t] : β[t] + maximum(view(offset, t, :))
+        hi > _ETA_CLAMP && return true
+    end
+    return false
+end
+
 # NB2 grouped fits can stall with a group's log r out at the Poisson boundary, where
 # the likelihood is nearly flat, well below a better point (#477). From the returned
 # point, restart with the boundary groups at r = 1: all of them together and, when
@@ -671,6 +688,7 @@ function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVect
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         rg = exp.(θ[(p + rr + 1):(p + rr + G)])
         rvec = [rg[gidx[t]] for t in 1:p]
+        _nb_eta_above_clamp(β, offset) && return 1e12   # #553: flat plateau past the η clamp
         v = try
             -nb_grouped_marginal_loglik_laplace(Yc, Λ, β, rvec; link = link, mask = msk,
                                                 offset = offset, hessian = hessian,
@@ -900,6 +918,7 @@ function fit_nb_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3}
         rg = exp.(θ[(p + q + rr + 1):(p + q + rr + G)])
         rvec = [rg[gidx[t]] for t in 1:p]
         O = _build_offset(X_fit, γ)
+        _nb_eta_above_clamp(β, O) && return 1e12   # #553: flat plateau past the η clamp
         v = try
             -nb_grouped_marginal_loglik_laplace(Yc, Λ, β, rvec; link = link, mask = msk,
                                                 offset = O, hessian = hessian,

@@ -17,7 +17,8 @@
 # (see families/binomial.jl, families/poisson.jl).
 
 # η clamp is family-agnostic; μ clamp dispatches on the family.
-_clamp_eta(η) = clamp(η, -30.0, 30.0)
+const _ETA_CLAMP = 30.0
+_clamp_eta(η) = clamp(η, -_ETA_CLAMP, _ETA_CLAMP)
 
 # Robust linear solve: returns `nothing` if the factorization is singular or
 # fails, so the inner Newton can stop gracefully. A = Λ'WΛ + I is SPD by
