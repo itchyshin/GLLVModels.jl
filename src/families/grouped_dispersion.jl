@@ -683,9 +683,23 @@ function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVect
     end
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     opts = Optim.Options(g_tol = g_tol, iterations = iterations)
-    res = Optim.optimize(negll, θ0, ls, opts; autodiff = :finite)
-    res = _nb_boundary_restart(negll, res, ls, opts, p + rr + 1)
-    θ̂, nll, conv0, iters0 = _nb_poisson_ridge_polish(negll, res, ls, opts, p + rr + 1)
+    # Exact gradient under LogLink: the covariate fitter's (`_nb_grouped_cov_negll_grad`)
+    # with no covariates (q = 0) and this fit's offset; θ has the same layout. The
+    # finite-difference gradient cost 2·(p + rr + G) Laplace passes per step and made
+    # per-species fits take minutes at p = 30 (#552: 494 s against tmb's 7 s). As in
+    # `fit_nb_gllvm_grouped_cov`, the exact-gradient route uses dense BFGS; other links
+    # keep L-BFGS with finite differences.
+    X0 = zeros(p, n, 0)
+    grad = link isa LogLink ?
+        (θ -> _nb_grouped_cov_negll_grad(Yc, X0, θ, p, 0, K, rr, G, gidx, link, msk,
+                                         hessian, newton_maxiter, newton_tol;
+                                         offset = offset)) : nothing
+    ls_ad = grad === nothing ? ls : _COV_BFGS()
+    res = grad === nothing ? Optim.optimize(negll, θ0, ls, opts; autodiff = :finite) :
+                             _optimize_with_analytic(negll, grad, θ0, ls_ad, opts)
+    res = _nb_boundary_restart(negll, res, ls_ad, opts, p + rr + 1; grad = grad)
+    θ̂, nll, conv0, iters0 = _nb_poisson_ridge_polish(negll, res, ls_ad, opts, p + rr + 1;
+                                                     grad = grad)
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     r̂g = exp.(θ̂[(p + rr + 1):(p + rr + G)])
@@ -769,11 +783,12 @@ function getLV(fit::NBGroupedCovFit, Y::AbstractMatrix{<:Integer},
 end
 
 # −∇θ of `fit_nb_gllvm_grouped_cov`'s objective, θ = [β; γ_free; pack(Λ); log r_1..r_G],
+# (with q = 0 and an `offset`, also of `fit_nb_gllvm_grouped`'s objective),
 # or `nothing` (finite-difference fallback) when a site's mode search fails or the AD
 # pass errors. Mode: the objective's own chain (`_nb_grouped_site_mode`); log-det weight:
 # `_nb_grouped_laplace_weight` at the objective's `hessian`.
 function _nb_grouped_cov_negll_grad(Yc, X_fit, θ, p, q, K, rr, G, gidx, link, msk,
-                                    hessian, maxiter, tol)
+                                    hessian, maxiter, tol; offset = nothing)
     try
         n = size(Yc, 2)
         N1 = ones(Int, p)
@@ -782,6 +797,7 @@ function _nb_grouped_cov_negll_grad(Yc, X_fit, θ, p, q, K, rr, G, gidx, link, m
         rg = exp.(θ[(p + q + rr + 1):(p + q + rr + G)])
         fams = [NegativeBinomial(float(rg[gidx[t]]), 0.5) for t in 1:p]
         O = _build_offset(X_fit, γ)
+        offset === nothing || (O = O .+ offset)
         ẑs = Vector{Vector{Float64}}(undef, n)
         for s in 1:n
             mi = msk === nothing ? nothing : view(msk, :, s)
@@ -797,6 +813,7 @@ function _nb_grouped_cov_negll_grad(Yc, X_fit, θ, p, q, K, rr, G, gidx, link, m
             rgd = exp.(θd[(p + q + rr + 1):(p + q + rr + G)])
             famsd = [NegativeBinomial(rgd[gidx[t]], 0.5) for t in 1:p]
             Od = _build_offset(X_fit, γd)
+            offset === nothing || (Od = Od .+ offset)
             acc = zero(eltype(θd))
             for s in 1:n
                 y = view(Yc, :, s)

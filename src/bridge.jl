@@ -294,7 +294,9 @@ end
 function _bridge_gradient_max_family(fit, Y; kwargs...)
     try
         ci = _family_ci(fit, Y; kwargs...)
-        g = ForwardDiff.gradient(ci.nll, ci.θ)
+        # An adapter's exact gradient (#552) when it has one; else ForwardDiff.
+        g = ci.grad === nothing ? nothing : ci.grad(ci.θ)
+        g === nothing && (g = ForwardDiff.gradient(ci.nll, ci.θ))
         return all(isfinite, g) ? maximum(abs, g) : NaN
     catch e
         e isa InterruptException && rethrow()
