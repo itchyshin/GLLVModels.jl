@@ -686,19 +686,20 @@ function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVect
     # Exact gradient under LogLink: the covariate fitter's (`_nb_grouped_cov_negll_grad`)
     # with no covariates (q = 0) and this fit's offset; θ has the same layout. The
     # finite-difference gradient cost 2·(p + rr + G) Laplace passes per step and made
-    # per-species fits take minutes at p = 30 (#552: 494 s against tmb's 7 s). As in
-    # `fit_nb_gllvm_grouped_cov`, the exact-gradient route uses dense BFGS; other links
-    # keep L-BFGS with finite differences.
+    # per-species fits take minutes at p = 30 (#552: 494 s against tmb's 7 s). Only the
+    # gradient changes: the optimisers stay as they were (L-BFGS, then the restart and
+    # the BFGS ridge polish). Dense BFGS from the start, as the covariate fitter uses,
+    # picks a different local maximum on test/fixtures/nb2_restart_seed52.toml
+    # (-833.6085 against -833.1814). Other links keep the finite-difference gradient.
     X0 = zeros(p, n, 0)
     grad = link isa LogLink ?
         (θ -> _nb_grouped_cov_negll_grad(Yc, X0, θ, p, 0, K, rr, G, gidx, link, msk,
                                          hessian, newton_maxiter, newton_tol;
                                          offset = offset)) : nothing
-    ls_ad = grad === nothing ? ls : _COV_BFGS()
     res = grad === nothing ? Optim.optimize(negll, θ0, ls, opts; autodiff = :finite) :
-                             _optimize_with_analytic(negll, grad, θ0, ls_ad, opts)
-    res = _nb_boundary_restart(negll, res, ls_ad, opts, p + rr + 1; grad = grad)
-    θ̂, nll, conv0, iters0 = _nb_poisson_ridge_polish(negll, res, ls_ad, opts, p + rr + 1;
+                             _optimize_with_analytic(negll, grad, θ0, ls, opts)
+    res = _nb_boundary_restart(negll, res, ls, opts, p + rr + 1; grad = grad)
+    θ̂, nll, conv0, iters0 = _nb_poisson_ridge_polish(negll, res, ls, opts, p + rr + 1;
                                                      grad = grad)
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
