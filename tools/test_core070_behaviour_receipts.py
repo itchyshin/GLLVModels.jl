@@ -545,6 +545,22 @@ def first_seven_provenance_gate_rejects_tampered_library_identity():
 
 
 @test
+def first_seven_capture_runner_provenance_survives_derivation_revision():
+    captured = {
+        "R": F7.digest(ROOT / "tools/first_seven_behaviour_R.R"),
+        "Julia": F7.digest(ROOT / "tools/first_seven_behaviour_J.jl"),
+        "derive": "a" * 64,
+    }
+    meta = {"runner_sha256": captured}
+    assert F7.runner_provenance_problem(meta) is None
+    assert meta["runner_sha256"]["derive"] == "a" * 64
+    for key in ("R", "Julia"):
+        bad = {"runner_sha256": {**captured, key: "0" * 64}}
+        problem = F7.runner_provenance_problem(bad)
+        assert problem and key in problem
+
+
+@test
 def first_seven_fixture_derivation_keeps_positive_and_mismatch_rows_separate():
     # Synthetic, runner-shaped observations only. These fixtures test the
     # parser and derivation; they are never emitted as measured receipts.
@@ -606,12 +622,15 @@ def first_seven_fixture_derivation_keeps_positive_and_mismatch_rows_separate():
                 "julia_openblas": "1", "julia_omp": "1"},
             "runner_sha256": {"R": F7.digest(ROOT / "tools/first_seven_behaviour_R.R"),
                 "Julia": F7.digest(ROOT / "tools/first_seven_behaviour_J.jl"),
-                "derive": F7.digest(ROOT / "tools/first_seven_behaviour_derive.py")},
+                "derive": "a" * 64},
             "r_version": "4.4", "r_host": "fixture", "julia_version": "fixture", "julia_host": "fixture"}
         receipts, eq = F7.derive(rrows, jrows, meta)
     self = receipts["isdm/ISDM-EXTRA-SOURCE"]
     assert self["verdict"] == "MISMATCH"
     assert self["r_observed"] == self["julia_observed"] == "guard:unknown-source"
+    assert self["provenance"]["runner_sha256"]["derive"] == "a" * 64
+    assert self["receipt_derivation_sha256"] == F7.digest(
+        ROOT / "tools/first_seven_behaviour_derive.py")
     assert not any(c["canonical"] == "guard:unknown-source" for c in eq["classes"])
     assert receipts["isdm/ISDM-WRAPPER-LAW"]["verdict"] == "PASS"
     assert receipts["isdm/ISDM-WRAPPER-LAW"]["case_id"] == "CORE070-ISDM-WRAPPER-LAW-PAIRED-CONTROL"

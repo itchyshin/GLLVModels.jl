@@ -62,6 +62,22 @@ def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+def runner_provenance_problem(meta):
+    """Check captured R/Julia runners while retaining the capture-time derivation hash."""
+    captured = meta.get("runner_sha256")
+    if not isinstance(captured, dict):
+        return "run metadata lacks captured runner hashes"
+    for name, path in (("R", "tools/first_seven_behaviour_R.R"),
+                       ("Julia", "tools/first_seven_behaviour_J.jl")):
+        if captured.get(name) != digest(ROOT / path):
+            return f"captured {name} runner hash differs from the current runner"
+    derive_sha = captured.get("derive")
+    if (not isinstance(derive_sha, str) or len(derive_sha) != 64 or
+            any(c not in "0123456789abcdef" for c in derive_sha)):
+        return "run metadata lacks a valid capture-time derivation hash"
+    return None
+
+
 def matching_fixture_hashes(rrows, jrows):
     rh = {r.get("fixture_sha256") for r in rrows.values()}
     jh = {r.get("fixture_sha256") for r in jrows.values()}
@@ -125,10 +141,9 @@ def derive(rrows, jrows, meta):
         raise ValueError("R output digest does not match run metadata")
     if meta.get("julia_output_sha256") != digest(meta["julia_output_path"]):
         raise ValueError("Julia output digest does not match run metadata")
-    if meta.get("runner_sha256") != {"R": digest(ROOT / "tools/first_seven_behaviour_R.R"),
-                                    "Julia": digest(ROOT / "tools/first_seven_behaviour_J.jl"),
-                                    "derive": digest(ROOT / "tools/first_seven_behaviour_derive.py")}:
-        raise ValueError("runner/derivation script digests differ from the finalized run")
+    runner_problem = runner_provenance_problem(meta)
+    if runner_problem:
+        raise ValueError(runner_problem)
     if not meta.get("r_source_sha256") or not meta.get("r_oracle_build_sha256") or not meta.get("julia_src_tree"):
         raise ValueError("run metadata lacks required R source/build or Julia source hashes")
     if any(r.get("engine") != "R" or r.get("pin") != "P1" or r.get("package_version") != "0.7.1"
@@ -197,6 +212,7 @@ def derive(rrows, jrows, meta):
         receipts[sid] = {"schema": "core070-first-seven-behaviour/v1", "case_id": FROZEN_CASES[cid],
             "source_id": sid, "reference_commit": PIN, "verdict": "PASS" if matched else "MISMATCH",
             "evidence_kind": "public_door_behaviour", "r_observed": rl, "julia_observed": jl,
+            "receipt_derivation_sha256": digest(ROOT / "tools/first_seven_behaviour_derive.py"),
             "raw_observations": {"R": rr, "Julia": jr}, "signed_scope": block["signed_scope"],
             "provenance": meta}
     clean = []
@@ -204,6 +220,7 @@ def derive(rrows, jrows, meta):
         c["labels"] = {k: sorted(v) for k, v in c["labels"].items()}
         clean.append(c)
     return receipts, {"schema": "core070-first-seven-equivalence/v1", "ruling": "D-319 N6/N10",
+                      "receipt_derivation_sha256": digest(ROOT / "tools/first_seven_behaviour_derive.py"),
                       "classes": clean}
 
 

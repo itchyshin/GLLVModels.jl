@@ -7,6 +7,7 @@
   "evidence_kind": "public_door_behaviour",
   "r_observed": "guard:family-scale-per-trait",
   "julia_observed": "guard:family-scale-per-trait",
+  "receipt_derivation_sha256": "43f45e9424314d3e4fb6c92ff2ea94c1bcf9e9ba5e9b6c11f79ca7728a2e14dc",
   "raw_observations": {
     "R": {
       "case_id": "CORE070-FIRST7-ISDM-MISSING-IN-TRAIT",

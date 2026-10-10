@@ -1,6 +1,7 @@
 {
   "schema": "core070-first-seven-equivalence/v1",
   "ruling": "D-319 N6/N10",
+  "receipt_derivation_sha256": "43f45e9424314d3e4fb6c92ff2ea94c1bcf9e9ba5e9b6c11f79ca7728a2e14dc",
   "classes": [
     {
       "canonical": "residual-check:coherent",
