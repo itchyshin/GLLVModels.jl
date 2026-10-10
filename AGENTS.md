@@ -93,6 +93,8 @@ Full responsibility detail lives in §2 of the reference plan.
 
 ## Phase state snapshot
 
+- **P1 seven-receipt candidate (2026-10-06).** Drafts #842/#843/#844 bind seven exact rows on candidate `54f0c2e00`: X2 304/317 and C2 290/297. Current-head P1 twins pass on Julia 1 and 1.10; owning receipts, negative controls, full/core package checks and local Documenter pass at their recorded candidate/source SHAs. Main remains `f220379d0` pending explicit merge consent. C3 6/8, C4 4/8 and 37 C6 names remain open; no signatures or version change. Acceptance: 19/20 met, G7 open. START HERE: `LOOP/lanes/true-parity-p1-next/checkpoint.md`.
+
 - **True-parity rulings wired, lane handed to Codex (2026-10-06).** `origin/main` @ `9269f4622`: maintainer rulings of 2026-10-05 (#838) and observation weights on the Poisson route (#839) merged; X2 297 of 317; C0, C1, C5, C7, C8 MET; C2, C3 (6/8), C4 (4/8), C6 (37 held) open. Other lanes: see the coordination board's Active-Lane-Split. `Project.toml` stays **`0.3.0`**. **START HERE:** `docs/dev-log/handover/2026-10-06-codex-handover.md`.
 - **Beta grouped convergence gate (#480), 2026-09-24.** `converged` now requires a scale-aware gradient test, with a restart when Optim stops without it; inner-search follow-up is #482.
 - **Gamma grouped mode search fixed (#479), 2026-09-24.** A diverged per-site search now returns `-Inf` instead of a finite value, so the fit cannot report convergence far below the optimum.

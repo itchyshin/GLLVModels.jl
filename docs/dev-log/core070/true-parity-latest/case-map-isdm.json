@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
-  "scope": "isdm family: the 20 required rows the P1 carry scan lists as DANGLING, all paid by the wave1 isdm admission batch (R admission-predicate replay against the pinned P1 source; no fit, no Julia side). The 17 rejected isdm rows and the two NOT_BOUND_AT_P0 namespace exports (isdm_source, isdm_sources) are out of scope.",
-  "note": "Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with PARITY_CASEMAP pointing at this file. Classification and disposition are carried from docs/dev-log/core070/required-source-case-map.json unchanged, except the four signed dispositions of SIGNED_DISPOSITIONS (maintainer ruling 2026-10-05, D-319, item N6; no agent signs). The R side of every isdm row is a boolean predicate replay with no fit number and there is no Julia side at the run commit, so every row cites evidence.non_binding_receipts and is free. Draft PR #546's P1 iSDM twins are not used here; mapping them onto these rows is a proposal for the maintainer (PR body).",
+  "scope": "isdm family: the 20 required rows the P1 carry scan lists as DANGLING, initially measured by the wave1 isdm admission batch (R admission-predicate replay against the pinned P1 source; no fit, no Julia side). The 17 rejected isdm rows and the two NOT_BOUND_AT_P0 namespace exports (isdm_source, isdm_sources) are out of scope.",
+  "note": "Classification and admission remain unchanged except the existing maintainer-signed dispositions. The wave1 admission replay remains non-binding by itself. Five approved first-seven rows also cite raw-backed paired public-door behaviour receipts at P1; the canonical behavioural predicate determines whether these bind. Other rows retain their existing evidence and dispositions.",
   "generator": "tools/core070_isdm_p1_receipts.py",
   "glvmodels_commit": "361516c7d03bea1d49b7b5639c04b153c0e77f94",
   "batch_verifiers": {
@@ -20,10 +20,11 @@
     "numeric_fail": 0,
     "numeric_held_batch_verifier_failed": 0,
     "numeric_non_discriminating": 0,
-    "needs_surface_r_side_measured": 9,
+    "needs_surface_r_side_measured": 4,
     "measured_held_batch_verifier_failed": 0,
     "measured_fail": 0,
-    "not_measured": 0
+    "not_measured": 0,
+    "behavioural": 5
   },
   "p0_evidence_summary": {
     "rows_with_p0_evidence_record": 20,
@@ -157,13 +158,13 @@
         "raw_available_in_repo_or_on_this_host": false,
         "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
       },
-      "evidence_tier": "needs_surface_r_side_measured",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-COUNT-PAIRED-CONTROL.json"
         ],
-        "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -195,13 +196,13 @@
         "raw_available_in_repo_or_on_this_host": false,
         "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
       },
-      "evidence_tier": "needs_surface_r_side_measured",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-EXTRA-SOURCE-PAIRED-CONTROL.json"
         ],
-        "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -372,13 +373,13 @@
         "raw_available_in_repo_or_on_this_host": false,
         "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
       },
-      "evidence_tier": "needs_surface_r_side_measured",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-MISSING-IN-TRAIT-PAIRED-CONTROL.json"
         ],
-        "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -410,13 +411,13 @@
         "raw_available_in_repo_or_on_this_host": false,
         "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
       },
-      "evidence_tier": "needs_surface_r_side_measured",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-MISSING-SOURCE-PAIRED-CONTROL.json"
         ],
-        "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {
@@ -801,13 +802,13 @@
         "raw_available_in_repo_or_on_this_host": false,
         "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256) remains."
       },
-      "evidence_tier": "needs_surface_r_side_measured",
+      "evidence_tier": "behavioural",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/isdm/cases/CORE070-ISDM-WRAPPER-LAW-PAIRED-CONTROL.json"
         ],
-        "tier": "R side measured at P1: the pinned P1 R admission predicate replays to its frozen TRUE expectation on the frozen fixture. That is a boolean predicate replay, not a fit: it produces no number, and GLLVModels at the run commit has no iSDM surface, so there is no R-vs-Julia comparison and the row does not bind"
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
       },
       "measured_result": {
         "case_verdicts": {

@@ -1,0 +1,24 @@
+model=gpt-6.1-sol
+routing_class=ceiling
+effort=high
+slice=completion-rose
+role=Rose
+justification=Scientific completion and scope judgment is load-bearing
+ultra_reason=
+effort_exception_code=
+effort_exception_reason=
+tier_escalation_code=load_bearing
+catalog_status=known
+catalog_routing_class=
+catalog_path=/Users/z3437171/.codex/models_cache.json
+catalog_supported_efforts=low,medium,high,xhigh,max,ultra
+context_mode=fresh_ephemeral
+sandbox=read-only
+cwd=/Users/z3437171/local-scratch/lanes/GLLVM.jl-true-parity-p1-next
+brief=/Users/z3437171/local-scratch/lanes/GLLVM.jl-true-parity-p1-next/.unlazy/true-parity-p1-next/briefs/completion-rose.md
+result=/Users/z3437171/local-scratch/lanes/GLLVM.jl-true-parity-p1-next/.unlazy/true-parity-p1-next/dispatch/completion-rose.result.md
+events=/Users/z3437171/local-scratch/lanes/GLLVM.jl-true-parity-p1-next/.unlazy/true-parity-p1-next/dispatch/completion-rose.events.jsonl
+started_at=2026-10-06T18:24:04Z
+finished_at=2026-10-06T18:33:24Z
+status=0
+command=/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin/codex exec --ephemeral --strict-config -C /Users/z3437171/local-scratch/lanes/GLLVM.jl-true-parity-p1-next -m gpt-6.1-sol -c model_reasoning_effort=\"high\" -c features.multi_agent=false -s read-only --json -o /Users/z3437171/local-scratch/lanes/GLLVM.jl-true-parity-p1-next/.unlazy/true-parity-p1-next/dispatch/completion-rose.result.md - 

@@ -472,6 +472,50 @@
     },
     {
       "kind": "route",
+      "canonical": "all-count:nonmixed-admitted",
+      "r": [
+        "all-count:nonmixed-admitted"
+      ],
+      "julia": [
+        "all-count:nonmixed-admitted"
+      ],
+      "basis": "Measured identical public-door behaviour for isdm/ISDM-COUNT; P1 raw R and Julia outputs are preserved in docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/ISDM-COUNT.json. Included by signed D-319 N6/N10."
+    },
+    {
+      "kind": "error_class",
+      "canonical": "guard:family-length",
+      "r": [
+        "guard:family-length"
+      ],
+      "julia": [
+        "guard:family-length"
+      ],
+      "basis": "Measured identical public-door behaviour for isdm/ISDM-EXTRA-SOURCE; P1 raw R and Julia outputs are preserved in docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/ISDM-EXTRA-SOURCE.json. Included by signed D-319 N6/N10."
+    },
+    {
+      "kind": "error_class",
+      "canonical": "guard:family-scale-per-trait",
+      "r": [
+        "guard:family-scale-per-trait"
+      ],
+      "julia": [
+        "guard:family-scale-per-trait"
+      ],
+      "basis": "Measured identical public-door behaviour for isdm/ISDM-MISSING-IN-TRAIT; P1 raw R and Julia outputs are preserved in docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/ISDM-MISSING-IN-TRAIT.json. Included by signed D-319 N6/N10."
+    },
+    {
+      "kind": "error_class",
+      "canonical": "guard:wrapper-law-refusal",
+      "r": [
+        "guard:wrapper-law-refusal"
+      ],
+      "julia": [
+        "guard:wrapper-law-refusal"
+      ],
+      "basis": "Measured identical public-door behaviour for isdm/ISDM-WRAPPER-LAW; P1 raw R and Julia outputs are preserved in docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/ISDM-WRAPPER-LAW.json. Included by signed D-319 N6/N10."
+    },
+    {
+      "kind": "route",
       "canonical": "residual-check:coherent",
       "r": [
         "residual-check:coherent"

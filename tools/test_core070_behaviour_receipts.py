@@ -406,8 +406,8 @@ def every_entry_is_scoped_and_both_labels_are_listed_in_one_class():
                 rc, jc = A._label_class(index, e["kind"], "r", a), A._label_class(index, e["kind"], "julia", b)
                 assert rc is not None and jc is not None, f"{e['source_id']}: {a!r} / {b!r} not both listed in a class"
                 assert rc[1] == jc[1], f"{e['source_id']}: {a!r} and {b!r} are in different classes"
-    assert first_seven_seen == {"postfit/POSTFIT-SURFACE-check_auto_residual"}, first_seven_seen
-    assert seen == 58, seen  # Existing 57 entries plus the staged residual public-door row
+    assert first_seven_seen == B.FIRST7_SOURCE_IDS, first_seven_seen
+    assert seen == 63, seen  # Existing 57 entries plus the six exact approved public-door rows
 
 
 @test
@@ -481,6 +481,22 @@ def first_seven_extra_source_keeps_the_early_r_guard_distinct():
     assert F7.label(cid, r, "R") == "guard:family-length"
     assert F7.label(cid, j, "Julia") == "guard:unknown-source"
     assert F7.label(cid, r, "R") != F7.label(cid, j, "Julia")
+    assert F7.EXPECTED[cid] == "guard:family-length"
+
+
+@test
+def first_seven_fixture_digest_is_anchored_to_the_declared_panel():
+    rows = []
+    i = 0
+    for trait in ("a", "b"):
+        for source in ("count", "detect"):
+            for unit in ("u1", "u2"):
+                i += 1
+                value = 1 + i % 4 if source == "count" else i % 2
+                support = 0.05 + (i - 1) * 0.05
+                rows.append("\t".join((trait, source, unit, f"{value:.8f}", f"{support:.8f}")))
+    actual = hashlib.sha256(("\n".join(rows) + "\n").encode()).hexdigest()
+    assert actual == F7.FIXTURE_SHA256
 
 
 @test
@@ -520,9 +536,28 @@ def first_seven_provenance_gate_rejects_tampered_library_identity():
     assert "Julia raw runner digest differs" in d
     assert "wrong public call" in d
     assert not F7.matching_fixture_hashes(
-        {"r": {"fixture_sha256": "rows-a"}}, {"j": {"fixture_sha256": "rows-b"}})
+        {"r": {"fixture_sha256": F7.FIXTURE_SHA256}}, {"j": {"fixture_sha256": "0" * 64}})
     assert F7.matching_fixture_hashes(
-        {"r": {"fixture_sha256": "rows-a"}}, {"j": {"fixture_sha256": "rows-a"}})
+        {"r": {"fixture_sha256": F7.FIXTURE_SHA256}},
+        {"j": {"fixture_sha256": F7.FIXTURE_SHA256}})
+    assert not F7.matching_fixture_hashes(
+        {"r": {"fixture_sha256": "a" * 64}}, {"j": {"fixture_sha256": "a" * 64}})
+
+
+@test
+def first_seven_capture_runner_provenance_survives_derivation_revision():
+    captured = {
+        "R": F7.digest(ROOT / "tools/first_seven_behaviour_R.R"),
+        "Julia": F7.digest(ROOT / "tools/first_seven_behaviour_J.jl"),
+        "derive": "a" * 64,
+    }
+    meta = {"runner_sha256": captured}
+    assert F7.runner_provenance_problem(meta) is None
+    assert meta["runner_sha256"]["derive"] == "a" * 64
+    for key in ("R", "Julia"):
+        bad = {"runner_sha256": {**captured, key: "0" * 64}}
+        problem = F7.runner_provenance_problem(bad)
+        assert problem and key in problem
 
 
 @test
@@ -544,7 +579,7 @@ def first_seven_fixture_derivation_keeps_positive_and_mismatch_rows_separate():
     jrows[auto].update(actual="true", message="ordinal-probit control flagged")
     extra = "CORE070-FIRST7-ISDM-EXTRA-SOURCE"
     rrows[extra].update({"outcome": "ERROR", "class": "simpleError", "actual": "",
-                         "message": "length(family) must match the number of distinct levels"})
+                         "message": "Unknown source: unknown"})
     jrows[extra].update({"outcome": "ERROR", "class": "ArgumentError", "actual": "",
                          "message": "Unknown source: unknown"})
     wrapper = "CORE070-FIRST7-ISDM-WRAPPER-LAW"
@@ -562,11 +597,11 @@ def first_seven_fixture_derivation_keeps_positive_and_mismatch_rows_separate():
         row.update(source_marker_sha256=build["marker_sha256"],
                    source_tree_sha256=source["source_tree_sha256"],
                    installed_tree_sha256=build["installed_tree_sha256"],
-                   namespace_sha256=source["namespace_sha256"], fixture_sha256="fixture-hash",
+                   namespace_sha256=source["namespace_sha256"], fixture_sha256=F7.FIXTURE_SHA256,
                    runner_sha256=F7.digest(ROOT / "tools/first_seven_behaviour_R.R"))
     for row in jrows.values():
         row.update(runner_sha256=F7.digest(ROOT / "tools/first_seven_behaviour_J.jl"),
-                   fixture_sha256="fixture-hash", package_source="src/GLLVModels.jl",
+                   fixture_sha256=F7.FIXTURE_SHA256, package_source="src/GLLVModels.jl",
                    src_diff_sha256=hashlib.sha256(subprocess.run(
                        ["git", "-C", str(ROOT), "diff", "--binary", "HEAD", "--", "src"],
                        check=True, capture_output=True).stdout).hexdigest())
@@ -587,11 +622,15 @@ def first_seven_fixture_derivation_keeps_positive_and_mismatch_rows_separate():
                 "julia_openblas": "1", "julia_omp": "1"},
             "runner_sha256": {"R": F7.digest(ROOT / "tools/first_seven_behaviour_R.R"),
                 "Julia": F7.digest(ROOT / "tools/first_seven_behaviour_J.jl"),
-                "derive": F7.digest(ROOT / "tools/first_seven_behaviour_derive.py")},
+                "derive": "a" * 64},
             "r_version": "4.4", "r_host": "fixture", "julia_version": "fixture", "julia_host": "fixture"}
         receipts, eq = F7.derive(rrows, jrows, meta)
     self = receipts["isdm/ISDM-EXTRA-SOURCE"]
     assert self["verdict"] == "MISMATCH"
+    assert self["r_observed"] == self["julia_observed"] == "guard:unknown-source"
+    assert self["provenance"]["runner_sha256"]["derive"] == "a" * 64
+    assert self["receipt_derivation_sha256"] == F7.digest(
+        ROOT / "tools/first_seven_behaviour_derive.py")
     assert not any(c["canonical"] == "guard:unknown-source" for c in eq["classes"])
     assert receipts["isdm/ISDM-WRAPPER-LAW"]["verdict"] == "PASS"
     assert receipts["isdm/ISDM-WRAPPER-LAW"]["case_id"] == "CORE070-ISDM-WRAPPER-LAW-PAIRED-CONTROL"

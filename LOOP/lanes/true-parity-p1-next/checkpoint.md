@@ -1,14 +1,22 @@
-# Checkpoint: first-seven implementation active
+# Checkpoint, 2026-10-06, 21:00 UTC
 
-- PLATFORM: Codex. Parent verified gpt-6.1-sol/high. Branch codex/true-parity-p1-next. HEAD 7db4430bb87bee7ac842866fe69926d13771f577.
-- Worktree: /Users/z3437171/local-scratch/lanes/GLLVM.jl-true-parity-p1-next
-- DONE: G0 locked; Shannon3/3 reverified; root4/8 reverified; FAMILY11 live R refusal and canonical derivation committed.
-- MEASURED HEAD: X2 298/317 and C2 284/297, up one exact row from baseline. C3 6/8, C4 4/8 and C6 37 undecided unchanged. Assembled-row diff is exactly family/FAMILY-11-LOG.
-- PACKET: docs/dev-log/plans/2026-10-06-p1-method-evidence.md covers13 remaining rows; p1-c6-evidence.md covers37 unique names. Independent review pending; no signatures or classifications changed.
-- RUNNING: Pat same-leaf repair in GLLVM.jl-p1-pat for wrong panel, wrong wrapper case and provenance gaps. Manifest .unlazy/true-parity-p1-next/dispatch/pat-repair.events.dispatch.txt. No numerical fit run by child.
-- TESTS: sequential full/core Julia on isolated Totoro snapshot ed11661f0, started17:24UTC, cap19:24UTC,4 Julia threads and BLAS/OMP1. Owned remote /home/snakagaw/hsq_work/true-parity-p1-next-01a111fc. Driver PID in suite-driver.pid; logs full-suite.log/core-suite.log; suite-status.txt. Parent tool session55917. Stop only owned processes on overrun. New focused controls run separately.
-- GATES: seven-row candidate, packet review, main landing and closure remain unmet. Every merge and unsigned scientific/classification change waits for Shinichi. No push or PR yet.
-- PRESERVE: root checkout, older lanes, sibling R reference, old Totoro bridge repo. Automatic primary Graft config changes were backed up in runtime dispatch before restoring their original tracked bytes; child worktree configs remain untouched.
-- NEXT: finish Pat repair review, capture real six public probes with caps/estimate, retain mismatches, serial derivation/assembly, fresh Emmy/Pat/Rose review, Melissa reconciliation, three focused draft PRs as evidence permits.
-- RESUME: GOAL.md, checkpoint.md, ultra-plan.md, arcs.md. Runtime .unlazy/true-parity-p1-next has manifests/ledgers/raw logs. P1 baseline f220379d0937d0afffc6a030023c63c0f715e168 and frozen R9539352f66f2db2cc26b1c393e67212a359b60c9. Do not redo completed family capture.
-- CONTEXT: second compaction reached. Scope frozen to this checkpoint; next arc must use fresh bounded CLI/job or a user-requested fresh chat. Actual CLI invocation count exceeds original six-role budget due to blocked first attempts and same-leaf repairs; Melissa must count actual invocations separately.
+- GOAL ACTIVE. Seven exact candidate rows bind: X2 304/317,C2 290/297; C3 6/8,C4 4/8,C6 37undecided unchanged. Main f220379d0 remains297/317. Ledger18met/2unmet/0abandoned.
+- FULL PASSED: all four Pkg.test shards at d879a9e21; FAMILY-11 eight-job CI37515650751 passed. Documenter98.617seconds. Receipt panel Emmy/Pat/Rose OK at d879, scoped and conditional.
+- CORE PASSED: session31075, driver_exit0/core_exit0, all four shards exit0. Passes7607/10017/6717/6556; existing Broken assertions11/4/5/70; README8/8 per shard; elapsed2331.498s. Aggregate `.unlazy/true-parity-p1-next/dispatch/repaired-core-shards.log`, SHA256 `8831a86d71a365458aa32d69cdd0e2027b3392fc54b6362e676d987bcd239eba`; Totoro status `driver_exit=0`; verified PGID399887 absent. Scratch cached/offline test-only dependency environment smoke4.215seconds. No source tests or tolerances changed.
+- STOPPED FAILURES: original old unsharded exit124; archive attempt exit143; corrected full/core driver exit1 solely because direct core missed StableRNGs/JSON3. Full exits0/0/0/0. All failed logs retained; no core pass inferred.
+- CI REPAIR: PR843 commit bca77e4a4 provisions R4.5.3/Julia1.10 for fixture controls and selects Julia from PATH. Local33/33; hosted negative-controls, guard, Documenter and deploy pass. Julia-only twin checks on #843 run37528540192 and #844 run37526410958 were still in progress at21:00UTC. Engine/Julia tests/raw receipts/signatures/tolerances/dependency files unchanged.
+- TASK VALIDATION: complete20gates,7ledgerfiles in /private/tmp/p1-current-task-validation, sourceff46. Six leaves exit0, root exit1. Canonical report structurePASS and acceptanceUNMET only currentG7/G8. Historical tracked ledgers untouched. Prior isolated-PR workaround failed; use the declared complete task validation scope.
+- DRAFT STACK: #842 family8a74f62c5, #843 residual04d23c900, #844 isdmf5b90fa19. Integration keepsb5 raw ancestry. Every merge needs Shinichi. Thirteen remaining rows/37names accounted, unsigned contracts still required. P2/releases/version deferred.
+- ROUTING:11successful production invocations/sixroles; two completion panels plus one bounded Emmy CI follow-up,7reviewcalls; one failed CLI launch. No Astra/ultra. Fifth compaction admitted; no new broad P1 arc.
+- REVIEW: fresh Pat, Rose, and Emmy scoped reviews pass; Melissa's current reconciliation records suite source d879a9e21 separately from checkpoint candidate2451c176d. Exact seven-row result is local candidate evidence only.
+- HOSTED: #844 Julia1.10 twin check passed in38m7s. #844 Julia1 and both #843 Julia-only checks were pending at21:08UTC; all other reported hosted checks pass.
+- NEXT: await the remaining hosted Julia checks, reverify current candidate/main refs, finish report accounting, then present the concrete merge consent packet for #842. Preserve root/R/older lanes and all historical ledgers.
+
+
+## Current state, 2026-10-06 22:58 UTC
+
+- First-seven candidate `54f0c2e00e13b5daa7bebb7e3419cf6561206ad9` reverified: seven exact rows, X2 304/317, C2 290/297. C3 6/8, C4 4/8, C6 37 undecided.
+- Owning receipts and local negative controls pass. Hosted #844 P1 twin run 37533654264 passed on Julia 1 and 1.10; negative-controls run 37533678454 passed. Full and repaired core suites passed at `d879a9e21`.
+- Acceptance: 19 met / 1 unmet / 0 abandoned. G8 report/panel/reconciliation is complete. G7 awaits explicit merge consent and fresh main verification. Main remains `f220379d0937d0afffc6a030023c63c0f715e168`.
+- Local Documenter passes, including doctests and VitePress rendering. The full report structure passes; the repository-wide validator still stops at the unrelated malformed historical Totoro gate ledger.
+- #842/#843/#844 remain drafts; no merge occurred. Full P1 remains open with 13 scoreboard rows and 37 C6 names pending signed decisions.

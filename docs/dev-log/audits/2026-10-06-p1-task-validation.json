@@ -1,0 +1,39 @@
+{
+  "scope": "complete approved twenty-gate P1 checkpoint contract",
+  "candidate": "54f0c2e00e13b5daa7bebb7e3419cf6561206ad9",
+  "source_root": "/Users/z3437171/local-scratch/lanes/GLLVM.jl-p1-pr-isdm",
+  "source_entries": "symlinked unchanged",
+  "ledger_files": [
+    "GATES.md",
+    "gates/leaf-shannon.md",
+    "gates/leaf-hopper.md",
+    "gates/leaf-pat.md",
+    "gates/leaf-ebbinghaus.md",
+    "gates/leaf-gauss.md",
+    "gates/leaf-melissa.md"
+  ],
+  "historical_ledgers": "outside this task; untouched and excluded from this declared task scope",
+  "required_task_gates_omitted": 0,
+  "structure": "PASS",
+  "report_exit": 1,
+  "unmet": [
+    "G7"
+  ],
+  "gate_counts": {
+    "met": 19,
+    "unmet": 1,
+    "abandoned": 0
+  },
+  "logs": {
+    ".unlazy/true-parity-p1-next/dispatch/GATES-reverify.log": "e94c97cbbda279241063706a469b17cf81190d96bf25b2ed3f035ad48d9be881",
+    ".unlazy/true-parity-p1-next/dispatch/full-report-validator.log": "ee3cc484ac78252203bc39573f1b37a3257ac55de8754902b434a7491fd3a8e6",
+    ".unlazy/true-parity-p1-next/dispatch/leaf-ebbinghaus-reverify.log": "10db1db90d130260305deca0d0ef9b997b58a233c9bbd6a1c9fb12a45b7f9ee8",
+    ".unlazy/true-parity-p1-next/dispatch/leaf-gauss-reverify.log": "41630bcd677102e4f2c76bfbcb0d126b982e4383fc6dd417adee16eb7441cc2e",
+    ".unlazy/true-parity-p1-next/dispatch/leaf-hopper-reverify.log": "b6a9e30d90833ccf48fb8f249ad2603d93680904f86f026d38289bf39e521e84",
+    ".unlazy/true-parity-p1-next/dispatch/leaf-melissa-reverify.log": "9b7f9d260829dad28f45fd9469917b37136f3ac1252f61a45e3d92bedc5d4ab1",
+    ".unlazy/true-parity-p1-next/dispatch/leaf-pat-reverify.log": "d53ea430753eaea81a8f6708c956c030cac8957c308032c17fe0ab340b1c3d29",
+    ".unlazy/true-parity-p1-next/dispatch/leaf-shannon-reverify.log": "35f6bbca5ae8308cb084ad19537ba20d287a8a8dbc743580051383880c4c4d5d",
+    ".unlazy/true-parity-p1-next/dispatch/full-after-task-final.log": "37117521db0f4398c11f9d75ac9bfc03cbc21c57d552e490b18c9a52b73a568f"
+  },
+  "validator_limitation": "Fresh full repository validator passed after-task report structure then exited 1 because unrelated historical .unlazy/totoro-t4-p6-grid/GATES.md lacks explicit gate IDs. Lane-scoped status reports only G7 unmet; G7 is intentionally open pending merge consent and origin/main evidence."
+}

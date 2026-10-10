@@ -1,0 +1,24 @@
+model=gpt-6.1-sol
+routing_class=ceiling
+effort=high
+slice=b-gauss
+role=Gauss
+justification=Gaussian model identity, convergence and prospective Monte-Carlo contracts require stronger numerical judgment than routine receipt production.
+ultra_reason=
+effort_exception_code=
+effort_exception_reason=
+tier_escalation_code=load_bearing
+catalog_status=known
+catalog_routing_class=
+catalog_path=/Users/z3437171/.codex/models_cache.json
+catalog_supported_efforts=low,medium,high,xhigh,max,ultra
+context_mode=fresh_ephemeral
+sandbox=read-only
+cwd=/Users/z3437171/local-scratch/lanes/GLLVM.jl-true-parity-p1-next
+brief=.unlazy/true-parity-p1-next/briefs/gauss.md
+result=.unlazy/true-parity-p1-next/dispatch/gauss.result.md
+events=.unlazy/true-parity-p1-next/dispatch/gauss.events.jsonl
+started_at=2026-10-06T17:08:10Z
+finished_at=2026-10-06T17:21:36Z
+status=0
+command=/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin/codex exec --ephemeral --strict-config -C /Users/z3437171/local-scratch/lanes/GLLVM.jl-true-parity-p1-next -m gpt-6.1-sol -c model_reasoning_effort=\"high\" -c features.multi_agent=false -s read-only --json -o .unlazy/true-parity-p1-next/dispatch/gauss.result.md - 

@@ -1,7 +1,38 @@
+## 2026-10-10: first-seven behaviour receipt provenance
+
+- Reconciled the iSDM candidate onto current PR #844 head `2d400ee245` without force-push; candidate `637100d9b0244942063616f9c1bbab7f47746ab4` is two commits ahead. Fresh Rose delta review returned PASS WITH NOTES for the bounded receipt checkpoint.
+- Reverified exact seven-row checkpoint, assembler and both canonical negative-control suites. Results: seven bound; X2 304/317, C2 290/297; assembly 317 rows current; behaviour controls 35/35; checkpoint controls pass. Main-ref gate remains unmet pending maintainer-approved merges.
+- The after-task structure check passes. Full repository validation still stops at the unreadable cursor-owned `.unlazy/totoro-t4-p6-grid/GATES.md`; that unrelated ledger was left unchanged. No Julia source, fit, numerical claim, classification, admission or tolerance changed.
+
 ## 2026-10-06: provision interpreters for the residual-stage controls
 
 - PR843's hosted negative controls failed32/33 because its crossed R/Julia fixture could not find `Rscript`. PR844 exposed the same missing runner setup. The control also used a Juliaup-only path unavailable to hosted setup-julia.
 - Apply R4.5.3 and Julia1.10 setup before the controls, and resolve Julia from `PATH` with the existing local fallback. The fixture builds scratch data, loads no package, and performs no fit. Local Python controls pass33/33 on the residual-stage branch; CI will verify the hosted setup.
+
+## 2026-10-06: negative-control CI interpreter provisioning
+
+- Exact PR844 run37520380284 failed32/33 controls because Rscript was absent. Its crossed-fixture control also used a local Juliaup path unavailable to setup-julia runners.
+- Provision base R4.5.3 and Julia1.10 before the controls, using action versions already in repository CI. Resolve Julia from PATH before the existing local fallback. No fits, gllvmTMB package, engine, receipts, signatures, versions or tolerances changed.
+- All33/33 controls pass locally using PATH interpreters. Fresh enforced Emmy gpt-6-luna/medium returned OK for the two-file repair; its review does not certify core-suite success. Hosted rerun remains required.
+## 2026-10-06: independent first-seven review and test-environment repair
+
+- Final fresh Emmy/Pat/Rose panel independently returned receipt-candidate OK at d879a9e21, conditional on package tests and consent. Exactly seven rows bind; X2 304/317, C2 290/297;13 remaining rows and37 C6 names unchanged and unsigned. Documentation at that candidate passed in98.617seconds.
+- Earlier unsharded run hit its two-hour cap, exit124; core not executed, owned processes stopped. Initial archive candidate run stopped at1153seconds, exit143, after existing tests revealed missing Git provenance/default R jsonlite. Both prerequisite tests passed in17.319seconds after deploying real exact-source Git clones and using the already-installed R library; no source/tolerance/package-install change.
+- Corrected four-shard full/core verification launched19:29:03UTC, cap21:29:03UTC, max16cores. Results pending. Main remains f220379d0; every merge requires Shinichi. Measured ledger18met/2unmet/0abandoned. This is a continuation checkpoint, not full P1 or validated completion.
+## 2026-10-06: seven P1 receipt gaps, candidate checkpoint
+
+- Exact7rows bind locally: X2 304/317,C2 290/297; all other baseline statuses and admission/case contracts unchanged. C3 6/8,C4 4/8,C6 37undecided remain open.
+- Actual P1 public R FAMILY11 refusals and six paired R/Julia behaviours retained with process/source/build/hash provenance and mixed-source positive controls. Canonical derivation rejects stale/fabricated/mismatched evidence.
+- Owning derivations, assembly, negative controls, Python33/33, enabled Julia2/2 and Documenter109.2seconds pass. Full/core ated11661f0 pending; current-candidate full/core not inferred.
+- Initial independent panel found repaired tooling/prose/map defects; final immutable-candidate review remains required. Three staged draft branches are prepared; every merge awaits Shinichi. Main/full P1/closure are not claimed.
+
+## 2026-10-06: P1 first-seven checkpoint verifier
+
+- Approved baseline: `f220379d0937d0afffc6a030023c63c0f715e168`; P1 R source: `9539352f66f2db2cc26b1c393e67212a359b60c9`.
+- Added an internal exact-row verifier and controls. The verifier fixes the approved baseline checker, checks all admission/case contracts, preserves unrelated scoreboard statuses, validates P1 receipt and raw-hash provenance, and rechecks every numeric or behavioural bound receipt.
+- Controls pass for exact-row substitution, dropped rows, contract edits, signed substitutions, missing P1 source/build provenance, bad raw hashes and invalid bridge context. Existing checker and assembler controls passed; assembly is current at 317 rows.
+- The unchanged baseline is correctly rejected at FAMILY-11. No receipt gap has been closed by this tooling commit, and no full P1 or release claim is made. Candidate and main checkpoint gates remain unmet.
+- Full/core Julia suites and Documenter are pending for the receipt checkpoint; this change adds Node tooling and tests only.
 
 ## 2026-10-06: check_auto_residual public behaviour, local phase
 
@@ -21738,3 +21769,22 @@ After-task: `docs/dev-log/after-task/2026-09-13-destination-b-close-as-limit.md`
 - Fix: exact test-only compat pin in `test/Project.toml`: `Aqua = "=0.8.16"`. No `Project.toml` version bump, no runtime deps, no likelihood code, no gllvmTMB edits, no Aqua subcheck skip.
 - Local validation: temp Julia env with `Aqua v0.8.16`, `SpecialFunctions v2.9.0`, and `LogExpFunctions v0.3.29`; `Aqua.test_all(GLLVM; ambiguities=false)` passed, including `Persistent tasks | 1/1`.
 - Also ran: `git diff --check` passed. Full `Pkg.test()` was not run locally; an accidental all-suite probe was stopped after it started because the focused Aqua reproducer covered the CI failure mode.
+
+## 2026-10-06 - P1 first-seven checkpoint verification
+
+- Candidate `2451c176d7c098d91f4f29a5b1aba1b1117dc9a7`: exact checkpoint verifier passed for the seven named P1 rows; X2 304/317 and C2 290/297. Assembly and checkpoint/assembler negative controls passed. The remaining 13 scoreboard rows and 37 C6 names remain open.
+- Four `Pkg.test()` shards passed at source `d879a9e21fe2203ae52d5ceb3a4d2ed5c3e3e886`: 30,915 passes, 88 Broken assertions, zero failures/errors. Four repaired core shards also exited zero at the same source: 30,897 passes, 90 Broken assertions, zero failures/errors; README checks passed 8/8 per shard. Raw core summaries: `docs/dev-log/audits/2026-10-06-p1-repaired-core-shards.log`.
+- The d879-to-candidate changes do not touch `src/`, Julia tests, dependency files, or numerical tolerances. Main remains `f220379d0`; no merge or full-P1 completion is claimed. Hosted Julia-only twin checks on #843/#844 were still running at 21:00 UTC.
+
+
+## 2026-10-06 - P1 first-seven current-head verification
+
+- Exact PR #844 candidate `54f0c2e00e13b5daa7bebb7e3419cf6561206ad9`: seven rows bind; X2 304/317, C2 290/297. Four owning receipt derivations and 317-row assembly pass; checker, assembler and checkpoint negative controls pass.
+- Hosted P1 twin run 37533654264 passed on Julia 1 and 1.10; negative-controls run 37533678454 passed. Full and repaired core suites passed at source `d879a9e21fe2203ae52d5ceb3a4d2ed5c3e3e886`; all four shards in each suite exited zero.
+- Main remains `f220379d0`. The first checkpoint's merge/main gate is open pending explicit maintainer consent. Full P1 is not complete.
+
+## 2026-10-06 P1 first-seven final verification
+
+- Exact candidate `54f0c2e00e13b5daa7bebb7e3419cf6561206ad9`: unlazy reverify 19/20 gates, 12 runnable checks passed, G7 intentionally open pending consent and main landing.
+- Local `julia --project=docs docs/make.jl`: passed, including doctests and VitePress rendering.
+- Full repository after-task validation remains limited by the unrelated malformed historical Totoro gate ledger; task report structure passes.

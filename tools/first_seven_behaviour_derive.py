@@ -16,6 +16,11 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 BASE = ROOT / "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour"
 PIN = "9539352f66f2db2cc26b1c393e67212a359b60c9"
+# Canonical fixture bytes: trait (a,b) x source (count,detect) x unit
+# (u1,u2), in expand.grid/Julia panel order; count values are 1+i%%4,
+# detection values i%%2, and support is seq(0.05, 0.4, length=8), all
+# numeric fields formatted to eight decimals and rows newline-terminated.
+FIXTURE_SHA256 = "9a33a6aea9253c4e056971c464c21e0d745c22443829fb68f481abade644371e"
 R_SOURCE = "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json"
 R_BUILD = "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro.json"
 CASES = {
@@ -38,6 +43,7 @@ SIGNED_SCOPE = set(CASES.values())
 EXPECTED = {
     "CORE070-FIRST7-CHECK-AUTO-RESIDUAL": "residual-check:coherent",
     "CORE070-FIRST7-ISDM-COUNT": "all-count:nonmixed-admitted",
+    "CORE070-FIRST7-ISDM-EXTRA-SOURCE": "guard:family-length",
     "CORE070-FIRST7-ISDM-MISSING-IN-TRAIT": "guard:family-scale-per-trait",
     "CORE070-FIRST7-ISDM-MISSING-SOURCE": "guard:family-length",
     "CORE070-FIRST7-ISDM-WRAPPER-LAW": "guard:wrapper-law-refusal",
@@ -56,10 +62,26 @@ def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+def runner_provenance_problem(meta):
+    """Check captured R/Julia runners while retaining the capture-time derivation hash."""
+    captured = meta.get("runner_sha256")
+    if not isinstance(captured, dict):
+        return "run metadata lacks captured runner hashes"
+    for name, path in (("R", "tools/first_seven_behaviour_R.R"),
+                       ("Julia", "tools/first_seven_behaviour_J.jl")):
+        if captured.get(name) != digest(ROOT / path):
+            return f"captured {name} runner hash differs from the current runner"
+    derive_sha = captured.get("derive")
+    if (not isinstance(derive_sha, str) or len(derive_sha) != 64 or
+            any(c not in "0123456789abcdef" for c in derive_sha)):
+        return "run metadata lacks a valid capture-time derivation hash"
+    return None
+
+
 def matching_fixture_hashes(rrows, jrows):
     rh = {r.get("fixture_sha256") for r in rrows.values()}
     jh = {r.get("fixture_sha256") for r in jrows.values()}
-    return len(rh) == len(jh) == 1 and bool(next(iter(rh))) and rh == jh
+    return len(rh) == len(jh) == 1 and rh == jh == {FIXTURE_SHA256}
 
 
 def tsv(path, engine):
@@ -119,10 +141,9 @@ def derive(rrows, jrows, meta):
         raise ValueError("R output digest does not match run metadata")
     if meta.get("julia_output_sha256") != digest(meta["julia_output_path"]):
         raise ValueError("Julia output digest does not match run metadata")
-    if meta.get("runner_sha256") != {"R": digest(ROOT / "tools/first_seven_behaviour_R.R"),
-                                    "Julia": digest(ROOT / "tools/first_seven_behaviour_J.jl"),
-                                    "derive": digest(ROOT / "tools/first_seven_behaviour_derive.py")}:
-        raise ValueError("runner/derivation script digests differ from the finalized run")
+    runner_problem = runner_provenance_problem(meta)
+    if runner_problem:
+        raise ValueError(runner_problem)
     if not meta.get("r_source_sha256") or not meta.get("r_oracle_build_sha256") or not meta.get("julia_src_tree"):
         raise ValueError("run metadata lacks required R source/build or Julia source hashes")
     if any(r.get("engine") != "R" or r.get("pin") != "P1" or r.get("package_version") != "0.7.1"
@@ -191,6 +212,7 @@ def derive(rrows, jrows, meta):
         receipts[sid] = {"schema": "core070-first-seven-behaviour/v1", "case_id": FROZEN_CASES[cid],
             "source_id": sid, "reference_commit": PIN, "verdict": "PASS" if matched else "MISMATCH",
             "evidence_kind": "public_door_behaviour", "r_observed": rl, "julia_observed": jl,
+            "receipt_derivation_sha256": digest(ROOT / "tools/first_seven_behaviour_derive.py"),
             "raw_observations": {"R": rr, "Julia": jr}, "signed_scope": block["signed_scope"],
             "provenance": meta}
     clean = []
@@ -198,6 +220,7 @@ def derive(rrows, jrows, meta):
         c["labels"] = {k: sorted(v) for k, v in c["labels"].items()}
         clean.append(c)
     return receipts, {"schema": "core070-first-seven-equivalence/v1", "ruling": "D-319 N6/N10",
+                      "receipt_derivation_sha256": digest(ROOT / "tools/first_seven_behaviour_derive.py"),
                       "classes": clean}
 
 

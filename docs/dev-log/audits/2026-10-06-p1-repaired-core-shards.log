@@ -1,0 +1,30 @@
+driver_exit=0
+core_exit=0
+  raw: |Δ summary| (R par_tight)                    7.529793058314027e-5
+  unit ordination: |scores_J - R scores|            8.881784197001252e-16
+Test Summary: | Pass  Broken  Total      Time
+GLLVModels.jl | 7607      11   7618  31m48.3s
+Test Summary:                | Pass  Total   Time
+#536 README Quick start runs |    8      8  11.7s
+core_exit=0
+  raw: |Δ beta| (R par_tight)                   5.623876376092962e-6
+  raw: |Δ time| (R par_tight)                   4.599172651276184e-6
+Test Summary: |  Pass  Broken  Total      Time
+GLLVModels.jl | 10017       4  10021  37m60.0s
+Test Summary:                | Pass  Total  Time
+#536 README Quick start runs |    8      8  9.2s
+core_exit=0
+profile trace max |value_J - value_R| = 9.82351551215288e-7
+bootstrap time_estimate mean/sd: Julia 0.7132749549740844 / 0.11529041995813141; R 0.7226486047410728 / 0.11525913433016902
+Test Summary: | Pass  Broken  Total      Time
+GLLVModels.jl | 6717       5   6722  30m03.2s
+Test Summary:                | Pass  Total  Time
+#536 README Quick start runs |    8      8  9.2s
+core_exit=0
+A4_S4_TREE_JULIA_OWN_OPTIMUM_OK
+ZIB bridge no-X Wald CI: max|Δ| vs native = 0.0 (≤1e-8)
+Test Summary: | Pass  Broken  Total      Time
+GLLVModels.jl | 6556      70   6626  38m40.9s
+Test Summary:                | Pass  Total  Time
+#536 README Quick start runs |    8      8  9.5s
+elapsed_seconds=2331.498

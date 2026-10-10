@@ -1,0 +1,24 @@
+model=gpt-6-luna
+routing_class=build
+effort=medium
+slice=checkpoint-melissa
+role=Melissa
+justification=
+ultra_reason=
+effort_exception_code=
+effort_exception_reason=
+tier_escalation_code=
+catalog_status=known
+catalog_routing_class=luna-flex
+catalog_path=/Users/z3437171/.codex/models_cache.json
+catalog_supported_efforts=low,medium,high,xhigh,max
+context_mode=fresh_ephemeral
+sandbox=read-only
+cwd=/Users/z3437171/local-scratch/lanes/GLLVM.jl-true-parity-p1-next
+brief=/Users/z3437171/local-scratch/lanes/GLLVM.jl-true-parity-p1-next/.unlazy/true-parity-p1-next/briefs/melissa.md
+result=/Users/z3437171/local-scratch/lanes/GLLVM.jl-true-parity-p1-next/.unlazy/true-parity-p1-next/dispatch/melissa.result.md
+events=/Users/z3437171/local-scratch/lanes/GLLVM.jl-true-parity-p1-next/.unlazy/true-parity-p1-next/dispatch/melissa.events.jsonl
+started_at=2026-10-06T18:29:45Z
+finished_at=2026-10-06T18:30:43Z
+status=0
+command=/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin/codex exec --ephemeral --strict-config -C /Users/z3437171/local-scratch/lanes/GLLVM.jl-true-parity-p1-next -m gpt-6-luna -c model_reasoning_effort=\"medium\" -c features.multi_agent=false -s read-only --json -o /Users/z3437171/local-scratch/lanes/GLLVM.jl-true-parity-p1-next/.unlazy/true-parity-p1-next/dispatch/melissa.result.md - 
