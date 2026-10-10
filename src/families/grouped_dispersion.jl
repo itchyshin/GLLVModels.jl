@@ -158,7 +158,7 @@ function _nb_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::Abs
         (mask === nothing || mask[t]) || continue
         ℓ += _glm_logpdf(fams[t], μ[t], n[t], y[t])
     end
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 # Per-species log-posterior for one site: the backtracking merit function.

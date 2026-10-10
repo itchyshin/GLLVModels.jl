@@ -20,6 +20,11 @@
 const _ETA_CLAMP = 30.0
 _clamp_eta(η) = clamp(η, -_ETA_CLAMP, _ETA_CLAMP)
 
+# log det of the K×K Laplace curvature `Λ'WΛ + I`. With K = 0 the matrix is 0×0 and its log
+# det is 0, but Julia 1.12's `logdet(::Symmetric)` throws on an empty matrix (1.10 returns
+# 0.0); the fitters' `catch` then turned every K = 0 evaluation into the failure sentinel.
+_laplace_logdet(A::AbstractMatrix) = size(A, 1) == 0 ? zero(eltype(A)) : logdet(A)
+
 # Robust linear solve: returns `nothing` if the factorization is singular or
 # fails, so the inner Newton can stop gracefully. A = Λ'WΛ + I is SPD by
 # construction but can be numerically singular when the Fisher weights blow up
