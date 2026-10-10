@@ -53,6 +53,7 @@ println(_SHARD === nothing ?
 
     _shard_include("test_package_rename_alias.jl")
     _shard_include("test_shard_selection.jl")
+    _shard_include("test_family11_p1_boundary.jl")
     _shard_include("test_likelihood.jl")
     _shard_include("test_packing.jl")
     _shard_include("test_none_dep.jl")
