@@ -1,3 +1,9 @@
+## 2026-10-10: first-seven behaviour receipt provenance
+
+- Reconciled the iSDM candidate onto current PR #844 head `2d400ee245` without force-push; candidate `637100d9b0244942063616f9c1bbab7f47746ab4` is two commits ahead. Fresh Rose delta review returned PASS WITH NOTES for the bounded receipt checkpoint.
+- Reverified exact seven-row checkpoint, assembler and both canonical negative-control suites. Results: seven bound; X2 304/317, C2 290/297; assembly 317 rows current; behaviour controls 35/35; checkpoint controls pass. Main-ref gate remains unmet pending maintainer-approved merges.
+- The after-task structure check passes. Full repository validation still stops at the unreadable cursor-owned `.unlazy/totoro-t4-p6-grid/GATES.md`; that unrelated ledger was left unchanged. No Julia source, fit, numerical claim, classification, admission or tolerance changed.
+
 ## 2026-10-06: provision interpreters for the residual-stage controls
 
 - PR843's hosted negative controls failed32/33 because its crossed R/Julia fixture could not find `Rscript`. PR844 exposed the same missing runner setup. The control also used a Juliaup-only path unavailable to hosted setup-julia.
