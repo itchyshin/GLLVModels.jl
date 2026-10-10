@@ -16,6 +16,11 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 BASE = ROOT / "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour"
 PIN = "9539352f66f2db2cc26b1c393e67212a359b60c9"
+# Canonical fixture bytes: trait (a,b) x source (count,detect) x unit
+# (u1,u2), in expand.grid/Julia panel order; count values are 1+i%%4,
+# detection values i%%2, and support is seq(0.05, 0.4, length=8), all
+# numeric fields formatted to eight decimals and rows newline-terminated.
+FIXTURE_SHA256 = "9a33a6aea9253c4e056971c464c21e0d745c22443829fb68f481abade644371e"
 R_SOURCE = "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json"
 R_BUILD = "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro.json"
 CASES = {
@@ -38,6 +43,7 @@ SIGNED_SCOPE = set(CASES.values())
 EXPECTED = {
     "CORE070-FIRST7-CHECK-AUTO-RESIDUAL": "residual-check:coherent",
     "CORE070-FIRST7-ISDM-COUNT": "all-count:nonmixed-admitted",
+    "CORE070-FIRST7-ISDM-EXTRA-SOURCE": "guard:family-length",
     "CORE070-FIRST7-ISDM-MISSING-IN-TRAIT": "guard:family-scale-per-trait",
     "CORE070-FIRST7-ISDM-MISSING-SOURCE": "guard:family-length",
     "CORE070-FIRST7-ISDM-WRAPPER-LAW": "guard:wrapper-law-refusal",
@@ -59,7 +65,7 @@ def digest(path):
 def matching_fixture_hashes(rrows, jrows):
     rh = {r.get("fixture_sha256") for r in rrows.values()}
     jh = {r.get("fixture_sha256") for r in jrows.values()}
-    return len(rh) == len(jh) == 1 and bool(next(iter(rh))) and rh == jh
+    return len(rh) == len(jh) == 1 and rh == jh == {FIXTURE_SHA256}
 
 
 def tsv(path, engine):
