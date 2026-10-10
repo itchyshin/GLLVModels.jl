@@ -142,3 +142,25 @@ end
     @test predict(f, y) ≈ predict(f, y; X = ones(p, n, 1))
     @test residuals(f, y) ≈ residuals(f, y; X = ones(p, n, 1))
 end
+
+# #577: on psych::bfi (items scored 1–6) the public Normal route reported
+# `converged = true` thousands of logLik units below the centred fit, with and
+# without a response mask. The intercept design above fixed the unmasked path; this
+# pins the masked path too: shifting the observed values by a per-trait constant
+# moves only the intercepts. (Observed-mean centring is not the ML intercept under
+# missingness, so the comparison is shift against shift, not raw against centred.)
+@testset "masked Gaussian fit is shift equivariant (#577)" begin
+    rng = MersenneTwister(577)
+    p, n = 6, 120
+    Y0 = 0.9 .* randn(rng, p, 1) * randn(rng, 1, n) .+ randn(rng, p, n)
+    mk = rand(rng, p, n) .> 0.1
+    shift = [2.3, 4.9, 4.6, 4.7, 4.5, 3.1]
+    Y1 = Y0 .+ shift
+    Y0[.!mk] .= 0.0; Y1[.!mk] .= 0.0
+    f0 = fit_gllvm(Y0; family = Normal(), K = 1, mask = mk)
+    f1 = fit_gllvm(Y1; family = Normal(), K = 1, mask = mk)
+    @test f0.converged && f1.converged
+    @test length(f1.pars.β) == p
+    @test isapprox(f0.logLik, f1.logLik; atol = 1e-5)
+    @test isapprox(f1.pars.β, f0.pars.β .+ shift; atol = 1e-3)
+end
