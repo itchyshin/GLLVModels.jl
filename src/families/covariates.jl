@@ -167,7 +167,7 @@ function _laplace_site_off(family, y::AbstractVector, n::AbstractVector,
         F = cholesky(A; check = false)
         issuccess(F) || return oftype(ℓ, -Inf)
     end
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 # Total Laplace log-marginal with an additive per-(t,s) offset matrix `O` (p×n):
@@ -240,7 +240,7 @@ function _cov_site_diffable(fams, y::AbstractVector, n::AbstractVector, Λ::Abst
         obs(t) || continue
         ℓ += _glm_logpdf(fams[t], μz[t], n[t], y[t])
     end
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 # Optimiser for the exact-gradient route: dense BFGS, not L-BFGS. These objectives are

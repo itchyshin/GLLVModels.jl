@@ -468,7 +468,7 @@ function _truncnb2_pertrait_loglik_site(fams::AbstractVector, y::AbstractVector,
         (mask === nothing || mask[t]) || continue
         ℓ += _glm_logpdf(fams[t], μ[t], n[t], y[t])
     end
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 # Smallest per-site Laplace precision eigenvalue min_s eigmin(I + Λ' diag(W_s) Λ) at the

@@ -333,7 +333,7 @@ function twopart_loglik_site(family, y::AbstractVector,
         Amat[d, d] += 1.0                      # + I (adds 1.0 to each diagonal entry)
     end
     A = Symmetric(Amat)
-    return ℓ - 0.5 * dot(ẑ, ẑ) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(ẑ, ẑ) - 0.5 * _laplace_logdet(A)
 end
 
 """

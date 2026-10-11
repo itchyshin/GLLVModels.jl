@@ -263,7 +263,7 @@ function _beta_binomial_loglik_site(y::AbstractVector, N::AbstractVector,
         W[t] = Wt
     end
     A = Symmetric(Λ' * (W .* Λ) + I)
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 """

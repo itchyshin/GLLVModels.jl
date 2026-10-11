@@ -286,7 +286,7 @@ function _compoisson_loglik_site(y::AbstractVector, Λ::AbstractMatrix,
         W[t] = Wt
     end
     A = Symmetric(Λ' * (W .* Λ) + I)
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 """

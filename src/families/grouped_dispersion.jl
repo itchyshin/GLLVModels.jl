@@ -1124,7 +1124,7 @@ function _beta_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::A
         (mask === nothing || mask[t]) || continue
         ℓ += _glm_logpdf(fams[t], μ[t], n[t], y[t])
     end
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 """
@@ -1706,7 +1706,7 @@ function _gamma_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::
         (mask === nothing || mask[t]) || continue
         ℓ += _glm_logpdf(fams[t], μ[t], n[t], y[t])
     end
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 """
@@ -2199,7 +2199,7 @@ function _nb1_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::Ab
         (mask === nothing || mask[t]) || continue
         ℓ += _glm_logpdf(fams[t], μ[t], n[t], y[t])
     end
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 """
@@ -2660,7 +2660,7 @@ function _tweedie_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n
         (mask === nothing || mask[t]) || continue
         ℓ += _glm_logpdf(fams[t], μ[t], n[t], y[t])
     end
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 """
