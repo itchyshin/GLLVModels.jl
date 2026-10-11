@@ -58,10 +58,57 @@ _off869(f) = !f.converged
             ("fit_exponential_gllvm",     () -> fit_exponential_gllvm(Yf; K = 0)),
             ("fit_delta_gamma_gllvm",     () -> fit_delta_gamma_gllvm(Ynn; K = 0)),
             ("fit_delta_lognormal_gllvm", () -> fit_delta_lognormal_gllvm(Ynn; K = 0)),
+            # guarded as well; these already ended at the sentinel before the guard, so they
+            # pin the outcome rather than a change
+            ("fit_zip_gllvm",             () -> fit_zip_gllvm(Yi; K = 0)),
+            ("fit_hurdle_poisson_gllvm",  () -> fit_hurdle_poisson_gllvm(Yi; K = 0)),
+            ("fit_compoisson_gllvm",      () -> fit_compoisson_gllvm(Yi; K = 0)),
+            ("fit_censored_poisson_gllvm", () -> fit_censored_poisson_gllvm(Yi; K = 0)),
+            ("fit_truncated_poisson_gllvm", () -> fit_truncated_poisson_gllvm(max.(Yi, 1); K = 0)),
+            ("fit_nb1_gllvm",             () -> fit_nb1_gllvm(Yi; K = 0)),
         ]
             f = redirect_stderr(devnull) do; thunk(); end
             @test (nm, _off869(f)) == (nm, true)
         end
+    end
+
+    @testset "K >= 1 plateau, plain and with an X_lv predictor" begin
+        Yi = round.(Int, _Y869 .* _BIG869)
+        Yf = Float64.(_Y869) .* _BIG869 .+ 0.5
+        Xl = reshape([sin(0.9i) for i in 1:size(Yi, 2)], size(Yi, 2), 1)
+        # The X_lv routes build the additive eta term (offset + Lambda * alpha' * X_lv) inside
+        # the fitter closure; the start is already past the cap, so the guard sees it there.
+        for (nm, thunk) in [
+            ("fit_poisson_gllvm K = 1",        () -> fit_poisson_gllvm(Yi; K = 1)),
+            ("fit_poisson_gllvm K = 1, X_lv",  () -> fit_poisson_gllvm(Yi; K = 1, X_lv = Xl)),
+            ("fit_nb_gllvm K = 1, X_lv",       () -> fit_nb_gllvm(Yi; K = 1, X_lv = Xl)),
+            ("fit_gamma_gllvm K = 1, X_lv",    () -> fit_gamma_gllvm(Yf; K = 1, X_lv = Xl)),
+        ]
+            f = redirect_stderr(devnull) do; thunk(); end
+            @test (nm, _off869(f), f.loglik == -Inf) == (nm, true, true)
+        end
+    end
+
+    @testset "K = 0 values are finite and exact (Julia 1.10 and 1.12)" begin
+        # With no latent block the Poisson Laplace value is the sum of independent per-species
+        # Poisson loglik at the sample means. A regression to the 1.12 empty-logdet sentinel
+        # would give -Inf here.
+        Y = _Y869
+        ref = sum(logpdf(Poisson(sum(Y[t, :]) / size(Y, 2)), y) for t in axes(Y, 1) for y in Y[t, :])
+        f = fit_poisson_gllvm(Y; K = 0)
+        @test f.converged
+        @test isapprox(f.loglik, ref; atol = 1e-8)
+        # The zero-inflated Laplace evaluator at K = 0 equals the exact independent mixture.
+        Yz = [0 1 3 0; 2 0 1 4]; β = [0.4, 0.1]; α = [-1.0, -0.3]
+        mix = sum(begin
+                      π0 = 1 / (1 + exp(-α[t])); μ = exp(β[t])
+                      y == 0 ? log(π0 + (1 - π0) * exp(-μ)) : log(1 - π0) + logpdf(Poisson(μ), y)
+                  end for t in 1:2 for y in Yz[t, :])
+        @test isapprox(_G869.zi_marginal_loglik_laplace(_G869.zi_poisson(), Yz, zeros(2, 0), β, α),
+                       mix; atol = 1e-8)
+        # NB2 shared and grouped agree at K = 0 (per-species r aside) and are finite
+        @test isfinite(fit_nb_gllvm(Y; K = 0).loglik)
+        @test isfinite(fit_truncated_nbinom2_gllvm(max.(Y, 1); K = 0).loglik)
     end
 
     @testset "a start past the cap is refused, not reported converged (K = 0, Gamma / Tweedie)" begin
