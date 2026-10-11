@@ -1,3 +1,21 @@
+## 2026-10-10: false `converged` on three fitters (refs #754, #753, #781)
+
+- Branch `cursor/false-converged-754-753-781-78dc` from `origin/main` `e6cfcd4ee`.
+  Draft PR #868. Repros in `docs/dev-log/repro/2026-10-10-false-converged/`.
+- Main (`e6cfcd4ee`, Julia 1.10.12): #754 noise-only `conv=true` `s2=6.21e-10`;
+  constant y `conv=true` `negll=-11870.67`; NaN y `ErrorException` pointing at
+  the optimiser. #753 rank-1 `σ_eps=sqrt(eps())` `conv=true` `logLik=1939.83`.
+  #781 `iterations=0` `conv=true`; NaN `θ_init` `conv=true` `loglik=-1e12`.
+- After: noise-only `sigma2_boundary=true` `conv=false`; constant/NaN y
+  `ArgumentError` naming `y`; EM `sigma_eps_boundary=true` `conv=false`;
+  ZINB `iterations=0` `conv=false`; NaN `θ_init` rejected.
+- Julia 1.10.12 local: test_branch_re_convergence 14/14, test_em_phylo_sigma_eps_floor 4/4,
+  test_zinb_cov_iterations 10/10, test_nparams_em_branch_re 8/8, test_em_squarem 27/27,
+  test_em_phylo 27/27, test_zinb_x_identity 42/42, test_em_louis 147/147,
+  test_branch_re_marginal_fallback 13/13, test_phylo_branch_re 44/44.
+- #752 (xlv feasibility-as-converged) not touched; next PR. Siblings:
+  `em_fit_phylo_squarem` increment stop, `fit_relaxed_clock` increment stop.
+
 ## 2026-10-01: postfit numeric twins at gllvmTMB P1 (5 rows, #660)
 
 - Branch `claude/true-parity-cov-postfit-family-twins` from `origin/main` (`3fcf20698`). New:
