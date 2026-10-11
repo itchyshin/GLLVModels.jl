@@ -823,6 +823,11 @@ function _nb_grouped_cov_negll_grad(Yc, X_fit, θ, p, q, K, rr, G, gidx, link, m
         Λ = unpack_lambda(θ[(p + q + 1):(p + q + rr)], p, K)
         rg = exp.(θ[(p + q + rr + 1):(p + q + rr + G)])
         fams = [NegativeBinomial(float(rg[gidx[t]]), 0.5) for t in 1:p]
+        # An offset may be NaN or ±Inf at an unobserved cell (the engine never reads it).
+        # Zero those cells so they cannot put a NaN into the AD pass (#552 review).
+        if offset !== nothing && msk !== nothing
+            offset = ifelse.(msk, offset, 0.0)
+        end
         O = _build_offset(X_fit, γ)
         offset === nothing || (O = O .+ offset)
         ẑs = Vector{Vector{Float64}}(undef, n)

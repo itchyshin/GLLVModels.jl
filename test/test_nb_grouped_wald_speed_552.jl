@@ -105,3 +105,31 @@ end
     @test g !== nothing
     @test maximum(abs, g) < 1e-3
 end
+
+@testset "#552 exact gradient is used when masked cells carry a NaN or Inf offset" begin
+    rng = MersenneTwister(5522)
+    p, n, K = 4, 40, 1
+    Y, _ = _sim_nb_552(rng, p, n, K)
+    mk = rand(rng, p, n) .> 0.15
+    O0 = 0.1 .* randn(rng, p, n)
+    Oz = copy(O0); Oz[.!mk] .= 0.0
+    rr = GLLVModels.rr_theta_len(p, K)
+    θ = vcat(fill(1.0, p), 0.3 .* ones(rr), log.([1.0, 3.0, 10.0, 30.0]))
+    grad(O) = GLLVModels._nb_grouped_cov_negll_grad(Y, zeros(p, n, 0), θ, p, 0, K, rr, p,
+                                                    collect(1:p), GLLVModels.LogLink(), mk,
+                                                    :observed, 100, 1e-9; offset = O)
+    gz = grad(Oz)
+    @test gz !== nothing && all(isfinite, gz)
+    for bad in (NaN, Inf, -Inf)
+        Ob = copy(O0); Ob[.!mk] .= bad
+        g = grad(Ob)
+        @test g !== nothing           # not the finite-difference fallback
+        @test g == gz                 # masked cells have no effect
+    end
+    # The fit with NaN at masked cells equals the fit with 0 there, via the exact gradient.
+    On = copy(O0); On[.!mk] .= NaN
+    fz = fit_nb_gllvm_grouped(Y; K = K, group = collect(1:p), mask = mk, offset = Oz)
+    fn = fit_nb_gllvm_grouped(Y; K = K, group = collect(1:p), mask = mk, offset = On)
+    @test isapprox(fn.loglik, fz.loglik; atol = 1e-8)
+    @test fn.converged == fz.converged
+end
