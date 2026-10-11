@@ -15,6 +15,9 @@
   test_branch_re_marginal_fallback 13/13, test_phylo_branch_re 44/44.
 - #752 (xlv feasibility-as-converged) not touched; next PR. Siblings:
   `em_fit_phylo_squarem` increment stop, `fit_relaxed_clock` increment stop.
+- CI on #868 head `3d87d246b`: 14 successful / 0 failed / 1 skipped
+  (advisory frozen-R smoke). Julia 1.10 + Julia 1 shards 1–4, Documenter,
+  Documenter deploy, both P1 twin jobs, wrong-close guard.
 
 ## 2026-10-01: postfit numeric twins at gllvmTMB P1 (5 rows, #660)
 
