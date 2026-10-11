@@ -81,6 +81,16 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
   by decision (e.g. GP-1).
 
 ### Fixed
+- **FIX:** three fitters no longer report `converged = true` off an optimum
+  (refs #754, #753, #781). `fit_branch_re` requires a small Nelder–Mead
+  simplex in parameter space and records `sigma2_boundary` when `σ²` or
+  `σ²_eps` is at or below `1e-8`; constant or non-finite `y` raise
+  `ArgumentError` naming the data. `em_fit_phylo` records
+  `sigma_eps_boundary` when the M-step clamps `σ_eps²` to `eps()` and then
+  leaves `converged` false. `fit_zinb_gllvm_cov(iterations = 0)` evaluates
+  the start only, returns `converged = false`, and rejects a non-finite
+  `θ_init`. None of these checks use an absolute gradient or objective
+  tolerance. #752 (xlv constrained refit) is a sibling, not this change.
 - **FIX:** every non-Gaussian **Wald** standard error was wrong. The
   observed-information finite-difference Hessian (`_fd_hessian`, backing
   `confint(fit, Y; method=:wald)` and `_family_wald` for Poisson / Binomial / NB /

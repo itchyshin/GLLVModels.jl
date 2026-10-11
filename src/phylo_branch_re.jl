@@ -365,6 +365,11 @@ end
 # 6. Public driver: ML fit of {μ, σ², σ²_eps}.
 # ---------------------------------------------------------------------------
 
+# Variance at or below this value is reported as a boundary, not an interior
+# optimum. Matches the xlv profile `sigma2_boundary` scale (1e-8): a log-
+# variance that has run to the underflow / no-signal floor.
+const _BRANCH_RE_VARIANCE_BOUNDARY_TOL = 1e-8
+
 """
     BranchREFit
 
@@ -374,7 +379,13 @@ Result of `fit_branch_re`. Fields:
   * `ẑ`                – branch-increment BLUPs (length E).
   * `std_incr`         – ẑ_e/√ℓ_e (length E).
   * `rate_e`           – ẑ_e²/ℓ_e per-branch rate read-outs (length E).
-  * `n_iter`, `converged` – optimiser diagnostics.
+  * `n_iter`, `converged` – optimiser diagnostics. `converged` is true only
+    when the Nelder–Mead simplex is small in both function value and
+    parameter space *and* neither variance sits on the stated floor
+    `_BRANCH_RE_VARIANCE_BOUNDARY_TOL`.
+  * `sigma2_boundary`  – `true` when `σ²` or `σ²_eps` is at or below
+    `_BRANCH_RE_VARIANCE_BOUNDARY_TOL` (no phylogenetic signal, or a
+    collapsed residual). `converged` is then false.
 """
 struct BranchREFit
     μ::Float64
@@ -386,6 +397,14 @@ struct BranchREFit
     rate_e::Vector{Float64}
     n_iter::Int
     converged::Bool
+    sigma2_boundary::Bool
+    # Default `sigma2_boundary = false` so existing 9-argument positional
+    # constructions (tests, dense reference) stay valid.
+    function BranchREFit(μ, σ², σ²_eps, negll, ẑ, std_incr, rate_e,
+                         n_iter, converged, sigma2_boundary = false)
+        new(μ, σ², σ²_eps, negll, ẑ, std_incr, rate_e,
+            n_iter, converged, sigma2_boundary)
+    end
 end
 
 # Post-fit: `_nparams` unlocks generic `dof`/`aic`/`bic` in src/postfit.jl.
@@ -403,6 +422,12 @@ Nelder–Mead, then extracts the branch BLUPs and per-branch rate read-outs.
 `fix_σ²_eps` pins the observation-noise variance (then a 1-D optimisation over
 log σ² only). Defaults split the marginal trait variance between phylogenetic
 signal and noise as a warm start.
+
+Non-finite `y` and constant (zero-variance) `y` raise `ArgumentError` naming
+the response. `converged` requires a small simplex in both the objective and
+the log-variance coordinates; a variance at or below
+`_BRANCH_RE_VARIANCE_BOUNDARY_TOL` is reported via `sigma2_boundary` and
+forces `converged = false`.
 """
 function fit_branch_re(phy::EdgePhy, y::AbstractVector;
                        σ²_init::Union{Nothing,Real} = nothing,
@@ -411,8 +436,7 @@ function fit_branch_re(phy::EdgePhy, y::AbstractVector;
                        max_iter::Integer = 500, tol::Real = 1e-9)
     cache = branch_re_cache(phy)
     yv = collect(float.(y))
-    length(yv) == cache.p ||
-        throw(ArgumentError("y length $(length(yv)) must equal p $(cache.p)"))
+    _branch_re_check_y(yv, cache.p; caller = "fit_branch_re")
 
     vy = var(yv; corrected = false)
     # Mean root→tip path length (in branch-length units) for a rate warm-start.
@@ -450,11 +474,35 @@ function fit_branch_re(phy::EdgePhy, y::AbstractVector;
     isfinite(negll) && isfinite(σ²) && σ² > 0 && isfinite(σ²_eps) && σ²_eps > 0 ||
         throw(ErrorException("branch-RE optimisation found no finite likelihood point"))
 
+    sigma2_boundary = _branch_re_variance_boundary(σ², σ²_eps)
+    # Boundary is not an interior optimum; the optimiser flag alone is not enough.
+    converged = conv && !sigma2_boundary
+
     _, μ̂ = branch_re_profile_negll(cache, yv, σ², σ²_eps)
     ẑ, std_incr, rate_e = branch_blups(cache, yv, σ², σ²_eps, μ̂)
     return BranchREFit(μ̂, σ², σ²_eps, negll, ẑ, std_incr, rate_e,
-                       n_iter, converged)
+                       n_iter, converged, sigma2_boundary)
 end
+
+# Reject non-finite and zero-variance responses before the optimiser can
+# manufacture a huge positive log-likelihood or a misleading "no finite
+# likelihood" error that points at the search rather than the data.
+function _branch_re_check_y(y::AbstractVector, p::Integer; caller::AbstractString)
+    length(y) == p ||
+        throw(ArgumentError("y length $(length(y)) must equal p $p"))
+    if !all(isfinite, y)
+        idx = findall(!isfinite, y)
+        throw(ArgumentError("$caller: y contains non-finite values at indices $idx"))
+    end
+    if isempty(y) || all(==(first(y)), y)
+        throw(ArgumentError("$caller: y is constant (zero variance)"))
+    end
+    return nothing
+end
+
+_branch_re_variance_boundary(σ²::Real, σ²_eps::Real) =
+    (isfinite(σ²) && σ² <= _BRANCH_RE_VARIANCE_BOUNDARY_TOL) ||
+    (isfinite(σ²_eps) && σ²_eps <= _BRANCH_RE_VARIANCE_BOUNDARY_TOL)
 
 # ---------------------------------------------------------------------------
 # 7. Self-contained derivative-free optimisers (no Optim dependency).
@@ -481,7 +529,16 @@ function _nelder_mead(f, x0::AbstractVector; max_iter::Integer = 500,
         iters = it
         ord = sortperm(fvals)
         simplex = simplex[ord]; fvals = fvals[ord]
-        if abs(fvals[end] - fvals[1]) ≤ tol * (abs(fvals[1]) + tol)
+        # Both the objective spread and the parameter-space diameter must be
+        # small. f-spread alone is the #754 defect: a flat profile lets the
+        # simplex walk toward -Inf in log-variance with equal f-values.
+        # x-spread is relative to the best vertex (plus one log-unit so a
+        # near-zero log-variance still has a scale); it is not an absolute
+        # objective or gradient tolerance.
+        f_spread = abs(fvals[end] - fvals[1])
+        f_ok = isfinite(f_spread) && isfinite(fvals[1]) &&
+               f_spread ≤ tol * (abs(fvals[1]) + tol)
+        if f_ok && _simplex_x_settled(simplex, tol)
             converged = true
             break
         end
@@ -515,6 +572,21 @@ function _nelder_mead(f, x0::AbstractVector; max_iter::Integer = 500,
     return simplex[ord[1]], fvals[ord[1]], iters, converged
 end
 
+# Simplex diameter in parameter space, relative to the best vertex. `+ 1`
+# is one unit of the log-variance chart, not an objective tolerance.
+function _simplex_x_settled(simplex, tol)
+    xbest = simplex[1]
+    diam = 0.0
+    scale = 0.0
+    @inbounds for v in simplex
+        for j in eachindex(xbest)
+            diam = max(diam, abs(v[j] - xbest[j]))
+            scale = max(scale, abs(xbest[j]))
+        end
+    end
+    return diam <= tol * (scale + 1)
+end
+
 function _nelder_mead_1d(f, x0::Real; max_iter::Integer = 500, tol::Real = 1e-9)
     x̂, fbest, iters, conv = _nelder_mead(v -> f(v[1]), [float(x0)];
                                           max_iter, tol)
@@ -540,6 +612,7 @@ function fit_branch_re_dense(phy::EdgePhy, y::AbstractVector;
                              max_iter::Integer = 500, tol::Real = 1e-9)
     p = phy.n_leaves
     yv = collect(float.(y))
+    _branch_re_check_y(yv, p; caller = "fit_branch_re_dense")
     Z = path_membership(phy)
     V = Matrix(Z * spdiagm(0 => phy.branch_lengths) * Z')     # dense p×p
     one_p = ones(p)
@@ -581,9 +654,10 @@ function fit_branch_re_dense(phy::EdgePhy, y::AbstractVector;
     D = σ² .* phy.branch_lengths
     ẑ = D .* (Z' * (cΣ \ (yv .- μ̂)))
     sqrtℓ = sqrt.(phy.branch_lengths)
+    sigma2_boundary = _branch_re_variance_boundary(σ², σ²_eps)
     return BranchREFit(μ̂, σ², σ²_eps, negll_dense(σ², σ²_eps)[1],
                        ẑ, ẑ ./ sqrtℓ, (ẑ .^ 2) ./ phy.branch_lengths,
-                       iters, conv)
+                       iters, conv && !sigma2_boundary, sigma2_boundary)
 end
 
 # ---------------------------------------------------------------------------

@@ -85,7 +85,7 @@ function _em_map_phylo(θ::AbstractVector, y::AbstractMatrix,
                        Σ_phy::AbstractMatrix, p::Integer, K_B::Integer)
     Λ_B, σ_eps, σ_phy = _unpack_phylo(θ, p, K_B)
     ss = _estep_dense(y, Λ_B, σ_eps, σ_phy, Σ_phy)
-    Λ_B′, σ_eps′, σ_phy′ = _mstep_dense(y, ss)
+    Λ_B′, σ_eps′, σ_phy′, _ = _mstep_dense(y, ss)
     return _pack_phylo(Λ_B′, σ_eps′, σ_phy′)
 end
 
@@ -332,7 +332,8 @@ function em_fit_phylo_squarem(y::AbstractMatrix, K_B::Integer,
             if isfinite(fb.logLik) && fb.logLik > ll_sq + safety_tol
                 return EMPhyloFit(fb.Λ_B, fb.σ_eps, fb.σ_phy, fb.logLik,
                                   fb.n_iter, fb.converged, fb.loglik_trace,
-                                  fb.blup_phy, fb.blup_phi, true)
+                                  fb.blup_phy, fb.blup_phi, true,
+                                  fb.sigma_eps_boundary)
             end
         elseif needs_fallback
             fb = em_fit_phylo(yf, K_B, Σ_phy;
@@ -345,7 +346,8 @@ function em_fit_phylo_squarem(y::AbstractMatrix, K_B::Integer,
             if isfinite(fb.logLik) && fb.logLik > ll_polish
                 return EMPhyloFit(fb.Λ_B, fb.σ_eps, fb.σ_phy, fb.logLik,
                                   fb.n_iter, fb.converged, fb.loglik_trace,
-                                  fb.blup_phy, fb.blup_phi, true)
+                                  fb.blup_phy, fb.blup_phi, true,
+                                  fb.sigma_eps_boundary)
             end
             # θ_polish is the best candidate: fall through to the common tail,
             # which recomputes BLUPs and log-lik at θ.

@@ -14,6 +14,17 @@
   throws (`_laplace_logdet`), and `fit_truncated_nbinom2_gllvm(K = 0)` and `zi_marginal_loglik_laplace`
   at K = 0 no longer throw on any Julia version.
 
+- **False `converged` on three fitters (refs #754, #753, #781).**
+  `fit_branch_re` now requires a small Nelder–Mead simplex in parameter
+  space and reports `sigma2_boundary` when a variance sits on the stated
+  `1e-8` floor; constant or non-finite `y` raise `ArgumentError` naming
+  the data. `em_fit_phylo` records `sigma_eps_boundary` when the M-step
+  clamps `σ_eps²` to `eps()` and does not report `converged = true` on
+  that floor. `fit_zinb_gllvm_cov(iterations <= 0)` is a start-only
+  transport check (`converged = false`) and rejects a non-finite
+  `θ_init`. No new absolute gradient or objective tolerance. #752 is
+  left as the next sibling PR.
+
 - **Observation weights on the Poisson Laplace route (DATA-W-* rows).** `fit_gllvm(Y; family =
   Poisson(), K, weights)`, `fit_poisson_gllvm(Y; K, weights)` and `gllvm(@formula(y ~ 1), Y,
   data; family = Poisson(), weights)` take observation weights with gllvmTMB's meaning: a weight
