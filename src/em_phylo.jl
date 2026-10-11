@@ -551,14 +551,41 @@ function _mstep_dense(y::AbstractMatrix, ss)
     end
 
     # Residual variance can go non-positive from rounding or exactly rank-K
-    # data. The floor keeps the next E-step defined, but it is not an
+    # data. The floor is a fraction of the data's own mean square
+    # `sum(y.^2)/(n*p)`, not a bare `eps()`, so rescaling y cannot flip the
+    # clamp. The floor keeps the next E-step defined, but it is not an
     # interior MLE: callers must record the clamp and must not report
     # `converged = true` (#753).
     σ²_resid = (sy2 - quad_fit) / (n * p)
-    hit_floor = !isfinite(σ²_resid) || σ²_resid <= eps()
-    σ²_eps_new = hit_floor ? float(eps()) : σ²_resid
+    σ²_floor = _sigma_eps2_data_floor(sy2, n, p)
+    hit_floor = !isfinite(σ²_resid) || σ²_resid <= σ²_floor
+    # The decision *and* the stored clamp are relative. Lift to `eps()`
+    # only so the next E-step Cholesky stays defined when `y` is tiny.
+    σ²_eps_new = if hit_floor
+        max(σ²_floor, float(eps()))
+    else
+        σ²_resid
+    end
     return Λ_B_new, sqrt(σ²_eps_new), σ_phy_new, hit_floor
 end
+
+# Residual-variance floor in y² units: the same 1e-8 fraction of the data
+# mean square that `fit_branch_re` uses against `var(y)`. A rank-1 residual
+# after `sy2 - quad_fit` sits at ~1e-8 of `scale` on tiny y (review of
+# #868), so an ulp-sized floor misses that path. `sy2` is `sum(abs2, y)`.
+# A zero / non-finite mean square falls back to `eps()` so the next
+# E-step stays defined.
+const _SIGMA_EPS2_BOUNDARY_FRAC = 1e-8
+
+function _sigma_eps2_data_floor(sy2::Real, n::Integer, p::Integer)
+    np = n * p
+    np == 0 && return float(eps())
+    scale = sy2 / np
+    isfinite(scale) && scale > 0 || return float(eps())
+    return _SIGMA_EPS2_BOUNDARY_FRAC * scale
+end
+_sigma_eps2_data_floor(y::AbstractMatrix) =
+    _sigma_eps2_data_floor(sum(abs2, y), size(y, 2), size(y, 1))
 
 # ---------------------------------------------------------------------------
 # Observed information matrix via Supplemented EM (Meng & Rubin 1991 JASA).
@@ -736,7 +763,8 @@ Result of `em_fit_phylo`. Fields:
 * `logLik`     – final marginal log-likelihood (dense closed form).
 * `n_iter`     – EM iterations run.
 * `converged`  – whether the log-lik increment fell below `tol` *and* the
-                 M-step did not clamp `σ_eps²` to `eps()`.
+                 M-step did not clamp `σ_eps²` to the data-relative floor
+                 `1e-8 * mean(y.^2)`.
 * `loglik_trace` – log-lik at each iteration (monotone non-decreasing).
 * `blup_phy`   – ancestral-state BLUP of the phylo effect on the data scale
                  (μ_z, length p) from the LAST E-step.
@@ -745,9 +773,9 @@ Result of `em_fit_phylo`. Fields:
                  inferior-basin safety check after it fell back to plain EM
                  from the warm start (see `em_fit_phylo_squarem`). Always
                  `false` for `em_fit_phylo` and for an unguarded SQUAREM run.
-* `sigma_eps_boundary` – `true` iff an M-step replaced `σ_eps²` with `eps()`
-                 (rank-K or over-specified `K_B` data). `converged` is then
-                 false.
+* `sigma_eps_boundary` – `true` iff an M-step replaced `σ_eps²` with the
+                 data-relative floor `1e-8 * mean(y.^2)` (rank-K or
+                 over-specified `K_B` data). `converged` is then false.
 """
 struct EMPhyloFit
     Λ_B::Matrix{Float64}
@@ -797,8 +825,10 @@ effect with covariance `(σ_phy σ_phy') ∘ Σ_phy`. Matches
 `y` is (p, n_sites). `Σ_phy` is the fixed (p × p) tree-derived species
 covariance. Warm-started from PPCA (`ppca_init`) unless `λ_init`/`σ_eps_init`
 are supplied. Returns an `EMPhyloFit` including the ancestral-state BLUPs
-from the final E-step. If an M-step clamps `σ_eps²` to `eps()`, the fit
-records `sigma_eps_boundary = true` and `converged` is false.
+from the final E-step. If an M-step clamps `σ_eps²` to
+`1e-8 * mean(y.^2)`, the fit records `sigma_eps_boundary = true` and
+`converged` is false. The fraction matches `fit_branch_re`'s variance
+floor so rescaling `y` cannot flip the flags.
 
 When `assert_monotone` (default), a log-lik DECREASE beyond `1e-7` triggers an
 error — a monotone non-decrease is an EM invariant, so a decrease is a bug.
@@ -937,7 +967,9 @@ function em_fit_phylo(y::AbstractMatrix, K_B::Integer, Σ_phy::AbstractMatrix;
         ss = estep(Λ_B, σ_eps, σ_phy)
         blup_phy = copy(ss.μ_z); blup_phi = copy(ss.μ_φ)
         Λ_B, σ_eps, σ_phy, hit_floor = _mstep_dense(yf, ss)
-        sigma_eps_boundary = hit_floor
+        # Latch: a later M-step that stores max(floor, eps()) on tiny y
+        # can leave the relative floor, and must not clear the flag.
+        sigma_eps_boundary = sigma_eps_boundary || hit_floor
     end
 
     ll_final = loglik_check(Λ_B, σ_eps, σ_phy)
@@ -959,7 +991,7 @@ function em_fit_phylo(y::AbstractMatrix, K_B::Integer, Σ_phy::AbstractMatrix;
 
     # Final residual on the numerical floor is a boundary even if the last
     # increment test fired before that M-step was recorded.
-    if σ_eps^2 <= eps()
+    if σ_eps^2 <= _sigma_eps2_data_floor(yf)
         sigma_eps_boundary = true
     end
     converged = converged && !sigma_eps_boundary

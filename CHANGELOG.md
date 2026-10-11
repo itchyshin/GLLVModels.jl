@@ -17,10 +17,13 @@
 - **False `converged` on three fitters (refs #754, #753, #781).**
   `fit_branch_re` now requires a small Nelder–Mead simplex in parameter
   space and reports `sigma2_boundary` when a variance sits on the stated
-  `1e-8` floor; constant or non-finite `y` raise `ArgumentError` naming
-  the data. `em_fit_phylo` records `sigma_eps_boundary` when the M-step
-  clamps `σ_eps²` to `eps()` and does not report `converged = true` on
-  that floor. `fit_zinb_gllvm_cov(iterations <= 0)` is a start-only
+  `1e-8 * var(y)` floor; constant or non-finite `y` raise `ArgumentError` naming
+  the data. `em_fit_phylo` and `em_fit_phylo_squarem` record
+  `sigma_eps_boundary` when the M-step clamps `σ_eps²` to
+  `1e-8 * mean(y.^2)` and do not report `converged = true` on that
+  floor. Both floors are fractions of the data scale, so rescaling `y`
+  cannot flip the flags. SQUAREM's main path (no fallback) carries the
+  clamp flag and vetoes `converged` the same way. `fit_zinb_gllvm_cov(iterations <= 0)` is a start-only
   transport check (`converged = false`) and rejects a non-finite
   `θ_init`. No new absolute gradient or objective tolerance. #752 is
   left as the next sibling PR.

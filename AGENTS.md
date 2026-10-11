@@ -93,10 +93,19 @@ Full responsibility detail lives in §2 of the reference plan.
 
 ## Phase state snapshot
 
+- **False `converged` on three fitters (2026-10-11 review).** Draft PR #868
+  (`cursor/false-converged-754-753-781-78dc`): floors are now fractions of
+  the data scale (`1e-8 * var(y)` for branch-RE, `1e-8 * mean(y.^2)` for
+  phylo EM, including the clamp); SQUAREM's main path latches `hit_floor`
+  and vetoes `converged`. `fit_relaxed_clock` increment+τ²-floor is a
+  follow-up (issue create 403; body in
+  `docs/dev-log/owed/2026-10-11-relaxed-clock-false-converged-issue.md`).
+  `Project.toml` stays **`0.3.0`**. After-task:
+  `docs/dev-log/after-task/2026-10-11-false-converged-review-floors.md`.
 - **False `converged` on three fitters (2026-10-10).** Draft PR #868
   (`cursor/false-converged-754-753-781-78dc`) from `origin/main` `e6cfcd4ee`:
   `fit_branch_re` x-spread + `sigma2_boundary` + named `y` errors (#754);
-  `em_fit_phylo` records the `σ_eps² = eps()` clamp and leaves `converged`
+  `em_fit_phylo` records the `σ_eps²` clamp and leaves `converged`
   false (#753); `fit_zinb_gllvm_cov(iterations <= 0)` is a start-only check
   with `converged = false` and a finite `θ_init` guard (#781). #752 left as
   the next PR. `Project.toml` stays **`0.3.0`**. After-task:

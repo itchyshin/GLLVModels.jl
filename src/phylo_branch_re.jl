@@ -365,9 +365,9 @@ end
 # 6. Public driver: ML fit of {μ, σ², σ²_eps}.
 # ---------------------------------------------------------------------------
 
-# Variance at or below this value is reported as a boundary, not an interior
-# optimum. Matches the xlv profile `sigma2_boundary` scale (1e-8): a log-
-# variance that has run to the underflow / no-signal floor.
+# Fraction of the data's own variance `vy` (y² units). A fitted `σ²` or
+# `σ²_eps` at or below `tol * vy` is a boundary, not an interior optimum.
+# The comparison is relative so rescaling y cannot flip the flag.
 const _BRANCH_RE_VARIANCE_BOUNDARY_TOL = 1e-8
 
 """
@@ -382,10 +382,11 @@ Result of `fit_branch_re`. Fields:
   * `n_iter`, `converged` – optimiser diagnostics. `converged` is true only
     when the Nelder–Mead simplex is small in both function value and
     parameter space *and* neither variance sits on the stated floor
-    `_BRANCH_RE_VARIANCE_BOUNDARY_TOL`.
-  * `sigma2_boundary`  – `true` when `σ²` or `σ²_eps` is at or below
-    `_BRANCH_RE_VARIANCE_BOUNDARY_TOL` (no phylogenetic signal, or a
-    collapsed residual). `converged` is then false.
+    `_BRANCH_RE_VARIANCE_BOUNDARY_TOL * var(y)`.
+  * `sigma2_boundary`  – `true` when `σ²` or `σ²_eps` is at or below that
+    fraction of the data variance (no phylogenetic signal, or a collapsed
+    residual). `converged` is then false. The test is relative to `y`, so
+    the flags do not depend on the units of the response.
 """
 struct BranchREFit
     μ::Float64
@@ -426,8 +427,8 @@ signal and noise as a warm start.
 Non-finite `y` and constant (zero-variance) `y` raise `ArgumentError` naming
 the response. `converged` requires a small simplex in both the objective and
 the log-variance coordinates; a variance at or below
-`_BRANCH_RE_VARIANCE_BOUNDARY_TOL` is reported via `sigma2_boundary` and
-forces `converged = false`.
+`_BRANCH_RE_VARIANCE_BOUNDARY_TOL * var(y)` is reported via
+`sigma2_boundary` and forces `converged = false`.
 """
 function fit_branch_re(phy::EdgePhy, y::AbstractVector;
                        σ²_init::Union{Nothing,Real} = nothing,
@@ -474,7 +475,7 @@ function fit_branch_re(phy::EdgePhy, y::AbstractVector;
     isfinite(negll) && isfinite(σ²) && σ² > 0 && isfinite(σ²_eps) && σ²_eps > 0 ||
         throw(ErrorException("branch-RE optimisation found no finite likelihood point"))
 
-    sigma2_boundary = _branch_re_variance_boundary(σ², σ²_eps)
+    sigma2_boundary = _branch_re_variance_boundary(σ², σ²_eps, vy)
     # Boundary is not an interior optimum; the optimiser flag alone is not enough.
     converged = conv && !sigma2_boundary
 
@@ -500,9 +501,11 @@ function _branch_re_check_y(y::AbstractVector, p::Integer; caller::AbstractStrin
     return nothing
 end
 
-_branch_re_variance_boundary(σ²::Real, σ²_eps::Real) =
-    (isfinite(σ²) && σ² <= _BRANCH_RE_VARIANCE_BOUNDARY_TOL) ||
-    (isfinite(σ²_eps) && σ²_eps <= _BRANCH_RE_VARIANCE_BOUNDARY_TOL)
+function _branch_re_variance_boundary(σ²::Real, σ²_eps::Real, scale::Real)
+    isfinite(scale) && scale > 0 || return true
+    tol = _BRANCH_RE_VARIANCE_BOUNDARY_TOL * scale
+    return (isfinite(σ²) && σ² <= tol) || (isfinite(σ²_eps) && σ²_eps <= tol)
+end
 
 # ---------------------------------------------------------------------------
 # 7. Self-contained derivative-free optimisers (no Optim dependency).
@@ -654,7 +657,7 @@ function fit_branch_re_dense(phy::EdgePhy, y::AbstractVector;
     D = σ² .* phy.branch_lengths
     ẑ = D .* (Z' * (cΣ \ (yv .- μ̂)))
     sqrtℓ = sqrt.(phy.branch_lengths)
-    sigma2_boundary = _branch_re_variance_boundary(σ², σ²_eps)
+    sigma2_boundary = _branch_re_variance_boundary(σ², σ²_eps, vy)
     return BranchREFit(μ̂, σ², σ²_eps, negll_dense(σ², σ²_eps)[1],
                        ẑ, ẑ ./ sqrtℓ, (ẑ .^ 2) ./ phy.branch_lengths,
                        iters, conv && !sigma2_boundary, sigma2_boundary)
