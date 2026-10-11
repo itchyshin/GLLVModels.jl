@@ -1,3 +1,22 @@
+## 2026-10-11: data-relative floors + SQUAREM hit_floor (review of #868)
+
+- Same branch `cursor/false-converged-754-753-781-78dc`, still draft #868.
+  Review of `4fa4848c9` blocked on unit-dependent floors and SQUAREM dropping
+  `hit_floor`.
+- Floors are now `1e-8 * var(y)` (branch-RE) and `1e-8 * mean(y.^2)` (phylo
+  EM, including the clamp). SQUAREM latches `hit_floor` on the main path.
+  `y` / `y*1e-5` / `y*1e5` share `(converged, boundary) = (false, true)`.
+- `fit_relaxed_clock` follow-up: `issue_write` 403. Body at
+  `docs/dev-log/owed/2026-10-11-relaxed-clock-false-converged-issue.md`
+  and `/opt/cursor/artifacts/2026-10-11-relaxed-clock-false-converged-issue.md`.
+- Julia 1.10.12 local:
+  test_branch_re_convergence 16/16, test_em_phylo_sigma_eps_floor 28/28,
+  test_em_squarem 27/27, test_zinb_cov_iterations 10/10,
+  test_em_phylo 27/27, test_nparams_em_branch_re 8/8,
+  test_phylo_branch_re 44/44.
+- After-task:
+  `docs/dev-log/after-task/2026-10-11-false-converged-review-floors.md`.
+
 ## 2026-10-10: false `converged` on three fitters (refs #754, #753, #781)
 
 - Branch `cursor/false-converged-754-753-781-78dc` from `origin/main` `e6cfcd4ee`.
