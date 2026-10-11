@@ -496,6 +496,7 @@ function fit_gllvm_cov(Y::AbstractMatrix; family, X::AbstractArray{<:Real, 3},
         Λ = unpack_lambda(θ[(p + q + 1):(p + q + rr)], p, K)
         disp = has_disp ? exp(θ[p + q + rr + 1]) : NaN
         O = _build_offset(X_fit, γ)
+        _eta_cap_guarded(lk) && _eta_above_clamp(β, O; mask = msk) && return 1e12   # #869: η-clamp plateau
         v = try
             # Built inside the `try`: a line-search step can push log-dispersion so low
             # that exp(...) == 0.0, and Distributions then throws DomainError (Gamma,
@@ -524,5 +525,8 @@ function fit_gllvm_cov(Y::AbstractMatrix; family, X::AbstractArray{<:Real, 3},
     γ̂ = collect(Float64, _expand_fixed_zero(γ̂_free, γ_fixed_mask))
     Λ̂ = unpack_lambda(θ̂[(p + q + 1):(p + q + rr)], p, K)
     disp̂ = has_disp ? exp(θ̂[p + q + rr + 1]) : NaN
-    return GllvmCovFit(family, β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, disp̂, lk, _fit_verdict(res)...)
+    loglik, conv, iters = _fit_verdict(res)
+    conv = _eta_cap_verdict(conv, lk, β̂, _build_offset(X_fit, γ̂_free); mask = msk,
+                            caller = "fit_gllvm_cov")
+    return GllvmCovFit(family, β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, disp̂, lk, loglik, conv, iters)
 end

@@ -370,6 +370,8 @@ function fit_tweedie_gllvm(Y::AbstractMatrix; K::Integer,
         φ = exp(θ[p_sp + rr + 1])
         ξ = θ[p_sp + rr + 2]
         pw = 1.0 + 1.0 / (1.0 + exp(-ξ))
+        _eta_cap_guarded(link) && _eta_above_clamp(β, nothing; mask = msk) &&
+            return _TWEEDIE_FAIL_PENALTY   # #869: η-clamp plateau
         v = try
             -tweedie_marginal_loglik_laplace(Yc, Λ, β, φ, pw;
                                              hessian = hessian,
@@ -399,5 +401,6 @@ function fit_tweedie_gllvm(Y::AbstractMatrix; K::Integer,
         @warn "fit_tweedie_gllvm: the power ran to the boundary of (1, 2) \
                (p̂ = $(p̂), φ̂ = $(φ̂)); the fit is flagged as not converged."
     end
+    conv = _eta_cap_verdict(conv, link, β̂, nothing; mask = msk, caller = "fit_tweedie_gllvm")
     return TweedieFit(β̂, Λ̂, φ̂, p̂, link, loglik, conv, Optim.iterations(res), hessian)
 end

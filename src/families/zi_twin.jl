@@ -455,6 +455,7 @@ function fit_zi_gllvm(Y::AbstractMatrix{<:Union{Missing, Real}}; family::_ZiTwin
     p, n = size(Yf)
     rr = rr_theta_len(p, K)
     isnb = family isa ZiNbinom2
+    zlink = default_link(family)   # fixed by `_zi_check_link`: log for zi_poisson / zi_nbinom2
     β0, lz0, Λ0, logphi0 = _zi_twin_warmstart(family, Yf, N, K)
     function unpack(θ)
         β = θ[1:p]; lz = θ[(p + 1):(2p)]
@@ -464,6 +465,7 @@ function fit_zi_gllvm(Y::AbstractMatrix{<:Union{Missing, Real}}; family::_ZiTwin
     end
     function negll(θ)
         β, lz, Λ, phi = unpack(θ)
+        _eta_cap_guarded(zlink) && _eta_above_clamp(β, nothing) && return 1e12   # #869: η-clamp plateau
         v = try
             -zi_marginal_loglik_laplace(family, Yf, Λ, β, lz; phi = phi, trials = N,
                                         eigmin_floor = eigmin_floor, maxiter = newton_maxiter, tol = newton_tol)
@@ -517,6 +519,7 @@ function fit_zi_gllvm(Y::AbstractMatrix{<:Union{Missing, Real}}; family::_ZiTwin
               "$(eigmin_floor)). The Laplace approximation is not reliable here and the " *
               "fit is reported as not converged; gllvmTMB's objective shares this surface."
     end
+    converged = _eta_cap_verdict(converged, zlink, β, nothing; caller = "fit_zi_gllvm")
     return ZiFit(Symbol(_zi_rname(family)), β, Λ, lz, zi,
                  phi === nothing ? Float64[] : phi, N, loglik, converged, iters, mineig)
 end

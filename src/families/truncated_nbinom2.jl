@@ -349,6 +349,7 @@ function fit_truncated_nbinom2_gllvm(Y::AbstractMatrix; K::Integer,
         β = θ[1:p]
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         r = exp(θ[p + rr + 1])
+        _eta_cap_guarded(link) && _eta_above_clamp(β, offset; mask = msk) && return 1e12   # #869: η-clamp plateau
         v = try
             -truncated_nbinom2_marginal_loglik_laplace(Yc, Λ, β, r;
                                      link = link, mask = msk, offset = offset,
@@ -414,6 +415,8 @@ function fit_truncated_nbinom2_gllvm(Y::AbstractMatrix; K::Integer,
     # extra variance the latent variable absorbs), so it only warns. Unlike the NB2
     # grouped fitters' `_dispersion_group_boundary`, which flags both ends.
     converged = _truncnb2_dispersion_verdict(converged, [f.r], "fit_truncated_nbinom2_gllvm")
+    converged = _eta_cap_verdict(converged, link, f.β, offset; mask = msk,
+                                 caller = "fit_truncated_nbinom2_gllvm")
     return TruncatedNegBin2Fit(f.β, f.Λ, f.r, link, f.loglik, converged, f.iters,
                                f.θ, f.mineig)
 end
@@ -647,6 +650,7 @@ function fit_truncated_nbinom2_gllvm_pertrait(Y::AbstractMatrix; K::Integer,
         β = θ[1:p]
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         rvec = exp.(θ[(p + rr + 1):(p + rr + p)])
+        _eta_cap_guarded(link) && _eta_above_clamp(β, offset; mask = msk) && return 1e12   # #869: η-clamp plateau
         v = try
             -truncated_nbinom2_pertrait_marginal_loglik_laplace(Yc, Λ, β, rvec;
                     link = link, mask = msk, offset = offset, hessian = hessian,
@@ -675,6 +679,8 @@ function fit_truncated_nbinom2_gllvm_pertrait(Y::AbstractMatrix; K::Integer,
     # Dispersion boundary (2026-09-29): see `fit_truncated_nbinom2_gllvm`.
     converged = _truncnb2_dispersion_verdict(converged, r̂,
                                              "fit_truncated_nbinom2_gllvm_pertrait")
+    converged = _eta_cap_verdict(converged, link, β̂, offset; mask = msk,
+                                 caller = "fit_truncated_nbinom2_gllvm_pertrait")
     return TruncatedNegBin2PerTraitFit(β̂, Λ̂, r̂, link, loglik, converged, iters,
                                        collect(Float64, θ̂))
 end
