@@ -116,6 +116,25 @@ const _X554 = [
         @test !_G553._nb_eta_above_clamp([1.0, 29.5], nothing)
         @test _G553._nb_eta_above_clamp([1.0, 29.5], [0.0 0.0; 0.0 1.0])
         @test !_G553._nb_eta_above_clamp([-40.0, 2.0], nothing)   # lower cap is allowed
+        # Only cells the objective reads count: an unobserved cell may carry NaN or ±Inf.
+        off = [0.0 0.0; 0.0 Inf]
+        @test !_G553._nb_eta_above_clamp([1.0, 2.0], off)   # non-finite: refused upstream at observed cells
+        @test !_G553._nb_eta_above_clamp([1.0, 2.0], off; mask = [true true; true false])
+        @test !_G553._nb_eta_above_clamp([1.0, 2.0], [0.0 NaN; -Inf 0.0])
+        @test !_G553._nb_eta_above_clamp([1.0, 2.0], [0.0 40.0; 0.0 0.0]; mask = [true false; true true])
+        @test _G553._nb_eta_above_clamp([1.0, 2.0], [0.0 40.0; 0.0 0.0])
+    end
+
+    @testset "#553 guard ignores non-finite offsets at unobserved cells" begin
+        Y = _SPIDER553[[1, 2, 6, 8, 11], :]
+        p, n = size(Y)
+        msk = trues(p, n); msk[2, 5] = false
+        fits = map((0.0, NaN, Inf)) do v
+            off = zeros(p, n); off[2, 5] = v
+            fit_nb_gllvm_grouped(Y; K = 0, group = collect(1:p), mask = msk, offset = off)
+        end
+        @test all(f -> f.converged, fits)
+        @test all(f -> isapprox(f.loglik, fits[1].loglik; atol = 1e-8), fits)
     end
 
     @testset "#554 Poisson K = 2 at the optimum reports converged" begin

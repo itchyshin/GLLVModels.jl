@@ -421,11 +421,19 @@ _dispersion_group_lower_boundary(dvec::AbstractVector{<:Real}) =
 # NB2 mean of e^30 ≈ 1e13 is never an optimum, so the grouped NB2 objectives return the
 # failure sentinel when any site's β_t + offset is above the cap: the line search then
 # backtracks off that region instead of settling on it. Upper end only: an all-zero
-# species legitimately heads to the lower cap.
-function _nb_eta_above_clamp(β::AbstractVector, offset)
+# species legitimately heads to the lower cap. Only cells the objective reads count: an
+# offset may be NaN or ±Inf at an unobserved cell (`mask = false`; see
+# `_check_offset_observed`), and a masked +Inf would otherwise make every θ the sentinel.
+function _nb_eta_above_clamp(β::AbstractVector, offset; mask = nothing)
+    offset === nothing && return any(>(_ETA_CLAMP), β)
     @inbounds for t in eachindex(β)
-        hi = offset === nothing ? β[t] : β[t] + maximum(view(offset, t, :))
-        hi > _ETA_CLAMP && return true
+        hi = -Inf
+        for s in axes(offset, 2)
+            (mask === nothing || mask[t, s]) || continue
+            o = offset[t, s]
+            isfinite(o) && (hi = max(hi, o))
+        end
+        β[t] + hi > _ETA_CLAMP && return true
     end
     return false
 end
@@ -688,7 +696,7 @@ function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVect
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         rg = exp.(θ[(p + rr + 1):(p + rr + G)])
         rvec = [rg[gidx[t]] for t in 1:p]
-        _nb_eta_above_clamp(β, offset) && return 1e12   # #553: flat plateau past the η clamp
+        _nb_eta_above_clamp(β, offset; mask = msk) && return 1e12   # #553: flat plateau past the η clamp
         v = try
             -nb_grouped_marginal_loglik_laplace(Yc, Λ, β, rvec; link = link, mask = msk,
                                                 offset = offset, hessian = hessian,
@@ -918,7 +926,7 @@ function fit_nb_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3}
         rg = exp.(θ[(p + q + rr + 1):(p + q + rr + G)])
         rvec = [rg[gidx[t]] for t in 1:p]
         O = _build_offset(X_fit, γ)
-        _nb_eta_above_clamp(β, O) && return 1e12   # #553: flat plateau past the η clamp
+        _nb_eta_above_clamp(β, O; mask = msk) && return 1e12   # #553: flat plateau past the η clamp
         v = try
             -nb_grouped_marginal_loglik_laplace(Yc, Λ, β, rvec; link = link, mask = msk,
                                                 offset = O, hessian = hessian,
