@@ -25,6 +25,59 @@ _clamp_eta(η) = clamp(η, -_ETA_CLAMP, _ETA_CLAMP)
 # 0.0); the fitters' `catch` then turned every K = 0 evaluation into the failure sentinel.
 _laplace_logdet(A::AbstractMatrix) = size(A, 1) == 0 ? zero(eltype(A)) : logdet(A)
 
+# η-clamp plateau (#553, #869). Once β_t plus its additive η term is above `_ETA_CLAMP`, a
+# log-link objective is exactly flat in β_t (μ is capped at e^30), so a gradient test can
+# fire there and report `converged = true` far below the optimum. Two tools, used together:
+#   * `_eta_above_clamp` in the objective: return the failure sentinel above the cap, so the
+#     line search backtracks instead of settling on the plateau;
+#   * `_eta_cap_contact` at the verdict: a fit that ends at (or within the finite-difference
+#     step of) the cap is not converged. A backtracking line search can stall on a zero step
+#     at the sentinel wall, which Optim reports as converged (x_abstol = 0).
+# Upper end only: an all-zero species legitimately heads to the lower cap. The guard is for
+# log links (`_eta_cap_guarded`): under logit the upper cap can be a genuine limit.
+# `offset` is `nothing` or a p×n matrix of everything added to β (user offset, Xγ, X_lv
+# mean); only observed cells with a finite value count, because an unobserved cell may hold
+# NaN or ±Inf (`_check_offset_observed`).
+_eta_cap_guarded(::Link) = false
+_eta_cap_guarded(::LogLink) = true
+
+function _eta_offset_max(offset, t::Integer; mask = nothing)
+    offset === nothing && return 0.0
+    hi = -Inf
+    @inbounds for s in axes(offset, 2)
+        (mask === nothing || mask[t, s]) || continue
+        o = offset[t, s]
+        isfinite(o) && (hi = max(hi, o))
+    end
+    return hi
+end
+
+function _eta_above_clamp(β::AbstractVector, offset; mask = nothing, slack::Real = 0.0)
+    @inbounds for t in eachindex(β)
+        β[t] + _eta_offset_max(offset, t; mask = mask) > _ETA_CLAMP - slack && return true
+    end
+    return false
+end
+
+# The contact band must exceed the finite-difference step at β_t (cbrt(eps)·|β_t|).
+_eta_contact_slack(b::Real) = max(1e-2, 10 * cbrt(eps(Float64)) * max(abs(b), 1.0))
+
+function _eta_cap_contact(β::AbstractVector, offset; mask = nothing)
+    @inbounds for t in eachindex(β)
+        β[t] + _eta_offset_max(offset, t; mask = mask) >= _ETA_CLAMP - _eta_contact_slack(β[t]) &&
+            return true
+    end
+    return false
+end
+
+# `converged` after the contact check; warns once when the check overturns it.
+function _eta_cap_verdict(conv::Bool, link::Link, β::AbstractVector, offset; mask = nothing,
+                          caller::AbstractString = "fit")
+    (conv && _eta_cap_guarded(link) && _eta_cap_contact(β, offset; mask = mask)) || return conv
+    @warn "$caller: an intercept ended at the η clamp (β + offset ≈ $(_ETA_CLAMP), a mean of about 1e13), where the objective is flat; converged is false. Rescale the response or the offset if the data really sit there." maxlog = 1
+    return false
+end
+
 # Robust linear solve: returns `nothing` if the factorization is singular or
 # fails, so the inner Newton can stop gracefully. A = Λ'WΛ + I is SPD by
 # construction but can be numerically singular when the Fisher weights blow up

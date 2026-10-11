@@ -424,19 +424,8 @@ _dispersion_group_lower_boundary(dvec::AbstractVector{<:Real}) =
 # species legitimately heads to the lower cap. Only cells the objective reads count: an
 # offset may be NaN or ±Inf at an unobserved cell (`mask = false`; see
 # `_check_offset_observed`), and a masked +Inf would otherwise make every θ the sentinel.
-function _nb_eta_above_clamp(β::AbstractVector, offset; mask = nothing)
-    offset === nothing && return any(>(_ETA_CLAMP), β)
-    @inbounds for t in eachindex(β)
-        hi = -Inf
-        for s in axes(offset, 2)
-            (mask === nothing || mask[t, s]) || continue
-            o = offset[t, s]
-            isfinite(o) && (hi = max(hi, o))
-        end
-        β[t] + hi > _ETA_CLAMP && return true
-    end
-    return false
-end
+_nb_eta_above_clamp(β::AbstractVector, offset; mask = nothing) =
+    _eta_above_clamp(β, offset; mask = mask)   # shared helper, families/laplace.jl
 
 # NB2 grouped fits can stall with a group's log r out at the Poisson boundary, where
 # the likelihood is nearly flat, well below a better point (#477). From the returned
