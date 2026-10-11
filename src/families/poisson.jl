@@ -316,7 +316,9 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
     # the finite-difference gradient (the analytic gradient carries neither).
     # A finite-difference fallback also covers any θ where the analytic gradient is
     # non-finite (e.g. a pathological line-search probe).
-    res = if X_lv_fit !== nothing
+    # Each branch yields `run_fit(alg, θstart)` and its start, so a non-converged L-BFGS run can
+    # be continued with dense BFGS on the same objective (`_bfgs_continuation`, #554).
+    run_fit, θstart = if X_lv_fit !== nothing
         # Predictor-informed latent-score route: joint (β, alpha_lv, Λ) by finite
         # differences — the offset depends jointly on Λ and alpha_lv.
         θ0_lv = vcat(β0, vec(alpha0), pack_lambda(Λ0))
@@ -331,7 +333,7 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
             end
             return isfinite(v) ? v : 1e12
         end
-        Optim.optimize(negll_lv, θ0_lv, ls, opts; autodiff = :finite)
+        ((alg, θs) -> Optim.optimize(negll_lv, θs, alg, opts; autodiff = :finite)), θ0_lv
     elseif gradient === :analytic && offset === nothing && weights === nothing && link isa LogLink &&
            (hessian === _default_hessian(Poisson(), link) ||
             _glm_weight_matches_observed(Poisson(), link))
@@ -410,11 +412,12 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
             end
             return nothing
         end
-        Optim.optimize(Optim.only_fg!(fg!), θ0, ls, opts)
+        ((alg, θs) -> Optim.optimize(Optim.only_fg!(fg!), θs, alg, opts)), θ0
     else
-        Optim.optimize(negll, θ0, ls, opts; autodiff = :finite)
+        ((alg, θs) -> Optim.optimize(negll, θs, alg, opts; autodiff = :finite)), θ0
     end
-    θ̂ = Optim.minimizer(res)
+    θ̂, nll, conv, iters = _bfgs_continuation(run_fit, run_fit(ls, θstart))
+    verdict = _fit_verdict(nll, conv, iters)
     if X_lv_fit !== nothing
         cursor = 0
         β̂ = collect(θ̂[(cursor + 1):(cursor + p)])
@@ -422,12 +425,12 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         alpha_hat = reshape(collect(θ̂[(cursor + 1):(cursor + q_lv * K)]), q_lv, K)
         cursor += q_lv * K
         Λ̂ = unpack_lambda(@view(θ̂[(cursor + 1):(cursor + rr)]), p, K)
-        return PoissonFit(β̂, Λ̂, link, _fit_verdict(res)...,
+        return PoissonFit(β̂, Λ̂, link, verdict...,
                           alpha_hat, collect(Float64, θ̂), hessian, nothing, _stored_offset(offset))
     else
         β̂ = θ̂[1:p]
         Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
-        return PoissonFit(β̂, Λ̂, link, _fit_verdict(res)..., nothing, Float64[], hessian,
+        return PoissonFit(β̂, Λ̂, link, verdict..., nothing, Float64[], hessian,
                           nothing, _stored_offset(offset), weights)
     end
 end
