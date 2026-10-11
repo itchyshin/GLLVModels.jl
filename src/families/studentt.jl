@@ -375,7 +375,7 @@ function _studentt_grouped_loglik_site(fams::AbstractVector{<:StudentTFamily}, y
         F = cholesky(A; check = false)
         issuccess(F) || return oftype(ℓ, -Inf)
     end
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 # ---------------------------------------------------------------------------

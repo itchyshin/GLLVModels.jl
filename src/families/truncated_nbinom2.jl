@@ -462,7 +462,8 @@ function _truncnb2_pertrait_loglik_site(fams::AbstractVector, y::AbstractVector,
     A = Symmetric(Λ' * (W .* Λ) + I)
     # Laplace breakdown guard (see TRUNCNB2_LAPLACE_EIGMIN_FLOOR). Skipped entirely at
     # the default -Inf, so the unguarded value is unchanged bit for bit.
-    (isfinite(eigmin_floor) && eigmin(A) < eigmin_floor) && return -Inf
+    # With K = 0 there is no latent precision to break down (and eigmin throws on 0x0).
+    (isfinite(eigmin_floor) && size(A, 1) > 0 && eigmin(A) < eigmin_floor) && return -Inf
     ℓ = 0.0
     @inbounds for t in 1:p
         (mask === nothing || mask[t]) || continue
@@ -481,6 +482,7 @@ function _truncnb2_min_site_eigen(Y::AbstractMatrix, Λ::AbstractMatrix,
     fams = TruncatedNegBin2.(float.(rvec))
     n1 = ones(Int, p)
     m = Inf
+    size(Λ, 2) == 0 && return m   # K = 0: no eigenvalues (eigmin throws on 0x0)
     @inbounds for i in axes(Y, 2)
         mi = mask   === nothing ? nothing : view(mask, :, i)
         oi = offset === nothing ? nothing : view(offset, :, i)

@@ -217,8 +217,8 @@ function _zi_loglik_site(fams, y, Λz, Λ, logit_zi, β; eigmin_floor, maxiter, 
         ℓ += logf
     end
     A = Symmetric(Λ' * (W .* Λ) + I)
-    eigmin(A) >= eigmin_floor || return -Inf
-    return ℓ - 0.5 * dot(ẑ, ẑ) - 0.5 * logdet(A)
+    (size(A, 1) == 0 || eigmin(A) >= eigmin_floor) || return -Inf   # eigmin throws on 0x0 (K = 0)
+    return ℓ - 0.5 * dot(ẑ, ẑ) - 0.5 * _laplace_logdet(A)
 end
 
 _zi_cell(::ZiPoisson, logit_zi, phi, N) = _ZiPoisCell(logit_zi)
