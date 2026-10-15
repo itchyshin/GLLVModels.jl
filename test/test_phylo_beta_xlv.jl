@@ -188,7 +188,7 @@ end
     eta_target = vec(GLLVModels._eta_realized_lv_effects(X_lv, Z_truth, Lambda))
     prof = GLLVModels._phylo_beta_xlv_profile_eta_realized(
         fit, Y, phy, X_lv, [6], eta_target;
-        level = 0.95, profile_iterations = 700,
+        level = 0.95, profile_iterations = 3000,
         profile_max_expand = 5, profile_max_bisect = 6,
         newton_maxiter = 80, newton_tol = 1e-9)
     @test prof.method == :profile_eta_realized
