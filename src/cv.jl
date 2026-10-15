@@ -36,7 +36,7 @@ Fields:
 - `fold_mses::Vector{Float64}` — out-of-sample MSE for each fold
 - `fold_residual_means::Vector{Float64}` — mean of quantile residuals per fold
 - `fold_residual_stds::Vector{Float64}` — standard deviation of quantile residuals per fold
-- `predictions::Matrix{Float64}` — $p \times n$ matrix of out-of-sample predicted response values $\hat{\mu}$
+- `predictions::Matrix{Float64}` — $p \times n$ matrix of out-of-sample predicted response values $\hat{\mu}$ (for `Binomial` with trial counts `N`, the expected count $N\hat{\mu}$, on the scale of `Y`)
 - `residuals::Matrix{Float64}` — $p \times n$ matrix of out-of-sample Dunn–Smyth randomized quantile residuals
 - `fits::Vector{Any}` — fitted model objects from each training fold
 """
@@ -527,8 +527,12 @@ function cv_gllvm(Y::AbstractMatrix;
             η = β_t + Λ_t_dot_z
             μ = linkinv(link, η)
 
-            predictions[t, s] = μ
-            sq_err = (Float64(y_val) - Float64(μ))^2
+            # Binomial with trial counts: `y` is a count out of N[t, s], so the
+            # prediction is the expected count N * μ, not the probability (#769).
+            # `_cv_cell_eval` below keeps μ: its log-density takes (N, μ).
+            pred = (family isa Binomial && N !== nothing) ? Float64(N[t, s]) * Float64(μ) : Float64(μ)
+            predictions[t, s] = pred
+            sq_err = (Float64(y_val) - pred)^2
             push!(fold_errs, sq_err)
             push!(all_sq_errs, sq_err)
 
