@@ -397,6 +397,7 @@ println(_SHARD === nothing ?
     _shard_include("test_beta_binomial.jl")
     _shard_include("test_beta_binomial_mode_search.jl")
     _shard_include("test_beta_binomial_verdict_515.jl")
+    _shard_include("test_beta_binomial_phi_continuity_872.jl")
     _shard_include("test_beta_binomial_grouped_verdict_515.jl")
     _shard_include("test_zero_inflated.jl")
     _shard_include("test_zi_twin.jl")
