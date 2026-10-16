@@ -1,3 +1,16 @@
+## 2026-10-16: red proof, default-route mollusc NB2 grouped logLik (refs #784, refs #914)
+
+- Branch `cursor/red-proof-784-914-43af` from `main` `033d4e1da`. Test-only: no `src/` change.
+- New `test/test_nb_grouped_mollusc_default_784.jl` plus `test/fixtures/mollusc15.csv`
+  (md5 `2cafc37f9e2614d388d5bfd05a88aede`, from #914 `a45b2ae`) and one
+  `_shard_include` at the end of `test/runtests.jl`.
+- Call: `fit_gllvm(Y; family = NegativeBinomial(), K = 2, disp_group = :species)` with
+  no `routes` keyword; assert `logLik >= -3121.17`. Expected: fail on base at
+  `-3129.531424` (#784 stall, `converged = true`); pass on #914 head `a45b2ae`
+  (`routes = :both` default, `-3121.164397`).
+- Draft PR titled `[red proof, do not merge]`; body `refs #784, refs #914`. Never
+  mark ready, never merge, never push to `main` or to #914's branch.
+
 ## 2026-10-01: postfit numeric twins at gllvmTMB P1 (5 rows, #660)
 
 - Branch `claude/true-parity-cov-postfit-family-twins` from `origin/main` (`3fcf20698`). New:
