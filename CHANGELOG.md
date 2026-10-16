@@ -2,6 +2,14 @@
 
 ## Development
 
+- **NB2 per-species dispersion: a second start on the exact-gradient route (refs #784).**
+  `fit_nb_gllvm_grouped` (the `fit_gllvm(Y; family = NegativeBinomial(), disp_group = :species)`
+  route) now also fits from the same start with the exact-gradient dense-BFGS route used by
+  `fit_nb_gllvm_grouped_cov` and keeps the better of the two (a tie keeps the L-BFGS fit), for
+  the log link without an `offset`. On `ade4::mollusc` (15 taxa × 163 sites, K = 2) the L-BFGS
+  fit stopped at logLik −3129.5314 with `converged = true`, 8.37 below gllvmTMB; the fit now
+  reaches −3121.1644, gllvmTMB's optimum. Fits where L-BFGS already ends higher are unchanged.
+
 - **Observation weights on the Poisson Laplace route (DATA-W-* rows).** `fit_gllvm(Y; family =
   Poisson(), K, weights)`, `fit_poisson_gllvm(Y; K, weights)` and `gllvm(@formula(y ~ 1), Y,
   data; family = Poisson(), weights)` take observation weights with gllvmTMB's meaning: a weight

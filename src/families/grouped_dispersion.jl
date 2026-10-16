@@ -530,6 +530,27 @@ function _nb_poisson_ridge_polish(negll, res, ls, opts, first_log_r::Integer;
     return (θ, f0, conv, iters)
 end
 
+# Second start for `fit_nb_gllvm_grouped` (#784). Finite-difference L-BFGS from the default
+# start can stop at a clearly worse local maximum of the grouped NB2 Laplace objective
+# (ade4::mollusc, 15 taxa x 163 sites, K = 2: -3129.5314, with `converged = true`; the exact-
+# gradient dense-BFGS route of `fit_nb_gllvm_grouped_cov` reaches -3121.1644 from the same
+# start, which is gllvmTMB's optimum). Neither route dominates (a 15 x 81 subsample of the
+# same data ends 1.99 higher on the finite-difference route), so the caller runs both and
+# keeps the better. This is the same route, boundary restart and ridge polish as the
+# covariate fitter's `_fit_from`, with no covariates (q = 0, so θ is `[β; pack(Λ); log r]`).
+# `Yc` is the integer response, `msk` the observation mask, `θ0` the default start.
+# Returns `(θ, nll, converged, iterations)`.
+function _nb_grouped_exact_route(negll, Yc, θ0, p, K, rr, G, gidx, link, msk, hessian,
+                                 newton_maxiter, newton_tol, opts)
+    X0 = zeros(p, size(Yc, 2), 0)
+    grad = θ -> _nb_grouped_cov_negll_grad(Yc, X0, θ, p, 0, K, rr, G, gidx, link, msk,
+                                           hessian, newton_maxiter, newton_tol)
+    alg = _COV_BFGS()
+    r = _optimize_with_analytic(negll, grad, copy(θ0), alg, opts)
+    r = _nb_boundary_restart(negll, r, alg, opts, p + rr + 1; grad = grad)
+    return _nb_poisson_ridge_polish(negll, r, alg, opts, p + rr + 1; grad = grad)
+end
+
 """
     NBGroupedFit
 
@@ -657,9 +678,17 @@ point with the boundary groups at `r = 1` (together, and each on its own when th
 are several) and keeps the best restart only if its log-likelihood is higher by
 more than `1e-6`; otherwise the boundary fit stands and is flagged in
 `dispersion_boundary` (which flags both ends; only `r < 1e-6` also makes `converged`
-false, `r > 1e6` warns). `iterations` then counts the kept run only. On small data the
-likelihood can have several maxima, so this improves the local search but does not
-guarantee the global maximum. The per-site mode search is damped and falls back to
+false, `r > 1e6` warns). `iterations` then counts the kept run only. `routes` picks the
+optimiser route. With the default `:both`, for the log link without an `offset`, the fit
+also runs a second start from the same initial point on the exact-gradient dense-BFGS route
+that [`fit_nb_gllvm_grouped_cov`](@ref) uses (with its own boundary restart and polish), and
+keeps whichever of the two ends higher by more than `1e-6`; a tie keeps the L-BFGS fit
+(#784: on `ade4::mollusc`, 15 taxa × 163 sites, K = 2, L-BFGS alone stopped 8.37 below
+gllvmTMB's optimum). `:lbfgs` runs only the finite-difference L-BFGS route (the behaviour
+before #784) and `:exact` only the exact-gradient route (log link, no `offset`; far
+cheaper at large p). With another link or an `offset`, `:both` is the L-BFGS route alone.
+On small data the likelihood can have several maxima, so this improves the local search
+but does not guarantee the global maximum. The per-site mode search is damped and falls back to
 an exact observed-curvature Newton search where Fisher scoring does not converge; a
 site that still fails makes the objective return its failure sentinel. With one group this
 matches [`fit_nb_gllvm`](@ref) when `hessian=:fisher`. `hessian=:observed` (the
@@ -671,11 +700,17 @@ as in [`fit_nb_gllvm`](@ref); `r_group` still starts at `r₀ = 10`.
 function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVector{<:Integer},
         link::Link = LogLink(), mask = nothing, offset = nothing,
         hessian::Symbol = :observed, β_init = nothing, Λ_init = nothing,
+        routes::Symbol = :both,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    routes in (:both, :lbfgs, :exact) ||
+        throw(ArgumentError("routes must be :both, :lbfgs or :exact; got :$routes"))
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
                                caller = "fit_nb_gllvm_grouped")
+    exact_ok = link isa LogLink && offset === nothing   # the exact gradient needs both
+    routes === :exact && !exact_ok && throw(ArgumentError(
+        "routes = :exact needs the log link and no offset"))
     length(group) == p || throw(ArgumentError("length(group)=$(length(group)) must equal p=$p"))
     rr = rr_theta_len(p, K)
     # relabel groups to 1..G, build species→group index
@@ -709,9 +744,25 @@ function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVect
     end
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     opts = Optim.Options(g_tol = g_tol, iterations = iterations)
-    res = Optim.optimize(negll, θ0, ls, opts; autodiff = :finite)
-    res = _nb_boundary_restart(negll, res, ls, opts, p + rr + 1)
-    θ̂, nll, conv0, iters0 = _nb_poisson_ridge_polish(negll, res, ls, opts, p + rr + 1)
+    if routes === :exact
+        θ̂, nll, conv0, iters0 = _nb_grouped_exact_route(negll, Yc, θ0, p, K, rr, G, gidx, link,
+                                                        msk, hessian, newton_maxiter,
+                                                        newton_tol, opts)
+    else
+        res = Optim.optimize(negll, θ0, ls, opts; autodiff = :finite)
+        res = _nb_boundary_restart(negll, res, ls, opts, p + rr + 1)
+        θ̂, nll, conv0, iters0 = _nb_poisson_ridge_polish(negll, res, ls, opts, p + rr + 1)
+        if routes === :both && exact_ok
+            # #784: second start on the exact-gradient BFGS route; keep it only if better by
+            # more than 1e-6 (a tie keeps the L-BFGS fit above).
+            θ̂2, nll2, conv2, iters2 = _nb_grouped_exact_route(negll, Yc, θ0, p, K, rr, G, gidx,
+                                                              link, msk, hessian,
+                                                              newton_maxiter, newton_tol, opts)
+            if !_nll_failed(nll2) && (_nll_failed(nll) || nll2 < nll - 1e-6)
+                θ̂, nll, conv0, iters0 = θ̂2, nll2, conv2, iters2
+            end
+        end
+    end
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     r̂g = exp.(θ̂[(p + rr + 1):(p + rr + G)])
