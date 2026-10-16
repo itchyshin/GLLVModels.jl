@@ -105,7 +105,7 @@ function fit_truncated_poisson_gllvm(Y::AbstractMatrix; K::Integer,
     offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
                                caller = "fit_truncated_poisson_gllvm")
     rr = rr_theta_len(p, K)
-    msk = mask === nothing ? (any(ismissing, Y) ? observed_mask(Y) : nothing) : mask
+    msk = _resolve_obs_mask(mask, Y)
     Yc = Integer.(_sanitize_missing(Y, 1))   # placeholder 1 for masked (never enters ℓ)
     # Reject zeros in observed cells.
     @inbounds for t in 1:p, s in 1:n
