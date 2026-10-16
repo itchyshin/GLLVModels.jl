@@ -128,7 +128,7 @@ end
             Zf = getLV(f, Y; rotate = false)
             ηhat = f.β .+ O .+ f.Λ * Zf'
             @test predict(f, Y; type = :link) ≈ ηhat
-            @test predict(f, Y) ≈ linkinv.(Ref(f.link), ηhat)
+            @test predict(f, Y) ≈ GM.linkinv.(Ref(f.link), ηhat)
             # An explicit training offset is the stored one; the offset-free route differs.
             @test predict(f, Y; type = :link, offset = O) ≈ ηhat
             @test maximum(abs, predict(f, Y; type = :link, offset = zeros(p, n)) .- ηhat) > 0.1
