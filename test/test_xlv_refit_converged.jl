@@ -23,7 +23,7 @@ const _G752 = GLLVModels
             nll, th0, p, K, q, 1, tgt;
             profile_iterations = it, penalty_weights = weights)
         short = refit(30)
-        long = refit(600)
+        long = refit(50_000)
         # The iteration cap is hit, so the refit must not claim convergence,
         # whatever the constraint error is.
         @test !short.converged
@@ -31,6 +31,8 @@ const _G752 = GLLVModels
         # The stalled refit is far from the minimum: this is the anti-conservative
         # deviance the flag has to warn about.
         @test short.nll > long.nll + 1
+        # With a budget large enough for Nelder-Mead to finish, the flag is true.
+        @test long.converged
     end
 
     @testset "ordinal" begin
@@ -43,9 +45,11 @@ const _G752 = GLLVModels
             nll, th0, p, K, q, C, 1, tgt;
             profile_iterations = it, penalty_weights = weights)
         short = refit(30)
-        long = refit(600)
+        long = refit(50_000)
         @test !short.converged
         @test isfinite(short.constraint_error)
         @test short.nll > long.nll + 1
+        # With a budget large enough for Nelder-Mead to finish, the flag is true.
+        @test long.converged
     end
 end
