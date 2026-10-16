@@ -85,9 +85,10 @@ end
         @test_throws ArgumentError direct(Y_bad)
         @test ad.refit(Y_bad) === nothing
         @test !GM._bootstrap_refit_ok(ad.refit(Y_bad), m)[2]
-        # A refit that reports a failed verdict is still screened out. No draw in the
-        # support reliably makes these fitters fail, so take a real refit and mark it
-        # failed the way `_fit_verdict` does (`converged = false`, `loglik = -Inf`).
+        # A refit that reports a failed verdict is still screened out. No draw in (0, 1)
+        # makes these fitters fail, so take a real refit and mark it failed the way
+        # `_fit_verdict` does (`converged = false`, `loglik = -Inf`). The adapter's own
+        # forwarding of a false verdict is therefore not exercised for Beta.
         raw_bad = merge(ad.refit(Y), (converged = false, loglik = -Inf))
         @test GM._bootstrap_refit_ok(raw_bad.θ, m)[2]    # the old contract accepts it
         @test !GM._bootstrap_refit_ok(raw_bad, m)[2]     # the migrated one does not

@@ -70,7 +70,8 @@ end
         # A refit that reports a failed verdict is still screened out. No in-support draw
         # makes this fitter fail, so take a real refit and mark it failed the way
         # `_fit_verdict` does (`converged = false`, `loglik = -Inf`); its θ stays finite,
-        # as a sentinel fit's warm start does.
+        # as a sentinel fit's warm start does. The adapter's own forwarding of a false
+        # verdict is therefore not exercised for Binomial.
         raw_bad = merge(ad.refit(Y), (converged = false, loglik = -Inf))
         @test all(isfinite, raw_bad.θ)                    # why main counted it
         @test GM._bootstrap_refit_ok(raw_bad.θ, m)[2]     # the old contract accepts it
