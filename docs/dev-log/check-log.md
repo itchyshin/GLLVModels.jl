@@ -10,6 +10,11 @@
   (`routes = :both` default, `-3121.164397`).
 - Draft PR titled `[red proof, do not merge]`; body `refs #784, refs #914`. Never
   mark ready, never merge, never push to `main` or to #914's branch.
+- Local Julia 1.10.12: base **2 pass / 1 fail** (`-3129.531424039885`, 25m57s);
+  #914 `a45b2ae` worktree **3/3 pass** (29m22s). Never pushed to #914.
+- CI run `38970253410` **failure**. Shard 4/4 only: 1.10 `7302 passed, 1 failed,
+  0 errored, 7 broken`; Julia 1 `7300 passed, 1 failed, 0 errored, 7 broken`.
+  Same assertion (`-3129.531424… >= -3121.17`). Shards 1–3 green both versions.
 
 ## 2026-10-01: postfit numeric twins at gllvmTMB P1 (5 rows, #660)
 
