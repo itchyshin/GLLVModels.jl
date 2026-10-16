@@ -50,6 +50,19 @@
   fits gain a `stop_reason` field (`:converged`, `:not_converged`, `:gradient_not_small`,
   `:gradient_at_failure_value`, `:objective_failure`).
 
+- **`fit_zip_gllvm` Laplace log-determinant now uses the observed count curvature (refs #739).**
+  The ZIP count weight was the expected Fisher information, so `hessian = :observed` (the
+  default) and `:fisher` gave the identical objective and `fit_zip_gllvm` maximised a different
+  surface from gllvmTMB's `zi_poisson()`: logLik below it on simulated ZIP data, with a
+  higher mean ZI estimate. `:observed` is now the exact second derivative of the ZIP
+  log-density (`_tp_observed_Wc_z(::ZIPoisson, …)`), with the same eigenvalue floor as the
+  `zi_poisson()` route (`ZI_LAPLACE_EIGMIN_FLOOR`) and `converged = false` for an optimum at the
+  floor. On a p = 6, n = 50 fixture the logLik moves from -663.283 to -659.541, equal to the
+  `zi_poisson()` fit (`test/test_zip_observed_laplace.jl`). Fitted ZIP values change, in
+  `fit_zip_gllvm`, `fit_zip_gllvm_cov` and every route that reaches the ZIP two-part Laplace with
+  the default `hessian`; `hessian = :fisher` is unchanged. ZINB and ZIB still use the Fisher
+  weight (`TWOPART_KNOWN_OPEN`).
+
 - **Observation weights on the Poisson Laplace route (DATA-W-* rows).** `fit_gllvm(Y; family =
   Poisson(), K, weights)`, `fit_poisson_gllvm(Y; K, weights)` and `gllvm(@formula(y ~ 1), Y,
   data; family = Poisson(), weights)` take observation weights with gllvmTMB's meaning: a weight

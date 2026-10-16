@@ -271,6 +271,20 @@ end
 # unchanged.
 _tp_observed_Wc(::Any, y, ηc, Wc) = Wc
 
+# A family whose observed count curvature also depends on η^z (the zero-inflated mixtures:
+# at y = 0 the posterior share of structural zeros enters) overrides `_tp_observed_Wc_z`.
+# The default forwards to `_tp_observed_Wc`, so every other family is bit-for-bit unchanged.
+_tp_observed_Wc_z(family, y, ηz, ηc, Wc) = _tp_observed_Wc(family, y, ηc, Wc)
+@inline _tp_observed_Wc_at(family, t, y, ηz, ηc, Wc) = _tp_observed_Wc_z(family, y, ηz, ηc, Wc)
+@inline _tp_observed_Wc_at(fams::AbstractVector, t, y, ηz, ηc, Wc) = _tp_observed_Wc_z(fams[t], y, ηz, ηc, Wc)
+
+# Smallest admissible eigenvalue of the site precision A = I + Λ'WΛ under `hessian = :observed`
+# (0 = no guard). Where the observed curvature goes negative A can approach singularity while
+# the mode search still converges, and -½ logdet A then inflates the Laplace value; see the
+# breakdown-guard note above `ZI_LAPLACE_EIGMIN_FLOOR` in zi_twin.jl. Only ZIPoisson sets one.
+_tp_eigmin_floor(::Any) = 0.0
+_tp_eigmin_floor(fams::AbstractVector) = isempty(fams) ? 0.0 : maximum(_tp_eigmin_floor, fams)
+
 """
     twopart_loglik_site(family, y, Λz, Λc, βz, βc; offsetz=nothing, offsetc=nothing,
                         maxiter=100, tol=1e-9) -> Float64
@@ -319,7 +333,7 @@ function twopart_loglik_site(family, y::AbstractVector,
         _, _, W_z, W_c, logf = _tp_pieces_at(family, t, y[t], ηz[t], ηc[t])
         # Observed curvature enters HERE ONLY (the log-det), never the mode solve.
         Wz[t] = W_z
-        Wc[t] = hessian === :observed ? _tp_observed_Wc_at(family, t, y[t], ηc[t], W_c) : W_c
+        Wc[t] = hessian === :observed ? _tp_observed_Wc_at(family, t, y[t], ηz[t], ηc[t], W_c) : W_c
         ℓ += logf
     end
     # Per-call buffers (written in place with the SAME broadcast / BLAS expressions
@@ -333,6 +347,8 @@ function twopart_loglik_site(family, y::AbstractVector,
         Amat[d, d] += 1.0                      # + I (adds 1.0 to each diagonal entry)
     end
     A = Symmetric(Amat)
+    floor_ = hessian === :observed ? _tp_eigmin_floor(family) : 0.0
+    floor_ > 0 && eigmin(A) < floor_ && return -Inf
     return ℓ - 0.5 * dot(ẑ, ẑ) - 0.5 * _laplace_logdet(A)
 end
 
@@ -1362,6 +1378,20 @@ function _tp_pieces(::ZIPoisson, y, ηz, ηc)
     end
 end
 
+# Observed count curvature -∂² log f / ∂(η^c)² for the zero-inflated Poisson (#739). A positive
+# count is Poisson, so it is μ. At y = 0, log f = log(π + (1-π)e^{-μ}) and, with
+# g = (1-π)e^{-μ}/P0 the posterior share of count-process zeros, ∂g/∂η^c = -μ g (1-g), so
+# the curvature is gμ(1 - μ(1-g)): negative for moderate μ, hence the eigenvalue floor.
+function _tp_observed_Wc_z(::ZIPoisson, y, ηz, ηc, Wc)
+    μ = exp(ηc)
+    y > 0 && return μ
+    π = inv(one(ηz) + exp(-ηz))
+    e = exp(-μ)
+    g = (one(π) - π) * e / (π + (one(π) - π) * e)
+    return g * μ * (one(g) - μ * (one(g) - g))
+end
+_tp_eigmin_floor(::ZIPoisson) = ZI_LAPLACE_EIGMIN_FLOOR
+
 """
     zip_marginal_loglik_laplace(Y, Λc, βz, βc; Λz=nothing, kwargs...) -> Float64
 
@@ -1500,11 +1530,14 @@ Fit a zero-inflated Poisson GLLVM by L-BFGS over `[βz; βc; vec(Λc)]` (Λz=0).
 excess-zero fraction + positive-count log-means + SVD loadings.
 
 `hessian` selects the two-part Laplace log-det curvature (`:observed` default /
-`:fisher`); the mode search does not depend on it. NOTE (2026-08-28): for this
-family the observed count-part weight is not yet specialised, so both selectors
-currently produce the identical objective (the `TWOPART_KNOWN_OPEN` census gap;
-DeltaGamma is the only two-part family whose observed weight is implemented).
-Exposing the kwarg is the measurement prerequisite for closing that gap.
+`:fisher`); the mode search does not depend on it. `:observed` is the exact
+second derivative of the ZIP log-density, as gllvmTMB's Laplace uses (#739); before
+that fix both selectors gave the Fisher-weight objective, whose maximiser sits
+elsewhere and whose logLik was below gllvmTMB's `zi_poisson()` on simulated data.
+Where the observed curvature goes negative the site precision can approach
+singularity, so a site whose smallest eigenvalue is below `ZI_LAPLACE_EIGMIN_FLOOR`
+is a failed evaluation (as on the `zi_poisson()` route), and an optimum within 10%
+of the floor is reported `converged = false`. `:fisher` is unchanged and unguarded.
 """
 function fit_zip_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         offset = nothing,
@@ -1546,7 +1579,36 @@ function fit_zip_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     Λc = unpack_lambda(θ̂[(2p + 1):(2p + rr)], p, K)
     ll, conv, iters = _fit_verdict(res)
     conv = _eta_cap_verdict(conv, LogLink(), βc, offset; caller = "fit_zip_gllvm")
+    # #739: an optimum at the Laplace breakdown guard is not a usable log-likelihood, and
+    # Optim reports it converged (a line search into the 1e12 sentinel is a zero step).
+    if conv && hessian === :observed
+        me = _zip_min_site_eigen(Y, Λc, βz, βc, offset, newton_maxiter, newton_tol)
+        if me < 1.1 * ZI_LAPLACE_EIGMIN_FLOOR
+            conv = false
+            @warn "fit_zip_gllvm: the optimum sits at the Laplace breakdown guard (smallest " *
+                  "site precision eigenvalue $(round(me; sigdigits = 3)), floor " *
+                  "$(ZI_LAPLACE_EIGMIN_FLOOR)); reported as not converged."
+        end
+    end
     return ZIPFit(βz, βc, Λc, ll, conv, iters, _stored_offset(offset))
+end
+
+# Smallest per-site Laplace precision eigenvalue I + Λc'(W_obs .* Λc) at given parameters
+# (-Inf if a site's mode search fails).
+function _zip_min_site_eigen(Y, Λc, βz, βc, offset, maxiter, tol)
+    p, n = size(Y); Λz = zeros(p, size(Λc, 2))
+    m = Inf
+    for s in 1:n
+        oc = offset === nothing ? nothing : view(offset, :, s)
+        y = view(Y, :, s)
+        ẑ, ok = _twopart_mode_search(ZIPoisson(), y, Λz, Λc, βz, βc;
+                                     offsetc = oc, maxiter = maxiter, tol = tol)
+        ok || return -Inf
+        ηc = _clamp_eta.(βc .+ (oc === nothing ? 0.0 : oc) .+ Λc * ẑ)
+        W = [_tp_observed_Wc_z(ZIPoisson(), y[t], βz[t], ηc[t], NaN) for t in 1:p]
+        m = min(m, eigmin(Symmetric(Λc' * (W .* Λc) + I)))
+    end
+    return m
 end
 
 """
