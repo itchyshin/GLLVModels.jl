@@ -333,7 +333,7 @@ function twopart_loglik_site(family, y::AbstractVector,
         Amat[d, d] += 1.0                      # + I (adds 1.0 to each diagonal entry)
     end
     A = Symmetric(Amat)
-    return ℓ - 0.5 * dot(ẑ, ẑ) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(ẑ, ẑ) - 0.5 * _laplace_logdet(A)
 end
 
 """
@@ -628,6 +628,7 @@ function fit_delta_lognormal_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
             βc = θ[(p + 1):(2p)]
             Λc = unpack_lambda(θ[(2p + 1):(2p + rr)], p, K)
             σ = disp_group === :shared ? exp(θ[2p + rr + 1]) : exp.(θ[(2p + rr + 1):(2p + rr + ndisp)])
+            _eta_above_clamp(βc, offset) && return 1e12   # #869: η-clamp plateau (log-scale positive part)
             v = try
                 -delta_lognormal_marginal_loglik_laplace(Y, Λc, βz, βc, σ; offsetc = offset, hessian = hessian,
                                                          maxiter = newton_maxiter, tol = newton_tol)
@@ -643,6 +644,7 @@ function fit_delta_lognormal_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
             β = θ[1:p]
             Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
             σ = disp_group === :shared ? exp(θ[p + rr + 1]) : exp.(θ[(p + rr + 1):(p + rr + ndisp)])
+            _eta_above_clamp(β, offset) && return 1e12   # #869: η-clamp plateau (log-scale positive part)
             v = try
                 -delta_lognormal_marginal_loglik_laplace(Y, Λ, β, β, σ; Λz = Λ,
                         offsetz = offset, offsetc = offset, hessian = hessian,
@@ -667,7 +669,9 @@ function fit_delta_lognormal_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         σ = disp_group === :shared ? exp(θ̂[p + rr + 1]) : exp.(θ̂[(p + rr + 1):(p + rr + ndisp)])
         βz = β; βc = β
     end
-    return DeltaLogNormalFit(βz, βc, Λc, σ, _fit_verdict(res)..., predictor, disp_group,
+    ll, conv, iters = _fit_verdict(res)
+    conv = _eta_cap_verdict(conv, LogLink(), βc, offset; caller = "fit_delta_lognormal_gllvm")
+    return DeltaLogNormalFit(βz, βc, Λc, σ, ll, conv, iters, predictor, disp_group,
                              _stored_offset(offset))
 end
 
@@ -796,6 +800,7 @@ function fit_hurdle_poisson_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     function negll(θ)
         βz = θ[1:p]; βc = θ[(p + 1):(2p)]
         Λc = unpack_lambda(θ[(2p + 1):(2p + rr)], p, K)
+        _eta_above_clamp(βc, offset) && return 1e12   # #869: η-clamp plateau (log-link count part)
         v = try
             -hurdle_poisson_marginal_loglik_laplace(Y, Λc, βz, βc; offsetc = offset, hessian = hessian,
                                                     maxiter = newton_maxiter, tol = newton_tol)
@@ -810,7 +815,9 @@ function fit_hurdle_poisson_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     θ̂ = Optim.minimizer(res)
     βz = θ̂[1:p]; βc = θ̂[(p + 1):(2p)]
     Λc = unpack_lambda(θ̂[(2p + 1):(2p + rr)], p, K)
-    return HurdlePoissonFit(βz, βc, Λc, _fit_verdict(res)..., _stored_offset(offset))
+    ll, conv, iters = _fit_verdict(res)
+    conv = _eta_cap_verdict(conv, LogLink(), βc, offset; caller = "fit_hurdle_poisson_gllvm")
+    return HurdlePoissonFit(βz, βc, Λc, ll, conv, iters, _stored_offset(offset))
 end
 
 # ---------------------------------------------------------------------------
@@ -959,6 +966,7 @@ function fit_hurdle_nb_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         βz = θ[1:p]; βc = θ[(p + 1):(2p)]
         Λc = unpack_lambda(θ[(2p + 1):(2p + rr)], p, K)
         r = exp(θ[2p + rr + 1])
+        _eta_above_clamp(βc, offset) && return 1e12   # #869: η-clamp plateau (log-link count part)
         v = try
             -hurdle_nb_marginal_loglik_laplace(Y, Λc, βz, βc, r; offsetc = offset, hessian = hessian,
                                                maxiter = newton_maxiter, tol = newton_tol)
@@ -974,7 +982,9 @@ function fit_hurdle_nb_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     βz = θ̂[1:p]; βc = θ̂[(p + 1):(2p)]
     Λc = unpack_lambda(θ̂[(2p + 1):(2p + rr)], p, K)
     r = exp(θ̂[2p + rr + 1])
-    return HurdleNBFit(βz, βc, Λc, r, _fit_verdict(res)..., _stored_offset(offset))
+    ll, conv, iters = _fit_verdict(res)
+    conv = _eta_cap_verdict(conv, LogLink(), βc, offset; caller = "fit_hurdle_nb_gllvm")
+    return HurdleNBFit(βz, βc, Λc, r, ll, conv, iters, _stored_offset(offset))
 end
 
 # ---------------------------------------------------------------------------
@@ -1239,6 +1249,7 @@ function fit_delta_gamma_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
             βz = θ[1:p]; βc = θ[(p + 1):(2p)]
             Λc = unpack_lambda(θ[(2p + 1):(2p + rr)], p, K)
             α = disp_group === :shared ? exp(θ[2p + rr + 1]) : exp.(θ[(2p + rr + 1):(2p + rr + ndisp)])
+            _eta_above_clamp(βc, offset) && return 1e12   # #869: η-clamp plateau (log-link positive part)
             v = try
                 -delta_gamma_marginal_loglik_laplace(Y, Λc, βz, βc, α; offsetc = offset,
                                                      hessian = hessian,
@@ -1255,6 +1266,7 @@ function fit_delta_gamma_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
             β = θ[1:p]
             Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
             α = disp_group === :shared ? exp(θ[p + rr + 1]) : exp.(θ[(p + rr + 1):(p + rr + ndisp)])
+            _eta_above_clamp(β, offset) && return 1e12   # #869: η-clamp plateau (log-link positive part)
             v = try
                 -delta_gamma_marginal_loglik_laplace(Y, Λ, β, β, α; Λz = Λ,
                         offsetz = offset, offsetc = offset, hessian = hessian,
@@ -1279,7 +1291,9 @@ function fit_delta_gamma_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         α = disp_group === :shared ? exp(θ̂[p + rr + 1]) : exp.(θ̂[(p + rr + 1):(p + rr + ndisp)])
         βz = β; βc = β
     end
-    return DeltaGammaFit(βz, βc, Λc, α, _fit_verdict(res)..., predictor, disp_group,
+    ll, conv, iters = _fit_verdict(res)
+    conv = _eta_cap_verdict(conv, LogLink(), βc, offset; caller = "fit_delta_gamma_gllvm")
+    return DeltaGammaFit(βz, βc, Λc, α, ll, conv, iters, predictor, disp_group,
                          _stored_offset(offset))
 end
 
@@ -1509,6 +1523,7 @@ function fit_zip_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     function negll(θ)
         βz = θ[1:p]; βc = θ[(p + 1):(2p)]
         Λc = unpack_lambda(θ[(2p + 1):(2p + rr)], p, K)
+        _eta_above_clamp(βc, offset) && return 1e12   # #869: η-clamp plateau (log-link count part)
         v = try
             -zip_marginal_loglik_laplace(Y, Λc, βz, βc; offsetc = offset, hessian = hessian,
                                          maxiter = newton_maxiter, tol = newton_tol)
@@ -1529,7 +1544,9 @@ function fit_zip_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     θ̂ = Optim.minimizer(res)
     βz = θ̂[1:p]; βc = θ̂[(p + 1):(2p)]
     Λc = unpack_lambda(θ̂[(2p + 1):(2p + rr)], p, K)
-    return ZIPFit(βz, βc, Λc, _fit_verdict(res)..., _stored_offset(offset))
+    ll, conv, iters = _fit_verdict(res)
+    conv = _eta_cap_verdict(conv, LogLink(), βc, offset; caller = "fit_zip_gllvm")
+    return ZIPFit(βz, βc, Λc, ll, conv, iters, _stored_offset(offset))
 end
 
 """
@@ -1610,6 +1627,7 @@ function fit_zip_gllvm_cov(Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 3
         Λc = unpack_lambda(θ[(2p + 2q + 1):(2p + 2q + rr)], p, K)
         Oz = _build_offset(X_fit, γz)
         Oc = _build_offset(X_fit, γc)
+        _eta_above_clamp(βc, Oc) && return 1e12   # #869: η-clamp plateau (log-link count part)
         v = try
             -zip_marginal_loglik_laplace(Y, Λc, βz, βc;
                                          offsetz = Oz, offsetc = Oc, hessian = hessian,
@@ -1630,8 +1648,11 @@ function fit_zip_gllvm_cov(Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 3
     Λĉ = unpack_lambda(θ̂[(2p + 2q + 1):(2p + 2q + rr)], p, K)
     γẑ = collect(Float64, _expand_fixed_zero(γz_free, γ_fixed_mask))
     γĉ = collect(Float64, _expand_fixed_zero(γc_free, γ_fixed_mask))
+    ll, conv, iters = _fit_verdict(res)
+    conv = _eta_cap_verdict(conv, LogLink(), βĉ, _build_offset(X_fit, γc_free);
+                            caller = "fit_zip_gllvm_cov")
     return ZIPCovFit(βẑ, γẑ, βĉ, γĉ, collect(Bool, γ_fixed_mask), Λĉ,
-                     _fit_verdict(res)...)
+                     ll, conv, iters)
 end
 
 # ---------------------------------------------------------------------------
@@ -1739,6 +1760,7 @@ function fit_zinb_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         βz = θ[1:p]; βc = θ[(p + 1):(2p)]
         Λc = unpack_lambda(θ[(2p + 1):(2p + rr)], p, K)
         r = exp(θ[2p + rr + 1])
+        _eta_above_clamp(βc, offset) && return 1e12   # #869: η-clamp plateau (log-link count part)
         v = try
             -zinb_marginal_loglik_laplace(Y, Λc, βz, βc, r; offsetc = offset, hessian = hessian,
                                           maxiter = newton_maxiter, tol = newton_tol)
@@ -1760,7 +1782,9 @@ function fit_zinb_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     βz = θ̂[1:p]; βc = θ̂[(p + 1):(2p)]
     Λc = unpack_lambda(θ̂[(2p + 1):(2p + rr)], p, K)
     r = exp(θ̂[2p + rr + 1])
-    return ZINBFit(βz, βc, Λc, r, _fit_verdict(res)..., _stored_offset(offset))
+    ll, conv, iters = _fit_verdict(res)
+    conv = _eta_cap_verdict(conv, LogLink(), βc, offset; caller = "fit_zinb_gllvm")
+    return ZINBFit(βz, βc, Λc, r, ll, conv, iters, _stored_offset(offset))
 end
 
 """
@@ -1864,6 +1888,7 @@ function fit_zinb_gllvm_cov(Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 
         r = exp(θ[2p + 2q + rr + 1])
         Oz = _build_offset(X_fit, γz)
         Oc = _build_offset(X_fit, γc)
+        _eta_above_clamp(βc, Oc) && return 1e12   # #869: η-clamp plateau (log-link count part)
         v = try
             -zinb_marginal_loglik_laplace(Y, Λc, βz, βc, r; hessian = hessian,
                                          offsetz = Oz, offsetc = Oc,
@@ -1887,7 +1912,9 @@ function fit_zinb_gllvm_cov(Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 
         γẑ = collect(Float64, _expand_fixed_zero(γz_free, γ_fixed_mask))
         γĉ = collect(Float64, _expand_fixed_zero(γc_free, γ_fixed_mask))
         return ZINBCovFit(βẑ, γẑ, βĉ, γĉ, collect(Bool, γ_fixed_mask), Λĉ, r̂,
-                          -nll0, true, 0)
+                          -nll0,
+                          _eta_cap_verdict(true, LogLink(), βĉ, _build_offset(X_fit, γc_free);
+                                           caller = "fit_zinb_gllvm_cov"), 0)
     end
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     res = Optim.optimize(negll, θ0, ls, Optim.Options(g_tol = g_tol, iterations = iterations);
@@ -1901,8 +1928,11 @@ function fit_zinb_gllvm_cov(Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 
     r̂ = exp(θ̂[2p + 2q + rr + 1])
     γẑ = collect(Float64, _expand_fixed_zero(γz_free, γ_fixed_mask))
     γĉ = collect(Float64, _expand_fixed_zero(γc_free, γ_fixed_mask))
+    ll, conv, iters = _fit_verdict(res)
+    conv = _eta_cap_verdict(conv, LogLink(), βĉ, _build_offset(X_fit, γc_free);
+                            caller = "fit_zinb_gllvm_cov")
     return ZINBCovFit(βẑ, γẑ, βĉ, γĉ, collect(Bool, γ_fixed_mask), Λĉ, r̂,
-                      _fit_verdict(res)...)
+                      ll, conv, iters)
 end
 
 # ---------------------------------------------------------------------------
