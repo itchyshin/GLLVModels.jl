@@ -2183,7 +2183,8 @@ function confint_speciescov(fit::GllvmSpeciesCovFit, Y::AbstractMatrix, X::Abstr
     ad = _FamilyCI(θ, nll, names, kinds, _ -> error("bootstrap unsupported"), _ -> nothing)
     sel = _family_select(parm, ad.names)
     isempty(sel) && throw(ArgumentError("parm selector matched no parameters"))
-    return _family_wald(ad, sel, level)
+    ok_ = _ci_check_input_converged("confint_speciescov", fit)
+    return merge(_family_wald(ad, sel, level), (converged = ok_,))
 end
 
 """
@@ -2221,7 +2222,8 @@ function confint_fourthcorner(fit::FourthCornerFit, Y::AbstractMatrix,
     ad = _FamilyCI(θ, nll, names, kinds, _ -> error("bootstrap unsupported"), _ -> nothing)
     sel = _family_select(parm, ad.names)
     isempty(sel) && throw(ArgumentError("parm selector matched no parameters"))
-    return _family_wald(ad, sel, level)
+    ok_ = _ci_check_input_converged("confint_fourthcorner", fit)
+    return merge(_family_wald(ad, sel, level), (converged = ok_,))
 end
 
 """
@@ -2253,7 +2255,8 @@ function confint_rrr(fit::RRRFit, Y::AbstractMatrix, X::AbstractMatrix;
     ad = _FamilyCI(θ, nll, names, kinds, _ -> error("bootstrap unsupported"), _ -> nothing)
     sel = _family_select(parm, ad.names)
     isempty(sel) && throw(ArgumentError("parm selector matched no parameters"))
-    return _family_wald(ad, sel, level)
+    ok_ = _ci_check_input_converged("confint_rrr", fit)
+    return merge(_family_wald(ad, sel, level), (converged = ok_,))
 end
 
 """
@@ -2288,7 +2291,8 @@ function confint_constrained(fit::ConstrainedOrdinationFit, Y::AbstractMatrix, X
     ad = _FamilyCI(θ, nll, names, kinds, _ -> error("bootstrap unsupported"), _ -> nothing)
     sel = _family_select(parm, ad.names)
     isempty(sel) && throw(ArgumentError("parm selector matched no parameters"))
-    return _family_wald(ad, sel, level)
+    ok_ = _ci_check_input_converged("confint_constrained", fit)
+    return merge(_family_wald(ad, sel, level), (converged = ok_,))
 end
 
 # --- Hurdle-Poisson --------------------------------------------------------
@@ -3069,6 +3073,20 @@ function _wald_boundary_indices(Hsym::Symmetric, known::Vector{Int})
     return sort(collect(idx))
 end
 
+# #780: every interval below is computed at `fit.θ`. A Wald SE is only an SE at a stationary
+# point, and a profile/bootstrap interval is centred on the fit, so a fit the optimiser stopped
+# early gives intervals that look valid but are not. Warn once per call and report the flag in
+# the result (`converged`); `pd_hessian` keeps its meaning (the Hessian's definiteness only).
+_ci_fit_converged(fit) = !(hasproperty(fit, :converged) && getproperty(fit, :converged) === false)
+
+function _ci_check_input_converged(who::AbstractString, fit)
+    ok = _ci_fit_converged(fit)
+    ok || @warn "$who: the supplied $(nameof(typeof(fit))) did not converge (`fit.converged == false`), " *
+                "so these intervals are computed at a point that is not a stationary point of the " *
+                "objective and should not be reported. Refit with more iterations (or a better start) first."
+    return ok
+end
+
 # ---------------------------------------------------------------------------
 # Wald
 # ---------------------------------------------------------------------------
@@ -3603,8 +3621,10 @@ function confint(fit::_CIFit, Y::AbstractMatrix;
                                         newton_maxiter = newton_maxiter, newton_tol = newton_tol)
     sel = _family_select(parm, ad.names)
     isempty(sel) && throw(ArgumentError("parm selector matched no parameters"))
+    fit_ok = _ci_check_input_converged("confint", fit)
     if method === :wald
         result=_family_wald(ad,sel,level;hessian=is_aghq ? ForwardDiff.hessian(ad.nll,ad.θ) : nothing)
+        result = merge(result, (converged = fit_ok,))
         return is_aghq ? merge(result,(objective=:aghq,gradient_kind=:frozen_surrogate,)) : result
     elseif method === :profile
         result = _family_profile(ad, sel, level;
@@ -3612,9 +3632,11 @@ function confint(fit::_CIFit, Y::AbstractMatrix;
                                profile_g_tol = profile_g_tol,
                                profile_max_expand = profile_max_expand,
                                profile_max_bisect = profile_max_bisect)
+        result = merge(result, (converged = fit_ok,))
         return is_aghq ? merge(result,(objective=:aghq,gradient_kind=:frozen_surrogate,)) : result
     elseif method === :bootstrap
         result=_family_bootstrap(ad,sel,level,n_boot,seed,parallel;retain_replicates=is_aghq)
+        result = merge(result, (converged = fit_ok,))
         return is_aghq ? merge(result,(objective=:aghq,gradient_kind=:frozen_surrogate,)) : result
     else
         throw(ArgumentError("method must be :wald, :profile, or :bootstrap; got :$method"))
@@ -3647,6 +3669,7 @@ function StatsAPI.vcov(fit::_CIFit, Y::AbstractMatrix;
                                         newton_maxiter = newton_maxiter, newton_tol = newton_tol)
     sel = _family_select(parm, ad.names)
     isempty(sel) && throw(ArgumentError("parm selector matched no parameters"))
+    _ci_check_input_converged("vcov", fit)
     return _family_wald(ad, sel, level; hessian = is_aghq ? ForwardDiff.hessian(ad.nll, ad.θ) : nothing,
                         covariance = true).covariance
 end
@@ -3702,7 +3725,8 @@ function confint_spde_latent(fit::SPDELatentFit, Y::AbstractMatrix, locs::Abstra
     ad = _FamilyCI(θ, nll, names, kinds, sim, refit)
     sel = _family_select(parm, ad.names)
     isempty(sel) && throw(ArgumentError("parm selector matched no parameters"))
-    return _family_wald(ad, sel, level)
+    ok_ = _ci_check_input_converged("confint_spde_latent", fit)
+    return merge(_family_wald(ad, sel, level), (converged = ok_,))
 end
 
 # ---------------------------------------------------------------------------
@@ -4305,7 +4329,8 @@ function _lv_bootstrap(fit, Y, X_lv, N, q_lv::Integer, level::Real,
         rng = MersenneTwister(seed + b)
         Bb = try
             fb = refitfn(simfn(rng))
-            fb === nothing ? nothing : vec(extract_lv_effects(fb))
+            # #757: a refit that stopped early is not a draw from the estimator.
+            (fb === nothing || !_ci_fit_converged(fb)) ? nothing : vec(extract_lv_effects(fb))
         catch
             nothing
         end
@@ -4315,6 +4340,8 @@ function _lv_bootstrap(fit, Y, X_lv, N, q_lv::Integer, level::Real,
         push!(reps, Bb)
     end
     nconv = length(reps); a = (1 - level) / 2
+    n_dropped = n_boot - nconv
+    _bootstrap_warn_dropped("confint_lv_effects", n_dropped, n_boot)
     lo = fill(NaN, nb); hi = fill(NaN, nb)
     if nconv >= 10
         M = reduce(hcat, reps)    # nb × nconv
@@ -4324,5 +4351,5 @@ function _lv_bootstrap(fit, Y, X_lv, N, q_lv::Integer, level::Real,
     end
     term = ["B_lv[$t,$c]" for c in 1:q_lv for t in 1:p]
     return (term = term, estimate = b̂, lower = lo, upper = hi,
-            level = level, method = :bootstrap, n_converged = nconv)
+            level = level, method = :bootstrap, n_converged = nconv, n_dropped = n_dropped)
 end
