@@ -73,6 +73,19 @@ using Distributions: Beta, Gamma
         @test isfinite(fit_gamma_gllvm(Zm; K = 1).loglik)
         Zc = Matrix{Union{Missing, Int}}(Yp); Zc[2, 3] = missing
         @test isfinite(fit_poisson_gllvm(Zc; K = 1).loglik)
+        # A `Matrix{Any}` holding `missing` (what `readdlm` plus `replace("NA" => missing)`
+        # gives) fits exactly as the same data typed `Union{Missing, Float64}`.
+        for (f, Y) in ((fit_gamma_gllvm, Yg), (fit_beta_gllvm, Yb))
+            Za = Matrix{Any}(Y); Za[1, 1] = missing
+            Zu = Matrix{Union{Missing, Float64}}(Y); Zu[1, 1] = missing
+            fa = f(Za; K = 1)
+            @test isfinite(fa.loglik) && fa.loglik == f(Zu; K = 1).loglik
+        end
+        # A zero weight drops the cell like `mask`, so its value is not checked.
+        W = ones(p, n); W[1, 1] = 0
+        Zw = copy(Yp); Zw[1, 1] = -1
+        fw = fit_poisson_gllvm(Zw; K = 1, weights = W)
+        @test isfinite(fw.loglik) && fw.converged
     end
 
     @testset "the grouped Beta and Gamma twins" begin
