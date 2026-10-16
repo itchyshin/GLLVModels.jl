@@ -53,12 +53,14 @@ end
 
 # Like `_sanitize_missing`, but also replaces the cells that `mask` marks unobserved, so a
 # `NaN` (or any out-of-support) value in a masked-out cell never reaches an
-# `Integer.(...)` conversion, the warm start or the objective. The element type is
-# promoted explicitly so mixing, say, `Int` data with a `Float64` placeholder gives a
-# concrete matrix rather than `Matrix{Real}`.
+# `Integer.(...)` conversion, the warm start or the objective. The result always has a
+# concrete element type: `Int` data with a `Float64` placeholder, or a `Matrix{Any}`
+# holding `missing` (e.g. from `readdlm`), are narrowed to the promoted value type, as the
+# objectives cannot work on an abstract element type.
 function _sanitize_unobserved(Y::AbstractMatrix, mask, placeholder)
     mask === nothing && return _sanitize_missing(Y, placeholder)
-    T = promote_type(nonmissingtype(eltype(Y)), typeof(placeholder))
-    return T[(mask[t, i] && !ismissing(Y[t, i])) ? Y[t, i] : placeholder
-             for t in axes(Y, 1), i in axes(Y, 2)]
+    out = [(mask[t, i] && !ismissing(Y[t, i])) ? Y[t, i] : placeholder
+           for t in axes(Y, 1), i in axes(Y, 2)]
+    isconcretetype(eltype(out)) && return out
+    return convert(Matrix{mapreduce(typeof, promote_type, out; init = typeof(placeholder))}, out)
 end
